@@ -105,7 +105,7 @@ describe("④ 전송 본문 — 본인 몫만 싣는다 (Network request body)",
     ]);
     expect(r.status).toBe(200);
     expect(r.body.selfOwns).toBe("building_only");
-    expect(r.body.burdenedGiftInfo).toMatchObject({ landStdPriceAtTransfer: 0, buildingStdPriceAtTransfer: 200_000_000, landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: 80_000_000 });
+    expect(r.body.burdenedGiftInfo).toMatchObject({ landStdPriceAtTransfer: 0, buildingStdPriceAtTransfer: 200_000_000, landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: 80_000_000, ownerSplitDebtConfirmed: true });
     const info = r.body.burdenedGiftInfo as Record<string, unknown>;
     for (const k of ["marketValueByPart", "giftBuildingStdPriceAtTransfer", "actualLandAcquisitionPrice", "actualBuildingAcquisitionPrice"]) expect(info[k], k).toBeUndefined();
     for (const k of ["landTransferPrice", "buildingTransferPrice", "landAcquisitionPrice", "buildingAcquisitionPrice", "landStandardPriceAtTransfer", "buildingStandardPriceAtTransfer"]) expect(r.body[k], k).toBeUndefined();
@@ -242,6 +242,25 @@ describe("⑫ 직접 API — 본인 몫 계약(비소유 파트 0)은 ④를 거
       expect(res.status, JSON.stringify(over)).toBe(400);
       expect(Object.keys(res.json?.error?.fieldErrors ?? {}), JSON.stringify(over)).toEqual([`burdenedGiftInfo.${Object.keys(over)[0]}`]);
     }
+  });
+
+  it("채무 확인(ownerSplitDebtConfirmed)이 없거나 false → 400 (경로 burdenedGiftInfo.ownerSplitDebtConfirmed · 상증령 §63①2호)", async () => {
+    const r = await run([asset(1, A2)]);
+    for (const v of [undefined, false]) {
+      const res = await post({ ...r.body, burdenedGiftInfo: { ...info(r), ownerSplitDebtConfirmed: v } });
+      expect(res.status, String(v)).toBe(400);
+      expect(Object.keys(res.json?.error?.fieldErrors ?? {}), String(v)).toEqual(["burdenedGiftInfo.ownerSplitDebtConfirmed"]);
+      expect(res.text).toContain("증여한 건물에만 관련된다는 확인");
+      expect(res.text).toContain("상속세 및 증여세법 시행령 §63 ① 2호");
+    }
+  });
+
+  it("⑧↔⑫ 같은 칸 — 화면에서 확인을 체크하지 않은 폼은 ⑧이 bgOwnerSplitDebtConfirmed로, 그 폼의 ④ 본문은 ⑫가 400으로 막는다", async () => {
+    const r = await run([asset(1, { ...A2, bgOwnerSplitDebtConfirmed: false })]);
+    expect(fieldsOf(r)).toEqual(["bgOwnerSplitDebtConfirmed"]);
+    expect(info(r).ownerSplitDebtConfirmed).toBe(false);
+    expect(r.status).toBe(400);
+    expect(Object.keys(r.json?.error?.fieldErrors ?? {})).toEqual(["burdenedGiftInfo.ownerSplitDebtConfirmed"]);
   });
 
   it("소유자 분리가 없는(both) 부담부증여는 같은 본문에서 계약을 검사하지 않는다 — 형제 안전망", async () => {

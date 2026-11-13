@@ -46,6 +46,7 @@ export interface BgOwnerSplitInfoPatch {
   marketValueByPart?: undefined;
   giftBuildingStdPriceAtTransfer?: undefined;
   marketValueAtTransfer?: number;
+  ownerSplitDebtConfirmed?: boolean;
 }
 
 /**
@@ -54,6 +55,7 @@ export interface BgOwnerSplitInfoPatch {
  *  · 실지취득가: 총액 칸(`bgActualAcquisitionTotal`)이 증여한 부분의 실지취득가액이다 — 토지·건물 파트 칸에 남은 값은 싣지 않는다.
  *  · 증여일 현재 건물 기준시가(`giftBuildingStdPriceAtTransfer`): 소유자 분리에서 본인분인지 결합 공시가격인지 확인하지 못했다(계획서 V-U1) — 싣지 않는다(⑤도 칸을 숨긴다).
  *  · 시가 모드: `marketValueAtTransfer` = 증여한 부분 시가. 비어 있으면 총액 칸으로 대신하지 않는다(⑧이 막는다).
+ *  · 채무 확인(`bgOwnerSplitDebtConfirmed`) → `ownerSplitDebtConfirmed` — 엔진 계약·⑫가 `true`를 요구한다(⑧과 같은 칸).
  */
 export function bgOwnerSplitInfoPatch(asset: AssetForm): BgOwnerSplitInfoPatch {
   if (!bgOwnerSplitActive(asset)) return {};
@@ -68,6 +70,7 @@ export function bgOwnerSplitInfoPatch(asset: AssetForm): BgOwnerSplitInfoPatch {
     actualBuildingAcquisitionPrice: undefined,
     marketValueByPart: undefined,
     giftBuildingStdPriceAtTransfer: undefined,
+    ownerSplitDebtConfirmed: asset.bgOwnerSplitDebtConfirmed === true,
     ...(asset.bgValuationMode === "sangjeungbeop_market" ? { marketValueAtTransfer: parseAmount(asset.bgMarketValueOwnedPart) || undefined } : {}),
   };
 }

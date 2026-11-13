@@ -26,7 +26,7 @@ const rates = makeMockRates();
 /** 채무 1억 = 보증금 5천만 + 차입 5천만(설정 5천만) — 계획서 §9.1 A2. */
 const DEBT = { lendingDepositTotal: 50_000_000, mortgageDebtAmount: 50_000_000, mortgageSetAmount: 50_000_000, annualRentTotal: 0 };
 const info = (std: { landT: number; bldT: number; landA: number; bldA: number }, over: Partial<BurdenedGiftInfo> = {}) =>
-  ({ valuationMode: "sangjeungbeop_standard", ...DEBT, landStdPriceAtTransfer: std.landT, buildingStdPriceAtTransfer: std.bldT, landStdPriceAtAcquisition: std.landA, buildingStdPriceAtAcquisition: std.bldA, ...over }) as BurdenedGiftInfo;
+  ({ valuationMode: "sangjeungbeop_standard", ...DEBT, landStdPriceAtTransfer: std.landT, buildingStdPriceAtTransfer: std.bldT, landStdPriceAtAcquisition: std.landA, buildingStdPriceAtAcquisition: std.bldA, ownerSplitDebtConfirmed: true, ...over }) as BurdenedGiftInfo;
 
 function run(over: Partial<TransferTaxInput>) {
   return calculateTransferTax(
