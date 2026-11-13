@@ -223,7 +223,7 @@ export function splitExpenseText(
 
 const MODE_ORDER: SplitAcqMode[] = ["actual", "estimated", "appraisal", "salesCase"];
 /** 부담부증여 기준시가 평가 취득가액의 표기(「소득세법 시행령」 제159조 제1항 제1호 괄호). */
-const BG_STANDARD_LABEL = "취득시 기준시가 × 채무액 ÷ 증여가액";
+const BG_STANDARD_LABEL = "취득시 기준시가 × 채무비율";
 
 /**
  * 집계 자산들의 취득가액 산정방식 집합 — **응답에 실재하는 echo 세 종**에서 파생한다(우선순위):
@@ -264,7 +264,7 @@ export function aggregateAcqModes(
   return modes;
 }
 
-/** 집계 소제목 전용 산정방식 — 부담부증여 기준시가 평가의 취득가액(취득시 기준시가 × 채무액 ÷ 증여가액, 「소득세법 시행령」 제159조 제1항 제1호)은 환산도 실거래가도 아니다. */
+/** 집계 소제목 전용 산정방식 — 부담부증여 기준시가 평가의 취득가액(취득시 기준시가 × 채무비율, 「소득세법 시행령」 제159조 제1항 제1호)은 환산도 실거래가도 아니다. */
 export type AggHeadingMode = SplitAcqMode | "bgStandard";
 
 const BG_METHOD_TO_HEADING_MODE: Record<NonNullable<PerPropertyBreakdown["transferBurdenedGiftBreakdown"]>["acquisitionMethodUsed"], AggHeadingMode> = {

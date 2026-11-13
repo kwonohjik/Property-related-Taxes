@@ -1,7 +1,7 @@
 /**
  * anchor — 연간 합산 상세 명세서의 취득가액·필요경비 머리(소제목)가 부담부증여 자산의 실제 취득가액 산정방식을 말한다.
  *
- * 부담부증여 기준시가 평가의 취득가액은 「취득시 기준시가 × 채무액 ÷ 증여가액」(「소득세법 시행령」 제159조 제1항 제1호 괄호)이다 — 환산도 실거래가도 아니다.
+ * 부담부증여 기준시가 평가의 취득가액은 「취득시 기준시가 × 채무비율」(「소득세법 시행령」 제159조 제1항 제1호 괄호)이다 — 환산도 실거래가도 아니다.
  * 수정 前(실측 2026-11-13): 토지·건물 분리(소유자 분리·취득일 분리) 자산은 파트 `acqMode`가 "estimated"라 「자산별 환산취득가 합계 — 시행령 §163·§176의2②」,
  * 분리 없는 자산은 「자산별 실제 거래가액 합계」, 시가 + 환산취득가액도 「실제 거래가액 합계」였다. 머리는 §159 명세의 `acquisitionMethodUsed`로 정한다.
  * 함께: §159 단계 산식의 평가 모드 이름이 영문 키(「supplementary 평가」) 대신 한국어다.
@@ -28,7 +28,7 @@ beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
 });
 
-const BG_STD_HEAD = "자산별 취득가액 합계 — 취득시 기준시가 × 채무액 ÷ 증여가액 (시행령 §159①1호)";
+const BG_STD_HEAD = "자산별 취득가액 합계 — 취득시 기준시가 × 채무비율 (시행령 §159①1호)";
 const LUMP_HEAD = "자산별 개산공제·양도비 합계 — §97① 나목·시행령 §163⑥";
 const MKT = { bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "200,000,000", standardPriceAtTransfer: "200,000,000", standardPriceAtAcq: "80,000,000" };
 
@@ -64,9 +64,9 @@ describe("다건 상세 명세서 머리 — 부담부증여 취득가액 산정
   it("부담부증여 기준시가 자산과 실거래가 자산이 섞이면 두 방식을 모두 밝힌다", () => {
     const modes = new Set(["actual", "bgStandard"] as const);
     expect(aggregateAcqHeading(modes)).toBe(
-      "자산별 취득가액 합계 (산정방식: 실거래가·부담부증여 취득시 기준시가 × 채무액 ÷ 증여가액(시행령 §159①1호) — 자산·파트별로 다름, 소득세법 §97①1호 가목·나목)",
+      "자산별 취득가액 합계 (산정방식: 실거래가·부담부증여 취득시 기준시가 × 채무비율(시행령 §159①1호) — 자산·파트별로 다름, 소득세법 §97①1호 가목·나목)",
     );
-    expect(aggregateExpenseHeading(modes)).toContain("부담부증여 취득시 기준시가 × 채무액 ÷ 증여가액 파트는 개산공제");
+    expect(aggregateExpenseHeading(modes)).toContain("부담부증여 취득시 기준시가 × 채무비율 파트는 개산공제");
   });
 });
 
