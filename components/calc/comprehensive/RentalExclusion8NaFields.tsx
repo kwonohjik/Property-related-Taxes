@@ -16,6 +16,7 @@ import { na8Asks } from "@/lib/calc/comprehensive-rental-8na";
 import { na8Context } from "@/lib/calc/comprehensive-rental-8na";
 import { isShortTerm6y } from "@/lib/calc/comprehensive-rental-8na";
 import { resolveRegulated8Na } from "@/lib/calc/comprehensive-rental-8na";
+import { asksPeriodApplicationDate } from "@/lib/calc/comprehensive-rental-8na";
 
 export type Tri = "yes" | "no";
 const YES_NO = (testId: string, yes: string, no: string) => [
@@ -81,6 +82,38 @@ export function YesNoField({
         options={YES_NO(name, yes, no)}
       />
     </div>
+  );
+}
+
+/**
+ * 7호 나목·8호 가목2) 의무임대기간 8/10년 판단용 등록 신청일(선택) — 경고 문구에만 쓴다(⑧ 차단 없음).
+ * 표시 조건은 `asksPeriodApplicationDate`(④ 전송과 같은 술어). 8호 나목 칸이 이미 신청일을 물으면 열리지 않는다.
+ */
+export function RentalPeriodApplicationDateField({
+  property,
+  registrationType,
+  onUpdate,
+}: {
+  property: PropertyEntry;
+  registrationType: string;
+  onUpdate: (data: Partial<PropertyEntry>) => void;
+}) {
+  const assessmentYear = useComprehensiveWizardStore((s) => s.formData.assessmentYear);
+  const taxpayerType = useComprehensiveWizardStore((s) => s.formData.taxpayerType);
+  const ctx = useMemo(
+    () => na8Context({ assessmentYear, taxpayerType }, registrationType),
+    [assessmentYear, taxpayerType, registrationType],
+  );
+  if (!asksPeriodApplicationDate(property, ctx)) return null;
+  return (
+    <DateField
+      label="지자체 임대사업자 등록 신청일"
+      testId="comprehensive-period-application-date"
+      optional
+      value={property.rentalApplicationDate}
+      onChange={(v) => onUpdate({ rentalApplicationDate: v })}
+      hint="2020.8.17. 이전 신청이면 의무임대기간 8년, 8.18. 이후면 10년입니다(부칙<제31085호> §3·§4). 비우면 10년으로 안내합니다."
+    />
   );
 }
 

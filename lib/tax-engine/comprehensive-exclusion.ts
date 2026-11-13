@@ -51,6 +51,33 @@ const MANDATORY_PERIOD_BY_TYPE: Record<
 };
 
 /**
+ * §3①7호 나목·8호 가목2) — 2020.8.18. 이후 「민간임대주택에 관한 특별법」 §5① 등록 신청(추가 변경신고 포함)분은 10년,
+ * 그 전 신청분은 종전 규정 8년(대통령령 제31085호 부칙 §3·§4). 납세의무자 본인의 신청일 기준 — 포괄승계도 승계인 신청일
+ * (서면-2025-부동산-2158). 신청일을 모르면 등록일이 8.18. 전일 때만 8년(신청일 ≤ 등록일), 아니면 10년 + 확인 필요 안내.
+ * 경고 문구에만 쓴다 — 합산배제 성립·세액과 무관.
+ */
+const LONG_PERIOD_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
+  "private_purchase_long",
+  "public_support_purchase",
+  "public_support_construction",
+]);
+const AUG_18_2020 = Date.UTC(2020, 7, 18);
+
+function mandatoryPeriod(input: RentalExclusionInput): { years: number; applicationUnknown: boolean } {
+  if (!LONG_PERIOD_TYPES.has(input.registrationType)) {
+    return { years: MANDATORY_PERIOD_BY_TYPE[input.registrationType], applicationUnknown: false };
+  }
+  const app = input.rentalApplicationDate;
+  const appMs = app && !Number.isNaN(app.getTime()) ? app.getTime() : null;
+  const before =
+    appMs !== null ? appMs < AUG_18_2020 : input.rentalRegistrationDate.getTime() < AUG_18_2020;
+  return {
+    years: before ? COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG_PRE_0818 : COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG,
+    applicationUnknown: appMs === null && !before,
+  };
+}
+
+/**
  * §3①1호 단서(민간건설임대)·2호 단서(민간매입임대) 「2018년 3월 31일 이전에 … 임대사업자 등록과 사업자등록을 한 주택으로 한정」.
  * - 대통령령 제28645호(2018.2.13. 시행) 부칙 제2조 — 시행 이후 납세의무 성립분(2018 과세기준일)부터.
  * - 3.31.이 토요일이라 국세기본법 §5로 4.2.까지(서면-2021-법규재산-3280 — 같은 문언의 소령 §167의3①2호 가목 회신 유추 ·
@@ -165,11 +192,15 @@ export function validateRentalExclusion(
   // 배제 성립 — 경과 연수가 의무기간 미달이면 사후 추징 위험 경고 (배제는 유지)
   const warnings: string[] = [];
   if (input.actualRentalYears !== undefined) {
-    const requiredYears = MANDATORY_PERIOD_BY_TYPE[input.registrationType];
+    const { years: requiredYears, applicationUnknown } = mandatoryPeriod(input);
     if (requiredYears > 0 && input.actualRentalYears < requiredYears) {
+      const basis = LONG_PERIOD_TYPES.has(input.registrationType)
+        ? COMPREHENSIVE_EXCL.MANDATORY_PERIOD_LONG_BASIS
+        : "종합부동산세법 시행령 §3①";
       warnings.push(
         `의무임대기간(${requiredYears}년) 미충족 — 현재 ${input.actualRentalYears}년 경과. ` +
-          `의무기간 충족 전 등록 말소 시 합산배제 세액이 소급 추징됩니다 (시행령 §3①).`,
+          `의무기간 충족 전 등록 말소 시 합산배제 세액이 소급 추징됩니다 (${basis}).` +
+          (applicationUnknown ? " 지자체 등록 신청일이 2020.8.17. 이전이면 의무임대기간은 8년입니다(확인 필요)." : ""),
       );
     }
   }

@@ -146,6 +146,20 @@ export function resolveRegulated8Na(p: PropertyEntry, assessmentDate: string): R
 const tri = (s: "" | "yes" | "no" | undefined): boolean | null => (s === "yes" ? true : s === "no" ? false : null);
 
 /** ④ — 묻는 칸만 보낸다(안 묻는 칸은 엔진이 판정 단계에 닿지 않는다). */
+/** 7호 나목·8호 가목2) 의무임대기간 8/10년(부칙<제31085호> §3·§4) — 엔진 `mandatoryPeriod`와 같은 유형·경계 */
+const LONG_PERIOD_TYPES = new Set(["private_purchase_long", "public_support_purchase", "public_support_construction"]);
+const AUG_18_2020 = "2020-08-18";
+
+/**
+ * 의무임대기간 판단용 등록 신청일(선택) 칸 — 7·8호이고 등록일이 2020.8.18. 이후인데 8호 나목 칸이 신청일을 묻지 않을 때.
+ * 경고 문구에만 쓰므로 ⑧에서 막지 않는다(계획서 Q-1 a). 비면 엔진이 10년 + 「8.17. 이전 신청이면 8년」 안내.
+ */
+export function asksPeriodApplicationDate(p: PropertyEntry, ctx: Na8Context): boolean {
+  if (!LONG_PERIOD_TYPES.has(ctx.registrationType)) return false;
+  if (v(p.rentalRegistrationDate) === "" || v(p.rentalRegistrationDate) < AUG_18_2020) return false;
+  return !na8Asks(p, ctx).rentalApplicationDate;
+}
+
 export function rental8NaApiFields(p: PropertyEntry, ctx: Na8Context) {
   const a = na8Asks(p, ctx);
   const reg = a.regulated ? resolveRegulated8Na(p, ctx.assessmentDate) : null;
@@ -156,7 +170,8 @@ export function rental8NaApiFields(p: PropertyEntry, ctx: Na8Context) {
     householdOwnedHouseAtAcquisition: a.householdOwned ? tri(p.householdOwnedAtAcquisition) : undefined,
     regulatedAtAssessment: reg ? reg.regulated : undefined,
     regulatedNoticeDate: reg?.regulated ? reg.noticeDate || undefined : undefined,
-    rentalApplicationDate: a.rentalApplicationDate ? v(p.rentalApplicationDate) || undefined : undefined,
+    rentalApplicationDate:
+      a.rentalApplicationDate || asksPeriodApplicationDate(p, ctx) ? v(p.rentalApplicationDate) || undefined : undefined,
     businessRegistrationApplicationDate: a.businessRegistrationApplicationDate
       ? v(p.businessRegistrationApplicationDate) || undefined
       : undefined,

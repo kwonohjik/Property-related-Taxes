@@ -1,6 +1,6 @@
 # 종부세 합산배제 §3①7호 나목·8호 가목2) 의무임대기간 8년 → 10년 (2020.8.18. 등록 신청 기준)
 
-- 작성: 2026-11-13 · 상태: **Q 결정 완료(2026-11-13) — Q-1 a · Q-2 a**
+- 작성: 2026-11-13 · 상태: **구현(2026-11-13) — Q-1 a · Q-2 a**
 - 계기: 합산배제 날짜 경계 점검 목록의 마지막 항목(`project_comprehensive_rental_exclusion_date_gates` 메모).
 - 범위: 엔진은 의무임대기간을 **경고 문구에만** 쓴다(`lib/tax-engine/comprehensive-exclusion.ts:167-171`). 합산배제 성립 여부·세액은 바뀌지 않는다.
 
@@ -76,3 +76,10 @@
 |---|---|
 | Q 결정 | 사용자 |
 | 엔진 + anchor + 화면 칸 + 게이트 | 약 1시간 |
+
+## 9. 구현 (2026-11-13)
+
+- 엔진 `comprehensive-exclusion.ts` `mandatoryPeriod` — 7·8호 M-1~M-4 · 경고에 `COMPREHENSIVE_EXCL.MANDATORY_PERIOD_LONG_BASIS` · 상수 `MANDATORY_PERIOD_LONG_PRE_0818 = 8`.
+- 화면: `asksPeriodApplicationDate`(lib/calc/comprehensive-rental-8na.ts) — ⑤ `RentalPeriodApplicationDateField`(경과 연수 아래) · ④ `rental8NaApiFields`가 같은 술어로 신청일 전송 · ⑧ 차단 없음.
+- manifest `COMPREHENSIVE_DECREE.MANDATORY_PERIOD_LONG_10Y`(PASS) · 부칙은 `UNVERIFIABLE_LAW_NAMES["종합부동산세법 시행령 대통령령"]`에 제31085호 §3·§4 추가.
+- 테스트: 엔진 anchor 7(변이 1 — 경계일 8.19. 바꾸면 실패) · route anchor 5.
