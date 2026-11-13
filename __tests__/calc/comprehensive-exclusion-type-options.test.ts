@@ -49,6 +49,9 @@ describe("라벨 조문 번호 — 종부령 §3① 현행 호", () => {
   ])("%s → %s", (k, ho) => {
     expect(label(k)).toContain(ho);
   });
+  it("7호는 건설임대 중 공공지원·장기일반을 한 호로 묶는다 — 라벨에 둘 다", () => {
+    expect(label("public_support_construction_rental")).toMatch(/공공지원.*장기일반/);
+  });
 });
 
 describe("⑤ 첫 드롭다운 → 임대등록 유형 동기화 대상", () => {

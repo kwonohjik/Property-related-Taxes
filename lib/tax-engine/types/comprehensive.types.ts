@@ -70,7 +70,7 @@ export type ExclusionType =
   | "private_construction_rental"   // 민간건설임대 (시행령 §3①1호)
   | "private_purchase_rental_long"  // 민간매입임대 장기일반 (시행령 §3①8호)
   | "private_purchase_rental_short" // 민간매입임대 단기 구법 (시행령 §3①2호 구법)
-  | "public_support_construction_rental" // 공공지원민간임대 건설 (시행령 §3①7호)
+  | "public_support_construction_rental" // 공공지원·장기일반민간임대 건설 (시행령 §3①7호)
   | "public_support_purchase_rental"     // 공공지원민간임대 매입 (시행령 §3①8호)
   | "public_construction_rental"    // 공공건설임대 (시행령 §3①1호)
   | "public_purchase_rental"        // 공공매입임대 (시행령 §3①2호)
@@ -95,7 +95,7 @@ export interface RentalExclusionInput extends RentalExclusion8NaFacts, RentalExc
     | "private_construction"
     | "private_purchase_long"
     | "private_purchase_short"
-    | "public_support_construction"  // 공공지원민간임대 건설 (시행령 §3①7호)
+    | "public_support_construction"  // 공공지원·장기일반민간임대 건설 (시행령 §3①7호 — 두 유형 요건이 같다)
     | "public_support_purchase"      // 공공지원민간임대 매입 (시행령 §3①8호)
     | "public_construction"
     | "public_purchase"
