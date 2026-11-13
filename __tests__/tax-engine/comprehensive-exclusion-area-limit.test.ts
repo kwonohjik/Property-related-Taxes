@@ -222,25 +222,29 @@ describe("공공지원민간임대 분리 — 건설(§7호) vs 매입(§8호)",
     expect(result.failReasons).toContain(COMPREHENSIVE_EXCL.PRICE_EXCEEDED);
   });
 
-  // 의무임대기간 공통: 10년
-  it("공공지원_건설: 경과 8년 < 의무 10년 → 배제 유지 + 경고", () => {
+  // 의무임대기간 공통: 2020.8.18. 이후 등록 신청분 10년(그 전 신청분 8년 — 부칙<제31085호> §3·§4,
+  // comprehensive-mandatory-period-8to10.anchor.test.ts). BASE 등록일(2017)은 8년이라 여기서는 2020.8.20. 신청분으로 본다.
+  const POST_0818 = { rentalRegistrationDate: new Date("2020-09-01"), rentalApplicationDate: new Date("2020-08-20") };
+  it("공공지원_건설: 경과 5년 < 의무 10년 → 배제 유지 + 경고", () => {
     const result = validateRentalExclusion({
       ...BASE_PUBLIC_SUPPORT,
+      ...POST_0818,
       registrationType: "public_support_construction",
       area: 100,
-      actualRentalYears: 8,
+      actualRentalYears: 5,
     });
     expect(result.isExcluded).toBe(true);
     expect(result.warnings?.length).toBeGreaterThan(0);
     expect(result.warnings![0]).toContain("10");
   });
 
-  it("공공지원_매입: 경과 8년 < 의무 10년 → 배제 유지 + 경고", () => {
+  it("공공지원_매입: 경과 5년 < 의무 10년 → 배제 유지 + 경고", () => {
     const result = validateRentalExclusion({
       ...BASE_PUBLIC_SUPPORT,
+      ...POST_0818,
       registrationType: "public_support_purchase",
       area: 200,
-      actualRentalYears: 8,
+      actualRentalYears: 5,
     });
     expect(result.isExcluded).toBe(true);
     expect(result.warnings?.length).toBeGreaterThan(0);

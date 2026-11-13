@@ -99,6 +99,13 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     keywords: ["법인 또는 법인으로 보는 단체가", "제2조제6호의2에 따른 단기민간임대주택"],
     keywordMode: "ALL",
   },
+  /** §3①7호 나목·8호 가목2) — 장기일반민간임대주택등 의무임대기간 10년(2020.8.18. 이후 등록 신청분 · 부칙<제31085호> §3·§4) */
+  {
+    id: "COMPREHENSIVE_DECREE.MANDATORY_PERIOD_LONG_10Y",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["10년 이상 계속하여 임대하는 것일 것", "같은 법 시행령 제34조제1항제3호에 따른 시점부터 그 기간을 계산한다"],
+    keywordMode: "ALL",
+  },
   /** §3①6호 — 미분양매입임대주택(2008.6.11.~2009.6.30. 최초 분양계약 · 5호 이상 · 수도권 밖 · 서류 제출) */
   {
     id: "COMPREHENSIVE_DECREE.UNSOLD_PURCHASE_RENTAL",

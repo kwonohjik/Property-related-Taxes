@@ -23,6 +23,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { asksBusinessRegistrationDate } from "@/lib/calc/comprehensive-api";
 import { toRegistrationType } from "@/lib/calc/comprehensive-api";
 import { RentalExclusion8NaFields } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
+import { RentalPeriodApplicationDateField } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
 import { RentalExclusion6hoFields } from "@/components/calc/comprehensive/RentalExclusion6hoFields";
 
 // ============================================================
@@ -240,6 +241,13 @@ function RentalExclusionDetail({
           상속·합병 승계 임대기간은 합산하여 입력 (시행령 §3⑦).
         </p>
       </div>
+
+      {/* 7호 나목·8호 가목2) 의무임대기간 8/10년 — 등록일이 2020.8.18. 이후일 때 신청일(선택) */}
+      <RentalPeriodApplicationDateField
+        property={property}
+        registrationType={property.rentalRegistrationType || toRegistrationType(property.exclusionType)}
+        onUpdate={onUpdate}
+      />
 
       {/* 임대등록 말소 (예외 케이스 — 기본 접힘) */}
       <ToggleCard
