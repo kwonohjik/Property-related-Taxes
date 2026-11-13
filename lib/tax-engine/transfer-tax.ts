@@ -459,6 +459,8 @@ function calculateTransferTaxCore(
       input,
       effectiveInput,
       estimatedBase,
+      // [echo] 표시 전용 — 정상 반환(`transfer-tax-normal-return.ts`)과 같은 값. 손실이어도 신고서·명세서·특례 카드가 읽는다.
+      gainEcho: { appliedExpenses, estimatedDeduction, swapApplied, swapComparison, expropriationValuationDetail, auctionValuationDetail, housingExpropriationValuationDetail, rawInput },
       steps,
       warnings,
       taxableGain: lossTaxableGain,

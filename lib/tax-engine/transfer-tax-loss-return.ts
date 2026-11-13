@@ -40,6 +40,20 @@ export interface LossReturnArgs {
   input: TransferTaxInput;
   effectiveInput: TransferTaxInput;
   estimatedBase: number;
+  /**
+   * [echo] 정상 반환(`transfer-tax-normal-return.ts`)이 싣는 양도차익 산출 표시값 — 표시 전용(세액 불변).
+   * 빠뜨리면 신고서가 필요경비를 취득가액에 흡수하고 상세명세서 1단계가 환산 손실을 0 · 0 으로 찍는다(비과세 조기 반환 `transfer-tax-finalize.ts`가 먼저 겪은 사고).
+   */
+  gainEcho: {
+    appliedExpenses: number;
+    estimatedDeduction: number;
+    swapApplied?: boolean;
+    swapComparison?: TransferTaxResult["swapComparison"];
+    expropriationValuationDetail?: TransferTaxResult["expropriationValuationDetail"];
+    auctionValuationDetail?: TransferTaxResult["auctionValuationDetail"];
+    housingExpropriationValuationDetail?: TransferTaxResult["housingExpropriationValuationDetail"];
+    rawInput: TransferTaxInput;
+  };
   steps: CalculationStep[];
   warnings: string[];
   transferGain: number;
@@ -72,6 +86,7 @@ export function buildLossTransferTaxResult({
   input,
   effectiveInput,
   estimatedBase,
+  gainEcho,
   steps,
   warnings,
   transferGain,
@@ -183,6 +198,18 @@ export function buildLossTransferTaxResult({
     transferGain: transferGain,
     taxableGain,
     usedEstimatedAcquisition: usedEstimated,
+    ...(usedEstimated ? { estimatedBase, estimatedDeduction: gainEcho.estimatedDeduction } : {}),
+    // 환산 기준시가 echo — 정상 반환과 같은 게이트(분리 취득이면 파트별 echo가 대신한다)
+    ...(effectiveInput.useEstimatedAcquisition && !splitDetail
+      ? { estimatedStdPriceAtAcquisition: effectiveInput.standardPriceAtAcquisition, estimatedStdPriceAtTransfer: effectiveInput.standardPriceAtTransfer }
+      : {}),
+    expenses: gainEcho.appliedExpenses,
+    swapApplied: gainEcho.swapApplied,
+    swapComparison: gainEcho.swapComparison,
+    expropriationValuationDetail: gainEcho.expropriationValuationDetail,
+    auctionValuationDetail: gainEcho.auctionValuationDetail,
+    housingExpropriationValuationDetail: gainEcho.housingExpropriationValuationDetail,
+    capitalExpenditureForDisplay: gainEcho.rawInput.capitalExpenditure ?? 0,
     ...(depreciationAmount ? { depreciationAmount } : {}),
     longTermHoldingDeduction: 0,
     lthdStartDate: resolveLTHDStartDate(effectiveInput),
