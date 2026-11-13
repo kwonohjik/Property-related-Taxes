@@ -17,6 +17,7 @@ import { multiFormAssetOf } from "./multi-result-groups";
 import type { ReactNode } from "react";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import {
+  assetExemptGain,
   effectiveGrossGain,
   inverseAcquisitionForDisplay,
   capExInAcquisitionColumnOfResult,
@@ -497,24 +498,13 @@ export function buildStatementItems(
 
   // 비과세 자산은 `transferGain`이 0이라 「비과세 양도차익」까지 0이 됐다 — gross 축으로 맞춘다
   // (신고서 정본: `FilingFormTableHelpers.ts:644`).
+  // 비과세 자산의 양도차손은 비과세 양도차익도 음수다(`assetExemptGain`과 같은 규칙 — 「전체 = 비과세 + 과세대상」 유지).
   const exemptGainSingle = isRentalHousingException
     ? 0
+    : result.isExempt
+    ? singleGrossGain - result.taxableGain
     : Math.max(0, singleGrossGain - result.taxableGain);
-  const exemptGainAgg = isAggregate
-    ? properties.reduce((s, p) => {
-        const gross = effectiveGrossGain(p);
-        return (
-          s +
-          Math.max(
-            0,
-            gross -
-              (gross > 0
-                ? Math.min(gross, Math.max(0, p.income) + p.longTermHoldingDeduction)
-                : gross),
-          )
-        );
-      }, 0)
-    : 0;
+  const exemptGainAgg = isAggregate ? properties.reduce((s, p) => s + assetExemptGain(p), 0) : 0;
   const exemptVal = isAggregate ? exemptGainAgg : exemptGainSingle;
   const taxableGainVal = isAggregate
     ? properties.reduce(
@@ -552,7 +542,7 @@ export function buildStatementItems(
       ? `전체 양도차익 ${totalTransferGainVal.toLocaleString()} (비과세분은 양도소득금액 단계에서 가른다)`
       : proratedStep
       ? prorationFormulaAsFrac(proratedStep.formula)
-      : exemptVal <= 0
+      : exemptVal === 0
         ? `전체 양도차익 ${totalTransferGainVal.toLocaleString()} (전액 과세)`
         : `전체 양도차익 ${totalTransferGainVal.toLocaleString()} − 비과세 양도차익 ${exemptVal.toLocaleString()}`;
   const exemptFormula = isAggregate

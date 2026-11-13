@@ -603,7 +603,10 @@ export function buildExemptEarlyResult(p: {
     specialHouseExclusionDetail: p.specialHouseExclusionDetail,
     warnings: p.warnings,
     transferGain: 0,
-    exemptGrossGain: Math.max(0, ownedGrossGain),
+    // 0 바닥을 두지 않는다 — 비과세 × 양도차손에서 gross가 0으로 눌리면 표시부 역산(「취득가액 = 양도가액 − gross − 필요경비」)이
+    // 취득가액을 양도가액으로 덮었다(입력 700,000,000 → 신고서 500,000,000). 표시 전용이라 세액 불변
+    // (계획서 `docs/00-pm/exempt-loss-gross-gain-display.plan.md` Q-1 a · 선례 #1642).
+    exemptGrossGain: ownedGrossGain,
     /**
      * [echo] 표시 전용 — 세액 불변.
      *

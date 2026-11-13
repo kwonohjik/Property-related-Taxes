@@ -138,6 +138,25 @@ describe("G2-6 카드 — 비과세/과세대상 양도차익은 §160① 안분
     expect([leafExempt, leafTaxable]).toEqual([1_120_000_000, 480_000_000]);
   });
 
+  /**
+   * 전액 비과세 × 양도차손(8억 양도 < 취득 10억 = −200,000,000) + 과세 주택(+500,000,000) — 엔진이 비과세 gross의 0 바닥을 걷은 뒤
+   * 비과세 양도차익이 음수라 행 조건이 `> 0`이면 비과세 행이 사라지고 「양도차익 − 비과세 = 과세대상」이 깨진다
+   * (계획서 `docs/00-pm/exempt-loss-gross-gain-display.plan.md` Q-1 a). 양도차익 300,000,000 − (−200,000,000) = 500,000,000.
+   */
+  it("(d) 비과세 손실 + 과세 주택: 양도차익 300,000,000 · 비과세 행 200,000,000(= −(−2억)) · 과세대상 500,000,000 — 행 검산 성립", async () => {
+    const { result, props } = await compute([
+      house("800,000,000", "1,000,000,000", { transferDate: "2025-03-01" }),
+      house("900,000,000", "400,000,000", { isOneHousehold: false }),
+    ]);
+    const rows = cardRows(result, props);
+    expect(rows).toContain("양도차익300,000,000");
+    expect(rows).toContain("비과세양도차익200,000,000");
+    expect(rows).toContain("과세대상양도차익500,000,000");
+    const leafExempt = result.properties.reduce((s, p) => s + assetExemptGain(p), 0);
+    expect(leafExempt).toBe(-200_000_000);
+    expect(300_000_000 - leafExempt).toBe(500_000_000);
+  });
+
   it("긍정 짝 — 부분 비과세 없음(12억 이하 비과세 + 과세 주택): 종전과 같은 값, 행 검산 일치", async () => {
     const { result, props } = await compute([
       house("1,000,000,000", "400,000,000"),

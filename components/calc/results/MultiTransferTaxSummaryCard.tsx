@@ -151,7 +151,7 @@ export function MultiTransferTaxSummaryCard({
              검산이 맞지 않았다. 신고서 양식과 같은 3행 구조로 가른다.
         */}
         <ResultRow label="양도차익" value={sums.grossGain} />
-        {exemptGain > 0 && (
+        {exemptGain !== 0 && (
           <>
             <ResultRow label="비과세 양도차익" value={-exemptGain} />
             <ResultRow label="과세대상 양도차익" value={gains.taxable} />
