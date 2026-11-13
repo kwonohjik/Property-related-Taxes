@@ -1,6 +1,10 @@
 # 종부세 합산배제 §3①4호(미임대 민간건설임대)·5호(부동산투자회사 2008 취득 매입임대)·9호(분양전환공공임대 임대의무기간 만료 후 미분양전환) 유형 신설
 
-- 작성: 2026-11-13 · 상태: **Q 결정 대기** (코드 변경 없음 · 실측은 throwaway probe — 파일 삭제 완료)
+- 작성: 2026-11-13 · 상태: **PR-1 엔진 구현(2026-11-13) — Q 권장안(a) · Q-8 #3323 · Q-9 #3325로 이미 처리**
+  - 엔진: `comprehensive-exclusion-4ho.ts`·`-5ho.ts`·`-9ho.ts` · 사실 `types/comprehensive-exclusion-459ho.types.ts` · 유형 키 `vacant_construction`/`reit_purchase`/`public_conversion_pending`(+`_rental`) · 사유 코드 19 · manifest 3(PASS) · anchor `comprehensive-exclusion-459ho.anchor.test.ts` 15(변이 4건 확인).
+  - 4호 사용승인일은 공통 `usageApprovalDate`(#3325) · 5호 호수는 6호와 같은 `reitRental5hoCount` · 9호 면적·가격·임대료는 바탕 유형(공공건설/공공매입)으로 계산.
+  - V-12 해소: 종부세법 §8②1호(MST 280417)는 대통령령 위임뿐. 제35352호 부칙 §2①은 1·2·3·7·8호만 들어 4호 나목은 2025 이후에도 부칙<제31447호> §2(사용승인일) — 원문 확인. 다만 4호는 「2년 이내」라 2025 이후 사용승인일은 언제나 2021.2.17. 뒤.
+  - PR-2(화면 14지점·Zod·route — 4·9호 임대개시일 선택 처리)는 다음.
 - 계기: 날짜 경계 점검(8호 나목 #3288·#3293 · 11호 나목 #3300 · 6호 신설 #3309·#3311) 뒤 남은 공백. 엔진 임대 유형은 1·2·3·6·7·8·10·11호뿐이고 **4·5·9호가 없다**(`lib/tax-engine/types/comprehensive.types.ts:69-105`). 화면 과세연도 선택지는 2021~2025(`lib/tax-engine/data/comprehensive-historical.ts:166` `COMPREHENSIVE_SUPPORTED_YEARS`), API는 2026도 받는다.
 - 선례: 6호 신설 계획서 `docs/01-plan/features/comprehensive-rental-excl-6ho-unsold-purchase.plan.md` (엔진 PR → 화면 PR 2단계, 사실 필드는 별도 `*.types.ts`, 「모름」=혜택 불성립 + 확인 필요).
 - 읽는 법: 3호·6호 계획과 같이 번호는 시행령 §3① 각 호. 인용은 법령명+법/령+조항호까지.

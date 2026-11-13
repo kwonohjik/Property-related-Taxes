@@ -7,6 +7,10 @@ import { addYears } from "./utc-date";
 import { excludedUnder8hoNa } from "./comprehensive-exclusion-8ho-na";
 import { unsoldPurchase6hoIssues } from "./comprehensive-exclusion-6ho";
 import { builtRentalBaseCap } from "./comprehensive-exclusion-price-era";
+import { vacantConstruction4hoIssues } from "./comprehensive-exclusion-4ho";
+import { reitPurchase5hoIssues } from "./comprehensive-exclusion-5ho";
+import { conversionPending9hoIssues } from "./comprehensive-exclusion-9ho";
+import { conversion9hoBaseType } from "./comprehensive-exclusion-9ho";
 import {
   COMPREHENSIVE_EXCL,
   COMPREHENSIVE_EXCL_CONST,
@@ -49,6 +53,9 @@ const MANDATORY_PERIOD_BY_TYPE: Record<
   private_short_term_6y_construction: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT_TERM_6Y, // 6 — §3①10호
   private_short_term_6y_purchase:     COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT_TERM_6Y, // 6 — §3①11호
   unsold_purchase:             COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,      // 5 — §3①6호 나목
+  vacant_construction:         0,                                                    // §3①4호 — 「소유」 · 임대기간 요건 없음
+  reit_purchase:               COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG,       // 10 — §3①5호 나목
+  public_conversion_pending:   0,                                                    // §3①9호 — 「소유」 · 임대 계속 요건 없음
 };
 
 /**
@@ -154,6 +161,14 @@ function twoPlusUnitsIssue(input: RentalExclusionInput): string | null {
 const NO_RENT_LIMIT_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
   "existing_rental",
   "unsold_purchase",
+  "vacant_construction", // 4호 — 미임대(임대료 없음)
+  "reit_purchase",       // 5호 — 임대료 문언 없음(§3⑧에도 없음)
+]);
+
+/** §3① 각 호 외의 부분 「소유(제4호 또는 제9호의 주택을 소유한 경우)」 — 임대 개시·임대 계속을 보지 않는다 */
+const OWNED_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
+  "vacant_construction",
+  "public_conversion_pending",
 ]);
 
 export function validateRentalExclusion(
@@ -171,9 +186,16 @@ export function validateRentalExclusion(
     failReasons.push(...unsoldPurchase6hoIssues(input));
     const unitsIssue = twoPlusUnitsIssue(input);
     if (unitsIssue) failReasons.push(unitsIssue);
+    failReasons.push(...vacantConstruction4hoIssues(input));
+    failReasons.push(...reitPurchase5hoIssues(input));
+    failReasons.push(...conversionPending9hoIssues(input));
   }
 
-  const areaLimit = getAreaLimit(input);
+  // 9호는 「제1호에 해당하는 공공건설임대주택」·「제2호에 해당하는 공공매입임대주택」 — 면적·가격은 그 바탕 유형으로 본다(Q-4 a)
+  const base9 = conversion9hoBaseType(input);
+  const limitInput: RentalExclusionInput = base9 ? { ...input, registrationType: base9 } : input;
+
+  const areaLimit = getAreaLimit(limitInput);
   if (input.area > areaLimit) {
     failReasons.push(
       areaLimit === COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_AREA_CONSTRUCTION
@@ -182,7 +204,7 @@ export function validateRentalExclusion(
     );
   }
 
-  const priceLimit = getPriceLimit(input);
+  const priceLimit = getPriceLimit(limitInput);
   if (input.assessedValue > priceLimit) {
     failReasons.push(COMPREHENSIVE_EXCL.PRICE_EXCEEDED);
     // 30호 이상을 골랐지만 그 구간이 아직 없던 과세연도 — 왜 30호 미만 금액으로 봤는지 알린다
@@ -190,7 +212,7 @@ export function validateRentalExclusion(
       failReasons.push(COMPREHENSIVE_EXCL.THIRTY_PLUS_TIER_NOT_IN_FORCE);
     }
     // 건설임대 6억 기준을 쓴 까닭(2021.2.17. 전 사용승인 · 사용승인일 모름)
-    const builtReason = thirtyPlusTierApplies(input) ? null : builtRentalBaseCap(input)?.reason;
+    const builtReason = thirtyPlusTierApplies(input) ? null : builtRentalBaseCap(limitInput)?.reason;
     if (builtReason) failReasons.push(builtReason);
   }
 
@@ -202,13 +224,16 @@ export function validateRentalExclusion(
     }
   }
 
-  if (input.assessmentDate < input.rentalStartDate) {
+  // 4·9호는 「소유」 — 임대 개시를 보지 않는다
+  if (!OWNED_TYPES.has(input.registrationType) && input.assessmentDate < input.rentalStartDate) {
     failReasons.push(COMPREHENSIVE_EXCL.RENTAL_NOT_STARTED);
   }
 
   // 의무임대기간 — 등록 말소 확인 시 즉시 차단 (시행령 §3① 계속임대 위반 확정)
   // ※ "현재까지 N년 미달"은 거부 사유 아님 — 장래 의무이므로 경고만(아래 warnings)
+  // 9호는 「소유」만 요구(공공주택사업자 — 민특법 등록 말소 개념 없음) · 4호는 임대사업자 요건이라 말소 시 불성립(계획서 4-7·9-7)
   if (
+    input.registrationType !== "public_conversion_pending" &&
     input.registrationRevokedDate &&
     input.registrationRevokedDate <= input.assessmentDate
   ) {
@@ -259,7 +284,14 @@ function getAreaLimit(input: RentalExclusionInput): number {
     case "private_short_term_6y_construction":
     // 미분양매입임대 — 149㎡ (§3①6호 가목)
     case "unsold_purchase":
+    // 미임대 민간건설 — 149㎡ (§3①4호 가목) · 부동산투자회사 2008 매입 — 149㎡ (§3①5호 가목)
+    case "vacant_construction":
+    case "reit_purchase":
       return COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_AREA_CONSTRUCTION; // 149
+
+    // 9호 — 바탕 유형을 모르면 면적을 보지 않는다(구분 모름 사유가 따로 불성립시킨다)
+    case "public_conversion_pending":
+      return Infinity;
 
     // 매입임대 — 면적제한 없음 (§3①2·8·11호)
     case "private_purchase_long":
@@ -306,6 +338,13 @@ function getPriceLimit(input: RentalExclusionInput): number {
     // 미분양매입임대 (§3①6호 가목) — 3억 (수도권 안은 다목으로 따로 불성립)
     case "unsold_purchase":
       return COMPREHENSIVE_EXCL_CONST.UNSOLD_PURCHASE_RENTAL_PRICE; // 3억
+    // 미임대 민간건설 (§3①4호 나목) — 9억/6억(부칙<제31447호> §2 · 2025 이후에도 사용승인일)
+    case "vacant_construction":
+      return builtRentalBaseCap(input)?.cap ?? COMPREHENSIVE_EXCL_CONST.BUILT_RENTAL_PRICE_PRE_20210217;
+    // 5호 — 2008년도 과세기준일 공시가격(사실 칸)으로 본다 · 9호 바탕 유형 모름 — 가격을 보지 않는다
+    case "reit_purchase":
+    case "public_conversion_pending":
+      return Infinity;
     // 장기 건설임대 (§3①1·7호) — 30호미만 9억 / 30호이상 12억, 수도권 무관
     case "private_construction":
     case "public_construction":
@@ -344,6 +383,9 @@ function getRentalExclusionLegalCode(
     case "private_short_term_6y_construction": return COMPREHENSIVE_EXCL.PRIVATE_SHORT_TERM_RENTAL_6Y_CONSTRUCTION;
     case "private_short_term_6y_purchase":     return COMPREHENSIVE_EXCL.PRIVATE_SHORT_TERM_RENTAL_6Y_PURCHASE;
     case "unsold_purchase":                    return COMPREHENSIVE_EXCL.UNSOLD_PURCHASE_RENTAL;
+    case "vacant_construction":                return COMPREHENSIVE_EXCL.VACANT_CONSTRUCTION_RENTAL;
+    case "reit_purchase":                      return COMPREHENSIVE_EXCL.REIT_PURCHASE_RENTAL;
+    case "public_conversion_pending":          return COMPREHENSIVE_EXCL.PUBLIC_CONVERSION_PENDING_RENTAL;
   }
 }
 
@@ -440,6 +482,9 @@ export function applyAggregationExclusion(
     "private_short_term_rental_6y_construction",
     "private_short_term_rental_6y_purchase",
     "unsold_purchase_rental",
+    "vacant_construction_rental",
+    "reit_purchase_rental",
+    "public_conversion_pending_rental",
   ];
 
   const results: ExclusionResult[] = properties.map((prop) => {
