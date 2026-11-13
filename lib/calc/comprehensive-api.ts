@@ -16,6 +16,8 @@ import { rental8NaApiFields } from "./comprehensive-rental-8na";
 import { validate8NaInputs } from "./comprehensive-rental-8na";
 import { rental6hoApiFields } from "./comprehensive-rental-6ho";
 import { validate6hoInputs } from "./comprehensive-rental-6ho";
+import { qualifyingUnitHo } from "./comprehensive-rental-units";
+import { validateQualifyingUnits } from "./comprehensive-rental-units";
 
 /**
  * 법인 §9② class 도출 (시행령 §4의4) — 엔진과 동일 헬퍼로 단일 진실. 개인이면 undefined.
@@ -122,6 +124,10 @@ export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFo
       label,
     );
     if (ho6Error) return ho6Error;
+    // §3①1·3·7·10호 「2호 이상」 — ⑤가 보이는 칸과 같은 술어(qualifyingUnitHo)
+    const regType = p.rentalRegistrationType || toRegistrationType(p.exclusionType);
+    const unitsError = validateQualifyingUnits(p, regType, asksThirtyPlusUnits(regType, formData.assessmentYear), label);
+    if (unitsError) return unitsError;
   }
   const aggParcelsMode = formData.hasAggregateLand && formData.landAggregateMode === "parcels";
   const sepParcelsMode = formData.hasSeparateLand && formData.landSeparateMode === "parcels";
@@ -446,6 +452,8 @@ export async function callComprehensiveApi(
           isThirtyPlusUnits: asksThirtyPlusUnits(registrationType, formData.assessmentYear)
             ? p.isThirtyPlusUnits || undefined
             : undefined,
+          // §3①1·3·7·10호 「2호 이상」 — 그 네 호에서만(⑤⑧과 같은 술어)
+          qualifyingUnitCount: qualifyingUnitHo(registrationType) ? p.qualifyingUnitCount : undefined,
           // §3①8호 나목·7호 단서 — 묻는 칸만(na8Asks). 조정대상지역은 PNU 자동 판정 또는 직접 입력
           ...rental8NaApiFields(p, na8Context(formData, registrationType)),
           // §3①6호 — 6호일 때만 값이 있다(그 밖 유형은 빈 객체라 위 8호 칸 값을 덮지 않는다)

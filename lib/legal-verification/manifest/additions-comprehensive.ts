@@ -113,6 +113,16 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     keywords: ["10년 이상 계속하여 임대하는 것일 것", "같은 법 시행령 제34조제1항제3호에 따른 시점부터 그 기간을 계산한다"],
     keywordMode: "ALL",
   },
+  /** §3①1·3·7·10호 「요건을 모두 갖춘 주택이 2호 이상」 · §3⑤ 1·6·7·10호 호수는 같은 시·도별 합산(3호는 ⑤ 밖) */
+  {
+    id: "COMPREHENSIVE_DECREE.TWO_PLUS_UNITS",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: [
+      "요건을 모두 갖춘 주택이 2호 이상인 경우 그 주택",
+      "같은 특별시ㆍ광역시 또는 도에 소재하는 주택별로 각각 합산하여 계산한다",
+    ],
+    keywordMode: "ALL",
+  },
   /** §3①6호 — 미분양매입임대주택(2008.6.11.~2009.6.30. 최초 분양계약 · 5호 이상 · 수도권 밖 · 서류 제출) */
   {
     id: "COMPREHENSIVE_DECREE.UNSOLD_PURCHASE_RENTAL",

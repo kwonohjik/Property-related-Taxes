@@ -12,6 +12,7 @@ import type { RentalExclusionInput } from "@/lib/tax-engine/types/comprehensive.
 import { NA8_NOT_APPLICABLE } from "./_helpers/comprehensive-8na-not-applicable";
 
 const base = (over: Partial<RentalExclusionInput>): RentalExclusionInput => ({
+  qualifyingUnitCount: 2, // §3①1·3·7·10호 「2호 이상」 충족 — 그 게이트는 two-plus-units anchor
   registrationType: "private_short_term_6y_construction",
   // 11호 나목 1)·2) 해당 없음 확정 — 나목 판정은 comprehensive-exclusion-11ho-na.anchor.test.ts
   ...NA8_NOT_APPLICABLE,

@@ -93,6 +93,8 @@ test.describe("종부세 단기민간임대 6년 합산배제", () => {
       page.locator('select:has(option[value="private_short_term_6y_construction"])'),
     ).toHaveValue("private_short_term_6y_construction");
     await fillStep3(page);
+    // §3①10호 「2호 이상」 — 이 스펙은 2025 특례 축만 본다
+    await page.getByTestId("comprehensive-qualifying-unit-count").locator("input").fill("2");
     await clickNext(page); // Step3 → Step4(토지·계산)
     await calcAndWait(page);
 

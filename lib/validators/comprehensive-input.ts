@@ -127,6 +127,8 @@ const rentalExclusionInfoSchema = z.object({
   isEupMyeonArea: z.boolean().optional(),
   /** 30호 이상 여부 (§3①1·2·7·8호 공시가격 상한 tier) */
   isThirtyPlusUnits: z.boolean().optional(),
+  /** §3①1·3·7·10호 「요건을 모두 갖춘 주택이 2호 이상」 — 이 주택 포함 호수. 그 네 유형에서 없으면 엔진이 「모름」=불성립 */
+  qualifyingUnitCount: z.number().int().nonnegative().optional(),
 
   // ── §3①8호 나목 1)~4)·7호 단서 (엔진 comprehensive-exclusion-8ho-na.ts) — 없으면 엔진이 「모름」=불성립 ──
   acquisitionDate: isoDateOptional,

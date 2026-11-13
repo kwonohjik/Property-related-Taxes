@@ -1,0 +1,55 @@
+import { test, expect } from "@playwright/test";
+import { openHouseModal, closeHouseModal, expandHouseAdvanced } from "./_helpers/tax-flow";
+
+/**
+ * 종부세 합산배제 §3①1·3·7·10호 「요건을 모두 갖춘 주택이 2호 이상」 — 호수 칸(⑤) → ④ 전송 → 엔진 판정.
+ * 2023 과세연도 · 공공건설 5억(6억 이하라 사용승인일 칸 없음) · 84㎡. 1호 → 불성립 + 2호 미만 사유 · 2호 → 성립.
+ *
+ * worktree 실행: E2E_PORT=3103 npx playwright test e2e/comprehensive-two-plus-units.spec.ts
+ */
+async function run(page: import("@playwright/test").Page, units: string) {
+  await page.goto("/calc/comprehensive-tax");
+  await page.getByRole("radio", { name: "2023" }).check();
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await openHouseModal(page, 0);
+  await page.getByPlaceholder("금액 입력").first().fill("500000000");
+  await page.getByPlaceholder("0.00").first().fill("84");
+  await expandHouseAdvanced(page);
+  await page
+    .getByRole("dialog")
+    .locator('select:has(option[value="public_construction_rental"])')
+    .selectOption("public_construction_rental");
+  await closeHouseModal(page);
+  await page.getByRole("button", { name: /^다음/ }).click();
+  await page.getByLabel("연도").first().fill("2018");
+  await page.getByLabel("월").first().fill("1");
+  await page.getByLabel("일").first().fill("10");
+  await page.getByTestId("comprehensive-qualifying-unit-count").locator("input").fill(units);
+  const startBox = page.locator('div.space-y-1\\.5:has(> label:has-text("임대개시일"))');
+  await startBox.getByLabel("연도").fill("2018");
+  await startBox.getByLabel("월").fill("2");
+  await startBox.getByLabel("일").fill("1");
+  await page.getByRole("button", { name: /^다음/ }).click();
+  const resp = page.waitForResponse((r) => r.url().includes("/api/calc/comprehensive") && r.request().method() === "POST", {
+    timeout: 30_000,
+  });
+  await page.getByRole("button", { name: /계산하기/ }).click();
+  const r = await resp;
+  expect(r.ok()).toBe(true);
+  return r.request().postDataJSON() as { properties: { rentalInfo?: Record<string, unknown> }[] };
+}
+
+test("2PLUS-E2E-1: 공공건설 1호뿐 → 불성립 + 2호 미만 사유", async ({ page }) => {
+  test.setTimeout(90_000);
+  const body = await run(page, "1");
+  expect(body.properties[0].rentalInfo).toMatchObject({ qualifyingUnitCount: 1 });
+  await expect(page.getByTestId("comprehensive-exclusion-fail-reasons")).toContainText("2호 미만", { timeout: 30_000 });
+});
+
+test("2PLUS-E2E-2: 공공건설 2호 → 성립", async ({ page }) => {
+  test.setTimeout(90_000);
+  const body = await run(page, "2");
+  expect(body.properties[0].rentalInfo).toMatchObject({ qualifyingUnitCount: 2 });
+  await expect(page.getByText(/합산배제/).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("comprehensive-exclusion-fail-reasons")).toHaveCount(0);
+});

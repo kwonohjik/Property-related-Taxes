@@ -123,6 +123,11 @@ export interface RentalExclusionInput extends RentalExclusion8NaFacts, RentalExc
   isEupMyeonArea?: boolean;
   /** 합산배제 임대주택 30호 이상 여부 (§3①1·2·7·8호 공시가격 상한 tier — 30호↑ 상향) */
   isThirtyPlusUnits?: boolean;
+  /**
+   * §3①1·3·7·10호 「요건을 모두 갖춘 주택이 2호 이상」 — 이 주택을 포함해 그 호의 요건을 모두 갖춘 주택 수.
+   * 1·7·10호는 같은 특별시·광역시·도(§3⑤), 3호는 ⑤ 밖이라 전국. 없으면 불성립 + 확인 필요.
+   */
+  qualifyingUnitCount?: number;
 
   // ── 의무임대기간 (시행령 §3① "N년 이상 계속하여 임대") ──
   /** 임대등록 말소일 — 입력 + 과세기준일 이전이면 합산배제 거부 (시행령 §3① 계속임대 위반 확정) */
