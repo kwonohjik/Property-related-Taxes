@@ -99,6 +99,24 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     keywords: ["법인 또는 법인으로 보는 단체가", "제2조제6호의2에 따른 단기민간임대주택"],
     keywordMode: "ALL",
   },
+  /** §3①6호 — 미분양매입임대주택(2008.6.11.~2009.6.30. 최초 분양계약 · 5호 이상 · 수도권 밖 · 서류 제출) */
+  {
+    id: "COMPREHENSIVE_DECREE.UNSOLD_PURCHASE_RENTAL",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: [
+      "2008년 6월 11일부터 2009년 6월 30일까지 최초로 분양계약을 체결하고 계약금을 납부한 주택",
+      "미분양매입임대주택",
+      "미분양주택 확인서 사본",
+    ],
+    keywordMode: "ALL",
+  },
+  /** §3①6호 가목 단서 1) — 2020.7.11. 이후 단기민간임대 등록 신청(대통령령 제31085호) */
+  {
+    id: "COMPREHENSIVE_DECREE.UNSOLD_6HO_GA1_SHORT_AFTER_0711",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["같은 법 제2조제6호에 따른 단기민간임대주택", "법률 제17482호 민간임대주택에 관한 특별법 일부개정법률로 개정되기 전의 것"],
+    keywordMode: "ALL",
+  },
   {
     id: "COMPREHENSIVE_DECREE.EXCLUDED_EMPLOYEE_HOUSE",
     citation: "종합부동산세법 시행령 §4",

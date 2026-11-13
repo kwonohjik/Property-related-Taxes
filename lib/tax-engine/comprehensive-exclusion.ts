@@ -5,6 +5,7 @@
 
 import { addYears } from "./utc-date";
 import { excludedUnder8hoNa } from "./comprehensive-exclusion-8ho-na";
+import { unsoldPurchase6hoIssues } from "./comprehensive-exclusion-6ho";
 import {
   COMPREHENSIVE_EXCL,
   COMPREHENSIVE_EXCL_CONST,
@@ -46,6 +47,7 @@ const MANDATORY_PERIOD_BY_TYPE: Record<
   existing_rental:             COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,      // 5 — §3①3호 (2005년 이전)
   private_short_term_6y_construction: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT_TERM_6Y, // 6 — §3①10호
   private_short_term_6y_purchase:     COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT_TERM_6Y, // 6 — §3①11호
+  unsold_purchase:             COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,      // 5 — §3①6호 나목
 };
 
 /**
@@ -101,6 +103,11 @@ function shortTerm6yEraIssues(input: RentalExclusionInput): string[] {
   return issues;
 }
 
+const NO_RENT_LIMIT_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
+  "existing_rental",
+  "unsold_purchase",
+]);
+
 export function validateRentalExclusion(
   input: RentalExclusionInput,
 ): ExclusionValidationResult {
@@ -113,6 +120,7 @@ export function validateRentalExclusion(
     if (capIssue) failReasons.push(capIssue);
     failReasons.push(...shortTerm6yEraIssues(input));
     failReasons.push(...excludedUnder8hoNa(input));
+    failReasons.push(...unsoldPurchase6hoIssues(input));
   }
 
   const areaLimit = getAreaLimit(input);
@@ -129,7 +137,8 @@ export function validateRentalExclusion(
     failReasons.push(COMPREHENSIVE_EXCL.PRICE_EXCEEDED);
   }
 
-  if (!input.isInitialContract && input.previousRent !== undefined) {
+  // 임대료 증가율 요건은 1·2·7·8·10·11호에만 있다 — 3호(2005.1.5. 이전 임대)·6호(미분양매입)는 없다(§3① 각 호 · §3⑧)
+  if (!NO_RENT_LIMIT_TYPES.has(input.registrationType) && !input.isInitialContract && input.previousRent !== undefined) {
     const increaseRate = (input.currentRent - input.previousRent) / input.previousRent;
     if (increaseRate > COMPREHENSIVE_EXCL_CONST.RENT_INCREASE_RATE_LIMIT) {
       failReasons.push(COMPREHENSIVE_EXCL.RENT_INCREASE_EXCEEDED);
@@ -187,6 +196,8 @@ function getAreaLimit(input: RentalExclusionInput): number {
     case "public_construction":
     case "public_support_construction":
     case "private_short_term_6y_construction":
+    // 미분양매입임대 — 149㎡ (§3①6호 가목)
+    case "unsold_purchase":
       return COMPREHENSIVE_EXCL_CONST.SHORT_TERM_6Y_AREA_CONSTRUCTION; // 149
 
     // 매입임대 — 면적제한 없음 (§3①2·8·11호)
@@ -220,6 +231,9 @@ function getPriceLimit(input: RentalExclusionInput): number {
     // 기존임대 (§3①3호) — 3억, 수도권·호수 무관
     case "existing_rental":
       return COMPREHENSIVE_EXCL_CONST.EXISTING_RENTAL_PRICE; // 3억
+    // 미분양매입임대 (§3①6호 가목) — 3억 (수도권 안은 다목으로 따로 불성립)
+    case "unsold_purchase":
+      return COMPREHENSIVE_EXCL_CONST.UNSOLD_PURCHASE_RENTAL_PRICE; // 3억
     // 장기 건설임대 (§3①1·7호) — 30호미만 9억 / 30호이상 12억, 수도권 무관
     case "private_construction":
     case "public_construction":
@@ -256,6 +270,7 @@ function getRentalExclusionLegalCode(
     case "existing_rental":             return COMPREHENSIVE_EXCL.EXISTING_RENTAL;
     case "private_short_term_6y_construction": return COMPREHENSIVE_EXCL.PRIVATE_SHORT_TERM_RENTAL_6Y_CONSTRUCTION;
     case "private_short_term_6y_purchase":     return COMPREHENSIVE_EXCL.PRIVATE_SHORT_TERM_RENTAL_6Y_PURCHASE;
+    case "unsold_purchase":                    return COMPREHENSIVE_EXCL.UNSOLD_PURCHASE_RENTAL;
   }
 }
 
@@ -351,6 +366,7 @@ export function applyAggregationExclusion(
     "existing_rental",
     "private_short_term_rental_6y_construction",
     "private_short_term_rental_6y_purchase",
+    "unsold_purchase_rental",
   ];
 
   const results: ExclusionResult[] = properties.map((prop) => {
