@@ -123,6 +123,37 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  /** §3①4호 — 미임대 민간건설임대주택(소유 · 사용승인 후 미임대 2년 이내 · 9억) */
+  {
+    id: "COMPREHENSIVE_DECREE.VACANT_CONSTRUCTION_4HO",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: [
+      "소유(제4호 또는 제9호의 주택을 소유한 경우를 말한다)",
+      "임대된 사실이 없고, 그 임대되지 아니한 기간이 2년 이내일 것",
+      "합산배제신고를 한 연도의 과세기준일 현재의 공시가격이 9억원 이하일 것",
+    ],
+    keywordMode: "ALL",
+  },
+  /** §3①5호 — 부동산투자회사 등 2008년 취득 매입임대(5호 이상 · 2008 공시가격 6억 · 수도권 밖) */
+  {
+    id: "COMPREHENSIVE_DECREE.REIT_PURCHASE_5HO",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: [
+      "2008년 1월 1일부터 2008년 12월 31일까지 취득 및 임대하는 매입임대주택",
+      "2008년도 과세기준일의 공시가격이 6억원 이하일 것",
+    ],
+    keywordMode: "ALL",
+  },
+  /** §3①9호 — 분양전환공공임대 임대의무기간 만료 후 미분양전환(만료일 다음 날부터 2년 이내) */
+  {
+    id: "COMPREHENSIVE_DECREE.CONVERSION_PENDING_9HO",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: [
+      "임대의무기간이 만료된 후 분양전환이 이루어지지 않은 주택",
+      "임대의무기간 만료일의 다음 날부터 2년 이내인 경우로 한정한다",
+    ],
+    keywordMode: "ALL",
+  },
   /** §3①6호 — 미분양매입임대주택(2008.6.11.~2009.6.30. 최초 분양계약 · 5호 이상 · 수도권 밖 · 서류 제출) */
   {
     id: "COMPREHENSIVE_DECREE.UNSOLD_PURCHASE_RENTAL",
