@@ -41,7 +41,7 @@ const RENTAL_REG_TYPE_OPTIONS: [string, string][] = [
   ["private_purchase_long", "민간매입임대 장기일반"],
   ["private_purchase_short", "민간매입임대 단기 구법"],
   ["private_construction", "민간건설임대"],
-  ["public_support_construction", "공공지원민간임대 건설형 (§7호, 149㎡ 이하)"],
+  ["public_support_construction", "공공지원·장기일반민간임대 건설형 (§3①7호, 149㎡ 이하)"],
   ["public_support_purchase", "공공지원민간임대 매입형 (§8호, 면적제한 없음)"],
   ["public_construction", "공공건설임대"],
   ["public_purchase", "공공매입임대"],
@@ -144,6 +144,17 @@ function RentalExclusionDetail({
         {property.rentalRegistrationType === "existing_rental" && (
           <p className="text-xs text-muted-foreground">
             기존임대주택(§3①3호): 2005년 1월 5일 이전 등록 · 공시가격 3억원 이하 · 5년 이상 임대 · 전용면적 85㎡ 이하 (읍·면 지역은 100㎡ 이하)
+          </p>
+        )}
+        {/* §3①7호는 건설임대 중 공공지원·장기일반을 한 호로 묶는다 — 장기일반 건설은 7호로 판정(서면-2023-부동산-2263) */}
+        {property.rentalRegistrationType === "private_construction" && (
+          <p className="text-xs text-muted-foreground">
+            민간건설임대(§3①1호)는 2018.3.31. 이전 등록·사업자등록 주택만 해당합니다. 장기일반·공공지원민간임대로 등록했다면 「공공지원·장기일반민간임대 건설형(§3①7호)」을 고르세요.
+          </p>
+        )}
+        {property.rentalRegistrationType === "public_support_construction" && (
+          <p className="text-xs text-muted-foreground">
+            §3①7호: 건설임대 중 공공지원 또는 장기일반민간임대 · 전용 149㎡ 이하 · 10년 이상 임대(2020.8.17. 이전 등록 신청분 8년) · 임대료 5% 초과 금지 · 2호 이상. 1호와 달리 2018.3.31. 등록 한정 단서는 없습니다.
           </p>
         )}
       </div>

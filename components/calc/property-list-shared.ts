@@ -26,7 +26,7 @@ export const EXCLUSION_TYPE_OPTIONS: [string, string][] = [
   ["private_purchase_rental_long", "민간매입임대 장기일반 (시행령 §3①8호)"],
   ["private_purchase_rental_short", "민간매입임대 단기 구법 (시행령 §3①2호)"],
   ["private_construction_rental", "민간건설임대 (시행령 §3①1호)"],
-  ["public_support_construction_rental", "공공지원민간임대 건설 (시행령 §3①7호)"],
+  ["public_support_construction_rental", "공공지원·장기일반민간임대 건설 (시행령 §3①7호)"],
   ["public_support_purchase_rental", "공공지원민간임대 매입 (시행령 §3①8호)"],
   ["public_construction_rental", "공공건설임대 (시행령 §3①1호)"],
   ["public_purchase_rental", "공공매입임대 (시행령 §3①2호)"],
