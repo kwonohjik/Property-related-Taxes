@@ -20,6 +20,8 @@ export type { CorporateHousingClass, CorporateHousingType, CorporateHousingReqs 
 
 // §3①8호 나목·7호 단서 판정 입력 — 별도 파일(800줄 정책)
 import type { RentalExclusion8NaFacts } from "./comprehensive-exclusion-8na.types";
+// §3①6호 미분양매입임대 판정 입력 — 별도 파일(800줄 정책)
+import type { RentalExclusion6hoFacts } from "./comprehensive-exclusion-6ho.types";
 
 // 직전연도 세부담상한 상당액 타입 — 별도 파일(800줄 정책). 로컬 사용 + 하위호환 re-export
 import type {
@@ -75,6 +77,7 @@ export type ExclusionType =
   | "existing_rental"               // 기존임대주택 2005년 이전 등록 (시행령 §3①3호)
   | "private_short_term_rental_6y_construction" // 단기민간임대 건설 6년 (시행령 §3①10호)
   | "private_short_term_rental_6y_purchase"     // 단기민간임대 매입 6년 (시행령 §3①11호)
+  | "unsold_purchase_rental"        // 미분양매입임대 (시행령 §3①6호)
   | "unsold_housing"                // 미분양주택 (시행령 §4①1호)
   | "daycare_housing"               // 가정어린이집용 (시행령 §4①2호)
   | "employee_housing"              // 사원용 (시행령 §4①3호)
@@ -87,7 +90,7 @@ export type ExclusionType =
 /**
  * 임대주택 합산배제 입력 (시행령 §3 요건 판정용)
  */
-export interface RentalExclusionInput extends RentalExclusion8NaFacts {
+export interface RentalExclusionInput extends RentalExclusion8NaFacts, RentalExclusion6hoFacts {
   registrationType:
     | "private_construction"
     | "private_purchase_long"
@@ -98,7 +101,8 @@ export interface RentalExclusionInput extends RentalExclusion8NaFacts {
     | "public_purchase"
     | "existing_rental"              // 기존임대주택 2005년 이전 등록 (시행령 §3①3호)
     | "private_short_term_6y_construction"  // 단기민간임대 건설 (시행령 §3①10호)
-    | "private_short_term_6y_purchase";     // 단기민간임대 매입 (시행령 §3①11호)
+    | "private_short_term_6y_purchase"      // 단기민간임대 매입 (시행령 §3①11호)
+    | "unsold_purchase";                    // 미분양매입임대 (시행령 §3①6호)
   rentalRegistrationDate: Date;    // 지자체 임대사업자 등록일(등록증 — 신청일 아님, 서면-2021-법규재산-3280)
   /**
    * 세무서 사업자등록일(소득세법 §168·법인세법 §111) — §3①1호·2호 단서 「2018년 3월 31일 이전에 … 사업자등록등」
