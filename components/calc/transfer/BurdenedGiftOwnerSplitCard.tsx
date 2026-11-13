@@ -96,7 +96,7 @@ export function BurdenedGiftOwnerSplitCard({ asset, onChange, transferDate }: Co
       <ToneCard tone="amber" title={`증여한 ${name}분의 기준시가 (소득세법 시행령 §159①)`}>
         <p className="text-caption text-amber-900 dark:text-amber-200">
           {market
-            ? `증여한 ${name}분의 시가는 위 시가 평가 칸에 입력했습니다. 여기 기준시가는 ${transferNeeded ? "환산취득가액(양도가액 × 취득시 기준시가 ÷ 양도시 기준시가) 계산에" : "취득가액(취득시 기준시가 × 채무비율) 계산에"} 씁니다.`
+            ? `증여한 ${name}분의 시가는 위 시가 평가 칸에 입력했습니다. 여기 기준시가는 ${transferNeeded ? "환산취득가액(양도가액에 취득시·양도시 기준시가 비율을 곱한 값) 계산에" : "취득가액(취득시 기준시가 × 채무비율) 계산에"} 씁니다.`
             : `증여가액(C)과 양도가액이 증여한 ${name}분의 기준시가로 정해집니다 — 취득가액은 취득시 기준시가에 채무비율을 곱합니다.`}
           {` ${name === "건물" ? "토지" : "건물"}분은 입력하지 않습니다.`}
         </p>
