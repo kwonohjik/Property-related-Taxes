@@ -569,6 +569,14 @@ export interface PresaleRightEntry {
   originalMemberDisposalDelayReason?: string;
   /** §155⑱ 「해당 각 호의 매각 등의 방법으로 양도」 — 2022-02-15 전 양도분의 요건 */
   originalMemberDisposalDelayDisposedByThatMethod?: boolean;
+  /** 기존주택 매매계약 체결·계약금 지급일(YYYY-MM-DD) — §155①2호 괄호·연혁 부칙(리뷰 E-3) */
+  originalMemberContractDate?: string;
+  /** §155⑯ 공공기관·법인 지방이전 특례 */
+  originalMemberPublicInstitutionRelocation?: boolean;
+  /** §155⑯ 이전한 기관·법인 소재지 지번(표시용) */
+  originalMemberRelocatedInstitutionJibun?: string;
+  /** §155⑯ 이전한 시·군 코드(10자리) — 위 주소에서 파생 */
+  originalMemberRelocatedSigunguCode?: string;
   isInherited?: boolean;
   /**
    * 상속인이 아닌 사람이 유증·사인증여로 받은 권리(isInherited=true 시에만 의미) — §156의2⑥⑦ · §156의3④⑤의 「상속받은」

@@ -48,6 +48,9 @@ export interface PresaleRightPayloadItem {
   originalMemberTenantLeaseEndDate?: string;
   originalMemberDisposalDelayReason?: string;
   originalMemberDisposalDelayDisposedByThatMethod?: boolean;
+  originalMemberContractDate?: string;
+  originalMemberPublicInstitutionRelocation?: boolean;
+  originalMemberRelocatedSigunguCode?: string;
   isInherited?: boolean;
   nonHeirBequest?: boolean;
   isRankingDisqualifiedInheritedRight?: boolean;
@@ -64,10 +67,20 @@ export interface PresaleRightPayloadItem {
   inheritedDate?: string;
 }
 
-/** 기존주택 원조합원 행의 §155① 사실(전입일·기존 임차인 단서·§155⑱ 사유). 그 밖의 행이면 빈 객체. */
+/** 기존주택 원조합원 행의 §155① 사실(계약일·전입일·기존 임차인 단서·§155⑯·⑱). 그 밖의 행이면 빈 객체. */
 function originalMemberFacts(p: PresaleRightEntry): Partial<PresaleRightPayloadItem> {
   if (p.type !== "redevelopment_right" || effectiveMemberOrigin(p) !== "original_house") return {};
   return {
+    ...(p.originalMemberContractDate ? { originalMemberContractDate: p.originalMemberContractDate } : {}),
+    // §155⑯ — 토글을 끄면 남은 이전지 코드는 싣지 않는다(일시적 2주택 경로 `buildTempTwoHouseDeadlineExceptionFacts`와 같은 규약).
+    ...(p.originalMemberPublicInstitutionRelocation
+      ? {
+          originalMemberPublicInstitutionRelocation: true,
+          ...(p.originalMemberRelocatedSigunguCode
+            ? { originalMemberRelocatedSigunguCode: p.originalMemberRelocatedSigunguCode }
+            : {}),
+        }
+      : {}),
     ...(p.originalMemberMoveInDate ? { originalMemberMoveInDate: p.originalMemberMoveInDate } : {}),
     ...(p.originalMemberExistingTenant && p.originalMemberTenantLeaseEndDate
       ? { originalMemberTenantLeaseEndDate: p.originalMemberTenantLeaseEndDate }

@@ -17,9 +17,11 @@
  *
  * ## 조정대상지역 처분기한
  *
- * 처분기한은 일시적 2주택 경로와 **같은 leaf**(`resolveTemporaryTwoHouseDeadlineEra`)로 정한다. 「두 주택이 신규 주택
- * 취득일에 조정대상지역인가」는 양도 주택의 `regionCode`와 입주권 행의 `regionCode`(기존주택 = 정비구역 소재지)로
- * 판정한다. 모르면 두 경우를 모두 계산해, 결론이 같을 때만 확정한다(결론을 가르면 특례 불성립 + 확인 필요).
+ * 처분기한은 일시적 2주택 경로와 **같은 함수**(`resolveTemporaryTwoHouseDeadlineFor` — 연혁 기한·부칙 계약일·§155⑯ 5년)로
+ * 정한다. 입주권 행을 `temporaryTwoHouse` 입력으로 옮겨 넘긴다(`asTemporaryTwoHouse` · 2026-11-13 리뷰 E-3). 「두 주택이
+ * 신규 주택 취득일에 조정대상지역인가」는 양도 주택의 `regionCode`와 입주권 행의 `regionCode`(기존주택 = 정비구역 소재지)로
+ * 판정하고, 2호 괄호(공고 전 취득·계약 제외)는 정본 `resolveRegulatedAtNewAcquisition`을 따른다. 모르면 두 경우를 모두
+ * 계산해, 결론이 같을 때만 확정한다(결론을 가르면 특례 불성립 + 확인 필요).
  *
  * ## 입주권 행이 받는 §155① 사실 (#2054 후속)
  *
@@ -33,9 +35,12 @@
  */
 import { format } from "../utc-date";
 import { isRegulatedByBjdCode } from "../data/regulated-areas";
-import { resolveTemporaryTwoHouseDeadlineEra } from "../data/temporary-two-house-deadline-era";
 import { TRANSFER } from "../legal-codes";
 import { judgeTemporaryTwoHouseTiming } from "../transfer-tax-temporary-two-house-timing";
+import { meetsPublicInstitutionRelocationRegion } from "../transfer-tax-temporary-two-house-timing";
+import { resolveRegulatedAtNewAcquisition } from "../transfer-tax-temporary-two-house-timing";
+import { resolveTemporaryTwoHouseDeadlineFor } from "../transfer-tax-temporary-two-house-timing";
+import { extractSigunguCodeFromPnu } from "@/lib/geo/pnu-sigungu";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
 import type { PresaleRight } from "../types/multi-house-surcharge.types";
 import type { TransferTaxInput } from "../types/transfer.types";
@@ -74,28 +79,60 @@ function regulatedAt(code: string | undefined, inDistrict: boolean | undefined, 
   return j.districtOnly ? undefined : j.isRegulated;
 }
 
+/**
+ * 원조합원 입주권 행을 일시적 2주택 경로의 입력(`temporaryTwoHouse`)으로 옮긴다 — 신규 주택 = 기존주택(B).
+ * 조정 판정(2호 괄호 공고 전 취득·계약)·연혁 기한(부칙 계약일)·§155⑯을 정본 함수가 그대로 판정하게 한다
+ * (2026-11-13 리뷰 E-3 — 종전에는 이 셋이 빠진 채 기한을 따로 계산해 같은 사실에서 정본 경로와 결론이 갈렸다).
+ */
+function asTemporaryTwoHouse(
+  input: OriginalMemberInput,
+  right: PresaleRight,
+): NonNullable<TransferTaxInput["temporaryTwoHouse"]> {
+  const newHouseSigunguCode = extractSigunguCodeFromPnu(right.regionCode);
+  return {
+    previousAcquisitionDate: input.acquisitionDate,
+    newAcquisitionDate: right.acquisitionDate,
+    ...(right.regionCode ? { newHouseRegionCode: right.regionCode } : {}),
+    ...(right.inDesignatedDistrict !== undefined ? { newHouseInDesignatedDistrict: right.inDesignatedDistrict } : {}),
+    ...(right.originalMemberContractDate ? { newHouseContractDate: right.originalMemberContractDate } : {}),
+    // §155①2호 가목·단서 — 일시적 2주택 경로와 같은 leaf에 같은 의미로 넘긴다.
+    ...(right.originalMemberMoveInDate ? { wholeHouseholdMoveInDate: right.originalMemberMoveInDate } : {}),
+    ...(right.originalMemberTenantLeaseEndDate ? { existingTenantLeaseEndDate: right.originalMemberTenantLeaseEndDate } : {}),
+    ...(right.originalMemberPublicInstitutionRelocation
+      ? {
+          publicInstitutionRelocation: true,
+          ...(right.originalMemberRelocatedSigunguCode ? { relocatedSigunguCode: right.originalMemberRelocatedSigunguCode } : {}),
+          ...(newHouseSigunguCode ? { newHouseSigunguCode } : {}),
+        }
+      : {}),
+  };
+}
+
 /** 기존주택(B) 취득일 기준 §155① 타이밍(1년·처분기한·연혁상 전입 요건). */
 function judgeTiming(input: OriginalMemberInput, right: PresaleRight, oneYearWaived: boolean): TimingOutcome {
   const newAcq = right.acquisitionDate;
   // 양도 주택이 B보다 뒤에 취득됐으면 양도 주택이 「신규 주택」이다 — §155①은 종전 주택 양도만 받는다.
   if (input.acquisitionDate.getTime() >= newAcq.getTime()) return { kind: "unmet" };
 
+  const tt = asTemporaryTwoHouse(input, right);
+  // `isRegulatedArea`는 `temporaryTwoHouse`가 없을 때의 대리 지표라 두 정본 함수가 여기서는 읽지 않는다.
+  const asInput = { ...input, isRegulatedArea: false, temporaryTwoHouse: tt };
   const previous = regulatedAt(input.regionCode, input.regionInDesignatedDistrict, newAcq);
-  const next = regulatedAt(right.regionCode, right.inDesignatedDistrict, newAcq);
+  let next = regulatedAt(right.regionCode, right.inDesignatedDistrict, newAcq);
+  // §155①2호 괄호 — 계약일에 미지정이었거나 공고가 있은 날 이전에 취득·계약했으면 조정 취득이 아니다(정본과 같은 판정).
+  if (next === true && resolveRegulatedAtNewAcquisition(asInput).next === false) next = false;
   const candidates =
     previous === false || next === false ? [false] : previous === true && next === true ? [true] : [true, false];
+  // §155⑯ 후단(1년 요건 면제)은 전단의 지역 요건과 같은 술어로 연다(정본 `evaluateTemporaryTwoHouseTiming`과 같다).
+  const relocation = meetsPublicInstitutionRelocationRegion(tt);
 
   const outcomes = candidates.map((bothRegulated): TimingOutcome => {
-    const era = resolveTemporaryTwoHouseDeadlineEra({
+    // 연혁 기한(부칙 계약일 포함) + §155⑯ 5년 — 일시적 2주택 경로와 같은 함수다.
+    const era = resolveTemporaryTwoHouseDeadlineFor(
+      asInput,
+      { disposalDeadlineYears: ORIGINAL_MEMBER_BASE_DEADLINE_YEARS },
       bothRegulated,
-      baseDeadlineYears: ORIGINAL_MEMBER_BASE_DEADLINE_YEARS,
-      newAcquisitionDate: newAcq,
-      previousAcquisitionDate: input.acquisitionDate,
-      // §155①2호 가목·단서 — 일시적 2주택 경로와 같은 leaf에 같은 의미로 넘긴다(신규 주택 = 기존주택).
-      moveInDate: right.originalMemberMoveInDate,
-      existingTenantLeaseEndDate: right.originalMemberTenantLeaseEndDate,
-      transferDate: input.transferDate,
-    });
+    );
     const timingOf = (moveInMet: boolean | undefined) =>
       judgeTemporaryTwoHouseTiming({
         previousAcquisitionDate: input.acquisitionDate,
@@ -103,6 +140,7 @@ function judgeTiming(input: OriginalMemberInput, right: PresaleRight, oneYearWai
         transferDate: input.transferDate,
         deadlineYears: era.years,
         oneYearWaived,
+        publicInstitutionRelocation: relocation,
         ...(era.deadlineDate ? { deadlineDate: era.deadlineDate } : {}),
         ...(moveInMet !== undefined ? { moveInMet } : {}),
         // §155⑱ — 기존주택 취득일부터 3년이 되는 날 현재 각 호 사유면 처분기한을 넘겨도 충족으로 본다.

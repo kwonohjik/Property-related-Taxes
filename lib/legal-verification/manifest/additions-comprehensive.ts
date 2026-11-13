@@ -57,6 +57,34 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     keywords: ["2018년 3월 31일 이전에", "사업자등록등", "민간매입임대주택의 경우에는"],
     keywordMode: "ALL",
   },
+  /** §3①8호 나목1) — 1주택 이상 보유 세대의 세대원이 새로 취득한 조정대상지역 장기일반민간임대주택 제외(대통령령 제29243호·제30921호) */
+  {
+    id: "COMPREHENSIVE_DECREE.EXCLUDED_8NA1_REGULATED_NEW_ACQ",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["세대원이 새로 취득", "조정대상지역의 공고가 있은 날 이전에"],
+    keywordMode: "ALL",
+  },
+  /** §3①8호 나목2) — 법인이 공고 후 사업자등록등을 신청한 조정대상지역 장기일반민간임대주택 제외(대통령령 제30921호) */
+  {
+    id: "COMPREHENSIVE_DECREE.EXCLUDED_8NA2_CORP_REGULATED_APP",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["법인 또는 법인으로 보는 단체가", "이미 공고된 조정대상지역의 경우 2020년 6월 17일을 말한다"],
+    keywordMode: "ALL",
+  },
+  /** §3①8호 나목3) — 2020.7.11. 이후 등록 신청한 아파트 장기일반 민간매입임대주택 제외(대통령령 제31085호) */
+  {
+    id: "COMPREHENSIVE_DECREE.EXCLUDED_8NA3_APARTMENT_AFTER_0711",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["2020년 7월 11일 이후 종전의", "아파트를 임대하는 민간매입임대주택"],
+    keywordMode: "ALL",
+  },
+  /** §3①7호 단서·8호 나목4) — 2020.7.11. 이후 단기 → 장기일반·공공지원 변경신고 주택 제외(대통령령 제31085호) */
+  {
+    id: "COMPREHENSIVE_DECREE.EXCLUDED_SHORT_TO_LONG_AFTER_0711",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["2020년 7월 11일 이후 같은 법 제5조제3항에 따라", "장기일반민간임대주택으로 변경신고한 주택"],
+    keywordMode: "ALL",
+  },
   {
     id: "COMPREHENSIVE_DECREE.EXCLUDED_EMPLOYEE_HOUSE",
     citation: "종합부동산세법 시행령 §4",

@@ -42,6 +42,13 @@ type RelocationProps = {
    * 않는다(같은 사실을 두 번 받으면 어긋나도 아무도 잡지 못한다). 판정 메뉴만 넘긴다.
    */
   newHouseLocationFromRoster?: boolean;
+  /**
+   * 신규 주택 소재지를 다른 칸(원조합원 입주권 행의 정비구역 주소)에서 받는 화면 — 주소 칸 대신 이 안내를 그린다(리뷰 E-3).
+   * 주면 `newHouseLocationFromRoster`보다 우선한다.
+   */
+  newHouseLocationNote?: string;
+  /** 「신규 주택」을 화면에서 부르는 이름 — 원조합원 입주권 행은 「기존주택」. 기본 「신규 주택」 */
+  newHouseLabel?: string;
 };
 
 type DelayReasonFields = Pick<TempTwoHouseDeadlineExceptionFields, "disposalDelayReason" | "disposalDelayDisposedByThatMethod">;
@@ -74,6 +81,8 @@ export function TempTwoHouseRelocationInputs({
   relocationRegionVerdict,
   onNewHouseAddress,
   newHouseLocationFromRoster,
+  newHouseLocationNote,
+  newHouseLabel = "신규 주택",
 }: RelocationProps) {
   return (
     <ToggleCard
@@ -112,8 +121,12 @@ export function TempTwoHouseRelocationInputs({
           />
         </div>
         <div className="space-y-1.5">
-          <label className="text-sm font-medium">신규 주택 소재지</label>
-          {newHouseLocationFromRoster ? (
+          <label className="text-sm font-medium">{newHouseLabel} 소재지</label>
+          {newHouseLocationNote ? (
+            <p data-testid="relocation-new-house-location-note" className="text-xs text-muted-foreground">
+              {newHouseLocationNote}
+            </p>
+          ) : newHouseLocationFromRoster ? (
             <p data-testid="relocation-new-house-from-roster" className="text-xs text-muted-foreground">
               보유 주택 목록에 입력한 신규 주택의 주소로 판정합니다 — 목록의 주소를 고치면 판정도 함께 바뀝니다.
             </p>

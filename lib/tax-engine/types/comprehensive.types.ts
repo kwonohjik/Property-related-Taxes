@@ -18,6 +18,9 @@ import type {
 } from "./comprehensive-corporate.types";
 export type { CorporateHousingClass, CorporateHousingType, CorporateHousingReqs };
 
+// §3①8호 나목·7호 단서 판정 입력 — 별도 파일(800줄 정책)
+import type { RentalExclusion8NaFacts } from "./comprehensive-exclusion-8na.types";
+
 // 직전연도 세부담상한 상당액 타입 — 별도 파일(800줄 정책). 로컬 사용 + 하위호환 re-export
 import type {
   PreviousYearAutoInput,
@@ -84,7 +87,7 @@ export type ExclusionType =
 /**
  * 임대주택 합산배제 입력 (시행령 §3 요건 판정용)
  */
-export interface RentalExclusionInput {
+export interface RentalExclusionInput extends RentalExclusion8NaFacts {
   registrationType:
     | "private_construction"
     | "private_purchase_long"

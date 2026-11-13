@@ -57,25 +57,50 @@ export function originalMemberMoveInRelevant(row: PresaleRightEntry, transferDat
 /**
  * ⑧ 기존주택 원조합원 행의 모순 차단 — 일시적 2주택 경로(`temporaryTwoHouseEraIssues`)와 같은 규칙·문구.
  * 기존 임차인 단서를 켰는데 종료일이 없거나 종료일이 기존주택 취득일 이하면 막는다. 칸이 닫힌 행은 보지 않는다.
+ * 기존주택 매매계약일이 기존주택 취득일보다 늦으면 막는다(리뷰 E-3 — 일시적 2주택 경로의 계약일 모순 규칙과 같다).
  */
 export function originalMemberFactErrors(
   rights: readonly PresaleRightEntry[],
   transferDate: string | undefined,
-): { field: `presaleRights.${number}.originalMemberTenantLeaseEndDate`; message: string }[] {
+): {
+  field: `presaleRights.${number}.${"originalMemberTenantLeaseEndDate" | "originalMemberContractDate"}`;
+  message: string;
+}[] {
   return rights.flatMap((r, i) => {
-    if (!originalMemberMoveInRelevant(r, transferDate) || r.originalMemberExistingTenant !== true) return [];
-    const field = `presaleRights.${i}.originalMemberTenantLeaseEndDate` as const;
-    if (!r.originalMemberTenantLeaseEndDate) {
-      return [{ field, message: `분양권·입주권 ${i + 1}: 기존 임차인 특례 — 전 소유자와 임차인 간 임대차계약 종료일을 입력하세요.` }];
-    }
-    if (r.acquisitionDate && r.originalMemberTenantLeaseEndDate <= r.acquisitionDate) {
-      return [
-        {
-          field,
-          message: `분양권·입주권 ${i + 1}: 기존 임차인 특례 — 임대차계약 종료일은 기존주택 취득일 뒤여야 합니다(취득일 현재 거주 중인 임차인).`,
-        },
-      ];
-    }
-    return [];
+    const contract =
+      r.type === "redevelopment_right" &&
+      effectiveMemberOrigin(r) === "original_house" &&
+      r.originalMemberContractDate &&
+      r.acquisitionDate &&
+      r.originalMemberContractDate > r.acquisitionDate
+        ? [
+            {
+              field: `presaleRights.${i}.originalMemberContractDate` as const,
+              message: `분양권·입주권 ${i + 1}: 기존주택 매매계약 체결·계약금 지급일은 기존주택 취득일보다 늦을 수 없습니다.`,
+            },
+          ]
+        : [];
+    return [...contract, ...tenantLeaseErrors(r, i, transferDate)];
   });
+}
+
+function tenantLeaseErrors(
+  r: PresaleRightEntry,
+  i: number,
+  transferDate: string | undefined,
+): { field: `presaleRights.${number}.originalMemberTenantLeaseEndDate`; message: string }[] {
+  if (!originalMemberMoveInRelevant(r, transferDate) || r.originalMemberExistingTenant !== true) return [];
+  const field = `presaleRights.${i}.originalMemberTenantLeaseEndDate` as const;
+  if (!r.originalMemberTenantLeaseEndDate) {
+    return [{ field, message: `분양권·입주권 ${i + 1}: 기존 임차인 특례 — 전 소유자와 임차인 간 임대차계약 종료일을 입력하세요.` }];
+  }
+  if (r.acquisitionDate && r.originalMemberTenantLeaseEndDate <= r.acquisitionDate) {
+    return [
+      {
+        field,
+        message: `분양권·입주권 ${i + 1}: 기존 임차인 특례 — 임대차계약 종료일은 기존주택 취득일 뒤여야 합니다(취득일 현재 거주 중인 임차인).`,
+      },
+    ];
+  }
+  return [];
 }

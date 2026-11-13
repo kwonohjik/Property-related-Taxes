@@ -228,11 +228,21 @@ export function withDonorBuiltPenalty<R extends { detail: CarryoverTaxationDetai
     housingSplit = h.split;
     formula = h.formula;
   } else if (db.buildingType === "extension") {
-    base = calculateEstimatedAcquisitionPrice(rawInput.transferPrice, db.extensionStdPriceAtAcquisition!, rawInput.standardPriceAtTransfer!);
-    formula = { multiplicand: rawInput.transferPrice, numerator: db.extensionStdPriceAtAcquisition!, denominator: rawInput.standardPriceAtTransfer! };
+    // 분모 = A 양도차익의 환산 분모(영 §164⑨ 특례 반영) — 소득세법 §114조의2① «환산취득가액»은 양도차익에 실제로 쓰인 값이다.
+    //   특례가 없으면 `conv.denominator`는 `rawInput.standardPriceAtTransfer` 그대로라 종전과 바이트 동일하다(DP-6, 일체 주택 `housingBase`와 같은 단일 소스).
+    const denominator = resolveConversionDenominatorAtTransfer(rawInput).denominator;
+    base = calculateEstimatedAcquisitionPrice(rawInput.transferPrice, db.extensionStdPriceAtAcquisition!, denominator);
+    formula = { multiplicand: rawInput.transferPrice, numerator: db.extensionStdPriceAtAcquisition!, denominator };
   } else {
     // 건물 단독 신축 — 증여자 환산취득가액 전체가 건물분이다. §97②2호 단서 swap 이 발동해도 «환산을 썼다는 사실»에 붙는 가산세라 base 는 swap 전 값이다.
-    base = detail.scenarioA.acquisitionPrice;
+    // 특례(공익수용 1호·공매·경락 2호)가 걸리면 A 의 양도차익은 특례 분모 환산취득가액을 쓰는데 `scenarioA.acquisitionPrice` 는 특례 전 분모라, 같은 분모로 다시 구한다(DP-6).
+    // 특례가 없거나(분모 불변) 기준시가 환산이 아닌 경로(PHD)는 종전 값 그대로 둔다.
+    const conv = resolveConversionDenominatorAtTransfer(rawInput);
+    const specialApplies = Boolean(conv.expropriationValuationDetail || conv.housingExpropriationValuationDetail || conv.auctionValuationDetail);
+    base =
+      specialApplies && !rawInput.preHousingDisclosure && conv.denominator > 0
+        ? calculateEstimatedAcquisitionPrice(rawInput.transferPrice, rawInput.standardPriceAtAcquisition ?? 0, conv.denominator)
+        : detail.scenarioA.acquisitionPrice;
   }
 
   const penalty = calculateBuildingPenalty(
