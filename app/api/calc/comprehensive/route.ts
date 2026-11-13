@@ -67,6 +67,8 @@ function toEngineInput(
           rentalApplicationDate: toOptionalDate(p.rentalInfo.rentalApplicationDate),
           businessRegistrationApplicationDate: toOptionalDate(p.rentalInfo.businessRegistrationApplicationDate),
           shortTermConversionDate: toOptionalDate(p.rentalInfo.shortTermConversionDate),
+          // §3①6호 미분양매입임대 (⑭)
+          unsoldContractDate: toOptionalDate(p.rentalInfo.unsoldContractDate),
           registrationRevokedDate: p.rentalInfo.registrationRevokedDate
             ? parseDate(p.rentalInfo.registrationRevokedDate)
             : undefined,

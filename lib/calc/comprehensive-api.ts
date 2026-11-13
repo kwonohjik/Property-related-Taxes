@@ -14,6 +14,8 @@ import { formatComprehensiveErrors } from "./comprehensive-error-format";
 import { na8Context } from "./comprehensive-rental-8na";
 import { rental8NaApiFields } from "./comprehensive-rental-8na";
 import { validate8NaInputs } from "./comprehensive-rental-8na";
+import { rental6hoApiFields } from "./comprehensive-rental-6ho";
+import { validate6hoInputs } from "./comprehensive-rental-6ho";
 
 /**
  * 법인 §9② class 도출 (시행령 §4의4) — 엔진과 동일 헬퍼로 단일 진실. 개인이면 undefined.
@@ -110,6 +112,13 @@ export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFo
       label,
     );
     if (na8Error) return na8Error;
+    // §3①6호 미분양매입임대 — ⑤가 보이는 칸과 같은 술어(ho6Asks)
+    const ho6Error = validate6hoInputs(
+      p,
+      na8Context(formData, p.rentalRegistrationType || toRegistrationType(p.exclusionType)),
+      label,
+    );
+    if (ho6Error) return ho6Error;
   }
   const aggParcelsMode = formData.hasAggregateLand && formData.landAggregateMode === "parcels";
   const sepParcelsMode = formData.hasSeparateLand && formData.landSeparateMode === "parcels";
@@ -248,6 +257,7 @@ const RENTAL_TYPES = new Set([
   "existing_rental",
   "private_short_term_rental_6y_construction",
   "private_short_term_rental_6y_purchase",
+  "unsold_purchase_rental",
 ]);
 
 // 기타 합산배제 유형 (otherInfo 필드 구성에 사용)
@@ -277,6 +287,7 @@ export function toRegistrationType(exclusionType: string): string {
     existing_rental:                    "existing_rental",
     private_short_term_rental_6y_construction: "private_short_term_6y_construction",
     private_short_term_rental_6y_purchase:     "private_short_term_6y_purchase",
+    unsold_purchase_rental:                    "unsold_purchase",
   };
   return map[exclusionType] ?? "private_purchase_long";
 }
@@ -387,6 +398,8 @@ export async function callComprehensiveApi(
           isThirtyPlusUnits: p.isThirtyPlusUnits || undefined,
           // §3①8호 나목·7호 단서 — 묻는 칸만(na8Asks). 조정대상지역은 PNU 자동 판정 또는 직접 입력
           ...rental8NaApiFields(p, na8Context(formData, registrationType)),
+          // §3①6호 — 6호일 때만 값이 있다(그 밖 유형은 빈 객체라 위 8호 칸 값을 덮지 않는다)
+          ...rental6hoApiFields(p, na8Context(formData, registrationType)),
         },
       };
     }

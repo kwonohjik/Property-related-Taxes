@@ -30,6 +30,7 @@ export const EXCLUSION_TYPE_OPTIONS: [string, string][] = [
   ["public_purchase_rental", "공공매입임대 (시행령 §3①5호)"],
   ["private_short_term_rental_6y_construction", "민간건설 단기민간임대 6년 (시행령 §3①10호)"],
   ["private_short_term_rental_6y_purchase", "민간매입 단기민간임대 6년 (시행령 §3①11호)"],
+  ["unsold_purchase_rental", "미분양매입임대 (시행령 §3①6호)"],
   ["unsold_housing", "미분양주택 (시행령 §4①1호)"],
   ["daycare_housing", "가정어린이집용 (시행령 §4①2호)"],
   ["employee_housing", "사원용 주택 (시행령 §4①3호)"],

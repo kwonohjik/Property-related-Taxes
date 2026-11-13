@@ -23,6 +23,7 @@ const exclusionTypeSchema = z.enum([
   "existing_rental",
   "private_short_term_rental_6y_construction",
   "private_short_term_rental_6y_purchase",
+  "unsold_purchase_rental",
   "unsold_housing",
   "daycare_housing",
   "employee_housing",
@@ -48,6 +49,7 @@ const rentalRegistrationTypeSchema = z.enum([
   "existing_rental",
   "private_short_term_6y_construction",
   "private_short_term_6y_purchase",
+  "unsold_purchase",
 ]);
 
 const isoDateOptional = z
@@ -132,6 +134,16 @@ const rentalExclusionInfoSchema = z.object({
   isApartment: z.boolean().nullable().optional(),
   convertedFromShortTerm: z.boolean().nullable().optional(),
   shortTermConversionDate: isoDateOptional,
+
+  // ── §3①6호 미분양매입임대 (엔진 comprehensive-exclusion-6ho.ts) — 없으면 엔진이 「모름」=불성립 ──
+  unsoldContractDate: isoDateOptional,
+  isUnsoldFirstComeSupply: z.boolean().nullable().optional(),
+  unsoldDocsSubmitted: z.boolean().nullable().optional(),
+  unsoldUnitCount: z.number().int().nonnegative().optional(),
+  purchaseRental2hoCount: z.number().int().nonnegative().optional(),
+  existingRental3hoSameRegionCount: z.number().int().nonnegative().optional(),
+  reitRental5hoCount: z.number().int().nonnegative().optional(),
+  rentalRegistrationKind: z.enum(["short_term", "long_term_general", "public_support", "other"]).optional(),
 });
 
 // ============================================================

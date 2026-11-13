@@ -1,7 +1,7 @@
 # 종부세 합산배제 §3①6호 미분양매입임대주택 유형 신설 (가목 단서 1)~3) 포함)
 
-- 작성: 2026-11-13 · 상태: **PR-1 엔진 구현(2026-11-13)** · PR-2 화면 대기 — Q-1 b(호수 숫자) · 나머지 권장안(a)
-- PR-1: `comprehensive-exclusion-6ho.ts`(판정) · `types/comprehensive-exclusion-6ho.types.ts`(사실 8개) · 사유 코드 13개 · 3호·6호 임대료 검사 제외(Q-7) · manifest 2(PASS) · anchor `comprehensive-exclusion-6ho.anchor.test.ts` 24건(변이 2건 확인). 화면에서는 아직 6호를 고를 수 없다(PR-2).
+- 작성: 2026-11-13 · 상태: **PR-1 엔진 #3309 머지 · PR-2 화면 구현(2026-11-13)** — Q-1 b(호수 숫자) · 나머지 권장안(a)
+- PR-1: `comprehensive-exclusion-6ho.ts`(판정) · `types/comprehensive-exclusion-6ho.types.ts`(사실 8개) · 사유 코드 13개 · 3호·6호 임대료 검사 제외(Q-7) · manifest 2(PASS) · anchor `comprehensive-exclusion-6ho.anchor.test.ts` 24건(변이 2건 확인). 
 - 계기: 날짜 경계 점검 목록의 「6호 가목 단서」. 확인해 보니 엔진에 **6호 유형 자체가 없다** — 판정 대상이 없어 단서만 넣을 수 없다. 사용자 결정(2026-11-13): 6호 유형 신설 계획서.
 - 선행: 8호 나목 #3288·#3293 · 11호 나목 #3300 — 6호 가목 단서 1)~3)은 8호 나목 3)·4)·7호 단서와 같은 문언·같은 개정령이다.
 
@@ -119,3 +119,10 @@
 | Q 결정 | 사용자 |
 | PR-1 엔진(타입·판정·anchor·manifest·Q-7) | 약 1.5시간 |
 | PR-2 화면(14지점·⑤ 칸·⑧·E2E) | 약 2시간 |
+
+## 9. PR-2 화면 (2026-11-13)
+
+- 술어 `lib/calc/comprehensive-rental-6ho.ts` `ho6Asks`(⑤⑧④ 공유) — 미분양 5호 미만일 때만 2·3·5호 호수 · 2021 과세연도부터 등록 종류 · 단기·장기일반이고 등록일이 2020.7.11. 이후면 신청일 · 장기일반 신청 7.11. 이후면 아파트 · 장기일반·공공지원이면 변경신고.
+- ⑤ `components/calc/comprehensive/RentalExclusion6hoFields.tsx`(8호 카드의 `DateField`·`YesNoField` 재사용) · 유형 선택지(`property-list-shared`·`ExclusionInfoInput`)·자동매칭(`PropertyCardEditor`).
+- ⑨⑩ Zod enum · ⑫ 새 필드 8개 · ⑭ `unsoldContractDate` Date 변환 · ④ `rental6hoApiFields`는 6호가 아니면 빈 객체(8호 칸 값을 덮지 않는다).
+- 테스트: route anchor `comprehensive.route.6ho.anchor.test.ts` 11건 · E2E `comprehensive-unsold-6ho.spec.ts` 2건.
