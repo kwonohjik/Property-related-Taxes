@@ -1,6 +1,6 @@
 # 부담부증여 지분 재개발 완공 아파트 × 시가 · 환산취득가액(K-5) · 담보 승 — 전면 개방 (Q-1 b)
 
-- 상태: **Q-1 a · Q-2 a · Q-3 a 확정(2026-11-13 사용자: 권장안)** · PR-1(⑫ 지분 축소) 진행 · PR-2(축 전달 · 게이트) 대기. 작성 2026-11-13, 기준 master `b1f2140c5`.
+- 상태: **Q-1 a · Q-2 a · Q-3 a 확정(2026-11-13 사용자: 권장안)** · PR-1(⑫ 지분 축소) #3313 머지(`ab151281d`) · PR-2(축 전달 · 게이트 · Q-3) 구현(§8). 작성 2026-11-13, 기준 master `b1f2140c5`.
 - 선행: `bg-redev-fractional-collateral-win.plan.md`(V-S1g) §4 Q-1 b · §5 V-G9 · §7 「범위 밖」. 그 문서는 Q-1 a(부분 개방)로 닫았고, 이 문서가 남겨 둔 조합을 연다.
 - 표기: **[직접]** = 이 문서를 쓰면서 직접 실행하고 대조함. **[코드]** = 코드만 읽음. **확인 필요** = 측정하지 않았거나 원인을 밝히지 못함.
 
@@ -135,3 +135,20 @@
 | 회귀 | 필터 `redev · 166-3 · 166_3 · bg-redev · bg-axis · bg-fractional · collateral` 254파일 3,139건 통과 · 전체는 pre-push |
 | 정적 검사 | `tsc` 0건 · eslint 0건 |
 | 화면 경로 | 바뀌지 않는다. ⑧ 게이트가 그대로 막고 있고, ④가 주 자산에 `useEstimatedAcquisition: true`를 보내 ⑫가 §166③ 칸을 요구한다(축 없는 `redevPreApprovalAcqMode` — `transfer-tax-api.ts:399`). 둘 다 PR-2에서 고친다 |
+
+## 8. PR-2 결과 — 축 전달 · 게이트 개방 · Q-3 a (2026-11-13)
+
+| 항목 | 결과 |
+|---|---|
+| leaf | `redevPreApprovalAcqMode` · `redevPreApprovalExpensesUnused`에 `isFractionalSplit?` (미지정 = 종전). `redevPreApprovalExpensesWinnerDependent`와 안내 문장 삭제(Q-3 a) |
+| 래퍼 | `isRedevPhdTriggered` · `isRedevPhdSectionActive` · `redevLandSec164Applies` · `buildRedevelopmentPayload` · `validateRedevelopmentAsset` · `redevLegacyExpenseUnusedMessage`에 같은 인자 |
+| 축 출처 | ④ `fractionalBundleMerge`(주 자산 `transfer-tax-api.ts:399` · `primary-context` 재개발 payload) · 컴패니언 `axisB` · ⑧ `isFractionalSplitAxis`(`validate-acquisition` → `validate-redev` · `validate-bg:458` · 레거시 필요경비 문구) · `burdened-gift-acq-std-price` 인자 · 사이드바 `axisBBundle` · ⑤ `splitMode === "fractional"`(`AssetSectionAcquisition` → `RedevelopmentBlock` → `RedevelopmentValuationSection` → `RedevLandSec164Input`·토지 출자 카드 · `AssetSectionExpense` · `BurdenedGiftBlock`) · 결과 스냅샷 `building-std-snapshot-applicability`(단건 `inputData`의 `isFullFractionalBundle` — 다건은 재개발을 받지 않는다) |
+| 게이트 | `bgFractionalCollateralKindSupported`의 K-5 제외와 `bgRedevMarketConvertedFractional` · `bgRedevConvertedBlockNote`(⑧ 문구 3곳) 삭제 |
+| 완료 게이트(§3-7) | 축 없이 남은 호출: `validate-acquisition:322`(`carryover_donor`) · `validate-clause-a:173`(`actual`) · `companion-payload:629`(의제취득일 전 — 게이트 밖) · `rental-residence-requirement-status.ts:75`(거주기간만 읽음) · `transfer-pre1990-redev-bridge.ts:44` `deriveRedevLandSec164PerSqm`(파생 단가 — ⑧은 축 있는 `acqMode`로 게이트, ④ 값은 담보 승이면 엔진이 쓰지 않음 · V-2 실측 정합) — 모두 축 무관 |
+| V-1~V-3 | **해소 [직접]** — 축 A 50% · K-5 · 담보 승: §164⑦ 발동 취득일(2003) ⑧ 0건 · 447,609,250 = 반 크기 단건(보충 승 대조는 §164⑦ 칸을 그대로 요구) · §164④ 1988 토지 출자 ⑧ 0건 = 단건 · 청산금 수령분 단독 신고 ⑧ 0건 = 단건 · 인가 전 실비 2천만 원 넣어도 값 동일(개산공제). anchor RD-6 |
+| anchor | `bg-redev-fractional-win` RD-3을 «열림 27칸»으로 다시 씀(채움 = 오라클 · 취득시 기준시가 비움 ⑧ ⊇ ⑫ · §166③ 비움 ⑧ 0 ∧ 200) · RD-5 게이트·산정방식 축 · RD-6 V-1~V-3 — 33건. `redev-fractional-expense-winner-axis.anchor.test.tsx`(종전 `-note` 대체) 6건 — 축 B 40%(물건 전체 채무 6억)는 축 B로 보충 승·축 A로 읽으면 담보 승 |
+| 뒤집힌 기존 단언 | `bg-axis-a-nonsupp-win` AA-4 2건 · `bg-axis-b-mkt-collateral-win` AB-5 2건 · `bg-single-fractional-collateral` SF-1 1건 · `bg-land-fractional-win` BL-7 1건 — 모두 «K-5 막힘» → «열림» |
+| 뮤테이션 | 10/10 사망 — leaf 산정방식 축(8) · leaf 필요경비 축(4) · 게이트 K-5 제외 복원(14) · ⑧ validate-redev 산정방식 축(3) · ⑧ §164⑦ 축(1) · ⑧ 취득시 기준시가 칸 술어 축(4) · ④ useEstimatedAcquisition 축(3) · ⑤ 재개발 블록 필요경비 축(2) · ⑫ 지분 축소(12) · ⑧ validate-acquisition 축 전달(4). 매번 백업 복원 |
+| 회귀 | 필터(redev · 166-3 · bg-redev · bg-axis · bg-fractional · collateral · phd · pre1990 · snapshot · per-asset-summary · expense · bg-land) 374파일 통과 · 전체는 pre-push |
+| E2E | `e2e/bg-redev-fractional-win.spec.ts` 4건 통과(headless) — RD-E1 K-4 담보 승: 필요경비 칸 대신 개산공제 안내 · RD-E3 K-5 담보 승: 200 · 취득시 기준시가 칸 · §166③ D 칸 없음 · 447,609,250 · RD-E4 보충 승: 필요경비 칸 |
+| 남은 한계 | V-4 사람이 직접 본 브라우저 확인은 아니다(headless) · V-5 사이드바는 코드 배선만(축 B 묶음 `axisBBundle`) — 렌더 실측 없음 · V-6 안분 이후 손계산(단건 오라클 대조만) |

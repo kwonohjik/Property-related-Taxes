@@ -445,7 +445,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           )}
 
           {/* K-5: 환산취득가액 안내 (별도 입력 없음 — 취득시 기준시가 재사용) */}
-          {collateralForced || preDeemed || noMethod ? null : asset.bgAcquisitionMethod === "converted" && redevPreApprovalAcqMode(asset) === "estimated" ? (
+          {collateralForced || preDeemed || noMethod ? null : asset.bgAcquisitionMethod === "converted" && redevPreApprovalAcqMode(asset, isFractionalSplit === true) === "estimated" ? (
             // 재개발 완공 아파트 — 취득가액은 종전 부동산의 취득가액이라 §166③으로 환산한다(일반 환산식이 아니다).
             <div className="rounded border border-amber-300 bg-amber-100/60 p-2 text-caption text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
               종전 부동산 취득가액 = 평가액 × <Frac top="취득일 기준시가" bottom="관리처분계획 인가일 기준시가" /> (시행령 §166③) × 채무비율.

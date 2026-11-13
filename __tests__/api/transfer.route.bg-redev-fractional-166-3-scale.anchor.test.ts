@@ -6,7 +6,7 @@
  * 담보 승을 판정하고 취득가액을 취득시 기준시가 × 채무비율로 강제하므로 §166③ 칸을 쓰지 않는다. 종전 ⑫는 줄이지 않은 시가로 판정해 지분 담보 승을 보충 승으로 읽고
  * §166③ 칸(분모·분자)을 요구해 400을 냈다(엔진이 쓰지 않는 칸).
  *
- * 화면 경로는 ⑧ 게이트(`bgRedevMarketConvertedFractional`)가 아직 막고, ④가 주 자산에 `useEstimatedAcquisition: true`를 보내므로(축 없는 `redevPreApprovalAcqMode`)
+ * PR-1 시점에는 화면 경로를 ⑧ 게이트가 막았고 ④가 주 자산에 `useEstimatedAcquisition: true`를 보냈으므로(축 없는 `redevPreApprovalAcqMode` — PR-2에서 축을 실어 열었다)
  * 여기서는 ④ 본문을 직접 API 본문으로 쓴다 — 주 자산은 `useEstimatedAcquisition: false`(부담부증여는 엔진이 §159 산정방식으로 다시 판정한다). 함께 양도의 지분 자산은
  * 컴패니언이라 ④ 본문 그대로다. 화면 개방은 PR-2.
  *

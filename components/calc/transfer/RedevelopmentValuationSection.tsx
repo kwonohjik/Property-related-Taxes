@@ -37,10 +37,12 @@ import { RedevLandSec164Input } from "./RedevLandSec164Input";
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
+  /** 지분 분할 축(폼 `assetSplitMode === "fractional"`) — 지분 자산의 산정방식 판정(`redevPreApprovalAcqMode`)·필요경비 칸이 담보 승을 확정하는 데 쓴다(⑧·④와 같은 축). */
+  isFractionalSplit?: boolean;
 }
 
-export function RedevelopmentValuationSection({ asset, onChange }: Props) {
-  const acqMode = redevPreApprovalAcqMode(asset);
+export function RedevelopmentValuationSection({ asset, onChange, isFractionalSplit }: Props) {
+  const acqMode = redevPreApprovalAcqMode(asset, isFractionalSplit);
   // 「취득당시」 기준일 — 이월과세면 당초 증여자 취득일(§164⑦ 판정·조회 기준일 · 계획서 `redev-carryover-phd-donor-date.plan.md` Q-2 a).
   const acqRefDate = redevPreApprovalAcquisitionDate(asset);
   const donorNote = donorAcqDateNote(asset, acqRefDate);
@@ -55,7 +57,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     if (rights <= 0 || D <= 0) return null;
 
     // 이 지점은 위 `useEstimatedAcquisition` 조기 반환 뒤라 환산 모드가 보장된다.
-    const provisionTriggered = isRedevPhdTriggered(asset);
+    const provisionTriggered = isRedevPhdTriggered(asset, isFractionalSplit);
 
     const A = parseAmount(asset.redevFirstDisclosureHousingPrice);
     const area = parseDecimal(asset.redevLandArea);
@@ -103,6 +105,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
     };
   }, [
     acqMode,
+    isFractionalSplit,
     asset.redevRightsValue,
     asset.redevManagementDisposalHousingPrice,
     asset.redevAcquisitionHousingPrice,
@@ -197,7 +200,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
    * (이 컴포넌트는 상위 `RedevelopmentBlock`이 환산 모드에서만 렌더하므로
    *  술어의 `useEstimatedAcquisition` 조건은 항상 충족된다 — 동작 동일.)
    */
-  const isPreDisclosureTriggered = isRedevPhdTriggered(asset);
+  const isPreDisclosureTriggered = isRedevPhdTriggered(asset, isFractionalSplit);
 
   const landAreaNumber = parseDecimal(asset.redevLandArea) || undefined;
 
@@ -214,6 +217,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
             asset={asset}
             onChange={onChange}
             preview={landContribPreview}
+            isFractionalSplit={isFractionalSplit}
           />
         ) : (
           <>
@@ -301,7 +305,7 @@ export function RedevelopmentValuationSection({ asset, onChange }: Props) {
                 referenceDate={acqRefDate}
                 jibun={asset.addressJibun || undefined}
               />
-              <RedevLandSec164Input asset={asset} onChange={onChange} />
+              <RedevLandSec164Input asset={asset} onChange={onChange} isFractionalSplit={isFractionalSplit} />
               <LandPriceLookupField
                 label="최초공시 당시 개별공시지가 (원/㎡)"
                 data-field="redevLandPricePerSqmAtFirst"
@@ -452,6 +456,7 @@ interface LandContribProps {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
   preview: LandContribPreview | null;
+  isFractionalSplit?: boolean;
 }
 
 /**
@@ -472,7 +477,7 @@ interface LandContribProps {
  *  - §99①1호 시점 모호성 안내 카드 포함 (2007.1.1 vs 2006.1.1)
  *  - LandPriceLookupField 재사용 — Vworld API 조회 활성화 (jibun prop)
  */
-function LandContribValuationContent({ asset, onChange, preview }: LandContribProps) {
+function LandContribValuationContent({ asset, onChange, preview, isFractionalSplit }: LandContribProps) {
   const fmt = (n: number) => n.toLocaleString("ko-KR");
   const landAreaNumber = parseDecimal(asset.redevLandArea) || undefined;
   const acqRefDate = redevPreApprovalAcquisitionDate(asset);
@@ -517,7 +522,7 @@ function LandContribValuationContent({ asset, onChange, preview }: LandContribPr
         referenceDate={acqRefDate}
         jibun={asset.addressJibun || undefined}
       />
-      <RedevLandSec164Input asset={asset} onChange={onChange} />
+      <RedevLandSec164Input asset={asset} onChange={onChange} isFractionalSplit={isFractionalSplit} />
 
       {/* 관리처분 직전 토지 ㎡당 단가 — §166③ 분모 */}
       <LandPriceLookupField

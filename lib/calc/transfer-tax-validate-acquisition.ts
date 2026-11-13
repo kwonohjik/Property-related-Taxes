@@ -308,7 +308,7 @@ function validateAssetAcquisitionBranches(
   // redevSubject="" 미입력 시에도 redev 검증 진입 (3중 패턴 — API/validate 동기화):
   // buildRedevelopmentPayload와 동일 fallback (right_to_move_in → "right", 그 외 → "apt")
   if (asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in") {
-    const redevError = validateRedevelopmentAsset(asset, label, isOneHousehold, typeToggleSection);
+    const redevError = validateRedevelopmentAsset(asset, label, isOneHousehold, typeToggleSection, isFractionalSplitAxis === true);
     if (redevError) return redevError;
     // 재개발 × 이월과세(비부담부증여) — 이 분기는 `validateCarryoverAsset`를 타지 않으므로 증여 사건 칸(가업상속·날짜·관계·평가액 / 음수·채무·세대)을
     //   같은 leaf로 본다(⑫ `refineCarryoverTaxation`과 같은 규칙 · 계획서 `redev-carryover-validation-scope.plan.md` Q-2 a). 환산 방식·PHD·증여자 신축 칸은 재개발에 없다.
@@ -343,7 +343,7 @@ function validateAssetAcquisitionBranches(
     // 이월과세는 취득일 칸이 화면에 없다 — ④와 같은 leaf(원값 → 증여 등기일)로 읽는다(계획서 Q-1 a · 종전 원값이라 새 입력은 칸 없는 막다른 길).
     if (!primaryAcquisitionDateOf(asset)) return fieldError("acquisitionDate", `${label}: 취득일을 입력하세요.`);
     // 이전 입력 형식 필요경비 — §166 산식이 읽지 않아 침묵 누락된다(계획서 redev-transfer-expense-residual Q-1 a). ⑤가 같은 술어로 칸을 보인다.
-    if (redevLegacyExpenseUnused(asset)) return fieldError("directExpenses", `${label}: ${redevLegacyExpenseUnusedMessage(asset)}`);
+    if (redevLegacyExpenseUnused(asset)) return fieldError("directExpenses", `${label}: ${redevLegacyExpenseUnusedMessage(asset, isFractionalSplitAxis === true)}`);
     return null;
   }
 

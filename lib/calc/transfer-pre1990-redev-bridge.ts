@@ -28,15 +28,15 @@ import { isRedevPhdTriggered } from "./redev-phd-trigger";
  * 영 §164④ 구간인가 — 원조합원(승계 제외) 재개발 자산 + ⑤ 환산 + 종전 토지 취득일 < 1990-08-30 + 그 칸을 분자로 쓰는 분기
  * (토지 출자 §166③ · 주택 출자 §164⑦ 본문 발동).
  */
-export function redevLandSec164Applies(asset: AssetForm): boolean {
+export function redevLandSec164Applies(asset: AssetForm, isFractionalSplit?: boolean): boolean {
   if (asset.redevIsSuccessorMember === "yes") return false;
   const originalMember =
     asset.assetKind === "redevelopment_apt" ||
     (asset.assetKind === "right_to_move_in" && asset.isSuccessorRightToMoveIn !== true);
-  if (!originalMember || redevPreApprovalAcqMode(asset) !== "estimated") return false;
+  if (!originalMember || redevPreApprovalAcqMode(asset, isFractionalSplit) !== "estimated") return false;
   const acq = redevPreApprovalAcquisitionDate(asset);
   if (!acq || acq >= LAND_PRICE_NOTICE_START) return false;
-  return asset.redevOriginalAssetType === "land" || isRedevPhdTriggered(asset);
+  return asset.redevOriginalAssetType === "land" || isRedevPhdTriggered(asset, isFractionalSplit);
 }
 
 /** 영 §164④ 환산 — 취득시 토지 ㎡당 가액(원, 정수). 구간이 아니거나 5필드·면적이 덜 차면 null. */

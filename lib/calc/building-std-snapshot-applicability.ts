@@ -38,6 +38,7 @@ import {
   needsMixedHousingBuildingStdAtTransfer,
 } from "@/lib/calc/mixed-use-housing-std-split";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
 
 function matchAsset(list: unknown, assetId: string): Record<string, unknown> | undefined {
   if (!Array.isArray(list)) return undefined;
@@ -75,6 +76,16 @@ function findAsset(
     if (hit) return hit;
   }
   return undefined;
+}
+
+/**
+ * 단건 폼의 지분 분할 축 — ④·⑧과 같은 판정(`isFullFractionalBundle`). 재개발 §164⑦ 게이트(`isRedevPhdSectionActive`)가 지분 자산의
+ * 담보 승을 확정하는 데 쓴다. 다건은 재개발을 받지 않으므로(`multi-transfer-support-messages.ts`) 단건 모양만 본다.
+ */
+function fractionalSplitAxisOf(inputData: Record<string, unknown>): boolean {
+  const assets = (inputData as { assets?: unknown }).assets;
+  if (!Array.isArray(assets)) return false;
+  return isFullFractionalBundle(assets as AssetForm[], (inputData as { assetSplitMode?: "companion" | "fractional" }).assetSplitMode);
 }
 
 /**
@@ -173,7 +184,7 @@ export function isBuildingStdSnapshotApplicable(
     if (!("redevFirstDisclosureDate" in asset)) return true;
     // 트리거(모드+날짜)만이 아니라 **섹션 가시성 5중 게이트** 전체를 본다 —
     // 승계조합원·자산종류 변경·§164⑤ 분기 전환도 이 계산을 무효로 만든다.
-    return isRedevPhdSectionActive(asset);
+    return isRedevPhdSectionActive(asset, fractionalSplitAxisOf(inputData));
   }
 
   // 겸용 주택분 나목(S3-2) — 노출·전송·⑧과 **같은 술어**. 입력이 술어를 거짓으로 돌리면 이 계산서는 쓰이지 않는다.

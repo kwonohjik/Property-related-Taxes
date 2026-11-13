@@ -23,9 +23,9 @@ import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-redevelopme
  * 그 칸을 지목하면 같은 ④의 보라 안내(`AssetSectionExpense` — 같은 술어)와 반대가 됐다.
  * 이월과세 ② 환산은 칸이 보이므로(`redevPreApprovalExpensesScenarioDependent`) 첫 갈래다.
  */
-export function redevLegacyExpenseUnusedMessage(asset: AssetForm): string {
+export function redevLegacyExpenseUnusedMessage(asset: AssetForm, isFractionalSplit?: boolean): string {
   const head = `「직접 귀속 필요경비 — 이전 입력 형식」은 재개발·재건축 완공 아파트와 조합원입주권에서는 계산에 쓰이지 않습니다(${REDEVELOPMENT.GAIN_BASE}). `;
-  if (!redevPreApprovalExpensesUnused(asset)) {
+  if (!redevPreApprovalExpensesUnused(asset, isFractionalSplit)) {
     return head + "금액을 「자본적 지출액」과 「양도비」 칸에 나눠 입력하고(원조합원이 관리처분계획 인가 전에 쓴 비용은 「인가전 분 필요경비」) 이 칸은 비우세요.";
   }
   if (isReceiveOnlyFiling(asset)) {

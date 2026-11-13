@@ -52,6 +52,8 @@ export function validateRedevelopmentAsset(
   isOneHousehold?: boolean,
   /** 입주권 「조합원 유형」 질문이 있는 섹션 — 축 B 둘째 이후 지분 카드는 ③ 취득정보(`successorTypeToggleSectionLabel`). */
   typeToggleSection: string = successorTypeToggleSectionLabel(false),
+  /** 지분 분할 축(`isFullFractionalBundle`) — 지분 자산의 산정방식 판정(`redevPreApprovalAcqMode`)이 담보 승을 확정하는 데 쓴다(⑤·④와 같은 축). */
+  isFractionalSplit?: boolean,
 ): string | null {
   // ── 분기 결정 필드 ──
   // UI display fallback과 동일(RedevelopmentBlock.tsx) + API 변환(buildRedevelopmentPayload).
@@ -69,7 +71,7 @@ export function validateRedevelopmentAsset(
   const settlementDirection = asset.redevSettlementDirection || "pay";
   // ⑤ 「인가전 분 종전 부동산 취득가액」 방식 — ⑤·④·PHD 트리거와 같은 leaf. 부담부증여는 ⑤ 라디오가 아니라 K-4/K-5가 정한다
   //   (`burdened_gift`면 이 블록의 실가·환산 칸을 요구하지 않는다 — 엔진이 §159 안분값을 쓴다).
-  const acqMode = redevPreApprovalAcqMode(asset);
+  const acqMode = redevPreApprovalAcqMode(asset, isFractionalSplit);
   const isEstimatedMode = acqMode === "estimated";
   const isActualMode = acqMode === "actual";
   // 환산 오류가 가리킬 칸 — 부담부증여 K-5는 ⑤ 라디오가 화면에 없고 부담부증여 블록의 산정방식이 정한다.
@@ -211,7 +213,7 @@ export function validateRedevelopmentAsset(
 
   // ── originalAssetType="land" 분기 (사례 37·40) — housing 전용 로직 skip ──
   // 수령 청산금 상한 — ⑫와 같은 술어를 ④ payload로 본다. 토지 출자는 아래에서 일찍 반환하므로 두 분기가 각각 확인한다.
-  const redevPayload = buildRedevelopmentPayload(asset, getOwnershipRatio(asset));
+  const redevPayload = buildRedevelopmentPayload(asset, getOwnershipRatio(asset), isFractionalSplit);
   const settlementLimitIssue = redevReceiveSettlementReachesValue(redevPayload)
     ? fieldError("redevSettlementAmount", `${label}: ${REDEV_RECEIVE_SETTLEMENT_LIMIT_MESSAGE}`)
     : null;
@@ -289,7 +291,7 @@ export function validateRedevelopmentAsset(
         if (landArea <= 0) {
           return fieldError("redevLandArea", `${label}: 토지면적(㎡)을 입력하세요. (§166③ 분자 산정 필수)`);
         }
-        return fieldError("redevLandPricePerSqmAtAcq", redevLandSec164Applies(asset)
+        return fieldError("redevLandPricePerSqmAtAcq", redevLandSec164Applies(asset, isFractionalSplit)
           ? `${label}: 취득당시 토지 ㎡당 단가 — 1990.8.30. 전 취득이라 개별공시지가가 없습니다. §164④ 칸(1990.1.1. 기준 개별공시지가·토지등급 3종)을 채우거나 단가를 직접 입력하세요. (§166③ 분자)`
           : `${label}: 취득당시 토지 ㎡당 단가를 입력하세요. (§166③ 분자 — Vworld 조회 또는 직접 입력)`);
       }
@@ -490,7 +492,7 @@ export function validateRedevelopmentAsset(
   //    이 분기 배제(`isHousingRightReceiveEstimated`)만 validate 고유 조건으로 남긴다 —
   //    그 플래그는 이 함수 안에서 계산되므로 술어 인자로 올리지 않는다.
   const isPreDisclosureTriggered =
-    !isHousingRightReceiveEstimated && isRedevPhdTriggered(asset);
+    !isHousingRightReceiveEstimated && isRedevPhdTriggered(asset, isFractionalSplit);
 
   if (isPreDisclosureTriggered) {
     // 본문 발동 — PHD 패턴 7필드 모두 필수
@@ -502,7 +504,7 @@ export function validateRedevelopmentAsset(
       return fieldError("redevLandArea", `${label}: §164⑦ 본문 — 토지면적(㎡) 입력 필수입니다.`);
     }
     if (effectiveRedevLandPricePerSqmAtAcq(asset) <= 0) {
-      return fieldError("redevLandPricePerSqmAtAcq", redevLandSec164Applies(asset)
+      return fieldError("redevLandPricePerSqmAtAcq", redevLandSec164Applies(asset, isFractionalSplit)
         ? `${label}: §164⑦ 본문 — 취득시 토지 ㎡당 단가 — 1990.8.30. 전 취득이라 개별공시지가가 없습니다. §164④ 칸(1990.1.1. 기준 개별공시지가·토지등급 3종)을 채우거나 단가를 직접 입력하세요.`
         : `${label}: §164⑦ 본문 — 취득시 토지 ㎡당 단가(공시지가 조회) 입력 필수입니다.`);
     }

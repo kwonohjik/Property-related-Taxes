@@ -39,7 +39,7 @@ import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
 import { landContributedOriginalApt } from "@/lib/calc/redev-field-scope";
 import { redevPreApprovalAcqMode } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { isRedevCarryoverDonorBasis } from "@/lib/calc/redev-carryover-acq-mode";
-import { redevPreApprovalExpensesUnused, redevPreApprovalExpensesWinnerDependent, REDEV_PRE_APPROVAL_WINNER_DEPENDENT_NOTE } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { redevPreApprovalExpensesUnused } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { redevPreApprovalExpensesScenarioDependent } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { REDEV_PRE_APPROVAL_SCENARIO_DEPENDENT_NOTE } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { isBgPreDeemedAsset } from "@/lib/calc/bg-pre-deemed";
@@ -105,6 +105,8 @@ interface Props {
   firstCardRedevRightsValue?: number;
   /** 축 B 지분 카드(자산 2~N) — §163⑨ 안내가 이 카드 위 지분 토글을 가리킨다(`shareAcquisitionOnly`와 같은 술어 · vp2c §27 D-3l). */
   shareCard?: boolean;
+  /** 지분 분할 축(폼 `assetSplitMode === "fractional"`) — 지분 자산의 산정방식 판정(`redevPreApprovalAcqMode`)·필요경비 칸이 담보 승을 확정하는 데 쓴다(⑧·④와 같은 축). */
+  isFractionalSplit?: boolean;
   /*
    * 🔄 `wasRegulatedAtAcquisition`은 **지웠다** (P6-c-1). C-1 (a) 거주요건 경고를 그리던
    *    `RedevelopmentRightExemptionSection`이 판정 메뉴 전용이 되면서 이 블록에서 소비처가
@@ -114,7 +116,7 @@ interface Props {
    */
 }
 
-export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgmentLoaded, transferDate, firstCardRedevRightsValue, shareCard }: Props) {
+export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgmentLoaded, transferDate, firstCardRedevRightsValue, shareCard, isFractionalSplit }: Props) {
   /**
    * 공유지분 모드 여부 — ④ API 변환(`buildRedevelopmentPayload`)과 **같은 술어**를 쓴다.
    * 갈라지면 화면이 「지분 해당분」이라 하는데 엔진은 100%로 취급하는 사고가 난다.
@@ -124,7 +126,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
   const isActive = asset.assetKind === "redevelopment_apt" || asset.assetKind === "right_to_move_in";
   const isRightSubject = asset.redevSubject === "right" || asset.assetKind === "right_to_move_in";
   /** ⑤ 「인가전 분 종전 부동산 취득가액」 방식 — ⑧·④·PHD 트리거와 같은 leaf */
-  const redevAcqMode = redevPreApprovalAcqMode(asset);
+  const redevAcqMode = redevPreApprovalAcqMode(asset, isFractionalSplit);
   // 의제취득일 전 상속·증여 · 시가 평가 3자 max(PR-7b-4) — 인가 전 실비는 ①② 채택일 때만 쓴다(아래 칸 안내 · `redevPreApprovalExpensesUnused`와 같은 축)
   const bgPreDeemedThreeWay = isBgPreDeemedAsset(asset) && redevAcqMode === "estimated";
   // 완공APT 안분 가이드의 고가주택 기준금액 — 양도일 기준(안내 전용, 세액은 엔진이 다시 정한다)
@@ -447,7 +449,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
           )}
 
           {/* 인가 전 분 필요경비가 개산공제인 경우(부담부증여 완공 아파트 기준시가·환산 · 일반 양도 환산) — 실비 칸이 쓰이지 않는다(값은 지우지 않는다). */}
-          {asset.redevIsSuccessorMember !== "yes" && redevPreApprovalExpensesUnused(asset) && (
+          {asset.redevIsSuccessorMember !== "yes" && redevPreApprovalExpensesUnused(asset, isFractionalSplit) && (
             <ToneCard tone="amber">
               {asset.transferType === "burdened_gift" ? (
                 <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="redev-pre-expense-lump-notice">
@@ -464,7 +466,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
               )}
             </ToneCard>
           )}
-          {asset.redevIsSuccessorMember !== "yes" && !redevPreApprovalExpensesUnused(asset) && (
+          {asset.redevIsSuccessorMember !== "yes" && !redevPreApprovalExpensesUnused(asset, isFractionalSplit) && (
             <FieldCard
               label="인가전 분 필요경비"
               field="redevPreApprovalExpenses"
@@ -473,9 +475,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
                   ? "의제취득일(1985.1.1.) 전 상속·증여 종전자산 — ①·②가 채택되면 채무비율을 곱해 공제하고, ③(§166③ 환산)이 채택되면 개산공제(시행령 §163⑥)를 적용해 이 금액은 쓰이지 않습니다 (소득세법 시행령 §166①1호)."
                   : redevPreApprovalExpensesScenarioDependent(asset)
                     ? REDEV_PRE_APPROVAL_SCENARIO_DEPENDENT_NOTE
-                    : redevPreApprovalExpensesWinnerDependent(asset)
-                      ? REDEV_PRE_APPROVAL_WINNER_DEPENDENT_NOTE
-                      : undefined
+                    : undefined
               }
             >
               <CurrencyInput label=""
@@ -619,7 +619,7 @@ export function RedevelopmentBlock({ asset, onChange, isOneHouseSingle, judgment
                단일 소스 — ① 기본정보의 면적 위젯이 같은 술어를 쓴다. 복제 금지:
                갈리면 면적 입력 dead-end 또는 미사용 값 입력이 된다. */
             shouldShowRedevValuationSection(asset) && (
-              <RedevelopmentValuationSection asset={asset} onChange={onChange} />
+              <RedevelopmentValuationSection asset={asset} onChange={onChange} isFractionalSplit={isFractionalSplit} />
             )
           )}
         </ToneCard>

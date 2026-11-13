@@ -396,7 +396,7 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
       : isCarryoverGeneral ? true
       // 재개발 × 부담부증여 — ⑤ 라디오(화면에 없다)가 아니라 부담부증여 K-4/K-5가 정한다(⑤⑧과 같은 leaf). 숨은 라디오의 stale 값이
       //   ⑫ refine(§166③ 분모 필수)을 일으키지 않게 한다. 엔진은 §159 스텝에서 같은 판정을 다시 한다(`redevSec166Conversion`).
-      : isRedevelopment && primary.transferType === "burdened_gift" ? redevPreApprovalAcqMode(primary) === "estimated"
+      : isRedevelopment && primary.transferType === "burdened_gift" ? redevPreApprovalAcqMode(primary, fractionalBundleMerge) === "estimated"
       : isEstimated,
     standardPriceAtAcquisition: hasPre1990 || usesPhd
       ? undefined
