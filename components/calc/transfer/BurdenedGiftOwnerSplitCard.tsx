@@ -16,7 +16,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { bgAcqStdPriceNeededBase } from "@/lib/calc/burdened-gift-acq-std-price";
-import { bgOwnerSplitActive, bgOwnerSplitOwnedPart } from "@/lib/calc/bg-owner-split-scope";
+import { bgOwnerSplitActive, bgOwnerSplitOwnedPart, bgOwnerSplitTransferStdNeeded } from "@/lib/calc/bg-owner-split-scope";
 import { PartAcqStdPrice } from "./LandBuildingSplitSection";
 import { TransferBuildingStdFields, TransferLandStdFields } from "./TransferStdPriceCards";
 
@@ -88,22 +88,25 @@ export function BurdenedGiftOwnerSplitCard({ asset, onChange, transferDate }: Co
   const market = asset.bgValuationMode === "sangjeungbeop_market";
   // 취득시 기준시가는 취득가액이 기준시가 × 채무비율이거나 환산·담보 승으로 읽을 때만 — ⑧(`validateBgOwnerSplit`)과 같은 술어.
   const acqNeeded = bgAcqStdPriceNeededBase(asset);
+  // 양도시 기준시가는 기준시가 평가·시가 × 환산에서만 쓴다 — 시가 × 실지는 칸을 열지 않는다(⑧·엔진 계약과 같은 술어).
+  const transferNeeded = bgOwnerSplitTransferStdNeeded(asset);
+  if (!transferNeeded && !acqNeeded) return null;
   return (
     <div data-testid="bg-owner-split-card">
       <ToneCard tone="amber" title={`증여한 ${name}분의 기준시가 (소득세법 시행령 §159①)`}>
         <p className="text-caption text-amber-900 dark:text-amber-200">
           {market
-            ? `시가 평가에서도 증여한 ${name}분의 양도시 기준시가를 입력합니다(계산 입력 요건). 증여한 ${name}분의 시가는 위 시가 평가 칸에 입력했습니다.`
+            ? `증여한 ${name}분의 시가는 위 시가 평가 칸에 입력했습니다. 여기 기준시가는 ${transferNeeded ? "환산취득가액(양도가액 × 취득시 기준시가 ÷ 양도시 기준시가) 계산에" : "취득가액(취득시 기준시가 × 채무비율) 계산에"} 씁니다.`
             : `증여가액(C)과 양도가액이 증여한 ${name}분의 기준시가로 정해집니다 — 취득가액은 취득시 기준시가에 채무비율을 곱합니다.`}
           {` ${name === "건물" ? "토지" : "건물"}분은 입력하지 않습니다.`}
         </p>
         {part === "land" ? (
           <>
-            <TransferLandStdFields asset={asset} onChange={onChange} transferDate={transferDate} />
+            {transferNeeded && <TransferLandStdFields asset={asset} onChange={onChange} transferDate={transferDate} />}
             {acqNeeded && <PartAcqStdPrice part="land" asset={asset} onChange={onChange} transferDate={transferDate} />}
           </>
         ) : acqNeeded ? (
-          <PartAcqStdPrice part="building" asset={asset} onChange={onChange} transferDate={transferDate} showTransfer transferHint={OWNED_TRANSFER_HINT} />
+          <PartAcqStdPrice part="building" asset={asset} onChange={onChange} transferDate={transferDate} showTransfer={transferNeeded} transferHint={market ? undefined : OWNED_TRANSFER_HINT} />
         ) : (
           <TransferBuildingStdFields asset={asset} onChange={onChange} transferDate={transferDate} placement="ownedPart" />
         )}

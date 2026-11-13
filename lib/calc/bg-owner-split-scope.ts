@@ -14,6 +14,7 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";
 import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
+import { bgOwnerSplitNeedsTransferStd } from "@/lib/tax-engine/burdened-gift-owner-split";
 
 /** 차단 문구 머리말 — 사유별 문구가 이어 붙는다(테스트·field-jump가 머리말로 식별한다). */
 export const BG_OWNER_SPLIT_UNSUPPORTED_MESSAGE = "토지·건물 소유자가 다른 자산의 부담부증여는 이 경우 계산하지 않습니다";
@@ -119,4 +120,9 @@ export function bgOwnerSplitUnsupportedBody(d: BgOwnerSplitBody, opts?: { bundle
 /** ⑫ — 범위 안: 본인 몫 계약(비소유 파트 0)을 검사할 본문. */
 export function bgOwnerSplitActiveBody(d: BgOwnerSplitBody): boolean {
   return bodyOwnerSplitRequested(d) && bodyReason(d, false) === undefined;
+}
+
+/** 증여한 부분의 양도시 기준시가를 받는가 — 폼 값을 엔진 술어 모양으로 넘긴다(⑤ 카드·④ `bgOwnerSplitInfoPatch`·⑧ `validateBgOwnerSplit` 공용). */
+export function bgOwnerSplitTransferStdNeeded(asset: Pick<AssetForm, "bgValuationMode" | "bgAcquisitionMethod">): boolean {
+  return bgOwnerSplitNeedsTransferStd({ valuationMode: asset.bgValuationMode, acquisitionMethod: asset.bgAcquisitionMethod });
 }
