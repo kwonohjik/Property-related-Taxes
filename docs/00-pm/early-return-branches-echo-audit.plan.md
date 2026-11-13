@@ -73,7 +73,7 @@ M3의 필지별 값(`parcelDetails`): p1 `acquisitionPrice 83,333,333 · expense
 
 - **V-1** 가업상속 재귀 경로의 실측(정적으로만 확인).
 - **V-2** 겸용주택(`mixedUse`)은 별도 엔진(`MixedUseGainBreakdown`)이라 이번 대조 밖이다. 다건 집계(`calculateTransferTaxAggregate`)의 조기 반환도 대조하지 않았다.
-- **V-3** 브라우저 렌더 미확인 — 다필지·비과세 시료는 함수 직접 호출 값이다(Playwright 미실행). 다필지는 자산 카드 토글(`AssetSectionAcquisition.tsx:262`)로 정상 폼에서 닿는다.
+- **V-3** ~~브라우저 렌더 미확인~~ → `early-return-mixed-use-aggregate-audit.plan.md` §8에서 headless Playwright로 확인했다(단건 다필지 이익·손실, 비과세 환산, 비과세 환산 + 공매 카드 — 전/후 대조 포함). 다필지는 자산 카드 토글(`AssetSectionAcquisition.tsx:262`)로 정상 폼에서 닿는다.
 - **V-4** 다필지 + swap(§97②2호 단서) 필지의 `expenses` 계상 — Q-1 구현 때 anchor로 확인.
 - **V-5** 다필지 + 수용/공매 §164⑨ 필지 시료(`transferCause`가 필지 게이트로 들어감)의 표시 — 미측정.
 - **V-6** 비과세 + 수용/공매 부분 비과세(12억 초과 과세분)는 정상 반환 쪽이라 카드가 실리는지 — 이번에 전액 비과세만 측정했다.
