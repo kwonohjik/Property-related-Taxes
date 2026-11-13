@@ -20,6 +20,7 @@ import { findRuralSurtaxDeductionBasis } from "@/lib/tax-engine/rural-surtax-bas
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isBgSuccessorRight } from "@/lib/calc/transfer-successor-right";
+import { bgOwnedPartOfResult } from "@/lib/calc/bg-owner-split-result";
 
 /** 승계조합원 입주권 부담부증여 — 결과 명세 취득가 라벨(V-2). 자산이 없으면 false. */
 const isBgSuccessorRightOf = (a: AssetForm | undefined): boolean => !!a && isBgSuccessorRight(a);
@@ -103,6 +104,8 @@ export function SingleDetailCards({
           breakdown={result.transferBurdenedGiftBreakdown}
           propertyType={asset?.assetKind ?? formData?.assets?.[0]?.assetKind}
           successorRight={isBgSuccessorRightOf(asset ?? formData?.assets?.[0])}
+          // 소유자 분리 — 증여한 부분은 엔진 결과(`splitDetail.selfOwns`)에서 읽는다(폼을 다시 판정하지 않는다)
+          ownerPart={bgOwnedPartOfResult(result)}
           warnings={result.warnings}
           // 재개발 완공 아파트 × K-5 — 엔진이 §166③으로 계산한 값(명세의 일반 환산값 대신 표시)
           redevSec166={redevSec166DisplayOf(result)}

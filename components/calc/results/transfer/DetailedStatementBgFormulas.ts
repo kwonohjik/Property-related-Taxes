@@ -16,6 +16,7 @@
 
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
+import { bgOwnedPartOfResult, bgOwnedPartPhrase, BG_PART_LABEL, type BgOwnedPart } from "@/lib/calc/bg-owner-split-result";
 
 type BgAssetBreakdown = TransferBurdenedGiftBreakdown["perAsset"]["land"];
 
@@ -113,6 +114,8 @@ export interface BgSingleDisplay {
   /** 필요경비 슬롯 합 — 개산공제 또는 실비 안분. */
   expenses: number;
   parts: { label: string; a: BgAssetBreakdown }[];
+  /** 토지·건물 소유자 분리 — 증여한 부분(엔진 `splitDetail.selfOwns`). 있으면 산식 머리에 「증여한 건물분」을 붙이고 parts는 그 파트 하나다. */
+  ownerPart?: BgOwnedPart;
 }
 
 /**
@@ -136,19 +139,49 @@ export function resolveBgCarryoverSingleDisplay(result: TransferTaxResult): BgSi
   return bgSingleDisplayOf(result);
 }
 
-function bgSingleDisplayOf(result: TransferTaxResult): BgSingleDisplay | undefined {
+/**
+ * 소유자 분리 부담부증여 단건의 표시값 — 증여한 파트의 §159 슬롯 echo. 취득일 분리(`both`)·재개발·겸용·이월과세는 종전 경로다.
+ * 비소유 파트 슬롯은 0이라 합계에 영향이 없고, 산식은 증여한 파트 하나만 적는다(`joinParts`가 「증여한 건물분」을 붙인다).
+ * 신고서 양식 표는 분리 열(`splitDetail`)을 그대로 쓰므로 이 값을 읽지 않는다 — 상세 명세서만 읽는다.
+ */
+export function resolveBgOwnerSplitDisplay(result: TransferTaxResult): BgSingleDisplay | undefined {
+  const ownerPart = bgOwnedPartOfResult(result);
+  if (!ownerPart || result.carryoverTaxationDetail) return undefined;
+  return bgSingleDisplayOf(result, ownerPart);
+}
+
+/**
+ * 다건(연간 합산) 자산별 산식 — 같은 증여한 파트 슬롯 echo(`resolveBgOwnerSplitDisplay`와 같은 산식 빌더 · 같은 접두).
+ * 자산별 취득가액·필요경비 줄이 `splitAcqFormulaText`의 「건물(환산취득가) … 파트별 산정」으로 떨어지면 §159 기준시가 안분이 환산취득가로 읽힌다.
+ * 소유자 분리 부담부증여가 아니면(또는 재개발·이월과세) undefined — 호출부는 종전 경로를 탄다.
+ */
+export function bgOwnerSplitPerAssetFormulas(p: {
+  transferBurdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
+  splitDetail?: TransferTaxResult["splitDetail"];
+  redevelopmentDetail?: unknown;
+  carryoverTaxationDetail?: unknown;
+}): { acquisition: string; expense: string } | undefined {
+  const ownerPart = bgOwnedPartOfResult(p);
+  const bg = p.transferBurdenedGiftBreakdown;
+  if (!ownerPart || !bg || p.redevelopmentDetail || p.carryoverTaxationDetail) return undefined;
+  const a = bg.perAsset[ownerPart];
+  const phrase = bgOwnedPartPhrase(ownerPart);
+  return { acquisition: `${phrase} ${buildBgAcquisitionFormula(bg, a, a.acquisitionPrice)}`, expense: `${phrase} ${buildBgExpenseFormula(bg, a)}` };
+}
+
+function bgSingleDisplayOf(result: TransferTaxResult, ownerPart?: BgOwnedPart): BgSingleDisplay | undefined {
   const bg = result.transferBurdenedGiftBreakdown;
-  if (!bg || result.redevelopmentDetail || result.mixedUseDetail || result.splitDetail) {
+  if (!bg || result.redevelopmentDetail || result.mixedUseDetail || (result.splitDetail && !ownerPart)) {
     return undefined;
   }
   const all = [
     { label: "토지", a: bg.perAsset.land },
     { label: "건물", a: bg.perAsset.building },
   ];
-  // 값이 있는 파트만 — 토지 자산은 건물 슬롯이, 주택·건물 자산은 토지 슬롯이 0이다.
-  const parts = all.filter(
-    ({ a }) => a.sangjeungbeopValue > 0 || a.transferPrice > 0 || a.acquisitionPrice > 0 || a.estimatedDeduction > 0,
-  );
+  // 값이 있는 파트만 — 토지 자산은 건물 슬롯이, 주택·건물 자산은 토지 슬롯이 0이다. 소유자 분리는 증여한 파트 하나로 못 박는다(비소유 파트는 0이 계약이다).
+  const parts = ownerPart
+    ? all.filter(({ label }) => label === BG_PART_LABEL[ownerPart])
+    : all.filter(({ a }) => a.sangjeungbeopValue > 0 || a.transferPrice > 0 || a.acquisitionPrice > 0 || a.estimatedDeduction > 0);
   const sum = (pick: (a: BgAssetBreakdown) => number) => all.reduce((n, { a }) => n + pick(a), 0);
   return {
     breakdown: bg,
@@ -156,11 +189,13 @@ function bgSingleDisplayOf(result: TransferTaxResult): BgSingleDisplay | undefin
     acquisition: sum((a) => a.acquisitionPrice),
     expenses: sum((a) => a.estimatedDeduction),
     parts,
+    ...(ownerPart ? { ownerPart } : {}),
   };
 }
 
-/** 파트가 둘이면 「토지 」·「건물 」 접두를 붙여 이어 쓴다 — 한 파트면 접두 없이(자산 하나의 산식이다). */
+/** 파트가 둘이면 「토지 」·「건물 」 접두를 붙여 이어 쓴다 — 한 파트면 접두 없이(자산 하나의 산식이다). 소유자 분리는 「증여한 건물분 」을 붙인다. */
 function joinParts(d: BgSingleDisplay, build: (a: BgAssetBreakdown) => string): string {
+  if (d.ownerPart) return d.parts.map(({ a }) => `${bgOwnedPartPhrase(d.ownerPart!)} ${build(a)}`).join("\n");
   return d.parts.length > 1
     ? d.parts.map(({ label, a }) => `${label} ${build(a)}`).join("\n")
     : d.parts.map(({ a }) => build(a)).join("\n");

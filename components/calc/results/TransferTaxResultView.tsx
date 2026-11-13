@@ -68,6 +68,7 @@ import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-di
 import { FalseContractPriceNotice } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/LocalIncomePenaltyNotice";
 import { shouldShowLocalIncomePenaltyNotice } from "@/lib/calc/local-income-penalty-notice";
+import { bgOwnedPartOfResult } from "@/lib/calc/bg-owner-split-result";
 
 // ── 중과 유예 근거(basis) 표시용 기한 포맷 — API JSON 왕복 후 string 도달 가능(Date 직렬화) ──
 /** 이월과세 서식 부제의 취득가액 — 소유자 분리면 본인 파트 값(엔진 echo `ownerSplitPart` · 계획서 V-4). 자산 전체 값은 본문 서식과 어긋난다. */
@@ -588,6 +589,8 @@ export function TransferTaxResultView({
               : {})}
             // «구분 기재»를 골랐는가도 엔진 미전송이라 폼에서 읽는다(엔진 echo와 둘 다 참일 때만 안내).
             {...(isSaleSplitActual(formData?.assets?.[0]) ? { saleSplitActual: true } : {})}
+            // 부담부증여 × 소유자 분리 — 비소유 파트는 0원 열이 아니라 「계산하지 않음」(엔진 결과로 판정)
+            {...(bgOwnedPartOfResult(result) ? { bgOwnerSplit: true } : {})}
           />
         </PrintSection>
       )}

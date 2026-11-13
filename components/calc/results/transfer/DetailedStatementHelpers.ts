@@ -61,6 +61,7 @@ import { allPropertiesReceiveOnly } from "./receive-only-display";
 import { receiveOnlyTransferDateOf } from "./receive-only-display";
 import {
   resolveBgSingleDisplay,
+  resolveBgOwnerSplitDisplay,
   resolveBgCarryoverSingleDisplay,
   buildBgSingleAcquisitionFormula,
   buildBgSingleExpenseFormula,
@@ -184,7 +185,8 @@ export function buildStatementItems(
   }).transferBurdenedGiftBreakdown;
 
   // 단건 부담부증여: §159 슬롯 echo에서 읽는다(`contractTotalPrice`가 빈 칸이라 역산하면 음수).
-  const bgSingle = isAggregate ? undefined : resolveBgSingleDisplay(result);
+  // 소유자 분리 부담부증여(증여한 파트만 §159)는 분리 열이 있어 `resolveBgSingleDisplay`가 비켜선다 — 증여한 파트의 슬롯 echo로 같은 산식을 그린다.
+  const bgSingle = isAggregate ? undefined : (resolveBgSingleDisplay(result) ?? resolveBgOwnerSplitDisplay(result));
   // 이월과세 단건 부담부증여: 양도가액·취득가액·필요경비 줄도 §159 슬롯 echo에서 읽는다 — 폼 계약금액이 빈 칸이라 역산하면 양도가액 0 · 취득가액 음수였다
   // (계획서 `bg-single-carryover-statement-price-rows.plan.md` Q-1 a).
   const bgCarryoverSingle = isAggregate ? undefined : resolveBgCarryoverSingleDisplay(result);

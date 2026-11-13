@@ -1,6 +1,6 @@
 # 부담부증여 × 토지·건물 소유자 분리 — 본인 소유분 §159 계산 계획서
 
-> 작성 2026-11-12 · 기준 master `b3a1507c6`(차단 #3272 `368a5d545` 포함) · 상태: **Plan — Q 결정 완료(2026-11-12 · 사용자 「모두 권고대로」) · PR-1 실측 완료 → PR-2 착수 가능**
+> 작성 2026-11-12 · 기준 master `b3a1507c6`(차단 #3272 `368a5d545` 포함) · 상태: **완료(PR-2+PR-3 #3285 · PR-4 이 PR) — 건물 종류 본인 몫 §159 계산·화면·결과 echo·다건 대조까지. 주택(V-1)·공동담보·임대 나목·함께 양도 묶음 등은 차단 유지**
 > 엔진 절은 transfer-tax-senior, UI 절은 transfer-tax-ui-senior가 병렬로 작성했고(CLAUDE.md 새 기능 워크플로), 두 절의 충돌은 §6에서 정리했다.
 > 인용 file:line은 모두 열어 확인했다. 확인하지 못한 것은 「확인 필요」로 적었다. 앵커 수치는 손계산이며 실행·실측은 Pre-Do(PR-1)에서 한다.
 
@@ -121,6 +121,13 @@
 - 비소유 파트 줄은 「본인 소유 아님 — 계산하지 않음」으로 적는다.
 - 엔진 echo가 필요하다: 증여한 부분, 양시점 가목·나목, 본인 몫 기준시가·시가. 신고서·상세 명세·인쇄도 같은 echo를 쓴다.
 
+### 8.1 PR-4 구현 기록 (2026-11-13)
+
+- **엔진 echo는 새로 만들지 않았다.** 증여한 부분은 이미 결과에 있는 `splitDetail.selfOwns` + §159 명세(`transferBurdenedGiftBreakdown`, `cards`·`assetKind` 없음)로 읽는다 — 단일 소스 `lib/calc/bg-owner-split-result.ts` `bgOwnedPartOfResult`. 화면이 폼 값을 다시 판정하지 않는다. (`TransferBurdenedGiftBreakdown`을 건드리지 않은 이유: 타입 파일이 764줄이다.)
+- **엔진 단계 문구 1곳:** `transfer-tax-burdened-gift-step.ts`의 「부담부증여 양도차익 산정」 산식을 소유자 분리일 때 「(증여한 건물분 보충적평가 ○○ 중 ○○% 안분)」로 적는다(시가 평가면 「시가」). 소유자 분리가 아닌 부담부증여의 문구(영문 모드 키 포함)는 그대로다 — 별건.
+- **소비처:** §159 명세 카드(`BurdenedGiftDetailCard` — 증여한 부분 머리·건물분 라벨·채무비율 기준·비소유 파트 「본인 소유 아님 — 계산하지 않음」) · 분리 양도차익 카드(`SplitGainDetailSection` `bgOwnerSplit` — 비소유 열 「—」) · 상세 명세서 단건(`resolveBgOwnerSplitDisplay`)·다건 자산별(`bgOwnerSplitPerAssetFormulas`). 신고서 양식 표는 종전 분리 열(소유 파트만)을 그대로 쓴다. PDF/인쇄는 같은 DOM 섹션이다.
+- **남은 한계(확인 필요):** 다건 상세 명세서의 취득가액 **머리 소제목**(「자산별 환산취득가 합계 — 시행령 §163·§176의2②」)은 `aggregateAcqModes`가 분리 파트 취득방식을 「환산」으로 읽어 정하는 값이라 소유자 분리·날짜 분리 부담부증여 모두 같다 — 자산 행 산식은 바로잡았으나 머리는 손대지 않았다.
+
 ## 9. Pre-Do 앵커 (손계산 · 건물만 · 기준시가 · 보충적 승 · 매매 2015-01-01 → 양도 2026-02-16 · 장특 22% · 중과 없음)
 
 > Q-1 b 결정으로 앵커 자산 종류를 **건물(`assetKind: "building"`)**로 바꿨다. 손계산 수치는 주택 시료와 같다(개별주택가격의 가목:나목 대신 건물의 토지 기준시가 : 건물 기준시가). 실측 결과는 §9.1.
@@ -161,13 +168,13 @@
 | V-2 | 상증령 §50⑧2호·§63①2호 verbatim을 `verify:legal` manifest에 등록 |
 | V-3 | ~~일반 양도 소유자 분리의 12억 판정 분모~~ — **v1 대상 아님(Q-1 b).** v1은 건물 종류만 열고, 건물은 1세대1주택·12억 판정 대상이 아니다. 주택을 여는 단계에서 다시 잰다 |
 | V-4 | ✅ **정적 확인(2026-11-12).** 건물 종류의 부담부증여 기준시가 모드 단일 칸은 「양도시 기준시가 (원)」 한 칸이다(`CompanionSaleModeBlock.tsx:180-184`). ④는 그 값을 통째로 `buildingStdPriceAtTransfer`에, 토지에 0을 싣는다(`transfer-tax-api-burdened-gift.ts:584-591` · probe wire `landStdT=0`). 칸의 ㎡당 단가 조회는 토지 공시지가다(`StandardPriceInput.tsx:76-77` `propertyType="land"`). ⇒ v1 소유자 분리는 단일 칸을 쓰지 않고 날짜 분리와 같은 파트 칸(가목 = ㎡당 공시지가 × 면적 · 나목 = `buildingStandardPriceAtTransfer`, `bg-house-split.ts:38-41`)을 쓴다. 단일 칸에 건물 기준시가가 들어가는지는 사용자 입력에 달렸다 — 소유자 분리와 별개의 관찰(세액 영향 미측정) |
-| V-5 | **④ 절반 확인(2026-11-12 probe wire).** 부담부증여에서도 `selfOwns`와 `landAcquisitionDate`는 실린다 — 건물만 + 토지 취득일 입력 → `2010-01-01`, 토지만 + 미입력 → 자산 취득일 `2015-01-01`(fallback). 파트 칸(㎡당 공시지가·건물 기준시가)은 실리지 않는다(`bgHouseSplitMode`가 소유자 분리면 undefined → info는 단일 칸 값 10억·5억). **엔진 절반(`calcSplitGain` `:76` 게이트)**은 ⑫ 차단에 가려 route로 잴 수 없다 → PR-2에서 엔진 직접 anchor로 잰다 |
-| V-6 | 비소유 파트 표시용 보유연수를 하류(파트별 세율·§104⑤ 비교)가 읽지 않는지 — 뮤테이션 |
+| V-5 | ✅ **해소(#3285 · PR-4 재확인).** 엔진 절반은 `bg-owner-split-159.anchor.test.ts`(A1~A4·토지만·입력 계약·V-6)로, ④ 절반은 route anchor `transfer.route.bg-owner-split-calc.anchor.test.ts`(본문 `selfOwns`·본인 몫 기준시가·비소유 0)와 E2E BGO-E1로 고정했다. 다건도 같은 본문이 나간다(`multi-bg-owner-split-parity.anchor.test.ts` · E2E BGO-E7). **이하 PR-1 당시 기록:** **④ 절반 확인(2026-11-12 probe wire).** 부담부증여에서도 `selfOwns`와 `landAcquisitionDate`는 실린다 — 건물만 + 토지 취득일 입력 → `2010-01-01`, 토지만 + 미입력 → 자산 취득일 `2015-01-01`(fallback). 파트 칸(㎡당 공시지가·건물 기준시가)은 실리지 않는다(`bgHouseSplitMode`가 소유자 분리면 undefined → info는 단일 칸 값 10억·5억). **엔진 절반(`calcSplitGain` `:76` 게이트)**은 ⑫ 차단에 가려 route로 잴 수 없다 → PR-2에서 엔진 직접 anchor로 잰다 |
+| V-6 | ✅ **해소.** 엔진 anchor `bg-owner-split-159.anchor.test.ts`의 「V-6」 3건이 비소유 파트 취득일이 세액에 닿지 않음을 고정한다. PR-4 뮤테이션: `landOnlyRateInput`(`land-only-owner-household.ts`)의 비주택 분기를 토지 취득일 치환 없이 `return input`으로 바꾸면 「토지만 본인 · 건물 취득일 8개월 전」 케이스가 깨진다(1건 kill) |
 | V-7 | 환산·시가 모드 취득시 시가 본인 몫 경로와 §114조의2 가산세 base |
-| V-U1 | `bgGiftBuildingStdPriceAtTransfer`(증여일 현재 기준시가, `BurdenedGiftBlock.tsx:626`)가 소유자 분리에서 본인분인지 결합 공시가격인지 |
-| V-U3 | 사이드바 합계의 비소유 파트 0 처리 |
-| V-U4 | ⑩ 컴패니언 Zod 변경 필요 여부 · ⑪ 파일·줄 |
-| V-U8 | 브라우저 수동 확인(완료 보고 전 · Network 탭 body 포함) |
+| V-U1 | ✅ **처리(#3285).** 본인분인지 결합 공시가격인지 확인하지 못해 ④가 `giftBuildingStdPriceAtTransfer`를 싣지 않고(`bg-owner-split-info.ts` `bgOwnerSplitInfoPatch`) ⑤도 칸을 숨긴다. 결과 화면은 이 값을 읽지 않는다 |
+| V-U3 | ✅ **실측 — 결함 없음(PR-4).** 건물만·토지만 모두 계산 전 「계산 후 표시」, 계산 뒤 양도가액 100,000,000 · 취득가액 40,000,000 · 필요경비 1,200,000(증여한 부분 값 · 비소유 0이 합을 흐트러뜨리지 않음). E2E BGO-E5가 고정한다. 코드 변경 없음 |
+| V-U4 | ✅ **해소(#3285).** ⑩ 컴패니언은 「함께 양도 묶음」 사유로 막는다(`transfer-tax-schema-bg-owner-split.ts`) — 컴패니언 Zod에 본인 몫 계약은 두지 않는다. ⑪ 새 fallback 없음(Q-8: 토지만 본인의 `landAcquisitionDate` 필수 규칙 유지) |
+| V-U8 | ✅ **headless Playwright로 확인(PR-4)** — 요청 본문(Network request body)·결과 화면·인쇄 미디어 텍스트·다건. **사람이 직접 브라우저를 조작한 수동 확인은 아니다** |
 
 **Q (사용자 결정)** — 권고를 첫 줄에 둔다.
 
@@ -189,7 +196,7 @@
 | PR-1 | ✅ Pre-Do: 앵커 A1~A4 probe 실측 + V-3·V-4·V-5 측정(§9.1 · §10). 코드 변경 없음 | 완료 2026-11-12 |
 | PR-2 | 엔진: `burdened-gift-owner-split.ts` + `bgSplitGainResult` `selfOwns` + `calcSplitGain` 게이트(V-5 엔진 절반 anchor) + 단계 배선 · §9.1 수치를 소유자 분리 입력으로 재현 | 소스 ~110 · anchor ~250 |
 | PR-3 | ④ `bgOwnerSplitInfoPatch` · ⑤ 잠금 축소·파트 카드 · ⑧ 전용 검증 · ⑫ 술어 교체 · ①②③ 시가 필드 | ~250 · E2E 2~3 |
-| PR-4 | ⑦ 결과·명세·인쇄 echo · 다건 대조 · 설계서 V-3 닫기 | ~150 |
+| PR-4 | ✅ ⑦ 결과·명세·인쇄 echo · 다건 대조 · 설계서 V-3 닫기 — 이 PR | 완료 2026-11-13 |
 
 - **테스트 승계:** #3272의 `transfer.route.bg-owner-split-block.anchor.test.ts`·`bg-owner-split-toggle-lock.anchor.test.tsx`는 단언을 뒤집지 않고 **범위 밖 차단 anchor로 좁혀** 남긴다. `transfer.route.bg-owner-split-hidden-flags-v5.anchor.test.ts`는 「숨은 감정·매매사례 플래그를 읽지 않는다」는 의미를 범위 안 계산에서 다시 고정한다(공유 단언 반전 금지).
 - **E2E:** 기본 틀은 `e2e/bg-house-building-split.spec.ts`(날짜 분리 선례)다. 범위 안 시나리오는 건물만·토지만·시가 모드 칸 이동·토글 끄기 후 날짜 분리 카드·차단 시절 저장본 로드·다건 1물건·묶음 차단 문구·일반 양도 회귀다.
