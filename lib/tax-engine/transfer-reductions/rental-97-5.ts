@@ -31,6 +31,7 @@ import {
   validateRentIncreaseInterval,
   rental97EffectiveStart,
   rentViolationsFromRentalStart,
+  rentCheckEnd97,
   rentIntervalViolationsFromRuleDate,
   DEFAULT_JEONSE_CONVERSION_RATE,
 } from "./rental-97-shared-helpers";
@@ -168,14 +169,17 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
     // 임대개시일(령 §97의3④·§97의5③ 기산일) 이후 체결·갱신한 계약의 증액만 판정한다
     // 상속 합산이면 피상속인 분부터 — 합산된 「임대기간 중」 요건이다(V-13 Q-E).
     const rentStart = decedentStart ?? rental97EffectiveStart(input);
+    // 종점 — 양도 전 임대 종료·등록 말소일 뒤 계약은 세지 않는다(서면-2017-법령해석재산-1253 · `rentCheckEnd97`)
+    const rentEnd = rentCheckEnd97(input);
     const capViolations = rentViolationsFromRentalStart(
       validateRentIncrease(input.rentHistory, input.jeonseConversionRate ?? DEFAULT_JEONSE_CONVERSION_RATE).violations,
       rentStart,
+      rentEnd,
     );
     if (capViolations.length > 0) {
       reasons.push({
         code: "RENT_INCREASE_VIOLATED",
-        message: `임대료(환산보증금) 증액 5% 제한 위반 계약 ${capViolations.length}건 (§97의5①3호 — §97의3①2호 준용). 임대사업자 등록일·세무서 사업자등록일·실제 임대개시일 중 가장 늦은 날 이후 체결·갱신한 계약만 셉니다.`,
+        message: `임대료(환산보증금) 증액 5% 제한 위반 계약 ${capViolations.length}건 (§97의5①3호 — §97의3①2호 준용). 임대사업자 등록일·세무서 사업자등록일·실제 임대개시일 중 가장 늦은 날 이후, 임대 종료일(등록 말소일) 이전에 체결·갱신한 계약만 셉니다.`,
         legalBasis,
       });
     }
@@ -187,6 +191,7 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
           .violations,
       ),
       rentStart,
+      rentEnd,
     );
     if (intervalViolations.length > 0) {
       reasons.push({
@@ -195,7 +200,7 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
           `마지막 증액일(증액 전이면 첫 계약일)로부터 1년 이내에 임대료(환산보증금)를 올린 계약 ${intervalViolations.length}건 ` +
           `(${intervalViolations.map((v) => `${ymd(v.lastIncreaseDate)} → ${ymd(v.contractDate)}`).join(", ")}) ` +
           `— 조특령 §97의3③1호 후단 「증액이 있은 후 1년 이내에는 하지 못하고」 (§97의5①3호 준용). ` +
-          `1년은 민법 기간 계산으로 다음 해 같은 날에 만료합니다. 임대사업자 등록일·세무서 사업자등록일·실제 임대개시일 중 가장 늦은 날 이후 체결·갱신한 계약만 세며, 직전 계약이 2020.2.11 이후인 경우부터 적용합니다(대통령령 제30390호 부칙 §16).`,
+          `1년은 민법 기간 계산으로 다음 해 같은 날에 만료합니다. 임대사업자 등록일·세무서 사업자등록일·실제 임대개시일 중 가장 늦은 날 이후, 임대 종료일(등록 말소일) 이전에 체결·갱신한 계약만 세며, 직전 계약이 2020.2.11 이후인 경우부터 적용합니다(대통령령 제30390호 부칙 §16).`,
         legalBasis: "조특령 §97의3③1호",
       });
     }
@@ -242,6 +247,8 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
      * 양도 전에 임대를 끝냈으면(`rentalContinuesToTransfer === false`) 종점은 **임대 종료일**이다.
      * 🔴 종전에는 항상 양도일이었다 — 조기 종료 선언이 안분 비율(령 §97의5② B)만 바꾸고
      *    10년 판정은 그대로 통과시켰다. 미입력은 양도일로 대체하지 않는다(자동 fallback 금지).
+     * 등록이 말소(자진·자동)됐으면 말소일도 같은 칸으로 받는다 — 령 ① 「그 등록한 기간 동안」이므로 말소 뒤
+     * 계속 임대한 기간은 임대기간이 아니다(`rental-97-5-deregistration-end.plan.md` D-1).
      */
     const rentalEnded = input.rentalContinuesToTransfer === false;
     let periodEnd: Date | undefined = input.transferDate;
@@ -250,7 +257,7 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
       if (!input.rentalEndDate) {
         reasons.push({
           code: "MISSING_RENTAL_END_DATE",
-          message: "양도 전에 임대를 종료한 경우 임대 종료일을 입력해야 합니다 (§97의5①2호 — 10년 계속 임대 판정의 종점).",
+          message: "양도 전에 임대를 종료했거나 등록이 말소된 경우 임대 종료일(등록 말소일 중 먼저 온 날)을 입력해야 합니다 (§97의5①2호 — 10년 계속 임대 판정의 종점 · 조특령 §97의5① 「그 등록한 기간 동안」).",
           legalBasis,
         });
       } else if (
@@ -259,7 +266,7 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
       ) {
         reasons.push({
           code: "INVALID_RENTAL_END_DATE",
-          message: "임대 종료일은 임대개시일(등록일이 늦으면 등록일)과 양도일 사이여야 합니다 (§97의5①2호).",
+          message: "임대 종료일은 임대개시일(등록일이 늦으면 등록일)과 양도일 사이여야 합니다 — 등록 말소일을 넣은 경우도 같습니다 (§97의5①2호).",
           legalBasis,
         });
       } else {
