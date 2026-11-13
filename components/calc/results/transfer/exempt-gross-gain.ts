@@ -140,9 +140,16 @@ export function assetTaxableGain(p: {
   return gross > 0 ? Math.min(gross, Math.max(0, p.income) + p.longTermHoldingDeduction) : gross;
 }
 
-/** 자산별 비과세 양도차익 = gross − 과세대상. */
+/**
+ * 자산별 비과세 양도차익 = gross − 과세대상.
+ *
+ * 비과세 자산의 양도차손은 gross가 음수이고 과세대상은 0이라 **비과세 양도차익도 음수**다 — 0으로 누르면 「gross = 비과세 + 과세대상」이 깨져
+ * 합산 신고서·요약 카드·PDF가 어긋난다(엔진이 비과세 gross의 0 바닥을 걷은 뒤 — 계획서 `docs/00-pm/exempt-loss-gross-gain-display.plan.md` Q-1 a).
+ * 비과세가 아닌 자산은 종전대로 0 바닥(차손이면 gross = 과세대상이라 0).
+ */
 export function assetExemptGain(p: Parameters<typeof assetTaxableGain>[0]): number {
-  return Math.max(0, effectiveGrossGain(p) - assetTaxableGain(p));
+  const gain = effectiveGrossGain(p) - assetTaxableGain(p);
+  return p.isExempt ? gain : Math.max(0, gain);
 }
 
 /**

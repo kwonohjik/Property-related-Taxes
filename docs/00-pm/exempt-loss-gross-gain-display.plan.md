@@ -3,7 +3,7 @@
 > 2026-11-13 · 시작은 #3335 후속 V-4(배율초과 비사업용 카드가 있는 상속·증여 겸용) 실측이었고, 그 안의 1건이 **일반 주택에도 공통인 결함**으로 확인돼 이 계획서의 주제가 됐다.
 > 방법: throwaway probe — vitest(폼 → ⑧ → ④ → ⑫ route → ⑭ 파트 카드 → 집계 → `buildRows`) + Playwright 1건(단건 신고서·명세서 텍스트). 둘 다 커밋 전에 삭제했다.
 > 표기: **[직접]** 이번 세션 코드 읽기·실측 · **[해석]** · **[확인 필요]**.
-> 상태: **결정 대기(Q-1)**. 이 PR은 계획서만이다 — 코드는 바꾸지 않았다. **세액 영향 없음(표시 결함).**
+> 상태: **Q-1 a 결정(2026-11-13, 「권장안으로」) → 구현·검증 완료(§6)**. **세액 영향 없음(표시 결함).**
 
 ## 0. 결론
 
@@ -94,4 +94,24 @@ K2에서 `mu-nbl` 카드 양도차익이 −108,781,164, 상가 토지 카드가
 | b | 표시부(`FilingFormTableHelpers`·집계 echo)에서 보정한다 | 비권고 — 소비처 수만큼 보정이 필요하다(메모리 `feedback_clamped_value_poisons_inverse_display` How-to 2) |
 | c | 두고 종결한다 | 비권고 — 신고서가 사용자가 입력한 취득가액을 지운다. 1세대1주택 비과세로 손해 보고 파는 경우는 실재한다 [해석] |
 
-권고대로면 「권장안으로」, 이 계획서만 머지하려면 「머지해」입니다.
+
+## 6. 구현·검증 결과 (Q-1 a)
+
+**변경 5곳** [직접: diff]
+- `lib/tax-engine/transfer-tax-finalize.ts:606` — 비과세 조기 반환 `exemptGrossGain: Math.max(0, ownedGrossGain)` → `ownedGrossGain`(0 바닥 제거).
+- `components/calc/results/transfer/exempt-gross-gain.ts` `assetExemptGain` — 비과세 자산은 `gross − 과세대상`을 그대로(음수 허용), 비과세가 아니면 종전 0 바닥. **신고서(집계)·요약 카드(`sumAssetGains`)·PDF 합산 표·집계 명세서가 공유하는 정본 leaf.**
+- `components/calc/results/transfer/FilingFormTableHelpers.ts` — 단건 «비과세 양도차익» 행: 비과세면 `effGain − taxableGain`(음수 허용). «양도차손 §102② 통산 가능» 고지는 `!result.isExempt`일 때만(비과세 자산의 손실은 통산 대상이 아니므로 gross가 음수로 오기 시작한 뒤 생길 거짓 고지를 막는 가드).
+- `components/calc/results/transfer/DetailedStatementHelpers.ts` — 단건 비과세 양도차익 동일 규칙 · 집계 합은 중복 산식을 걷고 `assetExemptGain` 합 · «과세대상 양도차익» 문구 조건 `exemptVal <= 0` → `=== 0`(비과세 손실이면 «전체 −N − 비과세 −N»).
+- `components/calc/results/MultiTransferTaxSummaryCard.tsx` — 비과세 행 조건 `exemptGain > 0` → `!== 0`.
+
+**계획서와 달라진 것 2건 (공개)**
+1. **`transfer-tax-rental-housing-step.ts:701`은 고치지 않았다.** 양도차손이면 §155⑳ 단계가 적용되지 않는다(전액 비과세 × 양도 2억 < 취득 3억 시료에서 `rentalHousingExceptionDetail.applied`가 `undefined` — 손실 조기 반환이 앞선 것으로 읽는다 [해석]). 음수를 볼 일이 없는 줄이라 변경이 시험 불가·범위 밖이었다 — V-7 해소.
+2. **표시층 4곳이 추가로 필요했다.** 엔진 바닥만 걷으면 `sumAssetGains`의 «양도차익 − 비과세 = 과세대상»(다건 요약 카드·PDF)이 88,060,942 어긋나고 단건 명세서가 «비과세 양도차익 = 전체 −200,000,000 − 과세대상 0»이라 적고 값 0을 보였다(V-5 해소: 비과세 양도차익도 음수 = 「전체 = 비과세 + 과세대상」 유지). 설계 선택이며 되돌릴 수 있다.
+
+**anchor 7건** — `transfer.route.exempt-loss-gross-gain.anchor.test.ts` EL-1~6(+EL-4 겸용 컴패니언) · `multi-summary-card-partial-exempt-g2-6.anchor.test.tsx`에 (d) 추가. 수정 전 EL-1~4 실패 · 짝(EL-5)·EL-6 통과. 절대값: 단건 취득가액 700,000,000 · 전체 양도차익 −200,000,000 · 비과세 −200,000,000 · 함께 양도 주택 열 항등식 0 · 겸용 K8 주택 카드 gross −77,700,831·−10,360,111, 합계 열 항등식 0 · 집계 [gross, 비과세, 과세대상] = [200,000,000, 30,481,569, 169,518,431] · 요약 카드 «양도차익 300,000,000 / 비과세 200,000,000 / 과세대상 500,000,000».
+
+**뮤테이션 9종 전부 사망**(백업·복원·`cmp`): 엔진 바닥 복원 · 통산 고지 가드 제거 · 단건 신고서 비과세 행 · 정본 leaf 바닥 복원 · 단건 명세서 · 과세대상 문구 조건 · 집계 명세서 leaf · 요약 카드 조건. (§155⑳ 줄 M2는 위 1번으로 대상에서 뺐다.)
+
+**회귀·정적 검사:** 회귀 5배치 전건 통과 — `__tests__/api` 7472 · `tax-engine` 19866 · `calc` 11963 · `lib` 3423 · `components` 7260 (실패 0 — **바닥에 기대 `exemptGrossGain === 0`을 고정한 기존 단언은 없었다**). `tsc --noEmit`(힙 8GB) 0건(내 테스트 파일의 암묵적 any 6건을 고친 뒤). eslint 오류 0건(경고 3건 `_properties`·`PerAssetValue`·`calcTax` 미사용은 건드리지 않은 기존 줄). **세액 불변 확인(V-4 해소):** 세액·판정 단언 실패 0건.
+
+**미수행:** 브라우저(Playwright) 재확인(CI E2E에 맡김 — 단건 신고서 «취득가액 500,000,000» → 700,000,000 화면 확인은 요청 시) · PDF·다건 분해 카드 렌더 직접 측정(V-6: 정본 leaf 공유로 따라온다고 읽었다 [해석]).

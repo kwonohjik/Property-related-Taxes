@@ -564,7 +564,8 @@ export function buildRows(
     // 비과세 자산은 transferGain=0 → exemptGrossGain echo 사용 (전체·비과세 양도차익 표시).
     const effGain = result.isExempt ? (result.exemptGrossGain ?? 0) : result.transferGain;
     setNum("transferGain", "total", effGain);
-    setNum("exemptGain", "total", isRH ? 0 : Math.max(0, effGain - result.taxableGain));
+    // 비과세 자산의 양도차손은 비과세 양도차익도 음수 — 「전체 = 비과세 + 과세대상」을 유지한다(`assetExemptGain`과 같은 규칙).
+    setNum("exemptGain", "total", isRH ? 0 : result.isExempt ? effGain - result.taxableGain : Math.max(0, effGain - result.taxableGain));
     setNum("taxableGain", "total", isRH ? effGain : result.taxableGain);
     /**
      * 양도차손 고지 — 「소득세법」 §102②.
@@ -574,7 +575,8 @@ export function buildRows(
      *   세 경로만 이 문구를 받는다(양도세 결과뷰는 4개 —
      *   memory `feedback_transfer_result_view_is_not_one`).
      */
-    if (effGain < 0) {
+    // 비과세 자산의 손실은 과세 대상 양도차손이 아니라 통산 안내를 붙이지 않는다 — gross가 음수로 오기 시작한 뒤 생긴 가드.
+    if (effGain < 0 && !result.isExempt) {
       setRoseNote(
         "transferGain",
         "total",
