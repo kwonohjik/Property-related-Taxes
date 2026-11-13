@@ -20,6 +20,7 @@ import { qualifyingUnitHo } from "./comprehensive-rental-units";
 import { validateQualifyingUnits } from "./comprehensive-rental-units";
 import { isOwnedRentalType } from "./comprehensive-rental-459ho";
 import { priceRegistrationType } from "./comprehensive-rental-459ho";
+import { asksRegistrationRevokedDate } from "./comprehensive-rental-459ho";
 import { rental459hoApiFields } from "./comprehensive-rental-459ho";
 import { validate459hoInputs } from "./comprehensive-rental-459ho";
 
@@ -466,7 +467,8 @@ export async function callComprehensiveApi(
           currentRent: parseAmount(p.currentRent),
           isInitialContract: p.isInitialContract,
           actualRentalYears: p.actualRentalYears ? parseDecimal(p.actualRentalYears) : undefined,
-          registrationRevokedDate: p.registrationRevokedDate || undefined,
+          // 9호는 말소일을 묻지 않는다(⑤와 같은 술어) — 다른 유형에서 넣어 둔 값이 남아 있어도 보내지 않는다
+          registrationRevokedDate: asksRegistrationRevokedDate(registrationType) ? p.registrationRevokedDate || undefined : undefined,
           isEupMyeonArea: p.isEupMyeonArea || undefined,
           isThirtyPlusUnits: asksThirtyPlusUnits(priceType, formData.assessmentYear)
             ? p.isThirtyPlusUnits || undefined

@@ -24,6 +24,14 @@ export function isOwnedRentalType(registrationType: string): boolean {
   return ho === "4" || ho === "9";
 }
 
+/**
+ * 「임대등록 말소」 칸을 묻는가 — 9호는 「소유」만 요건이고 공공주택사업자라 민간임대주택법 등록 말소가 맞지 않아
+ * 엔진이 말소일을 보지 않는다(`comprehensive-exclusion.ts` · 계획서 9-7). ⑤ 칸 표시와 ④ 전송이 같이 쓴다.
+ */
+export function asksRegistrationRevokedDate(registrationType: string): boolean {
+  return ho459(registrationType) !== "9";
+}
+
 /** 9호의 가격·30호 칸을 볼 바탕 유형(공공건설 1호 / 공공매입 2호). 9호가 아니면 받은 유형 그대로, 구분 모르면 null. */
 export function priceRegistrationType(p: PropertyEntry, registrationType: string): string | null {
   if (registrationType !== "public_conversion_pending") return registrationType;

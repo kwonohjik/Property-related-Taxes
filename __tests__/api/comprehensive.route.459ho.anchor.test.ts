@@ -136,6 +136,11 @@ describe("④ 본문", () => {
     expect(info?.reitAcquisitionDate).toBeUndefined();
     expect(info?.reitPrice2008Under6eok).toBeUndefined();
   });
+  it("★ 9호는 말소일을 보내지 않는다(칸을 묻지 않음 — 다른 유형에서 넣어 둔 값이 남아도) · 4호는 보낸다", async () => {
+    const revoked = { registrationRevokedDate: "2024-04-01" };
+    expect((await bodyOf(form({ ...HO9, ...revoked }))).properties[0].rentalInfo?.registrationRevokedDate).toBeUndefined();
+    expect((await bodyOf(form({ ...HO4, ...revoked }))).properties[0].rentalInfo?.registrationRevokedDate).toBe("2024-04-01");
+  });
 });
 
 describe("⑫⑭ → 엔진 (화면 경로 끝까지)", () => {

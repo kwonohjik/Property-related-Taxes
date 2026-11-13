@@ -2,7 +2,8 @@
 
 - 작성: 2026-11-13 · 상태: **구현 완료(2026-11-13) — PR-1 엔진 #3329 · PR-2 화면 · Q 권장안(a) · Q-8 #3323 · Q-9 #3325로 이미 처리**
   - PR-2: 술어 `lib/calc/comprehensive-rental-459ho.ts`(`ho459` — ⑤⑧④ 공유) · ⑤ `RentalExclusion459hoFields.tsx` · 선택지 3개(두 드롭다운) · 4·9호 임대개시일 선택(⑧·⑫ refine·⑭ `toOptionalDate`·엔진 타입 `rentalStartDate?`) · 4·5호 임대료 칸 숨김 · 9호 가격·30호 칸은 바탕 유형(`priceRegistrationType`) · route anchor 8(변이 3) · E2E `comprehensive-rental-459ho.spec.ts` 2.
-  - 남은 한계: 9호 말소 칸은 화면에 남아 있으나 엔진이 보지 않는다 · 9호 바탕 유형 미선택 시 사용승인일·30호 칸이 열리지 않는다(⑧이 종류 선택을 먼저 요구).
+  - 남은 한계: 9호 바탕 유형 미선택 시 사용승인일·30호 칸이 열리지 않는다(⑧이 종류 선택을 먼저 요구).
+  - 후속: 9호에서 「임대등록 말소」 칸 숨김 + ④ 미전송(`asksRegistrationRevokedDate` — 엔진이 9호 말소일을 보지 않아 안내문과 결과가 어긋났다).
   - 엔진: `comprehensive-exclusion-4ho.ts`·`-5ho.ts`·`-9ho.ts` · 사실 `types/comprehensive-exclusion-459ho.types.ts` · 유형 키 `vacant_construction`/`reit_purchase`/`public_conversion_pending`(+`_rental`) · 사유 코드 19 · manifest 3(PASS) · anchor `comprehensive-exclusion-459ho.anchor.test.ts` 15(변이 4건 확인).
   - 4호 사용승인일은 공통 `usageApprovalDate`(#3325) · 5호 호수는 6호와 같은 `reitRental5hoCount` · 9호 면적·가격·임대료는 바탕 유형(공공건설/공공매입)으로 계산.
   - V-12 해소: 종부세법 §8②1호(MST 280417)는 대통령령 위임뿐. 제35352호 부칙 §2①은 1·2·3·7·8호만 들어 4호 나목은 2025 이후에도 부칙<제31447호> §2(사용승인일) — 원문 확인. 다만 4호는 「2년 이내」라 2025 이후 사용승인일은 언제나 2021.2.17. 뒤.
