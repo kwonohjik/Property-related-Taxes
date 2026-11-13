@@ -55,9 +55,9 @@ export function rentalProrationIssue(args: {
   if (r.rentalContinuesToTransfer === false) {
     const end = r.rentalEndDate || "";
     if (!end)
-      return fieldError(`reduction.${r.type}.rentalEndDate`, `${label} 적용: 양도 전에 임대를 종료했으면 임대 종료일을 입력하세요 (${r.type === "rental_97_5" ? "§97의5①2호" : "§97의3①1호"} — 임대기간 판정의 종점).`);
+      return fieldError(`reduction.${r.type}.rentalEndDate`, `${label} 적용: 양도 전에 임대를 종료했으면 임대 종료일을 입력하세요 — 등록이 먼저 말소됐으면 말소일입니다 (${r.type === "rental_97_5" ? "§97의5①2호" : "§97의3①1호"} — 임대기간 판정의 종점).`);
     if ((start && end < start) || (form.transferDate && end > form.transferDate))
-      return fieldError(`reduction.${r.type}.rentalEndDate`, `${label} 적용: 임대 종료일은 임대개시일(등록일·사업자등록일이 늦으면 그날)과 양도일 사이여야 합니다.`);
+      return fieldError(`reduction.${r.type}.rentalEndDate`, `${label} 적용: 임대 종료일은 임대개시일(등록일·사업자등록일이 늦으면 그날)과 양도일 사이여야 합니다 — 등록 말소일을 넣은 경우도 같습니다.`);
   }
 
   /**

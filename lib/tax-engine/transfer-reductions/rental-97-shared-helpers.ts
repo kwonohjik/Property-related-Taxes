@@ -268,13 +268,30 @@ export function rental97EffectiveStart(input: {
  * ⇒ 증액한 계약의 체결·갱신일이 기산일 이후인 위반만 센다. 비교 기준(직전 계약)은 기산일 전 계약이어도 된다
  *   — 등록 당시 존속하던 계약의 임대료가 첫 기준이다.
  * 기산일을 모르면(임대일 미입력) 걸러내지 않는다 — 그 경우는 MISSING_RENTAL_START가 따로 막는다.
+ *
+ * 종점(`end`) — 양도 전에 임대를 끝냈거나 등록이 말소됐으면 그 날(`rentCheckEnd97`). 그 **뒤**에 체결·갱신한 계약은
+ * 「임대기간 중」(령 §97의5① 「그 등록한 기간 동안」 · 령 §97의3② 「그 등록 기간 동안」)이 아니므로 세지 않는다.
+ * 종점 **당일** 계약은 센다. 근거: 서면-2017-법령해석재산-1253(2019.4.19.) — §97의5 요건을 갖추어 10년 이상 임대한 후
+ * 양도 시 해당 요건을 갖추지 못한 경우에도 감면대상. §97의3은 같은 「등록 기간」 문언으로 같이 적용한다(정면 해석례 없음 —
+ * `docs/01-plan/features/rental-97-5-deregistration-end.plan.md` Q-3·V-2).
  */
 export function rentViolationsFromRentalStart<T extends { contractDate: Date }>(
   violations: T[],
   start: Date | undefined,
+  end?: Date,
 ): T[] {
-  if (!start) return violations;
-  return violations.filter((v) => v.contractDate.getTime() >= start.getTime());
+  return violations.filter(
+    (v) =>
+      (!start || v.contractDate.getTime() >= start.getTime()) && (!end || v.contractDate.getTime() <= end.getTime()),
+  );
+}
+
+/**
+ * 임대료 요건의 종점 — 「양도 전에 임대 종료 또는 등록 말소」를 골랐을 때의 그 날. 아니면 없음(양도일까지 본다).
+ * 종료일이 범위 밖이면 `INVALID_RENTAL_END_DATE`가 따로 막으므로 여기서 다시 검사하지 않는다.
+ */
+export function rentCheckEnd97(input: { rentalContinuesToTransfer?: boolean; rentalEndDate?: Date }): Date | undefined {
+  return input.rentalContinuesToTransfer === false ? input.rentalEndDate : undefined;
 }
 
 /**

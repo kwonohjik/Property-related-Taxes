@@ -2,7 +2,7 @@
 
 - 작성일: 2026-11-13
 - 출발점: 교재 「자진말소 및 자동말소와 양도소득세 100% 감면」 3쪽 대조(§97의5 교재 대조의 후속 — `rental-97-5-textbook-gaps.plan.md`)
-- 상태: **Q-1~Q-3 결정 대기**
+- 상태: **구현** — Q-1 (a) · Q-2 (A) · Q-3 같이 적용 (사용자 결정 2026-11-13 「권장안대로」)
 
 ## 0. 요약
 
@@ -126,7 +126,7 @@
 ## 7. 변경 범위 (Q-1 a · Q-2 A · Q-3 같이 적용 기준)
 
 1. `lib/tax-engine/transfer-reductions/rental-97-shared-helpers.ts` — `rentViolationsFromRentalStart`에 선택 인자 `end`(종점 이후 계약 제외)를 더한다. 이름·주석에 종점 규칙 추가.
-2. `rental-97-5.ts` — 종점을 임대료 판정보다 먼저 구한다(계산 순서만 옮김 · 결과 동일). 5%·1년 판정에 종점 전달. 메시지에 「임대 종료일(말소일) 이후 계약은 세지 않습니다」.
+2. `rental-97-5.ts` — 5%·1년 판정에 종점 전달. 메시지에 「임대 종료일(말소일) 이후 계약은 세지 않습니다」.
 3. `rental-97-3.ts` — 같은 처리.
 4. `components/calc/transfer/rental/RentalCommonFields.tsx` — 질문·선택지·칸 라벨·hint 문구(§5 Q-1 a). 조문은 `is975`로 §97의5① / §97의3② 분기.
 5. `lib/calc/transfer-tax-validate-rental-proration.ts:58-60` — ⑧ 메시지 「임대 종료일 또는 등록 말소일」.
@@ -153,10 +153,17 @@
 
 ## 10. 체크리스트
 
-- [ ] Q-1 · Q-2 · Q-3 결정
-- [ ] anchor M-1~M-9 먼저 작성 → M-3·M-8 실패 확인(Pre-Do)
-- [ ] 엔진 필터 · 순서 이동
-- [ ] 화면·⑧·엔진 메시지 문구
-- [ ] 뮤테이션 3건
-- [ ] `npx tsc --noEmit` 0건 · `npx vitest run __tests__/tax-engine/transfer/ __tests__/calc/ __tests__/components/`
-- [ ] Playwright 브라우저 확인
+- [x] Q-1 · Q-2 · Q-3 결정 — 권장안 (2026-11-13)
+- [x] anchor M-1~M-9 먼저 작성 → M-3·M-7·M-8 실패 확인(Pre-Do) → 구현 후 9/9
+- [x] 엔진 필터(`rentCheckEnd97`·`rentViolationsFromRentalStart` 종점 인자)
+- [x] 화면·⑧·엔진 메시지 문구 · 컴포넌트 anchor M-10 4건
+- [x] 뮤테이션 5건 전부 잡힘 — 종점 필터 제거(M-3·M-7·M-8) · `<=`→`<`(M-5) · §97의3 미전달(M-8) · §97의5 5% 판정 미전달(M-3) · 1년 판정 미전달(M-7)
+- [x] `npx tsc --noEmit` 0건 · `__tests__/tax-engine/transfer/ calc/ components/ api/` 33,383 통과(문구 변경으로 깨진 2건은 ⑧ 메시지 앞부분을 유지해 해결 — 단언 반전 없음)
+- [x] Playwright `e2e/transfer-rental-97-5-deregistration-end.spec.ts` 1/1 — 새 질문·안내 → 「양도 전에 임대 종료 또는 등록 말소」 → 말소일 2025-04-15 → body `rentalEndDate` · `rental97TaxDetail.rentalGainRatio` 0.75 · 결과 카드
+
+## 11. 구현 중 바뀐 것
+
+- §7-2 「종점을 임대료 판정보다 먼저 구한다」는 하지 않았다. 임대료 판정의 종점은 입력만으로 정해지므로(`rentalContinuesToTransfer === false`면 `rentalEndDate`) 헬퍼 `rentCheckEnd97`(`rental-97-shared-helpers.ts`)가 입력에서 바로 읽는다 — 계산 순서는 그대로다. 종료일이 범위 밖이면 `INVALID_RENTAL_END_DATE`가 따로 부적격으로 만든다.
+- 화면 안내의 1253 인용은 조문별로 갈랐다 — §97의3 폼은 「§97의5 해석을 같은 「등록 기간」 문언에 적용 — 정면 해석례 없어 확인 필요」로 표시한다(V-2).
+- ⑧ 메시지는 기존 E2E 칸 이동 표(`validation-field-jump-cases-reduction.ts` 「양도 전에 임대를 종료했으면 임대 종료일」)와 단위 테스트(「임대 종료일을 입력」)가 그대로 맞도록 앞부분을 유지하고 「— 등록이 먼저 말소됐으면 말소일입니다」를 덧붙였다.
+- E2E는 교재 사례를 과거 날짜로 옮겼다(취득 2015-02-15 · 등록 2015-04-15 · 말소 2025-04-15 · 양도 2026-06-01) — 미래 양도일을 피하려는 것뿐, 비율 0.75는 같다.

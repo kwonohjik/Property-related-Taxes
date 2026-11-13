@@ -324,7 +324,15 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
           bodyClassName="space-y-2"
         >
           <div>
-            <p className="mb-1.5 text-xs text-muted-foreground">임대가 양도일까지 계속되었습니까?</p>
+            <p className="mb-1.5 text-xs text-muted-foreground">
+              장기일반민간임대주택 등록을 유지한 채 양도일까지 임대했습니까?
+            </p>
+            {/* 말소 뒤 임대는 임대기간이 아니다 — 령 「그 등록(한) 기간 동안」 (rental-97-5-deregistration-end.plan.md D-1 · Q-1 a) */}
+            <p data-testid="rental-dereg-hint" className="mb-1.5 text-micro text-muted-foreground">
+              등록이 말소(자진말소·자동말소)됐으면 그 뒤에 계속 임대해도 임대기간에 들어가지 않습니다 —{" "}
+              {is975 ? "조특령 §97의5① 「그 등록한 기간 동안」" : "조특령 §97의3② 「그 등록 기간 동안」"}. 이 경우 「양도 전에 임대
+              종료 또는 등록 말소」를 고르세요.
+            </p>
             <p className="mb-1.5 text-micro text-muted-foreground">
               조특령 §97의3⑤·§97의5② — 안분 산식의 분자는 「실제 임대기간의 <strong>마지막 날</strong>의
               기준시가」입니다. 양도일 기준시가와 별개 변수여서, 임대를 끝내고 시간이 지난 뒤 양도했다면
@@ -344,8 +352,8 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
               }
               onChange={(v) => onChange({ rentalContinuesToTransfer: v === "yes" })}
               options={[
-                { value: "yes", label: "양도일까지 계속 임대" },
-                { value: "no", label: "양도 전에 임대 종료" },
+                { value: "yes", label: "양도일까지 등록·임대 유지" },
+                { value: "no", label: "양도 전에 임대 종료 또는 등록 말소" },
               ]}
             />
             {value.rentalContinuesToTransfer === null && (
@@ -360,7 +368,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
               {/* §97의5①2호·§97의3①1호 — 임대기간 판정의 종점. 두 평가기만 읽으므로 그 조문에서만 묻는다. */}
               {usesEndDateAndInterval && (
                 <div className="mb-2">
-                  <label className="mb-1 block text-xs font-medium">임대 종료일</label>
+                  <label className="mb-1 block text-xs font-medium">임대 종료일 또는 등록 말소일 (먼저 온 날)</label>
                   <DateInput
                     data-field={`reduction.${fieldType}.rentalEndDate`}
                     value={value.rentalEndDate}
@@ -368,6 +376,10 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
                   />
                   <p className="mt-1 text-micro text-muted-foreground">
                     실제 임대기간의 마지막 날 — 임대기간 요건은 이 날까지로 판정합니다 ({is975 ? "§97의5①2호" : "§97의3①1호"} 「10년 이상 계속하여 임대한 후 양도」).
+                    이 날 뒤에 맺은 계약의 임대료 증액은 따지지 않습니다
+                    {is975
+                      ? " (서면-2017-법령해석재산-1253)."
+                      : " (§97의5 해석 서면-2017-법령해석재산-1253을 같은 「등록 기간」 문언에 적용 — §97의3 정면 해석례는 없어 확인이 필요합니다)."}
                   </p>
                 </div>
               )}
