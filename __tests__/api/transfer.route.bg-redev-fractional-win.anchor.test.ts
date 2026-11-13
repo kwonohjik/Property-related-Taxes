@@ -12,9 +12,11 @@
  *
  * · RD-1 청산금 납부 — 신규 통과 6칸: ⑧ 0건 ∧ ⑫ 200 ∧ 양도차익 = 오라클 (+ 명세: 담보 승 · 채무비율 1 · 취득가액 2억 · 개산공제 600만).
  * · RD-2 시나리오 변형 — 청산금 수령 · 토지 출자 · 승계조합원(K-5 포함, 승계는 §166 밖이라 열린다).
- * · RD-3 시가 · K-5 · 담보 승 · 지분(승계 제외)은 ⑧이 계속 막는다 — 막다른 길 방지(⑧ ⊇ ⑫) · 안내 문구 · 보충 승은 종전 그대로 통과.
+ * · RD-3 시가 · K-5 · 담보 승 · 지분(승계 제외) — 전면 개방(Q-1 b · 계획서 `bg-redev-fractional-k5-full-open.plan.md`): 27칸
+ *   (3시나리오 × 3모양 × 칸 상태 3) — 채움 = 오라클 · 취득시 기준시가 비움 ⑧ ⊇ ⑫ · §166③ 칸 비움 ⑧ 0 ∧ ⑫ 200(같은 값). 보충 승은 종전 그대로.
  * · RD-4 취득시 기준시가를 비우면 ⑧ 차단(칸 standardPriceAtAcq) ∧ ⑫ 400 (⑧ ⊇ ⑫).
  * · RD-5 ⑤ 술어 — 게이트 · 강제 · 취득시 기준시가 칸 · 산정방식 판정.
+ * · RD-6 K-5 담보 승 지분 변형(계획서 V-1~V-3) — §164⑦ 발동 취득일 · §164④ 1990.8.30. 전 토지 출자 · 청산금 수령분 단독 신고: ⑧ 0건 ∧ = 반 크기 단건.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
@@ -165,28 +167,44 @@ describe("RD-2 시나리오 변형 — 청산금 수령 · 토지 출자 · 승�
   });
 });
 
-describe("RD-3 시가 · K-5 · 담보 승 · 지분(승계 제외) — ⑧이 계속 막는다 (막다른 길 방지)", () => {
+describe("RD-3 시가 · K-5 · 담보 승 · 지분(승계 제외) — 전면 개방 27칸", () => {
   const w = debt("700000000");
-  const cases: [string, Variant][] = [["청산금 납부", "pay"], ["청산금 수령", "receive"], ["토지 출자", "land"]];
-  it.each(cases)("%s 축 A: ⑧ 차단 + 안내가 «실지취득가액»을 가리킨다", (_n, v) => {
-    const f = form([redev("a", 1, v, HALF, K5(1), w, v === "receive" ? set(v, 0.5) : set(v, 0.5))]);
-    const is = issues(f);
-    expect(is.length).toBeGreaterThan(0);
-    expect(is.some((i) => /실지취득가액/.test(i.message) && /재개발/.test(i.message))).toBe(true);
+  const wB = debt("1400000000");
+  const BLANK_166_3 = { redevManagementDisposalHousingPrice: "", redevAcquisitionHousingPrice: "", redevLandStdPriceAtAcq: "", redevLandStdPriceAtApproval: "" };
+  const cases: [string, Variant, number, number, number][] = [
+    ["청산금 납부", "pay", 447_609_250, 895_218_500, 1_542_827_750],
+    ["청산금 수령", "receive", 509_000_001, 1_018_000_000, 1_727_000_001],
+    ["토지 출자", "land", 447_609_250, 895_218_500, 1_542_827_750],
+  ];
+  const shapes = (v: Variant, ...extra: Record<string, unknown>[]) => ({
+    A: form([redev("a", 1, v, HALF, K5(1), w, set(v, 0.5), ...extra)]),
+    B: form([redev("p", 1, v, pct("60"), K5(1), wB, set(v, 0.6), ...extra), redev("s", 1, v, pct("40"), K5(1), wB, set(v, 0.4), ...extra)], AB),
+    C: form([redev("a", 1, v, K5(1), debt("1600000000"), set(v, 1)), redev("b", 1, v, HALF, K5(1), w, set(v, 0.5), ...extra)], BD),
   });
-  it.each(cases)("%s 축 B 60/40: ⑧ 차단", (_n, v) => {
-    const wB = debt("1400000000");
-    const f = form([redev("p", 1, v, pct("60"), K5(1), wB, set(v, 0.6)), redev("s", 1, v, pct("40"), K5(1), wB, set(v, 0.4))], AB);
-    expect(issues(f).length).toBeGreaterThan(0);
+  it.each(cases)("%s — 채움: ⑧ 0건 ∧ ⑫ 200 ∧ = 오라클(축 A 반 크기 단건 · 축 B 100% 단건 · 함께 양도 단건 합)", async (_n, v, gA, gB, gC) => {
+    const sh = shapes(v);
+    const oA = await single(v, 0.5, K5(0.5), w);
+    const want = { A: gA, B: gB, C: gC };
+    expect(gA).toBe(oA);
+    expect(gB).toBe(await single(v, 1, K5(1), wB));
+    expect(gC).toBe((await single(v, 1, K5(1), debt("1600000000"))) + oA);
+    for (const [k, f] of Object.entries(sh)) {
+      expect(issues(f), k).toEqual([]);
+      expect(ok(await post(f)), k).toBe(want[k as keyof typeof want]);
+    }
   });
-  it.each(cases)("%s 함께 양도의 50% 자산: ⑧ 차단", (_n, v) => {
-    const f = form([redev("a", 1, v, K5(1), debt("1600000000"), set(v, 1)), redev("b", 1, v, HALF, K5(1), w, set(v, 0.5))], BD);
-    expect(issues(f).length).toBeGreaterThan(0);
+  it.each(cases)("%s — 취득시 기준시가 비움: ⑧이 그 칸으로 막고 ⑫ 400 (⑧ ⊇ ⑫)", async (_n, v) => {
+    for (const [k, f] of Object.entries(shapes(v, { standardPriceAtAcq: "" }))) {
+      expect(issues(f).some((i) => i.field === "standardPriceAtAcq"), k).toBe(true);
+      expect((await post(f)).status, k).toBe(400);
+    }
   });
-  it("⑧ ⊇ ⑫: 막힌 조합은 취득시 기준시가를 비우면 ⑫ 400 — ⑧이 막지 않았다면 막다른 길이었다", async () => {
-    const f = form([redev("a", 1, "pay", HALF, K5(1), w, set("pay", 0.5), { standardPriceAtAcq: "" })]);
-    expect(issues(f).length).toBeGreaterThan(0);
-    expect((await post(f)).status).toBe(400);
+  it.each(cases)("%s — §166③ 칸 비움: 엔진이 쓰지 않는 칸이라 ⑧ 0건 ∧ ⑫ 200 ∧ 값 동일", async (_n, v, gA, gB, gC) => {
+    const want = { A: gA, B: gB, C: gC };
+    for (const [k, f] of Object.entries(shapes(v, BLANK_166_3))) {
+      expect(issues(f), k).toEqual([]);
+      expect(ok(await post(f)), k).toBe(want[k as keyof typeof want]);
+    }
   });
   it.each([
     ["축 A 단건", () => form([redev("a", 1, "pay", HALF, K5(1), debt("300000000"), set("pay", 0.5))]), 237_932_775],
@@ -214,11 +232,11 @@ describe("RD-4 취득시 기준시가를 비우면 ⑧ 차단(칸 있음) ∧ �
 
 describe("RD-5 ⑤ 술어 — 게이트 · 강제 · 칸 · 산정방식", () => {
   const w = debt("700000000");
-  it("게이트: K-4·기준시가·승계는 열림, 시가·K-5(승계 제외)는 닫힘, 이월과세·일반건물은 종전 그대로", () => {
+  it("게이트: K-4·기준시가·승계·시가 K-5 모두 열림(전면 개방), 이월과세는 종전 그대로 닫힘", () => {
     expect(bgFractionalCollateralKindSupported(redev("a", 1, "pay", HALF, w))).toBe(true);
     expect(bgFractionalCollateralKindSupported(redev("a", 1, "pay", HALF, STD, K5(1)))).toBe(true);
     expect(bgFractionalCollateralKindSupported(redev("a", 1, "successor", HALF, K5(1), w))).toBe(true);
-    expect(bgFractionalCollateralKindSupported(redev("a", 1, "pay", HALF, K5(1), w))).toBe(false);
+    expect(bgFractionalCollateralKindSupported(redev("a", 1, "pay", HALF, K5(1), w))).toBe(true);
     expect(bgFractionalCollateralKindSupported(redev("a", 1, "pay", HALF, w, { acquisitionCause: "carryover_gift" }))).toBe(false);
   });
   it("축 A 시가 · K-4 · 담보: 강제 ∧ 취득시 기준시가 칸 ∧ 산정방식 burdened_gift", () => {
@@ -227,7 +245,42 @@ describe("RD-5 ⑤ 술어 — 게이트 · 강제 · 칸 · 산정방식", () =>
     expect(needsBgAcqStdPriceInput(a, false)).toBe(true);
     expect(redevPreApprovalAcqMode(a)).toBe("burdened_gift");
   });
+  it("축 A 시가 · K-5 · 담보: 축을 넘기면 burdened_gift(취득시 기준시가 칸) · 축 미지정이면 종전처럼 estimated(승자 미확정)", () => {
+    const a = redev("a", 1, "pay", HALF, K5(1), w);
+    expect(redevPreApprovalAcqMode(a, false)).toBe("burdened_gift");
+    expect(needsBgAcqStdPriceInput(a, false)).toBe(true);
+    expect(redevPreApprovalAcqMode(a)).toBe("estimated");
+  });
   it("보충 승은 강제하지 않는다", () => {
     expect(bgCollateralForcesStdAcq(redev("a", 1, "pay", HALF, debt("300000000")), false)).toBe(false);
+  });
+});
+
+describe("RD-6 K-5 담보 승 지분 변형 — §164⑦ · §164④ · 청산금 수령분 단독 신고 (계획서 V-1~V-3)", () => {
+  const w = debt("700000000");
+  it("V-1 §164⑦ 발동 취득일(2003 < 최초 공시 2005-04-30): 축 A 담보 승은 §164⑦ 칸을 요구하지 않는다 ∧ = 반 크기 단건 447,609,250 · 보충 승은 그대로 요구", async () => {
+    const PHD = { acquisitionDate: "2003-01-01", redevFirstDisclosureDate: "2005-04-30" };
+    const f = form([redev("a", 1, "pay", HALF, K5(1), w, set("pay", 0.5), PHD)]);
+    expect(issues(f)).toEqual([]);
+    expect(ok(await post(f))).toBe(447_609_250);
+    expect(await single("pay", 0.5, K5(0.5), w, PHD)).toBe(447_609_250);
+    const supp = form([redev("a", 1, "pay", HALF, K5(1), debt("300000000"), set("pay", 0.5), PHD)]);
+    expect(issues(supp).map((i) => i.field)).toEqual(["redevFirstDisclosureHousingPrice"]);
+  });
+  it("V-2 §164④ 1990.8.30. 전 토지 출자(1988): 축 A 담보 승 ⑧ 0건 ∧ = 반 크기 단건", async () => {
+    const OLD = { acquisitionDate: "1988-01-01" };
+    const f = form([redev("a", 1, "land", HALF, K5(1), w, set("land", 0.5), OLD)]);
+    expect(issues(f)).toEqual([]);
+    const g = ok(await post(f));
+    expect(g).toBe(await single("land", 0.5, K5(0.5), w, OLD));
+  });
+  it("V-3 청산금 수령분 단독 신고: 축 A 담보 승 ⑧ 0건 ∧ = 반 크기 단건 · 인가 전 실비는 쓰이지 않는다(개산공제)", async () => {
+    const RO = { redevReceiveOnlyMode: "yes", redevSettlementSaleDate: "2023-10-01" };
+    const F = { transferDate: "2023-10-01", filingDate: "2023-12-15" };
+    const f = form([redev("a", 1, "receive", HALF, K5(1), w, set("receive", 0.5), RO)], F);
+    expect(issues(f)).toEqual([]);
+    const g = ok(await post(f));
+    expect(g).toBe(ok(await post(form([redev("z", 0.5, "receive", K5(0.5), w, RO)], F))));
+    expect(ok(await post(form([redev("a", 1, "receive", HALF, K5(1), w, set("receive", 0.5), RO, { redevPreApprovalExpenses: "20000000" })], F)))).toBe(g);
   });
 });

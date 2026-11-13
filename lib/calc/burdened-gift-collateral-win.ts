@@ -45,42 +45,27 @@ export function bgWholeGiftValuation(asset: AssetForm, isFractionalSplit?: boole
 
 /**
  * 지분 자산(축 A·B)에서 담보·임대 승의 취득가액 처리(취득시 기준시가 × 채무비율 — ⑤ 칸·⑧ 요구·⑫ 요구)를 **확인한 범위**.
- * 주택(`housing`)과 토지(`land`), 재개발 완공 아파트(시가 모드 환산취득가액(K-5) 제외 — `bgRedevMarketConvertedFractional`), 일반건물(`general_building` — 의제취득일 전 상속·증여 파트가 없을 때)이다 —
+ * 주택(`housing`)과 토지(`land`), 재개발 완공 아파트(`redevelopment_apt`), 일반건물(`general_building` — 의제취득일 전 상속·증여 파트가 없을 때)이다 —
  * 토지는 15칸 격자(축 A 단건·축 B·함께 양도 × 기준시가 담보·임대·보충, 시가 담보·보충)가 같은 종류 단건 기준과 일치하고 ⑤ 칸·필요경비·⑧ 요구가 이 술어 하나로 따라옴을 측정했다
  * (계획서 `bg-fractional-winner-kinds-grid.plan.md` §3.1·§3.1.1, 결정 Q-1 a). 일반건물은 60칸 격자(2 시나리오 × 3모양 × 10칸) 중 58칸이 일치하고 나머지 2칸은 게이트 무관 +4원(축 B 임대)이다
  * — 열려면 ⑫ Zod의 축 B 지분율 전달(`transfer-tax-schema-gb-bg-refines.ts`)과 취득 안내 3곳의 축 인자(`gbBgStdUseOf`)가 함께 필요했다(계획서 `bg-gb-fractional-gate.plan.md` §3.2·§3.3, 결정 Q-1 a).
  * 일반건물의 의제취득일 전 파트(토지 또는 건물)도 연다 — 종전에는 같은 파트의 시가 모드 보충 승이 단건과 어긋나 닫았는데(§3.4 · Q-2 a) #3021이 그 값을 고쳤고,
  * 파트 3 × 10칸 × 3모양 90칸이 단건 기준과 일치함을 측정했다(계획서 `bg-gb-pre-deemed-fractional-clause-a.plan.md` V-P5). 지분 자산은 3자 max 술어(`gbBgThreeWayParts`)에도
- * 축을 넘겨야 담보 승을 3자 max로 오판하지 않는다. 주택·토지 등 그 밖의 의제취득일 전 상속·증여(`isBgPreDeemedAsset`)·이월과세는 교차를 측정하지 않았고, 입주권·겸용은 격자 측정이 끝나지 않았다
+ * 축을 넘겨야 담보 승을 3자 max로 오판하지 않는다. 재개발 완공 아파트의 시가 모드 환산취득가액(K-5)은 산정방식 판정(`redevPreApprovalAcqMode`)·필요경비 칸(`redevPreApprovalExpensesUnused`)에
+ * 축을 넘기고 ⑫ §166③ 필수 판정이 지분 축소 후 승자를 보면서 열었다(계획서 `bg-redev-fractional-k5-full-open.plan.md` — 27칸 정합). 주택·토지 등 그 밖의 의제취득일 전 상속·증여(`isBgPreDeemedAsset`)·이월과세는 교차를 측정하지 않았고, 입주권·겸용은 격자 측정이 끝나지 않았다
  * (`bg-nonsupp-winner-support.plan.md` V-S1·V-S4). 범위 밖은 ⑧이 막는다(`bgSplitAxisCollateralWinUnsupported` · `bgFractionalCollateralWin`).
  */
 export function bgFractionalCollateralKindSupported(asset: AssetForm): boolean {
   const kindOk =
     asset.assetKind === "housing" ||
     asset.assetKind === "land" ||
-    (asset.assetKind === "redevelopment_apt" && !bgRedevMarketConvertedFractional(asset)) ||
+    asset.assetKind === "redevelopment_apt" ||
     asset.assetKind === "general_building";
   return kindOk && !isBgPreDeemedAsset(asset) && !bgAnyCarryover(asset) && !isMixedBurdenedGift(asset);
 }
 
-/**
- * 재개발 완공 아파트 × 시가 모드 × 환산취득가액(K-5) × 승계조합원 아님 — 지분 담보·임대 승을 **열지 않는** 조합이다.
- * `redevPreApprovalAcqMode`가 담보 승 여부를 축 인자 없이 읽어(`bgCollateralForcesStdAcq(asset)`) 지분 자산을 «환산(estimated)»으로 판정한다. 그러면 ⑤는 취득시 기준시가 칸 대신
- * §166③ 환산 칸을 띄우는데 ⑫는 담보 승의 취득가액을 취득시 기준시가 × 채무비율로 강제해 그 값을 요구한다 — ⑧ 0건 → ⑫ 400의 막다른 길이다
- * (계획서 `bg-redev-fractional-collateral-win.plan.md` §3.3·Q-1 a). 축을 두 판정 leaf에 싣는 전면 개방(Q-1 b)은 별도 계획이다.
- * 승계조합원은 §166 밖이라 «환산»으로 판정되지 않아(같은 leaf) 취득시 기준시가 칸이 뜨므로 열린다.
- */
-export function bgRedevMarketConvertedFractional(asset: AssetForm): boolean {
-  return asset.assetKind === "redevelopment_apt" && asset.bgValuationMode === "sangjeungbeop_market" && asset.bgAcquisitionMethod === "converted" && asset.redevIsSuccessorMember !== "yes";
-}
-
 /** ⑧ 차단 문구의 «계산하는 종류» — 3곳(`bgUnsupportedWinnerCause` · 축 B · 축 A)이 같은 말을 한다. */
 export const BG_FRACTIONAL_SCOPE_TEXT = "주택·토지·일반건물·재개발 완공 아파트(이월과세 제외 · 일반건물이 아니면 의제취득일 전 상속·증여도 제외)";
-
-/** 재개발 K-5(시가 모드)라서 막힌 경우 사용자가 할 일 — 그 밖의 사유에는 붙이지 않는다. */
-export function bgRedevConvertedBlockNote(asset: AssetForm): string {
-  return bgRedevMarketConvertedFractional(asset) ? " 재개발 완공 아파트는 시가 모드에서 취득가액 산정방식을 «환산취득가액»으로 고르면 계산하지 않으니 «실지취득가액»을 고르세요." : "";
-}
 
 /** 축 B 카드에서 시가 모드 담보평가(§66)가 이기는데 취득가액 처리를 확인하지 못한 종류인가 — ⑧ 차단용(거짓 사유 「채무액 초과」 대체). */
 export function bgSplitAxisCollateralWinUnsupported(asset: AssetForm): boolean {
@@ -161,7 +146,7 @@ export function bgUnsupportedWinnerCause(asset: AssetForm): string {
   if (asset.assetKind === "right_to_move_in") return asset.isSuccessorRightToMoveIn === true ? BG_RTMI_SUCCESSOR_DATE_CAUSE : BG_RTMI_ORIGINAL_CAUSE;
   if (isMixedBurdenedGift(asset))
     return "겸용주택 부담부증여는 단독 소유 단건만 계산하며, 담보·임대로 평가되는 경우 증여가액을 주택과 상가로 나눌 법정 기준이 없어 계산하지 않습니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.";
-  return `지분을 가진 자산의 담보·임대 평가에서 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 ${BG_FRACTIONAL_SCOPE_TEXT}만 계산합니다.${bgRedevConvertedBlockNote(asset)} 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.`;
+  return `지분을 가진 자산의 담보·임대 평가에서 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 ${BG_FRACTIONAL_SCOPE_TEXT}만 계산합니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.`;
 }
 
 /**

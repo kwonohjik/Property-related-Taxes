@@ -74,8 +74,9 @@ import { effectiveRedevLandPricePerSqmAtAcq } from "./transfer-pre1990-redev-bri
  *    차감**해 약분되지 않으므로, 구현하게 되면 이 판단을 **다시 해야 한다**.
  *
  * @param ownershipRatio 공유지분율(0<r<1). 미전달·1.0이면 완전 무변경(단독 소유).
+ * @param isFractionalSplit 지분 분할 축 — 산정방식 판정(`redevPreApprovalAcqMode`)이 지분 담보 승을 확정하는 데 쓴다.
  */
-export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: number) {
+export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: number, isFractionalSplit?: boolean) {
   const fractional =
     ownershipRatio !== undefined && ownershipRatio > 0 && ownershipRatio < 1;
   /** 절대금액 성분 전용 스케일러. 비율 성분·사실 금액(청산금)에는 쓰지 않는다. */
@@ -94,7 +95,7 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
    */
   const isApt = subject === "apt";
   /** §164⑦ 본문 발동 — ⑧·⑤와 같은 술어(`isRedevPhdTriggered`). */
-  const phdTriggered = isRedevPhdTriggered(asset);
+  const phdTriggered = isRedevPhdTriggered(asset, isFractionalSplit);
   const rightsValueRaw =
     asset.redevIsSuccessorMember === "yes"
       ? parseAmount(asset.fixedAcquisitionPrice)
@@ -120,7 +121,7 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
     // 감정·매매사례 플래그가 남으면 ④가 환산으로 보내지 않으므로(`transfer-tax-api-primary-context.ts` isEstimated) 여기서도 환산으로 보지 않는다.
     preApprovalExpenses:
       isReceiveOnlyFiling(asset) &&
-      redevPreApprovalExpensesUnused(asset) &&
+      redevPreApprovalExpensesUnused(asset, isFractionalSplit) &&
       asset.isAppraisalAcquisition !== true &&
       asset.isSalesCaseAcquisition !== true
         ? 0

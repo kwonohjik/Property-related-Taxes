@@ -492,7 +492,7 @@ export function buildAssetPayload(
      * 누락 시 침묵 strip이라 그 자산만 §166을 잃고 일반 주택 산식으로 계산된다.
      */
     ...(isRedevelopmentSec166Asset(asset)
-      ? { redevelopment: buildRedevPayloadForCompanion(asset, getOwnershipRatio(asset)) }
+      ? { redevelopment: buildRedevPayloadForCompanion(asset, getOwnershipRatio(asset), axisB) }
       : {}),
     /**
      * ⑬ 승계조합원 입주권 표지 — 엔진이 §166 분기(`isRedevelopmentActive`)·장기보유특별공제 배제(§95②, `transfer-tax-lthd.ts` L-0a)를

@@ -54,8 +54,9 @@ export interface RedevPhdTriggerFields extends RedevPreApprovalAcqModeFields {
  * 최초공시일보다 이르면 true. 취득일은 이월과세면 당초 증여자 취득일이다 — 엔진·⑫와 같은 날짜
  * (계획서 `redev-carryover-phd-donor-date.plan.md` Q-1 a).
  */
-export function isRedevPhdTriggered(a: RedevPhdTriggerFields): boolean {
-  if (redevPreApprovalAcqMode(a) !== "estimated") return false;
+/** `isFractionalSplit` — 지분 자산의 산정방식 판정 축(`redevPreApprovalAcqMode`). 축 없이는 지분 담보 승을 «환산»으로 읽는다. */
+export function isRedevPhdTriggered(a: RedevPhdTriggerFields, isFractionalSplit?: boolean): boolean {
+  if (redevPreApprovalAcqMode(a, isFractionalSplit) !== "estimated") return false;
   const acquisitionDate = redevPreApprovalAcquisitionDate(a);
   if (!acquisitionDate || !a.redevFirstDisclosureDate) return false;
   return isPhdEligible(acquisitionDate, a.redevFirstDisclosureDate);
@@ -104,7 +105,7 @@ export interface RedevPhdSectionFields extends RedevPhdTriggerFields {
   redevSettlementDirection?: unknown;
 }
 
-export function isRedevPhdSectionActive(a: RedevPhdSectionFields): boolean {
+export function isRedevPhdSectionActive(a: RedevPhdSectionFields, isFractionalSplit?: boolean): boolean {
   // 1) 자산 종류 축 — 값이 있는데 재개발 계열이 아니면 블록 자체가 없다.
   if (
     typeof a.assetKind === "string" &&
@@ -118,7 +119,7 @@ export function isRedevPhdSectionActive(a: RedevPhdSectionFields): boolean {
   // 3) 승계조합원(완공APT) — ⑤ 섹션 전체를 숨긴다.
   if (a.redevIsSuccessorMember === "yes") return false;
   // 4) 환산 모드 + 취득일 < 최초공시일
-  if (!isRedevPhdTriggered(a)) return false;
+  if (!isRedevPhdTriggered(a, isFractionalSplit)) return false;
   // 5) 단독주택 출자 §164⑤ 2-point 분기 — 전용 카드가 대신 뜬다(§164⑦ 아님).
   if (
     a.redevOriginalAssetType === "housing" &&

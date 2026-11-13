@@ -56,9 +56,9 @@ describe("SF-1 지분 50% 담보 승 — 주택은 계산하고, 확인하지 �
     expect(r.issues).toEqual([]);
     expect(r.status).toBe(200);
   });
-  it("재개발 APT(시가·K-5): ⑧ 1건(지분 자산 담보 승 사유) · 「채무액(」 초과 사유 없음", async () => {
+  it("재개발 APT(시가·K-5): 전면 개방 — 지분 자산 담보 승 사유 없음 · 「채무액(」 초과 사유 없음", async () => {
     const r = await run(house(HALF, x({ assetKind: "redevelopment_apt", bgAcquisitionMethod: "converted" })));
-    expect(r.issues.filter((m) => m.includes(FRAC_WIN)).length).toBe(1);
+    expect(r.issues.filter((m) => m.includes(FRAC_WIN)).length).toBe(0);
     expect(r.issues.some((m) => m.includes(EXCESS))).toBe(false);
   });
 });

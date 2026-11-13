@@ -372,6 +372,7 @@ export function AssetSectionAcquisition({
             transferDate={transferDate}
             firstCardRedevRightsValue={firstCardRedevRightsValue}
             shareCard={splitMode === "fractional" && !isFirst}
+            isFractionalSplit={splitMode === "fractional"}
           />
         )
       )}

@@ -202,7 +202,7 @@ export function buildPrimaryContext(
   // ⚠️ `primaryRatio`(:253)보다 **앞**이라 여기서 직접 구한다 — 빌더가 `0<r<1`을 자체 가드하므로
   //    단독 소유(1.0)에서는 완전 무변경이다. 필드별 스케일 규율은 빌더 주석 참조(§166④1호 vs ①1호).
   const redevPayload = isRedevelopment
-    ? buildRedevelopmentPayload(primary, getOwnershipRatio(primary))
+    ? buildRedevelopmentPayload(primary, getOwnershipRatio(primary), fractionalBundleMerge)
     : undefined;
 
   // ⑬ 부담부증여 (소령 §159) — Phase 2 (2026-05-12): transferType 분기 + 모든 propertyType 지원

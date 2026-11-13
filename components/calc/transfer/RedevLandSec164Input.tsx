@@ -16,6 +16,8 @@ import { redevPreApprovalAcquisitionDate } from "@/lib/calc/redev-carryover-acq-
 interface Props {
   asset: AssetForm;
   onChange: (patch: Partial<AssetForm>) => void;
+  /** 지분 분할 축 — `redevLandSec164Applies`의 산정방식 판정(⑧과 같은 축). */
+  isFractionalSplit?: boolean;
 }
 
 /**
@@ -26,8 +28,8 @@ function sharesSec163_9LandFields(asset: AssetForm): boolean {
   return sec164LandStatus(asset) !== null;
 }
 
-export function RedevLandSec164Input({ asset, onChange }: Props) {
-  if (!redevLandSec164Applies(asset)) return null;
+export function RedevLandSec164Input({ asset, onChange, isFractionalSplit }: Props) {
+  if (!redevLandSec164Applies(asset, isFractionalSplit)) return null;
   const derived = deriveRedevLandSec164PerSqm(asset);
   const derivedText = derived ? `${derived.toLocaleString()}원/㎡` : "칸을 모두 채우면 계산됩니다";
 

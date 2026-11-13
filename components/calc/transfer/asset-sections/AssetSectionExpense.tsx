@@ -95,7 +95,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
   // 인가 전 분은 재개발 블록 칸이 받고, 그 칸이 쓰이지 않는 모드(개산공제)면 인가 전 지출은 공제되지 않는다 — 같은 leaf로 문구를 가른다.
   const redevPostOnly =
     isRedevelopmentSec166Asset(asset) && asset.redevIsSuccessorMember !== "yes"
-      ? redevPreApprovalExpensesUnused(asset) ? "lump" : "actual"
+      ? redevPreApprovalExpensesUnused(asset, isFractionalSplit === true) ? "lump" : "actual"
       : null;
   // 청산금 수령 단독 신고 — 신축주택을 양도하지 않으므로 두 칸은 종전 부동산의 필요경비로 안분된다(양도소득세 집행기준 100-166-10).
   const redevReceiveOnly = redevPostOnly !== null && isReceiveOnlyFiling(asset);
@@ -264,7 +264,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
           {redevLegacyExpenseUnused(asset) && (
             <ToneCard tone="amber">
               <p className="text-xs text-amber-900 dark:text-amber-200" data-testid="redev-legacy-expense-unused-notice">
-                {redevLegacyExpenseUnusedMessage(asset)}
+                {redevLegacyExpenseUnusedMessage(asset, isFractionalSplit === true)}
               </p>
             </ToneCard>
           )}
