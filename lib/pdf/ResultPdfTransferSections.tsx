@@ -482,10 +482,12 @@ export function TransferMultiSection({ r, selectedSectionIds, codeRows }: { r: R
     <>
       <Text style={s.sectionTitle}>합산 신고서 양식</Text>
       <View style={s.table}>
-        {aggGains.exempt > 0 ? (
+        {/* 비과세 양도차손(gross < 0)이 낀 다건은 비과세 양도차익이 음수다 — `> 0`이면 else로 빠져 화면 요약 카드와 달라졌다(#3337 후속, 계획서 exempt-loss-pdf-multi-measure Q-1 a).
+            음수면 화면 카드(`value={-exemptGain}`)처럼 부호를 뒤집어 찍는다(총 − (−N) = 과세대상). */}
+        {aggGains.exempt !== 0 ? (
           <>
             <View style={s.row}><Text style={s.lbl}>총 양도차익</Text><Text style={s.val}>{fmt(aggGains.gross)}</Text></View>
-            <View style={s.row}><Text style={s.lblSub}>비과세 양도차익</Text><Text style={s.val}>- {fmt(aggGains.exempt)}</Text></View>
+            <View style={s.row}><Text style={s.lblSub}>비과세 양도차익</Text><Text style={s.val}>{aggGains.exempt > 0 && "- "}{fmt(Math.abs(aggGains.exempt))}</Text></View>
             <View style={s.row}><Text style={s.lblSub}>과세대상 양도차익</Text><Text style={s.val}>{fmt(aggGains.taxable)}</Text></View>
           </>
         ) : (
