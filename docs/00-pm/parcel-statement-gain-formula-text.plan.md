@@ -2,7 +2,7 @@
 
 > 2026-11-13 · 코드 읽기 + throwaway probe(`POST /api/calc/transfer` 다필지 시료 → `findStepByLabel` 실측). probe는 커밋 전에 삭제했다.
 > 표기: **[직접]** 이번 세션 코드 읽기·실측 · **[해석]** · **[확인 필요]**.
-> 상태: **결정 대기(Q-1)**. 값·세액은 불변 — 표시 문구만의 문제다.
+> 상태: **Q-1 b 결정(2026-11-13, 「b로 진행해」) → 구현·검증 완료(§4)**. 값·세액은 불변 — 표시 문구만의 문제다.
 
 ## 0. 결론
 
@@ -36,3 +36,17 @@
 ## 3. 결정 요청
 
 - **Q-1:** a / **b(권고)** / c
+
+## 4. 구현·검증 결과 (Q-1 b)
+
+**변경 2곳** [직접: diff]
+- `lib/tax-engine/transfer-tax-multi-parcel-branch.ts` — `양도차익 합계` step 문구 «필지별 합산» → 필지별 값 나열(`필지 1 197,000,000 + 필지 2 197,000,000`). 음수 필지는 뺀다(`- 필지 3 36,333,332`), 첫 필지가 음수면 부호만 붙인다(`필지 1 -36,333,334`). `장기보유특별공제 합계`의 «필지별 합산»은 그대로.
+- `components/calc/results/transfer/DetailedStatementHelpers.ts:459` — `findStepByLabel(result.steps, "양도차익 합계", "양도차익")`. 다필지 밖에서는 «양도차익 합계» 라벨이 없어 두 번째 키워드(종전 동작)로 떨어진다.
+
+**anchor** `__tests__/calc/parcel-statement-gain-formula.anchor.test.ts` PF-1~5 (기대값은 route 응답 + 손계산: 800M ÷ 3 = 266,666,666·잔여 2원은 마지막 필지, 합 91,000,000 = 800M − 700M − 9M). 수정 전 PF-1~3 실패·PF-4(일반 단건 불변) 통과를 먼저 확인했다.
+
+**뮤테이션 4종 전부 사망** (백업·복원·`cmp`): M1 명세서 키워드를 종전으로 되돌림(4건 실패) · M2 엔진 문구를 종전으로 되돌림(4건 실패) · M3 음수 필지 부호 처리 제거(PF-3 실패) · M4 첫 필지 음수 분기 제거(PF-5 실패).
+
+**회귀·정적 검사:** 회귀 5배치 전건 통과 — `__tests__/api` 7460 · `tax-engine` 19866 · `calc` 11960 · `lib` 3423 · `components` 7254 (실패 0). `tsc --noEmit`(힙 8GB) 0건. eslint 오류 0건(경고 1건 `DetailedStatementHelpers.ts:58 PerAssetValue` 미사용 — 수정 전에도 동일한 기존 항목, 이번 PR 밖이라 손대지 않음).
+
+**미수행:** 브라우저(Playwright) 재확인(V-4)은 이 PR에서 하지 않았다 — 렌더 경로는 `buildStatementItems` 출력(anchor가 고정)을 그대로 쓰며, 명세서 화면의 실제 표시는 CI E2E와 이후 요청 시 확인한다 [확인 필요].

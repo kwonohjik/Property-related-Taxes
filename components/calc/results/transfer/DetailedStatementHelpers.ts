@@ -456,7 +456,9 @@ export function buildStatementItems(
       : undefined,
   });
 
-  const gainStep = findStepByLabel(result.steps, "양도차익");
+  // 다필지는 필지별 `[필지 N] 양도차익`이 먼저 들어 있어 "양도차익" 첫 일치가 첫 필지 산식을 잡는다 — 합계 step을 앞세운다.
+  // 「양도차익 합계」 라벨은 엔진 전체에서 다필지 분기에만 있다(다른 경로는 종전 그대로 「양도차익 계산」).
+  const gainStep = findStepByLabel(result.steps, "양도차익 합계", "양도차익");
   // 비과세 자산은 `transferGain`이 0이므로 gross echo를 쓴다 — 신고서 양식과 같은 축.
   const totalTransferGainVal = isAggregate
     ? properties.reduce((s, p) => s + effectiveGrossGain(p), 0)
