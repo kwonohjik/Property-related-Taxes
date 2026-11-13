@@ -126,7 +126,14 @@
 - **엔진 echo는 새로 만들지 않았다.** 증여한 부분은 이미 결과에 있는 `splitDetail.selfOwns` + §159 명세(`transferBurdenedGiftBreakdown`, `cards`·`assetKind` 없음)로 읽는다 — 단일 소스 `lib/calc/bg-owner-split-result.ts` `bgOwnedPartOfResult`. 화면이 폼 값을 다시 판정하지 않는다. (`TransferBurdenedGiftBreakdown`을 건드리지 않은 이유: 타입 파일이 764줄이다.)
 - **엔진 단계 문구 1곳:** `transfer-tax-burdened-gift-step.ts`의 「부담부증여 양도차익 산정」 산식을 소유자 분리일 때 「(증여한 건물분 보충적평가 ○○ 중 ○○% 안분)」로 적는다(시가 평가면 「시가」). 소유자 분리가 아닌 부담부증여의 문구(영문 모드 키 포함)는 그대로다 — 별건.
 - **소비처:** §159 명세 카드(`BurdenedGiftDetailCard` — 증여한 부분 머리·건물분 라벨·채무비율 기준·비소유 파트 「본인 소유 아님 — 계산하지 않음」) · 분리 양도차익 카드(`SplitGainDetailSection` `bgOwnerSplit` — 비소유 열 「—」) · 상세 명세서 단건(`resolveBgOwnerSplitDisplay`)·다건 자산별(`bgOwnerSplitPerAssetFormulas`). 신고서 양식 표는 종전 분리 열(소유 파트만)을 그대로 쓴다. PDF/인쇄는 같은 DOM 섹션이다.
-- **남은 한계(확인 필요):** 다건 상세 명세서의 취득가액 **머리 소제목**(「자산별 환산취득가 합계 — 시행령 §163·§176의2②」)은 `aggregateAcqModes`가 분리 파트 취득방식을 「환산」으로 읽어 정하는 값이라 소유자 분리·날짜 분리 부담부증여 모두 같다 — 자산 행 산식은 바로잡았으나 머리는 손대지 않았다.
+- **남은 한계 → 해소(#3295):** 다건 상세 명세서의 취득가액 **머리 소제목**(「자산별 환산취득가 합계 — 시행령 §163·§176의2②」)은 `aggregateAcqModes`가 분리 파트 취득방식을 「환산」으로 읽어 정하는 값이라 소유자 분리·날짜 분리 부담부증여 모두 같다 — 자산 행 산식은 바로잡았으나 머리는 손대지 않았다.
+
+### 8.2 후속 — 채무 확인을 API·엔진 계약으로 (2026-11-13)
+
+- PR-3까지 채무 확인(`bgOwnerSplitDebtConfirmed`)은 ⑧ 화면 검증뿐이라 직접 API 본문은 확인 없이 계산됐다. 새 와이어 키 `burdenedGiftInfo.ownerSplitDebtConfirmed`(§6 ⑬⑭ 「새 와이어 키 없음」 전제를 이 키 하나가 바꾼다 — ⑭는 `burdenedGiftInfo` 통째 패스스루라 변경 없음)를 ④ `bgOwnerSplitInfoPatch`가 싣는다.
+- 판정은 엔진 계약 `bgOwnerSplitContractViolation` 첫 검사 하나다 — 엔진 직접 호출은 INVALID_INPUT으로 던지고 ⑫ `refineBgOwnerSplit`은 같은 함수로 400(`burdenedGiftInfo.ownerSplitDebtConfirmed`). ⑧과 순서가 같다(확인 → 기준시가). 소유자 분리가 아니면 읽지 않는다.
+- 근거 인용 상수 `BURDENED_GIFT_TRANSFER.SANGJEUNGBEOP_DECREE_JOINT_MORTGAGE_63_1_2`(상증령 §63①2호 · 현행 MST 290845 본문 확인) · 매니페스트 `INH_DECREE.JOINT_MORTGAGE_VALUATION`.
+- 남은 한계: 「토지만」의 토지 취득일 필수(Q-8)는 여전히 ⑧뿐이다(⑪ 자산 취득일 fallback).
 
 ## 9. Pre-Do 앵커 (손계산 · 건물만 · 기준시가 · 보충적 승 · 매매 2015-01-01 → 양도 2026-02-16 · 장특 22% · 중과 없음)
 

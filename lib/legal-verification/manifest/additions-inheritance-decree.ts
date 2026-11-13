@@ -349,6 +349,14 @@ export const INHERITANCE_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
 
+  {
+    /** 공동저당 채권액 안분 — 부담부증여 × 토지·건물 소유자 분리의 채무 확인 근거(`BURDENED_GIFT_TRANSFER.SANGJEUNGBEOP_DECREE_JOINT_MORTGAGE_63_1_2`) · KoreanLaw 현행 MST 290845 실측(2026-11-13). */
+    id: "INH_DECREE.JOINT_MORTGAGE_VALUATION",
+    citation: "상증령 §63",
+    keywords: ["공동저당권이 설정된 재산의 가액은", "공동저당된 재산의 평가기준일 현재의 가액으로 안분하여 계산한 가액"],
+    keywordMode: "ALL",
+  },
+
   // ── 납부·물납·징수유예·경정청구 ────────────────────────────────────
   {
     id: "INH_DECREE.SELF_PAYMENT",

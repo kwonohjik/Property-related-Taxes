@@ -10,6 +10,7 @@
  *
  * 날짜 분리(`bgPartDatesDiffer`)는 `selfOwns === both`를 요구하므로 두 경로는 함께 켜지지 않는다.
  */
+import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { TransferTaxInput } from "./types/transfer.types";
 
@@ -27,10 +28,20 @@ const PART_LABEL = { land: "토지", building: "건물" } as const;
 type OwnerSplitInfo = NonNullable<TransferTaxInput["burdenedGiftInfo"]>;
 export type BgOwnerSplitContractViolation = { detail: string; field: string };
 
-/** 입력 계약 위반 첫 건 — 비소유 파트의 기준시가·실지취득가액은 0(또는 없음), 증여한 파트의 양도시 기준시가는 양수. 없으면 null. ⑫도 같은 판정을 쓴다. */
+/**
+ * 입력 계약 위반 첫 건 — 채무 확인(`ownerSplitDebtConfirmed: true`), 비소유 파트의 기준시가·실지취득가액은 0(또는 없음), 증여한 파트의 양도시 기준시가는 양수.
+ * 없으면 null. ⑫도 같은 판정을 쓴다. 채무 확인이 먼저다 — ⑧ `validateBgOwnerSplit`도 이 순서로 묻는다.
+ */
 export function bgOwnerSplitContractViolation(owner: OwnerSplit, info: OwnerSplitInfo): BgOwnerSplitContractViolation | null {
   const owned = owner === "building_only" ? "building" : "land";
   const other = owned === "building" ? "land" : "building";
+  if (info.ownerSplitDebtConfirmed !== true)
+    return {
+      detail:
+        `인수한 채무(임대보증금 포함)가 증여자 본인 채무이고 증여한 ${PART_LABEL[owned]}에만 관련된다는 확인(ownerSplitDebtConfirmed: true)을 보내세요 — ` +
+        `타인 소유 부분과 함께 담보로 설정한 채무는 증여한 부분만의 평가액으로 안분해야 하는데 입력 칸이 없어 계산하지 않습니다(${BURDENED_GIFT_TRANSFER.SANGJEUNGBEOP_DECREE_JOINT_MORTGAGE_63_1_2}).`,
+      field: "burdenedGiftInfo.ownerSplitDebtConfirmed",
+    };
   const std = {
     land: { transfer: info.landStdPriceAtTransfer, acq: info.landStdPriceAtAcquisition },
     building: { transfer: info.buildingStdPriceAtTransfer, acq: info.buildingStdPriceAtAcquisition },

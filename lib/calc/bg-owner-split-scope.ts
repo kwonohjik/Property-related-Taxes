@@ -9,7 +9,7 @@
  *  · 밖(사유별로 막는다): 주택 · 매매 외 취득원인(상속·증여·이월과세·신축) · 시가 평가의 매매사례가액·감정가액 · 공유지분 · 함께 양도 묶음·지분 분할(축 B).
  *
  * ⑤(토글 잠금·카드 노출)·④(`bgOwnerSplitInfoPatch`)·⑧(`validateBgOwnerSplit`)·⑫(`transfer-tax-schema-bg-owner-split.ts`)가 **이 술어만** 읽는다(3중 패턴).
- * 채무가 증여한 부분에만 관련된다는 확인(`bgOwnerSplitDebtConfirmed`)은 범위 판정이 아니라 필수 입력이다 — ⑧만 요구한다(폼 확인 항목이라 요청 본문에 키가 없다).
+ * 채무가 증여한 부분에만 관련된다는 확인(`bgOwnerSplitDebtConfirmed`)은 범위 판정이 아니라 필수 입력이다 — ⑧이 그 칸으로 보내고, ④가 `burdenedGiftInfo.ownerSplitDebtConfirmed`로 실어 엔진 계약·⑫가 같은 값을 요구한다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { effectiveSelfOwns } from "./self-owns-scope";

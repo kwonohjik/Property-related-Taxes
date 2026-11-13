@@ -118,6 +118,12 @@ export interface BurdenedGiftInfo {
   marketValueByPart?: { land: number; building: number };
   /** 취득시 시가 평가액(총액). 시가 모드에서 필수. */
   marketValueAtAcquisition?: number;
+  /**
+   * 토지·건물 소유자 분리(`selfOwns` building_only·land_only) 전용 — 인수한 채무(임대보증금 포함)가 증여자 본인 채무이고 증여한 부분에만 관련된다는 확인.
+   * 소유자 분리면 `true`여야 한다(`bgOwnerSplitContractViolation` — 엔진 throw·⑫ 400 공용). 타인 소유 부분과 함께 담보로 잡힌 채무는
+   * 「상속세 및 증여세법 시행령」 제63조 제1항 제2호 안분이 필요한데 입력 칸이 없어 계산하지 않는다. 그 밖의 부담부증여는 읽지 않는다.
+   */
+  ownerSplitDebtConfirmed?: boolean;
 
   // === Phase 2 증여세 통합용 필드 ===
   /**

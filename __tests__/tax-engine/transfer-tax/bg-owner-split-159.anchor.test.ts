@@ -29,6 +29,7 @@ function info(std: { landT: number; bldT: number; landA: number; bldA: number },
     buildingStdPriceAtTransfer: std.bldT,
     landStdPriceAtAcquisition: std.landA,
     buildingStdPriceAtAcquisition: std.bldA,
+    ownerSplitDebtConfirmed: true,
     ...over,
   } as BurdenedGiftInfo;
 }
@@ -106,19 +107,35 @@ describe("L — 토지만 본인(토지만 증여)", () => {
 });
 
 describe("C — 입력 계약: 비소유 파트 기준시가는 0이어야 한다(엔진이 0으로 바꾸지 않는다)", () => {
+  // 픽스처는 채무 확인 true — 아래 단언은 각자의 계약 문구로 맞춘다(채무 확인 위반이 먼저 던져 «증여한 부분»만으로는 가려진다).
   it("건물만 본인인데 토지 기준시가가 있으면 던진다", () => {
     expect(() => run({ selfOwns: "building_only", burdenedGiftInfo: info({ landT: 800_000_000, bldT: 200_000_000, landA: 0, bldA: 250_000_000 }) })).toThrow(
-      /증여한 부분/,
+      /토지는 본인 소유가 아니므로/,
     );
     expect(() => run({ selfOwns: "building_only", burdenedGiftInfo: info({ landT: 0, bldT: 200_000_000, landA: 250_000_000, bldA: 250_000_000 }) })).toThrow(
-      /증여한 부분/,
+      /토지는 본인 소유가 아니므로/,
     );
   });
   it("토지만 본인인데 건물 기준시가가 있으면 던진다", () => {
-    expect(() => run({ selfOwns: "land_only", burdenedGiftInfo: info({ landT: 200_000_000, bldT: 50_000_000, landA: 80_000_000, bldA: 0 }) })).toThrow(/증여한 부분/);
+    expect(() => run({ selfOwns: "land_only", burdenedGiftInfo: info({ landT: 200_000_000, bldT: 50_000_000, landA: 80_000_000, bldA: 0 }) })).toThrow(/건물은 본인 소유가 아니므로/);
   });
   it("소유 파트 양도시 기준시가가 0이면 던진다", () => {
-    expect(() => run({ selfOwns: "building_only", burdenedGiftInfo: info({ landT: 0, bldT: 0, landA: 0, bldA: 250_000_000 }) })).toThrow(/증여한 부분/);
+    expect(() => run({ selfOwns: "building_only", burdenedGiftInfo: info({ landT: 0, bldT: 0, landA: 0, bldA: 250_000_000 }) })).toThrow(/양도시 건물 기준시가를 입력하세요/);
+  });
+});
+
+describe("D — 입력 계약: 채무가 증여한 부분에만 관련된다는 확인(ownerSplitDebtConfirmed: true)", () => {
+  const A2_STD = { landT: 0, bldT: 200_000_000, landA: 0, bldA: 80_000_000 };
+  it("건물만 본인 · 확인 없음 → 던진다(공동저당 안분 칸이 없어 계산하지 않는다)", () => {
+    expect(() => run({ selfOwns: "building_only", burdenedGiftInfo: info(A2_STD, { ownerSplitDebtConfirmed: undefined }) })).toThrow(/ownerSplitDebtConfirmed: true/);
+  });
+  it("토지만 본인 · 확인 false → 던진다 · 문구는 증여한 토지", () => {
+    expect(() => run({ selfOwns: "land_only", burdenedGiftInfo: info({ landT: 200_000_000, bldT: 0, landA: 80_000_000, bldA: 0 }, { ownerSplitDebtConfirmed: false }) })).toThrow(
+      /증여한 토지에만 관련된다는 확인/,
+    );
+  });
+  it("소유자 같음(both)은 확인을 읽지 않는다 — 없어도 계산한다", () => {
+    expect(() => run({ selfOwns: "both", burdenedGiftInfo: info({ landT: 0, bldT: 200_000_000, landA: 0, bldA: 80_000_000 }, { ownerSplitDebtConfirmed: undefined }) })).not.toThrow();
   });
 });
 

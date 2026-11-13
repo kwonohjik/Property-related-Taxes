@@ -34,6 +34,8 @@ export const burdenedGiftInfoSchema = z.object({
   marketValueByPart: z.object({ land: z.number().int().nonnegative(), building: z.number().int().nonnegative() }).optional(),
   /** 시가 모드 취득시 평가액 (총액, legacy backward-compat). */
   marketValueAtAcquisition: z.number().int().nonnegative().optional(),
+  /** 토지·건물 소유자 분리 — 채무가 증여한 부분에만 관련된다는 확인(`true` 필수 · 판정 `refineBgOwnerSplit`). 🔴 여기 없으면 침묵 strip돼 확인한 요청도 400이 된다(⑫). */
+  ownerSplitDebtConfirmed: z.boolean().optional(),
   /** [신설] 취득가액 산정방식 (K-4 실지·K-5 환산·K-6 매매사례가액·K-7 감정가액). 시가 모드 시 필수. */
   acquisitionMethod: z.enum(["actual", "converted", "appraisal", "salesCase"]).optional(),
   /** [신설] K-4 실지취득가액 — 토지. */

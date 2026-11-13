@@ -105,6 +105,13 @@ export const BURDENED_GIFT_TRANSFER = {
   SANGJEUNGBEOP_MORTGAGE_66:
     "상속세 및 증여세법 §66 — (근)저당권 등 설정 재산 평가특례",
 
+  /**
+   * 상증령 §63 ① 2호 — 공동저당권이 설정된 재산 = 그 재산이 담보하는 채권액을 공동저당된 재산의 평가기준일 현재 가액으로 안분(KoreanLaw 현행 MST 290845 실측 2026-11-13).
+   * 토지·건물 소유자가 다른 부담부증여에서 타인 소유 부분과 함께 담보로 잡힌 채무는 이 안분이 필요하다 — 입력 칸이 없어 계산하지 않는다(`burdened-gift-owner-split.ts`).
+   */
+  SANGJEUNGBEOP_DECREE_JOINT_MORTGAGE_63_1_2:
+    "상속세 및 증여세법 시행령 §63 ① 2호 — 공동저당권이 설정된 재산의 평가",
+
   /** 상증법 §61 ⑤ — 임대 부동산 평가. */
   SANGJEUNGBEOP_RENTAL_61_5:
     "상속세 및 증여세법 §61 ⑤ — 임대 부동산 평가",
