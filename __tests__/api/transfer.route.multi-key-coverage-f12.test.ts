@@ -84,6 +84,9 @@ describe("F-12 다건 키 분류", () => {
     expect(issues({ generalBuildingShares: [{ burdenedGiftInfo: {} }, { burdenedGiftInfo: {} }], transferType: "burdened_gift", burdenedGiftInfo: {} })).toEqual([]);
     expect(issues({ generalBuildingShares: [{ burdenedGiftInfo: {} }, { burdenedGiftInfo: {}, carryoverTaxation: {} }], transferType: "burdened_gift" })).toEqual([]);
     expect(issues({ companionAssets: [{}] })).toEqual(["companionAssets"]);
+    // 다필지(§114⑦) — 배열값 규칙: 필지가 1개 이상일 때만 거부, 빈 배열·값 없음은 통과(계획서 early-return-mixed-use-aggregate-audit Q-1 a).
+    expect(issues({ parcels: [{}] })).toEqual(["parcels"]);
+    expect(issues({ parcels: [] })).toEqual([]);
     expect(issues({ reductions: [{ type: "self_farming" }] })).toEqual([]);
     expect(issues({ reductions: [{ type: "unsold_98" }] })).toEqual(["reductions"]);
     expect(issues({ propertyType: "housing" })).toEqual([]);
@@ -96,7 +99,7 @@ describe("F-12 다건 키 분류", () => {
     // 파트 이월과세 3키도 ⑭가 단건과 같은 합성기로 옮긴다(트랙 CO-PART · Q-4 b) — 다건 전용 거부 없음. 남은 거부 규칙은 아래 `rejected` 순회가 본다.
     expect(issues({ landCarryoverPart: {}, buildingCarryoverPart: {}, carryoverGiftEvent: {} })).toEqual([]);
     expect(issues({ acquisitionCause: "carryover_gift" })).toEqual([]);
-    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "reductions", "propertyType"]);
+    const scalar = new Set(["transferType", "acquisitionCause", "companionAssets", "parcels", "reductions", "propertyType"]);
     for (const k of rejected) {
       if (scalar.has(k)) continue;
       expect(issues({ [k]: {} })).toEqual([k]);

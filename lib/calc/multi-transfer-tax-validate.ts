@@ -11,6 +11,7 @@ import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import { MULTI_REDEVELOPMENT_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_RIGHT_TO_MOVE_IN_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_MIXED_USE_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
+import { MULTI_PARCELS_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { MULTI_PRE_DEEMED_PURCHASE_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { isPreDeemedPurchaseAsset } from "./transfer-pre-deemed-purchase-form";
 import { MULTI_PHD_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
@@ -170,7 +171,7 @@ export function validateMultiSupportedMode(form: PropertyItem["form"]): string |
     return MULTI_PHD_UNSUPPORTED_MESSAGE;
   }
   if (a.parcelMode && a.assetKind === "land") {
-    return "다필지 토지는 단건 계산기에서만 지원됩니다.";
+    return MULTI_PARCELS_UNSUPPORTED_MESSAGE;
   }
   if (a.familyBusinessInheritance !== undefined) {
     return MULTI_FAMILY_BUSINESS_UNSUPPORTED_MESSAGE;
