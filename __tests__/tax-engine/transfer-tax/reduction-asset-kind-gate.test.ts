@@ -7,6 +7,7 @@ import { describe, it, expect } from "vitest";
 import {
   isReductionCategoryAllowedForAssetKind,
   isReductionAllowedForAssetKind,
+  hasArticleExceptionInCategory,
   type ReductionAssetKind,
 } from "@/lib/tax-engine/transfer-reductions";
 
@@ -71,5 +72,21 @@ describe("isReductionAllowedForAssetKind (id 단위)", () => {
 
   it("미지 타입은 차단하지 않음 (방어적)", () => {
     expect(isReductionAllowedForAssetKind("unknown_type", "land")).toBe(true);
+  });
+});
+
+describe("G-7 — §97의3 × 조합원입주권 조문 단위 예외 (서면-2023-법규재산-2731)", () => {
+  it("§97의3만 열린다 — 같은 범주의 §97·§97의2·§97의4·§97의5는 그대로 막힌다", () => {
+    expect(isReductionAllowedForAssetKind("rental_97_3", MOVE_IN)).toBe(true);
+    for (const id of ["rental_97_main", "rental_97_proviso", "rental_97_2", "rental_97_4", "rental_97_5", "long_term_rental"]) {
+      expect(isReductionAllowedForAssetKind(id, MOVE_IN)).toBe(false);
+    }
+    expect(isReductionAllowedForAssetKind("rental_97_3", PRESALE)).toBe(false);
+  });
+  it("범주 게이트는 닫힌 채 — ⑤가 그룹을 펼칠 근거는 `hasArticleExceptionInCategory`", () => {
+    expect(isReductionCategoryAllowedForAssetKind("rental", MOVE_IN)).toBe(false);
+    expect(hasArticleExceptionInCategory("rental", MOVE_IN)).toBe(true);
+    expect(hasArticleExceptionInCategory("rental", PRESALE)).toBe(false);
+    expect(hasArticleExceptionInCategory("unsold_housing", MOVE_IN)).toBe(false);
   });
 });

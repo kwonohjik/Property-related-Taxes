@@ -40,6 +40,7 @@ import {
   ALL_REDUCTION_IDS,
   CATEGORY_UI_SCHEMA,
   isReductionAllowedForAssetKind,
+  isReductionCategoryAllowedForAssetKind,
   type TransferReductionId,
   type ReductionCategory,
   type ReductionAssetKind,
@@ -299,7 +300,7 @@ export function GroupCategorySection({
             const disabledReason = !housingAllowed
               ? `🏠 주택 양도에만 적용되는 감면입니다 (현재 자산: ${assetKindLabel})`
               : !articleAllowed
-              ? `🏠 ${assetKindGateReason(id, assetKind) ?? `이 조문은 현재 자산 종류(${assetKindLabel})에 적용되지 않습니다`}`
+              ? `🏠 ${assetKindGateReason(id, assetKind) ?? (isReductionCategoryAllowedForAssetKind(category, assetKind) ? `이 조문은 현재 자산 종류(${assetKindLabel})에 적용되지 않습니다` : `주택 양도에만 적용되는 감면입니다 (현재 자산: ${assetKindLabel})`)}`
               : causeBlocked
               ? `🧾 ${causeBlocked.message}`
               : !period.inPeriod
@@ -355,6 +356,7 @@ export function GroupCategorySection({
                       acquisitionDate={acquisitionDate}
                       assetContractDate={assetContractDate}
                       acquisitionCause={assetAcquisitionCause}
+                      isRightToMoveIn={assetKind === "right_to_move_in"}
                     />
                   )}
                   {/* §97의5 입력 폼 */}

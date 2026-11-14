@@ -25,6 +25,7 @@ import { canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import { assetKindGateMessage } from "@/lib/tax-engine/transfer-reductions";
 import { asksInheritedPresaleQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
 import { unsold98AcquisitionCauseReason } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
+import { rental973RightToMoveInBlockReason } from "@/lib/tax-engine/transfer-reductions/rental-97-3-right-after-auto-cancel";
 import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-reductions";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -180,6 +181,19 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         // UI disabled와 동일 판정 (단일 소스 isReductionAllowedForAssetKind). field별 검증보다 먼저.
         const gateMessage = assetKindGateMessage(r.type, asset.assetKind);
         if (gateMessage) return fail(gateMessage);
+        // G-7 — §97의3 × 조합원입주권은 조문 단위로 열렸지만 서면-2023-법규재산-2731 사실관계(Q-5 a)만이다. ⑫와 같은 술어.
+        if (r.type === "rental_97_3" && asset.assetKind === "right_to_move_in") {
+          const rightReason = rental973RightToMoveInBlockReason({
+            isSuccessor: asset.isSuccessorRightToMoveIn === true || asset.redevIsSuccessorMember === "yes",
+            originalAssetType: asset.redevOriginalAssetType,
+            approvalDate: asset.redevApprovalDate,
+            rentalContinuesToTransfer: r.rentalContinuesToTransfer ?? undefined,
+            autoCancelled973: r.autoCancelled973,
+            rentalEndDate: r.rentalEndDate,
+            hasApprovalStdPrice: parseAmount(r.stdPriceAtTransfer || "0") > 0,
+          });
+          if (rightReason) return fail(rightReason);
+        }
         // US-07 — §98 시리즈 취득 원인 게이트(⑤·엔진과 같은 leaf). 답이 비면 묻고, 불성립이 확정되면 막는다. 「모름」은 엔진이 확인 필요로 안내한다.
         if (asksInheritedPresaleQuestion(r.type, asset.acquisitionCause) && !asset.inheritedPresaleCompletedByHeir) {
           return fail("상속받은 주택입니다. 상속 당시 분양권이었고 본인(상속인)이 잔금을 내고 취득했는지 선택하세요.");

@@ -27,6 +27,7 @@ export { REDUCTION_METADATA, ALL_REDUCTION_IDS, getReductionsByCategory, CATEGOR
 export {
   isReductionCategoryAllowedForAssetKind,
   isReductionAllowedForAssetKind,
+  hasArticleExceptionInCategory,
   isGbClaimRouteAllowedForAssetKind,
   assetKindGateReason,
   assetKindGateMessage,

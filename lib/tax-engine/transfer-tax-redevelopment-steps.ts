@@ -384,7 +384,9 @@ export function runRedevelopmentGainSteps(
         // PR-B — 대통령령 제29241호 부칙 §2②2호(2018.9.13. 이전 매매계약·계약금) 판정 축. 세액감면 경로(`calcReductions`)와 같은 자산 매매계약일.
         contractDate: input.assetContractDate,
         stdPriceAtAcquisition: input.standardPriceAtAcquisition,
-        stdPriceAtTransfer: input.standardPriceAtTransfer,
+        // G-7 Q-6 a — 조합원입주권의 안분 D는 관리처분계획 인가일 기준시가(§97의3 카드 칸)다. 자산의 양도일 기준시가로 폴백하지 않는다
+        //   (⑧·⑫가 카드 칸을 요구한다 — `rental973RightToMoveInBlockReason`).
+        stdPriceAtTransfer: input.redevelopment?.subject === "right" ? undefined : input.standardPriceAtTransfer,
       });
   // §97의4① 단서 — LTHD 표2와 같은 leaf(분리 거주 입력·인가일 요건 강등·승계 분기) (E-4).
   const table2ActiveForRedev = redevUsesTable2({

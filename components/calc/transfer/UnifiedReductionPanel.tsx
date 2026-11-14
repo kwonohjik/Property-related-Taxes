@@ -45,6 +45,7 @@ import {
   isReductionCategoryAllowedForAssetKind,
   getReductionsByCategory,
   isReductionAllowedForAssetKind,
+  hasArticleExceptionInCategory,
   type TransferReductionId,
   type ReductionCategory,
   type ReductionAssetKind,
@@ -486,7 +487,8 @@ export function UnifiedReductionPanel({ asset, assetIndex = 0, transferDate, onC
           category={cat}
           isOpen={openCategories[cat]}
           onToggleOpen={() => setOpenCategories((prev) => ({ ...prev, [cat]: !prev[cat] }))}
-          housingAllowed={isReductionCategoryAllowedForAssetKind(cat, asset.assetKind)}
+          // G-7 — 범주는 막혀도 조문 단위로 열린 조문(§97의3 × 조합원입주권)이 있으면 그룹을 연다. 나머지 조문은 조문 게이트가 막는다.
+          housingAllowed={isReductionCategoryAllowedForAssetKind(cat, asset.assetKind) || hasArticleExceptionInCategory(cat, asset.assetKind)}
           assetKind={asset.assetKind}
           assetKindLabel={ASSET_KIND_LABEL[asset.assetKind]}
           periodResults={periodResults}
