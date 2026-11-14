@@ -20,6 +20,9 @@
  *   (교재 389쪽 · 서면-2017-법령해석재산-1253).
  *   직접 해석례는 확보하지 못했다(계획서 V-1). 종전(2026-11-01 리뷰 게이트 C-3)에는 초과 공실로 나뉜 구간 중
  *   **가장 긴 구간**으로 판정했다 — 1년 공실 뒤 10년 6개월 임대가 적격이었다.
+ * - 6개월 **이내** 공실 — 끊지 않되 그 일수를 기간에서 **뺀다**(G5-2 · 교재 384쪽 본문 「해당 공실기간 만큼 더 임대하여」 ·
+ *   사용자 결정 2026-11-14). 령 ①1호 문언 「계속하여 임대한 것으로 본다」와 같은 쪽 교재 사례(10년 중 5개월 공실 4번 → 적용)는
+ *   기간에 넣는 쪽이라 이 계산이 그보다 불리하다 — 알고 택한 정책이다(재제안 금지 · 메시지에 법령 근거로 쓰지 않음).
  * - 간주기간(아래)이 한 공실의 가운데를 덮으면 남은 앞뒤 조각을 **각각** 6개월로 판정한다 — 간주기간은
  *   「계속하여 임대한 것으로 본다」이므로 그 앞뒤 조각은 서로 다른 공백이 된다(가정, 해석례 미확인).
  *
@@ -29,7 +32,7 @@
  * 공실 구간과 겹치면 겹친 부분을 공실에서 빼고, 남은 조각마다 6개월 판정을 한다.
  */
 
-import { addMonths, differenceInYears, subMonths } from "../utc-date";
+import { addDays, addMonths, differenceInDays, differenceInYears, subMonths } from "../utc-date";
 
 /** 령 §97의5①1호 — 공실 유예 6개월 (경계 「이내」 포함) */
 const VACANCY_GRACE_MONTHS = 6;
@@ -81,8 +84,10 @@ function subtractWindows(span: Span, windows: Span[]): Span[] {
 }
 
 export interface ContinuousRental975Result {
-  /** 기산일부터 첫 단절까지 계속 임대한 연수 (만 년) — 10년 판정에 쓰는 값 */
+  /** 기산일부터 첫 단절까지 계속 임대한 연수 (만 년) — 6개월 이내 공실 일수를 뺀 값, 10년 판정에 쓴다 */
   years: number;
+  /** 첫 구간 안의 6개월 이내 공실 일수 — 계속성은 유지하되 기간에서 뺀다(G5-2, 교재 384쪽 본문 · 사용자 결정) */
+  graceVacancyDays: number;
   /** 그 구간 — [start, 첫 6개월 초과 공실 시작] · 단절이 없으면 [start, end] */
   countedSegment?: Span;
   /** 계속성을 끊은 6개월 초과 공실 조각 (시간순) */
@@ -101,7 +106,7 @@ export function evaluateContinuousRental975(args: {
   deemedRentalPeriods: DeemedRentalPeriod975[];
 }): ContinuousRental975Result {
   const { start, end } = args;
-  if (end.getTime() <= start.getTime()) return { years: 0, breaks: [] };
+  if (end.getTime() <= start.getTime()) return { years: 0, graceVacancyDays: 0, breaks: [] };
 
   // 역순 구간은 무시한다 — ⑧·⑫가 막지만 엔진 단독 호출 방어(리뷰 게이트 probe I)
   const windows = args.deemedRentalPeriods
@@ -109,6 +114,8 @@ export function evaluateContinuousRental975(args: {
     .map(expandDeemedPeriod);
 
   const breaks: Span[] = [];
+  /** 6개월 이내 공실 조각 — 끊김은 아니지만 기간에서 뺀다(G5-2) */
+  const graceFrags: Span[] = [];
   for (const v of args.vacancyPeriods) {
     // 기간 밖 부분은 판정 대상이 아니다
     const s = Math.max(v.startDate.getTime(), start.getTime());
@@ -116,15 +123,49 @@ export function evaluateContinuousRental975(args: {
     if (e <= s) continue;
     for (const frag of subtractWindows({ start: new Date(s), end: new Date(e) }, windows)) {
       if (frag.end.getTime() > addMonths(frag.start, VACANCY_GRACE_MONTHS).getTime()) breaks.push(frag);
+      else graceFrags.push(frag);
     }
   }
   breaks.sort((a, b) => a.start.getTime() - b.start.getTime());
 
   // 기산일부터 첫 단절 시작까지만 센다(Q-1 a) — 단절 뒤에 다시 시작한 구간은 「등록 후부터의 계속」이 아니다.
   const countedEnd = breaks.length > 0 ? breaks[0].start : end;
-  if (countedEnd.getTime() <= start.getTime()) return { years: 0, breaks };
+  if (countedEnd.getTime() <= start.getTime()) return { years: 0, graceVacancyDays: 0, breaks };
   const countedSegment = { start, end: countedEnd };
-  return { years: differenceInYears(countedEnd, start), countedSegment, breaks };
+  /**
+   * G5-2 — 6개월 이내 공실은 계속 임대로 「보지만」(끊지 않음) 그 일수만큼 기간에서 뺀다 — 교재 384쪽 본문
+   * 「6개월 이내면 해당 공실기간 만큼 더 임대하여 통산된 임대기간이 10년 이상이면 적용」(사용자 결정 2026-11-14).
+   * ⚠️ 조특령 §97의5①1호 문언(「해당 기간 동안 계속하여 임대한 것으로 본다」)보다 불리한 계산이다 — 메시지에
+   *    법령을 근거로 쓰지 않는다. 겹친 공실은 한 번만 뺀다. 날수 → 연수는 §97의3 `calculateEffectiveRentalPeriod`와 같은 방식.
+   */
+  const graceVacancyDays = unionDays(graceFrags, countedSegment);
+  const effectiveEnd = addDays(start, differenceInDays(countedEnd, start) - graceVacancyDays);
+  return { years: differenceInYears(effectiveEnd, start), graceVacancyDays, countedSegment, breaks };
+}
+
+/** spans를 within으로 자르고 겹침을 합친 총 일수 */
+function unionDays(spans: Span[], within: Span): number {
+  const clipped = spans
+    .map((sp) => ({
+      start: Math.max(sp.start.getTime(), within.start.getTime()),
+      end: Math.min(sp.end.getTime(), within.end.getTime()),
+    }))
+    .filter((sp) => sp.end > sp.start)
+    .sort((a, b) => a.start - b.start);
+  let days = 0;
+  let curStart = -Infinity;
+  let curEnd = -Infinity;
+  for (const sp of clipped) {
+    if (sp.start > curEnd) {
+      if (curEnd > curStart) days += differenceInDays(new Date(curEnd), new Date(curStart));
+      curStart = sp.start;
+      curEnd = sp.end;
+    } else if (sp.end > curEnd) {
+      curEnd = sp.end;
+    }
+  }
+  if (curEnd > curStart) days += differenceInDays(new Date(curEnd), new Date(curStart));
+  return days;
 }
 
 /**

@@ -300,12 +300,18 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
               `있어 계속 임대가 끊겼습니다 — 기산일부터 첫 공실 전까지(${counted ? `${ymd(counted.start)}~${ymd(counted.end)}` : "0일"})만 셉니다. ` +
               `끊긴 뒤 다시 임대한 기간은 「등록 후 … 계속하여」 임대한 기간이 아닙니다 (§97의5①2호 · 조특령 §97의5①1호 — 6개월 이내 공실만 계속 임대로 봄).`
             : "";
+        // G5-2 — 6개월 이내 공실 일수를 뺐다(교재 384쪽 본문 · 사용자 정책 — 법령 근거로 쓰지 않는다)
+        const graceNote =
+          continuity.graceVacancyDays > 0
+            ? ` 6개월 이내 공실 ${continuity.graceVacancyDays.toLocaleString()}일은 계속 임대가 끊긴 것으로 보지 않지만 ` +
+              `10년을 셀 때는 빼고 셉니다 — 그만큼 더 임대해야 합니다.`
+            : "";
         const mergeNote = rentalPeriod975
           ? ` 피상속인 임대기간(${rentalPeriod975.decedent.start}~${rentalPeriod975.decedent.end})을 합산했습니다 (${RENTAL_97_5_PERIOD.PERIOD_CALC} → ${RENTAL_97_5_PERIOD.INHERITANCE_MERGE}).`
           : "";
         reasons.push({
           code: "RENTAL_PERIOD_SHORT",
-          message: `계속 임대기간 ${eligibleRentalYears}년 — 10년 이상 계속 임대 요건 미달 (§97의5①2호).${restartNote}${mergeNote}`,
+          message: `계속 임대기간 ${eligibleRentalYears}년 — 10년 이상 계속 임대 요건 미달 (§97의5①2호).${restartNote}${graceNote}${mergeNote}`,
           legalBasis,
         });
       }

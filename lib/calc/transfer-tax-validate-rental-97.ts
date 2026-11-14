@@ -73,8 +73,9 @@ export function rental97SeriesIssue(args: {
     if (r.hasVacancyOverGrace === null) {
       // D1-03 — 유예는 조문마다 다르다: §97의5만 6개월(조특령 §97의5①1호),
       // 나머지 넷은 3월(조특령 §97⑤5호 → 조특칙 §44). ⑤UI 질문 문구와 같은 값이어야 한다.
-      const grace = r.type === "rental_97_5" ? "6개월" : "3개월";
-      return fail(fieldError(`reduction.${r.type}.hasVacancyOverGrace`, `${label} 적용: ${grace}을 초과하는 공실 여부(없음/있음)를 선택하세요.`));
+      // §97의5는 6개월 이내 공실도 기간에서 빼므로(G5-2) 길이와 관계없이 묻는다 — ⑤ `RentalCommonFields` 질문과 같은 문구.
+      const question = r.type === "rental_97_5" ? "공실 여부(6개월 이내 포함)" : "3개월을 초과하는 공실 여부";
+      return fail(fieldError(`reduction.${r.type}.hasVacancyOverGrace`, `${label} 적용: ${question}를 선택하세요(없음/있음).`));
     }
     if (r.hasVacancyOverGrace === true && (!r.vacancyPeriods || r.vacancyPeriods.length === 0))
       return fail(fieldError(`reduction.${r.type}.vacancyPeriods`, `${label} 적용: 공실 "있음" 선택 시 공실 구간을 1건 이상 입력하세요.`));

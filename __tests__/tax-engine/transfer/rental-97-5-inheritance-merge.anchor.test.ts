@@ -67,10 +67,11 @@ describe("10년 계속 임대 — 피상속인 분 합산 (Q-A)", () => {
     });
   });
 
-  it("H-3 피상속인 2016-03-01 → 양도 2026-03-01 정확히 10년 적격 · 2026-02-28 9년 부적격", () => {
+  it("H-3 피상속인 2016-03-01 → 상속 간격 44일(공실로 차감, G5-2)을 더한 2026-04-14 정확히 10년 적격 · 2026-04-13 9년 부적격", () => {
+    // 상속개시 2017-06-01 ~ 상속인 개시 2017-07-15 간격은 6개월 이내 공실 — 끊지 않되 44일을 뺀다(G5-2 · 2026-11-14)
     const i = inh({ decedentRegistrationDate: "2016-03-01", decedentRentalStartDate: "2016-03-01" });
-    expect(evaluateRental975(input({ inheritance975: i })).isEligible).toBe(true);
-    const r = evaluateRental975(input({ inheritance975: i, transferDate: D("2026-02-28") }));
+    expect(evaluateRental975(input({ inheritance975: i, transferDate: D("2026-04-14") })).isEligible).toBe(true);
+    const r = evaluateRental975(input({ inheritance975: i, transferDate: D("2026-04-13") }));
     expect(codes(r)).toEqual(["RENTAL_PERIOD_SHORT"]);
     expect(years(r)).toContain("계속 임대기간 9년");
     expect(years(r)).toContain("피상속인 임대기간(2016-03-01~2017-06-01)을 합산했습니다");

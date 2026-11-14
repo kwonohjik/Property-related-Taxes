@@ -57,7 +57,7 @@ describe("④ API 변환 — 유예 초과 공실이 엔진 payload에 실린다
   });
 });
 
-describe("🔴 엔진 — 같은 4개월 공실이 §97에서는 임대기간을 깎고 §97의5에서는 깎지 않는다", () => {
+describe("🔴 엔진 — 같은 4개월 공실이 §97에서는 유예(3월)를 넘어 깎이고, §97의5에서는 끊지 않되 일수를 뺀다(G5-2)", () => {
   const base = {
     rentalStartDate: D("1999-01-01"),
     acquisitionDate: D("1998-06-01"),
@@ -120,17 +120,17 @@ describe("🔴 엔진 — 같은 4개월 공실이 §97에서는 임대기간을
     calculatedTax: 100_000_000,
   };
 
-  it("§97의5: 4개월 공실은 6개월 유예 이내라 차감하지 않는다 → 10년 유지·적용", () => {
+  it("§97의5: 4개월 공실은 끊김이 아니지만 120일을 뺀다 → 9년 · 배제 (G5-2 — 교재 384쪽 본문 · 사용자 결정 2026-11-14)", () => {
     const r = evaluateRental975({
       ...BASE_97_5,
       vacancyPeriods: [{ startDate: D("2021-01-01"), endDate: D("2021-05-01") }],
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
-    const codes = r.isEligible ? [] : (r.ineligibleReasons ?? []).map((x) => x.code);
-    expect(codes, "§97의5에 3월 유예를 잘못 적용하면 임대기간이 깎여 배제된다").not.toContain(
-      "RENTAL_PERIOD_SHORT",
-    );
-    expect(r.isEligible).toBe(true);
+    expect(r.isEligible).toBe(false);
+    const msg = r.isEligible ? "" : (r.ineligibleReasons ?? []).map((x) => x.message).join(" ");
+    // 3월 유예를 잘못 적용하면 「끊겼습니다」(단절)가 된다 — §97의5는 6개월 이내라 끊지 않고 일수만 뺀다
+    expect(msg).toContain("6개월 이내 공실 120일");
+    expect(msg).not.toContain("끊겼습니다");
   });
 
   it("§97의5: 7개월 공실은 6개월 유예를 넘어 차감된다 → 10년 미달·배제 (구별력)", () => {
