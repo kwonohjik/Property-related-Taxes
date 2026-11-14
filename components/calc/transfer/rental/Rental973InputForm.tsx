@@ -28,6 +28,7 @@ import { rental973DeemedStartString } from "@/lib/calc/rental-97-effective-start
 import { rental973LongRegistrationDate } from "@/lib/calc/transfer-tax-validate-rental-conversion";
 import { Clause4GrandfatherQuestion } from "./Clause4GrandfatherQuestion";
 import { Rental973InheritanceBlock } from "./Rental973InheritanceBlock";
+import { RentalResidentOnlyNotice } from "./RentalResidentOnlyNotice";
 import { Rental973AutoCancelToggle } from "./Rental973AutoCancelToggle";
 import { autoCancelDeemed973Applies } from "@/lib/tax-engine/transfer-reductions/rental-97-3-auto-cancel";
 import { rental973InheritanceInScope } from "@/lib/calc/rental-97-3-inheritance";
@@ -118,6 +119,7 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
       <ToneCard tone="violet" sectionNum="①" title="등록·신분">
+        <RentalResidentOnlyNotice article="§97의3" />
 
         {/* PR-C — 단기민간임대 → 장기일반 변경신고. 이 선택이 아래 「임대사업자 등록일」의 의미를 바꾸므로
             (변경신고 주택 = 단기 지자체 등록일) 그 입력 **직전**에 둔다(입력 화면 작성 원칙 「모드 토글은 영향 필드 직전」).
