@@ -65,7 +65,7 @@ describe("G-7′ 입주권 × §97의3 — 인가전 분에만 특례", () => {
 
   it("R-7 🔴 장특 68,000,000 — 인가후 분(청산금 분기 3.5억)에 특례율을 씌우지 않는다 (종전 155,500,000)", () => {
     expect(with973.rental97LthdDetail?.isEligible).toBe(true);
-    expect(with973.rental97LthdDetail?.rentalGainRatio).toBe(0.5);
+    expect((with973.rental97LthdDetail as { rentalGainRatio?: number } | undefined)?.rentalGainRatio).toBe(0.5);
     expect(detail(with973).preApproval.lthd).toBe(68_000_000);
     expect(detail(with973).settlement.gain).toBe(350_000_000);
     expect(detail(with973).settlement.lthd).toBe(0);
