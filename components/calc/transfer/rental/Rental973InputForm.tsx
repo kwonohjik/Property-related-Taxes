@@ -29,6 +29,7 @@ import { rental973LongRegistrationDate } from "@/lib/calc/transfer-tax-validate-
 import { Clause4GrandfatherQuestion } from "./Clause4GrandfatherQuestion";
 import { Rental973InheritanceBlock } from "./Rental973InheritanceBlock";
 import { RentalResidentOnlyNotice } from "./RentalResidentOnlyNotice";
+import { RentalMultiFamilyPartialNotice } from "./RentalMultiFamilyPartialNotice";
 import { Rental973AutoCancelToggle } from "./Rental973AutoCancelToggle";
 import { autoCancelDeemed973Applies } from "@/lib/tax-engine/transfer-reductions/rental-97-3-auto-cancel";
 import { APT_PURCHASE_973_QUESTION } from "@/lib/tax-engine/transfer-reductions/rental-97-3-apt-purchase-exclusion";
@@ -325,6 +326,7 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
           description="전용 85㎡(수도권 외 읍면 100㎡) 이하 · 다가구주택은 전체 면적 합이 아니라 가구당 전용면적으로 판정 — 령 §97의3③2호"
           tone="sky"
         />
+        <RentalMultiFamilyPartialNotice article="§97의3" />
       </ToneCard>
 
       {/* ② 임대 개시 */}

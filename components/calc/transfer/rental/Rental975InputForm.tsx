@@ -30,6 +30,7 @@ import { evaluateRental975Continuity } from "@/lib/tax-engine/transfer-reduction
 import { rental975InheritanceInScope } from "@/lib/calc/rental-97-5-inheritance";
 import { Rental975InheritanceBlock } from "./Rental975InheritanceBlock";
 import { RentalResidentOnlyNotice } from "./RentalResidentOnlyNotice";
+import { RentalMultiFamilyPartialNotice } from "./RentalMultiFamilyPartialNotice";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 
 type Rental975Form = Extract<RentalReductionFormVariant, { type: "rental_97_5" }>;
@@ -288,6 +289,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
           description="전용 85㎡(수도권 외 읍면 100㎡) 이하 · 다가구주택은 전체 면적 합이 아니라 가구당 전용면적으로 판정 — §97의5①3호 → 령 §97의3③2호"
           tone="sky"
         />
+        <RentalMultiFamilyPartialNotice article="§97의5" />
 
         <div>
           <p className="mb-1 text-xs font-medium">소재지</p>
