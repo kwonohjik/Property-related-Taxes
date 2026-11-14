@@ -158,6 +158,7 @@ export function giftBurdenedEffectiveIsRegulatedArea(
 export function giftBurdenedProvisoMode(bgt: BurdenedGiftTransferTaxInput): ProvisoMode {
   const count = bgt.householdHousingCount ?? 1;
   const tt = bgt.temporaryTwoHouse;
+  const rentalResidenceDeclared = rentalResidenceContextDeclared(bgt.rentalHousingException);
   return provisoGate({
     isOneHousehold: bgt.isOneHousehold === true,
     isHousing: true,
@@ -165,9 +166,13 @@ export function giftBurdenedProvisoMode(bgt: BurdenedGiftTransferTaxInput): Prov
     temporaryTwoHouseApplies:
       count === 2 && !!tt && !!giftBurdenedPreviousAcquisitionDate(bgt) && !!ymd(tt.newAcquisitionDate),
     // V-F4 — 이 경로는 명부가 없어 §155 의제 중 합가(④⑤)만 입력된다. 합가 칸은 세대 2주택 이상에서만 보인다(`giftBurdenedMergeInScope`).
-    deemedOneHouseContextDeclared: !!(bgt.marriageDate || bgt.parentalCareMergeDate),
+    // V-8(`rental-4ho-temp-merge-gaps.plan.md` §8) — 세대 3주택 이상 합가는 이 화면에 목록이 없어 엔진이 판정하지 않고 계산한다
+    //   (`NO_ROSTER_THREE_HOUSE_MERGE_NOTICE`). 단서를 골라도 결론에 닿지 않으므로(mock 실측 3·4주택 × 없음·1·3·4·5호 모두 같은 세액)
+    //   합가 맥락은 2주택에서만 연다. §155⑳ 선언과 겹치면 종전대로 둔다(임대 행을 빼고 합가를 보는 경로 — #2821).
+    deemedOneHouseContextDeclared:
+      !!(bgt.marriageDate || bgt.parentalCareMergeDate) && (count === 2 || rentalResidenceDeclared),
     // §155⑳ 거주주택 특례 선언(이 경로의 카드 — `gift-burdened-rental-exception.ts`)이면 2주택 이상에서도 1호·2호가목·3호를 받는다
-    rentalResidenceDeclared: rentalResidenceContextDeclared(bgt.rentalHousingException),
+    rentalResidenceDeclared,
   }).mode;
 }
 
