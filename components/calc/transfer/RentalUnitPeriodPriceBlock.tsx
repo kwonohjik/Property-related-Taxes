@@ -13,6 +13,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PeriodRangeEditor } from "./PeriodRangeEditor";
+import { RENTAL_155_22_EXCEPTIONS_SHORT } from "@/lib/calc/rental-155-22-exceptions";
 import { rentalUnitLowPriceInScope } from "@/lib/calc/rental-unit-low-price-scope";
 import { RentalSuccessionBlock } from "./RentalSuccessionBlock";
 import { recognizedRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
@@ -86,7 +87,7 @@ export function RentalUnitPeriodPriceBlock({
         )}
         <p className="text-xs text-muted-foreground px-1">
           의무임대기간 {reqYears}년({reqYears * 12}개월) — 채우기 전에 거주주택을 양도해도 특례를 적용하며,
-          이후 채우지 못하면 특례가 없었을 경우의 세액과의 차액을 신고·납부합니다(소령 §155㉑·㉒).
+          이후 채우지 못하면 특례가 없었을 경우의 세액과의 차액을 신고·납부합니다(소령 §155㉑·㉒). {RENTAL_155_22_EXCEPTIONS_SHORT}
         </p>
       </div>
 

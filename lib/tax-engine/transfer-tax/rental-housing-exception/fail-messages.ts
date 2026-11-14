@@ -76,7 +76,11 @@ export function buildFailMessage(
         return `${n}호: 말소된 임대주택의 민간임대주택 등록 유형(단기 4년·장기일반 8년)을 선택해야 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 1호(임대의무기간 1/2 이상)를 판정할 수 있습니다.`;
       }
       const duty = TERMINATED_DUTY_YEARS[t];
-      return `${n}호: 자진말소는 「민간임대주택에 관한 특별법」 제43조 임대의무기간(${duty}년)의 1/2(${duty * 6}개월) 이상 임대해야 합니다 (현재: ${unit.halfDutyRentalMonths ?? unit.rentalMonths}개월, ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 1호).`;
+      const halfMonths = unit.halfDutyRentalMonths ?? unit.rentalMonths;
+      if (unit.terminationReason === "auto") {
+        return `${n}호: 자동말소된 주택도 「민간임대주택에 관한 특별법」 제43조 임대의무기간(${duty}년)의 1/2(${duty * 6}개월) 이상 임대하지 않은 상태에서 등록이 말소되면 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23}이 적용되지 않습니다 (현재: ${halfMonths}개월, ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 1호 · 서면-2024-법규재산-0692).`;
+      }
+      return `${n}호: 자진말소는 「민간임대주택에 관한 특별법」 제43조 임대의무기간(${duty}년)의 1/2(${duty * 6}개월) 이상 임대해야 합니다 (현재: ${halfMonths}개월, ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 1호).`;
     }
     case "REQUIREMENTS_NOT_CONFIRMED":
       return `${n}호: 기타 요건(임대료 5% 이내 증액·임대사업자 등록·임대료 지급 등) 확인 필요`;

@@ -27,8 +27,8 @@ import { RentalHousing154_10Block } from "./RentalHousing154_10Block";
 import { RentalLifetimeLimitBlock } from "./RentalLifetimeLimitBlock";
 import { RentalHousingCalcSummary } from "./RentalHousingCalcSummary";
 import { Phrp154_10FactQuestion } from "./Phrp154_10FactQuestion";
-import { phrp154_10QuestionInScope } from "@/lib/calc/phrp-154-10-fact-question";
-import { PRIOR_RESIDENCE_155_20_ONLY_NOTE } from "@/lib/calc/phrp-154-10-fact-question";
+import { phrp154_10QuestionInScope, PRIOR_RESIDENCE_155_20_ONLY_NOTE } from "@/lib/calc/phrp-154-10-fact-question";
+import { RENTAL_155_22_EXCEPTIONS_SHORT } from "@/lib/calc/rental-155-22-exceptions";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { TONE } from "@/components/calc/shared/tones";
 import { cn } from "@/lib/utils";
@@ -673,7 +673,7 @@ export function RentalHousingExceptionSection({
 
             {/* 추가 안내 */}
             <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-2.5 text-xs text-violet-800 space-y-1 dark:text-violet-200 dark:bg-violet-950/40">
-              <p>• 임대주택: 기준시가 상한 준수 + 의무임대기간 충족(충족 전 양도도 적용 — 미충족 시 사후 추징, 소령 §155㉑·㉒)</p>
+              <p>• 임대주택: 기준시가 상한 준수 + 의무임대기간 충족(충족 전 양도도 적용 — 미충족 시 사후 추징, 소령 §155㉑·㉒). {RENTAL_155_22_EXCEPTIONS_SHORT}</p>
               <p>• 아파트는 2020.7.11 이전 등록분만 적용 가능</p>
               <p className="flex items-center gap-1">
                 <span>• 세부 요건은</span>

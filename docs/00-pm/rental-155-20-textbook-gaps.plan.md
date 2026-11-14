@@ -99,6 +99,7 @@
 - 범위 밖: 조특법 §97의3(954), 다주택 명부 `HouseEntryEditor.tsx`(751줄 — Q-8).
 
 ### PR-3 문구 4건 (세액 불변)
+> **구현(2026-11-14)**: G-7 단일 소스는 엔진 쪽 `rental-housing-exception/clawback-exceptions.ts`(화면은 `lib/calc/rental-155-22-exceptions.ts` 재수출) · 법령 상수 `PIT_RR_74_2`(소칙 §74의2, 매니페스트 등록) · Q-1에 따라 생애 1회 이력 질문·⑧·엔진 고지도 0393 취지로. anchor 9건.
 - G-1 `RentalUnitCard.tsx:262-293`: 「장기일반」 라벨 → 「장기일반 (단기 4년 등록 포함)」(testid 불변) + hint 「2020.8.17. 이전에 4년 단기민간임대로 등록했다면 「장기일반」을 고르세요. 지자체 등록 신청일이 2020.7.10. 이전이면 가목, 2020.7.11. 이후면 마목(아파트 제외)으로 판정합니다」. 「구 임대주택법」이 ㉓ 대상에서 빠지는 이유는 V-6 확인 전엔 쓰지 않는다.
 - G-2 `fail-messages.ts:79`: `terminationReason`으로 분기 — 자동말소면 「임대의무기간 1/2 이상 임대하지 않은 상태에서 등록이 말소되어 …」(0692 인용은 V-7).
 - G-6(결정 (a)): 질문·NOTE·⑧ 문구 `lib/calc/phrp-154-10-fact-question.ts:78·84·89` · `Phrp154_10FactQuestion.tsx:35·58` · `RentalHousing154_10Block.tsx:48` · `RentalHousingCalcSummary.tsx:80` · AI 카탈로그 `lib/one-house-ai/field-catalog-asset.ts:429·447`. 질문 초안 「…다른 거주주택을 장기임대주택 거주주택 특례(소령 §155⑳)의 요건을 갖춘 상태로 양도한 적이 있습니까?」 + 「특례를 신청하지 않고 과세로 신고했어도 요건을 갖췄다면 「예」입니다(사전-2023-법규재산-0393)」. §155①로 양도한 주택 제외 문장 유지. 테스트 갱신: `__tests__/calc/phrp-154-10-fact-question.anchor.test.tsx`·`__tests__/components/phrp-prior-residence-155-20-only.anchor.test.tsx`.

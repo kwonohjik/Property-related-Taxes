@@ -11,6 +11,7 @@ import {
   rentalResidenceRequirementHoldYears,
 } from "./one-house/rental-residence-holding-proviso";
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
+import { RENTAL_155_22_EXCEPTIONS_LONG } from "./transfer-tax/rental-housing-exception/clawback-exceptions";
 import { MULTI_HOUSE } from "./legal-codes/transfer-house";
 import { rentalUnitLowPriceFacts } from "./rental-card-surcharge-rows";
 import {
@@ -118,7 +119,8 @@ export function buildRentalPeriodPendingNotice(unitIndexes: number[] | undefined
     `장기임대주택 ${units}가 임대기간요건을 채우기 전에 거주주택을 양도해 특례를 적용했습니다` +
     `(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_21}). 이후 임대기간요건을 충족하지 못하게 되면(임대의무호수를 ` +
     `임대하지 않은 기간이 6개월을 지난 경우 포함) 그 사유가 발생한 날이 속하는 달의 말일부터 2개월 이내에 ` +
-    `특례가 없었다면 납부했을 세액과의 차액을 신고·납부해야 합니다(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_22}).`
+    `특례가 없었다면 납부했을 세액과의 차액을 신고·납부해야 합니다(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_22}). ` +
+    RENTAL_155_22_EXCEPTIONS_LONG
   );
 }
 

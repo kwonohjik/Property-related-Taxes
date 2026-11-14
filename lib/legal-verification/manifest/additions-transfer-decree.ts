@@ -642,6 +642,13 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // 영 §155㉒2호가목 「재정경제부령으로 정하는 부득이한 사유」 — ㉒ 사후 추징 예외 안내(수용·사망 상속). KoreanLaw MST 286379 본문 확인.
+    id: "TRANSFER_RULE.RENTAL_155_22_FORCE_MAJEURE_74_2",
+    citation: "소득세법 시행규칙 §74의2",
+    keywords: ["계속 임대로 보는 부득이한 사유", "수용(협의매수를 포함한다)된 경우", "사망으로 상속되는 경우"],
+    keywordMode: "ALL",
+  },
+  {
     // 복합 인용 "소득세법 시행령 §168조의11 ② + 소득세법 시행규칙 §83조의4" 뒤쪽 조문 —
     // 앞 조문만 파싱되던 탓에 그동안 모수 밖이었다.
     id: "TRANSFER_RULE.NBL_OTHER_LAND_AREA",

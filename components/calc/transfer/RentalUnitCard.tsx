@@ -239,13 +239,21 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
       )}
 
       {/* 임대 구분 — 등록시기로 배제되는 유형은 disabled(단, 현재 선택은 제외: mount-limbo 방지) */}
-      <FieldCard label="임대 구분" required>
+      <FieldCard
+        label="임대 구분"
+        required
+        hint={
+          <span data-testid={`rental-category-hint-${index}`}>
+            2020.8.17. 이전에 4년 단기민간임대로 등록했다면 「장기일반」을 고르세요. 지자체 등록 신청일이 2020.7.10. 이전이면 가목, 2020.7.11. 이후면 마목(아파트 제외)으로 판정합니다.
+          </span>
+        }
+      >
         <RadioCardGroup
           name={`rental-category-${index}`}
           tone="emerald"
           layout="inline"
           options={[
-            { value: "long_general", label: "장기일반" },
+            { value: "long_general", label: "장기일반 (단기 4년 등록 포함)" },
             { value: "short_6y", label: "단기 6년" },
             { value: "existing_business", label: "기존사업자(나목)" },
             { value: "unsold_08_09", label: "미분양(라목)" },
