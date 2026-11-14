@@ -21,6 +21,7 @@ import { canDeclareRentalHousingException } from "./rental-housing-exception-sco
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
 import { deriveRentalArticle } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
+import { isTerminationEligibleArticle } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
 import { rentalSuccessionOf } from "@/lib/stores/calc-wizard-asset-rental-period";
 import { rentalUnitRegApplicationDate, rentalUnitRegistrationBasis } from "./rental-succession";
 import {
@@ -254,7 +255,7 @@ export function validateRentalHousingException(
     if (blocksUnitFactToggles && !u.requirementsConfirmed) {
       // U2 — 말소 호는 「말소 전까지」 충족을 묻는다(⑤ 문구와 같은 조건 · 기획재정부 재산세제과-151).
       const terminated =
-        u.rentalAutoTermination && (article === "가" || article === "다" || article === "라" || article === "마");
+        u.rentalAutoTermination && isTerminationEligibleArticle(article);
       return terminated
         ? `${unitLabel}: 기타 요건 자기확인이 필요합니다 (등록 말소 전까지 임대료 5% 상한·등록 유지 등 — 말소 후 임대 중단 등은 묻지 않습니다).`
         : `${unitLabel}: 기타 요건 자기확인이 필요합니다 (임대료 5% 상한 — 2019.2.12. 이후 체결·갱신 계약분, 등록 유지 등).`;
@@ -263,10 +264,10 @@ export function validateRentalHousingException(
     const extIssue = rentalUnitAptDeadlineInScope(u) ? aptDeadlineExtensionIncomplete(u.aptDeadlineExtension) : null;
     if (extIssue) return `${unitLabel}: 아파트 양도기한 연장 사유(소령 §167의3⑪) — ${extIssue}`;
     // ㉓1호 자진말소 1/2은 민특법 임대의무기간 기준이다 — 등록 유형 없이는 판정할 수 없다(OH-39).
-    // ⑤는 말소 토글 ON + 가·다·라·마목일 때 이 선택지를 띄운다(엔진 `terminationEligibleArticle`과 같은 목).
+    // ⑤는 말소 토글 ON + ㉓ 대상 목(가·다·라·마·구법)일 때 이 선택지를 띄운다(엔진 `terminationEligibleArticle`과 같은 목).
     if (
       u.rentalAutoTermination &&
-      (article === "가" || article === "다" || article === "라" || article === "마") &&
+      isTerminationEligibleArticle(article) &&
       !u.terminatedRegistrationType
     ) {
       return `${unitLabel}: 말소된 임대주택의 민간임대주택 등록 유형(단기 4년·장기일반 8년)을 선택하세요 (소령 §155㉓1호 임대의무기간 1/2 판정).`;
@@ -275,7 +276,7 @@ export function validateRentalHousingException(
      * I-4 — ㉓ 「말소 이후 5년 이내」는 말소일로 판정한다. 없으면 판정할 수 없으므로 두 모드 모두 막는다
      * (구 기록의 불리언만 있는 호 포함 — 엔진도 말소일이 없으면 ㉓을 주지 않는다). 순서가 뒤집힌 날짜도 막는다.
      */
-    if (u.rentalAutoTermination && (article === "가" || article === "다" || article === "라" || article === "마")) {
+    if (u.rentalAutoTermination && isTerminationEligibleArticle(article)) {
       const cd = (u.registrationCancellationDate ?? "").slice(0, 10);
       if (!cd) {
         return `${unitLabel}: 등록 말소일을 입력하세요 (소령 §155㉓ — 말소 이후 5년 이내 거주주택 양도 판정).`;

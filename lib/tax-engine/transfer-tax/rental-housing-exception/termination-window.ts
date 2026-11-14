@@ -24,9 +24,13 @@ export function terminationDeadline(cancellationDate: Date): DeadlineEnd {
   return deadlineEndFrom(cancellationDate, TERMINATION_TRANSFER_YEARS);
 }
 
-/** ㉓ 대상 목 — 「제167조의3제1항제2호가목 및 다목부터 마목까지」 */
+/**
+ * ㉓ 대상 목 — 「제167조의3제1항제2호가목 및 다목부터 마목까지」.
+ * 구법(구 「임대주택법」 등록분)도 들어간다 — 법률 제13499호 부칙 제3조①로 민간매입·건설임대주택 인용에 종전 「임대주택법」
+ * 등록분이 포함되고(가목·다목), 사전-2025-법규재산-0972가 구 임대주택법 매입·건설임대(준공공 제외)에 ㉓ 5년 창을 적용했다(V-6).
+ */
 export function isTerminationEligibleArticle(article: RentalArticle): boolean {
-  return article === "가" || article === "다" || article === "라" || article === "마";
+  return article === "가" || article === "다" || article === "라" || article === "마" || article === "구법";
 }
 
 export const ymd = (d: Date) => d.toISOString().slice(0, 10);
@@ -201,3 +205,15 @@ export function autoCancellationDateCheckNotice(i: number, u: RentalUnitInput): 
   );
 }
 
+
+/**
+ * V-6 — 구 임대주택법 등록분 자진말소의 ㉓1호 「임대의무기간의 2분의 1」을 민특법 단기 4년으로 셀지 구 임대주택법 5년으로 셀지
+ * 정면 해석례를 확보하지 못했다. 계산은 고른 등록 유형 그대로 두고 확인 필요만 알린다.
+ */
+export function preRentalActVoluntaryHalfNotice(i: number, u: RentalUnitInput): string | undefined {
+  if (u.rentalCategory !== "pre_2018" || u.terminationReason !== "voluntary") return undefined;
+  return (
+    `${i + 1}호: 구 임대주택법으로 등록한 주택의 자진말소는 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23}1호의 「임대의무기간의 2분의 1」을 ` +
+    "민간임대주택법 단기 4년과 구 임대주택법 5년 중 어느 쪽으로 셀지 확인된 해석례가 없습니다 — 고른 등록 유형 기준으로 계산했습니다(확인 필요)."
+  );
+}
