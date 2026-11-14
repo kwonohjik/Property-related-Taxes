@@ -3,7 +3,7 @@
  *
  * anchor — 공실 유예 기간이 조문마다 다르다는 사실을 ⑤ 입력 화면과 ⑧ 검증 메시지 양쪽에서 고정한다 (D1-03).
  *
- * - §97의5만 6개월(조특령 §97의5①1호)
+ * - §97의5만 6개월(조특령 §97의5①1호) — 단 6개월 이내 공실도 기간에서 빼므로(G5-2, 2026-11-14) 길이와 관계없이 묻는다
  * - §97 본문·단서·§97의2·§97의3·§97의4는 3월(조특령 §97⑤5호 → 조특칙 §44)
  *
  * 엔진 쪽 임계는 `__tests__/tax-engine/transfer/rental-97-vacancy-grace-by-article.anchor.test.ts`가 지킨다.
@@ -39,21 +39,24 @@ const CASES: { type: string; grace: "3개월" | "6개월"; form: (v: Any) => Rea
   { type: "rental_97_5", grace: "6개월", form: (v) => <Rental975InputForm value={v} onChange={noop} /> },
 ];
 const other = (g: string) => (g === "3개월" ? "6개월" : "3개월");
+/** ⑤ 질문 · ⑧ 메시지 — §97의5는 「6개월 이내 포함」 전부를 묻는다(G5-2) */
+const question = (g: string) => (g === "3개월" ? "3개월을 초과하는 공실 구간" : "공실 구간(6개월 이내 포함)");
+const ask = (g: string) => (g === "3개월" ? "3개월을 초과하는 공실 여부" : "공실 여부(6개월 이내 포함)");
 
 describe("⑤ 입력 화면 — 공실 질문의 유예 기간", () => {
   for (const c of CASES) {
-    it(`${c.type}: 「${c.grace}을 초과하는 공실 구간」`, () => {
+    it(`${c.type}: 「${question(c.grace)}」`, () => {
       const { container } = render(c.form(getReductionDefault(c.type as Any)));
       const text = container.textContent ?? "";
-      expect(text).toContain(`${c.grace}을 초과하는 공실 구간`);
-      expect(text).not.toContain(`${other(c.grace)}을 초과하는 공실 구간`);
+      expect(text).toContain(question(c.grace));
+      expect(text).not.toContain(question(other(c.grace)));
     });
   }
 });
 
 describe("⑧ 검증 — 공실 여부 미선택 메시지의 유예 기간이 ⑤와 같다", () => {
   for (const c of CASES) {
-    it(`${c.type}: 미선택 → 「${c.grace}을 초과하는 공실 여부」`, () => {
+    it(`${c.type}: 미선택 → 「${ask(c.grace)}」`, () => {
       // 공실 검사 앞의 필수 칸만 채운다 — 그래야 첫 오류가 공실 미선택이다.
       const r = {
         ...getReductionDefault(c.type as Any),
@@ -70,7 +73,7 @@ describe("⑧ 검증 — 공실 여부 미선택 메시지의 유예 기간이 �
       );
       const message = issue?.message ?? "";
       expect(fieldOf(message)).toBe(`reduction.${c.type}.hasVacancyOverGrace`);
-      expect(message).toContain(`${c.grace}을 초과하는 공실 여부`);
+      expect(message).toContain(ask(c.grace));
       expect(message).not.toContain(other(c.grace));
     });
   }

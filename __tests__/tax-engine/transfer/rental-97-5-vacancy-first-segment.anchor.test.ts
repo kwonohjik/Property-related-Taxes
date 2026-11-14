@@ -141,15 +141,86 @@ describe("Q-2 a — 상속 합산과 상속인 단독 중 첫 구간이 긴 쪽"
     const rentHistory = [jeonse("2015-03-01", 100_000_000), jeonse("2015-05-01", 110_000_000)];
     expect(codes(run({ ...H, inheritance975: inh, rentHistory }))).not.toContain("RENT_INCREASE_VIOLATED");
     // 대조군 — 합산으로 판정하는 H3 사안이면 같은 피상속인 분 증액을 센다
-    const merged = run({ ...H, rentalStartDate: D("2015-11-01"), transferDate: D("2025-06-01"), inheritance975: inh, rentHistory });
+    const merged = run({ ...H, rentalStartDate: D("2015-11-01"), transferDate: D("2025-09-01"), inheritance975: inh, rentHistory });
     expect(codes(merged)).toContain("RENT_INCREASE_VIOLATED");
   });
 
-  it("H3 합산 ON · 간격 5개월(상속인 개시 2015-11-01 · 양도 2025-06-01) → 합산으로 적격 · 구간 echo", () => {
-    const r = run({ ...H, rentalStartDate: D("2015-11-01"), transferDate: D("2025-06-01"), inheritance975: inh });
+  it("H3 합산 ON · 간격 5개월(상속인 개시 2015-11-01 · 양도 2025-09-01) → 합산으로 적격 · 구간 echo", () => {
+    // 합산 10년 6개월 − 간격 153일(G5-2 차감) = 10년 1개월 · 상속인 단독 9년 10개월
+    const r = run({ ...H, rentalStartDate: D("2015-11-01"), transferDate: D("2025-09-01"), inheritance975: inh });
     expect(r.isEligible).toBe(true);
     expect((r as unknown as { rentalPeriod975?: { decedent: { start: string } } }).rentalPeriod975?.decedent.start).toBe(
       "2015-03-01",
     );
+  });
+});
+
+/**
+ * G5-2 — 6개월 이내 공실은 끊지 않되 그 일수를 10년에서 뺀다 (교재 384쪽 본문 「해당 공실기간 만큼 더 임대하여」 ·
+ * 사용자 결정 2026-11-14). 조특령 §97의5①1호 「계속하여 임대한 것으로 본다」보다 불리한 정책이다 — 재제안 금지.
+ */
+describe("G5-2 — 6개월 이내 공실 일수 차감", () => {
+  /** 임대개시 2015-09-01 → 양도 2025-10-01 (10년 1개월) */
+  const TEN_Y1M = { transferDate: D("2025-10-01") };
+
+  it("🔴 10년 1개월 임대 중 5개월 공실 → 9년 8개월 · 부적격 (종전 「계속 임대로 봄」은 적격)", () => {
+    const r = run({ ...TEN_Y1M, vacancyPeriods: [v("2020-01-01", "2020-06-01")] });
+    expect(codes(r)).toEqual(["RENTAL_PERIOD_SHORT"]);
+    expect(text(r)).toContain("계속 임대기간 9년");
+    expect(text(r)).toContain("6개월 이내 공실 152일");
+    expect(text(r)).not.toContain("끊겼습니다");
+  });
+
+  it("공실이 없으면 10년 1개월 → 적격 (기준선)", () => {
+    expect(run(TEN_Y1M).isEligible).toBe(true);
+  });
+
+  it("11년 10개월 임대 중 5개월 공실 → 11년 5개월 · 적격", () => {
+    expect(run({ vacancyPeriods: [v("2020-01-01", "2020-06-01")] }).isEligible).toBe(true);
+  });
+
+  it("교재 384쪽 사례(10년 중 5개월 공실 4번) → 20개월을 빼 부적격 — 교재 사례와 다르다(본문 우선 정책)", () => {
+    const r = run({
+      transferDate: D("2025-09-01"),
+      vacancyPeriods: [
+        v("2017-01-01", "2017-06-01"),
+        v("2019-01-01", "2019-06-01"),
+        v("2021-01-01", "2021-06-01"),
+        v("2023-01-01", "2023-06-01"),
+      ],
+    });
+    expect(codes(r)).toEqual(["RENTAL_PERIOD_SHORT"]);
+    expect(text(r)).toContain("계속 임대기간 8년");
+  });
+
+  it("겹친 공실은 한 번만 뺀다", () => {
+    const leaf = (vac: { startDate: Date; endDate: Date }[]) =>
+      evaluateContinuousRental975({ start: D("2015-09-01"), end: D("2027-07-01"), vacancyPeriods: vac, deemedRentalPeriods: [] });
+    const once = leaf([v("2020-01-01", "2020-06-01")]);
+    const overlapped = leaf([v("2020-01-01", "2020-06-01"), v("2020-03-01", "2020-06-01")]);
+    expect(once.graceVacancyDays).toBe(152);
+    expect(overlapped.graceVacancyDays).toBe(152);
+  });
+
+  it("수용 간주기간과 겹친 공실 부분은 빼지 않는다 (간주기간은 임대로 본다)", () => {
+    const r = evaluateContinuousRental975({
+      start: D("2015-09-01"),
+      end: D("2025-10-01"),
+      vacancyPeriods: [v("2020-01-01", "2020-06-01")],
+      deemedRentalPeriods: [{ reason: "expropriation", startDate: D("2020-01-01"), endDate: D("2020-06-01") }],
+    });
+    expect(r.graceVacancyDays).toBe(0);
+    expect(r.years).toBe(10);
+  });
+
+  it("첫 단절 뒤의 짧은 공실은 셀 구간 밖이라 빼지 않는다", () => {
+    const r = evaluateContinuousRental975({
+      start: D("2015-09-01"),
+      end: D("2027-07-01"),
+      vacancyPeriods: [v("2026-01-01", "2026-08-01"), v("2026-10-01", "2026-12-01")],
+      deemedRentalPeriods: [],
+    });
+    expect(r.graceVacancyDays).toBe(0);
+    expect(r.years).toBe(10);
   });
 });

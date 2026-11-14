@@ -339,6 +339,12 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
             {rentalPreview ? `${rentalPreview.years}년` : "—"}
           </span>
         </div>
+        {rentalPreview && rentalPreview.graceVacancyDays > 0 && (
+          <p className="text-micro text-muted-foreground">
+            6개월 이내 공실 {rentalPreview.graceVacancyDays.toLocaleString()}일은 계속 임대가 끊긴 것으로 보지 않지만 10년을 셀 때는
+            빼고 셉니다 — 그만큼 더 임대해야 합니다.
+          </p>
+        )}
         {rentalPreview && rentalPreview.breaks.length > 0 && (
           <p className="text-micro text-muted-foreground">
             6개월을 넘는 공실 {rentalPreview.breaks.length}건으로 계속 임대가 끊겨 기산일부터 첫 공실 전까지

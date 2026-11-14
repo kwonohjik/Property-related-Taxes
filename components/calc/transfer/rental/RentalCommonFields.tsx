@@ -87,9 +87,15 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
   const graceBasis =
     vacancyGraceMonths === 3
       ? "조특칙 §44 — 기존 임차인 퇴거일부터 다음 임차인 입주일까지 3월 이내는 임대기간에 산입"
-      : "조특령 §97의5①1호 — 기존 임차인 퇴거일부터 다음 임차인 주민등록 이전일까지 6개월 이내는 계속 임대 간주. " +
+      : "기존 임차인 퇴거일부터 다음 임차인 주민등록 이전일까지의 공실을 기간과 관계없이 모두 넣으세요. " +
+        "6개월 이내 공실은 계속 임대가 끊긴 것으로 보지 않지만 10년을 셀 때는 빼고 셉니다(그만큼 더 임대해야 함). " +
         "임대개시 후 10년을 채우기 전에 6개월을 넘는 공실이 있으면 계속 임대가 끊겨 감면을 받을 수 없습니다(끊긴 뒤 다시 임대한 기간은 세지 않음). " +
         "10년을 채운 뒤의 공실은 상관없습니다.";
+  /**
+   * 공실 질문 — §97의5는 6개월 이내 공실도 기간에서 빼므로(G5-2 · `evaluateContinuousRental975`) 길이와 관계없이 모두 묻는다.
+   * 나머지 조문은 유예(3월)를 넘는 공실만 차감하므로 그것만 묻는다. ⑧ 메시지(`transfer-tax-validate-rental-97.ts`)와 같은 문구.
+   */
+  const vacancyQuestion = vacancyGraceMonths === 3 ? `${graceLabel}을 초과하는 공실 구간` : "공실 구간(6개월 이내 포함)";
   // ── 임대료 계약 이력 ──
   function addRentHistory() {
     const next: RentHistoryFormItem = {
@@ -260,7 +266,7 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
       <ToneCard tone="sky" sectionNum={sec4} title="공실 기간" bodyClassName="space-y-2">
         <div>
           <p className="text-xs text-muted-foreground mb-1.5">
-            {graceLabel}을 초과하는 공실 구간
+            {vacancyQuestion}
           </p>
           <p className="mb-1.5 text-micro text-muted-foreground">{graceBasis}</p>
           <RadioCardGroup

@@ -209,7 +209,8 @@ const commonRows = (label: string, grace: string, rentRule = false): Row[] => [
         },
       ]
     : []),
-  { name: "공실 여부", prop: "hasVacancyOverGrace", message: new RegExp(`^${label} 적용: ${grace}을 초과하는 공실 여부`), patch: { hasVacancyOverGrace: null } },
+  // §97의5는 6개월 이내 공실도 기간에서 빼므로 길이와 관계없이 묻는다(G5-2 · `transfer-tax-validate-rental-97.ts`)
+  { name: "공실 여부", prop: "hasVacancyOverGrace", message: new RegExp(`^${label} 적용: ${grace === "6개월" ? "공실 여부\\(6개월 이내 포함\\)" : `${grace}을 초과하는 공실 여부`}`), patch: { hasVacancyOverGrace: null } },
 ];
 /** 증액 위반 이력·공실 구간 — 한 조문에서 목록형 칸 배선을 본다 */
 const listRows = (label: string): Row[] => [
