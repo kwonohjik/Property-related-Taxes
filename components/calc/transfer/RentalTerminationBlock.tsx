@@ -13,6 +13,8 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { deadlineEndNote } from "@/lib/tax-engine/civil-period";
 import { terminationDeadline } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
+import { isAutoCancellationDeemable } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/termination-window";
+import { ADDENDA_17482_DEEMED_CANCELLATION } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/termination-window";
 import { deriveHalfDutyRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
 import { recognizedRentalSegments } from "@/lib/stores/calc-wizard-asset-rental-period";
 import { halfDutyRentalPeriods } from "@/lib/stores/calc-wizard-asset-rental-period";
@@ -34,10 +36,25 @@ export interface RentalTerminationBlockProps {
 export function RentalTerminationBlock({ unit, index, set, onChange, transferDate }: RentalTerminationBlockProps) {
   // I-4 — 이 호 말소일 기준 5년 기한(엔진 `terminationDeadline` — 민법 §161 연장 포함). 표시 전용 파생.
   const cancellationTs = unit.registrationCancellationDate ? new Date(unit.registrationCancellationDate).getTime() : NaN;
+  // G-8 — 자동말소 · 폐지 유형 · 2020.8.18. 전 종료일이면 법률 제17482호 부칙 제7조로 2020.8.18. 말소 간주(엔진과 같은 술어).
+  const deemed = unit.rentalAutoTermination && isAutoCancellationDeemable(unit, cancellationTs);
   const unitDeadline =
     unit.rentalAutoTermination && !Number.isNaN(cancellationTs)
-      ? terminationDeadline(new Date(unit.registrationCancellationDate))
+      ? terminationDeadline(deemed ? ADDENDA_17482_DEEMED_CANCELLATION : new Date(unit.registrationCancellationDate))
       : null;
+  // G-8 — 말소 사유에 따라 칸이 묻는 날짜가 다르다(민특법 §6⑤ 자동 = 임대의무기간 종료일 · §6①11호 자진 = 말소된 날).
+  const cancellationLabel =
+    unit.terminationReason === "auto"
+      ? "등록 말소일(임대의무기간 종료일)"
+      : unit.terminationReason === "voluntary"
+        ? "등록 말소일(말소 신청으로 등록이 말소된 날)"
+        : "등록 말소일";
+  const cancellationHint =
+    unit.terminationReason === "auto"
+      ? "민특법 §6⑤에 따라 임대의무기간이 끝난 날 등록이 말소됩니다. 등록증에 적힌 말소 처리일이 아니라 임대의무기간 종료일을 넣으세요. 2020.8.18. 전에 끝났다면 실제 종료일을 넣으면 2020.8.18.에 말소된 것으로 계산합니다(법률 제17482호 부칙 제7조)."
+      : unit.terminationReason === "voluntary"
+        ? "민특법 §6①11호에 따라 임대의무기간 안에 말소를 신청해 등록이 말소된 날입니다 (소령 §155㉓)."
+        : "먼저 위 말소 사유를 고르세요 — 자동말소는 임대의무기간 종료일, 자진말소는 등록이 말소된 날입니다 (소령 §155㉓).";
   const transferTs = transferDate ? new Date(transferDate).getTime() : NaN;
 
   return (
@@ -130,7 +147,7 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
         I-4 — ㉓ 「말소 이후 5년 이내」는 선언이 아니라 말소일로 판정한다. 2호 이상이면 엔진이 입력한 말소 호 중
         가장 이른 말소일로 기한을 정한다(기획재정부 재산세제과-1308). 여기 표시는 이 호 기준이다.
       */}
-      <FieldCard label="등록 말소일" required hint="말소 이후 5년 이내 양도 판정 기준일 (소령 §155㉓)">
+      <FieldCard label={cancellationLabel} required hint={<span data-testid={`rental-cancellation-date-hint-${index}`}>{cancellationHint}</span>}>
         <DateInput
           data-testid={`rental-cancellation-date-${index}`}
           value={unit.registrationCancellationDate ?? ""}
@@ -145,10 +162,18 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
               (transferTs <= unitDeadline.end.getTime() ? " — 양도일이 기한 안입니다." : " — 양도일이 기한을 지났습니다.")}
           </p>
           {deadlineEndNote(unitDeadline) && <p className="text-muted-foreground">{deadlineEndNote(unitDeadline)}</p>}
-          {cancellationTs < Date.UTC(2020, 7, 18) && (
-            <p className="text-rose-700 dark:text-rose-300">
-              2020.8.18. 전 말소는 §155㉓ 말소 특례 대상이 아닙니다(대통령령 제31083호 부칙 제3조②).
+          {deemed ? (
+            <p className="text-muted-foreground" data-testid={`rental-cancellation-deemed-${index}`}>
+              임대의무기간이 2020.8.18. 전에 끝나 법률 제17482호 민간임대주택에 관한 특별법 부칙 제7조에 따라 2020.8.18.에 등록이
+              말소된 것으로 보고 기한을 계산했습니다.
             </p>
+          ) : (
+            cancellationTs < Date.UTC(2020, 7, 18) && (
+              <p className="text-rose-700 dark:text-rose-300">
+                2020.8.18. 전 말소는 §155㉓ 말소 특례 대상이 아닙니다(대통령령 제31083호 부칙 제3조②)
+                {unit.terminationReason === "auto" ? "" : " — 자동말소라면 말소 사유를 「자동말소」로 고르세요"}.
+              </p>
+            )
           )}
           <p className="text-muted-foreground">
             장기임대주택이 2호 이상이면 가장 먼저 말소된 주택의 말소일부터 5년입니다 — 이미 양도했거나 거주주택으로

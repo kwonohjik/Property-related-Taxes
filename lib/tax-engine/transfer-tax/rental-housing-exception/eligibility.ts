@@ -117,6 +117,8 @@ import {
   firstTerminationCancellation,
   isRegisteredAbolishedTypeUnit,
   terminationWindowIssues,
+  deemedAutoCancellationNotice,
+  autoCancellationDateCheckNotice,
   ymd,
   dayOf,
 } from "./termination-window";
@@ -398,6 +400,12 @@ export function checkEligibility(
       ctx && unit.rentalAutoTermination && terminationEligibleArticle
         ? terminationWindowIssues(i, unit, ctx, first, firstDeadline)
         : [];
+    // G-8 — 부칙 제7조 간주 적용 고지 · 자동말소일 오입력(등록증 처리일) 확인 필요 고지(값은 바꾸지 않는다 — Q-9).
+    if (ctx && unit.rentalAutoTermination && terminationEligibleArticle) {
+      for (const n of [deemedAutoCancellationNotice(i, unit), autoCancellationDateCheckNotice(i, unit)]) {
+        if (n) notices.push(n);
+      }
+    }
     /**
      * D-5 — ㉓은 「법률 제17482호 민간임대주택에 관한 특별법 일부개정법률 부칙 제5조제1항이 적용되는 주택으로 한정」한다.
      * 부칙 §5①은 종전 장기일반민간임대주택 중 **아파트 매입임대**와 단기민간임대주택만이다 — 장기일반으로 등록한 비아파트·건설임대는
