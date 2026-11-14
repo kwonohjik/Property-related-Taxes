@@ -187,6 +187,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
       .optional(),
     /** 구 조특령 §97의3②2호 — 자동말소(민특법 §6⑤) 8년 간주. ⑫에 없으면 침묵 stripping된다. 조건 위반은 `refineReductionRequiredInputs` 400 */
     autoCancelled973: z.boolean().optional(),
+    /** 종전 §97의3① 괄호 — 2020.7.11. 이후 등록 신청 아파트 매입임대(G-1). ⑫에 없으면 침묵 stripping된다. 질문 구간 미답은 `refineReductionRequiredInputs` 400 */
+    aptPurchaseAfter0711_973: z.boolean().optional(),
   }),
   z.object({
     type: z.literal("rental_97_4"),

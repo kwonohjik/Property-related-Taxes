@@ -212,6 +212,12 @@ export interface Rental97EvaluationInput extends PeriodCheckContext {
    */
   autoCancelled973?: boolean;
   /**
+   * §97의3 — 2020.7.11. 이후 장기일반으로 등록 신청한 아파트 민간매입임대주택인가(종전 §97의3① 괄호 · 재산세제과-954).
+   * 장기 등록일 2020-07-11~2020-12-31 · 변경신고 주택 아님일 때만 의미가 있다 — true면 적용 제외, 미답이면 혜택 불성립
+   * (`rental-97-3-apt-purchase-exclusion.ts`).
+   */
+  aptPurchaseAfter0711_973?: boolean;
+  /**
    * §97의4 — 임대사업자 등록이 자동말소된 날(민간임대주택에 관한 특별법 §6⑤ — 임대의무기간 종료일).
    * 임대기간 종점 = min(양도일, 이 날) (국세청 서면-2021-법규재산-1422, 2022.6.21. — 「임대개시일부터 자동말소일까지」).
    */

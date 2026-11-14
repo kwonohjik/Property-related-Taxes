@@ -31,6 +31,8 @@ import { Rental973InheritanceBlock } from "./Rental973InheritanceBlock";
 import { RentalResidentOnlyNotice } from "./RentalResidentOnlyNotice";
 import { Rental973AutoCancelToggle } from "./Rental973AutoCancelToggle";
 import { autoCancelDeemed973Applies } from "@/lib/tax-engine/transfer-reductions/rental-97-3-auto-cancel";
+import { APT_PURCHASE_973_QUESTION } from "@/lib/tax-engine/transfer-reductions/rental-97-3-apt-purchase-exclusion";
+import { rental973AptPurchaseQuestionApplies } from "@/lib/calc/rental-97-3-apt-purchase";
 import { rental973InheritanceInScope } from "@/lib/calc/rental-97-3-inheritance";
 import { rental973InheritanceConflictsConversion } from "@/lib/calc/rental-97-3-inheritance";
 import { rental973MergedDecedentStart } from "@/lib/calc/rental-97-3-inheritance";
@@ -78,6 +80,8 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
   );
   // 장기일반민간임대주택등 「등록」일 — 변경신고 주택은 수리일(엔진 `longRegistrationDate`·⑧과 같은 축)
   const longRegistrationDate = rental973LongRegistrationDate(value);
+  // G-1 — 종전 §97의3① 괄호 아파트 매입임대 질문 표시 여부(④·⑧과 같은 판정)
+  const aptPurchaseQuestion = rental973AptPurchaseQuestionApplies(value);
   const rentalDuration = useMemo(
     () => diffYearsMonths(effectiveStart, transferDate ?? ""),
     [effectiveStart, transferDate],
@@ -269,6 +273,34 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
             }
             tone="amber"
           />
+        )}
+
+        {/* G-1 — 종전 §97의3① 괄호(2023.1.1. 전 등록분): 2020.7.11. 이후 등록 신청한 아파트 민간매입임대주택은 적용 제외.
+            장기 등록일 2020-07-11~2020-12-31 · 변경신고 없음일 때만 결론을 가른다(엔진·④·⑧·⑫와 같은 leaf). 미답은 ⑧이 막는다. */}
+        {aptPurchaseQuestion && (
+          <div>
+            <p className="mb-1 text-xs font-medium">{APT_PURCHASE_973_QUESTION}</p>
+            <RadioCardGroup
+              data-field="reduction.rental_97_3.aptPurchaseAfter0711_973"
+              name="aptPurchaseAfter0711_973"
+              layout="inline"
+              tone="amber"
+              value={value.aptPurchaseAfter0711_973 ?? ""}
+              onChange={(v) => onChange({ aptPurchaseAfter0711_973: v as Rental973Form["aptPurchaseAfter0711_973"] })}
+              options={[
+                { value: "yes", label: "예 — 적용 제외", testId: "r973-apt-purchase-yes" },
+                { value: "no", label: "아니오", testId: "r973-apt-purchase-no" },
+              ]}
+            />
+            <p className="mt-1 text-micro text-muted-foreground">
+              2023.1.1. 전 등록분에 적용되는 종전 §97의3① 괄호 — 등록 <b>신청</b>일이 2020.7.11. 이후인 아파트 매입임대는 제외됩니다
+              (증여로 임대사업자 지위를 포괄승계한 경우도 같음 · 기획재정부 재산세제과-954). 건설임대이거나 아파트가 아니면 「아니오」.
+              도시형 생활주택인 아파트도 조문이 「아파트」로만 정해 포함해 계산합니다 — 해석 미확인(확인 필요).
+            </p>
+            {!value.aptPurchaseAfter0711_973 && (
+              <p className="mt-1 text-micro text-rose-700 dark:text-rose-400">※ 반드시 선택하세요 (미선택 시 계산 불가)</p>
+            )}
+          </div>
         )}
 
         <ToggleCard

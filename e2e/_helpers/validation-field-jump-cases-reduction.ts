@@ -251,7 +251,9 @@ const RENTAL_97_3 = table("rental_97_3", hybrid("rental_97_3"), r973Ok, {}, [
   { name: "임대 종료일", prop: "rentalEndDate", message: /^§97의3 적용: 양도 전에 임대를 종료했으면 임대 종료일/, patch: { rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "200000000", rentalEndDate: "" } },
   // 구 조특령 §97의3②2호 자동말소 8년 간주 — 말소일 2020.8.18. 전(부칙 제31086호 §2) · 종전 민특법 등록이 아님
   { name: "자동말소 말소일 2020.8.18. 전", prop: "rentalEndDate", message: /^§97의3 적용: 자동말소 8년 간주\(구 조특령 §97의3②2호\)는 2020\.8\.18\. 이후 말소분부터/, patch: { rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "200000000", rentalEndDate: "2020-08-17", autoCancelled973: true } },
-  { name: "자동말소 장기 등록 2020.8.18. 이후", prop: "autoCancelled973", message: /^§97의3 적용: 자동말소 8년 간주\(구 조특령 §97의3②2호\)는 종전 민간임대주택법/, patch: { registrationDate: "2020-09-01", rentalStartDate: "2020-09-01", taxRegistrationDate: "2020-09-01", rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "200000000", rentalEndDate: "2023-06-01", autoCancelled973: true } },
+  { name: "자동말소 장기 등록 2020.8.18. 이후", prop: "autoCancelled973", message: /^§97의3 적용: 자동말소 8년 간주\(구 조특령 §97의3②2호\)는 종전 민간임대주택법/, patch: { registrationDate: "2020-09-01", rentalStartDate: "2020-09-01", taxRegistrationDate: "2020-09-01", rentalContinuesToTransfer: false, stdPriceAtRentalEnd: "200000000", rentalEndDate: "2023-06-01", autoCancelled973: true, aptPurchaseAfter0711_973: "no" } },
+  // G-1 종전 §97의3① 괄호 — 장기 등록일 2020-07-11~2020-12-31이면 「2020.7.11. 이후 등록 신청한 아파트 매입임대인가」를 묻는다(미답 차단)
+  { name: "아파트 매입임대 2020.7.11. 이후 등록 신청", prop: "aptPurchaseAfter0711_973", message: /^§97의3 적용: 장기일반 등록일이 2020\.7\.11\.~2020\.12\.31\.입니다/, patch: { registrationDate: "2020-09-01", rentalStartDate: "2020-09-01", taxRegistrationDate: "2020-09-01" } },
   { name: "세무서 사업자등록일", prop: "taxRegistrationDate", message: /^§97의3 적용: 세무서 사업자등록일을 입력/, patch: { taxRegistrationDate: "" } },
   { name: "안분 취득 당시 기준시가", prop: "stdPriceAtAcquisition", message: /^§97의3 적용: 안분 산식의 취득 당시·양도 당시 기준시가/, patch: { stdPriceAtAcquisition: "" } },
   { name: "안분 양도 당시 기준시가", prop: "stdPriceAtTransfer", message: /^§97의3 적용: 안분 산식의 취득 당시·양도 당시 기준시가/, patch: { stdPriceAtTransfer: "" } },

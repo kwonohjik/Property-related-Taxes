@@ -154,6 +154,7 @@ export function getReductionDefault(id: TransferReductionId): AssetReductionForm
       decedentRegistrationDate973: "",
       decedentRentalStartDate973: "",
       autoCancelled973: false, // 구 조특령 §97의3②2호 — 자동말소 8년 간주
+      aptPurchaseAfter0711_973: "", // G-1 종전 §97의3① 괄호 — 2020.7.11. 이후 등록 신청 아파트 매입임대(미답)
     };
   }
   if (id === "rental_97_4") {

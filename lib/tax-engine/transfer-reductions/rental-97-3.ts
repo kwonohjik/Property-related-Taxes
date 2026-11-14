@@ -57,6 +57,9 @@ import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result 
 import { autoCancelDeemed973Applies } from "./rental-97-3-auto-cancel";
 import { AUTO_CANCEL_DEEMED_973_YEARS } from "./rental-97-3-auto-cancel";
 import { AUTO_CANCEL_DEEMED_973_RATE } from "./rental-97-3-auto-cancel";
+import { aptPurchase973QuestionApplies } from "./rental-97-3-apt-purchase-exclusion";
+import { APT_PURCHASE_973_EXCLUDED_MESSAGE } from "./rental-97-3-apt-purchase-exclusion";
+import { APT_PURCHASE_973_MISSING_MESSAGE } from "./rental-97-3-apt-purchase-exclusion";
 
 /** §97의3 장특공제율 특례 — 10년 이상 임대 (①항 본문 — 100분의 70) */
 export const RENTAL_97_3_OVERRIDE_RATE = 0.7;
@@ -216,6 +219,25 @@ export function evaluateRental973(input: Rental97EvaluationInput): Rental97Resul
   const rentCheckStart = decedentStart ?? conversion?.rentCheckStartDate ?? rental97EffectiveStart(input);
   // 장기일반민간임대주택등 「등록」일 — 등록 시한·건설한정·8년 경과규정의 축. 변경신고 주택은 수리일이다.
   const longRegistrationDate = conv?.acceptedDate ?? input.registrationDate;
+
+  /**
+   * 2-0″) 종전 §97의3① 괄호 — 2020.7.11. 이후 장기일반으로 등록 신청한 아파트 민간매입임대주택 적용 제외 (G-1 · 재산세제과-954).
+   * 질문 구간(장기 등록일 2020-07-11~2020-12-31 · 변경신고 주택 아님)에서 「예」면 제외, 미답이면 혜택 불성립(⑧·⑫가 먼저 막는다).
+   * 자동말소 간주(구 령 ②2호)보다 먼저다(Q-4) — ①의 대상이 아니면 ②의 기간 간주는 의미가 없다. 6) 절이 간주를 계산해도
+   * 사유가 있으면 부적격 반환이라 간주 echo(`autoCancelDeemed973`)는 실리지 않는다.
+   */
+  const aptPurchaseExcluded =
+    aptPurchase973QuestionApplies({
+      longRegistrationDate,
+      isShortTermConversion: conv !== undefined || input.isConvertedFromShortTerm === true,
+    }) && input.aptPurchaseAfter0711_973 !== false;
+  if (aptPurchaseExcluded) {
+    reasons.push({
+      code: "APT_PURCHASE_AFTER_0711",
+      message: input.aptPurchaseAfter0711_973 === true ? APT_PURCHASE_973_EXCLUDED_MESSAGE : APT_PURCHASE_973_MISSING_MESSAGE,
+      legalBasis: RENTAL_97_3_PERIOD.APT_PURCHASE_EXCLUSION,
+    });
+  }
 
   /**
    * 2-1) §97의3① 본문 — 「「민간임대주택에 관한 특별법」 제2조제2호에 따른 **민간건설임대주택**

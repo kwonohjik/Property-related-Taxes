@@ -120,6 +120,8 @@ describe("B. 세액 — 2021~2022 등록 매입임대의 과소과세 실측", (
           rentalHousingType: "long_term_private" as const,
           isConvertedFromShortTerm: false,
           isPrivateConstructionRental: construction,
+          // G-1 — 비아파트라 종전 §97의3① 괄호 아파트 매입임대 제외에 해당하지 않는다. 2020-07-11~12-31 등록(B-4)은 답이 있어야 적격.
+          aptPurchaseAfter0711_973: false,
         },
       ],
     });

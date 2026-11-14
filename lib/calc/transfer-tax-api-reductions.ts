@@ -31,6 +31,7 @@ import { toUnsold992Payload } from "./transfer-tax-api-reductions-unsold";
 import { toUnsold989Payload } from "./transfer-tax-api-reductions-unsold";
 import { rental975InheritancePayload } from "./rental-97-5-inheritance";
 import { rental973InheritancePayload } from "./rental-97-3-inheritance";
+import { rental973AptPurchaseQuestionApplies } from "./rental-97-3-apt-purchase";
 
 /** AssetReductionForm[] → 엔진 reductions payload 변환 */
 /**
@@ -321,6 +322,10 @@ export function toEngineReductions(
           })(),
           // 구 조특령 §97의3②2호 — 자동말소 8년 간주. 종료(말소) 선택 시에만 — 「양도일까지 유지」면 남은 토글을 싣지 않는다.
           ...(r.rentalContinuesToTransfer === false && r.autoCancelled973 ? { autoCancelled973: true } : {}),
+          // G-1 종전 §97의3① 괄호 — 질문 구간(장기 등록일 2020-07-11~2020-12-31 · 변경신고 없음)에서 답했을 때만 싣는다. 구간 밖 잔존 답은 싣지 않는다.
+          ...(rental973AptPurchaseQuestionApplies(r) && r.aptPurchaseAfter0711_973
+            ? { aptPurchaseAfter0711_973: r.aptPurchaseAfter0711_973 === "yes" }
+            : {}),
         };
       }
       if (r.type === "rental_97_4") {

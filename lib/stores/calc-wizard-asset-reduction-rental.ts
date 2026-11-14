@@ -140,6 +140,11 @@ export type RentalReductionFormVariant =
        * 말소일은 공용 종료 칸(`rentalEndDate`)이다 — 「양도 전에 임대 종료 또는 등록 말소」를 골랐을 때만 묻고 싣는다.
        */
       autoCancelled973: boolean;
+      /**
+       * 종전 §97의3① 괄호 — 2020.7.11. 이후 장기일반으로 등록 신청한 아파트 민간매입임대주택인가(G-1 · 재산세제과-954).
+       * 3-state — 장기 등록일 2020-07-11~2020-12-31 · 변경신고 없음일 때만 묻는다(`aptPurchase973QuestionApplies`). 미답은 ⑧ 차단.
+       */
+      aptPurchaseAfter0711_973: "yes" | "no" | "";
     } & RentalCommonFormFields)
   | ({
       type: "rental_97_4";
