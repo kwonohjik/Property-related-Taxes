@@ -26,8 +26,7 @@ import { Clause4GrandfatherQuestion } from "./Clause4GrandfatherQuestion";
 import type { RentalReductionFormVariant, RentalCommonFormFields } from "@/lib/stores/calc-wizard-asset-reduction";
 import { addMonths } from "@/lib/tax-engine/utc-date";
 import { RENTAL_97_5_REGISTRATION_MONTHS } from "@/lib/tax-engine/transfer-reductions";
-import { evaluateContinuousRental975 } from "@/lib/tax-engine/transfer-reductions/rental-97-5-period";
-import { inheritanceMergeSpan975 } from "@/lib/tax-engine/transfer-reductions/rental-97-5-period";
+import { evaluateRental975Continuity } from "@/lib/tax-engine/transfer-reductions/rental-97-5-period";
 import { rental975InheritanceInScope } from "@/lib/calc/rental-97-5-inheritance";
 import { Rental975InheritanceBlock } from "./Rental975InheritanceBlock";
 import { RentalResidentOnlyNotice } from "./RentalResidentOnlyNotice";
@@ -124,7 +123,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
   // 종점 — 양도 전 임대 종료면 임대 종료일(§97의5①2호), 아니면 양도일
   const ended = value.rentalContinuesToTransfer === false;
   /**
-   * 리뷰 9번 — 엔진과 **같은 판정 함수**(`evaluateContinuousRental975`)로 미리 보여 준다.
+   * 리뷰 9번 — 엔진과 **같은 판정 함수**(`evaluateRental975Continuity`)로 미리 보여 준다.
    * 기산일 = 임대개시일·임대사업자 등록일·사업자등록일 중 늦은 날(조특령 §97의5③), 종점 = 양도일 또는 임대 종료일,
    * 6개월 초과 공실 단절·수용/정비사업 간주기간 반영. 종전에는 임대개시일→양도일 단순 차이였다.
    */
@@ -135,7 +134,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
     const ownStart = toOptionalDate(value.rentalStartDate) ? new Date(Math.max(...dates.map((d) => d.getTime()))) : undefined;
     const end = toOptionalDate(ended ? value.rentalEndDate : transferDate);
     if (!ownStart || !end) return null;
-    // V-13 — 상속 합산(엔진과 같은 leaf `inheritanceMergeSpan975`). 날짜 순서가 어긋나면 합산하지 않는다(⑧·엔진이 막는다).
+    // V-13 — 상속 합산(엔진과 같은 leaf `evaluateRental975Continuity`). 날짜 순서가 어긋나면 합산하지 않는다(⑧·엔진이 막는다).
     const inhDate = toOptionalDate(acquisitionDate);
     const decReg = toOptionalDate(value.decedentRegistrationDate975);
     const decStart = toOptionalDate(value.decedentRentalStartDate975);
@@ -143,16 +142,16 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
       inheritanceInScope && value.isInherited975 && inhDate && decReg && decStart && decReg < inhDate && decStart < inhDate
         ? { inheritanceDate: inhDate, decedentRegistrationDate: decReg, decedentRentalStartDate: decStart }
         : undefined;
-    const span = inheritanceMergeSpan975(ownStart, inh);
-    const start = span.start;
     const toSpans = (rows: { startDate: string; endDate: string }[]) =>
       rows
         .map((r) => ({ startDate: toOptionalDate(r.startDate), endDate: toOptionalDate(r.endDate) }))
         .filter((r): r is { startDate: Date; endDate: Date } => !!r.startDate && !!r.endDate);
-    return evaluateContinuousRental975({
-      start,
+    // 합산·상속인 단독 중 첫 구간이 긴 쪽 — 엔진과 같은 leaf(`evaluateRental975Continuity`, Q-2 a)
+    return evaluateRental975Continuity({
+      ownStart,
       end,
-      vacancyPeriods: [...(value.hasVacancyOverGrace ? toSpans(value.vacancyPeriods ?? []) : []), ...span.gapVacancies],
+      inheritance: inh,
+      vacancyPeriods: value.hasVacancyOverGrace ? toSpans(value.vacancyPeriods ?? []) : [],
       deemedRentalPeriods: value.hasDeemedRentalPeriod
         ? (value.deemedRentalPeriods ?? [])
             .map((p) => ({ reason: p.reason, startDate: toOptionalDate(p.startDate), endDate: toOptionalDate(p.endDate) }))
@@ -340,11 +339,13 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
             {rentalPreview ? `${rentalPreview.years}년` : "—"}
           </span>
         </div>
-        {rentalPreview && rentalPreview.breaks.length > 0 && rentalPreview.longestSegment && (
+        {rentalPreview && rentalPreview.breaks.length > 0 && (
           <p className="text-micro text-muted-foreground">
-            6개월을 넘는 공실 {rentalPreview.breaks.length}건으로 계속 임대가 끊겨 가장 긴 구간(
-            {rentalPreview.longestSegment.start.toLocaleDateString("ko-KR")} ~{" "}
-            {rentalPreview.longestSegment.end.toLocaleDateString("ko-KR")})으로 셉니다.
+            6개월을 넘는 공실 {rentalPreview.breaks.length}건으로 계속 임대가 끊겨 기산일부터 첫 공실 전까지
+            {rentalPreview.countedSegment
+              ? `(${rentalPreview.countedSegment.start.toLocaleDateString("ko-KR")} ~ ${rentalPreview.countedSegment.end.toLocaleDateString("ko-KR")})`
+              : "(0일)"}
+            만 셉니다 — 끊긴 뒤 다시 임대한 기간은 세지 않습니다.
           </p>
         )}
       </div>
