@@ -107,6 +107,8 @@ export type TransferReductionStub =
       inheritance973?: { inheritanceDate: Date; decedentRegistrationDate: Date; decedentRentalStartDate: Date };
       /** 구 조특령 §97의3②2호 — 민특법 §6⑤ 자동말소(종전 장기일반 아파트 매입임대) · 말소일 = rentalEndDate (엔진 `autoCancelled973`) */
       autoCancelled973?: boolean;
+      /** 종전 §97의3① 괄호 — 2020.7.11. 이후 장기일반으로 등록 신청한 아파트 민간매입임대주택 (엔진 `aptPurchaseAfter0711_973` · G-1) */
+      aptPurchaseAfter0711_973?: boolean;
       /** §97의3①1호 — 양도 전 임대 종료 시 실제 임대기간의 마지막 날 */
       rentalEndDate?: Date;
       /** 조특령 §97의3④ — 세무서 사업자등록일 (isTaxRegistered면 필수) */

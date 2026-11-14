@@ -25,6 +25,8 @@ import { rental974AptDeadlineIssue } from "./apt-deadline-extension-scope";
 import { rental975InheritanceInScope } from "./rental-97-5-inheritance";
 import { rental973InheritanceInScope } from "./rental-97-3-inheritance";
 import { rental973InheritanceConflictsConversion } from "./rental-97-3-inheritance";
+import { rental973AptPurchaseQuestionApplies } from "./rental-97-3-apt-purchase";
+import { APT_PURCHASE_973_MISSING_MESSAGE } from "@/lib/tax-engine/transfer-reductions/rental-97-3-apt-purchase-exclusion";
 
 export function rental97SeriesIssue(args: {
   fail: (message: string) => ValidationIssue;
@@ -129,6 +131,10 @@ export function rental97SeriesIssue(args: {
     const conversionIssue = r.type === "rental_97_3" ? rentalConversionIssue(r, label) : null;
     if (conversionIssue) return fail(conversionIssue);
     const longReg = r.type === "rental_97_3" ? rental973LongRegistrationDate(r) : "";
+    // G-1 종전 §97의3① 괄호 — 질문 구간(장기 등록일 2020-07-11~2020-12-31 · 변경신고 없음)이면 답을 요구한다. ⑫·엔진과 같은 leaf·문구.
+    // 자동말소 간주 검사보다 먼저 둔다(Q-4 — 적용 제외가 간주에 앞선다).
+    if (r.type === "rental_97_3" && !r.aptPurchaseAfter0711_973 && rental973AptPurchaseQuestionApplies(r))
+      return fail(fieldError("reduction.rental_97_3.aptPurchaseAfter0711_973", `${label} 적용: ${APT_PURCHASE_973_MISSING_MESSAGE}`));
     // 구 조특령 §97의3②2호 자동말소 8년 간주 — 토글은 「양도 전에 임대 종료 또는 등록 말소」에서만 보이고 ④도 그때만 싣는다.
     // ⑫ `refineReductionRequiredInputs`와 같은 leaf(`autoCancelDeemed973Issue`).
     if (r.type === "rental_97_3" && r.autoCancelled973 && r.rentalContinuesToTransfer === false) {

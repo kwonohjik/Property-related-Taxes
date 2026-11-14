@@ -11,6 +11,8 @@
  */
 import { z } from "zod";
 import { autoCancelDeemed973Issue } from "@/lib/tax-engine/transfer-reductions/rental-97-3-auto-cancel";
+import { aptPurchase973QuestionApplies } from "@/lib/tax-engine/transfer-reductions/rental-97-3-apt-purchase-exclusion";
+import { APT_PURCHASE_973_MISSING_MESSAGE } from "@/lib/tax-engine/transfer-reductions/rental-97-3-apt-purchase-exclusion";
 import { isAddenda29_2WindowIso } from "@/lib/tax-engine/transfer-reductions/new-99-3-era";
 import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { new994CapitalRegionConflict } from "@/lib/tax-engine/transfer-reductions/new-99-4-size";
@@ -142,6 +144,17 @@ export function refineReductionRequiredInputs(
         longRegistrationDate: conv?.acceptedDate ?? (r.registrationDate as string | undefined),
       });
       if (msg) issue(msg.field, msg.message);
+    }
+    // 종전 §97의3① 괄호 — 2020.7.11. 이후 등록 신청 아파트 매입임대(G-1). 질문 구간인데 답이 없으면 막는다(⑧과 같은 leaf).
+    if (r.type === "rental_97_3" && r.aptPurchaseAfter0711_973 === undefined) {
+      const conv = r.shortTermConversion as { acceptedDate?: string } | undefined;
+      if (
+        aptPurchase973QuestionApplies({
+          longRegistrationDate: conv?.acceptedDate ?? (r.registrationDate as string | undefined),
+          isShortTermConversion: conv !== undefined || r.isConvertedFromShortTerm === true,
+        })
+      )
+        issue("aptPurchaseAfter0711_973", APT_PURCHASE_973_MISSING_MESSAGE);
     }
 
     if (r.type === "new_99_3") {

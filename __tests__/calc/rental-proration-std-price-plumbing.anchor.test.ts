@@ -40,6 +40,7 @@ function form(over: Record<string, unknown> = {}): AssetReductionForm {
     decedentRegistrationDate973: "",
     decedentRentalStartDate973: "",
     autoCancelled973: false,
+    aptPurchaseAfter0711_973: "", // G-1
     ...over,
   } as AssetReductionForm;
 }

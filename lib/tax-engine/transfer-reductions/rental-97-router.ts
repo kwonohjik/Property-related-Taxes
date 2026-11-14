@@ -109,6 +109,8 @@ function buildInput(r: RentalReductionVariant, ctx: Rental97EngineContext): Rent
         inheritance973: r.inheritance973,
         // 구 조특령 §97의3②2호 — 자동말소 8년 간주(말소일 = rentalEndDate). ⚠️ 명시 매핑 — 적지 않으면 조용히 사라진다.
         autoCancelled973: r.autoCancelled973,
+        // 종전 §97의3① 괄호 — 2020.7.11. 이후 등록 신청 아파트 매입임대 적용 제외(G-1). ⚠️ 명시 매핑 — 적지 않으면 조용히 사라진다.
+        aptPurchaseAfter0711_973: r.aptPurchaseAfter0711_973,
       };
     case "rental_97_4":
       // D2-04 — 종전에는 region만 넘겨 기준시가 한도를 판정할 입력이 없었다.

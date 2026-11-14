@@ -159,6 +159,14 @@ export const RENTAL_97_3_PERIOD = {
    * (기준-2024-법규재산-0079) · `transfer-reductions/rental-97-3-auto-cancel.ts`
    */
   AUTO_CANCEL_DEEMED: "조특령 §97의3②2호(대통령령 제33264호로 개정되기 전의 것)",
+  /**
+   * 조특법 §97의3① 괄호(법률 제19199호로 개정되기 전의 것) — 「2020년 7월 11일 이후 장기일반민간임대주택으로 등록 신청한 경우로서
+   * 아파트를 임대하는 민간매입임대주택」 적용 제외. 2023.1.1. 전 등록분은 부칙 §38로 이 문언 · 재산세제과-954(2024.08.19.)
+   * · `transfer-reductions/rental-97-3-apt-purchase-exclusion.ts`. 현행 본문에는 이 구절이 없어 `verify:legal` 키워드로 잡을 수 없다.
+   * ⚠️ 「(법률 제19199호로 …)」로 쓰면 인용 파서가 「법률」을 별도 법령의 「제19199조」로 읽어 검증 모수 밖 법령이 생긴다
+   *    (`__tests__/lib/legal-verification-unverifiable.test.ts`) — 날짜·부칙으로 적는다.
+   */
+  APT_PURCHASE_EXCLUSION: "조특법 §97의3①(2022.12.31. 개정 전 — 부칙 §38 종전 규정)",
 } as const;
 
 /**

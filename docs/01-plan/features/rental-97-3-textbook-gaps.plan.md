@@ -198,3 +198,14 @@ G-7을 열려면 G-7′을 **먼저** 고쳐야 한다(게이트를 여는 순�
 - [ ] Pre-Do anchor A-1·R-1 실측으로 기대값 확정
 - [ ] PR-1 · PR-2 · PR-3
 - [ ] 브라우저 확인(Playwright)
+
+## 10. 구현 중 바뀐 것·확인한 것
+
+### PR-1 (G-1) — 2026-11-14
+- 단일 소스: 엔진 leaf `lib/tax-engine/transfer-reductions/rental-97-3-apt-purchase-exclusion.ts`(구간 술어·문구) + 폼 어댑터 `lib/calc/rental-97-3-apt-purchase.ts`(④⑤⑧ 공용). 엔진 사유 `APT_PURCHASE_AFTER_0711`.
+- 엔진에 **미답으로 도달하면 혜택 불성립**(같은 사유 · 미답 문구) — ⑧·⑫가 먼저 막지만 그 밖의 엔진 호출에서도 「모름=불리」를 지킨다. 그래서 질문 구간 날짜를 쓰던 대조군 픽스처 1건(`rental-97-3-purchase-reg-deadline.anchor.test.ts` B-4 · 비아파트)에 `aptPurchaseAfter0711_973: false`를 넣었다.
+- 법령 상수 `RENTAL_97_3_PERIOD.APT_PURCHASE_EXCLUSION` = 「조특법 §97의3①(2022.12.31. 개정 전 — 부칙 §38 종전 규정)」. 「(법률 제19199호로 …)」로 쓰면 인용 파서가 「법률」을 별도 법령의 「제19199조」로 읽어 `legal-verification-unverifiable` 게이트가 깨진다(실측).
+- ⑧ 순서: 미답 검사를 자동말소 간주 검사보다 앞에 둔다(Q-4). 기존 E2E 점프 케이스 「자동말소 장기 등록 2020.8.18. 이후」(등록 2020-09-01)가 질문 구간이라 `aptPurchaseAfter0711_973: "no"`를 넣고, 미답 케이스 1줄을 추가했다.
+- anchor: 라우트 관통 A-1~A-8(`__tests__/api/transfer.route.rental-97-3-apt-purchase-0711.anchor.test.ts`) · ⑤ 노출 경계(`__tests__/components/calc/rental-97-3-apt-purchase-question.anchor.test.tsx`). A-1 장특 60,000,000(일반 20%) · A-2 210,000,000(70%).
+- 뮤테이션 10건 전부 검출: 하한 `>=`→`>` · 상한 `<=`→`<` · leaf 변경신고 무시 · 엔진 답 무시 · ④ 미전송 · ⑭ 매핑 삭제 · ⑫ refine 삭제 · ⑧ 삭제 · ⑫ Zod 필드 삭제 · 엔진 변경신고 무시(처음엔 생존 → A-7에 엔진 단언 추가).
+- 남은 한계: 사람 브라우저 확인 없음(E2E 점프 케이스는 CI E2E가 돈다). V-0 법제처 원문 대조는 아직.
