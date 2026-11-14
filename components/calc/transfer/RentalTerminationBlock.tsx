@@ -4,7 +4,7 @@
  * §155⑳㉓ 말소 특례 토글 — RentalUnitCard 분리 (800줄 정책).
  *
  * 자진·자동 말소된 호의 말소 사유·말소 전 등록 유형·말소일 + 이 호 말소일 기준 5년 기한 안내.
- * 노출 여부(가·다·라·마목)는 호출부(`showTermination`)가 정한다 — 이 컴포넌트는 그리기만 한다.
+ * 노출 여부(가·다·라·마목·구법)는 호출부(`showTermination`)가 정한다 — 이 컴포넌트는 그리기만 한다.
  */
 
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -98,7 +98,21 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
         OH-39 — ㉓1호 「같은 법 제43조에 따른 임대의무기간의 2분의 1」은 소득세법 목별 임대기간요건
         (가목 5년 등)이 아니라 말소 전 민특법 등록 유형의 임대의무기간이다(종전 §2 5호 8년 · 6호 4년).
       */}
-      <FieldCard label="말소 전 민간임대주택 등록 유형" required hint="자진말소 1/2 판정 기준 (소령 §155㉓1호)">
+      <FieldCard
+        label="말소 전 민간임대주택 등록 유형"
+        required
+        hint={
+          unit.rentalCategory === "pre_2018" ? (
+            // V-6 — 0972: 구 임대주택법 매입·건설임대(준공공 제외)는 2020.8.18. 전 의무기간 경과 시 그날 말소(부칙 제7조 폐지 유형)
+            <span data-testid={`rental-terminated-type-pre2018-hint-${index}`}>
+              구 임대주택법으로 등록한 주택(준공공임대 제외)은 「단기민간임대(4년)」를 고르세요. 2020.8.18. 전에 임대의무기간이 끝났다면
+              그날 말소된 것으로 봅니다(사전-2025-법규재산-0972). 자진말소의 1/2을 4년과 5년 중 어느 기준으로 셀지는 확인된 해석례가 없습니다(확인 필요).
+            </span>
+          ) : (
+            "자진말소 1/2 판정 기준 (소령 §155㉓1호)"
+          )
+        }
+      >
         <RadioCardGroup
           name={`rental-terminated-type-${index}`}
           data-testid={`rental-terminated-type-${index}`}

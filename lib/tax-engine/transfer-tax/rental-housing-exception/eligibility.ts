@@ -121,6 +121,7 @@ import {
   terminationWindowIssues,
   deemedAutoCancellationNotice,
   autoCancellationDateCheckNotice,
+  preRentalActVoluntaryHalfNotice,
   ymd,
   dayOf,
 } from "./termination-window";
@@ -406,7 +407,7 @@ export function checkEligibility(
         : [];
     // G-8 — 부칙 제7조 간주 적용 고지 · 자동말소일 오입력(등록증 처리일) 확인 필요 고지(값은 바꾸지 않는다 — Q-9).
     if (ctx && unit.rentalAutoTermination && terminationEligibleArticle) {
-      for (const n of [deemedAutoCancellationNotice(i, unit), autoCancellationDateCheckNotice(i, unit)]) {
+      for (const n of [deemedAutoCancellationNotice(i, unit), autoCancellationDateCheckNotice(i, unit), preRentalActVoluntaryHalfNotice(i, unit)]) {
         if (n) notices.push(n);
       }
     }

@@ -364,7 +364,7 @@ export const ONE_HOUSE_FIELD_CATALOG_ASSET = [
     path: "asset.rentalHousingException.rentalUnits[].rentalAutoTermination",
     kind: "boolean",
     label: "자진말소 또는 자동말소로 임대사업자 등록이 말소된 임대주택입니다.",
-    hint: "등록이 자진·자동말소됐으면 켠다 — 말소일(2호 이상이면 최초 말소일)부터 5년 이내 거주주택을 양도하면 임대기간요건을 충족한 것으로 본다(소령 §155㉓). 자진말소는 임대의무기간 1/2 이상 임대한 경우에 한한다. 가·다·라·마목에서 묻는다. 자진말소(민특법 §6①11호 신청)·자동말소(§6⑤ 임대의무기간 종료)만 해당한다 — 재건축 멸실 등 그 밖의 사유로 말소됐으면 false로 두고 requirementsConfirmed를 false로 넣는다.",
+    hint: "등록이 자진·자동말소됐으면 켠다 — 말소일(2호 이상이면 최초 말소일)부터 5년 이내 거주주택을 양도하면 임대기간요건을 충족한 것으로 본다(소령 §155㉓). 자진말소는 임대의무기간 1/2 이상 임대한 경우에 한한다. 가·다·라·마목과 구 임대주택법 등록분(pre_2018)에서 묻는다. 자진말소(민특법 §6①11호 신청)·자동말소(§6⑤ 임대의무기간 종료)만 해당한다 — 재건축 멸실 등 그 밖의 사유로 말소됐으면 false로 두고 requirementsConfirmed를 false로 넣는다.",
     when: "asset.rentalHousingException.applyException = true",
   },
   {

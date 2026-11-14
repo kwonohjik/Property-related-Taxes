@@ -27,6 +27,7 @@ import {
   deriveStdPriceCap,
   isApartmentRestricted,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
+import { isTerminationEligibleArticle } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
 import { isMa1IncludedIn15520 } from "@/lib/tax-engine/data/rental-155-20-era";
 import { rentalUnitAptDeadlineInScope } from "@/lib/calc/apt-deadline-extension-scope";
 import { rentalUnitUrbanLifeQuestionInScope } from "@/lib/calc/apt-deadline-extension-scope";
@@ -142,8 +143,8 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
   const showSize = isConstruction || isLa;
   // 2호 이상 임대 요건: 건설(다·바·자) + 나목 / 라목은 5호(별도)
   const show2Units = isConstruction || isNa;
-  // §155⑳㉓ 말소 특례(가·다·라·마목): 자진·자동 말소 후 5년내 거주주택 양도
-  const showTermination = article === "가" || article === "다" || isLa || article === "마";
+  // §155⑳㉓ 말소 특례(가·다·라·마목·구법 — V-6): 자진·자동 말소 후 5년내 거주주택 양도 · ④⑧·엔진과 같은 술어
+  const showTermination = isTerminationEligibleArticle(article);
   // F6: 다·바(건설 장기)도 일반 아파트 허용. 나·라목도 허용. 아·자(단기)만 아파트 제외.
   // 아·자(단기 6년)만 묻지 않는다 — ④와 같은 술어(`rentalUnitApartmentInScope`).
   const showApartment = rentalUnitApartmentInScope(unit);
@@ -515,7 +516,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
         </>
       )}
 
-      {/* §155⑳㉓ 말소 특례 (가·다·라·마목) */}
+      {/* §155⑳㉓ 말소 특례 (가·다·라·마목·구법) */}
       {showTermination && (
         <RentalTerminationBlock unit={unit} index={index} set={set} onChange={onChange} transferDate={transferDate} />
       )}
