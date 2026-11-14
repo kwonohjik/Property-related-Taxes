@@ -18,7 +18,7 @@
  * | RT-7 | 합가 맥락은 카드가 있어 ⑧이 미완을 막는다 |
  * | RT-8 | §155⑦ · 근거 표시 |
  * | RT-9 | 미선택 고지 — 일시적 2주택·합가는 결론을 가를 때만 · 순수 2주택 없음 · 1주택 보유 미달은 유지 |
- * | RT-10 | 다건·판정 route 도달 |
+ * | RT-10 | 다건·판정 route 도달 · 다건 세액 = 단건(V-3) |
  * | RT-11 | 판정 → 계산기 전달 |
  * | RT-12 | 화면 — 일시적 2주택·합가 옵션에 4호, 칸에 값 · 전달 카드는 ④와 같은 사유만 적는다 |
  * | RT-13 | 겸용주택 — 일시적 2주택·합가 + 4호 → 주택분 비과세(대조 과세) · 일반 경로와 같은 근거 고지 · 거주 충족이면 고지 없음 |
@@ -105,6 +105,8 @@ const MERGE_P = facts("2018-09-01");
 const MARRIAGE = { marriageDate: "2021-01-01", isFirstTransferredInMerge: true };
 const PARENTAL = { parentalCareMergeDate: "2023-03-01", parentalCareParentAge: "over_60", isFirstTransferredInMerge: true };
 const TAXED_MERGE = 168_366_000;
+/** 2026-06 양도 · 다른 주택 4억(중과 시료) — RT-2와 같은 사실 */
+const LATE = { ...TEMP, transfer: "2026-06-01", price: "1500000000", houses: [other("b", "2024-01-01", { officialPrice: "400000000" })] };
 
 const warnings = (r: { warnings?: string[] }) => (r.warnings ?? []).join("\n");
 const ids = (r: { appliedExceptions?: { id: string }[] }) => (r.appliedExceptions ?? []).map((e) => e.id);
@@ -245,6 +247,28 @@ describe("RT-10 다건·판정 route", () => {
     expect(json.data.properties[0].isExempt).toBe(true);
     const partial = buildPropertyPayload(form({ ...TEMP, f: { provisoReason: R4 } })) as Record<string, unknown>;
     expect(partial.oneHouseExemptionProviso).toBeUndefined();
+  });
+
+  // V-3 실측(2026-11-15) — 다건 세액이 단건과 같다. 4호 유무 짝·고가주택·중과 배제·1년 요건·기한 뒤·합가까지.
+  it.each([
+    ["일시적 2주택 · 4호 없음", () => form(TEMP), 2023, 172_766_000],
+    ["일시적 2주택 15억 · 4호", () => form({ ...TEMP, price: "1500000000", f: TEMP_F }), 2023, 53_933_000],
+    ["2026-06 15억 · 4호(중과 배제)", () => form({ ...LATE, f: TEMP_F }), 2026, 48_917_000],
+    ["2026-06 15억 · 4호 없음(중과)", () => form(LATE), 2026, 640_761_000],
+    ["다른 주택 1년 안 취득 · 4호", () => form({ ...TEMP, houses: [other("b", "2019-06-01")], f: TEMP_F }), 2023, TAXED_TEMP],
+    ["신청 2019-12-17 · 4호", () => form({ ...TEMP, f: facts("2019-12-17") }), 2023, TAXED_TEMP],
+    ["혼인 합가 · 4호", () => form({ ...MERGE, f: { ...MARRIAGE, ...MERGE_P } }), 2024, 0],
+    ["혼인 합가 · 4호 없음", () => form({ ...MERGE, f: MARRIAGE }), 2024, TAXED_MERGE],
+    ["동거봉양 합가 · 4호", () => form({ ...MERGE, f: { ...PARENTAL, ...MERGE_P } }), 2024, 0],
+  ] as const)("다건 세액 = 단건 — %s", async (_n, make, year, tax) => {
+    const f = make();
+    expect((await runCalc(f)).result.totalTax).toBe(tax);
+    const mf = { taxYear: year, annualBasicDeductionUsed: "0", basicDeductionAllocation: "EARLIEST_TRANSFER" } as MultiTransferFormData;
+    const body = await bodyOf(() => callMultiTransferTaxAPI(mf, [{ propertyId: "p1", propertyLabel: "p1", form: f, completionPercent: 100 }]));
+    const res = await post(MULTI, "http://l/api/calc/transfer/multi", body);
+    const json = (await res.json()) as { data: { totalTax: number } };
+    expect(res.status, JSON.stringify(json).slice(0, 300)).toBe(200);
+    expect(json.data.totalTax).toBe(tax);
   });
 
   async function judge(f: TransferFormData) {
