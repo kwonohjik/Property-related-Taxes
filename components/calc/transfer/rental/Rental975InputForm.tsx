@@ -30,6 +30,7 @@ import { evaluateContinuousRental975 } from "@/lib/tax-engine/transfer-reduction
 import { inheritanceMergeSpan975 } from "@/lib/tax-engine/transfer-reductions/rental-97-5-period";
 import { rental975InheritanceInScope } from "@/lib/calc/rental-97-5-inheritance";
 import { Rental975InheritanceBlock } from "./Rental975InheritanceBlock";
+import { RentalResidentOnlyNotice } from "./RentalResidentOnlyNotice";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 
 type Rental975Form = Extract<RentalReductionFormVariant, { type: "rental_97_5" }>;
@@ -164,6 +165,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
     <div className="mt-2 ml-4 space-y-3">
       {/* ① 등록·신분 */}
       <ToneCard tone="violet" sectionNum="①" title="등록·신분">
+        <RentalResidentOnlyNotice article="§97의5" />
 
         {/* §97의5①1호 — 매입임대주택을 취득하고 3개월 내 등록 (취득 유형 → 등록일 순서) */}
         <div>
