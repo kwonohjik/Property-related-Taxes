@@ -41,6 +41,7 @@ export type RentalDeclaration = Partial<
     | "decedentRentalMonths"
     | "rentalCancelledDate"
     | "rentalCancellationReason"
+    | "rentalGiftDonorHousehold"
     // 9유형 매트릭스 (가~자목)
     | "rentalType"
     | "rentIncreaseUnder5Pct"

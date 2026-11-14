@@ -31,6 +31,7 @@ import { buildHouseAddressPatch } from "@/lib/calc/house-region";
 import { HOUSE_REGION_LABEL } from "@/lib/calc/house-region";
 import { HOUSE_REGION_MANUAL_HINT } from "@/lib/calc/house-region";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
+import { RentalGiftDonorHouseholdField } from "@/components/calc/transfer/RentalGiftDonorHouseholdField";
 import { RentalCancellationReasonField } from "@/components/calc/transfer/RentalCancellationReasonField";
 import { HouseEntrySpecialExclusionSection } from "@/components/calc/transfer/HouseEntrySpecialExclusionSection";
 import { HouseEntryOneHouseFactsSection } from "@/components/calc/transfer/HouseEntryOneHouseFactsSection";
@@ -560,6 +561,7 @@ function LongTermRentalSection({
             decedentRentalMonths: v ? house.decedentRentalMonths : undefined,
             rentalCancelledDate: v ? house.rentalCancelledDate : undefined,
             rentalCancellationReason: v ? house.rentalCancellationReason : undefined,
+            rentalGiftDonorHousehold: v ? house.rentalGiftDonorHousehold : undefined,
           });
         }}
         title="장기임대 등록주택"
@@ -645,6 +647,11 @@ function LongTermRentalSection({
               onChange={(v) => onUpdate({ rentalCancellationReason: v })}
             />
           )}
+          <RentalGiftDonorHouseholdField
+            decl={house}
+            testIdPrefix={`house-rental-gift-donor-${house.id}`}
+            onChange={(v) => onUpdate({ rentalGiftDonorHousehold: v })}
+          />
 
           {/*
             🔴 9유형 매트릭스는 「임대사업자 정식 등록」 토글 **밖**의 형제다(R20).

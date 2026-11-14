@@ -27,6 +27,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { HouseEntryRentalTypeSection } from "@/components/calc/transfer/HouseEntryRentalTypeSection";
 import { RentalCancellationReasonField } from "@/components/calc/transfer/RentalCancellationReasonField";
+import { RentalGiftDonorHouseholdField } from "@/components/calc/transfer/RentalGiftDonorHouseholdField";
 import { hasRentalBasicRegistration } from "@/lib/tax-engine/multi-house-surcharge-count";
 import type { RentalDeclaration, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { sellingRentalDeclarationView, sellingTaxIncentiveAsksUrbanLife } from "@/lib/calc/tax-incentive-rental-scope";
@@ -157,6 +158,11 @@ export function SellingHouseLongTermRentalSection({ value, onChange }: Props) {
               onChange={(v) => patch({ rentalCancellationReason: v })}
             />
           )}
+          <RentalGiftDonorHouseholdField
+            decl={ltr}
+            testIdPrefix="selling-rental-gift-donor"
+            onChange={(v) => patch({ rentalGiftDonorHousehold: v })}
+          />
 
           {/*
             🔴 명부 행과 같은 함정을 그대로 알린다(R20) — 등록이 미완비면 유형을 다 채워도

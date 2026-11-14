@@ -5,6 +5,7 @@
  * |---|---|---|---|
  * | S1 | 계산기 보유 상황 명부 2호 마목 행 | 공고 전 취득·계약금 증빙 칸 → 요청 → 10호 배제(#3352) | `__tests__/api/transfer.route.ma1-deposit-carveout.anchor.test.ts` |
  * | S2 | 같은 명부 행 · 가목 자동말소 | 「말소일까지」 5% 라벨 · 해석례 안내 + 확인 필요 · 계약일 힌트(#3353) | `__tests__/components/house-entry-rent-cap-after-cancel.anchor.test.tsx` |
+ * | S4 | 같은 명부 행 · 가목 자동말소 + 증여 질문 | 「별도세대에게서」 → 요청 → 장기임대주택 아님 · 확인 필요 고지(§14) | `__tests__/api/transfer.route.rental-gift-separate-household.anchor.test.ts` |
  * | S3 | 판정 메뉴 ② §155⑳ 임대주택 카드 | 마목 918 · 2021.2.16. 전 양도 → 증빙 칸 → ⑳ 요건 충족(#3352) | `__tests__/components/rental-unit-card-ma1-deposit-proof.anchor.test.tsx` |
  *
  * 실행: E2E_PORT=<worktree 포트> npx playwright test e2e/surcharge-exclusion-textbook-gaps.spec.ts
@@ -20,7 +21,7 @@ const PROOF_CARD = /^조정대상지역 공고일 이전에 취득했거나, 계
 // ─────────────────────────────── S1·S2 계산기 명부 행 ───────────────────────────────
 
 /** anchor MA 시료 — 강남 일반주택(2013-06-01 · 3억 → 20억) 2022-03-01 양도 · 명부 1행. */
-function calcSeed(h2: Record<string, unknown>) {
+function calcSeed(h2: Record<string, unknown>, extra: Record<string, unknown>[] = []) {
   return {
     state: {
       formData: {
@@ -40,7 +41,7 @@ function calcSeed(h2: Record<string, unknown>) {
         ],
         transferDate: "2022-03-01",
         contractTotalPrice: "2,000,000,000",
-        householdHousingCount: "2",
+        householdHousingCount: String(2 + extra.length),
         isOneHousehold: true,
         isRegulatedArea: true,
         wasRegulatedAtAcquisition: false,
@@ -70,6 +71,7 @@ function calcSeed(h2: Record<string, unknown>) {
             hasContractDepositProof: false,
             ...h2,
           },
+          ...extra,
         ],
       },
       pendingMigration: false,
@@ -78,10 +80,10 @@ function calcSeed(h2: Record<string, unknown>) {
   };
 }
 
-async function openRosterRow(page: Page, h2: Record<string, unknown> = {}) {
+async function openRosterRow(page: Page, h2: Record<string, unknown> = {}, extra: Record<string, unknown>[] = []) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), calcSeed(h2));
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), calcSeed(h2, extra));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.getByRole("button", { name: "보유 상황" }).first().click();
@@ -183,6 +185,66 @@ test.describe("S2 명부 가목 자동말소 행 — 「말소일까지」 5%", 
     await expect(dialog.getByRole("switch", { name: /^임대료 증액 5% 이하 충족/ })).toBeVisible();
     await expect(dialog.getByRole("switch", { name: /^말소일까지/ })).toHaveCount(0);
     await expect(dialog.getByTestId("rent-cap-cancel-note-h2")).toHaveCount(0);
+  });
+});
+
+test.describe("S4 명부 가목 자동말소 행 — 증여 질문(별도세대)", () => {
+  // anchor G-1 시료 — h2 = 2022-02-01 증여 가목(증여자 2017 등록 · 2021-01-02 자동말소) · h3 = 가목 2017 등록.
+  // 2주택이면 일시적 2주택 배제가 결과를 덮는다(실측) — 3주택으로 둔다.
+  const gifted = {
+    rentalType: "A",
+    acquisitionDate: "2022-02-01",
+    businessRegistrationDate: "2017-01-02",
+    rentalRegistrationDate: "2017-01-02",
+    rentalRegisteredDate: "2017-01-02",
+    rentalStartDate: "2017-01-02",
+    rentalCancelledDate: "2021-01-02",
+    rentalCancellationReason: "auto",
+    isExcluded918Rule: undefined,
+  };
+  const h3 = {
+    id: "h3",
+    region: "capital",
+    regionCode: GANGNAM,
+    acquisitionOrigin: "general",
+    acquisitionDate: "2016-01-01",
+    officialPrice: "300000000",
+    isInherited: false,
+    isLongTermRental: true,
+    isApartment: false,
+    isOfficetel: false,
+    isUnsoldHousing: false,
+    isRegisteredRental: true,
+    rentalType: "A",
+    businessRegistrationDate: "2017-01-02",
+    rentalRegistrationDate: "2017-01-02",
+    rentalRegisteredDate: "2017-01-02",
+    rentalStartDate: "2017-01-02",
+    rentalStartOfficialPrice: "300000000",
+    rentIncreaseUnder5Pct: true,
+  };
+
+  test("[S4-1] 「별도세대에게서」 → 요청에 실리고 장기임대주택에서 빠져 3주택 중과 1,328,497,500 + 확인 필요 고지", async ({ page }) => {
+    test.setTimeout(90_000);
+    const dialog = await openRosterRow(page, gifted, [h3]);
+    await dialog.getByTestId("house-rental-gift-donor-h2-separate").click();
+    await page.keyboard.press("Escape");
+    const { row, result } = await calculate(page);
+    expect(row?.rentalGiftDonorHousehold).toBe("separate");
+    expect(result.multiHouseSurchargeEvaluation.surchargeType).toBe("multi_house_3plus");
+    expect(result.totalTax).toBe(1_328_497_500);
+    await expect(page.getByText(/별도세대에서 증여받기 전에 증여자의 임대사업자 등록이 말소된 주택이라/).first()).toBeVisible();
+  });
+
+  test("[S4-2] 짝 — 「동일세대원에게서」 → 중과 없음 633,682,500", async ({ page }) => {
+    test.setTimeout(90_000);
+    const dialog = await openRosterRow(page, gifted, [h3]);
+    await dialog.getByTestId("house-rental-gift-donor-h2-same").click();
+    await page.keyboard.press("Escape");
+    const { row, result } = await calculate(page);
+    expect(row?.rentalGiftDonorHousehold).toBe("same");
+    expect(result.multiHouseSurchargeEvaluation.surchargeType).toBe("none");
+    expect(result.totalTax).toBe(633_682_500);
   });
 });
 

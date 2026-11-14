@@ -11,6 +11,7 @@
  */
 
 import { rentalCancellationStatus } from "./rental-cancellation-deeming";
+import { isSeparateHouseholdGiftOfCancelledRental } from "./rental-cancellation-deeming";
 import { calcLongTermRentalPeriodYears } from "./multi-house-rental-period";
 import { calcTaxIncentiveRentalPeriodYears } from "./multi-house-rental-period";
 import { MULTI_HOUSE } from "./legal-codes";
@@ -285,6 +286,8 @@ const LEGACY_RENTAL_YEARS = 5;
  */
 export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Date): boolean {
   if (!house.isLongTermRental) return false;
+  // S-4 — 별도세대 증여자의 등록이 증여 전에 말소됐으면 수증자 세대에는 등록한 거주자가 없다.
+  if (isSeparateHouseholdGiftOfCancelledRental(house)) return false;
 
   // 양도일 전 말소 — 자동말소(가·다~마목)만 §167의3①2호 단서로 임대기간요건을 갖춘 것으로 본다.
   const cancellation = rentalCancellationStatus(house, transferDate);

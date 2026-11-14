@@ -100,6 +100,7 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     decedentRentalMonths: h.decedentRentalMonths,
     rentalCancelledDate: toOptionalDate(h.rentalCancelledDate),
     rentalCancellationReason: h.rentalCancellationReason, // §167의3①2호 단서
+    rentalGiftDonorHousehold: h.rentalGiftDonorHousehold, // S-4 별도세대 증여 전 말소
     // ⑭ 장기임대 9유형 매트릭스 18필드 — 폼/Zod 이름(rentalLandArea·rentalTotalFloorArea) →
     // 엔진 HouseInfo 이름(landArea·totalFloorArea)으로 매핑. 날짜는 Date 변환. (누락 시 엔진 미도달=과다산정)
     rentalType: h.rentalType,

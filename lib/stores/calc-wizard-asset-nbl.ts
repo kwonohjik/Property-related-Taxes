@@ -368,6 +368,8 @@ export interface HouseEntry {
   rentalCancelledDate?: string;
   /** 말소 사유 — 자동말소면 가·다~마목은 §167의3①2호 단서로 임대기간요건 간주 충족. ""·undefined = 미선택 */
   rentalCancellationReason?: "" | "auto" | "voluntary";
+  /** 증여로 받은 주택이면 증여자의 세대(S-4) — 말소된 등록이 있을 때만 묻는다(`rental-gift-donor-scope.ts`). ""·undefined = 미답 */
+  rentalGiftDonorHousehold?: "" | "none" | "same" | "separate";
 
   // ── 장기임대 9유형 매트릭스 (가~자목) — 신규 18필드 ──
   /**

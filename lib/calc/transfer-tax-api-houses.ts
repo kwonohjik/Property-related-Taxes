@@ -14,6 +14,7 @@ import { isHousingLike } from "./transfer-tax-api-helpers";
 import { deriveHouseRegionFromCode } from "./house-region";
 import { preDesignationContractInScope } from "./pre-designation-contract-scope";
 import { rentIncreaseContractDatePayload } from "./rent-cap-contract-date-scope";
+import { rentalGiftDonorPayload } from "./rental-gift-donor-scope";
 import { effectiveSellingTaxIncentiveRental, taxIncentiveRentalPayload } from "./tax-incentive-rental-scope";
 import { rentalPeriodDatesPayload } from "./tax-incentive-rental-scope";
 import { effectiveSellingUrbanLife, sellingRentalDeclarationView } from "./tax-incentive-rental-scope";
@@ -51,6 +52,8 @@ export function buildSellingRentalPayload(ltr: RentalDeclaration | undefined): o
     rentalCancelledDate: ltr.rentalCancelledDate || undefined,
     // 말소 사유(§167의3①2호 단서) — 말소일이 있을 때만(⑤가 그때만 묻는다)
     rentalCancellationReason: (ltr.rentalCancelledDate && ltr.rentalCancellationReason) || undefined,
+    // S-4 — 증여자 세대(말소된 등록이 있을 때만)
+    ...rentalGiftDonorPayload(ltr),
     // 가목2) 괄호 — 도시형 생활주택인 아파트는 양도기한(⑪)만 비적용. 명부 행과 같은 규약(묻는 범위에서 「예」일 때만).
     //   호출부가 3호 칸과 합친 유효 사실의 보기(`sellingRentalDeclarationView`)를 넘긴다.
     isUrbanLifeHousingApartment:
@@ -373,6 +376,8 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
       // 말소 사유(§167의3①2호 단서) — 말소일이 있을 때만(⑤가 그때만 묻는다)
       rentalCancellationReason:
         (h.isLongTermRental && h.rentalCancelledDate && h.rentalCancellationReason) || undefined,
+      // S-4 — 증여자 세대(말소된 등록이 있을 때만)
+      ...rentalGiftDonorPayload(h),
       // P2 특수 배제 (2주택 전용·인구감소) — 독립 플래그, 토글 ON 시 부속값 전달
       isUnavoidableReason: h.isUnavoidableReason,
       // §167의10①3호는 「**취득 당시** 기준시가 3억 이하」다 — `officialPrice`(양도일 연도 조회값)로
