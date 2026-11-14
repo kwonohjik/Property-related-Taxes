@@ -332,7 +332,7 @@ export function validateRentalHousingException(
     inLifetimeEraBase &&
     !isAddendumTransitionEffective(rh.residenceTransitionUnderAddendum === true, rh.residenceTransitionBasis)
   ) {
-    return `${label}: 2019.2.12 이후 취득한 거주주택을 2025.2.27 이전에 양도하는 경우 — 장기임대주택을 보유한 채 거주주택을 양도해 이 특례를 적용받은 이력이 있는지 선택하세요 (소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①).`;
+    return `${label}: 2019.2.12 이후 취득한 거주주택을 2025.2.27 이전에 양도하는 경우 — 장기임대주택을 보유한 채 거주주택을 이 특례의 요건을 갖춘 상태로 양도한 이력(과세로 신고했어도 포함 — 사전-2023-법규재산-0393)이 있는지 선택하세요 (소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①).`;
   }
 
   /**

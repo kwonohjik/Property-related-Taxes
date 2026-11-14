@@ -249,14 +249,14 @@ export const ONE_HOUSE_FIELD_CATALOG_ASSET = [
     path: "asset.rentalHousingException.rentalUnits[].rentalCategory",
     kind: "enum",
     values: [
-      { value: "long_general", label: "장기일반" },
+      { value: "long_general", label: "장기일반 (단기 4년 등록 포함)" },
       { value: "short_6y", label: "단기 6년" },
       { value: "existing_business", label: "기존사업자(나목)" },
       { value: "unsold_08_09", label: "미분양(라목)" },
       { value: "pre_2018", label: "구 임대주택법" },
     ],
     label: "임대 구분",
-    hint: "등록 임대 유형. 등록일·취득 방법과 합쳐 §167의3①2호 목(가~자·구법)이 도출된다. 등록일과 맞지 않는 유형은 장기일반으로 되돌려진다.",
+    hint: "등록 임대 유형. 2020.8.17. 이전에 4년 단기민간임대로 등록했다면 장기일반을 고른다(지자체 등록 신청일이 2020.7.10. 이전이면 가목, 2020.7.11. 이후면 마목(아파트 제외)으로 판정). 등록일·취득 방법과 합쳐 §167의3①2호 목(가~자·구법)이 도출된다. 등록일과 맞지 않는 유형은 장기일반으로 되돌려진다.",
     when: "asset.rentalHousingException.applyException = true",
   },
   {
@@ -423,10 +423,10 @@ export const ONE_HOUSE_FIELD_CATALOG_ASSET = [
     values: [
       { value: "", label: "미선택" },
       { value: "none", label: "없음 — 이번이 최초의 거주주택 양도입니다" },
-      { value: "used", label: "있음 — 이미 거주주택을 양도해 이 특례를 적용받았습니다" },
+      { value: "used", label: "있음 — 이미 거주주택을 이 특례의 요건을 갖춘 상태로 양도했습니다 (과세로 신고했어도 포함)" },
     ],
     label: "장기임대주택 보유 중 거주주택 양도 이력",
-    hint: "2019.2.12 이후 취득 · 2025.2.27 이전 양도 구간의 생애 한 차례 제한 — 이미 이 특례로 거주주택을 양도한 적이 있는가. 경과조치(residenceTransitionUnderAddendum)가 성립하면 묻지 않는다. 모르면 비움.",
+    hint: "2019.2.12 이후 취득 · 2025.2.27 이전 양도 구간의 생애 한 차례 제한 — 이미 이 특례의 요건을 갖춘 상태로 거주주택을 양도한 적이 있는가(과세로 신고했어도 포함 — 사전-2023-법규재산-0393). 경과조치(residenceTransitionUnderAddendum)가 성립하면 묻지 않는다. 모르면 비움.",
     when: "asset.rentalHousingException.scenario = A + 2019.2.12 이후 취득 · 2025.2.27 이전 양도",
   },
   {
@@ -460,7 +460,7 @@ export const ONE_HOUSE_FIELD_CATALOG_ASSET = [
     path: "asset.rentalHousingException.priorResidenceTransferDate",
     kind: "date",
     label: "직전거주주택 양도일",
-    hint: "B — 먼저 §155⑳을 적용받아 양도한 직전거주주택의 양도일(§161① 비과세 기산점). 일시적 2주택(§155①) 등 다른 규정으로 양도한 주택은 직전거주주택이 아니다. 함께 보유한 임대주택이 없는 §154⑩ 경로에서는 이 주택이 직전거주주택보유주택임을 확인하는 판정 사실이다.",
+    hint: "B — 먼저 §155⑳ 요건을 갖추고 양도한 직전거주주택의 양도일(§161① 비과세 기산점). 과세로 신고했어도 요건을 갖췄다면 해당한다(사전-2023-법규재산-0393). 일시적 2주택(§155①)으로 양도한 주택은 직전거주주택이 아니다. 함께 보유한 임대주택이 없는 §154⑩ 경로에서는 이 주택이 직전거주주택보유주택임을 확인하는 판정 사실이다.",
     when: "asset.rentalHousingException.scenario = B",
   },
   {
@@ -478,7 +478,7 @@ export const ONE_HOUSE_FIELD_CATALOG_ASSET = [
       { value: "no", label: "아니오" },
     ],
     label: "임대 등록·어린이집 운영 + 보유 중 다른 거주주택 양도 (소령 §154⑩)",
-    hint: "이 주택을 민간임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 이 주택을 보유하는 동안 §155⑳(장기임대주택 거주주택 특례)을 적용받아 다른 거주주택을 양도한 적이 있는가. 그 다른 거주주택을 일시적 2주택(§155①) 등 다른 규정으로 양도했으면 no. yes면 직전거주주택 양도일 후 기간분만 비과세(§154⑩ — 시나리오 B · 임대주택 0호로 선언된다). 원문에 사실이 없으면 비움.",
+    hint: "이 주택을 민간임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 이 주택을 보유하는 동안 다른 거주주택을 §155⑳(장기임대주택 거주주택 특례)의 요건을 갖춘 상태로 양도한 적이 있는가(특례를 신청하지 않고 과세로 신고했어도 요건을 갖췄다면 yes — 사전-2023-법규재산-0393). 그 다른 거주주택을 일시적 2주택(§155①)으로 양도했으면 no. yes면 직전거주주택 양도일 후 기간분만 비과세(§154⑩ — 시나리오 B · 임대주택 0호로 선언된다). 원문에 사실이 없으면 비움.",
     when: "주택 양도 + 2011.10.14 이후 양도 + 임대주택 1호 이상으로 ⑳을 선언하지 않음",
   },
 ] as const satisfies readonly FieldSpec[];

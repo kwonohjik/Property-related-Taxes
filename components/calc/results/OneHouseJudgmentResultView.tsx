@@ -28,6 +28,7 @@ import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/thresh
 import { resolveOneRightHighValueThreshold } from "@/lib/tax-engine/data/one-right-high-value-era";
 import { oneRightClauseNaYears } from "@/lib/tax-engine/data/one-right-requirement-era";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { RENTAL_155_22_EXCEPTIONS_LONG } from "@/lib/calc/rental-155-22-exceptions";
 import { DEMOLISHED_BEFORE_BALANCE_UNMET_ID } from "@/lib/tax-engine/data/demolished-before-balance-era";
 import { countExclusionHouseRef, type HouseRefRow } from "@/components/calc/results/transfer/count-exclusion-house-ref";
 
@@ -313,7 +314,8 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
                 {rental.periodPendingUnitIndexes.map((i) => `${i + 1}호`).join("·")}
               </b>
               는 의무임대기간을 채우기 전이라 <b>소득세법 시행령 §155㉑</b>로 통과했습니다. 이후
-              요건을 충족하지 못하면 <b>§155㉒</b>에 따라 차액을 신고·납부해야 합니다.
+              요건을 충족하지 못하면 <b>§155㉒</b>에 따라 차액을 신고·납부해야 합니다.{" "}
+              <span data-testid="one-house-rental-155-22-exceptions">{RENTAL_155_22_EXCEPTIONS_LONG}</span>
             </p>
           )}
           {/* I-4 — §155㉓ 최초 말소일부터 5년 기한(엔진 echo). 구 응답엔 필드가 없다. */}

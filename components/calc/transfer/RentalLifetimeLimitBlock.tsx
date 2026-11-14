@@ -107,8 +107,8 @@ export function RentalLifetimeLimitBlock({ rh, assetId, path154_10 = false, onCh
               },
               {
                 value: "used",
-                label: "있음 — 이미 거주주택을 양도해 이 특례를 적용받았습니다",
-                description: "생애 한 차례 제한으로 이번 양도에는 적용되지 않습니다.",
+                label: "있음 — 이미 거주주택을 이 특례의 요건을 갖춘 상태로 양도했습니다",
+                description: "특례를 신청하지 않고 과세로 신고했어도 요건을 갖췄다면 이 항목입니다(사전-2023-법규재산-0393). 생애 한 차례 제한으로 이번 양도에는 적용되지 않습니다.",
                 testId: "rental-prior-history-used",
               },
             ]}
