@@ -240,28 +240,29 @@ export function FilingFormTable({
               ))}
             </tbody>
           </table>
-          {rowFootnotes.length > 0 && (
-            <div
-              data-testid="filing-row-footnote"
-              className="px-3 py-1.5 border-t border-slate-200 dark:border-slate-700 text-caption text-slate-600 dark:text-slate-400 leading-snug whitespace-normal"
-            >
-              {rowFootnotes.map((n) => (
-                <p key={n}>※ {n}</p>
-              ))}
-            </div>
-          )}
-          {unenteredNotices.length > 0 && (
-            <div
-              data-testid="filing-sale-split-unentered-note"
-              className="px-3 py-1.5 border-t border-slate-200 dark:border-slate-700 text-caption text-slate-600 dark:text-slate-400 leading-snug whitespace-normal"
-            >
-              {unenteredNotices.map((n) => (
-                <p key={n}>※ {n}</p>
-              ))}
-            </div>
-          )}
         </div>
       </div>
+      {/* 「※」 안내는 가로 스크롤 영역 밖에 둔다 — 안에 두면 표 폭(375px에서 414)으로 줄바꿈되어 오른쪽 끝이 가려졌다. */}
+      {rowFootnotes.length > 0 && (
+        <div
+          data-testid="filing-row-footnote"
+          className="px-3 py-1.5 border-t border-slate-200 dark:border-slate-700 text-caption text-slate-600 dark:text-slate-400 leading-snug whitespace-normal"
+        >
+          {rowFootnotes.map((n) => (
+            <p key={n}>※ {n}</p>
+          ))}
+        </div>
+      )}
+      {unenteredNotices.length > 0 && (
+        <div
+          data-testid="filing-sale-split-unentered-note"
+          className="px-3 py-1.5 border-t border-slate-200 dark:border-slate-700 text-caption text-slate-600 dark:text-slate-400 leading-snug whitespace-normal"
+        >
+          {unenteredNotices.map((n) => (
+            <p key={n}>※ {n}</p>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
