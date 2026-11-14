@@ -200,7 +200,10 @@ export const propertySchema = z
     companions.forEach((c, i) => {
       refineMixedSaleSplitSingleOnly(c.mixedUse ?? undefined, ctx, ["companionAssets", i, "mixedUse"]);
       refineUnregisteredSelfFarming(c.isUnregistered, c.reductions, ctx, ["companionAssets", i, "reductions"]);
-      refineReductionAssetKindGate(c.reductions, c.assetKind, ctx, ["companionAssets", i, "reductions"]);
+      refineReductionAssetKindGate(c.reductions, c.assetKind, ctx, ["companionAssets", i, "reductions"], {
+        isSuccessorRightToMoveIn: c.isSuccessorRightToMoveIn,
+        redevelopment: c.redevelopment as { isSuccessorMember?: boolean; originalAssetType?: string; approvalDate?: string } | null | undefined,
+      });
       refineReductionTrack127_7(c.reductions, c.acquisitionDate, data.transferDate, ctx, ["companionAssets", i, "reductions"]);
       refineReductionRequiredInputs(c.reductions, c.assetContractDate, ctx, ["companionAssets", i, "reductions"], c.redevelopment, c.acquisitionCause);
       refineCompanionGbUnregisteredAxis(c, ctx, ["companionAssets", i, "isUnregistered"]);

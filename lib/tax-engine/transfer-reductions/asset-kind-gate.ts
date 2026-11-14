@@ -7,6 +7,7 @@
  *
  * 카테고리별 집합 차이 (사용자 확정 2026-06-29):
  *   - rental(§97): { housing, redevelopment_apt } — 입주권·분양권은 물리적 임대 불가로 배제.
+ *     예외: §97의3 × 조합원입주권은 조문 단위로 연다(G-7 · `hasArticleExceptionInCategory`).
  *   - new_housing(§99)·unsold(§98의4·§98의9): + 입주권·분양권. (§98의8·§99의2는 조문 단위로 주택만 — `UNSOLD_SPONSOR_FIRST_CONTRACT_EXTRA_IDS`)
  *   - §98·§98의2·§98의3·§98의5·§98의6·§98의7: 주택(housing)만 — 조문 단위 예외(`UNSOLD_98_SERIES_HOUSING_ONLY_IDS`, US-44).
  *     완공 뒤 양도는 assetKind가 housing이다. presale_right는 완공 전 권리 자체의 양도다.
@@ -27,6 +28,7 @@
 import { REDUCTION_METADATA } from "./metadata";
 import { UNSOLD_99_2_DECREE } from "../legal-codes/transfer-house";
 import type { TransferReductionId, ReductionCategory } from "./types";
+import { RENTAL_973_RIGHT_TO_MOVE_IN_ID } from "./rental-97-3-right-after-auto-cancel";
 
 /**
  * 자산 종류 union — `AssetForm["assetKind"]`(lib/stores/calc-wizard-asset.ts)와 동일하게 유지.
@@ -265,6 +267,15 @@ export function isGbClaimRouteAllowedForAssetKind(assetKind: ReductionAssetKind)
   return GB_CLAIM_ROUTE_KINDS.has(assetKind);
 }
 
+/**
+ * 카테고리 게이트는 막지만 조문 단위로 열린 조합이 있는가 — ⑤ 그룹을 펼쳐 그 조문만 고르게 한다.
+ * 지금은 §97의3 × 조합원입주권 하나(G-7 · 서면-2023-법규재산-2731). 요건(원조합원·자동말소·말소일 ≤ 인가일)은
+ * `rental973RightToMoveInBlockReason`이 ⑧·⑫에서 가른다 — 범주를 열면 §97·§97의2·§97의4·§97의5까지 열린다.
+ */
+export function hasArticleExceptionInCategory(category: ReductionCategory, assetKind: ReductionAssetKind): boolean {
+  return category === "rental" && assetKind === "right_to_move_in";
+}
+
 /** 카테고리 단위 게이트 — UI 카테고리 활성/카운터 판정용 */
 export function isReductionCategoryAllowedForAssetKind(
   category: ReductionCategory,
@@ -304,6 +315,8 @@ export function isReductionAllowedForAssetKind(
   if (id === "self_farming") return SELF_FARMING_KINDS.has(assetKind);
   // §98 시리즈 6조문 × 조합원 경로·분양권 — 미분양주택 정의상 성립 불가 (위 UNSOLD_98_SERIES_HOUSING_ONLY_IDS 주석)
   if (UNSOLD_98_SERIES_HOUSING_ONLY_IDS.has(id) || UNSOLD_SPONSOR_FIRST_CONTRACT_EXTRA_IDS.has(id)) return UNSOLD_98_SERIES_ALLOWED_KINDS.has(assetKind);
+  // §97의3 × 조합원입주권 — 자동말소 뒤 인가로 입주권이 된 경우만(G-7). 요건은 ⑧·⑫의 `rental973RightToMoveInBlockReason`.
+  if (id === RENTAL_973_RIGHT_TO_MOVE_IN_ID && assetKind === "right_to_move_in") return true;
   const cat = REDUCTION_METADATA[id as TransferReductionId]?.category ?? LEGACY_REDUCTION_CATEGORY[id];
   if (!cat) return true; // 매핑 미존재 시 차단하지 않음 (방어적 — standalone·미지 타입)
   return isReductionCategoryAllowedForAssetKind(cat, assetKind);

@@ -18,6 +18,7 @@ import { NEW_99_3_ADDENDA_6762 } from "@/lib/tax-engine/legal-codes/transfer-hou
 import { new994CapitalRegionConflict } from "@/lib/tax-engine/transfer-reductions/new-99-4-size";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { assetKindGateMessage, reductionAssetKindFromWire } from "@/lib/tax-engine/transfer-reductions/asset-kind-gate";
+import { RENTAL_973_RIGHT_TO_MOVE_IN_ID, rental973RightToMoveInBlockReason } from "@/lib/tax-engine/transfer-reductions/rental-97-3-right-after-auto-cancel";
 import { findTrack127_7Conflict } from "@/lib/tax-engine/transfer-reductions/income-deduction-router";
 import { findRental97StatutoryOverlap } from "@/lib/tax-engine/transfer-reductions/rental-97-statutory-overlap";
 import { rental97StatutoryOverlapMessage } from "@/lib/tax-engine/transfer-reductions/rental-97-statutory-overlap";
@@ -41,12 +42,35 @@ export function refineReductionAssetKindGate(
   kind: string | undefined,
   ctx: z.RefinementCtx,
   path: (string | number)[],
+  /** G-7 — §97의3 × 조합원입주권 요건(⑧ `rental973RightToMoveInBlockReason`과 같은 술어)에 쓰는 자산 사실 */
+  right?: RightFacts,
 ) {
   const assetKind = reductionAssetKindFromWire(kind);
   if (!assetKind) return;
   (reductions ?? []).forEach((r, i) => {
-    const message = assetKindGateMessage(r.type, assetKind);
+    const message = assetKindGateMessage(r.type, assetKind) ?? rightToMoveIn973Message(r, assetKind, right);
     if (message) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, i, "type"], message });
+  });
+}
+
+type RightFacts = {
+  isSuccessorRightToMoveIn?: boolean;
+  redevelopment?: { isSuccessorMember?: boolean; originalAssetType?: string; approvalDate?: string } | null;
+};
+
+/** G-7 — 조문 단위로 열린 §97의3 × 조합원입주권도 2731 사실관계(Q-5 a)가 아니면 막는다. 자산 사실이 없으면(모름) 막는다. */
+function rightToMoveIn973Message(r: ReductionLike, assetKind: string, right: RightFacts | undefined): string | undefined {
+  if (r.type !== RENTAL_973_RIGHT_TO_MOVE_IN_ID || assetKind !== "right_to_move_in") return undefined;
+  const redev = right?.redevelopment ?? undefined;
+  const str = (v: unknown) => (typeof v === "string" ? v : undefined);
+  return rental973RightToMoveInBlockReason({
+    isSuccessor: right?.isSuccessorRightToMoveIn === true || redev?.isSuccessorMember === true,
+    originalAssetType: redev?.originalAssetType,
+    approvalDate: redev?.approvalDate,
+    rentalContinuesToTransfer: typeof r.rentalContinuesToTransfer === "boolean" ? r.rentalContinuesToTransfer : undefined,
+    autoCancelled973: r.autoCancelled973 === true,
+    rentalEndDate: str(r.rentalEndDate),
+    hasApprovalStdPrice: typeof r.stdPriceAtTransfer === "number" && r.stdPriceAtTransfer > 0,
   });
 }
 

@@ -111,6 +111,8 @@ export function addPropertyRefines(
     generalBuildingValuation?: Record<string, unknown> | null;
     /** ⑩ 재개발/재건축 환산취득가 서브객체 (시행령 §166③) — base 스키마 nonnegative()로 충분 */
     redevelopment?: Record<string, unknown> | null;
+    /** 승계 입주권 — §97의3 × 조합원입주권 요건(G-7) 판정용 */
+    isSuccessorRightToMoveIn?: boolean;
     /** 축 B 파트별 독립(§99①1호 나목) — 제공 시 결합 총액 검증 우회 */
     buildingStandardPriceAtAcquisition?: number;
     /** Q-1(D15) — 미등기 + 자경농지 감면 교차 검증 */
@@ -171,7 +173,10 @@ export function addPropertyRefines(
   }
   refineUnregisteredSelfFarming(data.isUnregistered, data.reductions, ctx, ["reductions"]);
   // 재개발 완공 아파트 조합원 갈래는 준공일을 요구한다(NH-36) — 서브객체는 base 스키마가 모양을 보장한다
-  refineReductionAssetKindGate(data.reductions, data.propertyType, ctx, ["reductions"]);
+  refineReductionAssetKindGate(data.reductions, data.propertyType, ctx, ["reductions"], {
+    isSuccessorRightToMoveIn: data.isSuccessorRightToMoveIn,
+    redevelopment: data.redevelopment as { isSuccessorMember?: boolean; originalAssetType?: string; approvalDate?: string } | null | undefined,
+  });
   refineReductionTrack127_7(data.reductions, data.acquisitionDate, data.transferDate, ctx, ["reductions"], {
     // V-7 — 요청 본문의 거주주택 특례 선언(④가 첫 자산에서만 싣는다)이 있는 주택이면 안내 문구. ⑧과 같은 술어(`rentalHousingPathApplies`).
     rentalHousingPath: rentalHousingPathApplies({ assetIndex: 0, assetKind: data.propertyType, declared: data.rentalHousingException?.applyException === true }),

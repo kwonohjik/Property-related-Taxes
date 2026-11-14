@@ -81,6 +81,19 @@ describe("G-7′ 입주권 × §97의3 — 인가전 분에만 특례", () => {
   });
 });
 
+describe("G-7 Q-6 a — 입주권은 안분 D를 자산의 양도일 기준시가로 폴백하지 않는다", () => {
+  it("§97의3 카드 D 빈칸 + 자산 양도일 기준시가 3억 → 그 값을 D로 쓰지 않는다(쓰면 비율 0.5 · 장특 68,000,000 — 실측 PR-3 전)", () => {
+    const { stdPriceAtTransfer: _d, ...noD } = RED_973;
+    void _d;
+    const r = run([noD]);
+    // 「모름 = 혜택 불성립」 — 안분 기준시가 누락 사유로 부적격 · 일반 장특 36,000,000 (⑧·⑫는 이 조합을 먼저 막는다)
+    expect(r.rental97LthdDetail?.isEligible).toBe(false);
+    const reasons = (r.rental97LthdDetail as { ineligibleReasons?: { code: string }[] } | undefined)?.ineligibleReasons ?? [];
+    expect(reasons.map((i) => i.code)).toContain("MISSING_PRORATION_PRICES");
+    expect(r.longTermHoldingDeduction).toBe(36_000_000);
+  });
+});
+
 describe("applyRental97LthdSpecial — subject 축 (단위)", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const branch = (gain: number, lthdRate: number) => ({ gain, lthdRate, lthd: 0 }) as any;

@@ -217,3 +217,15 @@ G-7을 열려면 G-7′을 **먼저** 고쳐야 한다(게이트를 여는 순�
 - 실측(엔진 직접, `__tests__/tax-engine/transfer/redev-right-97-3-pre-approval-only.anchor.test.ts`): 시료 장특 155,500,000 → **68,000,000**(인가전 2억 = 임대분 1억 × 50% + 비임대분 1억 × 18%). 계획서 §3의 68,000,000과 일치. R-6(완공 아파트 `redev-lthd-special-97-3-97-4.anchor.test.ts`) 값 불변.
 - 화면 도달 경로 세액 불변 — 입주권 × §97의3은 아직 ⑧·⑫가 막는다(PR-3에서 연다).
 - 뮤테이션 4건 전부 검출: 청산금 분기 guard 삭제 · 인가후 분기 guard 삭제(차익 주입) · 호출부 `"apt"` 고정 · step 문구 분기 반전.
+
+### PR-3 (G-7) — 2026-11-14
+- 단일 소스 leaf `lib/tax-engine/transfer-reductions/rental-97-3-right-after-auto-cancel.ts` — `rental973RightToMoveInBlockReason`(⑧·⑫ 같은 술어·문구) · D 라벨·안내 상수.
+- 게이트: `isReductionAllowedForAssetKind("rental_97_3", "right_to_move_in")` = true(조문 단위 예외). 범주 게이트 `isReductionCategoryAllowedForAssetKind("rental", 입주권)`는 그대로 false — ⑤는 `hasArticleExceptionInCategory`로 그룹만 펼치고, 나머지 5조문은 조문 게이트가 「주택 양도에만」으로 막는다(헤더 「활성 1 / 전체 6」).
+- 요건(Q-5 a, 순서대로 첫 사유만): 승계(`isSuccessorRightToMoveIn` 또는 `isSuccessorMember`) → 종전 자산 토지 → 「양도일까지 계속 임대」 또는 자동말소 OFF → 말소일·인가일 빈칸 → 말소일 > 인가일 → D 빈칸. ⑫는 주 자산·컴패니언 모두(`refineReductionAssetKindGate` 5번째 인자).
+- Q-6 a: D 칸 라벨 「관리처분계획 인가일 당시 기준시가」 + 「해석 미확인(확인 필요)」. **엔진도 입주권이면 D를 자산의 양도일 기준시가로 폴백하지 않는다**(`transfer-tax-redevelopment-steps.ts` evaluateRental97Lthd ctx) — 폴백하면 분모가 양도일 기준이 된다. ⑧·⑫가 카드 칸을 필수로 요구한다.
+- 실측(라우트 관통 `__tests__/api/transfer.route.rental-97-3-right-after-auto-cancel.anchor.test.ts`): R-1 장특 68,000,000(대조군 36,000,000) · 임대분 비율 0.5. 화면의 「임대개시일 당시 기준시가」(`officialPriceAtStart`)가 산식 C를 겸한다 — 처음 픽스처에 2억을 넣어 52,000,000(비율 0.25)이 나왔다.
+- ⑤ anchor `__tests__/components/rental-97-3-right-to-move-in-gate.anchor.test.tsx` · E2E `e2e/transfer-rental-97-3-right-after-auto-cancel.spec.ts`.
+- 엔진 D 폴백 차단 실측: 카드 D 빈칸 + 자산 양도일 기준시가 3억 → `MISSING_PRORATION_PRICES` 부적격 · 장특 36,000,000(폴백했다면 68,000,000).
+- 뮤테이션 11건 전부 검출: 조문 예외 삭제 · 그룹 예외 false · ⑧ 삭제 · ⑫ 삭제 · 말소일 비교 반전 · 자동말소 조건 삭제 · 승계 조건 삭제 · 토지 조건 삭제 · D 빈칸 조건 삭제 · 엔진 D 폴백 복원 · ⑤ 패널→카드 입주권 전달 삭제.
+- 컴패니언(함께 양도) 실측(2026-11-14 사용자 요청 · `__tests__/api/transfer.route.rental-97-3-right-companion.anchor.test.ts`): 주택 + 입주권(개별 실가) — 컴패니언 입주권 장특 **68,000,000**(인가 후 분 0 · 단건과 같음) · 합계 90,000,000 → 122,000,000 · 입주권을 주 자산으로 넣어도 같은 값(위치 대칭). 자진말소·말소일 > 인가일·D 빈칸·승계는 컴패니언에서도 ⑧ 차단 + ⑫ 400(`companionAssets.0.reductions.0.type`). 컴패니언 ⑫ 배관 뮤테이션 2건(승계 필드 삭제 · 배관 전체 삭제) 검출.
+- 남은 한계: 사람 브라우저 확인 없음(E2E 1건 로컬 통과).

@@ -37,6 +37,8 @@ import { rental973InheritanceInScope } from "@/lib/calc/rental-97-3-inheritance"
 import { rental973InheritanceConflictsConversion } from "@/lib/calc/rental-97-3-inheritance";
 import { rental973MergedDecedentStart } from "@/lib/calc/rental-97-3-inheritance";
 import { mergedRentalYears97 } from "@/lib/tax-engine/transfer-reductions/rental-97-shared-helpers";
+import { RENTAL_973_RIGHT_STD_PRICE_D_LABEL } from "@/lib/tax-engine/transfer-reductions/rental-97-3-right-after-auto-cancel";
+import { RENTAL_973_RIGHT_STD_PRICE_D_HINT } from "@/lib/tax-engine/transfer-reductions/rental-97-3-right-after-auto-cancel";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 
 type Rental973Form = Extract<RentalReductionFormVariant, { type: "rental_97_3" }>;
@@ -51,6 +53,8 @@ interface Props {
   assetContractDate?: string;
   /** 자산 취득원인 — V-14 상속 합산 토글은 상속 자산에서만 보인다(`rental973InheritanceInScope`) */
   acquisitionCause?: string;
+  /** G-7 — 조합원입주권 양도(자동말소 뒤 인가로 입주권이 된 경우만 · 서면-2023-법규재산-2731). 안분 D 라벨이 인가일 기준시가로 바뀐다(Q-6 a) */
+  isRightToMoveIn?: boolean;
 }
 
 function diffYearsMonths(from: string, to: string): string {
@@ -66,7 +70,7 @@ function diffYearsMonths(from: string, to: string): string {
   return months > 0 ? `${years}년 ${months}개월` : `${years}년`;
 }
 
-export function Rental973InputForm({ value, onChange, transferDate, acquisitionDate, assetContractDate, acquisitionCause }: Props) {
+export function Rental973InputForm({ value, onChange, transferDate, acquisitionDate, assetContractDate, acquisitionCause, isRightToMoveIn = false }: Props) {
   const patchCommon = (patch: Partial<RentalCommonFormFields>) => {
     onChange(patch as Partial<Rental973Form>);
   };
@@ -121,6 +125,15 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
 
   return (
     <div className="mt-2 ml-4 space-y-3">
+      {isRightToMoveIn && (
+        <ToneCard tone="amber">
+          <p className="text-xs leading-relaxed" data-testid="r973-right-to-move-in-notice">
+            조합원입주권 양도에는 <b>원조합원의 종전 주택이 자동말소(민간임대주택법 §6⑤)된 뒤 관리처분계획 인가로 입주권이 된 경우</b>에만 적용합니다
+            (서면-2023-법규재산-2731). 아래 ③에서 「양도일까지 계속 임대」를 끄고 자동말소를 선택하고, 말소일은 관리처분계획 인가일 이전이어야 합니다.
+            장기보유특별공제 특례는 관리처분계획 인가 전 양도차익에만 적용됩니다(소득세법 §95② 괄호).
+          </p>
+        </ToneCard>
+      )}
       {/* ① 등록·신분 */}
       <ToneCard tone="violet" sectionNum="①" title="등록·신분">
         <RentalResidentOnlyNotice article="§97의3" />
@@ -371,6 +384,7 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
         value={value}
         onChange={patchCommon}
         sectionOffset={3}
+        {...(isRightToMoveIn ? { stdPriceAtTransferLabel: RENTAL_973_RIGHT_STD_PRICE_D_LABEL, stdPriceAtTransferHint: RENTAL_973_RIGHT_STD_PRICE_D_HINT } : {})}
         endExtra={
           <Rental973AutoCancelToggle
             checked={value.autoCancelled973 ?? false}

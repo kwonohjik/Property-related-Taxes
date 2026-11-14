@@ -56,6 +56,9 @@ interface Props {
   vacancyExtra?: ReactNode;
   /** 종료 칸 바로 아래 — 「양도 전에 임대 종료 또는 등록 말소」일 때만 그린다(§97의3 자동말소 토글) */
   endExtra?: ReactNode;
+  /** 안분 D 칸 라벨·안내 — 조합원입주권 §97의3은 관리처분계획 인가일 기준시가(G-7 Q-6 a) */
+  stdPriceAtTransferLabel?: string;
+  stdPriceAtTransferHint?: string;
 }
 
 const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> = {
@@ -67,7 +70,7 @@ const CONTRACT_TYPE_LABELS: Record<RentHistoryFormItem["contractType"], string> 
 /** 섹션 배지 원문자 — 임대 감면 입력 폼 전체가 공유하는 표기(`Rental97MainInputForm`의 `CIRCLED`와 같은 것). */
 export const CIRCLED_SECTION_NUM = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧"] as const;
 
-export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancyGraceMonths, hasGainProration = false, fieldType = "unspecified", vacancyExtra, endExtra }: Props) {
+export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancyGraceMonths, hasGainProration = false, fieldType = "unspecified", vacancyExtra, endExtra, stdPriceAtTransferLabel, stdPriceAtTransferHint }: Props) {
   /**
    * 🔴 라디오 `name`이 전역 상수라 **자산 간에 한 그룹으로 묶였다**
    *    (2026-09-07 대장 재대조 · #25). 감면은 자산-수준(`asset.reductions`)이므로 다자산에서
@@ -425,11 +428,16 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
               onChange={(v) => onChange({ stdPriceAtAcquisition: v })}
             />
             <CurrencyInput
-              label="양도 당시 기준시가 (주택+부속토지 합계)"
+              label={stdPriceAtTransferLabel ?? "양도 당시 기준시가 (주택+부속토지 합계)"}
               data-field={`reduction.${fieldType}.stdPriceAtTransfer`}
               value={value.stdPriceAtTransfer}
               onChange={(v) => onChange({ stdPriceAtTransfer: v })}
             />
+            {stdPriceAtTransferHint && (
+              <p className="mt-1 text-micro text-muted-foreground" data-testid={`reduction-${fieldType}-std-price-d-hint`}>
+                {stdPriceAtTransferHint}
+              </p>
+            )}
           </div>
           )}
         </ToneCard>
