@@ -20,6 +20,7 @@ import { recognizedRentalSegments } from "@/lib/stores/calc-wizard-asset-rental-
 import { halfDutyRentalPeriods } from "@/lib/stores/calc-wizard-asset-rental-period";
 import { hasRentalAfterCancellation } from "@/lib/stores/calc-wizard-asset-rental-period";
 import { rentalRegisteredDateOf } from "@/lib/stores/calc-wizard-asset-rental-period";
+import { rentalSuccessionOf } from "@/lib/stores/calc-wizard-asset-rental-period";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 type RentalUnitForm = AssetForm["rentalHousingException"]["rentalUnits"][number];
@@ -55,6 +56,7 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
       : unit.terminationReason === "voluntary"
         ? "민특법 §6①11호에 따라 임대의무기간 안에 말소를 신청해 등록이 말소된 날입니다 (소령 §155㉓)."
         : "먼저 위 말소 사유를 고르세요 — 자동말소는 임대의무기간 종료일, 자진말소는 등록이 말소된 날입니다 (소령 §155㉓).";
+  const successionKind = rentalSuccessionOf(unit);
   const transferTs = transferDate ? new Date(transferDate).getTime() : NaN;
 
   return (
@@ -136,10 +138,13 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
             해석례를 찾지 못했습니다(확인 필요).
           </p>
         )}
-        {unit.isInheritedRental === true && (
+        {successionKind && (
           <p className="text-xs px-1 pt-1 text-amber-800 dark:text-amber-300" data-testid={`rental-half-duty-inherited-notice-${index}`}>
-            피상속인 임대기간을 1/2 계산에 더했습니다. 포괄양수한 임대주택은 전 임대사업자 등록일부터 센다는 해석
-            (서면-2020-법규재산-5310)을 유추한 것으로, 상속을 직접 다룬 해석은 찾지 못했습니다(확인 필요).
+            {successionKind === "assumption"
+              ? "전 임대사업자 임대기간을 1/2 계산에 더했습니다. 포괄양수한 임대주택은 전 임대사업자 등록일부터 센다는 해석(서면-2020-법규재산-5310)에 따른 것입니다."
+              : successionKind === "household_gift"
+                ? "증여자 임대기간을 1/2 계산에 더했습니다(임대기간 통산은 서면-2022-법규재산-4972). 같은 세대원 증여의 1/2 기산을 직접 다룬 해석은 찾지 못해 포괄양수 해석(서면-2020-법규재산-5310)을 유추했습니다(확인 필요)."
+                : "피상속인 임대기간을 1/2 계산에 더했습니다. 포괄양수한 임대주택은 전 임대사업자 등록일부터 센다는 해석(서면-2020-법규재산-5310)을 유추한 것으로, 상속을 직접 다룬 해석은 찾지 못했습니다(확인 필요)."}
           </p>
         )}
       </FieldCard>

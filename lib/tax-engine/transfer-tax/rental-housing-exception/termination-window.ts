@@ -8,7 +8,7 @@ import { RA_CUT } from "../../rental-article/rules";
 import { deadlineEndFrom, deadlineEndNote, type DeadlineEnd } from "../../civil-period";
 import { addMonths, addYears } from "../../utc-date";
 import { registeredDateOf } from "../../rental-article/registered-date";
-import { deriveRentalArticle, deriveRegApplicationDate } from "./derive";
+import { deriveRentalArticle, deriveRegApplicationDate, registrationBasis } from "./derive";
 import type { EligibilityContext } from "./eligibility";
 import type { RentalUnitInput, RentalArticle } from "./types";
 /** §155㉓ 「등록이 말소된 이후 … 5년 이내에 거주주택을 양도」 — 기한 연수 (I-4) */
@@ -46,7 +46,7 @@ export function firstTerminationCancellation(
     const u = rentalUnits[i];
     const cd = effectiveCancellationDate(u);
     if (!u.rentalAutoTermination || !validDate(cd)) continue;
-    const art = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, deriveRegApplicationDate(u));
+    const art = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, deriveRegApplicationDate(registrationBasis(u)));
     if (!isTerminationEligibleArticle(art)) continue;
     if (dayOf(cd) < RA_CUT.Y2020_08_18 || dayOf(cd) > dayOf(transferDate)) continue;
     if (!first || dayOf(cd) < dayOf(first.date)) first = { date: cd, unitIndex: i };
@@ -65,7 +65,7 @@ export function isRegisteredAbolishedTypeUnit(u: RentalUnitInput): boolean {
   if (u.rentalAutoTermination || !u.isApartment || u.rentalAcquisitionType !== "purchase" || u.rentalCategory !== "long_general") {
     return false;
   }
-  const app = deriveRegApplicationDate(u);
+  const app = deriveRegApplicationDate(registrationBasis(u)); // 증여 승계는 증여자 등록 기준(G-3)
   if (!app || !validDate(app) || dayOf(app) >= RA_CUT.Y2020_08_18) return false;
   return isTerminationEligibleArticle(deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, app));
 }
@@ -187,7 +187,8 @@ export function autoCancellationDateCheckNotice(i: number, u: RentalUnitInput): 
   const cd = u.registrationCancellationDate;
   if (u.terminationReason !== "auto" || !isAbolishedTypeTermination(u) || !validDate(cd)) return undefined;
   if (dayOf(cd) < ADDENDA_17482_EFFECTIVE) return undefined;
-  const reg = registeredDateOf(u.rentalRegisteredDate, u.rentalRegistrationDate) ?? undefined;
+  const basis = registrationBasis(u); // 증여 승계는 증여자 등록일부터 의무기간이 흐른다(G-3)
+  const reg = registeredDateOf(basis.rentalRegisteredDate, basis.rentalRegistrationDate) ?? undefined;
   const type = u.terminatedRegistrationType;
   if (!validDate(reg) || !type) return undefined;
   const years = AUTO_DUTY_YEARS[type];

@@ -8,7 +8,7 @@
  * |---|---|
  * | UI-1 | 구간이 있으면 ④가 엔진에 싣는 것과 같은 인정 개월(등록일 자르기·3월 이내 공실 산입)을 보여 준다 |
  * | UI-2 | 구간이 없으면 표시하지 않는다 |
- * | UI-3 | 상속 토글 ON이면 피상속인 임대기간 칸이 보이고, 입력은 `decedentRentalMonths`로 간다 |
+ * | UI-3 | 승계 「상속」이면 피상속인 임대기간 칸이 보이고, 입력은 `decedentRentalMonths`로 간다(옛 `isInheritedRental` 기록도 상속으로 읽는다) |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
@@ -20,7 +20,7 @@ afterEach(cleanup);
 
 type Unit = ReturnType<typeof makeDefaultRentalUnit>;
 
-function renderBlock(over: Partial<Unit>, set = vi.fn()) {
+function renderBlock(over: Partial<Unit>, set = vi.fn(), onChange = vi.fn()) {
   const unit: Unit = {
     ...makeDefaultRentalUnit(),
     businessRegistrationDate: "2016-01-01",
@@ -32,7 +32,7 @@ function renderBlock(over: Partial<Unit>, set = vi.fn()) {
       unit={unit}
       index={0}
       set={set}
-      onChange={vi.fn()}
+      onChange={onChange}
       transferDate="2024-01-01"
       reqYears={5}
       showAcqPrice
@@ -41,7 +41,7 @@ function renderBlock(over: Partial<Unit>, set = vi.fn()) {
       showTermination={false}
     />,
   );
-  return { unit, set };
+  return { unit, set, onChange };
 }
 
 describe("⑳ 임대주택 카드 — 인정 임대개월·상속", () => {
@@ -61,12 +61,17 @@ describe("⑳ 임대주택 카드 — 인정 임대개월·상속", () => {
     expect(screen.queryByTestId("rental-recognized-months-0")).toBeNull();
   });
 
-  it("UI-3 ★ 상속 토글 ON → 피상속인 임대기간 칸 입력이 decedentRentalMonths로 간다", () => {
-    const { set } = renderBlock({ isInheritedRental: true, decedentRentalMonths: "" });
-    const card = screen.getByTestId("rental-inherited-0");
-    expect(card.textContent).toContain("피상속인 임대기간");
-    const input = card.querySelector("input[type='text'], input:not([type])") as HTMLInputElement;
+  it("UI-3 ★ 승계 「상속」 → 피상속인 임대기간 칸 입력이 decedentRentalMonths로 간다", () => {
+    const { onChange } = renderBlock({ rentalSuccession: "inheritance", decedentRentalMonths: "" });
+    const input = screen.getByTestId("rental-predecessor-months-0") as HTMLInputElement;
+    expect(screen.getByTestId("rental-succession-inheritance-0")).toHaveProperty("checked", true);
     fireEvent.change(input, { target: { value: "30" } });
-    expect(set).toHaveBeenCalledWith("decedentRentalMonths", "30");
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ decedentRentalMonths: "30" }));
+  });
+
+  it("UI-3b 옛 기록(rentalSuccession 없음 · isInheritedRental true)도 상속으로 보인다", () => {
+    renderBlock({ rentalSuccession: undefined, isInheritedRental: true, decedentRentalMonths: "30" });
+    expect(screen.getByTestId("rental-succession-inheritance-0")).toHaveProperty("checked", true);
+    expect(screen.getByTestId("rental-predecessor-months-0")).toHaveProperty("value", "30");
   });
 });

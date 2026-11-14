@@ -83,6 +83,7 @@
 - 범위 밖(Q-3): 다주택 중과 `rental-cancellation-deeming.ts:43`의 2020.8.18. 하한.
 
 ### PR-2 G-3·G-5 — 임대사업 승계 입력 (14지점)
+> **구현(2026-11-14)**: 엔진 `derive.ts` `registrationBasis`(목·㉓ 창·다주택 전환 행) · `succession.ts`(echo·고지) · `RentalUnitVerdict.succession`·판정 메뉴 `unitSuccessions` · D10 수증자 own 유지 · 클라이언트 `lib/calc/rental-succession.ts`·`lib/calc/rental-unit-reg-date.ts`(임대 구분 자가 치유 — 기존 동작을 실효 등록 기준으로) · 화면 `RentalSuccessionBlock`·`RentalSuccessionEchoNote`. anchor 49 + 컴포넌트 9 · 뮤테이션 2/2 · ⑧↔⑫ 40조합 격자 모순 0. 다주택 명부는 Q-8대로 옛 상속 토글 유지.
 - 화면 ⑤: 상속 토글(`RentalUnitPeriodPriceBlock.tsx:94-117`)을 신규 `RentalSuccessionBlock`(≈90줄, `RadioCardGroup` tone violet)으로 교체.
   - 「승계 없음」 / 「상속받아 계속 임대」(현행 그대로: 피상속인 개월) / 「같은 세대원에게 증여받아 계속 임대(포괄승계)」 / 「그 밖의 포괄양수(임대사업자 지위 승계)」
   - 증여: 「증여자 임대기간(개월)」 + 증여자 「세무서 사업자등록일」·「지자체 임대사업자 등록 신청일」·「등록일」(Q-4)

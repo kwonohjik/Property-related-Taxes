@@ -43,6 +43,14 @@ export function toRentalHousingExceptionEngineInput(
       hasMinimum5UnitsInCity: u.hasMinimum5UnitsInCity,
       firstSaleContractDate: toOptionalDate(u.firstSaleContractDate),
       rentalMonths: u.rentalMonths,
+      succession: u.succession, // G-3·G-5 승계 echo·고지(개월은 rentalMonths에 이미 합산)
+      donorRegistration: u.donorRegistration
+        ? {
+            businessRegistrationDate: toDate(u.donorRegistration.businessRegistrationDate, "donorRegistration.businessRegistrationDate"),
+            rentalRegistrationDate: toDate(u.donorRegistration.rentalRegistrationDate, "donorRegistration.rentalRegistrationDate"),
+            rentalRegisteredDate: toOptionalDate(u.donorRegistration.rentalRegisteredDate),
+          }
+        : undefined, // G-3 증여자 등록 기준
       halfDutyRentalMonths: u.halfDutyRentalMonths, // V-5 §155㉓1호 1/2(지자체 등록일 기산)
       rentalAutoTermination: u.rentalAutoTermination,
       registrationCancellationDate: toOptionalDate(u.registrationCancellationDate), // I-4 §155㉓

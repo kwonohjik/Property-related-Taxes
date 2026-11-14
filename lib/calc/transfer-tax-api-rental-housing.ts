@@ -11,6 +11,8 @@ import { parseDecimal } from "@/lib/calc/number-parse";
 import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
 import { deriveRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
 import { deriveHalfDutyRentalMonths } from "@/lib/stores/calc-wizard-asset-rental-period";
+import { rentalSuccessionOf } from "@/lib/stores/calc-wizard-asset-rental-period";
+import { rentalUnitDonorRegistrationInScope } from "./rental-succession";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isRentalHousingExceptionApplicable } from "./rental-housing-exception-scope";
 import { aptDeadlineExtensionPayload, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
@@ -20,6 +22,8 @@ import { rentalUnitLowPriceInScope } from "./rental-unit-low-price-scope";
 import { rentalUnitApartmentInScope } from "./rental-unit-apartment-scope";
 
 // ─── ④ 장기임대주택 거주주택 비과세 특례 API 변환 헬퍼 (소령 §155⑳) ───
+
+const toIsoZ = (d: string) => (d.includes("T") ? d : `${d}T00:00:00.000Z`);
 
 /**
  * AssetForm.rentalHousingException → API payload 변환.
@@ -90,6 +94,20 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
         ? (u.firstSaleContractDate.includes('T') ? u.firstSaleContractDate : `${u.firstSaleContractDate}T00:00:00.000Z`)
         : undefined,
       rentalMonths: deriveRentalMonths(u),
+      // G-3·G-5 임대사업 승계 — 개월은 위 `rentalMonths`에 이미 합산돼 있다(echo·고지용 사실). 승계 종류가 있을 때만 보낸다(⑤·⑧과 같은 `rentalSuccessionOf`).
+      succession: rentalSuccessionOf(u)
+        ? { kind: rentalSuccessionOf(u), predecessorMonths: parseFloat(u.decedentRentalMonths ?? "") || 0 }
+        : undefined,
+      // 같은 세대원 증여(포괄승계)일 때만 증여자 등록 3필드 — ⑤ 노출·⑧ 필수와 같은 술어(`rentalUnitDonorRegistrationInScope`). 남은 값은 보내지 않는다.
+      // 증여자 사업자등록일·신청일이 비면 보내지 않는다(⑧이 먼저 막는다 · 본인 날짜로 대신하지 않는다). 등록일이 비면 엔진이 신청일로 본다.
+      donorRegistration:
+        rentalUnitDonorRegistrationInScope(u) && u.donorBusinessRegistrationDate && u.donorRentalRegistrationDate
+          ? {
+              businessRegistrationDate: toIsoZ(u.donorBusinessRegistrationDate),
+              rentalRegistrationDate: toIsoZ(u.donorRentalRegistrationDate),
+              rentalRegisteredDate: u.donorRentalRegisteredDate ? toIsoZ(u.donorRentalRegisteredDate) : undefined,
+            }
+          : undefined,
       // V-5 — ㉓1호 1/2은 민특법 임대의무기간 기준(지자체 등록일부터). 말소 토글 ON일 때만(⑤가 그때만 노출 — 3중 패턴).
       halfDutyRentalMonths: rentalUnitTerminationInScope(u) ? deriveHalfDutyRentalMonths(u) : undefined,
       // S16-3 — 말소 표시는 ㉓ 대상 목(가·다·라·마)일 때만 효력이 있다. 목이 바뀌어 토글이 화면에서 사라진 stale 값은 보내지 않는다.

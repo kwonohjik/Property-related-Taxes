@@ -53,11 +53,24 @@ describe("V-5 말소 블록 1/2 판정 개월", () => {
     expect(screen.queryByTestId("rental-half-duty-inherited-notice-0")).toBeNull();
   });
 
-  it("NT-3 ★ 상속 토글 ON이면 5310 유추 확인 필요 고지", () => {
+  it("NT-3 ★ 상속 승계(옛 isInheritedRental 기록 포함)면 5310 유추 확인 필요 고지", () => {
     renderWith({ rentalPeriods: [{ start: "2018-01-01", end: "2022-03-01" }], isInheritedRental: true, decedentRentalMonths: "12" });
     const t = screen.getByTestId("rental-half-duty-inherited-notice-0").textContent ?? "";
     expect(t).toContain("서면-2020-법규재산-5310");
     expect(t).toContain("확인 필요");
+  });
+
+  it("NT-4 증여 승계는 4972 통산 + 1/2 직접 해석 없음(확인 필요), 포괄양수는 5310 정면", () => {
+    renderWith({ rentalPeriods: [{ start: "2018-01-01", end: "2022-03-01" }], rentalSuccession: "household_gift", decedentRentalMonths: "12" });
+    const gift = screen.getByTestId("rental-half-duty-inherited-notice-0").textContent ?? "";
+    expect(gift).toContain("증여자 임대기간");
+    expect(gift).toContain("서면-2022-법규재산-4972");
+    expect(gift).toContain("확인 필요");
+    cleanup();
+    renderWith({ rentalPeriods: [{ start: "2018-01-01", end: "2022-03-01" }], rentalSuccession: "assumption", decedentRentalMonths: "12" });
+    const assumed = screen.getByTestId("rental-half-duty-inherited-notice-0").textContent ?? "";
+    expect(assumed).toContain("서면-2020-법규재산-5310");
+    expect(assumed).not.toContain("확인 필요");
   });
 });
 

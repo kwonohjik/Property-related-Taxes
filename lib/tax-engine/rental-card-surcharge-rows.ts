@@ -23,6 +23,7 @@
  */
 import type { HouseInfo, RentalHousingType } from "./types/multi-house-surcharge.types";
 import type { RentalUnitInput } from "./transfer-tax/rental-housing-exception/types";
+import { registrationBasis } from "./transfer-tax/rental-housing-exception/derive";
 import {
   classifyRegionCriteriaByCode,
   isLongTermRentalDutyPeriodPending,
@@ -73,6 +74,8 @@ function candidateRentalTypes(unit: RentalUnitInput): RentalHousingType[] {
 function rowFor(unit: RentalUnitInput, index: number, transferDate: Date, rentalType: RentalHousingType): HouseInfo {
   const capital = unit.region === "seoul-metro";
   const lowPrice = rentalUnitLowPriceFacts(unit);
+  // 증여 승계(G-3)는 ⑳ 판정과 같은 증여자 등록 3필드 — 임대기간(`rentalPeriodYears`)에 증여자 개월이 이미 합산돼 있어 날짜도 맞춘다.
+  const basis = registrationBasis(unit);
   return {
     id: `임대주택 ${index + 1}호`,
     acquisitionDate: transferDate,
@@ -89,9 +92,9 @@ function rowFor(unit: RentalUnitInput, index: number, transferDate: Date, rental
     isLongTermRental: true,
     isRegisteredRental: true,
     rentalType,
-    businessRegistrationDate: unit.businessRegistrationDate,
-    rentalRegistrationDate: unit.rentalRegistrationDate,
-    rentalRegisteredDate: unit.rentalRegisteredDate,
+    businessRegistrationDate: basis.businessRegistrationDate,
+    rentalRegistrationDate: basis.rentalRegistrationDate,
+    rentalRegisteredDate: basis.rentalRegisteredDate,
     rentalPeriodYears: unit.rentalMonths / 12,
     rentIncreaseUnder5Pct: unit.requirementsConfirmed,
     rentalStartOfficialPrice: unit.standardPriceAtRentalStart,

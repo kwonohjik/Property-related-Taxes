@@ -3,6 +3,7 @@
  * AssetForm이 extends. 800줄 정책으로 calc-wizard-asset.ts에서 분리.
  */
 import type { AptDeadlineExtensionForm } from "./calc-wizard-asset-nbl";
+import type { RentalSuccessionForm } from "./calc-wizard-asset-rental-period";
 
 export interface RentalHousingExceptionFormSlice {
   // ── 장기임대주택 보유자 거주주택 비과세 특례 (소령 §155⑳) ──
@@ -81,12 +82,27 @@ export interface RentalHousingExceptionFormSlice {
       /** 임대 구간 (interval 모드, 비연속 허용). 개월은 API 변환 시 deriveRentalMonths로 합산 */
       rentalPeriods: Array<{ start: string; end: string }>;
       /**
-       * 상속받아 계속 임대하는 주택 — 피상속인 임대기간을 합산한다(조특령 §97⑤3호, 소득세법 시행령 §167의3③ 준용).
-       * optional — 이 칸 신설 전 복원분(undefined)은 false와 같다.
+       * 상속받아 계속 임대하는 주택 — **옛 칸**(`rentalSuccession` 신설 전 기록·AI 추출). 읽는 곳은 `rentalSuccessionOf`뿐이고,
+       * 쓰는 쪽은 `withRentalSuccession`이 함께 정리한다. optional — 신설 전 복원분(undefined)은 false와 같다.
        */
       isInheritedRental?: boolean;
-      /** 피상속인 임대개월(문자열) — `isInheritedRental`일 때만 `deriveRentalMonths`가 더한다. 상속인 등록일로 자르지 않는다. */
+      /**
+       * 임대사업 승계 종류(G-3·G-5) — "" 승계 없음 · inheritance 상속(조특령 §97⑤3호 준용) · household_gift 같은 세대원 증여(포괄승계 —
+       * 재산세제과-1591) · assumption 그 밖의 포괄양수(5310). 읽기는 `rentalSuccessionOf`(옛 `isInheritedRental` 흡수).
+       * optional — 신설 전 복원분(undefined)은 ③ migrate가 채운다.
+       */
+      rentalSuccession?: RentalSuccessionForm;
+      /**
+       * 전 임대사업자 임대개월(문자열) — 승계 종류가 있으면 `deriveRentalMonths`가 더한다(상속=피상속인 · 증여=증여자 · 포괄양수=전 사업자).
+       * 본인 등록일로 자르지 않는다.
+       */
       decedentRentalMonths?: string;
+      /** 증여 승계 — 증여자 세무서 사업자등록일(YYYY-MM-DD). 증여일 때만 ④가 보내고 ⑧이 요구한다. */
+      donorBusinessRegistrationDate?: string;
+      /** 증여 승계 — 증여자 지자체 임대사업자등록 **신청일** — 목 도출·아파트 제한·기한 판정의 기준(수증자 신청일 대신). */
+      donorRentalRegistrationDate?: string;
+      /** 증여 승계 — 증여자 지자체 임대사업자 **등록일**(비면 엔진이 신청일로 본다 — `registeredDateOf`). */
+      donorRentalRegisteredDate?: string;
       /** 임대주택 지번 주소 — 임대개시일 기준시가 Vworld 조회용(UI 상태·엔진 미전송) */
       rentalAddressJibun: string;
       /** 공동주택 동(예: "324") — 임대개시일 기준시가 세대 식별용(UI 상태·엔진 미전송) */

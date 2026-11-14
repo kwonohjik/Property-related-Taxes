@@ -19,6 +19,23 @@ const CUT_2020_07_11 = new Date("2020-07-11").getTime();
 // ============================================================
 
 /**
+ * 목·의무기간·기준시가 상한·등록 기한·㉓ 대상 목·최초 말소일 판정에 쓰는 **등록 3필드의 단일 소스** (G-3 · 계획서 PR-2).
+ * 같은 세대원 증여(포괄승계)면 증여자 등록(`donorRegistration`), 아니면 본인 등록. 「양도일 현재」 등록(D10 · §155⑳2호)은
+ * 수증자 본인이 양도일에 등록·임대 중이어야 하므로 이 함수를 거치지 않고 본인 값을 그대로 본다.
+ * 포괄양수(타 세대)는 증여자 값이 없어 본인 등록을 쓴다 — 목 판정 근거는 해석례 미확보(결과 고지 「확인 필요」).
+ */
+export function registrationBasis(
+  unit: Pick<RentalUnitInput, "businessRegistrationDate" | "rentalRegistrationDate" | "rentalRegisteredDate" | "donorRegistration">,
+): Pick<RentalUnitInput, "businessRegistrationDate" | "rentalRegistrationDate" | "rentalRegisteredDate"> {
+  const b = unit.donorRegistration ?? unit;
+  return {
+    businessRegistrationDate: b.businessRegistrationDate,
+    rentalRegistrationDate: b.rentalRegistrationDate,
+    rentalRegisteredDate: b.rentalRegisteredDate,
+  };
+}
+
+/**
  * 등록기준일 = max(세무서 §168, 지자체 민특법§5 **등록일**) — 둘 중 늦은 날(지자체 등록일 미입력이면 신청일 — V-3).
  * 두 등록이 모두 완료된 날 = "사업자등록등" 완비일 = 임대개시 가능 시점.
  * 하나라도 미입력(Invalid Date)이면 null 반환 → 상위에서 BOTH_REG_REQUIRED로 배제.
