@@ -6,6 +6,8 @@
 import { TRANSFER_RENTAL_HOUSING } from "../../legal-codes/transfer";
 import { RA_CUT } from "../../rental-article/rules";
 import { deadlineEndFrom, deadlineEndNote, type DeadlineEnd } from "../../civil-period";
+import { addMonths, addYears } from "../../utc-date";
+import { registeredDateOf } from "../../rental-article/registered-date";
 import { deriveRentalArticle, deriveRegApplicationDate } from "./derive";
 import type { EligibilityContext } from "./eligibility";
 import type { RentalUnitInput, RentalArticle } from "./types";
@@ -42,7 +44,7 @@ export function firstTerminationCancellation(
   let first: { date: Date; unitIndex: number } | null = null;
   for (let i = 0; i < rentalUnits.length; i++) {
     const u = rentalUnits[i];
-    const cd = u.registrationCancellationDate;
+    const cd = effectiveCancellationDate(u);
     if (!u.rentalAutoTermination || !validDate(cd)) continue;
     const art = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, deriveRegApplicationDate(u));
     if (!isTerminationEligibleArticle(art)) continue;
@@ -81,7 +83,7 @@ export function terminationWindowIssues(
 ): string[] {
   const n = i + 1;
   const law = TRANSFER_RENTAL_HOUSING.PIT_RD_155_23;
-  const cd = unit.registrationCancellationDate;
+  const cd = effectiveCancellationDate(unit);
   if (!validDate(cd)) {
     return [`${n}호: 등록 말소일을 입력해야 ${law}(말소 이후 5년 이내 거주주택 양도)을 판정할 수 있습니다.`];
   }
@@ -108,3 +110,93 @@ export function terminationWindowIssues(
   }
   return issues;
 }
+
+// ============================================================
+// G-8 — 자동말소일 (계획서 `docs/00-pm/rental-155-20-textbook-gaps.plan.md` PR-1)
+// ============================================================
+
+/** 2020.8.18. — 법률 제17482호 민간임대주택에 관한 특별법 시행일(부칙 제1조) */
+const ADDENDA_17482_EFFECTIVE = RA_CUT.Y2020_08_18;
+
+/** 부칙 제7조 간주 말소일(2020-08-18) — ⑤ 카드의 호별 기한 표시도 이 값을 쓴다. */
+export const ADDENDA_17482_DEEMED_CANCELLATION = new Date(ADDENDA_17482_EFFECTIVE);
+
+/** 간주 판정에 필요한 호 사실 — 엔진 입력과 ⑤ 폼 행이 같은 이름을 쓴다. */
+export type AutoCancellationFacts = {
+  terminationReason?: string;
+  terminatedRegistrationType?: string;
+  isApartment?: boolean;
+  rentalAcquisitionType?: string;
+};
+
+/**
+ * 법률 제17482호 부칙 제5조① 폐지 유형 — 종전 단기민간임대주택 또는 장기일반민간임대주택 중 아파트 민간매입임대주택.
+ * 말소 전 등록 유형(`terminatedRegistrationType`)으로 가른다. 미입력이면 판정하지 않는다(간주 없음).
+ */
+function isAbolishedTypeTermination(f: AutoCancellationFacts): boolean {
+  if (f.terminatedRegistrationType === "short_term") return true;
+  return f.terminatedRegistrationType === "long_term_general" && f.isApartment === true && f.rentalAcquisitionType === "purchase";
+}
+
+/**
+ * 부칙 제7조 간주가 걸리는가 — 자동말소(민특법 §6⑤) · 폐지 유형 · 입력 말소일(= 임대의무기간 종료일)이 2020.8.18. 전.
+ * 부칙 제7조: 「…임대의무기간이 이 법 시행일 전에 경과된 경우에는 이 법 시행일에 그 임대주택의 등록이 말소된 것으로 본다」.
+ * 자진말소(§6①11호)는 2020.8.18. 신설이라 그 전 날짜는 입력 오류로 둔다. 사유 미선택은 「모름」 — 간주하지 않는다.
+ * 엔진(`isDeemedAutoCancellation`)과 ⑤ 카드(`RentalTerminationBlock`)가 같은 술어를 쓴다.
+ */
+export function isAutoCancellationDeemable(f: AutoCancellationFacts, cancellationTs: number): boolean {
+  return (
+    f.terminationReason === "auto" &&
+    isAbolishedTypeTermination(f) &&
+    !Number.isNaN(cancellationTs) &&
+    cancellationTs < ADDENDA_17482_EFFECTIVE
+  );
+}
+
+export function isDeemedAutoCancellation(u: RentalUnitInput): boolean {
+  const cd = u.registrationCancellationDate;
+  return validDate(cd) && isAutoCancellationDeemable(u, dayOf(cd));
+}
+
+/**
+ * ㉓ 창·최초 말소일 판정에 쓰는 말소일 — 부칙 제7조 간주가 걸리면 2020-08-18, 아니면 입력 그대로.
+ * 「말소 후 취득 거주주택 불가」(재산세제과-1308) 비교도 같은 날짜를 쓴다(계획서 V-2 권고).
+ */
+export function effectiveCancellationDate(u: RentalUnitInput): Date | undefined {
+  return isDeemedAutoCancellation(u) ? ADDENDA_17482_DEEMED_CANCELLATION : u.registrationCancellationDate;
+}
+
+/** 부칙 제7조 간주를 적용했다는 고지 */
+export function deemedAutoCancellationNotice(i: number, u: RentalUnitInput): string | undefined {
+  if (!isDeemedAutoCancellation(u) || !validDate(u.registrationCancellationDate)) return undefined;
+  return (
+    `${i + 1}호: 임대의무기간이 2020.8.18. 전(${ymd(u.registrationCancellationDate)})에 끝나 법률 제17482호 민간임대주택에 관한 특별법 ` +
+    `부칙 제7조에 따라 2020.8.18.에 등록이 말소된 것으로 보고 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23}의 5년 기한을 계산했습니다(사전-2025-법규재산-0972).`
+  );
+}
+
+/** 말소 전 등록 유형별 민특법 임대의무기간(년) — 종전 단기 4년·장기일반 8년 */
+const AUTO_DUTY_YEARS = { short_term: 4, long_term_general: 8 } as const;
+
+/**
+ * Q-9 — 자동말소일 오입력(등록증 말소 처리일) 확인 필요 고지. 값은 바꾸지 않는다(자동 대체 금지).
+ * 민특법 §6⑤ 「임대의무기간이 종료한 날 등록이 말소된다」 — 입력 말소일이 「지자체 등록일 + 의무기간」보다 1개월 넘게 늦으면 고지.
+ * 임대 개시가 등록보다 늦으면 종료일도 늦어지므로 결론을 바꾸지 않고 확인만 요청한다.
+ */
+export function autoCancellationDateCheckNotice(i: number, u: RentalUnitInput): string | undefined {
+  const cd = u.registrationCancellationDate;
+  if (u.terminationReason !== "auto" || !isAbolishedTypeTermination(u) || !validDate(cd)) return undefined;
+  if (dayOf(cd) < ADDENDA_17482_EFFECTIVE) return undefined;
+  const reg = registeredDateOf(u.rentalRegisteredDate, u.rentalRegistrationDate) ?? undefined;
+  const type = u.terminatedRegistrationType;
+  if (!validDate(reg) || !type) return undefined;
+  const years = AUTO_DUTY_YEARS[type];
+  const estimatedEnd = addYears(reg, years);
+  if (dayOf(cd) <= dayOf(addMonths(estimatedEnd, 1))) return undefined;
+  return (
+    `${i + 1}호: 자동말소는 임대의무기간이 끝난 날 등록이 말소됩니다(${TRANSFER_RENTAL_HOUSING.MRHSA_6_5}). 입력한 말소일(${ymd(cd)})이 ` +
+    `지자체 등록일(${ymd(reg)})부터 임대의무기간 ${years}년이 끝나는 날(${ymd(estimatedEnd)})보다 늦습니다 — 등록증에 적힌 말소 처리일이 아니라 ` +
+    "임대의무기간 종료일을 넣었는지 확인하세요(확인 필요). 임대를 등록일보다 늦게 시작했다면 종료일도 그만큼 늦어집니다."
+  );
+}
+

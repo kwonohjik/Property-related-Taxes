@@ -68,6 +68,7 @@
 751줄(≥750 위험구간) → `eligibility.ts` 546 + `derive.ts` 147(등록기준일·목·의무기간·상한·임대 구분 활성 파생) + `termination-window.ts` 110(㉓ 기한·대상 목·최초 말소일·`isRegisteredAbolishedTypeUnit`·`terminationWindowIssues`). `firstTerminationCancellation`이 `deriveRentalArticle`을 쓰므로 파생 함수를 먼저 떼어 순환 import를 피했다. `./eligibility` 경로 재수출로 기존 import 불변. 검증: tsc 0 · 양도세·calc·lib·api·components 회귀 3,058파일 37,044건 통과.
 
 ### PR-1 G-8 — 엔진 + 말소일 칸 문구
+> **구현(2026-11-14)**: 헬퍼는 `rules.ts`가 아니라 `termination-window.ts`에 뒀다(㉓ 전용 · 중과 반영은 Q-3 제외라 공용화 불필요). 술어 `isAutoCancellationDeemable`을 엔진과 ⑤ 카드가 공유. 법령 상수 `TRANSFER_RENTAL_HOUSING.MRHSA_6_5`(민특법 §6 — 매니페스트 `PRIVATE_RENTAL.CANCELLATION` 기존 등록). anchor 11 + 컴포넌트 4 · 뮤테이션 2/2.
 - 엔진: `lib/tax-engine/rental-article/rules.ts`에 단일 소스
   `effectiveAutoCancellationDate(cancelled, reason)` — `reason === "auto" && cancelled < RA_CUT.Y2020_08_18` → 2020-08-18, 그 밖에는 입력 그대로. 법령 상수(부칙 제7조)를 `legal-codes`에 추가하고 `lib/legal-verification/manifest/additions-transfer.ts`에 등록.
 - 적용처: `firstTerminationCancellation`(최초 말소일) · `terminationWindowIssues`(창·「말소 후 취득 거주주택」 비교 — V-2) · ㉓ 대상 유형은 기존 `terminationOutsideAddendum` 술어(부칙 §5①) 그대로.
