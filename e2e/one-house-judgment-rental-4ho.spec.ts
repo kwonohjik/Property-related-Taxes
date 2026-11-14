@@ -76,6 +76,35 @@ test.describe("판정 메뉴 — 삭제 전 §154①4호 임대사업자 등록"
     await expect(page.getByText(/4호 임대사업자 등록/).first()).toBeVisible();
   });
 
+  test("[R4-4] Q-2 재결정 — 2019.12.17. 이후 매매·증여 포괄승계 + 신청자와 다른 세대 → 과세 · 사유에 확인 필요", async ({ page }) => {
+    await seedOneHouse(page);
+    await page.getByTestId("proviso-reason-rental_4ho").click();
+    await fillDateAndVerify(page, { year: "2018", month: "06", day: "01" }, {
+      scope: page.getByTestId("proviso-4ho-business-date"),
+    });
+    await fillDateAndVerify(page, { year: "2018", month: "06", day: "01" }, {
+      scope: page.getByTestId("proviso-4ho-rental-date"),
+    });
+    await page.getByTestId("proviso-4ho-regulated-one-house-yes").click();
+    await page.getByTestId("proviso-4ho-status-auto_cancelled").click();
+    // 등록 신청일 안내가 아래 토글을 가리킨다 · 토글 설명에 매매 «확인 필요»와 이혼 재산분할 제외
+    await expect(page.getByText(/2019년 12월 17일 이후 넘겨받았다면 아래 「임대사업자 지위를 넘겨받았고」 칸도 확인하세요/).first()).toBeVisible();
+    const toggle = page.getByText("2019년 12월 17일 이후 임대사업자 지위를 넘겨받았고, 양도일 현재 등록 신청자와 세대가 다릅니다");
+    await expect(page.getByText(/매매는 해석례가 없어 확인 필요\). 이혼 재산분할로 받은 지분은 적용되므로/).first()).toBeVisible();
+    await toggle.click();
+
+    const body = await judge(page);
+    const proviso = body.oneHouseExemptionProviso as { rentalRegistration4ho: Record<string, unknown> };
+    expect(proviso.rentalRegistration4ho).toMatchObject({
+      statusAtTransfer: "auto_cancelled",
+      giftSuccessionSeparatedHousehold: true,
+    });
+    await expect(page.getByTestId("one-house-verdict")).toHaveText("과세");
+    await expect(
+      page.getByText(/매매로 넘겨받은 경우를 직접 다룬 해석례는 확인하지 못했습니다 — 확인 필요/).first(),
+    ).toBeVisible();
+  });
+
   test("[R4-3] 필수 칸을 비우면 판정으로 넘어가지 않는다(⑧)", async ({ page }) => {
     await seedOneHouse(page);
     await page.getByTestId("proviso-reason-rental_4ho").click();
