@@ -127,7 +127,7 @@ export interface RentalHousingExceptionFormSlice {
        */
       terminationReason?: "" | "auto" | "voluntary";
       /**
-       * §167의3⑪ 기한 연장 사실 — 도출 목이 가·나·라·마이고 아파트일 때만 묻는다(§155㉓ 말소 경로 제외).
+       * §167의3⑪ 기한 연장 사실 — 도출 목이 가·나·라·마·구법(매입)이고 아파트일 때만 묻는다(§155㉓ 말소 경로 제외).
        * optional — 미입력·stale 복원분(undefined)은 「모름」(엔진 판정 보류). 범위: `apt-deadline-extension-scope.ts`.
        */
       aptDeadlineExtension?: AptDeadlineExtensionForm;

@@ -260,7 +260,7 @@ export function validateRentalHousingException(
         ? `${unitLabel}: 기타 요건 자기확인이 필요합니다 (등록 말소 전까지 임대료 5% 상한·등록 유지 등 — 말소 후 임대 중단 등은 묻지 않습니다).`
         : `${unitLabel}: 기타 요건 자기확인이 필요합니다 (임대료 5% 상한 — 2019.2.12. 이후 체결·갱신 계약분, 등록 유지 등).`;
     }
-    // §167의3⑪ 「연장 사유 있음」 입력 미완 — ⑤·④와 같은 범위(아파트 가·나·라·마목 · ㉓ 말소 경로 제외).
+    // §167의3⑪ 「연장 사유 있음」 입력 미완 — ⑤·④와 같은 범위(아파트 가·나·라·마목·구법 · ㉓ 말소 경로 제외).
     const extIssue = rentalUnitAptDeadlineInScope(u) ? aptDeadlineExtensionIncomplete(u.aptDeadlineExtension) : null;
     if (extIssue) return `${unitLabel}: 아파트 양도기한 연장 사유(소령 §167의3⑪) — ${extIssue}`;
     // ㉓1호 자진말소 1/2은 민특법 임대의무기간 기준이다 — 등록 유형 없이는 판정할 수 없다(OH-39).

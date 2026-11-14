@@ -88,8 +88,12 @@ export function rentalRequiredYears(article: SharedRentalArticle, regApplication
 // 이 기한까지 양도해야 §167조의3①2호 해당 목으로 인정된다(사목에 해당하면 사목 자체 양도기한 적용 — 단서).
 // ============================================================
 
-/** 가목2)·나목2)·라목8)·마목4) 게이트 대상 목. 다·바·아·자·구법·사는 대상 아님. */
-export const APT_DEADLINE_GATED_ARTICLES: readonly SharedRentalArticle[] = ["가", "나", "라", "마"];
+/**
+ * 가목2)·나목2)·라목8)·마목4) 게이트 대상 목. 다·바·아·자·사는 대상 아님.
+ * 구법(구 「임대주택법」 매입 — 건설은 다목으로 도출)도 대상이다: 민특법 부칙<제13499호> 제3조③3호·부칙<제15356호> 제5조⑤로
+ * 종전 단기민간임대주택이고, 같은 법 부칙 제3조①로 민간매입임대주택 인용에 들어가 가목이다(V-6 ⓑ).
+ */
+export const APT_DEADLINE_GATED_ARTICLES: readonly SharedRentalArticle[] = ["가", "나", "라", "마", "구법"];
 
 /** ⑪ 바닥 — 「제11항에 따른 기한은 2027년 12월 31일로 한다」. */
 export const APT_TRANSFER_DEADLINE_FLOOR = new Date("2027-12-31").getTime();

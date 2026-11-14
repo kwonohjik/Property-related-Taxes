@@ -80,7 +80,8 @@ describe("V-6 구 임대주택법 등록분 × §155㉓", () => {
     const r = run([unit({ cancelled: "2022-01-10", terminationReason: "voluntary" })], "2024-06-01");
     expect(r.cancellationWindow?.firstCancellationDate).toBe("2022-01-10");
     expect(r.cancellationWindow?.deadline).toBe("2027-01-11");
-    expect(r.notices?.some((n) => n.includes("구 임대주택법") && n.includes("확인 필요"))).toBe(true);
+    // V-6 ⓒ — 1/2 기준(5년 → 30개월)을 부칙<제13499호> 제3조③ 단서로 확정해 「확인 필요」 고지는 더 내지 않는다.
+    expect(r.notices?.some((n) => n.includes("구 임대주택법") && n.includes("확인 필요"))).toBe(false);
   });
 
   it("P-5 말소 OFF 구법(등록·임대 중)은 불변 — 성립 · 창 없음", () => {

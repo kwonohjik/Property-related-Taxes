@@ -14,6 +14,24 @@ export const TERMINATED_DUTY_YEARS: Record<NonNullable<RentalUnitInput["terminat
   long_term_general: 8,
 };
 
+/**
+ * 구 「임대주택법」 등록분(pre_2018)의 임대의무기간(년) — 민특법 부칙<제13499호> 제3조③ 단서(부칙<제15356호> 제5조⑤ 단서 같음)가
+ * 「임대의무기간 … 종전의 「임대주택법」을 적용한다」고 정해 구 임대주택법 시행령 §13①2호 5년이다(V-6 ⓒ). 1/2 = 30개월.
+ */
+export const PRE_RENTAL_ACT_DUTY_YEARS = 5;
+
+/**
+ * §155㉓1호 1/2 판정·자동말소일 확인에 쓰는 임대의무기간(년). 등록 유형 미선택이면 null(판정하지 않는다).
+ * 구 임대주택법 등록분은 고른 유형(단기 4년 — 부칙 제3조③3호 「단기임대주택」)과 무관하게 5년이다.
+ */
+export function terminationDutyYears(
+  unit: Pick<RentalUnitInput, "terminatedRegistrationType" | "rentalCategory">,
+): number | null {
+  const t = unit.terminatedRegistrationType;
+  if (!t) return null;
+  return unit.rentalCategory === "pre_2018" ? PRE_RENTAL_ACT_DUTY_YEARS : TERMINATED_DUTY_YEARS[t];
+}
+
 // ============================================================
 // 호별 미충족 메시지 빌더 (checkRentalArticle failCode → §155⑳ 한국어 메시지)
 // ============================================================
@@ -75,8 +93,15 @@ export function buildFailMessage(
       if (!t) {
         return `${n}호: 말소된 임대주택의 민간임대주택 등록 유형(단기 4년·장기일반 8년)을 선택해야 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 1호(임대의무기간 1/2 이상)를 판정할 수 있습니다.`;
       }
-      const duty = TERMINATED_DUTY_YEARS[t];
+      const duty = terminationDutyYears(unit) ?? TERMINATED_DUTY_YEARS[t];
       const halfMonths = unit.halfDutyRentalMonths ?? unit.rentalMonths;
+      if (unit.rentalCategory === "pre_2018") {
+        return (
+          `${n}호: 구 임대주택법으로 등록한 주택은 임대의무기간이 종전 임대주택법에 따라 ${duty}년입니다(${TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_DEEMED_SHORT_TERM} 단서 · ` +
+          `${TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_DUTY_PERIOD}) — 그 1/2(${duty * 6}개월) 이상 임대하지 않은 상태에서 등록이 말소되면 ` +
+          `${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23}이 적용되지 않습니다 (현재: ${halfMonths}개월, ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 1호).`
+        );
+      }
       if (unit.terminationReason === "auto") {
         return `${n}호: 자동말소된 주택도 「민간임대주택에 관한 특별법」 제43조 임대의무기간(${duty}년)의 1/2(${duty * 6}개월) 이상 임대하지 않은 상태에서 등록이 말소되면 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23}이 적용되지 않습니다 (현재: ${halfMonths}개월, ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 1호 · 서면-2024-법규재산-0692).`;
       }
@@ -91,7 +116,7 @@ export function buildFailMessage(
       );
     case "APT_TRANSFER_DEADLINE_EXCEEDED":
       return (
-        `${n}호: 해당 유형(${article}목)의 아파트는 ${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11}에 따른 양도기한` +
+        `${n}호: 해당 유형(${article === "구법" ? "구 임대주택법 매입임대 — 가목" : `${article}목`})의 아파트는 ${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11}에 따른 양도기한` +
         "(2027.12.31 — 임대의무기간 2027.1.1 이후 종료·2027.1.1 이후 조정대상지역 신규지정·정비사업 이전고시로 " +
         "각각 1년 연장될 수 있음)이 지난 후에도 양도하지 않아 장기임대주택으로 인정되지 않습니다."
       );
