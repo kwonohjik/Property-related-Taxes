@@ -123,7 +123,9 @@ export function deriveRentalArticle(
   acqType: "purchase" | "construction",
   regApplicationDate: Date | null,
 ): RentalArticle {
-  if (rentalCategory === "pre_2018") return "구법";
+  // 구 임대주택법 등록분 — 법률 제13499호 부칙 제3조①로 민특법 민간건설임대주택 인용에 포함되므로 건설은 다목(V-6 ⓐ ·
+  // 다주택 `rental-card-surcharge-rows.ts`와 같은 대응). 매입은 구법 그대로 둔다(§167의3⑪ 가목2) 적용 여부 확인 필요 — V-6 ⓑ).
+  if (rentalCategory === "pre_2018") return acqType === "construction" ? "다" : "구법";
   if (rentalCategory === "existing_business") return "나"; // 기존사업자 매입임대(취득방법 매입 고정)
   if (rentalCategory === "unsold_08_09") return "라"; // 미분양 매입임대(취득방법 매입 고정)
   if (rentalCategory === "short_6y") return acqType === "construction" ? "자" : "아";
