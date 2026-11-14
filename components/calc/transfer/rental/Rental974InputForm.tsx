@@ -129,6 +129,10 @@ export function Rental974InputForm({ value, onChange, transferDate }: Props) {
           onRegistrationDateChange={(v) => onChange({ registrationDate: v })}
           onIsTaxRegisteredChange={(v) => onChange({ isTaxRegistered: v })}
           onRentalStartDateChange={(v) => onChange({ rentalStartDate: v })}
+          // 단기→장기 전환: §97의4는 단기·장기 모두 대상(소령 §167의3①2호 가목)이라 유형을 바꿔도 처음 등록한 날부터 센다.
+          //   전환일을 넣으면 2018.3.31. 단서와 6년 요건에 잘못 걸린다(2026-11-14 실측: 단기 2016.1. → 장기 2019.1.이면 둘 다 탈락).
+          //   교재(지병근, 「주택임대사업자의 모든 것」 339쪽)가 사전-2025-법규재산-0065(2025.2.26.)를 인용 — 원문 미확인(국세청 해석 검색 API 오류).
+          registrationDateHint="단기임대주택으로 등록했다가 장기임대주택으로 바꾼 경우에는 처음(단기로) 등록한 날을 입력하세요. 유형을 바꿔도 임대기간은 처음 등록해 임대한 날부터 셉니다 (조특령 §97의4②)."
         />
         {/* 조특령 §97의4② — 사업자등록·임대사업자등록·임대 중 늦은 날부터 임대 개시 */}
         {value.isTaxRegistered && (

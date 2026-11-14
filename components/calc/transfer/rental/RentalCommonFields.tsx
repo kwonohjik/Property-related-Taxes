@@ -469,6 +469,8 @@ interface RegistrationFieldsProps {
   onRentalStartDateChange: (v: string) => void;
   /** 검증 오류 → 입력칸 이동 앵커의 조문 타입 — `reduction.${fieldType}.registrationDate`·`.rentalStartDate` */
   fieldType?: string;
+  /** 등록일 칸 아래 조문별 안내 — 등록일을 어느 날로 볼지가 조문마다 다르다(§97의4: 단기→장기 전환 시 처음 등록한 날). */
+  registrationDateHint?: ReactNode;
 }
 
 export function RegistrationFields({
@@ -479,12 +481,14 @@ export function RegistrationFields({
   onIsTaxRegisteredChange,
   onRentalStartDateChange,
   fieldType = "unspecified",
+  registrationDateHint,
 }: RegistrationFieldsProps) {
   return (
     <div className="space-y-2">
       <div>
         <label className="mb-1 block text-xs font-medium">지자체 임대사업자 등록일</label>
         <DateInput data-field={`reduction.${fieldType}.registrationDate`} value={registrationDate} onChange={onRegistrationDateChange} />
+        {registrationDateHint && <p className="mt-1 text-micro text-muted-foreground">{registrationDateHint}</p>}
       </div>
       <TaxRegistrationToggle checked={isTaxRegistered} onCheckedChange={onIsTaxRegisteredChange} />
       <div>
