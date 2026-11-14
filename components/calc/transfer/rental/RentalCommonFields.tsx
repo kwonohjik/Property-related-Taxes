@@ -88,7 +88,8 @@ export function RentalCommonFields({ value, onChange, sectionOffset = 3, vacancy
     vacancyGraceMonths === 3
       ? "조특칙 §44 — 기존 임차인 퇴거일부터 다음 임차인 입주일까지 3월 이내는 임대기간에 산입"
       : "조특령 §97의5①1호 — 기존 임차인 퇴거일부터 다음 임차인 주민등록 이전일까지 6개월 이내는 계속 임대 간주. " +
-        "6개월을 넘는 공실이 있으면 계속 임대가 끊기며, 끊기지 않은 구간 중 가장 긴 구간이 10년 이상이어야 합니다.";
+        "임대개시 후 10년을 채우기 전에 6개월을 넘는 공실이 있으면 계속 임대가 끊겨 감면을 받을 수 없습니다(끊긴 뒤 다시 임대한 기간은 세지 않음). " +
+        "10년을 채운 뒤의 공실은 상관없습니다.";
   // ── 임대료 계약 이력 ──
   function addRentHistory() {
     const next: RentHistoryFormItem = {

@@ -95,7 +95,7 @@ describe("상속개시일 ~ 상속인 임대개시 간격 = 공실 (Q-D)", () =>
   it("H-4 간격 정확히 6개월(2017-06-01 → 2017-12-01) → 계속 · 적격", () => {
     expect(evaluateRental975(late("2017-12-01")).isEligible).toBe(true);
   });
-  it("H-4 간격 6개월 초과(→ 2017-12-02) → 끊김 · 가장 긴 구간 8년 · 부적격", () => {
+  it("H-4 간격 6개월 초과(→ 2017-12-02) → 끊김 · 상속인 단독 첫 구간 8년 · 부적격 (Q-2 a)", () => {
     const r = evaluateRental975(late("2017-12-02"));
     expect(codes(r)).toEqual(["RENTAL_PERIOD_SHORT"]);
     expect(years(r)).toContain("계속 임대기간 8년");
@@ -141,12 +141,12 @@ describe("상속인 기준 그대로인 요건", () => {
 });
 
 describe("공실·임대료 — 피상속인 분에도 적용 (Q-D·Q-E)", () => {
-  it("H-7 피상속인 분 공실 5개월 → 계속 적격 · 7개월 → 끊겨 가장 긴 구간 9년 부적격", () => {
+  it("H-7 피상속인 분 공실 5개월 → 계속 적격 · 7개월 → 끊겨 부적격(합산 첫 구간 0년 < 상속인 단독 8년 → 8년, Q-2 a)", () => {
     const vac = (end: string) => [{ startDate: D("2016-01-01"), endDate: D(end) }];
     expect(evaluateRental975(input({ inheritance975: inh(), vacancyPeriods: vac("2016-06-01") })).isEligible).toBe(true);
     const r = evaluateRental975(input({ inheritance975: inh(), vacancyPeriods: vac("2016-08-01") }));
     expect(codes(r)).toEqual(["RENTAL_PERIOD_SHORT"]);
-    expect(years(r)).toContain("계속 임대기간 9년");
+    expect(years(r)).toContain("계속 임대기간 8년");
   });
   it("🔴 피상속인 분 계약의 5% 초과 증액 → 합산하면 RENT_INCREASE_VIOLATED · 합산 없으면 세지 않는다", () => {
     const rentHistory = [jeonse("2015-03-01", 100_000_000), jeonse("2016-03-02", 110_000_000)];

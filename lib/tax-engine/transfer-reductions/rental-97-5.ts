@@ -36,8 +36,7 @@ import {
   DEFAULT_JEONSE_CONVERSION_RATE,
 } from "./rental-97-shared-helpers";
 import type { Rental97EvaluationInput, Rental97IneligibleReason, Rental97Result } from "./types";
-import { evaluateContinuousRental975 } from "./rental-97-5-period";
-import { inheritanceMergeSpan975 } from "./rental-97-5-period";
+import { evaluateRental975Continuity } from "./rental-97-5-period";
 
 const ymd = (d: Date) =>
   `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
@@ -105,9 +104,30 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
   }
   /** 합산에 쓸 상속 입력 — 날짜가 어긋나면 합산하지 않는다(위 사유로 이미 부적격) */
   const mergeInh = inh && !inhInvalid ? inh : undefined;
+
+  /**
+   * ①2호 계속 임대 판정을 먼저 한다 — 3) 임대료 증액 판정의 기산일이 「합산했는지」에 달려 있다.
+   * 합산 판정과 상속인 단독 판정 중 첫 구간이 긴 쪽을 쓴다(Q-2 a · `evaluateRental975Continuity` ·
+   * `rental-97-5-vacancy-break.plan.md`). 상속인 단독이 이기면 합산하지 않은 것과 같다.
+   * 종점을 정할 수 없으면(종료일 미입력·범위 밖 — 4)에서 부적격) 판정 없이 입력대로 합산한다.
+   */
+  const ownStart = input.rentalStartDate ? rental97EffectiveStart(input) : undefined;
+  const periodEndCheck = ownStart ? periodEnd975(input, ownStart) : undefined;
+  const continuity =
+    ownStart && periodEndCheck?.end
+      ? evaluateRental975Continuity({
+          ownStart,
+          end: periodEndCheck.end,
+          vacancyPeriods: input.vacancyPeriods ?? [],
+          deemedRentalPeriods: input.deemedRentalPeriods ?? [],
+          inheritance: mergeInh,
+        })
+      : undefined;
+  /** 실제로 합산한 상속 입력 */
+  const usedInh = continuity && !continuity.merged ? undefined : mergeInh;
   /** 피상속인 의제 임대개시일 — 임대개시일·장기일반·공공지원 등록등일 중 늦은 날(령 §97의5③ 후단과 같은 규칙) */
-  const decedentStart = mergeInh
-    ? new Date(Math.max(mergeInh.decedentRentalStartDate.getTime(), mergeInh.decedentRegistrationDate.getTime()))
+  const decedentStart = usedInh
+    ? new Date(Math.max(usedInh.decedentRentalStartDate.getTime(), usedInh.decedentRegistrationDate.getTime()))
     : undefined;
 
   /**
@@ -238,65 +258,47 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
      * ⇒ 등록 이전 임대기간은 산입하지 않는다.
      *
      * 리뷰 9번 — 「소득세법」 §168 **사업자등록**도 같은 문장의 요건이다. 세무서 사업자등록이 늦으면
-     * 그날부터 개시한다(종전에는 예/아니오만 받아 기산일에 반영하지 못했다).
-     */
-    const effectiveStart = rental97EffectiveStart(input) as Date; // rentalStartDate 확인됨
-
-    /**
-     * 종점 — 법 §97의5①2호 「10년 이상 계속하여 … 임대한 **후 양도**할 것」.
+     * 그날부터 개시한다(종전에는 예/아니오만 받아 기산일에 반영하지 못했다). 기산일은 위 `ownStart`다.
+     *
+     * 종점 — 법 §97의5①2호 「10년 이상 계속하여 … 임대한 **후 양도**할 것」 (`periodEnd975`).
      * 양도 전에 임대를 끝냈으면(`rentalContinuesToTransfer === false`) 종점은 **임대 종료일**이다.
      * 🔴 종전에는 항상 양도일이었다 — 조기 종료 선언이 안분 비율(령 §97의5② B)만 바꾸고
      *    10년 판정은 그대로 통과시켰다. 미입력은 양도일로 대체하지 않는다(자동 fallback 금지).
      * 등록이 말소(자진·자동)됐으면 말소일도 같은 칸으로 받는다 — 령 ① 「그 등록한 기간 동안」이므로 말소 뒤
      * 계속 임대한 기간은 임대기간이 아니다(`rental-97-5-deregistration-end.plan.md` D-1).
      */
-    const rentalEnded = input.rentalContinuesToTransfer === false;
-    let periodEnd: Date | undefined = input.transferDate;
-    if (rentalEnded) {
-      periodEnd = undefined;
-      if (!input.rentalEndDate) {
-        reasons.push({
-          code: "MISSING_RENTAL_END_DATE",
-          message: "양도 전에 임대를 종료했거나 등록이 말소된 경우 임대 종료일(등록 말소일 중 먼저 온 날)을 입력해야 합니다 (§97의5①2호 — 10년 계속 임대 판정의 종점 · 조특령 §97의5① 「그 등록한 기간 동안」).",
-          legalBasis,
-        });
-      } else if (
-        input.rentalEndDate.getTime() > input.transferDate.getTime() ||
-        input.rentalEndDate.getTime() < effectiveStart.getTime()
-      ) {
-        reasons.push({
-          code: "INVALID_RENTAL_END_DATE",
-          message: "임대 종료일은 임대개시일(등록일이 늦으면 등록일)과 양도일 사이여야 합니다 — 등록 말소일을 넣은 경우도 같습니다 (§97의5①2호).",
-          legalBasis,
-        });
-      } else {
-        periodEnd = input.rentalEndDate;
-      }
+    if (periodEndCheck?.issue === "missing") {
+      reasons.push({
+        code: "MISSING_RENTAL_END_DATE",
+        message: "양도 전에 임대를 종료했거나 등록이 말소된 경우 임대 종료일(등록 말소일 중 먼저 온 날)을 입력해야 합니다 (§97의5①2호 — 10년 계속 임대 판정의 종점 · 조특령 §97의5① 「그 등록한 기간 동안」).",
+        legalBasis,
+      });
+    } else if (periodEndCheck?.issue === "invalid") {
+      reasons.push({
+        code: "INVALID_RENTAL_END_DATE",
+        message: "임대 종료일은 임대개시일(등록일이 늦으면 등록일)과 양도일 사이여야 합니다 — 등록 말소일을 넣은 경우도 같습니다 (§97의5①2호).",
+        legalBasis,
+      });
     }
 
-    if (periodEnd) {
+    if (continuity && periodEndCheck?.end) {
       // 상속 합산(V-13) — 피상속인 분을 앞에 붙여 한 구간으로 「계속」을 본다(Q-A·Q-D · `inheritanceMergeSpan975`).
-      const span = inheritanceMergeSpan975(effectiveStart, mergeInh);
-      // 리뷰 2·5번 — 6개월 초과 공실은 계속성을 끊고(가장 긴 연속 구간으로 판정), 수용·정비사업 간주기간은 계속 임대로 본다.
-      const cont = evaluateContinuousRental975({
-        start: span.start,
-        end: periodEnd,
-        vacancyPeriods: [...(input.vacancyPeriods ?? []), ...span.gapVacancies],
-        deemedRentalPeriods: input.deemedRentalPeriods ?? [],
-      });
-      if (mergeInh && span.decedentStart) {
+      // 6개월 초과 공실은 계속성을 끊고 기산일부터 첫 구간만 센다(Q-1 a), 수용·정비사업 간주기간은 계속 임대로 본다.
+      const span = continuity.span;
+      if (usedInh && span.decedentStart) {
         rentalPeriod975 = {
-          decedent: { start: ymd(span.decedentStart), end: ymd(mergeInh.inheritanceDate) },
-          heir: { start: ymd(span.heirStart), end: ymd(periodEnd) },
+          decedent: { start: ymd(span.decedentStart), end: ymd(usedInh.inheritanceDate) },
+          heir: { start: ymd(span.heirStart), end: ymd(periodEndCheck.end) },
         };
       }
-      eligibleRentalYears = cont.years;
+      eligibleRentalYears = continuity.years;
       if (eligibleRentalYears < RENTAL_97_5_MANDATORY_YEARS) {
+        const counted = continuity.countedSegment;
         const restartNote =
-          cont.breaks.length > 0 && cont.longestSegment
-            ? ` 6개월을 넘는 공실(${cont.breaks.map((b) => `${ymd(b.start)}~${ymd(b.end)}`).join(", ")})로 계속 임대가 ` +
-              `끊겨, 가장 긴 계속 임대 구간(${ymd(cont.longestSegment.start)}~${ymd(cont.longestSegment.end)})으로 ` +
-              `판정했습니다 (조특령 §97의5①1호 — 6개월 이내 공실만 계속 임대로 봄).`
+          continuity.breaks.length > 0
+            ? ` 10년을 채우기 전에 6개월을 넘는 공실(${continuity.breaks.map((b) => `${ymd(b.start)}~${ymd(b.end)}`).join(", ")})이 ` +
+              `있어 계속 임대가 끊겼습니다 — 기산일부터 첫 공실 전까지(${counted ? `${ymd(counted.start)}~${ymd(counted.end)}` : "0일"})만 셉니다. ` +
+              `끊긴 뒤 다시 임대한 기간은 「등록 후 … 계속하여」 임대한 기간이 아닙니다 (§97의5①2호 · 조특령 §97의5①1호 — 6개월 이내 공실만 계속 임대로 봄).`
             : "";
         const mergeNote = rentalPeriod975
           ? ` 피상속인 임대기간(${rentalPeriod975.decedent.start}~${rentalPeriod975.decedent.end})을 합산했습니다 (${RENTAL_97_5_PERIOD.PERIOD_CALC} → ${RENTAL_97_5_PERIOD.INHERITANCE_MERGE}).`
@@ -386,6 +388,25 @@ export function evaluateRental975(input: Rental97EvaluationInput): Rental97Resul
     ...(rentalPeriod975 ? { rentalPeriod975 } : {}),
     ...(section90 ? { section90 } : {}),
   };
+}
+
+/**
+ * ①2호 판정 종점 — 계속 임대면 양도일, 양도 전 임대 종료(말소 포함)면 임대 종료일.
+ * 종료일이 없거나 [기산일, 양도일] 밖이면 종점을 정하지 않는다 — 사유는 호출부가 붙인다(자동 fallback 금지).
+ */
+function periodEnd975(
+  input: Rental97EvaluationInput,
+  effectiveStart: Date,
+): { end?: Date; issue?: "missing" | "invalid" } {
+  if (input.rentalContinuesToTransfer !== false) return { end: input.transferDate };
+  if (!input.rentalEndDate) return { issue: "missing" };
+  if (
+    input.rentalEndDate.getTime() > input.transferDate.getTime() ||
+    input.rentalEndDate.getTime() < effectiveStart.getTime()
+  ) {
+    return { issue: "invalid" };
+  }
+  return { end: input.rentalEndDate };
 }
 
 /**

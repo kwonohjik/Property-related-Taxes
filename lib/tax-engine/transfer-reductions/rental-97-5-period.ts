@@ -11,13 +11,15 @@
  *
  * ## 공실 — 「계속」이 끊긴다 (리뷰 2번, 2026-11-01)
  * - 국세청 서면-2020-법규재산-4965(2022.5.31): 공실이 여러 번이면 **각** 공실이 6개월 이내인지 본다(합산 아님).
- * - 6개월을 **초과**한 공실의 처리는 해석례를 찾지 못했다. 다음 가정으로 구현한다:
- *   같은 시행령이 §97의3②에는 「**통산**하여 10년」을, §97의5①에는 「**계속하여** 10년」을 쓴다. 6개월 이내만
- *   계속 임대로 「본다」고 정했으므로, 그것을 넘은 공실은 계속성을 끊는다.
- *   ⇒ 초과 공실로 나뉜 **연속 구간 중 가장 긴 구간**이 10년 이상이면 충족한다. 법 §97의5①2호는 「10년 이상
- *   계속하여 … 임대한 **후** 양도」이므로 10년 연속 임대를 마친 뒤의 공실(양도 직전 공실 포함)은 요건을 깨지 않는다.
- *   (리뷰 게이트 C-3 — 「마지막 단절 이후만 센다」는 모델은 선행 10년 구간을 버려 적격을 부적격으로 뒤집었다.)
- *   종전 구현(`calculateEffectiveRentalPeriod`)은 초과 공실 구간만 빼고 나머지를 합산했다 — 「통산」 모델이다.
+ * - 6개월을 **초과**한 공실 — **기산일부터 첫 구간**으로 판정한다(Q-1 a · 사용자 결정 2026-11-14,
+ *   `docs/01-plan/features/rental-97-5-vacancy-break.plan.md`). 법 §97의5①2호는 「**등록 후** 10년 이상 **계속하여**」이고
+ *   6개월 이내만 계속 임대로 「본다」고 정했으므로, 그것을 넘은 공실에서 「등록 후부터의 계속」이 끊긴다.
+ *   ⇒ 기산일부터 첫 초과 공실이 **시작되기 전까지**가 10년 이상이어야 한다. 끊긴 뒤 다시 10년을 임대해도 충족하지 않는다
+ *   (교재 384·392·393쪽 「공실기간이 6개월을 초과한 경우에는 … 적용받을 수 없」다).
+ *   10년을 채운 **뒤**의 공실(양도 직전 공실 포함)은 요건을 깨지 않는다 — 「10년 이상 계속하여 … 임대한 **후** 양도」
+ *   (교재 389쪽 · 서면-2017-법령해석재산-1253).
+ *   직접 해석례는 확보하지 못했다(계획서 V-1). 종전(2026-11-01 리뷰 게이트 C-3)에는 초과 공실로 나뉜 구간 중
+ *   **가장 긴 구간**으로 판정했다 — 1년 공실 뒤 10년 6개월 임대가 적격이었다.
  * - 간주기간(아래)이 한 공실의 가운데를 덮으면 남은 앞뒤 조각을 **각각** 6개월로 판정한다 — 간주기간은
  *   「계속하여 임대한 것으로 본다」이므로 그 앞뒤 조각은 서로 다른 공백이 된다(가정, 해석례 미확인).
  *
@@ -79,10 +81,10 @@ function subtractWindows(span: Span, windows: Span[]): Span[] {
 }
 
 export interface ContinuousRental975Result {
-  /** 가장 긴 계속 임대 구간의 연수 (만 년) */
+  /** 기산일부터 첫 단절까지 계속 임대한 연수 (만 년) — 10년 판정에 쓰는 값 */
   years: number;
-  /** 그 구간 — 단절이 없으면 [start, end] */
-  longestSegment?: Span;
+  /** 그 구간 — [start, 첫 6개월 초과 공실 시작] · 단절이 없으면 [start, end] */
+  countedSegment?: Span;
   /** 계속성을 끊은 6개월 초과 공실 조각 (시간순) */
   breaks: Span[];
 }
@@ -118,20 +120,11 @@ export function evaluateContinuousRental975(args: {
   }
   breaks.sort((a, b) => a.start.getTime() - b.start.getTime());
 
-  // 단절 공실 사이의 연속 구간 — [start, 첫 공실 시작], [공실 끝, 다음 공실 시작], …, [마지막 공실 끝, end]
-  let best: { span: Span; years: number } | undefined;
-  let cursor = start;
-  const segments: Span[] = [];
-  for (const b of breaks) {
-    if (b.start.getTime() > cursor.getTime()) segments.push({ start: cursor, end: b.start });
-    if (b.end.getTime() > cursor.getTime()) cursor = b.end;
-  }
-  if (end.getTime() > cursor.getTime()) segments.push({ start: cursor, end });
-  for (const span of segments) {
-    const years = differenceInYears(span.end, span.start);
-    if (!best || years > best.years) best = { span, years };
-  }
-  return { years: best?.years ?? 0, ...(best ? { longestSegment: best.span } : {}), breaks };
+  // 기산일부터 첫 단절 시작까지만 센다(Q-1 a) — 단절 뒤에 다시 시작한 구간은 「등록 후부터의 계속」이 아니다.
+  const countedEnd = breaks.length > 0 ? breaks[0].start : end;
+  if (countedEnd.getTime() <= start.getTime()) return { years: 0, breaks };
+  const countedSegment = { start, end: countedEnd };
+  return { years: differenceInYears(countedEnd, start), countedSegment, breaks };
 }
 
 /**
@@ -152,4 +145,42 @@ export function inheritanceMergeSpan975(
   const gapVacancies =
     heirStart.getTime() > inh.inheritanceDate.getTime() ? [{ startDate: inh.inheritanceDate, endDate: heirStart }] : [];
   return { start: decedentStart, heirStart, decedentStart, gapVacancies };
+}
+
+/**
+ * §97의5 계속 임대 판정 — 상속 합산 포함 (엔진 `rental-97-5.ts`와 화면 미리보기의 단일 소스).
+ *
+ * 합산하면 기산일이 피상속인 개시일로 앞당겨진다. 상속 간격이나 피상속인 구간에 6개월 초과 공실이 있으면
+ * 첫 구간이 짧아져 합산을 켜는 쪽이 끄는 쪽보다 불리해진다(계획서 H2). 그래서 합산 판정과 **상속인 단독 판정**
+ * (합산하지 않은 것과 같다) 중 첫 구간이 긴 쪽을 쓴다 — 같으면 합산(Q-2 a, 사용자 결정 2026-11-14).
+ * 상속인 등록도 상속개시일부터 3개월 안의 등록이라 그 자체가 「등록 후」 기산점이다.
+ *
+ * `merged === false`이면 호출부는 피상속인 분을 쓰지 않는다 — 임대료 증액 판정 기산일·구간 echo 모두 상속인 기준.
+ */
+export function evaluateRental975Continuity(args: {
+  /** 상속인 본인 의제 개시일 — 등록일·임대개시일·사업자등록일 중 늦은 날(령 §97의5③) */
+  ownStart: Date;
+  end: Date;
+  vacancyPeriods: { startDate: Date; endDate: Date }[];
+  deemedRentalPeriods: DeemedRentalPeriod975[];
+  /** 날짜 순서 검증을 통과한 상속 합산 입력 — 없으면 합산하지 않는다 */
+  inheritance?: { inheritanceDate: Date; decedentRegistrationDate: Date; decedentRentalStartDate: Date };
+}): ContinuousRental975Result & { merged: boolean; span: ReturnType<typeof inheritanceMergeSpan975> } {
+  const own = inheritanceMergeSpan975(args.ownStart, undefined);
+  const heirOnly = evaluateContinuousRental975({
+    start: own.start,
+    end: args.end,
+    vacancyPeriods: args.vacancyPeriods,
+    deemedRentalPeriods: args.deemedRentalPeriods,
+  });
+  if (!args.inheritance) return { ...heirOnly, merged: false, span: own };
+
+  const span = inheritanceMergeSpan975(args.ownStart, args.inheritance);
+  const merged = evaluateContinuousRental975({
+    start: span.start,
+    end: args.end,
+    vacancyPeriods: [...args.vacancyPeriods, ...span.gapVacancies],
+    deemedRentalPeriods: args.deemedRentalPeriods,
+  });
+  return merged.years >= heirOnly.years ? { ...merged, merged: true, span } : { ...heirOnly, merged: false, span: own };
 }
