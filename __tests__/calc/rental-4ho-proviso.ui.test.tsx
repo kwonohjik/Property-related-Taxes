@@ -54,7 +54,7 @@ describe("OH-38 ⑤ — 4호 입력 칸의 노출", () => {
     expect(screen.getByText("임대사업자 등록 신청일")).toBeTruthy();
     // 2026 양도 → 부칙 제38조② 요건 질문이 보인다
     expect(has("proviso-4ho-regulated-one-house-yes")).toBe(true);
-    expect(screen.getByText(/증여로 임대사업자 지위를 넘겨받고/)).toBeTruthy();
+    expect(screen.getByText(/2019년 12월 17일 이후 임대사업자 지위를 넘겨받았고, 양도일 현재/)).toBeTruthy();
     // 상태 미선택 → 단서 질문 없음
     expect(has("proviso-4ho-during-mandatory-yes")).toBe(false);
     click("proviso-4ho-status-maintained");
@@ -87,7 +87,7 @@ describe("OH-38 ⑤ — 4호 입력 칸의 노출", () => {
     render(<Harness start={initial({ transferDate: "2020-02-10", provisoReason: "rental_registration_4ho" })} />);
     expect(has("proviso-4ho-fields")).toBe(true);
     expect(has("proviso-4ho-regulated-one-house-yes")).toBe(false);
-    expect(screen.queryByText(/증여로 임대사업자 지위를 넘겨받고/)).toBeNull();
+    expect(screen.queryByText(/2019년 12월 17일 이후 임대사업자 지위를 넘겨받았고, 양도일 현재/)).toBeNull();
   });
 
   it("2주택(일시적 2주택 맥락 아님)이면 §154① 단서 카드 자체가 없다", () => {

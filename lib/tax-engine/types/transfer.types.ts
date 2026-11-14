@@ -1946,7 +1946,7 @@ export interface Rental4hoRegistrationFacts {
   rentIncreaseOver5Percent?: boolean;
   /** 5% 초과 증액 계약의 체결·갱신일(여럿이면 가장 늦은 날) — 대통령령 제29523호 부칙 제6조 */
   rentIncreaseContractDate?: Date;
-  /** 2019-12-17 이후 증여로 등록 신청자의 임대사업자 지위를 포괄승계했고 양도일 현재 그와 별도 세대(사전-2024-법규재산-0747) */
+  /** 2019-12-17 이후 매매·증여 등으로 등록 신청자의 임대사업자 지위를 포괄승계했고 양도일 현재 그와 별도 세대(사전-2024-법규재산-0747 · 매매는 Q-2 재결정 · 이혼 재산분할은 해당 없음 — 법규과-1427) */
   giftSuccessionSeparatedHousehold?: boolean;
 }
 

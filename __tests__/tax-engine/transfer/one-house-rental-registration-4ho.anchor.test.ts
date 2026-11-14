@@ -16,6 +16,7 @@ import type { OneHouseJudgeInput } from "@/lib/tax-engine/one-house/types";
 import type { OneHouseSpecialRulesData } from "@/lib/tax-engine/schemas/rate-table.schema";
 import type { Rental4hoRegistrationFacts } from "@/lib/tax-engine/types/transfer.types";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
+import { resolveRental4hoRegistration } from "@/lib/tax-engine/one-house/rental-registration-4ho";
 
 const mockRates = makeMockRates();
 const RULES = mockRates.get("transfer:special:one_house_exemption")!
@@ -188,6 +189,14 @@ describe("선언·승계 요건(부칙 제38조② · 사전-2024-법규재산-0
   });
   it("증여 포괄승계 후 증여자와 별도 세대 → 과세", () => {
     expect(calc(scenario({ ...COMPLIANT, giftSuccessionSeparatedHousehold: true })).isExempt).toBe(false);
+  });
+  it("Q-2 재결정 — 2019.12.17. 이후 매매 포괄양수(신청 세대 밖)도 같은 칸으로 부적용 · 사유에 확인 필요", () => {
+    const v = resolveRental4hoRegistration(scenario({ ...COMPLIANT, giftSuccessionSeparatedHousehold: true }));
+    expect(v?.status).toBe("excluded");
+    const reason = v?.status === "excluded" ? v.reasons.join(" ") : "";
+    expect(reason).toMatch(/매매·증여 등으로/);
+    expect(reason).toMatch(/매매로 넘겨받은 경우를 직접 다룬 해석례는 확인하지 못했습니다 — 확인 필요/);
+    expect(reason).toMatch(/대통령령 제30395호 부칙 제38조 ②/);
   });
 });
 
