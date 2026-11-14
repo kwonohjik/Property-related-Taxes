@@ -235,7 +235,7 @@ function ComprehensiveSection({ r, selectedSectionIds }: { r: R; selectedSection
           <View style={s.row}><Text style={s.lbl}>과세 대상 공시가격 합계</Text><Text style={s.val}>{fmt(r.includedAssessedValue)}</Text></View>
         )}
         {num(r.basicDeduction) !== undefined && (
-          <View style={s.row}><Text style={s.lbl}>기본공제</Text><Text style={s.val}>- {fmt(r.basicDeduction)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>기본공제</Text><Text style={s.val}>{(num(r.basicDeduction) ?? 0) > 0 ? `- ${fmt(r.basicDeduction)}` : "0"}</Text></View>
         )}
         {num(r.fairMarketRatio) !== undefined && (
           <View style={s.row}><Text style={s.lbl}>공정시장가액비율</Text><Text style={s.val}>{fmtRate(r.fairMarketRatio)}</Text></View>
