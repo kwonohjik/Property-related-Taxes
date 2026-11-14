@@ -198,6 +198,25 @@ describe("checkRentalArticle — C3 확장 (나·라·사·아·자 게이트)",
       rentalYears: 10, isExcluded918Rule: true,
     }));
     expect(r918.failCodes).toContain("SHORT_TERM_REGULATED");
+    // 마목 1) 괄호 — 공고 전 취득·계약금 지급 증빙이면 배제에서 제외(S-1)
+    const carve = checkRentalArticle("마", base({
+      businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
+      rentalYears: 10, isExcluded918Rule: true, hasContractDepositProof: true,
+    }));
+    expect(carve.failCodes).not.toContain("SHORT_TERM_REGULATED");
+    // 사목 base 마 — 같은 게이트
+    const saMa = checkRentalArticle("사", base({
+      businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
+      rentalYears: 3, saMokBaseArticle: "마", isExcluded918Rule: true,
+      rentalCancellationDate: new Date("2024-01-01"), hasHalfDutyPeriodMet: true, isSoldWithin1YearOfCancellation: true,
+    }));
+    expect(saMa.failCodes).toContain("SHORT_TERM_REGULATED");
+    const saMaProof = checkRentalArticle("사", base({
+      businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
+      rentalYears: 3, saMokBaseArticle: "마", isExcluded918Rule: true, hasContractDepositProof: true,
+      rentalCancellationDate: new Date("2024-01-01"), hasHalfDutyPeriodMet: true, isSoldWithin1YearOfCancellation: true,
+    }));
+    expect(saMaProof.failCodes).not.toContain("SHORT_TERM_REGULATED");
     const shortToLong = checkRentalArticle("마", base({
       businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
       rentalYears: 10, isExcludedShortToLongChange: true,

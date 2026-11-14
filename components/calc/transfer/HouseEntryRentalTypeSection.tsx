@@ -52,7 +52,7 @@ const TYPE_FIELDS: Record<RentalHousingType, Array<keyof RentalDeclaration>> = {
   B: ["acquisitionOfficialPrice", "isNationalSizeHousing", "hasMinimum2Units"],
   C: ["rentalStartOfficialPrice", "hasMinimum2Units", "rentalLandArea", "rentalTotalFloorArea", "rentIncreaseUnder5Pct", "isConvertedToSale"],
   D: ["acquisitionOfficialPrice", "firstSaleContractDate", "rentalLandArea", "rentalTotalFloorArea", "hasMinimum5UnitsInCity", "isExcludedAfter20200711Apt"],
-  E: ["rentalStartOfficialPrice", "rentIncreaseUnder5Pct", "isExcluded918Rule", "isExcludedAfter20200711Apt", "isExcludedShortToLongChange"],
+  E: ["rentalStartOfficialPrice", "rentIncreaseUnder5Pct", "isExcluded918Rule", "hasContractDepositProof", "isExcludedAfter20200711Apt", "isExcludedShortToLongChange"],
   F: ["rentalStartOfficialPrice", "hasMinimum2Units", "rentalLandArea", "rentalTotalFloorArea", "rentIncreaseUnder5Pct", "isConvertedToSale", "isExcludedShortToLongChange"],
   // 사목(G): 말소 게이트 + base 목 selector. base 목의 "해당 목의 다른 요건" 필드는 saMokBaseArticle 선택 시 동적 추가.
   G: ["saMokBaseArticle", "rentalCancellationDate", "hasHalfDutyPeriodMet", "isSoldWithin1YearOfCancellation"],
@@ -80,10 +80,10 @@ const FIELD_META: Record<string, { kind: FieldKind; label: string; hint?: string
   isSoldWithin1YearOfCancellation: { kind: "bool", label: "말소일 이후 1년 이내 양도" },
   saMokBaseArticle: { kind: "select", label: "말소 전 근거 목", hint: "사목은 근거 목의 기준시가·면적 등 다른 요건도 충족해야 합니다(임대기간요건만 면제)" },
   // 결격(제외) 사유 — 체크 시 중과배제가 적용되지 않음
-  isExcluded918Rule: { kind: "bool", label: "2018.9.14 이후 조정지역 취득 (결격)" },
+  isExcluded918Rule: { kind: "bool", label: "1주택 이상 보유 중 2018.9.14 이후 조정지역에서 새로 취득 (결격)" },
   isExcludedAfter20200711Apt: { kind: "bool", label: "2020.7.11 이후 등록 아파트 (결격)" },
-  isExcludedShortToLongChange: { kind: "bool", label: "단기→장기 변경신고분 (결격)" },
-  hasContractDepositProof: { kind: "bool", label: "계약금 지급 증빙 보유" },
+  isExcludedShortToLongChange: { kind: "bool", label: "단기→장기 변경신고분(2020.7.11 이후) (결격)" },
+  hasContractDepositProof: { kind: "bool", label: "조정지역 공고일 전 취득 또는 계약금 지급 증빙 보유" },
 };
 
 export function HouseEntryRentalTypeSection({

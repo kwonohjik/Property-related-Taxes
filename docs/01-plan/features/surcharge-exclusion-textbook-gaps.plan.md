@@ -2,7 +2,7 @@
 
 - 작성일: 2026-11-14
 - 출발점: 교재 「주택임대사업자2」(지병근) pp.313~333 대조(2회 분할) → 차이 후보 S-1~S-4 → 해석례 원문 확인
-- 상태: **계획 초안** — Q-1~Q-5 사용자 결정 대기
+- 상태: **계획 확정** — Q-1~Q-5 **모두 권장안**(사용자 결정 2026-11-14) · PR-1 구현(§10)
 - 기준 코드: master `a60bcbf80`
 
 ## 0. 요약
@@ -166,8 +166,26 @@ S-1(1회차 probe): 마목 918=false → `only_general_two_house`(배제) · 918
 
 ## 9. 체크리스트
 
-- [ ] Q-1~Q-5 결정
+- [x] Q-1~Q-5 결정 (2026-11-14 · 전부 권장안)
 - [ ] V-0 법제처 원문 대조
-- [ ] Pre-Do anchor A-1·B-1 세액 실측
+- [x] Pre-Do anchor S-1 세액 실측(§10) · [ ] B-1
 - [ ] PR-1 · PR-2
 - [ ] 브라우저 확인(Playwright)
+
+## 10. PR-1 구현 기록 (S-1)
+
+- 엔진 `check.ts` GATES 마 `hard918` → `carveout918`(`hard918` 필드 삭제 — 쓰는 목이 없어짐). 사목 base 마·§155⑳ 2021.2.16. 이전 양도분이 같은 게이트로 함께 바뀐다.
+- ⑤ 다주택 TYPE_FIELDS.E에 `hasContractDepositProof` · 라벨 3개(Q-2) · ⑳ `RentalUnitCard` 증빙 칸을 「아목 또는 (마목 && ⑳ 미포함 양도분)」으로 · ⑳ 실패 메시지 목 이름.
+- 실측(route `__tests__/api/transfer.route.ma1-deposit-carveout.anchor.test.ts` — 강남 일반주택 3억→20억 · 2013-06-01 취득 · 2022-03-01 양도 · 마목 매입 다세대 2019-02-01 등록 · 918 ✓):
+
+| | 종전 | 수정 후 |
+|---|---|---|
+| MA-1 증빙 ✓ | 1,141,772,500 (`multi_house_2`) | **633,682,500** (10호 `only_general_two_house`) |
+| MA-2 증빙 없음 | 1,141,772,500 | 1,141,772,500 |
+| MA-3 918 아님 | 633,682,500 | 633,682,500 |
+
+- 처음 잡은 양도일 2021-06-01은 일시적 2주택(`temporary_two_house`)에 걸려 세 경우가 같았다 → 2022-03-01(취득 3년 경과 · 12의2 유예 시행 전)로 옮겼다.
+- ⑳ 화면 테스트: ⑳은 2020.7.11. 이후 등록분이 마목이라(가·다목 등록상한과 다름) 등록일 2020-08-01로 잡았다.
+- anchor: `check.test.ts`(마·사목 base 마 carve-out) · `rh-eligibility-period.test.ts`(⑳ 마목) · `rental-unit-card-ma1-deposit-proof.anchor.test.tsx` · `house-entry-ma1-deposit-proof.anchor.test.tsx`.
+- 뮤테이션 5건 모두 검출: M1 마 게이트 제거 · M2 마 증빙 무시 · M3 ⑳ 칸 아목만 · M4 다주택 E 칸 제거 · M5 ⑳ 포함 양도분에도 칸 노출.
+- 미수행: 브라우저 확인.

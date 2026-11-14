@@ -37,7 +37,7 @@ export function buildFailMessage(
     case "APARTMENT_RESTRICTED":
       return `${n}호: 해당 유형(${article}목)에서 아파트는 §155⑳ 특례 대상이 아닙니다.`;
     case "SHORT_TERM_REGULATED":
-      return `${n}호: 조정대상지역에 신규취득한 단기임대(아목)는 §155⑳ 특례 불가.`;
+      return `${n}호: 조정대상지역에 신규취득한 ${article}목 임대주택(공고 전 취득·계약금 지급 증빙 없음)은 §155⑳ 특례 불가.`;
     case "SIZE_REQUIRED":
       return `${n}호: ${article === "라" ? "미분양매입임대주택은" : "건설임대는"} 대지면적·연면적을 입력해야 규모요건(대지 298㎡·연면적 149㎡ 이하)을 판정할 수 있습니다.`;
     case "SIZE_EXCEEDED":

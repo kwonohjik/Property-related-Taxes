@@ -83,7 +83,7 @@ export type RentalUnitInput = {
    *    구성 편의를 위해 optional. 미제공 시 false/0 default(check.ts falsy·adapter).
    */
   isExcluded918Rule?: boolean;
-  /** 아목 918 carve-out — 조정대상지역 공고 전 계약 + 계약금 지급 증빙 */
+  /** 마목 1)·아목 4) 918 carve-out — 조정대상지역 공고 전 취득 또는 계약 + 계약금 지급 증빙 */
   hasContractDepositProof?: boolean;
   /** 마·바목 단기→장기 변경신고 배제 여부 */
   isExcludedShortToLongChange?: boolean;
