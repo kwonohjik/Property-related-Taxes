@@ -190,7 +190,7 @@ export function Rental4hoProvisoFields({ value, mode, onChange }: Props) {
           variant="card"
           tone="violet"
           title="2019년 12월 17일 이후 임대사업자 지위를 넘겨받았고, 양도일 현재 등록 신청자와 세대가 다릅니다"
-          description="매매·증여 등으로 포괄승계한 경우입니다. 이 경우 삭제 전 4호가 적용되지 않습니다 — 증여 후 세대가 갈라진 경우는 해석례(사전-2024-법규재산-0747)가 있고, 매매로 넘겨받은 경우는 직접 다룬 해석례가 없어 확인이 필요합니다. 이혼 재산분할로 넘겨받은 지분은 적용되므로(법규과-1427, 2025.6.25.) 켜지 않습니다."
+          description="매매·증여 등으로 넘겨받은 경우 삭제 전 4호가 적용되지 않습니다(증여는 사전-2024-법규재산-0747, 매매는 해석례가 없어 확인 필요). 이혼 재산분할로 받은 지분은 적용되므로(법규과-1427) 켜지 않습니다."
           checked={value.proviso4hoGiftSeparated === true}
           onCheckedChange={(v) => onChange({ proviso4hoGiftSeparated: v })}
         />
