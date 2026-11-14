@@ -18,6 +18,7 @@ import { format } from "./utc-date";
 import { readSpouseHolding, marriageSubtractionWindowOpen } from "./spouse-holding-at-transfer";
 import { spouseHoldingNotices } from "./multi-house-surcharge-spouse-notice";
 import { rentalCancellationNotices } from "./rental-cancellation-deeming";
+import { separateHouseholdGiftNotices } from "./rental-cancellation-deeming";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import { MULTI_HOUSE } from "./legal-codes";
 import { isCrisisAcqExempt } from "./legal-codes";
@@ -189,11 +190,11 @@ export function determineMultiHouseSurcharge(
     computeMultiHouseSurcharge(alt, houseCountRules, regulatedAreaHistory, suspensionRules, isRegulatedFallback),
   );
   // §167의3①2호 단서 — 말소 사유(미선택·자진말소)가 결론을 가를 때만 알린다.
-  notices.push(
-    ...rentalCancellationNotices(input, result, (alt) =>
-      computeMultiHouseSurcharge(alt, houseCountRules, regulatedAreaHistory, suspensionRules, isRegulatedFallback),
-    ),
-  );
+  const recompute = (alt: MultiHouseSurchargeInput) =>
+    computeMultiHouseSurcharge(alt, houseCountRules, regulatedAreaHistory, suspensionRules, isRegulatedFallback);
+  notices.push(...rentalCancellationNotices(input, result, recompute));
+  // S-4 — 별도세대 증여 전 말소된 임대주택을 장기임대주택에서 뺀 것이 결론을 가를 때만 알린다.
+  notices.push(...separateHouseholdGiftNotices(input, result, recompute));
   return notices.length > 0 ? { ...result, warnings: [...result.warnings, ...notices] } : result;
 }
 

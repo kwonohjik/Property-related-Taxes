@@ -188,6 +188,13 @@ export interface HouseInfo {
   /** 임대사업자 자진·자동 말소일 (사목 G형 판정용) */
   rentalCancellationDate?: Date;
   /**
+   * 이 장기임대주택을 증여로 받았을 때 증여자의 세대 — 말소일(`rentalCancelledDate`·사목 `rentalCancellationDate`)이 있을 때만
+   * 화면이 묻는다. `separate`이고 말소일이 이 주택 취득일(증여일) 이전이면 그 등록·말소는 별도세대인 증여자의 것이라
+   * 장기임대주택으로 보지 않는다(`isSeparateHouseholdGiftOfCancelledRental`). `same`은 종전대로 판정한다(기획재정부
+   * 재산세제과-1591 → 서면-2021-법규재산-4283). 미제공 = 증여 아님.
+   */
+  rentalGiftDonorHousehold?: "same" | "separate";
+  /**
    * 임대개시일 — 있으면 임대기간을 날짜로 계산한다(2호는 등록일로 자름 — `multi-house-rental-period.ts`).
    */
   rentalStartDate?: Date;

@@ -6,6 +6,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { rentalCancellationStatus } from "@/lib/tax-engine/rental-cancellation-deeming";
+import { isSeparateHouseholdGiftOfCancelledRental } from "@/lib/tax-engine/rental-cancellation-deeming";
 import { isLongTermRentalHousingExempt } from "@/lib/tax-engine/multi-house-surcharge-count";
 import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.types";
 
@@ -60,3 +61,22 @@ describe("isLongTermRentalHousingExempt — 단서는 임대기간요건만 면�
     expect(isLongTermRentalHousingExempt(house({ isRegisteredRental: false }), T)).toBe(false);
   });
 });
+
+describe("S-4 별도세대 증여 전 말소 — isSeparateHouseholdGiftOfCancelledRental", () => {
+  const gifted = (o: Partial<HouseInfo> = {}) => house({ acquisitionDate: new Date("2022-03-01"), ...o });
+  it("D-5 ★ 별도세대 · 말소일(2022-03-01) ≤ 증여일(2022-03-01) → 2호 아님 / 동일세대 · 미답 → 2호", () => {
+    expect(isSeparateHouseholdGiftOfCancelledRental(gifted({ rentalGiftDonorHousehold: "separate" }))).toBe(true);
+    expect(isLongTermRentalHousingExempt(gifted({ rentalGiftDonorHousehold: "separate" }), T)).toBe(false);
+    expect(isLongTermRentalHousingExempt(gifted({ rentalGiftDonorHousehold: "same" }), T)).toBe(true);
+    expect(isLongTermRentalHousingExempt(gifted(), T)).toBe(true);
+  });
+  it("D-6 짝 — 말소일이 증여 뒤면 술어 밖 · 사목은 rentalCancellationDate로 본다", () => {
+    expect(isSeparateHouseholdGiftOfCancelledRental(gifted({ rentalGiftDonorHousehold: "separate", acquisitionDate: new Date("2022-02-28") }))).toBe(false);
+    expect(
+      isSeparateHouseholdGiftOfCancelledRental(
+        gifted({ rentalGiftDonorHousehold: "separate", rentalType: "G", rentalCancelledDate: undefined, rentalCancellationDate: new Date("2022-01-01") }),
+      ),
+    ).toBe(true);
+  });
+});
+

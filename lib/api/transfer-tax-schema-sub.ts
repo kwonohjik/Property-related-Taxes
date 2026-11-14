@@ -273,6 +273,8 @@ export const houseSchema = z.object({
   rentalCancelledDate: z.string().date().optional(),
   /** 말소 사유 — 자동말소면 §167의3①2호 단서(임대기간요건 간주 충족) */
   rentalCancellationReason: z.enum(["auto", "voluntary"]).optional(),
+  /** S-4 증여자 세대 — 별도세대이고 말소일 ≤ 취득일이면 장기임대주택 아님 */
+  rentalGiftDonorHousehold: z.enum(["same", "separate"]).optional(),
   // ── ⑨⑫ 장기임대 9유형 매트릭스 (가~자목) 18필드 ──
   rentalType: z.enum(["A", "B", "C", "D", "E", "F", "G", "H", "I"]).optional(),
   rentIncreaseUnder5Pct: z.boolean().optional(),

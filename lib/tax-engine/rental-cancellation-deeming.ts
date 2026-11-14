@@ -45,6 +45,21 @@ export function rentalCancellationStatus(house: HouseInfo, transferDate: Date): 
     : "not_deemed";
 }
 
+/**
+ * 별도세대에서 증여받은 주택의 임대사업자 등록이 **증여 전에** 말소됐는가(S-4 · 교재 329쪽).
+ *
+ * §167의3①2호는 「사업자등록등을 한 거주자가 민간임대주택으로 등록하여 임대하는」 주택이고, 단서의 간주도 그 등록이
+ * 말소되는 경우다. 증여자가 별도세대면 수증자 세대에는 등록한 사람이 없다 ⇒ 장기임대주택으로 보지 않는다.
+ * 동일세대원 증여는 배제를 인정한 해석이 있다(기획재정부 재산세제과-1591 → 서면-2021-법규재산-4283). 별도세대 증여를
+ * 정면으로 다룬 해석은 확인하지 못했다(taxlaw 검색 2026-11-15) — 결론이 갈리면 확인 필요 고지(`separateHouseholdGiftNotices`).
+ * 말소일이 증여 뒤면 수증자 자신의 등록이 말소된 것이라 이 술어 밖이다.
+ */
+export function isSeparateHouseholdGiftOfCancelledRental(house: HouseInfo): boolean {
+  if (house.rentalGiftDonorHousehold !== "separate") return false;
+  const cancelled = house.rentalCancelledDate ?? house.rentalCancellationDate;
+  return !!cancelled && cancelled.getTime() <= house.acquisitionDate.getTime();
+}
+
 const differs = (a: MultiHouseSurchargeResult, b: MultiHouseSurchargeResult): boolean =>
   a.surchargeApplicable !== b.surchargeApplicable || a.surchargeType !== b.surchargeType;
 
@@ -76,5 +91,28 @@ export function rentalCancellationNotices(
         `${MULTI_HOUSE.LONG_TERM_RENTAL_VOLUNTARY_CANCEL_BASIS}는 말소 후 1년 이내에 그 주택을 양도하는 경우만 정하고, 다른 주택을 양도할 때 장기임대주택으로 보는지는 해석을 확인하지 못했습니다(확인 필요).`
       : `${houseLabel(h.id)}: 임대사업자 등록이 말소됐는데 말소 사유를 고르지 않아 장기임대주택(${MULTI_HOUSE.LONG_TERM_RENTAL_EXCLUSION_BASIS})으로 보지 않았습니다 — ` +
         `임대의무기간이 끝난 날 자동말소(${RENTAL_REGISTRATION_4HO.AUTO_CANCELLATION})됐다면 「자동말소」를 고르세요. ${MULTI_HOUSE.LONG_TERM_RENTAL_AUTO_CANCEL_PROVISO}에 따라 임대기간요건을 갖춘 것으로 봅니다(확인 필요).`,
+  );
+}
+
+/**
+ * `isSeparateHouseholdGiftOfCancelledRental`로 장기임대주택에서 뺀 주택이 결론을 가를 때만 알린다(위와 같은 반사실 재계산).
+ */
+export function separateHouseholdGiftNotices(
+  input: MultiHouseSurchargeInput,
+  result: MultiHouseSurchargeResult,
+  recompute: (alt: MultiHouseSurchargeInput) => MultiHouseSurchargeResult,
+): string[] {
+  const targets = input.houses.filter((h) => h.isLongTermRental && isSeparateHouseholdGiftOfCancelledRental(h));
+  if (targets.length === 0) return [];
+  const alt = recompute({
+    ...input,
+    houses: input.houses.map((h) => (targets.includes(h) ? { ...h, rentalGiftDonorHousehold: undefined } : h)),
+  });
+  if (!differs(result, alt)) return [];
+  return targets.map(
+    (h) =>
+      `${houseLabel(h.id)}: 별도세대에서 증여받기 전에 증여자의 임대사업자 등록이 말소된 주택이라 장기임대주택(${MULTI_HOUSE.LONG_TERM_RENTAL_EXCLUSION_BASIS})으로 보지 않았습니다 — ` +
+      `이 규정은 「사업자등록등을 한 거주자가 … 등록하여 임대하는」 주택이고, 수증자 세대에는 등록한 사람이 없습니다. ` +
+      `동일세대원에게 증여받은 경우는 중과배제를 인정한 해석이 있으나(기획재정부 재산세제과-1591), 별도세대 증여를 직접 다룬 해석은 확인하지 못했습니다(확인 필요).`,
   );
 }
