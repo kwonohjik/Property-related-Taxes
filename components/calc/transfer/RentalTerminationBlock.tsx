@@ -11,6 +11,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
+import { TRANSFER_RENTAL_HOUSING } from "@/lib/tax-engine/legal-codes/transfer";
 import { deadlineEndNote } from "@/lib/tax-engine/civil-period";
 import { terminationDeadline } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
 import { isAutoCancellationDeemable } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/termination-window";
@@ -103,10 +104,12 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
         required
         hint={
           unit.rentalCategory === "pre_2018" ? (
-            // V-6 — 0972: 구 임대주택법 매입·건설임대(준공공 제외)는 2020.8.18. 전 의무기간 경과 시 그날 말소(부칙 제7조 폐지 유형)
+            // V-6 — 민특법 부칙<제13499호> 제3조③3호: 구 임대주택법 매입·건설임대(준공공 제외) = 단기임대주택 · 의무기간은 종전 법(5년)
             <span data-testid={`rental-terminated-type-pre2018-hint-${index}`}>
-              구 임대주택법으로 등록한 주택(준공공임대 제외)은 「단기민간임대(4년)」를 고르세요. 2020.8.18. 전에 임대의무기간이 끝났다면
-              그날 말소된 것으로 봅니다(사전-2025-법규재산-0972). 자진말소의 1/2을 4년과 5년 중 어느 기준으로 셀지는 확인된 해석례가 없습니다(확인 필요).
+              구 임대주택법으로 등록한 주택(준공공임대 제외)은 단기민간임대주택으로 보므로 「단기민간임대(4년)」를 고르세요
+              ({TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_DEEMED_SHORT_TERM}). 임대의무기간은 종전 임대주택법에 따라 5년이라 자진말소의 1/2은
+              30개월로 판정합니다({TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_DUTY_PERIOD}). 2020.8.18. 전에 임대의무기간이 끝났다면 그날 말소된 것으로
+              봅니다(사전-2025-법규재산-0972).
             </span>
           ) : (
             "자진말소 1/2 판정 기준 (소령 §155㉓1호)"
@@ -119,7 +122,7 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
           tone="violet"
           layout="inline"
           options={[
-            { value: "short_term", label: "단기민간임대(4년)", description: "1/2 = 24개월", testId: `rental-terminated-type-short-${index}` },
+            { value: "short_term", label: "단기민간임대(4년)", description: unit.rentalCategory === "pre_2018" ? "1/2 = 30개월(구 임대주택법 5년)" : "1/2 = 24개월", testId: `rental-terminated-type-short-${index}` },
             { value: "long_term_general", label: "장기일반민간임대(8년)", description: "1/2 = 48개월", testId: `rental-terminated-type-long-${index}` },
           ]}
           value={unit.terminatedRegistrationType ?? ""}

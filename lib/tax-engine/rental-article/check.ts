@@ -167,7 +167,7 @@ type ArticleGate = {
   carveout918?: boolean; // 마·아
   shortToLong?: boolean; // 마·바
   cancellationOnly?: boolean; // 사 — period/price/size 등 skip
-  aptDeadlineGate?: boolean; // 가·나·라·마 (§167조의3⑪, 대통령령 제36737호)
+  aptDeadlineGate?: boolean; // 가·나·라·마·구법 (§167조의3⑪, 대통령령 제36737호 · 구법 = 가목 매입 — V-6 ⓑ)
 };
 
 const GATES: Record<SharedRentalArticle, ArticleGate> = {
@@ -195,7 +195,7 @@ const GATES: Record<SharedRentalArticle, ArticleGate> = {
   사: { priceAt: "rentalStart", fivePct: false, cancellationOnly: true },
   아: { priceAt: "rentalStart", fivePct: true, regDateMin: RA_CUT.Y2025_06_04, apartmentBlanket: true, carveout918: true },
   자: { priceAt: "rentalStart", fivePct: true, regDateMin: RA_CUT.Y2025_06_04, apartmentBlanket: true, size: true, min2: true },
-  구법: { priceAt: "rentalStart", fivePct: true },
+  구법: { priceAt: "rentalStart", fivePct: true, aptDeadlineGate: true },
 };
 
 /**

@@ -61,7 +61,8 @@ import {
   isConstructionArticle,
   type NormalizedRentalUnit,
 } from "../../rental-article/check";
-import { buildFailMessage, TERMINATED_DUTY_YEARS } from "./fail-messages";
+import { buildFailMessage } from "./fail-messages";
+import { terminationDutyYears } from "./fail-messages";
 import { checkPhrp154_10Eligibility } from "./phrp-154-10";
 import { registeredDateOf } from "../../rental-article/registered-date";
 import type {
@@ -121,7 +122,6 @@ import {
   terminationWindowIssues,
   deemedAutoCancellationNotice,
   autoCancellationDateCheckNotice,
-  preRentalActVoluntaryHalfNotice,
   ymd,
   dayOf,
 } from "./termination-window";
@@ -392,9 +392,8 @@ export function checkEligibility(
      * 가목 5년 → 30개월)을 썼다. 자동말소(㉓2호)는 임대의무기간 종료일 말소라 이 1/2을 언제나 넘는다.
      * 등록 유형을 모르면 판정하지 않는다(간주 충족을 주지 않는다).
      */
-    const dutyYears = unit.terminatedRegistrationType
-      ? TERMINATED_DUTY_YEARS[unit.terminatedRegistrationType]
-      : null;
+    // V-6 ⓒ — 구 임대주택법 등록분은 종전 임대주택법 5년(→ 30개월 · `terminationDutyYears`).
+    const dutyYears = terminationDutyYears(unit);
     const terminationEligibleArticle = isTerminationEligibleArticle(article);
     /**
      * I-4 — ㉓ 5년 창. 말소된 호는 양도일 현재 등록·임대 중이 아니므로(⑳2호) 소득세법 임대기간을 이미
@@ -407,7 +406,7 @@ export function checkEligibility(
         : [];
     // G-8 — 부칙 제7조 간주 적용 고지 · 자동말소일 오입력(등록증 처리일) 확인 필요 고지(값은 바꾸지 않는다 — Q-9).
     if (ctx && unit.rentalAutoTermination && terminationEligibleArticle) {
-      for (const n of [deemedAutoCancellationNotice(i, unit), autoCancellationDateCheckNotice(i, unit), preRentalActVoluntaryHalfNotice(i, unit)]) {
+      for (const n of [deemedAutoCancellationNotice(i, unit), autoCancellationDateCheckNotice(i, unit)]) {
         if (n) notices.push(n);
       }
     }

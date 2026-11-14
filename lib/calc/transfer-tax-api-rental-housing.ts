@@ -127,7 +127,7 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
       // 말소 사유(다주택 중과 §167의3①2호 단서) — 말소 토글이 효력을 가질 때만, 미선택("")·stale(undefined)은 보내지 않는다.
       terminationReason: rentalUnitTerminationInScope(u) && u.terminationReason ? u.terminationReason : undefined,
       requirementsConfirmed: u.requirementsConfirmed ?? false,
-      // §167의3⑪ 연장 사실 — ⑤·⑧과 같은 범위(아파트 가·나·라·마목 · ㉓ 말소 경로 제외). 「모름」은 미전송.
+      // §167의3⑪ 연장 사실 — ⑤·⑧과 같은 범위(아파트 가·나·라·마목·구법 · ㉓ 말소 경로 제외). 「모름」은 미전송.
       aptDeadlineExtension: rentalUnitAptDeadlineInScope(u) ? aptDeadlineExtensionPayload(u.aptDeadlineExtension) : undefined,
       // 혼인합가 1199 — 판정 메뉴에서만 입력(⑤). 엔진은 혼인합가 판정에서만 읽는다.
       mergeOrigin: u.mergeOrigin,

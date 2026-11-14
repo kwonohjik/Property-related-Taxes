@@ -11,6 +11,7 @@ import { registeredDateOf } from "../../rental-article/registered-date";
 import { deriveRentalArticle, deriveRegApplicationDate, registrationBasis } from "./derive";
 import type { EligibilityContext } from "./eligibility";
 import type { RentalUnitInput, RentalArticle } from "./types";
+import { PRE_RENTAL_ACT_DUTY_YEARS } from "./fail-messages";
 /** §155㉓ 「등록이 말소된 이후 … 5년 이내에 거주주택을 양도」 — 기한 연수 (I-4) */
 export const TERMINATION_TRANSFER_YEARS = 5;
 
@@ -195,25 +196,13 @@ export function autoCancellationDateCheckNotice(i: number, u: RentalUnitInput): 
   const reg = registeredDateOf(basis.rentalRegisteredDate, basis.rentalRegistrationDate) ?? undefined;
   const type = u.terminatedRegistrationType;
   if (!validDate(reg) || !type) return undefined;
-  const years = AUTO_DUTY_YEARS[type];
+  // 구 임대주택법 등록분은 종전 임대주택법 5년(V-6 ⓒ · `PRE_RENTAL_ACT_DUTY_YEARS`)
+  const years = u.rentalCategory === "pre_2018" ? PRE_RENTAL_ACT_DUTY_YEARS : AUTO_DUTY_YEARS[type];
   const estimatedEnd = addYears(reg, years);
   if (dayOf(cd) <= dayOf(addMonths(estimatedEnd, 1))) return undefined;
   return (
     `${i + 1}호: 자동말소는 임대의무기간이 끝난 날 등록이 말소됩니다(${TRANSFER_RENTAL_HOUSING.MRHSA_6_5}). 입력한 말소일(${ymd(cd)})이 ` +
     `지자체 등록일(${ymd(reg)})부터 임대의무기간 ${years}년이 끝나는 날(${ymd(estimatedEnd)})보다 늦습니다 — 등록증에 적힌 말소 처리일이 아니라 ` +
     "임대의무기간 종료일을 넣었는지 확인하세요(확인 필요). 임대를 등록일보다 늦게 시작했다면 종료일도 그만큼 늦어집니다."
-  );
-}
-
-
-/**
- * V-6 — 구 임대주택법 등록분 자진말소의 ㉓1호 「임대의무기간의 2분의 1」을 민특법 단기 4년으로 셀지 구 임대주택법 5년으로 셀지
- * 정면 해석례를 확보하지 못했다. 계산은 고른 등록 유형 그대로 두고 확인 필요만 알린다.
- */
-export function preRentalActVoluntaryHalfNotice(i: number, u: RentalUnitInput): string | undefined {
-  if (u.rentalCategory !== "pre_2018" || u.terminationReason !== "voluntary") return undefined;
-  return (
-    `${i + 1}호: 구 임대주택법으로 등록한 주택의 자진말소는 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23}1호의 「임대의무기간의 2분의 1」을 ` +
-    "민간임대주택법 단기 4년과 구 임대주택법 5년 중 어느 쪽으로 셀지 확인된 해석례가 없습니다 — 고른 등록 유형 기준으로 계산했습니다(확인 필요)."
   );
 }
