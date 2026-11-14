@@ -3,7 +3,7 @@
 > 작성 2026-11-14 · 기준 origin/master 8b276b05e · 워크트리 `Property-related-Taxes-r155tb`
 > 출처: 교재 「주택임대사업자의 모든 것」 Chapter 05 거주주택 비과세 특례(pp.268~312) 4회 대조 + 해석례·법령 원문 확인.
 > 설계 초안: `transfer-tax-senior`(엔진·API) + `transfer-tax-ui-senior`(화면) 병렬 Plan 보고(2026-11-14).
-> 상태: **Plan — Q 결정 대기**. 세액이 바뀌는 PR(PR-1·PR-2)은 Q 결정 뒤 Pre-Do anchor부터.
+> 상태: **Q-1~Q-9 전부 권고안으로 확정(사용자 결정 2026-11-14)** · PR-0 진행. 세액이 바뀌는 PR(PR-1·PR-2)은 Pre-Do anchor부터.
 
 ## 1. 결론 요약
 
@@ -65,7 +65,7 @@
 ## 4. 설계
 
 ### PR-0 (선행 · 세액 불변) — `eligibility.ts` 분리
-751줄(≥750 위험구간). `terminationDeadline`·`isTerminationEligibleArticle`·`firstTerminationCancellation`·`terminationWindowIssues`(+PR-1 헬퍼 호출)를 `lib/tax-engine/transfer-tax/rental-housing-exception/termination-window.ts`(≈110줄)로 옮긴다. 재수출로 import 경로 유지. 검증: 회귀 전체 통과·세액 불변.
+751줄(≥750 위험구간) → `eligibility.ts` 546 + `derive.ts` 147(등록기준일·목·의무기간·상한·임대 구분 활성 파생) + `termination-window.ts` 110(㉓ 기한·대상 목·최초 말소일·`isRegisteredAbolishedTypeUnit`·`terminationWindowIssues`). `firstTerminationCancellation`이 `deriveRentalArticle`을 쓰므로 파생 함수를 먼저 떼어 순환 import를 피했다. `./eligibility` 경로 재수출로 기존 import 불변. 검증: tsc 0 · 양도세·calc·lib·api·components 회귀 3,058파일 37,044건 통과.
 
 ### PR-1 G-8 — 엔진 + 말소일 칸 문구
 - 엔진: `lib/tax-engine/rental-article/rules.ts`에 단일 소스
@@ -103,6 +103,8 @@
 - G-7: 신규 `lib/calc/rental-155-22-exceptions.ts`(긴·짧은 문장 상수) → `OneHouseJudgmentResultView.tsx:307-316` · `RentalUnitPeriodPriceBlock.tsx:87-90` · `RentalHousingExceptionSection.tsx:676` · 엔진 `transfer-tax-rental-housing-judge.ts:111-122` `buildRentalPeriodPendingNotice`. 내용 = ㉒2호 가목(수용·사망 상속 — 소칙 §74의2) · 나·다목(정비사업·리모델링 6개월 제외) · 라목(자진 1/2·자동 종료일 말소 시 요건 충족 간주). 동일세대 증여(조심2021중2756)·재개발 말소(서면부동산 2024-0800)는 V-8 확인 전 확정 문구로 쓰지 않는다.
 
 ## 5. Q — 사용자 결정 (권고 먼저)
+
+**결정(2026-11-14): 아래 권고안 9건 전부 확정 — 재질문 금지.**
 
 | # | 질문 | 권고 |
 |---|---|---|
