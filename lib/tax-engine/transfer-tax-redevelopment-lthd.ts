@@ -88,8 +88,17 @@ export function applyLthdExclusion(r: RedevelopmentResult): RedevelopmentResult 
  * 후까지 **이어진 것으로 본다**. 그러면 령 §97의3⑤의 비율(임대개시일~임대 마지막 날 기준시가
  * 상승분 ÷ 전체)이 세 구간에 걸쳐 산정되는 것이 자연스럽고, 분기별로 따로 뽑을 근거가 없다.
  *
+ * ## 조합원입주권(`subject="right"`)은 인가전 분에만
+ *
+ * 소득세법 §95② 괄호 「조합원입주권을 양도하는 경우에는 「도시 및 주거환경정비법」 제74조에 따른
+ * 관리처분계획 인가 … 전 토지분 또는 건물분의 양도차익으로 한정한다」 — 특례도 장기보유특별공제액을
+ * 계산하는 규정이라 같은 괄호 안에 있다. 입주권의 청산금 분기는 §166①2호 가목의 **인가후 분**
+ * (프리미엄)이라 공제 대상 양도차익이 없다. 종전에는 세 분기에 모두 씌워 인가후 분에도 특례율이
+ * 붙었다(G-7′ — 시료 장특 155,500,000, 맞는 값 68,000,000).
+ *
  * @param special `evaluateRental97Lthd` 결과에서 뽑은 값. `overrideRate`(§97의3) 또는
  *   `additionalRate`(§97의4) 중 하나만 온다.
+ * @param subject 재개발 입력의 `subject` — `"right"`면 인가전 분에만 적용한다.
  */
 export function applyRental97LthdSpecial(
   r: RedevelopmentResult,
@@ -103,6 +112,7 @@ export function applyRental97LthdSpecial(
     /** §97의4 — 임대기간별 추가 공제율 */
     additionalRate?: number;
   },
+  subject: NonNullable<TransferTaxInput["redevelopment"]>["subject"],
 ): RedevelopmentResult {
   const applyBranch = (b: RedevelopmentBranchDetail): RedevelopmentBranchDetail => {
     const gain = Math.max(b.gain, 0);
@@ -129,8 +139,9 @@ export function applyRental97LthdSpecial(
   };
 
   const preApproval = applyBranch(r.preApproval);
-  const postApprovalExistingHouse = applyBranch(r.postApprovalExistingHouse);
-  const settlement = applyBranch(r.settlement);
+  // 입주권은 인가후 분(청산금 분기)에 공제 대상 차익이 없다 — 원래 값(lthd 0) 그대로 둔다.
+  const postApprovalExistingHouse = subject === "right" ? r.postApprovalExistingHouse : applyBranch(r.postApprovalExistingHouse);
+  const settlement = subject === "right" ? r.settlement : applyBranch(r.settlement);
   const lthd = preApproval.lthd + postApprovalExistingHouse.lthd + settlement.lthd;
 
   return {

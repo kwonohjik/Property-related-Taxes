@@ -122,13 +122,13 @@ describe("#6·#7 재개발 장특 특례 `applyRental97LthdSpecial` — 분기 �
   it("§97의3 — 임대분(13/17) × 0.7 + 비임대분 × 0.68: 5,100 → 2,730 + 816 · 1,700 → 910 + 272 = 4,728 (종전 4,726)", () => {
     const r = applyRental97LthdSpecial(result(5_100, 1_700, 0.36 + 0.32), {
       overrideRate: 0.7, rentalGainRatio: 13 / 17, rentalGainFraction: { num: 13, den: 17 },
-    });
+    }, "apt");
     expect(r.preApproval.lthd).toBe(3_546);
     expect(r.postApprovalExistingHouse.lthd).toBe(1_182);
     expect(r.total.lthd).toBe(4_728);
   });
   it("§97의4 — 0.36 + 가산 0.32: 10,000 → 6,800 (종전 6,799)", () => {
-    const r = applyRental97LthdSpecial(result(10_000, 0, 0.36), { rentalGainRatio: 1, additionalRate: 0.32 });
+    const r = applyRental97LthdSpecial(result(10_000, 0, 0.36), { rentalGainRatio: 1, additionalRate: 0.32 }, "apt");
     expect(r.preApproval.lthd).toBe(6_800);
   });
 });

@@ -406,7 +406,7 @@ export function runRedevelopmentGainSteps(
       overrideRate: rental97Special.overrideRate,
       rentalGainRatio: rental97Special.rentalGainRatio,
       rentalGainFraction: rental97Special.rentalGainFraction,
-    });
+    }, input.redevelopment!.subject);
     const deductionWithSpecial = withSpecial.total.lthd;
     const deductionWithoutSpecial = redevAfterLthdExclusion.total.lthd;
     const specialApplied = shouldApplyRental973Special(deductionWithSpecial, deductionWithoutSpecial);
@@ -424,7 +424,9 @@ export function runRedevelopmentGainSteps(
         formula:
           `임대기간분 양도차익 × 70% + 비임대분 × 분기별 공제율. 임대분 비율 ` +
           `${(rental97Special.rentalGainRatio * 100).toFixed(2)}% (조특령 §97의3⑤) · ` +
-          `인가전·인가후 기존건물·청산금 3분기에 각각 적용 (소득세법 시행령 §166⑤). ` +
+          (input.redevelopment!.subject === "right"
+            ? `조합원입주권은 관리처분계획 인가 전 양도차익에만 적용 (소득세법 §95② 괄호). `
+            : `인가전·인가후 기존건물·청산금 3분기에 각각 적용 (소득세법 시행령 §166⑤). `) +
           `공제액 ${deductionWithoutSpecial.toLocaleString()} → ` +
           `${deductionWithSpecial.toLocaleString()}`,
         amount: redevAfterRight.total.lthd,
@@ -461,7 +463,7 @@ export function runRedevelopmentGainSteps(
       redevAfterRight = applyRental97LthdSpecial(redevAfterLthdExclusion, {
         additionalRate: rental97Special.additionalRate,
         rentalGainRatio: 1,
-      });
+      }, input.redevelopment!.subject);
       steps.push({
         label: "장기보유특별공제 특례 — 장기임대주택 추가공제율 (조특법 §97의4①)",
         formula:
