@@ -44,6 +44,20 @@ interface Props {
   urbanLifeHousingQuestionEnabled?: boolean;
   /** 질문 대신 보일 안내 — 같은 사실을 다른 칸이 묻고 있을 때(양도 주택 3호). 질문과 같은 범위에서만 보인다. */
   urbanLifeSharedHint?: string;
+  /**
+   * 명부 행(다른 주택) — 이 임대주택의 2호 여부는 일반주택 양도(§167의3①10호) 판정에 쓰인다. 말소 뒤 5% 기준을
+   * 일반주택 양도에 적용한 정면 해석이 없어 「확인 필요」를 덧붙인다(계획서 surcharge-exclusion-textbook-gaps Q-4 a · V-2).
+   */
+  rentCapGeneralHouseSaleNote?: boolean;
+}
+
+/**
+ * 말소된 임대주택(사목 · 가·다~마목 자동말소)의 5% 질문은 **말소일까지**를 묻는다 — 말소 뒤 임대·5%·사업자등록을
+ * 지키지 않아도 중과세율을 적용하지 않는다(서면-2022-법규재산-0208 · 사전-2022-법규재산-0039 · 서면-2021-법규재산-5655).
+ * 엔진은 선언을 그대로 읽는다(`rentIncreaseUnder5Pct`).
+ */
+function isCancelledForRentCap(h: RentalDeclaration): boolean {
+  return h.rentalType === "G" || (!!h.rentalCancelledDate && h.rentalCancellationReason === "auto");
 }
 
 // 유형별 노출 필드 (엔진 checkRentalType_X 요구 필드 — 공통 등록정보 외)
@@ -93,6 +107,7 @@ export function HouseEntryRentalTypeSection({
   aptDeadlineExtensionEnabled = false,
   urbanLifeHousingQuestionEnabled = false,
   urbanLifeSharedHint,
+  rentCapGeneralHouseSaleNote = false,
 }: Props) {
   const rentalType = house.rentalType;
   let fields: Array<keyof RentalDeclaration> = rentalType ? [...TYPE_FIELDS[rentalType]] : [];
@@ -101,6 +116,8 @@ export function HouseEntryRentalTypeSection({
     const baseFields = TYPE_FIELDS[SAMOK_BASE_TO_TYPE[house.saMokBaseArticle]];
     fields = [...fields, ...baseFields.filter((f) => !fields.includes(f))];
   }
+
+  const cancelled = isCancelledForRentCap(house);
 
   function setStr(key: keyof RentalDeclaration, v: string) {
     onUpdate({ [key]: v || undefined } as RentalDeclaration);
@@ -201,14 +218,33 @@ export function HouseEntryRentalTypeSection({
                 tone="violet"
                 checked={(house[key] as boolean) ?? false}
                 onCheckedChange={(v) => setBool(key, v)}
-                title={meta.label}
+                title={key === "rentIncreaseUnder5Pct" && cancelled ? "말소일까지 임대료 증액 5% 이하 충족" : meta.label}
               />
             );
+            if (key !== "rentIncreaseUnder5Pct") return chip;
+            const cancelNote = cancelled && (
+              <p className="text-caption text-muted-foreground" data-testid={`rent-cap-cancel-note-${idPrefix}`}>
+                말소 뒤 체결·갱신한 계약은 보지 않습니다 — 말소 뒤에는 임대료 증액 5% 상한을 지키지 않아도 중과세율을
+                적용하지 않습니다(서면-2022-법규재산-0208 · 서면-2021-법규재산-5655).
+                {rentCapGeneralHouseSaleNote &&
+                  " 다른 주택(일반주택)을 양도할 때 이 기준을 직접 다룬 해석은 확인하지 못했습니다(확인 필요)."}
+              </p>
+            );
             // 5% 미충족 선언 + 등록 2019-02-12 전 → 초과 증액 계약일(부칙<제29523호> 제6조). ④와 같은 술어.
-            if (key !== "rentIncreaseUnder5Pct" || !rentIncreaseContractDateInScope(house)) return chip;
+            if (!rentIncreaseContractDateInScope(house)) {
+              return cancelNote ? (
+                <div key={key as string} className="space-y-1">
+                  {chip}
+                  {cancelNote}
+                </div>
+              ) : (
+                chip
+              );
+            }
             return (
               <div key={key as string} className="space-y-2">
                 {chip}
+                {cancelNote}
                 <div className="space-y-1" data-testid={`rent-increase-contract-date-${idPrefix}`}>
                   <label className="block text-caption text-muted-foreground font-medium">
                     5% 넘게 올린 계약의 체결·갱신일 <span className="text-muted-foreground font-normal">(선택)</span>
@@ -218,7 +254,7 @@ export function HouseEntryRentalTypeSection({
                     onChange={(v) => setStr("rentIncreaseContractDate", v)}
                   />
                   <p className="text-caption text-muted-foreground">
-                    여러 번이면 가장 늦은 날. 2019년 2월 12일 전에 체결·갱신한 계약뿐이면 5% 요건을 보지 않습니다
+                    여러 번이면 {cancelled ? "말소일 전 계약 중 " : ""}가장 늦은 날. 2019년 2월 12일 전에 체결·갱신한 계약뿐이면 5% 요건을 보지 않습니다
                     (대통령령 제29523호 부칙 제6조). 2019년 2월 12일 이후 처음 체결·갱신한 표준임대차계약은 비교
                     기준이므로, 그 계약에서만 올렸다면 위 「5% 이하 충족」을 켜세요(서면-2021-법규재산-3399). 비워 두면
                     5% 요건 미충족으로 봅니다.

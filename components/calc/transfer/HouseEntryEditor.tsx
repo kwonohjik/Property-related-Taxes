@@ -675,6 +675,7 @@ function LongTermRentalSection({
             onUpdate={onUpdate}
             aptDeadlineExtensionEnabled={aptDeadlineExtensionEnabled}
             urbanLifeHousingQuestionEnabled
+            rentCapGeneralHouseSaleNote
           />
         </div>
       </ToggleCard>

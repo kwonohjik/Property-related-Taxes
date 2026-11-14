@@ -24,6 +24,18 @@ const SURCHARGE_SUSPENSION_KEYWORDS = [
 
 export const TRANSFER_DECREE_SURCHARGE_ADDITIONS: VerificationRule[] = [
   {
+    // S-3 — §167의3⑤ 추징 사유(6개월 미임대 포함)·2호 의무임대기간등 산정특례. 엔진 `DUTY_PERIOD_PENDING_WARNING`.
+    // 원문: `.legal-cache/article_ef_003956_제167조의3_v3.json`(2026-10-26 저장) 실독 2026-11-14.
+    id: "TRANSFER_DECREE.DUTY_PERIOD_CALC_SPECIAL_167_3_5",
+    citation: "소득세법 시행령 §167의3",
+    keywords: [
+      "임대의무호수를 임대하지 않은 기간이 6개월을 지난 경우를 포함한다",
+      "제2호의 의무임대기간등 산정특례에 해당하는 경우에는 해당 규정에 따른다",
+      "그 등록이 말소된 날에 해당 임대기간요건을 갖춘 것으로 본다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     // US-82 · US-85 — 감면주택 중과 배제의 정의 조항: ①3호(조특법 §97·§97의2·§98 감면 임대주택 5년 이상 임대 국민주택) ·
     // ①5호(조특법 §77·§98의2~§98의8·§99~§99의3 감면주택). 엔진 `surchargeExclusionBasis` · `SURCHARGE_EXCLUDED_INCOME_DEDUCTION_IDS`.
     // 원문 MST 290841 실독 2026-11-09.

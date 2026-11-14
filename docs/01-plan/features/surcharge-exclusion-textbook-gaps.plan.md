@@ -168,8 +168,8 @@ S-1(1회차 probe): 마목 918=false → `only_general_two_house`(배제) · 918
 
 - [x] Q-1~Q-5 결정 (2026-11-14 · 전부 권장안)
 - [ ] V-0 법제처 원문 대조
-- [x] Pre-Do anchor S-1 세액 실측(§10) · [ ] B-1
-- [ ] PR-1 · PR-2
+- [x] Pre-Do anchor S-1 세액 실측(§10) · B-1은 엔진 불변이라 §3 Pc가 대신함
+- [x] PR-1 #3352 · PR-2 구현(§11)
 - [ ] 브라우저 확인(Playwright)
 
 ## 10. PR-1 구현 기록 (S-1)
@@ -189,3 +189,11 @@ S-1(1회차 probe): 마목 918=false → `only_general_two_house`(배제) · 918
 - anchor: `check.test.ts`(마·사목 base 마 carve-out) · `rh-eligibility-period.test.ts`(⑳ 마목) · `rental-unit-card-ma1-deposit-proof.anchor.test.tsx` · `house-entry-ma1-deposit-proof.anchor.test.tsx`.
 - 뮤테이션 5건 모두 검출: M1 마 게이트 제거 · M2 마 증빙 무시 · M3 ⑳ 칸 아목만 · M4 다주택 E 칸 제거 · M5 ⑳ 포함 양도분에도 칸 노출.
 - 미수행: 브라우저 확인.
+
+## 11. PR-2 구현 기록 (S-2 · S-3)
+
+- ⑤ `HouseEntryRentalTypeSection` — 말소 주택(`rentalType === "G"` 또는 `rentalCancelledDate` + 자동말소)이면 5% 칸 제목 「말소일까지 임대료 증액 5% 이하 충족」 + 안내(0208·5655) · 계약일 hint 「말소일 전 계약 중 가장 늦은 날」. 명부 행(`HouseEntryEditor` → `rentCapGeneralHouseSaleNote`)에는 「일반주택 양도 — 확인 필요」를 덧붙인다(Q-4 a · V-2). 양도 주택(`SellingHouseLongTermRentalSection`)은 같은 컴포넌트를 쓰고 이 prop을 넘기지 않는다.
+- 엔진 판정식은 바꾸지 않았다(Q-3 a) — 타입 주석 `rentIncreaseUnder5Pct`에 「말소된 주택은 말소일까지」를 적었다. 「말소일까지 충족」 선언 → 배제는 §3 Pc·Pe(`true`)가 실측이다.
+- S-3 `DUTY_PERIOD_PENDING_WARNING`에 6개월 미임대·⑤2호 산정특례 두 문장 · 상수 `MULTI_HOUSE.DUTY_PERIOD_CALC_SPECIAL_BASIS` · 매니페스트 `TRANSFER_DECREE.DUTY_PERIOD_CALC_SPECIAL_167_3_5`(키워드는 캐시 현행본 문언 — 법제처 복구 뒤 `npm run verify:legal` 필요).
+- anchor: `house-entry-rent-cap-after-cancel.anchor.test.tsx` RC-1~RC-4 · route C-1. 뮤테이션 3건 검출(자동말소 조건 · 확인 필요 prop · 고지 문구).
+- 미수행: 브라우저 확인 · `verify:legal`(법제처 점검).
