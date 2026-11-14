@@ -126,6 +126,19 @@ describe("마목 1) 공고 전 계약 증빙 — 폼부터 route까지", () => {
   it("MA-2 짝 — 918 ✓ · 증빙 없음 → 중과 1,141,772,500 (불변)", async () => {
     expect(await run(form(rental()))).toMatchObject({ totalTax: 1_141_772_500, surcharge: "multi_house_2" });
   });
+  it("C-1 S-3 — ④ 의무기간 전 일반주택 양도 고지에 6개월 미임대 · ⑤2호 산정특례", async () => {
+    const body = await bodyOf(form(rental({ isExcluded918Rule: false })));
+    const res = await SINGLE(
+      new NextRequest("http://l/api/calc/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(withIdentityStdInBody(body)),
+      }),
+    );
+    const text = JSON.stringify(await res.json());
+    expect(text).toContain("임대의무호수를 임대하지 않은 기간이 6개월을 지난 경우도 그 사유에 포함됩니다");
+    expect(text).toContain("소득세법 시행령 §167의3⑤2호");
+  });
   it("MA-3 짝 — 918 아님 → 10호 배제 633,682,500 (불변)", async () => {
     expect(await run(form(rental({ isExcluded918Rule: false })))).toMatchObject({
       totalTax: 633_682_500,

@@ -141,4 +141,7 @@ export function getGeneralHouseExcludeReason(house: HouseInfo, transferDate: Dat
 export const DUTY_PERIOD_PENDING_WARNING =
   "의무임대기간(의무무상·의무사용기간)을 채우기 전인 임대주택등을 장기임대주택등으로 보아 중과를 배제했습니다" +
   `(${MULTI_HOUSE.DUTY_PERIOD_PENDING_BASIS}). 이후 그 요건을 채우지 못하게 되면 사유 발생일이 속하는 달의 말일부터 ` +
-  `2개월 이내에 중과했을 세액과의 차액을 신고·납부해야 합니다(${MULTI_HOUSE.DUTY_PERIOD_PENDING_CLAWBACK_BASIS}).`;
+  `2개월 이내에 중과했을 세액과의 차액을 신고·납부해야 합니다(${MULTI_HOUSE.DUTY_PERIOD_PENDING_CLAWBACK_BASIS}). ` +
+  "임대의무호수를 임대하지 않은 기간이 6개월을 지난 경우도 그 사유에 포함됩니다. 수용 등 부득이한 사유, 재개발·재건축·" +
+  "리모델링 기간, 임대의무기간의 2분의 1 이상 임대한 뒤의 자진말소 등은 의무임대기간등 산정특례에 따릅니다" +
+  `(${MULTI_HOUSE.DUTY_PERIOD_CALC_SPECIAL_BASIS}).`;
