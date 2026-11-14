@@ -70,8 +70,8 @@ describe("V-6 구 임대주택법 등록분 × §155㉓", () => {
     expect(r.notices?.some((n) => n.includes("부칙 제7조"))).toBe(true);
   });
 
-  it("P-3 0972 건설임대도 포함 — 구법 × 건설 · 같은 날짜 → 2020.8.18. 간주 창", () => {
-    const r = run([unit({ cancelled: "2015-10-01", rentalAcquisitionType: "construction", hasMinimum2Units: true })], "2025-06-01");
+  it("P-3 0972 건설임대도 포함 — 구법 × 건설(다목 · 규모요건 충족) · 같은 날짜 → 2020.8.18. 간주 창", () => {
+    const r = run([unit({ cancelled: "2015-10-01", rentalAcquisitionType: "construction", hasMinimum2Units: true, landAreaM2: 200, totalFloorAreaM2: 100 })], "2025-06-01");
     expect(r.cancellationWindow?.firstCancellationDate).toBe("2020-08-18");
     expect(r.passed).toBe(true);
   });
