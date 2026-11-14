@@ -142,6 +142,18 @@ describe("OH-16 마목 1) 포함 — 양도일 게이트(대통령령 제31442�
     expect(e.failReasons.map((f) => f.code)).toContain("SHORT_TERM_REGULATED");
   });
 
+  it("OH16-V0 2018-10-22 양도 · 2018-09-28 등록 918 → ⑳은 2020.7.11. 전 등록분을 가목으로 판정해 918 결격 축 자체가 없다(V-0 실측)", () => {
+    const u = {
+      ...unitMa918,
+      businessRegistrationDate: new Date("2018-09-28"),
+      rentalRegistrationDate: new Date("2018-09-28"),
+      rentalMonths: 1,
+    };
+    const e = checkEligibility([u], 5, 5, false, ctx("2018-10-22"));
+    expect(e.perUnitVerdict?.[0].derivedArticle).toBe("가");
+    expect(e.failReasons.map((f) => f.code)).not.toContain("SHORT_TERM_REGULATED");
+  });
+
   it("OH16-3 마목 2)(2020.7.11 이후 등록 아파트)는 포함 대상이 아니다 — 여전히 배제", () => {
     const e = checkEligibility([{ ...unitMa918, isApartment: true }], 5, 5, false, ctx("2024-06-01"));
     expect(e.passed).toBe(false);

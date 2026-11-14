@@ -55,7 +55,7 @@ const rental = (over: Partial<HouseEntry> = {}): HouseEntry => ({
   ...over,
 });
 
-function form(h2: HouseEntry): Form {
+function form(h2: HouseEntry, o: { transferDate?: string; extra?: HouseEntry[] } = {}): Form {
   const f = createDefaultTransferFormData();
   f.isOneHousehold = true;
   f.assets[0] = {
@@ -66,13 +66,13 @@ function form(h2: HouseEntry): Form {
     regionCode: GANGNAM,
   };
   return Object.assign(f, {
-    transferDate: "2022-03-01",
+    transferDate: o.transferDate ?? "2022-03-01",
     contractTotalPrice: "2,000,000,000",
     residencePeriodMonths: "0",
-    householdHousingCount: "2",
+    householdHousingCount: String(2 + (o.extra?.length ?? 0)),
     isRegulatedArea: true,
     wasRegulatedAtAcquisition: false,
-    houses: [h2],
+    houses: [h2, ...(o.extra ?? [])],
   });
 }
 
@@ -144,5 +144,47 @@ describe("마목 1) 공고 전 계약 증빙 — 폼부터 route까지", () => {
       totalTax: 633_682_500,
       reasons: "only_general_two_house",
     });
+  });
+});
+
+/**
+ * V-0 — 마목 단서(1주택 이상 보유 중 조정지역 새로 취득 → 제외)는 대통령령 제29242호(2018.10.23. 시행)가 신설했다.
+ * 부칙 제4조① 「이 영 시행 이후 양도하는 분부터 적용」 — 2018.10.22. 이전 양도분에는 단서가 없다(2018.7.17. 시행본 MST 204069 실독).
+ * 시료: 일반주택(2013 취득) 양도 · 마목 다세대(2018-09-20 취득 · 09-28 두 등록) · 가목 다세대(2017 등록 · 배제) — 3주택.
+ * 2주택이면 일시적 2주택 배제가 결과를 덮어 차이가 보이지 않는다(probe 2026-11-15).
+ */
+describe("V-0 마목 단서 시행일 — 2018.10.23. 전 양도분은 918 결격 없음", () => {
+  const ma2018 = (o: Partial<HouseEntry> = {}) =>
+    rental({
+      acquisitionDate: "2018-09-20",
+      businessRegistrationDate: "2018-09-28",
+      rentalRegistrationDate: "2018-09-28",
+      rentalStartDate: "2018-09-28",
+      ...o,
+    });
+  const ga2017 = rental({
+    id: "h3",
+    rentalType: "A",
+    acquisitionDate: "2016-01-01",
+    businessRegistrationDate: "2017-01-02",
+    rentalRegistrationDate: "2017-01-02",
+    rentalStartDate: "2017-01-02",
+    isExcluded918Rule: false,
+  });
+  it("V0-1 ★ 2018-10-22 양도 · 918 ✓ → 단서 시행 전이라 10호 배제 627,495,000 (종전 3주택 중과 1,118,755,000)", async () => {
+    expect(await run(form(ma2018(), { transferDate: "2018-10-22", extra: [ga2017] }))).toMatchObject({
+      totalTax: 627_495_000,
+      surcharge: "none",
+    });
+  });
+  it("V0-2 경계 짝 — 2018-10-23 양도 · 918 ✓ → 단서 적용 · 3주택 중과", async () => {
+    expect(await run(form(ma2018(), { transferDate: "2018-10-23", extra: [ga2017] }))).toMatchObject({
+      surcharge: "multi_house_3plus",
+    });
+  });
+  it("V0-3 짝 — 2018-10-22 양도 · 918 아님 → 같은 627,495,000", async () => {
+    expect(
+      await run(form(ma2018({ isExcluded918Rule: false }), { transferDate: "2018-10-22", extra: [ga2017] })),
+    ).toMatchObject({ totalTax: 627_495_000, surcharge: "none" });
   });
 });

@@ -310,7 +310,7 @@ export function checkEligibility(
     /**
      * OH-16 — 양도일 2021-02-17 이후 ⑳은 「같은 호 마목에 해당하는 주택의 경우에는 같은 목 1)에 따른
      * 주택[같은 목 2) 및 3)에 해당하지 않는 경우로 한정한다]을 **포함**한다」(대통령령 제31442호, 부칙
-     * 제2조② 양도분). 공용 predicate의 마목 918 hard 배제(다주택 §167의3 축)를 이 경로에서만 끈다.
+     * 제2조② 양도분). 공용 predicate의 마목 918 배제(다주택 §167의3 축)를 이 경로에서만 끈다.
      * 2)(아파트)·3)(단기→장기 변경)은 APARTMENT_RESTRICTED·SHORT_TO_LONG_CHANGE로 그대로 남는다.
      * 양도일이 없으면(직접 호출) 종전대로 배제한다.
      */
@@ -331,8 +331,8 @@ export function checkEligibility(
       hasMinimum5UnitsInCity: unit.hasMinimum5UnitsInCity, // 라목
       firstSaleContractDate: unit.firstSaleContractDate, // 라목
       isNationalSizeHousing: unit.isNationalSizeHousing, // 나목
-      isExcluded918Rule: ma1Included ? false : unit.isExcluded918Rule, // 마 hard·아 carve-out
-      hasContractDepositProof: unit.hasContractDepositProof, // 아 carve-out
+      isExcluded918Rule: ma1Included ? false : unit.isExcluded918Rule, // 마·아 carve-out
+      hasContractDepositProof: unit.hasContractDepositProof, // 마·아 carve-out
       isExcludedShortToLongChange: unit.isExcludedShortToLongChange, // 마·바
       rentIncreaseUnder5Pct: unit.requirementsConfirmed, // §155⑳ 묶음 확인 → 5%룰 매핑
       /**

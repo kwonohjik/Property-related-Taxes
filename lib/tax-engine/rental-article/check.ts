@@ -12,6 +12,7 @@
  *   - 마·아목 918 = isExcluded918Rule && !hasContractDepositProof — 마목 1) 괄호 「조정대상지역의 공고가 있은 날 이전에
  *     … 취득하거나 … 매매계약을 체결하고 계약금을 지급한 사실이 증빙서류에 의해 확인되는 경우는 제외한다」·아목 4) 단서
  *     (공고일 이전 취득·계약금 지급 증명 → 조정대상지역 주택으로 보지 않음).
+ *     마목 단서는 2018.10.23. 이후 양도분부터(대통령령 제29242호 부칙 제4조① — `isMa918ProvisoInForce`).
  *
  * 판정 상수는 rules.ts 단일 소스. 아파트 제한은 isApartmentRestrictedForArticle 공용.
  *
@@ -218,6 +219,15 @@ export function isRentCapContractSubject(contractDate: Date): boolean {
 }
 
 /**
+ * 그 양도일에 마목 단서(1주택 이상 보유 중 새로 취득한 조정대상지역 장기일반민간임대주택 → 제외)가 있었는가.
+ * 단서는 대통령령 제29242호(2018.10.23. 시행)가 신설했다(2018.7.17. 시행본에는 없음) — 부칙 제4조① 「이 영 시행
+ * 이후 양도하는 분부터 적용」. 2018.9.13. 이전 취득·계약(부칙 제4조②)은 `isExcluded918Rule` 질문 자체가 거른다.
+ */
+export function isMa918ProvisoInForce(transferDate: Date): boolean {
+  return transferDate.getTime() >= RA_CUT.Y2018_10_23;
+}
+
+/**
  * 5% 미충족 선언이 실제로 요건 위반인가. 가·다·마·바목에서만 두 경계를 본다:
  * - 양도일이 2019-02-12 전 — 5% 문언이 없던 시행본(부칙 제2조② 「이 영 시행 이후 양도하는 분부터」).
  * - 초과 증액 계약(가장 늦은 것)이 2019-02-12 전 — 부칙 제6조.
@@ -351,8 +361,12 @@ function checkArticleGates(
     (!!u.isExcludedAfter20200711Apt && (article === "마" || article === "라"));
   if (aptRestricted) fails.push("APARTMENT_RESTRICTED");
 
-  // (j) 918 조정취득 배제 — 마목 1)·아목 4): 공고 전 취득·계약금 지급 증빙이 없으면 배제
-  if (gate.carveout918 && u.isExcluded918Rule && !u.hasContractDepositProof) fails.push("SHORT_TERM_REGULATED");
+  // (j) 918 조정취득 배제 — 마목 1)·아목 4): 공고 전 취득·계약금 지급 증빙이 없으면 배제.
+  //     마목 단서는 2018.10.23. 이후 양도분부터(양도일 미제공이면 종전대로 본다).
+  const ma918NotYet = article === "마" && !!u.transferDate && !isMa918ProvisoInForce(u.transferDate);
+  if (gate.carveout918 && u.isExcluded918Rule && !u.hasContractDepositProof && !ma918NotYet) {
+    fails.push("SHORT_TERM_REGULATED");
+  }
 
   // (k) 단기→장기 변경 배제 (마·바)
   if (gate.shortToLong && u.isExcludedShortToLongChange) fails.push("SHORT_TO_LONG_CHANGE");
