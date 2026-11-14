@@ -385,6 +385,9 @@ describe("checkEligibility — C4 나목·918·단→장변경", () => {
     };
     expect(checkEligibility([makeUnit({ ...maBase, isExcluded918Rule: true })], 5, 5)
       .failReasons.find((f) => f.code === "SHORT_TERM_REGULATED")).toBeDefined();
+    // 마목 1) 괄호 — 공고 전 취득·계약금 지급 증빙이면 배제 아님(S-1)
+    expect(checkEligibility([makeUnit({ ...maBase, isExcluded918Rule: true, hasContractDepositProof: true })], 5, 5)
+      .failReasons.find((f) => f.code === "SHORT_TERM_REGULATED")).toBeUndefined();
     expect(checkEligibility([makeUnit({ ...maBase, isExcludedShortToLongChange: true })], 5, 5)
       .failReasons.find((f) => f.code === "SHORT_TO_LONG_CHANGE")).toBeDefined();
   });

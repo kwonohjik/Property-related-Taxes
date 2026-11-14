@@ -142,15 +142,15 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
   const showAcqPrice = isNa || isLa; // 나·라목은 취득당시 기준시가(임대개시일 기준시가 스왑)
   // 나목 cap은 취득당시 3억(지역무관) → 소재지역 숨김. 라목은 비수도권 요건이라 소재지역 노출. 가·마·아·구법은 지역별 cap.
   const showRegion = article === "가" || article === "마" || article === "아" || article === "구법" || isLa;
-  // 918 조정취득: 마목(hard)·아목(carve-out)
+  // 918 조정취득: 마목 1)·아목 4)
   const show918 = article === "마" || article === "아";
   // OH-16 — 2021-02-17 이후 양도분은 ⑳이 마목 1)을 포함한다(엔진과 같은 leaf). 양도일 미입력이면 판정 보류.
   const ma1Included =
     article === "마" && !!transferDate && !Number.isNaN(new Date(transferDate).getTime())
       ? isMa1IncludedIn15520(new Date(transferDate))
       : null;
-  // 아목 carve-out: 918 ON 시 계약금 지급 증빙으로 배제 해제
-  const showDepositProof = article === "아";
+  // 마목 1)·아목 4) carve-out: 918 ON 시 공고 전 취득·계약금 지급 증빙으로 배제 해제(마목은 ⑳에 포함되는 양도분이면 918 자체를 보지 않는다)
+  const showDepositProof = article === "아" || (article === "마" && ma1Included !== true);
   // 단기→장기 변경신고 배제: 마·바
   const showShortToLong = article === "마" || article === "바";
   // 규모요건(대지298·연면적149): 건설(다·바·자) + 라목(미분양)
@@ -429,7 +429,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
         </FieldCard>
       )}
 
-      {/* 918 조정취득 배제 (마목 hard·아목 carve-out) */}
+      {/* 918 조정취득 배제 (마목 1)·아목 4)) */}
       {show918 && (
         <ToggleCard
           variant="card"
@@ -441,7 +441,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
               ? ma1Included === true
                 ? "2021.2.17 이후 양도분은 해당해도 §155⑳ 장기임대주택에 포함됩니다(소령 §155⑳ 괄호 — 아파트·단기→장기 변경 주택은 제외)."
                 : ma1Included === false
-                  ? "2021.2.16 이전 양도분은 해당하면 §155⑳ 특례가 배제됩니다(2021.2.17 이후 양도분부터 포함)."
+                  ? "2021.2.16 이전 양도분은 해당하면 §155⑳ 특례가 배제됩니다(2021.2.17 이후 양도분부터 포함). 조정대상지역 공고 전 취득·계약금 지급 증빙이 있으면 예외."
                   : "양도일에 따라 달라집니다 — 2021.2.17 이후 양도분은 포함, 그 전 양도분은 배제(소령 §155⑳ 괄호)."
               : "아목(단기 매입)은 원칙 배제 — 조정대상지역 공고 전 계약 + 계약금 지급 증빙이 있으면 예외."
           }
@@ -450,14 +450,14 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
         />
       )}
 
-      {/* 아목 918 carve-out — 조정대상지역 공고 전 계약 + 계약금 지급 증빙 */}
+      {/* 마목 1)·아목 4) 918 carve-out — 조정대상지역 공고 전 취득 또는 계약 + 계약금 지급 증빙 */}
       {showDepositProof && unit.isExcluded918Rule && (
         <ToggleCard
           variant="card"
           size="sm"
           tone="emerald"
-          title="조정대상지역 공고일 이전에 계약하고 계약금을 지급한 증빙이 있습니다."
-          description="증빙이 있으면 아목 918 배제에서 제외되어 특례가 유지됩니다."
+          title="조정대상지역 공고일 이전에 취득했거나, 계약하고 계약금을 지급한 증빙이 있습니다."
+          description={`증빙이 있으면 ${article}목 918 배제에서 제외되어 특례가 유지됩니다.`}
           checked={unit.hasContractDepositProof}
           onCheckedChange={(v) => set("hasContractDepositProof", v)}
         />

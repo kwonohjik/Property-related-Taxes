@@ -416,7 +416,7 @@ export interface HouseEntry {
   isExcludedAfter20200711Apt?: boolean;
   /** 단기→장기 변경신고 제외 해당 여부 — E·F */
   isExcludedShortToLongChange?: boolean;
-  /** 계약금 지급 증빙 보유 여부 — H (조정지역 2018.9.14 취득 예외) */
+  /** 조정대상지역 공고 전 취득·계약금 지급 증빙 보유 여부 — E·H (마목 1)·아목 4) 918 배제 예외) */
   hasContractDepositProof?: boolean;
   /**
    * §167의3⑪ 기한 연장 사실 — 가목2)·나목2)·라목8)·마목4) **아파트**일 때만 묻는다(A·B·D·E).

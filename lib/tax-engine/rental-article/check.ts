@@ -9,7 +9,9 @@
  *   - 가·다목 등록상한(2018.4.2)은 §155⑳ derive(2020.7.11 경계)와 충돌 → 공용 predicate 미적용,
  *     다주택 isLongTermRentalHousingExempt-side 잔여 게이트로 유지.
  *   - 마목 아파트 = date-derived(§155⑳) OR isExcludedAfter20200711Apt(다주택) 결합.
- *   - 아목 918 = (isExcluded918Rule && !hasContractDepositProof)(다주택·C4 §155⑳) OR isRegulatedAreaNewAcq(§155⑳ C3).
+ *   - 마·아목 918 = isExcluded918Rule && !hasContractDepositProof — 마목 1) 괄호 「조정대상지역의 공고가 있은 날 이전에
+ *     … 취득하거나 … 매매계약을 체결하고 계약금을 지급한 사실이 증빙서류에 의해 확인되는 경우는 제외한다」·아목 4) 단서
+ *     (공고일 이전 취득·계약금 지급 증명 → 조정대상지역 주택으로 보지 않음).
  *
  * 판정 상수는 rules.ts 단일 소스. 아파트 제한은 isApartmentRestrictedForArticle 공용.
  *
@@ -94,9 +96,9 @@ export type NormalizedRentalUnit = {
   rentIncreaseContractDate?: Date;
   /** 양도일 — 2019-02-12 전 양도분에는 가·다·마·바목 5% 문언이 없었다. 미제공이면 이 게이트를 보지 않는다. */
   transferDate?: Date;
-  /** 918 조정취득 배제 (마목 hard·아목 carve-out — 양 feature 공용, C4서 §155⑳도 이 필드로 통일) */
+  /** 918 조정취득 배제 (마·아목 — 양 feature 공용, C4서 §155⑳도 이 필드로 통일) */
   isExcluded918Rule?: boolean;
-  /** 아목 918 carve-out — 계약금 지급 증빙 */
+  /** 마·아목 918 carve-out — 조정대상지역 공고 전 취득 또는 매매계약 + 계약금 지급 증빙 */
   hasContractDepositProof?: boolean;
   /** 라목 최초 분양계약일 */
   firstSaleContractDate?: Date;
@@ -161,8 +163,7 @@ type ArticleGate = {
   existingBusinessGate?: boolean; // 나 — 지자체 ≤ 기존사업자기준일 · 세무서 ≤ 2004.6.30.(의제 포함) — `passesExistingBusinessRegGate`
   saleWindow?: readonly [number, number]; // 라
   nonCapitalOnly?: boolean; // 라
-  hard918?: boolean; // 마
-  carveout918?: boolean; // 아
+  carveout918?: boolean; // 마·아
   shortToLong?: boolean; // 마·바
   cancellationOnly?: boolean; // 사 — period/price/size 등 skip
   aptDeadlineGate?: boolean; // 가·나·라·마 (§167조의3⑪, 대통령령 제36737호)
@@ -188,7 +189,7 @@ const GATES: Record<SharedRentalArticle, ArticleGate> = {
     nonCapitalOnly: true,
     aptDeadlineGate: true,
   },
-  마: { priceAt: "rentalStart", fivePct: true, hard918: true, shortToLong: true, aptDeadlineGate: true },
+  마: { priceAt: "rentalStart", fivePct: true, carveout918: true, shortToLong: true, aptDeadlineGate: true },
   바: { priceAt: "rentalStart", fivePct: true, size: true, min2: true, shortToLong: true },
   사: { priceAt: "rentalStart", fivePct: false, cancellationOnly: true },
   아: { priceAt: "rentalStart", fivePct: true, regDateMin: RA_CUT.Y2025_06_04, apartmentBlanket: true, carveout918: true },
@@ -350,8 +351,7 @@ function checkArticleGates(
     (!!u.isExcludedAfter20200711Apt && (article === "마" || article === "라"));
   if (aptRestricted) fails.push("APARTMENT_RESTRICTED");
 
-  // (j) 918 조정취득 배제 — 마목 hard(무조건) / 아목 carve-out(계약금 증빙 없으면 배제)
-  if (gate.hard918 && u.isExcluded918Rule) fails.push("SHORT_TERM_REGULATED");
+  // (j) 918 조정취득 배제 — 마목 1)·아목 4): 공고 전 취득·계약금 지급 증빙이 없으면 배제
   if (gate.carveout918 && u.isExcluded918Rule && !u.hasContractDepositProof) fails.push("SHORT_TERM_REGULATED");
 
   // (k) 단기→장기 변경 배제 (마·바)
