@@ -23,7 +23,7 @@ import { rentalHousingBasisOf } from "../transfer-tax/rental-housing-exception/d
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { OneHouseJudgment } from "./types";
 import { revokeOneHouseExemption } from "./revoke-exemption";
-import type { CancellationWindow } from "../transfer-tax/rental-housing-exception/types";
+import type { CancellationWindow, RentalUnitVerdict } from "../transfer-tax/rental-housing-exception/types";
 import type { RentalResidenceComposition } from "../transfer-tax-rental-residence-composition";
 
 /** 판정 메뉴 ④가 읽는 §155⑳ 결론. 금액·안분은 담지 않는다(세액은 계산기의 몫). */
@@ -47,6 +47,8 @@ export type OneHouseRentalHousingVerdict = {
   notices: string[];
   /** §155㉓ 최초 말소일부터 5년 기한(I-4) — 말소일을 입력한 말소 호가 있을 때만 */
   cancellationWindow?: CancellationWindow;
+  /** 임대사업 승계 echo(G-3·G-5 · Q-6) — 승계를 입력한 호만(0-based `unitIndex`). 증여면 증여자 등록 날짜 3필드 포함 */
+  unitSuccessions?: Array<NonNullable<RentalUnitVerdict["succession"]> & { unitIndex: number }>;
   legalBasis: string;
 };
 
@@ -67,6 +69,9 @@ export function buildRentalHousingVerdict(
   if (!eligibility) return null;
   const exceeded = composition?.status === "exceeded" ? composition : undefined;
   const compositionNotice = exceeded?.confirmNotice && eligibility.passed ? [exceeded.confirmNotice] : [];
+  const unitSuccessions = (eligibility.perUnitVerdict ?? []).flatMap((v) =>
+    v.succession ? [{ unitIndex: v.unitIndex, ...v.succession }] : [],
+  );
   return {
     scenario: input.rentalHousingException?.scenario ?? "A",
     passed: eligibility.passed && !exceeded,
@@ -79,6 +84,7 @@ export function buildRentalHousingVerdict(
     periodPendingUnitIndexes: eligibility.periodPendingUnitIndexes ?? [],
     notices: [...(eligibility.notices ?? []), ...compositionNotice],
     ...(eligibility.cancellationWindow ? { cancellationWindow: eligibility.cancellationWindow } : {}),
+    ...(unitSuccessions.length > 0 ? { unitSuccessions } : {}),
     // 근거 조문은 판정이 정한 값 — §154⑩ 표준 경로(B · 0호)는 §154⑩, 그 밖에는 §155⑳ (S06-13).
     legalBasis: rentalHousingBasisOf(eligibility.laws),
   };

@@ -15,10 +15,10 @@ import { saMokTransferDeadline } from "@/lib/tax-engine/rental-article/rules";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { ARTICLE_BY_RENTAL_TYPE } from "@/lib/tax-engine/multi-house-surcharge-count";
 import {
-  deriveRegApplicationDate,
   deriveRentalArticle,
   isTerminationEligibleArticle,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
+import { rentalUnitRegApplicationDate } from "./rental-succession";
 import type { SharedRentalArticle } from "@/lib/tax-engine/rental-article/types";
 import type { AptDeadlineExtensionForm, RentalDeclaration } from "@/lib/stores/calc-wizard-asset-nbl";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -140,14 +140,8 @@ export function rentalDeclarationUrbanLifeQuestionInScope(d: RentalDeclaration |
  */
 export function rentalUnitUrbanLifeQuestionInScope(u: RentalUnitForm | undefined): boolean {
   if (!u?.isApartment) return false;
-  const effReg =
-    u.businessRegistrationDate && u.rentalRegistrationDate
-      ? deriveRegApplicationDate({
-          businessRegistrationDate: new Date(u.businessRegistrationDate),
-          rentalRegistrationDate: new Date(u.rentalRegistrationDate),
-        })
-      : null;
-  const article = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, effReg);
+  // 증여 승계는 증여자 등록 기준(G-3) — 엔진 `registrationBasis`와 같은 술어
+  const article = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, rentalUnitRegApplicationDate(u));
   if (!isGated(article)) return false;
   return !(u.rentalAutoTermination && isTerminationEligibleArticle(article));
 }

@@ -18,6 +18,7 @@ import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
 import { RentalCancellationWindowNote } from "./RentalCancellationWindowNote";
+import { RentalSuccessionEchoNote } from "./RentalSuccessionEchoNote";
 import { rentalHousingBasisOf } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 
 interface Props {
@@ -102,6 +103,9 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
             </p>
           )}
           <RentalCancellationWindowNote window={detail.eligibility.cancellationWindow} />
+          <RentalSuccessionEchoNote
+            items={(detail.eligibility.perUnitVerdict ?? []).flatMap((v) => (v.succession ? [{ unitIndex: v.unitIndex, ...v.succession }] : []))}
+          />
         </div>
 
         <p className="text-xs text-amber-800 dark:text-amber-300">
@@ -163,6 +167,10 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
               </li>
             ))}
           </ul>
+          {/* G-3·G-5 임대사업 승계 echo(Q-6) — 승계를 입력한 호만 */}
+          <RentalSuccessionEchoNote
+            items={detail.eligibility.perUnitVerdict.flatMap((v) => (v.succession ? [{ unitIndex: v.unitIndex, ...v.succession }] : []))}
+          />
         </div>
       )}
 

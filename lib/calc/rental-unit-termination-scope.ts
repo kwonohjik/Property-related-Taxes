@@ -8,22 +8,16 @@
  * ⑧(`transfer-tax-validate-rental-exception.ts`)은 이미 같은 목에만 말소 필드를 검사한다.
  */
 import {
-  deriveRegApplicationDate,
   deriveRentalArticle,
   isTerminationEligibleArticle,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
+import { rentalUnitRegApplicationDate } from "./rental-succession";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 type RentalUnitForm = AssetForm["rentalHousingException"]["rentalUnits"][number];
 
 export function rentalUnitTerminationInScope(u: RentalUnitForm): boolean {
   if (!u.rentalAutoTermination) return false;
-  const effReg =
-    u.businessRegistrationDate && u.rentalRegistrationDate
-      ? deriveRegApplicationDate({
-          businessRegistrationDate: new Date(u.businessRegistrationDate),
-          rentalRegistrationDate: new Date(u.rentalRegistrationDate),
-        })
-      : null;
-  return isTerminationEligibleArticle(deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, effReg));
+  // 증여 승계는 증여자 등록 기준(G-3) — 엔진 `registrationBasis`와 같은 술어
+  return isTerminationEligibleArticle(deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, rentalUnitRegApplicationDate(u)));
 }

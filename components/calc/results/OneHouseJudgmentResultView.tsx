@@ -18,6 +18,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { CtaButton } from "@/components/calc/shared/WizardNav";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RentalCancellationWindowNote } from "@/components/calc/results/transfer/RentalCancellationWindowNote";
+import { RentalSuccessionEchoNote } from "@/components/calc/results/transfer/RentalSuccessionEchoNote";
 import { OneHouseRequirementReviewCard } from "@/components/calc/results/OneHouseRequirementReviewCard";
 import { OneHouseContestedIssuesCard } from "@/components/calc/results/OneHouseContestedIssuesCard";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
@@ -317,6 +318,8 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
           )}
           {/* I-4 — §155㉓ 최초 말소일부터 5년 기한(엔진 echo). 구 응답엔 필드가 없다. */}
           <RentalCancellationWindowNote window={rental.cancellationWindow} />
+          {/* G-3·G-5 임대사업 승계 echo(Q-6) — 승계를 입력한 호만. 구 응답엔 필드가 없다. */}
+          <RentalSuccessionEchoNote items={rental.unitSuccessions} />
           {/* OH-40·§7-5 — 판정 보류·확인 필요 고지(결론은 그대로). 구 응답엔 필드가 없을 수 있다. */}
           {(rental.notices ?? []).map((n, i) => (
             <p key={`notice-${i}`} className="text-sm" data-testid="one-house-rental-notice">

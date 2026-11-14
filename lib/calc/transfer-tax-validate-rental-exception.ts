@@ -20,10 +20,9 @@ import { parseDecimal } from "@/lib/calc/number-parse";
 import { canDeclareRentalHousingException } from "./rental-housing-exception-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
-import {
-  deriveRegApplicationDate,
-  deriveRentalArticle,
-} from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
+import { deriveRentalArticle } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
+import { rentalSuccessionOf } from "@/lib/stores/calc-wizard-asset-rental-period";
+import { rentalUnitRegApplicationDate, rentalUnitRegistrationBasis } from "./rental-succession";
 import {
   isLifetimeLimitEra155_20,
   isAddendumTransitionEffective,
@@ -183,17 +182,33 @@ export function validateRentalHousingException(
       }
     }
 
-    // 상속 임대주택 — 피상속인 임대개월 미입력은 차단(자동 간주 없음 · 조특령 §97⑤3호 합산 대상)
-    if (u.isInheritedRental && !(parseFloat(u.decedentRentalMonths ?? "") > 0)) {
-      return `${unitLabel}: 상속받은 임대주택이면 피상속인 임대기간(개월)을 입력하세요.`;
+    // 임대사업 승계(상속·같은 세대원 증여·포괄양수) — 전 임대사업자 임대개월 미입력은 차단(자동 간주 없음 · 조특령 §97⑤3호 합산 대상).
+    // 증여는 증여자 날짜도 필수(G-3 — 수증자 날짜로 대신하지 않는다). ④가 `donorRegistration`을 보내는 조건과 같은 술어(`rentalSuccessionOf`).
+    const succession = rentalSuccessionOf(u);
+    if (succession && !(parseFloat(u.decedentRentalMonths ?? "") > 0)) {
+      return `${unitLabel}: ${
+        succession === "inheritance"
+          ? "상속받은 임대주택이면 피상속인 임대기간(개월)을 입력하세요."
+          : succession === "household_gift"
+            ? "같은 세대원에게 증여받아 계속 임대하는 주택이면 증여자 임대기간(개월)을 입력하세요."
+            : "포괄양수한 임대주택이면 전 임대사업자 임대기간(개월)을 입력하세요."
+      }`;
+    }
+    if (succession === "household_gift") {
+      const donor = rentalUnitRegistrationBasis(u);
+      if (!donor.businessRegistrationDate) return `${unitLabel}: 증여자의 세무서 사업자등록일을 입력하세요.`;
+      if (!donor.rentalRegistrationDate) return `${unitLabel}: 증여자의 지자체 임대사업자등록신청일을 입력하세요.`;
+      if (donor.rentalRegistrationDate.slice(0, 10) > u.rentalRegistrationDate.slice(0, 10)) {
+        return `${unitLabel}: 증여자의 임대사업자등록신청일(${donor.rentalRegistrationDate.slice(0, 10)})은 증여받은 사람의 신청일(${u.rentalRegistrationDate.slice(0, 10)})보다 늦을 수 없습니다.`;
+      }
+      if (donor.rentalRegisteredDate && donor.rentalRegisteredDate.slice(0, 10) < donor.rentalRegistrationDate.slice(0, 10)) {
+        return `${unitLabel}: 증여자의 임대사업자 등록일은 증여자 등록신청일(${donor.rentalRegistrationDate.slice(0, 10)}) 이후여야 합니다.`;
+      }
     }
 
-    // 도출 목 재사용(deriveRentalArticle · 지자체 등록 신청일 기준 — D-1) — UI 조건부 노출·엔진 판정과 3중 동기화
-    const eff = deriveRegApplicationDate({
-      businessRegistrationDate: new Date(u.businessRegistrationDate),
-      rentalRegistrationDate: new Date(u.rentalRegistrationDate),
-    });
-    const article = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, eff);
+    // 도출 목 재사용(deriveRentalArticle · 지자체 등록 신청일 기준 — D-1) — UI 조건부 노출·엔진 판정과 3중 동기화.
+    // 증여 승계는 증여자 등록 기준(엔진 `registrationBasis`와 같은 술어 `rentalUnitRegApplicationDate`).
+    const article = deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, rentalUnitRegApplicationDate(u));
 
     if (article === "나") {
       // 나목(기존사업자 매입) — 취득당시 기준시가 3억·국민주택규모·2호 (임대개시일 기준시가 미사용)
@@ -265,8 +280,10 @@ export function validateRentalHousingException(
       if (!cd) {
         return `${unitLabel}: 등록 말소일을 입력하세요 (소령 §155㉓ — 말소 이후 5년 이내 거주주택 양도 판정).`;
       }
-      if (cd < u.rentalRegistrationDate.slice(0, 10)) {
-        return `${unitLabel}: 등록 말소일(${cd})은 지자체 임대사업자등록신청일(${u.rentalRegistrationDate.slice(0, 10)}) 이후여야 합니다.`;
+      // 말소일의 하한은 실효 등록 기준(증여 승계는 증여자 신청일 — 말소는 증여자 때 등록의 말소다)
+      const basisApplication = rentalUnitRegistrationBasis(u).rentalRegistrationDate.slice(0, 10);
+      if (cd < basisApplication) {
+        return `${unitLabel}: 등록 말소일(${cd})은 지자체 임대사업자등록신청일(${basisApplication}) 이후여야 합니다.`;
       }
       if (formTransferDate && cd > formTransferDate.slice(0, 10)) {
         return `${unitLabel}: 등록 말소일(${cd})이 양도일(${formTransferDate.slice(0, 10)}) 뒤입니다 — 양도일 현재 등록 중인 주택이면 말소 표시를 끄세요.`;

@@ -110,7 +110,9 @@ import {
   deriveEffectiveRegDate,
   deriveRegApplicationDate,
   deriveRentalArticle,
+  registrationBasis,
 } from "./derive";
+import { successionEcho, successionNotice } from "./succession";
 import {
   terminationDeadline,
   isTerminationEligibleArticle,
@@ -300,8 +302,10 @@ export function checkEligibility(
     const unit = rentalUnits[i];
 
     // 목 도출 + 공용 canonical predicate(check.ts)에 위임 — 판정 로직 단일 소스.
-    const effectiveRegDate = deriveEffectiveRegDate(unit);
-    const article = deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, deriveRegApplicationDate(unit));
+    // G-3 — 증여 승계는 증여자 등록 3필드(`registrationBasis`)로 목·기한을 판정한다. D10(양도일 현재 등록)은 아래에서 본인 값을 그대로 본다.
+    const basis = registrationBasis(unit);
+    const effectiveRegDate = deriveEffectiveRegDate(basis);
+    const article = deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, deriveRegApplicationDate(basis));
     derivedArticles.push(article);
     /**
      * OH-16 — 양도일 2021-02-17 이후 ⑳은 「같은 호 마목에 해당하는 주택의 경우에는 같은 목 1)에 따른
@@ -312,9 +316,9 @@ export function checkEligibility(
      */
     const ma1Included = article === "마" && ctx != null && isMa1IncludedIn15520(ctx.transferDate);
     const normalized: NormalizedRentalUnit = {
-      businessRegistrationDate: unit.businessRegistrationDate,
-      rentalRegistrationDate: unit.rentalRegistrationDate,
-      rentalRegisteredDate: unit.rentalRegisteredDate ?? null,
+      businessRegistrationDate: basis.businessRegistrationDate,
+      rentalRegistrationDate: basis.rentalRegistrationDate,
+      rentalRegisteredDate: basis.rentalRegisteredDate ?? null,
       isCapitalArea: unit.region === "seoul-metro",
       isApartment: unit.isApartment,
       isUrbanLifeHousingApartment: unit.isUrbanLifeHousingApartment, // 가목2) 괄호 — 양도기한 게이트만
@@ -457,6 +461,7 @@ export function checkEligibility(
       terminationWindowApplied = true;
     }
 
+    const succession = successionEcho(unit);
     perUnitVerdict.push({
       unitIndex: i,
       derivedArticle: article,
@@ -464,7 +469,11 @@ export function checkEligibility(
       stdPriceCap: result.stdPriceCap,
       effectiveRegDate: effectiveRegDate ? effectiveRegDate.toISOString().slice(0, 10) : "",
       sizeRequired: isConstructionArticle(article),
+      ...(succession ? { succession } : {}),
     });
+    // G-3·G-5 — 승계 근거 한계 고지(증여: 기준시가 상한 · 포괄양수: 목 판정). 결론을 바꾸지 않는다.
+    const successionNote = successionNotice(i, unit);
+    if (successionNote) notices.push(successionNote);
 
     if (!result.passed) {
       allUnitsPassed = false;

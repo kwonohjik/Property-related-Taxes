@@ -21,6 +21,50 @@ export interface RentalPeriod {
   end: string;
 }
 
+/**
+ * 임대사업 승계 종류(G-3·G-5) — 상속(조특령 §97⑤3호 준용) · 같은 세대원 증여(포괄승계) · 그 밖의 포괄양수. "" = 승계 없음.
+ * 개월 칸은 `decedentRentalMonths`를 3종류가 공유한다(의미 = 전 임대사업자 임대개월 — 피상속인·증여자·전 사업자).
+ */
+export type RentalSuccessionKind = "inheritance" | "household_gift" | "assumption";
+export type RentalSuccessionForm = "" | RentalSuccessionKind;
+
+const SUCCESSION_KINDS: readonly string[] = ["inheritance", "household_gift", "assumption"];
+
+/**
+ * 호의 승계 종류 — **읽는 곳은 모두 이 헬퍼 하나**다. 명시한 종류가 우선이고, 칸 신설 전 기록(`rentalSuccession` 없음)·AI 추출이 채운
+ * 옛 `isInheritedRental`(true)은 상속으로 읽는다. 쓰는 쪽(⑤ onChange)은 `withRentalSuccession`으로 옛 플래그까지 함께 정리한다.
+ */
+export function rentalSuccessionOf(unit: { rentalSuccession?: string; isInheritedRental?: boolean }): RentalSuccessionForm {
+  if (SUCCESSION_KINDS.includes(unit.rentalSuccession ?? "")) return unit.rentalSuccession as RentalSuccessionKind;
+  return unit.isInheritedRental === true ? "inheritance" : "";
+}
+
+/**
+ * ⑤ 승계 종류 변경 — 한 번의 갱신으로 종류·옛 상속 플래그·종류 전용 입력을 함께 정리한다(useEffect 미러링 금지).
+ * 종류가 바뀌면 개월 칸(뜻이 종류마다 다르다)과 증여자 날짜를 비운다 — 같은 종류를 다시 고르면 입력을 지우지 않는다.
+ */
+export function withRentalSuccession<
+  U extends {
+    rentalSuccession?: string;
+    isInheritedRental?: boolean;
+    decedentRentalMonths?: string;
+    donorBusinessRegistrationDate?: string;
+    donorRentalRegistrationDate?: string;
+    donorRentalRegisteredDate?: string;
+  },
+>(unit: U, kind: RentalSuccessionForm): U {
+  if (rentalSuccessionOf(unit) === kind) return { ...unit, rentalSuccession: kind, isInheritedRental: false };
+  return {
+    ...unit,
+    rentalSuccession: kind,
+    isInheritedRental: false,
+    decedentRentalMonths: "",
+    donorBusinessRegistrationDate: "",
+    donorRentalRegistrationDate: "",
+    donorRentalRegisteredDate: "",
+  };
+}
+
 export const RENTAL_PERIOD_DEFAULTS = {
   rentalInputMode: "direct" as "interval" | "direct",
   rentalPeriods: [] as RentalPeriod[],
@@ -47,6 +91,13 @@ export function migrateRentalPeriodFields(u: Record<string, unknown>): void {
   }
   if (typeof u.decedentRentalMonths !== "string") {
     u.decedentRentalMonths = "";
+  }
+  // G-3·G-5 승계 종류 — 칸 신설 전 기록은 옛 상속 플래그에서 도출한다(그 밖은 승계 없음). 증여자 날짜는 빈 값.
+  if (!SUCCESSION_KINDS.includes(String(u.rentalSuccession ?? ""))) {
+    u.rentalSuccession = u.isInheritedRental === true ? "inheritance" : "";
+  }
+  for (const k of ["donorBusinessRegistrationDate", "donorRentalRegistrationDate", "donorRentalRegisteredDate"] as const) {
+    if (typeof u[k] !== "string") u[k] = "";
   }
   if (typeof u.rentalAddressJibun !== "string") {
     u.rentalAddressJibun = "";
@@ -171,6 +222,7 @@ export function deriveHalfDutyRentalMonths(unit: {
   rentalMonths?: string;
   rentalRegistrationDate?: string;
   rentalRegisteredDate?: string;
+  rentalSuccession?: string;
   isInheritedRental?: boolean;
   decedentRentalMonths?: string;
   registrationCancellationDate?: string;
@@ -205,8 +257,8 @@ export function hasRentalAfterCancellation(unit: {
  * 실제 임대개월 도출 — API 변환·validation·UI 총합 공용(단일 소스, residence deriveResidencePeriodMonths 대칭).
  * interval 모드 + 구간 있으면 인정 개월(`recognizedRentalMonths`), 아니면 direct 개월(rentalMonths) 파싱 —
  * direct는 사용자가 계산한 값이라 자르지 않는다(옛 기록·AI 필드 경로).
- * 상속받은 임대주택이면 피상속인 임대개월을 더한다(조특령 §97⑤3호 — 계획서 Q-2). 피상속인 기간은 상속인
- * 등록일로 자르지 않는다.
+ * 임대사업 승계(상속·같은 세대원 증여·포괄양수 — `rentalSuccessionOf`)면 전 임대사업자 임대개월을 더한다(조특령 §97⑤3호 — 계획서 Q-2;
+ * 증여·포괄양수는 G-3·G-5 Q-4·Q-5). 그 기간은 본인 등록일로 자르지 않는다.
  */
 export function deriveRentalMonths(unit: {
   rentalInputMode?: "interval" | "direct";
@@ -215,10 +267,11 @@ export function deriveRentalMonths(unit: {
   businessRegistrationDate?: string;
   rentalRegistrationDate?: string;
   rentalRegisteredDate?: string;
+  rentalSuccession?: string;
   isInheritedRental?: boolean;
   decedentRentalMonths?: string;
 }): number {
-  const decedent = unit.isInheritedRental ? parseFloat(unit.decedentRentalMonths ?? "") || 0 : 0;
+  const decedent = rentalSuccessionOf(unit) ? parseFloat(unit.decedentRentalMonths ?? "") || 0 : 0;
   if (unit.rentalInputMode === "interval" && (unit.rentalPeriods?.length ?? 0) > 0) {
     return recognizedRentalMonths(unit.rentalPeriods, rentalRegistrationBasisDate(unit)) + decedent;
   }

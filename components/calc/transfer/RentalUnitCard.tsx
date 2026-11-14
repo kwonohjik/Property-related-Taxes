@@ -22,7 +22,6 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import {
   deriveCategoryAvailability,
   deriveEffectiveRegDate,
-  deriveRegApplicationDate,
   deriveRentalArticle,
   deriveRequiredYears,
   deriveStdPriceCap,
@@ -36,7 +35,10 @@ import { RentalTerminationBlock } from "./RentalTerminationBlock";
 import { RentalUnitPeriodPriceBlock } from "./RentalUnitPeriodPriceBlock";
 import { rentalUnitApartmentInScope } from "@/lib/calc/rental-unit-apartment-scope";
 import { rentalRegisteredDateOf } from "@/lib/stores/calc-wizard-asset-rental-period";
-import { registeredDateAfterApplicationChange } from "@/lib/stores/calc-wizard-asset-rental-period";
+import { rentalUnitDonorRegistrationInScope } from "@/lib/calc/rental-succession";
+import { rentalUnitRegApplicationDate } from "@/lib/calc/rental-succession";
+import { rentalUnitRegistrationBasis } from "@/lib/calc/rental-succession";
+import { applyRentalRegDate } from "@/lib/calc/rental-unit-reg-date";
 
 /** 도출 목 → 사람이 읽는 라벨 */
 const ARTICLE_LABEL: Record<string, string> = {
@@ -70,30 +72,26 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
   }
 
   // ── 파생 (useMemo — store 미러링 금지, 표시 전용) ──
+  // 판정 기준 등록 3필드 = 실효 등록 기준(G-3 — 같은 세대원 증여 승계면 증여자 등록, 아니면 본인 · 엔진 `registrationBasis`와 같은 단일 술어).
   // 등록 완비일·「등록을 한」 경계는 지자체 **등록일**(V-3 — 비면 신청일 · 엔진 `registeredDateOf`와 같은 규칙)
-  const registeredDate = rentalRegisteredDateOf(unit);
+  const basis = rentalUnitRegistrationBasis(unit);
+  const donorBasis = rentalUnitDonorRegistrationInScope(unit);
+  const registeredDate = rentalRegisteredDateOf({
+    rentalRegistrationDate: basis.rentalRegistrationDate,
+    rentalRegisteredDate: basis.rentalRegisteredDate,
+  });
   const effRegDate = useMemo(() => {
-    if (!unit.businessRegistrationDate || !unit.rentalRegistrationDate) return null;
+    if (!basis.businessRegistrationDate || !basis.rentalRegistrationDate) return null;
     return deriveEffectiveRegDate({
-      businessRegistrationDate: new Date(unit.businessRegistrationDate),
-      rentalRegistrationDate: new Date(unit.rentalRegistrationDate),
+      businessRegistrationDate: new Date(basis.businessRegistrationDate),
+      rentalRegistrationDate: new Date(basis.rentalRegistrationDate),
       rentalRegisteredDate: new Date(registeredDate),
     });
-  }, [unit.businessRegistrationDate, unit.rentalRegistrationDate, registeredDate]);
+  }, [basis.businessRegistrationDate, basis.rentalRegistrationDate, registeredDate]);
 
   // 목 도출·마목 2) 아파트 제한·마·바목 의무기간은 지자체 등록 **신청일** 기준(엔진 `deriveRegApplicationDate`와 같은 규칙 — D-1).
-  const regAppDate = useMemo(() => {
-    if (!unit.businessRegistrationDate || !unit.rentalRegistrationDate) return null;
-    return deriveRegApplicationDate({
-      businessRegistrationDate: new Date(unit.businessRegistrationDate),
-      rentalRegistrationDate: new Date(unit.rentalRegistrationDate),
-    });
-  }, [unit.businessRegistrationDate, unit.rentalRegistrationDate]);
-
-  const article = useMemo(
-    () => deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, regAppDate),
-    [unit.rentalCategory, unit.rentalAcquisitionType, regAppDate],
-  );
+  const regAppDate = rentalUnitRegApplicationDate(unit);
+  const article = deriveRentalArticle(unit.rentalCategory, unit.rentalAcquisitionType, regAppDate);
 
   // 임대개시일 = 최초 임대 시작일(min 유효 rentalPeriods[].start) → 없으면 등록기준일. 조회연도 추천용.
   const rentalStartDate = useMemo(() => {
@@ -101,33 +99,20 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
     return starts[0] || (effRegDate ? effRegDate.toISOString().slice(0, 10) : "");
   }, [unit.rentalPeriods, effRegDate]);
 
-  // 임대 구분 등록시기별 활성 판정 (표시 전용 — store 미러링 금지)
+  // 임대 구분 등록시기별 활성 판정 (표시 전용 — store 미러링 금지) — 실효 등록 기준
   const categoryAvail = useMemo(
     () =>
       deriveCategoryAvailability(
-        unit.businessRegistrationDate ? new Date(unit.businessRegistrationDate) : null,
-        unit.rentalRegistrationDate ? new Date(unit.rentalRegistrationDate) : null,
-        unit.rentalRegisteredDate ? new Date(unit.rentalRegisteredDate) : null,
+        basis.businessRegistrationDate ? new Date(basis.businessRegistrationDate) : null,
+        basis.rentalRegistrationDate ? new Date(basis.rentalRegistrationDate) : null,
+        basis.rentalRegisteredDate ? new Date(basis.rentalRegisteredDate) : null,
       ),
-    [unit.businessRegistrationDate, unit.rentalRegistrationDate, unit.rentalRegisteredDate],
+    [basis.businessRegistrationDate, basis.rentalRegistrationDate, basis.rentalRegisteredDate],
   );
 
   // 등록일 변경 시 무효화된 현재 선택만 유효 유형(long_general)으로 auto-reset (onChange 이벤트 구동 — useEffect 아님)
   function setRegDate(key: "businessRegistrationDate" | "rentalRegistrationDate" | "rentalRegisteredDate", v: string) {
-    const next = { ...unit, [key]: v };
-    // V-3 — 신청일을 넣을 때 등록일이 비었거나 종전 신청일과 같으면 같은 날로 채운다(다르면 사용자가 고쳐 쓴다)
-    if (key === "rentalRegistrationDate") {
-      next.rentalRegisteredDate = registeredDateAfterApplicationChange(unit.rentalRegistrationDate, unit.rentalRegisteredDate, v);
-    }
-    const avail = deriveCategoryAvailability(
-      next.businessRegistrationDate ? new Date(next.businessRegistrationDate) : null,
-      next.rentalRegistrationDate ? new Date(next.rentalRegistrationDate) : null,
-      next.rentalRegisteredDate ? new Date(next.rentalRegisteredDate) : null,
-    );
-    // avail[...]가 undefined일 수 있음(stale/legacy rentalCategory) — 옵셔널 체이닝으로
-    // 크래시 방지 + 유효 기본값(long_general)으로 self-heal
-    if (!avail[next.rentalCategory]?.available) next.rentalCategory = "long_general";
-    onChange(next);
+    onChange(applyRentalRegDate(unit, key, v));
   }
   const reqYears = deriveRequiredYears(article, regAppDate);
   // 바목 2025.2.28. 상한은 「등록한」 — 지자체 등록일(V-3)
@@ -162,7 +147,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
   // F6: 다·바(건설 장기)도 일반 아파트 허용. 나·라목도 허용. 아·자(단기)만 아파트 제외.
   // 아·자(단기 6년)만 묻지 않는다 — ④와 같은 술어(`rentalUnitApartmentInScope`).
   const showApartment = rentalUnitApartmentInScope(unit);
-  const bothRegMissing = !unit.businessRegistrationDate || !unit.rentalRegistrationDate;
+  const bothRegMissing = !basis.businessRegistrationDate || !basis.rentalRegistrationDate;
   // 주소로 법정동코드가 채워지면 소재 지역을 자동판별 배지로 표시(regionCode 비면 수동 라디오 fallback).
   // ?? "" : 타입은 non-optional이나 migrate 미경유 stale sessionStorage 유닛은 undefined일 수 있어 방어.
   const regionAuto = (unit.regionCode ?? "").length >= 10;
@@ -301,11 +286,18 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
         <div data-testid={`rental-verdict-badge-${index}`} className="text-xs space-y-0.5">
           {bothRegMissing ? (
             <p className="text-rose-700 font-medium dark:text-rose-300">
-              세무서·지자체 등록일을 모두 입력해야 사업자등록등 요건이 성립합니다.
+              {donorBasis
+                ? "증여자의 세무서 사업자등록일·지자체 등록 신청일을 모두 입력해야 목을 판정할 수 있습니다."
+                : "세무서·지자체 등록일을 모두 입력해야 사업자등록등 요건이 성립합니다."}
             </p>
           ) : (
             <>
               <p className="font-semibold">{ARTICLE_LABEL[article]}</p>
+              {donorBasis && (
+                <p className="text-violet-800 dark:text-violet-300" data-testid={`rental-verdict-donor-basis-${index}`}>
+                  증여자 등록 기준으로 판정 — 증여자 지자체 등록 신청일 {basis.rentalRegistrationDate}
+                </p>
+              )}
               <p>
                 의무임대기간 <b>{reqYears}년</b> · 기준시가 상한 <b>{capLabel}</b>
                 {showSize ? " · 규모 대지298㎡·연면적149㎡" : " · 규모요건 없음"}

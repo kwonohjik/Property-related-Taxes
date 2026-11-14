@@ -29,6 +29,12 @@ import type { Gain95PartEcho } from "./ltc-table-split";
 export type RentalCategory =
   | "long_general" | "short_6y" | "pre_2018" | "existing_business" | "unsold_08_09";
 
+/**
+ * 임대사업 승계 종류 — 상속(조특령 §97⑤3호 준용) · 같은 세대원에게 증여받은 포괄승계(재산세제과-1591) · 그 밖의 포괄양수(5310).
+ * 이 타입은 승계 **사실**이다 — 개월 합산은 호출부(④)가 `rentalMonths`에 이미 반영한다(엔진 개월 계산 불변).
+ */
+export type RentalSuccessionKind = "inheritance" | "household_gift" | "assumption";
+
 /** 수도권/비수도권 구분 (조정대상지역은 isExcluded918Rule 별도 축) */
 export type RegionType = "seoul-metro" | "non-metro";
 
@@ -103,8 +109,26 @@ export type RentalUnitInput = {
   hasMinimum5UnitsInCity?: boolean;
   /** 최초 분양계약일 — 라목(미분양) 2008.6.11~2009.6.30 판정용 */
   firstSaleContractDate?: Date;
-  /** 실제 임대 개월수 (공실 차감 후) */
+  /** 실제 임대 개월수 (공실 차감 후) — 승계 호는 전 임대사업자 개월이 이미 합산돼 있다(④) */
   rentalMonths: number;
+  /**
+   * 임대사업 승계 사실(G-3·G-5) — 결과 echo(`RentalUnitVerdict.succession`)와 포괄양수 확인 필요 고지용이다.
+   * `predecessorMonths`는 `rentalMonths`에 **이미 합산된** 전 임대사업자(피상속인·증여자·전 사업자) 개월 — 여기서 다시 더하지 않는다.
+   * 목·기한 판정 날짜는 `donorRegistration`이 정한다(증여만). 미제공 = 승계 없음.
+   */
+  succession?: { kind: RentalSuccessionKind; predecessorMonths: number };
+  /**
+   * 같은 세대원에게 증여받아 계속 임대하는 호(포괄승계)의 **증여자 등록 사실** — 있으면 목 도출·아파트 제한·기준시가 상한·등록 기한·
+   * ㉓ 대상 목·최초 말소일이 수증자가 아니라 증여자 등록일로 판정된다(`registrationBasis`; 서면-2022-법규재산-4972 ·
+   * 사전-2022-법규재산-0744 → 기획재정부 재산세제과-1591). 「양도일 현재」 등록(D10)은 수증자 본인 등록으로 본다.
+   * 날짜 3필드는 본인 등록 3필드와 같은 뜻이다(`rentalRegisteredDate` 미제공이면 신청일).
+   * ⚠️ 조특법 §97의3에는 쓰지 않는다 — 반대 결론(기획재정부 재산세제과-954).
+   */
+  donorRegistration?: {
+    businessRegistrationDate: Date;
+    rentalRegistrationDate: Date;
+    rentalRegisteredDate?: Date;
+  };
   /**
    * §155㉓1호 「민특법 §43 임대의무기간의 2분의 1 이상 임대」 판정용 임대개월(V-5). 민특령 §34①2호 — 매입임대는
    * **임대사업자 등록일**(그 뒤 임대 개시면 실제 임대개시일)부터 센다. 세무서 사업자등록일은 기산에 쓰지 않는다
@@ -254,6 +278,17 @@ export type RentalUnitVerdict = {
   stdPriceCap: number;
   effectiveRegDate: string; // ISO date (max 두 등록일)
   sizeRequired: boolean;    // 건설 규모요건 적용 여부
+  /**
+   * 임대사업 승계 echo(Q-6) — 입력에 승계가 있을 때만. 증여면 증여자 등록 날짜 3필드(YYYY-MM-DD)를 함께 싣는다.
+   * `effectiveRegDate`·`derivedArticle`은 증여면 증여자 등록 기준 값이다.
+   */
+  succession?: {
+    kind: RentalSuccessionKind;
+    predecessorMonths: number;
+    donorBusinessRegistrationDate?: string;
+    donorRentalRegistrationDate?: string;
+    donorRentalRegisteredDate?: string;
+  };
 };
 
 /** §155㉓ 「최초 말소일부터 5년 이내」 기한 echo (I-4) — 날짜는 YYYY-MM-DD */
