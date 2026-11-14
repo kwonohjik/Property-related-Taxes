@@ -95,7 +95,7 @@ export function Rental4hoProvisoFields({ value, mode, onChange }: Props) {
           field="proviso4hoRentalRegDate"
           label="임대사업자 등록 신청일"
           required
-          hint="시·군·구 — 민간임대주택법 §5①. 분양권 상태에서 신청한 경우도 포함됩니다. 지위를 포괄승계했다면 최초 신청일 — 2019년 12월 17일 이후 매매로 넘겨받은 경우는 적용 여부를 정한 해석례가 없어 확인이 필요합니다"
+          hint="시·군·구 — 민간임대주택법 §5①. 분양권 상태에서 신청한 경우도 포함됩니다. 지위를 포괄승계했다면 최초 신청일 — 2019년 12월 17일 이후 넘겨받았다면 아래 「임대사업자 지위를 넘겨받았고」 칸도 확인하세요(2020년 2월 11일 이후 양도에만 나옵니다)"
         >
           <div data-testid="proviso-4ho-rental-date">
             <DateInput
@@ -189,8 +189,8 @@ export function Rental4hoProvisoFields({ value, mode, onChange }: Props) {
         <ToggleCard
           variant="card"
           tone="violet"
-          title="증여로 임대사업자 지위를 넘겨받고 그 증여자와 세대가 갈라졌습니다"
-          description="2019년 12월 17일 이후 증여로 등록 신청자의 임대사업자 지위를 포괄승계했고, 양도일 현재 그 증여자와 같은 세대가 아니면(이혼 등) 적용되지 않습니다 (사전-2024-법규재산-0747)."
+          title="2019년 12월 17일 이후 임대사업자 지위를 넘겨받았고, 양도일 현재 등록 신청자와 세대가 다릅니다"
+          description="매매·증여 등으로 포괄승계한 경우입니다. 이 경우 삭제 전 4호가 적용되지 않습니다 — 증여 후 세대가 갈라진 경우는 해석례(사전-2024-법규재산-0747)가 있고, 매매로 넘겨받은 경우는 직접 다룬 해석례가 없어 확인이 필요합니다. 이혼 재산분할로 넘겨받은 지분은 적용되므로(법규과-1427, 2025.6.25.) 켜지 않습니다."
           checked={value.proviso4hoGiftSeparated === true}
           onCheckedChange={(v) => onChange({ proviso4hoGiftSeparated: v })}
         />
