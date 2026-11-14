@@ -170,7 +170,7 @@ S-1(1회차 probe): 마목 918=false → `only_general_two_house`(배제) · 918
 - [x] V-0 법제처 원문 대조(§12 · 부수 결함 PR-3)
 - [x] Pre-Do anchor S-1 세액 실측(§10) · B-1은 엔진 불변이라 §3 Pc가 대신함
 - [x] PR-1 #3352 · PR-2 구현(§11)
-- [ ] 브라우저 확인(Playwright)
+- [x] 브라우저 확인(Playwright · `e2e/surcharge-exclusion-textbook-gaps.spec.ts` 7/7 · 2026-11-15)
 
 ## 10. PR-1 구현 기록 (S-1)
 
@@ -218,4 +218,15 @@ S-1(1회차 probe): 마목 918=false → `only_general_two_house`(배제) · 918
 **수정** — `RA_CUT.Y2018_10_23` · `isMa918ProvisoInForce(transferDate)` · (j)는 마목이고 `u.transferDate`가 2018.10.23. 전이면 결격을 넣지 않는다(양도일 미제공 = 종전). 아목 4)는 2025.6.4. 이후 등록이라 해당 없음.
 **⑳ 경로** — 실측 결과 2020.7.11. 전 등록분은 가목으로 판정돼 918 축이 없다(`OH16-V0`). 코드 변경 없음(주석만 정리).
 **anchor** — route V0-1~3 · `check.test.ts` 경계 2건 · `OH16-V0`. 뮤테이션 3건(게이트 제거·경계일 −1일·`>=`→`>`) 모두 잡힘.
+
+## 13. 브라우저 확인 (2026-11-15 · master 4eb0acdd2)
+
+`e2e/surcharge-exclusion-textbook-gaps.spec.ts` 7/7 통과(새로 띄운 dev 서버 · 세액은 route anchor와 같음).
+
+| # | 화면 | 결과 |
+|---|---|---|
+| S1-1·2 | 계산기 명부 마목 행 | 918 ✓ · 증빙 꺼짐 1,141,772,500 `multi_house_2` → 증빙 켜면 요청 `hasContractDepositProof: true` · 633,682,500 중과 없음 |
+| S1-3 | 명부 가목 행 | 증빙 칸 없음 |
+| S2-1·2 | 명부 가목 자동말소 행 | 「말소일까지 임대료 증액 5% 이하 충족」 · 0208·5655 안내 + 확인 필요 · 계약일 힌트 「말소일 전 계약 중」 / 말소 없음이면 종전 라벨 |
+| S3-1·2 | 판정 메뉴 ⑳ 마목 918 카드(2021-02-10 양도) | 증빙 꺼짐 ⑳ 요건 미충족 → 켜면 요청에 실려 요건 충족 |
 
