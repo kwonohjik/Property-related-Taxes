@@ -217,6 +217,17 @@ describe("checkRentalArticle — C3 확장 (나·라·사·아·자 게이트)",
       rentalCancellationDate: new Date("2024-01-01"), hasHalfDutyPeriodMet: true, isSoldWithin1YearOfCancellation: true,
     }));
     expect(saMaProof.failCodes).not.toContain("SHORT_TERM_REGULATED");
+    // V-0 — 단서는 대통령령 제29242호(2018.10.23. 시행) 신설 · 부칙 제4조① 시행 이후 양도분부터
+    const before = checkRentalArticle("마", base({
+      businessRegistrationDate: new Date("2018-09-28"), rentalRegistrationDate: new Date("2018-09-28"),
+      rentalYears: 10, isExcluded918Rule: true, transferDate: new Date("2018-10-22"),
+    }));
+    expect(before.failCodes).not.toContain("SHORT_TERM_REGULATED");
+    const onDay = checkRentalArticle("마", base({
+      businessRegistrationDate: new Date("2018-09-28"), rentalRegistrationDate: new Date("2018-09-28"),
+      rentalYears: 10, isExcluded918Rule: true, transferDate: new Date("2018-10-23"),
+    }));
+    expect(onDay.failCodes).toContain("SHORT_TERM_REGULATED");
     const shortToLong = checkRentalArticle("마", base({
       businessRegistrationDate: new Date("2021-01-01"), rentalRegistrationDate: new Date("2021-01-01"),
       rentalYears: 10, isExcludedShortToLongChange: true,
