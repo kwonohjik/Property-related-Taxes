@@ -268,8 +268,18 @@ export const houseSchema = z.object({
   rentalStartDate: z.string().date().optional(),
   /** 임대 종료일 — 없으면 판정 양도일까지 */
   rentalEndDate: z.string().date().optional(),
-  /** 2호 상속 — 피상속인 임대개월(조특령 §97⑤3호) */
+  /** 2호 전 임대사업자 임대개월 — 상속(조특령 §97⑤3호)·동일세대원 증여·포괄양수(Q-8) */
   decedentRentalMonths: z.number().nonnegative().optional(),
+  /** Q-8 2호 임대사업 승계 종류 — 미제공 = 승계 없음 */
+  rentalSuccession: z.enum(["inheritance", "household_gift", "assumption"]).optional(),
+  /** Q-8 상속·동일세대원 증여의 피상속인·증여자 등록 — 목·등록기한 판정용(⑫ `refineHouseExclusionInputs`가 종류와 짝을 본다) */
+  predecessorRegistration: z
+    .object({
+      businessRegistrationDate: z.string().date(),
+      rentalRegistrationDate: z.string().date(),
+      rentalRegisteredDate: z.string().date().optional(),
+    })
+    .optional(),
   rentalCancelledDate: z.string().date().optional(),
   /** 말소 사유 — 자동말소면 §167의3①2호 단서(임대기간요건 간주 충족) */
   rentalCancellationReason: z.enum(["auto", "voluntary"]).optional(),

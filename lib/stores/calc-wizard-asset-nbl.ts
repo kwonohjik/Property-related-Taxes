@@ -3,6 +3,7 @@
  * calc-wizard-asset.ts 800줄 정책에 따라 분리 (2026-05-11).
  */
 
+import type { RentalSuccessionForm } from "./calc-wizard-asset-rental-period";
 import type { RentalHousingType } from "@/lib/tax-engine/multi-house-surcharge";
 import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "./calc-wizard-asset-reduction";
 import type { AptDeadlineExtensionForm, TaxIncentiveRentalRegistrationType } from "./calc-wizard-asset-nbl-rental";
@@ -362,8 +363,16 @@ export interface HouseEntry {
   rentalEndDate?: string;
   /** 2호 상속 — 상속받아 계속 임대(조특령 §97⑤3호, 소령 §167의3③ 준용). undefined = 아님 */
   isInheritedRental?: boolean;
-  /** 2호 상속 — 피상속인 임대개월(문자열). `isInheritedRental`일 때만 ④가 싣는다 */
+  /** 2호 전 임대사업자 임대개월(문자열) — 상속·동일세대원 증여·포괄양수 공용(Q-8). 승계 종류가 있을 때만 ④가 싣는다 */
   decedentRentalMonths?: string;
+  /** Q-8 2호 임대사업 승계 종류 — 읽기는 `rentalSuccessionOf`(옛 `isInheritedRental` = 상속). undefined = 승계 없음 */
+  rentalSuccession?: RentalSuccessionForm;
+  /** Q-8 피상속인·증여자 세무서 사업자등록일(YYYY-MM-DD) — 상속(선택)·동일세대원 증여(필수) */
+  predecessorBusinessRegistrationDate?: string;
+  /** Q-8 피상속인·증여자 지자체 임대사업자 등록 신청일 */
+  predecessorRentalRegistrationDate?: string;
+  /** Q-8 피상속인·증여자 지자체 임대사업자 등록일(등록증 · 선택) */
+  predecessorRentalRegisteredDate?: string;
   /** 임대사업자 말소일 (양도일 이전 말소 시 임대 배제 해제) */
   rentalCancelledDate?: string;
   /** 말소 사유 — 자동말소면 가·다~마목은 §167의3①2호 단서로 임대기간요건 간주 충족. ""·undefined = 미선택 */

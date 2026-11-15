@@ -98,6 +98,14 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     rentalStartDate: toOptionalDate(h.rentalStartDate),
     rentalEndDate: toOptionalDate(h.rentalEndDate),
     decedentRentalMonths: h.decedentRentalMonths,
+    rentalSuccession: h.rentalSuccession, // Q-8 임대사업 승계
+    predecessorRegistration: h.predecessorRegistration
+      ? {
+          businessRegistrationDate: toDate(h.predecessorRegistration.businessRegistrationDate, "predecessorRegistration.businessRegistrationDate"),
+          rentalRegistrationDate: toDate(h.predecessorRegistration.rentalRegistrationDate, "predecessorRegistration.rentalRegistrationDate"),
+          rentalRegisteredDate: toOptionalDate(h.predecessorRegistration.rentalRegisteredDate),
+        }
+      : undefined,
     rentalCancelledDate: toOptionalDate(h.rentalCancelledDate),
     rentalCancellationReason: h.rentalCancellationReason, // §167의3①2호 단서
     rentalGiftDonorHousehold: h.rentalGiftDonorHousehold, // S-4 별도세대 증여 전 말소

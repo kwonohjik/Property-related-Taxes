@@ -19,6 +19,7 @@ import { isWithinDeadline } from "./civil-period";
 import { isSmallNewHouseSpecial, resolvePopulationDeclineSecondHome } from "./multi-house-surcharge-12ho";
 import { isCapitalAreaHouse } from "./multi-house-surcharge-12ho";
 import { checkRentalArticle, type NormalizedRentalUnit } from "./rental-article/check";
+import { houseRegistrationBasis } from "./multi-house-rental-succession";
 import { registeredDateOf } from "./rental-article/registered-date";
 import {
   RA_CUT,
@@ -234,10 +235,11 @@ export const ARTICLE_BY_RENTAL_TYPE: Record<RentalHousingType, SharedRentalArtic
 
 /** HouseInfo → 공용 정규화 입력 (Phase 2 C3 — checkRentalArticle 위임). */
 function toNormalizedFromHouse(house: HouseInfo, transferDate: Date): NormalizedRentalUnit {
+  const reg = houseRegistrationBasis(house); // Q-8 상속·동일세대원 증여 → 전 임대사업자 등록으로 목 판정
   return {
-    businessRegistrationDate: house.businessRegistrationDate ?? null,
-    rentalRegistrationDate: house.rentalRegistrationDate ?? null,
-    rentalRegisteredDate: house.rentalRegisteredDate ?? null,
+    businessRegistrationDate: reg.businessRegistrationDate ?? null,
+    rentalRegistrationDate: reg.rentalRegistrationDate ?? null,
+    rentalRegisteredDate: reg.rentalRegisteredDate ?? null,
     isCapitalArea: isCapitalAreaHouse(house),
     isApartment: house.isApartment,
     // 같은 사실(「주택법」 도시형 생활주택인 아파트)이 2호 가목2) 괄호에도 걸린다 — 양도기한 게이트만 비적용.
@@ -338,9 +340,10 @@ export function aptTransferDeadlineConfirmReasons(house: HouseInfo, transferDate
 function passesRegistrationCap(house: HouseInfo, article: SharedRentalArticle): boolean {
   const regBoundArticle = article === "사" ? house.saMokBaseArticle : article;
   if (regBoundArticle === "가" || regBoundArticle === "다") {
-    const bizTs = house.businessRegistrationDate!.getTime();
+    const reg = houseRegistrationBasis(house); // Q-8 — 피상속인 2018.3.31. 이전 등록이면 가목(서면-2020-법규재산-1959)
+    const bizTs = reg.businessRegistrationDate!.getTime();
     // 「2018년 3월 31일까지 사업자등록등」 — 지자체는 등록일(서면-2021-법규재산-3280 · V-3)
-    const rentTs = registeredDateOf(house.rentalRegisteredDate, house.rentalRegistrationDate)!.getTime();
+    const rentTs = registeredDateOf(reg.rentalRegisteredDate, reg.rentalRegistrationDate)!.getTime();
     if (bizTs > RA_CUT.Y2018_04_02 || rentTs > RA_CUT.Y2018_04_02) return false;
   }
   return true;

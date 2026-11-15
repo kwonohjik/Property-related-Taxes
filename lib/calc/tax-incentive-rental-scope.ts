@@ -17,6 +17,9 @@
  * 일을 막는다). 국민주택규모는 2호 위젯이 **나목(B)에서만** 묻기 때문에 그때만 공유한다.
  * 명부 행은 처음부터 한 칸(`HouseEntry.rentalPeriodYears` 등)을 두 호가 함께 쓴다.
  */
+import { houseRentalSuccessionPayload } from "./house-rental-succession";
+import { houseRentalSuccessionIssue } from "./house-rental-succession";
+import type { HouseRentalSuccessionFacts } from "./house-rental-succession";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TaxIncentiveRentalFacts } from "@/lib/stores/calc-wizard-asset-nbl";
 import { aptDeadlineExtensionIncomplete, aptDeadlineExtensionPayload } from "./apt-deadline-extension-scope";
@@ -130,36 +133,34 @@ export function taxIncentiveRentalPeriodMissing(f: TaxIncentiveRentalFacts | und
 
 /**
  * ④ 2호 임대기간 사실 → `houseSchema` 필드(양도 주택 2호 선언·명부 행 공용). 연수는 싣지 않는다(Q-3).
- * 피상속인 개월은 「상속받아 계속 임대」가 켜져 있고 값이 있을 때만(조특령 §97⑤3호).
+ * 임대사업 승계는 `house-rental-succession.ts`(Q-8 · 상속은 조특령 §97⑤3호).
  */
-export function rentalPeriodDatesPayload(r: {
-  rentalStartDate?: string;
-  rentalEndDate?: string;
-  isInheritedRental?: boolean;
-  decedentRentalMonths?: string;
-}): object {
-  const decedent = r.isInheritedRental ? parseFloat(r.decedentRentalMonths ?? "") : NaN;
+export function rentalPeriodDatesPayload(
+  r: {
+    rentalStartDate?: string;
+    rentalEndDate?: string;
+  } & HouseRentalSuccessionFacts,
+): object {
   return {
     rentalStartDate: r.rentalStartDate || undefined,
     rentalEndDate: r.rentalEndDate || undefined,
-    decedentRentalMonths: decedent > 0 ? decedent : undefined,
+    // Q-8 임대사업 승계(상속·동일세대원 증여·포괄양수) — 종류·전 임대사업자 개월·등록
+    ...houseRentalSuccessionPayload(r),
   };
 }
 
 /**
- * ⑧ 2호 임대기간 입력 문제 — 개시일 필수 여부는 호출부가 정하고(현행과 같은 범위), 여기서는 날짜 역전·상속 개월 미입력만 본다.
+ * ⑧ 2호 임대기간 입력 문제 — 개시일 필수 여부는 호출부가 정하고(현행과 같은 범위), 여기서는 날짜 역전·임대사업 승계 입력(Q-8)만 본다.
  */
-export function rentalPeriodDatesIssue(r: {
-  rentalStartDate?: string;
-  rentalEndDate?: string;
-  isInheritedRental?: boolean;
-  decedentRentalMonths?: string;
-}): string | null {
+export function rentalPeriodDatesIssue(
+  r: {
+    rentalStartDate?: string;
+    rentalEndDate?: string;
+  } & HouseRentalSuccessionFacts,
+): string | null {
   if (r.rentalStartDate && r.rentalEndDate && r.rentalEndDate < r.rentalStartDate)
     return "임대 종료일은 임대개시일 이후여야 합니다.";
-  if (r.isInheritedRental && !(parseFloat(r.decedentRentalMonths ?? "") > 0))
-    return "상속받아 계속 임대하는 주택이면 피상속인 임대기간(개월)을 입력하세요.";
-  return null;
+  return houseRentalSuccessionIssue(r);
 }
 
 /**

@@ -6,6 +6,7 @@
  * | Q3 | 계산기 보유 상황 명부 가목 행 | 2018-03-01 자동말소 → 부칙 제7조 안내 · 요청 · 10호 배제 633,682,500 · 간주 고지(#3378) | `__tests__/api/transfer.route.surcharge-addenda7-deemed-cancel.anchor.test.ts` |
  * | A | 판정 메뉴 ② ⑳ 임대주택 카드 · 구법 건설 | 다목 라벨 · 규모요건 칸 · 비수도권 4억 → 요건 충족 / 매입 짝 → 미충족(#3370) | `__tests__/tax-engine/transfer/rental-155-20-pre2018-construction.anchor.test.ts` |
  * | T | 같은 카드 · 구법 매입 말소 | 말소 토글 · 등록 유형 0972 안내 · 말소 4필드 전송(#3366) | `__tests__/components/rental-155-23-pre2018.test.tsx` |
+ * | Q8 | 계산기 명부 가목 행 · 상속 승계 | 피상속인 2016 등록 → 요청 `predecessorRegistration` → 중과 없음 633,682,500 + 고지 / 「승계 없음」 짝 3주택 중과 1,328,497,500 | `__tests__/api/transfer.route.surcharge-rental-succession-q8.anchor.test.ts` |
  * | B | 같은 카드 · 구법 매입 아파트 | 도시형 생활주택 질문 · 자진말소 → 1/2 30개월 안내(#3373) | `__tests__/components/rental-155-20-pre2018-deadline-half.test.tsx` |
  *
  * 실행: E2E_PORT=<worktree 포트> npx playwright test e2e/rental-155-20-textbook-gaps.spec.ts
@@ -19,7 +20,7 @@ const GANGNAM = "1168010100";
 // ─────────────────────────────── Q3 계산기 명부 행 ───────────────────────────────
 
 /** anchor R 시료 — 강남 일반주택(2013-06-01 · 3억 → 20억) 2022-03-01 양도 · h2 가목 단기(2014-03-01 등록 · 2018-03-01 의무기간 종료). */
-function calcSeed(transferDate: string) {
+function calcSeed(transferDate: string, h2: Record<string, unknown> = {}, extra: Record<string, unknown>[] = []) {
   return {
     state: {
       formData: {
@@ -39,7 +40,7 @@ function calcSeed(transferDate: string) {
         ],
         transferDate,
         contractTotalPrice: "2,000,000,000",
-        householdHousingCount: "2",
+        householdHousingCount: String(2 + extra.length),
         isOneHousehold: true,
         isRegulatedArea: true,
         wasRegulatedAtAcquisition: false,
@@ -68,7 +69,9 @@ function calcSeed(transferDate: string) {
             isExcluded918Rule: false,
             hasContractDepositProof: false,
             rentalCancelledDate: "2018-03-01",
+            ...h2,
           },
+          ...extra,
         ],
       },
       pendingMigration: false,
@@ -77,10 +80,10 @@ function calcSeed(transferDate: string) {
   };
 }
 
-async function openRosterRow(page: Page, transferDate = "2022-03-01") {
+async function openRosterRow(page: Page, transferDate = "2022-03-01", h2: Record<string, unknown> = {}, extra: Record<string, unknown>[] = []) {
   await page.goto("/calc/transfer-tax");
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
-  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), calcSeed(transferDate));
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), calcSeed(transferDate, h2, extra));
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.getByRole("button", { name: "보유 상황" }).first().click();
@@ -144,6 +147,75 @@ test.describe("Q3 명부 가목 행 — 2020.8.18. 전 의무기간 종료 자�
     const { result } = await calculate(page);
     expect(result.totalTax).toBe(651_057_000);
     await expect(page.getByText(/아직 등록 중인 주택으로 판정했습니다/).first()).toBeVisible();
+  });
+});
+
+// ─────────────────────────────── Q8 명부 행 임대사업 승계 ───────────────────────────────
+
+test.describe("Q8 명부 가목 행 — 상속 승계(피상속인 등록일로 목 판정)", () => {
+  // anchor S-1 시료 — h2 가목: 피상속인 2016-03-01 등록 → 2019-06-01 상속 · 상속인 등록·임대개시 2019-06-01 · 피상속인 39개월.
+  // h3 가목 2017 등록 = 3주택(2주택이면 일시적 2주택 배제가 결과를 덮는다).
+  const d = (x: string) => ({ businessRegistrationDate: x, rentalRegistrationDate: x, rentalRegisteredDate: x, rentalStartDate: x });
+  const h2 = {
+    acquisitionDate: "2019-06-01",
+    ...d("2019-06-01"),
+    rentalCancelledDate: undefined,
+    rentalSuccession: "inheritance",
+    decedentRentalMonths: "39",
+    predecessorBusinessRegistrationDate: "2016-03-01",
+    predecessorRentalRegistrationDate: "2016-03-01",
+  };
+  const h3 = {
+    id: "h3",
+    region: "capital",
+    regionCode: GANGNAM,
+    acquisitionOrigin: "general",
+    acquisitionDate: "2016-01-01",
+    officialPrice: "300000000",
+    isInherited: false,
+    isLongTermRental: true,
+    isApartment: false,
+    isOfficetel: false,
+    isUnsoldHousing: false,
+    isRegisteredRental: true,
+    rentalType: "A",
+    ...d("2017-01-02"),
+    rentalStartOfficialPrice: "300000000",
+    rentIncreaseUnder5Pct: true,
+    isExcluded918Rule: false,
+  };
+
+  test("[Q8-1] 상속 · 피상속인 칸 표시 → 요청 predecessorRegistration → 중과 없음 633,682,500 + 피상속인 판정 고지", async ({ page }) => {
+    test.setTimeout(90_000);
+    const dialog = await openRosterRow(page, "2022-03-01", h2, [h3]);
+    await expect(dialog.getByTestId("house-h2-rental-succession-inheritance")).toBeVisible();
+    await expect(dialog.getByTestId("house-h2-rental-predecessor-registration")).toContainText("피상속인의 등록일");
+    await expect(dialog.getByTestId("house-h2-rental-predecessor-months")).toHaveValue("39");
+    await page.keyboard.press("Escape");
+
+    const { row, result } = await calculate(page);
+    expect(row).toMatchObject({
+      rentalSuccession: "inheritance",
+      decedentRentalMonths: 39,
+      predecessorRegistration: { businessRegistrationDate: "2016-03-01", rentalRegistrationDate: "2016-03-01" },
+    });
+    expect(result.multiHouseSurchargeEvaluation.surchargeType).toBe("none");
+    expect(result.totalTax).toBe(633_682_500);
+    await expect(page.getByText(/목·등록기한을 피상속인 등록\(사업자등록 2016-03-01/).first()).toBeVisible();
+  });
+
+  test("[Q8-2] 짝 — 「승계 없음」을 고르면 승계 필드가 빠지고 3주택 중과 1,328,497,500", async ({ page }) => {
+    test.setTimeout(90_000);
+    const dialog = await openRosterRow(page, "2022-03-01", h2, [h3]);
+    await dialog.getByTestId("house-h2-rental-succession-none").click();
+    await expect(dialog.getByTestId("house-h2-rental-predecessor-registration")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+
+    const { row, result } = await calculate(page);
+    expect(row?.rentalSuccession).toBeUndefined();
+    expect(row?.predecessorRegistration).toBeUndefined();
+    expect(result.multiHouseSurchargeEvaluation.surchargeType).toBe("multi_house_3plus");
+    expect(result.totalTax).toBe(1_328_497_500);
   });
 });
 

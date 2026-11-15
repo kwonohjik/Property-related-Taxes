@@ -19,6 +19,7 @@ import { readSpouseHolding, marriageSubtractionWindowOpen } from "./spouse-holdi
 import { spouseHoldingNotices } from "./multi-house-surcharge-spouse-notice";
 import { rentalCancellationNotices } from "./rental-cancellation-deeming";
 import { addenda7DeemedCancellationNotices } from "./rental-cancellation-deeming";
+import { rentalSuccessionNotices } from "./multi-house-rental-succession";
 import { separateHouseholdGiftNotices } from "./rental-cancellation-deeming";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import { MULTI_HOUSE } from "./legal-codes";
@@ -196,6 +197,8 @@ export function determineMultiHouseSurcharge(
   notices.push(...rentalCancellationNotices(input, result, recompute));
   // Q-3 — 2020.8.18. 전 임대의무기간 종료(자동말소)는 부칙 제7조로 2020.8.18. 말소로 읽었다고 알린다.
   notices.push(...addenda7DeemedCancellationNotices(input));
+  // Q-8 — 임대사업 승계(상속·동일세대원 증여·포괄양수)를 어떻게 읽었는지 알린다.
+  notices.push(...rentalSuccessionNotices(input));
   // S-4 — 별도세대 증여 전 말소된 임대주택을 장기임대주택에서 뺀 것이 결론을 가를 때만 알린다.
   notices.push(...separateHouseholdGiftNotices(input, result, recompute));
   return notices.length > 0 ? { ...result, warnings: [...result.warnings, ...notices] } : result;

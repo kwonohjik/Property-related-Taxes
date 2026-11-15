@@ -61,6 +61,9 @@ type HouseRow = {
   rentalPeriodYears?: number;
   rentalStartDate?: string;
   isUnavoidableOutsideCapital?: boolean;
+  isLongTermRental?: boolean;
+  rentalSuccession?: "inheritance" | "household_gift" | "assumption";
+  predecessorRegistration?: object;
 };
 
 /**
@@ -95,6 +98,14 @@ export function refineHouseExclusionInputs(
     // 화면은 임대개시일만 보내고, 직접 API는 연수도 받는다(둘 중 하나).
     if (h.isTaxIncentiveRental === true && !h.rentalStartDate && !positive(h.rentalPeriodYears))
       issue(["houses", i, "rentalStartDate"], "조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대개시일이 필요합니다");
+    // Q-8 — 피상속인·증여자 등록은 상속·동일세대원 증여 승계에만 쓴다(⑧ `rentalPeriodDatesIssue`의 거울). 엔진은 이 날짜가 있으면
+    //   목·등록기한을 그것으로 판정하므로, 종류 없이 오면 무엇의 날짜인지 알 수 없다.
+    const predecessorKind = h.rentalSuccession === "inheritance" || h.rentalSuccession === "household_gift";
+    if (h.predecessorRegistration && !predecessorKind)
+      issue(["houses", i, "predecessorRegistration"], "전 임대사업자 등록일은 상속·동일세대원 증여 승계(rentalSuccession)일 때만 보냅니다");
+    // 동일세대원 증여만 필수(자동 대체 금지) — 상속은 선택(비우면 상속인 등록일로 판정 + 엔진 확인 필요 고지).
+    if (h.isLongTermRental === true && h.rentalSuccession === "household_gift" && !h.predecessorRegistration)
+      issue(["houses", i, "predecessorRegistration"], "동일세대원 증여 승계 장기임대주택은 증여자의 사업자등록일·임대사업자 등록 신청일이 필요합니다 (소득세법 시행령 §167의3①2호)");
   });
   // §155⑧ 「각각 1개씩」 — ⑧ 표시 행은 한 채(⑧ `duplicateUnavoidableOutsideCapitalRows`의 거울). 둘째 행이 있으면 세대 판정과
   //   중과 4호가 서로 다른 행을 볼 수 있었다. ⑧은 양도일 현재 보유 행만 세는데(`duplicateOwnedUnavoidableOutsideCapitalRows`)

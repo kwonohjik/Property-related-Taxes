@@ -6,26 +6,24 @@
  *
  * 임대개시일·임대 종료일(선택)을 받고 엔진이 연수를 계산한다(`multi-house-rental-period.ts`).
  * - 2호(`variant="long_term"`): 세무서 사업자등록일·지자체 등록일 중 늦은 날 전 임대분은 빼고 센다(소령 §167의3③).
- *   상속받아 계속 임대하면 피상속인 임대개월을 더한다(조특령 §97⑤3호).
+ *   임대사업 승계(상속·동일세대원 증여·포괄양수)는 `HouseRentalSuccessionFields`(Q-8).
  * - 3호(`variant="tax_incentive"`): 입력한 개시일 그대로 센다(③은 2호 한정) — 상속 칸 없음.
  * 3개월을 넘는 공실은 이 입력으로 뺄 수 없다 — 고지만(Q-4).
  *
- * 정책: DateInput·DecimalInput·ToggleCard 전용, onPatch 직접 호출(useEffect 미러링 없음).
+ * 정책: DateInput·RadioCardGroup 전용, onPatch 직접 호출(useEffect 미러링 없음).
  */
 
 import { DateInput } from "@/components/ui/date-input";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { HouseRentalSuccessionFields } from "@/components/calc/transfer/HouseRentalSuccessionFields";
+import type { HouseRentalSuccessionFacts } from "@/lib/calc/house-rental-succession";
 
 /** 중과배제 명부 행·양도 주택의 「임대사업자 등록일」 칸 안내(V-3) — 두 화면 공용 */
 export const REGISTERED_DATE_HINT =
   "등록증의 등록일. 신청일을 넣으면 같은 날로 채워지니 다르면 고쳐 주세요. 가·다목 2018.3.31. 등록 기한과 임대기간 기산은 이 날로 봅니다(서면-2021-법규재산-3280).";
 
-export interface RentalPeriodDatesValue {
+export interface RentalPeriodDatesValue extends HouseRentalSuccessionFacts {
   rentalStartDate?: string;
   rentalEndDate?: string;
-  isInheritedRental?: boolean;
-  decedentRentalMonths?: string;
 }
 
 interface Props {
@@ -67,30 +65,8 @@ export function RentalPeriodDatesFields({ value, onPatch, variant, testIdPrefix 
         임차인이 바뀌는 사이 3개월을 넘는 공실이 있었다면 그 기간은 이 계산에 반영되지 않습니다(조특칙 §44 — 확인 필요).
       </p>
       {longTerm && (
-        <ToggleCard
-          variant="card"
-          size="sm"
-          tone="violet"
-          data-testid={`${testIdPrefix}-inherited`}
-          checked={value.isInheritedRental === true}
-          onCheckedChange={(b) =>
-            onPatch({ isInheritedRental: b || undefined, decedentRentalMonths: b ? value.decedentRentalMonths : undefined })
-          }
-          title="상속받아 계속 임대하는 주택"
-          description="피상속인의 임대기간을 더합니다(조특령 §97⑤3호 · 소령 §167의3③ 준용)."
-        >
-          <div className="space-y-1 pt-1">
-            <label className={LABEL}>피상속인 임대기간 (개월)</label>
-            <DecimalInput
-              value={value.decedentRentalMonths ?? ""}
-              onChange={(s) => onPatch({ decedentRentalMonths: s || undefined })}
-              placeholder="피상속인 임대 개월"
-            />
-            <p className={HINT}>
-              피상속인이 사업자등록과 임대주택 등록을 한 뒤 임대한 개월입니다. 위 임대개시일에는 상속 후 상속인이 임대를 시작한 날을 넣으세요.
-            </p>
-          </div>
-        </ToggleCard>
+        // Q-8 — 임대사업 승계(상속·동일세대원 증여·포괄양수). 종전 「상속받아 계속 임대」 토글을 대신한다.
+        <HouseRentalSuccessionFields value={value} onPatch={onPatch} testIdPrefix={testIdPrefix} />
       )}
     </div>
   );

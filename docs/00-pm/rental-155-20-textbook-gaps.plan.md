@@ -96,7 +96,7 @@
 - ⑧: 증여·포괄양수 = 개월 필수, 증여 = 증여자 날짜 필수·순서(증여자 신청일 ≤ 수증자 신청일). 상속 필수 규칙(`:187`) 유지.
 - ⑫ `lib/api/transfer-tax-schema-rental-exception.ts` `rentalUnitSchema`에 `donorRegistration` · ⑬ 통째 전송(stripping anchor로 확인) · ⑭ **2곳** `app/api/calc/transfer/_rental-engine-input.ts:19-58`·`app/api/calc/transfer/multi/route-property-input.ts:443-473`(toDate). ⑧↔⑫ 날짜 3필드 허용 조합 격자 대조.
 - ⑥ 사이드바: ⑳ 임대 호는 합계 대상 아님(해당 없음). ⑦ 결과: 승계 echo(Q-6).
-- 범위 밖: 조특법 §97의3(954), 다주택 명부 `HouseEntryEditor.tsx`(751줄 — Q-8).
+- 범위 밖: 조특법 §97의3(954), ~~다주택 명부 `HouseEntryEditor.tsx`(751줄 — Q-8)~~ → 해소(Q-8 · §6 V-10).
 
 ### PR-3 문구 4건 (세액 불변)
 > **구현(2026-11-14)**: G-7 단일 소스는 엔진 쪽 `rental-housing-exception/clawback-exceptions.ts`(화면은 `lib/calc/rental-155-22-exceptions.ts` 재수출) · 법령 상수 `PIT_RR_74_2`(소칙 §74의2, 매니페스트 등록) · Q-1에 따라 생애 1회 이력 질문·⑧·엔진 고지도 0393 취지로. anchor 9건.
@@ -118,7 +118,7 @@
 | Q-5 | 포괄양수(타 세대)는 개월만 받고 목 판정은 본인 날짜 + 「목 판정 근거 확인 필요」 고지 | **그렇게** — 5310은 1/2 기산만 정면(V-5) |
 | Q-6 | 결과 카드에 승계 echo(전 임대사업자 개월·증여자 신청일) 표시 | **표시** |
 | Q-7 | PR-0 분리를 선행 PR로 | **선행** |
-| Q-8 | 다주택 명부(`HouseEntryEditor`, 751줄)에 같은 승계 입력·사목 안내 | **이번 제외** — 분리 선행 필요, 후속 |
+| Q-8 | 다주택 명부(`HouseEntryEditor`, 751줄)에 같은 승계 입력·사목 안내 | ~~이번 제외~~ → **반영(2026-11-15 · 사용자 「q-8」 · 범위 「상속·증여·양수 전부」 · 증여 「적용 + 확인 필요 고지」)** — 아래 §6 V-10 |
 | Q-9 | G-8 등록증 처리일 오입력 방어 | **고지만** — 엔진이 날짜를 덮어쓰지 않음 |
 
 ## 6. V — 미검증(착수 전·중 확인)
@@ -146,6 +146,11 @@
 - V-7 0692를 자동말소 1/2 문구에 인용할지.
 - V-8 조심2021중2756·서면부동산 2024-0800 원문.
 - V-9 증여자 개월 합산과 `recognizedRentalSegments` 클립 기준일의 이중 계산·공백 anchor.
+- ~~V-10 Q-8 다주택 명부 임대사업 승계~~ **해소(2026-11-15 · taxlaw 원문)**:
+  - 근거: 서면-2020-법규재산-1959[법규과-1120](2024.5.8.) 질의1 「피상속인이 … 사업자등록과 … 등록하여 임대하는 날이 '18.3.31. 이전인 경우 소득령§167의3①(2)가목을 적용」 · 기준-2020-법령해석재산-0296(2021.1.27.) 「동일세대원이 공동으로 등록하여 임대 중인 장기임대주택 … 요건을 충족하는지 여부는 1세대를 기준으로 판단」 · 기획재정부 재산세제과-1591(2022.12.27.) 질의2 「자동말소된 장기임대주택을 동일세대원에게 증여한 경우 양도세 중과배제 적용 가능」(→ 서면-2021-법규재산-4283) · 기준-2021-법무재산-0225(2022.2.15.) 「포괄 양수받은 임대주택을 … 자진 말소 후 양도한 경우 … 1/2 이상 임대 요건 판단 시 전 소유자의 임대기간을 합산」 · 5310(1/2 기산일 = 전 임대사업자 등록일). 등록기한(가목 2018.3.31.)을 **증여자** 기준으로 본 정면 해석은 못 찾음 → 확인 필요 고지(사용자 결정).
+  - 수정 전 실측(route · 강남 일반주택 2013 + h2 가목 + h3 가목 2017 등록 = 3주택 · 2022-03-01 양도): 상속인 날짜 2019 + 피상속인 39개월 **1,328,497,500**(3주택 중과) vs 피상속인 날짜 2016을 주 칸에 **633,682,500** · 동일세대 증여 수증자 날짜 2021 1,328,497,500 vs 증여자 날짜 2016 633,682,500. (2주택 시료는 일시적 2주택 배제가 덮어 차이가 안 보였다.)
+  - 수정: PR-0 `HouseEntryEditor.tsx` 757 → 592 + `HouseEntryLongTermRentalSection.tsx`. 엔진 `multi-house-rental-succession.ts` `houseRegistrationBasis`(승계 등록이 있으면 목 판정 `toNormalizedFromHouse`·등록상한 `passesRegistrationCap`에 그 날짜 — 등록 완비·임대기간 기산은 본인 날짜) · `rentalSuccessionNotices`(상속·증여·양수별 고지). ⑫ `houseSchema` `rentalSuccession`·`predecessorRegistration` + refine(증여는 필수 · 상속·증여 외 종류에 등록 실으면 400) · ⑭ `mapHousesToEngine`. 클라이언트 `lib/calc/house-rental-succession.ts`(⑤④⑧ 단일 술어) — 명부 행·양도 주택 2호 선언이 같은 `RentalPeriodDatesFields`·`rentalPeriodDatesPayload`·`rentalPeriodDatesIssue`를 쓰므로 둘 다 열린다. 화면 `HouseRentalSuccessionFields`(옛 상속 토글 대체 · 옛 `isInheritedRental` = 상속). 상속은 피상속인 날짜 **선택**(비우면 상속인 날짜 + 확인 필요 — 옛 기록 RD-4 유지), 증여는 **필수**(⑳ 카드와 같은 자동 대체 금지). 포괄양수는 개월만 + 목 확인 필요(Q-5와 같음). 사목 1/2 칸에 5310·0225 기산 안내.
+  - 테스트: `__tests__/api/transfer.route.surcharge-rental-succession-q8.anchor.test.ts` S-1~S-9 · `__tests__/components/house-rental-succession-fields.test.tsx` U-1~U-4. 뮤테이션: `houseRegistrationBasis`가 승계 날짜를 무시하면 S-1·S-4 실패(2/2).
 
 ## 7. 테스트·검증 계획
 

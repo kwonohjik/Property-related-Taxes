@@ -202,8 +202,22 @@ export interface HouseInfo {
   rentalEndDate?: Date;
   /** 임대기간(년) — `rentalStartDate`가 없을 때만 쓴다(직접 API·⑳ 카드 명부 행·옛 기록) */
   rentalPeriodYears?: number;
-  /** 2호 상속 — 피상속인 임대개월(조특령 §97⑤3호, 소령 §167의3③ 준용). 3호에는 더하지 않는다 */
+  /**
+   * 2호 전 임대사업자 임대개월 — 상속(조특령 §97⑤3호, 소령 §167의3③ 준용)·동일세대원 증여·포괄양수(Q-8). 3호에는 더하지 않는다.
+   * 이름은 상속 때부터의 것이다(의미 = 전 임대사업자 개월).
+   */
   decedentRentalMonths?: number;
+  /** 2호 임대사업 승계 종류(Q-8 · `multi-house-rental-succession.ts`) — 미제공 = 승계 없음 */
+  rentalSuccession?: "inheritance" | "household_gift" | "assumption";
+  /**
+   * 상속·동일세대원 증여 승계 — 피상속인·증여자의 등록 3필드. 있으면 목·등록기한 판정을 이 날짜로 한다
+   * (서면-2020-법규재산-1959 · 기획재정부 재산세제과-1591). 등록 완비(양도일 현재 등록)·임대기간 기산은 본인 날짜 그대로다.
+   */
+  predecessorRegistration?: {
+    businessRegistrationDate: Date;
+    rentalRegistrationDate: Date;
+    rentalRegisteredDate?: Date;
+  };
   /**
    * 임대료 증가율 5% 이하 충족 여부. 말소된 주택(사목 · 가·다~마목 자동말소)은 **말소일까지**의 계약으로 답한다 —
    * 말소 뒤에는 5%를 지키지 않아도 중과세율을 적용하지 않는다(서면-2022-법규재산-0208 · 서면-2021-법규재산-5655).
