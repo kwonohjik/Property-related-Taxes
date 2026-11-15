@@ -31,6 +31,7 @@ import { rental975InheritanceInScope } from "@/lib/calc/rental-97-5-inheritance"
 import { Rental975InheritanceBlock } from "./Rental975InheritanceBlock";
 import { RentalResidentOnlyNotice } from "./RentalResidentOnlyNotice";
 import { RentalMultiFamilyPartialNotice } from "./RentalMultiFamilyPartialNotice";
+import { RentalMultiFamilyPriceCapNotice } from "./RentalMultiFamilyPartialNotice";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 
 type Rental975Form = Extract<RentalReductionFormVariant, { type: "rental_97_5" }>;
@@ -268,6 +269,7 @@ export function Rental975InputForm({ value, onChange, acquisitionDate, transferD
             주택+부속토지 합계 — 6억(수도권 밖 3억) 이하 요건 (§97의5①3호 → 령 §97의3③4호)
             {inheritanceInScope && value.isInherited975 && " · 피상속인 임대기간을 합산하면 피상속인 임대개시일 당시 가격을 넣으세요 (§97의4와 같은 기준 — 해석례가 없어 확인 필요)"}
           </p>
+          <RentalMultiFamilyPriceCapNotice article="§97의5" />
         </div>
 
         <Clause4GrandfatherQuestion
