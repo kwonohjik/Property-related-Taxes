@@ -253,6 +253,10 @@ export function MixedUseCalculationSections({
                 ? "적용 (12억 초과 안분 과세 — 나중에 취득한 부수토지분은 보유요건 미달로 전액 과세)"
                 : "적용 (12억 초과 안분 과세)"}
         </span>
+        {/* 비과세 근거 — 일반 주택 결과의 `exemptReason`에 해당(`mixed-use-exempt-basis-row.plan.md`). 엔진 echo 그대로 싣는다. */}
+        {breakdown.calculationRoute.highValueRule !== "non_one_house_full_taxation" && h.exemptBasis && (
+          <p className="mt-1" data-testid="mixed-use-exempt-basis">근거: {h.exemptBasis}</p>
+        )}
       </div>
       )}
 

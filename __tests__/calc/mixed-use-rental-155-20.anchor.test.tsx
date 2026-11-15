@@ -85,6 +85,8 @@ describe("⑳ 거주주택 — 겸용을 거주주택으로", () => {
     expect(r.result.housingPart.isExempt).toBe(true);
     expect(payable(r)).toBe(0);
     expect(w(r)).toContain("겸용주택의 주택 부분을 거주주택으로");
+    // 결과 「근거:」 줄(`mixed-use-exempt-basis-row.plan.md`) — 일반 경로 「장기임대주택 보유자 거주주택 비과세 (§155⑳)」와 같은 이름.
+    expect((r.result.housingPart as { exemptBasis?: string }).exemptBasis).toBe("장기임대주택 보유자 거주주택 (§155⑳)");
     expect((await runCalc(form({ mixed: false, res: R30, houses: [R] }))).result.totalTax).toBe(0);
   });
   it("MX-2 임대를 카드로만(명부 없음 · 주택 수 1) · 거주 30 → 0", async () => {

@@ -27,6 +27,28 @@ import type { OneHouseAppliedException, OneHouseCoreVerdict, OneHouseJudgeInput 
 const MARRIAGE_CLAUSE = shortArticle(TRANSFER.MARRIAGE_MERGE_EXEMPT).replace("§155", "");
 const PARENTAL_CARE_CLAUSE = shortArticle(TRANSFER.PARENTAL_CARE_MERGE_EXEMPT).replace("§155", "");
 
+/**
+ * §155④⑤ 합가 의제 라벨 — 일반 경로 `exemptReason`과 겸용 결과 근거(`transfer-tax-mixed-use-exempt-basis.ts`)가 같은 문구를 쓴다.
+ * D4 이중 합가는 순서대로 적는다(혼인이 먼저면 「혼인 합가 후 동거봉양 합가」, 동거봉양이 먼저면 그 반대).
+ */
+export function mergeDeemingLabel(
+  mergeBasis: "marriage_merge" | "parental_care_merge" | "marriage_merge_overlap" | "parental_care_merge_overlap" | "double_merge",
+  input: Parameters<typeof doubleMergeOrderOf>[0],
+): string {
+  const isMarriage = mergeBasis.startsWith("marriage");
+  if (mergeBasis === "double_merge") {
+    return doubleMergeOrderOf(input)?.first !== "parental_care"
+      ? `혼인 합가 후 동거봉양 합가 (${shortArticle(TRANSFER.MARRIAGE_MERGE_EXEMPT)}·${PARENTAL_CARE_CLAUSE})`
+      : `동거봉양 합가 후 혼인 합가 (${shortArticle(TRANSFER.PARENTAL_CARE_MERGE_EXEMPT)}·${MARRIAGE_CLAUSE})`;
+  }
+  if (mergeBasis.endsWith("_overlap")) {
+    return `일시적 2주택·${isMarriage ? "혼인" : "동거봉양"} 합가 중첩 (${shortArticle(TRANSFER.TEMPORARY_TWO_HOUSE)}①·${isMarriage ? MARRIAGE_CLAUSE : PARENTAL_CARE_CLAUSE})`;
+  }
+  return isMarriage
+    ? `혼인 합가 (${shortArticle(TRANSFER.MARRIAGE_MERGE_EXEMPT)})`
+    : `동거봉양 합가 (${shortArticle(TRANSFER.PARENTAL_CARE_MERGE_EXEMPT)})`;
+}
+
 export function checkDeemedOneHouseVerdict(
   input: OneHouseJudgeInput,
   oneHouseRules: OneHouseSpecialRulesData,
@@ -125,17 +147,9 @@ export function checkDeemedOneHouseVerdict(
     if (mergeBasis && meetsOneHouseHoldingResidence(input, rule)) {
       const isMarriage = mergeBasis.startsWith("marriage");
       const isDouble = mergeBasis === "double_merge";
-      // D4 — 순서대로 적는다(혼인이 먼저면 「혼인 합가 후 동거봉양 합가」, 동거봉양이 먼저면 그 반대).
+      // D4 — 적용 특례 행도 라벨과 같은 순서로 적는다.
       const marriageFirst = doubleMergeOrderOf(input)?.first !== "parental_care";
-      const mergeLabel = isDouble
-        ? marriageFirst
-          ? `혼인 합가 후 동거봉양 합가 (${shortArticle(TRANSFER.MARRIAGE_MERGE_EXEMPT)}·${PARENTAL_CARE_CLAUSE})`
-          : `동거봉양 합가 후 혼인 합가 (${shortArticle(TRANSFER.PARENTAL_CARE_MERGE_EXEMPT)}·${MARRIAGE_CLAUSE})`
-        : mergeBasis.endsWith("_overlap")
-        ? `일시적 2주택·${isMarriage ? "혼인" : "동거봉양"} 합가 중첩 (${shortArticle(TRANSFER.TEMPORARY_TWO_HOUSE)}①·${isMarriage ? MARRIAGE_CLAUSE : PARENTAL_CARE_CLAUSE})`
-        : isMarriage
-          ? `혼인 합가 (${shortArticle(TRANSFER.MARRIAGE_MERGE_EXEMPT)})`
-          : `동거봉양 합가 (${shortArticle(TRANSFER.PARENTAL_CARE_MERGE_EXEMPT)})`;
+      const mergeLabel = mergeDeemingLabel(mergeBasis, input);
       const priceCheck =
         input.burdenedGiftDenominator ?? input.totalPropertyTransferPrice ?? input.transferPrice;
       // 중첩(§155①·④⑤)이면 두 조문이 함께 근거다 — 한 줄로 합치지 않고 행을 나눈다.
