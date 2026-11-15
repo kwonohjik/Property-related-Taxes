@@ -95,11 +95,18 @@ describe("G-6·Q-1 요건을 갖춘 상태로 양도", () => {
 });
 
 describe("G-7 ㉒ 사후 추징 예외", () => {
-  it("W-4 ★ 상수 — 법령 원문 요지만(미확인 해석례 없음)", () => {
+  it("W-4 ★ 상수 — 법령 원문 요지 + 원문 확인한 해석례(V-8)", () => {
     expect(RENTAL_155_22_EXCEPTIONS_LONG).toContain("수용(협의매수 포함)되거나 사망으로 상속된 경우에는 계속 임대하는 것으로 봅니다(소득세법 시행령 §155㉒2호가목 · 소득세법 시행규칙 §74의2)");
     expect(RENTAL_155_22_EXCEPTIONS_LONG).toContain("관리처분계획등 인가일 전 6개월부터 준공일 후 6개월까지 빼고(같은 호 나목·다목)");
     expect(RENTAL_155_22_EXCEPTIONS_LONG).toContain("(같은 호 라목)");
-    expect(RENTAL_155_22_EXCEPTIONS_LONG).not.toMatch(/2021중2756|2024-0800/);
+    // 마목 — 법령 본문(2022.2.15. 개정 이후 소규모재건축사업등 포함)
+    expect(RENTAL_155_22_EXCEPTIONS_LONG).toContain("당초 주택의 등록 말소일에 요건을 갖춘 것으로 봅니다 — 임대하지 않은 기간이 6개월을 넘으면 제외합니다(같은 호 마목)");
+    // V-8 원문 확인(2026-11-16): 6120·0800 = 2022.2.15. 전 거주주택 양도 × 가로주택정비 멸실 · 2756·4972 = 같은 세대원 포괄승계 증여
+    expect(RENTAL_155_22_EXCEPTIONS_LONG).toContain("2022.2.15. 전에 거주주택을 양도했다면 가로주택정비사업 멸실에는 마목이 적용되지 않아");
+    expect(RENTAL_155_22_EXCEPTIONS_LONG).toContain("(서면-2020-법규재산-6120 · 요건을 갖춘 뒤 멸실되면 추징하지 않음 — 서면-2024-부동산-0800)");
+    expect(RENTAL_155_22_EXCEPTIONS_LONG).toContain("임대기간요건을 갖추지 못한 사유로 보지 않고, 증여자와 수증자의 임대기간을 통산합니다(조심 2021중2756 · 서면-2022-법규재산-4972)");
+    // 라목만 말소 예외인 것처럼 읽히던 「에 한해」는 마목과 모순이라 쓰지 않는다
+    expect(RENTAL_155_22_EXCEPTIONS_LONG).not.toContain("에 한해");
     expect(RENTAL_155_22_EXCEPTIONS_SHORT).toBe("수용·사망 상속·정비사업·말소 등은 사후 추징의 예외가 있습니다(소득세법 시행령 §155㉒2호).");
   });
 

@@ -103,7 +103,7 @@
 - G-1 `RentalUnitCard.tsx:262-293`: 「장기일반」 라벨 → 「장기일반 (단기 4년 등록 포함)」(testid 불변) + hint 「2020.8.17. 이전에 4년 단기민간임대로 등록했다면 「장기일반」을 고르세요. 지자체 등록 신청일이 2020.7.10. 이전이면 가목, 2020.7.11. 이후면 마목(아파트 제외)으로 판정합니다」. 「구 임대주택법」은 V-6에서 ㉓ 대상으로 고쳤다(§6).
 - G-2 `fail-messages.ts:79`: `terminationReason`으로 분기 — 자동말소면 「임대의무기간 1/2 이상 임대하지 않은 상태에서 등록이 말소되어 …」(0692 인용은 V-7).
 - G-6(결정 (a)): 질문·NOTE·⑧ 문구 `lib/calc/phrp-154-10-fact-question.ts:78·84·89` · `Phrp154_10FactQuestion.tsx:35·58` · `RentalHousing154_10Block.tsx:48` · `RentalHousingCalcSummary.tsx:80` · AI 카탈로그 `lib/one-house-ai/field-catalog-asset.ts:429·447`. 질문 초안 「…다른 거주주택을 장기임대주택 거주주택 특례(소령 §155⑳)의 요건을 갖춘 상태로 양도한 적이 있습니까?」 + 「특례를 신청하지 않고 과세로 신고했어도 요건을 갖췄다면 「예」입니다(사전-2023-법규재산-0393)」. §155①로 양도한 주택 제외 문장 유지. 테스트 갱신: `__tests__/calc/phrp-154-10-fact-question.anchor.test.tsx`·`__tests__/components/phrp-prior-residence-155-20-only.anchor.test.tsx`.
-- G-7: 신규 `lib/calc/rental-155-22-exceptions.ts`(긴·짧은 문장 상수) → `OneHouseJudgmentResultView.tsx:307-316` · `RentalUnitPeriodPriceBlock.tsx:87-90` · `RentalHousingExceptionSection.tsx:676` · 엔진 `transfer-tax-rental-housing-judge.ts:111-122` `buildRentalPeriodPendingNotice`. 내용 = ㉒2호 가목(수용·사망 상속 — 소칙 §74의2) · 나·다목(정비사업·리모델링 6개월 제외) · 라목(자진 1/2·자동 종료일 말소 시 요건 충족 간주). 동일세대 증여(조심2021중2756)·재개발 말소(서면부동산 2024-0800)는 V-8 확인 전 확정 문구로 쓰지 않는다.
+- G-7: 신규 `lib/calc/rental-155-22-exceptions.ts`(긴·짧은 문장 상수) → `OneHouseJudgmentResultView.tsx:307-316` · `RentalUnitPeriodPriceBlock.tsx:87-90` · `RentalHousingExceptionSection.tsx:676` · 엔진 `transfer-tax-rental-housing-judge.ts:111-122` `buildRentalPeriodPendingNotice`. 내용 = ㉒2호 가목(수용·사망 상속 — 소칙 §74의2) · 나·다목(정비사업·리모델링 6개월 제외) · 라목(자진 1/2·자동 종료일 말소 시 요건 충족 간주). 동일세대 증여(조심2021중2756)·재개발 말소(서면부동산 2024-0800)는 V-8 확인 전 확정 문구로 쓰지 않는다(✅ V-8 확인 후 반영 — §6).
 
 ## 5. Q — 사용자 결정 (권고 먼저)
 
@@ -144,7 +144,7 @@
   - ✅ ⓒ 구법 ㉓1호 1/2 = 30개월: `terminationDutyYears`(fail-messages.ts)가 pre_2018이면 5년. 자동말소일 확인 고지(`autoCancellationDateCheckNotice`)도 5년. 「해석례 없음 · 확인 필요」 고지(`preRentalActVoluntaryHalfNotice`)는 삭제, 등록 유형 안내·단기 선택지 설명을 30개월·부칙 제3조③3호로 고쳤다. 수정 전 실측: 26개월 자진말소 → 성립(24개월 기준) · 등록일+5년 자동말소일 → 확인 필요 고지.
   - 테스트: `rental-155-20-pre2018-deadline-half.anchor.test.ts`(B-1~B-6·C-1~C-6) · `components/rental-155-20-pre2018-deadline-half.test.tsx`(U-1~U-3·A-1·V-1·H-1) — 수정 전 코드에서 11건 실패.
 - V-7 0692를 자동말소 1/2 문구에 인용할지.
-- V-8 조심2021중2756·서면부동산 2024-0800 원문.
+- ✅ V-8 원문 확인(2026-11-16 · KoreanLaw tax_tribunal·nts): **조심 2021중2756**(2021.11.10., 취소) — ㉒ 「1세대가 … 충족하지 못하게 된 때」라 충족 주체는 1세대, 같은 세대원 배우자에게 임대사업자 지위를 포괄승계하는 증여는 ㉒ 사유 아님(소칙 §74의2 부득이한 사유는 물리적 불능 열거라 무관) · 국세청 **서면-2022-법규재산-4972**(2024.5.27.)도 같은 세대원 증여 = 증여자·수증자 임대기간 통산 — 충돌 없음. **서면-2024-부동산-0800**(부동산납세과-1701, 2024.10.8.) — 2022.2.15. 전 거주주택 양도 후 임대주택이 임대기간요건을 **갖춘 뒤** 가로주택정비사업으로 멸실 → 추징 없음. 유사 **서면-2020-법규재산-6120**(2022.6.29.) — 같은 시기 요건 **전** 멸실·말소 → 미충족(2022.2.15. 개정 ㉒2호 마목은 부칙 제2조②로 그 뒤 양도분부터). → G-7 긴 문장에 마목(법령 본문 · 기존 상수에 빠져 있었음) + 6120·0800 + 2756·4972 추가, 「라목에 한해」 표현 삭제(마목과 모순). 짧은 문장은 법령 인용(§155㉒2호)이라 해석례를 넣지 않음. 세액 불변.
 - V-9 증여자 개월 합산과 `recognizedRentalSegments` 클립 기준일의 이중 계산·공백 anchor.
 
 ## 7. 테스트·검증 계획
