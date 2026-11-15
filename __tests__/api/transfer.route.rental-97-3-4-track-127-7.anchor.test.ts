@@ -3,7 +3,8 @@
  * 신축주택(§99의3)·수용 감면(§77)·§98의2와 같은 카드에서 이중 적용되던 결함 (NH-41 Q-2 b 후속).
  * 계획서 docs/00-pm/rental-97-3-4-track-127-7.plan.md (Q-1 a · Q-2 a · Q-3 a).
  *
- * 조심 2024서2915: §97의4 추가공제율도 §127⑦의 «감면규정». §97의3은 직접 재결이 없어 같은 구조로 본다(유추 — 계획서 V-1).
+ * 조심 2024서2915: §97의4 추가공제율도 §127⑦의 «감면규정». §97의3은 §98의3과의 쌍만 서면-2017-법령해석재산-0404가 직접 택일로 회신했고,
+ * 그 밖의 쌍은 같은 구조로 본다(유추 — 계획서 V-1).
  * ⑤·⑧·⑫는 `findTrack127_7Conflict` 한 함수를 쓰므로 여기서는 ⑧↔⑫ 문구 일치와 현행 고정 동작(임대 범주 안 쌍)을 본다.
  * 세율표는 route 폴백이다(정본 세액).
  */
@@ -181,6 +182,10 @@ describe("refine 단위 — 분류 · 임대 범주 제외 · 날짜 무관", ()
   it("하이브리드(§98의3)도 5년 이내·후 모두 막는다", async () => {
     expect(await run(["rental_97_4", "unsold_98_3"], "2024-01-01", "2025-01-01")).toHaveLength(1);
     expect(await run(["rental_97_4", "unsold_98_3"], "2015-01-01", "2025-01-01")).toHaveLength(1);
+  });
+  it("§97의3 + §98의3은 5년 이내·후 모두 막는다 — 서면-2017-법령해석재산-0404 직접 회신(§127⑦ 본문 택일)", async () => {
+    expect(await run(["rental_97_3", "unsold_98_3"], "2024-01-01", "2025-01-01")).toHaveLength(1);
+    expect(await run(["rental_97_3", "unsold_98_3"], "2011-01-20", "2025-01-01")).toHaveLength(1);
   });
   it("단독과, 임대 세액감면 계열 ↔ 다른 계열 세액감면(§77)은 막지 않는다 (명문 배제·§127⑦ 쌍은 V-6 anchor, 임대 계열 안 쌍은 rental-97-tax-amount-pairs anchor)", async () => {
     for (const pair of [["rental_97_main", "public_expropriation"], ["rental_97_proviso", "public_expropriation"], ["rental_97_5", "public_expropriation"]]) {
