@@ -59,6 +59,7 @@ import { mixedUseRequirementReviewNotice } from "./transfer-tax-mixed-use-unmet-
 import { mixedUseResidenceYearsLabel } from "./transfer-tax-mixed-use-unmet-notices";
 import { decisiveProvisoException } from "./one-house/decisive-proviso";
 import { deemedPathProvisoNotices } from "./transfer-tax-one-house-warnings";
+import { rental4hoUndeterminedNotice } from "./one-house/era-undetermined";
 import { isOldSurchargeClauseEra } from "./data/surcharge-old-clauses-era";
 import {
   article89Clause2Notices,
@@ -510,6 +511,12 @@ export function judgeMixedUseOneHouseExemption(
       }),
     );
   }
+  // 삭제 전 §154①4호 미선택 안내 — 일반 경로와 같은 함수·같은 조건. `relevance`를 넘기지 않아 1주택에서만 낸다
+  //   (`mixed-use-one-house-proviso-notice.plan.md` Q-3 a). 미등기는 일반 경로도 내지 않는다.
+  if (deemedInput.isOneHousehold && !isUnregistered) {
+    const rental4hoNotice = rental4hoUndeterminedNotice(deemedInput, oneHouseSpecialRules, isOneHouseExempt);
+    if (rental4hoNotice) warnings.push(rental4hoNotice.reason);
+  }
   // 일시적 2주택 · 합가 의제가 깨져 주택 수 축이 서지 않으면 아래 자체 §154① 문장이 나가지 않는다 — 정본 요건 검토표의
   //   미충족 행을 일반 계산기와 같은 문장으로 알린다(`mixed-use-unmet-reason-calc.plan.md` Q-1 a). 위 고지와 같은 사유는 뺀다.
   //   주택 수 축이 서지 않으면 비과세(`isOneHouseExempt`)도 아니다 — 따로 묻지 않는다.
@@ -524,6 +531,13 @@ export function judgeMixedUseOneHouseExemption(
   const decisiveProviso = isOneHouseExempt
     ? decisiveProvisoException(exemptionReqInput, oneHouseSpecialRules.one_house_exemption)
     : undefined;
+  // 1주택(§155 의제·⑥⑦⑧ 특례 아님) — 일반 경로는 `exemptReason`에 단서·근거를 적는다. 겸용 결과에는 그 칸이 없어 문장으로 싣는다
+  //   (`mixed-use-one-house-proviso-notice.plan.md` Q-1 b 단서 전 사유 · Q-2 a 의제 경로는 위 문장만).
+  if (decisiveProviso && deemedAppliedIds(deemedOneHouseBy155).length === 0 && special155Basis === undefined) {
+    warnings.push(
+      `겸용주택 주택분은 「${decisiveProviso.label}」에 따라 1세대1주택 비과세 보유·거주요건을 충족했습니다 — ${decisiveProviso.legalBasis}`,
+    );
+  }
   if (decisiveProviso) {
     warnings.push(
       ...deemedPathProvisoNotices([
