@@ -215,6 +215,17 @@ export function HouseEntryRentalTypeSection({
                 title={key === "rentIncreaseUnder5Pct" && cancelled ? "말소일까지 임대료 증액 5% 이하 충족" : meta.label}
               />
             );
+            if (key === "hasHalfDutyPeriodMet") {
+              return (
+                <div key={key as string} className="space-y-1">
+                  {chip}
+                  <p className="text-caption text-muted-foreground" data-testid={`half-duty-assumption-note-${idPrefix}`}>
+                    임대사업자 지위를 포괄 양수한 주택은 전 소유자의 임대기간을 합산하고, 전 임대사업자 등록일부터 셉니다(그 뒤
+                    임대를 시작했으면 실제 임대개시일부터 · 기준-2021-법무재산-0225 · 서면-2020-법규재산-5310).
+                  </p>
+                </div>
+              );
+            }
             if (key !== "rentIncreaseUnder5Pct") return chip;
             const cancelNote = cancelled && (
               <p className="text-caption text-muted-foreground" data-testid={`rent-cap-cancel-note-${idPrefix}`}>

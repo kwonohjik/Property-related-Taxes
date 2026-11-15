@@ -26,6 +26,9 @@ export interface RentalPeriodDatesValue {
   rentalEndDate?: string;
   isInheritedRental?: boolean;
   decedentRentalMonths?: string;
+  decedentBusinessRegistrationDate?: string;
+  decedentRentalRegistrationDate?: string;
+  decedentRentalRegisteredDate?: string;
 }
 
 interface Props {
@@ -74,7 +77,13 @@ export function RentalPeriodDatesFields({ value, onPatch, variant, testIdPrefix 
           data-testid={`${testIdPrefix}-inherited`}
           checked={value.isInheritedRental === true}
           onCheckedChange={(b) =>
-            onPatch({ isInheritedRental: b || undefined, decedentRentalMonths: b ? value.decedentRentalMonths : undefined })
+            onPatch({
+              isInheritedRental: b || undefined,
+              decedentRentalMonths: b ? value.decedentRentalMonths : undefined,
+              decedentBusinessRegistrationDate: b ? value.decedentBusinessRegistrationDate : undefined,
+              decedentRentalRegistrationDate: b ? value.decedentRentalRegistrationDate : undefined,
+              decedentRentalRegisteredDate: b ? value.decedentRentalRegisteredDate : undefined,
+            })
           }
           title="상속받아 계속 임대하는 주택"
           description="피상속인의 임대기간을 더합니다(조특령 §97⑤3호 · 소령 §167의3③ 준용)."
@@ -90,7 +99,49 @@ export function RentalPeriodDatesFields({ value, onPatch, variant, testIdPrefix 
               피상속인이 사업자등록과 임대주택 등록을 한 뒤 임대한 개월입니다. 위 임대개시일에는 상속 후 상속인이 임대를 시작한 날을 넣으세요.
             </p>
           </div>
+          <div className="space-y-1 pt-2" data-testid={`${testIdPrefix}-decedent-registration`}>
+            <p className={LABEL}>
+              피상속인 등록 사실 <span className="font-normal">(선택)</span>
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <div className="space-y-1">
+                <label className={LABEL}>세무서 사업자등록일</label>
+                <DateInput
+                  value={value.decedentBusinessRegistrationDate ?? ""}
+                  onChange={(s) => onPatch({ decedentBusinessRegistrationDate: s || undefined })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className={LABEL}>지자체 등록 신청일</label>
+                <DateInput
+                  value={value.decedentRentalRegistrationDate ?? ""}
+                  onChange={(s) => onPatch({ decedentRentalRegistrationDate: s || undefined })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className={LABEL}>
+                  지자체 등록일 <span className="font-normal">(비우면 신청일)</span>
+                </label>
+                <DateInput
+                  value={value.decedentRentalRegisteredDate ?? ""}
+                  onChange={(s) => onPatch({ decedentRentalRegisteredDate: s || undefined })}
+                />
+              </div>
+            </div>
+            <p className={HINT} data-testid={`${testIdPrefix}-decedent-registration-hint`}>
+              가·다목의 「2018년 3월 31일까지 사업자등록등」은 피상속인 등록일로 판정합니다 — 상속인이 그 뒤에 등록했어도
+              피상속인이 그날까지 등록했다면 가목을 적용합니다(서면-2020-법규재산-1959). 비우면 위 상속인 등록일로 판정합니다. 그 밖의
+              요건은 상속인 등록으로 봅니다.
+            </p>
+          </div>
         </ToggleCard>
+      )}
+      {longTerm && (
+        <p className={HINT} data-testid={`${testIdPrefix}-household-gift-note`}>
+          같은 세대원에게 증여받아 임대사업자 지위를 이어받은(포괄승계) 주택은 위 등록일·임대개시일에 본인(수증자) 날짜를 넣습니다.
+          다주택 중과배제에서 증여자 등록일로 목·등록 기한을 판정하는지는 정면 해석이 없어 본인 날짜로 판정합니다 — 확인 필요.
+          등록이 말소된 뒤 같은 세대원에게 증여받은 주택은 중과배제가 적용될 수 있습니다(기획재정부 재산세제과-1591).
+        </p>
       )}
     </div>
   );

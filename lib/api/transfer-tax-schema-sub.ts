@@ -270,6 +270,10 @@ export const houseSchema = z.object({
   rentalEndDate: z.string().date().optional(),
   /** 2호 상속 — 피상속인 임대개월(조특령 §97⑤3호) */
   decedentRentalMonths: z.number().nonnegative().optional(),
+  /** 2호 상속 — 피상속인 등록 사실(가·다목 2018.3.31. 상한만 · 서면-2020-법규재산-1959). 앞의 두 날짜가 다 있을 때만 엔진이 쓴다 */
+  decedentBusinessRegistrationDate: z.string().date().optional(),
+  decedentRentalRegistrationDate: z.string().date().optional(),
+  decedentRentalRegisteredDate: z.string().date().optional(),
   rentalCancelledDate: z.string().date().optional(),
   /** 말소 사유 — 자동말소면 §167의3①2호 단서(임대기간요건 간주 충족) */
   rentalCancellationReason: z.enum(["auto", "voluntary"]).optional(),
