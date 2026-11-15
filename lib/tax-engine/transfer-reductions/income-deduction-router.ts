@@ -12,7 +12,6 @@
 
 import { coerceOptionalDate } from "../tax-utils";
 import { surchargeExclusionBasis, SURCHARGE_EXCLUSION_STEP_LABEL, type SurchargeHousehold } from "../surcharge-exclusion-basis";
-import { MULTI_HOUSE } from "../legal-codes/transfer";
 import { resolveHighValuePriceCheck } from "../one-house/threshold";
 import { RENTAL_STATUTORY_PAIR_IDS } from "./rental-97-statutory-overlap";
 import { evaluateNew993, type New993Result } from "./new-99-3";
@@ -93,7 +92,8 @@ const RATE_LTHD_SPECIAL_TRACK_IDS: ReadonlyArray<string> = ["unsold_98", "unsold
  * 감면세액도 소득금액 차감도 만들지 않고 장기보유특별공제율만 바꾼다(metadata `long_term_holding_special`·`long_term_holding_additional`).
  *
  * 조심 2024서2915(2024.12.12., 기각)가 §97의4를 §127⑦의 «감면규정»으로 보아 §99의3과 병용 불가로 판단했다.
- * §97의3은 직접 재결이 없다 — §97의4와 같은 구조(공제율을 달리 적용)라 같게 둔다(계획서 `rental-97-3-4-track-127-7.plan.md` Q-1 a · V-1: 유추).
+ * §97의3은 서면-2017-법령해석재산-0404(2019.3.28.)가 §98의3과 동시에 적용받으면 §127⑦ 본문에 따라 거주자가 선택하는 하나만 적용한다고 직접 회신했다.
+ * 그 밖의 조문과의 쌍은 직접 근거가 없다 — §97의4와 같은 구조(공제율을 달리 적용)라 같게 둔다(계획서 `rental-97-3-4-track-127-7.plan.md` Q-1 a · V-1: 유추).
  * §97의3/4가 아닌 분류 조문과는 보유연수와 무관하게 택일이다(§97 본문·단서·§97의2 포함). 명문 배제 3쌍(§97의3②·§97의5②)만 `rental-97-statutory-overlap.ts`가 맡는다.
  */
 const RENTAL_LTHD_TRACK_IDS: ReadonlyArray<string> = ["rental_97_3", "rental_97_4"];
