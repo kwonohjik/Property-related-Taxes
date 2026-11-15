@@ -11,7 +11,7 @@ import { registeredDateOf } from "../../rental-article/registered-date";
 import { deriveRentalArticle, deriveRegApplicationDate, registrationBasis } from "./derive";
 import type { EligibilityContext } from "./eligibility";
 import type { RentalUnitInput, RentalArticle } from "./types";
-import { PRE_RENTAL_ACT_DUTY_YEARS } from "./fail-messages";
+import { terminationDutyYears } from "./fail-messages";
 /** §155㉓ 「등록이 말소된 이후 … 5년 이내에 거주주택을 양도」 — 기한 연수 (I-4) */
 export const TERMINATION_TRANSFER_YEARS = 5;
 
@@ -180,9 +180,6 @@ export function deemedAutoCancellationNotice(i: number, u: RentalUnitInput): str
   );
 }
 
-/** 말소 전 등록 유형별 민특법 임대의무기간(년) — 종전 단기 4년·장기일반 8년 */
-const AUTO_DUTY_YEARS = { short_term: 4, long_term_general: 8 } as const;
-
 /**
  * Q-9 — 자동말소일 오입력(등록증 말소 처리일) 확인 필요 고지. 값은 바꾸지 않는다(자동 대체 금지).
  * 민특법 §6⑤ 「임대의무기간이 종료한 날 등록이 말소된다」 — 입력 말소일이 「지자체 등록일 + 의무기간」보다 1개월 넘게 늦으면 고지.
@@ -194,10 +191,9 @@ export function autoCancellationDateCheckNotice(i: number, u: RentalUnitInput): 
   if (dayOf(cd) < ADDENDA_17482_EFFECTIVE) return undefined;
   const basis = registrationBasis(u); // 증여 승계는 증여자 등록일부터 의무기간이 흐른다(G-3)
   const reg = registeredDateOf(basis.rentalRegisteredDate, basis.rentalRegistrationDate) ?? undefined;
-  const type = u.terminatedRegistrationType;
-  if (!validDate(reg) || !type) return undefined;
-  // 구 임대주택법 등록분은 종전 임대주택법 5년(V-6 ⓒ · `PRE_RENTAL_ACT_DUTY_YEARS`)
-  const years = u.rentalCategory === "pre_2018" ? PRE_RENTAL_ACT_DUTY_YEARS : AUTO_DUTY_YEARS[type];
+  // 등록 유형별 임대의무기간 — 종전 민특법 단기 4년·장기일반 8년, 구 임대주택법 단기 5년·준공공 10년(`terminationDutyYears` 단일 소스)
+  const years = terminationDutyYears(u);
+  if (!validDate(reg) || years == null) return undefined;
   const estimatedEnd = addYears(reg, years);
   if (dayOf(cd) <= dayOf(addMonths(estimatedEnd, 1))) return undefined;
   return (

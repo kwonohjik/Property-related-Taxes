@@ -307,6 +307,33 @@ test.describe("B 구 임대주택법 매입 아파트 — ⑪ 양도기한 · �
     await expect(hint).toContainText("부칙<제13499호> 제3조③3호");
     await expect(page.getByText("「주택법」에 따른 도시형 생활주택인 아파트입니다.")).toHaveCount(0);
   });
+
+  // 구 준공공(구법 × 장기일반) ㉓1호 1/2 = 60개월 — 부칙<제13499호> 제3조③1호 단서 · 구 임대주택법 시행령 §13①1호
+  const quasiPublic = (months: string) => ({
+    ...apt,
+    rentalMonths: months,
+    rentalAutoTermination: true,
+    terminationReason: "voluntary",
+    terminatedRegistrationType: "long_term_general",
+    registrationCancellationDate: "2022-01-10",
+  });
+
+  test("[B-3] 구 준공공 자진말소 40개월 → 안내 60개월·산입 확인 필요 · 요건 미충족", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openJudgmentRentalCard(page, "2024-06-01", quasiPublic("40"));
+    await expect(page.getByTestId("rental-terminated-type-pre2018-hint-0")).toContainText("60개월");
+    await expect(page.getByTestId("rental-pre2018-quasi-public-note-0")).toContainText("확인");
+    const unit = await judge(page);
+    expect(unit).toMatchObject({ rentalCategory: "pre_2018", terminatedRegistrationType: "long_term_general" });
+    await expect(page.getByTestId("one-house-rental-verdict")).toContainText("요건 미충족");
+  });
+
+  test("[B-4] 짝 — 60개월 → 요건 충족", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openJudgmentRentalCard(page, "2024-06-01", quasiPublic("60"));
+    await judge(page);
+    await expect(page.getByTestId("one-house-rental-verdict")).toHaveText("요건 충족");
+  });
 });
 
 test.describe("I 상속 임대주택 — 피상속인 등록일로 목 판정(1959 유추)", () => {
