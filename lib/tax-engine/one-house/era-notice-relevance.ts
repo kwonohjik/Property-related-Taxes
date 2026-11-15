@@ -41,6 +41,23 @@ function residenceDecidesConclusion(
   return input.householdHousingCount === 1 && !holding.met && !holding.provisoWaives;
 }
 
+/**
+ * 삭제 전 §154①4호가 성립한다고 채운 단서 입력 — 미선택 고지 게이트(`rental4hoDecides`)의 반사실 입력.
+ * 두 신청일 = min(2019-12-16, 양도일) · 신청 당시 조정대상지역 1주택 · 자동말소. 일반 경로와 겸용 경로가 같은 값을 쓴다.
+ */
+export function rental4hoFavorableProviso(transferDate: Date): NonNullable<OneHouseJudgeInput["oneHouseExemptionProviso"]> {
+  const applied = new Date(Math.min(RENTAL_4HO_REGISTRATION_DEADLINE.getTime(), transferDate.getTime()));
+  return {
+    reason: RENTAL_4HO_REASON,
+    rentalRegistration4ho: {
+      businessRegistrationApplicationDate: applied,
+      rentalRegistrationApplicationDate: applied,
+      regulatedOneHouseAtApplication: true,
+      statusAtTransfer: "auto_cancelled",
+    },
+  };
+}
+
 export function buildEraNoticeRelevance(ctx: {
   input: OneHouseJudgeInput;
   oneHouseRules: OneHouseSpecialRulesData;
@@ -113,19 +130,7 @@ export function buildEraNoticeRelevance(ctx: {
     // 삭제 전 §154①4호(1주택 밖 맥락) — 4호가 성립한다고 채운 본체 판정이 비과세·부분과세일 때만 고지한다. 채운 입력은 `applies`라 고지가 생기지 않는다.
     rental4hoDecides: () => {
       if (article89Excluded) return false;
-      const applied = new Date(Math.min(RENTAL_4HO_REGISTRATION_DEADLINE.getTime(), input.transferDate.getTime()));
-      const v = core({
-        ...input,
-        oneHouseExemptionProviso: {
-          reason: RENTAL_4HO_REASON,
-          rentalRegistration4ho: {
-            businessRegistrationApplicationDate: applied,
-            rentalRegistrationApplicationDate: applied,
-            regulatedOneHouseAtApplication: true,
-            statusAtTransfer: "auto_cancelled",
-          },
-        },
-      });
+      const v = core({ ...input, oneHouseExemptionProviso: rental4hoFavorableProviso(input.transferDate) });
       return v.isExempt || v.isPartialExempt;
     },
     // 귀농주택 ⑩4호·⑪·귀농 전 취득 「모름」·미응답(결정 #44) — 그 사실만 유리하게 채운 본체 판정이 비과세일 때만 확인 필요를 낸다.
