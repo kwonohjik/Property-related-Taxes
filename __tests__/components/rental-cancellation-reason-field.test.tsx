@@ -12,6 +12,7 @@
  * | CR-2 | 카드 — 토글을 끄면 말소 사유도 함께 비운다(같은 onChange 한 번) |
  * | CR-3 | 명부 행 — 「임대사업자 말소일」을 입력했을 때만 칸이 있고, 장기임대를 끄면 사유도 비운다 |
  * | CR-4 | 양도 주택 장기임대 칸 — 말소일을 입력했을 때만 칸이 있고 선택이 저장된다 |
+ * | CR-5 | 「의무기간 후 말소 신청」(민특법 §6①3호) — 명부 행·양도 주택 모두 저장 · 5% 질문은 「말소일까지」(서면-2023-부동산-1329) |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
@@ -102,5 +103,38 @@ describe("말소 사유 칸 — 명부", () => {
     );
     fireEvent.click(screen.getByTestId("selling-rental-cancel-reason-auto"));
     expect(onChange.mock.calls.at(-1)![0].longTermRental.rentalCancellationReason).toBe("auto");
+  });
+
+  it("CR-5 「의무기간 후 말소 신청」 — 명부 행·양도 주택 모두 저장 · 5% 질문은 「말소일까지」", () => {
+    const onUpdate = vi.fn();
+    render(
+      <HouseEntryEditor
+        house={row({ rentalCancelledDate: "2021-03-01", rentalCancellationReason: "after_duty", rentalType: "A" })}
+        onUpdate={onUpdate}
+      />,
+    );
+    expect(screen.getByText("의무기간 후 말소 신청")).toBeTruthy();
+    expect(screen.getByText("말소일까지 임대료 증액 5% 이하 충족")).toBeTruthy();
+    cleanup();
+    // 대조 — 자진말소면 5% 질문은 종전 제목 · 선택을 바꾸면 after_duty가 저장된다
+    render(
+      <HouseEntryEditor
+        house={row({ rentalCancelledDate: "2021-03-01", rentalCancellationReason: "voluntary", rentalType: "A" })}
+        onUpdate={onUpdate}
+      />,
+    );
+    expect(screen.queryByText("말소일까지 임대료 증액 5% 이하 충족")).toBeNull();
+    fireEvent.click(screen.getByTestId("house-rental-cancel-reason-h1-after-duty"));
+    expect(onUpdate).toHaveBeenLastCalledWith({ rentalCancellationReason: "after_duty" });
+    cleanup();
+    const onChange = vi.fn();
+    render(
+      <SellingHouseLongTermRentalSection
+        value={{ longTermRental: { isLongTermRental: true, rentalCancelledDate: "2021-03-01" } }}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("selling-rental-cancel-reason-after-duty"));
+    expect(onChange.mock.calls.at(-1)![0].longTermRental.rentalCancellationReason).toBe("after_duty");
   });
 });

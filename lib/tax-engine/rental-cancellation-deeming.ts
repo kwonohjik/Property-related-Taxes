@@ -12,6 +12,10 @@
  * - **자진말소**(§6①11호): 사목은 말소 후 1년 이내에 **그 주택을** 양도하는 경우만 정한다. 다른 주택을 양도할 때
  *   2호로 보는지는 해석을 확인하지 못해 보지 않는다(사용자 결정 2026-10-13 · 확인 필요 고지).
  * - 말소 사유 미선택 = 모름 → 간주하지 않는다(확인 필요 고지).
+ * - **의무기간 후 말소 신청**(§6①3호 후단 「제43조의 임대의무기간이 지난 후 등록 말소를 신청하는 경우」): 단서·사목 어느 것도
+ *   아니다. 해당 목의 요건(임대기간은 말소일까지)을 갖춘 주택을 **그 주택으로 양도**하면 중과배제한다(기획재정부 재산세제과-536 다목 ·
+ *   서면-2022-법규재산-3076 가목 · 서면-2023-부동산-1329 마목). 다른 주택을 양도할 때는 해석이 없어 보지 않는다
+ *   (사용자 결정 2026-11-16 · 확인 필요 고지 `afterDutyCancellationNotices`). 판정은 `isAfterDutyCancelledRentalExempt`.
  *
  * 자동말소는 법률 제17482호(2020.8.18. 시행)로 생겼다. 그 전에 임대의무기간이 끝난 주택은 같은 법 부칙 제7조로
  * **2020.8.18.에 말소된 것으로 본다** — 말소 사유 「자동말소」(설명 「임대의무기간 종료일 말소」)에 그 전 날짜를 넣으면
@@ -35,8 +39,9 @@ const PROVISO_TYPES: ReadonlySet<RentalHousingType> = new Set(["A", "C", "D", "E
  * - `none`: 양도일 현재 말소되지 않았다
  * - `auto_deemed`: 자동말소 + 단서 대상 목 — 임대기간요건만 갖춘 것으로 본다
  * - `not_deemed`: 그 밖의 말소 — 장기임대주택으로 보지 않는다
+ * - `after_duty`: 의무기간 후 말소 신청(§6①3호) — 그 주택 양도에서만 장기임대주택(`isAfterDutyCancelledRentalExempt`)
  */
-export type RentalCancellationStatus = "none" | "auto_deemed" | "not_deemed";
+export type RentalCancellationStatus = "none" | "auto_deemed" | "not_deemed" | "after_duty";
 
 /** 법률 제17482호 부칙 제7조 — 자동말소인데 입력 말소일(= 임대의무기간 종료일)이 2020.8.18. 전이면 2020.8.18. 말소로 본다. */
 export function isAddenda7DeemedCancellation(house: HouseInfo): boolean {
@@ -53,6 +58,7 @@ export function effectiveRentalCancelledTs(house: HouseInfo): number | undefined
 export function rentalCancellationStatus(house: HouseInfo, transferDate: Date): RentalCancellationStatus {
   const cancelledTs = effectiveRentalCancelledTs(house);
   if (cancelledTs === undefined || cancelledTs > transferDate.getTime()) return "none";
+  if (house.rentalCancellationReason === "after_duty") return "after_duty";
   // 자동말소면 말소일은 늘 2020.8.18. 이후다(그 전 날짜는 위 간주로 2020.8.18.).
   return house.rentalCancellationReason === "auto" && house.rentalType != null && PROVISO_TYPES.has(house.rentalType)
     ? "auto_deemed"
@@ -74,10 +80,10 @@ export function isSeparateHouseholdGiftOfCancelledRental(house: HouseInfo): bool
   return cancelledTs !== undefined && cancelledTs <= house.acquisitionDate.getTime();
 }
 
-const differs = (a: MultiHouseSurchargeResult, b: MultiHouseSurchargeResult): boolean =>
+export const differs = (a: MultiHouseSurchargeResult, b: MultiHouseSurchargeResult): boolean =>
   a.surchargeApplicable !== b.surchargeApplicable || a.surchargeType !== b.surchargeType;
 
-const houseLabel = (id: string): string => (id.startsWith("임대주택") ? id : `주택 ${id}`);
+export const houseLabel = (id: string): string => (id.startsWith("임대주택") ? id : `주택 ${id}`);
 
 /**
  * 말소 사유를 「자동말소」로 바꾸면 중과 여부·유형이 달라질 때만 확인 필요 고지를 낸다

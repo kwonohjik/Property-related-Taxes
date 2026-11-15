@@ -5,11 +5,13 @@
  *
  * 자동말소(민특법 §6⑤, 임대의무기간 종료일)면 가·다·라·마목은 임대기간요건을 갖춘 것으로 본다. 자진말소·미선택은
  * 장기임대주택으로 보지 않는다(사용자 결정 2026-10-13 — 엔진 `rental-cancellation-deeming.ts`가 확인 필요 고지).
+ * 임대의무기간이 지난 후 말소 신청(§6①3호)은 그 주택을 양도할 때만 장기임대주택으로 본다(536 · 3076 · 1329 — 사용자 결정 2026-11-16,
+ * 엔진 `multi-house-rental-after-duty.ts`).
  * 말소일을 입력했을 때만 묻는다(④ `transfer-tax-api-houses.ts`도 말소일이 있을 때만 보낸다).
  */
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 
-type Reason = "auto" | "voluntary";
+type Reason = "auto" | "voluntary" | "after_duty";
 
 export function RentalCancellationReasonField({
   value,
@@ -31,6 +33,7 @@ export function RentalCancellationReasonField({
         options={[
           { value: "auto", label: "자동말소", description: "임대의무기간 종료일 말소 (민특법 §6⑤)", testId: `${testIdPrefix}-auto` },
           { value: "voluntary", label: "자진말소", description: "임대의무기간 내 말소 신청 (민특법 §6①11호)", testId: `${testIdPrefix}-voluntary` },
+          { value: "after_duty", label: "의무기간 후 말소 신청", description: "임대의무기간이 지난 후 말소 신청 (민특법 §6①3호)", testId: `${testIdPrefix}-after-duty` },
         ]}
         value={value ?? ""}
         onChange={onChange}
@@ -39,6 +42,8 @@ export function RentalCancellationReasonField({
         자동말소면 가·다·라·마목은 임대기간요건을 갖춘 것으로 봅니다(소령 §167의3①2호 단서). 임대의무기간이 2020.8.18. 전에
         끝났다면 그 종료일을 넣어도 2020.8.18.에 말소된 것으로 계산합니다(법률 제17482호 민간임대주택에 관한 특별법 부칙 제7조).
         자진말소이거나 고르지 않으면 장기임대주택으로 보지 않습니다 — 자진말소 후 1년 이내에 이 주택을 양도하면 유형에서 사목을 고르세요.
+        임대의무기간이 지난 뒤 말소를 신청했다면 해당 목의 요건을 말소일까지 갖춘 경우 이 주택을 양도할 때 중과세율을 적용하지 않습니다(기획재정부
+        재산세제과-536 · 서면-2022-법규재산-3076). 다른 주택을 양도할 때는 장기임대주택으로 보지 않습니다(직접 해석 미확인).
       </p>
     </div>
   );
