@@ -2,7 +2,8 @@
  * 영 §167의3①2호 단서 — 말소된 장기임대주택의 중과 2호 판정 (`rental-cancellation-deeming.ts` · #20 C 후속).
  *
  * 단서는 「가목 및 다목부터 마목까지」만 정한다 — 나목(기존사업자)·바목(장기일반 건설)·아·자목(2025 신설 단기)은 자동말소여도
- * 간주하지 않는다. 자동말소 제도는 법률 제17482호(2020.8.18. 시행)로 생겼다.
+ * 간주하지 않는다. 자동말소 제도는 법률 제17482호(2020.8.18. 시행)로 생겼다 — 그 전에 의무기간이 끝난 주택은 같은 법 부칙 제7조로
+ * 2020.8.18. 말소로 본다(Q-3 · `rental-cancellation-addenda7.anchor.test.ts`).
  */
 import { describe, it, expect } from "vitest";
 import { rentalCancellationStatus } from "@/lib/tax-engine/rental-cancellation-deeming";
@@ -41,10 +42,11 @@ describe("rentalCancellationStatus", () => {
     for (const t of ["B", "F", "G", "H", "I"] as const) expect(rentalCancellationStatus(house({ rentalType: t }), T)).toBe("not_deemed");
     expect(rentalCancellationStatus(house({ rentalType: undefined }), T)).toBe("not_deemed");
   });
-  it("D-2 자진말소 · 미선택 · 2020.8.18. 전 말소 → 간주하지 않는다 / 양도일 뒤 말소 · 말소일 없음 → 말소 아님", () => {
+  it("D-2 자진말소 · 미선택 → 간주하지 않는다 / 2020.8.18. 전 자동말소일은 부칙 제7조로 2020.8.18. 말소(Q-3) / 양도일 뒤 말소 · 말소일 없음 → 말소 아님", () => {
     expect(rentalCancellationStatus(house({ rentalCancellationReason: "voluntary" }), T)).toBe("not_deemed");
     expect(rentalCancellationStatus(house({ rentalCancellationReason: undefined }), T)).toBe("not_deemed");
-    expect(rentalCancellationStatus(house({ rentalCancelledDate: new Date("2020-08-17") }), T)).toBe("not_deemed");
+    expect(rentalCancellationStatus(house({ rentalCancelledDate: new Date("2020-08-17") }), T)).toBe("auto_deemed");
+    expect(rentalCancellationStatus(house({ rentalCancelledDate: new Date("2020-08-17"), rentalCancellationReason: "voluntary" }), T)).toBe("not_deemed");
     expect(rentalCancellationStatus(house({ rentalCancelledDate: new Date("2020-08-18") }), T)).toBe("auto_deemed");
     expect(rentalCancellationStatus(house({ rentalCancelledDate: new Date("2026-09-19") }), T)).toBe("none");
     expect(rentalCancellationStatus(house({ rentalCancelledDate: undefined }), T)).toBe("none");

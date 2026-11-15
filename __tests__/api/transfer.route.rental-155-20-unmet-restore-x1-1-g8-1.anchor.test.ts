@@ -677,9 +677,13 @@ describe("M 말소된 임대 호 — 영 §167의3①2호 단서 (#20 C 후속)"
     }
   });
 
-  it("M-5 짝 — 자동말소는 법률 제17482호(2020.8.18. 시행)로 생겼다: 그 전 말소일이면 간주하지 않는다", async () => {
-    const s = await single(cancelledCard("auto", { registrationCancellationDate: "2020-08-17" }));
-    expect(mh(s).surchargeType).toBe("multi_house_2");
+  it("M-5 ★ 자동말소일이 2020.8.18. 전(의무기간 종료일)이면 법률 제17482호 부칙 제7조로 2020.8.18. 말소 → 단서 적용 2호(Q-3 · 서면-2021-법규재산-6391) / 짝 — 자진말소는 그대로 2호 아님", async () => {
+    const auto = await single(cancelledCard("auto", { registrationCancellationDate: "2020-08-17" }));
+    expect(mh(auto).surchargeType).toBe("none");
+    const warnings = ((auto.raw.multiHouseSurchargeEvaluation as Obj).warnings ?? []) as string[];
+    expect(warnings.some((w) => w.includes("부칙 제7조에 따라 2020.8.18.에 등록이 말소된 것으로 봅니다"))).toBe(true);
+    const vol = await single(cancelledCard("voluntary", { registrationCancellationDate: "2020-08-17" }));
+    expect(mh(vol).surchargeType).toBe("multi_house_2");
   });
 
   it("M-6 ★ 명부 행 — 「임대사업자 말소일」 + 자동말소면 2호(10호 배제), 미선택·자진말소면 중과 2주택 + 확인 필요 고지", async () => {
