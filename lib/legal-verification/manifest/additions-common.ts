@@ -49,6 +49,7 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
       "임대사업자 등록의 말소",
       "임대사업자가 임대의무기간 내 등록 말소를 신청",
       "임대의무기간이 종료한 날 등록이 말소된다",
+      "임대의무기간이 지난 후 등록 말소를 신청하는 경우",
     ],
     keywordMode: "ALL",
   },

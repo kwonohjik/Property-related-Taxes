@@ -183,8 +183,10 @@ export interface HouseInfo {
   /**
    * 말소 사유 — `auto` 자동말소(민특법 §6⑤, 임대의무기간 종료일)면 가·다~마목은 §167의3①2호 단서로 임대기간요건을
    * 갖춘 것으로 본다(`rental-cancellation-deeming.ts`). `voluntary` 자진말소(§6①11호)·미제공은 간주하지 않는다.
+   * `after_duty` 임대의무기간이 지난 후 말소 신청(§6①3호 후단)은 해당 목의 요건을 말소일까지로 판정해 **그 주택을 양도할 때만**
+   * 장기임대주택으로 본다(기획재정부 재산세제과-536 · 서면-2022-법규재산-3076 · 서면-2023-부동산-1329 — 사용자 결정 2026-11-16).
    */
-  rentalCancellationReason?: "auto" | "voluntary";
+  rentalCancellationReason?: "auto" | "voluntary" | "after_duty";
   /** 임대사업자 자진·자동 말소일 (사목 G형 판정용) */
   rentalCancellationDate?: Date;
   /**

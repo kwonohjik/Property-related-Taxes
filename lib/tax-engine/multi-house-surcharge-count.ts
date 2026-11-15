@@ -291,7 +291,8 @@ export function isLongTermRentalHousingExempt(house: HouseInfo, transferDate: Da
 
   // 양도일 전 말소 — 자동말소(가·다~마목)만 §167의3①2호 단서로 임대기간요건을 갖춘 것으로 본다.
   const cancellation = rentalCancellationStatus(house, transferDate);
-  if (cancellation === "not_deemed") return false;
+  // 의무기간 후 말소 신청(§6①3호)은 그 주택 양도에서만 본다 — `isAfterDutyCancelledRentalExempt`(사용자 결정 2026-11-16).
+  if (cancellation === "not_deemed" || cancellation === "after_duty") return false;
 
   if (!house.rentalType) {
     return hasBasicRegistration(house) && calcLongTermRentalPeriodYears(house, transferDate) >= LEGACY_RENTAL_YEARS;

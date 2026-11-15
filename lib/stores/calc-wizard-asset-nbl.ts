@@ -373,8 +373,8 @@ export interface HouseEntry {
   decedentRentalRegisteredDate?: string;
   /** 임대사업자 말소일 (양도일 이전 말소 시 임대 배제 해제) */
   rentalCancelledDate?: string;
-  /** 말소 사유 — 자동말소면 가·다~마목은 §167의3①2호 단서로 임대기간요건 간주 충족. ""·undefined = 미선택 */
-  rentalCancellationReason?: "" | "auto" | "voluntary";
+  /** 말소 사유 — 자동말소면 가·다~마목은 §167의3①2호 단서로 임대기간요건 간주 충족 · after_duty = 의무기간 후 말소 신청(§6①3호). ""·undefined = 미선택 */
+  rentalCancellationReason?: "" | "auto" | "voluntary" | "after_duty";
   /** 증여로 받은 주택이면 증여자의 세대(S-4) — 말소된 등록이 있을 때만 묻는다(`rental-gift-donor-scope.ts`). ""·undefined = 미답 */
   rentalGiftDonorHousehold?: "" | "none" | "same" | "separate";
 

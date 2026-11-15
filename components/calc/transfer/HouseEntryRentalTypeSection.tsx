@@ -49,10 +49,14 @@ interface Props {
 /**
  * 말소된 임대주택(사목 · 가·다~마목 자동말소)의 5% 질문은 **말소일까지**를 묻는다 — 말소 뒤 임대·5%·사업자등록을
  * 지키지 않아도 중과세율을 적용하지 않는다(서면-2022-법규재산-0208 · 사전-2022-법규재산-0039 · 서면-2021-법규재산-5655).
+ * 의무기간 후 말소 신청(민특법 §6①3호)도 말소 뒤 임대하지 않아도 배제한다(서면-2023-부동산-1329).
  * 엔진은 선언을 그대로 읽는다(`rentIncreaseUnder5Pct`).
  */
 function isCancelledForRentCap(h: RentalDeclaration): boolean {
-  return h.rentalType === "G" || (!!h.rentalCancelledDate && h.rentalCancellationReason === "auto");
+  return (
+    h.rentalType === "G" ||
+    (!!h.rentalCancelledDate && (h.rentalCancellationReason === "auto" || h.rentalCancellationReason === "after_duty"))
+  );
 }
 
 // 유형별 노출 필드 (엔진 checkRentalType_X 요구 필드 — 공통 등록정보 외)
@@ -230,7 +234,7 @@ export function HouseEntryRentalTypeSection({
             const cancelNote = cancelled && (
               <p className="text-caption text-muted-foreground" data-testid={`rent-cap-cancel-note-${idPrefix}`}>
                 말소 뒤 체결·갱신한 계약은 보지 않습니다 — 말소 뒤에는 임대료 증액 5% 상한을 지키지 않아도 중과세율을
-                적용하지 않습니다(서면-2022-법규재산-0208 · 서면-2021-법규재산-5655).
+                적용하지 않습니다(서면-2022-법규재산-0208 · 서면-2021-법규재산-5655 · 서면-2023-부동산-1329).
               </p>
             );
             // 5% 미충족 선언 + 등록 2019-02-12 전 → 초과 증액 계약일(부칙<제29523호> 제6조). ④와 같은 술어.

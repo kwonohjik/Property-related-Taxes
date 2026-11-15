@@ -34,6 +34,8 @@ export const RENTAL_REGISTRATION_4HO = {
   AUTO_CANCELLATION: "민간임대주택에 관한 특별법 §6 ⑤",
   /** 민간임대주택법 §6①11호 — 임대의무기간 내 등록 말소 신청(자진말소) */
   VOLUNTARY_CANCELLATION: "민간임대주택에 관한 특별법 §6 ① 11호",
+  /** 민간임대주택법 §6①3호 후단 — 임대의무기간이 지난 후 등록 말소 신청 */
+  AFTER_DUTY_CANCELLATION: "민간임대주택에 관한 특별법 §6 ① 3호",
   /** 민간임대주택법 §43 — 임대의무기간 */
   MANDATORY_PERIOD: "민간임대주택에 관한 특별법 §43",
   /**

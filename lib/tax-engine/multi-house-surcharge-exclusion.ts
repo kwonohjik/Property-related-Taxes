@@ -48,6 +48,8 @@ import {
   isSmallNewHouseSpecial,
   resolvePopulationDeclineSecondHome,
 } from "./multi-house-surcharge-count";
+import { isAfterDutyCancelledRentalExempt } from "./multi-house-rental-after-duty";
+import { afterDutyExclusionDetail } from "./multi-house-rental-after-duty";
 
 export {
   isGroupExcludable,
@@ -453,6 +455,15 @@ export function determineSurchargeExclusion(
       exclusionReasons.push({
         type: "long_term_rental_house",
         detail: `장기임대주택 양도 (${selfBasis(MULTI_HOUSE.LONG_TERM_RENTAL_EXCLUSION_BASIS)})`,
+      });
+      return { isExcluded: true, exclusionReasons, isSuspended: false };
+    }
+
+    // 민특법 §6①3호 후단 — 의무기간 후 말소 신청한 장기임대주택은 그 주택 양도에서만 배제(536 · 3076 · 1329).
+    if (isAfterDutyCancelledRentalExempt(sellingHouse, input.transferDate)) {
+      exclusionReasons.push({
+        type: "long_term_rental_house",
+        detail: afterDutyExclusionDetail(sellingHouse, selfBasis(MULTI_HOUSE.LONG_TERM_RENTAL_EXCLUSION_BASIS)),
       });
       return { isExcluded: true, exclusionReasons, isSuspended: false };
     }

@@ -20,6 +20,7 @@ import { spouseHoldingNotices } from "./multi-house-surcharge-spouse-notice";
 import { rentalCancellationNotices } from "./rental-cancellation-deeming";
 import { addenda7DeemedCancellationNotices } from "./rental-cancellation-deeming";
 import { separateHouseholdGiftNotices } from "./rental-cancellation-deeming";
+import { afterDutyCancellationNotices } from "./multi-house-rental-after-duty";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import { MULTI_HOUSE } from "./legal-codes";
 import { isCrisisAcqExempt } from "./legal-codes";
@@ -198,6 +199,8 @@ export function determineMultiHouseSurcharge(
   notices.push(...addenda7DeemedCancellationNotices(input));
   // S-4 — 별도세대 증여 전 말소된 임대주택을 장기임대주택에서 뺀 것이 결론을 가를 때만 알린다.
   notices.push(...separateHouseholdGiftNotices(input, result, recompute));
+  // §6①3호 — 의무기간 후 말소 신청 주택을 다른 주택 양도에서 보지 않은 것 · 양도 주택 사유 선택이 결론을 가를 때만 알린다.
+  notices.push(...afterDutyCancellationNotices(input, result, recompute));
   return notices.length > 0 ? { ...result, warnings: [...result.warnings, ...notices] } : result;
 }
 
