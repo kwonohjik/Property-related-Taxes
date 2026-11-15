@@ -155,6 +155,11 @@
 - 회귀: `npx vitest run __tests__/tax-engine/transfer/ __tests__/calc/ __tests__/lib/` (반전 단언은 `__tests__/lib`에도 있음 — 메모리 교훈).
 - E2E: `e2e/one-house-judgment-rental-155-20-active-ui.spec.ts` 확장. testid `rental-succession-{none|inheritance|household-gift|assumption}-${i}` · `rental-predecessor-months-${i}` · `rental-donor-reg-date-${i}` · `rental-cancellation-date-hint-${i}` · `rental-category-hint-${i}`. 결과 필드 있음/없음을 바꾸면 `grep -rn <필드> e2e` 먼저.
 - 브라우저(Playwright 헤드리스): 증여 승계 → 목 배지 변경 · 말소 사유별 라벨 · Network body 신규 필드 · 판정 결과 ㉒ 문구.
+- ✅ 후속 브라우저 확인(2026-11-15 · Playwright 헤드리스 · `e2e/rental-155-20-textbook-gaps.spec.ts` 8/8 통과) — #3366·#3370·#3373·#3378 화면:
+  - Q3(#3378) 계산기 명부 가목 행(2014 등록 · 말소일 2018-03-01): 말소 사유 칸 부칙 제7조 안내 표시 → 「자동말소」 → 요청 `rentalCancelledDate: 2018-03-01`·`auto` → 10호 배제 633,682,500 + 결과 화면 간주 고지 / 「자진말소」 짝 2주택 중과 1,141,772,500 / 2020-05-01 양도 651,057,000 + 「아직 등록 중」 고지.
+  - A(#3370) 판정 메뉴 ⑳ 카드 구법 건설 비수도권 4억: 「다목 · 건설 장기(5년)」 라벨 · 규모요건 칸 → 요건 충족 / 매입 짝 「구 임대주택법(5년)」 · 칸 없음 → 요건 미충족.
+  - T(#3366) 구법 매입 자동말소: 말소 토글 · 등록 유형 0972 안내 · 요청에 말소 4필드.
+  - B(#3373) 구법 매입 아파트: 도시형 생활주택 질문 표시 / 자진말소면 질문 숨김 · 등록 유형 안내 30개월·부칙<제13499호> 제3조③3호.
 
 ## 8. 재제안 금지와의 정합
 
