@@ -5,7 +5,7 @@
  *
  * | # | 주장 |
  * |---|---|
- * | SB-1 | 승계 종류별 칸 노출 — 없음=칸 없음 · 상속·포괄양수=개월만 · 증여=개월+증여자 날짜 3칸, 개월 라벨은 종류별 |
+ * | SB-1 | 승계 종류별 칸 노출 — 없음=칸 없음 · 포괄양수=개월만 · 상속=개월+피상속인 날짜 3칸(선택) · 증여=개월+증여자 날짜 3칸, 라벨은 종류별 |
  * | SB-2 | 종류를 바꾸면 개월·증여자 날짜가 비고 같은 종류를 다시 고르면 지우지 않는다 (한 번의 onChange) |
  * | SB-3 ★ | 증여 선택 시 판정 기준 배지가 **증여자 날짜 기준 목**(가목)으로 바뀐다 — 수증자 날짜(마목)로 대신하지 않는다 |
  * | SB-4 | 증여자 날짜를 비워 두면 배지는 본인 날짜로 대신하지 않고 입력 요구를 보인다 |
@@ -61,7 +61,10 @@ describe("⑳ 임대사업 승계 입력", () => {
 
     pick("rental-succession-inheritance-0");
     expect(screen.getByText("피상속인 임대기간")).toBeTruthy();
-    expect(screen.queryByTestId("rental-donor-reg-date-0")).toBeNull();
+    // 상속 — 피상속인 날짜 3칸(선택) + 1959 유추·확인 필요 안내
+    expect(screen.getByText("피상속인 지자체 임대사업자 등록 신청일")).toBeTruthy();
+    expect(screen.getByTestId("rental-decedent-registration-note-0").textContent).toContain("서면-2020-법규재산-1959");
+    expect(screen.getByTestId("rental-decedent-registration-note-0").textContent).toContain("확인 필요");
 
     pick("rental-succession-assumption-0");
     expect(screen.getByText("전 임대사업자 임대기간")).toBeTruthy();
@@ -69,6 +72,7 @@ describe("⑳ 임대사업 승계 입력", () => {
 
     pick("rental-succession-household-gift-0");
     expect(screen.getByText("증여자 임대기간")).toBeTruthy();
+    expect(screen.queryByTestId("rental-decedent-registration-note-0")).toBeNull();
     for (const id of ["rental-donor-biz-date-0", "rental-donor-reg-date-0", "rental-donor-registered-date-0"]) {
       expect(screen.getByTestId(id)).toBeTruthy();
     }
@@ -148,7 +152,18 @@ describe("⑳ 임대사업 승계 입력", () => {
       "2호: 같은 세대원에게 증여받아 계속 임대 — 증여자 임대기간 24개월을 더했고, 목은 증여자 지자체 등록 신청일 2019-06-01 기준으로 판정했습니다(증여자 세무서 사업자등록일 2019-05-01)",
     );
     expect(rentalSuccessionEchoText({ unitIndex: 0, kind: "inheritance", predecessorMonths: 30 })).toBe(
-      "1호: 상속받아 계속 임대 — 피상속인 임대기간 30개월을 더했습니다",
+      "1호: 상속받아 계속 임대 — 피상속인 임대기간 30개월을 더했고, 목은 상속인 본인 등록일 기준으로 판정했습니다",
+    );
+    expect(
+      rentalSuccessionEchoText({
+        unitIndex: 0,
+        kind: "inheritance",
+        predecessorMonths: 30,
+        donorBusinessRegistrationDate: "2019-05-01",
+        donorRentalRegistrationDate: "2019-06-01",
+      }),
+    ).toBe(
+      "1호: 상속받아 계속 임대 — 피상속인 임대기간 30개월을 더했고, 목은 피상속인 지자체 등록 신청일 2019-06-01 기준으로 판정했습니다(피상속인 세무서 사업자등록일 2019-05-01)",
     );
     expect(rentalSuccessionEchoText({ unitIndex: 0, kind: "assumption", predecessorMonths: 12 })).toContain("전 임대사업자 임대기간 12개월");
 

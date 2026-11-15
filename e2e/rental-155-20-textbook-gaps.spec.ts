@@ -7,6 +7,7 @@
  * | A | 판정 메뉴 ② ⑳ 임대주택 카드 · 구법 건설 | 다목 라벨 · 규모요건 칸 · 비수도권 4억 → 요건 충족 / 매입 짝 → 미충족(#3370) | `__tests__/tax-engine/transfer/rental-155-20-pre2018-construction.anchor.test.ts` |
  * | T | 같은 카드 · 구법 매입 말소 | 말소 토글 · 등록 유형 0972 안내 · 말소 4필드 전송(#3366) | `__tests__/components/rental-155-23-pre2018.test.tsx` |
  * | B | 같은 카드 · 구법 매입 아파트 | 도시형 생활주택 질문 · 자진말소 → 1/2 30개월 안내(#3373) | `__tests__/components/rental-155-20-pre2018-deadline-half.test.tsx` |
+ * | I | 같은 카드 · 상속 아파트(상속인 2021-03 등록) | 피상속인 등록일 칸·1959 안내 · 피상속인 2019-06 → 요청 donorRegistration · 요건 충족 / 비움 → 미충족 | `__tests__/api/rental-155-20-succession.route.anchor.test.ts` I-1~I-3 |
  *
  * 실행: E2E_PORT=<worktree 포트> npx playwright test e2e/rental-155-20-textbook-gaps.spec.ts
  */
@@ -305,5 +306,45 @@ test.describe("B 구 임대주택법 매입 아파트 — ⑪ 양도기한 · �
     await expect(hint).toContainText("30개월");
     await expect(hint).toContainText("부칙<제13499호> 제3조③3호");
     await expect(page.getByText("「주택법」에 따른 도시형 생활주택인 아파트입니다.")).toHaveCount(0);
+  });
+});
+
+test.describe("I 상속 임대주택 — 피상속인 등록일로 목 판정(1959 유추)", () => {
+  const inherited = {
+    businessRegistrationDate: "2021-03-01",
+    rentalRegistrationDate: "2021-03-01",
+    rentalRegisteredDate: "2021-03-01",
+    rentalCategory: "long_general",
+    isApartment: true,
+    region: "seoul-metro",
+    standardPriceAtRentalStart: "300000000",
+    rentalMonths: "36",
+    rentalSuccession: "inheritance",
+    decedentRentalMonths: "24",
+  };
+  const decedent = {
+    donorBusinessRegistrationDate: "2019-06-01",
+    donorRentalRegistrationDate: "2019-06-01",
+    donorRentalRegisteredDate: "2019-06-01",
+  };
+
+  test("[I-1] 피상속인 2019-06 → 피상속인 칸·안내 · 요청에 donorRegistration · 요건 충족", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openJudgmentRentalCard(page, "2024-06-01", { ...inherited, ...decedent });
+    await expect(page.getByText("피상속인 지자체 임대사업자 등록 신청일")).toBeVisible();
+    await expect(page.getByTestId("rental-decedent-registration-note-0")).toContainText("서면-2020-법규재산-1959");
+    const unit = await judge(page);
+    expect(unit).toMatchObject({ succession: { kind: "inheritance", predecessorMonths: 24 } });
+    expect((unit?.donorRegistration as { rentalRegistrationDate?: string })?.rentalRegistrationDate?.slice(0, 10)).toBe("2019-06-01");
+    await expect(page.getByTestId("one-house-rental-verdict")).toHaveText("요건 충족");
+  });
+
+  test("[I-2] 짝 — 피상속인 날짜 비움 → 요청에 없음 · 상속인 2021-03 마목 아파트 제한으로 요건 미충족", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openJudgmentRentalCard(page, "2024-06-01", inherited);
+    await expect(page.getByTestId("rental-decedent-registration-note-0")).toBeVisible();
+    const unit = await judge(page);
+    expect(unit?.donorRegistration).toBeUndefined();
+    await expect(page.getByTestId("one-house-rental-verdict")).toContainText("요건 미충족");
   });
 });

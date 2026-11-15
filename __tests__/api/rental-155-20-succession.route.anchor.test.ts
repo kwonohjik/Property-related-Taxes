@@ -225,9 +225,21 @@ describe("⑫ Zod — 승계 입력 짝·순서 (⑧과 같은 격자)", () => {
     expect((await single(f(), mut((u) => delete u.donorRegistration))).status).toBe(400);
   });
 
-  it("Z-2 증여가 아닌데 donorRegistration 있음 → 400", async () => {
-    const r = await single(f(), mut((u) => ((u.succession as Obj).kind = "inheritance")));
+  it("Z-2 증여·상속이 아닌데(포괄양수) donorRegistration 있음 → 400", async () => {
+    const r = await single(f(), mut((u) => ((u.succession as Obj).kind = "assumption")));
     expect(r.status).toBe(400);
+  });
+
+  it("Z-2′ 상속 + donorRegistration(피상속인 날짜) → 통과 · 상속 + 없음 → 통과(선택)", async () => {
+    expect((await single(f(), mut((u) => ((u.succession as Obj).kind = "inheritance")))).status).toBe(200);
+    const none = await single(
+      f(),
+      mut((u) => {
+        (u.succession as Obj).kind = "inheritance";
+        delete u.donorRegistration;
+      }),
+    );
+    expect(none.status).toBe(200);
   });
 
   it("Z-3 증여자 신청일이 수증자 신청일보다 뒤 → 400", async () => {
@@ -266,5 +278,55 @@ describe("⑫ Zod — 승계 입력 짝·순서 (⑧과 같은 격자)", () => {
 
   it("Z-7 알 수 없는 승계 종류 → 400", async () => {
     expect((await single(f(), mut((u) => ((u.succession as Obj).kind = "sale")))).status).toBe(400);
+  });
+});
+
+/**
+ * 상속 승계 — 피상속인 등록일(선택)로 목 판정(사용자 결정 2026-11-15 · 서면-2020-법규재산-1959 유추 · ⑳ 직접 해석 없음 → 확인 필요).
+ * 수정 전 실측: 피상속인 2019-06 등록 → 상속인 2021-03 등록 아파트는 마목 아파트 제한으로 과세(엔진 probe 137,566,000 vs 0).
+ */
+describe("상속 승계 — 피상속인 등록일로 목 판정 (단건·다건)", () => {
+  const INHERIT: Partial<UnitForm> = { ...GIFT, rentalSuccession: "inheritance" };
+  const BLANK: Partial<UnitForm> = {
+    ...INHERIT,
+    donorBusinessRegistrationDate: "",
+    donorRentalRegistrationDate: "",
+    donorRentalRegisteredDate: "",
+  };
+  const texts = (r: Verdict) => [...(r.warnings ?? []), ...(r.steps ?? []).map((x) => x.formula)];
+
+  it("I-1 ★ 피상속인 2019-06 → 가목 비과세(0) / 피상속인 날짜 비움 → 상속인 2021-03 마목 아파트 제한으로 과세(승계 없음과 같은 세액)", async () => {
+    const own = await single(form({ rentalMonths: "60" }));
+    const inherit = await single(form(INHERIT));
+    const blank = await single(form(BLANK));
+    expect(own.totalTax).toBeGreaterThan(0);
+    expect(inherit.status).toBe(200);
+    expect(inherit.totalTax).toBe(0);
+    expect(blank.status).toBe(200);
+    expect(blank.totalTax).toBe(own.totalTax);
+    // ⑭ 다건 매핑
+    expect(await multi(form(INHERIT))).toBe(0);
+    expect(await multi(form(BLANK))).toBe(own.totalTax);
+  });
+
+  it("I-2 ⑬ 본문 — 상속 donorRegistration 전송 · 비우면 전송 안 함", async () => {
+    const u = unitsOf(await reqBody(form(INHERIT)))[0] as { succession?: Obj; donorRegistration?: Obj };
+    expect(u.succession).toEqual({ kind: "inheritance", predecessorMonths: 24 });
+    expect(u.donorRegistration).toMatchObject({ rentalRegistrationDate: "2019-06-01T00:00:00.000Z" });
+    expect((unitsOf(await reqBody(form(BLANK)))[0] as Obj).donorRegistration).toBeUndefined();
+  });
+
+  it("I-3 확인 필요 고지 — 피상속인 기준 판정(1959·⑳ 직접 해석 없음) / 비움(상속인 기준 · 피상속인 등록일로 볼 수 있음)", async () => {
+    const f = (u: Partial<UnitForm>) => {
+      const x = form(u);
+      x.assets[0].actualSalePrice = "1,500,000,000";
+      x.contractTotalPrice = "1,500,000,000";
+      return x;
+    };
+    const inherit = await single(f(INHERIT));
+    expect(texts(inherit).some((w) => w.includes("피상속인의 등록일 기준") && w.includes("서면-2020-법규재산-1959") && w.includes("확인 필요"))).toBe(true);
+    expect(inherit.echo).toMatchObject({ kind: "inheritance", donorRentalRegistrationDate: "2019-06-01" });
+    const blank = await single(f({ ...BLANK, rentalMonths: "36" }));
+    expect(texts(blank).some((w) => w.includes("피상속인 등록일을 입력하지 않아") && w.includes("확인 필요"))).toBe(true);
   });
 });

@@ -178,12 +178,20 @@ describe("④ 전송 — succession·donorRegistration (⑤·⑧과 같은 술�
     });
   });
 
-  it("W-2 상속·포괄양수 — succession만. 남아 있는 증여자 칸은 보내지 않는다", () => {
-    for (const k of ["inheritance", "assumption"] as const) {
-      const [u] = api(asset({ ...GIFT, rentalSuccession: k })).rentalUnits;
-      expect(u.succession).toEqual({ kind: k, predecessorMonths: 24 });
-      expect(u.donorRegistration).toBeUndefined();
-    }
+  it("W-2 포괄양수 — succession만. 남아 있는 증여자 칸은 보내지 않는다", () => {
+    const [u] = api(asset({ ...GIFT, rentalSuccession: "assumption" })).rentalUnits;
+    expect(u.succession).toEqual({ kind: "assumption", predecessorMonths: 24 });
+    expect(u.donorRegistration).toBeUndefined();
+  });
+
+  it("W-2′ ★ 상속 — 피상속인 날짜를 넣으면 donorRegistration으로 보낸다 · 비우면 보내지 않는다(상속인 날짜로 판정)", () => {
+    const [u] = api(asset({ ...GIFT, rentalSuccession: "inheritance" })).rentalUnits;
+    expect(u.succession).toEqual({ kind: "inheritance", predecessorMonths: 24 });
+    expect(String(u.donorRegistration?.rentalRegistrationDate).slice(0, 10)).toBe("2019-06-01");
+    const [blank] = api(
+      asset({ ...GIFT, rentalSuccession: "inheritance", donorBusinessRegistrationDate: "", donorRentalRegistrationDate: "", donorRentalRegisteredDate: "" }),
+    ).rentalUnits;
+    expect(blank.donorRegistration).toBeUndefined();
   });
 
   it("W-3 승계 없음 — 둘 다 없다(옛 isInheritedRental 기록은 상속으로 보낸다)", () => {
@@ -255,6 +263,13 @@ describe("⑧ 검증 — 승계 입력", () => {
     expect(validate(asset({ ...GIFT, decedentRentalMonths: "" }))).toContain("증여자 임대기간(개월)을 입력하세요");
     expect(validate(asset({ rentalSuccession: "assumption", decedentRentalMonths: "" }))).toContain("전 임대사업자 임대기간(개월)을 입력하세요");
     expect(validate(asset({ rentalSuccession: "inheritance", decedentRentalMonths: "" }))).toContain("피상속인 임대기간(개월)을 입력하세요");
+    // 상속 — 피상속인 날짜는 선택(비우면 통과) · 한쪽만 넣으면 막는다(④가 안 보내 조용히 상속인 날짜로 판정되므로) · 순서는 증여와 같은 격자
+    const INH = { ...GIFT, rentalSuccession: "inheritance" as const };
+    expect(validate(asset({ ...INH, donorBusinessRegistrationDate: "", donorRentalRegistrationDate: "", donorRentalRegisteredDate: "" }))).toBeNull();
+    expect(validate(asset(INH))).toBeNull();
+    expect(validate(asset({ ...INH, donorRentalRegistrationDate: "", donorRentalRegisteredDate: "" }))).toContain("함께 입력하거나 둘 다 비워");
+    expect(validate(asset({ ...INH, donorBusinessRegistrationDate: "" }))).toContain("함께 입력하거나 둘 다 비워");
+    expect(validate(asset({ ...INH, donorRentalRegistrationDate: "2021-03-02", donorRentalRegisteredDate: "2021-03-02" }))).toContain("피상속인의 임대사업자등록신청일");
     // 옛 기록(rentalSuccession 없음 + isInheritedRental)도 상속 규칙
     expect(validate(asset({ rentalSuccession: undefined, isInheritedRental: true, decedentRentalMonths: "" }))).toContain("피상속인 임대기간(개월)을 입력하세요");
   });

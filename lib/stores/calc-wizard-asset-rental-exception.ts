@@ -97,11 +97,11 @@ export interface RentalHousingExceptionFormSlice {
        * 본인 등록일로 자르지 않는다.
        */
       decedentRentalMonths?: string;
-      /** 증여 승계 — 증여자 세무서 사업자등록일(YYYY-MM-DD). 증여일 때만 ④가 보내고 ⑧이 요구한다. */
+      /** 증여·상속 승계 — 증여자(필수)·피상속인(선택) 세무서 사업자등록일(YYYY-MM-DD). 증여·상속일 때만 ④가 보내고 ⑧은 증여만 요구한다. */
       donorBusinessRegistrationDate?: string;
-      /** 증여 승계 — 증여자 지자체 임대사업자등록 **신청일** — 목 도출·아파트 제한·기한 판정의 기준(수증자 신청일 대신). */
+      /** 증여·상속 승계 — 증여자·피상속인 지자체 임대사업자등록 **신청일** — 목 도출·아파트 제한·기한 판정의 기준(본인 신청일 대신). */
       donorRentalRegistrationDate?: string;
-      /** 증여 승계 — 증여자 지자체 임대사업자 **등록일**(비면 엔진이 신청일로 본다 — `registeredDateOf`). */
+      /** 증여·상속 승계 — 증여자·피상속인 지자체 임대사업자 **등록일**(비면 엔진이 신청일로 본다 — `registeredDateOf`). */
       donorRentalRegisteredDate?: string;
       /** 임대주택 지번 주소 — 임대개시일 기준시가 Vworld 조회용(UI 상태·엔진 미전송) */
       rentalAddressJibun: string;

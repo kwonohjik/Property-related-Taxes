@@ -106,7 +106,7 @@ describe("⑦ 임대사업 승계 echo", () => {
 
   it("E-2 상속 승계 — 피상속인 개월", async () => {
     const r = await runCalc(form({ rentalSuccession: "inheritance", decedentRentalMonths: "30" }));
-    expect(cardText(r.result?.rentalHousingExceptionDetail)).toContain("1호: 상속받아 계속 임대 — 피상속인 임대기간 30개월을 더했습니다");
+    expect(cardText(r.result?.rentalHousingExceptionDetail)).toContain("1호: 상속받아 계속 임대 — 피상속인 임대기간 30개월을 더했고, 목은 상속인 본인 등록일 기준으로 판정했습니다");
   });
 
   it("E-3 승계 없음 — echo 목록을 그리지 않는다", async () => {
