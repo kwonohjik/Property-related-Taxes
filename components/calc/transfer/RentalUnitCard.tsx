@@ -36,7 +36,8 @@ import { RentalTerminationBlock } from "./RentalTerminationBlock";
 import { RentalUnitPeriodPriceBlock } from "./RentalUnitPeriodPriceBlock";
 import { rentalUnitApartmentInScope } from "@/lib/calc/rental-unit-apartment-scope";
 import { rentalRegisteredDateOf } from "@/lib/stores/calc-wizard-asset-rental-period";
-import { rentalUnitDonorRegistrationInScope } from "@/lib/calc/rental-succession";
+import { rentalUnitUsesDonorRegistration } from "@/lib/calc/rental-succession";
+import { rentalSuccessionOf } from "@/lib/stores/calc-wizard-asset-rental-period";
 import { rentalUnitRegApplicationDate } from "@/lib/calc/rental-succession";
 import { rentalUnitRegistrationBasis } from "@/lib/calc/rental-succession";
 import { applyRentalRegDate } from "@/lib/calc/rental-unit-reg-date";
@@ -76,7 +77,9 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
   // 판정 기준 등록 3필드 = 실효 등록 기준(G-3 — 같은 세대원 증여 승계면 증여자 등록, 아니면 본인 · 엔진 `registrationBasis`와 같은 단일 술어).
   // 등록 완비일·「등록을 한」 경계는 지자체 **등록일**(V-3 — 비면 신청일 · 엔진 `registeredDateOf`와 같은 규칙)
   const basis = rentalUnitRegistrationBasis(unit);
-  const donorBasis = rentalUnitDonorRegistrationInScope(unit);
+  // 배지는 「목 판정에 전 임대사업자 등록을 실제로 쓰는가」로 — 상속은 피상속인 두 날짜를 넣었을 때만(노출 범위 술어 아님)
+  const donorBasis = rentalUnitUsesDonorRegistration(unit);
+  const predecessor = rentalSuccessionOf(unit) === "inheritance" ? "피상속인" : "증여자";
   const registeredDate = rentalRegisteredDateOf({
     rentalRegistrationDate: basis.rentalRegistrationDate,
     rentalRegisteredDate: basis.rentalRegisteredDate,
@@ -296,7 +299,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
           {bothRegMissing ? (
             <p className="text-rose-700 font-medium dark:text-rose-300">
               {donorBasis
-                ? "증여자의 세무서 사업자등록일·지자체 등록 신청일을 모두 입력해야 목을 판정할 수 있습니다."
+                ? `${predecessor}의 세무서 사업자등록일·지자체 등록 신청일을 모두 입력해야 목을 판정할 수 있습니다.`
                 : "세무서·지자체 등록일을 모두 입력해야 사업자등록등 요건이 성립합니다."}
             </p>
           ) : (
@@ -304,7 +307,7 @@ export function RentalUnitCard({ unit, index, onChange, onRemove, canRemove, tra
               <p className="font-semibold">{ARTICLE_LABEL[article]}</p>
               {donorBasis && (
                 <p className="text-violet-800 dark:text-violet-300" data-testid={`rental-verdict-donor-basis-${index}`}>
-                  증여자 등록 기준으로 판정 — 증여자 지자체 등록 신청일 {basis.rentalRegistrationDate}
+                  {predecessor} 등록 기준으로 판정 — {predecessor} 지자체 등록 신청일 {basis.rentalRegistrationDate}
                 </p>
               )}
               <p>

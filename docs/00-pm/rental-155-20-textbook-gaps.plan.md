@@ -206,3 +206,5 @@ probe(엔진 `checkEligibility` · mock 세율 · 10억 양도 · 임대 1호 ·
 - 명부 surcharge 행(`rental-card-surcharge-rows.ts`)도 `registrationBasis`라 함께 따라간다.
 
 테스트: route I-1(단건·다건 0 / 비움 = 승계 없음 세액) · I-2(본문) · I-3(고지·echo) · Z-2/Z-2′ · client W-2′·⑧ 상속 5건 · 컴포넌트 SB-1·SB-6 · E2E `rental-155-20-textbook-gaps.spec.ts` I-1·I-2. 뮤테이션 6/6(노출 술어·Zod·반쪽 입력·고지·basis·라벨).
+
+> **후속(2026-11-15)** — §10 구현(#3385)에서 `RentalUnitCard` 판정 기준 배지가 노출 범위 술어(`rentalUnitDonorRegistrationInScope`)를 써서, 상속 + 피상속인 칸 비움(상속인 날짜로 판정)에도 「증여자 등록 기준으로 판정 — 증여자 지자체 등록 신청일 {상속인 날짜}」로 잘못 표시됐다. 배지를 `rentalUnitUsesDonorRegistration`(실제 판정 기준)으로 바꾸고 문구를 종류별(피상속인/증여자)로. 세액 불변. 테스트 SB-9(수정 전 실패 확인).
