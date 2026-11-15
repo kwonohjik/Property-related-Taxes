@@ -153,7 +153,7 @@ S-1(1회차 probe): 마목 918=false → `only_general_two_house`(배제) · 918
 |---|---|
 | ~~V-0~~ ✅ | 법제처 복구 뒤 §167의3①2호 마목 1)·⑤ 현행본 대조 · 마목 1) 괄호의 시행본 연혁 → **해소**(§12) |
 | V-1 | 0039 본문은 0208 인용뿐 — 「임대료 증액 상한」이 「해당 목에서 정하는 바에 따라 임대」에 포함된다는 해석은 0039 제목·요지 + 5655 문언에 기댄다 |
-| V-2 | 말소 뒤 5% 초과 × 일반주택 양도(10호) 정면 해석 0건(Q-4) |
+| ~~V-2~~ ✅ | 말소 뒤 5% 초과 × 일반주택 양도(10호) — 사용자 결정으로 2호와 같은 기준 · 확인 필요 안내 삭제(§15) |
 | V-3 | §155⑳ 거주주택 비과세 경로의 말소 뒤 5% — 범위 밖(⑳은 `requirementsConfirmed` 묶음 확인 · 날짜 없음) |
 | ~~V-4~~ | S-4 별도세대 증여 — taxlaw 검색 완료(§14 · 정면 해석 0건) |
 
@@ -192,7 +192,7 @@ S-1(1회차 probe): 마목 918=false → `only_general_two_house`(배제) · 918
 
 ## 11. PR-2 구현 기록 (S-2 · S-3)
 
-- ⑤ `HouseEntryRentalTypeSection` — 말소 주택(`rentalType === "G"` 또는 `rentalCancelledDate` + 자동말소)이면 5% 칸 제목 「말소일까지 임대료 증액 5% 이하 충족」 + 안내(0208·5655) · 계약일 hint 「말소일 전 계약 중 가장 늦은 날」. 명부 행(`HouseEntryEditor` → `rentCapGeneralHouseSaleNote`)에는 「일반주택 양도 — 확인 필요」를 덧붙인다(Q-4 a · V-2). 양도 주택(`SellingHouseLongTermRentalSection`)은 같은 컴포넌트를 쓰고 이 prop을 넘기지 않는다.
+- ⑤ `HouseEntryRentalTypeSection` — 말소 주택(`rentalType === "G"` 또는 `rentalCancelledDate` + 자동말소)이면 5% 칸 제목 「말소일까지 임대료 증액 5% 이하 충족」 + 안내(0208·5655) · 계약일 hint 「말소일 전 계약 중 가장 늦은 날」. 명부 행(`HouseEntryEditor` → `rentCapGeneralHouseSaleNote`)에는 「일반주택 양도 — 확인 필요」를 덧붙인다(Q-4 a · V-2) — **§15에서 삭제**. 양도 주택(`SellingHouseLongTermRentalSection`)은 같은 컴포넌트를 쓰고 이 prop을 넘기지 않는다.
 - 엔진 판정식은 바꾸지 않았다(Q-3 a) — 타입 주석 `rentIncreaseUnder5Pct`에 「말소된 주택은 말소일까지」를 적었다. 「말소일까지 충족」 선언 → 배제는 §3 Pc·Pe(`true`)가 실측이다.
 - S-3 `DUTY_PERIOD_PENDING_WARNING`에 6개월 미임대·⑤2호 산정특례 두 문장 · 상수 `MULTI_HOUSE.DUTY_PERIOD_CALC_SPECIAL_BASIS` · 매니페스트 `TRANSFER_DECREE.DUTY_PERIOD_CALC_SPECIAL_167_3_5`(키워드는 캐시 현행본 문언 — 법제처 복구 뒤 `npm run verify:legal` 필요).
 - anchor: `house-entry-rent-cap-after-cancel.anchor.test.tsx` RC-1~RC-4 · route C-1. 뮤테이션 3건 검출(자동말소 조건 · 확인 필요 prop · 고지 문구).
@@ -253,3 +253,9 @@ S-1(1회차 probe): 마목 918=false → `only_general_two_house`(배제) · 918
 **E2E** — `e2e/surcharge-exclusion-textbook-gaps.spec.ts` S4-1·2(명부 행 증여 질문 → 요청 → 1,328,497,500 / 633,682,500) · 전체 9/9. 2주택 시료는 일시적 2주택 배제가 덮어 3주택으로 둔다.
 **남은 한계** — 동일세대 증여의 임대기간 승계·⑳ 경로는 이 칸과 무관(⑳은 G-3 #3361). 정면 해석이 나오면 재검토.
 
+## 15. V-2 닫음 — 10호 「확인 필요」 안내 삭제 (2026-11-15)
+
+- 사용자 결정: 말소 뒤에는 임대료 증액 5% 상한을 지키지 않아도 된다 — 일반주택 양도(10호)도 2호와 같은 기준이다. 10호는 같은 술어(`isLongTermRentalHousingExempt`)로 「장기임대주택」을 판정하므로 판정은 이미 같았다(Q-4 a).
+- 변경: 명부 행 5% 안내(`rent-cap-cancel-note-*`)의 「다른 주택(일반주택)을 양도할 때 … (확인 필요)」 문장과 그 prop(`rentCapGeneralHouseSaleNote`)을 지웠다. 엔진·세액 불변.
+- 점검(코드 읽기 · master `e941cff5b`): 말소 뒤 5% 준수를 요구하는 코드 없음 — ⑤ 「말소일까지」 라벨(`HouseEntryRentalTypeSection` `isCancelledForRentCap`) · 엔진은 선언을 읽고 자동말소는 임대기간요건만 간주(`multi-house-surcharge-count.ts`) · 직접 API 계약(`multi-house-surcharge.types.ts` `rentIncreaseUnder5Pct` 주석) · §155⑳ 카드 「등록 말소 전까지」(`RentalUnitPeriodPriceBlock.tsx`, 재산세제과-151).
+- 테스트: RC-4 반전(확인 필요 없음) · E2E S2-1 `not.toContainText("확인 필요")`.

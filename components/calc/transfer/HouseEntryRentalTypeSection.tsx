@@ -44,11 +44,6 @@ interface Props {
   urbanLifeHousingQuestionEnabled?: boolean;
   /** 질문 대신 보일 안내 — 같은 사실을 다른 칸이 묻고 있을 때(양도 주택 3호). 질문과 같은 범위에서만 보인다. */
   urbanLifeSharedHint?: string;
-  /**
-   * 명부 행(다른 주택) — 이 임대주택의 2호 여부는 일반주택 양도(§167의3①10호) 판정에 쓰인다. 말소 뒤 5% 기준을
-   * 일반주택 양도에 적용한 정면 해석이 없어 「확인 필요」를 덧붙인다(계획서 surcharge-exclusion-textbook-gaps Q-4 a · V-2).
-   */
-  rentCapGeneralHouseSaleNote?: boolean;
 }
 
 /**
@@ -107,7 +102,6 @@ export function HouseEntryRentalTypeSection({
   aptDeadlineExtensionEnabled = false,
   urbanLifeHousingQuestionEnabled = false,
   urbanLifeSharedHint,
-  rentCapGeneralHouseSaleNote = false,
 }: Props) {
   const rentalType = house.rentalType;
   let fields: Array<keyof RentalDeclaration> = rentalType ? [...TYPE_FIELDS[rentalType]] : [];
@@ -226,8 +220,6 @@ export function HouseEntryRentalTypeSection({
               <p className="text-caption text-muted-foreground" data-testid={`rent-cap-cancel-note-${idPrefix}`}>
                 말소 뒤 체결·갱신한 계약은 보지 않습니다 — 말소 뒤에는 임대료 증액 5% 상한을 지키지 않아도 중과세율을
                 적용하지 않습니다(서면-2022-법규재산-0208 · 서면-2021-법규재산-5655).
-                {rentCapGeneralHouseSaleNote &&
-                  " 다른 주택(일반주택)을 양도할 때 이 기준을 직접 다룬 해석은 확인하지 못했습니다(확인 필요)."}
               </p>
             );
             // 5% 미충족 선언 + 등록 2019-02-12 전 → 초과 증액 계약일(부칙<제29523호> 제6조). ④와 같은 술어.

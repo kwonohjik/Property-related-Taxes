@@ -4,7 +4,7 @@
  * | # | 화면 | 내용 | anchor |
  * |---|---|---|---|
  * | S1 | 계산기 보유 상황 명부 2호 마목 행 | 공고 전 취득·계약금 증빙 칸 → 요청 → 10호 배제(#3352) | `__tests__/api/transfer.route.ma1-deposit-carveout.anchor.test.ts` |
- * | S2 | 같은 명부 행 · 가목 자동말소 | 「말소일까지」 5% 라벨 · 해석례 안내 + 확인 필요 · 계약일 힌트(#3353) | `__tests__/components/house-entry-rent-cap-after-cancel.anchor.test.tsx` |
+ * | S2 | 같은 명부 행 · 가목 자동말소 | 「말소일까지」 5% 라벨 · 해석례 안내(확인 필요 없음 · §15) · 계약일 힌트(#3353) | `__tests__/components/house-entry-rent-cap-after-cancel.anchor.test.tsx` |
  * | S4 | 같은 명부 행 · 가목 자동말소 + 증여 질문 | 「별도세대에게서」 → 요청 → 장기임대주택 아님 · 확인 필요 고지(§14) | `__tests__/api/transfer.route.rental-gift-separate-household.anchor.test.ts` |
  * | S3 | 판정 메뉴 ② §155⑳ 임대주택 카드 | 마목 918 · 2021.2.16. 전 양도 → 증빙 칸 → ⑳ 요건 충족(#3352) | `__tests__/components/rental-unit-card-ma1-deposit-proof.anchor.test.tsx` |
  *
@@ -168,14 +168,14 @@ test.describe("S2 명부 가목 자동말소 행 — 「말소일까지」 5%", 
     isExcluded918Rule: undefined,
   };
 
-  test("[S2-1] 자동말소 → 라벨 「말소일까지」 · 0208·5655 안내 + 확인 필요 · 계약일 힌트 「말소일 전 계약 중」", async ({ page }) => {
+  test("[S2-1] 자동말소 → 라벨 「말소일까지」 · 0208·5655 안내(확인 필요 없음) · 계약일 힌트 「말소일 전 계약 중」", async ({ page }) => {
     test.setTimeout(90_000);
     const dialog = await openRosterRow(page, cancelled);
     await expect(dialog.getByRole("switch", { name: /^말소일까지 임대료 증액 5% 이하 충족/ })).toBeVisible();
     const note = dialog.getByTestId("rent-cap-cancel-note-h2");
     await expect(note).toContainText("서면-2022-법규재산-0208");
     await expect(note).toContainText("서면-2021-법규재산-5655");
-    await expect(note).toContainText("확인 필요");
+    await expect(note).not.toContainText("확인 필요");
     await expect(dialog.getByTestId("rent-increase-contract-date-h2")).toContainText("말소일 전 계약 중 가장 늦은 날");
   });
 
