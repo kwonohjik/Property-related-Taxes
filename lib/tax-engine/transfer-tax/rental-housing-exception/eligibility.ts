@@ -392,7 +392,7 @@ export function checkEligibility(
      * 가목 5년 → 30개월)을 썼다. 자동말소(㉓2호)는 임대의무기간 종료일 말소라 이 1/2을 언제나 넘는다.
      * 등록 유형을 모르면 판정하지 않는다(간주 충족을 주지 않는다).
      */
-    // V-6 ⓒ — 구 임대주택법 등록분은 종전 임대주택법 5년(→ 30개월 · `terminationDutyYears`).
+    // V-6 ⓒ — 구 임대주택법 등록분은 종전 임대주택법 기간(단기 5년 → 30개월 · 준공공 10년 → 60개월 · `terminationDutyYears`).
     const dutyYears = terminationDutyYears(unit);
     const terminationEligibleArticle = isTerminationEligibleArticle(article);
     /**

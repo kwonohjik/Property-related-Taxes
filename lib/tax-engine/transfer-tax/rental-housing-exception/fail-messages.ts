@@ -15,21 +15,27 @@ export const TERMINATED_DUTY_YEARS: Record<NonNullable<RentalUnitInput["terminat
 };
 
 /**
- * 구 「임대주택법」 등록분(pre_2018)의 임대의무기간(년) — 민특법 부칙<제13499호> 제3조③ 단서(부칙<제15356호> 제5조⑤ 단서 같음)가
- * 「임대의무기간 … 종전의 「임대주택법」을 적용한다」고 정해 구 임대주택법 시행령 §13①2호 5년이다(V-6 ⓒ). 1/2 = 30개월.
+ * 구 「임대주택법」 등록분(pre_2018)의 임대의무기간(년) — 민특법 부칙<제13499호> 제3조③ 단서(부칙<제15356호> 제5조④·⑤ 단서 같음)가
+ * 「임대의무기간 … 종전의 「임대주택법」을 적용한다」고 정한다. 단서는 같은 항 1~3호 모두에 걸린다.
+ * - `short_term`(3호 매입·건설 → 단기임대주택): 구 임대주택법 시행령 §13①2호 5년(V-6 ⓒ) → 1/2 = 30개월
+ * - `long_term_general`(1호 준공공 → 준공공 → 장기일반): 같은 영 §13①1호 10년 → 1/2 = 60개월.
+ *   같은 호 후단(등록 전 임대기간 1/2·5년 한도 산입)은 입력 칸이 없어 반영하지 않는다 — 화면에서 확인 필요 고지(Q-2 (a)).
  */
-export const PRE_RENTAL_ACT_DUTY_YEARS = 5;
+export const PRE_RENTAL_ACT_DUTY_YEARS: Record<NonNullable<RentalUnitInput["terminatedRegistrationType"]>, number> = {
+  short_term: 5,
+  long_term_general: 10,
+};
 
 /**
  * §155㉓1호 1/2 판정·자동말소일 확인에 쓰는 임대의무기간(년). 등록 유형 미선택이면 null(판정하지 않는다).
- * 구 임대주택법 등록분은 고른 유형(단기 4년 — 부칙 제3조③3호 「단기임대주택」)과 무관하게 5년이다.
+ * 구 임대주택법 등록분은 종전 임대주택법 기간(`PRE_RENTAL_ACT_DUTY_YEARS`), 그 밖은 종전 민특법 기간이다.
  */
 export function terminationDutyYears(
   unit: Pick<RentalUnitInput, "terminatedRegistrationType" | "rentalCategory">,
 ): number | null {
   const t = unit.terminatedRegistrationType;
   if (!t) return null;
-  return unit.rentalCategory === "pre_2018" ? PRE_RENTAL_ACT_DUTY_YEARS : TERMINATED_DUTY_YEARS[t];
+  return (unit.rentalCategory === "pre_2018" ? PRE_RENTAL_ACT_DUTY_YEARS : TERMINATED_DUTY_YEARS)[t];
 }
 
 // ============================================================
@@ -96,9 +102,11 @@ export function buildFailMessage(
       const duty = terminationDutyYears(unit) ?? TERMINATED_DUTY_YEARS[t];
       const halfMonths = unit.halfDutyRentalMonths ?? unit.rentalMonths;
       if (unit.rentalCategory === "pre_2018") {
+        const quasiPublic = t === "long_term_general";
         return (
-          `${n}호: 구 임대주택법으로 등록한 주택은 임대의무기간이 종전 임대주택법에 따라 ${duty}년입니다(${TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_DEEMED_SHORT_TERM} 단서 · ` +
-          `${TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_DUTY_PERIOD}) — 그 1/2(${duty * 6}개월) 이상 임대하지 않은 상태에서 등록이 말소되면 ` +
+          `${n}호: 구 임대주택법으로 등록한 ${quasiPublic ? "준공공임대주택" : "주택"}은 임대의무기간이 종전 임대주택법에 따라 ${duty}년입니다(` +
+          `${quasiPublic ? TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_DEEMED_QUASI_PUBLIC : TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_DEEMED_SHORT_TERM} 단서 · ` +
+          `${quasiPublic ? TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_QUASI_PUBLIC_DUTY_PERIOD : TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_DUTY_PERIOD}) — 그 1/2(${duty * 6}개월) 이상 임대하지 않은 상태에서 등록이 말소되면 ` +
           `${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23}이 적용되지 않습니다 (현재: ${halfMonths}개월, ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 1호).`
         );
       }

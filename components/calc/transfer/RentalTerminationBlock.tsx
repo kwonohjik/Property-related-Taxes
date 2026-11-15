@@ -109,7 +109,9 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
               구 임대주택법으로 등록한 주택(준공공임대 제외)은 단기민간임대주택으로 보므로 「단기민간임대(4년)」를 고르세요
               ({TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_DEEMED_SHORT_TERM}). 임대의무기간은 종전 임대주택법에 따라 5년이라 자진말소의 1/2은
               30개월로 판정합니다({TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_DUTY_PERIOD}). 2020.8.18. 전에 임대의무기간이 끝났다면 그날 말소된 것으로
-              봅니다(사전-2025-법규재산-0972).
+              봅니다(사전-2025-법규재산-0972). 구 임대주택법 준공공임대주택은 「장기일반민간임대(8년)」를 고르세요 — 임대의무기간이 종전
+              임대주택법에 따라 10년이라 자진말소의 1/2은 60개월로 판정합니다({TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_DEEMED_QUASI_PUBLIC} ·{" "}
+              {TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_QUASI_PUBLIC_DUTY_PERIOD}).
             </span>
           ) : (
             "자진말소 1/2 판정 기준 (소령 §155㉓1호)"
@@ -123,11 +125,19 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
           layout="inline"
           options={[
             { value: "short_term", label: "단기민간임대(4년)", description: unit.rentalCategory === "pre_2018" ? "1/2 = 30개월(구 임대주택법 5년)" : "1/2 = 24개월", testId: `rental-terminated-type-short-${index}` },
-            { value: "long_term_general", label: "장기일반민간임대(8년)", description: "1/2 = 48개월", testId: `rental-terminated-type-long-${index}` },
+            { value: "long_term_general", label: "장기일반민간임대(8년)", description: unit.rentalCategory === "pre_2018" ? "1/2 = 60개월(구 임대주택법 준공공 10년)" : "1/2 = 48개월", testId: `rental-terminated-type-long-${index}` },
           ]}
           value={unit.terminatedRegistrationType ?? ""}
           onChange={(v) => set("terminatedRegistrationType", v)}
         />
+        {/* Q-2 (a) — 구 준공공 등록 전 임대기간 산입(구 임대주택법 시행령 §13①1호 후단)은 입력 칸이 없어 반영하지 않는다. */}
+        {unit.rentalCategory === "pre_2018" && unit.terminatedRegistrationType === "long_term_general" && (
+          <p className="text-xs px-1 pt-1 text-muted-foreground" data-testid={`rental-pre2018-quasi-public-note-${index}`}>
+            준공공임대주택으로 등록하기 전에 임대하던 주택이면 등록 전 임대기간의 1/2(5년 한도)을 임대의무기간에 포함합니다(
+            {TRANSFER_RENTAL_HOUSING.PRE_RENTAL_ACT_QUASI_PUBLIC_DUTY_PERIOD} 후단). 이 계산은 그 산입분을 반영하지 않았습니다 — 해당하면 확인
+            필요.
+          </p>
+        )}
         {/* V-5 — 1/2 판정 개월은 ④가 엔진에 싣는 값과 같다(`deriveHalfDutyRentalMonths` 단일 소스). */}
         {(unit.rentalPeriods ?? []).some((p) => p.start && p.end) && (
           <p className="text-xs px-1 pt-1" data-testid={`rental-half-duty-months-${index}`}>

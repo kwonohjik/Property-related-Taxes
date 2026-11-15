@@ -88,3 +88,31 @@ describe("V-6 ⓒ ⑤ 등록 유형 안내", () => {
     expect(t).not.toContain("확인된 해석례가 없습니다");
   });
 });
+
+describe("구 준공공(구법 × 장기일반) ⑤ — 1/2 = 60개월 (rental-155-23-pre2018-long-term-half.plan.md)", () => {
+  const render0 = (over: Partial<Unit>) =>
+    render(<RentalUnitCard unit={unit({ rentalAutoTermination: true, terminationReason: "voluntary", registrationCancellationDate: "2022-01-10", ...over })} index={0} onChange={vi.fn()} onRemove={() => {}} canRemove={false} />);
+
+  // 선택지 description은 layout="inline"에서 렌더되지 않는다(RadioCardGroup) — 화면에 보이는 등록 유형 안내만 단언한다.
+  it("H-2 구법 → 등록 유형 안내에 준공공 10년·60개월·§13①1호", () => {
+    render0({ terminatedRegistrationType: "long_term_general" });
+    const t = screen.getByTestId("rental-terminated-type-pre2018-hint-0").textContent ?? "";
+    expect(t).toContain("60개월");
+    expect(t).toContain("부칙<제13499호> 제3조③1호");
+    expect(t).toContain("구 임대주택법 시행령 §13①1호");
+  });
+
+  it("H-3 구법 × 장기일반 → 등록 전 임대분 산입 확인 필요 안내 · 단기면 없음", () => {
+    render0({ terminatedRegistrationType: "long_term_general" });
+    expect(screen.getByTestId("rental-pre2018-quasi-public-note-0").textContent).toContain("확인");
+    cleanup();
+    render0({ terminatedRegistrationType: "short_term" });
+    expect(screen.queryByTestId("rental-pre2018-quasi-public-note-0")).toBeNull();
+  });
+
+  it("H-4 대조: 가목(민특법 장기일반) → 구법 안내·산입 안내 없음", () => {
+    render0({ rentalCategory: "long_general", terminatedRegistrationType: "long_term_general" });
+    expect(screen.queryByTestId("rental-terminated-type-pre2018-hint-0")).toBeNull();
+    expect(screen.queryByTestId("rental-pre2018-quasi-public-note-0")).toBeNull();
+  });
+});

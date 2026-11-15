@@ -119,6 +119,7 @@ export interface RentalHousingExceptionFormSlice {
       /**
        * ㉓1호 자진말소 1/2 판정용 — 말소 주택의 종전 민특법 등록 유형(OH-39). "" = 미선택.
        * short_term = 단기민간임대(4년 → 24개월) · long_term_general = 장기일반민간임대(8년 → 48개월).
+       * 구 임대주택법 등록분(pre_2018)은 종전 임대주택법 기간 — short_term 5년 → 30개월 · long_term_general(구 준공공) 10년 → 60개월.
        */
       terminatedRegistrationType: "" | "short_term" | "long_term_general";
       /**

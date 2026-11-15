@@ -383,7 +383,7 @@ export const ONE_HOUSE_FIELD_CATALOG_ASSET = [
       { value: "long_term_general", label: "장기일반민간임대(8년)" },
     ],
     label: "말소 전 민간임대주택 등록 유형",
-    hint: "자진말소 1/2 판정 기준이 되는 말소 전 등록 유형(1/2 = 24개월·48개월, 소령 §155㉓1호). 구 임대주택법 등록분(pre_2018)은 short_term을 고르고 1/2은 종전 임대주택법 5년 → 30개월로 판정된다(민특법 부칙<제13499호> 제3조③3호). 모르면 비움.",
+    hint: "자진말소 1/2 판정 기준이 되는 말소 전 등록 유형(1/2 = 24개월·48개월, 소령 §155㉓1호). 구 임대주택법 등록분(pre_2018)은 short_term을 고르고 1/2은 종전 임대주택법 5년 → 30개월로 판정된다(민특법 부칙<제13499호> 제3조③3호). 단 구 임대주택법 준공공임대주택은 long_term_general을 고르고 1/2은 10년 → 60개월(같은 부칙 제3조③1호 · 구 임대주택법 시행령 §13①1호). 모르면 비움.",
     when: "asset.rentalHousingException.rentalUnits[].rentalAutoTermination = true",
   },
   {
