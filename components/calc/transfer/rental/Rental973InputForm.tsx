@@ -30,6 +30,7 @@ import { Clause4GrandfatherQuestion } from "./Clause4GrandfatherQuestion";
 import { Rental973InheritanceBlock } from "./Rental973InheritanceBlock";
 import { RentalResidentOnlyNotice } from "./RentalResidentOnlyNotice";
 import { RentalMultiFamilyPartialNotice } from "./RentalMultiFamilyPartialNotice";
+import { RentalMultiFamilyPriceCapNotice } from "./RentalMultiFamilyPartialNotice";
 import { Rental973AutoCancelToggle } from "./Rental973AutoCancelToggle";
 import { autoCancelDeemed973Applies } from "@/lib/tax-engine/transfer-reductions/rental-97-3-auto-cancel";
 import { APT_PURCHASE_973_QUESTION } from "@/lib/tax-engine/transfer-reductions/rental-97-3-apt-purchase-exclusion";
@@ -343,6 +344,7 @@ export function Rental973InputForm({ value, onChange, transferDate, acquisitionD
           <p className="mt-1 text-micro text-muted-foreground">
             주택+부속토지 합계 — 6억(수도권 밖 3억) 이하 요건 (령 §97의3③4호)
           </p>
+          <RentalMultiFamilyPriceCapNotice article="§97의3" />
           <p className="mt-1 text-micro text-muted-foreground">
             임대개시일은 실제 임대일·임대사업자 등록일·세무서 사업자등록일 중 늦은 날입니다 (령 §97의3④).
             {mergedDecedentStart
