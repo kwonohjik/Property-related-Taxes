@@ -256,42 +256,11 @@ export function collectEraUndetermined(
     }
   }
 
-  /*
-   * OH-38 — 거주요건 미충족으로 과세된 경우에만 낸다(비과세면 면제를 따질 이유가 없다).
-   *
-   * 🔑 게이트 축은 **등록 신청일**이다(계획서 §9.7 L-3). 종전에는 주택 **취득일** ≤ 2019-12-16에 걸어
-   *    분양권 상태로 먼저 신청한 세대(사전-2025-법규재산-0117 — 준공 취득일은 기한 뒤)를 고지조차 하지 않았다.
-   *    신청일은 4호를 골라야 입력되므로, 고르지 않았으면 신청일을 모른다 — 취득일로 배제하지 않고 고지한다.
-   *    골랐는데 사실이 빠졌으면 빠진 사실을 적는다. 골랐고 판정이 났으면(성립·제외) 여기서 말하지 않는다
-   *    (제외 사유는 `collectRental4hoUnmet`이 「선언했으나 적용되지 않은 특례」로 낸다).
-   * 확인 필요(계획서 §9.7 L-3(a)): 「1주택 보유」 판정 시점 — 신청 당시 **선언**으로 받는다.
-   */
-  const rental4ho = resolveRental4hoRegistration(input);
-  // M2 — 2011.6.2. 이전 양도분의 거주요건은 서울 등 소재 요건이다(4호 경과조치는 2019년 등록분).
-  const capitalNewTownEra = isCapitalNewTownResidenceEra(input.transferDate);
-  if (
-    !settled &&
-    !capitalNewTownEra &&
-    (rental4ho === null || rental4ho.status === "undetermined") &&
-    // 취득 당시 비조정이면 거주요건 자체가 없어 아래 술어가 참이다 — 조정 여부를 따로 보지 않는다.
-    !qualifiesLongTermMortgageResidenceExemption(input) &&
-    !meetsOneHouseResidenceRequirement(input, oneHouseRules.one_house_exemption) &&
-    // 1주택은 현행대로 낸다(보유 미달도 — 시간이 해소한다). 일시적 2주택·§155 의제는 4호로 결론이 바뀔 때만.
-    (input.householdHousingCount === 1 || (relevance?.rental4hoDecides?.() ?? false))
-  ) {
-    out.push({
-      id: "154-1-4ho-rental-registration-unverified",
-      reason:
-        rental4ho === null
-          ? `조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 ` +
-            `신청했다면, 삭제 전 ${law("①")}4호(거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 ` +
-            `증액은 제외)가 적용됩니다(대통령령 제30395호 부칙 제38조). 해당하면 ${input.temporaryTwoHouse && input.householdHousingCount !== 1 ? "1세대1주택 판정 메뉴의 " : ""}§154① 단서에서 「4호 임대사업자 등록」을 ` +
-            "선택하고 등록 사실을 입력하세요 — 입력하지 않아 이 경과조치는 판정하지 않았습니다."
-          : `삭제 전 ${law("①")}4호(임대사업자 등록)를 선택했지만 다음 사실이 입력되지 않아 판정하지 않았습니다: ` +
-            `${rental4ho.missing.join(" · ")}.`,
-    });
-  }
+  const rental4hoNotice = rental4hoUndeterminedNotice(input, oneHouseRules, settled, relevance);
+  if (rental4hoNotice) out.push(rental4hoNotice);
 
+  // M2 — 2011.6.2. 이전 양도분의 거주요건은 서울 등 소재 요건이다.
+  const capitalNewTownEra = isCapitalNewTownResidenceEra(input.transferDate);
   /*
    * M2 — 2003-11-20 ~ 2011-06-02 양도분 서울·과천·5개 신도시 거주 2년. 소재지가 신도시가 있는 시·구이거나
    *   주소가 없으면 요건을 적용했다(모름 = 혜택 불성립). 거주요건 때문에 과세된 경우에만 낸다.
@@ -580,4 +549,58 @@ export function collectEraUndetermined(
   }
 
   return out;
+}
+
+/** 삭제 전 4호 미선택·미완 고지의 입력 — 일반 판정 입력과 겸용 판정 입력(`transfer-tax-mixed-use-unmet-notices.ts`)이 모두 맞춘다. */
+export type Rental4hoUndeterminedInput = Parameters<typeof resolveRental4hoRegistration>[0] &
+  Parameters<typeof qualifiesLongTermMortgageResidenceExemption>[0] &
+  Parameters<typeof meetsOneHouseResidenceRequirement>[0] &
+  Pick<OneHouseJudgeInput, "householdHousingCount" | "temporaryTwoHouse">;
+
+/**
+ * 삭제 전 §154①4호 미선택·미완 고지 — 일반 경로(`collectEraUndetermined`)와 겸용 1주택 경로가 같은 문장·같은 조건을 쓴다
+ * (`docs/00-pm/mixed-use-one-house-proviso-notice.plan.md` D-2). `relevance`가 없으면 1주택에서만 낸다.
+ */
+export function rental4hoUndeterminedNotice(
+  input: Rental4hoUndeterminedInput,
+  oneHouseRules: OneHouseSpecialRulesData,
+  settled: boolean,
+  relevance?: Pick<EraNoticeRelevance, "rental4hoDecides">,
+): OneHouseUndetermined | undefined {
+  /*
+   * OH-38 — 거주요건 미충족으로 과세된 경우에만 낸다(비과세면 면제를 따질 이유가 없다).
+   *
+   * 🔑 게이트 축은 **등록 신청일**이다(계획서 §9.7 L-3). 종전에는 주택 **취득일** ≤ 2019-12-16에 걸어
+   *    분양권 상태로 먼저 신청한 세대(사전-2025-법규재산-0117 — 준공 취득일은 기한 뒤)를 고지조차 하지 않았다.
+   *    신청일은 4호를 골라야 입력되므로, 고르지 않았으면 신청일을 모른다 — 취득일로 배제하지 않고 고지한다.
+   *    골랐는데 사실이 빠졌으면 빠진 사실을 적는다. 골랐고 판정이 났으면(성립·제외) 여기서 말하지 않는다
+   *    (제외 사유는 `collectRental4hoUnmet`이 「선언했으나 적용되지 않은 특례」로 낸다).
+   * 확인 필요(계획서 §9.7 L-3(a)): 「1주택 보유」 판정 시점 — 신청 당시 **선언**으로 받는다.
+   */
+  const rental4ho = resolveRental4hoRegistration(input);
+  // M2 — 2011.6.2. 이전 양도분의 거주요건은 서울 등 소재 요건이다(4호 경과조치는 2019년 등록분).
+  const capitalNewTownEra = isCapitalNewTownResidenceEra(input.transferDate);
+  if (
+    !settled &&
+    !capitalNewTownEra &&
+    (rental4ho === null || rental4ho.status === "undetermined") &&
+    // 취득 당시 비조정이면 거주요건 자체가 없어 아래 술어가 참이다 — 조정 여부를 따로 보지 않는다.
+    !qualifiesLongTermMortgageResidenceExemption(input) &&
+    !meetsOneHouseResidenceRequirement(input, oneHouseRules.one_house_exemption) &&
+    // 1주택은 현행대로 낸다(보유 미달도 — 시간이 해소한다). 일시적 2주택·§155 의제는 4호로 결론이 바뀔 때만.
+    (input.householdHousingCount === 1 || (relevance?.rental4hoDecides?.() ?? false))
+  ) {
+    return {
+      id: "154-1-4ho-rental-registration-unverified",
+      reason:
+        rental4ho === null
+          ? `조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 ` +
+            `신청했다면, 삭제 전 ${law("①")}4호(거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 ` +
+            `증액은 제외)가 적용됩니다(대통령령 제30395호 부칙 제38조). 해당하면 ${input.temporaryTwoHouse && input.householdHousingCount !== 1 ? "1세대1주택 판정 메뉴의 " : ""}§154① 단서에서 「4호 임대사업자 등록」을 ` +
+            "선택하고 등록 사실을 입력하세요 — 입력하지 않아 이 경과조치는 판정하지 않았습니다."
+          : `삭제 전 ${law("①")}4호(임대사업자 등록)를 선택했지만 다음 사실이 입력되지 않아 판정하지 않았습니다: ` +
+            `${rental4ho.missing.join(" · ")}.`,
+    };
+  }
+  return undefined;
 }
