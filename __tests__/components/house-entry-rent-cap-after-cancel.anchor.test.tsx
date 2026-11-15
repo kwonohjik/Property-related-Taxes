@@ -1,6 +1,6 @@
 /**
  * ⑤ S-2 — 말소된 임대주택(사목 · 자동말소)의 5% 질문은 「말소일까지」(계획서
- * `docs/01-plan/features/surcharge-exclusion-textbook-gaps.plan.md` Q-3 a · Q-4 a).
+ * `docs/01-plan/features/surcharge-exclusion-textbook-gaps.plan.md` Q-3 a · Q-4 a · §15).
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
@@ -18,8 +18,8 @@ const BASE: RentalDeclaration = {
   rentalType: "A",
   rentIncreaseUnder5Pct: false,
 };
-const view = (d: RentalDeclaration, note = false) => {
-  render(<HouseEntryRentalTypeSection house={d} idPrefix="t" onUpdate={vi.fn()} rentCapGeneralHouseSaleNote={note} />);
+const view = (d: RentalDeclaration) => {
+  render(<HouseEntryRentalTypeSection house={d} idPrefix="t" onUpdate={vi.fn()} />);
   const r = {
     label: screen.queryByText(LABEL) !== null,
     note: screen.queryByTestId("rent-cap-cancel-note-t")?.textContent ?? null,
@@ -43,8 +43,10 @@ describe("S-2 ⑤ 말소 주택 5% 질문", () => {
     expect(view({ ...BASE, rentalCancelledDate: "2022-03-01", rentalCancellationReason: "voluntary" }).label).toBe(false);
     expect(screen.queryByText("임대료 증액 5% 이하 충족")).toBeNull();
   });
-  it("RC-4 명부 행(일반주택 양도 판정) → 확인 필요 덧붙임", () => {
-    const r = view({ ...BASE, rentalCancelledDate: "2022-03-01", rentalCancellationReason: "auto" }, true);
-    expect(r.note).toContain("확인 필요");
+  it("RC-4 일반주택 양도(10호)에도 같은 기준 — 확인 필요를 붙이지 않는다(사용자 결정 2026-11-15 · V-2 닫음)", () => {
+    const r = view({ ...BASE, rentalCancelledDate: "2022-03-01", rentalCancellationReason: "auto" });
+    expect(r.note).toContain("서면-2021-법규재산-5655");
+    expect(r.note).not.toContain("확인 필요");
+    expect(r.note).not.toContain("일반주택");
   });
 });
