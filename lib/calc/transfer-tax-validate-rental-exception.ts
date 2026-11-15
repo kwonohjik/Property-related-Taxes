@@ -23,7 +23,9 @@ import { isPhrpStdPriceLinked } from "./transfer-phrp-stdprice-link";
 import { deriveRentalArticle } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
 import { isTerminationEligibleArticle } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
 import { rentalSuccessionOf } from "@/lib/stores/calc-wizard-asset-rental-period";
-import { rentalUnitRegApplicationDate, rentalUnitRegistrationBasis } from "./rental-succession";
+import { rentalUnitRegApplicationDate } from "./rental-succession";
+import { rentalUnitRegistrationBasis } from "./rental-succession";
+import { rentalUnitUsesDonorRegistration } from "./rental-succession";
 import {
   isLifetimeLimitEra155_20,
   isAddendumTransitionEffective,
@@ -184,7 +186,7 @@ export function validateRentalHousingException(
     }
 
     // 임대사업 승계(상속·같은 세대원 증여·포괄양수) — 전 임대사업자 임대개월 미입력은 차단(자동 간주 없음 · 조특령 §97⑤3호 합산 대상).
-    // 증여는 증여자 날짜도 필수(G-3 — 수증자 날짜로 대신하지 않는다). ④가 `donorRegistration`을 보내는 조건과 같은 술어(`rentalSuccessionOf`).
+    // 증여는 증여자 날짜도 필수(G-3 — 수증자 날짜로 대신하지 않는다). 상속은 피상속인 날짜 선택. ④가 `donorRegistration`을 보내는 조건과 같은 술어(`rentalUnitUsesDonorRegistration`).
     const succession = rentalSuccessionOf(u);
     if (succession && !(parseFloat(u.decedentRentalMonths ?? "") > 0)) {
       return `${unitLabel}: ${
@@ -195,15 +197,21 @@ export function validateRentalHousingException(
             : "포괄양수한 임대주택이면 전 임대사업자 임대기간(개월)을 입력하세요."
       }`;
     }
-    if (succession === "household_gift") {
+    // 상속은 피상속인 날짜가 선택 — 사업자등록일·신청일 중 하나만 넣으면 ④가 보내지 않아 조용히 상속인 날짜로 판정되므로 막는다.
+    if (succession === "inheritance" && !!u.donorBusinessRegistrationDate !== !!u.donorRentalRegistrationDate) {
+      return `${unitLabel}: 피상속인 세무서 사업자등록일과 지자체 임대사업자등록신청일을 함께 입력하거나 둘 다 비워 두세요.`;
+    }
+    if (rentalUnitUsesDonorRegistration(u)) {
+      const who = succession === "inheritance" ? "피상속인" : "증여자";
+      const heir = succession === "inheritance" ? "상속인" : "증여받은 사람";
       const donor = rentalUnitRegistrationBasis(u);
-      if (!donor.businessRegistrationDate) return `${unitLabel}: 증여자의 세무서 사업자등록일을 입력하세요.`;
-      if (!donor.rentalRegistrationDate) return `${unitLabel}: 증여자의 지자체 임대사업자등록신청일을 입력하세요.`;
+      if (!donor.businessRegistrationDate) return `${unitLabel}: ${who}의 세무서 사업자등록일을 입력하세요.`;
+      if (!donor.rentalRegistrationDate) return `${unitLabel}: ${who}의 지자체 임대사업자등록신청일을 입력하세요.`;
       if (donor.rentalRegistrationDate.slice(0, 10) > u.rentalRegistrationDate.slice(0, 10)) {
-        return `${unitLabel}: 증여자의 임대사업자등록신청일(${donor.rentalRegistrationDate.slice(0, 10)})은 증여받은 사람의 신청일(${u.rentalRegistrationDate.slice(0, 10)})보다 늦을 수 없습니다.`;
+        return `${unitLabel}: ${who}의 임대사업자등록신청일(${donor.rentalRegistrationDate.slice(0, 10)})은 ${heir}의 신청일(${u.rentalRegistrationDate.slice(0, 10)})보다 늦을 수 없습니다.`;
       }
       if (donor.rentalRegisteredDate && donor.rentalRegisteredDate.slice(0, 10) < donor.rentalRegistrationDate.slice(0, 10)) {
-        return `${unitLabel}: 증여자의 임대사업자 등록일은 증여자 등록신청일(${donor.rentalRegistrationDate.slice(0, 10)}) 이후여야 합니다.`;
+        return `${unitLabel}: ${who}의 임대사업자 등록일은 ${who} 등록신청일(${donor.rentalRegistrationDate.slice(0, 10)}) 이후여야 합니다.`;
       }
     }
 

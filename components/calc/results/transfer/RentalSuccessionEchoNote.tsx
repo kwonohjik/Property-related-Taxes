@@ -8,10 +8,17 @@ import type { RentalUnitVerdict } from "@/lib/tax-engine/transfer-tax/rental-hou
 
 export type RentalSuccessionEchoItem = NonNullable<RentalUnitVerdict["succession"]> & { unitIndex: number };
 
-/** 호별 한 줄 — 어느 승계였는지 · 더한 전 임대사업자 개월 · 증여면 목 판정에 쓴 증여자 등록 날짜 */
+/** 호별 한 줄 — 어느 승계였는지 · 더한 전 임대사업자 개월 · 증여·상속이면 목 판정에 쓴 전 임대사업자 등록 날짜 */
 export function rentalSuccessionEchoText(s: RentalSuccessionEchoItem): string {
   const head = `${s.unitIndex + 1}호: `;
-  if (s.kind === "inheritance") return `${head}상속받아 계속 임대 — 피상속인 임대기간 ${s.predecessorMonths}개월을 더했습니다`;
+  if (s.kind === "inheritance") {
+    if (!s.donorRentalRegistrationDate) return `${head}상속받아 계속 임대 — 피상속인 임대기간 ${s.predecessorMonths}개월을 더했고, 목은 상속인 본인 등록일 기준으로 판정했습니다`;
+    const registered = s.donorRentalRegisteredDate ? ` · 지자체 등록일 ${s.donorRentalRegisteredDate}` : "";
+    return (
+      `${head}상속받아 계속 임대 — 피상속인 임대기간 ${s.predecessorMonths}개월을 더했고, ` +
+      `목은 피상속인 지자체 등록 신청일 ${s.donorRentalRegistrationDate} 기준으로 판정했습니다(피상속인 세무서 사업자등록일 ${s.donorBusinessRegistrationDate ?? "-"}${registered})`
+    );
+  }
   if (s.kind === "assumption") {
     return `${head}그 밖의 포괄양수 — 전 임대사업자 임대기간 ${s.predecessorMonths}개월을 더했고, 목은 본인 등록일 기준으로 판정했습니다`;
   }

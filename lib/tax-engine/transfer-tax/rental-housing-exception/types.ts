@@ -114,13 +114,15 @@ export type RentalUnitInput = {
   /**
    * 임대사업 승계 사실(G-3·G-5) — 결과 echo(`RentalUnitVerdict.succession`)와 포괄양수 확인 필요 고지용이다.
    * `predecessorMonths`는 `rentalMonths`에 **이미 합산된** 전 임대사업자(피상속인·증여자·전 사업자) 개월 — 여기서 다시 더하지 않는다.
-   * 목·기한 판정 날짜는 `donorRegistration`이 정한다(증여만). 미제공 = 승계 없음.
+   * 목·기한 판정 날짜는 `donorRegistration`이 정한다(증여 필수 · 상속 선택). 미제공 = 승계 없음.
    */
   succession?: { kind: RentalSuccessionKind; predecessorMonths: number };
   /**
    * 같은 세대원에게 증여받아 계속 임대하는 호(포괄승계)의 **증여자 등록 사실** — 있으면 목 도출·아파트 제한·기준시가 상한·등록 기한·
    * ㉓ 대상 목·최초 말소일이 수증자가 아니라 증여자 등록일로 판정된다(`registrationBasis`; 서면-2022-법규재산-4972 ·
    * 사전-2022-법규재산-0744 → 기획재정부 재산세제과-1591). 「양도일 현재」 등록(D10)은 수증자 본인 등록으로 본다.
+   * 상속(`succession.kind === "inheritance"`)이면 **피상속인** 등록 사실이다(선택 — 서면-2020-법규재산-1959 유추 · ⑳ 직접 해석 없음 ·
+   * 미제공이면 상속인 본인 등록).
    * 날짜 3필드는 본인 등록 3필드와 같은 뜻이다(`rentalRegisteredDate` 미제공이면 신청일).
    * ⚠️ 조특법 §97의3에는 쓰지 않는다 — 반대 결론(기획재정부 재산세제과-954).
    */
@@ -280,8 +282,8 @@ export type RentalUnitVerdict = {
   effectiveRegDate: string; // ISO date (max 두 등록일)
   sizeRequired: boolean;    // 건설 규모요건 적용 여부
   /**
-   * 임대사업 승계 echo(Q-6) — 입력에 승계가 있을 때만. 증여면 증여자 등록 날짜 3필드(YYYY-MM-DD)를 함께 싣는다.
-   * `effectiveRegDate`·`derivedArticle`은 증여면 증여자 등록 기준 값이다.
+   * 임대사업 승계 echo(Q-6) — 입력에 승계가 있을 때만. 증여·상속에 전 임대사업자 등록이 있으면 그 날짜 3필드(YYYY-MM-DD)를 함께 싣는다.
+   * `effectiveRegDate`·`derivedArticle`은 그때 전 임대사업자 등록 기준 값이다.
    */
   succession?: {
     kind: RentalSuccessionKind;
