@@ -62,9 +62,11 @@ test("[MPN-1] ★ 겸용 1주택 + 4호 → 주택분 비과세 · 4호·부칙 
     proviso4hoStatus: "auto_cancelled",
   });
   expect(result.housingPart?.isExempt).toBe(true);
-  await expect(
-    page.getByText(/겸용주택 주택분은 「§154① 단서 4호 임대사업자 등록」에 따라 .*대통령령 제30395호 부칙 제38조 ②/).first(),
-  ).toBeVisible();
+  // 근거는 「1세대 1주택 비과세: 적용」 아래 「근거:」 줄로 옮겼다(`mixed-use-exempt-basis-row.plan.md` Q-2 a · Q-3 a).
+  await expect(page.getByTestId("mixed-use-exempt-basis")).toHaveText(
+    "근거: 1세대1주택 · §154① 단서 4호 임대사업자 등록 — 소득세법 시행령 §154 ① 4호(2020.2.11. 삭제 전) · 대통령령 제30395호 부칙 제38조 ②",
+  );
+  await expect(page.getByText(/겸용주택 주택분은 「§154① 단서/)).toHaveCount(0);
 });
 
 test("[MPN-2] ★ 겸용 1주택 · 단서 미선택 · 거주 0 → 과세 · 4호 미선택 안내가 결과에 보인다", async ({ page }) => {
@@ -72,6 +74,22 @@ test("[MPN-2] ★ 겸용 1주택 · 단서 미선택 · 거주 0 → 과세 · 4
   const result = await calcMixed(page, {});
   expect(result.housingPart?.isExempt).toBe(false);
   await expect(page.getByText(/§154① 단서에서 「4호 임대사업자 등록」을 선택하고 등록 사실을 입력하세요/).first()).toBeVisible();
+  await expect(page.getByTestId("mixed-use-exempt-basis")).toHaveCount(0);
+});
+
+const TEMP_OTHER = { id: "b", region: "non_capital", regionCode: "4682025021", acquisitionOrigin: "general", acquisitionDate: "2022-03-01", officialPrice: "100000000", isApartment: false, isInherited: false, isLongTermRental: false };
+
+test("[MPN-4] ★ 겸용 일시적 2주택 + 4호 → 비과세 · 「근거: 일시적 2주택 (§155①) · 4호」", async ({ page }) => {
+  test.setTimeout(90_000);
+  const result = await calcMixed(page, {
+    provisoReason: "rental_registration_4ho",
+    proviso4hoBusinessRegDate: "2019-03-01",
+    proviso4hoRentalRegDate: "2019-03-01",
+    proviso4hoRegulatedOneHouse: "yes",
+    proviso4hoStatus: "auto_cancelled",
+  }, [TEMP_OTHER]);
+  expect(result.housingPart?.isExempt).toBe(true);
+  await expect(page.getByTestId("mixed-use-exempt-basis")).toContainText("근거: 일시적 2주택 (§155①) · §154① 단서 4호 임대사업자 등록");
 });
 
 test("[MPN-3] ★ 겸용 일시적 2주택 · 단서 미선택 · 거주 0 → 과세 · 판정 메뉴로 보내는 4호 미선택 안내가 결과에 보인다", async ({ page }) => {

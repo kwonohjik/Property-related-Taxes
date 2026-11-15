@@ -78,7 +78,7 @@ const FACTS: Record<string, Record<string, unknown>> = {
 };
 
 interface MixedResult {
-  housingPart: { isExempt: boolean; transferGain: number; proratedTaxableGain: number };
+  housingPart: { isExempt: boolean; transferGain: number; proratedTaxableGain: number; exemptBasis?: string };
   total: { determinedTax: number };
   warnings?: string[];
 }
@@ -107,6 +107,12 @@ async function mixed(over: Record<string, unknown>, mixedUseOver: Record<string,
   return json.data.result as MixedResult;
 }
 
+const BASIS_LABEL = {
+  uoc: "수도권 밖 부득이한 사유 주택 (§155⑧)",
+  rural: "농어촌주택 (§155⑦)",
+  cult: "문화유산 주택 (§155⑥1호)",
+} as const;
+
 describe("S08-3 — 겸용 × §155⑥·⑦·⑧ → 일반 주택과 같은 비과세", () => {
   for (const k of ["uoc", "rural", "cult"] as const) {
     it(`MIXED-${k}: 같은 세대 사실의 일반 주택이 비과세면 겸용 주택분도 비과세`, async () => {
@@ -114,6 +120,8 @@ describe("S08-3 — 겸용 × §155⑥·⑦·⑧ → 일반 주택과 같은 비
       expect(g.isExempt, "대조: 일반 주택은 비과세").toBe(true);
       const r = await mixed(FACTS[k]);
       expect(r.housingPart.isExempt).toBe(true);
+      // 결과 「근거:」 줄 — 일반 경로 `exemptReason`과 같은 특례 이름(`mixed-use-exempt-basis-row.plan.md`).
+      expect(r.housingPart.exemptBasis).toBe(BASIS_LABEL[k]);
     });
   }
 

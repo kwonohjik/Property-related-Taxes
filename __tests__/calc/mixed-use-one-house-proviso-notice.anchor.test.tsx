@@ -16,6 +16,9 @@
  * | MP-7 | 일시적 2주택 · 미선택 · 거주 미달 → 안내(「판정 메뉴의」) — G-5 |
  * | MP-8 | 혼인 합가 · 미선택 · 거주 미달 → 안내(이 화면 단서 카드) — G-5 |
  * | MP-9 | 4호로도 결론이 바뀌지 않으면(3주택 · 1년 안 신규 취득 · 거주 충족) 안내 없음 |
+ * | MP-10~12 | 근거 줄 — 일시적 2주택 · 혼인 합가 + 4호 · 과세면 없음(`mixed-use-exempt-basis-row.plan.md`) |
+ *
+ * MP-1~4는 2026-11-15 근거 줄 도입으로 경고 문장 단언을 `housingPart.exemptBasis` 단언으로 옮겼다(Q-2 a 경고 삭제).
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
@@ -75,35 +78,36 @@ async function calc(f: ReturnType<typeof mixed>) {
   expect(allIssues(f)).toEqual([]);
   const r = await runCalc(f);
   expect(r.status).toBe(200);
-  return r.result as { housingPart: { isExempt: boolean }; warnings: string[] };
+  return r.result as { housingPart: { isExempt: boolean; exemptBasis?: string }; warnings: string[] };
 }
-const basisLine = (w: string[]) => w.find((x) => x.startsWith("겸용주택 주택분은 「§154① 단서"));
+/** #3380 경고 문장 — 근거 줄(`housingPart.exemptBasis`)로 옮겨 지웠다(`mixed-use-exempt-basis-row.plan.md` Q-2 a). */
+const oldSentence = (w: string[]) => w.find((x) => x.startsWith("겸용주택 주택분은 「"));
+const BASIS_4HO = "§154① 단서 4호 임대사업자 등록 — 소득세법 시행령 §154 ① 4호(2020.2.11. 삭제 전) · 대통령령 제30395호 부칙 제38조 ②";
 const UNSELECTED = "§154① 단서에서 「4호 임대사업자 등록」을 선택하고 등록 사실을 입력하세요";
 
-describe("적용 근거 — 1주택", () => {
-  it("MP-1 4호 완비 → 비과세 · 4호 + 부칙 제38조② 근거", async () => {
+describe("적용 근거 — 결과 「근거:」 줄(housingPart.exemptBasis)", () => {
+  it("MP-1 1주택 + 4호 완비 → 비과세 · 4호 + 부칙 제38조② 근거 · 경고 문장 없음", async () => {
     const r = await calc(mixed({ f: R4 }));
     expect(r.housingPart.isExempt).toBe(true);
-    expect(basisLine(r.warnings)).toBe(
-      "겸용주택 주택분은 「§154① 단서 4호 임대사업자 등록」에 따라 1세대1주택 비과세 보유·거주요건을 충족했습니다 — " +
-        "소득세법 시행령 §154 ① 4호(2020.2.11. 삭제 전) · 대통령령 제30395호 부칙 제38조 ②",
-    );
+    expect(r.housingPart.exemptBasis).toBe(`1세대1주택 · ${BASIS_4HO}`);
+    expect(oldSentence(r.warnings)).toBeUndefined();
   });
   it("MP-2 5호 → 5호 근거(단서 전 사유)", async () => {
     const r = await calc(mixed({ f: R5 }));
     expect(r.housingPart.isExempt).toBe(true);
-    expect(basisLine(r.warnings)).toContain("「§154① 단서 5호 공고전계약」");
+    expect(r.housingPart.exemptBasis).toContain("1세대1주택 · §154① 단서 5호 공고전계약 — ");
   });
-  it("MP-3 거주 충족이면 단서가 결론을 가르지 않아 문장 없음", async () => {
+  it("MP-3 거주 충족이면 단서가 결론을 가르지 않아 단서 없이 「1세대1주택」", async () => {
     const r = await calc(mixed({ f: R4, residencePeriods: LIVED }));
     expect(r.housingPart.isExempt).toBe(true);
-    expect(basisLine(r.warnings)).toBeUndefined();
+    expect(r.housingPart.exemptBasis).toBe("1세대1주택");
   });
-  it("MP-4 일시적 2주택 + 4호 → 1321 고지만 · 근거 문장 중복 없음", async () => {
+  it("MP-4 일시적 2주택 + 4호 → 「일시적 2주택 (§155①) · 4호」 · 1321 회신 고지는 경고에 남는다", async () => {
     const r = await calc(mixed({ f: R4, houses: TEMP_HOUSES }));
     expect(r.housingPart.isExempt).toBe(true);
+    expect(r.housingPart.exemptBasis).toBe(`일시적 2주택 (§155①) · ${BASIS_4HO}`);
     expect(r.warnings.join("\n")).toContain("부동산납세과-1321");
-    expect(basisLine(r.warnings)).toBeUndefined();
+    expect(oldSentence(r.warnings)).toBeUndefined();
   });
 });
 
@@ -165,5 +169,23 @@ describe("4호 미선택 안내 — 일시적 2주택 · 합가(G-5)", () => {
     const RIGHT = { id: "r1", type: "redevelopment_right", memberOrigin: "successor", acquisitionDate: "2019-06-01", region: "capital" };
     const r = await calc(mixed({ houses: TEMP_HOUSES, f: { presaleRights: [RIGHT], rightThreeYearExceptionKind: "none" } }));
     expect(r.warnings.some((w) => w.includes(UNSELECTED))).toBe(false);
+  });
+});
+
+describe("적용 근거 — 의제 경로 · 과세(Q-1 a)", () => {
+  it("MP-10 일시적 2주택 · 거주 충족 → 「일시적 2주택 (§155①)」", async () => {
+    const r = await calc(mixed({ houses: TEMP_HOUSES, residencePeriods: LIVED }));
+    expect(r.housingPart.exemptBasis).toBe("일시적 2주택 (§155①)");
+  });
+  it("MP-11 혼인 합가 + 4호 → 「혼인 합가 (§155⑤) · 4호」 · 1334 회신 고지는 경고에 남는다", async () => {
+    const filled = { ...MARRIAGE, ...R4, proviso4hoBusinessRegDate: "2018-09-01", proviso4hoRentalRegDate: "2018-09-01" };
+    const r = await calc(mixed({ ...MERGE, f: filled }));
+    expect(r.housingPart.exemptBasis).toBe(`혼인 합가 (§155⑤) · ${BASIS_4HO}`);
+    expect(r.warnings.join("\n")).toContain("부동산납세과-1334");
+  });
+  it("MP-12 과세(단서 미선택 · 거주 0)면 근거 없음", async () => {
+    const r = await calc(mixed());
+    expect(r.housingPart.isExempt).toBe(false);
+    expect(r.housingPart.exemptBasis).toBeUndefined();
   });
 });

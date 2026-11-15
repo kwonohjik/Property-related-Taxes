@@ -162,6 +162,7 @@ function calcMixedUseCore(
     meetsOneHouseRequirements,
     isUnregistered,
     isOneHouseExempt,
+    exemptBasis,
     laterLandExemptExcluded,
     surchargeDeemedOneHouseBy155,
     surchargeDeemedOneHouseSource,
@@ -667,7 +668,8 @@ function calcMixedUseCore(
     splitMode: "post-2022",
     ...(necessaryExpenseProviso ? { necessaryExpenseProviso } : {}),
     apportionment,
-    housingPart,
+    // 비과세 근거 echo — 결과 「근거:」 줄(`mixed-use-exempt-basis-row.plan.md`). 세액 불변.
+    housingPart: exemptBasis ? { ...housingPart, exemptBasis } : housingPart,
     commercialPart,
     nonBusinessLandPart,
     total,

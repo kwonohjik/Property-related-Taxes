@@ -61,6 +61,7 @@ import { decisiveProvisoException } from "./one-house/decisive-proviso";
 import { deemedPathProvisoNotices } from "./transfer-tax-one-house-warnings";
 import { rental4hoUndeterminedNotice } from "./one-house/era-undetermined";
 import { rental4hoFavorableProviso } from "./one-house/era-notice-relevance";
+import { mixedUseExemptBasis } from "./transfer-tax-mixed-use-exempt-basis";
 import { isOldSurchargeClauseEra } from "./data/surcharge-old-clauses-era";
 import {
   article89Clause2Notices,
@@ -110,6 +111,8 @@ export function judgeMixedUseOneHouseExemption(
   meetsOneHouseRequirements: boolean;
   isUnregistered: boolean;
   isOneHouseExempt: boolean;
+  /** 비과세 근거 문구(`mixedUseExemptBasis`) — 비과세(`isOneHouseExempt`)일 때만. */
+  exemptBasis: string | undefined;
   /** 주택보다 나중에 취득한 부수토지가 보유요건(영 §154①) 미만 — 그 토지분은 비과세에서 뺀다(분리취득 G-3과 같은 술어). */
   laterLandExemptExcluded: boolean;
   /** 영 §167의10①15호 ① 요소 — §155①④⑤ 의제 또는 §155②③ 상속주택 경로. */
@@ -539,17 +542,21 @@ export function judgeMixedUseOneHouseExemption(
     }, warnings);
     if (reviewNotice) warnings.push(reviewNotice);
   }
-  // §155 의제 경로의 §154① 단서(5호 · 삭제 전 4호) 근거 — 겸용 결과뷰에는 적용 특례 행이 없어 일반 경로와 같은 문장을 경고로 싣는다.
+  // §155 의제 경로의 §154① 단서(5호 · 삭제 전 4호) 회신 근거·확인 필요 — 일반 경로와 같은 문장을 경고로 싣는다(근거 이름은 아래 「근거:」 줄).
   const decisiveProviso = isOneHouseExempt
     ? decisiveProvisoException(exemptionReqInput, oneHouseSpecialRules.one_house_exemption)
     : undefined;
-  // 1주택(§155 의제·⑥⑦⑧ 특례 아님) — 일반 경로는 `exemptReason`에 단서·근거를 적는다. 겸용 결과에는 그 칸이 없어 문장으로 싣는다
-  //   (`mixed-use-one-house-proviso-notice.plan.md` Q-1 b 단서 전 사유 · Q-2 a 의제 경로는 위 문장만).
-  if (decisiveProviso && deemedAppliedIds(deemedOneHouseBy155).length === 0 && special155Basis === undefined) {
-    warnings.push(
-      `겸용주택 주택분은 「${decisiveProviso.label}」에 따라 1세대1주택 비과세 보유·거주요건을 충족했습니다 — ${decisiveProviso.legalBasis}`,
-    );
-  }
+  // 비과세 근거 — 일반 경로 `exemptReason`에 해당하는 문구를 결과 「근거:」 줄로 싣는다(`mixed-use-exempt-basis-row.plan.md` Q-1 a).
+  //   1주택 단서 근거는 종전 경고 문장(#3380)에서 이 줄로 옮겼다(Q-2 a). §155 의제 경로의 회신 고지(아래)는 경고에 남긴다.
+  const exemptBasis = isOneHouseExempt
+    ? mixedUseExemptBasis({
+        deemedOneHouseBy155,
+        mergeFacts: deemedInput,
+        rentalResidenceDeemed: rentalResidence?.deemed === true,
+        special155Basis: houseCountOkWithoutSpecial155 ? undefined : special155Basis,
+        decisiveProviso,
+      })
+    : undefined;
   if (decisiveProviso) {
     warnings.push(
       ...deemedPathProvisoNotices([
@@ -645,6 +652,7 @@ export function judgeMixedUseOneHouseExemption(
     meetsOneHouseRequirements,
     isUnregistered,
     isOneHouseExempt,
+    exemptBasis,
     laterLandExemptExcluded,
     // E-14d — §155②③(상속주택 + 일반주택)은 주택 수가 1로 줄어 §155①④⑤ 의제 분기에 걸리지 않는다
     //   ⇒ 단건(`resolveSurchargeDeemedOneHouse`)과 같은 술어로 경로를 연다.
