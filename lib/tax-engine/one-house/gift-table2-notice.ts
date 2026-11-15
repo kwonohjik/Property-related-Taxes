@@ -32,6 +32,9 @@ import {
   giftHouseholdMaxPriorResidenceMonths,
 } from "./gift-household-basis";
 import { giftHouseholdPriorResidenceMonths } from "./gift-household-basis";
+import type { GiftHouseholdBasis } from "./gift-household-basis";
+import type { MixedUseAssetInput } from "../types/transfer-mixed-use.types";
+import type { MixedUseHousingPart } from "../types/transfer-mixed-use.types";
 
 export interface GiftTable2NoticeArgs {
   /** 표2 대상 판정 입력(유효 주택수 반영) — 장기보유특별공제 계산 축과 같은 입력이다. */
@@ -45,15 +48,65 @@ export interface GiftTable2NoticeArgs {
 
 export function giftTable2PriorResidenceNotice(a: GiftTable2NoticeArgs): string | undefined {
   const { input } = a;
-  const basis = input.giftHouseholdBasis;
+  return giftTable2NoticeCore({
+    basis: input.giftHouseholdBasis,
+    isHighValuePartial: a.isHighValuePartial,
+    lthdApplies: a.lthdApplies,
+    table2Axis: () => resolveLthdTable2OneHouseAxis(input, a.deemedOneHouseBy155) && isLthdTable2SubjectAsset(input),
+    residenceMonths: () => resolveExemptionRequirementResidenceMonths(input),
+    meetsTable2: (years) => meetsTable2ResidenceRequirement(input, years),
+  });
+}
+
+/** 겸용 표2 대상 판정의 통산 전 거주 개월 — `table2ResidencePeriodYears`(상속 통산) 우선, 없으면 본인 거주(`transfer-tax-mixed-use.ts`가 같은 값을 쓴다). */
+export function mixedTable2BaseResidenceMonths(asset: Pick<MixedUseAssetInput, "table2ResidencePeriodYears" | "residencePeriodYears">): number {
+  return (asset.table2ResidencePeriodYears ?? asset.residencePeriodYears) * 12;
+}
+
+/**
+ * 겸용주택 주택분 — 일반 경로와 같은 조건·같은 문장(계획서 `mixed-use-table2-gift-notice.plan.md`).
+ * 겸용 엔진은 증여 전 동일세대 거주 개월을 표2 대상 판정에 통산하는데(`table2ResidenceYears`) 이 고지를 부르지 않아,
+ * 같은 사실의 일반 주택과 달리 확인 필요가 결과에 없었다.
+ * 표2 술어 입력은 겸용 `buildHousingPart`의 `useTable2`와 같다. 표2 축(1세대1주택 비과세 대상 · 주택분은 표2 대상 자산)은
+ * 고가 부분과세 조건(비과세 대상인데 주택분 전액 비과세가 아님)이 이미 요구한다. 공제가 걸림 = 주택분 장기보유특별공제액 > 0
+ * (전액 비과세면 공제액이 0이라 이 조건이 먼저 거른다).
+ */
+export function mixedUseGiftTable2Notices(
+  asset: Pick<MixedUseAssetInput, "giftHouseholdBasis" | "table2ResidencePeriodYears" | "residencePeriodYears" | "winWinRentalHouse" | "buildingAcquisitionDate">,
+  transferDate: Date,
+  isOneHouseExempt: boolean,
+  housingPart: Pick<MixedUseHousingPart, "isExempt" | "longTermDeductionAmount">,
+): string[] {
+  const table2Input = { winWinRentalHouse: asset.winWinRentalHouse, transferDate, acquisitionDate: asset.buildingAcquisitionDate };
+  const notice = giftTable2NoticeCore({
+    basis: asset.giftHouseholdBasis,
+    isHighValuePartial: isOneHouseExempt && !housingPart.isExempt,
+    lthdApplies: housingPart.longTermDeductionAmount > 0,
+    table2Axis: () => true,
+    residenceMonths: () => mixedTable2BaseResidenceMonths(asset) + giftHouseholdPriorResidenceMonths(asset.giftHouseholdBasis),
+    meetsTable2: (years) => meetsTable2ResidenceRequirement(table2Input, years),
+  });
+  return notice ? [notice] : [];
+}
+
+function giftTable2NoticeCore(a: {
+  basis: GiftHouseholdBasis | undefined;
+  isHighValuePartial: boolean;
+  lthdApplies: boolean;
+  table2Axis: () => boolean;
+  /** 표2 대상 판정 거주 개월 — 답한 증여 전 거주 개월을 이미 더한 값이다. */
+  residenceMonths: () => number;
+  meetsTable2: (years: number) => boolean;
+}): string | undefined {
+  const basis = a.basis;
   if (!a.isHighValuePartial || !a.lthdApplies || !giftHouseholdConsolidationStart(basis)) return undefined;
-  if (!resolveLthdTable2OneHouseAxis(input, a.deemedOneHouseBy155) || !isLthdTable2SubjectAsset(input)) return undefined;
+  if (!a.table2Axis()) return undefined;
   // 입력이 있으면(0 포함) 통산을 적용했거나 거주한 적이 없다는 명시 답이다 — 통산이 표2를 연 경우에만 심판례 확인 필요를 고지한다.
   if (basis?.priorHouseholdResidenceMonths !== undefined) {
     const applied = giftHouseholdPriorResidenceMonths(basis);
-    const withPrior = resolveExemptionRequirementResidenceMonths(input);
-    if (applied <= 0 || !meetsTable2ResidenceRequirement(input, Math.floor(withPrior / 12))) return undefined;
-    if (meetsTable2ResidenceRequirement(input, Math.floor((withPrior - applied) / 12))) return undefined;
+    const withPrior = a.residenceMonths();
+    if (applied <= 0 || !a.meetsTable2(Math.floor(withPrior / 12))) return undefined;
+    if (a.meetsTable2(Math.floor((withPrior - applied) / 12))) return undefined;
     return (
       `증여 전 동일세대로 거주한 ${applied}개월을 장기보유특별공제 표2(1세대1주택) 대상 판정(${TRANSFER.LONG_TERM_DEDUCTION_TABLE2_DECREE} — 보유기간 중 거주기간 2년 이상)에 ` +
       "통산해 표2를 적용했습니다(사전-2025-법규재산-0506). 조심 2025서3843(2025.12.16.)은 양도일 현재 증여인과 동일세대가 아니어서 " +
@@ -65,9 +118,9 @@ export function giftTable2PriorResidenceNotice(a: GiftTable2NoticeArgs): string 
   }
   const maxPrior = giftHouseholdMaxPriorResidenceMonths(basis);
   if (maxPrior <= 0) return undefined;
-  const baseMonths = resolveExemptionRequirementResidenceMonths(input);
-  if (meetsTable2ResidenceRequirement(input, Math.floor(baseMonths / 12))) return undefined;
-  if (!meetsTable2ResidenceRequirement(input, Math.floor((baseMonths + maxPrior) / 12))) return undefined;
+  const baseMonths = a.residenceMonths();
+  if (a.meetsTable2(Math.floor(baseMonths / 12))) return undefined;
+  if (!a.meetsTable2(Math.floor((baseMonths + maxPrior) / 12))) return undefined;
   const statute = TRANSFER.LONG_TERM_DEDUCTION_TABLE2_DECREE;
   return (
     `증여받은 주택을 증여자와 계속 같은 세대로 보유한 경우, 증여 전 동일세대로 함께 거주한 기간은 장기보유특별공제 표2(1세대1주택) 대상 판정(${statute} — 보유기간 중 거주기간 2년 이상)에 ` +

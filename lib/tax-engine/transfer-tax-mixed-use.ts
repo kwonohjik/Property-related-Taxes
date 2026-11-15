@@ -10,6 +10,8 @@
  */
 
 import { giftHouseholdPriorResidenceMonths } from "./one-house/gift-household-basis";
+import { mixedTable2BaseResidenceMonths } from "./one-house/gift-table2-notice";
+import { mixedUseGiftTable2Notices } from "./one-house/gift-table2-notice";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { parseRatesFromMap, presaleRightStartDate } from "./transfer-tax-helpers";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
@@ -461,9 +463,7 @@ function calcMixedUseCore(
   // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 — 미제공 시 실거주로 fallback(비상속·별도세대 = 실거주).
   // 결정 #38-9: 증여 전 동일세대 거주 개월을 더한다 — 비과세 거주요건(`transfer-tax-mixed-use-exemption.ts`)과 같은 leaf·같은 값이다.
   // 공제율의 거주분은 `asset.residencePeriodYears`(본인 거주) 그대로다(사전-2025-법규재산-0506).
-  const table2ResidenceYears = Math.floor(
-    ((asset.table2ResidencePeriodYears ?? asset.residencePeriodYears) * 12 + giftHouseholdPriorResidenceMonths(asset.giftHouseholdBasis)) / 12,
-  );
+  const table2ResidenceYears = Math.floor((mixedTable2BaseResidenceMonths(asset) + giftHouseholdPriorResidenceMonths(asset.giftHouseholdBasis)) / 12);
 
   // ─── 🔴 2026-08-10 — 용도변경일 기반 LTHD **시간 비례 분할을 폐지**했다 ───
   //
@@ -513,6 +513,7 @@ function calcMixedUseCore(
     asset.buildingAcquisitionDate,
     laterLandExemptExcluded,
   );
+  warnings.push(...mixedUseGiftTable2Notices(asset, transferDate, isOneHouseExempt, housingPart)); // 증여 전 거주 표2 통산 확인 필요(일반 경로와 같은 고지)
   // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
   //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.
   const splitCommercialPart = buildCommercialPart(commercialGainSplit, isUnregistered);
