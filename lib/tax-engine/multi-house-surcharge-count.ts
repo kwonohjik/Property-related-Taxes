@@ -358,7 +358,7 @@ function passesRegistrationCap(house: HouseInfo, article: SharedRentalArticle): 
  */
 export function isLongTermRentalDutyPeriodPending(house: HouseInfo, transferDate: Date): boolean {
   if (!house.isLongTermRental) return false;
-  if (house.rentalCancelledDate && house.rentalCancelledDate <= transferDate) return false;
+  if (rentalCancellationStatus(house, transferDate) !== "none") return false; // 양도일 전 말소(부칙 제7조 간주일 포함)
   if (!hasBasicRegistration(house)) return false;
   /**
    * 유형 미선택 — 「임대기간요건 외에 해당 목의 다른 요건」이 **등록 완비뿐**이므로,

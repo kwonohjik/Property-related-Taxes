@@ -13,7 +13,11 @@
  *   2호로 보는지는 해석을 확인하지 못해 보지 않는다(사용자 결정 2026-10-13 · 확인 필요 고지).
  * - 말소 사유 미선택 = 모름 → 간주하지 않는다(확인 필요 고지).
  *
- * 자동말소는 법률 제17482호(2020.8.18. 시행)로 생겼다 — 그 전 말소일이면 간주하지 않는다.
+ * 자동말소는 법률 제17482호(2020.8.18. 시행)로 생겼다. 그 전에 임대의무기간이 끝난 주택은 같은 법 부칙 제7조로
+ * **2020.8.18.에 말소된 것으로 본다** — 말소 사유 「자동말소」(설명 「임대의무기간 종료일 말소」)에 그 전 날짜를 넣으면
+ * 말소일을 2020.8.18.로 읽는다(Q-3). 단서는 이 간주 말소에도 적용된다: 서면-2021-법규재산-6391(→기획재정부 재산세제과-861,
+ * 2022.8.1.) 사실관계 「2003.03. 단기 등록 → 2020.08.18. 자동말소」에 「각목 외 부분 단서에 따라 중과배제 적용 가능」.
+ * 양도일이 2020.8.18. 전이면 양도 당시 등록은 살아 있었다(`none`). §155⑳ 쪽 같은 간주는 `effectiveCancellationDate`.
  */
 import { MULTI_HOUSE, RENTAL_REGISTRATION_4HO } from "./legal-codes";
 import { RA_CUT } from "./rental-article/rules";
@@ -34,13 +38,23 @@ const PROVISO_TYPES: ReadonlySet<RentalHousingType> = new Set(["A", "C", "D", "E
  */
 export type RentalCancellationStatus = "none" | "auto_deemed" | "not_deemed";
 
-export function rentalCancellationStatus(house: HouseInfo, transferDate: Date): RentalCancellationStatus {
+/** 법률 제17482호 부칙 제7조 — 자동말소인데 입력 말소일(= 임대의무기간 종료일)이 2020.8.18. 전이면 2020.8.18. 말소로 본다. */
+export function isAddenda7DeemedCancellation(house: HouseInfo): boolean {
   const cancelled = house.rentalCancelledDate;
-  if (!cancelled || cancelled > transferDate) return "none";
-  return house.rentalCancellationReason === "auto" &&
-    house.rentalType != null &&
-    PROVISO_TYPES.has(house.rentalType) &&
-    cancelled.getTime() >= RA_CUT.Y2020_08_18
+  return house.rentalCancellationReason === "auto" && !!cancelled && cancelled.getTime() < RA_CUT.Y2020_08_18;
+}
+
+/** 판정에 쓰는 말소일(ms) — 부칙 제7조 간주가 걸리면 2020.8.18., 아니면 입력 그대로. 말소일이 없으면 undefined. */
+export function effectiveRentalCancelledTs(house: HouseInfo): number | undefined {
+  if (!house.rentalCancelledDate) return undefined;
+  return isAddenda7DeemedCancellation(house) ? RA_CUT.Y2020_08_18 : house.rentalCancelledDate.getTime();
+}
+
+export function rentalCancellationStatus(house: HouseInfo, transferDate: Date): RentalCancellationStatus {
+  const cancelledTs = effectiveRentalCancelledTs(house);
+  if (cancelledTs === undefined || cancelledTs > transferDate.getTime()) return "none";
+  // 자동말소면 말소일은 늘 2020.8.18. 이후다(그 전 날짜는 위 간주로 2020.8.18.).
+  return house.rentalCancellationReason === "auto" && house.rentalType != null && PROVISO_TYPES.has(house.rentalType)
     ? "auto_deemed"
     : "not_deemed";
 }
@@ -56,8 +70,8 @@ export function rentalCancellationStatus(house: HouseInfo, transferDate: Date): 
  */
 export function isSeparateHouseholdGiftOfCancelledRental(house: HouseInfo): boolean {
   if (house.rentalGiftDonorHousehold !== "separate") return false;
-  const cancelled = house.rentalCancelledDate ?? house.rentalCancellationDate;
-  return !!cancelled && cancelled.getTime() <= house.acquisitionDate.getTime();
+  const cancelledTs = effectiveRentalCancelledTs(house) ?? house.rentalCancellationDate?.getTime();
+  return cancelledTs !== undefined && cancelledTs <= house.acquisitionDate.getTime();
 }
 
 const differs = (a: MultiHouseSurchargeResult, b: MultiHouseSurchargeResult): boolean =>
@@ -92,6 +106,22 @@ export function rentalCancellationNotices(
       : `${houseLabel(h.id)}: 임대사업자 등록이 말소됐는데 말소 사유를 고르지 않아 장기임대주택(${MULTI_HOUSE.LONG_TERM_RENTAL_EXCLUSION_BASIS})으로 보지 않았습니다 — ` +
         `임대의무기간이 끝난 날 자동말소(${RENTAL_REGISTRATION_4HO.AUTO_CANCELLATION})됐다면 「자동말소」를 고르세요. ${MULTI_HOUSE.LONG_TERM_RENTAL_AUTO_CANCEL_PROVISO}에 따라 임대기간요건을 갖춘 것으로 봅니다(확인 필요).`,
   );
+}
+
+/**
+ * Q-3 — 부칙 제7조로 말소일을 2020.8.18.로 읽은 장기임대주택을 알린다(결론과 무관하게 · ⑳ 쪽 `deemedAutoCancellationNotice`의 짝).
+ */
+export function addenda7DeemedCancellationNotices(input: MultiHouseSurchargeInput): string[] {
+  return input.houses
+    .filter((h) => h.isLongTermRental && isAddenda7DeemedCancellation(h))
+    .map((h) => {
+      const head =
+        `${houseLabel(h.id)}: 임대의무기간이 2020.8.18. 전(${h.rentalCancelledDate!.toISOString().slice(0, 10)})에 끝나 ` +
+        `법률 제17482호 민간임대주택에 관한 특별법 부칙 제7조에 따라 2020.8.18.에 등록이 말소된 것으로 봅니다`;
+      return rentalCancellationStatus(h, input.transferDate) === "none"
+        ? `${head} — 양도일(${input.transferDate.toISOString().slice(0, 10)})에는 아직 등록 중인 주택으로 판정했습니다.`
+        : `${head}. 이 간주 말소에도 ${MULTI_HOUSE.LONG_TERM_RENTAL_AUTO_CANCEL_PROVISO}(임대기간요건을 갖춘 것으로 봄)를 적용했습니다(서면-2021-법규재산-6391 → 기획재정부 재산세제과-861).`;
+    });
 }
 
 /**
