@@ -12,7 +12,6 @@
 
 import { coerceOptionalDate } from "../tax-utils";
 import { surchargeExclusionBasis, SURCHARGE_EXCLUSION_STEP_LABEL, type SurchargeHousehold } from "../surcharge-exclusion-basis";
-import { MULTI_HOUSE } from "../legal-codes/transfer";
 import { resolveHighValuePriceCheck } from "../one-house/threshold";
 import { RENTAL_STATUTORY_PAIR_IDS } from "./rental-97-statutory-overlap";
 import { evaluateNew993, type New993Result } from "./new-99-3";
