@@ -173,4 +173,17 @@ describe("⑳ 임대사업 승계 입력", () => {
     const { container } = render(<RentalSuccessionEchoNote items={undefined} />);
     expect(container.innerHTML).toBe("");
   });
+
+  it("SB-9 ★ 상속 판정 기준 배지 — 피상속인 날짜를 넣으면 「피상속인 등록 기준」(가목) · 비우면 배지 없이 상속인 날짜(마목)", () => {
+    renderCard({ ...OWN, rentalSuccession: "inheritance", decedentRentalMonths: "24", ...DONOR });
+    const basis = screen.getByTestId("rental-verdict-donor-basis-0").textContent ?? "";
+    expect(basis).toContain("피상속인 등록 기준으로 판정");
+    expect(basis).not.toContain("증여자");
+    expect(badge()).toContain("가목");
+    cleanup();
+    renderCard({ ...OWN, rentalSuccession: "inheritance", decedentRentalMonths: "24" });
+    expect(screen.queryByTestId("rental-verdict-donor-basis-0")).toBeNull();
+    expect(badge()).not.toContain("증여자");
+    expect(badge()).toContain("마목");
+  });
 });
