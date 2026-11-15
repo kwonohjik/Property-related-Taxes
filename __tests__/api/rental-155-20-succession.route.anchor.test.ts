@@ -205,7 +205,7 @@ describe("G-3 증여 승계 — 증여자 날짜·승계 echo가 엔진에 닿�
     const u = unitsOf(body)[0] as { rentalMonths: number; succession?: Obj; donorRegistration?: Obj };
     expect(u.rentalMonths).toBe(60);
     expect(u.succession).toEqual({ kind: "inheritance", predecessorMonths: 24 });
-    expect(u.donorRegistration).toBeUndefined(); // 증여가 아닌 승계의 남은 증여자 값은 보내지 않는다(⑤·⑧과 같은 술어)
+    expect(u.donorRegistration).toBeUndefined(); // 상속은 피상속인 사업자등록일·신청일이 다 있을 때만 보낸다(반쪽 입력은 ⑧이 막는다)
   });
 
   it("S-5 포괄양수 — 목은 본인 날짜(마목 제한 유지) + 「포괄양수」 확인 필요 고지가 warnings로 나온다", async () => {
@@ -217,6 +217,36 @@ describe("G-3 증여 승계 — 증여자 날짜·승계 echo가 엔진에 닿�
   });
 });
 
+/** ⑳ 상속 — 피상속인 2019-06 등록 아파트를 상속인이 2021-03 등록(사용자 결정 2026-11-15 · 1959·1591 유추) */
+const INH: Partial<UnitForm> = { ...GIFT, rentalSuccession: "inheritance" };
+const INH_EMPTY: Partial<UnitForm> = { ...INH, donorBusinessRegistrationDate: "", donorRentalRegistrationDate: "", donorRentalRegisteredDate: "" };
+
+describe("⑳ 상속 승계 — 피상속인 등록 기준(선택)", () => {
+  it("H-1 ★ 피상속인 날짜 입력 → 가목 비과세 0 / 비우면 상속인 날짜(마목 아파트 제한)로 과세 128,766,000 (단건·다건)", async () => {
+    const empty = await single(form(INH_EMPTY));
+    const withReg = await single(form(INH));
+    expect(empty.totalTax).toBe(128_766_000); // 수정 전과 같은 값(상속인 날짜 판정)
+    expect(withReg.status).toBe(200);
+    expect(withReg.totalTax).toBe(0);
+    expect(await multi(form(INH_EMPTY))).toBe(empty.totalTax);
+    expect(await multi(form(INH))).toBe(0);
+  });
+
+  it("H-2 결과 — 상속 echo에 피상속인 날짜 · 「피상속인의 등록일 기준」 확인 필요 고지 (12억 초과 RH-A2)", async () => {
+    const f = form(INH);
+    f.assets[0].actualSalePrice = "1,500,000,000";
+    f.contractTotalPrice = "1,500,000,000";
+    const r = await single(f);
+    expect(r.echo).toMatchObject({ kind: "inheritance", predecessorMonths: 24, donorRentalRegistrationDate: "2019-06-01" });
+    expect((r.warnings ?? []).some((w) => w.includes("피상속인의 등록일 기준") && w.includes("확인 필요") && w.includes("서면-2020-법규재산-1959"))).toBe(true);
+  });
+
+  it("H-3 짝 — 피상속인 칸을 비우면 고지·donorRegistration 없음", async () => {
+    const body = await reqBody(form(INH_EMPTY));
+    expect(unitsOf(body)[0].donorRegistration).toBeUndefined();
+  });
+});
+
 describe("⑫ Zod — 승계 입력 짝·순서 (⑧과 같은 격자)", () => {
   const mut = (m: (u: Obj) => void) => (b: Obj) => m(unitsOf(b)[0]);
   const f = () => form(GIFT);
@@ -225,9 +255,14 @@ describe("⑫ Zod — 승계 입력 짝·순서 (⑧과 같은 격자)", () => {
     expect((await single(f(), mut((u) => delete u.donorRegistration))).status).toBe(400);
   });
 
-  it("Z-2 증여가 아닌데 donorRegistration 있음 → 400", async () => {
-    const r = await single(f(), mut((u) => ((u.succession as Obj).kind = "inheritance")));
+  it("Z-2 포괄양수인데 donorRegistration 있음 → 400", async () => {
+    const r = await single(f(), mut((u) => ((u.succession as Obj).kind = "assumption")));
     expect(r.status).toBe(400);
+  });
+
+  it("Z-2′ 상속은 donorRegistration(피상속인 등록 사실)을 받는다 → 200", async () => {
+    const r = await single(f(), mut((u) => ((u.succession as Obj).kind = "inheritance")));
+    expect(r.status).toBe(200);
   });
 
   it("Z-3 증여자 신청일이 수증자 신청일보다 뒤 → 400", async () => {

@@ -64,7 +64,7 @@ export const rentalUnitSchema = z.object({
   rentalMonths: z.number().nonnegative(),
   /**
    * 임대사업 승계 사실(G-3·G-5) — `predecessorMonths`는 `rentalMonths`에 **이미 합산된** 전 임대사업자 개월(echo·고지용, 다시 더하지 않는다).
-   * 증여(`household_gift`)이면 `donorRegistration` 필수, 그 밖은 금지 — 호별 짝은 `rentalHousingExceptionSchema`의 superRefine이 본다.
+   * 증여(`household_gift`)이면 `donorRegistration` 필수, 상속은 선택(피상속인 등록 사실), 그 밖은 금지 — 호별 짝은 `rentalHousingExceptionSchema`의 superRefine이 본다.
    */
   succession: z.object({ kind: RentalSuccessionKindEnum, predecessorMonths: z.number().nonnegative() }).optional(),
   /** 증여 승계의 증여자 등록 사실 3필드 — 목·의무기간·등록 기한 판정 기준(증여자 등록일). 등록일은 비면 신청일 */
@@ -130,8 +130,8 @@ export const rentalHousingExceptionSchema = z
   })
   /**
    * 임대사업 승계 짝·순서(G-3) — ⑧ `transfer-tax-validate-rental-exception.ts`와 같은 격자(UI 통과 ↔ API 400 모순 금지):
-   *  · 증여 ⇔ donorRegistration (증여인데 없거나, 증여가 아닌데 있으면 400)
-   *  · 증여자 신청일 ≤ 수증자 신청일 · 증여자 등록일 ≥ 증여자 신청일 (날짜는 UTC 일 단위로 비교)
+   *  · 증여 ⇒ donorRegistration 필수 · 상속은 선택 · 그 밖(승계 없음·포괄양수)에 있으면 400
+   *  · 전 임대사업자(증여자·피상속인) 신청일 ≤ 본인 신청일 · 전 임대사업자 등록일 ≥ 그 신청일 (날짜는 UTC 일 단위로 비교)
    */
   .superRefine((v, ctx) => {
     const day = (s: string) => s.slice(0, 10);
@@ -140,16 +140,16 @@ export const rentalHousingExceptionSchema = z
       if (isGift && !u.donorRegistration) {
         ctx.addIssue({ code: "custom", message: "같은 세대원 증여 승계는 증여자 등록 사실(donorRegistration)이 필요합니다.", path: ["rentalUnits", i, "donorRegistration"] });
       }
-      if (!isGift && u.donorRegistration) {
-        ctx.addIssue({ code: "custom", message: "증여자 등록 사실은 같은 세대원 증여 승계에서만 받습니다.", path: ["rentalUnits", i, "donorRegistration"] });
+      if (!isGift && u.succession?.kind !== "inheritance" && u.donorRegistration) {
+        ctx.addIssue({ code: "custom", message: "전 임대사업자 등록 사실은 같은 세대원 증여·상속 승계에서만 받습니다.", path: ["rentalUnits", i, "donorRegistration"] });
       }
       const donor = u.donorRegistration;
       if (!donor) return;
       if (day(donor.rentalRegistrationDate) > day(u.rentalRegistrationDate)) {
-        ctx.addIssue({ code: "custom", message: "증여자 임대사업자등록신청일은 수증자 신청일보다 늦을 수 없습니다.", path: ["rentalUnits", i, "donorRegistration", "rentalRegistrationDate"] });
+        ctx.addIssue({ code: "custom", message: "증여자·피상속인 임대사업자등록신청일은 본인 신청일보다 늦을 수 없습니다.", path: ["rentalUnits", i, "donorRegistration", "rentalRegistrationDate"] });
       }
       if (donor.rentalRegisteredDate && day(donor.rentalRegisteredDate) < day(donor.rentalRegistrationDate)) {
-        ctx.addIssue({ code: "custom", message: "증여자 임대사업자 등록일은 증여자 신청일 이후여야 합니다.", path: ["rentalUnits", i, "donorRegistration", "rentalRegisteredDate"] });
+        ctx.addIssue({ code: "custom", message: "증여자·피상속인 임대사업자 등록일은 그 신청일 이후여야 합니다.", path: ["rentalUnits", i, "donorRegistration", "rentalRegisteredDate"] });
       }
     });
   });

@@ -178,12 +178,20 @@ describe("④ 전송 — succession·donorRegistration (⑤·⑧과 같은 술�
     });
   });
 
-  it("W-2 상속·포괄양수 — succession만. 남아 있는 증여자 칸은 보내지 않는다", () => {
-    for (const k of ["inheritance", "assumption"] as const) {
-      const [u] = api(asset({ ...GIFT, rentalSuccession: k })).rentalUnits;
-      expect(u.succession).toEqual({ kind: k, predecessorMonths: 24 });
-      expect(u.donorRegistration).toBeUndefined();
-    }
+  it("W-2 포괄양수 — succession만. 남아 있는 전 사업자 날짜 칸은 보내지 않는다", () => {
+    const [u] = api(asset({ ...GIFT, rentalSuccession: "assumption" })).rentalUnits;
+    expect(u.succession).toEqual({ kind: "assumption", predecessorMonths: 24 });
+    expect(u.donorRegistration).toBeUndefined();
+  });
+
+  it("W-2′ 상속 — 피상속인 날짜(사업자등록일·신청일)를 넣으면 donorRegistration으로 싣는다 · 비우면 싣지 않는다", () => {
+    const [withReg] = api(asset({ ...GIFT, rentalSuccession: "inheritance" })).rentalUnits;
+    expect(withReg.succession).toEqual({ kind: "inheritance", predecessorMonths: 24 });
+    expect(withReg.donorRegistration?.rentalRegistrationDate).toBe("2019-06-01T00:00:00.000Z");
+    const [empty] = api(
+      asset({ ...GIFT, rentalSuccession: "inheritance", donorBusinessRegistrationDate: "", donorRentalRegistrationDate: "", donorRentalRegisteredDate: "" }),
+    ).rentalUnits;
+    expect(empty.donorRegistration).toBeUndefined();
   });
 
   it("W-3 승계 없음 — 둘 다 없다(옛 isInheritedRental 기록은 상속으로 보낸다)", () => {
@@ -303,6 +311,49 @@ describe("⑧ ↔ ⑫ 격자 — 승계 날짜 조합이 UI 통과 ⇔ API 통�
             const orderViolation = app > "2021-03-01" || (reg && reg < app);
             if (orderViolation) contradictions.push(`${key}: 순서 위반인데 ⑫ 통과`);
           }
+        }
+      }
+    }
+    expect(contradictions).toEqual([]);
+  });
+});
+
+/** ⑳ 상속 — 피상속인 등록 3칸(선택 · 사용자 결정 2026-11-15 · 1959·1591 유추) */
+const INH: Partial<UnitForm> = { ...GIFT, rentalSuccession: "inheritance" };
+const INH_EMPTY: Partial<UnitForm> = {
+  ...INH,
+  donorBusinessRegistrationDate: "",
+  donorRentalRegistrationDate: "",
+  donorRentalRegisteredDate: "",
+};
+
+describe("⑳ 상속 — 피상속인 등록 기준(선택)", () => {
+  it("H-1 ⑧ 비워 두면 통과(상속인 본인 날짜) · 반쪽 입력은 막는다 · 순서 위반은 막는다", () => {
+    expect(validate(asset(INH_EMPTY))).toBeNull();
+    expect(validate(asset(INH))).toBeNull();
+    expect(validate(asset({ ...INH_EMPTY, donorRentalRegistrationDate: "2019-06-01" }))).toContain("함께 입력하세요");
+    expect(validate(asset({ ...INH_EMPTY, donorRentalRegisteredDate: "2019-06-01" }))).toContain("함께 입력하세요");
+    expect(validate(asset({ ...INH, donorRentalRegistrationDate: "2021-03-02", donorRentalRegisteredDate: "" }))).toContain("상속인의 신청일");
+    expect(validate(asset({ ...INH, donorRentalRegisteredDate: "2019-05-31" }))).toContain("피상속인 등록신청일");
+  });
+
+  it("H-2 ★ 클라이언트 목 판정 — 피상속인 날짜가 있으면 피상속인 기준(가목), 비우면 상속인 기준(마목)", () => {
+    expect(rentalUnitRegApplicationDate(unitOf(asset(INH)))?.toISOString().slice(0, 10)).toBe("2019-06-01");
+    expect(rentalUnitRegApplicationDate(unitOf(asset(INH_EMPTY)))?.toISOString().slice(0, 10)).toBe("2021-03-01");
+  });
+
+  it("H-3 ⑧ ↔ ⑫ 격자 — 상속 피상속인 날짜 조합 전수 모순 0", () => {
+    const contradictions: string[] = [];
+    for (const app of ["2019-06-01", "2021-03-01", "2021-03-02", ""]) {
+      for (const reg of ["", "2019-05-31", "2019-06-01", "2021-03-01", "2021-03-02"]) {
+        for (const biz of ["2019-06-01", ""]) {
+          const a = asset({ ...INH, donorBusinessRegistrationDate: biz, donorRentalRegistrationDate: app, donorRentalRegisteredDate: reg });
+          const msg = validate(a);
+          const payload = toRentalHousingExceptionApi(a);
+          const ok = payload ? rentalHousingExceptionSchema.safeParse(payload).success : false;
+          const key = `신청일=${app || "-"} 등록일=${reg || "-"} 사업자=${biz || "-"}`;
+          if (msg === null && !ok) contradictions.push(`${key}: ⑧ 통과 · ⑫ 거부`);
+          if (msg !== null && ok && app && biz && (app > "2021-03-01" || (reg && reg < app))) contradictions.push(`${key}: 순서 위반인데 ⑫ 통과`);
         }
       }
     }

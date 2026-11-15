@@ -98,7 +98,7 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
       succession: rentalSuccessionOf(u)
         ? { kind: rentalSuccessionOf(u), predecessorMonths: parseFloat(u.decedentRentalMonths ?? "") || 0 }
         : undefined,
-      // 같은 세대원 증여(포괄승계)일 때만 증여자 등록 3필드 — ⑤ 노출·⑧ 필수와 같은 술어(`rentalUnitDonorRegistrationInScope`). 남은 값은 보내지 않는다.
+      // 같은 세대원 증여(포괄승계)·상속일 때만 전 임대사업자 등록 3필드 — ⑤ 노출과 같은 술어(`rentalUnitDonorRegistrationInScope`). 남은 값은 보내지 않는다.
       // 증여자 사업자등록일·신청일이 비면 보내지 않는다(⑧이 먼저 막는다 · 본인 날짜로 대신하지 않는다). 등록일이 비면 엔진이 신청일로 본다.
       donorRegistration:
         rentalUnitDonorRegistrationInScope(u) && u.donorBusinessRegistrationDate && u.donorRentalRegistrationDate

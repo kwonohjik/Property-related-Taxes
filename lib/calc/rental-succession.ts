@@ -27,18 +27,39 @@ type SuccessionFacts = Pick<
   | "donorRentalRegisteredDate"
 >;
 
-/** 같은 세대원 증여(포괄승계)인가 — 증여자 입력 노출(⑤)·전송(④)·검증(⑧)의 단일 술어 */
+/**
+ * 전 임대사업자(증여자·피상속인) 등록 3칸을 받는가 — 노출(⑤)·전송(④)의 단일 술어.
+ * 같은 세대원 증여(G-3 · 필수)와 상속(선택 — 사용자 결정 2026-11-15 · 서면-2020-법규재산-1959·재산세제과-1591 유추)만.
+ */
 export function rentalUnitDonorRegistrationInScope(u: Pick<RentalUnitForm, "rentalSuccession" | "isInheritedRental"> | undefined): boolean {
+  if (!u) return false;
+  const k = rentalSuccessionOf(u);
+  return k === "household_gift" || k === "inheritance";
+}
+
+/** 전 임대사업자 등록 3칸이 필수인가 — 증여만(⑧). 상속은 비우면 상속인 본인 등록으로 판정한다. */
+export function rentalUnitDonorRegistrationRequired(u: Pick<RentalUnitForm, "rentalSuccession" | "isInheritedRental"> | undefined): boolean {
   return !!u && rentalSuccessionOf(u) === "household_gift";
 }
 
-/** 목·의무기간·기한 판정의 등록 3필드(YYYY-MM-DD 문자열, 없으면 "") — 증여면 증여자, 아니면 본인(엔진 `registrationBasis`와 같은 규칙) */
+/**
+ * 목·기한 판정을 전 임대사업자 등록으로 하는가 — 증여는 항상(비면 날짜 없음 → ⑧ 차단), 상속은 사업자등록일·신청일을 다 넣었을 때만.
+ * ④가 `donorRegistration`을 싣는 조건 · 엔진 `registrationBasis`(값이 오면 그것)와 같다.
+ */
+export function rentalUnitPredecessorBasisApplied(
+  u: Partial<Pick<RentalUnitForm, "rentalSuccession" | "isInheritedRental" | "donorBusinessRegistrationDate" | "donorRentalRegistrationDate">>,
+): boolean {
+  if (rentalUnitDonorRegistrationRequired(u)) return true;
+  return rentalUnitDonorRegistrationInScope(u) && !!u.donorBusinessRegistrationDate && !!u.donorRentalRegistrationDate;
+}
+
+/** 목·의무기간·기한 판정의 등록 3필드(YYYY-MM-DD 문자열, 없으면 "") — 증여면 증여자, 상속은 피상속인 날짜를 다 넣었으면 피상속인, 아니면 본인(엔진 `registrationBasis`와 같은 규칙) */
 export function rentalUnitRegistrationBasis(u: Partial<SuccessionFacts>): {
   businessRegistrationDate: string;
   rentalRegistrationDate: string;
   rentalRegisteredDate: string;
 } {
-  if (rentalUnitDonorRegistrationInScope(u)) {
+  if (rentalUnitPredecessorBasisApplied(u)) {
     return {
       businessRegistrationDate: u.donorBusinessRegistrationDate ?? "",
       rentalRegistrationDate: u.donorRentalRegistrationDate ?? "",

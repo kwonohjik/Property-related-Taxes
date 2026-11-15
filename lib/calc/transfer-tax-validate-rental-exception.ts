@@ -195,6 +195,19 @@ export function validateRentalHousingException(
             : "포괄양수한 임대주택이면 전 임대사업자 임대기간(개월)을 입력하세요."
       }`;
     }
+    // 상속 — 피상속인 등록 3칸은 선택. 넣기 시작했으면 사업자등록일·신청일을 함께(반쪽이면 본인 날짜로 조용히 돌아가지 않게 막는다)
+    if (succession === "inheritance") {
+      const any = !!(u.donorBusinessRegistrationDate || u.donorRentalRegistrationDate || u.donorRentalRegisteredDate);
+      if (any && !(u.donorBusinessRegistrationDate && u.donorRentalRegistrationDate)) {
+        return `${unitLabel}: 피상속인 등록 사실을 넣으려면 피상속인의 세무서 사업자등록일과 지자체 임대사업자등록신청일을 함께 입력하세요.`;
+      }
+      if (u.donorRentalRegistrationDate && u.donorRentalRegistrationDate.slice(0, 10) > u.rentalRegistrationDate.slice(0, 10)) {
+        return `${unitLabel}: 피상속인의 임대사업자등록신청일(${u.donorRentalRegistrationDate.slice(0, 10)})은 상속인의 신청일(${u.rentalRegistrationDate.slice(0, 10)})보다 늦을 수 없습니다.`;
+      }
+      if (u.donorRentalRegisteredDate && u.donorRentalRegistrationDate && u.donorRentalRegisteredDate.slice(0, 10) < u.donorRentalRegistrationDate.slice(0, 10)) {
+        return `${unitLabel}: 피상속인의 임대사업자 등록일은 피상속인 등록신청일(${u.donorRentalRegistrationDate.slice(0, 10)}) 이후여야 합니다.`;
+      }
+    }
     if (succession === "household_gift") {
       const donor = rentalUnitRegistrationBasis(u);
       if (!donor.businessRegistrationDate) return `${unitLabel}: 증여자의 세무서 사업자등록일을 입력하세요.`;
