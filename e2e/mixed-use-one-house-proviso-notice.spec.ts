@@ -1,5 +1,5 @@
 /**
- * 겸용주택 1주택 — §154① 단서 적용 근거 · 삭제 전 4호 미선택 안내가 결과 화면에 보인다
+ * 겸용주택 1주택 — §154① 단서 적용 근거 · 삭제 전 4호 미선택 안내가 결과 화면에 보인다(일시적 2주택은 G-5 · MPN-3)
  * (`docs/00-pm/mixed-use-one-house-proviso-notice.plan.md`). 문장·조건은 anchor
  * (`__tests__/calc/mixed-use-one-house-proviso-notice.anchor.test.tsx`)가 고정한다 — 여기서는 겸용 결과 화면 표시만 본다.
  */
@@ -9,9 +9,9 @@ import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 
 const GANGNAM = "1168010100";
 
-async function calcMixed(page: Page, formOver: Record<string, unknown>) {
+async function calcMixed(page: Page, formOver: Record<string, unknown>, houses: Record<string, unknown>[] = []) {
   await gotoTransferHoldingsStep(page, {
-    houses: [],
+    houses,
     assetOver: withMixedHousingStd({
       addressJibun: "서울특별시 강남구 역삼동 1",
       regionCode: GANGNAM,
@@ -37,7 +37,7 @@ async function calcMixed(page: Page, formOver: Record<string, unknown>) {
       transferDate: "2023-03-20",
       filingDate: "2023-12-31",
       contractTotalPrice: "1000000000",
-      householdHousingCount: "1",
+      householdHousingCount: String(1 + houses.length),
       residencePeriodMonths: "0",
       ...formOver,
     },
@@ -72,4 +72,13 @@ test("[MPN-2] ★ 겸용 1주택 · 단서 미선택 · 거주 0 → 과세 · 4
   const result = await calcMixed(page, {});
   expect(result.housingPart?.isExempt).toBe(false);
   await expect(page.getByText(/§154① 단서에서 「4호 임대사업자 등록」을 선택하고 등록 사실을 입력하세요/).first()).toBeVisible();
+});
+
+test("[MPN-3] ★ 겸용 일시적 2주택 · 단서 미선택 · 거주 0 → 과세 · 판정 메뉴로 보내는 4호 미선택 안내가 결과에 보인다", async ({ page }) => {
+  test.setTimeout(90_000);
+  const result = await calcMixed(page, {}, [
+    { id: "b", region: "non_capital", regionCode: "4682025021", acquisitionOrigin: "general", acquisitionDate: "2022-03-01", officialPrice: "100000000", isApartment: false, isInherited: false, isLongTermRental: false },
+  ]);
+  expect(result.housingPart?.isExempt).toBe(false);
+  await expect(page.getByText(/1세대1주택 판정 메뉴의 §154① 단서에서 「4호 임대사업자 등록」을 선택하고/).first()).toBeVisible();
 });

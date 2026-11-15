@@ -1,6 +1,6 @@
 /**
  * anchor — 겸용주택 1주택 · §154① 단서 근거 고지 + 삭제 전 4호 미선택 안내
- * (`docs/00-pm/mixed-use-one-house-proviso-notice.plan.md` · Q-1 b · Q-2 a · Q-3 a 사용자 결정 2026-11-15).
+ * (`docs/00-pm/mixed-use-one-house-proviso-notice.plan.md` · Q-1 b · Q-2 a · Q-3 a 사용자 결정 2026-11-15 · G-5 후속 2026-11-15).
  *
  * 일반 주택은 `exemptReason`에 단서·근거를 적고(1주택) 거주 미달 과세면 4호 미선택 안내를 낸다. 겸용 결과에는
  * `exemptReason` 칸이 없어 둘 다 0건이었다(실측 · mock). 세액은 바뀌지 않는다 — 문장만.
@@ -12,7 +12,10 @@
  * | MP-3 | 거주 충족이면 단서가 결론을 가르지 않아 문장 없음 |
  * | MP-4 | 일시적 2주택 + 4호 → 1321 고지만(근거 문장 중복 없음 · Q-2 a) |
  * | MP-5 | 1주택 · 단서 미선택 · 거주 미달 → 4호 미선택 안내(일반 경로와 같은 문장) |
- * | MP-6 | 거주 충족 · 4호 선택 후 제외 · 일시적 2주택(남은 한계 G-5)이면 미선택 안내 없음 |
+ * | MP-6 | 거주 충족 · 4호 선택 후 제외이면 미선택 안내 없음 |
+ * | MP-7 | 일시적 2주택 · 미선택 · 거주 미달 → 안내(「판정 메뉴의」) — G-5 |
+ * | MP-8 | 혼인 합가 · 미선택 · 거주 미달 → 안내(이 화면 단서 카드) — G-5 |
+ * | MP-9 | 4호로도 결론이 바뀌지 않으면(3주택 · 1년 안 신규 취득 · 거주 충족) 안내 없음 |
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
@@ -59,12 +62,13 @@ const R5 = { provisoReason: "pre_designation_contract", provisoPreContractNoHous
 const LIVED = [{ moveInDate: ACQ, moveOutDate: TRANSFER }];
 const TEMP_HOUSES = [houseRow("b", "2022-03-01", { region: "non_capital", regionCode: NC, officialPrice: "100000000", isApartment: false, acquisitionOrigin: "general" } as never)];
 
-function mixed(o: { f?: object; residencePeriods?: object[]; houses?: typeof TEMP_HOUSES } = {}) {
+function mixed(o: { f?: object; residencePeriods?: object[]; houses?: typeof TEMP_HOUSES; acq?: string; transfer?: string } = {}) {
   const houses = o.houses ?? [];
+  const transfer = o.transfer ?? TRANSFER;
   return redevAptForm({
     kind: "housing", price: "1000000000", count: String(houses.length + 1), houses,
-    assetOver: { ...MIXED, acquisitionDate: ACQ, regionCode: GANGNAM, residencePeriods: o.residencePeriods ?? [] },
-    formOver: { transferDate: TRANSFER, filingDate: "2023-12-31", ...(o.f ?? {}) } as never,
+    assetOver: { ...MIXED, acquisitionDate: o.acq ?? ACQ, regionCode: GANGNAM, residencePeriods: o.residencePeriods ?? [] },
+    formOver: { transferDate: transfer, filingDate: `${transfer.slice(0, 4)}-12-31`, ...(o.f ?? {}) } as never,
   });
 }
 async function calc(f: ReturnType<typeof mixed>) {
@@ -115,9 +119,51 @@ describe("4호 미선택 안내 — 1주택", () => {
   it.each([
     ["거주 충족(비과세)", { residencePeriods: LIVED }],
     ["4호 선택 후 제외(신청 당시 「아니오」)", { f: { ...R4, proviso4hoRegulatedOneHouse: "no" } }],
-    ["일시적 2주택 — 남은 한계 G-5", { houses: TEMP_HOUSES }],
   ])("MP-6 %s → 안내 없음", async (_n, o) => {
     const r = await calc(mixed(o as never));
+    expect(r.warnings.some((w) => w.includes(UNSELECTED))).toBe(false);
+  });
+});
+
+/**
+ * G-5 — 일시적 2주택 · 합가 겸용주택도 4호가 결론을 가를 때 같은 안내를 낸다(일반 경로 RT-15와 같은 문장 · 입력 위치 안내 포함).
+ * 반사실 입력은 일반 경로 `rental4hoDecides`와 같은 `rental4hoFavorableProviso`다.
+ */
+const other = (id: string, acq: string, over: object = {}) =>
+  houseRow(id, acq, { region: "non_capital", regionCode: NC, officialPrice: "100000000", isApartment: false, acquisitionOrigin: "general", ...over } as never);
+const MERGE = { houses: [other("c", "2018-02-01", { mergeOrigin: "counterpart_side" })], acq: "2018-08-01", transfer: "2024-06-01" };
+const MARRIAGE = { marriageDate: "2021-01-01", isFirstTransferredInMerge: true };
+const MENU = "1세대1주택 판정 메뉴의 §154① 단서에서";
+
+describe("4호 미선택 안내 — 일시적 2주택 · 합가(G-5)", () => {
+  it("MP-7 일시적 2주택 · 미선택 · 거주 0 → 과세 · 판정 메뉴로 안내 · 4호를 채우면 비과세", async () => {
+    const r = await calc(mixed({ houses: TEMP_HOUSES }));
+    expect(r.housingPart.isExempt).toBe(false);
+    const line = r.warnings.find((w) => w.includes(UNSELECTED));
+    expect(line).toContain(MENU);
+    expect((await calc(mixed({ houses: TEMP_HOUSES, f: R4 }))).housingPart.isExempt).toBe(true);
+  });
+  it("MP-8 혼인 합가 · 미선택 → 과세 · 이 화면 단서 카드로 안내 · 4호를 채우면 비과세", async () => {
+    const r = await calc(mixed({ ...MERGE, f: MARRIAGE }));
+    expect(r.housingPart.isExempt).toBe(false);
+    const line = r.warnings.find((w) => w.includes(UNSELECTED));
+    expect(line).toBeDefined();
+    expect(line).not.toContain(MENU);
+    const filled = { ...MARRIAGE, ...R4, proviso4hoBusinessRegDate: "2018-09-01", proviso4hoRentalRegDate: "2018-09-01" };
+    expect((await calc(mixed({ ...MERGE, f: filled }))).housingPart.isExempt).toBe(true);
+  });
+  it.each([
+    ["3주택 — 4호로도 주택 수 축이 서지 않는다", { houses: [...TEMP_HOUSES, other("d", "2022-06-01")] }],
+    ["종전주택 취득 1년 안에 신규 취득 — 4호로도 §155① 불성립", { houses: [other("b", "2019-06-01")] }],
+    ["일시적 2주택 · 거주 충족(비과세)", { houses: TEMP_HOUSES, residencePeriods: LIVED }],
+    ["일시적 2주택 · 보유 2년 미달 — 4호는 거주만 면제", { houses: [other("b", "2022-04-01")], acq: "2021-03-01", transfer: "2023-01-01" }],
+  ])("MP-9 %s → 안내 없음", async (_n, o) => {
+    const r = await calc(mixed(o as never));
+    expect(r.warnings.some((w) => w.includes(UNSELECTED))).toBe(false);
+  });
+  it("MP-9 §89② 배제 확정(입주권 3년 초과 · 예외 없음) — 4호로도 비과세가 아니다 → 안내 없음", async () => {
+    const RIGHT = { id: "r1", type: "redevelopment_right", memberOrigin: "successor", acquisitionDate: "2019-06-01", region: "capital" };
+    const r = await calc(mixed({ houses: TEMP_HOUSES, f: { presaleRights: [RIGHT], rightThreeYearExceptionKind: "none" } }));
     expect(r.warnings.some((w) => w.includes(UNSELECTED))).toBe(false);
   });
 });

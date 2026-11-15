@@ -60,6 +60,7 @@ import { mixedUseResidenceYearsLabel } from "./transfer-tax-mixed-use-unmet-noti
 import { decisiveProvisoException } from "./one-house/decisive-proviso";
 import { deemedPathProvisoNotices } from "./transfer-tax-one-house-warnings";
 import { rental4hoUndeterminedNotice } from "./one-house/era-undetermined";
+import { rental4hoFavorableProviso } from "./one-house/era-notice-relevance";
 import { isOldSurchargeClauseEra } from "./data/surcharge-old-clauses-era";
 import {
   article89Clause2Notices,
@@ -511,10 +512,21 @@ export function judgeMixedUseOneHouseExemption(
       }),
     );
   }
-  // 삭제 전 §154①4호 미선택 안내 — 일반 경로와 같은 함수·같은 조건. `relevance`를 넘기지 않아 1주택에서만 낸다
-  //   (`mixed-use-one-house-proviso-notice.plan.md` Q-3 a). 미등기는 일반 경로도 내지 않는다.
+  // 삭제 전 §154①4호 미선택 안내 — 일반 경로와 같은 함수·같은 조건. 1주택은 그대로 내고(Q-3 a), 일시적 2주택·합가는
+  //   4호가 성립한다고 채운 반사실 판정이 비과세일 때만 낸다(일반 경로 `rental4hoDecides`와 같은 반사실 입력 · G-5).
+  //   미등기는 일반 경로도 내지 않는다.
   if (deemedInput.isOneHousehold && !isUnregistered) {
-    const rental4hoNotice = rental4hoUndeterminedNotice(deemedInput, oneHouseSpecialRules, isOneHouseExempt);
+    const rental4hoNotice = rental4hoUndeterminedNotice(deemedInput, oneHouseSpecialRules, isOneHouseExempt, {
+      rental4hoDecides: () => {
+        if (clause2Excluded) return false;
+        const proviso = rental4hoFavorableProviso(transferDate);
+        const deemedWith4ho = resolveDeemedOneHouseBy155({ ...deemedInput, oneHouseExemptionProviso: proviso }, oneHouseSpecialRules);
+        return (
+          (houseCountOk || deemedWith4ho !== undefined) &&
+          meetsOneHouseHoldingResidence({ ...exemptionReqInput, oneHouseExemptionProviso: proviso }, oneHouseSpecialRules.one_house_exemption)
+        );
+      },
+    });
     if (rental4hoNotice) warnings.push(rental4hoNotice.reason);
   }
   // 일시적 2주택 · 합가 의제가 깨져 주택 수 축이 서지 않으면 아래 자체 §154① 문장이 나가지 않는다 — 정본 요건 검토표의
