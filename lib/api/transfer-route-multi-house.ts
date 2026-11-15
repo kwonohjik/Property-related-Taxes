@@ -98,6 +98,9 @@ export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[]
     rentalStartDate: toOptionalDate(h.rentalStartDate),
     rentalEndDate: toOptionalDate(h.rentalEndDate),
     decedentRentalMonths: h.decedentRentalMonths,
+    decedentBusinessRegistrationDate: toOptionalDate(h.decedentBusinessRegistrationDate), // 1959 가·다목 상한
+    decedentRentalRegistrationDate: toOptionalDate(h.decedentRentalRegistrationDate),
+    decedentRentalRegisteredDate: toOptionalDate(h.decedentRentalRegisteredDate),
     rentalCancelledDate: toOptionalDate(h.rentalCancelledDate),
     rentalCancellationReason: h.rentalCancellationReason, // §167의3①2호 단서
     rentalGiftDonorHousehold: h.rentalGiftDonorHousehold, // S-4 별도세대 증여 전 말소

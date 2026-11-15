@@ -334,14 +334,18 @@ export function aptTransferDeadlineConfirmReasons(house: HouseInfo, transferDate
  * 가·다목 등록상한 2018.4.2 — 다주택 전용 잔여 게이트.
  * (§155⑳ derive는 2020.7.11 경계로 가/다목을 도출하므로 공용 predicate에 넣으면 §155⑳ 회귀.)
  * 사목(base 가/다)도 "해당 목의 다른 요건"에 이 등록상한이 포함되므로 동일 검사(F-S1).
+ * 상속받아 계속 임대하는 주택은 피상속인 등록일로 본다(서면-2020-법규재산-1959 — 피상속인이 2018.3.31. 전 등록 → 가목).
  */
 function passesRegistrationCap(house: HouseInfo, article: SharedRentalArticle): boolean {
   const regBoundArticle = article === "사" ? house.saMokBaseArticle : article;
   if (regBoundArticle === "가" || regBoundArticle === "다") {
-    const bizTs = house.businessRegistrationDate!.getTime();
+    const decedent = !!house.decedentBusinessRegistrationDate && !!house.decedentRentalRegistrationDate;
+    const biz = decedent ? house.decedentBusinessRegistrationDate! : house.businessRegistrationDate!;
     // 「2018년 3월 31일까지 사업자등록등」 — 지자체는 등록일(서면-2021-법규재산-3280 · V-3)
-    const rentTs = registeredDateOf(house.rentalRegisteredDate, house.rentalRegistrationDate)!.getTime();
-    if (bizTs > RA_CUT.Y2018_04_02 || rentTs > RA_CUT.Y2018_04_02) return false;
+    const registered = decedent
+      ? registeredDateOf(house.decedentRentalRegisteredDate, house.decedentRentalRegistrationDate)!
+      : registeredDateOf(house.rentalRegisteredDate, house.rentalRegistrationDate)!;
+    if (biz.getTime() > RA_CUT.Y2018_04_02 || registered.getTime() > RA_CUT.Y2018_04_02) return false;
   }
   return true;
 }

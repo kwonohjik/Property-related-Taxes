@@ -29,6 +29,7 @@ type Disposition = "carried" | string;
 const RENTAL_KEYS = [
   "isLongTermRental", "isApartment", "isRegisteredRental", "rentalRegistrationDate", "rentalRegisteredDate", "businessRegistrationDate", "rentalPeriodYears",
   "rentalStartDate", "rentalEndDate", "isInheritedRental", "decedentRentalMonths",
+  "decedentBusinessRegistrationDate", "decedentRentalRegistrationDate", "decedentRentalRegisteredDate",
   "rentalCancelledDate", "rentalCancellationReason", "rentalGiftDonorHousehold", "rentalType", "rentIncreaseUnder5Pct", "rentIncreaseContractDate",
   "isNationalSizeHousing", "hasMinimum2Units", "hasMinimum5UnitsInCity", "rentalLandArea", "rentalTotalFloorArea", "isConvertedToSale",
   "firstSaleContractDate", "acquisitionOfficialPrice", "rentalStartOfficialPrice", "hasHalfDutyPeriodMet", "isSoldWithin1YearOfCancellation",
@@ -127,6 +128,9 @@ export const ROW_FIELD_DISPOSITION = {
   rentalEndDate: "carried",
   isInheritedRental: "carried",
   decedentRentalMonths: "carried",
+  decedentBusinessRegistrationDate: "carried",
+  decedentRentalRegistrationDate: "carried",
+  decedentRentalRegisteredDate: "carried",
   rentalCancelledDate: "carried",
   rentalCancellationReason: "carried",
   rentalGiftDonorHousehold: "carried",

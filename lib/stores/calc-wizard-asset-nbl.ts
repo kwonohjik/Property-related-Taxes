@@ -364,6 +364,13 @@ export interface HouseEntry {
   isInheritedRental?: boolean;
   /** 2호 상속 — 피상속인 임대개월(문자열). `isInheritedRental`일 때만 ④가 싣는다 */
   decedentRentalMonths?: string;
+  /**
+   * 2호 상속 — 피상속인의 세무서 사업자등록일·지자체 등록 신청일·등록일(YYYY-MM-DD, 선택). 가·다목 「2018년 3월 31일까지
+   * 사업자등록등」만 이 날짜로 본다(서면-2020-법규재산-1959). 앞의 두 날짜가 다 있을 때만 ④가 싣는다(`rentalPeriodDatesPayload`).
+   */
+  decedentBusinessRegistrationDate?: string;
+  decedentRentalRegistrationDate?: string;
+  decedentRentalRegisteredDate?: string;
   /** 임대사업자 말소일 (양도일 이전 말소 시 임대 배제 해제) */
   rentalCancelledDate?: string;
   /** 말소 사유 — 자동말소면 가·다~마목은 §167의3①2호 단서로 임대기간요건 간주 충족. ""·undefined = 미선택 */

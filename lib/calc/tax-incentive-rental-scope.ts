@@ -132,33 +132,50 @@ export function taxIncentiveRentalPeriodMissing(f: TaxIncentiveRentalFacts | und
  * ④ 2호 임대기간 사실 → `houseSchema` 필드(양도 주택 2호 선언·명부 행 공용). 연수는 싣지 않는다(Q-3).
  * 피상속인 개월은 「상속받아 계속 임대」가 켜져 있고 값이 있을 때만(조특령 §97⑤3호).
  */
-export function rentalPeriodDatesPayload(r: {
-  rentalStartDate?: string;
-  rentalEndDate?: string;
-  isInheritedRental?: boolean;
-  decedentRentalMonths?: string;
-}): object {
+export function rentalPeriodDatesPayload(r: RentalPeriodSuccessionFacts): object {
   const decedent = r.isInheritedRental ? parseFloat(r.decedentRentalMonths ?? "") : NaN;
+  const reg = decedentRegistrationInScope(r);
   return {
     rentalStartDate: r.rentalStartDate || undefined,
     rentalEndDate: r.rentalEndDate || undefined,
     decedentRentalMonths: decedent > 0 ? decedent : undefined,
+    // 피상속인 등록 사실(1959) — 상속이고 사업자등록일·신청일이 다 있을 때만(⑧이 반쪽 입력을 막는다)
+    decedentBusinessRegistrationDate: reg ? r.decedentBusinessRegistrationDate : undefined,
+    decedentRentalRegistrationDate: reg ? r.decedentRentalRegistrationDate : undefined,
+    decedentRentalRegisteredDate: reg ? r.decedentRentalRegisteredDate || undefined : undefined,
   };
+}
+
+type RentalPeriodSuccessionFacts = {
+  rentalStartDate?: string;
+  rentalEndDate?: string;
+  isInheritedRental?: boolean;
+  decedentRentalMonths?: string;
+  decedentBusinessRegistrationDate?: string;
+  decedentRentalRegistrationDate?: string;
+  decedentRentalRegisteredDate?: string;
+};
+
+/** 피상속인 등록 사실을 싣는가 — 상속 + 사업자등록일·지자체 신청일 둘 다(④·⑧ 공용 술어) */
+function decedentRegistrationInScope(r: RentalPeriodSuccessionFacts): boolean {
+  return !!r.isInheritedRental && !!r.decedentBusinessRegistrationDate && !!r.decedentRentalRegistrationDate;
 }
 
 /**
  * ⑧ 2호 임대기간 입력 문제 — 개시일 필수 여부는 호출부가 정하고(현행과 같은 범위), 여기서는 날짜 역전·상속 개월 미입력만 본다.
  */
-export function rentalPeriodDatesIssue(r: {
-  rentalStartDate?: string;
-  rentalEndDate?: string;
-  isInheritedRental?: boolean;
-  decedentRentalMonths?: string;
-}): string | null {
+export function rentalPeriodDatesIssue(r: RentalPeriodSuccessionFacts): string | null {
   if (r.rentalStartDate && r.rentalEndDate && r.rentalEndDate < r.rentalStartDate)
     return "임대 종료일은 임대개시일 이후여야 합니다.";
   if (r.isInheritedRental && !(parseFloat(r.decedentRentalMonths ?? "") > 0))
     return "상속받아 계속 임대하는 주택이면 피상속인 임대기간(개월)을 입력하세요.";
+  if (r.isInheritedRental) {
+    const any = !!(r.decedentBusinessRegistrationDate || r.decedentRentalRegistrationDate || r.decedentRentalRegisteredDate);
+    if (any && !decedentRegistrationInScope(r))
+      return "피상속인 등록 사실을 넣으려면 세무서 사업자등록일과 지자체 임대사업자 등록 신청일을 함께 입력하세요.";
+    if (r.decedentRentalRegisteredDate && r.decedentRentalRegistrationDate && r.decedentRentalRegisteredDate < r.decedentRentalRegistrationDate)
+      return "피상속인 임대사업자 등록일은 등록 신청일 이후여야 합니다.";
+  }
   return null;
 }
 
