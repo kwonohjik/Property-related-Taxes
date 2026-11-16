@@ -174,6 +174,65 @@ describe("묶음 안 겸용 BG — 증여자 상속 취득(§163⑨ 평가액 = 
   });
 });
 
+describe("묶음 안 겸용 BG — 의제취득일 전(1985.1.1. 전)·§163⑨ 단서 구간(2005.4.30. 전) 상속 취득 · PHD(§164⑦) — `calcMixedSec163_9Compare`가 파트 카드 경로에서도 돈다", () => {
+  /** 1983 상속 · PHD(의제취득일 기준) — 평가액 ①·②§164⑦·③환산 3자 비교(era pre_deemed) */
+  const Y83 = x({
+    acquisitionCause: "inheritance", acquisitionDate: "1983-03-15", inheritanceStartDate: "1983-03-15", decedentAcquisitionDate: "1970-01-01",
+    usePreHousingDisclosure: true, phdFirstDisclosureDate: "2005-04-30", phdFirstDisclosureHousingPrice: "250000000", phdLandPricePerSqmAtFirst: "1600000", phdLandPricePerSqmAtAcq: "800000",
+    phdBuildingStdPriceAtAcq: "25000000", phdBuildingStdPriceAtFirst: "45000000", phdBuildingStdPriceAtTransfer: "100000000", mixedAcqLandPricePerSqm: "800000", mixedAcqCommercialBuildingPrice: "30000000",
+  });
+  /** 1995 상속 · PHD — 단서 구간 ①평가액·②§164⑦ 2자 비교(era clause) · 최초 고시일 2005-04-30 */
+  const Y95 = x({
+    acquisitionCause: "inheritance", acquisitionDate: "1995-03-15", inheritanceStartDate: "1995-03-15", decedentAcquisitionDate: "1980-01-01",
+    usePreHousingDisclosure: true, phdFirstDisclosureDate: "2005-04-30", phdFirstDisclosureHousingPrice: "250000000", phdLandPricePerSqmAtFirst: "1600000", phdLandPricePerSqmAtAcq: "800000",
+    phdBuildingStdPriceAtAcq: "25000000", phdBuildingStdPriceAtFirst: "45000000", phdBuildingStdPriceAtTransfer: "100000000", mixedAcqHousingPrice: "", mixedAcqLandPricePerSqm: "800000", mixedAcqCommercialBuildingPrice: "30000000",
+  });
+  const MKT_INH = x({ bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1500000000", bgHousingAppraisalDeclared: "none", bgAcquisitionMethod: "", bgActualAcquisitionTotal: "" });
+  const RV = (h: string, c: string) => x({ mixedHousingInheritedValueOverride: h, mixedCommercialInheritedValueOverride: c });
+  const hm = (id: number, debt: string) => house(id, debt, x({ bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "750000000", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "300000000" }));
+
+  async function pair(over: Partial<AssetForm>[]) {
+    const f = bundle([hm(1, "200000000"), mixed(2, "600000000", MKT_INH, ...over)]);
+    expect(allIssues(f)).toEqual([]);
+    const r = await post(f);
+    expect(r.status).toBe(200);
+    const ov = [r.body.burdenedGiftInfo.assumedDebtOverride, r.body.companionAssets[0].burdenedGiftInfo.assumedDebtOverride];
+    expect(ov).toEqual([266_666_666, 533_333_334]);
+    const h1 = await post(single(hm(1, String(ov[0]))));
+    const m1 = await post(single(mixed(1, String(ov[1]), MKT_INH, ...over)));
+    expect(m1.status).toBe(200);
+    expect(r.j.data.aggregated.totalTransferGain).toBe(gainOfSingle(h1.j) + gainOfSingle(m1.j));
+    const d = r.j.data.aggregated.mixedUseBgDetailsByAsset.m2 as Loose;
+    const sd = m1.j.data.result.burdenedGift as Loose;
+    // 서브엔진이 비교(채택 후보)까지 단건과 같이 돌았다 — 취득가액 4부분·취득 경로·deemed 기준 echo가 같다
+    for (const k of ["housingLand", "housingBuilding", "commercialLand", "commercialBuilding"]) expect(d.perPart[k].acquisitionPrice).toBe(sd.perPart[k].acquisitionPrice);
+    expect(d.acquisitionMethodUsed).toBe(sd.acquisitionMethodUsed);
+    expect(d.deemedBasis).toEqual(sd.deemedBasis);
+    return { r, d, sd };
+  }
+
+  it("[CP-12] 1983 상속(의제취득일 전) · ① 3.5억씩 → ① 채택(deemedBasis reported) · 단건 합 일치 · 비교 후보 ②③은 채무비율 전 합계", async () => {
+    const { d } = await pair([Y83, RV("350000000", "350000000")]);
+    expect(d.deemedBasis).toMatchObject({ housing: "reported", commercial: "reported", housingPhd: true });
+    expect(d.acquisitionStdAtDeemedDate).toBe(true);
+  });
+
+  it("[CP-12b] 1983 상속 · ① 비움 → ③ 환산취득가액(converted_pre_deemed) 채택 · 단건 합 일치", async () => {
+    const { d } = await pair([Y83, RV("", "")]);
+    expect(d.acquisitionMethodUsed).toBe("converted");
+  });
+
+  it("[CP-13] 1995 상속(§163⑨ 단서 구간) · ① 3.5억씩 → ① 채택 · 단건 합 일치", async () => {
+    const { d } = await pair([Y95, RV("350000000", "350000000")]);
+    expect(d.deemedBasis).toMatchObject({ housing: "reported", commercial: "reported", housingPhd: true });
+  });
+
+  it("[CP-13b] 1995 상속 · ① 1억씩 < ②(§164⑦) → ② 채택(deemedBasis standard) · 단건 합 일치", async () => {
+    const { d } = await pair([Y95, RV("100000000", "100000000")]);
+    expect(d.deemedBasis.housing).toBe("standard");
+  });
+});
+
 describe("묶음 × 공유지분 — 컴패니언·주 자산 겸용이 지분 50%인 함께 양도 (PR-A 단건 규약 위)", () => {
   const SH = x({ ownershipNumerator: "50", ownershipDenominator: "100", ownershipRemainderThirdParty: "yes" });
   it("[CP-8] 컴패니언 겸용 지분 50% · 인수 채무 3억 + 주택 채무 2억 → 200 · B_i = [2.5억, 2.5억] · 양도차익 242,500,006 = 단건 합 · 증여가액 12억(주택 6억 + 겸용 지분분 6억)", async () => {
