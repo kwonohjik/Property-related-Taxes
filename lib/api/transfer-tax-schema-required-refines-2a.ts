@@ -44,6 +44,8 @@ import {
 import { refineSplitCarryoverValues } from "./transfer-tax-schema-split-carryover";
 import { refineLandRebuild } from "./transfer-tax-schema-land-rebuild";
 import { refinePreDeemedAcquisitionSource } from "./transfer-tax-schema-pre-deemed-source";
+import { isAppurtenantLandPrimary } from "./transfer-tax-schema-household-refines";
+import { refineAppurtenantCardLandHolding } from "./transfer-tax-schema-household-refines";
 
 type Issue = (path: (string | number)[], message: string) => void;
 const issuer = (ctx: z.RefinementCtx): Issue => (path, message) =>
@@ -129,6 +131,9 @@ export type Required2aLike = {
   buildingCarryoverPart?: SplitCarryoverPartLike;
   carryoverTaxation?: unknown;
   companionAssets?: ReadonlyArray<unknown>;
+  // 역방향 G1 — 주 자산이 주택 부수토지인지 · 짝 주택 정착면적(카드에 없을 때 route가 쓰는 값)
+  landNature?: string;
+  buildingFootprintArea?: number;
   isSeparateAcquisition?: boolean;
   landAcqMode?: string;
   buildingAcqMode?: string;
@@ -661,7 +666,11 @@ export function refineRequiredInputs2a(d: Required2aLike, ctx: z.RefinementCtx) 
   refineHouseFirstDisclosureDate(d.houseFirstDisclosureDate, d.transferDate, ctx);
   refineApartNtsPrice(d.inheritedAcquisition as ApartNtsLike | undefined, !!d.inheritedHouseValuation, d.transferDate, ctx);
   refineSplitAcquisitionInputs(d, ctx);
-  refineSplitPartCause(d, d.propertyType === "housing" || d.propertyType === "building", d.propertyType === "housing", ctx, [], {
+  // 주 자산이 주택 부수토지면(역방향 G1) 토지 보유기간 중 거주 개월은 카드 규칙(짝 주택 = 함께 양도 주택)으로 받는다 — 분리취득 leaf에는 넘기지 않는다
+  //   (분리 대상이 아니라 게이트가 stray로 막는다). 컴패니언 부수토지 카드와 같은 leaf(`refineAppurtenantCardLandHolding`).
+  const appurtenantPrimary = isAppurtenantLandPrimary(d);
+  if (appurtenantPrimary) refineAppurtenantCardLandHolding({ assetKind: "land", landNature: d.landNature, acquisitionDate: d.acquisitionDate, landHoldingResidenceMonths: d.landHoldingResidenceMonths }, d, ctx, []);
+  refineSplitPartCause(appurtenantPrimary ? { ...d, landHoldingResidenceMonths: undefined } : d, d.propertyType === "housing" || d.propertyType === "building", d.propertyType === "housing", ctx, [], {
     supported: true,
     hasCompanions: (d.companionAssets?.length ?? 0) > 0,
   });

@@ -16,6 +16,8 @@ import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { effectiveSelfOwns, selfOwnsSplitApplicable } from "./self-owns-scope";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { primaryEnginePropertyType } from "./transfer-tax-api-helpers";
+import { mergePrimaryBasic } from "./transfer-tax-api-helpers";
+import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 
 export function buildLandHoldingResidencePayload(
@@ -116,9 +118,13 @@ export function buildMixedLandHoldingResidencePayload(
 export function landHoldingResidenceDirectHintApplies(
   residenceAsset: AssetForm,
   formAssets: readonly AssetForm[],
+  assetSplitMode?: "companion" | "fractional",
 ): boolean {
   if (residenceAsset.residenceInputMode !== "direct") return false;
   if (landHoldingResidenceApplies(residenceAsset) || mixedLandHoldingResidenceApplies(residenceAsset)) return true;
   const first = formAssets[0];
-  return !!first && first.assetId === residenceAsset.assetId && formAssets.slice(1).some((card) => appurtenantCardAfterPrimaryHouse(card, first));
+  if (!first || first.assetId !== residenceAsset.assetId) return false;
+  // 축 B 지분 카드는 거주를 첫 지분 칸에서 승계한다 — 지분 카드가 토지를 건물보다 나중에 취득했으면 같은 칸 입력이 그 지분의 토지 보유 개월로 잘린다(④ `shareLandHolding`과 같은 병합 사본).
+  if (isFullFractionalBundle([...formAssets], assetSplitMode) && formAssets.slice(1).some((s) => landHoldingResidenceApplies(mergePrimaryBasic(s, first)))) return true;
+  return formAssets.slice(1).some((card) => appurtenantCardAfterPrimaryHouse(card, first));
 }

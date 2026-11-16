@@ -11,6 +11,7 @@ import { z } from "zod";
 import { directResidenceMonthsOverflowError } from "@/lib/calc/residence-interval-validate";
 import { residenceStartWithMerge } from "@/lib/calc/self-owns-scope";
 import { collectAppurtenantCardHoldingResidenceIssues } from "@/lib/tax-engine/transfer-land-holding-residence";
+import { reverseAppurtenantWireHouse } from "./reverse-appurtenant-wire";
 import { refineBgOwnerSplit } from "./transfer-tax-schema-bg-owner-split";
 import { refineBgGiftBuildingStd } from "./transfer-tax-schema-bg-gift-std";
 
@@ -344,25 +345,54 @@ export function residenceMonthsOverflowIssue(d: ResidenceCapFacts & {
     : msg;
 }
 
+type PairHouseBody = {
+  propertyType?: string;
+  landNature?: string;
+  acquisitionDate?: string;
+  residencePeriodMonths?: number;
+  buildingFootprintArea?: number;
+  companionAssets?: ReadonlyArray<unknown>;
+};
+type PairHouseCompanion = { assetKind?: string; acquisitionDate?: string; buildingFootprintArea?: number; residencePeriodMonths?: number };
+
 /**
- * 함께 양도 주택 부수토지 카드의 「토지 보유기간 중 거주 개월」(구간 입력 · ④가 계산) — 엔진과 같은 leaf(`collectAppurtenantCardHoldingResidenceIssues`).
- * 카드 모양이 아닌 컴패니언의 값은 분리취득 leaf(`refineSplitPartCause`)가 받는다. 거주 합계는 카드 자신의 값, 없으면 주 자산 값(⑭ 승계와 같은 식).
+ * 주택 부수토지의 **짝 주택** — 부수토지가 거주를 승계하는 주택(⑭와 같은 식).
+ *  - 주 자산이 주택이면 주 자산(거주 합계 = 주 자산 값).
+ *  - 주 자산이 부수토지인 역방향(G1)이면 route가 단위를 만드는 그 함께 양도 주택(`reverseAppurtenantWireHouse`) — 거주 합계 = 주택 카드 값, 없으면 주 자산 값
+ *    (`bundled-reverse-appurtenant.ts` `houseResidenceMonths`).
+ *  - 그 밖은 없다(카드가 승계할 주택 거주가 없다).
+ */
+function appurtenantPairHouseOf(data: PairHouseBody): { acquisitionDate?: string; residencePeriodMonths?: number } | undefined {
+  if (data.propertyType === "housing") return { acquisitionDate: data.acquisitionDate, residencePeriodMonths: data.residencePeriodMonths };
+  const house = reverseAppurtenantWireHouse(data, (data.companionAssets ?? []) as readonly PairHouseCompanion[], data.buildingFootprintArea);
+  return house ? { acquisitionDate: house.acquisitionDate, residencePeriodMonths: house.residencePeriodMonths ?? data.residencePeriodMonths } : undefined;
+}
+
+/**
+ * 주택 부수토지(함께 양도 카드 · 역방향 G1의 첫 자산 토지)의 「토지 보유기간 중 거주 개월」(구간 입력 · ④가 계산) — 엔진과 같은 leaf(`collectAppurtenantCardHoldingResidenceIssues`).
+ * 카드 모양이 아닌 컴패니언의 값은 분리취득 leaf(`refineSplitPartCause`)가 받는다. 거주 합계는 카드 자신의 값, 없으면 짝 주택 값(⑭ 승계와 같은 식).
  */
 export function refineAppurtenantCardLandHolding(
   c: { assetKind?: string; landNature?: string; acquisitionDate?: string; residencePeriodMonths?: number; landHoldingResidenceMonths?: number },
-  data: { propertyType?: string; acquisitionDate?: string; residencePeriodMonths?: number },
+  data: PairHouseBody,
   ctx: z.RefinementCtx,
   prefix: (string | number)[],
 ) {
+  const pair = appurtenantPairHouseOf(data);
   const [issue] = collectAppurtenantCardHoldingResidenceIssues({
     landHoldingResidenceMonths: c.landHoldingResidenceMonths,
-    residencePeriodMonths: c.residencePeriodMonths ?? data.residencePeriodMonths,
+    residencePeriodMonths: c.residencePeriodMonths ?? pair?.residencePeriodMonths,
     isAppurtenantLandCard: isAppurtenantLandCard(c),
-    primaryIsHousing: data.propertyType === "housing",
+    primaryIsHousing: !!pair,
     cardAcquisitionDate: c.acquisitionDate,
-    primaryAcquisitionDate: data.acquisitionDate,
+    primaryAcquisitionDate: pair?.acquisitionDate,
   });
   if (issue) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...prefix, issue.field], message: issue.message });
+}
+
+/** 주 자산이 주택 부수토지(토지 · `appurtenant_to_housing`)인가 — 그 토지 보유기간 중 거주 개월은 카드 규칙(짝 주택 기준)으로 받는다(역방향 G1). */
+export function isAppurtenantLandPrimary(d: { propertyType?: string; landNature?: string }): boolean {
+  return d.propertyType === "land" && d.landNature === "appurtenant_to_housing";
 }
 
 /** 함께 양도 주택 부수토지 카드인가 — ⑫ 컴패니언 모양(`assetKind` land + `landNature` appurtenant_to_housing). */

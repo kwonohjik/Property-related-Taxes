@@ -126,17 +126,18 @@ export function collectLandHoldingResidenceIssues(f: SplitPartCauseFacts): Split
 }
 
 export const LAND_HOLDING_RESIDENCE_CARD_GATE_MESSAGE =
-  "토지 보유기간 중 거주 개월 수(landHoldingResidenceMonths)는 함께 양도하는 주택 부수토지 카드를 첫 번째 주택(주 자산)보다 나중에 취득한 경우에만 입력할 수 있습니다 — "
+  "토지 보유기간 중 거주 개월 수(landHoldingResidenceMonths)는 주택 부수토지를 짝 주택(첫 번째 자산인 주택, 첫 번째 자산이 부수토지면 함께 양도하는 주택 1건)보다 나중에 취득한 경우에만 입력할 수 있습니다 — "
   + "조용히 버려지지 않도록 막습니다";
 
 /**
  * 함께 양도 **주택 부수토지 카드**(L-1b) — 구간 입력의 카드 보유기간 중 거주 개월(④가 주 자산 거주 구간 ∩ [카드 취득일, 양도일]).
  * 카드는 거주를 주 자산에서 승계하므로(`bundled-split-helpers.ts`) 값은 승계할 거주 합계 이하여야 한다.
- * 게이트: 주 자산이 주택 · 카드가 주택 부수토지 · 카드 취득일 > 주 주택 취득일. ⑫가 컴패니언 모양에서 이 함수를 부른다(분리취득 leaf와 모양이 달라 따로 둔다).
+ * 게이트: 짝 주택이 있다(주 자산 주택, 또는 역방향 G1의 함께 양도 주택 — ⑫ `appurtenantPairHouseOf`) · 카드가 주택 부수토지 · 카드 취득일 > 짝 주택 취득일.
+ * ⑫가 컴패니언 모양과 역방향 첫 자산 토지에서 이 함수를 부른다(분리취득 leaf와 모양이 달라 따로 둔다).
  */
 export function collectAppurtenantCardHoldingResidenceIssues(f: {
   landHoldingResidenceMonths?: number;
-  /** 카드가 승계할 거주 합계 — 카드 자신의 값이 없으면 주 자산 값. 모르면 상한 검사를 건너뛴다 */
+  /** 카드가 승계할 거주 합계 — 카드 자신의 값이 없으면 짝 주택 값. 모르면 상한 검사를 건너뛴다 */
   residencePeriodMonths?: number;
   isAppurtenantLandCard: boolean;
   primaryIsHousing: boolean;

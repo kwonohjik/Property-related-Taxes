@@ -18,6 +18,7 @@
 import type { z } from "zod";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { companionAssetSchema } from "@/lib/api/transfer-tax-schema-sub";
+import { reverseAppurtenantWireHouse } from "@/lib/api/reverse-appurtenant-wire";
 import {
   appurtenantLimitShareOf,
   resolveCompanionSplit,
@@ -27,9 +28,6 @@ import {
 
 type CompanionRawAsset = z.infer<typeof companionAssetSchema>;
 type HouseCtx = NonNullable<TransferTaxItemInput["primaryContextForCompanionRate"]>;
-
-/** 주택 계열 컴패니언 — 이 중 하나라도 일반 주택이 아니거나 2건 이상이면 짝 주택을 정하지 않는다. */
-const HOUSE_LIKE_KINDS: ReadonlySet<string> = new Set(["housing", "mixed_use_house", "redevelopment_apt"]);
 
 export interface ReverseAppurtenantUnit {
   houseAssetId: string;
@@ -55,12 +53,11 @@ export function resolveReverseAppurtenantUnit(
   companions: readonly CompanionRawAsset[],
   houseCtx: HouseCtx | undefined,
 ): ReverseAppurtenantUnit | undefined {
-  if (primary.propertyType !== "land" || primary.landNature !== "appurtenant_to_housing") return undefined;
-  const houseLike = companions.filter((c) => HOUSE_LIKE_KINDS.has(c.assetKind));
-  if (houseLike.length !== 1 || houseLike[0].assetKind !== "housing") return undefined;
+  // 짝 주택 판정은 ⑫와 같은 술어다(`reverse-appurtenant-wire.ts`) — ⑫가 부수토지의 토지 보유기간 중 거주 개월을 이 주택 기준으로 받는다.
+  //   `houseCtx`는 같은 주택 카드에서 만든 값이다(`resolveHousingContextFromCompanion` — 정착면적은 카드 값, 없으면 주 자산 값).
+  const house = reverseAppurtenantWireHouse(primary, companions, houseCtx?.buildingFootprintArea);
   const footprint = houseCtx?.buildingFootprintArea;
-  if (!houseCtx || footprint === undefined || !(footprint > 0)) return undefined;
-  const house = houseLike[0];
+  if (!house || !houseCtx || footprint === undefined) return undefined;
   const primaryLandAreaM2 = primary.transferArea ?? primary.acquisitionArea;
   return {
     houseAssetId: house.assetId,
