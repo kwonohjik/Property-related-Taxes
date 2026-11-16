@@ -113,6 +113,7 @@ function rowFor(unit: RentalUnitInput, index: number, transferDate: Date, rental
       ? {
           rentalCancelledDate: unit.registrationCancellationDate ?? transferDate,
           rentalCancellationReason: unit.terminationReason,
+          preAddendaDemolished: unit.preAddendaDemolished, // V-10 — 2020.8.18. 전 멸실 답(⑳과 같은 사실)
         }
       : {}),
   };

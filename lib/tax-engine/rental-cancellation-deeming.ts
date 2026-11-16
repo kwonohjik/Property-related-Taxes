@@ -22,6 +22,11 @@
  * 말소일을 2020.8.18.로 읽는다(Q-3). 단서는 이 간주 말소에도 적용된다: 서면-2021-법규재산-6391(→기획재정부 재산세제과-861,
  * 2022.8.1.) 사실관계 「2003.03. 단기 등록 → 2020.08.18. 자동말소」에 「각목 외 부분 단서에 따라 중과배제 적용 가능」.
  * 양도일이 2020.8.18. 전이면 양도 당시 등록은 살아 있었다(`none`). §155⑳ 쪽 같은 간주는 `effectiveCancellationDate`.
+ *
+ * **2020.8.18. 전 멸실**(V-10 후속 · 사용자 결정 2026-11-16 「카드 답만 중과에 전달」): 서면-2022-법규재산-3118(→ 기획재정부
+ * 조세정책과-2231, 2024.12.9.)은 2020.8.18. 전에 재건축으로 멸실된 임대주택을 부칙 제7조에 따라 자동말소된 것으로 볼 수 없다고 했다
+ * (§155㉓ 질의). 단서도 같은 간주 말소에 기대므로(6391 → 861) ⑳ 카드에서 멸실 「예」로 답한 호는 `not_deemed`로 본다 — 중과 단서를
+ * 직접 다룬 해석은 확인하지 못해 확인 필요 고지(`addenda7DeemedCancellationNotices`). 명부 행은 묻지 않고 고지만 덧붙인다.
  */
 import { MULTI_HOUSE, RENTAL_REGISTRATION_4HO } from "./legal-codes";
 import { RA_CUT } from "./rental-article/rules";
@@ -55,10 +60,16 @@ export function effectiveRentalCancelledTs(house: HouseInfo): number | undefined
   return isAddenda7DeemedCancellation(house) ? RA_CUT.Y2020_08_18 : house.rentalCancelledDate.getTime();
 }
 
+/** V-10 후속 — 부칙 제7조 간주 대상인데 2020.8.18. 전에 멸실됐다고 답한 호(⑳ 카드 답 · 3118 · 2231). */
+export function isPreAddendaDemolishedCancellation(house: HouseInfo): boolean {
+  return isAddenda7DeemedCancellation(house) && house.preAddendaDemolished === true;
+}
+
 export function rentalCancellationStatus(house: HouseInfo, transferDate: Date): RentalCancellationStatus {
   const cancelledTs = effectiveRentalCancelledTs(house);
   if (cancelledTs === undefined || cancelledTs > transferDate.getTime()) return "none";
   if (house.rentalCancellationReason === "after_duty") return "after_duty";
+  if (isPreAddendaDemolishedCancellation(house)) return "not_deemed";
   // 자동말소면 말소일은 늘 2020.8.18. 이후다(그 전 날짜는 위 간주로 2020.8.18.).
   return house.rentalCancellationReason === "auto" && house.rentalType != null && PROVISO_TYPES.has(house.rentalType)
     ? "auto_deemed"
@@ -114,6 +125,9 @@ export function rentalCancellationNotices(
   );
 }
 
+/** 서면-2022-법규재산-3118 · 기획재정부 조세정책과-2231(2024.12.9.) */
+const PRE_ADDENDA_DEMOLITION_RULING = "서면-2022-법규재산-3118(기획재정부 조세정책과-2231, 2024.12.9.)";
+
 /**
  * Q-3 — 부칙 제7조로 말소일을 2020.8.18.로 읽은 장기임대주택을 알린다(결론과 무관하게 · ⑳ 쪽 `deemedAutoCancellationNotice`의 짝).
  */
@@ -124,9 +138,21 @@ export function addenda7DeemedCancellationNotices(input: MultiHouseSurchargeInpu
       const head =
         `${houseLabel(h.id)}: 임대의무기간이 2020.8.18. 전(${h.rentalCancelledDate!.toISOString().slice(0, 10)})에 끝나 ` +
         `법률 제17482호 민간임대주택에 관한 특별법 부칙 제7조에 따라 2020.8.18.에 등록이 말소된 것으로 봅니다`;
-      return rentalCancellationStatus(h, input.transferDate) === "none"
-        ? `${head} — 양도일(${input.transferDate.toISOString().slice(0, 10)})에는 아직 등록 중인 주택으로 판정했습니다.`
-        : `${head}. 이 간주 말소에도 ${MULTI_HOUSE.LONG_TERM_RENTAL_AUTO_CANCEL_PROVISO}(임대기간요건을 갖춘 것으로 봄)를 적용했습니다(서면-2021-법규재산-6391 → 기획재정부 재산세제과-861).`;
+      if (rentalCancellationStatus(h, input.transferDate) === "none") {
+        return `${head} — 양도일(${input.transferDate.toISOString().slice(0, 10)})에는 아직 등록 중인 주택으로 판정했습니다.`;
+      }
+      if (isPreAddendaDemolishedCancellation(h)) {
+        return (
+          `${houseLabel(h.id)}: 2020.8.18. 전에 재건축·재개발 등으로 멸실된 임대주택이라 법률 제17482호 민간임대주택에 관한 특별법 부칙 제7조에 따라 ` +
+          `자동말소된 것으로 보지 않아 장기임대주택(${MULTI_HOUSE.LONG_TERM_RENTAL_EXCLUSION_BASIS})으로 보지 않았습니다 — ` +
+          `${PRE_ADDENDA_DEMOLITION_RULING}은 거주주택 비과세(§155㉓) 질의이고, ${MULTI_HOUSE.LONG_TERM_RENTAL_AUTO_CANCEL_PROVISO}에 같은 결론을 적용한 해석은 확인하지 못했습니다(확인 필요).`
+        );
+      }
+      const applied = `${head}. 이 간주 말소에도 ${MULTI_HOUSE.LONG_TERM_RENTAL_AUTO_CANCEL_PROVISO}(임대기간요건을 갖춘 것으로 봄)를 적용했습니다(서면-2021-법규재산-6391 → 기획재정부 재산세제과-861).`;
+      // 명부 행은 멸실 여부를 묻지 않는다(⑳ 카드 행은 「아니오」 = false가 온다).
+      return h.preAddendaDemolished === undefined
+        ? `${applied} 2020.8.18. 전에 재건축·재개발 등으로 멸실된 주택이면 부칙 제7조에 따라 자동말소된 것으로 볼 수 없다는 해석(${PRE_ADDENDA_DEMOLITION_RULING} — §155㉓)이 있어 결론이 달라질 수 있습니다(확인 필요).`
+        : applied;
     });
 }
 
