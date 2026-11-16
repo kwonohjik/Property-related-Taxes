@@ -183,7 +183,7 @@ describe("AA-4 범위 밖 — 주택 외·이월과세는 정확한 사유로 �
     const m = issues(companionForm([house(1, debt("1200000000")), redev(2)])).map((i) => i.message).filter((t) => t.includes(GATE));
     expect(m).toEqual([]);
   });
-  it("술어 — 주택·토지·일반건물 지분은 풀리고 입주권·겸용은 지분 여부와 무관하게 막힌다", () => {
+  it("술어(묶음 게이트용) — 주택·토지·일반건물 지분은 풀리고 입주권·겸용은 지분 여부와 무관하게 막힌다(겸용 지분 단건은 이 술어가 아니라 엔진 판정을 따른다)", () => {
     const base = (over: Partial<AssetForm>) => house(1, HALF, debt("700000000"), over);
     expect(bgNonSupplementaryWinnerUnsupported(base(x({})))).toBe(false);
     expect(bgNonSupplementaryWinnerUnsupported(base(x({ assetKind: "right_to_move_in" })))).toBe(true);

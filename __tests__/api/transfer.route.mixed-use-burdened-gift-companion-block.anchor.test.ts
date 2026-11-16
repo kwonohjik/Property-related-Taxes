@@ -167,7 +167,7 @@ describe("컴패니언 겸용주택 × 부담부증여 — MB-6 차단 (API)", (
     body.companionAssets[idx].transferType = "burdened_gift";
     const res = await post(body);
     expect(res.status).toBe(400);
-    expect(res.text).toMatch(/단독 소유 단건만 지원합니다/);
+    expect(res.text).toMatch(/함께 양도\(여러 물건\)·지분 분할 취득과 함께 계산할 수 없습니다/);
     expect(res.text).toMatch(new RegExp(`companionAssets.*${idx}|"fieldErrors"`));
   });
 
@@ -184,6 +184,6 @@ describe("컴패니언 겸용주택 × 부담부증여 — MB-6 차단 (API)", (
     const body = { ...(r.body as object), transferType: "burdened_gift", burdenedGiftInfo: BG_INFO };
     const res = await post(body);
     expect(res.status).toBe(400);
-    expect(res.text).toMatch(/단독 소유 단건만 지원합니다/);
+    expect(res.text).toMatch(/함께 양도\(여러 물건\)·지분 분할 취득과 함께 계산할 수 없습니다/);
   });
 });

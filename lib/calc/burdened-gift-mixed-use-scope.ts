@@ -12,6 +12,8 @@
  *  · 읽기 전용이다 — `useEffect → store` 미러링으로 쓰지 않는다. 비어 있는 값은 **0으로 메우지 않고** `missing`/`issues`에 싣는다(자동 안분 fallback 금지).
  */
 import { parseAmount } from "@/lib/calc/number-parse";
+import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
 import { computeMortgageValuation } from "@/lib/tax-engine/burdened-gift-valuation";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
@@ -49,14 +51,17 @@ export function isMixedBgDeemedPath(
 
 /**
  * 겸용 × 부담부증여 × 시가 평가에서 담보채권액 평가(상증법 §66)가 시가보다 큰가 — 엔진 prepare의 `marketCollateralWin`과 같은 판정이다
- * (시가 모드는 시가와 담보평가만 비교한다 · 사용자 결정 H-1 2026-11-16). 이때 §159①1호 괄호가 취득가액을 취득시 기준시가로 강제해
+ * (시가 모드는 시가와 담보평가만 비교한다 · 사용자 결정 H-1 2026-11-16). 공유지분이면 시가를 지분분으로 줄여 비교한다 — 채무는 지분 인수분이다
+ * (엔진 `scaleBurdenedGiftInfo` 규약 · PR-A). 이때 §159①1호 괄호가 취득가액을 취득시 기준시가로 강제해
  * 산정방식별 금액·상속·증여 평가액·구분 감정평가를 쓰지 않는다. 금액은 ④(`buildBurdenedGiftInfo`)와 같은 칸에서 읽는다.
  */
 export function isMixedBgMarketCollateralWin(
-  a: ScopeAsset & Pick<AssetForm, "bgValuationMode" | "bgMarketValueAtTransfer" | "bgLendingDepositTotal" | "bgMortgageDebtAmount" | "bgMortgageSetAmount">,
+  a: ScopeAsset & Pick<AssetForm, "bgValuationMode" | "bgMarketValueAtTransfer" | "bgLendingDepositTotal" | "bgMortgageDebtAmount" | "bgMortgageSetAmount" | "ownershipNumerator" | "ownershipDenominator">,
 ): boolean {
   if (!isMixedBurdenedGift(a) || a.bgValuationMode !== "sangjeungbeop_market") return false;
-  const market = parseAmount(a.bgMarketValueAtTransfer) || 0;
+  const ratio = getOwnershipRatio(a as AssetForm);
+  const marketWhole = parseAmount(a.bgMarketValueAtTransfer) || 0;
+  const market = ratio < 1 ? applyRatio(marketWhole, ratio) : marketWhole;
   if (market <= 0) return false;
   const mortgage = computeMortgageValuation({
     lendingDepositTotal: parseAmount(a.bgLendingDepositTotal) || 0,
@@ -72,7 +77,7 @@ export function isMixedBgMarketCollateralWin(
  * 산정방식 라디오 숨김·⑧/⑫ 방식 면제는 종전대로 `isMixedBgDeemedPath`다(상속·증여 취득에는 고를 방식이 없다).
  */
 export function isMixedBgDeemedValueUsed(
-  a: ScopeAsset & Pick<AssetForm, "bgValuationMode" | "acquisitionCause" | "bgMarketValueAtTransfer" | "bgLendingDepositTotal" | "bgMortgageDebtAmount" | "bgMortgageSetAmount">,
+  a: ScopeAsset & Pick<AssetForm, "bgValuationMode" | "acquisitionCause" | "bgMarketValueAtTransfer" | "bgLendingDepositTotal" | "bgMortgageDebtAmount" | "bgMortgageSetAmount" | "ownershipNumerator" | "ownershipDenominator">,
 ): boolean {
   return isMixedBgDeemedPath(a) && !isMixedBgMarketCollateralWin(a);
 }

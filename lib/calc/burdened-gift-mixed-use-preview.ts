@@ -118,7 +118,7 @@ export function mixedBgReportedField(asset: AssetForm): string {
 }
 
 /**
- * 함께 양도(컴패니언)·지분 분할(축 B) 묶음 안의 겸용 부담부증여 차단 문구 — 엔진 MB-6의 문구를 **그대로** 쓴다(복제 금지).
+ * 함께 양도(컴패니언)·지분 분할(축 B) 묶음 안의 겸용 부담부증여 차단 문구 — 엔진 MB-6의 문구를 **그대로** 쓴다(복제 금지). 공유지분 단건은 막지 않는다(PR-A).
  * 묶음 여부는 폼-전역 사실이라 BG 공통 검증(`validateBurdenedGiftAsset`)이 먼저 알려야 한다 — 그 뒤 검증은 채울 수 없는 칸을 요구할 수 있다.
  */
 export function mixedBgCompanionBlockMessage(): string {
@@ -130,5 +130,5 @@ export function mixedBgCompanionBlockMessage(): string {
     isCompanion: true,
     residentialFloorArea: 0, nonResidentialFloorArea: 0, buildingFootprintArea: 0, totalLandArea: 0,
   });
-  return issues.find((i) => i.code === "MB-6")?.message ?? "겸용주택 부담부증여는 단독 소유 단건만 지원합니다.";
+  return issues.find((i) => i.code === "MB-6")?.message ?? "겸용주택 부담부증여는 함께 양도(여러 물건)·지분 분할 취득과 함께 계산할 수 없습니다.";
 }

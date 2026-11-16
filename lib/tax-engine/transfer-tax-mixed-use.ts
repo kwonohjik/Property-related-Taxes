@@ -200,9 +200,9 @@ function calcMixedUseCore(
   const apportionmentBase = saleSplit.apportionment;
   const housingSalePart = saleSplit.parts ? salePartsFor(saleSplit.parts, "housing", asset.transferExpense ?? 0) : undefined;
   const commercialSalePart = saleSplit.parts ? salePartsFor(saleSplit.parts, "commercial", asset.transferExpense ?? 0) : undefined;
-  // BG — 양도가액은 «채무 귀속으로 정한 부분별 양도가액»(B_h'·B_c')으로 덮어쓴다. 고가주택 안분 분모는 주택분 증여가액 C_h(해석 B).
+  // BG — 양도가액은 «채무 귀속으로 정한 부분별 양도가액»(B_h'·B_c')으로 덮어쓴다. 고가주택 안분 분모는 주택분 증여가액 C_h(해석 B) — 공유지분이면 물건 전체 주택분(`housingJudgment` · 영 §156①).
   const apportionment: MixedUseApportionment = bg
-    ? { ...apportionmentBase, housingTransferPrice: bg.debt.housingDebt, commercialTransferPrice: bg.debt.commercialDebt, wholeHousingTransferPrice: bg.value.housing }
+    ? { ...apportionmentBase, housingTransferPrice: bg.debt.housingDebt, commercialTransferPrice: bg.debt.commercialDebt, wholeHousingTransferPrice: bg.value.housingJudgment }
     : apportionmentBase;
 
   // ── 법 §104⑦ 다주택 중과 판정 + 감면주택 중과 배제 선판정(NH-09) — `transfer-tax-mixed-use-surcharge-judge.ts` ──

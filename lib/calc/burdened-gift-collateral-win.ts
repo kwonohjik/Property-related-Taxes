@@ -94,7 +94,7 @@ export function bgFractionalCollateralWin(asset: AssetForm): boolean {
  * (`bg-carryover-mkt-collateral-win.plan.md`).
  *
  * 화면이 이 경우를 다루지 않는 자산은 `false`다 — ⑧이 따로 막는다:
- * - 겸용주택: 단독 소유 단건만 — `isMixedBgMarketCollateralWin`(엔진 prepare와 같은 판정 · 사용자 결정 H-1 2026-11-16). 함께 양도·지분은 엔진 MB-6이 막는다.
+ * - 겸용주택: 단독 소유·공유지분 단건 — `isMixedBgMarketCollateralWin`(엔진 prepare와 같은 판정 · 사용자 결정 H-1 2026-11-16 · 지분은 시가를 지분분으로 줄여 비교 · PR-A). 함께 양도·지분 분할 취득은 엔진 MB-6이 막는다.
  * - 지분 보유: **주택·토지·일반건물·재개발**만(종류 범위는 `bgFractionalCollateralKindSupported`). 축을 `isFractionalSplit`로 넘겨야 한다 — 축 B `true`(물건 전체 판정) · 축 A `false`(지분분 판정) ·
  *   미지정 `undefined`면 지분 자산은 `false`(종전 — 승자를 확정하지 않는다).
  */
@@ -132,7 +132,7 @@ export function bgUnsupportedWinnerReason(asset: AssetForm): string {
  * `bgNonSupplementaryWinnerUnsupported`가 true인 자산을 막는 **실제 사유** — ⑧ 안내 문구용(엔진 중단 사유와 같은 말).
  * · 조합원입주권: 괄호가 취득가액을 입주권 기준시가(소령 §165①)로 정하는 시기의 담보·임대 승 — 승계 단건만 계산하고(`bg-rtmi-std-acq.ts`), 원조합원은 질의 H-2 대기,
  *   묶음·지분은 확인하지 못했다(엔진 `burdened-gift-apportionment.ts`).
- * · 겸용주택: 단독 소유 단건은 담보·임대 승도 계산한다(사용자 결정 H-1). 함께 양도·지분은 엔진 MB-6이 막는다.
+ * · 겸용주택: 단독 소유·공유지분 단건은 담보·임대 승도 계산한다(사용자 결정 H-1 · PR-A). 함께 양도·지분 분할 취득은 엔진 MB-6이 막는다.
  * · 지분 보유(주택 외): 취득가액 처리를 확인한 종류가 주택뿐이다. 뒤 문장은 사유별 조치 안내다.
  */
 /** 원조합원 입주권 담보·임대 승 차단 사유 — 취득시 입주권 기준시가의 정의가 불명확하다(질의 H-2 대기). 승계는 I-1이 계산한다(`bg-rtmi-std-acq.ts`). */
@@ -146,7 +146,7 @@ export const BG_RTMI_SUCCESSOR_DATE_CAUSE =
 export function bgUnsupportedWinnerCause(asset: AssetForm): string {
   if (asset.assetKind === "right_to_move_in") return asset.isSuccessorRightToMoveIn === true ? BG_RTMI_SUCCESSOR_DATE_CAUSE : BG_RTMI_ORIGINAL_CAUSE;
   if (isMixedBurdenedGift(asset))
-    return "겸용주택 부담부증여는 단독 소유 단건만 계산합니다 — 공유지분·함께 양도(여러 물건)와 함께 계산하지 않습니다.";
+    return "겸용주택 부담부증여는 함께 양도(여러 물건)·지분 분할 취득과 함께 계산하지 않습니다 — 단독 소유 또는 공유지분 단건만 계산합니다.";
   return `지분을 가진 자산의 담보·임대 평가에서 이 경우의 취득가액(「소득세법 시행령」 제159조 제1항 제1호 괄호 — 취득시 기준시가 × 채무비율)은 ${BG_FRACTIONAL_SCOPE_TEXT}만 계산합니다. 담보 설정액·임대 보증금 입력을 재확인해 증여재산 평가가 보충적평가(기준시가) 또는 시가가 되게 하세요.`;
 }
 

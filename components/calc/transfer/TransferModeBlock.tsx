@@ -217,7 +217,7 @@ export function TransferModeBlock({ asset, onChange, transferDate, isFractionalS
               아래 부담부증여 카드는 그 합계를 읽기 전용으로 보여 주고, 채무가 주택·상가 중 어디에 속하는지를 받습니다.
             </p>
             <p className="text-caption text-amber-800 dark:text-amber-200">
-              계산 범위: 증여자가 매매로 취득한 단독 소유 단건. 개별주택가격 미공시 환산·보유 중 일부 용도변경·공유지분·함께 양도는 계산하지 않습니다.
+              계산 범위: 단독 소유 또는 공유지분 단건. 개별주택가격 미공시 환산·보유 중 일부 용도변경·함께 양도(여러 물건)·지분 분할 취득은 계산하지 않습니다. 공유지분이면 시가·취득가액·기준시가는 물건 전체 기준으로, 채무는 내 지분 인수분으로 입력합니다.
             </p>
           </div>
         </ToneCard>

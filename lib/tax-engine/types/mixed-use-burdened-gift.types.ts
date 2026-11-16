@@ -76,7 +76,12 @@ export type MixedUseBurdenedGiftBreakdown = Omit<
   | "ownershipRatio"
 > & {
   perPart: Record<MixedUsePartKey, MixedUseBurdenedGiftPart>;
-  /** 12억 판정/안분 echo — 결과뷰가 분모를 재도출하지 않게 한다 */
+  /**
+   * 공유지분 단건의 지분율(0<r<1) — 단독 소유면 없다. 있으면 증여가액·무상이전분·채무비율·4부분 금액은 **내 지분분**이고,
+   * `highValue`(12억 판정·안분 분모)만 **물건 전체** 값이다(영 §156①). 결과뷰 라벨이 둘을 구분한다.
+   */
+  ownershipRatio?: number;
+  /** 12억 판정/안분 echo — 결과뷰가 분모를 재도출하지 않게 한다 (공유지분이면 물건 전체 값) */
   highValue: {
     /** 양도하는 주택 부분이 있어 판정·안분이 걸리는가(false = «주택 양도 없음») */
     applicable: boolean;

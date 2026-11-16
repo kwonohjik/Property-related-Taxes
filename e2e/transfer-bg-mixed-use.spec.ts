@@ -279,4 +279,43 @@ test.describe("겸용주택 × 부담부증여", () => {
     await expect(page.locator('[data-print-id="calculation"]')).toContainText("174,975,600");
     await expect(page.getByTestId("bg-mixed-gift-value")).toHaveText("1,300,000,000");
   });
+
+  // ── 공유지분 단건(PR-A · 사용자 결정 Q-1 S안) — 시가·취득가액은 물건 전체, 채무는 내 지분 인수분. 값은 route anchor `transfer.route.mixed-use-bg-share.anchor.test.ts`와 같다 ──
+  const SHARE = {
+    ownershipNumerator: "50",
+    ownershipDenominator: "100",
+    ownershipRemainderThirdParty: "yes",
+    bgMortgageAttribution: "unallocated",
+  };
+
+  test("BGMU-13 공유지분 50% · 시가 15억(물건 전체) · 지분 인수 채무 3억 · 보충 승 → 계산 성공 25,125,001 · 증여가액은 지분분 7.5억 · 지분 고지 문구 (SH-1)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seedAndOpen(page, { ...SHARE, bgMortgageDebtAmount: "300000000" });
+    await calc(page);
+    await expect(page.locator('[data-print-id="calculation"]')).toContainText("25,125,001");
+    const card = page.getByTestId("bg-mixed-detail-card");
+    // 증여가액·무상이전분·채무는 내 지분분 — 물건 전체 시가 15억이 아니다
+    await expect(page.getByTestId("bg-mixed-gift-value")).toHaveText("750,000,000");
+    await expect(card).toContainText("내 지분 50% 해당분");
+    await expect(card).toContainText("인수 채무액 (내 지분 인수분)");
+    await expect(card).toContainText("450,000,000");
+    // 12억 고가주택 판정 가액은 물건 전체 값으로 따로 표시한다
+    await expect(page.getByTestId("bg-mixed-highvalue-whole")).toHaveText("750,000,000");
+    await expect(card).toContainText("12억원 고가주택 판정 가액 (물건 전체");
+    await expect(page.getByText("겸용주택 공유지분 부담부증여는 직접 다룬 해석례가 확인되지 않았습니다").first()).toBeVisible();
+    await expect(page.getByTestId("bg-result-apportion")).toContainText("주택분 양도로 보는 채무액150,000,000");
+  });
+
+  test("BGMU-14 공유지분 50% · 시가 모드 담보 승(지분분 시가 7.5억 < 담보 8억) → 계산 성공 118,396,000 · 취득가액은 취득시 기준시가 기준 (SH-4 · S-G)", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seedAndOpen(page, { ...SHARE, bgMortgageDebtAmount: "800000000" });
+    await expect(page.getByTestId("bg-collateral-forced-notice")).toContainText("겸용주택 기준시가의 취득시 값");
+    await calc(page);
+    await expect(page.locator('[data-print-id="calculation"]')).toContainText("118,396,000");
+    const card = page.getByTestId("bg-mixed-detail-card");
+    await expect(card).toContainText("증여가액 = 담보채권액 평가");
+    await expect(card).toContainText("내 지분 50% 해당분");
+    await expect(page.getByTestId("bg-mixed-gift-value")).toHaveText("800,000,000");
+    await expect(page.getByTestId("bg-mixed-highvalue-whole")).toHaveText("800,000,000");
+  });
 });
