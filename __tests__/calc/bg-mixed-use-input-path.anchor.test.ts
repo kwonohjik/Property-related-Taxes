@@ -183,11 +183,9 @@ describe("겸용 × 부담부증여 — 화면 입력 → 엔진 (PR-3)", () => 
     expect(tax(r)).toBe(69_094_001);
   });
 
-  it("[P-6] 🔴 ⑧ 순서·점프: 귀속 미선택 먼저 → 부분 초과(MB-14)는 마지막 — 귀속을 고르기 전에는 MB-14를 말하지 않는다", () => {
+  it("[P-6] 🔴 ⑧: 귀속 미선택은 귀속 칸으로 이동 · 귀속을 고른 뒤 한쪽 채무가 기준시가 몫을 넘어도 막지 않는다(종전 MB-14 · 사용자 결정 2026-11-16)", () => {
     expect(issuesOf(mk({ bgMortgageAttribution: "" }))[0]?.field).toBe("bgMortgageAttribution");
-    const over = issuesOf(mk({ bgMortgageAttribution: "commercial", bgMortgageDebtAmount: "800000000" }))[0];
-    expect(over?.field).toBe("bgMortgageAttribution");
-    expect(over?.message).toMatch(/상가 부분의 증여가액/);
+    expect(issuesOf(mk({ bgMortgageAttribution: "commercial", bgMortgageDebtAmount: "800000000" }))).toEqual([]);
   });
 
   /** 엔진 MB-12가 거부하는 9개 키(`mixed-use-burdened-gift-prepare.ts` 「BG 입력 형태」) — ④ 겸용 분기가 실어서는 안 된다. */

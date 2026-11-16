@@ -39,15 +39,14 @@ const SEC_163_9_PRE_DISCLOSURE_TIME = new Date(SEC_163_9_BUILDING_FIRST_DISCLOSU
 export type MixedBgIssueCode =
   // MB-7(담보·임대 승 차단)은 사용자 결정 H-1(2026-11-16)로 없앴다 — 번호는 재사용하지 않는다.
   | "MB-1" | "MB-2" | "MB-3" | "MB-4" | "MB-5" | "MB-6" | "MB-8" | "MB-9"
-  | "MB-10" | "MB-11" | "MB-12" | "MB-13" | "MB-14" | "MB-15" | "MB-16" | "MB-17" | "MB-18";
+  // MB-14(부분 초과 차단)도 사용자 결정(2026-11-16 — 부분 증여가액의 하한 = 그 부분 채무액)으로 없앴다.
+  | "MB-10" | "MB-11" | "MB-12" | "MB-13" | "MB-15" | "MB-16" | "MB-17" | "MB-18";
 
 export interface MixedBgIssue {
   code: MixedBgIssueCode;
   message: string;
   /** `mixedUse`/최상위 기준 경로 — ⑫가 `ctx.addIssue`에, ⑧이 점프 field 매핑에 쓴다 */
   path: string[];
-  /** MB-14 등 어느 쪽(주택/상가)에서 초과했는가 */
-  part?: "housing" | "commercial";
 }
 
 type DateLike = Date | string | null | undefined;
@@ -132,6 +131,8 @@ export interface MixedBgPrepared {
     separateAppraisal: boolean;
     /** 증여가액이 무엇으로 정해졌는가 — 담보(§66)·임대(§61⑤) 승은 사용자 결정 H-1(2026-11-16)로 계산한다 */
     selectedMode: "supplementary" | "mortgage" | "rental";
+    /** 그 부분으로 보는 채무액이 기준시가(구분 감정평가) 몫보다 커서 부분 증여가액을 채무액으로 올린 쪽 — 다른 쪽은 C에서 뺐다 */
+    debtFloor?: "housing" | "commercial";
     /** 시가 모드인데 담보평가가 이겨 §159①1호 괄호로 취득가액을 취득시 기준시가로 강제했는가 */
     collateralForcedStdInMarketMode: boolean;
   };
@@ -171,8 +172,7 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   const info = src.burdenedGift;
   if (!info) return { issues: [] };
   const issues: MixedBgIssue[] = [];
-  const add = (code: MixedBgIssueCode, message: string, path: string[], part?: "housing" | "commercial") =>
-    issues.push({ code, message, path, ...(part ? { part } : {}) });
+  const add = (code: MixedBgIssueCode, message: string, path: string[]) => issues.push({ code, message, path });
 
   // ── 단순 게이트 ────────────────────────────────────────────
   const td = toTime(src.transferDate);
@@ -385,19 +385,9 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
     return { issues };
   }
   // C_h — 구분 감정평가가 있으면 입력값(부가세령 §64①1호 단서), 없으면 양도시 기준시가 비례(같은 호 본문)
-  //   담보(§66) 승은 사용자 결정 H-1 ④(2026-11-16): C = B(담보평가 = 보증금 + min(채권최고액, 차입금) ≤ B이고 위 MB-10을 통과했다)라서
-  //   부분 증여가액 = 그 부분 귀속 채무 + 구분 불분명 채무의 양도시 기준시가 비례 몫(각 부분 채무비율 1). 기준시가 비례로 C를 나누면
-  //   한 부분에만 귀속된 보증금이 그 부분 몫을 넘어 MB-14로 막히기 때문이다(예: 상가 보증금만 → 상가 채무비율 > 1).
-  //   임대(§61⑤) 승은 결정 H-1 ①~③대로 보충적평가와 같은 기준시가 비례 분할이다.
-  const collateralWin = valuation.selectedMode === "mortgage";
   let Ch: number;
-  let collateralUh: number | undefined;
   const separateAppraisal = isMarketAcq && info.housingAppraisal?.exists === true;
-  if (collateralWin) {
-    if (!attr || issues.some((i) => i.code === "MB-13")) return { issues };
-    collateralUh = safeMultiplyThenDivide(attr.unallocated, Hs, Hs + Cs);
-    Ch = attr.housing + collateralUh;
-  } else if (separateAppraisal) {
+  if (separateAppraisal) {
     const hv = info.housingAppraisal?.housingValue;
     if (!pos(hv) || hv >= C) {
       add("MB-17", `주택분 감정평가가액은 0보다 크고 증여가액(${won(C)})보다 작아야 합니다.`, ["burdenedGiftInfo", "housingAppraisal", "housingValue"]);
@@ -407,21 +397,28 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   } else {
     Ch = apportionByStdPrice(C, Hs, Cs).land;
   }
-  const Cc = C - Ch;
 
   // ── 채무 귀속 안분 (MB-13 통과 시) ──────────────────────────
   if (!attr || issues.some((i) => i.code === "MB-13")) return { issues };
-  const uh = collateralUh ?? Math.floor(safeMultiplyThenDivide(attr.unallocated, Ch, C));
+  // 구분 불분명 채무 — 담보(§66) 승은 C = B(담보평가 = 보증금 + min(채권최고액, 차입금) ≤ B이고 위 MB-10을 통과)라 기준시가 비율로 나눈다(사용자 결정 H-1 ①).
+  //   그 밖은 주택·상가 증여가액 비율이다.
+  const collateralWin = valuation.selectedMode === "mortgage";
+  const uh = collateralWin ? safeMultiplyThenDivide(attr.unallocated, Hs, Hs + Cs) : Math.floor(safeMultiplyThenDivide(attr.unallocated, Ch, C));
   const uc = attr.unallocated - uh;
   const Bh = attr.housing + uh;
   const Bc = attr.commercial + uc;
+  // 부분 증여가액의 하한 = 그 부분으로 보는 채무액(사용자 결정 2026-11-16 — 보증금·담보 채권은 평가액의 하한이다: 상증법 §66).
+  //   넘친 쪽을 채무액으로 올리고 다른 쪽은 증여가액 C에서 뺀다(합계 = C 유지). B ≤ C(MB-10)라 다른 쪽도 그 쪽 채무액 이상이 된다.
+  //   평가 승자와 관계없이 적용한다(종전 MB-14 차단 · 담보 승은 C = B라 언제나 C_h = B_h', C_c = B_c'). 구분 불분명 몫은 위에서 정한 대로 두고 다시 나누지 않는다.
+  let debtFloor: "housing" | "commercial" | undefined;
   if (Bh > Ch) {
-    add("MB-14", `주택으로 보는 채무액(${won(Bh)} = 주택 귀속 ${won(attr.housing)} + 구분 불분명 안분 ${won(uh)})이 주택 부분의 증여가액(${won(Ch)})보다 큽니다. 채무 귀속을 다시 확인하세요 — 구분 불분명 채무는 자동으로 다시 나누지 않습니다.`, ["burdenedGiftInfo", "debtAttribution"], "housing");
+    Ch = Bh;
+    debtFloor = "housing";
+  } else if (Bc > C - Ch) {
+    Ch = C - Bc;
+    debtFloor = "commercial";
   }
-  if (Bc > Cc) {
-    add("MB-14", `상가로 보는 채무액(${won(Bc)} = 상가 귀속 ${won(attr.commercial)} + 구분 불분명 안분 ${won(uc)})이 상가 부분의 증여가액(${won(Cc)})보다 큽니다. 채무 귀속을 다시 확인하세요 — 구분 불분명 채무는 자동으로 다시 나누지 않습니다.`, ["burdenedGiftInfo", "debtAttribution"], "commercial");
-  }
-  if (issues.length > 0) return { issues };
+  const Cc = C - Ch;
 
   // ── 취득 경로 — BG 모드가 정본(asset의 stale 플래그를 덮어쓴다) ──
   let acqPath: MixedBgAcqPath;
@@ -441,7 +438,7 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
       },
       valuation,
       value: {
-        whole: C, housing: Ch, commercial: Cc, isMarket, separateAppraisal,
+        whole: C, housing: Ch, commercial: Cc, isMarket, separateAppraisal, ...(debtFloor ? { debtFloor } : {}),
         selectedMode: valuation.selectedMode, collateralForcedStdInMarketMode: marketCollateralWin,
       },
       transferStd,

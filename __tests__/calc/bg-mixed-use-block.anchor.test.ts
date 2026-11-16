@@ -208,8 +208,8 @@ describe("겸용주택 × 부담부증여", () => {
     expect(firstIssue({ isSelfBuilt: true })?.field).toBe("isSelfBuilt");
   });
 
-  it("[M-1e] ⑧: 한쪽 귀속 채무가 그 쪽 증여가액을 넘으면(MB-14) 귀속 칸으로 이동 — 자동 재배분 없음", () => {
-    expect(firstIssue({ bgMortgageAttribution: "commercial", bgMortgageDebtAmount: "800000000" })?.field).toBe("bgMortgageAttribution");
+  it("[M-1e] ⑧: 한쪽 귀속 채무가 그 쪽 기준시가 몫을 넘어도 막지 않는다 — 그 부분 증여가액을 채무액으로 올린다(종전 MB-14 · 사용자 결정 2026-11-16)", () => {
+    expect(collectStepIssues(0, mk({ ...BG_UI, bgMortgageAttribution: "commercial", bgMortgageDebtAmount: "800000000" }) as never)).toEqual([]);
   });
 
   it("[M-1h] ⑧: 임대료 환산 평가가 증여가액을 정해도(기준시가 모드) 막지 않는다 — 종전 MB-7 차단은 사용자 결정 H-1(2026-11-16)로 없어졌다", () => {

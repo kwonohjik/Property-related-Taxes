@@ -155,6 +155,11 @@ export function BurdenedGiftMixedUsePanel({ asset, transferDate }: Props) {
                 {" "}담보·임대 평가액을 주택·상가로 나누는 기준은 법령에 없고 이를 직접 다룬 해석례도 확인되지 않아 확인이 필요합니다.
               </p>
             )}
+            {v.debtFloor && v.selectedMode !== "mortgage" && (
+              <p data-testid="bg-mixed-debt-floor" className="text-caption text-amber-800 dark:text-amber-200">
+                {v.debtFloor === "housing" ? "주택" : "상가"}분으로 보는 채무액이 기준시가 비율 몫보다 커서 그 부분 증여가액을 채무액으로 보고, 다른 부분은 증여가액 전체에서 뺐습니다(보증금·담보 채권은 평가액의 하한 — 상증법 §66). 해석례가 직접 답하지 않아 확인이 필요합니다.
+              </p>
+            )}
             {d.unallocated > 0 && (
               <p className="text-caption text-amber-800 dark:text-amber-200">
                 구분 불분명 채무를 주택·상가 {v.selectedMode === "mortgage" ? "기준시가" : "증여가액"} 비율로 나눈 것은 해석례가 직접 답하지 않아 확인이 필요합니다.

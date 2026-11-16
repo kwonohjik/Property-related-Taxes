@@ -315,6 +315,13 @@ export function applyMixedBurdenedGift(args: {
         "증여일 현재 주택·상가 기준시가 비율로 나누어 부분별로 「소득세법 시행령」 제159조 제1항을 적용했습니다. 확인이 필요합니다.",
     );
   }
+  if (bg.value.debtFloor && bg.value.selectedMode !== "mortgage") {
+    const [up, other] = bg.value.debtFloor === "housing" ? ["주택", "상가"] : ["상가", "주택"];
+    notices.push(
+      `${up}분으로 보는 채무액이 ${up}분의 기준시가 비율 몫보다 커서 ${up}분 증여가액을 그 채무액으로 보고 ${other}분 증여가액은 증여가액 전체에서 뺀 금액으로 보았습니다` +
+        "(보증금·담보 채권은 그 부분 평가액의 하한 — 「상속세 및 증여세법」 제66조). 이를 직접 다룬 해석례는 확인되지 않아 확인이 필요합니다.",
+    );
+  }
   if (bg.value.collateralForcedStdInMarketMode) notices.push(MARKET_COLLATERAL_STANDARD_ACQUISITION_NOTICE);
   const eraNotice = bgParenthesisEraNotice(method, bg.value.selectedMode, transferDate);
   if (eraNotice) notices.push(eraNotice);
