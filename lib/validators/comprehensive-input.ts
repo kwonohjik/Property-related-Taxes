@@ -103,6 +103,10 @@ const rentalExclusionInfoSchema = z.object({
     .positive({ message: "기준 공시가격은 0원보다 커야 합니다." })
     .optional(),
 
+  /** 과세기준일 현재 공실(§3⑦4호) · 기존 임차인 퇴거일 — 엔진 comprehensive-exclusion-vacancy.ts */
+  rentalVacantAtAssessment: z.boolean().optional(),
+  vacancyEvictionDate: isoDateOptional,
+
   /** 현재 임대료 (원) */
   currentRent: z
     .number()
@@ -179,7 +183,8 @@ const rentalExclusionInfoSchema = z.object({
   { message: "임대개시일을 입력하세요 (YYYY-MM-DD).", path: ["rentalStartDate"] },
 ).refine(
   // 5% 요건 유형에서 처음 쓴 표준임대차계약이 아니면 직전 임대료가 있어야 증가율을 본다 — 없으면 엔진이 조용히 통과시켰다(⑧과 같은 술어)
-  (r) => !rentIncreaseLimitApplies(r.registrationType) || r.isInitialContract || r.previousRent !== undefined,
+  // 공실이면 그해 계약이 없어 5% 비교를 하지 않는다(T-12 Q-5 a — ⑧과 같은 면제)
+  (r) => !rentIncreaseLimitApplies(r.registrationType) || r.rentalVacantAtAssessment === true || r.isInitialContract || r.previousRent !== undefined,
   { message: "처음 쓴 표준임대차계약이 아니면 직전 임대료(월)를 입력하세요 — 임대료 증가율 5% 요건 (종합부동산세법 시행령 §3①).", path: ["previousRent"] },
 );
 

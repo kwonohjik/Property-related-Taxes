@@ -10,6 +10,8 @@ import type { RentalExclusion6hoFacts } from "./comprehensive-exclusion-6ho.type
 import type { RentalExclusion459hoFacts } from "./comprehensive-exclusion-459ho.types";
 // 가격 판정 기준 공시가격(임대개시일 등) — 계획서 T-03
 import type { RentalExclusionPriceBasisFacts } from "./comprehensive-exclusion-price-basis.types";
+// 공실 2년(§3⑦4호) — 계획서 T-12
+import type { RentalExclusionVacancyFacts } from "./comprehensive-exclusion-vacancy.types";
 
 // ============================================================
 // 1. 합산배제 관련 타입
@@ -46,7 +48,11 @@ export type ExclusionType =
  * 임대주택 합산배제 입력 (시행령 §3 요건 판정용)
  */
 export interface RentalExclusionInput
-  extends RentalExclusion8NaFacts, RentalExclusion6hoFacts, RentalExclusion459hoFacts, RentalExclusionPriceBasisFacts {
+  extends RentalExclusion8NaFacts,
+    RentalExclusion6hoFacts,
+    RentalExclusion459hoFacts,
+    RentalExclusionPriceBasisFacts,
+    RentalExclusionVacancyFacts {
   registrationType:
     | "private_construction"
     | "private_purchase_long"

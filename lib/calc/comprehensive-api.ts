@@ -27,6 +27,7 @@ import { rentIncreaseLimitApplies } from "@/lib/tax-engine/comprehensive-exclusi
 import { asksThirtyPlusUnits } from "./comprehensive-rental-price-basis";
 import { asksBusinessRegistrationField } from "./comprehensive-rental-business-reg";
 import { businessRegistrationRequiredMessage } from "./comprehensive-rental-business-reg";
+import { isVacantEntry, rentalVacancyApiFields, validateVacancyInputs } from "./comprehensive-rental-vacancy";
 import { asksUsageApprovalDate } from "./comprehensive-rental-price-basis";
 import { asksPriceBasisValue } from "./comprehensive-rental-price-basis";
 
@@ -144,7 +145,10 @@ export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFo
     const ho459Error = validate459hoInputs(p, regType, label);
     if (ho459Error) return ho459Error;
     // 임대료 증가율 5% — 처음 쓴 표준임대차계약이 아니면 직전 임대료 필수(⑫ refine과 같은 술어 · ⑤는 토글 OFF면 칸을 보인다)
-    if (rentIncreaseLimitApplies(regType) && !p.isInitialContract && !(parseAmount(p.previousRent) > 0)) {
+    // §3⑦4호 공실(T-12) — 퇴거일 · 공실이면 직전 임대료 필수를 면제한다(⑫ refine과 같은 조건)
+    const vacancyError = validateVacancyInputs(p, regType, formData.assessmentYear, label);
+    if (vacancyError) return vacancyError;
+    if (rentIncreaseLimitApplies(regType) && !isVacantEntry(p, regType) && !p.isInitialContract && !(parseAmount(p.previousRent) > 0)) {
       return `${label}: 처음 쓴 표준임대차계약이 아니면 직전 임대료(월)를 입력하세요 — 바로 앞 계약보다 5% 넘게 올랐는지 봅니다 (종합부동산세법 시행령 §3①).`;
     }
   }
@@ -445,9 +449,10 @@ export async function callComprehensiveApi(
               : undefined,
           area: parseDecimal(p.area),
           location: p.location,
-          previousRent: p.previousRent ? parseAmount(p.previousRent) : undefined,
-          currentRent: parseAmount(p.currentRent),
-          isInitialContract: p.isInitialContract,
+          // 공실이면 그해 계약이 없다 — 남은 임대료·토글 값을 보내지 않는다(T-12 · ⑤가 칸을 숨긴다)
+          previousRent: !isVacantEntry(p, registrationType) && p.previousRent ? parseAmount(p.previousRent) : undefined,
+          currentRent: isVacantEntry(p, registrationType) ? 0 : parseAmount(p.currentRent),
+          isInitialContract: isVacantEntry(p, registrationType) ? true : p.isInitialContract,
           actualRentalYears: p.actualRentalYears ? parseDecimal(p.actualRentalYears) : undefined,
           // 9호는 말소일을 묻지 않는다(⑤와 같은 술어) — 다른 유형에서 넣어 둔 값이 남아 있어도 보내지 않는다
           registrationRevokedDate: asksRegistrationRevokedDate(registrationType) ? p.registrationRevokedDate || undefined : undefined,
@@ -463,6 +468,7 @@ export async function callComprehensiveApi(
           ...rental6hoApiFields(p, na8Context(formData, registrationType)),
           // §3①4·5·9호 — 그 호일 때만 값이 있다(4호 사용승인일은 위 칸을 덮어 필수로 보낸다)
           ...rental459hoApiFields(p, registrationType),
+          ...rentalVacancyApiFields(p, registrationType),
         },
       };
     }

@@ -61,6 +61,8 @@ function toEngineInput(
           // 4·9호(「소유」)는 없을 수 있다 — 그 밖 유형은 Zod refine이 필수로 막는다
           rentalStartDate: toOptionalDate(p.rentalInfo.rentalStartDate),
           businessRegistrationDate: toOptionalDate(p.rentalInfo.businessRegistrationDate),
+          // §3⑦4호 공실 퇴거일 (⑭ · T-12)
+          vacancyEvictionDate: toOptionalDate(p.rentalInfo.vacancyEvictionDate),
           usageApprovalDate: toOptionalDate(p.rentalInfo.usageApprovalDate),
           // §3①8호 나목·7호 단서 (⑭) — ownerType은 엔진(comprehensive-tax)이 taxpayerType에서 주입
           acquisitionDate: toOptionalDate(p.rentalInfo.acquisitionDate),

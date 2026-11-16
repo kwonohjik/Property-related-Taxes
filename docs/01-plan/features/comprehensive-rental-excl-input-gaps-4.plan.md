@@ -137,3 +137,11 @@
 - 픽스처(V-3 실측): 14파일 71건 실패 → 픽스처마다 `businessRegistrationDate`를 명시(공용 헬퍼 기본값 아님) · 연도를 바꾸는 시료(A15-4·5·6′)는 그해 2.20.로 · RC-5는 「단서 안 봄 + 새 사유 하나」로 단언 · `route.required-inputs` C4·RC-7·RC-8은 8호도 묻고 싣도록 뒤집음 · E2E 3개(8na·5pct-base·unsold-6ho)에 세무서 등록일 입력.
 - anchor: 엔진 8건(A13-1~7 · 공공 등 제외) · route 5건(A13-3 3,426,370 · A13-2 1,267,200 · A13-5 ⑧ · A13-8 V-7 · 술어 유형·연도).
 - 뮤테이션 4종(엔진 판정 끔 5 · ④ 1·2호만 3 · ⑧ 끔 3 · 이중 보고 방지 끔 1건 실패) · tsc 0 · eslint 0 · verify:legal 501/501 · 회귀 1,760파일 통과 · E2E 5건 통과(8호 칸 hint 「6월 2일~9월 30일에 등록했다면」 표시 단언 포함).
+- 검증 후 #3420 머지(11f8c4f2b · CI 18건 통과).
+
+### PR-B · T-12 (브랜치 `fix/comp-excl-vacancy`)
+- 엔진 `comprehensive-exclusion-vacancy.ts`: `isVacantAtAssessment`(4·9호 제외) · `vacancyCheck` — 퇴거일 빈칸 `VACANCY_EVICTION_DATE_MISSING` · 과세기준일 뒤/임대개시일 앞 `VACANCY_EVICTION_DATE_INVALID` · `isWithinPeriod(퇴거일, 2, 과세기준일)`이면 성립 + 경고 `VACANCY_WITHIN_2Y_WARNING`, 아니면 `VACANCY_OVER_2Y` · 공실이면 5% 비교를 건너뜀(Q-5 a). 타입 `comprehensive-exclusion-vacancy.types.ts` · manifest §3⑦4호 키워드(verify:legal 502/502).
+- 화면: 술어 `lib/calc/comprehensive-rental-vacancy.ts`(`asksVacancy`·`isVacantEntry`·④ `rentalVacancyApiFields`·⑧ `validateVacancyInputs`) · 컴포넌트 `RentalExclusionRentFields.tsx`(공실 토글 → 5% 토글 → 임대료 · ExclusionInfoInput 638 → 585줄) · ④ 공실이면 `currentRent: 0`·`isInitialContract: true`·`previousRent` 미전송 · ⑧·⑫ 직전 임대료 필수 면제 · ⑫ 필드 2개 · ⑭ 퇴거일 `toOptionalDate` · store optional 2개 · 오류 라벨 2개.
+- anchor: 엔진 6건(A12-1 당일 성립 · A12-2·3 불성립(토요일 연장 없음) · A12-4 · 5% 건너뜀 · 4·9호) · route 6건(A12-2 3,426,370 · A12-1 1,267,200 + 경고 · A12-5 막다른 길 없음 · A12-5′ ⑫ 직접 API 200/400 · A12-4 ⑧ 3종 · A12-6 4호 전환 미전송).
+- 뮤테이션 7종(엔진 판정 · ⑧ 면제 · ⑫ 면제 · ④ 미전송 · ⑭ 날짜 · 엔진 5% 건너뜀 · ④ 남은 토글) 전부 실패 확인 · tsc 0 · eslint 0 · 회귀 1,764파일(무관 양도세 격자 4건 load 40 시간 초과 → 단독 78건 통과) · E2E `comprehensive-rental-vacancy.spec.ts` 2건 + 5pct-base 2건 통과(공실 ON이면 임대료 칸 숨김 · body `currentRent:0` · 경고/불성립 사유 표시).
+- `comprehensive-input.ts` 700줄(착지 목표 경계) — PR-C에서 넘으면 임대 스키마 분리.
