@@ -138,7 +138,7 @@ describe("CW-2 ⑧ 차단 유지 — 정당하지 않은 경우와 범위 밖", 
     expect(render(<BurdenedGiftBlock asset={house(o)} onChange={() => {}} />).container.querySelector('[data-testid="bg-collateral-forced-notice"]')).toBeNull();
   });
 
-  it("겸용주택 — 종전처럼 MB-7(담보평가를 주택·상가로 나눌 기준 없음)이 막는다 · ⑫와 같은 이유", () => {
+  it("겸용주택 — 담보 승도 계산한다(종전 MB-7 차단 · 사용자 결정 H-1 2026-11-16): ⑧ 통과 · 시가 취득 칸 대신 강제 안내 · 구분 감정평가 선언 숨김", () => {
     const mixed = house({
       acquisitionDate: "2010-03-15", isMixedUseHouse: true, residentialFloorArea: "100", nonResidentialFloorArea: "100", mixedUseTotalLandArea: "200",
       buildingFootprintArea: "100", mixedTransferHousingPrice: "600000000", mixedTransferLandPricePerSqm: "5000000", mixedTransferCommercialBuildingPrice: "100000000",
@@ -147,8 +147,12 @@ describe("CW-2 ⑧ 차단 유지 — 정당하지 않은 경우와 범위 밖", 
       standardPriceAtTransfer: "1500000000", standardPriceAtAcq: "700000000", bgHousingAppraisalDeclared: "none", bgMortgageAttribution: "unallocated",
     });
     const m = allIssues(form([mixed], { transferDate: "2024-03-01", contractTotalPrice: "1500000000" })).map((x) => x.message).join("\n");
-    expect(m).toContain("나눌 법정 기준이 없어");
-    expect(bgCollateralForcesStdAcq(mixed)).toBe(false);
+    expect(m).not.toContain("나눌 법정 기준이 없어");
+    expect(m).toBe("");
+    expect(bgCollateralForcesStdAcq(mixed)).toBe(true);
+    const c = render(<BurdenedGiftBlock asset={mixed} onChange={() => {}} transferDate="2024-03-01" />).container;
+    expect(c.querySelector('[data-testid="bg-collateral-forced-notice"]')?.textContent).toContain("겸용주택 기준시가의 취득시 값");
+    expect(c.querySelector('[data-testid="bg-housing-appraisal"]')).toBeNull();
   });
 
   it("함께 부담부증여 묶음 — 승자가 섞이면(담보 + 보충) 합산 증여가액 불일치로 막는다", () => {

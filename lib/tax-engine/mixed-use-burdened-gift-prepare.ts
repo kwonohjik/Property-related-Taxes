@@ -26,7 +26,7 @@ import { isBuildingDayLandPriceRequired } from "./mixed-use-acq-date";
 import { apportionByStdPrice } from "./std-price-apportion";
 import { multiplyByArea } from "./area-utils";
 import { SEC_163_9_BUILDING_FIRST_DISCLOSURE } from "./transfer-split-part-cause";
-import { computeSangjeungbeopValuation } from "./burdened-gift-valuation";
+import { computeMortgageValuation, computeSangjeungbeopValuation } from "./burdened-gift-valuation";
 import { safeMultiplyThenDivide } from "./tax-utils";
 
 /** 겸용 분리계산 시행일 — 영 §160① 괄호(부칙 제1조3호·제42조: 2022.1.1. 전 양도분은 종전 규정). `isMixedUseSplitTransfer`(`data/mixed-use-split-era.ts`)와 같은 날. */
@@ -37,7 +37,8 @@ const DEEMED_ACQUISITION_TIME = new Date("1985-01-01").getTime();
 const SEC_163_9_PRE_DISCLOSURE_TIME = new Date(SEC_163_9_BUILDING_FIRST_DISCLOSURE).getTime();
 
 export type MixedBgIssueCode =
-  | "MB-1" | "MB-2" | "MB-3" | "MB-4" | "MB-5" | "MB-6" | "MB-7" | "MB-8" | "MB-9"
+  // MB-7(담보·임대 승 차단)은 사용자 결정 H-1(2026-11-16)로 없앴다 — 번호는 재사용하지 않는다.
+  | "MB-1" | "MB-2" | "MB-3" | "MB-4" | "MB-5" | "MB-6" | "MB-8" | "MB-9"
   | "MB-10" | "MB-11" | "MB-12" | "MB-13" | "MB-14" | "MB-15" | "MB-16" | "MB-17" | "MB-18";
 
 export interface MixedBgIssue {
@@ -116,7 +117,7 @@ export interface MixedBgPrepared {
     /** B_c' */
     commercialDebt: number;
   };
-  /** 증여재산 평가(보충적·담보·임대 Max) 원 결과 — v1은 항상 `selectedMode:"supplementary"` */
+  /** 증여재산 평가(보충적·담보·임대 Max) 원 결과 */
   valuation: ReturnType<typeof computeSangjeungbeopValuation>;
   /** 증여가액 */
   value: {
@@ -129,7 +130,10 @@ export interface MixedBgPrepared {
     isMarket: boolean;
     /** 구분 감정평가가 있어 C_h를 직접 입력받았는가(G-13) */
     separateAppraisal: boolean;
-    selectedMode: "supplementary";
+    /** 증여가액이 무엇으로 정해졌는가 — 담보(§66)·임대(§61⑤) 승은 사용자 결정 H-1(2026-11-16)로 계산한다 */
+    selectedMode: "supplementary" | "mortgage" | "rental";
+    /** 시가 모드인데 담보평가가 이겨 §159①1호 괄호로 취득가액을 취득시 기준시가로 강제했는가 */
+    collateralForcedStdInMarketMode: boolean;
   };
   /** 양도시 4부분 기준시가 basis */
   transferStd: { hl: number; hb: number; cl: number; cb: number };
@@ -179,8 +183,13 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   const method = info.acquisitionMethod;
   const isMarket = info.valuationMode === "sangjeungbeop_market";
   const byInheritOrGift = cause === "inheritance" || cause === "gift";
+  // 시가 모드 담보(§66) 승 — 시가 모드는 시가와 담보평가만 비교하므로(임대 환산은 채택하지 않는다 · `computeSangjeungbeopValuation`) 기하 없이 판정된다.
+  //   이때 §159①1호 괄호가 취득가액을 취득시 기준시가로 강제한다(`resolveBgAcquisitionBasis`의 `collateralForcedStdInMarketMode`와 같은 조건 · 입주권은 MB-12가 막는다)
+  //   — 취득 경로는 기준시가 모드와 같고, 시가 취득 경로 입력(산정방식·실지 총액·상속증여 평가액·구분 감정평가)을 묻지 않는다.
+  const marketCollateralWin = isMarket && pos(info.marketValueAtTransfer) && computeMortgageValuation(info) > info.marketValueAtTransfer;
+  const isMarketAcq = isMarket && !marketCollateralWin;
   // 상속·증여 취득 경로(K-4 고정)는 시가 모드에서만 의미가 있다 — 기준시가 모드는 괄호가 취득시 기준시가를 강제한다.
-  const deemedPath = isMarket && byInheritOrGift;
+  const deemedPath = isMarketAcq && byInheritOrGift;
   // PHD(§164⑦) — 상속·증여 취득(시가)은 §163⑨ 단서 2호의 §164⑦ 가액(②)을 만드는 입력이라 허용한다(PR-7b-7a-2 · 사용자 결정 M-1 (a)).
   //   매매·기준시가 평가는 종전대로 막는다(그 경로의 취득시 기준시가를 §164⑦로 바꾸는 계산은 아직 없다 — 의제취득일 전은 7b Q-37).
   const phd = src.usePreHousingDisclosure === true;
@@ -270,7 +279,7 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
     if (info.housingAppraisal !== undefined) {
       add("MB-17", "구분 감정평가 선언(주택분 시가)은 시가 모드에서만 입력합니다 — 기준시가 모드의 증여가액은 보충적평가액입니다.", ["burdenedGiftInfo", "housingAppraisal"]);
     }
-  } else if (info.housingAppraisal === undefined) {
+  } else if (isMarketAcq && info.housingAppraisal === undefined) {
     add("MB-17", "주택·상가로 구분된 감정평가가액이 있는지 선택하세요 — 있으면 부가가치세법 시행령 제64조 제1항 제1호 단서에 따라 그 가액 비율로, 없으면 기준시가 비율로 시가를 주택·상가에 나눕니다.", ["burdenedGiftInfo", "housingAppraisal"]);
   }
 
@@ -315,8 +324,8 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   ) {
     need(pos(as.landPricePerSqmAtBuildingAcq), "건물 취득일 기준 주택부수토지 개별공시지가(토지·건물 취득일이 다릅니다)", ["mixedUse", "acquisitionStandardPrice", "landPricePerSqmAtBuildingAcq"]);
   }
-  if (isMarket) {
-    need(pos(info.marketValueAtTransfer), "양도시(증여일) 시가 평가액", ["burdenedGiftInfo", "marketValueAtTransfer"]);
+  if (isMarket) need(pos(info.marketValueAtTransfer), "양도시(증여일) 시가 평가액", ["burdenedGiftInfo", "marketValueAtTransfer"]);
+  if (isMarketAcq) {
     if (deemedPath) {
       // 상속·증여 취득은 K-4 고정(§163⑨) — 산정방식을 고르지 않는다(화면에 라디오가 없다 · PR-7b-7a). 고른 값이 실지가 아니면 위 MB-8이 막는다.
       // 단서 구간·PHD는 ②(§164 가액)가 있어 평가액이 선택이다 — 두 칸 모두 입력하거나 모두 비운다(PR-6 Q-19 · PR-7b-7a-2). 비교 후보 재계산은 보지 않는다.
@@ -369,19 +378,26 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
     add("MB-12", `부담부증여 정보의 양도시 기준시가 합계(${won(info.landStdPriceAtTransfer + info.buildingStdPriceAtTransfer)})가 겸용주택 입력에서 계산한 양도시 기준시가 합계(${won(sigmaTransfer)} = 개별주택가격 + 상가 부수토지 + 상가건물)와 다릅니다.`, ["burdenedGiftInfo", "buildingStdPriceAtTransfer"]);
   }
   const valuation = computeSangjeungbeopValuation(transferStd.hl + transferStd.cl, transferStd.hb + transferStd.cb, info);
-  if (valuation.selectedMode !== "supplementary") {
-    add("MB-7", `증여재산 평가가 ${valuation.selectedMode === "mortgage" ? "담보채권액(상속세 및 증여세법 제66조)" : "임대료 환산(같은 법 제61조 제5항)"} 평가로 결정됩니다 — 이 평가는 담보·임대된 재산 단위라 증여가액을 주택·상가로 나눌 법정 기준이 없어 겸용주택 부담부증여는 보충적평가(기준시가) 또는 시가가 증여가액인 경우만 계산합니다.`, ["burdenedGiftInfo", "mortgageDebtAmount"]);
-    return { issues };
-  }
+
   const C = valuation.max;
   if (B > C) {
     add("MB-10", `인수 채무(${won(B)})가 증여가액(${won(C)})을 초과합니다 — 채무액÷증여가액이 1을 넘으면 증여가액을 초과하는 부분까지 양도로 보게 되어 계산할 수 없습니다(「소득세법」 제88조 제1호 후단, 같은 법 시행령 제159조 제1항 제1호·제2호).`, ["burdenedGiftInfo", "mortgageDebtAmount"]);
     return { issues };
   }
   // C_h — 구분 감정평가가 있으면 입력값(부가세령 §64①1호 단서), 없으면 양도시 기준시가 비례(같은 호 본문)
+  //   담보(§66) 승은 사용자 결정 H-1 ④(2026-11-16): C = B(담보평가 = 보증금 + min(채권최고액, 차입금) ≤ B이고 위 MB-10을 통과했다)라서
+  //   부분 증여가액 = 그 부분 귀속 채무 + 구분 불분명 채무의 양도시 기준시가 비례 몫(각 부분 채무비율 1). 기준시가 비례로 C를 나누면
+  //   한 부분에만 귀속된 보증금이 그 부분 몫을 넘어 MB-14로 막히기 때문이다(예: 상가 보증금만 → 상가 채무비율 > 1).
+  //   임대(§61⑤) 승은 결정 H-1 ①~③대로 보충적평가와 같은 기준시가 비례 분할이다.
+  const collateralWin = valuation.selectedMode === "mortgage";
   let Ch: number;
-  const separateAppraisal = isMarket && info.housingAppraisal?.exists === true;
-  if (separateAppraisal) {
+  let collateralUh: number | undefined;
+  const separateAppraisal = isMarketAcq && info.housingAppraisal?.exists === true;
+  if (collateralWin) {
+    if (!attr || issues.some((i) => i.code === "MB-13")) return { issues };
+    collateralUh = safeMultiplyThenDivide(attr.unallocated, Hs, Hs + Cs);
+    Ch = attr.housing + collateralUh;
+  } else if (separateAppraisal) {
     const hv = info.housingAppraisal?.housingValue;
     if (!pos(hv) || hv >= C) {
       add("MB-17", `주택분 감정평가가액은 0보다 크고 증여가액(${won(C)})보다 작아야 합니다.`, ["burdenedGiftInfo", "housingAppraisal", "housingValue"]);
@@ -395,7 +411,7 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
 
   // ── 채무 귀속 안분 (MB-13 통과 시) ──────────────────────────
   if (!attr || issues.some((i) => i.code === "MB-13")) return { issues };
-  const uh = Math.floor(safeMultiplyThenDivide(attr.unallocated, Ch, C));
+  const uh = collateralUh ?? Math.floor(safeMultiplyThenDivide(attr.unallocated, Ch, C));
   const uc = attr.unallocated - uh;
   const Bh = attr.housing + uh;
   const Bc = attr.commercial + uc;
@@ -409,7 +425,7 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
 
   // ── 취득 경로 — BG 모드가 정본(asset의 stale 플래그를 덮어쓴다) ──
   let acqPath: MixedBgAcqPath;
-  if (!isMarket) acqPath = "standard";
+  if (!isMarketAcq) acqPath = "standard";
   else if (deemedPath) acqPath = src.bgPreDeemedConverted === true ? "converted_pre_deemed" : "deemed";
   else acqPath = method === "actual" ? "actual" : method === "converted" ? "converted" : (method as "salesCase" | "appraisal");
   const totalFor =
@@ -424,7 +440,10 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
         unallocatedToHousing: uh, unallocatedToCommercial: uc, housingDebt: Bh, commercialDebt: Bc,
       },
       valuation,
-      value: { whole: C, housing: Ch, commercial: Cc, isMarket, separateAppraisal, selectedMode: "supplementary" },
+      value: {
+        whole: C, housing: Ch, commercial: Cc, isMarket, separateAppraisal,
+        selectedMode: valuation.selectedMode, collateralForcedStdInMarketMode: marketCollateralWin,
+      },
       transferStd,
       acqPath,
       preDeemed: preDeemedInherited,

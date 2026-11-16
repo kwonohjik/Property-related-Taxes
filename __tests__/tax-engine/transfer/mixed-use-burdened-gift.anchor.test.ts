@@ -336,10 +336,10 @@ describe("겸용 × 부담부증여 — 차단 가드 MB-1~MB-18", () => {
     const { a, i } = base();
     expect(await issuesOf({ ...a, ownershipRatio: 0.5 }, i)).toContain("MB-6");
   });
-  it("MB-7 담보·임대 평가가 보충적평가를 이김", async () => {
+  it("(종전 MB-7) 임대 평가가 보충적평가를 이겨도 막지 않는다 — 사용자 결정 H-1(2026-11-16)", async () => {
     const { a } = base();
     const i = bg(F1, { valuationMode: "sangjeungbeop_standard", marketValueAtTransfer: undefined, acquisitionMethod: undefined, actualAcquisitionTotal: undefined, housingAppraisal: undefined, annualRentTotal: 600e6 });
-    expect(await issuesOf(a, i)).toContain("MB-7");
+    expect(await issuesOf(a, i)).toEqual([]);
   });
   it("MB-8 증여자 상속 취득 × K-5/K-6/K-7", async () => {
     const { a } = base();

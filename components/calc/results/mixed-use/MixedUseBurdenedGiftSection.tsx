@@ -108,6 +108,8 @@ export function MixedUseBgApportionSection({
 }) {
   const d = bg.debtAttribution;
   const whole = d.housingGiftValue + d.commercialGiftValue;
+  const stdHousing = bg.perPart.housingLand.stdPriceAtTransfer + bg.perPart.housingBuilding.stdPriceAtTransfer;
+  const stdCommercial = bg.perPart.commercialLand.stdPriceAtTransfer + bg.perPart.commercialBuilding.stdPriceAtTransfer;
   return (
     <ResultSection
       title="① 부담부증여 — 채무 귀속과 양도가액"
@@ -128,7 +130,12 @@ export function MixedUseBgApportionSection({
               formula={
                 <FLine>
                   구분 불분명 채무 {fmtPlain(d.unallocated)} ×{" "}
-                  <Frac top={`주택분 증여가액 ${fmtPlain(d.housingGiftValue)}`} bottom={`증여가액 ${fmtPlain(whole)}`} />
+                  {bg.sangjeungbeopValuation?.selectedMode === "mortgage" ? (
+                    // 담보 승 — 증여가액이 곧 채무라 기준시가 비율로 나눈다(사용자 결정 H-1 ④)
+                    <Frac top={`주택분 양도시 기준시가 ${fmtPlain(stdHousing)}`} bottom={`양도시 기준시가 합계 ${fmtPlain(stdHousing + stdCommercial)}`} />
+                  ) : (
+                    <Frac top={`주택분 증여가액 ${fmtPlain(d.housingGiftValue)}`} bottom={`증여가액 ${fmtPlain(whole)}`} />
+                  )}
                   {" "}— 이 안분은 국세청 해석례가 직접 답하지 않아 확인이 필요합니다
                 </FLine>
               }

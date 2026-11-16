@@ -22,6 +22,8 @@ import { MIXED_USE_BURDENED_GIFT } from "./legal-codes/burdened-gift-mixed-use";
 import { estimatedDeductionRate } from "./legal-codes";
 import { computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
 import { buildBurdenedGiftGiftTax } from "./burdened-gift-gift-tax";
+import { MARKET_COLLATERAL_STANDARD_ACQUISITION_NOTICE } from "./burdened-gift-valuation";
+import { bgParenthesisEraNotice } from "./burdened-gift-valuation";
 import { burdenedGiftSurchargeSuspendedNotice } from "./burdened-gift-eligibility";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { analyzeMixedBurdenedGift, type MixedBgPrepared, type MixedBgSource } from "./mixed-use-burdened-gift-prepare";
@@ -211,10 +213,11 @@ export function applyMixedBurdenedGift(args: {
   const perPart = {} as Record<MixedUsePartKey, MixedUseBurdenedGiftPart>;
   for (const k of KEYS) {
     const s = sideOf(k);
-    // A_i — 시가 모드는 시가 총액의 쪽(주택/상가) 몫을 그 쪽 기준시가 비례로 나눈 값, 기준시가 모드는 basis 자체
+    // A_i — 시가 모드·담보/임대 승은 증여가액의 쪽(주택/상가) 몫을 그 쪽 기준시가 비례로 나눈 값, 기준시가 모드 보충적평가는 basis 자체
     const sideStd = s === "housing" ? hs : cs;
+    const splitSide = bg.value.isMarket || bg.value.selectedMode !== "supplementary";
     perPart[k] = {
-      sangjeungbeopValue: bg.value.isMarket && sideStd > 0 ? safeMultiplyThenDivide(den[s], stdT[k], sideStd) : stdT[k],
+      sangjeungbeopValue: splitSide && sideStd > 0 ? safeMultiplyThenDivide(den[s], stdT[k], sideStd) : stdT[k],
       stdPriceAtAcquisition: g(k).basis,
       stdPriceAtTransfer: stdT[k],
       transferPrice: g(k).t,
@@ -246,6 +249,7 @@ export function applyMixedBurdenedGift(args: {
     gratuitousPortion,
     taxpayer: "donor",
     acquisitionMethodUsed: method,
+    ...(bg.value.collateralForcedStdInMarketMode ? { acquisitionStdForcedByCollateral: true as const } : {}),
     ...(bg.acqPath === "converted_pre_deemed"
       ? {
           deemedCause: asset.acquisitionCause === "gift" ? ("gift" as const) : ("inheritance" as const),
@@ -294,9 +298,27 @@ export function applyMixedBurdenedGift(args: {
     "증여세 평가에 쓰는 상가건물 기준시가는 양도세 기준시가와 같다고 보았습니다.",
   ];
   if (bg.debt.unallocated > 0) {
-    notices.push("구분이 분명하지 않은 채무는 주택·상가 증여가액 비율로 나누었습니다 — 이 안분은 국세청 해석례가 직접 답하지 않아 확인이 필요합니다.");
+    notices.push(
+      bg.value.selectedMode === "mortgage"
+        ? "구분이 분명하지 않은 채무는 증여일 현재 주택·상가 기준시가 비율로 나누었습니다 — 이 안분은 국세청 해석례가 직접 답하지 않아 확인이 필요합니다."
+        : "구분이 분명하지 않은 채무는 주택·상가 증여가액 비율로 나누었습니다 — 이 안분은 국세청 해석례가 직접 답하지 않아 확인이 필요합니다.",
+    );
   }
-  if (bg.value.isMarket && !bg.value.separateAppraisal) {
+  if (bg.value.selectedMode === "mortgage") {
+    notices.push(
+      `증여가액이 담보채권액 평가(「상속세 및 증여세법」 제66조)로 정해졌습니다. 이 평가액을 주택·상가로 나누는 기준은 법령에 없고 이를 직접 다룬 해석례도 확인되지 않아, ` +
+        "주택·상가 각 부분의 증여가액을 그 부분에 귀속된 채무에 구분이 분명하지 않은 채무의 기준시가 비율 몫을 더한 금액으로 보았습니다(각 부분의 채무비율 1). 확인이 필요합니다.",
+    );
+  } else if (bg.value.selectedMode === "rental") {
+    notices.push(
+      `증여가액이 임대료 환산 평가(「상속세 및 증여세법」 제61조 제5항)로 정해졌습니다. 이 평가액을 주택·상가로 나누는 기준은 법령에 없고 이를 직접 다룬 해석례도 확인되지 않아, ` +
+        "증여일 현재 주택·상가 기준시가 비율로 나누어 부분별로 「소득세법 시행령」 제159조 제1항을 적용했습니다. 확인이 필요합니다.",
+    );
+  }
+  if (bg.value.collateralForcedStdInMarketMode) notices.push(MARKET_COLLATERAL_STANDARD_ACQUISITION_NOTICE);
+  const eraNotice = bgParenthesisEraNotice(method, bg.value.selectedMode, transferDate);
+  if (eraNotice) notices.push(eraNotice);
+  if (bg.value.isMarket && !bg.value.separateAppraisal && !bg.value.collateralForcedStdInMarketMode) {
     notices.push(`주택·상가로 구분된 감정평가가액이 없다고 보아 시가를 양도시 기준시가 비율로 주택·상가에 나누었습니다(${MIXED_USE_BURDENED_GIFT.VAT_DECREE_APPORTION_64_1} 본문).`);
   }
   if (bg.value.separateAppraisal) {

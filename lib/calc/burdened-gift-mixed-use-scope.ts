@@ -12,6 +12,8 @@
  *  · 읽기 전용이다 — `useEffect → store` 미러링으로 쓰지 않는다. 비어 있는 값은 **0으로 메우지 않고** `missing`/`issues`에 싣는다(자동 안분 fallback 금지).
  */
 import { parseAmount } from "@/lib/calc/number-parse";
+import { computeMortgageValuation } from "@/lib/tax-engine/burdened-gift-valuation";
+import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { DEEMED_ACQUISITION_DATE } from "./transfer-163-9-base-date";
@@ -43,6 +45,36 @@ export function isMixedBgDeemedPath(
     a.bgValuationMode === "sangjeungbeop_market" &&
     (a.acquisitionCause === "inheritance" || a.acquisitionCause === "gift")
   );
+}
+
+/**
+ * 겸용 × 부담부증여 × 시가 평가에서 담보채권액 평가(상증법 §66)가 시가보다 큰가 — 엔진 prepare의 `marketCollateralWin`과 같은 판정이다
+ * (시가 모드는 시가와 담보평가만 비교한다 · 사용자 결정 H-1 2026-11-16). 이때 §159①1호 괄호가 취득가액을 취득시 기준시가로 강제해
+ * 산정방식별 금액·상속·증여 평가액·구분 감정평가를 쓰지 않는다. 금액은 ④(`buildBurdenedGiftInfo`)와 같은 칸에서 읽는다.
+ */
+export function isMixedBgMarketCollateralWin(
+  a: ScopeAsset & Pick<AssetForm, "bgValuationMode" | "bgMarketValueAtTransfer" | "bgLendingDepositTotal" | "bgMortgageDebtAmount" | "bgMortgageSetAmount">,
+): boolean {
+  if (!isMixedBurdenedGift(a) || a.bgValuationMode !== "sangjeungbeop_market") return false;
+  const market = parseAmount(a.bgMarketValueAtTransfer) || 0;
+  if (market <= 0) return false;
+  const mortgage = computeMortgageValuation({
+    lendingDepositTotal: parseAmount(a.bgLendingDepositTotal) || 0,
+    mortgageDebtAmount: parseAmount(a.bgMortgageDebtAmount) || 0,
+    mortgageSetAmount: a.bgMortgageSetAmount ? parseAmount(a.bgMortgageSetAmount) : undefined,
+  } as BurdenedGiftInfo);
+  return mortgage > market;
+}
+
+/**
+ * 상속·증여 평가액(주택분·상가분)이 실제로 취득가액에 쓰이는가 — `isMixedBgDeemedPath`이면서 시가 모드 담보 승이 아닐 때다
+ * (엔진 prepare의 `deemedPath`). ⑤ 평가액 칸 · ④ 평가액 전송 · §163⑨ 비교 구간이 이 술어를 쓴다.
+ * 산정방식 라디오 숨김·⑧/⑫ 방식 면제는 종전대로 `isMixedBgDeemedPath`다(상속·증여 취득에는 고를 방식이 없다).
+ */
+export function isMixedBgDeemedValueUsed(
+  a: ScopeAsset & Pick<AssetForm, "bgValuationMode" | "acquisitionCause" | "bgMarketValueAtTransfer" | "bgLendingDepositTotal" | "bgMortgageDebtAmount" | "bgMortgageSetAmount">,
+): boolean {
+  return isMixedBgDeemedPath(a) && !isMixedBgMarketCollateralWin(a);
 }
 
 /**

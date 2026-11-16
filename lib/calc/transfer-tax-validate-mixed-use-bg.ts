@@ -11,7 +11,8 @@
  *  · 폼 → 엔진 입력은 ④와 같은 함수로 만들고(`burdened-gift-mixed-use-preview.ts`),
  *  · 이슈의 `path`를 화면 입력칸(`data-field`)으로 옮기며,
  *  · 사용자에게 더 구체적인 귀속 입력 문구(모드 미선택·분할 합 불일치)를 엔진의 일반 MB-13 앞에 둔다.
- * 순서는 화면 순서 = 계산 순서다: 차단 조합 → 필수 입력(MB-11) → 귀속(MB-13) → 구분 감정평가(MB-17) → 평가 차단(MB-7) → 초과부담부(MB-10) → 부분 초과(MB-14).
+ * 순서는 화면 순서 = 계산 순서다: 차단 조합 → 필수 입력(MB-11) → 귀속(MB-13) → 구분 감정평가(MB-17) → 초과부담부(MB-10) → 부분 초과(MB-14).
+ * (담보·임대 승 차단 MB-7은 사용자 결정 H-1(2026-11-16)로 없어졌다 — 엔진이 그 경우를 계산한다.)
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -79,9 +80,7 @@ export function validateMixedUseBurdenedGift(
   const mb17 = firstIssue(issues, (i) => i.code === "MB-17");
   if (mb17) return fail(mb17);
 
-  // 6) 평가 차단(MB-7) · 초과부담부(MB-10)
-  const mb7 = firstIssue(issues, (i) => i.code === "MB-7");
-  if (mb7) return fail(mb7, "transferType");
+  // 6) 초과부담부(MB-10)
   const mb10 = firstIssue(issues, (i) => i.code === "MB-10");
   if (mb10) return fail(mb10, "bgLendingDepositTotal");
 
