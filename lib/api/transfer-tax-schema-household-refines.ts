@@ -10,6 +10,7 @@
 import { z } from "zod";
 import { directResidenceMonthsOverflowError } from "@/lib/calc/residence-interval-validate";
 import { residenceStartWithMerge } from "@/lib/calc/self-owns-scope";
+import { collectAppurtenantCardHoldingResidenceIssues } from "@/lib/tax-engine/transfer-land-holding-residence";
 import { refineBgOwnerSplit } from "./transfer-tax-schema-bg-owner-split";
 import { refineBgGiftBuildingStd } from "./transfer-tax-schema-bg-gift-std";
 
@@ -341,4 +342,30 @@ export function residenceMonthsOverflowIssue(d: ResidenceCapFacts & {
   return msg && start.kind === "acquisition" && start.start !== d.acquisitionDate
     ? msg.replace(`취득일(${start.start})`, `보유 기산 후보 중 가장 이른 날(${start.start} — 증여자 취득일·세대 보유 시작일 포함)`)
     : msg;
+}
+
+/**
+ * 함께 양도 주택 부수토지 카드의 「토지 보유기간 중 거주 개월」(구간 입력 · ④가 계산) — 엔진과 같은 leaf(`collectAppurtenantCardHoldingResidenceIssues`).
+ * 카드 모양이 아닌 컴패니언의 값은 분리취득 leaf(`refineSplitPartCause`)가 받는다. 거주 합계는 카드 자신의 값, 없으면 주 자산 값(⑭ 승계와 같은 식).
+ */
+export function refineAppurtenantCardLandHolding(
+  c: { assetKind?: string; landNature?: string; acquisitionDate?: string; residencePeriodMonths?: number; landHoldingResidenceMonths?: number },
+  data: { propertyType?: string; acquisitionDate?: string; residencePeriodMonths?: number },
+  ctx: z.RefinementCtx,
+  prefix: (string | number)[],
+) {
+  const [issue] = collectAppurtenantCardHoldingResidenceIssues({
+    landHoldingResidenceMonths: c.landHoldingResidenceMonths,
+    residencePeriodMonths: c.residencePeriodMonths ?? data.residencePeriodMonths,
+    isAppurtenantLandCard: isAppurtenantLandCard(c),
+    primaryIsHousing: data.propertyType === "housing",
+    cardAcquisitionDate: c.acquisitionDate,
+    primaryAcquisitionDate: data.acquisitionDate,
+  });
+  if (issue) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...prefix, issue.field], message: issue.message });
+}
+
+/** 함께 양도 주택 부수토지 카드인가 — ⑫ 컴패니언 모양(`assetKind` land + `landNature` appurtenant_to_housing). */
+export function isAppurtenantLandCard(c: { assetKind?: string; landNature?: string }): boolean {
+  return c.assetKind === "land" && c.landNature === "appurtenant_to_housing";
 }

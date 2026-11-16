@@ -825,6 +825,11 @@ export interface TransferTaxInput {
     building?: SplitCarryoverPartBasis;
   };
   /**
+   * 해결자 전용 내부 입력 — 주택 split 파트 이월과세 시나리오 입력(`calcSplitCarryoverScenarios`)에서만 세운다(와이어 아님 — ⑭가 옮기지 않는다).
+   * 시나리오는 파트 취득일을 증여자 취득일로 치환하므로 「토지가 건물보다 나중 취득」 날짜 비교가 원 입력과 달라진다 — 토지 보유기간 중 거주 규칙(`transfer-land-holding-residence.ts`)을 걸지 않고 종전 계산을 유지한다.
+   */
+  landHoldingResidenceSkip?: boolean;
+  /**
    * ⚠️ 엔진 내부 전달용 — 주택·건물 부담부증여 × 토지·건물 취득일 다름(`bgPartDatesDiffer`) 또는 소유자 분리(`bgOwnerSplitOf` — 비소유 파트 0)에서 부담부증여 단계가 싣는 §159 파트 값.
    * `calcSplitGain`이 다시 안분하지 않고 그대로 쓴다(설계서 `bg-house-building-split.design.md` §5.1). 와이어(⑫)에는 없다.
    */
@@ -1537,6 +1542,13 @@ export interface TransferTaxInput {
   landPartDonorSameHousehold?: boolean;
   /** 건물 증여 전, 토지를 보유한 동안 건물 소유자와 같은 세대로 이 집에 거주한 개월 수(0 이상 정수). `landPartDonorSameHousehold === true`일 때 필수다 */
   landPartPriorHouseholdResidenceMonths?: number;
+  /**
+   * 토지를 건물보다 **나중에** 취득한 분리취득 주택 — 구간 입력에서 ④가 각 거주 구간과 [토지 취득일, 양도일]의 겹침 개월을 합해 싣는 **토지 보유기간 중 거주 개월**.
+   * 토지 파트 표2 거주기간별 공제율의 거주 연수에만 쓴다(표2 대상 판정·건물 파트는 `residencePeriodMonths` 그대로).
+   * 직접 개월 입력은 이 값이 없어 엔진이 `min(residencePeriodMonths, 토지 보유 개월)`로 상한한다(확인 필요 고지). 게이트·검증: `transfer-land-holding-residence.ts`(엔진·⑫ 공유).
+   * 토지가 건물보다 나중 취득이 아니면 보내지 않는다(보내면 엔진·⑫가 막는다). 미전송 = 종전 계산(토지가 먼저인 경우) 또는 직접 입력 상한(나중인 경우).
+   */
+  landHoldingResidenceMonths?: number;
   /** 토지 파트 피상속인 취득일 — `landAcquisitionCause === "inheritance"` 시 §104②1호 통산 */
   landDecedentAcquisitionDate?: Date;
   /**

@@ -12,6 +12,8 @@ import type { RentalLthdParts } from "./transfer-tax/rental-housing-exception/lt
 import { appurtenantLandLthdNoticeText } from "./appurtenant-land-lthd-rate";
 import { calcLongTermRate } from "./transfer-tax-mixed-use-inheritance";
 import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
+import { landHoldingResidenceCapNotice } from "./transfer-land-holding-residence-notice";
+import { resolveLandHoldingResidence } from "./transfer-land-holding-residence";
 
 /**
  * 주택분(배율 초과분 제외) 양도차익을 토지·건물 파트로 나눈 장기보유특별공제 입력. 만들 수 없으면 `undefined`(종전 단일 보유연수 산식).
@@ -32,8 +34,10 @@ export function buildRentalLthdParts(args: {
   housingGain: number;
   /** 표2 후보 연수(「주택 부수토지로서의 보유기간」) — 토지만 본인이 합가일을 넣어 건물 보유연수와 달라진 경우만. 없으면 건물 보유연수 */
   houseYearsOverride?: number;
+  /** 토지를 건물보다 나중에 취득한 주택의 토지 파트 거주 연수(토지 보유기간 중 거주 — `resolveLandHoldingResidence`). 없으면 자산 단위 거주 연수 */
+  landLiveYears?: number;
 }): RentalLthdParts | undefined {
-  const { splitDetail, nonBusinessGain, laterLandExcluded, housingGain, houseYearsOverride } = args;
+  const { splitDetail, nonBusinessGain, laterLandExcluded, housingGain, houseYearsOverride, landLiveYears } = args;
   if (!splitDetail) return undefined;
   const selfOwns = splitDetail.selfOwns ?? "both";
   if (selfOwns === "building_only") return undefined;
@@ -50,21 +54,42 @@ export function buildRentalLthdParts(args: {
       holdYears: landYears,
       // 기본통칙 95-0…1 — 토지가 주택보다 보유기간이 오래된 경우에만 「주택 부수토지로서의 보유기간」(= 건물 보유연수 · 합가일 반영)이 쓰인다.
       ...(landYears > houseYears ? { houseHoldYears: houseYears } : {}),
+      ...(landLiveYears !== undefined ? { liveYears: landLiveYears } : {}),
     },
     building: { gain: buildingGain, holdYears: buildingYears },
   };
 }
 
 /**
+ * 토지를 건물보다 **나중에** 취득한 주택의 토지 파트 거주 — 표2 거주분 공제율에 쓰는 거주 연수와 직접 입력 상한 사실(`resolveLandHoldingResidence` — 일반 경로 split 분기와 같은 leaf).
+ * 걸리지 않으면(토지가 먼저·같은 날·소유자 분리·분리 계산 없음) 둘 다 없다 — 종전 계산(자산 단위 거주 연수).
+ */
+export function rentalLandHoldingResidence(
+  input: Parameters<typeof resolveLandHoldingResidence>[0],
+  splitDetail: SplitGainResult | undefined,
+): { landLiveYears?: number; landCap?: { directMonths: number; cappedMonths: number; landHoldingMonths: number } } {
+  if (!splitDetail) return {};
+  const res = resolveLandHoldingResidence(input, splitDetail.selfOwns ?? "both");
+  if (!res.applies) return {};
+  return {
+    landLiveYears: Math.floor(res.months / 12),
+    ...(res.capped ? { landCap: { directMonths: input.residencePeriodMonths, cappedMonths: res.months, landHoldingMonths: res.landHoldingMonths! } } : {}),
+  };
+}
+
+/**
  * 특례 결과의 파트별 공제를 `splitDetail` 토지·건물 파트에 채운다(결과 카드가 파트별 공제율·공제액을 읽는다 — 종전에는 이 경로가
  * 그 필드를 채우지 않아 카드가 0%를 표시했다). 값은 **실제 적용한 장특표** 기준이다 — A는 표2, B는 표1(`appliedTable`, `gain95Applied`와 같은 축).
- * 반환값은 기본통칙 95-0…1로 토지분 공제율이 토지 자신의 보유연수 값과 달라졌을 때의 고지 문구(없으면 `undefined`).
+ * 반환값은 기본통칙 95-0…1로 토지분 공제율이 토지 자신의 보유연수 값과 달라졌을 때의 고지 문구, 또는 토지를 건물보다 나중에 취득해 직접 입력 거주를 토지 보유 개월로
+ * 상한했을 때의 고지 문구(없으면 `undefined`).
  */
 export function applyRentalLthdPartsToSplit(
   splitDetail: SplitGainResult | undefined,
   rhe: RentalHousingExceptionResult,
   /** 표2 연혁(2009~2020 보유 연 8%)을 가르는 양도일 — 보유분·거주분 분해 echo가 쓴다 */
   transferDate: Date,
+  /** 토지를 건물보다 나중에 취득했는데 직접 입력 거주를 토지 보유 개월로 상한했다면 그 사실(고지 echo 게이트) — 없으면 상한 없음 */
+  landCap?: { directMonths: number; cappedMonths: number; landHoldingMonths: number },
 ): string | undefined {
   const parts = rhe.formulaTrace.partsLthd;
   if (!splitDetail || !parts) return undefined;
@@ -102,9 +127,22 @@ export function applyRentalLthdPartsToSplit(
   const ap = parts.land.appurtenant;
   // 표2가 계산에 들어간 경우 — A(표2 전체)와 B2의 2호 부분.
   const table2Used = table2 || (rhe.scenarioId === "RH-B2" && (rhe.formulaTrace.part2 ?? 0) > 0);
+  // 토지 파트의 거주 연수 echo(표시 전용) — 토지를 건물보다 나중에 취득했으면 토지 보유기간 중 거주 연수다. 상한이 표2 공제율을 실제로 바꿨을 때만 고지 echo.
+  if (parts.land.liveYears !== undefined) splitDetail.land.residenceYears = parts.land.liveYears;
+  if (
+    landCap && table2Used && !parts.land.appurtenant &&
+    calcLongTermRate(parts.land.holdYears, Math.floor(landCap.cappedMonths / 12), true, false, transferDate) !==
+      calcLongTermRate(parts.land.holdYears, Math.floor(landCap.directMonths / 12), true, false, transferDate)
+  ) {
+    splitDetail.land.holdingResidenceCap = landCap;
+  } else {
+    delete splitDetail.land.holdingResidenceCap;
+  }
+  // 상한 고지는 토지가 나중 취득일 때만이고 통칙 95-0…1(토지가 먼저)은 반대 방향이라 두 고지는 함께 나오지 않는다.
+  const capNotice = landHoldingResidenceCapNotice(splitDetail.land.holdingResidenceCap);
   if (!ap || !table2Used) {
     delete splitDetail.land.appurtenantLthd;
-    return undefined;
+    return capNotice;
   }
   if (table2) splitDetail.land.appurtenantLthd = ap;
   else delete splitDetail.land.appurtenantLthd; // B의 카드는 표1 값을 보이므로 통칙 echo는 달지 않는다(고지만).

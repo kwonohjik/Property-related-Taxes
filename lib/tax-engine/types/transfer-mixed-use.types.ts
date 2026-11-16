@@ -192,6 +192,12 @@ export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
    * 표2 게이트(대상 판정)는 `table2ResidencePeriodYears`(통산) 우선 — 미제공 시 이 값으로 fallback.
    */
   residencePeriodYears: number;
+  /**
+   * 토지를 건물보다 **나중에** 취득한 겸용주택 — 구간 입력에서 ④가 거주 구간과 [토지 취득일, 양도일]의 겹침 개월을 `floor(÷12)`한 연수(토지 보유기간 중 거주).
+   * 주택분 **토지** 거주분 공제율에만 쓴다(표2 대상 판정·건물분은 `residencePeriodYears` 그대로). 직접 입력(없음)이면 엔진이 `min(거주 연수, 토지 보유 연수)`로 상한하고 고지한다.
+   * 게이트·검증: `transfer-land-holding-residence.ts`(엔진·⑫ 공유) — 토지가 나중 취득이 아니면 보내지 않는다.
+   */
+  landHoldingResidencePeriodYears?: number;
 
   /**
    * §154⑧3호 표2 '대상 판정'용 통산 거주 연수 (상속개시 후 실거주 + 상속개시 전 동일세대 통산 거주).
@@ -804,6 +810,10 @@ export interface MixedUseHousingPart {
    * `SplitPartResult["appurtenantLthd"]`와 같고 표시 계층은 이 값을 그대로 읽는다(재계산 금지).
    */
   appurtenantLthd?: SplitPartResult["appurtenantLthd"];
+  /** 토지를 건물보다 나중에 취득해 직접 입력 거주를 토지 보유 개월로 상한했고 그 상한이 토지 공제율을 바꾼 경우의 사실(표시 전용 — 고지 게이트). 분리취득 `holdingResidenceCap`과 같은 모양·같은 고지 */
+  landHoldingResidenceCap?: SplitPartResult["holdingResidenceCap"];
+  /** 토지를 건물보다 나중에 취득해 토지 거주를 토지 보유기간 중 거주로 센 경우, 그 연수가 공제율에 쓰였는가(표시 게이트 — 분리취득 `holdingResidenceRateUsed`와 같은 뜻). 역방향이 아니면 없다 */
+  landHoldingResidenceRateUsed?: boolean;
   /** 파트별(토지·건물) 장특 echo(표시 전용 — 합계 보유/거주분 echo는 이 파트 합). 옛 결과(`resultData`)에는 없다. */
   partLthd?: MixedPartLthd;
   /** 양도소득금액 */
@@ -850,6 +860,11 @@ export interface MixedPartLthdEcho {
   residenceDeductionAmount: number;
   /** 그 파트 자신의 보유연수(취득일 → 양도일) — 상세명세서 산식 문구용. #2247 이후·이 필드 추가 전 결과에는 없다. */
   holdingYears?: number;
+  /**
+   * 그 파트의 거주기간별 공제율 산정 거주 연수 — 주택분만(상가분은 표1이라 없다). 토지를 건물보다 나중에 취득했으면 토지는 토지 보유기간 중 거주 연수라 건물과 다르다.
+   * 상세명세서·신고서가 이 값을 읽는다(자산 단위 연수를 두 파트에 찍지 않는다). 이 필드 추가 전 결과에는 없다 — 자산 단위 연수로 되돌아간다.
+   */
+  residenceYears?: number;
 }
 export interface MixedPartLthd {
   land: MixedPartLthdEcho;

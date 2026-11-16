@@ -226,6 +226,16 @@ export interface SplitPartResult {
    */
   priorHouseholdResidenceEffect?: { rate: boolean; eligibility: boolean };
   /**
+   * 토지를 건물보다 나중에 취득했는데 거주를 개월 수로 **직접 입력**해 토지 보유 개월로 상한했고, 그 상한이 토지 파트 공제율을 **실제로 바꾼** 경우의 사실(표시 전용 — 고지 게이트).
+   * 구간 입력(④가 겹침을 계산)이거나 상한이 연수를 바꾸지 않았으면 없다. `residenceYears`는 상한 적용 값이다.
+   */
+  holdingResidenceCap?: { directMonths: number; cappedMonths: number; landHoldingMonths: number };
+  /**
+   * 토지를 건물보다 나중에 취득해 토지 파트 거주 연수를 **토지 보유기간 중 거주**로 센 경우(역방향)에서, 그 연수가 거주기간별 공제율에 **쓰였는가**(표시 전용 — 신고서 칸 게이트).
+   * 표2로 계산되고(1세대1주택 대상 · 2021 이후 거주분 열이 있는 연혁) 통칙 95-0…1로 표1이 이긴 부수토지가 아니면 true다. 역방향이 걸리지 않으면(토지가 먼저·같은 날·소유자 분리) 없다.
+   */
+  holdingResidenceRateUsed?: boolean;
+  /**
    * 소득세법 기본통칙 95-0…1 적용 echo(표시 전용·세액은 `longTermRate`·`longTermDeduction`이 정본) — **토지 파트**이고
    * 1세대1주택 표2 대상이며 토지가 주택(건물)보다 보유기간이 오래된 경우에만 채운다. 표1(토지 전체 보유기간)과
    * 표2(주택 부수토지로서의 보유기간 = 건물 보유연수) 중 **큰 공제율**을 `longTermRate`로 삼았다는 사실이다.

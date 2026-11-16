@@ -96,6 +96,8 @@ export function buildHousingLthdEcho(a: {
   landHoldingYears: number;
   buildingHoldingYears: number;
   residenceYears: number;
+  /** 토지 파트 거주 연수 — 없으면 `residenceYears`(자산 단위). 파트 echo의 `residenceYears`에 싣는다. */
+  landResidenceYears?: number;
 }): {
   holdingDeductionAmount: number;
   residenceDeductionAmount: number;
@@ -113,6 +115,8 @@ export function buildHousingLthdEcho(a: {
     a.buildingDeductionAmount,
     a.buildingHoldingYears,
   );
+  land.residenceYears = a.landResidenceYears ?? a.residenceYears;
+  building.residenceYears = a.residenceYears;
   return {
     holdingDeductionAmount: land.holdingDeductionAmount + building.holdingDeductionAmount,
     residenceDeductionAmount: land.residenceDeductionAmount + building.residenceDeductionAmount,

@@ -19,6 +19,8 @@ import { highValueExcessRulingNoticeText } from "./transfer-tax-appurtenant-land
 import { appurtenantLandLthdNoticeText } from "./appurtenant-land-lthd-rate";
 import { judgeMixedUseOneHouseExemption } from "./transfer-tax-mixed-use-exemption";
 import { mergeRentalCarveoutSurchargeNotice } from "./one-house/merge-rental-carveout";
+import { resolveMixedLandHoldingResidence } from "./transfer-land-holding-residence";
+import { landHoldingResidenceCapNotice } from "./transfer-land-holding-residence-notice";
 import { resolveMixedUseRentalResidence } from "./transfer-tax-mixed-use-rental-residence";
 import { judgeMixedUseMultiHouseSurcharge } from "./transfer-tax-mixed-use-surcharge-judge";
 import { mixedSurchargeFallbackFacts } from "./transfer-tax-mixed-use-surcharge-judge";
@@ -512,7 +514,11 @@ function calcMixedUseCore(
     // §155의3①1호 「취득한 후 체결」 — 위 `exemptionReqInput`과 같은 취득일(건물 취득일 = 주택 부분 취득일).
     asset.buildingAcquisitionDate,
     laterLandExemptExcluded,
+    // 토지를 건물보다 나중에 취득했으면 주택분 토지 거주분은 토지 보유기간 중 거주(분리취득과 같은 leaf · 검증 위반이면 throw)
+    resolveMixedLandHoldingResidence(asset, transferDate),
   );
+  const landCapNotice = landHoldingResidenceCapNotice(housingPart.landHoldingResidenceCap);
+  if (landCapNotice && !housingPart.isExempt) warnings.push(landCapNotice);
   warnings.push(...mixedUseGiftTable2Notices(asset, transferDate, isOneHouseExempt, housingPart)); // 증여 전 거주 표2 통산 확인 필요(일반 경로와 같은 고지)
   // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
   //    「주택(이에 딸린 토지 포함)」이라 상가건물·상가부수토지는 그 자산이 아니다.

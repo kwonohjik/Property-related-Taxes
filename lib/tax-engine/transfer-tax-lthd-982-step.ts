@@ -11,12 +11,13 @@ import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-
 import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era, table2HoldingRateAt } from "./data/lthd-table2-era";
 import { giftTable2PriorResidenceNotice } from "./one-house/gift-table2-notice";
 import { landPartPriorResidenceNotice } from "./transfer-split-land-residence-notice";
+import { landHoldingResidenceCapNotice } from "./transfer-land-holding-residence-notice";
 import { appurtenantLandLthdNoticeText } from "./appurtenant-land-lthd-rate";
 import { pushLongTermHoldingSteps } from "./transfer-tax-lthd-steps";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
 import type { UsageConversionDetail } from "./types/transfer-result.types";
-import type { SplitGainResult } from "./types/transfer-split-gain.types";
+import type { SplitGainResult, SplitPartResult } from "./types/transfer-split-gain.types";
 import type { Rental97Result } from "./transfer-reductions/types";
 import type { Unsold982LthdEcho } from "./transfer-reductions/unsold-hybrid-p4";
 
@@ -41,6 +42,8 @@ export interface Lthd982StepArgs {
   appurtenantTable1Applied?: boolean;
   /** 겸용 파트 카드 주택 부수토지에 통칙 95-0…1을 적용해 공제율이 달라진 경우의 고지 입력(`calcLongTermHoldingDeduction` echo) */
   appurtenantLthdNotice?: Parameters<typeof appurtenantLandLthdNoticeText>[0];
+  /** 함께 양도 부수토지 카드(L-1b)를 주택보다 나중에 취득해 직접 입력 거주를 카드 보유 개월로 상한했고 그 상한이 공제율을 바꾼 경우의 고지 입력(`calcLongTermHoldingDeduction` echo) */
+  landHoldingResidenceCap?: SplitPartResult["holdingResidenceCap"];
   splitDetail?: SplitGainResult;
   /** §97의3·§97의4 echo — 장특 step 산식에서 혼합·가산 공제율을 풀어 쓴다(표시 전용, `transfer-tax-lthd-steps.ts`). */
   rental97LthdDetail?: Rental97Result;
@@ -157,6 +160,9 @@ export function applyLthd982AndPushSteps(a: Lthd982StepArgs): Lthd982StepResult 
   // 4289 — 건물 증여 전 동일세대 거주 개월을 토지 파트 표2 거주기간 공제율에 더했다(§98의2 특칙이 공제액을 덮어쓴 경우는 제외 — 토지 파트 공제율이 쓰이지 않는다).
   const landPriorNotice = lthd982Applied ? undefined : landPartPriorResidenceNotice(exemptionJudgeInput, a.splitDetail);
   if (landPriorNotice) a.warnings.push(landPriorNotice);
+  // 역방향 — 토지를 건물보다 나중에 취득해 직접 입력 거주를 토지 보유 개월로 상한했고 그 상한이 공제율을 바꿨다(구간 입력이면 echo가 없다).
+  const landCapNotice = lthd982Applied ? undefined : landHoldingResidenceCapNotice(a.splitDetail?.land.holdingResidenceCap ?? a.landHoldingResidenceCap);
+  if (landCapNotice) a.warnings.push(landCapNotice);
   // OH-31 — 2009-01-01 전 양도분의 표2 연혁은 미지원이다(현행 식으로 계산) — 숨기지 않는다.
   if (longTermHoldingDeduction > 0 && resolveLthdTable2Era(exemptionJudgeInput.transferDate) === "unsupported" && resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155) && isLthdTable2SubjectAsset(exemptionJudgeInput)) a.warnings.push(LTHD_TABLE2_UNSUPPORTED_NOTICE);
 

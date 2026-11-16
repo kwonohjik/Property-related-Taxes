@@ -9,6 +9,7 @@
  *    `?.trim()` 금지 — undefined일 때 `undefined !== ""` → true가 되어 0을 전송한다.
  */
 
+import { buildMixedLandHoldingResidencePayload } from "./transfer-land-holding-residence-scope";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { isMixedUseCaseA } from "./mixed-use-case";
 import {
@@ -271,6 +272,8 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
     // 거주기간 단일 소스 — 보유상황(입주일·퇴거일/개월) 거주에서 도출.
     // 메인 엔진과 동일 whole-year 산식(Math.floor(months/12), transfer-tax-helpers.ts:466·505)로 정합.
     residencePeriodYears: Math.floor(resMonths / 12),  // 실거주 (표2 거주분 공제율)
+    // 토지를 건물보다 나중에 취득한 겸용주택의 구간 입력 — 토지 보유기간과 겹친 거주 연수(주택분 토지 거주분 전용 · 표2 대상 판정·건물분은 위 값 그대로). 직접 입력은 엔진이 상한.
+    ...buildMixedLandHoldingResidencePayload(primary),
     // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 — 동일세대 상속이면 실거주 + 상속개시 전 통산 거주.
     // 규칙은 엔진 `consolidateResidenceMonths` 재사용(단일 소스). 비상속·별도세대면 실거주로 identity.
     table2ResidencePeriodYears: Math.floor(

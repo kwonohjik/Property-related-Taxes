@@ -355,6 +355,8 @@ export function buildTransferEngineInput(
     // ⑭ 4289 — 건물 증여 전 동일세대 거주(D2 증여 호스트). 게이트·상한은 엔진 진입 leaf(`transfer-split-land-residence.ts`)가 막는다. 컴패니언은 매핑하지 않는다(⑫가 명시 거부).
     landPartDonorSameHousehold: data.landPartDonorSameHousehold,
     landPartPriorHouseholdResidenceMonths: data.landPartPriorHouseholdResidenceMonths,
+    // ⑭ 역방향 — 토지를 건물보다 나중에 취득한 주택의 토지 보유기간 중 거주 개월(구간 입력 · ④가 계산). 게이트·상한은 엔진 진입 leaf(`transfer-land-holding-residence.ts`)가 막는다. 직접 입력은 없고 엔진이 보유 개월로 상한한다.
+    landHoldingResidenceMonths: data.landHoldingResidenceMonths,
     // ⑭ 구주택 멸실·신축 통산(해석 (5)) — Date 변환은 공용 변환기. 컴패니언은 매핑하지 않는다(⑫가 명시 거부).
     landRebuildPriorHouse: toEngineLandRebuild(data.landRebuildPriorHouse),
     // ⑭ 주택 split 파트 이월과세(§97의2①) — 와이어(사건 1벌 + 파트 N벌) → 엔진 input. Date 변환·증여세 안분은 합성기가 한다(TypeScript 미감지 영역).

@@ -239,7 +239,10 @@ export function validateLandPartCause(
     issue.field === "carryoverTaxation" ||
     issue.field === "expenses"
       ? "landAcquisitionCause"
-      : issue.field;
+      : // 역방향 — 토지 보유기간 중 거주 개월은 ④가 거주 구간에서 계산하는 값이라 화면 칸이 없다(⑧은 이 값을 넣지 않아 발동하지 않는다). 고칠 칸은 거주 구간이다.
+        issue.field === "landHoldingResidenceMonths"
+        ? "residencePeriods"
+        : issue.field;
   return fieldError(anchor, msg);
 }
 

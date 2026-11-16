@@ -6,6 +6,7 @@
 import type { MixedUseSaleSplitFields } from "@/lib/tax-engine/types/transfer-mixed-use-sale-split.types";
 import { hasMixedBuildingExtras, hasMixedSaleSplitInput, mixedSaleSplitBlockedReason } from "@/lib/tax-engine/mixed-use-sale-split";
 import { z } from "zod";
+import { mixedLandHoldingResidenceIssue } from "@/lib/tax-engine/transfer-land-holding-residence";
 import { isBuildingDayLandPriceRequired } from "@/lib/tax-engine/mixed-use-acq-date";
 import {
   isHousingBuildingStdAtAcqRequired,
@@ -81,6 +82,11 @@ export const mixedUseAssetSchema = z.object({
   /** PHD 3-시점 환산 입력 (겸용주택 모드 전용). landArea는 엔진이 주택부수토지로 자동 주입. */
   preHousingDisclosure: phdForMixedUseSchema.optional(),
   residencePeriodYears: z.number().nonnegative(),
+  /**
+   * 토지를 건물보다 나중에 취득한 겸용주택 — 구간 입력의 토지 보유기간 중 거주 연수(④가 겹침 개월 ÷ 12 내림). 게이트·정수·거주 연수 합계 이하는 아래 superRefine이
+   * 엔진과 같은 leaf(`mixedLandHoldingResidenceIssue`)로 막는다. 비엄격 z.object라 여기 없으면 침묵 strip된다.
+   */
+  landHoldingResidencePeriodYears: z.number().int().nonnegative().optional(),
   // §154⑧3호 표2 '대상 판정'용 통산 거주 연수 (client-derived). 미제공 시 엔진이 residencePeriodYears fallback.
   table2ResidencePeriodYears: z.number().int().nonnegative().optional(),
   isMetropolitanArea: z.boolean().optional(),
@@ -153,6 +159,9 @@ export const mixedUseAssetSchema = z.object({
   commercialBuildingDepreciation: z.number().int().nonnegative().optional(),
   buildingDirectTransferExpense: z.number().int().nonnegative().optional(),
 }).superRefine((v, ctx) => {
+  // 토지 나중 취득 — 토지 보유기간 중 거주 연수 게이트·정수·합계 이하(엔진 `resolveMixedLandHoldingResidence`와 같은 leaf)
+  const landHoldingMsg = mixedLandHoldingResidenceIssue(v);
+  if (landHoldingMsg) ctx.addIssue({ code: "custom", message: landHoldingMsg, path: ["landHoldingResidencePeriodYears"] });
   // B1 — 결합 제외 7종·값 누락(엔진 leaf 규칙). 파트 모델이 아니면 아무 일도 하지 않는다.
   refineMixedSeparateAcquisition(v, ctx);
   // 양도가액 안분 기준·감가상각비·건물 귀속 양도비 — 짝 입력·범위(엔진 `prepareMixedSaleSplit`과 같은 leaf).

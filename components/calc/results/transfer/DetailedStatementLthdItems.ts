@@ -222,7 +222,7 @@ export function setLongTermDeductionItems(
         holdYears: number | undefined,
       ) =>
         t2
-          ? `표2 [${holdLabel}${years(holdYears)} ${pct(e.holdingDeductionRate)} + 거주 ${hResYears}년 ${pct(e.residenceDeductionRate)}]`
+          ? `표2 [${holdLabel}${years(holdYears)} ${pct(e.holdingDeductionRate)} + 거주 ${e.residenceYears ?? hResYears}년 ${pct(e.residenceDeductionRate)}]`
           : `표1 [${holdLabel}${years(holdYears)} ${pct(e.longTermRate)}]`;
       const landBracket = bracket(hp.land, landT2, landHoldLabel, landHoldYears);
       const bldBracket = bracket(hp.building, hT2, "보유", hp.building.holdingYears ?? h.holdingYears);

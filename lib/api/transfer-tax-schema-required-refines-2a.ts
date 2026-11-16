@@ -118,6 +118,9 @@ export type Required2aLike = {
   landPartPriorHouseholdResidenceMonths?: number;
   donorAcquisitionDate?: string;
   rentalHousingException?: { applyException?: boolean } | null;
+  // 역방향 — 토지를 건물보다 나중에 취득한 주택의 토지 보유기간 중 거주 개월(구간 입력 · ④가 계산) + 그 상한인 거주 합계(컴패니언은 선택 필드)
+  landHoldingResidenceMonths?: number;
+  residencePeriodMonths?: number;
   // 구주택 멸실·신축 통산 (landRebuildShape)
   landRebuildPriorHouse?: { startMode: "since_land" | "later"; priorHouseStartDate?: string; demolitionDate: string; footprintUnchanged: boolean };
   // 주택 split 파트 이월과세 (splitCarryoverShape · 자산 단위 carryoverTaxation과 상호배제)
@@ -508,6 +511,7 @@ export function refineSplitPartCause(
     | "carryoverGiftEvent" | "landCarryoverPart" | "buildingCarryoverPart" | "carryoverTaxation"
     | "expenses" | "landStandardPriceAtTransfer" | "buildingStandardPriceAtTransfer"
     | "landPartDonorSameHousehold" | "landPartPriorHouseholdResidenceMonths" | "donorAcquisitionDate" | "rentalHousingException"
+    | "landHoldingResidenceMonths" | "residencePeriodMonths"
   > & {
     acquisitionDate?: string; // 컴패니언은 선택 필드
     useEstimatedAcquisition?: boolean;
@@ -585,6 +589,9 @@ export function refineSplitPartCause(
     landPartPriorHouseholdResidenceMonths: d.landPartPriorHouseholdResidenceMonths,
     donorAcquisitionDate: d.donorAcquisitionDate,
     rentalHousingDeclared: d.rentalHousingException?.applyException === true,
+    // 역방향 — 토지 보유기간 중 거주. 게이트(토지가 나중 취득)·정수·거주 합계 이하는 `transfer-land-holding-residence.ts`(엔진·⑧과 같은 leaf)
+    landHoldingResidenceMonths: d.landHoldingResidenceMonths,
+    residencePeriodMonths: d.residencePeriodMonths,
   });
   const issue = issuer(ctx);
   // ⑫ 경로는 실제 입력 필드다 — `areaScenario`는 ⑧(폼 칸) 전용 앵커이고 API에는 사실 `isPartialAreaTransfer`로 온다.

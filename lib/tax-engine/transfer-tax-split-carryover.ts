@@ -147,6 +147,9 @@ function buildScenarioInput(
     landCarryoverTaxation: undefined,
     buildingCarryoverTaxation: undefined,
     carryoverGiftEvent: undefined,
+    // 토지 보유기간 중 거주 규칙은 이월과세 시나리오에 걸지 않는다 — 치환 날짜로 「토지가 나중 취득」 비교가 달라진다(종전 계산 유지).
+    landHoldingResidenceMonths: undefined,
+    landHoldingResidenceSkip: true,
     // P6 — 해결자 전용 내부 입력도 비운다(외부에서 들어온 값이 B 시나리오로 새지 않게). A 환산 파트일 때만 아래에서 다시 세운다.
     splitCarryoverBasis: undefined,
     // §99의4·§98의9 「그 주택 취득 전에 보유하던」 판정은 수증자 본인 취득일이다 — 건물 A 치환이 취득순서를 앞당기지 않게 원 취득일을 고정한다.

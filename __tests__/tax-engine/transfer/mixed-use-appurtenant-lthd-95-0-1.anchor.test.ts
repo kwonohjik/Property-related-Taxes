@@ -73,10 +73,13 @@ describe("단건 겸용 — 주택분 토지 통칙 95-0…1", () => {
     expect(r.housingPart.appurtenantLthd).toMatchObject({ table1Rate: 0.24, table2Rate: 0.24, table1Applied: true, changedFromOwnYears: true });
   });
 
-  it("토지가 건물보다 늦게 취득 — 게이트 밖(echo·고지 없음, 값 불변 220,698,980)", () => {
+  it("토지가 건물보다 늦게 취득 — 통칙 95-0…1 게이트 밖(echo·통칙 고지 없음) · 거주 10년은 토지 보유 7년으로 상한(역방향 §8) 214,902,094", () => {
     const r = run({ landAcquisitionDate: D("2019-06-01"), buildingAcquisitionDate: D("2015-06-01"), residencePeriodYears: 10 });
     expect(r.housingPart.appurtenantLthd).toBeUndefined();
-    expect(r.housingPart.longTermDeductionAmount).toBe(220_698_980);
+    // 직전 값 220,698,980 = 토지 거주 10년(40%)까지 센 값(토지 보유 7년 밖 3년 포함). 토지분 과세 양도차익 48,307,382:
+    //   토지 68%(보유 7년 28% + 거주 10년 40%) 32,849,019 → 56%(28% + 거주 7년 28%) 27,052,133 → 장특 −5,796,886
+    expect(r.housingPart.longTermDeductionAmount).toBe(220_698_980 - (32_849_019 - 27_052_133));
+    expect(r.housingPart.longTermDeductionAmount).toBe(214_902_094);
     expect(r.warnings.some((w) => w.includes(NOTICE))).toBe(false);
   });
 
