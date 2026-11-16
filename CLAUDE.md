@@ -14,17 +14,9 @@
 ## Commands
 
 ```bash
-npm run dev                   # 개발 서버 (Turbopack)
-npm run build                 # 프로덕션 빌드
-npm run typecheck             # tsc --noEmit
-npm run lint                  # ESLint
 npm run check:pre-pr          # typecheck + lint + test (PR 전 수동 게이트)
 npm test                      # vitest 전체 (1회) — 반복 검증에는 쓰지 않는다(아래 「테스트」)
-npm run test:watch            # vitest 감시 모드
-npx vitest run <path>         # 단일 파일/디렉터리
-npx vitest run -t "T-01"      # 이름 패턴
 npx playwright test <spec>    # E2E 단일 스펙 (비-worktree는 E2E_PORT 생략, 기본 3000)
-npx shadcn@latest add <name>  # shadcn/ui 컴포넌트 추가
 
 # 데이터·법령 (.env.local 필요)
 npm run seed:tax-rates        # Supabase tax_rates 시딩
@@ -116,15 +108,8 @@ npm run verify:legal          # 법령 조문 상수 검증 (:refresh = 캐시 �
 ## CI — GitHub 호스팅 러너, PR에서만
 
 - job: `check`(typecheck+lint) · `test`(vitest 4샤드) · `e2e`(Playwright 12샤드) · `e2e-report`. 문서 전용(`**.md`·`docs/**`·`.claude/**`)·draft PR은 건너뛴다. E2E는 CI에만 있다(pre-push에 없음). Node는 `setup-node`로 24 고정.
-- 신규 워크플로는 `runs-on: ubuntu-latest`. self-hosted는 pre-push가 차단한다(`scripts/check-workflow-runner.sh` — public 저장소라 fork PR이 개발자 Mac에서 코드를 실행할 수 있다). 저장소를 비공개로 되돌리면 이 방향부터 재검토.
-- 샤드 수를 바꾸면 `ci.yml`의 `--shard=N/분모`도 함께 바꾸고, 샤드 합집합 = 전체(누락·중복 0)를 한 리포터(json)로 대조한다 — 어긋나면 일부 테스트가 조용히 실행되지 않는다. `--reporter=dot` 요약은 적게 집계하므로 json과 섞지 말 것.
-- `timeout-minutes`는 호스팅 러너 실측으로만 갱신(Mac 수치 금지). Playwright 타임아웃은 CI 60초 / 로컬 30초 — 로컬은 올리지 않는다.
-- job 레벨 `continue-on-error`는 체크를 초록으로 만들지 않는다(conclusion은 `failure` 그대로).
+- 워크플로 편집 규칙(runs-on·샤드·timeout·continue-on-error): [.github/CLAUDE.md](.github/CLAUDE.md) — `.github/` 파일을 다룰 때 자동 로드.
 - 배경·실측 이력(러너 전환·샤딩·법제처 API 실패 원인과 기각된 가설 — 재조사 전에 먼저 볼 것): [docs/00-pm/ci-pipeline.md](docs/00-pm/ci-pipeline.md).
-
-## Tech Stack
-
-Next.js 16 (App Router, React 19, Turbopack) + TS strict / shadcn(BaseUI) + Tailwind v4 + zustand / Next Route Handlers (`app/api/**`) / Supabase (Auth + Postgres) / vitest(node·jsdom) + RTL / Playwright E2E / Sentry (`tax_type`·`request_id` 태그).
 
 ## Architecture — 2-Layer Tax Engine
 
