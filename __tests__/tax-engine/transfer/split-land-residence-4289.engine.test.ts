@@ -320,3 +320,41 @@ describe("`landPartPriorResidenceMonths` · 표2 대상 판정 leaf", () => {
     expect(resolveExemptionRequirementResidenceMonths(on)).toBe(7);
   });
 });
+
+describe("고지 게이트 — 4289 개월이 결과를 바꾸지 않으면 「더했다」고 말하지 않는다 (14지점 점검 FAIL-1)", () => {
+  it("통칙 95-0…1로 표1이 이김(건물 증여 2023-10-01 · 보유 1년): 율이 OFF와 같고 효과 echo false/false · 고지 없음", () => {
+    const off = run({ acquisitionDate: D("2023-10-01") });
+    const on = run({ acquisitionDate: D("2023-10-01"), ...ON(132) });
+    expect(on.calculatedTax).toBe(off.calculatedTax);
+    expect(on.splitDetail!.land.longTermRate).toBe(off.splitDetail!.land.longTermRate);
+    expect(on.splitDetail!.land.appurtenantLthd?.table1Applied).toBe(true);
+    expect(on.splitDetail!.land.priorHouseholdResidenceEffect).toEqual({ rate: false, eligibility: true });
+    // 대상 판정은 뒤집혔지만(표2 대상) 토지는 표1이 이겼고 건물(보유 1년)은 0 — 고지는 대상 판정만 말한다
+    const n = note4289(on);
+    expect(n).toHaveLength(1);
+    expect(n[0]).not.toContain("부수토지의 표2 거주기간 공제율");
+    expect(n[0]).toContain("표2 대상 판정(거주 2년)에 더했습니다");
+  });
+
+  it("표2 대상 아님(2주택 세대): 효과 false/false · 고지 없음 · 율·세액 OFF와 같음", () => {
+    const off = run({ householdHousingCount: 2 });
+    const on = run({ householdHousingCount: 2, ...ON(132) });
+    expect(on.calculatedTax).toBe(off.calculatedTax);
+    expect(on.splitDetail!.land.priorHouseholdResidenceEffect).toEqual({ rate: false, eligibility: false });
+    expect(note4289(on)).toHaveLength(0);
+  });
+
+  it("S1 ON: 효과 rate·eligibility 모두 true · 고지 1건(공제율과 대상 판정)", () => {
+    const on = run(ON(132));
+    expect(on.splitDetail!.land.priorHouseholdResidenceEffect).toEqual({ rate: true, eligibility: true });
+    expect(note4289(on)[0]).toContain("부수토지의 표2 거주기간 공제율과 표2 대상 판정(거주 2년)에 더했습니다");
+  });
+
+  it("본인 거주로 이미 표2 대상(증여 후 거주 36개월) + 4289 132개월: eligibility false · rate true", () => {
+    const on = run({ residencePeriodMonths: 36, ...ON(132) });
+    expect(on.splitDetail!.land.priorHouseholdResidenceEffect).toEqual({ rate: true, eligibility: false });
+    const n = note4289(on);
+    expect(n).toHaveLength(1);
+    expect(n[0]).not.toContain("표2 대상 판정");
+  });
+});

@@ -85,3 +85,18 @@ describe("짝 — OFF·옛 이력은 종전 표시", () => {
     expect(cell(rows, "장기보유특별공제", "land")).toBe(416_000_000);
   });
 });
+
+describe("짝 — 4289 개월이 토지 공제율을 바꾸지 않으면 거주기간 파트 열 비움 (14지점 점검 FAIL-1)", () => {
+  it("통칙으로 표1이 이김(건물 증여 2023-10-01): 토지 열 비움", () => {
+    const r = s1({ ...ON, acquisitionDate: new Date("2023-10-01") });
+    expect(r.splitDetail!.land.appurtenantLthd?.table1Applied).toBe(true);
+    const rows = rowsOf(r);
+    expect(cell(rows, "거주기간", "land")).toBeUndefined();
+  });
+
+  it("표2 대상 아님(2주택 세대): 토지 열 비움", () => {
+    const rows = rowsOf(s1({ ...ON, householdHousingCount: 2 }));
+    expect(cell(rows, "거주기간", "land")).toBeUndefined();
+  });
+});
+

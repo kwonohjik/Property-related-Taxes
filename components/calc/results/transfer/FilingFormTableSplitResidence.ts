@@ -21,6 +21,8 @@ export function fillSplitResidenceCells(
 ): void {
   const land = sp.land.residenceYears;
   const building = sp.building.residenceYears;
+  // 4289 개월이 토지 공제율을 실제로 바꾼 경우만(통칙 95-0…1로 표1이 이기거나 표2 대상이 아니면 거주기간별 공제율을 쓰지 않았다).
+  if (!sp.land.priorHouseholdResidenceEffect?.rate) return;
   if (land === undefined || building === undefined || land <= building) return;
   setStr("residencePeriod", "land", fmtPeriod(land * 12));
   setStr("residencePeriod", "building", fmtPeriod(ownResidenceMonths));

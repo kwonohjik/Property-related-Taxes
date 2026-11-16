@@ -368,8 +368,11 @@ export function calcLongTermHoldingDeduction(
   // 4289 — 토지 파트만: 거주분 공제율의 거주 연수 = 본인 거주(증여일부터) + 건물 증여 전 같은 세대 거주(서면-2025-법규재산-4289). 건물 파트는 `rateForYears` 그대로다.
   //   게이트·상한은 `calcSplitGain` 진입 leaf가 막았다 — 입력이 없거나 토글이 꺼져 있으면 0이라 종전 값과 같다.
   const landResidenceYears = Math.floor((input.residencePeriodMonths + landPartPriorResidenceMonths(input)) / 12);
-  const landRateForYears = (years: number): number =>
-    calcLongTermRate(years, landResidenceYears, useTable2, false, input.transferDate);
+  // 4289 개월이 결과를 실제로 바꿨는지(고지·신고서 칸 게이트) — 대상 판정은 그 개월을 뺀 값으로도 열리는가.
+  const useTable2WithoutLandMonths =
+    isOneHouseForTable2 &&
+    isLthdTable2SubjectAsset(input) &&
+    meetsTable2ResidenceRequirement(input, Math.floor(resolveExemptionRequirementResidenceMonths(input) / 12));
 
   // 토지/건물 분리 케이스 — 각각 보유연수 적용 후 합산
   if (splitDetail) {
@@ -396,34 +399,43 @@ export function calcLongTermHoldingDeduction(
     //   「표2 = 주택 부수토지로서의 보유기간」을 건너뛰었다. 게이트: 두 파트를 모두 본인이 소유하고 표2 대상이며 토지가 더 오래된 경우만 —
     //   토지가 주택과 같거나 더 짧으면 종전 값(자신의 보유연수)을 그대로 쓴다.
     //   산식은 L-1b(컴패니언 부수토지 카드)·§155⑳ 경로와 같은 leaf(`appurtenant-land-lthd-rate.ts`)다.
-    const landOwnYearsRate = ownsLand ? landRateForYears(splitDetail.land.holdingYears) : 0;
-    let landRate = landOwnYearsRate;
-    let landAppurtenantLthd: SplitPartResult["appurtenantLthd"];
     // 표2 후보 연수 — 주택(건물) 보유연수. 토지만 본인이 합가일을 넣었으면 합가일이 더 늦을 때 합가일부터의 연수다(「주택 부수토지로서의 보유기간」).
     const houseYearsForLand = landOnlyAppurtenantHouseYears(input, splitDetail.building.holdingYears);
-    if (
-      ownsLand &&
-      (ownsBuilding || selfOwns === "land_only") &&
-      useTable2 &&
-      splitDetail.land.holdingYears > houseYearsForLand
-    ) {
+    // 토지 파트 공제율 — 거주 연수만 인자로 받는다(4289 개월을 뺀 반사실 비교에 같은 산식을 쓰기 위해).
+    const resolveLandRate = (resYears: number): { rate: number; appurtenantLthd?: SplitPartResult["appurtenantLthd"] } => {
+      const ownYearsRate = ownsLand
+        ? calcLongTermRate(splitDetail.land.holdingYears, resYears, useTable2, false, input.transferDate)
+        : 0;
+      if (
+        !(ownsLand &&
+        (ownsBuilding || selfOwns === "land_only") &&
+        useTable2 &&
+        splitDetail.land.holdingYears > houseYearsForLand)
+      ) {
+        return { rate: ownYearsRate };
+      }
       const appurtenant = resolveAppurtenantLandLthdRate({
         landHoldingYears: splitDetail.land.holdingYears,
         houseHoldingYears: houseYearsForLand,
-        residenceYears: landResidenceYears,
+        residenceYears: resYears,
         useTable2,
         transferDate: input.transferDate,
       });
-      landRate = appurtenant.rate;
-      landAppurtenantLthd = {
-        houseHoldingYears: houseYearsForLand,
-        table1Rate: appurtenant.table1Rate,
-        table2Rate: appurtenant.table2Rate,
-        table1Applied: appurtenant.table1Applied,
-        changedFromOwnYears: appurtenant.rate !== landOwnYearsRate,
-        basis: resolveAppurtenantLthdNoticeBasis(input.transferDate),
+      return {
+        rate: appurtenant.rate,
+        appurtenantLthd: {
+          houseHoldingYears: houseYearsForLand,
+          table1Rate: appurtenant.table1Rate,
+          table2Rate: appurtenant.table2Rate,
+          table1Applied: appurtenant.table1Applied,
+          changedFromOwnYears: appurtenant.rate !== ownYearsRate,
+          basis: resolveAppurtenantLthdNoticeBasis(input.transferDate),
+        },
       };
-    }
+    };
+    const landResolved = resolveLandRate(landResidenceYears);
+    const landRate = landResolved.rate;
+    const landAppurtenantLthd = landResolved.appurtenantLthd;
     const buildingRate = ownsBuilding ? rateForYears(splitDetail.building.holdingYears) : 0;
     // F-1 (2026-10-07): D10-06이 이 분기를 빠뜨렸다 — `landRate`는 표2에서 보유분+거주분을 double로 더한
     //   값이라(0.6799999999999999) applyRate면 파트 공제액이 1원 과소가 된다(실측 652,799,999 ↔ 652,800,000).
@@ -441,6 +453,13 @@ export function calcLongTermHoldingDeduction(
     splitDetail.building.longTermDeduction = buildingDed;
     // 파트별 거주 연수 echo(표시 전용) — 토지는 건물 증여 전 같은 세대 거주를 더한 값(4289), 건물은 자산 단위 실거주 연수다.
     if (ownsLand) splitDetail.land.residenceYears = landResidenceYears;
+    // 4289 개월의 실제 효과(고지·신고서 칸 게이트) — 통칙 95-0…1로 표1이 이기거나 표2 대상이 아니면 둘 다 false다.
+    if (ownsLand && landPartPriorResidenceMonths(input) > 0) {
+      splitDetail.land.priorHouseholdResidenceEffect = {
+        rate: landRate !== resolveLandRate(residenceYears).rate,
+        eligibility: useTable2 && !useTable2WithoutLandMonths,
+      };
+    }
     if (ownsBuilding) splitDetail.building.residenceYears = residenceYears;
     // 보유분·거주분 분해 echo(E-1, 표시 전용) — 소유 파트에만. 거주 0으로 부른 공제율이 보유분이다.
     const holdOnlyRate = (years: number): number =>

@@ -220,6 +220,12 @@ export interface SplitPartResult {
    */
   residenceYears?: number;
   /**
+   * 건물 증여 전 동일세대 거주 개월(서면-2025-법규재산-4289)의 **실제 효과** — 토지 파트이고 그 개월이 있을 때만 채운다(표시 전용).
+   * `rate`: 토지 파트 공제율이 그 개월을 뺐을 때와 다르다. `eligibility`: 그 개월을 빼면 표2 대상(거주 2년)이 아니다.
+   * 고지·신고서 거주기간 칸은 이 값으로 게이트한다(통칙 95-0…1로 표1이 이기거나 표2 대상이 아니면 둘 다 false).
+   */
+  priorHouseholdResidenceEffect?: { rate: boolean; eligibility: boolean };
+  /**
    * 소득세법 기본통칙 95-0…1 적용 echo(표시 전용·세액은 `longTermRate`·`longTermDeduction`이 정본) — **토지 파트**이고
    * 1세대1주택 표2 대상이며 토지가 주택(건물)보다 보유기간이 오래된 경우에만 채운다. 표1(토지 전체 보유기간)과
    * 표2(주택 부수토지로서의 보유기간 = 건물 보유연수) 중 **큰 공제율**을 `longTermRate`로 삼았다는 사실이다.
