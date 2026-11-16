@@ -583,7 +583,8 @@ export function buildRedevIncomeFormula(
   redev: RedevelopmentResult,
 ): string {
   const detail = redev[branch];
-  const income = Math.max(0, detail.gain - detail.lthd);
+  // 양도차손 열은 음수 그대로 — 열 합 = 합계 열(§95① · V-4, 임대 토지·건물 분리 열과 같은 규약)
+  const income = detail.gain - detail.lthd;
   return `${fmt(detail.gain)} − ${fmt(detail.lthd)} = ${fmt(income)}`;
 }
 
@@ -708,7 +709,7 @@ export function buildRedevPerAssetForIncome(
 ): PerAssetValue[] {
   return buildPerAsset(
     redev,
-    (b, r) => Math.max(0, r[b].gain - r[b].lthd),
+    (b, r) => r[b].gain - r[b].lthd, // 양도차손 열은 음수 그대로(V-4)
     (b, r) => buildRedevIncomeFormula(b, r),
     subject,
     settlementDirection,
