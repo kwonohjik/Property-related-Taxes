@@ -370,7 +370,8 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
           <BgOwnerSplitMarketValueField asset={asset} onChange={onChange} />
 
           {/* 겸용주택 — 구분 감정평가가액 유무 선언(G-13): 시가를 주택·상가로 나누는 법정 안분의 근거 */}
-          {isMixed && <BurdenedGiftHousingAppraisalField asset={asset} onChange={onChange} />}
+          {/* 담보 승이면 증여가액이 담보평가액이라 시가를 나누지 않는다(사용자 결정 H-1 · 엔진도 읽지 않는다) */}
+          {isMixed && !collateralForced && <BurdenedGiftHousingAppraisalField asset={asset} onChange={onChange} />}
 
           {/* 취득가액 산정방식 (§100① 일치 원칙) — 4옵션 라디오는 분리 파일(800줄 한도). 의제취득일 전 자산은 산정방식이 없다(아래 안내). */}
           {methodForOtherShares && (
@@ -423,7 +424,9 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
                 담보평가액 {fmt(valuationPreview.mortgage)}원이 시가 {fmt(parseAmount(ownerSplit ? asset.bgMarketValueOwnedPart : asset.bgMarketValueAtTransfer) || 0)}원보다 커서 증여가액이 담보평가액입니다
                 (「상속세 및 증여세법」 제66조). 취득가액은 위 산정방식과 관계없이 <b>취득시 기준시가 × 채무비율</b>로 산정하고(「소득세법 시행령」 제159조
                 제1항 제1호 괄호), 필요경비는 개산공제입니다.{" "}
-                {asset.assetKind === "general_building"
+                {isMixed
+                  ? "취득시 기준시가는 「③ 취득정보」 겸용주택 기준시가의 취득시 값(주택·상가 4부분)을 씁니다. 주택·상가 증여가액은 각 부분에 귀속된 채무에 구분 불분명 채무의 기준시가 비율 몫을 더한 금액으로 봅니다(법령·해석례가 없어 확인 필요)."
+                  : asset.assetKind === "general_building"
                   ? "취득시 기준시가는 아래 일반건물 취득 정보의 취득시 토지·건물 기준시가를 씁니다."
                   : ownerSplit ? `취득시 기준시가는 아래 「증여한 ${ownedName}분의 기준시가」 카드에 입력하세요.` : "취득시 기준시가는 「② 양도정보」에 입력하세요."}
                 {isCarryover && " 이월과세이므로 당초 증여자의 취득 당시 기준시가도 아래 「이월과세」 칸에 입력하세요."}

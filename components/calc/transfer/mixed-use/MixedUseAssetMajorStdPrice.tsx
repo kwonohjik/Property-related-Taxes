@@ -20,6 +20,7 @@ import { MixedUseHousingBuildingStdField } from "./MixedUseHousingBuildingStdFie
 import { isMixedAcqDatesSeparate } from "@/lib/calc/mixed-use-acq-date-split";
 import { isMixedBurdenedGift } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { isMixedBgDeemedPath } from "@/lib/calc/burdened-gift-mixed-use-scope";
+import { isMixedBgDeemedValueUsed } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { isMixedBgPreDeemedInherited } from "@/lib/calc/burdened-gift-mixed-use-scope";
 import { mixedBgReportedOptional } from "@/lib/calc/mixed-use-sec163-9";
 import { mixedSec163_9CompareOf } from "@/lib/calc/mixed-use-sec163-9";
@@ -88,7 +89,9 @@ export function MixedUseAssetMajorStdPrice({
    * (④가 보내지 않는다 — 자본적지출·양도비는 「자본적 지출, 필요경비」 공통 칸).
    */
   const bgDeemed = isMixedBgDeemedPath(asset);
-  const showReported = !bgMixed || bgDeemed;
+  /** 시가 모드 담보 승은 평가액을 쓰지 않는다(§159①1호 괄호 — 취득시 기준시가 강제 · 사용자 결정 H-1) — ④·엔진과 같은 술어로 칸을 숨긴다. */
+  const bgDeemedValueUsed = isMixedBgDeemedValueUsed(asset);
+  const showReported = !bgMixed || bgDeemedValueUsed;
   const isPurchaseActual = bgMixed
     ? false
     : isPerPart
@@ -119,7 +122,7 @@ export function MixedUseAssetMajorStdPrice({
   const expenseHint = mixedSec163_9ExpenseHint(asset);
   // 단서 구간(자산 합계 비교)·PHD(§164⑦ 가액)면 평가액이 선택이다 — 두 칸 모두 입력하거나 모두 비운다(PR-7b-7a-2 · 엔진 MB-11과 같은 조건)
   const bgReportedOptional = mixedBgReportedOptional(asset);
-  const bgReportedRequired = bgDeemed && !bgReportedOptional;
+  const bgReportedRequired = bgDeemedValueUsed && !bgReportedOptional;
   // §163⑨ 단서 구간(2005.4.30. 전 상속·증여) — 주택분 취득당시 기준시가는 §164⑦ 환산가액뿐이라 PHD 필수 · 직접 입력 칸을 숨긴다(사용자 결정 R-1 · ⑧·⑫·엔진 MB-11과 같은 술어)
   // 부담부증여 × 의제취득일 전 상속·증여 — 주택분 의제취득일 기준시가도 §164⑦ 환산가액뿐이다(Q-37 · PR-7b-7b · 엔진 MB-11). 시가·기준시가 평가 공통.
   const bgPreDeemed = isMixedBgPreDeemedInherited(asset);

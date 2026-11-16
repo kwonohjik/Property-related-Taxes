@@ -212,10 +212,9 @@ describe("겸용주택 × 부담부증여", () => {
     expect(firstIssue({ bgMortgageAttribution: "commercial", bgMortgageDebtAmount: "800000000" })?.field).toBe("bgMortgageAttribution");
   });
 
-  it("[M-1h] ⑧: 임대료 환산 평가가 증여가액을 정하면(MB-7, 기준시가 모드) 양도 형태 칸으로 이동 — 평가는 사실관계라 고칠 수 없고 일반 양도로 바꾸는 것이 사용자가 할 수 있는 일이다", () => {
-    const hit = firstIssue({ bgValuationMode: "sangjeungbeop_standard", bgAnnualRentTotal: "240000000" });
-    expect(hit?.message).toMatch(/임대료 환산/);
-    expect(hit?.field).toBe("transferType");
+  it("[M-1h] ⑧: 임대료 환산 평가가 증여가액을 정해도(기준시가 모드) 막지 않는다 — 종전 MB-7 차단은 사용자 결정 H-1(2026-11-16)로 없어졌다", () => {
+    // 종전: 양도 형태 칸으로 이동(«나눌 법정 기준 없음»). 이후: 주택·상가 기준시가 비율 분할로 계산한다.
+    expect(collectStepIssues(0, mk({ ...BG_UI, bgValuationMode: "sangjeungbeop_standard", bgAnnualRentTotal: "240000000" }) as never)).toEqual([]);
   });
 
   it("[M-1f] ⑧: 시가 모드에서 구분 감정평가 유무를 선언하지 않으면(G-13, 기본값 없음) 선언 칸으로 이동 — 기준시가 비례로 조용히 나누지 않는다", () => {
@@ -309,9 +308,12 @@ describe("겸용주택 × 부담부증여", () => {
     expect(res.status).toBe(400);
   });
 
-  it("[M-3d] 🔴 임대료 환산 평가가 보충적평가를 이기는 입력(MB-7) → 400", async () => {
+  it("[M-3d] 임대료 환산 평가가 보충적평가를 이기는 입력 → 200 · 증여가액 = 임대 환산(종전 MB-7 400 · 사용자 결정 H-1)", async () => {
     const res = await post(await bgBody({}, { valuationMode: "sangjeungbeop_standard", annualRentTotal: 600_000_000, marketValueAtTransfer: undefined, acquisitionMethod: undefined, actualAcquisitionTotal: undefined, housingAppraisal: undefined }));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
+    const j = (await res.json()) as { data: { result: { burdenedGift?: { sangjeungbeopValuation: { selectedMode: string; max: number } } } } };
+    // 임대 환산 = 보증금 0 + 600,000,000 ÷ 12% = 5,000,000,000
+    expect(j.data.result.burdenedGift?.sangjeungbeopValuation).toMatchObject({ selectedMode: "rental", max: 5_000_000_000 });
   });
 
   it("[M-3e] 🔴 비겸용에 채무 귀속을 실으면 400 — 조용히 무시되는 입력 금지", async () => {

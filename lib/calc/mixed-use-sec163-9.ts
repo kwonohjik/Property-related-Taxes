@@ -8,7 +8,7 @@
  */
 import { DEEMED_ACQUISITION_DATE, HOUSE_FIRST_DISCLOSURE } from "./transfer-163-9-base-date";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
-import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
+import { isMixedBgDeemedValueUsed } from "./burdened-gift-mixed-use-scope";
 import { isMixedBgPreDeemedInherited } from "./burdened-gift-mixed-use-scope";
 import { SEC_163_9_GENERAL_BUILDING_FIRST_NOTICE } from "@/lib/tax-engine/transfer-split-part-cause";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -20,7 +20,8 @@ export function mixedSec163_9CompareOf(asset: AssetForm): MixedSec163_9Compare |
   // 부담부증여 — 시가 평가 × 상속·증여 취득(소령 §163⑨ 평가액 경로)만 비교한다(단서 구간 PR-7b-7a-2 · 의제취득일 전 PR-7b-7b). 기준시가 평가는 §159①1호 괄호라
   //   §163⑨를 쓰지 않는다(의제취득일 전이면 의제취득일 기준시가 × 채무비율 — 비교 없음).
   const bg = isMixedBurdenedGift(asset);
-  if (bg && !isMixedBgDeemedPath(asset)) return undefined;
+  //   시가 모드 담보 승도 괄호가 취득시 기준시가를 쓰게 해 비교하지 않는다(사용자 결정 H-1).
+  if (bg && !isMixedBgDeemedValueUsed(asset)) return undefined;
   const cause =
     asset.acquisitionCause === "inheritance" ? "inheritance" : asset.acquisitionCause === "gift" ? "gift" : undefined;
   const date = asset.acquisitionDate ?? "";
@@ -67,7 +68,7 @@ export function mixedSec163_9ExpenseHint(asset: AssetForm): string | null {
  * 그 밖(본문)은 평가액이 유일한 취득가액이라 필수다. ⑤ 칸 제목·안내와 엔진 MB-11(`analyzeMixedBurdenedGift`)이 같은 조건이다(PR-7b-7a-2).
  */
 export function mixedBgReportedOptional(asset: AssetForm): boolean {
-  if (!isMixedBgDeemedPath(asset)) return false;
+  if (!isMixedBgDeemedValueUsed(asset)) return false;
   // 의제취득일 전 — 상속은 ①이 후보 중 하나라 선택(두 칸 짝), 증여는 필수(Q-14·Q-16 · PR-7b-7b · 엔진 MB-11과 같은 조건)
   if (isMixedBgPreDeemedInherited(asset)) return asset.acquisitionCause !== "gift";
   return asset.usePreHousingDisclosure === true || mixedSec163_9CompareOf(asset)?.era === "clause";

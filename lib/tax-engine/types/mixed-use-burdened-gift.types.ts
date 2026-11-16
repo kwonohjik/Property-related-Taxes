@@ -70,7 +70,6 @@ export type MixedUseBurdenedGiftBreakdown = Omit<
   | "convertedAcquisitionBeforeSwap"
   | "wholePropertySupplementary"
   | "fractionalHighValueDenominator"
-  | "acquisitionStdForcedByCollateral"
   | "assetKind"
   | "rightValuationDetail"
   | "carryoverGiftTax"

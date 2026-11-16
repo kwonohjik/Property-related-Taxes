@@ -147,8 +147,18 @@ export function BurdenedGiftMixedUsePanel({ asset, transferDate }: Props) {
                 </span>
               </div>
             )}
+            {v.selectedMode !== "supplementary" && (
+              <p data-testid="bg-mixed-nonsupp-split" className="text-caption text-amber-800 dark:text-amber-200">
+                {v.selectedMode === "mortgage"
+                  ? <>증여가액이 담보채권액 평가(「상속세 및 증여세법」 제66조) {fmt(v.whole)}원입니다. 주택·상가 증여가액은 각 부분에 귀속된 채무에 구분 불분명 채무의 기준시가 비율 몫을 더한 금액으로 보았습니다(각 부분 채무비율 1).</>
+                  : <>증여가액이 임대료 환산 평가(「상속세 및 증여세법」 제61조 제5항) {fmt(v.whole)}원입니다. 주택·상가 증여가액은 이 금액을 양도시 기준시가 비율로 나눈 값입니다.</>}
+                {" "}담보·임대 평가액을 주택·상가로 나누는 기준은 법령에 없고 이를 직접 다룬 해석례도 확인되지 않아 확인이 필요합니다.
+              </p>
+            )}
             {d.unallocated > 0 && (
-              <p className="text-caption text-amber-800 dark:text-amber-200">구분 불분명 채무를 주택·상가 증여가액 비율로 나눈 것은 해석례가 직접 답하지 않아 확인이 필요합니다.</p>
+              <p className="text-caption text-amber-800 dark:text-amber-200">
+                구분 불분명 채무를 주택·상가 {v.selectedMode === "mortgage" ? "기준시가" : "증여가액"} 비율로 나눈 것은 해석례가 직접 답하지 않아 확인이 필요합니다.
+              </p>
             )}
           </div>
         ) : (

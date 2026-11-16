@@ -255,4 +255,28 @@ test.describe("겸용주택 × 부담부증여", () => {
     await expect(page.getByTestId("validation-issues")).toContainText("주택분·상가분 상증법 평가액");
     await expect(page.locator('[data-field="mixedHousingInheritedValueOverride"]').locator("input").first()).toBeFocused();
   });
+  // ── 담보·임대 승(사용자 결정 H-1 2026-11-16 · 종전 MB-7 차단) — anchor `transfer.route.mixed-use-bg-nonsupp-winner.anchor.test.ts` MN-2·MN-4와 같은 시료·같은 값 ──
+  test("BGMU-11 기준시가 모드 담보 승 · 상가 보증금 3억 + 근저당 10억(불분명) → 주택 5억/상가 8억 · 174,975,600 · 명세 라벨 «담보채권액 평가»", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seedAndOpen(page, {
+      bgValuationMode: "sangjeungbeop_standard", bgMarketValueAtTransfer: "", bgAcquisitionMethod: "", bgActualAcquisitionTotal: "", bgHousingAppraisalDeclared: "",
+      bgLendingDepositTotal: "300000000", bgDepositAttribution: "commercial", bgMortgageDebtAmount: "1000000000", bgMortgageAttribution: "unallocated",
+    });
+    await expect(page.getByTestId("bg-mixed-nonsupp-split")).toContainText("담보채권액 평가");
+    await calc(page);
+    await expect(page.locator('[data-print-id="calculation"]')).toContainText("174,975,600");
+    await expect(page.getByTestId("bg-mixed-gift-value")).toHaveText("1,300,000,000");
+    await expect(page.getByTestId("bg-mixed-detail-card")).toContainText("증여가액 = 담보채권액 평가");
+    await expect(page.getByTestId("bg-result-apportion")).toContainText("주택분 양도로 보는 채무액500,000,000");
+  });
+
+  test("BGMU-12 시가 모드 담보 승(시가 12.5억 < 담보 13억) — 강제 안내가 보이고 구분 감정평가 선언은 숨는다 · 174,975,600", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seedAndOpen(page, { bgMarketValueAtTransfer: "1250000000", bgMortgageDebtAmount: "1300000000", bgMortgageAttribution: "unallocated" });
+    await expect(page.getByTestId("bg-collateral-forced-notice")).toContainText("겸용주택 기준시가의 취득시 값");
+    await expect(page.getByTestId("bg-housing-appraisal")).toHaveCount(0);
+    await calc(page);
+    await expect(page.locator('[data-print-id="calculation"]')).toContainText("174,975,600");
+    await expect(page.getByTestId("bg-mixed-gift-value")).toHaveText("1,300,000,000");
+  });
 });

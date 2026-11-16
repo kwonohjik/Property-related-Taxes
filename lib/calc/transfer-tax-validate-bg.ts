@@ -323,7 +323,7 @@ export function validateBurdenedGiftAsset(
       asset.assetKind === "right_to_move_in" ? "actual" : asset.bgAcquisitionMethod || "";
     /**
      * 담보 승(「상속세 및 증여세법」 제66조) — 단독 소유 단건만 엔진과 같은 증여가액 C로 판정한다(`bgWholeGiftValuation` 범위 주석).
-     * 조합원입주권은 담보·임대 승이면 취득가액을 기준시가로 정해야 하는데 입주권 기준시가 입력 경로가 없어 막는다(`rtmiNonSupplementaryWinnerIssue` — 겸용은 MB-7이 막는다).
+     * 조합원입주권은 담보·임대 승이면 취득가액을 기준시가로 정해야 하는데 입주권 기준시가 입력 경로가 없어 막는다(`rtmiNonSupplementaryWinnerIssue` — 겸용 단건은 사용자 결정 H-1로 계산한다).
      * 이월과세는 막지 않는다 — 두 시나리오 모두 취득시 기준시가 × 채무비율이고 당초 증여자 기준시가는 아래 `missingCoDonorBasisLabel`이 요구한다
      * (`bg-carryover-mkt-collateral-win.plan.md`). 계획서 `docs/00-pm/burdened-gift-residuals-o3-o5-o8.plan.md` O-5.
      */

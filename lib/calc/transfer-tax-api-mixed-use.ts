@@ -36,7 +36,7 @@ import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bri
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount } from "./household-house-count";
 import { isMixedBurdenedGift, resolveMixedBgAcquisition } from "./burdened-gift-mixed-use-scope";
-import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
+import { isMixedBgDeemedValueUsed } from "./burdened-gift-mixed-use-scope";
 import { mixedSec163_9CompareOf } from "./mixed-use-sec163-9";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { buildMixedSaleSplitFields } from "./transfer-tax-api-mixed-use-sale-split";
@@ -120,7 +120,8 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
    * PHD·보유 중 용도변경은 토글이 보이므로(ON 전이만 비활성) 그대로 보내 엔진 MB-2·MB-4가 알린다.
    */
   const bgMixed = isMixedBurdenedGift(primary);
-  const bgDeemed = isMixedBgDeemedPath(primary);
+  // 시가 모드 담보 승은 평가액을 쓰지 않는다(괄호가 취득시 기준시가 강제 · 사용자 결정 H-1) — ⑤가 칸을 숨기므로 싣지 않는다.
+  const bgDeemed = isMixedBgDeemedValueUsed(primary);
   const sec163_9Compare = mixedSec163_9CompareOf(primary);
   const bgAcq = resolveMixedBgAcquisition(primary);
   const isPerPart = !bgMixed && isMixedUsePerPartAcq(primary);
