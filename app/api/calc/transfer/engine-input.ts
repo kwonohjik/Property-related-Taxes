@@ -352,6 +352,9 @@ export function buildTransferEngineInput(
     // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). leaf가 YYYY-MM-DD 문자열로 비교한다
     houseFirstDisclosureDate: data.houseFirstDisclosureDate,
     landDonorAcquisitionDate: toOptionalDate(data.landDonorAcquisitionDate),
+    // ⑭ 4289 — 건물 증여 전 동일세대 거주(D2 증여 호스트). 게이트·상한은 엔진 진입 leaf(`transfer-split-land-residence.ts`)가 막는다. 컴패니언은 매핑하지 않는다(⑫가 명시 거부).
+    landPartDonorSameHousehold: data.landPartDonorSameHousehold,
+    landPartPriorHouseholdResidenceMonths: data.landPartPriorHouseholdResidenceMonths,
     // ⑭ 구주택 멸실·신축 통산(해석 (5)) — Date 변환은 공용 변환기. 컴패니언은 매핑하지 않는다(⑫가 명시 거부).
     landRebuildPriorHouse: toEngineLandRebuild(data.landRebuildPriorHouse),
     // ⑭ 주택 split 파트 이월과세(§97의2①) — 와이어(사건 1벌 + 파트 N벌) → 엔진 input. Date 변환·증여세 안분은 합성기가 한다(TypeScript 미감지 영역).

@@ -116,6 +116,9 @@ export function toMultiEngineItem(
     landHouseSec164Value: p.landHouseSec164Value,
     houseFirstDisclosureDate: p.houseFirstDisclosureDate,
     landDonorAcquisitionDate: toOptionalDate(p.landDonorAcquisitionDate),
+    // ⑭ 4289 — 건물 증여 전 동일세대 거주(D2 증여 호스트). 게이트·상한은 엔진 진입 leaf(`transfer-split-land-residence.ts`)가 막는다. 컴패니언은 매핑하지 않는다(⑫가 명시 거부).
+    landPartDonorSameHousehold: p.landPartDonorSameHousehold,
+    landPartPriorHouseholdResidenceMonths: p.landPartPriorHouseholdResidenceMonths,
     landRebuildPriorHouse: toEngineLandRebuild(p.landRebuildPriorHouse),
     // ⑭ 주택·건물 split 파트 이월과세(§97의2①) — 와이어(사건 1벌 + 파트 N벌) → 엔진 input. 단건 `engine-input.ts`와 같은 합성기(Date 변환·증여세 안분).
     //   파트 A/B는 엔진(STEP 0.476)이 **그 자산의 결정세액**으로 정한다 — 연간 합산의 다른 이월과세(그 해 전체 비교)와 비교 단위가 다르다(Q-4 b · route 고지).

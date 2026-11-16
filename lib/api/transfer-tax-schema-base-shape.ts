@@ -359,6 +359,12 @@ export const propertyBaseShape = {
   /** 토지 파트 증여자 취득일 (§104②2호) */
   landDonorAcquisitionDate: z.string().date().optional(),
   /**
+   * 4289 — 건물만 증여받고 토지는 매수한 주택(D2 증여)에서 건물 증여자와 증여일부터 양도일까지 계속 같은 세대인가 + 건물 증여 전 같은 세대 거주 개월 수.
+   * 게이트·상한·필수 짝은 refine이 `transfer-split-land-residence.ts` leaf로 막는다(엔진·⑧과 같은 규칙). 컴패니언은 키를 받아서 명시 거부한다(strip하면 조용히 버려진다).
+   */
+  landPartDonorSameHousehold: z.boolean().optional(),
+  landPartPriorHouseholdResidenceMonths: z.number().int().nonnegative().optional(),
+  /**
    * 주택 split 파트 이월과세(소득세법 §97의2①) — 증여 사건 1벌 + 파트 N벌. 단건·컴패니언·다건이 같은 shape를 spread한다
    * (이 파일은 `splitAcquisitionShape`를 spread하지 않고 인라인 복사본을 가진다 — 키를 여기에도 둬야 단건이 strip하지 않는다).
    * 설계: transfer-split-part-carryover.engine.design.md §1

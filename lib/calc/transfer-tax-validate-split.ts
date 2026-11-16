@@ -326,7 +326,10 @@ export function validateLandPartCause(
     issue.field === "buildingCarryoverPart" ||
     issue.field === "carryoverGiftEvent" ||
     issue.field === "carryoverTaxation" ||
-    issue.field === "expenses"
+    issue.field === "expenses" ||
+    // 4289 — 건물 증여 전 동일세대 거주 칸(폼 필드)이 생기기 전까지의 임시 앵커. ⑧ 사실 배선(UI)에서 실제 칸 키로 바꾼다.
+    issue.field === "landPartDonorSameHousehold" ||
+    issue.field === "landPartPriorHouseholdResidenceMonths"
       ? "landAcquisitionCause"
       : issue.field;
   return fieldError(anchor, msg);

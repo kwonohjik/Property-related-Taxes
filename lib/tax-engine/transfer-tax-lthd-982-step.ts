@@ -5,11 +5,12 @@
  * `calcLongTermHoldingDeduction`의 결과(공제액·율)를 받아 §98의2 특칙으로 덮어쓸 수 있는 값을 돌려준다.
  */
 import { applyRate } from "./tax-utils";
-import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
+import { resolveTable2SubjectResidenceMonths } from "./one-house/residence-months";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
 import { isLthdTable2SubjectAsset, resolveLthdTable2OneHouseAxis } from "./lthd-table2-subject";
 import { LTHD_TABLE2_UNSUPPORTED_NOTICE, resolveLthdTable2Era, table2HoldingRateAt } from "./data/lthd-table2-era";
 import { giftTable2PriorResidenceNotice } from "./one-house/gift-table2-notice";
+import { landPartPriorResidenceNotice } from "./transfer-split-land-residence-notice";
 import { appurtenantLandLthdNoticeText } from "./appurtenant-land-lthd-rate";
 import { pushLongTermHoldingSteps } from "./transfer-tax-lthd-steps";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
@@ -57,7 +58,7 @@ export interface Lthd982StepResult {
 export function applyLthd982AndPushSteps(a: Lthd982StepArgs): Lthd982StepResult {
   const { exemptionJudgeInput, taxableGain, deemedOneHouseBy155, holdingPeriod } = a;
   let { longTermHoldingDeduction, longTermHoldingRate } = a;
-  const table2ResidenceYearsForStep = Math.floor(resolveExemptionRequirementResidenceMonths(exemptionJudgeInput) / 12);
+  const table2ResidenceYearsForStep = Math.floor(resolveTable2SubjectResidenceMonths(exemptionJudgeInput) / 12);
   // STEP 4.05: §98의2 특칙 — 장특 = 양도차익 × §95② 표2 보유기간별 공제율 강제 (법 ①1호, P4).
   // 적격 선판정은 STEP 0.45 (중과 배제 5호 열거 — 동일 신호). 1세대1주택 표2(보유+거주)는
   // ①의 "각 표 외의 부분 본문 불구" 범위 밖 — 특례 적용 시 유지 (항상 ≥ 표2 보유 단독).
@@ -153,6 +154,9 @@ export function applyLthd982AndPushSteps(a: Lthd982StepArgs): Lthd982StepResult 
     );
   }
   if (a.appurtenantLthdNotice && !lthd982Applied) a.warnings.push(appurtenantLandLthdNoticeText(a.appurtenantLthdNotice));
+  // 4289 — 건물 증여 전 동일세대 거주 개월을 토지 파트 표2 거주기간 공제율에 더했다(§98의2 특칙이 공제액을 덮어쓴 경우는 제외 — 토지 파트 공제율이 쓰이지 않는다).
+  const landPriorNotice = lthd982Applied ? undefined : landPartPriorResidenceNotice(exemptionJudgeInput, a.splitDetail);
+  if (landPriorNotice) a.warnings.push(landPriorNotice);
   // OH-31 — 2009-01-01 전 양도분의 표2 연혁은 미지원이다(현행 식으로 계산) — 숨기지 않는다.
   if (longTermHoldingDeduction > 0 && resolveLthdTable2Era(exemptionJudgeInput.transferDate) === "unsupported" && resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155) && isLthdTable2SubjectAsset(exemptionJudgeInput)) a.warnings.push(LTHD_TABLE2_UNSUPPORTED_NOTICE);
 

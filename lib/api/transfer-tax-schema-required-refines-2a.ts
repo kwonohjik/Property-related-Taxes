@@ -113,6 +113,11 @@ export type Required2aLike = {
   landHouseSec164Value?: number;
   houseFirstDisclosureDate?: string;
   selfOwns?: string;
+  // 4289 — 건물 증여 전 동일세대 거주(D2 증여 · 컴패니언은 받아서 명시 거부) + 증여자 건물 취득일(상한 시작일) + §155⑳ 선언(결합 차단)
+  landPartDonorSameHousehold?: boolean;
+  landPartPriorHouseholdResidenceMonths?: number;
+  donorAcquisitionDate?: string;
+  rentalHousingException?: { applyException?: boolean } | null;
   // 구주택 멸실·신축 통산 (landRebuildShape)
   landRebuildPriorHouse?: { startMode: "since_land" | "later"; priorHouseStartDate?: string; demolitionDate: string; footprintUnchanged: boolean };
   // 주택 split 파트 이월과세 (splitCarryoverShape · 자산 단위 carryoverTaxation과 상호배제)
@@ -502,6 +507,7 @@ export function refineSplitPartCause(
     | "landHouseExisted" | "landHouseSec164Value" | "houseFirstDisclosureDate"
     | "carryoverGiftEvent" | "landCarryoverPart" | "buildingCarryoverPart" | "carryoverTaxation"
     | "expenses" | "landStandardPriceAtTransfer" | "buildingStandardPriceAtTransfer"
+    | "landPartDonorSameHousehold" | "landPartPriorHouseholdResidenceMonths" | "donorAcquisitionDate" | "rentalHousingException"
   > & {
     acquisitionDate?: string; // 컴패니언은 선택 필드
     useEstimatedAcquisition?: boolean;
@@ -574,6 +580,11 @@ export function refineSplitPartCause(
     buildingCarryoverEstimated: d.buildingCarryoverPart?.useEstimatedAcquisition === true,
     landDonorAcquisitionDate: d.landCarryoverPart?.donorAcquisitionDate,
     buildingDonorAcquisitionDate: d.buildingCarryoverPart?.donorAcquisitionDate,
+    // 4289 — 건물 증여 전 동일세대 거주. 게이트·상한은 `transfer-split-land-residence.ts`(엔진·⑧과 같은 leaf)
+    landPartDonorSameHousehold: d.landPartDonorSameHousehold,
+    landPartPriorHouseholdResidenceMonths: d.landPartPriorHouseholdResidenceMonths,
+    donorAcquisitionDate: d.donorAcquisitionDate,
+    rentalHousingDeclared: d.rentalHousingException?.applyException === true,
   });
   const issue = issuer(ctx);
   // ⑫ 경로는 실제 입력 필드다 — `areaScenario`는 ⑧(폼 칸) 전용 앵커이고 API에는 사실 `isPartialAreaTransfer`로 온다.

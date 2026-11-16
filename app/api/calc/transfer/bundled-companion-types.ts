@@ -74,7 +74,14 @@ type CompanionContextOnlyKeys =
    * 이 키는 컴패니언 item에 도달할 수 없다(싣지 않는 것이 의도다). 컴패니언 토지 카드 세율(`resolveCompanionLandRate`)은 토지 취득일을 보지 않는 별개 구현이라
    * 같은 통산을 넣으면 두 경로가 갈린다 — 별건(계획서 §사용자 결정 Q-3).
    */
-  | "landRebuildPriorHouse";
+  | "landRebuildPriorHouse"
+  /**
+   * 🔑 **컴패니언은 건물 증여 전 동일세대 거주(서면-2025-법규재산-4289, D2 증여)를 받지 않는다** — ⑫ leaf(`transfer-split-land-residence.ts`)가 키를 받아서 **명시 거부**(400)하므로
+   * 이 키는 컴패니언 item에 도달할 수 없다(싣지 않는 것이 의도다). 컴패니언 부수토지 카드 세율·공제율(L-1b)은 분리취득 split 분기와 별개 구현이라
+   * 같은 거주 연수를 넣으면 두 경로가 갈린다 — 별건(계획서 split-land-residence-rate-4289 Q-6 a).
+   */
+  | "landPartDonorSameHousehold"
+  | "landPartPriorHouseholdResidenceMonths";
 
 /**
  * ⑭ 컴패니언 원시 자산 — **⑫ 스키마에서 전면 파생**한다 (장치 1, 2026-09-04).

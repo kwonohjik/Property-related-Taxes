@@ -1529,6 +1529,14 @@ export interface TransferTaxInput {
    * 미제공 시 자산 단위 `acquisitionCause`를 그대로 쓴다(회귀 0).
    */
   landAcquisitionCause?: "purchase" | "inheritance" | "gift" | "carryover_gift";
+  /**
+   * 건물만 증여받고 토지는 매수한 주택(D2 증여)에서, 건물 증여자와 증여일부터 양도일까지 **계속 같은 세대**인가 — 서면-2025-법규재산-4289.
+   * `true`일 때만 `landPartPriorHouseholdResidenceMonths`를 토지 파트의 표2 거주기간 공제율과 표2 대상 판정(거주 2년)에 더한다(건물 파트·비과세 거주요건에는 쓰지 않는다).
+   * 게이트·상한: `transfer-split-land-residence.ts`(엔진·⑧·⑫ 공유). 미전송 = 종전 계산.
+   */
+  landPartDonorSameHousehold?: boolean;
+  /** 건물 증여 전, 토지를 보유한 동안 건물 소유자와 같은 세대로 이 집에 거주한 개월 수(0 이상 정수). `landPartDonorSameHousehold === true`일 때 필수다 */
+  landPartPriorHouseholdResidenceMonths?: number;
   /** 토지 파트 피상속인 취득일 — `landAcquisitionCause === "inheritance"` 시 §104②1호 통산 */
   landDecedentAcquisitionDate?: Date;
   /**

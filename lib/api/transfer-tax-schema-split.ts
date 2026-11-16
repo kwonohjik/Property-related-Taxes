@@ -53,6 +53,12 @@ export const splitAcquisitionShape = {
   /** 토지 파트 증여자 취득일 (§104②2호 — 이월과세 자산만. 분리 계산의 토지 이월과세는 미지원으로 차단 — D0 G-1) */
   landDonorAcquisitionDate: z.string().date().optional(),
   /**
+   * 4289 — 건물만 증여받고 토지는 매수한 주택(D2 증여)에서 건물 증여자와 증여일부터 양도일까지 계속 같은 세대인가 + 건물 증여 전 같은 세대 거주 개월 수.
+   * 게이트·상한·필수 짝은 refine이 `transfer-split-land-residence.ts` leaf로 막는다(엔진·⑧과 같은 규칙). 컴패니언은 키를 받아서 명시 거부한다(strip하면 조용히 버려진다).
+   */
+  landPartDonorSameHousehold: z.boolean().optional(),
+  landPartPriorHouseholdResidenceMonths: z.number().int().nonnegative().optional(),
+  /**
    * 주택 split 파트 이월과세(§97의2①) 와이어 — 컴패니언은 이 키를 **받아서** 명시 거부한다(leaf S0·S2′). 받지 않으면 Zod가 조용히 strip해
    * 이월과세 없이 단순 증여로 계산한다(anchor SPCO-0o). 설계: transfer-split-part-carryover.engine.design.md §1.3
    */

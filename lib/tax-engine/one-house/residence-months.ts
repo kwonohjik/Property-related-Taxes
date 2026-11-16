@@ -11,6 +11,7 @@
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { ResidenceReqInput } from "../transfer-tax-exemption-holding";
 import { giftHouseholdPriorResidenceMonths } from "./gift-household-basis";
+import { landPartPriorResidenceMonths } from "../transfer-split-land-residence";
 
 /**
  * §154⑧3호 통산 거주 개월 규칙 코어 — 최소입력 pure 헬퍼 (client·engine 공용 단일 소스).
@@ -91,3 +92,18 @@ export function resolveExemptionRequirementResidenceMonths(input: ResidenceReqIn
   return resolveExemptionResidenceMonths(input) + giftHouseholdPriorResidenceMonths(input.giftHouseholdBasis);
 }
 
+
+/**
+ * §95② **표2 대상 판정**(시행령 §159의4 — 보유기간 중 거주기간 2년 이상)에만 쓰는 거주 개월
+ * = 비과세 거주요건 값(`resolveExemptionRequirementResidenceMonths`) + 건물 증여 전 동일세대 거주 개월(`landPartPriorHouseholdResidenceMonths` — 서면-2025-법규재산-4289).
+ *
+ * 4289는 「[표2]의 공제를 적용하는 경우」를 전제로 부수토지의 거주기간별 공제율을 정한다 — 건물 증여 전 같은 세대 거주가 없으면 표1로 떨어져 그 전제가 서지 않으므로
+ * 대상 판정에도 같은 개월을 더한다(사전-2025-법규재산-0506 질의1과 같은 방향).
+ *
+ * 🔴 **비과세 거주요건(§154①)·§155⑳ 요건에는 쓰지 않는다**(4289는 공제율만 다룬다 — 계획서 Q-3·V-5). 그쪽 소비처는 `resolveExemptionRequirementResidenceMonths`를 그대로 읽는다.
+ * 표2 **공제율**의 토지 파트 거주 연수는 이 값이 아니라 `본인 거주 + 새 개월`(`transfer-tax-lthd.ts`의 토지 전용 클로저)이다.
+ * 새 입력이 없으면 `resolveExemptionRequirementResidenceMonths`와 값이 같다.
+ */
+export function resolveTable2SubjectResidenceMonths(input: ResidenceReqInput): number {
+  return resolveExemptionRequirementResidenceMonths(input) + landPartPriorResidenceMonths(input);
+}

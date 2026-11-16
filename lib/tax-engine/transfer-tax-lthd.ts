@@ -44,7 +44,8 @@ import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
 import { appurtenantCardHouseHoldingMonths } from "./land-only-owner-household";
 import { landOnlyAppurtenantHouseYears } from "./land-only-owner-household";
-import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
+import { resolveExemptionRequirementResidenceMonths, resolveTable2SubjectResidenceMonths } from "./one-house/residence-months";
+import { landPartPriorResidenceMonths } from "./transfer-split-land-residence";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
 import type { Rental97Result } from "./transfer-reductions/types";
 import type { TransferTaxInput, SplitGainResult } from "./types/transfer.types";
@@ -273,7 +274,8 @@ export function calcLongTermHoldingDeduction(
   const isOneHouseForTable2 = resolveLthdTable2OneHouseAxis(input, deemedOneHouseBy155);
   const residenceYears = Math.floor(input.residencePeriodMonths / 12); // 실거주(표2 거주분 공제율)
   // §154⑧3호·결정 #38-9: 표2 "대상 판정"은 동일세대 상속 통산 거주 + 증여 전 동일세대 거주 (공제율은 실거주 residenceYears 유지 — 사전-2025-법규재산-0506).
-  const table2ResidenceYears = Math.floor(resolveExemptionRequirementResidenceMonths(input) / 12);
+  // 4289: 건물 증여 전 동일세대 거주 개월이 있으면 표2 대상 판정에만 더한다(비과세 거주요건과 다른 소비처는 `resolveExemptionRequirementResidenceMonths` 그대로).
+  const table2ResidenceYears = Math.floor(resolveTable2SubjectResidenceMonths(input) / 12);
 
   // L-2: 「소득세법」 §95⑤·⑥ — 비주택으로 보유하다 주택으로 용도변경한 뒤 양도하는 경우.
   //   보유분 = 비주택 기간 표1 + 주택 기간 표2 (합계 40% 한도 — 같은 항 1호 단서)
@@ -363,6 +365,11 @@ export function calcLongTermHoldingDeduction(
   // 양도일을 넘겨 표2 연혁(OH-31 — 2009~2020 연 8% 단일축)을 가른다.
   const rateForYears = (years: number): number =>
     calcLongTermRate(years, residenceYears, useTable2, false, input.transferDate);
+  // 4289 — 토지 파트만: 거주분 공제율의 거주 연수 = 본인 거주(증여일부터) + 건물 증여 전 같은 세대 거주(서면-2025-법규재산-4289). 건물 파트는 `rateForYears` 그대로다.
+  //   게이트·상한은 `calcSplitGain` 진입 leaf가 막았다 — 입력이 없거나 토글이 꺼져 있으면 0이라 종전 값과 같다.
+  const landResidenceYears = Math.floor((input.residencePeriodMonths + landPartPriorResidenceMonths(input)) / 12);
+  const landRateForYears = (years: number): number =>
+    calcLongTermRate(years, landResidenceYears, useTable2, false, input.transferDate);
 
   // 토지/건물 분리 케이스 — 각각 보유연수 적용 후 합산
   if (splitDetail) {
@@ -389,7 +396,7 @@ export function calcLongTermHoldingDeduction(
     //   「표2 = 주택 부수토지로서의 보유기간」을 건너뛰었다. 게이트: 두 파트를 모두 본인이 소유하고 표2 대상이며 토지가 더 오래된 경우만 —
     //   토지가 주택과 같거나 더 짧으면 종전 값(자신의 보유연수)을 그대로 쓴다.
     //   산식은 L-1b(컴패니언 부수토지 카드)·§155⑳ 경로와 같은 leaf(`appurtenant-land-lthd-rate.ts`)다.
-    const landOwnYearsRate = ownsLand ? rateForYears(splitDetail.land.holdingYears) : 0;
+    const landOwnYearsRate = ownsLand ? landRateForYears(splitDetail.land.holdingYears) : 0;
     let landRate = landOwnYearsRate;
     let landAppurtenantLthd: SplitPartResult["appurtenantLthd"];
     // 표2 후보 연수 — 주택(건물) 보유연수. 토지만 본인이 합가일을 넣었으면 합가일이 더 늦을 때 합가일부터의 연수다(「주택 부수토지로서의 보유기간」).
@@ -403,7 +410,7 @@ export function calcLongTermHoldingDeduction(
       const appurtenant = resolveAppurtenantLandLthdRate({
         landHoldingYears: splitDetail.land.holdingYears,
         houseHoldingYears: houseYearsForLand,
-        residenceYears,
+        residenceYears: landResidenceYears,
         useTable2,
         transferDate: input.transferDate,
       });
@@ -432,6 +439,9 @@ export function calcLongTermHoldingDeduction(
     splitDetail.land.longTermDeduction = landDed;
     splitDetail.building.longTermRate = buildingRate;
     splitDetail.building.longTermDeduction = buildingDed;
+    // 파트별 거주 연수 echo(표시 전용) — 토지는 건물 증여 전 같은 세대 거주를 더한 값(4289), 건물은 자산 단위 실거주 연수다.
+    if (ownsLand) splitDetail.land.residenceYears = landResidenceYears;
+    if (ownsBuilding) splitDetail.building.residenceYears = residenceYears;
     // 보유분·거주분 분해 echo(E-1, 표시 전용) — 소유 파트에만. 거주 0으로 부른 공제율이 보유분이다.
     const holdOnlyRate = (years: number): number =>
       calcLongTermRate(years, 0, useTable2, false, input.transferDate);
