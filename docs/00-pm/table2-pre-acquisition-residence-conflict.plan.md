@@ -151,6 +151,7 @@
   - 판결 2025두34935는 대상 판정 근거로 인용하지 않는다.
 - 한계: 겸용주택 증여 경로(`transfer-tax-mixed-use.ts`)와 승계 0691 경로에는 이 심판례 고지를 붙이지 않았다(#2608 이전에도 고지 없음).
   - 2026-11-16: 겸용주택 증여 경로는 해소했다 — `mixed-use-table2-gift-notice.plan.md`(일반 경로와 같은 조건·같은 문장 · 미답 입력 안내 포함 · 세액 불변). 승계 0691 경로(증여받은 입주권 · `transfer-tax-redevelopment-successor-gift-notices.ts`)는 0691 통산·미확인 고지만 있고 3843 「양도일 현재 동일세대」 문구는 없다 — 남은 한계(범위 밖).
+  - 2026-11-16: 승계 0691 경로도 해소했다 — `redev-gift-0691-3843-notice.plan.md`(통산 고지에 같은 문장 `TRIBUNAL_3843_SAME_HOUSEHOLD_CHECK` · 세액 불변).
 - 검증:
   - anchor `table2-pre-residence-tribunal-notice.anchor.test.ts` 3건 신설 (상속 5,969,191 · 고지 없음 / 이월과세 A 136,260,000 · 고지 / 짝)
   - PR-4b 갱신 (통산 시 심판례 고지 · 23개월은 고지 없음)

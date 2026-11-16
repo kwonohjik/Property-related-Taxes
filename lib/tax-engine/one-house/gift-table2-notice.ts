@@ -36,6 +36,14 @@ import type { GiftHouseholdBasis } from "./gift-household-basis";
 import type { MixedUseAssetInput } from "../types/transfer-mixed-use.types";
 import type { MixedUseHousingPart } from "../types/transfer-mixed-use.types";
 
+/**
+ * 조심 2025서3843 확인 필요 문장 — 증여 주택(이 파일)과 증여받은 입주권의 0691 통산(`transfer-tax-redevelopment-successor-gift-notices.ts`)이 같은 문장을 쓴다.
+ * 두 경로 모두 「증여일부터 양도일까지 계속 같은 세대」 답일 때만 통산하므로, 양도일 현재 동일세대인지 확인을 알린다(사용자 결정 2026-10-27 · 2026-11-16).
+ */
+export const TRIBUNAL_3843_SAME_HOUSEHOLD_CHECK =
+  "조심 2025서3843(2025.12.16.)은 양도일 현재 증여인과 동일세대가 아니어서 증여인 거주기간을 통산하지 않아 표2 적용을 배제한 사안입니다 — " +
+  "양도일 현재 증여인과 동일세대인지 확인이 필요합니다.";
+
 export interface GiftTable2NoticeArgs {
   /** 표2 대상 판정 입력(유효 주택수 반영) — 장기보유특별공제 계산 축과 같은 입력이다. */
   input: TransferTaxInput;
@@ -109,8 +117,7 @@ function giftTable2NoticeCore(a: {
     if (a.meetsTable2(Math.floor((withPrior - applied) / 12))) return undefined;
     return (
       `증여 전 동일세대로 거주한 ${applied}개월을 장기보유특별공제 표2(1세대1주택) 대상 판정(${TRANSFER.LONG_TERM_DEDUCTION_TABLE2_DECREE} — 보유기간 중 거주기간 2년 이상)에 ` +
-      "통산해 표2를 적용했습니다(사전-2025-법규재산-0506). 조심 2025서3843(2025.12.16.)은 양도일 현재 증여인과 동일세대가 아니어서 " +
-      "증여인 거주기간을 통산하지 않아 표2 적용을 배제한 사안입니다 — 양도일 현재 증여인과 동일세대인지 확인이 필요합니다. " +
+      `통산해 표2를 적용했습니다(사전-2025-법규재산-0506). ${TRIBUNAL_3843_SAME_HOUSEHOLD_CHECK} ` +
       (basis.holdingAlreadyAtDonor === true
         ? "(표2 공제율의 거주기간은 증여일 이후 본인 거주만 반영했습니다.)"
         : "(표2 공제율의 보유·거주기간은 증여일부터 센 본인의 기간이라 통산하지 않습니다.)")

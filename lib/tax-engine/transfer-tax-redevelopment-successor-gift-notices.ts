@@ -5,12 +5,14 @@
  * 그 사안은 표2(장기보유특별공제) 대상 판정이고, 비과세 거주요건(영 §154①)은 다루지 않았다. 엔진은 두 판정이 **같은 거주 개월**을 읽게 한다
  * (`resolveAptResidenceMonths` — 「그 보유기간 중 거주기간 2년 이상」이 같은 사실을 요구한다). 그래서 비과세에 쓴 통산은 정면 해석이 없어 확인 필요를 알린다.
  * 동일세대원 증여 후 수증자 양도의 거주기간 통산은 서면인터넷방문상담4팀-912(2005.6.10.)가 비과세 판정에 통산한다고 답했다(주택 증여 사안).
+ * 통산 고지에는 증여 주택과 같은 조심 2025서3843 확인 필요 문장을 붙인다(`TRIBUNAL_3843_SAME_HOUSEHOLD_CHECK` — 계획서 `redev-gift-0691-3843-notice.plan.md`).
  *
  * 고지는 **결론이 갈릴 수 있을 때만** 낸다 — 거주 2년 문턱(표2 대상 · 조정대상지역 거주요건)을 통산이 넘기거나(통산 적용),
  * 확인하지 않은 통산이 문턱을 넘길 수 있을 때(미확인). 모름 = 혜택 불성립이라 미확인은 통산하지 않고 계산한다.
  */
 import { resolveAptResidenceMonths, resolveSuccessorOwnResidenceMonths } from "./redevelopment-lthd";
 import type { TransferTaxInput } from "./types/transfer.types";
+import { TRIBUNAL_3843_SAME_HOUSEHOLD_CHECK } from "./one-house/gift-table2-notice";
 
 const RESIDENCE_YEARS_THRESHOLD = 2;
 
@@ -47,6 +49,7 @@ export function redevSuccessorGiftNotices(original: Pick<TransferTaxInput, "acqu
       return [
         `증여자와 같은 세대로서 종전주택에서 거주한 ${prior}개월을 거주기간에 통산했습니다. 장기보유특별공제 표2 대상 판정(영 §159의3)은 사전-2020-법령해석재산-0691(2021.8.26.)을 따랐고, ` +
           "1세대1주택 비과세 거주요건(영 §154①)에도 같은 값을 썼으나 증여받은 입주권을 정면으로 다룬 해석례는 확인하지 못했습니다(주택 증여 사안: 서면인터넷방문상담4팀-912) — 확인 필요. " +
+          `${TRIBUNAL_3843_SAME_HOUSEHOLD_CHECK} ` +
           "표2 공제율의 거주분은 양도자 본인의 신축주택 거주기간만 반영했습니다.",
       ];
     }
