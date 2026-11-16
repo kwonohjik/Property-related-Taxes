@@ -4,6 +4,8 @@
  *
  * - CS-E1 상속 지분 2003 × §164⑥: 지분 카드에 §164⑥ 칸 · 부수토지 섹션 대신 안내 · 지분 2 = 196,363,637(종전 ⑧ 「누락」 막다른 길)
  * - CS-E2 매매 지분 2019 × 환산: 지분 카드에 「취득시 ㎡당 호별고시가」만 · 양도시 칸 없음 · 지분 2 = 97,480,000(종전 198,320,000)
+ * - CS-E3 지분 카드 「호별 고시가 조회」: 자산 1 소재지로 조회 · 취득시 시점만 · 취득시 단가만 채운다(종전: 지분 카드에 소재지가 없어 버튼이
+ *   비활성 + 「소재지를 다시 선택」 안내 — 지분 카드엔 소재지 칸이 없다 · 소재지가 있으면 쓰이지 않는 양도시 단가 · 면적을 지분 카드에 썼다)
  */
 import { test, expect, type Page } from "@playwright/test";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
@@ -91,4 +93,35 @@ test.describe("상가 축 B 지분 카드 — 취득 쪽 칸 · 물건 단위 �
     await expect(page.getByTestId("cb-share-object-fields-note")).toBeVisible();
     expect(await calc(page)).toEqual([297_480_000, 97_480_000]);
   });
+
+  test("CS-E3 지분 카드 호별 고시가 조회 — 자산 1 소재지 · 취득시 단가만", async ({ page }) => {
+    test.setTimeout(120_000);
+    const PNU = "1111010700100800000";
+    const MOCK = {
+      success: true, dateStatus: { "2013-01-01": "ok", "2018-01-01": "ok", "2021-01-01": "ok" }, availableDates: ["2013-01-01", "2018-01-01", "2021-01-01"],
+      units: [{ key: "1(단일)|4|1|1", buildingName: "적선현대빌딩", dong: "1(단일)", floorClass: "지상", floor: "1", ho: "1", kind: "상가",
+        prices: { "2013-01-01": { price: 4_000_000, ea: 639.47, sa: 357.74 }, "2018-01-01": { price: 4_800_000, ea: 639.47, sa: 357.74 }, "2021-01-01": { price: 5_898_000, ea: 639.47, sa: 357.74 } } }],
+    };
+    await page.route("**/api/address/commercial-standard-price**", (r) => r.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(MOCK) }));
+    await seed(page, [
+      { ...makeDefaultAsset(1), assetId: "p", assetKind: "commercial_building", acquisitionCause: "purchase", acquisitionDate: "2013-05-10", useEstimatedAcquisition: true, cbEra: "post_disclosure",
+        addressPnu: PNU, addressJibun: "서울특별시 종로구 적선동 80", actualSalePrice: "1000000000", ownershipNumerator: "60", ownershipDenominator: "100", ...AREA },
+      // 「+ 지분 추가」로 만든 카드 — 소재지(PNU)가 없다
+      { ...makeDefaultAsset(2), assetId: "s", acquisitionCause: "purchase", acquisitionDate: "2018-03-01", useEstimatedAcquisition: true, ownershipNumerator: "40", ownershipDenominator: "100" },
+    ]);
+    const launchers = page.getByTestId("cb-stdprice-lookup-open");
+    await expect(launchers).toHaveCount(2);
+    await expect(launchers.nth(1)).toBeEnabled();
+    await launchers.nth(1).click();
+    const modal = page.getByRole("dialog").filter({ hasText: "호별 고시가 조회" });
+    await expect(modal).toContainText("서울특별시 종로구 적선동 80");
+    await expect(modal).not.toContainText("양도시");
+    await page.getByTestId("cb-stdprice-unit-4__1__1").click();
+    await expect(page.getByTestId("cb-stdprice-share-note")).toBeVisible();
+    await page.getByTestId("cb-stdprice-apply").click();
+    await expect(modal).toBeHidden();
+    const share = await page.evaluate(() => JSON.parse(sessionStorage.getItem("transfer-tax-wizard")!).state.formData.assets[1]);
+    expect([share.cbUnitPriceAtFirstOrAcq, share.cbUnitPriceAtTransfer, share.cbExclusiveArea, share.cbSharedArea]).toEqual(["4800000", "", "", ""]);
+  });
 });
+

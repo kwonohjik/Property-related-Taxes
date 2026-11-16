@@ -241,6 +241,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate, shareCa
                 onChange={onChange}
                 transferDate={transferDate}
                 variant="estimated"
+                shareCard={shareCard}
               />
             </div>
             {/* 양도시 — emerald (지분 카드는 자산 1 값 · 숨김) */}

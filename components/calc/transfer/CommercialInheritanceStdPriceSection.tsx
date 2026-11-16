@@ -47,9 +47,11 @@ interface Props {
   asset: AssetForm;
   onChange: (data: Partial<AssetForm>) => void;
   transferDate?: string;
+  /** 축 B 둘째 이후 지분 카드 — 자동조회가 면적을 이 카드에 쓰지 않는다(면적은 자산 1 값 · `commercial-share-object-fields.ts`). */
+  shareCard?: boolean;
 }
 
-export function CommercialInheritanceStdPriceSection({ asset, onChange, transferDate }: Props) {
+export function CommercialInheritanceStdPriceSection({ asset, onChange, transferDate, shareCard = false }: Props) {
   // 기준일·대상 판정은 API payload 빌더(`transfer-tax-api-inheritance.ts`)와 **같은 함수**를 쓴다.
   // 여기서 재기술하면 stale `inheritanceStartDate`를 가진 증여 자산에서 노출과 payload가 어긋난다.
   const inheritanceDate = deriveSec163_9BaseDate(asset);
@@ -140,7 +142,7 @@ export function CommercialInheritanceStdPriceSection({ asset, onChange, transfer
       {/* ① 최초고시(2005) ㎡당 호별고시가 */}
       <ToneCard tone="emerald" sectionNum="1" title="최초고시(2005) 호별 ㎡당 고시가 (원/㎡)">
         <div className="flex flex-col items-end gap-1">
-          <CommercialStdPriceLookupModal asset={asset} onChange={onChange} transferDate={transferDate} variant="inheritance" />
+          <CommercialStdPriceLookupModal asset={asset} onChange={onChange} transferDate={transferDate} variant="inheritance" shareCard={shareCard} />
         </div>
         <FieldCard field="cbUnitPriceAtFirstOrAcq" label="최초고시(2005) ㎡당 호별고시가" unit="원/㎡" hint="국세청 고시 이력에서 확인.">
           <CurrencyInput label="" value={asset.cbUnitPriceAtFirstOrAcq} onChange={(v) => onChange({ cbUnitPriceAtFirstOrAcq: v })} hideUnit />

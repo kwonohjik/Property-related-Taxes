@@ -45,6 +45,11 @@ interface Props {
   onChange: (patch: Partial<AssetForm>) => void;
   transferDate?: string;
   variant: "estimated" | "inheritance";
+  /**
+   * 축 B 둘째 이후 지분 카드 — 면적 · 양도시 고시가는 물건 단위라 자산 1 값을 쓴다(`commercial-share-object-fields.ts`).
+   * 이 카드에서는 이 지분 취득 쪽 시점(취득시 · 최초고시)만 조회 · 적용한다 — 양도시 · 면적을 이 카드에 쓰면 계산에 쓰이지 않는 값이 남는다.
+   */
+  shareCard?: boolean;
 }
 
 /** 조회 시점 1개 — 기준일과 확정 고시일자. */
@@ -59,7 +64,7 @@ const RENDER_LIMIT = 200;
 const SEARCH_THRESHOLD = 200;
 
 
-export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, variant }: Props) {
+export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, variant, shareCard = false }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,9 +97,9 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
     } else if (asset.acquisitionDate) {
       out.push({ id: "firstOrAcq", label: "취득시", refDate: asset.acquisitionDate });
     }
-    if (transferDate) out.push({ id: "transfer", label: "양도시", refDate: transferDate });
+    if (transferDate && !shareCard) out.push({ id: "transfer", label: "양도시", refDate: transferDate });
     return out;
-  }, [variant, asset.cbEra, asset.acquisitionDate, transferDate]);
+  }, [variant, asset.cbEra, asset.acquisitionDate, transferDate, shareCard]);
 
   const runLookup = useCallback(async () => {
     if (!asset.addressPnu || refPoints.length === 0) return;
@@ -177,7 +182,7 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
     }
 
     const area = areaSource(selected, points);
-    if (area && (!hasAreaValue(asset) || areaOverride)) {
+    if (area && !shareCard && (!hasAreaValue(asset) || areaOverride)) {
       patch.cbExclusiveArea = String(area.ea);
       patch.cbSharedArea = String(area.sa);
     }
@@ -195,7 +200,7 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
 
   const area = selected ? areaSource(selected, points) : null;
   const areaConflict =
-    !!area && hasAreaValue(asset) && (asset.cbExclusiveArea !== String(area.ea) || asset.cbSharedArea !== String(area.sa));
+    !shareCard && !!area && hasAreaValue(asset) && (asset.cbExclusiveArea !== String(area.ea) || asset.cbSharedArea !== String(area.sa));
   const filledCount = points.filter(
     (p) => p.noticeDate && selected?.prices[p.noticeDate],
   ).length;
@@ -381,9 +386,15 @@ export function CommercialStdPriceLookupModal({ asset, onChange, transferDate, v
                     </div>
                   </div>
                 )}
-                <p className="text-caption text-muted-foreground">
-                  대지면적은 고시 자료에 없습니다 — 등기부에서 직접 입력하세요.
-                </p>
+                {shareCard ? (
+                  <p data-testid="cb-stdprice-share-note" className="text-caption text-muted-foreground">
+                    면적 · 양도시 고시가는 같은 물건이라 자산 1 값을 씁니다 — 이 지분 카드에는 이 지분 취득 쪽 ㎡당 고시가만 채웁니다.
+                  </p>
+                ) : (
+                  <p className="text-caption text-muted-foreground">
+                    대지면적은 고시 자료에 없습니다 — 등기부에서 직접 입력하세요.
+                  </p>
+                )}
                 {variant === "inheritance" && (
                   <p className="text-caption text-amber-800 dark:text-amber-200">
                     §164⑥ 적용에는 <b>대지면적 · 취득시·최초고시 개별공시지가 · 취득시·최초고시 건물
