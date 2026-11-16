@@ -23,6 +23,7 @@ import { priceRegistrationType } from "./comprehensive-rental-459ho";
 import { asksRegistrationRevokedDate } from "./comprehensive-rental-459ho";
 import { rental459hoApiFields } from "./comprehensive-rental-459ho";
 import { validate459hoInputs } from "./comprehensive-rental-459ho";
+import { rentIncreaseLimitApplies } from "@/lib/tax-engine/comprehensive-exclusion";
 
 /**
  * 법인 §9② class 도출 (시행령 §4의4) — 엔진과 동일 헬퍼로 단일 진실. 개인이면 undefined.
@@ -139,6 +140,10 @@ export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFo
     // §3①4·5·9호 — ⑤가 보이는 칸과 같은 술어(ho459)
     const ho459Error = validate459hoInputs(p, regType, label);
     if (ho459Error) return ho459Error;
+    // 임대료 증가율 5% — 처음 쓴 표준임대차계약이 아니면 직전 임대료 필수(⑫ refine과 같은 술어 · ⑤는 토글 OFF면 칸을 보인다)
+    if (rentIncreaseLimitApplies(regType) && !p.isInitialContract && !(parseAmount(p.previousRent) > 0)) {
+      return `${label}: 처음 쓴 표준임대차계약이 아니면 직전 임대료(월)를 입력하세요 — 바로 앞 계약보다 5% 넘게 올랐는지 봅니다 (종합부동산세법 시행령 §3①).`;
+    }
   }
   const aggParcelsMode = formData.hasAggregateLand && formData.landAggregateMode === "parcels";
   const sepParcelsMode = formData.hasSeparateLand && formData.landSeparateMode === "parcels";

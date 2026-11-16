@@ -124,7 +124,7 @@ export interface RentalExclusionInput extends RentalExclusion8NaFacts, RentalExc
   location: "metro" | "non_metro"; // 수도권 여부
   previousRent?: number;           // 직전 임대료 (환산 월세 기준)
   currentRent: number;             // 현재 임대료
-  isInitialContract: boolean;      // 최초 계약 여부
+  isInitialContract: boolean;      // 처음 쓴 표준임대차계약 여부(5% 비교 제외)
   assessmentDate: Date;            // 과세기준일 (6월 1일)
   /** 읍·면 지역 여부 (existing_rental §3①3호 전용 — 읍면 100㎡ / 그외 85㎡ 면적 상한) */
   isEupMyeonArea?: boolean;

@@ -63,7 +63,7 @@ actualRentalYears: string;         // DecimalInput 원문 또는 ""
 
 ### 3-2. 입력 위젯 (⑤) — `ExclusionInfoInput.tsx` `RentalExclusionDetail`
 
-위치: 임대개시일 블록(:107~119) 다음, "최초 임대차 계약" ToggleCard(:122~) 앞.
+위치: 임대개시일 블록(:107~119) 다음, "처음 쓴 표준임대차계약 (5% 비교 제외)" ToggleCard(:122~) 앞.
 
 ```
 ┌─ (기존) 임대개시일 [DateInput] ────────────────────┐
