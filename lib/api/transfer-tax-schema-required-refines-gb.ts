@@ -279,10 +279,12 @@ export function refineGbPropertyRequired(
   basePath: (string | number)[] = [],
   /** I3 「일괄 취득가액」 이슈가 가리킬 칸 — 주 자산 `acquisitionPrice`, 컴패니언 `fixedAcquisitionPrice`(⑧ 이 요구하는 칸). */
   acquisitionPricePath: (string | number)[] = [...basePath, "acquisitionPrice"],
+  /** 서브객체 키 — 축 B 지분은 `valuation`. */
+  valuationKey: string = "generalBuildingValuation",
 ) {
   const v = data.generalBuildingValuation as GbValuationLike | null | undefined;
   if (!v || data.transferType === "burdened_gift") return;
-  const issue = issuer(ctx, [...basePath, "generalBuildingValuation"]);
+  const issue = issuer(ctx, [...basePath, valuationKey]);
   const bothInherited = v.acquisitionByInheritance === true && v.buildingAcquisitionByInheritance === true;
   const anyInherited = v.acquisitionByInheritance === true || v.buildingAcquisitionByInheritance === true;
   // route와 같은 값 — `route.ts`의 `bundledAcq`(일괄 취득가액 = 서브객체 값 우선, 없으면 자산 취득가액)
@@ -426,4 +428,38 @@ function checkDonorValues(
   } else if (!positive(p.donorAcquisitionPrice)) {
     issue([...path, "donorAcquisitionPrice"], `${noun} 이월과세 — 증여자의 취득가액이 필요합니다 (소득세법 §97의2①1호)`);
   }
+}
+
+/**
+ * 축 B 지분 배열(`generalBuildingShares` 2건 이상)의 자산-수준 필수 입력 — 주 자산·컴패니언과 **같은 함수**를 지분마다 건다
+ * (`gb-gift-off-sec164-unsplit.plan.md` V-1 → `gb-share-required-refines-parity.plan.md`).
+ *
+ * 지분 스키마는 파트 수준(`generalBuildingValuationSchema`)만 검사하고 이 파일의 자산-수준 규칙(I1·I3·X1·Z4·Z5·C1~C4·§163⑨ 단서 파트 가액)은
+ * 최상위(첫 지분) 서브객체에만 걸렸다. 둘째 지분부터는 ⑧ 이 막는 입력(고시 전 증여 일괄 신고가액 · 취득가액 빈칸)이 200 으로 계산됐다.
+ * 지분의 취득가액은 지분 몫(`acquisitionPrice` — ④ `transfer-tax-api-gb-shares.ts` × 지분율)이다.
+ */
+export function refineGbSharesPropertyRequired(
+  data: Pick<GbPropertyLike, "transferType" | "transferDate" | "useEstimatedAcquisition"> & {
+    generalBuildingShares?: ReadonlyArray<{ acquisitionPrice?: number; reductions?: unknown[]; burdenedGiftInfo?: unknown; valuation?: unknown }>;
+  },
+  ctx: z.RefinementCtx,
+) {
+  const shares = data.generalBuildingShares;
+  if (!shares || shares.length < 2) return;
+  shares.forEach((s, i) =>
+    refineGbPropertyRequired(
+      {
+        transferType: s.burdenedGiftInfo !== undefined ? "burdened_gift" : data.transferType,
+        transferDate: data.transferDate,
+        reductions: s.reductions,
+        acquisitionPrice: s.acquisitionPrice,
+        useEstimatedAcquisition: data.useEstimatedAcquisition,
+        generalBuildingValuation: s.valuation,
+      },
+      ctx,
+      ["generalBuildingShares", i],
+      ["generalBuildingShares", i, "acquisitionPrice"],
+      "valuation",
+    ),
+  );
 }

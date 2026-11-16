@@ -27,6 +27,7 @@ import {
   refineMixedUseNoCarryover,
 } from "./transfer-tax-schema-mixed-use";
 import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
+import { refineGbSharesPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
 import { refineGbValuationPresent } from "./transfer-tax-schema-required-refines-gb";
 import { refineHouseholdRequiredInputs, type HouseholdRefineInput } from "./transfer-tax-schema-household-refines";
 import { refineRequiredInputs2a, type Required2aLike } from "./transfer-tax-schema-required-refines-2a";
@@ -537,6 +538,7 @@ export function refinePropertyRequiredInputs(
   refineHouseholdRequiredInputs(data, ctx); // O3·O4·H-3·유예 나목·M2 (2차 점검)
   refineGbValuationPresent(data as Parameters<typeof refineGbValuationPresent>[0], ctx); // 일반건물 서브객체 필수 (gb-without-valuation-subobject)
   refineGbPropertyRequired(data, ctx); // 일반건물 I1·I3·X1·Z4·Z5·C1~C4 (2차 점검)
+  refineGbSharesPropertyRequired(data as Parameters<typeof refineGbSharesPropertyRequired>[0], ctx); // 축 B 지분마다 같은 규칙 (V-1)
   refineRequiredInputs2a(data, ctx); // §164⑨ EX · 분리취득 SP · 의제 전 상속 PD (2차 점검)
 }
 
