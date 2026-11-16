@@ -14,6 +14,7 @@ import { conversion9hoBaseType } from "./comprehensive-exclusion-9ho";
 import { isOnOrBeforeDeadline } from "./civil-period";
 import { SHORT_TERM_6Y_TYPES, SHORT_TERM_6Y_FULL_ASSESSMENT } from "./comprehensive-exclusion-business-reg";
 import { filingDeadlineApplies, filingPeriodEnd, businessRegistrationIssue } from "./comprehensive-exclusion-business-reg";
+import { vacancyCheck, isVacantAtAssessment } from "./comprehensive-exclusion-vacancy";
 import {
   COMPREHENSIVE_EXCL,
   COMPREHENSIVE_EXCL_CONST,
@@ -202,6 +203,7 @@ export function validateRentalExclusion(
 ): ExclusionValidationResult {
   const failReasons: string[] = [];
   let deadlineWarning: string | null = null;
+  let vacancyWarning: string | null = null;
 
   if (!input.rentalRegistrationDate) {
     failReasons.push(COMPREHENSIVE_EXCL.NO_RENTAL_REGISTRATION);
@@ -218,6 +220,10 @@ export function validateRentalExclusion(
       REG_CAP_2018_TYPES.has(input.registrationType) && input.assessmentDate.getTime() >= REG_CAP_2018_ERA_START,
     );
     if (bizIssue) failReasons.push(bizIssue);
+    // 과세기준일 현재 공실 — §3⑦4호 2년(T-12)
+    const vacancy = vacancyCheck(input);
+    if (vacancy.issue) failReasons.push(vacancy.issue);
+    vacancyWarning = vacancy.warning;
     failReasons.push(...excludedUnder8hoNa(input));
     failReasons.push(...unsoldPurchase6hoIssues(input));
     const unitsIssue = twoPlusUnitsIssue(input);
@@ -265,7 +271,12 @@ export function validateRentalExclusion(
   }
 
   // 임대료 증가율 요건은 1·2·7·8·10·11호에만 있다 — 3호(2005.1.5. 이전 임대)·6호(미분양매입)는 없다(§3① 각 호 · §3⑧)
-  if (rentIncreaseLimitApplies(input.registrationType) && !input.isInitialContract && input.previousRent !== undefined) {
+  if (
+    rentIncreaseLimitApplies(input.registrationType) &&
+    !isVacantAtAssessment(input) && // 공실이면 그해 계약이 없다(Q-5 a)
+    !input.isInitialContract &&
+    input.previousRent !== undefined
+  ) {
     const increaseRate = (input.currentRent - input.previousRent) / input.previousRent;
     if (increaseRate > COMPREHENSIVE_EXCL_CONST.RENT_INCREASE_RATE_LIMIT) {
       failReasons.push(COMPREHENSIVE_EXCL.RENT_INCREASE_EXCEEDED);
@@ -295,6 +306,7 @@ export function validateRentalExclusion(
   // 배제 성립 — 경과 연수가 의무기간 미달이면 사후 추징 위험 경고 (배제는 유지)
   const warnings: string[] = [];
   if (deadlineWarning) warnings.push(deadlineWarning);
+  if (vacancyWarning) warnings.push(vacancyWarning);
   if (input.actualRentalYears !== undefined) {
     const { years: requiredYears, applicationUnknown } = mandatoryPeriod(input);
     if (requiredYears > 0 && input.actualRentalYears < requiredYears) {

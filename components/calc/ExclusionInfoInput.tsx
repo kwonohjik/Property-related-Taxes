@@ -14,7 +14,6 @@
  */
 
 import { useState } from "react";
-import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -29,6 +28,7 @@ import { parseAmount } from "@/lib/calc/number-parse";
 import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
 import { RentalExclusion8NaFields } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
 import { RentalExclusionPriceBasisField } from "@/components/calc/comprehensive/RentalExclusionPriceBasisField";
+import { RentalExclusionRentFields } from "@/components/calc/comprehensive/RentalExclusionRentFields";
 import { RentalPeriodApplicationDateField } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
 import { RentalExclusion6hoFields } from "@/components/calc/comprehensive/RentalExclusion6hoFields";
 import { CountField } from "@/components/calc/comprehensive/RentalExclusion6hoFields";
@@ -359,60 +359,8 @@ function RentalExclusionDetail({
       </ToggleCard>
       )}
 
-      {/* 5% 비교 기준 계약 — 4호(미임대)·5호(임대료 요건 없음)는 묻지 않는다.
-          기준은 2019.2.12. 이후 처음 쓴 표준임대차계약(종부령 부칙<제29524호> §3 · 서면-2020-부동산-2435),
-          8호는 등록·재등록 뒤 처음 쓴 계약(서면-2021-부동산-5682·2749). 1·2호는 해석례 없음(계획서 V-F) */}
-      {asksRent && (<>
-      <ToggleCard
-        tone="violet"
-        title="처음 쓴 표준임대차계약 (5% 비교 제외)"
-        description="2019.2.12. 이후 처음 쓴 표준임대차계약이면 켜세요"
-        checked={property.isInitialContract}
-        onCheckedChange={(v) => onUpdate({ isInitialContract: v })}
-      />
-      <p className="text-xs text-muted-foreground">
-        장기일반 매입(8호)은 등록·재등록 뒤 처음 쓴 계약이 기준입니다. 다른 호는 확인 필요.
-      </p>
-
-      {/* 임대료 */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <CurrencyInput
-          label="현재 임대료 (월)"
-          value={property.currentRent}
-          onChange={(v) => onUpdate({ currentRent: v })}
-          placeholder="0"
-          hint="환산 월세 기준"
-        />
-        {!property.isInitialContract && (
-          <CurrencyInput
-            label="직전 임대료 (월)"
-            value={property.previousRent}
-            onChange={(v) => onUpdate({ previousRent: v })}
-            placeholder="0"
-            hint="바로 앞 계약의 월 임대료(보증금은 월세로 환산)"
-          />
-        )}
-      </div>
-
-      {/* 임대료 증가율 경고 (갱신 계약 시) */}
-      {!property.isInitialContract &&
-        property.currentRent &&
-        property.previousRent &&
-        (() => {
-          const current = parseInt(property.currentRent.replace(/,/g, "") || "0");
-          const previous = parseInt(property.previousRent.replace(/,/g, "") || "0");
-          if (previous > 0 && current > previous * 1.05) {
-            return (
-              <div className="rounded-md bg-red-50 border border-red-200 p-3 dark:bg-red-950/40">
-                <p className="text-xs text-red-700 dark:text-red-300">
-                  ⚠ 바로 앞 계약보다 5% 넘게 올랐습니다. 처음 쓴 표준임대차계약이 아니면 합산배제되지 않습니다.
-                </p>
-              </div>
-            );
-          }
-          return null;
-        })()}
-      </>)}
+      {/* 공실(§3⑦4호 · T-12) → 5% 비교 기준 계약 → 임대료 — 계산 순서대로 한 컴포넌트에(800줄 정책) */}
+      <RentalExclusionRentFields property={property} registrationType={regType} asksRent={asksRent} onUpdate={onUpdate} />
     </div>
   );
 }

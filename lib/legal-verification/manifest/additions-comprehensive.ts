@@ -57,6 +57,13 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     keywords: ["과세기준일 현재 임대를 개시한 자가", "보유현황 신고기간 종료일까지 임대사업자로서 사업자등록을 하는 경우"],
     keywordMode: "ALL",
   },
+  /** §3⑦4호 — 공실 2년 이내 계속 임대 간주(T-12) */
+  {
+    id: "COMPREHENSIVE_DECREE.EXCLUDED_RENTAL_VACANCY_2Y",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["기존 임차인의 퇴거일부터 다음 임차인의 입주일까지의 기간이 2년 이내인 경우에는 계속 임대하는 것으로 본다"],
+    keywordMode: "ALL",
+  },
   /** 법 §8③ — 합산배제 주택 보유현황 신고기간 9.16.~9.30. */
   {
     id: "COMPREHENSIVE.HOLDING_STATUS_REPORT_PERIOD",
