@@ -135,6 +135,8 @@ type R = {
   burdenedGift: {
     sangjeungbeopValuation: { selectedMode: string; max: number };
     gratuitousPortion: number;
+    acquisitionStdForcedByCollateral?: true;
+    ownershipRatio?: number;
     debtAttribution: { housingDebt: number; commercialDebt: number; housingGiftValue: number; commercialGiftValue: number; housingRatio: number; commercialRatio: number };
     perPart: Record<string, { transferPrice: number; acquisitionPrice: number; estimatedDeduction: number }>;
     highValue: { judgmentBase: number; prorationBase: number };
@@ -185,6 +187,7 @@ describe("겸용 × 부담부증여 × 공유지분 — 화면 경로", () => {
     expect(status).toBe(200);
     expect(res!.burdenedGift.sangjeungbeopValuation.selectedMode).toBe("mortgage");
     expect(res!.burdenedGift.acquisitionStdForcedByCollateral).toBe(true);
+    expect(res!.total.determinedTax).toBe(118_396_000); // 엔진 anchor S-G와 같은 시료·같은 값
   });
 
   it("[SH-5] 함께 양도·축 B는 계속 막는다(MB-6 · PR-B) — 안내 문구가 「함께 양도(여러 물건)·지분 분할 취득」", async () => {

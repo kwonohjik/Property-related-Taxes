@@ -257,6 +257,7 @@ export function applyMixedBurdenedGift(args: {
     giftValuation: bg.valuation,
     gratuitousPortion,
     taxpayer: "donor",
+    ...(bg.shareRatio !== undefined ? { ownershipRatio: bg.shareRatio } : {}),
     acquisitionMethodUsed: method,
     ...(bg.value.collateralForcedStdInMarketMode ? { acquisitionStdForcedByCollateral: true as const } : {}),
     ...(bg.acqPath === "converted_pre_deemed"
@@ -303,7 +304,7 @@ export function applyMixedBurdenedGift(args: {
   // ── 고지 — 확인 필요 사항은 숨기지 않는다 ──
   const notices: string[] = [
     ...(bg.shareRatio !== undefined ? [MIXED_BG_SHARE_NOTICE] : []),
-    `12억원 고가주택 판정·안분은 양도로 보는 채무액이 아니라 증여가액(${bg.value.wholeJudgment.toLocaleString("ko-KR")}원)을 기준으로 했습니다(국심2007서2099 등 — 겸용주택을 직접 다룬 해석례는 확인되지 않아 확인이 필요합니다).`,
+    `12억원 고가주택 판정·안분은 양도로 보는 채무액이 아니라 ${bg.shareRatio !== undefined ? "물건 전체 " : ""}증여가액(${bg.value.wholeJudgment.toLocaleString("ko-KR")}원)을 기준으로 했습니다(국심2007서2099 등 — 겸용주택을 직접 다룬 해석례는 확인되지 않아 확인이 필요합니다).`,
     `채무 귀속은 입력하신 사실 선언(임대차계약서의 임차 대상·근저당 설정 대상 등 증빙 필요)에 따랐습니다 — ${MIXED_USE_BURDENED_GIFT.DEBT_ATTRIBUTION_RULING}.`,
     "증여세 평가에 쓰는 상가건물 기준시가는 양도세 기준시가와 같다고 보았습니다.",
   ];

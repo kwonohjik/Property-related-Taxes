@@ -93,6 +93,7 @@ describe("겸용 × 부담부증여 × 공유지분 1/2 — 시가 모드 (보�
     expect(r.burdenedGift?.giftValuation.max).toBe(1_000_000_000);
     expect(r.burdenedGift?.gratuitousPortion).toBe(500_000_000);
     expect(r.burdenedGift?.debtAttribution.housingRatio).toBe(0.5);
+    expect(r.burdenedGift?.ownershipRatio).toBe(0.5);
     // 12억 판정·안분 분모는 물건 전체(§156①) — 지분분 10억이 아니다
     expect(r.burdenedGift?.highValue.judgmentBase).toBe(2_000_000_000);
     expect(r.burdenedGift?.highValue.prorationBase).toBe(1_500_000_000);
@@ -160,6 +161,18 @@ describe("겸용 × 부담부증여 × 공유지분 1/2 — 비1세대1주택 (�
     expect(r.housingPart.landAcqPrice).toBe(58_333_333);
     const o = calcMixedUseTransferTax(1, TD, { ...asset(F1, { isOneHouseExempt: false, residencePeriodYears: 0 }), burdenedGift: bg(F1, SF, R) }, RATES);
     expect(det(o)).toBe(69_094_001);
+    halves(r, o);
+  });
+});
+
+describe("겸용 × 부담부증여 × 공유지분 1/2 — 시가 모드 담보 승(지분분 시가 7.5억 < 담보 8억)", () => {
+  const SG: Spec = { market: 1.5e9, mortgage: 8e8, attr: { housing: 0, commercial: 0, unallocated: 8e8 }, acq: 7e8 };
+  it("[S-G] 취득가액 = 취득시 기준시가 × 지분 × 채무비율 1(§159①1호 괄호) · 118,396,000 · 오라클(100% · 채무 16억) ÷2 일치", () => {
+    const r = share(F1, SG, { isOneHouseExempt: false, residencePeriodYears: 0 });
+    expect(r.burdenedGift?.giftValuation.selectedMode).toBe("mortgage");
+    expect(r.burdenedGift?.acquisitionStdForcedByCollateral).toBe(true);
+    expect(det(r)).toBe(118_396_000);
+    const o = calcMixedUseTransferTax(1, TD, { ...asset(F1, { isOneHouseExempt: false, residencePeriodYears: 0 }), burdenedGift: bg(F1, SG, R) }, RATES);
     halves(r, o);
   });
 });

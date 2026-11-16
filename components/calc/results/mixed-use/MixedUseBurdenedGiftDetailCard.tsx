@@ -26,7 +26,8 @@ export function MixedUseBurdenedGiftDetailCard({ bg, valuationMode }: Props) {
   const whole = d.housingGiftValue + d.commercialGiftValue;
   // 담보·임대 승(사용자 결정 H-1)은 평가 모드와 관계없이 엔진 승자로 라벨을 정한다
   const sel = bg.sangjeungbeopValuation?.selectedMode;
-  const valueLabel =
+  const shareLabel = bg.ownershipRatio !== undefined ? ` — 내 지분 ${Number((bg.ownershipRatio * 100).toFixed(2))}% 해당분` : "";
+  const baseValueLabel =
     sel === "mortgage"
       ? "증여가액 = 담보채권액 평가 (상증법 §66 — 임대보증금 + 담보 채권액)"
       : sel === "rental"
@@ -36,6 +37,8 @@ export function MixedUseBurdenedGiftDetailCard({ bg, valuationMode }: Props) {
       : valuationMode === "sangjeungbeop_standard"
         ? "증여가액 = 보충적평가 (상증법 §61 — 개별주택가격 + 상가 부수토지 + 상가건물 기준시가)"
         : "증여가액 (상증법 §60~§66 평가)";
+  // 공유지분이면 증여가액·채무는 내 지분분이고 12억 판정 가액만 물건 전체다 — 라벨이 둘을 구분한다(PR-A).
+  const valueLabel = baseValueLabel + shareLabel;
   return (
     <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-4 space-y-2 print:break-inside-avoid dark:bg-fuchsia-950/40" data-testid="bg-mixed-detail-card">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -61,7 +64,7 @@ export function MixedUseBurdenedGiftDetailCard({ bg, valuationMode }: Props) {
             <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(d.commercialGiftValue)}</td>
           </tr>
           <tr>
-            <td className="py-1 pr-2">인수 채무액 (물건 전체)</td>
+            <td className="py-1 pr-2">{bg.ownershipRatio !== undefined ? "인수 채무액 (내 지분 인수분)" : "인수 채무액 (물건 전체)"}</td>
             <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.assumedDebtAmount)}</td>
           </tr>
           <tr>
@@ -70,6 +73,12 @@ export function MixedUseBurdenedGiftDetailCard({ bg, valuationMode }: Props) {
             </td>
             <td className="text-right font-mono tabular-nums whitespace-nowrap text-fuchsia-700 dark:text-fuchsia-300">{fmt(bg.gratuitousPortion)}</td>
           </tr>
+          {bg.ownershipRatio !== undefined && bg.highValue.applicable && (
+            <tr>
+              <td className="py-1 pr-2">12억원 고가주택 판정 가액 (물건 전체 — 소득세법 시행령 §156①)</td>
+              <td className="text-right font-mono tabular-nums whitespace-nowrap" data-testid="bg-mixed-highvalue-whole">{fmt(bg.highValue.judgmentBase)}</td>
+            </tr>
+          )}
           {bg.giftTax && <BurdenedGiftGiftTaxRows giftTax={bg.giftTax} />}
         </tbody>
       </table>
