@@ -1,0 +1,188 @@
+# 분리취득 부수토지 — 건물 증여 전 동일세대 거주의 표2 거주기간 공제율 (서면-2025-법규재산-4289)
+
+- 상태: **계획 v0.2 — 사용자 결정 대기**(Q-1~Q-8)
+- 작성: 2026-11-16 · 기준 master `56e629a36`
+  - v0.1: 초안.
+  - v0.2: 엔진·UI 시니어 병렬 검토 반영. 확인 결과 놓친 호출 지점 3곳 · 결과 문구 깨짐 · 2020 연혁 오류 · 화면 경로 세액 · 14지점 실제 파일.
+- 출처: V-1(`table2-pre-acquisition-residence-conflict.plan.md` §6) 조사 중 발견했다. 사용자 지시 「계획서 작성해」.
+- 세액이 바뀐다. 화면 경로 시료 S1 기준 산출세액 186,114,000 → 68,790,000(−117,324,000)이다.
+
+## 1. 근거 (원문 · KoreanLaw MCP nts 조회 2026-11-16)
+
+**서면-2025-법규재산-4289 (2026.10.29.)** — 대법원 2025두34935(2026.1.15.) 뒤의 회신이다.
+
+- 요지: 「동일세대원이 주택의 건물부분과 부수토지 부분을 각각 소유한 경우로서 「소득세법」 제95조제2항 단서에 해당하여 [표2]의 공제를 적용하는 경우 거주기간별 공제율은 동일세대원으로서 주택의 건물부분 소유자와 함께 거주한 기간으로 산정하는 것」
+- 회신: 「동일세대원이 주택의 건물부분과 부수토지 부분을 각각 소유하다가 주택의 건물부분을 토지소유자에게 증여하여 단독명의로 전환한 경우로서 … 부수토지의 거주기간별 공제율은 동일세대원으로서 주택의 건물부분 소유자와 함께 거주한 기간으로 산정하는 것」
+- 사실관계:
+  - '86.06. 甲 토지에 배우자 乙 명의로 주택 신축(토지 甲 · 건물 乙).
+  - '97.10.까지 11년 함께 거주.
+  - '02.10. 乙이 甲에게 건물 증여(단독명의).
+  - '25.01. 양도 · 양도 당시 1주택.
+- 질의는 **부수토지**만이다. 건물분 거주기간 공제율은 묻지 않았다.
+
+함께 본 해석:
+- 사전-2025-법규재산-1126(2026.1.21.): 이월과세여도 표2 거주기간은 「증여받은 자가 해당 주택을 취득한 날부터 기산」한다.
+- 사전-2025-법규재산-0506(2025.6.25.):
+  - 질의1: 표2 대상 판정에는 동일세대 보유·거주를 통산한다.
+  - 질의2: 공제율에는 피상속인·증여자 기간을 통산하지 않는다.
+- 대법원 2025두34935: 표2 거주기간 = 「양도자가 양도자산인 주택의 취득일부터 양도일까지의 보유기간 중 해당 주택에서 거주한 기간」이다.
+  - 4289의 부수토지는 甲이 '86부터 보유했다. 그래서 '86~'97 거주는 甲의 토지 보유기간 중 거주다.
+
+## 2. 현행 (실측 · throwaway probe · mock 세율 = 2024 누진표 · 코드 변경 없음)
+
+4289 날짜('86~'02)는 다른 차단에 걸린다. 영 §163⑨ 단서 2호 — 2005 개별주택가격 공시 전 증여 건물 평가는 단독·다가구 확인 주택만 지원한다. 그래서 구조만 같게 날짜를 옮겼다.
+
+시료 S1:
+- 토지 2000-06-01 매수 · 건물 2012-10-01 같은 세대 배우자로부터 증여.
+- 2000~2011 함께 거주(132개월) · 증여 후 본인 거주 0.
+- 2025-01-15 양도 20억(토지 14억·건물 6억) · 1세대 1주택 · 비조정.
+
+| 항목 | 화면 경로 현행 (D2 세대 칸 없음) | 엔진 직접(`giftHouseholdBasis` 132개월) | 4289 적용 시 |
+|---|---|---|---|
+| 표2 대상 | 아니오(본인 거주 0 → 표1) | 예(0506 질의1 통산) | 예 |
+| 토지 공제율 | 30%(표1 24년) | 40%(통칙 95-0…1 · 건물 12년분 상한) | 80%(+ 거주 11년분 40%) |
+| 건물 공제율 | 24%(표1 12년) | 40% | 40%(거주분은 증여일부터 — 1126·0506 질의2) |
+| 산출세액 | 186,114,000 | 150,660,000 | 68,790,000 |
+
+- 68,790,000은 엔진 직접 시료의 과세표준 441,500,000에서 토지 공제 증가분 208,000,000(= 520,000,000 × 40%)을 빼고, `calculateProgressiveTax`(같은 누진표)로 구했다.
+- 같은 방법으로 현행 과세표준을 계산하면 엔진 값 150,660,000과 같다.
+- 본인 거주를 132로 넣으면 두 파트 모두 80% · 35,485,000이다. 이는 건물분이 1126에 어긋나는 잘못된 값이고, 화면 ⑧은 건물 취득일 전 입주를 막는다.
+
+## 3. 원인 (file:line)
+
+- ① 분리취득 공제율은 토지·건물이 **같은 거주 연수** 하나를 쓴다.
+  - `lib/tax-engine/transfer-tax-lthd.ts:274` `residenceYears`.
+  - 토지 `:392` `rateForYears` · 통칙 leaf 호출 `:403` · `changedFromOwnYears` 비교 `:412` · 건물 `:420`.
+  - 셋 다 같은 클로저다. 토지 전용 클로저를 따로 두지 않으면 일부만 바뀐다.
+- ② 표2 대상은 자산 단위 `useTable2`(`:362`)다. 토지 개월이 대상 판정을 열면 건물도 표1→표2가 된다. 이것은 4289 전제(「[표2]의 공제를 적용하는 경우」)대로이고 의도된 결과다.
+- ③ 화면은 D2(건물 상속·증여 + 토지 매수)에서 증여 세대 칸을 열지 않는다.
+  - `lib/calc/gift-household-payload.ts:158-161` `!effectiveBuildingCauseMix`.
+  - 엔진 고지 `one-house/gift-household-notice.ts:31` `GIFT_HOUSEHOLD_NOT_REFLECTED_ID` 「건물만 증여받은 주택 … 입력받지 않습니다」.
+- ④ 거주 구간 ⑧ 기준일은 건물 취득일이다(`lib/calc/transfer-tax-validate-step1.ts:356`). 이 동작은 1126·판결과 맞다.
+
+## 4. 범위
+
+| 경로 | 해당 | 비고 |
+|---|---|---|
+| 단건 D2 — 건물 **증여** + 토지 매수 · 주 자산 | ✅ 4289 사실 | 이번 대상 |
+| 다건(연간 합산) D2 · 주 자산 | ✅ 같은 엔진(`transfer-tax-aggregate-asset-records.ts`가 자산별 `calculateTransferTax`) | 배선만 |
+| 함께 양도(컴패니언) D2 | ❓ 토글은 비주 자산에도 렌더된다(`CompanionAcquisitionCauseSection.tsx:212`) | Q-6 |
+| §155⑳ 거주주택 + 분리취득 | ❓ `ltc-table-split.ts:154-174`가 토지·건물에 `liveYears` 하나를 준다(표2 무조건 계산) | Q-7 |
+| 건물만 이월과세 + 토지 매수(P4 B) | ❓ A 시나리오는 취득일이 증여자 취득일이다(`transfer-tax-split-carryover.ts:188`) | Q-8 |
+| D2 건물 **상속** + 토지 매수 | ❓ 4289는 증여 사안 | Q-1 |
+| 부담부증여 · 소유자 분리 | ✗ D2 overlay 제외(`transfer-land-part-cause.ts:109`) · 소유자 분리는 V-4 | — |
+| 겸용주택 | ✗ D2 미적용(`buildingCauseMixApplicable` `!isMixedUseHouse`) | — |
+| 토지를 **나중에** 취득(역방향) | 별건 — §8 | Q-5 |
+
+## 5. 결정 사항 (Q)
+
+| ID | 질문 | 선택지 | 권장 |
+|---|---|---|---|
+| Q-1 | 원인 범위 | (a) D2 **증여**만 · (b) 상속까지 | **(a)** — 4289는 증여 사안이다. 상속은 0506 질의2·조심 2025인3033이 공제율 불통산이고, 「토지 보유 중 거주」 축을 다룬 해석이 없다 |
+| Q-2 | 입력 모양 | (a) D2 증여 블록에 ToggleCard 1개 + 자식 개월 칸. 상속 D2 `InheritedCohabitationCard`(`BuildingCauseMixBlock.tsx:138-139`)와 같은 모양이다. 토글 = 「건물 증여자와 증여일부터 양도일까지 계속 같은 세대」, 자식 = 「건물 증여 전, 토지를 보유한 동안 건물 소유자와 같은 세대로 이 집에 거주한 개월 수」 · (b) 일반 증여 세대 칸 전체를 D2에도 연다 | **(a)** — (b)는 §154① 보유 통산·「취득 당시」까지 D2에 연다. 그 축은 종전에 「정하지 않았다」고 둔 것이다. (a)는 토글 OFF가 현행이라, 옛 이력·세션을 복원해도 막히지 않는다(③). 「계속 같은 세대」 문구는 3843 확인 문장과 맞춘다 |
+| Q-3 | 새 개월을 **표2 대상 판정**(영 §159의4 거주 2년)에도 쓰는가 | (a) 쓴다 · (b) 공제율만 | **(a)** — 4289는 「[표2]의 공제를 적용하는 경우」를 전제로 한다. 0506 질의1과 같은 방향이다. (b)면 S1이 표1로 남아 4289가 닿지 않는다. **비과세 거주요건(§154①)·§155⑳ 요건에는 쓰지 않는다**(V-5) |
+| Q-4 | 개월 수 상한 · 빈칸 | 상한 = 「토지 취득일 또는 증여자의 건물 취득일 중 늦은 날」~건물 증여일 개월 수. (a) 넘으면 ⑧·⑫ 차단 · 토글 ON에 빈칸이면 차단 · (b) 엔진이 상한으로 자른다(기존 `giftHouseholdPriorResidenceMonths` 방식) | **(a)** — 이상값은 검증 오류로 막는다(자동 보정 금지 원칙). 증여자 건물 취득일은 D2의 「증여자 취득일(선택)」 칸이다. 비었으면 토지 취득일만 쓴다 |
+| Q-5 | 역방향(토지를 나중에 취득) — §8 | (a) 이번 범위 밖 · 별도 계획 · (b) 같이 고친다 | **(a)** — 방향이 반대(세액 증가)이고 정면 해석이 없다 |
+| Q-6 | 함께 양도(컴패니언) D2 | (a) 칸 숨김 + ⑫ 400 + ④ 미전송(`buildLandPartCausePayload` `opts.isNonPrimary` 패턴) · (b) 컴패니언 스키마·`bundled-split-helpers.ts`까지 연다 | **(a)** — 일반 증여 세대 칸도 첫 자산만 묻는다(`calcGiftHouseholdFactAsked`). 컴패니언 거주 연수 축은 확인되지 않았다 |
+| Q-7 | §155⑳ 거주주택 + D2 | (a) 같이 반영 — `RentalLthdParts.land`에 거주 연수 필드를 두고 `buildRentalLthdParts`에서 채운다 · (b) ⑳ 선언 시 칸 차단(⑧·⑫) | **(b)** — ⑳ 경로는 표2를 무조건 계산하고 시나리오별로 표를 고른다. 4289와의 결합 근거가 없다. 막다른 길이 되지 않도록 차단 문구에 이유를 적는다 |
+| Q-8 | 건물만 이월과세 + 토지 매수(P4 B) | (a) 이번 범위 밖 — 칸은 D2 증여 호스트에만(B는 호스트가 `carryover_gift`) · (b) 포함 | **(a)** — A 시나리오에서는 건물 보유가 증여자 취득일부터다. 토지 거주 통산의 기산은 4289·1126 어느 쪽도 답하지 않는다 |
+
+## 6. 설계 (권장안 기준)
+
+### 엔진
+- **입력 2개(신규)**: 이름은 Do에서 확정한다.
+  - `landPartDonorSameHousehold?: boolean`: 건물 증여자와 증여일부터 양도일까지 계속 같은 세대인가.
+  - `landPartPriorHouseholdResidenceMonths?: number`.
+- **게이트·상한 단일 소스**:
+  - `lib/tax-engine/transfer-split-part-cause.ts` `SplitPartCauseFacts`·`collectSplitPartCauseIssues`(`:483`)에 둔다.
+  - 이 leaf는 엔진·⑧(`transfer-tax-validate-split.ts:248-285`)·⑫(`transfer-tax-schema-required-refines-2a.ts:501·549`)가 공유한다.
+  - 게이트 조건: D2 증여 호스트 · `selfOwns` both · 부담부증여 아님 · 주 자산(Q-6) · ⑳ 미선언(Q-7). 하나라도 어긋난 값이 오면 ⑫ 400이다. stale은 ④가 안 싣는다.
+  - 상한 계산은 `maxPriorResidenceMonthsBetween`(`one-house/gift-household-basis.ts:128` · `utc-date`)을 재사용한다.
+  - leaf가 691줄이라 추가 후 750 위험구간이다. 새 규칙은 별도 파일(`transfer-split-land-residence.ts` 등)로 두고 leaf는 호출만 한다.
+- **공제율**(`transfer-tax-lthd.ts` split 분기):
+  - 토지 전용 `landResidenceYears = floor((residencePeriodMonths + 새 개월) / 12)`.
+  - 토지 클로저를 따로 둔다. `:392` 자기연수 · `:403` 통칙 leaf `residenceYears` · `:412` 비교에 같은 값을 쓴다.
+  - 건물 `:420`은 종전 그대로다.
+- **표2 대상 판정**(Q-3 a):
+  - `one-house/residence-months.ts`에 별도 leaf를 둔다(예: `resolveTable2SubjectResidenceMonths` = 요건 값 + 새 개월).
+  - 바꿀 곳: `transfer-tax-lthd.ts:276`(→ `useTable2`) · `transfer-tax-lthd-982-step.ts:60`(→ `:124` `meetsTable2Residence` → `lthd-steps.ts:150` `isOneHouseSpecial`). 이걸 빠뜨리면 「공제율은 표2인데 문구는 표1」이 된다.
+  - 고지 판정 `gift-table2-notice.ts:65` · `land-only-appurtenant-card-notice.ts:22`: 같은 leaf를 쓸지 Do에서 정한다. 결론을 가르면 같은 leaf다.
+  - 바꾸지 않을 곳(비과세 거주요건·§155⑳ 요건): `transfer-tax-exemption-holding.ts:351·566` · `transfer-tax-rental-housing-judge.ts:97·180` · `transfer-tax-rental-housing-step.ts:239`.
+  - `ResidenceReqInput` Pick(`transfer-tax-exemption-holding.ts:273`)에 새 필드를 추가한다.
+- **결과 echo**(확정 수정 대상):
+  - `SplitPartResult`(`types/transfer-split-gain.types.ts:212` 근처)에 파트별 거주 연수를 싣는다.
+  - 표시부가 그 값을 읽게 한다: `transfer-tax-split-display.ts:438·465·578·582` · `transfer-tax-lthd-steps.ts:227` · `DetailedStatementLthdFormulas.ts:66`.
+  - 신고서 split-2col 거주기간 칸(`FilingFormTableHelpers.ts:298`)도 맞춘다.
+  - 옛 이력(새 필드 없음)은 공통 연수로 되돌아가게 한다.
+  - 수정하지 않으면 S1 토지 줄이 「거주 0년(2년 미만 — 거주기간 공제 없음) = 40%」 같은 자기모순 문장을 낸다.
+  - 숫자 분해 `deriveSplitLthdEcho`(`:409`)는 거주 연수에 무관해 안전하다.
+- **고지**:
+  - 적용 고지: 「부수토지 거주기간 공제율에 건물 증여 전 같은 세대 거주 N개월을 포함했습니다(서면-2025-법규재산-4289). 건물분 거주기간은 증여일부터 셉니다(사전-2025-법규재산-1126). 양도일 현재 증여인과 같은 세대인지 확인이 필요합니다(조심 2025서3843).」
+  - `GIFT_HOUSEHOLD_NOT_REFLECTED_ID` 문구 「건물만 증여받은 주택 … 입력받지 않습니다」를 새 칸과 모순되지 않게 고친다(비과세 쪽은 여전히 미입력).
+
+### 14지점 (UI 시니어 매핑)
+- ①: `lib/stores/calc-wizard-asset-split-acq.ts:65` 옆.
+- ②: `calc-wizard-asset-factory.ts:224` 옆.
+- ③: `calc-wizard-asset-migrate.ts:108` 옆. 이력 편집 `transfer-resume-entry.ts:138`이 거친다.
+- ④: `lib/calc/transfer-tax-api-split.ts:421-433` `buildLandPartCausePayload` D2 분기 한 곳.
+  - 단건 spread `transfer-tax-api.ts:565` · 다건 `multi-transfer-property-payload.ts:362` · 컴패니언 `transfer-tax-api-companion-payload.ts:47`이 모두 이 함수를 거친다.
+  - `engineLandOverlay(...) === "purchase"` 가드로 stale을 막는다.
+- ⑤: `BuildingCauseMixBlock.tsx:150`(증여자 취득일) 뒤 · `:166` 이월과세 고지 앞.
+  - `PriorHouseholdResidenceField`는 hint가 의미상 반대(「공제율 통산 안 함」)라 재사용하지 않고 새 FieldCard를 둔다.
+  - hint는 150자 미만으로 쓰고, 긴 법적 설명은 `CollapsibleHintCard`에 둔다.
+- ⑥: 사이드바 해당 없음 예상(`transfer-per-asset-summary.ts`는 공제율을 합계에 안 씀). 렌더 실측으로 확인한다.
+- ⑦: 결과 카드 토지 파트 거주분(위 echo).
+- ⑧:
+  - leaf 호출부 `transfer-tax-validate-split.ts`(749줄 — 규칙 본문은 새 파일).
+  - 오류 라벨 `lib/calc/transfer-tax-error-format.ts:62`.
+  - 거주 구간 오류 힌트 `transfer-tax-validate-step1.ts:365·389`: D2 증여도 새 칸을 안내하는 별도 문구를 쓴다. 기존 `GIFT_PRIOR_HINT`는 의미가 달라 쓰지 않는다.
+- ⑨⑩: enum 해당 없음.
+- ⑪: 해당 없음.
+- ⑫: 스키마가 **두 벌**이다. 한 벌만 고치면 다른 쪽에서 침묵 strip된다.
+  - 단건·다건 인라인 `lib/api/transfer-tax-schema-base-shape.ts:352`(698줄).
+  - 컴패니언 `transfer-tax-schema-split.ts:46`(Q-6 a면 400 규칙만).
+- ⑬: ④ spread.
+- ⑭: 단건 `app/api/calc/transfer/engine-input.ts:349` · 다건 `multi/route-property-input.ts:114` · 컴패니언 `bundled-split-helpers.ts:242`(Q-6 a면 미매핑 확인).
+- 그 밖에 같은 엔진을 부르는 `transfer-tax-preliminary-filing.ts` · `multi-house-surcharge-judgment/surcharge-simulation.ts`의 입력 매핑 누락 여부를 확인한다(V-8).
+- 판정 메뉴(`/api/calc/one-house-exemption`)는 D2·분리취득을 읽지 않아 필요 없다.
+
+## 7. 검증 계획
+
+- Pre-Do anchor(실패 먼저): S1 화면 경로(폼 → ④ → route → 엔진)로 토지 80% · 건물 40% · 산출세액 68,790,000.
+- 긍정·부정 짝:
+  - 토글 OFF → 현행(표1 · 186,114,000).
+  - 토글 ON에 빈칸 → ⑧ 차단.
+  - 상한 초과 → ⑧·⑫ 차단.
+  - D2 상속 → 칸 없음.
+  - 컴패니언 → 칸 없음 + ⑫ 400.
+  - ⑳ 선언 → 차단.
+  - D2 아님(토글 OFF·호스트 전환) → stale 무시.
+- 연혁:
+  - 2009~2019 양도(`holding_8pct` — 표2 대상에 거주요건 없음 · 보유 8% 단일축) → 세액이 같다.
+  - **2020 양도(`holding_8pct_residence_2y`)는 거주 2년이 대상 판정을 가른다.** 새 개월이 표1→표2를 뒤집어 세액이 바뀐다(`transfer-tax-exemption-residence-waivers.ts:227`). 기대값을 실측으로 고정한다.
+- 결과 문구: S1 토지 줄 「거주 11년」 · 건물 줄 「거주 0년」. 표2 문구(982-step 경로)와 공제율이 같은 표를 말한다. 옛 이력 복원 fallback도 확인한다.
+- 다건 parity: 같은 입력이면 단건 세액 = 다건 세액이어야 한다.
+- 뮤테이션: 토지 개월 가산 제거 · 건물에도 가산 · 대상 판정 가산 제거(982-step 포함) · 상한 제거 · 게이트(컴패니언·⑳) 제거.
+- E2E: D2 증여 블록 토글·개월 → 계산 → 결과 토지 80%. 수정 전 서버에서 실패해야 한다.
+- 회귀: transfer·calc·api·lib·components.
+
+## 8. 별건 — 역방향(토지를 나중에 취득) (Q-5 · 실측만)
+
+- 시료: 건물 2010-03-01 매수 · 토지 2020-03-01 매수 · 2025-01-15 양도 20억 · 1세대 1주택.
+  - 거주 178개월이면 토지 56%(표2 보유 4년 16% + 거주 14년 40%) · 건물 80%.
+  - 거주 60개월이면 토지 36%(16% + 5년 20%).
+- 「토지 보유기간 중 거주」만 세면 토지 거주분은 4년분 16%가 되어 토지 32%다.
+- 현행은 토지 보유 전 거주까지 토지 공제율에 넣는다. `calcLongTermRate`는 거주 연수를 보유 연수로 자르지 않는다(`transfer-tax-mixed-use-inheritance.ts:41`).
+- 정면 해석은 없다. nts 「부수토지 거주기간」 6건 중 공제율 사안은 4289뿐이고, 1992~93년 4건은 비과세 사안이다. 판결 문언과는 긴장이 있다.
+
+## 9. 미검증 (V)
+
+- **V-1** 4289 원문 대조(taxlaw 화면 Playwright). MCP 결과에는 「인용 전 원문 대조 권장」 표지가 있다.
+- **V-2** 고지 `GIFT_HOUSEHOLD_NOT_REFLECTED_ID` 문구 개정안이 비과세 쪽 미입력 사실과 맞는지.
+- **V-3** (Q-7로 승격)
+- **V-4** 소유자 분리(토지만 본인)에서 건물 소유자(세대원) 거주를 이미 거주기간으로 읽는지 실측. `land-only-owner-household.ts:73` 합가일 보정은 확인했다. 거주 축은 코드로 확인하지 못했다.
+- **V-5** 새 개월을 비과세 거주요건(조정대상지역 거주 2년)에도 넣을지. 4289는 공제율만 다룬다. 이번에는 넣지 않는다(Q-3).
+- **V-6** (§6 echo로 확정 — 실측은 §7)
+- **V-7** 「주택 부수토지로서의 보유기간」(통칙 95-0…1 표2 보유분 기준)이 주택 존재 시점('86)인지 건물 증여 시점('02)인지. 시료는 둘 다 10년 이상이라 40% 상한이다. 건물 보유가 10년 미만인 시료에서 차이가 나는지 실측한다. 4289는 다루지 않는다.
+- **V-8** `transfer-tax-preliminary-filing.ts` · `multi-house-surcharge-judgment/surcharge-simulation.ts` 입력 매핑에 새 필드가 필요한지.
+- **V-9** 판정 메뉴에서 넘어온 증여 폼(`gift-household-handoff.ts`)이 D2로 켜지는 경로가 있는지.
