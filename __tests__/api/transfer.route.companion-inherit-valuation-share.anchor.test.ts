@@ -133,3 +133,130 @@ describe.each(KINDS)("V-P2d %s — 매매 함께 양도 × 주 자산 상속 지
   }
 });
 
+/**
+ * V-P2d-1·2 — 주 자산 종류 · 지분율 · 3건 묶음 · 증여 확장(2026-11-16 · 계획서 §6). 측정 54칸 · 값 결함 0건.
+ * 이 줄(`primaryInheritanceValuation` 지분 축소)을 끄면 상속 칸은 안분 echo만 바뀌고(지분분 → 100%) 최종 값은 그대로다 —
+ * 승계 입주권 · 준공 전 승계 완공 APT도 주 자산 쪽에서는 최종 값이 덮인다(컴패니언 쪽 §6.4와 다르다). 증여 칸은 이 줄 밖이다.
+ * 대조: 단건 합. 단 일반건물 × apportioned는 양도가액을 기준시가 비율로 다시 나누고 의제취득일 전(1983) 건물은 취득가액이
+ * 양도가액에 연동되므로, 주 자산 양도차익을 **같은 안분 양도가액을 넣은 반 크기 단건**과 비교한다(면적은 반올림하지 않는다).
+ */
+const SH = (n: number) => ({ ownershipNumerator: String(n), ownershipDenominator: "100", ownershipRemainderThirdParty: "yes" });
+const inh = (date: string, dec = "1970-01-01") => ({ acquisitionCause: "inheritance", acquisitionDate: date, inheritanceStartDate: date, decedentAcquisitionDate: dec });
+const FLAT = (kind: string, date: string) => (sc: number) => ({ addressJibun: "서울 강남구 테스트동 3", assetKind: kind, ...inh(date),
+  publishedValueAtInheritance: S(200000000, sc), standardPriceAtTransfer: S(600000000, sc), actualSalePrice: S(1000000000, sc), acquisitionArea: "100", transferArea: "100" });
+const GB = (date: string) => (sc: number) => ({ assetKind: "general_building", addressJibun: "서울 강남구 역삼동 1", gbAcqLandPricePerSqm: "1000000", gbAcqBuildingValue: S(150_000_000, sc),
+  gbLandArea: String(205 * sc), gbBuildingArea: String(300 * sc), gbBuildingFootprintArea: String(135 * sc), gbZoneType: "general_residential", gbTransferLandPricePerSqm: "5514000",
+  gbTransferBuildingValue: S(259_072_400, sc), actualSalePrice: S(1_000_000_000, sc), standardPriceAtTransfer: S(1_389_442_400, sc), acquisitionCause: "inheritance", gbBuildingAcquisitionCause: "inheritance",
+  hasSeperateLandAcquisitionDate: false, landAcquisitionDate: date, acquisitionDate: date, inheritanceStartDate: date, decedentAcquisitionDate: "1970-01-01", landAcqMode: "actual", buildingAcqMode: "actual",
+  publishedValueAtInheritance: S(300_000_000, sc), gbBuildingInheritedValue: S(100_000_000, sc) });
+/** 원조합원 — `redev-companion-sec164-carry` 시료. 청산금은 지분 납부분 직접 입력(줄이지 않는다 · `transfer-tax-api-redev.ts`). */
+const OM = (kind: "rtmi" | "apt") => (sc: number) => ({ addressJibun: "제주특별자치도 강남구 테스트동 7-1", assetKind: kind === "apt" ? "redevelopment_apt" : "right_to_move_in", redevSubject: kind === "apt" ? "apt" : "right",
+  redevApprovalLawBasis: "urban_renovation_art_74", redevOriginalAssetType: "housing", redevSettlementDirection: "pay", redevApprovalDate: "2015-03-01", redevRightsValue: S(500000000, sc),
+  redevPreApprovalExpenses: "0", redevIsSuccessorMember: "no", isSuccessorRightToMoveIn: false, useEstimatedAcquisition: false, redevActualAcquisitionPrice: S(100000000, sc),
+  redevSettlementAmount: "50000000", actualSalePrice: S(1_000_000_000, sc), transferType: "regular", ...inh("2000-06-01", "1980-01-01"),
+  publishedValueAtInheritance: S(300000000, sc), inheritanceValuationMethod: "supplementary", inheritanceAssetKind: "house_individual", standardPriceAtTransfer: S(600000000, sc) });
+const IND = { inhHouseValLandArea: "100", inhHouseValLandPricePerSqmAtTransfer: "3000000", inhHouseValLandPricePerSqmAtFirst: "1000000", inhHouseValHousePriceAtFirst: "900000000", inhHouseValLandPricePerSqmAtInheritance: "800000" };
+const LANDOM = { redevOriginalAssetType: "land", redevLandArea: "200", inheritanceAssetKind: "land", ...inh("1988-06-01", "1980-01-01") };
+const GRADE = { pre1990GradeMode: "value", pre1990Grade_current: "100000", pre1990Grade_prev: "100000", pre1990Grade_atAcq: "80000", pre1990PricePerSqm_1990: "3000000" };
+/** ② 칸(§164⑤ 7.2억 · §164④ 4.8억)은 결합(sc = 1)에만 넣고, 대조 단건은 ① = ② × 지분율(V-P2c §6.1 동치) */
+const OM2 = (kind: "rtmi" | "apt") => (sc: number) => (sc === 1 ? { ...OM(kind)(1), ...IND } : { ...OM(kind)(sc), publishedValueAtInheritance: S(720000000, sc) });
+const OMLAND = (sc: number) => (sc === 1 ? { ...OM("rtmi")(1), ...LANDOM, ...GRADE } : { ...OM("rtmi")(sc), ...LANDOM, publishedValueAtInheritance: S(480000000, sc) });
+const SUCC = (kind: "rtmi" | "apt", date: string) => (sc: number) => ({ addressJibun: "제주특별자치도 강남구 테스트동 1-1", assetKind: kind === "apt" ? "redevelopment_apt" : "right_to_move_in",
+  redevSubject: kind === "apt" ? "apt" : "right", isSuccessorRightToMoveIn: kind === "rtmi", actualSalePrice: S(1_000_000_000, sc), redevApprovalLawBasis: "urban_renovation_art_74", redevApprovalDate: "2016-02-20",
+  redevIsSuccessorMember: "yes", ...(kind === "apt" ? { redevCompletionDate: "2022-12-02" } : {}), redevSettlementDirection: "pay", redevSettlementAmount: "0", redevPreApprovalExpenses: "0", redevPostApprovalExpenses: "0",
+  standardPriceAtTransfer: S(600_000_000, sc), ...inh(date, "2018-01-01"), fixedAcquisitionPrice: "", publishedValueAtInheritance: S(200_000_000, sc), inheritanceValuationMethod: "supplementary" });
+const PRESALE = (sc: number) => ({ addressJibun: "서울 강남구 테스트동 5", assetKind: "presale_right", ...inh("2021-03-01", "2020-01-01"),
+  publishedValueAtInheritance: S(200000000, sc), actualSalePrice: S(1000000000, sc), standardPriceAtTransfer: S(600000000, sc) });
+const GIFT = (base: (sc: number) => Record<string, unknown>) => (sc: number) => ({ ...base(sc), acquisitionCause: "gift", inheritanceStartDate: "", publishedValueAtInheritance: "",
+  donorAcquisitionDate: "2010-01-01", giftDonorRelation: "lineal", giftSameHousehold: "no", fixedAcquisitionPrice: S(200000000, sc) });
+
+/** [이름, 시료, 지분 %, 주 자산 안분 echo, 주 자산 최종 취득가액(파트 카드면 파트별), apportioned 최종 취득가액(다를 때만)] */
+const P2D: [string, (sc: number) => Record<string, unknown>, number, number, number[], number[]?][] = [
+  ["상가 상속 1995", FLAT("commercial_building", "1995-05-05"), 50, 100_000_000, [100_000_000]],
+  ["상가 상속 1983(의제 전)", FLAT("commercial_building", "1983-07-26"), 50, 100_000_000, [100_000_000]],
+  ["건물(토지 제외) 상속 1995", FLAT("building", "1995-05-05"), 50, 100_000_000, [100_000_000]],
+  ["건물(토지 제외) 상속 1983(의제 전)", FLAT("building", "1983-07-26"), 50, 100_000_000, [100_000_000]],
+  ["일반건물 C1 상속 1995", GB("1995-05-05"), 50, 150_000_000, [150_000_000, 75_000_000]],
+  ["일반건물 C1 상속 1988", GB("1988-05-01"), 50, 150_000_000, [150_000_000, 75_000_000]],
+  ["일반건물 C1 상속 1983(의제 전 — apportioned 건물 취득가액은 안분 양도가액에 연동)", GB("1983-07-26"), 50, 150_000_000, [150_000_000, 75_000_000], [150_000_000, 81_608_998]],
+  ["분양권 상속 2021", PRESALE, 50, 100_000_000, [100_000_000]],
+  ["원조합원 입주권 상속 2000 ①", OM("rtmi"), 50, 150_000_000, [200_000_000]],
+  ["원조합원 완공 APT 상속 2000 ①", OM("apt"), 50, 150_000_000, [200_000_000]],
+  ["원조합원 입주권 상속 2000 ① + ② §164⑤", OM2("rtmi"), 50, 150_000_000, [410_000_000]],
+  ["원조합원 완공 APT 상속 2000 ① + ② §164⑤", OM2("apt"), 50, 150_000_000, [410_000_000]],
+  ["원조합원 토지 출자 입주권 상속 1988 ① + ② §164④", OMLAND, 50, 150_000_000, [290_000_000]],
+  ["승계 입주권 상속 2021", SUCC("rtmi", "2021-03-01"), 50, 100_000_000, [100_000_000]],
+  ["승계 완공 APT 준공 뒤 상속 2023", SUCC("apt", "2023-03-01"), 50, 100_000_000, [100_000_000]],
+  ["승계 완공 APT 준공 전 상속 2021", SUCC("apt", "2021-03-01"), 50, 100_000_000, [100_000_000]],
+  ["토지 상속 1995 지분 30%", LAND("1995-05-05"), 30, 60_000_000, [60_000_000]],
+  ["토지 상속 1995 지분 70%", LAND("1995-05-05"), 70, 140_000_000, [140_000_000]],
+  ["토지 상속 1995 지분 25%", LAND("1995-05-05"), 25, 50_000_000, [50_000_000]],
+  ["주택 상속 1995 지분 30%", HOUSE("1995-05-05"), 30, 60_000_000, [60_000_000]],
+  ["주택 상속 1995 지분 70%", HOUSE("1995-05-05"), 70, 140_000_000, [140_000_000]],
+  ["주택 상속 1983 지분 25%", HOUSE("1983-07-26"), 25, 50_000_000, [50_000_000]],
+  ["상가 상속 1995 지분 30%", FLAT("commercial_building", "1995-05-05"), 30, 60_000_000, [60_000_000]],
+  ["상가 상속 1983 지분 70%", FLAT("commercial_building", "1983-07-26"), 70, 140_000_000, [140_000_000]],
+  // 대조 — 증여 주 자산은 이 줄 밖(acquisitionCause === "inheritance"만). echo는 지분 축소된 증여가액(`fixedAcquisitionPrice`)에서 온다.
+  ["증여 토지 2020(이 줄 밖)", GIFT(LAND("2020-05-05")), 50, 100_000_000, [100_000_000]],
+  ["증여 주택 2020(이 줄 밖)", GIFT(HOUSE("2020-05-05")), 50, 100_000_000, [100_000_000]],
+];
+
+describe.each(P2D)("V-P2d-1·2 %s — 매매 함께 양도 × 주 자산", (_name, base, pct, echo, acqActual, acqApportioned) => {
+  for (const mode of ["actual", "apportioned"] as const) {
+    it(`${mode}: ⑧ 0건 · ⑫ 200 · 양도차익 = 단건 합 · 주 자산 안분 echo ${echo.toLocaleString()} · 최종 취득가액`, async () => {
+      const sc = pct / 100;
+      const acq = mode === "apportioned" && acqApportioned ? acqApportioned : acqActual;
+      const prim = (k: number, id: string, ...o: Record<string, unknown>[]) => Object.assign({ assetId: id }, x(base(k)), ...o.map(x)) as Partial<AssetForm>;
+      const other = (id: string): Partial<AssetForm> => ({ ...PRIMARY(id), addressJibun: "서울 강남구 테스트동 9" });
+      const sale = (k: number) => Number(base(k).actualSalePrice);
+      const f = form([prim(1, "p", SH(pct)), other("c")], { assetSplitMode: "companion", bundledSaleMode: mode, contractTotalPrice: String(Math.round(sale(1) * sc) + 800_000_000) });
+      const r = await post(f);
+      expect(issuesOf(f), "⑧").toEqual([]);
+      expect(r.status, `⑫ ${r.err}`).toBe(200);
+
+      const ap = Object.fromEntries(r.apportioned.map((a) => [a.assetId, a]));
+      expect(ap.primary.allocatedAcquisitionPrice, "주 자산 안분 echo").toBe(echo);
+      expect(ap.c.allocatedAcquisitionPrice, "컴패니언 안분 취득가액").toBe(300_000_000);
+      expect(r.props.map((p) => p.acquisitionPrice), "자산별 최종 취득가액").toEqual([...acq, 300_000_000]);
+
+      const z2 = await post(form([other("z2")], { contractTotalPrice: "800000000" }));
+      const isGb = base(1).assetKind === "general_building";
+      const single = (price: number) => post(form([prim(sc, "z1", { actualSalePrice: String(price) })], { contractTotalPrice: String(price) }));
+      // apportioned는 양도가액을 기준시가 비율로 다시 나눈다 — 주 자산 양도차익은 같은 안분 양도가액을 넣은 반 크기 단건과 대조한다
+      const pt = mode === "apportioned" ? r.props.slice(0, acq.length).reduce((a, p) => a + (p.transferPrice as number), 0) : sale(sc);
+      const z1 = await single(pt);
+      expect([z1.status, z2.status], `대조 ${z1.err}${z2.err}`).toEqual([200, 200]);
+      const primGain = r.props.slice(0, acq.length).reduce((a, p) => a + (p.transferGain as number), 0);
+      expect(primGain, "주 자산 양도차익 = 같은 양도가액 반 크기 단건").toBe(z1.gain);
+      // 합계 = 원래 양도가액 단건 합 — 의제 전 일반건물 apportioned만 건물 취득가액이 양도가액에 연동돼 갈린다(설계)
+      const z1own = mode === "apportioned" ? await single(sale(sc)) : z1;
+      if (!(isGb && mode === "apportioned" && String(base(1).acquisitionDate) < "1985-01-01")) {
+        expect(r.gain, "양도차익 = 단건 합").toBe((z1own.gain as number) + (z2.gain as number));
+      }
+    });
+  }
+});
+
+describe("V-P2d-2 3건 묶음 — 주 자산 토지 상속 50% + 토지 매매 100% + 주택 상속 50%", () => {
+  for (const mode of ["actual", "apportioned"] as const) {
+    it(`${mode}: ⑧ 0건 · ⑫ 200 · 양도차익 = 단건 셋의 합 1,300,000,000 · 안분 echo [100,000,000 · 300,000,000 · 100,000,000]`, async () => {
+      const other = (id: string): Partial<AssetForm> => ({ ...PRIMARY(id), addressJibun: "서울 강남구 테스트동 9" });
+      const land = (k: number, id: string, ...o: Record<string, unknown>[]) => Object.assign({ assetId: id }, x(LAND("1995-05-05")(k)), ...o.map(x)) as Partial<AssetForm>;
+      const house = (k: number, id: string, ...o: Record<string, unknown>[]) => Object.assign({ assetId: id }, x(HOUSE("1995-05-05")(k)), x({ addressJibun: "서울 강남구 테스트동 4" }), ...o.map(x)) as Partial<AssetForm>;
+      const f = form([land(1, "p", SH(50)), other("c"), house(1, "h", SH(50))], { assetSplitMode: "companion", bundledSaleMode: mode, contractTotalPrice: "1800000000" });
+      const r = await post(f);
+      const zs = [
+        await post(form([land(0.5, "z1")], { contractTotalPrice: "500000000" })),
+        await post(form([other("z2")], { contractTotalPrice: "800000000" })),
+        await post(form([house(0.5, "z3")], { contractTotalPrice: "500000000" })),
+      ];
+      expect(issuesOf(f), "⑧").toEqual([]);
+      expect(r.status, `⑫ ${r.err}`).toBe(200);
+      expect(zs.map((z) => z.status)).toEqual([200, 200, 200]);
+      expect(r.gain).toBe(zs.reduce((a, z) => a + (z.gain as number), 0));
+      expect(r.gain).toBe(1_300_000_000);
+      expect(r.apportioned.map((a) => a.allocatedAcquisitionPrice)).toEqual([100_000_000, 300_000_000, 100_000_000]);
+      expect(r.props.map((p) => p.acquisitionPrice)).toEqual([100_000_000, 300_000_000, 100_000_000]);
+    });
+  }
+});
