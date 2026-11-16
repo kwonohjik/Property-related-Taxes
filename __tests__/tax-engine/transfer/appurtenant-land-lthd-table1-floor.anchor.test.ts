@@ -117,14 +117,17 @@ describe("부수토지 LTHD — 표1 ↔ 표2 max (기본통칙 95-0…1)", () =
     expect(r.totalTax).toBe(43_901_000);
   });
 
-  it("A-6: 토지가 **짧으면** max는 no-op — 토지 3년 · 주택 14년 · 거주 10년 → 표2 80%", () => {
+  it("A-6: 토지가 **짧으면** max는 no-op — 토지 3년 · 주택 14년 · 거주 10년 → 표2 52%(보유 14년 40% + 거주는 토지 보유기간 중 min(120, 36개월) = 3년 12%)", () => {
+    // 역방향(계획서 split-land-residence-rate-4289 §8): 카드를 주택보다 나중에 취득했으면 표2 거주분의 거주는 카드(토지) 보유기간 중 거주다.
+    //   직전 값 80%는 토지 보유 전 거주 7년까지 센 값(거주 10년 40%). 표1(토지 3년 6%)은 여전히 표2가 이긴다 — 이 테스트의 요지(max no-op)는 그대로다.
     const r = calculateTransferTax(companionLand("2021-06-01", 168, 120), rates);
-    expect(r.longTermHoldingRate).toBe(0.8);
+    expect(r.longTermHoldingRate).toBeCloseTo(0.52, 10);
   });
 
-  it("A-7: 토지 3년 미만(표1 0%)이어도 표2는 그대로 적용된다", () => {
+  it("A-7: 토지 3년 미만(표1 0%)이어도 표2는 그대로 적용된다 — 표2 48%(보유 14년 40% + 거주 min(120, 34개월) = 2년 8%)", () => {
+    // 직전 값 80%(거주 10년 40%) — 토지 보유 34개월 밖의 거주까지 센 값이다(역방향 §8).
     const r = calculateTransferTax(companionLand("2021-08-01", 168, 120), rates);
-    expect(r.longTermHoldingRate).toBe(0.8);
+    expect(r.longTermHoldingRate).toBeCloseTo(0.48, 10);
   });
 
   it("A-8: 표2 **미대상**(1세대1주택 아님)은 종전대로 표1 단독 — F11 회귀 가드", () => {

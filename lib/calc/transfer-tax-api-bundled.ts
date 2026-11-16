@@ -1,4 +1,5 @@
 import { laterShareResidenceMonths } from "./axis-b-share-residence";
+import { buildLandHoldingResidencePayload } from "./transfer-land-holding-residence-scope";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { householdFactsFormView } from "./household-facts-view";
@@ -96,6 +97,14 @@ export function buildBundledPrimaryPayload(c: {
             ? {
                 reductions: toEngineReductions(primaryReductionsWithRows(householdFactsFormView(form)), a, a.expropriationNoticeDate),
                 residencePeriodMonths: clampResidenceToHousingPeriod(a, form.transferDate, "", isUsageConversionActive(a) ? a.residentialUseStartDate : undefined).months,
+                // ④ 역방향 — 이 카드가 자기 거주 구간을 가진 주택이면 토지를 건물보다 나중에 취득한 분리취득의 토지 보유기간 중 거주 개월도 싣는다(주 자산과 같은 leaf).
+                //   다른 컴패니언은 자기 거주 입력이 없어(0 또는 주 자산 승계) 싣지 않는다 — 엔진이 보유 개월로 상한한다.
+                ...buildLandHoldingResidencePayload(a, {
+                  propertyType: (payload as { propertyType?: unknown }).propertyType,
+                  landAcquisitionDate: (payload as { landAcquisitionDate?: unknown }).landAcquisitionDate,
+                  selfOwns: (payload as { selfOwns?: unknown }).selfOwns,
+                  buildingAcquisitionDate: (payload as { acquisitionDate?: unknown }).acquisitionDate,
+                }),
               }
             : {};
         return {

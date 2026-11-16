@@ -37,6 +37,7 @@ import { buildSplitPayload, isSplitPayloadActive } from "@/lib/calc/transfer-tax
 import { buildLandStdAtAcquisitionPayload } from "@/lib/calc/transfer-tax-api-split";
 import { legacyExpenseMovesToParts } from "@/lib/calc/split-legacy-expense";
 import { buildLandPartCausePayload } from "@/lib/calc/transfer-tax-api-split";
+import { buildLandHoldingResidencePayload } from "@/lib/calc/transfer-land-holding-residence-scope";
 import { buildLandRebuildPayload } from "@/lib/calc/transfer-land-rebuild";
 import { buildExpropriationInput } from "@/lib/calc/transfer-tax-api-helpers";
 import { buildNewConstructionPayload } from "@/lib/calc/transfer-tax-api-body-blocks";
@@ -250,6 +251,10 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
   // 매핑하지 않으므로 여기서 전송하지 않는다 — ⑧(validateMultiSupportedMode)이 화면에서, ⑫(transfer-tax-schema-multi-refines)가
   // API에서 막는다. (1990 환산·토지/건물 분리·§164⑨는 단건과 같은 leaf로 전송 — F-12. 상업용·일반건물 환산·이월과세(§97의2)·
   // 부담부증여(소령 §159)도 단건과 같은 leaf로 아래에서 싣는다 — 계획서 multi-building-valuation-support · multi-carryover-bg-gb-shares.)
+  // 분리 축 전송 조각 — 아래 body 스프레드와 ④ 역방향(토지 보유기간 중 거주 개월)이 같은 값을 읽는다.
+  const splitPayload = primary
+    ? buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed, primaryCtx: { transferDate: form.transferDate }, ...(primaryFractional ? { shareRatio: primaryRatio } : {}) })
+    : undefined;
   return {
     propertyType: primaryKind,
     // ⑬ §77 직접 경작 토지 — 농특세령 §4①1호 괄호. 단건 ④와 **같은 leaf**를 쓴다 (D11-01).
@@ -357,9 +362,18 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     // ⑬ 토지·건물 분리 축 — 반드시 `standardPriceAtAcquisition` **뒤**에 둔다(별개 취득이면 빌더가
     //    그 값을 undefined로 덮는다 — 단건 ④와 같은 순서). 종전에는 소유자 분리(`selfOwns`)가 화면에
     //    뜨는데 전송되지 않아 비소유 파트까지 과세됐다(29,216,000 → 35,953,500).
-    ...(primary ? buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed, primaryCtx: { transferDate: form.transferDate }, ...(primaryFractional ? { shareRatio: primaryRatio } : {}) }) : {}),
+    ...(splitPayload ?? {}),
     ...(primary ? buildLandStdAtAcquisitionPayload(primary) : {}),
     ...(primary ? buildLandPartCausePayload(primary) : {}),
+    // ④ 역방향 — 토지를 건물보다 나중에 취득한 주택의 구간 입력은 토지 보유기간과 겹친 거주 개월만 싣는다(단건 ④와 같은 leaf · 직접 입력은 엔진이 보유 개월로 상한).
+    ...(primary && splitPayload
+      ? buildLandHoldingResidencePayload(primary, {
+          propertyType: primaryKind,
+          landAcquisitionDate: splitPayload.landAcquisitionDate,
+          selfOwns: splitPayload.selfOwns,
+          buildingAcquisitionDate: primaryAcquisitionDateOf(primary),
+        })
+      : {}),
     // 구주택 멸실·신축 통산(해석 (5)) — 단건 ④와 같은 leaf.
     ...(primary ? buildLandRebuildPayload(primary) : {}),
     // 주택별 개별주택가격 최초공시일 — 영 §163⑨ 단서 2호 구간의 끝(자산 단위·D2-4·D1-H 공용). 바꾸지 않았으면 싣지 않는다

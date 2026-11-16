@@ -46,6 +46,7 @@ import { appurtenantCardHouseHoldingMonths } from "./land-only-owner-household";
 import { landOnlyAppurtenantHouseYears } from "./land-only-owner-household";
 import { resolveExemptionRequirementResidenceMonths, resolveTable2SubjectResidenceMonths } from "./one-house/residence-months";
 import { landPartPriorResidenceMonths } from "./transfer-split-land-residence";
+import { resolveLandHoldingResidence } from "./transfer-land-holding-residence";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
 import type { Rental97Result } from "./transfer-reductions/types";
 import type { TransferTaxInput, SplitGainResult } from "./types/transfer.types";
@@ -83,6 +84,11 @@ interface LongTermHoldingResult {
    * 고지 입력(표시 전용 — `appurtenantLandLthdNoticeText`에 그대로 넘긴다). 세액은 `deduction`이 정본.
    */
   appurtenantLthdNotice?: Parameters<typeof appurtenantLandLthdNoticeText>[0];
+  /**
+   * 함께 양도 부수토지 카드(L-1b)를 주택보다 **나중에** 취득했는데 거주를 개월 수로 직접 입력해 카드 보유 개월로 상한했고, 그 상한이 공제율을 **실제로 바꾼** 경우의 사실(표시 전용 — 고지 게이트).
+   * 분리취득 토지 파트의 `holdingResidenceCap`과 같은 모양·같은 고지다(`transfer-land-holding-residence-notice.ts`).
+   */
+  landHoldingResidenceCap?: { directMonths: number; cappedMonths: number; landHoldingMonths: number };
 }
 
 /**
@@ -235,13 +241,24 @@ export function calcLongTermHoldingDeduction(
       meetsTable2ResidenceRequirement(input, table2ResidenceYears);
     // 통칙 95-0…1 — 표1(토지 전체 보유기간)과 표2(주택 부수토지로서의 보유기간 = primary 주택의 보유연수)의 **큰 공제율**.
     // 산식은 split 분기·§155⑳ 경로와 같은 leaf(`appurtenant-land-lthd-rate.ts`)다 — 3년 진입요건은 `calcLongTermRate` 정본에 내장.
-    const companion = resolveAppurtenantLandLthdRate({
-      landHoldingYears: landHolding.years,
-      houseHoldingYears: primaryHoldingYears,
-      residenceYears,
-      useTable2: useTable2ForCompanion,
-      transferDate: input.transferDate,
-    });
+    // 카드를 주택보다 나중에 취득했으면 표2 거주분의 거주는 **카드(토지) 보유기간 중 거주**다 — 분리취득 토지 파트와 같은 규칙(`transfer-land-holding-residence.ts` · 직접 입력은 보유 개월로 상한).
+    //   카드가 주택보다 먼저 취득됐으면 거주 ≤ 주택 보유 < 카드 보유라 상한은 걸리지 않는다(값 불변).
+    const cardHoldingMonths = landHolding.years * 12 + landHolding.months;
+    const cardResidenceMonths = Math.min(input.residencePeriodMonths, cardHoldingMonths);
+    const cardResidenceYears = Math.floor(cardResidenceMonths / 12);
+    const companionAt = (resYears: number) =>
+      resolveAppurtenantLandLthdRate({
+        landHoldingYears: landHolding.years,
+        houseHoldingYears: primaryHoldingYears,
+        residenceYears: resYears,
+        useTable2: useTable2ForCompanion,
+        transferDate: input.transferDate,
+      });
+    const companion = companionAt(cardResidenceYears);
+    const landHoldingResidenceCap =
+      cardResidenceMonths < input.residencePeriodMonths && companion.rate !== companionAt(residenceYears).rate
+        ? { directMonths: input.residencePeriodMonths, cappedMonths: cardResidenceMonths, landHoldingMonths: cardHoldingMonths }
+        : undefined;
     const useTable1Axis = companion.table1Applied;
     const companionRate = companion.rate;
     const deduction = companionRate > 0 ? applyLthdRate(taxableGain, companionRate) : 0;
@@ -257,6 +274,7 @@ export function calcLongTermHoldingDeduction(
       holdingPeriod: displayHolding,
       // 표2 대상인데 표1이 이긴 경우에만 표시 축을 뒤집는다(표2 미대상은 원래 표1 형식이다).
       ...(useTable2ForCompanion && useTable1Axis ? { appurtenantTable1Applied: true } : {}),
+      ...(landHoldingResidenceCap ? { landHoldingResidenceCap } : {}),
     };
   }
 
@@ -365,9 +383,6 @@ export function calcLongTermHoldingDeduction(
   // 양도일을 넘겨 표2 연혁(OH-31 — 2009~2020 연 8% 단일축)을 가른다.
   const rateForYears = (years: number): number =>
     calcLongTermRate(years, residenceYears, useTable2, false, input.transferDate);
-  // 4289 — 토지 파트만: 거주분 공제율의 거주 연수 = 본인 거주(증여일부터) + 건물 증여 전 같은 세대 거주(서면-2025-법규재산-4289). 건물 파트는 `rateForYears` 그대로다.
-  //   게이트·상한은 `calcSplitGain` 진입 leaf가 막았다 — 입력이 없거나 토글이 꺼져 있으면 0이라 종전 값과 같다.
-  const landResidenceYears = Math.floor((input.residencePeriodMonths + landPartPriorResidenceMonths(input)) / 12);
   // 4289 개월이 결과를 실제로 바꿨는지(고지·신고서 칸 게이트) — 대상 판정은 그 개월을 뺀 값으로도 열리는가.
   const useTable2WithoutLandMonths =
     isOneHouseForTable2 &&
@@ -379,6 +394,12 @@ export function calcLongTermHoldingDeduction(
     const selfOwns = splitDetail.selfOwns ?? "both";
     const ownsLand = selfOwns !== "building_only";
     const ownsBuilding = selfOwns !== "land_only";
+    // 토지 파트만: 거주분 공제율의 거주 연수 = 본인 거주 + 건물 증여 전 같은 세대 거주(서면-2025-법규재산-4289). 건물 파트는 `rateForYears` 그대로다.
+    //   · 토지가 건물보다 나중 취득이면 본인 거주는 **토지 보유기간 중 거주**다(`transfer-land-holding-residence.ts` — 구간 입력은 ④가 겹침을 싣고 직접 입력은 보유 개월로 상한).
+    //     4289는 토지가 먼저 취득된 경우의 입력이라 둘은 겹치지 않는다(상한 leaf가 막는다).
+    //   게이트·상한은 `calcSplitGain` 진입 leaf가 막았다 — 입력이 없거나 토글이 꺼져 있으면 0이라 종전 값과 같다.
+    const landHoldingRes = resolveLandHoldingResidence(input, selfOwns);
+    const landResidenceYears = Math.floor((landHoldingRes.months + landPartPriorResidenceMonths(input)) / 12);
 
     // 파트별 과세 양도차익 — **STEP 3(`resolveTaxableGain`)이 확정한 값**을 그대로 쓴다(OH-04).
     //   12억 안분 여부·분모는 비과세 판정(`isPartialExempt` — §155 의제 포함)과 STEP 3 분모
@@ -456,8 +477,16 @@ export function calcLongTermHoldingDeduction(
     // 4289 개월의 실제 효과(고지·신고서 칸 게이트) — 통칙 95-0…1로 표1이 이기거나 표2 대상이 아니면 둘 다 false다.
     if (ownsLand && landPartPriorResidenceMonths(input) > 0) {
       splitDetail.land.priorHouseholdResidenceEffect = {
-        rate: landRate !== resolveLandRate(residenceYears).rate,
+        rate: landRate !== resolveLandRate(Math.floor(landHoldingRes.months / 12)).rate,
         eligibility: useTable2 && !useTable2WithoutLandMonths,
+      };
+    }
+    // 역방향 — 직접 입력 거주를 토지 보유 개월로 상한했고 그 상한이 토지 공제율을 실제로 바꿨을 때만 echo(고지 게이트). 연수가 같으면 결과가 같아 알리지 않는다.
+    if (ownsLand && landHoldingRes.capped && landRate !== resolveLandRate(Math.floor(input.residencePeriodMonths / 12)).rate) {
+      splitDetail.land.holdingResidenceCap = {
+        directMonths: input.residencePeriodMonths,
+        cappedMonths: landHoldingRes.months,
+        landHoldingMonths: landHoldingRes.landHoldingMonths!,
       };
     }
     if (ownsBuilding) splitDetail.building.residenceYears = residenceYears;

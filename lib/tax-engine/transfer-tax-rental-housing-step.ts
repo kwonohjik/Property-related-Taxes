@@ -56,7 +56,7 @@ import { splitAppurtenantExcess, splitLaterAcquiredLand, buildRentalPartRateDeta
 import { resolveSplitAwareTax, buildCalculatedTaxStep } from "./transfer-tax-split-rate";
 import { applyRentalHousingReductions } from "./transfer-tax-rental-housing-reductions";
 import { RENTAL_HOUSING_INCOME_DEDUCTION_ORDER_NOTICE, finalizeRentalHousingIncomeDeduction, resolveRentalHousingIncomeDeduction } from "./transfer-tax-rental-housing-income-deduction";
-import { buildRentalLthdParts, applyRentalLthdPartsToSplit } from "./transfer-tax-rental-housing-lthd-parts";
+import { buildRentalLthdParts, applyRentalLthdPartsToSplit, rentalLandHoldingResidence } from "./transfer-tax-rental-housing-lthd-parts";
 import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
 import {
   rentalResidenceProvisoLabel,
@@ -257,9 +257,12 @@ export function runRentalHousingExceptionStep(
     resolveHighValueDenominator(effectiveInput) > resolveHighValueHouseThreshold(effectiveInput.transferDate);
   const rulingFacts = rulingGateOpen ? buildRentalHighValueExcessRuling(effectiveInput, splitDetail!, nbl!) : undefined;
   // 장기보유특별공제는 토지·건물 **파트별 보유연수**로 구한다(§95④ — 일반 경로 split 분기와 같은 규칙). 분리 취득이 아니면 종전 단일 보유연수.
+  // 토지를 건물보다 나중에 취득했으면 토지 파트 거주분 공제율의 거주 연수는 토지 보유기간 중 거주다(일반 경로 split 분기와 같은 leaf).
+  const landRes = rentalLandHoldingResidence(effectiveInput, splitDetail);
   const lthdParts = buildRentalLthdParts({
     splitDetail, nonBusinessGain: nbl?.gain ?? 0, laterLandExcluded: !!laterLand, housingGain,
     houseYearsOverride: splitDetail ? landOnlyAppurtenantHouseYears(effectiveInput, splitDetail.building.holdingYears) : undefined,
+    landLiveYears: landRes.landLiveYears,
   });
   /**
    * D-2 — 다주택 중과 대상이면 장기보유특별공제를 배제한다(소득세법 §95② 괄호 · 일반 경로 L-1 `transfer-tax-lthd.ts`와 같은 조건).
@@ -385,8 +388,8 @@ export function runRentalHousingExceptionStep(
   const provisoNotice = phrpUnmetReason ? undefined : rentalResidenceProvisoNotice(effectiveInput);
 
   // ── 특례 적용: taxableGain을 특례 결과로 대체하고 최종 결과 반환 ──
-  // 파트별 장특을 결과 카드(splitDetail 파트)에 채우고, 기본통칙 95-0…1로 토지분 공제율이 달라졌으면 고지한다.
-  const appurtenantLthdNotice = applyRentalLthdPartsToSplit(splitDetail, rhe, effectiveInput.transferDate);
+  // 파트별 장특을 결과 카드(splitDetail 파트)에 채우고, 기본통칙 95-0…1로 토지분 공제율이 달라졌으면(또는 토지를 나중에 취득해 직접 입력 거주를 토지 보유 개월로 상한했으면) 고지한다.
+  const appurtenantLthdNotice = applyRentalLthdPartsToSplit(splitDetail, rhe, effectiveInput.transferDate, landRes.landCap);
   const periodPendingNotice = buildRentalPeriodPendingNotice(rhe.eligibility.periodPendingUnitIndexes);
   // #15(S06-5) — 2호 부분 표2 독법 고지. 결론(세액)은 바꾸지 않고 두 독법이 갈릴 때만 단다.
   const table2ReadingNotice = buildPrhpTable2ReadingNotice(

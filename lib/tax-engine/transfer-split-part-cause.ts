@@ -24,6 +24,7 @@
 import type { PartAcqMode } from "./transfer-tax-split-acq-price";
 import { TRANSFER } from "./legal-codes";
 import { collectSplitLandResidenceIssues } from "./transfer-split-land-residence";
+import { collectLandHoldingResidenceIssues } from "./transfer-land-holding-residence";
 
 export interface SplitPartCauseFacts {
   /** 주택·건물(토지 포함) 자산인가 — 분리 계산 대상(`calcSplitGain`과 같은 범위) */
@@ -116,6 +117,11 @@ export interface SplitPartCauseFacts {
   donorAcquisitionDate?: string;
   /** §155⑳ 거주주택 특례를 선언했다 — 4289 입력과 결합할 수 없다(Q-7 b) */
   rentalHousingDeclared?: boolean;
+  // ── 역방향(토지를 건물보다 나중에 취득) — 토지 보유기간 중 거주 (`transfer-land-holding-residence.ts`) ──
+  /** 구간 입력에서 ④가 계산한 [토지 취득일, 양도일]과의 겹침 개월 — 생략 = 직접 입력(엔진이 보유 개월로 상한) */
+  landHoldingResidenceMonths?: number;
+  /** 거주기간 합계(개월) — 위 값의 상한 검사에 쓴다. 생략 = 그 검사를 하지 않는다 */
+  residencePeriodMonths?: number;
 }
 
 /** D1-H — 토지를 받을 당시 지금의 주택이 그 위에 있었는가(계획서 transfer-house-land-163-9-2.plan.md Q-1). */
@@ -153,7 +159,9 @@ export type SplitPartCauseField =
   | "expenses"
   // 4289 — 건물 증여 전 동일세대 거주(D2 증여)
   | "landPartDonorSameHousehold"
-  | "landPartPriorHouseholdResidenceMonths";
+  | "landPartPriorHouseholdResidenceMonths"
+  // 역방향 — 토지 보유기간 중 거주
+  | "landHoldingResidenceMonths";
 
 export interface SplitPartCauseIssue {
   field: SplitPartCauseField;
@@ -500,7 +508,7 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
     if (f.hasLandCarryover) stray.push({ field: "landCarryoverPart", message: PART_CARRYOVER_STRAY_MESSAGE });
     if (f.hasBuildingCarryover) stray.push({ field: "buildingCarryoverPart", message: PART_CARRYOVER_STRAY_MESSAGE });
     if (f.carryoverGiftDate) stray.push({ field: "carryoverGiftEvent", message: PART_CARRYOVER_STRAY_MESSAGE });
-    stray.push(...collectSplitLandResidenceIssues(f));
+    stray.push(...collectSplitLandResidenceIssues(f), ...collectLandHoldingResidenceIssues(f));
     return stray;
   }
   const issues: SplitPartCauseIssue[] = [];
@@ -634,7 +642,7 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
   if (f.hasLegacyExpenses && hasPart)
     issues.push({ field: "expenses", message: PART_CARRYOVER_LEGACY_EXPENSES_MESSAGE });
 
-  if (!f.hasLandAcquisitionDate) return [...issues, ...collectSplitLandResidenceIssues(f)];
+  if (!f.hasLandAcquisitionDate) return [...issues, ...collectSplitLandResidenceIssues(f), ...collectLandHoldingResidenceIssues(f)];
 
   // S5 — 이월과세 파트의 취득일은 증여 등기접수일이다(Q-8). 한 곳 입력 규약을 엔진·⑫도 강제한다.
   if (f.carryoverGiftDate) {
@@ -701,6 +709,6 @@ export function collectSplitPartCauseIssues(f: SplitPartCauseFacts): SplitPartCa
   if (cause === "inheritance" && !f.hasLandDecedentAcquisitionDate)
     issues.push({ field: "landDecedentAcquisitionDate", message: LAND_DECEDENT_DATE_REQUIRED_MESSAGE });
 
-  issues.push(...collectSplitLandResidenceIssues(f));
+  issues.push(...collectSplitLandResidenceIssues(f), ...collectLandHoldingResidenceIssues(f));
   return issues;
 }

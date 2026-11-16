@@ -74,5 +74,8 @@ export function splitPartCauseFactsOfInput(input: TransferTaxInput): SplitPartCa
     landPartPriorHouseholdResidenceMonths: input.landPartPriorHouseholdResidenceMonths,
     donorAcquisitionDate: dayKey(input.donorAcquisitionDate as Date | string | undefined),
     rentalHousingDeclared: input.rentalHousingException?.applyException === true,
+    // 역방향 — 토지 보유기간 중 거주(토지가 건물보다 나중 취득). 상한 검사에 거주 합계를 함께 싣는다.
+    landHoldingResidenceMonths: input.landHoldingResidenceMonths,
+    residencePeriodMonths: input.residencePeriodMonths,
   };
 }

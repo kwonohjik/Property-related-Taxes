@@ -59,6 +59,11 @@ export const splitAcquisitionShape = {
   landPartDonorSameHousehold: z.boolean().optional(),
   landPartPriorHouseholdResidenceMonths: z.number().int().nonnegative().optional(),
   /**
+   * 역방향 — 토지를 건물보다 나중에 취득한 분리취득 주택(본인이 둘 다 소유)에서 구간 입력의 **토지 보유기간 중 거주 개월**(④가 [토지 취득일, 양도일]과의 겹침을 합해 싣는다).
+   * 게이트(토지가 나중 취득)·정수·거주 합계 이하는 refine이 `transfer-land-holding-residence.ts` leaf로 막는다(엔진·⑧과 같은 규칙) — 컴패니언도 받는다(strip하면 직접 입력 상한이 대신 걸려 값이 갈린다).
+   */
+  landHoldingResidenceMonths: z.number().int().nonnegative().optional(),
+  /**
    * 주택 split 파트 이월과세(§97의2①) 와이어 — 컴패니언은 이 키를 **받아서** 명시 거부한다(leaf S0·S2′). 받지 않으면 Zod가 조용히 strip해
    * 이월과세 없이 단순 증여로 계산한다(anchor SPCO-0o). 설계: transfer-split-part-carryover.engine.design.md §1.3
    */

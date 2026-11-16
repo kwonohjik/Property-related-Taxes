@@ -53,6 +53,7 @@ import { postTransferCalc } from "./transfer-tax-api-post";
 import { buildSplitPayload, makeRatioed, isSplitPayloadActive } from "./transfer-tax-api-split";
 import { buildLandStdAtAcquisitionPayload } from "./transfer-tax-api-split";
 import { buildLandPartCausePayload } from "./transfer-tax-api-split";
+import { buildLandHoldingResidencePayload } from "./transfer-land-holding-residence-scope";
 import { buildLandRebuildPayload } from "./transfer-land-rebuild";
 import { anyPartCarryover } from "./transfer-land-part-cause";
 import { legacyExpenseMovesToParts } from "./split-legacy-expense";
@@ -298,6 +299,8 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     usageConversionOn ? primary.residentialUseStartDate : undefined,
   );
 
+  // 분리 축 전송 조각 — 아래 body 스프레드와 ④ 역방향(토지 보유기간 중 거주 개월)이 같은 값을 읽는다.
+  const splitPayload = buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed, primaryCtx: { transferDate: form.transferDate }, ...(primaryFractional ? { shareRatio: primaryRatio } : {}) });
   const body = {
     // commercial_building/general_building은 그대로 송신 — 엔진 진입 조건 충족
     // 추가로 서브객체(commercialBuildingValuation/generalBuildingValuation)로 환산취득가 데이터 전달
@@ -464,7 +467,7 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
         ? ratioed(primary.extensionAppraisalValue) || undefined
         : undefined,
     // ④⑬ 토지·건물 분리 축 (소령 §166⑥·§168②) — 게이트·파트 필드 전체를 sibling 빌더에 위임.
-    ...buildSplitPayload(primary, { isBurdenedGift, usesPhd, ratioed, primaryCtx: { transferDate: form.transferDate }, ...(primaryFractional ? { shareRatio: primaryRatio } : {}) }),
+    ...splitPayload,
     /**
      * 엔진 `acquisitionArea` — **취득 당시 단가에 곱할 면적**이며, 일부양도(`partial`)에서는
      * 취득 전체 면적이 아니라 **양도한 부분의 면적**이다.
@@ -737,7 +740,16 @@ export async function callTransferTaxAPI(formInput: TransferFormData): Promise<T
     ...buildNewConstructionPayload(primary),
   };
 
-  return postTransferCalc<TransferAPIResult>(body);
+  // ④ 역방향 — 토지를 건물보다 나중에 취득한 주택의 구간 입력은 토지 보유기간과 겹친 거주 개월만 싣는다(직접 입력은 엔진이 보유 개월로 상한). 위 body가 싣는 날짜·소유 축으로 판정한다.
+  return postTransferCalc<TransferAPIResult>({
+    ...body,
+    ...buildLandHoldingResidencePayload(primary, {
+      propertyType: body.propertyType,
+      landAcquisitionDate: splitPayload.landAcquisitionDate,
+      selfOwns: splitPayload.selfOwns,
+      buildingAcquisitionDate: body.acquisitionDate,
+    }),
+  });
 }
 
 // 거주요건 판정 입력 빌드 — transfer-tax-api-residence.ts로 격리 (800줄 정책)

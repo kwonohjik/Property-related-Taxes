@@ -244,6 +244,8 @@ export function buildCompanionEngineInputs(
     landHouseSec164Value: c.landHouseSec164Value,
     houseFirstDisclosureDate: c.houseFirstDisclosureDate,
     landDonorAcquisitionDate: toOptionalDate(c.landDonorAcquisitionDate),
+    // ⑭ 역방향 — 토지를 건물보다 나중에 취득한 주택의 토지 보유기간 중 거주 개월(구간 입력). 게이트·상한은 엔진 진입 leaf(`transfer-land-holding-residence.ts`)가 막는다.
+    landHoldingResidenceMonths: c.landHoldingResidenceMonths,
     selfOwns: c.selfOwns,
     buildingOwnerSameHousehold: c.buildingOwnerSameHousehold,
     buildingOwnerHouseholdMerged: c.buildingOwnerHouseholdMerged,

@@ -110,6 +110,11 @@ export type Gain95PartInput = {
    * 있으면 표2 공제율을 기본통칙 95-0…1(표1 토지 전체 보유기간 vs 표2 주택 부수토지로서의 보유기간 중 큰 공제율)로 정한다.
    */
   houseHoldYears?: number;
+  /**
+   * 이 파트의 표2 거주분 공제율에 쓰는 거주 연수 — 토지를 건물보다 **나중에** 취득한 토지 파트만(토지 보유기간 중 거주 · `transfer-land-holding-residence.ts`).
+   * 없으면 호출부가 넘긴 자산 단위 거주 연수(`liveYears`)를 그대로 쓴다.
+   */
+  liveYears?: number;
 };
 
 export type RentalLthdParts = { land: Gain95PartInput; building: Gain95PartInput };
@@ -122,6 +127,8 @@ export type Gain95PartEcho = {
   rateTable2: number;
   ltcTable1: number;
   ltcTable2: number;
+  /** 토지를 건물보다 나중에 취득한 토지 파트만 — 표2 거주분 공제율에 쓴 거주 연수(토지 보유기간 중 거주) */
+  liveYears?: number;
   /** 기본통칙 95-0…1을 적용한 토지 파트만 */
   appurtenant?: {
     houseHoldingYears: number;
@@ -154,13 +161,15 @@ export function calculateGain95BothTablesByParts(
   liveYears: number,
   transferDate?: Date,
 ): Gain95BothTablesByParts {
-  const landOwnRate2 = calcLongTermRate(parts.land.holdYears, liveYears, true, false, transferDate);
+  // 토지 파트의 거주 연수 — 토지를 건물보다 나중에 취득했으면 토지 보유기간 중 거주(일반 경로 split 분기와 같은 leaf). 건물 파트는 자산 단위 그대로.
+  const landLiveYears = parts.land.liveYears ?? liveYears;
+  const landOwnRate2 = calcLongTermRate(parts.land.holdYears, landLiveYears, true, false, transferDate);
   const appurtenant =
     parts.land.houseHoldYears !== undefined
       ? resolveAppurtenantLandLthdRate({
           landHoldingYears: parts.land.holdYears,
           houseHoldingYears: parts.land.houseHoldYears,
-          residenceYears: liveYears,
+          residenceYears: landLiveYears,
           useTable2: true,
           transferDate,
         })
@@ -210,6 +219,7 @@ export function calculateGain95BothTablesByParts(
       rateTable2: land.rate2,
       ltcTable1: t1.land,
       ltcTable2: t2.land,
+      ...(parts.land.liveYears !== undefined ? { liveYears: parts.land.liveYears } : {}),
       ...(appurtenant
         ? {
             appurtenant: {
