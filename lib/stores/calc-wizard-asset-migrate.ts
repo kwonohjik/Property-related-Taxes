@@ -89,6 +89,9 @@ export function migrateAsset(raw: unknown): AssetForm {
   // §104②1·2호 토지 파트 통산(2026-07-31) — 구 세션 복원 방어
   if (a.landDecedentAcquisitionDate === undefined) a.landDecedentAcquisitionDate = "";
   if (a.landDonorAcquisitionDate === undefined) a.landDonorAcquisitionDate = "";
+  // 4289 — 건물 증여 전 동일세대 거주(D2 증여). 옛 세션·이력에는 칸이 없다 → OFF·미입력(= 종전 계산)
+  if (a.landPartDonorSameHousehold === undefined) a.landPartDonorSameHousehold = false;
+  if (a.landPartPriorHouseholdResidenceMonths === undefined) a.landPartPriorHouseholdResidenceMonths = "";
   if (!a.standardPricePerSqmAtAcq) a.standardPricePerSqmAtAcq = "";
   if (!a.standardPricePerSqmAtTransfer) a.standardPricePerSqmAtTransfer = "";
   // Round 9 (2026-05-06): 자산-수준 매매계약일 (감면 시한 판정)

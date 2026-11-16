@@ -47,6 +47,7 @@ import {
 import { saleSplitProvisoApplies } from "./sale-split-100-3-era";
 import { acqAppraisalApportionApplies } from "./transfer-acq-appraisal";
 import { isPreDeemedLandPart } from "@/lib/tax-engine/transfer-split-part-cause";
+import { buildLandPartResidencePayload } from "./transfer-split-land-residence-scope";
 
 /**
  * 지분 스케일 적용기 — **금액 필드 전용** 단일 진입점.
@@ -410,6 +411,8 @@ export function buildLandPartCausePayload(
   buildingBundledStdPrice?: "yes" | "no";
   landHouseExisted?: "yes" | "no" | "unknown";
   landHouseSec164Value?: number;
+  landPartDonorSameHousehold?: true;
+  landPartPriorHouseholdResidenceMonths?: number;
 } {
   // P2 C — 통째 이월과세 + 증여자 토지·건물 취득일 상이: 사건 1벌 + 파트 2벌. 술어가 거짓이면 키를 하나도 내지 않는다(stray 400 방지).
   const ratio = getOwnershipRatio(primary);
@@ -432,6 +435,8 @@ export function buildLandPartCausePayload(
       ...(bundled ? { buildingBundledStdPrice: bundled } : {}),
       ...(sec164 > 0 ? { buildingSec164Value: sec164 } : {}),
       ...(buildingSec164Applies(primary) && isPartialAreaScenario(primary) ? { isPartialAreaTransfer: true } : {}),
+      // 4289 — 건물 증여 전 동일세대 거주(D2 증여 · 주 자산 · §155⑳ 미선언일 때만). ⑤ 표시·⑧ 검증과 같은 leaf — OFF·잔재는 싣지 않는다.
+      ...buildLandPartResidencePayload(primary, opts),
     };
   }
   return {

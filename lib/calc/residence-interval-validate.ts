@@ -30,6 +30,14 @@ const GIFT_PRIOR_HINT =
   " 증여 전 증여자와 같은 세대로 거주한 기간은 「증여 전 동일세대 거주기간」 칸에 개월 수로 입력하세요(비과세 거주요건과 표2 대상 판정에 통산됩니다).";
 
 /**
+ * 건물만 증여받고 토지는 매수한 주택(D2 증여)의 안내 — 증여 전 거주는 구간·개월 직접 입력이 아니라 「건물 증여 전 같은 세대 거주」 칸에 입력한다(4289).
+ * `GIFT_PRIOR_HINT`와 쓰임이 다르다(그 칸은 비과세 거주요건·표2 대상 판정에 통산하고, 이 칸은 토지 파트 표2 거주기간 공제율·표2 대상 판정에만 쓴다 —
+ * 비과세 거주요건에는 쓰지 않는다). 호출부가 `landPartResidenceAsked`로 게이트한다 — 칸이 없거나 막힌 자리에서 안내만 하면 막다른 길이다.
+ */
+const LAND_PART_PRIOR_HINT =
+  " 건물 증여 전 증여자와 같은 세대로 거주한 기간은 「건물 증여자와 증여일부터 양도일까지 계속 같은 세대」를 켜고 「건물 증여 전 같은 세대 거주 개월 수」 칸에 입력하세요(토지 파트 거주기간별 공제율과 표2 대상 판정에만 쓰이고 비과세 거주요건에는 쓰이지 않습니다).";
+
+/**
  * 기준일이 합가일일 때(`startKind: "merge"`)의 문구 — 토지만 본인 × 같은 세대 합가의 거주기간은 동일세대원으로서 건물 소유자와 함께 거주한 기간만 통산한다
  * (서면인터넷방문상담4팀-331 · 기준-2025-법규재산-0040 · 재산46014-610). 취득일 문구(「취득 전 임차 거주」)는 이 경우 맞지 않는다.
  */
@@ -44,6 +52,8 @@ export function collectResidenceIntervalErrors(args: {
   transferDate?: string;
   /** 증여 전 동일세대 거주 칸이 있는 입력이면 true — 취득 전 입주 오류에 그 칸을 안내한다. */
   giftPriorHint?: boolean;
+  /** D2 증여의 「건물 증여 전 같은 세대 거주」 칸이 열려 있으면 true — 취득 전 입주 오류에 그 칸을 안내한다. */
+  landPriorHint?: boolean;
 }): string[] {
   const { periods, acquisitionDate, transferDate } = args;
   const errors: string[] = [];
@@ -58,7 +68,7 @@ export function collectResidenceIntervalErrors(args: {
       if (acquisitionDate && p.moveInDate < acquisitionDate && args.startKind === "merge")
         return fieldError(`residencePeriods.${i}.moveInDate`, `${label}: 입주일이 세대 합가일(${acquisitionDate})보다 빠릅니다. ${MERGE_BASIS}`);
       if (acquisitionDate && p.moveInDate < acquisitionDate)
-        return fieldError(`residencePeriods.${i}.moveInDate`, `${label}: 입주일이 취득일(${acquisitionDate})보다 빠릅니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.${args.giftPriorHint ? GIFT_PRIOR_HINT : ""}`);
+        return fieldError(`residencePeriods.${i}.moveInDate`, `${label}: 입주일이 취득일(${acquisitionDate})보다 빠릅니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.${args.giftPriorHint ? GIFT_PRIOR_HINT : args.landPriorHint ? LAND_PART_PRIOR_HINT : ""}`);
       if (transferDate && p.moveInDate > transferDate)
         return fieldError(`residencePeriods.${i}.moveInDate`, `${label}: 입주일은 양도일 이전이어야 합니다.`);
       if (transferDate && p.moveOutDate > transferDate)
@@ -123,6 +133,8 @@ export function directResidenceMonthsOverflowError(args: {
   field: IssueField;
   /** 증여 전 동일세대 거주 칸이 있는 입력이면 true — 상한 초과 오류에 그 칸을 안내한다. */
   giftPriorHint?: boolean;
+  /** D2 증여의 「건물 증여 전 같은 세대 거주」 칸이 열려 있으면 true — 상한 초과 오류에 그 칸을 안내한다. */
+  landPriorHint?: boolean;
 }): string | null {
   const { months, acquisitionDate, transferDate, field } = args;
   if (!acquisitionDate || !transferDate || transferDate < acquisitionDate) return null;
@@ -133,6 +145,6 @@ export function directResidenceMonthsOverflowError(args: {
   return fieldError(
     field,
     `거주기간: ${months}개월이 취득일(${acquisitionDate})부터 양도일까지의 ${max}개월을 넘습니다. ` +
-      `거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.${args.giftPriorHint ? GIFT_PRIOR_HINT : ""}`,
+      `거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.${args.giftPriorHint ? GIFT_PRIOR_HINT : args.landPriorHint ? LAND_PART_PRIOR_HINT : ""}`,
   );
 }

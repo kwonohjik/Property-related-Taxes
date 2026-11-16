@@ -89,6 +89,14 @@ export interface SplitAcquisitionFormSlice {
    */
   landDonorAcquisitionDate: string;
   /**
+   * D2 증여(건물 증여 + 토지 매수) — 건물 증여자와 **증여일부터 양도일까지 계속 같은 세대**인가(서면-2025-법규재산-4289).
+   * ON일 때만 아래 개월 수를 토지 파트 표2 거주기간 공제율에 더한다. 읽는 쪽은 저장값이 아니라
+   * `landPartResidenceFacts`(lib/calc/transfer-split-land-residence-scope.ts) — 호스트가 닫힌 자산의 잔재는 「없음」.
+   */
+  landPartDonorSameHousehold: boolean;
+  /** 건물 증여 전, 토지를 보유한 동안 건물 소유자와 같은 세대로 이 집에 거주한 개월 수(문자열 — `""` = 미입력). 토글 ON일 때만 읽는다 */
+  landPartPriorHouseholdResidenceMonths: string;
+  /**
    * 토지 파트 취득 방식 — 4-way 독립(소득령 §166⑥, 토지·건물 취득일 분리 모드 전용).
    * `landSplitMode`(구, 취득·양도 겸용 토글)를 대체 — 취득은 이 필드가 단일 소스.
    * ""(미선택) 시 자산 전체 레거시 플래그에서 파생 — `lib/calc/transfer-tax-split-acq-mode.ts` 참조.

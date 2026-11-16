@@ -11,7 +11,7 @@
  * 토글을 켜면 상속·증여 블록 대신 **매매 블록을 건물 원인 모드로 재사용**한다(`CompanionAcquisitionCauseSection`이 마운트 조건을 넓히고
  * `buildingCause`를 내린다) — 날짜 2열 [토지 취득일 | 건물 상속개시일·증여일], 건물 파트 고정 칩 + 평가액, 토지 매매 4방식은 거기서 나온다.
  * 이 컴포넌트는 토글과 **건물 파트에만 속하는 칸**만 둔다: 피상속인 취득일(§104②1호 통산) · 동일세대 통산(§154⑧3호 — 건물만 상속에도 적용,
- * 계획서 D2-Q3) · 증여자 취득일(선택) · 이월과세 고지.
+ * 계획서 D2-Q3) · 증여자 취득일(선택) · 건물 증여 전 동일세대 거주(4289 — 증여 호스트·주 자산, `LandPartPriorResidenceCard`) · 이월과세 고지.
  *
  * ## 노출하지 않는 경우
  * 부담부증여(엔진이 §159로 취득가액을 덮는다) · 가업상속공제 입력이 남은 자산(D2에서 그 칸을 숨기는데 ⑧이 막는다) · 이월과세·재개발 등
@@ -31,6 +31,8 @@ import { InheritedCohabitationCard } from "./InheritedCohabitationCard";
 import { effectiveSelfOwns } from "@/lib/calc/self-owns-scope";
 import { buildingCauseMixApplicable, effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
 import { buildingCarryoverMixApplicable } from "@/lib/calc/transfer-land-part-cause";
+import { LandPartPriorResidenceCard } from "./LandPartPriorResidenceCard";
+import { landPartResidenceHost } from "@/lib/calc/transfer-split-land-residence-scope";
 import { BuildingCarryoverMixPanel } from "./BuildingCarryoverMixPanel";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -157,6 +159,10 @@ export function BuildingCauseMixBlock(props: {
                   data-testid="building-donor-acq-date"
                 />
               </FieldCard>
+              {/* 4289 — 건물 증여 전 동일세대 거주(토지 파트 표2 거주기간 공제율). 주 자산·본인 토지·건물 모두 소유일 때만(④·⑧과 같은 leaf). 컴패니언은 칸이 없다. */}
+              {landPartResidenceHost(asset, { isNonPrimary: props.isNonPrimaryAsset }) && (
+                <LandPartPriorResidenceCard asset={asset} onChange={onChange} />
+              )}
             </>
           )}
 
