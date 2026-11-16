@@ -28,6 +28,7 @@ import { rentalUnitRegistrationBasis } from "./rental-succession";
 import { rentalUnitUsesDonorRegistration } from "./rental-succession";
 import { successionPeriodOverlap } from "./rental-succession-overlap";
 import { successionOverlapMessage } from "./rental-succession-overlap";
+import { rentalUnitPreAddendaDemolitionInScope } from "./rental-unit-termination-scope";
 import {
   isLifetimeLimitEra155_20,
   isAddendumTransitionEffective,
@@ -302,6 +303,10 @@ export function validateRentalHousingException(
       }
       if (formTransferDate && cd > formTransferDate.slice(0, 10)) {
         return `${unitLabel}: 등록 말소일(${cd})이 양도일(${formTransferDate.slice(0, 10)}) 뒤입니다 — 양도일 현재 등록 중인 주택이면 말소 표시를 끄세요.`;
+      }
+      // V-10 — 2020.8.18. 전 멸실 여부(⑤·④와 같은 술어 · 미답 = 차단 — 엔진은 모름이면 ㉓을 적용하지 않는다)
+      if (rentalUnitPreAddendaDemolitionInScope(u) && u.preAddendaDemolished !== "yes" && u.preAddendaDemolished !== "no") {
+        return `${unitLabel}: 2020.8.18. 전에 재건축·재개발 등으로 멸실된 주택인지 선택하세요 (멸실됐으면 법률 제17482호 부칙 제7조 간주 자동말소가 아니라 소령 §155㉓을 적용하지 않습니다 — 기획재정부 조세정책과-2231).`;
       }
     }
   }

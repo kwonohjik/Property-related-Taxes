@@ -100,6 +100,22 @@ export function terminationWindowIssues(
   if (dayOf(cd) > dayOf(ctx.transferDate)) {
     return [`${n}호: 등록 말소일(${ymd(cd)})이 양도일(${ymd(ctx.transferDate)}) 뒤입니다 — 양도일 현재 등록 중인 주택이면 말소 표시를 끄고, 말소일을 확인하세요.`];
   }
+  // V-10 — 2020.8.18. 전 멸실은 부칙 제7조 간주 자동말소가 아니다(기획재정부 조세정책과-2231). 모름 = 적용하지 않는다.
+  const rawCd = unit.registrationCancellationDate;
+  if (validDate(rawCd) && needsPreAddendaDemolitionAnswer(unit, dayOf(rawCd))) {
+    if (unit.preAddendaDemolished === true) {
+      return [
+        `${n}호: 2020.8.18. 전에 멸실된 임대주택은 법률 제17482호 민간임대주택에 관한 특별법 부칙 제7조에 따라 자동말소된 것으로 볼 수 없어 ` +
+          `${law}을 적용하지 않습니다(서면-2022-법규재산-3118 · 기획재정부 조세정책과-2231, 2024.12.9.).`,
+      ];
+    }
+    if (unit.preAddendaDemolished !== false) {
+      return [
+        `${n}호: 2020.8.18. 전에 재건축·재개발 등으로 멸실됐는지 입력하지 않아 ${law}을 적용하지 않았습니다 — 멸실된 주택은 부칙 제7조 ` +
+          "간주 자동말소로 보지 않습니다(기획재정부 조세정책과-2231 · 확인 필요).",
+      ];
+    }
+  }
   const issues: string[] = [];
   if (dayOf(ctx.residenceAcquisitionDate) > dayOf(cd)) {
     issues.push(
@@ -155,6 +171,21 @@ export function isAutoCancellationDeemable(f: AutoCancellationFacts, cancellatio
     isAbolishedTypeTermination(f) &&
     !Number.isNaN(cancellationTs) &&
     cancellationTs < ADDENDA_17482_EFFECTIVE
+  );
+}
+
+/**
+ * V-10 — 「2020.8.18. 전 멸실」 질문 대상: 자동말소 · 폐지 유형 · 입력 말소일 ≤ 2020-08-18(부칙 제7조 간주가 걸리거나 그날 말소).
+ * 서면-2022-법규재산-3118[법규과-3158, 2024.12.18.] → 기획재정부 조세정책과-2231(2024.12.9.): 임대의무기간이 2020.8.18. 전에 지났더라도
+ * 그 전에 멸실된 임대주택은 부칙 제7조에 따라 자동말소된 것으로 볼 수 없어 §155㉓을 적용할 수 없다.
+ * 엔진(`terminationWindowIssues`) · ⑤ 카드 · ④ 전송 · ⑧ · ⑫가 같은 술어를 쓴다.
+ */
+export function needsPreAddendaDemolitionAnswer(f: AutoCancellationFacts, cancellationTs: number): boolean {
+  return (
+    f.terminationReason === "auto" &&
+    isAbolishedTypeTermination(f) &&
+    !Number.isNaN(cancellationTs) &&
+    cancellationTs <= ADDENDA_17482_EFFECTIVE
   );
 }
 

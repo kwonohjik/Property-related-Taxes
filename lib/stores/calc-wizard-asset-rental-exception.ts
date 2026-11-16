@@ -128,6 +128,11 @@ export interface RentalHousingExceptionFormSlice {
        */
       terminationReason?: "" | "auto" | "voluntary";
       /**
+       * V-10 — 2020.8.18. 전에 재건축·재개발 등으로 멸실됐는가. "" = 미답(⑧ 차단). 자동말소 · 폐지 유형 · 말소일 ≤ 2020-08-18일 때만
+       * 묻는다(`rentalUnitPreAddendaDemolitionInScope`). optional — 이 칸 신설 전 복원분(undefined)도 미답과 같다.
+       */
+      preAddendaDemolished?: "" | "yes" | "no";
+      /**
        * §167의3⑪ 기한 연장 사실 — 도출 목이 가·나·라·마·구법(매입)이고 아파트일 때만 묻는다(§155㉓ 말소 경로 제외).
        * optional — 미입력·stale 복원분(undefined)은 「모름」(엔진 판정 보류). 범위: `apt-deadline-extension-scope.ts`.
        */

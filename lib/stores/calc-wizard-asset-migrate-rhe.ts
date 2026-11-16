@@ -78,6 +78,8 @@ export function migrateRentalHousingException(a: Record<string, unknown>): void 
         }
         // 말소 사유(다주택 중과 §167의3①2호 단서) — 구 세션엔 없다 → 미선택
         if (u.terminationReason !== "auto" && u.terminationReason !== "voluntary") u.terminationReason = "";
+        // V-10 — 2020.8.18. 전 멸실 여부(구 세션엔 없다 → 미답)
+        if (u.preAddendaDemolished !== "yes" && u.preAddendaDemolished !== "no") u.preAddendaDemolished = "";
       });
     }
     if (rhe.priorResidenceTransferDate === undefined) rhe.priorResidenceTransferDate = undefined;

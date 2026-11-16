@@ -32,6 +32,7 @@ function unit(over: Partial<RentalUnitInput> & { reg: string; cancelled: string 
     terminatedRegistrationType: "short_term",
     terminationReason: "auto",
     registrationCancellationDate: d(cancelled),
+    preAddendaDemolished: false, // V-10 — 2020.8.18. 당시 주택이 있었음
     requirementsConfirmed: true,
     isExcluded918Rule: false,
     ...rest,

@@ -12,6 +12,7 @@ import { z } from "zod";
 import { aptDeadlineExtensionSchema } from "./transfer-tax-schema-apt-deadline";
 import { successionPeriodOverlap } from "@/lib/calc/rental-succession-overlap";
 import { successionOverlapMessage } from "@/lib/calc/rental-succession-overlap";
+import { needsPreAddendaDemolitionAnswer } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/termination-window";
 
 // ─── ⑨ 장기임대주택 거주주택 비과세 특례 Zod enum (소령 §155⑳) ──────
 
@@ -85,6 +86,8 @@ export const rentalUnitSchema = z.object({
   terminatedRegistrationType: TerminatedRegistrationTypeEnum.optional(),
   /** 말소 사유 — 다주택 중과 §167의3①2호 단서(자동말소 임대기간요건 간주) */
   terminationReason: z.enum(["auto", "voluntary"]).optional(),
+  /** V-10 — 2020.8.18. 전 멸실 여부(자동말소 · 폐지 유형 · 말소일 ≤ 2020-08-18이면 필수 — superRefine) */
+  preAddendaDemolished: z.boolean().optional(),
   /** §167의3⑪ 연장 사실 — 가·나·라·마목 아파트(미전송 = 모름 · 엔진 판정 보류) */
   aptDeadlineExtension: aptDeadlineExtensionSchema.optional(),
   /** 혼인합가 1199 — 이 임대주택의 혼인 전 보유자(판정 메뉴) */
@@ -146,6 +149,15 @@ export const rentalHousingExceptionSchema = z
       }
       if (!allowsDonor && u.donorRegistration) {
         ctx.addIssue({ code: "custom", message: "전 임대사업자 등록 사실은 같은 세대원 증여·상속 승계에서만 받습니다.", path: ["rentalUnits", i, "donorRegistration"] });
+      }
+      // V-10 — ⑧과 같은 범위(④는 말소 표시가 효력을 가질 때만 말소 사유·유형·날짜를 보낸다)
+      if (
+        u.rentalAutoTermination &&
+        u.registrationCancellationDate &&
+        u.preAddendaDemolished === undefined &&
+        needsPreAddendaDemolitionAnswer(u, Date.parse(`${day(u.registrationCancellationDate)}T00:00:00.000Z`))
+      ) {
+        ctx.addIssue({ code: "custom", message: "2020.8.18. 이전에 말소(부칙 제7조 간주 포함)된 자동말소 호는 2020.8.18. 전 멸실 여부(preAddendaDemolished)가 필요합니다.", path: ["rentalUnits", i, "preAddendaDemolished"] });
       }
       const donor = u.donorRegistration;
       if (!donor) return;

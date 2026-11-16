@@ -56,6 +56,7 @@ export function toRentalHousingExceptionEngineInput(
       registrationCancellationDate: toOptionalDate(u.registrationCancellationDate), // I-4 §155㉓
       terminatedRegistrationType: u.terminatedRegistrationType,
       terminationReason: u.terminationReason, // 다주택 중과 §167의3①2호 단서
+      preAddendaDemolished: u.preAddendaDemolished, // V-10 2020.8.18. 전 멸실(기획재정부 조세정책과-2231)
       aptDeadlineExtension: toEngineAptDeadlineExtension(u.aptDeadlineExtension), // §167의3⑪
       mergeOrigin: u.mergeOrigin, // 혼인합가 1199
       requirementsConfirmed: u.requirementsConfirmed,

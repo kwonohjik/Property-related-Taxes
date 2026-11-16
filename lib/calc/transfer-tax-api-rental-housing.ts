@@ -18,6 +18,7 @@ import { isRentalHousingExceptionApplicable } from "./rental-housing-exception-s
 import { aptDeadlineExtensionPayload, rentalUnitAptDeadlineInScope } from "./apt-deadline-extension-scope";
 import { rentalUnitUrbanLifeQuestionInScope } from "./apt-deadline-extension-scope";
 import { rentalUnitTerminationInScope } from "./rental-unit-termination-scope";
+import { rentalUnitPreAddendaDemolitionInScope } from "./rental-unit-termination-scope";
 import { rentalUnitLowPriceInScope } from "./rental-unit-low-price-scope";
 import { rentalUnitApartmentInScope } from "./rental-unit-apartment-scope";
 
@@ -126,6 +127,11 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
         rentalUnitTerminationInScope(u) && u.terminatedRegistrationType ? u.terminatedRegistrationType : undefined,
       // 말소 사유(다주택 중과 §167의3①2호 단서) — 말소 토글이 효력을 가질 때만, 미선택("")·stale(undefined)은 보내지 않는다.
       terminationReason: rentalUnitTerminationInScope(u) && u.terminationReason ? u.terminationReason : undefined,
+      // V-10 — 2020.8.18. 전 멸실 여부. ⑤·⑧과 같은 술어일 때만 보낸다(미답 ""은 ⑧이 막는다 · stale 값은 범위 밖이면 미전송).
+      preAddendaDemolished:
+        rentalUnitPreAddendaDemolitionInScope(u) && (u.preAddendaDemolished === "yes" || u.preAddendaDemolished === "no")
+          ? u.preAddendaDemolished === "yes"
+          : undefined,
       requirementsConfirmed: u.requirementsConfirmed ?? false,
       // §167의3⑪ 연장 사실 — ⑤·⑧과 같은 범위(아파트 가·나·라·마목·구법 · ㉓ 말소 경로 제외). 「모름」은 미전송.
       aptDeadlineExtension: rentalUnitAptDeadlineInScope(u) ? aptDeadlineExtensionPayload(u.aptDeadlineExtension) : undefined,

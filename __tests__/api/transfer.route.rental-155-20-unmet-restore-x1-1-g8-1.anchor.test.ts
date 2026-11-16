@@ -678,7 +678,7 @@ describe("M 말소된 임대 호 — 영 §167의3①2호 단서 (#20 C 후속)"
   });
 
   it("M-5 ★ 자동말소일이 2020.8.18. 전(의무기간 종료일)이면 법률 제17482호 부칙 제7조로 2020.8.18. 말소 → 단서 적용 2호(Q-3 · 서면-2021-법규재산-6391) / 짝 — 자진말소는 그대로 2호 아님", async () => {
-    const auto = await single(cancelledCard("auto", { registrationCancellationDate: "2020-08-17" }));
+    const auto = await single(cancelledCard("auto", { registrationCancellationDate: "2020-08-17", preAddendaDemolished: "no" })); // V-10 멸실 아님
     expect(mh(auto).surchargeType).toBe("none");
     const warnings = ((auto.raw.multiHouseSurchargeEvaluation as Obj).warnings ?? []) as string[];
     expect(warnings.some((w) => w.includes("부칙 제7조에 따라 2020.8.18.에 등록이 말소된 것으로 봅니다"))).toBe(true);

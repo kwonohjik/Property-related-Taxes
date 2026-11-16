@@ -11,6 +11,8 @@ import {
   deriveRentalArticle,
   isTerminationEligibleArticle,
 } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/eligibility";
+import { needsPreAddendaDemolitionAnswer } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/termination-window";
+import { parseISO } from "@/lib/tax-engine/utc-date";
 import { rentalUnitRegApplicationDate } from "./rental-succession";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -20,4 +22,15 @@ export function rentalUnitTerminationInScope(u: RentalUnitForm): boolean {
   if (!u.rentalAutoTermination) return false;
   // 증여 승계는 증여자 등록 기준(G-3) — 엔진 `registrationBasis`와 같은 술어
   return isTerminationEligibleArticle(deriveRentalArticle(u.rentalCategory, u.rentalAcquisitionType, rentalUnitRegApplicationDate(u)));
+}
+
+/**
+ * V-10 — 「2020.8.18. 전에 멸실됐나요?」 질문을 묻는가(⑤ 노출 · ④ 전송 · ⑧ 미답 차단 공용).
+ * 말소 표시가 효력을 갖고(위 술어) 엔진 `needsPreAddendaDemolitionAnswer`(자동말소 · 폐지 유형 · 말소일 ≤ 2020-08-18)가 참일 때.
+ */
+export function rentalUnitPreAddendaDemolitionInScope(u: RentalUnitForm): boolean {
+  if (!rentalUnitTerminationInScope(u)) return false;
+  const cd = (u.registrationCancellationDate ?? "").slice(0, 10);
+  if (!cd) return false;
+  return needsPreAddendaDemolitionAnswer(u, parseISO(cd).getTime());
 }
