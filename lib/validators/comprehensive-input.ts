@@ -7,6 +7,7 @@
 
 import { z } from "zod";
 import { requiredCorporateReqKey } from "@/lib/tax-engine/comprehensive-corporate-class";
+import { rentIncreaseLimitApplies } from "@/lib/tax-engine/comprehensive-exclusion";
 
 // ============================================================
 // 합산배제 유형 enum
@@ -100,7 +101,7 @@ const rentalExclusionInfoSchema = z.object({
     .number()
     .nonnegative({ message: "임대료는 0원 이상이어야 합니다." }),
 
-  /** 최초 계약 여부 */
+  /** 처음 쓴 표준임대차계약 여부(2019.2.12. 이후 — 5% 비교 제외) */
   isInitialContract: z.boolean(),
 
   /** 실제 임대 경과 연수 (시행령 §3⑦ 합산, 선택) — 의무기간 미달 시 추징 경고용 */
@@ -169,6 +170,10 @@ const rentalExclusionInfoSchema = z.object({
   // §3① 각 호 외의 부분 — 4·9호는 「소유」라 임대개시일이 없을 수 있다. 그 밖 유형은 임대개시일 필수(종전과 같음)
   (r) => r.rentalStartDate !== undefined || r.registrationType === "vacant_construction" || r.registrationType === "public_conversion_pending",
   { message: "임대개시일을 입력하세요 (YYYY-MM-DD).", path: ["rentalStartDate"] },
+).refine(
+  // 5% 요건 유형에서 처음 쓴 표준임대차계약이 아니면 직전 임대료가 있어야 증가율을 본다 — 없으면 엔진이 조용히 통과시켰다(⑧과 같은 술어)
+  (r) => !rentIncreaseLimitApplies(r.registrationType) || r.isInitialContract || r.previousRent !== undefined,
+  { message: "처음 쓴 표준임대차계약이 아니면 직전 임대료(월)를 입력하세요 — 임대료 증가율 5% 요건 (종합부동산세법 시행령 §3①).", path: ["previousRent"] },
 );
 
 // ============================================================

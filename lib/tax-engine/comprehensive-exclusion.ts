@@ -202,6 +202,11 @@ const NO_RENT_LIMIT_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]>
   "reit_purchase",       // 5호 — 임대료 문언 없음(§3⑧에도 없음)
 ]);
 
+/** 임대료 증가율 5% 요건을 보는 유형 — ⑧·⑫가 「직전 임대료」 필수 검사에 같은 술어를 쓴다(single source) */
+export function rentIncreaseLimitApplies(registrationType: string): boolean {
+  return !(NO_RENT_LIMIT_TYPES as ReadonlySet<string>).has(registrationType);
+}
+
 /** §3① 각 호 외의 부분 「소유(제4호 또는 제9호의 주택을 소유한 경우)」 — 임대 개시·임대 계속을 보지 않는다 */
 const OWNED_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
   "vacant_construction",
@@ -258,7 +263,7 @@ export function validateRentalExclusion(
   }
 
   // 임대료 증가율 요건은 1·2·7·8·10·11호에만 있다 — 3호(2005.1.5. 이전 임대)·6호(미분양매입)는 없다(§3① 각 호 · §3⑧)
-  if (!NO_RENT_LIMIT_TYPES.has(input.registrationType) && !input.isInitialContract && input.previousRent !== undefined) {
+  if (rentIncreaseLimitApplies(input.registrationType) && !input.isInitialContract && input.previousRent !== undefined) {
     const increaseRate = (input.currentRent - input.previousRent) / input.previousRent;
     if (increaseRate > COMPREHENSIVE_EXCL_CONST.RENT_INCREASE_RATE_LIMIT) {
       failReasons.push(COMPREHENSIVE_EXCL.RENT_INCREASE_EXCEEDED);

@@ -3,7 +3,7 @@
 - 작성일: 2026-11-16 (v0.2 — 엔진·UI 시니어 병렬 검토 반영)
 - 출발점: 교재 대조 `comprehensive-rental-excl-textbook-157-180.plan.md` §3.5의 🔴 3건
 - 기준 코드: master `263aed501`(워크트리 `../prt-compexcl` · 브랜치 `review/comp-exclusion-textbook`)
-- 상태: **계획 확정** — Q-1~Q-11 **모두 권장안**(사용자 결정 2026-11-16) · PR-1 구현 중(§7)
+- 상태: **계획 확정** — Q-1~Q-11 **모두 권장안**(사용자 결정 2026-11-16) · PR-1 #3414 머지 · PR-2 구현(§7)
 
 ## 0. 요약
 
@@ -216,3 +216,12 @@ PR 3개 권장(Q-6): **PR-1 T-15 → PR-2 T-07a → PR-3 T-03**.
 - 상수 `REGISTERED_AFTER_FILING_DEADLINE`·`REGISTERED_AFTER_ASSESSMENT_DEEMED` · manifest `COMPREHENSIVE_DECREE.EXCLUDED_RENTAL_FILING_DEADLINE_DEEMED`·`COMPREHENSIVE.HOLDING_STATUS_REPORT_PERIOD`.
 - 결과 경고 제목 「의무임대기간 확인 필요」 → 「확인 필요」(`AggregationExclusionSection.tsx`).
 - anchor: 엔진 9건(A15-1~8 · 2018·2020·2023 연장 포함) · route 3건(A15-3 3,426,370원 · A15-2 1,267,200원 + 경고 · A15-1 불변).
+- 검증: 뮤테이션(불성립 push 제거 → 5건 실패) · tsc 0 · verify:legal 501/501 · CI 18건 통과 → #3414 머지(bc3291dce).
+
+### PR-2 · T-07a (브랜치 `fix/comp-excl-5pct-base-contract`)
+- 문구(엔진 동작 불변): ToggleCard 「처음 쓴 표준임대차계약 (5% 비교 제외)」 / 「2019.2.12. 이후 처음 쓴 표준임대차계약이면 켜세요」 · 토글 아래 text-xs 「장기일반 매입(8호)은 등록·재등록 뒤 처음 쓴 계약이 기준입니다. 다른 호는 확인 필요.」 · 직전 임대료 hint 「바로 앞 계약의 월 임대료(보증금은 월세로 환산)」(T-07c) · 증가율 경고 · 오류 라벨 · JSDoc 2곳 · 설계 문서 2곳.
+- T-07d: `RENT_INCREASE_EXCEEDED` 근거를 「민간임대주택법 §44」 → 「종합부동산세법 시행령 §3①, 종합부동산세법 시행령 대통령령 제29524호 부칙 제3조」.
+- Q-11: 엔진 술어 `rentIncreaseLimitApplies(registrationType)` export(엔진 비교 줄도 이 술어) → ⑧ `validateRequiredExclusionAndLandInputs`(토글 OFF·직전 임대료 빈칸/0 차단) · ⑫ `rentalExclusionInfoSchema` refine(OFF·`previousRent` 없음 → 400). 3·6호(임대료 요건 없음)는 막지 않는다 — ⑤는 칸을 보이지만 엔진이 보지 않는다.
+- anchor(route 7건): A07-1 OFF·10% 3,426,370원 · A07-2 ON 1,267,200원 · A07-3 5% 이내 1,267,200원 · ⑧ 빈칸·0원 · ⑫ 400 · 3호 통과.
+- 뮤테이션 3종(⑧ 제거 → 2건 · ⑫ 제거 → 1건 · 술어 항상 참 → 1건 실패) · tsc 0 · eslint 0 · verify:legal 501/501 · 종부세 회귀 1,756파일 통과.
+- 브라우저(Playwright `e2e/comprehensive-rental-5pct-base.spec.ts` 2건 통과): 토글·안내·hint·경고 문구 표시 · Network body `isInitialContract:false, previousRent:1000000` · 결과 불성립 사유 「임대료 증가율 5% 초과」 · OFF+빈칸은 ⑧ 문구 표시·요청 0건.

@@ -351,15 +351,20 @@ function RentalExclusionDetail({
       </ToggleCard>
       )}
 
-      {/* 최초 계약 여부 — 4호(미임대)·5호(임대료 요건 없음)는 묻지 않는다 */}
+      {/* 5% 비교 기준 계약 — 4호(미임대)·5호(임대료 요건 없음)는 묻지 않는다.
+          기준은 2019.2.12. 이후 처음 쓴 표준임대차계약(종부령 부칙<제29524호> §3 · 서면-2020-부동산-2435),
+          8호는 등록·재등록 뒤 처음 쓴 계약(서면-2021-부동산-5682·2749). 1·2호는 해석례 없음(계획서 V-F) */}
       {asksRent && (<>
       <ToggleCard
         tone="violet"
-        title="최초 임대차 계약"
-        description="계약 갱신 아님"
+        title="처음 쓴 표준임대차계약 (5% 비교 제외)"
+        description="2019.2.12. 이후 처음 쓴 표준임대차계약이면 켜세요"
         checked={property.isInitialContract}
         onCheckedChange={(v) => onUpdate({ isInitialContract: v })}
       />
+      <p className="text-xs text-muted-foreground">
+        장기일반 매입(8호)은 등록·재등록 뒤 처음 쓴 계약이 기준입니다. 다른 호는 확인 필요.
+      </p>
 
       {/* 임대료 */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -376,7 +381,7 @@ function RentalExclusionDetail({
             value={property.previousRent}
             onChange={(v) => onUpdate({ previousRent: v })}
             placeholder="0"
-            hint="임대료 증가율 5% 검증용"
+            hint="바로 앞 계약의 월 임대료(보증금은 월세로 환산)"
           />
         )}
       </div>
@@ -392,7 +397,7 @@ function RentalExclusionDetail({
             return (
               <div className="rounded-md bg-red-50 border border-red-200 p-3 dark:bg-red-950/40">
                 <p className="text-xs text-red-700 dark:text-red-300">
-                  ⚠ 임대료 증가율이 5%를 초과합니다. 합산배제 요건을 충족하지 못할 수 있습니다.
+                  ⚠ 바로 앞 계약보다 5% 넘게 올랐습니다. 처음 쓴 표준임대차계약이 아니면 합산배제되지 않습니다.
                 </p>
               </div>
             );
