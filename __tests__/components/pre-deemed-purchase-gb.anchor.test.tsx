@@ -6,9 +6,8 @@
  * 시료: 양도 10억 · 실가 5억 · 1984.6. → ② = 5억 × 50.29 ÷ 49.59 = 507,057,874 · 오라클: ②를 실가로 직접 넣은 세액(mock 세율).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useState } from "react";
 import { NextRequest } from "next/server";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), useSearchParams: () => new URLSearchParams(), usePathname: () => "/calc/transfer-tax" }));
 vi.mock("@/lib/db/tax-rates", async (importOriginal) => {
@@ -201,5 +200,47 @@ describe("⑥ 사이드바 · ⑦ 결과 블록", () => {
     const r = await check(mk([GB()]));
     render(<GbResultBlocks view={{ detail: detail(r.data), asset: asset(GB()), partAcquisitionPrice: () => undefined } as never} />);
     expect(screen.getByTestId("pre-deemed-purchase-result-card").textContent).toContain("507,057,874");
+  });
+});
+
+/**
+ * 남은 한계 ① — 일반건물이 서브객체 밖(최상위 · 컴패니언 레벨)으로 보낸 `preDeemedPurchase`는 일반건물 경로가 읽지 않아
+ * 200 + 비교 없는 세액이었다(단건 113,060,000 vs 서브객체 111,083,795 · 함께 양도 200,730,000 vs 198,654,985). 받아 놓고 무시하지 않도록 ⑫ 가 거부한다.
+ * 화면(④)은 언제나 서브객체로 보낸다 — API 직접 호출에서만 닿는 입력이다.
+ */
+describe("GP 일반건물 preDeemedPurchase 자리 — 서브객체 밖은 400", () => {
+  async function postBody(b: Body) {
+    const res = await POST(new NextRequest("http://localhost/api/calc/transfer", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isRegulatedArea: false, wasRegulatedAtAcquisition: false, isUnregistered: false, isNonBusinessLand: false, annualBasicDeductionUsed: 0, ...b, residencePeriodMonths: 0 }),
+    }));
+    const j = (await res.json()) as { data?: Body; error?: { fieldErrors?: Record<string, string[]> } };
+    return { status: res.status, data: j.data ?? {}, keys: Object.keys(j.error?.fieldErrors ?? {}) };
+  }
+  const clone = (b: Body) => JSON.parse(JSON.stringify(b)) as Body;
+
+  it("GP-1 ★ 단건 — 최상위로 옮기면 400 `preDeemedPurchase` (수정 전 200 · 113,060,000) · 서브객체는 200 · 111,083,795", async () => {
+    const r = await check(mk([GB()]));
+    expect([r.status, tax(r.data)]).toEqual([200, 111_083_795]);
+    const moved = clone(r.body);
+    moved.preDeemedPurchase = moved.generalBuildingValuation.preDeemedPurchase;
+    delete moved.generalBuildingValuation.preDeemedPurchase;
+    const m = await postBody(moved);
+    expect([m.status, m.keys]).toEqual([400, ["preDeemedPurchase"]]);
+  });
+
+  it("GP-2 함께 양도 — 일반건물 컴패니언 레벨로 옮기면 400 (수정 전 200 · 200,730,000) · 서브객체는 200 · 198,654,985", async () => {
+    const LAND = {
+      addressJibun: "서울 강남구 테스트동 2-2", assetKind: "land", acquisitionCause: "purchase", acquisitionDate: "2012-01-01", acquisitionArea: "100", transferArea: "100",
+      landNature: "standalone", standardPriceAtAcq: "100000000", standardPriceAtTransfer: "200000000", actualSalePrice: "400,000,000", fixedSalePrice: "400,000,000", fixedAcquisitionPrice: "100,000,000",
+    };
+    const r = await check(mk([LAND, GB()], { assetSplitMode: "companion", bundledSaleMode: "actual", contractTotalPrice: "1400000000" }));
+    expect([r.issue, r.status, tax(r.data)]).toEqual([null, 200, 198_654_985]);
+    const moved = clone(r.body);
+    const c = moved.companionAssets[0];
+    c.preDeemedPurchase = c.generalBuildingValuation.preDeemedPurchase;
+    delete c.generalBuildingValuation.preDeemedPurchase;
+    const m = await postBody(moved);
+    expect([m.status, m.keys]).toEqual([400, ["companionAssets.0.preDeemedPurchase"]]);
   });
 });
