@@ -686,6 +686,25 @@ describe("M 말소된 임대 호 — 영 §167의3①2호 단서 (#20 C 후속)"
     expect(mh(vol).surchargeType).toBe("multi_house_2");
   });
 
+  it("M-5b ★ V-10 후속 — 같은 호를 2020.8.18. 전 멸실 「예」로 답하면 간주 자동말소가 아니라 2호 아님 → 중과 2주택(783,678,500) + 3118 확인 필요 고지 (종전 단서 적용 · 중과 없음)", async () => {
+    const no = await single(cancelledCard("auto", { registrationCancellationDate: "2020-08-17", preAddendaDemolished: "no" }));
+    const yes = await single(cancelledCard("auto", { registrationCancellationDate: "2020-08-17", preAddendaDemolished: "yes" }));
+    expect(mh(no).surchargeType).toBe("none");
+    expect(mh(yes).surchargeType).toBe("multi_house_2");
+    expect(no.totalTax).toBe(391_743_000);
+    expect(yes.totalTax).toBe(783_678_500);
+    const warnings = ((yes.raw.multiHouseSurchargeEvaluation as Obj).warnings ?? []) as string[];
+    expect(warnings.some((w) => w.includes("임대주택 1호: 2020.8.18. 전에 재건축·재개발 등으로 멸실된 임대주택이라") && w.includes("확인 필요"))).toBe(true);
+    expect(await multi(cancelledCard("auto", { registrationCancellationDate: "2020-08-17", preAddendaDemolished: "yes" }))).toBe(yes.totalTax);
+  });
+
+  it("M-5c 명부 행 — 멸실 질문이 없어 종전대로 단서 적용(중과 없음)하고, 멸실이면 달라질 수 있다는 확인 필요를 덧붙인다", async () => {
+    const s = await single(form([cancelledRow("auto", { rentalCancelledDate: "2020-08-17" })], { contractTotalPrice: "1,500,000,000" }));
+    expect(mh(s).surchargeType).toBe("none");
+    const warnings = ((s.raw.multiHouseSurchargeEvaluation as Obj).warnings ?? []) as string[];
+    expect(warnings.some((w) => w.includes("주택 h4:") && w.includes("멸실된 주택이면 부칙 제7조에 따라 자동말소된 것으로 볼 수 없다는 해석"))).toBe(true);
+  });
+
   it("M-6 ★ 명부 행 — 「임대사업자 말소일」 + 자동말소면 2호(10호 배제), 미선택·자진말소면 중과 2주택 + 확인 필요 고지", async () => {
     const roster = (reason: "" | "auto" | "voluntary") =>
       single(form([cancelledRow(reason)], { contractTotalPrice: "1,500,000,000" }));

@@ -187,6 +187,11 @@ export interface HouseInfo {
    * 장기임대주택으로 본다(기획재정부 재산세제과-536 · 서면-2022-법규재산-3076 · 서면-2023-부동산-1329 — 사용자 결정 2026-11-16).
    */
   rentalCancellationReason?: "auto" | "voluntary" | "after_duty";
+  /**
+   * V-10 후속 — 2020.8.18. 전에 재건축·재개발 등으로 멸실됐는가(§155⑳ 카드 답만 옮긴다 · `rentalCardSurchargeRows`).
+   * true면 법률 제17482호 부칙 제7조 간주 자동말소로 보지 않는다(`isPreAddendaDemolishedCancellation`). 명부 행은 묻지 않는다(미제공).
+   */
+  preAddendaDemolished?: boolean;
   /** 임대사업자 자진·자동 말소일 (사목 G형 판정용) */
   rentalCancellationDate?: Date;
   /**
