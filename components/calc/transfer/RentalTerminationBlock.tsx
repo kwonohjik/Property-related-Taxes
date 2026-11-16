@@ -22,6 +22,7 @@ import { halfDutyRentalPeriods } from "@/lib/stores/calc-wizard-asset-rental-per
 import { hasRentalAfterCancellation } from "@/lib/stores/calc-wizard-asset-rental-period";
 import { rentalRegisteredDateOf } from "@/lib/stores/calc-wizard-asset-rental-period";
 import { rentalSuccessionOf } from "@/lib/stores/calc-wizard-asset-rental-period";
+import { rentalUnitPreAddendaDemolitionInScope } from "@/lib/calc/rental-unit-termination-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 type RentalUnitForm = AssetForm["rentalHousingException"]["rentalUnits"][number];
@@ -73,7 +74,7 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
         onChange({
           ...unit,
           rentalAutoTermination: v,
-          ...(v ? {} : { terminatedRegistrationType: "", registrationCancellationDate: "", terminationReason: "" }),
+          ...(v ? {} : { terminatedRegistrationType: "", registrationCancellationDate: "", terminationReason: "", preAddendaDemolished: "" }),
         })
       }
     >
@@ -186,6 +187,36 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
           onChange={(v) => set("registrationCancellationDate", v)}
         />
       </FieldCard>
+      {/*
+        V-10 — 2020.8.18. 전에 멸실된 임대주택은 부칙 제7조 간주 자동말소가 아니다(서면-2022-법규재산-3118 · 기획재정부 조세정책과-2231).
+        자동말소 · 폐지 유형 · 말소일 ≤ 2020-08-18일 때만 묻는다(④·⑧·엔진과 같은 술어). 미답은 ⑧이 막는다.
+      */}
+      {rentalUnitPreAddendaDemolitionInScope(unit) && (
+        <FieldCard
+          label="2020.8.18. 전에 재건축·재개발 등으로 멸실된 주택입니까?"
+          required
+          hint={
+            <span data-testid={`rental-pre-addenda-demolished-hint-${index}`}>
+              임대의무기간이 2020.8.18. 전에 끝났더라도 그 전에 멸실된 임대주택은 법률 제17482호 민간임대주택에 관한 특별법 부칙 제7조에 따라
+              자동말소된 것으로 보지 않아 {TRANSFER_RENTAL_HOUSING.PIT_RD_155_23}을 적용하지 않습니다(서면-2022-법규재산-3118 · 기획재정부
+              조세정책과-2231).
+            </span>
+          }
+        >
+          <RadioCardGroup
+            name={`rental-pre-addenda-demolished-${index}`}
+            data-testid={`rental-pre-addenda-demolished-${index}`}
+            tone="violet"
+            layout="inline"
+            options={[
+              { value: "no", label: "아니오 — 2020.8.18. 당시 주택이 있었음", testId: `rental-pre-addenda-demolished-no-${index}` },
+              { value: "yes", label: "예 — 그 전에 멸실됨", testId: `rental-pre-addenda-demolished-yes-${index}` },
+            ]}
+            value={unit.preAddendaDemolished ?? ""}
+            onChange={(v) => set("preAddendaDemolished", v)}
+          />
+        </FieldCard>
+      )}
       {unitDeadline && (
         <div data-testid={`rental-cancellation-deadline-${index}`} className="px-1 space-y-0.5 text-caption">
           <p>
@@ -194,6 +225,11 @@ export function RentalTerminationBlock({ unit, index, set, onChange, transferDat
               (transferTs <= unitDeadline.end.getTime() ? " — 양도일이 기한 안입니다." : " — 양도일이 기한을 지났습니다.")}
           </p>
           {deadlineEndNote(unitDeadline) && <p className="text-muted-foreground">{deadlineEndNote(unitDeadline)}</p>}
+          {rentalUnitPreAddendaDemolitionInScope(unit) && unit.preAddendaDemolished === "yes" && (
+            <p className="text-rose-700 dark:text-rose-300" data-testid={`rental-pre-addenda-demolished-fail-${index}`}>
+              2020.8.18. 전에 멸실된 주택이라 위 기한과 관계없이 {TRANSFER_RENTAL_HOUSING.PIT_RD_155_23} 말소 특례를 적용하지 않습니다.
+            </p>
+          )}
           {deemed ? (
             <p className="text-muted-foreground" data-testid={`rental-cancellation-deemed-${index}`}>
               임대의무기간이 2020.8.18. 전에 끝나 법률 제17482호 민간임대주택에 관한 특별법 부칙 제7조에 따라 2020.8.18.에 등록이

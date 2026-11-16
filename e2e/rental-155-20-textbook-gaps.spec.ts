@@ -271,16 +271,41 @@ test.describe("T 구 임대주택법 매입 말소 → §155㉓ 입력(#3366)", 
       terminationReason: "auto",
       terminatedRegistrationType: "short_term",
       registrationCancellationDate: "2015-10-01",
+      preAddendaDemolished: "no", // V-10 — 2020.8.18. 전 말소(부칙 제7조 간주)라 멸실 질문이 뜬다
     });
     await expect(page.getByText("자진말소 또는 자동말소로 임대사업자 등록이 말소된 임대주택입니다.")).toBeVisible();
     await expect(page.getByTestId("rental-terminated-type-pre2018-hint-0")).toContainText("0972");
+    await expect(page.getByTestId("rental-pre-addenda-demolished-0")).toBeVisible();
     const unit = await judge(page);
     expect(unit).toMatchObject({
       rentalAutoTermination: true,
       terminationReason: "auto",
       terminatedRegistrationType: "short_term",
+      preAddendaDemolished: false,
     });
     expect(String(unit?.registrationCancellationDate)).toContain("2015-10-01");
+  });
+});
+
+test.describe("V-10 2020.8.18. 전 멸실 → 부칙 제7조 간주 말소 아님 → ㉓ 미적용(기획재정부 조세정책과-2231)", () => {
+  test("[V10-1] 멸실 「예」 → 요건 미충족 · true 전송 · 사유 문구", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openJudgmentRentalCard(page, "2025-06-01", {
+      rentalMonths: "60",
+      standardPriceAtRentalStart: "300000000",
+      region: "seoul-metro",
+      rentalAutoTermination: true,
+      terminationReason: "auto",
+      terminatedRegistrationType: "short_term",
+      registrationCancellationDate: "2015-10-01",
+      preAddendaDemolished: "yes",
+    });
+    await expect(page.getByTestId("rental-pre-addenda-demolished-hint-0")).toContainText("기획재정부 조세정책과-2231");
+    await expect(page.getByTestId("rental-pre-addenda-demolished-fail-0")).toBeVisible();
+    const unit = await judge(page);
+    expect(unit?.preAddendaDemolished).toBe(true);
+    await expect(page.getByTestId("one-house-rental-verdict")).toContainText("요건 미충족");
+    await expect(page.getByTestId("one-house-judgment-result")).toContainText("부칙 제7조에 따라 자동말소된 것으로 볼 수 없어");
   });
 });
 

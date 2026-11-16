@@ -169,6 +169,12 @@ export type RentalUnitInput = {
    */
   terminatedRegistrationType?: "short_term" | "long_term_general";
   /**
+   * V-10 — 2020.8.18.(법률 제17482호 시행일) **전에** 재건축·재개발 등으로 멸실됐는가. 자동말소 · 폐지 유형 · 입력 말소일 ≤ 2020-08-18인
+   * 호에만 묻는다(`needsPreAddendaDemolitionAnswer`). 멸실된 주택은 부칙 제7조 간주 자동말소로 볼 수 없어 §155㉓을 적용하지 않는다
+   * (서면-2022-법규재산-3118[법규과-3158, 2024.12.18.] · 기획재정부 조세정책과-2231, 2024.12.9.). 미제공 = 「모름」 → ㉓ 미적용.
+   */
+  preAddendaDemolished?: boolean;
+  /**
    * §167조의3⑪ 기한 연장 사실(가목2)·나목2)·라목8)·마목4) 아파트) — 미제공 = 「모름」(바닥 초과 양도면
    * 기한 경과 + 확인 필요 고지 · 사용자 결정 2026-10-04). §155㉓ 경로는 이 요건을 적용하지 않는다(`skipAptTransferDeadlineGate`).
    */
