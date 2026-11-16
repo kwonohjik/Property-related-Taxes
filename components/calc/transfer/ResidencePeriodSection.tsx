@@ -31,6 +31,8 @@ interface Props {
   mergeStartDate?: string;
   /** 축 B(같은 주택 지분) — 컴패니언에는 거주 칸이 없고 이 값을 승계한다. 있으면 힌트를 띄운다. */
   appliesToOtherShares?: boolean;
+  /** 개월 수 직접 입력 칸에 붙이는 V-11 안내 — 토지를 건물보다 나중에 취득해 토지분 거주가 토지 보유기간으로 잘리는 자산(게이트는 호출부 `landHoldingResidenceDirectHintApplies`). */
+  landHoldingResidenceHint?: boolean;
   onChange: (
     patch: Partial<{
       residenceInputMode: "interval" | "direct";
@@ -54,6 +56,7 @@ export function ResidencePeriodSection({
   transferDate,
   mergeStartDate,
   appliesToOtherShares,
+  landHoldingResidenceHint,
   onChange,
 }: Props) {
   const isInterval = residenceInputMode === "interval";
@@ -198,7 +201,20 @@ export function ResidencePeriodSection({
            구 기록 복원뿐이지만, 그때도 이 칸이 유일한 입력 경로다.)
       */}
       {!isInterval && (
-        <FieldCard field="residencePeriodMonthsAsset" label="거주기간 (개월)" hint="해당 주택에 실제 거주한 총 개월 수 (표2 거주분 공제율). 위 「거주 기간 입력」 토글을 켜면 입주일·퇴거일 구간으로 입력할 수 있습니다.">
+        <FieldCard
+          field="residencePeriodMonthsAsset"
+          label="거주기간 (개월)"
+          hint={
+            <>
+              <span>해당 주택에 실제 거주한 총 개월 수 (표2 거주분 공제율). 위 「거주 기간 입력」 토글을 켜면 입주일·퇴거일 구간으로 입력할 수 있습니다.</span>
+              {landHoldingResidenceHint && (
+                <span data-testid="residence-land-holding-hint" className="mt-1 block">
+                  토지를 건물보다 나중에 취득해 토지분 거주기간은 토지 보유기간 안의 거주만 셉니다. 개월 수로 입력하면 토지 보유기간을 상한으로 계산하니, 입주·퇴거일 구간으로 입력하면 겹친 기간만 셉니다.
+                </span>
+              )}
+            </>
+          }
+        >
           <div className="flex items-center gap-2">
             <div className="w-32">
               <DecimalInput

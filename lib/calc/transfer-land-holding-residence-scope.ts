@@ -80,15 +80,41 @@ export function buildAppurtenantCardHoldingResidencePayload(
 }
 
 /**
+ * 겸용주택(주택분 토지)이 「토지를 건물보다 나중에 취득」한 경우인가 — ⑤ 표시·④ 전송 공용 술어(거주 입력 방식은 보지 않는다).
+ * 토지·건물 취득일은 ④가 `mixedUse`에 싣는 값과 같은 식이다(`landAcquisitionDate || acquisitionDate` · `acquisitionDate`).
+ */
+export function mixedLandHoldingResidenceApplies(
+  primary: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "landAcquisitionDate" | "acquisitionDate">,
+): boolean {
+  if (primary.assetKind !== "housing" || !primary.isMixedUseHouse) return false;
+  const land = primary.landAcquisitionDate || primary.acquisitionDate;
+  return landAcquiredAfterBuilding({ landAcquisitionDate: land, buildingAcquisitionDate: primary.acquisitionDate });
+}
+
+/**
  * ④ 겸용주택 — 거주를 정수 연수로만 받는 서브객체(`mixedUse`)용. 토지를 건물보다 나중에 취득했고 구간 입력이면 [토지 취득일, 양도일]과의 겹침 개월을 `floor(÷12)`한 연수를 싣는다.
- * 직접 입력이면 싣지 않는다(엔진이 min(거주 연수, 토지 보유 연수)로 상한하고 고지한다). 토지·건물 취득일은 ④가 서브객체에 싣는 값과 같은 식이다
- * (`landAcquisitionDate || acquisitionDate` · `acquisitionDate`).
+ * 직접 입력이면 싣지 않는다(엔진이 min(거주 연수, 토지 보유 연수)로 상한하고 고지한다). 게이트는 ⑤와 같은 술어 `mixedLandHoldingResidenceApplies`다.
  */
 export function buildMixedLandHoldingResidencePayload(
-  primary: Pick<AssetForm, "residenceInputMode" | "residencePeriods" | "landAcquisitionDate" | "acquisitionDate">,
+  primary: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "residenceInputMode" | "residencePeriods" | "landAcquisitionDate" | "acquisitionDate">,
 ): { landHoldingResidencePeriodYears?: number } {
-  if (primary.residenceInputMode !== "interval") return {};
+  if (primary.residenceInputMode !== "interval" || !mixedLandHoldingResidenceApplies(primary)) return {};
   const land = primary.landAcquisitionDate || primary.acquisitionDate;
-  if (!landAcquiredAfterBuilding({ landAcquisitionDate: land, buildingAcquisitionDate: primary.acquisitionDate })) return {};
   return { landHoldingResidencePeriodYears: Math.floor(sumResidenceMonthsFrom(primary.residencePeriods ?? [], land) / 12) };
+}
+
+/**
+ * ⑤ V-11 안내 게이트 — 거주를 **개월 수로 직접 입력**하는 칸에서, 이 규칙(토지 파트 거주기간 = 토지 보유기간 중 거주)이 걸리는 자산인가.
+ * 세 경로가 같은 칸(주택 자산의 「거주기간(개월)」)에서 입력된다: 분리취득 주택(`landHoldingResidenceApplies`) · 겸용주택 주택분 토지(`mixedLandHoldingResidenceApplies`) ·
+ * 주 자산 주택이 함께 양도하는 부수토지 카드(`appurtenantCardAfterPrimaryHouse` — 카드는 거주를 첫 자산에서 승계하므로 첫 자산이 그 칸의 자산일 때만).
+ * 구간 입력이면 ④가 겹침을 계산해 보내므로 이 안내를 띄우지 않는다. 술어는 ④ 전송과 같은 것을 import한다(재정의 금지).
+ */
+export function landHoldingResidenceDirectHintApplies(
+  residenceAsset: AssetForm,
+  formAssets: readonly AssetForm[],
+): boolean {
+  if (residenceAsset.residenceInputMode !== "direct") return false;
+  if (landHoldingResidenceApplies(residenceAsset) || mixedLandHoldingResidenceApplies(residenceAsset)) return true;
+  const first = formAssets[0];
+  return !!first && first.assetId === residenceAsset.assetId && formAssets.slice(1).some((card) => appurtenantCardAfterPrimaryHouse(card, first));
 }

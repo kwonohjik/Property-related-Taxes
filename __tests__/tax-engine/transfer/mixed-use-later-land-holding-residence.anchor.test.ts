@@ -45,13 +45,13 @@ const land = (r: ReturnType<typeof run>) => r.housingPart.partLthd!.land;
 const building = (r: ReturnType<typeof run>) => r.housingPart.partLthd!.building;
 
 describe("겸용 주택분 토지 — 나중 취득 + 거주", () => {
-  it("직접 14년: 토지 32% · 건물 80%(불변) · 고지 1건(입력 168개월 → 58개월) · 결정세액 59,768,490(현행 55,034,457)", () => {
+  it("직접 14년: 토지 32% · 건물 80%(불변) · 고지 1건(거주 168개월 → 토지분 58개월) · 결정세액 59,768,490(현행 55,034,457)", () => {
     const r = run();
     expect(land(r).longTermRate).toBeCloseTo(0.32, 10);
     expect(building(r).longTermRate).toBeCloseTo(0.8, 10);
     const n = capNote(r);
     expect(n).toHaveLength(1);
-    expect(n[0]).toContain("입력 168개월 → 58개월");
+    expect(n[0]).toContain("거주 168개월 → 토지분 58개월");
     expect(n[0]).toContain("확인 필요");
     expect(n[0]).not.toMatch(/유리|불리|절감|절세/);
     // 손계산: 토지 과세 양도차익 51,908,261 × 32% = 16,610,643(현행 56% = 29,068,626) → 과세표준 197,301,203 + 12,457,983 = 209,759,186

@@ -8,6 +8,7 @@ import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
 import { isMultiHouseSurchargeSuppressed } from "@/lib/calc/transfer-tax-api-helpers";
 import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
+import { landHoldingResidenceDirectHintApplies } from "@/lib/calc/transfer-land-holding-residence-scope";
 import { ONE_HOUSE_RESIDENCE } from "@/lib/tax-engine/legal-codes/transfer";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -542,6 +543,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 transferDate={householdView.transferDate}
                 mergeStartDate={landOnlyMergeResidenceStart(exemptPrimary)}
                 appliesToOtherShares={isFullFractionalBundle(householdView.assets, householdView.assetSplitMode)}
+                landHoldingResidenceHint={landHoldingResidenceDirectHintApplies(exemptPrimary, form.assets)}
                 onChange={(patch) =>
                   householdOnChange({
                     assets: householdView.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)),

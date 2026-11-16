@@ -72,7 +72,7 @@ describe("S2 엔진 직접 — 직접 입력은 토지 보유 개월로 상한(Q
     const n = capNote(r);
     expect(n).toHaveLength(1);
     expect(n[0]).toContain("58개월");
-    expect(n[0]).toContain("입력 178개월 → 58개월");
+    expect(n[0]).toContain("거주 178개월 → 토지분 58개월");
     expect(n[0]).toContain("2025두34935");
     expect(n[0]).toContain("확인 필요");
     // 사실만 쓴다 — 유리·불리·절감 표현 없음
@@ -244,7 +244,7 @@ describe("함께 양도 부수토지 카드(L-1b) — 카드를 주택보다 나
     const r = runCard("2020-03-01", 178);
     expect(r.longTermHoldingRate).toBeCloseTo(0.56, 10);
     expect(capNote(r)).toHaveLength(1);
-    expect(capNote(r)[0]).toContain("입력 178개월 → 51개월");
+    expect(capNote(r)[0]).toContain("거주 178개월 → 토지분 51개월");
   });
 
   it("카드가 주택보다 먼저(2000-03-01): 상한 없음 — 표2 보유 14년 40% + 거주 14년 40% = 80% · 고지 없음", () => {
