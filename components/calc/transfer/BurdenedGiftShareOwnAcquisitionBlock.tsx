@@ -20,6 +20,8 @@ import { bgActualFieldSec163_9Cause } from "@/lib/calc/bg-share-own-acquisition"
 import { sec163_9Hint } from "@/lib/calc/bg-share-own-acquisition";
 import { bgCollateralForcesStdAcq } from "@/lib/calc/burdened-gift-collateral-win";
 import { bgHouseSplitActive } from "@/lib/calc/bg-house-split";
+import { bgSec163_9ProvisoKind } from "@/lib/calc/bg-163-9-proviso";
+import { BgSec163_9ProvisoSection } from "./BgSec163_9ProvisoSection";
 
 interface Props {
   /** 지분 카드 원본 — 토글 상태를 읽는다. */
@@ -42,6 +44,9 @@ export function BurdenedGiftShareOwnAcquisitionBlock({ asset, merged, primaryAss
   const twoParts = merged.assetKind === "general_building" || bgHouseSplitActive(merged, { isNonPrimary: true });
   // 재개발 · 입주권 상속 · 증여 지분 — 그 칸에 넣을 값은 §163⑨ 평가액이다(vp2c §27 D-3l)
   const sec163_9 = actualOnly || redev ? sec163_9Hint(bgActualFieldSec163_9Cause(merged)) : undefined;
+  // §163⑨ 단서 구간 — 단건 「부담부증여」 카드와 같은 ② §164 칸(①은 위 이 지분 실지 칸). 병합 자산으로 판정하고 칸 값은 이 지분 카드에 쓴다
+  // (`mergePrimaryBasic`은 §164 칸을 덮지 않는다 — ④가 이 지분 값으로 싣는다). 종전에는 상속 지분 카드에 이 칸이 없어 평가액만으로 계산됐다.
+  const provisoKind = showActual ? bgSec163_9ProvisoKind(merged) : null;
   const actualField = (key: "bgActualAcquisitionLand" | "bgActualAcquisitionBuilding" | "bgActualAcquisitionTotal", label: string) => (
     <FieldCard label={label} hint={`물건 전체(100%) 기준 — 이 지분 취득 당시 가액을 물건 전체로 환산해 입력하세요(지분율은 시스템이 곱합니다).${sec163_9 ? ` ${sec163_9}` : ""}`}>
       <CurrencyInput label="" hideUnit value={asset[key]} data-field={key} onChange={(v) => onChange({ [key]: v })} />
@@ -86,6 +91,7 @@ export function BurdenedGiftShareOwnAcquisitionBlock({ asset, merged, primaryAss
             ) : (
               actualField("bgActualAcquisitionTotal", "이 지분 실지취득가액")
             ))}
+          {provisoKind && <BgSec163_9ProvisoSection asset={merged} onChange={onChange} transferDate={transferDate} kind={provisoKind} />}
         </div>
       </ToggleCard>
     </div>

@@ -5,6 +5,8 @@
  * - BP-2 단독주택 증여 2005-04-29: §164⑦ 칸 · 양도차익 513,461,539.
  * - BP-3 같은 주택 · 기준시가 평가: §164 칸 없음 · ③ 안내는 「취득당시 기준시가 × 채무비율」.
  * - BP-4 상가 상속 2003(PR-2): ② 카드가 ③ §164⑥ 칸을 가리킨다 · ③ §164⑥ 섹션 부담부증여 문구 · 양도차익 205,454,546.
+ * - BP-5 축 B 60/40 · 지분 2 상속 토지 1988(§11): 지분 카드 「이 지분의 취득가액을 자산 1과 따로 입력」에 §164④ 칸 · 합계 137,778,704
+ *   (96,000,000 + 0.4 × 0.4 × (5억 − 238,883,100)). 종전에는 칸이 없어 평가액만(160,000,000).
  * 고정값은 route anchor(`transfer.route.bg-163-9-proviso-land-house.anchor.test.ts`)와 같다.
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -47,6 +49,27 @@ async function seed(page: Page, asset: A, contractTotalPrice: string) {
   await page.reload();
   await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   // hydration 대기(e2e/CLAUDE.md §6)
+  await page.waitForFunction(() => {
+    const el = document.querySelector('[data-asset-section="2"]');
+    return !!el && Object.keys(el).some((k) => k.startsWith("__react"));
+  });
+}
+async function seedAssets(page: Page, assets: A[], over: A) {
+  const s = {
+    state: {
+      formData: rosterForDeclaredCount({
+        assets, transferDate: "2023-02-16", filingDate: "2023-04-30", totalTransferExpense: "0",
+        householdHousingCount: "0", householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, isOneHousehold: false, ...over,
+      } as never),
+      pendingMigration: false,
+    },
+    version: 0,
+  };
+  await page.goto("/calc/transfer-tax");
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  await page.evaluate((x) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(x)), s);
+  await page.reload();
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
   await page.waitForFunction(() => {
     const el = document.querySelector('[data-asset-section="2"]');
     return !!el && Object.keys(el).some((k) => k.startsWith("__react"));
@@ -122,5 +145,38 @@ test.describe("부담부증여 × §163⑨ 단서 — 토지 · 단독주택", (
     const r = await calc(page);
     expect(r.sent?.reportedValue).toBe(100_000_000);
     expect(r.gain).toBe(205_454_546);
+  });
+
+  test("BP-5 축 B 60/40 · 상속 토지 지분 — 지분 카드에 §164④ 칸 · 137,778,704", async ({ page }) => {
+    test.setTimeout(120_000);
+    const base: A = { assetKind: "land", acquisitionArea: "100", transferArea: "100", landAreaM2: "100", landNature: "independent", companionLandNature: "independent", standardPriceAtTransfer: "300000000" };
+    await seedAssets(page, [
+      { ...makeDefaultAsset(1), assetId: "p", addressJibun: "제주특별자치도 강남구 테스트동 5-5", ...base, acquisitionCause: "purchase", acquisitionDate: "2015-01-01",
+        actualSalePrice: "500000000", ...bg("500000000", "200000000"), bgActualAcquisitionLand: "100000000", ownershipNumerator: "60", ownershipDenominator: "100" },
+      { ...makeDefaultAsset(2), assetId: "s", ownershipNumerator: "40", ownershipDenominator: "100", acquisitionCause: "inheritance", acquisitionDate: "1988-06-01",
+        inheritanceStartDate: "1988-06-01", decedentAcquisitionDate: "1980-01-01", inheritanceValuationMethod: "supplementary",
+        bgShareOwnAcquisition: true, bgAcquisitionMethod: "actual", bgActualAcquisitionLand: "100000000",
+        pre1990Enabled: true, pre1990PricePerSqm_1990: "5000000", pre1990Grade_current: "100", pre1990Grade_prev: "90", pre1990Grade_atAcq: "80" },
+    ], { assetSplitMode: "fractional", contractTotalPrice: "500000000" });
+    // 지분 카드 ③ 취득정보까지 펼친다 — 자산 1은 매매라 단서 칸이 없고, 보이는 단서 섹션은 지분 카드의 것 하나다
+    for (let round = 0; round < 3; round++) {
+      const heads = page.locator("[data-asset-section] > button");
+      for (let k = 0; k < (await heads.count()); k++) {
+        const h = heads.nth(k);
+        if ((await h.isVisible()) && (await h.innerText()).includes("펼치기")) await h.click();
+      }
+    }
+    const share = page.getByTestId("bg-share-own-acquisition");
+    await expect(share.getByTestId("bg-163-9-proviso-section")).toContainText("§164④ 가액 중 큰 금액");
+    await expect(page.getByTestId("bg-163-9-proviso-section")).toHaveCount(1);
+    for (const step of ["보유 상황", "감면·공제", "가산세"]) await page.getByRole("button", { name: step }).first().click();
+    const resp = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST", { timeout: 60_000 });
+    await page.getByRole("button", { name: /계산하기/ }).click();
+    const r = await resp;
+    expect(r.status(), await r.text()).toBe(200);
+    const body = r.request().postDataJSON() as { companionAssets?: { inheritedAcquisition?: { reportedValue?: number } }[] };
+    expect(body.companionAssets?.[0]?.inheritedAcquisition?.reportedValue).toBe(40_000_000);
+    const j = (await r.json()) as { data: { aggregated: { totalTransferGain: number } } };
+    expect(j.data.aggregated.totalTransferGain).toBe(137_778_704);
   });
 });
