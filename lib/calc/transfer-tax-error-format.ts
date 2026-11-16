@@ -48,6 +48,8 @@ const FIELD_LABEL: Record<string, string> = {
   // 토지/건물 분리
   landAcquisitionDate: "토지 취득일",
   landAcquisitionCause: "토지 취득원인",
+  landPartDonorSameHousehold: "건물 증여자와 증여일부터 계속 같은 세대 여부",
+  landPartPriorHouseholdResidenceMonths: "건물 증여 전 같은 세대 거주 개월 수",
   landDecedentAcquisitionDate: "토지 피상속인 취득일",
   landRebuildPriorHouse: "구주택 멸실·신축 통산",
   "landRebuildPriorHouse.startMode": "구주택 시작 구분(토지 취득 때부터 / 취득 뒤)",

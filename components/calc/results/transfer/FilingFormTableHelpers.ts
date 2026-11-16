@@ -28,6 +28,7 @@ import {
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { nonPurchaseOwnerSplit } from "@/lib/calc/transfer-land-part-cause";
+import { fillSplitResidenceCells } from "./FilingFormTableSplitResidence";
 import { residenceIntervalMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import type {
   AggregateTransferResult,
@@ -389,6 +390,8 @@ export function buildRows(
     // 일자가 없는 호출 경로(formData 미전달)에서는 종전대로 엔진 만-연수로 폴백.
     setStr("holdingPeriod", "land", spLandHold !== "-" ? spLandHold : fmtPeriod(Math.round(sp.land.holdingYears * 12)));
     setStr("holdingPeriod", "building", spBuildingHold !== "-" ? spBuildingHold : fmtPeriod(Math.round(sp.building.holdingYears * 12)));
+    // 4289 — 건물 증여 전 같은 세대 거주를 더한 토지 파트의 거주기간별 공제율 산정 연수(건물과 다를 때만)
+    fillSplitResidenceCells(sp, residenceMonthsTotal, setStr, setRoseNote);
     // 과세비율 분모는 본인 소유 파트의 gain만 — building_only인데 land.gain을 포함하면
     // 분자(result.taxableGain=건물분)와 불일치해 토지·건물 셀이 모두 오염됨.
     const ownedGain =

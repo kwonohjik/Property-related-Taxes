@@ -17,6 +17,7 @@ import { calcFinalHouseRestartInScope, collectFinalHouseRestartErrors } from "./
 import { shareResidenceNeedsIntervals } from "./axis-b-share-residence";
 import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { calcGiftPriorResidenceAsked } from "./gift-household-payload";
+import { landPartResidenceAsked } from "./transfer-split-land-residence-scope";
 import { directResidenceMonthsOverflowError } from "./residence-interval-validate";
 import { isOneHouseExemptionAsset, usesHouseCountRoster, requiresPresaleRightsConfirmation } from "./housing-like-asset";
 import { householdFactsFormView } from "./household-facts-view";
@@ -363,6 +364,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
       startKind: residenceStart.kind,
       transferDate: form.transferDate,
       giftPriorHint: calcGiftPriorResidenceAsked(primary),
+      landPriorHint: landPartResidenceAsked(primary),
     }))
       issues.push({ step, message });
   }
@@ -387,6 +389,7 @@ export function collectStep1Issues(form: TransferFormData): ValidationIssue[] {
         transferDate: form.transferDate,
         field: "residencePeriodMonthsAsset",
         giftPriorHint: calcGiftPriorResidenceAsked(primary),
+        landPriorHint: landPartResidenceAsked(primary),
       });
       if (overflow) issues.push({ step, message: overflow });
     }

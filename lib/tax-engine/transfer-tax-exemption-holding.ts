@@ -303,6 +303,9 @@ export type ResidenceReqInput = Pick<
   | "nonResidentHoldingPeriod"
   // 증여받은 주택 — 증여자와 계속 같은 세대면 보유 통산·「취득 당시」 기준일을 세대 보유 시작일로 옮긴다(결정 #33·#34·#38).
   | "giftHouseholdBasis"
+  // 4289 — 건물 증여 전 동일세대 거주(D2 증여). **표2 대상 판정에만** 읽는다(`resolveTable2SubjectResidenceMonths`) — 비과세 거주요건·§155⑳은 읽지 않는다.
+  | "landPartDonorSameHousehold"
+  | "landPartPriorHouseholdResidenceMonths"
 > &
   Partial<Pick<TransferTaxInput, "householdHousingCount">>;
 

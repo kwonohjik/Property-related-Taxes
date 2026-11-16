@@ -462,7 +462,7 @@ function partReason(p: SplitPartResult, a: SplitLthdDisplayArgs): string {
   if (p.appurtenantLthd) return `${appurtenantCandidates(p, p.appurtenantLthd)} ${total}%`;
   if (a.singleAxis) return `표2 보유 ${years}년×8% = ${total}%, 80% 한도 — 2020.12.31. 이전 양도분`;
   if (a.isTable2) {
-    return `보유 ${years}년×4%=${pct(p.holdingDeductionRate!)}% + ${residenceTerm(a.residenceYears, pct(p.residenceDeductionRate!))}`;
+    return `보유 ${years}년×4%=${pct(p.holdingDeductionRate!)}% + ${residenceTerm(p.residenceYears ?? a.residenceYears, pct(p.residenceDeductionRate!))}`;
   }
   return `보유 ${years}년×2% = ${total}%, 30% 한도`;
 }
@@ -575,11 +575,11 @@ export function buildSplitLthdSubFormulas(
           `${ap.table1Applied ? `표1 ${pct(ap.table1Rate)}% 적용` : `표2 보유 ${ap.houseHoldingYears}년 = ${pct(p.holdingDeductionRate!)}% 적용`})`,
       );
       resItems.push(
-        `${label} ${won(res)} (${ap.table1Applied ? "표1 적용 — 거주기간 공제 없음" : residenceTerm(a.residenceYears, pct(p.residenceDeductionRate!), " = ")})`,
+        `${label} ${won(res)} (${ap.table1Applied ? "표1 적용 — 거주기간 공제 없음" : residenceTerm(p.residenceYears ?? a.residenceYears, pct(p.residenceDeductionRate!), " = ")})`,
       );
     } else {
       holdItems.push(`${label} ${won(hold)} (보유 ${p.holdingYears}년×4% = ${pct(p.holdingDeductionRate!)}%)`);
-      resItems.push(`${label} ${won(res)} (${residenceTerm(a.residenceYears, pct(p.residenceDeductionRate!), " = ")})`);
+      resItems.push(`${label} ${won(res)} (${residenceTerm(p.residenceYears ?? a.residenceYears, pct(p.residenceDeductionRate!), " = ")})`);
     }
   }
   const nb = a.sd.nonBusinessLandPart;

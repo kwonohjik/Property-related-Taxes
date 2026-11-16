@@ -69,5 +69,10 @@ export function splitPartCauseFactsOfInput(input: TransferTaxInput): SplitPartCa
     buildingCarryoverEstimated: input.buildingCarryoverTaxation?.useEstimatedAcquisition === true,
     landDonorAcquisitionDate: dayKey(input.landCarryoverTaxation?.donorAcquisitionDate),
     buildingDonorAcquisitionDate: dayKey(input.buildingCarryoverTaxation?.donorAcquisitionDate),
+    // 4289 — 건물 증여 전 동일세대 거주. 증여자 건물 취득일은 ④가 증여 취득이면 싣는 최상위 `donorAcquisitionDate`다.
+    landPartDonorSameHousehold: input.landPartDonorSameHousehold,
+    landPartPriorHouseholdResidenceMonths: input.landPartPriorHouseholdResidenceMonths,
+    donorAcquisitionDate: dayKey(input.donorAcquisitionDate as Date | string | undefined),
+    rentalHousingDeclared: input.rentalHousingException?.applyException === true,
   };
 }

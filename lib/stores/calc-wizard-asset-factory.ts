@@ -229,6 +229,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     landRebuildFootprintUnchanged: false,
     landDecedentAcquisitionDate: "",
     landDonorAcquisitionDate: "",
+    landPartDonorSameHousehold: false,
+    landPartPriorHouseholdResidenceMonths: "",
     landAcqMode: "",
     buildingAcqMode: "",
     saleSplitMode: "apportioned",
