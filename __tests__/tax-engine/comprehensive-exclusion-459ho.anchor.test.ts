@@ -8,6 +8,9 @@ import { validateRentalExclusion } from "@/lib/tax-engine/comprehensive-exclusio
 import { COMPREHENSIVE_EXCL as E } from "@/lib/tax-engine/legal-codes";
 import type { RentalExclusionInput } from "@/lib/tax-engine/types/comprehensive.types";
 
+/** 가격 기준일 공시가격 칸이 비면 그해 공시가격으로 판정하고 안내를 붙인다(T-03 Q-2 a) — 형식까지 고정 */
+const notEntered = (won: string) => `가격 판정: ${won}원(그해 공시가격) — ${E.PRICE_BASIS_NOT_ENTERED}`;
+
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
 
 describe("4호 미임대 민간건설임대", () => {
@@ -154,15 +157,18 @@ describe("9호 분양전환공공임대 만료 후 2년", () => {
     expect(v({ conversionCompleted: null }).failReasons).toEqual([E.CONV_9HO_CONVERTED_UNKNOWN]);
   });
   it("★ 면적·가격·임대료는 바탕 유형(1호 공공건설 / 2호 공공매입)으로 — 구분 모르면 그것만 사유", () => {
-    expect(v({ assessedValue: 900_000_001 }).failReasons).toEqual([E.PRICE_EXCEEDED]);
+    expect(v({ assessedValue: 900_000_001 }).failReasons).toEqual([E.PRICE_EXCEEDED, notEntered("900,000,001")]);
     expect(v({ area: 150 }).failReasons).toEqual([E.AREA_EXCEEDED_149]);
     // 2024년분 공공건설 · 사용승인 2020 → 6억(부칙<제31447호> §2) — 사유도 바탕 유형으로 붙는다
     expect(
       v({ assessmentDate: d("2024-06-01"), mandatoryPeriodEndDate: d("2023-03-01"), assessedValue: 700_000_000, usageApprovalDate: d("2020-01-01") })
         .failReasons,
-    ).toEqual([E.PRICE_EXCEEDED, E.BUILT_PRICE_CAP_6EOK_PRE_20210217]);
+    ).toEqual([E.PRICE_EXCEEDED, E.BUILT_PRICE_CAP_6EOK_PRE_20210217, notEntered("700,000,000")]);
     // 공공매입 수도권 6억 · 면적 무제한
-    expect(v({ conversionBase: "purchase", assessedValue: 700_000_000 }).failReasons).toEqual([E.PRICE_EXCEEDED]);
+    expect(v({ conversionBase: "purchase", assessedValue: 700_000_000 }).failReasons).toEqual([
+      E.PRICE_EXCEEDED,
+      notEntered("700,000,000"),
+    ]);
     expect(v({ conversionBase: "purchase", area: 200 }).isExcluded).toBe(true);
     expect(v({ conversionBase: undefined, assessedValue: 2_000_000_000, area: 200 }).failReasons).toEqual([
       E.CONV_9HO_BASE_UNKNOWN,

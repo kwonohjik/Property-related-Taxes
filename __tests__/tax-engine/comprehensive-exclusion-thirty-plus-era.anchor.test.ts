@@ -33,12 +33,14 @@ const BASE: RentalExclusionInput = {
   usageApprovalDate: d("2022-01-01"),
 };
 const v = (over: Partial<RentalExclusionInput>) => validateRentalExclusion({ ...BASE, ...over });
+/** 가격 기준일 공시가격 칸이 비면 그해 공시가격으로 판정하고 안내를 붙인다(T-03 Q-2 a) — 형식까지 고정 */
+const notEntered = (won: string) => `가격 판정: ${won}원(그해 공시가격) — ${E.PRICE_BASIS_NOT_ENTERED}`;
 
 describe("2024 이하 — 30호 이상이어도 30호 미만 기준", () => {
   it("★ P5 7호 공공지원 건설 30호 이상 12억(2024) → 불성립(상한 9억) + 시행 전 사유", () => {
     const r = v({ assessedValue: 1_200_000_000, assessmentDate: d("2024-06-01") });
     expect(r.isExcluded).toBe(false);
-    expect(r.failReasons).toEqual([E.PRICE_EXCEEDED, E.THIRTY_PLUS_TIER_NOT_IN_FORCE]);
+    expect(r.failReasons).toEqual([E.PRICE_EXCEEDED, E.THIRTY_PLUS_TIER_NOT_IN_FORCE, notEntered("1,200,000,000")]);
   });
   it("★ P6·P7 1호 공공건설 30호 이상 10억(2024·2021) → 불성립", () => {
     expect(v({ registrationType: "public_construction", assessmentDate: d("2024-06-01") }).isExcluded).toBe(false);
@@ -63,7 +65,7 @@ describe("2025 이후 — 30호 구간 적용(현행 = 문언)", () => {
     expect(v({ registrationType: "public_construction" }).isExcluded).toBe(true);
   });
   it("2025에 12억 초과면 가격 초과만(시행 전 사유는 붙지 않는다)", () => {
-    expect(v({ assessedValue: 1_200_000_001 }).failReasons).toEqual([E.PRICE_EXCEEDED]);
+    expect(v({ assessedValue: 1_200_000_001 }).failReasons).toEqual([E.PRICE_EXCEEDED, notEntered("1,200,000,001")]);
   });
 });
 
@@ -71,9 +73,9 @@ describe("대조 — 30호 미만은 연도 무관", () => {
   it("C1 8호 30호 미만 8억(2023) · C2 1호 30호 미만 10억(2023) → 가격 초과만", () => {
     expect(
       v({ registrationType: "private_purchase_long", isThirtyPlusUnits: false, assessedValue: 800_000_000, assessmentDate: d("2023-06-01") }).failReasons,
-    ).toEqual([E.PRICE_EXCEEDED]);
+    ).toEqual([E.PRICE_EXCEEDED, notEntered("800,000,000")]);
     expect(
       v({ registrationType: "public_construction", isThirtyPlusUnits: false, assessmentDate: d("2023-06-01") }).failReasons,
-    ).toEqual([E.PRICE_EXCEEDED]);
+    ).toEqual([E.PRICE_EXCEEDED, notEntered("1,000,000,000")]);
   });
 });

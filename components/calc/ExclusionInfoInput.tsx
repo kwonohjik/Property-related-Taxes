@@ -27,6 +27,7 @@ import { asksUsageApprovalDate } from "@/lib/calc/comprehensive-api";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { useComprehensiveWizardStore } from "@/lib/stores/comprehensive-wizard-store";
 import { RentalExclusion8NaFields } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
+import { RentalExclusionPriceBasisField } from "@/components/calc/comprehensive/RentalExclusionPriceBasisField";
 import { RentalPeriodApplicationDateField } from "@/components/calc/comprehensive/RentalExclusion8NaFields";
 import { RentalExclusion6hoFields } from "@/components/calc/comprehensive/RentalExclusion6hoFields";
 import { CountField } from "@/components/calc/comprehensive/RentalExclusion6hoFields";
@@ -260,6 +261,14 @@ function RentalExclusionDetail({
           </p>
         </div>
       )}
+
+      {/* §3① 가목 가격 기준일 공시가격(선택) — 사용승인일로 상한이 정해진 뒤에 묻는다(asksPriceBasisValue · ④와 같은 술어) */}
+      <RentalExclusionPriceBasisField
+        property={property}
+        registrationType={regType}
+        assessmentYear={assessmentYear}
+        onUpdate={onUpdate}
+      />
 
       {/* §3①8호 나목·7호 단서 — 묻는 칸은 na8Asks(⑧·④와 같은 술어) */}
       <RentalExclusion8NaFields

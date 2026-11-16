@@ -25,19 +25,21 @@ const BASE: RentalExclusionInput = {
   assessmentDate: d("2023-06-01"),
 };
 const v = (over: Partial<RentalExclusionInput>) => validateRentalExclusion({ ...BASE, ...over });
+/** 가격 기준일 공시가격 칸이 비면 그해 공시가격으로 판정하고 안내를 붙인다(T-03 Q-2 a) — 형식까지 고정 */
+const notEntered = (won: string) => `가격 판정: ${won}원(그해 공시가격) — ${E.PRICE_BASIS_NOT_ENTERED}`;
 
 describe("2022~2024 — 사용승인일로 6억/9억", () => {
   it("★ 공공건설 7억 · 사용승인 2020 → 불성립(6억) + 사유", () => {
     const r = v({ usageApprovalDate: d("2020-05-01") });
     expect(r.isExcluded).toBe(false);
-    expect(r.failReasons).toEqual([E.PRICE_EXCEEDED, E.BUILT_PRICE_CAP_6EOK_PRE_20210217]);
+    expect(r.failReasons).toEqual([E.PRICE_EXCEEDED, E.BUILT_PRICE_CAP_6EOK_PRE_20210217, notEntered("700,000,000")]);
   });
   it("경계 — 사용승인 2021-02-16 → 6억 · 2021-02-17 → 9억(당일 포함)", () => {
     expect(v({ usageApprovalDate: d("2021-02-16") }).isExcluded).toBe(false);
     expect(v({ usageApprovalDate: d("2021-02-17") }).isExcluded).toBe(true);
   });
   it("★ 사용승인일 모름 → 6억 + 확인 필요", () => {
-    expect(v({}).failReasons).toEqual([E.PRICE_EXCEEDED, E.USAGE_APPROVAL_DATE_UNKNOWN]);
+    expect(v({}).failReasons).toEqual([E.PRICE_EXCEEDED, E.USAGE_APPROVAL_DATE_UNKNOWN, notEntered("700,000,000")]);
   });
   it("민간건설(1호)·공공지원 건설(7호)도 2022 이후는 사용승인일", () => {
     expect(v({ registrationType: "private_construction", usageApprovalDate: d("2020-01-01") }).failReasons).toContain(

@@ -44,6 +44,8 @@ export interface PropertyEntry {
   businessRegistrationDate?: string;
   /** 사용승인일 YYYY-MM-DD — 1·7호 건설임대 6억/9억(부칙<제31447호> §2). 묻는 조건은 asksUsageApprovalDate(⑤④ 공유) */
   usageApprovalDate?: string;
+  /** 기준 공시가격(원) — 임대개시일 등 또는 최초 합산배제신고 연도 과세기준일(종부령 §3① 가목). 묻는 조건은 asksPriceBasisValue(⑤④ 공유) */
+  priceBasisValue?: string;
   // ── §3①8호 나목 1)~4)·7호 단서 — 묻는 조건은 lib/calc/comprehensive-rental-8na.ts 한 곳(⑤⑧④ 공유). 빈 값 "" = 미입력 ──
   rentalAcquisitionDate?: string;              // 나목1) 취득일
   rentalDepositPaidDate?: string;              // 나목1) 괄호 — 매매계약·계약금 지급일(선택)

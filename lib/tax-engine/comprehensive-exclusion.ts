@@ -251,7 +251,11 @@ export function validateRentalExclusion(
   }
 
   const priceLimit = getPriceLimit(limitInput);
-  if (input.assessedValue > priceLimit) {
+  // 가격 기준일은 임대개시일 등 또는 최초 합산배제신고 연도 과세기준일 — 그 공시가격을 넣었으면 그것으로, 아니면 그해 공시가격(Q-2 a)
+  const basisType = priceBasisApplies(limitInput.registrationType);
+  const basisValue = basisType && (input.priceBasisValue ?? 0) > 0 ? (input.priceBasisValue as number) : null;
+  const judgedPrice = basisValue ?? input.assessedValue;
+  if (judgedPrice > priceLimit) {
     failReasons.push(COMPREHENSIVE_EXCL.PRICE_EXCEEDED);
     // 30호 이상을 골랐지만 그 구간이 아직 없던 과세연도 — 왜 30호 미만 금액으로 봤는지 알린다
     if (input.isThirtyPlusUnits === true && !thirtyPlusTierApplies(input)) {
@@ -260,6 +264,14 @@ export function validateRentalExclusion(
     // 건설임대 6억 기준을 쓴 까닭(2021.2.17. 전 사용승인 · 사용승인일 모름)
     const builtReason = thirtyPlusTierApplies(input) ? null : builtRentalBaseCap(limitInput)?.reason;
     if (builtReason) failReasons.push(builtReason);
+    // 판정 기준값은 불성립 사유에만 적는다(Q-3 a′) — 상한 사유들 뒤
+    if (basisType) {
+      failReasons.push(
+        basisValue !== null
+          ? `가격 판정: ${won(basisValue)} — ${COMPREHENSIVE_EXCL.PRICE_JUDGED_BY_BASIS}`
+          : `가격 판정: ${won(input.assessedValue)}(그해 공시가격) — ${COMPREHENSIVE_EXCL.PRICE_BASIS_NOT_ENTERED}`,
+      );
+    }
   }
 
   // 임대료 증가율 요건은 1·2·7·8·10·11호에만 있다 — 3호(2005.1.5. 이전 임대)·6호(미분양매입)는 없다(§3① 각 호 · §3⑧)
@@ -363,11 +375,50 @@ function getAreaLimit(input: RentalExclusionInput): number {
  */
 const THIRTY_PLUS_TIER_IN_FORCE = Date.UTC(2025, 1, 28);
 
-function thirtyPlusTierApplies(input: RentalExclusionInput): boolean {
+function thirtyPlusTierApplies(input: Pick<RentalExclusionInput, "isThirtyPlusUnits" | "assessmentDate">): boolean {
   return input.isThirtyPlusUnits === true && input.assessmentDate.getTime() >= THIRTY_PLUS_TIER_IN_FORCE;
 }
 
-function getPriceLimit(input: RentalExclusionInput): number {
+/** 가격 상한 판정에 쓰는 사실 — 화면 술어가 좁은 입력으로 부를 수 있게 한다 */
+export type RentalPriceCapInput = Pick<
+  RentalExclusionInput,
+  "registrationType" | "location" | "assessmentDate" | "usageApprovalDate" | "isThirtyPlusUnits" | "conversionBase"
+> &
+  Partial<Pick<RentalExclusionInput, "rentalRegistrationDate">>;
+
+/**
+ * 공시가격 상한(원) — 엔진 판정과 화면 「기준 공시가격」 칸 표시가 같은 함수를 쓴다(single source).
+ * 9호는 바탕 유형(공공건설/공공매입)으로 보고, 바탕을 모르면 가격을 보지 않는다(Infinity).
+ */
+export function rentalPriceCap(input: RentalPriceCapInput): number {
+  if (input.registrationType !== "public_conversion_pending") return getPriceLimit(input);
+  const base = input.conversionBase === "construction" ? "public_construction" : input.conversionBase === "purchase" ? "public_purchase" : null;
+  return base ? getPriceLimit({ ...input, registrationType: base }) : Infinity;
+}
+
+/**
+ * 가격 기준일이 「임대개시일(…) 또는 최초 합산배제신고 연도 과세기준일」인 유형 — 1·2·6·7·8·10·11호(9호는 바탕 유형으로).
+ * 3호(2005년도)·5호(2008년도)·4호 나목(신고 연도 현재)은 기준일이 달라 제외(계획서 Q-9 · V-C).
+ */
+const PRICE_BASIS_TYPES: ReadonlySet<string> = new Set([
+  "private_construction",
+  "public_construction",
+  "private_purchase_short",
+  "public_purchase",
+  "unsold_purchase",
+  "public_support_construction",
+  "private_purchase_long",
+  "public_support_purchase",
+  "private_short_term_6y_construction",
+  "private_short_term_6y_purchase",
+]);
+export function priceBasisApplies(registrationType: string): boolean {
+  return PRICE_BASIS_TYPES.has(registrationType);
+}
+
+const won = (n: number) => `${n.toLocaleString("ko-KR")}원`;
+
+function getPriceLimit(input: RentalPriceCapInput): number {
   const metro = input.location === "metro";
   const over30 = thirtyPlusTierApplies(input); // 30호 이상 tier (§3①1·2·7·8호 · 2025 과세연도부터)
   switch (input.registrationType) {

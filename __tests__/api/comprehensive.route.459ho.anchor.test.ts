@@ -25,6 +25,9 @@ import { defaultFormData, makeProperty } from "@/lib/stores/comprehensive-wizard
 import type { ComprehensiveFormData, PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 import { COMPREHENSIVE_EXCL as E } from "@/lib/tax-engine/legal-codes";
 
+/** 가격 기준일 공시가격 칸이 비면 그해 공시가격으로 판정하고 안내를 붙인다(T-03 Q-2 a) — 형식까지 고정 */
+const notEntered = (won: string) => `가격 판정: ${won}원(그해 공시가격) — ${E.PRICE_BASIS_NOT_ENTERED}`;
+
 type Excl = { excludedCount: number; propertyResults: { failReasons?: string[]; reason?: string }[] };
 type Body = { properties: { rentalInfo?: Record<string, unknown> }[] };
 
@@ -160,7 +163,7 @@ describe("⑫⑭ → 엔진 (화면 경로 끝까지)", () => {
   it("★ 9호 성립 · 공공매입 수도권 7억 → 가격 초과 · 2022 → 시행 전", async () => {
     expect((await run(form(HO9))).excludedCount).toBe(1);
     const purchase = await run(form({ ...HO9, conversionBase: "purchase", assessedValue: "700,000,000" }));
-    expect(purchase.propertyResults[0].failReasons).toEqual([E.PRICE_EXCEEDED]);
+    expect(purchase.propertyResults[0].failReasons).toEqual([E.PRICE_EXCEEDED, notEntered("700,000,000")]);
     const y22 = await run(form({ ...HO9, mandatoryPeriodEndDate: "2021-03-01" }, "2022"));
     expect(y22.propertyResults[0].failReasons).toEqual([E.CONV_9HO_NOT_IN_FORCE]);
   });
