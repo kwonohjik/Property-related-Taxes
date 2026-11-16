@@ -6,9 +6,8 @@
  * 오라클: ②를 그 파트 실가로 직접 넣은 세액(mock 세율). 토지 1984.6. 실가 1억 → ② 101,411,574.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useState } from "react";
 import { NextRequest } from "next/server";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), useSearchParams: () => new URLSearchParams(), usePathname: () => "/calc/transfer-tax" }));
 vi.mock("@/lib/db/tax-rates", async (importOriginal) => {
