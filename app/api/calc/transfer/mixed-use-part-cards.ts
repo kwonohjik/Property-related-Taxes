@@ -49,6 +49,7 @@
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
+import type { MixedUseBurdenedGiftBreakdown } from "@/lib/tax-engine/types/mixed-use-burdened-gift.types";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { buildMixedUseAssetInput } from "./mixed-use-asset-input";
@@ -98,8 +99,11 @@ export function buildMixedUsePartCards(
   rates: TaxRatesMap,
   assetId: string,
   assetLabel: string,
+  /** 함께 양도 묶음 안 겸용 BG의 4부분 명세를 결과 슬롯(`aggregated.mixedUseBgDetailsByAsset`)에 싣는 훅 — 겸용 BG가 아니면 부르지 않는다. */
+  onBgDetail?: (breakdown: MixedUseBurdenedGiftBreakdown) => void,
 ): TransferTaxItemInput[] {
   const r = calcMixedUseTransferTax(partTransferPrice, transferDate, mixedAsset, rates);
+  if (r.burdenedGift) onBgDetail?.(r.burdenedGift);
   /**
    * 2022.1.1. 전 양도는 엔진이 전부 0인 거부 결과를 낸다. 단건은 그 결과를 그대로 보여 주지만 여기서는 0인 파트 카드가 합산에 섞여
    * 겸용 주택이 **조용히 빠졌다**(실측 2026-10-18). ⑧이 먼저 막고, API 직접 호출은 여기서 400으로 막는다(주 자산·컴패니언 공통 지점).
@@ -177,8 +181,9 @@ export function buildMixedUsePartCards(
    * 판정은 다시 하지 않는다 — 엔진 결과를 그대로 따른다(카드마다 재판정하면 두 경로가 갈린다).
    */
   const wholeHouse = cp.deemedHouseBy154_3Main === true;
+  // 부담부증여면 건물 전체 12억 판정 가액은 증여가액 C다(엔진 echo `highValue.judgmentBase` — `partTransferPrice`는 채무 재배분 몫 B라 아니다 · V-7).
   const housingTotal = wholeHouse
-    ? (mixedAsset.totalPropertyTransferPrice ?? partTransferPrice)
+    ? (r.burdenedGift?.highValue.judgmentBase ?? mixedAsset.totalPropertyTransferPrice ?? partTransferPrice)
     : housingTotalSplit;
   const cnbGain = wholeHouse ? Math.floor(cp.landTransferGain * ratio) : 0; // 토지 차손이면 배율 초과 몫도 차손(엔진 `exemptCommercialPartAsHouse`와 같은 값)
   const cnblA = wholeHouse ? Math.floor(cp.landAcqPrice * ratio) : 0;
@@ -228,6 +233,14 @@ export function buildMixedUsePartCards(
      *   보조 2키(`inheritedHouseValuation`·`commercialInheritanceValuation`)는 이 키가 없으면 STEP 0.45가 읽지 않는다.
      */
     inheritedAcquisition: undefined,
+    /**
+     * · **부담부증여(소령 §159)**(`burdenedGiftInfo`·`transferType`·`assumedDebtOverride` — info 안): 겸용 엔진이 §159 안분(채무비율 × 증여자 취득가액·개산공제)을 **이미**
+     *   4부분 금액에 반영해 카드 금액으로 넘겼다. 남기면 카드마다 STEP 0.48이 자산 전체 §159를 **다시** 돌려 같은 값을 카드 수만큼 센다
+     *   (실측: 단건 7,848,000 × 1.1 = 8,632,800이 190,014,000 — 카드 4장이 각각 양도차익 320,000,000). 증여세는 카드가 아니라 계약 단위 1회다
+     *   (`aggregated.burdenedGift` — `burdenedGiftWholeInfo`).
+     */
+    burdenedGiftInfo: undefined,
+    transferType: undefined,
     /**
      * · **가업상속공제 의제취득가액**(`familyBusinessInheritance` · §97의2④): 겸용 엔진 미지원(범위 밖)이다. 남기면 카드마다 STEP 0.42가
      *   자산 전체 의제취득가액으로 취득가액을 덮는다(2026-11-11 실측: 주 자산 묶음 +19,410,112 · 지분 60/40 −55,078,862). ④·⑧은 화면 잔재를
@@ -466,6 +479,8 @@ export function buildMixedUseCompanionItems(
     assetId: string;
     assetLabel: string;
     allocatedSalePrice: number;
+    /** 묶음 안 겸용 BG 4부분 명세 수집(자산 id 키) — `bundled-route.ts`가 `aggregated.mixedUseBgDetailsByAsset`에 싣는다. */
+    onMixedBgDetail?: (assetId: string, breakdown: MixedUseBurdenedGiftBreakdown) => void;
     /**
      * §155⑳ 거주주택 · §155④⑤ 합가 상대 쪽 임대 — 선언을 받는 주 자산만 넘긴다(`route.ts`와 같은 `engineInput`).
      * 상가 카드의 주택 취급(§154③ 본문)이 이 판정을 본다. 근거 문장은 서브엔진 `warnings`가 버려지므로 `onNotices`로 돌려준다.
@@ -553,8 +568,11 @@ export function buildMixedUseCompanionItems(
     isFirstTransferredInMerge: g.isFirstTransferredInMerge,
     gracePeriod: g.gracePeriod,
     unavoidableOutsideCapitalHouse: g.unavoidableOutsideCapitalHouse,
-    // 컴패니언 겸용 × 부담부증여는 열지 않는다(MB-6 — ⑫ `refineCompanionMixedUseBurdenedGift`가 입구에서 막는다).
-    burdenedGift: undefined,
+    // 겸용 × 부담부증여 — 함께 양도 묶음 안이면 엔진이 재배분 채무(`assumedDebtOverride`)·구분 불분명·보충적평가 승만 규칙으로 계산한다(MB-19~21 · PR-B).
+    //   `transferType`이 부담부증여인 item만 싣는다 — info는 ④가 컴패니언·주 자산 모두 `buildBurdenedGiftInfo`로 만들고 묶음이면 override를 얹는다.
+    //   증여자의 취득원인(MB-5·8·9·15가 읽는 값)은 아래 `acquisitionCause`(= item의 취득원인) 그대로다 — 단건의 `data.acquisitionCause`와 같은 출처.
+    burdenedGift: companionEngine.transferType === "burdened_gift" ? companionEngine.burdenedGiftInfo : undefined,
+    burdenedGiftInBundle: companionEngine.transferType === "burdened_gift" ? true : undefined,
     acquisitionCause: companionEngine.acquisitionCause,
     // US-07 — 분양권 상속 답도 그 자산의 것이다(컴패니언 item은 상속일 때만 싣는다 — `bundled-split-helpers.ts`). 취득 원인과 함께 있어야 STEP 0.45 게이트가 카드 판정과 갈리지 않는다.
     inheritedPresaleCompletedByHeir: companionEngine.inheritedPresaleCompletedByHeir,
@@ -568,5 +586,6 @@ export function buildMixedUseCompanionItems(
     ctx.mixedUseCtx.rates,
     asset.assetId,
     asset.assetLabel,
+    asset.onMixedBgDetail ? (b) => asset.onMixedBgDetail!(asset.assetId, b) : undefined,
   );
 }

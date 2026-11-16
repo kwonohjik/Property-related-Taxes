@@ -342,10 +342,14 @@ describe("겸용 × 부담부증여 — 차단 가드 MB-1~MB-18", () => {
     const { a, i } = base();
     expect(await issuesOf({ ...a, transferCause: "public_expropriation" }, i)).toContain("MB-5");
   });
-  it("MB-6 지분 < 1 단건은 통과한다 — 공유지분 단건은 PR-A로 열렸다(함께 양도·축 B만 막는다)", async () => {
+  it("MB-6은 축 B(지분 분할 취득)만 막는다 — 공유지분 단건(PR-A)·함께 양도(PR-B)는 통과한다", async () => {
     const { a, i } = base();
     expect(await issuesOf({ ...a, ownershipRatio: 0.5 }, i)).not.toContain("MB-6");
-    expect(await issuesOf({ ...a, ownershipRatio: 0.5, isCompanion: true } as never, i)).toContain("MB-6");
+    expect(await issuesOf({ ...a, ownershipRatio: 0.5, isAxisB: true } as never, i)).toContain("MB-6");
+    // 함께 양도 묶음 안이면 재배분 채무(assumedDebtOverride)가 필요하다(MB-21) — MB-6은 아니다
+    const bundle = await issuesOf({ ...a, isCompanion: true } as never, i);
+    expect(bundle).not.toContain("MB-6");
+    expect(bundle).toContain("MB-21");
   });
   it("(종전 MB-7) 임대 평가가 보충적평가를 이겨도 막지 않는다 — 사용자 결정 H-1(2026-11-16)", async () => {
     const { a } = base();

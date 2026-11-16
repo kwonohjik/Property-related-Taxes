@@ -5,10 +5,23 @@
  * 따라서 «⑧ 통과 ↔ ⑫ 400» 모순이 생기지 않는다.
  */
 import { z } from "zod";
-import { collectMixedBurdenedGiftIssues, MIXED_BG_COMPANION_BLOCK_MESSAGE, type MixedBgSource } from "@/lib/tax-engine/mixed-use-burdened-gift-prepare";
+import { collectMixedBurdenedGiftIssues, type MixedBgSource } from "@/lib/tax-engine/mixed-use-burdened-gift-prepare";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { isMixedInheritedSplitDateStraddle } from "@/lib/tax-engine/mixed-use-inherited-split-date";
 import { MIXED_INHERITED_SPLIT_DATE_MESSAGE } from "@/lib/tax-engine/mixed-use-inherited-split-date";
+
+/**
+ * 묶음이 **지분 분할 취득(축 B — 같은 물건의 지분 여럿)** 인가 — route(`bundled-route.ts`)·⑫ 양도가액 면제(`transfer-tax-schema.ts`)와 **같은 판정**이다:
+ * 명시 플래그(`fractionalSplitBundle`)가 앞서고, 없으면 전 자산이 물건 전체 양도가액(`totalPropertyTransferPrice`)을 가진 모양이다.
+ * 겸용 × 부담부증여는 축 B만 막는다(MB-6 · PR-C까지) — 함께 양도(다른 물건)는 계산한다(PR-B).
+ */
+export function isAxisBBundle(
+  data: { fractionalSplitBundle?: boolean; totalPropertyTransferPrice?: number },
+  companions: ReadonlyArray<{ totalPropertyTransferPrice?: number }>,
+): boolean {
+  if (companions.length === 0) return false;
+  return data.fractionalSplitBundle ?? (data.totalPropertyTransferPrice !== undefined && companions.every((c) => c.totalPropertyTransferPrice !== undefined));
+}
 
 export function refineMixedUseBurdenedGift(
   data: {
@@ -20,6 +33,8 @@ export function refineMixedUseBurdenedGift(
     burdenedGiftInfo?: unknown;
     mixedUse?: unknown;
     companionAssets?: ReadonlyArray<unknown>;
+    fractionalSplitBundle?: boolean;
+    totalPropertyTransferPrice?: number;
   },
   ctx: z.RefinementCtx,
 ): void {
@@ -64,6 +79,7 @@ export function refineMixedUseBurdenedGift(
     burdenedGift: info,
     transferDate: data.transferDate,
     isCompanion: (data.companionAssets?.length ?? 0) > 0,
+    isAxisB: isAxisBBundle(data, (data.companionAssets ?? []) as ReadonlyArray<{ totalPropertyTransferPrice?: number }>),
   });
   for (const issue of issues) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: issue.path, message: issue.message });
@@ -71,21 +87,53 @@ export function refineMixedUseBurdenedGift(
 }
 
 /**
- * 함께 양도(컴패니언) 겸용주택 × 부담부증여 — MB-6. 컴패니언 겸용은 서브엔진이 `mixedUse`만 읽고 채무 귀속(`debtAttribution`)을 싣는 입력 경로가 없어,
- * 열어 두면 §159 안분 없이 일반 양도로 계산된다(오류 없는 오산). 판정은 `transferType`(컴패니언 스키마에도 있다)과 구 표식 두 가지로 한다.
+ * 함께 양도(컴패니언) 겸용주택 × 부담부증여 — 판정은 **엔진 leaf 하나**(`collectMixedBurdenedGiftIssues`)다(PR-B · 종전에는 무조건 막았다).
+ * 묶음 안 겸용은 채무를 신고 단위로 재배분한 값(`assumedDebtOverride`)·구분 불분명·보충적평가 승만 계산한다(MB-19~21). 지분 분할 취득(축 B)은 MB-6이 막는다.
+ * 컴패니언 스키마에는 `transferType`이 있다 — 구 표식(`acquisitionCause=burdened_gift`)은 증여자의 취득원인을 알려 주지 않아 주 자산과 같이 거부한다.
  */
 export function refineCompanionMixedUseBurdenedGift(
-  companions: ReadonlyArray<{ assetKind?: string; transferType?: string; acquisitionCause?: string; burdenedGiftInfo?: unknown }>,
+  companions: ReadonlyArray<{
+    assetKind?: string;
+    transferType?: string;
+    acquisitionCause?: string;
+    ownershipRatio?: number;
+    burdenedGiftInfo?: unknown;
+    mixedUse?: unknown;
+  }>,
   ctx: z.RefinementCtx,
+  opts: { transferDate: string; isAxisB: boolean },
 ): void {
   companions.forEach((c, i) => {
     if (c.assetKind !== "mixed_use_house") return;
-    if (c.transferType !== "burdened_gift" && c.acquisitionCause !== "burdened_gift") return;
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["companionAssets", i, "transferType"],
-      message: MIXED_BG_COMPANION_BLOCK_MESSAGE,
+    if (c.acquisitionCause === "burdened_gift") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["companionAssets", i, "acquisitionCause"],
+        message: "겸용주택 부담부증여는 양도 형태(transferType=burdened_gift)로 보내고, 취득원인에는 증여자의 취득원인을 입력하세요",
+      });
+      return;
+    }
+    if (c.transferType !== "burdened_gift") return;
+    const info = c.burdenedGiftInfo as BurdenedGiftInfo | undefined;
+    // 부담부증여인데 info가 없으면 겸용 BG seam이 켜지지 않아 일반 양도로 조용히 계산된다 — 컴패니언에는 이를 막는 다른 refine이 없다.
+    if (!info) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "burdenedGiftInfo"], message: "부담부증여(transferType=burdened_gift)는 burdenedGiftInfo가 필요합니다" });
+      return;
+    }
+    // `mixedUse` 부재는 ⑩ 겸용 필수 refine이 막는다(중복 메시지 방지).
+    if (!c.mixedUse) return;
+    const issues = collectMixedBurdenedGiftIssues({
+      ...(c.mixedUse as MixedBgSource),
+      ownershipRatio: c.ownershipRatio,
+      acquisitionCause: c.acquisitionCause,
+      burdenedGift: info,
+      transferDate: opts.transferDate,
+      isCompanion: true,
+      isAxisB: opts.isAxisB,
     });
+    for (const issue of issues) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, ...issue.path], message: issue.message });
+    }
   });
 }
 

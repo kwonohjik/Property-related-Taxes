@@ -1,5 +1,7 @@
 /**
- * anchor — 컴패니언(함께 양도) 겸용주택 × 부담부증여: 계산하지 않고 막는다 (MB-6 · ⑫).
+ * anchor — 컴패니언(함께 양도) 겸용주택 × 부담부증여 **막는 조합** (⑫ · PR-B 이후).
+ * 함께 양도 자체는 계산한다(`transfer.route.mixed-use-bg-companion.anchor.test.ts`) — 여기는 축 B(MB-6)·info 누락·구 표식·일반 양도 혼합 묶음만 고정한다.
+ * (종전: 컴패니언 겸용 × 부담부증여 전체를 MB-6으로 막았다.)
  *
  * 컴패니언 겸용은 서브엔진이 `mixedUse`만 읽고 채무 귀속(`debtAttribution`)을 싣는 입력 경로가 없다. 열어 두면 §159 안분 없이
  * 일반 양도로 계산되는 «오류 없는 오산»이 된다 — `refineCompanionMixedUseBurdenedGift`(컴패니언 arm)와 `refineMixedUseBurdenedGift`
@@ -153,13 +155,13 @@ async function post(body: unknown) {
   return { status: res.status, text: JSON.stringify(await res.json()) };
 }
 
-describe("컴패니언 겸용주택 × 부담부증여 — MB-6 차단 (API)", () => {
+describe("컴패니언 겸용주택 × 부담부증여 — 막는 조합(API · PR-B 이후: 축 B·info 누락·구 표식)", () => {
   it("[CB-0] 대조군 — 같은 body(일반 양도)는 200", async () => {
     const r = await pipeline(bundledForm());
     expect(r.status).toBe(200);
   });
 
-  it("[CB-1] 🔴 컴패니언이 겸용이고 transferType=burdened_gift → 400 (컴패니언 arm)", async () => {
+  it("[CB-1] 🔴 컴패니언이 겸용이고 transferType=burdened_gift인데 burdenedGiftInfo가 없으면 → 400 (일반 양도로 조용히 계산되지 않는다)", async () => {
     const r = await pipeline(bundledForm());
     const body = r.body as { companionAssets: Array<Record<string, unknown>> };
     const idx = body.companionAssets.findIndex((c) => c.assetKind === "mixed_use_house");
@@ -167,7 +169,7 @@ describe("컴패니언 겸용주택 × 부담부증여 — MB-6 차단 (API)", (
     body.companionAssets[idx].transferType = "burdened_gift";
     const res = await post(body);
     expect(res.status).toBe(400);
-    expect(res.text).toMatch(/함께 양도\(여러 물건\)·지분 분할 취득과 함께 계산할 수 없습니다/);
+    expect(res.text).toMatch(/burdenedGiftInfo가 필요합니다/);
     expect(res.text).toMatch(new RegExp(`companionAssets.*${idx}|"fieldErrors"`));
   });
 
@@ -179,11 +181,30 @@ describe("컴패니언 겸용주택 × 부담부증여 — MB-6 차단 (API)", (
     expect((await post(body)).status).toBe(400);
   });
 
-  it("[CB-3] 🔴 primary가 겸용 BG이고 컴패니언이 따로 있으면 MB-6 → 400 (primary arm)", async () => {
+  it("[CB-3] 🔴 primary가 겸용 BG이고 컴패니언이 일반 양도(부담부증여 아님)이면 400 — 일반 양도 + 부담부증여 혼합 묶음은 계속 막힌다(PR-B와 무관)", async () => {
     const r = await pipeline(primaryMixedForm());
     const body = { ...(r.body as object), transferType: "burdened_gift", burdenedGiftInfo: BG_INFO };
     const res = await post(body);
     expect(res.status).toBe(400);
-    expect(res.text).toMatch(/함께 양도\(여러 물건\)·지분 분할 취득과 함께 계산할 수 없습니다/);
+  });
+
+  it("[CB-4] 🔴 축 B(지분 분할 취득 — `fractionalSplitBundle`)에서는 컴패니언 겸용 BG를 계속 막는다 → 400 (MB-6 · 컴패니언 arm)", async () => {
+    const r = await pipeline(bundledForm());
+    const body = r.body as { fractionalSplitBundle?: boolean; companionAssets: Array<Record<string, unknown>> };
+    const idx = body.companionAssets.findIndex((c) => c.assetKind === "mixed_use_house");
+    body.fractionalSplitBundle = true;
+    body.companionAssets[idx].transferType = "burdened_gift";
+    body.companionAssets[idx].burdenedGiftInfo = BG_INFO;
+    const res = await post(body);
+    expect(res.status).toBe(400);
+    expect(res.text).toMatch(/지분 분할 취득\(같은 물건의 지분을 여러 번 취득\)과 함께 계산할 수 없습니다/);
+  });
+
+  it("[CB-5] 🔴 축 B에서 primary 겸용 BG도 같다(primary arm)", async () => {
+    const r = await pipeline(primaryMixedForm());
+    const body = { ...(r.body as object), transferType: "burdened_gift", burdenedGiftInfo: BG_INFO, fractionalSplitBundle: true };
+    const res = await post(body);
+    expect(res.status).toBe(400);
+    expect(res.text).toMatch(/지분 분할 취득\(같은 물건의 지분을 여러 번 취득\)과 함께 계산할 수 없습니다/);
   });
 });

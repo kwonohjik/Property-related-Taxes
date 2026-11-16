@@ -17,7 +17,7 @@ import {
   type MixedBgSource,
 } from "@/lib/tax-engine/mixed-use-burdened-gift-prepare";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
-import { buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
+import { apportionCompanionBurdenedGiftDebt, buildBurdenedGiftInfo } from "./transfer-tax-api-burdened-gift";
 import { buildMixedUsePayload } from "./transfer-tax-api-mixed-use";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
@@ -40,13 +40,23 @@ export function mixedBgSourceOfForm(
   asset: AssetForm,
   form: TransferFormData | undefined,
   transferDate: string,
-  opts?: { isCompanion?: boolean },
+  /** `isCompanion` = 묶음(함께 양도·축 B) 안의 겸용 · `isAxisB` = 그중 지분 분할 취득(MB-6). 함께 양도면 ④와 같은 재배분 채무(`assumedDebtOverride`)를 얹는다. */
+  opts?: { isCompanion?: boolean; isAxisB?: boolean },
 ): MixedBgSource | undefined {
   if (!isMixedBurdenedGift(asset)) return undefined;
   const f = form ?? minimalForm(transferDate);
   const mu = buildMixedUsePayload(asset, f);
   if (!mu) return undefined;
-  const info = buildBurdenedGiftInfo(asset, undefined, transferDate) as unknown as BurdenedGiftInfo;
+  let info = buildBurdenedGiftInfo(asset, undefined, transferDate) as unknown as BurdenedGiftInfo;
+  const inBundle = opts?.isCompanion === true && opts.isAxisB !== true;
+  if (inBundle && form) {
+    // ④ `companionBgDebtOverrides`와 같은 함수·같은 입력 — 신고 단위 채무를 자산가액 비율로 재배분한 이 자산의 몫(Q-3 ①).
+    const idx = form.assets.findIndex((a) => a.assetId === asset.assetId);
+    const overrides = idx >= 0
+      ? apportionCompanionBurdenedGiftDebt(form.assets.map((a) => buildBurdenedGiftInfo(a)), form.assets.map((a) => getOwnershipRatio(a)))
+      : undefined;
+    if (overrides) info = { ...info, assumedDebtOverride: overrides[idx] };
+  }
   return {
     ...(mu as unknown as MixedBgSource),
     ownershipRatio: getOwnershipRatio(asset),
@@ -54,6 +64,7 @@ export function mixedBgSourceOfForm(
     burdenedGift: info,
     transferDate,
     isCompanion: opts?.isCompanion === true,
+    isAxisB: opts?.isAxisB === true,
   };
 }
 
@@ -62,7 +73,7 @@ export function analyzeMixedBgOfForm(
   asset: AssetForm,
   form: TransferFormData | undefined,
   transferDate: string,
-  opts?: { isCompanion?: boolean },
+  opts?: { isCompanion?: boolean; isAxisB?: boolean },
 ): MixedBgAnalysis | undefined {
   const src = mixedBgSourceOfForm(asset, form, transferDate, opts);
   return src ? analyzeMixedBurdenedGift(src) : undefined;
@@ -118,17 +129,18 @@ export function mixedBgReportedField(asset: AssetForm): string {
 }
 
 /**
- * 함께 양도(컴패니언)·지분 분할(축 B) 묶음 안의 겸용 부담부증여 차단 문구 — 엔진 MB-6의 문구를 **그대로** 쓴다(복제 금지). 공유지분 단건은 막지 않는다(PR-A).
+ * 지분 분할 취득(축 B) 묶음 안의 겸용 부담부증여 차단 문구 — 엔진 MB-6의 문구를 **그대로** 쓴다(복제 금지). 공유지분 단건(PR-A)·함께 양도(PR-B)는 막지 않는다.
  * 묶음 여부는 폼-전역 사실이라 BG 공통 검증(`validateBurdenedGiftAsset`)이 먼저 알려야 한다 — 그 뒤 검증은 채울 수 없는 칸을 요구할 수 있다.
  */
-export function mixedBgCompanionBlockMessage(): string {
+export function mixedBgAxisBBlockMessage(): string {
   const issues = collectMixedBurdenedGiftIssues({
     burdenedGift: {
       valuationMode: "sangjeungbeop_standard", lendingDepositTotal: 0, mortgageDebtAmount: 0, annualRentTotal: 0,
       landStdPriceAtTransfer: 0, buildingStdPriceAtTransfer: 0, landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: 0,
     } as BurdenedGiftInfo,
     isCompanion: true,
+    isAxisB: true,
     residentialFloorArea: 0, nonResidentialFloorArea: 0, buildingFootprintArea: 0, totalLandArea: 0,
   });
-  return issues.find((i) => i.code === "MB-6")?.message ?? "겸용주택 부담부증여는 함께 양도(여러 물건)·지분 분할 취득과 함께 계산할 수 없습니다.";
+  return issues.find((i) => i.code === "MB-6")?.message ?? "겸용주택 부담부증여는 지분 분할 취득과 함께 계산할 수 없습니다.";
 }

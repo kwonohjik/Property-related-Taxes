@@ -26,9 +26,11 @@ export function addCompanionAcquisitionCauseRefines(
   /** 폼-전역 양도일 (YYYY-MM-DD) — 이월과세 날짜 순서 검증용. */
   transferDate: string,
   ctx: z.RefinementCtx,
+  /** 지분 분할 취득(축 B) 묶음인가 — 겸용 × 부담부증여는 축 B만 막는다(MB-6). `isAxisBBundle`과 같은 판정. */
+  isAxisB: boolean,
 ): void {
-  // 겸용주택 × 부담부증여(MB-6) — 컴패니언 겸용에는 채무 귀속 입력 경로가 없다.
-  refineCompanionMixedUseBurdenedGift(companions, ctx);
+  // 겸용주택 × 부담부증여 — 판정은 엔진 leaf(MB-1~21). 함께 양도는 계산하고 축 B(MB-6)만 막는다.
+  refineCompanionMixedUseBurdenedGift(companions, ctx, { transferDate, isAxisB });
   // 겸용주택 × 이월과세 — 파트 카드 5장이 증여자 취득가액 전액을 각각 받던 경로를 막는다(⑧과 같은 술어·문구).
   refineCompanionMixedUseNoCarryover(companions, ctx);
   // ── 컴패니언별 acquisitionCause 검증 ──
@@ -40,6 +42,8 @@ export function addCompanionAcquisitionCauseRefines(
       c.burdenedGiftInfo &&
       !c.burdenedGiftInfo.rightValuation &&
       !(c.generalBuildingValuation?.landPreDeemedClauseA && c.generalBuildingValuation?.buildingPreDeemedClauseA) &&
+      // 겸용 × 증여자 상속·증여 취득(시가) — 평가액이 취득가액이라 실지취득가액 총액을 읽지 않는다(엔진 MB-8·MB-11이 평가액을 요구 · 주 자산 `mixedDeemed`와 같은 축)
+      !(c.assetKind === "mixed_use_house" && (c.acquisitionCause === "inheritance" || c.acquisitionCause === "gift")) &&
       bgActualAcquisitionMissing(c.burdenedGiftInfo, c.ownershipRatio, transferDate)
     ) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["companionAssets", i, "burdenedGiftInfo", "actualAcquisitionTotal"], message: "부담부증여 실지취득가액 안분은 실지취득가액이 필요합니다" });
