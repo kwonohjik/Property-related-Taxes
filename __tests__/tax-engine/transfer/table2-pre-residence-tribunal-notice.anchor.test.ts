@@ -8,7 +8,8 @@
  * | # | 주장 |
  * |---|---|
  * | H | 동일세대 상속 — 표2 32%(통산) · 심판례 고지 없음(재산세제과-720 정면) |
- * | CA | 이월과세 A — 증여 전 24개월 통산으로 표2 40% · 심판례 고지(공제율 문구는 「증여일 이후 본인 거주」) · 본인 24개월이면 고지 없음 |
+ * | CA | 이월과세 A — 증여 전 24개월 통산으로 표2 40% · 심판례 고지(공제율 문구는 「증여일 이후 본인 거주」 + 사전-2025-법규재산-1126) · 본인 24개월이면 고지 없음 |
+ * | CR | 이월과세 A 공제율 — 보유분은 증여자 취득일부터(§95④ 단서), 거주분은 증여일 이후 본인 거주만(1126) |
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
@@ -88,9 +89,37 @@ describe("CA — 이월과세 시나리오 A: 증여 전 거주 통산 + 심판�
     expect(w).toHaveLength(1);
     expect(w[0]).toContain("증여 전 동일세대로 거주한 24개월");
     expect(w[0]).toContain("증여일 이후 본인 거주만 반영");
+    expect(w[0]).toContain("사전-2025-법규재산-1126");
   });
   it("[짝] 본인 거주 24개월이면 통산이 결론을 가르지 않아 고지 없음 · 입력 0도 고지 없음", () => {
     expect(run(24, 24).w).toHaveLength(0);
     expect(run(0, 0).w).toHaveLength(0);
+  });
+});
+
+describe("CR — 이월과세 A 공제율: 보유분 증여자 취득일 · 거주분 증여일 이후 본인 거주 (사전-2025-법규재산-1126)", () => {
+  // 1126 사실(별도세대 직계존속 증여 · 수증자 증여 전부터 거주)과 같은 축 — 증여 전 거주는 표2 거주기간 공제율에 넣지 않는다.
+  const rate = (prior: number | undefined, own: number) =>
+    calculateTransferTax(
+      baseTransferInput({
+        propertyType: "housing", acquisitionPrice: 0, expenses: 0, useEstimatedAcquisition: false,
+        isOneHousehold: true, householdHousingCount: 1, residencePeriodMonths: own, isRegulatedArea: false,
+        acquisitionCause: "carryover_gift", transferPrice: 2_000_000_000, transferDate: D("2025-06-15"),
+        acquisitionDate: D("2021-03-02"), regionCode: "4143010100",
+        carryoverTaxation: {
+          useEstimatedAcquisition: false, giftTaxAmount: 0, giftRegistryDate: D("2021-03-02"),
+          donorAcquisitionDate: D("2012-01-10"), donorAcquisitionPrice: 300_000_000, giftDateValuation: 900_000_000,
+          donorRelation: "lineal", donorSameHouseholdContinuous: true, donorHouseholdHoldingStartDate: D("2012-01-10"),
+          donorPriorHouseholdResidenceMonths: prior,
+        } as never,
+      }),
+      rates,
+    );
+  it("보유 13년(증여자 취득일부터)분 40% 상한 + 거주분은 증여 후 본인 0·24·48개월 → 0·8·16%p — 증여 전 24개월은 공제율에 안 들어간다", () => {
+    const r0 = rate(24, 0);
+    expect(r0.carryoverTaxationDetail!.adoptedScenario).toBe("A");
+    expect(r0.longTermHoldingRate).toBeCloseTo(0.4, 10);
+    expect(rate(24, 24).longTermHoldingRate).toBeCloseTo(0.48, 10);
+    expect(rate(24, 48).longTermHoldingRate).toBeCloseTo(0.56, 10);
   });
 });
