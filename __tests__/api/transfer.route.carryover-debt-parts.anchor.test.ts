@@ -275,7 +275,7 @@ describe("CDP-5 ⑫ 단독 차단 · 엔진 방어선 · 카드 상한", () => {
     expect(r.fieldErrors).toContain("generalBuildingValuation.buildingCarryoverPart.giftAssumedDebt");
   });
 
-  it("지분 B 감면 + 채무 → ⑧은 막는다(토글 앵커) / ⑫는 지분 valuation에 감면이 없어 못 보지만 엔진이 400으로 막는다(침묵 통과 아님)", async () => {
+  it("지분 B 감면 + 채무 → ⑧은 막는다(토글 앵커) / ⑫도 지분 valuation 필드 위치로 막는다(gb-share-required-refines-parity)", async () => {
     const sA = gbBase({ assetId: "share-a", ownershipNumerator: "60", ownershipDenominator: "100", acquisitionDate: "2009-03-01" });
     const sB = gbBase({ assetId: "share-b", ownershipNumerator: "40", ownershipDenominator: "100", acquisitionDate: "2021-03-01", acquisitionCause: "carryover_gift", carryover: co() });
     const body = await bodyOf(formOf([sA, sB]));
@@ -283,9 +283,9 @@ describe("CDP-5 ⑫ 단독 차단 · 엔진 방어선 · 카드 상한", () => {
     shares[1].reductions = [EXPR_WIRE];
     const r = await post(body);
     expect(r.status).toBe(400);
-    // 엔진 방어선의 400 — 와이어에 없는 경로(`carryoverTaxation.giftAssumedDebt`)로 오지만 사유는 감면이다. V-10 잔여(지분·컴패니언 ⑫ 필드 위치 차단은 별건)
-    expect(r.message).toContain("감면");
-    expect(r.fieldErrors).toEqual(["carryoverTaxation.giftAssumedDebt"]);
+    // ⑫ 필드 위치 차단 — 지분마다 자산-수준 규칙(`refineGbSharesPropertyRequired` → C 감면 × 채무 매입분)을 건다. 종전에는 ⑫ 가 못 보고
+    // 엔진 방어선이 와이어에 없는 경로(`carryoverTaxation.giftAssumedDebt`)로 400 을 냈다(V-10 잔여 「지분 ⑫ 필드 위치 차단은 별건」 해소).
+    expect(r.fieldErrors).toEqual(["generalBuildingShares.1.valuation.landCarryoverPart.giftAssumedDebt"]);
     const b = await bodyOf(formOf([sA, { ...sB, reductions: [EXPR_FORM] as never }]));
     expect(b.generalBuildingShares[1].reductions?.length ?? 0).toBeGreaterThan(0);
     expect(issuesOf(formOf([sA, { ...sB, reductions: [EXPR_FORM] as never }])).map((i) => i.field)).toContain("carryover.giftDebtAssumed");
