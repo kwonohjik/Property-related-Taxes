@@ -30,7 +30,7 @@ export function MixedUseBurdenedGiftDetailCard({ bg, valuationMode }: Props) {
     sel === "mortgage"
       ? "증여가액 = 담보채권액 평가 (상증법 §66 — 임대보증금 + 담보 채권액)"
       : sel === "rental"
-        ? "증여가액 = 임대료 환산 평가 (상증법 §61⑤ — 임대보증금 + 연 임대료 ÷ 12%)"
+        ? "증여가액 = 임대료 환산 평가 (상증법 §61⑤ — 임대보증금 + 연 임대료를 12%로 환산한 금액)"
         : valuationMode === "sangjeungbeop_market"
       ? "증여가액 = 양도시 시가 (상증법 §60②)"
       : valuationMode === "sangjeungbeop_standard"
