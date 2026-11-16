@@ -26,6 +26,8 @@ import { rentalSuccessionOf } from "@/lib/stores/calc-wizard-asset-rental-period
 import { rentalUnitRegApplicationDate } from "./rental-succession";
 import { rentalUnitRegistrationBasis } from "./rental-succession";
 import { rentalUnitUsesDonorRegistration } from "./rental-succession";
+import { successionPeriodOverlap } from "./rental-succession-overlap";
+import { successionOverlapMessage } from "./rental-succession-overlap";
 import {
   isLifetimeLimitEra155_20,
   isAddendumTransitionEffective,
@@ -213,6 +215,10 @@ export function validateRentalHousingException(
       if (donor.rentalRegisteredDate && donor.rentalRegisteredDate.slice(0, 10) < donor.rentalRegistrationDate.slice(0, 10)) {
         return `${unitLabel}: ${who}의 임대사업자 등록일은 ${who} 등록신청일(${donor.rentalRegistrationDate.slice(0, 10)}) 이후여야 합니다.`;
       }
+      // V-9 — 전 임대사업자 개월과 본인 기간이 겹치면 같은 기간을 두 번 센다(⑫ superRefine과 같은 술어).
+      const months = parseFloat(u.decedentRentalMonths ?? "") || 0;
+      const overlap = successionPeriodOverlap(u, donor, months);
+      if (overlap) return `${unitLabel}: ${successionOverlapMessage(who, months, overlap)}`;
     }
 
     // 도출 목 재사용(deriveRentalArticle · 지자체 등록 신청일 기준 — D-1) — UI 조건부 노출·엔진 판정과 3중 동기화.

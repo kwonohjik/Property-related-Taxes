@@ -38,7 +38,7 @@ type Obj = Record<string, unknown>;
 type RheForm = TransferFormData["assets"][number]["rentalHousingException"];
 type UnitForm = RheForm["rentalUnits"][number];
 
-/** 2021-03 수증자 등록 아파트 · 증여자 2019-06 등록 · 합산 60개월(증여자 24 + 본인 36) */
+/** 2021-06 수증자 등록 아파트 · 증여자 2019-06 등록 · 합산 60개월(증여자 24 + 본인 36) */
 function form(unit: Partial<UnitForm> = {}, transferDate = "2024-06-01"): TransferFormData {
   const f = createDefaultTransferFormData();
   f.transferDate = transferDate;
@@ -62,9 +62,9 @@ function form(unit: Partial<UnitForm> = {}, transferDate = "2024-06-01"): Transf
     rentalUnits: [
       {
         ...makeDefaultRentalUnit(),
-        businessRegistrationDate: "2021-03-01",
-        rentalRegistrationDate: "2021-03-01",
-        rentalRegisteredDate: "2021-03-01",
+        businessRegistrationDate: "2021-06-01",
+        rentalRegistrationDate: "2021-06-01",
+        rentalRegisteredDate: "2021-06-01",
         isApartment: true,
         standardPriceAtRentalStart: "300,000,000",
         rentalInputMode: "direct",
@@ -245,7 +245,7 @@ describe("⑫ Zod — 승계 입력 짝·순서 (⑧과 같은 격자)", () => {
   it("Z-3 증여자 신청일이 수증자 신청일보다 뒤 → 400", async () => {
     const r = await single(
       f(),
-      mut((u) => ((u.donorRegistration as Obj).rentalRegistrationDate = "2021-03-02T00:00:00.000Z")),
+      mut((u) => ((u.donorRegistration as Obj).rentalRegistrationDate = "2021-06-02T00:00:00.000Z")),
     );
     expect(r.status).toBe(400);
   });
@@ -255,8 +255,8 @@ describe("⑫ Zod — 승계 입력 짝·순서 (⑧과 같은 격자)", () => {
       f(),
       mut((u) => {
         const donor = u.donorRegistration as Obj;
-        donor.rentalRegistrationDate = "2021-03-01T00:00:00.000Z";
-        donor.rentalRegisteredDate = "2021-03-01T00:00:00.000Z";
+        donor.rentalRegistrationDate = "2021-06-01T00:00:00.000Z";
+        donor.rentalRegisteredDate = "2021-06-01T00:00:00.000Z";
       }),
     );
     expect(r.status).toBe(200);
@@ -283,7 +283,7 @@ describe("⑫ Zod — 승계 입력 짝·순서 (⑧과 같은 격자)", () => {
 
 /**
  * 상속 승계 — 피상속인 등록일(선택)로 목 판정(사용자 결정 2026-11-15 · 서면-2020-법규재산-1959 유추 · ⑳ 직접 해석 없음 → 확인 필요).
- * 수정 전 실측: 피상속인 2019-06 등록 → 상속인 2021-03 등록 아파트는 마목 아파트 제한으로 과세(엔진 probe 137,566,000 vs 0).
+ * 수정 전 실측: 피상속인 2019-06 등록 → 상속인 2021-06 등록 아파트는 마목 아파트 제한으로 과세(엔진 probe 137,566,000 vs 0).
  */
 describe("상속 승계 — 피상속인 등록일로 목 판정 (단건·다건)", () => {
   const INHERIT: Partial<UnitForm> = { ...GIFT, rentalSuccession: "inheritance" };
@@ -295,7 +295,7 @@ describe("상속 승계 — 피상속인 등록일로 목 판정 (단건·다건
   };
   const texts = (r: Verdict) => [...(r.warnings ?? []), ...(r.steps ?? []).map((x) => x.formula)];
 
-  it("I-1 ★ 피상속인 2019-06 → 가목 비과세(0) / 피상속인 날짜 비움 → 상속인 2021-03 마목 아파트 제한으로 과세(승계 없음과 같은 세액)", async () => {
+  it("I-1 ★ 피상속인 2019-06 → 가목 비과세(0) / 피상속인 날짜 비움 → 상속인 2021-06 마목 아파트 제한으로 과세(승계 없음과 같은 세액)", async () => {
     const own = await single(form({ rentalMonths: "60" }));
     const inherit = await single(form(INHERIT));
     const blank = await single(form(BLANK));

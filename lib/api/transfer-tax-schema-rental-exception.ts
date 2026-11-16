@@ -10,6 +10,8 @@
 
 import { z } from "zod";
 import { aptDeadlineExtensionSchema } from "./transfer-tax-schema-apt-deadline";
+import { successionPeriodOverlap } from "@/lib/calc/rental-succession-overlap";
+import { successionOverlapMessage } from "@/lib/calc/rental-succession-overlap";
 
 // ─── ⑨ 장기임대주택 거주주택 비과세 특례 Zod enum (소령 §155⑳) ──────
 
@@ -132,6 +134,7 @@ export const rentalHousingExceptionSchema = z
    * 임대사업 승계 짝·순서(G-3) — ⑧ `transfer-tax-validate-rental-exception.ts`와 같은 격자(UI 통과 ↔ API 400 모순 금지):
    *  · 증여 → donorRegistration 필수 · 상속 → 선택 · 그 밖(승계 없음·포괄양수)에 있으면 400
    *  · 전 임대사업자(증여자·피상속인) 신청일 ≤ 본인 신청일 · 전 임대사업자 등록일 ≥ 그 신청일 (날짜는 UTC 일 단위로 비교)
+   *  · V-9 전 임대사업자 개월(`succession.predecessorMonths`)과 본인 기간이 겹치면 400(`successionPeriodOverlap`)
    */
   .superRefine((v, ctx) => {
     const day = (s: string) => s.slice(0, 10);
@@ -151,6 +154,12 @@ export const rentalHousingExceptionSchema = z
       }
       if (donor.rentalRegisteredDate && day(donor.rentalRegisteredDate) < day(donor.rentalRegistrationDate)) {
         ctx.addIssue({ code: "custom", message: "증여자·피상속인 임대사업자 등록일은 그 신청일 이후여야 합니다.", path: ["rentalUnits", i, "donorRegistration", "rentalRegisteredDate"] });
+      }
+      const months = u.succession?.predecessorMonths ?? 0;
+      const overlap = successionPeriodOverlap(u, donor, months);
+      if (overlap) {
+        const who = isGift ? "증여자" : "피상속인";
+        ctx.addIssue({ code: "custom", message: successionOverlapMessage(who, months, overlap), path: ["rentalUnits", i, "succession", "predecessorMonths"] });
       }
     });
   });
