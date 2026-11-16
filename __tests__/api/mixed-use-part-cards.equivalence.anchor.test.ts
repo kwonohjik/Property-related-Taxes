@@ -115,6 +115,36 @@ describe("겸용 파트 카드 ≡ 단건 겸용", () => {
     expect(agg.totalTax).toBe(Math.floor(single.total.transferTax * 1.1));
   });
 
+  it("EQ-3b 🔑 토지를 건물보다 나중에 취득(2020-03-01 · 건물 1997) + 거주 25년 — 직접 입력: 카드도 min(25, 토지 보유 6년)로 같은 값(역방향 §8)", () => {
+    const asset: MixedUseAssetInput = { ...mixedUseCase14(), landAcquisitionDate: new Date("2020-03-01"), isOneHouseExempt: true };
+    const { single, cards, agg } = compare(asset, companionBase({ isOneHousehold: true, residencePeriodMonths: 25 * 12 }));
+    // 구별력 근거 — 토지 공제율이 거주 25년(40%)이 아니라 토지 보유 6년분(24%)으로 잘려 있어야 이 케이스가 카드 상한을 잰다
+    expect(single.housingPart.partLthd!.land.longTermRate).toBeCloseTo(0.48, 10); // 보유 6년 24% + 거주 6년 24%
+    expect(single.warnings.some((w) => w.includes("토지 보유기간 중 거주만 셉니다"))).toBe(true);
+    expect(cards.some((c) => c.landHoldingResidenceMonths !== undefined)).toBe(false);
+    // 카드 경로도 같은 확인 필요 고지를 낸다(집계 warnings)
+    expect((agg.warnings ?? []).filter((w: string) => w.includes("토지 보유기간 중 거주만 셉니다"))).toHaveLength(1);
+    expect(agg.taxBase).toBe(single.total.taxBase);
+    expect(agg.totalTax).toBe(Math.floor(single.total.transferTax * 1.1));
+  });
+
+  it("EQ-3c 🔑 같은 시료 · 구간 입력 — ④ 겹침 2년(landHoldingResidencePeriodYears)을 카드도 같은 값으로 받는다", () => {
+    const asset: MixedUseAssetInput = { ...mixedUseCase14(), landAcquisitionDate: new Date("2020-03-01"), isOneHouseExempt: true, landHoldingResidencePeriodYears: 2 };
+    const { single, cards, agg } = compare(asset, companionBase({ isOneHousehold: true, residencePeriodMonths: 25 * 12 }));
+    expect(single.housingPart.partLthd!.land.longTermRate).toBeCloseTo(0.32, 10); // 보유 6년 24% + 거주 2년 8%
+    expect(single.warnings.some((w) => w.includes("토지 보유기간 중 거주만 셉니다"))).toBe(false);
+    expect(cards.find((c) => c.propertyId.startsWith("mu-house") && c.propertyId.includes("land"))?.landHoldingResidenceMonths).toBe(24);
+    expect(agg.taxBase).toBe(single.total.taxBase);
+    expect(agg.totalTax).toBe(Math.floor(single.total.transferTax * 1.1));
+  });
+
+  it("EQ-3d 카드: 직접 입력이 보유 개월을 넘어도(77 → 75개월) 연수가 같으면(둘 다 6년) 공제율이 같아 고지하지 않는다", () => {
+    const asset: MixedUseAssetInput = { ...mixedUseCase14(), landAcquisitionDate: new Date("2020-03-01"), isOneHouseExempt: true, residencePeriodYears: 6 };
+    const { single, agg } = compare(asset, companionBase({ isOneHousehold: true, residencePeriodMonths: 77 }));
+    expect(single.warnings.some((w) => w.includes("토지 보유기간 중 거주만 셉니다"))).toBe(false);
+    expect((agg.warnings ?? []).filter((w: string) => w.includes("토지 보유기간 중 거주만 셉니다"))).toHaveLength(0);
+  });
+
   it("EQ-4 배율초과 비사업용토지 — §104⑤ 후단 별개 자산", () => {
     const asset: MixedUseAssetInput = { ...mixedUseExcessLand(), isOneHouseExempt: false };
     const { single, cards, agg } = compare(asset, companionBase());

@@ -18,6 +18,7 @@
 import { completedMonthsInclusive } from "./civil-period";
 import { parseISO } from "./utc-date";
 import type { SplitPartCauseFacts, SplitPartCauseIssue } from "./transfer-split-part-cause";
+import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 
 export const LAND_HOLDING_RESIDENCE_MONTHS_FIELD = "landHoldingResidenceMonths" as const;
 
@@ -139,4 +140,59 @@ export function collectAppurtenantCardHoldingResidenceIssues(f: {
   if (!Number.isInteger(months) || months < 0) return at(LAND_HOLDING_RESIDENCE_INVALID_MESSAGE);
   if (f.residencePeriodMonths !== undefined && months > f.residencePeriodMonths) return at(LAND_HOLDING_RESIDENCE_EXCEEDS_MESSAGE);
   return [];
+}
+
+export const LAND_HOLDING_RESIDENCE_MIXED_GATE_MESSAGE =
+  "토지 보유기간 중 거주 연수(mixedUse.landHoldingResidencePeriodYears)는 겸용주택의 토지를 건물보다 나중에 취득한 경우에만 입력할 수 있습니다 — 조용히 버려지지 않도록 막습니다";
+export const LAND_HOLDING_RESIDENCE_MIXED_EXCEEDS_MESSAGE =
+  "토지 보유기간 중 거주 연수(mixedUse.landHoldingResidencePeriodYears)는 거주 연수 합계(residencePeriodYears)를 넘을 수 없습니다";
+
+/**
+ * 겸용주택 — 거주를 정수 **연수**로만 받는 서브객체용 검증(⑫·엔진 공유). 값은 ④가 구간 겹침 개월을 `floor(÷12)`한 연수다.
+ * 게이트(토지가 건물보다 나중) → 0 이상 정수 → 거주 연수 합계 이하 순으로 첫 위반 하나.
+ */
+export function mixedLandHoldingResidenceIssue(a: {
+  landHoldingResidencePeriodYears?: number;
+  residencePeriodYears?: number;
+  landAcquisitionDate?: Date | string;
+  buildingAcquisitionDate?: Date | string;
+}): string | undefined {
+  const y = a.landHoldingResidencePeriodYears;
+  if (y === undefined) return undefined;
+  if (!landAcquiredAfterBuilding({ landAcquisitionDate: a.landAcquisitionDate, buildingAcquisitionDate: a.buildingAcquisitionDate })) return LAND_HOLDING_RESIDENCE_MIXED_GATE_MESSAGE;
+  if (!Number.isInteger(y) || y < 0) return LAND_HOLDING_RESIDENCE_INVALID_MESSAGE;
+  if (a.residencePeriodYears !== undefined && y > a.residencePeriodYears) return LAND_HOLDING_RESIDENCE_MIXED_EXCEEDS_MESSAGE;
+  return undefined;
+}
+
+/**
+ * 겸용주택 주택분 토지의 거주 연수(공제율의 거주분 기준) — 분리취득과 같은 `resolveLandHoldingResidence`를 연수×12로 부른다
+ * (floor(min(연수×12, 보유 개월) ÷ 12) = min(연수, 보유 연수)라 직접 입력은 연수 단위로 같은 값이다). 검증 위반이면 throw(엔진 입구).
+ * `cap`: 직접 입력 상한이 걸렸을 때의 사실 — 공제율이 실제로 바뀌었는지는 호출부(공제율 함수)가 가린다.
+ */
+export function resolveMixedLandHoldingResidence(
+  asset: {
+    residencePeriodYears: number;
+    landHoldingResidencePeriodYears?: number;
+    landAcquisitionDate: Date | string;
+    buildingAcquisitionDate: Date | string;
+  },
+  transferDate: Date | string,
+): { years: number; cap?: { directMonths: number; cappedMonths: number; landHoldingMonths: number } } {
+  const issue = mixedLandHoldingResidenceIssue(asset);
+  if (issue) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, issue, { field: "landHoldingResidencePeriodYears" });
+  const res = resolveLandHoldingResidence(
+    {
+      residencePeriodMonths: asset.residencePeriodYears * 12,
+      landHoldingResidenceMonths: asset.landHoldingResidencePeriodYears === undefined ? undefined : asset.landHoldingResidencePeriodYears * 12,
+      landAcquisitionDate: asset.landAcquisitionDate,
+      acquisitionDate: asset.buildingAcquisitionDate,
+      transferDate,
+    },
+    "both",
+  );
+  return {
+    years: Math.floor(res.months / 12),
+    ...(res.capped ? { cap: { directMonths: asset.residencePeriodYears * 12, cappedMonths: res.months, landHoldingMonths: res.landHoldingMonths! } } : {}),
+  };
 }

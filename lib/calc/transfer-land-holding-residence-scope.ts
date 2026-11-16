@@ -78,3 +78,17 @@ export function buildAppurtenantCardHoldingResidencePayload(
   const start = conv && conv > card.acquisitionDate ? conv : card.acquisitionDate;
   return { landHoldingResidenceMonths: sumResidenceMonthsFrom(primary.residencePeriods ?? [], start) };
 }
+
+/**
+ * ④ 겸용주택 — 거주를 정수 연수로만 받는 서브객체(`mixedUse`)용. 토지를 건물보다 나중에 취득했고 구간 입력이면 [토지 취득일, 양도일]과의 겹침 개월을 `floor(÷12)`한 연수를 싣는다.
+ * 직접 입력이면 싣지 않는다(엔진이 min(거주 연수, 토지 보유 연수)로 상한하고 고지한다). 토지·건물 취득일은 ④가 서브객체에 싣는 값과 같은 식이다
+ * (`landAcquisitionDate || acquisitionDate` · `acquisitionDate`).
+ */
+export function buildMixedLandHoldingResidencePayload(
+  primary: Pick<AssetForm, "residenceInputMode" | "residencePeriods" | "landAcquisitionDate" | "acquisitionDate">,
+): { landHoldingResidencePeriodYears?: number } {
+  if (primary.residenceInputMode !== "interval") return {};
+  const land = primary.landAcquisitionDate || primary.acquisitionDate;
+  if (!landAcquiredAfterBuilding({ landAcquisitionDate: land, buildingAcquisitionDate: primary.acquisitionDate })) return {};
+  return { landHoldingResidencePeriodYears: Math.floor(sumResidenceMonthsFrom(primary.residencePeriods ?? [], land) / 12) };
+}

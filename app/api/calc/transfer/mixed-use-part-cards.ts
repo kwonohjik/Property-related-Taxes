@@ -319,6 +319,8 @@ export function buildMixedUsePartCards(
         // 기본통칙 95-0…1 — 카드는 취득일이 토지 취득일뿐이라 «주택 부수토지로서의 보유기간»(건물 보유기간)을 모른다.
         //   겸용 엔진(`buildHousingPart`)과 같은 표1·표2 비교를 단건 엔진이 하도록 건물 취득일을 싣는다.
         appurtenantHouseAcquisitionDate: bldAcqDate,
+        // 토지를 건물보다 나중에 취득한 겸용 × 구간 입력 — 겸용 엔진이 받은 토지 보유기간 중 거주 연수를 카드에도 싣는다(없으면 카드 엔진이 직접 입력 상한을 건다 — 같은 규칙).
+        ...(mixedAsset.landHoldingResidencePeriodYears !== undefined ? { landHoldingResidenceMonths: mixedAsset.landHoldingResidencePeriodYears * 12 } : {}),
       },
     ),
     card(

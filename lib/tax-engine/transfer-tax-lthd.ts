@@ -565,7 +565,19 @@ export function calcLongTermHoldingDeduction(
           transferDate: input.transferDate,
         })
       : undefined;
-  const ownYearsRate = rateForYears(holding.years);
+  // 겸용 파트 카드의 주택 부수토지를 주택보다 **나중에** 취득했으면 거주분의 거주는 토지 보유기간 중 거주다 — 겸용 엔진(`buildHousingPart`)과 같은 leaf.
+  //   카드 취득일 = 토지 취득일, `appurtenantHouseAcquisitionDate` = 건물 취득일. 구간 입력이면 겸용 엔진이 받은 연수를 개월로 실어 온다(`landHoldingResidenceMonths`).
+  const cardLandRes =
+    appurtenantHouseDate && input.propertyType === "housing"
+      ? resolveLandHoldingResidence({ ...input, acquisitionDate: appurtenantHouseDate, landAcquisitionDate: input.acquisitionDate }, "both")
+      : undefined;
+  const ownYearsRate = cardLandRes?.applies
+    ? calcLongTermRate(holding.years, Math.floor(cardLandRes.months / 12), useTable2, false, input.transferDate)
+    : rateForYears(holding.years);
+  const cardLandCap =
+    cardLandRes?.capped && ownYearsRate !== rateForYears(holding.years)
+      ? { directMonths: input.residencePeriodMonths, cappedMonths: cardLandRes.months, landHoldingMonths: cardLandRes.landHoldingMonths! }
+      : undefined;
   // 공제율만 바꾸고 아래 분기(L-2' §97의3·§97의4)는 그대로 탄다 — 그 분기들의 기본 공제율도 통칙 값이다.
   const rate = cardAppurtenant ? cardAppurtenant.rate : ownYearsRate;
   // 표시 echo(일반 반환에만) — 보유기간 표시 축을 공제율을 만든 축과 맞추고(L-1b와 같은 규칙 — 동률은 표1), 값이 달라졌으면 고지 입력을 싣는다.
@@ -669,7 +681,7 @@ export function calcLongTermHoldingDeduction(
 
   if (rate > 0) {
     const deduction = applyLthdRate(taxableGain, rate);
-    return { deduction, rate, holdingPeriod, rental97LthdDetail, ...cardEcho };
+    return { deduction, rate, holdingPeriod, rental97LthdDetail, ...cardEcho, ...(cardLandCap ? { landHoldingResidenceCap: cardLandCap } : {}) };
   }
 
   return { deduction: 0, rate: 0, holdingPeriod, rental97LthdDetail };
