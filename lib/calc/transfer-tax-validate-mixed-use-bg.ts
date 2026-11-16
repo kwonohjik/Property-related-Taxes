@@ -11,7 +11,8 @@
  *  · 폼 → 엔진 입력은 ④와 같은 함수로 만들고(`burdened-gift-mixed-use-preview.ts`),
  *  · 이슈의 `path`를 화면 입력칸(`data-field`)으로 옮기며,
  *  · 사용자에게 더 구체적인 귀속 입력 문구(모드 미선택·분할 합 불일치)를 엔진의 일반 MB-13 앞에 둔다.
- * 순서는 화면 순서 = 계산 순서다: 차단 조합 → 필수 입력(MB-11) → 귀속(MB-13) → 구분 감정평가(MB-17) → 초과부담부(MB-10) → 부분 초과(MB-14).
+ * 순서는 화면 순서 = 계산 순서다: 차단 조합 → 필수 입력(MB-11) → 귀속(MB-13) → 구분 감정평가(MB-17) → 초과부담부(MB-10).
+ * (부분 초과 차단 MB-14는 사용자 결정(2026-11-16 — 부분 증여가액의 하한 = 그 부분 채무액)으로 없어졌다.)
  * (담보·임대 승 차단 MB-7은 사용자 결정 H-1(2026-11-16)로 없어졌다 — 엔진이 그 경우를 계산한다.)
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -19,7 +20,7 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { MixedBgIssue } from "@/lib/tax-engine/mixed-use-burdened-gift-prepare";
 import { analyzeMixedBgOfForm, mixedBgIssueField } from "./burdened-gift-mixed-use-preview";
 import { mixedBgReportedField } from "./burdened-gift-mixed-use-preview";
-import { mixedBgDebtAttribution, mixedBgDebtAttrMessage, mixedBgOverflowField } from "./burdened-gift-mixed-use-scope";
+import { mixedBgDebtAttribution, mixedBgDebtAttrMessage } from "./burdened-gift-mixed-use-scope";
 import { fieldError } from "./transfer-tax-validate-field";
 import { validateMixedUseDatesAndAreas } from "./transfer-tax-validate-mixed-use-asset";
 import { mixedUsePhdFieldError } from "./transfer-tax-validate-mixed-use-asset";
@@ -83,10 +84,6 @@ export function validateMixedUseBurdenedGift(
   // 6) 초과부담부(MB-10)
   const mb10 = firstIssue(issues, (i) => i.code === "MB-10");
   if (mb10) return fail(mb10, "bgLendingDepositTotal");
-
-  // 7) 부분 초과부담부(MB-14) — C_h는 4부분·귀속이 모두 있어야 계산되므로 맨 끝
-  const mb14 = firstIssue(issues, (i) => i.code === "MB-14");
-  if (mb14) return fail(mb14, mixedBgOverflowField(asset, mb14.part ?? "housing"));
 
   return null;
 }

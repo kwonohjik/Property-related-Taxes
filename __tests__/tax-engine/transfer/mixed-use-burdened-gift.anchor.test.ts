@@ -287,14 +287,24 @@ describe("겸용 × 부담부증여 — 채무 귀속 anchor (설계서 §4.3)",
     expect(r.burdenedGift?.acquisitionMethodUsed).toBe("actual");
   });
 
-  it("[M-14] 부분 초과부담부: 상가 귀속 5억 > C_c 2.5억 → MB-14", () => {
+  it("[M-14] 상가 귀속 5억 > 기준시가 몫 C_c 2.5억 → 상가 증여가액 = 5억(채무액 하한), 주택 = 10억 − 5억 (종전 MB-14 · 사용자 결정 2026-11-16)", () => {
     const info = bg(F2, { marketValueAtTransfer: 1.0e9, mortgageDebtAmount: 500e6, actualAcquisitionTotal: 500e6, debtAttribution: { housing: 0, commercial: 500e6, unallocated: 0 } });
-    expect(() => run(asset(F2, one), info)).toThrow(/상가/);
+    const r = run(asset(F2, one), info);
+    expect(r.burdenedGift?.debtAttribution).toMatchObject({ housingGiftValue: 500_000_000, commercialGiftValue: 500_000_000, housingDebt: 0, commercialDebt: 500_000_000, commercialRatio: 1 });
+    // 상가 5억 = 토지 250,000,000 : 건물 50,000,000 비례 → floor(5억×5/6) 416,666,666 + 83,333,334
+    expect(r.commercialPart?.landTransferPrice).toBe(416_666_666);
+    expect(r.commercialPart?.buildingTransferPrice).toBe(83_333_334);
+    expect(r.warnings.some((w) => w.includes("상가분 증여가액을 그 채무액으로 보고"))).toBe(true);
   });
 
-  it("[M-15] 불분명 안분 후 초과: 주택 귀속 749,999,999 + 불분명 1억 → MB-14(자동 재배분 없음)", () => {
+  it("[M-15] 불분명 안분 후 초과: 주택 749,999,999 + 불분명 몫 75,000,000 = 824,999,999 > 7.5억 → 주택 증여가액 = 824,999,999 · 상가 = 175,000,001 (불분명 몫은 다시 나누지 않는다)", () => {
     const info = bg(F2, { marketValueAtTransfer: 1.0e9, mortgageDebtAmount: 849_999_999, actualAcquisitionTotal: 500e6, debtAttribution: { housing: 749_999_999, commercial: 0, unallocated: 100e6 } });
-    expect(() => run(asset(F2, one), info)).toThrow(/주택/);
+    const r = run(asset(F2, one), info);
+    // 불분명 1억의 주택 몫 = floor(1억 × 7.5억/10억) = 75,000,000 (하한 적용 전 비율)
+    expect(r.burdenedGift?.debtAttribution).toMatchObject({
+      unallocatedToHousing: 75_000_000, unallocatedToCommercial: 25_000_000,
+      housingGiftValue: 824_999_999, commercialGiftValue: 175_000_001, housingDebt: 824_999_999, commercialDebt: 25_000_000, housingRatio: 1,
+    });
   });
 });
 
@@ -371,10 +381,10 @@ describe("겸용 × 부담부증여 — 차단 가드 MB-1~MB-18", () => {
     expect(await issuesOf(a, bg(F1, { debtAttribution: undefined }))).toContain("MB-13");
     expect(await issuesOf(a, bg(F1, { debtAttribution: { housing: 0, commercial: 0, unallocated: 599_999_999 } }))).toContain("MB-13");
   });
-  it("MB-14 부분 초과부담부", async () => {
+  it("(종전 MB-14) 부분 초과부담부도 막지 않는다 — 부분 증여가액의 하한 = 그 부분 채무액(사용자 결정 2026-11-16)", async () => {
     const { a } = base();
     const i = bg(F1, { mortgageDebtAmount: 800e6, debtAttribution: { housing: 0, commercial: 800e6, unallocated: 0 } });
-    expect(await issuesOf(a, i)).toContain("MB-14");
+    expect(await issuesOf(a, i)).toEqual([]);
   });
   it("MB-15 신축 취득", async () => {
     const { a, i } = base();

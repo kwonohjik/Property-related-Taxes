@@ -244,10 +244,19 @@ describe("겸용 × 부담부증여 — 담보·임대 승 (사용자 결정 H-1
     expect(res!.warnings.some((w) => w.includes("2023.2.28. 개정으로 추가"))).toBe(true);
   });
 
-  it("[MN-7] 남은 한계 — 임대 승에서 귀속 채무가 기준시가 안분 몫을 넘으면 MB-14로 막는다(결정 ④는 담보 승만)", async () => {
-    // 임대 환산 = 7억 + 0.72억÷12% = 13억 → 상가 6.5억 < 상가 보증금 7억
-    const { issues, status } = await calc({ ...BG_ON, ...STD, bgLendingDepositTotal: "700000000", bgDepositAttribution: "commercial", bgMortgageDebtAmount: "0", bgAnnualRentTotal: "72000000" });
-    expect(issues[0]?.field).toBe("bgDepositAttribution");
-    expect(status).toBe(400);
+  it("[MN-7] 임대 승 · 상가 보증금 7억 > 상가 기준시가 몫 6.5억 → 상가 증여가액 = 7억(보증금 하한), 주택 = 13억 − 7억 = 6억 (종전 MB-14 · 사용자 결정 2026-11-16)", async () => {
+    // 임대 환산 = 7억 + 0.72억 ÷ 12% = 13억. 주택 채무 0 → 주택 양도 없음.
+    const { issues, status, res } = await calc({ ...BG_ON, ...STD, bgLendingDepositTotal: "700000000", bgDepositAttribution: "commercial", bgMortgageDebtAmount: "0", bgAnnualRentTotal: "72000000" });
+    expect(issues).toEqual([]);
+    expect(status).toBe(200);
+    const b = res!.burdenedGift;
+    expect(b.sangjeungbeopValuation).toMatchObject({ selectedMode: "rental", max: 1_300_000_000 });
+    expect(b.debtAttribution).toMatchObject({ housingGiftValue: 600_000_000, commercialGiftValue: 700_000_000, housingDebt: 0, commercialDebt: 700_000_000, commercialRatio: 1 });
+    // 상가 7억 = floor(7억×5/6) 583,333,333 + 116,666,667 · 취득 = 취득시 기준시가 × 1
+    expect(parts(b).commercialLand).toEqual([583_333_333, 250_000_000, 7_500_000]);
+    expect(parts(b).commercialBuilding).toEqual([116_666_667, 50_000_000, 1_500_000]);
+    expect(parts(b).housingLand[0]).toBe(0);
+    expect(res!.total.determinedTax).toBe(89_059_200);
+    expect(res!.warnings.some((w) => w.includes("상가분 증여가액을 그 채무액으로 보고"))).toBe(true);
   });
 });

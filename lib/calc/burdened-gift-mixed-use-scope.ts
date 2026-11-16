@@ -195,21 +195,6 @@ export function mixedBgDebtAttrMessage(issue: MixedBgDebtAttrIssue): string {
   return `${label} 귀속 합계(주택 ${s.housing.toLocaleString("ko-KR")} + 상가 ${s.commercial.toLocaleString("ko-KR")} + 구분 불분명 ${s.unallocated.toLocaleString("ko-KR")} = ${won(sum)})가 ${label} 총액(${won(issue.total)})과 다릅니다 — ${gap}`;
 }
 
-/**
- * MB-14(부분 초과) 점프 대상 — 초과한 쪽에 **0이 아닌 귀속이 들어간 항목** 중 담보차입금 → 임대보증금 순으로 첫 번째의 모드 칸.
- * 구분 불분명 몫은 두 쪽 모두에 들어가므로 «귀속이 들어갔다»에 포함한다. 없으면 임대보증금 모드 칸.
- */
-export function mixedBgOverflowField(a: AssetForm, part: "housing" | "commercial"): MixedBgDebtAttrIssue["field"] {
-  for (const item of ["mortgage", "deposit"] as const) {
-    const it = itemOf(a, item);
-    if (it.total <= 0) continue;
-    const contributes =
-      it.mode === part || it.mode === "unallocated" || (it.mode === "split" && (it.split[part] > 0 || it.split.unallocated > 0));
-    if (contributes) return it.modeField;
-  }
-  return "bgDepositAttribution";
-}
-
 // ───────────────────────── 구분 감정평가 선언 (G-13) ─────────────────────────
 
 /**
