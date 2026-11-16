@@ -173,4 +173,4 @@
 - ③ 증여 §164 섹션(`GiftLandStdPriceSection` · `GiftHouseStdPriceSection`): 부담부증여 단서 구간(술어 `"land"` · `"house"`)이면 띄우지 않는다 — 「부담부증여」 카드 한 곳. 주택은 최초 공시일로 열린 구간의 주택 구분 선택만 남긴다. 지분 카드 ③은 병합된 양도 형태 · 부담부증여 값(`bgShareCardJudgmentFields`)으로 같은 판정을 한다.
 - 세액: 엔진 · ④ 불변. 화면에서 상속 지분 ② 칸을 채울 수 있게 됐을 뿐이다(채우면 위 오라클 값).
 - 검증: route anchor `transfer.route.bg-163-9-proviso-share-companion.anchor.test.ts`(10) · 컴포넌트 anchor `bg-163-9-proviso-share-card.anchor.test.tsx`(10 · 세 변경 각각 되돌리면 실패) · E2E BP-5(지분 카드 칸 · 137,778,704 · 수정 전 코드에서 실패).
-- 남은 것: 상가 축 B에서 페이지 전체 cb 칸 3개 중복 표시는 수정 전부터 같다(자산 1 카드 · 지분 카드가 각자 가진 칸 — 범위 밖 · 미조사).
+- 남은 것: 상가 축 B에서 페이지 전체 cb 칸 3개 중복 표시는 수정 전부터 같다 → `commercial-share-acq-side-fields.plan.md`(2026-11-16)에서 조사 · 세액 결함 2건과 함께 수정.

@@ -65,6 +65,11 @@ interface Props {
   onChange: (patch: Partial<AssetForm>) => void;
   /** 양도일 (공시지가 기준연도 자동 계산용) */
   transferDate?: string;
+  /**
+   * 축 B 둘째 이후 지분 카드 — 양도시 가격(호별고시가 · 개별공시지가 · 건물 기준시가)은 물건 단위라 자산 1 값을 쓴다(`commercial-share-object-fields.ts`).
+   * 이 카드에서는 그 칸을 숨기고 취득 쪽 칸만 받는다(종전에는 칸이 보였지만 입력이 계산에 쓰이지 않았다).
+   */
+  shareCard?: boolean;
 }
 
 const CB_ERA_OPTIONS = [
@@ -80,7 +85,7 @@ const CB_ERA_OPTIONS = [
   },
 ];
 
-export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props) {
+export function CommercialBuildingBlock({ asset, onChange, transferDate, shareCard = false }: Props) {
   // 건물 기준시가 모달 prefill — 자산 카드 소재지 재사용(이중입력 방지)
   const stdPriceAddress = stdPriceAddressOf(asset);
   const isOn = asset.useEstimatedAcquisition && asset.assetKind === "commercial_building";
@@ -217,6 +222,11 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
           </p>
         </div>
 
+        {shareCard && (
+          <p data-testid="cb-share-object-fields-note" className="text-caption text-muted-foreground">
+            양도시 가격(호별고시가 · 개별공시지가 · 건물 기준시가)은 같은 물건이라 자산 1에서 입력한 값을 씁니다. 이 지분 카드에는 이 지분을 취득할 당시의 칸만 입력하세요.
+          </p>
+        )}
         {/* 면적 3필드(전용·공유·대지)는 ① 기본정보로 이전했다 (2026-08-04).
             취득원인 무관 단일 입력 — `asset-sections/AssetAreaCommercial.tsx`.
             ⚠️ `totalFloorArea` 계산은 유지한다 — 아래 기준시가 모달 prefill이 소비한다. */}
@@ -233,7 +243,8 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 variant="estimated"
               />
             </div>
-            {/* 양도시 — emerald */}
+            {/* 양도시 — emerald (지분 카드는 자산 1 값 · 숨김) */}
+            {!shareCard && (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2 dark:bg-emerald-950/40">
               <FieldCard
                 label="양도시 ㎡당 호별고시가"
@@ -248,6 +259,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 />
               </FieldCard>
             </div>
+            )}
             {/* 최초고시(2005) 또는 취득시 — amber */}
             <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-2 dark:bg-amber-950/40">
               <FieldCard
@@ -348,7 +360,8 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
               </div>
             )}
 
-            {/* 양도시 — emerald (공통 필수) */}
+            {/* 양도시 — emerald (공통 필수 · 지분 카드는 자산 1 값 · 숨김) */}
+            {!shareCard && (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2 dark:bg-emerald-950/40">
               <p className="mb-1 text-caption font-medium text-emerald-700 dark:text-emerald-300">양도시</p>
               <LandPriceLookupField
@@ -361,6 +374,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 jibun={asset.addressJibun || undefined}
               />
             </div>
+            )}
           </ToneCard>
         )}
 
@@ -453,7 +467,8 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 onApply={(v) => onChange({ cbBuildingStdPriceAtFirst: String(v) })}
               />
             </div>
-            {/* 양도시 — emerald */}
+            {/* 양도시 — emerald (지분 카드는 자산 1 값 · 숨김) */}
+            {!shareCard && (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-2 dark:bg-emerald-950/40">
               <FieldCard
                 label="양도시 건물 기준시가"
@@ -471,6 +486,7 @@ export function CommercialBuildingBlock({ asset, onChange, transferDate }: Props
                 <BuildingStdPriceModalButton lockedTaxType="transfer" initialAddress={stdPriceAddress} snapshotKey={`bsp-${asset.assetId}-cb-transfer`} applyTimePoint="transfer" hideFloorAreaInput prefill={{ floorArea: totalFloorArea != null ? String(totalFloorArea) : undefined, landAreaM2: asset.cbLandArea, acquisitionDate: asset.acquisitionDate, transferDate }} onApply={(v) => onChange({ cbBuildingStdPriceAtTransfer: String(v) })} />
               </div>
             </div>
+            )}
           </ToneCard>
         )}
 

@@ -318,6 +318,7 @@ export function AssetSectionAcquisition({
           asset={asset}
           onChange={onChange}
           transferDate={transferDate}
+          shareCard={splitMode === "fractional" && !isFirst}
         />
       )}
 
@@ -329,8 +330,14 @@ export function AssetSectionAcquisition({
 
       {/* 상업용건물 부수토지 초과분 비사업용 판정 (지방세령 §101①2호·§101②).
           위 환산 블록과 달리 **취득방법 무관**(상속 포함) — 환산 게이트 밖에 마운트한다. */}
-      {asset.assetKind === "commercial_building" && (
+      {/* 축 B 둘째 이후 지분 — 부수토지 판정 칸(무허가 · 전체 대지 · 바닥면적 · 용도지역 · 지정지역)은 물건 단위라 자산 1 값을 쓴다(④ · ⑧ 병합). */}
+      {asset.assetKind === "commercial_building" && !(splitMode === "fractional" && !isFirst) && (
         <CommercialAppurtenantLandSection asset={asset} onChange={onChange} transferDate={transferDate} />
+      )}
+      {asset.assetKind === "commercial_building" && splitMode === "fractional" && !isFirst && (
+        <p data-testid="cb-share-appurtenant-note" className="text-caption text-muted-foreground">
+          부수토지 판정(집합건물 전체 대지 · 바닥면적 · 용도지역)은 같은 물건이라 자산 1에서 입력한 값을 씁니다.
+        </p>
       )}
 
       {/* 일반건물(토지+건물 일괄) — 취득방법 무관 항상 마운트 (2026-05-10 실거래가 모드 지원) */}

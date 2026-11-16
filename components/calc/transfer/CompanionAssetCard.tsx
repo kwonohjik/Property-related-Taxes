@@ -27,6 +27,7 @@ import { useUnifiedRateBadge } from "./CompanionAssetCardNewConstruction";
 import { getAssetDateOrderError } from "@/lib/calc/transfer-tax-validate-asset";
 import { soleSplitRightJudgmentFacts } from "@/lib/calc/sole-split-right-judgment-facts";
 import { BurdenedGiftTrancheBasisBlock } from "./BurdenedGiftTrancheBasisBlock";
+import { commercialShareObjectFieldsOf } from "@/lib/calc/commercial-share-object-fields";
 import type { BundledSaleMode } from "./CompanionSaleModeBlock";
 import { ASSET_KIND_LABELS } from "./asset-labels";
 import { summarizeAssetSections } from "./asset-section-summary";
@@ -192,6 +193,9 @@ export function CompanionAssetCard({
             ...bgShareCardJudgmentFields(asset, primaryAsset),
             // 승계 입주권 지분 — 담보·임대 승(괄호 열거 시기)이면 이 카드도 취득시 기준시가 2칸을 입력한다(X-3). 승자·시기는 첫 카드 병합값으로 판정한다.
             ...bgRtmiShareJudgmentFields(asset, primaryAsset),
+            // 상가 지분 — 물건 단위 칸(면적 · 용도지역 · 양도시 가격)은 자산 1 값이다(④ · ⑧ 병합과 같은 목록). 지분 카드는 그 칸을 입력받지 않고,
+            // 미리보기 · 연면적 표시만 이 값으로 계산한다. 취득 쪽 칸은 이 카드 값 그대로다(`commercial-share-object-fields.ts`).
+            ...(primaryAsset.assetKind === "commercial_building" ? commercialShareObjectFieldsOf(primaryAsset) : {}),
           }
         : asset,
     [hideInheritedSections, primaryAsset, asset],
