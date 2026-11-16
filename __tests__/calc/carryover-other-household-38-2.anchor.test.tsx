@@ -100,6 +100,9 @@ describe("O-2 ⑤ 위젯 — 「그 외」에서도 질문이 보인다", () => 
     renderBlock(carryoverAsset({ donorSameHousehold: "yes" }));
     expect(screen.getByText("세대가 이 주택 보유를 시작한 날")).toBeTruthy();
     expect(screen.getByText("증여 전 동일세대 거주기간")).toBeTruthy();
+    // 이월과세는 보유기간 공제율이 증여자 취득일부터라, 안내는 「거주기간 공제율은 증여일부터」로 한정하고 근거를 단다(사전-2025-법규재산-1126)
+    expect(screen.getByText(/거주기간 공제율은 증여일부터, 이월과세도 같음 · 사전-2025-법규재산-1126/)).toBeTruthy();
+    expect(screen.queryByText(/공제율 기간은 증여일부터/)).toBeNull();
     cleanup();
     renderBlock(carryoverAsset({ donorSameHousehold: "no" }));
     expect(screen.queryByText("세대가 이 주택 보유를 시작한 날")).toBeNull();

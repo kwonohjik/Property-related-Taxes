@@ -279,6 +279,9 @@ function calcCarryoverScenariosCore(
     // (리뷰 US-33 · Q-12 a): 진입부 게이트(`stripAcquisitionCauseGatedReductions`)가 원 입력 `carryover_gift`·이 A 입력 `gift`·B 입력
     // `reductionAcquisitionCause`를 모두 걷어 낸다. 배우자 지분 증여 예외(기준-2025-법규재산-0033)는 이 감면주택 자체의 양도가 아니라 **주택 수 제외(명부 행 ⑥)** 해석이라
     // 여기서 다룰 일이 아니다 — 행 ⑥ 증여 토글은 기본 꺼짐(제외)이고 안내는 `SPOUSE_SHARE_GIFT_EXCEPTION_NOTE`에 있다.
+    // 표2 **거주기간별 공제율**은 바꾸지 않는다 — `residencePeriodMonths`(증여일 이후 본인 거주)를 그대로 쓴다. 이월과세도 거주기간은
+    // 「증여받은 자가 해당 주택을 취득한 날부터 기산」한다(사전-2025-법규재산-1126, 2026.1.21. — 증여 전부터 계속 거주한 수증자 사안).
+    // 증여 전 동일세대 거주는 아래 `giftHouseholdBasis`로 표2 대상 판정·비과세 거주요건에만 통산한다(사전-2025-법규재산-0506 질의1 · 부동산거래관리과-672).
     acquisitionDate: ct.donorAcquisitionDate,
     // 부담부증여 주택·건물 — 당초 증여자가 건물을 토지와 다른 날 취득했으면(`buildingDonorAcquisitionDate`) 건물은 그날, 토지는 증여자 취득일부터 센다.
     //   일반건물 route와 같은 leaf(`carryoverHoldingStartsA`)다. 날짜가 달라지면 부담부증여 단계가 토지·건물 파트로 나눠 계산한다(설계서 `bg-house-building-split.design.md` §5.1).
