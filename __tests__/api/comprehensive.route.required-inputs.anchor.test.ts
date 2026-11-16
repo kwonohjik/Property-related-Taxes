@@ -81,12 +81,16 @@ describe("C4 — 합산배제 임대주택 빈 칸 (UI 도달)", () => {
 
   it("🔴 ⑧ 등록일·임대개시일·면적 비면 차단", () => {
     expect(validateRequiredExclusionAndLandInputs(form({}))).toMatch(/임대사업자 등록일/);
+    // 8호도 세무서 사업자등록일을 묻는다(T-13 · §3① 각 호 외의 부분)
     expect(
       validateRequiredExclusionAndLandInputs(form({ rentalRegistrationDate: "2020-01-01" })),
+    ).toMatch(/세무서 사업자등록일/);
+    expect(
+      validateRequiredExclusionAndLandInputs(form({ rentalRegistrationDate: "2020-01-01", businessRegistrationDate: "2020-01-01" })),
     ).toMatch(/임대개시일/);
     expect(
       validateRequiredExclusionAndLandInputs(
-        form({ rentalRegistrationDate: "2020-01-01", rentalStartDate: "2020-01-01" }),
+        form({ rentalRegistrationDate: "2020-01-01", businessRegistrationDate: "2020-01-01", rentalStartDate: "2020-01-01" }),
       ),
     ).toMatch(/전용면적/);
   });
@@ -95,7 +99,7 @@ describe("C4 — 합산배제 임대주택 빈 칸 (UI 도달)", () => {
     expect(
       validateRequiredExclusionAndLandInputs(
         // 8호 나목·4) 「해당 없음」 사실 — 2017 취득(2018.9.13. 이전)·단기 변경신고 없음
-        form({ rentalRegistrationDate: "2020-01-01", rentalStartDate: "2020-01-01", area: "84", ...NA8_NONE }),
+        form({ rentalRegistrationDate: "2020-01-01", businessRegistrationDate: "2020-01-01", rentalStartDate: "2020-01-01", area: "84", ...NA8_NONE }),
       ),
     ).toBeNull();
   });
@@ -211,22 +215,25 @@ describe("2018.3.31. 단서 — 세무서 사업자등록일 (⑤④⑧⑫⑭)",
     ],
   } as ComprehensiveFormData);
 
-  it("RC-7 ★ ⑧ 민간매입(2호)에서 세무서 사업자등록일이 비면 막고, 장기일반(8호)이면 묻지 않는다", () => {
-    expect(validateRequiredExclusionAndLandInputs(form({}))).toMatch(/세무서 사업자등록일/);
+  // T-13(2026-11-16)로 뒤집음 — 8호도 「과세기준일 현재 사업자등록」(§3① 각 호 외의 부분)을 묻고 싣는다. 문구만 다르다
+  it("RC-7 ★ ⑧ 2호는 단서 문구로, 8호는 각 호 외의 부분 문구로 세무서 사업자등록일이 비면 막는다", () => {
+    expect(validateRequiredExclusionAndLandInputs(form({}))).toMatch(/2018\.3\.31\. 이전 사업자등록등/);
     expect(validateRequiredExclusionAndLandInputs(form({ businessRegistrationDate: "2017-06-01" }))).toBeNull();
-    expect(
-      validateRequiredExclusionAndLandInputs(
-        form({ exclusionType: "private_purchase_rental_long", rentalRegistrationType: "private_purchase_long", ...NA8_NONE }),
-      ),
-    ).toBeNull();
+    const ho8 = { exclusionType: "private_purchase_rental_long", rentalRegistrationType: "private_purchase_long", ...NA8_NONE };
+    expect(validateRequiredExclusionAndLandInputs(form(ho8))).toMatch(/과세기준일\(그해 9\.30\.까지 등록하면 과세기준일로 봄\)/);
+    expect(validateRequiredExclusionAndLandInputs(form({ ...ho8, businessRegistrationDate: "2017-06-01" }))).toBeNull();
   });
 
-  it("RC-8 ★ ④ 2호면 싣고 8호면 남은 값을 싣지 않는다", async () => {
+  it("RC-8 ★ ④ 2호·8호 모두 싣고, 묻지 않는 유형(공공매입)이면 남은 값을 싣지 않는다", async () => {
     const info = async (over: Record<string, unknown>) =>
       ((await bodyOf(form(over))).properties as { rentalInfo?: Record<string, unknown> }[])[0].rentalInfo!;
     expect((await info({ businessRegistrationDate: "2017-06-01" })).businessRegistrationDate).toBe("2017-06-01");
     expect(
       (await info({ businessRegistrationDate: "2017-06-01", exclusionType: "private_purchase_rental_long", rentalRegistrationType: "private_purchase_long" }))
+        .businessRegistrationDate,
+    ).toBe("2017-06-01");
+    expect(
+      (await info({ businessRegistrationDate: "2017-06-01", exclusionType: "public_purchase_rental", rentalRegistrationType: "public_purchase" }))
         .businessRegistrationDate,
     ).toBeUndefined();
   });

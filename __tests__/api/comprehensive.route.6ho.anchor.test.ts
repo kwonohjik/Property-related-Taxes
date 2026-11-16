@@ -71,6 +71,7 @@ const form = (over: Partial<PropertyEntry>, top: Partial<ComprehensiveFormData> 
         exclusionType: "unsold_purchase_rental",
         rentalRegistrationType: "unsold_purchase",
         rentalRegistrationDate: "2019-05-01",
+        businessRegistrationDate: "2019-05-01", // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
         rentalStartDate: "2019-06-01",
         area: "84",
         currentRent: "1,000,000",

@@ -29,6 +29,7 @@ describe("validateRentalExclusion — 임대주택 합산배제", () => {
     registrationType: "private_purchase_long",
     ...NA8_NOT_APPLICABLE,
     rentalRegistrationDate: new Date("2020-01-01"),
+    businessRegistrationDate: new Date("2020-01-01"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
     rentalStartDate: new Date("2020-02-01"),
     assessedValue: 500_000_000,  // 5억 (수도권 6억 이하)
     area: 75,                    // 75㎡ (85㎡ 이하)
@@ -127,6 +128,7 @@ describe("validateRentalExclusion — 의무임대기간 (GAP-1)", () => {
     usageApprovalDate: new Date("2022-01-01"),  // 8억이 9억 구간에 들도록(부칙<제31447호> §2 — 2021.2.17. 이후 사용승인)
     ...NA8_NOT_APPLICABLE,
     rentalRegistrationDate: new Date("2020-01-01"),
+    businessRegistrationDate: new Date("2020-01-01"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
     rentalStartDate: new Date("2020-02-01"),
     assessedValue: 800_000_000,  // 8억 (공공지원 수도권 9억 이하)
     area: 75,
@@ -332,6 +334,7 @@ describe("applyAggregationExclusion — 일괄 판정", () => {
           registrationType: "private_purchase_long",
           ...NA8_NOT_APPLICABLE,
           rentalRegistrationDate: new Date("2020-01-01"),
+          businessRegistrationDate: new Date("2020-01-01"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
           rentalStartDate: new Date("2020-02-01"),
           assessedValue: 300_000_000,
           area: 75,
@@ -369,6 +372,7 @@ describe("applyAggregationExclusion — 일괄 판정", () => {
           registrationType: "private_purchase_long",
           ...NA8_NOT_APPLICABLE,
           rentalRegistrationDate: new Date("2020-01-01"),
+          businessRegistrationDate: new Date("2020-01-01"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
           rentalStartDate: new Date("2020-02-01"),
           assessedValue: 400_000_000,
           area: 75,
@@ -410,6 +414,7 @@ describe("applyAggregationExclusion — 일괄 판정", () => {
           registrationType: "private_purchase_long",
           ...NA8_NOT_APPLICABLE,
           rentalRegistrationDate: new Date("2020-01-01"),
+          businessRegistrationDate: new Date("2020-01-01"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
           rentalStartDate: new Date("2020-02-01"),
           assessedValue: 500_000_000,
           area: 75,
@@ -429,6 +434,7 @@ describe("applyAggregationExclusion — 일괄 판정", () => {
           registrationType: "private_purchase_long",
           ...NA8_NOT_APPLICABLE,
           rentalRegistrationDate: new Date("2020-01-01"),
+          businessRegistrationDate: new Date("2020-01-01"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
           rentalStartDate: new Date("2020-02-01"),
           assessedValue: 250_000_000,
           area: 75,

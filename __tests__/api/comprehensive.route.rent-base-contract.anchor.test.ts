@@ -80,6 +80,7 @@ const form = (initial: boolean, previousRent: string, regType = "private_purchas
         exclusionType,
         rentalRegistrationType: regType,
         rentalRegistrationDate: "2021-03-01",
+        businessRegistrationDate: "2021-03-01", // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
         rentalApplicationDate: "2021-03-01",
         rentalStartDate: "2021-03-01",
         area: "84",

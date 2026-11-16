@@ -127,3 +127,13 @@
 
 - 줄 수: `comprehensive-exclusion.ts` 654 · `comprehensive-api.ts` 690 · `comprehensive-input.ts` 695 · `ExclusionInfoInput.tsx` 638 — 판정·술어·위젯은 새 파일로 두고 원래 파일에는 호출 한 줄씩. `comprehensive-input.ts`가 750을 넘으면 임대 스키마(95~185행)를 분리한다.
 - 상수·manifest: 위 신규 사유 상수 · `additions-comprehensive.ts`에 §3⑦4호 「기존 임차인의 퇴거일부터 다음 임차인의 입주일까지의 기간이 2년 이내인 경우에는 계속 임대하는 것으로 본다」 · §3⑧ 「연속하는 2개 과세연도까지는 합산배제 임대주택에서 제외한다」 · 부칙<제30404호> §4 「이 영 시행 이후 위반하는 분부터 적용한다」. 종전 §3③④는 삭제 조문이라 상수 주석으로만.
+
+## 7. 구현 기록
+
+### PR-A · T-13 (브랜치 `fix/comp-excl-business-reg`)
+- V-7 Pre-Do(정적): 8호 나목2) `appStatus`(`comprehensive-exclusion-8ho-na.ts:114`)는 「사업자등록 신청일」이 있으면 등록일을 보지 않는다. 화면은 법인 8호·11호에서 신청일을 ⑧로 받으므로 화면 경로 판정 불변 — anchor A13-8로 고정(신청일 같고 등록일 2019/2021 → 같은 사유 `EXCLUDED_8NA2_CORP_REGULATED_APP`).
+- 엔진 `comprehensive-exclusion-business-reg.ts`: `filingDeadlineApplies`·`filingPeriodEnd`(PR-1 지자체 기한과 공용 — `FILING_DEADLINE_TYPES`·10·11호 경계·`SHORT_TERM_6Y_*` 이동) · `businessRegistrationIssue`(빈칸 `BUSINESS_REGISTRATION_DATE_MISSING` · 9.30. 뒤 `BUSINESS_REGISTERED_AFTER_FILING_DEADLINE` · 1·2호 2018.2.13. 이후는 단서가 보므로 건너뜀).
+- 화면 `lib/calc/comprehensive-rental-business-reg.ts`: `asksBusinessRegistrationDate`(1·2호 — 옮기고 comprehensive-api.ts re-export) · `asksBusinessRegistrationField`(⑤④⑧ 공용) · 유형별 hint·⑧ 문구 · 오류 라벨 「세무서 사업자등록일」 · ⑫ 변경 없음.
+- 픽스처(V-3 실측): 14파일 71건 실패 → 픽스처마다 `businessRegistrationDate`를 명시(공용 헬퍼 기본값 아님) · 연도를 바꾸는 시료(A15-4·5·6′)는 그해 2.20.로 · RC-5는 「단서 안 봄 + 새 사유 하나」로 단언 · `route.required-inputs` C4·RC-7·RC-8은 8호도 묻고 싣도록 뒤집음 · E2E 3개(8na·5pct-base·unsold-6ho)에 세무서 등록일 입력.
+- anchor: 엔진 8건(A13-1~7 · 공공 등 제외) · route 5건(A13-3 3,426,370 · A13-2 1,267,200 · A13-5 ⑧ · A13-8 V-7 · 술어 유형·연도).
+- 뮤테이션 4종(엔진 판정 끔 5 · ④ 1·2호만 3 · ⑧ 끔 3 · 이중 보고 방지 끔 1건 실패) · tsc 0 · eslint 0 · verify:legal 501/501 · 회귀 1,760파일 통과 · E2E 5건 통과(8호 칸 hint 「6월 2일~9월 30일에 등록했다면」 표시 단언 포함).
