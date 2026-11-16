@@ -3,7 +3,7 @@
 - 작성일: 2026-11-16 (v0.2 — 엔진·UI 시니어 병렬 검토 반영)
 - 출발점: 교재 대조 `comprehensive-rental-excl-textbook-157-180.plan.md` §3.5의 🔴 3건
 - 기준 코드: master `263aed501`(워크트리 `../prt-compexcl` · 브랜치 `review/comp-exclusion-textbook`)
-- 상태: **계획** — Q-1~Q-11 사용자 결정 대기
+- 상태: **계획 확정** — Q-1~Q-11 **모두 권장안**(사용자 결정 2026-11-16) · PR-1 구현 중(§7)
 
 ## 0. 요약
 
@@ -171,6 +171,8 @@ PR 3개 권장(Q-6): **PR-1 T-15 → PR-2 T-07a → PR-3 T-03**.
 
 ## 4. 사용자 결정(Q)
 
+> **결정(2026-11-16): Q-1~Q-11 모두 권장안.**
+
 | Q | 질문 | 권장 |
 |---|---|---|
 | Q-1 | T-03 기준 공시가격 칸을 언제 묻나 | **a 그해 공시가격이 상한을 넘을 때만** · b 늘 묻기 |
@@ -206,3 +208,11 @@ PR 3개 권장(Q-6): **PR-1 T-15 → PR-2 T-07a → PR-3 T-03**.
 - 세액 anchor(원 단위 고정): A15-3 · A07-1 · A03-1.
 - 뮤테이션: 새 판정·비교 줄을 되돌리면 A15-3·A03-1이 실패하는지 확인한다.
 - 브라우저(Playwright): PR-2 문구 · PR-3 칸 노출 조건(상한 초과 시만)·Network body `priceBasisValue` · 결과 사유.
+
+## 7. 구현 기록
+
+### PR-1 · T-15 (브랜치 `fix/comp-excl-registration-deadline`)
+- 엔진 `registrationDeadlineCheck`(`lib/tax-engine/comprehensive-exclusion.ts`) — 민간 유형 8개 · 10·11호는 2026 과세기준일부터 · `isOnOrBeforeDeadline(등록일, 그해 9.30.)` · 순서는 `shortTerm6yEraIssues` 뒤.
+- 상수 `REGISTERED_AFTER_FILING_DEADLINE`·`REGISTERED_AFTER_ASSESSMENT_DEEMED` · manifest `COMPREHENSIVE_DECREE.EXCLUDED_RENTAL_FILING_DEADLINE_DEEMED`·`COMPREHENSIVE.HOLDING_STATUS_REPORT_PERIOD`.
+- 결과 경고 제목 「의무임대기간 확인 필요」 → 「확인 필요」(`AggregationExclusionSection.tsx`).
+- anchor: 엔진 9건(A15-1~8 · 2018·2020·2023 연장 포함) · route 3건(A15-3 3,426,370원 · A15-2 1,267,200원 + 경고 · A15-1 불변).
