@@ -245,7 +245,7 @@ export function calcLongTermHoldingDeduction(
     // 카드를 주택보다 나중에 취득했으면 표2 거주분의 거주는 **카드(토지) 보유기간 중 거주**다 — 분리취득 토지 파트와 같은 규칙(`transfer-land-holding-residence.ts` · 직접 입력은 보유 개월로 상한).
     //   카드가 주택보다 먼저 취득됐으면 거주 ≤ 주택 보유 < 카드 보유라 상한은 걸리지 않는다(값 불변).
     const cardHoldingMonths = landHolding.years * 12 + landHolding.months;
-    //   구간 입력이면 ④가 주 자산 거주 구간과 카드 보유기간의 겹침 개월을 싣는다(`landHoldingResidenceMonths`) — 그 값을 쓰고 상한 고지는 내지 않는다.
+    //   구간 입력이면 ④가 주 자산 거주 구간과 카드 보유기간의 겹침 개월을 싣는다(`landHoldingResidenceMonths` — 역방향 G1은 API가 첫 자산 토지에도 싣는다) — 그 값을 쓰고 상한 고지는 내지 않는다.
     const cardResidenceMonths = input.landHoldingResidenceMonths ?? Math.min(input.residencePeriodMonths, cardHoldingMonths);
     const cardResidenceYears = Math.floor(cardResidenceMonths / 12);
     const companionAt = (resYears: number) =>

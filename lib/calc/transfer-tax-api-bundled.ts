@@ -91,6 +91,19 @@ export function buildBundledPrimaryPayload(c: {
           : undefined;
         // ⑬ 축 B에서 늦게 취득한 지분의 거주 — 그 지분을 보유한 동안의 구간만 센다(없으면 서버가 주 자산 값을 승계).
         const shareResidence = laterShareResidenceMonths(a, form);
+        // ④ 역방향 게이트가 읽는 사실 — 이 카드 payload에 실제로 실린 값. 컴패니언 payload에는 `propertyType`이 없고 `assetKind`뿐이다
+        //   (엔진 `isSplitable`(housing·building)과 같은 범위 — 겸용은 `mixed_use_house`로 접혀 제외).
+        const sentSplit = {
+          propertyType: (payload as { assetKind?: unknown }).assetKind,
+          landAcquisitionDate: (payload as { landAcquisitionDate?: unknown }).landAcquisitionDate,
+          selfOwns: (payload as { selfOwns?: unknown }).selfOwns,
+          buildingAcquisitionDate: (payload as { acquisitionDate?: unknown }).acquisitionDate,
+        };
+        // ④ 역방향 × 축 B — 지분 카드는 거주를 주 자산 칸에서 승계한다(거주 칸은 주 자산에 하나뿐). 그래서 겹침도 **주 자산의 거주 구간**으로
+        //   이 지분의 [토지 취득일, 양도일]과 센다(주 자산과 같은 leaf). 직접 입력이면 싣지 않는다 — 엔진이 그 지분의 토지 보유 개월로 상한한다.
+        const shareLandHolding = fractionalBundleMerge
+          ? buildLandHoldingResidencePayload({ ...a, residenceInputMode: primary.residenceInputMode, residencePeriods: primary.residencePeriods }, sentSplit)
+          : {};
         // ⑬ NH-14 후속 — 세대 기준 주택 카드는 명부 행 ⑥ 감면(§99의4·§98의9)까지 받는다(주택 먼저의 대표 자산 감면과 같은 leaf · 같은 게이트).
         //   F-1 — 그 주택의 거주기간도 싣는다(② 섹션이 이 주택 카드에 저장한다 — 주 자산과 같은 클램프 leaf · 폼-전역 옛 값 폴백 없음).
         const hfReductions =
@@ -99,14 +112,8 @@ export function buildBundledPrimaryPayload(c: {
                 reductions: toEngineReductions(primaryReductionsWithRows(householdFactsFormView(form)), a, a.expropriationNoticeDate),
                 residencePeriodMonths: clampResidenceToHousingPeriod(a, form.transferDate, "", isUsageConversionActive(a) ? a.residentialUseStartDate : undefined).months,
                 // ④ 역방향 — 이 카드가 자기 거주 구간을 가진 주택이면 토지를 건물보다 나중에 취득한 분리취득의 토지 보유기간 중 거주 개월도 싣는다(주 자산과 같은 leaf).
-                //   다른 컴패니언은 자기 거주 입력이 없어(0 또는 주 자산 승계) 싣지 않는다 — 엔진이 보유 개월로 상한한다.
-                ...buildLandHoldingResidencePayload(a, {
-                  // 컴패니언 payload에는 `propertyType`이 없고 `assetKind`뿐이다 — 엔진 `isSplitable`(housing·building)과 같은 범위(겸용은 `mixed_use_house`로 접혀 제외).
-                  propertyType: (payload as { assetKind?: unknown }).assetKind,
-                  landAcquisitionDate: (payload as { landAcquisitionDate?: unknown }).landAcquisitionDate,
-                  selfOwns: (payload as { selfOwns?: unknown }).selfOwns,
-                  buildingAcquisitionDate: (payload as { acquisitionDate?: unknown }).acquisitionDate,
-                }),
+                //   다른 컴패니언은 자기 거주 입력이 없어 거주가 0이다(축 B 지분은 아래 `shareLandHolding`).
+                ...buildLandHoldingResidencePayload(a, sentSplit),
               }
             : {};
         return {
@@ -114,6 +121,7 @@ export function buildBundledPrimaryPayload(c: {
           // ⑬ 컴패니언 주택은 자기 소재지·날짜로 조정대상지역을 판정한다(없으면 ⑭가 주 자산 값) — 같은 물건 지분(축 B)은 소재지가 주 자산과 같다.
           ...(fractionalBundleMerge ? {} : companionRegulatedFlags(a, form.transferDate)),
           ...hfReductions,
+          ...shareLandHolding,
           // ⑬ 역방향 — 주택 부수토지 카드를 주 주택보다 나중에 취득했고 주 자산 거주가 구간 입력이면 카드 보유기간과 겹친 개월만 싣는다(직접 입력은 엔진이 카드 보유 개월로 상한).
           ...buildAppurtenantCardHoldingResidencePayload(a, primary),
           ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),

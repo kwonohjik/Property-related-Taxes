@@ -543,7 +543,7 @@ export function Step4({ form, onChange }: { form: TransferFormData; onChange: (d
                 transferDate={householdView.transferDate}
                 mergeStartDate={landOnlyMergeResidenceStart(exemptPrimary)}
                 appliesToOtherShares={isFullFractionalBundle(householdView.assets, householdView.assetSplitMode)}
-                landHoldingResidenceHint={landHoldingResidenceDirectHintApplies(exemptPrimary, form.assets)}
+                landHoldingResidenceHint={landHoldingResidenceDirectHintApplies(exemptPrimary, form.assets, form.assetSplitMode)}
                 onChange={(patch) =>
                   householdOnChange({
                     assets: householdView.assets.map((a, i) => (i === 0 ? { ...a, ...patch } : a)),
