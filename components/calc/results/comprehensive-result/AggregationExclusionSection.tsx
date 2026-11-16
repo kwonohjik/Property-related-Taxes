@@ -68,12 +68,12 @@ export function AggregationExclusionSection({
         </ToneCard>
       )}
 
-      {/* 의무임대기간 미충족 경고 (시행령 §3① — 사후 추징 위험) */}
+      {/* 성립했지만 확인이 필요한 경고 — 의무임대기간 미충족(사후 추징 위험)·신고기한까지 등록 의제(시행령 §3①) */}
       {aggregationExclusion.propertyResults.some(
         (r) => r.warnings && r.warnings.length > 0,
       ) && (
         <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 dark:bg-amber-950/40">
-          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">의무임대기간 확인 필요</p>
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">확인 필요</p>
           <ul className="mt-1 space-y-1">
             {aggregationExclusion.propertyResults.flatMap((r, idx) =>
               (r.warnings ?? []).map((w, wi) => (

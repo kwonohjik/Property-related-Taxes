@@ -50,6 +50,20 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     keywords: ["합산배제 임대주택", "공공주택사업자", "임대사업자", "사업자등록"],
     keywordMode: "ALL",
   },
+  /** §3① 각 호 외의 부분 후단 — 보유현황 신고기간 종료일까지 사업자등록하면 과세기준일 현재 한 것으로 봄 */
+  {
+    id: "COMPREHENSIVE_DECREE.EXCLUDED_RENTAL_FILING_DEADLINE_DEEMED",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["과세기준일 현재 임대를 개시한 자가", "보유현황 신고기간 종료일까지 임대사업자로서 사업자등록을 하는 경우"],
+    keywordMode: "ALL",
+  },
+  /** 법 §8③ — 합산배제 주택 보유현황 신고기간 9.16.~9.30. */
+  {
+    id: "COMPREHENSIVE.HOLDING_STATUS_REPORT_PERIOD",
+    citation: "종합부동산세법 §8",
+    keywords: ["9월 16일부터 9월 30일까지", "보유현황을 신고하여야 한다"],
+    keywordMode: "ALL",
+  },
   /** §3①1호·2호 단서 — 민간건설·민간매입임대는 2018.3.31. 이전 사업자등록등 주택으로 한정(대통령령 제28645호) */
   {
     id: "COMPREHENSIVE_DECREE.EXCLUDED_RENTAL_REG_CAP_2018",

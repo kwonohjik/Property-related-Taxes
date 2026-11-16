@@ -11,6 +11,7 @@ import { vacantConstruction4hoIssues } from "./comprehensive-exclusion-4ho";
 import { reitPurchase5hoIssues } from "./comprehensive-exclusion-5ho";
 import { conversionPending9hoIssues } from "./comprehensive-exclusion-9ho";
 import { conversion9hoBaseType } from "./comprehensive-exclusion-9ho";
+import { isOnOrBeforeDeadline } from "./civil-period";
 import {
   COMPREHENSIVE_EXCL,
   COMPREHENSIVE_EXCL_CONST,
@@ -139,6 +140,42 @@ function shortTerm6yEraIssues(input: RentalExclusionInput): string[] {
 }
 
 /**
+ * §3① 각 호 외의 부분 — 「임대사업자로서 … 과세기준일 현재 임대」 + 후단 「과세기준일 현재 임대를 개시한 자가 법 제8조제3항에 따른
+ * 주택의 보유현황 신고기간 종료일까지 임대사업자로서 사업자등록을 하는 경우에는 … 과세기준일 현재 … 한 것으로 본다」.
+ * - 신고기간 종료일 = 그해 9.30.(법 §8③) · 토요일·공휴일이면 다음 날(민법 §161 — 국세기본법 §5와 9.30. 주변 결과 같음).
+ * - 지자체 등록일 > 종료일 → 불성립. 과세기준일 < 등록일 ≤ 종료일 → 성립 + 확인 필요(지자체 등록까지 의제하는지 정면 해석 없음 — 계획서 Q-4 a).
+ * - 대상: 민간 유형만(Q-8 a). 공공·9호(공공주택사업자)·4호(「소유」)·3호(2005 이전 임대)·5호(부동산투자회사)는 보지 않는다.
+ * - 10·11호는 2025 이하 과세연도를 `shortTerm6yEraIssues`가 따로 판정하므로 2026 과세기준일부터만 본다(이중 보고 방지).
+ * 계획서: docs/01-plan/features/comprehensive-rental-excl-tax-defects-3.plan.md §2.1
+ */
+const FILING_DEADLINE_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
+  "private_construction",
+  "private_purchase_short",
+  "private_purchase_long",
+  "public_support_construction",
+  "public_support_purchase",
+  "unsold_purchase",
+  "private_short_term_6y_construction",
+  "private_short_term_6y_purchase",
+]);
+
+function registrationDeadlineCheck(input: RentalExclusionInput): { issue: string | null; warning: string | null } {
+  const none = { issue: null, warning: null };
+  if (!FILING_DEADLINE_TYPES.has(input.registrationType)) return none;
+  if (SHORT_TERM_6Y_TYPES.has(input.registrationType) && input.assessmentDate.getTime() < SHORT_TERM_6Y_FULL_ASSESSMENT) {
+    return none;
+  }
+  const reg = input.rentalRegistrationDate;
+  const filingPeriodEnd = new Date(Date.UTC(input.assessmentDate.getUTCFullYear(), 8, 30));
+  if (!isOnOrBeforeDeadline(reg, filingPeriodEnd)) {
+    return { issue: COMPREHENSIVE_EXCL.REGISTERED_AFTER_FILING_DEADLINE, warning: null };
+  }
+  return reg.getTime() > input.assessmentDate.getTime()
+    ? { issue: null, warning: COMPREHENSIVE_EXCL.REGISTERED_AFTER_ASSESSMENT_DEEMED }
+    : none;
+}
+
+/**
  * §3①1·3·7·10호 「다음 각 목의 요건을 모두 갖춘 주택이 2호 이상인 경우 그 주택」 — 2·6·8·11호에는 이 문언이 없다(6호는 5호 이상 · 6호 모듈).
  * 호수는 사용자가 센다(1·7·10호 같은 시·도 §3⑤ · 3호 전국 · 1호는 민간·공공건설 합산). 직접 해석 0건 — 계획서
  * comprehensive-rental-excl-two-plus-units.plan.md V-1~V-3. 「모름」은 불성립 + 확인 필요.
@@ -175,6 +212,7 @@ export function validateRentalExclusion(
   input: RentalExclusionInput,
 ): ExclusionValidationResult {
   const failReasons: string[] = [];
+  let deadlineWarning: string | null = null;
 
   if (!input.rentalRegistrationDate) {
     failReasons.push(COMPREHENSIVE_EXCL.NO_RENTAL_REGISTRATION);
@@ -182,6 +220,9 @@ export function validateRentalExclusion(
     const capIssue = regCap2018Issue(input);
     if (capIssue) failReasons.push(capIssue);
     failReasons.push(...shortTerm6yEraIssues(input));
+    const deadline = registrationDeadlineCheck(input);
+    if (deadline.issue) failReasons.push(deadline.issue);
+    deadlineWarning = deadline.warning;
     failReasons.push(...excludedUnder8hoNa(input));
     failReasons.push(...unsoldPurchase6hoIssues(input));
     const unitsIssue = twoPlusUnitsIssue(input);
@@ -246,6 +287,7 @@ export function validateRentalExclusion(
 
   // 배제 성립 — 경과 연수가 의무기간 미달이면 사후 추징 위험 경고 (배제는 유지)
   const warnings: string[] = [];
+  if (deadlineWarning) warnings.push(deadlineWarning);
   if (input.actualRentalYears !== undefined) {
     const { years: requiredYears, applicationUnknown } = mandatoryPeriod(input);
     if (requiredYears > 0 && input.actualRentalYears < requiredYears) {
