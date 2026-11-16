@@ -120,15 +120,17 @@ export function applySettlementExemption(
 
   if (rightsBase > threshold) {
     // §160①1호 — 양도차익 × (양도가액 − 기준금액) ÷ 양도가액. 「양도가액」 자리에 권리가격(2705 질의2).
-    // 손실 분기는 안분하지 않는다(`applyHighValueAllocation`의 같은 규약).
-    if (s.gain <= 0) return redev;
-    const taxableGain = safeMultiplyThenDivide(
-      s.gain,
-      rightsBase - threshold,
-      rightsBase,
-    );
-    // §160①2호 — 형제 경로(`applyHighValueAllocation`)와 같이 안분 후 양도차익 × 그 분기 공제율.
-    const taxableLthd = s.lthdRate > 0 ? applyFairMarketRatio(taxableGain, s.lthdRate) : 0;
+    // 양도차손도 같은 비율로 안분한다(2026-11-16 · V-5) — 비율은 부호와 무관하다(일반 경로 `calcOneHouseProration`·
+    // 신축주택 분기 `applyHighValueAllocation`과 같음). 종전에는 손실을 안분하지 않아, 권리가격이 기준금액 이하면 손실 0(비과세)인데
+    // 1원만 넘어도 손실 전액이 신축주택 양도차익을 지웠다(권리 15억 · 손실 −60,000,000 → 맞는 값 −12,000,000).
+    // 음수는 절댓값을 안분해 부호를 붙인다(양수와 같은 방향으로 절사).
+    if (s.gain === 0) return redev;
+    const taxableGain =
+      s.gain < 0
+        ? -safeMultiplyThenDivide(-s.gain, rightsBase - threshold, rightsBase)
+        : safeMultiplyThenDivide(s.gain, rightsBase - threshold, rightsBase);
+    // §160①2호 — 형제 경로(`applyHighValueAllocation`)와 같이 안분 후 양도차익 × 그 분기 공제율. 차손이면 공제 0.
+    const taxableLthd = taxableGain > 0 && s.lthdRate > 0 ? applyFairMarketRatio(taxableGain, s.lthdRate) : 0;
     const settlement = {
       ...s,
       gain: taxableGain,
