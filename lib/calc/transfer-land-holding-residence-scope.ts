@@ -14,6 +14,8 @@ import { landAcquiredAfterBuilding } from "@/lib/tax-engine/transfer-land-holdin
 import { anyPartCarryover } from "./transfer-land-part-cause";
 import { effectiveSelfOwns, selfOwnsSplitApplicable } from "./self-owns-scope";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
+import { primaryEnginePropertyType } from "./transfer-tax-api-helpers";
+import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 
 export function buildLandHoldingResidencePayload(
   asset: Pick<AssetForm, "residenceInputMode" | "residencePeriods"> & Parameters<typeof anyPartCarryover>[0],
@@ -45,4 +47,34 @@ export function landHoldingResidenceApplies(
   if (!selfOwnsSplitApplicable(asset) || effectiveSelfOwns(asset) !== "both") return false;
   if (anyPartCarryover(asset) || asset.hasSeperateLandAcquisitionDate !== true) return false;
   return landAcquiredAfterBuilding({ landAcquisitionDate: asset.landAcquisitionDate, buildingAcquisitionDate: primaryAcquisitionDateOf(asset as AssetForm) });
+}
+
+/**
+ * 함께 양도 **주택 부수토지 카드**(L-1b)가 주 주택보다 나중에 취득됐는가 — ⑤ 표시·④ 전송 공용 술어(거주 입력 방식은 보지 않는다).
+ * 주 자산이 주택(겸용 제외)이고 카드가 부수토지(`landNature: appurtenant`)이며 카드 취득일 > 주 주택 취득일(이월과세면 증여 등기접수일 — `primaryAcquisitionDateOf`).
+ * 카드는 거주를 주 자산에서 승계한다(`bundled-split-helpers.ts`) — 주 자산이 거주 칸을 가진 쪽이라 입력 방식도 주 자산 것이다.
+ */
+export function appurtenantCardAfterPrimaryHouse(
+  card: Pick<AssetForm, "assetKind" | "landNature" | "acquisitionDate">,
+  primary: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "redevSubject" | "acquisitionDate" | "acquisitionCause" | "carryover">,
+): boolean {
+  if (card.assetKind !== "land" || card.landNature !== "appurtenant") return false;
+  if (primaryEnginePropertyType(primary) !== "housing") return false;
+  return landAcquiredAfterBuilding({ landAcquisitionDate: card.acquisitionDate, buildingAcquisitionDate: primaryAcquisitionDateOf(primary as AssetForm) });
+}
+
+/**
+ * ④ — 주 자산이 구간 입력이면 그 구간과 [카드 취득일, 양도일]의 겹침 개월을 카드에 싣는다. 직접 입력이면 싣지 않는다(엔진이 카드 보유 개월로 상한하고 고지한다).
+ * `residencePeriodMonths`(승계할 거주 합계)는 줄이지 않는다 — 표2 대상 판정(거주 2년)이 같은 값을 읽는다.
+ * 용도변경 주택은 주거용 사용일 이전 거주를 합계에서 이미 잘랐으므로(`clampResidenceToHousingPeriod`) 겹침도 같은 시작일로 자른다.
+ */
+export function buildAppurtenantCardHoldingResidencePayload(
+  card: Pick<AssetForm, "assetKind" | "landNature" | "acquisitionDate">,
+  primary: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "redevSubject" | "acquisitionDate" | "acquisitionCause" | "carryover" | "residenceInputMode" | "residencePeriods"> &
+    Parameters<typeof isUsageConversionActive>[0] & { residentialUseStartDate?: string },
+): { landHoldingResidenceMonths?: number } {
+  if (primary.residenceInputMode !== "interval" || !appurtenantCardAfterPrimaryHouse(card, primary)) return {};
+  const conv = isUsageConversionActive(primary) ? primary.residentialUseStartDate : undefined;
+  const start = conv && conv > card.acquisitionDate ? conv : card.acquisitionDate;
+  return { landHoldingResidenceMonths: sumResidenceMonthsFrom(primary.residencePeriods ?? [], start) };
 }

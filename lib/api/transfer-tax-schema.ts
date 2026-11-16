@@ -15,6 +15,8 @@ import { newConstructionLandOnlyIssue } from "./transfer-tax-schema-household-re
 import { landOnlyHouseholdIssue } from "./transfer-tax-schema-household-refines";
 import { landOnlyHouseholdMergeIssue } from "./transfer-tax-schema-household-refines";
 import { residenceMonthsOverflowIssue } from "./transfer-tax-schema-household-refines";
+import { refineAppurtenantCardLandHolding } from "./transfer-tax-schema-household-refines";
+import { isAppurtenantLandCard } from "./transfer-tax-schema-household-refines";
 import {
   filingPenaltyDetailsSchema,
   delayedPaymentDetailsSchema,
@@ -219,7 +221,9 @@ export const propertySchema = z
       // 재개발 원조합원 날짜 순서 — 종전 부동산 취득이 인가일 뒤인데 승계조합원 모드 OFF (⑧과 같은 술어 · 주 자산과 같은 leaf)
       refineRedevOriginalMemberOrder(c, ctx, ["companionAssets", i]);
       // D0 — 토지 파트 취득원인(이월과세 미지원·상속·증여 추계 불가·피상속인 취득일) — 주 자산과 같은 leaf
-      refineSplitPartCause(c, c.assetKind === "housing" || c.assetKind === "building", c.assetKind === "housing", ctx, ["companionAssets", i], {
+      // 주택 부수토지 카드의 구간 거주 개월은 아래 전용 refine이 받는다(분리취득 leaf는 주택·건물 모양만 — 값을 넘기면 게이트가 stray로 막는다).
+      if (isAppurtenantLandCard(c)) refineAppurtenantCardLandHolding(c, data, ctx, ["companionAssets", i]);
+      refineSplitPartCause(isAppurtenantLandCard(c) ? { ...c, landHoldingResidenceMonths: undefined } : c, c.assetKind === "housing" || c.assetKind === "building", c.assetKind === "housing", ctx, ["companionAssets", i], {
         supported: false, // 컴패니언은 파트 이월과세를 받지 않는다(leaf S0) — 키는 받아서 명시 거부한다
         hasCompanions: false,
       });

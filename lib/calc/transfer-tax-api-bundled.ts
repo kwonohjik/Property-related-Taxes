@@ -1,5 +1,6 @@
 import { laterShareResidenceMonths } from "./axis-b-share-residence";
 import { buildLandHoldingResidencePayload } from "./transfer-land-holding-residence-scope";
+import { buildAppurtenantCardHoldingResidencePayload } from "./transfer-land-holding-residence-scope";
 import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-residence";
 import { isUsageConversionActive } from "@/lib/stores/calc-wizard-asset-usage-conversion";
 import { householdFactsFormView } from "./household-facts-view";
@@ -112,6 +113,8 @@ export function buildBundledPrimaryPayload(c: {
           // ⑬ 컴패니언 주택은 자기 소재지·날짜로 조정대상지역을 판정한다(없으면 ⑭가 주 자산 값) — 같은 물건 지분(축 B)은 소재지가 주 자산과 같다.
           ...(fractionalBundleMerge ? {} : companionRegulatedFlags(a, form.transferDate)),
           ...hfReductions,
+          // ⑬ 역방향 — 주택 부수토지 카드를 주 주택보다 나중에 취득했고 주 자산 거주가 구간 입력이면 카드 보유기간과 겹친 개월만 싣는다(직접 입력은 엔진이 카드 보유 개월로 상한).
+          ...buildAppurtenantCardHoldingResidencePayload(a, primary),
           ...(nblRaw ? { nonBusinessLandRaw: nblRaw } : {}),
           ...(shareResidence !== undefined ? { residencePeriodMonths: shareResidence } : {}),
         };

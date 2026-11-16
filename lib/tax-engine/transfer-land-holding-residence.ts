@@ -112,3 +112,31 @@ export function collectLandHoldingResidenceIssues(f: SplitPartCauseFacts): Split
   if (f.residencePeriodMonths !== undefined && months > f.residencePeriodMonths) return at(LAND_HOLDING_RESIDENCE_EXCEEDS_MESSAGE);
   return [];
 }
+
+export const LAND_HOLDING_RESIDENCE_CARD_GATE_MESSAGE =
+  "토지 보유기간 중 거주 개월 수(landHoldingResidenceMonths)는 함께 양도하는 주택 부수토지 카드를 첫 번째 주택(주 자산)보다 나중에 취득한 경우에만 입력할 수 있습니다 — "
+  + "조용히 버려지지 않도록 막습니다";
+
+/**
+ * 함께 양도 **주택 부수토지 카드**(L-1b) — 구간 입력의 카드 보유기간 중 거주 개월(④가 주 자산 거주 구간 ∩ [카드 취득일, 양도일]).
+ * 카드는 거주를 주 자산에서 승계하므로(`bundled-split-helpers.ts`) 값은 승계할 거주 합계 이하여야 한다.
+ * 게이트: 주 자산이 주택 · 카드가 주택 부수토지 · 카드 취득일 > 주 주택 취득일. ⑫가 컴패니언 모양에서 이 함수를 부른다(분리취득 leaf와 모양이 달라 따로 둔다).
+ */
+export function collectAppurtenantCardHoldingResidenceIssues(f: {
+  landHoldingResidenceMonths?: number;
+  /** 카드가 승계할 거주 합계 — 카드 자신의 값이 없으면 주 자산 값. 모르면 상한 검사를 건너뛴다 */
+  residencePeriodMonths?: number;
+  isAppurtenantLandCard: boolean;
+  primaryIsHousing: boolean;
+  cardAcquisitionDate?: Date | string;
+  primaryAcquisitionDate?: Date | string;
+}): SplitPartCauseIssue[] {
+  const months = f.landHoldingResidenceMonths;
+  if (months === undefined) return [];
+  const at = (message: string): SplitPartCauseIssue[] => [{ field: LAND_HOLDING_RESIDENCE_MONTHS_FIELD, message }];
+  if (!f.isAppurtenantLandCard || !f.primaryIsHousing || !landAcquiredAfterBuilding({ landAcquisitionDate: f.cardAcquisitionDate, buildingAcquisitionDate: f.primaryAcquisitionDate }))
+    return at(LAND_HOLDING_RESIDENCE_CARD_GATE_MESSAGE);
+  if (!Number.isInteger(months) || months < 0) return at(LAND_HOLDING_RESIDENCE_INVALID_MESSAGE);
+  if (f.residencePeriodMonths !== undefined && months > f.residencePeriodMonths) return at(LAND_HOLDING_RESIDENCE_EXCEEDS_MESSAGE);
+  return [];
+}
