@@ -5,7 +5,7 @@
  * 따라서 «⑧ 통과 ↔ ⑫ 400» 모순이 생기지 않는다.
  */
 import { z } from "zod";
-import { collectMixedBurdenedGiftIssues, type MixedBgSource } from "@/lib/tax-engine/mixed-use-burdened-gift-prepare";
+import { collectMixedBurdenedGiftIssues, MIXED_BG_COMPANION_BLOCK_MESSAGE, type MixedBgSource } from "@/lib/tax-engine/mixed-use-burdened-gift-prepare";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import { isMixedInheritedSplitDateStraddle } from "@/lib/tax-engine/mixed-use-inherited-split-date";
 import { MIXED_INHERITED_SPLIT_DATE_MESSAGE } from "@/lib/tax-engine/mixed-use-inherited-split-date";
@@ -84,7 +84,7 @@ export function refineCompanionMixedUseBurdenedGift(
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ["companionAssets", i, "transferType"],
-      message: "겸용주택 부담부증여는 공유지분·함께 양도(여러 물건)·지분 분할 취득과 함께 계산할 수 없습니다 — 단독 소유 단건만 지원합니다.",
+      message: MIXED_BG_COMPANION_BLOCK_MESSAGE,
     });
   });
 }

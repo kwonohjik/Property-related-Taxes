@@ -20,7 +20,7 @@
 import { BURDENED_GIFT_TRANSFER } from "./legal-codes/burdened-gift";
 import { MIXED_USE_BURDENED_GIFT } from "./legal-codes/burdened-gift-mixed-use";
 import { estimatedDeductionRate } from "./legal-codes";
-import { computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
+import { applyRatio, computeEstimatedDeduction, safeMultiplyThenDivide } from "./tax-utils";
 import { buildBurdenedGiftGiftTax } from "./burdened-gift-gift-tax";
 import { MARKET_COLLATERAL_STANDARD_ACQUISITION_NOTICE } from "./burdened-gift-valuation";
 import { bgParenthesisEraNotice } from "./burdened-gift-valuation";
@@ -36,6 +36,11 @@ import type {
   MixedUsePartKey,
 } from "./types/mixed-use-burdened-gift.types";
 import type { TransferBurdenedGiftAcquisitionMethodUsed } from "./types/transfer-burdened-gift.types";
+
+/** 겸용 × 공유지분 부담부증여 고지 — 직접 해석례가 없다(2026-11-17 국세청 해석례 검색 「겸용주택 부담부증여 공유지분」 0건). */
+export const MIXED_BG_SHARE_NOTICE =
+  "겸용주택 공유지분 부담부증여는 직접 다룬 해석례가 확인되지 않았습니다. 「소득세법 시행령」 제156조 제1항의 «면적 비율»을 지분율로 읽어 12억원 고가주택 판정·안분 가액을 물건 전체로 환산했고, " +
+  "증여가액·채무비율·취득가액은 지분 증여가액 기준으로 계산했습니다 — 확인이 필요합니다.";
 
 /** 엔진 진입 가드 + 준비 — 이슈가 있으면 `INVALID_INPUT`으로 throw (⑫·⑧과 같은 collector 결과). */
 export function prepareMixedBurdenedGiftOrThrow(src: MixedBgSource): MixedBgPrepared {
@@ -109,7 +114,9 @@ export function applyMixedBurdenedGift(args: {
   const hs = bg.transferStd.hl + bg.transferStd.hb;
   const cs = bg.transferStd.cl + bg.transferStd.cb;
   const rate = estimatedDeductionRate(asset.isUnregistered);
-  const lump = (k: MixedUsePartKey) => computeEstimatedDeduction(scale(g(k).basis, k), rate);
+  // 공유지분 — 취득시 기준시가(basis)는 물건 전체 값이라 지분분으로 줄여 ×B′/C(지분 증여가액)와 스케일을 맞춘다(단독 소유면 그대로).
+  const basisOf = (k: MixedUsePartKey) => (bg.shareRatio === undefined ? g(k).basis : applyRatio(g(k).basis, bg.shareRatio));
+  const lump = (k: MixedUsePartKey) => computeEstimatedDeduction(scale(basisOf(k), k), rate);
 
   const acq = {} as Record<MixedUsePartKey, number>;
   const ded = {} as Record<MixedUsePartKey, number>;
@@ -122,7 +129,7 @@ export function applyMixedBurdenedGift(args: {
     const e = g(k);
     switch (bg.acqPath) {
       case "standard": // K-1~K-3 (괄호 발동) — 취득시 기준시가 × B'/C, 개산공제
-        acq[k] = scale(e.basis, k);
+        acq[k] = scale(basisOf(k), k);
         ded[k] = lump(k);
         lumpRate = rate;
         break;
@@ -217,7 +224,9 @@ export function applyMixedBurdenedGift(args: {
     const sideStd = s === "housing" ? hs : cs;
     const splitSide = bg.value.isMarket || bg.value.selectedMode !== "supplementary";
     perPart[k] = {
-      sangjeungbeopValue: splitSide && sideStd > 0 ? safeMultiplyThenDivide(den[s], stdT[k], sideStd) : stdT[k],
+      sangjeungbeopValue: splitSide && sideStd > 0
+        ? safeMultiplyThenDivide(den[s], stdT[k], sideStd)
+        : bg.shareRatio === undefined ? stdT[k] : applyRatio(stdT[k], bg.shareRatio),
       stdPriceAtAcquisition: g(k).basis,
       stdPriceAtTransfer: stdT[k],
       transferPrice: g(k).t,
@@ -272,8 +281,8 @@ export function applyMixedBurdenedGift(args: {
     perPart,
     highValue: {
       applicable: bg.debt.housingDebt > 0,
-      judgmentBase: mainText ? bg.value.whole : bg.value.housing,
-      prorationBase: bg.value.housing,
+      judgmentBase: mainText ? bg.value.wholeJudgment : bg.value.housingJudgment,
+      prorationBase: bg.value.housingJudgment,
       basis: mainText ? "whole_building_C" : "housing_part_C",
     },
     debtAttribution: {
@@ -293,7 +302,8 @@ export function applyMixedBurdenedGift(args: {
 
   // ── 고지 — 확인 필요 사항은 숨기지 않는다 ──
   const notices: string[] = [
-    `12억원 고가주택 판정·안분은 양도로 보는 채무액이 아니라 증여가액(${bg.value.whole.toLocaleString("ko-KR")}원)을 기준으로 했습니다(국심2007서2099 등 — 겸용주택을 직접 다룬 해석례는 확인되지 않아 확인이 필요합니다).`,
+    ...(bg.shareRatio !== undefined ? [MIXED_BG_SHARE_NOTICE] : []),
+    `12억원 고가주택 판정·안분은 양도로 보는 채무액이 아니라 증여가액(${bg.value.wholeJudgment.toLocaleString("ko-KR")}원)을 기준으로 했습니다(국심2007서2099 등 — 겸용주택을 직접 다룬 해석례는 확인되지 않아 확인이 필요합니다).`,
     `채무 귀속은 입력하신 사실 선언(임대차계약서의 임차 대상·근저당 설정 대상 등 증빙 필요)에 따랐습니다 — ${MIXED_USE_BURDENED_GIFT.DEBT_ATTRIBUTION_RULING}.`,
     "증여세 평가에 쓰는 상가건물 기준시가는 양도세 기준시가와 같다고 보았습니다.",
   ];

@@ -1,7 +1,7 @@
 /**
  * 겸용주택 × 부담부증여 — **순수 판정·준비 leaf** (엔진 · ⑫ Zod · ⑧ validate가 같은 함수를 호출한다).
  *
- * 설계: docs/02-design/features/transfer-burdened-gift-mixed-use.engine.design.md (R4) §3.1A·§3.7·§10 RES-1.
+ * 설계: docs/02-design/features/transfer-burdened-gift-mixed-use.engine.design.md (R4) §3.1A·§3.7·§10 RES-1 · 공유지분 단건: docs/00-pm/bg-mixed-use-m2-bundle-share.plan.md (PR-A).
  *
  * ## 이 파일이 갖는 것
  *  1. `collectMixedBurdenedGiftIssues` — 차단 판정 MB-1~MB-18. 엔진 throw · ⑫ superRefine · ⑧이 이 한 함수를 부른다(규칙 두 벌 금지).
@@ -26,8 +26,13 @@ import { isBuildingDayLandPriceRequired } from "./mixed-use-acq-date";
 import { apportionByStdPrice } from "./std-price-apportion";
 import { multiplyByArea } from "./area-utils";
 import { SEC_163_9_BUILDING_FIRST_DISCLOSURE } from "./transfer-split-part-cause";
-import { computeMortgageValuation, computeSangjeungbeopValuation } from "./burdened-gift-valuation";
-import { safeMultiplyThenDivide } from "./tax-utils";
+import {
+  computeMortgageValuation,
+  computeSangjeungbeopValuation,
+  fractionalHighValueDenominator,
+  scaleBurdenedGiftInfo,
+} from "./burdened-gift-valuation";
+import { applyRatio, safeMultiplyThenDivide } from "./tax-utils";
 
 /** 겸용 분리계산 시행일 — 영 §160① 괄호(부칙 제1조3호·제42조: 2022.1.1. 전 양도분은 종전 규정). `isMixedUseSplitTransfer`(`data/mixed-use-split-era.ts`)와 같은 날. */
 const MIXED_BG_EFFECTIVE_TIME = new Date("2022-01-01").getTime();
@@ -41,6 +46,10 @@ export type MixedBgIssueCode =
   | "MB-1" | "MB-2" | "MB-3" | "MB-4" | "MB-5" | "MB-6" | "MB-8" | "MB-9"
   // MB-14(부분 초과 차단)도 사용자 결정(2026-11-16 — 부분 증여가액의 하한 = 그 부분 채무액)으로 없앴다.
   | "MB-10" | "MB-11" | "MB-12" | "MB-13" | "MB-15" | "MB-16" | "MB-17" | "MB-18";
+
+/** MB-6 문구 — 엔진·⑫ 컴패니언 refine·⑧이 같은 상수를 쓴다(복제 금지). */
+export const MIXED_BG_COMPANION_BLOCK_MESSAGE =
+  "겸용주택 부담부증여는 함께 양도(여러 물건)·지분 분할 취득과 함께 계산할 수 없습니다 — 단독 소유 또는 공유지분 단건만 지원합니다.";
 
 export interface MixedBgIssue {
   code: MixedBgIssueCode;
@@ -90,12 +99,17 @@ export interface MixedBgSource {
   separateAcquisition?: unknown;
   partialUsageChange?: unknown;
   transferCause?: string;
+  /**
+   * 공유지분율 (0 < r ≤ 1). **지분 단건**에서만 의미가 있다 — 평가·취득 입력(기준시가·시가·취득총액)은 물건 전체(100%) 값을 받아 여기서 ×r하고
+   * (비겸용 `scaleBurdenedGiftInfo`와 같은 규약), 채무·귀속 3칸은 지분 인수분 그대로다(PR-A · 계획서 `bg-mixed-use-m2-bundle-share.plan.md` Q-1).
+   * 함께 양도·축 B는 `isCompanion`이 막는다.
+   */
   ownershipRatio?: number;
   /** 증여자의 취득원인 echo */
   acquisitionCause?: string;
   housingInheritedValue?: number;
   commercialInheritedValue?: number;
-  /** 함께 양도(컴패니언)·축 B 묶음 안의 겸용인가 — MB-6 */
+  /** 함께 양도(컴패니언)·축 B 묶음 안의 겸용인가 — MB-6 (지분 단건은 막지 않는다) */
   isCompanion?: boolean;
 }
 
@@ -120,12 +134,19 @@ export interface MixedBgPrepared {
   valuation: ReturnType<typeof computeSangjeungbeopValuation>;
   /** 증여가액 */
   value: {
-    /** C = 증여재산 총 평가액(보충적평가 또는 시가) */
+    /** C = 증여재산 총 평가액(보충적평가 또는 시가) — 지분이면 **지분 증여가액** */
     whole: number;
     /** C_h */
     housing: number;
     /** C_c = C − C_h */
     commercial: number;
+    /**
+     * 12억 고가주택 **판정** 가액(영 §156①·②) — 단독 소유는 `whole`과 같다. 지분이면 물건 전체:
+     * 보충 승 = 물건 전체 보충적평가액, 담보·임대 승 = `ceil(C/r)`(비겸용 `fractionalHighValueDenominator` 규약).
+     */
+    wholeJudgment: number;
+    /** 12억 **안분 분모**(영 §160① 괄호 — 주택분) — 단독 소유는 `housing`과 같다. 지분이면 물건 전체 주택분. */
+    housingJudgment: number;
     isMarket: boolean;
     /** 구분 감정평가가 있어 C_h를 직접 입력받았는가(G-13) */
     separateAppraisal: boolean;
@@ -140,6 +161,8 @@ export interface MixedBgPrepared {
   transferStd: { hl: number; hb: number; cl: number; cb: number };
   /** 증여자의 취득 경로 */
   acqPath: MixedBgAcqPath;
+  /** 공유지분율(0<r<1) — 단독 소유면 없다. 4부분 취득시 기준시가(basis)를 ×r해 쓰는 곳(`applyMixedBurdenedGift`)이 읽는다. */
+  shareRatio?: number;
   /** 의제취득일(1985.1.1.) 전 상속·증여 — 취득시 기준시가가 의제취득일 기준시가다(결과 라벨 echo · PR-7b-7b) */
   preDeemed: boolean;
   /** 엔진 asset에 덮어쓸 값 — 취득 플래그는 BG 모드가 정본이다(asset의 stale 플래그를 신뢰하지 않는다) */
@@ -174,6 +197,12 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   const issues: MixedBgIssue[] = [];
   const add = (code: MixedBgIssueCode, message: string, path: string[]) => issues.push({ code, message, path });
 
+  // ── 공유지분(PR-A) — 평가·취득 입력은 물건 전체(100%), 여기서 ×r. 채무·귀속은 지분 인수분 그대로 ──
+  const shareR = src.ownershipRatio !== undefined && src.ownershipRatio > 0 && src.ownershipRatio < 1 ? src.ownershipRatio : undefined;
+  /** 물건 전체(100%) 입력 → 지분분. 단독 소유는 그대로다. */
+  const toShare = (v: number): number => (shareR === undefined ? v : applyRatio(v, shareR));
+  const infoS = scaleBurdenedGiftInfo(info, shareR);
+
   // ── 단순 게이트 ────────────────────────────────────────────
   const td = toTime(src.transferDate);
   if (td !== undefined && td < MIXED_BG_EFFECTIVE_TIME) {
@@ -186,7 +215,7 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   // 시가 모드 담보(§66) 승 — 시가 모드는 시가와 담보평가만 비교하므로(임대 환산은 채택하지 않는다 · `computeSangjeungbeopValuation`) 기하 없이 판정된다.
   //   이때 §159①1호 괄호가 취득가액을 취득시 기준시가로 강제한다(`resolveBgAcquisitionBasis`의 `collateralForcedStdInMarketMode`와 같은 조건 · 입주권은 MB-12가 막는다)
   //   — 취득 경로는 기준시가 모드와 같고, 시가 취득 경로 입력(산정방식·실지 총액·상속증여 평가액·구분 감정평가)을 묻지 않는다.
-  const marketCollateralWin = isMarket && pos(info.marketValueAtTransfer) && computeMortgageValuation(info) > info.marketValueAtTransfer;
+  const marketCollateralWin = isMarket && pos(info.marketValueAtTransfer) && computeMortgageValuation(info) > (infoS.marketValueAtTransfer as number);
   const isMarketAcq = isMarket && !marketCollateralWin;
   // 상속·증여 취득 경로(K-4 고정)는 시가 모드에서만 의미가 있다 — 기준시가 모드는 괄호가 취득시 기준시가를 강제한다.
   const deemedPath = isMarketAcq && byInheritOrGift;
@@ -215,8 +244,9 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   if (src.transferCause === "public_expropriation") {
     add("MB-5", "겸용주택 부담부증여는 공익사업 수용 양도 특례와 함께 계산할 수 없습니다.", ["transferCause"]);
   }
-  if ((src.ownershipRatio !== undefined && src.ownershipRatio < 1) || src.isCompanion === true) {
-    add("MB-6", "겸용주택 부담부증여는 공유지분·함께 양도(여러 물건)·지분 분할 취득과 함께 계산할 수 없습니다 — 단독 소유 단건만 지원합니다.", ["ownershipRatio"]);
+  // 공유지분 단건은 계산한다(PR-A). 함께 양도(여러 물건)·지분 분할 취득(축 B)은 PR-B까지 막는다.
+  if (src.isCompanion === true) {
+    add("MB-6", MIXED_BG_COMPANION_BLOCK_MESSAGE, ["ownershipRatio"]);
   }
   if (deemedPath && (method === "converted" || method === "salesCase" || method === "appraisal")) {
     add("MB-8", "증여자가 상속·증여로 취득한 자산은 상속개시일(증여일) 현재 상증법 평가액이 취득 당시 실지거래가액입니다(「소득세법 시행령」 제163조 제9항) — 환산취득가액·매매사례가액·감정가액을 쓸 수 없습니다. 취득가액 산정방식을 「실지취득가액」으로 선택하세요.", ["burdenedGiftInfo", "acquisitionMethod"]);
@@ -374,10 +404,14 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   const Hs = transferStd.hl + transferStd.hb;
   const Cs = transferStd.cl + transferStd.cb;
   const sigmaTransfer = Hs + Cs;
+  // 지분이면 4부분 양도시 기준시가도 지분분으로 줄여 C·승자·C_h를 지분분 위에서 계산한다(단독 소유면 같은 값).
+  const sHl = toShare(transferStd.hl), sHb = toShare(transferStd.hb), sCl = toShare(transferStd.cl), sCb = toShare(transferStd.cb);
+  const HsS = sHl + sHb;
+  const CsS = sCl + sCb;
   if (info.landStdPriceAtTransfer + info.buildingStdPriceAtTransfer !== sigmaTransfer) {
     add("MB-12", `부담부증여 정보의 양도시 기준시가 합계(${won(info.landStdPriceAtTransfer + info.buildingStdPriceAtTransfer)})가 겸용주택 입력에서 계산한 양도시 기준시가 합계(${won(sigmaTransfer)} = 개별주택가격 + 상가 부수토지 + 상가건물)와 다릅니다.`, ["burdenedGiftInfo", "buildingStdPriceAtTransfer"]);
   }
-  const valuation = computeSangjeungbeopValuation(transferStd.hl + transferStd.cl, transferStd.hb + transferStd.cb, info);
+  const valuation = computeSangjeungbeopValuation(sHl + sCl, sHb + sCb, infoS);
 
   const C = valuation.max;
   if (B > C) {
@@ -387,15 +421,19 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   // C_h — 구분 감정평가가 있으면 입력값(부가세령 §64①1호 단서), 없으면 양도시 기준시가 비례(같은 호 본문)
   let Ch: number;
   const separateAppraisal = isMarketAcq && info.housingAppraisal?.exists === true;
+  /** 구분 감정평가 주택분 가액(물건 전체 입력 — 12억 판정 분모에 그대로 쓴다) */
+  let wholeHousingAppraisal: number | undefined;
   if (separateAppraisal) {
     const hv = info.housingAppraisal?.housingValue;
-    if (!pos(hv) || hv >= C) {
-      add("MB-17", `주택분 감정평가가액은 0보다 크고 증여가액(${won(C)})보다 작아야 합니다.`, ["burdenedGiftInfo", "housingAppraisal", "housingValue"]);
+    const hvS = pos(hv) ? toShare(hv) : undefined;
+    if (!pos(hv) || hvS === undefined || hvS >= C) {
+      add("MB-17", `주택분 감정평가가액은 0보다 크고 증여가액(${won(C)})보다 작아야 합니다${shareR === undefined ? "" : "(공유지분이면 지분분으로 줄여 비교합니다)"}.`, ["burdenedGiftInfo", "housingAppraisal", "housingValue"]);
       return { issues };
     }
-    Ch = hv;
+    wholeHousingAppraisal = hv;
+    Ch = hvS;
   } else {
-    Ch = apportionByStdPrice(C, Hs, Cs).land;
+    Ch = apportionByStdPrice(C, HsS, CsS).land;
   }
 
   // ── 채무 귀속 안분 (MB-13 통과 시) ──────────────────────────
@@ -403,7 +441,7 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   // 구분 불분명 채무 — 담보(§66) 승은 C = B(담보평가 = 보증금 + min(채권최고액, 차입금) ≤ B이고 위 MB-10을 통과)라 기준시가 비율로 나눈다(사용자 결정 H-1 ①).
   //   그 밖은 주택·상가 증여가액 비율이다.
   const collateralWin = valuation.selectedMode === "mortgage";
-  const uh = collateralWin ? safeMultiplyThenDivide(attr.unallocated, Hs, Hs + Cs) : Math.floor(safeMultiplyThenDivide(attr.unallocated, Ch, C));
+  const uh = collateralWin ? safeMultiplyThenDivide(attr.unallocated, HsS, HsS + CsS) : Math.floor(safeMultiplyThenDivide(attr.unallocated, Ch, C));
   const uc = attr.unallocated - uh;
   const Bh = attr.housing + uh;
   const Bc = attr.commercial + uc;
@@ -420,13 +458,34 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   }
   const Cc = C - Ch;
 
+  // ── 12억 판정·안분 분모(영 §156①·②·§160①) — 지분이면 물건 전체 값이다(비겸용 `fractionalHighValueDenominator` 규약 · 계획서 Q-2) ──
+  //   보충 승 = 물건 전체 보충적평가액(시가 모드는 시가, 기준시가 모드는 4부분 합), 담보·임대 승 = ceil(C/r).
+  //   주택분은 같은 규약 — 보충 승이면 물건 전체를 기준시가 비례(구분 감정평가가 있으면 그 가액)로 나눈 주택분, 그 밖은 ceil(C_h/r).
+  //   하한(debtFloor)이 발동했으면 그 부분 채무를 물건 전체로 환산한 값이다(100% 단독 소유로 같은 일을 했을 때와 같다).
+  const ceilByShare = (x: number): number => Math.ceil(x / (shareR as number) - 1e-6);
+  let wholeJudgment = C;
+  let housingJudgment = Ch;
+  if (shareR !== undefined) {
+    const suppWin = valuation.selectedMode === "supplementary";
+    wholeJudgment = fractionalHighValueDenominator({
+      selectedMode: valuation.selectedMode,
+      max: C,
+      wholePropertySupplementary: isMarket ? (info.marketValueAtTransfer ?? 0) : sigmaTransfer,
+      ownershipRatio: shareR,
+    });
+    if (suppWin && !debtFloor) housingJudgment = wholeHousingAppraisal ?? apportionByStdPrice(wholeJudgment, Hs, Cs).land;
+    else if (suppWin && debtFloor === "commercial") housingJudgment = wholeJudgment - ceilByShare(Bc);
+    else housingJudgment = ceilByShare(Ch);
+  }
+
   // ── 취득 경로 — BG 모드가 정본(asset의 stale 플래그를 덮어쓴다) ──
   let acqPath: MixedBgAcqPath;
   if (!isMarketAcq) acqPath = "standard";
   else if (deemedPath) acqPath = src.bgPreDeemedConverted === true ? "converted_pre_deemed" : "deemed";
   else acqPath = method === "actual" ? "actual" : method === "converted" ? "converted" : (method as "salesCase" | "appraisal");
+  // 취득 총액도 지분분 — 4부분 분해가 지분분 위에서 이뤄져 ×B′/C(지분 증여가액)와 스케일이 맞는다.
   const totalFor =
-    acqPath === "actual" ? info.actualAcquisitionTotal : acqPath === "salesCase" || acqPath === "appraisal" ? info.presumedAcquisitionTotal : undefined;
+    acqPath === "actual" ? infoS.actualAcquisitionTotal : acqPath === "salesCase" || acqPath === "appraisal" ? infoS.presumedAcquisitionTotal : undefined;
 
   return {
     issues,
@@ -438,10 +497,11 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
       },
       valuation,
       value: {
-        whole: C, housing: Ch, commercial: Cc, isMarket, separateAppraisal, ...(debtFloor ? { debtFloor } : {}),
+        whole: C, housing: Ch, commercial: Cc, wholeJudgment, housingJudgment, isMarket, separateAppraisal, ...(debtFloor ? { debtFloor } : {}),
         selectedMode: valuation.selectedMode, collateralForcedStdInMarketMode: marketCollateralWin,
       },
       transferStd,
+      ...(shareR !== undefined ? { shareRatio: shareR } : {}),
       acqPath,
       preDeemed: preDeemedInherited,
       assetOverrides: {
@@ -450,7 +510,8 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
         acquisitionByInheritance: acqPath === "deemed" && cause === "inheritance",
         acquisitionByGift: acqPath === "deemed" && cause === "gift",
         acquisitionActualTotalPrice: totalFor,
-        totalPropertyTransferPrice: C,
+        // 12억 판정 가액 — 지분이면 물건 전체(영 §156①), 단독 소유는 C
+        totalPropertyTransferPrice: wholeJudgment,
       },
     },
   };
