@@ -38,7 +38,7 @@ import type {
  * 임대유형별 의무임대기간 (시행령 §3① 각 호 나목, 2026.2.27 시행본 실측)
  *
  * - 장기일반·공공지원민간임대(§3①7·8호): 10년
- * - 건설·매입·2005 이전 구법(§3①1·2·3호): 5년
+ * - 건설·매입(2018.3.31. 이전 등록)·2005 이전 임대(§3①1·2·3호): 5년
  * - 공공건설/공공매입: §3①1·2호 5년 (단 §3⑦8호 임대의무기간 종료일까지 계속임대 간주 — 별도 사후관리)
  *
  * - 단기민간임대주택(§2⑥의2, 6년·§3①10·11호): 6년 (건설 10호·매입 11호)
@@ -48,7 +48,7 @@ const MANDATORY_PERIOD_BY_TYPE: Record<
   number
 > = {
   private_construction:        COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,      // 5 — §3①1호
-  private_purchase_short:      COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,      // 5 — §3①2호 (구법)
+  private_purchase_short:      COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_SHORT,      // 5 — §3①2호 (2018.3.31. 이전 등록)
   private_purchase_long:       COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG,       // 10 — §3①8호
   public_support_construction: COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG,       // 10 — §3①7호
   public_support_purchase:     COMPREHENSIVE_EXCL_CONST.MANDATORY_PERIOD_LONG,       // 10 — §3①8호 (공공지원)
@@ -292,7 +292,7 @@ export function validateRentalExclusion(
     failReasons.push(COMPREHENSIVE_EXCL.RENTAL_NOT_STARTED);
   }
 
-  // 의무임대기간 — 등록 말소 확인 시 즉시 차단 (시행령 §3① 계속임대 위반 확정)
+  // 등록 말소 — 과세기준일(당일 포함)까지 말소면 과세기준일 현재 임대사업자가 아니다(§3① 각 호 외의 부분)
   // ※ "현재까지 N년 미달"은 거부 사유 아님 — 장래 의무이므로 경고만(아래 warnings)
   // 9호는 「소유」만 요구(공공주택사업자 — 민특법 등록 말소 개념 없음) · 4호는 임대사업자 요건이라 말소 시 불성립(계획서 4-7·9-7)
   if (
@@ -300,7 +300,7 @@ export function validateRentalExclusion(
     input.registrationRevokedDate &&
     input.registrationRevokedDate <= input.assessmentDate
   ) {
-    failReasons.push(COMPREHENSIVE_EXCL.MANDATORY_PERIOD_NOT_MET);
+    failReasons.push(COMPREHENSIVE_EXCL.REGISTRATION_REVOKED);
   }
 
   if (failReasons.length > 0) {
@@ -318,8 +318,12 @@ export function validateRentalExclusion(
         ? COMPREHENSIVE_EXCL.MANDATORY_PERIOD_LONG_BASIS
         : "종합부동산세법 시행령 §3①";
       warnings.push(
-        `의무임대기간(${requiredYears}년) 미충족 — 현재 ${input.actualRentalYears}년 경과. ` +
-          `의무기간 충족 전 등록 말소 시 합산배제 세액이 소급 추징됩니다 (${basis}).` +
+        `의무임대기간(${requiredYears}년) 미충족 — 현재 ${input.actualRentalYears}년 경과 (${basis}). ` +
+          `의무기간 안에 요건을 갖추지 못하게 되면(협의매수·수용 등 ${COMPREHENSIVE_EXCL.CONTINUED_RENTAL_DEEMED} 사유는 제외) ` +
+          `경감받은 세액과 이자상당가산액을 추징합니다 (${COMPREHENSIVE_EXCL.RECAPTURE_BASIS}). ` +
+          `종전 장기일반 아파트 매입임대·단기민간임대가 ${COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_CANCELLATION_CLAUSES}에 따라 ` +
+          `자진말소·자동말소된 경우에 한해 ` +
+          `추징하지 않습니다 (${COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_CANCELLATION}).` +
           (applicationUnknown ? " 지자체 등록 신청일이 2020.8.17. 이전이면 의무임대기간은 8년입니다(확인 필요)." : ""),
       );
     }

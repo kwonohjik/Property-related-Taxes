@@ -77,7 +77,7 @@ describe("6-2~6-5 면적·가격·수도권", () => {
     expect(issues({ location: "metro" })).toEqual([E.UNSOLD_6HO_METRO]);
   });
   it("말소 → 불성립(나목 5년 계속 임대)", () => {
-    expect(verdict({ registrationRevokedDate: d("2024-01-01") }).failReasons).toContain(E.MANDATORY_PERIOD_NOT_MET);
+    expect(verdict({ registrationRevokedDate: d("2024-01-01") }).failReasons).toContain(E.REGISTRATION_REVOKED);
   });
 });
 

@@ -25,7 +25,7 @@ import type { RentalExclusionRentViolationFacts } from "./comprehensive-exclusio
 export type ExclusionType =
   | "private_construction_rental"   // 민간건설임대 (시행령 §3①1호)
   | "private_purchase_rental_long"  // 민간매입임대 장기일반 (시행령 §3①8호)
-  | "private_purchase_rental_short" // 민간매입임대 단기 구법 (시행령 §3①2호 구법)
+  | "private_purchase_rental_short" // 민간매입임대 2018.3.31. 이전 등록 — 단기·장기 공통 (시행령 §3①2호)
   | "public_support_construction_rental" // 공공지원·장기일반민간임대 건설 (시행령 §3①7호)
   | "public_support_purchase_rental"     // 공공지원민간임대 매입 (시행령 §3①8호)
   | "public_construction_rental"    // 공공건설임대 (시행령 §3①1호)
@@ -98,7 +98,7 @@ export interface RentalExclusionInput
   qualifyingUnitCount?: number;
 
   // ── 의무임대기간 (시행령 §3① "N년 이상 계속하여 임대") ──
-  /** 임대등록 말소일 — 입력 + 과세기준일 이전이면 합산배제 거부 (시행령 §3① 계속임대 위반 확정) */
+  /** 임대등록 말소일 — 과세기준일(당일 포함)까지 말소면 합산배제 거부 — 과세기준일 현재 임대사업자 아님 (시행령 §3①) */
   registrationRevokedDate?: Date;
   /** 실제 임대 경과 연수 (기산일~과세기준일, 시행령 §3⑦ 합산기간) — 의무기간 미달 시 추징 위험 경고용 (배제 거부 아님) */
   actualRentalYears?: number;

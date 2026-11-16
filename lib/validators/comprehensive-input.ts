@@ -135,7 +135,7 @@ const rentalExclusionInfoSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." })
     .optional(),
 
-  /** 임대등록 말소일 (YYYY-MM-DD, 선택) — 과세기준일 이전이면 합산배제 거부 */
+  /** 임대등록 말소일 (YYYY-MM-DD, 선택) — 과세기준일(당일 포함)까지 말소면 합산배제 거부(§3①) */
   registrationRevokedDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "YYYY-MM-DD 형식이어야 합니다." })
