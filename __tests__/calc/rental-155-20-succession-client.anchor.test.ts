@@ -46,9 +46,9 @@ function asset(unitOver: Partial<UnitForm>): AssetForm {
       rentalUnits: [
         {
           ...makeDefaultRentalUnit(),
-          businessRegistrationDate: "2021-03-01",
-          rentalRegistrationDate: "2021-03-01",
-          rentalRegisteredDate: "2021-03-01",
+          businessRegistrationDate: "2021-06-01",
+          rentalRegistrationDate: "2021-06-01",
+          rentalRegisteredDate: "2021-06-01",
           isApartment: true,
           standardPriceAtRentalStart: "300,000,000",
           rentalMonths: "36",
@@ -224,13 +224,13 @@ describe("클라이언트 목 판정 4곳 — 증여면 증여자 등록 기준(
     });
     const own = unitOf(asset({ ...GIFT, rentalSuccession: "assumption" }));
     expect(rentalUnitDonorRegistrationInScope(own)).toBe(false);
-    expect(rentalUnitRegistrationBasis(own).rentalRegistrationDate).toBe("2021-03-01");
+    expect(rentalUnitRegistrationBasis(own).rentalRegistrationDate).toBe("2021-06-01");
   });
 
   it("D-2 rentalUnitRegApplicationDate — 증여자 칸이 비어 있으면 null(본인 날짜로 대신하지 않는다)", () => {
     expect(rentalUnitRegApplicationDate(unitOf(asset(GIFT)))?.toISOString().slice(0, 10)).toBe("2019-06-01");
     expect(rentalUnitRegApplicationDate(unitOf(asset({ ...GIFT, donorRentalRegistrationDate: "" })))).toBeNull();
-    expect(rentalUnitRegApplicationDate(unitOf(asset({})))?.toISOString().slice(0, 10)).toBe("2021-03-01");
+    expect(rentalUnitRegApplicationDate(unitOf(asset({})))?.toISOString().slice(0, 10)).toBe("2021-06-01");
   });
 
   it("D-3 rentalUnitTerminationInScope — 건설임대·말소: 증여자 2019(다목) 대상 / 수증자 2021(바목) 대상 아님", () => {
@@ -269,14 +269,14 @@ describe("⑧ 검증 — 승계 입력", () => {
     expect(validate(asset(INH))).toBeNull();
     expect(validate(asset({ ...INH, donorRentalRegistrationDate: "", donorRentalRegisteredDate: "" }))).toContain("함께 입력하거나 둘 다 비워");
     expect(validate(asset({ ...INH, donorBusinessRegistrationDate: "" }))).toContain("함께 입력하거나 둘 다 비워");
-    expect(validate(asset({ ...INH, donorRentalRegistrationDate: "2021-03-02", donorRentalRegisteredDate: "2021-03-02" }))).toContain("피상속인의 임대사업자등록신청일");
+    expect(validate(asset({ ...INH, donorRentalRegistrationDate: "2021-06-02", donorRentalRegisteredDate: "2021-06-02" }))).toContain("피상속인의 임대사업자등록신청일");
     // 옛 기록(rentalSuccession 없음 + isInheritedRental)도 상속 규칙
     expect(validate(asset({ rentalSuccession: undefined, isInheritedRental: true, decedentRentalMonths: "" }))).toContain("피상속인 임대기간(개월)을 입력하세요");
   });
 
   it("V-2 순서 — 증여자 신청일이 수증자 신청일보다 뒤면 막고 같은 날은 통과", () => {
-    expect(validate(asset({ ...GIFT, donorRentalRegistrationDate: "2021-03-02", donorRentalRegisteredDate: "2021-03-02" }))).toContain("증여자");
-    expect(validate(asset({ ...GIFT, donorRentalRegistrationDate: "2021-03-01", donorRentalRegisteredDate: "2021-03-01" }))).toBeNull();
+    expect(validate(asset({ ...GIFT, donorRentalRegistrationDate: "2021-06-02", donorRentalRegisteredDate: "2021-06-02" }))).toContain("증여자");
+    expect(validate(asset({ ...GIFT, donorRentalRegistrationDate: "2021-06-01", donorRentalRegisteredDate: "2021-06-01" }))).toBeNull();
   });
 
   it("V-3 증여자 등록일은 증여자 신청일 이후여야 한다 · 비워도 된다(엔진이 신청일로 본다)", () => {
@@ -291,9 +291,9 @@ describe("⑧ 검증 — 승계 입력", () => {
 });
 
 describe("⑧ ↔ ⑫ 격자 — 승계 날짜 조합이 UI 통과 ⇔ API 통과로 일치한다", () => {
-  // 수증자 신청일 2021-03-01. 증여자 신청일 × 증여자 등록일 × 증여자 사업자등록일 전수.
-  const applications = ["2019-06-01", "2021-03-01", "2021-03-02", ""];
-  const registered = ["", "2019-05-31", "2019-06-01", "2021-03-01", "2021-03-02"];
+  // 수증자 신청일 2021-06-01. 증여자 신청일 × 증여자 등록일 × 증여자 사업자등록일 전수.
+  const applications = ["2019-06-01", "2021-06-01", "2021-06-02", ""];
+  const registered = ["", "2019-05-31", "2019-06-01", "2021-06-01", "2021-06-02"];
   const business = ["2019-06-01", ""];
 
   it("G-1 ⑧이 통과하면 ⑫도 통과하고, ⑧이 증여자 날짜로 막으면 ④가 보내지 않거나 ⑫가 400이다(모순 0)", () => {
@@ -315,7 +315,7 @@ describe("⑧ ↔ ⑫ 격자 — 승계 날짜 조합이 UI 통과 ⇔ API 통�
           // 증여자 날짜가 정상으로 전송된 조합(④가 donorRegistration을 보냄)에서 ⑫가 거부하는데 ⑧이 막지 않으면 모순 — 위 줄이 잡는다.
           // 반대(⑧ 차단 · ⑫ 통과)는 ⑧이 더 엄격한 필수(빈 칸)일 때만 허용 — 순서 위반은 둘 다 막아야 한다.
           if (msg !== null && ok && app && biz) {
-            const orderViolation = app > "2021-03-01" || (reg && reg < app);
+            const orderViolation = app > "2021-06-01" || (reg && reg < app);
             if (orderViolation) contradictions.push(`${key}: 순서 위반인데 ⑫ 통과`);
           }
         }

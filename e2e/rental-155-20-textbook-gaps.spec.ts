@@ -347,7 +347,8 @@ test.describe("I 상속 임대주택 — 피상속인 등록일로 목 판정(19
     standardPriceAtRentalStart: "300000000",
     rentalMonths: "36",
     rentalSuccession: "inheritance",
-    decedentRentalMonths: "24",
+    // V-9 — 피상속인 2019-06 등록 + 21개월 = 2021-03(상속인 등록일) — 개월이 더 길면 두 기간이 겹쳐 ⑧이 막는다
+    decedentRentalMonths: "21",
   };
   const decedent = {
     donorBusinessRegistrationDate: "2019-06-01",
@@ -361,7 +362,7 @@ test.describe("I 상속 임대주택 — 피상속인 등록일로 목 판정(19
     await expect(page.getByText("피상속인 지자체 임대사업자 등록 신청일")).toBeVisible();
     await expect(page.getByTestId("rental-decedent-registration-note-0")).toContainText("서면-2020-법규재산-1959");
     const unit = await judge(page);
-    expect(unit).toMatchObject({ succession: { kind: "inheritance", predecessorMonths: 24 } });
+    expect(unit).toMatchObject({ succession: { kind: "inheritance", predecessorMonths: 21 } });
     expect((unit?.donorRegistration as { rentalRegistrationDate?: string })?.rentalRegistrationDate?.slice(0, 10)).toBe("2019-06-01");
     await expect(page.getByTestId("one-house-rental-verdict")).toHaveText("요건 충족");
   });
@@ -373,5 +374,12 @@ test.describe("I 상속 임대주택 — 피상속인 등록일로 목 판정(19
     const unit = await judge(page);
     expect(unit?.donorRegistration).toBeUndefined();
     await expect(page.getByTestId("one-house-rental-verdict")).toContainText("요건 미충족");
+  });
+
+  test("[I-3] V-9 — 피상속인 개월이 상속인 등록일까지 넘치면(24개월 → 2021-06 > 2021-03) 겹침 안내로 막는다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openJudgmentRentalCard(page, "2024-06-01", { ...inherited, ...decedent, decedentRentalMonths: "24" });
+    await page.getByRole("button", { name: "다음" }).click();
+    await expect(page.getByText(/두 기간이 겹칩니다/).first()).toBeVisible();
   });
 });

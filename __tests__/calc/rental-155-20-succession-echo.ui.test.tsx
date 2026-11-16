@@ -89,7 +89,7 @@ function cardText(detail: Detail) {
 
 
 const DONOR = {
-  donorBusinessRegistrationDate: "2003-04-01",
+  donorBusinessRegistrationDate: "2001-04-01", // V-9 — 2001-04 + 24개월 = 2003-04 ≤ 수증자 2003-05(겹치지 않게)
   donorRentalRegistrationDate: "2003-05-01",
   donorRentalRegisteredDate: "2003-05-01",
 };
