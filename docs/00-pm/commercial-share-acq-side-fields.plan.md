@@ -34,6 +34,18 @@
 - E2E `commercial-share-acq-side-fields.spec.ts` CS-E1 · CS-E2(수정 전 코드에서 둘 다 실패) · 상가 관련 E2E 20스펙 98/98.
 - 회귀: api 상가 × 축 B 23파일 + calc · components · lib 1,990파일 23,179건 통과 · typecheck 0 · lint 0.
 
-## 4. 남은 것
+## 4. 남은 것 → 지분 카드 「호별 고시가 조회」 정리(2026-11-16 · 사용자 「자동조회 1건 정리해」)
 
-- 지분 카드의 「국세청 고시분 자동조회」(`CommercialStdPriceLookupModal`)는 양도시 단가 · 면적도 그 카드에 채운다 — 쓰이지 않는 값이 지분 카드 store에 남는다(세액 무관 · 미수정).
+### 4.1 실측(Playwright · 조회 API mock)
+
+| 지분 카드 | 종전 |
+|---|---|
+| 「+ 지분 추가」로 만든 카드(PNU 없음 — `makeDefaultAsset`) | 🔴 버튼 비활성 + 「소재지를 다시 선택하면 조회할 수 있습니다」 — 지분 카드에는 소재지 칸이 없어 따를 수 없다. 이 지분 취득시 단가를 자동조회할 길이 없었다 |
+| PNU가 있는 카드(옛 저장 등) | 🟡 양도시 단가(5,898,000)를 지분 store에 씀(계산 무관) · 자산 1 면적과 다르면 「조회값으로 덮어쓰기」 제안(무시될 값) · 「소재지 미상」 표시 |
+
+### 4.2 구현
+
+- `CommercialStdPriceLookupModal` `shareCard`: 양도시 시점을 조회하지 않고, 적용은 취득 쪽 단가(`cbUnitPriceAtFirstOrAcq`)만 — 면적 · 양도시 단가를 지분 카드에 쓰지 않는다 · 면적 충돌 안내 대신 「면적 · 양도시 고시가는 자산 1 값」 안내(`cb-stdprice-share-note`). `CommercialBuildingBlock` · `CommercialInheritanceStdPriceSection`이 지분 카드면 넘긴다.
+- 지분 카드 ③ 표시 자산에 자산 1 소재지(`addressPnu` · `addressJibun` · `addressRoad`)를 준다 — 같은 물건이고 ④도 소재지를 병합한다. 지분 카드의 공시지가 조회(`LandPriceLookupField` 지번)도 같은 소재지를 쓴다.
+- 세액 불변(표시 · 입력 경로만).
+- 검증: E2E CS-E3(수정 전 코드에서 실패 — 버튼 비활성) · 상가 관련 E2E 20스펙 99/99 · components 830파일 7,350건 · typecheck 0 · lint 0.

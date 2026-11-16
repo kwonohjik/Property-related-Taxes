@@ -323,7 +323,7 @@ export function AssetSectionAcquisition({
       )}
 
       {/* 상속 상가 §164⑥ 취득당시 기준시가 (2005.1.1 전 상속) — max(상증법 평가액, §164⑥). 소령 §163⑨2호. */}
-      <CommercialInheritanceStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} />
+      <CommercialInheritanceStdPriceSection asset={asset} onChange={onChange} transferDate={transferDate} shareCard={splitMode === "fractional" && !isFirst} />
 
       {/* 상속·증여 건물(토지 제외) §164⑤ 취득당시 기준시가 (기준일 연도 ≤ 2000) — max(상증법 평가액, §164⑤). 소령 §163⑨2호. */}
       <BuildingSec164Section asset={asset} onChange={onChange} transferDate={transferDate} />

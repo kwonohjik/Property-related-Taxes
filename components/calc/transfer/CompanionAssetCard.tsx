@@ -195,7 +195,10 @@ export function CompanionAssetCard({
             ...bgRtmiShareJudgmentFields(asset, primaryAsset),
             // 상가 지분 — 물건 단위 칸(면적 · 용도지역 · 양도시 가격)은 자산 1 값이다(④ · ⑧ 병합과 같은 목록). 지분 카드는 그 칸을 입력받지 않고,
             // 미리보기 · 연면적 표시만 이 값으로 계산한다. 취득 쪽 칸은 이 카드 값 그대로다(`commercial-share-object-fields.ts`).
-            ...(primaryAsset.assetKind === "commercial_building" ? commercialShareObjectFieldsOf(primaryAsset) : {}),
+            // 소재지도 같은 물건이다 — 지분 카드에는 ① 기본정보(소재지 칸)가 없어, 자산 1 소재지로 호별 고시가 · 공시지가를 조회한다(④도 소재지를 병합한다).
+            ...(primaryAsset.assetKind === "commercial_building"
+              ? { ...commercialShareObjectFieldsOf(primaryAsset), addressPnu: primaryAsset.addressPnu, addressJibun: primaryAsset.addressJibun, addressRoad: primaryAsset.addressRoad }
+              : {}),
           }
         : asset,
     [hideInheritedSections, primaryAsset, asset],
