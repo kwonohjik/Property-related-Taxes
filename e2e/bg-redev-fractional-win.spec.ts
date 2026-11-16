@@ -109,3 +109,63 @@ test("RD-E4: 보충적평가 승(채무 3억)은 담보 승 안내가 없다 —
   await expect(page.locator(EXPENSE_FIELD).first()).toBeVisible();
   await expect(page.getByTestId(LUMP)).toHaveCount(0);
 });
+
+// ── V-5 사이드바 렌더(계획서 `bg-redev-fractional-k5-full-open.plan.md` §9) — 축 B 60/40 · K-5 · 인가 전 실비 2천만 원 입력 ──
+// 부담부증여는 계산 전 필요경비가 축·승자와 무관하게 «계산 후 표시»다(`transfer-per-asset-summary.ts` `usesSelfComputedTransferPrice` 분기가
+// 재개발 축 분기보다 먼저 잡는다). 계산 후 사이드바는 결과 신고서 표의 카드별 필요경비와 같다.
+// 담보 승(물건 전체 채무 14억)은 개산공제라 실비와 무관(7,200,000 / 4,800,000), 보충 승(전체 채무 6억)은 실비를 쓴다 — 실비 0이면 «-».
+const axisB = (debtTotal: string, over: Record<string, unknown> = {}) => [
+  half({ ownershipNumerator: "60", ownershipRemainderThirdParty: undefined, redevSettlementAmount: "55668900", bgMortgageDebtAmount: debtTotal, bgMortgageSetAmount: debtTotal, ...over }),
+  half({ assetId: "s", ownershipNumerator: "40", ownershipRemainderThirdParty: undefined, redevSettlementAmount: "37112600", bgMortgageDebtAmount: debtTotal, bgMortgageSetAmount: debtTotal, ...over }),
+];
+const K5_BLANK = { bgAcquisitionMethod: "converted", redevManagementDisposalHousingPrice: "", redevAcquisitionHousingPrice: "" };
+
+async function seedAxisB(page: Page, assets: unknown[]) {
+  await page.setViewportSize({ width: 1400, height: 1000 }); // 사이드바는 lg 이상에서만 렌더
+  await page.goto("/calc/transfer-tax");
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor({ timeout: 120_000 });
+  await page.evaluate((s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)), seedWithDeclaredRoster({
+    state: {
+      formData: {
+        assets, transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", assetSplitMode: "fractional", contractTotalPrice: "525000000",
+        householdHousingCount: "1", isOneHousehold: false, householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
+        isRegulatedArea: false, wasRegulatedAtAcquisition: false, isUnregistered: false,
+      },
+      pendingMigration: false,
+    },
+    version: 0,
+  }));
+  await page.reload();
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+}
+/** 사이드바 「필요경비」 라벨 바로 다음 줄(카드 순서) */
+async function sidebarExpenses(page: Page) {
+  const lines = (await page.locator("aside").first().innerText()).split("\n").map((s) => s.trim()).filter(Boolean);
+  return lines.flatMap((l, i) => (l === "필요경비" ? [lines[i + 1]] : []));
+}
+async function calcAndReturn(page: Page) {
+  const r = await calculate(page);
+  expect(r.status(), await r.text()).toBe(200);
+  const row = (await page.locator("table tr").filter({ hasText: /^\s*필요경비/ }).first().innerText()).replace(/\s+/g, " ");
+  await page.getByRole("button", { name: "이전 단계로 이동" }).click();
+  await page.locator("aside").first().waitFor();
+  return row;
+}
+
+test("RD-E5: 축 B 60/40 · K-5 · 담보 승 — 사이드바 계산 전 «계산 후 표시» × 2 · 계산 후 7,200,000 / 4,800,000 = 신고서 표", async ({ page }) => {
+  test.setTimeout(240_000);
+  await seedAxisB(page, axisB("1400000000", { ...K5_BLANK, redevPreApprovalExpenses: "20000000" }));
+  expect(await sidebarExpenses(page)).toEqual(["계산 후 표시", "계산 후 표시"]);
+  const row = await calcAndReturn(page);
+  expect(row).toContain("12,000,000 7,200,000 4,800,000");
+  await expect.poll(() => sidebarExpenses(page)).toEqual(["7,200,000", "4,800,000"]);
+});
+
+test("RD-E6: 축 B 60/40 · 보충 승(물건 전체 채무 6억) · 실비 0 — 실비를 쓰므로 계산 후 사이드바 «-» × 2 (축 A로 읽으면 40% 카드가 담보 승이 된다)", async ({ page }) => {
+  test.setTimeout(240_000);
+  await seedAxisB(page, axisB("600000000", { redevPreApprovalExpenses: "0" }));
+  expect(await sidebarExpenses(page)).toEqual(["계산 후 표시", "계산 후 표시"]);
+  const row = await calcAndReturn(page);
+  expect(row).toContain("필요경비 0 0 0");
+  await expect.poll(() => sidebarExpenses(page)).toEqual(["-", "-"]);
+});
