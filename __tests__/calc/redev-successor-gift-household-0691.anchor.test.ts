@@ -153,6 +153,8 @@ describe("엔진까지 — 폼 → ④ → route(⑫⑭) → 엔진", () => {
     expect((r.body.redevelopment as { successorGiftSameHousehold?: boolean }).successorGiftSameHousehold).toBe(true);
     expect(r.result.isExempt).toBe(true);
     expect(r.result.totalTax).toBe(0);
+    // 통산 고지에 증여 주택과 같은 조심 2025서3843 확인 문장(redev-gift-0691-3843-notice)
+    expect((r.result.warnings as string[]).some((w) => w.includes("사전-2020-법령해석재산-0691") && w.includes("양도일 현재 증여인과 동일세대인지 확인이 필요합니다"))).toBe(true);
   });
   it("대조 — 「아니오」는 과세, 미답은 과세 + 확인 필요 고지", async () => {
     const no = await runCalc(form({ ...yes, redevSuccessorGiftSameHousehold: "no" }));

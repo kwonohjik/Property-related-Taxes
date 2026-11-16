@@ -17,6 +17,7 @@ import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { makeMockRates, baseTransferInput } from "../../_helpers/mock-rates";
 import { redevUsesTable2 } from "@/lib/tax-engine/redevelopment-lthd";
+import { TRIBUNAL_3843_SAME_HOUSEHOLD_CHECK } from "@/lib/tax-engine/one-house/gift-table2-notice";
 import type { RedevelopmentInfo } from "@/lib/tax-engine/types/transfer-redevelopment.types";
 
 const rates = makeMockRates();
@@ -116,6 +117,16 @@ describe("S2 — 비과세 거주요건(영 §154①)에도 같은 값이 쓰인
     expect(carried[0]).toContain("정면으로 다룬 해석례는 확인하지 못했습니다");
     expect(carried[0]).toContain("확인 필요");
     expect(notice(run(s2(1_000_000_000, { flag: false, prior: 240, newM: 0 })))).toHaveLength(0);
+  });
+  it("통산 고지에는 증여 주택과 같은 조심 2025서3843 「양도일 현재 동일세대인지 확인」 문장이 붙는다 · 미확인 고지에는 없다 (redev-gift-0691-3843-notice)", () => {
+    const carried = notice(run(s2(1_000_000_000, { flag: true, prior: 240, newM: 0 })));
+    expect(carried[0]).toContain(TRIBUNAL_3843_SAME_HOUSEHOLD_CHECK);
+    expect(carried[0]).toContain("조심 2025서3843(2025.12.16.)");
+    // S1(0691 사실 · 표2) — 같은 문장
+    const s1Carried = notice(run(s1({ flag: true, prior: 240, newM: 0 })));
+    expect(s1Carried).toHaveLength(1);
+    expect(s1Carried[0]).toContain(TRIBUNAL_3843_SAME_HOUSEHOLD_CHECK);
+    expect(notice(run(s2(1_000_000_000, { newM: 0 })))[0]).not.toContain("2025서3843");
   });
   it("본인 신축 거주만으로 2년을 넘으면 통산이 결론을 가르지 않아 고지하지 않는다(선언 「예」여도)", () => {
     expect(notice(run(s2(1_000_000_000, { flag: true, prior: 240, newM: 24 })))).toHaveLength(0);
