@@ -17,6 +17,7 @@ import {
   preApprovalNecessaryExpense,
 } from "./redevelopment-split";
 import { computeRedevelopmentLthd, applyLthdToGain } from "./redevelopment-lthd";
+import { existingBuildingLthdBases } from "./redevelopment-existing-netting";
 import {
   calcRedevLandContribEstimated,
 } from "./redevelopment-land-contribution";
@@ -478,8 +479,15 @@ export function runOriginalMember(
     return { total, holdingPart, residencePart };
   }
 
-  const preApprovalLthdAmt = splitLthdAmount(split.preApproval.gain, lthd.preApproval);
-  const postApprovalLthdAmt = splitLthdAmount(split.postApprovalExistingHouse.gain, lthd.postApprovalExistingHouse);
+  // 완공 아파트의 두 분기는 기존건물분양도차익 한 금액이다(§166②1호) — 부호가 다르면 상계한 금액에 공제한다.
+  const netBases = isApt
+    ? existingBuildingLthdBases(
+        { gain: split.preApproval.gain, lthdRate: lthd.preApproval.applicable ? lthd.preApproval.rate : 0 },
+        { gain: split.postApprovalExistingHouse.gain, lthdRate: lthd.postApprovalExistingHouse.applicable ? lthd.postApprovalExistingHouse.rate : 0 },
+      )
+    : undefined;
+  const preApprovalLthdAmt = splitLthdAmount(netBases?.pre ?? split.preApproval.gain, lthd.preApproval);
+  const postApprovalLthdAmt = splitLthdAmount(netBases?.post ?? split.postApprovalExistingHouse.gain, lthd.postApprovalExistingHouse);
   const settlementLthdAmt = splitLthdAmount(split.settlement.gain, lthd.settlement);
 
   // 인가전 분 표시용 필요경비 — 청산금 **수령** 분기는 §166①2호 나목 비율로 안분
@@ -575,6 +583,7 @@ export function runOriginalMember(
     holdingMonths: lthd.preApproval.holdingMonths,
     holdingDays: lthd.preApproval.holdingDays,
     lthd: preApprovalLthdAmt.total,
+    ...(netBases && split.preApproval.gain > 0 ? { lthdBaseGain: netBases.pre } : {}),
     lthdRate: lthd.preApproval.applicable ? lthd.preApproval.rate : 0,
     ...(lthd.preApproval.rateBasis ? { lthdRateBasis: lthd.preApproval.rateBasis } : {}),
     ...(lthd.preApproval.holdingOnlyTable2 ? { lthdHoldingOnlyTable2: true as const } : {}),
@@ -603,6 +612,7 @@ export function runOriginalMember(
     holdingMonths: lthd.postApprovalExistingHouse.holdingMonths,
     holdingDays: lthd.postApprovalExistingHouse.holdingDays,
     lthd: postApprovalLthdAmt.total,
+    ...(netBases && split.postApprovalExistingHouse.gain > 0 ? { lthdBaseGain: netBases.post } : {}),
     lthdRate: lthd.postApprovalExistingHouse.applicable
       ? lthd.postApprovalExistingHouse.rate
       : 0,

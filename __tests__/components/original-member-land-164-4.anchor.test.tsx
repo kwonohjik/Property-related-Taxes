@@ -163,10 +163,10 @@ describe("Q-2 토지 출자 완공 아파트 — 주택 §164⑦ 축이 아니�
     expect(r.body.inheritedAcquisition.assetKind).toBe("land");
     expect(r.res.determinedTax).toBe(232_510_000);
   });
-  it("가드 — 주택 출자 완공 아파트 2000 + 주택 ② → 86,143,333", async () => {
+  it("가드 — 주택 출자 완공 아파트 2000 + 주택 ② → 112,126,667", async () => {
     const r = await check(mk([OM({ ...at("2000-06-01"), ...APT, ...IND, redevOriginalAssetType: "housing" })]));
     expect(r.body.inheritedAcquisition.assetKind).toBe("house_individual");
-    expect(r.res.determinedTax).toBe(86_143_333);
+    expect(r.res.determinedTax).toBe(112_126_667); // 종전 86,143,333 — 인가 전 분 차손을 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
   });
   it.each([
     ["토지 출자 + inheritedHouseValuation", OM({ ...at("2000-06-01"), ...APT, ...IND, redevOriginalAssetType: "housing" }), (b: Body) => ({ ...b, redevelopment: { ...b.redevelopment, originalAssetType: "land" } }), "inheritedHouseValuation"],

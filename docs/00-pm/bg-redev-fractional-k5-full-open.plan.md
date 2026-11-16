@@ -117,7 +117,7 @@
 | V-3 | 청산금 수령분 단독 신고(`redevReceiveOnlyMode`) × 지분 담보 승(V-S1g V-G10) — `buildRedevelopmentPayload:123` | 위와 같음 |
 | V-4 | ⑤ 화면(jsdom·Playwright) — 축 A·B·C에서 취득시 기준시가 카드와 §166③ 칸 표시. §1은 술어만 쟀다 | PR-2 |
 | V-5 | 사이드바(`transfer-per-asset-summary.ts:592`) 계산 전 필요경비 «계산 후 표시»가 축에 따라 바뀌는가 | PR-2 |
-| V-6 | 안분(인가 전·후) 뒤 최종 양도차익 손계산 — V-S1g V-G7과 같은 한계. 이번에도 단건 오라클로만 대조했다 | 남은 한계 |
+| ~~V-6~~ ✅ | 안분(인가 전·후) 뒤 최종 양도차익 손계산 — **2026-11-16 손계산 완료**: 양도가액 안분·보유기간·공제율·세율까지 엔진과 같았고, 인가 전 분 차손을 상계하지 않는 결함 1건을 찾아 고쳤다(`redev-existing-building-lthd-netting.plan.md` — 일반 양도·고가주택에도 걸림) | 해소 |
 | V-G8 | 청산금 수령 축 B ±1~3원(V-S1g) — 이번 시료의 수령 B는 1,018,000,000 = 오라클 | 게이트와 무관 |
 
 ## 6. 재현
@@ -151,7 +151,7 @@
 | 뮤테이션 | 10/10 사망 — leaf 산정방식 축(8) · leaf 필요경비 축(4) · 게이트 K-5 제외 복원(14) · ⑧ validate-redev 산정방식 축(3) · ⑧ §164⑦ 축(1) · ⑧ 취득시 기준시가 칸 술어 축(4) · ④ useEstimatedAcquisition 축(3) · ⑤ 재개발 블록 필요경비 축(2) · ⑫ 지분 축소(12) · ⑧ validate-acquisition 축 전달(4). 매번 백업 복원 |
 | 회귀 | 필터(redev · 166-3 · bg-redev · bg-axis · bg-fractional · collateral · phd · pre1990 · snapshot · per-asset-summary · expense · bg-land) 374파일 통과 · 전체는 pre-push |
 | E2E | `e2e/bg-redev-fractional-win.spec.ts` 4건 통과(headless) — RD-E1 K-4 담보 승: 필요경비 칸 대신 개산공제 안내 · RD-E3 K-5 담보 승: 200 · 취득시 기준시가 칸 · §166③ D 칸 없음 · 447,609,250 · RD-E4 보충 승: 필요경비 칸 |
-| 남은 한계 | ~~V-4·V-5~~ → §9에서 실측(2026-11-16) · V-6 안분 이후 손계산(단건 오라클 대조만) |
+| 남은 한계 | ~~V-4·V-5~~ → §9에서 실측(2026-11-16) · ~~V-6~~ → 손계산 완료 · 결함 1건 수정(`redev-existing-building-lthd-netting.plan.md`) |
 
 ## 9. 남은 한계 V-4 · V-5 실측 (2026-11-16)
 

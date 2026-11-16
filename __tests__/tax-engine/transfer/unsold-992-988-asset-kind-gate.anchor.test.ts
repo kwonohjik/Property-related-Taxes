@@ -94,7 +94,7 @@ describe("엔진 진입 방어 — ⑤⑧을 거치지 않은 재개발APT 입�
   it("E-1: 🔴 §99의2 5년 이내(100% 세액감면) — 걷어 내고 미선택과 세액이 같다 + 고지", () => {
     const withRed = calculateTransferTax(asset("redevelopment_apt", "2013-06-01", "2016-06-01", [R992] as Reductions), rates);
     const none = calculateTransferTax(asset("redevelopment_apt", "2013-06-01", "2016-06-01", []), rates);
-    expect(none.determinedTax).toBe(20_732_921);
+    expect(none.determinedTax).toBe(23_560_273); // 종전 20,732,921 — 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
     expect(withRed.unsold992Detail).toBeUndefined();
     expect(withRed.reductionAmount).toBe(0);
     expect(withRed.determinedTax).toBe(none.determinedTax);
@@ -104,7 +104,7 @@ describe("엔진 진입 방어 — ⑤⑧을 거치지 않은 재개발APT 입�
   it("E-2: 🔴 §99의2 5년 후(소득금액 공제) — 미선택과 세액이 같다", () => {
     const withRed = calculateTransferTax(asset("redevelopment_apt", "2013-06-01", "2019-06-01", [R992] as Reductions), rates);
     const none = calculateTransferTax(asset("redevelopment_apt", "2013-06-01", "2019-06-01", []), rates);
-    expect(none.determinedTax).toBe(19_685_309);
+    expect(none.determinedTax).toBe(23_078_132); // 종전 19,685,309 — 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
     expect(withRed.unsold992Detail).toBeUndefined();
     expect(withRed.determinedTax).toBe(none.determinedTax);
   });
@@ -112,7 +112,7 @@ describe("엔진 진입 방어 — ⑤⑧을 거치지 않은 재개발APT 입�
   it("E-3: 🔴 §98의8 — 미선택과 세액이 같다 + 고지", () => {
     const withRed = calculateTransferTax(asset("redevelopment_apt", "2015-06-01", "2022-06-01", [R988] as Reductions), rates);
     const none = calculateTransferTax(asset("redevelopment_apt", "2015-06-01", "2022-06-01", []), rates);
-    expect(none.determinedTax).toBe(17_307_532);
+    expect(none.determinedTax).toBe(21_265_826); // 종전 17,307,532 — 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
     expect(withRed.unsold988Detail).toBeUndefined();
     expect(withRed.determinedTax).toBe(none.determinedTax);
     expect(withRed.warnings?.some((w) => w.includes("§98의8") && w.includes("이 계산에 반영하지 않았습니다"))).toBe(true);

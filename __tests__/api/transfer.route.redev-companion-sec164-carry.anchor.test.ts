@@ -95,7 +95,7 @@ const pair = (o: A) => mkO([LAND, OM(o)]);
 describe("CC-1 원조합원 종전 주택 — 컴패니언도 max(①,②)", () => {
   it.each([
     ["입주권", {}, 116_260_000, 266_250_000],
-    ["완공 아파트", APT, 61_316_667, 205_070_000],
+    ["완공 아파트", APT, 86_396_667, 205_070_000], // 종전 61,316,667 — 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
   ] as [string, A, number, number][])("%s 2000 상속 · ① 3억 + ② 7.2억 → ① 7.2억과 같은 세액 · ② 없으면 종전과 같다", async (_n, kind, withSec164, onlyReported) => {
     const r = await check(pair({ ...at("2000-06-01"), ...kind, ...IND }));
     expect(r.issue).toBe("");

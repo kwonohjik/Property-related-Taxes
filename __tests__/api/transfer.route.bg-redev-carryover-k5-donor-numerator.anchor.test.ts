@@ -111,8 +111,8 @@ describe("K5-3 종전 토지 — 분자는 토지 기준시가(§166③ 토지 �
 });
 
 describe("K5-2 회귀 0 — K-5 밖은 그대로", () => {
-  it("기준시가 평가 11,112,000 · K-4 실지 70,310,000", async () => {
-    expect((await detail({})).det).toBe(11_112_000);
+  it("기준시가 평가 37,751,600 · K-4 실지 70,310,000", async () => {
+    expect((await detail({})).det).toBe(37_751_600); // 종전 11,112,000 — 인가 전 분 차손을 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
     expect((await detail({ bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1,000,000,000", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "300,000,000", bgCoDonorActualAcquisitionTotal: "100,000,000" })).det).toBe(70_310_000);
   });
 });
