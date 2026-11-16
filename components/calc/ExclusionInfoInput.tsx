@@ -46,7 +46,7 @@ import { asksRegistrationRevokedDate } from "@/lib/calc/comprehensive-rental-459
 
 const RENTAL_REG_TYPE_OPTIONS: [string, string][] = [
   ["private_purchase_long", "민간매입임대 장기일반"],
-  ["private_purchase_short", "민간매입임대 단기 구법"],
+  ["private_purchase_short", "민간매입임대 2018.3.31. 이전 등록 (단기·장기 공통 5년)"],
   ["private_construction", "민간건설임대"],
   ["public_support_construction", "공공지원·장기일반민간임대 건설형 (§3①7호, 149㎡ 이하)"],
   ["public_support_purchase", "공공지원민간임대 매입형 (§8호, 면적제한 없음)"],
@@ -150,6 +150,11 @@ function RentalExclusionDetail({
             </option>
           ))}
         </select>
+        {regType === "private_purchase_long" && (
+          <p className="text-xs text-muted-foreground" data-testid="comprehensive-8ho-2ho-hint">
+            2018.3.31. 이전에 임대사업자 등록과 사업자등록을 모두 마친 민간매입임대는 2호(의무임대기간 5년)로도 판정할 수 있습니다.
+          </p>
+        )}
         {property.rentalRegistrationType === "private_short_term_6y_construction" && (
           <p className="text-xs text-muted-foreground">
             단기민간임대(건설, §3①10호): 공시가격 6억원 이하 · 전용 149㎡ 이하 · 6년 이상 임대 · 임대료 5% 초과 금지 · 2호 이상 · 2024년 이전 과세연도 적용 안 됨
@@ -338,7 +343,7 @@ function RentalExclusionDetail({
       <ToggleCard
         tone="rose"
         title="임대등록 말소"
-        description="의무임대기간 중 자진·직권 말소된 경우"
+        description="과세기준일까지 임대사업자 등록이 말소된 경우 (자진·자동·직권 말소)"
         checked={showRevoke}
         onCheckedChange={(v) => {
           setShowRevoke(v);
@@ -352,7 +357,7 @@ function RentalExclusionDetail({
             onChange={(v) => onUpdate({ registrationRevokedDate: v })}
           />
           <p className="text-xs text-muted-foreground">
-            말소일이 과세기준일(6월 1일) 이전이면 합산배제가 적용되지 않습니다 (
+            말소일이 과세기준일(6월 1일) 당일이거나 그 전이면 그해부터 합산배제가 적용되지 않습니다 (
             <LawArticleModal
               legalBasis="종합부동산세법 시행령 §3"
               label="시행령 §3①"

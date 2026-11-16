@@ -24,7 +24,7 @@ export const EXCLUSION_TYPE_OPTIONS: [string, string][] = [
   ["none", "합산배제 미신청"],
   // 키는 ExclusionType·Zod exclusionTypeSchema와 같아야 한다(없는 키는 계산 400). 조문 번호는 종부령 §3① 현행 호.
   ["private_purchase_rental_long", "민간매입임대 장기일반 (시행령 §3①8호)"],
-  ["private_purchase_rental_short", "민간매입임대 단기 구법 (시행령 §3①2호)"],
+  ["private_purchase_rental_short", "민간매입임대 2018.3.31. 이전 등록 (단기·장기 공통 5년, 시행령 §3①2호)"],
   ["private_construction_rental", "민간건설임대 (시행령 §3①1호)"],
   ["public_support_construction_rental", "공공지원·장기일반민간임대 건설 (시행령 §3①7호)"],
   ["public_support_purchase_rental", "공공지원민간임대 매입 (시행령 §3①8호)"],

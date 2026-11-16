@@ -8,7 +8,7 @@
 import { filingDeadlineApplies } from "@/lib/tax-engine/comprehensive-exclusion-business-reg";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 
-/** §3①1호·2호 단서(2018.3.31. 사업자등록등)가 걸리는 유형 — 민간건설·민간매입(구법 5년) */
+/** §3①1호·2호 단서(2018.3.31. 사업자등록등)가 걸리는 유형 — 민간건설·민간매입(2018.3.31. 이전 등록 5년) */
 export function asksBusinessRegistrationDate(registrationType: string): boolean {
   return registrationType === "private_construction" || registrationType === "private_purchase_short";
 }

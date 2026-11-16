@@ -65,7 +65,7 @@ describe("4호 미임대 민간건설임대", () => {
   });
   it("면적 149㎡ 초과 · 등록 말소 → 불성립", () => {
     expect(v({ area: 149.01 }).failReasons).toEqual([E.AREA_EXCEEDED_149]);
-    expect(v({ registrationRevokedDate: d("2025-01-01") }).failReasons).toEqual([E.MANDATORY_PERIOD_NOT_MET]);
+    expect(v({ registrationRevokedDate: d("2025-01-01") }).failReasons).toEqual([E.REGISTRATION_REVOKED]);
   });
 });
 

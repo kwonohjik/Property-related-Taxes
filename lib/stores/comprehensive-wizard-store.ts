@@ -89,7 +89,7 @@ export interface PropertyEntry {
   previousRent: string;            // 직전 임대료 (원)
   isInitialContract: boolean;
   actualRentalYears: string;       // 실제 임대 경과 연수 (시행령 §3⑦ 합산, 선택)
-  registrationRevokedDate: string; // 임대등록 말소일 YYYY-MM-DD (선택, 입력 시 과세기준일 이전이면 배제 거부)
+  registrationRevokedDate: string; // 임대등록 말소일 YYYY-MM-DD (선택, 과세기준일 당일까지 말소면 배제 거부 — §3①)
   // ── 기타 합산배제 상세 ──
   recruitmentNoticeDate: string;   // 미분양: 입주자모집공고일
   acquisitionDate: string;         // 미분양: 취득일

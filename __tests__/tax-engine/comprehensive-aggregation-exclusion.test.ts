@@ -139,13 +139,13 @@ describe("validateRentalExclusion — 의무임대기간 (GAP-1)", () => {
   };
 
   // Anchor-1: 등록 말소일이 과세기준일 이전 → 합산배제 거부
-  it("Anchor-1: 말소일 < 과세기준일 → MANDATORY_PERIOD_NOT_MET (배제 거부)", () => {
+  it("Anchor-1: 말소일 < 과세기준일 → REGISTRATION_REVOKED (배제 거부)", () => {
     const result = validateRentalExclusion({
       ...baseRentalInput,
       registrationRevokedDate: new Date("2023-05-01"),  // 과세기준일 2024-06-01 이전
     });
     expect(result.isExcluded).toBe(false);
-    expect(result.failReasons).toContain(COMPREHENSIVE_EXCL.MANDATORY_PERIOD_NOT_MET);
+    expect(result.failReasons).toContain(COMPREHENSIVE_EXCL.REGISTRATION_REVOKED);
   });
 
   // Anchor-2: 경과 연수 < 의무기간, 말소 없음 → 배제 유지 + 경고
@@ -192,7 +192,7 @@ describe("validateRentalExclusion — 의무임대기간 (GAP-1)", () => {
       registrationRevokedDate: new Date("2024-06-01"),
     });
     expect(result.isExcluded).toBe(false);
-    expect(result.failReasons).toContain(COMPREHENSIVE_EXCL.MANDATORY_PERIOD_NOT_MET);
+    expect(result.failReasons).toContain(COMPREHENSIVE_EXCL.REGISTRATION_REVOKED);
   });
 
   // T-MP-4: 말소일 > 과세기준일 (미래 말소 예정) → 배제 유지
