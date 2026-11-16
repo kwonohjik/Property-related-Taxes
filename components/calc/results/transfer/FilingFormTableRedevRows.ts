@@ -145,7 +145,8 @@ export function fillRedev4SplitBranchData(
 
   // 양도소득금액·감면후 소득금액
   for (const [key, b] of branches) {
-    const income = Math.max(0, b.gain - b.lthd);
+    // 양도차손 열은 음수 그대로 — 열 합 = 합계 열(§95① · V-4, 임대 토지·건물 분리 열과 같은 규약)
+    const income = b.gain - b.lthd;
     setNum("incomeAmount", key, income);
     setNum("incomeAmountAfter", key, income);
   }
@@ -263,8 +264,9 @@ export function fillRedevRightReceiveBranchData(
   setNum("ltResidencePart", "total", nakkokRp);
 
   // 양도소득금액·감면후 소득금액
-  const nakkokIncome = Math.max(0, nakkok.gain - nakkok.lthd);
-  const gamokIncome = Math.max(0, gamok.gain - 0); // LTHD=0
+  // 양도차손 열은 음수 그대로 — 열 합 = 합계 열(§95① · V-4, 임대 토지·건물 분리 열과 같은 규약)
+  const nakkokIncome = nakkok.gain - nakkok.lthd;
+  const gamokIncome = gamok.gain; // LTHD=0
 
   setNum("incomeAmount", "preApproval", nakkokIncome);
   setNum("incomeAmountAfter", "preApproval", nakkokIncome);
@@ -375,7 +377,8 @@ export function fillRedevRightLandPayBranchData(
   setNum("ltResidencePart", "total", preRp);
 
   // 양도소득금액·감면후 소득금액
-  const preIncome = Math.max(0, pre.gain - pre.lthd);
+  // 양도차손 열은 음수 그대로 — 열 합 = 합계 열(§95① · V-4, 임대 토지·건물 분리 열과 같은 규약)
+  const preIncome = pre.gain - pre.lthd;
   const postIncome = post.gain; // LTHD=0
 
   setNum("incomeAmount", "preApproval", preIncome);
@@ -481,8 +484,9 @@ export function fillRedevRightPayBranchData(
   setNum("ltResidencePart", "total", preRp);
 
   // 양도소득금액·감면후 소득금액
-  const preIncome = Math.max(0, pre.gain - pre.lthd);
-  const postIncome = Math.max(0, post.gain - 0); // LTHD=0
+  // 양도차손 열은 음수 그대로 — 열 합 = 합계 열(§95① · V-4, 임대 토지·건물 분리 열과 같은 규약)
+  const preIncome = pre.gain - pre.lthd;
+  const postIncome = post.gain; // LTHD=0
 
   setNum("incomeAmount", "preApproval", preIncome);
   setNum("incomeAmountAfter", "preApproval", preIncome);

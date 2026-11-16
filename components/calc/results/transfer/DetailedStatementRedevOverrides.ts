@@ -228,12 +228,12 @@ export function applyLandContribOverrides(
     incomeItem.perAsset = [
       {
         label: "① 인가전 분",
-        value: Math.max(0, pre.gain - pre.lthd),
-        formula: `${fmt(pre.gain)} − ${fmt(pre.lthd)} = ${fmt(Math.max(0, pre.gain - pre.lthd))}`,
+        value: pre.gain - pre.lthd, // 양도차손이면 음수 그대로(V-4)
+        formula: `${fmt(pre.gain)} − ${fmt(pre.lthd)} = ${fmt(pre.gain - pre.lthd)}`,
       },
       {
         label: "② 인가후 분",
-        value: Math.max(0, post.gain - post.lthd),
+        value: post.gain - post.lthd,
         formula: `${fmt(post.gain)} − 0 = ${fmt(post.gain)}`,
       },
     ];
