@@ -72,6 +72,7 @@ const form = (over: Partial<PropertyEntry>, top: Partial<ComprehensiveFormData> 
         exclusionType: "private_short_term_rental_6y_purchase",
         rentalRegistrationType: "private_short_term_6y_purchase",
         rentalRegistrationDate: "2025-07-01",
+        businessRegistrationDate: "2025-07-01", // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
         rentalStartDate: "2024-03-01",
         area: "59",
         currentRent: "1,000,000",

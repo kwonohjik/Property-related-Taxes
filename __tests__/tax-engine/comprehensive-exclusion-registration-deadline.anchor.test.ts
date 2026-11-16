@@ -21,6 +21,7 @@ const BASE: RentalExclusionInput = {
   ...NA8_NOT_APPLICABLE,
   registrationType: "private_purchase_long",
   rentalRegistrationDate: d("2025-02-20"),
+  businessRegistrationDate: d("2025-02-20"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
   rentalApplicationDate: d("2025-02-15"),
   rentalStartDate: d("2025-03-01"),
   acquisitionDate: d("2016-01-01"),
@@ -58,17 +59,17 @@ describe("A15 — 보유현황 신고기간 종료일까지 등록", () => {
   });
 
   it("A15-4 ★ 2023: 9.30.(토·추석 다음 날)~10.3. 연휴 → 10.4.까지 성립 · 10.5. 불성립", () => {
-    const y = { assessmentDate: d("2023-06-01"), rentalStartDate: d("2023-03-01"), rentalApplicationDate: d("2023-06-20") };
+    const y = { assessmentDate: d("2023-06-01"), rentalStartDate: d("2023-03-01"), rentalApplicationDate: d("2023-06-20"), businessRegistrationDate: d("2023-02-20") };
     expect(run({ ...y, rentalRegistrationDate: d("2023-10-04") })).toMatchObject({ isExcluded: true, warnings: [DEEMED] });
     expect(run({ ...y, rentalRegistrationDate: d("2023-10-05") }).reason).toBe(LATE);
   });
 
   it("A15-5 2020: 추석·개천절·주말 → 10.5.까지 성립 · 10.6. 불성립 / 2018: 9.30.(일) → 10.1.", () => {
     // 2020은 8호 나목3)·4)(2020.7.11. 이후) 판정과 무관한 비아파트·변경신고 없음 픽스처
-    const y20 = { assessmentDate: d("2020-06-01"), rentalStartDate: d("2020-03-01"), rentalApplicationDate: d("2020-06-20") };
+    const y20 = { assessmentDate: d("2020-06-01"), rentalStartDate: d("2020-03-01"), rentalApplicationDate: d("2020-06-20"), businessRegistrationDate: d("2020-02-20") };
     expect(run({ ...y20, rentalRegistrationDate: d("2020-10-05") }).isExcluded).toBe(true);
     expect(run({ ...y20, rentalRegistrationDate: d("2020-10-06") }).failReasons).toContain(LATE);
-    const y18 = { assessmentDate: d("2018-06-01"), rentalStartDate: d("2018-03-01"), rentalApplicationDate: d("2018-06-20") };
+    const y18 = { assessmentDate: d("2018-06-01"), rentalStartDate: d("2018-03-01"), rentalApplicationDate: d("2018-06-20"), businessRegistrationDate: d("2018-02-20") };
     expect(run({ ...y18, rentalRegistrationDate: d("2018-10-01") }).failReasons ?? []).not.toContain(LATE);
     expect(run({ ...y18, rentalRegistrationDate: d("2018-10-02") }).failReasons).toContain(LATE);
   });
@@ -83,6 +84,7 @@ describe("A15 — 보유현황 신고기간 종료일까지 등록", () => {
       registrationType: "private_short_term_6y_purchase",
       assessmentDate: d("2026-06-01"),
       rentalRegistrationDate: d("2026-10-01"),
+      businessRegistrationDate: d("2026-02-20"), // 세무서 등록은 기한 안 — 지자체 등록 기한만 본다(T-13 분리)
       assessedValue: 300_000_000,
     });
     expect(r.failReasons).toContain(LATE);

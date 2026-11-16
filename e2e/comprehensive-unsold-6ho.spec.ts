@@ -46,6 +46,8 @@ async function fill6ho(page: Page, reg: [string, string, string], application?: 
   await page.getByLabel("연도").first().fill(reg[0]);
   await page.getByLabel("월").first().fill(reg[1]);
   await page.getByLabel("일").first().fill(reg[2]);
+  // 세무서 사업자등록일 — §3① 각 호 외의 부분(T-13)
+  await fillDateIn(page, "comprehensive-business-registration-date", reg[0], reg[1], reg[2]);
   await fillDateIn(page, "comprehensive-6ho-contract-date", "2009", "3", "2");
   await page.getByTestId("comprehensive-6ho-first-come-yes").check();
   await page.getByTestId("comprehensive-6ho-unsold-units").locator("input").fill("5");

@@ -219,6 +219,7 @@ describe("SC3: 3주택 합산과세 — 9억 기본공제", () => {
             registrationType: "private_purchase_long",  // 10년 의무
             ...NA8_NOT_APPLICABLE,
             rentalRegistrationDate: new Date("2021-01-01"),
+            businessRegistrationDate: new Date("2021-01-01"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
             rentalStartDate: new Date("2021-03-01"),
             assessedValue: 500_000_000,
             area: 75,
@@ -271,6 +272,7 @@ describe("SC4: 합산배제 통합 — 과세표준에서 배제 주택 제외",
             registrationType: "private_purchase_long",
             ...NA8_NOT_APPLICABLE,
             rentalRegistrationDate: new Date("2020-01-01"),
+            businessRegistrationDate: new Date("2020-01-01"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
             rentalStartDate: new Date("2020-02-01"),
             assessedValue: 250_000_000,
             area: 75,
@@ -313,6 +315,7 @@ describe("SC4: 합산배제 통합 — 과세표준에서 배제 주택 제외",
             registrationType: "private_purchase_long",
             ...NA8_NOT_APPLICABLE,
             rentalRegistrationDate: new Date("2020-01-01"),
+            businessRegistrationDate: new Date("2020-01-01"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
             rentalStartDate: new Date("2020-02-01"),
             assessedValue: 250_000_000,
             area: 75,
@@ -332,6 +335,7 @@ describe("SC4: 합산배제 통합 — 과세표준에서 배제 주택 제외",
             registrationType: "private_purchase_long",
             ...NA8_NOT_APPLICABLE,
             rentalRegistrationDate: new Date("2019-01-01"),
+            businessRegistrationDate: new Date("2019-01-01"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
             rentalStartDate: new Date("2019-06-01"),
             assessedValue: 300_000_000,
             area: 75,

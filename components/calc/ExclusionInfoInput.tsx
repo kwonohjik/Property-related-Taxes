@@ -20,7 +20,8 @@ import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
-import { asksBusinessRegistrationDate } from "@/lib/calc/comprehensive-api";
+import { asksBusinessRegistrationField } from "@/lib/calc/comprehensive-rental-business-reg";
+import { businessRegistrationHint } from "@/lib/calc/comprehensive-rental-business-reg";
 import { toRegistrationType } from "@/lib/calc/comprehensive-api";
 import { asksThirtyPlusUnits } from "@/lib/calc/comprehensive-api";
 import { asksUsageApprovalDate } from "@/lib/calc/comprehensive-api";
@@ -224,8 +225,8 @@ function RentalExclusionDetail({
         </p>
       </div>
 
-      {/* 세무서 사업자등록일 — §3①1호·2호 단서(2018.3.31.)가 걸리는 민간건설·민간매입에서만 (④·⑧ 같은 술어) */}
-      {asksBusinessRegistrationDate(property.rentalRegistrationType || toRegistrationType(property.exclusionType)) && (
+      {/* 세무서 사업자등록일 — §3①1호·2호 단서(2018.3.31.) · 그 밖 민간 유형은 과세기준일 현재(9.30.까지 의제 · T-13) (④·⑧ 같은 술어) */}
+      {asksBusinessRegistrationField(regType, assessmentYear) && (
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">
             세무서 사업자등록일 <span className="text-destructive">*</span>
@@ -235,9 +236,7 @@ function RentalExclusionDetail({
             value={property.businessRegistrationDate ?? ""}
             onChange={(v) => onUpdate({ businessRegistrationDate: v })}
           />
-          <p className="text-xs text-muted-foreground">
-            민간건설·민간매입임대는 2018.3.31. 이전에 임대사업자 등록과 사업자등록을 모두 한 주택만 합산배제됩니다(시행령 §3①1호·2호 단서 · 3.31.이 토요일이라 4.2.까지).
-          </p>
+          <p className="text-xs text-muted-foreground">{businessRegistrationHint(regType)}</p>
         </div>
       )}
 

@@ -16,6 +16,7 @@ const BASE: RentalExclusionInput = {
   registrationType: "private_purchase_long",
   ...NA8_NOT_APPLICABLE,
   rentalRegistrationDate: d("2017-03-01"),
+  businessRegistrationDate: d("2017-03-01"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
   rentalStartDate: d("2017-04-01"),
   assessedValue: 300_000_000,
   area: 59,

@@ -44,6 +44,9 @@ test("8NA-E2E-1: 장기일반 매입 · 2020-07-20 단기→장기 변경신고 
   await page.getByLabel("연도").first().fill("2017");
   await page.getByLabel("월").first().fill("1");
   await page.getByLabel("일").first().fill("10");
+  // 세무서 사업자등록일 — §3① 각 호 외의 부분(T-13)
+  await fillDateIn(page, "comprehensive-business-registration-date", "2017", "1", "10");
+  await expect(page.getByText("6월 2일~9월 30일에 등록했다면 과세기준일에 등록한 것으로 봅니다", { exact: false })).toBeVisible();
   await fillDateIn(page, "comprehensive-8na-acquisition-date", "2017", "1", "2");
   await page.getByTestId("comprehensive-8na-converted-yes").check();
   await fillDateIn(page, "comprehensive-8na-conversion-date", "2020", "7", "20");

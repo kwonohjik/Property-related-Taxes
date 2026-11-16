@@ -12,6 +12,8 @@ import { reitPurchase5hoIssues } from "./comprehensive-exclusion-5ho";
 import { conversionPending9hoIssues } from "./comprehensive-exclusion-9ho";
 import { conversion9hoBaseType } from "./comprehensive-exclusion-9ho";
 import { isOnOrBeforeDeadline } from "./civil-period";
+import { SHORT_TERM_6Y_TYPES, SHORT_TERM_6Y_FULL_ASSESSMENT } from "./comprehensive-exclusion-business-reg";
+import { filingDeadlineApplies, filingPeriodEnd, businessRegistrationIssue } from "./comprehensive-exclusion-business-reg";
 import {
   COMPREHENSIVE_EXCL,
   COMPREHENSIVE_EXCL_CONST,
@@ -117,12 +119,8 @@ function regCap2018Issue(input: RentalExclusionInput): string | null {
  * - 제3조: 2025 과세기준일은 아파트(도시형 생활주택 아닌 것) 아닌 주택을 보유현황 신고기간 종료일(종부법 §8③ — 9.30.)까지
  *   단기로 등록하면 적용(「등록하는」=지자체 등록일 · 신고기간 연장 여부는 확인 필요 — 계획서 V-3).
  */
-const SHORT_TERM_6Y_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
-  "private_short_term_6y_construction",
-  "private_short_term_6y_purchase",
-]);
+// SHORT_TERM_6Y_TYPES · SHORT_TERM_6Y_FULL_ASSESSMENT는 등록 기한 모듈(comprehensive-exclusion-business-reg.ts)과 공용
 const SHORT_TERM_6Y_FIRST_ASSESSMENT = Date.UTC(2025, 5, 1);
-const SHORT_TERM_6Y_FULL_ASSESSMENT = Date.UTC(2026, 5, 1);
 const SHORT_TERM_6Y_2025_REG_DEADLINE = Date.UTC(2025, 8, 30);
 
 function shortTerm6yEraIssues(input: RentalExclusionInput): string[] {
@@ -147,27 +145,13 @@ function shortTerm6yEraIssues(input: RentalExclusionInput): string[] {
  * - 대상: 민간 유형만(Q-8 a). 공공·9호(공공주택사업자)·4호(「소유」)·3호(2005 이전 임대)·5호(부동산투자회사)는 보지 않는다.
  * - 10·11호는 2025 이하 과세연도를 `shortTerm6yEraIssues`가 따로 판정하므로 2026 과세기준일부터만 본다(이중 보고 방지).
  * 계획서: docs/01-plan/features/comprehensive-rental-excl-tax-defects-3.plan.md §2.1
+ * 대상 유형·10·11호 경계·9.30.은 `filingDeadlineApplies`·`filingPeriodEnd`(세무서 등록 기한 T-13과 공용).
  */
-const FILING_DEADLINE_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
-  "private_construction",
-  "private_purchase_short",
-  "private_purchase_long",
-  "public_support_construction",
-  "public_support_purchase",
-  "unsold_purchase",
-  "private_short_term_6y_construction",
-  "private_short_term_6y_purchase",
-]);
-
 function registrationDeadlineCheck(input: RentalExclusionInput): { issue: string | null; warning: string | null } {
   const none = { issue: null, warning: null };
-  if (!FILING_DEADLINE_TYPES.has(input.registrationType)) return none;
-  if (SHORT_TERM_6Y_TYPES.has(input.registrationType) && input.assessmentDate.getTime() < SHORT_TERM_6Y_FULL_ASSESSMENT) {
-    return none;
-  }
+  if (!filingDeadlineApplies(input.registrationType, input.assessmentDate)) return none;
   const reg = input.rentalRegistrationDate;
-  const filingPeriodEnd = new Date(Date.UTC(input.assessmentDate.getUTCFullYear(), 8, 30));
-  if (!isOnOrBeforeDeadline(reg, filingPeriodEnd)) {
+  if (!isOnOrBeforeDeadline(reg, filingPeriodEnd(input.assessmentDate))) {
     return { issue: COMPREHENSIVE_EXCL.REGISTERED_AFTER_FILING_DEADLINE, warning: null };
   }
   return reg.getTime() > input.assessmentDate.getTime()
@@ -228,6 +212,12 @@ export function validateRentalExclusion(
     const deadline = registrationDeadlineCheck(input);
     if (deadline.issue) failReasons.push(deadline.issue);
     deadlineWarning = deadline.warning;
+    // 세무서 사업자등록 기한(T-13) — 1·2호 단서가 등록일을 이미 본 과세연도는 건너뛴다(이중 보고 방지)
+    const bizIssue = businessRegistrationIssue(
+      input,
+      REG_CAP_2018_TYPES.has(input.registrationType) && input.assessmentDate.getTime() >= REG_CAP_2018_ERA_START,
+    );
+    if (bizIssue) failReasons.push(bizIssue);
     failReasons.push(...excludedUnder8hoNa(input));
     failReasons.push(...unsoldPurchase6hoIssues(input));
     const unitsIssue = twoPlusUnitsIssue(input);

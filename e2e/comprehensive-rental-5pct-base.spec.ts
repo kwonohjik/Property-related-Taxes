@@ -45,6 +45,8 @@ async function toStep3(page: Page): Promise<void> {
   await page.getByLabel("연도").first().fill("2017");
   await page.getByLabel("월").first().fill("1");
   await page.getByLabel("일").first().fill("10");
+  // 세무서 사업자등록일 — §3① 각 호 외의 부분(T-13)
+  await fillDateIn(page, "comprehensive-business-registration-date", "2017", "1", "10");
   await fillDateIn(page, "comprehensive-8na-acquisition-date", "2017", "1", "2");
   await page.getByTestId("comprehensive-8na-converted-no").check();
   const startBox = page.locator('div.space-y-1\\.5:has(> label:has-text("임대개시일"))');

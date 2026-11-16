@@ -60,6 +60,7 @@ const FIELD_LABEL: Record<string, string> = {
   currentRent: "현재 임대료",
   isInitialContract: "처음 쓴 표준임대차계약 여부",
   priceBasisValue: "기준 공시가격",
+  businessRegistrationDate: "세무서 사업자등록일",
   isEupMyeonArea: "읍·면 지역 여부",
   isThirtyPlusUnits: "30호 이상 여부",
   // 중첩: 기타 합산배제(otherInfo)

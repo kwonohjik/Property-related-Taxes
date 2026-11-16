@@ -25,6 +25,8 @@ import { rental459hoApiFields } from "./comprehensive-rental-459ho";
 import { validate459hoInputs } from "./comprehensive-rental-459ho";
 import { rentIncreaseLimitApplies } from "@/lib/tax-engine/comprehensive-exclusion";
 import { asksThirtyPlusUnits } from "./comprehensive-rental-price-basis";
+import { asksBusinessRegistrationField } from "./comprehensive-rental-business-reg";
+import { businessRegistrationRequiredMessage } from "./comprehensive-rental-business-reg";
 import { asksUsageApprovalDate } from "./comprehensive-rental-price-basis";
 import { asksPriceBasisValue } from "./comprehensive-rental-price-basis";
 
@@ -111,11 +113,9 @@ export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFo
     if (!RENTAL_TYPES.has(p.exclusionType)) continue;
     const label = `주택 ${i + 1}`;
     if (!p.rentalRegistrationDate) return `${label}: 합산배제 임대주택은 임대사업자 등록일을 입력하세요 (종합부동산세법 시행령 §3①).`;
-    if (
-      asksBusinessRegistrationDate(p.rentalRegistrationType || toRegistrationType(p.exclusionType)) &&
-      !p.businessRegistrationDate
-    ) {
-      return `${label}: 민간건설·민간매입임대는 세무서 사업자등록일을 입력하세요 — 2018.3.31. 이전 사업자등록등 주택만 합산배제됩니다 (종합부동산세법 시행령 §3①1호·2호 단서).`;
+    const bizType = p.rentalRegistrationType || toRegistrationType(p.exclusionType);
+    if (asksBusinessRegistrationField(bizType, formData.assessmentYear) && !p.businessRegistrationDate) {
+      return businessRegistrationRequiredMessage(bizType, label);
     }
     // 4·9호는 「소유」 — 임대개시일을 묻지 않는다(⑫ refine과 같은 조건)
     if (!p.rentalStartDate && !isOwnedRentalType(p.rentalRegistrationType || toRegistrationType(p.exclusionType))) {
@@ -312,13 +312,10 @@ const OTHER_INFO_TYPES = new Set([
 // store의 exclusionType → validator의 registrationType 매핑
 // (임대주택 합산배제 신청 시 UI 선택값을 API 검증 스키마 값으로 변환)
 // export: PropertyListInput onChange 자동매칭에서 재사용 (단일 출처 — UI 설계 §3)
-/** §3①1호·2호 단서(2018.3.31. 사업자등록등)가 걸리는 유형 — 민간건설·민간매입(구법 5년). ⑤·④·⑧ 공용 */
+// 세무서 사업자등록일 칸 술어는 comprehensive-rental-business-reg.ts(1·2호 단서 + 9.30. 기한 · T-13) — 하위호환 re-export
+export { asksBusinessRegistrationDate } from "./comprehensive-rental-business-reg";
 // 30호·사용승인일 칸 술어는 가격 상한 술어 파일로 옮겼다(기준 공시가격 칸과 같은 상한 · 순환 import 회피) — 하위호환 re-export
 export { asksThirtyPlusUnits, asksUsageApprovalDate } from "./comprehensive-rental-price-basis";
-
-export function asksBusinessRegistrationDate(registrationType: string): boolean {
-  return registrationType === "private_construction" || registrationType === "private_purchase_short";
-}
 
 export function toRegistrationType(exclusionType: string): string {
   const map: Record<string, string> = {
@@ -431,8 +428,8 @@ export async function callComprehensiveApi(
           // 빈 칸을 채우지 않는다 — ⑧ `validateRequiredExclusionAndLandInputs`가 막는다(종전엔
           // `과세연도-01-01`·60㎡로 채워 합산배제가 조용히 적용됐다).
           rentalRegistrationDate: p.rentalRegistrationDate,
-          // §3①1호·2호 단서 판정에만 쓴다 — ⑤가 그 두 유형에서만 묻는다(`asksBusinessRegistrationDate`)
-          businessRegistrationDate: asksBusinessRegistrationDate(registrationType)
+          // §3①1호·2호 단서 · 각 호 외의 부분 9.30. 기한(T-13) — ⑤가 묻는 때만(`asksBusinessRegistrationField`)
+          businessRegistrationDate: asksBusinessRegistrationField(registrationType, formData.assessmentYear)
             ? p.businessRegistrationDate || undefined
             : undefined,
           // 4·9호(「소유」)는 비어 있을 수 있다 — 그 밖은 ⑧이 막는다

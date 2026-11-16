@@ -54,8 +54,11 @@ describe("2018.3.31. 사업자등록등 상한 — 1호·2호 민간", () => {
     expect(r.failReasons).toContain(COMPREHENSIVE_EXCL.BUSINESS_REGISTRATION_DATE_UNKNOWN);
   });
 
-  it("RC-5 2017 과세기준일(단서 신설 전)에는 보지 않는다", () => {
-    expect(run({ rentalRegistrationDate: d("2017-03-01"), businessRegistrationDate: undefined, rentalStartDate: d("2017-03-01"), assessmentDate: d("2017-06-01") }).isExcluded).toBe(true);
+  it("RC-5 2017 과세기준일(단서 신설 전)에는 단서를 보지 않는다 — 세무서 등록 자체는 각 호 외의 부분 요건(T-13)", () => {
+    const y17 = { rentalRegistrationDate: d("2017-03-01"), rentalStartDate: d("2017-03-01"), assessmentDate: d("2017-06-01") };
+    expect(run({ ...y17, businessRegistrationDate: d("2017-03-01") }).isExcluded).toBe(true);
+    // 빈칸이면 단서 사유(UNKNOWN)가 아니라 각 호 외의 부분 사유 하나만
+    expect(run({ ...y17, businessRegistrationDate: undefined }).failReasons).toEqual([COMPREHENSIVE_EXCL.BUSINESS_REGISTRATION_DATE_MISSING]);
   });
 
   it("RC-6 단서 밖 유형(공공매입·공공건설·장기일반 8호)은 2019 등록이어도 이 사유 없음", () => {

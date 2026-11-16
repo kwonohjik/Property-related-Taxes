@@ -74,6 +74,7 @@ const form = (reg: string): ComprehensiveFormData =>
         exclusionType: "private_purchase_rental_long",
         rentalRegistrationType: "private_purchase_long",
         rentalRegistrationDate: reg,
+        businessRegistrationDate: "2025-02-20", // 세무서 등록은 기한 안 — 지자체 등록 기한만 본다(T-13 분리)
         rentalApplicationDate: reg,
         rentalStartDate: "2025-03-01",
         area: "84",

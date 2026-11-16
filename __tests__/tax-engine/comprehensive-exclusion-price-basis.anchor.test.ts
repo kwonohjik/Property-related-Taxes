@@ -17,6 +17,7 @@ const BASE: RentalExclusionInput = {
   registrationType: "public_support_construction",
   ...NA8_NOT_APPLICABLE,
   rentalRegistrationDate: d("2020-01-10"),
+  businessRegistrationDate: d("2020-01-10"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
   rentalStartDate: d("2020-02-01"),
   usageApprovalDate: d("2020-01-01"),
   assessedValue: 700_000_000,

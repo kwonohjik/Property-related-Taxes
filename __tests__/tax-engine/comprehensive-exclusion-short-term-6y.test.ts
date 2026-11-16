@@ -17,6 +17,7 @@ const base = (over: Partial<RentalExclusionInput>): RentalExclusionInput => ({
   // 11호 나목 1)·2) 해당 없음 확정 — 나목 판정은 comprehensive-exclusion-11ho-na.anchor.test.ts
   ...NA8_NOT_APPLICABLE,
   rentalRegistrationDate: new Date("2025-01-01"),
+  businessRegistrationDate: new Date("2025-01-01"), // 세무서 사업자등록(§3① 각 호 외의 부분 · T-13)
   rentalStartDate: new Date("2025-01-01"),
   assessedValue: 500_000_000,
   area: 100,
