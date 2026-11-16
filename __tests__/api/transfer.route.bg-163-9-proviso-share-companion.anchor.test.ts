@@ -104,12 +104,13 @@ describe("BGPS — 축 B 상속 · 증여 지분 카드(토글 켬)의 ② §164
       expect(await gains(form([p, s(k.blank)], AB))).toEqual([216_000_000, 144_000_000]);
     });
   }
-  it("상가 §164⑥ 509,090,909(상속 2003 · 8칸 중 물건 단위 7칸은 자산 1 · 취득시 개별공시지가는 지분) — 0.16 × (10억 − 509,090,909) = 78,545,455", async () => {
-    const CB = { cbExclusiveArea: "50", cbSharedArea: "20", cbLandArea: "100", cbUnitPriceAtFirstOrAcq: "10000000", cbLandPricePerSqmAtFirst: "700000", cbBuildingStdPriceAtAcq: "30000000", cbBuildingStdPriceAtFirst: "40000000", cbAcqBuildingStdBy164_5: true };
-    const p = mk(1, "p", { assetKind: "commercial_building", standardPriceAtTransfer: "400000000", standardPriceAtAcq: "200000000", ...CB, cbLandPricePerSqmAtAcq: "500000" }, PUR, bg("1000000000", "400000000", false),
+  it("상가 §164⑥ 509,090,909(상속 2003 · 면적 3칸은 자산 1 · 취득 쪽 5칸은 지분 카드) — 0.16 × (10억 − 509,090,909) = 78,545,455", async () => {
+    // 지분 카드 ③ §164⑥ 섹션에 보이는 칸이 지분 값이다(`commercial-share-object-fields.ts` — 2026-11-16 전에는 자산 1 값으로 덮여 ⑧ 「누락」이었다).
+    const ACQ = { cbUnitPriceAtFirstOrAcq: "10000000", cbLandPricePerSqmAtAcq: "500000", cbLandPricePerSqmAtFirst: "700000", cbBuildingStdPriceAtAcq: "30000000", cbBuildingStdPriceAtFirst: "40000000", cbAcqBuildingStdBy164_5: true };
+    const p = mk(1, "p", { assetKind: "commercial_building", standardPriceAtTransfer: "400000000", standardPriceAtAcq: "200000000", cbExclusiveArea: "50", cbSharedArea: "20", cbLandArea: "100" }, PUR, bg("1000000000", "400000000", false),
       { actualSalePrice: "1000000000", ownershipNumerator: "60", ownershipDenominator: "100" });
     const s = mk(2, "s", { ownershipNumerator: "40", ownershipDenominator: "100", bgShareOwnAcquisition: true, bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "100000000" },
-      { acquisitionCause: "inheritance", acquisitionDate: "2003-06-01", inheritanceStartDate: "2003-06-01", decedentAcquisitionDate: "1990-01-01", cbLandPricePerSqmAtAcq: "500000" });
+      { acquisitionCause: "inheritance", acquisitionDate: "2003-06-01", inheritanceStartDate: "2003-06-01", decedentAcquisitionDate: "1990-01-01", ...ACQ });
     expect(await gains(form([p, s], { assetSplitMode: "fractional", contractTotalPrice: "1000000000" }))).toEqual([216_000_000, 78_545_455]);
   });
 });

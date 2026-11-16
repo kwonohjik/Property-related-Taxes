@@ -18,6 +18,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { soleSplitRightJudgmentFacts } from "./sole-split-right-judgment-facts";
 import { bgShareOwnAcquisitionFields } from "./bg-share-own-acquisition";
 import { bgShareOwnAcquisitionActive } from "./bg-share-own-acquisition";
+import { commercialShareObjectFieldsOf } from "./commercial-share-object-fields";
 import { BG_SHARE_STD_TRANSFER_KINDS } from "./bg-share-own-acquisition";
 import { deriveMemberRightsValue } from "./burdened-gift-right-valuation";
 import { meetsSurchargeSuspensionHolding } from "@/lib/tax-engine/tax-utils";
@@ -225,26 +226,12 @@ function mergePrimaryBasicAll(a: AssetForm, primary: AssetForm): AssetForm {
      * (`buildBurdenedGiftInfo`의 `debtScaleRatio`)가 자산별 지분율로 한 번만 적용한다.
      */
     /**
-     * 상가(§101①·환산) 하위필드 — **물건 단위 값**이라 전 지분 공통이다 (축 B, 2026-09-03).
+     * 상가(§101①·환산) 하위필드 — **물건 단위 칸**만 전 지분 공통이다 (축 B, 2026-09-03 · 2026-11-16 취득 쪽 분리).
      * 컴패니언 카드는 ① 기본정보를 숨기므로 병합하지 않으면 ④가 서브객체를 만들지 못해
      * **그 지분만** 부수토지 초과 세율·환산을 잃는다(부담부증여 bg*와 같은 축).
+     * 취득 쪽 칸(취득시·최초고시 가격 · §164⑧ 준용)은 지분 값 그대로다 — 목록과 이유는 `commercial-share-object-fields.ts`.
      */
-    cbTotalLandArea: primary.cbTotalLandArea,
-    cbTotalBuildingFootprintArea: primary.cbTotalBuildingFootprintArea,
-    cbZoneType: primary.cbZoneType,
-    cbUnapprovedBuilding: primary.cbUnapprovedBuilding,
-    cbLandArea: primary.cbLandArea,
-    cbExclusiveArea: primary.cbExclusiveArea,
-    cbSharedArea: primary.cbSharedArea,
-    cbUnitPriceAtTransfer: primary.cbUnitPriceAtTransfer,
-    cbUnitPriceAtFirstOrAcq: primary.cbUnitPriceAtFirstOrAcq,
-    cbLandPricePerSqmAtTransfer: primary.cbLandPricePerSqmAtTransfer,
-    cbLandPricePerSqmAtFirst: primary.cbLandPricePerSqmAtFirst,
-    cbBuildingStdPriceAtTransfer: primary.cbBuildingStdPriceAtTransfer,
-    cbBuildingStdPriceAtFirst: primary.cbBuildingStdPriceAtFirst,
-    cbBuildingStdPriceAtAcq: primary.cbBuildingStdPriceAtAcq,
-    cbPrevStdPriceSum: primary.cbPrevStdPriceSum,
-    cbStdPriceAdjustMonths: primary.cbStdPriceAdjustMonths,
+    ...commercialShareObjectFieldsOf(primary),
     bgValuationMode: primary.bgValuationMode,
     bgDonorRelation: primary.bgDonorRelation,
     bgLendingDepositTotal: primary.bgLendingDepositTotal,
