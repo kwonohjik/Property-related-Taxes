@@ -12,16 +12,19 @@ import { DateInput } from "@/components/ui/date-input";
 import type { PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 import { asksVacancy } from "@/lib/calc/comprehensive-rental-vacancy";
 import { isVacantEntry } from "@/lib/calc/comprehensive-rental-vacancy";
+import { asksRentViolation } from "@/lib/calc/comprehensive-rental-rent-violation";
 
 export function RentalExclusionRentFields({
   property,
   registrationType,
   asksRent,
+  assessmentYear,
   onUpdate,
 }: {
   property: PropertyEntry;
   registrationType: string;
   asksRent: boolean;
+  assessmentYear: string;
   onUpdate: (patch: Partial<PropertyEntry>) => void;
 }) {
   const vacant = isVacantEntry(property, registrationType);
@@ -105,6 +108,31 @@ export function RentalExclusionRentFields({
           return null;
         })()}
       </>)}
+
+      {/* §3⑧ 5% 위반 뒤 2개 과세연도(T-07b) — 공실이어도 묻는다(위반 효과는 공실과 무관) · ④⑧과 같은 술어 */}
+      {asksRentViolation(registrationType, assessmentYear) && (
+        <ToggleCard
+          tone="rose"
+          title="임대료를 5% 넘게 올린 적이 있음"
+          description="올린 해를 포함해 연속 2개 과세연도는 합산배제에서 빠집니다(시행령 §3⑧ · 2020.2.11. 이후 위반)"
+          checked={property.rentViolationRecorded === true}
+          onCheckedChange={(v) => onUpdate({ rentViolationRecorded: v })}
+        >
+          <div className="space-y-1.5">
+            <label className="block text-sm font-medium">
+              5% 넘게 올린 계약일 <span className="text-destructive">*</span>
+            </label>
+            <DateInput
+              data-testid="comprehensive-rent-violation-date"
+              value={property.rentViolationDate ?? ""}
+              onChange={(v) => onUpdate({ rentViolationDate: v })}
+            />
+            <p className="text-xs text-muted-foreground">
+              그 계약일이 속한 과세연도와 다음 과세연도는 합산배제되지 않습니다. 과세기준일(6월 1일) 뒤에 올렸어도 그해부터 봅니다(확인 필요).
+            </p>
+          </div>
+        </ToggleCard>
+      )}
     </>
   );
 }

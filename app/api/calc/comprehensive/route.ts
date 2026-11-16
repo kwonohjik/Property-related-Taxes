@@ -63,6 +63,8 @@ function toEngineInput(
           businessRegistrationDate: toOptionalDate(p.rentalInfo.businessRegistrationDate),
           // §3⑦4호 공실 퇴거일 (⑭ · T-12)
           vacancyEvictionDate: toOptionalDate(p.rentalInfo.vacancyEvictionDate),
+          // §3⑧ 5% 위반 계약일 (⑭ · T-07b)
+          rentViolationDate: toOptionalDate(p.rentalInfo.rentViolationDate),
           usageApprovalDate: toOptionalDate(p.rentalInfo.usageApprovalDate),
           // §3①8호 나목·7호 단서 (⑭) — ownerType은 엔진(comprehensive-tax)이 taxpayerType에서 주입
           acquisitionDate: toOptionalDate(p.rentalInfo.acquisitionDate),
