@@ -24,6 +24,9 @@ import { asksRegistrationRevokedDate } from "./comprehensive-rental-459ho";
 import { rental459hoApiFields } from "./comprehensive-rental-459ho";
 import { validate459hoInputs } from "./comprehensive-rental-459ho";
 import { rentIncreaseLimitApplies } from "@/lib/tax-engine/comprehensive-exclusion";
+import { asksThirtyPlusUnits } from "./comprehensive-rental-price-basis";
+import { asksUsageApprovalDate } from "./comprehensive-rental-price-basis";
+import { asksPriceBasisValue } from "./comprehensive-rental-price-basis";
 
 /**
  * 법인 §9② class 도출 (시행령 §4의4) — 엔진과 동일 헬퍼로 단일 진실. 개인이면 undefined.
@@ -310,36 +313,8 @@ const OTHER_INFO_TYPES = new Set([
 // (임대주택 합산배제 신청 시 UI 선택값을 API 검증 스키마 값으로 변환)
 // export: PropertyListInput onChange 자동매칭에서 재사용 (단일 출처 — UI 설계 §3)
 /** §3①1호·2호 단서(2018.3.31. 사업자등록등)가 걸리는 유형 — 민간건설·민간매입(구법 5년). ⑤·④·⑧ 공용 */
-/**
- * §3①1·2·7·8호 가목 「30호 이상」 상향 구간 — 대통령령 제35352호(2025.2.28.) 신설·2025 과세연도부터.
- * ⑤ 토글 표시 · ④ 전송이 같은 술어를 쓴다(엔진 `thirtyPlusTierApplies`와 같은 경계).
- */
-const THIRTY_PLUS_REG_TYPES = new Set([
-  "private_construction",
-  "public_construction",
-  "public_support_construction",
-  "private_purchase_long",
-  "private_purchase_short",
-  "public_purchase",
-  "public_support_purchase",
-]);
-export function asksThirtyPlusUnits(registrationType: string, assessmentYear: string): boolean {
-  const year = parseInt(assessmentYear) || new Date().getFullYear();
-  return THIRTY_PLUS_REG_TYPES.has(registrationType) && year >= 2025;
-}
-
-/**
- * §3①1호·7호 가목 건설임대 6억/9억 — 사용승인일(선택) 칸을 묻는가. 엔진 `builtRentalBaseCap`과 같은 경계:
- * 2021~2024 과세연도(2021년분 민간건설은 등록일로 보므로 공공건설만) · 공시가격이 6억 초과일 때만(6억 이하면 어느 쪽이든 성립).
- * 비면 엔진이 6억 + 확인 필요(⑧ 차단 없음 — 계획서 Q-2 a). 2025 이후는 전면 9억/12억(Q-3 a)이라 묻지 않는다.
- */
-const BUILT_REG_TYPES = new Set(["private_construction", "public_construction", "public_support_construction"]);
-export function asksUsageApprovalDate(registrationType: string, assessmentYear: string, assessedValue: number): boolean {
-  if (!BUILT_REG_TYPES.has(registrationType) || !(assessedValue > 600_000_000)) return false;
-  const year = parseInt(assessmentYear) || new Date().getFullYear();
-  if (year < 2021 || year > 2024) return false;
-  return !(year === 2021 && registrationType !== "public_construction");
-}
+// 30호·사용승인일 칸 술어는 가격 상한 술어 파일로 옮겼다(기준 공시가격 칸과 같은 상한 · 순환 import 회피) — 하위호환 re-export
+export { asksThirtyPlusUnits, asksUsageApprovalDate } from "./comprehensive-rental-price-basis";
 
 export function asksBusinessRegistrationDate(registrationType: string): boolean {
   return registrationType === "private_construction" || registrationType === "private_purchase_short";
@@ -466,6 +441,11 @@ export async function callComprehensiveApi(
             ? p.usageApprovalDate || undefined
             : undefined,
           assessedValue: base.assessedValue,
+          // 가격 판정 기준 공시가격 — ⑤가 묻는 때만(상한 초과 · 대상 유형). 0·빈칸은 보내지 않는다(엔진은 그해 공시가격 + 안내)
+          priceBasisValue:
+            asksPriceBasisValue(p, registrationType, formData.assessmentYear) && parseAmount(p.priceBasisValue) > 0
+              ? parseAmount(p.priceBasisValue)
+              : undefined,
           area: parseDecimal(p.area),
           location: p.location,
           previousRent: p.previousRent ? parseAmount(p.previousRent) : undefined,

@@ -3,7 +3,7 @@
 - 작성일: 2026-11-16 (v0.2 — 엔진·UI 시니어 병렬 검토 반영)
 - 출발점: 교재 대조 `comprehensive-rental-excl-textbook-157-180.plan.md` §3.5의 🔴 3건
 - 기준 코드: master `263aed501`(워크트리 `../prt-compexcl` · 브랜치 `review/comp-exclusion-textbook`)
-- 상태: **계획 확정** — Q-1~Q-11 **모두 권장안**(사용자 결정 2026-11-16) · PR-1 #3414 머지 · PR-2 구현(§7)
+- 상태: **계획 확정** — Q-1~Q-11 **모두 권장안**(사용자 결정 2026-11-16) · PR-1 #3414 · PR-2 #3417 머지 · PR-3 구현(§7)
 
 ## 0. 요약
 
@@ -225,3 +225,17 @@ PR 3개 권장(Q-6): **PR-1 T-15 → PR-2 T-07a → PR-3 T-03**.
 - anchor(route 7건): A07-1 OFF·10% 3,426,370원 · A07-2 ON 1,267,200원 · A07-3 5% 이내 1,267,200원 · ⑧ 빈칸·0원 · ⑫ 400 · 3호 통과.
 - 뮤테이션 3종(⑧ 제거 → 2건 · ⑫ 제거 → 1건 · 술어 항상 참 → 1건 실패) · tsc 0 · eslint 0 · verify:legal 501/501 · 종부세 회귀 1,756파일 통과.
 - 브라우저(Playwright `e2e/comprehensive-rental-5pct-base.spec.ts` 2건 통과): 토글·안내·hint·경고 문구 표시 · Network body `isInitialContract:false, previousRent:1000000` · 결과 불성립 사유 「임대료 증가율 5% 초과」 · OFF+빈칸은 ⑧ 문구 표시·요청 0건.
+- 검증 후 #3417 머지(abbbf27b7 · CI 18건 통과).
+
+### PR-3 · T-03 (브랜치 `fix/comp-excl-price-basis`)
+- 법문 재확인(2026-11-16 · KoreanLaw MST 290557 현행 §3①): 2·8호 가목 「해당 주택의 임대를 개시한 날 또는 최초로 **제9항에 따른** 합산배제신고를 한 연도의 과세기준일을 기준으로 하여」 · 1·7호 「2호 이상의 주택의 임대를 개시한 날(…)」 · 6호 「5호 이상」 · 10·11호 같은 구조 · 3호 2005년도 · 4호 나목 「신고를 한 연도의 과세기준일 현재」 · 5호 2008년도.
+- 엔진: `priceBasisApplies`(1·2·6·7·8·10·11호 원 유형 · 9호는 바탕 유형으로) · `rentalPriceCap`(좁은 입력 `RentalPriceCapInput` · 9호 바탕 모름 Infinity) export · `getPriceLimit`/`builtRentalBaseCap`/`thirtyPlusTierApplies` 입력을 Pick으로 좁힘(동작 불변) · 판정값 = 대상 유형이고 `priceBasisValue > 0`이면 그 값, 아니면 그해 공시가격.
+- 사유(Q-2 a · Q-3 a′): 가격 초과일 때만 상한 사유들 뒤에 「가격 판정: ○○원(그해 공시가격) — `PRICE_BASIS_NOT_ENTERED`」 또는 「가격 판정: ○○원 — `PRICE_JUDGED_BY_BASIS`」. 금액은 `toLocaleString("ko-KR")`.
+- 타입(Q-10): 합산배제 타입 7개를 `types/comprehensive-exclusion.types.ts`로 옮기고 원래 파일 re-export(800 → 669줄) · 새 facts `comprehensive-exclusion-price-basis.types.ts`.
+- 화면: ① store `priceBasisValue?: string` · ⑤ `RentalExclusionPriceBasisField`(사용승인일 칸 뒤 · hint 한 줄 · 미공시 4604·0290·2963 / 상속 1054 / 포괄승계 5687은 `CollapsibleHintCard`) · 술어 `lib/calc/comprehensive-rental-price-basis.ts`(`asksThirtyPlusUnits`·`asksUsageApprovalDate`를 comprehensive-api.ts에서 옮김 — 순환 import 회피 · 원래 파일에서 re-export) · ④ 술어가 참이고 > 0일 때만 전송 · ⑧ 차단 없음 · ⑫ `z.number().int().positive().optional()` · ⑭ spread · 오류 라벨 「기준 공시가격」.
+- 기존 단언 갱신 7건(4파일): 가격 초과 사유 배열에 안내 줄이 붙는다 — 느슨하게 바꾸지 않고 금액까지 명시(`notEntered("700,000,000")`).
+- anchor: route 8건(A03-1 1,267,200 · A03-2·3 4,537,951 · A03-4 미질문·미전송 · A03-9 ⑫ 0원 400 · A03-5·7·8 술어) · 엔진 7건(A03-6 7호 6억 구간 · 경계 · 3·4호 무시 · 9호 바탕 · `rentalPriceCap` 상한 · 대상 유형).
+- 뮤테이션 5종(엔진 기준값 무시 4 · ④ 미전송 2 · ⑫ strip 3 · 술어 항상 참 3 · 3호 포함 3건 실패) · tsc 0 · eslint 0 · verify:legal 501/501 · 회귀 2,029파일 통과.
+- 브라우저(Playwright `e2e/comprehensive-rental-price-basis.spec.ts` 3건 통과): 7억이면 칸·hint 표시 → 5억 입력 → Network body `priceBasisValue:500000000` · 불성립 사유 없음 / 비우면 「가격 판정: 700,000,000원(그해 공시가격)」 / 5억이면 칸 없음.
+- 손대지 않음: `asksUsageApprovalDate`의 `600_000_000` 리터럴(이동만) · 3호 2005년도 가격(V-C).
+- 14지점 점검(`ui-engine-sync-checker` · 정적): 갭 0 — ①④⑤⑦⑧⑫⑬⑭ PASS · ②③⑥⑨⑩⑪ 의도된 N-A · `rentalInfo`를 만드는 다른 경로 없음. 참고: 과세연도가 비면 `asksPriceBasisValue`만 거짓(다른 두 술어는 올해로 대체) — 과세연도는 필수 입력이고 안전한 쪽이라 두었다.

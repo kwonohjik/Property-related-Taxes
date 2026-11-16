@@ -96,6 +96,13 @@ const rentalExclusionInfoSchema = z.object({
     .nonnegative()
     .optional(),
 
+  /** 가격 판정 기준 공시가격(원) — 임대개시일 등 또는 최초 합산배제신고 연도 과세기준일(종부령 §3① 가목). 0은 받지 않는다(빈칸=보내지 않음) */
+  priceBasisValue: z
+    .number()
+    .int({ message: "기준 공시가격은 원 단위 정수여야 합니다." })
+    .positive({ message: "기준 공시가격은 0원보다 커야 합니다." })
+    .optional(),
+
   /** 현재 임대료 (원) */
   currentRent: z
     .number()

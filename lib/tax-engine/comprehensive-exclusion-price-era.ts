@@ -38,7 +38,11 @@ export interface BuiltRentalCap {
 }
 
 /** 건설임대 1·7호의 30호 미만 기본 상한 · 4호 나목 상한. 건설임대가 아니면 null. */
-export function builtRentalBaseCap(input: RentalExclusionInput): BuiltRentalCap | null {
+/** 상한 판정에 쓰는 사실만 — 화면 술어(`rentalPriceCap`)도 같은 함수를 부른다 */
+export type BuiltRentalCapInput = Pick<RentalExclusionInput, "registrationType" | "assessmentDate" | "usageApprovalDate"> &
+  Partial<Pick<RentalExclusionInput, "rentalRegistrationDate">>;
+
+export function builtRentalBaseCap(input: BuiltRentalCapInput): BuiltRentalCap | null {
   if (!BUILT_TYPES.has(input.registrationType)) return null;
   const nine = COMPREHENSIVE_EXCL_CONST.BUILT_RENTAL_PRICE_UNDER30;
   const six = COMPREHENSIVE_EXCL_CONST.BUILT_RENTAL_PRICE_PRE_20210217;
