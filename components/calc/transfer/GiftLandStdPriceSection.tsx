@@ -26,6 +26,7 @@ import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandV
 import { deriveSec163_9BaseDate, isSec163_9LandAsset, sec164LandAreaField } from "@/lib/calc/transfer-163-9-base-date";
 import { sec164LandStatus } from "@/lib/calc/sec164-required-fields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { bgSec163_9ProvisoKind } from "@/lib/calc/bg-163-9-proviso";
 
 /** 개별공시지가 최초고시일 — 이 날 前 상속·증여받은 토지가 §163⑨1호의 §164④ max 대상. */
 const LAND_FIRST_DISCLOSURE = "1990-08-30";
@@ -50,6 +51,8 @@ export function GiftLandStdPriceSection({ asset, onChange, transferDate }: Props
   ) {
     return null;
   }
+  // 부담부증여 × §163⑨ 단서 구간 — 같은 칸을 「부담부증여」 카드(`BgSec163_9ProvisoSection`)가 받는다. 여기도 띄우면 같은 칸이 두 곳에 뜬다.
+  if (bgSec163_9ProvisoKind(asset) === "land") return null;
 
   return (
     <ToneCard

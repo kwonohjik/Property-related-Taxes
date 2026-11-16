@@ -33,6 +33,7 @@ import { HouseFirstDisclosureEntryCard } from "@/components/calc/transfer/HouseF
 import { InheritanceHouseKindPicker } from "@/components/calc/transfer/inheritance/InheritanceHouseKindPicker";
 import { sec164HouseStatus } from "@/lib/calc/sec164-required-fields";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { bgSec163_9ProvisoKind } from "@/lib/calc/bg-163-9-proviso";
 import { ApartFirstPriceEntryCard, ApartNtsPriceQuestion } from "@/components/calc/transfer/inheritance/ApartNtsPriceQuestion";
 import { apartNtsQuestionRelevant, apartSec164FormOpen, isApartSec163_9Asset } from "@/lib/calc/apart-nts-price";
 
@@ -89,6 +90,10 @@ export function GiftHouseStdPriceSection({ asset, onChange, transferDate }: Prop
   }
   // 최초 공시일로 열린 구간(증여일이 2005.4.30. 이후)이면 주택 구분을 여기서도 바꿀 수 있어야 한다 — 진입 카드는 열리면 사라진다.
   const openedByHouseDate = giftDate >= HOUSE_FIRST_DISCLOSURE;
+  // 부담부증여 × §163⑨ 단서 구간 — §164⑦ 칸은 「부담부증여」 카드(`BgSec163_9ProvisoSection`)가 받는다(같은 칸이 두 곳에 뜨지 않게). 주택 구분 선택만 남긴다.
+  if (bgSec163_9ProvisoKind(asset) === "house") {
+    return openedByHouseDate ? <InheritanceHouseKindPicker asset={asset} onChange={onChange} /> : null;
+  }
 
   return (
     <ToneCard
