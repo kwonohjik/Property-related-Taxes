@@ -12,6 +12,8 @@ import type { RentalExclusion459hoFacts } from "./comprehensive-exclusion-459ho.
 import type { RentalExclusionPriceBasisFacts } from "./comprehensive-exclusion-price-basis.types";
 // 공실 2년(§3⑦4호) — 계획서 T-12
 import type { RentalExclusionVacancyFacts } from "./comprehensive-exclusion-vacancy.types";
+// §3⑧ 5% 위반 뒤 2개 과세연도 — 계획서 T-07b
+import type { RentalExclusionRentViolationFacts } from "./comprehensive-exclusion-rent-violation.types";
 
 // ============================================================
 // 1. 합산배제 관련 타입
@@ -52,7 +54,8 @@ export interface RentalExclusionInput
     RentalExclusion6hoFacts,
     RentalExclusion459hoFacts,
     RentalExclusionPriceBasisFacts,
-    RentalExclusionVacancyFacts {
+    RentalExclusionVacancyFacts,
+    RentalExclusionRentViolationFacts {
   registrationType:
     | "private_construction"
     | "private_purchase_long"

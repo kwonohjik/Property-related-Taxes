@@ -106,6 +106,8 @@ const rentalExclusionInfoSchema = z.object({
   /** 과세기준일 현재 공실(§3⑦4호) · 기존 임차인 퇴거일 — 엔진 comprehensive-exclusion-vacancy.ts */
   rentalVacantAtAssessment: z.boolean().optional(),
   vacancyEvictionDate: isoDateOptional,
+  /** §3⑧ 5% 넘게 올린 계약일 — 엔진 comprehensive-exclusion-rent-violation.ts */
+  rentViolationDate: isoDateOptional,
 
   /** 현재 임대료 (원) */
   currentRent: z

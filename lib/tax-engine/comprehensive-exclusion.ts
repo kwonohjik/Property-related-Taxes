@@ -15,6 +15,7 @@ import { isOnOrBeforeDeadline } from "./civil-period";
 import { SHORT_TERM_6Y_TYPES, SHORT_TERM_6Y_FULL_ASSESSMENT } from "./comprehensive-exclusion-business-reg";
 import { filingDeadlineApplies, filingPeriodEnd, businessRegistrationIssue } from "./comprehensive-exclusion-business-reg";
 import { vacancyCheck, isVacantAtAssessment } from "./comprehensive-exclusion-vacancy";
+import { rentViolationIssue } from "./comprehensive-exclusion-rent-violation";
 import {
   COMPREHENSIVE_EXCL,
   COMPREHENSIVE_EXCL_CONST,
@@ -282,6 +283,9 @@ export function validateRentalExclusion(
       failReasons.push(COMPREHENSIVE_EXCL.RENT_INCREASE_EXCEEDED);
     }
   }
+  // §3⑧ 5% 위반 뒤 2개 과세연도(T-07b) — 그해 6.1. 계약으로 이미 5% 초과면 붙이지 않는다
+  const violation = rentViolationIssue(input);
+  if (violation && !failReasons.includes(COMPREHENSIVE_EXCL.RENT_INCREASE_EXCEEDED)) failReasons.push(violation);
 
   // 4·9호는 「소유」 — 임대 개시를 보지 않는다
   if (!OWNED_TYPES.has(input.registrationType) && input.rentalStartDate && input.assessmentDate < input.rentalStartDate) {

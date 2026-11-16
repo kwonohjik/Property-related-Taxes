@@ -50,6 +50,9 @@ export interface PropertyEntry {
   rentalVacantAtAssessment?: boolean;
   /** 기존 임차인 퇴거일 YYYY-MM-DD — 공실일 때 2년 판정 */
   vacancyEvictionDate?: string;
+  /** 임대료를 5% 넘게 올린 적 있음(§3⑧ · T-07b) · 그 계약일 YYYY-MM-DD — 묻는 조건은 asksRentViolation(⑤④⑧ 공유) */
+  rentViolationRecorded?: boolean;
+  rentViolationDate?: string;
   // ── §3①8호 나목 1)~4)·7호 단서 — 묻는 조건은 lib/calc/comprehensive-rental-8na.ts 한 곳(⑤⑧④ 공유). 빈 값 "" = 미입력 ──
   rentalAcquisitionDate?: string;              // 나목1) 취득일
   rentalDepositPaidDate?: string;              // 나목1) 괄호 — 매매계약·계약금 지급일(선택)

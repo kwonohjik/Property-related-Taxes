@@ -28,6 +28,7 @@ import { asksThirtyPlusUnits } from "./comprehensive-rental-price-basis";
 import { asksBusinessRegistrationField } from "./comprehensive-rental-business-reg";
 import { businessRegistrationRequiredMessage } from "./comprehensive-rental-business-reg";
 import { isVacantEntry, rentalVacancyApiFields, validateVacancyInputs } from "./comprehensive-rental-vacancy";
+import { rentViolationApiFields, validateRentViolationInputs } from "./comprehensive-rental-rent-violation";
 import { asksUsageApprovalDate } from "./comprehensive-rental-price-basis";
 import { asksPriceBasisValue } from "./comprehensive-rental-price-basis";
 
@@ -148,6 +149,8 @@ export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFo
     // §3⑦4호 공실(T-12) — 퇴거일 · 공실이면 직전 임대료 필수를 면제한다(⑫ refine과 같은 조건)
     const vacancyError = validateVacancyInputs(p, regType, formData.assessmentYear, label);
     if (vacancyError) return vacancyError;
+    const violationError = validateRentViolationInputs(p, regType, formData.assessmentYear, label);
+    if (violationError) return violationError;
     if (rentIncreaseLimitApplies(regType) && !isVacantEntry(p, regType) && !p.isInitialContract && !(parseAmount(p.previousRent) > 0)) {
       return `${label}: 처음 쓴 표준임대차계약이 아니면 직전 임대료(월)를 입력하세요 — 바로 앞 계약보다 5% 넘게 올랐는지 봅니다 (종합부동산세법 시행령 §3①).`;
     }
@@ -469,6 +472,7 @@ export async function callComprehensiveApi(
           // §3①4·5·9호 — 그 호일 때만 값이 있다(4호 사용승인일은 위 칸을 덮어 필수로 보낸다)
           ...rental459hoApiFields(p, registrationType),
           ...rentalVacancyApiFields(p, registrationType),
+          ...rentViolationApiFields(p, registrationType, formData.assessmentYear),
         },
       };
     }

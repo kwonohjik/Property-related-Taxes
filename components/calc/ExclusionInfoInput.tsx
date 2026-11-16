@@ -360,7 +360,13 @@ function RentalExclusionDetail({
       )}
 
       {/* 공실(§3⑦4호 · T-12) → 5% 비교 기준 계약 → 임대료 — 계산 순서대로 한 컴포넌트에(800줄 정책) */}
-      <RentalExclusionRentFields property={property} registrationType={regType} asksRent={asksRent} onUpdate={onUpdate} />
+      <RentalExclusionRentFields
+        property={property}
+        registrationType={regType}
+        asksRent={asksRent}
+        assessmentYear={assessmentYear}
+        onUpdate={onUpdate}
+      />
     </div>
   );
 }

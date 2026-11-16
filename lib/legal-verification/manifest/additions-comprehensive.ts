@@ -64,6 +64,13 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     keywords: ["기존 임차인의 퇴거일부터 다음 임차인의 입주일까지의 기간이 2년 이내인 경우에는 계속 임대하는 것으로 본다"],
     keywordMode: "ALL",
   },
+  /** §3⑧ — 5% 요건 위반 뒤 연속 2개 과세연도 제외(T-07b) */
+  {
+    id: "COMPREHENSIVE_DECREE.EXCLUDED_RENTAL_RENT_VIOLATION_2Y",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["해당 과세연도를 포함하여 연속하는 2개 과세연도까지는 합산배제 임대주택에서 제외한다"],
+    keywordMode: "ALL",
+  },
   /** 법 §8③ — 합산배제 주택 보유현황 신고기간 9.16.~9.30. */
   {
     id: "COMPREHENSIVE.HOLDING_STATUS_REPORT_PERIOD",

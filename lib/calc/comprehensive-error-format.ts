@@ -63,6 +63,7 @@ const FIELD_LABEL: Record<string, string> = {
   businessRegistrationDate: "세무서 사업자등록일",
   rentalVacantAtAssessment: "과세기준일 현재 공실",
   vacancyEvictionDate: "기존 임차인 퇴거일",
+  rentViolationDate: "5% 넘게 올린 계약일",
   isEupMyeonArea: "읍·면 지역 여부",
   isThirtyPlusUnits: "30호 이상 여부",
   // 중첩: 기타 합산배제(otherInfo)

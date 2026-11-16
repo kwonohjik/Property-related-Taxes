@@ -145,3 +145,9 @@
 - anchor: 엔진 6건(A12-1 당일 성립 · A12-2·3 불성립(토요일 연장 없음) · A12-4 · 5% 건너뜀 · 4·9호) · route 6건(A12-2 3,426,370 · A12-1 1,267,200 + 경고 · A12-5 막다른 길 없음 · A12-5′ ⑫ 직접 API 200/400 · A12-4 ⑧ 3종 · A12-6 4호 전환 미전송).
 - 뮤테이션 7종(엔진 판정 · ⑧ 면제 · ⑫ 면제 · ④ 미전송 · ⑭ 날짜 · 엔진 5% 건너뜀 · ④ 남은 토글) 전부 실패 확인 · tsc 0 · eslint 0 · 회귀 1,764파일(무관 양도세 격자 4건 load 40 시간 초과 → 단독 78건 통과) · E2E `comprehensive-rental-vacancy.spec.ts` 2건 + 5pct-base 2건 통과(공실 ON이면 임대료 칸 숨김 · body `currentRent:0` · 경고/불성립 사유 표시).
 - `comprehensive-input.ts` 700줄(착지 목표 경계) — PR-C에서 넘으면 임대 스키마 분리.
+
+### PR-C · T-07b (브랜치 `fix/comp-excl-rent-violation`)
+- 엔진 `comprehensive-exclusion-rent-violation.ts`: `rentViolationApplies`(§3⑧ 열거 1·2·7·8·10·11호 — `rentIncreaseLimitApplies`와 9호만 다름을 anchor로 고정) · `rentViolationIssue` — 위반 계약일 v ≥ 2020.2.11.(부칙<제30404호> §4)이고 year(v) ≤ 과세연도 ≤ year(v)+1이면 `RENT_VIOLATION_TWO_YEARS`, 그해 6.1. 뒤면 `RENT_VIOLATION_SAME_YEAR_AFTER_ASSESSMENT`(확인 필요 · Q-8 a) · 그해 계약 5% 초과(`RENT_INCREASE_EXCEEDED`)면 붙이지 않음. manifest §3⑧ 키워드(verify:legal 503/503).
+- 화면: 술어 `lib/calc/comprehensive-rental-rent-violation.ts`(`asksRentViolation` — 2020 과세연도부터 · ④ · ⑧) · `RentalExclusionRentFields`에 rose 토글 「임대료를 5% 넘게 올린 적이 있음」 → 「5% 넘게 올린 계약일 *」(공실이어도 표시) · store optional 2 · ⑫ `rentViolationDate` · ⑭ `toOptionalDate` · 오류 라벨.
+- anchor 엔진 6 · route 4(A07b-1 3,426,370 · A07b-2 1,267,200 · 토글 OFF 남은 날짜 미전송 · ⑧ · 술어) · 뮤테이션 7종(엔진 · 중복 방지 · ④ · ⑭ · ⑧ · 부칙 경계 · 6.1. 뒤 분기) 전부 실패 확인 · tsc 0 · eslint 0 · 회귀 889파일 · E2E `comprehensive-rental-rent-violation.spec.ts` 2건 + vacancy 2건 통과.
+- `comprehensive-input.ts` 702줄 · `comprehensive-api.ts` 697줄(800 미만 — 다음에 늘리면 임대 스키마·⑧ 분리).
