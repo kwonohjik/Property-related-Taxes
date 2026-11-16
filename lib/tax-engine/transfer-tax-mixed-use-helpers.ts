@@ -22,6 +22,7 @@ import type { TransferTaxInput } from "./types/transfer.types";
  * 재수출 경로(`transfer-tax-exemption`)를 쓴다 — 5개 호출부 전부가 그 경로를 쓴다.
  */
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
+import { landResidenceCountsInRate } from "./transfer-land-holding-residence";
 import type { CommercialGainSplit } from "./transfer-tax-mixed-use-commercial";
 import type { HousingGainSplit } from "./transfer-tax-mixed-use-housing";
 import type {
@@ -295,7 +296,7 @@ export function buildHousingPart(
    * 토지를 건물보다 나중에 취득한 주택분 토지의 거주 연수(토지 보유기간 중 거주 — `resolveMixedLandHoldingResidence`). 미주입 = 자산 단위 거주 연수(종전).
    * 건물분·표2 대상 판정(`table2ResidenceYears`)에는 쓰지 않는다. `cap`은 직접 입력 상한 사실 — 공제율이 실제로 바뀔 때만 echo한다.
    */
-  landResidence?: { years: number; cap?: { directMonths: number; cappedMonths: number; landHoldingMonths: number } },
+  landResidence?: { years: number; applies?: boolean; cap?: { directMonths: number; cappedMonths: number; landHoldingMonths: number } },
 ): MixedUseHousingPart {
   // 주택분에 걸리는 §95② 배제 사유 합집합 — 아래 4개 calcLongTermRate 호출의 단일 소스.
   const housingLthdExcluded = isUnregistered || surchargeLthdExcluded;
@@ -469,6 +470,7 @@ export function buildHousingPart(
     landHoldingYears: gainSplit.landHoldingYears,
     buildingHoldingYears: gainSplit.buildingHoldingYears,
     residenceYears,
+    landResidenceYears,
   });
 
   // ── ④ 양도소득금액 — 음수(차손)도 그대로 둔다. 합산 단계(`buildTotalTax`)가 §167의2①로 다른 파트에서 공제한다. ──
@@ -517,6 +519,10 @@ export function buildHousingPart(
     // 토지 나중 취득 — 직접 입력 상한이 토지 공제율을 실제로 바꿨을 때만(연수가 같으면 알리지 않는다).
     ...(landResidence?.cap && landOwnYearsRate !== calcLongTermRate(gainSplit.landHoldingYears, residenceYears, useTable2, housingLthdExcluded)
       ? { landHoldingResidenceCap: landResidence.cap }
+      : {}),
+    // 역방향 표시 게이트 — 토지 거주 연수가 공제율에 쓰였는가(분리취득 `holdingResidenceRateUsed`와 같은 leaf)
+    ...(landResidence?.applies
+      ? { landHoldingResidenceRateUsed: landResidenceCountsInRate({ useTable2, transferDate, appurtenantTable1Applied: appurtenant?.table1Applied }) }
       : {}),
     // 통칙 95-0…1 적용 echo(표시 전용) — 일반 경로 `SplitPartResult.appurtenantLthd`와 같은 형태다.
     ...(appurtenant

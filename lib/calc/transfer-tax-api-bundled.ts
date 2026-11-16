@@ -101,7 +101,8 @@ export function buildBundledPrimaryPayload(c: {
                 // ④ 역방향 — 이 카드가 자기 거주 구간을 가진 주택이면 토지를 건물보다 나중에 취득한 분리취득의 토지 보유기간 중 거주 개월도 싣는다(주 자산과 같은 leaf).
                 //   다른 컴패니언은 자기 거주 입력이 없어(0 또는 주 자산 승계) 싣지 않는다 — 엔진이 보유 개월로 상한한다.
                 ...buildLandHoldingResidencePayload(a, {
-                  propertyType: (payload as { propertyType?: unknown }).propertyType,
+                  // 컴패니언 payload에는 `propertyType`이 없고 `assetKind`뿐이다 — 엔진 `isSplitable`(housing·building)과 같은 범위(겸용은 `mixed_use_house`로 접혀 제외).
+                  propertyType: (payload as { assetKind?: unknown }).assetKind,
                   landAcquisitionDate: (payload as { landAcquisitionDate?: unknown }).landAcquisitionDate,
                   selfOwns: (payload as { selfOwns?: unknown }).selfOwns,
                   buildingAcquisitionDate: (payload as { acquisitionDate?: unknown }).acquisitionDate,

@@ -100,6 +100,9 @@ const GRID: [string, Cell[]][] = [
       ["건물만 본인", { selfOwns: "building_only" } as Partial<AssetForm>],
       ["일반건물", { assetKind: "general_building" } as Partial<AssetForm>],
       ["토지 취득일 빈칸", { landAcquisitionDate: "" }],
+      // ④ `buildSplitPayload`는 `normalizeBuildingCauseInputs` 사본을 읽는다 — 상속·증여 호스트의 stale 분리 입력(토글만 켜진 잔재)은 「분리 없음」이다. ⑤도 같은 사본을 읽어야 한다.
+      ["stale 분리 입력(상속 호스트)", { acquisitionCause: "inheritance" } as Partial<AssetForm>],
+      ["stale 분리 입력(증여 호스트)", { acquisitionCause: "gift" } as Partial<AssetForm>],
     ]),
   ],
   [
@@ -164,4 +167,21 @@ describe("겸용 ④ 게이트 = ⑤ 술어(단일 소스)", () => {
       const a = mixedBase({ ...intervalPatch, ...o });
       expect("landHoldingResidencePeriodYears" in buildMixedLandHoldingResidencePayload(a)).toBe(mixedLandHoldingResidenceApplies(a));
     });
+});
+
+describe("⑧ 오류 라벨 — 새 필드 경로가 한국어로 나온다(동기화 점검 6번)", () => {
+  it("landHoldingResidenceMonths · 컴패니언 카드 경로 · mixedUse.landHoldingResidencePeriodYears", async () => {
+    const { formatFieldErrors } = await import("@/lib/calc/transfer-tax-error-format");
+    const out = formatFieldErrors(
+      {
+        landHoldingResidenceMonths: ["x"],
+        "companionAssets.0.landHoldingResidenceMonths": ["y"],
+        "mixedUse.landHoldingResidencePeriodYears": ["z"],
+      },
+      "입력값이 올바르지 않습니다",
+    );
+    expect(out).toContain("토지 보유기간 중 거주 개월 수");
+    expect(out).toContain("토지 보유기간 중 거주 연수");
+    expect(out).not.toContain("landHoldingResidence");
+  });
 });

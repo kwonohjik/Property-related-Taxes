@@ -47,6 +47,7 @@ import { landOnlyAppurtenantHouseYears } from "./land-only-owner-household";
 import { resolveExemptionRequirementResidenceMonths, resolveTable2SubjectResidenceMonths } from "./one-house/residence-months";
 import { landPartPriorResidenceMonths } from "./transfer-split-land-residence";
 import { resolveLandHoldingResidence } from "./transfer-land-holding-residence";
+import { landResidenceCountsInRate } from "./transfer-land-holding-residence";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
 import type { Rental97Result } from "./transfer-reductions/types";
 import type { TransferTaxInput, SplitGainResult } from "./types/transfer.types";
@@ -489,6 +490,14 @@ export function calcLongTermHoldingDeduction(
         cappedMonths: landHoldingRes.months,
         landHoldingMonths: landHoldingRes.landHoldingMonths!,
       };
+    }
+    // 역방향 표시 게이트 — 토지 거주 연수가 거주기간별 공제율에 실제로 쓰였는가(표2 · 거주분 열이 있는 연혁 · 통칙으로 표1이 이긴 부수토지 아님). 걸리지 않으면 echo하지 않는다.
+    if (ownsLand && landHoldingRes.applies) {
+      splitDetail.land.holdingResidenceRateUsed = landResidenceCountsInRate({
+        useTable2,
+        transferDate: input.transferDate,
+        appurtenantTable1Applied: landAppurtenantLthd?.table1Applied,
+      });
     }
     if (ownsBuilding) splitDetail.building.residenceYears = residenceYears;
     // 보유분·거주분 분해 echo(E-1, 표시 전용) — 소유 파트에만. 거주 0으로 부른 공제율이 보유분이다.

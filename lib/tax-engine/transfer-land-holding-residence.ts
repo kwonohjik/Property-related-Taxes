@@ -16,6 +16,7 @@
  * 엔진(`calcLongTermHoldingDeduction`)·⑫(`refineSplitPartCause`)·⑧이 `collectSplitPartCauseIssues`를 거쳐 **같은 게이트 술어**(`landAcquiredAfterBuilding`)를 공유한다.
  */
 import { completedMonthsInclusive } from "./civil-period";
+import { isLthdTable2HoldingOnlyEra } from "./data/lthd-table2-era";
 import { parseISO } from "./utc-date";
 import type { SplitPartCauseFacts, SplitPartCauseIssue } from "./transfer-split-part-cause";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
@@ -59,6 +60,16 @@ export function landHoldingMonthsOf(landAcquisitionDate: Date | string, transfer
   const transfer = dayOf(transferDate);
   if (!land || !transfer) return 0;
   return completedMonthsInclusive(parseISO(land), parseISO(transfer));
+}
+
+/**
+ * 역방향(토지 나중 취득)에서 토지 파트의 거주 연수가 거주기간별 공제율에 **쓰였는가**(표시 게이트 · 신고서·명세서 공용).
+ * 표2로 계산되고(1세대1주택 대상) 그 양도일의 표2에 거주분 열이 있으며(2009~2020 양도는 보유 8% 단일축) 통칙 95-0…1로 표1이 이긴 부수토지가 아니면 true다.
+ */
+export function landResidenceCountsInRate(a: { useTable2: boolean; transferDate?: Date | string; appurtenantTable1Applied?: boolean }): boolean {
+  if (!a.useTable2 || a.appurtenantTable1Applied) return false;
+  if (!a.transferDate) return true; // 양도일 미제공(겸용 경로는 2022 이후만) — 현행 표2로 본다(`calcLongTermRate`와 같은 규약)
+  return !isLthdTable2HoldingOnlyEra(a.transferDate instanceof Date ? a.transferDate : parseISO(a.transferDate.slice(0, 10)));
 }
 
 export interface LandHoldingResidence {
@@ -178,7 +189,7 @@ export function resolveMixedLandHoldingResidence(
     buildingAcquisitionDate: Date | string;
   },
   transferDate: Date | string,
-): { years: number; cap?: { directMonths: number; cappedMonths: number; landHoldingMonths: number } } {
+): { years: number; applies: boolean; cap?: { directMonths: number; cappedMonths: number; landHoldingMonths: number } } {
   const issue = mixedLandHoldingResidenceIssue(asset);
   if (issue) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, issue, { field: "landHoldingResidencePeriodYears" });
   const res = resolveLandHoldingResidence(
@@ -193,6 +204,7 @@ export function resolveMixedLandHoldingResidence(
   );
   return {
     years: Math.floor(res.months / 12),
+    applies: res.applies,
     ...(res.capped ? { cap: { directMonths: asset.residencePeriodYears * 12, cappedMonths: res.months, landHoldingMonths: res.landHoldingMonths! } } : {}),
   };
 }

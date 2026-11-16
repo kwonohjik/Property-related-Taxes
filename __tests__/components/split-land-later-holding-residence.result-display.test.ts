@@ -94,6 +94,34 @@ describe("⑦ 역방향 — S2 신고서 거주기간 파트 열", () => {
   });
 });
 
+describe("⑦ 역방향 — 표2 거주분 공제율이 쓰인 경우만 채운다(동기화 점검 2번)", () => {
+  it("표2 비대상(세대 3주택 → 표1): 연수 echo는 4/14로 갈려도 토지 열을 채우지 않는다 · 엔진 echo 표지 false", () => {
+    const r = s2({ householdHousingCount: 3 });
+    expect(r.splitDetail!.land.residenceYears).toBe(4);
+    expect(r.splitDetail!.building.residenceYears).toBe(14);
+    expect(r.splitDetail!.land.holdingResidenceRateUsed).toBe(false);
+    const rows = rowsOf(r);
+    expect(cell(rows, "거주기간", "land")).toBeUndefined();
+    expect(cell(rows, "거주기간", "building")).toBeUndefined();
+  });
+
+  it("표2 거주분이 없는 2009~2020 양도(보유 8% 단일축): 채우지 않는다", () => {
+    const r = s2({ transferDate: new Date("2018-06-15"), landAcquisitionDate: new Date("2014-03-01") });
+    expect(r.splitDetail!.land.holdingResidenceRateUsed).toBe(false);
+    expect(cell(rowsOf(r), "거주기간", "land")).toBeUndefined();
+  });
+
+  it("표2 1세대 1주택(S2): 표지 true · 채운다", () => {
+    const r = s2();
+    expect(r.splitDetail!.land.holdingResidenceRateUsed).toBe(true);
+    expect(cell(rowsOf(r), "거주기간", "land")).toBe("4년 0월");
+  });
+
+  it("토지가 먼저(역방향 아님): 표지 없음(규칙이 걸리지 않는다)", () => {
+    expect(s2({ landAcquisitionDate: new Date("2000-03-01") }).splitDetail!.land.holdingResidenceRateUsed).toBeUndefined();
+  });
+});
+
 describe("순방향(4289)과 역방향이 같은 함수에서 섞이지 않는다", () => {
   const run = (sp: SplitGainResult) => {
     const str: Record<string, string> = {};
@@ -122,7 +150,7 @@ describe("순방향(4289)과 역방향이 같은 함수에서 섞이지 않는�
   });
 
   it("토지 연수 < 건물 연수 → 4289 표지가 켜져 있어도 역방향 각주(4289 문구 없음)", () => {
-    const { str, note } = run(base(4, 14, { priorHouseholdResidenceEffect: { rate: true, eligibility: true } }));
+    const { str, note } = run(base(4, 14, { priorHouseholdResidenceEffect: { rate: true, eligibility: true }, holdingResidenceRateUsed: true }));
     expect(str["residencePeriod.land"]).toBe("4년 0월");
     expect(note).toContain("대법원 2025두34935");
     expect(note).not.toContain("4289");

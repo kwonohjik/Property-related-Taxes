@@ -12,6 +12,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { sumResidenceMonthsFrom } from "@/lib/stores/calc-wizard-asset-residence";
 import { landAcquiredAfterBuilding } from "@/lib/tax-engine/transfer-land-holding-residence";
 import { anyPartCarryover } from "./transfer-land-part-cause";
+import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
 import { effectiveSelfOwns, selfOwnsSplitApplicable } from "./self-owns-scope";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
 import { primaryEnginePropertyType } from "./transfer-tax-api-helpers";
@@ -41,9 +42,12 @@ export function buildLandHoldingResidencePayload(
  * 파트 이월과세 아님 ∧ 별개 취득 토글 ON ∧ 토지 취득일 > 건물 취득일. 거주 입력 방식은 보지 않는다(방식별 안내 문구는 호출부가 가른다).
  */
 export function landHoldingResidenceApplies(
-  asset: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns" | "hasSeperateLandAcquisitionDate" | "landAcquisitionDate" | "acquisitionDate" | "acquisitionCause" | "carryover"> &
-    Parameters<typeof anyPartCarryover>[0],
+  rawAsset: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns" | "hasSeperateLandAcquisitionDate" | "landAcquisitionDate" | "acquisitionDate" | "acquisitionCause" | "carryover"> &
+    Parameters<typeof anyPartCarryover>[0] &
+    Parameters<typeof normalizeBuildingCauseInputs>[0],
 ): boolean {
+  // ④ `buildSplitPayload`와 같은 D2 정규화 사본을 읽는다 — 상속·증여 호스트의 stale 분리 입력(토글만 켜진 잔재)은 「분리 없음」이다.
+  const asset = normalizeBuildingCauseInputs(rawAsset);
   if (!selfOwnsSplitApplicable(asset) || effectiveSelfOwns(asset) !== "both") return false;
   if (anyPartCarryover(asset) || asset.hasSeperateLandAcquisitionDate !== true) return false;
   return landAcquiredAfterBuilding({ landAcquisitionDate: asset.landAcquisitionDate, buildingAcquisitionDate: primaryAcquisitionDateOf(asset as AssetForm) });

@@ -113,8 +113,8 @@ describe("검증 — 엔진 입구(⑫와 같은 leaf)", () => {
   it("leaf: mixedLandHoldingResidenceIssue / resolveMixedLandHoldingResidence", () => {
     const a = { residencePeriodYears: 14, landAcquisitionDate: D("2020-03-01"), buildingAcquisitionDate: D("2010-03-01") };
     expect(mixedLandHoldingResidenceIssue(a)).toBeUndefined();
-    expect(resolveMixedLandHoldingResidence(a, TD)).toEqual({ years: 4, cap: { directMonths: 168, cappedMonths: 58, landHoldingMonths: 58 } });
-    expect(resolveMixedLandHoldingResidence({ ...a, landHoldingResidencePeriodYears: 2 }, TD)).toEqual({ years: 2 });
-    expect(resolveMixedLandHoldingResidence({ ...a, landAcquisitionDate: D("2000-03-01") }, TD)).toEqual({ years: 14 });
+    expect(resolveMixedLandHoldingResidence(a, TD)).toEqual({ years: 4, applies: true, cap: { directMonths: 168, cappedMonths: 58, landHoldingMonths: 58 } });
+    expect(resolveMixedLandHoldingResidence({ ...a, landHoldingResidencePeriodYears: 2 }, TD)).toEqual({ years: 2, applies: true });
+    expect(resolveMixedLandHoldingResidence({ ...a, landAcquisitionDate: D("2000-03-01") }, TD)).toEqual({ years: 14, applies: false });
   });
 });
