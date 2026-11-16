@@ -114,7 +114,9 @@ export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFo
     }
     if (!RENTAL_TYPES.has(p.exclusionType)) continue;
     const label = `주택 ${i + 1}`;
-    if (!p.rentalRegistrationDate) return `${label}: 합산배제 임대주택은 임대사업자 등록일을 입력하세요 (종합부동산세법 시행령 §3①).`;
+    // T-14 — 지자체 등록 없는 다가구 경과조치(부칙<제30404호> §6)는 판정하지 못한다: 할 일(세무서 확인 · 유형 '없음')을 함께 알린다
+    if (!p.rentalRegistrationDate)
+      return `${label}: 지자체 임대사업자 등록일이 없으면 합산배제를 계산할 수 없습니다. 2020.2.11. 전에 세무서에 주택임대업 등록을 한 다가구주택은 지자체 등록 없이도 배제될 수 있으니(종합부동산세법 시행령 부칙<대통령령 제30404호> §6) 관할 세무서에 확인하세요. 일반 주택으로 계산하려면 합산배제 유형을 '없음'으로 바꾸세요.`;
     const bizType = p.rentalRegistrationType || toRegistrationType(p.exclusionType);
     if (asksBusinessRegistrationField(bizType, formData.assessmentYear) && !p.businessRegistrationDate) {
       return businessRegistrationRequiredMessage(bizType, label);

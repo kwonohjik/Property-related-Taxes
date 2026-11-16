@@ -141,3 +141,12 @@ describe("⑤④⑧ 술어 asksBusinessRegistrationField — 묻는 유형·연�
       expect(asksBusinessRegistrationField(t, "2025")).toBe(false);
   });
 });
+
+describe("T-14 다가구 경과조치 — 안내만(계획서 Q-10 a)", () => {
+  it("A14-1 ⑧ 지자체 등록일 빈칸 — 경과조치 안내와 할 일(세무서 확인 · 유형 '없음')을 함께", () => {
+    const msg = validateRequiredExclusionAndLandInputs(form("2025-02-20", { rentalRegistrationDate: "" })) ?? "";
+    expect(msg).toMatch(/^주택 1: 지자체 임대사업자 등록일이 없으면 합산배제를 계산할 수 없습니다/);
+    expect(msg).toContain("부칙<대통령령 제30404호> §6");
+    expect(msg).toContain("합산배제 유형을 '없음'으로 바꾸세요");
+  });
+});

@@ -1,6 +1,6 @@
 # 종부세 합산배제 입력 공백 4건 계획서 — T-13 세무서 사업자등록 · T-12 공실 2년 · T-07b §3⑧ 2개 연도 · T-14 다가구 경과조치
 
-- 작성: 2026-11-16 · 상태: **v0.2 — 계획 확정 · Q-1~Q-11 모두 권장안(사용자 결정 2026-11-16) · PR-A 착수**
+- 작성: 2026-11-16 · 상태: **v0.2 — 계획 확정 · Q-1~Q-11 모두 권장안(사용자 결정 2026-11-16) · PR-A #3420 머지 · PR-B·C·D 구현(§7)**
 - 출처: 교재 대조 `comprehensive-rental-excl-textbook-157-180.plan.md` §3.2(T-07b)·§3.3(T-12~T-14) · 세액 결함 3건은 `comprehensive-rental-excl-tax-defects-3.plan.md`로 완료(#3414·#3417·#3418)
 - 공통: 넷 다 **입력 칸이 없어서** 생기는 공백이다. 14지점이 함께 움직인다.
 
@@ -151,3 +151,9 @@
 - 화면: 술어 `lib/calc/comprehensive-rental-rent-violation.ts`(`asksRentViolation` — 2020 과세연도부터 · ④ · ⑧) · `RentalExclusionRentFields`에 rose 토글 「임대료를 5% 넘게 올린 적이 있음」 → 「5% 넘게 올린 계약일 *」(공실이어도 표시) · store optional 2 · ⑫ `rentViolationDate` · ⑭ `toOptionalDate` · 오류 라벨.
 - anchor 엔진 6 · route 4(A07b-1 3,426,370 · A07b-2 1,267,200 · 토글 OFF 남은 날짜 미전송 · ⑧ · 술어) · 뮤테이션 7종(엔진 · 중복 방지 · ④ · ⑭ · ⑧ · 부칙 경계 · 6.1. 뒤 분기) 전부 실패 확인 · tsc 0 · eslint 0 · 회귀 889파일 · E2E `comprehensive-rental-rent-violation.spec.ts` 2건 + vacancy 2건 통과.
 - `comprehensive-input.ts` 702줄 · `comprehensive-api.ts` 697줄(800 미만 — 다음에 늘리면 임대 스키마·⑧ 분리).
+
+### PR-D · T-14 (브랜치 `fix/comp-excl-multifamily-notice`) — 안내만(Q-10 a)
+- ⑤ 지자체 등록일 hint에 한 줄: 2020.2.11. 전 세무서에만 주택임대업 등록한 다가구는 지자체 등록 없이 배제될 수 있으나 판정 못 함(확인 필요).
+- ⑧ 지자체 등록일 빈칸 문구: 계산 불가 이유 + 부칙<대통령령 제30404호> §6 + 할 일(관할 세무서 확인 · 일반 주택이면 유형 '없음'). 세액·엔진 불변.
+- anchor A14-1(route.business-reg) · 기존 C4 `/임대사업자 등록일/` 단언 통과 · tsc 0 · eslint 0.
+- 판정 경로(b)는 V-1(의제 다가구의 호 · 2호 단서 · 구별 가격) 해소 뒤.
