@@ -183,8 +183,8 @@ describe("RD-1 함께 양도 — §166 자산의 차감형 감면이 합산 세�
     ["입주권", "apportioned", 179_698_889, 8_200_888, 97_629_629],
     ["입주권", "actual", 174_410_000, 11_312_000, 134_666_666],
     // 완공APT §99의3 — 조합원 갈래(NH-36·NH-63·NH-32): 준공 2021-09-01부터 5년 이내 · 재개발 변형 (600−300)/(600−100) = 0.6
-    ["완공APT", "apportioned", 134_748_889, 10_134_888, 125_333_333],
-    ["완공APT", "actual", 117_860_000, 15_566_000, 192_000_000],
+    ["완공APT", "apportioned", 143_039_798, 12_829_434, 156_424_242], // 종전 결정세액 134,748,889 · 농특세 10,134,888 · 125,333,333 — 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
+    ["완공APT", "actual", 121_787_272, 16_842_363, 206_727_273], // 종전 117,860,000 · 15,566,000 · 192,000,000 — 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
   ] as const)("%s · %s · §99의3 → 결정세액 %i · 농특세 %i", async (kind, mode, det, rural, reducible) => {
     const mk = kind === "입주권" ? right : apt;
     const reductions = [r993()];
@@ -205,7 +205,7 @@ describe("RD-1 함께 양도 — §166 자산의 차감형 감면이 합산 세�
     const s1 = await runCalc(single(right({ reductions: [r993()] })));
     expect(incomeDeductionReducible(s1.result)).toBe(134_666_666);
     const s2 = await runCalc(single(apt({ reductions: [r993()] })));
-    expect(incomeDeductionReducible(s2.result)).toBe(192_000_000);
+    expect(incomeDeductionReducible(s2.result)).toBe(206_727_273); // 종전 192,000,000 — 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
   });
 });
 
@@ -213,8 +213,8 @@ describe("RD-2 감면 없는 함께 양도 §166 자산 — 세액 불변", () =
   it.each([
     ["입주권", "apportioned", 220_703_333],
     ["입주권", "actual", 230_970_000],
-    ["완공APT", "apportioned", 185_423_333],
-    ["완공APT", "actual", 195_690_000],
+    ["완공APT", "apportioned", 207_186_969], // 종전 185,423,333 — 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
+    ["완공APT", "actual", 205_999_091], // 종전 195,690,000 — 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
   ] as const)("%s · %s → %i", async (kind, mode, det) => {
     const mk = kind === "입주권" ? right : apt;
     for (const assets of [
@@ -232,7 +232,7 @@ describe("RD-3 단건 §166 — 세액 불변 · 감면대상 소득금액과 �
   it.each([
     ["입주권", 100_242_998, 10_640_666, 134_666_666],
     // 완공APT §99의3은 조합원 갈래 수정(NH-36·NH-63·NH-32)으로 세액이 바뀐다 — 준공일부터 5년 이내 · 재개발 변형 0.6
-    ["완공APT", 45_848_500, 14_515_000, 192_000_000],
+    ["완공APT", 50_904_862, 15_791_363, 206_727_273], // 종전 45,848,500 · 14,515,000 · 192,000,000 — 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
   ] as const)("%s · §99의3 → 총세액 %i · 농특세 %i · 감면대상 소득금액 %i (수정 전 0)", async (kind, total, rural, reducible) => {
     const mk = kind === "입주권" ? right : apt;
     const r = await runCalc(single(mk({ reductions: [r993()] })));

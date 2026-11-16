@@ -161,7 +161,7 @@ describe("묶음 카드 — 신고서 필요경비 줄 (Q-1 a · Q-2 b)", () => 
     expect(v.pre[0]).not.toContain("개산공제");
     expect(v.pre[0]).toContain("1,200,000");
     expect(v.necessary).toEqual([1_200_000]);
-    expect(v.tax).toBe(14_685_633);
+    expect(v.tax).toBe(17_543_254); // 종전 14,685,633 — 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
   });
 
   it("B4 축 B 입주권 원+원 · 인가 전 실비 3,000,000씩 — 카드마다 600,000", async () => {
@@ -296,7 +296,7 @@ describe("입력 경로 — 자본적지출·양도비(인가 후 분 · 청산�
     expect(v.post[0]).toContain("1,568,942");
     expect(v.settlement[0]).toContain("664,035");
     expect(cardExpenseSum(v.d)).toBe(propertyExpenseSum(v.d));
-    expect(v.tax).toBe(14_228_885);
+    expect(v.tax).toBe(16_896_454); // 종전 14,228,885 — 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
   });
 
   it("묶음 · 비재개발 주택(실지)에 자본적지출·양도비 + 재개발 카드 — 카드별 합(주택 §159 칸 2,400,000 + 재개발 1,020,419) = 자산별 필요경비 합", async () => {

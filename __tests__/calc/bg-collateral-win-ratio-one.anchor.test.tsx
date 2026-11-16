@@ -94,11 +94,11 @@ describe("CW-1 ⑧ 통과 — 담보평가액 = 인수 채무(채무비율 1)는
     expect(c.tax).toBe(128_124_000);
   });
 
-  it("완공 아파트 K-4 · K-5 — 기준시가 강제 + 인가 전 개산공제(46,712,000)", async () => {
+  it("완공 아파트 K-4 · K-5 — 기준시가 강제 + 인가 전 개산공제(54,854,857)", async () => {
     for (const a of [apt(), apt({ bgAcquisitionMethod: "converted" })]) {
       const c = await calc(form([a]));
       expect(c.issues).toEqual([]);
-      expect(c.tax).toBe(46_712_000);
+      expect(c.tax).toBe(54_854_857); // 종전 46,712,000 — 인가 전 분 차손을 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
     }
   });
 });

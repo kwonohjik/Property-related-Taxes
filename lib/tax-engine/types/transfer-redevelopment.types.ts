@@ -550,6 +550,12 @@ export interface RedevelopmentBranchDetail {
    * - 묶음 내 동일 LTHD율 적용 (§166⑤2호나목 동일 보유기간 → 동일 율)
    */
   lthd: number;
+  /**
+   * 장기보유특별공제를 계산한 기존건물분양도차익(시행령 §166②1호) — 인가 전 분과 인가 후 기존주택분의 부호가 달라
+   * 두 분기를 상계한 경우에만 **양수였던 분기**에 싣는다(`existingBuildingLthdBases` — 합계가 0 이하면 0). 이때 `lthd = 이 값 × lthdRate`이고,
+   * 산식 표시는 `gain` 대신 이 값을 쓴다. 상계하지 않으면 undefined.
+   */
+  lthdBaseGain?: number;
 
   /** 적용 LTHD율 (0~0.8, 표1 또는 표2) */
   lthdRate: number;

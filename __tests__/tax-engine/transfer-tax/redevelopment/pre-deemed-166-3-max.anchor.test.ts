@@ -57,7 +57,7 @@ function make(opts: {
 const CASES = [
   // [id, 입력, 채택, 종전자산 취득가액, 결정세액, 종전(PR-1) 결정세액]
   { id: "I-1 ① 1억 < ③", in: { reported: 100_000_000 }, sel: "converted", acq: SEC166_3, tax: 61_420_275, before: 74_228_133 },
-  { id: "I-2 ① 3억 > ③", in: { reported: 300_000_000 }, sel: "reported", acq: 300_000_000, tax: 11_040_084, before: 11_040_084 },
+  { id: "I-2 ① 3억 > ③", in: { reported: 300_000_000 }, sel: "reported", acq: 300_000_000, tax: 17_686_385, before: 11_040_084 }, // 인가 전 분 차손 — 기존건물분 상계(시행령 §166②1호 · #V6)로 갱신
   { id: "I-3 ③만", in: {}, sel: "converted", acq: SEC166_3, tax: 61_420_275, before: 61_420_275 },
   { id: "I-4 ① 2억 > ③", in: { reported: 200_000_000 }, sel: "reported", acq: 200_000_000, tax: 44_968_133, before: 44_968_133 },
   { id: "I-5 ⑤ 실가 — ③ 없음(① 1억)", in: { reported: 100_000_000, useEst: false }, sel: "reported", acq: 100_000_000, tax: 74_228_133, before: 74_228_133 },

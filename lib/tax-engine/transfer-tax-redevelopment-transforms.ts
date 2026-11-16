@@ -674,8 +674,9 @@ export function emitRedevelopmentSteps(
   }
 
   // LTHD 3줄 (finalize emit 매칭 — FilingFormTable 3열)
-  pushLthdStep(steps, "인가전 분 장기보유공제", redev.preApproval.gain, redev.preApproval.lthdRate, redev.preApproval.lthd, redev.preApproval.holdingMonths, redev.preApproval.lthdRateBasis);
-  pushLthdStep(steps, "인가후 기존주택분 장기보유공제", redev.postApprovalExistingHouse.gain, redev.postApprovalExistingHouse.lthdRate, redev.postApprovalExistingHouse.lthd, redev.postApprovalExistingHouse.holdingMonths, redev.postApprovalExistingHouse.lthdRateBasis);
+  // 두 분기 부호가 달라 상계했으면 양수 분기 줄이 상계한 기존건물분양도차익(`lthdBaseGain`)에 공제한다(§166②1호).
+  pushLthdStep(steps, "인가전 분 장기보유공제", redev.preApproval.lthdBaseGain ?? redev.preApproval.gain, redev.preApproval.lthdRate, redev.preApproval.lthd, redev.preApproval.holdingMonths, redev.preApproval.lthdRateBasis, redev.preApproval.lthdBaseGain !== undefined);
+  pushLthdStep(steps, "인가후 기존주택분 장기보유공제", redev.postApprovalExistingHouse.lthdBaseGain ?? redev.postApprovalExistingHouse.gain, redev.postApprovalExistingHouse.lthdRate, redev.postApprovalExistingHouse.lthd, redev.postApprovalExistingHouse.holdingMonths, redev.postApprovalExistingHouse.lthdRateBasis, redev.postApprovalExistingHouse.lthdBaseGain !== undefined);
   pushLthdStep(steps, "청산금 분 장기보유공제", redev.settlement.gain, redev.settlement.lthdRate, redev.settlement.lthd, redev.settlement.holdingMonths, redev.settlement.lthdRateBasis);
 }
 
@@ -688,13 +689,15 @@ function pushLthdStep(
   holdingMonths: number,
   /** 공제율 산정 근거(토지 출자 원조합원 표1·표2 선택/합산) — 있으면 산식 뒤에 덧붙인다 */
   rateBasis?: string,
+  /** 인가 전 분과 인가 후 기존주택분을 상계한 기존건물분양도차익에 공제했는가 */
+  netted = false,
 ): void {
   if (gain <= 0 && amount === 0) return; // 대상 부존재 분기 skip
   const years = Math.floor(holdingMonths / 12);
   const months = holdingMonths % 12;
   steps.push({
     label,
-    formula: `양도차익 ${gain.toLocaleString()} × ${Math.round(rate * 100)}% (보유 ${years}년 ${months}개월, ${REDEVELOPMENT.LTHD_PERIOD})${rateBasis ? ` — ${rateBasis}` : ""}`,
+    formula: `${netted ? "기존건물분 양도차익(인가 전 분과 인가 후 기존주택분을 합한 금액)" : "양도차익"} ${gain.toLocaleString()} × ${Math.round(rate * 100)}% (보유 ${years}년 ${months}개월, ${REDEVELOPMENT.LTHD_PERIOD})${rateBasis ? ` — ${rateBasis}` : ""}`,
     amount,
     legalBasis: REDEVELOPMENT.LTHD_PERIOD,
   });

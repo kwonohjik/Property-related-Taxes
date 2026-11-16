@@ -546,6 +546,12 @@ export function buildRedevLthdFormula(
   }
 
   if (!detail.gain || detail.gain <= 0) {
+    // 인가 전 분과 인가 후 기존주택분은 기존건물분양도차익 한 금액이다 — 이 분기의 차손은 다른 분기 줄에서 상계해 공제했다.
+    const sibling =
+      branch === "preApproval" ? redev.postApprovalExistingHouse : branch === "postApprovalExistingHouse" ? redev.preApproval : undefined;
+    if (detail.gain < 0 && sibling?.lthdBaseGain !== undefined) {
+      return "양도차손 — 다른 기존건물분 줄의 양도차익과 합해 장기보유특별공제를 계산";
+    }
     return "장기보유특별공제 대상 양도차익 부존재";
   }
   const years = Math.floor(detail.holdingMonths / 12);
@@ -566,7 +572,9 @@ export function buildRedevLthdFormula(
   }
 
   const basisMemo = detail.lthdRateBasis ? ` · ${detail.lthdRateBasis}` : "";
-  return `${fmt(detail.gain)} × ${pct}% (보유 ${years}년 ${months}개월${residenceMemo}${basisMemo}) = ${fmt(detail.lthd)}`;
+  // 상계했으면 기존건물분양도차익(인가 전 분 + 인가 후 기존주택분)에 공제했다 — `lthdBaseGain`.
+  const base = detail.lthdBaseGain !== undefined ? `기존건물분 양도차익(인가 전 분 + 인가 후 기존주택분) ${fmt(detail.lthdBaseGain)}` : fmt(detail.gain);
+  return `${base} × ${pct}% (보유 ${years}년 ${months}개월${residenceMemo}${basisMemo}) = ${fmt(detail.lthd)}`;
 }
 
 /** 양도소득금액 분할별 산식 */

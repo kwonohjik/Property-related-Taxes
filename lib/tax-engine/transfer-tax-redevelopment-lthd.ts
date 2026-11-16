@@ -19,6 +19,7 @@ import { applyFairMarketRatio } from "./tax-utils";
 import { applyRentalGainShare } from "./transfer-reductions/rental-97-shared-helpers";
 import { calculateProration } from "./tax-utils";
 import { isLandContributedNewBuild } from "./redevelopment-lthd";
+import { existingBuildingLthdBases } from "./redevelopment-existing-netting";
 
 export function zeroLthdParts(b: RedevelopmentBranchDetail): Partial<RedevelopmentBranchDetail> {
   return {
@@ -114,8 +115,10 @@ export function applyRental97LthdSpecial(
   },
   subject: NonNullable<TransferTaxInput["redevelopment"]>["subject"],
 ): RedevelopmentResult {
-  const applyBranch = (b: RedevelopmentBranchDetail): RedevelopmentBranchDetail => {
-    const gain = Math.max(b.gain, 0);
+  // 완공 아파트의 두 분기는 부호가 다르면 상계한 기존건물분에 특례를 적용한다(§166②1호 — `existingBuildingLthdBases`).
+  const bases = subject === "right" ? undefined : existingBuildingLthdBases(r.preApproval, r.postApprovalExistingHouse);
+  const applyBranch = (b: RedevelopmentBranchDetail, base: number = b.gain): RedevelopmentBranchDetail => {
+    const gain = Math.max(base, 0);
     if (gain <= 0) return b;
 
     if (special.overrideRate !== undefined) {
@@ -138,9 +141,9 @@ export function applyRental97LthdSpecial(
     return b;
   };
 
-  const preApproval = applyBranch(r.preApproval);
+  const preApproval = applyBranch(r.preApproval, bases?.pre);
   // 입주권은 인가후 분(청산금 분기)에 공제 대상 차익이 없다 — 원래 값(lthd 0) 그대로 둔다.
-  const postApprovalExistingHouse = subject === "right" ? r.postApprovalExistingHouse : applyBranch(r.postApprovalExistingHouse);
+  const postApprovalExistingHouse = subject === "right" ? r.postApprovalExistingHouse : applyBranch(r.postApprovalExistingHouse, bases?.post);
   const settlement = subject === "right" ? r.settlement : applyBranch(r.settlement);
   const lthd = preApproval.lthd + postApprovalExistingHouse.lthd + settlement.lthd;
 
@@ -226,29 +229,35 @@ export function applyHighValueAllocation(
   // 일반 경로 `calcOneHouseProration`과 같은 정수 비례 leaf — 곱셈 먼저 · 나눗셈 나중(부동소수점 비율 금지).
   const prorate = (gain: number) => calculateProration(gain, transferPrice - threshold, transferPrice);
 
-  // 분기별 과세대상 양도차익·LTHD 산정 (정수연산 — 분기별 floor)
-  const scaleBranch = (branch: RedevelopmentResult["preApproval"]) => {
-    if (branch.gain <= 0) {
-      return { ...branch, gainBeforeAllocation: branch.gain, nontaxableGain: 0 };
-    }
+  // 분기별 과세대상 양도차익 (정수연산 — 분기별 floor).
+  // 양도차손 분기도 같은 비율로 안분한다(2026-11-16) — §160①의 대상은 신축주택 양도차익 전체(분기 합)라 분기마다 같은 비율을 곱해야
+  // 합계를 안분한 값과 같다. 종전에는 손실 분기를 안분하지 않아 손실 전액이 안분된 이익을 지웠다(인가전 −3억 · 양도 15억 → 합계 −140,000,001,
+  // 맞는 값 99,999,999). 음수는 절댓값을 안분해 부호를 붙인다. 일반 경로 `calcOneHouseProration`도 부호와 무관하게 안분한다.
+  const scaleGain = (branch: RedevelopmentBranchDetail): RedevelopmentBranchDetail => {
     const originalGain = branch.gain;
-    const taxableGain = prorate(originalGain);
-    const nontaxableGain = originalGain - taxableGain; // 정수연산 보존: 비과세 = 안분 전 - 과세대상
-    const taxableLthd = branch.lthdRate > 0 ? applyFairMarketRatio(taxableGain, branch.lthdRate) : 0;
+    const taxableGain = originalGain < 0 ? -prorate(-originalGain) : prorate(originalGain);
+    // 정수연산 보존: 비과세 = 안분 전 - 과세대상
+    return { ...branch, gain: taxableGain, gainBeforeAllocation: originalGain, nontaxableGain: originalGain - taxableGain };
+  };
+  // 안분 후 공제 — 기준 금액 × 그 분기 공제율. 완공 아파트의 두 분기는 부호가 다르면 상계한 기존건물분에 공제한다(§166②1호).
+  const withLthd = (branch: RedevelopmentBranchDetail, base: number, netted: boolean): RedevelopmentBranchDetail => {
+    const taxableLthd = base > 0 && branch.lthdRate > 0 ? applyFairMarketRatio(base, branch.lthdRate) : 0;
     return {
       ...branch,
-      gain: taxableGain,
       lthd: taxableLthd,
-      gainBeforeAllocation: originalGain,
-      nontaxableGain,
+      lthdBaseGain: netted && branch.gain > 0 ? base : undefined,
       // 12억 안분 후 보유분/거주분은 같은 비율로 재산정 (공용 leaf — E3-05로 4곳 단일화)
       ...scaleLthdParts(branch, taxableLthd),
     };
   };
 
-  const preApproval = scaleBranch(redevRaw.preApproval);
-  const postApprovalExistingHouse = scaleBranch(redevRaw.postApprovalExistingHouse);
-  const settlement = keepSettlement ? redevRaw.settlement : scaleBranch(redevRaw.settlement);
+  const preScaled = scaleGain(redevRaw.preApproval);
+  const postScaled = scaleGain(redevRaw.postApprovalExistingHouse);
+  const bases = redevInfo.subject === "apt" ? existingBuildingLthdBases(preScaled, postScaled) : undefined;
+  const preApproval = withLthd(preScaled, bases?.pre ?? preScaled.gain, bases !== undefined);
+  const postApprovalExistingHouse = withLthd(postScaled, bases?.post ?? postScaled.gain, bases !== undefined);
+  const settlementScaled = keepSettlement ? undefined : scaleGain(redevRaw.settlement);
+  const settlement = settlementScaled ? withLthd(settlementScaled, settlementScaled.gain, false) : redevRaw.settlement;
 
   const totalGain = preApproval.gain + postApprovalExistingHouse.gain + settlement.gain;
   const totalLthd = preApproval.lthd + postApprovalExistingHouse.lthd + settlement.lthd;
