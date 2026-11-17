@@ -91,7 +91,7 @@ describe("날짜 검증", () => {
 describe("지원하지 않는 조합 — 전부 공통 안내를 단다", () => {
   const cases: [string, Partial<ReturnType<typeof makeDefaultAsset>>, RegExp][] = [
     ["C-14 겸용주택", { isMixedUseHouse: true }, /겸용주택/],
-    ["C-19 토지·건물 분리취득", { hasSeperateLandAcquisitionDate: true }, /서로 다른 시점/],
+    ["C-19 토지·건물 분리취득", { hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2010-01-01" }, /토지·건물을 나눠 계산하는 자산/],
     ["C-24 부담부증여", { transferType: "burdened_gift" }, /부담부증여/],
   ];
 

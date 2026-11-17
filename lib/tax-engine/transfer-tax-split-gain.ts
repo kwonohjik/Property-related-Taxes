@@ -19,6 +19,8 @@ import type { AcqSplitJudgmentDetail } from "./types/transfer-split-gain.types";
 import { calculateHoldingPeriod, computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { apportionByStdPrice } from "./std-price-apportion";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { usageConversionSplitConflict } from "./usage-conversion-split-scope";
+import { USAGE_CONVERSION_SPLIT_UNSUPPORTED_MESSAGE } from "./usage-conversion-split-scope";
 import { housingExcessNeedsStdInputsOfInput, phdSplitPathTaken } from "./housing-excess-split";
 import { resolveHousingExcessAcqContract } from "./housing-excess-acq-contract";
 import { collectSplitPartCauseIssues } from "./transfer-split-part-cause";
@@ -66,6 +68,10 @@ export {
  */
 export function calcSplitGain(input: TransferTaxInput): SplitGainResult | null {
   if (input.propertyType !== "housing" && input.propertyType !== "building") return null;
+  // 용도변경(§95⑤) × 분리 계산 — 분리 경로는 §95⑤ 혼합공제를 건너뛰므로 용도변경이 조용히 빠진다. ⑫·⑧과 같은 leaf로 막는다(2026-11-17).
+  if (usageConversionSplitConflict(input)) {
+    throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, USAGE_CONVERSION_SPLIT_UNSUPPORTED_MESSAGE, { field: "nonHousingToHousingConversion" });
+  }
 
   // 파트별 모드 조기 파생 — PHD 게이트 판정용(혼합 모드 시 오발동 방지).
   const earlyLandMode: PartAcqMode = input.landAcqMode ?? deriveLegacyAcqMode(input);

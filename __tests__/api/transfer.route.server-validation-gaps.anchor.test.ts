@@ -194,6 +194,6 @@ describe("#15 수용·용도변경 ⑧ — stale 분리 입력은 「분리 없�
       residentialUseStartDate: "2018-01-01",
     } as Asset;
     expect(hasStaleSplitInput(a)).toBe(false);
-    expect(validateUsageConversion(a, "자산", "2025-03-01")).toContain("서로 다른 시점");
+    expect(validateUsageConversion(a, "자산", "2025-03-01")).toContain("토지·건물을 나눠 계산하는 자산");
   });
 });

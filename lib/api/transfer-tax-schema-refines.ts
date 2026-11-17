@@ -19,6 +19,8 @@ import { refineMixedUseInheritedSplitDate } from "./transfer-tax-schema-mixed-bg
 import { refineDonorBuiltOuter, type DonorBuiltWire } from "./transfer-tax-schema-donor-built";
 import { refineSelfBuiltHousing, isSeparatedLike } from "./transfer-tax-schema-self-built-housing";
 import { refineTemporaryTwoHouseCross } from "./transfer-tax-schema-temp-two-house";
+import { usageConversionSplitConflict } from "@/lib/tax-engine/usage-conversion-split-scope";
+import { USAGE_CONVERSION_SPLIT_UNSUPPORTED_MESSAGE } from "@/lib/tax-engine/usage-conversion-split-scope";
 /**
  * Q-1(D15) — 미등기 + 자경농지 감면(조특법 §69) 동시 입력 거부.
  *
@@ -253,6 +255,10 @@ export function addPropertyRefines(
   // 범위를 벗어나면 기간을 비주택/주택으로 나눌 수 없어 엔진이 TaxCalculationError를 던진다
   // (계획 C-8·C-9). 400으로 먼저 돌려주는 편이 낫다.
   if (data.nonHousingToHousingConversion) {
+    // 분리 계산(토지 취득일 전송)과 함께면 엔진이 §95⑤를 건너뛴다 — 조용히 빠지지 않도록 400(엔진·⑧과 같은 leaf · 2026-11-17).
+    if (usageConversionSplitConflict(data)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nonHousingToHousingConversion"], message: USAGE_CONVERSION_SPLIT_UNSUPPORTED_MESSAGE });
+    }
     const start = data.nonHousingToHousingConversion.residentialUseStartDate;
     if (start <= data.acquisitionDate) {
       ctx.addIssue({
