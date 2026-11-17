@@ -43,6 +43,8 @@ interface Props {
   useEstimatedAcquisition?: boolean;
   housingSectionNum?: number;
   commercialSectionNum?: number;
+  /** 축 B 둘째 이후 지분 카드 — 양도시 칸(개별주택가격 · 주택건물 나목 · 상가건물 · 상가부수토지 공시지가)을 숨긴다. 자산 1 값을 쓴다(④ · ⑧ 병합과 같은 목록). */
+  shareCard?: boolean;
   /** 소재지 지번 주소 — Vworld 공시지가 조회용 */
   jibun?: string;
 }
@@ -63,6 +65,7 @@ export function MixedUseAssetMajorStdPrice({
   housingSectionNum,
   commercialSectionNum,
   jibun,
+  shareCard = false,
 }: Props) {
   const residential = parseDecimal(asset.residentialFloorArea);
   const commercial = parseDecimal(asset.nonResidentialFloorArea);
@@ -208,6 +211,11 @@ export function MixedUseAssetMajorStdPrice({
 
   return (
     <div className="space-y-3">
+      {shareCard && (
+        <p data-testid="mixed-share-object-fields-note" className="text-caption text-muted-foreground">
+          겸용 여부 · 면적 · 용도지역 · 양도시 기준시가는 같은 건물이라 자산 1에서 입력한 값을 씁니다. 이 지분 카드에는 이 지분을 취득할 당시의 칸만 입력하세요.
+        </p>
+      )}
       {/* ── ② 주택 기준시가 ─────────────────────────── */}
       <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/20 p-3 space-y-2">
         <div className="flex items-center gap-2">
@@ -299,8 +307,13 @@ export function MixedUseAssetMajorStdPrice({
             data-field="usePreHousingDisclosure"
             // 겸용 × 부담부증여는 PHD와 함께 계산하지 않는다(엔진 MB-2). **켜는 쪽만** 막는다 — 이미 켜져 있으면 사용자가 끌 수 있어야 한다(막다른 길 방지).
             //   상속·증여 취득(시가)은 예외 — §163⑨ 단서 2호의 §164⑦ 가액을 만드는 입력이다(PR-7b-7a-2 · 사용자 결정 M-1 (a)).
-            disabled={bgMixed && !bgDeemed && !bgPreDeemed && !asset.usePreHousingDisclosure}
-            disabledReason="겸용주택 부담부증여는 개별주택가격 미공시 환산(§164⑦)과 함께 계산할 수 없습니다"
+            // 축 B 지분 카드도 켜는 쪽만 막는다 — 3시점 입력의 양도시 칸이 물건 단위라 지분 카드에서 나눠 받지 못한다(⑧ `transfer-tax-validate-mixed-use-share.ts`와 같은 조건).
+            disabled={((bgMixed && !bgDeemed && !bgPreDeemed) || shareCard) && !asset.usePreHousingDisclosure}
+            disabledReason={
+              shareCard
+                ? "겸용주택 지분 카드(둘째 이후 지분)는 개별주택가격 미공시 환산(§164⑦)을 계산하지 않습니다"
+                : "겸용주택 부담부증여는 개별주택가격 미공시 환산(§164⑦)과 함께 계산할 수 없습니다"
+            }
             title={`${isDeemed163_9 ? acqLabel : "취득 당시"} 개별주택가격 미공시 (§164⑦ 3-시점 환산)`}
             description={
               bgPreDeemed
@@ -373,8 +386,8 @@ export function MixedUseAssetMajorStdPrice({
           />
         </div>
 
-        {/* 양도 sub-block — PHD ON 시 하단 PHD 패널의 양도시 입력이 단일 소스이므로 숨김 */}
-        {!phdOn && (
+        {/* 양도 sub-block — PHD ON 시 하단 PHD 패널의 양도시 입력이 단일 소스이므로 숨김 · 축 B 지분 카드는 자산 1 값(물건 단위) */}
+        {!phdOn && !shareCard && (
           <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-2 dark:bg-emerald-950/40">
             <p className="text-caption font-semibold text-emerald-700 dark:text-emerald-300">양도시</p>
             <StandardPriceInput
@@ -493,7 +506,7 @@ export function MixedUseAssetMajorStdPrice({
             </span>
           )}
         </p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className={shareCard ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"}>
           <div className="rounded-md border border-amber-200 bg-amber-50/40 p-2 space-y-1 dark:bg-amber-950/40">
             <p className="text-caption font-semibold text-amber-700 dark:text-amber-300">{acqLabel}</p>
             <CurrencyInput
@@ -505,16 +518,18 @@ export function MixedUseAssetMajorStdPrice({
               hideUnit
             />
           </div>
-          <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-1 dark:bg-emerald-950/40">
-            <p className="text-caption font-semibold text-emerald-700 dark:text-emerald-300">양도시</p>
-            <CurrencyInput
-              label=""
-              value={asset.mixedTransferCommercialBuildingPrice}
-              onChange={(v) => onChange({ mixedTransferCommercialBuildingPrice: v })}
-              placeholder="양도시 상가건물 기준시가"
-              hideUnit
-            />
-          </div>
+          {!shareCard && (
+            <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-1 dark:bg-emerald-950/40">
+              <p className="text-caption font-semibold text-emerald-700 dark:text-emerald-300">양도시</p>
+              <CurrencyInput
+                label=""
+                value={asset.mixedTransferCommercialBuildingPrice}
+                onChange={(v) => onChange({ mixedTransferCommercialBuildingPrice: v })}
+                placeholder="양도시 상가건물 기준시가"
+                hideUnit
+              />
+            </div>
+          )}
         </div>
         <div className="flex justify-end">
           <BuildingStdPriceModalButton
@@ -535,11 +550,13 @@ export function MixedUseAssetMajorStdPrice({
               transferLandPricePerSqm:
                 asset.mixedTransferLandPricePerSqm || asset.phdLandPricePerSqmAtTransfer,
             }}
+            // 축 B 지분 카드는 취득시 값만 쓴다 — 양도시 값은 자산 1의 물건 단위 칸이다(지분 카드에 쓰면 병합이 덮어 화면과 계산이 갈린다).
             onApplyBoth={(acq, transfer) =>
-              onChange({
-                mixedAcqCommercialBuildingPrice: String(acq),
-                mixedTransferCommercialBuildingPrice: String(transfer),
-              })
+              onChange(
+                shareCard
+                  ? { mixedAcqCommercialBuildingPrice: String(acq) }
+                  : { mixedAcqCommercialBuildingPrice: String(acq), mixedTransferCommercialBuildingPrice: String(transfer) },
+              )
             }
           />
         </div>
@@ -564,6 +581,7 @@ export function MixedUseAssetMajorStdPrice({
             placeholder={`${acqLabel} 개별공시지가 /㎡`}
           />
         </div>
+        {!shareCard && (
         <div className="rounded-md border border-emerald-200 bg-emerald-50/40 p-2 space-y-1 dark:bg-emerald-950/40">
           <p className="text-caption font-semibold text-emerald-700 dark:text-emerald-300">양도시</p>
           <LandPriceLookupField
@@ -577,6 +595,7 @@ export function MixedUseAssetMajorStdPrice({
             placeholder="양도시 개별공시지가 /㎡"
           />
         </div>
+        )}
 
         {/* 자동합계 — "기준시가 합계" 문구 유지 (E2E transfer-p3-hybrid 방어) */}
         {(transferCommercialLandStd > 0 ||

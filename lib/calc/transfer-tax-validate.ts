@@ -41,6 +41,7 @@ import { collectStep1Issues } from "./transfer-tax-validate-step1";
 import { collectWithFields, type IssueField } from "./transfer-tax-validate-field";
 import { isMultiHouseSurchargeSuppressed, isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import { axisBEffectiveAsset } from "./axis-b-effective-asset";
+import { mixedUseShareIssue } from "./transfer-tax-validate-mixed-use-share";
 import { bgShareCauseMismatchMessage } from "./bg-share-own-acquisition";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
@@ -461,6 +462,12 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
         // OH-48 — 완공APT 지분 카드 분리 거주가 비면 서버가 숨은 Step4 값을 승계해 지분마다 거주가 갈린다
         const splitField = shareSplitResidenceMissingField(form.assets[i], primaryAsset, form);
         if (splitField) issues.push({ step, assetIndex: i, field: splitField, message: `자산 ${i + 1}: ${SHARE_SPLIT_RESIDENCE_MISSING_MESSAGE}` });
+      }
+      // 겸용주택 × 축 B — 지분 카드가 받지 않는 조합(용도변경 · 지분 카드 미공시 환산). 종전에는 지분 카드가 일반 주택으로 조용히 계산됐다(V-0).
+      //   다른 미입력과 무관하게 낸다 — 이 조합이면 칸을 채워도 계산하지 않으므로 먼저 알려야 한다.
+      if (fullFractional) {
+        const mixedShare = mixedUseShareIssue(i, form.assets[i], entry);
+        if (mixedShare) issues.push({ step, ...mixedShare });
       }
     }
 
