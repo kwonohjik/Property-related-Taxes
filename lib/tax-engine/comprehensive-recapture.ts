@@ -5,8 +5,11 @@
  *
  * - §10① 금액(합산 대상으로 본 세액 − 제외하고 계산한 세액)은 계산하지 않는다 — 연도별 경감세액을 입력으로 받는다.
  * - 이자(§10②): `comprehensive-recapture-interest.ts` — 구간별 율·기산일 이월.
- * - §10③ 배제(Q-5): **고지일 기준**으로 시기를 가른다(1호 2020.2.11. · 2·3호 2020.10.7. · 10·11호 2025.6.4.).
- *   2·3호 신설의 적용 시점·10·11호 납세의무 성립 기준은 부칙에서 확인하지 못해 「확인 필요」로 남긴다(V-5·V-6).
+ * - §10③ 배제 시기(Q-5 · 2026-11-17 사용자 결정으로 V-5·V-6 닫음):
+ *   1호 = 고지일 2020.2.11. 이후(부칙<제30404호> §5 「시행 이후 추징하는 분부터」).
+ *   2·3호 = 고지일 2020.10.7. 이후(부칙<제31085호>에 §10 적용례 없음 — 1호 기준을 따른다).
+ *   10·11호의 1호 = 경감받은 연도의 납세의무 성립일(6.1.)이 2025.6.4. 이후인 연도분(2026년분)부터
+ *   (부칙<제35352호> §2②) — 그 전 연도분은 추징한다(`fromTaxYear`).
  * - 배제면 금액은 0(Q-7). 고지일이 2009.2.4. 전이면 던지지 않고 failReasons로 둔다(Q-6 — 거부는 Zod).
  * - 자동 안분·추정 없음: 입력에 없는 사실은 불성립 또는 「확인 필요」로 둔다.
  */
@@ -29,6 +32,11 @@ const X = COMPREHENSIVE_EXCL;
 const T_1HO = parseISO(C.RECAPTURE_EXEMPT_1HO_START);
 const T_23HO = parseISO(C.RECAPTURE_EXEMPT_23HO_START);
 const T_6Y = parseISO(C.RECAPTURE_EXEMPT_6Y_START);
+/** 10·11호 §10③1호를 적용하는 첫 과세연도 — 납세의무 성립일(6.1.)이 2025.6.4. 이후인 첫 해(= 2026) */
+const FIRST_6Y_TAX_YEAR = (() => {
+  const y = T_6Y.getUTCFullYear();
+  return parseISO(`${y}-06-01`) >= T_6Y ? y : y + 1;
+})();
 const T_3HO_PROVISO_END = parseISO(C.RECAPTURE_EXEMPT_3HO_PROVISO_END);
 const T_3HO_GA_FROM = parseISO(C.RECAPTURE_EXEMPT_3HO_GA_FROM);
 const T_INTEREST_RULE = parseISO(C.RECAPTURE_INTEREST_RULE_START);
@@ -37,6 +45,7 @@ const NOT_EXEMPT = (failReasons: string[], notices: string[] = []): RecaptureExe
   exempt: false,
   clause: null,
   legalBasis: null,
+  fromTaxYear: null,
   failReasons,
   notices,
 });
@@ -50,10 +59,8 @@ function evaluate1ho(
   if (!rentViolationApplies(input.registrationType)) return NOT_EXEMPT([X.RECAPTURE_EXEMPT_1HO_NOT_TARGET]);
   const is6y = input.registrationType.startsWith("private_short_term_6y");
   if (noticeDate < T_1HO) return NOT_EXEMPT([X.RECAPTURE_EXEMPT_1HO_NOT_IN_FORCE]);
-  if (is6y && noticeDate < T_6Y) return NOT_EXEMPT([X.RECAPTURE_EXEMPT_1HO_6Y_NOT_IN_FORCE]);
 
   const notices: string[] = [X.RECAPTURE_NOTICE_1HO_BOUNDARY];
-  if (is6y) notices.push(X.RECAPTURE_NOTICE_6Y_ERA_UNCLEAR);
   const { years, applicationUnknown } = mandatoryPeriod({
     registrationType: input.registrationType,
     rentalApplicationDate: input.rentalApplicationDate,
@@ -68,6 +75,8 @@ function evaluate1ho(
     exempt: true,
     clause: "10③1호",
     legalBasis: X.RECAPTURE_EXEMPT_RENT_5PCT,
+    // 10·11호는 연도별 — 그 전 연도분은 `calculateRecapture`가 추징한다
+    fromTaxYear: is6y ? FIRST_6Y_TAX_YEAR : null,
     failReasons: [],
     notices,
   };
@@ -79,12 +88,13 @@ function evaluate2ho(
   noticeDate: Date,
 ): RecaptureExemptionResult {
   if (noticeDate < T_23HO) return NOT_EXEMPT([X.RECAPTURE_EXEMPT_23HO_NOT_IN_FORCE]);
-  const notices = [X.RECAPTURE_NOTICE_ERA_UNCLEAR, X.RECAPTURE_NOTICE_2HO_TARGET_HOUSING];
+  const notices = [X.RECAPTURE_NOTICE_2HO_TARGET_HOUSING];
   if (input.cancelClause === "other") return NOT_EXEMPT([X.RECAPTURE_EXEMPT_2HO_NOT_CLAUSE], notices);
   return {
     exempt: true,
     clause: "10③2호",
     legalBasis: X.RECAPTURE_EXEMPT_CANCELLATION,
+    fromTaxYear: null,
     failReasons: [],
     notices,
   };
@@ -96,7 +106,7 @@ function evaluate3ho(
   noticeDate: Date,
 ): RecaptureExemptionResult {
   if (noticeDate < T_23HO) return NOT_EXEMPT([X.RECAPTURE_EXEMPT_23HO_NOT_IN_FORCE]);
-  const notices = [X.RECAPTURE_NOTICE_ERA_UNCLEAR, X.RECAPTURE_NOTICE_3HO_PROVISO_COUNT];
+  const notices = [X.RECAPTURE_NOTICE_3HO_PROVISO_COUNT];
   const h = input.newHousing;
   // 단서 — 준공일부터 6개월이 되는 날이 2020.7.10. 이전이면 3호 제외(그 날 당일 포함)
   if (addMonths(startOfDay(h.completionDate), 6) <= T_3HO_PROVISO_END) {
@@ -112,6 +122,7 @@ function evaluate3ho(
     exempt: true,
     clause: isGa ? "10③3호 가목" : "10③3호 나목",
     legalBasis: X.RECAPTURE_EXEMPT_REPLACEMENT_HOUSING,
+    fromTaxYear: null,
     failReasons: [],
     notices,
   };
@@ -156,23 +167,34 @@ export function calculateRecapture(input: RecaptureInput): RecaptureResult {
       calculated: false,
       exempt: false,
       exemption: NOT_EXEMPT([]),
+      exemptTaxYears: [],
       failReasons: [X.RECAPTURE_NOTICE_BEFORE_INTEREST_RULE],
       notices: [],
     };
   }
 
-  const exemption = evaluateRecaptureExemption(input.exemption, input.noticeDate);
-  if (exemption.exempt) {
-    return { ...zero, calculated: true, exempt: true, exemption, failReasons: [], notices: exemption.notices };
+  let exemption = evaluateRecaptureExemption(input.exemption, input.noticeDate);
+  // 배제가 일부 연도분부터만 적용되면(10·11호) 그 전 연도분은 추징한다
+  const from = exemption.exempt ? exemption.fromTaxYear : null;
+  const rows = from === null ? (exemption.exempt ? [] : input.rows) : input.rows.filter((r) => r.taxYear < from);
+  const exemptTaxYears = exemption.exempt
+    ? input.rows.filter((r) => from === null || r.taxYear >= from).map((r) => r.taxYear)
+    : [];
+  if (exemption.exempt && exemptTaxYears.length === 0) {
+    // 입력한 연도가 모두 적용 전 — 배제 불성립
+    exemption = NOT_EXEMPT([X.RECAPTURE_EXEMPT_1HO_6Y_NOT_IN_FORCE], exemption.notices);
+  } else if (rows.length === 0) {
+    return { ...zero, calculated: true, exempt: true, exemption, exemptTaxYears, failReasons: [], notices: exemption.notices };
   }
 
-  const { annualInterest, notices } = calculateRecaptureAnnualInterest(input.rows, input.noticeDate);
+  const { annualInterest, notices } = calculateRecaptureAnnualInterest(rows, input.noticeDate);
   const totalRecoveryTax = annualInterest.reduce((sum, r) => sum + r.amount, 0);
   const interestAmount = annualInterest.reduce((sum, r) => sum + r.interest, 0);
   return {
     calculated: true,
     exempt: false,
     exemption,
+    exemptTaxYears: exemption.exempt ? exemptTaxYears : [],
     totalRecoveryTax,
     interestAmount,
     totalPayable: totalRecoveryTax + interestAmount,

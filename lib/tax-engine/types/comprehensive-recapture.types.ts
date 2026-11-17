@@ -65,6 +65,11 @@ export interface RecaptureExemptionResult {
   clause: RecaptureExemptionClause | null;
   /** 배제 근거 조문(배제일 때만) — `COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_*` */
   legalBasis: string | null;
+  /**
+   * 배제가 이 과세연도분부터만 적용된다 — 그 전 연도분은 추징한다(null이면 모든 연도).
+   * 10·11호의 §10③1호: 2025.6.4. 이후 납세의무가 성립하는 경우부터(부칙<제35352호> §2②) → 2026년분부터.
+   */
+  fromTaxYear: number | null;
   /** 사유를 입력했으나 배제가 성립하지 않은 이유 */
   failReasons: string[];
   /** 확인 필요 안내 */
@@ -85,9 +90,11 @@ export interface RecaptureResult {
    * (엔진은 던지지 않는다. 거부는 API Zod의 몫).
    */
   calculated: boolean;
-  /** §10③에 따라 추징하지 않는가(true면 금액은 0) */
+  /** §10③에 따라 추징하지 않는가(true면 금액은 0) — 일부 연도만 배제되면 false이고 `exemptTaxYears`에 그 연도가 있다 */
   exempt: boolean;
   exemption: RecaptureExemptionResult;
+  /** §10③에 따라 추징하지 않는 과세연도(입력 순서) — 전부 배제면 모든 연도, 배제가 아니면 빈 배열 */
+  exemptTaxYears: number[];
   /** 추징 세액 합계(§10①) — 배제면 0 */
   totalRecoveryTax: number;
   /** 이자상당가산액(§10②) — 배제면 0 */

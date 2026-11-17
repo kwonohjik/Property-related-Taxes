@@ -218,12 +218,62 @@ describe("E: §10③1호 — 최소 임대의무기간이 지난 뒤 5% 요건 �
     expect(evaluateRecaptureExemption(rent5("2020-03-01", t), d("2020-02-11")).exempt).toBe(true);
   });
 
-  it("단기민간임대 6년(10호) — 고지일 2025-06-03 이전이면 적용 안 함, 2025-06-04부터 적용 + 납세의무 성립 기준 확인 필요", () => {
-    const t = { registrationType: "private_short_term_6y_construction" as const, rentalStartDate: d("2018-01-01") };
-    expect(evaluateRecaptureExemption(rent5("2024-01-01", t), d("2025-06-03")).failReasons).toEqual([COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_1HO_6Y_NOT_IN_FORCE]);
-    const ok = evaluateRecaptureExemption(rent5("2024-01-01", t), d("2025-06-04"));
-    expect(ok.exempt).toBe(true); // 2018-01-01 + 6년 = 2024-01-01
-    expect(ok.notices).toContain(COMPREHENSIVE_EXCL.RECAPTURE_NOTICE_6Y_ERA_UNCLEAR);
+  it("1호(10·11호 외)는 모든 연도에 적용 — fromTaxYear null", () => {
+    const t = { registrationType: "private_construction" as const };
+    expect(evaluateRecaptureExemption(rent5("2020-03-01", t), NOTICE).fromTaxYear).toBeNull();
+  });
+});
+
+/**
+ * 10·11호(단기민간임대 6년)의 §10③1호 — 부칙<제35352호> §2② 「2025.6.4. 이후 납세의무가 성립하는 경우부터」.
+ * 2026-11-17 사용자 결정(V-6 닫음): 경감받은 연도마다 그해 납세의무 성립일(6.1.)로 가른다 → 2026년분부터 배제, 2025년분은 추징.
+ */
+describe("E′: 10·11호 §10③1호 — 경감받은 연도의 6.1.이 2025.6.4. 이후인 연도분만 배제", () => {
+  const t6 = { registrationType: "private_short_term_6y_construction" as const, rentalStartDate: d("2025-07-01"), rentalRegistrationDate: d("2025-07-01"), rentalApplicationDate: d("2025-06-20") };
+  const ex6 = rent5("2031-07-01", t6); // 2025-07-01 + 6년 = 2031-07-01 → 의무기간 경과
+  const calc6 = (years: number[]) =>
+    calculateRecapture({ noticeDate: d("2031-10-01"), rows: years.map((taxYear) => ({ taxYear, amount: 1_000_000 })), exemption: ex6 });
+
+  it("판정: 배제 성립 · fromTaxYear 2026 · 시기 「확인 필요」 없음 · 고지일로 막지 않는다", () => {
+    const r = evaluateRecaptureExemption(ex6, d("2031-10-01"));
+    expect(r).toMatchObject({ exempt: true, clause: "10③1호", fromTaxYear: 2026 });
+    expect(r.notices.some((n) => n.includes("납세의무"))).toBe(false);
+    // 종전 고지일 게이트(2025.6.4.) 삭제 — 연도로만 가른다
+    expect(evaluateRecaptureExemption(ex6, d("2025-06-03")).exempt).toBe(true);
+  });
+
+  it("2025·2026·2027년분 → 2025년분만 추징(1,000,000 + 이자 2,116일 × 220 = 465,520) · 2026·2027년분 배제", () => {
+    const r = calc6([2025, 2026, 2027]);
+    expect(r.exempt).toBe(false);
+    expect(r.exemption).toMatchObject({ exempt: true, clause: "10③1호", fromTaxYear: 2026, failReasons: [] });
+    expect(r.exemptTaxYears).toEqual([2026, 2027]);
+    expect(r.annualInterest.map((a) => a.taxYear)).toEqual([2025]);
+    // 기산일 2025-12-16(12.15. 월) ~ 고지 2031-10-01 양끝 포함 2,116일 × 22 / 100,000 × 1,000,000
+    expect(r.annualInterest[0]).toMatchObject({ interestFrom: "2025-12-16", days: 2_116, interest: 465_520 });
+    expect([r.totalRecoveryTax, r.interestAmount, r.totalPayable, r.recoveryPeriodYears]).toEqual([1_000_000, 465_520, 1_465_520, 1]);
+  });
+
+  it("2026·2027년분만 → 전부 배제(금액 0)", () => {
+    const r = calc6([2026, 2027]);
+    expect(r).toMatchObject({ exempt: true, totalRecoveryTax: 0, interestAmount: 0, totalPayable: 0, exemptTaxYears: [2026, 2027], annualInterest: [] });
+  });
+
+  it("2025년분만 → 배제 불성립(부칙 §2②) · 전액 추징", () => {
+    const r = calc6([2025]);
+    expect(r.exempt).toBe(false);
+    expect(r.exemptTaxYears).toEqual([]);
+    expect(r.exemption).toMatchObject({ exempt: false, clause: null, failReasons: [COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_1HO_6Y_NOT_IN_FORCE] });
+    expect(r.totalPayable).toBe(1_465_520);
+  });
+
+  it("11호(매입)도 같다", () => {
+    const r = calculateRecapture({
+      noticeDate: d("2031-10-01"),
+      rows: [{ taxYear: 2025, amount: 1_000_000 }, { taxYear: 2026, amount: 500_000 }],
+      exemption: rent5("2031-07-01", { ...t6, registrationType: "private_short_term_6y_purchase" }),
+    });
+    expect(r.exemptTaxYears).toEqual([2026]);
+    expect(r.totalRecoveryTax).toBe(1_000_000);
   });
 });
 
@@ -233,7 +283,8 @@ describe("E: §10③2호 — 민간임대주택법 §6①11호·⑤에 따른 �
   it("§6⑤ 자동말소 → 추징하지 않음 · §6①11호 자진말소도 동일", () => {
     const r = evaluateRecaptureExemption(cancelled("6⑤"), NOTICE);
     expect(r).toMatchObject({ exempt: true, clause: "10③2호", legalBasis: COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_CANCELLATION });
-    expect(r.notices).toEqual(expect.arrayContaining([COMPREHENSIVE_EXCL.RECAPTURE_NOTICE_2HO_TARGET_HOUSING, COMPREHENSIVE_EXCL.RECAPTURE_NOTICE_ERA_UNCLEAR]));
+    // 시기(고지일 2020.10.7. 이후)는 확정(2026-11-17 사용자 결정 · V-5 닫음) — 「확인 필요」는 대상 주택 안내만
+    expect(r.notices).toEqual([COMPREHENSIVE_EXCL.RECAPTURE_NOTICE_2HO_TARGET_HOUSING]);
     expect(evaluateRecaptureExemption(cancelled("6①11호"), NOTICE).exempt).toBe(true);
   });
 
