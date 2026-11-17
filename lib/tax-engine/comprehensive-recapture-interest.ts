@@ -102,7 +102,6 @@ export function calculateRecaptureAnnualInterest(
 
   const annualInterest = rows.map((row) => {
     const start = recaptureInterestStart(row.taxYear);
-    if (start.extended) push(COMPREHENSIVE_EXCL.RECAPTURE_DEADLINE_CARRY_NOTICE);
     if (start.holidayTableUncovered) push(COMPREHENSIVE_EXCL.RECAPTURE_HOLIDAY_TABLE_UNCOVERED_NOTICE);
     else if (start.holidayTableProvisional) push(COMPREHENSIVE_EXCL.RECAPTURE_HOLIDAY_TABLE_PROVISIONAL_NOTICE);
 

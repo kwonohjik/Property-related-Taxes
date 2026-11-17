@@ -177,8 +177,11 @@ describe("결과 표시 — 기산일 이월·구간·배제 카드", () => {
     expect(screen.getByTestId("rc-seg-2018-2").textContent).toContain("1일 10만분의 22");
     const carry = screen.getByTestId("rc-deadline-carry");
     expect(carry.textContent).toContain("납부기한 2018.12.17.(12.15.이 토요일 · 12.16.이 일요일) 다음 날");
+    expect(carry.textContent).toContain("국세기본법 §5①");
     expect(screen.getByTestId("rc-annual-table").contains(carry)).toBe(false);
+    // 이월은 확정(V-2 닫음) — 「확인 필요」에는 구간별 절사 안내만 남고 기산일 안내는 없다
     expect(screen.getByTestId("rc-notices").textContent).toContain("확인 필요");
+    expect(screen.getByTestId("rc-notices").textContent).not.toContain("기산일");
   });
 
   it("구간이 하나뿐인 해는 하위 행 없이 율을 한 줄에 쓰고, 12.15.가 평일이면 이월 설명이 없다", () => {

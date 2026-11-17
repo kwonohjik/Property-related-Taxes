@@ -8,6 +8,7 @@
  */
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { RecaptureAnnualInterest } from "@/lib/tax-engine/types/comprehensive.types";
+import { COMPREHENSIVE_EXCL } from "@/lib/tax-engine/legal-codes";
 import { deadlineCarryText, dotDate } from "./shared";
 
 const NUM = "text-right font-mono tabular-nums whitespace-nowrap";
@@ -51,7 +52,7 @@ export function AnnualInterestTable({ rows }: { rows: RecaptureAnnualInterest[] 
         <ul className="space-y-1 text-caption text-muted-foreground" data-testid="rc-deadline-carry">
           {carried.map(({ r, text }) => (
             <li key={r.taxYear}>
-              {r.taxYear}년분 이자 기산일은 {dotDate(r.interestFrom)}입니다 — 납부기한 {text} 다음 날(12.16.이 아닙니다).
+              {r.taxYear}년분 이자 기산일은 {dotDate(r.interestFrom)}입니다 — 납부기한 {text} 다음 날(12.16.이 아닙니다 · {COMPREHENSIVE_EXCL.RECAPTURE_DEADLINE_CARRY_BASIS}).
             </li>
           ))}
         </ul>

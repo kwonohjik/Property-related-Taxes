@@ -29,7 +29,7 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
-    // comprehensive.ts COMPREHENSIVE_EXCL.RECAPTURE_*_NOTICE 가 인용 — 납부 기한이 토요일·일요일·공휴일이면 그 다음날(종부세 추징 이자 기산일 · 2026-11-17 현행 본문 실독)
+    // comprehensive.ts COMPREHENSIVE_EXCL.RECAPTURE_DEADLINE_CARRY_BASIS·RECAPTURE_HOLIDAY_TABLE_*_NOTICE 가 인용 — 납부 기한이 토요일·일요일·공휴일이면 그 다음날(종부세 추징 이자 기산일 · 2026-11-17 현행 본문 실독)
     // 연혁(2009.2.6.·2018.4.1. 시행본)은 「공휴일, 토요일」 문언이라 12월 기한에는 같은 결과다.
     id: "NTBL.DEADLINE_SPECIAL",
     citation: "국세기본법 §5",
