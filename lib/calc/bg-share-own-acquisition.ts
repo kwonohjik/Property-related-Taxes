@@ -19,6 +19,7 @@ import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { bgAnyCarryover } from "./bg-carryover-parts";
 import { gbBgThreeWayParts } from "./bg-pre-deemed-mode";
 import { bgCollateralForcesStdAcq } from "./burdened-gift-collateral-win";
+import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
 
 /** 토글을 여는 자산 종류 — 측정한 종류만(§14 일반건물 · §15 주택 · 토지 · 상가 · 건물). */
 const SHARE_OWN_ACQ_KINDS: ReadonlySet<string> = new Set(["general_building", "housing", "land", "commercial_building", "building"]);
@@ -68,7 +69,10 @@ export function bgShareOwnAcquisitionApplies(merged: AssetForm): boolean {
     !isBgPreDeemedAsset(merged) &&
     // 일반건물은 파트별 — 두 파트 모두 의제취득일 전 상속·증여면 ①②③ 3자 max라 산정방식을 쓰지 않는다(한 파트면 다른 파트가 쓴다)
     !gbBgThreeWayParts(merged, true).all &&
-    !bgAnyCarryover(merged)
+    !bgAnyCarryover(merged) &&
+    // 겸용 × 상속 · 증여 취득 지분 — 취득가액은 그 지분 ③의 주택분 · 상가분 평가액(§163⑨)이고 산정방식을 고르지 않는다(자산 1 `BurdenedGiftBlock` `mixedDeemed`와 같은 술어).
+    //   열면 ⑧이 쓰이지 않는 실지 칸을 켜라고 요구했다(실측: 토글 켬 · 실지 빈칸 / 5억 / 9억 모두 세액 같음 · 계획서 bg-mixed-use-m2-bundle-share.plan.md §3.3.7).
+    !isMixedBgDeemedPath(merged)
   );
 }
 
