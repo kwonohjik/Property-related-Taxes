@@ -24,12 +24,25 @@
  *
  * ## 이 함수는 아직 배선되지 않았다
  *
- * 호출자 0건(정의 + 재export 뿐). 그래도 anchor 를 둔다 — 배선하는 순간 조용히 2배가 되기 때문이고,
+ * 호출자 0건(정의 + 재export 뿐 — 추징 계산기 `/api/calc/comprehensive-recapture`가 같은 이자 계산을 쓴다). 그래도 anchor 를 둔다 — 배선하는 순간 조용히 2배가 되기 때문이고,
  * 종전에는 테스트도 0건이라 이 결함이 리뷰까지 살아남았다.
  */
 
 import { describe, it, expect } from "vitest";
 import { calculatePostManagementPenalty } from "@/lib/tax-engine/comprehensive-tax";
+
+/**
+ * ## 기대값 개정 (추징 계산기 PR-1 — 계획서 comprehensive-rental-excl-recapture-calculator.plan.md §5.1)
+ *
+ * 이자율이 **구간으로 갈린다**(부칙<제29524호> §4 · 부칙<제32425호> §5): ~2019.2.11. 10만분의 30 ·
+ * 2019.2.12.~2022.2.14. 25 · 2022.2.15.~ 22. 종전 엔진은 22를 전 기간에 단일 적용했다.
+ * 이 격자에서 걸리는 연도는 **2021년분뿐**이다(기산일 2021-12-16 → 고지 2022-02-14까지 61일 = 25구간, 그 뒤 22구간):
+ *   1,000,000 × 61 × 25/100,000 = 15,250 (2021-12-16~2022-02-14)
+ *   1,000,000 × 1,021 × 22/100,000 = 224,620 (2022-02-15~2024-12-01)  → 239,870  (종전 238,040)
+ * 2022·2023년분은 전 기간이 22구간이라 불변(2022-12-15 목·2023-12-15 금 — 납부기한 이월 없음).
+ * 주말 이월(국세기본법 §5① — Q-2)로 바뀌는 값은 이 격자에 없다(12.15.가 수·목·금).
+ *   interestAmount 473,220 → 475,050 · totalPayable 3,473,220 → 3,475,050 · G22-3 차이 470,580 → 468,750.
+ */
 
 /** 리뷰 §G-22 재현 격자 — 2021·2022·2023년분 각 100만 · 고지일 2024-12-01 */
 function threeYears() {
@@ -57,13 +70,15 @@ describe("G-22 이자상당가산액 — 연도별 기산 (시행령 §10②1호
     expect(r.annualInterest.map((a) => a.days)).toEqual([1082, 717, 352]);
   });
 
-  it("G22-2: 🔴 이자는 연도별 세액 × 그 해 일수의 합이다 (전체 × 단일 일수가 아니다)", () => {
+  it("G22-2: 🔴 이자는 연도별 세액 × 그 해 일수의 합이다 (전체 × 단일 일수가 아니다) — 2021년분은 25·22 두 구간(개정 238,040→239,870)", () => {
     const r = threeYears();
-    // 1,000,000 × days × 22/100,000 = 220 × days
-    expect(r.annualInterest.map((a) => a.interest)).toEqual([238_040, 157_740, 77_440]);
-    expect(r.interestAmount).toBe(473_220);
+    // 2022·2023년분: 1,000,000 × days × 22/100,000 = 220 × days (717일 → 157,740 · 352일 → 77,440)
+    // 2021년분: 61일 × 25 + 1,021일 × 22 = 15,250 + 224,620 = 239,870 (구간 분할 — 위 개정 주석)
+    expect(r.annualInterest.map((a) => a.interest)).toEqual([239_870, 157_740, 77_440]);
+    expect(r.annualInterest[0].segments.map((g) => [g.days, g.ratePer100k])).toEqual([[61, 25], [1021, 22]]);
+    expect(r.interestAmount).toBe(475_050);
     expect(r.totalRecoveryTax).toBe(3_000_000);
-    expect(r.totalPayable).toBe(3_473_220);
+    expect(r.totalPayable).toBe(3_475_050);
     expect(r.recoveryPeriodYears).toBe(3);
   });
 
@@ -73,7 +88,7 @@ describe("G-22 이자상당가산액 — 연도별 기산 (시행령 §10②1호
     const legacy = Math.floor(3_000_000 * 1_430 * 0.00022);
     expect(legacy).toBe(943_800);
     expect(r.interestAmount).toBeLessThan(legacy);
-    expect(legacy - r.interestAmount).toBe(470_580);
+    expect(legacy - r.interestAmount).toBe(468_750); // 개정 전 470,580 (2021년분 구간 분할로 +1,830)
   });
 
   it("G22-4: 산식이 금액을 재현한다 — 연도별 echo 합 = 총 이자", () => {

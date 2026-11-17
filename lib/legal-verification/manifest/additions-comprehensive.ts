@@ -242,6 +242,37 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  /**
+   * 추징 계산기 §10③ 각 호 — 추징하지 않는 경우(2020.10.7. 신설 · 2025.2.28. 개정 · 2026.10.1. 시행본 2026-11-17 조회).
+   * 계획서 comprehensive-rental-excl-recapture-calculator.plan.md §2·§5.2. 호마다 규칙을 따로 둔다(한 호가 개정돼도 어느 호인지 보이도록).
+   */
+  {
+    id: "COMPREHENSIVE_DECREE.RECAPTURE_EXEMPT_1HO",
+    citation: "종합부동산세법 시행령 §10",
+    keywords: [
+      "경감받은 세액과 이자상당가산액을 추징하지 않는다",
+      "최소 임대의무기간이 지난 후에",
+      "요건을 충족하지 않게 된 경우",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "COMPREHENSIVE_DECREE.RECAPTURE_EXEMPT_2HO",
+    citation: "종합부동산세법 시행령 §10",
+    keywords: ["제6조제1항제11호 또는 같은 조 제5항에 따라 임대사업자 등록이 말소된 경우"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "COMPREHENSIVE_DECREE.RECAPTURE_EXEMPT_3HO",
+    citation: "종합부동산세법 시행령 §10",
+    keywords: [
+      "소규모주택정비사업으로 당초의 합산배제 임대주택이 멸실되어 새로 취득하거나",
+      "리모델링으로 새로 취득한 주택",
+      "새로 취득한 주택의 준공일부터 6개월이 되는 날이 2020년 7월 10일 이전인 경우는 제외한다",
+      "해당 주택에 대하여 임대사업자 등록을 하지 않았을 것",
+    ],
+    keywordMode: "ALL",
+  },
   {
     id: "COMPREHENSIVE_DECREE.PROPERTY_TAX_DEDUCTION_CALC",
     citation: "종합부동산세법 시행령 §4의3",

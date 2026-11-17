@@ -76,7 +76,10 @@ const LONG_PERIOD_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> =
 ]);
 const AUG_18_2020 = Date.UTC(2020, 7, 18);
 
-function mandatoryPeriod(input: RentalExclusionInput): { years: number; applicationUnknown: boolean } {
+/** 추징 계산기(`comprehensive-recapture.ts`)도 쓴다 — 파라미터를 읽는 3칸으로 좁혔다(동작 불변). */
+export function mandatoryPeriod(
+  input: Pick<RentalExclusionInput, "registrationType" | "rentalApplicationDate" | "rentalRegistrationDate">,
+): { years: number; applicationUnknown: boolean } {
   if (!LONG_PERIOD_TYPES.has(input.registrationType)) {
     return { years: MANDATORY_PERIOD_BY_TYPE[input.registrationType], applicationUnknown: false };
   }
