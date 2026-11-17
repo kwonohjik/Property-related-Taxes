@@ -19,6 +19,7 @@
  * - 빈칸은 「미입력」으로 차단한다(자동 보정·안분 없음). ④는 빈칸을 Zod가 거부하는 값(`undefined`·`""`)으로 보낸다.
  */
 import { COMPREHENSIVE_EXCL_CONST } from "@/lib/tax-engine/legal-codes";
+import { COMPREHENSIVE_EXCL } from "@/lib/tax-engine/legal-codes";
 import { rentViolationApplies } from "@/lib/tax-engine/comprehensive-exclusion-rent-violation";
 import { recaptureInterestStart } from "@/lib/tax-engine/comprehensive-recapture-interest";
 import {
@@ -126,7 +127,12 @@ function validateExemption(form: RecaptureFormState, out: RecaptureIssue[]): voi
       } else if (!APPLICATION_KIND_OPTIONS.some((o) => o.value === form.applicationKind)) {
         out.push({ field: f("newHousing.application"), code: "format", message: "등록 신청 사실이 올바르지 않습니다." });
       } else if (form.applicationKind !== "none") {
-        push(dateIssue(form.applicationDate, f("newHousing.application.date"), "등록 신청일"));
+        const dateErr = dateIssue(form.applicationDate, f("newHousing.application.date"), "등록 신청일");
+        push(dateErr);
+        // V-12 — 2020.8.18.부터는 그 두 유형으로 등록 신청할 수 없다(⑫ 같은 규칙)
+        if (!dateErr && form.applicationDate > COMPREHENSIVE_EXCL_CONST.RECAPTURE_EXEMPT_3HO_GA_UNTIL) {
+          out.push({ field: f("newHousing.application.date"), code: "range", message: COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_3HO_GA_ABOLISHED });
+        }
       }
       return;
     }

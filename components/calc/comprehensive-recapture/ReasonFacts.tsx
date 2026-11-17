@@ -160,7 +160,7 @@ function ReplacementFacts({ form, onPatch, onReplace }: Props) {
         />
       </FieldCard>
       {form.applicationKind !== "" && form.applicationKind !== "none" && (
-        <FieldCard label="등록 신청일" required>
+        <FieldCard label="등록 신청일" required hint="2020.7.11.~8.17. 사이 신청일 — 2020.8.18.부터는 이 두 유형으로 새로 등록 신청할 수 없습니다.">
           <DateInput value={form.applicationDate} onChange={(v) => onPatch({ applicationDate: v })} data-testid="rc-application-date" />
         </FieldCard>
       )}
