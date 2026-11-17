@@ -46,6 +46,7 @@ const ROUTES = [
   "app/api/calc/stock-transfer/route.ts",
   "app/api/calc/one-house-exemption/route.ts",
   "app/api/calc/cross-104-5/route.ts",
+  "app/api/calc/comprehensive-recapture/route.ts",
 ];
 
 /** `NextResponse.json(` 호출마다 괄호 짝이 맞는 인자 문자열을 돌려준다. */
