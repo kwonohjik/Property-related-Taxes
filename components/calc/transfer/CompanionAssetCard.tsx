@@ -107,6 +107,8 @@ interface Props {
   hasSiblings: boolean;
   /** 지분 분할(축 B) 주 자산 카드에만 — 전 지분. 일반건물 최초공시 토글의 노출 축(`GeneralBuildingBlock.fractionalShares`). */
   gbFractionalShares?: readonly AssetForm[];
+  /** 함께 양도 묶음 안 겸용 부담부증여 — 재배분 채무(`debt`)를 귀속 카드로 넘긴다. 묶음 밖·겸용 아님은 undefined. */
+  mixedBgBundle?: { debt: number | undefined };
 }
 
 const SECTION_CHIPS = [
@@ -148,6 +150,7 @@ export function CompanionAssetCard({
   onFractionalToggle,
   hasSiblings,
   gbFractionalShares,
+  mixedBgBundle,
 }: Props) {
   const isMultiBundled = !singleMode && bundledSaleMode !== undefined;
   // 위치로 판정한다 — 저장 필드 `isPrimaryForHouseholdFlags`는 첫 자산 삭제·옛 저장분에서 어긋날 수 있다(같은 카드의 `isFirst`와 같은 축).
@@ -437,6 +440,7 @@ export function CompanionAssetCard({
             primaryAsset={primaryAsset}
             isFractionalSplit={splitMode === "fractional"}
             isCompanionBundle={splitMode === "companion"}
+            mixedBgBundle={mixedBgBundle}
             isSingleAsset={!hasSiblings}
             isPrimary={index === 0}
             fractionalShares={gbFractionalShares}

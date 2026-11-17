@@ -30,6 +30,8 @@ import { assetOfProperty } from "@/components/calc/results/transfer/sale-split-u
 import { isPhdApartment } from "@/components/calc/results/transfer/phd-housing-term";
 import { GbResultBlocks } from "@/components/calc/results/transfer/GbResultBlocks";
 import { gbBlockViewsOf } from "@/components/calc/results/transfer/gb-result-block-views";
+import { MixedUseBgBundleAssetCard } from "@/components/calc/results/mixed-use/MixedUseBgBundleAssetCard";
+import { mixedBgBundleViewsOf } from "@/components/calc/results/mixed-use/mixed-bg-bundle-views";
 // 800줄 정책 — 일반건물 3-way 요약 표(사례 33)를 별도 파일로 분리(2026-08-11).
 import { GeneralBuilding3WayTable } from "@/components/calc/results/transfer/GeneralBuilding3WayTable";
 import {
@@ -187,6 +189,8 @@ import { sumAssetGains } from "./transfer/exempt-gross-gain";
 
 export function BundledAllocationCard({ apportionment, aggregated, ownershipMap, formData, transferBurdenedGiftBreakdown, onBack, onReset }: Props) {
   const gbViews = useMemo(() => gbBlockViewsOf(aggregated, apportionment, formData), [aggregated, apportionment, formData]);
+  // 겸용주택 × 부담부증여 × 함께 양도 — 자산별 4부분 명세(증여세는 계약 단위 1회라 아래 §159 명세 카드에 있다 · PR-B Q-7)
+  const mixedBgViews = useMemo(() => mixedBgBundleViewsOf(aggregated, apportionment, formData), [aggregated, apportionment, formData]);
   const receiveOnlyShares = isFullFractionalBundle(formData.assets, formData.assetSplitMode) && allPropertiesReceiveOnly(aggregated.properties);
   /**
    * 출력 항목 선택 — 단건(`TransferTaxResultView`)과 동일한 패널.
@@ -287,6 +291,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
            * 같은 슬롯을 쓰면서 **주택·토지도 도달**하므로 자산 종류에서 파생한다.
            */
           propertyType={formData.assets[0]?.assetKind}
+          mixedBundleNote={mixedBgViews.length > 0}
           /**
            * 이 명세는 주 자산의 것이다. 주 자산이 §166 자산(원조합원 입주권 등)이면 인가 전 분과 합산 신고서의 취득가액
            * (엔진 표시 echo — §166 역산 정본)을 잇는다.
@@ -365,6 +370,11 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
       {/* 일반건물 결과 카드 블록 6종 — 일반건물 한 물건분씩. 함께 양도는 자산마다 소제목 아래 반복한다(`gb-bundled-result-blocks.plan.md`). */}
       {gbViews.map((v) => (
         <GbResultBlocks key={v.assetId ?? "single"} view={v} />
+      ))}
+
+      {/* 겸용주택 × 부담부증여 — 겸용 자산마다 4부분 명세 카드(증여세 행 없음) */}
+      {mixedBgViews.map((v) => (
+        <MixedUseBgBundleAssetCard key={v.assetKey} assetKey={v.assetKey} assetLabel={v.label} bg={v.bg} valuationMode={v.valuationMode} />
       ))}
 
       </PrintSection>

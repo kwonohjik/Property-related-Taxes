@@ -2,7 +2,7 @@
 
 import type { RentalResidenceRequirementFacts } from "@/lib/calc/rental-residence-requirement-status";
 import type { MergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { type AssetForm, type TransferFormData, makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
 import { Button } from "@/components/ui/button";
 import { CompanionAssetCard } from "./CompanionAssetCard";
@@ -12,6 +12,7 @@ import { appurtenantLimitShareOfAssets } from "@/lib/calc/housing-excess-split";
 import { maxAssetCards } from "@/lib/calc/asset-card-count-cap";
 import { assetCardCapMessage } from "@/lib/calc/asset-card-count-cap";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { mixedBgBundleMember } from "@/lib/calc/burdened-gift-mixed-use-preview";
 
 interface Props {
   assets: AssetForm[];
@@ -95,6 +96,14 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
   const cardCapGb = splitMode === "fractional" && assets[0]?.assetKind === "general_building";
   const atCardCap = assets.length >= maxAssetCards(cardCapGb);
 
+  // 함께 양도 묶음 안 겸용 부담부증여 — 카드마다 재배분 채무(④와 같은 함수)를 읽어 귀속 카드에 보여 준다. 묶음 밖·겸용 아님은 undefined.
+  // useMemo 파생이며 store에 쓰지 않는다(미러링 금지). 겸용 부담부증여가 없으면 계산하지 않는다.
+  const bundleDeclaredMode = splitMode === "none" ? undefined : splitMode;
+  const mixedBgBundles = useMemo(
+    () => assets.map((a) => mixedBgBundleMember(assets, bundleDeclaredMode, a.assetId)),
+    [assets, bundleDeclaredMode],
+  );
+
   // 언마운트 뒤 늦게 도착한 카드 패치를 가르기 위한 표지(아래 updateAsset)
   const mountedRef = useRef(false);
   useEffect(() => {
@@ -174,6 +183,7 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
           splitMode={splitMode}
           onFractionalToggle={onFractionalToggle}
           hasSiblings={assets.length > 1}
+          mixedBgBundle={mixedBgBundles[idx]}
           // 일반건물 최초공시(물건 사건) 토글 — 주 자산 카드가 전 지분의 산정방식을 본다(축 B만).
           gbFractionalShares={splitMode === "fractional" && idx === 0 ? assets : undefined}
         />

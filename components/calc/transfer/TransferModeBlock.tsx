@@ -49,6 +49,8 @@ interface Props {
    */
   isFractionalSplit?: boolean;
   isCompanionBundle?: boolean;
+  /** 함께 양도 묶음 안 겸용 부담부증여 — 신고 단위 채무를 재배분한 이 자산의 몫(`debt`). 묶음 밖·겸용 아님은 undefined. 귀속 카드가 읽는다. */
+  mixedBgBundle?: { debt: number | undefined };
   /** 축 B 첫 카드 — 지분 전체(`BurdenedGiftBlock` 산정방식 노출 판정 · PR-7b-5) */
   fractionalShares?: readonly AssetForm[];
   /** 함께 양도하는 두 번째 이후 자산 — 토글 C(주택·건물 토지·건물 취득일 다름)를 꺼진 것으로 그린다(④·⑧과 같은 `neutralizeCarryoverDonorSplitForCompanion`). */
@@ -102,7 +104,7 @@ const UNSUPPORTED_LABELS = (Object.keys(ASSET_KIND_LABELS) as AssetForm["assetKi
   .map((k) => ASSET_KIND_LABELS[k])
   .join(", ");
 
-export function TransferModeBlock({ asset, onChange, transferDate, isFractionalSplit, isCompanionBundle, fractionalShares, isNonPrimaryAsset }: Props) {
+export function TransferModeBlock({ asset, onChange, transferDate, isFractionalSplit, isCompanionBundle, mixedBgBundle, fractionalShares, isNonPrimaryAsset }: Props) {
   // transferCause=공익수용이면 그것을 우선 표시, 아니면 transferType(일반/부담부증여)
   const currentMode =
     asset.transferCause === "public_expropriation"
@@ -217,7 +219,7 @@ export function TransferModeBlock({ asset, onChange, transferDate, isFractionalS
               아래 부담부증여 카드는 그 합계를 읽기 전용으로 보여 주고, 채무가 주택·상가 중 어디에 속하는지를 받습니다.
             </p>
             <p className="text-caption text-amber-800 dark:text-amber-200">
-              계산 범위: 단독 소유 또는 공유지분 단건. 개별주택가격 미공시 환산·보유 중 일부 용도변경·함께 양도(여러 물건)·지분 분할 취득은 계산하지 않습니다. 공유지분이면 시가·취득가액·기준시가는 물건 전체 기준으로, 채무는 내 지분 인수분으로 입력합니다.
+              계산 범위: 단독 소유·공유지분 단건, 그리고 함께 양도(여러 물건) 묶음 — 묶음은 증여재산 평가가 보충적평가(기준시가 또는 시가)인 경우만 계산하며, 신고 단위 채무를 자산가액 비율로 재배분한 몫을 이 겸용주택의 채무(구분 불분명)로 봅니다. 개별주택가격 미공시 환산·보유 중 일부 용도변경·지분 분할 취득은 계산하지 않습니다. 공유지분이면 시가·취득가액·기준시가는 물건 전체 기준으로, 채무는 내 지분 인수분으로 입력합니다.
             </p>
           </div>
         </ToneCard>
@@ -234,6 +236,7 @@ export function TransferModeBlock({ asset, onChange, transferDate, isFractionalS
           transferDate={transferDate}
           isFractionalSplit={isFractionalSplit}
           isCompanionBundle={isCompanionBundle}
+          mixedBgBundle={mixedBgBundle}
           fractionalShares={fractionalShares}
         />
       )}

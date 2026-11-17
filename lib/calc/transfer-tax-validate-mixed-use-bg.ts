@@ -53,7 +53,7 @@ export function validateMixedUseBurdenedGift(
   if (!analysis) return null;
   const issues = analysis.issues;
   const issueField = (i: MixedBgIssue) =>
-    i.path.join(".") === "mixedUse.housingInheritedValue" ? mixedBgReportedField(asset) : mixedBgIssueField(i);
+    i.path.join(".") === "mixedUse.housingInheritedValue" ? mixedBgReportedField(asset) : mixedBgIssueField(i, asset);
   const fail = (i: MixedBgIssue, field?: string) => fieldError((field ?? issueField(i)) as never, `${label}: ${i.message}`);
 
   // 2) 차단 조합(MB-1~6·8·9·12·15·16·18)
@@ -70,14 +70,17 @@ export function validateMixedUseBurdenedGift(
   const missing = firstIssue(issues, (i) => i.code === "MB-11");
   if (missing) return fail(missing);
 
-  // 4) 채무 귀속 — 모드 미선택·분할 합 불일치는 항목별 구체 문구, 그 밖의 MB-13은 엔진 문구
-  const attr = mixedBgDebtAttribution(asset);
-  if (attr.issues.length > 0) {
-    const a = attr.issues[0];
-    return fieldError(a.field, `${label}: ${mixedBgDebtAttrMessage(a)}`);
+  // 4) 채무 귀속 — 모드 미선택·분할 합 불일치는 항목별 구체 문구, 그 밖의 MB-13은 엔진 문구.
+  //    함께 양도 묶음은 귀속을 받지 않는다(채무 전부 구분 불분명 — 엔진 MB-19가 남은 주택·상가 선언만 막았다). 귀속 카드가 라디오를 숨기므로 미선택을 요구하면 막다른 길이다.
+  if (!(isCompanion && !isAxisB)) {
+    const attr = mixedBgDebtAttribution(asset);
+    if (attr.issues.length > 0) {
+      const a = attr.issues[0];
+      return fieldError(a.field, `${label}: ${mixedBgDebtAttrMessage(a)}`);
+    }
+    const mb13 = firstIssue(issues, (i) => i.code === "MB-13");
+    if (mb13) return fail(mb13);
   }
-  const mb13 = firstIssue(issues, (i) => i.code === "MB-13");
-  if (mb13) return fail(mb13);
 
   // 5) 구분 감정평가 선언(G-13, MB-17)
   const mb17 = firstIssue(issues, (i) => i.code === "MB-17");
