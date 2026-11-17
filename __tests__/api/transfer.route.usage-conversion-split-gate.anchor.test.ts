@@ -29,6 +29,8 @@ import { usageConversionSplitConflict } from "@/lib/tax-engine/usage-conversion-
 import { baseTransferInput } from "../tax-engine/_helpers/mock-rates";
 import { propertySchema } from "@/lib/api/transfer-tax-schema";
 import { propertyItemSchema } from "@/lib/api/transfer-tax-schema";
+import { PHD_ELEVEN } from "../calc/_phd-non-estimated-fixture";
+import { phdForm } from "../calc/_phd-non-estimated-fixture";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -130,4 +132,40 @@ describe("⑧ ≡ ④ — 화면에서 토지 취득일이 실리면 ⑧ C-19가
       expect("landAcquisitionDate" in (r.body as Loose), name).toBe(blocked); // ⑧ 판정 ⇔ ④가 토지 취득일을 싣는다
       if (blocked) expect(r.status, name).toBe(400);
     });
+});
+
+describe("⑧ ≡ ④ — 토글 없이 토지 취득일이 실리는 나머지 두 경로도 막힌다 (2026-11-17 실측 · 짝은 분리 계산 200)", () => {
+  const C19 = "토지·건물을 나눠 계산하는 자산";
+  const CONV = { hasNonHousingConversion: true, residentialUseStartDate: "2010-01-01" };
+  const check = async (name: string, f: never, blocked: boolean) => {
+    const r = await runCalc(f);
+    expect((r.issues as { message: string }[]).some((i) => i.message.includes(C19)), name).toBe(blocked);
+    expect("landAcquisitionDate" in (r.body as Loose), name).toBe(true); // 두 경로 모두 토글 없이 토지 취득일 = 건물 취득일을 싣는다
+    expect(r.status, name).toBe(blocked ? 400 : 200);
+    if (!blocked) expect((r.json as Loose).data.result.splitDetail, name).toBeDefined();
+    else expect(msgs(r.json as Loose), name).toContain(USAGE_CONVERSION_SPLIT_UNSUPPORTED_MESSAGE);
+    return (r.json as Loose)?.data?.result?.totalTax as number | undefined;
+  };
+
+  it("개별주택가격 미공시 환산(PHD · 2003 취득 · 환산) — 용도변경이면 막힘 · 짝 206,154,088 분리 계산", async () => {
+    const phd = { useEstimatedAcquisition: true, usePreHousingDisclosure: true, ...PHD_ELEVEN };
+    expect(await check("PHD", phdForm(phd) as never, false)).toBe(206_154_088);
+    await check("PHD + 용도변경", phdForm({ ...phd, ...CONV } as never) as never, true);
+  });
+
+  it("배율 초과분 분리(같은 날 취득 · 토지 500㎡ · 한도 300㎡) — 용도변경이면 막힘 · 짝 9,296,570 분리 계산", async () => {
+    const HOUSE: Loose = {
+      ...makeDefaultAsset(1), assetKind: "housing", acquisitionCause: "purchase", acquisitionDate: "2012-01-02", fixedAcquisitionPrice: "500000000", actualSalePrice: "1000000000",
+      addressJibun: "서울 테스트동 1", residenceInputMode: "direct", residencePeriodMonthsAsset: "120", buildingFootprintArea: "100", appurtenantLandZone: "metropolitan_residential",
+      isUrbanArea: true, areaScenario: "same", acquisitionArea: "500", transferArea: "500", standardPriceAtAcq: "300000000", standardPricePerSqmAtAcq: "400000",
+      buildingStandardPriceAtAcq: "150000000", standardPricePerSqmAtTransfer: "800000", buildingStandardPriceAtTransfer: "400000000",
+    };
+    const f = (o: Loose) =>
+      ({
+        ...createDefaultTransferFormData(), transferDate: "2026-02-16", isOneHousehold: true, householdHousingCount: "1", householdNoOtherHousesConfirmed: true,
+        householdNoPresaleRightsConfirmed: true, residencePeriodMonths: "120", contractTotalPrice: "1000000000", assets: [{ ...HOUSE, ...o }],
+      }) as never;
+    expect(await check("배율 초과", f({}), false)).toBe(9_296_570);
+    await check("배율 초과 + 용도변경", f({ ...CONV, residentialUseStartDate: "2015-01-01" }), true);
+  });
 });
