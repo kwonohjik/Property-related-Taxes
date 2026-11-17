@@ -67,12 +67,13 @@ export function fillMixedHousingResidenceCells(
   if (!hp.landHoldingResidenceRateUsed || land === undefined || building === undefined || land >= building) return false;
   setStr("residencePeriod", "housingLand", fmtPeriod(land * 12));
   setStr("residencePeriod", "housingBuilding", fmtPeriod(ownResidenceMonths));
+  // 겸용은 거주를 정수 연수로 받는다(`directMonths` = 연수 × 12) — 개월로 적으면 입력과 달라 보이므로 연 단위로 적는다(엔진 고지와 같은 규칙).
   const cap = hp.landHoldingResidenceCap;
   setRoseNote(
     "residencePeriod",
     "housingLand",
     `토지분 거주 ${land}년 — 토지를 건물보다 나중에 취득해 토지 보유기간 중 거주만 산정 (대법원 2025두34935). 건물은 본인 거주 전체` +
-      (cap ? `. 거주 ${cap.directMonths}개월을 토지 보유기간 ${cap.landHoldingMonths}개월로 상한해 계산 — 확인 필요` : ""),
+      (cap ? `. 거주 연수 ${cap.directMonths / 12}년을 토지 보유기간 ${cap.landHoldingMonths}개월로 상한해 계산 — 확인 필요` : ""),
   );
   return true;
 }

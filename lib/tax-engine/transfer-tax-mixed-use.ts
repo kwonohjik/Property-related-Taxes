@@ -517,7 +517,7 @@ function calcMixedUseCore(
     // 토지를 건물보다 나중에 취득했으면 주택분 토지 거주분은 토지 보유기간 중 거주(분리취득과 같은 leaf · 검증 위반이면 throw)
     resolveMixedLandHoldingResidence(asset, transferDate),
   );
-  const landCapNotice = landHoldingResidenceCapNotice(housingPart.landHoldingResidenceCap);
+  const landCapNotice = landHoldingResidenceCapNotice(housingPart.landHoldingResidenceCap, "years"); // 겸용은 정수 연수 입력 — 연 단위로 적는다
   if (landCapNotice && !housingPart.isExempt) warnings.push(landCapNotice);
   warnings.push(...mixedUseGiftTable2Notices(asset, transferDate, isOneHouseExempt, housingPart)); // 증여 전 거주 표2 통산 확인 필요(일반 경로와 같은 고지)
   // ⚠️ 상가분에는 `surchargeLthdExcluded`를 넘기지 않는다 — §104⑦의 대상은
