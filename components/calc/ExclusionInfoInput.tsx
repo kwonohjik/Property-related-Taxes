@@ -39,6 +39,9 @@ import { ho459 } from "@/lib/calc/comprehensive-rental-459ho";
 import { isOwnedRentalType } from "@/lib/calc/comprehensive-rental-459ho";
 import { priceRegistrationType } from "@/lib/calc/comprehensive-rental-459ho";
 import { asksRegistrationRevokedDate } from "@/lib/calc/comprehensive-rental-459ho";
+import { RentalExclusionMultiFamilyFields } from "@/components/calc/comprehensive/RentalExclusionMultiFamilyFields";
+import { deemedMultiFamilyApplies } from "@/lib/calc/comprehensive-rental-multifamily";
+import { DEEMED_BUSINESS_REG_HINT } from "@/lib/calc/comprehensive-rental-multifamily";
 
 // ============================================================
 // 임대 등록 유형 레이블
@@ -120,6 +123,7 @@ function RentalExclusionDetail({
   const ho = ho459(regType);
   const owned = isOwnedRentalType(regType);
   const asksRent = ho !== "4" && ho !== "5";
+  const deemed = deemedMultiFamilyApplies(regType, property);
 
   return (
     <div className="space-y-4">
@@ -216,23 +220,8 @@ function RentalExclusionDetail({
         />
       )}
 
-      {/* 임대사업자 등록일 */}
-      <div className="space-y-1.5">
-        <label className="block text-sm font-medium">
-          임대사업자 등록일 <span className="text-destructive">*</span>
-        </label>
-        <DateInput
-          value={property.rentalRegistrationDate}
-          onChange={(v) => onUpdate({ rentalRegistrationDate: v })}
-        />
-        <p className="text-xs text-muted-foreground">
-          지방자치단체 임대사업자 등록증의 등록일(신청일 아님)
-        </p>
-        {/* T-14 다가구 경과조치(부칙<제30404호> §6) — 판정 경로 없이 안내만(계획서 Q-10 a · V-1) */}
-        <p className="text-xs text-muted-foreground">
-          2020.2.11. 전에 세무서에만 주택임대업으로 등록한 다가구주택은 지자체 등록 없이도 합산배제될 수 있지만 이 계산기는 판정하지 못합니다(확인 필요).
-        </p>
-      </div>
+      {/* T-14 토글(1·2호 ∧ 다가구) + 임대사업자 등록일 — 의제 다가구가 켜지면 지자체 등록일 칸을 숨긴다(⑧·④와 같은 술어) */}
+      <RentalExclusionMultiFamilyFields property={property} registrationType={regType} onUpdate={onUpdate} />
 
       {/* 세무서 사업자등록일 — §3①1호·2호 단서(2018.3.31.) · 그 밖 민간 유형은 과세기준일 현재(9.30.까지 의제 · T-13) (④·⑧ 같은 술어) */}
       {asksBusinessRegistrationField(regType, assessmentYear) && (
@@ -245,7 +234,7 @@ function RentalExclusionDetail({
             value={property.businessRegistrationDate ?? ""}
             onChange={(v) => onUpdate({ businessRegistrationDate: v })}
           />
-          <p className="text-xs text-muted-foreground">{businessRegistrationHint(regType)}</p>
+          <p className="text-xs text-muted-foreground">{deemed ? DEEMED_BUSINESS_REG_HINT : businessRegistrationHint(regType)}</p>
         </div>
       )}
 
@@ -339,7 +328,7 @@ function RentalExclusionDetail({
       />
 
       {/* 임대등록 말소 (예외 케이스 — 기본 접힘) · 9호는 묻지 않는다(④와 같은 술어 asksRegistrationRevokedDate) */}
-      {asksRegistrationRevokedDate(regType) && (
+      {asksRegistrationRevokedDate(regType) && !deemed && (
       <ToggleCard
         tone="rose"
         title="임대등록 말소"

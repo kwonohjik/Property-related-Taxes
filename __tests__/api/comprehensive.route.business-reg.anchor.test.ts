@@ -142,7 +142,7 @@ describe("⑤④⑧ 술어 asksBusinessRegistrationField — 묻는 유형·연�
   });
 });
 
-describe("T-14 다가구 경과조치 — 안내만(계획서 Q-10 a)", () => {
+describe("T-14 다가구 경과조치 — 8호 등 의제 경로 없는 유형은 안내만(1·2호는 토글 · comprehensive.route.multifamily-deemed.anchor)", () => {
   it("A14-1 ⑧ 지자체 등록일 빈칸 — 경과조치 안내와 할 일(세무서 확인 · 유형 '없음')을 함께", () => {
     const msg = validateRequiredExclusionAndLandInputs(form("2025-02-20", { rentalRegistrationDate: "" })) ?? "";
     expect(msg).toMatch(/^주택 1: 지자체 임대사업자 등록일이 없으면 합산배제를 계산할 수 없습니다/);

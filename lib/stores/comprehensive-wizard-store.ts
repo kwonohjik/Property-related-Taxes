@@ -113,7 +113,10 @@ export interface PropertyEntry {
   propertyTaxAmount: string;        // 재산세 부과세액 (원). 빈 문자열 = 자동계산(하위호환)
   // ── 다가구주택 면적안분 (트랙 A, 사례7 이상) ──
   multiFamilyEnabled: boolean;      // 다가구 층별 면적 입력 ON/OFF
-  floorUnits: { label: string; area: string }[]; // 구별 면적 행 (area = DecimalInput 문자열)
+  floorUnits: { label: string; area: string; officialValue?: string }[]; // 구별 면적 행 (area = DecimalInput 문자열 · officialValue = T-14 구별 공시가격 CurrencyInput 문자열)
+  // ── T-14 2020.2.11. 전 세무서에만 등록한 다가구(부칙<제30404호> §6) — 적용 술어는 lib/calc/comprehensive-rental-multifamily.ts 한 곳(⑤⑧④ 공유) ──
+  deemedMultiFamily: boolean;                      // 토글 (유형 1·2호 ∧ multiFamilyEnabled 일 때만 효력)
+  deemedNoConversionAfterCutoff: "" | "yes" | "no"; // 2020.2.11. 이후 임대로 바꾼 호실이 없다
   // ── 주택 세부담상한 (직전 공시가격 단일 입력원 — 모드가 표시 제어, 2단계 통합) ──
   priorAssessedValue: string;          // 직전연도 주택공시가격 (원, CurrencyInput 문자열)
 }
@@ -262,6 +265,8 @@ function makeProperty(): PropertyEntry {
     propertyTaxAmount: "",  // 재산세 부과세액 직접입력 (빈 문자열 = 자동계산)
     multiFamilyEnabled: false,  // 다가구 층별 면적 입력 OFF
     floorUnits: [],              // 구별 면적 행 (빈 배열 = 미입력)
+    deemedMultiFamily: false,    // ② initial: T-14 의제 다가구 토글 OFF
+    deemedNoConversionAfterCutoff: "",
     // ② initial: 주택 세부담상한 (직전 공시가격 단일 입력원)
     priorAssessedValue: "",
   };
@@ -540,6 +545,9 @@ export const useComprehensiveWizardStore = create<ComprehensiveWizardState>()(
               // ③ normalize: 다가구주택 면적안분 (트랙 A) — 구 세션 누락 시 기본값
               multiFamilyEnabled: p.multiFamilyEnabled ?? false,
               floorUnits: p.floorUnits ?? [],
+              // ③ normalize: T-14 의제 다가구 — 구 세션 누락 시 OFF(현행 판정 불변)
+              deemedMultiFamily: p.deemedMultiFamily ?? false,
+              deemedNoConversionAfterCutoff: p.deemedNoConversionAfterCutoff ?? "",
               // ③ normalize: 주택 세부담상한 (직전 공시가격 단일 입력원) — 구 세션 누락 시 기본값
               priorAssessedValue: p.priorAssessedValue ?? "",
               // ③ normalize: 읍·면 지역 여부 (existing_rental §3①3호 전용) — 구 세션 누락 시 false

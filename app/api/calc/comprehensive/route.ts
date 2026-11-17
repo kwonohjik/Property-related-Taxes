@@ -28,6 +28,7 @@ import type {
   OtherExclusionInput,
 } from "@/lib/tax-engine/types/comprehensive.types";
 import type { ComprehensiveTaxInputSchema } from "@/lib/validators/comprehensive-input";
+import { toDate } from "@/lib/api/date-coerce";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 
 // ─────────────────────────────────────────────────────────────
@@ -57,7 +58,23 @@ function toEngineInput(
     const rentalInfo: RentalExclusionInput | undefined = p.rentalInfo
       ? {
           ...p.rentalInfo,
-          rentalRegistrationDate: parseDate(p.rentalInfo.rentalRegistrationDate),
+          // T-14: 의제 다가구면 세무서 사업자등록일을 §5 등록일 자리에 넣는다 — 엔진이 같은 값으로 정규화하고 지자체 날짜는 보지 않는다
+          // (엔진 타입상 필수 Date · Zod refine이 둘 중 하나는 있음을 보장)
+          rentalRegistrationDate: toDate(
+            p.rentalInfo.deemedMultiFamily ? p.rentalInfo.businessRegistrationDate : p.rentalInfo.rentalRegistrationDate,
+            "rentalRegistrationDate",
+          ),
+          // ⑭ T-14 의제 다가구 구별 면적·공시가격 (숫자 — Date 변환 불요)
+          deemedMultiFamily: p.rentalInfo.deemedMultiFamily
+            ? {
+                units: p.rentalInfo.deemedMultiFamily.units.map((u) => ({
+                  label: u.label,
+                  area: u.area,
+                  assessedValue: u.assessedValue,
+                })),
+                noConversionAfterCutoff: p.rentalInfo.deemedMultiFamily.noConversionAfterCutoff,
+              }
+            : undefined,
           // 4·9호(「소유」)는 없을 수 있다 — 그 밖 유형은 Zod refine이 필수로 막는다
           rentalStartDate: toOptionalDate(p.rentalInfo.rentalStartDate),
           businessRegistrationDate: toOptionalDate(p.rentalInfo.businessRegistrationDate),
