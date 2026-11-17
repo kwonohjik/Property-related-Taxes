@@ -182,8 +182,9 @@ describe("역방향 — ⑫ 차단(엔진·⑧과 같은 leaf)", () => {
     expect((await post({ landHoldingResidenceMonths: 179 })).status).toBe(400);
   });
 
-  it("토지가 나중 취득이 아니면(먼저·같은 날·소유자 분리) 값이 와도 400 — 조용히 버려지지 않는다", async () => {
-    for (const o of [{ landAcquisitionDate: "2000-03-01" }, { landAcquisitionDate: "2010-03-01" }, { selfOwns: "land_only" }]) {
+  it("토지가 나중 취득이 아니면(먼저·같은 날·건물만 본인) 값이 와도 400 — 조용히 버려지지 않는다 · 토지만 본인은 받는다(V-4)", async () => {
+    expect(mine({ ...S2, selfOwns: "land_only", landHoldingResidenceMonths: 10 })).toEqual([]);
+    for (const o of [{ landAcquisitionDate: "2000-03-01" }, { landAcquisitionDate: "2010-03-01" }, { selfOwns: "building_only" }]) {
       expect(mine({ ...S2, ...o, landHoldingResidenceMonths: 10 }).map((i) => i.message), JSON.stringify(o)).toContain(LAND_HOLDING_RESIDENCE_GATE_MESSAGE);
     }
     expect((await post({ landAcquisitionDate: "2000-03-01", landHoldingResidenceMonths: 10 })).status).toBe(400);

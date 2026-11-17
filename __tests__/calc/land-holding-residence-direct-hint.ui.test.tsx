@@ -65,6 +65,11 @@ describe("⑤ Step4 — 직접 입력 칸 안내(실제 화면)", () => {
     expect(field?.textContent).toContain("위 「거주 기간 입력」 토글을 켜면 입주일·퇴거일 구간으로 입력할 수 있습니다");
   });
 
+  it("토지만 본인(건물은 같은 세대원 · V-4) 직접 입력: 안내가 보인다", () => {
+    renderStep([split({ selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false } as Partial<AssetForm>)]);
+    expect(screen.queryByTestId(HINT)).not.toBeNull();
+  });
+
   it("겸용주택 직접 입력(토지 나중 취득): 안내가 보인다", () => {
     renderStep([mixed()]);
     expect(screen.queryByTestId(HINT)).not.toBeNull();
@@ -89,7 +94,7 @@ describe("⑤ Step4 — 직접 입력 칸 안내(실제 화면)", () => {
       ["토지가 먼저 취득", [split({ landAcquisitionDate: "2000-03-01" } as Partial<AssetForm>)]],
       ["같은 날 취득", [split({ landAcquisitionDate: "2010-03-01" } as Partial<AssetForm>)]],
       ["별개 취득 토글 OFF 잔재", [split({ hasSeperateLandAcquisitionDate: false } as Partial<AssetForm>)]],
-      ["토지만 본인(소유자 분리)", [split({ selfOwns: "land_only" } as Partial<AssetForm>)]],
+      ["건물만 본인(소유자 분리)", [split({ selfOwns: "building_only" } as Partial<AssetForm>)]],
       ["겸용 · 토지 먼저", [mixed({ landAcquisitionDate: "2000-03-01" } as Partial<AssetForm>)]],
       ["겸용 · 토지 취득일 빈칸", [mixed({ landAcquisitionDate: "" } as Partial<AssetForm>)]],
       ["일반 주택(분리취득 아님)", [house()]],

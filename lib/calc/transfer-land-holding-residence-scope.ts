@@ -40,8 +40,9 @@ export function buildLandHoldingResidencePayload(
 
 /**
  * ⑤ 표시 술어 — 이 자산이 「토지를 건물보다 나중에 취득한 분리취득 주택」이라 거주 입력이 토지 보유기간으로 잘리는가(직접 입력은 엔진 상한 · 구간 입력은 ④ 겹침).
- * ④가 싣는 값의 게이트(`buildLandHoldingResidencePayload`)와 **같은 사실**을 폼 값에서 읽는다 — 분리 계산 자산(주택·건물, 겸용 제외) ∧ 본인이 토지·건물 모두 소유 ∧
- * 파트 이월과세 아님 ∧ 별개 취득 토글 ON ∧ 토지 취득일 > 건물 취득일. 거주 입력 방식은 보지 않는다(방식별 안내 문구는 호출부가 가른다).
+ * ④가 싣는 값의 게이트(`buildLandHoldingResidencePayload`)와 **같은 사실**을 폼 값에서 읽는다 — 분리 계산 자산(주택·건물, 겸용 제외) ∧ 본인이 토지를 소유(토지·건물 모두 또는 토지만 — V-4) ∧
+ * 파트 이월과세 아님 ∧ 토지 취득일이 실린다(토지·건물 모두는 별개 취득 토글 ON · 토지만 본인은 토글 없이 실린다 — ④ `buildSplitPayload`) ∧ 토지 취득일 > 건물 취득일.
+ * 거주 입력 방식은 보지 않는다(방식별 안내 문구는 호출부가 가른다).
  */
 export function landHoldingResidenceApplies(
   rawAsset: Pick<AssetForm, "assetKind" | "isMixedUseHouse" | "selfOwns" | "hasSeperateLandAcquisitionDate" | "landAcquisitionDate" | "acquisitionDate" | "acquisitionCause" | "carryover"> &
@@ -50,8 +51,9 @@ export function landHoldingResidenceApplies(
 ): boolean {
   // ④ `buildSplitPayload`와 같은 D2 정규화 사본을 읽는다 — 상속·증여 호스트의 stale 분리 입력(토글만 켜진 잔재)은 「분리 없음」이다.
   const asset = normalizeBuildingCauseInputs(rawAsset);
-  if (!selfOwnsSplitApplicable(asset) || effectiveSelfOwns(asset) !== "both") return false;
-  if (anyPartCarryover(asset) || asset.hasSeperateLandAcquisitionDate !== true) return false;
+  const selfOwns = effectiveSelfOwns(asset);
+  if (!selfOwnsSplitApplicable(asset) || (selfOwns !== "both" && selfOwns !== "land_only")) return false;
+  if (anyPartCarryover(asset) || (selfOwns === "both" && asset.hasSeperateLandAcquisitionDate !== true)) return false;
   return landAcquiredAfterBuilding({ landAcquisitionDate: asset.landAcquisitionDate, buildingAcquisitionDate: primaryAcquisitionDateOf(asset as AssetForm) });
 }
 

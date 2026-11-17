@@ -11,7 +11,8 @@
  *
  * 적용 범위 — **토지 파트 공제율만**. 표2 **대상 판정**(거주 2년)은 자산(주택) 단위 「보유기간 중 거주」라 건물 기준 그대로다(이 파일은 대상 판정을 건드리지 않는다).
  *   · 토지가 건물보다 같은 날이거나 먼저 취득됐으면 이 규칙은 걸리지 않는다(종전 그대로 · 4289 개월만 더한다).
- *   · 소유자 분리(토지만·건물만 본인)는 범위 밖이다(그 축의 거주는 별도 — 계획서 V-4).
+ *   · 소유자 분리 중 **토지만 본인**(건물은 같은 세대원)도 같은 규칙이다(계획서 V-4 · 사용자 결정 2026-11-17) — 토지 취득 전 거주는 그 토지의 보유기간 중 거주가 아니다.
+ *     건물만 본인은 토지 파트가 없어 닿지 않는다. 합가 전 거주는 ⑧이 따로 막는다(`land-only-merge-residence-period`).
  *
  * 엔진(`calcLongTermHoldingDeduction`)·⑫(`refineSplitPartCause`)·⑧이 `collectSplitPartCauseIssues`를 거쳐 **같은 게이트 술어**(`landAcquiredAfterBuilding`)를 공유한다.
  */
@@ -40,7 +41,7 @@ function dayOf(d: Date | string | undefined): string | undefined {
 }
 
 /**
- * 토지가 건물보다 **나중에** 취득됐는가(날짜 엄격 비교) — 소유자 분리는 제외한다. ④·⑫·엔진이 같은 술어를 쓴다.
+ * 토지가 건물보다 **나중에** 취득됐는가(날짜 엄격 비교) — 건물만 본인은 제외한다(토지 파트가 없다 · 토지만 본인은 포함 — V-4). ④·⑫·엔진이 같은 술어를 쓴다.
  * 날짜가 하나라도 비면 판정하지 않는다(false — 다른 규칙이 날짜 누락을 짚는다).
  */
 export function landAcquiredAfterBuilding(a: {
@@ -48,7 +49,7 @@ export function landAcquiredAfterBuilding(a: {
   buildingAcquisitionDate?: Date | string;
   selfOwns?: string;
 }): boolean {
-  if (a.selfOwns !== undefined && a.selfOwns !== "both") return false;
+  if (a.selfOwns === "building_only") return false;
   const land = dayOf(a.landAcquisitionDate);
   const building = dayOf(a.buildingAcquisitionDate);
   return !!land && !!building && land > building;
