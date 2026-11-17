@@ -10,6 +10,7 @@ import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { expandAssetSection } from "./_helpers/expandAssetSection";
 import { withMixedHousingStd } from "./_helpers/mixed-housing-std-seed";
 import { seedWithDeclaredRoster } from "./_helpers/roster-for-declared-count";
+import { MIXED_SHARE_PHD_ERA_MESSAGE } from "../lib/calc/transfer-tax-validate-mixed-use-share";
 
 const OBJECT = {
   assetKind: "housing", isMixedUseHouse: true, mixedZoneType: "green", addressJibun: "제주특별자치도 강남구 테스트동 1-1",
@@ -28,11 +29,11 @@ const ACQ_2015 = {
   mixedAcqHousingPrice: "700000000", mixedAcqCommercialBuildingPrice: "80000000", mixedAcqLandPricePerSqm: "600000",
 };
 
-async function seed(page: Page) {
+async function seed(page: Page, secondOver: Record<string, unknown> = {}) {
   const first = withMixedHousingStd({ ...makeDefaultAsset(1), ...OBJECT, ...RES, ...ACQ_2009, ownershipNumerator: "60", ownershipDenominator: "100" });
   // 둘째 지분 — 화면이 만든 카드처럼 겸용 칸이 없다. 취득시 주택건물 기준시가(나목)만 이 지분 값으로 둔다(취득 쪽 칸).
   const acqN = withMixedHousingStd({ ...makeDefaultAsset(2), ...OBJECT, ...ACQ_2015 }).mixedAcqHousingBuildingStdPrice;
-  const second = { ...makeDefaultAsset(2), addressJibun: OBJECT.addressJibun, ...RES, ...ACQ_2015, mixedAcqHousingBuildingStdPrice: acqN, ownershipNumerator: "40", ownershipDenominator: "100" };
+  const second = { ...makeDefaultAsset(2), addressJibun: OBJECT.addressJibun, ...RES, ...ACQ_2015, mixedAcqHousingBuildingStdPrice: acqN, ownershipNumerator: "40", ownershipDenominator: "100", ...secondOver };
   const formData = {
     ...createDefaultTransferFormData(),
     assets: [first, second],
@@ -81,4 +82,21 @@ test("MXB-1 둘째 지분 카드 ③ — 겸용 취득 칸만 · 양도시 칸 �
   const data = (await r.json()).data;
   expect(data.mode).toBe("bundled");
   expect(data.aggregated.totalTax).toBe(74_332_369);
+});
+
+test("MXB-2 둘째 지분 × 2000 증여 — 「켜야 계산됩니다」 없이 계산하지 않는다는 한 문구 · 요청 없음(PR-C0 · Q-12 a)", async ({ page }) => {
+  test.setTimeout(90_000);
+  await seed(page, { acquisitionCause: "gift", acquisitionDate: "2000-01-01" });
+  await expandAssetSection(page, 3, 1);
+  const card = page.locator('[data-asset-card-index="1"] [data-asset-section="3"]');
+  await expect(card.getByText(MIXED_SHARE_PHD_ERA_MESSAGE).first()).toBeVisible();
+  await expect(card.getByText("켜야 계산됩니다")).toHaveCount(0);
+
+  let posted = 0;
+  page.on("request", (r) => { if (r.url().includes("/api/calc/transfer") && r.method() === "POST") posted++; });
+  await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+  await page.getByRole("button", { name: "세금 계산하기" }).click();
+  await expect(page.getByText(`자산 2: ${MIXED_SHARE_PHD_ERA_MESSAGE}`).first()).toBeVisible();
+  await expect(page.getByText("미공시(§164⑦) 토글을 켜고")).toHaveCount(0);
+  expect(posted).toBe(0);
 });

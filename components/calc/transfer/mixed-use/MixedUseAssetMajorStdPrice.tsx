@@ -35,6 +35,7 @@ import {
 } from "@/lib/calc/mixed-use-part-acq-split";
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
+import { MIXED_SHARE_PHD_ERA_MESSAGE } from "@/lib/calc/transfer-tax-validate-mixed-use-share";
 
 interface Props {
   asset: AssetForm;
@@ -310,13 +311,18 @@ export function MixedUseAssetMajorStdPrice({
             // 축 B 지분 카드도 켜는 쪽만 막는다 — 3시점 입력의 양도시 칸이 물건 단위라 지분 카드에서 나눠 받지 못한다(⑧ `transfer-tax-validate-mixed-use-share.ts`와 같은 조건).
             disabled={((bgMixed && !bgDeemed && !bgPreDeemed) || shareCard) && !asset.usePreHousingDisclosure}
             disabledReason={
-              shareCard
+              shareCard && clausePhdRequired
+                ? MIXED_SHARE_PHD_ERA_MESSAGE
+                : shareCard
                 ? "겸용주택 지분 카드(둘째 이후 지분)는 개별주택가격 미공시 환산(§164⑦)을 계산하지 않습니다"
                 : "겸용주택 부담부증여는 개별주택가격 미공시 환산(§164⑦)과 함께 계산할 수 없습니다"
             }
             title={`${isDeemed163_9 ? acqLabel : "취득 당시"} 개별주택가격 미공시 (§164⑦ 3-시점 환산)`}
             description={
-              bgPreDeemed
+              // 지분 카드는 미공시 환산을 받지 않는다 — 꼭 필요한 취득이면 「켜세요」 대신 계산하지 않는다고 알린다(Q-12 a · ⑧ 같은 술어)
+              shareCard && clausePhdRequired
+                ? MIXED_SHARE_PHD_ERA_MESSAGE
+                : bgPreDeemed
                 ? "의제취득일(1985.1.1.) 전 상속·증여라 켜야 계산됩니다 — 주택분 의제취득일 기준시가는 §164⑦ 환산가액입니다(소득세법 시행령 §164⑦·§176조의2④)"
                 : clausePhdRequired
                 ? "상속개시일·증여일이 개별주택가격 최초 공시(2005.4.30.) 전이라 켜야 계산됩니다 — 주택분 취득당시 기준시가는 §164⑦ 환산가액이고, 그 금액으로 평가액과 비교합니다(소득세법 시행령 §164⑦·§163⑨ 단서 2호)"
