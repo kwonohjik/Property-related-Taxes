@@ -31,7 +31,7 @@ const share = (o: Over = {}) => ({ ...makeDefaultAsset(2), ...ACQ, ownershipNume
 function renderShare(p: AssetForm, s: AssetForm) {
   const { container } = render(
     <CompanionAssetCard index={1} asset={s} primaryAsset={p} bundledSaleMode="apportioned" onChange={() => {}} transferDate="2024-06-01"
-      splitMode="fractional" onFractionalToggle={() => {}} hasSiblings forceOpenAll />,
+      splitMode="fractional" onFractionalToggle={() => {}} hasSiblings />,
   );
   const sec3 = container.querySelector('[data-asset-section="3"]');
   return {
