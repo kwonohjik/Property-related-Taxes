@@ -336,6 +336,12 @@ describe("E: §10③3호 — 정비사업·리모델링으로 새로 취득한 �
     expect(evaluateRecaptureExemption(replaced({ ...na, completionDate: d("2020-01-11") }), NOTICE).exempt).toBe(true);
   });
 
+  it("V-7 확정 — 6개월 계산은 초일불산입(V-4와 같은 기준)이라 「확인 필요」 안내를 내지 않는다", () => {
+    const na = { isApartment: true, registeredAsRental: false };
+    expect(evaluateRecaptureExemption(replaced({ ...na, completionDate: d("2020-01-10") }), NOTICE).notices).toEqual([]);
+    expect(evaluateRecaptureExemption(replaced({ ...na, completionDate: d("2020-01-11") }), NOTICE).notices).toEqual([]);
+  });
+
   it("시기 — 고지일 2020-10-06 이전이면 적용 안 함", () => {
     expect(evaluateRecaptureExemption(replaced({ isApartment: true, registeredAsRental: false }), d("2020-10-06")).failReasons).toEqual([COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_23HO_NOT_IN_FORCE]);
   });

@@ -108,25 +108,25 @@ function evaluate3ho(
   noticeDate: Date,
 ): RecaptureExemptionResult {
   if (noticeDate < T_23HO) return NOT_EXEMPT([X.RECAPTURE_EXEMPT_23HO_NOT_IN_FORCE]);
-  const notices = [X.RECAPTURE_NOTICE_3HO_PROVISO_COUNT];
   const h = input.newHousing;
-  // 단서 — 준공일부터 6개월이 되는 날이 2020.7.10. 이전이면 3호 제외(그 날 당일 포함)
+  // 단서 — 준공일부터 6개월이 되는 날이 2020.7.10. 이전이면 3호 제외(그 날 당일 포함).
+  // 「6개월이 되는 날」= 초일불산입(민법 §157 본문) → 준공일의 6개월 뒤 같은 날짜, 없으면 그 달 말일(민법 §160③) — V-7 사용자 결정(V-4와 같은 기준)
   if (addMonths(startOfDay(h.completionDate), 6) <= T_3HO_PROVISO_END) {
-    return NOT_EXEMPT([X.RECAPTURE_EXEMPT_3HO_BEFORE_PROVISO], notices);
+    return NOT_EXEMPT([X.RECAPTURE_EXEMPT_3HO_BEFORE_PROVISO]);
   }
   const app = h.application;
   const isGa =
     !!app && app.kind !== "other" && startOfDay(app.date) >= T_3HO_GA_FROM;
   // 나목 — 아파트(당초가 단기민간임대면 모든 주택)이면서 임대사업자 등록을 하지 않았을 것
   const isNa = (h.isApartment || input.originalKind === "short_term") && !h.registeredAsRental;
-  if (!isGa && !isNa) return NOT_EXEMPT([X.RECAPTURE_EXEMPT_3HO_NO_ITEM], notices);
+  if (!isGa && !isNa) return NOT_EXEMPT([X.RECAPTURE_EXEMPT_3HO_NO_ITEM]);
   return {
     exempt: true,
     clause: isGa ? "10③3호 가목" : "10③3호 나목",
     legalBasis: X.RECAPTURE_EXEMPT_REPLACEMENT_HOUSING,
     fromTaxYear: null,
     failReasons: [],
-    notices,
+    notices: [],
   };
 }
 
