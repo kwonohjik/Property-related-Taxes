@@ -133,11 +133,14 @@ describe.each([["상속", INH], ["증여", GIFT]] as const)("OS — %s 소유자
     expect([r.fields, r.status, r.tax]).toEqual([[], 200, CONTROL.land_only]);
   });
 
-  it("⑧ 용도변경 병용 — 남은 분리 플래그는 「서로 다른 시점에 취득」으로 막지 않는다(매매 별개 취득은 그대로 막는다)", () => {
+  it("⑧ 용도변경 병용 — 남은 분리 플래그만으로는 막지 않는다 · 소유자 분리 자체는 분리 계산이라 막는다(2026-11-17) · 매매 별개 취득은 그대로 막는다", () => {
     const conv = { hasNonHousingConversion: true, residentialUseStartDate: "2018-01-01", hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "2010-01-01" };
     const a = { ...makeDefaultAsset(1), ...B, selfOwns: "land_only", ...conv } as AssetForm;
-    expect(validateUsageConversion(a, "자산") ?? "").not.toContain("서로 다른 시점");
-    expect(validateUsageConversion({ ...a, acquisitionCause: "purchase", selfOwns: "both" } as AssetForm, "자산") ?? "").toContain("서로 다른 시점");
+    // 남은 플래그만(토지·건물 모두 본인 · 상속·증여 호스트) — ④가 토지 취득일을 싣지 않아 분리 계산이 아니다
+    expect(validateUsageConversion({ ...a, selfOwns: "both" } as AssetForm, "자산")).toBeNull();
+    // 소유자 분리는 ④가 토지 취득일(= 취득일)을 실어 엔진이 나눠 계산한다 — 종전 통과 → 용도변경이 조용히 빠졌다(실측 증여 토지만 본인 토지 60%)
+    expect(validateUsageConversion(a, "자산") ?? "").toContain("토지·건물을 나눠 계산하는 자산");
+    expect(validateUsageConversion({ ...a, acquisitionCause: "purchase", selfOwns: "both" } as AssetForm, "자산") ?? "").toContain("토지·건물을 나눠 계산하는 자산");
   });
 
   it.each([[false], [true]] as const)("⑦ 신고서 토지 열 — 남은 옛 토지 취득일(분리 플래그 %s)이 아니라 계산과 같은 날짜·보유기간", async (sep) => {

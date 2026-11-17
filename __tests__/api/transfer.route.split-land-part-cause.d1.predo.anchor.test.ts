@@ -34,6 +34,7 @@ import { propertySchema } from "@/lib/api/transfer-tax-schema";
 import { validateLandPartCause } from "@/lib/calc/transfer-tax-validate-split";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { USAGE_CONVERSION_SPLIT_UNSUPPORTED_MESSAGE } from "@/lib/tax-engine/usage-conversion-split-scope";
 
 const req = (b: object) =>
   new NextRequest("http://localhost/api/calc/transfer", {
@@ -292,11 +293,12 @@ describe("D1-6 결합 제외 — 현행 실측 (설계 §3 표)", () => {
     expect(r.determinedTax).toBe(0);
   });
 
-  it("D1-6c [무관] 공익수용·비주택→주택 용도변경: 원인은 독립으로 작동 — 133,060,000 그대로(엔진이 두 축을 교차해 읽는 곳 없음)", async () => {
+  it("D1-6c 공익수용: 원인은 독립으로 작동 — 133,060,000 그대로 · 용도변경은 분리 계산과 함께 400(2026-11-17 — 종전 200·133,060,000은 용도변경이 조용히 빠진 값)", async () => {
     const ex = await post({ ...OH, ...CAUSE, transferCause: "public_expropriation" });
     const cv = await post({ ...OH, ...CAUSE, nonHousingToHousingConversion: { residentialUseStartDate: "2020-01-01", residenceMonthsTrimmed: 0 } });
     expect(ex.r.determinedTax).toBe(133_060_000);
-    expect(cv.r.determinedTax).toBe(133_060_000);
+    expect(cv.status).toBe(400);
+    expect(messages(cv.body)).toContain(USAGE_CONVERSION_SPLIT_UNSUPPORTED_MESSAGE);
   });
 
   it("D1-6d [전환 D1-1 · R-X3] 가업상속 입력 + 토지 상속 → 400 — 종전 200·153,860,000(가업상속 입력 침묵 무시)", async () => {

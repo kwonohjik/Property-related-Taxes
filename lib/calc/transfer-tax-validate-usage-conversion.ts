@@ -10,7 +10,20 @@
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
-import { normalizeBuildingCauseInputs } from "./transfer-land-part-cause";
+import { buildSplitPayload } from "./transfer-tax-api-split";
+import { phdFlagEffective } from "./phd-toggle-scope";
+import { parseAmount } from "./number-parse";
+
+/** ④ `buildSplitPayload`가 이 자산(첫 자산)에 토지 취득일을 싣는가 — 실리면 엔진이 토지·건물을 나눠 계산한다(`calcSplitGain` 진입 조건). */
+function sendsLandAcquisitionDate(asset: AssetForm, transferDate: string | undefined): boolean {
+  const payload = buildSplitPayload(asset, {
+    isBurdenedGift: asset.transferType === "burdened_gift",
+    usesPhd: phdFlagEffective(asset),
+    ratioed: (v) => parseAmount(v) || undefined,
+    primaryCtx: { transferDate },
+  });
+  return !!payload.landAcquisitionDate;
+}
 
 /**
  * 비주택 → 주택 용도변경 (「소득세법」 §95⑤·⑥ · 시행령 §154⑤ 단서) 전용 검증.
@@ -67,10 +80,12 @@ export function validateUsageConversion(
     );
   }
 
-  // C-19 — 토지·건물 분리취득은 파트별 공제율을 따로 내므로 §95⑤ 혼합과 병용할 수 없다.
-  // stale 분리 입력(화면에 끌 토글이 없는 상속·증여 호스트 잔재)·상속·증여 소유자 분리는 ④가 분리 없이 보내므로 막지 않는다(같은 사본).
-  if (normalizeBuildingCauseInputs(asset).hasSeperateLandAcquisitionDate === true) {
-    return unsupported("토지·건물을 서로 다른 시점에 취득한 자산입니다.");
+  // C-19 — 토지·건물을 나눠 계산하는 자산은 §95⑤ 혼합과 병용할 수 없다(엔진이 분리 경로에서 §95⑤를 건너뛴다).
+  // 판정은 ④가 토지 취득일을 싣는가 그 자체다(`buildSplitPayload` — 같은 함수) — 엔진 `calcSplitGain`·⑫가 같은 사실(`usageConversionSplitConflict`)로 막는다.
+  // 종전에는 별개 취득 토글만 봐서, 토글 없이 토지 취득일이 실리는 상속·증여 소유자 분리·파트 이월과세·배율 초과분 분리·PHD가 통과하고
+  // 용도변경이 조용히 빠졌다(2026-11-17 실측). stale 분리 입력(화면에 끌 토글이 없는 상속·증여 호스트 잔재)은 ④가 보내지 않으므로 그대로 통과한다.
+  if (sendsLandAcquisitionDate(asset, formTransferDate)) {
+    return unsupported("토지·건물을 나눠 계산하는 자산입니다(토지·건물 취득일 다름 · 소유자 다름 · 배율 초과분 분리 · 개별주택가격 미공시 환산 등).");
   }
 
   // C-24 — 부담부증여는 채무 인수분 안분 축이 별도다.
