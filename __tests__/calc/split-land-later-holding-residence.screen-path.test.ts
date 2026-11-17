@@ -169,8 +169,14 @@ describe("④⑬ → ⑫⑭ → 엔진 — S2 화면 경로", () => {
     expect(b).not.toHaveProperty("landHoldingResidenceMonths");
   });
 
-  it("짝 — 소유자 분리(토지만 본인)·별개 취득 토글 OFF 잔재: 새 키 없음", async () => {
-    expect(await body(asset({ selfOwns: "land_only" } as Partial<AssetForm>))).not.toHaveProperty("landHoldingResidenceMonths");
+  it("🔑 토지만 본인(V-4): 토글 없이도 토지 취득일이 실려 같은 겹침 58개월을 싣는다 · 건물만 본인은 키 없음", async () => {
+    const lo = { selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false } as Partial<AssetForm>;
+    expect((await body(asset(lo))).landHoldingResidenceMonths).toBe(58);
+    expect((await body(asset({ ...lo, hasSeperateLandAcquisitionDate: false } as Partial<AssetForm>))).landHoldingResidenceMonths).toBe(58);
+    expect(await body(asset({ selfOwns: "building_only" } as Partial<AssetForm>))).not.toHaveProperty("landHoldingResidenceMonths");
+  });
+
+  it("짝 — 별개 취득 토글 OFF 잔재(토지·건물 모두 본인): 새 키 없음", async () => {
     // 토글을 껐으면 토지 취득일 잔재를 싣지 않는다 — 분리 계산 자체가 아니다
     expect(await body(asset({ hasSeperateLandAcquisitionDate: false } as Partial<AssetForm>))).not.toHaveProperty("landHoldingResidenceMonths");
   });
@@ -192,7 +198,8 @@ describe("④ leaf — buildLandHoldingResidencePayload", () => {
     expect(buildLandHoldingResidencePayload(periods as never, sent)).toEqual({ landHoldingResidenceMonths: 58 });
     expect(buildLandHoldingResidencePayload(direct("178") as never, sent)).toEqual({});
     expect(buildLandHoldingResidencePayload(periods as never, { ...sent, landAcquisitionDate: "2010-03-01" })).toEqual({});
-    expect(buildLandHoldingResidencePayload(periods as never, { ...sent, selfOwns: "land_only" })).toEqual({});
+    expect(buildLandHoldingResidencePayload(periods as never, { ...sent, selfOwns: "land_only" })).toEqual({ landHoldingResidenceMonths: 58 });
+    expect(buildLandHoldingResidencePayload(periods as never, { ...sent, selfOwns: "building_only" })).toEqual({});
     expect(buildLandHoldingResidencePayload(periods as never, { propertyType: "housing", buildingAcquisitionDate: "2010-03-01" })).toEqual({});
     // 분리 계산 대상 자산(주택·건물)이 아니면 싣지 않는다 — 일반건물·겸용주택은 ⑫가 막는다
     expect(buildLandHoldingResidencePayload(periods as never, { ...sent, propertyType: "general_building" })).toEqual({});
@@ -231,6 +238,7 @@ describe("⑤ 표시 술어 ≡ ④ 전송 — landHoldingResidenceApplies(폼) 
     ["같은 날", { landAcquisitionDate: "2010-03-01" }],
     ["별개 취득 토글 OFF(토지 취득일 잔재)", { hasSeperateLandAcquisitionDate: false } as Partial<AssetForm>],
     ["토지만 본인", { selfOwns: "land_only" } as Partial<AssetForm>],
+    ["토지만 본인 · 별개 취득 토글 OFF(④는 토지 취득일을 그대로 싣는다)", { selfOwns: "land_only", hasSeperateLandAcquisitionDate: false } as Partial<AssetForm>],
     ["건물만 본인", { selfOwns: "building_only" } as Partial<AssetForm>],
     ["일반건물", { assetKind: "general_building" } as Partial<AssetForm>],
     ["건물(비주택)", { assetKind: "building" } as Partial<AssetForm>],

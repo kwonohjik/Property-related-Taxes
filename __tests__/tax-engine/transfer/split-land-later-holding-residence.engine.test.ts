@@ -165,8 +165,15 @@ describe("짝 — 이 규칙이 걸리지 않는 입력은 종전과 같다", ()
     expect(capNote(r)).toHaveLength(0);
   });
 
-  it("소유자 분리(토지만 본인)는 범위 밖 — 상한을 걸지 않는다", () => {
-    const sp = run({ selfOwns: "land_only" });
+  it("🔑 토지만 본인(건물은 같은 세대원)도 같은 규칙 — 상한·고지(V-4 · 사용자 결정 2026-11-17 · 수정 전 상한 없음·고지 0)", () => {
+    const sp = run({ selfOwns: "land_only", buildingOwnerSameHousehold: true, buildingOwnerHouseholdMerged: false });
+    expect(sp.splitDetail!.land.holdingResidenceCap).toBeDefined();
+    expect(sp.splitDetail!.land.residenceYears).toBe(4);
+    expect(capNote(sp)).toHaveLength(1);
+  });
+
+  it("짝 — 건물만 본인은 토지 파트가 없어 상한·고지 없음", () => {
+    const sp = run({ selfOwns: "building_only" });
     expect(sp.splitDetail!.land.holdingResidenceCap).toBeUndefined();
     expect(capNote(sp)).toHaveLength(0);
   });
@@ -261,11 +268,12 @@ describe("함께 양도 부수토지 카드(L-1b) — 카드를 주택보다 나
 });
 
 describe("leaf — 게이트·검증", () => {
-  it("landAcquiredAfterBuilding: 엄격 비교(같은 날 아님) · 소유자 분리 제외 · 날짜 빈칸 false", () => {
+  it("landAcquiredAfterBuilding: 엄격 비교(같은 날 아님) · 건물만 본인 제외(토지만 본인은 포함 — V-4) · 날짜 빈칸 false", () => {
     expect(landAcquiredAfterBuilding({ landAcquisitionDate: "2020-03-01", buildingAcquisitionDate: "2010-03-01" })).toBe(true);
     expect(landAcquiredAfterBuilding({ landAcquisitionDate: "2010-03-01", buildingAcquisitionDate: "2010-03-01" })).toBe(false);
     expect(landAcquiredAfterBuilding({ landAcquisitionDate: "2010-03-02", buildingAcquisitionDate: "2010-03-01" })).toBe(true);
-    expect(landAcquiredAfterBuilding({ landAcquisitionDate: "2020-03-01", buildingAcquisitionDate: "2010-03-01", selfOwns: "land_only" })).toBe(false);
+    expect(landAcquiredAfterBuilding({ landAcquisitionDate: "2020-03-01", buildingAcquisitionDate: "2010-03-01", selfOwns: "land_only" })).toBe(true);
+    expect(landAcquiredAfterBuilding({ landAcquisitionDate: "2020-03-01", buildingAcquisitionDate: "2010-03-01", selfOwns: "building_only" })).toBe(false);
     expect(landAcquiredAfterBuilding({ landAcquisitionDate: "2020-03-01", buildingAcquisitionDate: "2010-03-01", selfOwns: "both" })).toBe(true);
     expect(landAcquiredAfterBuilding({ landAcquisitionDate: undefined, buildingAcquisitionDate: "2010-03-01" })).toBe(false);
   });
@@ -281,7 +289,8 @@ describe("leaf — 게이트·검증", () => {
     expect(resolveLandHoldingResidence({ ...base, residencePeriodMonths: 178 }, "both")).toEqual({ applies: true, months: 58, capped: true, landHoldingMonths: 58 });
     expect(resolveLandHoldingResidence({ ...base, residencePeriodMonths: 30 }, "both")).toEqual({ applies: true, months: 30, capped: false, landHoldingMonths: 58 });
     expect(resolveLandHoldingResidence({ ...base, residencePeriodMonths: 178, landHoldingResidenceMonths: 40 }, "both")).toEqual({ applies: true, months: 40, capped: false, landHoldingMonths: 58 });
-    expect(resolveLandHoldingResidence({ ...base, residencePeriodMonths: 178 }, "land_only")).toEqual({ applies: false, months: 178, capped: false });
+    expect(resolveLandHoldingResidence({ ...base, residencePeriodMonths: 178 }, "land_only")).toEqual({ applies: true, months: 58, capped: true, landHoldingMonths: 58 });
+    expect(resolveLandHoldingResidence({ ...base, residencePeriodMonths: 178 }, "building_only")).toEqual({ applies: false, months: 178, capped: false });
     expect(resolveLandHoldingResidence({ ...base, landAcquisitionDate: D("2000-03-01"), residencePeriodMonths: 178 }, "both")).toEqual({ applies: false, months: 178, capped: false });
   });
 
@@ -303,11 +312,12 @@ describe("leaf — 게이트·검증", () => {
     expect(collectLandHoldingResidenceIssues(facts({ landHoldingResidenceMonths: 178 }))).toEqual([]);
   });
 
-  it("게이트 — 토지가 나중 취득이 아니면(같은 날·먼저·소유자 분리·분리 대상 아님) 막는다", () => {
+  it("게이트 — 토지가 나중 취득이 아니면(같은 날·먼저·건물만 본인·분리 대상 아님) 막는다", () => {
+    expect(collectLandHoldingResidenceIssues(facts({ landHoldingResidenceMonths: 10, selfOwns: "land_only" }))).toEqual([]); // 토지만 본인은 받는다(V-4)
     for (const o of [
       { landAcquisitionDate: "2010-03-01" },
       { landAcquisitionDate: "2000-03-01" },
-      { selfOwns: "land_only" },
+      { selfOwns: "building_only" },
       { isSplitable: false },
     ]) {
       const [issue] = collectLandHoldingResidenceIssues(facts({ landHoldingResidenceMonths: 10, ...o }));
