@@ -50,6 +50,7 @@ import { bgBundleWinnerModes } from "./burdened-gift-bundle-winner";
 import { bgBundleMixedWinnerMessage } from "./burdened-gift-bundle-winner";
 import type { BgWinnerMode } from "./burdened-gift-bundle-winner";
 import { bgNonSupplementaryWinnerUnsupported } from "./burdened-gift-collateral-win";
+import { isMixedBurdenedGift, mixedBgBundleWinnerField } from "./burdened-gift-mixed-use-scope";
 import { bgUnsupportedWinnerCause } from "./burdened-gift-collateral-win";
 import { bgUnsupportedWinnerReason } from "./burdened-gift-collateral-win";
 import { bgRtmiBundleWinnerComputable } from "./bg-rtmi-std-acq";
@@ -387,6 +388,8 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
           issues.push({
             step,
             assetIndex: i,
+            // 겸용주택은 승자를 만든 채무 칸으로 보낸다(엔진 MB-20과 같은 앵커) — 다른 종류는 종전대로 자산 카드로 후퇴한다.
+            ...(isMixedBurdenedGift(form.assets[i]) ? { field: mixedBgBundleWinnerField(form.assets[i]) } : {}),
             message: `자산 ${i + 1}: 증여재산 평가액이 ${kind}으로 결정되는 ${bgUnsupportedWinnerReason(form.assets[i])} 자산은 함께 양도와 같이 계산하지 않습니다. ${bgUnsupportedWinnerCause(form.assets[i])}`,
           });
         });

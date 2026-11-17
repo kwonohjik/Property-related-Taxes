@@ -176,8 +176,11 @@ export function computeTransferPerAssetSummary(
     const a = neutralizeCarryoverDonorSplitForCompanion(axisBBundle && i > 0 ? mergePrimaryBasic(rawAsset, primary) : rawAsset, i > 0);
     const ratio = ownershipRatioOf(a);
     const fractional = ratio < 1;
-    /** 겸용 × 부담부증여(주 자산) — 취득 입력·계약금액이 아니라 BG 블록·엔진 echo가 정본이다. */
-    const bgMixed = i === 0 && isMixedBurdenedGift(a);
+    /**
+     * 겸용 × 부담부증여 — 취득 입력·계약금액이 아니라 BG 블록·엔진 echo가 정본이다.
+     * 단건은 주 자산(겸용은 단건 전제)이고, 함께 양도 묶음은 자산마다다(PR-B) — 묶음의 엔진 echo는 `aggregated.mixedUseBgDetailsByAsset[자산 id]`(주 자산 키 `primary`)에 있다.
+     */
+    const bgMixed = isMixedBurdenedGift(a);
 
     /**
      * 전용 환산 프리뷰(일반건물·상가) — 계산 **전** 산출값. 산식은 재구현하지 않고 route가 쓰는
@@ -199,6 +202,11 @@ export function computeTransferPerAssetSummary(
     // (companion만 실제 assetId 유지) → i===0 은 "primary"로 매칭. 미러링 누락 시
     // 주 자산이 bundledMatch 실패 → salePending("계산 후 표시")로 잘못 빠짐.
     const bundledAssetId = i === 0 ? "primary" : a.assetId;
+    /** 겸용 부담부증여 4부분 명세(엔진 echo) — 단건은 겸용 결과, 묶음은 자산별 슬롯. 계산 전·막힌 조합은 undefined. */
+    const bgMixedDetail = bgMixed
+      ? (bundledResult ? bundledResult.aggregated?.mixedUseBgDetailsByAsset?.[bundledAssetId] : mixedResult?.burdenedGift)
+      : undefined;
+    const bgMixedParts = bgMixedDetail ? Object.values(bgMixedDetail.perPart) : undefined;
     const bundledMatch = bundledResult?.apportionment.apportioned.find((p) => p.assetId === bundledAssetId);
     // 엔진이 이 자산에 **실제로 쓴** 취득가액·필요경비(E-U1 이후 분리 자산도 파트 합) — 취득·경비 두 칸이 같은 축을 읽는다.
     const bundledProperty = bundledResult?.aggregated?.properties?.find((p) => p.propertyId === bundledAssetId);
@@ -284,8 +292,7 @@ export function computeTransferPerAssetSummary(
     } else if (bgMixed) {
       // 겸용 × 부담부증여 — 양도가액은 채무액을 부분별로 안분한 **엔진 값**이다(A×B/C를 클라이언트에서 다시 계산하지 않는다).
       // 계산 전에는 «계산 후 표시», 계산 후에는 엔진 echo(4부분 양도가액 합)를 쓴다.
-      const bg = mixedResult?.burdenedGift;
-      if (bg) salePrice = Object.values(bg.perPart).reduce((n, p) => n + p.transferPrice, 0);
+      if (bgMixedParts) salePrice = bgMixedParts.reduce((n, p) => n + p.transferPrice, 0);
       else salePending = true;
     } else if (usesSelfComputedTransferPrice(a)) {
       /**
@@ -371,8 +378,15 @@ export function computeTransferPerAssetSummary(
       if (bgMixed) acqPending = false;
     } else if (bgMixed) {
       // 겸용 × 부담부증여 — 숨은 stale 취득 입력(`fixedAcquisitionPrice` 등)을 보이지 않는다. 취득가액은 채무비율 적용 후 엔진 값이다.
-      acqPrice = 0;
-      acqPending = true;
+      // 함께 양도 묶음은 결과가 오면 그 자산의 4부분 취득가액 합이다(엔진이 §159로 정한 값이라 감가상각 등을 다시 빼지 않는다).
+      if (bgMixedParts) {
+        acqPrice = bgMixedParts.reduce((n, p) => n + p.acquisitionPrice, 0);
+        acqPending = false;
+        depAlreadyDeducted = true;
+      } else {
+        acqPrice = 0;
+        acqPending = true;
+      }
     } else if (!result && a.isMixedUseHouse && (a.acquisitionCause === "inheritance" || a.acquisitionCause === "gift")) {
       /**
        * 겸용 × 상속·증여(§163⑨) — 취득가액은 겸용 엔진이 주택·상가 기준시가 섹션의 상속개시일·증여일 평가액으로 정한다
@@ -559,9 +573,13 @@ export function computeTransferPerAssetSummary(
       expense =
         h.landAppraisalDed + h.buildingAppraisalDed + c.landAppraisalDed + c.buildingAppraisalDed;
     } else if (bgMixed) {
-      // 겸용 × 부담부증여 계산 전 — 개산공제·실비 안분은 취득시 기준시가 × 채무비율이라 엔진만 안다.
-      expense = 0;
-      expensePending = true;
+      // 겸용 × 부담부증여 계산 전 — 개산공제·실비 안분은 취득시 기준시가 × 채무비율이라 엔진만 안다. 묶음은 결과가 오면 4부분 개산공제·실비 합이다.
+      if (bgMixedParts) {
+        expense = bgMixedParts.reduce((n, p) => n + p.estimatedDeduction, 0);
+      } else {
+        expense = 0;
+        expensePending = true;
+      }
     } else if (bundledMatch) {
       // 엔진이 자산별로 **실제 차감한** 필요경비 — 안분 결과(`allocatedExpenses`)는 입력 경비만
       // 담고 개산공제(§163⑥)는 그 뒤 단건 엔진이 더하므로, 추계 자산에서 0으로 보였다(F-14).
@@ -632,9 +650,11 @@ export function computeTransferPerAssetSummary(
     const saleTransferNote = blockedMixedBg
       ? "함께 양도 불가"
       : bgMixed
-      ? mixedResult?.burdenedGift
-        ? mixedBgNoTransferNote(mixedResult.burdenedGift.debtAttribution.housingDebt, mixedResult.burdenedGift.debtAttribution.commercialDebt)
-        : mixedBgNoTransferNoteOfForm(a)
+      ? bgMixedDetail
+        ? mixedBgNoTransferNote(bgMixedDetail.debtAttribution.housingDebt, bgMixedDetail.debtAttribution.commercialDebt)
+        : isSingle
+          ? mixedBgNoTransferNoteOfForm(a)
+          : undefined // 묶음은 채무를 재배분해 전부 구분 불분명으로 본다 — 입력 귀속 선언으로 계산 전 문구를 만들지 않는다
       : undefined;
 
     return {

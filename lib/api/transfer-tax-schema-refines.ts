@@ -82,6 +82,9 @@ export function addPropertyRefines(
     ownershipRatio?: number;
     burdenedGiftInfo?: unknown;
     companionAssets?: ReadonlyArray<unknown>;
+    /** 축 B 판정(`isAxisBBundle`) — 겸용 × 부담부증여는 지분 분할 취득만 막는다 */
+    fractionalSplitBundle?: boolean;
+    totalPropertyTransferPrice?: number;
     decedentAcquisitionDate?: string;
     donorAcquisitionDate?: string;
     giftSameHouseholdContinuous?: boolean;

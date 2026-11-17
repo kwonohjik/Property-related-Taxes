@@ -85,6 +85,11 @@ interface Props {
    * 있으면 평가액·기준시가·채무비율이 물건 전체가 아니라 증여한 부분의 값임을 밝히고, 비소유 파트는 0원 줄 대신 「계산하지 않음」으로 적는다.
    */
   ownerPart?: BgOwnedPart;
+  /**
+   * 함께 양도 묶음에 겸용주택 부담부증여가 있다 — 이 명세의 「토지·건물」 줄은 묶음 합계 표시(겸용 자산의 토지분도 건물 칸에 합산)이고,
+   * 겸용 자산의 주택분·상가분 4부분 값은 자산별 겸용 명세 카드가 정본이다. 한 줄 안내만 덧붙인다.
+   */
+  mixedBundleNote?: boolean;
 }
 
 const PROPERTY_TYPE_LABEL: Record<string, string> = {
@@ -99,7 +104,7 @@ const PROPERTY_TYPE_LABEL: Record<string, string> = {
   right_to_move_in: "입주권",
 };
 
-export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, redevSec166, redevFilingAcquisition, redevFilingExpenses, redevSuccessorExpense, redevFilingSuccessor = false, successorRight = false, ownerPart }: Props) {
+export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, redevSec166, redevFilingAcquisition, redevFilingExpenses, redevSuccessorExpense, redevFilingSuccessor = false, successorRight = false, ownerPart, mixedBundleNote = false }: Props) {
   const fmt = (n: number) => n.toLocaleString("ko-KR");
   const buildingAcqLabel = successorRight
     ? "입주권 취득가"
@@ -433,6 +438,11 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
         ※ 자산별 양도가액·취득가액은 위 Max 평가액을 분모로 채무비율 안분 (소령 §159 ① 1호·2호).
         증여세는 무상이전분에 대해 수증자가 별도 신고.
       </p>
+      {mixedBundleNote && (
+        <p className="text-xs text-fuchsia-700 dark:text-fuchsia-400" data-testid="bg-bundle-mixed-note">
+          ※ 이 묶음의 겸용주택은 위 「토지·건물」 줄에서 합계로만 보입니다 — 겸용주택의 주택분·상가분 토지·건물 4부분 양도가액·취득가액은 아래 「부담부증여 명세 — 겸용주택」 카드를 보세요.
+        </p>
+      )}
     </div>
   );
 }

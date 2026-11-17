@@ -383,6 +383,7 @@ function validateAssetAcquisitionBranches(
       return validateMixedUseBurdenedGift(
         asset, label, form, formTransferDate,
         contractAssumedDebtTotal !== undefined || isFractionalSplitAxis === true,
+        isFractionalSplitAxis === true,
       );
     }
     return validateMixedUseAsset(asset, label, formTransferDate);

@@ -185,6 +185,27 @@ export function mixedBgDebtAttribution(a: AssetForm): MixedBgDebtAttribution {
   return out;
 }
 
+/**
+ * 함께 양도 묶음 안 겸용 — 이 자산에 **남아 있는 「구분 불분명」 아닌 귀속 선언**의 점프 앵커(엔진 MB-19). 없으면 undefined.
+ * 묶음은 채무를 신고 단위로 재배분해 전부 「구분 불분명」으로 보므로(Q-3 ①) 주택·상가·나누어 입력 선언은 받지 않는다.
+ * 귀속 카드(묶음용)는 이 값이 있을 때만 라디오를 보여 «구분 불분명»으로 바꿀 길을 낸다 — 저장값을 자동으로 지우지 않는다.
+ */
+export function mixedBgBundleAttrFixField(a: AssetForm): "bgDepositAttribution" | "bgMortgageAttribution" | undefined {
+  for (const item of ["deposit", "mortgage"] as const) {
+    const it = itemOf(a, item);
+    if (it.total > 0 && (it.mode === "housing" || it.mode === "commercial" || it.mode === "split")) return it.modeField;
+  }
+  return undefined;
+}
+
+/**
+ * 함께 양도 묶음 안 겸용 — 비보충 승자(담보 §66·임대 §61⑤ · 엔진 MB-20 · ⑧ 묶음 승자 게이트)를 만든 채무 칸의 점프 앵커.
+ * 담보차입금이 있으면 그 칸, 담보 없이 임대보증금만 있으면 보증금 칸이다. ⑧ 두 곳(엔진 이슈·묶음 게이트)이 같은 칸을 가리키게 한 곳에 둔다.
+ */
+export function mixedBgBundleWinnerField(a: AssetForm): "bgMortgageDebtAmount" | "bgLendingDepositTotal" {
+  return !(parseAmount(a.bgMortgageDebtAmount) > 0) && parseAmount(a.bgLendingDepositTotal) > 0 ? "bgLendingDepositTotal" : "bgMortgageDebtAmount";
+}
+
 /** 귀속 오류 문장 — ⑧과 귀속 카드 인라인 경고가 같은 문장을 쓴다. */
 export function mixedBgDebtAttrMessage(issue: MixedBgDebtAttrIssue): string {
   const label = BG_ATTR_ITEM_LABEL[issue.item];

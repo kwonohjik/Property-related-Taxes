@@ -42,6 +42,11 @@ export const MIXED_BG_SHARE_NOTICE =
   "겸용주택 공유지분 부담부증여는 직접 다룬 해석례가 확인되지 않았습니다. 「소득세법 시행령」 제156조 제1항의 «면적 비율»을 지분율로 읽어 12억원 고가주택 판정·안분 가액을 물건 전체로 환산했고, " +
   "증여가액·채무비율·취득가액은 지분 증여가액 기준으로 계산했습니다 — 확인이 필요합니다.";
 
+/** 겸용 × 함께 양도 부담부증여 고지 — 채무 재배분·귀속·증여세 1회. */
+export const MIXED_BG_BUNDLE_NOTICE =
+  "함께 양도(여러 물건) 묶음 안의 겸용주택 부담부증여입니다 — 신고 단위 채무를 자산가액(증여가액) 비율로 재배분한 몫을 이 겸용주택의 인수 채무로 보았고(「소득세법 시행령」 제159조 제1항·제2항의 단일 채무비율), " +
+  "그 채무는 구분 불분명으로 보아 주택·상가 증여가액 비율로 나누었습니다. 증여세는 증여계약 전체로 한 번 계산합니다. 이 묶음 안 겸용주택의 귀속·재배분은 직접 다룬 해석례가 확인되지 않아 확인이 필요합니다.";
+
 /** 엔진 진입 가드 + 준비 — 이슈가 있으면 `INVALID_INPUT`으로 throw (⑫·⑧과 같은 collector 결과). */
 export function prepareMixedBurdenedGiftOrThrow(src: MixedBgSource): MixedBgPrepared {
   const { issues, prepared } = analyzeMixedBurdenedGift(src);
@@ -243,13 +248,16 @@ export function applyMixedBurdenedGift(args: {
 
   const mainText = asset.residentialFloorArea > asset.nonResidentialFloorArea;
   const gratuitousPortion = bg.value.whole - bg.debt.total;
-  const giftTax = buildBurdenedGiftGiftTax({
-    info: bg.info,
-    giftDate: transferDate,
-    giftValuationMax: bg.value.whole,
-    assumedDebtAmount: bg.debt.total,
-    gratuitousPortion,
-  });
+  // 함께 양도 묶음 — 증여세는 계약 단위 1회(`aggregated.burdenedGift`)라 자산별로 계산하지 않는다(카드별로 쪼개면 증여재산공제가 N번 차감된다 · Q-7).
+  const giftTax = bg.inBundle
+    ? undefined
+    : buildBurdenedGiftGiftTax({
+        info: bg.info,
+        giftDate: transferDate,
+        giftValuationMax: bg.value.whole,
+        assumedDebtAmount: bg.debt.total,
+        gratuitousPortion,
+      });
 
   const breakdown: MixedUseBurdenedGiftBreakdown = {
     assumedDebtAmount: bg.debt.total,
@@ -304,8 +312,10 @@ export function applyMixedBurdenedGift(args: {
   // ── 고지 — 확인 필요 사항은 숨기지 않는다 ──
   const notices: string[] = [
     ...(bg.shareRatio !== undefined ? [MIXED_BG_SHARE_NOTICE] : []),
+    ...(bg.inBundle ? [MIXED_BG_BUNDLE_NOTICE] : []),
     `12억원 고가주택 판정·안분은 양도로 보는 채무액이 아니라 ${bg.shareRatio !== undefined ? "물건 전체 " : ""}증여가액(${bg.value.wholeJudgment.toLocaleString("ko-KR")}원)을 기준으로 했습니다(국심2007서2099 등 — 겸용주택을 직접 다룬 해석례는 확인되지 않아 확인이 필요합니다).`,
-    `채무 귀속은 입력하신 사실 선언(임대차계약서의 임차 대상·근저당 설정 대상 등 증빙 필요)에 따랐습니다 — ${MIXED_USE_BURDENED_GIFT.DEBT_ATTRIBUTION_RULING}.`,
+    // 묶음은 귀속 입력을 받지 않는다(재배분 채무 전부 구분 불분명 — 계획서 Q-3 ①) — 「입력하신 사실 선언」 고지는 단건만.
+    ...(bg.inBundle ? [] : [`채무 귀속은 입력하신 사실 선언(임대차계약서의 임차 대상·근저당 설정 대상 등 증빙 필요)에 따랐습니다 — ${MIXED_USE_BURDENED_GIFT.DEBT_ATTRIBUTION_RULING}.`]),
     "증여세 평가에 쓰는 상가건물 기준시가는 양도세 기준시가와 같다고 보았습니다.",
   ];
   if (bg.debt.unallocated > 0) {
@@ -345,7 +355,11 @@ export function applyMixedBurdenedGift(args: {
   if (mainText) {
     notices.push("주택 연면적이 주택 외 부분보다 커 건물 전부를 주택으로 보는 경우(소령 §154③ 본문)에도 채무 귀속에 따라 양도로 보는 부분을 나누어 계산했습니다 — 이 경우를 직접 다룬 해석례는 확인되지 않아 확인이 필요합니다.");
   }
-  return { housing, commercial, housingAcqTotal: acq.housingLand + acq.housingBuilding, proviso, breakdown, notices };
+  // 묶음 안 겸용은 서브엔진 결과(`warnings`)가 합산에 닿지 않는다(파트 카드만 합산) — 고지를 명세에 싣고 route가 집계 경고로 올린다.
+  return {
+    housing, commercial, housingAcqTotal: acq.housingLand + acq.housingBuilding, proviso, notices,
+    breakdown: bg.inBundle ? { ...breakdown, bundleNotices: notices } : breakdown,
+  };
 }
 
 /** 표시용 step — 계산 과정 맨 앞에 한 줄 */

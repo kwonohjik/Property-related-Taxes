@@ -216,6 +216,8 @@ export interface CompanionBuildContext {
   onGbDetail?: Parameters<typeof buildGbCompanionItems>[3];
   /** 일반건물 부담부증여 × 이월과세 비교 단위 수집 — `buildGbCompanionItems` 참조(PR-1). */
   onGbCarryoverUnit?: Parameters<typeof buildGbCompanionItems>[4];
+  /** 겸용 컴패니언 부담부증여 4부분 명세 수집(PR-B) — `buildMixedUseCompanionItems` 참조. */
+  onMixedBgDetail?: (assetId: string, breakdown: import("@/lib/tax-engine/types/mixed-use-burdened-gift.types").MixedUseBurdenedGiftBreakdown) => void;
 }
 
 /**

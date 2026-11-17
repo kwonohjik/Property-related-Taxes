@@ -43,6 +43,7 @@ import { asReverseUnitHouse, resolveReverseAppurtenantUnit, reverseUnitHouseFact
 import { asHouseholdFactsCompanionHouse } from "./bundled-reverse-appurtenant";
 import { aggregateWithSameDayRightWarning, withSameDayRightsHeldOnItems } from "@/lib/tax-engine/one-house/same-day-right";
 import type { GbBundledAssetDetail } from "@/lib/tax-engine/types/transfer-aggregate.types";
+import type { MixedUseBurdenedGiftBreakdown } from "@/lib/tax-engine/types/mixed-use-burdened-gift.types";
 import { GB_BG_SELF_BUILT_NOTICE } from "@/lib/tax-engine/general-building-bg-penalty-signal";
 
 const AXIS_B_LATER_SHARE_RESIDENCE_NOTICE =
@@ -216,6 +217,11 @@ export function calculateBundledTransfer(
       ? apportionment.apportioned.map((a, i) => ({ ...a, allocatedSalePrice: shareRedev[i]!.settlementAmount }))
       : apportionment.apportioned;
 
+  // 겸용 부담부증여 자산별 4부분 명세(PR-B · Q-7) — 자산 id 키(주 자산 `primary`). 증여세는 `aggregated.burdenedGift` 1회.
+  const mixedBgDetailsByAsset: Record<string, MixedUseBurdenedGiftBreakdown> = {};
+  const onMixedBgDetail = (assetId: string, breakdown: MixedUseBurdenedGiftBreakdown) => {
+    mixedBgDetailsByAsset[assetId] = breakdown;
+  };
   const mixedRentalNotices: string[] = [];
   const itemsRaw: TransferTaxItemInput[] = apportioned.flatMap((a, idx) => {
     if (a.assetId === "primary") {
@@ -280,6 +286,7 @@ export function calculateBundledTransfer(
             assetId: "primary",
             assetLabel: a.assetLabel ?? "",
             allocatedSalePrice: a.allocatedSalePrice,
+            onMixedBgDetail,
             rentalResidence: { input: engineInput, onNotices: (n) => mixedRentalNotices.push(...n) },
           },
         );
@@ -376,6 +383,7 @@ export function calculateBundledTransfer(
       mixedUseCtx,
       onGbDetail,
       onGbCarryoverUnit,
+      onMixedBgDetail,
     });
     if (reverseUnit && c.assetId === reverseUnit.houseAssetId) return built.map((it) => asReverseUnitHouse(it, reverseUnit, engineInput));
     // NH-14 후속 — 첫 자산이 주택이 아닌데 이 주택이 세대·주택 현황의 기준 자산이면(④가 id를 싣는다) 본문 최상위 세대 사실은 이 주택의 것이다.
@@ -495,6 +503,12 @@ export function calculateBundledTransfer(
   }
   attachGbCarryoverUnits(calc, aggregated, gbCarryoverDrafts, gbCarryoverUnits, gbDetailsByAsset);
   if (Object.keys(gbDetailsByAsset).length > 0) aggregated.generalBuildingDetailsByAsset = gbDetailsByAsset;
+  if (Object.keys(mixedBgDetailsByAsset).length > 0) {
+    aggregated.mixedUseBgDetailsByAsset = mixedBgDetailsByAsset;
+    for (const d of Object.values(mixedBgDetailsByAsset)) {
+      for (const n of d.bundleNotices ?? []) if (!aggregated.warnings.includes(n)) aggregated.warnings.push(n);
+    }
+  }
 
   return {
     mode: "bundled" as const,

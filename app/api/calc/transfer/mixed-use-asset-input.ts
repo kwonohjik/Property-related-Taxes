@@ -137,9 +137,11 @@ export interface MixedUseAssetInputSources {
   // ── 겸용 × 부담부증여 (소령 §159) ───────────────────────────
   /**
    * 부담부증여 입력(`data.burdenedGiftInfo`) — `transferType === "burdened_gift"`일 때만 싣는다. 있으면 엔진이 겸용 BG seam을 탄다.
-   * ⚠️ 컴패니언 겸용은 `undefined`(MB-6 — ⑫가 입구에서 막는다).
+   * 묶음 안 겸용(주 자산·컴패니언)도 싣는다(PR-B) — 채무는 `assumedDebtOverride`, 취득원인은 증여자의 것(아래 `acquisitionCause`).
    */
   burdenedGift: MixedUseAssetInput["burdenedGift"];
+  /** 함께 양도 묶음 안의 겸용 BG인가(⑭ 묶음 어댑터만 `true`) — 엔진이 채무 재배분값·구분 불분명·보충적평가 승만 규칙을 적용한다(MB-19~21). */
+  burdenedGiftInBundle: MixedUseAssetInput["burdenedGiftInBundle"];
   /**
    * 취득원인 echo — 주 자산은 증여자(양도인)의 `data.acquisitionCause`, 컴패니언은 그 자산의 취득 원인(`mixed-use-part-cards.ts` — NH-14 레인에서 연결).
    * BG 가드(MB-8·9·15 · 컴패니언은 부담부증여를 열지 않아 닿지 않는다)와 STEP 0.45 감면주택 중과 배제의 취득 원인 게이트가 읽는다.
@@ -288,6 +290,7 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     isSelfCultivatedExpropriatedLand: s.isSelfCultivatedExpropriatedLand,
     preHousingDisclosure: phdInput,
     burdenedGift: s.burdenedGift,
+    burdenedGiftInBundle: s.burdenedGiftInBundle,
     acquisitionCause: s.acquisitionCause,
     inheritedPresaleCompletedByHeir: s.inheritedPresaleCompletedByHeir,
     // 엔진 내부 전용(§163⑨ 자산 합계 비교가 후보로 다시 계산할 때만 켠다 — `mixed-use-sec163-9-compare.ts`). 요청으로는 받지 않는다.

@@ -421,7 +421,7 @@ export const propertySchema = z
       }
 
       // ── 컴패니언별 acquisitionCause 검증 — 별도 파일로 분리 (800줄 정책, F16) ──
-      addCompanionAcquisitionCauseRefines(companions, data.transferDate, ctx);
+      addCompanionAcquisitionCauseRefines(companions, data.transferDate, ctx, fullFractionalBundle);
       // ── 일체 주택 본인 신축 × 건물분 가산세 입력(Q-12) — 닿을 수 없는 컴패니언 조합은 400 (단건·다건은 `addPropertyRefines`) ──
       companions.forEach((c, i) =>
         refineSelfBuiltHousing(

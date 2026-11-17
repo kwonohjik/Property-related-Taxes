@@ -743,6 +743,12 @@ export interface AggregateTransferResult {
    */
   generalBuildingDetailsByAsset?: Record<string, GbBundledAssetDetail>;
   /**
+   * 함께 양도 묶음의 **겸용주택 × 부담부증여** 자산별 4부분 명세(`MixedUseBurdenedGiftBreakdown`) — 키 = 자산 id(주 자산 `primary` · 컴패니언 `assetId`). 부담부증여인 겸용 자산만 있다.
+   * 자산별 `giftTax`는 비어 있다 — 증여세는 계약 단위 1회(`burdenedGift`)다. 채무 귀속·채무비율·양도가액·취득가액 4부분은 이 슬롯이 맞는 값이고
+   * (`burdenedGift.perAsset`의 토지·건물 2부분은 묶음 표시용 근사다) 결과 카드가 겸용 BG 명세로 그린다(PR-B · 계획서 Q-7).
+   */
+  mixedUseBgDetailsByAsset?: Record<string, import("./mixed-use-burdened-gift.types").MixedUseBurdenedGiftBreakdown>;
+  /**
    * §97②2호 단서 swap 발동 여부 (일반건물 환산 자산총액 판정 — 안 A).
    * 나목(자본적지출+양도비) > 가목(환산취득가+개산공제 합) 시 true. 결과뷰 표시용.
    */

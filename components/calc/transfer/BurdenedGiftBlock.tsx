@@ -107,12 +107,14 @@ interface Props {
    * 침묵하면 사용자가 총액을 각 카드에 넣어 **자산 수만큼 곱해진다**(실측 2배).
    */
   isCompanionBundle?: boolean;
+  /** 함께 양도 묶음 안 겸용 부담부증여 — 이 자산의 재배분 채무(`debt`). 있으면 채무 귀속은 「구분 불분명」으로 고정된다(Q-3 ①). 묶음 밖·겸용 아님은 undefined. */
+  mixedBgBundle?: { debt: number | undefined };
   /** 축 B 첫 카드 — 지분 전체. 의제취득일 전 범위 밖 지분이 있으면 산정방식을 받는다(PR-7b-5 · `bgFractionalHasOutOfScopeShare`) */
   fractionalShares?: readonly AssetForm[];
 }
 
 
-export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalSplit, isCompanionBundle, fractionalShares }: Props) {
+export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalSplit, isCompanionBundle, mixedBgBundle, fractionalShares }: Props) {
   /**
    * ④ 상속·증여 계산기 런처 사양 — null이면 미노출.
    * ⚠️ 주입 규칙(건물분 단독 vs 부수토지 합산)이 자산마다 반대다. 판단은 전부 이 함수에 있다.
@@ -360,7 +362,7 @@ export function BurdenedGiftBlock({ asset, onChange, transferDate, isFractionalS
         {/* 토지·건물 소유자 분리 — 증여한 부분에 대한 채무만 + 공동담보 아님 확인(⑧ 필수) */}
         <BgOwnerSplitDebtConfirm asset={asset} onChange={onChange} />
         {/* 겸용주택 — 채무가 주택·상가 어디에 속하는지(부동산거래관리과-119). 총액은 위 두 칸이 정본이다. */}
-        {isMixed && <BurdenedGiftDebtAttributionCard asset={asset} onChange={onChange} />}
+        {isMixed && <BurdenedGiftDebtAttributionCard asset={asset} onChange={onChange} bundle={mixedBgBundle} />}
       </div>
 
       {/* ③ 시가 모드 — 양도시 시가 + 취득가액 산정방식 (K-4 실지 / K-5 환산) */}

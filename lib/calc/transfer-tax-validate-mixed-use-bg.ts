@@ -27,7 +27,7 @@ import { mixedUsePhdFieldError } from "./transfer-tax-validate-mixed-use-asset";
 import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
 
 /** 화면 순서로 정렬한 이슈 묶음 — 같은 묶음 안에서는 엔진이 낸 순서를 지킨다. */
-const HARD_BLOCKS = new Set(["MB-1", "MB-2", "MB-3", "MB-4", "MB-5", "MB-6", "MB-8", "MB-9", "MB-12", "MB-15", "MB-16", "MB-18"]);
+const HARD_BLOCKS = new Set(["MB-1", "MB-2", "MB-3", "MB-4", "MB-5", "MB-6", "MB-8", "MB-9", "MB-12", "MB-15", "MB-16", "MB-18", "MB-19", "MB-20", "MB-21"]);
 
 function firstIssue(issues: MixedBgIssue[], pick: (i: MixedBgIssue) => boolean): MixedBgIssue | undefined {
   return issues.find(pick);
@@ -38,8 +38,10 @@ export function validateMixedUseBurdenedGift(
   label: string,
   form: TransferFormData | undefined,
   formTransferDate: string | undefined,
-  /** 함께 양도(컴패니언) 묶음·지분 분할(축 B) 안의 겸용인가 — 엔진 MB-6 */
+  /** 묶음(함께 양도·지분 분할 축 B) 안의 겸용인가 — 함께 양도면 엔진 MB-19~21, 축 B면 MB-6 */
   isCompanion: boolean,
+  /** 그중 지분 분할 취득(축 B)인가 — 엔진 MB-6 */
+  isAxisB = false,
 ): string | null {
   const transferDate = formTransferDate ?? form?.transferDate ?? "";
 
@@ -47,11 +49,11 @@ export function validateMixedUseBurdenedGift(
   const common = validateMixedUseDatesAndAreas(asset, label, formTransferDate);
   if (common) return common;
 
-  const analysis = analyzeMixedBgOfForm(asset, form, transferDate, { isCompanion });
+  const analysis = analyzeMixedBgOfForm(asset, form, transferDate, { isCompanion, isAxisB });
   if (!analysis) return null;
   const issues = analysis.issues;
   const issueField = (i: MixedBgIssue) =>
-    i.path.join(".") === "mixedUse.housingInheritedValue" ? mixedBgReportedField(asset) : mixedBgIssueField(i);
+    i.path.join(".") === "mixedUse.housingInheritedValue" ? mixedBgReportedField(asset) : mixedBgIssueField(i, asset);
   const fail = (i: MixedBgIssue, field?: string) => fieldError((field ?? issueField(i)) as never, `${label}: ${i.message}`);
 
   // 2) 차단 조합(MB-1~6·8·9·12·15·16·18)
@@ -68,14 +70,17 @@ export function validateMixedUseBurdenedGift(
   const missing = firstIssue(issues, (i) => i.code === "MB-11");
   if (missing) return fail(missing);
 
-  // 4) 채무 귀속 — 모드 미선택·분할 합 불일치는 항목별 구체 문구, 그 밖의 MB-13은 엔진 문구
-  const attr = mixedBgDebtAttribution(asset);
-  if (attr.issues.length > 0) {
-    const a = attr.issues[0];
-    return fieldError(a.field, `${label}: ${mixedBgDebtAttrMessage(a)}`);
+  // 4) 채무 귀속 — 모드 미선택·분할 합 불일치는 항목별 구체 문구, 그 밖의 MB-13은 엔진 문구.
+  //    함께 양도 묶음은 귀속을 받지 않는다(채무 전부 구분 불분명 — 엔진 MB-19가 남은 주택·상가 선언만 막았다). 귀속 카드가 라디오를 숨기므로 미선택을 요구하면 막다른 길이다.
+  if (!(isCompanion && !isAxisB)) {
+    const attr = mixedBgDebtAttribution(asset);
+    if (attr.issues.length > 0) {
+      const a = attr.issues[0];
+      return fieldError(a.field, `${label}: ${mixedBgDebtAttrMessage(a)}`);
+    }
+    const mb13 = firstIssue(issues, (i) => i.code === "MB-13");
+    if (mb13) return fail(mb13);
   }
-  const mb13 = firstIssue(issues, (i) => i.code === "MB-13");
-  if (mb13) return fail(mb13);
 
   // 5) 구분 감정평가 선언(G-13, MB-17)
   const mb17 = firstIssue(issues, (i) => i.code === "MB-17");

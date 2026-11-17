@@ -44,7 +44,7 @@ const OLD = "취득가액 산정 기준을 확인하지 못했습니다";
 // I-1 이후 원조합원 입주권의 사유 — 기준시가 정의(취득일·납입한 금액의 범위)가 불명확해 계산하지 않는다(질의 H-2 대기). 승계 입주권 단건은 I-1이 계산한다(`transfer.route.bg-successor-rtmi-std-acq.anchor.test.ts`).
 const RTMI_CAUSE = "원조합원 입주권의 기준시가";
 // 종전: "증여가액을 주택과 상가로 나눌 법정 기준이 없어 계산하지 않습니다"(MB-7) — 결정 H-1로 단건은 계산하고 묶음 사유만 남았다.
-const MIXED_CAUSE = "겸용주택 부담부증여는 함께 양도(여러 물건)·지분 분할 취득과 함께 계산하지 않습니다 — 단독 소유 또는 공유지분 단건만 계산합니다.";
+const MIXED_CAUSE = "함께 양도(여러 물건) 묶음 안의 겸용주택 부담부증여는 증여재산 평가가 보충적평가(기준시가 또는 시가)인 경우만 계산합니다";
 /** allIssues는 80자로 자르므로 전체 메시지를 직접 모은다. */
 const full = (f: TransferFormData) => { const out: string[] = []; for (let s = 0; s <= 5; s++) for (const i of collectStepIssues(s, f)) out.push(i.message); return out; };
 

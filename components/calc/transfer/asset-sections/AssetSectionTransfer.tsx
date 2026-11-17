@@ -46,6 +46,8 @@ interface Props {
   /** 지분 분할 모드(splitMode==="fractional") — 양도가액 자동계산·기준시가 안분 입력 숨김 게이트 */
   isFractionalSplit?: boolean;
   isCompanionBundle?: boolean;
+  /** 함께 양도 묶음 안 겸용 부담부증여 — 재배분 채무. 묶음 밖·겸용 아님은 undefined(`mixedBgBundleMember`). */
+  mixedBgBundle?: { debt: number | undefined };
   /** 신고서 자산이 1건뿐인가 — 겸용주택 양도가액 안분 방식은 단건만 받는다(`mixedSaleSplitScope`). */
   isSingleAsset?: boolean;
   /** 첫 자산(양도 주택) — 다주택 중과의 양도 주택 행은 첫 자산만 싣는다(`buildHousesPayload`) */
@@ -64,6 +66,7 @@ export function AssetSectionTransfer({
   primaryAsset,
   isFractionalSplit,
   isCompanionBundle,
+  mixedBgBundle,
   isSingleAsset,
   isPrimary,
   fractionalShares,
@@ -108,6 +111,7 @@ export function AssetSectionTransfer({
         transferDate={transferDate ?? ""}
         isFractionalSplit={isFractionalSplit}
         isCompanionBundle={isCompanionBundle}
+        mixedBgBundle={mixedBgBundle}
         fractionalShares={fractionalShares}
         isNonPrimaryAsset={isPrimary === false}
       />

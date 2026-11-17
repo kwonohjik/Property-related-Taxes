@@ -8,6 +8,10 @@
  * 시딩: `sessionStorage("transfer-tax-wizard")`. 시드가 복원 정규화에 지워질 수 있으므로(feedback_e2e_seed_erased_by_restore_normalization)
  * 화면에서 시드가 살아 있음을 먼저 단언한다.
  *
+ * BGMU-15~17 — 함께 양도(여러 물건) 묶음(PR-B 화면 단계, 계획서 `docs/00-pm/bg-mixed-use-m2-bundle-share.plan.md` Q-3 ①·Q-4·Q-7).
+ *   시료는 route anchor `__tests__/api/transfer.route.mixed-use-bg-companion.anchor.test.ts` CP-1과 같다: 주택(기준시가 6억·채무 2억) + 겸용(기준시가 12억·채무 6억) →
+ *   신고 단위 채무 8억 · ΣA 18억 · B_i = [266,666,666, 533,333,334].
+ *
  * worktree 실행: E2E_PORT=3103 npx playwright test e2e/transfer-bg-mixed-use.spec.ts
  */
 import { test, expect, type Page } from "@playwright/test";
@@ -87,6 +91,86 @@ async function calc(page: Page) {
   await page.getByRole("button", { name: "가산세", exact: true }).first().click();
   await page.getByRole("button", { name: "세금 계산하기" }).click();
   await page.getByTestId("bg-result-apportion").waitFor({ timeout: 30_000 });
+}
+
+/** 함께 양도 묶음 시료 — route anchor CP-1과 같다(기준시가 모드 · 귀속은 화면이 받지 않아 미선택이 정상). */
+const bundleHouse = (over: Record<string, unknown> = {}) => ({
+  ...makeDefaultAsset(1),
+  assetId: "h1",
+  // 조정대상지역이 아닌 주소 — 서울이면 같은 날 양도 주택 2채(§154⑨ 순서)를 ⑧이 막는다(route anchor도 제주 주소)
+  addressJibun: "제주특별자치도 강남구 테스트동 1-1",
+  assetKind: "housing",
+  acquisitionCause: "purchase",
+  acquisitionDate: "2015-01-01",
+  fixedAcquisitionPrice: "300000000",
+  actualSalePrice: "",
+  standardPriceAtTransfer: "600000000",
+  standardPriceAtAcq: "300000000",
+  useEstimatedAcquisition: false,
+  transferType: "burdened_gift",
+  bgValuationMode: "sangjeungbeop_standard",
+  bgDonorRelation: "lineal_descendant",
+  bgLendingDepositTotal: "0",
+  bgMortgageDebtAmount: "200000000",
+  bgMortgageSetAmount: "200000000",
+  ...over,
+});
+const bundleMixed = (over: Record<string, unknown> = {}) =>
+  withMixedHousingStd({
+    ...makeDefaultAsset(2),
+    assetId: "m2",
+    addressJibun: "제주특별자치도 강남구 테스트동 2-2",
+    assetKind: "housing",
+    acquisitionCause: "purchase",
+    acquisitionDate: "2010-03-15",
+    isMixedUseHouse: true,
+    mixedAcqPerPartMode: false,
+    residentialFloorArea: "100",
+    nonResidentialFloorArea: "100",
+    mixedUseTotalLandArea: "200",
+    buildingFootprintArea: "100",
+    mixedTransferHousingPrice: "600000000",
+    mixedTransferLandPricePerSqm: "5000000",
+    mixedTransferCommercialBuildingPrice: "100000000",
+    mixedAcqHousingPrice: "300000000",
+    mixedAcqLandPricePerSqm: "2500000",
+    mixedAcqCommercialBuildingPrice: "50000000",
+    mixedTransferHousingBuildingStdPrice: "100000000",
+    mixedAcqHousingBuildingStdPrice: "50000000",
+    mixedIsMetropolitanArea: true,
+    transferType: "burdened_gift",
+    bgValuationMode: "sangjeungbeop_standard",
+    bgDonorRelation: "lineal_descendant",
+    bgLendingDepositTotal: "0",
+    bgMortgageDebtAmount: "600000000",
+    bgMortgageSetAmount: "600000000",
+    bgMortgageAttribution: "",
+    ...over,
+  });
+
+async function seedBundleAndOpen(page: Page, assets: unknown[], extra: Record<string, unknown> = {}) {
+  await page.goto("/calc/transfer-tax");
+  await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
+  const formData = {
+    ...createDefaultTransferFormData(),
+    assets,
+    transferDate: "2024-03-01",
+    filingDate: "2024-05-31",
+    contractTotalPrice: "",
+    householdHousingCount: "2",
+    isOneHousehold: false,
+    householdNoOtherHousesConfirmed: true,
+    householdNoPresaleRightsConfirmed: true,
+    assetSplitMode: "companion",
+    bundledSaleMode: "actual",
+    ...extra,
+  };
+  await page.evaluate(
+    (s) => sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(s)),
+    seedWithDeclaredRoster({ state: { formData, currentStep: 0, pendingMigration: false }, version: 0 }),
+  );
+  await page.reload();
+  await ready(page);
 }
 
 test.describe("겸용주택 × 부담부증여", () => {
@@ -317,5 +401,83 @@ test.describe("겸용주택 × 부담부증여", () => {
     await expect(card).toContainText("내 지분 50% 해당분");
     await expect(page.getByTestId("bg-mixed-gift-value")).toHaveText("800,000,000");
     await expect(page.getByTestId("bg-mixed-highvalue-whole")).toHaveText("800,000,000");
+  });
+  // ── 함께 양도(여러 물건) 묶음 — 보충적평가 승만, 채무는 신고 단위로 재배분해 구분 불분명 (PR-B 화면 단계) ──
+  test("BGMU-15 주택 BG + 겸용 BG 함께 양도 — 귀속을 고르지 않아도 계산 성공 · 겸용 자산 4부분 카드 · 재배분 채무 533,333,334 · 증여세는 1회", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seedBundleAndOpen(page, [bundleHouse(), bundleMixed()]);
+    // ⑤ 겸용 카드의 채무 귀속 — 읽기 전용(라디오 없음) + 재배분 채무 표시(④가 보내는 값과 같다)
+    await expandAssetSection(page, 2, 1);
+    await expect(page.getByTestId("bg-attr-card")).toHaveAttribute("data-bundle", "true");
+    await expect(page.getByTestId("bg-attr-bundle-debt")).toHaveText("533,333,334원");
+    await expect(page.locator('input[type="radio"][name^="bgMortgageAttribution"]')).toHaveCount(0);
+    await expect(page.getByTestId("bg-mixed-notice")).toContainText("함께 양도(여러 물건) 묶음");
+
+    await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+    const res = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST", { timeout: 60_000 });
+    await page.getByRole("button", { name: "세금 계산하기" }).click();
+    const r = await res;
+    expect(r.status(), await r.text()).toBe(200);
+    const data = (await r.json()).data;
+    expect(data.mode).toBe("bundled");
+    // 오라클(route anchor CP-1): 양도차익 합 = 자산별 단건(자기 채무 = B_i) 합 · 증여가액 ΣA 18억 · 증여세 결정세액 1회
+    expect(data.aggregated.totalTransferGain).toBe(388_000_004);
+    expect(data.aggregated.burdenedGift.giftValuation.max).toBe(1_800_000_000);
+
+    // ⑦ 겸용 자산별 4부분 카드 — 증여가액 12억 · 재배분 채무 · 부분별 양도가액·취득가액·개산공제·양도차익
+    const card = page.getByTestId("bg-mixed-bundle-card-m2");
+    await card.waitFor({ timeout: 30_000 });
+    await expect(page.getByTestId("bg-mixed-bundle-gift-value-m2")).toHaveText("1,200,000,000");
+    await expect(page.getByTestId("bg-mixed-bundle-debt-m2")).toHaveText("533,333,334");
+    const row = (k: string) => card.locator(`tr[data-part="${k}"]`);
+    await expect(row("housingLand")).toContainText("222,222,222");
+    await expect(row("housingLand")).toContainText("111,111,111");
+    await expect(row("housingLand")).toContainText("107,777,778");
+    await expect(row("commercialBuilding")).toContainText("44,444,445");
+    await expect(row("commercialBuilding")).toContainText("21,555,557");
+    // 증여세는 계약 단위 1회 — 겸용 카드에는 없고 묶음 §159 명세 카드에 한 번 있다
+    await expect(card).not.toContainText("증여세 산출세액");
+    await expect(page.getByText("증여세 산출세액")).toHaveCount(1);
+    await expect(page.locator("tr", { hasText: "증여세 결정세액 (수증자 부담)" })).toHaveCount(1);
+    await expect(page.locator("tr", { hasText: "증여세 결정세액 (수증자 부담)" })).toContainText("218,250,000");
+    // 주택 카드(주 자산)는 겸용 카드를 만들지 않는다
+    await expect(page.getByTestId("bg-mixed-bundle-card-primary")).toHaveCount(0);
+    await expect(page.getByTestId("bg-bundle-mixed-note")).toBeVisible();
+
+    // ⑥ 사이드바 — 겸용 자산(자산 2) 양도가액 = 재배분 채무 · 취득가액·필요경비 = 엔진 echo (종전에는 주 자산이 겸용이면 «계산 후 표시»에 갇혔다)
+    await page.getByRole("button", { name: /^이전/ }).last().click();
+    await page.getByRole("button", { name: "가산세" }).first().click();
+    const side = (await page.locator("aside").innerText()).replace(/\s+/g, " ");
+    expect(side, side).toContain("자산 2 — 주택 양도가액 533,333,334 취득가액 266,666,666 필요경비 7,999,998");
+    expect(side, side).toContain("자산 1 — 주택 양도가액 266,666,666 취득가액 133,333,333 필요경비 3,999,999");
+  });
+
+  test("BGMU-16 묶음 안 겸용에 주택 귀속 선언이 남아 있으면 «다음»이 막히고 담보차입금 귀속 칸으로 이동한다 — 「구분 불분명」만 고를 수 있다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seedBundleAndOpen(page, [bundleHouse(), bundleMixed({ bgMortgageAttribution: "housing" })]);
+    await expandAssetSection(page, 2, 1);
+    // 저장된 선언은 지우지 않는다 — 라디오가 열려 있고 주택·상가·나누어 입력은 비활성
+    const group = page.locator('[data-field="bgMortgageAttribution"]');
+    await expect(group).toHaveCount(1);
+    await expect(page.locator('input[type="radio"][name^="bgMortgageAttribution"][value="housing"]')).toBeChecked();
+    for (const v of ["housing", "commercial", "split"]) {
+      await expect(page.locator(`input[type="radio"][name^="bgMortgageAttribution"][value="${v}"]`)).toBeDisabled();
+    }
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await expect(page.getByTestId("validation-issues")).toContainText("채무 귀속을 「구분 불분명」으로만 받습니다");
+    // 「구분 불분명」으로 바꾸면 막힘이 풀리고 선택지(라디오)는 사라진다
+    // `check()`는 쓰지 않는다 — 고르는 순간 라디오가 사라져(남은 선언이 풀려서) 사후 확인이 대상을 잃는다
+    await page.locator('input[type="radio"][name^="bgMortgageAttribution"][value="unallocated"]').click();
+    await expect(page.locator('input[type="radio"][name^="bgMortgageAttribution"]')).toHaveCount(0);
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await expect(page.getByTestId("validation-issues")).toHaveCount(0);
+  });
+
+  test("BGMU-17 지분 분할 취득(축 B) 겸용 BG는 여전히 막힌다 — 함께 양도 해제가 축 B까지 번지지 않았다", async ({ page }) => {
+    test.setTimeout(90_000);
+    const share = (id: number, n: string) => bundleMixed({ assetId: `s${id}`, ownershipNumerator: n, ownershipDenominator: "100", bgMortgageAttribution: "unallocated" });
+    await seedBundleAndOpen(page, [share(1, "60"), share(2, "40")], { assetSplitMode: "fractional", contractTotalPrice: "" });
+    await page.getByRole("button", { name: "다음", exact: true }).click();
+    await expect(page.getByTestId("validation-issues")).toContainText("지분 분할 취득");
   });
 });
