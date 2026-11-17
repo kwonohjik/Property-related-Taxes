@@ -13,6 +13,8 @@ interface Props {
   acqSectionNum?: number;
   /** 소재지 지번 주소 — Vworld 공시지가 조회용 */
   jibun?: string;
+  /** 축 B 둘째 이후 지분 카드 — 양도시 칸은 물건 단위라 자산 1에서 입력한다(`mixed-use-share-object-fields.ts`). 취득 쪽 칸만 연다. */
+  shareCard?: boolean;
 }
 
 /**
@@ -40,6 +42,7 @@ export function MixedUseStandardPriceInputs({
   transferSectionNum,
   acqSectionNum,
   jibun,
+  shareCard = false,
 }: Props) {
   if (asset.hasPartialUsageChange) {
     return (
@@ -66,6 +69,7 @@ export function MixedUseStandardPriceInputs({
       housingSectionNum={transferSectionNum}
       commercialSectionNum={acqSectionNum}
       jibun={jibun}
+      shareCard={shareCard}
     />
   );
 }

@@ -292,6 +292,7 @@ export function AssetSectionAcquisition({
           transferDate={transferDate}
           useEstimatedAcquisition={asset.useEstimatedAcquisition}
           jibun={asset.addressJibun || undefined}
+          shareCard={splitMode === "fractional" && !isFirst}
         />
       )}
 

@@ -19,6 +19,7 @@ import { soleSplitRightJudgmentFacts } from "./sole-split-right-judgment-facts";
 import { bgShareOwnAcquisitionFields } from "./bg-share-own-acquisition";
 import { bgShareOwnAcquisitionActive } from "./bg-share-own-acquisition";
 import { commercialShareObjectFieldsOf } from "./commercial-share-object-fields";
+import { mixedUseShareObjectFieldsOf } from "./mixed-use-share-object-fields";
 import { BG_SHARE_STD_TRANSFER_KINDS } from "./bg-share-own-acquisition";
 import { deriveMemberRightsValue } from "./burdened-gift-right-valuation";
 import { meetsSurchargeSuspensionHolding } from "@/lib/tax-engine/tax-utils";
@@ -232,6 +233,11 @@ function mergePrimaryBasicAll(a: AssetForm, primary: AssetForm): AssetForm {
      * 취득 쪽 칸(취득시·최초고시 가격 · §164⑧ 준용)은 지분 값 그대로다 — 목록과 이유는 `commercial-share-object-fields.ts`.
      */
     ...commercialShareObjectFieldsOf(primary),
+    /**
+     * 겸용주택 물건 단위 칸(겸용 여부 · 면적 · 용도지역 · 양도시 기준시가) — 지분 카드에는 ①이 숨어 칸이 없다(2026-11-17 V-0).
+     * 병합하지 않던 동안 둘째 이후 지분이 일반 주택으로 계산됐다. 취득 쪽 겸용 칸은 지분 값 그대로다 — 목록과 이유는 `mixed-use-share-object-fields.ts`.
+     */
+    ...mixedUseShareObjectFieldsOf(primary),
     bgValuationMode: primary.bgValuationMode,
     bgDonorRelation: primary.bgDonorRelation,
     bgLendingDepositTotal: primary.bgLendingDepositTotal,

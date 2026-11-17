@@ -28,6 +28,7 @@ import { getAssetDateOrderError } from "@/lib/calc/transfer-tax-validate-asset";
 import { soleSplitRightJudgmentFacts } from "@/lib/calc/sole-split-right-judgment-facts";
 import { BurdenedGiftTrancheBasisBlock } from "./BurdenedGiftTrancheBasisBlock";
 import { commercialShareObjectFieldsOf } from "@/lib/calc/commercial-share-object-fields";
+import { mixedUseShareObjectFieldsOf } from "@/lib/calc/mixed-use-share-object-fields";
 import type { BundledSaleMode } from "./CompanionSaleModeBlock";
 import { ASSET_KIND_LABELS } from "./asset-labels";
 import { summarizeAssetSections } from "./asset-section-summary";
@@ -201,6 +202,11 @@ export function CompanionAssetCard({
             // 소재지도 같은 물건이다 — 지분 카드에는 ① 기본정보(소재지 칸)가 없어, 자산 1 소재지로 호별 고시가 · 공시지가를 조회한다(④도 소재지를 병합한다).
             ...(primaryAsset.assetKind === "commercial_building"
               ? { ...commercialShareObjectFieldsOf(primaryAsset), addressPnu: primaryAsset.addressPnu, addressJibun: primaryAsset.addressJibun, addressRoad: primaryAsset.addressRoad }
+              : {}),
+            // 겸용주택 지분 — 겸용 여부 · 면적 · 용도지역 · 양도시 기준시가는 자산 1 값이다(④ · ⑧ 병합과 같은 목록 — `mixed-use-share-object-fields.ts`).
+            // 이 값이 없으면 ③의 겸용 패널이 뜨지 않아 취득시 기준시가 칸이 없고, ④는 이 지분을 일반 주택으로 보냈다(V-0). 소재지는 공시지가 조회용(상가와 같다).
+            ...(primaryAsset.assetKind === "housing" && primaryAsset.isMixedUseHouse
+              ? { ...mixedUseShareObjectFieldsOf(primaryAsset), addressPnu: primaryAsset.addressPnu, addressJibun: primaryAsset.addressJibun, addressRoad: primaryAsset.addressRoad }
               : {}),
           }
         : asset,
