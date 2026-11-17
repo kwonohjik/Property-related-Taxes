@@ -203,6 +203,31 @@ describe("결과 표시 — 기산일 이월·구간·배제 카드", () => {
     expect(screen.queryByTestId("rc-annual-table")).toBeNull();
   });
 
+  it("10호 일부 연도 배제(부칙<제35352호> §2②): 2025년분만 표·요약에 남고, 2026·2027년분은 emerald 카드에 적는다", () => {
+    const r = calculateRecapture({
+      noticeDate: d("2031-10-01"),
+      rows: [2025, 2026, 2027].map((taxYear) => ({ taxYear, amount: 1_000_000 })),
+      exemption: {
+        reason: "rent_over_5pct",
+        registrationType: "private_short_term_6y_construction",
+        rentalStartDate: d("2025-07-01"),
+        rentalApplicationDate: d("2025-06-20"),
+        rentalRegistrationDate: d("2025-07-01"),
+        ceasedDate: d("2031-07-01"),
+      },
+    });
+    render(<RecaptureResultView result={r} noticeDate="2031-10-01" facts={["임대 기산일: 2025.7.1."]} />);
+    expect(screen.getByTestId("rc-total-payable").textContent).toBe("1,465,520");
+    expect(screen.getByTestId("rc-annual-2025")).toBeTruthy();
+    expect(screen.queryByTestId("rc-annual-2026")).toBeNull();
+    const card = screen.getByTestId("rc-partial-exempt");
+    expect(screen.getByTestId("rc-exempt-years").textContent).toBe("2026년분 · 2027년분");
+    expect(card.textContent).toContain("시행령 §10③1호");
+    expect(card.textContent).toContain("부칙 제2조②");
+    expect(screen.queryByTestId("rc-exempt")).toBeNull();
+    expect(screen.queryByTestId("rc-not-exempt")).toBeNull();
+  });
+
   it("사유를 골랐지만 배제가 성립하지 않으면 불성립 사유를 보이고 추징을 계산한다", () => {
     const result = calculateRecapture({ noticeDate: d(notice), rows, exemption: { reason: "registration_cancelled", cancelClause: "other" } });
     render(<RecaptureResultView result={result} noticeDate={notice} facts={[]} />);

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * 합산배제 추징 결과 — 요약 · 연도별 산출근거 · 배제(추징하지 않음) · 확인 필요 · 면책.
+ * 합산배제 추징 결과 — 요약 · 연도별 산출근거 · 배제(추징하지 않음 — 전부 또는 일부 연도) · 확인 필요 · 면책.
  * 계획서: docs/01-plan/features/comprehensive-rental-excl-recapture-calculator.plan.md §6.4
  *
  * 표시 문구는 엔진 결과(`exemption`·`notices`·`failReasons`)를 그대로 옮긴다. 유리·불리 평가어를 쓰지 않는다.
@@ -9,6 +9,7 @@
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { COMPREHENSIVE_EXCL } from "@/lib/tax-engine/legal-codes";
 import type { RecaptureResult } from "@/lib/tax-engine/types/comprehensive-recapture.types";
 import { AnnualInterestTable } from "./AnnualInterestTable";
 import { dotDate } from "./shared";
@@ -62,6 +63,8 @@ export function RecaptureResultView({
             </p>
           </ToneCard>
 
+          {result.exemptTaxYears.length > 0 && <PartialExemptCard result={result} facts={facts} />}
+
           {result.exemption.failReasons.length > 0 && (
             <ToneCard tone="slate" title="입력한 사유는 추징하지 않는 경우에 해당하지 않았습니다" bodyClassName="space-y-1">
               <ul className="space-y-1 text-xs" data-testid="rc-not-exempt">
@@ -91,6 +94,35 @@ export function RecaptureResultView({
 
       <DisclaimerBanner />
     </section>
+  );
+}
+
+/** 일부 연도만 추징하지 않음(10·11호 — 부칙<제35352호> §2②) — 추징한 연도는 위 요약과 아래 표에 있다 */
+function PartialExemptCard({ result, facts }: { result: RecaptureResult; facts: string[] }) {
+  return (
+    <ToneCard tone="emerald" title="일부 연도는 추징하지 않음" bodyClassName="space-y-2">
+      <div data-testid="rc-partial-exempt" className="space-y-2 text-xs">
+        <p>
+          <span className="font-medium">추징하지 않는 연도: </span>
+          <span data-testid="rc-exempt-years">{result.exemptTaxYears.map((y) => `${y}년분`).join(" · ")}</span>
+        </p>
+        <p>
+          <span className="font-medium">근거: </span>
+          {result.exemption.legalBasis}
+        </p>
+        <p>{COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_6Y_PARTIAL}</p>
+        {facts.length > 0 && (
+          <div>
+            <p className="font-medium">입력한 사실</p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-4" data-testid="rc-facts">
+              {facts.map((m, i) => (
+                <li key={i}>{m}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </ToneCard>
   );
 }
 
