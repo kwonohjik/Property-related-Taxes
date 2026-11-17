@@ -290,3 +290,75 @@
 - V-10 신규: 국기법 §5①은 2009.2.6.·2018.4.1.·현행 시행본만 실독했다(문언 「공휴일·토요일」 → 「토요일 및 일요일」·「공휴일에 관한 법률」). 12월 기한에는 결과가 같지만 그 밖 시행본은 개별 대조하지 않았다.
 - V-11 신규: `deadlineEnd`는 민법 §161 기반(토요일 연장은 2007.12.21.부터)이고 국기법 §5①과 12월 기한에서는 같은 결과다. 규정 근거가 다른 이월 규칙이라는 점은 V-2와 함께 확인한다.
 - V-12 신규: §10③3호 가목 신청일이 2020.8.18. 이후 단기·아파트 매입임대 신규 등록 불가 시기와 어긋나는 입력은 엔진이 따로 막지 않는다(조문은 「등록 신청을 했을 것」만 요구). §10③1호의 `rentalStartDate`(기산일)와 등록일의 선후 모순도 검사하지 않는다 — PR-2 ⑧ 설계 때 정한다.
+
+## 11. 구현 로그 PR-2 (화면 · 2026-11-17)
+
+### 11.1 구현 결과
+
+| 파일 | 줄 | 내용 |
+|---|---|---|
+| `app/calc/comprehensive-recapture/page.tsx` | 11 | 얇은 쉘(metadata + 계산기 마운트) |
+| `components/calc/comprehensive-recapture/shared.ts` | 234 | ① 폼 상태 · ② initial · 선택지 · `switchReason`(사유 전환 시 다른 호 칸 비움) · `changeRegistrationType`·`changeApplicationKind` · `deadlineCarryText`·`summarizeFacts`(표시 보조). 순수 모듈 |
+| `…/ComprehensiveRecaptureCalculator.tsx` | 132 | 오케스트레이터(로컬 `useState` · ⑧ → ⑬ · 입력이 바뀌면 결과 제거) |
+| `…/ReasonSection.tsx` · `ReasonFacts.tsx` | 37 · 189 | ① 사유 `RadioCardGroup`(rose) + 사유별 사실 칸(violet) |
+| `…/AnnualTaxTable.tsx` | 87 | ② 연도별 경감세액(연도 정수 · `CurrencyInput` · 1~20행) |
+| `…/RecaptureResultView.tsx` · `AnnualInterestTable.tsx` | 130 · 97 | 요약 · 연도별 표(구간 하위 행) · 배제 emerald 카드 · 확인 필요 · `DisclaimerBanner` |
+| `…/RecaptureCalculatorLink.tsx` | 31 | 진입 링크 + Step3 상단 안내 카드(sky) |
+| `lib/calc/comprehensive-recapture-api.ts` | 90 | ④ `toRecaptureBody`(전사 변환) · ⑬ `callComprehensiveRecaptureApi` |
+| `lib/calc/comprehensive-recapture-validate.ts` | 219 | ⑧ `validateRecapture` |
+| 수정 | | `app/calc/comprehensive-tax/page.tsx` 616 → 621(Step3 두 분기에 안내 카드) · `AggregationExclusionSection.tsx` 90 → 94(확인 필요 상자 링크) · `lib/tax-engine/comprehensive-exclusion.ts` `LONG_PERIOD_TYPES` `export`(1단어 — 신청일을 묻는 유형 집합을 화면이 재정의하지 않도록. 동작 불변) · `calc-route-autosave-reach.guard.test.ts` `NO_HISTORY_ROUTES` 등록(사유 포함) |
+| 테스트 | | `__tests__/lib/calc/comprehensive-recapture-validate.test.ts` 31건 · `__tests__/components/comprehensive-recapture-form.test.tsx` 15건 · `e2e/comprehensive-recapture.spec.ts` 3건 |
+
+다른 라우트 목록 가드(홈 메뉴 `app/page.tsx` · `app/sitemap.ts` · `lib/storage/tax-type-routes.ts`)는 위성 계산기(`cross-104-5`·`*-postmgmt`)를 싣지 않고 새 페이지를 요구하지 않는다(grep 확인). 진입은 §6.1 Q-10대로 종부세 3단계·결과 「확인 필요」 상자뿐이다.
+
+### 11.2 ⑧ ↔ ⑫ 격자 대조 (같은 폼을 ⑧과 ④→JSON→Zod에 넣는다)
+
+- 규칙 R1: Zod가 거부하는 입력은 ⑧이 일반 규칙으로 막는다. R2: Zod가 통과시키는데 ⑧이 막는 입력은 UI 전용 코드(`deadline`·`order`·`unanswered`)뿐이다.
+- 격자: ① 사유 4 × 기준 폼에서 필드 하나씩 풀 값 바꾸기(날짜 22종·유형 12종·연도 13종 × 금액 9종 등) ② 무작위 6,000건(고정 시드 · Zod 통과·거부 양쪽 모두 충분) ③ 행 수 0·1·20·21 × 사유.
+- **격자가 잡은 실결함 5건(⑧ 최초 구현)**: 선택지 밖 enum 값(`cancelClause`·`cause`·`originalKind`가 목록 밖 값, `isApartment`·`registeredAsRental`이 yes/no 밖 값)을 ⑧이 통과시키고 Zod는 400. 화면 라디오로는 도달하지 않지만 ⑧이 전사 검증이 아니었다 → 멤버십 검사를 추가했다. 이 5건은 격자 없이는 보이지 않았다.
+- 최종: 전건 일치(위반 0).
+
+### 11.3 결정
+
+| # | 결정 | 근거 |
+|---|---|---|
+| D-1 | **V-12 — 막는 것은 날짜 선후 모순 둘뿐**(`order`): ① 5% 초과 계약일 < 임대 기산일 ② 지자체 등록 신청일 > 등록일(신청을 묻는 유형만) | 둘 다 법령 해석이 아니라 사건의 순서(임대한 뒤 증액 · 신청한 뒤 등록)다. 엔진은 던지지 않고 ①을 「의무기간 미충족 → 추징」으로 계산하므로 오타가 조용히 추징 금액이 된다 |
+| D-2 | **막지 않는 것**: 가목 신청일이 2020.8.18. 이후 단기·아파트 매입임대 신규 등록 불가 시기와 어긋나는 입력 · 임대 기산일이 등록일보다 앞서는 입력 | 앞의 것은 그 불가 시기를 이 저장소에서 법령 본문으로 확인한 바 없고(조문은 「등록 신청을 했을 것」만 요구) 추정으로 막지 않는다. 뒤의 것은 임대를 먼저 시작하고 나중에 등록하는 사실이 가능하다 |
+| D-3 | 고지일 < 그해 기산일 연도 차단(`deadline`)은 엔진 `recaptureInterestStart`를 import(국기법 §5① 이월 규칙 single-source) | 2018년분 고지 12.17. 차단·12.18. 통과 / 2024년분 12.16. 차단·12.17. 통과 — 12.16. 고정이었다면 달랐을 경계를 테스트가 고정 |
+| D-4 | 3호 가목 「신청 사실」은 3지선다(신청 없음 · 장기일반 아파트 민간매입 · 단기)로 둔다. Zod의 `kind: "other"`는 화면에서 만들지 않는다 | `other`는 엔진에서 가목 불성립이라 「신청 없음」과 결과가 같다. 라벨을 「해당하는 신청 없음(그 밖의 유형 포함)」로 적었다 |
+| D-5 | 가목 신청 사실 미선택은 `unanswered`로 ⑧만 막는다(API는 `application` 생략 = 신청 없음) | 자동 보정 금지 — 사용자가 「신청 없음」을 명시해야 한다. ④는 미선택을 `undefined`로 보내 「없음」과 구별한다 |
+| D-6 | ④는 전사 함수 — 빈 금액·연도를 0으로 보정하지 않고 Zod가 거부하는 `undefined`로 보낸다 | ⑧↔⑫ 대조가 성립하려면 ④가 빈칸을 숨기지 않아야 한다 |
+| D-7 | 입력을 고치면 결과·오류를 핸들러에서 지운다(효과 아님) | 결과 탭 stale 함정 · `useEffect` 미러링 금지 |
+| D-8 | 신청일 칸은 엔진 `LONG_PERIOD_TYPES`(export)에 해당하는 3개 유형에서만 열고, 유형을 바꾸면 그 칸을 비운다 | 엔진 `mandatoryPeriod`가 신청일로 8·10년을 가르는 유형과 같은 집합 |
+
+### 11.4 mutation probe (vitest: ⑧ validate 31건 + 컴포넌트 15건 = 46건)
+
+| # | 변이 | 잡힘(실패 수) |
+|---|---|---|
+| P1 | ⑧ 납부기한 규칙 제거(`deadline`) | 3 |
+| P1b | 같은 규칙의 경계 `<` → `<=` | 3 |
+| P2 | 사유 전환 시 다른 호 칸 비우기 제거(`switchReason`) | 3 |
+| P3 | 배제 카드 조건 반전(`exempt` → `!exempt`) | 3 |
+| P4 | ⑧ `order` 규칙(5% 초과 계약일 < 기산일) 제거 | 1 |
+| P5 | ⑧ `cancelClause` 선택지 멤버십 제거 | 1(⑧↔⑫ 격자) |
+| P6 | ④ 가목 「신청 없음」 `null` → 생략 | 1 |
+| P7 | ④ 빈 금액을 0으로 보정 | 3 |
+
+전부 잡힌 뒤 원복했다.
+
+### 11.5 실측
+
+- E2E `E2E_PORT=3108 npx playwright test e2e/comprehensive-recapture.spec.ts` — 3건 통과(RC-E2E-1: 요청 body 직접 확인 · 2,000,000 + 756,040 = 2,756,040 · 구간 하위 행 · 기산일 이월 설명 / RC-E2E-2: §6⑤ 「추징하지 않음」 0 / RC-E2E-3: 빈 폼·연도 중복·고지일 < 납부기한 → 요청 0건).
+- 375px: 페이지 가로 스크롤 0(`expectNoPageHScroll`) · 표만 `overflow-x-auto` 안에 있고 기산일 이월 설명·확인 필요·면책은 그 밖이다.
+
+### 11.6 계획서 §6과 달라진 점
+
+1. §6.1 파일 목록에 `RecaptureCalculatorLink.tsx`(진입 링크 + Step3 안내 카드) 1개를 더했다(링크가 두 곳이라 한 곳에 둠).
+2. §6.4 「375px에서는 표를 가로 스크롤 영역에 넣고」: 열 6개가 375px에 다 들어가지 않아 율·이자 칸이 스크롤 안에서 잘린다 — 계획서가 정한 방식이다. 하위 행(구간)은 같은 표 안에 있어 좌우로 밀어 본다.
+3. §6.2 ⑧ 「사유 사이 모순」은 사유 라디오가 단일 선택이라 사유 사이 모순이 없다 — V-12 선후 모순(D-1)으로 구체화했다.
+
+### 11.7 남은 V (확인 필요)
+
+- V-1·V-2·V-3·V-4·V-6·V-7·V-8·V-9·V-10·V-11: §10.7 그대로(화면에는 결과 `notices`로 나간다). V-5도 같다.
+- V-12: 가목 신청일 × 2020.8.18. 신규 등록 불가 시기 — 화면은 막지 않기로 했다(D-2). 법령 본문 확인 시 ⑧에 `order`류 규칙으로 추가할 수 있다.
+- V-13 신규: `select-test-scope.sh`가 `components/calc/comprehensive-recapture/*`·`lib/calc/comprehensive-recapture*`·`app/calc/comprehensive-recapture/*`를 세목 전용 경로로 알지 못해 push 때 전체 테스트로 판정된다(좁히기 오판정은 아니다 — 안전한 방향). 범위를 넓히려면 `scripts/select-test-scope.test.sh`에 케이스를 먼저 추가해야 한다.

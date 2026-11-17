@@ -69,7 +69,7 @@ const MANDATORY_PERIOD_BY_TYPE: Record<
  * (서면-2025-부동산-2158). 신청일을 모르면 등록일이 8.18. 전일 때만 8년(신청일 ≤ 등록일), 아니면 10년 + 확인 필요 안내.
  * 경고 문구에만 쓴다 — 합산배제 성립·세액과 무관.
  */
-const LONG_PERIOD_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
+export const LONG_PERIOD_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new Set([
   "private_purchase_long",
   "public_support_purchase",
   "public_support_construction",

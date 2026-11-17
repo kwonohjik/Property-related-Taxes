@@ -40,6 +40,7 @@ import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveT
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { Step1Basic } from "./Step1Basic";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { RecaptureEntryCard } from "@/components/calc/comprehensive-recapture/RecaptureCalculatorLink";
 
 // ============================================================
 // 상수
@@ -227,16 +228,20 @@ function Step3Exclusion() {
 
   if (propertiesWithExclusion.length === 0) {
     return (
-      <div className="rounded-md bg-muted/30 border px-4 py-6 text-center text-sm text-muted-foreground">
-        합산배제 신청 주택이 없습니다.
-        <br />
-        다음 단계로 진행해주세요.
+      <div className="space-y-4">
+        <RecaptureEntryCard />
+        <div className="rounded-md bg-muted/30 border px-4 py-6 text-center text-sm text-muted-foreground">
+          합산배제 신청 주택이 없습니다.
+          <br />
+          다음 단계로 진행해주세요.
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      <RecaptureEntryCard />
       <div className="rounded-md bg-muted/30 border px-4 py-3 text-xs text-muted-foreground">
         합산배제 신청 주택의 요건 정보를 입력해주세요.
         요건 미충족 시 해당 주택은 과세 대상에 포함됩니다.
