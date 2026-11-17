@@ -115,6 +115,18 @@ describe("겸용 × 토지 나중 취득 — ④ → ⑫ → 엔진", () => {
     expect(capNote(r)).toHaveLength(1);
   });
 
+  it("🔑 직접 70개월(5년 10개월): 공제율·세액은 60개월과 같고(연 단위) · 고지는 입력과 다른 「60개월」이 아니라 연 단위 「거주 연수 5년」(수정 전 「거주기간 60개월을 …」)", async () => {
+    const r70 = await run(asset(direct("70")));
+    const r60 = await run(asset(direct("60")));
+    expect(r70.mu.residencePeriodYears).toBe(5);
+    expect(landLthd(r70).longTermRate).toBeCloseTo(0.32, 10);
+    expect(buildingLthd(r70).longTermRate).toBeCloseTo(0.6, 10);
+    expect(result(r70).total.determinedTax).toBe(result(r60).total.determinedTax);
+    const [n] = capNote(r70);
+    expect(n).toContain("거주 연수 5년을 토지 보유기간 58개월로 상한해 계산했습니다(토지분 거주 4년");
+    expect(n).not.toMatch(/60개월|70개월/);
+  });
+
   it("토지 취득 전에만 거주(2010-06-01~2015-05-31 = 60개월): 겹침 0 · 합계 5년 그대로 · 토지 16%(보유분만) · 건물 60%", async () => {
     const r = await run(asset(interval(["2010-06-01", "2015-05-31"])));
     expect(r.mu.landHoldingResidencePeriodYears).toBe(0);
