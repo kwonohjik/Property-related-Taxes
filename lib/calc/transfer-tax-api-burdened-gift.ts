@@ -362,7 +362,8 @@ export function buildBurdenedGiftInfo(
    *    새면 HTTP 400이므로 **명시적으로 비운다**. 취득가액은 총액(`actualAcquisitionTotal`·`presumedAcquisitionTotal`)만 싣는다.
    */
   if (isMixedBurdenedGift(primary)) {
-    const attr = mixedBgDebtAttribution(primary);
+    // 축 B(지분 분할 취득) — 채무 칸(`d()`)과 같은 r로 귀속도 항목별 ×r(합 = ×r 채무 · 계획서 §3.3.3 6 · Q-6)
+    const attr = mixedBgDebtAttribution(primary, scaleDebt ? debtScaleRatio : undefined);
     const {
       actualLandAcquisitionPrice: _al, actualBuildingAcquisitionPrice: _ab,
       presumedLandAcquisitionPrice: _pl, presumedBuildingAcquisitionPrice: _pb,

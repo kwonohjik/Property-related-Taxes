@@ -4,7 +4,8 @@
  * 겸용주택 × 부담부증여 × **함께 양도 묶음** — 자산별 4부분 명세 카드 (계획서 `bg-mixed-use-m2-bundle-share.plan.md` Q-3 ①·Q-7).
  *
  * 단건 카드(`MixedUseBurdenedGiftDetailCard`)와 다른 점 — **증여세 행이 없다.** 증여세는 증여계약 전체로 한 번 계산해 묶음 결과의
- * 부담부증여 명세(`aggregated.burdenedGift`)에 있다. 채무는 신고 단위 합계를 자산가액 비율로 재배분한 몫이고 전부 「구분 불분명」이다.
+ * 부담부증여 명세(`aggregated.burdenedGift`)에 있다. 함께 양도면 채무는 신고 단위 합계를 자산가액 비율로 재배분한 몫이고 전부 「구분 불분명」이다.
+ * 지분 분할 취득(축 B · `bg.axisB`)이면 채무·귀속은 물건 전체 입력 × 지분율이다(재배분 아님 · PR-C) — 문구만 가른다.
  *
  * 엔진 echo(`mixedUseBgDetailsByAsset[자산 id]`)만 읽는다 — 증여가액·채무·부분별 금액을 다시 계산하지 않는다(양도차익 한 칸만 echo 세 값의 뺄셈).
  * 표기: 한국어 풀어쓰기 · 각 숫자 옆 변수명 라벨 · 금액 칸은 font-mono tabular-nums 우측정렬 · 화면 리터럴 `÷` 금지(`Frac`).
@@ -31,6 +32,9 @@ interface Props {
 
 export function MixedUseBgBundleAssetCard({ bg, assetLabel, assetKey, valuationMode }: Props) {
   const d = bg.debtAttribution;
+  const axisB = bg.axisB === true;
+  const stdHousing = bg.perPart.housingLand.stdPriceAtTransfer + bg.perPart.housingBuilding.stdPriceAtTransfer;
+  const stdCommercial = bg.perPart.commercialLand.stdPriceAtTransfer + bg.perPart.commercialBuilding.stdPriceAtTransfer;
   const whole = d.housingGiftValue + d.commercialGiftValue;
   const sel = bg.sangjeungbeopValuation?.selectedMode;
   const valueLabel =
@@ -78,13 +82,29 @@ export function MixedUseBgBundleAssetCard({ bg, assetLabel, assetKey, valuationM
           </tr>
           <tr>
             <td className="py-1 pr-2">
-              인수 채무액 — 신고 단위 채무를 자산별 증여가액 비율로 재배분한 이 겸용주택의 몫 (귀속: 구분 불분명)
+              {axisB
+                ? "인수 채무액 — 물건 전체로 입력한 채무 × 이 지분의 지분율 (귀속도 같은 지분율로 나눔)"
+                : "인수 채무액 — 신고 단위 채무를 자산별 증여가액 비율로 재배분한 이 겸용주택의 몫 (귀속: 구분 불분명)"}
             </td>
             <td className={AMOUNT} data-testid={`bg-mixed-bundle-debt-${assetKey}`}>{fmt(bg.assumedDebtAmount)}</td>
           </tr>
+          {axisB && (d.housing > 0 || d.commercial > 0) && (
+            <tr>
+              <td className="py-1 pr-2 pl-3">└ 주택 귀속 · 상가 귀속 (입력한 사실 선언 × 지분율)</td>
+              <td className={AMOUNT} data-testid={`bg-mixed-bundle-debt-declared-${assetKey}`}>
+                {fmt(d.housing)} · {fmt(d.commercial)}
+              </td>
+            </tr>
+          )}
           <tr>
             <td className="py-1 pr-2 pl-3">
-              └ 주택 몫 = 구분 불분명 채무 {fmtPlain(d.unallocated)} × <Frac top={`주택분 증여가액 ${fmtPlain(d.housingGiftValue)}`} bottom={`증여가액 ${fmtPlain(whole)}`} />
+              └ 주택 몫 = 구분 불분명 채무 {fmtPlain(d.unallocated)} ×{" "}
+              {sel === "mortgage" ? (
+                // 담보 승(축 B 기준시가 모드에서만 — 함께 양도는 보충 승만) — 증여가액이 곧 채무라 기준시가 비율로 나눈다(단건 카드와 같다 · 사용자 결정 H-1 ④)
+                <Frac top={`주택분 양도시 기준시가 ${fmtPlain(stdHousing)}`} bottom={`양도시 기준시가 합계 ${fmtPlain(stdHousing + stdCommercial)}`} />
+              ) : (
+                <Frac top={`주택분 증여가액 ${fmtPlain(d.housingGiftValue)}`} bottom={`증여가액 ${fmtPlain(whole)}`} />
+              )}
             </td>
             <td className={AMOUNT} data-testid={`bg-mixed-bundle-debt-housing-${assetKey}`}>{fmt(d.unallocatedToHousing)}</td>
           </tr>
@@ -147,7 +167,9 @@ export function MixedUseBgBundleAssetCard({ bg, assetLabel, assetKey, valuationM
 
       <p className="text-xs text-fuchsia-700 dark:text-fuchsia-400">
         ※ 증여세는 증여계약 전체를 한 번 계산합니다 — 무상이전분·증여세는 위 「부담부증여 평가 명세」에 있고 이 카드에는 없습니다.
-        채무 재배분과 구분 불분명 안분은 해석례가 직접 답하지 않아 확인이 필요합니다.
+        {axisB
+          ? " 지분 분할 취득의 채무·귀속을 지분율로 나눈 것과 구분 불분명 안분은 해석례가 직접 답하지 않아 확인이 필요합니다."
+          : " 채무 재배분과 구분 불분명 안분은 해석례가 직접 답하지 않아 확인이 필요합니다."}
       </p>
     </div>
   );

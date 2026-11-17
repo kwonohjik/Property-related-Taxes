@@ -15,13 +15,14 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 export type MixedSec163_9Compare = { era: "pre_deemed" | "clause"; cause: "inheritance" | "gift"; commercialOutsideClause?: boolean };
 
-export function mixedSec163_9CompareOf(asset: AssetForm): MixedSec163_9Compare | undefined {
+/** `isFractionalSplit` — 지분 분할 취득(축 B)이면 부담부증여 담보 승을 물건 전체로 판정한다(`isMixedBgDeemedValueUsed`). 부담부증여가 아니면 읽지 않는다. */
+export function mixedSec163_9CompareOf(asset: AssetForm, isFractionalSplit?: boolean): MixedSec163_9Compare | undefined {
   if (asset.assetKind !== "housing" || asset.isMixedUseHouse !== true) return undefined;
   // 부담부증여 — 시가 평가 × 상속·증여 취득(소령 §163⑨ 평가액 경로)만 비교한다(단서 구간 PR-7b-7a-2 · 의제취득일 전 PR-7b-7b). 기준시가 평가는 §159①1호 괄호라
   //   §163⑨를 쓰지 않는다(의제취득일 전이면 의제취득일 기준시가 × 채무비율 — 비교 없음).
   const bg = isMixedBurdenedGift(asset);
   //   시가 모드 담보 승도 괄호가 취득시 기준시가를 쓰게 해 비교하지 않는다(사용자 결정 H-1).
-  if (bg && !isMixedBgDeemedValueUsed(asset)) return undefined;
+  if (bg && !isMixedBgDeemedValueUsed(asset, isFractionalSplit)) return undefined;
   const cause =
     asset.acquisitionCause === "inheritance" ? "inheritance" : asset.acquisitionCause === "gift" ? "gift" : undefined;
   const date = asset.acquisitionDate ?? "";
@@ -38,14 +39,14 @@ export function mixedSec163_9CompareOf(asset: AssetForm): MixedSec163_9Compare |
 }
 
 /** ⑤ 취득시 기준시가 칸의 시점 라벨 — 의제취득일 전이면 의제취득일 기준(§164④~⑦의 「취득당시」 = 의제취득일, PR-3·PR-4와 같다). */
-export function mixedAcqTimeLabel(asset: AssetForm, fallback: string): string {
+export function mixedAcqTimeLabel(asset: AssetForm, fallback: string, isFractionalSplit?: boolean): string {
   // 부담부증여 기준시가 평가는 비교가 없지만 취득시 기준시가가 의제취득일 기준시가다(PR-7b-7b)
-  return mixedSec163_9CompareOf(asset)?.era === "pre_deemed" || isMixedBgPreDeemedInherited(asset) ? "의제취득일(1985.1.1.)" : fallback;
+  return mixedSec163_9CompareOf(asset, isFractionalSplit)?.era === "pre_deemed" || isMixedBgPreDeemedInherited(asset) ? "의제취득일(1985.1.1.)" : fallback;
 }
 
 /** ⑤ ① 평가액 칸 안내 — 비교 구간이면 「두 칸 모두/모두 비움 · 합계로 비교」, 아니면 null(종전 문구). */
-export function mixedSec163_9ReportedHint(asset: AssetForm): string | null {
-  const cmp = mixedSec163_9CompareOf(asset);
+export function mixedSec163_9ReportedHint(asset: AssetForm, isFractionalSplit?: boolean): string | null {
+  const cmp = mixedSec163_9CompareOf(asset, isFractionalSplit);
   if (!cmp) return null;
   const kind = cmp.cause === "gift" ? "증여세" : "상속세";
   if (cmp.commercialOutsideClause) {
@@ -57,8 +58,8 @@ export function mixedSec163_9ReportedHint(asset: AssetForm): string | null {
 }
 
 /** ⑤ 실제 필요경비 칸 안내 — 의제취득일 전이면 ③(환산)이 채택될 때 개산공제가 대신 붙는다. 아니면 null(종전 문구). */
-export function mixedSec163_9ExpenseHint(asset: AssetForm): string | null {
-  if (mixedSec163_9CompareOf(asset)?.era !== "pre_deemed") return null;
+export function mixedSec163_9ExpenseHint(asset: AssetForm, isFractionalSplit?: boolean): string | null {
+  if (mixedSec163_9CompareOf(asset, isFractionalSplit)?.era !== "pre_deemed") return null;
   return "신고가액(①)·§164 기준시가(②)가 채택되면 이 경비를 더하고, 환산취득가액(③)이 채택되면 이 칸 대신 개산공제(소득세법 시행령 §163⑥)를 적용합니다. 자본적지출·양도비가 있으면 입력하세요";
 }
 
@@ -67,9 +68,9 @@ export function mixedSec163_9ExpenseHint(asset: AssetForm): string | null {
  * 의제취득일 전은 상속만 선택이다(증여 필수).
  * 그 밖(본문)은 평가액이 유일한 취득가액이라 필수다. ⑤ 칸 제목·안내와 엔진 MB-11(`analyzeMixedBurdenedGift`)이 같은 조건이다(PR-7b-7a-2).
  */
-export function mixedBgReportedOptional(asset: AssetForm): boolean {
-  if (!isMixedBgDeemedValueUsed(asset)) return false;
+export function mixedBgReportedOptional(asset: AssetForm, isFractionalSplit?: boolean): boolean {
+  if (!isMixedBgDeemedValueUsed(asset, isFractionalSplit)) return false;
   // 의제취득일 전 — 상속은 ①이 후보 중 하나라 선택(두 칸 짝), 증여는 필수(Q-14·Q-16 · PR-7b-7b · 엔진 MB-11과 같은 조건)
   if (isMixedBgPreDeemedInherited(asset)) return asset.acquisitionCause !== "gift";
-  return asset.usePreHousingDisclosure === true || mixedSec163_9CompareOf(asset)?.era === "clause";
+  return asset.usePreHousingDisclosure === true || mixedSec163_9CompareOf(asset, isFractionalSplit)?.era === "clause";
 }

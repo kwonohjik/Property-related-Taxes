@@ -32,7 +32,6 @@ import { bgPreDeemedError } from "./transfer-tax-validate-bg-pre-deemed";
 import { effectiveGbLandPriceAtAcq } from "./transfer-pre1990-gb-bridge";
 import { bgMixedUseBlock, isMixedBurdenedGift } from "./burdened-gift-mixed-use-scope";
 import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
-import { mixedBgAxisBBlockMessage } from "./burdened-gift-mixed-use-preview";
 import {
   deriveMemberRightsValue,
   deriveRightValuationTotal,
@@ -199,16 +198,12 @@ export function validateBurdenedGiftAsset(
    * (1-a) 겸용주택 × 부담부증여 — 2026-10-16 PR-1(엔진)·PR-3(화면)으로 **계산한다**. 종전 일괄 차단(「세액 0」 방지)을 대체한다.
    *
    * 여기서는 **BG 공통 검증보다 앞**에서 막아야 하는 것만 본다 — 그 뒤 검증은 이 조합에서 채울 수 없는 칸을 요구하기 때문이다:
-   *  · 지분 분할 취득 묶음(축 B — 엔진 MB-6 · 문구는 엔진 leaf의 것). 함께 양도는 계산한다(PR-B)
    *  · UI P1 좁힘: 취득원인 이월과세·신축, 남아 있는 신축·증축 값(`bgMixedUseBlock`) — 상속·증여는 PR-7b-7a부터 연다
    * 엔진 차단(MB-1~18)·필수 입력·귀속(MB-13)·구분 감정평가(MB-17)·초과부담부는 `validateMixedUseBurdenedGift`(취득 검증의 겸용 분기)가
    * 엔진 leaf(`analyzeMixedBurdenedGift`)로 판정한다 — 규칙 복제 없음.
    */
   if (isMixedBurdenedGift(asset)) {
-    // 함께 양도 묶음은 계산한다(PR-B) — 귀속·승자 규칙은 엔진 leaf(MB-19~21)가 `validateMixedUseBurdenedGift`에서 같은 함수로 막는다. 지분 분할 취득(축 B)만 막는다(MB-6).
-    if (isFractionalSplitAxis === true) {
-      return fieldError("transferType", `${label}: ${mixedBgAxisBBlockMessage()}`);
-    }
+    // 함께 양도 묶음(PR-B)·지분 분할 취득(축 B · PR-C)은 계산한다 — 묶음 규칙은 엔진 leaf(MB-19~21)가 `validateMixedUseBurdenedGift`에서 같은 함수로 막는다.
     const uiBlock = bgMixedUseBlock(asset);
     if (uiBlock) return fieldError(uiBlock.field, `${label}: ${uiBlock.long}`);
   }

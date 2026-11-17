@@ -26,7 +26,7 @@ export const MIXED_SHARE_PHD_ERA_MESSAGE =
 
 /** 지분 카드가 미공시 환산을 꼭 써야 하는 취득인가 — ⑤ 토글 안내 · ⑧ 같은 술어(⑤ `clausePhdRequired`와 같은 조건). */
 export function mixedSharePhdRequired(merged: AssetForm): boolean {
-  return mixedSec163_9CompareOf(merged)?.era === "clause" || isMixedBgPreDeemedInherited(merged);
+  return mixedSec163_9CompareOf(merged, true)?.era === "clause" || isMixedBgPreDeemedInherited(merged);
 }
 
 const isMixed = (a: Pick<AssetForm, "assetKind" | "isMixedUseHouse">) => a.assetKind === "housing" && a.isMixedUseHouse === true;

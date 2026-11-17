@@ -99,7 +99,8 @@ export function MixedUseExpandedPanel({
   useEstimatedAcquisition,
   jibun,
   shareCard = false,
-}: Props & { shareCard?: boolean }) {
+  fractionalSplit = false,
+}: Props & { shareCard?: boolean; fractionalSplit?: boolean }) {
   if (!asset.isMixedUseHouse) return null;
 
   const isAfter2022 = !transferDate || transferDate >= "2022-01-01";
@@ -155,6 +156,7 @@ export function MixedUseExpandedPanel({
         acqSectionNum={3}
         jibun={jibun}
         shareCard={shareCard}
+        fractionalSplit={fractionalSplit}
       />
 
       {/* 거주기간은 보유상황 단계(1세대1주택)에서 단일 입력 — 자산목록 거주 입력 제거(중복 제거) */}

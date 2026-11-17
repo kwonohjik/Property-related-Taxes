@@ -473,11 +473,52 @@ test.describe("겸용주택 × 부담부증여", () => {
     await expect(page.getByTestId("validation-issues")).toHaveCount(0);
   });
 
-  test("BGMU-17 지분 분할 취득(축 B) 겸용 BG는 여전히 막힌다 — 함께 양도 해제가 축 B까지 번지지 않았다", async ({ page }) => {
+  // 🔄 2026-11-17(M-2 PR-C): 지분 분할 취득(축 B)을 계산한다 — 종전 BGMU-17은 막힘을 고정했다.
+  //    화면 상태: 자산 1 = 물건 단위 칸 + 부담부증여 칸(물건 전체 · 귀속 불분명) · 자산 2 = 이 지분의 취득 쪽 칸만(② 숨김). 값은 route anchor
+  //    `__tests__/calc/mixed-bg-axis-b.anchor.test.ts` S1과 같다 — 단독 소유 단건과 같은 67,033,120원.
+  test("BGMU-17 지분 분할 취득(축 B) 겸용 BG를 계산한다 — 단건과 같은 세액 · ⑦ 카드 2장(축 B 문구) · 증여세 1회", async ({ page }) => {
     test.setTimeout(90_000);
-    const share = (id: number, n: string) => bundleMixed({ assetId: `s${id}`, ownershipNumerator: n, ownershipDenominator: "100", bgMortgageAttribution: "unallocated" });
-    await seedBundleAndOpen(page, [share(1, "60"), share(2, "40")], { assetSplitMode: "fractional", contractTotalPrice: "" });
-    await page.getByRole("button", { name: "다음", exact: true }).click();
-    await expect(page.getByTestId("validation-issues")).toContainText("지분 분할 취득");
+    const first = bundleMixed({ assetId: "s1", ownershipNumerator: "60", ownershipDenominator: "100", bgMortgageAttribution: "unallocated" });
+    const second = {
+      ...makeDefaultAsset(2),
+      assetId: "s2",
+      addressJibun: (first as { addressJibun: string }).addressJibun,
+      acquisitionCause: "purchase",
+      acquisitionDate: "2010-03-15",
+      mixedAcqHousingPrice: "300000000",
+      mixedAcqLandPricePerSqm: "2500000",
+      mixedAcqCommercialBuildingPrice: "50000000",
+      mixedAcqHousingBuildingStdPrice: "50000000",
+      transferType: "burdened_gift",
+      ownershipNumerator: "40",
+      ownershipDenominator: "100",
+    };
+    await seedBundleAndOpen(page, [first, second], { assetSplitMode: "fractional", bundledSaleMode: "apportioned", householdHousingCount: "2" });
+    // ⑤ 계산 범위 안내 — 지분 분할 취득을 계산한다고 적는다
+    await expandAssetSection(page, 2, 0);
+    await expect(page.getByTestId("bg-mixed-notice")).toContainText("지분마다 지분율로 나누어 계산");
+    await expect(page.getByTestId("bg-mixed-notice")).not.toContainText("지분 분할 취득은 계산하지 않습니다");
+
+    await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+    const res = page.waitForResponse((r) => r.url().includes("/api/calc/transfer") && r.request().method() === "POST", { timeout: 60_000 });
+    await page.getByRole("button", { name: "세금 계산하기" }).click();
+    const r = await res;
+    expect(r.status(), await r.text()).toBe(200);
+    const data = (await r.json()).data;
+    expect(data.mode).toBe("bundled");
+    expect(data.aggregated.totalTax).toBe(67_033_120);
+    // 증여세는 계약 단위 1회 — 단건과 같은 101,850,000원
+    expect(data.aggregated.burdenedGift.giftTax.finalTax).toBe(101_850_000);
+
+    // ⑦ 지분마다 4부분 카드 — 함께 양도의 재배분 문구 대신 축 B 문구
+    for (const key of ["primary", "s2"]) {
+      const card = page.getByTestId(`bg-mixed-bundle-card-${key}`);
+      await card.waitFor({ timeout: 30_000 });
+      await expect(card).toContainText("물건 전체로 입력한 채무 × 이 지분의 지분율");
+      await expect(card).not.toContainText("재배분한 이 겸용주택의 몫");
+      await expect(card).not.toContainText("증여세 산출세액");
+    }
+    await expect(page.getByTestId("bg-mixed-bundle-debt-primary")).toHaveText("360,000,000");
+    await expect(page.getByTestId("bg-mixed-bundle-debt-s2")).toHaveText("240,000,000");
   });
 });

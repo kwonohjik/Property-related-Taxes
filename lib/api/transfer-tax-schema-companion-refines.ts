@@ -26,10 +26,10 @@ export function addCompanionAcquisitionCauseRefines(
   /** 폼-전역 양도일 (YYYY-MM-DD) — 이월과세 날짜 순서 검증용. */
   transferDate: string,
   ctx: z.RefinementCtx,
-  /** 지분 분할 취득(축 B) 묶음인가 — 겸용 × 부담부증여는 축 B만 막는다(MB-6). `isAxisBBundle`과 같은 판정. */
+  /** 지분 분할 취득(축 B) 묶음인가 — 겸용 × 부담부증여 엔진 leaf가 함께 양도(재배분 · MB-19~21)와 축 B(단건 규칙 · MB-22)를 가른다. `isAxisBBundle`과 같은 판정. */
   isAxisB: boolean,
 ): void {
-  // 겸용주택 × 부담부증여 — 판정은 엔진 leaf(MB-1~21). 함께 양도는 계산하고 축 B(MB-6)만 막는다.
+  // 겸용주택 × 부담부증여 — 판정은 엔진 leaf(MB-1~22). 함께 양도·축 B 모두 계산한다(축 B는 PR-C).
   refineCompanionMixedUseBurdenedGift(companions, ctx, { transferDate, isAxisB });
   // 겸용주택 × 이월과세 — 파트 카드 5장이 증여자 취득가액 전액을 각각 받던 경로를 막는다(⑧과 같은 술어·문구).
   refineCompanionMixedUseNoCarryover(companions, ctx);

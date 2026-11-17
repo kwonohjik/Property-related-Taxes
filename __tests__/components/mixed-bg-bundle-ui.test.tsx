@@ -89,14 +89,17 @@ describe("MBU-1 · 채무 귀속 카드 — 함께 양도 묶음 변형", () => 
 });
 
 describe("MBU-2 · 계산 범위 안내 문구(⑤)", () => {
-  it("함께 양도 묶음(보충적평가 승만·구분 불분명 재배분)을 계산 범위에 넣고, 지분 분할 취득만 계산하지 않는다고 적는다", () => {
+  // 🔄 2026-11-17(M-2 PR-C): 지분 분할 취득도 계산 범위에 넣는다 — 물건 전체 입력 × 지분율 · 시가 모드 담보 승만 계산하지 않는다(Q-10 (b)).
+  it("함께 양도 묶음(보충적평가 승만·구분 불분명 재배분)과 지분 분할 취득(물건 전체 입력 × 지분율)을 계산 범위에 넣는다", () => {
     const { getByTestId } = render(<Harness initial={seed()} bundle={{ debt: 1 }} />);
     const t = getByTestId("bg-mixed-notice").textContent ?? "";
     expect(t).toContain("함께 양도(여러 물건) 묶음");
     expect(t).toContain("보충적평가");
     expect(t).toContain("구분 불분명");
-    expect(t).not.toContain("함께 양도(여러 물건)·지분 분할 취득은 계산하지 않습니다");
-    expect(t).toMatch(/지분 분할 취득은 계산하지 않습니다/);
+    expect(t).not.toMatch(/지분 분할 취득은 계산하지 않습니다/);
+    expect(t).toContain("지분 분할 취득(같은 물건의 지분을 여러 번 취득)");
+    expect(t).toContain("지분마다 지분율로 나누어 계산");
+    expect(t).toContain("담보채권액 평가가 이기는 경우는 계산하지 않습니다");
   });
 });
 

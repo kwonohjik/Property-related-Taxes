@@ -46,6 +46,8 @@ interface Props {
   commercialSectionNum?: number;
   /** 축 B 둘째 이후 지분 카드 — 양도시 칸(개별주택가격 · 주택건물 나목 · 상가건물 · 상가부수토지 공시지가)을 숨긴다. 자산 1 값을 쓴다(④ · ⑧ 병합과 같은 목록). */
   shareCard?: boolean;
+  /** 지분 분할 취득(축 B — 첫 카드 포함). 부담부증여 시가 모드 담보 승을 물건 전체로 판정한다 — ④ · ⑧과 같은 축(PR-C · S10g). */
+  fractionalSplit?: boolean;
   /** 소재지 지번 주소 — Vworld 공시지가 조회용 */
   jibun?: string;
 }
@@ -67,6 +69,7 @@ export function MixedUseAssetMajorStdPrice({
   commercialSectionNum,
   jibun,
   shareCard = false,
+  fractionalSplit = false,
 }: Props) {
   const residential = parseDecimal(asset.residentialFloorArea);
   const commercial = parseDecimal(asset.nonResidentialFloorArea);
@@ -94,7 +97,7 @@ export function MixedUseAssetMajorStdPrice({
    */
   const bgDeemed = isMixedBgDeemedPath(asset);
   /** 시가 모드 담보 승은 평가액을 쓰지 않는다(§159①1호 괄호 — 취득시 기준시가 강제 · 사용자 결정 H-1) — ④·엔진과 같은 술어로 칸을 숨긴다. */
-  const bgDeemedValueUsed = isMixedBgDeemedValueUsed(asset);
+  const bgDeemedValueUsed = isMixedBgDeemedValueUsed(asset, fractionalSplit);
   const showReported = !bgMixed || bgDeemedValueUsed;
   const isPurchaseActual = bgMixed
     ? false
@@ -118,19 +121,19 @@ export function MixedUseAssetMajorStdPrice({
         : undefined;
   /** 파트 모델의 PHD 토글 노출 — 환산 파트가 있을 때만(엔진 X-7). 총액 모델은 항상(불변). */
   const showPhdToggle = !isPerPart || mixedAnyPartEstimated(asset);
-  const acqLabel = mixedAcqTimeLabel(asset, isInheritance ? "상속개시일" : isGift ? "증여일" : "취득시");
+  const acqLabel = mixedAcqTimeLabel(asset, isInheritance ? "상속개시일" : isGift ? "증여일" : "취득시", fractionalSplit);
   // 자동합계 박스 라벨 전용 — 원문이 "취득"(시 없음)이라 별도 변수로 분리 (E2E 문구 회귀 방지).
-  const acqSummaryLabel = mixedAcqTimeLabel(asset, isInheritance ? "상속개시일" : isGift ? "증여일" : "취득");
+  const acqSummaryLabel = mixedAcqTimeLabel(asset, isInheritance ? "상속개시일" : isGift ? "증여일" : "취득", fractionalSplit);
   // §163⑨ 단서 자산 합계 비교 구간(PR-6) — ①·경비 칸 안내(없으면 종전 문구)
-  const reportedHint = mixedSec163_9ReportedHint(asset);
-  const expenseHint = mixedSec163_9ExpenseHint(asset);
+  const reportedHint = mixedSec163_9ReportedHint(asset, fractionalSplit);
+  const expenseHint = mixedSec163_9ExpenseHint(asset, fractionalSplit);
   // 단서 구간(자산 합계 비교)·PHD(§164⑦ 가액)면 평가액이 선택이다 — 두 칸 모두 입력하거나 모두 비운다(PR-7b-7a-2 · 엔진 MB-11과 같은 조건)
-  const bgReportedOptional = mixedBgReportedOptional(asset);
+  const bgReportedOptional = mixedBgReportedOptional(asset, fractionalSplit);
   const bgReportedRequired = bgDeemedValueUsed && !bgReportedOptional;
   // §163⑨ 단서 구간(2005.4.30. 전 상속·증여) — 주택분 취득당시 기준시가는 §164⑦ 환산가액뿐이라 PHD 필수 · 직접 입력 칸을 숨긴다(사용자 결정 R-1 · ⑧·⑫·엔진 MB-11과 같은 술어)
   // 부담부증여 × 의제취득일 전 상속·증여 — 주택분 의제취득일 기준시가도 §164⑦ 환산가액뿐이다(Q-37 · PR-7b-7b · 엔진 MB-11). 시가·기준시가 평가 공통.
   const bgPreDeemed = isMixedBgPreDeemedInherited(asset);
-  const clausePhdRequired = mixedSec163_9CompareOf(asset)?.era === "clause" || bgPreDeemed;
+  const clausePhdRequired = mixedSec163_9CompareOf(asset, fractionalSplit)?.era === "clause" || bgPreDeemed;
   const bgReportedHint = bgDeemed && bgPreDeemed && reportedHint
     ? `${reportedHint} 부담부증여는 이긴 금액의 주택분·상가분에 각 채무비율을 곱합니다(같은 영 §159①1호).`
     : bgReportedRequired

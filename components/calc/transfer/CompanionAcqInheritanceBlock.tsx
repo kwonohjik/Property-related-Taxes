@@ -50,7 +50,7 @@ export function CompanionAcqInheritanceBlock({ asset, onChange, transferDate, fi
   // 직접 산정(MixedUseAssetMajorStdPrice) — 여기의 자산 구분·취득가액 의제 특례는 겸용 엔진이
   // 소비하지 않는 dead 입력이라 숨긴다(CompanionAcqPurchaseBlock.tsx의 기존 isMixedUse 파생 패턴 재사용).
   const isMixedUse = !!asset.isMixedUseHouse;
-  const mixedCmp = mixedSec163_9CompareOf(asset);
+  const mixedCmp = mixedSec163_9CompareOf(asset, isFractionalSplit);
   /**
    * 🔴 **부담부증여는 취득가액 축이 통째로 무효다** (2026-08-08 · 계획서 §10-5).
    *

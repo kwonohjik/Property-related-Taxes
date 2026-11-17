@@ -63,6 +63,11 @@ export function CompanionAcqSpecialAssetNotices({ asset, shareCard }: { asset?: 
                 ※ 산식에 필요한 <b>취득시 기준시가</b>는 아래 일반건물 취득 정보의 토지 공시지가·건물
                 기준시가 입력에서 자동 도출됩니다.
               </>
+            ) : isMixedBurdenedGift(asset) && shareCard ? (
+              <>
+                ※ 지분 분할 취득한 겸용주택의 증여재산 평가·채무·채무 귀속은 자산 1(첫 지분) 카드의 ② 양도정보에 <b>물건 전체</b>로 한 번만 입력합니다 — 지분마다 지분율로 나누어 계산합니다.
+                이 지분 카드에는 아래 <b>겸용주택 기준시가</b>에 이 지분을 취득할 당시의 값만 입력하세요.
+              </>
             ) : isMixedBurdenedGift(asset) ? (
               <>
                 ※ 겸용주택의 <b>취득시·양도시 기준시가</b>(주택·상가 4부분)는 아래 <b>겸용주택 기준시가</b>에서 한 번만 입력합니다.

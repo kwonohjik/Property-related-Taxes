@@ -283,6 +283,7 @@ export async function POST(request: NextRequest) {
         // ⑭ 겸용 × 부담부증여(소령 §159) — 양도 형태가 부담부증여일 때만 싣는다. 가드(MB-1~17)는 ⑫가 입구에서, 엔진이 다시 던진다.
         burdenedGift: data.transferType === "burdened_gift" ? data.burdenedGiftInfo : undefined,
         burdenedGiftInBundle: undefined, // 단건 — 함께 양도 묶음은 ⑭ `buildMixedUseCompanionItems`가 켠다
+        burdenedGiftAxisB: undefined, // 단건 — 지분 분할 취득(축 B) 묶음도 ⑭ `buildMixedUseCompanionItems`가 켠다
         acquisitionCause: data.acquisitionCause,
         // ⑭ US-07 — 겸용 중과 배제 선판정의 취득 원인 게이트
         inheritedPresaleCompletedByHeir: data.acquisitionCause === "inheritance" ? data.inheritedPresaleCompletedByHeir : undefined,

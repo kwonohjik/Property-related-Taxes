@@ -295,15 +295,16 @@ describe("묶음 안 겸용 BG — 막는 조합(Q-3 ① · Q-4 · 축 B)", () =
     expect(msgOf(r.j)).toContain("재배분한 채무");
   });
 
-  it("[CP-7] 축 B(같은 물건 지분 60/40 분할 취득)는 계속 막는다(MB-6 · PR-C) — ⑧·⑫", async () => {
+  // 🔄 2026-11-17(M-2 PR-C): 축 B를 계산한다 — 이 시료는 단독 소유 단건(`__tests__/calc/mixed-bg-axis-b.anchor.test.ts` S1)과 같은 67,033,120원이다.
+  it("[CP-7] 축 B(같은 물건 지분 60/40 분할 취득)를 계산한다 — ⑧ 0건 · ⑫ 200 · 단건과 같은 세액 (종전 MB-6)", async () => {
     const f = rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, {
       assets: [mixed(1, "600000000", x({ ownershipNumerator: "60", ownershipDenominator: "100" })), mixed(2, "600000000", x({ ownershipNumerator: "40", ownershipDenominator: "100" }))],
       contractTotalPrice: "", assetSplitMode: "fractional",
     })) as TransferFormData;
-    expect(allIssues(f).some((m) => m.includes("지분 분할 취득"))).toBe(true);
+    expect(allIssues(f)).toEqual([]);
     const r = await post(f);
-    expect(r.status).toBe(400);
-    expect(msgOf(r.j)).toContain("지분 분할 취득");
+    expect(r.status).toBe(200);
+    expect(r.j.data.aggregated.totalTax).toBe(67_033_120);
   });
 });
 
