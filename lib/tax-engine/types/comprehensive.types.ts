@@ -645,25 +645,52 @@ export interface PostManagementViolationInput {
   noticeDate: Date;
 }
 
+/** 이자율 시행 구간 하나 — 기산일~고지일(양끝 포함)과 교차시킨 부분 */
+export interface RecaptureInterestSegment {
+  /** 구간 시작(YYYY-MM-DD) */
+  from: string;
+  /** 구간 끝(YYYY-MM-DD) */
+  to: string;
+  /** 구간 일수(양끝 포함) */
+  days: number;
+  /** 1일당 이자율의 분자 — 분모는 10만(「1일당 10만분의 N」) */
+  ratePer100k: number;
+  /** 구간 이자 — 경감세액 × 일수 × 율을 구간마다 원 미만 절사 */
+  interest: number;
+}
+
+/** 과세연도별 이자 산출근거 */
+export interface RecaptureAnnualInterest {
+  taxYear: number;
+  amount: number;
+  /** 그 해 납부기한 — 12.15.이 토·일·공휴일이면 다음 날로 넘긴 날(국세기본법 §5①) */
+  paymentDeadline: string;
+  /** 기산일 — 납부기한 다음 날 */
+  interestFrom: string;
+  /** 산정일수 — 기산일부터 고지일까지(양쪽 끝 포함). 구간 일수의 합 */
+  days: number;
+  /** 연도별 이자 — 구간 이자의 합 */
+  interest: number;
+  /** 이자율 구간별 산출근거 — 고지일이 기산일보다 앞서면 빈 배열 */
+  segments: RecaptureInterestSegment[];
+}
+
 /**
  * 사후관리 위반 추징 결과
  */
 export interface PostManagementPenaltyResult {
   totalRecoveryTax: number;          // 추징 세액 합계 (종합부동산세법 §17⑤ 「경감받은 세액」)
-  interestAmount: number;            // 이자상당가산액 (같은 법 시행령 §10②2호 — 1일 10만분의 22)
+  interestAmount: number;            // 이자상당가산액 (같은 법 시행령 §10②2호 — 구간별 1일 10만분의 30·25·22)
   totalPayable: number;              // 총 납부액 (추징세 + 이자상당가산액)
   recoveryPeriodYears: number;       // 추징 대상 연수
   /**
    * 🔴 G-22: 연도별 산출근거 echo — 표시 산식이 금액을 재현할 수 있어야 한다.
    * 「전체 추징세액 × 단일 일수」로는 어느 해가 며칠인지 화면에서 확인할 수 없다.
    */
-  annualInterest: {
-    taxYear: number;
-    amount: number;
-    /** 기산일 — 그 해 납부기한(12/15) 다음 날 */
-    interestFrom: string;
-    /** 산정일수 — 기산일부터 고지일까지(양쪽 끝 포함) */
-    days: number;
-    interest: number;
-  }[];
+  annualInterest: RecaptureAnnualInterest[];
+  /**
+   * 확인 필요 안내 — 기한 이월(국세기본법 §5①)·구간별 절사·공휴일 표 한계. 없으면 생략.
+   * 금액에는 영향이 없다(기산일은 이미 반영돼 있다).
+   */
+  notices?: string[];
 }

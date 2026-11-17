@@ -28,6 +28,14 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
     keywords: ["기간의 말일이 토요일 또는 공휴일에 해당한 때에는 기간은 그 익일로 만료한다"],
     keywordMode: "ALL",
   },
+  {
+    // comprehensive.ts COMPREHENSIVE_EXCL.RECAPTURE_*_NOTICE 가 인용 — 납부 기한이 토요일·일요일·공휴일이면 그 다음날(종부세 추징 이자 기산일 · 2026-11-17 현행 본문 실독)
+    // 연혁(2009.2.6.·2018.4.1. 시행본)은 「공휴일, 토요일」 문언이라 12월 기한에는 같은 결과다.
+    id: "NTBL.DEADLINE_SPECIAL",
+    citation: "국세기본법 §5",
+    keywords: ["토요일 및 일요일", "그 다음날을 기한으로 한다"],
+    keywordMode: "ALL",
+  },
   // ── 삭제된 소득세법 시행령 §154①4호 경과조치 (OH-38 · legal-codes/transfer-house.ts RENTAL_REGISTRATION_4HO) ──
   // 키워드는 KoreanLaw MCP 현행 본문 verbatim(소득세법 2026-07-01 시행본 · 민간임대주택법 MST 276995, 2026-09-28 조회).
   {
