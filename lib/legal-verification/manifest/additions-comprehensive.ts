@@ -273,6 +273,19 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  /**
+   * 추징 §10③3호 가목 신청 가능 기간(V-12 · 2026-11-17 현행 MST 276995 실독) — 2020.8.18. 개정으로 §2 6호(종전 단기) 삭제,
+   * 5호에서 아파트 민간매입임대 제외. 현행 6의2호(6년 단기 · 아파트 제외)는 종전 단기가 아니다. 이 문언이 바뀌면 가목 상한(2020-08-17)을 다시 본다.
+   */
+  {
+    id: "PRIVATE_RENTAL.RECAPTURE_3HO_GA_KINDS_ABOLISHED",
+    citation: "민간임대주택에 관한 특별법 §2",
+    keywords: [
+      "를 임대하는 민간매입임대주택은 제외한다",
+      "6년 이상 임대할 목적으로 취득하여 임대하는 민간임대주택",
+    ],
+    keywordMode: "ALL",
+  },
   {
     id: "COMPREHENSIVE_DECREE.PROPERTY_TAX_DEDUCTION_CALC",
     citation: "종합부동산세법 시행령 §4의3",

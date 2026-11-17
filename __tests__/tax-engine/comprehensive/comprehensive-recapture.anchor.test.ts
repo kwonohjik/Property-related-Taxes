@@ -320,6 +320,20 @@ describe("E: §10③3호 — 정비사업·리모델링으로 새로 취득한 �
     expect(evaluateRecaptureExemption(replaced({ application: { kind: "short_term", date: d("2020-07-10") } }), NOTICE).failReasons).toEqual([COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_3HO_NO_ITEM]);
   });
 
+  it("V-12 가목 끝: 신청일 2020-08-17 포함 · 2020-08-18부터 불성립(2020.8.18. 민특법 개정으로 두 유형 폐지) + 사유 고지", () => {
+    for (const kind of ["long_general_apartment_purchase", "short_term"] as const) {
+      expect(evaluateRecaptureExemption(replaced({ application: { kind, date: d("2020-08-17") } }), NOTICE)).toMatchObject({ exempt: true, clause: "10③3호 가목" });
+      expect(evaluateRecaptureExemption(replaced({ application: { kind, date: d("2020-08-18") } }), NOTICE).failReasons).toEqual([
+        COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_3HO_NO_ITEM,
+        COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_3HO_GA_ABOLISHED,
+      ]);
+    }
+    // 가목이 막혀도 나목(아파트 · 미등록)이면 그대로 성립한다
+    expect(evaluateRecaptureExemption(replaced({ isApartment: true, registeredAsRental: false, application: { kind: "short_term", date: d("2021-03-02") } }), NOTICE)).toMatchObject({ exempt: true, clause: "10③3호 나목" });
+    // 그 밖의 유형(`other`)은 가목 대상이 아니라 사유 고지를 붙이지 않는다
+    expect(evaluateRecaptureExemption(replaced({ application: { kind: "other", date: d("2021-03-02") } }), NOTICE).failReasons).toEqual([COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_3HO_NO_ITEM]);
+  });
+
   it("나목: 아파트 · 미등록 → 추징하지 않음 / 등록했으면 불성립 / 아파트 아니면 불성립", () => {
     expect(evaluateRecaptureExemption(replaced({ isApartment: true, registeredAsRental: false }), NOTICE)).toMatchObject({ exempt: true, clause: "10③3호 나목" });
     expect(evaluateRecaptureExemption(replaced({ isApartment: true, registeredAsRental: true }), NOTICE).exempt).toBe(false);

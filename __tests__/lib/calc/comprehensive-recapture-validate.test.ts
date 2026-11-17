@@ -9,6 +9,7 @@
 import { describe, it, expect } from "vitest";
 import { comprehensiveRecaptureInputSchema } from "@/lib/validators/comprehensive-recapture-input";
 import { toRecaptureBody } from "@/lib/calc/comprehensive-recapture-api";
+import { COMPREHENSIVE_EXCL } from "@/lib/tax-engine/legal-codes";
 import {
   validateRecapture,
   UI_ONLY_ISSUE_CODES,
@@ -185,10 +186,23 @@ describe("⑧ V-12 — 선후 모순만 막는다", () => {
     expect(validateRecapture({ ...OK_1HO, registrationType: "private_construction", rentalApplicationDate: "2015-03-02" })).toEqual([]);
   });
 
-  it("막지 않는 것 — 임대 기산일이 등록일보다 앞섬 · 가목 신청일이 2020.8.18. 이후", () => {
+  it("막지 않는 것 — 임대 기산일이 등록일보다 앞섬 · 가목 신청일이 2020.7.11. 전(엔진이 가목 불성립으로 계산)", () => {
     expect(validateRecapture({ ...OK_1HO, rentalStartDate: "2015-01-01", rentalRegistrationDate: "2015-03-01" })).toEqual([]);
-    expect(validateRecapture({ ...OK_3HO, applicationKind: "short_term", applicationDate: "2020-08-20" })).toEqual([]);
     expect(validateRecapture({ ...OK_3HO, applicationKind: "long_general_apartment_purchase", applicationDate: "2020-07-10" })).toEqual([]);
+  });
+
+  it("V-12 결정(막기) — 가목 신청일 2020.8.18. 이후는 range(⑫도 400) · 8.17.은 통과", () => {
+    for (const applicationKind of ["short_term", "long_general_apartment_purchase"] as const) {
+      const late = { ...OK_3HO, applicationKind, applicationDate: "2020-08-18" };
+      expect(validateRecapture(late)).toEqual([
+        { field: "exemption.newHousing.application.date", code: "range", message: COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_3HO_GA_ABOLISHED },
+      ]);
+      expect(zodOk(late)).toBe(false);
+      const last = { ...OK_3HO, applicationKind, applicationDate: "2020-08-17" };
+      expect(validateRecapture(last)).toEqual([]);
+      expect(zodOk(last)).toBe(true);
+    }
+    expect(UI_ONLY_ISSUE_CODES).not.toContain("range");
   });
 });
 
@@ -257,7 +271,7 @@ function mulberry32(seed: number) {
 
 const DATES = [
   "", "2024-02-31", "2024-2-3", "2025-13-01", "abc", "2009-02-03", "2009-02-04", "2015-03-01", "2018-12-17", "2018-12-18",
-  "2019-02-11", "2020-07-10", "2020-07-11", "2020-08-20", "2021-12-15", "2021-12-16", "2024-12-15", "2024-12-16", "2024-12-17",
+  "2019-02-11", "2020-07-10", "2020-07-11", "2020-08-17", "2020-08-18", "2020-08-20", "2021-12-15", "2021-12-16", "2024-12-15", "2024-12-16", "2024-12-17",
   "2025-03-01", "2025-12-01", "2026-11-01",
 ];
 const YEARS = ["", "0", "2008", "2009", "2018", "2019", "2021", "2023", "2024", "2025", "2026", "20x", "99999999999"];

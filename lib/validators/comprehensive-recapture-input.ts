@@ -7,10 +7,12 @@
  * - 연도 범위: 2009 ~ 고지 연도(Q-12) · 고지일 하한 2009-02-04(Q-6 — 이자 규정 시작 전 고지일 거부)
  * - 날짜는 `YYYY-MM-DD`(존재하는 날짜) — route가 `toDate`로 UTC 자정 Date로 바꾼다
  * - 사유별 입력은 discriminatedUnion(`reason`)
+ * - §10③3호 가목 신청일 상한 2020-08-17(V-12 — 2020.8.18. 민특법 개정으로 두 유형 폐지 · ⑧ 같은 규칙)
  */
 
 import { z } from "zod";
 import { COMPREHENSIVE_EXCL_CONST } from "@/lib/tax-engine/legal-codes";
+import { COMPREHENSIVE_EXCL } from "@/lib/tax-engine/legal-codes";
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -94,6 +96,17 @@ export const comprehensiveRecaptureInputSchema = z
     exemption: exemptionSchema,
   })
   .superRefine((v, ctx) => {
+    const ex = v.exemption;
+    if (ex.reason === "replacement_housing") {
+      const app = ex.newHousing.application;
+      if (app && app.kind !== "other" && app.date > COMPREHENSIVE_EXCL_CONST.RECAPTURE_EXEMPT_3HO_GA_UNTIL) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["exemption", "newHousing", "application", "date"],
+          message: COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_3HO_GA_ABOLISHED,
+        });
+      }
+    }
     const noticeYear = Number(v.noticeDate.slice(0, 4));
     const seen = new Set<number>();
     v.rows.forEach((r, i) => {

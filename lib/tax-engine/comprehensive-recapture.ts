@@ -39,6 +39,7 @@ const FIRST_6Y_TAX_YEAR = (() => {
 })();
 const T_3HO_PROVISO_END = parseISO(C.RECAPTURE_EXEMPT_3HO_PROVISO_END);
 const T_3HO_GA_FROM = parseISO(C.RECAPTURE_EXEMPT_3HO_GA_FROM);
+const T_3HO_GA_UNTIL = parseISO(C.RECAPTURE_EXEMPT_3HO_GA_UNTIL);
 const T_INTEREST_RULE = parseISO(C.RECAPTURE_INTEREST_RULE_START);
 
 const NOT_EXEMPT = (failReasons: string[], notices: string[] = []): RecaptureExemptionResult => ({
@@ -115,11 +116,15 @@ function evaluate3ho(
     return NOT_EXEMPT([X.RECAPTURE_EXEMPT_3HO_BEFORE_PROVISO]);
   }
   const app = h.application;
-  const isGa =
-    !!app && app.kind !== "other" && startOfDay(app.date) >= T_3HO_GA_FROM;
+  // 가목 — 신청 가능 기간 2020.7.11.~8.17.(8.18. 민특법 개정으로 두 유형 폐지 · V-12). ⑧·⑫가 8.18. 이후를 막고 엔진도 가목으로 보지 않는다
+  const gaKind = !!app && app.kind !== "other";
+  const gaAfterAbolished = gaKind && startOfDay(app.date) > T_3HO_GA_UNTIL;
+  const isGa = gaKind && startOfDay(app.date) >= T_3HO_GA_FROM && !gaAfterAbolished;
   // 나목 — 아파트(당초가 단기민간임대면 모든 주택)이면서 임대사업자 등록을 하지 않았을 것
   const isNa = (h.isApartment || input.originalKind === "short_term") && !h.registeredAsRental;
-  if (!isGa && !isNa) return NOT_EXEMPT([X.RECAPTURE_EXEMPT_3HO_NO_ITEM]);
+  if (!isGa && !isNa) {
+    return NOT_EXEMPT(gaAfterAbolished ? [X.RECAPTURE_EXEMPT_3HO_NO_ITEM, X.RECAPTURE_EXEMPT_3HO_GA_ABOLISHED] : [X.RECAPTURE_EXEMPT_3HO_NO_ITEM]);
+  }
   return {
     exempt: true,
     clause: isGa ? "10③3호 가목" : "10③3호 나목",

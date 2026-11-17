@@ -114,4 +114,21 @@ describe("POST /api/calc/comprehensive-recapture", () => {
     expect((await post({ ...base, rows: [{ taxYear: 2021, amount: 1.5 }] })).status).toBe(400);
     expect((await post({ ...base, noticeDate: "2024-02-31" })).status).toBe(400);
   });
+
+  it("400: §10③3호 가목 신청일 2020-08-18 이후(V-12 — 두 유형 폐지) · 2020-08-17은 200", async () => {
+    const body = (date: string) => ({
+      noticeDate: "2026-11-01",
+      rows: [{ taxYear: 2023, amount: 1_000_000 }],
+      exemption: {
+        reason: "replacement_housing",
+        cause: "redevelopment_reconstruction",
+        originalKind: "short_term",
+        newHousing: { completionDate: "2021-01-01", isApartment: false, registeredAsRental: true, application: { kind: "short_term", date } },
+      },
+    });
+    expect((await post(body("2020-08-18"))).status).toBe(400);
+    const ok = await post(body("2020-08-17"));
+    expect(ok.status).toBe(200);
+    expect(ok.json.data.exemption).toMatchObject({ clause: "10③3호 가목" });
+  });
 });
