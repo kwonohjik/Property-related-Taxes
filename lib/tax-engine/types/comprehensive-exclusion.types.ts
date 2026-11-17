@@ -47,6 +47,17 @@ export type ExclusionType =
   | "none";                         // 합산배제 미신청
 
 /**
+ * 2020.2.11. 전 세무서 사업자등록만 한 다가구주택(부칙<대통령령 제30404호> 제6조 · T-14) — 1구를 1호로 본 구별 사실.
+ * 판정: `lib/tax-engine/comprehensive-exclusion-multifamily.ts`. 계획서: comprehensive-rental-excl-multifamily-deemed.plan.md
+ */
+export interface DeemedMultiFamilyInput {
+  /** 구(호실)별 면적(㎡)·공시가격(원) — 1구=1호(시행령 §3⑥). 가격은 사용자가 구별로 입력한다(산정 방법 확인 필요) */
+  units: { label: string; area: number; assessedValue: number }[];
+  /** 2020.2.11. 이후 임대로 바꾼 호실이 없음 — false면 불성립 + 확인 필요 */
+  noConversionAfterCutoff: boolean;
+}
+
+/**
  * 임대주택 합산배제 입력 (시행령 §3 요건 판정용)
  */
 export interface RentalExclusionInput
@@ -96,6 +107,11 @@ export interface RentalExclusionInput
    * 1·7·10호는 같은 특별시·광역시·도(§3⑤), 3호는 ⑤ 밖이라 전국. 없으면 불성립 + 확인 필요.
    */
   qualifyingUnitCount?: number;
+  /**
+   * 있으면 의제 다가구 판정 경로(1·2호만) — 세무서 사업자등록일을 지자체 등록일로 보고 가격·면적은 구별로 판정한다.
+   * 없으면 현행 판정 100% 불변(`validateDeemedMultiFamily`).
+   */
+  deemedMultiFamily?: DeemedMultiFamilyInput;
 
   // ── 의무임대기간 (시행령 §3① "N년 이상 계속하여 임대") ──
   /** 임대등록 말소일 — 과세기준일(당일 포함)까지 말소면 합산배제 거부 — 과세기준일 현재 임대사업자 아님 (시행령 §3①) */

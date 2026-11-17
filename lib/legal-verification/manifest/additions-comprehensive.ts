@@ -57,6 +57,13 @@ export const COMPREHENSIVE_ADDITIONS: VerificationRule[] = [
     keywords: ["과세기준일 현재 임대를 개시한 자가", "보유현황 신고기간 종료일까지 임대사업자로서 사업자등록을 하는 경우"],
     keywordMode: "ALL",
   },
+  /** §3⑥ — 다가구주택은 1구를 1호의 주택으로 본다(T-14 의제 다가구 구별 판정 · 부칙<제30404호> 제6조 경과조치와 함께 인용) */
+  {
+    id: "COMPREHENSIVE_DECREE.MULTIFAMILY_ONE_GU_ONE_HO",
+    citation: "종합부동산세법 시행령 §3",
+    keywords: ["다가구주택은", "1구를 1호의 주택으로 본다"],
+    keywordMode: "ALL",
+  },
   /** §3⑦4호 — 공실 2년 이내 계속 임대 간주(T-12) */
   {
     id: "COMPREHENSIVE_DECREE.EXCLUDED_RENTAL_VACANCY_2Y",
