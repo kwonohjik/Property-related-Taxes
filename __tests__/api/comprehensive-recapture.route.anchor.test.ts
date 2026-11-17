@@ -50,7 +50,7 @@ describe("POST /api/calc/comprehensive-recapture", () => {
     expect(r.totalPayable).toBe(2_756_040);
     expect(r.annualInterest[0]).toMatchObject({ taxYear: 2018, paymentDeadline: "2018-12-17", interestFrom: "2018-12-18", days: 2176, interest: 516_170 });
     expect(r.annualInterest[0].segments.map((g: { days: number; ratePer100k: number }) => [g.days, g.ratePer100k])).toEqual([[56, 30], [1099, 25], [1021, 22]]);
-    expect(r.notices).toEqual(expect.arrayContaining([COMPREHENSIVE_EXCL.RECAPTURE_DEADLINE_CARRY_NOTICE]));
+    expect(r.notices.some((n: string) => n.includes("기산일"))).toBe(false);
   });
 
   it("§10③ 배제: 3호 나목(아파트 · 미등록 · 준공 2021-01-01) → 추징하지 않음 · 금액 0 · 근거 echo — 날짜 문자열이 엔진에 Date로 도달한다", async () => {

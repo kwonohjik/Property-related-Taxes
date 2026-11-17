@@ -117,7 +117,8 @@ describe("기산일 — 납부기한 12.15.의 토·일·공휴일 이월 (국�
     expect(a.interestFrom).toBe("2018-12-18");
     expect(a.segments.map((g) => [g.days, g.ratePer100k, g.interest])).toEqual([[56, 30, 16_800], [1_099, 25, 274_750], [1_021, 22, 224_620]]);
     expect(a.interest).toBe(516_170);
-    expect(notices).toContain(COMPREHENSIVE_EXCL.RECAPTURE_DEADLINE_CARRY_NOTICE);
+    // 이월은 확정(2026-11-17 사용자 결정 · V-2 닫음) — 「확인 필요」에 기산일 안내를 붙이지 않는다
+    expect(notices.some((n) => n.includes("기산일"))).toBe(false);
   });
 
   it("2019년분 100만 · 고지 2024-12-01 = 422,370 (12.16. 고정이면 422,620)", () => {
@@ -161,7 +162,7 @@ describe("D: calculatePostManagementPenalty 위임 — 추징 계산기와 같�
       noticeDate: d("2024-12-01"),
     });
     expect(r.interestAmount).toBe(516_170);
-    expect(r.notices).toContain(COMPREHENSIVE_EXCL.RECAPTURE_DEADLINE_CARRY_NOTICE);
+    expect((r.notices ?? []).some((n) => n.includes("기산일"))).toBe(false);
   });
 });
 
