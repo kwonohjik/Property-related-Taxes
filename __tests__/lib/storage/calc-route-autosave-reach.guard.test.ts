@@ -25,6 +25,8 @@ const ROOT = process.cwd();
 const NO_HISTORY_ROUTES: Record<string, string> = {
   "app/calc/cross-104-5/page.tsx":
     "소득세법 §104⑤ 합산 비교 — 저장된 양도세 이력(`calculationRepository`)을 읽어 재계산하는 화면이라 새 record를 만들지 않는다",
+  "app/calc/comprehensive-recapture/page.tsx":
+    "종부세 합산배제 추징 계산기(종합부동산세법 §17⑤1호·시행령 §10) — 본 계산과 시간축이 다른 별도 페이지이고 이력을 저장하지 않기로 결정(계획서 comprehensive-rental-excl-recapture-calculator.plan.md Q-11 · §6.3 — 사후관리 추징 시뮬레이터 3종과 같다). 이력 세목 미등록",
   "app/calc/family-business-postmgmt/page.tsx":
     "상증법 §18의2⑤ 가업상속공제 사후관리 추징 시뮬레이터 — 이력 세목 미등록(별건)",
   "app/calc/multi-house-surcharge/page.tsx":

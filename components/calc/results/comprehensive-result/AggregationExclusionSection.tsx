@@ -7,6 +7,7 @@
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { RecaptureCalculatorLink } from "@/components/calc/comprehensive-recapture/RecaptureCalculatorLink";
 import { SectionHeader } from "./result-rows";
 
 function failedExclusions(result: ComprehensiveTaxResult) {
@@ -83,6 +84,9 @@ export function AggregationExclusionSection({
               )),
             )}
           </ul>
+          <p className="mt-2 text-xs text-amber-700 dark:text-amber-300 print:hidden">
+            요건을 충족하지 않게 되어 추징을 받는 경우의 세액은 <RecaptureCalculatorLink />에서 계산합니다.
+          </p>
         </div>
       )}
     </section>
