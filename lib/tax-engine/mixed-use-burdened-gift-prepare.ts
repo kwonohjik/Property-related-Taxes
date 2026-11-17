@@ -43,15 +43,14 @@ const SEC_163_9_PRE_DISCLOSURE_TIME = new Date(SEC_163_9_BUILDING_FIRST_DISCLOSU
 
 export type MixedBgIssueCode =
   // MB-7(담보·임대 승 차단)은 사용자 결정 H-1(2026-11-16)로 없앴다 — 번호는 재사용하지 않는다.
-  | "MB-1" | "MB-2" | "MB-3" | "MB-4" | "MB-5" | "MB-6" | "MB-8" | "MB-9"
+  // MB-6(지분 분할 취득 = 축 B 차단)도 M-2 PR-C(2026-11-17)로 없앴다 — 번호는 재사용하지 않는다.
+  | "MB-1" | "MB-2" | "MB-3" | "MB-4" | "MB-5" | "MB-8" | "MB-9"
   // MB-14(부분 초과 차단)도 사용자 결정(2026-11-16 — 부분 증여가액의 하한 = 그 부분 채무액)으로 없앴다.
   | "MB-10" | "MB-11" | "MB-12" | "MB-13" | "MB-15" | "MB-16" | "MB-17" | "MB-18"
   // 함께 양도 묶음(PR-B · 계획서 `bg-mixed-use-m2-bundle-share.plan.md` Q-3 ①·Q-4) — 묶음은 채무를 신고 단위로 자산가액 비율 재배분하는 모델이다.
-  | "MB-19" | "MB-20" | "MB-21";
-
-/** MB-6(지분 분할 취득 = 축 B) 문구 — 엔진·⑫·⑧이 같은 상수를 쓴다(복제 금지). */
-export const MIXED_BG_AXIS_B_BLOCK_MESSAGE =
-  "겸용주택 부담부증여는 지분 분할 취득(같은 물건의 지분을 여러 번 취득)과 함께 계산할 수 없습니다 — 단독 소유·공유지분 단건·함께 양도(여러 물건)만 지원합니다.";
+  | "MB-19" | "MB-20" | "MB-21"
+  // 지분 분할 취득(축 B · PR-C) — 시가 모드 담보 승은 계산하지 않는다(사용자 결정 Q-10 (b) 2026-11-17 · 실측하지 않음).
+  | "MB-22";
 
 /** MB-19 문구 — 함께 양도 묶음은 채무를 자산가액 비율로 재배분하므로 주택·상가 귀속을 받지 않는다. */
 export const MIXED_BG_BUNDLE_ATTRIBUTION_MESSAGE =
@@ -60,6 +59,10 @@ export const MIXED_BG_BUNDLE_ATTRIBUTION_MESSAGE =
 /** MB-20 문구 — 묶음 안 겸용은 보충적평가(기준시가 또는 시가)가 증여가액인 경우만 계산한다. */
 export const MIXED_BG_BUNDLE_WINNER_MESSAGE =
   "함께 양도(여러 물건) 묶음 안의 겸용주택 부담부증여는 증여재산 평가가 보충적평가(기준시가 또는 시가)인 경우만 계산합니다 — 담보채권액 평가(상속세 및 증여세법 제66조)·임대료 환산 평가(같은 법 제61조 제5항)가 증여가액이 되는 경우는 합산 증여가액이 자산별 평가액의 합과 어긋나 계산하지 않습니다.";
+
+/** MB-22 문구 — 축 B는 기준시가 모드의 담보·임대 승과 보충적평가 승만 계산한다(Q-10 (b)). */
+export const MIXED_BG_AXIS_B_MARKET_COLLATERAL_MESSAGE =
+  "지분 분할 취득(같은 물건의 지분을 여러 번 취득)한 겸용주택 부담부증여에서 시가 평가 중 담보채권액 평가(상속세 및 증여세법 제66조)가 시가보다 커 증여가액이 되는 경우는 계산하지 않습니다 — 기준시가 평가의 담보·임대 승과 보충적평가 승만 계산합니다. 시가·채무액·채권최고액을 다시 확인하세요.";
 
 /** MB-21 문구 — 묶음의 채무는 신고 단위 재배분값(`assumedDebtOverride`)이어야 한다. */
 export const MIXED_BG_BUNDLE_DEBT_MESSAGE =
@@ -116,16 +119,19 @@ export interface MixedBgSource {
   /**
    * 공유지분율 (0 < r ≤ 1). **지분 단건**에서만 의미가 있다 — 평가·취득 입력(기준시가·시가·취득총액)은 물건 전체(100%) 값을 받아 여기서 ×r하고
    * (비겸용 `scaleBurdenedGiftInfo`와 같은 규약), 채무·귀속 3칸은 지분 인수분 그대로다(PR-A · 계획서 `bg-mixed-use-m2-bundle-share.plan.md` Q-1).
-   * 함께 양도·축 B는 `isCompanion`이 막는다.
+   * 축 B(PR-C)는 카드마다 그 지분율이 온다 — 평가·취득은 같은 규약으로 여기서 ×r하고, 채무·귀속은 ④가 물건 전체 입력을 항목별로 ×r해 보낸다.
    */
   ownershipRatio?: number;
   /** 증여자의 취득원인 echo */
   acquisitionCause?: string;
   housingInheritedValue?: number;
   commercialInheritedValue?: number;
-  /** 묶음(함께 양도·축 B) 안의 겸용인가. 함께 양도면 채무·귀속·승자 규칙이 달라지고(MB-19~21), 축 B는 `isAxisB`가 따로 막는다. */
+  /** 묶음(함께 양도·축 B) 안의 겸용인가. 함께 양도면 채무·귀속·승자 규칙이 달라지고(MB-19~21), 축 B는 `isAxisB`로 가른다. */
   isCompanion?: boolean;
-  /** 지분 분할 취득(축 B — 같은 물건의 지분 여럿) 묶음 안의 겸용인가 — MB-6. 함께 양도(다른 물건)는 막지 않는다(PR-B). */
+  /**
+   * 지분 분할 취득(축 B — 같은 물건의 지분 여럿) 묶음 안의 겸용인가(M-2 PR-C). 축 B는 함께 양도의 재배분 모델(MB-19~21)을 쓰지 않는다 —
+   * 입력이 물건 전체이고 ④가 채무·귀속을 지분율로 나눠 보낸다(계획서 §3.3). 증여세는 계약 단위 1회라 카드마다 계산하지 않는다.
+   */
   isAxisB?: boolean;
 }
 
@@ -179,6 +185,8 @@ export interface MixedBgPrepared {
   acqPath: MixedBgAcqPath;
   /** 함께 양도 묶음 안의 겸용인가 — 증여세를 자산별로 계산하지 않는다(계약 단위 1회 · Q-7). */
   inBundle?: boolean;
+  /** 지분 분할 취득(축 B) 묶음 안의 겸용인가 — 증여세는 계약 단위 1회(`inBundle`과 같다) · 귀속은 받는다(재배분 모델 아님 · PR-C). */
+  axisB?: boolean;
   /** 공유지분율(0<r<1) — 단독 소유면 없다. 4부분 취득시 기준시가(basis)를 ×r해 쓰는 곳(`applyMixedBurdenedGift`)이 읽는다. */
   shareRatio?: number;
   /** 의제취득일(1985.1.1.) 전 상속·증여 — 취득시 기준시가가 의제취득일 기준시가다(결과 라벨 echo · PR-7b-7b) */
@@ -262,12 +270,10 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
   if (src.transferCause === "public_expropriation") {
     add("MB-5", "겸용주택 부담부증여는 공익사업 수용 양도 특례와 함께 계산할 수 없습니다.", ["transferCause"]);
   }
-  // 공유지분 단건(PR-A)·함께 양도 묶음(PR-B)은 계산한다. 지분 분할 취득(축 B)만 PR-C까지 막는다.
-  if (src.isAxisB === true) {
-    add("MB-6", MIXED_BG_AXIS_B_BLOCK_MESSAGE, ["ownershipRatio"]);
-  }
   /** 함께 양도(다른 물건) 묶음 안의 겸용 — B := 재배분 채무, 귀속 = {0, 0, B}, 보충적평가 승만. */
   const inBundle = src.isCompanion === true && src.isAxisB !== true;
+  /** 지분 분할 취득(축 B) 묶음 안의 겸용 — 단건과 같은 규칙(입력 채무·귀속 · 모든 승자)에 ④가 ×r한 값이 온다(PR-C). */
+  const axisB = src.isCompanion === true && src.isAxisB === true;
   if (deemedPath && (method === "converted" || method === "salesCase" || method === "appraisal")) {
     add("MB-8", "증여자가 상속·증여로 취득한 자산은 상속개시일(증여일) 현재 상증법 평가액이 취득 당시 실지거래가액입니다(「소득세법 시행령」 제163조 제9항) — 환산취득가액·매매사례가액·감정가액을 쓸 수 없습니다. 취득가액 산정방식을 「실지취득가액」으로 선택하세요.", ["burdenedGiftInfo", "acquisitionMethod"]);
   }
@@ -446,6 +452,11 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
     add("MB-20", MIXED_BG_BUNDLE_WINNER_MESSAGE, ["burdenedGiftInfo", "valuationMode"]);
     return { issues };
   }
+  // 축 B × 시가 모드 담보 승 — ⑧ `bgSplitAxisCollateralWinUnsupported`(겸용은 확인 범위 밖)와 같은 조합. 판정은 ×r한 채무와 ×r한 시가라 물건 전체 판정과 같다.
+  if (axisB && marketCollateralWin) {
+    add("MB-22", MIXED_BG_AXIS_B_MARKET_COLLATERAL_MESSAGE, ["burdenedGiftInfo", "mortgageDebtAmount"]);
+    return { issues };
+  }
   if (B > C) {
     add("MB-10", `인수 채무(${won(B)})가 증여가액(${won(C)})을 초과합니다 — 채무액÷증여가액이 1을 넘으면 증여가액을 초과하는 부분까지 양도로 보게 되어 계산할 수 없습니다(「소득세법」 제88조 제1호 후단, 같은 법 시행령 제159조 제1항 제1호·제2호).`, ["burdenedGiftInfo", "mortgageDebtAmount"]);
     return { issues };
@@ -535,6 +546,7 @@ export function analyzeMixedBurdenedGift(src: MixedBgSource): MixedBgAnalysis {
       transferStd,
       ...(shareR !== undefined ? { shareRatio: shareR } : {}),
       ...(inBundle ? { inBundle: true } : {}),
+      ...(axisB ? { axisB: true } : {}),
       acqPath,
       preDeemed: preDeemedInherited,
       assetOverrides: {

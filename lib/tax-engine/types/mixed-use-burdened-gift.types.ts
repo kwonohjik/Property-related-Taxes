@@ -81,8 +81,10 @@ export type MixedUseBurdenedGiftBreakdown = Omit<
    * `highValue`(12억 판정·안분 분모)만 **물건 전체** 값이다(영 §156①). 결과뷰 라벨이 둘을 구분한다.
    */
   ownershipRatio?: number;
-  /** 함께 양도 묶음 안 겸용의 고지문 — 서브엔진 `warnings`는 묶음 합산에 닿지 않아 명세에 싣는다(route가 집계 경고로 올린다). 단건·지분은 `warnings`에 있다. */
+  /** 함께 양도 · 지분 분할 취득(축 B) 묶음 안 겸용의 고지문 — 서브엔진 `warnings`는 묶음 합산에 닿지 않아 명세에 싣는다(route가 집계 경고로 올린다). 단건·지분은 `warnings`에 있다. */
   bundleNotices?: string[];
+  /** 지분 분할 취득(축 B) 묶음의 지분 카드인가 — 결과 카드가 함께 양도(재배분) 문구 대신 축 B 문구를 쓴다(PR-C). 값은 단건 규칙(입력 채무·귀속 × 지분율). */
+  axisB?: true;
   /** 12억 판정/안분 echo — 결과뷰가 분모를 재도출하지 않게 한다 (공유지분이면 물건 전체 값) */
   highValue: {
     /** 양도하는 주택 부분이 있어 판정·안분이 걸리는가(false = «주택 양도 없음») */

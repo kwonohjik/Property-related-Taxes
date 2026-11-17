@@ -119,13 +119,18 @@ describe("⑧ — 묶음 안 겸용은 귀속을 고르지 않아도 막지 않�
     expect(issues.some((m) => m.includes("담보평가(상증법 §66)") && m.includes(":bgMortgageDebtAmount:"))).toBe(true);
   });
 
-  it("[SC-6] 지분 분할 취득(축 B) 겸용 부담부증여는 계속 막는다(MB-6) — 점프 칸 transferType", () => {
+  // 🔄 2026-11-17(M-2 PR-C): 축 B를 계산한다 — ⑧ 0건(세액 대조는 `mixed-bg-axis-b.anchor.test.ts`).
+  it("[SC-6] 지분 분할 취득(축 B) 겸용 부담부증여를 막지 않는다 — ⑧ 0건 (종전 MB-6 · 점프 칸 transferType)", () => {
     const f = rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), FORM, {
       assets: [mixed(1, "600000000", x({ ownershipNumerator: "60", ownershipDenominator: "100" })), mixed(2, "600000000", x({ ownershipNumerator: "40", ownershipDenominator: "100" }))],
       contractTotalPrice: "", assetSplitMode: "fractional",
     })) as TransferFormData;
     const issues = allIssues(f);
-    expect(issues.some((m) => m.includes(":transferType:") && m.includes("지분 분할 취득"))).toBe(true);
+    // 축 B는 단건 규칙이라 귀속을 묻는다(함께 양도와 다르다) — 귀속 칸은 자산 1에만 있고 지분 카드는 그 값을 잇는다(④ 병합) → 자산 1에서 고르면 둘 다 풀린다.
+    expect(issues.every((m) => m.includes(":bgMortgageAttribution:") && m.includes("어디에 속하는지 선택하세요"))).toBe(true);
+    expect(issues.some((m) => m.includes("지분 분할 취득"))).toBe(false);
+    f.assets[0] = { ...f.assets[0], bgMortgageAttribution: "unallocated" } as AssetForm;
+    expect(allIssues(f)).toEqual([]);
   });
 });
 

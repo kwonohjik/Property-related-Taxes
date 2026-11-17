@@ -13,7 +13,7 @@ import { MIXED_INHERITED_SPLIT_DATE_MESSAGE } from "@/lib/tax-engine/mixed-use-i
 /**
  * 묶음이 **지분 분할 취득(축 B — 같은 물건의 지분 여럿)** 인가 — route(`bundled-route.ts`)·⑫ 양도가액 면제(`transfer-tax-schema.ts`)와 **같은 판정**이다:
  * 명시 플래그(`fractionalSplitBundle`)가 앞서고, 없으면 전 자산이 물건 전체 양도가액(`totalPropertyTransferPrice`)을 가진 모양이다.
- * 겸용 × 부담부증여는 축 B만 막는다(MB-6 · PR-C까지) — 함께 양도(다른 물건)는 계산한다(PR-B).
+ * 겸용 × 부담부증여 엔진 leaf가 이 판정으로 함께 양도(재배분 · PR-B)와 축 B(단건 규칙 · PR-C)를 가른다.
  */
 export function isAxisBBundle(
   data: { fractionalSplitBundle?: boolean; totalPropertyTransferPrice?: number },
@@ -88,7 +88,7 @@ export function refineMixedUseBurdenedGift(
 
 /**
  * 함께 양도(컴패니언) 겸용주택 × 부담부증여 — 판정은 **엔진 leaf 하나**(`collectMixedBurdenedGiftIssues`)다(PR-B · 종전에는 무조건 막았다).
- * 묶음 안 겸용은 채무를 신고 단위로 재배분한 값(`assumedDebtOverride`)·구분 불분명·보충적평가 승만 계산한다(MB-19~21). 지분 분할 취득(축 B)은 MB-6이 막는다.
+ * 묶음 안 겸용은 채무를 신고 단위로 재배분한 값(`assumedDebtOverride`)·구분 불분명·보충적평가 승만 계산한다(MB-19~21). 지분 분할 취득(축 B)은 단건 규칙(④가 ×r한 채무·귀속)이고 시가 모드 담보 승만 막는다(MB-22 · PR-C).
  * 컴패니언 스키마에는 `transferType`이 있다 — 구 표식(`acquisitionCause=burdened_gift`)은 증여자의 취득원인을 알려 주지 않아 주 자산과 같이 거부한다.
  */
 export function refineCompanionMixedUseBurdenedGift(

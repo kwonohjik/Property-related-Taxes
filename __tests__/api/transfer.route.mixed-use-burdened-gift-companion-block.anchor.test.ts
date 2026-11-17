@@ -188,23 +188,33 @@ describe("컴패니언 겸용주택 × 부담부증여 — 막는 조합(API · 
     expect(res.status).toBe(400);
   });
 
-  it("[CB-4] 🔴 축 B(지분 분할 취득 — `fractionalSplitBundle`)에서는 컴패니언 겸용 BG를 계속 막는다 → 400 (MB-6 · 컴패니언 arm)", async () => {
+  // 🔄 2026-11-17(M-2 PR-C): MB-6을 없앴다 — 축 B 겸용 BG는 계산하고, 엔진이 축 B로 알고 계산했다는 echo(`axisB` · 카드별 증여세 없음)를 슬롯에 남긴다.
+  //    기준시가 합계는 겸용 입력(1,680,000,000)과 맞춘다 — 종전 값(1,000,000,000)은 MB-6에 가려 있던 MB-12 불일치였다.
+  it("[CB-4] 축 B(지분 분할 취득 — `fractionalSplitBundle`) 컴패니언 겸용 BG를 계산한다 → 200 · 슬롯 echo axisB · 카드별 증여세 없음 (종전 MB-6 · 컴패니언 arm)", async () => {
     const r = await pipeline(bundledForm());
     const body = r.body as { fractionalSplitBundle?: boolean; companionAssets: Array<Record<string, unknown>> };
     const idx = body.companionAssets.findIndex((c) => c.assetKind === "mixed_use_house");
     body.fractionalSplitBundle = true;
     body.companionAssets[idx].transferType = "burdened_gift";
-    body.companionAssets[idx].burdenedGiftInfo = BG_INFO;
+    body.companionAssets[idx].burdenedGiftInfo = { ...BG_INFO, buildingStdPriceAtTransfer: 1_680_000_000 };
     const res = await post(body);
-    expect(res.status).toBe(400);
-    expect(res.text).toMatch(/지분 분할 취득\(같은 물건의 지분을 여러 번 취득\)과 함께 계산할 수 없습니다/);
+    expect(res.status, res.text.slice(0, 400)).toBe(200);
+    expect(res.text).not.toMatch(/지분 분할 취득\(같은 물건의 지분을 여러 번 취득\)과 함께 계산할 수 없습니다/);
+    const slots = Object.values((JSON.parse(res.text) as { data: { aggregated: { mixedUseBgDetailsByAsset?: Record<string, { axisB?: boolean; giftTax?: unknown }> } } }).data.aggregated.mixedUseBgDetailsByAsset ?? {});
+    expect(slots.length).toBe(1);
+    expect(slots[0].axisB).toBe(true);
+    expect(slots[0].giftTax).toBeUndefined();
   });
 
-  it("[CB-5] 🔴 축 B에서 primary 겸용 BG도 같다(primary arm)", async () => {
+  it("[CB-5] 축 B에서 primary 겸용 BG도 같다(primary arm)", async () => {
     const r = await pipeline(primaryMixedForm());
-    const body = { ...(r.body as object), transferType: "burdened_gift", burdenedGiftInfo: BG_INFO, fractionalSplitBundle: true };
+    const body = { ...(r.body as object), transferType: "burdened_gift", burdenedGiftInfo: { ...BG_INFO, buildingStdPriceAtTransfer: 1_680_000_000 }, fractionalSplitBundle: true };
     const res = await post(body);
-    expect(res.status).toBe(400);
-    expect(res.text).toMatch(/지분 분할 취득\(같은 물건의 지분을 여러 번 취득\)과 함께 계산할 수 없습니다/);
+    expect(res.status, res.text.slice(0, 400)).toBe(200);
+    expect(res.text).not.toMatch(/지분 분할 취득\(같은 물건의 지분을 여러 번 취득\)과 함께 계산할 수 없습니다/);
+    const slots = Object.values((JSON.parse(res.text) as { data: { aggregated: { mixedUseBgDetailsByAsset?: Record<string, { axisB?: boolean; giftTax?: unknown }> } } }).data.aggregated.mixedUseBgDetailsByAsset ?? {});
+    expect(slots.length).toBe(1);
+    expect(slots[0].axisB).toBe(true);
+    expect(slots[0].giftTax).toBeUndefined();
   });
 });

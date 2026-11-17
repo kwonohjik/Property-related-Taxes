@@ -110,6 +110,11 @@ export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
    */
   burdenedGiftInBundle?: boolean;
   /**
+   * 부담부증여가 **지분 분할 취득(축 B — 같은 물건의 지분 여럿) 묶음 안**의 겸용인가(⑭ 묶음 어댑터가 `burdenedGiftInBundle`과 함께 켠다 — PR-C).
+   * 켜면 함께 양도의 재배분 모델(MB-19~21)을 쓰지 않고 단건 규칙(④가 ×r한 채무·귀속 · 모든 승자)으로 계산한다. 증여세는 자산별로 계산하지 않는다.
+   */
+  burdenedGiftAxisB?: boolean;
+  /**
    * 증여자의 취득원인 echo(route `data.acquisitionCause`) — 부담부증여 가드(MB-8 상속×K-5/6/7 · MB-9 이월과세 · MB-15 신축)와
    * 조특법 §99·§99의3 중과 배제 선판정의 취득 원인 게이트(`transfer-tax-mixed-use-reduction-surcharge.ts`)가 읽는다.
    * 취득가액 경로는 읽지 않는다(아래 `acquisitionBy*`·`use*` 플래그가 정한다).

@@ -520,6 +520,7 @@ export function buildCompanionEngineInputs(
       assetId: c.assetId,
       assetLabel: c.assetLabel ?? "",
       allocatedSalePrice: a.allocatedSalePrice,
+      isAxisB: ctx.isAxisB,
       onMixedBgDetail: ctx.onMixedBgDetail,
       rentalResidence: ctx.primaryEngineInput.onShareMixedRentalNotices
         ? { input: { ...companionEngine, annualBasicDeductionUsed: 0 }, onNotices: ctx.primaryEngineInput.onShareMixedRentalNotices } // 판정 함수는 기본공제를 읽지 않는다

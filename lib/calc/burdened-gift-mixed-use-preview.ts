@@ -11,7 +11,6 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import {
   analyzeMixedBurdenedGift,
-  collectMixedBurdenedGiftIssues,
   type MixedBgAnalysis,
   type MixedBgIssue,
   type MixedBgSource,
@@ -64,14 +63,16 @@ export function mixedBgSourceOfForm(
   asset: AssetForm,
   form: TransferFormData | undefined,
   transferDate: string,
-  /** `isCompanion` = 묶음(함께 양도·축 B) 안의 겸용 · `isAxisB` = 그중 지분 분할 취득(MB-6). 함께 양도면 ④와 같은 재배분 채무(`assumedDebtOverride`)를 얹는다. */
+  /** `isCompanion` = 묶음(함께 양도·축 B) 안의 겸용 · `isAxisB` = 그중 지분 분할 취득. 함께 양도면 ④와 같은 재배분 채무(`assumedDebtOverride`)를, 축 B면 ④와 같은 ×r 채무를 쓴다. */
   opts?: { isCompanion?: boolean; isAxisB?: boolean },
 ): MixedBgSource | undefined {
   if (!isMixedBurdenedGift(asset)) return undefined;
   const f = form ?? minimalForm(transferDate);
   const mu = buildMixedUsePayload(asset, f);
   if (!mu) return undefined;
-  let info = buildBurdenedGiftInfo(asset, undefined, transferDate) as unknown as BurdenedGiftInfo;
+  // 축 B(지분 분할 취득) — ④(`transfer-tax-api-primary-context.ts` `bgInfoBase`)와 같은 r로 채무·귀속을 ×r한다(3중 패턴 · 계획서 §3.3.3 8).
+  //   원값으로 넘기면 엔진 leaf가 ×r된 증여가액과 원 채무를 비교해 MB-10 「인수 채무가 증여가액을 초과」를 오탐한다(S12 — route는 200).
+  let info = buildBurdenedGiftInfo(asset, opts?.isAxisB === true ? getOwnershipRatio(asset) : undefined, transferDate) as unknown as BurdenedGiftInfo;
   const inBundle = opts?.isCompanion === true && opts.isAxisB !== true;
   if (inBundle && form) {
     // ④ `companionBgDebtOverrides`와 같은 함수·같은 입력 — 신고 단위 채무를 자산가액 비율로 재배분한 이 자산의 몫(Q-3 ①).
@@ -151,21 +152,4 @@ export function mixedBgReportedField(asset: AssetForm): string {
   const housing = parseAmount(gift ? asset.mixedHousingGiftValueOverride : asset.mixedHousingInheritedValueOverride);
   if (!(housing > 0)) return gift ? "mixedHousingGiftValueOverride" : "mixedHousingInheritedValueOverride";
   return gift ? "mixedCommercialGiftValueOverride" : "mixedCommercialInheritedValueOverride";
-}
-
-/**
- * 지분 분할 취득(축 B) 묶음 안의 겸용 부담부증여 차단 문구 — 엔진 MB-6의 문구를 **그대로** 쓴다(복제 금지). 공유지분 단건(PR-A)·함께 양도(PR-B)는 막지 않는다.
- * 묶음 여부는 폼-전역 사실이라 BG 공통 검증(`validateBurdenedGiftAsset`)이 먼저 알려야 한다 — 그 뒤 검증은 채울 수 없는 칸을 요구할 수 있다.
- */
-export function mixedBgAxisBBlockMessage(): string {
-  const issues = collectMixedBurdenedGiftIssues({
-    burdenedGift: {
-      valuationMode: "sangjeungbeop_standard", lendingDepositTotal: 0, mortgageDebtAmount: 0, annualRentTotal: 0,
-      landStdPriceAtTransfer: 0, buildingStdPriceAtTransfer: 0, landStdPriceAtAcquisition: 0, buildingStdPriceAtAcquisition: 0,
-    } as BurdenedGiftInfo,
-    isCompanion: true,
-    isAxisB: true,
-    residentialFloorArea: 0, nonResidentialFloorArea: 0, buildingFootprintArea: 0, totalLandArea: 0,
-  });
-  return issues.find((i) => i.code === "MB-6")?.message ?? "겸용주택 부담부증여는 지분 분할 취득과 함께 계산할 수 없습니다.";
 }

@@ -35,7 +35,8 @@ export function mixedBgBundleViewsOf(
         assetKey: key,
         label: apportionment.apportioned.find((a) => a.assetId === key)?.assetLabel || (idx >= 0 ? `자산 ${idx + 1}` : key),
         bg: byAsset[key],
-        valuationMode: idx >= 0 ? formData.assets[idx]?.bgValuationMode : undefined,
+        // 축 B 지분 카드는 평가 모드를 저장하지 않는다(② 숨김 · 지분 카드 값 `""`) — 물건 단위 값인 자산 1의 것을 쓴다(④ 병합과 같은 출처 · PR-C).
+        valuationMode: byAsset[key].axisB ? formData.assets[0]?.bgValuationMode : idx >= 0 ? formData.assets[idx]?.bgValuationMode : undefined,
       };
     });
 }

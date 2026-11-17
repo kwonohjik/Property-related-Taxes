@@ -479,6 +479,8 @@ export function buildMixedUseCompanionItems(
     assetId: string;
     assetLabel: string;
     allocatedSalePrice: number;
+    /** 묶음이 지분 분할 취득(축 B — `isFullFractionalBundle`)인가 — 겸용 부담부증여가 재배분 모델 대신 단건 규칙으로 계산된다(PR-C). */
+    isAxisB?: boolean;
     /** 묶음 안 겸용 BG 4부분 명세 수집(자산 id 키) — `bundled-route.ts`가 `aggregated.mixedUseBgDetailsByAsset`에 싣는다. */
     onMixedBgDetail?: (assetId: string, breakdown: MixedUseBurdenedGiftBreakdown) => void;
     /**
@@ -573,6 +575,7 @@ export function buildMixedUseCompanionItems(
     //   증여자의 취득원인(MB-5·8·9·15가 읽는 값)은 아래 `acquisitionCause`(= item의 취득원인) 그대로다 — 단건의 `data.acquisitionCause`와 같은 출처.
     burdenedGift: companionEngine.transferType === "burdened_gift" ? companionEngine.burdenedGiftInfo : undefined,
     burdenedGiftInBundle: companionEngine.transferType === "burdened_gift" ? true : undefined,
+    burdenedGiftAxisB: companionEngine.transferType === "burdened_gift" && asset.isAxisB === true ? true : undefined,
     acquisitionCause: companionEngine.acquisitionCause,
     // US-07 — 분양권 상속 답도 그 자산의 것이다(컴패니언 item은 상속일 때만 싣는다 — `bundled-split-helpers.ts`). 취득 원인과 함께 있어야 STEP 0.45 게이트가 카드 판정과 갈리지 않는다.
     inheritedPresaleCompletedByHeir: companionEngine.inheritedPresaleCompletedByHeir,

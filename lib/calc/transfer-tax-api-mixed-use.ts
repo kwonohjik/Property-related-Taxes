@@ -35,6 +35,7 @@ import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-resi
 import { consolidateResidenceMonths } from "@/lib/tax-engine/transfer-tax-exemption";
 import { derivePre1990PhdLandPricePerSqmAtAcq } from "./transfer-pre1990-phd-bridge";
 import { getOwnershipRatio } from "./transfer-tax-api-helpers";
+import { isFullFractionalBundle } from "./transfer-tax-api-asset-basics";
 import { resolveHouseholdHousingCount } from "./household-house-count";
 import { isMixedBurdenedGift, resolveMixedBgAcquisition } from "./burdened-gift-mixed-use-scope";
 import { isMixedBgDeemedValueUsed } from "./burdened-gift-mixed-use-scope";
@@ -122,8 +123,11 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
    */
   const bgMixed = isMixedBurdenedGift(primary);
   // 시가 모드 담보 승은 평가액을 쓰지 않는다(괄호가 취득시 기준시가 강제 · 사용자 결정 H-1) — ⑤가 칸을 숨기므로 싣지 않는다.
-  const bgDeemed = isMixedBgDeemedValueUsed(primary);
-  const sec163_9Compare = mixedSec163_9CompareOf(primary);
+  //   지분 분할 취득(축 B)은 시가·채무가 물건 전체 입력이라 담보 승을 물건 전체로 판정한다(⑤ · ⑧ 미리보기와 같은 축 — S10g).
+  //   ⑤ 미리보기의 최소 폼(`burdened-gift-mixed-use-preview.ts` `minimalForm`)은 자산 목록이 없다 — 단건으로 본다.
+  const axisB = isFullFractionalBundle(form.assets ?? [], form.assetSplitMode);
+  const bgDeemed = isMixedBgDeemedValueUsed(primary, axisB);
+  const sec163_9Compare = mixedSec163_9CompareOf(primary, axisB);
   const bgAcq = resolveMixedBgAcquisition(primary);
   const isPerPart = !bgMixed && isMixedUsePerPartAcq(primary);
   const partNeeds = isPerPart ? mixedPartAcqNeedsOfForm(primary) : undefined;

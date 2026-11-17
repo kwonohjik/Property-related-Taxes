@@ -342,14 +342,13 @@ describe("겸용 × 부담부증여 — 차단 가드 MB-1~MB-18", () => {
     const { a, i } = base();
     expect(await issuesOf({ ...a, transferCause: "public_expropriation" }, i)).toContain("MB-5");
   });
-  it("MB-6은 축 B(지분 분할 취득)만 막는다 — 공유지분 단건(PR-A)·함께 양도(PR-B)는 통과한다", async () => {
+  // 🔄 2026-11-17(M-2 PR-C): MB-6(축 B 차단)을 없앴다 — 축 B는 단건 규칙(④가 ×r한 채무·귀속)으로 계산한다. 번호는 재사용하지 않는다.
+  it("(종전 MB-6) 축 B(지분 분할 취득)도 막지 않는다 — 재배분 채무(MB-21)를 요구하지 않는 점이 함께 양도와 다르다", async () => {
     const { a, i } = base();
-    expect(await issuesOf({ ...a, ownershipRatio: 0.5 }, i)).not.toContain("MB-6");
-    expect(await issuesOf({ ...a, ownershipRatio: 0.5, isAxisB: true } as never, i)).toContain("MB-6");
-    // 함께 양도 묶음 안이면 재배분 채무(assumedDebtOverride)가 필요하다(MB-21) — MB-6은 아니다
-    const bundle = await issuesOf({ ...a, isCompanion: true } as never, i);
-    expect(bundle).not.toContain("MB-6");
-    expect(bundle).toContain("MB-21");
+    expect(await issuesOf({ ...a, ownershipRatio: 0.5 }, i)).toEqual([]);
+    expect(await issuesOf({ ...a, ownershipRatio: 0.5, isCompanion: true, isAxisB: true } as never, i)).toEqual([]);
+    // 짝: 함께 양도 묶음 안이면 재배분 채무(assumedDebtOverride)가 필요하다(MB-21)
+    expect(await issuesOf({ ...a, isCompanion: true } as never, i)).toContain("MB-21");
   });
   it("(종전 MB-7) 임대 평가가 보충적평가를 이겨도 막지 않는다 — 사용자 결정 H-1(2026-11-16)", async () => {
     const { a } = base();

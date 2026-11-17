@@ -217,6 +217,8 @@ export interface CompanionBuildContext {
   /** 일반건물 부담부증여 × 이월과세 비교 단위 수집 — `buildGbCompanionItems` 참조(PR-1). */
   onGbCarryoverUnit?: Parameters<typeof buildGbCompanionItems>[4];
   /** 겸용 컴패니언 부담부증여 4부분 명세 수집(PR-B) — `buildMixedUseCompanionItems` 참조. */
+  /** 묶음이 지분 분할 취득(축 B)인가 — 겸용 컴패니언 부담부증여 엔진 입력 `burdenedGiftAxisB`(PR-C). */
+  isAxisB?: boolean;
   onMixedBgDetail?: (assetId: string, breakdown: import("@/lib/tax-engine/types/mixed-use-burdened-gift.types").MixedUseBurdenedGiftBreakdown) => void;
 }
 

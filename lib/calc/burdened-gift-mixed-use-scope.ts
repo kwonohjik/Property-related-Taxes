@@ -54,12 +54,16 @@ export function isMixedBgDeemedPath(
  * (시가 모드는 시가와 담보평가만 비교한다 · 사용자 결정 H-1 2026-11-16). 공유지분이면 시가를 지분분으로 줄여 비교한다 — 채무는 지분 인수분이다
  * (엔진 `scaleBurdenedGiftInfo` 규약 · PR-A). 이때 §159①1호 괄호가 취득가액을 취득시 기준시가로 강제해
  * 산정방식별 금액·상속·증여 평가액·구분 감정평가를 쓰지 않는다. 금액은 ④(`buildBurdenedGiftInfo`)와 같은 칸에서 읽는다.
+ *
+ * 지분 분할 취득(축 B · `isFractionalSplit === true`)은 시가·채무를 모두 물건 전체로 입력한다(④가 채무를, 엔진이 시가를 같은 r로 줄인다) — 물건 전체끼리 비교한다.
+ * 시가만 ×r하면 채무 10억 · 시가 15억 · 40% 지분 카드가 «담보 승»으로 읽혀 산정방식 라디오가 숨는다(계획서 §3.3.3 9 · S10 — 엔진은 시가 승).
  */
 export function isMixedBgMarketCollateralWin(
   a: ScopeAsset & Pick<AssetForm, "bgValuationMode" | "bgMarketValueAtTransfer" | "bgLendingDepositTotal" | "bgMortgageDebtAmount" | "bgMortgageSetAmount" | "ownershipNumerator" | "ownershipDenominator">,
+  isFractionalSplit?: boolean,
 ): boolean {
   if (!isMixedBurdenedGift(a) || a.bgValuationMode !== "sangjeungbeop_market") return false;
-  const ratio = getOwnershipRatio(a as AssetForm);
+  const ratio = isFractionalSplit === true ? 1 : getOwnershipRatio(a as AssetForm);
   const marketWhole = parseAmount(a.bgMarketValueAtTransfer) || 0;
   const market = ratio < 1 ? applyRatio(marketWhole, ratio) : marketWhole;
   if (market <= 0) return false;
@@ -75,11 +79,13 @@ export function isMixedBgMarketCollateralWin(
  * 상속·증여 평가액(주택분·상가분)이 실제로 취득가액에 쓰이는가 — `isMixedBgDeemedPath`이면서 시가 모드 담보 승이 아닐 때다
  * (엔진 prepare의 `deemedPath`). ⑤ 평가액 칸 · ④ 평가액 전송 · §163⑨ 비교 구간이 이 술어를 쓴다.
  * 산정방식 라디오 숨김·⑧/⑫ 방식 면제는 종전대로 `isMixedBgDeemedPath`다(상속·증여 취득에는 고를 방식이 없다).
+ * 지분 분할 취득(축 B)은 `isFractionalSplit`를 넘겨야 담보 승을 물건 전체로 판정한다(`isMixedBgMarketCollateralWin` · S10g — 넘기지 않으면 평가액 칸이 숨고 ④가 싣지 않아 엔진 MB-11).
  */
 export function isMixedBgDeemedValueUsed(
   a: ScopeAsset & Pick<AssetForm, "bgValuationMode" | "acquisitionCause" | "bgMarketValueAtTransfer" | "bgLendingDepositTotal" | "bgMortgageDebtAmount" | "bgMortgageSetAmount" | "ownershipNumerator" | "ownershipDenominator">,
+  isFractionalSplit?: boolean,
 ): boolean {
-  return isMixedBgDeemedPath(a) && !isMixedBgMarketCollateralWin(a);
+  return isMixedBgDeemedPath(a) && !isMixedBgMarketCollateralWin(a, isFractionalSplit);
 }
 
 /**
@@ -157,24 +163,34 @@ function itemOf(a: AssetForm, item: BgAttrItem) {
  * · 모드 `""`는 **어느 버킷에도 넣지 않는다** — 「전부 구분 불분명」 기본값 금지(엔진 Q-10).
  * · `split`은 입력 3칸을 그대로 쓰고 합이 총액과 다르면 `SPLIT_MISMATCH`. 비분할 모드는 구조상 합이 총액과 같다.
  * · 분할 3칸은 `split`일 때만 읽는다 — 모드를 바꿔도 값은 보존되지만 전송되지 않는다(stale 가드).
+ * · `ratio`(0<r<1 · 지분 분할 취득 축 B — ④ `buildBurdenedGiftInfo`의 `debtScaleRatio`)면 **항목별로** ×r한다: 그 항목의 주택·상가는 각각 ×r(절사),
+ *   불분명은 「×r한 그 항목 총액」의 잔액이다. ④ 채무 칸(`d()`)도 항목별 ×r이라 귀속 합 = 채무 합이 된다. 합계 단위로 ×r하면 잔액이 음수가 될 수 있다
+ *   (보증금 100,000,001 · 담보 500,000,001 모두 주택 · r 0.6 → 주택 360,000,001 · 불분명 −1 — 계획서 §3.3.2 NEG). 검증(`issues`)은 입력값 그대로 한다.
  */
-export function mixedBgDebtAttribution(a: AssetForm): MixedBgDebtAttribution {
+export function mixedBgDebtAttribution(a: AssetForm, ratio?: number): MixedBgDebtAttribution {
   const out: MixedBgDebtAttribution = { housing: 0, commercial: 0, unallocated: 0, issues: [] };
+  const scale = ratio !== undefined && ratio > 0 && ratio < 1;
+  const r = (v: number): number => (scale ? applyRatio(v, ratio as number) : v);
+  const addItem = (total: number, h: number, c: number) => {
+    const hs = r(h);
+    const cs = r(c);
+    out.housing += hs;
+    out.commercial += cs;
+    out.unallocated += r(total) - hs - cs;
+  };
   for (const item of ["deposit", "mortgage"] as const) {
     const it = itemOf(a, item);
     if (it.total <= 0) continue;
     switch (it.mode) {
-      case "housing": out.housing += it.total; break;
-      case "commercial": out.commercial += it.total; break;
-      case "unallocated": out.unallocated += it.total; break;
+      case "housing": addItem(it.total, it.total, 0); break;
+      case "commercial": addItem(it.total, 0, it.total); break;
+      case "unallocated": addItem(it.total, 0, 0); break;
       case "split": {
         const sum = it.split.housing + it.split.commercial + it.split.unallocated;
         if (sum !== it.total) {
           out.issues.push({ item, kind: "SPLIT_MISMATCH", field: it.splitField, diff: it.total - sum, total: it.total, split: it.split });
         } else {
-          out.housing += it.split.housing;
-          out.commercial += it.split.commercial;
-          out.unallocated += it.split.unallocated;
+          addItem(it.total, it.split.housing, it.split.commercial);
         }
         break;
       }

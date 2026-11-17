@@ -27,7 +27,7 @@ import { mixedUsePhdFieldError } from "./transfer-tax-validate-mixed-use-asset";
 import { isMixedBgDeemedPath } from "./burdened-gift-mixed-use-scope";
 
 /** 화면 순서로 정렬한 이슈 묶음 — 같은 묶음 안에서는 엔진이 낸 순서를 지킨다. */
-const HARD_BLOCKS = new Set(["MB-1", "MB-2", "MB-3", "MB-4", "MB-5", "MB-6", "MB-8", "MB-9", "MB-12", "MB-15", "MB-16", "MB-18", "MB-19", "MB-20", "MB-21"]);
+const HARD_BLOCKS = new Set(["MB-1", "MB-2", "MB-3", "MB-4", "MB-5", "MB-8", "MB-9", "MB-12", "MB-15", "MB-16", "MB-18", "MB-19", "MB-20", "MB-21", "MB-22"]);
 
 function firstIssue(issues: MixedBgIssue[], pick: (i: MixedBgIssue) => boolean): MixedBgIssue | undefined {
   return issues.find(pick);
@@ -38,9 +38,9 @@ export function validateMixedUseBurdenedGift(
   label: string,
   form: TransferFormData | undefined,
   formTransferDate: string | undefined,
-  /** 묶음(함께 양도·지분 분할 축 B) 안의 겸용인가 — 함께 양도면 엔진 MB-19~21, 축 B면 MB-6 */
+  /** 묶음(함께 양도·지분 분할 축 B) 안의 겸용인가 — 함께 양도면 엔진 MB-19~21 */
   isCompanion: boolean,
-  /** 그중 지분 분할 취득(축 B)인가 — 엔진 MB-6 */
+  /** 그중 지분 분할 취득(축 B)인가 — 단건 규칙 · 채무·귀속은 ④와 같은 ×r(PR-C) */
   isAxisB = false,
 ): string | null {
   const transferDate = formTransferDate ?? form?.transferDate ?? "";
@@ -56,7 +56,7 @@ export function validateMixedUseBurdenedGift(
     i.path.join(".") === "mixedUse.housingInheritedValue" ? mixedBgReportedField(asset) : mixedBgIssueField(i, asset);
   const fail = (i: MixedBgIssue, field?: string) => fieldError((field ?? issueField(i)) as never, `${label}: ${i.message}`);
 
-  // 2) 차단 조합(MB-1~6·8·9·12·15·16·18)
+  // 2) 차단 조합(MB-1~5·8·9·12·15·16·18~22)
   const hard = firstIssue(issues, (i) => HARD_BLOCKS.has(i.code));
   if (hard) return fail(hard);
 

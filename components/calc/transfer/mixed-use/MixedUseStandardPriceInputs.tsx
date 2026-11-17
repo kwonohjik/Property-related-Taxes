@@ -15,6 +15,8 @@ interface Props {
   jibun?: string;
   /** 축 B 둘째 이후 지분 카드 — 양도시 칸은 물건 단위라 자산 1에서 입력한다(`mixed-use-share-object-fields.ts`). 취득 쪽 칸만 연다. */
   shareCard?: boolean;
+  /** 지분 분할 취득(축 B — 첫 카드 포함). 부담부증여 시가 모드 담보 승을 물건 전체로 판정한다(`isMixedBgMarketCollateralWin`). */
+  fractionalSplit?: boolean;
 }
 
 /**
@@ -43,6 +45,7 @@ export function MixedUseStandardPriceInputs({
   acqSectionNum,
   jibun,
   shareCard = false,
+  fractionalSplit = false,
 }: Props) {
   if (asset.hasPartialUsageChange) {
     return (
@@ -70,6 +73,7 @@ export function MixedUseStandardPriceInputs({
       commercialSectionNum={acqSectionNum}
       jibun={jibun}
       shareCard={shareCard}
+      fractionalSplit={fractionalSplit}
     />
   );
 }

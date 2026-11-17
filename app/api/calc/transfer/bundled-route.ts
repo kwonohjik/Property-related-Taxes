@@ -286,6 +286,7 @@ export function calculateBundledTransfer(
             assetId: "primary",
             assetLabel: a.assetLabel ?? "",
             allocatedSalePrice: a.allocatedSalePrice,
+            isAxisB: isFullFractionalBundle,
             onMixedBgDetail,
             rentalResidence: { input: engineInput, onNotices: (n) => mixedRentalNotices.push(...n) },
           },
@@ -383,6 +384,7 @@ export function calculateBundledTransfer(
       mixedUseCtx,
       onGbDetail,
       onGbCarryoverUnit,
+      isAxisB: isFullFractionalBundle,
       onMixedBgDetail,
     });
     if (reverseUnit && c.assetId === reverseUnit.houseAssetId) return built.map((it) => asReverseUnitHouse(it, reverseUnit, engineInput));

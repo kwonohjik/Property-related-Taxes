@@ -122,7 +122,7 @@ function calcMixedUseCore(
   // (2022 이전 양도가 `buildRejectionResult`의 「단일 자산 모드로 재계산」 문구로 새면 BG에 틀린 안내가 나간다).
   // BG면 양도가액은 «인수 채무 합계»이고, 취득 경로 플래그는 BG 모드가 정본으로 덮어쓴다.
   const bg = assetInput.burdenedGift
-    ? prepareMixedBurdenedGiftOrThrow({ ...assetInput, burdenedGift: assetInput.burdenedGift, transferDate, isCompanion: assetInput.burdenedGiftInBundle === true })
+    ? prepareMixedBurdenedGiftOrThrow({ ...assetInput, burdenedGift: assetInput.burdenedGift, transferDate, isCompanion: assetInput.burdenedGiftInBundle === true, isAxisB: assetInput.burdenedGiftAxisB === true })
     : undefined;
   const transferPrice = bg ? bg.debt.total : transferPriceInput;
   const asset = bg ? applyBurdenedGiftAssetOverrides(assetInput, bg) : assetInput;
