@@ -106,6 +106,8 @@ describe("묶음 안 겸용 BG — 오라클: 자산별 단건(자기 채무 = B
     expect(agg.burdenedGift.giftTax).toBeDefined();
     expect(agg.mixedUseBgDetailsByAsset.h1).toBeUndefined();
     expect(r.j.data.aggregated.warnings.some((w: string) => w.includes("함께 양도(여러 물건) 묶음 안의 겸용주택 부담부증여입니다"))).toBe(true);
+    // 묶음은 귀속 입력을 받지 않는다 — 단건용 「입력하신 사실 선언」 고지가 「구분 불분명」 고지와 충돌하지 않게 빠져야 한다.
+    expect(r.j.data.aggregated.warnings.some((w: string) => w.includes("입력하신 사실 선언"))).toBe(false);
   });
 
   it("[CP-2] 주 자산이 겸용 BG · 컴패니언 주택 BG — 같은 오라클 · 명세 슬롯 키 primary", async () => {

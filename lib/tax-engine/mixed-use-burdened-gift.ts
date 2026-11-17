@@ -314,7 +314,8 @@ export function applyMixedBurdenedGift(args: {
     ...(bg.shareRatio !== undefined ? [MIXED_BG_SHARE_NOTICE] : []),
     ...(bg.inBundle ? [MIXED_BG_BUNDLE_NOTICE] : []),
     `12억원 고가주택 판정·안분은 양도로 보는 채무액이 아니라 ${bg.shareRatio !== undefined ? "물건 전체 " : ""}증여가액(${bg.value.wholeJudgment.toLocaleString("ko-KR")}원)을 기준으로 했습니다(국심2007서2099 등 — 겸용주택을 직접 다룬 해석례는 확인되지 않아 확인이 필요합니다).`,
-    `채무 귀속은 입력하신 사실 선언(임대차계약서의 임차 대상·근저당 설정 대상 등 증빙 필요)에 따랐습니다 — ${MIXED_USE_BURDENED_GIFT.DEBT_ATTRIBUTION_RULING}.`,
+    // 묶음은 귀속 입력을 받지 않는다(재배분 채무 전부 구분 불분명 — 계획서 Q-3 ①) — 「입력하신 사실 선언」 고지는 단건만.
+    ...(bg.inBundle ? [] : [`채무 귀속은 입력하신 사실 선언(임대차계약서의 임차 대상·근저당 설정 대상 등 증빙 필요)에 따랐습니다 — ${MIXED_USE_BURDENED_GIFT.DEBT_ATTRIBUTION_RULING}.`]),
     "증여세 평가에 쓰는 상가건물 기준시가는 양도세 기준시가와 같다고 보았습니다.",
   ];
   if (bg.debt.unallocated > 0) {
