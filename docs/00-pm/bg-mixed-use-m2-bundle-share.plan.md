@@ -1,6 +1,6 @@
 # 겸용주택 × 부담부증여 — 공유지분·함께 양도·지분 분할 취득(M-2) 해제 계획서
 
-> 작성 2026-11-17 · 상태 **Plan v0.2 — Q-1~Q-7 전부 권고안으로 확정(2026-11-17 사용자 「권고대로」) · PR-A #3428 · PR-B #3432 · V-0 결함 → fix(§9) · 다음: PR-C 절 v0.3**
+> 작성 2026-11-17 · 상태 **Plan v0.2 — Q-1~Q-7 전부 권고안으로 확정(2026-11-17 사용자 「권고대로」) · PR-A #3428 · PR-B #3432 · V-0 결함 → fix #3437(§9) · PR-C 절 v0.3(§3.3 · 2026-11-17) — Q-10·Q-12 결정 대기**
 > 선행: M-1 단독 단건(#3419 · 사용자 결정 H-1) · 부분 증여가액 하한(#3423 · 결정 5). 상위 계획 `bg-nonsupp-winner-support.plan.md` §4.3.3이 「별도 계획서」로 넘긴 범위.
 > 조사: 엔진(transfer-tax-senior)·UI(transfer-tax-ui-senior) 병렬 — throwaway probe(삭제 확인), 핵심 file:line은 작성자가 재확인.
 
@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | A. 공유지분 단건 | 열려 있음(① `OwnershipRatioBlock`) | ⑧ HARD_BLOCKS MB-6 · ⑫ `refineMixedUseBurdenedGift` · 엔진 MB-6 | 승자 오판·하한 미발동·증여세 과대 | **PR-A**(중) |
 | B. 함께 양도(컴패니언) | 열려 있음(컴패니언 카드가 같은 `BurdenedGiftBlock`·귀속 카드를 띄움) | ⑧ 묶음 차단 · ⑫ `refineCompanionMixedUseBurdenedGift` · 엔진 MB-6 · ⑭ `burdenedGift: undefined` | 카드마다 §159 재실행 → 이중 적용 | **PR-B**(대) |
-| C. 지분 분할 취득(축 B) | **없음** — 지분 카드에서 겸용이 될 길이 없다(§2.3) | 위와 같음 + 화면 경로 부재 | — | **PR-C**(대 · V-0 선행) |
+| C. 지분 분할 취득(축 B) | #3437로 지분 카드가 겸용이 됨 | ⑧ `validate-bg.ts:207` · ⑫ MB-6 | 엔진이 함께 양도로 오인(MB-21) · 귀속 칸 없음 · 귀속 ×r 누락(§3.3.1) | **PR-C0**(소) → **PR-C**(대) |
 
 ## 1. 법령 근거 (KoreanLaw MCP — 소득세법 시행령 MST 290841, 시행 2026-10-01 본문)
 
@@ -65,7 +65,7 @@ R2는 A·B·C·E에서 R4÷2(양도차익·4부분)와 일치한다. R1의 `grat
 ### 2.3 지분 분할 취득 (축 B)
 
 - **화면 경로가 없다.** 축 B 지분 카드는 ①이 숨고(`CompanionAssetCard.tsx:158` `hideInheritedSections` [재확인]) 겸용 토글은 ①에 있다. 병합 `mergePrimaryBasicAll`(`lib/calc/transfer-tax-api-helpers.ts:184~`)은 `assetKind`를 잇지만 `isMixedUseHouse`·겸용 칸을 잇지 않는다 [재확인]. UI probe: 비BG 겸용 60/40 + 기본 지분 카드 → ⑧ 0건, body `companionAssets[0]`은 `assetKind:"housing"`·`mixedUse` 없음.
-- 기존 anchor `__tests__/api/mixed-use-fractional-axis-b.anchor.test.ts`(축 B 60/40 = 단건 일치)는 픽스처가 두 카드 모두에 겸용 필드를 직접 넣는다 — 화면 경로의 간극을 가린다. **비BG 겸용 축 B의 세액 영향은 미측정**(V-0) — 결함으로 단정하지 않는다.
+- 기존 anchor `__tests__/api/mixed-use-fractional-axis-b.anchor.test.ts`(축 B 60/40 = 단건 일치)는 픽스처가 두 카드 모두에 겸용 필드를 직접 넣는다 — 화면 경로의 간극을 가린다. **비BG 겸용 축 B의 세액 영향은 미측정**(V-0) — 결함으로 단정하지 않는다. → 2026-11-17 실측 결함 확정 · fix #3437(§9).
 - ④ 축 B 채무 스케일 `d()`(`transfer-tax-api-burdened-gift.ts:278`)는 채무 4칸만 ×r, 귀속 3칸은 원값(`:382`) → MB-13 불가피.
 - 규약: 축 B는 물건 전체 입력 · 채무 ×r · 승자는 물건 전체(비율 1)로 판정(`bg-nonsupp-winner-support.plan.md` §4.1.2) — 겸용도 같다. 겸용 축 B BG 직접 실측은 없다(V-5).
 
@@ -90,10 +90,83 @@ R2는 A·B·C·E에서 R4÷2(양도차익·4부분)와 일치한다. R1의 `grat
 5. **결과·⑥**: 자산별 슬롯 `mixedUseBgDetailsByAsset`(선례 GB) + 묶음용 `MixedUseBurdenedGiftDetailCard` 변형(증여세 행 숨김 — 묶음은 계약 단위 1회 `aggregated.burdenedGift`). 사이드바 `bgMixed` 술어를 i>0로 일반화. 증여세 1회 산정에 겸용 info 합산(V-3).
 6. **anchor**: 카드 집계 = 단건 × 묶음 대조(위 8,632,800 시료), 이중 적용 뮤테이션(중화 제거 → 190,014,000 검출), 재배분 시료(B_i 533,333,334).
 
-### 3.3 PR-C — 지분 분할 취득 (축 B)
+### 3.3 PR-C — 지분 분할 취득 (축 B) · v0.3 (2026-11-17 실측 재설계)
 
-선행 **V-0**: 비BG 겸용 축 B가 화면 경로에서 지분 카드를 일반 주택으로 계산하는지 세액 실측(Playwright 또는 화면 body probe). 결함이면 별도 fix PR이 먼저다(병합 목록에 `isMixedUseHouse`·`mixedUse*` 추가 — 물건 단위 값).
-그 뒤: ④ 귀속 3칸도 `d()` 규약으로 ×r, 칸별 floor 잔액은 불분명에 흡수(Q-6) · 승자는 비율 1 판정 · 증여세 1회(`burdenedGiftWholeInfo`, `transfer-tax-api.ts:672-678`) · detail 슬롯은 PR-B 것 재사용. 규모·세부는 V-0·V-5 실측 후 이 절을 v0.2로 다시 쓴다.
+> 조사: 엔진(transfer-tax-senior)·UI(transfer-tax-ui-senior) 병렬 · 화면 경로 probe(폼 → ⑧ → ④ body → route) · throwaway 패치는 복사본에서만, 삭제 확인. [재확인] = 작성자가 file:line을 다시 읽음.
+
+#### 3.3.1 지금 막는 곳과 「게이트만 풀면」
+
+| 층 | 위치 | 비고 |
+|---|---|---|
+| ⑧ | `lib/calc/transfer-tax-validate-bg.ts:207-210` `isFractionalSplitAxis` → `transferType` 칸에 MB-6 문구 | 자산 1·자산 2 같은 문구(자산 2 칸은 숨음 — 자산 1이 먼저라 막다른 길 아님) |
+| ⑫ | `lib/api/transfer-tax-schema-mixed-bg-refines.ts:79-83`(주 자산) · `:104-134`(컴패니언) `isAxisB: isAxisBBundle(...)` | **MB-6의 서버 쪽 정본** |
+| 엔진 leaf | `lib/tax-engine/mixed-use-burdened-gift-prepare.ts:266-268` | 엔진 호출은 `isAxisB`를 넘기지 않는다 — `transfer-tax-mixed-use.ts:125` [재확인] `isCompanion: burdenedGiftInBundle` 뿐, ⑭ `mixed-use-part-cards.ts:575` [재확인]이 BG 카드면 무조건 `true` |
+
+게이트(⑧·⑫·leaf MB-6)만 풀면 **세 군데가 막힌다**(실측):
+
+1. **엔진이 축 B를 함께 양도로 오인** — `inBundle = isCompanion && isAxisB !== true`(`prepare.ts:270` [재확인])인데 `isAxisB`가 엔진에 오지 않아 inBundle → MB-21(재배분 채무 없음) 400. 주택·상가 귀속이면 MB-19, 담보·임대 승이면 MB-20도 같은 원인.
+2. **귀속 3칸이 지분 카드에 없다** — `mergePrimaryBasicAll`(`transfer-tax-api-helpers.ts:187~`)이 귀속 8칸(`bgDepositAttribution`·`bgMortgageAttribution`·`bg{Deposit,Mortgage}Split{Housing,Commercial,Unallocated}`)과 구분 감정평가 2칸(`bgHousingAppraisalDeclared`·`bgHousingAppraisalValue`)을 잇지 않는다 [재확인: grep 0건]. 지분 카드는 ②가 숨어 칸도 없다(`CompanionAssetCard.tsx:162`·`:428`) → ⑧ 자산 2 「담보차입금 … 어디에 속하는지 선택하세요」 = **막다른 길**.
+3. **귀속 ×r 누락** — ④ 겸용 분기(`transfer-tax-api-burdened-gift.ts:364-386` [재확인])는 채무 4칸을 `d()`로 ×r한 `...allowed`를 펼치지만 `debtAttribution`은 원값 → ⑫ MB-13 「귀속 합계(600,000,000) ≠ 인수 채무 합계(360,000,000)」. 이때 ⑧은 0건(원값끼리 비교) — **⑧↔⑫ 어긋남**.
+
+#### 3.3.2 배관을 다 고친 뒤의 세액 (throwaway, 엔진에 `isAxisB` 전달 + 귀속 병합 + 귀속 항목별 ×r)
+
+오라클 = 같은 물건을 단독 소유 단건 겸용 BG로 계산(같은 취득이면 같아야 한다). 비교값 = 결정세액 + 지방소득세. 기준 2024-03-01 · 주택 100㎡/상가 100㎡ · 양도시 기준시가 12억 · 지분 60/40(S14는 50/30/20).
+
+| 시료 | 단건 | 축 B | 차이 |
+|---|---|---|---|
+| S1 기준시가 보충 승 · 불분명 6억 | 67,033,120 | 67,033,120 | 0 |
+| S2 시가 15억 · 불분명 6억 · 실지 7억 | 76,003,401 | 76,003,401 | 0 |
+| S3c 시가 15억 · 주택 2억 + 상가 1억 + 불분명 3억 | 76,003,401 | 76,003,402 | +1 |
+| S4 기준시가 고가(주택 20억) · 1세대1주택 | 115,743,896 | 115,743,897 | +1 |
+| S5 부분 증여가액 하한 발동(결정 5) · 주택 귀속 9억 | 149,446,000 | 149,446,000 | 0 |
+| S9a 기준시가 **담보 승**(채무 13억) | 192,473,160 | 192,473,160 | 0 |
+| S9c 기준시가 **임대 승** | 26,892,378 | 26,892,379 | +1 |
+| S13 시가 + 구분 감정평가 8억 | 76,003,401 | 76,003,401 | 0 |
+| S14b 3분할 · 시가 + 귀속 3칸 | 76,003,401 | 76,003,403 | +2 |
+
+전 시료(19건) ±2원 이내 = 카드별 절사(V-P1b-2). **S8 지분별 취득이 다른 경우**: 오라클 = PR-A 공유지분 단건 2건(60%·2010 취득 / 40%·2015 취득) → 4부분별 양도가액·취득가액·개산공제가 카드 8장 전부 일치(기준시가 모드 · 시가 모드 + `bgShareOwnAcquisition`). 상속·증여 취득 지분(2015 증여 · 2006 상속)도 단건과 0원 차이.
+
+- **12억 판정**: 카드마다 `highValue.judgmentBase`가 물건 전체 값(S4 20억 · S5 하한 9억)이다 — `prepare.ts:497-511` 규약(보충 승 = 물건 전체 보충적평가액 · 담보·임대 승 `ceil(C/r)` · 하한 `ceil(Ch/r)`)이 축 B에서도 그대로 맞는다. 추가 작업 없음.
+- **증여세**: 계약 단위 `aggregated.burdenedGift`는 단건과 같다(S1 101,850,000) — ④ `burdenedGiftWholeInfo`(`transfer-tax-api.ts:675-678`)가 겸용 info를 그대로 싣는다. 합산 코드 불필요(V-3과 달리 물건이 하나).
+- **귀속 ×r 단위 함정(NEG)**: 귀속을 **합계 단위**로 ×r하고 불분명이 잔액을 흡수하면 음수가 난다(보증금 100,000,001 · 담보 500,000,001 모두 주택 → 주택 360,000,001 · 불분명 −1 → ⑧ 0건인데 ⑫ 400 「>=0」). **항목별(보증금·담보차입금 각각) ×r + 그 항목 불분명이 잔액 흡수**면 주택 360,000,000 · 불분명 0 · 단건 일치. → Q-6 「칸별 floor 잔액 → 불분명」의 구현 단위는 **항목별**.
+
+#### 3.3.3 설계 — PR-C 변경 목록
+
+**엔진·⑭**
+1. MB-6 삭제: `prepare.ts:266-268`(+ 상수 `:52-54` · 타입 `:46`) · ⑧ HARD_BLOCKS(`transfer-tax-validate-mixed-use-bg.ts:30`) · ⑫ 전달(`isAxisB`)은 유지 — inBundle 판정에만 쓴다.
+2. 엔진 입력에 축 B 표시 `burdenedGiftAxisB`(`types/transfer-mixed-use.types.ts` · `burdenedGiftInBundle` 옆): ⑭ `mixed-use-part-cards.ts:575` → `mixed-use-asset-input.ts` Sources → `transfer-tax-mixed-use.ts:125`가 `isAxisB`를 prepare에 넘긴다. 호출처(`bundled-route.ts` 주 자산 · `bundled-split-helpers.ts` 컴패니언)에 `isFullFractionalBundle`.
+3. 계약 단위 1회: `mixed-use-burdened-gift.ts:252`(카드별 `giftTax`) · `:315-318`(notices) · `:361`(bundleNotices) 조건을 `inBundle || axisB`로. 지금은 축 B 카드마다 증여세가 슬롯에 따로 계산된다(S1 50,440,000 + 27,160,000 ≠ 101,850,000 — 화면 미노출이지만 데이터 어긋남).
+4. 고지 전달: 축 B에서 `aggregated.warnings`가 0건(공유지분·12억·귀속 사실 고지 소실). `bundled-route.ts:505-510`이 축 B 슬롯 notices도 올린다. 축 B 문구는 「귀속 = 입력한 사실 선언을 지분율로 나눔」(함께 양도의 재배분 문구와 다름).
+
+**④**
+5. `mergePrimaryBasicAll`에 귀속 8칸 + 구분 감정평가 2칸 병합 — 단일 소스 목록(선례 `mixed-use-share-object-fields.ts`). 귀속은 한 증여계약 채무의 속성이라 물건 단위.
+6. ④ 겸용 분기 `debtAttribution`을 `d()`와 같은 r로 **항목별** ×r · floor 잔액은 그 항목 불분명에 흡수(Q-6 · NEG).
+
+**⑧ (3중 패턴 — ④와 같은 값)**
+7. `transfer-tax-validate-bg.ts:207-210` 삭제(파일 708줄 → 감소).
+8. 미리보기 `burdened-gift-mixed-use-preview.ts:74` [재확인]가 축 B에서도 채무를 원값으로 엔진 leaf에 넘긴다 → 축 B면 ④와 같은 ×r. 실측 S12(채무 9억 · 담보 설정 5억): ⑧ MB-10 「인수 채무가 증여가액을 초과」 오탐 2건인데 route 200(= 단건 112,490,400) — ⑧이 ⑫보다 엄격.
+9. `isMixedBgMarketCollateralWin`(`burdened-gift-mixed-use-scope.ts:60-73` [재확인])이 지분율 < 1이면 시가만 ×r하고 채무는 원값 비교 — 축 B는 입력이 모두 물건 전체라 오판(S10 시가 15억 · 채무 10억 · 실제 시가 승 → 담보 승 판정 → 취득가액 방식 라디오 숨김(`BurdenedGiftBlock.tsx:167`·`:455`) + ⑧ 「산정방식을 선택하세요」 = 막다른 길 가능, 렌더 확인 필요). 축 B 인자를 받아 물건 전체로 비교.
+10. 비보충 승 처리 = Q-10.
+
+**⑤⑥⑦**
+11. ⑤ `TransferModeBlock.tsx:216-224` 「지분 분할 취득은 계산하지 않습니다」 → 축 B 규약 문구(물건 전체 입력 · 채무·귀속은 지분율로 나눔). 지분 카드는 BG 칸이 없다(② 숨김 — 비겸용과 같음) → `fractional-basic-inherited-notice`처럼 한 줄 안내. `CompanionAcqSpecialAssetNotices.tsx:66-70` 「② 양도정보의 증여재산 평가는…」은 지분 카드엔 ②가 없어 문구 정정.
+12. ⑥ 변경 없음 — `transfer-per-asset-summary.ts:175·183`이 병합 자산으로 `bgMixed`를 판정해 i>0에서 참, 계산 후 슬롯(`primary`·`assetId`) 값 정상(실측).
+13. ⑦ `MixedUseBgBundleAssetCard.tsx:81·87·92·150`의 함께 양도 전용 문구(「신고 단위 채무를 자산별 증여가액 비율로 재배분…」)를 축 B 분기 · `mixed-bg-bundle-views.ts:38`이 **저장된** `bgValuationMode`(지분 카드는 `""`)를 읽음 → 병합 자산 값으로(라벨만, 세액 무관).
+
+**⑫** 코드 변경 없음(MB-6 삭제를 따라감). ⑧↔⑫ 격자 대조: 귀속 ×r 합 = ×r 채무.
+
+#### 3.3.4 남는 한계 (v1)
+
+- 지분 카드가 1985.1.1. 전 또는 2005.4.30. 전 상속·증여 취득이면 ⑧이 「미공시를 켜세요」(엔진 MB-11 · `transfer-tax-validate-mixed-use-inheritance.ts:71`)와 Q-9 「지분 카드는 미공시를 계산하지 않습니다」가 서로를 가리킨다 — **비BG에서도 지금 master에 있는 막다른 길**(#3437 Q-9가 만듦 · 2026-11-17 probe: 증여 2000-01-01 지분 카드 · PHD 끔/켬 둘 다 ⑧ 걸림, ⑤ 토글은 지분 카드에서 disabled). → **PR-C0**(아래 §3.3.5 · Q-12).
+- 보유 중 일부 용도변경(Q-8)·지분 카드 미공시(Q-9)는 BG에서도 그대로 막는다.
+- 미측정: 지분 4개 이상 · 자본적지출·양도비가 있는 시료 · 시가 모드 담보 승 축 B(단건 입력 불완전으로 비교 못 함 — 기존 ⑧ `bgFractionalCollateralKindSupported`가 겸용을 제외해 막힘) · 화면 렌더(Playwright).
+
+#### 3.3.5 분할
+
+| PR | 내용 | 규모 |
+|---|---|---|
+| **PR-C0** | 지분 카드 × 1985 전·2005.4.30. 전 상속·증여 막다른 길 해소(비BG·BG 공통 · Q-12) | 약 2시간 |
+| **PR-C** | §3.3.3 1~13 + 테스트 뒤집기(§7) + anchor(S1·S2·S3c·S4·S5·S8·S9a·S13·S14b · NEG · S12) + E2E(BGMU-17 대체) | 약 1일 |
 
 ### 3.4 기각·재제안 금지 (이 계획에서 쓰지 않는 것)
 
@@ -105,17 +178,17 @@ R2는 A·B·C·E에서 R4÷2(양도차익·4부분)와 일치한다. R1의 `grat
 
 | 지점 | PR-A 지분 | PR-B 컴패니언 | PR-C 축 B |
 |---|---|---|---|
-| ①②③ | 없음 | 없음(Q-3 선택지 3이면 신설) | V-0 결과에 따라 병합 필드 |
-| ④ | `share()` 우회 점검 | 재배분 ↔ 귀속(Q-3) | 귀속 ×r |
-| ⑤ | `TransferModeBlock` 문구 | 귀속 카드 묶음 규약 안내 | 지분 카드 겸용 표시 |
-| ⑥ | 현행 `i===0` 충분 | `bgMixed` 일반화 · `mu-*#assetId` 매핑 | PR-B와 같음 |
-| ⑦ | notice · echo | `mixedUseBgDetailsByAsset` 슬롯·카드 변형 | PR-B 재사용 |
-| ⑧ | 엔진 판정 따라 해제 | 묶음 차단 해제 · 승자 게이트 문구 | 병합 자산 검증 |
+| ①②③ | 없음 | 없음(Q-3 선택지 3이면 신설) | 없음(기존 필드 · initial `calc-wizard-asset-factory.ts:530-538`) |
+| ④ | `share()` 우회 점검 | 재배분 ↔ 귀속(Q-3) | 귀속·감정 병합 · 귀속 항목별 ×r |
+| ⑤ | `TransferModeBlock` 문구 | 귀속 카드 묶음 규약 안내 | 안내 문구 2곳 · 지분 카드 한 줄 안내 |
+| ⑥ | 현행 `i===0` 충분 | `bgMixed` 일반화 · `mu-*#assetId` 매핑 | 변경 없음(실측) |
+| ⑦ | notice · echo | `mixedUseBgDetailsByAsset` 슬롯·카드 변형 | 슬롯 재사용 · 카드 문구 축 B 분기 · 고지 전달 |
+| ⑧ | 엔진 판정 따라 해제 | 묶음 차단 해제 · 승자 게이트 문구 | 차단 삭제 · 미리보기 ×r · 담보 승 술어 축 B |
 | ⑨⑩ | 없음 | 확인 필요(V-8) | 같음 |
 | ⑪ | 없음 | 확인 필요(V-8) | 같음 |
-| ⑫ | `ownershipRatio` 전달 유지 · ⑧ 격자 대조 | collector 교체 · deemed 면제 | 같음 |
+| ⑫ | `ownershipRatio` 전달 유지 · ⑧ 격자 대조 | collector 교체 · deemed 면제 | MB-6 삭제만(전달 유지) |
 | ⑬ | 없음 | 없음(이미 전달) | 없음 |
-| ⑭ | 판정용 물건 전체 값 | `burdenedGift` 전달 · 중화 · detail 보관 | 지분 카드별 호출 |
+| ⑭ | 판정용 물건 전체 값 | `burdenedGift` 전달 · 중화 · detail 보관 | `burdenedGiftAxisB` 전달 · 증여세·고지 1회 |
 
 ## 5. 사용자 결정 (Q) — 2026-11-17 전부 권고안 확정
 
@@ -129,6 +202,15 @@ R2는 A·B·C·E에서 R4÷2(양도차익·4부분)와 일치한다. R1의 `grat
 | **Q-6** | 축 B 귀속 ×r의 floor 잔액 흡수처 | 불분명 · 주택 · 상가 | **불분명**(Q-3 ①이면 묶음 쪽은 해당 없음, 축 B 단독 물건만) |
 | **Q-7** | 묶음 결과 표시 | 자산별 겸용 BG 4부분 카드(증여세 행 숨김) / 합계만 | **자산별 카드** — GB 선례와 같은 슬롯 |
 
+**PR-C v0.3에서 새로 생긴 결정 — 대기**
+
+| # | 질문 | 선택지 | 권고 |
+|---|---|---|---|
+| **Q-10** | 축 B의 담보·임대 승 — Q-4(「묶음(축 B 포함) v1 보충 승만」)를 다시 묻는 것. Q-4 당시엔 축 B 실측이 없었다 | (a) Q-4 유지 — 축 B에 승자 게이트 신설(지금 ⑧ 승자 게이트 `transfer-tax-validate.ts:381`은 `!fullFractional`이라 축 B를 안 막는다 · 엔진 MB-20도 축 B 제외) · (b) **기준시가 모드** 담보·임대 승은 계산, 시가 모드 담보 승은 기존 ⑧(`bgFractionalCollateralKindSupported` 겸용 제외)대로 차단 · (c) 전부 계산(시가 담보 승 실측 필요) | **(b)** — 축 B는 물건이 하나라 승자가 단건과 같고(비율 1), S9a·S9c·S9d가 단건과 ±1. (a)는 실측상 맞는 계산을 새 코드로 막는다 |
+| **Q-12** | 지분 카드 × 1985 전·2005.4.30. 전 상속·증여(§3.3.4 막다른 길 — 비BG도 해당) | (a) ⑧이 그 조합에서 「미공시를 켜세요」 대신 「이 지분 조합은 계산하지 않습니다」 한 문구로 막는다(술어는 기존 PHD 필수 규칙 재사용) · (b) 지분 카드 미공시를 열고 3시점 입력을 양도시(자산 1 값)·취득시(지분 값)로 나눈다(화면 큼) | **(a)** — Q-9와 같은 범위 제한. 직접 API는 이미 단건과 일치(1983 상속 · 지분 2 PHD 117,626,660 = 단건) |
+
+구현 지침(결정 아님): 귀속·구분 감정평가는 자산 1 값을 지분 카드로 병합(물건 단위 사실 · 지분 카드 입력 칸 신설 안 함) · Q-6 잔액 흡수는 항목별 · 축 B 슬롯 `giftTax`는 비움(계약 단위 1회).
+
 ## 6. 미확인 (V)
 
 | # | 내용 | 막는 PR |
@@ -138,11 +220,12 @@ R2는 A·B·C·E에서 R4÷2(양도차익·4부분)와 일치한다. R1의 `grat
 | V-2 | K-5 환산·§97②2호 단서 경로에서 지분일 때 `est.*AppraisalDed`(지분 감축)와 `lump()` 중복 여부 | PR-A |
 | V-3 | `buildCompanionBurdenedGiftWholeInfo`에 겸용 info 합산 가능 여부(증여세 1회) | PR-B |
 | V-4 | 컴패니언 `acquisitionCause`(`"burdened_gift"`)와 증여자 취득원인 echo 전달 설계(MB-5·MB-9가 읽는 값) | PR-B |
-| V-5 | 축 B 겸용 BG 직접 실측 | PR-C |
+| ~~V-5~~ | ✅ 2026-11-17 실측(§3.3.2 — 배관 수정 후 19시료 단건 ±2 · S8 지분별 취득 4부분 일치) | — |
 | V-6 | 상속·증여 취득(deemed) 지분·임대 승 지분 시료 | PR-A |
 | V-7 | `wholeHouse` 훅 B_i vs C — 12억 경계 시료의 세액 차이 | PR-B |
 | V-8 | ⑨⑩⑪이 겸용 컴패니언 BG에 필요한지 | PR-B |
 | V-9 | 묶음 명세서·신고서가 `mu-*#assetId` 파트 카드를 묶어 보이는 방식 | PR-B |
+| V-11 | 축 B 시가 모드 담보 승 · 지분 4개 이상 · 자본적지출·양도비 시료 · 화면 렌더 | PR-C 구현 중 실측 |
 | V-10 | §156① 「면적 비율」을 겸용 지분에서 지분율로 읽는 직접 근거 — 해석례 0건 | 결과 「확인 필요」 고지로 대응 |
 
 ## 7. 테스트
@@ -158,6 +241,8 @@ R2는 A·B·C·E에서 R4÷2(양도차익·4부분)와 일치한다. R1의 `grat
 | `__tests__/api/transfer.route.bg-uniform-winner-gate.anchor.test.ts` | UW-2 겸용 셀(Q-4에서 묶음 비보충을 열 때만) | — |
 | `__tests__/calc/bg-collateral-win-ratio-one.anchor.test.tsx` | `:8` 주석 | A |
 
+PR-C 뒤집기(축 B 차단 단언): `mixed-use-burdened-gift.anchor.test.ts:345-352` · `transfer.route.mixed-use-burdened-gift-companion-block.anchor.test.ts` CB-4·CB-5(`:191-209`) · `transfer.route.mixed-use-bg-companion.anchor.test.ts` CP-7(`:298-306`) · `__tests__/calc/mixed-bg-bundle-screen-path.anchor.test.ts` SC-6(`:122-129`) · `__tests__/components/mixed-bg-bundle-ui.test.tsx:92-99` · E2E `transfer-bg-mixed-use.spec.ts` BGMU-17(`:476-482`) · 주석 3곳.
+
 신규: PR-A anchor(§2.1 시료 6건, R4÷2 대조) · PR-B anchor(카드 집계 = 단건×1.1 · 재배분 시료) · E2E 축별 1건 이상(BGMU-13~).
 
 ## 8. 다음 단계
@@ -168,7 +253,8 @@ R2는 A·B·C·E에서 R4÷2(양도차익·4부분)와 일치한다. R1의 `grat
 - ✅ PR-B 함께 양도 #3432(2026-11-17).
 - ✅ **V-0 실측 = 결함 확정(비BG)** → fix PR(이 PR, 아래 §9).
 2. PR-A Pre-Do anchor(§2.1 C·E 시료) 먼저 작성 → 설계 환류.
-3. PR-A 구현·머지 → PR-B → V-0 실측 → PR-C 절 v0.2.
+3. PR-A 구현·머지 → PR-B → V-0 실측 → PR-C 절 v0.3 ✅(§3.3).
+4. 사용자: Q-10 · Q-12 결정 → PR-C0 → PR-C.
 
 ## 9. V-0 실측 결과와 fix (2026-11-17)
 
@@ -191,4 +277,6 @@ R2는 A·B·C·E에서 R4÷2(양도차익·4부분)와 일치한다. R1의 `grat
    - ⑫는 바꾸지 않는다 — 직접 API는 카드마다 자기 `mixedUse`를 실어 이 제약이 없다(FB anchor).
 4. **anchor** — `__tests__/api/mixed-use-axis-b-share-screen-path.anchor.test.ts`(A · B · C 화면 = 정답 · 같은 취득은 단건 × 1.1 ±2원(카드별 절사, V-P1b-2) · C 취득 쪽 값 고정) · `__tests__/components/mixed-use-axis-b-share-card.anchor.test.tsx`(③ 칸 · ⑧ 두 조합 · 짝). 뮤테이션 4건 실측(병합 제거 → 4건 실패 · 취득 칸까지 병합 → C 실패 · 주입 제거 · 양도시 숨김 제거 → 각 1건 실패).
 
-남은 한계: 지분 카드의 양도시 나목 미입력 시 ⑧이 자산 1과 자산 2에 같은 문구를 낸다(자산 2 칸은 숨김 — 자산 1을 고치면 둘 다 풀린다) · 겸용 양도가액 구분(§166⑧) · 건물 직접 양도비 · 감가상각비는 자산 2건 이상이면 원래 받지 않는다(`mixed-use-sale-split-scope.ts:30` — 지분 분할도 해당) — 병합 대상 아님 · PR-C(BG 축 B)는 이 병합 위에서 다시 설계한다.
+남은 한계: 지분 카드의 양도시 나목 미입력 시 ⑧이 자산 1과 자산 2에 같은 문구를 낸다(자산 2 칸은 숨김 — 자산 1을 고치면 둘 다 풀린다) · 겸용 양도가액 구분(§166⑧) · 건물 직접 양도비 · 감가상각비는 자산 2건 이상이면 원래 받지 않는다(`mixed-use-sale-split-scope.ts:30` — 지분 분할도 해당) — 병합 대상 아님 · PR-C(BG 축 B)는 이 병합 위에서 다시 설계한다.(→ §3.3 v0.3)
+
+**#3437 뒤 발견(2026-11-17 PR-C 조사)**: 지분 카드가 2005.4.30. 전(또는 1985.1.1. 전) 상속·증여 취득이면 ⑧ 「미공시를 켜세요」(`transfer-tax-validate-mixed-use-inheritance.ts:71`)와 Q-9가 서로를 가리키는 막다른 길 — 비BG에서도 재현(probe · 증여 2000-01-01). 세액이 틀리게 나오지는 않는다(계산 전 차단). → PR-C0 · Q-12.
