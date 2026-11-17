@@ -213,7 +213,7 @@ describe("결과 표시 — 기산일 이월·구간·배제 카드", () => {
         rentalStartDate: d("2025-07-01"),
         rentalApplicationDate: d("2025-06-20"),
         rentalRegistrationDate: d("2025-07-01"),
-        ceasedDate: d("2031-07-01"),
+        ceasedDate: d("2031-07-02"),
       },
     });
     render(<RecaptureResultView result={r} noticeDate="2031-10-01" facts={["임대 기산일: 2025.7.1."]} />);

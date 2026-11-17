@@ -60,7 +60,7 @@ function evaluate1ho(
   const is6y = input.registrationType.startsWith("private_short_term_6y");
   if (noticeDate < T_1HO) return NOT_EXEMPT([X.RECAPTURE_EXEMPT_1HO_NOT_IN_FORCE]);
 
-  const notices: string[] = [X.RECAPTURE_NOTICE_1HO_BOUNDARY];
+  const notices: string[] = [];
   const { years, applicationUnknown } = mandatoryPeriod({
     registrationType: input.registrationType,
     rentalApplicationDate: input.rentalApplicationDate,
@@ -68,8 +68,10 @@ function evaluate1ho(
   });
   if (applicationUnknown) notices.push(X.RECAPTURE_NOTICE_APPLICATION_UNKNOWN);
 
-  // 「최소 임대의무기간이 지난 후」 — 기산일부터 N년이 만료된 날의 다음 날 이후(= 기산일 + N년 당일부터, V-4)
-  const periodPassed = startOfDay(input.ceasedDate) >= addYears(startOfDay(input.rentalStartDate), years);
+  // 「최소 임대의무기간이 지난 후」 — 초일불산입(민법 §157 본문 · 2026-11-17 사용자 결정, V-4 닫음):
+  // 기산일 다음 날부터 N년 → 만료일 = 기산일 + N년 당일(민법 §160③) → 그 다음 날부터 「지난 후」.
+  // 예) 기산 2015.3.1. · 5년 → 2015.3.2.~2020.3.1. → 2020.3.2.부터 지난 후(2020.3.1. 계약은 추징).
+  const periodPassed = startOfDay(input.ceasedDate) > addYears(startOfDay(input.rentalStartDate), years);
   if (!periodPassed) return NOT_EXEMPT([X.RECAPTURE_EXEMPT_1HO_PERIOD_NOT_MET], notices);
   return {
     exempt: true,
