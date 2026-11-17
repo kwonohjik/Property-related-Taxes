@@ -15,6 +15,7 @@ import { isOnOrBeforeDeadline } from "./civil-period";
 import { SHORT_TERM_6Y_TYPES, SHORT_TERM_6Y_FULL_ASSESSMENT } from "./comprehensive-exclusion-business-reg";
 import { filingDeadlineApplies, filingPeriodEnd, businessRegistrationIssue } from "./comprehensive-exclusion-business-reg";
 import { vacancyCheck, isVacantAtAssessment } from "./comprehensive-exclusion-vacancy";
+import { validateDeemedMultiFamily } from "./comprehensive-exclusion-multifamily";
 import { rentViolationIssue } from "./comprehensive-exclusion-rent-violation";
 import {
   COMPREHENSIVE_EXCL,
@@ -205,6 +206,8 @@ const OWNED_TYPES: ReadonlySet<RentalExclusionInput["registrationType"]> = new S
 export function validateRentalExclusion(
   input: RentalExclusionInput,
 ): ExclusionValidationResult {
+  // 2020.2.11. 전 세무서 사업자등록만 한 다가구주택(T-14) — 정규화해 이 함수를 다시 부른다
+  if (input.deemedMultiFamily) return validateDeemedMultiFamily(input, validateRentalExclusion);
   const failReasons: string[] = [];
   let deadlineWarning: string | null = null;
   let vacancyWarning: string | null = null;
