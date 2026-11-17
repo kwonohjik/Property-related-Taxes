@@ -77,6 +77,10 @@ export function validateDeemedMultiFamily(
   const base = validate(normalized);
   const baseReasons = new Set(base.failReasons ?? []);
   failReasons.push(...baseReasons);
+  // 결정 ②: 2018.3.31. 단서를 세무서 등록일로 적용한 불성립은 정면 해석이 없어 확인 필요를 붙인다
+  if (baseReasons.has(COMPREHENSIVE_EXCL.REGISTERED_AFTER_2018_03_31)) {
+    failReasons.push(COMPREHENSIVE_EXCL.DEEMED_MULTIFAMILY_REG_CAP_2018_CONFIRM);
+  }
 
   // 5. 구별 가격·면적 — 건물 단위 판정에 없던 사유만 가져온다
   const failedUnits: string[] = [];

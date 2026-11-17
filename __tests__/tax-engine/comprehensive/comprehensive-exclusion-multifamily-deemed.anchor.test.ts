@@ -128,7 +128,10 @@ describe("T-14 의제 다가구 — 불성립", () => {
   it("DM-4 ★ M3 세무서 2019-05-01 → 2018.3.31. 단서 불성립(결정 ②) · 경계는 4.2.(국세기본법 §5)", () => {
     const r = run({ businessRegistrationDate: d("2019-05-01"), deemedMultiFamily: dm() });
     expect(r.isExcluded).toBe(false);
-    expect(r.failReasons).toEqual([COMPREHENSIVE_EXCL.REGISTERED_AFTER_2018_03_31]);
+    expect(r.failReasons).toEqual([
+      COMPREHENSIVE_EXCL.REGISTERED_AFTER_2018_03_31,
+      COMPREHENSIVE_EXCL.DEEMED_MULTIFAMILY_REG_CAP_2018_CONFIRM,
+    ]);
     // 지자체 날짜(2019-03-01)가 아니라 세무서 등록일로 정규화한다 — 4.2.는 성립, 4.3.은 불성립
     expect(run({ businessRegistrationDate: d("2018-04-02"), deemedMultiFamily: dm() }).isExcluded).toBe(true);
     expect(run({ businessRegistrationDate: d("2018-04-03"), deemedMultiFamily: dm() }).isExcluded).toBe(false);
@@ -144,7 +147,10 @@ describe("T-14 의제 다가구 — 불성립", () => {
     const before = run({ businessRegistrationDate: d("2020-02-10"), deemedMultiFamily: dm() });
     expect(before.isExcluded).toBe(false);
     expect(before.failReasons).not.toContain(COMPREHENSIVE_EXCL.DEEMED_MULTIFAMILY_REGISTERED_AFTER_CUTOFF);
-    expect(before.failReasons).toEqual([COMPREHENSIVE_EXCL.REGISTERED_AFTER_2018_03_31]);
+    expect(before.failReasons).toEqual([
+      COMPREHENSIVE_EXCL.REGISTERED_AFTER_2018_03_31,
+      COMPREHENSIVE_EXCL.DEEMED_MULTIFAMILY_REG_CAP_2018_CONFIRM,
+    ]);
   });
 
   it("DM-6 ★ M6 1호 한 구 160㎡ → 불성립(면적 149㎡) + 일부 배제 미지원 확인 필요", () => {
