@@ -10,6 +10,7 @@ import { render, screen, cleanup, fireEvent, within, waitFor } from "@testing-li
 import { ComprehensiveRecaptureCalculator } from "@/components/calc/comprehensive-recapture/ComprehensiveRecaptureCalculator";
 import { RecaptureResultView } from "@/components/calc/comprehensive-recapture/RecaptureResultView";
 import { calculateRecapture } from "@/lib/tax-engine/comprehensive-recapture";
+import { COMPREHENSIVE_EXCL } from "@/lib/tax-engine/legal-codes";
 import { checkedRadioValue, radioValues } from "./_helpers/radio-values";
 
 // HomeButton이 useRouter를 쓴다 — 라우터 마운트 없이 렌더
@@ -91,6 +92,14 @@ describe("① 추징 사유 라디오 — 값 축", () => {
 });
 
 describe("② 연도별 표", () => {
+  it("V-8 — §3⑧ 제외 연도 중 이미 경감받은 연도는 입력(추징), 경감받지 않은 연도는 입력하지 않는다는 안내", () => {
+    render(<ComprehensiveRecaptureCalculator />);
+    const guide = screen.getByTestId("rc-year-scope").textContent ?? "";
+    expect(guide).toBe(COMPREHENSIVE_EXCL.RECAPTURE_YEAR_SCOPE_GUIDE);
+    expect(guide).toContain("추징 대상이니 입력");
+    expect(guide).not.toContain("확인 필요");
+  });
+
   it("연도 추가·삭제 — 1행은 지울 수 없고 20행에서 추가가 막힌다", () => {
     render(<ComprehensiveRecaptureCalculator />);
     expect((screen.getByTestId("rc-remove-0") as HTMLButtonElement).disabled).toBe(true);

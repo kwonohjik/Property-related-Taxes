@@ -9,6 +9,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Button } from "@/components/ui/button";
 import { COMPREHENSIVE_EXCL_CONST } from "@/lib/tax-engine/legal-codes";
+import { COMPREHENSIVE_EXCL } from "@/lib/tax-engine/legal-codes";
 import { newRowId, type RecaptureRowForm } from "./shared";
 
 const INPUT_CLS =
@@ -29,6 +30,9 @@ export function AnnualTaxTable({
     <ToneCard tone="sky" sectionNum={2} title="연도별 경감받은 세액 (시행령 §10①)">
       <p className="text-xs text-muted-foreground">
         종합부동산세법 시행령 §10①에 따라 합산배제로 보아 온 매 과세연도마다, 그 주택을 합산 대상으로 보고 계산한 세액에서 합산 대상에서 제외하고 계산한 세액을 뺀 금액입니다. 해당 연도 고지서·신고서의 합산 전후 세액 차이를 확인해 입력하세요.
+      </p>
+      <p className="text-xs text-muted-foreground" data-testid="rc-year-scope">
+        {COMPREHENSIVE_EXCL.RECAPTURE_YEAR_SCOPE_GUIDE}
       </p>
       <div className="hidden sm:grid grid-cols-[7rem_1fr_2.5rem] gap-2 px-1 text-xs font-medium text-muted-foreground">
         <span>과세연도</span>
