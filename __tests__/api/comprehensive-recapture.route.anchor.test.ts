@@ -69,7 +69,7 @@ describe("POST /api/calc/comprehensive-recapture", () => {
     expect(json.data.exemption).toMatchObject({ clause: "10③3호 나목", legalBasis: COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_REPLACEMENT_HOUSING });
   });
 
-  it("§10③1호 경계가 Date 비교로 동작한다(문자열 비교 silent false 회귀 방지): 기산 2015-03-01 · 10년 · 위반 2025-03-01 배제 / 2025-02-28 추징", async () => {
+  it("§10③1호 경계가 Date 비교로 동작한다(문자열 비교 silent false 회귀 방지): 기산 2015-03-01 · 10년 · 위반 2025-03-02 배제 / 2025-03-01 추징(초일불산입)", async () => {
     const body = (ceasedDate: string) => ({
       noticeDate: "2026-11-01",
       rows: [{ taxYear: 2023, amount: 1_000_000 }],
@@ -82,8 +82,8 @@ describe("POST /api/calc/comprehensive-recapture", () => {
         ceasedDate,
       },
     });
-    expect((await post(body("2025-03-01"))).json.data.exempt).toBe(true);
-    expect((await post(body("2025-02-28"))).json.data.exempt).toBe(false);
+    expect((await post(body("2025-03-02"))).json.data.exempt).toBe(true);
+    expect((await post(body("2025-03-01"))).json.data.exempt).toBe(false);
   });
 
   const base = { noticeDate: "2024-12-01", rows: [{ taxYear: 2021, amount: 1 }], exemption: { reason: "other" } };

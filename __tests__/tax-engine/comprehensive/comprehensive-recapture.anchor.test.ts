@@ -182,21 +182,22 @@ const rent5 = (ceased: string, over: Partial<Extract<RecaptureExemptionInput, { 
 const NOTICE = d("2026-11-01");
 
 describe("E: §10③1호 — 최소 임대의무기간이 지난 뒤 5% 요건 불충족", () => {
-  it("기산 2015-03-01 + 10년 = 2025-03-01 당일 위반 → 추징하지 않음 (경계 포함 — V-4)", () => {
-    const r = evaluateRecaptureExemption(rent5("2025-03-01"), NOTICE);
+  // V-4 닫음(2026-11-17 사용자 결정): 초일불산입(민법 §157 본문) — 기산 2015-03-01 · 10년 → 2015-03-02~2025-03-01 → 2025-03-02부터 「지난 후」
+  it("기산 2015-03-01 + 10년 → 2025-03-02 위반부터 추징하지 않음 · 경계 「확인 필요」 없음", () => {
+    const r = evaluateRecaptureExemption(rent5("2025-03-02"), NOTICE);
     expect(r).toMatchObject({ exempt: true, clause: "10③1호", legalBasis: COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_RENT_5PCT });
-    expect(r.notices).toContain(COMPREHENSIVE_EXCL.RECAPTURE_NOTICE_1HO_BOUNDARY);
+    expect(r.notices).toEqual([]);
   });
 
-  it("하루 전 2025-02-28 위반 → 의무기간 안이라 추징", () => {
-    const r = evaluateRecaptureExemption(rent5("2025-02-28"), NOTICE);
+  it("만료일 당일 2025-03-01 위반 → 의무기간 안(초일불산입)이라 추징", () => {
+    const r = evaluateRecaptureExemption(rent5("2025-03-01"), NOTICE);
     expect(r).toMatchObject({ exempt: false, clause: null, failReasons: [COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_1HO_PERIOD_NOT_MET] });
   });
 
-  it("7호·8호 등록 신청 2020-08-17 이전이면 의무 8년(2023-03-01 경계), 신청일을 모르고 등록이 8.18. 이후면 10년 + 확인 필요", () => {
+  it("7호·8호 등록 신청 2020-08-17 이전이면 의무 8년(2023-03-02부터 경과), 신청일을 모르고 등록이 8.18. 이후면 10년 + 확인 필요", () => {
     const pre = { rentalApplicationDate: d("2020-08-17"), rentalRegistrationDate: d("2020-08-17") };
-    expect(evaluateRecaptureExemption(rent5("2023-03-01", pre), NOTICE).exempt).toBe(true);
-    expect(evaluateRecaptureExemption(rent5("2023-02-28", pre), NOTICE).exempt).toBe(false);
+    expect(evaluateRecaptureExemption(rent5("2023-03-02", pre), NOTICE).exempt).toBe(true);
+    expect(evaluateRecaptureExemption(rent5("2023-03-01", pre), NOTICE).exempt).toBe(false);
     const unknown = rent5("2025-03-01", { rentalApplicationDate: undefined });
     expect(evaluateRecaptureExemption(unknown, NOTICE).notices).toContain(COMPREHENSIVE_EXCL.RECAPTURE_NOTICE_APPLICATION_UNKNOWN);
   });
@@ -206,21 +207,21 @@ describe("E: §10③1호 — 최소 임대의무기간이 지난 뒤 5% 요건 �
     expect(r).toMatchObject({ exempt: false, failReasons: [COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_1HO_NOT_TARGET] });
   });
 
-  it("건설임대 1호(5년): 기산 2015-03-01 + 5년 = 2020-03-01 경계", () => {
+  it("건설임대 1호(5년): 기산 2015-03-01 → 2020-03-01 만료 → 2020-03-02부터 경과", () => {
     const t = { registrationType: "private_construction" as const };
-    expect(evaluateRecaptureExemption(rent5("2020-03-01", t), NOTICE).exempt).toBe(true);
-    expect(evaluateRecaptureExemption(rent5("2020-02-29", t), NOTICE).exempt).toBe(false);
+    expect(evaluateRecaptureExemption(rent5("2020-03-02", t), NOTICE).exempt).toBe(true);
+    expect(evaluateRecaptureExemption(rent5("2020-03-01", t), NOTICE).exempt).toBe(false);
   });
 
   it("시기 — 고지일 2020-02-11 이전이면 적용 안 함, 2020-02-11부터 적용 (Q-5)", () => {
     const t = { registrationType: "private_construction" as const };
-    expect(evaluateRecaptureExemption(rent5("2020-03-01", t), d("2020-02-10")).failReasons).toEqual([COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_1HO_NOT_IN_FORCE]);
-    expect(evaluateRecaptureExemption(rent5("2020-03-01", t), d("2020-02-11")).exempt).toBe(true);
+    expect(evaluateRecaptureExemption(rent5("2020-03-02", t), d("2020-02-10")).failReasons).toEqual([COMPREHENSIVE_EXCL.RECAPTURE_EXEMPT_1HO_NOT_IN_FORCE]);
+    expect(evaluateRecaptureExemption(rent5("2020-03-02", t), d("2020-02-11")).exempt).toBe(true);
   });
 
   it("1호(10·11호 외)는 모든 연도에 적용 — fromTaxYear null", () => {
     const t = { registrationType: "private_construction" as const };
-    expect(evaluateRecaptureExemption(rent5("2020-03-01", t), NOTICE).fromTaxYear).toBeNull();
+    expect(evaluateRecaptureExemption(rent5("2020-03-02", t), NOTICE).fromTaxYear).toBeNull();
   });
 });
 
@@ -230,7 +231,7 @@ describe("E: §10③1호 — 최소 임대의무기간이 지난 뒤 5% 요건 �
  */
 describe("E′: 10·11호 §10③1호 — 경감받은 연도의 6.1.이 2025.6.4. 이후인 연도분만 배제", () => {
   const t6 = { registrationType: "private_short_term_6y_construction" as const, rentalStartDate: d("2025-07-01"), rentalRegistrationDate: d("2025-07-01"), rentalApplicationDate: d("2025-06-20") };
-  const ex6 = rent5("2031-07-01", t6); // 2025-07-01 + 6년 = 2031-07-01 → 의무기간 경과
+  const ex6 = rent5("2031-07-02", t6); // 기산 2025-07-01 · 6년 → 2031-07-01 만료 → 2031-07-02 경과(초일불산입)
   const calc6 = (years: number[]) =>
     calculateRecapture({ noticeDate: d("2031-10-01"), rows: years.map((taxYear) => ({ taxYear, amount: 1_000_000 })), exemption: ex6 });
 
@@ -270,7 +271,7 @@ describe("E′: 10·11호 §10③1호 — 경감받은 연도의 6.1.이 2025.6.
     const r = calculateRecapture({
       noticeDate: d("2031-10-01"),
       rows: [{ taxYear: 2025, amount: 1_000_000 }, { taxYear: 2026, amount: 500_000 }],
-      exemption: rent5("2031-07-01", { ...t6, registrationType: "private_short_term_6y_purchase" }),
+      exemption: rent5("2031-07-02", { ...t6, registrationType: "private_short_term_6y_purchase" }),
     });
     expect(r.exemptTaxYears).toEqual([2026]);
     expect(r.totalRecoveryTax).toBe(1_000_000);
