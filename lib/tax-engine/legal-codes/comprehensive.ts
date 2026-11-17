@@ -390,8 +390,6 @@ export const COMPREHENSIVE_EXCL = {
   INTEREST_PENALTY:              "종합부동산세법 시행령 §10②2호 — 이자상당가산액 (1일 10만분의 22)",
 
   // ── 추징 계산기 — 이자 구간·기산일 (계획서 comprehensive-rental-excl-recapture-calculator.plan.md §5) ──
-  /** 구간별 절사 */
-  RECAPTURE_SEGMENT_FLOOR_NOTICE: "이자율이 바뀐 구간마다 원 미만을 버린 뒤 합산했습니다 — 구간별 절사를 정한 명문을 확인하지 못했습니다. 확인 필요 (종합부동산세법 시행령 §10②)",
   /** 납부기한 12.15.가 토·일·공휴일이면 그 다음 날이 기한 → 이자 기산일도 그 다음 날(연속 휴일은 반복 이월) — 2026-11-17 사용자 결정으로 확정(V-2 닫음) */
   RECAPTURE_DEADLINE_CARRY_BASIS: "국세기본법 §5①",
   /** 공휴일 표 밖의 해 */

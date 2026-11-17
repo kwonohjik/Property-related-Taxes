@@ -9,6 +9,7 @@
  * - 율(§10②2호): 구간 분할 — ~2019.2.11. 10만분의 30 · 2019.2.12.~2022.2.14. 25 · 2022.2.15.~ 22
  *   (부칙<제29524호> §4 · 부칙<제32425호> §5). 고지일이 개정 전이면 앞 구간만 남아 「시행 이후 납부·부과」 분기가 따로 필요 없다.
  * - 절사: 구간마다 `applyRateFraction`(내림) 뒤 합산한다(Q-1 — 양도세 납부지연가산세 `splitByRatePeriods`와 같은 방식).
+ *   2026-11-17 사용자 결정으로 확정(V-1 닫음) — 「확인 필요」 안내를 붙이지 않는다.
  * - 분자는 율 상수에서 **파생**한다(이중 진실 금지 — 상수를 바꾸면 금액이 움직인다).
  */
 
@@ -106,7 +107,6 @@ export function calculateRecaptureAnnualInterest(
     else if (start.holidayTableProvisional) push(COMPREHENSIVE_EXCL.RECAPTURE_HOLIDAY_TABLE_PROVISIONAL_NOTICE);
 
     const segments = noticeDate >= start.from ? splitRecaptureInterest(row.amount, start.from, noticeDate) : [];
-    if (segments.length >= 2) push(COMPREHENSIVE_EXCL.RECAPTURE_SEGMENT_FLOOR_NOTICE);
     return {
       taxYear: row.taxYear,
       amount: row.amount,

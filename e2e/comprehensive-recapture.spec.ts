@@ -69,8 +69,8 @@ test.describe("합산배제 추징 계산기 (§17⑤1호 · 시행령 §10)", (
     await expect(page.getByTestId("rc-seg-2021-0")).toContainText("2021.12.16.~2022.2.14.");
     await expect(page.getByTestId("rc-deadline-carry")).toContainText("납부기한 2018.12.17.(12.15.이 토요일 · 12.16.이 일요일) 다음 날");
     await expect(page.getByTestId("rc-deadline-carry")).toContainText("국세기본법 §5①");
-    await expect(page.getByTestId("rc-notices")).toContainText("확인 필요");
-    await expect(page.getByTestId("rc-notices")).not.toContainText("기산일");
+    // 이월(V-2)·구간별 절사(V-1)는 확정 — 이 사례에는 「확인 필요」 상자가 없다
+    await expect(page.getByTestId("rc-notices")).toHaveCount(0);
 
     await expectNoPageHScroll(page);
   });
