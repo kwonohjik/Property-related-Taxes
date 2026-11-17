@@ -73,10 +73,11 @@ describe("이자 구간 분할 — 율 경계 (Q-1)", () => {
     ]);
     expect(a.days).toBe(1_537);
     expect(a.interest).toBe(1_349_831);
-    expect(notices).toContain(COMPREHENSIVE_EXCL.RECAPTURE_SEGMENT_FLOOR_NOTICE);
+    // 구간별 절사는 확정(2026-11-17 사용자 결정 · V-1 닫음) — 「확인 필요」 안내 없음
+    expect(notices).toEqual([]);
   });
 
-  it("구간이 하나뿐이면 구간별 절사 확인 필요 안내를 붙이지 않는다", () => {
+  it("구간이 하나뿐인 해도 「확인 필요」 안내가 없다", () => {
     expect(one(2023, 1_000_000, "2024-12-01").notices).toEqual([]);
   });
 

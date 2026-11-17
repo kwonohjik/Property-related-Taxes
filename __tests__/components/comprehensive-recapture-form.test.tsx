@@ -179,9 +179,8 @@ describe("결과 표시 — 기산일 이월·구간·배제 카드", () => {
     expect(carry.textContent).toContain("납부기한 2018.12.17.(12.15.이 토요일 · 12.16.이 일요일) 다음 날");
     expect(carry.textContent).toContain("국세기본법 §5①");
     expect(screen.getByTestId("rc-annual-table").contains(carry)).toBe(false);
-    // 이월은 확정(V-2 닫음) — 「확인 필요」에는 구간별 절사 안내만 남고 기산일 안내는 없다
-    expect(screen.getByTestId("rc-notices").textContent).toContain("확인 필요");
-    expect(screen.getByTestId("rc-notices").textContent).not.toContain("기산일");
+    // 이월(V-2)·구간별 절사(V-1)는 확정 — 이 사례에는 「확인 필요」 상자가 없다
+    expect(screen.queryByTestId("rc-notices")).toBeNull();
   });
 
   it("구간이 하나뿐인 해는 하위 행 없이 율을 한 줄에 쓰고, 12.15.가 평일이면 이월 설명이 없다", () => {
@@ -212,7 +211,9 @@ describe("결과 표시 — 기산일 이월·구간·배제 카드", () => {
   });
 
   it("면책 고지와 인쇄 시 확인 필요 박스는 가로 스크롤 영역 밖에 있다", () => {
-    const result = calculateRecapture({ noticeDate: d(notice), rows, exemption: { reason: "other" } });
+    // 배치 확인용 — 「확인 필요」 안내가 있는 결과를 만든다(2018 사례 자체에는 안내가 없다)
+    const base = calculateRecapture({ noticeDate: d(notice), rows, exemption: { reason: "other" } });
+    const result = { ...base, notices: ["배치 확인용 안내"] };
     render(<RecaptureResultView result={result} noticeDate={notice} facts={[]} />);
     expect(screen.getByText(/면책 고지/)).toBeTruthy();
     expect(screen.getByTestId("rc-annual-table").closest(".overflow-x-auto")?.contains(screen.getByTestId("rc-notices"))).toBe(false);
