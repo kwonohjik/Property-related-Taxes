@@ -453,6 +453,14 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
     const fractionalModeWithoutBundle = isFractionalModeWithoutBundle(form);
     for (let i = 0; i < form.assets.length; i++) {
       const entry = axisBEffectiveAsset(form, i);
+      // 겸용주택 × 축 B — 지분 카드가 받지 않는 조합(용도변경 · 지분 카드 미공시 환산 · 미공시 환산이 꼭 필요한 취득). 종전에는 지분 카드가 일반 주택으로 조용히 계산됐다(V-0).
+      //   다른 미입력과 무관하게 낸다 — 이 조합이면 칸을 채워도 계산하지 않으므로 먼저 알려야 한다. `exclusive`면 그 카드의 다른 오류는 내지 않는다(Q-12 a).
+      const mixedShare = fullFractional ? mixedUseShareIssue(i, form.assets[i], entry) : undefined;
+      const pushMixedShare = () => mixedShare && issues.push({ step, assetIndex: mixedShare.assetIndex, field: mixedShare.field, message: mixedShare.message });
+      if (mixedShare?.exclusive) {
+        pushMixedShare();
+        continue;
+      }
       const message = fractionalModeWithoutBundle ? fractionalModeShareIssue(form.assets[i], i) : validateAssetEntry(entry, i, form);
       if (message) issues.push({ step, assetIndex: i, message });
       // 축 B 상속 · 증여 지분 × 지분 토글 꺼짐 — 자산 1의 취득가액으로 계산되지 않게 토글을 요구한다(Q-42 a)
@@ -463,12 +471,7 @@ function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationI
         const splitField = shareSplitResidenceMissingField(form.assets[i], primaryAsset, form);
         if (splitField) issues.push({ step, assetIndex: i, field: splitField, message: `자산 ${i + 1}: ${SHARE_SPLIT_RESIDENCE_MISSING_MESSAGE}` });
       }
-      // 겸용주택 × 축 B — 지분 카드가 받지 않는 조합(용도변경 · 지분 카드 미공시 환산). 종전에는 지분 카드가 일반 주택으로 조용히 계산됐다(V-0).
-      //   다른 미입력과 무관하게 낸다 — 이 조합이면 칸을 채워도 계산하지 않으므로 먼저 알려야 한다.
-      if (fullFractional) {
-        const mixedShare = mixedUseShareIssue(i, form.assets[i], entry);
-        if (mixedShare) issues.push({ step, ...mixedShare });
-      }
+      pushMixedShare();
     }
 
     /**

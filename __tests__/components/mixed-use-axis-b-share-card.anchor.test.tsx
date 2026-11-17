@@ -11,6 +11,7 @@ import { makeDefaultAsset, type AssetForm } from "@/lib/stores/calc-wizard-asset
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { MIXED_SHARE_PARTIAL_CHANGE_MESSAGE, MIXED_SHARE_PHD_MESSAGE } from "@/lib/calc/transfer-tax-validate-mixed-use-share";
+import { MIXED_SHARE_PHD_ERA_MESSAGE } from "@/lib/calc/transfer-tax-validate-mixed-use-share";
 
 afterEach(cleanup);
 
@@ -19,6 +20,7 @@ const OBJECT = {
   assetKind: "housing", isMixedUseHouse: true, mixedZoneType: "green", addressJibun: "제주특별자치도 강남구 테스트동 1-1",
   residentialFloorArea: "60", nonResidentialFloorArea: "40", buildingFootprintArea: "50", mixedUseTotalLandArea: "300",
   mixedTransferHousingPrice: "1600000000", mixedTransferCommercialBuildingPrice: "200000000", mixedTransferLandPricePerSqm: "1000000",
+  mixedTransferHousingBuildingStdPrice: "300000000",
 };
 const ACQ = {
   acquisitionCause: "purchase", acquisitionDate: "2009-03-01", useEstimatedAcquisition: false, fixedAcquisitionPrice: "500000000",
@@ -78,5 +80,46 @@ describe("MSC-2 ⑧ — 지분 카드가 받지 않는 조합", () => {
   it("🔴 짝: 지분 분할이 아니면(단건) 용도변경을 이 사유로 막지 않는다", () => {
     const single = Object.assign(form([primary({ ownershipNumerator: "", ownershipDenominator: "", hasPartialUsageChange: true, partialChangeDirection: "house_to_commercial" })]), { assetSplitMode: undefined });
     expect(issues(single).some((i) => i.message.includes(MIXED_SHARE_PARTIAL_CHANGE_MESSAGE))).toBe(false);
+  });
+});
+
+/**
+ * MSC-3 — 지분 카드 × 2005.4.30. 전 상속·증여(§163⑨ 단서 구간). 주택분 취득당시 기준시가가 §164⑦ 환산가액뿐인데 지분 카드는 미공시 환산을 막는다(MSC-2).
+ * 종전: 끄면 「미공시를 켜세요」, 켜면 「끄세요」 — 어느 쪽으로도 통과하지 못했다(2026-11-17 실측 · 비부담부증여도 재현). 이제 그 카드에는 한 문구만 낸다(계획서 Q-12 a).
+ */
+describe("MSC-3 지분 카드 × 2005.4.30. 전 상속·증여 — 한 문구로 막는다", () => {
+  const shareIssues = (o: Over) => issues(form([primary(), share(o)])).filter((i) => i.assetIndex === 1);
+  it.each([
+    ["증여 2000 · 미공시 끔", { acquisitionCause: "gift", acquisitionDate: "2000-01-01" }],
+    ["상속 2000 · 미공시 끔", { acquisitionCause: "inheritance", acquisitionDate: "2000-01-01" }],
+    ["증여 2000 · 미공시 켬", { acquisitionCause: "gift", acquisitionDate: "2000-01-01", usePreHousingDisclosure: true }],
+    ["증여 2005.4.29.", { acquisitionCause: "gift", acquisitionDate: "2005-04-29" }],
+  ])("%s → 자산 2 오류는 계산하지 않는다는 한 문구뿐", (_n, o) => {
+    const hit = shareIssues(o);
+    expect(hit).toHaveLength(1);
+    expect(hit[0]).toMatchObject({ field: "acquisitionDate" });
+    expect(hit[0].message).toContain(MIXED_SHARE_PHD_ERA_MESSAGE);
+  });
+  it.each([
+    ["증여 2005.4.30.(공시일)", { acquisitionCause: "gift", acquisitionDate: "2005-04-30" }],
+    ["증여 1980(의제취득일 전 · 비부담부증여)", { acquisitionCause: "gift", acquisitionDate: "1980-01-01" }],
+    ["매매 2000", { acquisitionCause: "purchase", acquisitionDate: "2000-01-01" }],
+  ])("🔴 짝: %s → 이 사유로 막지 않는다", (_n, o) => {
+    expect(shareIssues(o).some((i) => i.message.includes(MIXED_SHARE_PHD_ERA_MESSAGE))).toBe(false);
+  });
+  it("🔴 짝: 첫 카드(자산 1)의 2000 증여는 이 사유로 막지 않는다 — 첫 지분의 미공시 환산은 계산한다", () => {
+    const all = issues(form([primary({ acquisitionCause: "gift", acquisitionDate: "2000-01-01" }), share()]));
+    expect(all.some((i) => i.message.includes(MIXED_SHARE_PHD_ERA_MESSAGE))).toBe(false);
+  });
+  it("⑤ 지분 카드 미공시 토글 — 「켜야 계산됩니다」 대신 계산하지 않는다고 알린다", () => {
+    const { container } = render(
+      <CompanionAssetCard index={1} asset={share({ acquisitionCause: "gift", acquisitionDate: "2000-01-01" })} primaryAsset={primary()} bundledSaleMode="apportioned"
+        onChange={() => {}} transferDate="2024-06-01" splitMode="fractional" onFractionalToggle={() => {}} hasSiblings />,
+    );
+    const toggle = container.querySelector('[data-asset-section="3"] [data-field="usePreHousingDisclosure"]')?.closest("div");
+    const text = container.querySelector('[data-asset-section="3"]')?.textContent ?? "";
+    expect(text).toContain(MIXED_SHARE_PHD_ERA_MESSAGE);
+    expect(text).not.toContain("켜야 계산됩니다");
+    expect(toggle).not.toBeNull();
   });
 });

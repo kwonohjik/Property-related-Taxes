@@ -25,7 +25,7 @@ import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
-import { MIXED_SHARE_PHD_MESSAGE } from "@/lib/calc/transfer-tax-validate-mixed-use-share";
+import { MIXED_SHARE_PHD_ERA_MESSAGE } from "@/lib/calc/transfer-tax-validate-mixed-use-share";
 import { rosterForDeclaredCount } from "@/__tests__/calc/_helpers/roster-for-declared-count";
 
 beforeEach(() => {
@@ -128,8 +128,9 @@ describe("§163⑨ 단서 구간 증여 겸용 — 신고가액 빈칸 = 6억 = 
       const r = await run(form(asset(...over, { fixedAcquisitionPrice: v } as Partial<AssetForm>), arr));
       // 🔄 2026-11-17(V-0 fix · Q-9): 축 B 둘째 지분 카드의 미공시 환산은 ⑧이 막는다 — 이 픽스처는 두 카드에 PHD를 직접 넣은 폼이라 화면이 만들 수 없던 상태다
       //    (종전엔 지분 카드가 겸용이 될 길이 없었고, 이제는 ⑤가 켜는 쪽을 잠근다). 엔진 · ⑫는 그대로라 세액 고정은 유지한다.
+      // 🔄 2026-11-17(PR-C0 · Q-12 a): 1990 증여는 §163⑨ 단서 구간이라 둘째 지분 카드가 미공시 환산을 꼭 써야 한다 — ⑧은 그 카드에 「계산하지 않음」 한 문구만 낸다.
       const sharePhd = arr === "fractional" && (over as readonly Partial<AssetForm>[]).includes(PHD);
-      expect(r.issues, v).toEqual(sharePhd ? [expect.stringContaining(MIXED_SHARE_PHD_MESSAGE)] : []);
+      expect(r.issues, v).toEqual(sharePhd ? [expect.stringContaining(MIXED_SHARE_PHD_ERA_MESSAGE)] : []);
       expect(r.status, v).toBe(200);
       expect(r.totalTax, v).toBe(tax);
     }
