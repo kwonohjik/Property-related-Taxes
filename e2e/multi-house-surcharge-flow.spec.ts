@@ -85,7 +85,8 @@ test.describe("다주택 중과 판정 — 흐름", () => {
     await gotoResult(page, { sellingHouseExclusion: { isCulturalHeritage: true } });
     await expect(page.getByTestId("surcharge-conclusion-label")).toHaveText("중과 없음");
     await page.getByTestId("surcharge-calculate-tax").click();
-    await expect(page).toHaveURL(/\/calc\/transfer-tax$/);
+    // CI dev 서버는 /calc/transfer-tax를 처음 컴파일하는 데 5초를 넘길 수 있다(2026-11-18 trace: RSC 요청 대기 중 기본 5초 만료) — rental-urban-life-apt-deadline V10과 같이 30초
+    await expect(page).toHaveURL(/\/calc\/transfer-tax$/, { timeout: 30_000 });
     const exclusion = await page.evaluate(() => {
       const raw = sessionStorage.getItem("transfer-tax-wizard") ?? localStorage.getItem("transfer-tax-wizard");
       return raw ? JSON.parse(raw).state?.formData?.sellingHouseExclusion : null;
