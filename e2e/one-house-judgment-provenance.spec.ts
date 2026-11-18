@@ -57,7 +57,8 @@ async function judge(page: Page) {
 
 /** 전달 후 계산기 0단계의 계산기-전용 입력을 채우고 결과까지 간다. */
 async function calculateInCalculator(page: Page) {
-  await expect(page).toHaveURL(/\/calc\/transfer-tax$/);
+  // CI dev 서버는 /calc/transfer-tax를 처음 컴파일하는 데 5초를 넘길 수 있다(2026-11-18 trace: RSC 요청 대기 중 기본 5초 만료) — rental-urban-life-apt-deadline V10과 같이 30초
+  await expect(page).toHaveURL(/\/calc\/transfer-tax$/, { timeout: 30_000 });
   await expandAssetSection(page, 1);
   const input = page.getByPlaceholder("도로명 또는 지번 주소 입력").first();
   await input.fill(JIBUN);

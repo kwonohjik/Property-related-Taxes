@@ -119,7 +119,8 @@ async function fillCalculatorRequiredBasics(page: Page) {
 
 /** 전달 직후 계산기 → ② 보유 상황 단계(넘겨받은 사실 카드가 있는 곳). */
 async function gotoHoldingStep(page: Page) {
-  await expect(page).toHaveURL(/\/calc\/transfer-tax$/);
+  // CI dev 서버는 /calc/transfer-tax를 처음 컴파일하는 데 5초를 넘길 수 있다(2026-11-18 trace: RSC 요청 대기 중 기본 5초 만료) — rental-urban-life-apt-deadline V10과 같이 30초
+  await expect(page).toHaveURL(/\/calc\/transfer-tax$/, { timeout: 30_000 });
   await fillCalculatorAddress(page);
   /*
    * 🔑 **취득가액은 판정 메뉴가 묻지 않는다** — 비과세 판정에 필요 없는 값이고, 그래서 전달은
@@ -150,7 +151,8 @@ test.describe("판정 메뉴 → 계산기 사실 전달", () => {
     await judge(page);
 
     await page.getByTestId("one-house-to-calculator").click();
-    await expect(page).toHaveURL(/\/calc\/transfer-tax$/);
+    // CI dev 서버는 /calc/transfer-tax를 처음 컴파일하는 데 5초를 넘길 수 있다(2026-11-18 trace: RSC 요청 대기 중 기본 5초 만료) — rental-urban-life-apt-deadline V10과 같이 30초
+    await expect(page).toHaveURL(/\/calc\/transfer-tax$/, { timeout: 30_000 });
 
     await gotoHoldingStep(page);
     await expect(page.getByTestId("imported-one-house-facts")).toBeVisible();
@@ -167,7 +169,8 @@ test.describe("판정 메뉴 → 계산기 사실 전달", () => {
     await gotoSaleStep(page);
     await judge(page);
     await page.getByTestId("one-house-to-calculator").click();
-    await expect(page).toHaveURL(/\/calc\/transfer-tax$/);
+    // CI dev 서버는 /calc/transfer-tax를 처음 컴파일하는 데 5초를 넘길 수 있다(2026-11-18 trace: RSC 요청 대기 중 기본 5초 만료) — rental-urban-life-apt-deadline V10과 같이 30초
+    await expect(page).toHaveURL(/\/calc\/transfer-tax$/, { timeout: 30_000 });
 
     // 1단계(자산 목록)에 양도일이 채워져 있다. 라벨은 「년」이 아니라 **「연도」**다.
     await expect(page.getByTestId("transfer-date").getByLabel("연도")).toHaveValue("2026");
