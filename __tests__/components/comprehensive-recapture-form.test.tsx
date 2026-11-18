@@ -80,6 +80,13 @@ describe("① 추징 사유 라디오 — 값 축", () => {
     expect(screen.getByTestId("rc-rental-application")).toBeTruthy();
   });
 
+  it("V-5 — 지자체 등록일 칸에 세무서에만 등록한 다가구(T-14 의제)는 세무서 사업자등록일을 넣는다는 안내", () => {
+    render(<ComprehensiveRecaptureCalculator />);
+    expect(screen.queryByText(/세무서 사업자등록일을 넣습니다/)).toBeNull();
+    fireEvent.click(screen.getByTestId("rc-reason-rent_over_5pct"));
+    expect(screen.getByText(/세무서에만 주택임대업 사업자등록을 한 다가구주택은 세무서 사업자등록일을 넣습니다/)).toBeTruthy();
+  });
+
   it("3호 가목 — 신청 유형을 고르면 신청일이 열리고 「없음」이면 닫힌다", () => {
     render(<ComprehensiveRecaptureCalculator />);
     fireEvent.click(screen.getByTestId("rc-reason-replacement_housing"));

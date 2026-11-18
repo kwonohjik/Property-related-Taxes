@@ -77,7 +77,12 @@ function Rent5pctFacts({ form, onPatch, onReplace }: Props) {
       <FieldCard label="임대 기산일" required hint="최초 임대한 날입니다(시행령 §3⑦1호). 의무임대기간은 이 날부터 셉니다.">
         <DateInput value={form.rentalStartDate} onChange={(v) => onPatch({ rentalStartDate: v })} data-testid="rc-rental-start" />
       </FieldCard>
-      <FieldCard label="지자체 임대사업자 등록일" required>
+      {/* V-5(T-14 계획서 §6): 의제 다가구(1·2호)는 지자체 등록이 없다 — 엔진 정규화(세무서 등록일=§5 등록일)와 같은 기준. 1·2호 계산엔 이 날짜를 쓰지 않는다(`mandatoryPeriod` 장기 3유형만). */}
+      <FieldCard
+        label="지자체 임대사업자 등록일"
+        required
+        hint="2020.2.11. 전에 지자체 등록 없이 세무서에만 주택임대업 사업자등록을 한 다가구주택은 세무서 사업자등록일을 넣습니다."
+      >
         <DateInput value={form.rentalRegistrationDate} onChange={(v) => onPatch({ rentalRegistrationDate: v })} data-testid="rc-rental-registration" />
       </FieldCard>
       {asksApplicationDate(form.registrationType) && (
