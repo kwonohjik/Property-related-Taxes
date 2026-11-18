@@ -658,6 +658,7 @@ export function calculateRedevelopmentTax(
     taxBase,
     appliedRate: taxResult.appliedRate,
     ...(taxResult.specialRateBasis ? { specialRateBasis: taxResult.specialRateBasis } : {}),
+    ...(taxResult.nonBusinessLandShortTerm ? { nonBusinessLandShortTerm: true } : {}),
     progressiveDeduction: taxResult.progressiveDeduction,
     calculatedTax: taxResult.calculatedTax,
     isSurchargeSuspended: taxResult.surchargeSuspended,

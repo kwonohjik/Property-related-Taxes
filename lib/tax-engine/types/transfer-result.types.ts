@@ -268,6 +268,11 @@ export interface TransferTaxResult {
    */
   rateClause?: RateClause;
   /**
+   * 비사업용 토지 + 단기세율 채택 표지 — 신고서 ③ 세율구분 코드 1-35·1-36 표시 전용(NBL2611-V9-RI05). 세액 무영향.
+   * 상세: `RateCalcResult.nonBusinessLandShortTerm`(transfer-tax-rate-calc.ts).
+   */
+  nonBusinessLandShortTerm?: boolean;
+  /**
    * §104 밖 세율 특례 표지(조특법 §98①1호 20%) — 신고서 ③ 세율구분 코드(1-92) 표시 전용.
    * `rateClause`(§104 호 축)에 섞지 않는다 — 그룹핑 키가 그 값을 읽는다.
    */

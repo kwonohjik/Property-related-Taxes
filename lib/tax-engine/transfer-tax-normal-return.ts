@@ -201,6 +201,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
      */
     rateClause: taxResult.rateClause,
     ...(taxResult.specialRateBasis ? { specialRateBasis: taxResult.specialRateBasis } : {}),
+    ...(taxResult.nonBusinessLandShortTerm ? { nonBusinessLandShortTerm: true } : {}),
     shortTermNote: taxResult.shortTermNote,
     reductionAmount,
     reductionType,

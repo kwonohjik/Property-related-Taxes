@@ -593,6 +593,7 @@ export function buildRows(
     assetKind: primary?.assetKind,
     transferDate,
     nblSurchargeExcluded: result.nblSurchargeExcluded,
+    nonBusinessLandShortTerm: result.nonBusinessLandShortTerm,
   });
   if (rateCode) setStr("rateCode", "total", rateCode);
   const ratePct = fmtRatePct(result.appliedRate);
