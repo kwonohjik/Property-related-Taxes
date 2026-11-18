@@ -126,6 +126,15 @@ describe("summarizeAssetSections — 헤더 라벨 요약 (금액 없음)", () =
     expect(h.extras).toEqual({ label: "장기임대 거주주택 특례", filled: false });
   });
 
+  it("NBL2611-R21 — 함께 양도 토지 카드는 표지가 꺼져 있어도 ⑤가 열려 토글이 보인다 · 첫 자산·지분 분할 카드는 아니다", () => {
+    const off = asset({ assetKind: "land", isNonBusinessLand: false });
+    expect(summarizeAssetSections(off, { assetIndex: 1 }).extras).toEqual({ label: "비사업용 토지 검토 안 함", filled: false });
+    expect(summarizeAssetSections(asset({ assetKind: "land", landNature: "appurtenant" }), { assetIndex: 1 }).extras).toEqual({ label: "부수토지 한도 초과분", filled: false });
+    expect(summarizeAssetSections(off, { assetIndex: 0 }).extras).toBeNull();
+    expect(summarizeAssetSections(off, { assetIndex: 1, isFractionalSplit: true }).extras).toBeNull();
+    expect(summarizeAssetSections(asset({ assetKind: "land", isNonBusinessLand: true }), { assetIndex: 1 }).extras).toEqual({ label: "비사업용 토지", filled: true });
+  });
+
   it("④ 일괄 양도비(폼-전역) 활성 시 자산 transferExpense=0 이어도 filled", () => {
     const s = summarizeAssetSections(
       asset({ assetKind: "land", capitalExpenditure: "0", transferExpense: "0" }),
