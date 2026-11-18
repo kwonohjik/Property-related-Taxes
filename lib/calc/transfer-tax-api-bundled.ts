@@ -86,9 +86,11 @@ export function buildBundledPrimaryPayload(c: {
       .map((a, ci) => {
         const payload = buildAssetPayload(neutralizeCarryoverDonorSplitForCompanion(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, true), effBundledSaleMode, form.transferDate, totalContractPrice, undefined, form.assets[0], form.isOneHousehold, companionBgDebtOverrides?.[ci + 1], form);
         // ⑬ 축 B 토지 지분 — 첫 카드 정밀판정을 이 지분 취득 사실로 다시 판정하게 싣는다(없으면 첫 카드 표지 `true`만 남아 «사업용» 판정이어도 +10%p).
+        // NBL2611-V6-PU01 — 비지분 컴패니언 토지도 자기 카드의 정밀판정을 싣는다. 종전에는 raw가 없어 화면이 「무조건 사업용」·「사업용」을
+        //   확정해도 서버는 표지(`isNonBusinessLand: true`)만 보고 이 카드 전량에 +10%p를 붙였다. 주 자산(`transfer-tax-api.ts`)과 같은 빌더다.
         const nblRaw = fractionalBundleMerge
           ? buildNonBusinessLandRaw(buildFractionalShareNblRecord(a, primary), form.transferDate)
-          : undefined;
+          : buildNonBusinessLandRaw(a, form.transferDate);
         // ⑬ 축 B에서 늦게 취득한 지분의 거주 — 그 지분을 보유한 동안의 구간만 센다(없으면 서버가 주 자산 값을 승계).
         const shareResidence = laterShareResidenceMonths(a, form);
         // ④ 역방향 게이트가 읽는 사실 — 이 카드 payload에 실제로 실린 값. 컴패니언 payload에는 `propertyType`이 없고 `assetKind`뿐이다
