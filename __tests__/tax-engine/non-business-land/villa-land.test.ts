@@ -30,7 +30,7 @@ describe("C-5 별장부수토지 PDF p.1705", () => {
   it("별장 사용기간이 전혀 없음 → 비사용 100% → REDIRECT", () => {
     const r = judgeVillaLand(base(), DEFAULT_NON_BUSINESS_LAND_RULES);
     expect(r.action).toBe("REDIRECT_TO_CATEGORY");
-    expect(r.redirectHint).toContain("다시 입력");
+    expect(r.redirectHint).toContain("재분류") // NBL2611-V8-VL05 — 재입력 요구 → 재분류 고지;
   });
 
   // §168의13① 3요건 헬퍼 — 전부 충족 villa

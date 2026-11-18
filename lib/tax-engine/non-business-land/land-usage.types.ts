@@ -37,15 +37,15 @@ export interface PastureUsage {
 export interface VillaUsage {
   villaUsePeriods: BusinessUsePeriod[];
   isEupMyeon: boolean;
-  /** 농어촌주택 경로 진입 여부. true여도 아래 3요건(§168의13①1~3호) 모두 충족해야 사업용 의제 */
+  /** 농어촌주택 경로 진입 여부. true여도 아래 3요건(영 §168의13 1~3호) 모두 충족해야 사업용 의제 */
   isRuralHousing: boolean;
-  /** §168의13①1호 건물 연면적(㎡) — 150 이내 요건 */
+  /** 영 §168의13 1호 건물 연면적(㎡) — 150 이내 요건 */
   buildingFloorArea?: number;
-  /** §168의13①1호 건물 부속토지면적(㎡) — 660 이내 요건. 자산 전체 landArea와 별개(부속토지 전용) */
+  /** 영 §168의13 1호 건물 부속토지면적(㎡) — 660 이내 요건. 자산 전체 landArea와 별개(부속토지 전용) */
   attachedLandArea?: number;
-  /** §168의13①2호 건물+부속토지 합산 기준시가(원) — 2억 이하 요건 */
+  /** 영 §168의13 2호 건물+부속토지 합산 기준시가(원) — 2억 이하 요건 */
   combinedStdValue?: number;
-  /** §168의13①3호 조특법 §99의4①1호가목1)~4) 제외지역(수도권·도시지역·조정대상지역·허가구역) 소재 여부. true=제외지역=요건 미충족 */
+  /** 영 §168의13 3호 「조세특례제한법」 §99의4①1호가목1)~4) 제외지역(수도권·도시지역·조정대상지역·허가구역) 소재 여부. true=제외지역=요건 미충족 */
   isInRestrictedArea?: boolean;
   /** @deprecated 산식 미반영(엔진 미소비) — 하위호환 잔존. 제거는 별도 정리 작업 */
   isAfter20150101?: boolean;

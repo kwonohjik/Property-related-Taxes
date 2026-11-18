@@ -1,5 +1,5 @@
 /**
- * 별장부수토지 판정 (§168-13, PDF p.1705 흐름도 1:1)
+ * 별장부수토지 판정 (영 §168의13 + 기간기준 영 §168의6, PDF p.1705 흐름도 1:1)
  *
  * 판정 순서:
  *   Step 3-1   별장 비사용기간 기간기준 → PASS 시 "해당 지목으로 이동" (REDIRECT)
@@ -70,16 +70,18 @@ export function judgeVillaLand(
       id: "villa_non_use_period",
       label: "Step 3-1 별장 비사용기간 기간기준",
       status: "PASS",
-      detail: `별장 비사용기간이 기간기준 충족 — ${r1.detail}. 실제 용도(주택/기타) 재입력 필요.`,
-      legalBasis: NBL.VILLA,
+      // NBL2611-V8-VL05 — 엔진이 주택부수토지로 자동 재분류해 판정한다(engine.ts). 재입력을 요구하지 않는다.
+      detail: `별장 비사용기간이 기간기준 충족 — ${r1.detail}. 별장이 아니므로 주택부수토지로 재분류해 판정합니다.`,
+      // NBL2611-V8-VL07 — 기간기준 단계의 근거는 영 §168의6이다(§168의13은 별장 범위).
+      legalBasis: NBL.CRITERIA,
     });
     return {
-      isBusiness: false, // REDIRECT 상태에서는 판정 미확정 — UI 재입력 요구
+      isBusiness: false, // REDIRECT 상태에서는 판정 미확정 — 엔진이 주택부수토지로 재분류해 다시 판정한다
       reason: "별장 비사용기간 기간기준 충족 — 다른 지목으로 재판정 필요",
       steps,
       appliedLaws,
       action: "REDIRECT_TO_CATEGORY",
-      redirectHint: "별장 비사용기간이 기간기준을 충족합니다. 실제 용도(주택 부수 토지 또는 기타토지)로 다시 입력해 주세요.",
+      redirectHint: "별장 비사용기간이 기간기준을 충족해 별장이 아닙니다. 주택 부수 토지로 재분류해 판정합니다(주택 정착면적 사용).",
       totalOwnershipDays,
       effectiveBusinessDays: r1.effectiveBusinessDays,
       gracePeriodDays: r1.gracePeriodDays,
@@ -94,24 +96,24 @@ export function judgeVillaLand(
     label: "Step 3-1 별장 비사용기간 기간기준",
     status: "FAIL",
     detail: `별장 비사용기간 기간기준 미충족 — ${r1.detail}`,
-    legalBasis: NBL.VILLA,
+    legalBasis: NBL.CRITERIA,
   });
 
-  // ── Step 3-1-1: 읍·면 농어촌주택 (§168의13① 3요건 AND) ───────────
+  // ── Step 3-1-1: 읍·면 농어촌주택 (영 §168의13 1~3호 3요건 AND — 항 없음, NBL2611-V8-VL07) ───────────
   if (v.isEupMyeon && v.isRuralHousing) {
-    const RURAL_FLOOR_MAX = 150; // §168의13①1호 건물 연면적(㎡)
-    const RURAL_LAND_MAX = 660; // §168의13①1호 건물 부속토지면적(㎡)
-    const RURAL_VALUE_MAX = 200_000_000; // §168의13①2호 건물+부속토지 합산 기준시가(원)
+    const RURAL_FLOOR_MAX = 150; // 영 §168의13 1호 건물 연면적(㎡)
+    const RURAL_LAND_MAX = 660; // 영 §168의13 1호 건물 부속토지면적(㎡)
+    const RURAL_VALUE_MAX = 200_000_000; // 영 §168의13 2호 건물+부속토지 합산 기준시가(원) — 2015.2.3. 전 양도분 한도는 연혁(A4 소관 R03)
     const floorOk = v.buildingFloorArea !== undefined && v.buildingFloorArea <= RURAL_FLOOR_MAX;
     const landOk = v.attachedLandArea !== undefined && v.attachedLandArea <= RURAL_LAND_MAX;
     const valueOk = v.combinedStdValue !== undefined && v.combinedStdValue <= RURAL_VALUE_MAX;
-    const areaOk = v.isInRestrictedArea !== true; // §168의13①3호 §99의4①1호가목 제외지역 아님
+    const areaOk = v.isInRestrictedArea !== true; // 영 §168의13 3호 — 「조세특례제한법」 §99의4①1호가목1)~4) 제외지역 아님
     const reqMet = floorOk && landOk && valueOk && areaOk; // 미입력(undefined)=요건 미충족(미입증=불인정)
     const reqDetail =
       `연면적 ${v.buildingFloorArea ?? "미입력"}㎡(≤150 ${floorOk ? "✓" : "✗"})·` +
       `부속토지 ${v.attachedLandArea ?? "미입력"}㎡(≤660 ${landOk ? "✓" : "✗"})·` +
       `건물+부속토지 기준시가 ${v.combinedStdValue ?? "미입력"}원(≤2억 ${valueOk ? "✓" : "✗"})·` +
-      `§99의4①1호가목 제외지역 ${v.isInRestrictedArea ? "해당(✗)" : "아님(✓)"}`;
+      `「조세특례제한법」 §99의4①1호가목 제외지역 ${v.isInRestrictedArea ? "해당(✗)" : "아님(✓)"}`;
 
     if (reqMet) {
       const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];

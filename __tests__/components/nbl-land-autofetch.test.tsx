@@ -61,9 +61,28 @@ describe("NblLandValueAutoFetchButton — 비활성화 사유", () => {
 });
 
 describe("NblLandValueAutoFetchButton — 자동조회 산식", () => {
-  it("당해(2025)·직전(2024) 공시지가 × 면적 × 지분", async () => {
-    // 양도일 2026-02-18 → 5/31 이하 → 당해=2025, 직전=2024
-    vi.stubGlobal("fetch", mockFetch({ "2025": { price: 1000, zoneName: "일반상업지역" }, "2024": { price: 900 } }));
+  it("당해(2026)·직전(2025) 공시지가 × 면적 × 지분 — 양도일 6~12월", async () => {
+    // 양도일 2026-08-10 → 5/31 지남 → 당해=2026, 직전(= 2025.12.31. 기준시가)=2025
+    vi.stubGlobal("fetch", mockFetch({ "2026": { price: 1000, zoneName: "일반상업지역" }, "2025": { price: 900 } }));
+    const onResult = vi.fn();
+    render(
+      <NblLandValueAutoFetchButton
+        jibun="서울 강남구 역삼동 737"
+        area={100}
+        ratio={0.5}
+        transferDate="2026-08-10"
+        onResult={onResult}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button"));
+    await waitFor(() => expect(onResult).toHaveBeenCalled());
+    // 당해 = floor(1000×100×0.5)=50000, 직전 = floor(900×100×0.5)=45000
+    expect(onResult).toHaveBeenCalledWith("50000", "45000");
+  });
+
+  it("NBL2611-V6-PU07: 양도일 1~5월 — 직전도 전년(2025) 공시지가(종전: 전전년 2024를 채움)", async () => {
+    // 2024가 mock에 있으면 종전 동작(직전=2024)이 값을 채우므로, 2025만 두어 2024 조회 시 실패하게 한다.
+    vi.stubGlobal("fetch", mockFetch({ "2025": { price: 1000 } }));
     const onResult = vi.fn();
     render(
       <NblLandValueAutoFetchButton
@@ -76,19 +95,18 @@ describe("NblLandValueAutoFetchButton — 자동조회 산식", () => {
     );
     fireEvent.click(screen.getByRole("button"));
     await waitFor(() => expect(onResult).toHaveBeenCalled());
-    // 당해 = floor(1000×100×0.5)=50000, 직전 = floor(900×100×0.5)=45000
-    expect(onResult).toHaveBeenCalledWith("50000", "45000");
+    expect(onResult).toHaveBeenCalledWith("50000", "50000");
   });
 
   it("지분 미지정(1) → 전체 가액", async () => {
-    vi.stubGlobal("fetch", mockFetch({ "2025": { price: 637000 }, "2024": { price: 600000 } }));
+    vi.stubGlobal("fetch", mockFetch({ "2026": { price: 637000 }, "2025": { price: 600000 } }));
     const onResult = vi.fn();
     render(
       <NblLandValueAutoFetchButton
         jibun="인천 중구 내동 6-20"
         area={314.1}
         ratio={1}
-        transferDate="2026-02-18"
+        transferDate="2026-08-10"
         onResult={onResult}
       />,
     );

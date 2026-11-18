@@ -54,7 +54,7 @@
 
 - **(a) 지분별 판정 — 권장.** 각 지분에 정밀판정 입력을 실어 엔진이 지분마다 STEP 0.6을 돈다(집계는 이미 자산별로 `calculateTransferTax`를 부른다 — `transfer-tax-aggregate-asset-records.ts:135`).
   - 땅에 관한 사실은 **첫 카드 값**이다: 지목·용도지역·사용기간·재촌·면적·소재지 등 `nbl*`, 정밀판정 토글, 양도원인, 사업인정고시일.
-  - 지분에 관한 사실은 **그 지분 카드 값**이다: 취득일, 취득원인, 피상속인·증여자 취득일, 지분율. 공유 면적 안분(대법원 2015두39439 — `lib/tax-engine/non-business-land/co-ownership.ts`)에 쓰이는 `nblOwnershipRatio`는 `deriveOwnershipRatio`(`non-business-land-request.ts:29`)가 그 지분 값으로 계산한다.
+  - 지분에 관한 사실은 **그 지분 카드 값**이다: 취득일, 취득원인, 피상속인·증여자 취득일, 지분율. 공유 면적 안분(`lib/tax-engine/non-business-land/co-ownership.ts`)에 쓰이는 `nblOwnershipRatio`는 `deriveOwnershipRatio`(`non-business-land-request.ts:29`)가 그 지분 값으로 계산한다.
   - 결과: S1은 단건과 같아진다. S2의 둘째 지분은 공익수용 의제가 성립하지 않아 일반 판정으로 간다. 그러려면 지목·용도지역이 필요하다(4-3).
 - (b) 첫 지분 판정 결과를 전 지분에 공유한다. 서버에서 첫 지분의 `isNonBusinessLand`·면적비율을 둘째 지분에 복사한다. 변경은 작지만, S2처럼 취득일이 다르면 §168의14③3호의 «취득일» 요건을 첫 지분 기준으로 둘째 지분에 적용하게 된다 — 문언과 어긋난다.
 

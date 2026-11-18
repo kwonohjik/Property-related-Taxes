@@ -152,7 +152,7 @@ export interface OwnerResidenceHistory {
 /** 소유자 프로필 (신규) */
 export interface OwnerProfile {
   residenceHistories: OwnerResidenceHistory[];
-  /** 공동소유 지분 (1=100%). 미지정 시 1로 간주. 대법원 2015두39439 */
+  /** 공동소유 지분 (1=100%). 미지정 시 1로 간주. */
   ownershipRatio?: number;
 }
 

@@ -19,6 +19,7 @@
 
 import { useState } from "react";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
@@ -401,6 +402,13 @@ export function BurdenedGiftTransferSection({
               }
               data-testid="bg-transfer-nonbiz-land"
             />
+            {/* NBL2611-Q-13 — 전량 on/off 선택일 뿐이라 부분 비사업용·건물 부수토지 초과분을 반영하지 못한다(리뷰 §5.2). 고지 먼저. */}
+            <ToneCard tone="amber" className="py-2">
+              <p className="text-xs leading-snug text-amber-800 dark:text-amber-300" data-testid="bg-transfer-nonbiz-scope-notice">
+                이 선택은 토지 전량을 비사업용으로 보거나 보지 않는 단순 선택입니다. 토지의 일부만 비사업용인 경우(면적 안분)와
+                건물 부수토지의 배율 초과분은 반영하지 않습니다 — 확인 필요. 정밀한 판정은 양도소득세 계산기의 비사업용 토지 판정에서 합니다.
+              </p>
+            </ToneCard>
             {/* 양도(증여)일 2009.3.16.~2015.12.31.의 비사업용 토지 — 8호 중과 유예 요건(지정지역 여부). 그 기간에만 뜬다. */}
             {bgt.isNonBusinessLand && (
               <NblDesignatedAreaQuestion
