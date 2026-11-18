@@ -13,6 +13,7 @@
  */
 
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { publicNoticeLookback } from "@/lib/tax-engine/data/nbl-historical-values-era";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { buildUnconditionalExemption } from "@/lib/tax-engine/non-business-land/form-mapper-helpers";
 import { hasDeclaredUnconditionalExemption } from "@/lib/tax-engine/non-business-land/form-mapper-helpers";
@@ -70,7 +71,8 @@ interface ToggleDef {
   key: NblExemptToggleKey;
   flagField: keyof AssetForm;
   uncondField: keyof UnconditionalExemptionInput;
-  requirementHint: string;
+  /** 고정 문구, 또는 양도일·고시일 연혁에 따라 달라지는 문구(공익수용 — NBL2611-V3-PR01) */
+  requirementHint: string | ((facts: { transfer: Date; uncond: UnconditionalExemptionInput }) => string);
 }
 
 const TOGGLE_DEFS: readonly ToggleDef[] = [
@@ -92,8 +94,13 @@ const TOGGLE_DEFS: readonly ToggleDef[] = [
     key: "publicExpropriation",
     flagField: "nblExemptPublicExpropriation",
     uncondField: "isPublicExpropriation",
-    requirementHint:
-      "사업인정고시일이 2006.12.31. 이전이거나, 취득일이 고시일로부터 5년 이전이어야 사업용으로 확정됩니다.",
+    requirementHint: ({ transfer, uncond }) => {
+      // 「N년」은 엔진과 같은 연혁 leaf가 정한다 — 화면에 숫자를 따로 두지 않는다.
+      const n = uncond.publicNoticeDate
+        ? `${publicNoticeLookback(transfer, uncond.publicNoticeDate).years}년`
+        : "2년 또는 5년(양도일·고시일 연혁에 따라 다름 — 고시일을 입력하면 확정됩니다)";
+      return `사업인정고시일이 2006.12.31. 이전이거나, 취득일이 고시일로부터 ${n} 이전이어야 사업용으로 확정됩니다.`;
+    },
   },
   {
     key: "factoryAdjacent",
@@ -266,7 +273,7 @@ export function evaluateUnconditionalExemption(
     );
     perToggle[def.key] = {
       qualifies: res.isExempt,
-      requirementHint: def.requirementHint,
+      requirementHint: typeof def.requirementHint === "function" ? def.requirementHint({ transfer, uncond }) : def.requirementHint,
     };
   }
 

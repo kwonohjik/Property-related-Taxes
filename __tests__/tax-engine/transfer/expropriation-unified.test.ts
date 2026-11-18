@@ -64,21 +64,28 @@ describe("공익수용 통합 Phase 1 — NBL 고시일 fallback", () => {
 });
 
 describe("공익수용 통합 Phase 1 — 판정 분기(취득-시점 조건 독립)", () => {
+  // 5년 구간은 고시일 2021.5.4. 이후여야 한다(NBL2611-V3-PR01 — 종전 이 셀은 고시일 2015로 5년 단일 기준을 고정했다). 2년 구간은 아래 별도 셀.
   const uncond = buildUnconditionalExemption(
-    { nblExemptPublicExpropriation: true, expropriationNoticeDate: "2015-01-01" },
+    { nblExemptPublicExpropriation: true, expropriationNoticeDate: "2022-01-01" },
     pd,
   );
 
   it("E3 expr-acq-5y-before: 고시일 후이나 취득 5년 이전 → 사업용 의제 O(나목)", () => {
-    // 고시일 2015 − 5 = 2010; 취득 2009-12-31 ≤ 2010 → 의제 성립
-    const res = checkUnconditionalExemption(nblInput(uncond, "2009-12-31", "2020-01-01"), "farmland");
+    // 고시일 2022 − 5 = 2017; 취득 2016-12-31 ≤ 2017-01-01 → 의제 성립
+    const res = checkUnconditionalExemption(nblInput(uncond, "2016-12-31", "2024-01-01"), "farmland");
     expect(res.isExempt).toBe(true);
   });
 
   it("E4 expr-acq-3y-mixed: 취득 3년 전 + 고시일 2006 이후 → 사업용 의제 X(중과)", () => {
-    // 취득 2012 > 2010(5년 경계), 고시일 2015 > 2006.12.31 → 가·나목 모두 불성립
-    const res = checkUnconditionalExemption(nblInput(uncond, "2012-01-01", "2020-01-01"), "farmland");
+    // 취득 2019 > 2017(5년 경계), 고시일 2022 > 2006.12.31 → 가·나목 모두 불성립
+    const res = checkUnconditionalExemption(nblInput(uncond, "2019-01-01", "2024-01-01"), "farmland");
     expect(res.isExempt).toBe(false);
+  });
+
+  it("E4b 종전 2년 구간: 고시일 2015(2021.5.4. 전) · 취득 3년 전 → 사업용 의제 O(고시일부터 2년 이전)", () => {
+    const old = buildUnconditionalExemption({ nblExemptPublicExpropriation: true, expropriationNoticeDate: "2015-01-01" }, pd);
+    expect(checkUnconditionalExemption(nblInput(old, "2012-01-01", "2020-01-01"), "farmland").isExempt).toBe(true);
+    expect(checkUnconditionalExemption(nblInput(old, "2013-01-02", "2020-01-01"), "farmland").isExempt).toBe(false);
   });
 });
 

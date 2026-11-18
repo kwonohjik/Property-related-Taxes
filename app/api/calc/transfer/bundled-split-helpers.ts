@@ -57,6 +57,7 @@ import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { toEngineCarryoverTaxation } from "@/lib/api/carryover-engine-input";
 import { toEngineSec163_9Inputs } from "./route-inherited-acquisition";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
+import { buildNblEngineInputGiftBasis } from "@/lib/calc/non-business-land-request";
 
 // ─── 사례 28 자동 분기 양방향 확장 ───────────────────────────────
 // 자산 순서와 무관하게(primary가 land여도) companion에서 housing을 검색하여
@@ -429,6 +430,7 @@ export function buildCompanionEngineInputs(
     isUnregistered: c.isUnregistered ?? false,
     isNonBusinessLand: c.isNonBusinessLand ?? false,
     nonBusinessLandDetails: buildNblEngineInput(c.nonBusinessLandRaw), // ⑭ 축 B 토지 지분 정밀판정 — 주 자산과 같은 함수(engine-input.ts)
+    nonBusinessLandDetailsIfCarryoverExcluded: buildNblEngineInputGiftBasis(c.nonBusinessLandRaw, c.carryoverTaxation?.giftRegistryDate), // ⑭ 이월과세 배제 시 수증일 기준(NBL2611-R23)
     isDesignatedArea: c.isDesignatedArea,
     isOneHousehold: c.isOneHousehold ?? false,
     acquisitionCause: c.acquisitionCause,

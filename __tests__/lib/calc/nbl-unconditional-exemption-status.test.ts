@@ -4,7 +4,8 @@
  * 검증 목표: UI 배너·지목별 비활성·토글 뱃지를 구동하는 evaluateUnconditionalExemption 이
  * 엔진의 "실제" 날짜/지목 판정과 일치하는가 (토글 ON 여부만 보던 과대표현 수정).
  *
- * 공익수용(§168-14③3호): 가목 고시일≤2006.12.31 / 나목 취득일≤고시일−5년.
+ * 공익수용(§168-14③3호): 가목 고시일≤2006.12.31 / 나목 취득일≤고시일−N년 — N은 양도일·고시일 연혁(`data/nbl-historical-values-era.ts`):
+ * 양도 2014.2.21. 전 5 · 그 뒤 고시 2021.5.4. 전 2 · 고시 2021.5.4. 이후 5. 5년 구간 셀은 고시일 2022-04-23(NBL2611-V3-PR01 이전에는 2017-04-23으로 5년 단일 기준을 고정하고 있었다).
  */
 import { describe, it, expect } from "vitest";
 
@@ -42,14 +43,14 @@ describe("[NBL-UI] evaluateUnconditionalExemption — 엔진 실제 판정 기�
     expect(r.matched?.legalBasis).toContain("3호 가목");
   });
 
-  it("공익수용 나목: 고시일 2017-04-23 + 취득일 2010-01-01 (5년 이전) → isExempt=true", () => {
+  it("공익수용 나목: 고시일 2022-04-23 + 취득일 2010-01-01 (5년 이전) → isExempt=true", () => {
     const r = evaluateUnconditionalExemption(
       asset({
         nblLandType: "other_land",
         nblZoneType: "commercial",
         acquisitionDate: "2010-01-01",
         nblExemptPublicExpropriation: true,
-        nblExemptPublicNoticeDate: "2017-04-23",
+        nblExemptPublicNoticeDate: "2022-04-23",
       }),
       TRANSFER,
     );
@@ -58,14 +59,14 @@ describe("[NBL-UI] evaluateUnconditionalExemption — 엔진 실제 판정 기�
     expect(r.matched?.legalBasis).toContain("3호 나목");
   });
 
-  it("공익수용 미충족: 고시일 2017-04-23 + 취득일 2015-01-01 (5년 이내) → isExempt=false, 지목별 진행", () => {
+  it("공익수용 미충족: 고시일 2022-04-23 + 취득일 2018-01-01 (5년 이내) → isExempt=false, 지목별 진행", () => {
     const r = evaluateUnconditionalExemption(
       asset({
         nblLandType: "other_land",
         nblZoneType: "commercial",
-        acquisitionDate: "2015-01-01",
+        acquisitionDate: "2018-01-01",
         nblExemptPublicExpropriation: true,
-        nblExemptPublicNoticeDate: "2017-04-23",
+        nblExemptPublicNoticeDate: "2022-04-23",
       }),
       TRANSFER,
     );
@@ -75,32 +76,45 @@ describe("[NBL-UI] evaluateUnconditionalExemption — 엔진 실제 판정 기�
     expect(r.perToggle.publicExpropriation?.requirementHint).toContain("5년 이전");
   });
 
-  it("경계: 고시일 2017-04-23 + 취득일 정확히 2012-04-23 (=고시일−5년) → 의제 성립(true)", () => {
+  it("경계: 고시일 2022-04-23 + 취득일 정확히 2017-04-23 (=고시일−5년) → 의제 성립(true)", () => {
     const r = evaluateUnconditionalExemption(
       asset({
         nblLandType: "other_land",
         nblZoneType: "commercial",
-        acquisitionDate: "2012-04-23",
+        acquisitionDate: "2017-04-23",
         nblExemptPublicExpropriation: true,
-        nblExemptPublicNoticeDate: "2017-04-23",
+        nblExemptPublicNoticeDate: "2022-04-23",
       }),
       TRANSFER,
     );
     expect(r.isExempt).toBe(true);
   });
 
-  it("경계: 취득일 2012-04-24 (고시일−5년 하루 초과) → 미성립(false)", () => {
+  it("경계: 취득일 2017-04-24 (고시일−5년 하루 초과) → 미성립(false)", () => {
     const r = evaluateUnconditionalExemption(
       asset({
         nblLandType: "other_land",
         nblZoneType: "commercial",
-        acquisitionDate: "2012-04-24",
+        acquisitionDate: "2017-04-24",
         nblExemptPublicExpropriation: true,
-        nblExemptPublicNoticeDate: "2017-04-23",
+        nblExemptPublicNoticeDate: "2022-04-23",
       }),
       TRANSFER,
     );
     expect(r.isExempt).toBe(false);
+  });
+
+  /** NBL2611-V3-PR01 — 양도 2014.2.21. 이후 · 고시 2021.5.4. 전 사업은 「고시일부터 2년 이전」(제25193호 · 부칙 제31659호 제4조) */
+  it("공익수용(종전 2년): 고시일 2017-04-23 + 취득일 2015-04-23 (=고시일−2년) → 성립 · 하루 늦으면 미성립 · 근거에 목 구분 없음", () => {
+    const mk = (acquisitionDate: string) =>
+      asset({ nblLandType: "other_land", nblZoneType: "commercial", acquisitionDate, nblExemptPublicExpropriation: true, nblExemptPublicNoticeDate: "2017-04-23" });
+    const ok = evaluateUnconditionalExemption(mk("2015-04-23"), TRANSFER);
+    expect(ok.isExempt).toBe(true);
+    expect(ok.matched?.legalBasis).toContain("2년 이전");
+    expect(ok.matched?.legalBasis).not.toContain("나목");
+    const no = evaluateUnconditionalExemption(mk("2015-04-24"), TRANSFER);
+    expect(no.isExempt).toBe(false);
+    expect(no.perToggle.publicExpropriation?.requirementHint).toContain("2년 이전");
   });
 
   /** ③1호는 토글이 없다 — 취득원인·상속개시일로 자동 판정 (계획서 nbl-unconditional-inherit-cause.plan.md Q-1 a) */
