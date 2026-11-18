@@ -39,6 +39,7 @@ import { validateSplitLandExprAsset } from "./transfer-tax-validate-expropriatio
 import { validateRentalHousingException } from "./transfer-tax-validate-rental-exception";
 import { validateDepreciation } from "./transfer-tax-validate-depreciation";
 import { validateHousingExcessSplitInputs } from "./transfer-tax-validate-housing-excess";
+import { appurtenantCardsZoneError } from "./transfer-tax-validate-housing-excess";
 import { validateSeparateLandDateRequired } from "./separate-land-date-required";
 import type { TransferFormData, AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
@@ -335,6 +336,12 @@ export function validateAssetEntry(
   // #17 — 같은 날 취득 주택의 배율 초과분 분리 입력(기준시가 5칸) 필수. ⑤ 카드 노출·④ 전송·엔진 게이트와 같은 술어.
   const housingExcessError = validateHousingExcessSplitInputs(a, label, form.transferDate, index > 0);
   if (housingExcessError) return housingExcessError;
+
+  // NBL2611-V4-HS02 — 주 자산 주택 + 함께 양도 부수토지 카드: 카드 합계가 정착면적 × 3을 넘으면 소재지 구분 필수(⑫ `refineAppurtenantCardsZone`과 같은 술어).
+  if (index === 0) {
+    const cardsZoneError = appurtenantCardsZoneError(a, form.assets.slice(1), label);
+    if (cardsZoneError) return cardsZoneError;
+  }
 
   // 공유 지분율 범위 — ⑤ 인라인 경고(`OwnershipRatioInput`)와 **같은 술어**를 쓴다.
   // 술어가 갈리면 「칸에는 경고가 없는데 다음을 누르면 막히는」 모순이 생긴다.

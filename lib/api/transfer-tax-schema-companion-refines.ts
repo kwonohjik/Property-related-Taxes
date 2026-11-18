@@ -18,6 +18,8 @@ import { refineCompanionMixedUseNoCarryover } from "./transfer-tax-schema-mixed-
 import { refineGbPropertyRequired } from "./transfer-tax-schema-required-refines-gb";
 import { refineGbValuationPresent } from "./transfer-tax-schema-required-refines-gb";
 import { bgActualAcquisitionMissing } from "./transfer-tax-schema-collateral-win";
+import { appurtenantCardsZoneMessage } from "@/lib/calc/appurtenant-card-zone-pending";
+import { appurtenantCardsZoneShortfall } from "@/lib/calc/appurtenant-card-zone-pending";
 
 type CompanionAsset = z.infer<typeof companionAssetSchema>;
 
@@ -414,4 +416,34 @@ export function refineCarryoverTaxation(
       message: "이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)",
     });
   }
+}
+
+/**
+ * NBL2611-V4-HS02 ⑫ — 주 자산 주택 + 함께 양도 부수토지 카드: 카드 합계가 정착면적 × 3을 넘는데 소재지 구분이 없으면 거부한다.
+ * ⑧ `appurtenantCardsZoneError`와 **같은 술어**(`appurtenantCardsZoneShortfall`) — 면적은 ④가 싣는 값(주택 `acquisitionArea` ·
+ * 부수토지 카드 `areaM2`)이고 route `appurtenantLimitShareOf`가 읽는 값과 같다. 거부하지 않으면 route 컴패니언 분리가 3배 default로 초과분을 만든다.
+ * 옛 호출(`isUrbanArea`만 싣는 본문)은 엔진이 그 값으로 5배·10배를 정하므로 default가 쓰이지 않는다 — 거부하지 않는다.
+ */
+export function refineAppurtenantCardsZone(
+  data: {
+    propertyType?: string;
+    appurtenantLandZone?: string;
+    isUrbanArea?: boolean;
+    buildingFootprintArea?: number;
+    acquisitionArea?: number;
+    selfOwns?: string;
+  },
+  companions: ReadonlyArray<{ assetKind?: string; landNature?: string; areaM2?: number }>,
+  ctx: z.RefinementCtx,
+): void {
+  if (data.propertyType !== "housing" || data.appurtenantLandZone !== undefined || data.isUrbanArea !== undefined) return;
+  const shortfall = appurtenantCardsZoneShortfall({
+    footprintM2: data.buildingFootprintArea ?? 0,
+    houseLandAreaM2: data.selfOwns !== "building_only" ? data.acquisitionArea : undefined,
+    cardsAreaM2: companions.reduce(
+      (sum, c) => (c.assetKind === "land" && c.landNature === "appurtenant_to_housing" && (c.areaM2 ?? 0) > 0 ? sum + c.areaM2! : sum),
+      0,
+    ),
+  });
+  if (shortfall) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["appurtenantLandZone"], message: appurtenantCardsZoneMessage("", shortfall) });
 }
