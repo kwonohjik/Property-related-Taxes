@@ -26,6 +26,7 @@ import {
   suggestsMultiFamilyInputFirst,
 } from "@/lib/calc/comprehensive-rental-multifamily";
 import { defaultFormData, makeProperty } from "@/lib/stores/comprehensive-wizard-store";
+import { asksPriceBasisValue } from "@/lib/calc/comprehensive-rental-price-basis";
 import type { ComprehensiveFormData, PropertyEntry } from "@/lib/stores/comprehensive-wizard-store";
 import { COMPREHENSIVE_EXCL as E } from "@/lib/tax-engine/legal-codes";
 
@@ -218,6 +219,25 @@ describe("DM-2 ④ 전송", () => {
     );
     expect(info).not.toHaveProperty("deemedMultiFamily");
     expect(info.rentalRegistrationDate).toBe("2025-02-20");
+  });
+});
+
+describe("DM-6 건물 단위 기준 공시가격 — 의제면 묻지도 보내지도 않는다(엔진이 읽지 않음 · 브라우저 확인 2026-11-18)", () => {
+  it("★ 토글 ON: 건물 7.5억 > 지방 3억이어도 기준 공시가격 칸을 묻지 않고 ④에도 싣지 않는다", async () => {
+    const p = entry({ priceBasisValue: "200,000,000" });
+    expect(asksPriceBasisValue(p, "private_purchase_short", "2025")).toBe(false);
+    const info = await rentalInfoOf(form({ priceBasisValue: "200,000,000" }));
+    expect(info).not.toHaveProperty("priceBasisValue");
+  });
+  it("대조: 토글 OFF면 종전대로 묻고(건물 7.5억 > 3억) 값을 싣는다", async () => {
+    const off = { deemedMultiFamily: false, rentalRegistrationDate: "2017-06-01", priceBasisValue: "200,000,000" };
+    expect(asksPriceBasisValue(entry(off), "private_purchase_short", "2025")).toBe(true);
+    const info = await rentalInfoOf(form(off));
+    expect(info.priceBasisValue).toBe(200_000_000);
+  });
+  it("대조: 다가구 입력 OFF면 토글이 남아 있어도 의제 미적용 → 종전대로 묻는다", () => {
+    const p = entry({ multiFamilyEnabled: false, rentalRegistrationDate: "2017-06-01" });
+    expect(asksPriceBasisValue(p, "private_purchase_short", "2025")).toBe(true);
   });
 });
 
