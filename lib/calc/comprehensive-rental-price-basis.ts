@@ -12,6 +12,7 @@ import type { RentalPriceCapInput } from "@/lib/tax-engine/comprehensive-exclusi
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { parseAmount } from "./number-parse";
 import { priceRegistrationType } from "./comprehensive-rental-459ho";
+import { deemedMultiFamilyApplies } from "./comprehensive-rental-multifamily";
 
 /**
  * §3①1·2·7·8호 가목 「30호 이상」 상향 구간 — 대통령령 제35352호(2025.2.28.) 신설·2025 과세연도부터.
@@ -49,8 +50,11 @@ export function asksUsageApprovalDate(registrationType: string, assessmentYear: 
  * 대상 유형(1·2·6·7·8·10·11호 · 9호는 바탕 유형)이고 그해 공시가격이 상한을 넘을 때만.
  * 상한은 ④가 엔진에 보내는 값(사용승인일·30호는 각 술어가 참일 때만 보낸다)으로 엔진 `rentalPriceCap`이 정한다.
  * 비면 ⑧은 막지 않고 엔진이 그해 공시가격으로 판정 + 안내(Q-2 a).
+ * T-14 의제 다가구가 적용되면 묻지 않는다 — 엔진이 건물 단위 기준 공시가격을 읽지 않고 구별 공시가격으로 판정한다
+ * (comprehensive-exclusion-multifamily.ts 정규화 `priceBasisValue: undefined`). 건물 값으로 「상한을 넘습니다」 안내를 띄우면 결과와 반대로 읽힌다.
  */
 export function asksPriceBasisValue(p: PropertyEntry, registrationType: string, assessmentYear: string): boolean {
+  if (deemedMultiFamilyApplies(registrationType, p)) return false;
   const priceType = priceRegistrationType(p, registrationType);
   if (!priceType || !priceBasisApplies(priceType)) return false;
   const assessedValue = parseAmount(p.assessedValue);

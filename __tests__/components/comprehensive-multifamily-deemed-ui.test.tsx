@@ -116,3 +116,19 @@ describe("토글 OFF 기본 화면 — 날짜 칸 개수 불변", () => {
     expect(yearInputs()).toBe(a);
   });
 });
+
+describe("ON — 건물 단위 기준 공시가격 칸 숨김(엔진이 구별 가격으로 판정 · 브라우저 확인 2026-11-18)", () => {
+  const base = { assessedValue: "750,000,000", location: "non_metro" as const, multiFamilyEnabled: true, floorUnits: U2, rentalRegistrationDate: "2017-06-01" };
+  const NOTE = /그해 공시가격이 가격 상한을 넘습니다/;
+
+  it("★ 토글 ON이면 건물 7.5억 > 지방 3억이어도 「기준 공시가격」 칸과 상한 초과 안내가 없다", () => {
+    render(<ExclusionInfoInput index={0} property={{ ...makeProperty(), exclusionType: "private_purchase_rental_short", rentalRegistrationType: "private_purchase_short", ...base, deemedMultiFamily: true } as PropertyEntry} onUpdate={vi.fn()} />);
+    expect(screen.queryByText(NOTE)).toBeNull();
+    expect(screen.queryByText("기준 공시가격 (선택)")).toBeNull();
+  });
+
+  it("대조: 토글 OFF면 칸과 안내가 그대로 보인다", () => {
+    render(<ExclusionInfoInput index={0} property={{ ...makeProperty(), exclusionType: "private_purchase_rental_short", rentalRegistrationType: "private_purchase_short", ...base, deemedMultiFamily: false } as PropertyEntry} onUpdate={vi.fn()} />);
+    expect(screen.getByText(NOTE)).toBeTruthy();
+  });
+});
