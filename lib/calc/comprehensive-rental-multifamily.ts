@@ -20,7 +20,7 @@ function isDeemedType(registrationType: string): boolean {
 }
 
 /** 의제 다가구 ON일 때 세무서 사업자등록일 칸 hint — 1·2호 단서 hint 대신 */
-export const DEEMED_BUSINESS_REG_HINT = "본인 세무서 주택임대업 사업자등록일(2020.2.10. 이전)";
+export const DEEMED_BUSINESS_REG_HINT = "본인 세무서 주택임대업 사업자등록일(2020.2.10. 이전 · 피상속인 등록일 아님)";
 
 /** 토글을 보이는가 — 유형 1·2호 ∧ 다가구 층별 입력 ON */
 export function asksDeemedMultiFamilyToggle(registrationType: string, p: PropertyEntry): boolean {
@@ -80,7 +80,7 @@ export function validateDeemedMultiFamilyInputs(p: PropertyEntry, registrationTy
     }
   }
   if (!p.deemedNoConversionAfterCutoff) {
-    return `${label}: 2020.2.11. 이후 임대로 바꾼 호실이 없는지 고르세요 ${BASIS}.`;
+    return `${label}: 2020.2.11. 전부터 본인이 계속 임대해 왔는지(그 뒤 상속·취득·임대 전환·폐업 없음) 고르세요 ${BASIS}.`;
   }
   return null;
 }

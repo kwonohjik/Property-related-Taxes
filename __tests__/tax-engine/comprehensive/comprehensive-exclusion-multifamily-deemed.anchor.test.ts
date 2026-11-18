@@ -163,7 +163,7 @@ describe("T-14 의제 다가구 — 불성립", () => {
     expect(run({ ...ONE, deemedMultiFamily: dm([{ ...U4[0], area: 149 }, U4[1], U4[2], U4[3]]) }).isExcluded).toBe(true);
   });
 
-  it("DM-7 ★ M7 2020.2.11. 이후 임대로 바꾼 호실이 있다(아니오) → 불성립 + 확인 필요", () => {
+  it("DM-7 ★ M7 2020.2.11. 전부터 본인이 계속 임대하지 않음(상속·취득·전환·폐업 — 아니오) → 불성립 + 확인 필요", () => {
     const r = run({ deemedMultiFamily: dm(U3, false) });
     expect(r.isExcluded).toBe(false);
     expect(r.failReasons).toEqual([COMPREHENSIVE_EXCL.DEEMED_MULTIFAMILY_UNIT_CONVERTED_AFTER_CUTOFF]);

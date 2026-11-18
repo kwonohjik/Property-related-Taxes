@@ -116,7 +116,7 @@ export interface PropertyEntry {
   floorUnits: { label: string; area: string; officialValue?: string }[]; // 구별 면적 행 (area = DecimalInput 문자열 · officialValue = T-14 구별 공시가격 CurrencyInput 문자열)
   // ── T-14 2020.2.11. 전 세무서에만 등록한 다가구(부칙<제30404호> §6) — 적용 술어는 lib/calc/comprehensive-rental-multifamily.ts 한 곳(⑤⑧④ 공유) ──
   deemedMultiFamily: boolean;                      // 토글 (유형 1·2호 ∧ multiFamilyEnabled 일 때만 효력)
-  deemedNoConversionAfterCutoff: "" | "yes" | "no"; // 2020.2.11. 이후 임대로 바꾼 호실이 없다
+  deemedNoConversionAfterCutoff: "" | "yes" | "no"; // 2020.2.11. 전부터 본인이 계속 임대(그 뒤 상속·취득·전환·폐업 없음)
   // ── 주택 세부담상한 (직전 공시가격 단일 입력원 — 모드가 표시 제어, 2단계 통합) ──
   priorAssessedValue: string;          // 직전연도 주택공시가격 (원, CurrencyInput 문자열)
 }

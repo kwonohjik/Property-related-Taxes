@@ -256,7 +256,7 @@ describe("DM-3 ⑧ 차단 문구", () => {
     expect(msg({ floorUnits: [units[0], { ...units[1], officialValue: "" }, units[2]] })).toMatch(/2층 구의 공시가격을 입력하세요/);
     expect(msg({ floorUnits: [{ ...units[0], officialValue: "0" }, units[1], units[2]] })).toMatch(/1층 구의 공시가격을 입력하세요/);
     expect(msg({ floorUnits: [] })).toMatch(/구별\(층별\) 행이 없습니다/);
-    expect(msg({ deemedNoConversionAfterCutoff: "" })).toMatch(/2020\.2\.11\. 이후 임대로 바꾼 호실이 없는지 고르세요/);
+    expect(msg({ deemedNoConversionAfterCutoff: "" })).toMatch(/2020\.2\.11\. 전부터 본인이 계속 임대해 왔는지\(그 뒤 상속·취득·임대 전환·폐업 없음\) 고르세요/);
   });
   it("토글 OFF + 지자체 등록일 빈칸 → 종전 차단 문구 + 1·2호는 토글 안내 / 다가구 OFF는 입력 안내", () => {
     expect(msg({ deemedMultiFamily: false })).toMatch(/^주택 1: 지자체 임대사업자 등록일이 없으면 합산배제를 계산할 수 없습니다/);

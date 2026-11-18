@@ -53,7 +53,7 @@ export type ExclusionType =
 export interface DeemedMultiFamilyInput {
   /** 구(호실)별 면적(㎡)·공시가격(원) — 1구=1호(시행령 §3⑥). 가격은 사용자가 구별로 입력한다(산정 방법 확인 필요) */
   units: { label: string; area: number; assessedValue: number }[];
-  /** 2020.2.11. 이후 임대로 바꾼 호실이 없음 — false면 불성립 + 확인 필요 */
+  /** 2020.2.11. 전부터 본인이 계속 임대(그 뒤 상속·취득·임대 전환·폐업 없음) — false면 불성립 + 확인 필요 */
   noConversionAfterCutoff: boolean;
 }
 

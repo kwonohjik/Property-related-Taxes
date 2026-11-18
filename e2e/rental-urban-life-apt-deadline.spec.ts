@@ -352,7 +352,8 @@ test.describe("V10 판정 메뉴 §155⑳ 임대주택 카드 — 도시형 생�
       await judge(page);
 
       await page.getByTestId("one-house-to-calculator").click();
-      await expect(page).toHaveURL(/\/calc\/transfer-tax$/);
+      // CI dev 서버는 /calc/transfer-tax를 처음 컴파일하는 데 5초를 넘길 수 있다(2026-11-18 trace: RSC 요청 대기 중 기본 5초 만료) — 같은 이동을 기다리는 다른 spec과 같이 30초
+      await expect(page).toHaveURL(/\/calc\/transfer-tax$/, { timeout: 30_000 });
       await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
       await expandAssetSection(page, 3, 0);
       await page.getByTestId("fixed-acquisition-price").fill("500000000");
