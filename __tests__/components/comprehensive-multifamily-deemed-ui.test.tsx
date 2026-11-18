@@ -64,7 +64,7 @@ describe("ON — 지자체 등록일·말소 칸 숨김 · 구별 공시가격",
     renderWith(on);
     expect(yearInputs()).toBe(off - 1);
     expect(screen.queryByText(/지방자치단체 임대사업자 등록증의 등록일/)).toBeNull();
-    expect(screen.getByText("본인 세무서 주택임대업 사업자등록일(2020.2.10. 이전)")).toBeTruthy();
+    expect(screen.getByText("본인 세무서 주택임대업 사업자등록일(2020.2.10. 이전 · 피상속인 등록일 아님)")).toBeTruthy();
   });
 
   it("★ 임대등록 말소 칸도 ON이면 숨기고 OFF면 보인다(지자체 말소일은 보지 않는다 — 조심2022서6703)", () => {
@@ -77,7 +77,10 @@ describe("ON — 지자체 등록일·말소 칸 숨김 · 구별 공시가격",
 
   it("전환 질문과 구별 공시가격 행(라벨·면적 표시)이 보이고, 입력하면 floorUnits[i].officialValue로 올라간다", () => {
     const onUpdate = renderWith(on);
-    expect(screen.getByText("2020.2.11. 이후 임대로 바꾼 호실이 없다")).toBeTruthy();
+    expect(screen.getByText("2020.2.11. 전부터 본인이 계속 임대해 왔다")).toBeTruthy();
+    // V-3·V-4 안내(상속·취득·전환·폐업) · V-1·V-2 안내(구별 공시가격 산정·공용부분 제외)
+    expect(screen.getByTestId("comprehensive-deemed-continuity-hint").textContent).toMatch(/상속·증여·매매.*폐업.*재산세제과-142/);
+    expect(screen.getByTestId("comprehensive-deemed-unit-basis-hint").textContent).toMatch(/재산세과-3053.*계단.*주택법 시행규칙 §2 1호/);
     expect(screen.getByTestId("comprehensive-deemed-unit-0").textContent).toContain("1층");
     expect(screen.getByTestId("comprehensive-deemed-unit-1").textContent).toContain("35.5㎡");
     fireEvent.change(screen.getByTestId("comprehensive-deemed-unit-value-1"), { target: { value: "250000000" } });
