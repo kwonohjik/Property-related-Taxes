@@ -66,6 +66,9 @@ const FIELD_LABEL: Record<string, string> = {
   rentViolationDate: "5% 넘게 올린 계약일",
   isEupMyeonArea: "읍·면 지역 여부",
   isThirtyPlusUnits: "30호 이상 여부",
+  units: "구",
+  deemedMultiFamily: "2020.2.11. 전 세무서 등록 다가구",
+  noConversionAfterCutoff: "2020.2.11. 이후 임대 전환 호실 없음",
   // 중첩: 기타 합산배제(otherInfo)
   otherInfo: "기타 합산배제 정보",
   // 토지(landAggregate·landSeparate·필지)

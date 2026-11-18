@@ -31,6 +31,10 @@ import { isVacantEntry, rentalVacancyApiFields, validateVacancyInputs } from "./
 import { rentViolationApiFields, validateRentViolationInputs } from "./comprehensive-rental-rent-violation";
 import { asksUsageApprovalDate } from "./comprehensive-rental-price-basis";
 import { asksPriceBasisValue } from "./comprehensive-rental-price-basis";
+import { deemedMultiFamilyApplies } from "./comprehensive-rental-multifamily";
+import { deemedMultiFamilyApiFields } from "./comprehensive-rental-multifamily";
+import { missingRentalRegistrationMessage } from "./comprehensive-rental-multifamily";
+import { validateDeemedMultiFamilyInputs } from "./comprehensive-rental-multifamily";
 
 /**
  * 법인 §9② class 도출 (시행령 §4의4) — 엔진과 동일 헬퍼로 단일 진실. 개인이면 undefined.
@@ -114,10 +118,12 @@ export function validateRequiredExclusionAndLandInputs(formData: ComprehensiveFo
     }
     if (!RENTAL_TYPES.has(p.exclusionType)) continue;
     const label = `주택 ${i + 1}`;
-    // T-14 — 지자체 등록 없는 다가구 경과조치(부칙<제30404호> §6)는 판정하지 못한다: 할 일(세무서 확인 · 유형 '없음')을 함께 알린다
-    if (!p.rentalRegistrationDate)
-      return `${label}: 지자체 임대사업자 등록일이 없으면 합산배제를 계산할 수 없습니다. 2020.2.11. 전에 세무서에 주택임대업 등록을 한 다가구주택은 지자체 등록 없이도 배제될 수 있으니(종합부동산세법 시행령 부칙<대통령령 제30404호> §6) 관할 세무서에 확인하세요. 일반 주택으로 계산하려면 합산배제 유형을 '없음'으로 바꾸세요.`;
     const bizType = p.rentalRegistrationType || toRegistrationType(p.exclusionType);
+    // T-14 — 2020.2.11. 전 세무서에만 등록한 다가구(의제)는 세무서 등록일로 판정 · 아니면 지자체 등록일 필수(⑤⑧④가 같은 술어)
+    if (deemedMultiFamilyApplies(bizType, p)) {
+      const deemedError = validateDeemedMultiFamilyInputs(p, bizType, label);
+      if (deemedError) return deemedError;
+    } else if (!p.rentalRegistrationDate) return missingRentalRegistrationMessage(p, bizType, label);
     if (asksBusinessRegistrationField(bizType, formData.assessmentYear) && !p.businessRegistrationDate) {
       return businessRegistrationRequiredMessage(bizType, label);
     }
@@ -475,6 +481,8 @@ export async function callComprehensiveApi(
           ...rental459hoApiFields(p, registrationType),
           ...rentalVacancyApiFields(p, registrationType),
           ...rentViolationApiFields(p, registrationType, formData.assessmentYear),
+          // T-14 의제 다가구 — 적용이면 지자체 날짜를 빼고 구별 값을 보낸다(아니면 빈 객체 · 위 spread를 마지막에 덮는다)
+          ...deemedMultiFamilyApiFields(p, registrationType),
         },
       };
     }
