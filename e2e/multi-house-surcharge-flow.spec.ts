@@ -113,7 +113,8 @@ test.describe("다주택 중과 판정 — 흐름", () => {
     await gotoResult(page);
     await page.goto("/");
     await page.getByRole("link", { name: /다주택 중과 판정/ }).click();
-    await expect(page).toHaveURL(/\/calc\/multi-house-surcharge/);
+    // CI dev 서버는 판정 화면을 처음 컴파일하는 데 5초를 넘길 수 있다(2026-11-18 #3458 trace와 같은 원인) — 계산기 이동과 같이 30초
+    await expect(page).toHaveURL(/\/calc\/multi-house-surcharge/, { timeout: 30_000 });
     await expect(page.getByTestId("one-house-household")).toBeVisible();
     await expect
       .poll(async () =>
@@ -170,10 +171,12 @@ test.describe("다주택 중과 판정 — 흐름", () => {
     test.setTimeout(90_000);
     await gotoResult(page);
     await page.getByTestId("surcharge-to-one-house-link").click();
-    await expect(page).toHaveURL(/\/calc\/one-house-exemption$/);
+    // CI dev 서버는 판정 화면을 처음 컴파일하는 데 5초를 넘길 수 있다(2026-11-18 #3458 trace와 같은 원인) — 계산기 이동과 같이 30초
+    await expect(page).toHaveURL(/\/calc\/one-house-exemption$/, { timeout: 30_000 });
     // 입력을 함께 쓴다 — 1주택 메뉴 사이드바 요약에 시드한 양도 예정일이 그대로 있다
     await expect(page.locator("aside")).toContainText("2021-06-01");
     await page.getByTestId("one-house-to-surcharge-link").click();
-    await expect(page).toHaveURL(/\/calc\/multi-house-surcharge$/);
+    // CI dev 서버는 판정 화면을 처음 컴파일하는 데 5초를 넘길 수 있다(2026-11-18 #3458 trace와 같은 원인) — 계산기 이동과 같이 30초
+    await expect(page).toHaveURL(/\/calc\/multi-house-surcharge$/, { timeout: 30_000 });
   });
 });
