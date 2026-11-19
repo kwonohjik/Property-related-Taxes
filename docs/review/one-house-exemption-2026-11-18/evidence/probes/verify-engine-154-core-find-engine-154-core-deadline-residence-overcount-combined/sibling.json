@@ -1,0 +1,80 @@
+{
+  "mergeMonths": {
+    "late": 24,
+    "atDl": 19
+  },
+  "mergeLate": {
+    "isExempt": false,
+    "pending": [
+      "155-5-marriage-merge@2027-10-01"
+    ],
+    "unmet": [],
+    "undetermined": [],
+    "applied": []
+  },
+  "mergeDl": "2027-10-01",
+  "mergeMonthsAtDl": 19,
+  "mergeOnDl": {
+    "isExempt": false,
+    "pending": [],
+    "unmet": [
+      {
+        "id": "155-5-marriage-merge",
+        "reasons": [
+          "§154① 보유 2년(취득 당시 조정대상지역이면 거주 2년) 요건을 충족하지 않습니다."
+        ]
+      }
+    ],
+    "undetermined": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "applied": []
+  },
+  "mergeCtrlLate": {
+    "isExempt": false,
+    "pending": [
+      "155-5-marriage-merge@2027-10-01"
+    ],
+    "unmet": [],
+    "undetermined": [],
+    "applied": []
+  },
+  "mergeCtrlOnDl": {
+    "isExempt": true,
+    "pending": [],
+    "unmet": [],
+    "undetermined": [],
+    "applied": [
+      "155-5-marriage-merge"
+    ]
+  },
+  "unavLate": {
+    "isExempt": false,
+    "pending": [
+      "155-8-unavoidable-resolved@2027-07-01"
+    ],
+    "unmet": [],
+    "undetermined": [],
+    "applied": []
+  },
+  "unavDl": "2027-07-01",
+  "unavMonthsAtDl": 19,
+  "unavOnDl": {
+    "isExempt": false,
+    "pending": [],
+    "unmet": [
+      {
+        "id": "155-8-unavoidable:work",
+        "reasons": [
+          "§154① 보유 2년(취득 당시 조정대상지역이면 거주 2년) 요건을 충족하지 않습니다."
+        ]
+      }
+    ],
+    "undetermined": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "applied": []
+  }
+}

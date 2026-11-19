@@ -1,0 +1,83 @@
+{
+  "inhBeforeSelling": {
+    "status": 200,
+    "issues": [
+      "error:generalHouseRightAtInheritance: 양도 주택을 상속개시 후 취득했습니다 — 상속개시 당시 보유한 조합원입주권·분양권으로 취득한 신축주택인지 선택하세요."
+    ],
+    "isExempt": false,
+    "applied": [],
+    "unmet": [
+      "155-2-inherited-house: 양도하는 주택을 상속개시 후(2013.2.15. 이후) 취득했습니다 — §155② 괄호의 「상속개시 당시 보유한 주택」이 아니라 상속주택을 주택 수에서 빼지 않습니다(대통령령 제24356호 부칙 제20조). 상속개시 당시 보유한 조합원입주권·분양권으로 사업시행 완료 후 취득한 신축주택이면 ② 보유 주택 목록 아래에서 선택하세요."
+    ],
+    "undet": [],
+    "houseCount": {
+      "total": 3,
+      "countedForExemption": 3,
+      "excluded": []
+    },
+    "tth": {
+      "previousAcquisitionDate": "2015-01-02",
+      "newAcquisitionDate": "2023-06-01",
+      "newHouseRegionCode": "4682025021",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    }
+  },
+  "inhAfterSelling": {
+    "status": 200,
+    "issues": [],
+    "isExempt": true,
+    "reason": "일시적 2주택 비과세",
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "unmet": [],
+    "undet": [],
+    "houseCount": {
+      "total": 3,
+      "countedForExemption": 2,
+      "excluded": [
+        {
+          "houseId": "INH",
+          "label": "상속주택 — 주택 수 제외",
+          "legalBasis": "소득세법 시행령 §155②",
+          "houseNo": 1,
+          "houseAcquisitionDate": "2020-03-01"
+        }
+      ]
+    },
+    "tth": {
+      "previousAcquisitionDate": "2015-01-02",
+      "newAcquisitionDate": "2023-06-01",
+      "newHouseRegionCode": "4682025021",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    }
+  },
+  "onlyNew": {
+    "status": 200,
+    "issues": [],
+    "isExempt": true,
+    "reason": "일시적 2주택 비과세",
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "unmet": [],
+    "undet": [],
+    "houseCount": {
+      "total": 2,
+      "countedForExemption": 2,
+      "excluded": []
+    },
+    "tth": {
+      "previousAcquisitionDate": "2015-01-02",
+      "newAcquisitionDate": "2023-06-01",
+      "newHouseRegionCode": "4682025021",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    }
+  }
+}

@@ -1,0 +1,307 @@
+[
+  {
+    "k": "RE-ctl exempt (P-E112-post2013 그대로)",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": true,
+    "isPartialExempt": false,
+    "und": [
+      "155-2-reinheritance-reference-date-unverified"
+    ],
+    "hasRE": true,
+    "hasPC": false,
+    "excluded": [
+      {
+        "houseId": "A",
+        "legalBasis": "소득세법 시행령 §155②"
+      }
+    ],
+    "unmet": []
+  },
+  {
+    "k": "RE-ctl exempt cf reInherited=false",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [],
+    "hasRE": false,
+    "hasPC": false,
+    "excluded": [],
+    "unmet": [
+      "155-2-inherited-house"
+    ]
+  },
+  {
+    "k": "RE-1 gangnam 2018 res0 (taxed)",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified",
+      "155-2-reinheritance-reference-date-unverified"
+    ],
+    "hasRE": true,
+    "hasPC": false,
+    "excluded": [
+      {
+        "houseId": "A",
+        "legalBasis": "소득세법 시행령 §155②"
+      }
+    ],
+    "unmet": []
+  },
+  {
+    "k": "RE-1 cf reInherited=false",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [],
+    "hasRE": false,
+    "hasPC": false,
+    "excluded": [],
+    "unmet": [
+      "155-2-inherited-house"
+    ]
+  },
+  {
+    "k": "RE-1 cf residence 24 (exempt?)",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": true,
+    "isPartialExempt": false,
+    "und": [
+      "155-2-reinheritance-reference-date-unverified"
+    ],
+    "hasRE": true,
+    "hasPC": false,
+    "excluded": [
+      {
+        "houseId": "A",
+        "legalBasis": "소득세법 시행령 §155②"
+      }
+    ],
+    "unmet": []
+  },
+  {
+    "k": "RE-5 holding short transfer 2020-12 (taxed)",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [
+      "155-2-reinheritance-reference-date-unverified"
+    ],
+    "hasRE": true,
+    "hasPC": false,
+    "excluded": [
+      {
+        "houseId": "A",
+        "legalBasis": "소득세법 시행령 §155②"
+      }
+    ],
+    "unmet": []
+  },
+  {
+    "k": "RE-5 cf reInherited=false",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [],
+    "hasRE": false,
+    "hasPC": false,
+    "excluded": [],
+    "unmet": [
+      "155-2-inherited-house"
+    ]
+  },
+  {
+    "k": "RE-2 holding short 2025-03 non-reg (taxed)",
+    "status": 200,
+    "validationErrors": [
+      "generalHouseRightAtInheritance: 양도 주택을 상속개시 후 취득했습니다 — 상속개시 당시 보유한 조합원입주권·분양권으로 취득한 신축주택인지 선택하세요."
+    ],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [],
+    "hasRE": false,
+    "hasPC": false,
+    "excluded": [],
+    "unmet": [
+      "155-2-inherited-house"
+    ]
+  },
+  {
+    "k": "RE-2 cf reInherited=false",
+    "status": 200,
+    "validationErrors": [
+      "generalHouseRightAtInheritance: 양도 주택을 상속개시 후 취득했습니다 — 상속개시 당시 보유한 조합원입주권·분양권으로 취득한 신축주택인지 선택하세요."
+    ],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [],
+    "hasRE": false,
+    "hasPC": false,
+    "excluded": [],
+    "unmet": [
+      "155-2-inherited-house"
+    ]
+  },
+  {
+    "k": "RE-3 high-value 15억 partial",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": true,
+    "und": [
+      "155-2-reinheritance-reference-date-unverified"
+    ],
+    "hasRE": true,
+    "hasPC": false,
+    "excluded": [
+      {
+        "houseId": "A",
+        "legalBasis": "소득세법 시행령 §155②"
+      }
+    ],
+    "unmet": []
+  },
+  {
+    "k": "RE-3 cf reInherited=false",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [],
+    "hasRE": false,
+    "hasPC": false,
+    "excluded": [],
+    "unmet": [
+      "155-2-inherited-house"
+    ]
+  },
+  {
+    "k": "PC-ctl exempt (P-T001-parental-care 그대로)",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": true,
+    "isPartialExempt": false,
+    "und": [
+      "155-2-pre2010-parental-care-exception-unverified"
+    ],
+    "hasRE": false,
+    "hasPC": true,
+    "excluded": [
+      {
+        "houseId": "A",
+        "legalBasis": "소득세법 시행령 §155②"
+      }
+    ],
+    "unmet": []
+  },
+  {
+    "k": "PC-ctl cf parentalCare=false",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [],
+    "hasRE": false,
+    "hasPC": false,
+    "excluded": [],
+    "unmet": [
+      "155-2-inherited-house"
+    ]
+  },
+  {
+    "k": "PC-1 holding short (taxed)",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [
+      "155-2-pre2010-parental-care-exception-unverified"
+    ],
+    "hasRE": false,
+    "hasPC": true,
+    "excluded": [
+      {
+        "houseId": "A",
+        "legalBasis": "소득세법 시행령 §155②"
+      }
+    ],
+    "unmet": []
+  },
+  {
+    "k": "PC-1 cf parentalCare=false",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [],
+    "hasRE": false,
+    "hasPC": false,
+    "excluded": [],
+    "unmet": [
+      "155-2-inherited-house"
+    ]
+  },
+  {
+    "k": "PC-2 ranking disqualified (row not excluded?)",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [
+      "155-2-pre2010-parental-care-exception-unverified"
+    ],
+    "hasRE": false,
+    "hasPC": true,
+    "excluded": [],
+    "unmet": [
+      "155-2-inherited-house"
+    ]
+  },
+  {
+    "k": "PC-3 plus another general house (taxed)",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [
+      "155-2-pre2010-parental-care-exception-unverified"
+    ],
+    "hasRE": false,
+    "hasPC": true,
+    "excluded": [
+      {
+        "houseId": "A",
+        "legalBasis": "소득세법 시행령 §155②"
+      }
+    ],
+    "unmet": []
+  },
+  {
+    "k": "RE-4 plus another general house (taxed)",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [
+      "155-2-reinheritance-reference-date-unverified"
+    ],
+    "hasRE": true,
+    "hasPC": false,
+    "excluded": [
+      {
+        "houseId": "A",
+        "legalBasis": "소득세법 시행령 §155②"
+      }
+    ],
+    "unmet": []
+  }
+]

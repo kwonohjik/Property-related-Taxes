@@ -1,0 +1,141 @@
+{
+ "E193-era+ltr": {
+  "sectionVisibleBeforeDeclare": true,
+  "ohErr": [],
+  "scErr": [],
+  "oneHouse": {
+   "isExempt": false,
+   "rental": false,
+   "applied": []
+  },
+  "surchargeBase": {
+   "exemptionIsExempt": false
+  },
+  "surchargeLtr": {
+   "status": 200,
+   "exemptionIsExempt": true,
+   "applied": [
+    "155-1-temporary-two-house"
+   ],
+   "rental": false
+  },
+  "calcBase": {
+   "isExempt": false,
+   "determinedTax": 103340000,
+   "totalTax": 113674000
+  },
+  "calcLtr": {
+   "isExempt": true,
+   "determinedTax": 0,
+   "totalTax": 0,
+   "warnings": [
+    "장기임대주택 거주주택 특례(소득세법 시행령 §155⑳)는 세대 구성 요건(「장기임대주택과 그 밖의 1주택」)을 충족하지 못했습니다 — 거주주택 외에 장기임대주택이 아닌 주택이 2채 있습니다 — 소득세법 시행령 §15"
+   ]
+  }
+ },
+ "E193-era-B+ltr-auto": {
+  "sectionVisibleBeforeDeclare": true,
+  "ohErr": [],
+  "scErr": [],
+  "oneHouse": {
+   "isExempt": false,
+   "rental": false,
+   "applied": []
+  },
+  "surchargeBase": {
+   "exemptionIsExempt": false
+  },
+  "surchargeLtr": {
+   "status": 200,
+   "exemptionIsExempt": true,
+   "applied": [
+    "155-1-temporary-two-house"
+   ],
+   "rental": false
+  },
+  "calcBase": {
+   "isExempt": false,
+   "determinedTax": 103340000,
+   "totalTax": 113674000
+  },
+  "calcLtr": {
+   "isExempt": false,
+   "determinedTax": 16775000,
+   "totalTax": 18452500,
+   "warnings": [
+    "장기임대주택 거주주택 특례(소득세법 시행령 §155⑳)는 세대 구성 요건(「장기임대주택과 그 밖의 1주택」)을 충족하지 못했습니다(소득세법 시행령 §161① 안분도 적용하지 않았습니다) — 거주주택 외에 장기임대주택"
+   ]
+  }
+ },
+ "E194-era+ltr": {
+  "sectionVisibleBeforeDeclare": true,
+  "ohErr": [],
+  "scErr": [],
+  "oneHouse": {
+   "isExempt": false,
+   "rental": false,
+   "applied": []
+  },
+  "surchargeBase": {
+   "exemptionIsExempt": false,
+   "headlineCount": 3,
+   "headlineType": "none"
+  },
+  "surchargeLtr": {
+   "status": 200,
+   "exemptionIsExempt": true,
+   "applied": [
+    "155-1-temporary-two-house"
+   ],
+   "rental": false,
+   "headlineCount": 2,
+   "headlineType": "none",
+   "exclusionReasons": []
+  },
+  "calcBase": {
+   "isExempt": false,
+   "determinedTax": 113600000,
+   "totalTax": 124960000
+  },
+  "calcLtr": {
+   "isExempt": true,
+   "determinedTax": 0,
+   "totalTax": 0,
+   "warnings": [
+    "장기임대주택 거주주택 특례(소득세법 시행령 §155⑳)는 세대 구성 요건(「장기임대주택과 그 밖의 1주택」)을 충족하지 못했습니다 — 거주주택 외에 장기임대주택이 아닌 주택이 2채 있습니다 — 소득세법 시행령 §15"
+   ]
+  }
+ },
+ "E163-era+ltr(명부 없음)": {
+  "sectionVisibleBeforeDeclare": false,
+  "ohErr": [],
+  "scErr": [],
+  "oneHouse": {
+   "isExempt": false,
+   "rental": false,
+   "applied": []
+  },
+  "surchargeBase": {
+   "exemptionIsExempt": false
+  },
+  "surchargeLtr": {
+   "status": 200,
+   "exemptionIsExempt": true,
+   "applied": [],
+   "rental": false
+  },
+  "calcBase": {
+   "isExempt": false,
+   "determinedTax": 90610000,
+   "totalTax": 99671000
+  },
+  "calcLtr": {
+   "isExempt": true,
+   "determinedTax": 0,
+   "totalTax": 0,
+   "warnings": [
+    "장기임대주택 거주주택 특례(소득세법 시행령 §155⑳)는 요건을 충족하지 못해 적용하지 않았습니다 — 1호: 거주주택 양도일 현재 세무서 사업자등록과 지자체 임대주택 등록을 모두 마쳐야 합니다 (소득세법 시행령 §1"
+   ]
+  }
+ }
+}

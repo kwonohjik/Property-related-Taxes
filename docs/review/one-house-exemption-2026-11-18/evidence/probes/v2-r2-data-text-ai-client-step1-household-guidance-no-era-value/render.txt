@@ -1,0 +1,6 @@
+same(2018,2025)=true
+same(2023,2025)=true
+has 사실상 이혼=true
+has 12개월 환산=true
+has 연혁/2019/2024 표기=false
+len=9042

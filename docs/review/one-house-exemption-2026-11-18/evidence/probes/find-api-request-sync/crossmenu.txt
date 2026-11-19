@@ -1,0 +1,4 @@
+one-house ⑧ errors: []
+surcharge ⑧ errors: ["보유 주택 1: 조특법 감면 임대주택이면 임대개시일을 입력하세요."]
+④ row: {"id":"h1","region":"capital","acquisitionDate":"2018-01-01","officialPrice":300000000,"isInherited":false,"isLongTermRental":false,"isApartment":false,"isOfficetel":false,"isUnsoldHousing":false,"isUnsoldNewHouse":false,"isSpouseOwned":false,"isTaxIncentiveRental":true,"isNationalSizeHousing":false}
+route: 400 {"error":{"code":"INVALID_INPUT","message":"입력값이 올바르지 않습니다","fieldErrors":{"houses.1.rentalStartDate":["조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대개시일이 필요합니다"]}}}

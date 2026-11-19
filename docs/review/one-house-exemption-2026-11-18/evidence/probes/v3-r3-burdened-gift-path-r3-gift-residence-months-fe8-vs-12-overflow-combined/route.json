@@ -1,0 +1,174 @@
+[
+  {
+    "name": "res_overflow_30_of_12",
+    "v8": null,
+    "status": 400,
+    "bodyKeys": {
+      "acquisitionDate": "2024-06-01",
+      "transferDate": "2025-06-01",
+      "residencePeriodMonths": 30,
+      "isOneHousehold": true
+    },
+    "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"residencePeriodMonths\":[\"거주기간: 30개월이 취득일(2024-06-01)부터 양도일까지의 12개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.\"]}}}",
+    "fixedV8_wouldBlock": true,
+    "fixedV8": "거주기간: 30개월이 취득일(2024-06-01)부터 양도일까지의 12개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요."
+  },
+  {
+    "name": "res_boundary_12_of_12",
+    "v8": null,
+    "status": 200,
+    "bodyKeys": {
+      "acquisitionDate": "2024-06-01",
+      "transferDate": "2025-06-01",
+      "residencePeriodMonths": 12,
+      "isOneHousehold": true
+    },
+    "isExempt": false,
+    "determinedTax": 42150000,
+    "longTermHoldingRate": 0,
+    "fixedV8_wouldBlock": false,
+    "fixedV8": null
+  },
+  {
+    "name": "res_boundary_13_of_12",
+    "v8": null,
+    "status": 400,
+    "bodyKeys": {
+      "acquisitionDate": "2024-06-01",
+      "transferDate": "2025-06-01",
+      "residencePeriodMonths": 13,
+      "isOneHousehold": true
+    },
+    "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"residencePeriodMonths\":[\"거주기간: 13개월이 취득일(2024-06-01)부터 양도일까지의 12개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.\"]}}}",
+    "fixedV8_wouldBlock": true,
+    "fixedV8": "거주기간: 13개월이 취득일(2024-06-01)부터 양도일까지의 12개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요."
+  },
+  {
+    "name": "res_ok_0",
+    "v8": null,
+    "status": 200,
+    "bodyKeys": {
+      "acquisitionDate": "2024-06-01",
+      "transferDate": "2025-06-01",
+      "residencePeriodMonths": 0,
+      "isOneHousehold": true
+    },
+    "isExempt": false,
+    "determinedTax": 42150000,
+    "longTermHoldingRate": 0,
+    "fixedV8_wouldBlock": false,
+    "fixedV8": null
+  },
+  {
+    "name": "gangnam_999",
+    "v8": null,
+    "status": 400,
+    "bodyKeys": {
+      "acquisitionDate": "2022-06-01",
+      "transferDate": "2025-06-01",
+      "residencePeriodMonths": 999,
+      "isOneHousehold": true,
+      "regionCode": "1168010100"
+    },
+    "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"residencePeriodMonths\":[\"거주기간: 999개월이 취득일(2022-06-01)부터 양도일까지의 36개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.\"]}}}",
+    "fixedV8_wouldBlock": true,
+    "fixedV8": "거주기간: 999개월이 취득일(2022-06-01)부터 양도일까지의 36개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요."
+  },
+  {
+    "name": "gangnam_24",
+    "v8": null,
+    "status": 200,
+    "bodyKeys": {
+      "acquisitionDate": "2022-06-01",
+      "transferDate": "2025-06-01",
+      "residencePeriodMonths": 24,
+      "isOneHousehold": true,
+      "regionCode": "1168010100"
+    },
+    "isExempt": true,
+    "determinedTax": 0,
+    "longTermHoldingRate": 0,
+    "fixedV8_wouldBlock": false,
+    "fixedV8": null
+  },
+  {
+    "name": "gangnam_36",
+    "v8": null,
+    "status": 200,
+    "bodyKeys": {
+      "acquisitionDate": "2022-06-01",
+      "transferDate": "2025-06-01",
+      "residencePeriodMonths": 36,
+      "isOneHousehold": true,
+      "regionCode": "1168010100"
+    },
+    "isExempt": true,
+    "determinedTax": 0,
+    "longTermHoldingRate": 0,
+    "fixedV8_wouldBlock": false,
+    "fixedV8": null
+  },
+  {
+    "name": "gangnam_37",
+    "v8": null,
+    "status": 400,
+    "bodyKeys": {
+      "acquisitionDate": "2022-06-01",
+      "transferDate": "2025-06-01",
+      "residencePeriodMonths": 37,
+      "isOneHousehold": true,
+      "regionCode": "1168010100"
+    },
+    "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"residencePeriodMonths\":[\"거주기간: 37개월이 취득일(2022-06-01)부터 양도일까지의 36개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.\"]}}}",
+    "fixedV8_wouldBlock": true,
+    "fixedV8": "거주기간: 37개월이 취득일(2022-06-01)부터 양도일까지의 36개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요."
+  },
+  {
+    "name": "ctrl_onehh_off_30",
+    "v8": null,
+    "status": 200,
+    "bodyKeys": {
+      "acquisitionDate": "2024-06-01",
+      "transferDate": "2025-06-01",
+      "residencePeriodMonths": 30,
+      "isOneHousehold": false
+    },
+    "isExempt": false,
+    "determinedTax": 42150000,
+    "longTermHoldingRate": 0,
+    "fixedV8_wouldBlock": true,
+    "fixedV8": "거주기간: 30개월이 취득일(2024-06-01)부터 양도일까지의 12개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요."
+  },
+  {
+    "name": "inherit_60_of_36",
+    "v8": null,
+    "status": 400,
+    "bodyKeys": {
+      "acquisitionDate": "2022-06-01",
+      "transferDate": "2025-06-01",
+      "residencePeriodMonths": 60,
+      "isOneHousehold": true,
+      "acquisitionCause": "inheritance"
+    },
+    "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"residencePeriodMonths\":[\"거주기간: 60개월이 취득일(2022-06-01)부터 양도일까지의 36개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.\"]}}}",
+    "fixedV8_wouldBlock": true,
+    "fixedV8": "거주기간: 60개월이 취득일(2022-06-01)부터 양도일까지의 36개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요."
+  },
+  {
+    "name": "inherit_36_of_36",
+    "v8": null,
+    "status": 200,
+    "bodyKeys": {
+      "acquisitionDate": "2022-06-01",
+      "transferDate": "2025-06-01",
+      "residencePeriodMonths": 36,
+      "isOneHousehold": true,
+      "acquisitionCause": "inheritance"
+    },
+    "isExempt": true,
+    "determinedTax": 0,
+    "longTermHoldingRate": 0,
+    "fixedV8_wouldBlock": false,
+    "fixedV8": null
+  }
+]

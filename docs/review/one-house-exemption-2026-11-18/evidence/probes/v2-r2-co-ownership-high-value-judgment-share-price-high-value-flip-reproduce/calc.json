@@ -1,0 +1,22 @@
+{
+  "handed": {
+    "contractTotalPrice": "700000000",
+    "actualSalePrice": "700000000"
+  },
+  "half_whole14": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": true,
+    "totalTax": 3151500
+  },
+  "half_handed7": {
+    "status": 200,
+    "isExempt": true,
+    "totalTax": 0
+  },
+  "full_share7": {
+    "status": 200,
+    "isExempt": true,
+    "totalTax": 0
+  }
+}

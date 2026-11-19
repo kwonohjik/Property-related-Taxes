@@ -1,0 +1,84 @@
+{
+  "reverse": {
+    "R0_parentalOnly_nAfter": {
+      "engine": {
+        "isExempt": false,
+        "totalTax": 124366000,
+        "axis": {
+          "kind": "parental_care",
+          "mergeDate": "2008-01-01T00:00:00.000Z",
+          "secondMergeSide": false
+        }
+      },
+      "judge": {
+        "status": 200,
+        "isExempt": false,
+        "applied": [],
+        "unmet": [],
+        "validationErrors": []
+      }
+    },
+    "R1_marriage2023_nAfter": {
+      "engine": {
+        "isExempt": true,
+        "exemptReason": "일시적 2주택·혼인 합가 중첩 (§155①·⑤) 1세대1주택 비과세",
+        "totalTax": 0,
+        "axis": {
+          "kind": "marriage",
+          "mergeDate": "2023-01-01T00:00:00.000Z",
+          "secondMergeSide": false
+        }
+      },
+      "judge": {
+        "status": 200,
+        "isExempt": true,
+        "applied": [
+          "155-1-temporary-two-house",
+          "155-5-marriage-merge"
+        ],
+        "unmet": [],
+        "validationErrors": []
+      }
+    },
+    "R2_marriage2023_nBefore_seller": {
+      "engine": {
+        "isExempt": true,
+        "exemptReason": "일시적 2주택·혼인 합가 중첩 (§155①·⑤) 1세대1주택 비과세",
+        "totalTax": 0,
+        "axis": {
+          "kind": "marriage",
+          "mergeDate": "2023-01-01T00:00:00.000Z",
+          "secondMergeSide": false
+        }
+      },
+      "judge": {
+        "status": 200,
+        "isExempt": true,
+        "applied": [
+          "155-1-temporary-two-house",
+          "155-5-marriage-merge"
+        ],
+        "unmet": [],
+        "validationErrors": []
+      }
+    },
+    "R2c_parentalOnly_nBefore_seller": {
+      "engine": {
+        "isExempt": false,
+        "totalTax": 124366000,
+        "axis": {
+          "kind": "parental_care",
+          "mergeDate": "2008-01-01T00:00:00.000Z",
+          "secondMergeSide": false
+        }
+      },
+      "judge": {
+        "status": 200,
+        "isExempt": false,
+        "applied": [],
+        "unmet": [],
+        "validationErrors": []
+      }
+    }
+  }
+}

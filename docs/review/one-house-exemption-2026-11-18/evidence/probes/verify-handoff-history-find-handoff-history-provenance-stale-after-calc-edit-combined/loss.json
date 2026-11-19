@@ -1,0 +1,29 @@
+{
+  "loss": {
+    "judgment": {
+      "isExempt": true,
+      "partial": false,
+      "label": "비과세"
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "totalTax": 0,
+      "exemptReason": "1세대1주택 비과세"
+    }
+  },
+  "highValue": {
+    "judgment": {
+      "isExempt": false,
+      "partial": true,
+      "label": "부분 비과세"
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": true,
+      "totalTax": 43901000,
+      "exemptReason": "1세대1주택 고가주택"
+    }
+  }
+}

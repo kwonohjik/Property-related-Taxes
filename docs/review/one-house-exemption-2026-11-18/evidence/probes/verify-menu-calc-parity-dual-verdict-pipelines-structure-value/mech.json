@@ -1,0 +1,77 @@
+{
+  "unmet_card_plus_general_row": {
+    "menu": {
+      "status": 200,
+      "isExempt": false,
+      "isPartial": false,
+      "rentalPassed": false,
+      "errors": []
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": false,
+      "totalTax": 124366000,
+      "issues": [],
+      "bodyCount": 2,
+      "warnings": [
+        "장기임대주택 거주주택 특례(소득세법 시행령 §155⑳)가 요건을 충족하지 못해 임대주택 1호를 세대 주택 수에 넣어(3주택) 계산했습니다 — 1세대1주택 비과세·12억 초과분 안분·장기보유특별공제 표2를 적용하지 않습니다. 임대주택이 다른 특례(일시적 2주택 등)에 해당하는지는 「보유 주택 목록」에 임대주택을 취득일과 함께 넣어야 판정합니다."
+      ]
+    }
+  },
+  "met_card_plus_general_row": {
+    "menu": {
+      "status": 200,
+      "isExempt": true,
+      "isPartial": false,
+      "reason": "일시적 2주택 비과세",
+      "rentalPassed": true,
+      "errors": []
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "reason": "일시적 2주택 비과세",
+      "totalTax": 0,
+      "issues": [],
+      "bodyCount": 2,
+      "warnings": []
+    }
+  },
+  "no_rhe_general_row": {
+    "menu": {
+      "status": 200,
+      "isExempt": true,
+      "isPartial": false,
+      "reason": "일시적 2주택 비과세",
+      "errors": []
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "reason": "일시적 2주택 비과세",
+      "totalTax": 0,
+      "issues": [],
+      "bodyCount": 2,
+      "warnings": []
+    }
+  },
+  "unmet_card_no_roster": {
+    "menu": {
+      "status": 200,
+      "isExempt": false,
+      "isPartial": false,
+      "rentalPassed": false,
+      "errors": []
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": false,
+      "totalTax": 124366000,
+      "issues": [],
+      "bodyCount": 1,
+      "warnings": [
+        "장기임대주택 거주주택 특례(소득세법 시행령 §155⑳)가 요건을 충족하지 못해 임대주택 1호를 세대 주택 수에 넣어(2주택) 계산했습니다 — 1세대1주택 비과세·12억 초과분 안분·장기보유특별공제 표2를 적용하지 않습니다. 임대주택이 다른 특례(일시적 2주택 등)에 해당하는지는 「보유 주택 목록」에 임대주택을 취득일과 함께 넣어야 판정합니다."
+      ]
+    }
+  }
+}

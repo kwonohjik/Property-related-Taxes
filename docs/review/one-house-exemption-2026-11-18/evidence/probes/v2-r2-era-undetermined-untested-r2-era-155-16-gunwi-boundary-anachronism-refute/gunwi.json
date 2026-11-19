@@ -1,0 +1,95 @@
+{
+  "classify 대구동구→구미": "adjacent",
+  "classify(군위=경북 4772) 대구동구→구미": "not_adjacent",
+  "classify 대구동구→의성": "adjacent",
+  "classify(군위=경북 4772) 대구동구→의성": "not_adjacent",
+  "classify 대구동구→청송": "adjacent",
+  "classify(군위=경북 4772) 대구동구→청송": "not_adjacent",
+  "classify 대구동구→칠곡(편입 전부터 연접)": "adjacent",
+  "classify(군위=경북 4772) 대구동구→칠곡(편입 전부터 연접)": "adjacent",
+  "classify 대구동구→포항": "not_adjacent",
+  "classify(군위=경북 4772) 대구동구→포항": "not_adjacent",
+  "classify 구미→대구수성(역방향 법인 이전)": "adjacent",
+  "classify(군위=경북 4772) 구미→대구수성(역방향 법인 이전)": "not_adjacent",
+  "classify 의성→대구수성": "adjacent",
+  "classify(군위=경북 4772) 의성→대구수성": "not_adjacent",
+  "classify 진천→청주흥덕(옛 청주시)": "adjacent",
+  "classify(군위=경북 4772) 진천→청주흥덕(옛 청주시)": "adjacent",
+  "classify 진천→청주상당": "adjacent",
+  "classify(군위=경북 4772) 진천→청주상당": "adjacent",
+  "classify 진천→청주서원": "adjacent",
+  "classify(군위=경북 4772) 진천→청주서원": "adjacent",
+  "raw 군위": [
+    "2714000000",
+    "4719000000",
+    "4723000000",
+    "4773000000",
+    "4775000000",
+    "4785000000"
+  ],
+  "raw 구미": [
+    "2772000000",
+    "4715000000",
+    "4725000000",
+    "4773000000",
+    "4785000000"
+  ],
+  "raw 청송": [
+    "2772000000",
+    "4711300000",
+    "4717000000",
+    "4723000000",
+    "4773000000",
+    "4776000000",
+    "4777000000"
+  ],
+  "raw 진천": [
+    "4155000000",
+    "4311400000",
+    "4374500000",
+    "4377000000",
+    "4413100000",
+    "4413300000"
+  ],
+  "screen 대구동구→구미": {
+    "ok": true,
+    "reason": "이전한 시·군과 연접한 시·군에 소재합니다 — 지역 요건 충족."
+  },
+  "verdict 2022-06-01 대구동구→구미": {
+    "isExempt": true,
+    "und": []
+  },
+  "verdict 2022-06-01 대구동구→의성": {
+    "isExempt": true,
+    "und": []
+  },
+  "verdict 2022-06-01 대구동구→포항(대조)": {
+    "isExempt": false,
+    "und": []
+  },
+  "verdict 2022-06-01 구미→대구수성(법인 역방향)": {
+    "isExempt": true,
+    "und": []
+  },
+  "verdict 2023-03-02 대구동구→구미 (신규 2019-06-01)": {
+    "isExempt": true,
+    "und": []
+  },
+  "verdict 2023-09-01 대구동구→구미 (신규 2019-06-01 · 부칙 제5조 구간)": {
+    "isExempt": true,
+    "und": []
+  },
+  "verdict 2024-03-02 대구동구→구미 (신규 2019-06-01)": {
+    "isExempt": true,
+    "und": []
+  },
+  "tax 2022 대구동구→구미": {
+    "isExempt": true,
+    "totalTax": 0,
+    "exemptReason": "일시적 2주택 비과세 (§155⑯ 지방이전 처분기한 5년)"
+  },
+  "tax 2022 대구동구→포항": {
+    "isExempt": false,
+    "totalTax": 48917000
+  }
+}

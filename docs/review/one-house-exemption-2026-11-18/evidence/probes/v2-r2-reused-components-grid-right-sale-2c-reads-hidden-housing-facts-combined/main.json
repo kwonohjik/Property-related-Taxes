@@ -1,0 +1,156 @@
+{
+ "control-right-direct": {
+  "assetKind": "right_to_move_in",
+  "stale": {
+   "acquisitionCause": "purchase",
+   "decedentSameHouseholdBeforeInheritance": false,
+   "decedentCohabitationHoldingStartDate": "",
+   "hasNonHousingConversion": false,
+   "residentialUseStartDate": ""
+  },
+  "card": true,
+  "auto": "자동취득 당시 조정대상지역 해당2017-08-03 고시 — 서울특별시 강남구 지정",
+  "warn": true,
+  "inheritFieldVisible": false,
+  "api_wasReg": true,
+  "api_conversion": null,
+  "api_cohab": null,
+  "validate3": [],
+  "route": {
+   "status": 200,
+   "isExempt": null,
+   "verdict": null,
+   "reason": "",
+   "raw": "{\"judgment\":{\"isExempt\":true,\"isPartialExempt\":false,\"article89Clause2\":{\"status\":\"not_applicable\"},\"appliedExceptions\":[{\"id\":\"one_right_89_1_4_ga\",\"label\":\"1세대1입주권 비과세 — 가목(다른 주택·분양권 미보유)\",\"legalBasis\":\"소득세법 §89 ① 4호\"}],\"pending\":[],\"undetermined\":[],\"unmetExceptions\":[],\"legalBasis\":[]},\"judgmentBaseDate\":\"2026-11-18\",\"houseCount\":{\"total\":0,\"countedForExemption\":0,\"excluded\":[]},\"oneRightExemp"
+  }
+ },
+ "control-housing-plain-switch": {
+  "assetKind": "right_to_move_in",
+  "stale": {
+   "acquisitionCause": "purchase",
+   "decedentSameHouseholdBeforeInheritance": false,
+   "decedentCohabitationHoldingStartDate": "",
+   "hasNonHousingConversion": false,
+   "residentialUseStartDate": ""
+  },
+  "card": true,
+  "auto": "자동취득 당시 조정대상지역 해당2017-08-03 고시 — 서울특별시 강남구 지정",
+  "warn": true,
+  "inheritFieldVisible": false,
+  "api_wasReg": true,
+  "api_conversion": null,
+  "api_cohab": null,
+  "validate3": [],
+  "route": {
+   "status": 200,
+   "isExempt": null,
+   "verdict": null,
+   "reason": "",
+   "raw": "{\"judgment\":{\"isExempt\":true,\"isPartialExempt\":false,\"article89Clause2\":{\"status\":\"not_applicable\"},\"appliedExceptions\":[{\"id\":\"one_right_89_1_4_ga\",\"label\":\"1세대1입주권 비과세 — 가목(다른 주택·분양권 미보유)\",\"legalBasis\":\"소득세법 §89 ① 4호\"}],\"pending\":[],\"undetermined\":[],\"unmetExceptions\":[],\"legalBasis\":[]},\"judgmentBaseDate\":\"2026-11-18\",\"houseCount\":{\"total\":0,\"countedForExemption\":0,\"excluded\":[]},\"oneRightExemp"
+  }
+ },
+ "stale-inherit-cohab": {
+  "assetKind": "right_to_move_in",
+  "stale": {
+   "acquisitionCause": "inheritance",
+   "decedentSameHouseholdBeforeInheritance": true,
+   "decedentCohabitationHoldingStartDate": "2010-01-01",
+   "hasNonHousingConversion": false,
+   "residentialUseStartDate": ""
+  },
+  "card": true,
+  "auto": "자동동일세대 보유 개시 당시 조정대상지역 미해당서울특별시 강남구 — 2010-01-01 기준 미지정(지정 이력 없음 또는 해제됨)",
+  "warn": false,
+  "inheritFieldVisible": false,
+  "api_wasReg": false,
+  "api_conversion": null,
+  "api_cohab": null,
+  "validate3": [],
+  "route": {
+   "status": 200,
+   "isExempt": null,
+   "verdict": null,
+   "reason": "",
+   "raw": "{\"judgment\":{\"isExempt\":true,\"isPartialExempt\":false,\"article89Clause2\":{\"status\":\"not_applicable\"},\"appliedExceptions\":[{\"id\":\"one_right_89_1_4_ga\",\"label\":\"1세대1입주권 비과세 — 가목(다른 주택·분양권 미보유)\",\"legalBasis\":\"소득세법 §89 ① 4호\"}],\"pending\":[],\"undetermined\":[],\"unmetExceptions\":[],\"legalBasis\":[]},\"judgmentBaseDate\":\"2026-11-18\",\"houseCount\":{\"total\":0,\"countedForExemption\":0,\"excluded\":[]},\"oneRightExemp"
+  }
+ },
+ "stale-usage-2010": {
+  "assetKind": "right_to_move_in",
+  "stale": {
+   "acquisitionCause": "purchase",
+   "decedentSameHouseholdBeforeInheritance": false,
+   "decedentCohabitationHoldingStartDate": "",
+   "hasNonHousingConversion": true,
+   "residentialUseStartDate": "2010-01-01"
+  },
+  "card": true,
+  "auto": "자동취득 당시 조정대상지역 해당2017-08-03 고시 — 서울특별시 강남구 지정",
+  "warn": true,
+  "inheritFieldVisible": false,
+  "api_wasReg": false,
+  "api_conversion": null,
+  "api_cohab": null,
+  "validate3": [],
+  "route": {
+   "status": 200,
+   "isExempt": null,
+   "verdict": null,
+   "reason": "",
+   "raw": "{\"judgment\":{\"isExempt\":true,\"isPartialExempt\":false,\"article89Clause2\":{\"status\":\"not_applicable\"},\"appliedExceptions\":[{\"id\":\"one_right_89_1_4_ga\",\"label\":\"1세대1입주권 비과세 — 가목(다른 주택·분양권 미보유)\",\"legalBasis\":\"소득세법 §89 ① 4호\"}],\"pending\":[],\"undetermined\":[],\"unmetExceptions\":[],\"legalBasis\":[]},\"judgmentBaseDate\":\"2026-11-18\",\"houseCount\":{\"total\":0,\"countedForExemption\":0,\"excluded\":[]},\"oneRightExemp"
+  }
+ },
+ "stale-usage-2020": {
+  "assetKind": "right_to_move_in",
+  "stale": {
+   "acquisitionCause": "purchase",
+   "decedentSameHouseholdBeforeInheritance": false,
+   "decedentCohabitationHoldingStartDate": "",
+   "hasNonHousingConversion": true,
+   "residentialUseStartDate": "2016-06-01"
+  },
+  "card": true,
+  "auto": "자동취득 당시 조정대상지역 미해당서울특별시 강남구 — 2015-01-01 기준 미지정(지정 이력 없음 또는 해제됨)",
+  "warn": false,
+  "inheritFieldVisible": false,
+  "api_wasReg": false,
+  "api_conversion": null,
+  "api_cohab": null,
+  "validate3": [],
+  "route": {
+   "status": 200,
+   "isExempt": null,
+   "verdict": null,
+   "reason": "",
+   "raw": "{\"judgment\":{\"isExempt\":true,\"isPartialExempt\":false,\"article89Clause2\":{\"status\":\"not_applicable\"},\"appliedExceptions\":[{\"id\":\"one_right_89_1_4_ga\",\"label\":\"1세대1입주권 비과세 — 가목(다른 주택·분양권 미보유)\",\"legalBasis\":\"소득세법 §89 ① 4호\"}],\"pending\":[],\"undetermined\":[],\"unmetExceptions\":[],\"legalBasis\":[]},\"judgmentBaseDate\":\"2026-11-18\",\"houseCount\":{\"total\":0,\"countedForExemption\":0,\"excluded\":[]},\"oneRightExemp"
+  }
+ },
+ "housing-inherit-cohab-visible": {
+  "assetKind": "housing",
+  "stale": {
+   "acquisitionCause": "inheritance",
+   "decedentSameHouseholdBeforeInheritance": true,
+   "decedentCohabitationHoldingStartDate": "2010-01-01",
+   "hasNonHousingConversion": false,
+   "residentialUseStartDate": ""
+  },
+  "card": false,
+  "auto": "자동동일세대 보유 개시 당시 조정대상지역 미해당서울특별시 강남구 — 2010-01-01 기준 미지정(지정 이력 없음 또는 해제됨)",
+  "warn": false,
+  "inheritFieldVisible": true,
+  "api_wasReg": false,
+  "api_acqCause": "inheritance",
+  "api_conversion": null,
+  "api_cohab": "2010-01-01",
+  "validate3": [
+   "residencePeriods:거주 구간 #1: 입주일을 입력하세요.",
+   "rentalHousingException.phrp154_10Answer:장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요."
+  ],
+  "route": {
+   "status": 200,
+   "isExempt": null,
+   "verdict": null,
+   "reason": "",
+   "raw": "{\"judgment\":{\"isExempt\":true,\"isPartialExempt\":false,\"exemptReason\":\"1세대1주택 비과세\",\"appliedExceptions\":[],\"article89Clause2\":{\"status\":\"not_applicable\"},\"pending\":[],\"undetermined\":[],\"unmetExceptions\":[],\"requirementReview\":{\"scheme\":\"154-1-one-house\",\"items\":[{\"id\":\"one-house\",\"label\":\"1세대가 양도일 현재 국내에 1주택 보유\",\"status\":\"met\",\"facts\":[{\"label\":\"판정에 세는 주택\",\"value\":\"1채\"}],\"legalBasis\":\"소득세법 §89 ①\"},{\""
+  }
+ }
+}

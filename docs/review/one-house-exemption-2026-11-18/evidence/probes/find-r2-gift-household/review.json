@@ -1,0 +1,276 @@
+[
+ {
+  "name": "yesFull",
+  "isExempt": true,
+  "reason": "1세대1주택 비과세",
+  "review": {
+   "scheme": "154-1-one-house",
+   "items": [
+    {
+     "id": "one-house",
+     "label": "1세대가 양도일 현재 국내에 1주택 보유",
+     "status": "met",
+     "facts": [
+      {
+       "label": "판정에 세는 주택",
+       "value": "1채"
+      }
+     ],
+     "legalBasis": "소득세법 §89 ①"
+    },
+    {
+     "id": "holding",
+     "label": "보유기간 2년 이상",
+     "status": "met",
+     "facts": [
+      {
+       "label": "보유 기산일",
+       "value": "2010-03-01"
+      },
+      {
+       "label": "보유기간",
+       "value": "15년 11개월"
+      }
+     ],
+     "legalBasis": "소득세법 시행령 §154"
+    },
+    {
+     "id": "residence",
+     "label": "거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+     "status": "not_required",
+     "facts": [
+      {
+       "label": "취득 당시 조정대상지역",
+       "value": "비해당"
+      },
+      {
+       "label": "거주기간",
+       "value": "0개월"
+      }
+     ],
+     "note": "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다.",
+     "legalBasis": "소득세법 시행령 §154"
+    },
+    {
+     "id": "high-value",
+     "label": "양도가액 12억원 이하 — 고가주택 아님",
+     "status": "met",
+     "facts": [
+      {
+       "label": "양도가액",
+       "value": "900,000,000"
+      },
+      {
+       "label": "고가주택 기준금액",
+       "value": "12억"
+      }
+     ],
+     "legalBasis": "소득세법 §89 ①"
+    }
+   ]
+  },
+  "basis": [],
+  "applied": [],
+  "pending": [],
+  "keys": [
+   "isExempt",
+   "isPartialExempt",
+   "exemptReason",
+   "appliedExceptions",
+   "article89Clause2",
+   "pending",
+   "undetermined",
+   "unmetExceptions",
+   "requirementReview",
+   "legalBasis"
+  ]
+ },
+ {
+  "name": "yesLate",
+  "isExempt": false,
+  "review": {
+   "scheme": "154-1-one-house",
+   "items": [
+    {
+     "id": "one-house",
+     "label": "1세대가 양도일 현재 국내에 1주택 보유",
+     "status": "met",
+     "facts": [
+      {
+       "label": "판정에 세는 주택",
+       "value": "1채"
+      }
+     ],
+     "legalBasis": "소득세법 §89 ①"
+    },
+    {
+     "id": "holding",
+     "label": "보유기간 2년 이상",
+     "status": "unmet",
+     "facts": [
+      {
+       "label": "보유 기산일",
+       "value": "2025-01-01"
+      },
+      {
+       "label": "보유기간",
+       "value": "1년 1개월"
+      }
+     ],
+     "legalBasis": "소득세법 시행령 §154"
+    },
+    {
+     "id": "residence",
+     "label": "거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+     "status": "not_required",
+     "facts": [
+      {
+       "label": "취득 당시 조정대상지역",
+       "value": "비해당"
+      },
+      {
+       "label": "거주기간",
+       "value": "0개월"
+      }
+     ],
+     "note": "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다.",
+     "legalBasis": "소득세법 시행령 §154"
+    },
+    {
+     "id": "high-value",
+     "label": "양도가액 12억원 이하 — 고가주택 아님",
+     "status": "met",
+     "facts": [
+      {
+       "label": "양도가액",
+       "value": "900,000,000"
+      },
+      {
+       "label": "고가주택 기준금액",
+       "value": "12억"
+      }
+     ],
+     "legalBasis": "소득세법 §89 ①"
+    }
+   ]
+  },
+  "basis": [
+   "소득세법 시행령 §154"
+  ],
+  "applied": [],
+  "pending": [
+   {
+    "id": "154-1-holding-years",
+    "kind": "transfer_after",
+    "description": "보유기간 요건 — 이 날짜까지 보유한 뒤 양도해야 비과세",
+    "deadline": "2026-12-31T00:00:00.000Z",
+    "legalBasis": "소득세법 시행령 §154"
+   }
+  ],
+  "keys": [
+   "isExempt",
+   "isPartialExempt",
+   "article89Clause2",
+   "appliedExceptions",
+   "pending",
+   "undetermined",
+   "unmetExceptions",
+   "requirementReview",
+   "legalBasis"
+  ]
+ },
+ {
+  "name": "no",
+  "isExempt": false,
+  "review": {
+   "scheme": "154-1-one-house",
+   "items": [
+    {
+     "id": "one-house",
+     "label": "1세대가 양도일 현재 국내에 1주택 보유",
+     "status": "met",
+     "facts": [
+      {
+       "label": "판정에 세는 주택",
+       "value": "1채"
+      }
+     ],
+     "legalBasis": "소득세법 §89 ①"
+    },
+    {
+     "id": "holding",
+     "label": "보유기간 2년 이상",
+     "status": "unmet",
+     "facts": [
+      {
+       "label": "보유 기산일",
+       "value": "2025-06-01"
+      },
+      {
+       "label": "보유기간",
+       "value": "0년 8개월"
+      }
+     ],
+     "legalBasis": "소득세법 시행령 §154"
+    },
+    {
+     "id": "residence",
+     "label": "거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+     "status": "not_required",
+     "facts": [
+      {
+       "label": "취득 당시 조정대상지역",
+       "value": "비해당"
+      },
+      {
+       "label": "거주기간",
+       "value": "0개월"
+      }
+     ],
+     "note": "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다.",
+     "legalBasis": "소득세법 시행령 §154"
+    },
+    {
+     "id": "high-value",
+     "label": "양도가액 12억원 이하 — 고가주택 아님",
+     "status": "met",
+     "facts": [
+      {
+       "label": "양도가액",
+       "value": "900,000,000"
+      },
+      {
+       "label": "고가주택 기준금액",
+       "value": "12억"
+      }
+     ],
+     "legalBasis": "소득세법 §89 ①"
+    }
+   ]
+  },
+  "basis": [
+   "소득세법 시행령 §154"
+  ],
+  "applied": [],
+  "pending": [
+   {
+    "id": "154-1-holding-years",
+    "kind": "transfer_after",
+    "description": "보유기간 요건 — 이 날짜까지 보유한 뒤 양도해야 비과세",
+    "deadline": "2027-05-31T00:00:00.000Z",
+    "legalBasis": "소득세법 시행령 §154"
+   }
+  ],
+  "keys": [
+   "isExempt",
+   "isPartialExempt",
+   "article89Clause2",
+   "appliedExceptions",
+   "pending",
+   "undetermined",
+   "unmetExceptions",
+   "requirementReview",
+   "legalBasis"
+  ]
+ }
+]

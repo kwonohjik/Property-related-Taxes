@@ -1,0 +1,518 @@
+[
+ {
+  "id": "E132-era",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [
+    "155-5-marriage-merge"
+   ],
+   "undetermined": [],
+   "houseTotal": 2,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-5-marriage-merge"
+   ],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 2,
+   "rental": false
+  }
+ },
+ {
+  "id": "E132-current",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [
+    "155-5-marriage-merge"
+   ],
+   "undetermined": [],
+   "houseTotal": 2,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-5-marriage-merge"
+   ],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 2,
+   "rental": false
+  }
+ },
+ {
+  "id": "P-E132-1062",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-5-marriage-merge"
+   ],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 2,
+   "rental": true
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-5-marriage-merge"
+   ],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 2,
+   "rental": false
+  }
+ },
+ {
+  "id": "P-E132-seller-rentals-only",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-5-marriage-merge"
+   ],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 2,
+   "rental": true
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-5-marriage-merge"
+   ],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 2,
+   "rental": false
+  }
+ },
+ {
+  "id": "E163-era",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  }
+ },
+ {
+  "id": "E167-era",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  }
+ },
+ {
+  "id": "E175-era",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  }
+ },
+ {
+  "id": "E178-era",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  }
+ },
+ {
+  "id": "E182-era",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  }
+ },
+ {
+  "id": "E182-era-3",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  }
+ },
+ {
+  "id": "E193-era",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 3,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-1-temporary-two-house"
+   ],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 3,
+   "rental": false
+  }
+ },
+ {
+  "id": "E193-current",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 3,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-1-temporary-two-house"
+   ],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 3,
+   "rental": false
+  }
+ },
+ {
+  "id": "E194-era",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 3,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-1-temporary-two-house"
+   ],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 3,
+   "rental": false
+  }
+ },
+ {
+  "id": "E199-era",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  }
+ },
+ {
+  "id": "E203-era",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  }
+ },
+ {
+  "id": "F069-era",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  }
+ },
+ {
+  "id": "N-F069-gate-20111013",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  }
+ },
+ {
+  "id": "F070-era",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  }
+ },
+ {
+  "id": "F128-era",
+  "variant": "selling-ltr",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErr": [],
+  "so": {
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  },
+  "ss": {
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [],
+   "unmet": [],
+   "undetermined": [],
+   "houseTotal": 1,
+   "rental": false
+  }
+ }
+]

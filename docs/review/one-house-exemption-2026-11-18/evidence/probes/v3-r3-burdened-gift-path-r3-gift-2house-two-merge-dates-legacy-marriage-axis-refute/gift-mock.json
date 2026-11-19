@@ -1,0 +1,105 @@
+{
+  "A_both": {
+    "status": 200,
+    "fe8": {
+      "s1": null
+    },
+    "isExempt": false,
+    "totalTax": 6604125,
+    "determinedTax": 6003750,
+    "warnings": [
+      "혼인 합가 비과세 특례(소득세법 시행령 §155⑤)를 적용하지 않았습니다 — 혼인 전 각자 1주택을 보유하다가 혼인으로 1세대 2주택이 됨 확인하지 않음(세대 주택 수 2채) — 이 화면은 세대 보유 주택 명부 입력이 없어 합가 전 구성을 판정하지 않습니다 · 혼인일부터 10년 이내 양도 미충족(혼인일 2008-01-01, 기한 2018-01-02, 양도(예정)일 2024-12-01) — 역상 말일 2018-01-01이 토요일·공휴일이라 기한이 2018-01-02까지 늘어났습니다(국세기본법 §4 → 민법 §161)."
+    ],
+    "marker": true,
+    "sentMarriage": {
+      "marriageDate": "2008-01-01"
+    },
+    "sentParental": {
+      "mergeDate": "2020-01-01",
+      "parentAge": "over_60"
+    }
+  },
+  "A_parentalOnly": {
+    "status": 200,
+    "fe8": {
+      "s1": null
+    },
+    "isExempt": true,
+    "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+    "totalTax": 0,
+    "determinedTax": 0,
+    "warnings": [],
+    "marker": true,
+    "sentParental": {
+      "mergeDate": "2020-01-01",
+      "parentAge": "over_60"
+    }
+  },
+  "A_marriageOnly": {
+    "status": 200,
+    "fe8": {
+      "s1": null
+    },
+    "isExempt": false,
+    "totalTax": 6604125,
+    "determinedTax": 6003750,
+    "warnings": [
+      "혼인 합가 비과세 특례(소득세법 시행령 §155⑤)를 적용하지 않았습니다 — 혼인 전 각자 1주택을 보유하다가 혼인으로 1세대 2주택이 됨 확인하지 않음(세대 주택 수 2채) — 이 화면은 세대 보유 주택 명부 입력이 없어 합가 전 구성을 판정하지 않습니다 · 혼인일부터 10년 이내 양도 미충족(혼인일 2008-01-01, 기한 2018-01-02, 양도(예정)일 2024-12-01) — 역상 말일 2018-01-01이 토요일·공휴일이라 기한이 2018-01-02까지 늘어났습니다(국세기본법 §4 → 민법 §161)."
+    ],
+    "marker": true,
+    "sentMarriage": {
+      "marriageDate": "2008-01-01"
+    }
+  },
+  "B_both": {
+    "status": 200,
+    "fe8": {
+      "s1": null
+    },
+    "isExempt": true,
+    "exemptReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+    "totalTax": 0,
+    "determinedTax": 0,
+    "warnings": [],
+    "marker": true,
+    "sentMarriage": {
+      "marriageDate": "2020-01-01"
+    },
+    "sentParental": {
+      "mergeDate": "2012-01-01",
+      "parentAge": "over_60"
+    }
+  },
+  "B_parentalOnly": {
+    "status": 200,
+    "fe8": {
+      "s1": null
+    },
+    "isExempt": false,
+    "totalTax": 6844200,
+    "determinedTax": 6222000,
+    "warnings": [
+      "동거봉양 합가 비과세 특례(소득세법 시행령 §155④)를 적용하지 않았습니다 — 합가 전 각자 1주택을 보유하다가 합가로 1세대 2주택이 됨 확인하지 않음(세대 주택 수 2채) — 이 화면은 세대 보유 주택 명부 입력이 없어 합가 전 구성을 판정하지 않습니다 · 합가일부터 10년 이내 양도 미충족(합가일 2012-01-01, 기한 2022-01-03, 양도(예정)일 2024-12-01) — 역상 말일 2022-01-01이 토요일·공휴일이라 기한이 2022-01-03까지 늘어났습니다(국세기본법 §4 → 민법 §161)."
+    ],
+    "marker": true,
+    "sentParental": {
+      "mergeDate": "2012-01-01",
+      "parentAge": "over_60"
+    }
+  },
+  "B_marriageOnly": {
+    "status": 200,
+    "fe8": {
+      "s1": null
+    },
+    "isExempt": true,
+    "exemptReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+    "totalTax": 0,
+    "determinedTax": 0,
+    "warnings": [],
+    "marker": true,
+    "sentMarriage": {
+      "marriageDate": "2020-01-01"
+    }
+  }
+}

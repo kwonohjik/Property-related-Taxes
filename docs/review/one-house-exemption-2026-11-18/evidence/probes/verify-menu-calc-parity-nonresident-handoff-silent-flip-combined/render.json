@@ -1,0 +1,23 @@
+{
+  "NR": {
+    "step": 3,
+    "err": null,
+    "present": true,
+    "text": "판정 시 전제된 주의사항비거주자 사실은 이 판정에만 반영됩니다 — 양도세 계산기로 넘기면 거주자 기준(1세대1주택 비과세·장기보유특별공제 포함)으로 다시 계산되니 세액은 따로 확인하세요.",
+    "ctaCard": false
+  },
+  "period": {
+    "step": 3,
+    "err": null,
+    "present": true,
+    "text": "판정 시 전제된 주의사항비거주자 사실은 이 판정에만 반영됩니다 — 양도세 계산기로 넘기면 거주자 기준(1세대1주택 비과세·장기보유특별공제 포함)으로 다시 계산되니 세액은 따로 확인하세요.",
+    "ctaCard": false
+  },
+  "control": {
+    "step": 3,
+    "err": null,
+    "present": false,
+    "text": null,
+    "ctaCard": false
+  }
+}

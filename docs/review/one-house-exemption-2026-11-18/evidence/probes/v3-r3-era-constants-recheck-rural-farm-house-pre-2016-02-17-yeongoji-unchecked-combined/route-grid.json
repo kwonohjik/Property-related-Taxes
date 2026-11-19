@@ -1,0 +1,125 @@
+[
+  {
+    "path": "judgment-menu",
+    "ruralAcq": "2015-06-01",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": true,
+    "appliedExceptions": [
+      "155-7-rural:return_to_farm"
+    ],
+    "undetermined": [],
+    "unmetExceptions": [],
+    "mentionsYeongoji": false,
+    "mentions26982": false
+  },
+  {
+    "path": "calculator",
+    "ruralAcq": "2015-06-01",
+    "status": 200,
+    "bodyRuralHouseKeys": [
+      "houseId",
+      "kind",
+      "isOutsideCapitalEupMyeon",
+      "acquisitionDate",
+      "isHighPriceAtAcquisition",
+      "landAreaSqm",
+      "wholeHouseholdMoved",
+      "returnedToFarmExitHouse",
+      "farmlandBasis",
+      "farmlandHolder",
+      "priorReturnFarmExemption",
+      "generalHouseAcquiredBeforeReturn"
+    ],
+    "isExempt": true,
+    "exemptReason": "농어촌주택 비과세 (§155⑦3호 귀농)",
+    "totalTax": 0,
+    "warningsRural": [
+      "귀농주택 특례(소득세법 시행령 §155⑦3호)는 사후관리 대상입니다(소득세법 시행령 §155⑫) — 귀농일부터 계속하여 3년 이상 영농 또는 영어에 종사하지 않거나 그 기간 동안 해당 주택에 거주하지 않으면 양도한 "
+    ],
+    "mentionsYeongoji": false
+  },
+  {
+    "path": "judgment-menu",
+    "ruralAcq": "2016-02-16",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": true,
+    "appliedExceptions": [
+      "155-7-rural:return_to_farm"
+    ],
+    "undetermined": [],
+    "unmetExceptions": [],
+    "mentionsYeongoji": false,
+    "mentions26982": false
+  },
+  {
+    "path": "calculator",
+    "ruralAcq": "2016-02-16",
+    "status": 200,
+    "bodyRuralHouseKeys": [
+      "houseId",
+      "kind",
+      "isOutsideCapitalEupMyeon",
+      "acquisitionDate",
+      "isHighPriceAtAcquisition",
+      "landAreaSqm",
+      "wholeHouseholdMoved",
+      "returnedToFarmExitHouse",
+      "farmlandBasis",
+      "farmlandHolder",
+      "priorReturnFarmExemption",
+      "generalHouseAcquiredBeforeReturn"
+    ],
+    "isExempt": true,
+    "exemptReason": "농어촌주택 비과세 (§155⑦3호 귀농)",
+    "totalTax": 0,
+    "warningsRural": [
+      "귀농주택 특례(소득세법 시행령 §155⑦3호)는 사후관리 대상입니다(소득세법 시행령 §155⑫) — 귀농일부터 계속하여 3년 이상 영농 또는 영어에 종사하지 않거나 그 기간 동안 해당 주택에 거주하지 않으면 양도한 "
+    ],
+    "mentionsYeongoji": false
+  },
+  {
+    "path": "judgment-menu",
+    "ruralAcq": "2016-02-17",
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "appliedExceptions": [],
+    "undetermined": [],
+    "unmetExceptions": [
+      {
+        "id": "155-7-3ho-return-to-farm:deadline-lapsed",
+        "reasons": [
+          "귀농주택 취득일부터 이 날짜까지 일반주택을 양도해야 비과세 — 이 기한(2021-02-17)이 판정 기준일(2026-05-20) 전에 지나 양도일을 조정해도 충족할 수 없습니다."
+        ]
+      }
+    ],
+    "mentionsYeongoji": false,
+    "mentions26982": false
+  },
+  {
+    "path": "calculator",
+    "ruralAcq": "2016-02-17",
+    "status": 200,
+    "bodyRuralHouseKeys": [
+      "houseId",
+      "kind",
+      "isOutsideCapitalEupMyeon",
+      "acquisitionDate",
+      "isHighPriceAtAcquisition",
+      "landAreaSqm",
+      "wholeHouseholdMoved",
+      "returnedToFarmExitHouse",
+      "farmlandBasis",
+      "farmlandHolder",
+      "priorReturnFarmExemption",
+      "generalHouseAcquiredBeforeReturn"
+    ],
+    "isExempt": false,
+    "exemptReason": null,
+    "totalTax": 155166000,
+    "warningsRural": [],
+    "mentionsYeongoji": false
+  }
+]

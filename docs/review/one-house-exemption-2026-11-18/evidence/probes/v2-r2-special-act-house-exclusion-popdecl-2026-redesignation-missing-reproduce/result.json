@@ -1,0 +1,322 @@
+{
+  "A_classify": {
+    "CHUNCHEON": null,
+    "DONGDUCHEON": null,
+    "TONGYEONG": "interest",
+    "YECHEON": null,
+    "CHILGOK": null,
+    "PYEONGCHANG": "decline",
+    "GANGNEUNG": "interest"
+  },
+  "B_eval": {
+    "DONGDUCHEON 2026-10-19 2억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "DONGDUCHEON 2026-10-19 4억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "DONGDUCHEON 2026-10-19 4억+1": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "TONGYEONG 2026-10-19 3억": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "TONGYEONG 2026-10-19 6억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "TONGYEONG 2026-10-19 9억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "YECHEON 2026-10-19 2억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "CHILGOK 2026-10-19 2억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "PYEONGCHANG(ctrl) 2026-10-19 2억": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "GANGNEUNG(ctrl) 2026-10-19 2억": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "DONGDUCHEON 2026-10-20 2억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "DONGDUCHEON 2026-10-20 4억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "DONGDUCHEON 2026-10-20 4억+1": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "TONGYEONG 2026-10-20 3억": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "TONGYEONG 2026-10-20 6억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "TONGYEONG 2026-10-20 9억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "YECHEON 2026-10-20 2억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "CHILGOK 2026-10-20 2억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "PYEONGCHANG(ctrl) 2026-10-20 2억": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "GANGNEUNG(ctrl) 2026-10-20 2억": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "DONGDUCHEON 2026-11-01 2억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "DONGDUCHEON 2026-11-01 4억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "DONGDUCHEON 2026-11-01 4억+1": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "TONGYEONG 2026-11-01 3억": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "TONGYEONG 2026-11-01 6억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "TONGYEONG 2026-11-01 9억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "YECHEON 2026-11-01 2억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "CHILGOK 2026-11-01 2억": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "PYEONGCHANG(ctrl) 2026-11-01 2억": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "GANGNEUNG(ctrl) 2026-11-01 2억": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    }
+  },
+  "C_override": {
+    "dongducheon_decline_2e": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "yecheon_interest_2e": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "tongyeong_decline_6e": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    }
+  },
+  "D_rowCandidate": {
+    "DONGDUCHEON": false,
+    "TONGYEONG": true,
+    "YECHEON": false,
+    "CHILGOK": false,
+    "PYEONGCHANG": true
+  },
+  "E_route": {
+    "G_ctrl_pyeongchang_2e": {
+      "status": 200,
+      "isExempt": true,
+      "excluded": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G_ctrl_gangneung_2e": {
+      "status": 200,
+      "isExempt": true,
+      "excluded": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G_dongducheon_2e": {
+      "status": 200,
+      "isExempt": false,
+      "excluded": [],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G_dongducheon_2e_noanswers": {
+      "status": 200,
+      "isExempt": false,
+      "excluded": [],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G_tongyeong_6e": {
+      "status": 200,
+      "isExempt": false,
+      "excluded": [],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G_tongyeong_3e": {
+      "status": 200,
+      "isExempt": true,
+      "excluded": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G_yecheon_2e": {
+      "status": 200,
+      "isExempt": false,
+      "excluded": [],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G_chilgok_2e": {
+      "status": 200,
+      "isExempt": false,
+      "excluded": [],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G2_ctrl_pyeongchang_after3y": {
+      "status": 200,
+      "isExempt": true,
+      "excluded": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G2_dongducheon_after3y": {
+      "status": 200,
+      "isExempt": false,
+      "excluded": [],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G2_yecheon_after3y": {
+      "status": 200,
+      "isExempt": false,
+      "excluded": [],
+      "und": [],
+      "unmet": [],
+      "val": []
+    }
+  },
+  "F_12ho": {
+    "DONGDUCHEON": null,
+    "TONGYEONG": null,
+    "YECHEON": null,
+    "CHILGOK": null,
+    "PYEONGCHANG": {
+      "qualifies": true,
+      "popCap": 900000000
+    }
+  }
+}

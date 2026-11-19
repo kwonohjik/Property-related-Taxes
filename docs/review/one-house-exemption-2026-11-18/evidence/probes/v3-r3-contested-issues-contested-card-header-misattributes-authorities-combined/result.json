@@ -1,0 +1,202 @@
+{
+  "C8_route": {
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": true
+  },
+  "C8_render": {
+    "headerText": "아래 사실은 과세관청 해석과 조세심판원 결정의 결론이 다릅니다. 두 입장으로 각각 판정한 결론을 함께 보여 드리니 근거 문서를 확인해 판단하세요.",
+    "verdictBadge": "해석이 갈림",
+    "issues": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "enginePosition": "A",
+        "conclusionsDiffer": true,
+        "positions": [
+          {
+            "key": "A",
+            "verdict": "exempt",
+            "renderedLabel": "입장 A(아래 판정 내역)",
+            "authorities": [
+              "서면-2021-법규재산-0407 · 사전-2024-법규재산-0670 · 사전-2025-법규재산-0584 (2021.1.1. 전 취득 분양권의 완공일 기산 — 이 갈래에 §155①을 병용할 수 있다고 직접 밝힌 해석은 확인하지 못함)"
+            ],
+            "issuers": [
+              "nts"
+            ]
+          },
+          {
+            "key": "B",
+            "verdict": "taxable",
+            "renderedLabel": "입장 B",
+            "authorities": [
+              "사전-2024-법규재산-0833 (2024.11.27.)",
+              "사전-2025-법규재산-1241",
+              "서면-2024-법규재산-3770"
+            ],
+            "issuers": [
+              "nts",
+              "nts",
+              "nts"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "C6_route": {
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false
+  },
+  "C6_render": {
+    "headerText": "아래 사실은 과세관청 해석과 조세심판원 결정의 결론이 다릅니다. 두 입장으로 각각 판정한 결론을 함께 보여 드리니 근거 문서를 확인해 판단하세요.",
+    "verdictBadge": "해석이 갈림",
+    "issues": [
+      {
+        "id": "155-4-parental-care-merge-right-sale",
+        "enginePosition": "B",
+        "conclusionsDiffer": true,
+        "positions": [
+          {
+            "key": "A",
+            "verdict": "exempt",
+            "renderedLabel": "입장 A",
+            "authorities": [
+              "국심-2006-서-3136 (2006.12.04.)"
+            ],
+            "issuers": [
+              "tribunal"
+            ]
+          },
+          {
+            "key": "B",
+            "verdict": "taxable",
+            "renderedLabel": "입장 B(아래 판정 내역)",
+            "authorities": [
+              "조심-2021-서-1117 (2022.08.10.)"
+            ],
+            "issuers": [
+              "tribunal"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "spec_issuers": {
+    "155-2-inherited-house-gifted-within-household": {
+      "A": [
+        [
+          "nts",
+          "서면-2015-부동산-1363 (2015.09.21.)"
+        ]
+      ],
+      "B": [
+        [
+          "tribunal",
+          "조심-2023-서-10059 (2024.07.09.)"
+        ]
+      ],
+      "cardShowsIssuerLabel": false
+    },
+    "155-3-same-household-co-inherited-minority": {
+      "A": [
+        [
+          "nts",
+          "서면-2021-법규재산-0843 (2023.09.08.)"
+        ],
+        [
+          "nts",
+          "사전-2021-법령해석재산-0199 (2021.05.31.)"
+        ],
+        [
+          "tribunal",
+          "조심-2009-서-3229 (2010.03.10., 조세심판관합동회의)"
+        ]
+      ],
+      "B": [
+        [
+          "tribunal",
+          "조심-2018-중-0424 (2018.04.19.)"
+        ],
+        [
+          "tribunal",
+          "조심-2023-중-7006 (2024.04.22.)"
+        ]
+      ],
+      "cardShowsIssuerLabel": false
+    },
+    "155-3-co-inherited-minority-before-ranking-clause": {
+      "A": [
+        [
+          "nts",
+          "재산세과-2922 (2008.09.24.)"
+        ],
+        [
+          "nts",
+          "서면인터넷방문상담4팀-813 (2008.03.27.) — 조심-2019-서-2002에 인용된 처분청 근거"
+        ]
+      ],
+      "B": [
+        [
+          "tribunal",
+          "조심-2010-서-0825 (2011.02.11.)"
+        ],
+        [
+          "tribunal",
+          "조심-2016-서-2720 (2017.03.03.)"
+        ],
+        [
+          "tribunal",
+          "조심-2017-서-3603 (2017.10.30.)"
+        ],
+        [
+          "tribunal",
+          "조심-2019-서-2002 (2019.08.22.)"
+        ]
+      ],
+      "cardShowsIssuerLabel": true
+    },
+    "155-4-parental-care-merge-right-sale": {
+      "A": [
+        [
+          "tribunal",
+          "국심-2006-서-3136 (2006.12.04.)"
+        ]
+      ],
+      "B": [
+        [
+          "tribunal",
+          "조심-2021-서-1117 (2022.08.10.)"
+        ]
+      ],
+      "cardShowsIssuerLabel": false
+    },
+    "155-1-presale-holding-completion": {
+      "A": [
+        [
+          "nts",
+          "서면-2021-법규재산-0407 · 사전-2024-법규재산-0670 · 사전-2025-법규재산-0584 (2021.1.1. 전 취득 분양권의 완공일 기산 — 이 갈래에 §155①을 병용할 수 있다고 직접 밝힌 해석은 확인하지 못함)"
+        ]
+      ],
+      "B": [
+        [
+          "nts",
+          "사전-2024-법규재산-0833 (2024.11.27.)"
+        ],
+        [
+          "nts",
+          "사전-2025-법규재산-1241"
+        ],
+        [
+          "nts",
+          "서면-2024-법규재산-3770"
+        ]
+      ],
+      "cardShowsIssuerLabel": false
+    }
+  },
+  "header_variants": [
+    "해석이 갈리는 쟁점"
+  ]
+}

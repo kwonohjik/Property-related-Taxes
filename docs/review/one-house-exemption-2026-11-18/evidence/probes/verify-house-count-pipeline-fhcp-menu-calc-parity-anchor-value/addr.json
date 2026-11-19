@@ -1,0 +1,46 @@
+{
+ "E001-dual": {
+  "status": 400,
+  "issues": [
+   "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+  ],
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "propertyType": "right_to_move_in",
+  "redevRightsValue": ""
+ },
+ "E036-era": {
+  "status": 400,
+  "issues": [
+   "0:redevApprovalDate:자산: 관리처분/사업시행계획 인가일을 입력하세요."
+  ],
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법",
+  "propertyType": "right_to_move_in",
+  "redevRightsValue": ""
+ },
+ "G021-current": {
+  "status": 400,
+  "issues": [
+   "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+  ],
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "propertyType": "right_to_move_in",
+  "redevRightsValue": ""
+ },
+ "STAT-71-2-right": {
+  "status": 400,
+  "issues": [
+   "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+  ],
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "propertyType": "right_to_move_in",
+  "redevRightsValue": ""
+ },
+ "F038-current": {
+  "status": 200,
+  "issues": [
+   "0:fixedAcquisitionPrice:자산: 취득가액을 입력하세요."
+  ],
+  "propertyType": "housing",
+  "redevRightsValue": ""
+ }
+}

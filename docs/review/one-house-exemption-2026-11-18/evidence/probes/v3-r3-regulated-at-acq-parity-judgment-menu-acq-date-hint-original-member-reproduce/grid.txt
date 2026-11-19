@@ -1,0 +1,11 @@
+J acq=2021-06-01 status=200 ve(err)=[] isExempt=false reason= body.wasRegAtAcq=true body.acq=2021-06-01
+  review: one-house:met[판정에 세는 주택=1채] ; holding:met[보유 기산일=2021-06-01|보유기간=3년 9개월] ; residence:unmet[취득 당시 조정대상지역=해당|거주기간=12개월] ; high-value:met[양도가액=1,000,000,000|고가주택 기준금액=12억]
+J acq=2015-03-01 status=200 ve(err)=[] isExempt=true reason=1세대1주택 비과세 body.wasRegAtAcq=false body.acq=2015-03-01
+  review: one-house:met[판정에 세는 주택=1채] ; holding:met[보유 기산일=2015-03-01|보유기간=10년 0개월] ; residence:not_required[취득 당시 조정대상지역=비해당|거주기간=12개월] ; high-value:met[양도가액=1,000,000,000|고가주택 기준금액=12억]
+J acq=2017-09-01 status=200 ve(err)=[] isExempt=false reason= body.wasRegAtAcq=true body.acq=2017-09-01
+  review: one-house:met[판정에 세는 주택=1채] ; holding:met[보유 기산일=2017-09-01|보유기간=7년 6개월] ; residence:unmet[취득 당시 조정대상지역=해당|거주기간=12개월] ; high-value:met[양도가액=1,000,000,000|고가주택 기준금액=12억]
+C original-member(house) prior=2015-03-01 status=200 issues=[] isExempt=true tax=0 reason=1세대1주택 비과세 body.redevOriginalAssetType="housing"
+C original-member(house) prior=2017-09-01 status=200 issues=[] isExempt=false tax=145060000 reason= body.redevOriginalAssetType="housing"
+C successor acq(right)=2019-01-01 status=200 issues=[] isExempt=false tax=161060000 reason=
+H handoff acq=2021-06-01 kind=housing acqDate=2021-06-01 status=200 issues(n)=0 first=[] isExempt=false tax=161060000
+H handoff acq=2015-03-01 kind=housing acqDate=2015-03-01 status=200 issues(n)=0 first=[] isExempt=true tax=0

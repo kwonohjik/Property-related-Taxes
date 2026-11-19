@@ -1,0 +1,18 @@
+{
+  "k5": {
+    "ms": 639,
+    "undetermined": [
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "status": "excluded",
+    "isExempt": false
+  },
+  "k6": {
+    "ms": 7238,
+    "undetermined": [
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "status": "excluded",
+    "isExempt": false
+  }
+}

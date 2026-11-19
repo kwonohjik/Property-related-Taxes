@@ -1,0 +1,36 @@
+LEAF isRegulatedByBjdCode(4128111100, 2020-01-10, false) = false conf=high basis=2017-08-03 고시 — 경기도 고양시 덕양구 삼송동: 삼송택지개발지구 밖(사용자 선언) — 지정 지구 외 지역
+LEAF isRegulatedByBjdCode(4128111100, 2020-01-10, true) = true conf=high basis=2017-08-03 고시 — 경기도 고양시 덕양구 삼송동: 삼송택지개발지구 안(사용자 선언) 지정
+LEAF isRegulatedByBjdCode(4128111100, 2020-01-10, undefined) = true conf=medium basis=2017-08-03 고시 — 경기도 고양시 덕양구 삼송동: 삼송택지개발지구만 지정(지구 안인지 확인 필요)
+LEAF resolveWasRegulatedAtAcquisition(mixed-shape, no key) = true
+LEAF resolveWasRegulatedAtAcquisition(+regionInDesignatedDistrict:false) = false
+ROUTE code=4128111100 mixed=false inDistrict=false | issues=0 screenEffective=false body.regionCode=4128111100 body.regionInDesignatedDistrict=false body.wasRegulatedAtAcquisition=false | status=200 exempt=true tax=0 exemptReason=1세대1주택 비과세
+ROUTE code=4128111100 mixed=true inDistrict=false | issues=0 screenEffective=false body.regionCode=4128111100 body.regionInDesignatedDistrict=false body.wasRegulatedAtAcquisition=false | status=200 exempt=false tax=83990000 exemptReason=undefined
+    warn: 건물 보유기간 4년 4개월 · 거주기간 1년 미만 · 취득 당시 조정대상지역 해당 — 1세대1주택 비과세 요건(보유 2년, 조정대상지역 취득 시 거주 2년, 소득세법 시행령 §154①) 미충족으로 주택분도 과세됩니다.
+ROUTE code=4128111100 mixed=false inDistrict=true | issues=0 screenEffective=true body.regionCode=4128111100 body.regionInDesignatedDistrict=true body.wasRegulatedAtAcquisition=true | status=200 exempt=false tax=92389000 exemptReason=undefined
+    warn: 1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 미충족(취득 당시 조정대상지역 해당, 거주기간 0개월).
+ROUTE code=4128111100 mixed=true inDistrict=true | issues=0 screenEffective=true body.regionCode=4128111100 body.regionInDesignatedDistrict=true body.wasRegulatedAtAcquisition=true | status=200 exempt=false tax=83990000 exemptReason=undefined
+    warn: 건물 보유기간 4년 4개월 · 거주기간 1년 미만 · 취득 당시 조정대상지역 해당 — 1세대1주택 비과세 요건(보유 2년, 조정대상지역 취득 시 거주 2년, 소득세법 시행령 §154①) 미충족으로 주택분도 과세됩니다.
+ROUTE code=4128111100 mixed=false inDistrict=undefined | issues=0 screenEffective=true body.regionCode=4128111100 body.regionInDesignatedDistrict=undefined body.wasRegulatedAtAcquisition=true | status=200 exempt=false tax=92389000 exemptReason=undefined
+    warn: 1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 미충족(취득 당시 조정대상지역 해당, 거주기간 0개월).
+ROUTE code=4128111100 mixed=true inDistrict=undefined | issues=0 screenEffective=true body.regionCode=4128111100 body.regionInDesignatedDistrict=undefined body.wasRegulatedAtAcquisition=true | status=200 exempt=false tax=83990000 exemptReason=undefined
+    warn: 건물 보유기간 4년 4개월 · 거주기간 1년 미만 · 취득 당시 조정대상지역 해당 — 1세대1주택 비과세 요건(보유 2년, 조정대상지역 취득 시 거주 2년, 소득세법 시행령 §154①) 미충족으로 주택분도 과세됩니다.
+ROUTE code=5011010100 mixed=false inDistrict=undefined | issues=0 screenEffective=false body.regionCode=5011010100 body.regionInDesignatedDistrict=undefined body.wasRegulatedAtAcquisition=false | status=200 exempt=true tax=0 exemptReason=1세대1주택 비과세
+ROUTE code=5011010100 mixed=true inDistrict=undefined | issues=0 screenEffective=false body.regionCode=5011010100 body.regionInDesignatedDistrict=undefined body.wasRegulatedAtAcquisition=false | status=200 exempt=true tax=0 exemptReason=1세대1주택
+TTU mixed=false inDistrict=false undeclaredNotice=false
+TT mixed=false inDistrict=false | issues=[] status=200 exempt=true tax=0 reason=일시적 2주택 비과세
+TTU mixed=true inDistrict=false undeclaredNotice=false
+TT mixed=true inDistrict=false | issues=[] status=200 exempt=false tax=keys:splitMode,apportionment,housingPart,commercialPart,nonBusinessLandPart,total,steps,calculationRoute,warnings,multiHouseSurcharge,acquisitionByInheritance|total:{"aggregateIncome":258000003,"basicDeduction":2500000,"taxBase":255500003,"taxByBasicRate":77690001,"appliedRate":0.38,"progressiveDeduction":19400000,"rateBasis":"progressive","nonBusinessSurcharge":0,"transferTax":77690001,"reductionAmount":0,"reductionDetails":{},"determinedTax":77690001,"penalty reason=undefined
+    warn: 일시적 2주택 비과세 특례(소득세법 시행령 §155①)를 적용하지 않았습니다 — 신규주택 취득일부터 2년 이내 종전주택 양도 미충족(신규주택 취득일 2020-03-01, 처분기한 2022-03-02, 양도(예정)일 2022-06-02) — 역상 말일 2022-03-01이 토요일·공휴일이라 기한이 2022-03-02까지 늘어났습니다(국세기본법 §4 → 민법 §161).
+TTU mixed=false inDistrict=true undeclaredNotice=false
+TT mixed=false inDistrict=true | issues=[] status=200 exempt=false tax=85459000 reason=undefined
+    warn: 일시적 2주택 비과세 특례(소득세법 시행령 §155①)를 적용하지 않았습니다 — 신규주택 취득일부터 2년 이내 종전주택 양도 미충족(신규주택 취득일 2020-03-01, 처분기한 2022-03-02, 양도(예정)일 2022-06-02) — 역상 말일 2022-03-01이 토요일·공휴일이라 기한이 2022-03-02까지 늘어났습니다(국세기본법 §4 → 민법 §161).
+TTU mixed=true inDistrict=true undeclaredNotice=false
+TT mixed=true inDistrict=true | issues=[] status=200 exempt=false tax=keys:splitMode,apportionment,housingPart,commercialPart,nonBusinessLandPart,total,steps,calculationRoute,warnings,multiHouseSurcharge,acquisitionByInheritance|total:{"aggregateIncome":258000003,"basicDeduction":2500000,"taxBase":255500003,"taxByBasicRate":77690001,"appliedRate":0.38,"progressiveDeduction":19400000,"rateBasis":"progressive","nonBusinessSurcharge":0,"transferTax":77690001,"reductionAmount":0,"reductionDetails":{},"determinedTax":77690001,"penalty reason=undefined
+    warn: 일시적 2주택 비과세 특례(소득세법 시행령 §155①)를 적용하지 않았습니다 — 신규주택 취득일부터 2년 이내 종전주택 양도 미충족(신규주택 취득일 2020-03-01, 처분기한 2022-03-02, 양도(예정)일 2022-06-02) — 역상 말일 2022-03-01이 토요일·공휴일이라 기한이 2022-03-02까지 늘어났습니다(국세기본법 §4 → 민법 §161).
+TTU mixed=false inDistrict=undefined undeclaredNotice=true
+TT mixed=false inDistrict=undefined | issues=[] status=200 exempt=false tax=85459000 reason=undefined
+    warn: 양도 주택 소재지(경기도 고양시 덕양구 삼송동)는 2020.03.01. 당시 동 전체가 아니라 「삼송택지개발지구」만 조정대상지역이었는데, 지구 안인지 고르지 않아 조정대상지역으로 판정했습니다(확인 필요) — 소재지 아래에서 「지구 안·밖」을 고르세요.
+    warn: 일시적 2주택 비과세 특례(소득세법 시행령 §155①)를 적용하지 않았습니다 — 신규주택 취득일부터 2년 이내 종전주택 양도 미충족(신규주택 취득일 2020-03-01, 처분기한 2022-03-02, 양도(예정)일 2022-06-02) — 역상 말일 2022-03-01이 토요일·공휴일이라 기한이 2022-03-02까지 늘어났습니다(국세기본법 §4 → 민법 §161).
+TTU mixed=true inDistrict=undefined undeclaredNotice=false
+TT mixed=true inDistrict=undefined | issues=[] status=200 exempt=false tax=keys:splitMode,apportionment,housingPart,commercialPart,nonBusinessLandPart,total,steps,calculationRoute,warnings,multiHouseSurcharge,acquisitionByInheritance|total:{"aggregateIncome":258000003,"basicDeduction":2500000,"taxBase":255500003,"taxByBasicRate":77690001,"appliedRate":0.38,"progressiveDeduction":19400000,"rateBasis":"progressive","nonBusinessSurcharge":0,"transferTax":77690001,"reductionAmount":0,"reductionDetails":{},"determinedTax":77690001,"penalty reason=undefined
+    warn: 일시적 2주택 비과세 특례(소득세법 시행령 §155①)를 적용하지 않았습니다 — 신규주택 취득일부터 2년 이내 종전주택 양도 미충족(신규주택 취득일 2020-03-01, 처분기한 2022-03-02, 양도(예정)일 2022-06-02) — 역상 말일 2022-03-01이 토요일·공휴일이라 기한이 2022-03-02까지 늘어났습니다(국세기본법 §4 → 민법 §161).

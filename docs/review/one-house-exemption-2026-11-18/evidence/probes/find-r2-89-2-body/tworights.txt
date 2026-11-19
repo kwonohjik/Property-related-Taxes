@@ -1,0 +1,48 @@
+## T0 일시적 2주택(종전 A 양도) · 권리 없음
+status=200 ⑧=[] hhc=2
+isExempt=true partial=false 89②=not_applicable open=[]
+applied=["155-1-temporary-two-house"]
+undet=[]
+err=null
+
+## T1 일시적 2주택 + 입주권 1개 (E011)
+status=200 ⑧=[] hhc=2
+isExempt=false partial=false 89②=excluded open=[]
+applied=[]
+undet=[]
+err=null
+
+## T2 일시적 2주택 + 입주권 2개
+status=200 ⑧=[] hhc=2
+isExempt=true partial=false 89②=undetermined open=["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"]
+applied=["155-1-temporary-two-house"]
+undet=[["89-2-open:소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의2 ⑦·⑩·⑪에 해당하는지를 판정하지 않았습니다 — 해당 조문을 직접 확인하세요."],["89-2-open:소득세법 시행령 §156의3 ⑤·⑦·⑧","소득세법 시행령 §156의3 ⑤·⑦·⑧에 해당하는지를 판정하지 않았습니다 — 해당 조문을 직접 확인하세요."]]
+err=null
+
+## T3 일시적 2주택 + 분양권 2개
+status=200 ⑧=[] hhc=2
+isExempt=true partial=false 89②=undetermined open=["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"]
+applied=["155-1-temporary-two-house"]
+undet=[["89-2-open:소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의2 ⑦·⑩·⑪에 해당하는지를 판정하지 않았습니다 — 해당 조문을 직접 확인하세요."],["89-2-open:소득세법 시행령 §156의3 ⑤·⑦·⑧","소득세법 시행령 §156의3 ⑤·⑦·⑧에 해당하는지를 판정하지 않았습니다 — 해당 조문을 직접 확인하세요."]]
+err=null
+
+## T4 일시적 2주택 + 입주권 1 + 분양권 1
+status=200 ⑧=[] hhc=2
+isExempt=true partial=false 89②=undetermined open=["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"]
+applied=["155-1-temporary-two-house"]
+undet=[["89-2-open:소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의2 ⑦·⑩·⑪에 해당하는지를 판정하지 않았습니다 — 해당 조문을 직접 확인하세요."],["89-2-open:소득세법 시행령 §156의3 ⑤·⑦·⑧","소득세법 시행령 §156의3 ⑤·⑦·⑧에 해당하는지를 판정하지 않았습니다 — 해당 조문을 직접 확인하세요."]]
+err=null
+
+## T5 혼인 2주택(각자) + 입주권 2개 · 먼저 양도 · 구성 미선택
+status=200 ⑧=[] hhc=2
+isExempt=true partial=false 89②=undetermined open=["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"]
+applied=["155-5-marriage-merge"]
+undet=[["89-2-open:소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의2 ⑦·⑩·⑪에 해당하는지를 판정하지 않았습니다 — 해당 조문을 직접 확인하세요."],["89-2-open:소득세법 시행령 §156의3 ⑤·⑦·⑧","소득세법 시행령 §156의3 ⑤·⑦·⑧에 해당하는지를 판정하지 않았습니다 — 해당 조문을 직접 확인하세요."]]
+err=null
+
+## T5b 같은 사안 · 입주권 1개 · 구성 미선택
+status=200 ⑧=[] hhc=2
+isExempt=false partial=false 89②=excluded open=[]
+applied=[]
+undet=[["89-2-merged-household-composition-undeclared","합가(혼인) 전 보유 구성을 선택하지 않아 그 예외(소득세법 시행령 §156의2 ⑨)를 적용하지 않고 「소득세법」 §89② 배제를 적용해 과세로 판정했습니다(확인 필요) — 합가 전 최초양도주택을 소유하던 사람이 실제로 무엇을 갖고 있었는지 「합가 전 보유 구성」에서 사실대로 선택하면 판정합니다."]]
+err=null

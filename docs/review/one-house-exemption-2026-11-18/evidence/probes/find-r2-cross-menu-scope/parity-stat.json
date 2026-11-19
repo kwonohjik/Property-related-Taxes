@@ -1,0 +1,11 @@
+{
+ "total": 448,
+ "bothOk": 448,
+ "statusMismatch": [],
+ "summaryMismatch": [],
+ "fullMismatch": [],
+ "scErrExtra": [
+  "E0061-parental-rental-counterpart:standardPriceAtTransfer"
+ ],
+ "keyDiffCount": 163
+}

@@ -1,0 +1,28 @@
+{
+  "resident": {
+    "status": 200,
+    "isExempt": true,
+    "reasons": [],
+    "undetermined": []
+  },
+  "nonResident2024": {
+    "status": 200,
+    "isExempt": false,
+    "reasons": [],
+    "undetermined": []
+  },
+  "nonResident2009": {
+    "status": 400,
+    "reasons": [],
+    "undetermined": [],
+    "err": {
+      "code": "INVALID_INPUT",
+      "message": "입력값이 올바르지 않습니다",
+      "fieldErrors": {
+        "residencePeriodMonths": [
+          "거주기간: 60개월이 취득일(2005-06-01)부터 양도일까지의 55개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요."
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,79 @@
+[
+ {
+  "val": "600000000",
+  "sx": false,
+  "J": {
+   "ex": false,
+   "pex": false,
+   "und": []
+  },
+  "C": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "tax": 691075000,
+   "adopt": "B",
+   "excl": "one_house_exemption",
+   "aTax": 42950000,
+   "bTax": 628250000
+  }
+ },
+ {
+  "val": "600000000",
+  "sx": true,
+  "J": {
+   "ex": false,
+   "pex": false,
+   "und": []
+  },
+  "C": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "tax": 691075000,
+   "adopt": "B",
+   "excl": "tax_comparison",
+   "spEx": true,
+   "aTax": 42950000,
+   "bTax": 628250000
+  }
+ },
+ {
+  "val": "1450000000",
+  "sx": false,
+  "J": {
+   "ex": false,
+   "pex": false,
+   "und": []
+  },
+  "C": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "tax": 36575000,
+   "adopt": "B",
+   "excl": "one_house_exemption",
+   "aTax": 42950000,
+   "bTax": 33250000
+  }
+ },
+ {
+  "val": "1450000000",
+  "sx": true,
+  "J": {
+   "ex": false,
+   "pex": false,
+   "und": []
+  },
+  "C": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "tax": 47245000,
+   "adopt": "A",
+   "spEx": true,
+   "aTax": 42950000,
+   "bTax": 33250000
+  }
+ }
+]

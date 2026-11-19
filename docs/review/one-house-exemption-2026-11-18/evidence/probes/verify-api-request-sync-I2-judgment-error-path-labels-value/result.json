@@ -1,0 +1,57 @@
+{
+  "A": "입력값이 올바르지 않습니다\n• houses.1.rentalStartDate: 조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대개시일이 필요합니다\n• presaleRights.0.acquisitionDate: 필수 입력입니다\n• rentalHousingException.rentalUnits.0.rentalStartDate: 필수 입력입니다\n• oneHouseExemptionProviso.departureDate: 필수 입력입니다\n• nonResidentHoldingPeriod.startDate: 유효한 날짜 형식이 아닙니다 (YYYY-MM-DD, 존재하는 날만 허용)\n• demolishedBeforeBalance.contractDate: 유효한 날짜 형식이 아닙니다 (YYYY-MM-DD, 존재하는 날만 허용)\n• longTermMortgageHouse.contractYears: 값이 너무 작습니다 (양수를 입력하세요)\n• 피상속인 취득일: 피상속인 취득일은 상속개시일보다 이전이어야 합니다\n• _root: root msg",
+  "B_single": {
+    "formHouseIds": [
+      "0:h1(보유 주택 1)"
+    ],
+    "bodyHouseIds": [
+      "houses.0=selling",
+      "houses.1=h1"
+    ],
+    "v8errors": [],
+    "status": 400,
+    "fieldErrors": {
+      "houses.1.rentalStartDate": [
+        "조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대개시일이 필요합니다"
+      ]
+    },
+    "formatted": "입력값이 올바르지 않습니다\n• houses.1.rentalStartDate: 조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대개시일이 필요합니다"
+  },
+  "C_filtered": {
+    "formHouseIds": [
+      "0:h1(보유 주택 1)",
+      "1:h2(보유 주택 2)"
+    ],
+    "bodyHouseIds": [
+      "houses.0=selling",
+      "houses.1=h2"
+    ],
+    "v8errors": [],
+    "status": 400,
+    "fieldErrors": {
+      "houses.1.rentalStartDate": [
+        "조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대개시일이 필요합니다"
+      ]
+    },
+    "formatted": "입력값이 올바르지 않습니다\n• houses.1.rentalStartDate: 조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대개시일이 필요합니다"
+  },
+  "D_nofilter": {
+    "formHouseIds": [
+      "0:h1(보유 주택 1)",
+      "1:h2(보유 주택 2)"
+    ],
+    "bodyHouseIds": [
+      "houses.0=selling",
+      "houses.1=h1",
+      "houses.2=h2"
+    ],
+    "v8errors": [],
+    "status": 400,
+    "fieldErrors": {
+      "houses.2.rentalStartDate": [
+        "조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대개시일이 필요합니다"
+      ]
+    },
+    "formatted": "입력값이 올바르지 않습니다\n• houses.2.rentalStartDate: 조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대개시일이 필요합니다"
+  }
+}

@@ -1,0 +1,59 @@
+## C1 계산기 엔진 — 일반주택 2018(상속 뒤) + 소수지분 2015 + 승계 입주권 2023
+isExempt=false determinedTax=82470000
+warnings=["「소득세법」 §89② 배제를 적용했습니다 — 양도하는 주택을 상속개시 뒤에 취득했습니다 — 소득세법 시행령 §156의2 ⑦1호 후단의 일반주택은 「상속개시 당시 보유한 주택」만 해당하고(상속개시 당시 보유한 권리로 완공된 신축주택은 포함하는 문구가 없습니다) 상속받은 주택을 이용한 특례를 적용하지 않았습니다."]
+
+## C2 대조 — 입주권 없음(§155③ 단독)
+isExempt=true determinedTax=0
+warnings=[]
+
+## C3 대조 — 일반주택 2013-06 취득(상속 전)
+isExempt=true determinedTax=0
+warnings=[]
+
+## C4 대조 — 단독상속(§155②) + 상속 뒤 일반주택 + 입주권
+isExempt=false determinedTax=113860000
+warnings=[]
+
+## C5 대조 — 최대지분(§155②풀) + 상속 뒤 일반주택 + 입주권
+isExempt=false determinedTax=113860000
+warnings=[]
+
+## G1 소수지분 + 일반주택은 상속 전(2014-06-01) 피상속인에게서 증여 + 입주권 — ⑦ 후단 괄호 증여 제외가 걸리는가
+isExempt=true determinedTax=0
+warnings=[]
+
+## G1v 같은 사안 §89② 술어 (resolveArticle89Clause2, count=1)
+{"status":"exception_met","exception":"소득세법 시행령 §156의2 ③","viaArticle":"소득세법 시행령 §156의2 ⑦","byTimingClause":true,"noticeDeadlines":["2026-03-16T00:00:00.000Z"]}
+
+## G2 대조 — 증여 + 입주권 없음(§155③ 단독)
+isExempt=true determinedTax=0
+warnings=[]
+
+## V1 §89② 술어 — 실패 시나리오(소수지분) (resolveArticle89Clause2, count=1)
+{"status":"excluded","exclusionReasons":["양도하는 주택을 상속개시 뒤에 취득했습니다 — 소득세법 시행령 §156의2 ⑦1호 후단의 일반주택은 「상속개시 당시 보유한 주택」만 해당하고(상속개시 당시 보유한 권리로 완공된 신축주택은 포함하는 문구가 없습니다) 상속받은 주택을 이용한 특례를 적용하지 않았습니다."],"exclusionBasis":"소득세법 시행령 §156의2 ⑦"}
+
+## V2 §89② 술어 — 소수지분 행 제거(1주택+1권리) (resolveArticle89Clause2, count=1)
+{"status":"exception_met","exception":"소득세법 시행령 §156의2 ③","byTimingClause":true,"noticeDeadlines":["2026-03-16T00:00:00.000Z"]}
+
+## C6 소수지분 상속 2012-03-01 + 일반주택 2018 + 입주권
+isExempt=false determinedTax=82470000
+warnings=["「소득세법」 §89② 배제를 적용했습니다 — 양도하는 주택을 상속개시 뒤에 취득했습니다 — 소득세법 시행령 §156의2 ⑦1호 후단의 일반주택은 「상속개시 당시 보유한 주택」만 해당하고(상속개시 당시 보유한 권리로 완공된 신축주택은 포함하는 문구가 없습니다) 상속받은 주택을 이용한 특례를 적용하지 않았습니다."]
+
+## G3 소수지분 + 일반주택=상속 전 2년 내 피상속인 증여(2019) + 입주권 2023 — ⑦ 후단 증여 제외가 걸리는가
+isExempt=true determinedTax=0
+warnings=[]
+
+## G3v 같은 사안 §89② 술어 (resolveArticle89Clause2, count=1)
+{"status":"exception_met","exception":"소득세법 시행령 §156의2 ③","viaArticle":"소득세법 시행령 §156의2 ⑦","byTimingClause":true,"noticeDeadlines":["2026-03-16T00:00:00.000Z"]}
+
+## G4 대조 — G3에서 입주권 없음(§155③ 단독)
+isExempt=true determinedTax=0
+warnings=[]
+
+## G5 대조 — G3에서 증여 아님
+isExempt=true determinedTax=0
+warnings=[]
+
+## G6 대조 — G3을 단독상속으로(② 괄호 증여 제외)
+isExempt=false determinedTax=117060000
+warnings=[]

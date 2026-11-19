@@ -1,0 +1,128 @@
+[
+  {
+    "decl": "declared",
+    "label": "purchase",
+    "jStatus": 200,
+    "jVeErr": [],
+    "jIsExempt": true,
+    "jFormCause": "purchase",
+    "calcCause": "purchase",
+    "calcDonor": "",
+    "calcGiftRel": "",
+    "calcDecedent": "",
+    "calcIssuesErr": [
+      "0:redevActualAcquisitionPrice:자산: 실가 모드 — 인가전 분 종전 주택 취득가액(실거래가)을 입력하세요. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§"
+    ],
+    "calcBodyCause": "purchase",
+    "calcStatus": 200,
+    "calcIsExempt": true,
+    "calcTotalTax": 0,
+    "calcLthd": 0,
+    "calcWarnGift": []
+  },
+  {
+    "decl": "declared",
+    "label": "gift",
+    "jStatus": 200,
+    "jVeErr": [],
+    "jIsExempt": true,
+    "jFormCause": "gift",
+    "calcCause": "gift",
+    "calcDonor": "2005-01-01",
+    "calcGiftRel": "lineal",
+    "calcDecedent": "",
+    "calcIssuesErr": [
+      "0:redevActualAcquisitionPrice:자산: 실가 모드 — 인가전 분 종전 주택 취득가액(실거래가)을 입력하세요. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§"
+    ],
+    "calcBodyCause": "gift",
+    "calcBodyDonor": "2005-01-01",
+    "calcStatus": 200,
+    "calcIsExempt": true,
+    "calcTotalTax": 0,
+    "calcLthd": 0,
+    "calcWarnGift": []
+  },
+  {
+    "decl": "declared",
+    "label": "inheritance",
+    "jStatus": 200,
+    "jVeErr": [],
+    "jIsExempt": true,
+    "jFormCause": "inheritance",
+    "calcCause": "inheritance",
+    "calcDonor": "",
+    "calcGiftRel": "",
+    "calcDecedent": "2001-01-01",
+    "calcIssuesErr": [
+      "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요 — 상속받은 종전 부동산의 취득가액은 그 평가액입니다(소득세법 시행령 §163⑨·§166"
+    ],
+    "calcBodyCause": "inheritance",
+    "calcBodyDecedent": "2001-01-01",
+    "calcStatus": 400,
+    "calcErr": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"inheritedAcquisition.reportedValue\":[\"상속받은 종전 부동산(원조합원)의 취득가액은 상속개시일 현재 평가액입니다 — inheritedAcquisition.reportedValue(또는 §164④ pre1990Land · §164⑤~⑦ inheritedHouseValuation)가 필요하고, 종전 부동산 실거래가로는 계산하지 않습니다 (소득세법 시행령 §163⑨·§166①)\"]}}}",
+    "calcWarnGift": []
+  },
+  {
+    "decl": "undeclared",
+    "label": "purchase",
+    "jStatus": 200,
+    "jVeErr": [],
+    "jIsExempt": false,
+    "jFormCause": "purchase",
+    "calcCause": "purchase",
+    "calcDonor": "",
+    "calcGiftRel": "",
+    "calcDecedent": "",
+    "calcIssuesErr": [
+      "0:redevActualAcquisitionPrice:자산: 실가 모드 — 인가전 분 종전 주택 취득가액(실거래가)을 입력하세요. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§"
+    ],
+    "calcBodyCause": "purchase",
+    "calcStatus": 200,
+    "calcIsExempt": false,
+    "calcTotalTax": 245751000,
+    "calcLthd": 130000000,
+    "calcWarnGift": []
+  },
+  {
+    "decl": "undeclared",
+    "label": "gift",
+    "jStatus": 200,
+    "jVeErr": [],
+    "jIsExempt": false,
+    "jFormCause": "gift",
+    "calcCause": "gift",
+    "calcDonor": "2005-01-01",
+    "calcGiftRel": "lineal",
+    "calcDecedent": "",
+    "calcIssuesErr": [
+      "0:redevActualAcquisitionPrice:자산: 실가 모드 — 인가전 분 종전 주택 취득가액(실거래가)을 입력하세요. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§"
+    ],
+    "calcBodyCause": "gift",
+    "calcBodyDonor": "2005-01-01",
+    "calcStatus": 200,
+    "calcIsExempt": false,
+    "calcTotalTax": 145486000,
+    "calcLthd": 52000000,
+    "calcWarnGift": []
+  },
+  {
+    "decl": "undeclared",
+    "label": "inheritance",
+    "jStatus": 200,
+    "jVeErr": [],
+    "jIsExempt": false,
+    "jFormCause": "inheritance",
+    "calcCause": "inheritance",
+    "calcDonor": "",
+    "calcGiftRel": "",
+    "calcDecedent": "2001-01-01",
+    "calcIssuesErr": [
+      "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요 — 상속받은 종전 부동산의 취득가액은 그 평가액입니다(소득세법 시행령 §163⑨·§166"
+    ],
+    "calcBodyCause": "inheritance",
+    "calcBodyDecedent": "2001-01-01",
+    "calcStatus": 400,
+    "calcErr": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"inheritedAcquisition.reportedValue\":[\"상속받은 종전 부동산(원조합원)의 취득가액은 상속개시일 현재 평가액입니다 — inheritedAcquisition.reportedValue(또는 §164④ pre1990Land · §164⑤~⑦ inheritedHouseValuation)가 필요하고, 종전 부동산 실거래가로는 계산하지 않습니다 (소득세법 시행령 §163⑨·§166①)\"]}}}",
+    "calcWarnGift": []
+  }
+]

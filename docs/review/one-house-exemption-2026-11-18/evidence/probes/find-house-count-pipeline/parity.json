@@ -1,0 +1,8831 @@
+[
+ {
+  "id": "E001-dual",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [
+   "155-4-parental-care-merge-right-sale"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "E002-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "E004-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E004-era-declared",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E004-era-late",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 124960000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E004-era-2",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E004-era-samehh",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 123915000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E006-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E0061-parental-rental-counterpart",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "kReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "undet": [
+   "155-20-merge-rental-carveout"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E007-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": true,
+  "kTax": 53460000,
+  "mReason": "일시적 2주택 고가주택",
+  "kReason": "일시적 2주택 고가주택",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E007-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": true,
+  "kTax": 82357000,
+  "mReason": "일시적 2주택 고가주택",
+  "kReason": "일시적 2주택 고가주택",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E008-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": true,
+  "kTax": 12078000,
+  "mReason": "일시적 2주택 고가주택",
+  "kReason": "일시적 2주택 고가주택",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E008-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": true,
+  "kTax": 218031000,
+  "mReason": "일시적 2주택 고가주택",
+  "kReason": "일시적 2주택 고가주택",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E011-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 306735000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E011-era-2",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 291951000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E014-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 282711000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E015-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 282711000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E015-era-2",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E015-era-2-early",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 282711000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E017-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E017-era-neg",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 65395000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E018-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E019-era-1",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 69300000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E022-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세 (§155⑦3호 귀농 농어촌주택 제외)",
+  "kReason": "일시적 2주택 비과세 (§155⑦3호 귀농 농어촌주택 제외)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E022-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세 (§155⑦3호 귀농 농어촌주택 제외)",
+  "kReason": "일시적 2주택 비과세 (§155⑦3호 귀농 농어촌주택 제외)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E022-current-rural-later",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세 (§155⑦3호 귀농 농어촌주택 제외)",
+  "kReason": "일시적 2주택 비과세 (§155⑦3호 귀농 농어촌주택 제외)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E022-current-rural-later-unmet",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 316899000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E023-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E028-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E029-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E033-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E033-era-within1y",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 218900000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E036-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "E040-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E040-era-late",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 307329000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E040-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E045-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E045-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E046-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E046-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E047-era-pre",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 5호 공고전계약)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 5호 공고전계약)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E049-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 307329000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E049-era-within2y",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E049-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E050-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E050-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E050-current-within1y",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 328911000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E053-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E053-era-daybefore",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 106524000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E054-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E055-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E056-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E057-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E057-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E058-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E061-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 307329000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E062-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E063-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E064-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E067-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-E067-no-decedent-date",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 186846000,
+  "undet": [
+   "89-2-three-year-exception-undeclared"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-E067-separate-household",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 186846000,
+  "undet": [
+   "89-2-three-year-exception-undeclared",
+   "89-2-inherited-presale-right-separate-household-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E070-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E071-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 94655000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E071-era-pos",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E072-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 182435000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E073-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 173360000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E073-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E073-current-neg",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 282711000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E074-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 69300000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E074-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E076-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 128700000,
+  "undet": [],
+  "contested": [
+   "155-3-same-household-co-inherited-minority"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E077-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 120780000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E083-dual",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 284559000,
+  "undet": [],
+  "contested": [
+   "155-3-same-household-co-inherited-minority"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E084-dual",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 299937000,
+  "undet": [],
+  "contested": [
+   "155-3-same-household-co-inherited-minority"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E086-dual",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 299937000,
+  "undet": [],
+  "contested": [
+   "155-3-same-household-co-inherited-minority"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E088-dual",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 123915000,
+  "undet": [],
+  "contested": [
+   "155-3-same-household-co-inherited-minority"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E091-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 120780000,
+  "undet": [],
+  "contested": [
+   "155-3-co-inherited-minority-before-ranking-clause"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E091-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 192159000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E091-current-single",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E093-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "E093-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "E093-current-twin",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "E094-dual",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [
+   "155-4-parental-care-merge-right-sale"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "E095-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E098-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E100-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E100-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E103-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E107-dual",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [
+   "155-2-inherited-house-gifted-within-household"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-E107-not-gifted",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E109-dual",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [
+   "155-2-inherited-house-gifted-within-household"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E110-dual",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [
+   "154-5-final-one-house-restart-unverified"
+  ],
+  "contested": [
+   "155-2-inherited-house-gifted-within-household"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E112-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-E112-post2013",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [
+   "155-2-reinheritance-reference-date-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-E112-post2013-acquired-after",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 128766000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-E112-not-reinherited",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 128700000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E115-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E117-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E118-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E119-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "E121-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E122-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 87120000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E122-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 232815000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E123-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택·동거봉양 합가 중첩 (§155①·④) 1세대1주택 비과세",
+  "kReason": "일시적 2주택·동거봉양 합가 중첩 (§155①·④) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E123-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택·동거봉양 합가 중첩 (§155①·④) 1세대1주택 비과세",
+  "kReason": "일시적 2주택·동거봉양 합가 중첩 (§155①·④) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E124-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 93060000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E125-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 114719000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E127-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "kReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E127-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "kReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E128-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "혼인 합가 후 동거봉양 합가 (§155⑤·④) 1세대1주택 비과세",
+  "kReason": "혼인 합가 후 동거봉양 합가 (§155⑤·④) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E128-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "혼인 합가 후 동거봉양 합가 (§155⑤·④) 1세대1주택 비과세",
+  "kReason": "혼인 합가 후 동거봉양 합가 (§155⑤·④) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E128-era-reverse",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "동거봉양 합가 후 혼인 합가 (§155④·⑤) 1세대1주택 비과세",
+  "kReason": "동거봉양 합가 후 혼인 합가 (§155④·⑤) 1세대1주택 비과세",
+  "undet": [
+   "155-4-5-double-merge-reverse-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E128-era-spouse2",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 125532000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E129-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "kReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E129-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "kReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E129-era-noprior",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 121247500,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E132-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 291951000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E132-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 262383000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-E132-1062",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+  "kReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-E132-seller-rentals-only",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+  "kReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E133-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 93060000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E139-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택·동거봉양 합가 중첩 (§155①·④) 1세대1주택 비과세",
+  "kReason": "일시적 2주택·동거봉양 합가 중첩 (§155①·④) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E140-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "kReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E140-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "kReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E141-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "kReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E141-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "kReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E143-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택·혼인 합가 중첩 (§155①·⑤) 1세대1주택 비과세",
+  "kReason": "일시적 2주택·혼인 합가 중첩 (§155①·⑤) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E143-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택·혼인 합가 중첩 (§155①·⑤) 1세대1주택 비과세",
+  "kReason": "일시적 2주택·혼인 합가 중첩 (§155①·⑤) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E144-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E145-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 99671000,
+  "undet": [],
+  "contested": [
+   "155-3-same-household-co-inherited-minority"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E146-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 79189000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E146-era-pos",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "농어촌주택 비과세 (§155⑦1호 상속)",
+  "kReason": "농어촌주택 비과세 (§155⑦1호 상속)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E147-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 90475000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E149-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "농어촌주택 비과세 (§155⑦3호 귀농)",
+  "kReason": "농어촌주택 비과세 (§155⑦3호 귀농)",
+  "undet": [
+   "155-10-4-farmland-area-990-era-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E149-era-5y",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "농어촌주택 비과세 (§155⑦3호 귀농)",
+  "kReason": "농어촌주택 비과세 (§155⑦3호 귀농)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E150-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "농어촌주택 비과세 (§155⑦1호 상속)",
+  "kReason": "농어촌주택 비과세 (§155⑦1호 상속)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E151-era",
+  "bucket": "pending",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 104940000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E156-dual",
+  "bucket": "dual",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 146272500,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E156-farmexit",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 146272500,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-E156-farmexit-not-returned",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "농어촌주택 비과세 (§155⑦2호 이농)",
+  "kReason": "농어촌주택 비과세 (§155⑦2호 이농)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E160-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "농어촌주택 비과세 (§155⑦1호 상속)",
+  "kReason": "농어촌주택 비과세 (§155⑦1호 상속)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E162-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "수도권 밖 부득이한 사유 주택 비과세 (§155⑧ 근무상 형편)",
+  "kReason": "수도권 밖 부득이한 사유 주택 비과세 (§155⑧ 근무상 형편)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E163-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 130185000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E163-era-pos",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E163-era-sameday",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E166-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E166-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E167-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 65395000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E175-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 328911000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E175-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E177-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E177-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E178-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 307329000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E178-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E180-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E182-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 236511000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E182-era-pos",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E182-era-3",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 192159000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E185-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E190-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E193-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 142934000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E193-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 144386000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E194-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 155760000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E195-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E195-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E196-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E197-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "E199-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 155760000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E199-era-pos",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E203-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 306735000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E203-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E204-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E208-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E209-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E211-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 269775000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-E211-within",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택·혼인 합가 중첩 (§155①·⑤) 1세대1주택 비과세",
+  "kReason": "일시적 2주택·혼인 합가 중첩 (§155①·⑤) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-E211-sell-b",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택·혼인 합가 중첩 (§155①·⑤) 1세대1주택 비과세",
+  "kReason": "일시적 2주택·혼인 합가 중첩 (§155①·⑤) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F004-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 12012440,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F006-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 63497500,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F006-household",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F007-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 84287500,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F011-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "F012-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F015-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F016-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F016-same-household",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 76681000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F018-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F020-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F021-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "mReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}"
+ },
+ {
+  "id": "F023-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 87120000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F023-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 247599000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F029-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 65395000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F031-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 93060000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F032-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 93060000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F033-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 82951000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F034-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F034-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F036-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F037-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 76681000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F038-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F038-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F039-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F040-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F043-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F045-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "kReason": "1세대1주택 비과세",
+  "undet": [
+   "154-1-demolished-before-balance-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F055-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F055-approval-2006",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 87120000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F055-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 247599000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F056-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 77357500,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F056-no-right",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F059-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F059-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 218031000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F060-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 87120000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F061-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F067-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 356400000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F068-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 90475000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F068-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F069-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 76428000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F069-roster",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 76428000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F069-gate-20111013",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 63497500,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F069-gate-20111014",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F069-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F070-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 93060000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F070-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F075-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F075-c-transfer",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F076-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F076-1day",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 186615000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F115-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F115-rental-undeclared",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 211695000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F123-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F123-over3y",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 284559000,
+  "undet": [
+   "civil-161-holiday-table-uncovered"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F128-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 69300000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F154-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": true,
+  "kTax": 9751500,
+  "mReason": "1세대1주택 고가주택",
+  "kReason": "1세대1주택 고가주택",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F154-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F154-current-whole13",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": true,
+  "kTax": 13596000,
+  "mReason": "1세대1주택 고가주택",
+  "kReason": "1세대1주택 고가주택",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F169-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F169-transfer",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 218625000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F170-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F170-gift",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 142560000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F175-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F175-2021",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 190960000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F180-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F180-acq-nonregulated",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F180-acq-regulated",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 269775000,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F187-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F187-one-day-short",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 284559000,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F190-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 190960000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F190-one-day-later",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F193-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F193-separate-household",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 104940000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F207-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F207-separate",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 21147500,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F217-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}"
+ },
+ {
+  "id": "P-F217-after-departure",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F217-before-departure",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 163625000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F242-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F242-no-residence",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F243-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 307329000,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified",
+   "154-12-co-inherited-residence-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F243-resided24",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F251-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}"
+ },
+ {
+  "id": "F251-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}"
+ },
+ {
+  "id": "F252-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 328911000,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified",
+   "154-12-co-inherited-residence-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F255-own-62m",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 1호 임대주택 거주5년)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 1호 임대주택 거주5년)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F256-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 1호 임대주택 거주5년)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 1호 임대주택 거주5년)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F256-59m",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 218900000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F256-highvalue",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": true,
+  "kTax": 42900000,
+  "mReason": "1세대1주택 고가주택 (§154① 단서 1호 임대주택 거주5년)",
+  "kReason": "1세대1주택 고가주택 (§154① 단서 1호 임대주택 거주5년)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F259-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 1호 임대주택 거주5년)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 1호 임대주택 거주5년)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F259-lease-unset",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 86900000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F260-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 65340000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F262-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호가 수용)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호가 수용)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F262-acquired-after-notice",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 163625000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F264-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호가 수용)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호가 수용)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F264-plan-decision-date",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 273625000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F264-remnant-2y-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 175983500,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F264-remnant-5y-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호가 수용)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호가 수용)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F268-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F268-first-member-departure",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 291951000,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F275-acquired-after-departure",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 526350000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F276-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 236511000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F276-held-2y",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F281-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F281-only-house",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호다 국외거주)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호다 국외거주)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F289-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F295-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F295-excluding-post-approval",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 306735000,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F297-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 306735000,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F297-within-2y",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F303-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F303-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F303-physical-departure",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 291951000,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F305-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F307-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F311-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 218625000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F312-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 42900000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F312-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 383075000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F316-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호다 국외거주)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호다 국외거주)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F318-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "kReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F322-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F322-current-within",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호나 해외이주)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F322-current-over",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 299937000,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F340-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세 (§154① 단서 3호 부득이)",
+  "kReason": "일시적 2주택 비과세 (§154① 단서 3호 부득이)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F340-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세 (§154① 단서 3호 부득이)",
+  "kReason": "일시적 2주택 비과세 (§154① 단서 3호 부득이)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F340-current-12m",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세 (§154① 단서 3호 부득이)",
+  "kReason": "일시적 2주택 비과세 (§154① 단서 3호 부득이)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F340-current-11m",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 526350000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F355-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 4호 임대사업자 등록 — 소득세법 시행령 §154 ① 4호(2020.2.11. 삭제 전) · 대통령령 제30395호 부칙 제38조 ②)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 4호 임대사업자 등록 — 소득세법 시행령 §154 ① 4호(2020.2.11. 삭제 전) · 대통령령 제30395호 부칙 제38조 ②)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F355-era-maintained",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 350757000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F361-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F361-era-6pct",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 341847000,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F366-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F366-era-17m",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 341847000,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F373-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "mReason": "1세대1주택 비과세 (§154① 단서 1호 임대주택 거주5년)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}"
+ },
+ {
+  "id": "P-F373-era-60m",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "mReason": "1세대1주택 비과세 (§154① 단서 1호 임대주택 거주5년)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}"
+ },
+ {
+  "id": "N-F373-era-59m",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}"
+ },
+ {
+  "id": "F384-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 87120000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F390-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "F395-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F395-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 141966000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F395-current-noconv",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F396-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 4호 임대사업자 등록 — 소득세법 시행령 §154 ① 4호(2020.2.11. 삭제 전) · 대통령령 제30395호 부칙 제38조 ②)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 4호 임대사업자 등록 — 소득세법 시행령 §154 ① 4호(2020.2.11. 삭제 전) · 대통령령 제30395호 부칙 제38조 ②)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F396-no-proviso",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 299937000,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F396-registered-20191217",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 329505000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F409-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F450-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F450-current-over",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": true,
+  "kTax": 13596000,
+  "mReason": "1세대1주택 고가주택",
+  "kReason": "1세대1주택 고가주택",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F451-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F455-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "F455-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "F456-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "P-F456-era-6eok",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "F456-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "P-F456-current-12eok",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "F461-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세 (§154① 단서 2호가 수용)",
+  "kReason": "1세대1주택 비과세 (§154① 단서 2호가 수용)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F461-no-proviso",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 86900000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F461-acquired-after-approval",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 108625000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F461-no-proviso-2y6m",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 60483500,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G016-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 128700000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-G016-era-approval-2005",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G017-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 83583500,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-G017-era-approval-2005",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G019-era",
+  "bucket": "dual",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G019-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G021-era",
+  "bucket": "mismatch",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G021-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "P-G021-current-3y",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "N-G021-current-3y1d",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G022-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G023-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G024-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G035-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G049-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G049-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G050-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G050-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G055-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G055-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G062-era",
+  "bucket": "mismatch",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G062-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "N-G062-over3y",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G065-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G066-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G077-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "P-G077-later-sold",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G091-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G091-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G099-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G099-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 218031000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G100-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G100-dual",
+  "bucket": "dual",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 48675000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G100-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 218031000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G103-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 123915000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G104-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 124740000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G104-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 218031000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G105-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G105-over3y",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 247599000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G105-completed",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 247599000,
+  "undet": [
+   "155-1-new-house-origin-unconfirmed"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G105-completed-exception",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G106-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G106-none",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 44495000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G107-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G110-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-G110-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G110-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 269775000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G111-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G116-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G116-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G116-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 284559000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G119-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 284559000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G119-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 284559000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-G119-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G120-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G120-era-origin",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G120-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G123-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G124-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 205689000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-G124-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G125-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G125-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 176583000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G125-norepl",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 176583000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G126-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G126-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G128-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": true,
+  "kTax": 160776000,
+  "mReason": "대체주택 특례 고가주택 (§156의2⑤)",
+  "kReason": "대체주택 특례 고가주택 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G128-era-origin",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": true,
+  "kTax": 160776000,
+  "mReason": "대체주택 특례 고가주택 (§156의2⑤)",
+  "kReason": "대체주택 특례 고가주택 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G129-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G129-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G131-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G132-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "kReason": "대체주택 특례 비과세 (§156의2⑤)",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G133-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G148-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 417230000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G152-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G154-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G157-era-first",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G157-era-second",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "G162-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [
+   "155-1-presale-holding-completion"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G163-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+  "kReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G163-era-blank",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+  "kReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G163-era-none",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+  "kReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G163-blank-within1y",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 263901000,
+  "undet": [
+   "89-2-merged-household-composition-undeclared"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G163-blank-right-before-marriage",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 263901000,
+  "undet": [
+   "89-2-merged-household-composition-undeclared"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G163-none-over3y",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 243903000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G163-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+  "kReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G163-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 198627000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G164-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R006-dual",
+  "bucket": "dual",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 84205000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R012-dual",
+  "bucket": "dual",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 124740000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R014-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 199083500,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-R014-era-no-officetel",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "일시적 2주택 비과세",
+  "kReason": "일시적 2주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R030-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 154440000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R031-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 164340000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R031-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 306735000,
+  "undet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-R031-current-24m",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R033-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 291951000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R037-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 142560000,
+  "undet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R043-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": true,
+  "kEx": false,
+  "kPart": true,
+  "kTax": 13596000,
+  "mReason": "1세대1주택 고가주택",
+  "kReason": "1세대1주택 고가주택",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-R043-current-12eok",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "S001-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "S006-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "S006-current",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "S041-4022-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "S045-2019seo2002-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 123915000,
+  "undet": [],
+  "contested": [
+   "155-3-co-inherited-minority-before-ranking-clause"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "S045-2017seo3603-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 123915000,
+  "undet": [],
+  "contested": [
+   "155-3-co-inherited-minority-before-ranking-clause"
+  ],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "T001-era",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 78193500,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-T001-separate-household",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-T001-parental-care",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [
+   "155-2-pre2010-parental-care-exception-unverified"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "SMOKE-1",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "SMOKE-2",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 658350000,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "STAT-71-2-house",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "STAT-71-2-right",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "STAT-71-2-right-unknown",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 400,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "undet": [
+   "71-2-pop-decline-unconfirmed"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kErrMsg": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}"
+ },
+ {
+  "id": "NTS-2025-2010-gift-separate",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "NTS-2025-2010-gift-same",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 306735000,
+  "undet": [
+   "71-2-pop-decline-unconfirmed"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "NTS-2025-1621-inherit-separate",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": true,
+  "mPart": false,
+  "kEx": true,
+  "kPart": false,
+  "kTax": 0,
+  "mReason": "1세대1주택 비과세",
+  "kReason": "1세대1주택 비과세",
+  "undet": [],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "NTS-2025-1621-inherit-same",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 306735000,
+  "undet": [
+   "71-2-pop-decline-unconfirmed"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "NTS-2025-1621-inherit-unknown",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 306735000,
+  "undet": [
+   "71-2-pop-decline-unconfirmed"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "NTS-2025-1621-inherit-legacy-false",
+  "bucket": "match",
+  "mStatus": 200,
+  "mErr": 0,
+  "kStatus": 200,
+  "kErr": 1,
+  "mEx": false,
+  "mPart": false,
+  "kEx": false,
+  "kPart": false,
+  "kTax": 306735000,
+  "undet": [
+   "71-2-pop-decline-unconfirmed"
+  ],
+  "contested": [],
+  "kIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ }
+]

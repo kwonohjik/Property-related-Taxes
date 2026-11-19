@@ -1,0 +1,41 @@
+{
+ "shiftedStart": "2018-03-02",
+ "rows": [
+  {
+   "transfer": "2020-02-29",
+   "holdingViaShift": {
+    "years": 1,
+    "months": 11,
+    "days": 28
+   },
+   "perIntervalMonths": 23
+  },
+  {
+   "transfer": "2020-03-01",
+   "holdingViaShift": {
+    "years": 2,
+    "months": 0,
+    "days": 0
+   },
+   "perIntervalMonths": 23
+  },
+  {
+   "transfer": "2020-03-12",
+   "holdingViaShift": {
+    "years": 2,
+    "months": 0,
+    "days": 11
+   },
+   "perIntervalMonths": 23
+  },
+  {
+   "transfer": "2020-03-13",
+   "holdingViaShift": {
+    "years": 2,
+    "months": 0,
+    "days": 12
+   },
+   "perIntervalMonths": 24
+  }
+ ]
+}

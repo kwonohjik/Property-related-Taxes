@@ -1,0 +1,4163 @@
+[
+ {
+  "id": "E001-dual",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E002-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E004-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E004-era-declared",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E004-era-late",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E004-era-2",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E004-era-samehh",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E006-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E0061-parental-rental-counterpart",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E007-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E007-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E008-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E008-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E011-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E011-era-2",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E014-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E015-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E015-era-2",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E015-era-2-early",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E017-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E017-era-neg",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E018-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E019-era-1",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E022-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E022-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E022-current-rural-later",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E022-current-rural-later-unmet",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E023-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E028-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E029-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E033-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E033-era-within1y",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E036-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E040-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E040-era-late",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E040-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E045-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E045-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E046-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E046-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E047-era-pre",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E049-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E049-era-within2y",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E049-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E050-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E050-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E050-current-within1y",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E053-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E053-era-daybefore",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E054-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E055-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E056-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E057-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E057-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E058-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E061-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E062-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E063-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E064-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E067-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-E067-no-decedent-date",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-E067-separate-household",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E070-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E071-era",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E071-era-pos",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E072-era",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E073-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E073-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E073-current-neg",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E074-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E074-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E076-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E077-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E083-dual",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E084-dual",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E086-dual",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E088-dual",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E091-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E091-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E091-current-single",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E093-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E093-current",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E093-current-twin",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E094-dual",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E095-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E098-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E100-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E100-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E103-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E107-dual",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-E107-not-gifted",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E109-dual",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E110-dual",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E112-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-E112-post2013",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-E112-post2013-acquired-after",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-E112-not-reinherited",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E115-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E117-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E118-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E119-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E121-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E122-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E122-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E123-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E123-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E124-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E125-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E127-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E127-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E128-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E128-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E128-era-reverse",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E128-era-spouse2",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E129-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E129-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E129-era-noprior",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E132-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E132-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-E132-1062",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-E132-seller-rentals-only",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E133-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E139-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E140-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E140-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E141-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E141-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E143-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E143-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E144-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E145-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E146-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E146-era-pos",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E147-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E149-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E149-era-5y",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E150-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E151-era",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E156-dual",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E156-farmexit",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-E156-farmexit-not-returned",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E160-era",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E162-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E163-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E163-era-pos",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E163-era-sameday",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E166-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E166-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E167-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E175-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E175-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E177-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E177-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E178-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E178-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E180-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E182-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E182-era-pos",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E182-era-3",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E185-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E190-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E193-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E193-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E194-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E195-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E195-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E196-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E197-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E199-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E199-era-pos",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E203-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E203-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E204-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E208-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E209-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E211-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-E211-within",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-E211-sell-b",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F004-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F006-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F006-household",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F007-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F011-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F012-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F015-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F016-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F016-same-household",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F018-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F020-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F021-era",
+  "kind": "housing",
+  "cause": "gift",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F023-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F023-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F029-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F031-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F032-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F033-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F034-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F034-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F036-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F037-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F038-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F038-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F039-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F040-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F043-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F045-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F055-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F055-approval-2006",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F055-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F056-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F056-no-right",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F059-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F059-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F060-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F061-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F067-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F068-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F068-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F069-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F069-roster",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F069-gate-20111013",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F069-gate-20111014",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F069-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F070-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F070-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F075-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F075-c-transfer",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F076-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F076-1day",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F115-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F115-rental-undeclared",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F123-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F123-over3y",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F128-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F154-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F154-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F154-current-whole13",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F169-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F169-transfer",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F170-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F170-gift",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F175-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F175-2021",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F180-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F180-acq-nonregulated",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F180-acq-regulated",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F187-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F187-one-day-short",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F190-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F190-one-day-later",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F193-era",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F193-separate-household",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F207-era",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F207-separate",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F217-era",
+  "kind": "housing",
+  "cause": "gift",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F217-after-departure",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F217-before-departure",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F242-era",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F242-no-residence",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F243-era",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F243-resided24",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F251-era",
+  "kind": "housing",
+  "cause": "gift",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F251-current",
+  "kind": "housing",
+  "cause": "gift",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F252-era",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F255-own-62m",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F256-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F256-59m",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F256-highvalue",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F259-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F259-lease-unset",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F260-era",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F262-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F262-acquired-after-notice",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F264-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F264-plan-decision-date",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F264-remnant-2y-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F264-remnant-5y-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F268-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F268-first-member-departure",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F275-acquired-after-departure",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F276-current",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F276-held-2y",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F281-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F281-only-house",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F289-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F295-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F295-excluding-post-approval",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F297-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F297-within-2y",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F303-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F303-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F303-physical-departure",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F305-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F307-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F311-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F312-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F312-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F316-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F318-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F322-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F322-current-within",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F322-current-over",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F340-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F340-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F340-current-12m",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F340-current-11m",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F355-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F355-era-maintained",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F361-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F361-era-6pct",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F366-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F366-era-17m",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F373-era",
+  "kind": "housing",
+  "cause": "gift",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F373-era-60m",
+  "kind": "housing",
+  "cause": "gift",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F373-era-59m",
+  "kind": "housing",
+  "cause": "gift",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F384-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F390-current",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F395-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F395-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F395-current-noconv",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F396-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F396-no-proviso",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F396-registered-20191217",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F409-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F450-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F450-current-over",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F451-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F455-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F455-current",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F456-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F456-era-6eok",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F456-current",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-F456-current-12eok",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F461-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F461-no-proviso",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F461-acquired-after-approval",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-F461-no-proviso-2y6m",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G016-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-G016-era-approval-2005",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G017-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-G017-era-approval-2005",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G019-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G019-current",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G021-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G021-current",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-G021-current-3y",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G021-current-3y1d",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G022-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G023-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G024-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G035-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G049-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G049-current",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G050-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G050-current",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G055-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G055-current",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G062-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G062-current",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G062-over3y",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G065-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G066-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G077-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-G077-later-sold",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G091-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G091-current",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G099-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G099-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G100-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G100-dual",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G100-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G103-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G104-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G104-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G105-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G105-over3y",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G105-completed",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G105-completed-exception",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G106-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G106-none",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G107-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G110-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-G110-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G110-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G111-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G116-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G116-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G116-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G119-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G119-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-G119-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G120-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G120-era-origin",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G120-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G123-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G124-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-G124-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G125-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G125-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G125-norepl",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G126-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G126-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G128-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G128-era-origin",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G129-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G129-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G131-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G132-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G133-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G148-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G152-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G154-era",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G157-era-first",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G157-era-second",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G162-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G163-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G163-era-blank",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G163-era-none",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G163-blank-within1y",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G163-blank-right-before-marriage",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G163-none-over3y",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G163-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-G163-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "G164-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R006-dual",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R012-dual",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R014-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-R014-era-no-officetel",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R030-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R031-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R031-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-R031-current-24m",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R033-current",
+  "kind": "housing",
+  "cause": "inheritance",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R037-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "R043-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "N-R043-current-12eok",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "S001-current",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "S006-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "S006-current",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "S041-4022-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "S045-2019seo2002-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "S045-2017seo3603-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "T001-era",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-T001-separate-household",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "P-T001-parental-care",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "SMOKE-1",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "SMOKE-2",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "STAT-71-2-house",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "STAT-71-2-right",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "STAT-71-2-right-unknown",
+  "kind": "right_to_move_in",
+  "cause": "purchase",
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}",
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "NTS-2025-2010-gift-separate",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "NTS-2025-2010-gift-same",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "NTS-2025-1621-inherit-separate",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "NTS-2025-1621-inherit-same",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "NTS-2025-1621-inherit-unknown",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "NTS-2025-1621-inherit-legacy-false",
+  "kind": "housing",
+  "cause": "purchase",
+  "status": 200,
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ }
+]

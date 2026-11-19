@@ -1,0 +1,2162 @@
+[
+ {
+  "S": 23,
+  "n": 1,
+  "r": 0,
+  "lastMoveOut": "2020-04-10",
+  "perInterval": [
+   23
+  ],
+  "residues": [
+   0
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 701,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-05-11",
+    "moveOutDate": "2020-04-10"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 1,
+  "r": 15,
+  "lastMoveOut": "2020-03-24",
+  "perInterval": [
+   23
+  ],
+  "residues": [
+   15
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 715,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-04-10",
+    "moveOutDate": "2020-03-24"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 1,
+  "r": 29,
+  "lastMoveOut": "2020-04-07",
+  "perInterval": [
+   23
+  ],
+  "residues": [
+   29
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 729,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-04-10",
+    "moveOutDate": "2020-04-07"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 2,
+  "r": 0,
+  "lastMoveOut": "2020-05-09",
+  "perInterval": [
+   12,
+   11
+  ],
+  "residues": [
+   0,
+   0
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 700,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-04-10",
+    "moveOutDate": "2019-04-09"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2020-05-09"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 2,
+  "r": 15,
+  "lastMoveOut": "2020-05-24",
+  "perInterval": [
+   12,
+   11
+  ],
+  "residues": [
+   15,
+   15
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 730,
+  "alt_days_ge_730": true,
+  "alt_30day": 24,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2019-03-24"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2020-05-24"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 2,
+  "r": 29,
+  "lastMoveOut": "2020-06-07",
+  "perInterval": [
+   12,
+   11
+  ],
+  "residues": [
+   29,
+   29
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 758,
+  "alt_days_ge_730": true,
+  "alt_30day": 24,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2019-04-07"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2020-06-07"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 3,
+  "r": 0,
+  "lastMoveOut": "2020-06-09",
+  "perInterval": [
+   8,
+   8,
+   7
+  ],
+  "residues": [
+   0,
+   0,
+   0
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 701,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-11-09"
+   },
+   {
+    "moveInDate": "2019-01-10",
+    "moveOutDate": "2019-09-09"
+   },
+   {
+    "moveInDate": "2019-11-10",
+    "moveOutDate": "2020-06-09"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 3,
+  "r": 15,
+  "lastMoveOut": "2020-08-24",
+  "perInterval": [
+   8,
+   8,
+   7
+  ],
+  "residues": [
+   15,
+   15,
+   15
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 745,
+  "alt_days_ge_730": true,
+  "alt_30day": 24,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-11-24"
+   },
+   {
+    "moveInDate": "2019-02-10",
+    "moveOutDate": "2019-10-24"
+   },
+   {
+    "moveInDate": "2020-01-10",
+    "moveOutDate": "2020-08-24"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 3,
+  "r": 29,
+  "lastMoveOut": "2020-09-07",
+  "perInterval": [
+   8,
+   8,
+   7
+  ],
+  "residues": [
+   29,
+   29,
+   29
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 787,
+  "alt_days_ge_730": true,
+  "alt_30day": 25,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-12-08"
+   },
+   {
+    "moveInDate": "2019-02-10",
+    "moveOutDate": "2019-11-07"
+   },
+   {
+    "moveInDate": "2020-01-10",
+    "moveOutDate": "2020-09-07"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 4,
+  "r": 0,
+  "lastMoveOut": "2020-08-09",
+  "perInterval": [
+   6,
+   6,
+   6,
+   5
+  ],
+  "residues": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 702,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-09-09"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-05-09"
+   },
+   {
+    "moveInDate": "2019-07-10",
+    "moveOutDate": "2020-01-09"
+   },
+   {
+    "moveInDate": "2020-03-10",
+    "moveOutDate": "2020-08-09"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 4,
+  "r": 15,
+  "lastMoveOut": "2020-11-24",
+  "perInterval": [
+   6,
+   6,
+   6,
+   5
+  ],
+  "residues": [
+   15,
+   15,
+   15,
+   15
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 761,
+  "alt_days_ge_730": true,
+  "alt_30day": 25,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-09-24"
+   },
+   {
+    "moveInDate": "2018-12-10",
+    "moveOutDate": "2019-06-24"
+   },
+   {
+    "moveInDate": "2019-09-10",
+    "moveOutDate": "2020-03-24"
+   },
+   {
+    "moveInDate": "2020-06-10",
+    "moveOutDate": "2020-11-24"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 4,
+  "r": 29,
+  "lastMoveOut": "2020-12-08",
+  "perInterval": [
+   6,
+   6,
+   6,
+   5
+  ],
+  "residues": [
+   29,
+   29,
+   29,
+   29
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 817,
+  "alt_days_ge_730": true,
+  "alt_30day": 26,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-10-08"
+   },
+   {
+    "moveInDate": "2018-12-10",
+    "moveOutDate": "2019-07-08"
+   },
+   {
+    "moveInDate": "2019-09-10",
+    "moveOutDate": "2020-04-07"
+   },
+   {
+    "moveInDate": "2020-06-10",
+    "moveOutDate": "2020-12-08"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 5,
+  "r": 0,
+  "lastMoveOut": "2020-11-09",
+  "perInterval": [
+   5,
+   5,
+   5,
+   4,
+   4
+  ],
+  "residues": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 701,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-08-09"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-04-09"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2019-11-09"
+   },
+   {
+    "moveInDate": "2020-01-10",
+    "moveOutDate": "2020-05-09"
+   },
+   {
+    "moveInDate": "2020-07-10",
+    "moveOutDate": "2020-11-09"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 5,
+  "r": 15,
+  "lastMoveOut": "2021-03-24",
+  "perInterval": [
+   5,
+   5,
+   5,
+   4,
+   4
+  ],
+  "residues": [
+   15,
+   15,
+   15,
+   15,
+   15
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 774,
+  "alt_days_ge_730": true,
+  "alt_30day": 25,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-08-24"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-04-24"
+   },
+   {
+    "moveInDate": "2019-07-10",
+    "moveOutDate": "2019-12-24"
+   },
+   {
+    "moveInDate": "2020-03-10",
+    "moveOutDate": "2020-07-24"
+   },
+   {
+    "moveInDate": "2020-11-10",
+    "moveOutDate": "2021-03-24"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 5,
+  "r": 29,
+  "lastMoveOut": "2021-04-07",
+  "perInterval": [
+   5,
+   5,
+   5,
+   4,
+   4
+  ],
+  "residues": [
+   29,
+   29,
+   29,
+   29,
+   29
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 844,
+  "alt_days_ge_730": true,
+  "alt_30day": 27,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-09-07"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-05-08"
+   },
+   {
+    "moveInDate": "2019-07-10",
+    "moveOutDate": "2020-01-07"
+   },
+   {
+    "moveInDate": "2020-03-10",
+    "moveOutDate": "2020-08-07"
+   },
+   {
+    "moveInDate": "2020-11-10",
+    "moveOutDate": "2021-04-07"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 6,
+  "r": 0,
+  "lastMoveOut": "2020-12-09",
+  "perInterval": [
+   4,
+   4,
+   4,
+   4,
+   4,
+   3
+  ],
+  "residues": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 701,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-07-09"
+   },
+   {
+    "moveInDate": "2018-09-10",
+    "moveOutDate": "2019-01-09"
+   },
+   {
+    "moveInDate": "2019-03-10",
+    "moveOutDate": "2019-07-09"
+   },
+   {
+    "moveInDate": "2019-09-10",
+    "moveOutDate": "2020-01-09"
+   },
+   {
+    "moveInDate": "2020-03-10",
+    "moveOutDate": "2020-07-09"
+   },
+   {
+    "moveInDate": "2020-09-10",
+    "moveOutDate": "2020-12-09"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 6,
+  "r": 15,
+  "lastMoveOut": "2021-06-24",
+  "perInterval": [
+   4,
+   4,
+   4,
+   4,
+   4,
+   3
+  ],
+  "residues": [
+   15,
+   15,
+   15,
+   15,
+   15,
+   15
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 789,
+  "alt_days_ge_730": true,
+  "alt_30day": 26,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-07-24"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-03-24"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2019-10-24"
+   },
+   {
+    "moveInDate": "2020-01-10",
+    "moveOutDate": "2020-05-24"
+   },
+   {
+    "moveInDate": "2020-08-10",
+    "moveOutDate": "2020-12-24"
+   },
+   {
+    "moveInDate": "2021-03-10",
+    "moveOutDate": "2021-06-24"
+   }
+  ]
+ },
+ {
+  "S": 23,
+  "n": 6,
+  "r": 29,
+  "lastMoveOut": "2021-07-08",
+  "perInterval": [
+   4,
+   4,
+   4,
+   4,
+   4,
+   3
+  ],
+  "residues": [
+   29,
+   29,
+   29,
+   29,
+   29,
+   29
+  ],
+  "engineMonths": 23,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 873,
+  "alt_days_ge_730": true,
+  "alt_30day": 28,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-08-07"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-04-07"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2019-11-07"
+   },
+   {
+    "moveInDate": "2020-01-10",
+    "moveOutDate": "2020-06-07"
+   },
+   {
+    "moveInDate": "2020-08-10",
+    "moveOutDate": "2021-01-07"
+   },
+   {
+    "moveInDate": "2021-03-10",
+    "moveOutDate": "2021-07-08"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 1,
+  "r": 0,
+  "lastMoveOut": "2020-01-09",
+  "perInterval": [
+   22
+  ],
+  "residues": [
+   0
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 671,
+  "alt_days_ge_730": false,
+  "alt_30day": 22,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2020-01-09"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 1,
+  "r": 15,
+  "lastMoveOut": "2020-01-24",
+  "perInterval": [
+   22
+  ],
+  "residues": [
+   15
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 686,
+  "alt_days_ge_730": false,
+  "alt_30day": 22,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2020-01-24"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 1,
+  "r": 29,
+  "lastMoveOut": "2020-04-08",
+  "perInterval": [
+   22
+  ],
+  "residues": [
+   29
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 699,
+  "alt_days_ge_730": false,
+  "alt_30day": 22,
+  "periods": [
+   {
+    "moveInDate": "2018-05-11",
+    "moveOutDate": "2020-04-08"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 2,
+  "r": 0,
+  "lastMoveOut": "2020-05-09",
+  "perInterval": [
+   11,
+   11
+  ],
+  "residues": [
+   0,
+   0
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 670,
+  "alt_days_ge_730": false,
+  "alt_30day": 22,
+  "periods": [
+   {
+    "moveInDate": "2018-05-11",
+    "moveOutDate": "2019-04-10"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2020-05-09"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 2,
+  "r": 15,
+  "lastMoveOut": "2020-05-24",
+  "perInterval": [
+   11,
+   11
+  ],
+  "residues": [
+   15,
+   15
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 699,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-04-10",
+    "moveOutDate": "2019-03-24"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2020-05-24"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 2,
+  "r": 29,
+  "lastMoveOut": "2020-06-07",
+  "perInterval": [
+   11,
+   11
+  ],
+  "residues": [
+   29,
+   29
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 727,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-04-10",
+    "moveOutDate": "2019-04-07"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2020-06-07"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 3,
+  "r": 0,
+  "lastMoveOut": "2020-05-09",
+  "perInterval": [
+   8,
+   7,
+   7
+  ],
+  "residues": [
+   0,
+   0,
+   0
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 670,
+  "alt_days_ge_730": false,
+  "alt_30day": 22,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-11-09"
+   },
+   {
+    "moveInDate": "2019-01-10",
+    "moveOutDate": "2019-08-09"
+   },
+   {
+    "moveInDate": "2019-10-10",
+    "moveOutDate": "2020-05-09"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 3,
+  "r": 15,
+  "lastMoveOut": "2020-07-24",
+  "perInterval": [
+   8,
+   7,
+   7
+  ],
+  "residues": [
+   15,
+   15,
+   15
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 715,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-11-24"
+   },
+   {
+    "moveInDate": "2019-02-10",
+    "moveOutDate": "2019-09-24"
+   },
+   {
+    "moveInDate": "2019-12-10",
+    "moveOutDate": "2020-07-24"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 3,
+  "r": 29,
+  "lastMoveOut": "2020-08-07",
+  "perInterval": [
+   8,
+   7,
+   7
+  ],
+  "residues": [
+   29,
+   29,
+   29
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 757,
+  "alt_days_ge_730": true,
+  "alt_30day": 24,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-12-08"
+   },
+   {
+    "moveInDate": "2019-02-10",
+    "moveOutDate": "2019-10-08"
+   },
+   {
+    "moveInDate": "2019-12-10",
+    "moveOutDate": "2020-08-07"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 4,
+  "r": 0,
+  "lastMoveOut": "2020-07-09",
+  "perInterval": [
+   6,
+   6,
+   5,
+   5
+  ],
+  "residues": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 669,
+  "alt_days_ge_730": false,
+  "alt_30day": 22,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-09-09"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-05-09"
+   },
+   {
+    "moveInDate": "2019-07-10",
+    "moveOutDate": "2019-12-09"
+   },
+   {
+    "moveInDate": "2020-02-10",
+    "moveOutDate": "2020-07-09"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 4,
+  "r": 15,
+  "lastMoveOut": "2020-11-24",
+  "perInterval": [
+   6,
+   6,
+   5,
+   5
+  ],
+  "residues": [
+   15,
+   15,
+   15,
+   15
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 731,
+  "alt_days_ge_730": true,
+  "alt_30day": 24,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-09-24"
+   },
+   {
+    "moveInDate": "2018-12-10",
+    "moveOutDate": "2019-06-24"
+   },
+   {
+    "moveInDate": "2019-10-11",
+    "moveOutDate": "2020-03-25"
+   },
+   {
+    "moveInDate": "2020-06-10",
+    "moveOutDate": "2020-11-24"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 4,
+  "r": 29,
+  "lastMoveOut": "2020-12-08",
+  "perInterval": [
+   6,
+   6,
+   5,
+   5
+  ],
+  "residues": [
+   29,
+   29,
+   29,
+   29
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 787,
+  "alt_days_ge_730": true,
+  "alt_30day": 25,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-10-08"
+   },
+   {
+    "moveInDate": "2018-12-10",
+    "moveOutDate": "2019-07-08"
+   },
+   {
+    "moveInDate": "2019-10-11",
+    "moveOutDate": "2020-04-08"
+   },
+   {
+    "moveInDate": "2020-06-10",
+    "moveOutDate": "2020-12-08"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 5,
+  "r": 0,
+  "lastMoveOut": "2020-10-09",
+  "perInterval": [
+   5,
+   5,
+   4,
+   4,
+   4
+  ],
+  "residues": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 670,
+  "alt_days_ge_730": false,
+  "alt_30day": 22,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-08-09"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-04-09"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2019-10-09"
+   },
+   {
+    "moveInDate": "2019-12-10",
+    "moveOutDate": "2020-04-09"
+   },
+   {
+    "moveInDate": "2020-06-10",
+    "moveOutDate": "2020-10-09"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 5,
+  "r": 15,
+  "lastMoveOut": "2021-01-24",
+  "perInterval": [
+   5,
+   5,
+   4,
+   4,
+   4
+  ],
+  "residues": [
+   15,
+   15,
+   15,
+   15,
+   15
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 745,
+  "alt_days_ge_730": true,
+  "alt_30day": 24,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-08-24"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-04-24"
+   },
+   {
+    "moveInDate": "2019-07-10",
+    "moveOutDate": "2019-11-24"
+   },
+   {
+    "moveInDate": "2020-02-10",
+    "moveOutDate": "2020-06-24"
+   },
+   {
+    "moveInDate": "2020-09-10",
+    "moveOutDate": "2021-01-24"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 5,
+  "r": 29,
+  "lastMoveOut": "2021-04-08",
+  "perInterval": [
+   5,
+   5,
+   4,
+   4,
+   4
+  ],
+  "residues": [
+   29,
+   29,
+   29,
+   29,
+   29
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 813,
+  "alt_days_ge_730": true,
+  "alt_30day": 26,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-09-07"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-05-08"
+   },
+   {
+    "moveInDate": "2019-07-10",
+    "moveOutDate": "2019-12-08"
+   },
+   {
+    "moveInDate": "2020-02-10",
+    "moveOutDate": "2020-07-08"
+   },
+   {
+    "moveInDate": "2020-11-11",
+    "moveOutDate": "2021-04-08"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 6,
+  "r": 0,
+  "lastMoveOut": "2020-11-09",
+  "perInterval": [
+   4,
+   4,
+   4,
+   4,
+   3,
+   3
+  ],
+  "residues": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 672,
+  "alt_days_ge_730": false,
+  "alt_30day": 22,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-07-09"
+   },
+   {
+    "moveInDate": "2018-09-10",
+    "moveOutDate": "2019-01-09"
+   },
+   {
+    "moveInDate": "2019-03-10",
+    "moveOutDate": "2019-07-09"
+   },
+   {
+    "moveInDate": "2019-09-10",
+    "moveOutDate": "2020-01-09"
+   },
+   {
+    "moveInDate": "2020-03-10",
+    "moveOutDate": "2020-06-09"
+   },
+   {
+    "moveInDate": "2020-08-10",
+    "moveOutDate": "2020-11-09"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 6,
+  "r": 15,
+  "lastMoveOut": "2021-05-24",
+  "perInterval": [
+   4,
+   4,
+   4,
+   4,
+   3,
+   3
+  ],
+  "residues": [
+   15,
+   15,
+   15,
+   15,
+   15,
+   15
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 756,
+  "alt_days_ge_730": true,
+  "alt_30day": 25,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-07-24"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-03-24"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2019-10-24"
+   },
+   {
+    "moveInDate": "2020-01-10",
+    "moveOutDate": "2020-05-24"
+   },
+   {
+    "moveInDate": "2020-08-10",
+    "moveOutDate": "2020-11-24"
+   },
+   {
+    "moveInDate": "2021-02-10",
+    "moveOutDate": "2021-05-24"
+   }
+  ]
+ },
+ {
+  "S": 22,
+  "n": 6,
+  "r": 29,
+  "lastMoveOut": "2021-06-07",
+  "perInterval": [
+   4,
+   4,
+   4,
+   4,
+   3,
+   3
+  ],
+  "residues": [
+   29,
+   29,
+   29,
+   29,
+   29,
+   29
+  ],
+  "engineMonths": 22,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 840,
+  "alt_days_ge_730": true,
+  "alt_30day": 27,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-08-07"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-04-07"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2019-11-07"
+   },
+   {
+    "moveInDate": "2020-01-10",
+    "moveOutDate": "2020-06-07"
+   },
+   {
+    "moveInDate": "2020-08-10",
+    "moveOutDate": "2020-12-08"
+   },
+   {
+    "moveInDate": "2021-02-10",
+    "moveOutDate": "2021-06-07"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 1,
+  "r": 0,
+  "lastMoveOut": "2019-12-09",
+  "perInterval": [
+   21
+  ],
+  "residues": [
+   0
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 640,
+  "alt_days_ge_730": false,
+  "alt_30day": 21,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2019-12-09"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 1,
+  "r": 15,
+  "lastMoveOut": "2019-12-24",
+  "perInterval": [
+   21
+  ],
+  "residues": [
+   15
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 655,
+  "alt_days_ge_730": false,
+  "alt_30day": 21,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2019-12-24"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 1,
+  "r": 29,
+  "lastMoveOut": "2020-01-07",
+  "perInterval": [
+   21
+  ],
+  "residues": [
+   29
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 669,
+  "alt_days_ge_730": false,
+  "alt_30day": 21,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2020-01-07"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 2,
+  "r": 0,
+  "lastMoveOut": "2020-04-09",
+  "perInterval": [
+   11,
+   10
+  ],
+  "residues": [
+   0,
+   0
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 640,
+  "alt_days_ge_730": false,
+  "alt_30day": 21,
+  "periods": [
+   {
+    "moveInDate": "2018-05-11",
+    "moveOutDate": "2019-04-10"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2020-04-09"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 2,
+  "r": 15,
+  "lastMoveOut": "2020-04-24",
+  "perInterval": [
+   11,
+   10
+  ],
+  "residues": [
+   15,
+   15
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 669,
+  "alt_days_ge_730": false,
+  "alt_30day": 22,
+  "periods": [
+   {
+    "moveInDate": "2018-04-10",
+    "moveOutDate": "2019-03-24"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2020-04-24"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 2,
+  "r": 29,
+  "lastMoveOut": "2020-05-08",
+  "perInterval": [
+   11,
+   10
+  ],
+  "residues": [
+   29,
+   29
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 697,
+  "alt_days_ge_730": false,
+  "alt_30day": 22,
+  "periods": [
+   {
+    "moveInDate": "2018-04-10",
+    "moveOutDate": "2019-04-07"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2020-05-08"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 3,
+  "r": 0,
+  "lastMoveOut": "2020-04-09",
+  "perInterval": [
+   7,
+   7,
+   7
+  ],
+  "residues": [
+   0,
+   0,
+   0
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 639,
+  "alt_days_ge_730": false,
+  "alt_30day": 21,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-10-09"
+   },
+   {
+    "moveInDate": "2018-12-10",
+    "moveOutDate": "2019-07-09"
+   },
+   {
+    "moveInDate": "2019-09-10",
+    "moveOutDate": "2020-04-09"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 3,
+  "r": 15,
+  "lastMoveOut": "2020-06-24",
+  "perInterval": [
+   7,
+   7,
+   7
+  ],
+  "residues": [
+   15,
+   15,
+   15
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 684,
+  "alt_days_ge_730": false,
+  "alt_30day": 22,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-10-24"
+   },
+   {
+    "moveInDate": "2019-01-10",
+    "moveOutDate": "2019-08-24"
+   },
+   {
+    "moveInDate": "2019-11-10",
+    "moveOutDate": "2020-06-24"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 3,
+  "r": 29,
+  "lastMoveOut": "2020-07-08",
+  "perInterval": [
+   7,
+   7,
+   7
+  ],
+  "residues": [
+   29,
+   29,
+   29
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 726,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-11-07"
+   },
+   {
+    "moveInDate": "2019-01-10",
+    "moveOutDate": "2019-09-07"
+   },
+   {
+    "moveInDate": "2019-11-10",
+    "moveOutDate": "2020-07-08"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 4,
+  "r": 0,
+  "lastMoveOut": "2020-06-09",
+  "perInterval": [
+   6,
+   5,
+   5,
+   5
+  ],
+  "residues": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 640,
+  "alt_days_ge_730": false,
+  "alt_30day": 21,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-09-09"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-04-09"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2019-11-09"
+   },
+   {
+    "moveInDate": "2020-01-10",
+    "moveOutDate": "2020-06-09"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 4,
+  "r": 15,
+  "lastMoveOut": "2020-09-24",
+  "perInterval": [
+   6,
+   5,
+   5,
+   5
+  ],
+  "residues": [
+   15,
+   15,
+   15,
+   15
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 701,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-09-24"
+   },
+   {
+    "moveInDate": "2018-12-10",
+    "moveOutDate": "2019-05-24"
+   },
+   {
+    "moveInDate": "2019-08-10",
+    "moveOutDate": "2020-01-24"
+   },
+   {
+    "moveInDate": "2020-04-10",
+    "moveOutDate": "2020-09-24"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 4,
+  "r": 29,
+  "lastMoveOut": "2020-12-08",
+  "perInterval": [
+   6,
+   5,
+   5,
+   5
+  ],
+  "residues": [
+   29,
+   29,
+   29,
+   29
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 756,
+  "alt_days_ge_730": true,
+  "alt_30day": 24,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-10-08"
+   },
+   {
+    "moveInDate": "2018-12-10",
+    "moveOutDate": "2019-06-07"
+   },
+   {
+    "moveInDate": "2019-10-11",
+    "moveOutDate": "2020-04-08"
+   },
+   {
+    "moveInDate": "2020-06-10",
+    "moveOutDate": "2020-12-08"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 5,
+  "r": 0,
+  "lastMoveOut": "2020-10-09",
+  "perInterval": [
+   5,
+   4,
+   4,
+   4,
+   4
+  ],
+  "residues": [
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 640,
+  "alt_days_ge_730": false,
+  "alt_30day": 21,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-08-09"
+   },
+   {
+    "moveInDate": "2018-12-11",
+    "moveOutDate": "2019-04-10"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2019-10-09"
+   },
+   {
+    "moveInDate": "2019-12-10",
+    "moveOutDate": "2020-04-09"
+   },
+   {
+    "moveInDate": "2020-06-10",
+    "moveOutDate": "2020-10-09"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 5,
+  "r": 15,
+  "lastMoveOut": "2020-12-24",
+  "perInterval": [
+   5,
+   4,
+   4,
+   4,
+   4
+  ],
+  "residues": [
+   15,
+   15,
+   15,
+   15,
+   15
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 713,
+  "alt_days_ge_730": false,
+  "alt_30day": 23,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-08-24"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-03-24"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2019-10-24"
+   },
+   {
+    "moveInDate": "2020-01-10",
+    "moveOutDate": "2020-05-24"
+   },
+   {
+    "moveInDate": "2020-08-10",
+    "moveOutDate": "2020-12-24"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 5,
+  "r": 29,
+  "lastMoveOut": "2021-01-07",
+  "perInterval": [
+   5,
+   4,
+   4,
+   4,
+   4
+  ],
+  "residues": [
+   29,
+   29,
+   29,
+   29,
+   29
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 783,
+  "alt_days_ge_730": true,
+  "alt_30day": 25,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-09-07"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-04-07"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2019-11-07"
+   },
+   {
+    "moveInDate": "2020-01-10",
+    "moveOutDate": "2020-06-07"
+   },
+   {
+    "moveInDate": "2020-08-10",
+    "moveOutDate": "2021-01-07"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 6,
+  "r": 0,
+  "lastMoveOut": "2020-10-09",
+  "perInterval": [
+   4,
+   4,
+   4,
+   3,
+   3,
+   3
+  ],
+  "residues": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 639,
+  "alt_days_ge_730": false,
+  "alt_30day": 21,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-07-09"
+   },
+   {
+    "moveInDate": "2018-09-10",
+    "moveOutDate": "2019-01-09"
+   },
+   {
+    "moveInDate": "2019-03-10",
+    "moveOutDate": "2019-07-09"
+   },
+   {
+    "moveInDate": "2019-09-10",
+    "moveOutDate": "2019-12-09"
+   },
+   {
+    "moveInDate": "2020-02-10",
+    "moveOutDate": "2020-05-09"
+   },
+   {
+    "moveInDate": "2020-07-10",
+    "moveOutDate": "2020-10-09"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 6,
+  "r": 15,
+  "lastMoveOut": "2021-04-24",
+  "perInterval": [
+   4,
+   4,
+   4,
+   3,
+   3,
+   3
+  ],
+  "residues": [
+   15,
+   15,
+   15,
+   15,
+   15,
+   15
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 727,
+  "alt_days_ge_730": false,
+  "alt_30day": 24,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-07-24"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-03-24"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2019-10-24"
+   },
+   {
+    "moveInDate": "2020-01-10",
+    "moveOutDate": "2020-04-24"
+   },
+   {
+    "moveInDate": "2020-07-10",
+    "moveOutDate": "2020-10-24"
+   },
+   {
+    "moveInDate": "2021-01-10",
+    "moveOutDate": "2021-04-24"
+   }
+  ]
+ },
+ {
+  "S": 21,
+  "n": 6,
+  "r": 29,
+  "lastMoveOut": "2021-05-08",
+  "perInterval": [
+   4,
+   4,
+   4,
+   3,
+   3,
+   3
+  ],
+  "residues": [
+   29,
+   29,
+   29,
+   29,
+   29,
+   29
+  ],
+  "engineMonths": 21,
+  "isExempt": false,
+  "status": 200,
+  "errs": [],
+  "totalDays": 811,
+  "alt_days_ge_730": true,
+  "alt_30day": 26,
+  "periods": [
+   {
+    "moveInDate": "2018-03-10",
+    "moveOutDate": "2018-08-07"
+   },
+   {
+    "moveInDate": "2018-11-10",
+    "moveOutDate": "2019-04-07"
+   },
+   {
+    "moveInDate": "2019-06-10",
+    "moveOutDate": "2019-11-07"
+   },
+   {
+    "moveInDate": "2020-01-10",
+    "moveOutDate": "2020-05-08"
+   },
+   {
+    "moveInDate": "2020-07-10",
+    "moveOutDate": "2020-11-07"
+   },
+   {
+    "moveInDate": "2021-01-10",
+    "moveOutDate": "2021-05-08"
+   }
+  ]
+ }
+]

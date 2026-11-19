@@ -1,0 +1,812 @@
+[
+ {
+  "id": "E001-dual",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "E002-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   true
+  ],
+  "c": [
+   200,
+   false,
+   true
+  ],
+  "issues": []
+ },
+ {
+  "id": "E036-era",
+  "kind": "right",
+  "approvalFilled": true,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "E093-era",
+  "kind": "right",
+  "approvalFilled": true,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "E093-current",
+  "kind": "right",
+  "approvalFilled": true,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "E093-current-twin",
+  "kind": "right",
+  "approvalFilled": true,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "E094-dual",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "E119-era",
+  "kind": "right",
+  "approvalFilled": true,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "E197-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "F011-era",
+  "kind": "right",
+  "approvalFilled": true,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "F021-era",
+  "kind": "carry",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   null
+  ],
+  "issues": []
+ },
+ {
+  "id": "F217-era",
+  "kind": "carry",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "F251-era",
+  "kind": "carry",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "F251-current",
+  "kind": "carry",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "F373-era",
+  "kind": "carry",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   null
+  ],
+  "issues": []
+ },
+ {
+  "id": "P-F373-era-60m",
+  "kind": "carry",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   null
+  ],
+  "issues": []
+ },
+ {
+  "id": "N-F373-era-59m",
+  "kind": "carry",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "F390-current",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "F455-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   true
+  ],
+  "c": [
+   200,
+   false,
+   true
+  ],
+  "issues": []
+ },
+ {
+  "id": "F455-current",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   true
+  ],
+  "c": [
+   200,
+   false,
+   true
+  ],
+  "issues": []
+ },
+ {
+  "id": "F456-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   true
+  ],
+  "c": [
+   200,
+   false,
+   true
+  ],
+  "issues": []
+ },
+ {
+  "id": "P-F456-era-6eok",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "F456-current",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   true
+  ],
+  "c": [
+   200,
+   false,
+   true
+  ],
+  "issues": []
+ },
+ {
+  "id": "P-F456-current-12eok",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G019-current",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G021-current",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "P-G021-current-3y",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "N-G021-current-3y1d",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G022-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G023-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G024-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G035-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G049-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G049-current",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G050-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G050-current",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G055-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G055-current",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G062-current",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "N-G062-over3y",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G065-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G066-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G077-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "P-G077-later-sold",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G091-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G091-current",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G133-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G152-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G154-era",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G157-era-first",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "G157-era-second",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "S001-current",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "STAT-71-2-right",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   true,
+   false
+  ],
+  "c": [
+   200,
+   true,
+   false
+  ],
+  "issues": []
+ },
+ {
+  "id": "STAT-71-2-right-unknown",
+  "kind": "right",
+  "approvalFilled": false,
+  "j": [
+   false,
+   false
+  ],
+  "c": [
+   200,
+   false,
+   false
+  ],
+  "issues": []
+ }
+]

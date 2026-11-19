@@ -1,0 +1,69 @@
+## C1 ⑧ 단독 2주택 (U+A) — 미해소
+status=200 validationErrors=[]
+isExempt=true partial=false applied=["155-8-unavoidable:work"]
+unmet={}
+undetermined=[] pending=[]
+excluded=[]
+
+## C2 ① 단독 2주택 (A+N)
+status=200 validationErrors=[]
+isExempt=true partial=false applied=["155-1-temporary-two-house"]
+unmet={}
+undetermined=[] pending=[]
+excluded=[]
+
+## T1 ⑧+① 3주택 (U 미해소 + A + N)
+status=200 validationErrors=[]
+isExempt=false partial=false applied=[]
+unmet={"155-8-unavoidable:work":["세대 주택 수가 3채입니다 — 이 특례는 부득이한 사유로 취득한 수도권 밖 주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."]}
+undetermined=[] pending=[]
+excluded=[]
+
+## T2 ⑧+① 3주택 (U 2025-01-10 해소 + A + N)
+status=200 validationErrors=[]
+isExempt=false partial=false applied=[]
+unmet={"155-8-unavoidable:work":["세대 주택 수가 3채입니다 — 이 특례는 부득이한 사유로 취득한 수도권 밖 주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."]}
+undetermined=[] pending=[]
+excluded=[]
+
+## C3 ⑦+① 3주택 (D3 — 인정)
+status=200 validationErrors=[]
+isExempt=true partial=false applied=["155-1-temporary-two-house","155-7-rural:farm_exit"]
+unmet={}
+undetermined=[] pending=[]
+excluded=[]
+
+## C4 ⑥+① 3주택 (1차 D-02)
+status=200 validationErrors=[]
+isExempt=false partial=false applied=[]
+unmet={"155-6-1ho-cultural-heritage":["세대 주택 수가 3채입니다 — 이 특례는 문화유산 주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."]}
+undetermined=[] pending=[]
+excluded=[]
+
+## C5 ⑧ 단독 — 해소 2025-01-10
+status=200 validationErrors=[]
+isExempt=true partial=false applied=["155-8-unavoidable:work"]
+unmet={}
+undetermined=[] pending=[]
+excluded=[]
+
+## C6 ⑧+① 3주택 — ① 기한 초과(양도 2027-06-15, N 2024-04-01)
+status=200 validationErrors=[]
+isExempt=false partial=false applied=[]
+unmet={"155-8-unavoidable:work":["세대 주택 수가 3채입니다 — 이 특례는 부득이한 사유로 취득한 수도권 밖 주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."]}
+undetermined=[] pending=[]
+excluded=[]
+
+## T3 ⑧+① 3주택 — U가 A보다 나중 취득(2018)
+status=200 validationErrors=[]
+isExempt=false partial=false applied=[]
+unmet={"155-8-unavoidable:work":["세대 주택 수가 3채입니다 — 이 특례는 부득이한 사유로 취득한 수도권 밖 주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."]}
+undetermined=[] pending=[]
+excluded=[]
+
+## C7 ⑧ 단독 — U가 A보다 나중 취득(2018)
+status=200 validationErrors=[]
+isExempt=true partial=false applied=["155-8-unavoidable:work"]
+unmet={}
+undetermined=[] pending=[]
+excluded=[]

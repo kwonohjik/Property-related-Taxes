@@ -1,0 +1,14 @@
+{
+  "pc_auto": {
+    "qualifies": true,
+    "popCap": 900000000,
+    "warnings": []
+  },
+  "pc_false": null,
+  "busan_auto": null,
+  "busan_true_decline": {
+    "qualifies": true,
+    "popCap": 900000000,
+    "warnings": []
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "appliedExceptions": [
+    "155-6-1ho-cultural-heritage"
+  ],
+  "undetermined": [],
+  "pending": [],
+  "unmetExceptions": [],
+  "unmetReasons": {},
+  "excludedHouses": [],
+  "contested": [],
+  "validationErrors": []
+}

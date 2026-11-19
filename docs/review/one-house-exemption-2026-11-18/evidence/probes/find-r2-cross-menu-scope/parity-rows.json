@@ -1,0 +1,4036 @@
+[
+ {
+  "id": "E001-dual",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E002-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E004-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E004-era-declared",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E004-era-late",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E004-era-2",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E004-era-samehh",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E006-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E0061-parental-rental-counterpart",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [
+   "standardPriceAtTransfer"
+  ],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E007-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E007-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E008-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E008-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E011-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E011-era-2",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E014-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E015-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E015-era-2",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E015-era-2-early",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E017-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E017-era-neg",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E018-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E019-era-1",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E022-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E022-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E022-current-rural-later",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E022-current-rural-later-unmet",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E023-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E028-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E029-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E033-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E033-era-within1y",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E036-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E040-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E040-era-late",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E040-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E045-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E045-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E046-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E046-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E047-era-pre",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E049-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E049-era-within2y",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E049-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E050-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E050-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E050-current-within1y",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E053-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E053-era-daybefore",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E054-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E055-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E056-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E057-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E057-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E058-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E061-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E062-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E063-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E064-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E067-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-E067-no-decedent-date",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-E067-separate-household",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E070-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E071-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E071-era-pos",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E072-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E073-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E073-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E073-current-neg",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E074-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E074-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E076-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E077-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E083-dual",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E084-dual",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E086-dual",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E088-dual",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E091-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E091-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E091-current-single",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E093-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E093-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E093-current-twin",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E094-dual",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E095-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E098-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E100-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E100-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E103-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E107-dual",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-E107-not-gifted",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E109-dual",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E110-dual",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E112-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-E112-post2013",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-E112-post2013-acquired-after",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-E112-not-reinherited",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E115-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E117-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E118-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E119-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E121-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E122-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E122-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E123-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E123-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E124-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E125-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E127-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E127-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E128-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E128-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E128-era-reverse",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E128-era-spouse2",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E129-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E129-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E129-era-noprior",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E132-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E132-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-E132-1062",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-E132-seller-rentals-only",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E133-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E139-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E140-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E140-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E141-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E141-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E143-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E143-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E144-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E145-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E146-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E146-era-pos",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E147-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E149-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E149-era-5y",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E150-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E156-farmexit",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-E156-farmexit-not-returned",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E160-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E162-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E163-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E163-era-pos",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E163-era-sameday",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E166-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E166-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E167-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E175-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E175-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E177-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E177-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E178-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E178-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E180-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E182-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E182-era-pos",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E182-era-3",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E185-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E190-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E193-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E193-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E194-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E195-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E195-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E196-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E197-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E199-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E199-era-pos",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E203-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E203-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E204-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E208-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E209-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "E211-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-E211-within",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-E211-sell-b",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F004-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F006-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F006-household",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F007-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F011-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F012-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F015-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F016-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F016-same-household",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F018-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F020-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F021-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F023-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F023-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F029-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F031-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F032-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F033-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F034-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F034-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F036-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F037-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F038-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F038-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F039-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F040-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F043-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F045-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F055-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F055-approval-2006",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F055-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F056-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F056-no-right",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F059-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F059-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F060-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F061-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F067-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F068-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F068-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F069-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F069-roster",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F069-gate-20111013",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F069-gate-20111014",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F069-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F070-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F070-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F075-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F075-c-transfer",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F076-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F076-1day",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F115-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F115-rental-undeclared",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F123-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F123-over3y",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F128-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F154-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F154-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F154-current-whole13",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F169-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F169-transfer",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F170-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F170-gift",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F175-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F175-2021",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F180-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F180-acq-nonregulated",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F180-acq-regulated",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F187-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F187-one-day-short",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F190-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F190-one-day-later",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F193-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F193-separate-household",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F207-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F207-separate",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F217-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F217-after-departure",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F217-before-departure",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F242-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F242-no-residence",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F243-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F243-resided24",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F251-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F251-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F252-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F255-own-62m",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F256-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F256-59m",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F256-highvalue",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F259-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F259-lease-unset",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F260-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F262-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F262-acquired-after-notice",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F264-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F264-plan-decision-date",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F264-remnant-2y-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F264-remnant-5y-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F268-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F268-first-member-departure",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F275-acquired-after-departure",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F276-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F276-held-2y",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F281-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F281-only-house",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F289-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F295-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F295-excluding-post-approval",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F297-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F297-within-2y",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F303-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F303-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F303-physical-departure",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F305-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F307-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F311-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F312-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F312-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F316-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F318-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F322-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F322-current-within",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F322-current-over",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F340-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F340-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F340-current-12m",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F340-current-11m",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F355-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F355-era-maintained",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F361-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F361-era-6pct",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F366-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F366-era-17m",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F373-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F373-era-60m",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F373-era-59m",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F384-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F390-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F395-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F395-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F395-current-noconv",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F396-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F396-no-proviso",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F396-registered-20191217",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F409-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F450-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F450-current-over",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F451-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F455-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F455-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F456-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F456-era-6eok",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F456-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-F456-current-12eok",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "F461-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F461-no-proviso",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F461-acquired-after-approval",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-F461-no-proviso-2y6m",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G016-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-G016-era-approval-2005",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G017-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-G017-era-approval-2005",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G019-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G021-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-G021-current-3y",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G021-current-3y1d",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G022-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G023-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G024-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G035-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G049-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G049-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G050-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G050-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G055-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G055-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G062-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G062-over3y",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G065-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G066-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G077-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-G077-later-sold",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G091-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G091-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G099-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G099-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G100-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G100-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G103-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G104-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G104-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G105-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G105-over3y",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G105-completed",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G105-completed-exception",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G106-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G106-none",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G107-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G110-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-G110-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G110-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G111-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G116-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G116-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G116-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G119-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G119-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-G119-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G120-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G120-era-origin",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G120-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G123-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G124-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-G124-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G125-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G125-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G125-norepl",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G126-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G126-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G128-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G128-era-origin",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G129-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G129-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G131-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G132-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G133-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G148-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G152-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G154-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G157-era-first",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G157-era-second",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G162-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G163-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G163-era-blank",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G163-era-none",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G163-blank-within1y",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G163-blank-right-before-marriage",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G163-none-over3y",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G163-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-G163-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "G164-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "R014-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-R014-era-no-officetel",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "R030-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "R031-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "R031-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-R031-current-24m",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "R033-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "R037-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "R043-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "N-R043-current-12eok",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "S001-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "S006-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "S006-current",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "S041-4022-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "S045-2019seo2002-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "S045-2017seo3603-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "T001-era",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-T001-separate-household",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "P-T001-parental-care",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "SMOKE-1",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "SMOKE-2",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "STAT-71-2-house",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "STAT-71-2-right",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "STAT-71-2-right-unknown",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "NTS-2025-2010-gift-separate",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "NTS-2025-2010-gift-same",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "NTS-2025-1621-inherit-separate",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "NTS-2025-1621-inherit-same",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "NTS-2025-1621-inherit-unknown",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ },
+ {
+  "id": "NTS-2025-1621-inherit-legacy-false",
+  "ohStatus": 200,
+  "scStatus": 200,
+  "ohErr": [],
+  "scErrExtra": [],
+  "summaryEqual": true,
+  "fullEqual": true
+ }
+]

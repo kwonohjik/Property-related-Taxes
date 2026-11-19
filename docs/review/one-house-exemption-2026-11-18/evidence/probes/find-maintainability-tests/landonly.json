@@ -1,0 +1,39 @@
+{
+  "other": {
+    "calcIsExempt": false,
+    "calcTax": 52428200,
+    "menuIsExempt": true,
+    "menuPartial": false
+  },
+  "same": {
+    "calcIsExempt": true,
+    "calcTax": 0,
+    "menuIsExempt": true,
+    "menuPartial": false
+  },
+  "both": {
+    "calcIsExempt": true,
+    "calcTax": 0,
+    "menuIsExempt": true,
+    "menuPartial": false
+  },
+  "routeJudge": {
+    "status": 200,
+    "isExempt": true
+  },
+  "routeCalc": {
+    "status": 200,
+    "keys": [
+      "data"
+    ],
+    "dkeys": [
+      "mode",
+      "result"
+    ],
+    "isExempt": false,
+    "totalTax": 52428200,
+    "warn": [
+      "토지만 본인 소유이고 건물(주택) 소유자가 양도일 현재 본인과 다른 세대라, 이 토지에는 1세대1주택 비과세와 장기보유특별공제 표2(장기임대주택 거주주택 특례 포함)를 적용하지 않았습니다(「소득세법 시행령」 §154① · 조심 2008중3554)."
+    ]
+  }
+}

@@ -1,0 +1,82 @@
+{
+ "900000000/36-12/inh": {
+  "baseStatus": 200,
+  "staleStatus": 200,
+  "sameResponse": true,
+  "bodyDiff": [
+   "wasRegulatedAtAcquisition"
+  ],
+  "baseIsExempt": true,
+  "staleIsExempt": true
+ },
+ "900000000/36-12/usg": {
+  "baseStatus": 200,
+  "staleStatus": 200,
+  "sameResponse": true,
+  "bodyDiff": [
+   "wasRegulatedAtAcquisition"
+  ],
+  "baseIsExempt": true,
+  "staleIsExempt": true
+ },
+ "900000000/20-12/inh": {
+  "baseStatus": 200,
+  "staleStatus": 200,
+  "sameResponse": true,
+  "bodyDiff": [
+   "wasRegulatedAtAcquisition"
+  ],
+  "baseIsExempt": true,
+  "staleIsExempt": true
+ },
+ "900000000/20-12/usg": {
+  "baseStatus": 200,
+  "staleStatus": 200,
+  "sameResponse": true,
+  "bodyDiff": [
+   "wasRegulatedAtAcquisition"
+  ],
+  "baseIsExempt": true,
+  "staleIsExempt": true
+ },
+ "1500000000/36-12/inh": {
+  "baseStatus": 200,
+  "staleStatus": 200,
+  "sameResponse": true,
+  "bodyDiff": [
+   "wasRegulatedAtAcquisition"
+  ],
+  "baseIsExempt": false,
+  "staleIsExempt": false
+ },
+ "1500000000/36-12/usg": {
+  "baseStatus": 200,
+  "staleStatus": 200,
+  "sameResponse": true,
+  "bodyDiff": [
+   "wasRegulatedAtAcquisition"
+  ],
+  "baseIsExempt": false,
+  "staleIsExempt": false
+ },
+ "1500000000/20-12/inh": {
+  "baseStatus": 200,
+  "staleStatus": 200,
+  "sameResponse": true,
+  "bodyDiff": [
+   "wasRegulatedAtAcquisition"
+  ],
+  "baseIsExempt": false,
+  "staleIsExempt": false
+ },
+ "1500000000/20-12/usg": {
+  "baseStatus": 200,
+  "staleStatus": 200,
+  "sameResponse": true,
+  "bodyDiff": [
+   "wasRegulatedAtAcquisition"
+  ],
+  "baseIsExempt": false,
+  "staleIsExempt": false
+ }
+}

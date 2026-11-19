@@ -1,0 +1,83 @@
+{
+  "A_parentalOnly": {
+    "isExempt": true,
+    "exemptReason": "일시적 2주택·동거봉양 합가 중첩 (§155①·④) 1세대1주택 비과세",
+    "totalTax": 0,
+    "axis": {
+      "kind": "parental_care",
+      "mergeDate": "2024-06-01T00:00:00.000Z",
+      "secondMergeSide": false
+    },
+    "doubleMerge": false,
+    "surchargeReasons": []
+  },
+  "A_both_second": {
+    "isExempt": false,
+    "totalTax": 146366000,
+    "axis": {
+      "kind": "marriage",
+      "mergeDate": "2010-05-01T00:00:00.000Z",
+      "secondMergeSide": false
+    },
+    "doubleMerge": false,
+    "surchargeReasons": []
+  },
+  "A_parentalOnly_reg15": {
+    "isExempt": false,
+    "exemptReason": "일시적 2주택·동거봉양 합가 중첩 (§155①·④) 고가주택",
+    "totalTax": 57277000,
+    "axis": {
+      "kind": "parental_care",
+      "mergeDate": "2024-06-01T00:00:00.000Z",
+      "secondMergeSide": false
+    },
+    "doubleMerge": false,
+    "surchargeReasons": []
+  },
+  "A_both_second_reg15": {
+    "isExempt": false,
+    "totalTax": 402831000,
+    "axis": {
+      "kind": "marriage",
+      "mergeDate": "2010-05-01T00:00:00.000Z",
+      "secondMergeSide": false
+    },
+    "doubleMerge": false,
+    "surchargeReasons": []
+  },
+  "B_parentalOnly": {
+    "isExempt": false,
+    "totalTax": 124366000,
+    "axis": {
+      "kind": "parental_care",
+      "mergeDate": "2012-01-01T00:00:00.000Z",
+      "secondMergeSide": false
+    },
+    "doubleMerge": false,
+    "surchargeReasons": []
+  },
+  "B_both_counterpart": {
+    "isExempt": true,
+    "exemptReason": "일시적 2주택·혼인 합가 중첩 (§155①·⑤) 1세대1주택 비과세",
+    "totalTax": 0,
+    "axis": {
+      "kind": "marriage",
+      "mergeDate": "2020-01-01T00:00:00.000Z",
+      "secondMergeSide": false
+    },
+    "doubleMerge": false,
+    "surchargeReasons": []
+  },
+  "B_marriageOnly_counterpart": {
+    "isExempt": true,
+    "exemptReason": "일시적 2주택·혼인 합가 중첩 (§155①·⑤) 1세대1주택 비과세",
+    "totalTax": 0,
+    "axis": {
+      "kind": "marriage",
+      "mergeDate": "2020-01-01T00:00:00.000Z",
+      "secondMergeSide": false
+    },
+    "doubleMerge": false,
+    "surchargeReasons": []
+  }
+}

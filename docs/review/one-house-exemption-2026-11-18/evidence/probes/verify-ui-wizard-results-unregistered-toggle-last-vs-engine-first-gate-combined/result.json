@@ -1,0 +1,107 @@
+{
+  "A_unreg_blank_step3Errors": [
+    {
+      "field": "rentalHousingException.phrp154_10Answer",
+      "message": "장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 "
+    }
+  ],
+  "B_reg_blank_step3Errors": [
+    {
+      "field": "rentalHousingException.phrp154_10Answer",
+      "message": "장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 "
+    }
+  ],
+  "A_hasPhrpError": true,
+  "B_hasPhrpError": true,
+  "C_unreg_no_step3Errors": [],
+  "step2_unreg_errors": [],
+  "route": {
+    "unreg_no": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": false,
+      "keys": [
+        "isExempt",
+        "isPartialExempt",
+        "article89Clause2",
+        "appliedExceptions",
+        "pending",
+        "undetermined",
+        "unmetExceptions",
+        "legalBasis"
+      ]
+    },
+    "unreg_yes": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": false,
+      "keys": [
+        "isExempt",
+        "isPartialExempt",
+        "article89Clause2",
+        "appliedExceptions",
+        "pending",
+        "undetermined",
+        "unmetExceptions",
+        "legalBasis"
+      ]
+    },
+    "reg_no": {
+      "status": 200,
+      "isExempt": true,
+      "isPartialExempt": false,
+      "keys": [
+        "isExempt",
+        "isPartialExempt",
+        "exemptReason",
+        "appliedExceptions",
+        "article89Clause2",
+        "pending",
+        "undetermined",
+        "unmetExceptions",
+        "requirementReview",
+        "legalBasis"
+      ]
+    },
+    "reg_yes": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": false,
+      "keys": [
+        "isExempt",
+        "isPartialExempt",
+        "appliedExceptions",
+        "article89Clause2",
+        "pending",
+        "undetermined",
+        "unmetExceptions",
+        "legalBasis"
+      ]
+    },
+    "unreg_blank": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": false,
+      "keys": [
+        "isExempt",
+        "isPartialExempt",
+        "article89Clause2",
+        "appliedExceptions",
+        "pending",
+        "undetermined",
+        "unmetExceptions",
+        "legalBasis"
+      ]
+    }
+  },
+  "surcharge": {
+    "unreg_no": {
+      "status": 400,
+      "body": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"property\":[\"Invalid input: expected object, received undefined\"]}}}"
+    },
+    "unreg_yes": {
+      "status": 400,
+      "body": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"property\":[\"Invalid input: expected object, received undefined\"]}}}"
+    }
+  }
+}

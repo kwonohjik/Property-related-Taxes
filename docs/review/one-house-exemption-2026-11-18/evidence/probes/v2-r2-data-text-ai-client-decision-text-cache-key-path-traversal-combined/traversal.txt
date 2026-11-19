@@ -1,0 +1,26 @@
+[A] realCache=./.legal-cache
+[A] id="228541" domain=prec len=6 → ./.legal-cache/decision_text_prec_228541_full_v4.json insideCache=true zodPublic=true zodVerify=true zodTool=true
+[A] id="228541" domain=ttSpecialDecc len=6 → ./.legal-cache/decision_text_ttSpecialDecc_228541_full_v4.json insideCache=true zodPublic=true zodVerify=true zodTool=true
+[A] id="../x" domain=prec len=4 → ./.legal-cache/decision_text_prec_../x_full_v4.json insideCache=true zodPublic=true zodVerify=true zodTool=true
+[A] id="../x" domain=ttSpecialDecc len=4 → ./.legal-cache/decision_text_ttSpecialDecc_../x_full_v4.json insideCache=true zodPublic=true zodVerify=true zodTool=true
+[A] id="/../../x" domain=prec len=8 → ./x_full_v4.json insideCache=false zodPublic=true zodVerify=true zodTool=true
+[A] id="/../../x" domain=ttSpecialDecc len=8 → ./x_full_v4.json insideCache=false zodPublic=true zodVerify=true zodTool=true
+[A] id="/../../../../../../tmp/a" domain=prec len=24 → /tmp/a_full_v4.json insideCache=false zodPublic=true zodVerify=true zodTool=true
+[A] id="/../../../../../../tmp/a" domain=ttSpecialDecc len=24 → /tmp/a_full_v4.json insideCache=false zodPublic=true zodVerify=true zodTool=true
+[A] id="/../decision_text_prec_228541" domain=prec len=29 → ./.legal-cache/decision_text_prec_228541_full_v4.json insideCache=true zodPublic=true zodVerify=true zodTool=true
+[A] id="/../decision_text_prec_228541" domain=ttSpecialDecc len=29 → ./.legal-cache/decision_text_prec_228541_full_v4.json insideCache=true zodPublic=true zodVerify=true zodTool=true
+[A] id="a/../../x" domain=prec len=9 → ./x_full_v4.json insideCache=false zodPublic=true zodVerify=true zodTool=true
+[A] id="a/../../x" domain=ttSpecialDecc len=9 → ./x_full_v4.json insideCache=false zodPublic=true zodVerify=true zodTool=true
+[A] id="1?x=2" domain=prec len=5 → ./.legal-cache/decision_text_prec_1?x=2_full_v4.json insideCache=true zodPublic=true zodVerify=true zodTool=true
+[A] id="1?x=2" domain=ttSpecialDecc len=5 → ./.legal-cache/decision_text_ttSpecialDecc_1?x=2_full_v4.json insideCache=true zodPublic=true zodVerify=true zodTool=true
+[B] mocked CACHE_DIR=<session>/scratchpad/probes/v2-r2-data-text-ai-client-decision-text-cache-key-path-traversal-combined/fake-root/a/b/.legal-cache
+[B] id="/../../planted" full=1 → status=200 caseNo=PLANTED-OUTSIDE-CACHE sourceUrl=https://example.invalid/planted code=-
+[B] id="/../../planted" (comp) → status=200 caseNo=PLANTED-COMP sourceUrl=https://example.invalid/planted code=-
+[B] id="../planted" full=1 → status=503 caseNo=- sourceUrl=- code=API_KEY_MISSING
+[B] id="planted" full=1 → status=503 caseNo=- sourceUrl=- code=API_KEY_MISSING
+[B] id="228541" full=1 → status=503 caseNo=- sourceUrl=- code=API_KEY_MISSING
+[C] read_interpretation id="/../../planted" → text.head="PLANTED-OUTSIDE-CACHE (2020.01.01.) 심은 파일\n요지: 심은 요지\n이유: 심은 이유" lookups=[{"tool":"read_interpretation","input":{"source":"tax_tribunal","id":"/../../planted"},"ok":true,"summary":"PLANTED-OUTSIDE-CACHE","url":"https://example.invalid/planted"}] readDocs=[{"source":"tax_tribunal","id":"/../../planted","docNo":"PLANTED-OUTSIDE-CACHE","title":"심은 파일","date":"2020.01.01.","url":"https://example.invalid/planted"}]
+[C] 대조군 id="../planted" → throw 법제처 Open API 키(OC)가 설정되지 않았습니다. .env.local 에 KOREAN_LAW_OC=... 를 추가하세요.
+[D] verify checkDoc → {"docNo":"PLANTED-OUTSIDE-CACHE","status":"fetched","url":"https://example.invalid/planted","excerpt":"요지: 심은 요지\n본문: 심은 이유"}
+[D] 대조군 id="../planted" → status=failed reason=법제처 Open API 키(OC)가 설정되지 않았습니다. .env.local 에 KOREAN_LAW_OC=... 를 추가하세요.
+[E] fetch url=https://www.law.go.kr/DRF/lawService.do?OC=***&target=prec&ID=%2F..%2F..%2Fwritten&type=JSON → result.caseNo=2020두1 sourceUrl=https://www.law.go.kr/LSW/precInfoP.do?precSeq=%2F..%2F..%2Fwritten writtenOutsideCache=true (<session>/scratchpad/probes/v2-r2-data-text-ai-client-decision-text-cache-key-path-traversal-combined/fake-root/a/b/written_full_v4.json)

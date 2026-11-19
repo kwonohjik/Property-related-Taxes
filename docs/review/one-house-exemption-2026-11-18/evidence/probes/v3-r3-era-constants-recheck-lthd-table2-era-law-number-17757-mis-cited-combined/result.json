@@ -1,0 +1,30 @@
+{
+  "cites": {
+    "l12": " * | ≥ 2021-01-01 | 보유 4%(40%) + 거주 4%(40%) | 거주 2년(§159의4) | 법률 제17477호 부칙 제1조(2021-01-01 시행)·제2조(시행 이후 양도분) |",
+    "l27": "/** 법률 제17477호 시행일 — 표2가 보유분·거주분으로 나뉘는 첫 양도일. */",
+    "l40": " * 2021.1.1. 이후에야 보유 4% + 거주 4%로 나뉜다(법률 제17757호 부칙 제2조② — 시행 이후 양도하는 분부터)."
+  },
+  "era": {
+    "2015-06-30": {
+      "era": "holding_8pct",
+      "holdingOnly": true,
+      "holdingRate10y": 0.8
+    },
+    "2020-12-31": {
+      "era": "holding_8pct_residence_2y",
+      "holdingOnly": true,
+      "holdingRate10y": 0.8
+    },
+    "2021-01-01": {
+      "era": "holding_residence_split",
+      "holdingOnly": false,
+      "holdingRate10y": 0.4
+    },
+    "2024-05-01": {
+      "era": "holding_residence_split",
+      "holdingOnly": false,
+      "holdingRate10y": 0.4
+    }
+  },
+  "splitStart": "2021-01-01T00:00:00.000Z"
+}

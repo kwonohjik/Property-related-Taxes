@@ -1,0 +1,5 @@
+{
+  "calls": 8,
+  "externalAborted": true,
+  "error": "조회 반복 상한(8회)에 걸려 결론을 내지 못했습니다"
+}

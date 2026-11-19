@@ -1,0 +1,464 @@
+{
+ "hold2:2016-02-29:2018-02-27": {
+  "status": 200,
+  "isExempt": false,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "hold2:2016-02-29:2018-02-28": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "1세대1주택 비과세",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "hold2:2016-02-29:2018-03-01": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "1세대1주택 비과세",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "hold2:2024-02-29:2026-02-27": {
+  "status": 200,
+  "isExempt": false,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "hold2:2024-02-29:2026-02-28": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "1세대1주택 비과세",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "hold2:2024-02-29:2026-03-01": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "1세대1주택 비과세",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "tt1y:2020-02-29:2021-02-27": {
+  "status": 200,
+  "isExempt": false,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2020-02-29\",\"newAcquisitionDate\":\"2021-02-27\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1y:2020-02-29:2021-02-28": {
+  "status": 200,
+  "isExempt": false,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2020-02-29\",\"newAcquisitionDate\":\"2021-02-28\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1y:2020-02-29:2021-03-01": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2020-02-29\",\"newAcquisitionDate\":\"2021-03-01\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1y:2021-01-31:2022-01-31": {
+  "status": 200,
+  "isExempt": false,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2021-01-31\",\"newAcquisitionDate\":\"2022-01-31\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1y:2021-01-31:2022-02-01": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2021-01-31\",\"newAcquisitionDate\":\"2022-02-01\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1y:2021-01-31:2022-02-02": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2021-01-31\",\"newAcquisitionDate\":\"2022-02-02\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1y:2021-08-31:2022-08-31": {
+  "status": 200,
+  "isExempt": false,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2021-08-31\",\"newAcquisitionDate\":\"2022-08-31\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1y:2021-08-31:2022-09-01": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2021-08-31\",\"newAcquisitionDate\":\"2022-09-01\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1y:2021-08-31:2022-09-02": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2021-08-31\",\"newAcquisitionDate\":\"2022-09-02\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1yReg:2020-02-29:2021-02-26": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2020-02-29\",\"newHouseRegionCode\":\"1168010300\",\"wholeHouseholdMoveInDate\":\"2020-03-30\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1yReg:2020-02-29:2021-02-28": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2020-02-29\",\"newHouseRegionCode\":\"1168010300\",\"wholeHouseholdMoveInDate\":\"2020-03-30\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1yReg:2020-02-29:2021-03-01": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2020-02-29\",\"newHouseRegionCode\":\"1168010300\",\"wholeHouseholdMoveInDate\":\"2020-03-30\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1yReg:2020-02-29:2021-03-02": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2020-02-29\",\"newHouseRegionCode\":\"1168010300\",\"wholeHouseholdMoveInDate\":\"2020-03-30\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1yReg:2020-02-29:2021-03-03": {
+  "status": 200,
+  "isExempt": false,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2020-02-29\",\"newHouseRegionCode\":\"1168010300\",\"wholeHouseholdMoveInDate\":\"2020-03-30\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1yReg:2021-01-31:2022-01-28": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2021-01-31\",\"newHouseRegionCode\":\"1168010300\",\"wholeHouseholdMoveInDate\":\"2021-03-01\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1yReg:2021-01-31:2022-01-31": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2021-01-31\",\"newHouseRegionCode\":\"1168010300\",\"wholeHouseholdMoveInDate\":\"2021-03-01\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1yReg:2021-01-31:2022-02-02": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2021-01-31\",\"newHouseRegionCode\":\"1168010300\",\"wholeHouseholdMoveInDate\":\"2021-03-01\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1yReg:2021-01-31:2022-02-03": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2021-01-31\",\"newHouseRegionCode\":\"1168010300\",\"wholeHouseholdMoveInDate\":\"2021-03-01\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt1yReg:2021-01-31:2022-02-04": {
+  "status": 200,
+  "isExempt": false,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2021-01-31\",\"newHouseRegionCode\":\"1168010300\",\"wholeHouseholdMoveInDate\":\"2021-03-01\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt2yReg:2019-01-31:2021-01-29": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2019-01-31\",\"newHouseRegionCode\":\"1168010300\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt2yReg:2019-01-31:2021-01-31": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2019-01-31\",\"newHouseRegionCode\":\"1168010300\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt2yReg:2019-01-31:2021-02-01": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2019-01-31\",\"newHouseRegionCode\":\"1168010300\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt2yReg:2019-01-31:2021-02-02": {
+  "status": 200,
+  "isExempt": false,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2019-01-31\",\"newHouseRegionCode\":\"1168010300\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt2yReg:2020-08-31:2022-08-30": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2020-08-31\",\"newHouseRegionCode\":\"1168010300\",\"wholeHouseholdMoveInDate\":\"2020-09-30\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt2yReg:2020-08-31:2022-08-31": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "일시적 2주택 비과세",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2020-08-31\",\"newHouseRegionCode\":\"1168010300\",\"wholeHouseholdMoveInDate\":\"2020-09-30\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "tt2yReg:2020-08-31:2022-09-01": {
+  "status": 200,
+  "isExempt": false,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "",
+  "validationErrors": [],
+  "tt": "{\"previousAcquisitionDate\":\"2015-01-05\",\"newAcquisitionDate\":\"2020-08-31\",\"newHouseRegionCode\":\"1168010300\",\"wholeHouseholdMoveInDate\":\"2020-09-30\",\"newHouseOrigin\":{\"kind\":\"general\"}}"
+ },
+ "156-2-3:2021-08-31:2024-08-30": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "1세대1주택 비과세",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "156-2-3:2021-08-31:2024-08-31": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "1세대1주택 비과세",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "156-2-3:2021-08-31:2024-09-02": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "1세대1주택 비과세",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "156-2-3:2021-08-31:2024-09-03": {
+  "status": 200,
+  "isExempt": false,
+  "applied": [],
+  "unmet": [
+   "156-2-3-right-three-year:deadline-lapsed:주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 3년 이내에 종전주택을 양도해야 비과세 — 이 기한(2024-09-02)이 판정 기준일(2026-11-18) 전에 지나 양도일을 조정해도 충족할 수 없습니다. 역상 말일 2024-08-31이 토요일·공휴일이라 기한이 2024-09-02까지 늘어났습니다(국세기본법 §4 → 민법 §161)."
+  ],
+  "undetermined": [],
+  "reason": "",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "156-2-3:2020-02-29:2023-02-27": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "1세대1주택 비과세",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "156-2-3:2020-02-29:2023-02-28": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "1세대1주택 비과세",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "156-2-3:2020-02-29:2023-03-01": {
+  "status": 200,
+  "isExempt": false,
+  "applied": [],
+  "unmet": [
+   "156-2-3-right-three-year:deadline-lapsed:주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 3년 이내에 종전주택을 양도해야 비과세 — 이 기한(2023-02-28)이 판정 기준일(2026-11-18) 전에 지나 양도일을 조정해도 충족할 수 없습니다."
+  ],
+  "undetermined": [],
+  "reason": "",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "156-2-3:2021-01-31:2024-01-30": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "1세대1주택 비과세",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "156-2-3:2021-01-31:2024-01-31": {
+  "status": 200,
+  "isExempt": true,
+  "applied": [],
+  "unmet": [],
+  "undetermined": [],
+  "reason": "1세대1주택 비과세",
+  "validationErrors": [],
+  "tt": "null"
+ },
+ "156-2-3:2021-01-31:2024-02-01": {
+  "status": 200,
+  "isExempt": false,
+  "applied": [],
+  "unmet": [
+   "156-2-3-right-three-year:deadline-lapsed:주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 3년 이내에 종전주택을 양도해야 비과세 — 이 기한(2024-01-31)이 판정 기준일(2026-11-18) 전에 지나 양도일을 조정해도 충족할 수 없습니다."
+  ],
+  "undetermined": [],
+  "reason": "",
+  "validationErrors": [],
+  "tt": "null"
+ }
+}

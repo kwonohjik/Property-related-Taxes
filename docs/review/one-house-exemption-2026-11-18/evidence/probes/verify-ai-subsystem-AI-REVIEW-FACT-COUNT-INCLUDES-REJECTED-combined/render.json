@@ -1,0 +1,39 @@
+{
+  "review_A": {
+    "headline": "AI가 원문에서 사실 4칸을 채웠습니다. 값이 원문과 맞는지 각 단계에서 확인하세요. 형식이 맞지 않아 넣지 않은 값이 3건 있습니다.",
+    "factItems": [
+      "양도 예정일 = 2024-02-30근거: 「2024.2.30. 양도」",
+      "증여자와 계속 같은 세대였습니까 = maybe근거: 「세대 불명」",
+      "취득일 = 2015-03-01근거: 「2015.3.1. 취득」",
+      "취득일 = 2016-03-01근거: 「2016.3.1. 잔금」"
+    ],
+    "formTransferDate": "",
+    "formAcq": "2015-03-01",
+    "formGiftSameHousehold": "",
+    "dupKeyErrors": [
+      "Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsu"
+    ]
+  },
+  "review_B": {
+    "headline": "AI가 원문에서 사실 2칸을 채웠습니다. 값이 원문과 맞는지 각 단계에서 확인하세요.",
+    "factItems": [
+      "양도 예정일 = 2024-06-15근거: 「2024.6.15. 양도」",
+      "취득일 = 2015-03-01근거: 「2015.3.1. 취득」"
+    ],
+    "formTransferDate": "2024-06-15",
+    "formAcq": "2015-03-01",
+    "formGiftSameHousehold": "",
+    "dupKeyErrors": []
+  },
+  "preview_A": {
+    "cards": [
+      "추출한 사실 4칸양도 예정일 (transferDate) = 2024-02-30근거: 「2024.2.30. 양도」증여자와 계속 같은 세대였습니까 (asset.giftSameHousehold) = maybe근거: 「세대 불명」취득일 (asset.acquisitionDate) = 2015-03-01근거: 「2015.3.1. 취득」취득일 (asset.acquisitionDate) = 2016-03-01근거: 「2016.3.1. 잔금」",
+      "원문에 없어 확인할 사실 5건양도 예정일을 입력하세요.입력 칸: 「양도 예정일」--예상 양도가액을 입력하세요.입력 칸: 「예상 양도가액」원거주 구간 #1: 입주일을 입력하세요.적용한 뒤 판정 화면의 검토 카드에서 해당 단계로 이동해 입력합니다.장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요.입력 칸: 「임대 등록·어린이집 운영 + 보유 중 다른 거주주택 양도 (소령 §154⑩)」예아니오취득일 — 입력값을 확인하세요.입력 칸: 「취득일」--",
+      "넣지 않은 값 3건transferDate — 날짜 형식이 아닙니다(YYYY-MM-DD): 2024-02-30asset.giftSameHousehold — 허용값이 아닙니다(, yes, no, rejoined): maybeasset.acquisitionDate — 같은 경로가 두 번 나왔습니다 — 뒤의 값은 버렸습니다",
+      "이번 호출 비용: 단가표에 없는 모델(m)이라 금액을 내지 않습니다 — 토큰 입력 1 · 캐시 읽기 0 · 캐시 쓰기 0 · 출력 1 · m"
+    ],
+    "dupKeyErrors": [
+      "Encountered two children with the same key, `%s`. Keys should be unique so that components maintain their identity across updates. Non-unique keys may cause children to be duplicated and/or omitted — the behavior is unsu"
+    ]
+  }
+}

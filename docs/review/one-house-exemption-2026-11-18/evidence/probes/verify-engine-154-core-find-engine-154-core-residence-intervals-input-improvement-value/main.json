@@ -1,0 +1,139 @@
+[
+  {
+    "id": "A-taxed-planned",
+    "status": 200,
+    "bodyResidenceMonths": 19,
+    "bodyHasIntervals": [],
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "pending": [],
+    "undetermined": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "appliedExceptions": []
+  },
+  {
+    "id": "A-cf-0530",
+    "status": 200,
+    "bodyResidenceMonths": 23,
+    "bodyHasIntervals": [],
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "pending": [],
+    "undetermined": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "appliedExceptions": []
+  },
+  {
+    "id": "A-cf-0531",
+    "status": 200,
+    "bodyResidenceMonths": 24,
+    "bodyHasIntervals": [],
+    "validationErrors": [],
+    "isExempt": true,
+    "isPartialExempt": false,
+    "pending": [],
+    "undetermined": [],
+    "appliedExceptions": []
+  },
+  {
+    "id": "A2-today",
+    "status": 200,
+    "bodyResidenceMonths": 23,
+    "bodyHasIntervals": [],
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "pending": [],
+    "undetermined": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "appliedExceptions": []
+  },
+  {
+    "id": "A3-moved-out",
+    "status": 200,
+    "bodyResidenceMonths": 13,
+    "bodyHasIntervals": [],
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "pending": [],
+    "undetermined": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "appliedExceptions": []
+  },
+  {
+    "id": "A4-empty-moveout",
+    "status": 200,
+    "bodyResidenceMonths": 0,
+    "bodyHasIntervals": [],
+    "validationErrors": [
+      "residencePeriods: 거주 구간 #1: 퇴거일을 입력하세요. (양도일까지 거주한 경우 양도일을 퇴거일로 입력)"
+    ],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "pending": [],
+    "undetermined": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "appliedExceptions": []
+  },
+  {
+    "id": "B-after-deadline",
+    "status": 200,
+    "bodyResidenceMonths": 27,
+    "bodyHasIntervals": [],
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "pending": [
+      {
+        "id": "155-1-disposal-deadline",
+        "kind": "transfer_by",
+        "deadline": "2027-02-01T00:00:00.000Z"
+      }
+    ],
+    "undetermined": [],
+    "appliedExceptions": []
+  },
+  {
+    "id": "B-cf-on-deadline-0201",
+    "status": 200,
+    "bodyResidenceMonths": 23,
+    "bodyHasIntervals": [],
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "pending": [],
+    "undetermined": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "appliedExceptions": []
+  },
+  {
+    "id": "B-cf-on-deadline-0131",
+    "status": 200,
+    "bodyResidenceMonths": 23,
+    "bodyHasIntervals": [],
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "pending": [],
+    "undetermined": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "appliedExceptions": []
+  }
+]

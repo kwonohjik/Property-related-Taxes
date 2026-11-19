@@ -1,0 +1,41 @@
+{
+  "earlier": {
+    "derived": {
+      "previousAcquisitionDate": "2015-06-01",
+      "newAcquisitionDate": "2024-04-01",
+      "source": "roster",
+      "newHouseRowId": "new",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "bodyTemp": {
+      "previousAcquisitionDate": "2015-06-01",
+      "newAcquisitionDate": "2024-04-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "bodyHeritage": true,
+    "bodyHeritageId": "heritage",
+    "bodyHouseholdCount": 3,
+    "bodyKeys": [
+      "temporaryTwoHouse",
+      "culturalHeritageHouse",
+      "culturalHeritageHouseId",
+      "houses"
+    ]
+  },
+  "later": {
+    "derived": null,
+    "bodyTemp": null,
+    "bodyHeritage": true,
+    "bodyHeritageId": "heritage",
+    "bodyHouseholdCount": 3,
+    "bodyKeys": [
+      "culturalHeritageHouse",
+      "culturalHeritageHouseId",
+      "houses"
+    ]
+  }
+}

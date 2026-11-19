@@ -1,0 +1,52 @@
+{
+  "opinion_maxTokens": {
+    "status": 422,
+    "body": {
+      "error": {
+        "code": "OPINION_FAILED",
+        "message": "출력 한도에 걸려 응답이 잘렸습니다"
+      }
+    }
+  },
+  "verify_maxTokens": {
+    "status": 200,
+    "usage": null,
+    "model": null,
+    "point0": {
+      "index": 0,
+      "support": "cannot_verify",
+      "reason": "원문 2차 대조 호출에 실패했습니다.",
+      "unsupportedClaims": [],
+      "statuteKeys": [
+        "소득세법 시행령 §155⑳"
+      ],
+      "docNos": []
+    },
+    "statutes": 1
+  },
+  "opinion_parse": {
+    "status": 502,
+    "body": {
+      "error": {
+        "code": "AI_UPSTREAM_ERROR",
+        "message": "AI 참고 의견 호출에 실패했습니다. 잠시 후 다시 시도하세요"
+      }
+    }
+  },
+  "verify_parse": {
+    "status": 200,
+    "usage": null,
+    "model": null,
+    "point0": {
+      "index": 0,
+      "support": "cannot_verify",
+      "reason": "원문 2차 대조 호출에 실패했습니다.",
+      "unsupportedClaims": [],
+      "statuteKeys": [
+        "소득세법 시행령 §155⑳"
+      ],
+      "docNos": []
+    },
+    "statutes": 1
+  }
+}

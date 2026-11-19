@@ -1,0 +1,443 @@
+{
+ "onlyJ": {
+  "regionCode": {
+   "n": 424,
+   "ex": [
+    "E001-dual=<undef>",
+    "E002-era=<undef>",
+    "E004-era=<undef>"
+   ]
+  },
+  "regionInDesignatedDistrict": {
+   "n": 456,
+   "ex": [
+    "E001-dual=<undef>",
+    "E002-era=<undef>",
+    "E004-era=<undef>"
+   ]
+  },
+  "nonHousingToHousingConversion": {
+   "n": 454,
+   "ex": [
+    "E001-dual=<undef>",
+    "E002-era=<undef>",
+    "E004-era=<undef>"
+   ]
+  },
+  "oneRightExemptionFacts.eligibleAtApproval": {
+   "n": 50,
+   "ex": [
+    "E001-dual=true",
+    "E002-era=true",
+    "E036-era=true"
+   ]
+  },
+  "oneRightExemptionFacts.otherHouseAcquisitionDate": {
+   "n": 50,
+   "ex": [
+    "E001-dual=\"1995-05-15\"",
+    "E002-era=\"2000-05-15\"",
+    "E036-era=<undef>"
+   ]
+  },
+  "oneRightExemptionFacts.otherHouseDisposalDelayReason": {
+   "n": 50,
+   "ex": [
+    "E001-dual=<undef>",
+    "E002-era=<undef>",
+    "E036-era=<undef>"
+   ]
+  },
+  "oneRightExemptionFacts.approvalDate": {
+   "n": 50,
+   "ex": [
+    "E001-dual=\"2003-12-01\"",
+    "E002-era=\"2005-05-10\"",
+    "E036-era=<undef>"
+   ]
+  },
+  "oneRightExemptionFacts.originalAssetType": {
+   "n": 50,
+   "ex": [
+    "E001-dual=\"housing\"",
+    "E002-era=\"housing\"",
+    "E036-era=\"housing\""
+   ]
+  },
+  "oneRightExemptionFacts.landHouseholdOwnedBuilding": {
+   "n": 50,
+   "ex": [
+    "E001-dual=<undef>",
+    "E002-era=<undef>",
+    "E036-era=<undef>"
+   ]
+  },
+  "decedentCohabitationHoldingStartDate": {
+   "n": 11,
+   "ex": [
+    "E004-era-2=<undef>",
+    "E071-era=<undef>",
+    "E071-era-pos=<undef>"
+   ]
+  },
+  "decedentCohabitationResidenceMonths": {
+   "n": 11,
+   "ex": [
+    "E004-era-2=<undef>",
+    "E071-era=<undef>",
+    "E071-era-pos=<undef>"
+   ]
+  },
+  "rentalHousingException.priorResidenceTransferDate": {
+   "n": 46,
+   "ex": [
+    "E0061-parental-rental-counterpart=<undef>",
+    "E132-era=<undef>",
+    "E132-current=<undef>"
+   ]
+  },
+  "rentalHousingException.standardPriceAtAcquisitionForPhrp": {
+   "n": 46,
+   "ex": [
+    "E0061-parental-rental-counterpart=<undef>",
+    "E132-era=<undef>",
+    "E132-current=<undef>"
+   ]
+  },
+  "rentalHousingException.standardPriceAtPriorTransfer": {
+   "n": 46,
+   "ex": [
+    "E0061-parental-rental-counterpart=<undef>",
+    "E132-era=<undef>",
+    "E132-current=<undef>"
+   ]
+  },
+  "rentalHousingException.standardPriceAtTransferForPhrp": {
+   "n": 46,
+   "ex": [
+    "E0061-parental-rental-counterpart=<undef>",
+    "E132-era=<undef>",
+    "E132-current=<undef>"
+   ]
+  },
+  "rentalHousingException.postRegistrationResidenceMonths": {
+   "n": 46,
+   "ex": [
+    "E0061-parental-rental-counterpart=<undef>",
+    "E132-era=<undef>",
+    "E132-current=<undef>"
+   ]
+  },
+  "rentalHousingException.residenceTransitionUnderAddendum": {
+   "n": 43,
+   "ex": [
+    "E0061-parental-rental-counterpart=<undef>",
+    "E132-era=<undef>",
+    "E132-current=<undef>"
+   ]
+  },
+  "rentalHousingException.residenceTransitionBasis": {
+   "n": 43,
+   "ex": [
+    "E0061-parental-rental-counterpart=<undef>",
+    "E132-era=<undef>",
+    "E132-current=<undef>"
+   ]
+  },
+  "rentalHousingException.wasRegisteredRentalOrChildcare": {
+   "n": 46,
+   "ex": [
+    "E0061-parental-rental-counterpart=<undef>",
+    "E132-era=<undef>",
+    "E132-current=<undef>"
+   ]
+  },
+  "rentalHousingException.counterpartHouseResidedTwoYears": {
+   "n": 45,
+   "ex": [
+    "E132-era=<undef>",
+    "E132-current=<undef>",
+    "P-E132-1062=<undef>"
+   ]
+  },
+  "rentalHousingException.priorRentalExemptionHistory": {
+   "n": 36,
+   "ex": [
+    "E163-era=<undef>",
+    "E163-era-pos=<undef>",
+    "E163-era-sameday=<undef>"
+   ]
+  },
+  "donorAcquisitionDate": {
+   "n": 7,
+   "ex": [
+    "F021-era=\"2000-01-01\"",
+    "F217-era=\"1993-03-15\"",
+    "F251-era=\"2017-12-12\""
+   ]
+  },
+  "giftSameHouseholdContinuous": {
+   "n": 7,
+   "ex": [
+    "F021-era=false",
+    "F217-era=false",
+    "F251-era=false"
+   ]
+  },
+  "nonResidentHoldingPeriod.endDate": {
+   "n": 2,
+   "ex": [
+    "F038-current=\"2024-09-15\"",
+    "F384-era=\"2005-08-15\""
+   ]
+  },
+  "demolishedBeforeBalance.contractDate": {
+   "n": 1,
+   "ex": [
+    "F045-era=\"2023-02-15\""
+   ]
+  },
+  "transferorNonResidentAtTransfer": {
+   "n": 7,
+   "ex": [
+    "F281-era=true",
+    "P-F281-only-house=true",
+    "F289-era=true"
+   ]
+  },
+  "giftHouseholdHoldingStartDate": {
+   "n": 3,
+   "ex": [
+    "F373-era=\"1996-03-07\"",
+    "P-F373-era-60m=\"1996-03-07\"",
+    "N-F373-era-59m=\"1996-03-07\""
+   ]
+  },
+  "nonResidentHoldingPeriod.startDate": {
+   "n": 1,
+   "ex": [
+    "F384-era=\"2002-02-15\""
+   ]
+  }
+ },
+ "onlyK": {
+  "transferCause": {
+   "n": 456,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E004-era"
+   ]
+  },
+  "acquisitionMethod": {
+   "n": 456,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E004-era"
+   ]
+  },
+  "householdRightCount": {
+   "n": 456,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E004-era"
+   ]
+  },
+  "isSuccessorRightToMoveIn": {
+   "n": 50,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E036-era"
+   ]
+  },
+  "acquisitionCause": {
+   "n": 430,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E004-era"
+   ]
+  },
+  "transferType": {
+   "n": 456,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E004-era"
+   ]
+  },
+  "priorReductionUsage": {
+   "n": 456,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E004-era"
+   ]
+  },
+  "householdNoPresaleRightsConfirmed": {
+   "n": 456,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E004-era"
+   ]
+  },
+  "redevelopment.subject": {
+   "n": 50,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E036-era"
+   ]
+  },
+  "redevelopment.approvalLawBasis": {
+   "n": 50,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E036-era"
+   ]
+  },
+  "redevelopment.approvalDate": {
+   "n": 50,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E036-era"
+   ]
+  },
+  "redevelopment.rightsValue": {
+   "n": 50,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E036-era"
+   ]
+  },
+  "redevelopment.settlementDirection": {
+   "n": 50,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E036-era"
+   ]
+  },
+  "redevelopment.settlementAmount": {
+   "n": 50,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E036-era"
+   ]
+  },
+  "redevelopment.preApprovalExpenses": {
+   "n": 50,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E036-era"
+   ]
+  },
+  "redevelopment.originalAssetType": {
+   "n": 50,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E036-era"
+   ]
+  },
+  "redevelopment.exemptionEligibleAtApproval": {
+   "n": 50,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E036-era"
+   ]
+  },
+  "redevelopment.otherHouseAcquisitionDate": {
+   "n": 18,
+   "ex": [
+    "E001-dual",
+    "E002-era",
+    "E094-dual"
+   ]
+  },
+  "carryoverTaxation.giftRegistryDate": {
+   "n": 7,
+   "ex": [
+    "F021-era",
+    "F217-era",
+    "F251-era"
+   ]
+  },
+  "carryoverTaxation.donorAcquisitionDate": {
+   "n": 7,
+   "ex": [
+    "F021-era",
+    "F217-era",
+    "F251-era"
+   ]
+  },
+  "carryoverTaxation.useEstimatedAcquisition": {
+   "n": 7,
+   "ex": [
+    "F021-era",
+    "F217-era",
+    "F251-era"
+   ]
+  },
+  "carryoverTaxation.giftTaxAmount": {
+   "n": 7,
+   "ex": [
+    "F021-era",
+    "F217-era",
+    "F251-era"
+   ]
+  },
+  "carryoverTaxation.giftDateValuation": {
+   "n": 7,
+   "ex": [
+    "F021-era",
+    "F217-era",
+    "F251-era"
+   ]
+  },
+  "carryoverTaxation.donorRelation": {
+   "n": 7,
+   "ex": [
+    "F021-era",
+    "F217-era",
+    "F251-era"
+   ]
+  },
+  "carryoverTaxation.donorSameHouseholdContinuous": {
+   "n": 7,
+   "ex": [
+    "F021-era",
+    "F217-era",
+    "F251-era"
+   ]
+  },
+  "carryoverTaxation.donorHouseholdHoldingStartDate": {
+   "n": 3,
+   "ex": [
+    "F373-era",
+    "P-F373-era-60m",
+    "N-F373-era-59m"
+   ]
+  }
+ },
+ "diff": {
+  "acquisitionCause": {
+   "n": 7,
+   "ex": [
+    "F021-era: J=\"gift\" K=\"carryover_gift\"",
+    "F217-era: J=\"gift\" K=\"carryover_gift\"",
+    "F251-era: J=\"gift\" K=\"carryover_gift\""
+   ]
+  }
+ }
+}

@@ -1,0 +1,100 @@
+import { it } from "vitest";
+import { writeFileSync } from "node:fs";
+import { buildCaseForm, type RulingCase } from "../calc/one-house-rulings/harness";
+import { handoff, runJudgment, withToday } from "../calc/_one-house-pr6a-routes";
+import { runCalc } from "../calc/_one-house-pr3a-calc-route";
+import { deriveCalcTemporaryTwoHouse } from "@/lib/calc/transfer-tax-api-body-blocks";
+
+const OUT =
+  "<session>/scratchpad/probes/v3-r3-contested-issues-same-household-inherited-row-as-155-1-new-house-refute/cells2.json";
+
+const M = (over: Record<string, unknown>) => ({
+  id: "m",
+  region: "non_capital",
+  acquisitionDate: "2015-03-01",
+  isInherited: true,
+  inheritedDate: "2015-03-01",
+  isCoInherited: false,
+  acquisitionOrigin: "general",
+  ...over,
+});
+const SAME = { decedentSameHouseholdAtInheritance: true };
+const SEP = { decedentSameHouseholdAtInheritance: false, decedentHouseholdSeparate: true };
+
+const mk = (houses: Record<string, unknown>[], transferDate: string, today: string): RulingCase =>
+  ({
+    id: "probe",
+    docNo: "",
+    docDate: "",
+    basis: "current",
+    today,
+    summary: "",
+    bucket: "match",
+    form: {
+      isOneHousehold: true,
+      transferDate,
+      contractTotalPrice: "500000000",
+      isRegulatedArea: false,
+      wasRegulatedAtAcquisition: false,
+      asset: {
+        assetKind: "housing",
+        acquisitionDate: "2012-11-21",
+        residenceInputMode: "direct",
+        residencePeriodMonthsAsset: "0",
+        fixedAcquisitionPrice: "300000000",
+      },
+      houses,
+    },
+  }) as unknown as RulingCase;
+
+const CELLS: Record<string, RulingCase> = {
+  sameWithin3y: mk([M(SAME)], "2017-06-01", "2017-05-20"),
+  sameAfter3y: mk([M(SAME)], "2018-06-01", "2018-05-20"),
+  separateWithin3y: mk([M(SEP)], "2017-06-01", "2017-05-20"),
+  sameParentalCareWithin3y: mk([M({ ...SAME, parentalCareMergeInheritedHouse: true })], "2017-06-01", "2017-05-20"),
+  // 「취득일」 칸에 피상속인 취득일(2005)을 넣은 사용자 — 같은 사실, 다른 입력 관례
+  sameWithin3y_rowAcqIsDecedentDate: mk([M({ ...SAME, acquisitionDate: "2005-01-01" })], "2017-06-01", "2017-05-20"),
+  // 피상속인이 S보다 1년 이상 뒤(2014-01-01) 취득, 2017-06-01 양도(피상속인 취득일 + 3년 이내) — 0464 방식으로 세면 §155① 가능
+  unknownWithin3y: mk([M({ decedentHouseholdUnknown: true })], "2017-06-01", "2017-05-20"),
+  sameWithin3y_rowAcqIsDecedentDate2014: mk([M({ ...SAME, acquisitionDate: "2014-01-01" })], "2016-12-01", "2016-11-20"),
+};
+
+it("cells", async () => {
+  const out: Record<string, unknown> = {};
+  for (const [k, c] of Object.entries(CELLS)) {
+    await withToday(c.today, async () => {
+      const form = buildCaseForm(c);
+      const j = await runJudgment(form);
+      const jd = j.data?.judgment;
+      const ids = (xs: { id?: string; kind?: string }[] | undefined) => (xs ?? []).map((x) => x.id ?? x.kind ?? "?");
+      const calcForm = handoff(form);
+      const tth = deriveCalcTemporaryTwoHouse(calcForm, calcForm.assets[0]);
+      const r = await runCalc(calcForm);
+      out[k] = {
+        judgment: {
+          status: j.status,
+          isExempt: jd?.isExempt,
+          applied: ids(jd?.appliedExceptions),
+          und: ids(jd?.undetermined),
+          unmet: ids(jd?.unmetExceptions),
+          unmetReasons: Object.fromEntries((jd?.unmetExceptions ?? []).map((u: { id: string; reasons: string[] }) => [u.id, u.reasons])),
+          excluded: (j.data?.houseCount?.excluded ?? []).map((x: { houseId?: string; legalBasis: string }) => `${x.houseId}:${x.legalBasis}`),
+          veErrors: j.ve.filter((x) => x.startsWith("error")),
+          bodyTth: (j.body as Record<string, unknown>).temporaryTwoHouse,
+          contested: (j.data?.contestedIssues ?? []).map((ci: { id: string }) => ci.id),
+        },
+        calc: {
+          status: r.status,
+          isExempt: r.isExempt,
+          totalTax: r.totalTax,
+          tth,
+          issues: r.issues.filter((x: string) => !x.includes("취득가액")),
+          warningsAll: (r.warnings ?? []).map((w: unknown) => JSON.stringify(w).slice(0, 160)),
+          warningsHit: (r.warnings ?? []).filter((w: unknown) => /상속|0464|동일세대/.test(JSON.stringify(w))).map((w: unknown) => JSON.stringify(w).slice(0, 200)),
+          err: r.err,
+        },
+      };
+    });
+  }
+  writeFileSync(OUT, JSON.stringify(out, null, 2));
+}, 120_000);

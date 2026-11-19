@@ -1,0 +1,114 @@
+{
+  "other": {
+    "fe8Issues": [],
+    "bodyKeys": {
+      "selfOwns": "land_only",
+      "buildingOwnerSameHousehold": false
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": false,
+      "tax": 94022000,
+      "totalTax": 103424200,
+      "warnLandOnly": [
+        "토지만 본인 소유이고 건물(주택) 소유자가 양도일 현재 본인과 다른 세대라, 이 토지에는 1세대1주택 비과세와 장기보유특별공제 표2(장기임대주택 거주주택 특례 포함)를 적용하지 않았습니다(「소득세법 시행령」 §154① · 조심 2008중3554)."
+      ]
+    },
+    "judge": {
+      "status": 200,
+      "isExempt": true,
+      "isPartialExempt": false,
+      "undeterminedIds": []
+    },
+    "surcharge": {
+      "status": 200,
+      "exemptionIsExempt": true,
+      "keys": [
+        "scope",
+        "transferDate",
+        "judgmentBaseDate",
+        "exemption",
+        "notices"
+      ],
+      "scope": {
+        "supported": false,
+        "reason": "no_house_roster"
+      },
+      "notices": []
+    }
+  },
+  "same": {
+    "fe8Issues": [],
+    "bodyKeys": {
+      "selfOwns": "land_only",
+      "buildingOwnerSameHousehold": true
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "tax": 0,
+      "totalTax": 0,
+      "warnLandOnly": []
+    },
+    "judge": {
+      "status": 200,
+      "isExempt": true,
+      "isPartialExempt": false,
+      "undeterminedIds": []
+    },
+    "surcharge": {
+      "status": 200,
+      "exemptionIsExempt": true,
+      "keys": [
+        "scope",
+        "transferDate",
+        "judgmentBaseDate",
+        "exemption",
+        "notices"
+      ],
+      "scope": {
+        "supported": false,
+        "reason": "no_house_roster"
+      },
+      "notices": []
+    }
+  },
+  "both": {
+    "fe8Issues": [],
+    "bodyKeys": {},
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "tax": 0,
+      "totalTax": 0,
+      "warnLandOnly": []
+    },
+    "judge": {
+      "status": 200,
+      "isExempt": true,
+      "isPartialExempt": false,
+      "undeterminedIds": []
+    },
+    "surcharge": {
+      "status": 200,
+      "exemptionIsExempt": true,
+      "keys": [
+        "scope",
+        "transferDate",
+        "judgmentBaseDate",
+        "exemption",
+        "notices"
+      ],
+      "scope": {
+        "supported": false,
+        "reason": "no_house_roster"
+      },
+      "notices": []
+    }
+  },
+  "menuBuilder": {
+    "landKeys": [
+      "isNonBusinessLand"
+    ]
+  }
+}

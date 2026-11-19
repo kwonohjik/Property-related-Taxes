@@ -1,0 +1,4114 @@
+[
+ {
+  "id": "E001-dual",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E002-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E004-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E004-era-declared",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E004-era-late",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E004-era-2",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E004-era-samehh",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E006-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E0061-parental-rental-counterpart",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E007-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E007-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E008-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E008-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E011-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E011-era-2",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E014-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E015-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E015-era-2",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E015-era-2-early",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E017-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E017-era-neg",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E018-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E019-era-1",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E022-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E022-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E022-current-rural-later",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E022-current-rural-later-unmet",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E023-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E028-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E029-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E033-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E033-era-within1y",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E036-era",
+  "from": "right_to_move_in",
+  "newErrs": [
+   "presaleRights.0.memberOrigin: 분양권·입주권 1: 조합원입주권 취득 경위가 원조합원(기존 주택·상가·토지 등)인지 승계취득인지 선택하세요."
+  ],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": true
+ },
+ {
+  "id": "E040-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E040-era-late",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E040-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E045-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E045-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E046-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E046-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E047-era-pre",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E049-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E049-era-within2y",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E049-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E050-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E050-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E050-current-within1y",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E053-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E053-era-daybefore",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E054-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E055-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E056-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E057-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E057-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E058-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E061-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E062-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E063-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E064-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E067-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-E067-no-decedent-date",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-E067-separate-household",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E070-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E071-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E071-era-pos",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E072-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E073-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E073-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E073-current-neg",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E074-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E074-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E076-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E077-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E083-dual",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E084-dual",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E086-dual",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E088-dual",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E091-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E091-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E091-current-single",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E093-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": true
+ },
+ {
+  "id": "E093-current",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": true
+ },
+ {
+  "id": "E093-current-twin",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "E094-dual",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": true
+ },
+ {
+  "id": "E095-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E098-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E100-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E100-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E103-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E107-dual",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-E107-not-gifted",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E109-dual",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E110-dual",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E112-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "P-E112-post2013",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-E112-post2013-acquired-after",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-E112-not-reinherited",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E115-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E117-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E118-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E119-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": true
+ },
+ {
+  "id": "E121-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E122-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E122-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E123-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E123-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E124-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E125-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E127-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E127-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E128-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E128-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E128-era-reverse",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E128-era-spouse2",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E129-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E129-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E129-era-noprior",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E132-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E132-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-E132-1062",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "P-E132-seller-rentals-only",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E133-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E139-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E140-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E140-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E141-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E141-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E143-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E143-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E144-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E145-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E146-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E146-era-pos",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E147-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E149-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E149-era-5y",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E150-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E151-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E156-dual",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E156-farmexit",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-E156-farmexit-not-returned",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E160-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E162-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E163-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E163-era-pos",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E163-era-sameday",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E166-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E166-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E167-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E175-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E175-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E177-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E177-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E178-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E178-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E180-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E182-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E182-era-pos",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E182-era-3",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E185-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E190-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E193-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E193-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E194-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E195-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E195-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E196-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E197-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E199-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E199-era-pos",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E203-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "E203-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E204-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E208-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E209-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "E211-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-E211-within",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "P-E211-sell-b",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F004-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F006-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F006-household",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F007-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F011-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F012-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F015-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F016-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F016-same-household",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F018-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F020-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F021-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F023-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F023-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F029-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F031-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F032-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F033-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F034-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F034-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F036-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F037-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F038-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F038-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F039-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F040-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F043-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F045-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F055-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F055-approval-2006",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F055-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F056-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F056-no-right",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F059-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F059-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F060-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F061-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F067-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F068-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F068-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F069-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F069-roster",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-F069-gate-20111013",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F069-gate-20111014",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F069-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F070-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F070-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F075-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "P-F075-c-transfer",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F076-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F076-1day",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F115-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F115-rental-undeclared",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F123-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F123-over3y",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F128-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F154-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F154-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "P-F154-current-whole13",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F169-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F169-transfer",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F170-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F170-gift",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F175-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F175-2021",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F180-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "P-F180-acq-nonregulated",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F180-acq-regulated",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F187-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F187-one-day-short",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F190-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F190-one-day-later",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F193-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F193-separate-household",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F207-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F207-separate",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F217-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F217-after-departure",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F217-before-departure",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F242-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "P-F242-no-residence",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F243-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F243-resided24",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F251-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F251-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F252-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F255-own-62m",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F256-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F256-59m",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-F256-highvalue",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F259-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F259-lease-unset",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F260-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F262-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F262-acquired-after-notice",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F264-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F264-plan-decision-date",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-F264-remnant-2y-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F264-remnant-5y-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F268-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F268-first-member-departure",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-F275-acquired-after-departure",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F276-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F276-held-2y",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F281-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F281-only-house",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F289-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F295-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F295-excluding-post-approval",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F297-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F297-within-2y",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F303-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F303-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F303-physical-departure",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F305-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F307-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F311-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F312-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F312-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F316-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F318-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F322-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "P-F322-current-within",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F322-current-over",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F340-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F340-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "P-F340-current-12m",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F340-current-11m",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F355-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F355-era-maintained",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F361-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F361-era-6pct",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F366-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F366-era-17m",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F373-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "P-F373-era-60m",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F373-era-59m",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F384-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F390-current",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F395-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F395-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F395-current-noconv",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F396-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F396-no-proviso",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-F396-registered-20191217",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F409-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F450-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F450-current-over",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F451-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "F455-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F455-current",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "F456-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F456-era-6eok",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "F456-current",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-F456-current-12eok",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "F461-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-F461-no-proviso",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-F461-acquired-after-approval",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-F461-no-proviso-2y6m",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G016-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-G016-era-approval-2005",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G017-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-G017-era-approval-2005",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G019-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G019-current",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "G021-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": true
+ },
+ {
+  "id": "G021-current",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "P-G021-current-3y",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "N-G021-current-3y1d",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G022-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G023-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G024-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "G035-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G049-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G049-current",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "G050-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "G050-current",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G055-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "G055-current",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "G062-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": true
+ },
+ {
+  "id": "G062-current",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "N-G062-over3y",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G065-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "G066-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G077-era",
+  "from": "right_to_move_in",
+  "newErrs": [
+   "presaleRights.0.memberOrigin: 분양권·입주권 1: 조합원입주권 취득 경위가 원조합원(기존 주택·상가·토지 등)인지 승계취득인지 선택하세요."
+  ],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-G077-later-sold",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "G091-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "G091-current",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "G099-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G099-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G100-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G100-dual",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G100-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G103-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G104-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G104-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G105-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-G105-over3y",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-G105-completed",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-G105-completed-exception",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G106-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-G106-none",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G107-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G110-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "P-G110-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-G110-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G111-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G116-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G116-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-G116-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G119-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G119-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-G119-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G120-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G120-era-origin",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G120-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G123-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G124-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-G124-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G125-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-G125-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-G125-norepl",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G126-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G126-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G128-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G128-era-origin",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G129-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G129-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G131-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G132-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G133-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G148-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G152-era",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G154-era",
+  "from": "right_to_move_in",
+  "newErrs": [
+   "presaleRights.0.memberOrigin: 분양권·입주권 1: 조합원입주권 취득 경위가 원조합원(기존 주택·상가·토지 등)인지 승계취득인지 선택하세요."
+  ],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": true
+ },
+ {
+  "id": "G157-era-first",
+  "from": "right_to_move_in",
+  "newErrs": [
+   "presaleRights.0.memberOrigin: 분양권·입주권 1: 조합원입주권 취득 경위가 원조합원(기존 주택·상가·토지 등)인지 승계취득인지 선택하세요."
+  ],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G157-era-second",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "G162-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G163-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G163-era-blank",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "G163-era-none",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-G163-blank-within1y",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-G163-blank-right-before-marriage",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-G163-none-over3y",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G163-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "N-G163-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "G164-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "R006-dual",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "R012-dual",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "R014-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-R014-era-no-officetel",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "R030-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "R031-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "R031-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-R031-current-24m",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "R033-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "R037-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "R043-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "N-R043-current-12eok",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "S001-current",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "S006-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "S006-current",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "S041-4022-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "S045-2019seo2002-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "S045-2017seo3603-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "T001-era",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "P-T001-separate-household",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "P-T001-parental-care",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "SMOKE-1",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "SMOKE-2",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "STAT-71-2-house",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "STAT-71-2-right",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": true
+ },
+ {
+  "id": "STAT-71-2-right-unknown",
+  "from": "right_to_move_in",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": true
+ },
+ {
+  "id": "NTS-2025-2010-gift-separate",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "NTS-2025-2010-gift-same",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "NTS-2025-1621-inherit-separate",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": true,
+  "ex1": false
+ },
+ {
+  "id": "NTS-2025-1621-inherit-same",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "NTS-2025-1621-inherit-unknown",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ },
+ {
+  "id": "NTS-2025-1621-inherit-legacy-false",
+  "from": "housing",
+  "newErrs": [],
+  "zod": [],
+  "status": 200,
+  "ex0": false,
+  "ex1": false
+ }
+]

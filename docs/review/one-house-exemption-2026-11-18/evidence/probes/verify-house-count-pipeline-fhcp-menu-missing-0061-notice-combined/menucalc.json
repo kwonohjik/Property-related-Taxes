@@ -1,0 +1,428 @@
+[
+  {
+    "label": "M1 대상 · 비조정 · 거주0 · 명부 a,r(cp) · ⑳ 미선언",
+    "leaf": {
+      "householdHousingCount": 3,
+      "missing": "합가 상대 쪽 장기임대주택 1채가 요건을 갖추면 주택 수에서 빼고 합가 특례를 적용할 수 있습니다(기준-2024-법규재산-0061) — 장기임대주택 특례(소득세법 시행령 §155⑳)를 선언해 임대 요건을 입력하세요. 입력이 없어 판정하지 않았습니다.",
+      "unmet": null
+    },
+    "menu": {
+      "status": 200,
+      "veErrors": [],
+      "isExempt": false,
+      "isPartialExempt": false,
+      "undetermined": [],
+      "unmet": [
+        "155-4-parental-care-merge :: 세대 주택 수가 3채입니다 — 합가 특례는 일시적 2주택 특례와 겹친 경우에만 3주택까지 적용되는데, ② 보유 주택 목록에서 일시적 2주택의 신규 주택이 하나로 특정되지 않습니다(합가 전에는 같은 쪽 안에서 나중에 취득한 주택, 합가 후에는 새로 취득한 주택 1채)."
+      ],
+      "pending": [],
+      "houseCount": {
+        "total": 3,
+        "counted": 3
+      },
+      "mentions0061": false
+    },
+    "calc": {
+      "status": 200,
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "isExempt": false,
+      "totalTax": 172766000,
+      "warnings": [
+        "합가 상대 쪽 장기임대주택 1채가 요건을 갖추면 주택 수에서 빼고 합가 특례를 적용할 수 있습니다(기준-2024-법규재산-0061) — 장기임대주택 특례(소득세법 시행령 §155⑳)를 선언해 임대 요건을 입력하세요. 입력이 없어 판정하지 않았습니다.",
+        "동거봉양 합가 비과세 특례(소득세법 시행령 §155④)를 적용하지 않았습니다 — 합가 전 각자 1주택을 보유하다가 합가로 1세대 2주택이 됨 미충족(세대 주택 수 3채) — 3주택은 일시적 2주택 특례(§155①)와 겹친 경우에만 인정됩니다 — 그 기간 요건을 충족하지 않습니다."
+      ],
+      "mentions0061": true,
+      "bodyHouses": 3
+    }
+  },
+  {
+    "label": "C1 대조 · 같음 + ⑳ 선언 · 상대 쪽 거주 예",
+    "leaf": {
+      "householdHousingCount": 3,
+      "missing": null,
+      "unmet": null
+    },
+    "menu": {
+      "status": 200,
+      "veErrors": [],
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+      "undetermined": [
+        "155-20-merge-rental-carveout :: 합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061). 「소득세법 시행령」 §154① 보유·거주 요건은 그대로 봅니다."
+      ],
+      "unmet": [],
+      "pending": [],
+      "houseCount": {
+        "total": 3,
+        "counted": 3
+      },
+      "mentions0061": true
+    },
+    "calc": {
+      "status": 200,
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "isExempt": true,
+      "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+      "totalTax": 0,
+      "warnings": [
+        "합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061). 「소득세법 시행령」 §154① 보유·거주 요건은 그대로 봅니다."
+      ],
+      "mentions0061": true,
+      "bodyHouses": 3,
+      "bodyRhe": {
+        "applyException": true,
+        "scenario": "A",
+        "rentalUnits": [
+          {
+            "businessRegistrationDate": "2019-09-26T00:00:00.000Z",
+            "rentalRegistrationDate": "2019-09-26T00:00:00.000Z",
+            "rentalRegisteredDate": "2019-09-26T00:00:00.000Z",
+            "rentalCategory": "long_general",
+            "rentalAcquisitionType": "purchase",
+            "isApartment": false,
+            "region": "seoul-metro",
+            "isExcluded918Rule": false,
+            "hasContractDepositProof": false,
+            "isExcludedShortToLongChange": false,
+            "standardPriceAtRentalStart": 250000000,
+            "acquisitionOfficialPrice": 250000000,
+            "isNationalSizeHousing": true,
+            "hasMinimum2Units": true,
+            "hasMinimum5UnitsInCity": false,
+            "rentalMonths": 48,
+            "rentalAutoTermination": false,
+            "requirementsConfirmed": true,
+            "mergeOrigin": "counterpart_side"
+          }
+        ],
+        "priorRentalExemptionHistory": "none",
+        "counterpartHouseResidedTwoYears": true
+      }
+    }
+  },
+  {
+    "label": "C2 대조 · 강남(조정 취득) · 거주0 · ⑳ 미선언",
+    "leaf": {
+      "householdHousingCount": 3,
+      "missing": null,
+      "unmet": null
+    },
+    "menu": {
+      "status": 200,
+      "veErrors": [],
+      "isExempt": false,
+      "isPartialExempt": false,
+      "undetermined": [],
+      "unmet": [
+        "155-4-parental-care-merge :: 세대 주택 수가 3채입니다 — 합가 특례는 일시적 2주택 특례와 겹친 경우에만 3주택까지 적용되는데, ② 보유 주택 목록에서 일시적 2주택의 신규 주택이 하나로 특정되지 않습니다(합가 전에는 같은 쪽 안에서 나중에 취득한 주택, 합가 후에는 새로 취득한 주택 1채)."
+      ],
+      "pending": [],
+      "houseCount": {
+        "total": 3,
+        "counted": 3
+      },
+      "mentions0061": false
+    },
+    "calc": {
+      "status": 200,
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "isExempt": false,
+      "totalTax": 172766000,
+      "warnings": [
+        "동거봉양 합가 비과세 특례(소득세법 시행령 §155④)를 적용하지 않았습니다 — 합가 전 각자 1주택을 보유하다가 합가로 1세대 2주택이 됨 미충족(세대 주택 수 3채) — 3주택은 일시적 2주택 특례(§155①)와 겹친 경우에만 인정됩니다 — 그 기간 요건을 충족하지 않습니다 · 양도주택 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 미충족(취득 당시 조정대상지역 해당, 거주기간 0개월)."
+      ],
+      "mentions0061": false,
+      "bodyHouses": 3
+    }
+  },
+  {
+    "label": "C3 대조 · 비조정 · 명부 a(cp)만(임대 없음) · ⑳ 미선언",
+    "leaf": {
+      "householdHousingCount": 2,
+      "missing": null,
+      "unmet": null
+    },
+    "menu": {
+      "status": 200,
+      "veErrors": [],
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+      "undetermined": [],
+      "unmet": [],
+      "pending": [],
+      "houseCount": {
+        "total": 2,
+        "counted": 2
+      },
+      "mentions0061": false
+    },
+    "calc": {
+      "status": 200,
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "isExempt": true,
+      "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+      "totalTax": 0,
+      "mentions0061": false,
+      "bodyHouses": 2
+    }
+  },
+  {
+    "label": "C4 · ⑳ 선언 · 상대 쪽 거주 「아니오」",
+    "leaf": {
+      "householdHousingCount": 3,
+      "missing": null,
+      "unmet": null
+    },
+    "menu": {
+      "status": 200,
+      "veErrors": [],
+      "isExempt": false,
+      "isPartialExempt": false,
+      "undetermined": [],
+      "unmet": [
+        "155-4-parental-care-merge :: 세대 주택 수가 3채입니다 — 합가 특례는 일시적 2주택 특례와 겹친 경우에만 3주택까지 적용되는데, ② 보유 주택 목록에서 일시적 2주택의 신규 주택이 하나로 특정되지 않습니다(합가 전에는 같은 쪽 안에서 나중에 취득한 주택, 합가 후에는 새로 취득한 주택 1채)."
+      ],
+      "pending": [],
+      "houseCount": {
+        "total": 3,
+        "counted": 3
+      },
+      "rentalVerdict": {
+        "passed": false,
+        "notices": []
+      },
+      "mentions0061": false
+    },
+    "calc": {
+      "status": 200,
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "isExempt": false,
+      "totalTax": 172766000,
+      "warnings": [
+        "동거봉양 합가 비과세 특례(소득세법 시행령 §155④)를 적용하지 않았습니다 — 합가 전 각자 1주택을 보유하다가 합가로 1세대 2주택이 됨 미충족(세대 주택 수 3채) — 3주택은 일시적 2주택 특례(§155①)와 겹친 경우에만 인정됩니다 — 그 기간 요건을 충족하지 않습니다."
+      ],
+      "mentions0061": false,
+      "bodyHouses": 3,
+      "bodyRhe": {
+        "applyException": true,
+        "scenario": "A",
+        "rentalUnits": [
+          {
+            "businessRegistrationDate": "2019-09-26T00:00:00.000Z",
+            "rentalRegistrationDate": "2019-09-26T00:00:00.000Z",
+            "rentalRegisteredDate": "2019-09-26T00:00:00.000Z",
+            "rentalCategory": "long_general",
+            "rentalAcquisitionType": "purchase",
+            "isApartment": false,
+            "region": "seoul-metro",
+            "isExcluded918Rule": false,
+            "hasContractDepositProof": false,
+            "isExcludedShortToLongChange": false,
+            "standardPriceAtRentalStart": 250000000,
+            "acquisitionOfficialPrice": 250000000,
+            "isNationalSizeHousing": true,
+            "hasMinimum2Units": true,
+            "hasMinimum5UnitsInCity": false,
+            "rentalMonths": 48,
+            "rentalAutoTermination": false,
+            "requirementsConfirmed": true,
+            "mergeOrigin": "counterpart_side"
+          }
+        ],
+        "priorRentalExemptionHistory": "none",
+        "counterpartHouseResidedTwoYears": false
+      }
+    }
+  },
+  {
+    "label": "C5 · ⑳ 선언 · 상대 쪽 거주 미답",
+    "leaf": {
+      "householdHousingCount": 3,
+      "missing": "합가 상대 쪽 장기임대주택 1채가 요건을 갖추면 주택 수에서 빼고 합가 특례를 적용할 수 있습니다(기준-2024-법규재산-0061) — 상대 쪽 주택에 2년 이상 거주했는지 답하세요. 입력이 없어 판정하지 않았습니다.",
+      "unmet": null
+    },
+    "menu": {
+      "status": 200,
+      "veErrors": [
+        "error:rentalHousingException.counterpartHouseResidedTwoYears: 합가 상대 쪽 주택에 2년 이상 거주했는지 답하세요 — 「예」면 양도 주택에 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061)."
+      ],
+      "isExempt": false,
+      "isPartialExempt": false,
+      "undetermined": [],
+      "unmet": [
+        "155-4-parental-care-merge :: 세대 주택 수가 3채입니다 — 합가 특례는 일시적 2주택 특례와 겹친 경우에만 3주택까지 적용되는데, ② 보유 주택 목록에서 일시적 2주택의 신규 주택이 하나로 특정되지 않습니다(합가 전에는 같은 쪽 안에서 나중에 취득한 주택, 합가 후에는 새로 취득한 주택 1채)."
+      ],
+      "pending": [],
+      "houseCount": {
+        "total": 3,
+        "counted": 3
+      },
+      "rentalVerdict": {
+        "passed": false,
+        "notices": []
+      },
+      "mentions0061": false
+    },
+    "calc": {
+      "status": 200,
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "isExempt": false,
+      "totalTax": 172766000,
+      "warnings": [
+        "합가 상대 쪽 장기임대주택 1채가 요건을 갖추면 주택 수에서 빼고 합가 특례를 적용할 수 있습니다(기준-2024-법규재산-0061) — 상대 쪽 주택에 2년 이상 거주했는지 답하세요. 입력이 없어 판정하지 않았습니다.",
+        "동거봉양 합가 비과세 특례(소득세법 시행령 §155④)를 적용하지 않았습니다 — 합가 전 각자 1주택을 보유하다가 합가로 1세대 2주택이 됨 미충족(세대 주택 수 3채) — 3주택은 일시적 2주택 특례(§155①)와 겹친 경우에만 인정됩니다 — 그 기간 요건을 충족하지 않습니다."
+      ],
+      "mentions0061": true,
+      "bodyHouses": 3,
+      "bodyRhe": {
+        "applyException": true,
+        "scenario": "A",
+        "rentalUnits": [
+          {
+            "businessRegistrationDate": "2019-09-26T00:00:00.000Z",
+            "rentalRegistrationDate": "2019-09-26T00:00:00.000Z",
+            "rentalRegisteredDate": "2019-09-26T00:00:00.000Z",
+            "rentalCategory": "long_general",
+            "rentalAcquisitionType": "purchase",
+            "isApartment": false,
+            "region": "seoul-metro",
+            "isExcluded918Rule": false,
+            "hasContractDepositProof": false,
+            "isExcludedShortToLongChange": false,
+            "standardPriceAtRentalStart": 250000000,
+            "acquisitionOfficialPrice": 250000000,
+            "isNationalSizeHousing": true,
+            "hasMinimum2Units": true,
+            "hasMinimum5UnitsInCity": false,
+            "rentalMonths": 48,
+            "rentalAutoTermination": false,
+            "requirementsConfirmed": true,
+            "mergeOrigin": "counterpart_side"
+          }
+        ],
+        "priorRentalExemptionHistory": "none"
+      }
+    }
+  },
+  {
+    "label": "C6 · 강남 · 거주0 · ⑳ 선언 예(경로 성립 · §154① 미달)",
+    "leaf": {
+      "householdHousingCount": 3,
+      "missing": null,
+      "unmet": "합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④로 판정했지만, 양도 주택이 「소득세법 시행령」 §154① 거주 2년(현재 0개월) 요건을 충족하지 못해 비과세되지 않습니다 (양도 주택에 같은 항 1호의 거주 2년은 적용하지 않았습니다 — 기준-2024-법규재산-0061)."
+    },
+    "menu": {
+      "status": 200,
+      "veErrors": [],
+      "isExempt": false,
+      "isPartialExempt": false,
+      "undetermined": [
+        "154-1-residence-deadline-unavailable :: 거주기간 요건을 충족하게 되는 날짜는 계산하지 않았습니다 — 거주 개시일이 아니라 거주 개월 수를 입력받기 때문입니다.",
+        "154-1-4ho-rental-registration-unverified :: 조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 신청했다면, 삭제 전 소득세법 시행령 §154①4호(거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 증액은 제외)가 적용됩니다(대통령령 제30395호 부칙 제38조). 해당하면 §154① 단서에서 「4호 임대사업자 등록」을 선택하고 등록 사실을 입력하세요 — 입력하지 않아 이 경과조치는 판정하지 않았습니다."
+      ],
+      "unmet": [
+        "155-4-parental-care-merge :: §154① 보유 2년(취득 당시 조정대상지역이면 거주 2년) 요건을 충족하지 않습니다."
+      ],
+      "pending": [],
+      "houseCount": {
+        "total": 3,
+        "counted": 3
+      },
+      "mentions0061": false
+    },
+    "calc": {
+      "status": 200,
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "isExempt": false,
+      "totalTax": 172766000,
+      "warnings": [
+        "조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 신청했다면, 삭제 전 소득세법 시행령 §154①4호(거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 증액은 제외)가 적용됩니다(대통령령 제30395호 부칙 제38조). 해당하면 §154① 단서에서 「4호 임대사업자 등록」을 선택하고 등록 사실을 입력하세요 — 입력하지 않아 이 경과조치는 판정하지 않았습니다.",
+        "합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④로 판정했지만, 양도 주택이 「소득세법 시행령」 §154① 거주 2년(현재 0개월) 요건을 충족하지 못해 비과세되지 않습니다 (양도 주택에 같은 항 1호의 거주 2년은 적용하지 않았습니다 — 기준-2024-법규재산-0061)."
+      ],
+      "mentions0061": true,
+      "bodyHouses": 3,
+      "bodyRhe": {
+        "applyException": true,
+        "scenario": "A",
+        "rentalUnits": [
+          {
+            "businessRegistrationDate": "2019-09-26T00:00:00.000Z",
+            "rentalRegistrationDate": "2019-09-26T00:00:00.000Z",
+            "rentalRegisteredDate": "2019-09-26T00:00:00.000Z",
+            "rentalCategory": "long_general",
+            "rentalAcquisitionType": "purchase",
+            "isApartment": false,
+            "region": "seoul-metro",
+            "isExcluded918Rule": false,
+            "hasContractDepositProof": false,
+            "isExcludedShortToLongChange": false,
+            "standardPriceAtRentalStart": 250000000,
+            "acquisitionOfficialPrice": 250000000,
+            "isNationalSizeHousing": true,
+            "hasMinimum2Units": true,
+            "hasMinimum5UnitsInCity": false,
+            "rentalMonths": 48,
+            "rentalAutoTermination": false,
+            "requirementsConfirmed": true,
+            "mergeOrigin": "counterpart_side"
+          }
+        ],
+        "priorRentalExemptionHistory": "none",
+        "counterpartHouseResidedTwoYears": true
+      }
+    }
+  },
+  {
+    "label": "C7 · 비조정 · 명부 a(cp)+r(seller_side 임대) · ⑳ 미선언",
+    "leaf": {
+      "householdHousingCount": 3,
+      "missing": null,
+      "unmet": null
+    },
+    "menu": {
+      "status": 200,
+      "veErrors": [],
+      "isExempt": false,
+      "isPartialExempt": false,
+      "undetermined": [],
+      "unmet": [
+        "155-4-parental-care-merge :: 세대 주택 수가 3채입니다 — 합가 특례는 일시적 2주택 특례와 겹친 경우에만 3주택까지 적용되는데, ② 보유 주택 목록에서 일시적 2주택의 신규 주택이 하나로 특정되지 않습니다(합가 전에는 같은 쪽 안에서 나중에 취득한 주택, 합가 후에는 새로 취득한 주택 1채)."
+      ],
+      "pending": [],
+      "houseCount": {
+        "total": 3,
+        "counted": 3
+      },
+      "mentions0061": false
+    },
+    "calc": {
+      "status": 200,
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "isExempt": false,
+      "totalTax": 172766000,
+      "warnings": [
+        "동거봉양 합가 비과세 특례(소득세법 시행령 §155④)를 적용하지 않았습니다 — 합가 전 각자 1주택을 보유하다가 합가로 1세대 2주택이 됨 미충족(세대 주택 수 3채) — 3주택은 일시적 2주택 특례(§155①)와 겹친 경우에만 인정됩니다 — 그 기간 요건을 충족하지 않습니다."
+      ],
+      "mentions0061": false,
+      "bodyHouses": 3
+    }
+  }
+]

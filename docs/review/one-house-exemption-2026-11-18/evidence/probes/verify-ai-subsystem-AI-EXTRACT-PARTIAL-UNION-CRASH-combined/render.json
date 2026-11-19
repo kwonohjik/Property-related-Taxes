@@ -1,0 +1,81 @@
+{
+  "render": {
+    "control_none": {
+      "ok": true
+    },
+    "control_screen_special": {
+      "ok": true
+    },
+    "kindOnly_reduction": {
+      "ok": false,
+      "error": "TypeError: Cannot read properties of undefined (reading 'type')"
+    },
+    "kindOnly_special": {
+      "ok": false,
+      "error": "TypeError: Cannot read properties of undefined (reading 'article')"
+    },
+    "partial_special_article": {
+      "ok": true
+    },
+    "partial_reduction_type": {
+      "ok": true
+    },
+    "partial_reduction_989": {
+      "ok": true
+    }
+  },
+  "answer": {
+    "targetFound": true,
+    "reduction": {
+      "countExclusion": {
+        "kind": "reduction"
+      },
+      "sidebarSteps": {
+        "0": {
+          "ok": true,
+          "count": 0
+        },
+        "1": {
+          "ok": true,
+          "count": 2
+        },
+        "2": {
+          "ok": false,
+          "error": "TypeError: Cannot read properties of undefined (reading 'type')"
+        }
+      },
+      "rowEditor": {
+        "ok": false,
+        "error": "TypeError: Cannot read properties of undefined (reading 'type')"
+      }
+    },
+    "special": {
+      "countExclusion": {
+        "kind": "special"
+      },
+      "sidebarSteps": {
+        "0": {
+          "ok": true,
+          "count": 0
+        },
+        "1": {
+          "ok": true,
+          "count": 2
+        },
+        "2": {
+          "ok": true,
+          "count": 2
+        }
+      },
+      "rowEditor": {
+        "ok": false,
+        "error": "TypeError: Cannot read properties of undefined (reading 'article')"
+      }
+    },
+    "control_unanswered": {
+      "0": 0,
+      "1": 2,
+      "2": 1
+    }
+  }
+}

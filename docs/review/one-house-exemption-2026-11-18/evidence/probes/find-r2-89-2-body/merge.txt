@@ -1,0 +1,39 @@
+## G1 혼인(2022) · 1주택+배우자 입주권 · 먼저 양도 · 구성 미선택
+status=200 ⑧=[] body.merge={"m":{"marriageDate":"2022-05-01"},"f":true}
+isExempt=false 89②=excluded exc=- undeclMerge=["소득세법 시행령 §156의2 ⑨"]
+applied=[]
+unmet=[["156-2-3-right-three-year:deadline-lapsed",["주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 3년 이내에 종전주택을 양도해야 비과세 — 이 기한(2024-01-15)이 판정 기준일(2024-05-01) 전에 지나 양도일을 조정해도 충족할 수 없습니다."]]]
+undet=[["89-2-three-year-exception-undeclared","권리 취득일부터 3년이 지나 양도했고 그 예외(소득세법 시행령 §156의2 ④ · 소득세법 시행규칙 §75 ①) 해당 여부를 선언하지 않아 예외 없이 과세로 판정했습니다(확인 필요) — 해당하면 「3년 경과 예외」에서 선언하세요."],["89-2-merged-household-composition-undeclared","합가(혼인) 전 보유 구성을 선택하지 않아 그 예외(소득세법 시행령 §156의2 ⑨)를 적용하지 않고 「소득세법」 §89② 배제를 적용해 과세로 판정했습니다(확인 필요) — 합가 전 최초양도주택을 소유하던 사람이 실제로 무엇을 갖고 있었는지 「합가 전 보유 구성」에서 사실대로 선택하면 판정합니다."]]
+err=null
+
+## G2 같은 사안 · 구성 house_only
+status=200 ⑧=[] body.merge={"m":{"marriageDate":"2022-05-01"},"f":true,"k":{"kind":"house_only"}}
+isExempt=true 89②=exception_met exc=소득세법 시행령 §156의2 ⑨2호 undeclMerge=null
+applied=[]
+unmet=[]
+undet=[]
+err=null
+
+## G3 같은 사안 · 먼저 양도 미선택 · 구성 house_only
+status=200 ⑧=[] body.merge={"m":{"marriageDate":"2022-05-01"},"k":{"kind":"house_only"}}
+isExempt=false 89②=excluded exc=- undeclMerge=null
+applied=[]
+unmet=[["156-2-3-right-three-year:deadline-lapsed",["주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 3년 이내에 종전주택을 양도해야 비과세 — 이 기한(2024-01-15)이 판정 기준일(2024-05-01) 전에 지나 양도일을 조정해도 충족할 수 없습니다."]]]
+undet=[["89-2-three-year-exception-undeclared","권리 취득일부터 3년이 지나 양도했고 그 예외(소득세법 시행령 §156의2 ④ · 소득세법 시행규칙 §75 ①) 해당 여부를 선언하지 않아 예외 없이 과세로 판정했습니다(확인 필요) — 해당하면 「3년 경과 예외」에서 선언하세요."]]
+err=null
+
+## G4 동거봉양(2022) · 연령 미선택 · house_only
+status=200 ⑧=["parentalCareParentAge: 동거봉양 합가일을 입력했다면 합가일 현재 직계존속의 연령을 선택하세요 — 고르지 않으면 동거봉양 합가 특례를 불성립으로 판정합니다(합가일 현재 만 나이 기준)."] body.merge={"p":{"mergeDate":"2022-05-01"},"f":true,"k":{"kind":"house_only"}}
+isExempt=false 89②=excluded exc=- undeclMerge=null
+applied=[]
+unmet=[["156-2-3-right-three-year:deadline-lapsed",["주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 3년 이내에 종전주택을 양도해야 비과세 — 이 기한(2024-01-15)이 판정 기준일(2024-05-01) 전에 지나 양도일을 조정해도 충족할 수 없습니다."]]]
+undet=[["89-2-three-year-exception-undeclared","권리 취득일부터 3년이 지나 양도했고 그 예외(소득세법 시행령 §156의2 ④ · 소득세법 시행규칙 §75 ①) 해당 여부를 선언하지 않아 예외 없이 과세로 판정했습니다(확인 필요) — 해당하면 「3년 경과 예외」에서 선언하세요."],["89-2-confirm:0","동거봉양 합가의 직계존속 연령 요건(합가일 현재 만 60세 이상 — 일부는 요양급여 받는 60세 미만)을 선택하지 않아 합가 특례를 적용하지 않았습니다. 합가일 현재 만 나이로 해당 여부를 선택하면 판정합니다(확인 필요)."]]
+err=null
+
+## G5 혼인 · 주택이 혼인 뒤 취득 · house_only(해당 없음)
+status=200 ⑧=[] body.merge={"m":{"marriageDate":"2017-05-01"},"f":true,"k":{"kind":"house_only"}}
+isExempt=false 89②=excluded exc=- undeclMerge=null
+applied=[]
+unmet=[["156-2-3-right-three-year:deadline-lapsed",["주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 3년 이내에 종전주택을 양도해야 비과세 — 이 기한(2024-01-15)이 판정 기준일(2024-05-01) 전에 지나 양도일을 조정해도 충족할 수 없습니다."]]]
+undet=[["89-2-three-year-exception-undeclared","권리 취득일부터 3년이 지나 양도했고 그 예외(소득세법 시행령 §156의2 ④ · 소득세법 시행규칙 §75 ①) 해당 여부를 선언하지 않아 예외 없이 과세로 판정했습니다(확인 필요) — 해당하면 「3년 경과 예외」에서 선언하세요."]]
+err=null

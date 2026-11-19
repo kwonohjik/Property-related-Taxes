@@ -1,0 +1,45 @@
+{
+  "menu_sameDay": {
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "article89Clause2": {
+      "status": "excluded"
+    },
+    "coreWouldPass": true,
+    "undetermined": [],
+    "unmetExceptions": [],
+    "pending": [],
+    "requirementReview": "absent"
+  },
+  "menu_normal_control": {
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": true,
+    "isPartialExempt": false,
+    "article89Clause2": {
+      "status": "exception_met",
+      "exception": "소득세법 시행령 §155 ①",
+      "deadline": "2025-03-04T00:00:00.000Z"
+    },
+    "undetermined": [],
+    "unmetExceptions": [],
+    "pending": [],
+    "requirementReview": "present"
+  },
+  "menu_oneDayAfter_lt1y": {
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "article89Clause2": {
+      "status": "excluded"
+    },
+    "coreWouldPass": true,
+    "undetermined": [],
+    "unmetExceptions": [],
+    "pending": [],
+    "requirementReview": "absent"
+  }
+}

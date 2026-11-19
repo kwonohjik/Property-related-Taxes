@@ -1,0 +1,52 @@
+[
+  {
+    "k": "A_rights2_delay",
+    "clause": null,
+    "directClause": null,
+    "reasons": [
+      "세대 보유 조합원입주권이 1개여야 합니다 (현재 2개 — 양도 대상 포함).",
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ]
+  },
+  {
+    "k": "A_cf_rights1_delay",
+    "clause": "na",
+    "directClause": "na",
+    "reasons": []
+  },
+  {
+    "k": "B_rights2_nodelay",
+    "clause": null,
+    "directClause": null,
+    "reasons": [
+      "세대 보유 조합원입주권이 1개여야 합니다 (현재 2개 — 양도 대상 포함).",
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ]
+  },
+  {
+    "k": "B_cf_rights1_nodelay",
+    "clause": null,
+    "directClause": null,
+    "reasons": [
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ]
+  },
+  {
+    "k": "C_nohousehold_delay",
+    "clause": null,
+    "directClause": null,
+    "reasons": [
+      "1세대에 해당하지 않습니다.",
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ]
+  },
+  {
+    "k": "D_noeligible_delay",
+    "clause": null,
+    "directClause": null,
+    "reasons": [
+      "관리처분계획인가일 현재 §89①3호 가목 요건(보유 2년, 조정대상지역 취득 시 거주 2년)을 갖춘 기존주택 소유가 선언되지 않았습니다.",
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ]
+  }
+]

@@ -1,0 +1,32 @@
+{
+  "base": {
+    "formHouses": 1,
+    "formTransferDate": "2021-06-01",
+    "oneHouseStep": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeResultType": "multi_house_2",
+    "surchargeResultTransferDate": "2021-06-01",
+    "surchargeResultRows": 2
+  },
+  "afterResumeClientChange": {
+    "formHouses": 0,
+    "formTransferDate": "2021-06-01",
+    "oneHouseStep": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 0,
+    "surchargeResultType": null,
+    "surchargeResultTransferDate": null,
+    "surchargeResultRows": null
+  },
+  "afterResumeSameClient": {
+    "formHouses": 0,
+    "formTransferDate": "2021-06-01",
+    "oneHouseStep": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeResultType": "multi_house_2",
+    "surchargeResultTransferDate": "2021-06-01",
+    "surchargeResultRows": 2
+  }
+}

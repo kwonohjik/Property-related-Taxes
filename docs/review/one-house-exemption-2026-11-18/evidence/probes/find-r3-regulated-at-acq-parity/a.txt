@@ -1,0 +1,24 @@
+A1 fwd start2018 gift2020 compl2023-06 (T,T | compl F) code
+  screen: {"date":"2023-06-01","basis":"none","step4Auto":"false(서울특별시 — 2023-06-01 기준 미지정(지정 이력 없음 또는 해제됨))","effective":false,"stored":false}
+  engine: status=200 exempt=false tax=173060000 reason= issues=[] bodyWas=false bodyCode=1144010100 warnRegulated=["조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 신청했다면, 삭제 전 소득세법 시행령 §154①4호(거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 증액","1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 미충족(취득 당시 조정대상지역 해당, 거주기간 6개월)."]
+A1s same, address string only
+  screen: {"date":"2023-06-01","basis":"none","step4Auto":"null","effective":false,"stored":false}
+  engine: status=200 exempt=true tax=0 reason=1세대1주택 비과세 issues=[] bodyWas=false bodyCode=undefined warnRegulated=[]
+A2 rev start2023-02 gift2023-06 compl2025-11 (F,F | compl T) code
+  screen: {"date":"2025-11-01","basis":"none","step4Auto":"true(2025-10-16 고시 — 서울특별시 지정)","effective":true,"stored":true}
+  engine: status=200 exempt=true tax=0 reason=1세대1주택 비과세 issues=[] bodyWas=true bodyCode=1144010100 warnRegulated=["증여자가 관리처분계획 인가 전부터 종전주택을 보유한 원조합원이고 계속 같은 세대였다는 입력에 따라, 세대가 종전주택 보유를 시작한 날부터 보유기간(종전주택·공사기간·신축주택)을 통산하고 그 날을 「취득 당시」로 보았습니다. 입주권 상태에서 동일세대원 "]
+A2s same, address string only
+  screen: {"date":"2025-11-01","basis":"none","step4Auto":"null","effective":true,"stored":true}
+  engine: status=200 exempt=false tax=348250000 reason= issues=[] bodyWas=true bodyCode=undefined warnRegulated=["조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 신청했다면, 삭제 전 소득세법 시행령 §154①4호(거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 증액","1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 미충족(취득 당시 조정대상지역 해당, 거주기간 0개월)."]
+A3 control: same-household NO (no consolidation) code
+  screen: {"date":"2023-06-01","basis":"none","step4Auto":"false(서울특별시 — 2023-06-01 기준 미지정(지정 이력 없음 또는 해제됨))","effective":false,"stored":false}
+  engine: status=200 exempt=true tax=0 reason=1세대1주택 비과세 issues=[] bodyWas=false bodyCode=1144010100 warnRegulated=[]
+B2 control jeju mixed=false status=200 exempt=true tax=0 issues=0
+B2 control jeju mixed=true status=200 exempt=true tax=0 issues=0
+B mixed=false inDistrict=false screenEffective=false | status=200 exempt=true tax=0 bodyInDistrict=false issues=[] reasons="1세대1주택 비과세" err=
+B mixed=false inDistrict=true screenEffective=true | status=200 exempt=false tax=132286000 bodyInDistrict=true issues=[] reasons="" err=
+B mixed=false inDistrict=undefined screenEffective=true | status=200 exempt=false tax=132286000 bodyInDistrict=undefined issues=[] reasons="" err=
+  mixed warnings/steps: ["조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 신청했다면, 삭제 전 소득세법 시행령 §154①4호(거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 증액은 제외)가 적용됩니다(대통령령 제30395호 부칙 제38조). 해당하면 §154① 단서에서 「4호 임대사업","건물 보유기간 4년 4개월 · 거주기간 1년 미만 · 취득 당시 조정대상지역 해당 — 1세대1주택 비과세 요건(보유 2년, 조정대상지역 취득 시 거주 2년, 소득세법 시행령 §154①) 미충족으로 주택분도 과세됩니다."] hp.reason=undefined keys=splitMode,apportionment,housingPart,commercialPart,nonBusinessLandPart,total,steps,calculationRoute,warnings,acquisitionByInheritance
+B mixed=true inDistrict=false screenEffective=false | status=200 exempt=false tax=132286000 bodyInDistrict=false issues=[] reasons="" err=
+B mixed=true inDistrict=true screenEffective=true | status=200 exempt=false tax=132286000 bodyInDistrict=true issues=[] reasons="" err=
+B mixed=true inDistrict=undefined screenEffective=true | status=200 exempt=false tax=132286000 bodyInDistrict=undefined issues=[] reasons="" err=

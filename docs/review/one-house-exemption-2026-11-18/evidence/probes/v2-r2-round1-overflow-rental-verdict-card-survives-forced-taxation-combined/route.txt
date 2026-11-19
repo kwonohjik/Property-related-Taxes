@@ -1,0 +1,81 @@
+## A 거주자 · ⑳ 성립(㉑ 통과 20개월)
+status=200 ⑧errors=[]
+isExempt=true partial=false exemptReason=1세대1주택 비과세 rental=passed=true scenario=A periodPending=[0] notices=[]
+unmet=[] undetermined=[] postMgmt=null applied=[]
+badge=판정 결과비과세1세대1주택 비과세 요건을 충족합니다.1세대1주택 비과세판정 기준일 2026-11-181주택 
+⑳카드헤더=요건 충족
+㉒문장=임대주택 1호는 의무임대기간을 채우기 전이라 소득세법 시행령 §155㉑로 통과했습니다. 이후 요건을 충족하지 못하면 §155㉒에 따라 차액을 신고·납부해야 합니다. 다만 임대주택이 수용(협의매수 포함)되거나 사망으로 상속된 경우에는 계속 임대하는 것으로 봅니다(소득세법 시행령 §155㉒
+has요건충족=true has㉒=true has§121②=false
+
+## B 비거주자 · ⑳ 성립(㉑)
+status=200 ⑧errors=[]
+isExempt=false partial=false exemptReason=undefined rental=passed=true scenario=A periodPending=[0] notices=[]
+unmet=["non-resident-121-2"] undetermined=[] postMgmt=null applied=[]
+badge=판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2026-11-181주택 수 산정세
+⑳카드헤더=요건 충족
+㉒문장=임대주택 1호는 의무임대기간을 채우기 전이라 소득세법 시행령 §155㉑로 통과했습니다. 이후 요건을 충족하지 못하면 §155㉒에 따라 차액을 신고·납부해야 합니다. 다만 임대주택이 수용(협의매수 포함)되거나 사망으로 상속된 경우에는 계속 임대하는 것으로 봅니다(소득세법 시행령 §155㉒
+has요건충족=true has㉒=true has§121②=true
+
+## C 잔금 전 멸실(2023-12-01 계약) · ⑳ 성립(㉑)
+status=200 ⑧errors=[]
+isExempt=false partial=false exemptReason=undefined rental=passed=true scenario=A periodPending=[0] notices=[]
+unmet=["154-1-demolished-before-balance"] undetermined=["154-1-demolished-before-balance-unverified"] postMgmt=null applied=[]
+badge=판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2026-11-181주택 수 산정세
+⑳카드헤더=요건 충족
+㉒문장=임대주택 1호는 의무임대기간을 채우기 전이라 소득세법 시행령 §155㉑로 통과했습니다. 이후 요건을 충족하지 못하면 §155㉒에 따라 차액을 신고·납부해야 합니다. 다만 임대주택이 수용(협의매수 포함)되거나 사망으로 상속된 경우에는 계속 임대하는 것으로 봅니다(소득세법 시행령 §155㉒
+has요건충족=true has㉒=true has§121②=false
+
+## D 비거주자 · ⑳ 성립(의무기간 충족 100개월 — ㉑ 아님)
+status=200 ⑧errors=[]
+isExempt=false partial=false exemptReason=undefined rental=passed=true scenario=A periodPending=[] notices=[]
+unmet=["non-resident-121-2"] undetermined=[] postMgmt=null applied=[]
+badge=판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2026-11-181주택 수 산정세
+⑳카드헤더=요건 충족
+㉒문장=(없음)
+has요건충족=true has㉒=false has§121②=true
+
+## E 비거주자 · 명부 장기임대 행 · ⑳ 성립(㉑)
+status=200 ⑧errors=[]
+isExempt=false partial=false exemptReason=undefined rental=passed=true scenario=A periodPending=[0] notices=[]
+unmet=["non-resident-121-2"] undetermined=[] postMgmt=null applied=[]
+badge=판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2026-11-181주택 수 산정세
+⑳카드헤더=요건 충족
+㉒문장=임대주택 1호는 의무임대기간을 채우기 전이라 소득세법 시행령 §155㉑로 통과했습니다. 이후 요건을 충족하지 못하면 §155㉒에 따라 차액을 신고·납부해야 합니다. 다만 임대주택이 수용(협의매수 포함)되거나 사망으로 상속된 경우에는 계속 임대하는 것으로 봅니다(소득세법 시행령 §155㉒
+has요건충족=true has㉒=true has§121②=true
+
+## F 대조: 거주 0개월(⑳ 불성립) · 비거주자
+status=200 ⑧errors=[]
+isExempt=false partial=false exemptReason=undefined rental=passed=false scenario=A periodPending=[0] notices=[]
+unmet=["non-resident-121-2"] undetermined=[] postMgmt=null applied=[]
+badge=판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2026-11-181주택 수 산정세
+⑳카드헤더=요건 미충족 — 특례가 적용되지 않습니다
+㉒문장=임대주택 1호는 의무임대기간을 채우기 전이라 소득세법 시행령 §155㉑로 통과했습니다. 이후 요건을 충족하지 못하면 §155㉒에 따라 차액을 신고·납부해야 합니다. 다만 임대주택이 수용(협의매수 포함)되거나 사망으로 상속된 경우에는 계속 임대하는 것으로 봅니다(소득세법 시행령 §155㉒
+has요건충족=false has㉒=true has§121②=true
+
+## G 비거주자 · 2012 양도(2010.1.1. 후)
+status=200 ⑧errors=[]
+isExempt=false partial=false exemptReason=undefined rental=passed=false scenario=A periodPending=[] notices=[]
+unmet=["non-resident-121-2"] undetermined=[] postMgmt=null applied=[]
+badge=판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2026-11-181주택 수 산정세
+⑳카드헤더=요건 미충족 — 특례가 적용되지 않습니다
+㉒문장=(없음)
+has요건충족=false has㉒=false has§121②=true
+
+## F' 거주자 · 거주 0개월(⑳ 불성립 · 다른 특례 없음 · 과세)
+status=200 ⑧errors=[]
+isExempt=false partial=false exemptReason=undefined rental=passed=false scenario=A periodPending=[0] notices=[]
+unmet=[] undetermined=[] postMgmt=null applied=[]
+badge=판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2026-11-181주택 수 산정세
+⑳카드헤더=요건 미충족 — 특례가 적용되지 않습니다
+㉒문장=임대주택 1호는 의무임대기간을 채우기 전이라 소득세법 시행령 §155㉑로 통과했습니다. 이후 요건을 충족하지 못하면 §155㉒에 따라 차액을 신고·납부해야 합니다. 다만 임대주택이 수용(협의매수 포함)되거나 사망으로 상속된 경우에는 계속 임대하는 것으로 봅니다(소득세법 시행령 §155㉒
+has요건충족=false has㉒=true has§121②=false
+
+## C' 잔금 전 멸실(2022-12-19 계약 — 경계 전) · ⑳ 성립(㉑)
+status=200 ⑧errors=[]
+isExempt=true partial=false exemptReason=1세대1주택 비과세 rental=passed=true scenario=A periodPending=[0] notices=[]
+unmet=[] undetermined=[] postMgmt=null applied=[]
+badge=판정 결과비과세1세대1주택 비과세 요건을 충족합니다.1세대1주택 비과세판정 기준일 2026-11-181주택 
+⑳카드헤더=요건 충족
+㉒문장=임대주택 1호는 의무임대기간을 채우기 전이라 소득세법 시행령 §155㉑로 통과했습니다. 이후 요건을 충족하지 못하면 §155㉒에 따라 차액을 신고·납부해야 합니다. 다만 임대주택이 수용(협의매수 포함)되거나 사망으로 상속된 경우에는 계속 임대하는 것으로 봅니다(소득세법 시행령 §155㉒
+has요건충족=true has㉒=true has§121②=false
+

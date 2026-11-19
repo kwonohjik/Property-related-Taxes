@@ -1,0 +1,276 @@
+{
+  "winWinNotRegulated": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "exemptReason": "1세대1주택 비과세",
+    "applied": [
+      "155-3-1-win-win-rental"
+    ],
+    "legalBasis": [
+      "소득세법 시행령 §155의3 ①"
+    ],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "not_required",
+      "note": "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다."
+    }
+  },
+  "winWinNotRegulated_control_noWinWin": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "exemptReason": "1세대1주택 비과세",
+    "applied": [],
+    "legalBasis": [],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "not_required",
+      "note": "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다."
+    }
+  },
+  "winWinRegulated_decisive": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "exemptReason": "1세대1주택 비과세",
+    "applied": [
+      "155-3-1-win-win-rental"
+    ],
+    "legalBasis": [
+      "소득세법 시행령 §155의3 ①"
+    ],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "waived",
+      "note": "상생임대주택(§155의3)으로 거주기간의 제한을 받지 않습니다."
+    }
+  },
+  "winWinRegulated_control_noWinWin": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "legalBasis": [],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "unmet"
+    }
+  },
+  "winWinNotRegulated_highValue": {
+    "isExempt": false,
+    "isPartialExempt": true,
+    "exemptReason": "1세대1주택 고가주택",
+    "applied": [
+      "155-3-1-win-win-rental"
+    ],
+    "legalBasis": [
+      "소득세법 시행령 §155의3 ①"
+    ],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "not_required",
+      "note": "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다."
+    }
+  },
+  "mortgageNotDecisive": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "exemptReason": "1세대1주택 비과세",
+    "applied": [
+      "155-2-1-long-term-mortgage-residence"
+    ],
+    "legalBasis": [
+      "소득세법 시행령 §155의2 ①"
+    ],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "met"
+    }
+  },
+  "mortgageNotDecisive_control": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "exemptReason": "1세대1주택 비과세",
+    "applied": [],
+    "legalBasis": [],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "met"
+    }
+  },
+  "mortgageNotRegulated": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "exemptReason": "1세대1주택 비과세",
+    "applied": [
+      "155-2-1-long-term-mortgage-residence"
+    ],
+    "legalBasis": [
+      "소득세법 시행령 §155의2 ①"
+    ],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "not_required",
+      "note": "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다."
+    }
+  },
+  "mortgageDecisive": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "exemptReason": "1세대1주택 비과세",
+    "applied": [
+      "155-2-1-long-term-mortgage-residence"
+    ],
+    "legalBasis": [
+      "소득세법 시행령 §155의2 ①"
+    ],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "waived",
+      "note": "장기저당담보주택(§155의2)으로 거주기간의 제한을 받지 않습니다."
+    }
+  },
+  "mortgageDecisive_control": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "legalBasis": [],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "unmet"
+    }
+  },
+  "provisoNotDecisive": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "exemptReason": "1세대1주택 비과세 (§154① 단서 3호 부득이)",
+    "applied": [
+      "154-1-proviso:unavoidable"
+    ],
+    "legalBasis": [
+      "소득세법 시행령 §154"
+    ],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "waived",
+      "note": "§154① 단서 사유에 해당해 거주요건을 적용하지 않습니다."
+    }
+  },
+  "provisoNotDecisive_control": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "exemptReason": "1세대1주택 비과세",
+    "applied": [],
+    "legalBasis": [],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "not_required",
+      "note": "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다."
+    }
+  },
+  "proviso5NotRegulated": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "exemptReason": "1세대1주택 비과세 (§154① 단서 5호 공고전계약)",
+    "applied": [
+      "154-1-proviso:pre_designation_contract"
+    ],
+    "legalBasis": [
+      "소득세법 시행령 §154"
+    ],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "waived",
+      "note": "§154① 단서 사유에 해당해 거주요건을 적용하지 않습니다."
+    }
+  },
+  "provisoDecisive": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "exemptReason": "1세대1주택 비과세 (§154① 단서 3호 부득이)",
+    "applied": [
+      "154-1-proviso:unavoidable"
+    ],
+    "legalBasis": [
+      "소득세법 시행령 §154"
+    ],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "waived",
+      "note": "§154① 단서 사유에 해당해 보유기간 요건을 적용하지 않습니다."
+    },
+    "residence": {
+      "status": "waived",
+      "note": "§154① 단서 사유에 해당해 거주요건을 적용하지 않습니다."
+    }
+  },
+  "provisoDecisive_control": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "legalBasis": [],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "unmet"
+    },
+    "residence": {
+      "status": "not_required",
+      "note": "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다."
+    }
+  },
+  "winWinPrePolicy": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "exemptReason": "1세대1주택 비과세",
+    "applied": [
+      "155-3-1-win-win-rental"
+    ],
+    "legalBasis": [
+      "소득세법 시행령 §155의3 ①"
+    ],
+    "scheme": "154-1-one-house",
+    "holding": {
+      "status": "met"
+    },
+    "residence": {
+      "status": "not_required",
+      "note": "조정대상지역 거주요건 도입(2017.8.3.) 전에 취득해 거주요건이 적용되지 않습니다."
+    }
+  }
+}

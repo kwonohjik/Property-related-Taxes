@@ -1,0 +1,1291 @@
+[
+ {
+  "id": "E001-dual",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 126720000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "재건축 조합원입주권이면 「인가일 현재 기존주택 요건」의 기준일이 관리처분계획인가일이 아닐 수 있습니다 — 2005.5.30. 이전 양도분과, 그"
+  ]
+ },
+ {
+  "id": "E002-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": true,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": true,
+  "kTax": 684452125,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "재건축 조합원입주권이면 「인가일 현재 기존주택 요건」의 기준일이 관리처분계획인가일이 아닐 수 있습니다 — 2005.5.30. 이전 양도분과, 그",
+   "거주기간이 입력되지 않았거나 0개월이라 장기보유특별공제 표2의 거주분이 반영되지 않았습니다 — 종전주택에 거주한 사실이 있으면 거주기간을 입력하"
+  ]
+ },
+ {
+  "id": "E036-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 400,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "E093-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 400,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "E093-current",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 400,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "E093-current-twin",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 400,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "E094-dual",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 304557000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "E119-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 400,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "E197-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 292083000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "F011-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 400,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "F021-era",
+  "bucket": "match",
+  "propertyType": "housing",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "kStatus": 200,
+  "kExempt": true,
+  "kReason": "1세대1주택 비과세",
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "F217-era",
+  "bucket": "match",
+  "propertyType": "housing",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "jVeErr": [],
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 53625000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 3년 이상 미충족(보유 기산일 2004-04-13, 보유기간 "
+  ]
+ },
+ {
+  "id": "F251-era",
+  "bucket": "match",
+  "propertyType": "housing",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "jVeErr": [],
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 168366000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 신청했다면, 삭제 전 소득",
+   "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 미충족(취득 당시 "
+  ]
+ },
+ {
+  "id": "F251-current",
+  "bucket": "match",
+  "propertyType": "housing",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "jVeErr": [],
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 219879000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 신청했다면, 삭제 전 소득",
+   "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 미충족(취득 당시 "
+  ]
+ },
+ {
+  "id": "F373-era",
+  "bucket": "match",
+  "propertyType": "housing",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "154-1-proviso:rental_5yr_residence"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "kStatus": 200,
+  "kExempt": true,
+  "kReason": "1세대1주택 비과세 (§154① 단서 1호 임대주택 거주5년)",
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "P-F373-era-60m",
+  "bucket": "match",
+  "propertyType": "housing",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "154-1-proviso:rental_5yr_residence"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "kStatus": 200,
+  "kExempt": true,
+  "kReason": "1세대1주택 비과세 (§154① 단서 1호 임대주택 거주5년)",
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "N-F373-era-59m",
+  "bucket": "match",
+  "propertyType": "housing",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 3년 이상 미충족(보유 기산일 1996-03-07, 보유기간 "
+  ]
+ },
+ {
+  "id": "F390-current",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "F455-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": true,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": true,
+  "kTax": 23194285,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "재건축 조합원입주권이면 「인가일 현재 기존주택 요건」의 기준일이 관리처분계획인가일이 아닐 수 있습니다 — 2005.5.30. 이전 양도분과, 그",
+   "거주기간이 입력되지 않았거나 0개월이라 장기보유특별공제 표2의 거주분이 반영되지 않았습니다 — 종전주택에 거주한 사실이 있으면 거주기간을 입력하"
+  ]
+ },
+ {
+  "id": "F455-current",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": true,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": true,
+  "kTax": 98408200,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "거주기간이 입력되지 않았거나 0개월이라 장기보유특별공제 표2의 거주분이 반영되지 않았습니다 — 종전주택에 거주한 사실이 있으면 거주기간을 입력하"
+  ]
+ },
+ {
+  "id": "F456-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": true,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": true,
+  "kTax": 20648570,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "재건축 조합원입주권이면 「인가일 현재 기존주택 요건」의 기준일이 관리처분계획인가일이 아닐 수 있습니다 — 2005.5.30. 이전 양도분과, 그",
+   "거주기간이 입력되지 않았거나 0개월이라 장기보유특별공제 표2의 거주분이 반영되지 않았습니다 — 종전주택에 거주한 사실이 있으면 거주기간을 입력하"
+  ]
+ },
+ {
+  "id": "P-F456-era-6eok",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "재건축 조합원입주권이면 「인가일 현재 기존주택 요건」의 기준일이 관리처분계획인가일이 아닐 수 있습니다 — 2005.5.30. 이전 양도분과, 그"
+  ]
+ },
+ {
+  "id": "F456-current",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": true,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": true,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "P-F456-current-12eok",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G019-era",
+  "bucket": "dual",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "재건축 조합원입주권이면 「인가일 현재 기존주택 요건」의 기준일이 관리처분계획인가일이 아닐 수 있습니다 — 2005.5.30. 이전 양도분과, 그"
+  ]
+ },
+ {
+  "id": "G019-current",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G021-era",
+  "bucket": "mismatch",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 148500000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "재건축 조합원입주권이면 「인가일 현재 기존주택 요건」의 기준일이 관리처분계획인가일이 아닐 수 있습니다 — 2005.5.30. 이전 양도분과, 그"
+  ]
+ },
+ {
+  "id": "G021-current",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_na"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "na",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "P-G021-current-3y",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_na"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "na",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "N-G021-current-3y1d",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 295647000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G022-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G023-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "재건축 조합원입주권이면 「인가일 현재 기존주택 요건」의 기준일이 관리처분계획인가일이 아닐 수 있습니다 — 2005.5.30. 이전 양도분과, 그"
+  ]
+ },
+ {
+  "id": "G024-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G035-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G049-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "재건축 조합원입주권이면 「인가일 현재 기존주택 요건」의 기준일이 관리처분계획인가일이 아닐 수 있습니다 — 2005.5.30. 이전 양도분과, 그"
+  ]
+ },
+ {
+  "id": "G049-current",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G050-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "2003년 3월 1일 이전에 양도한 조합원입주권은 고가 기준금액을 지원하지 않습니다 — 현행 기준(12억)으로 계산했습니다. 당시 소득세법 시행",
+   "재건축 조합원입주권이면 「인가일 현재 기존주택 요건」의 기준일이 관리처분계획인가일이 아닐 수 있습니다 — 2005.5.30. 이전 양도분과, 그"
+  ]
+ },
+ {
+  "id": "G050-current",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 292875000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G055-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_na"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "na",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G055-current",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_na"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "na",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G062-era",
+  "bucket": "mismatch",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 84205000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "재건축 조합원입주권이면 「인가일 현재 기존주택 요건」의 기준일이 관리처분계획인가일이 아닐 수 있습니다 — 2005.5.30. 이전 양도분과, 그"
+  ]
+ },
+ {
+  "id": "G062-current",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_na"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "na",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "N-G062-over3y",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 298419000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G065-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G066-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 278960000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "조합원입주권에 장기보유특별공제 표2를 적용하지 않았습니다 — 나목 다른 주택의 취득일이 입력되지 않았습니다. 해당 사실이 확인되어 §89①4호 "
+  ]
+ },
+ {
+  "id": "G077-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 128095000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "P-G077-later-sold",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_na"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "na",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G091-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "재건축 조합원입주권이면 「인가일 현재 기존주택 요건」의 기준일이 관리처분계획인가일이 아닐 수 있습니다 — 2005.5.30. 이전 양도분과, 그"
+  ]
+ },
+ {
+  "id": "G091-current",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G133-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 301785000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G152-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 104940000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G154-era",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 52855000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "2005년 12월 31일 이전 양도분의 소득세법 시행령 §155 제16항에는 「조합원입주권을 1개 소유한 1세대」 문언이 없습니다(2006.1.",
+   "재건축 조합원입주권이면 「인가일 현재 기존주택 요건」의 기준일이 관리처분계획인가일이 아닐 수 있습니다 — 2005.5.30. 이전 양도분과, 그"
+  ]
+ },
+ {
+  "id": "G157-era-first",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 107195000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "G157-era-second",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_na"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "na",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "S001-current",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "STAT-71-2-right",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": true,
+  "jPartial": false,
+  "jApplied": [
+   "one_right_89_1_4_ga"
+  ],
+  "jUnmet": [],
+  "jUndet": [],
+  "jVeErr": [],
+  "oneRight": "ga",
+  "kStatus": 200,
+  "kExempt": true,
+  "kPartial": false,
+  "kTax": 0,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": []
+ },
+ {
+  "id": "STAT-71-2-right-unknown",
+  "bucket": "match",
+  "propertyType": "right_to_move_in",
+  "jStatus": 200,
+  "jExempt": false,
+  "jPartial": false,
+  "jApplied": [],
+  "jUnmet": [],
+  "jUndet": [
+   "71-2-pop-decline-unconfirmed"
+  ],
+  "jVeErr": [],
+  "oneRight": null,
+  "kStatus": 200,
+  "kExempt": false,
+  "kPartial": false,
+  "kTax": 292875000,
+  "kIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "kWarn": [
+   "조특법 §71의2①(인구감소지역주택을 소유주택이 아닌 것으로 봄) 후보가 있으나 적용하지 않았습니다 — 인구감소지역주택을 취득할 당시 1채(또는"
+  ]
+ }
+]

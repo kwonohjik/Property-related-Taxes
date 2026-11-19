@@ -1,0 +1,40 @@
+{
+  "B_parentalOnly": {
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "validationErrors": [],
+    "warnings": [],
+    "bodyHouseCount": 3,
+    "bodyTemp": {
+      "previousAcquisitionDate": "2010-01-01",
+      "newAcquisitionDate": "2024-01-10",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    }
+  },
+  "B_both_counterpart": {
+    "status": 200,
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house",
+      "155-5-marriage-merge"
+    ],
+    "unmet": [],
+    "unmetReasons": {},
+    "validationErrors": [],
+    "warnings": [],
+    "exemptReason": "일시적 2주택·혼인 합가 중첩 (§155①·⑤) 1세대1주택 비과세",
+    "bodyHouseCount": 3,
+    "bodyTemp": {
+      "previousAcquisitionDate": "2010-01-01",
+      "newAcquisitionDate": "2024-01-10",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    }
+  }
+}

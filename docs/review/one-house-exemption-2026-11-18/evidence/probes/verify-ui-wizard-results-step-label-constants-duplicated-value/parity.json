@@ -1,0 +1,108 @@
+{
+  "oneHouseCalc": [
+    "세대",
+    "양도 대상 주택",
+    "보유 주택·권리",
+    "판정 결과"
+  ],
+  "oneHouseSidebar": [
+    "세대",
+    "양도 대상 주택",
+    "보유 주택·권리",
+    "판정 결과"
+  ],
+  "surchargeCalc": [
+    "세대",
+    "양도 대상 주택",
+    "보유 주택·권리",
+    "판정 결과",
+    "세부담 시뮬레이션"
+  ],
+  "surchargeSidebar": [
+    "세대",
+    "양도 대상 주택",
+    "보유 주택·권리",
+    "판정 결과",
+    "세부담 시뮬레이션"
+  ],
+  "oneHouseEqual": true,
+  "surchargeEqual": true,
+  "surchargePrefixIsOneHouse": true,
+  "headerLine6": " * 4단계: ① 세대 → ② 보유 주택·권리 → ③ 양도 예정 → ④ 판정 결과",
+  "oneHouseCounts": [
+    {
+      "i": 0,
+      "err": 0,
+      "warn": 0,
+      "len": 0
+    },
+    {
+      "i": 1,
+      "err": 5,
+      "warn": 0,
+      "len": 5
+    },
+    {
+      "i": 2,
+      "err": 0,
+      "warn": 0,
+      "len": 0
+    },
+    {
+      "i": 3,
+      "err": 0,
+      "warn": 0,
+      "len": 0
+    },
+    {
+      "i": 4,
+      "err": 0,
+      "warn": 0,
+      "len": 0
+    },
+    {
+      "i": 5,
+      "err": 0,
+      "warn": 0,
+      "len": 0
+    }
+  ],
+  "surchargeCounts": [
+    {
+      "i": 0,
+      "err": 0,
+      "warn": 0,
+      "len": 0
+    },
+    {
+      "i": 1,
+      "err": 5,
+      "warn": 0,
+      "len": 5
+    },
+    {
+      "i": 2,
+      "err": 0,
+      "warn": 0,
+      "len": 0
+    },
+    {
+      "i": 3,
+      "err": 0,
+      "warn": 0,
+      "len": 0
+    },
+    {
+      "i": 4,
+      "err": 0,
+      "warn": 0,
+      "len": 0
+    },
+    {
+      "i": 5,
+      "err": 0,
+      "warn": 0,
+      "len": 0
+    }
+  ]
+}

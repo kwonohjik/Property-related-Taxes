@@ -1,0 +1,620 @@
+{
+ "F003-era": {
+  "cat": "겸용·복합건물",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F133-era": {
+  "cat": "겸용·복합건물",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-capital-newtown-location-unverified"
+  ],
+  "vErr": 0
+ },
+ "F133-current": {
+  "cat": "겸용·복합건물",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F147-era": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "F147-current": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "F148-era": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "F156-era": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "F163-current": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "F166-era": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "F412-era": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "F412-current": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "F421-era": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "F424-era": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "F454-era": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "F454-current": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "F481-era": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "G011-current": {
+  "cat": "겸용·복합건물",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": true,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "G078-era": {
+  "cat": "겸용·복합건물",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "R009-era": {
+  "cat": "겸용·복합건물",
+  "ref": false,
+  "expected": null
+ },
+ "E066-era": {
+  "cat": "다가구·다세대 구획",
+  "ref": true,
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F098-era": {
+  "cat": "다가구·다세대 구획",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F394-era": {
+  "cat": "다가구·다세대 구획",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F429-era": {
+  "cat": "다가구·다세대 구획",
+  "ref": false,
+  "expected": null
+ },
+ "F442-era": {
+  "cat": "다가구·다세대 구획",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F448-era": {
+  "cat": "다가구·다세대 구획",
+  "ref": false,
+  "expected": null
+ },
+ "R042-era": {
+  "cat": "다가구·다세대 구획",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-capital-newtown-location-unverified"
+  ],
+  "vErr": 0
+ },
+ "E047-era": {
+  "cat": "오피스텔",
+  "ref": true,
+  "expected": {
+   "isExempt": false
+  },
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [
+   "154-1-proviso:pre_designation_contract"
+  ],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F096-era": {
+  "cat": "오피스텔",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F121-era": {
+  "cat": "오피스텔",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F172-era": {
+  "cat": "오피스텔",
+  "ref": true,
+  "expected": {
+   "isExempt": true
+  },
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [
+   "155-1-regulated-at-new-acquisition-unverified"
+  ],
+  "vErr": 0
+ },
+ "F048-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": true,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F139-current": {
+  "cat": "부수토지·면적·배율",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F141-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": {
+   "isExempt": false
+  }
+ },
+ "F143-current": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F145-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F146-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": {
+   "isExempt": true
+  }
+ },
+ "F149-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F152-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F156-current": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F159-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F160-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F163-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": true,
+  "expected": {
+   "isExempt": true
+  },
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F164-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F165-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F167-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": true,
+  "expected": {
+   "isExempt": true
+  },
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-capital-newtown-location-unverified"
+  ],
+  "vErr": 0
+ },
+ "F168-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F250-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F277-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": {
+   "isExempt": false
+  }
+ },
+ "F450-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F451-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F465-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F470-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F471-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F473-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F474-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "F476-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": false,
+  "expected": null
+ },
+ "G088-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "G095-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": true,
+  "expected": {
+   "isExempt": true,
+   "appliedExceptions": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "G150-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "R018-current": {
+  "cat": "부수토지·면적·배율",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "R023-era": {
+  "cat": "부수토지·면적·배율",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-capital-newtown-location-unverified"
+  ],
+  "vErr": 0
+ },
+ "E106-era": {
+  "cat": "지분·공유",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "E201-era": {
+  "cat": "지분·공유",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "E210-era": {
+  "cat": "지분·공유",
+  "ref": true,
+  "expected": {
+   "isExempt": true,
+   "rentalPassed": true
+  },
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F185-era": {
+  "cat": "지분·공유",
+  "ref": false,
+  "expected": null
+ },
+ "F195-era": {
+  "cat": "지분·공유",
+  "ref": false,
+  "expected": null
+ },
+ "F196-era": {
+  "cat": "지분·공유",
+  "ref": false,
+  "expected": null
+ },
+ "F459-era": {
+  "cat": "지분·공유",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-capital-newtown-location-unverified"
+  ],
+  "vErr": 0
+ },
+ "F459-current": {
+  "cat": "지분·공유",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": true,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F003-current": {
+  "cat": "용도변경(비주택↔주택)",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F046-era": {
+  "cat": "용도변경(비주택↔주택)",
+  "ref": true,
+  "expected": null,
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [],
+  "vErr": 0
+ },
+ "F212-era": {
+  "cat": "용도변경(비주택↔주택)",
+  "ref": true,
+  "expected": {
+   "isExempt": false
+  },
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "applied": [],
+  "undetermined": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-capital-newtown-location-unverified"
+  ],
+  "vErr": 0
+ },
+ "F278-era": {
+  "cat": "용도변경(비주택↔주택)",
+  "ref": false,
+  "expected": {
+   "isExempt": false
+  }
+ }
+}

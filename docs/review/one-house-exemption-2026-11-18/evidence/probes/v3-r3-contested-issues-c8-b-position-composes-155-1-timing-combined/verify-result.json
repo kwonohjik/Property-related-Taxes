@@ -1,0 +1,356 @@
+{
+  "S1_screen_noMoveIn": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "undetermined": [
+      "155-1-move-in-requirement-unverified"
+    ],
+    "contested": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "enginePosition": "A",
+        "A": "taxable",
+        "B": "taxable"
+      }
+    ],
+    "validationErrors": [],
+    "warnings": [
+      "newHouseMoveInDate: 신규 주택으로 세대전원이 이사·전입신고한 날을 입력하세요 — 입력하지 않으면 1년 내 전입 요건(§155①2"
+    ],
+    "payloadTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2018-01-01",
+      "newAcquisitionDate": "2021-06-01",
+      "newHouseRegionCode": "1168010100",
+      "newHouseContractDate": "2021-01-10",
+      "newHouseOrigin": {
+        "kind": "presale",
+        "rightAcquisitionDate": "2021-01-10"
+      }
+    },
+    "payloadRightThreeYearException": null
+  },
+  "S1c_control_moveIn": {
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "unmet": [],
+    "unmetReasons": {},
+    "undetermined": [],
+    "contested": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "enginePosition": "A",
+        "A": "exempt",
+        "B": "exempt"
+      }
+    ],
+    "validationErrors": [],
+    "warnings": [],
+    "payloadTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2018-01-01",
+      "newAcquisitionDate": "2021-06-01",
+      "newHouseRegionCode": "1168010100",
+      "newHouseContractDate": "2021-01-10",
+      "wholeHouseholdMoveInDate": "2021-07-01",
+      "newHouseOrigin": {
+        "kind": "presale",
+        "rightAcquisitionDate": "2021-01-10"
+      }
+    },
+    "payloadRightThreeYearException": null
+  },
+  "S1d_control_156_3_fails": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "undetermined": [],
+    "contested": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "enginePosition": "A",
+        "A": "taxable",
+        "B": "taxable"
+      }
+    ],
+    "validationErrors": [],
+    "warnings": [],
+    "payloadTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2020-06-01",
+      "newAcquisitionDate": "2021-06-01",
+      "newHouseRegionCode": "1168010100",
+      "newHouseContractDate": "2021-01-10",
+      "wholeHouseholdMoveInDate": "2021-07-01",
+      "newHouseOrigin": {
+        "kind": "presale",
+        "rightAcquisitionDate": "2021-01-10"
+      }
+    },
+    "payloadRightThreeYearException": null
+  },
+  "S1e_control_normal_direction": {
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "unmet": [],
+    "unmetReasons": {},
+    "undetermined": [
+      "155-1-presale-holding-156-3-unverified"
+    ],
+    "contested": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "enginePosition": "A",
+        "A": "exempt",
+        "B": "taxable"
+      }
+    ],
+    "validationErrors": [],
+    "warnings": [],
+    "payloadTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2020-03-01",
+      "newAcquisitionDate": "2021-06-01",
+      "newHouseRegionCode": "1168010100",
+      "newHouseContractDate": "2021-01-10",
+      "wholeHouseholdMoveInDate": "2021-07-01",
+      "newHouseOrigin": {
+        "kind": "presale",
+        "rightAcquisitionDate": "2021-01-10"
+      }
+    },
+    "payloadRightThreeYearException": null
+  },
+  "S1b_screen_deadline": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "undetermined": [],
+    "contested": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "enginePosition": "A",
+        "A": "taxable",
+        "B": "taxable"
+      }
+    ],
+    "validationErrors": [],
+    "warnings": [],
+    "payloadTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2018-01-01",
+      "newAcquisitionDate": "2021-03-01",
+      "newHouseRegionCode": "1168010100",
+      "newHouseContractDate": "2021-01-15",
+      "wholeHouseholdMoveInDate": "2021-04-01",
+      "newHouseOrigin": {
+        "kind": "presale",
+        "rightAcquisitionDate": "2021-01-15"
+      }
+    },
+    "payloadRightThreeYearException": null
+  },
+  "S2_api_threeYearDecl": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "undetermined": [],
+    "contested": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "enginePosition": "A",
+        "A": "taxable",
+        "B": "taxable"
+      }
+    ],
+    "validationErrors": [],
+    "warnings": [],
+    "payloadTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2020-12-01",
+      "newAcquisitionDate": "2021-10-01",
+      "newHouseContractDate": "2021-02-01",
+      "newHouseOrigin": {
+        "kind": "presale",
+        "rightAcquisitionDate": "2021-02-01"
+      }
+    },
+    "payloadRightThreeYearException": {
+      "kind": "new_house",
+      "completionDate": "2021-10-01",
+      "movedInWithin3Years": true,
+      "residedOneYearOrMore": true
+    }
+  },
+  "S2c_control_noDecl": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "undetermined": [],
+    "contested": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "enginePosition": "A",
+        "A": "taxable",
+        "B": "taxable"
+      }
+    ],
+    "validationErrors": [],
+    "warnings": [],
+    "payloadTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2020-12-01",
+      "newAcquisitionDate": "2021-10-01",
+      "newHouseContractDate": "2021-02-01",
+      "newHouseOrigin": {
+        "kind": "presale",
+        "rightAcquisitionDate": "2021-02-01"
+      }
+    },
+    "payloadRightThreeYearException": null
+  },
+  "S2d_control_oneYearMet": {
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "unmet": [],
+    "unmetReasons": {},
+    "undetermined": [],
+    "contested": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "enginePosition": "A",
+        "A": "exempt",
+        "B": "exempt"
+      }
+    ],
+    "validationErrors": [],
+    "warnings": [],
+    "payloadTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2020-01-01",
+      "newAcquisitionDate": "2021-10-01",
+      "newHouseContractDate": "2021-02-01",
+      "newHouseOrigin": {
+        "kind": "presale",
+        "rightAcquisitionDate": "2021-02-01"
+      }
+    },
+    "payloadRightThreeYearException": {
+      "kind": "new_house",
+      "completionDate": "2021-10-01",
+      "movedInWithin3Years": true,
+      "residedOneYearOrMore": true
+    }
+  },
+  "engine": {
+    "S1_A": {
+      "origin": {
+        "blocked": false,
+        "reasons": [],
+        "unconfirmed": [],
+        "confirmNotes": [],
+        "holdingPresale": true
+      },
+      "era": {
+        "years": 1,
+        "moveInMet": false
+      },
+      "timing": {
+        "oneYearMet": true,
+        "threeYearMet": true,
+        "moveInMet": false,
+        "deadline": "2022-06-02T00:00:00.000Z",
+        "overall": false
+      }
+    },
+    "S1_B": {
+      "origin": {
+        "blocked": false,
+        "reasons": [],
+        "unconfirmed": [],
+        "confirmNotes": [],
+        "holdingPresale": true,
+        "viaTimingClause": "소득세법 시행령 §156의3②·③"
+      },
+      "era": {
+        "years": 1,
+        "moveInMet": false
+      },
+      "timing": {
+        "oneYearMet": true,
+        "threeYearMet": true,
+        "moveInMet": false,
+        "deadline": "2022-06-02T00:00:00.000Z",
+        "overall": false
+      }
+    },
+    "S1b_B": {
+      "origin": {
+        "blocked": false,
+        "reasons": [],
+        "unconfirmed": [],
+        "confirmNotes": [],
+        "holdingPresale": true,
+        "viaTimingClause": "소득세법 시행령 §156의3②·③"
+      },
+      "era": {
+        "years": 1,
+        "moveInMet": true
+      },
+      "timing": {
+        "oneYearMet": true,
+        "threeYearMet": false,
+        "moveInMet": true,
+        "deadline": "2022-03-02T00:00:00.000Z",
+        "overall": false
+      }
+    },
+    "S2_B": {
+      "origin": {
+        "blocked": false,
+        "reasons": [],
+        "unconfirmed": [],
+        "confirmNotes": [],
+        "holdingPresale": true,
+        "viaTimingClause": "소득세법 시행령 §156의3②·③"
+      },
+      "era": {
+        "years": 3
+      },
+      "timing": {
+        "oneYearMet": false,
+        "threeYearMet": true,
+        "deadline": "2024-10-02T00:00:00.000Z",
+        "overall": false
+      }
+    },
+    "S2_B_origin_only": {
+      "blocked": false,
+      "reasons": [],
+      "unconfirmed": [],
+      "confirmNotes": [],
+      "holdingPresale": true,
+      "viaTimingClause": "소득세법 시행령 §156의3②·③"
+    }
+  }
+}

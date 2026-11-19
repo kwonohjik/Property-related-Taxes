@@ -1,0 +1,226 @@
+{
+  "A_classify": {
+    "CHUNCHEON": {
+      "kind": null,
+      "capital": false
+    },
+    "GAPYEONG": {
+      "kind": "decline",
+      "capital": true
+    },
+    "YEONCHEON": {
+      "kind": "decline",
+      "capital": true
+    },
+    "PYEONGCHANG": {
+      "kind": "decline",
+      "capital": false
+    },
+    "EUMSEONG": {
+      "kind": null,
+      "capital": false
+    }
+  },
+  "B_eval": {
+    "GAPYEONG acq 2024-01-15 tr 2025-02-15": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "YEONCHEON(ctrl) acq 2024-01-15 tr 2025-02-15": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "GAPYEONG acq 2024-01-15 tr 2025-03-10": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "YEONCHEON(ctrl) acq 2024-01-15 tr 2025-03-10": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "GAPYEONG acq 2024-01-15 tr 2025-03-11": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "YEONCHEON(ctrl) acq 2024-01-15 tr 2025-03-11": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "GAPYEONG acq 2024-01-15 tr 2026-06-01": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "YEONCHEON(ctrl) acq 2024-01-15 tr 2026-06-01": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "GAPYEONG acq 2025-03-10 tr 2025-03-11": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "YEONCHEON(ctrl) acq 2025-03-10 tr 2025-03-11": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "GAPYEONG acq 2025-03-10 tr 2026-06-01": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "YEONCHEON(ctrl) acq 2025-03-10 tr 2026-06-01": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "GAPYEONG acq 2025-03-11 tr 2026-06-01": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "YEONCHEON(ctrl) acq 2025-03-11 tr 2026-06-01": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    }
+  },
+  "E_route": {
+    "G_gapyeong_acq2024_tr2025_02": {
+      "status": 200,
+      "isExempt": true,
+      "excluded": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G_gapyeong_acq2024_tr2025_03_10": {
+      "status": 200,
+      "isExempt": true,
+      "excluded": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G_gapyeong_acq2024_tr2026_06": {
+      "status": 200,
+      "isExempt": true,
+      "excluded": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G_gapyeong_acq2025_03_11_tr2026": {
+      "status": 200,
+      "isExempt": true,
+      "excluded": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G_ctrl_yeoncheon_acq2024_tr2025_02": {
+      "status": 200,
+      "isExempt": true,
+      "excluded": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G_ctrl_pyeongchang_acq2024_tr2025_02": {
+      "status": 200,
+      "isExempt": true,
+      "excluded": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "und": [],
+      "unmet": [],
+      "val": []
+    },
+    "G_ctrl_eumseong_nonpop_tr2025_02": {
+      "status": 200,
+      "isExempt": false,
+      "excluded": [],
+      "und": [],
+      "unmet": [],
+      "val": []
+    }
+  }
+}

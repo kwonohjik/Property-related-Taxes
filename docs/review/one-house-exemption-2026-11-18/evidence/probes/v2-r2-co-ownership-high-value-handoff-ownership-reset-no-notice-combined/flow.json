@@ -1,0 +1,103 @@
+{
+  "J0_judgment_14": {
+    "status": 200,
+    "ve": [],
+    "isExempt": false,
+    "isPartialExempt": true,
+    "dataKeys": [
+      "judgment",
+      "judgmentBaseDate",
+      "houseCount"
+    ]
+  },
+  "P0_patch_asset": {
+    "ownershipNumerator": "100",
+    "ownershipDenominator": "100",
+    "ownershipRemainderThirdParty": "",
+    "fixedAcquisitionPrice": "",
+    "actualSalePrice": "1400000000"
+  },
+  "P0_patch_keys_ownership": [
+    "ruralHouseOwnerResidenceYears"
+  ],
+  "H1_before": {
+    "ownershipNumerator": "50",
+    "ownershipDenominator": "100",
+    "ownershipRemainderThirdParty": "yes",
+    "fixedAcquisitionPrice": "700000000",
+    "actualSalePrice": ""
+  },
+  "H1_after": {
+    "ownershipNumerator": "100",
+    "ownershipDenominator": "100",
+    "ownershipRemainderThirdParty": "",
+    "fixedAcquisitionPrice": "",
+    "actualSalePrice": "1400000000"
+  },
+  "H2_after": {
+    "ownershipNumerator": "100",
+    "ownershipDenominator": "100",
+    "ownershipRemainderThirdParty": "",
+    "fixedAcquisitionPrice": "",
+    "actualSalePrice": "1400000000"
+  },
+  "C1_full_guideOnly": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": true,
+    "totalTax": 14124000,
+    "calculatedTax": 12840000,
+    "issues": [],
+    "bodyOwnership": {
+      "top": {},
+      "asset": {}
+    }
+  },
+  "C2_half_declared": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": true,
+    "totalTax": 4801500,
+    "calculatedTax": 4365000,
+    "issues": [],
+    "bodyOwnership": {
+      "top": {
+        "ownershipRatio": 0.5
+      },
+      "asset": {}
+    }
+  },
+  "C3_half_undeclared": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": true,
+    "totalTax": 4801500,
+    "calculatedTax": 4365000,
+    "issues": [
+      "0::자산: 지분 모드 자산(50%)은 단독으로 계산할 수 없습니다. 나머지 지분도 내 것이면 그 지분을 별도 자산으로 추가하고, 나머지가 타인 소유"
+    ],
+    "bodyOwnership": {
+      "top": {
+        "ownershipRatio": 0.5
+      },
+      "asset": {}
+    }
+  },
+  "C4_full_10": {
+    "status": 200,
+    "isExempt": true,
+    "totalTax": 0,
+    "calculatedTax": 0,
+    "issues": [],
+    "bodyOwnership": {
+      "top": {},
+      "asset": {}
+    }
+  },
+  "T_text": {
+    "resultView_has_취득가액필요경비": true,
+    "resultView_has_지분": true,
+    "loadModal_has_취득가액필요경비": true,
+    "loadModal_has_지분": false
+  }
+}

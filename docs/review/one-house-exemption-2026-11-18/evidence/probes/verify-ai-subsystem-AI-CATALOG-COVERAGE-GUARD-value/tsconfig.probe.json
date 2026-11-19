@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "incremental": false, "noErrorTruncation": true, "plugins": [], "typeRoots": ["./node_modules/@types"] },
+  "files": ["./__tests__/__probe__/verify-ai-subsystem-AI-CATALOG-COVERAGE-GUARD-value-typeprobe.probe.test.ts", "./next-env.d.ts"],
+  "include": []
+}

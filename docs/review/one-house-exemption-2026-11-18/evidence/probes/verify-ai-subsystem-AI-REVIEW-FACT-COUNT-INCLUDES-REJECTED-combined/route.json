@@ -1,0 +1,91 @@
+{
+  "A": {
+    "status": 200,
+    "factsCount": 4,
+    "facts": [
+      "양도 예정일=2024-02-30",
+      "증여자와 계속 같은 세대였습니까=maybe",
+      "취득일=2015-03-01",
+      "취득일=2016-03-01"
+    ],
+    "factPaths": [
+      "transferDate",
+      "asset.giftSameHousehold",
+      "asset.acquisitionDate",
+      "asset.acquisitionDate"
+    ],
+    "form": {
+      "asset": {
+        "acquisitionDate": "2015-03-01"
+      }
+    },
+    "mergedTransferDate": "",
+    "mergedAcq": "2015-03-01",
+    "issues": [
+      {
+        "path": "transferDate",
+        "message": "날짜 형식이 아닙니다(YYYY-MM-DD): 2024-02-30"
+      },
+      {
+        "path": "asset.giftSameHousehold",
+        "message": "허용값이 아닙니다(, yes, no, rejoined): maybe"
+      },
+      {
+        "path": "asset.acquisitionDate",
+        "message": "같은 경로가 두 번 나왔습니다 — 뒤의 값은 버렸습니다"
+      }
+    ],
+    "questions": [
+      "validation:transferDate",
+      "validation:contractTotalPrice",
+      "validation:asset.residencePeriods",
+      "validation:asset.rentalHousingException.phrp154_10Answer",
+      "validation:asset.acquisitionDate"
+    ]
+  },
+  "B": {
+    "factsCount": 2,
+    "form": {
+      "transferDate": "2024-06-15",
+      "asset": {
+        "acquisitionDate": "2015-03-01"
+      }
+    },
+    "issues": []
+  },
+  "C": {
+    "factsCount": 1,
+    "form": {
+      "houses": [
+        {
+          "id": "A",
+          "acquisitionDate": "2010-01-01"
+        }
+      ]
+    },
+    "issues": [
+      {
+        "path": "houses[A].acquisitionDate",
+        "message": "rows에 선언되지 않은 행입니다(houses[A]) — 행을 새로 만들었습니다"
+      },
+      {
+        "path": "nope.field",
+        "message": "질문의 경로가 필드 사전에 없습니다"
+      }
+    ]
+  },
+  "D": {
+    "factsCount": 2,
+    "form": {
+      "asset": {
+        "acquisitionDate": "2016-03-01"
+      }
+    },
+    "issues": [
+      {
+        "path": "asset.acquisitionDate",
+        "message": "날짜 형식이 아닙니다(YYYY-MM-DD): 2015-02-30"
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+[fact] consolidated: result=false calls=2
+   same=false start=2025-03-01 strict=false dec=undefined rej=undefined prior=undefined
+   same=true start=2025-03-01 strict=true dec=undefined rej=undefined prior=undefined
+[fact] unconfirmed: result=false calls=2
+   same=true start=2010-03-01 strict=false dec=undefined rej=undefined prior=undefined
+   same=false start=- strict=false dec=undefined rej=undefined prior=undefined
+[fact] deceased: result=false calls=1
+   same=true start=2010-03-01 strict=false dec=undefined rej=undefined prior=undefined
+[fact] rejoined: result=false calls=1
+   same=true start=2010-03-01 strict=false dec=undefined rej=undefined prior=undefined
+[fact] separate: result=false calls=0
+   
+[fact] strictInput: result=false calls=0
+   
+[prior] consolidatedUndef: result=false calls=1
+   same=true start=2022-03-01 strict=false dec=undefined rej=undefined prior=39
+[prior] consolidated12: result=false calls=1
+   same=true start=2022-03-01 strict=false dec=undefined rej=undefined prior=0
+[prior] consolidated0: result=false calls=0
+   
+[prior] unconfirmed: result=false calls=0
+   
+[notice] c: id=gift-household-consolidation-detail-unverified sameTextWithHoldingAlreadyAtDonor=true
+[notice] u: id=gift-household-continuity-unconfirmed sameTextWithHoldingAlreadyAtDonor=true
+[GJ-2c] status=200 isExempt=false undetermined=[]
+[GJ-2c counterfactual start=2010-03-01] isExempt=true
+[GJ-2c counterfactual separate] isExempt=false

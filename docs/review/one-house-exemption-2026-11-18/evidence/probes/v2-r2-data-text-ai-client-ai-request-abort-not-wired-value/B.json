@@ -1,0 +1,8 @@
+{
+  "calls": 1,
+  "signalsSeen": [
+    true
+  ],
+  "errorName": "APIUserAbortError",
+  "error": "Request was aborted."
+}

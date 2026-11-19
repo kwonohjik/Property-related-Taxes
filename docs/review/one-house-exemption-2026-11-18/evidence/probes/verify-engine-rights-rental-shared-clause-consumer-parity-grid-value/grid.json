@@ -1,0 +1,549 @@
+{
+  "cells": 60,
+  "mismatchNa": 22,
+  "mismatchTiming": 0,
+  "mismatchOld8": 10,
+  "ctrlNoReason": "undefined",
+  "rows": [
+    {
+      "ds": "2016-06-01",
+      "reason": "kamco",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2016-06-01",
+      "reason": "kamco",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2016-06-01",
+      "reason": "auction",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2016-06-01",
+      "reason": "auction",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2016-06-01",
+      "reason": "public_sale",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2016-06-01",
+      "reason": "public_sale",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2016-06-01",
+      "reason": "cash_settlement_suit",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2016-06-01",
+      "reason": "cash_settlement_suit",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2016-06-01",
+      "reason": "expropriation_suit",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2016-06-01",
+      "reason": "expropriation_suit",
+      "method": true,
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2019-06-01",
+      "reason": "kamco",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2019-06-01",
+      "reason": "kamco",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2019-06-01",
+      "reason": "auction",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2019-06-01",
+      "reason": "auction",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2019-06-01",
+      "reason": "public_sale",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2019-06-01",
+      "reason": "public_sale",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2019-06-01",
+      "reason": "cash_settlement_suit",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2019-06-01",
+      "reason": "cash_settlement_suit",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2019-06-01",
+      "reason": "expropriation_suit",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2019-06-01",
+      "reason": "expropriation_suit",
+      "method": true,
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2021-06-01",
+      "reason": "kamco",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2021-06-01",
+      "reason": "kamco",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2021-06-01",
+      "reason": "auction",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2021-06-01",
+      "reason": "auction",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2021-06-01",
+      "reason": "public_sale",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2021-06-01",
+      "reason": "public_sale",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2021-06-01",
+      "reason": "cash_settlement_suit",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2021-06-01",
+      "reason": "cash_settlement_suit",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2021-06-01",
+      "reason": "expropriation_suit",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2021-06-01",
+      "reason": "expropriation_suit",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-14",
+      "reason": "kamco",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-14",
+      "reason": "kamco",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-14",
+      "reason": "auction",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-14",
+      "reason": "auction",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-14",
+      "reason": "public_sale",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-14",
+      "reason": "public_sale",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-14",
+      "reason": "cash_settlement_suit",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-14",
+      "reason": "cash_settlement_suit",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-14",
+      "reason": "expropriation_suit",
+      "method": "미선언",
+      "leaf": false,
+      "timing": false,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-14",
+      "reason": "expropriation_suit",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-15",
+      "reason": "kamco",
+      "method": "미선언",
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-15",
+      "reason": "kamco",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-15",
+      "reason": "auction",
+      "method": "미선언",
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-15",
+      "reason": "auction",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-15",
+      "reason": "public_sale",
+      "method": "미선언",
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-15",
+      "reason": "public_sale",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-15",
+      "reason": "cash_settlement_suit",
+      "method": "미선언",
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-15",
+      "reason": "cash_settlement_suit",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-15",
+      "reason": "expropriation_suit",
+      "method": "미선언",
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2022-02-15",
+      "reason": "expropriation_suit",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": true,
+      "na": "na"
+    },
+    {
+      "ds": "2023-06-01",
+      "reason": "kamco",
+      "method": "미선언",
+      "leaf": true,
+      "timing": true,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2023-06-01",
+      "reason": "kamco",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2023-06-01",
+      "reason": "auction",
+      "method": "미선언",
+      "leaf": true,
+      "timing": true,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2023-06-01",
+      "reason": "auction",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2023-06-01",
+      "reason": "public_sale",
+      "method": "미선언",
+      "leaf": true,
+      "timing": true,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2023-06-01",
+      "reason": "public_sale",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2023-06-01",
+      "reason": "cash_settlement_suit",
+      "method": "미선언",
+      "leaf": true,
+      "timing": true,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2023-06-01",
+      "reason": "cash_settlement_suit",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2023-06-01",
+      "reason": "expropriation_suit",
+      "method": "미선언",
+      "leaf": true,
+      "timing": true,
+      "old8": false,
+      "na": "na"
+    },
+    {
+      "ds": "2023-06-01",
+      "reason": "expropriation_suit",
+      "method": true,
+      "leaf": true,
+      "timing": true,
+      "old8": false,
+      "na": "na"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+## R0 ⑳ 거주주택 + 임대 1호 (권리 없음)
+status=200 ⑧=[] body.hhc=1 isExempt=true partial=false 89②=not_applicable exc=- open=[]
+applied=[] rental=true
+unmet=[]
+undet=[]
+houseCount={"total":1,"countedForExemption":1,"excluded":[]}
+err=null
+
+## R1 ⑳ 거주주택 + 임대 1호 + 승계 입주권(종전주택 취득 1년 후 · 3년 안 양도)
+status=200 ⑧=[] body.hhc=1 isExempt=true partial=false 89②=exception_met exc=소득세법 시행령 §156의2 ③ open=[]
+applied=[] rental=true
+unmet=[]
+undet=[]
+houseCount={"total":1,"countedForExemption":1,"excluded":[]}
+err=null
+
+## R2 ⑳ 거주주택 + 임대 1호 + 분양권(같은 타이밍)
+status=200 ⑧=[] body.hhc=1 isExempt=true partial=false 89②=exception_met exc=소득세법 시행령 §156의3 ② open=[]
+applied=[] rental=true
+unmet=[]
+undet=[]
+houseCount={"total":1,"countedForExemption":1,"excluded":[]}
+err=null
+
+## R3 명부 장기임대 행 + 입주권 (⑳ 선언)
+status=200 ⑧=[] body.hhc=2 isExempt=true partial=false 89②=exception_met exc=소득세법 시행령 §156의2 ③ open=[]
+applied=[] rental=true
+unmet=[]
+undet=[]
+houseCount={"total":2,"countedForExemption":1,"excluded":[{"houseId":"b","label":"장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄","legalBasis":"소득세법 시행령 §155⑳","houseNo":1,"houseAcquisitionDate":"2019-10-15"}]}
+err=null

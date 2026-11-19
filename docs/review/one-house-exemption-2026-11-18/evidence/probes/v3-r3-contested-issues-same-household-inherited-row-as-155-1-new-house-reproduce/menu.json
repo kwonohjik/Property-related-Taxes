@@ -1,0 +1,385 @@
+{
+  "sameWithin3y": {
+    "derivedNewHouse": {
+      "prev": "2012-11-21",
+      "next": "2015-03-01",
+      "row": "m",
+      "origin": "general"
+    },
+    "candidateExcluded": [],
+    "bodyTemp": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2015-03-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "und": [],
+    "pending": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "excludedHouses": [],
+    "validationErrors": []
+  },
+  "sameAfter3y": {
+    "derivedNewHouse": {
+      "prev": "2012-11-21",
+      "next": "2015-03-01",
+      "row": "m",
+      "origin": "general"
+    },
+    "candidateExcluded": [],
+    "bodyTemp": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2015-03-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "und": [],
+    "pending": [],
+    "unmet": [
+      "155-2-inherited-house"
+    ],
+    "unmetReasons": {
+      "155-2-inherited-house": [
+        "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+      ]
+    },
+    "excludedHouses": [],
+    "validationErrors": []
+  },
+  "separateWithin3y": {
+    "derivedNewHouse": null,
+    "candidateExcluded": [
+      "m"
+    ],
+    "bodyTemp": null,
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": true,
+    "applied": [],
+    "und": [],
+    "pending": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "excludedHouses": [
+      {
+        "houseId": "m",
+        "legalBasis": "소득세법 시행령 §155②"
+      }
+    ],
+    "validationErrors": []
+  },
+  "unknownWithin3y": {
+    "derivedNewHouse": {
+      "prev": "2012-11-21",
+      "next": "2015-03-01",
+      "row": "m",
+      "origin": "general"
+    },
+    "candidateExcluded": [],
+    "bodyTemp": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2015-03-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "und": [],
+    "pending": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "excludedHouses": [],
+    "validationErrors": []
+  },
+  "generalWithin3y": {
+    "derivedNewHouse": {
+      "prev": "2012-11-21",
+      "next": "2015-03-01",
+      "row": "m",
+      "origin": "general"
+    },
+    "candidateExcluded": [],
+    "bodyTemp": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2015-03-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "und": [],
+    "pending": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "excludedHouses": [],
+    "validationErrors": []
+  },
+  "generalAfter3y": {
+    "derivedNewHouse": {
+      "prev": "2012-11-21",
+      "next": "2015-03-01",
+      "row": "m",
+      "origin": "general"
+    },
+    "candidateExcluded": [],
+    "bodyTemp": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2015-03-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "und": [],
+    "pending": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "excludedHouses": [],
+    "validationErrors": []
+  },
+  "sameParentalCareWithin3y": {
+    "derivedNewHouse": null,
+    "candidateExcluded": [
+      "m"
+    ],
+    "bodyTemp": null,
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": true,
+    "applied": [],
+    "und": [],
+    "pending": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "excludedHouses": [
+      {
+        "houseId": "m",
+        "legalBasis": "소득세법 시행령 §155②"
+      }
+    ],
+    "validationErrors": []
+  },
+  "sameCoMinorityWithin3y": {
+    "derivedNewHouse": {
+      "prev": "2012-11-21",
+      "next": "2015-03-01",
+      "row": "m",
+      "origin": "general"
+    },
+    "candidateExcluded": [],
+    "bodyTemp": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2015-03-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "und": [],
+    "pending": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "excludedHouses": [],
+    "validationErrors": []
+  },
+  "sameOriginUnansweredWithin3y": {
+    "derivedNewHouse": {
+      "prev": "2012-11-21",
+      "next": "2015-03-01",
+      "row": "m",
+      "origin": "unknown"
+    },
+    "candidateExcluded": [],
+    "bodyTemp": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2015-03-01",
+      "newHouseOrigin": {
+        "kind": "unknown"
+      }
+    },
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "und": [
+      "155-1-new-house-origin-unconfirmed"
+    ],
+    "pending": [],
+    "unmet": [
+      "155-2-inherited-house",
+      "155-1-temporary-two-house"
+    ],
+    "unmetReasons": {
+      "155-2-inherited-house": [
+        "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+      ],
+      "155-1-temporary-two-house": [
+        "신규 주택이 분양권·조합원입주권 등 권리로 취득한 주택인지 모른다고 답해(보유 주택 목록 행은 답하지 않은 경우 포함) 일시적 2주택(소득세법 시행령 §155①)을 적용하지 않았습니다."
+      ]
+    },
+    "excludedHouses": [],
+    "validationErrors": [
+      "houses.0.acquisitionOrigin: 보유 주택 1: 일시적 2주택의 신규 주택으로 판정된 주택입니다 — 이 주택을 어떻게 취득했는지(일반 취득·분양권·조합원입주권·재건축 등) 선택하세요. 모르면 「모름」을 고르세요."
+    ]
+  },
+  "r0464_general": {
+    "derivedNewHouse": {
+      "prev": "2005-02-28",
+      "next": "2023-02-01",
+      "row": "B",
+      "origin": "general"
+    },
+    "candidateExcluded": [],
+    "bodyTemp": {
+      "previousAcquisitionDate": "2005-02-28",
+      "newAcquisitionDate": "2023-02-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "und": [],
+    "pending": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "excludedHouses": [],
+    "validationErrors": []
+  },
+  "r0464_inheritDate": {
+    "derivedNewHouse": {
+      "prev": "2005-02-28",
+      "next": "2022-03-02",
+      "row": "B",
+      "origin": "general"
+    },
+    "candidateExcluded": [],
+    "bodyTemp": {
+      "previousAcquisitionDate": "2005-02-28",
+      "newAcquisitionDate": "2022-03-02",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "und": [],
+    "pending": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "excludedHouses": [],
+    "validationErrors": []
+  },
+  "r0464_successorRight": {
+    "derivedNewHouse": {
+      "prev": "2005-02-28",
+      "next": "2023-02-01",
+      "row": "B",
+      "origin": "successor_right"
+    },
+    "candidateExcluded": [],
+    "bodyTemp": {
+      "previousAcquisitionDate": "2005-02-28",
+      "newAcquisitionDate": "2023-02-01",
+      "newHouseContractDate": "2022-03-02",
+      "newHouseOrigin": {
+        "kind": "successor_right",
+        "rightAcquisitionDate": "2022-03-02",
+        "rightApprovalDate": "2017-06-23"
+      }
+    },
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "und": [],
+    "pending": [],
+    "unmet": [],
+    "unmetReasons": {},
+    "excludedHouses": [],
+    "validationErrors": []
+  },
+  "r0464_originalMember": {
+    "derivedNewHouse": null,
+    "candidateExcluded": [],
+    "bodyTemp": null,
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "und": [],
+    "pending": [],
+    "unmet": [
+      "155-2-inherited-house"
+    ],
+    "unmetReasons": {
+      "155-2-inherited-house": [
+        "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+      ]
+    },
+    "excludedHouses": [],
+    "validationErrors": []
+  },
+  "sameBeforeSelling": {
+    "derivedNewHouse": null,
+    "candidateExcluded": [],
+    "bodyTemp": null,
+    "bodyCount": 2,
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "und": [],
+    "pending": [],
+    "unmet": [
+      "155-2-inherited-house"
+    ],
+    "unmetReasons": {
+      "155-2-inherited-house": [
+        "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+      ]
+    },
+    "excludedHouses": [],
+    "validationErrors": []
+  }
+}

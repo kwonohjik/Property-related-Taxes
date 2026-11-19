@@ -1,0 +1,255 @@
+{
+  "phrpYes": {
+    "summary": [
+      {
+        "label": "1세대 해당",
+        "value": "예"
+      },
+      {
+        "label": "세대 보유 주택 수",
+        "value": "1채"
+      },
+      {
+        "label": "양도 예정일",
+        "value": "2020-07-01"
+      },
+      {
+        "label": "예상 양도가액",
+        "value": 800000000
+      }
+    ],
+    "errs": [],
+    "bodyRh": {
+      "scenario": "B",
+      "units": 0
+    },
+    "route": {
+      "status": 200,
+      "isExempt": true,
+      "isPartialExempt": false,
+      "applied": [],
+      "rhPassed": true,
+      "rhKeys": [
+        "scenario",
+        "passed",
+        "residenceFailReasons",
+        "unitFailReasons",
+        "periodPendingUnitIndexes",
+        "notices",
+        "legalBasis"
+      ]
+    }
+  },
+  "phrpNo": {
+    "summary": [
+      {
+        "label": "1세대 해당",
+        "value": "예"
+      },
+      {
+        "label": "세대 보유 주택 수",
+        "value": "1채"
+      },
+      {
+        "label": "양도 예정일",
+        "value": "2020-07-01"
+      },
+      {
+        "label": "예상 양도가액",
+        "value": 800000000
+      }
+    ],
+    "errs": [],
+    "bodyRh": null,
+    "route": {
+      "status": 200,
+      "isExempt": true,
+      "isPartialExempt": false,
+      "applied": [],
+      "rhKeys": null
+    }
+  },
+  "unitA": {
+    "summary": [
+      {
+        "label": "1세대 해당",
+        "value": "예"
+      },
+      {
+        "label": "세대 보유 주택 수",
+        "value": "1채"
+      },
+      {
+        "label": "양도 예정일",
+        "value": "2020-07-01"
+      },
+      {
+        "label": "예상 양도가액",
+        "value": 800000000
+      }
+    ],
+    "errs": [
+      "rentalHousingException: 장기임대주택 특례 임대주택 #1: 세무서 사업자등록일을 입력하세요."
+    ],
+    "bodyRh": {
+      "scenario": "A",
+      "units": 1
+    },
+    "route": {
+      "status": 400,
+      "applied": [],
+      "rhKeys": null
+    }
+  },
+  "unitB": {
+    "summary": [
+      {
+        "label": "1세대 해당",
+        "value": "예"
+      },
+      {
+        "label": "세대 보유 주택 수",
+        "value": "1채"
+      },
+      {
+        "label": "양도 예정일",
+        "value": "2020-07-01"
+      },
+      {
+        "label": "예상 양도가액",
+        "value": 800000000
+      }
+    ],
+    "errs": [
+      "rentalHousingException: 장기임대주택 특례 임대주택 #1: 세무서 사업자등록일을 입력하세요."
+    ],
+    "bodyRh": {
+      "scenario": "B",
+      "units": 1
+    },
+    "route": {
+      "status": 400,
+      "applied": [],
+      "rhKeys": null
+    }
+  },
+  "phrpNoWinWin": {
+    "summary": [
+      {
+        "label": "1세대 해당",
+        "value": "예"
+      },
+      {
+        "label": "세대 보유 주택 수",
+        "value": "1채"
+      },
+      {
+        "label": "양도 예정일",
+        "value": "2020-07-01"
+      },
+      {
+        "label": "예상 양도가액",
+        "value": 800000000
+      },
+      {
+        "label": "선언한 특례",
+        "value": "상생임대주택"
+      }
+    ],
+    "errs": [
+      "winWinRentalContractDate: 상생임대주택: 상생임대차계약 체결일을 입력하세요.",
+      "winWinRentalIncreaseRatePct: 상생임대주택: 임대료 증가율(%)을 입력하세요.",
+      "winWinRentalPriorLeaseMonths: 상생임대주택: 직전임대차 임대기간(개월)을 입력하세요.",
+      "winWinRentalLeaseMonths: 상생임대주택: 상생임대차 임대기간(개월)을 입력하세요."
+    ],
+    "bodyRh": null,
+    "route": {
+      "status": 200,
+      "isExempt": true,
+      "isPartialExempt": false,
+      "applied": [],
+      "rhKeys": null
+    }
+  },
+  "phrpYesWinWin": {
+    "summary": [
+      {
+        "label": "1세대 해당",
+        "value": "예"
+      },
+      {
+        "label": "세대 보유 주택 수",
+        "value": "1채"
+      },
+      {
+        "label": "양도 예정일",
+        "value": "2020-07-01"
+      },
+      {
+        "label": "예상 양도가액",
+        "value": 800000000
+      },
+      {
+        "label": "선언한 특례",
+        "value": "상생임대주택"
+      }
+    ],
+    "errs": [
+      "winWinRentalContractDate: 상생임대주택: 상생임대차계약 체결일을 입력하세요.",
+      "winWinRentalIncreaseRatePct: 상생임대주택: 임대료 증가율(%)을 입력하세요.",
+      "winWinRentalPriorLeaseMonths: 상생임대주택: 직전임대차 임대기간(개월)을 입력하세요.",
+      "winWinRentalLeaseMonths: 상생임대주택: 상생임대차 임대기간(개월)을 입력하세요."
+    ],
+    "bodyRh": {
+      "scenario": "B",
+      "units": 0
+    },
+    "route": {
+      "status": 200,
+      "isExempt": true,
+      "isPartialExempt": false,
+      "applied": [],
+      "rhPassed": true,
+      "rhKeys": [
+        "scenario",
+        "passed",
+        "residenceFailReasons",
+        "unitFailReasons",
+        "periodPendingUnitIndexes",
+        "notices",
+        "legalBasis"
+      ]
+    }
+  },
+  "rightSaleStaleRh": {
+    "summary": [
+      {
+        "label": "1세대 해당",
+        "value": "예"
+      },
+      {
+        "label": "양도 대상",
+        "value": "조합원입주권"
+      },
+      {
+        "label": "세대 보유 주택 수",
+        "value": "0채"
+      },
+      {
+        "label": "세대 보유 입주권 수",
+        "value": "1개"
+      },
+      {
+        "label": "양도 예정일",
+        "value": "2020-07-01"
+      },
+      {
+        "label": "예상 양도가액",
+        "value": 800000000
+      }
+    ],
+    "errs": [],
+    "bodyRh": null,
+    "route": null
+  }
+}

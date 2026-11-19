@@ -1,0 +1,18 @@
+{
+  "housing/one_house": {
+    "fieldCardText": "12억 초과 여부(고가주택)를 판정하는 데 쓰입니다",
+    "wholeStep3Hits": []
+  },
+  "housing/surcharge": {
+    "fieldCardText": "12억 초과 여부(고가주택)를 판정하는 데 쓰입니다",
+    "wholeStep3Hits": []
+  },
+  "right_to_move_in/one_house": {
+    "fieldCardText": "12억 초과 여부(고가주택)를 판정하는 데 쓰입니다",
+    "wholeStep3Hits": []
+  },
+  "right_to_move_in/surcharge": {
+    "fieldCardText": "12억 초과 여부(고가주택)를 판정하는 데 쓰입니다",
+    "wholeStep3Hits": []
+  }
+}

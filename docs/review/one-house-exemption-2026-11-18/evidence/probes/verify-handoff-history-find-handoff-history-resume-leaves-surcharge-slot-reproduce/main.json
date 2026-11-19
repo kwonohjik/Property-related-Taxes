@@ -1,0 +1,63 @@
+{
+  "A1": {
+    "pushed": [
+      "/calc/one-house-exemption"
+    ],
+    "transferDate": "2026-02-16",
+    "oneHouseResult": null,
+    "oneHouseStep": 0,
+    "surchargeStep": 3,
+    "surchargeResultIsX": true
+  },
+  "A2": {
+    "transferDate": "2026-02-16",
+    "surchargeStep": 3,
+    "surchargeResult": null
+  },
+  "A3": {
+    "active": "c1",
+    "surchargeStep": 3,
+    "surchargeResultIsX": true,
+    "surchargeResultClientId": "c1"
+  },
+  "A4": {
+    "active": "c2",
+    "surchargeStep": 0,
+    "surchargeResult": null
+  },
+  "A5": {
+    "active": "c1",
+    "surchargeStep": 0,
+    "surchargeResult": null
+  },
+  "B1": {
+    "xType": "multi_house_2",
+    "xLabel": "2주택 중과",
+    "callsAfterX": 1,
+    "storeFormTransferDate": "2026-02-16",
+    "storeFormHouses": 0,
+    "shownLabel": "2주택 중과",
+    "shownBodyHasX2021": true,
+    "shownBodyHas2026": false,
+    "callsAfterResume": 1,
+    "rejudged": false,
+    "stillX": true,
+    "surchargeStepAfter": 3,
+    "calcTaxButtonShown": true,
+    "handedTransferDate": "2026-02-16"
+  },
+  "B2": {
+    "callsAfterX": 1,
+    "callsAfter": 2,
+    "shownLabel": "중과 없음",
+    "yType": "none"
+  },
+  "B3": {
+    "yType": "none",
+    "yHouseCount": 1,
+    "xType": "multi_house_2",
+    "xHouseCount": 2,
+    "yTransferDate": "2026-02-16",
+    "xTransferDate": "2021-06-01"
+  }
+}

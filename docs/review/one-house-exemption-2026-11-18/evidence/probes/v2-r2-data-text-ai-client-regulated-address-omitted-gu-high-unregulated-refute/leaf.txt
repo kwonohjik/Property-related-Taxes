@@ -1,0 +1,33 @@
+경기도 성남시 분당구 정자동 1 @2018-06-01 parse={"sido":"경기도","sigungu":"성남시 분당구"} → {"isRegulated":true,"confidence":"high","basis":"2017-08-03 고시 — 경기도 성남시 분당구 지정"}
+경기도 성남시 정자동 1 @2018-06-01 parse={"sido":"경기도","sigungu":"성남시"} → {"isRegulated":false,"confidence":"high","basis":"경기도 성남시 — 2018-06-01 기준 미지정"}
+경기도 성남시분당구 정자동 1 @2018-06-01 parse={"sido":"경기도","sigungu":"성남시분당구"} → {"isRegulated":false,"confidence":"high","basis":"경기도 성남시분당구 — 2018-06-01 기준 미지정"}
+경기도 성남시 정자동 1 @2026-06-01 parse={"sido":"경기도","sigungu":"성남시"} → {"isRegulated":false,"confidence":"high","basis":"경기도 성남시 — 2026-06-01 기준 미지정"}
+경기도 수원시 영통구 이의동 1 @2021-06-01 parse={"sido":"경기도","sigungu":"수원시 영통구"} → {"isRegulated":true,"confidence":"medium","basis":"2018-08-28 고시 — 경기도 수원시 영통구 지정 (동·지구 단위 지정/제외 — 정확한 소재지 확인 필요)"}
+경기도 수원시 이의동 1 @2021-06-01 parse={"sido":"경기도","sigungu":"수원시"} → {"isRegulated":false,"confidence":"high","basis":"경기도 수원시 — 2021-06-01 기준 미지정"}
+경기도 수원시영통구 이의동 1 @2021-06-01 parse={"sido":"경기도","sigungu":"수원시영통구"} → {"isRegulated":false,"confidence":"high","basis":"경기도 수원시영통구 — 2021-06-01 기준 미지정"}
+경기도 고양시 행신동 123 @2021-06-01 parse={"sido":"경기도","sigungu":"고양시"} → {"isRegulated":false,"confidence":"high","basis":"경기도 고양시 — 2021-06-01 기준 미지정"}
+경기도 용인시 수지구 풍덕천동 1 @2021-06-01 parse={"sido":"경기도","sigungu":"용인시 수지구"} → {"isRegulated":true,"confidence":"medium","basis":"2018-08-28 고시 — 경기도 용인시 수지구 지정 (동·지구 단위 지정/제외 — 정확한 소재지 확인 필요)"}
+경기도 용인시 풍덕천동 1 @2021-06-01 parse={"sido":"경기도","sigungu":"용인시"} → {"isRegulated":false,"confidence":"high","basis":"경기도 용인시 — 2021-06-01 기준 미지정"}
+경기도 안양시 평촌동 1 @2021-06-01 parse={"sido":"경기도","sigungu":"안양시"} → {"isRegulated":false,"confidence":"high","basis":"경기도 안양시 — 2021-06-01 기준 미지정"}
+경기도 안산시 고잔동 1 @2021-06-01 parse={"sido":"경기도","sigungu":"안산시"} → {"isRegulated":false,"confidence":"high","basis":"경기도 안산시 — 2021-06-01 기준 미지정"}
+충청북도 청주시 복대동 1 @2021-06-01 parse={"sido":"충청북도","sigungu":"청주시"} → {"isRegulated":false,"confidence":"high","basis":"충청북도 청주시 — 2021-06-01 기준 미지정"}
+경상북도 포항시 대잠동 1 @2021-06-01 parse={"sido":"경상북도","sigungu":"포항시"} → {"isRegulated":false,"confidence":"high","basis":"경상북도 포항시 — 2021-06-01 기준 미지정"}
+경기도 부천시 중동 1 @2021-06-01 parse={"sido":"경기도","sigungu":"부천시"} → {"isRegulated":true,"confidence":"high","basis":"2020-06-19 고시 — 경기도 부천시 지정"}
+경기도 화성시 동탄순환대로 123 @2026-08-01 parse={"sido":"경기도","sigungu":"화성시"} → {"isRegulated":false,"confidence":"high","basis":"경기도 화성시 — 2026-08-01 기준 미지정(지정 이력 없음 또는 해제됨)"}
+경기도 화성시 동탄구 동탄순환대로 123 @2026-08-01 parse={"sido":"경기도","sigungu":"화성시 동탄구"} → {"isRegulated":true,"confidence":"medium","basis":"2026-07-01 고시 — 경기도 화성시 동탄구 지정 (동·지구 단위 지정/제외 — 정확한 소재지 확인 필요)"}
+경기도 화성시 동탄순환대로 123 @2021-06-01 parse={"sido":"경기도","sigungu":"화성시"} → {"isRegulated":true,"confidence":"medium","basis":"2020-06-19 고시 — 경기도 화성시 지정 (동·지구 단위 지정/제외 — 정확한 소재지 확인 필요)"}
+인천광역시 남구 학익동 1 @2021-06-01 parse={"sido":"인천광역시","sigungu":"남구"} → {"isRegulated":false,"confidence":"high","basis":"인천광역시 남구 — 2021-06-01 기준 미지정"}
+인천광역시 미추홀구 학익동 1 @2021-06-01 parse={"sido":"인천광역시","sigungu":"미추홀구"} → {"isRegulated":true,"confidence":"high","basis":"2020-06-19 고시 — 인천광역시 미추홀구 지정"}
+경기도 여주시 1 @2021-06-01 parse={"sido":"경기도","sigungu":"여주시"} → {"isRegulated":false,"confidence":"high","basis":"경기도 여주시 — 2021-06-01 기준 미지정"}
+서울특별시 강남구 역삼동 1 @2018-03-02 parse={"sido":"서울특별시","sigungu":"강남구"} → {"isRegulated":true,"confidence":"high","basis":"2017-08-03 고시 — 서울특별시 강남구 지정"}
+code 4159000000 @2026-08-01 → {"isRegulated":false,"confidence":"high","basis":"경기도 화성시 — 2026-08-01 기준 미지정(지정 이력 없음 또는 해제됨)"}
+code 4159012700 @2026-08-01 → {"isRegulated":false,"confidence":"high","basis":"경기도 화성시 — 2026-08-01 기준 미지정(지정 이력 없음 또는 해제됨)"}
+code 4159712700 @2026-08-01 → {"isRegulated":true,"confidence":"high","basis":"2026-07-01 고시 — 경기도 화성시 동탄구 지정"}
+code 4159710200 @2026-08-01 → {"isRegulated":true,"confidence":"high","basis":"2026-07-01 고시 — 경기도 화성시 동탄구 지정"}
+CALC 서울특별시 강남구 역삼동 1: issues=[] flags=[true,true] status=200 isExempt=false totalTax=237435000 notices=[]
+CALC 경기도 성남시 분당구 정자동 1: issues=[] flags=[true,true] status=200 isExempt=false totalTax=237435000 notices=[]
+CALC 경기도 성남시 정자동 1: issues=[] flags=[false,false] status=200 isExempt=true totalTax=0 notices=[]
+CALC 경기도 성남시분당구 정자동 1: issues=[] flags=[false,false] status=200 isExempt=true totalTax=0 notices=[]
+CALC 경기도 고양시 행신동 123: issues=[] flags=[false,false] status=200 isExempt=true totalTax=0 notices=[]
+JUDG 경기도 성남시 분당구 정자동 1: status=200 ve=[] flags=[true,true] isExempt=false
+JUDG 경기도 성남시 정자동 1: status=200 ve=[] flags=[false,false] isExempt=true

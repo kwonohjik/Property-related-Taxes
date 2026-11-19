@@ -1,0 +1,28 @@
+=== A-inherit cohab months 24 (impossible — 2 months window)
+⑧ errors: []
+status 200 {"isExempt":true,"partial":false,"reason":"1세대1주택 비과세","applied":[],"unmet":[]}
+=== A-inherit cohab months 2 (max possible)
+⑧ errors: []
+status 200 {"isExempt":false,"partial":false,"applied":[],"unmet":[]}
+=== A-inherit cohab months 999
+⑧ errors: []
+status 200 {"isExempt":true,"partial":false,"reason":"1세대1주택 비과세","applied":[],"unmet":[]}
+=== B-repl residence widget 0, replResidenceMonths 12
+⑧ errors: []
+status 200 {"isExempt":true,"partial":false,"reason":"대체주택 특례 비과세 (§156의2⑤)","applied":["156-2-5-replacement-house"],"unmet":[]}
+=== B-repl residence widget 24, replResidenceMonths 1
+⑧ errors: []
+status 200 {"isExempt":false,"partial":false,"applied":[],"unmet":[]}
+=== B-repl holding 5 months, replResidenceMonths 12
+⑧ errors: []
+status 200 {"isExempt":true,"partial":false,"reason":"대체주택 특례 비과세 (§156의2⑤)","applied":["156-2-5-replacement-house"],"unmet":[]}
+=== C calc route baseline: 200 dataKeys=mode,result isExempt=true exemption=null determinedTax=0 totalTax=0 err=null
+=== C calc route + transferorNonResidentAtTransfer: 200 dataKeys=mode,result isExempt=true exemption=null determinedTax=0 totalTax=0 err=null
+=== C calc route + demolishedBeforeBalance: 200 dataKeys=mode,result isExempt=true exemption=null determinedTax=0 totalTax=0 err=null
+=== C one-house route + transferorNonResidentAtTransfer: 200 {"isExempt":false,"partial":false,"applied":[],"unmet":["non-resident-121-2"]}
+=== C one-house route + demolishedBeforeBalance: 200 {"isExempt":false,"partial":false,"applied":[],"unmet":["154-1-demolished-before-balance"]}
+=== D API direct future row: 200 {"isExempt":false,"partial":false,"applied":[],"unmet":[]} houseCount.total=2
+=== D API direct future right: 200 {"isExempt":true,"partial":false,"reason":"1세대1주택 비과세","applied":[],"unmet":[]}
+=== D client future row
+⑧ errors: []
+status 200 {"isExempt":true,"partial":false,"reason":"1세대1주택 비과세","applied":[],"unmet":[]}

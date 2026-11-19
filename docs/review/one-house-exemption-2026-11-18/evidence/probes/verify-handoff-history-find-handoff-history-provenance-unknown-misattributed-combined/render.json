@@ -1,0 +1,126 @@
+{
+  "S1_surcharge_menu": {
+    "slice": {
+      "id": null,
+      "hash": null,
+      "imported": true
+    },
+    "prov": {
+      "state": "unknown",
+      "record": null
+    },
+    "text": "출처 — 1세대1주택 비과세 판정원본 판정이 그 뒤에 바뀌었는지 확인할 수 없습니다(기준값이 없는 이전 세션에서 넘어온 값입니다). 확실히 하려면 판정 메뉴에서 다시 넘겨 주세요."
+  },
+  "S1b_first": {
+    "slice": {
+      "id": null,
+      "hash": null,
+      "imported": true
+    },
+    "prov": {
+      "state": "unknown",
+      "record": null
+    },
+    "text": "출처 — 1세대1주택 비과세 판정원본 판정이 그 뒤에 바뀌었는지 확인할 수 없습니다(기준값이 없는 이전 세션에서 넘어온 값입니다). 확실히 하려면 판정 메뉴에서 다시 넘겨 주세요."
+  },
+  "S1b_second_rehandoff": {
+    "slice": {
+      "id": null,
+      "hash": null,
+      "imported": true
+    },
+    "prov": {
+      "state": "unknown",
+      "record": null
+    },
+    "text": "출처 — 1세대1주택 비과세 판정원본 판정이 그 뒤에 바뀌었는지 확인할 수 없습니다(기준값이 없는 이전 세션에서 넘어온 값입니다). 확실히 하려면 판정 메뉴에서 다시 넘겨 주세요."
+  },
+  "S2_one_house_unsaved": {
+    "slice": {
+      "id": null,
+      "hash": null,
+      "imported": true
+    },
+    "prov": {
+      "state": "unknown",
+      "record": null
+    },
+    "text": "출처 — 1세대1주택 비과세 판정원본 판정이 그 뒤에 바뀌었는지 확인할 수 없습니다(기준값이 없는 이전 세션에서 넘어온 값입니다). 확실히 하려면 판정 메뉴에서 다시 넘겨 주세요."
+  },
+  "S2_vs_S1_slice_equal": true,
+  "S3_record_deleted": {
+    "slice": {
+      "id": "rec-del",
+      "hash": "hash-del",
+      "imported": true
+    },
+    "prov": {
+      "state": "unknown",
+      "record": null
+    },
+    "text": "출처 — 1세대1주택 비과세 판정원본 판정이 그 뒤에 바뀌었는지 확인할 수 없습니다(기준값이 없는 이전 세션에서 넘어온 값입니다). 확실히 하려면 판정 메뉴에서 다시 넘겨 주세요."
+  },
+  "S3b_repo_throw": {
+    "slice": {
+      "id": "rec-x",
+      "hash": "hash-x",
+      "imported": true
+    },
+    "prov": {
+      "state": "unknown",
+      "record": null
+    },
+    "text": "출처 — 1세대1주택 비과세 판정원본 판정이 그 뒤에 바뀌었는지 확인할 수 없습니다(기준값이 없는 이전 세션에서 넘어온 값입니다). 확실히 하려면 판정 메뉴에서 다시 넘겨 주세요."
+  },
+  "S4_no_baseline": {
+    "slice": {
+      "id": "rec-old",
+      "hash": null,
+      "imported": true
+    },
+    "prov": {
+      "state": "unknown",
+      "record": {
+        "calculationId": "rec-old",
+        "judgedFor": "2026-06-01",
+        "updatedAt": "2026-09-21T01:00:00.000Z",
+        "verdictLabel": "비과세"
+      }
+    },
+    "text": "출처 — 1세대1주택 비과세 판정원본 판정이 그 뒤에 바뀌었는지 확인할 수 없습니다(기준값이 없는 이전 세션에서 넘어온 값입니다). 확실히 하려면 판정 메뉴에서 다시 넘겨 주세요.판정 대상 양도(예정)일 2026-06-01 · 판정 결과 비과세 · 저장 2026-09-21"
+  },
+  "C1_fresh": {
+    "slice": {
+      "id": "rec-A",
+      "hash": "hash-A",
+      "imported": true
+    },
+    "prov": {
+      "state": "fresh",
+      "record": {
+        "calculationId": "rec-A",
+        "judgedFor": "2026-06-01",
+        "updatedAt": "2026-09-21T01:00:00.000Z",
+        "verdictLabel": "비과세"
+      }
+    },
+    "text": "출처 — 1세대1주택 비과세 판정판정 메뉴에서 넘겨받은 사실로 계산했습니다. 계산기는 판정 결과를 복사하지 않고 같은 엔진으로 다시 판정하므로, 이 화면에서 양도일·양도가액을 바꾸면 판정도 그에 맞게 바뀝니다.판정 대상 양도(예정)일 2026-06-01 · 판정 결과 비과세 · 저장 2026-09-21"
+  },
+  "C2_source_changed": {
+    "slice": {
+      "id": "rec-A",
+      "hash": "hash-A",
+      "imported": true
+    },
+    "prov": {
+      "state": "source_changed",
+      "record": {
+        "calculationId": "rec-A",
+        "judgedFor": "2026-06-01",
+        "updatedAt": "2026-09-21T01:00:00.000Z",
+        "verdictLabel": "비과세"
+      }
+    },
+    "text": "출처 — 1세대1주택 비과세 판정원본 판정이 그 뒤에 바뀌었습니다. 아래 세액은 넘겨받을 당시의 사실로 계산한 것입니다. 바뀐 판정을 반영하려면 판정 메뉴에서 다시 「이 결과로 세액 계산」을 누르세요.판정 대상 양도(예정)일 2026-06-01 · 판정 결과 비과세 · 저장 2026-09-21"
+  }
+}

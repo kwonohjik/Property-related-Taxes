@@ -1,0 +1,6 @@
+max(2022-01-01→2022-03-01)=2
+max(C2-18b2 2023-01-01→2023-12-01)=11
+max(C2 SAME_HOUSEHOLD 2010-01-01→2023-12-01)=167
+gift sibling ⑧ 24 → 증여 전 동일세대 거주기간은 세대 보유 시작일부터 증여일까지(2개월)를 넘을 수 없습니다.
+gift sibling ⑧ 2 → null
+engine consolidate(0, cohab 999) → 999

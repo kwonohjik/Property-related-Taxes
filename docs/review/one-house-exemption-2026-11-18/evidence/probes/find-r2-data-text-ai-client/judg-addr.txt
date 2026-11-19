@@ -1,0 +1,4 @@
+경기도 성남시 분당구 정자동 1 | ve=[] | body=[true,true] | isExempt=false | acqVerdict=true/high 2017-08-03 고시 — 경기도 성남시 분당구 지정
+경기도 성남시 정자동 1 | ve=[] | body=[false,false] | isExempt=true | acqVerdict=false/high 경기도 성남시 — 2018-06-01 기준 미지정
+경기도 수원시 매탄동 1 | ve=[] | body=[false,false] | isExempt=true | acqVerdict=false/high 경기도 수원시 — 2018-06-01 기준 미지정
+충청북도 청주시 복대동 1 | ve=[] | body=[false,false] | isExempt=true | acqVerdict=false/high 충청북도 청주시 — 2018-06-01 기준 미지정

@@ -1,0 +1,2 @@
+S07-11 anchor 3번째 it 픽스처(재상속 표시 · 승계조합원 신축 · 양도 2016-12-01, 보유 1.5년):
+judgeRedevAptOneHouseExemption → {"isExempt":false,"isPartialExempt":false,"und":["155-2-reinheritance-reference-date-unverified"]}

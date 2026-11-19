@@ -1,0 +1,20 @@
+{
+ "totalImportedIds": 63,
+ "importLines": 82,
+ "step1Ids": 2,
+ "step2Ids": 42,
+ "step3Ids": 22,
+ "step2Only": 40,
+ "step3Only": 20,
+ "shared23": 2,
+ "shared23List": [
+  "judgmentSaleIsHousing",
+  "OneHouseJudgmentFormData"
+ ],
+ "rangeLines": {
+  "step1": 41,
+  "step2": 382,
+  "step3": 204,
+  "tail": 46
+ }
+}

@@ -1,0 +1,66 @@
+## I 동일세대 상속(세대 보유 2005-03-01·상속 2018-09-01) · X §99의4 · 0061 예
+⑧ errors=[] status=200
+isExempt=true reason=1세대1주택 비과세 applied=[]
+undetermined=["155-20-merge-rental-carveout"]
+  carveout notice: 합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061). 「소득세법 시행령」 §154① 보유·거주 요건은 그대로 봅니다.
+unmet=[]
+houseCount total=2 counted=1 excluded=["x:조특법 §99의4 (농어촌주택)"]
+rentalHousingException.passed=undefined
+calls=[{"who":"ext(raw-date-shape)","gen":"2018-09-01","special":0,"inh":0},{"who":"STEP0.9","gen":"2005-03-01","special":1,"inh":0}]
+
+## II 별도세대 상속(2018-09-01) · X §99의4 · 0061 예
+⑧ errors=[] status=200
+isExempt=true reason=동거봉양 합가 (§155④) 1세대1주택 비과세 applied=["155-4-parental-care-merge"]
+undetermined=["155-20-merge-rental-carveout"]
+  carveout notice: 합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061). 「소득세법 시행령」 §154① 보유·거주 요건은 그대로 봅니다.
+unmet=[]
+houseCount total=2 counted=2 excluded=[]
+rentalHousingException.passed=undefined
+calls=[{"who":"ext(raw-date-shape)","gen":"2018-09-01","special":0,"inh":0},{"who":"STEP0.9","gen":"2018-09-01","special":0,"inh":0}]
+
+## III 동일세대 상속 · X 선언 없음 · 0061 예
+⑧ errors=[] status=200
+isExempt=true reason=동거봉양 합가 (§155④) 1세대1주택 비과세 applied=["155-4-parental-care-merge"]
+undetermined=["155-20-merge-rental-carveout"]
+  carveout notice: 합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061). 「소득세법 시행령」 §154① 보유·거주 요건은 그대로 봅니다.
+unmet=[]
+houseCount total=2 counted=2 excluded=[]
+rentalHousingException.passed=undefined
+calls=[{"who":"ext(raw-date-shape)","gen":"2018-09-01","special":0,"inh":0},{"who":"STEP0.9","gen":"2005-03-01","special":0,"inh":0}]
+
+## IV 동일세대 상속 · X §99의4 · 0061 아니오
+⑧ errors=[] status=200
+isExempt=false reason=- applied=[]
+undetermined=[]
+unmet=[]
+houseCount total=2 counted=1 excluded=["x:조특법 §99의4 (농어촌주택)"]
+rentalHousingException.passed=false
+calls=[{"who":"STEP0.9","gen":"2005-03-01","special":1,"inh":0},{"who":"ext","gen":"2005-03-01","special":1,"inh":0}]
+
+## VI 2005-03-01 매매 취득(형제 대조군) · X §99의4 · 0061 예
+⑧ errors=[] status=200
+isExempt=false reason=- applied=[]
+undetermined=[]
+unmet=[]
+houseCount total=2 counted=1 excluded=["x:조특법 §99의4 (농어촌주택)"]
+rentalHousingException.passed=false
+calls=[{"who":"ext(raw-date-shape)","gen":"2005-03-01","special":1,"inh":0},{"who":"STEP0.9","gen":"2005-03-01","special":1,"inh":0},{"who":"ext(raw-date-shape)","gen":"2005-03-01","special":1,"inh":0}]
+
+## I-mut 동일세대 상속 · X §99의4 · 0061 예 [MUTATION: 가드 기준일=resolveHce]
+⑧ errors=[] status=200
+isExempt=false reason=- applied=[]
+undetermined=[]
+unmet=[]
+houseCount total=2 counted=1 excluded=["x:조특법 §99의4 (농어촌주택)"]
+rentalHousingException.passed=false
+calls=[{"who":"ext(raw-date-shape)","gen":"2005-03-01","special":1,"inh":0},{"who":"STEP0.9","gen":"2005-03-01","special":1,"inh":0},{"who":"ext","gen":"2005-03-01","special":1,"inh":0}]
+
+## II-mut 별도세대 상속 · X §99의4 · 0061 예 [MUTATION: 가드 기준일=resolveHce]
+⑧ errors=[] status=200
+isExempt=true reason=동거봉양 합가 (§155④) 1세대1주택 비과세 applied=["155-4-parental-care-merge"]
+undetermined=["155-20-merge-rental-carveout"]
+  carveout notice: 합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061). 「소득세법 시행령」 §154① 보유·거주 요건은 그대로 봅니다.
+unmet=[]
+houseCount total=2 counted=2 excluded=[]
+rentalHousingException.passed=undefined
+calls=[{"who":"ext(raw-date-shape)","gen":"2018-09-01","special":0,"inh":0},{"who":"STEP0.9","gen":"2018-09-01","special":0,"inh":0}]

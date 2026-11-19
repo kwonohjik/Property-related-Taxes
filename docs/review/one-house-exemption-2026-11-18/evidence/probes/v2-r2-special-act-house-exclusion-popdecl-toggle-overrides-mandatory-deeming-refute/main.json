@@ -1,0 +1,104 @@
+{
+  "classify_busan_donggu": {
+    "kind": null
+  },
+  "capital_busan_donggu": false,
+  "classify_pyeongchang": {
+    "kind": "decline"
+  },
+  "E_base": {
+    "entries": [
+      {
+        "article": "pop_decline_71_2",
+        "houseId": "p",
+        "articleLabel": "인구감소지역주택(조특법 §71의2①)",
+        "eligible": true,
+        "legalBasis": "조특법 §71의2①",
+        "notice": "양도소득과세표준신고와 함께 과세특례신고서를 제출해야 하며(조특령 §68의2②), 인구감소지역주택 취득 전에 조합원입주권·분양권을 보유했다면 그 보유를 증명하는 서류를 함께 냅니다(③)."
+      }
+    ],
+    "excludedCount": 1
+  },
+  "E_pc_false": {
+    "entries": [],
+    "excludedCount": 0
+  },
+  "E_busan_true_decline": {
+    "entries": [
+      {
+        "article": "pop_decline_71_2",
+        "houseId": "p",
+        "articleLabel": "인구감소지역주택(조특법 §71의2①)",
+        "eligible": true,
+        "legalBasis": "조특법 §71의2①",
+        "notice": "양도소득과세표준신고와 함께 과세특례신고서를 제출해야 하며(조특령 §68의2②), 인구감소지역주택 취득 전에 조합원입주권·분양권을 보유했다면 그 보유를 증명하는 서류를 함께 냅니다(③)."
+      }
+    ],
+    "excludedCount": 1
+  },
+  "E_busan_true_notype": {
+    "entries": [
+      {
+        "article": "pop_decline_71_2",
+        "houseId": "p",
+        "articleLabel": "인구감소지역주택(조특법 §71의2①)",
+        "eligible": false,
+        "legalBasis": "조특법 §71의2①",
+        "reason": "인구감소지역인지 인구감소관심지역인지 판정할 수 없습니다.",
+        "unconfirmed": true
+      }
+    ],
+    "excludedCount": 0
+  },
+  "E_busan_auto": {
+    "entries": [],
+    "excludedCount": 0
+  },
+  "rowCand_pc_false": false,
+  "rowCand_busan_true": true,
+  "vis_menu_false": false,
+  "vis_menu_true": true,
+  "vis_calc_false": true,
+  "F_base": {
+    "isExempt": true,
+    "excluded": [
+      {
+        "houseId": "p",
+        "legalBasis": "조특법 §71의2①"
+      }
+    ],
+    "und": [],
+    "err": []
+  },
+  "F_pc_false": {
+    "isExempt": false,
+    "excluded": [],
+    "und": [],
+    "err": []
+  },
+  "F_busan_true_decline": {
+    "isExempt": true,
+    "excluded": [
+      {
+        "houseId": "p",
+        "legalBasis": "조특법 §71의2①"
+      }
+    ],
+    "und": [],
+    "err": []
+  },
+  "F_busan_auto": {
+    "isExempt": false,
+    "excluded": [],
+    "und": [],
+    "err": []
+  },
+  "F_busan_true_notype": {
+    "isExempt": false,
+    "excluded": [],
+    "und": [
+      "71-2-pop-decline-unconfirmed"
+    ],
+    "err": []
+  }
+}

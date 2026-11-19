@@ -1,0 +1,15 @@
+## A 기준
+issues=["step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다.","step1[householdNoOtherHousesConfirmed]: 다른 보유 주택이 없는지 확인하세요.","step1[householdNoPresaleRightsConfirmed]: 세대가 보유한 분양권·입주권이 없는지 확인하세요."] status=200
+scenarioId=RH-A1 applied=true isExempt=true tax=0
+
+## B 직전 양도 2020-01-01(보유기간 안)
+issues=["step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다.","step1[householdNoOtherHousesConfirmed]: 다른 보유 주택이 없는지 확인하세요.","step1[householdNoPresaleRightsConfirmed]: 세대가 보유한 분양권·입주권이 없는지 확인하세요."] status=200
+scenarioId=RH-B1 applied=true isExempt=false tax=105270000
+
+## B 직전 양도 2010-01-01(취득 2013-08-12 전)
+issues=["step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다.","step1[householdNoOtherHousesConfirmed]: 다른 보유 주택이 없는지 확인하세요.","step1[householdNoPresaleRightsConfirmed]: 세대가 보유한 분양권·입주권이 없는지 확인하세요."] status=200
+scenarioId=RH-B1 applied=true isExempt=false tax=105270000
+
+## B 직전 양도 2025-01-01(양도일 2024-06-01 뒤)
+issues=["step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다.","step1[householdNoOtherHousesConfirmed]: 다른 보유 주택이 없는지 확인하세요.","step1[householdNoPresaleRightsConfirmed]: 세대가 보유한 분양권·입주권이 없는지 확인하세요."] status=200
+scenarioId=RH-B1 applied=true isExempt=false tax=105270000

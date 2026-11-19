@@ -1,0 +1,94 @@
+[
+  {
+    "k": "reinherit control",
+    "v": {
+      "status": 200,
+      "errors": [],
+      "isExempt": true,
+      "isPartial": false,
+      "reason": "1세대1주택 비과세",
+      "und": [
+        "155-2-reinheritance-reference-date-unverified"
+      ],
+      "unmet": []
+    }
+  },
+  {
+    "k": "reinherit residence-unmet",
+    "v": {
+      "status": 200,
+      "errors": [],
+      "isExempt": false,
+      "isPartial": false,
+      "und": [
+        "154-1-residence-deadline-unavailable",
+        "154-1-4ho-rental-registration-unverified",
+        "155-2-reinheritance-reference-date-unverified"
+      ],
+      "unmet": []
+    }
+  },
+  {
+    "k": "reinherit residence-unmet cf(not excluded)",
+    "v": {
+      "status": 200,
+      "errors": [],
+      "isExempt": false,
+      "isPartial": false,
+      "und": [],
+      "unmet": [
+        [
+          "155-2-inherited-house",
+          [
+            "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+          ]
+        ]
+      ]
+    }
+  },
+  {
+    "k": "pre2010 control",
+    "v": {
+      "status": 200,
+      "errors": [],
+      "isExempt": true,
+      "isPartial": false,
+      "reason": "1세대1주택 비과세",
+      "und": [
+        "155-2-pre2010-parental-care-exception-unverified"
+      ],
+      "unmet": []
+    }
+  },
+  {
+    "k": "pre2010 holding-short",
+    "v": {
+      "status": 200,
+      "errors": [],
+      "isExempt": false,
+      "isPartial": false,
+      "und": [
+        "155-2-pre2010-parental-care-exception-unverified"
+      ],
+      "unmet": []
+    }
+  },
+  {
+    "k": "pre2010 holding-short cf(no exception)",
+    "v": {
+      "status": 200,
+      "errors": [],
+      "isExempt": false,
+      "isPartial": false,
+      "und": [],
+      "unmet": [
+        [
+          "155-2-inherited-house",
+          [
+            "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+          ]
+        ]
+      ]
+    }
+  }
+]

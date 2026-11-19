@@ -1,0 +1,26 @@
+§71의2 「2024년 1월 4일부터 2026년 12월 31일까지」 출현 횟수=2
+§68의2 「4억원」 출현 횟수=2 · 「9억원」=1
+§71의2 | baseline | current | PASS
+§71의2 | baseline | proposed | PASS
+§71의2 | baseline | refined | PASS
+§71의2 | M1 ①만 2027.12.31. 연장 | current | PASS
+§71의2 | M1 ①만 2027.12.31. 연장 | proposed | PASS
+§71의2 | M1 ①만 2027.12.31. 연장 | refined | FAIL missing=["제6호의 1세대를 말한다)가 2024년 1월 4일부터 2026년 12월 31일까지의 기간 중에"]
+§71의2 | M2 ①② 모두 연장 | current | PASS
+§71의2 | M2 ①② 모두 연장 | proposed | FAIL missing=["2024년 1월 4일부터 2026년 12월 31일까지"]
+§71의2 | M2 ①② 모두 연장 | refined | FAIL missing=["제6호의 1세대를 말한다)가 2024년 1월 4일부터 2026년 12월 31일까지의 기간 중에"]
+§71의2 | M6 ①2호(관심지역) 삭제 | current | PASS
+§71의2 | M6 ①2호(관심지역) 삭제 | proposed | FAIL missing=["인구감소관심지역"]
+§71의2 | M6 ①2호(관심지역) 삭제 | refined | FAIL missing=["인구감소관심지역"]
+§68의2 | baseline | current | PASS
+§68의2 | baseline | proposed | PASS
+§68의2 | baseline | refined | PASS
+§68의2 | M3 9억원→10억원 | current | PASS
+§68의2 | M3 9억원→10억원 | proposed | FAIL missing=["9억원"]
+§68의2 | M3 9억원→10억원 | refined | FAIL missing=["수도권 밖의 지역에 지정된 인구감소지역에 소재한 주택의 경우: 9억원"]
+§68의2 | M4 1호 나목2) 4억원→5억원(2호 4억 유지) | current | PASS
+§68의2 | M4 1호 나목2) 4억원→5억원(2호 4억 유지) | proposed | PASS
+§68의2 | M4 1호 나목2) 4억원→5억원(2호 4억 유지) | refined | FAIL missing=["수도권에 지정된 인구감소지역에 소재한 주택의 경우: 4억원"]
+§68의2 | M5 2호 관심지역 문언 삭제 | current | PASS
+§68의2 | M5 2호 관심지역 문언 삭제 | proposed | PASS
+§68의2 | M5 2호 관심지역 문언 삭제 | refined | FAIL missing=["인구감소관심지역에 소재할 것"]

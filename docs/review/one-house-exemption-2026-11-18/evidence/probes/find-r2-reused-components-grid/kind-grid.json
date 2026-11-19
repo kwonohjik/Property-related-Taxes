@@ -1,0 +1,1789 @@
+[
+ {
+  "base": "H1",
+  "mut": "none",
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": []
+ },
+ {
+  "base": "H1",
+  "mut": "res_direct_120",
+  "diffKeys": [
+   "residencePeriodMonths"
+  ],
+  "errs": [
+   "residencePeriodMonthsAsset: 거주기간: 120개월이 취득일(2018-01-01)부터 양도일까지의 101개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §1"
+  ],
+  "zodOk": false,
+  "zodIssues": [
+   "residencePeriodMonths: 거주기간: 120개월이 취득일(2018-01-01)부터 양도일까지의 101개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §1"
+  ],
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"residencePeriodMonths\":[\"거주기간: 120개월이 취득일(2018-01-01)부터 양도일까지의 101개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.\"]}}",
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": true
+ },
+ {
+  "base": "H1",
+  "mut": "inherit_incomplete",
+  "diffKeys": [
+   "acquisitionCause",
+   "decedentSameHouseholdBeforeInheritance",
+   "decedentCohabitationResidenceMonths"
+  ],
+  "errs": [
+   "decedentAcquisitionDate: 상속받은 주택이면 피상속인 취득일을 입력하세요.",
+   "decedentCohabitationHoldingStartDate: 동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)"
+  ],
+  "zodOk": false,
+  "zodIssues": [
+   "decedentCohabitationHoldingStartDate: 동일세대 상속이면 동일세대 거주·보유 개시일이 필요합니다 (소득세법 시행령 §154⑧3호)",
+   "decedentAcquisitionDate: 상속의 경우 피상속인 취득일이 필수입니다"
+  ],
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"decedentCohabitationHoldingStartDate\":[\"동일세대 상속이면 동일세대 거주·보유 개시일이 필요합니다 (소득세법 시행령 §154⑧3호)\"],\"decedentAcquisitionDate\":[\"상속의 경우 피상속인 취득일이 필수입니다\"]}}",
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": true
+ },
+ {
+  "base": "H1",
+  "mut": "inherit_complete",
+  "diffKeys": [
+   "acquisitionCause",
+   "decedentAcquisitionDate",
+   "decedentSameHouseholdBeforeInheritance"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "gift_incomplete",
+  "diffKeys": [],
+  "errs": [
+   "donorAcquisitionDate: 증여받은 주택이면 증여자 취득일을 입력하세요.",
+   "giftDonorRelation: 증여자와의 관계를 선택하세요.",
+   "giftSameHousehold: 증여일부터 양도일까지 증여자와 계속 같은 세대였는지 선택하세요."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "gift_complete_same",
+  "diffKeys": [
+   "acquisitionCause",
+   "donorAcquisitionDate",
+   "giftSameHouseholdContinuous",
+   "giftHouseholdHoldingStartDate"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "usage_conv",
+  "diffKeys": [
+   "nonHousingToHousingConversion"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": false,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": true
+ },
+ {
+  "base": "H1",
+  "mut": "ltm_empty",
+  "diffKeys": [],
+  "errs": [
+   "longTermMortgageContractDate: 장기저당담보주택: 계약체결일을 입력하세요.",
+   "longTermMortgageBorrowerAge: 장기저당담보주택: 계약체결일 현재 가입자 나이를 입력하세요.",
+   "longTermMortgageContractYears: 장기저당담보주택: 계약기간(년)을 입력하세요."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "winwin_empty",
+  "diffKeys": [],
+  "errs": [
+   "winWinRentalContractDate: 상생임대주택: 상생임대차계약 체결일을 입력하세요.",
+   "winWinRentalIncreaseRatePct: 상생임대주택: 임대료 증가율(%)을 입력하세요.",
+   "winWinRentalPriorLeaseMonths: 상생임대주택: 직전임대차 임대기간(개월)을 입력하세요.",
+   "winWinRentalLeaseMonths: 상생임대주택: 상생임대차 임대기간(개월)을 입력하세요."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "rebuild_nodate",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "rebuild_date",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "proviso_emig",
+  "diffKeys": [
+   "oneHouseExemptionProviso"
+  ],
+  "errs": [],
+  "zodOk": false,
+  "zodIssues": [
+   "oneHouseExemptionProviso.reason: Invalid option: expected one of \"rental_5yr_residence\"|\"expropriation\"|\"overseas"
+  ],
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"oneHouseExemptionProviso.reason\":[\"Invalid option: expected one of \\\"rental_5yr_residence\\\"|\\\"expropriation\\\"|\\\"overseas_migration\\\"|\\\"overseas_residence\\\"|\\\"unavoidable\\\"|\\\"pre_designation_contract\\\"|\\\"rental_registration_4ho\\\"\"]}}",
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": true
+ },
+ {
+  "base": "H1",
+  "mut": "repl_on_empty",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "declared_tt",
+  "diffKeys": [
+   "temporaryTwoHouse"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "demolish_nodate",
+  "diffKeys": [],
+  "errs": [
+   "demolishedBeforeBalanceContractDate: 매매계약일을 입력하세요 — 2022.12.20. 이후 체결한 계약인지에 따라 양도물건 판정 기준일이 달라집니다."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "demolish_date",
+  "diffKeys": [
+   "demolishedBeforeBalance"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": false,
+  "partial": false,
+  "applied": [],
+  "unmet": [
+   "154-1-demolished-before-balance"
+  ],
+  "und": [
+   "154-1-demolished-before-balance-unverified"
+  ],
+  "changed": true
+ },
+ {
+  "base": "H1",
+  "mut": "reg_acq_toggle",
+  "diffKeys": [
+   "wasRegulatedAtAcquisition"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": false,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [
+   "154-1-4ho-rental-registration-unverified",
+   "154-1-residence-deadline-unavailable"
+  ],
+  "changed": true
+ },
+ {
+  "base": "H1",
+  "mut": "phrp_yes",
+  "diffKeys": [
+   "rentalHousingException"
+  ],
+  "errs": [
+   "rentalHousingException: 장기임대주택 특례: PHRP 시나리오 — 직전거주주택 양도일을 입력하세요."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": false,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "rental": false,
+  "changed": true
+ },
+ {
+  "base": "H1",
+  "mut": "gen_gift2yr",
+  "diffKeys": [
+   "generalHouseGiftedFromDecedentWithin2yr"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "inhRightChoice",
+  "diffKeys": [
+   "inheritedRightChoiceWhenBothHeld"
+  ],
+  "errs": [],
+  "zodOk": false,
+  "zodIssues": [
+   "inheritedRightChoiceWhenBothHeld: Invalid option: expected one of \"redevelopment_right\"|\"presale_right\""
+  ],
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"inheritedRightChoiceWhenBothHeld\":[\"Invalid option: expected one of \\\"redevelopment_right\\\"|\\\"presale_right\\\"\"]}}",
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": true
+ },
+ {
+  "base": "H1",
+  "mut": "merge_marriage",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "redev_resid",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "surchRightValue",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H1",
+  "mut": "std_at_transfer",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "none",
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": []
+ },
+ {
+  "base": "H2",
+  "mut": "res_direct_120",
+  "diffKeys": [
+   "residencePeriodMonths"
+  ],
+  "errs": [
+   "residencePeriodMonthsAsset: 거주기간: 120개월이 취득일(2018-01-01)부터 양도일까지의 101개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §1"
+  ],
+  "zodOk": false,
+  "zodIssues": [
+   "residencePeriodMonths: 거주기간: 120개월이 취득일(2018-01-01)부터 양도일까지의 101개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §1"
+  ],
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"residencePeriodMonths\":[\"거주기간: 120개월이 취득일(2018-01-01)부터 양도일까지의 101개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.\"]}}",
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": true
+ },
+ {
+  "base": "H2",
+  "mut": "inherit_incomplete",
+  "diffKeys": [
+   "houses",
+   "acquisitionCause",
+   "decedentSameHouseholdBeforeInheritance",
+   "decedentCohabitationResidenceMonths"
+  ],
+  "errs": [
+   "decedentAcquisitionDate: 상속받은 주택이면 피상속인 취득일을 입력하세요.",
+   "decedentCohabitationHoldingStartDate: 동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)"
+  ],
+  "zodOk": false,
+  "zodIssues": [
+   "decedentCohabitationHoldingStartDate: 동일세대 상속이면 동일세대 거주·보유 개시일이 필요합니다 (소득세법 시행령 §154⑧3호)",
+   "decedentAcquisitionDate: 상속의 경우 피상속인 취득일이 필수입니다"
+  ],
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"decedentCohabitationHoldingStartDate\":[\"동일세대 상속이면 동일세대 거주·보유 개시일이 필요합니다 (소득세법 시행령 §154⑧3호)\"],\"decedentAcquisitionDate\":[\"상속의 경우 피상속인 취득일이 필수입니다\"]}}",
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": true
+ },
+ {
+  "base": "H2",
+  "mut": "inherit_complete",
+  "diffKeys": [
+   "houses",
+   "acquisitionCause",
+   "decedentAcquisitionDate",
+   "decedentSameHouseholdBeforeInheritance"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "gift_incomplete",
+  "diffKeys": [],
+  "errs": [
+   "donorAcquisitionDate: 증여받은 주택이면 증여자 취득일을 입력하세요.",
+   "giftDonorRelation: 증여자와의 관계를 선택하세요.",
+   "giftSameHousehold: 증여일부터 양도일까지 증여자와 계속 같은 세대였는지 선택하세요."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "gift_complete_same",
+  "diffKeys": [
+   "acquisitionCause",
+   "donorAcquisitionDate",
+   "giftSameHouseholdContinuous",
+   "giftHouseholdHoldingStartDate"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "usage_conv",
+  "diffKeys": [
+   "nonHousingToHousingConversion"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": false,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": true
+ },
+ {
+  "base": "H2",
+  "mut": "ltm_empty",
+  "diffKeys": [],
+  "errs": [
+   "longTermMortgageContractDate: 장기저당담보주택: 계약체결일을 입력하세요.",
+   "longTermMortgageBorrowerAge: 장기저당담보주택: 계약체결일 현재 가입자 나이를 입력하세요.",
+   "longTermMortgageContractYears: 장기저당담보주택: 계약기간(년)을 입력하세요."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "winwin_empty",
+  "diffKeys": [],
+  "errs": [
+   "winWinRentalContractDate: 상생임대주택: 상생임대차계약 체결일을 입력하세요.",
+   "winWinRentalIncreaseRatePct: 상생임대주택: 임대료 증가율(%)을 입력하세요.",
+   "winWinRentalPriorLeaseMonths: 상생임대주택: 직전임대차 임대기간(개월)을 입력하세요.",
+   "winWinRentalLeaseMonths: 상생임대주택: 상생임대차 임대기간(개월)을 입력하세요."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "rebuild_nodate",
+  "diffKeys": [],
+  "errs": [
+   "sellingHouseExistingAcquisitionDate: 양도 주택이 기존주택을 헐고 다시 지은 주택이면 헐기 전(기존) 주택 취득일을 입력하세요 — 해당하지 않으면 「일반 취득」을 고르세요."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "rebuild_date",
+  "diffKeys": [
+   "temporaryTwoHouse"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "proviso_emig",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "repl_on_empty",
+  "diffKeys": [],
+  "errs": [
+   "replBusinessApprovalDate: 대체주택 특례: 사업시행계획인가일을 입력하세요.",
+   "replCompletionDate: 대체주택 특례: 신축주택 준공일을 입력하세요(아직 완성되지 않았다면 「완성 전 양도」를 고르세요).",
+   "replResidenceMonths: 대체주택 특례: 대체주택 거주개월수를 1개월 이상 입력하세요.",
+   "replWillResideNewHouse: 대체주택 특례: 신축주택 1년 이상 거주 예정에 동의해야 비과세를 적용할 수 있습니다."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "declared_tt",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "demolish_nodate",
+  "diffKeys": [],
+  "errs": [
+   "demolishedBeforeBalanceContractDate: 매매계약일을 입력하세요 — 2022.12.20. 이후 체결한 계약인지에 따라 양도물건 판정 기준일이 달라집니다."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "demolish_date",
+  "diffKeys": [
+   "demolishedBeforeBalance"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": false,
+  "partial": false,
+  "applied": [],
+  "unmet": [
+   "154-1-demolished-before-balance"
+  ],
+  "und": [
+   "154-1-demolished-before-balance-unverified"
+  ],
+  "changed": true
+ },
+ {
+  "base": "H2",
+  "mut": "reg_acq_toggle",
+  "diffKeys": [
+   "wasRegulatedAtAcquisition"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": false,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [
+   "154-1-4ho-rental-registration-unverified",
+   "154-1-residence-deadline-unavailable"
+  ],
+  "changed": true
+ },
+ {
+  "base": "H2",
+  "mut": "phrp_yes",
+  "diffKeys": [
+   "rentalHousingException"
+  ],
+  "errs": [
+   "rentalHousingException: 장기임대주택 특례: PHRP 시나리오 — 직전거주주택 양도일을 입력하세요."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": false,
+  "partial": false,
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "rental": false,
+  "changed": true
+ },
+ {
+  "base": "H2",
+  "mut": "gen_gift2yr",
+  "diffKeys": [
+   "generalHouseGiftedFromDecedentWithin2yr"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "inhRightChoice",
+  "diffKeys": [
+   "inheritedRightChoiceWhenBothHeld"
+  ],
+  "errs": [],
+  "zodOk": false,
+  "zodIssues": [
+   "inheritedRightChoiceWhenBothHeld: Invalid option: expected one of \"redevelopment_right\"|\"presale_right\""
+  ],
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"inheritedRightChoiceWhenBothHeld\":[\"Invalid option: expected one of \\\"redevelopment_right\\\"|\\\"presale_right\\\"\"]}}",
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": true
+ },
+ {
+  "base": "H2",
+  "mut": "merge_marriage",
+  "diffKeys": [
+   "temporaryTwoHouse",
+   "marriageMerge"
+  ],
+  "errs": [
+   "houses.0.mergeOrigin: 보유 주택 1: 혼인 전 보유자를 고르세요 — 고르지 않으면 합가 특례를 불성립으로 판정합니다(편집 → 보유자 선택)."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": false,
+  "partial": false,
+  "applied": [],
+  "unmet": [
+   "155-5-marriage-merge"
+  ],
+  "und": [],
+  "changed": true
+ },
+ {
+  "base": "H2",
+  "mut": "redev_resid",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "surchRightValue",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "H2",
+  "mut": "std_at_transfer",
+  "diffKeys": [
+   "houses"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "155-1-temporary-two-house"
+  ],
+  "unmet": [],
+  "und": [],
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "none",
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga"
+ },
+ {
+  "base": "R1",
+  "mut": "res_direct_120",
+  "diffKeys": [
+   "residencePeriodMonths"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "inherit_incomplete",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "inherit_complete",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "gift_incomplete",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "gift_complete_same",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "usage_conv",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "ltm_empty",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "winwin_empty",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "rebuild_nodate",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "rebuild_date",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "proviso_emig",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "repl_on_empty",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "declared_tt",
+  "diffKeys": [
+   "temporaryTwoHouse"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "demolish_nodate",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "demolish_date",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "reg_acq_toggle",
+  "diffKeys": [
+   "wasRegulatedAtAcquisition"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "phrp_yes",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "gen_gift2yr",
+  "diffKeys": [
+   "generalHouseGiftedFromDecedentWithin2yr"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "inhRightChoice",
+  "diffKeys": [
+   "inheritedRightChoiceWhenBothHeld"
+  ],
+  "errs": [],
+  "zodOk": false,
+  "zodIssues": [
+   "inheritedRightChoiceWhenBothHeld: Invalid option: expected one of \"redevelopment_right\"|\"presale_right\""
+  ],
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"inheritedRightChoiceWhenBothHeld\":[\"Invalid option: expected one of \\\"redevelopment_right\\\"|\\\"presale_right\\\"\"]}}",
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": true
+ },
+ {
+  "base": "R1",
+  "mut": "merge_marriage",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "redev_resid",
+  "diffKeys": [
+   "oneRightExemptionFacts"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "surchRightValue",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R1",
+  "mut": "std_at_transfer",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "ga",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "none",
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na"
+ },
+ {
+  "base": "R2",
+  "mut": "res_direct_120",
+  "diffKeys": [
+   "residencePeriodMonths"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "inherit_incomplete",
+  "diffKeys": [
+   "houses"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "inherit_complete",
+  "diffKeys": [
+   "houses"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "gift_incomplete",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "gift_complete_same",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "usage_conv",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "ltm_empty",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "winwin_empty",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "rebuild_nodate",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "rebuild_date",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "proviso_emig",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "repl_on_empty",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "declared_tt",
+  "diffKeys": [
+   "temporaryTwoHouse"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "demolish_nodate",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "demolish_date",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "reg_acq_toggle",
+  "diffKeys": [
+   "wasRegulatedAtAcquisition"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "phrp_yes",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "gen_gift2yr",
+  "diffKeys": [
+   "generalHouseGiftedFromDecedentWithin2yr"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "inhRightChoice",
+  "diffKeys": [
+   "inheritedRightChoiceWhenBothHeld"
+  ],
+  "errs": [],
+  "zodOk": false,
+  "zodIssues": [
+   "inheritedRightChoiceWhenBothHeld: Invalid option: expected one of \"redevelopment_right\"|\"presale_right\""
+  ],
+  "status": 400,
+  "err": "{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"inheritedRightChoiceWhenBothHeld\":[\"Invalid option: expected one of \\\"redevelopment_right\\\"|\\\"presale_right\\\"\"]}}",
+  "applied": [],
+  "unmet": [],
+  "und": [],
+  "changed": true
+ },
+ {
+  "base": "R2",
+  "mut": "merge_marriage",
+  "diffKeys": [
+   "marriageMerge"
+  ],
+  "errs": [
+   "houses.0.mergeOrigin: 보유 주택 1: 혼인 전 보유자를 고르세요 — 고르지 않으면 합가 특례를 불성립으로 판정합니다(편집 → 보유자 선택)."
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "redev_resid",
+  "diffKeys": [
+   "oneRightExemptionFacts"
+  ],
+  "errs": [
+   "redevOtherHouseAcquisitionDate: 나목 기산일(2019-01-01)이 보유 주택 명부의 1주택 취득일(2023-12-15)과 다릅니다 — 나목은 양도일 현재 보유한 그 1주택의 "
+  ],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "surchRightValue",
+  "diffKeys": [],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ },
+ {
+  "base": "R2",
+  "mut": "std_at_transfer",
+  "diffKeys": [
+   "houses"
+  ],
+  "errs": [],
+  "zodOk": true,
+  "zodIssues": [],
+  "status": 200,
+  "isExempt": true,
+  "partial": false,
+  "applied": [
+   "one_right_89_1_4_na"
+  ],
+  "unmet": [],
+  "und": [],
+  "oneRight": "na",
+  "changed": false
+ }
+]

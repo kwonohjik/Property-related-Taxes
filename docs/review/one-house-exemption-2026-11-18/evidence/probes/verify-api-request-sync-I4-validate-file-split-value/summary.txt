@@ -1,0 +1,29 @@
+wc -l lib/calc/one-house-exemption-validate.ts = 775 (HEAD a9e2e20c2)
+28695a03e:721 (summary 포함) -> e4aeaf954:712 (summary 분리) -> 72eee73b7:775
+750 돌파: e4ae752e7 (2026-10-22, 750) 이후 6커밋(4d36c35ab 753, a26a42352 758, e5a4cc65e 769, bf689c00c, b55af06c4, 72eee73b7 775) 기회주의 분리 없이 통과
+diffstat 28695a03e..HEAD: 147+/93- (240=총 변경줄, 순증 +54)
+구간: header 1-19, import 20-82, err/warn/Errors 84-101, Step1 103-143(41), Step2+collectTempTwoHouseEraIssues 144-525(382), Step3 526-729(204), dispatcher+reexport 730-775(46)
+import 식별자 63: Step2 전용 40, Step3 전용 20, 공유 2(judgmentSaleIsHousing, OneHouseJudgmentFormData)
+Step2<->Step3 상호 참조: 주석만(362, 699)
+warn(): Step2 3회, Step3 0회
+2분할(Step2 이동) 추정: 새 파일 ~430, 원본 ~360
+{
+ "totalImportedIds": 63,
+ "importLines": 82,
+ "step1Ids": 2,
+ "step2Ids": 42,
+ "step3Ids": 22,
+ "step2Only": 40,
+ "step3Only": 20,
+ "shared23": 2,
+ "shared23List": [
+  "judgmentSaleIsHousing",
+  "OneHouseJudgmentFormData"
+ ],
+ "rangeLines": {
+  "step1": 41,
+  "step2": 382,
+  "step3": 204,
+  "tail": 46
+ }
+}

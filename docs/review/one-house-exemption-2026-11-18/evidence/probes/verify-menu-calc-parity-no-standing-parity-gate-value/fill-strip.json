@@ -1,0 +1,9097 @@
+[
+ {
+  "id": "E001-dual",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E002-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E004-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E004-era-declared",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E004-era-late",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E004-era-2",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E004-era-samehh",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E006-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E0061-parental-rental-counterpart",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "155-20-merge-rental-carveout"
+  ],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E007-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E007-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E008-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E008-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E011-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E011-era-2",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E014-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-1-temporary-two-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E015-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E015-era-2",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E015-era-2-early",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E017-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E017-era-neg",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E018-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E019-era-1",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E022-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E022-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E022-current-rural-later",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E022-current-rural-later-unmet",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-7-rural:return_to_farm"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E023-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E028-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E029-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E033-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E033-era-within1y",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E036-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E040-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E040-era-late",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E040-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E045-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E045-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E046-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E046-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E047-era-pre",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E049-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E049-era-within2y",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E049-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E050-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E050-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E050-current-within1y",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E053-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E053-era-daybefore",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E054-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E055-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E056-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E057-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E057-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E058-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E061-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-1-temporary-two-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E062-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E063-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E064-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E067-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-E067-no-decedent-date",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "89-2-three-year-exception-undeclared"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-E067-separate-household",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "89-2-three-year-exception-undeclared",
+   "89-2-inherited-presale-right-separate-household-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E070-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E071-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E071-era-pos",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E072-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E073-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E073-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E073-current-neg",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E074-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E074-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E076-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E077-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E083-dual",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E084-dual",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E086-dual",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E088-dual",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E091-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E091-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E091-current-single",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E093-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E093-current",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E093-current-twin",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E094-dual",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E095-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E098-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E100-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E100-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E103-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E107-dual",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-E107-not-gifted",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E109-dual",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E110-dual",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-5-final-one-house-restart-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E112-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-E112-post2013",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "155-2-reinheritance-reference-date-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-E112-post2013-acquired-after",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-E112-not-reinherited",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E115-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E117-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E118-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E119-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E121-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E122-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-4-parental-care-merge"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E122-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-4-parental-care-merge"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E123-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E123-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E124-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-4-parental-care-merge"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E125-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-4-parental-care-merge"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E127-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E127-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E128-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E128-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E128-era-reverse",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "155-4-5-double-merge-reverse-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E128-era-spouse2",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-5-marriage-merge"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E129-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E129-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E129-era-noprior",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-4-parental-care-merge"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E132-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-5-marriage-merge"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E132-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-5-marriage-merge"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-E132-1062",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-E132-seller-rentals-only",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E133-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-5-marriage-merge"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E139-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E140-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E140-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E141-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E141-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E143-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E143-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E144-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E145-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house",
+   "155-7-rural:inherited"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E146-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house",
+   "155-7-rural:inherited"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E146-era-pos",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E147-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-7-rural:return_to_farm"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E149-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "155-10-4-farmland-area-990-era-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E149-era-5y",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E150-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E151-era",
+  "bucket": "pending",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-7-rural:return_to_farm"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E156-dual",
+  "bucket": "dual",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-7-rural:return_to_farm"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E156-farmexit",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-7-rural:farm_exit"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-E156-farmexit-not-returned",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E160-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E162-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E163-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E163-era-pos",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E163-era-sameday",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E166-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E166-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E167-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E175-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E175-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E177-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E177-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E178-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E178-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E180-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E182-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E182-era-pos",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E182-era-3",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E185-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E190-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E193-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E193-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E194-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E195-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E195-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E196-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E197-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E199-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E199-era-pos",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E203-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E203-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E204-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E208-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E209-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "E211-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-5-marriage-merge"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-E211-within",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-E211-sell-b",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F004-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F006-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F006-household",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F007-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F011-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F012-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F015-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F016-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F016-same-household",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F018-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F020-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F021-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "gift",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F023-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F023-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F029-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F031-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F032-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F033-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F034-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F034-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F036-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F037-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F038-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F038-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": true,
+  "demolished": false
+ },
+ {
+  "id": "F039-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F040-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F043-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F045-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": true
+ },
+ {
+  "id": "F055-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F055-approval-2006",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F055-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F056-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F056-no-right",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F059-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F059-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F060-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F061-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F067-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F068-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F068-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F069-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F069-roster",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F069-gate-20111013",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F069-gate-20111014",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F069-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F070-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F070-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F075-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F075-c-transfer",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F076-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F076-1day",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F115-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F115-rental-undeclared",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F123-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F123-over3y",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "civil-161-holiday-table-uncovered"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F128-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F154-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F154-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F154-current-whole13",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F169-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F169-transfer",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F170-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F170-gift",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F175-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F175-2021",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F180-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F180-acq-nonregulated",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F180-acq-regulated",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F187-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F187-one-day-short",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F190-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F190-one-day-later",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F193-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F193-separate-household",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F207-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F207-separate",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F217-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "gift",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F217-after-departure",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F217-before-departure",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F242-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F242-no-residence",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F243-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified",
+   "154-12-co-inherited-residence-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F243-resided24",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F251-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "gift",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F251-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "gift",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F252-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified",
+   "154-12-co-inherited-residence-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F255-own-62m",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F256-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F256-59m",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F256-highvalue",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F259-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F259-lease-unset",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F260-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F262-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F262-acquired-after-notice",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F264-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F264-plan-decision-date",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F264-remnant-2y-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F264-remnant-5y-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F268-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F268-first-member-departure",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F275-acquired-after-departure",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F276-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F276-held-2y",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F281-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": true,
+  "demolished": false
+ },
+ {
+  "id": "P-F281-only-house",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": true,
+  "demolished": false
+ },
+ {
+  "id": "F289-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": true,
+  "demolished": false
+ },
+ {
+  "id": "F295-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F295-excluding-post-approval",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F297-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F297-within-2y",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F303-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F303-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F303-physical-departure",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F305-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F307-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": true,
+  "demolished": false
+ },
+ {
+  "id": "F311-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F312-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F312-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F316-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F318-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": true,
+  "demolished": false
+ },
+ {
+  "id": "F322-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F322-current-within",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F322-current-over",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F340-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F340-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F340-current-12m",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F340-current-11m",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F355-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F355-era-maintained",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "154-1-4ho-rental-registration"
+  ],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F361-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F361-era-6pct",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F366-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F366-era-17m",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F373-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "gift",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F373-era-60m",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "gift",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F373-era-59m",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "gift",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F384-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-capital-newtown-location-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": true,
+  "demolished": false
+ },
+ {
+  "id": "F390-current",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": true,
+  "demolished": false
+ },
+ {
+  "id": "F395-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F395-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F395-current-noconv",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F396-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F396-no-proviso",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F396-registered-20191217",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "154-1-4ho-rental-registration"
+  ],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F409-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F450-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F450-current-over",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F451-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F455-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F455-current",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F456-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F456-era-6eok",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F456-current",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-F456-current-12eok",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "F461-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F461-no-proviso",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F461-acquired-after-approval",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-F461-no-proviso-2y6m",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G016-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-G016-era-approval-2005",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G017-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-G017-era-approval-2005",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G019-era",
+  "bucket": "dual",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G019-current",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G021-era",
+  "bucket": "mismatch",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G021-current",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-G021-current-3y",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G021-current-3y1d",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G022-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G023-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G024-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G035-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G049-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G049-current",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G050-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G050-current",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G055-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G055-current",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G062-era",
+  "bucket": "mismatch",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G062-current",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G062-over3y",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G065-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G066-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G077-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-G077-later-sold",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G091-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G091-current",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G099-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G099-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G100-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G100-dual",
+  "bucket": "dual",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G100-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G103-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G104-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G104-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G105-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G105-over3y",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "156-2-3-right-three-year:deadline-lapsed"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G105-completed",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-1-temporary-two-house"
+  ],
+  "jUndet": [
+   "155-1-new-house-origin-unconfirmed"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G105-completed-exception",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G106-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G106-none",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "156-2-3-right-three-year:deadline-lapsed"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G107-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G110-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-G110-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G110-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G111-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G116-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G116-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G116-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G119-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G119-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-G119-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G120-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G120-era-origin",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G120-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G123-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G124-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-G124-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G125-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G125-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G125-norepl",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G126-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G126-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G128-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G128-era-origin",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G129-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G129-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G131-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G132-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G133-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G148-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G152-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G154-era",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G157-era-first",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G157-era-second",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G162-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G163-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G163-era-blank",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G163-era-none",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G163-blank-within1y",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "89-2-merged-household-composition-undeclared"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G163-blank-right-before-marriage",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "89-2-merged-household-composition-undeclared"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G163-none-over3y",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G163-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-G163-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "G164-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "R006-dual",
+  "bucket": "dual",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "R012-dual",
+  "bucket": "dual",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "R014-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-R014-era-no-officetel",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "R030-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "R031-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "R031-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable",
+   "154-1-4ho-rental-registration-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-R031-current-24m",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "R033-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "inheritance",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "R037-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "154-1-residence-deadline-unavailable"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "R043-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": true,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "N-R043-current-12eok",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "S001-current",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": true,
+  "demolished": false
+ },
+ {
+  "id": "S006-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "S006-current",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "S041-4022-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "S045-2019seo2002-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "S045-2017seo3603-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "T001-era",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-T001-separate-household",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "P-T001-parental-care",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "155-2-pre2010-parental-care-exception-unverified"
+  ],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "SMOKE-1",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "SMOKE-2",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "STAT-71-2-house",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "STAT-71-2-right",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "STAT-71-2-right-unknown",
+  "bucket": "match",
+  "assetKind": "right_to_move_in",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "71-2-pop-decline-unconfirmed"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "NTS-2025-2010-gift-separate",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "NTS-2025-2010-gift-same",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [
+   "71-2-pop-decline-unconfirmed"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "NTS-2025-1621-inherit-separate",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": true,
+  "jPartial": false,
+  "jUnmet": [],
+  "jUndet": [],
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "NTS-2025-1621-inherit-same",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [
+   "71-2-pop-decline-unconfirmed"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "NTS-2025-1621-inherit-unknown",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [
+   "71-2-pop-decline-unconfirmed"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ },
+ {
+  "id": "NTS-2025-1621-inherit-legacy-false",
+  "bucket": "match",
+  "assetKind": "housing",
+  "giftish": "purchase",
+  "jStatus": 200,
+  "jVe": [],
+  "jExempt": false,
+  "jPartial": false,
+  "jUnmet": [
+   "155-2-inherited-house"
+  ],
+  "jUndet": [
+   "71-2-pop-decline-unconfirmed"
+  ],
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "nonRes": false,
+  "demolished": false
+ }
+]

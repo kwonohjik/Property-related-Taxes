@@ -1,0 +1,26 @@
+## V1 1주택 + 입주권 2개 (보유·거주 충족)
+status=200 ⑧=[] isExempt=false 89②=excluded exc=-
+dataKeys=judgment,judgmentBaseDate,houseCount
+warnings=null
+unmet=[]
+undet=[]
+pending=[]
+TEXT: 판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2024-05-011주택 수 산정세대 보유 주택 1채 중 비과세 판정에 세는 주택은 1채입니다.이 화면은 비과세 판정까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요.
+
+## V2 ③ 1년 요건 미충족 (주택 2023-01-16 · 권리 2023-06-15 · 양도 2025-02-14, 보유 2년 충족)
+status=200 ⑧=[] isExempt=false 89②=excluded exc=-
+dataKeys=judgment,judgmentBaseDate,houseCount
+warnings=null
+unmet=[]
+undet=[]
+pending=[]
+TEXT: 판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2024-05-011주택 수 산정세대 보유 주택 1채 중 비과세 판정에 세는 주택은 1채입니다.이 화면은 비과세 판정까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요.
+
+## V3 2주택 + 1입주권 (특수주택 없음)
+status=200 ⑧=[] isExempt=false 89②=excluded exc=-
+dataKeys=judgment,judgmentBaseDate,houseCount
+warnings=null
+unmet=[]
+undet=[]
+pending=[]
+TEXT: 판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2024-05-011주택 수 산정세대 보유 주택 2채 중 비과세 판정에 세는 주택은 2채입니다.이 화면은 비과세 판정까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요.

@@ -1,0 +1,12 @@
+[prec] search first keys=["id","사건번호","데이터출처명","사건종류코드","사건종류명","선고","선고일자","판례일련번호","판결유형","법원종류코드","법원명","판례상세링크","사건명"] validId=625493
+[prec] ID="625493" → keys=["Law"] Law="일치하는 판례가 없습니다.  판례명을 확인하여 주십시오." caseNo= title=
+[prec] ID="/../../x" → throw 요청 타임아웃 (5000ms) — https://www.law.go.kr/DRF/lawService.do?OC=***&target=prec&ID=%2F..%2F..%2Fx&type=JSON
+[prec] ID="625493/../../x" → throw 요청 타임아웃 (5000ms) — https://www.law.go.kr/DRF/lawService.do?OC=***&target=prec&ID=625493%2F..%2F..%2Fx&type=JSON
+[prec] ID="/../625493" → throw 법제처 API 오류 (500) — https://www.law.go.kr/DRF/lawService.do?OC=***&target=prec&ID=%2F..%2F625493&type=JSON
+[prec] ID="625493/" → throw 법제처 API 오류 (500) — https://www.law.go.kr/DRF/lawService.do?OC=***&target=prec&ID=625493%2F&type=JSON
+[ttSpecialDecc] search first keys=["id","행정심판재결례상세링크","재결청","처분청","특별행정심판재결례일련번호","재결구분코드","청구번호","의결일자","처분일자","재결구분명","사건명","데이터기준일시"] validId=105794
+[ttSpecialDecc] ID="105794" → keys=["SpecialDeccService"] Law="" caseNo= title=000공업지역에 편입된 후 환지예정지 지정을 받은 쟁점
+[ttSpecialDecc] ID="/../../x" → throw 요청 타임아웃 (5000ms) — https://www.law.go.kr/DRF/lawService.do?OC=***&target=ttSpecialDecc&ID=%2F..%2F..%2Fx&type=JSON
+[ttSpecialDecc] ID="105794/../../x" → throw 요청 타임아웃 (5000ms) — https://www.law.go.kr/DRF/lawService.do?OC=***&target=ttSpecialDecc&ID=105794%2F..%2F..%2Fx&type=JSON
+[ttSpecialDecc] ID="/../105794" → throw 법제처 API 오류 (500) — https://www.law.go.kr/DRF/lawService.do?OC=***&target=ttSpecialDecc&ID=%2F..%2F105794&type=JSON
+[ttSpecialDecc] ID="105794/" → throw 법제처 API 오류 (500) — https://www.law.go.kr/DRF/lawService.do?OC=***&target=ttSpecialDecc&ID=105794%2F&type=JSON

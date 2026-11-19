@@ -1,0 +1,180 @@
+/**
+ * PROBE (throwaway) — C8 B 입장(§156의3) 재판정이 §155① 타이밍(전입·단축 기한·완공일 1년 간격)까지 덧씌우는가 — 독립 검증.
+ */
+import { describe, it } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
+import { observeCase, buildCaseForm, type RulingCase } from "../calc/one-house-rulings/harness";
+import { buildOneHouseExemptionApiBody } from "@/lib/calc/one-house-exemption-api";
+import { validateAllSteps } from "@/lib/calc/one-house-exemption-validate";
+import { judgeNewHouseOrigin } from "@/lib/tax-engine/one-house/new-house-origin";
+import { evaluateTemporaryTwoHouseTiming } from "@/lib/tax-engine/one-house/merge-deeming";
+import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
+
+const OUT =
+  "<session>/scratchpad/probes/v3-r3-contested-issues-c8-b-position-composes-155-1-timing-combined";
+
+const GANGNAM = "1168010100";
+const D = (s: string) => new Date(s);
+
+const menu = (
+  houses: Record<string, unknown>[],
+  over: Record<string, unknown> = {},
+  asset: Record<string, unknown> = {},
+): RulingCase => ({
+  id: "probe",
+  docNo: "-",
+  docDate: "-",
+  basis: "current",
+  today: "2026-11-19",
+  summary: "probe",
+  bucket: "match",
+  form: {
+    isOneHousehold: true,
+    contractTotalPrice: "800000000",
+    ...over,
+    asset: { assetKind: "housing", ...asset },
+    houses,
+  } as RulingCase["form"],
+});
+
+/** 엔진 직접 — 두 입장의 origin·timing을 본다 */
+function engineTiming(p: {
+  prev: string;
+  R: string;
+  completion: string;
+  transfer: string;
+  regionCode?: string;
+  moveIn?: string;
+  position?: "155_1" | "156_3";
+  rightThreeYearException?: TransferTaxInput["rightThreeYearException"];
+}) {
+  const input = {
+    acquisitionDate: D(p.prev),
+    transferDate: D(p.transfer),
+    isOneHousehold: true,
+    householdHousingCount: 2,
+    ...(p.regionCode ? { regionCode: p.regionCode } : {}),
+    ...(p.rightThreeYearException ? { rightThreeYearException: p.rightThreeYearException } : {}),
+    temporaryTwoHouse: {
+      previousAcquisitionDate: D(p.prev),
+      newAcquisitionDate: D(p.completion),
+      ...(p.regionCode ? { newHouseRegionCode: p.regionCode } : {}),
+      newHouseContractDate: D(p.R),
+      ...(p.moveIn ? { wholeHouseholdMoveInDate: D(p.moveIn) } : {}),
+      newHouseOrigin: {
+        kind: "presale",
+        rightAcquisitionDate: D(p.R),
+        ...(p.position ? { holdingPresalePosition: p.position } : {}),
+      },
+    },
+  } as unknown as Parameters<typeof evaluateTemporaryTwoHouseTiming>[0];
+  const r = evaluateTemporaryTwoHouseTiming(input, { disposalDeadlineYears: 3 } as never);
+  return {
+    origin: r.origin,
+    era: { years: r.era.years, moveInMet: r.era.moveInMet, deadlineDate: r.era.deadlineDate },
+    timing: {
+      oneYearMet: r.timing.oneYearMet,
+      threeYearMet: r.timing.threeYearMet,
+      moveInMet: r.timing.moveInMet,
+      deadline: r.timing.deadline,
+      overall: r.timing.overall,
+    },
+  };
+}
+
+describe("probe C8 B composes §155①", () => {
+  it("run", async () => {
+    const out: Record<string, unknown> = {};
+    const rec = async (name: string, c: RulingCase) => {
+      const form = buildCaseForm(c);
+      const body = buildOneHouseExemptionApiBody(form) as Record<string, unknown>;
+      const warnings = validateAllSteps(form)
+        .filter((e) => e.severity !== "error")
+        .map((e) => `${e.field}: ${e.message.slice(0, 60)}`);
+      const o = await observeCase(c);
+      out[name] = {
+        status: o.status,
+        isExempt: o.isExempt,
+        isPartialExempt: o.isPartialExempt,
+        applied: o.appliedExceptions,
+        unmet: o.unmetExceptions,
+        unmetReasons: o.unmetReasons,
+        undetermined: o.undetermined,
+        contested: o.contested,
+        validationErrors: o.validationErrors,
+        warnings,
+        payloadTemporaryTwoHouse: body.temporaryTwoHouse ?? null,
+        payloadRightThreeYearException: body.rightThreeYearException ?? null,
+        error: o.error,
+      };
+    };
+
+    // ── S1 화면 시료: 강남 · 종전 2018-01-01(거주 48) · 분양권 2021-01-10 · 완공 2021-06-01 · 양도 2022-03-01 · 전입일 미입력
+    const s1Row = { id: "b", region: "capital", regionCode: GANGNAM, acquisitionDate: "2021-06-01", acquisitionOrigin: "presale", rightAcquisitionDate: "2021-01-10" };
+    const s1Asset = { acquisitionDate: "2018-01-01", regionCode: GANGNAM, residencePeriodMonthsAsset: "48" };
+    await rec("S1_screen_noMoveIn", menu([s1Row], { transferDate: "2022-03-01" }, s1Asset));
+    // 대조군 S1c: 같은 사실 + 전입일 입력(2021-07-01) — A 성립 → B도 성립해야
+    await rec("S1c_control_moveIn", menu([s1Row], { transferDate: "2022-03-01", newHouseMoveInDate: "2021-07-01" }, s1Asset));
+    // 대조군 S1d: 분양권 1년 요건 미충족(종전 2020-06-01 · 분양권 2021-01-10) + 전입 입력 — §156의3② 불성립 → B 과세가 맞음 (A는?)
+    await rec(
+      "S1d_control_156_3_fails",
+      menu([s1Row], { transferDate: "2022-03-01", newHouseMoveInDate: "2021-07-01" }, { ...s1Asset, acquisitionDate: "2020-06-01", residencePeriodMonthsAsset: "20" }),
+    );
+    // 대조군 S1e: 종전 2020-03-01(분양권까지 10개월 → §156의3② 1년 불충족) · 완공 2021-06-01(§155① 1년 충족) · 전입 입력 · 거주 24 — A 비과세 · B 과세(정방향)
+    await rec(
+      "S1e_control_normal_direction",
+      menu([s1Row], { transferDate: "2022-03-02", newHouseMoveInDate: "2021-07-01" }, { ...s1Asset, acquisitionDate: "2020-03-01", residencePeriodMonthsAsset: "24" }),
+    );
+
+    // ── S1b 기한 축(화면): 강남 · 종전 2018-01-01 · 분양권 2021-01-15 · 완공 2021-03-01 · 전입 2021-04-01 · 양도 2022-04-01(완공+1년 초과)
+    const s1bRow = { id: "b", region: "capital", regionCode: GANGNAM, acquisitionDate: "2021-03-01", acquisitionOrigin: "presale", rightAcquisitionDate: "2021-01-15" };
+    await rec("S1b_screen_deadline", menu([s1bRow], { transferDate: "2022-04-01", newHouseMoveInDate: "2021-04-01" }, s1Asset));
+
+    // ── S2 API 시료: 종전 2020-12-01 · 분양권 2021-02-01 · 완공 2021-10-01 · 양도 2024-03-01 · ③ 이사·거주 선언(화면 카드 없음)
+    const s2Row = { id: "b", region: "capital", acquisitionDate: "2021-10-01", acquisitionOrigin: "presale", rightAcquisitionDate: "2021-02-01" };
+    const s2Asset = { acquisitionDate: "2020-12-01", residencePeriodMonthsAsset: "0" };
+    const s2Decl = {
+      rightThreeYearExceptionKind: "new_house",
+      rightNewHouseCompletionDate: "2021-10-01",
+      rightMovedInWithin3Years: true,
+      rightResidedOneYearOrMore: true,
+    };
+    await rec("S2_api_threeYearDecl", menu([s2Row], { transferDate: "2024-03-01", ...s2Decl }, s2Asset));
+    // 대조군 S2c: 같은 사실 · ③ 미선언 — B는 §156의3③ 불성립이라 과세가 맞음
+    await rec("S2c_control_noDecl", menu([s2Row], { transferDate: "2024-03-01" }, s2Asset));
+    // 대조군 S2d: 종전 2020-01-01(완공과 1년 이상) · 나머지 같음 — §155① 1년 충족 → A·B 모두?
+    await rec("S2d_control_oneYearMet", menu([s2Row], { transferDate: "2024-03-01", ...s2Decl }, { ...s2Asset, acquisitionDate: "2020-01-01" }));
+
+    // ── 엔진 직접: 두 입장의 origin · timing
+    out.engine = {
+      S1_A: engineTiming({ prev: "2018-01-01", R: "2021-01-10", completion: "2021-06-01", transfer: "2022-03-01", regionCode: GANGNAM }),
+      S1_B: engineTiming({ prev: "2018-01-01", R: "2021-01-10", completion: "2021-06-01", transfer: "2022-03-01", regionCode: GANGNAM, position: "156_3" }),
+      S1b_B: engineTiming({ prev: "2018-01-01", R: "2021-01-15", completion: "2021-03-01", transfer: "2022-04-01", regionCode: GANGNAM, moveIn: "2021-04-01", position: "156_3" }),
+      S2_B: engineTiming({
+        prev: "2020-12-01",
+        R: "2021-02-01",
+        completion: "2021-10-01",
+        transfer: "2024-03-01",
+        position: "156_3",
+        rightThreeYearException: { kind: "new_house", completionDate: D("2021-10-01"), movedInWithin3Years: true, residedOneYearOrMore: true } as never,
+      }),
+      S2_B_origin_only: judgeNewHouseOrigin(
+        {
+          acquisitionDate: D("2020-12-01"),
+          transferDate: D("2024-03-01"),
+          rightThreeYearException: { kind: "new_house", completionDate: D("2021-10-01"), movedInWithin3Years: true, residedOneYearOrMore: true } as never,
+          temporaryTwoHouse: {
+            previousAcquisitionDate: D("2020-12-01"),
+            newAcquisitionDate: D("2021-10-01"),
+            newHouseOrigin: { kind: "presale", rightAcquisitionDate: D("2021-02-01"), holdingPresalePosition: "156_3" },
+          },
+        } as never,
+        false,
+      ),
+    };
+
+    fs.mkdirSync(OUT, { recursive: true });
+    fs.writeFileSync(path.join(OUT, "verify-result.json"), JSON.stringify(out, null, 2));
+  }, 120_000);
+});

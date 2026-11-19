@@ -1,0 +1,4 @@
+cells=84 ohBreak=2 scBreak=1 cross=1
+BASE {"ohMsg":"","scMsg":"","ohE":0,"scE":0,"ohOk":true,"scOk":true,"ohIss":"","scIss":""}
+{"isTaxIncentiveRental":true} OH⑧0⑫400,CROSS(F2형) {"ohMsg":"","scMsg":"houses.0:보유 주택 1: 조특법 감면 임대주택이면 임대개시일을 입력하세요.","ohE":0,"scE":1,"ohOk":false,"scOk":false,"ohIss":"houses.1.rentalStartDate","scIss":"houses.1.rentalStartDate"}
+{"acquisitionOrigin":"right"} OH⑧0⑫400,SC⑧0⑫400 {"ohMsg":"","scMsg":"","ohE":0,"scE":0,"ohOk":false,"scOk":false,"ohIss":"temporaryTwoHouse.newHouseOrigin.kind","scIss":"temporaryTwoHouse.newHouseOrigin.kind"}

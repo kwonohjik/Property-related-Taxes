@@ -1,0 +1,101 @@
+[
+  {
+    "name": "5y·대구동구·⑯on",
+    "regionCode": "2714000000",
+    "capital": false,
+    "relocation": true,
+    "predicate": true,
+    "isExempt": true,
+    "exemptReason": "일시적 2주택 비과세 (§155⑯ 지방이전 처분기한 5년)",
+    "applied": null,
+    "totalTax": 0
+  },
+  {
+    "name": "5y·대구동구·⑯on·codes",
+    "regionCode": "2714000000",
+    "capital": false,
+    "relocation": true,
+    "predicate": true,
+    "isExempt": true,
+    "exemptReason": "일시적 2주택 비과세 (§155⑯ 지방이전 처분기한 5년)",
+    "applied": null,
+    "totalTax": 0
+  },
+  {
+    "name": "5y·대구동구·⑯off",
+    "regionCode": "2714000000",
+    "capital": false,
+    "relocation": false,
+    "predicate": false,
+    "isExempt": false,
+    "exemptReason": null,
+    "applied": null,
+    "totalTax": 159566000
+  },
+  {
+    "name": "5y·수원영통·⑯on(대조:수도권)",
+    "regionCode": "4111700000",
+    "capital": true,
+    "relocation": true,
+    "predicate": true,
+    "isExempt": true,
+    "exemptReason": "일시적 2주택 비과세 (§155⑯ 지방이전 처분기한 5년)",
+    "applied": null,
+    "totalTax": 0
+  },
+  {
+    "name": "5y·수원영통·⑯off",
+    "regionCode": "4111700000",
+    "capital": true,
+    "relocation": false,
+    "predicate": false,
+    "isExempt": false,
+    "exemptReason": null,
+    "applied": null,
+    "totalTax": 159566000
+  },
+  {
+    "name": "5y·코드없음·⑯on",
+    "regionCode": null,
+    "capital": null,
+    "relocation": true,
+    "predicate": true,
+    "isExempt": true,
+    "exemptReason": "일시적 2주택 비과세 (§155⑯ 지방이전 처분기한 5년)",
+    "applied": null,
+    "totalTax": 0
+  },
+  {
+    "name": "1y·대구동구·⑯on",
+    "regionCode": "2714000000",
+    "capital": false,
+    "relocation": true,
+    "predicate": true,
+    "isExempt": true,
+    "exemptReason": "일시적 2주택 비과세 (§155⑯ 지방이전 처분기한 5년·1년요건 면제)",
+    "applied": null,
+    "totalTax": 0
+  },
+  {
+    "name": "1y·대구동구·⑯off",
+    "regionCode": "2714000000",
+    "capital": false,
+    "relocation": false,
+    "predicate": false,
+    "isExempt": false,
+    "exemptReason": null,
+    "applied": null,
+    "totalTax": 190366000
+  },
+  {
+    "name": "1y·수원영통·⑯on(대조)",
+    "regionCode": "4111700000",
+    "capital": true,
+    "relocation": true,
+    "predicate": true,
+    "isExempt": true,
+    "exemptReason": "일시적 2주택 비과세 (§155⑯ 지방이전 처분기한 5년·1년요건 면제)",
+    "applied": null,
+    "totalTax": 0
+  }
+]

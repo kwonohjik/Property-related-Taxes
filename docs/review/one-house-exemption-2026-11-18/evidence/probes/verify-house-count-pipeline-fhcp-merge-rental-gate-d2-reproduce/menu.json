@@ -1,0 +1,265 @@
+{
+  "V1_unanswered_noRow": {
+    "gate_mergeRentalState": "unanswered",
+    "section_visible": true,
+    "question_rendered": true,
+    "errors": [
+      "error|rentalHousingException.counterpartHouseResidedTwoYears|합가 상대 쪽 주택에 2년 이상 거주했는지 답하세요 — 「예」면 양도 주택에 거주 2년을 적용하지 않습니다(기준-2024-법규"
+    ],
+    "warnings": 1,
+    "status": 200,
+    "bodyHouses": [
+      "selling",
+      "a"
+    ],
+    "isExempt": false,
+    "applied": [],
+    "unmet": [],
+    "undetermined": [],
+    "rentalPassed": false,
+    "rheDump": "{\"scenario\":\"A\",\"passed\":false,\"residenceFailReasons\":[\"거주주택 거주기간 2년 미충족 (현재: 0년)\"],\"unitFailReasons\":[],\"periodPendingUnitIndexes\":[0],\"notices\":[],\"legalBasis\":\"소득세법 시행령 §155⑳\"}",
+    "jReason": "{}",
+    "askNotice": []
+  },
+  "V4_yes_noRow": {
+    "gate_mergeRentalState": "waived",
+    "section_visible": true,
+    "question_rendered": true,
+    "errors": [],
+    "warnings": 1,
+    "status": 200,
+    "bodyHouses": [
+      "selling",
+      "a"
+    ],
+    "isExempt": true,
+    "reason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+    "applied": [
+      "155-4-parental-care-merge"
+    ],
+    "unmet": [],
+    "undetermined": [
+      "155-20-merge-rental-carveout: 합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택"
+    ],
+    "rheDump": "null",
+    "jReason": "{}",
+    "askNotice": [
+      "합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061"
+    ]
+  },
+  "V2_unanswered_sameDay": {
+    "section_visible": true,
+    "question_rendered": false,
+    "errors": [],
+    "warnings": 1,
+    "status": 200,
+    "bodyHouses": [
+      "selling",
+      "a"
+    ],
+    "isExempt": false,
+    "applied": [],
+    "unmet": [],
+    "undetermined": [],
+    "rentalPassed": false,
+    "rheDump": "{\"scenario\":\"A\",\"passed\":false,\"residenceFailReasons\":[\"거주주택 거주기간 2년 미충족 (현재: 0년)\"],\"unitFailReasons\":[],\"periodPendingUnitIndexes\":[0],\"notices\":[],\"legalBasis\":\"소득세법 시행령 §155⑳\"}",
+    "jReason": "{}",
+    "askNotice": []
+  },
+  "V3_yes_sameDay": {
+    "section_visible": true,
+    "question_rendered": false,
+    "errors": [],
+    "warnings": 1,
+    "status": 200,
+    "bodyHouses": [
+      "selling",
+      "a"
+    ],
+    "isExempt": true,
+    "reason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+    "applied": [
+      "155-4-parental-care-merge"
+    ],
+    "unmet": [],
+    "undetermined": [
+      "155-20-merge-rental-carveout: 합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택"
+    ],
+    "rheDump": "null",
+    "jReason": "{}",
+    "askNotice": [
+      "합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061"
+    ]
+  },
+  "V2b_unanswered_after": {
+    "section_visible": true,
+    "question_rendered": false,
+    "errors": [],
+    "warnings": 1,
+    "status": 200,
+    "bodyHouses": [
+      "selling",
+      "a"
+    ],
+    "isExempt": false,
+    "applied": [],
+    "unmet": [],
+    "undetermined": [],
+    "rentalPassed": false,
+    "rheDump": "{\"scenario\":\"A\",\"passed\":false,\"residenceFailReasons\":[\"거주주택 거주기간 2년 미충족 (현재: 0년)\"],\"unitFailReasons\":[],\"periodPendingUnitIndexes\":[0],\"notices\":[],\"legalBasis\":\"소득세법 시행령 §155⑳\"}",
+    "jReason": "{}",
+    "askNotice": []
+  },
+  "V3b_yes_after": {
+    "section_visible": true,
+    "question_rendered": false,
+    "errors": [],
+    "warnings": 1,
+    "status": 200,
+    "bodyHouses": [
+      "selling",
+      "a"
+    ],
+    "isExempt": true,
+    "reason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+    "applied": [
+      "155-4-parental-care-merge"
+    ],
+    "unmet": [],
+    "undetermined": [
+      "155-20-merge-rental-carveout: 합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택"
+    ],
+    "rheDump": "null",
+    "jReason": "{}",
+    "askNotice": [
+      "합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061"
+    ]
+  },
+  "V5_unanswered_firstSold": {
+    "section_visible": true,
+    "question_rendered": false,
+    "errors": [],
+    "warnings": 1,
+    "status": 200,
+    "bodyHouses": [
+      "selling",
+      "a"
+    ],
+    "isExempt": false,
+    "applied": [],
+    "unmet": [],
+    "undetermined": [],
+    "rentalPassed": false,
+    "rheDump": "{\"scenario\":\"A\",\"passed\":false,\"residenceFailReasons\":[\"거주주택 거주기간 2년 미충족 (현재: 0년)\"],\"unitFailReasons\":[],\"periodPendingUnitIndexes\":[0],\"notices\":[],\"legalBasis\":\"소득세법 시행령 §155⑳\"}",
+    "jReason": "{}",
+    "askNotice": []
+  },
+  "V6_yes_firstSold": {
+    "section_visible": true,
+    "question_rendered": false,
+    "errors": [],
+    "warnings": 1,
+    "status": 200,
+    "bodyHouses": [
+      "selling",
+      "a"
+    ],
+    "isExempt": true,
+    "reason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+    "applied": [
+      "155-4-parental-care-merge"
+    ],
+    "unmet": [],
+    "undetermined": [
+      "155-20-merge-rental-carveout: 합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택"
+    ],
+    "rheDump": "null",
+    "jReason": "{}",
+    "askNotice": [
+      "합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061"
+    ]
+  },
+  "C1_unanswered_heldBeforeTransfer": {
+    "section_visible": true,
+    "question_rendered": false,
+    "errors": [
+      "error|houses.1.acquisitionOrigin|보유 주택 2: 일시적 2주택의 신규 주택으로 판정된 주택입니다 — 이 주택을 어떻게 취득했는지(일반 취득·분양권·조합원입주권"
+    ],
+    "warnings": 1,
+    "status": 200,
+    "bodyHouses": [
+      "selling",
+      "a",
+      "held"
+    ],
+    "isExempt": false,
+    "applied": [],
+    "unmet": [],
+    "undetermined": [],
+    "rentalPassed": false,
+    "rheDump": "{\"scenario\":\"A\",\"passed\":false,\"residenceFailReasons\":[\"거주주택 거주기간 2년 미충족 (현재: 0년)\"],\"unitFailReasons\":[],\"compositionFailReason\":\"거주주택 외에 장기임대주택이 아닌 주택이 2채 있습니다 — 소득세법 시행령 §155⑳은 「장기임대주택과 그 밖의 1주택」을 소유한 1세대에 적용되며, 다른 특례를 둘 이상 겹쳐 적용하지 않습니다\",\"periodPendingUnitIndexes\":[0],\"notices\":[],\"legalBasis\":\"소득세법 시행령 §155⑳\"}",
+    "jReason": "{}",
+    "askNotice": []
+  },
+  "C2_yes_heldBeforeTransfer": {
+    "section_visible": true,
+    "question_rendered": false,
+    "errors": [
+      "error|houses.1.acquisitionOrigin|보유 주택 2: 일시적 2주택의 신규 주택으로 판정된 주택입니다 — 이 주택을 어떻게 취득했는지(일반 취득·분양권·조합원입주권"
+    ],
+    "warnings": 1,
+    "status": 200,
+    "bodyHouses": [
+      "selling",
+      "a",
+      "held"
+    ],
+    "isExempt": false,
+    "applied": [],
+    "unmet": [],
+    "undetermined": [],
+    "rentalPassed": false,
+    "rheDump": "{\"scenario\":\"A\",\"passed\":false,\"residenceFailReasons\":[\"거주주택 거주기간 2년 미충족 (현재: 0년)\"],\"unitFailReasons\":[],\"compositionFailReason\":\"거주주택 외에 장기임대주택이 아닌 주택이 2채 있습니다 — 소득세법 시행령 §155⑳은 「장기임대주택과 그 밖의 1주택」을 소유한 1세대에 적용되며, 다른 특례를 둘 이상 겹쳐 적용하지 않습니다\",\"periodPendingUnitIndexes\":[0],\"notices\":[],\"legalBasis\":\"소득세법 시행령 §155⑳\"}",
+    "jReason": "{}",
+    "askNotice": []
+  },
+  "V7_no_sameDay": {
+    "section_visible": true,
+    "question_rendered": false,
+    "errors": [],
+    "warnings": 1,
+    "status": 200,
+    "bodyHouses": [
+      "selling",
+      "a"
+    ],
+    "isExempt": false,
+    "applied": [],
+    "unmet": [],
+    "undetermined": [],
+    "rentalPassed": false,
+    "rheDump": "{\"scenario\":\"A\",\"passed\":false,\"residenceFailReasons\":[\"거주주택 거주기간 2년 미충족 (현재: 0년)\"],\"unitFailReasons\":[],\"periodPendingUnitIndexes\":[0],\"notices\":[],\"legalBasis\":\"소득세법 시행령 §155⑳\"}",
+    "jReason": "{}",
+    "askNotice": []
+  },
+  "V8_no_noRow": {
+    "gate_mergeRentalState": "declined",
+    "section_visible": true,
+    "question_rendered": true,
+    "errors": [],
+    "warnings": 1,
+    "status": 200,
+    "bodyHouses": [
+      "selling",
+      "a"
+    ],
+    "isExempt": false,
+    "applied": [],
+    "unmet": [],
+    "undetermined": [],
+    "rentalPassed": false,
+    "rheDump": "{\"scenario\":\"A\",\"passed\":false,\"residenceFailReasons\":[\"거주주택 거주기간 2년 미충족 (현재: 0년)\"],\"unitFailReasons\":[],\"periodPendingUnitIndexes\":[0],\"notices\":[],\"legalBasis\":\"소득세법 시행령 §155⑳\"}",
+    "jReason": "{}",
+    "askNotice": []
+  }
+}

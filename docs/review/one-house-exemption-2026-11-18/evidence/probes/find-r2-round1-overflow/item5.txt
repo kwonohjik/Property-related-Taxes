@@ -1,0 +1,39 @@
+## N2 base (⑳ 없음)
+isExempt=true partial=false tax=0 rheApplied=undefined N1=false N2=true N3=false
+steps(⑳)=[]
+
+## N2 + ⑳ B (finalize 회수)
+isExempt=false partial=false tax=66086057 rheApplied=undefined N1=false N2=false N3=false
+steps(⑳)=["장기임대주택 거주주택 비과세 특례 — 적용 불가"]
+
+## N1 base (⑳ 없음)
+isExempt=false partial=false tax=65676634 rheApplied=undefined N1=true N2=false N3=false
+steps(⑳)=[]
+
+## N1 + ⑳ B
+isExempt=false partial=false tax=65676634 rheApplied=undefined N1=false N2=false N3=false
+steps(⑳)=["장기임대주택 거주주택 비과세 특례 — 적용 불가"]
+
+## N3 통산 무관 · ⑳ 없음 · 1주택
+isExempt=false partial=true tax=41157187 rheApplied=undefined N1=false N2=false N3=false
+steps(⑳)=[]
+
+## N3 통산 무관 · ⑳ A · 2주택
+isExempt=false partial=true tax=41157187 rheApplied=undefined N1=false N2=false N3=true
+steps(⑳)=["장기임대주택 거주주택 비과세 특례"]
+
+## N3 짝 — 같은 ⑳ A · 통산 없음
+isExempt=false partial=true tax=41157187 rheApplied=undefined N1=false N2=false N3=false
+steps(⑳)=["장기임대주택 거주주택 비과세 특례"]
+
+## N2 + ⑳ B · 주택 수 1(임대 미산입 입력)
+isExempt=false partial=false tax=66086057 rheApplied=undefined N1=false N2=true N3=false
+steps(⑳)=["장기임대주택 거주주택 비과세 특례 — 적용 불가"]
+
+## N3 통산 무관 · ⑳ A · 2주택 · 9억
+isExempt=true partial=false tax=0 rheApplied=undefined N1=false N2=false N3=true
+steps(⑳)=["장기임대주택 거주주택 비과세 특례"]
+
+## item7 통산 · ⑳ A · 2주택 · 사용승인 후 1년 2개월
+isExempt=false tax=189220996 steps=["장기임대주택 거주주택 비과세 특례 — 적용 불가 :: 거주주택 보유기간 2년 미충족 (현재: 1년) · 2019.2.12 이후 취득한 거주주택을 2025.2.27 이전에 양도하는 경우 장기임대주택 보유 중 생애 한 차례만 거주주택을 최초로 양도하는 경우에 한정됩니다 — 이미 거주주택을 이 특례의 요건을 갖춘 상태로 양도한 이력(과세로 신고했어도 포함 — 사전-2023-법규재산-0393)을 입력하지 않아 적용하지 않았습니다 (소령 §155⑳ 괄호, 대통령령 제29523호 부칙 제7조①)"]
+## item7 짝 통산 · ⑳ 없음 · 1주택 → isExempt=true tax=0

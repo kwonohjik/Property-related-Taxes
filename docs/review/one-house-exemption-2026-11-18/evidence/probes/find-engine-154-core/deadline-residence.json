@@ -1,0 +1,52 @@
+{
+  "late": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "pending": [
+      {
+        "id": "155-1-disposal-deadline",
+        "deadline": "2027-06-03T00:00:00.000Z",
+        "description": "신규주택 취득일부터 이 날짜까지 종전주택을 양도해야 비과세"
+      }
+    ],
+    "reviewDeadlineNote": "2027-06-03까지 양도하면 이 요건을 충족합니다.",
+    "reviewResidence": {
+      "id": "residence",
+      "label": "종전주택 거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+      "status": "met",
+      "facts": [
+        {
+          "label": "취득 당시 조정대상지역",
+          "value": "해당"
+        },
+        {
+          "label": "거주기간",
+          "value": "24개월"
+        }
+      ],
+      "legalBasis": "소득세법 시행령 §154"
+    }
+  },
+  "deadline": "2027-06-03T00:00:00.000Z",
+  "onDeadline": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "reviewResidence": {
+      "id": "residence",
+      "label": "종전주택 거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+      "status": "unmet",
+      "facts": [
+        {
+          "label": "취득 당시 조정대상지역",
+          "value": "해당"
+        },
+        {
+          "label": "거주기간",
+          "value": "18개월"
+        }
+      ],
+      "legalBasis": "소득세법 시행령 §154"
+    },
+    "unmet": []
+  }
+}

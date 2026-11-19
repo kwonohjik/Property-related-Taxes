@@ -1,0 +1,139 @@
+{
+  "P-res": {
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "unmet": [],
+    "undetermined": [
+      "155-1-presale-holding-156-3-unverified"
+    ],
+    "contested": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "enginePosition": "A",
+        "A": "exempt",
+        "B": "taxable"
+      }
+    ],
+    "validationErrors": []
+  },
+  "P-NR": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [
+      "non-resident-121-2"
+    ],
+    "undetermined": [
+      "155-1-presale-holding-156-3-unverified"
+    ],
+    "contested": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "enginePosition": "A",
+        "A": "taxable",
+        "B": "taxable"
+      }
+    ],
+    "validationErrors": []
+  },
+  "P-DEM": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [
+      "154-1-demolished-before-balance"
+    ],
+    "undetermined": [
+      "155-1-presale-holding-156-3-unverified",
+      "154-1-demolished-before-balance-unverified"
+    ],
+    "contested": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "enginePosition": "A",
+        "A": "taxable",
+        "B": "taxable"
+      }
+    ],
+    "validationErrors": []
+  },
+  "P-res-general": {
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "unmet": [],
+    "undetermined": [],
+    "contested": [],
+    "validationErrors": []
+  },
+  "P-NR-general": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [
+      "non-resident-121-2"
+    ],
+    "undetermined": [],
+    "contested": [],
+    "validationErrors": []
+  },
+  "F-res": {
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "155-7-rural:return_to_farm"
+    ],
+    "unmet": [],
+    "undetermined": [
+      "155-10-4-farmland-area-990-era-unverified"
+    ],
+    "contested": [],
+    "validationErrors": []
+  },
+  "F-NR": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [
+      "non-resident-121-2"
+    ],
+    "undetermined": [
+      "155-10-4-farmland-area-990-era-unverified"
+    ],
+    "contested": [],
+    "validationErrors": []
+  },
+  "F-DEM": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [
+      "154-1-demolished-before-balance"
+    ],
+    "undetermined": [
+      "155-10-4-farmland-area-990-era-unverified",
+      "154-1-demolished-before-balance-unverified"
+    ],
+    "contested": [],
+    "validationErrors": []
+  },
+  "unitRevokeRemaining": [
+    "155-1-presale-holding-156-3-unverified",
+    "155-1-new-house-origin-uncollected",
+    "155-10-4-farmland-area-990-era-unverified",
+    "control-unrelated"
+  ]
+}

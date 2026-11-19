@@ -1,0 +1,26 @@
+[
+ {
+  "n": "plain",
+  "auto": "자동취득 당시 조정대상지역 해당2017-08-03 고시 — 서울특별시 강남구 지정",
+  "warn": true,
+  "wasReg": true
+ },
+ {
+  "n": "stale-inherit-cohab",
+  "auto": "자동동일세대 보유 개시 당시 조정대상지역 미해당서울특별시 강남구 — 2010-01-01 기준 미지정(지정 이력 없음 또는 해제됨)",
+  "warn": false,
+  "wasReg": false
+ },
+ {
+  "n": "stale-gift-household",
+  "auto": "자동취득 당시 조정대상지역 해당2017-08-03 고시 — 서울특별시 강남구 지정",
+  "warn": true,
+  "wasReg": true
+ },
+ {
+  "n": "stale-usage",
+  "auto": "자동취득 당시 조정대상지역 해당2017-08-03 고시 — 서울특별시 강남구 지정",
+  "warn": true,
+  "wasReg": false
+ }
+]

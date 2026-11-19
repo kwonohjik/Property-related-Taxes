@@ -1,0 +1,33 @@
+{
+  "A-yes": {
+    "exempt": true,
+    "tax": 0,
+    "detail": false
+  },
+  "A-no(separate 반사실)": {
+    "exempt": true,
+    "tax": 0,
+    "detail": false
+  },
+  "B-yes": {
+    "exempt": true,
+    "tax": 0,
+    "detail": true
+  },
+  "B-no": {
+    "exempt": false,
+    "tax": 208250000,
+    "detail": false
+  },
+  "bBasis": {
+    "giftDate": "2025-06-01T00:00:00.000Z",
+    "donorAcquisitionDate": "2010-03-01T00:00:00.000Z",
+    "continuousSameHousehold": true,
+    "householdHoldingStartDate": "2010-03-01T00:00:00.000Z"
+  },
+  "full": {
+    "exempt": true,
+    "tax": 0,
+    "detail": false
+  }
+}

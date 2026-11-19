@@ -1,0 +1,51 @@
+{
+  "afterOpen": {
+    "step": 0,
+    "resultKept": true,
+    "rowStale": {
+      "rows": [
+        {
+          "assetId": "asset-1795003433136-1",
+          "index": 1,
+          "assetLabel": "자산 1",
+          "assetKind": "housing",
+          "salePrice": 900000000,
+          "acqPrice": 200000000,
+          "acqLabel": "취득가액",
+          "expense": 0,
+          "reductionTypes": [],
+          "salePending": false,
+          "acqPending": false,
+          "expensePending": false,
+          "saleIsApportioned": false,
+          "ownershipRatio": 1
+        }
+      ],
+      "totalSalePrice": 900000000
+    },
+    "rowClean": {
+      "rows": [
+        {
+          "assetId": "asset-1795003433136-1",
+          "index": 1,
+          "assetLabel": "자산 1",
+          "assetKind": "housing",
+          "salePrice": 900000000,
+          "acqPrice": 0,
+          "acqLabel": "취득가액",
+          "expense": 0,
+          "reductionTypes": [],
+          "salePending": false,
+          "acqPending": false,
+          "expensePending": false,
+          "saleIsApportioned": false,
+          "ownershipRatio": 1
+        }
+      ],
+      "totalSalePrice": 900000000
+    }
+  },
+  "afterModal": {
+    "resultKept": true
+  }
+}

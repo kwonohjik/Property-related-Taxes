@@ -1,0 +1,324 @@
+{
+  "engine": {
+    "E1_parentalOnly_pCounterpart": {
+      "isExempt": true,
+      "exemptReason": "일시적 2주택·동거봉양 합가 중첩 (§155①·④) 1세대1주택 비과세",
+      "totalTax": 0,
+      "axis": {
+        "kind": "parental_care",
+        "mergeDate": "2024-06-01T00:00:00.000Z",
+        "secondMergeSide": false
+      },
+      "warnings": [
+        "일시적 2주택(§155①)과 합가(§155④·⑤) 특례를 중첩 적용해 1세대1주택으로 보았습니다 — 국세청 사전-2025-법규재산-1240(동거봉양)·서면-2022-법규재산-5124(혼인) 및 기본통칙 89-155…2①. 중과 배제는 사전-2021-법령해석재산-1719이 「§154①의 요건을 모두 충족하면 §167의3①13호에 따라 중과세율을 적용하지 아니한다」고 회신한 구조를 따랐습니다(그 회신의 중첩 조합은 §155①+⑳). ①과 ④·⑤의 조합에서 중과 배제를 정면으로 판단한 해석·심판례는 확인되지 않았고, 4주택 이상은 적용 대상이 아닙니다."
+      ]
+    },
+    "E2_marriage2010_pSecond": {
+      "isExempt": false,
+      "totalTax": 146366000,
+      "axis": {
+        "kind": "marriage",
+        "mergeDate": "2010-05-01T00:00:00.000Z",
+        "secondMergeSide": false
+      },
+      "warnings": [
+        "혼인 합가 비과세 특례(소득세법 시행령 §155⑤)를 적용하지 않았습니다 — 혼인 전 각자 1주택을 보유하다가 혼인으로 1세대 2주택이 됨 미충족(세대 주택 수 3채, 혼인 전 양도자 쪽 1채, 혼인 전 상대 쪽 0채, 혼인 후 취득 1채) — 혼인 전 양도자 쪽이 이미 1주택이었고 상대 쪽은 무주택이었습니다 · 양도 주택을 혼인일 이전(당일 포함)에 취득 미충족(양도 주택 취득일 2015-01-01, 혼인일 2010-05-01) · 혼인일부터 10년 이내 양도 미충족(혼인일 2010-05-01, 기한 2020-05-01, 양도(예정)일 2025-06-01)."
+      ]
+    },
+    "E3_marriage2010_pCounterpart": {
+      "isExempt": false,
+      "totalTax": 146366000,
+      "axis": {
+        "kind": "marriage",
+        "mergeDate": "2010-05-01T00:00:00.000Z",
+        "secondMergeSide": false
+      },
+      "warnings": [
+        "혼인 합가 비과세 특례(소득세법 시행령 §155⑤)를 적용하지 않았습니다 — 양도 주택을 혼인일 이전(당일 포함)에 취득 미충족(양도 주택 취득일 2015-01-01, 혼인일 2010-05-01) · 혼인일부터 10년 이내 양도 미충족(혼인일 2010-05-01, 기한 2020-05-01, 양도(예정)일 2025-06-01)."
+      ]
+    },
+    "C1_twoHouse_marriage2010_pSecond": {
+      "isExempt": true,
+      "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+      "totalTax": 0,
+      "axis": {
+        "kind": "parental_care",
+        "mergeDate": "2024-06-01T00:00:00.000Z",
+        "secondMergeSide": true
+      },
+      "warnings": []
+    },
+    "C2_marriage2016_pSecond": {
+      "isExempt": false,
+      "totalTax": 146366000,
+      "axis": {
+        "kind": "marriage",
+        "mergeDate": "2016-05-01T00:00:00.000Z",
+        "secondMergeSide": false
+      },
+      "warnings": [
+        "혼인 합가 비과세 특례(소득세법 시행령 §155⑤)를 적용하지 않았습니다 — 혼인 전 각자 1주택을 보유하다가 혼인으로 1세대 2주택이 됨 미충족(세대 주택 수 3채, 혼인 전 양도자 쪽 1채, 혼인 전 상대 쪽 0채, 혼인 후 취득 1채) — 혼인 전 양도자 쪽이 이미 1주택이었고 상대 쪽은 무주택이었습니다."
+      ]
+    },
+    "C3_trueD4": {
+      "isExempt": false,
+      "totalTax": 124366000,
+      "axis": {
+        "kind": "marriage",
+        "mergeDate": "2010-05-01T00:00:00.000Z",
+        "secondMergeSide": false
+      },
+      "warnings": [
+        "혼인·동거봉양 이중 합가 비과세 특례(소득세법 시행령 §155④ · 소득세법 시행령 §155⑤)를 적용하지 않았습니다 — 혼인일부터 10년 이내 양도 미충족(혼인일 2010-05-01, 기한 2020-05-01, 양도(예정)일 2025-06-01)."
+      ]
+    }
+  },
+  "judge": {
+    "J1_parentalOnly_pCounterpart": {
+      "status": 200,
+      "isExempt": true,
+      "applied": [
+        "155-1-temporary-two-house",
+        "155-4-parental-care-merge"
+      ],
+      "unmet": [],
+      "unmetReasons": {},
+      "pending": [],
+      "undetermined": [],
+      "validationErrors": [],
+      "allIssues": [],
+      "mergeWindowFacts": [
+        {
+          "label": "합가일",
+          "value": "2024-06-01"
+        },
+        {
+          "label": "기한",
+          "value": "2034-06-01"
+        },
+        {
+          "label": "양도(예정)일",
+          "value": "2025-06-01"
+        }
+      ],
+      "reviewItems": [
+        "merge-composition:met",
+        "merge-selling-before:met",
+        "merge-first-transfer:met",
+        "merge-parent-age:met",
+        "merge-window:met",
+        "holding:met",
+        "residence:not_required",
+        "high-value:met"
+      ]
+    },
+    "J2_marriage2010_pSecond": {
+      "status": 200,
+      "isExempt": false,
+      "applied": [],
+      "unmet": [
+        "155-5-marriage-merge"
+      ],
+      "unmetReasons": {
+        "155-5-marriage-merge": [
+          "양도 주택을 혼인한 날(2010-05-01) 이후인 2015-01-01에 취득했습니다 — 이 특례는 합가 당시 이미 보유하던 주택에 적용됩니다.",
+          "혼인·동거봉양 이중 합가 특례는 배우자가 혼인 전부터 보유한 주택 1채와 동거봉양으로 합친 가족이 합가 전부터 보유한 주택 1채가 있는 3주택에 적용됩니다 — 보유 주택 목록의 합가 전 보유자 구성이 이와 다릅니다."
+        ]
+      },
+      "pending": [],
+      "undetermined": [],
+      "validationErrors": [],
+      "allIssues": [],
+      "mergeWindowFacts": [
+        {
+          "label": "혼인일",
+          "value": "2010-05-01"
+        },
+        {
+          "label": "기한",
+          "value": "2020-05-01"
+        },
+        {
+          "label": "양도(예정)일",
+          "value": "2025-06-01"
+        }
+      ],
+      "reviewItems": [
+        "merge-composition:unmet",
+        "merge-selling-before:unmet",
+        "merge-first-transfer:met",
+        "merge-window:unmet",
+        "holding:met",
+        "residence:not_required",
+        "high-value:met"
+      ]
+    },
+    "J3_marriage2010_pCounterpart": {
+      "status": 200,
+      "isExempt": false,
+      "applied": [],
+      "unmet": [
+        "155-5-marriage-merge"
+      ],
+      "unmetReasons": {
+        "155-5-marriage-merge": [
+          "양도 주택을 혼인한 날(2010-05-01) 이후인 2015-01-01에 취득했습니다 — 이 특례는 합가 당시 이미 보유하던 주택에 적용됩니다.",
+          "혼인·동거봉양 이중 합가 특례는 배우자가 혼인 전부터 보유한 주택 1채와 동거봉양으로 합친 가족이 합가 전부터 보유한 주택 1채가 있는 3주택에 적용됩니다 — 보유 주택 목록의 합가 전 보유자 구성이 이와 다릅니다."
+        ]
+      },
+      "pending": [],
+      "undetermined": [],
+      "validationErrors": [],
+      "allIssues": [],
+      "mergeWindowFacts": [
+        {
+          "label": "혼인일",
+          "value": "2010-05-01"
+        },
+        {
+          "label": "기한",
+          "value": "2020-05-01"
+        },
+        {
+          "label": "양도(예정)일",
+          "value": "2025-06-01"
+        }
+      ],
+      "reviewItems": [
+        "merge-composition:met",
+        "merge-selling-before:unmet",
+        "merge-first-transfer:met",
+        "merge-window:unmet",
+        "holding:met",
+        "residence:not_required",
+        "high-value:met"
+      ]
+    },
+    "JC1_twoHouse_marriage2010_pSecond": {
+      "status": 200,
+      "isExempt": true,
+      "applied": [
+        "155-4-parental-care-merge"
+      ],
+      "unmet": [],
+      "unmetReasons": {},
+      "pending": [],
+      "undetermined": [],
+      "validationErrors": [],
+      "allIssues": [
+        "warning:marriageDate: 혼인일과 동거봉양 합가일을 모두 입력했습니다 — 두 합가가 겹친 특례는 3주택일 때만 적용됩니다. 3주택이 아니면 §155④·⑤는 각각 별개 특례이므로 해당하는 쪽만 남기세요."
+      ],
+      "mergeWindowFacts": [
+        {
+          "label": "합가일",
+          "value": "2024-06-01"
+        },
+        {
+          "label": "기한",
+          "value": "2034-06-01"
+        },
+        {
+          "label": "양도(예정)일",
+          "value": "2025-06-01"
+        }
+      ],
+      "reviewItems": [
+        "merge-composition:met",
+        "merge-selling-before:met",
+        "merge-first-transfer:met",
+        "merge-parent-age:met",
+        "merge-window:met",
+        "holding:met",
+        "residence:not_required",
+        "high-value:met"
+      ]
+    },
+    "JC3_trueD4": {
+      "status": 200,
+      "isExempt": false,
+      "applied": [],
+      "unmet": [],
+      "unmetReasons": {},
+      "pending": [],
+      "undetermined": [],
+      "validationErrors": [],
+      "allIssues": [],
+      "mergeWindowFacts": [
+        {
+          "label": "혼인일",
+          "value": "2010-05-01"
+        },
+        {
+          "label": "기한",
+          "value": "2020-05-01"
+        },
+        {
+          "label": "양도(예정)일",
+          "value": "2025-06-01"
+        }
+      ],
+      "reviewItems": [
+        "merge-composition:met",
+        "merge-selling-before:met",
+        "merge-first-transfer:met",
+        "merge-parent-age:met",
+        "merge-window:unmet",
+        "holding:met",
+        "residence:not_required",
+        "high-value:met"
+      ]
+    }
+  },
+  "calc": {
+    "K1_parentalOnly_pCounterpart": {
+      "status": 200,
+      "isExempt": true,
+      "exemptReason": "일시적 2주택·동거봉양 합가 중첩 (§155①·④) 1세대1주택 비과세",
+      "totalTax": 0,
+      "issues": [],
+      "bodyTemp": {
+        "previousAcquisitionDate": "2015-01-01",
+        "newAcquisitionDate": "2024-01-10",
+        "newHouseOrigin": {
+          "kind": "general"
+        }
+      },
+      "bodyCount": 3,
+      "warnings": [
+        "일시적 2주택(§155①)과 합가(§155④·⑤) 특례를 중첩 적용해 1세대1주택으로 보았습니다 — 국세청 사전-2025-법규재산-1240(동거봉양)·서면-2022-법규재산-5124(혼인) 및 기본통칙 89-155…2①. 중과 배제는 사전-2021-법령해석재산-1719이 「§154①의 요건을 모두 충족하면 §167의3①13호에 따라 중과세율을 적용하지 아니한다」고 회신한 구조를 따랐습니다(그 회신의 중첩 조합은 §155①+⑳). ①과 ④·⑤의 조합에서 중과 배제를 정면으로 판단한 해석·심판례는 확인되지 않았고, 4주택 이상은 적용 대상이 아닙니다."
+      ]
+    },
+    "K2_marriage2010_pSecond": {
+      "status": 200,
+      "isExempt": false,
+      "totalTax": 146366000,
+      "issues": [],
+      "bodyTemp": {
+        "previousAcquisitionDate": "2015-01-01",
+        "newAcquisitionDate": "2024-01-10",
+        "newHouseOrigin": {
+          "kind": "general"
+        }
+      },
+      "bodyMarriage": {
+        "marriageDate": "2010-05-01"
+      },
+      "bodyCount": 3,
+      "warnings": [
+        "혼인 합가 비과세 특례(소득세법 시행령 §155⑤)를 적용하지 않았습니다 — 혼인 전 각자 1주택을 보유하다가 혼인으로 1세대 2주택이 됨 미충족(세대 주택 수 3채, 혼인 전 양도자 쪽 1채, 혼인 전 상대 쪽 0채, 혼인 후 취득 1채) — 혼인 전 양도자 쪽이 이미 1주택이었고 상대 쪽은 무주택이었습니다 · 양도 주택을 혼인일 이전(당일 포함)에 취득 미충족(양도 주택 취득일 2015-01-01, 혼인일 2010-05-01) · 혼인일부터 10년 이내 양도 미충족(혼인일 2010-05-01, 기한 2020-05-01, 양도(예정)일 2025-06-01)."
+      ]
+    },
+    "KC1_twoHouse_marriage2010_pSecond": {
+      "status": 200,
+      "isExempt": true,
+      "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+      "totalTax": 0,
+      "issues": [],
+      "bodyMarriage": {
+        "marriageDate": "2010-05-01"
+      },
+      "bodyCount": 2,
+      "warnings": []
+    }
+  }
+}

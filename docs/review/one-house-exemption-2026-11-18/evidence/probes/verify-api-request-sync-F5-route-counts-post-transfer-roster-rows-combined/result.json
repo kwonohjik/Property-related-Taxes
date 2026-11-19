@@ -1,0 +1,133 @@
+{
+  "C0_noRoster_screen": {
+    "status": 200,
+    "isExempt": true,
+    "total": 1,
+    "counted": 1,
+    "applied": [],
+    "undetermined": []
+  },
+  "C1_beforeRow_screen": {
+    "bodyHouses": 2,
+    "status": 200,
+    "isExempt": false,
+    "total": 2,
+    "counted": 2,
+    "applied": [],
+    "undetermined": [
+      "155-1-new-house-origin-unconfirmed"
+    ]
+  },
+  "S1_futureRow_screen": {
+    "bodyHouses": 1,
+    "status": 200,
+    "isExempt": true,
+    "total": 1,
+    "counted": 1,
+    "applied": [],
+    "undetermined": []
+  },
+  "S2_sameDayRow_screen": {
+    "bodyHouses": 1,
+    "status": 200,
+    "isExempt": true,
+    "total": 1,
+    "counted": 1,
+    "applied": [],
+    "undetermined": []
+  },
+  "D1_futureRow_direct": {
+    "bodyHouses": 2,
+    "rowDates": [
+      "2015-01-01",
+      "2024-07-01"
+    ],
+    "status": 200,
+    "isExempt": false,
+    "total": 2,
+    "counted": 2,
+    "applied": [],
+    "undetermined": [
+      "155-1-new-house-origin-unconfirmed"
+    ]
+  },
+  "D2_sameDayRow_direct": {
+    "bodyHouses": 2,
+    "status": 200,
+    "isExempt": false,
+    "total": 2,
+    "counted": 2,
+    "applied": [],
+    "undetermined": [
+      "155-1-new-house-origin-unconfirmed"
+    ]
+  },
+  "R1_futureRight_direct": {
+    "status": 200,
+    "isExempt": true,
+    "total": 1,
+    "counted": 1,
+    "applied": [],
+    "undetermined": []
+  },
+  "R0_beforeRight_direct": {
+    "status": 200,
+    "isExempt": true,
+    "total": 1,
+    "counted": 1,
+    "applied": [],
+    "undetermined": []
+  },
+  "SUR_D1_direct": {
+    "status": 200,
+    "keys": [
+      "scope",
+      "transferDate",
+      "judgmentBaseDate",
+      "exemption",
+      "notices",
+      "headline",
+      "rows",
+      "rateImpact"
+    ],
+    "raw": "{\"scope\":{\"supported\":true},\"transferDate\":\"2024-06-01\",\"judgmentBaseDate\":\"2026-11-18\",\"exemption\":{\"judgment\":{\"isExempt\":false,\"isPartialExempt\":false,\"article89Clause2\":{\"status\":\"not_applicable\"},\"appliedExceptions\":[],\"pending\":[],\"undetermined\":[{\"id\":\"155-1-new-house-origin-unconfirmed\",\"reason\":\"신규 주택이 분양권·조합원입주권 등 권리로 취득한 주택인지 모른다고 답해(보유 주택 목록 행은 답하지 않은 경우 포함) 일시적 2주택(소득세법 시행령 §155①)을 적용하지 않았습니다. 확인 필요 — 사실을 확인해 답을 고르면 다시 판정합니다.\"}],\"unmetExceptions\":[{\"id\":\"155-1-temporary-two-house\",\"label\":\"일시적 2주택\",\"legalBasis\":\"소득세법 시행령 §155①\",\"reasons\":[\"신규 주택이 분양권·조합원입주권 등 권리로 취득한 주택인지 모른다고 답해("
+  },
+  "RR_before": {
+    "status": 200,
+    "isExempt": false,
+    "total": 1,
+    "counted": 1,
+    "applied": [],
+    "undetermined": []
+  },
+  "RR_sameDay": {
+    "status": 200,
+    "isExempt": true,
+    "total": 1,
+    "counted": 1,
+    "applied": [],
+    "undetermined": [
+      "same-day-right-unverified"
+    ]
+  },
+  "RR_after": {
+    "status": 200,
+    "isExempt": true,
+    "total": 1,
+    "counted": 1,
+    "applied": [],
+    "undetermined": []
+  },
+  "RR_onlyR1": {
+    "status": 200,
+    "isExempt": true,
+    "total": 1,
+    "counted": 1,
+    "applied": [],
+    "undetermined": []
+  },
+  "SUR_S1_screen": {
+    "status": 200,
+    "raw": "{\"scope\":{\"supported\":true},\"transferDate\":\"2024-06-01\",\"judgmentBaseDate\":\"2026-11-18\",\"exemption\":{\"judgment\":{\"isExempt\":true,\"isPartialExempt\":false,\"exemptReason\":\"1세대1주택 비과세\",\"appliedExceptions\":[],\"article89Clause2\":{\"status\":\"not_applicable\"},\"pending\":[],\"undetermined\":[],\"unmetExceptions\":[],\"requirementReview\":{\"scheme\":\"154-1-one-house\",\"items\":[{\"id\":\"one-house\",\"label\":\"1세대가 양도일 현재 국내에 1주택 보유\",\"status\":\"met\",\"facts\":[{\"label\":\"판정에 세는 주택\",\"value\":\"1채\"}],\"legalBasis\":\"소득세법 §89 ①\"},{\"id\":\"holding\",\"label\":\"보유기간 2년 이상\",\"status\":\"met\",\"facts\":[{\"label\":\"보유 기산일\",\"value\":\"2015-01-01\"},{"
+  }
+}

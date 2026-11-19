@@ -1,0 +1,20 @@
+{
+  "views": {
+    "AcquisitionTaxResultView.tsx": true,
+    "AllocationResultView.tsx": true,
+    "CapitalDecreaseMultiResultView.tsx": false,
+    "ComprehensiveTaxResultView.tsx": true,
+    "DeemedGiftResultView.tsx": true,
+    "GiftTaxResultView.tsx": true,
+    "InheritanceTaxResultView.tsx": true,
+    "MultiHouseSurchargeResultView.tsx": false,
+    "MultiTransferTaxResultView.tsx": false,
+    "OneHouseJudgmentResultView.tsx": false,
+    "PropertyTaxResultView.tsx": true,
+    "SpecificCorpMultiResultView.tsx": false,
+    "StockTransferTaxResultView.tsx": false,
+    "TransferTaxResultView.tsx": true
+  },
+  "judgmentHasLegalNotice": false,
+  "bannerSignatureTakesProps": false
+}

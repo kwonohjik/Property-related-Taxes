@@ -1,0 +1,102 @@
+{
+  "T1": {
+    "validateErrors": [],
+    "status": 200,
+    "rental": {
+      "scenario": "B",
+      "passed": true,
+      "residenceFailReasons": [],
+      "unitFailReasons": [],
+      "periodPendingUnitIndexes": [],
+      "notices": [],
+      "legalBasis": "소득세법 시행령 §154⑩"
+    },
+    "isExempt": true,
+    "exemptReason": "1세대1주택 비과세",
+    "rentalUnitsSent": 0,
+    "badge": "기간분 비과세",
+    "badgeClass": "rounded-lg border p-3 space-y-2 border-amber-200 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-900/15",
+    "card": {
+      "title": "장기임대주택 보유자 거주주택 특례",
+      "rootClass": "rounded-lg border p-3 space-y-2 border-emerald-200 bg-emerald-50/40 dark:border-emerald-800 dark:bg-emerald-900/15",
+      "toneEmerald": true,
+      "toneRose": false,
+      "toneAmber": false,
+      "verdict": "요건 충족",
+      "text": "3장기임대주택 보유자 거주주택 특례요건 충족임대주택을 거주주택으로 전환한 뒤 양도하는 경우입니다.소득세법 시행령 §154⑩ ↗B 시나리오의 §161① 안분(과세 범위)은 세액 계산에서 다룹니다.",
+      "hasBScenarioSentence": true
+    },
+    "full": "판정 결과기간분 비과세직전거주주택 양도일 후의 기간분에 대해서만 1세대1주택 비과세를 적용합니다(소령 §154⑩·§155⑳ 후단). 과세되는 범위는 §161 안분 입력이 있는 세액 계산에서 정해집니다.1세대1주택 비과세판정 기준일 2020-07-021주택 수 산정세대 보유 주택 1채 중 비과세 판정에 세는 주택은 1채입니다.21세대1주택 비과세 요건 검토법령이 정한 순서대로 각 요건을 검토한 결과입니다.1.충족1세대가 양도일 현재 국내에 1주택 보유판정에 세는 주택 1채소득세법 §89 ① ↗2.충족보유기간 2년 이상보유 기산일 2018-06-01 · 보유기간 2년 1개월소득세법 시행령 §154 ↗3.해당 없음거주기간 2년 이상(취득 당시 조정대상지역인 경우)취득 당시 조정대상지역 비해당 · 거주기간 13개월취득 당시 조정대상지역이 아니어서 거주요건이 없습니다.소득세법 시행령 §154 ↗4.충족양도가액 9억원 이하 — 고가주택 아님양도가액 800,000,000 · 고가주택 기준금액 9억소득세법 §89 ① ↗3장기임대주택 보유자 거주주택 특례요건 충족임대주택을 거주주택으로 전환한 뒤 양도하는 경우입니다.소득세법 시행령 §154⑩ ↗B 시나리오의 §161① 안분(과세 범위)은 세액 계산에서 다룹니다.이 화면은 비과세 판정까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요."
+  },
+  "T2": {
+    "status": 200,
+    "rental": null,
+    "badge": "비과세",
+    "card": null
+  },
+  "T3": {
+    "validateErrors": [],
+    "status": 200,
+    "rental": {
+      "scenario": "B",
+      "passed": false,
+      "residenceFailReasons": [
+        "거주주택 보유기간 2년 미충족 (현재: 1년, 소령 §154⑤·법 §95④)"
+      ],
+      "unitFailReasons": [],
+      "periodPendingUnitIndexes": [],
+      "notices": [],
+      "legalBasis": "소득세법 시행령 §154⑩"
+    },
+    "isExempt": false,
+    "badge": "과세",
+    "card": {
+      "title": "장기임대주택 보유자 거주주택 특례",
+      "rootClass": "rounded-lg border p-3 space-y-2 border-rose-200 bg-rose-50/40 dark:border-rose-800 dark:bg-rose-900/15",
+      "toneEmerald": false,
+      "toneRose": true,
+      "toneAmber": false,
+      "verdict": "요건 미충족 — 특례가 적용되지 않습니다",
+      "text": "2장기임대주택 보유자 거주주택 특례요건 미충족 — 특례가 적용되지 않습니다임대주택을 거주주택으로 전환한 뒤 양도하는 경우입니다.거주주택 보유기간 2년 미충족 (현재: 1년, 소령 §154⑤·법 §95④)소득세법 시행령 §154⑩ ↗B 시나리오의 §161① 안분(과세 범위)은 세액 계산에서 다룹니다.",
+      "hasBScenarioSentence": true
+    }
+  },
+  "CA": {
+    "status": 200,
+    "rental": {
+      "scenario": "A",
+      "passed": true,
+      "residenceFailReasons": [],
+      "unitFailReasons": [],
+      "periodPendingUnitIndexes": [
+        1
+      ],
+      "notices": [],
+      "legalBasis": "소득세법 시행령 §155⑳"
+    },
+    "badge": "비과세",
+    "card": {
+      "title": "장기임대주택 보유자 거주주택 특례",
+      "rootClass": "rounded-lg border p-3 space-y-2 border-emerald-200 bg-emerald-50/40 dark:border-emerald-800 dark:bg-emerald-900/15",
+      "toneEmerald": true,
+      "toneRose": false,
+      "toneAmber": false,
+      "verdict": "요건 충족",
+      "text": "3장기임대주택 보유자 거주주택 특례요건 충족거주주택을 양도하고 임대주택은 계속 보유하는 경우입니다.임대주택 2호는 의무임대기간을 채우기 전이라 소득세법 시행령 §155㉑로 통과했습니다. 이후 요건을 충족하지 못하면 §155㉒에 따라 차액을 신고·납부해야 합니다. 다만 임대주택이 수용(협의매수 포함)되거나 사망으로 상속된 경우에는 계속 임대하는 것으로 봅니다(소득세법 시행령 §155㉒2호가목 · 소득세법 시행규칙 §74의2). 재건축·재개발·소규모재건축사업등이나 리모델링으로 임대하지 못한 기간은 관리처분계획등 인가일 전 6개월부터 준공일 후 6개월까지 빼고(같은 호 나목·다목), 자진말소(임대의무기간 1/2 이상 임대)나 자동말소(임대의무기간 종료)로 등록이 말소되면 말소일에 임대기간요건을 갖춘 것으로 봅니다(같은 호 라목). 정비사업·리모델링으로 새로 취득한 주택이 아파트여서 등록 신청을 하지 않았거나(당초 주택이 단기민간임대였다면 모든 주택) 2020.7.11. 이후 아파트 매입 장기일반·단기로 등록 신청해 요건을 못 갖추게 되면 당초 주택의 등록 말소일에 요건을 갖춘 것으로 봅니다 — 임대하지 않은 기간이 6개월을 넘으면 제외합니다(같은 호 마목). 2022.2.15. 전에 거주주택을 양도했다면 가로주택정비사업 멸실에는 마목이 적용되지 않아, 요건을 갖추기 전에 멸실·말소되면 요건을 갖추지 못한 것으로 봅니다(서면-2020-법규재산-6120 · 요건을 갖춘 뒤 멸실되면 추징하지 않음 — 서면-2024-부동산-0800). 같은 세대원에게 임대사업자 지위를 포괄승계하여 증여한 것은 임대기간요건을 갖추지 못한 사유로 보지 않고, 증여자와 수증자의 임대기간을 통산합니다(조심 2021중2756 · 서면-2022-법규재산-4972).소득세법 시행령 §155⑳ ↗B 시나리오의 §161① 안분(과세 범위)은 세액 계산에서 다룹니다.",
+      "hasBScenarioSentence": true
+    }
+  },
+  "CA2": {
+    "badge": "비과세",
+    "card": {
+      "title": "장기임대주택 보유자 거주주택 특례",
+      "rootClass": "rounded-lg border p-3 space-y-2 border-emerald-200 bg-emerald-50/40 dark:border-emerald-800 dark:bg-emerald-900/15",
+      "toneEmerald": true,
+      "toneRose": false,
+      "toneAmber": false,
+      "verdict": "요건 충족",
+      "text": "2장기임대주택 보유자 거주주택 특례요건 충족거주주택을 양도하고 임대주택은 계속 보유하는 경우입니다.소득세법 시행령 §155⑳ ↗B 시나리오의 §161① 안분(과세 범위)은 세액 계산에서 다룹니다.",
+      "hasBScenarioSentence": true
+    }
+  }
+}

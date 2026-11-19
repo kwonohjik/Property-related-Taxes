@@ -1,0 +1,120 @@
+{
+ "opinionOversize": {
+  "status": 200,
+  "notesChars": 10000000,
+  "judgmentChars": 200060,
+  "factsChars": 200039,
+  "userMessageChars": 10400426
+ },
+ "opinionNotes51Status": 400,
+ "opinionSource10001Status": 400,
+ "verifyOversize": {
+  "status": 200,
+  "checkStatuteCalls": 5000,
+  "compareCalls": 0
+ },
+ "distribution": {
+  "total": 747,
+  "ok": 456,
+  "resultChars": {
+   "min": 288,
+   "p50": 1205,
+   "p95": 2179,
+   "max": 2588
+  },
+  "compactChars": {
+   "min": 277,
+   "p50": 521,
+   "p95": 1912,
+   "max": 5810
+  },
+  "rawFormChars": {
+   "min": 23187,
+   "p50": 23612,
+   "p95": 25239,
+   "max": 28648
+  },
+  "msgChars": {
+   "min": 829,
+   "p50": 2419,
+   "p95": 4658,
+   "max": 9239
+  },
+  "maxHouses": 5,
+  "top5ByMsg": [
+   {
+    "id": "F069-current",
+    "status": 200,
+    "resultChars": 1266,
+    "compactChars": 5810,
+    "rawFormChars": 28648,
+    "msgChars": 9239,
+    "houses": 0
+   },
+   {
+    "id": "P-F069-gate-20111014",
+    "status": 200,
+    "resultChars": 1264,
+    "compactChars": 5790,
+    "rawFormChars": 28628,
+    "msgChars": 9217,
+    "houses": 0
+   },
+   {
+    "id": "F069-era",
+    "status": 200,
+    "resultChars": 571,
+    "compactChars": 5790,
+    "rawFormChars": 28628,
+    "msgChars": 8094,
+    "houses": 0
+   },
+   {
+    "id": "N-F069-gate-20111013",
+    "status": 200,
+    "resultChars": 562,
+    "compactChars": 5790,
+    "rawFormChars": 28628,
+    "msgChars": 8062,
+    "houses": 0
+   },
+   {
+    "id": "P-E132-seller-rentals-only",
+    "status": 200,
+    "resultChars": 2125,
+    "compactChars": 3921,
+    "rawFormChars": 26964,
+    "msgChars": 8060,
+    "houses": 1
+   }
+  ],
+  "over30kResult": 0,
+  "over30kCompact": 0,
+  "statusCounts": {
+   "200": 456,
+   "400": 291
+  }
+ },
+ "houseGrowth": [
+  {
+   "n": 0,
+   "raw": 23242,
+   "compact": 556
+  },
+  {
+   "n": 5,
+   "raw": 25201,
+   "compact": 922
+  },
+  {
+   "n": 20,
+   "raw": 31091,
+   "compact": 1997
+  },
+  {
+   "n": 50,
+   "raw": 42881,
+   "compact": 4157
+  }
+ ]
+}

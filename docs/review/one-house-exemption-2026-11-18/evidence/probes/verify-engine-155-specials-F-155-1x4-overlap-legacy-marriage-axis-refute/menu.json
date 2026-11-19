@@ -1,0 +1,359 @@
+{
+  "parentalOnly": {
+    "status": 200,
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house",
+      "155-4-parental-care-merge"
+    ],
+    "unmet": [],
+    "unmetReasons": {},
+    "pending": [],
+    "undetermined": [],
+    "validationErrors": [],
+    "warnings": [],
+    "bodyHouseCount": 3,
+    "bodyTemp": {
+      "previousAcquisitionDate": "2015-01-01",
+      "newAcquisitionDate": "2024-01-10",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "exemptReason": "일시적 2주택·동거봉양 합가 중첩 (§155①·④) 1세대1주택 비과세",
+    "mergeWindow": {
+      "id": "merge-window",
+      "label": "합가일부터 10년 이내 양도",
+      "status": "met",
+      "facts": [
+        {
+          "label": "합가일",
+          "value": "2024-06-01"
+        },
+        {
+          "label": "기한",
+          "value": "2034-06-01"
+        },
+        {
+          "label": "양도(예정)일",
+          "value": "2025-06-01"
+        }
+      ],
+      "note": "기한 말일 2034-06-01은 토요일·공휴일이 아닙니다(국세기본법 §4 → 민법 §161). 이 해의 관공서 공휴일은 규정·음력으로 계산한 예정 공휴일 기준이라 임시공휴일·규정 개정은 반영하지 않았습니다 — 말일 또는 그 뒤 날이 임시공휴일로 지정되면 기한이 더 늘어납니다.",
+      "legalBasis": "소득세법 시행령 §155④"
+    }
+  },
+  "marriageToo_secondSide": {
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "unmet": [
+      "155-5-marriage-merge"
+    ],
+    "unmetReasons": {
+      "155-5-marriage-merge": [
+        "양도 주택을 혼인한 날(2010-05-01) 이후인 2015-01-01에 취득했습니다 — 이 특례는 합가 당시 이미 보유하던 주택에 적용됩니다.",
+        "혼인·동거봉양 이중 합가 특례는 배우자가 혼인 전부터 보유한 주택 1채와 동거봉양으로 합친 가족이 합가 전부터 보유한 주택 1채가 있는 3주택에 적용됩니다 — 보유 주택 목록의 합가 전 보유자 구성이 이와 다릅니다."
+      ]
+    },
+    "pending": [],
+    "undetermined": [],
+    "validationErrors": [],
+    "warnings": [],
+    "bodyHouseCount": 3,
+    "bodyTemp": {
+      "previousAcquisitionDate": "2015-01-01",
+      "newAcquisitionDate": "2024-01-10",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "mergeWindow": {
+      "id": "merge-window",
+      "label": "혼인일부터 10년 이내 양도",
+      "status": "unmet",
+      "facts": [
+        {
+          "label": "혼인일",
+          "value": "2010-05-01"
+        },
+        {
+          "label": "기한",
+          "value": "2020-05-01"
+        },
+        {
+          "label": "양도(예정)일",
+          "value": "2025-06-01"
+        }
+      ],
+      "note": "기한이 판정 기준일(2025-06-02) 전에 지나 양도일을 조정해도 충족할 수 없습니다.",
+      "legalBasis": "소득세법 시행령 §155⑤"
+    }
+  },
+  "marriageToo_counterpart": {
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "unmet": [
+      "155-5-marriage-merge"
+    ],
+    "unmetReasons": {
+      "155-5-marriage-merge": [
+        "양도 주택을 혼인한 날(2010-05-01) 이후인 2015-01-01에 취득했습니다 — 이 특례는 합가 당시 이미 보유하던 주택에 적용됩니다.",
+        "혼인·동거봉양 이중 합가 특례는 배우자가 혼인 전부터 보유한 주택 1채와 동거봉양으로 합친 가족이 합가 전부터 보유한 주택 1채가 있는 3주택에 적용됩니다 — 보유 주택 목록의 합가 전 보유자 구성이 이와 다릅니다."
+      ]
+    },
+    "pending": [],
+    "undetermined": [],
+    "validationErrors": [],
+    "warnings": [],
+    "bodyHouseCount": 3,
+    "bodyTemp": {
+      "previousAcquisitionDate": "2015-01-01",
+      "newAcquisitionDate": "2024-01-10",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "mergeWindow": {
+      "id": "merge-window",
+      "label": "혼인일부터 10년 이내 양도",
+      "status": "unmet",
+      "facts": [
+        {
+          "label": "혼인일",
+          "value": "2010-05-01"
+        },
+        {
+          "label": "기한",
+          "value": "2020-05-01"
+        },
+        {
+          "label": "양도(예정)일",
+          "value": "2025-06-01"
+        }
+      ],
+      "note": "기한이 판정 기준일(2025-06-02) 전에 지나 양도일을 조정해도 충족할 수 없습니다.",
+      "legalBasis": "소득세법 시행령 §155⑤"
+    }
+  },
+  "nAfterMerge_parentalOnly": {
+    "status": 200,
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house",
+      "155-4-parental-care-merge"
+    ],
+    "unmet": [],
+    "unmetReasons": {},
+    "pending": [],
+    "undetermined": [],
+    "validationErrors": [],
+    "warnings": [],
+    "bodyHouseCount": 3,
+    "bodyTemp": {
+      "previousAcquisitionDate": "2015-01-01",
+      "newAcquisitionDate": "2024-09-10",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "exemptReason": "일시적 2주택·동거봉양 합가 중첩 (§155①·④) 1세대1주택 비과세",
+    "mergeWindow": {
+      "id": "merge-window",
+      "label": "합가일부터 10년 이내 양도",
+      "status": "met",
+      "facts": [
+        {
+          "label": "합가일",
+          "value": "2024-06-01"
+        },
+        {
+          "label": "기한",
+          "value": "2034-06-01"
+        },
+        {
+          "label": "양도(예정)일",
+          "value": "2025-06-01"
+        }
+      ],
+      "note": "기한 말일 2034-06-01은 토요일·공휴일이 아닙니다(국세기본법 §4 → 민법 §161). 이 해의 관공서 공휴일은 규정·음력으로 계산한 예정 공휴일 기준이라 임시공휴일·규정 개정은 반영하지 않았습니다 — 말일 또는 그 뒤 날이 임시공휴일로 지정되면 기한이 더 늘어납니다.",
+      "legalBasis": "소득세법 시행령 §155④"
+    }
+  },
+  "nAfterMerge_marriageToo_second": {
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "unmet": [
+      "155-5-marriage-merge"
+    ],
+    "unmetReasons": {
+      "155-5-marriage-merge": [
+        "양도 주택을 혼인한 날(2010-05-01) 이후인 2015-01-01에 취득했습니다 — 이 특례는 합가 당시 이미 보유하던 주택에 적용됩니다.",
+        "다른 주택을 동거봉양 합가일(2024-06-01) 이후인 2024-09-10에 취득했습니다 — 합가로 3주택이 된 것이 아닙니다."
+      ]
+    },
+    "pending": [],
+    "undetermined": [],
+    "validationErrors": [],
+    "warnings": [],
+    "bodyHouseCount": 3,
+    "bodyTemp": {
+      "previousAcquisitionDate": "2015-01-01",
+      "newAcquisitionDate": "2024-09-10",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "mergeWindow": {
+      "id": "merge-window",
+      "label": "혼인일부터 10년 이내 양도",
+      "status": "unmet",
+      "facts": [
+        {
+          "label": "혼인일",
+          "value": "2010-05-01"
+        },
+        {
+          "label": "기한",
+          "value": "2020-05-01"
+        },
+        {
+          "label": "양도(예정)일",
+          "value": "2025-06-01"
+        }
+      ],
+      "note": "기한이 판정 기준일(2025-06-02) 전에 지나 양도일을 조정해도 충족할 수 없습니다.",
+      "legalBasis": "소득세법 시행령 §155⑤"
+    }
+  },
+  "twoHouse_marriageToo_second": {
+    "status": 200,
+    "isExempt": true,
+    "applied": [
+      "155-4-parental-care-merge"
+    ],
+    "unmet": [],
+    "unmetReasons": {},
+    "pending": [],
+    "undetermined": [],
+    "validationErrors": [],
+    "warnings": [
+      "warning:marriageDate: 혼인일과 동거봉양 합가일을 모두 입력했습니다 — 두 합가가 겹친 특례는 3주택일 때만 적용됩니다. 3주택이 아니면 §155④·⑤는 각각 별개 특례이므로 해당하는 쪽만 남기세요."
+    ],
+    "bodyHouseCount": 2,
+    "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+    "mergeWindow": {
+      "id": "merge-window",
+      "label": "합가일부터 10년 이내 양도",
+      "status": "met",
+      "facts": [
+        {
+          "label": "합가일",
+          "value": "2024-06-01"
+        },
+        {
+          "label": "기한",
+          "value": "2034-06-01"
+        },
+        {
+          "label": "양도(예정)일",
+          "value": "2025-06-01"
+        }
+      ],
+      "note": "기한 말일 2034-06-01은 토요일·공휴일이 아닙니다(국세기본법 §4 → 민법 §161). 이 해의 관공서 공휴일은 규정·음력으로 계산한 예정 공휴일 기준이라 임시공휴일·규정 개정은 반영하지 않았습니다 — 말일 또는 그 뒤 날이 임시공휴일로 지정되면 기한이 더 늘어납니다.",
+      "legalBasis": "소득세법 시행령 §155④"
+    }
+  },
+  "sellBeforeMarriage_marriageToo_second": {
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "unmet": [
+      "155-5-marriage-merge"
+    ],
+    "unmetReasons": {
+      "155-5-marriage-merge": [
+        "혼인·동거봉양 이중 합가 특례는 배우자가 혼인 전부터 보유한 주택 1채와 동거봉양으로 합친 가족이 합가 전부터 보유한 주택 1채가 있는 3주택에 적용됩니다 — 보유 주택 목록의 합가 전 보유자 구성이 이와 다릅니다."
+      ]
+    },
+    "pending": [],
+    "undetermined": [],
+    "validationErrors": [],
+    "warnings": [],
+    "bodyHouseCount": 3,
+    "bodyTemp": {
+      "previousAcquisitionDate": "2009-01-01",
+      "newAcquisitionDate": "2024-01-10",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "mergeWindow": {
+      "id": "merge-window",
+      "label": "혼인일부터 10년 이내 양도",
+      "status": "unmet",
+      "facts": [
+        {
+          "label": "혼인일",
+          "value": "2010-05-01"
+        },
+        {
+          "label": "기한",
+          "value": "2020-05-01"
+        },
+        {
+          "label": "양도(예정)일",
+          "value": "2025-06-01"
+        }
+      ],
+      "note": "기한이 판정 기준일(2025-06-02) 전에 지나 양도일을 조정해도 충족할 수 없습니다.",
+      "legalBasis": "소득세법 시행령 §155⑤"
+    }
+  },
+  "sellBeforeMarriage_parentalOnly": {
+    "status": 200,
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house",
+      "155-4-parental-care-merge"
+    ],
+    "unmet": [],
+    "unmetReasons": {},
+    "pending": [],
+    "undetermined": [],
+    "validationErrors": [],
+    "warnings": [],
+    "bodyHouseCount": 3,
+    "bodyTemp": {
+      "previousAcquisitionDate": "2009-01-01",
+      "newAcquisitionDate": "2024-01-10",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "exemptReason": "일시적 2주택·동거봉양 합가 중첩 (§155①·④) 1세대1주택 비과세",
+    "mergeWindow": {
+      "id": "merge-window",
+      "label": "합가일부터 10년 이내 양도",
+      "status": "met",
+      "facts": [
+        {
+          "label": "합가일",
+          "value": "2024-06-01"
+        },
+        {
+          "label": "기한",
+          "value": "2034-06-01"
+        },
+        {
+          "label": "양도(예정)일",
+          "value": "2025-06-01"
+        }
+      ],
+      "note": "기한 말일 2034-06-01은 토요일·공휴일이 아닙니다(국세기본법 §4 → 민법 §161). 이 해의 관공서 공휴일은 규정·음력으로 계산한 예정 공휴일 기준이라 임시공휴일·규정 개정은 반영하지 않았습니다 — 말일 또는 그 뒤 날이 임시공휴일로 지정되면 기한이 더 늘어납니다.",
+      "legalBasis": "소득세법 시행령 §155④"
+    }
+  }
+}

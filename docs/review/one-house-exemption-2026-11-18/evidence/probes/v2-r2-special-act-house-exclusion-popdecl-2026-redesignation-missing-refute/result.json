@@ -1,0 +1,177 @@
+{
+  "R1": {
+    "CHUNCHEON": {
+      "kind": null,
+      "capital": false
+    },
+    "DONGDUCHEON": {
+      "kind": null,
+      "capital": true
+    },
+    "TONGYEONG": {
+      "kind": "interest",
+      "capital": false
+    },
+    "YECHEON": {
+      "kind": null,
+      "capital": false
+    },
+    "CHILGOK": {
+      "kind": null,
+      "capital": false
+    },
+    "PYEONGCHANG": {
+      "kind": "decline",
+      "capital": false
+    },
+    "POCHEON": {
+      "kind": null,
+      "capital": true
+    }
+  },
+  "R2": {
+    "DONGDUCHEON 2026-10-19 2억": {
+      "excluded": 0,
+      "entries": []
+    },
+    "TONGYEONG 2026-10-19 3억": {
+      "excluded": 1,
+      "entries": [
+        {
+          "eligible": true,
+          "unconfirmed": false
+        }
+      ]
+    },
+    "TONGYEONG 2026-10-19 6억": {
+      "excluded": 0,
+      "entries": []
+    },
+    "YECHEON 2026-10-19 2억": {
+      "excluded": 0,
+      "entries": []
+    },
+    "CHILGOK 2026-10-19 2억": {
+      "excluded": 0,
+      "entries": []
+    },
+    "PYEONGCHANG(ctrl) 2026-10-19 2억": {
+      "excluded": 1,
+      "entries": [
+        {
+          "eligible": true,
+          "unconfirmed": false
+        }
+      ]
+    },
+    "DONGDUCHEON 2026-10-20 2억": {
+      "excluded": 0,
+      "entries": []
+    },
+    "TONGYEONG 2026-10-20 3억": {
+      "excluded": 1,
+      "entries": [
+        {
+          "eligible": true,
+          "unconfirmed": false
+        }
+      ]
+    },
+    "TONGYEONG 2026-10-20 6억": {
+      "excluded": 0,
+      "entries": []
+    },
+    "YECHEON 2026-10-20 2억": {
+      "excluded": 0,
+      "entries": []
+    },
+    "CHILGOK 2026-10-20 2억": {
+      "excluded": 0,
+      "entries": []
+    },
+    "PYEONGCHANG(ctrl) 2026-10-20 2억": {
+      "excluded": 1,
+      "entries": [
+        {
+          "eligible": true,
+          "unconfirmed": false
+        }
+      ]
+    }
+  },
+  "R3": {
+    "dongducheon_decline_2억": {
+      "excluded": 1,
+      "entries": [
+        {
+          "eligible": true,
+          "unconfirmed": false
+        }
+      ]
+    },
+    "dongducheon_decline_4억": {
+      "excluded": 1,
+      "entries": [
+        {
+          "eligible": true,
+          "unconfirmed": false
+        }
+      ]
+    },
+    "dongducheon_decline_4억1": {
+      "excluded": 0,
+      "entries": []
+    },
+    "tongyeong_decline_9억": {
+      "excluded": 1,
+      "entries": [
+        {
+          "eligible": true,
+          "unconfirmed": false
+        }
+      ]
+    },
+    "tongyeong_decline_9억1": {
+      "excluded": 0,
+      "entries": []
+    },
+    "yecheon_interest_4억": {
+      "excluded": 1,
+      "entries": [
+        {
+          "eligible": true,
+          "unconfirmed": false
+        }
+      ]
+    },
+    "yecheon_interest_4억1": {
+      "excluded": 0,
+      "entries": []
+    },
+    "pocheon_interest_2억": {
+      "excluded": 0,
+      "entries": []
+    }
+  },
+  "R4": {
+    "menu_card_visible_fresh_row": false,
+    "calc_card_visible_fresh_row": true,
+    "q5_candidate": {
+      "DONGDUCHEON": false,
+      "TONGYEONG": true,
+      "YECHEON": false,
+      "CHILGOK": false,
+      "PYEONGCHANG": true
+    }
+  },
+  "R5": {
+    "DONGDUCHEON": null,
+    "TONGYEONG_6억": null,
+    "YECHEON": null,
+    "CHILGOK": null,
+    "PYEONGCHANG": {
+      "qualifies": true,
+      "popCap": 900000000
+    }
+  }
+}

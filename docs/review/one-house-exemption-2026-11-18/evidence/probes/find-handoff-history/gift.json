@@ -1,0 +1,72 @@
+{
+  "spouseYes": {
+    "judgmentStatus": 200,
+    "judgmentExempt": true,
+    "judgmentPending": [],
+    "judgmentUndetermined": [
+      "gift-household-consolidation-detail-unverified"
+    ],
+    "calcCause": "carryover_gift",
+    "calcStatus": 200,
+    "calcIssues": [],
+    "calcExempt": true,
+    "calcExemptReason": "1세대1주택 비과세",
+    "calcTotalTax": 0,
+    "carryoverEcho": [
+      "carryoverTaxationDetail"
+    ]
+  },
+  "spouseNo": {
+    "judgmentStatus": 200,
+    "judgmentExempt": false,
+    "judgmentPending": [
+      "154-1-holding-years"
+    ],
+    "judgmentUndetermined": [],
+    "calcCause": "carryover_gift",
+    "calcStatus": 200,
+    "calcIssues": [],
+    "calcExempt": false,
+    "calcTotalTax": 229075000,
+    "calcWarnings": [
+      "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기산일 2025-06-01, 보유기간 0년 8개월)."
+    ],
+    "carryoverEcho": [
+      "carryoverTaxationDetail"
+    ]
+  },
+  "linealNo": {
+    "judgmentStatus": 200,
+    "judgmentExempt": false,
+    "judgmentPending": [
+      "154-1-holding-years"
+    ],
+    "judgmentUndetermined": [],
+    "calcCause": "carryover_gift",
+    "calcStatus": 200,
+    "calcIssues": [],
+    "calcExempt": false,
+    "calcTotalTax": 229075000,
+    "calcWarnings": [
+      "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기산일 2025-06-01, 보유기간 0년 8개월)."
+    ],
+    "carryoverEcho": [
+      "carryoverTaxationDetail"
+    ]
+  },
+  "spouseNo3y": {
+    "judgmentStatus": 200,
+    "judgmentExempt": true,
+    "judgmentPending": [],
+    "judgmentUndetermined": [],
+    "calcCause": "carryover_gift",
+    "calcStatus": 200,
+    "calcIssues": [],
+    "calcExempt": true,
+    "calcExemptReason": "1세대1주택 비과세",
+    "calcTotalTax": 0,
+    "carryoverEcho": [
+      "carryoverTaxationDetail"
+    ]
+  }
+}

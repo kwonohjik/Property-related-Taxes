@@ -1,0 +1,204 @@
+{
+  "coerce": {
+    "winWinRentalIncreaseRatePct": {
+      "value": "-24"
+    },
+    "asset.residencePeriodMonthsAsset": {
+      "value": "-24"
+    },
+    "houses[].ruralDecedentResidenceYears": {
+      "value": "-24"
+    },
+    "houses[].ruralOwnerResidenceYears": {
+      "value": "-24"
+    },
+    "houses[].ruralLandAreaSqm": {
+      "value": "-24"
+    },
+    "houses[].countExclusion.reduction.ruralLandAreaSqm994": {
+      "value": "-24"
+    },
+    "houses[].countExclusion.reduction.ruralHouseFloorAreaSqm994": {
+      "value": "-24"
+    },
+    "CONTROL intString winWinRentalPriorLeaseMonths": {
+      "error": "숫자가 아닙니다: -24"
+    },
+    "CONTROL intString top residencePeriodMonths": {
+      "error": "숫자가 아닙니다: -24"
+    }
+  },
+  "flow -24": {
+    "issues": [],
+    "initial": {
+      "top": "0",
+      "asset": "-24",
+      "mode": "direct",
+      "bodyResidenceMonths": -24,
+      "zodOk": false,
+      "zodIssues": [
+        "residencePeriodMonths: Too small: expected number to be >=0"
+      ],
+      "v8": [],
+      "qs": [
+        "residencePeriodMonths: 거주기간 (개월) — 입력값을 확인하세요."
+      ]
+    },
+    "routeStatus": 200,
+    "routeQuestions": [
+      {
+        "path": "residencePeriodMonths",
+        "field": {
+          "path": "residencePeriodMonths",
+          "kind": "intString",
+          "label": "거주기간 (개월)"
+        },
+        "question": "거주기간 (개월) — 입력값을 확인하세요.",
+        "source": "validation"
+      }
+    ],
+    "targets": [
+      {
+        "path": "residencePeriodMonths",
+        "target": "residencePeriodMonths",
+        "before": "0"
+      }
+    ],
+    "afterAnswer": {
+      "top": "24",
+      "asset": "-24",
+      "mode": "direct",
+      "bodyResidenceMonths": -24,
+      "zodOk": false,
+      "zodIssues": [
+        "residencePeriodMonths: Too small: expected number to be >=0"
+      ],
+      "v8": [],
+      "qs": [
+        "residencePeriodMonths: 거주기간 (개월) — 입력값을 확인하세요."
+      ]
+    },
+    "assetTargetOk": true,
+    "controlAssetAnswer": {
+      "top": "0",
+      "asset": "24",
+      "mode": "direct",
+      "bodyResidenceMonths": 24,
+      "zodOk": true,
+      "zodIssues": [],
+      "v8": [],
+      "qs": []
+    }
+  },
+  "flow 24": {
+    "issues": [],
+    "initial": {
+      "top": "0",
+      "asset": "24",
+      "mode": "direct",
+      "bodyResidenceMonths": 24,
+      "zodOk": true,
+      "zodIssues": [],
+      "v8": [],
+      "qs": []
+    },
+    "routeStatus": 200,
+    "routeQuestions": [],
+    "targets": [],
+    "afterAnswer": {
+      "top": "0",
+      "asset": "24",
+      "mode": "direct",
+      "bodyResidenceMonths": 24,
+      "zodOk": true,
+      "zodIssues": [],
+      "v8": [],
+      "qs": []
+    },
+    "assetTargetOk": true,
+    "controlAssetAnswer": {
+      "top": "0",
+      "asset": "24",
+      "mode": "direct",
+      "bodyResidenceMonths": 24,
+      "zodOk": true,
+      "zodIssues": [],
+      "v8": [],
+      "qs": []
+    }
+  },
+  "flow 36.5": {
+    "issues": [],
+    "initial": {
+      "top": "0",
+      "asset": "36.5",
+      "mode": "direct",
+      "bodyResidenceMonths": 36,
+      "zodOk": true,
+      "zodIssues": [],
+      "v8": [],
+      "qs": []
+    },
+    "routeStatus": 200,
+    "routeQuestions": [],
+    "targets": [],
+    "afterAnswer": {
+      "top": "0",
+      "asset": "36.5",
+      "mode": "direct",
+      "bodyResidenceMonths": 36,
+      "zodOk": true,
+      "zodIssues": [],
+      "v8": [],
+      "qs": []
+    },
+    "assetTargetOk": true,
+    "controlAssetAnswer": {
+      "top": "0",
+      "asset": "24",
+      "mode": "direct",
+      "bodyResidenceMonths": 24,
+      "zodOk": true,
+      "zodIssues": [],
+      "v8": [],
+      "qs": []
+    }
+  },
+  "flow -0.5": {
+    "issues": [],
+    "initial": {
+      "top": "0",
+      "asset": "-0.5",
+      "mode": "direct",
+      "bodyResidenceMonths": 0,
+      "zodOk": true,
+      "zodIssues": [],
+      "v8": [],
+      "qs": []
+    },
+    "routeStatus": 200,
+    "routeQuestions": [],
+    "targets": [],
+    "afterAnswer": {
+      "top": "0",
+      "asset": "-0.5",
+      "mode": "direct",
+      "bodyResidenceMonths": 0,
+      "zodOk": true,
+      "zodIssues": [],
+      "v8": [],
+      "qs": []
+    },
+    "assetTargetOk": true,
+    "controlAssetAnswer": {
+      "top": "0",
+      "asset": "24",
+      "mode": "direct",
+      "bodyResidenceMonths": 24,
+      "zodOk": true,
+      "zodIssues": [],
+      "v8": [],
+      "qs": []
+    }
+  }
+}

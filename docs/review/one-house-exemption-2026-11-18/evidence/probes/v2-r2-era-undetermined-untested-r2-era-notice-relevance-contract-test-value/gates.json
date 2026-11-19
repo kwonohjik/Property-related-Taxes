@@ -1,0 +1,131 @@
+{
+  "merged decides (비조정)": {
+    "isExempt": false,
+    "isPartial": false,
+    "und": [
+      "155-16-merged-special-city-unit"
+    ],
+    "unmet": []
+  },
+  "merged invariant (취득시 조정·거주0)": {
+    "isExempt": false,
+    "isPartial": false,
+    "und": [
+      "155-16-merged-special-city-unit"
+    ],
+    "unmet": []
+  },
+  "merged invariant cf(region met)": {
+    "isExempt": false,
+    "isPartial": false,
+    "und": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "unmet": []
+  },
+  "reinherit decides (비조정)": {
+    "isExempt": true,
+    "isPartial": false,
+    "und": [
+      "155-2-reinheritance-reference-date-unverified"
+    ],
+    "unmet": []
+  },
+  "reinherit cf(not reinherited, 비조정)": {
+    "isExempt": false,
+    "isPartial": false,
+    "und": [],
+    "unmet": [
+      [
+        "155-2-inherited-house",
+        [
+          "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+        ]
+      ]
+    ]
+  },
+  "reinherit invariant (조정·거주0)": {
+    "isExempt": false,
+    "isPartial": false,
+    "und": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified",
+      "155-2-reinheritance-reference-date-unverified"
+    ],
+    "unmet": []
+  },
+  "reinherit invariant cf(not reinherited)": {
+    "isExempt": false,
+    "isPartial": false,
+    "und": [],
+    "unmet": [
+      [
+        "155-2-inherited-house",
+        [
+          "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+        ]
+      ]
+    ]
+  },
+  "pre2010 decides (보유 충족)": {
+    "isExempt": true,
+    "isPartial": false,
+    "und": [
+      "155-2-pre2010-parental-care-exception-unverified"
+    ],
+    "unmet": []
+  },
+  "pre2010 cf(no care, 보유 충족)": {
+    "isExempt": false,
+    "isPartial": false,
+    "und": [],
+    "unmet": [
+      [
+        "155-2-inherited-house",
+        [
+          "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+        ]
+      ]
+    ]
+  },
+  "pre2010 invariant (보유 1년)": {
+    "isExempt": false,
+    "isPartial": false,
+    "und": [
+      "155-2-pre2010-parental-care-exception-unverified"
+    ],
+    "unmet": []
+  },
+  "pre2010 invariant cf(no care)": {
+    "isExempt": false,
+    "isPartial": false,
+    "und": [],
+    "unmet": [
+      [
+        "155-2-inherited-house",
+        [
+          "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+        ]
+      ]
+    ]
+  },
+  "1주택 조정 거주0 보유5년": {
+    "isExempt": false,
+    "isPartial": false,
+    "und": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "unmet": []
+  },
+  "1주택 조정 거주0 보유1년": {
+    "isExempt": false,
+    "isPartial": false,
+    "und": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "unmet": []
+  }
+}

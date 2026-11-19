@@ -1,0 +1,343 @@
+{
+ "top:parentalCareMergeDate": {
+  "usedBy": 24,
+  "flipped": [
+   "E0061-parental-rental-counterpart",
+   "E123-era",
+   "E123-current",
+   "E127-era",
+   "E127-current",
+   "E128-era",
+   "E128-current",
+   "E128-era-reverse",
+   "E129-era",
+   "E129-current",
+   "E139-era",
+   "E140-era",
+   "E140-current",
+   "E141-era",
+   "E141-current"
+  ],
+  "status400": []
+ },
+ "top:parentalCareParentAge": {
+  "usedBy": 24,
+  "flipped": [
+   "E0061-parental-rental-counterpart",
+   "E123-era",
+   "E123-current",
+   "E127-era",
+   "E127-current",
+   "E128-era",
+   "E128-current",
+   "E128-era-reverse",
+   "E129-era",
+   "E129-current",
+   "E139-era",
+   "E140-era",
+   "E140-current",
+   "E141-era",
+   "E141-current"
+  ],
+  "status400": []
+ },
+ "asset:redevExemptionEligibleAtApproval": {
+  "usedBy": 45,
+  "flipped": [
+   "E002-era",
+   "E093-current-twin",
+   "F455-era",
+   "F455-current",
+   "F456-era",
+   "P-F456-era-6eok",
+   "F456-current",
+   "P-F456-current-12eok",
+   "G019-current",
+   "G021-current",
+   "P-G021-current-3y",
+   "G022-era",
+   "G023-era",
+   "G024-era",
+   "G035-era",
+   "G049-era",
+   "G049-current",
+   "G050-era",
+   "G055-era",
+   "G055-current",
+   "G062-current",
+   "G065-era",
+   "P-G077-later-sold",
+   "G091-era",
+   "G091-current",
+   "G157-era-second",
+   "STAT-71-2-right"
+  ],
+  "status400": []
+ },
+ "top:marriageDate": {
+  "usedBy": 25,
+  "flipped": [
+   "E002-era",
+   "E128-era",
+   "E128-current",
+   "E128-era-reverse",
+   "P-E132-1062",
+   "P-E132-seller-rentals-only",
+   "E143-era",
+   "E143-current",
+   "P-E211-within",
+   "P-E211-sell-b",
+   "G055-era",
+   "G055-current",
+   "G163-era",
+   "G163-era-blank",
+   "G163-era-none",
+   "G163-current"
+  ],
+  "status400": []
+ },
+ "top:temporaryTwoHouseSpecial": {
+  "usedBy": 5,
+  "flipped": [],
+  "status400": []
+ },
+ "asset:rentalHousingException": {
+  "usedBy": 45,
+  "flipped": [
+   "E132-era",
+   "E132-current",
+   "E163-era",
+   "E167-era",
+   "E175-era",
+   "E178-era",
+   "E182-era",
+   "E182-era-3",
+   "E193-era",
+   "E193-current",
+   "E194-era",
+   "E199-era",
+   "E203-era",
+   "F069-era",
+   "N-F069-gate-20111013",
+   "F070-era",
+   "F128-era"
+  ],
+  "status400": []
+ },
+ "asset:residencePeriodMonthsAsset": {
+  "usedBy": 105,
+  "flipped": [
+   "E049-era-within2y",
+   "E049-current",
+   "E050-era",
+   "E053-era",
+   "E055-era",
+   "E100-era",
+   "E112-era",
+   "E115-era",
+   "E118-era",
+   "E123-era",
+   "E128-era",
+   "E128-era-reverse",
+   "E129-era",
+   "P-E132-1062",
+   "P-E132-seller-rentals-only",
+   "E163-era-pos",
+   "E163-era-sameday",
+   "E166-era",
+   "E166-current",
+   "E175-current",
+   "E177-era",
+   "E177-current",
+   "E178-current",
+   "E180-era",
+   "E182-era-pos",
+   "E185-era",
+   "E190-era",
+   "E195-era",
+   "E195-current",
+   "E196-era",
+   "E199-era-pos",
+   "E203-current",
+   "E204-current",
+   "E208-current",
+   "E209-current",
+   "P-F006-household",
+   "F015-era",
+   "F021-era",
+   "F068-current",
+   "P-F069-gate-20111014",
+   "F069-current",
+   "F070-current",
+   "F115-era",
+   "F154-era",
+   "P-F243-resided24",
+   "P-G016-era-approval-2005",
+   "P-G017-era-approval-2005",
+   "G099-era",
+   "P-R014-era-no-officetel",
+   "P-T001-separate-household",
+   "P-T001-parental-care"
+  ],
+  "status400": []
+ },
+ "top:newHouseRegulatedAtAcquisition": {
+  "usedBy": 18,
+  "flipped": [],
+  "status400": []
+ },
+ "top:newHouseContractDate": {
+  "usedBy": 11,
+  "flipped": [
+   "E045-era",
+   "E049-era-within2y",
+   "E056-era",
+   "E058-era",
+   "E062-era"
+  ],
+  "status400": []
+ },
+ "top:provisoReason": {
+  "usedBy": 46,
+  "flipped": [
+   "E047-era-pre",
+   "P-F217-after-departure",
+   "P-F255-own-62m",
+   "F256-era",
+   "N-F256-highvalue",
+   "F259-era",
+   "F262-era",
+   "F264-era",
+   "P-F264-remnant-5y-current",
+   "F268-current",
+   "P-F297-within-2y",
+   "F303-era",
+   "F303-current",
+   "F305-era",
+   "F316-era",
+   "F322-era",
+   "P-F322-current-within",
+   "F340-era",
+   "F340-current",
+   "P-F340-current-12m",
+   "F355-era",
+   "F373-era",
+   "P-F373-era-60m",
+   "F396-era",
+   "F461-era"
+  ],
+  "status400": []
+ },
+ "top:generalHouseRightAtInheritance": {
+  "usedBy": 7,
+  "flipped": [
+   "E073-current",
+   "E118-era"
+  ],
+  "status400": []
+ },
+ "asset:giftSameHousehold": {
+  "usedBy": 7,
+  "flipped": [],
+  "status400": []
+ },
+ "top:rightThreeYearExceptionKind": {
+  "usedBy": 20,
+  "flipped": [
+   "N-G105-completed-exception",
+   "G106-era",
+   "G111-era",
+   "G164-era",
+   "S006-era",
+   "S006-current"
+  ],
+  "status400": []
+ },
+ "asset:decedentSameHouseholdBeforeInheritance": {
+  "usedBy": 9,
+  "flipped": [
+   "F193-era",
+   "F207-era",
+   "F242-era",
+   "P-F242-no-residence"
+  ],
+  "status400": []
+ },
+ "top:provisoDepartureDate": {
+  "usedBy": 19,
+  "flipped": [
+   "P-F217-after-departure",
+   "F268-current",
+   "P-F297-within-2y",
+   "F303-era",
+   "F303-current",
+   "F305-era",
+   "F316-era",
+   "F322-era",
+   "P-F322-current-within"
+  ],
+  "status400": []
+ },
+ "top:provisoRentalLeaseResidenceMonths": {
+  "usedBy": 8,
+  "flipped": [
+   "P-F255-own-62m",
+   "F256-era",
+   "N-F256-highvalue",
+   "F259-era",
+   "F373-era",
+   "P-F373-era-60m"
+  ],
+  "status400": []
+ },
+ "top:provisoExpropriationDate": {
+  "usedBy": 9,
+  "flipped": [
+   "F262-era",
+   "F264-era",
+   "P-F264-remnant-5y-current",
+   "F461-era"
+  ],
+  "status400": []
+ },
+ "top:rightMovedInWithin3Years": {
+  "usedBy": 7,
+  "flipped": [
+   "N-G105-completed-exception",
+   "G106-era",
+   "G111-era",
+   "G164-era",
+   "S006-era",
+   "S006-current"
+  ],
+  "status400": []
+ },
+ "top:replacementHouseSpecial": {
+  "usedBy": 23,
+  "flipped": [
+   "G116-era",
+   "G116-current",
+   "P-G119-current",
+   "G120-era",
+   "G120-era-origin",
+   "G120-current",
+   "G123-era",
+   "P-G124-era",
+   "G125-era",
+   "G126-era",
+   "G126-current",
+   "G128-era",
+   "G128-era-origin",
+   "G129-era",
+   "G129-current",
+   "G131-era",
+   "G132-era"
+  ],
+  "status400": []
+ },
+ "top:mergedHouseholdFirstHouseKind": {
+  "usedBy": 8,
+  "flipped": [],
+  "status400": []
+ }
+}

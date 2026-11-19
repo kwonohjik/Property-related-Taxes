@@ -1,0 +1,88 @@
+{
+  "count2": {
+    "v8": {
+      "leaf": null,
+      "steps": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    "isExempt": true,
+    "totalTax": 0,
+    "exemptReason": "장기임대주택 보유자 거주주택 비과세 (§155⑳)",
+    "rheApplied": true,
+    "rheScenarioId": "RH-A1",
+    "failReasons": [],
+    "residenceFailReasons": [],
+    "rentalSteps": [],
+    "giftCardHasGateReason": null,
+    "giftCardMentions155_20": true,
+    "giftCardHasConfirmBox": false,
+    "calcCardsHasGateReason": null,
+    "calcCardsHasUnmetTitle": false,
+    "giftCardSnippet": "부담부증여 양도소득세 (소득세법 §88 · 소령 §159)부담부증여 양도소득세 (채무인수분)비과세장기임대주택 보유자 거주주택 비과세 (§155⑳)매매계약서의 거래가액을 실지거래가액과 다르게 적은 거래당사자는 비과세·감면받았거나 받을 세액에서 법에서 정한 금액을 빼게 됩니다 (소득세법 §91②). 이 계산에는 반영하지 않았습니다.비과세는 비과세를 적용하지 않았을 때의 산출세액과 계약서 거래가액·실지거래가액의 차액 중 적은 금액, 감면은 해당 감면세액과 그 차액 중 적은 금액을 뺍니다. 해당하면 확인이 필요합니다."
+  },
+  "count3": {
+    "v8": {
+      "leaf": null,
+      "steps": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    "isExempt": false,
+    "isPartialExempt": false,
+    "totalTax": 59990342,
+    "rheApplied": false,
+    "rheScenarioId": "RH-A1",
+    "gateFailReasons": [
+      "세대 보유 주택 3채 중 거주주택·장기임대주택(1채)이 아닌 주택이 1채 있는데, 그 주택이 일시적 2주택·상속주택 특례로 제외되는지 확인되지 않아 소득세법 시행령 §155⑳을 적용하지 않았습니다"
+    ],
+    "failReasons": [],
+    "residenceFailReasons": [],
+    "rentalSteps": [
+      "장기임대주택 거주주택 비과세 특례 — 적용 불가 :: 세대 보유 주택 3채 중 거주주택·장기임대주택(1채)이 아닌 주택이 1채 있는데, 그 주택이 일시적 2주택·상속주택 특례로 제외되는지 확인되지 않아 소득세법 시행령 §155⑳을 적용하지 않았습니다",
+      "장기임대주택 거주주택 비과세 특례 — 확인 필요 :: 거주주택·장기임대주택 외 주택 1채가 일시적 2주택(소득세법 시행령 §155①)·상속주택(소득세법 시행령 §155②)으로 주택 수에서 빠지면 소득세법 시행령 §155⑳이 적용될 수 있습니다 — 다른 보유 주택 목록에 그 주택을 입력하면 판정합니다(확인 필요)"
+    ],
+    "giftCardHasGateReason": false,
+    "giftCardMentions155_20": false,
+    "giftCardHasConfirmBox": false,
+    "calcCardsHasGateReason": true,
+    "calcCardsHasUnmetTitle": true,
+    "giftCardSnippet": "부담부증여 양도소득세 (소득세법 §88 · 소령 §159)부담부증여 양도소득세 (채무인수분)▼ 펼치기양도가액 (채무인수분)300,000,000취득가액 (채무인수분)(−) 56,250,000필요경비(−) 1,687,500양도차익242,062,500과세 양도차익242,062,500장기보유특별공제 (18%)(−) 43,571,250양도소득기본공제 (§103①1호)(−) 2,500,000양도소득 과세표준195,991,250산출세액 (세율 38%)54,536,675결정세액54,536,675지방소득세 (10%)5,453,667총 납부세액59,990,342산식 상세 (소령 §159①1호 안분)채무인수분은 소득세법 §88에 따라 유상양도로 봅니다. 취득가액·양도가액은 소령 §159①1호에 따라 채무액증여재산가액 비율로 안"
+  },
+  "count4": {
+    "v8": {
+      "leaf": null,
+      "steps": [
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    "isExempt": false,
+    "isPartialExempt": false,
+    "totalTax": 59990342,
+    "rheApplied": false,
+    "rheScenarioId": "RH-A1",
+    "gateFailReasons": [
+      "세대 보유 주택 4채 중 거주주택·장기임대주택(1채)이 아닌 주택이 2채 있습니다 — 소득세법 시행령 §155⑳은 「장기임대주택과 그 밖의 1주택」을 소유한 1세대에 적용되며, 다른 특례를 둘 이상 겹쳐 적용하지 않습니다"
+    ],
+    "failReasons": [],
+    "residenceFailReasons": [],
+    "rentalSteps": [
+      "장기임대주택 거주주택 비과세 특례 — 적용 불가 :: 세대 보유 주택 4채 중 거주주택·장기임대주택(1채)이 아닌 주택이 2채 있습니다 — 소득세법 시행령 §155⑳은 「장기임대주택과 그 밖의 1주택」을 소유한 1세대에 적용되며, 다른 특례를 둘 이상 겹쳐 적용하지 않습니다"
+    ],
+    "giftCardHasGateReason": false,
+    "giftCardMentions155_20": false,
+    "giftCardHasConfirmBox": false,
+    "calcCardsHasGateReason": true,
+    "calcCardsHasUnmetTitle": true,
+    "giftCardSnippet": "부담부증여 양도소득세 (소득세법 §88 · 소령 §159)부담부증여 양도소득세 (채무인수분)▼ 펼치기양도가액 (채무인수분)300,000,000취득가액 (채무인수분)(−) 56,250,000필요경비(−) 1,687,500양도차익242,062,500과세 양도차익242,062,500장기보유특별공제 (18%)(−) 43,571,250양도소득기본공제 (§103①1호)(−) 2,500,000양도소득 과세표준195,991,250산출세액 (세율 38%)54,536,675결정세액54,536,675지방소득세 (10%)5,453,667총 납부세액59,990,342산식 상세 (소령 §159①1호 안분)채무인수분은 소득세법 §88에 따라 유상양도로 봅니다. 취득가액·양도가액은 소령 §159①1호에 따라 채무액증여재산가액 비율로 안"
+  }
+}

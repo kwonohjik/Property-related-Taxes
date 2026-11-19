@@ -1,0 +1,170 @@
+{
+  "classify": {
+    "PYEONGCHANG": "decline",
+    "BUSAN_DONGGU": null,
+    "SEOUL_JUNGGU": null
+  },
+  "evaluator": {
+    "E1_pyeongchang_auto": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "E2_pyeongchang_toggle_false": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "E3_pyeongchang_toggle_true": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "E4_busan_auto_control": {
+      "excludedCount": 0,
+      "entries": []
+    },
+    "E5_busan_toggle_true_decline": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "E6_busan_toggle_true_no_type": {
+      "excludedCount": 0,
+      "entries": [
+        {
+          "eligible": false,
+          "unconfirmed": true,
+          "reason": "인구감소지역인지 인구감소관심지역인지 판정할 수 없습니다."
+        }
+      ]
+    },
+    "E7_seoul_toggle_true_decline": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "E8_seoul_auto_control": {
+      "excludedCount": 0,
+      "entries": []
+    }
+  },
+  "menu": {
+    "F1_pyeongchang_auto": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": true,
+      "excluded": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "undetermined": []
+    },
+    "F2_pyeongchang_toggle_false": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": false,
+      "excluded": [],
+      "undetermined": []
+    },
+    "F3_pyeongchang_toggle_true": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": true,
+      "excluded": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "undetermined": []
+    },
+    "F4_busan_auto_control": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": false,
+      "excluded": [],
+      "undetermined": []
+    },
+    "F5_busan_toggle_true_decline": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": true,
+      "excluded": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "undetermined": []
+    }
+  },
+  "calc": {
+    "C1_pyeongchang_auto": {
+      "status": 200,
+      "isExempt": true,
+      "totalTax": 0,
+      "popWarnings": [],
+      "specialHouseExclusionDetail": {
+        "entries": [
+          {
+            "article": "pop_decline_71_2",
+            "houseId": "p",
+            "articleLabel": "인구감소지역주택(조특법 §71의2①)",
+            "eligible": true,
+            "legalBasis": "조특법 §71의2①",
+            "notice": "양도소득과세표준신고와 함께 과세특례신고서를 제출해야 하며(조특령 §68의2②), 인구감소지역주택 취득 전에 조합원입주권·분양권을 보유했다면 그 보유를 증명하는 서류를 함께 냅니다(③)."
+          }
+        ],
+        "excludedCount": 1
+      }
+    },
+    "C2_pyeongchang_toggle_false": {
+      "status": 200,
+      "bodyToggle": false,
+      "isExempt": false,
+      "totalTax": 94897000,
+      "popWarnings": []
+    },
+    "C3_busan_auto_control": {
+      "status": 200,
+      "isExempt": false,
+      "totalTax": 167871000,
+      "popWarnings": []
+    },
+    "C4_busan_toggle_true_decline": {
+      "status": 200,
+      "bodyToggle": true,
+      "bodyAreaType": "decline",
+      "isExempt": true,
+      "totalTax": 0,
+      "popWarnings": [],
+      "specialHouseExclusionDetail": {
+        "entries": [
+          {
+            "article": "pop_decline_71_2",
+            "houseId": "p",
+            "articleLabel": "인구감소지역주택(조특법 §71의2①)",
+            "eligible": true,
+            "legalBasis": "조특법 §71의2①",
+            "notice": "양도소득과세표준신고와 함께 과세특례신고서를 제출해야 하며(조특령 §68의2②), 인구감소지역주택 취득 전에 조합원입주권·분양권을 보유했다면 그 보유를 증명하는 서류를 함께 냅니다(③)."
+          }
+        ],
+        "excludedCount": 1
+      }
+    }
+  }
+}

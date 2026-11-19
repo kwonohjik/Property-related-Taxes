@@ -1,0 +1,146 @@
+[
+  {
+    "k": 0,
+    "declared": true,
+    "ms": 48,
+    "status": 200,
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": [
+      "1:householdNoPresaleRightsConfirmed:세대가 보유한 분양권·입주권이 없는지 확인하세요."
+    ],
+    "districtWarnings": 0
+  },
+  {
+    "k": 0,
+    "declared": false,
+    "ms": 9,
+    "status": 200,
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": [
+      "1:householdNoPresaleRightsConfirmed:세대가 보유한 분양권·입주권이 없는지 확인하세요."
+    ],
+    "districtWarnings": 0
+  },
+  {
+    "k": 1,
+    "declared": true,
+    "ms": 10,
+    "status": 200,
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": [],
+    "districtWarnings": 0
+  },
+  {
+    "k": 1,
+    "declared": false,
+    "ms": 10,
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 64559000,
+    "issues": [],
+    "districtWarnings": 1
+  },
+  {
+    "k": 2,
+    "declared": true,
+    "ms": 4,
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 64559000,
+    "issues": [],
+    "districtWarnings": 0
+  },
+  {
+    "k": 2,
+    "declared": false,
+    "ms": 4,
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 64559000,
+    "issues": [],
+    "districtWarnings": 0
+  },
+  {
+    "k": 3,
+    "declared": true,
+    "ms": 5,
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 64559000,
+    "issues": [],
+    "districtWarnings": 0
+  },
+  {
+    "k": 3,
+    "declared": false,
+    "ms": 8,
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 64559000,
+    "issues": [],
+    "districtWarnings": 0
+  },
+  {
+    "k": 4,
+    "declared": true,
+    "ms": 4,
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 64559000,
+    "issues": [],
+    "districtWarnings": 0
+  },
+  {
+    "k": 4,
+    "declared": false,
+    "ms": 15,
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 64559000,
+    "issues": [],
+    "districtWarnings": 0
+  },
+  {
+    "k": 5,
+    "declared": true,
+    "ms": 4,
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 64559000,
+    "issues": [],
+    "districtWarnings": 0
+  },
+  {
+    "k": 5,
+    "declared": false,
+    "ms": 66,
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 64559000,
+    "issues": [],
+    "districtWarnings": 0
+  },
+  {
+    "k": 6,
+    "declared": true,
+    "ms": 4,
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 64559000,
+    "issues": [],
+    "districtWarnings": 0
+  },
+  {
+    "k": 6,
+    "declared": false,
+    "ms": 637,
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 64559000,
+    "issues": [],
+    "districtWarnings": 0
+  }
+]

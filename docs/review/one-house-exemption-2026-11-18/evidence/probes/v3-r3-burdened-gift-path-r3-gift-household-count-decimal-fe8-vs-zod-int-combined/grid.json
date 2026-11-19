@@ -1,0 +1,94 @@
+{
+  "count_1": {
+    "v8": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "bodyCount": 1,
+    "status": 200,
+    "mergeInScope": false,
+    "tempTwoInScope": false
+  },
+  "count_2": {
+    "v8": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "bodyCount": 2,
+    "status": 200,
+    "mergeInScope": true,
+    "tempTwoInScope": true
+  },
+  "count_3": {
+    "v8": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "bodyCount": 3,
+    "status": 200,
+    "mergeInScope": true,
+    "tempTwoInScope": false
+  },
+  "count_2.5": {
+    "v8": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "bodyCount": 2.5,
+    "status": 400,
+    "errorSnippet": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"householdHousingCount\":[\"Invalid input: expected int, received number\"]}}}",
+    "mergeInScope": true,
+    "tempTwoInScope": false
+  },
+  "count_1.5": {
+    "v8": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "bodyCount": 1.5,
+    "status": 400,
+    "errorSnippet": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"householdHousingCount\":[\"Invalid input: expected int, received number\"]}}}",
+    "mergeInScope": false,
+    "tempTwoInScope": false
+  },
+  "count_3.5": {
+    "v8": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "bodyCount": 3.5,
+    "status": 400,
+    "errorSnippet": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"householdHousingCount\":[\"Invalid input: expected int, received number\"]}}}",
+    "mergeInScope": true,
+    "tempTwoInScope": false
+  },
+  "ui": {
+    "inputMode": "decimal",
+    "afterPaste": {
+      "householdHousingCount": 2.5
+    },
+    "afterDot": {
+      "householdHousingCount": 2
+    },
+    "afterRes": {
+      "residencePeriodMonths": 24
+    },
+    "displayedAfterRerenderValue": "2"
+  },
+  "ui25": {
+    "displayed": "2.5",
+    "temp2BlockShown": false
+  }
+}
