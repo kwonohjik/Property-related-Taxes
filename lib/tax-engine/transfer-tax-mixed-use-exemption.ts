@@ -179,6 +179,8 @@ export function judgeMixedUseOneHouseExemption(
       : {}),
     oneHouseExemptionProviso: asset.oneHouseExemptionProviso,
     regionCode: asset.regionCode,
+    // 지구 한정 동의 「지정 지구 안인가」 선언 — 정본이 `regionCode`와 짝으로 읽는다(결정 #57 · D-77). 빼면 「지구 밖」 답이 지정(medium)으로 읽혀 거주요건이 걸린다.
+    regionInDesignatedDistrict: asset.regionInDesignatedDistrict,
     // 미주입 시 false — 조정대상지역이 아니면 거주요건 자체가 없다(종전 동작 불변).
     wasRegulatedAtAcquisition: asset.wasRegulatedAtAcquisition ?? false,
     /**
