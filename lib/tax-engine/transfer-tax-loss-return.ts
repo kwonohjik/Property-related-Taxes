@@ -73,6 +73,7 @@ export interface LossReturnArgs {
   carryoverDetail: Parameters<typeof buildTransferResultDetails>[0]["carryoverDetail"];
   inheritedAcquisitionStep: Parameters<typeof buildTransferResultDetails>[0]["inheritedAcquisitionStep"];
   cbStep: Parameters<typeof buildTransferResultDetails>[0]["cbStep"];
+  cbNblPart: Parameters<typeof buildTransferResultDetails>[0]["cbNblPart"];
   splitDetail: Parameters<typeof buildTransferResultDetails>[0]["splitDetail"];
   /**
    * 차손 자산의 **표시용** 세율·§104 호 (계획서 §10 결함 ③).
@@ -101,6 +102,7 @@ export function buildLossTransferTaxResult({
   carryoverDetail,
   inheritedAcquisitionStep,
   cbStep,
+  cbNblPart,
   splitDetail,
   new994Detail,
   unsold989Detail,
@@ -256,6 +258,7 @@ export function buildLossTransferTaxResult({
       carryoverDetail,
       inheritedAcquisitionStep,
       cbStep,
+      cbNblPart,
       splitDetail,
     }),
   };

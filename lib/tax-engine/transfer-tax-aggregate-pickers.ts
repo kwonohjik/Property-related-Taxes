@@ -37,6 +37,7 @@ export type SingleResult = ReturnType<typeof calculateTransferTax>;
 export function pickValuationDetails(r: SingleResult): TransferValuationDetailSource {
   return {
     commercialBuildingValuationDetail: r.commercialBuildingValuationDetail,
+    commercialNblPart: r.commercialNblPart,
     nonBusinessLandJudgmentDetail: r.nonBusinessLandJudgmentDetail,
     nblSurchargeExcluded: r.nblSurchargeExcluded,
     nblSurchargeExcludedBy: r.nblSurchargeExcludedBy,

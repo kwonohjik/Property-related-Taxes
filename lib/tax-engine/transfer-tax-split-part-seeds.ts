@@ -10,6 +10,7 @@
  * `transfer-split-basic-deduction-units-and-order-rounding.plan.md` §4.
  */
 import { applyFairMarketRatio } from "./tax-utils";
+import { safeMultiplyThenDivide } from "./tax-utils";
 import { calcTax } from "./transfer-tax-rate-calc";
 import { offsetLossesCore } from "./loss-offset-core";
 import { lossOffsetRateKey } from "./loss-offset-rate-key";
@@ -141,7 +142,7 @@ export function splitPartsForLossOffset(
 ): LossOffsetPart[] | null {
   if (!splitDetail && hasPartialNonBusinessLand(input)) {
     const { nbl, other } = partialNblRateInputs(input);
-    const nblIncome = partialNblIncome(income, input.nonBusinessLandAreaRatio!);
+    const nblIncome = partialNblIncome(income, input.nonBusinessLandAreaRatio!, input.nonBusinessLandPartShare);
     return [
       { kind: "non_business_land" as const, income: nblIncome, rateInput: nbl },
       { kind: "land" as const, income: income - nblIncome, rateInput: other },
@@ -170,13 +171,20 @@ export function hasPartialNonBusinessLand(input: TransferTaxInput): boolean {
 
 /** 부분 비사업용 토지의 파트별 세율 판정 입력 — 비사토 파트는 전량 8호, 그 외 파트는 비사업용이 아니다. */
 export const partialNblRateInputs = (input: TransferTaxInput): { nbl: TransferTaxInput; other: TransferTaxInput } => ({
-  nbl: { ...input, nonBusinessLandAreaRatio: 1 },
-  other: { ...input, isNonBusinessLand: false, nonBusinessLandAreaRatio: undefined },
+  nbl: { ...input, nonBusinessLandAreaRatio: 1, nonBusinessLandPartShare: undefined },
+  other: { ...input, isNonBusinessLand: false, nonBusinessLandAreaRatio: undefined, nonBusinessLandPartShare: undefined },
 });
 
-/** 자산 양도소득금액 중 비사토 파트 몫(면적 비율). 차손이면 음수다 — 절사 방향은 양수와 같게 절댓값으로. */
-export const partialNblIncome = (income: number, ratio: number): number =>
-  income >= 0 ? applyFairMarketRatio(income, ratio) : -applyFairMarketRatio(-income, ratio);
+/**
+ * 자산 양도소득금액 중 비사토 파트 몫(면적 비율). 차손이면 음수다 — 절사 방향은 양수와 같게 절댓값으로.
+ *
+ * `share`(정수 분수)가 있으면 그 분수로 나눈다 — 상업용건물처럼 «토지분 양도차익 × 초과 비율 ÷ 자산 양도차익»인 몫은
+ * 4자리 반올림(`applyFairMarketRatio`)을 거치면 수천~수만 원이 어긋난다(NBL2611-V5-BX01). 없으면 종전 면적비율 경로다.
+ */
+export const partialNblIncome = (income: number, ratio: number, share?: TransferTaxInput["nonBusinessLandPartShare"]): number => {
+  const part = (v: number) => (share ? safeMultiplyThenDivide(v, share.numerator, share.denominator) : applyFairMarketRatio(v, ratio));
+  return income >= 0 ? part(income) : -part(-income);
+};
 
 /**
  * 파트 차손 통산(「소득세법 시행령」 §167의2①) — 다건과 같은 코어(`offsetLossesCore`)·같은 「같은 세율」 키(`lossOffsetRateKey`)를 쓴다.

@@ -50,4 +50,64 @@ export interface CommercialAppurtenantLandInput {
    * §19⑤·§22 사용승인 미이행도 포함된다(법제처 법령해석례 25-0823, 2026.02.03).
    */
   unapprovedBuilding?: boolean;
+  /**
+   * 해당 호의 토지·건물 **기준시가**(원, 호 단위 총액) — 양도차익을 토지분·건물분으로 나누는 기준.
+   *
+   * 「소득세법」 §104의3①은 «토지»만 비사업용으로 정하므로(건물은 비사업용 토지가 될 수 없다) 초과 비율을
+   * 건물분 소득에 곱할 수 없다. 법 §100② 후문·영 §166⑥이 토지와 건물의 가액 구분이 불분명하면
+   * 취득가액은 취득 **당시**, 양도가액은 양도 **당시** 기준시가 비율로 나누라고 한다 — 시점별로 네 값이다.
+   *
+   * 초과분(또는 §101① 단서)이 있으면 필수다. **자동 안분 fallback은 없다** — 없으면 엔진이 거부한다(NBL2611-V5-BX01).
+   */
+  partBasis?: CommercialAppurtenantPartBasis;
+}
+
+/** 토지·건물 기준시가 4값 — 취득 당시 · 양도 당시 각각의 토지분·건물분(원, 호 단위 총액) */
+export interface CommercialAppurtenantPartBasis {
+  acquisitionLandStd: number;
+  acquisitionBuildingStd: number;
+  transferLandStd: number;
+  transferBuildingStd: number;
+}
+
+/** 분수 — 엔진이 정수 원 단위로 비율을 보존하는 방식(4자리 반올림 없음) */
+export interface IntegerFraction {
+  numerator: number;
+  denominator: number;
+}
+
+/**
+ * 상가 비사업용 파트 산출 echo (NBL2611-V5-BX01) — 표시 전용 + 다건 재계산의 단일 소스.
+ *
+ * 자산 한 개를 **토지분 / 건물분**으로 나누고, 초과 면적 비율은 **토지분 양도차익에만** 곱한다.
+ * 비사업용 파트(= 토지분 양도차익 × 초과 비율)의 양도소득 몫만 §104①8호 +10%p가 걸린다.
+ */
+export interface CommercialNblPartEcho {
+  /** 집합건물 전체 대지면적 × 100 (㎡ → 정수, 면적 비교 정밀도) */
+  totalLandArea100: number;
+  /** 초과 면적 × 100 — 기준면적(바닥면적 × 배율)을 넘는 부분, §101① 단서면 전체 */
+  excessArea100: number;
+  /** 적용 배율(§101②). 단서 해당 시 0 */
+  multiplier: number;
+  transferPrice: { land: number; building: number };
+  /** 취득가액(환산취득가액 포함, §97③ 감가상각 공제 전) */
+  acquisitionCost: { land: number; building: number };
+  /** 필요경비(개산공제 또는 자본적지출·양도비) */
+  expenses: { land: number; building: number };
+  landGain: number;
+  /** 건물분 = 자산 양도차익 − 토지분(§97③ 감가상각비 공제 반영) */
+  buildingGain: number;
+  totalGain: number;
+  /** 토지분 중 초과 면적 몫 = 비사업용 파트 양도차익 */
+  nonBusinessGain: number;
+  /** 토지분 중 기준면적 이내 몫(사업용) */
+  businessLandGain: number;
+  /** 비사업용 파트가 소득을 가지는가 — 토지분 양도차손·자산 양도차손익 0 이하면 false */
+  applied: boolean;
+  /** 엔진이 입력에 주입한 값 — 다건 재계산이 단건과 같은 값을 쓰도록 싣는다 */
+  injected: {
+    isNonBusinessLand: boolean;
+    nonBusinessLandAreaRatio?: number;
+    nonBusinessLandPartShare?: IntegerFraction;
+  };
 }
