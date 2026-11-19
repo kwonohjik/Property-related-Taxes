@@ -4,10 +4,11 @@
  * KoreanLaw 본문 검증(2026-06-16, mst=286211 §168조의14① · mst=286379 §83조의5①):
  * - §168조의14① 1~3호: event_window(사유 존속 기간 입력)
  * - §83조의5① 1·2·3·7·12호: event_window / 4호: 착공일~제공종료일 / 5호: 취득일+2년 ∪ 착공진행
- *   6·8·10·11호: 기산일+2년 / 9호: 멸실일+5년
+ *   6·8·10·11호: 기산일+2년 / 9호: 멸실일+5년(양도일 2025.3.21. 전은 2년 — `demolitionGraceYears`)
  * - 단서: 부동산매매업 매매용부동산은 1·2호(건축허가·착공 제한) 배제.
  */
 import { addYears } from "../utc-date";
+import { demolitionGraceYears } from "../data/nbl-historical-values-era";
 import type { DateInterval, GraceReasonCode } from "./types";
 
 export type GraceLengthKind =
@@ -43,6 +44,7 @@ export const GRACE_REASON_SPECS: Record<GraceReasonCode, GraceReasonSpec> = {
   mortgage_or_liquidation: { code: "mortgage_or_liquidation", lengthKind: "fixed_from_anchor", fixedYears: 2, anchorFromAcquisition: true, excludedForDealer: false, label: "저당권 실행·청산 분배 (6호)", legalBasis: "소득세법 시행규칙 §83의5①6호" },
   ownership_litigation:  { code: "ownership_litigation", lengthKind: "event_window", excludedForDealer: false, label: "소유권 소송 계속 (7호)", legalBasis: "소득세법 시행규칙 §83의5①7호" },
   urban_dev_buildable:   { code: "urban_dev_buildable", lengthKind: "fixed_from_anchor", fixedYears: 2, excludedForDealer: false, label: "도시개발 환지 건축가능 (8호)", legalBasis: "소득세법 시행규칙 §83의5①8호" },
+  // 9호 연수는 양도일 연혁이 있다(2025.3.21. 전 2년 · 이후 5년) — `resolveGraceIntervals`가 `demolitionGraceYears`로 정한다(NBL2611-V3-PR05). `fixedYears`는 현행값.
   demolition:            { code: "demolition", lengthKind: "fixed_from_anchor", fixedYears: 5, excludedForDealer: false, label: "건축물 멸실·철거·붕괴 (9호)", legalBasis: "소득세법 시행규칙 §83의5①9호" },
   business_closure_relocation: { code: "business_closure_relocation", lengthKind: "fixed_from_anchor", fixedYears: 2, excludedForDealer: false, label: "휴·폐업·이전 (10호)", legalBasis: "소득세법 시행규칙 §83의5①10호" },
   natural_disaster_wasteland: { code: "natural_disaster_wasteland", lengthKind: "fixed_from_anchor", fixedYears: 2, excludedForDealer: false, label: "천재지변 황지화 (11호)", legalBasis: "소득세법 시행규칙 §83의5①11호" },
@@ -75,7 +77,8 @@ export function resolveGraceIntervals(
     case "fixed_from_anchor": {
       const anchor = spec.anchorFromAcquisition ? ctx.acquisitionDate : anchorDate;
       if (!anchor || spec.fixedYears === undefined) return [];
-      return [{ start: anchor, end: addYears(anchor, spec.fixedYears) }];
+      const years = reasonCode === "demolition" ? demolitionGraceYears(ctx.transferDate) : spec.fixedYears;
+      return [{ start: anchor, end: addYears(anchor, years) }];
     }
     case "event_window":
     case "anchor_to_input_end": {

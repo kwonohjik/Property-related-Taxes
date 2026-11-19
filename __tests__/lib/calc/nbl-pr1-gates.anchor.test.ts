@@ -300,7 +300,7 @@ describe("[c5] 편입일·정착면적 차단 (V5-b·E1-03)", () => {
 // ────────────────────────────────────────────────────────────────────────
 describe("[c6] 무조건 의제 어댑터가 서버 매퍼와 같은 소스를 읽는다 (E5-02·A3-02·A1-03)", () => {
   it("A3-02: 이월과세 증여자 취득일(carryover 중첩)로 §168의14③3호나목 의제가 성립한다", () => {
-    // 고시일 2019-01-01, 증여자 취득일 2010-01-01 → 5년 이전 취득 → 나목 성립.
+    // 고시일 2022-01-01(5년 구간 — 2021.5.4. 이후 고시), 증여자 취득일 2010-01-01 → 5년 이전 취득 → 나목 성립.
     // 평면 donorAcquisitionDate는 비어 있고 carryover에만 있다(정상 경로).
     const asset = landAsset({
       acquisitionCause: "carryover_gift",
@@ -313,7 +313,7 @@ describe("[c6] 무조건 의제 어댑터가 서버 매퍼와 같은 소스를 �
         donorCapitalExpenditure: "0",
       },
       nblExemptPublicExpropriation: true,
-      nblExemptPublicNoticeDate: "2019-01-01",
+      nblExemptPublicNoticeDate: "2022-01-01",
     } as Partial<AssetForm>);
     expect(evaluateUnconditionalExemption(asset, TRANSFER).isExempt).toBe(true);
   });
@@ -344,13 +344,13 @@ describe("[c6] 무조건 의제 어댑터가 서버 매퍼와 같은 소스를 �
       acquisitionDate: "2018-06-01",
       carryover: {
         giftRegistryDate: "2018-06-01",
-        donorAcquisitionDate: "2017-01-01", // 고시일 5년 이내 취득 → 나목 불성립
+        donorAcquisitionDate: "2018-01-01", // 고시일(2022-01-01) 5년 이내 취득 → 나목 불성립
         donorAcquisitionPrice: "100,000,000",
         giftTaxAmount: "10,000,000",
         donorCapitalExpenditure: "0",
       },
       nblExemptPublicExpropriation: true,
-      nblExemptPublicNoticeDate: "2019-01-01",
+      nblExemptPublicNoticeDate: "2022-01-01",
     } as Partial<AssetForm>);
     expect(evaluateUnconditionalExemption(asset, TRANSFER).isExempt).toBe(false);
   });

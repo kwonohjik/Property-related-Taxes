@@ -10,6 +10,10 @@
  * 증여한 배우자 또는 직계존비속이 해당 자산을 취득한 날»). 국세청 해석(서면4팀-2622 · 부동산거래관리과-1112·-258 · 부동산납세과-539)이 일관되게
  * 증여자 취득일이라 한다 — 사용자 결정으로 따른다(확인 필요). 장기보유특별공제·세율의 보유기간과 와이어 `acquisitionDate`(등기접수일 · L21)는 그대로다.
  *
+ * ⚠️ NBL2611-R23(Q-11, 2026-11-19): 증여자 취득일 기산은 이월과세가 **적용되는**(시나리오 A 채택) 경우에만이다. 종전 이 파일의 셀은 증여 당시 평가액을 증여자 취득가와 같게(1억) 둬
+ *   ②3호 세액 비교로 **B가 채택**되는데도 증여자 취득일 기산을 단언했다(결함을 고정). 증여 당시 평가액을 9억으로 올려 A가 채택되게 했고 합계 수치를 A 기준으로 다시 재었다
+ *   (수정 전후 A 셀 값은 같다 — 배제 셀의 수증일 기산은 `transfer.route.nbl2611-a4-pr01-and-r23.anchor.test.ts`).
+ *
  * 모든 셀에서 ⑧(`collectStepIssues`)과 route(⑫·세액)를 같이 단언한다. 세율: route 폴백(`makeMockRates`).
  * 수정 전 값(같은 격자, patch 역적용 실측)은 각 셀 주석의 «전».
  */
@@ -51,7 +55,7 @@ const RURAL = {
 } as Partial<AssetForm>;
 const CAR = (g: string, d: string) => ({
   giftRegistryDate: g, donorAcquisitionDate: d, donorAcquisitionCause: "purchase", donorAcquisitionPrice: "100000000", useEstimatedAcquisition: false,
-  estimationMode: "", giftTaxAmount: "0", donorCapitalExpenditure: "0", giftDateValuation: "100000000", exclusionDeclared: {}, donorRelation: "spouse",
+  estimationMode: "", giftTaxAmount: "0", donorCapitalExpenditure: "0", giftDateValuation: "900000000", exclusionDeclared: {}, donorRelation: "spouse",
 }) as unknown as AssetForm["carryover"];
 const farm = (s: string, e: string) =>
   ({ nblFarmingSelf: true, nblFarmerResidenceDistance: "5", nblBusinessUsePeriods: [{ startDate: s, endDate: e, usageType: "farming" }] }) as Partial<AssetForm>;
@@ -136,17 +140,14 @@ function shareForm(d: string, residue: string, periods: Partial<AssetForm>): Tra
   return f;
 }
 
-// 수정 전 값 — 같은 격자를 patch 역적용(`git apply -R`)해 실측. 잔재 "" 는 정밀판정 요청이 빠져 판정 상세가 없다(nbl undefined) · 총세액은 표지 true 중과.
-//   주 자산  ge5 사업용: 전 473,836,000(잔재 "" 판정 없음 / 2015 비사업용 / 2023·G 비사업용 3호) → 후 375,111,000 · 판정 사업용 (잔재 무관)
-//   주 자산  lt5 사업용: 전 473,836,000("" · 2023) / 375,111,000(2015 · G) → 후 375,111,000 전 셀
-//   주 자산  비사업용 : 전·후 473,836,000 (세액 동일 — 잔재 ""는 표지 true였고, 이제 판정 상세가 생긴다 · 소유기간 호는 전 3호/1호 → 후 1호/2호)
-//   컴패니언 ge5 사업용: 전 340,417,000 → 후 326,139,000 · lt5 사업용: 전 350,977,000("" · 2023) / 337,227,000(2015 · G) → 후 337,227,000
-const MAIN_TOTAL = { USE: 375_111_000, NON: 473_836_000 } as const;
+// L22 수정 전 값(잔재 "" 는 정밀판정 요청이 빠져 판정 상세가 없었다 · 총세액은 표지 true 중과)은 2026-11-08 PR에 있다. 아래는 R23(2026-11-19) 이후 A 채택 셀의 합계 —
+//   수정 전(buildInputB가 증여자 취득일 NBL 입력을 그대로 둠)과 같은 값이다(A 셀은 B 입력을 읽지 않는다 — 양쪽 상태에서 47건 통과를 실측).
+const MAIN_TOTAL = { ge5: { USE: 316_899_000, NON: 401_764_000 }, lt5: { USE: 341_847_000, NON: 432_652_000 } } as const;
 const PURCHASE_CONTROL = {
   ge5: { USE: [197_703_000, false], NON: [254_188_000, true] },
   lt5: { USE: [214_335_000, false], NON: [274_780_000, true] },
 } as const;
-const SHARE_TOTAL = { ge5: { USE: 326_139_000, NON: 413_204_000 }, lt5: { USE: 337_227_000, NON: 426_932_000 } } as const;
+const SHARE_TOTAL = { ge5: { USE: 297_033_000, NON: 377_168_000 }, lt5: { USE: 320_595_000, NON: 406_340_000 } } as const;
 
 for (const bucket of ["ge5", "lt5"] as const) {
   for (const use of ["USE", "NON"] as const) {
@@ -162,7 +163,7 @@ for (const bucket of ["ge5", "lt5"] as const) {
           expect(r.rawAcq).toBe(D[bucket]);
           expect(r.wireAcq).toBe(G);
           expect(r.nbl).toEqual([verdict]);
-          expect(r.total).toBe(MAIN_TOTAL[use]);
+          expect(r.total).toBe(MAIN_TOTAL[bucket][use]);
           expect(r.steps).toContain(bucket === "ge5" ? "1호(소유 5년 이상)" : "2호(소유 3~5년)");
           // 결과 고지 — 증여자 취득일 기산 + 해석례 + 확인 필요
           const notice = r.warnings.filter((w) => w.includes("이월과세"));
@@ -191,16 +192,16 @@ for (const bucket of ["ge5", "lt5"] as const) {
 describe("소유기간 5년 경계(1825일 vs 1824일)는 증여자 취득일로 센다 — 잔재·등기접수일이 호를 정하지 않는다", () => {
   // 양도일 2024-06-03 − 1825일 = 2019-06-05(기산일) → 취득일은 그 전날
   it.each([
-    ["2019-06-04", "1호(소유 5년 이상)"],
-    ["2019-06-05", "2호(소유 3~5년)"],
-  ] as const)("증여자 취득일 %s → %s", async (donor, bucketText) => {
+    ["2019-06-04", "1호(소유 5년 이상)", 333_531_000],
+    ["2019-06-05", "2호(소유 3~5년)", 341_847_000],
+  ] as const)("증여자 취득일 %s → %s", async (donor, bucketText, expectedTotal) => {
     for (const residue of ["", "2023-06-01", G]) {
       const r = await run(carryoverMain(donor, residue, farm(addOneDay(donor), "2023-09-01")));
       expect(r.issues).toEqual([]);
       expect(r.steps).toContain(bucketText);
       expect(r.rawAcq).toBe(donor);
       expect(r.nbl).toEqual([false]);
-      expect(r.total).toBe(MAIN_TOTAL.USE);
+      expect(r.total).toBe(expectedTotal);
     }
   });
 });

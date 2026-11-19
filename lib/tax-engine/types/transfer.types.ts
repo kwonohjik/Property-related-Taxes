@@ -1183,6 +1183,13 @@ export interface TransferTaxInput {
    * 미제공 시 isNonBusinessLand 플래그 그대로 사용 (하위 호환).
    */
   nonBusinessLandDetails?: NonBusinessLandInput;
+  /**
+   * [엔진 내부 · NBL2611-R23] 배우자등 이월과세(§97의2) 자산(`acquisitionCause === "carryover_gift"`)의 `nonBusinessLandDetails`는
+   * **이월과세가 적용되는 시나리오 A 기준**이다(소유기간 기산 = 증여자 취득일 — 영 §168의14③3호 괄호 「법 제97조의2제1항을 적용받는 경우에는」).
+   * 이월과세가 배제돼 시나리오 B(수증자 기준)가 채택·비교되면 같은 raw를 **수증일 기준 일반 증여**로 다시 매핑한 이 입력을 쓴다 — `buildInputB`만 읽는다.
+   * ⑭ route 매핑이 raw에서 만든다(`buildNblEngineInputGiftBasis`). 공개 입력이 아니다 — Zod(⑫)에 열지 않는다.
+   */
+  nonBusinessLandDetailsIfCarryoverExcluded?: NonBusinessLandInput;
 
   // ── 사례 35: 주택 → 상가 용도변경 LTHD 기산일 분기 ──
   // 근거: 사전법규재산 2022-684·881, 서울행법 2012구단26961 (다주택 용도변경 시 변경일 전 보유기간 LTHD 배제)
