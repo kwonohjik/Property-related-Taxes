@@ -30,6 +30,7 @@ export {
 } from "./transfer-tax-building-schemas";
 export type { GeneralBuildingValuationSchemaInput } from "./transfer-tax-building-schemas";
 import { addCompanionAcquisitionCauseRefines } from "./transfer-tax-schema-companion-refines";
+import { refineAppurtenantCardsZone } from "./transfer-tax-schema-companion-refines";
 import { refineSelfBuiltHousing, isSeparatedLike } from "./transfer-tax-schema-self-built-housing";
 import { refineUnregisteredSelfFarming } from "./transfer-tax-schema-refines";
 import { refineCompanionGbUnregisteredAxis } from "./transfer-tax-schema-refines";
@@ -262,6 +263,8 @@ export const propertySchema = z
         });
       }
     });
+    // NBL2611-V4-HS02 — 부수토지 카드 합계가 정착면적 × 3을 넘는데 소재지 구분이 없으면 거부(⑧ `appurtenantCardsZoneError`와 같은 술어)
+    refineAppurtenantCardsZone(data, companions, ctx);
     if (companions.length > 0) {
       // 총 양도가액 필수
       if (data.totalSalePrice === undefined || data.totalSalePrice <= 0) {

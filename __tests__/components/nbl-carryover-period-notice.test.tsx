@@ -23,6 +23,9 @@ describe("CarryoverOwnershipPeriodNotice", () => {
     expect(text).not.toContain("2005-01-01"); // 원시 취득일 잔재는 보이지 않는다
     expect(text).toContain("부동산납세과-539");
     expect(text).toContain("확인이 필요합니다");
+    // R23(Q-11) — 증여자 취득일 기산은 이월과세가 적용될 때만. 배제 시 수증일 기준 고지
+    expect(screen.getByTestId("nbl-carryover-excluded-basis-notice").textContent).toContain("이월과세가 배제되면 수증일 기준");
+    expect(text).toContain("세액 비교");
   });
   it("이월과세 · 증여자 취득일 비움 → 입력 안내", () => {
     render(<CarryoverOwnershipPeriodNotice asset={asset({ acquisitionCause: "carryover_gift", carryover: carryover("") })} />);

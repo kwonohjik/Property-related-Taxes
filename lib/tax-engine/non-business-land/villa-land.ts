@@ -18,6 +18,7 @@ import type {
 } from "./types";
 import { getPeriodJudgmentDate, meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
 import { getOwnershipStart, invertPeriods } from "./utils/period-math";
+import { VILLA_REGION_LIST_EVOLVED_NOTICE, villaRuralValueLimit } from "../data/nbl-historical-values-era";
 
 export function judgeVillaLand(
   input: NonBusinessLandInput,
@@ -101,9 +102,10 @@ export function judgeVillaLand(
 
   // ── Step 3-1-1: 읍·면 농어촌주택 (영 §168의13 1~3호 3요건 AND — 항 없음, NBL2611-V8-VL07) ───────────
   if (v.isEupMyeon && v.isRuralHousing) {
+    warnings.push(VILLA_REGION_LIST_EVOLVED_NOTICE); // 제외지역 열거 연혁 고지(세액 불변) — NBL2611-V8-VL01
     const RURAL_FLOOR_MAX = 150; // 영 §168의13 1호 건물 연면적(㎡)
     const RURAL_LAND_MAX = 660; // 영 §168의13 1호 건물 부속토지면적(㎡)
-    const RURAL_VALUE_MAX = 200_000_000; // 영 §168의13 2호 건물+부속토지 합산 기준시가(원) — 2015.2.3. 전 양도분 한도는 연혁(A4 소관 R03)
+    const RURAL_VALUE_MAX = villaRuralValueLimit(input.transferDate); // 영 §168의13 2호 건물+부속토지 합산 기준시가(원) — 양도일 2015.2.3. 전 1억·이후 2억(NBL2611-V8-VL01)
     const floorOk = v.buildingFloorArea !== undefined && v.buildingFloorArea <= RURAL_FLOOR_MAX;
     const landOk = v.attachedLandArea !== undefined && v.attachedLandArea <= RURAL_LAND_MAX;
     const valueOk = v.combinedStdValue !== undefined && v.combinedStdValue <= RURAL_VALUE_MAX;
@@ -112,7 +114,7 @@ export function judgeVillaLand(
     const reqDetail =
       `연면적 ${v.buildingFloorArea ?? "미입력"}㎡(≤150 ${floorOk ? "✓" : "✗"})·` +
       `부속토지 ${v.attachedLandArea ?? "미입력"}㎡(≤660 ${landOk ? "✓" : "✗"})·` +
-      `건물+부속토지 기준시가 ${v.combinedStdValue ?? "미입력"}원(≤2억 ${valueOk ? "✓" : "✗"})·` +
+      `건물+부속토지 기준시가 ${v.combinedStdValue ?? "미입력"}원(≤${RURAL_VALUE_MAX / 100_000_000}억 ${valueOk ? "✓" : "✗"})·` +
       `「조세특례제한법」 §99의4①1호가목 제외지역 ${v.isInRestrictedArea ? "해당(✗)" : "아님(✓)"}`;
 
     if (reqMet) {
@@ -160,7 +162,7 @@ export function judgeVillaLand(
     label: "Step 3-1-1 읍·면 농어촌주택",
     status: v.isEupMyeon ? "FAIL" : "NOT_APPLICABLE",
     detail: v.isEupMyeon
-      ? "읍·면 소재이나 농어촌주택 요건(건 150㎡·토 660㎡·2억 이하) 미충족"
+      ? `읍·면 소재이나 농어촌주택 요건(건 150㎡·토 660㎡·${villaRuralValueLimit(input.transferDate) / 100_000_000}억 이하) 미충족`
       : "읍·면 소재 아님",
     legalBasis: NBL.VILLA,
   });

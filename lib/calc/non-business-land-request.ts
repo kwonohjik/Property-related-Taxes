@@ -57,6 +57,35 @@ export function buildNblEngineInput(
 }
 
 /**
+ * 이월과세(`carryover_gift`) 자산의 **이월과세 배제 시(시나리오 B) 비사업용 토지 입력** — NBL2611-R23 · Q-11.
+ *
+ * 영 §168의14③3호 괄호는 「법 제97조의2제1항을 적용받는 경우에는 증여한 배우자 또는 직계존비속이 해당 자산을 취득한 날」이다 —
+ * 배제(②1호 수용 2년 이전 증여 선언 · ②3호 세액 비교로 B 채택 · ③ 기간 경과)되면 기산일은 수증일(등기접수일)이다.
+ * 같은 raw를 **일반 증여·수증일 취득**으로 다시 매핑한다 — 취득일에서 파생되는 값(준비기간 2년·수입금액비율 영위일수·종중 취득일)이 함께 바뀌어야 해서
+ * 엔진이 입력 하나의 날짜만 갈아 끼우는 방식은 쓰지 않는다. 이월과세가 아니거나 수증일이 없으면 undefined.
+ */
+export function buildNblEngineInputGiftBasis(
+  raw: NonBusinessLandRaw | undefined,
+  giftRegistryDate: string | Date | undefined,
+): NonBusinessLandInput | undefined {
+  if (!raw || giftRegistryDate === undefined || giftRegistryDate === "") return undefined;
+  const flat = raw as Record<string, unknown>;
+  if (flat.acquisitionCause !== "carryover_gift") return undefined;
+  const gift = toDate(giftRegistryDate, "carryoverTaxation.giftRegistryDate");
+  return (
+    mapAssetToNblInput(
+      { ...flat, acquisitionCause: "gift", donorAcquisitionDate: "" },
+      {
+        acquisitionDate: gift,
+        transferDate: toDate(raw.transferDate, "nonBusinessLandRaw.transferDate"),
+        parseDate: toOptionalDate,
+        parseNumber: parseRawNumber,
+      },
+    ) ?? undefined
+  );
+}
+
+/**
  * 도시지역 편입일 단일 소스 — ④ raw 빌더와 ⑧ validate가 **같은 값**을 보게 한다.
  *
  * 두 규칙이 겹쳐 있어 어느 한쪽에서 재구현하면 조용히 어긋난다:

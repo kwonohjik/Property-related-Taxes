@@ -10,6 +10,7 @@ import type { MergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { NblSectionContainer } from "../nbl/NblSectionContainer";
 import { NblDesignatedAreaQuestion } from "../nbl/NblDesignatedAreaQuestion";
+import { NblScreeningToggle } from "../nbl/NblScreeningToggle";
 import { RentalHousingExceptionSection } from "../RentalHousingExceptionSection";
 import { RENTAL_HOUSING_EXCEPTION_DEFAULTS } from "@/lib/stores/calc-wizard-asset-factory";
 import { canDeclareRentalHousingException } from "@/lib/calc/rental-housing-exception-scope";
@@ -54,23 +55,25 @@ export function AssetSectionExtras({ asset, assetIndex, judgmentLoaded, onChange
   return (
     <>
       {/*
-        비사업용 토지 정밀 판정.
+        비사업용 토지 표지·정밀 판정.
 
-        🔴 **`nblUseDetailedJudgment`를 게이트에 넣지 말 것** (2026-09-07 재검증 H7).
-           `NblSectionContainer`는 그 플래그가 false일 때 **「+ 상세 판정 시작」 복귀 버튼**을
-           렌더한다. 게이트에 플래그를 걸면 그 분기가 도달 불가가 되어, 컨테이너 안의 「접기」를
-           누르는 순간 **되돌릴 수단이 함께 사라진다**.
+        NBL2611-R21 — **함께 양도 토지 카드(자산 2 이후)는 주 자산과 같은 「비사업용 토지 여부 검토」 토글을 갖는다**(Q-9 (가) · `NblScreeningToggle`).
+           종전에는 이 카드에 토글이 없어 공익수용 프리필이 켠 표지를 끌 수 없었다. 정밀판정을 접으면(`nblUseDetailedJudgment` false) ④가 raw를 안 보내
+           서버는 표지만 보고 카드 전량에 +10%p를 붙이는데, 표지를 끌 수단이 없어 비가역이었다. 이제 토글 해제가 표지와 정밀판정을 함께 끈다.
+           주 자산(자산 1)은 Step4 `SpecialSituationSection`이 같은 컴포넌트를 쓰므로 여기서는 그리지 않는다.
 
-           주 자산은 `SpecialSituationSection`에 별도 복귀 라디오(「판정 도움/판정 완료」)가 있어
-           복구되지만, 컴패니언 카드에는 그것이 없어 **비가역**이었다. 그 상태에서
-           `isNonBusinessLand`는 true로 남으므로 ④는 상세 페이로드를 안 보내고 엔진은
-           지목·재촌·유예기간 판정 없이 §104①8호 +10%p만 확정한다 — 조용한 모드 강등이다.
+        🔴 **컴패니언의 정밀판정 입력(`NblSectionContainer`)은 라디오가 「판정 도움 필요」일 때만 그린다.** 토글 아래 라디오가 복귀 수단이라
+           컨테이너 안의 「+ 상세 판정 시작」 복귀 버튼은 중복이다. 자산 1은 종전 그대로(표지만 보고 그린다 — 복귀 라디오는 Step4에 있다).
       */}
-      {asset.assetKind === "land" && asset.isNonBusinessLand && (
+      {/* 주택 부수토지(`landNature: "appurtenant"`)는 한도 초과분이 엔진에서 자동으로 비사업용 토지 카드가 된다 — 토글을 새로 켜게 하지 않는다(이미 켜져 있으면 끌 수 있게 둔다). */}
+      {asset.assetKind === "land" && assetIndex > 0 && (asset.landNature !== "appurtenant" || asset.isNonBusinessLand) && (
+        <NblScreeningToggle asset={asset} onChange={onChange} transferDate={transferDate} idSuffix={`companion-${assetIndex}`} />
+      )}
+      {asset.assetKind === "land" && asset.isNonBusinessLand && (assetIndex === 0 || asset.nblUseDetailedJudgment) && (
         <NblSectionContainer asset={asset} onAssetChange={onChange} transferDate={transferDate} />
       )}
-      {/* 양도일 2009.3.16.~2015.12.31.의 비사업용 토지 — 8호 중과 유예 요건(지정지역 여부). 그 기간에만 뜬다. */}
-      {asset.assetKind === "land" && asset.isNonBusinessLand && (
+      {/* 양도일 2009.3.16.~2015.12.31.의 비사업용 토지 — 8호 중과 유예 요건(지정지역 여부). 그 기간에만 뜬다. 컴패니언은 위 토글 안에 같은 질문이 있다. */}
+      {asset.assetKind === "land" && asset.isNonBusinessLand && assetIndex === 0 && (
         <NblDesignatedAreaQuestion
           transferDate={transferDate}
           value={asset.isDesignatedArea}

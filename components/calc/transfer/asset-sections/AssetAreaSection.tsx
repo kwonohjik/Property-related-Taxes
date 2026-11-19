@@ -525,7 +525,7 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsse
                 options={APPURTENANT_ZONE_OPTIONS}
               />
               <p className="text-caption text-muted-foreground">
-                미선택 시 배율 한도 검증을 하지 않습니다 — 토지 면적이 정착면적의 3배를 넘으면 필수입니다.
+                주택 카드 토지(본인 소유일 때)와 함께 양도하는 부수토지 카드 면적의 합이 정착면적의 3배를 넘으면 반드시 선택해야 합니다 — 선택하지 않으면 계산이 막힙니다. 3배 이하이면 선택하지 않아도 한도 초과분이 생기지 않습니다.
               </p>
               <p className="text-caption text-muted-foreground">
                 공익사업 수용 양도(양도일 2025-11-28 이후)는 사업인정 고시일 전에 취득한 토지에 한해 사업인정 고시일 전날 현재의 용도지역으로

@@ -541,6 +541,8 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
       "보호구역으로 지정된 기간",
       "최초의 경매기일",
       "최초의 공매일",
+      // NBL2611-V3-PR01 — ③3호나목 현행(고시일 2021.5.4. 이후 5년). 2년 구간은 과거 시행본이라 현행 본문 검증 대상이 아니다(연혁 leaf 머리 표가 시행본 원문 근거).
+      "사업인정고시일부터 5년 이전인 토지",
     ],
     keywordMode: "ALL",
   },
@@ -668,6 +670,8 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
       "건축허가가 제한된 기간",
       "착공이 제한된 기간",
       "공공공지",
+      // NBL2611-V3-PR05 — ①9호 현행(양도일 2025.3.21. 이후 5년). 2년은 그 전 시행본.
+      "멸실ㆍ철거되거나 무너진 날부터 5년",
     ],
     keywordMode: "ALL",
   },

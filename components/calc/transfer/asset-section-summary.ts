@@ -27,7 +27,7 @@ export interface AssetSummary {
   transfer: SectionSummary;
   acquisition: SectionSummary;
   expense: SectionSummary;
-  /** ⑤ 기타 특례 — land+NBL정밀 / housing·입주권에서만 non-null (그 외 섹션 미렌더) */
+  /** ⑤ 기타 특례 — land+NBL정밀 · 함께 양도 토지 카드(토글) / housing·입주권에서만 non-null (그 외 섹션 미렌더) */
   extras: SectionSummary | null;
 }
 
@@ -159,6 +159,10 @@ export function summarizeAssetSections(
     (canDeclareRentalHousingException(asset.assetKind, ctx.assetIndex ?? 0) || asset.rentalHousingException?.applyException === true);
   if (nblDetailed) {
     extras = { label: asset.nblUseDetailedJudgment ? "비사업용 토지 정밀판정" : "비사업용 토지", filled: true };
+  } else if (asset.assetKind === "land" && (ctx.assetIndex ?? 0) > 0 && ctx.isFractionalSplit !== true) {
+    // NBL2611-R21 — 함께 양도 토지 카드는 표지가 꺼져 있어도 ⑤가 열려 「비사업용 토지 여부 검토」 토글이 보인다(`AssetSectionExtras`). 자산 1의 토글은 Step4에 있다.
+    //   지분 분할(축 B) 카드는 땅 사실을 첫 카드에서 승계하므로(`mergePrimaryBasic` — 표지 포함) 토글이 없다.
+    extras = { label: asset.landNature === "appurtenant" ? "부수토지 한도 초과분" : "비사업용 토지 검토 안 함", filled: false };
   } else if (isRentalEligible) {
     extras = {
       label: "장기임대 거주주택 특례",

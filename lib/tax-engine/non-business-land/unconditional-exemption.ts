@@ -9,6 +9,7 @@
  */
 
 import { addYears } from "../utc-date";
+import { publicNoticeLookback } from "../data/nbl-historical-values-era";
 import type {
   LandCategoryGroup,
   NonBusinessLandInput,
@@ -84,8 +85,8 @@ export function checkUnconditionalExemption(
   }
 
   // ③3호: 공익사업법 협의매수·수용
-  //   - 사업인정고시일 2006.12.31 이전
-  //   - 취득일이 사업인정고시일부터 5년 이전
+  //   - 사업인정고시일 2006.12.31 이전 (가목)
+  //   - 취득일이 사업인정고시일부터 N년 이전 — N은 양도일·고시일 연혁(NBL2611-V3-PR01): 양도 2014.2.21. 전 5 · 그 뒤 고시 2021.5.4. 전 2 · 고시 2021.5.4. 이후 5
   if (u.isPublicExpropriation && u.publicNoticeDate) {
     const isBefore2007 = u.publicNoticeDate <= INHERITANCE_CUTOFF;
     if (isBefore2007) {
@@ -96,17 +97,18 @@ export function checkUnconditionalExemption(
         legalBasis: NBL.UNCONDITIONAL_PUBLIC_NOTICE_2006,
       };
     }
-    // 5년 전 취득 기준 (2021 개정 현행 단일 기준)
-    // 취득일 소급(시행령 §168의14③3호나목 괄호): 상속=피상속인 취득일 / §97의2① 이월과세=증여자 취득일.
-    // 미제공 시 양수인 취득일(input.acquisitionDate=상속개시일/증여일) fallback.
+    // 취득일 소급(시행령 §168의14③3호 괄호): 상속=피상속인 취득일 / §97의2① 이월과세 **적용 시**=증여자 취득일.
+    // 매퍼는 이월과세 증여 자산(시나리오 A 기준)에 증여자 취득일을 싣고, 이월과세가 배제돼 B(수증일 기준)가 채택되면 buildInputB가
+    // 일반 증여로 다시 매핑한 입력(`expropriationAcquisitionDate` 없음)을 쓴다 — NBL2611-R23. 미제공 시 양수인 취득일(input.acquisitionDate) fallback.
     const acqDateForExpropriation = u.expropriationAcquisitionDate ?? input.acquisitionDate;
-    const boundary5y = addYears(u.publicNoticeDate, -5);
-    if (acqDateForExpropriation <= boundary5y) {
+    const lookback = publicNoticeLookback(transferDate, u.publicNoticeDate);
+    const boundary = addYears(u.publicNoticeDate, -lookback.years);
+    if (acqDateForExpropriation <= boundary) {
       return {
         isExempt: true,
         reason: "public_expropriation",
-        detail: `공익사업 협의매수·수용 — 고시일 ${u.publicNoticeDate.toISOString().slice(0, 10)} 5년 이전 취득 (취득일 ${acqDateForExpropriation.toISOString().slice(0, 10)})`,
-        legalBasis: NBL.UNCONDITIONAL_PUBLIC_ACQ_5Y,
+        detail: `공익사업 협의매수·수용 — 고시일 ${u.publicNoticeDate.toISOString().slice(0, 10)} ${lookback.years}년 이전 취득 (취득일 ${acqDateForExpropriation.toISOString().slice(0, 10)})`,
+        legalBasis: lookback.legalBasis,
       };
     }
   }
