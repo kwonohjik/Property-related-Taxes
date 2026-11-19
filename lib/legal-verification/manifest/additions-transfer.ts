@@ -19,6 +19,17 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
   },
   // ── 소득세법 ──────────────────────────────────────────────────────
   {
+    /** NBL2611-B2 — 법 §104의3①4호 가·나목(재산세 비과세·면제 / 별도합산·분리과세 제외, `NBL.OTHER_LAND_PROPERTY_TAX_EXCLUSION`)과 ①6호 후단(별장 부속토지 경계 불명확 시 바닥면적 10배, 고지 `NBL_VILLA_LAND_SCOPE_NOTICE`) · KoreanLaw 현행 MST 280405 실측(2026-11-20). */
+    id: "TRANSFER.NBL_OTHER_LAND_VILLA_SCOPE",
+    citation: "소득세법 §104조의3",
+    keywords: [
+      "재산세가 비과세되거나 면제되는 토지",
+      "재산세 별도합산과세대상 또는 분리과세대상이 되는 토지",
+      "경계가 명확하지 아니한 경우에는 그 건축물 바닥면적의 10배에 해당하는 토지를 부속토지로 본다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER.DIVIDEND_INCOME",
     citation: "소득세법 §17",
     keywords: ["배당소득", "의제배당", "잉여금의 배당 또는 분배금", "수익분배의 성격"],

@@ -72,11 +72,12 @@ describe("NBL2611-V10-P 기간 분석 — 판정하지 않은 기간을 사업�
     expect(queryByTestId("nbl-period-skipped-notice")).not.toBeNull();
   });
 
-  it("비사업용 기타토지: 기간 값은 표시하되 «판정 근거 아님 — 확인 필요» 고지", () => {
+  it("기타토지(양도일 상태를 전 기간에 적용): 사업용 100% 표시값을 보이지 않고 사실을 밝힌다 (B2 — 엔진 echo 기반으로 A1 임시 고지를 대체)", () => {
     const j = judgeNonBusinessLand(otherLand("2024-06-01"), DEFAULT_NON_BUSINESS_LAND_RULES);
+    expect(j.periodEvaluation?.basis).toBe("state_at_transfer");
     const { container, queryByTestId } = render(<NonBusinessLandResultCard judgment={j} />);
-    expect(container.textContent).toContain("기간 분석");
-    expect(queryByTestId("nbl-period-not-judged-notice")).not.toBeNull();
+    expect(container.textContent).not.toContain("사업용 사용일수");
+    expect(queryByTestId("nbl-period-state-at-transfer-notice")).not.toBeNull();
   });
 
   it("농지(기간기준 판정 지목)는 기간 분석을 그대로 보여 주고 고지를 달지 않는다", () => {
@@ -96,6 +97,6 @@ describe("NBL2611-V10-P 기간 분석 — 판정하지 않은 기간을 사업�
     const { container, queryByTestId } = render(<NonBusinessLandResultCard judgment={j} />);
     expect(container.textContent).toContain("기간 분석");
     expect(queryByTestId("nbl-period-skipped-notice")).toBeNull();
-    expect(queryByTestId("nbl-period-not-judged-notice")).toBeNull();
+    expect(queryByTestId("nbl-period-state-at-transfer-notice")).toBeNull();
   });
 });

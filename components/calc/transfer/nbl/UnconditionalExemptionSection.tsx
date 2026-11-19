@@ -11,6 +11,7 @@ import type {
   ToggleExemptionStatus,
 } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { jongjoongLegalBadge } from "@/lib/calc/nbl-unconditional-exemption-status";
+import { NBL_UNCONDITIONAL_RULE_4_UNSUPPORTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 
 export interface UnconditionalExemptionSectionProps {
   asset: AssetForm;
@@ -209,6 +210,13 @@ export function UnconditionalExemptionSection({
         </div>
         <ExemptionStatusBadge status={status.perToggle.inong} />
       </ToggleCard>
+
+      {/* NBL2611-V3-O — 규칙 §83의5④ 3~7호는 입력·판정을 지원하지 않는다(gap-2 의식적 보류). 결함은 «지원하지 않음» 고지가 없던 것이다. */}
+      <ToneCard tone="amber" title="지원하지 않는 사유 — 확인 필요">
+        <p className="text-caption leading-snug" data-testid="nbl-uncond-rule4-unsupported-notice">
+          {NBL_UNCONDITIONAL_RULE_4_UNSUPPORTED_NOTICE}
+        </p>
+      </ToneCard>
     </div>
   );
 }

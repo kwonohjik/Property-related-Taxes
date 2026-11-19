@@ -83,7 +83,7 @@ describe("F28 · 배율 게이트는 별도합산 축에만 걸린다", () => {
     expect(r.isBusiness).toBe(true); // 정정 전 false
     expect(r.steps.find((s) => s.id === "other_building_multiplier")).toBeUndefined();
     expect(r.areaProportioning).toBeUndefined();
-    expect(r.reason).toContain("special_sum");
+    expect(r.reason).toContain("분리과세"); // NBL2611-V10-K — enum 원문 대신 한국어 라벨
   });
 
   it("F28-3: 🛡️ 종합합산·비과세는 어느 방향으로도 게이트를 타지 않는다 (대조군)", () => {

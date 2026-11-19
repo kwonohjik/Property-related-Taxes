@@ -29,6 +29,8 @@ import {
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { nblAcquisitionDateOf } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
+import { NBL_PROPERTY_TAX_TYPE_MIXED_NOTICE, NBL_PROPERTY_TAX_TYPE_SOURCE_HINT } from "@/lib/tax-engine/nbl-confirm-notices";
 
 export interface OtherLandDetailSectionProps {
   asset: AssetForm;
@@ -225,27 +227,29 @@ export function OtherLandDetailSection({
         onCheckedChange={(c) => onAssetChange({ nblOtherHasBuilding: c })}
       />
 
-      <FieldCard field="nblOtherPropertyTaxType" label="재산세 과세 분류">
+      {/* NBL2611-V1-OL06 (Q-2 (가)) — 출처 안내 + 혼재 고지서 선택 안내. 판정 로직은 바꾸지 않는다. 라벨은 엔진과 같은 표다(V10-K). */}
+      <FieldCard field="nblOtherPropertyTaxType" label="재산세 과세 분류" hint={NBL_PROPERTY_TAX_TYPE_SOURCE_HINT}>
         <Select
           value={asset.nblOtherPropertyTaxType ?? ""}
           onValueChange={(v) => v && onAssetChange({ nblOtherPropertyTaxType: v as PropertyTaxType })}
         >
           <SelectTrigger>
             <SelectValue>
-              {asset.nblOtherPropertyTaxType === "comprehensive" ? "종합합산"
-                : asset.nblOtherPropertyTaxType === "separate" ? "별도합산"
-                : asset.nblOtherPropertyTaxType === "special_sum" ? "분리과세"
-                : asset.nblOtherPropertyTaxType === "exempt" ? "비과세·면제"
-                : "선택 안 함"}
+              {asset.nblOtherPropertyTaxType ? PROPERTY_TAX_TYPE_LABEL[asset.nblOtherPropertyTaxType] : "선택 안 함"}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="comprehensive">종합합산</SelectItem>
-            <SelectItem value="separate">별도합산</SelectItem>
-            <SelectItem value="special_sum">분리과세</SelectItem>
-            <SelectItem value="exempt">비과세·면제</SelectItem>
+            <SelectItem value="comprehensive">{PROPERTY_TAX_TYPE_LABEL.comprehensive}</SelectItem>
+            <SelectItem value="separate">{PROPERTY_TAX_TYPE_LABEL.separate}</SelectItem>
+            <SelectItem value="special_sum">{PROPERTY_TAX_TYPE_LABEL.special_sum}</SelectItem>
+            <SelectItem value="exempt">{PROPERTY_TAX_TYPE_LABEL.exempt}</SelectItem>
           </SelectContent>
         </Select>
+        <ToneCard tone="amber" className="mt-2">
+          <p className="text-caption leading-snug" data-testid="nbl-other-tax-type-mixed-notice">
+            {NBL_PROPERTY_TAX_TYPE_MIXED_NOTICE}
+          </p>
+        </ToneCard>
       </FieldCard>
 
       {asset.nblOtherHasBuilding && (

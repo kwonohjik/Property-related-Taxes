@@ -180,6 +180,8 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
       "용도지역별 적용배율",
       "전용주거지역",
       "부설주차장 설치기준면적 이내의 토지",
+      // NBL2611-B2 — ① 단서(`NBL.BUILDING_SITE_SEPARATE_AGG_PROVISO`): 재산세 분류 칸 혼재 고지서 안내가 기댄다.
+      "사용승인(임시사용승인을 포함한다)을 받지 아니하고 사용 중인 건축물의 부속토지는 제외한다",
     ],
     keywordMode: "ALL",
   },

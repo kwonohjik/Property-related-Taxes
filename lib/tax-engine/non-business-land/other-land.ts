@@ -24,9 +24,11 @@ import { getPeriodJudgmentDate, meetsPeriodCriteria, type PeriodCriteriaResult }
 import { getOwnershipStart } from "./utils/period-math";
 import { computeAreaProportioning } from "./utils/area-proportioning";
 import { computeContiguousParcelNblAttribution } from "./utils/contiguous-parcel-proportioning";
-import { computeRevenueTest } from "./revenue-test";
+import { computeRevenueTest, REVENUE_BUSINESS_TYPE_LABEL } from "./revenue-test";
 import { judgeFactoryLandExcess } from "./factory-land-standard-area";
 import { judgeAppurtenantLandExcess } from "../appurtenant-land-excess";
+import { NBL_STATE_AT_TRANSFER_APPLIED_NOTICE } from "../nbl-confirm-notices";
+import { propertyTaxTypeLabel } from "./property-tax-type-label";
 import {
   resolveAreaLimit,
   resolveAreaLegalBasis,
@@ -55,7 +57,25 @@ export function isBareLand(input: NonBusinessLandInput): boolean {
   return false;
 }
 
+/**
+ * NBL2611-V10-P · V2-C2 — 기타토지는 소유기간 중 사용기간을 입력으로 받지 않고 **양도일 현재 상태를 소유기간 전체(`fullPeriod`)에 적용**한다.
+ * 그래서 기간기준 일수·비율은 «전 기간 사업용»으로 채운 표시값이며 판정 근거가 아니다. 이 사실을 echo(`periodEvaluation`)와 고지로 남긴다
+ * (판정식·세액 불변 — 건물 철거·신축 등 소유기간 중 상태 변화는 반영되지 않는다. 상태 이력 모델은 리뷰 Q-4).
+ */
 export function judgeOtherLand(
+  input: NonBusinessLandInput,
+  rules: NonBusinessLandJudgmentRules,
+): CategoryJudgeResult {
+  const result = judgeOtherLandCore(input, rules);
+  if (!input.otherLand) return { ...result, periodEvaluation: { basis: "not_judged" } };
+  return {
+    ...result,
+    periodEvaluation: { basis: "state_at_transfer" },
+    warnings: [...(result.warnings ?? []), NBL_STATE_AT_TRANSFER_APPLIED_NOTICE],
+  };
+}
+
+function judgeOtherLandCore(
   input: NonBusinessLandInput,
   rules: NonBusinessLandJudgmentRules,
 ): CategoryJudgeResult {
@@ -94,6 +114,10 @@ export function judgeOtherLand(
   // Step 0: 나대지 간주
   const bareLand = isBareLand(input);
   const effectiveTaxType: PropertyTaxType = bareLand ? "comprehensive" : o.propertyTaxType;
+  // NBL2611-V10-K — 재산세 분류는 한국어 라벨로 쓰고, 이 단계들의 근거는 법 §104의3①4호 가·나목이다(다목 위임조문 영 §168의11①이 아니다).
+  const declaredLabel = propertyTaxTypeLabel(o.propertyTaxType);
+  const effectiveLabel = propertyTaxTypeLabel(effectiveTaxType);
+  appliedLaws.push(NBL.OTHER_LAND_PROPERTY_TAX_EXCLUSION);
   steps.push({
     id: "other_bare_land",
     label: "Step 0 나대지 간주 검증 (2% 기준)",
@@ -102,8 +126,8 @@ export function judgeOtherLand(
       ? (o.hasBuilding
           ? `건축물 시가표준액 < 토지 시가표준액 × 2% → 별도합산 제외(종합합산 취급)`
           : `건축물 없는 토지(나대지) → 종합합산 취급`)
-      : `건축물 부속토지 (원 재산세 유형 유지: ${o.propertyTaxType})`,
-    legalBasis: NBL.OTHER_LAND,
+      : `건축물 부속토지 (선택한 재산세 분류 유지: ${declaredLabel})`,
+    legalBasis: NBL.OTHER_LAND_PROPERTY_TAX_EXCLUSION,
   });
 
   const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
@@ -217,12 +241,14 @@ export function judgeOtherLand(
     if (revenueTestDetail.pass) {
       appliedLaws.push(NBL.REVENUE_TEST);
       const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
-      return buildPass(`수입금액비율 충족 (${revenueTestDetail.businessType})`, steps, appliedLaws, warnings, {
+      return buildPass(`수입금액비율 충족 (${REVENUE_BUSINESS_TYPE_LABEL[revenueTestDetail.businessType]})`, steps, appliedLaws, warnings, {
         r, totalOwnershipDays, revenueTestDetail,
       });
     }
   }
 
+  // NBL2611-V2-PR04 인계 — 비종합합산 선언이 기간기준 미충족(소유일수 0 등)으로 비사업용이 될 때 끝의 사유가 「종합합산」으로 오표기되던 것을 바로잡는다(판정 불변).
+  let periodFailedReason: string | undefined;
   if (isNonComprehensive) {
     const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
     if (r.meets) {
@@ -230,19 +256,20 @@ export function judgeOtherLand(
         id: "other_tax_type_criteria",
         label: "Step 3-1 비종합합산(비과세·분리·별도) + 기간기준",
         status: "PASS",
-        detail: `재산세 ${effectiveTaxType} + 기간기준 충족`,
-        legalBasis: NBL.OTHER_LAND,
+        detail: `재산세 ${effectiveLabel} + 기간기준 충족`,
+        legalBasis: NBL.OTHER_LAND_PROPERTY_TAX_EXCLUSION,
       });
-      return buildPass(`재산세 ${effectiveTaxType} + 기간기준 충족`, steps, appliedLaws, warnings, {
+      return buildPass(`재산세 ${effectiveLabel} + 기간기준 충족`, steps, appliedLaws, warnings, {
         r, totalOwnershipDays, revenueTestDetail,
       });
     }
+    periodFailedReason = `재산세 ${effectiveLabel}이나 기간기준 미충족 — ${r.detail}`;
     steps.push({
       id: "other_tax_type_criteria",
       label: "Step 3-1 비종합합산(비과세·분리·별도) + 기간기준",
       status: "FAIL",
-      detail: `재산세 ${effectiveTaxType}이나 기간기준 미충족 — ${r.detail}`,
-      legalBasis: NBL.OTHER_LAND,
+      detail: periodFailedReason,
+      legalBasis: NBL.OTHER_LAND_PROPERTY_TAX_EXCLUSION,
     });
   } else {
     steps.push({
@@ -253,8 +280,10 @@ export function judgeOtherLand(
       // 뒤따르는 부분 안분 결과와 문구가 어긋난다.
       detail: factoryExcess
         ? "공장 기준면적 초과분이 종합합산 — 나목(별도합산·분리과세)으로는 전량 사업용이 되지 않는다"
-        : "재산세 종합합산과세대상 (원칙 비사업용)",
-      legalBasis: NBL.OTHER_LAND,
+        : buildingExcess
+          ? `선택한 재산세 분류(${declaredLabel})이나 건물 부수토지 배율 초과 — 초과분은 별도합산으로 보지 않는다`
+          : "재산세 종합합산과세대상 (원칙 비사업용)",
+      legalBasis: NBL.OTHER_LAND_PROPERTY_TAX_EXCLUSION,
     });
   }
 
@@ -314,7 +343,7 @@ export function judgeOtherLand(
         reason: `복합용도 건축물 — 특정용도분(${pctBiz.toFixed(1)}%)만 사업용·잔여 비사업용 (§168의11⑥)`,
         steps,
         appliedLaws,
-        areaProportioning: mixedUse.ap,
+        areaProportioning: { ...mixedUse.ap, legalBasis: [mixedUse.legalBasis] },
         totalOwnershipDays,
         effectiveBusinessDays: r.effectiveBusinessDays,
         gracePeriodDays: r.gracePeriodDays,
@@ -359,6 +388,7 @@ export function judgeOtherLand(
         nonBusinessRatio: c.nonBusinessRatio,
         buildingMultiplier: 1,
         contiguousNblDetail: c.detail,
+        legalBasis: [NBL.OTHER_LAND_CONTIGUOUS],
       };
       steps.push({
         id: "other_contiguous_nbl",
@@ -385,7 +415,7 @@ export function judgeOtherLand(
 
     // 호별 기준면적 해석 — 초과분 비사업용 면적 안분 (§168의11①) [단일 필지]
     if (areaLimit !== undefined && input.landArea > areaLimit) {
-      const areaProportioning = computeAreaProportioning(input.landArea, areaLimit);
+      const areaProportioning: AreaProportioning = { ...computeAreaProportioning(input.landArea, areaLimit), legalBasis: [legalBasis] };
       steps.push({
         id: "other_area_limit",
         label: "Step 3-1-1 §168의11① 호별 기준면적",
@@ -433,7 +463,10 @@ export function judgeOtherLand(
   // 이제 비로소 배율 초과분을 비사업용으로 확정한다(Step 0.6에서 미룬 판단).
   if (buildingExcess) {
     const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
-    const areaProportioning = computeAreaProportioning(input.landArea, buildingExcess.allowedLandArea);
+    const areaProportioning: AreaProportioning = {
+      ...computeAreaProportioning(input.landArea, buildingExcess.allowedLandArea),
+      legalBasis: [NBL.BUILDING_SITE_MULTIPLIER],
+    };
     steps.push({
       id: "other_building_multiplier_apply",
       label: "Step 3-1-2 건물 부수토지 배율 초과분",
@@ -483,7 +516,10 @@ export function judgeOtherLand(
     // `factoryExcess.standardArea`를 양도분과 직접 비교하면 안 된다(§1.4 약분 구조).
     const factoryTotal = o.factory!.totalAppurtenantLandArea;
     const businessAreaOfAsset = input.landArea * (1 - factoryExcess.nonBusinessRatio);
-    const areaProportioning = computeAreaProportioning(input.landArea, businessAreaOfAsset);
+    const areaProportioning: AreaProportioning = {
+      ...computeAreaProportioning(input.landArea, businessAreaOfAsset),
+      legalBasis: [factoryLegalBasis!],
+    };
     steps.push({
       id: "other_factory_area",
       label: "Step 0.5 공장용 건축물 부속토지 기준면적",
@@ -532,7 +568,10 @@ export function judgeOtherLand(
         r, totalOwnershipDays, revenueTestDetail,
       });
     }
-    const areaProportioning = computeAreaProportioning(input.landArea, fp);
+    const areaProportioning: AreaProportioning = {
+      ...computeAreaProportioning(input.landArea, fp),
+      legalBasis: [NBL.OTHER_LAND_FOOTPRINT_CARVEOUT],
+    };
     steps.push({
       id: "other_footprint_carveout",
       label: "Step 3-2 §101①2호나목 건축물 바닥면적 별도합산 유지",
@@ -564,9 +603,12 @@ export function judgeOtherLand(
     legalBasis: NBL.OTHER_LAND_BUSINESS,
   });
   const dummyR = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
-  return buildFail("종합합산 + 거주·사업관련 미해당 → 비사업용", steps, appliedLaws, warnings, {
-    r: dummyR, totalOwnershipDays, revenueTestDetail,
-  });
+  return buildFail(
+    periodFailedReason ? `${periodFailedReason} → 비사업용` : "종합합산 + 거주·사업관련 미해당 → 비사업용",
+    steps, appliedLaws, warnings, {
+      r: dummyR, totalOwnershipDays, revenueTestDetail,
+    },
+  );
 }
 
 interface Ctx {

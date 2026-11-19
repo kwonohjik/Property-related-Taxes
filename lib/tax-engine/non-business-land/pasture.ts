@@ -209,7 +209,7 @@ export function judgePasture(
 
   if (resolvedStandardArea !== undefined && input.landArea > resolvedStandardArea) {
     appliedLaws.push(NBL.PASTURE_AREA);
-    areaProportioning = computeAreaProportioning(input.landArea, resolvedStandardArea);
+    areaProportioning = { ...computeAreaProportioning(input.landArea, resolvedStandardArea), legalBasis: [NBL.PASTURE_AREA] };
     steps.push({
       id: "pasture_area",
       label: "Step 3-2 축산업용 기준면적",

@@ -458,6 +458,26 @@ export interface AreaProportioning {
   mixedUseBuildingRatio?: number;
   /** §168의11⑤ 연접 다필지 취득시기순 안분 시 필지별 귀속 상세. 미설정=단일 필지 안분 */
   contiguousNblDetail?: ContiguousParcelNbl[];
+  /**
+   * [echo] 이 면적 안분을 실제로 정한 법령 근거 목록 — 결과 카드가 고정 문구 대신 이 값을 읽는다(NBL2611-V10-P).
+   * 표시 전용이며 면적·비율·세액에는 영향이 없다. 없으면(이력 복원 결과) 카드가 일반 안내로 대체한다.
+   */
+  legalBasis?: string[];
+}
+
+/**
+ * 기간기준(영 §168의6)을 이 결과에서 **어떻게 다뤘는가** — 결과 카드 「기간 분석」 표시의 근거(NBL2611-V10-P).
+ *
+ * - `usage_periods`: 입력한 사용기간(자경·축산·별장 사용 등)으로 소유기간 중 사업용 기간을 실제로 셌다. 일수·비율이 판정 근거다.
+ * - `state_at_transfer`: 양도일 현재의 이용 상태를 소유기간 전체에 적용했다. 일수·비율은 «전 기간 사업용»으로 채운 표시값이라 판정 근거가 아니다(리뷰 V2-C2).
+ * - `not_judged`: 기간기준을 판정하지 않았다(배율 × 면적으로만 판정하는 주택·건물 부수토지, 무조건 사업용 의제, 판정 불가 등).
+ */
+export type PeriodEvaluationBasis = "usage_periods" | "state_at_transfer" | "not_judged";
+
+export interface PeriodEvaluation {
+  basis: PeriodEvaluationBasis;
+  /** 기간 대신 실제로 판정한 기준의 법령 근거(`not_judged`일 때 — 예: 주택부수토지는 영 §168의12 배율). 없을 수 있다. */
+  legalBasis?: readonly string[];
 }
 
 /** 판정 엔진 반환 액션 (v2 신규 — 별장 REDIRECT 경로 지원) */
@@ -490,6 +510,12 @@ export interface NonBusinessLandJudgment {
   };
 
   areaProportioning?: AreaProportioning;
+
+  /**
+   * [echo] 기간기준(영 §168의6)을 이 판정에서 실제로 다뤘는지 — 결과 카드 「기간 분석」 블록의 단일 근거(NBL2611-V10-P).
+   * 표시 전용(세액 불변). 없으면(이력 복원 결과) 카드가 판정 단계 id로 추정한다.
+   */
+  periodEvaluation?: PeriodEvaluation;
 
   /** §168조의14② 양도일 의제 (경매·공매·신문공고) — 기간기준 판정 기준일 */
   deemedTransfer?: { reason: DeemedTransferReason; date: Date };
@@ -674,6 +700,9 @@ export interface CategoryJudgeResult {
   steps: JudgmentStep[];
   appliedLaws: string[];
   areaProportioning?: AreaProportioning;
+
+  /** [echo] 기간기준 처리 방식 — 지목별 judge가 채운다. 비우면 엔진이 지목으로 정한다(NBL2611-V10-P). */
+  periodEvaluation?: PeriodEvaluation;
 
   /** §168의11② 수입금액비율 테스트 결과 (judgeOtherLand에서 산출) */
   revenueTestDetail?: RevenueTestResult;

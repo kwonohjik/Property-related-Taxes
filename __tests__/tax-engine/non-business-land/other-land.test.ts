@@ -36,7 +36,7 @@ describe("C-6 기타토지 PDF p.1706 흐름도", () => {
   it("재산세 분리과세 + 기간기준 충족 → 사업용", () => {
     const r = judgeOtherLand(base(), DEFAULT_NON_BUSINESS_LAND_RULES);
     expect(r.isBusiness).toBe(true);
-    expect(r.reason).toContain("separate");
+    expect(r.reason).toContain("별도합산"); // NBL2611-V10-K — enum 원문(separate) 대신 한국어 라벨
   });
 
   it("종합합산 + 거주·사업관련 X → 비사업용", () => {
