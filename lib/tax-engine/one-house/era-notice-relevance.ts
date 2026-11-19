@@ -2,8 +2,8 @@
  * 판정 메뉴 「판정하지 않은 부분」 고지의 **결론 가름 게이트**(`EraNoticeRelevance`) 조립 — `transfer-tax-exemption.ts`
  * 800줄 정책 분리. 로직은 그대로 옮겼다(동작 변경 없음).
  *
- * 각 게이트는 모르는 사실을 바꾼 **반사실 판정**이 현재 판정과 다를 때만 참이다. 판정 본체(`checkExemption`·`checkExemptionCore`)는
- * 순환 import를 피하려고 호출부가 콜백으로 넘긴다.
+ * 각 게이트는 모르는 사실을 바꾼 **반사실 판정**이 현재 판정과 다를 때만 참이다. 반사실 결론 키(`verdictKey`)와 본체 판정
+ * (`checkExemptionCore`)는 순환 import를 피하려고 호출부가 콜백으로 넘긴다.
  */
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import { describeOneHouseHoldingRequirement } from "../transfer-tax-exemption-holding";
@@ -14,7 +14,7 @@ import { giftHouseholdFactDecides, giftPriorResidenceDecides } from "./gift-hous
 import { withUnconfirmedFactsFavorable } from "./rural-return-to-farm-facts";
 import { counterfactualVerdictDiffers, withMoveInWithinYear, withNotBothRegulated } from "./temp-two-house-counterfactual";
 import { withDisposalDelayByThatMethod } from "./temp-two-house-counterfactual";
-import type { OneHouseCoreVerdict, OneHouseJudgeInput, OneHouseJudgment } from "./types";
+import type { OneHouseCoreVerdict, OneHouseJudgeInput } from "./types";
 
 /** 거주 요건을 채운 반사실 판정에 넣는 거주 개월 — 어떤 거주요건(2년·신도시 2년)도 넘는 값이다. */
 const RESIDENCE_COUNTERFACTUAL_MONTHS = 1200;
@@ -66,12 +66,15 @@ export function buildEraNoticeRelevance(ctx: {
   settled: boolean;
   /** 현재 판정(§89② 배제 반영 후). */
   verdict: OneHouseCoreVerdict;
-  /** `checkExemption`(전체 판정) — 반사실 입력으로 다시 돌린다. */
-  check: (input: OneHouseJudgeInput) => OneHouseJudgment;
+  /**
+   * 반사실 입력의 결론 키(`isExempt|isPartialExempt`) — 전체 판정(`checkExemption`)과 같은 값이지만 고지 술어를 다시 부르지 않는다
+   * (D-01 — 전체 판정을 넘기면 남은 미선언 축마다 재귀해 계승급 비용이었다).
+   */
+  verdictKey: (input: OneHouseJudgeInput) => string;
   /** `checkExemptionCore`(본체 판정). */
   core: (input: OneHouseJudgeInput) => OneHouseCoreVerdict;
 }): EraNoticeRelevance {
-  const { input, oneHouseRules, article89Excluded, settled, verdict, check, core } = ctx;
+  const { input, oneHouseRules, article89Excluded, settled, verdict, verdictKey, core } = ctx;
   return {
     // 거주기간 요건 고지(`154-1-residence-deadline-unavailable` · `154-1-capital-newtown-location-unverified`)는 그 요건이
     // 결론을 가를 때만 낸다(S07-10). 판정은 엔진 본체(`checkExemptionCore`) 그대로다 — 거주 개월만 채워 다시 돌린다.
@@ -83,14 +86,10 @@ export function buildEraNoticeRelevance(ctx: {
       return r.isExempt || r.isPartialExempt;
     },
     // 결정 #33·#34·#38 — 증여받은 주택의 세대 사실을 바꾼 반사실 판정이 현재 판정과 다를 때만 확인 필요를 낸다.
-    //   반사실 입력은 세대 관계가 확정(통산 성립·별도세대)이라 이 고지를 다시 만들지 않는다 — 통산 성립 가정은 한 번 더 별도세대
-    //   가정과 비교할 수 있으나 그 호출은 확정이므로 재귀 깊이가 2를 넘지 않는다.
+    //   반사실 판정은 결론 키(`verdictKey`)만 계산하므로 고지 게이트를 다시 부르지 않는다(D-01).
     giftHouseholdDecides: () => {
       const g = input.giftHouseholdBasis;
-      const verdictOf = (basis: GiftHouseholdBasis) => {
-        const r = check({ ...input, giftHouseholdBasis: basis });
-        return `${r.isExempt}|${r.isPartialExempt}`;
-      };
+      const verdictOf = (basis: GiftHouseholdBasis) => verdictKey({ ...input, giftHouseholdBasis: basis });
       if (!g) {
         // 일반 증여 화면(세대 사실·증여자 취득일 미입력) — 통산 성립 가정으로 다시 판정할 사실이 없다. 증여로 취득한 주택이
         // 비과세가 아닐 때만 알린다(비과세면 통산이 결론을 바꾸지 못한다 — 통산은 혜택을 늘리는 방향으로만 작용한다).
@@ -111,20 +110,16 @@ export function buildEraNoticeRelevance(ctx: {
       if (!g || article89Excluded) return false;
       // 재개발 승계조합원 — 증여 전 거주는 종전주택 거주 칸(사전-2020-법령해석재산-0691)이 받는다(계획서 redev-successor-gift-holding Q-2 a).
       if (input.redevSuccessorGift) return false;
-      return giftPriorResidenceDecides(g, `${verdict.isExempt}|${verdict.isPartialExempt}`, (basis) => {
-        const r = check({ ...input, giftHouseholdBasis: basis });
-        return `${r.isExempt}|${r.isPartialExempt}`;
-      });
+      return giftPriorResidenceDecides(g, `${verdict.isExempt}|${verdict.isPartialExempt}`, (basis) =>
+        verdictKey({ ...input, giftHouseholdBasis: basis }),
+      );
     },
     // §154①2호 가목 괄호 「사업인정 고시일 전 취득」 — 고시일이 비어 있어 단서를 적용하지 않았다. 고시일을 취득 뒤/앞으로 가정한
-    // 두 판정이 다를 때만 확인 필요를 낸다(S02-2). 고시일을 채운 두 판정은 이 함수 자신이고, 채우면 그 고지가 생기지 않아 재귀하지 않는다.
+    // 두 판정이 다를 때만 확인 필요를 낸다(S02-2). 두 판정은 결론 키(`verdictKey`)만 계산한다(D-01).
     expropriationNoticeDate: () => {
       const p = input.oneHouseExemptionProviso;
       if (!p) return false;
-      const verdictIf = (businessApprovalDate: Date) => {
-        const r = check({ ...input, oneHouseExemptionProviso: { ...p, businessApprovalDate } });
-        return `${r.isExempt}|${r.isPartialExempt}`;
-      };
+      const verdictIf = (businessApprovalDate: Date) => verdictKey({ ...input, oneHouseExemptionProviso: { ...p, businessApprovalDate } });
       return verdictIf(new Date(input.acquisitionDate.getTime() + 86_400_000)) !== verdictIf(input.acquisitionDate);
     },
     // 삭제 전 §154①4호(1주택 밖 맥락) — 4호가 성립한다고 채운 본체 판정이 비과세·부분과세일 때만 고지한다. 채운 입력은 `applies`라 고지가 생기지 않는다.
