@@ -19,9 +19,8 @@ import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
-import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { NblSectionContainer } from "@/components/calc/transfer/nbl/NblSectionContainer";
-import { NblDesignatedAreaQuestion } from "@/components/calc/transfer/nbl/NblDesignatedAreaQuestion";
+import { NblScreeningToggle } from "@/components/calc/transfer/nbl/NblScreeningToggle";
 
 interface Props {
   form: TransferFormData;
@@ -132,65 +131,7 @@ export function SpecialSituationSection({
         )}
 
         {primaryKind === "land" && primary && (
-          <ToggleCard
-            checked={primary.isNonBusinessLand ?? false}
-            onCheckedChange={(v) =>
-              patchPrimary({
-                isNonBusinessLand: v,
-                // 체크 해제 시 상세 판정도 끔. 체크 시는 현재 상태 유지(라디오로 선택).
-                nblUseDetailedJudgment: v ? primary.nblUseDetailedJudgment : false,
-              })
-            }
-            title="비사업용 토지 여부 검토"
-            description="해당 시 기본세율 +10%p 중과 대상"
-            tone="rose"
-          >
-            {/* P3: 재촌 요건 안내 */}
-            <div className="rounded-md bg-muted/40 border border-border/60 px-3 py-2 text-xs text-muted-foreground space-y-1">
-              <p className="font-medium text-foreground/70">
-                농지·임야 재촌(在村) 요건 — 아래 중 하나 충족 시 사업용
-              </p>
-              <ul className="space-y-0.5 pl-2">
-                <li>• 토지 소재지와 <strong>동일 시·군·구</strong>에 거주</li>
-                <li>• 토지 소재지와 <strong>연접한 시·군·구</strong>에 거주</li>
-                <li>• 토지 소재지와 거주지 사이 <strong>직선거리 30km 이내</strong></li>
-              </ul>
-              <p className="text-muted-foreground text-micro mt-1">
-                소득세법 시행령 §168조의8 — 정밀 판정을 원하시면 세무사 확인 권장
-              </p>
-            </div>
-
-            {/* 판정 상태 라디오 */}
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-foreground/70">판정 상태</p>
-              <RadioCardGroup
-                name={`nbl-mode-${primary.assetId}`}
-                tone="rose"
-                value={primary.nblUseDetailedJudgment ? "detailed" : "completed"}
-                onChange={(v) => patchPrimary({ nblUseDetailedJudgment: v === "detailed" })}
-                options={[
-                  {
-                    value: "completed",
-                    label: "이미 비사업용으로 판정 완료",
-                    description: "바로 +10%p 중과세 적용",
-                  },
-                  {
-                    value: "detailed",
-                    label: "판정 도움 필요",
-                    description: "지목·재촌·자경 입력으로 엔진이 자동 판정",
-                  },
-                ]}
-              />
-            </div>
-
-            {/* 양도일 2009.3.16.~2015.12.31.이면 지정지역 여부가 8호 중과 유예의 요건 사실이다 — 그 기간에만 뜬다 */}
-            <NblDesignatedAreaQuestion
-              transferDate={form.transferDate}
-              value={primary.isDesignatedArea}
-              onChange={(isDesignatedArea) => patchPrimary({ isDesignatedArea })}
-              idSuffix="primary"
-            />
-          </ToggleCard>
+          <NblScreeningToggle asset={primary} onChange={patchPrimary} transferDate={form.transferDate} idSuffix="primary" />
         )}
       </div>
 

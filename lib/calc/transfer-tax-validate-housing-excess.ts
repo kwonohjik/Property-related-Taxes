@@ -10,6 +10,9 @@
 import { parseAmount } from "@/lib/calc/number-parse";
 import { housingExcessAreaOfAsset, housingExcessNeedsLandSplit, housingExcessUsesInheritedTotal, housingExcessZonePending } from "./housing-excess-split";
 import { housingExcessCapexParts, housingExcessNeedsCapexSplit } from "./housing-excess-split";
+import { appurtenantLimitShareOfAssets } from "./housing-excess-split";
+import { appurtenantCardsZoneMessage } from "./appurtenant-card-zone-pending";
+import { appurtenantCardsZoneShortfall } from "./appurtenant-card-zone-pending";
 import { housingExcessPartModeMismatch } from "./housing-excess-split";
 import { housingExcessAcqContractParts, housingExcessNeedsAcqContract } from "./housing-excess-acq-contract";
 import { resolveLandStdAtTransfer } from "./transfer-tax-split-acq-mode";
@@ -144,4 +147,22 @@ export function appurtenantZoneRequiredError(
   const landArea = parseDecimal(asset.acquisitionArea);
   if (!(footprint > 0 && landArea > footprint * 3)) return null;
   return fieldError("appurtenantLandZone", `${label}: 토지 면적(${landArea}㎡)이 건물 정착면적의 3배를 초과합니다 — 부수토지 인정 한도 배율을 정하려면 「부수토지 소재지 구분」을 선택하세요. 한도 초과분은 1세대1주택 비과세에서 제외되고 비사업용 토지로 과세됩니다 (소득세법 §104의3①5호·시행령 §168의12).`);
+}
+
+/**
+ * NBL2611-V4-HS02 — 함께 양도 부수토지 카드를 합친 소재지 구분 필수 입력. 주 자산 주택 카드가 대상이다.
+ * 「주택 카드 토지(본인 소유일 때) + 같은 묶음 부수토지 카드 면적 합계」가 정착면적 × 3을 넘으면 소재지 구분이 필수다.
+ * 비면 route 컴패니언 분리(`resolveCompanionSplit`)가 최소 배율(3배)을 조용한 기본값으로 써 5배·10배 지역의 한도 이내 토지를 초과분으로 과세한다.
+ * ⑫ `refineAppurtenantCardsZone`이 같은 술어(`appurtenantCardsZoneShortfall`)로 직접 API도 막는다.
+ * 주택 카드 자기 토지만으로 3배를 넘는 경우는 `appurtenantZoneRequiredError` · `housingExcessZonePending`이 받는다(둘 다 부수토지 카드를 세지 않는다).
+ */
+export function appurtenantCardsZoneError(asset: AssetForm, companions: readonly AssetForm[], label: string): string | null {
+  if (asset.assetKind !== "housing" || asset.isMixedUseHouse || asset.appurtenantLandZone !== undefined) return null;
+  const share = appurtenantLimitShareOfAssets(asset, companions);
+  const shortfall = appurtenantCardsZoneShortfall({
+    footprintM2: parseDecimal(asset.buildingFootprintArea),
+    houseLandAreaM2: share.houseLandAreaM2,
+    cardsAreaM2: share.appurtenantCardsAreaM2,
+  });
+  return shortfall ? fieldError("appurtenantLandZone", appurtenantCardsZoneMessage(label, shortfall)) : null;
 }

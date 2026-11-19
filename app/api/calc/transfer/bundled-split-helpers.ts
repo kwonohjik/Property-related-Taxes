@@ -577,13 +577,19 @@ export function buildCompanionEngineInputs(
       },
       ctx.transferDate,
     );
+    /**
+     * NBL2611-V6-PU01 — 부수토지 카드로 판정된 토지는 비사업용 토지 정밀판정 입력을 떼어 낸다(역방향 `splitReversePrimaryLand`와 같은 규칙).
+     * 배율 이내분은 주택부수토지(§89①3호)이고 초과분은 비사업용 토지로 정해진다(§104의3①5호, F-13 Q-2) — 카드가 쥔 정밀판정(예: 별도합산 «사업용»)이
+     * 양쪽에 복제되면 초과분이 사업용으로 판정돼 중과가 빠진다. 종전에는 비지분 컴패니언의 정밀판정이 서버에 오지 않아 도달하지 못했던 경로다.
+     */
+    const decided = { ...plainEngine, nonBusinessLandDetails: undefined };
     if (splitResult.applied) {
-      return splitCompanionIntoTwo(plainEngine, splitResult, ctx.primaryCtxForSplit);
+      return splitCompanionIntoTwo(decided, splitResult, ctx.primaryCtxForSplit);
     }
     // F-13 — 배율 이내로 **확인된** 부수토지는 짝 주택과 「1세대1주택 단위」를 이룬다.
     //   판정이 불가능했던 카드(면적·정착면적 없음)는 넣지 않는다 — 초과분이 비과세로 새지 않게.
     if (splitResult.withinLimit) {
-      return [{ ...plainEngine, oneHouseUnitRole: "appurtenant_land" as const }];
+      return [{ ...decided, oneHouseUnitRole: "appurtenant_land" as const }];
     }
   }
 
