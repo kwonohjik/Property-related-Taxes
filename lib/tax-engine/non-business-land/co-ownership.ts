@@ -1,5 +1,5 @@
 /**
- * 공유지분 비율 적용 (대법원 2015두39439)
+ * 공유지분 비율 적용 (NBL2611-V9-RI06 — 종전에 인용한 「대법원 2015두39439」는 이 쟁점의 근거로 확인되지 않아 삭제했다)
  *
  * 비사업용 판정(isNonBusinessLand) 자체는 각 공유자별로 독립 판정한다.
  * 다만, 면적 안분 결과(areaProportioning)는 해당 공유자의 지분율만큼
@@ -26,7 +26,7 @@ export function applyCoOwnershipRatio(
 
   const warnings = [...judgment.warnings];
   warnings.push(
-    `공유지분율 ${(ownershipRatio * 100).toFixed(2)}% 적용 — 면적 안분 기준면적을 지분 비율로 조정함 (대법원 2015두39439)`,
+    `공유지분율 ${(ownershipRatio * 100).toFixed(2)}% 적용 — 면적 안분 기준면적을 지분 비율로 조정함`,
   );
 
   const areaProportioning = judgment.areaProportioning

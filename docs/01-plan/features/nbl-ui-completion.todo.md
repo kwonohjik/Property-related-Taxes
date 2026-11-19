@@ -194,7 +194,7 @@
 | 상태 | ID | 작업 | 파일 | 의존 | 완료 기준 |
 | ---- | -- | ---- | ---- | ---- | --------- |
 | `[x]` | P5-01 | `grace-period.ts` — `calculateGraceDaysInWindow(periods, window)` 구현. 중복 제거 후 윈도우 내 일수 합산 | `lib/tax-engine/non-business-land/grace-period.ts` (신규) | - | tsc 통과 |
-| `[x]` | P5-02 | `co-ownership.ts` — `applyCoOwnershipRatio(judgment, ratio)`. 면적 안분만 비례, 판정 자체 불변. 대법 2015두39439 주석 | `lib/tax-engine/non-business-land/co-ownership.ts` (신규) | - | tsc 통과 |
+| `[x]` | P5-02 | `co-ownership.ts` — `applyCoOwnershipRatio(judgment, ratio)`. 면적 안분만 비례, 판정 자체 불변. (근거 판례 인용 삭제 — NBL2611-V9-RI06) | `lib/tax-engine/non-business-land/co-ownership.ts` (신규) | - | tsc 통과 |
 | `[x]` | P5-03 | `data/livestock-standards.ts` — `LIVESTOCK_STANDARD_AREA` 8종(한우·젖소·돼지모돈·돼지비육·가금·말·양·염소) + `getLivestockStandardArea(type, count)` | `lib/tax-engine/non-business-land/data/livestock-standards.ts` (신규) | - | 8종 모두 정의 |
 | `[x]` | P5-04 | `form-mapper.ts` — `mapAssetToNblInput(asset, dates): NonBusinessLandInput \| null`. asset.nblUseDetailedJudgment === false면 null 반환 | `lib/tax-engine/non-business-land/form-mapper.ts` (신규) | P1-15 | 모든 nbl* 필드 매핑 |
 | `[x]` | P5-05 | `form-mapper.ts` — landArea는 asset.acquisitionArea 사용 (nblLandArea 폐지) | 동상 | P5-04 | acquisitionArea 참조 |

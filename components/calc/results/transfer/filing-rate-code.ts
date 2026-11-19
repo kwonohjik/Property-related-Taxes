@@ -76,6 +76,11 @@ export interface FilingRateCodeInput {
    * ’09.3.16.~’15.12.31. 양도 + 지정지역 아님). 사유와 무관하게 해당 호가 §104①1호라 정본 ⑮가 **일반세율 코드 1-10**으로 분류한다.
    */
   nblSurchargeExcluded?: boolean;
+  /**
+   * 비사업용 토지(§104①8호)가 단기세율(2·3호)로 과세됨 — 엔진 echo `nonBusinessLandShortTerm`(NBL2611-V9-RI05).
+   * 별지 제84호서식은 이 경우를 ⑩ 1-35(1~2년)·⑪ 1-36(1년 미만) «비사업용토지»로 적는다. 호(`104-1-2`·`104-1-3`)만으로는 구분되지 않는다.
+   */
+  nonBusinessLandShortTerm?: boolean;
 }
 
 /**
@@ -86,6 +91,7 @@ export interface FilingRateCodeInput {
  *   ④ 1-40 1년 미만 주택·입주권 · ⑤ 1-39 1~2년 주택·입주권(’21.6.1.~)
  *   ⑥ 1-46 1년 미만 주택·입주권·분양권(’21.6.1.~) · ⑦ 1-23 1년 이상 분양권(’21.6.1.~)
  *   ⑧ 1-30 미등기 · ⑨ 1-11 비사업용토지 +10%p · ⑩ 1-35 1~2년 비사업용 · ⑪ 1-36 1년 미만 비사업용
+ *     (⑩⑪은 §104① 후단 비교에서 단기세율이 채택된 비사업용토지 — 엔진 표지 `nonBusinessLandShortTerm`. NBL2611-V9-RI05)
  *   ⑮ 1-10 비사업용토지 ’09.3.16.~’12.12.31. 취득분
  *   ⑲ 1-51 / ㉓ 1-55 조정대상지역 1세대2주택 / 3주택(’18.4.1.~’21.5.31.)
  *   ㉗ 1-47 / ㉝ 1-49 같은 취지(’21.6.1.~ — +20%p / +30%p)
@@ -110,10 +116,12 @@ export function resolveFilingRateCode(input: FilingRateCodeInput): string | unde
 
     // ② ③ ④ ⑤ ⑥ 단기 보유
     case "104-1-3": // 1년 미만
+      if (input.nonBusinessLandShortTerm) return "1-36"; // ⑪ 1년 미만 보유 비사업용토지 (50%)
       if (isPresaleRight(assetKind)) return after20210601 ? "1-46" : undefined;
       if (housingLike) return after20210601 ? "1-46" : "1-40";
       return "1-20";
     case "104-1-2": // 1년 이상 2년 미만
+      if (input.nonBusinessLandShortTerm) return "1-35"; // ⑩ 1년 이상 2년 미만 보유 비사업용토지 (40%)
       if (isPresaleRight(assetKind)) return undefined; // 분양권은 ⑦(1-23)이 1년 이상 전체를 덮는다
       if (housingLike) return after20210601 ? "1-39" : undefined;
       return "1-15";

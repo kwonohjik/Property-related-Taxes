@@ -37,7 +37,7 @@ NBL 정밀판정 엔진·UI·매퍼(`mapAssetToNblInput`)는 완성돼 있으나
 | unconditionalExemption(무조건 의제) | §168의14③ | 7사유 |
 | gracePeriods(유예기간) | §168의14① | **본 PR=엔진 input까지 운반만**; judge 결선은 우선순위 2 |
 | 기간기준 3-test | §168의6 | 엔진 기존 구현(불변) |
-| ownershipRatio(공동소유) | 대법원 2015두39439 | applyCoOwnershipRatio |
+| ownershipRatio(공동소유) | (근거 판례 미확인 — NBL2611-V9-RI06) | applyCoOwnershipRatio |
 
 ## 엔진 input 타입 (불변 — 재확인)
 

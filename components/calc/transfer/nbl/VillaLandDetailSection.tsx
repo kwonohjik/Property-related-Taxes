@@ -10,21 +10,25 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { BusinessUsePeriodsInput } from "./shared/BusinessUsePeriodsInput";
 import { MetropolitanAreaField } from "./shared/MetropolitanAreaField";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { FOOTPRINT_DEFINITION } from "@/lib/calc/footprint-definition-copy";
 
 export interface VillaLandDetailSectionProps {
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
+  /** 양도일 `YYYY-MM-DD` — 재분류 후 배율 배지의 시행일 분기(NBL2611-V9-J) */
+  transferDate?: string;
 }
 
 export function VillaLandDetailSection({
   asset,
   onAssetChange,
+  transferDate,
 }: VillaLandDetailSectionProps) {
   return (
     <div className="space-y-3">
       <SectionHeader
         title="별장 부속토지 세부 정보"
-        description="소득령 §168의13 별장 판정"
+        description="소득세법 시행령 §168의13 별장의 범위와 적용기준"
         action={<LawArticleModal legalBasis="소득세법 시행령 §168의13" label="§168의13 별장" />}
       />
 
@@ -46,7 +50,7 @@ export function VillaLandDetailSection({
         붙었다. 화면에 값을 넣을 수단이 없어 회피할 방법도 없었다 — 법 근거 없는 불리 적용.
         용도지역(`nblZoneType`)은 상단 공통 블록에 이미 있다(`NblSectionContainer.tsx:160`).
       */}
-      <MetropolitanAreaField asset={asset} onAssetChange={onAssetChange} />
+      <MetropolitanAreaField asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />
 
       {/*
         🔴 정착면적 입력 (E1-02, 2026-09-02 코드리뷰).
@@ -59,7 +63,7 @@ export function VillaLandDetailSection({
         field="nblHousingFootprint"
         label="주택 정착면적"
         unit="㎡"
-        hint="별장 요건에 해당하지 않아 주택부수토지로 재분류될 때 인정면적(정착면적 × 용도지역별 배율) 산정에 쓰입니다."
+        hint={`별장 요건에 해당하지 않아 주택부수토지로 재분류될 때 인정면적(정착면적 × 용도지역별 배율) 산정에 쓰입니다. ${FOOTPRINT_DEFINITION}`}
       >
         <DecimalInput
           value={asset.nblHousingFootprint}
@@ -76,14 +80,14 @@ export function VillaLandDetailSection({
 
       <ToggleCard
         tone="violet"
-        title="농어촌주택 (§168의13① 3요건)"
+        title="농어촌주택 (영 §168의13 1~3호 3요건)"
         description="아래 3요건을 모두 충족해야 사업용으로 인정됩니다. 미입력 항목은 요건 미충족으로 처리됩니다."
         checked={asset.nblVillaIsRuralHousing}
         onCheckedChange={(v) => onAssetChange({ nblVillaIsRuralHousing: v })}
       >
         <div className="space-y-3">
-          {/* ① 면적 요건 (§168의13①1호) */}
-          <ToneCard tone="sky" sectionNum="1" title="면적 요건 (①1호)">
+          {/* ① 면적 요건 (영 §168의13 1호 — 항 없음, NBL2611-V8-VL07) */}
+          <ToneCard tone="sky" sectionNum="1" title="면적 요건 (1호)">
             <FieldCard label="건물 연면적" unit="㎡" hint="150㎡ 이내">
               <DecimalInput
                 value={asset.nblVillaBuildingFloorArea}
@@ -98,8 +102,8 @@ export function VillaLandDetailSection({
             </FieldCard>
           </ToneCard>
 
-          {/* ② 기준시가 요건 (§168의13①2호) */}
-          <ToneCard tone="emerald" sectionNum="2" title="기준시가 요건 (①2호)">
+          {/* ② 기준시가 요건 (영 §168의13 2호) */}
+          <ToneCard tone="emerald" sectionNum="2" title="기준시가 요건 (2호)">
             <FieldCard label="건물+부속토지 합산 기준시가" unit="원" hint="2억원 이하">
               <CurrencyInput
                 label="합산 기준시가"
@@ -111,12 +115,12 @@ export function VillaLandDetailSection({
             </FieldCard>
           </ToneCard>
 
-          {/* ③ 지역 요건 (§168의13①3호) */}
-          <ToneCard tone="rose" sectionNum="3" title="지역 요건 (①3호)">
+          {/* ③ 지역 요건 (영 §168의13 3호) */}
+          <ToneCard tone="rose" sectionNum="3" title="지역 요건 (3호)">
             <ToggleCard
               tone="rose"
               title="제외지역 소재 (수도권·도시지역·조정대상지역·허가구역)"
-              description="조특법 §99의4①1호가목1)~4) 제외지역에 소재하면 농어촌주택 요건 미충족 (관광단지는 제외지역 아님)"
+              description="「조세특례제한법」 §99의4①1호가목1)~4) 제외지역에 소재하면 농어촌주택 요건 미충족 (관광단지는 제외지역 아님)"
               checked={asset.nblVillaIsInRestrictedArea}
               onCheckedChange={(v) => onAssetChange({ nblVillaIsInRestrictedArea: v })}
             />

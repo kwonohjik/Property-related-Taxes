@@ -326,7 +326,7 @@ function calculateEstimatedDeduction(
  *   TRANSFER.GENERAL_BUILDING_APPORTIONMENT — §166⑥
  *   TRANSFER.GENERAL_BUILDING_ESTIMATED_ACQ — §176의2②
  *   TRANSFER.GENERAL_BUILDING_LUMP_DEDUCTION — §97②2호 + §163⑥
- *   NBL.BUILDING_SITE — §168의8 (건물 부수토지 배율)
+ *   NBL.BUILDING_SITE_MULTIPLIER — 「지방세법 시행령」 §101①2호 (건물 부수토지 배율) — NBL2611-V10-BX10 정정(종전 NBL.BUILDING_SITE=§168의8은 농지 조문)
  */
 export function buildGeneralBuildingAssetCards(
   rawInput: GeneralBuildingInput,

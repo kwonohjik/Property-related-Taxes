@@ -152,6 +152,10 @@ export function judgeNonBusinessLand(
           { ...engineInput, landType: "housing_site" },
           rules,
         );
+        // NBL2611-V8-VL05 — 재분류 사실은 항상 알린다(종전에는 정착면적이 빈 경우의 경고뿐이었다).
+        const reclassNotice =
+          "별장 비사용기간이 기간기준을 충족해 별장이 아니므로 주택부수토지로 재분류해 판정했습니다 — " +
+          "인정면적은 주택 정착면적 × 용도지역별 배율(영 §168의12)입니다.";
         const redirectWarnings =
           !engineInput.housingFootprint || engineInput.housingFootprint <= 0
             ? [
@@ -166,6 +170,7 @@ export function judgeNonBusinessLand(
           warnings: [
             ...(villaResult.warnings ?? []),
             ...(catResult.warnings ?? []),
+            reclassNotice,
             ...redirectWarnings,
           ],
         };
@@ -214,7 +219,7 @@ export function judgeNonBusinessLand(
     rules,
   });
 
-  // 공동소유 지분 적용 (대법원 2015두39439) — 지분율이 1 미만인 경우에만
+  // 공동소유 지분 적용 — 지분율이 1 미만인 경우에만
   const ownershipRatio = input.ownerProfile?.ownershipRatio;
   if (ownershipRatio !== undefined && ownershipRatio < 1) {
     return applyCoOwnershipRatio(judgment, ownershipRatio);
@@ -322,8 +327,9 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
      * **단정**한다. 그러므로 두 조건을 함께 본다:
      *   · `categoryResult` 존재 — 무조건 사업용 의제(§168의14③)로 Step 2에서 조기반환하면
      *     지목별 judge가 아예 돌지 않는다.
-     *   · `consumesPeriodJudgmentDate(landType)` — 주택·건물 부수토지는 배율축이라
-     *     `getPeriodJudgmentDate`를 부르지 않는다.
+     *   · `consumesPeriodJudgmentDate(landType)` — 주택·건물 부수토지 judge는 현행 구현상
+     *     `getPeriodJudgmentDate`를 부르지 않는다(주택부수토지는 2026-07-31 사용자 방침이지
+     *     법령 구조가 아니다 — NBL2611-V2-C2).
      * 종전에는 둘 다 보지 않아 적용되지 않은 의제를 적용했다고 표시했다.
      */
     deemedTransfer:

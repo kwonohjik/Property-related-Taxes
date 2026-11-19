@@ -3,6 +3,7 @@
 import type { NonBusinessLandJudgment, JudgmentStep, StepStatus, DeemedTransferReason } from "@/lib/tax-engine/non-business-land";
 import type { NblSurchargeExclusionReason } from "@/lib/tax-engine/types/transfer-result.types";
 import { nblExclusionBannerText } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
+import { nblLthdBannerPhrase } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
 
 interface Props {
   judgment: NonBusinessLandJudgment;
@@ -57,6 +58,13 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
   const isNonBusiness = judgment.isNonBusinessLand;
   const exemption = judgment.unconditionalExemption;
   const area = judgment.areaProportioning;
+  // NBL2611-V5-H — 장특 문구는 엔진 echo로 가른다(종전 고정 문구 「표1 적용」은 2016.1.1. 전 양도분에서 틀렸다).
+  const lthdExcluded = judgment.surcharge?.longTermDeductionExcluded === true;
+  // NBL2611-V10-P — 기간 판정을 하지 않는 지목(배율축)·분기를 단계 id로 식별한다(판정 echo 신설 전 최소 조치).
+  const periodNotJudged = judgment.judgmentSteps.some(
+    (st) => st.id.startsWith("housing_") || st.id.startsWith("building_site_"),
+  );
+  const nonBusinessOtherLand = isNonBusiness && judgment.judgmentSteps.some((st) => st.id === "other_bare_land");
 
   return (
     <div className="rounded-xl border border-border overflow-hidden">
@@ -72,8 +80,8 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
             <p className={`text-sm font-bold ${isNonBusiness ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
               {isNonBusiness
                 ? nblSurchargeExcluded
-                  ? nblExclusionBannerText(nblSurchargeExcludedBy)
-                  : "비사업용 토지 — 기본세율 +10%p 중과 (장기보유특별공제 표1 적용)."
+                  ? nblExclusionBannerText(nblSurchargeExcludedBy, lthdExcluded)
+                  : `비사업용 토지 — 기본세율 +10%p 중과 (${nblLthdBannerPhrase(lthdExcluded)}).`
                 : "사업용 토지 — 일반세율이 적용됩니다."}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">{judgment.judgmentReason}</p>
@@ -192,7 +200,9 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
       )}
 
       {/* ③ 기간 분석 */}
-      {judgment.totalOwnershipDays > 0 && (
+      {/* NBL2611-V10-P — 주택·건물 부속토지는 배율 × 면적 판정이라 소유기간 중 사업용 기간을 따지지 않는다. 그 경우 엔진이 채우는
+          일수·비율(소유기간 전체 · 면적 비율)은 기간 판정값이 아니므로 표시하지 않는다. 근본 해결(기간 판정 echo)은 R06. */}
+      {judgment.totalOwnershipDays > 0 && !periodNotJudged && (
         <div className="px-4 py-3 bg-muted/20 border-b border-border">
           <p className="text-xs font-medium text-muted-foreground mb-2">기간 분석</p>
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
@@ -209,6 +219,19 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
               </>
             )}
           </div>
+          {nonBusinessOtherLand && (
+            <p className="text-caption text-muted-foreground mt-2 leading-snug" data-testid="nbl-period-not-judged-notice">
+              비사업용으로 판정된 기타토지의 일부 분기는 소유기간 중 기간기준을 판정하지 않습니다. 이 경우 위 사업용 일수·비율은
+              소유기간 전체를 기준으로 채운 표시값이며 판정 근거가 아닙니다 — 확인 필요.
+            </p>
+          )}
+        </div>
+      )}
+      {periodNotJudged && (
+        <div className="px-4 py-2 border-b border-border" data-testid="nbl-period-skipped-notice">
+          <p className="text-caption text-muted-foreground leading-snug">
+            주택·건물 부속토지는 배율 × 면적으로 판정하며 소유기간 중 사업용 기간(기간기준)은 판정에 반영되지 않습니다.
+          </p>
         </div>
       )}
 

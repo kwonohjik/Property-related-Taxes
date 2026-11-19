@@ -249,9 +249,10 @@ export function OtherLandDetailSection({
 
       {asset.nblOtherHasBuilding && (
         <>
-          <FieldCard label="건물가액" unit="원">
+          {/* NBL2611-V10-OL11 — 법문 기준은 「시가표준액」(지방세법 시행령 §101①2호나목)이다. 「가액」은 시가·실거래가로 읽힌다. */}
+          <FieldCard label="건축물 시가표준액" unit="원">
             <CurrencyInput
-              label="건물가액"
+              label="건축물 시가표준액"
               hideLabel
               value={asset.nblOtherBuildingValue}
               onChange={(v) => onAssetChange({ nblOtherBuildingValue: v })}
@@ -259,9 +260,9 @@ export function OtherLandDetailSection({
             />
           </FieldCard>
 
-          <FieldCard label="토지가액" unit="원">
+          <FieldCard label="부속토지 시가표준액" unit="원">
             <CurrencyInput
-              label="토지가액"
+              label="부속토지 시가표준액"
               hideLabel
               value={asset.nblOtherLandValue}
               onChange={(v) => onAssetChange({ nblOtherLandValue: v })}
@@ -713,7 +714,7 @@ export function OtherLandDetailSection({
 
       {isLikelyBareground && (
         <div className="rounded-md bg-amber-50 border border-amber-200 dark:bg-amber-950/30 dark:border-amber-800 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 space-y-1">
-          <p>건물가액이 토지가액의 2% 미만 — 건축물 바닥면적분 토지는 별도합산(사업용) 유지, 그 외 부속토지만 별도합산에서 제외(종합합산)되어 비사업용으로 부분 안분됩니다. 위 &ldquo;건축물 바닥면적&rdquo;을 입력하면 안분이 반영됩니다.</p>
+          <p>건축물 시가표준액이 부속토지 시가표준액의 2% 미만 — 건축물 바닥면적분 토지는 별도합산(사업용) 유지, 그 외 부속토지만 별도합산에서 제외(종합합산)되어 비사업용으로 부분 안분됩니다. 위 &ldquo;건축물 바닥면적&rdquo;을 입력하면 안분이 반영됩니다.</p>
           <div className="flex flex-wrap items-center gap-1.5">
             <LawArticleModal legalBasis="소득세법 §104의3 ① 4호 나목" label="§104의3①4호나목" />
             <LawArticleModal legalBasis="지방세법 시행령 §101 ① 2호 나목" label="지방세법시행령 §101①2호나목" />
@@ -722,7 +723,7 @@ export function OtherLandDetailSection({
       )}
 
       <div className="rounded-md bg-muted/50 border px-3 py-2 text-xs text-muted-foreground space-y-1">
-        <p>건물가액이 토지가액의 2% 미만이면 건축물 바닥면적분 토지는 별도합산(사업용) 유지, 그 외 부속토지만 종합합산되어 비사업용으로 부분 안분됩니다(바닥면적 미입력 시 전량 비사업용).</p>
+        <p>건축물 시가표준액이 부속토지 시가표준액의 2% 미만이면 건축물 바닥면적분 토지는 별도합산(사업용) 유지, 그 외 부속토지만 종합합산되어 비사업용으로 부분 안분됩니다(바닥면적 미입력 시 전량 비사업용).</p>
         <div className="flex flex-wrap items-center gap-1.5">
           <LawArticleModal legalBasis="소득세법 §104의3 ① 4호 나목" label="§104의3①4호나목" />
           <LawArticleModal legalBasis="지방세법 시행령 §101 ① 2호 나목" label="지방세법시행령 §101①2호나목" />
