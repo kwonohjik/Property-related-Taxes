@@ -90,7 +90,8 @@ export function buildCalculationRoute(
       : `거주(통산) ${table2ResidenceYears}년 < 2년 → 표1 (보유×2%, 최대 30%)`;
 
   const zoneLabel = asset.zoneType ?? "residential";
-  const metroLabel = asset.isMetropolitanArea === false ? "수도권 외" : "수도권";
+  // 미선택(undefined)은 배율이 수도권 여부와 무관할 때만 도달한다(`assertMixedMetroSelected`) — 수도권이라고 적지 않는다.
+  const metroLabel = asset.isMetropolitanArea === undefined ? "수도권 여부 무관" : asset.isMetropolitanArea ? "수도권" : "수도권 외";
   const landMultiplierReason = `${metroLabel} ${zoneLabel} → ${excessResult.multiplier}배 (시행령 §168의12)`;
 
   // 🚨 Critical: 다주택자·§154① 보유요건 미충족(isOneHouseExempt === false)
@@ -157,11 +158,7 @@ export function collectWarnings(asset: MixedUseAssetInput): string[] {
         "이를 정면으로 다룬 해석례는 확인되지 않았습니다(확인 필요). 취득시 개별주택가격을 입력하면 기준시가 비율로 나눕니다.",
     );
   }
-  if (asset.isMetropolitanArea === undefined) {
-    warnings.push(
-      "수도권 여부 미입력 — 수도권(3배 배율)으로 보수 처리됩니다. 정확한 계산을 위해 수도권 여부를 입력하세요.",
-    );
-  }
+  // 수도권 여부 미입력: 배율이 갈리면 엔진이 계산 전에 막는다(`assertMixedMetroSelected` · NBL2611-V4-HS06) — 갈리지 않으면 값이 같아 고지할 것이 없다.
   return warnings;
 }
 
@@ -328,17 +325,27 @@ export function buildNonBusinessStep(
   excess: ReturnType<typeof calcExcessLandRatio>,
   derived: ReturnType<typeof computeDerivedAreas>,
 ): MixedUseStep {
+  // V10-BX09 — OH-17(§154③ 본문)은 한도가 「전체 토지 × 건물 전체 정착면적」이라 주택 부수토지·주택 정착면적을 적으면 값이 어긋난다.
+  const basis = nb.excessBasis?.wholeBuildingDeemedHouse
+    ? { landLabel: "전체 토지 면적", footprintLabel: "건물 전체 정착면적", land: nb.excessBasis.landArea, footprint: nb.excessBasis.footprintArea }
+    : { landLabel: "주택부수토지 면적", footprintLabel: "주택 정착면적", land: derived.residentialLandArea, footprint: derived.residentialFootprintArea };
   return {
     id: "step-6-non-business-land",
     title: "비사업용토지 부분 (주택부수토지 배율초과)",
     legalBasis: MIXED_USE.LAND_RATIO,
     values: [
-      { label: "주택부수토지 면적", value: `${derived.residentialLandArea.toFixed(2)} ㎡` },
-      { label: `적용 배율 (${excess.multiplier}배) × 주택 정착면적`, value: `${(derived.residentialFootprintArea * excess.multiplier).toFixed(2)} ㎡` },
+      { label: basis.landLabel, value: `${basis.land.toFixed(2)} ㎡` },
+      { label: `적용 배율 (${excess.multiplier}배) × ${basis.footprintLabel}`, value: `${(basis.footprint * excess.multiplier).toFixed(2)} ㎡` },
       { label: "배율초과 면적", value: `${nb.excessArea.toFixed(2)} ㎡` },
       { label: "비사업용 양도차익", value: nb.transferGain },
       { label: `장기보유공제 (표1, ${(nb.longTermDeductionRate * 100).toFixed(0)}%)`, value: nb.longTermDeductionAmount },
-      { label: "비사업용토지 양도소득금액 (+10%p 가산)", value: nb.incomeAmount, isResult: true },
+      {
+        label: nb.additionalRate > 0
+          ? `비사업용토지 양도소득금액 (+${Math.round(nb.additionalRate * 100)}%p 가산)`
+          : "비사업용토지 양도소득금액 (위기취득 — 가산 없음)",
+        value: nb.incomeAmount,
+        isResult: true,
+      },
     ],
   };
 }

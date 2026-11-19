@@ -58,6 +58,7 @@ function makeAsset(over: Partial<MixedUseAssetInput> = {}): MixedUseAssetInput {
     },
     residencePeriodYears: 10,
     zoneType: "general_residential",
+    isMetropolitanArea: true,
     isOneHouseExempt: true,
     ...over,
   } as MixedUseAssetInput;

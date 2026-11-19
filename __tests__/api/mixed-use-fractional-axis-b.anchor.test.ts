@@ -62,6 +62,7 @@ const MIXED = {
   nonResidentialFloorArea: "40",
   buildingFootprintArea: "50",
   mixedUseTotalLandArea: "300",
+  mixedIsMetropolitanArea: true,
   mixedTransferHousingPrice: "1600000000",
   mixedTransferCommercialBuildingPrice: "200000000",
   mixedTransferLandPricePerSqm: "1000000",

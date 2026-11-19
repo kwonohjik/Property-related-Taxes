@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { APPURTENANT_ZONE_OPTIONS } from "@/components/calc/transfer/appurtenant-zone-options";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -337,6 +336,7 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
             label="상가 부수토지 (㎡)"
             field="mixedCommercialLandAreaOverride"
             stacked
+            hint="상가 부수토지는 비사업용 토지 기준면적(건축물 바닥면적 × 용도지역별 배율 — 지방세법 시행령 §101②)을 판정하지 않습니다. 넘는 부분이 있을 수 있으면 확인이 필요합니다."
             badge={
               <AreaBadge
                 manual={hasCommLandOv}
@@ -368,13 +368,30 @@ export function MixedUseAreaInputs({ asset, onChange, sectionNum }: Props) {
           <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">부수토지 배율 지역</p>
           <LawArticleModal legalBasis="소득세법 시행령 §168의12" label="§168의12 배율" />
         </div>
-        <ToggleCard
-          tone="rose"
-          title="수도권 지역"
-          description="배율은 용도지역과 함께 정해집니다 — 수도권 주·상·공 3배 / 수도권 녹지·수도권 밖 도시 5배 / 도시지역 밖 10배 (시행령 §168의12)"
-          checked={!!asset.mixedIsMetropolitanArea}
-          onCheckedChange={(v) => onChange({ mixedIsMetropolitanArea: v })}
-        />
+        {/*
+          수도권 여부 — 배율의 **첫 번째 축**(NBL2611-V4-HS06 · 3-state).
+
+          🔴 종전에는 기본값이 «수도권»(ON)인 토글이라 수도권 밖 부동산을 입력하는 사람이 건드리지 않으면 주·상·공 3배로 계산돼
+             초과분이 비사업용 토지(+10%p·장특 배제)로 넘어갔다. 이제 **미선택이 기본값**이고, 배율이 실제로 갈릴 때만 ⑧이 선택을 요구한다.
+          표시 순서 = 계산 순서(수도권 여부 → 용도지역). 값은 ④가 `isMetropolitanArea`로 그대로 싣는다(`undefined` 미선택은 키를 싣지 않는다).
+        */}
+        <FieldCard
+          label="수도권 여부"
+          field="mixedIsMetropolitanArea"
+          hint="배율은 용도지역과 함께 정해집니다 — 수도권 주·상·공 3배 / 수도권 녹지·수도권 밖 도시 5배 / 도시지역 밖 10배 (시행령 §168의12). 부수토지가 인정 면적을 넘을 수 있으면 반드시 선택하세요."
+        >
+          <RadioCardGroup
+            name={`mixed-metro-${asset.assetId}`}
+            layout="inline"
+            tone="rose"
+            value={asset.mixedIsMetropolitanArea === undefined ? "" : asset.mixedIsMetropolitanArea ? "yes" : "no"}
+            onChange={(v) => onChange({ mixedIsMetropolitanArea: v === "yes" })}
+            options={[
+              { value: "yes", label: "수도권", testId: "mixed-metro-yes" },
+              { value: "no", label: "수도권 밖", testId: "mixed-metro-no" },
+            ]}
+          />
+        </FieldCard>
 
         {/*
           용도지역 — 배율의 **두 번째 축** (2026-09-06 · UI 리뷰 `desc-promises-unreachable-branch`).

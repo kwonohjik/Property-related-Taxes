@@ -92,7 +92,7 @@ test("Q5-E3 겸용 컴패니언 × 총 양도비 — 몫이 겸용 양도비로 
   const base = { acquisitionCause: "purchase", acquisitionDate: "2015-03-01", useEstimatedAcquisition: false, fixedAcquisitionPrice: "300000000",
     actualSalePrice: "600000000", standardPriceAtTransfer: "500000000", standardPriceAtAcq: "250000000" };
   const mixed = { isMixedUseHouse: true, acquisitionDate: "2009-03-01", residentialFloorArea: "60", nonResidentialFloorArea: "40", buildingFootprintArea: "50",
-    mixedUseTotalLandArea: "600", mixedZoneType: "general_residential", mixedTransferHousingPrice: "900000000", mixedTransferCommercialBuildingPrice: "300000000",
+    mixedUseTotalLandArea: "600", mixedZoneType: "general_residential", mixedIsMetropolitanArea: true, mixedTransferHousingPrice: "900000000", mixedTransferCommercialBuildingPrice: "300000000",
     mixedTransferLandPricePerSqm: "2000000", mixedAcqHousingPrice: "300000000", mixedAcqCommercialBuildingPrice: "100000000", mixedAcqLandPricePerSqm: "1000000",
     mixedAcqHousingBuildingStdPrice: "1", mixedTransferHousingBuildingStdPrice: "180000000" };
   const assets = [

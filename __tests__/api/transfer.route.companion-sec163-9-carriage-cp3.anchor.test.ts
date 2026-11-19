@@ -218,7 +218,7 @@ describe("CP-3 컴패니언 §163⑨ — 주 자산과 같은 값이 엔진에 �
       nonResidentialFloorArea: "40",
       buildingFootprintArea: "50",
       mixedUseTotalLandArea: "600",
-      mixedZoneType: "general_residential",
+      mixedZoneType: "general_residential", mixedIsMetropolitanArea: true,
       mixedTransferHousingPrice: "900000000",
       mixedTransferCommercialBuildingPrice: "300000000",
       mixedTransferLandPricePerSqm: "2000000",

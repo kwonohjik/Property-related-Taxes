@@ -227,7 +227,8 @@ describe("C-0 격자 — 겸용 엔진의 warnings 배열이 실재한다", () =
     // ⚠️ 이 픽스처는 경고를 내지 않는다. 그래서 C-1은 **렌더 경로**를 재기 위해
     //   경고를 주입한다 — 「엔진이 경고를 내면 화면에 공용 카드로 나오는가」가 이 축이다.
     expect(Array.isArray(mixed().warnings)).toBe(true);
-    expect(mixed().warnings.length).toBe(0);
+    // NBL2611-V4-BX04 — 상가 부수토지가 있는 겸용은 «기준면적 미판정» 고지 한 줄을 항상 낸다(세액 불변). 그 외 경고는 없다.
+    expect(mixed().warnings.filter((w) => !/기준면적을 판정하지 않습니다/.test(w))).toEqual([]);
   });
 });
 
@@ -242,7 +243,9 @@ describe("C-1 겸용이 「확인이 필요한 사항」 공용 카드를 쓴다
   });
 
   it("대조군 — 경고가 없으면 카드가 없다", () => {
-    const { container } = render(<MixedUseResultCard breakdown={mixed()} />);
+    // 엔진 고지(NBL2611-V4-BX04 상가 부수토지 미판정)는 걸러 낸 뒤 «경고 0건 → 카드 없음»을 본다.
+    const noWarnings = { ...mixed(), warnings: mixed().warnings.filter((w) => !/기준면적을 판정하지 않습니다/.test(w)) };
+    const { container } = render(<MixedUseResultCard breakdown={noWarnings} />);
     expect(container.textContent ?? "").not.toContain("확인이 필요한 사항");
   });
 });

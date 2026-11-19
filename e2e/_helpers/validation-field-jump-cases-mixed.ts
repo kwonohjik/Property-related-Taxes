@@ -129,6 +129,12 @@ export const MIXED_FIELD_JUMP_CASES: FieldJumpCase[] = [
     form: mixed({ mixedUseTotalLandArea: "2000", mixedZoneType: "" }),
   },
 
+  {
+    // NBL2611-V4-HS06 — 수도권 여부 미선택 + 배율이 갈림(주택 부수토지 1000㎡ > 정착 50㎡ × 3배, 5배 한도 안이 아님) → 수도권 여부 칸으로 이동
+    name: "mixed: mixedIsMetropolitanArea", field: "mixedIsMetropolitanArea", step: 0, assetIndex: A, message: /^자산: 수도권 여부를 선택하세요/,
+    form: mixed({ mixedUseTotalLandArea: "2000", mixedZoneType: "general_residential", mixedIsMetropolitanArea: undefined }),
+  },
+
   // ── 양도시 기준시가 ──
   { name: "mixed: mixedTransferHousingPrice", field: "mixedTransferHousingPrice", step: 0, assetIndex: A, message: /^자산: 양도시 개별주택공시가격을 입력하세요/, form: mixed({ mixedTransferHousingPrice: "" }) },
   { name: "mixed: mixedTransferLandPricePerSqm", field: "mixedTransferLandPricePerSqm", step: 0, assetIndex: A, message: /^자산: 양도시 개별공시지가/, form: mixed({ mixedTransferLandPricePerSqm: "" }) },

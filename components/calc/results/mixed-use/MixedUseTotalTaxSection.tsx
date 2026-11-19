@@ -114,8 +114,12 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
             // §104①8호(누진 + 10%p)를 자기 과세표준에만 적용한다. 총액에 별도로 얹지 않으므로
             // 위 「비사업용토지 +10%p 가산세」 행이 뜨지 않는다 — 산식에서마저 빠지면
             // 사용자는 중과가 누락된 것으로 오해한다.
+            // NBL2611-V4-HS01 — 위기취득(가산 0)이면 «+10%p» 문구를 붙이지 않는다(실제 적용값 그대로).
+            const nbAddPct = nb ? Math.round(nb.additionalRate * 100) : 0;
             const nbTerm = nb && t.nonBusinessSurcharge === 0
-              ? ` + 비사업용토지분 과세표준 × (누진세율 + 10%p, 소득세법 §104①8호)`
+              ? nbAddPct > 0
+                ? ` + 비사업용토지분 과세표준 × (누진세율 + ${nbAddPct}%p, 소득세법 §104①8호)`
+                : ` + 비사업용토지분 과세표준 × 누진세율 (위기취득 — 부칙 제9270호 §14①로 가산 없음)`
               : "";
             if (t.rateBasis === "clause2") {
               const addon = t.surchargeAddon;
@@ -129,7 +133,7 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
             const rate = t.appliedRate && t.appliedRate > 0 ? t.appliedRate : fallback.rate;
             const deduction = t.progressiveDeduction && t.progressiveDeduction > 0 ? t.progressiveDeduction : fallback.deduction;
             // 1호(합산 누진)가 채택된 경우 — 비사업용 가산이 포함된 2호보다 1호가 컸다는 뜻이다.
-            const nbNote = nbTerm
+            const nbNote = nbTerm && nbAddPct > 0
               ? ` · 비사업용토지분은 별개 자산으로 보아 §104①8호를 적용한 자산별 합계(§104⑤ 2호)와 비교했으나, 합산 누진(1호)이 더 커서 1호가 채택되었습니다`
               : "";
             return `${fmtPlain(t.taxBase)} × ${fmtPct(rate)} - ${fmtPlain(deduction)} (소득세법 §104)${nbNote}`;
@@ -137,7 +141,7 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
         />
         {t.nonBusinessSurcharge > 0 && (
           <Row
-            label="비사업용토지 +10%p 가산세"
+            label={`비사업용토지 +${Math.round((nb?.additionalRate ?? 0.1) * 100)}%p 가산세`}
             value={fmt(t.nonBusinessSurcharge)}
             formula={(() => {
               // 중과 base = 비사업용 양도소득금액 − 기본공제 귀속분(최고세율 부분에 전액 귀속).
@@ -145,7 +149,7 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
               const surchargeBase = nb
                 ? Math.max(0, nb.incomeAmount - (t.aggregateIncome - t.taxBase))
                 : 0;
-              return `비사업용토지 과세표준 귀속분 ${fmtPlain(surchargeBase)} × 10%`;
+              return `비사업용토지 과세표준 귀속분 ${fmtPlain(surchargeBase)} × ${Math.round((nb?.additionalRate ?? 0.1) * 100)}%`;
             })()}
           />
         )}

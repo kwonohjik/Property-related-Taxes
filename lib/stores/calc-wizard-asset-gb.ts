@@ -363,8 +363,12 @@ export interface GeneralBuildingFormSlice {
   mixedAcqHousingBuildingStdPrice: string;
   /** 양도시 **주택건물 기준시가**(나목, 원, 문자열) — 양도시 가목 : 나목 비례 분모. 술어: `needsMixedHousingBuildingStdAtTransfer`. */
   mixedTransferHousingBuildingStdPrice: string;
-  /** 수도권 여부 */
-  mixedIsMetropolitanArea: boolean;
+  /**
+   * 수도권 여부 — **3-state**: `undefined` = 미선택 · `true` = 수도권 · `false` = 수도권 밖 (NBL2611-V4-HS06).
+   * 부수토지 배율이 수도권 주·상·공 3배 / 그 밖 도시 5배로 갈릴 때 미선택이면 ⑧이 차단하고 ⑫가 400을 낸다(판정 leaf: `mixed-use-metro-required.ts`).
+   * 종전에는 기본값이 `true`라 수도권 밖 입력자가 토글을 건드리지 않으면 3배로 계산돼 초과분이 비사업용 토지(+10%p·장특 배제)로 넘어갔다.
+   */
+  mixedIsMetropolitanArea?: boolean;
   /**
    * 부수토지 배율 판정 용도지역 (「소득세법 시행령」 §168의12·§154⑦). `""` = 미선택.
    *
