@@ -55,6 +55,8 @@ import {
 import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house/same-household-inheritance-start";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
+import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { RegulatedAreaField } from "@/components/calc/transfer/RegulatedAreaField";
 import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import type { JudgmentMenu } from "@/lib/calc/judgment-menu-flags";
@@ -66,6 +68,17 @@ type Props = {
   /** 판정 메뉴 — 다주택 중과 판정은 2-C 안내와 양도 당시 기준시가 칸(M1)이 다르다(계획서 §5.3) */
   menu?: JudgmentMenu;
 };
+
+/**
+ * 양도 주택 취득일 칸 안내 — 재개발·재건축으로 받은 신축주택은 조합원 경위로 갈린다(D-78).
+ * 엔진 정본 `redevAptJudgmentAcquisitionDate`와 같은 규칙이다: 주택을 출자한 원조합원은 멸실 전 주택 취득일(기존주택의 연장),
+ * 승계조합원·토지만 출자한 원조합원은 사용승인일. 판정 메뉴는 이 날짜를 「취득 당시」 조정대상지역 판정일·보유 기산일로 그대로 쓴다.
+ */
+const REDEV_HOUSE_ACQ_DATE_HINT =
+  `재개발·재건축으로 받은 신축주택은 조합원 경위에 따라 다릅니다. ` +
+  `주택(건물)을 출자한 원조합원은 헐기 전 종전주택 취득일을 넣으세요 — 멸실 전 주택과 보유·거주기간을 통산합니다(${REDEVELOPMENT.REDEV_RESIDENCE_AGGREGATION}). ` +
+  `입주권을 승계받은 조합원은 사용승인일(임시사용승인·사실상 사용이 먼저면 그날 — ${TRANSFER.SELF_BUILT_ACQUISITION_DATE})을 넣으세요. ` +
+  `토지만 출자한 원조합원도 사용승인일이며, 입주권 전환이 조정대상지역 지정 전이면 거주요건이 없을 수 있으니 양도세 계산기의 재개발 입력으로 확인하세요.`;
 
 export function Step3({ form, onChange, menu = "one_house" }: Props) {
   const primary = form.assets[0];
@@ -313,7 +326,7 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
             hint={
               isRightSale
                 ? undefined
-                : "재개발로 받은 신축주택이면 사용승인일(임시사용승인·사실상 사용이 먼저면 그날)을 입력하세요 — 신축주택 취득시기입니다(시행령 §162①4호). 토지만 출자한 경우 입주권 전환이 조정대상지역 지정 전이면 거주요건이 없을 수 있으니 양도세 계산기의 재개발 입력으로 확인하세요."
+                : REDEV_HOUSE_ACQ_DATE_HINT
             }
           >
             <DateInput
