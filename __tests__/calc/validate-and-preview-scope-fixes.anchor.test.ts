@@ -88,7 +88,7 @@ describe("인구감소지역 자동판정 — 화면 fallback이 엔진과 같�
     // 이 함수가 `null`만 돌려준다면 화면 fallback 교체가 no-op이 된다(구별력 확인).
     const kinds = new Set<string | null>();
     for (const code of ["46770", "41111", "48330", "51770"]) {
-      kinds.add(classifyPopulationDeclineArea(code).kind);
+      kinds.add(classifyPopulationDeclineArea(code, undefined).kind);
     }
     expect(kinds.size).toBeGreaterThan(1);
   });
