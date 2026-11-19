@@ -9,6 +9,11 @@ export interface BusinessUsePeriodsInputProps {
   label?: string;
   /** 검증 오류 → 입력칸 이동 앵커 접두 — 행의 날짜칸이 `${fieldPrefix}.${i}.startDate`·`.endDate`가 된다 */
   fieldPrefix?: string;
+  /**
+   * 「+ 기간 추가」 행의 기본 사용 형태(표시용 메모 — 엔진은 읽지 않는다). 기본 「자경」은 농지용이라 별장 화면에서는
+   * 「별장 사용」을 넘긴다(NBL2611-V8-VL08).
+   */
+  defaultUsageType?: string;
 }
 
 export function BusinessUsePeriodsInput({
@@ -16,9 +21,10 @@ export function BusinessUsePeriodsInput({
   onChange,
   label = "사업용 사용기간",
   fieldPrefix,
+  defaultUsageType = "자경",
 }: BusinessUsePeriodsInputProps) {
   function addPeriod() {
-    onChange([...periods, { startDate: "", endDate: "", usageType: "자경" }]);
+    onChange([...periods, { startDate: "", endDate: "", usageType: defaultUsageType }]);
   }
 
   function removePeriod(i: number) {
@@ -53,7 +59,7 @@ export function BusinessUsePeriodsInput({
               type="text"
               value={p.usageType}
               onChange={(e) => updatePeriod(i, { usageType: e.target.value })}
-              placeholder="자경"
+              placeholder={defaultUsageType}
               className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
           </div>

@@ -18,6 +18,11 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { evaluateUnconditionalExemption } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { buildUncondSourceRecord, nblAcquisitionDateOf } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { nblLandSigunguCodeOf } from "./nbl-land-sigungu";
+import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
+import { getLandCategoryGroup } from "@/lib/tax-engine/non-business-land/land-category";
+import { consumesMetropolitanArea } from "@/lib/tax-engine/non-business-land/land-category";
+import { consumesPeriodJudgmentDate } from "@/lib/tax-engine/non-business-land/land-category";
+import { consumesUrbanIncorporationDate } from "@/lib/tax-engine/non-business-land/land-category";
 
 /** Zod 검증 후 출력(z.infer = z.output) — 빌더의 z.input과 구분 */
 type NonBusinessLandRaw = z.infer<typeof nonBusinessLandRawSchema>;
@@ -54,6 +59,24 @@ export function buildNblEngineInput(
       parseNumber: parseRawNumber,
     }) ?? undefined
   );
+}
+
+/**
+ * NBL2611-V6-PU11 · B1 — raw 페이로드가 **무조건 사업용 의제(영 §168의14③)** 로 성립하는가 (⑫ 전용).
+ *
+ * ⑧(`validateNblDetailedJudgment`)은 의제가 성립하면 지목·기간 행 검증을 건너뛴다(그 칸이 화면에서 비활성이라 고칠 수 없다).
+ * ⑫가 같은 조건을 쓰지 않으면 「⑧ 통과 ↔ ⑫ 400」 모순이 생기므로 **엔진 자신의 판정**(`checkUnconditionalExemption`)을
+ * raw에서 다시 돌려 같은 결론을 얻는다 — 조건을 따로 재구현하지 않는다. 날짜가 깨져 변환이 실패하면 의제 불성립으로 본다
+ * (다른 검증이 그 오류를 먼저 낸다).
+ */
+export function isNblRawUnconditionallyExempt(raw: Record<string, unknown>): boolean {
+  try {
+    const input = buildNblEngineInput(raw as NonBusinessLandRaw);
+    if (!input) return false;
+    return checkUnconditionalExemption(input, getLandCategoryGroup(input.landType)).isExempt;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -128,8 +151,16 @@ export function buildNonBusinessLandRaw(
     return undefined;
   }
   const nblFields = Object.fromEntries(
-    Object.entries(asset).filter(([k]) => k.startsWith("nbl")),
+    // `nblOtherLegacyRelatedReselect`는 화면 고지 표지(표시 전용)라 보내지 않는다 — 서버가 읽을 곳이 없다.
+    Object.entries(asset).filter(([k]) => k.startsWith("nbl") && k !== "nblOtherLegacyRelatedReselect"),
   );
+  // NBL2611-B1 — 지목별 입력 소비: 그 지목이 판정에 쓰지 않는 칸의 값은 store에 남아 있어도(이력 복원 보존) 보내지 않는다.
+  // ⑤ 렌더·⑧ 검증·서버 매퍼가 같은 엔진 술어(`consumes*`)를 쓴다 — useEffect로 store를 지우지 않는다.
+  const consumes = {
+    incorporation: consumesUrbanIncorporationDate(asset.nblLandType),
+    metro: consumesMetropolitanArea(asset.nblLandType),
+    deemed: consumesPeriodJudgmentDate(asset.nblLandType),
+  };
   return {
     ...nblFields,
     /**
@@ -149,7 +180,10 @@ export function buildNonBusinessLandRaw(
      * 않는다(파일 상단 ⚠️ 주석과 같은 이유). 동치는 anchor 테스트가 지킨다.
      */
     nblOwnershipRatio: String(deriveOwnershipRatio(asset)),
-    nblUrbanIncorporationDate: resolveNblUrbanIncorporationDate(asset),
+    nblUrbanIncorporationDate: consumes.incorporation ? resolveNblUrbanIncorporationDate(asset) : "",
+    nblIsMetropolitanArea: consumes.metro ? asset.nblIsMetropolitanArea : "",
+    nblDeemedTransferReason: consumes.deemed ? asset.nblDeemedTransferReason : "none",
+    nblDeemedTransferDate: consumes.deemed ? asset.nblDeemedTransferDate : "",
     nblLandSigunguCode: nblLandSigunguCodeOf(asset),
     // 농지 좌표(직선거리 30km 재촌 판정 기준점) — 양도 물건 주소검색 시 세팅됨.
     nblLandLat: asset.latitude,

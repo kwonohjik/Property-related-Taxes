@@ -14,6 +14,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { useMemo } from "react";
 import { parseISO, getDaysInYear } from "@/lib/tax-engine/utc-date";
 import { deriveCurrentBusinessDays, computeRevenueTest } from "@/lib/tax-engine/non-business-land/revenue-test";
@@ -291,12 +292,21 @@ export function OtherLandDetailSection({
           <p className="text-xs font-semibold text-sky-700 dark:text-sky-300">§168의11① 거주·사업관련 토지 (호별 면적기준)</p>
           <LawArticleModal legalBasis="소득세법 시행령 §168의11①" label="§168의11①" />
         </div>
+        {/* NBL2611-Q-10 (나) — 구 이력의 「거주·사업 직접 관련」은 복원 시 꺼지고(호 없이 사업용으로 읽던 fallback 폐지) 호를 다시 골라야 한다. */}
+        {asset.nblOtherLegacyRelatedReselect && (
+          <ToneCard tone="amber" title="호를 다시 선택하세요 — 확인 필요">
+            <p data-testid="nbl-other-legacy-related-notice" className="text-xs text-amber-800 dark:text-amber-200 leading-snug">
+              저장된 이력에 「거주·사업 직접 관련」이 켜져 있었지만 §168의11① 어느 호인지 기록이 없어 이제 판정에 반영하지 않습니다(호를 모르면 혜택을 인정하지 않습니다).
+              해당하는 호를 아래에서 선택하면 그 호의 기준면적으로 판정합니다.
+            </p>
+          </ToneCard>
+        )}
         <RadioCardGroup
           name={`nblOtherRelatedBusinessType-${asset.assetId ?? "primary"}`}
           tone="sky"
           options={RELATED_BUSINESS_OPTIONS}
           value={asset.nblOtherRelatedBusinessType}
-          onChange={(v) => onAssetChange({ nblOtherRelatedBusinessType: v })}
+          onChange={(v) => onAssetChange({ nblOtherRelatedBusinessType: v, nblOtherLegacyRelatedReselect: false })}
         />
 
         {/* parking_attached — 기준면적 직접입력 (별표 자동산출 미지원) */}
@@ -661,7 +671,7 @@ export function OtherLandDetailSection({
             <FieldCard label="직전 과세기간 영위일수" unit="일" hint="직전연도 중 사업을 개시·폐업하여 영위기간이 1년 미만인 경우만 입력. 미입력 시 직전 수입금액은 연환산하지 않습니다 (§168의11③3호).">
               <DecimalInput value={asset.nblRevenuePriorBusinessDays} onChange={(v) => onAssetChange({ nblRevenuePriorBusinessDays: v })} />
             </FieldCard>
-            <FieldCard label="직전 토지가액" unit="원">
+            <FieldCard field="nblRevenuePriorLandValue" label="직전 토지가액" unit="원" hint="직전 수입금액을 입력했으면 필수입니다 — 없으면 (당해+직전) 합산비율②가 계산되지 않습니다.">
               <CurrencyInput label="직전 토지가액" hideLabel hideUnit value={asset.nblRevenuePriorLandValue} onChange={(v) => onAssetChange({ nblRevenuePriorLandValue: v })} />
             </FieldCard>
 

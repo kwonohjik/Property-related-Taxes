@@ -90,6 +90,30 @@ function annualizeRevenue(
 }
 
 /**
+ * NBL2611-V9-DM06 — 직전 과세기간 **수입금액 쪽은 있는데 직전 토지가액이 없는** 입력인가 (⑧·⑫ 공용).
+ *
+ * `computeRevenueTest`의 `hasPrior`는 `priorLandValue`가 있어야 비율②(당해+직전)를 산정한다. 수입만 넣고 토지가액을
+ * 비우면 ②가 **조용히 빠져** 비율①만으로 판정된다(+24,350,000~+57,150,000). 반대쪽(직전 토지가액만 있고 수입이 0)은
+ * 막지 않는다 — 분자 직전 수입이 0이면 ②=당해수입÷(당해+직전 토지가액)이 항상 ①=당해수입÷당해 토지가액 이하라
+ * `max(①,②)`가 달라지지 않는다(토지가액 자동조회가 이 칸만 채운다).
+ * 수입 쪽 = 직전 수입금액 · 직전 간주임대료 입력(보증금 × 임대일수) · 공통수입 안분 ON의 직전 공통수입금액.
+ */
+export function priorRevenueWithoutLandValue(p: {
+  priorRevenue?: number;
+  priorDeposit?: number;
+  priorRentDays?: number;
+  commonApportion?: boolean;
+  priorCommonRevenue?: number;
+  priorLandValue?: number;
+}): boolean {
+  const hasRevenueSide =
+    (p.priorRevenue ?? 0) > 0 ||
+    ((p.priorDeposit ?? 0) > 0 && (p.priorRentDays ?? 0) > 0) ||
+    (p.commonApportion === true && (p.priorCommonRevenue ?? 0) > 0);
+  return hasRevenueSide && !((p.priorLandValue ?? 0) > 0);
+}
+
+/**
  * 수입금액비율 산정. businessType "none"·토지가액 0 가드 포함.
  * §168의11③3호 연환산을 당해·직전에 각각 적용 후 max(비율①, 비율②) 기준 pass 판정.
  */

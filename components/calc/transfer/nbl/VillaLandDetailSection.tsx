@@ -38,8 +38,22 @@ export function VillaLandDetailSection({
           onChange={(periods) => onAssetChange({ nblVillaUsePeriods: periods })}
           label="별장 사용기간"
           fieldPrefix="nblVillaUsePeriods"
+          defaultUsageType="별장 사용"
         />
       </FieldCard>
+
+      {/* NBL2611-Q-12 (a) — 사용기간이 0행이면 «별장으로 사용한 적 없음»을 명시 확인해야 한다(⑧·⑫). 0행은 비별장 100%로 읽혀 주택 부수 토지로 재분류된다. */}
+      {asset.nblVillaUsePeriods.length === 0 && (
+        <FieldCard field="nblVillaNoUseConfirmed" label="별장으로 사용한 기간 없음">
+          <ToggleCard
+            tone="amber"
+            title="별장으로 사용한 기간이 없습니다"
+            description="소유기간 전체를 별장이 아닌 용도로 썼다는 확인입니다. 확인하면 주택 부수 토지로 재분류해 판정하며(아래 정착면적·수도권 여부 사용), 별장으로 쓴 기간이 있으면 위에 입력하세요."
+            checked={asset.nblVillaNoUseConfirmed}
+            onCheckedChange={(v) => onAssetChange({ nblVillaNoUseConfirmed: v })}
+          />
+        </FieldCard>
+      )}
 
       {/*
         🔴 수도권 여부 (2026-09-06 UI 리뷰 — E1-02와 같은 재분류 경로의 나머지 한 축).

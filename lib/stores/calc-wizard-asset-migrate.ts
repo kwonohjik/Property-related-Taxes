@@ -30,6 +30,7 @@ import { effectiveBuildingCauseMix } from "@/lib/calc/transfer-land-part-cause";
 import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { sec164LandLatchClearPatch } from "@/lib/calc/transfer-163-9-base-date";
 import { deriveLandCauseHost } from "./calc-wizard-asset-migrate-land-cause";
+import { migrateNblB1Fields } from "./calc-wizard-asset-migrate-nbl";
 
 /**
  * 금액 문자열(CurrencyInput 저장 규약 — 콤마 포함)이 양수인가.
@@ -222,6 +223,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.nblVillaAttachedLandArea === undefined) a.nblVillaAttachedLandArea = "";
   if (a.nblVillaCombinedStdValue === undefined) a.nblVillaCombinedStdValue = "";
   if (a.nblVillaIsInRestrictedArea === undefined) a.nblVillaIsInRestrictedArea = false;
+  migrateNblB1Fields(a); // NBL2611-B1 — 별장 사용 없음 확인 · 레거시 「거주·사업 직접 관련」 정규화(Q-10 나·Q-12)
   // ── 장기임대 §97 시리즈 ~ 분리취득·§166⑧ 필드 normalize — 별도 모듈 (800줄 정책) ──
   //    구 sessionStorage 복원 시 신규 필드가 `undefined`로 남아 controlled→uncontrolled로
   //    뒤집히는 것을 막는 가드 묶음이다. `a`를 그대로 변형한다(반환 없음).

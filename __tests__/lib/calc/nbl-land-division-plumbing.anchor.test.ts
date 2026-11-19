@@ -11,7 +11,7 @@ import { describe, it, expect } from "vitest";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import { validateNblDetailedJudgment } from "@/lib/calc/transfer-tax-validate-nbl";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
-import { nonBusinessLandRawSchema } from "@/lib/api/transfer-tax-schema-nbl";
+import { nonBusinessLandRawBaseSchema } from "@/lib/api/transfer-tax-schema-nbl";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 /** 충주시(43130 · 도농복합시) 일반주거 농지 — 읍·면 여부가 결과를 가른다 */
@@ -69,7 +69,7 @@ describe("[E2-01] ④⑭ raw → 엔진 input", () => {
 
 describe("[E2-01] ⑫ Zod — 침묵 strip 방지", () => {
   it("🔴 nblLandDivision이 스키마를 통과해 살아남는다", () => {
-    const parsed = nonBusinessLandRawSchema.partial().safeParse({ nblLandDivision: "eup_myeon" });
+    const parsed = nonBusinessLandRawBaseSchema.partial().safeParse({ nblLandDivision: "eup_myeon" });
     expect(parsed.success).toBe(true);
     expect(parsed.success && parsed.data.nblLandDivision).toBe("eup_myeon");
   });

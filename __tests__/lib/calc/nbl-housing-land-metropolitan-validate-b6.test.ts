@@ -74,7 +74,7 @@ describe("[B6] 주택부수토지 수도권 여부 미입력 차단", () => {
   it("B6-7b: villa_land + 수도권='no' → 통과", () => {
     expect(
       validateNblDetailedJudgment(
-        nblAsset({ nblLandType: "villa_land", nblIsMetropolitanArea: "no" }),
+        nblAsset({ nblLandType: "villa_land", nblIsMetropolitanArea: "no", nblVillaNoUseConfirmed: true }),
         "자산 1",
         "2024-05-01",
       ),
@@ -84,7 +84,7 @@ describe("[B6] 주택부수토지 수도권 여부 미입력 차단", () => {
   it("B6-7c: villa_land + 도시 外(agriculture_forest) + 미선택 → 통과 (배율 무관 — 오탐 금지)", () => {
     expect(
       validateNblDetailedJudgment(
-        nblAsset({ nblLandType: "villa_land", nblZoneType: "agriculture_forest" }),
+        nblAsset({ nblLandType: "villa_land", nblZoneType: "agriculture_forest", nblVillaNoUseConfirmed: true }),
         "자산 1",
         "2024-05-01",
       ),

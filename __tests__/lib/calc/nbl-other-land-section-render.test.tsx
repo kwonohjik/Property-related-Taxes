@@ -27,7 +27,8 @@ describe("[NBL-OTHER-UI] ⑤ §168의11① 호별 면적기준 위젯", () => {
     render(<OtherLandDetailSection asset={asset} onAssetChange={onChange} />);
     const radio = screen.getByTestId("nbl-other-related-parking_attached");
     fireEvent.click(radio);
-    expect(onChange).toHaveBeenCalledWith({ nblOtherRelatedBusinessType: "parking_attached" });
+    // NBL2611-Q-10 — 호를 고르면 「호 재선택」 고지 표지도 함께 끈다
+    expect(onChange).toHaveBeenCalledWith({ nblOtherRelatedBusinessType: "parking_attached", nblOtherLegacyRelatedReselect: false });
   });
 
   it("parking_attached 선택 시 '기준면적 (㎡)' 입력이 노출된다", () => {
