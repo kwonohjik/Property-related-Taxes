@@ -30,7 +30,7 @@ export function popDeclineQuestionAsset(assetKind: string | undefined): boolean 
 export function popDeclineRowCandidate(row: Row): boolean {
   const acq = row.acquisitionDate;
   if (!acq || acq < iso(POP_DECLINE_WINDOW_START) || acq > iso(POP_DECLINE_WINDOW_END)) return false;
-  const auto = row.regionCode ? classifyPopulationDeclineArea(row.regionCode).kind : null;
+  const auto = row.regionCode ? classifyPopulationDeclineArea(row.regionCode, acq).kind : null;
   const isPop = row.isPopulationDeclineArea ?? auto !== null;
   if (!isPop) return false;
   const kind = row.populationAreaType ?? auto;

@@ -106,7 +106,8 @@ export function resolvePopulationDeclineSecondHome(
   presaleRights: readonly PresaleRight[],
   transferDate: Date,
 ): { qualifies: boolean; popCap: number; warnings: string[] } | null {
-  const autoKind = house.regionCode ? classifyPopulationDeclineArea(house.regionCode).kind : null;
+  // 「취득하는 주택」의 소재 — 취득일 현재 지정으로 판정한다(고시 제2026-61호 · D-43).
+  const autoKind = house.regionCode ? classifyPopulationDeclineArea(house.regionCode, house.acquisitionDate).kind : null;
   const isPopDecline = house.isPopulationDeclineArea ?? (autoKind !== null);
   // 12호 다·라목은 2026.2.27 시행본에서 신설됐고, 호 본문이 「2026년 1월 1일 이후 취득하는 주택」이다(F-11).
   const secondHomeInForce =

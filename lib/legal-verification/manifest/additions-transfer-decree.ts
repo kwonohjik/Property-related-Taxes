@@ -710,6 +710,14 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // §68의2①1호 가목 1) 「수도권(접경지역은 제외한다)」의 접경지역 범위 — 가평군 2025.3.11. 편입(`TRANSFER.CAPITAL_BORDER_AREA_DECREE_2_2`).
+    // 원문 MST 269703(시행 2025.3.11.) 실독 2026-11-20. 개정되면(시·군 추가) `CAPITAL_BORDER_FROM`에 편입일을 더한다.
+    id: "TRANSFER.CAPITAL_BORDER_AREA_DECREE_2_2",
+    citation: "접경지역 지원 특별법 시행령 §2",
+    keywords: ["대통령령으로 정하는 시ㆍ군", "고양시, 양주시, 동두천시, 포천시, 가평군"],
+    keywordMode: "ALL",
+  },
+  {
     // §99의4 가액 한도 한옥 4억의 「대통령령으로 정하는 한옥」(`NEW_99_4_HANOK_DECREE`). 원문 MST 288915 실독 2026-11-05.
     id: "TRANSFER_DECREE.NEW_99_4_HANOK",
     citation: "조특령 §99의4",
