@@ -124,6 +124,15 @@ export function checkExemption(
     : core;
 
   const settled = verdict.isExempt || verdict.isPartialExempt;
+  /**
+   * 반사실 판정의 결론 키 — 이 함수가 돌려줄 `isExempt|isPartialExempt`와 같다(위 `verdict` 삼항: §89② 배제면 false|false, 아니면 본체).
+   * 고지 게이트는 이 키만 비교하므로 판정 전체를 다시 부르지 않는다(D-01 — 미선언 축마다 재귀해 계승급 비용이었다).
+   */
+  const verdictKey = (i: OneHouseJudgeInput): string => {
+    if (resolveArticle89Clause2(i, presaleRightStartDate).status === "excluded") return "false|false";
+    const c = checkExemptionCore(i, oneHouseRules);
+    return `${c.isExempt}|${c.isPartialExempt}`;
+  };
   const appliedExceptions = verdict.appliedExceptions ?? [];
   // 이미 비과세·부분과세면 「무엇을 더 하면」이 없다 — pending은 과세를 뒤집는 조건만 담는다.
   const allPending = settled ? [] : collectPendingConditions(input, oneHouseRules, article89Clause2, coreWouldPass);
@@ -180,40 +189,30 @@ export function checkExemption(
     pending,
     undetermined: [
       ...collectUndetermined(input, oneHouseRules, article89Clause2, settled, {
-        // 양도 주택 「지정 지구 안인가」 미선언 고지는 그 선언이 비과세 결론을 가를 때만 낸다(S02-7). 선언을 채운 두 판정은
-        // 이 함수 자신이다 — 선언이 있으면 그 고지가 생기지 않아 재귀하지 않는다.
-        selling: () => {
-          const verdictIf = (regionInDesignatedDistrict: boolean) => {
-            const r = checkExemption({ ...input, regionInDesignatedDistrict }, oneHouseRules, presaleRightStartDate, options);
-            return `${r.isExempt}|${r.isPartialExempt}`;
-          };
-          return verdictIf(true) !== verdictIf(false);
-        },
+        // 양도 주택 「지정 지구 안인가」 미선언 고지는 그 선언이 비과세 결론을 가를 때만 낸다(S02-7). 선언을 채운 두 판정의
+        // 결론 키만 비교한다 — 판정 전체(`checkExemption`)를 다시 부르면 남은 미선언 축마다 재귀해 계승급 비용이 된다(D-01).
+        selling: () =>
+          verdictKey({ ...input, regionInDesignatedDistrict: true }) !==
+          verdictKey({ ...input, regionInDesignatedDistrict: false }),
         // 입주권 행(기존주택 원조합원 §155① 처분기한)의 지구 선언도 같은 규약이다(#32-4) — 그 행만 지구 안·밖으로 바꿔 다시 판정한다.
         right: (rowIndex: number) => {
-          const verdictIf = (inDesignatedDistrict: boolean) => {
-            const presaleRights = (input.presaleRights ?? []).map((r, i) => (i === rowIndex ? { ...r, inDesignatedDistrict } : r));
-            const r = checkExemption({ ...input, presaleRights }, oneHouseRules, presaleRightStartDate, options);
-            return `${r.isExempt}|${r.isPartialExempt}`;
-          };
-          return verdictIf(true) !== verdictIf(false);
+          const keyIf = (inDesignatedDistrict: boolean) =>
+            verdictKey({
+              ...input,
+              presaleRights: (input.presaleRights ?? []).map((r, i) => (i === rowIndex ? { ...r, inDesignatedDistrict } : r)),
+            });
+          return keyIf(true) !== keyIf(false);
         },
         // 일시적 2주택 명부 행(합가 D8 짝의 종전 주택 · 신규 주택)의 지구 선언도 같은 규약이다 — 그 행만 지구 안·밖으로 바꿔 다시 판정한다.
         previousHouse: () => {
-          const verdictIf = (previousHouseInDesignatedDistrict: boolean) => {
-            const temporaryTwoHouse = input.temporaryTwoHouse && { ...input.temporaryTwoHouse, previousHouseInDesignatedDistrict };
-            const r = checkExemption({ ...input, temporaryTwoHouse }, oneHouseRules, presaleRightStartDate, options);
-            return `${r.isExempt}|${r.isPartialExempt}`;
-          };
-          return verdictIf(true) !== verdictIf(false);
+          const keyIf = (previousHouseInDesignatedDistrict: boolean) =>
+            verdictKey({ ...input, temporaryTwoHouse: input.temporaryTwoHouse && { ...input.temporaryTwoHouse, previousHouseInDesignatedDistrict } });
+          return keyIf(true) !== keyIf(false);
         },
         newHouse: () => {
-          const verdictIf = (newHouseInDesignatedDistrict: boolean) => {
-            const temporaryTwoHouse = input.temporaryTwoHouse && { ...input.temporaryTwoHouse, newHouseInDesignatedDistrict };
-            const r = checkExemption({ ...input, temporaryTwoHouse }, oneHouseRules, presaleRightStartDate, options);
-            return `${r.isExempt}|${r.isPartialExempt}`;
-          };
-          return verdictIf(true) !== verdictIf(false);
+          const keyIf = (newHouseInDesignatedDistrict: boolean) =>
+            verdictKey({ ...input, temporaryTwoHouse: input.temporaryTwoHouse && { ...input.temporaryTwoHouse, newHouseInDesignatedDistrict } });
+          return keyIf(true) !== keyIf(false);
         },
       }, buildEraNoticeRelevance({
         input,
@@ -221,7 +220,7 @@ export function checkExemption(
         article89Excluded: article89Clause2.status === "excluded",
         settled,
         verdict,
-        check: (i) => checkExemption(i, oneHouseRules, presaleRightStartDate, options),
+        verdictKey,
         core: (i) => checkExemptionCore(i, oneHouseRules),
       })),
       ...undeclaredThreeYearExceptionUndetermined(article89Clause2, coreWouldPass, input.transferDate),
