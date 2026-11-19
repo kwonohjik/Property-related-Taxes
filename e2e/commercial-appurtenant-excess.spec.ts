@@ -86,6 +86,9 @@ test.describe("CB 부수토지 기준면적 초과분 중과", () => {
     await expect(page.getByText(/인정 한도.*600\.00\s*㎡/)).toBeVisible();
     await expect(page.getByText(/초과분\s*600\.00㎡ 비사업용/)).toBeVisible();
     await expect(page.getByText(/전체의\s*50\.0%/)).toBeVisible();
+    // NBL2611-V10-BX06 — 초과분이 있으면 «판정하지 않은 사항» 확인 필요 고지(입력 화면). 상업용건물은 «양도일 현재 상태» 고지가 없다.
+    await expect(page.getByText(/부설주차장 설치기준면적 이내의 토지 등\).*판정하지 않았습니다 — 확인 필요/)).toBeVisible();
+    await expect(page.getByText(/양도일 현재의 상태로 판정해 소유기간 전체에 적용/)).toHaveCount(0);
   });
 
   test("§101① 단서 토글 ON → 배율 입력이 사라지고 전량 비사업용 안내", async ({ page }) => {
@@ -108,6 +111,7 @@ test.describe("CB 부수토지 기준면적 초과분 중과", () => {
     const baselineText = await page.locator("body").innerText();
     // 판정 STEP은 없어야 한다
     expect(baselineText).not.toContain("부수토지 기준면적 초과분 비사업용 판정");
+    expect(baselineText).not.toContain("판정하지 않았습니다 — 확인 필요");
 
     // (2) 부수토지 초과 입력 후 계산
     await seed(page, TOTALS);
@@ -115,6 +119,9 @@ test.describe("CB 부수토지 기준면적 초과분 중과", () => {
 
     // 엔진 step 목록은 기본 접힘 — 펴야 검증이 실제로 성립한다
     // (접힌 채 단언하면 hidden 요소를 통과시켜 검증이 조용히 약해진다).
+    // NBL2611-V10-BX06 — 결과 「확인이 필요한 사항」 목록에도 같은 고지가 실린다.
+    await expect(page.getByText("확인이 필요한 사항").first()).toBeVisible();
+    await expect(page.getByText(/부설주차장 설치기준면적 이내의 토지 등\).*판정하지 않았습니다 — 확인 필요/).first()).toBeVisible();
     await page.getByRole("button", { name: /전체 엔진 계산 과정 보기/ }).first().click();
 
     // 판정 STEP 노출 — 산식에 배율·기준면적·초과면적이 들어간다

@@ -5,6 +5,7 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import { foldPurchasedPieces } from "@/lib/tax-engine/general-building-purchased-pieces";
+import { foldGbLandCards } from "@/lib/tax-engine/general-building-land-cards";
 import { gbViewProperties, type GbBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
 
 /** 꼬리 카드(매입분)를 부모에 합칠 때 더하는 수치 — 이 표가 읽는 행들이다(세율·공제율 같은 비율은 더하지 않는다). */
@@ -32,7 +33,10 @@ const THREE_WAY_SUM_KEYS = [
 export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: AggregateTransferResult; view?: GbBlockView }) {
   // 3-way 유효성 확인: 정확히 3개 카드이고, 마지막 카드가 "증축건물(3002)"일 때만 렌더
   // 당초 증여 때 인수한 채무 부분(매입분) 꼬리 카드는 부모(증여분) 카드에 합쳐 세 열로 그린다 — 합치지 않으면 카드가 4장이 되어 이 표가 통째로 사라진다.
-  const props = foldPurchasedPieces(view ? gbViewProperties(aggregated, view) : aggregated.properties, THREE_WAY_SUM_KEYS);
+  const pieceFolded = foldPurchasedPieces(view ? gbViewProperties(aggregated, view) : aggregated.properties, THREE_WAY_SUM_KEYS);
+  // NBL2611-V10-BX08 — 토지가 사업용·비사업용 초과분 두 장으로 갈려도 토지 한 열로 합쳐 세 열을 지킨다(합치지 않으면 4장이 되어 표가 사라졌다).
+  const props = foldGbLandCards(pieceFolded, THREE_WAY_SUM_KEYS);
+  const landSplit = props.length < pieceFolded.length;
   if (props.length !== 3) return null;
   const hasExtension = props.some((p) => p.propertyLabel.includes("3002"));
   if (!hasExtension) return null;
@@ -56,7 +60,10 @@ export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: Agg
    */
   const gbCards = (view?.detail ?? aggregated.generalBuildingValuationDetail)?.assetCards;
   // 함께 양도 카드 id에는 자산 접미사가 붙는다 — 상세 카드는 그 자산 것뿐이라 base id로 찾는다.
-  const cardOf = (propertyId: string) => gbCards?.find((c) => baseCardId(c.propertyId) === propertyId);
+  // 토지는 한도 이내 `land` · 사업용+초과분 `land_business`/`land_nbl` · 전체 비사업용 `land_nbl`로 갈린다(NBL2611-V10-BX08) — 산정 방식은 토지 카드 어느 쪽이든 같다.
+  const cardOf = (propertyId: string) =>
+    gbCards?.find((c) => baseCardId(c.propertyId) === propertyId) ??
+    (propertyId === "land" ? gbCards?.find((c) => c.propertyType === "land") : undefined);
   const bld2Estimated = cardOf("building2")?.usedEstimatedAcquisition;
 
   /**
@@ -132,6 +139,7 @@ export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: Agg
       <p className="text-xs text-muted-foreground mb-3">
         토지(1001) · 건물1(3001) · 증축건물2(3002) 소득 라인을 분리 표시.
         자산별 취득가액 산정 방식은 취득가액 옆에 표기됩니다. 결손이 난 자산의 손실은 나머지 자산의 양수 소득에 안분 흡수됩니다.
+        {landSplit && " 토지 열은 사업용분(1001)과 비사업용 초과분(1002)을 합산한 값이며, 세율은 두 몫에 따로 적용됩니다."}
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">

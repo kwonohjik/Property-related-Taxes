@@ -45,6 +45,7 @@ import { RegulatedAreaAssumptionLine } from "@/components/calc/results/transfer/
 import { regulatedAssumptionPdfGroups } from "@/lib/calc/regulated-area-assumption-text";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { CalculationWarningsCard } from "./shared/CalculationWarningsCard";
+import { mergeGbExcessConfirmNotices } from "@/lib/tax-engine/nbl-confirm-notices";
 import { allPropertiesReceiveOnly } from "@/components/calc/results/transfer/receive-only-display";
 import { isFullFractionalBundle } from "@/lib/calc/transfer-tax-api-helpers";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
@@ -247,7 +248,8 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
     <div className="space-y-6">
       {/* 자산별 경고 — 집계 엔진이 단건 warnings를 자산 라벨과 함께 모은다(R-5).
           종전에는 일괄양도 결과에 경고 카드가 **아예 없었다**. */}
-      <CalculationWarningsCard warnings={aggregated.warnings} />
+      {/* NBL2611-V10-BX06·V2-C2 — 일반건물 배율 초과분의 «판정하지 않은 사항·상태 가정» 고지를 같은 목록에 얹는다(문구 단일 소스 `nbl-confirm-notices.ts`). */}
+      <CalculationWarningsCard warnings={[...new Set([...aggregated.warnings, ...mergeGbExcessConfirmNotices(gbViews.map((v) => v.detail))])]} />
 
       {/* 출력 항목 선택 패널 (선택 항목만 인쇄·PDF) */}
       {/*
