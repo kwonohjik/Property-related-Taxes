@@ -76,6 +76,21 @@ test.describe("상가 축 B 지분 카드 — 취득 쪽 칸 · 물건 단위 �
     expect(await calc(page)).toEqual([540_000_000, 196_363_637]);
   });
 
+  test("CS-E4 초과분 토지·건물 구분(NBL2611-V5-BX01) — 취득 당시 2칸은 카드별 · 양도 당시 2칸은 자산 1에만", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seed(page, [
+      { ...makeDefaultAsset(1), assetId: "p", addressJibun: "서울 강남구 테스트동 1-1", assetKind: "commercial_building", acquisitionCause: "purchase", acquisitionDate: "2015-01-01",
+        actualSalePrice: "1000000000", fixedAcquisitionPrice: "100000000", ownershipNumerator: "60", ownershipDenominator: "100", ...AREA,
+        // 상업 3배 · 대지 1,200 · 바닥 200 → 초과 600㎡ — 토지·건물 구분 4칸이 열린다
+        cbTotalLandArea: "1200", cbTotalBuildingFootprintArea: "200", cbZoneType: "commercial" },
+      { ...makeDefaultAsset(2), assetId: "s", ownershipNumerator: "40", ownershipDenominator: "100", acquisitionCause: "purchase", acquisitionDate: "2019-01-01", fixedAcquisitionPrice: "100000000" },
+    ]);
+    expect(await visibleCount(page, "cbPartAcqLandStd")).toBe(2);
+    expect(await visibleCount(page, "cbPartAcqBuildingStd")).toBe(2);
+    expect(await visibleCount(page, "cbPartTransferLandStd")).toBe(1);
+    expect(await visibleCount(page, "cbPartTransferBuildingStd")).toBe(1);
+  });
+
   test("CS-E2 매매 지분 2019 × 환산 — 97,480,000", async ({ page }) => {
     test.setTimeout(120_000);
     const EST: A = { assetKind: "commercial_building", ...AREA, cbTotalLandArea: "1000", cbTotalBuildingFootprintArea: "800", cbZoneType: "general_residential",

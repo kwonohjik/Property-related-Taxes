@@ -121,4 +121,19 @@ export interface CommercialBuildingFormSlice {
    * 무허가 신축 + 불법 용도변경(허가·사용승인 미이행) 포함 — 법제처 해석례 25-0823.
    */
   cbUnapprovedBuilding: boolean;
+
+  // ── 초과분의 토지분·건물분 구분 기준시가 (NBL2611-V5-BX01 · 법 §100② · 영 §166⑥) ──
+  // 「소득세법」 §104의3①은 «토지»만 비사업용으로 보므로 초과 비율은 **토지분 양도차익**에만 곱한다.
+  // 토지·건물 가액 구분이 불분명하면 양도가액은 양도 당시, 취득가액은 취득 당시 기준시가 비율로 나눈다 —
+  // 해당 호 총액(원) 4값이며 초과분(또는 §101① 단서)이 있을 때만 필수다. **자동 안분 fallback 없음.**
+  // 양도 당시 2값은 같은 물건 · 같은 양도의 사실이라 축 B 지분 전 카드가 자산 1 값을 쓴다(`commercial-share-object-fields.ts`).
+  // 취득 당시 2값은 지분마다 취득일이 달라 카드별 입력이다.
+  /** 취득 당시 토지 기준시가 — 개별공시지가 × 해당 호 대지권 면적 (원) */
+  cbPartAcqLandStd: string;
+  /** 취득 당시 건물 기준시가 (원, 호 총액) */
+  cbPartAcqBuildingStd: string;
+  /** 양도 당시 토지 기준시가 (원) */
+  cbPartTransferLandStd: string;
+  /** 양도 당시 건물 기준시가 (원) */
+  cbPartTransferBuildingStd: string;
 }

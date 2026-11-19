@@ -53,6 +53,7 @@ import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { CB_PART_FORM_LAND_ONLY } from "../tax-engine/_helpers/cb-part-basis";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -64,6 +65,9 @@ const CB = {
   cbTotalLandArea: "1200",
   cbTotalBuildingFootprintArea: "200",
   cbZoneType: "commercial",
+  // NBL2611-V5-BX01 — 초과분이 있으면 토지·건물 구분 기준시가 4칸이 필수. 토지 100%(건물분 0)라 결함 수정 전과 같은 세액을 유지한다
+  // (이 파일은 축 B 배관·선형성 계약을 본다 — 건물분이 섞인 정답은 commercial-nbl-land-part.anchor).
+  ...CB_PART_FORM_LAND_ONLY,
 } as const;
 
 /** 부수토지 3필드를 뺀 대조군 — §101① 축의 판별력 측정용. */
@@ -151,6 +155,9 @@ const AXIS_B: AssetForm[] = [
     ownershipNumerator: "40",
     fixedAcquisitionPrice: "600000000",
     useEstimatedAcquisition: false,
+    // 취득 당시 2칸은 지분마다 달라 카드별 입력이다(양도 당시 2칸은 자산 1 값을 병합).
+    cbPartAcqLandStd: CB_PART_FORM_LAND_ONLY.cbPartAcqLandStd,
+    cbPartAcqBuildingStd: CB_PART_FORM_LAND_ONLY.cbPartAcqBuildingStd,
   }),
 ];
 
@@ -209,6 +216,8 @@ describe("상가 × 축 B(지분 분할)", () => {
       totalLandArea: 1200,
       totalBuildingFootprintArea: 200,
       zoneType: "commercial",
+      // 양도 당시 2값은 자산 1에서 병합, 취득 당시 2값은 이 카드 값
+      partBasis: { acquisitionLandStd: 1_000_000_000, acquisitionBuildingStd: 0, transferLandStd: 1_000_000_000, transferBuildingStd: 0 },
     });
   });
 });

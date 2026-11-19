@@ -24,6 +24,11 @@ const CB = {
   cbTotalLandArea: "1200",
   cbTotalBuildingFootprintArea: "200",
   cbZoneType: "commercial",
+  // NBL2611-V5-BX01 — 초과분 토지·건물 구분 기준시가(양도 12억 · 취득 6억 모두 토지 60%)
+  cbPartAcqLandStd: "360000000",
+  cbPartAcqBuildingStd: "240000000",
+  cbPartTransferLandStd: "720000000",
+  cbPartTransferBuildingStd: "480000000",
 };
 
 function seedForm(assets: Record<string, unknown>[]) {
@@ -60,6 +65,9 @@ const AXIS_B = [
     useEstimatedAcquisition: false,
     ownershipNumerator: "40",
     ownershipDenominator: "100",
+    // 지분마다 취득일이 달라 취득 당시 2칸은 카드별 입력(양도 당시 2칸은 자산 1 값을 병합)
+    cbPartAcqLandStd: "360000000",
+    cbPartAcqBuildingStd: "240000000",
   },
 ];
 
@@ -127,6 +135,7 @@ test.describe("상가 × 함께양도·지분 분할", () => {
       totalLandArea: 1200,
       totalBuildingFootprintArea: 200,
       zoneType: "commercial",
+      partBasis: { acquisitionLandStd: 360_000_000, acquisitionBuildingStd: 240_000_000, transferLandStd: 720_000_000, transferBuildingStd: 480_000_000 },
     });
 
     const body = await resp.json();
@@ -134,8 +143,11 @@ test.describe("상가 × 함께양도·지분 분할", () => {
     expect(
       body.data.aggregated.properties.map((p: { transferGain: number }) => p.transferGain),
     ).toEqual([360_000_000, 240_000_000]);
-    // 📌 §95④ 초일 산입(holding-period-first-day-inclusion.anchor) — 10년 20%(vitest axis-b-commercial과 같은 값)
-    expect(body.data.aggregated.totalTax).toBe(181_852_000);
+    // 📌 §95④ 초일 산입(holding-period-first-day-inclusion.anchor) — 10년 20%
+    // 📌 NBL2611-V5-BX01 재정의: 종전 181,852,000은 초과 비율 0.5를 건물분에도 곱한 값이었다. 이 픽스처는 토지·건물 기준시가 60:40이라
+    //    비사업용 파트가 자산 양도소득의 30%(0.5 × 0.6)뿐이고, 30%는 §104⑤ 1호(합산 누진)가 흡수해 초과 없는 세액(181,566,000)과 같다.
+    //    중과가 실제로 붙는 값은 vitest `commercial-nbl-land-part.anchor.test.ts`(토지 몫 80%·무허가 등)가 고정한다.
+    expect(body.data.aggregated.totalTax).toBe(181_566_000);
   });
 
   test("🔴 컴패니언(다른 물건) 상가 — 종전 400이 계산으로 바뀐다", async ({ page }) => {

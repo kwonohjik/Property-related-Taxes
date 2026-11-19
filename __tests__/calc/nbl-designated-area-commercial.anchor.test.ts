@@ -30,6 +30,7 @@ import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { commercialAppurtenantNblAreaOfAsset } from "@/lib/calc/transfer-tax-api-commercial";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { CB_PART_FORM_LAND_ONLY } from "../tax-engine/_helpers/cb-part-basis";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
@@ -49,6 +50,8 @@ const commercial = (n: number, over: Record<string, unknown> = {}) =>
     cbTotalLandArea: "1000",
     cbTotalBuildingFootprintArea: "100",
     cbZoneType: "general_residential",
+    // NBL2611-V5-BX01 — 초과분이 있으면 토지·건물 구분 기준시가 4칸이 필수. 토지 100%(건물분 0)라 결함 수정 전과 같은 세액을 유지한다.
+    ...CB_PART_FORM_LAND_ONLY,
     ...over,
   }) as unknown as AssetForm;
 const form = (assets: AssetForm[], over: Record<string, unknown> = {}) =>
@@ -144,7 +147,9 @@ describe("함께 양도 — 상업용건물이 컴패니언", () => {
 describe("지분 분할(축 B) — 한 상가를 60:40 지분으로 나눠 입력 (지분 카드는 `mergePrimaryBasic`로 주 자산 값을 물려받아 같은 ④ leaf를 지난다)", () => {
   const tranche = (n: number, num: string, over: Record<string, unknown> = {}) =>
     ({ ...makeDefaultAsset(n), acquisitionCause: "purchase", acquisitionDate: "2000-01-01", fixedAcquisitionPrice: "300000000",
-      useEstimatedAcquisition: false, ownershipNumerator: num, ownershipDenominator: "100", ...over }) as unknown as AssetForm;
+      useEstimatedAcquisition: false, ownershipNumerator: num, ownershipDenominator: "100",
+      // NBL2611-V5-BX01 — 취득 당시 2칸은 지분마다 달라 카드별 입력(양도 당시 2칸은 자산 1 값을 병합)
+      cbPartAcqLandStd: CB_PART_FORM_LAND_ONLY.cbPartAcqLandStd, cbPartAcqBuildingStd: CB_PART_FORM_LAND_ONLY.cbPartAcqBuildingStd, ...over }) as unknown as AssetForm;
   const run = (ida?: boolean) =>
     runCalc(form([commercial(1, { ownershipNumerator: "60", ownershipDenominator: "100", ...(ida !== undefined ? { isDesignatedArea: ida } : {}) }), tranche(2, "40")]));
   it("🔑 주 자산의 «아님»이 지분 카드에도 실려 두 지분 모두 유예된다 · 미선언은 지분마다 고지 1건씩 2건", async () => {
