@@ -9,7 +9,7 @@
 
 import { useState } from "react";
 import { recommendLandPriceYear } from "@/lib/utils/land-price-year";
-import { lookupLandPrice, isUrbanZone } from "@/lib/calc/nbl-land-zone";
+import { lookupLandPrice, isUrbanZone, resolveNblLandValueYears } from "@/lib/calc/nbl-land-zone";
 import { multiplyByAreaShare } from "@/lib/tax-engine/area-utils";
 
 const BTN_CLASS =
@@ -57,8 +57,8 @@ export function NblLandValueAutoFetchButton({
     setError(null);
     setInfo(null);
     try {
-      const curYear = recommendLandPriceYear(transferDate);
-      const priorYear = curYear - 1;
+      // NBL2611-V6-PU07 — 직전 과세기간 종료일(전년 12.31.) 기준시가의 공시연도. 종전 `curYear - 1`은 1~5월 양도분에 전전년을 채웠다.
+      const { currentYear: curYear, priorYear } = resolveNblLandValueYears(transferDate);
       const [cur, prior] = await Promise.all([
         lookupLandPrice(jibun, String(curYear)),
         lookupLandPrice(jibun, String(priorYear)),

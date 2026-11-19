@@ -7,6 +7,26 @@
  * 도시지역 "여부"만 판정해 편입일 입력 보조 안내에 사용한다.
  */
 
+import { recommendLandPriceYear } from "@/lib/utils/land-price-year";
+
+/**
+ * 수입금액비율 토지가액(당해·직전) 조회 연도 — NBL2611-V6-PU07.
+ *
+ * 「소득세법 시행령」 §168의11④: 당해 과세기간의 토지가액 = 당해 과세기간 종료일(과세기간 중 양도 시 양도일)의 기준시가.
+ * 직전 과세기간의 토지가액은 같은 정의를 직전 과세기간에 적용한 직전 과세기간 종료일(전년 12.31.)의 기준시가다.
+ * 개별공시지가는 매년 5월 31일까지 결정·공시되므로(「부동산 가격공시에 관한 법률 시행령」 §21①) 12.31.의 기준시가는
+ * 그 해 공시분이다 → 직전 공시연도 = 양도연도 − 1.
+ * 종전에는 직전을 「당해 − 1」로 잡아, 양도일이 1~5월이면(당해 = 전년 공시) 전전년 공시지가를 채웠다.
+ *
+ * @param transferDate 양도일 `YYYY-MM-DD`
+ */
+export function resolveNblLandValueYears(transferDate: string): { currentYear: number; priorYear: number } {
+  const currentYear = recommendLandPriceYear(transferDate);
+  const transferYear = Number.parseInt(transferDate.slice(0, 4), 10);
+  const priorYear = recommendLandPriceYear(`${transferYear - 1}-12-31`);
+  return { currentYear, priorYear };
+}
+
 export interface LandLookupResult {
   /** 개별공시지가 (원/㎡) */
   pricePerSqm: number;

@@ -11,6 +11,8 @@
 
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { FOOTPRINT_DEFINITION } from "@/lib/calc/footprint-definition-copy";
+import { FOOTPRINT_PLACEHOLDER } from "@/lib/calc/footprint-definition-copy";
 
 /**
  * 축 C(건물 바닥면적·정착면적) 입력 대상 자산유형.
@@ -81,8 +83,8 @@ export function AssetFootprintField({ asset, onChange }: Props) {
         <span
           title={
             isFootprintConsumed(asset)
-              ? "건물이 땅에 닿는 면적(1층 건축면적). 층별 합계인 연면적이 아닙니다. 「소득세법」 제89조 제1항 제3호의 「건물이 정착된 면적」 — 이 면적 × 지역별 배율(3·5·10배)이 1세대1주택 비과세 부수토지 한도입니다."
-              : "건물이 땅에 닿는 면적(1층 건축면적). 층별 합계인 연면적이 아닙니다. 「소득세법 시행령」 제154조 제7항 부수토지 한도는 주택 전용이라 이 자산 종류에는 적용되지 않습니다 — 현재는 기록용입니다."
+              ? `${FOOTPRINT_DEFINITION} 「소득세법」 제89조 제1항 제3호의 「건물이 정착된 면적」 — 이 면적 × 지역별 배율(3·5·10배)이 1세대1주택 비과세 부수토지 한도입니다.`
+              : `${FOOTPRINT_DEFINITION} 「소득세법 시행령」 제154조 제7항 부수토지 한도는 주택 전용이라 이 자산 종류에는 적용되지 않습니다 — 현재는 기록용입니다.`
           }
           className="ml-1 cursor-help"
         >
@@ -92,7 +94,7 @@ export function AssetFootprintField({ asset, onChange }: Props) {
       <DecimalInput
         value={asset.buildingFootprintArea}
         onChange={(v) => onChange({ buildingFootprintArea: v })}
-        placeholder="1층 건축면적"
+        placeholder={FOOTPRINT_PLACEHOLDER}
         data-testid="basic-building-footprint-area"
       />
       <p className="text-caption text-muted-foreground">

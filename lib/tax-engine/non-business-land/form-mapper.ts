@@ -154,7 +154,7 @@ export function mapAssetToNblInput(
   const landDivision: LandDivision | undefined =
     divisionRaw === "dong" || divisionRaw === "eup_myeon" ? divisionRaw : undefined;
 
-  // 공동소유 지분 (대법원 2015두39439) — engine.ts applyCoOwnershipRatio가 소비.
+  // 공동소유 지분 — engine.ts applyCoOwnershipRatio가 소비.
   // residenceHistories만 있어도, ratio≠1만 있어도 ownerProfile 생성.
   const ownershipRatio = parseOwnershipRatio(asset, parseNumber);
   const ownerProfile =

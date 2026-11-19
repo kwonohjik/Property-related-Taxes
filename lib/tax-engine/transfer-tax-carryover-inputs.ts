@@ -85,6 +85,14 @@ export function buildInputB(
      * ⚠️ 이 줄을 `"carryover_gift"`로 바꾸면 배제 자산에 통산이 들어가 과소과세가 된다.
      */
     acquisitionCause: "purchase",
+    /**
+     * 비사업용 토지 판정의 소유기간 기산도 **수증일**이다(NBL2611-R23 · 사용자 결정 2026-11-19 Q-11).
+     * 이월과세 토지의 NBL 기산일 = 증여자 취득일(L22)은 영 §168의14③3호 괄호 「법 제97조의2제1항을 **적용받는 경우**에는」의 해석례(서면4팀-2622 등)에 기댄 것이라
+     * 시나리오 A(적용)에만 맞다. B는 위 `acquisitionCause: "purchase"`처럼 §97의2 적용 없는 일반 취득이므로 같은 raw를 수증일 기준으로 다시 매핑한 입력을 쓴다.
+     * 없으면(NBL 정밀판정 미사용) 원 입력 그대로 — 이월과세 raw가 있는 route는 항상 만들어 보낸다.
+     */
+    nonBusinessLandDetails: rawInput.nonBusinessLandDetailsIfCarryoverExcluded ?? rawInput.nonBusinessLandDetails,
+    nonBusinessLandDetailsIfCarryoverExcluded: undefined,
     // 조특법 §99·§99의3 취득 원인 게이트는 실제 취득 원인(이월과세 증여)으로 판정한다 — 수증자는 최초 계약자가 아니다 (NH-34 시나리오 B · Q-3)
     reductionAcquisitionCause: rawInput.reductionAcquisitionCause ?? rawInput.acquisitionCause,
     // §99의4·§98의9 취득순서 판정 축 — A/B 어느 쪽이 채택되든 세대 기준은 같다 (D4-05)

@@ -4,7 +4,8 @@
  *
  * 부수토지 카드(한 장·이내분)는 「소득세법」 §104①2호 «주택(이에 딸린 토지로서 대통령령으로 정하는 토지를 포함한다)»에 따라 주택 단기세율(60%/70%)을 받는데
  * 신고서 코드는 `assetKind: "land"`라 «주택 및 조합원입주권 제외» 코드 1-15/1-20(정본 40%/50%)이 적혔다 — 한 열에서 코드와 ⑨세율이 어긋났다.
- * 대통령령 한도를 넘는 초과분 · 독립 나대지 · 다른 세대 토지만 본인 카드는 일반 토지라 1-15/1-20 그대로다.
+ * 독립 나대지 · 다른 세대 토지만 본인 카드는 일반 토지라 1-15/1-20 그대로다.
+ * 대통령령 한도를 넘는 **초과분은 비사업용 토지**라 1-35/1-36이다(NBL2611-V9-RI05 정정 — 종전 이 줄은 초과분도 1-15/1-20 그대로라 적었다).
  *
  * 정본: 「소득세법 시행규칙」 별지 제84호서식 작성방법 3쪽 «과세대상자산 및 세율» — ② 1-15(1~2년 · 주택 제외) 40% · ③ 1-20(1년 미만 · 주택 제외) 50% ·
  *       ⑤ 1-39(1~2년 · 주택 및 조합원입주권) 60% · ⑥ 1-46(1년 미만 · 주택·입주권·분양권) 70%. (KoreanLaw MCP `get_annexes` `[008400]` 본문, 2026-10-30.)
@@ -36,7 +37,8 @@ vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 type Loose = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
 /** 정본 표(별지 제84호서식 작성방법 3쪽)의 «코드 → 단일세율» — 고정세율 코드만 */
-const FIXED_RATE_BY_CODE: Record<string, string> = { "1-15": "40%", "1-20": "50%", "1-39": "60%", "1-46": "70%" };
+// NBL2611-V9-RI05 — ⑩ 1-35(1~2년 비사업용토지) 40% · ⑪ 1-36(1년 미만 비사업용토지) 50% 추가(별지 제84호서식 3쪽 코드표).
+const FIXED_RATE_BY_CODE: Record<string, string> = { "1-15": "40%", "1-20": "50%", "1-35": "40%", "1-36": "50%", "1-39": "60%", "1-46": "70%" };
 
 const ZONE = { buildingFootprintArea: 100, isUrbanArea: true, appurtenantLandZone: "metropolitan_residential" };
 const land = (id: string, acq: string, area: number, extra: Loose = {}) => ({
@@ -84,9 +86,11 @@ describe("부수토지 카드 신고서 코드 — 주택 세율을 받으면 �
     expect([r.code.primary, r.code.c1, r.rate.c1]).toEqual(["1-39", "1-39", "60%"]);
   });
 
-  it("🔑 F4 분리 배치(200㎡ → 이내분·초과분): 이내분 1-39(60%) · **초과분 1-15(40%) 그대로**", async () => {
+  it("🔑 F4 분리 배치(200㎡ → 이내분·초과분): 이내분 1-39(60%) · **초과분 1-35(40%)** — NBL2611-V9-RI05 정정(종전 1-15)", async () => {
     const r = await filing(fwd("2025-01-01", "2025-01-01", 200), "land", APP);
-    expect([r.code.primary, r.code.c1__appurtenant, r.code.c1__excess]).toEqual(["1-39", "1-39", "1-15"]);
+    // 초과분은 법 §104의3①5호의 비사업용 토지다 — 단기세율(40%)이 채택돼도 정본 코드는 ⑩ 1-35(비사업용토지 1~2년)이지 ② 1-15가 아니다.
+    // 종전 단언 「1-15 그대로」는 이 오기재를 고정하고 있었다.
+    expect([r.code.primary, r.code.c1__appurtenant, r.code.c1__excess]).toEqual(["1-39", "1-39", "1-35"]);
     expect([r.rate.c1__appurtenant, r.rate.c1__excess]).toEqual(["60%", "40%"]);
   });
 

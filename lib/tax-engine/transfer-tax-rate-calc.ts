@@ -82,6 +82,13 @@ interface CalcTaxResult {
   /** §104 밖 세율 특례 표지(조특법 §98 20%) — 신고서 ③ 코드 표시 전용. 그룹핑·세액에는 쓰지 않는다. */
   specialRateBasis?: SpecialRateBasis;
   /**
+   * 비사업용 토지(§104①8호)인데 §104① 후단 비교에서 **단기세율(2·3호)이 채택**된 경우 — 신고서 ③ 세율구분 코드 표시 전용 표지(NBL2611-V9-RI05).
+   * `rateClause`가 단기 호(`104-1-2`·`104-1-3`)라 호만으로는 비사업용 토지인지 알 수 없다. 별지 제84호서식은 이 경우를
+   * ⑩ 1-35(1~2년)·⑪ 1-36(1년 미만) «비사업용토지»로 적는다(② 1-15·③ 1-20은 비사업용이 아닌 자산). 세액·그룹핑에는 쓰지 않는다.
+   * 중과배제(`nblSurchargeExcluded`)로 가산이 0인 경우에는 싣지 않는다 — 그때는 비사업용토지로 중과하지 않는 해석이라 코드 분류를 단정하지 않는다.
+   */
+  nonBusinessLandShortTerm?: boolean;
+  /**
    * 이 자산이 **해당**하는 §104 호 **전부**(문자열 오름차순 정렬).
    *
    * `rateClause`는 §104① 후단·§104⑦ 후단이 고른 **승자**라 「해당 호 집합」을 표현하지 못한다.
@@ -482,6 +489,8 @@ export function calcTax(
           surchargeSuspended: false,
           shortTermNote: `보유기간 ${holdingMonthsTotal < 12 ? "1년" : "2년"} 미만 단기세율 적용 (§104①후단: 비사업용 누진세액과 비교한 큰 세액)`,
           ...(nblCrisisExcluded ? { nblSurchargeExcluded: true, nblSurchargeExcludedBy: nblExcludedBy } : {}),
+          // NBL2611-V9-RI05 — 신고서 ③ 코드가 «비사업용토지 단기»(1-35·1-36)로 적도록 표지를 싣는다(세액 무영향).
+          ...(nblCrisisExcluded ? {} : { nonBusinessLandShortTerm: true }),
           // 8호가 아니라 단기세율(2·3호)이 채택됐다 — **적용** 호는 그쪽이다.
           // 다만 **해당** 호는 둘 다이므로 `candidateClauses`는 아래 8호 반환과 같다.
           rateClause: shortTermClause(holdingMonthsTotal),

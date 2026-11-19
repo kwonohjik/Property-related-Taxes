@@ -18,7 +18,8 @@
 
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
-import { getHousingMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
+import { getHousingMultiplier, HOUSING_MULTIPLIER_SPLIT_EFFECTIVE_DATE } from "@/lib/tax-engine/non-business-land/urban-area";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
@@ -34,18 +35,27 @@ const METRO_OPTIONS: { value: SelectableMetroValue; label: string }[] = [
 export interface MetropolitanAreaFieldProps {
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
+  /**
+   * 양도일(`YYYY-MM-DD`) — **배율은 양도일로 갈린다**(NBL2611-V9-J): 2022.1.1. 전 양도분은 도시지역 일률 5배(종전 규정),
+   * 그 뒤는 수도권 주·상·공 3배. 종전에는 이 값을 안 받아 2022.1.1. 전 양도분에도 현행 3배를 표시했다(엔진은 5배).
+   */
+  transferDate?: string;
 }
 
-export function MetropolitanAreaField({ asset, onAssetChange }: MetropolitanAreaFieldProps) {
+export function MetropolitanAreaField({ asset, onAssetChange, transferDate }: MetropolitanAreaFieldProps) {
   const metro = asset.nblIsMetropolitanArea;
+  const trnDate = toOptionalDate(transferDate);
+  const isPreSplit = trnDate !== undefined && trnDate < HOUSING_MULTIPLIER_SPLIT_EFFECTIVE_DATE;
   const badge =
     metro === "yes" || metro === "no"
       ? (() => {
           const m = getHousingMultiplier(
             (asset.nblZoneType || "undesignated") as ZoneType,
             metro === "yes",
+            trnDate,
           );
-          return `${m.multiplier}배 적용 (${m.detail})`;
+          // 양도일이 없으면 현행 규정 기준이다 — 그 사실을 배지에 밝힌다(추정 표시 금지).
+          return `${m.multiplier}배 적용 (${m.detail}${trnDate ? "" : " — 양도일 미입력, 현행 규정 기준"})`;
         })()
       : null;
 
@@ -61,7 +71,9 @@ export function MetropolitanAreaField({ asset, onAssetChange }: MetropolitanArea
         />
         {metro === "yes" && (
           <p className="text-xs text-muted-foreground mt-1">
-            수도권 주·상·공 3배 / 녹지·기타 도시 5배 / 도시지역 외 10배
+            {isPreSplit
+              ? "2022.1.1. 전 양도분(종전 규정): 도시지역 일률 5배 / 도시지역 외 10배"
+              : "수도권 주·상·공 3배 / 녹지·기타 도시 5배 / 도시지역 외 10배"}
           </p>
       )}
     </FieldCard>
