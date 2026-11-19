@@ -179,6 +179,7 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
       "공장용 건축물의 부속토지",
       "용도지역별 적용배율",
       "전용주거지역",
+      "부설주차장 설치기준면적 이내의 토지",
     ],
     keywordMode: "ALL",
   },

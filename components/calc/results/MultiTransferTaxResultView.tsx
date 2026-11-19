@@ -19,6 +19,7 @@ import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggr
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import { MultiTransferTaxSummaryCard } from "./MultiTransferTaxSummaryCard";
 import { CalculationWarningsCard } from "./shared/CalculationWarningsCard";
+import { mergeGbExcessConfirmNotices } from "@/lib/tax-engine/nbl-confirm-notices";
 import { buildAggregateMeta } from "./transfer/build-aggregate-meta";
 import { MultiTransferFilingFormSection } from "@/components/calc/results/transfer/MultiTransferFilingFormSection";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
@@ -515,7 +516,8 @@ export function MultiTransferTaxResultView({
   return (
     <div className="space-y-4">
       {/* 자산별 경고 — 집계 엔진이 단건 warnings를 자산 라벨과 함께 모은다(R-5). */}
-      <CalculationWarningsCard warnings={result.warnings} />
+      {/* NBL2611-V10-BX06·V2-C2 — 일반건물 배율 초과분 고지(문구 단일 소스 `nbl-confirm-notices.ts`). */}
+      <CalculationWarningsCard warnings={[...new Set([...result.warnings, ...mergeGbExcessConfirmNotices(Object.values(result.generalBuildingDetailsByAsset ?? {}))])]} />
 
       {/*
         출처 (P5-b-1) — **건마다 따로** 띄운다.

@@ -131,6 +131,24 @@ test.describe("일반건물 증축 4조합 — 계산 도달", () => {
   });
 
   /**
+   * NBL2611-V10-BX08·BX06·V2-C2 — 증축 + 배율 초과분: 토지가 사업용·비사업용 초과분 두 장이어도 3-way 표가 남고(수정 전: 카드 4장 → 표 소실),
+   * 「확인이 필요한 사항」에 «판정하지 않은 사항»·«양도일 현재 상태 적용» 고지가 실린다.
+   * 시료: 토지 205㎡ · 바닥면적 40㎡ × 상업지역 3배 = 한도 120㎡ → 초과 85㎡.
+   */
+  test("NBL2611-C1: 증축 + 초과분 → 3-way 표 유지 + 확인 필요 고지(결과)", async ({ page }) => {
+    test.setTimeout(120_000);
+    await seed(page, { ...EXT_ACTUAL, gbBuildingFootprintArea: "40" });
+    await calculate(page);
+
+    await expect(page.getByText(/양도소득세 계산 결과|산출세액/).first()).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/일반건물 3-자산 요약/)).toBeVisible();
+    await expect(page.getByText(/사업용분\(1001\)과 비사업용 초과분\(1002\)을 합산/)).toBeVisible();
+    await expect(page.getByText("확인이 필요한 사항").first()).toBeVisible();
+    await expect(page.getByText(/부설주차장 설치기준면적 이내의 토지 등\).*판정하지 않았습니다 — 확인 필요/).first()).toBeVisible();
+    await expect(page.getByText(/양도일 현재의 상태로 판정해 소유기간 전체에 적용/).first()).toBeVisible();
+  });
+
+  /**
    * 🔴 **D-11의 화면 도달 지점** (계획서 §4 D-11 · §14 O-3 종결).
    *
    * 부분 혼합(토지 실가 + 건물1 환산)은 **분리 ON에서만** 만들 수 있다 — 파트별 산정방식

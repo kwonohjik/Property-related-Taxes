@@ -347,6 +347,8 @@ export function runSurchargeAndLandSteps(
   steps: CalculationStep[],
   /** STEP 0.9와 같은 §99의4·§98의9 기준일 — 15호 ① 요소 주택 수가 비과세와 같은 값을 보게(E-14) */
   hceGeneralHouseAcquisitionDate?: Date,
+  /** STEP 0.62 «판정하지 않은 사항» 고지를 싣는 호출부 배열(참조 push — NBL2611-V10-BX06). 생략하면 싣지 않는다. */
+  warnings?: string[],
 ): {
   /** STEP 4.05 §98의2 특칙이 downstream에서 다시 읽는다 — 같은 신호를 두 번 만들지 않는다 */
   surchargeExclusionByReduction: ReturnType<typeof resolveSurchargeExclusionByReduction>;
@@ -423,7 +425,7 @@ export function runSurchargeAndLandSteps(
   // (「지방세법 시행령」 §101①2호·§101②). commercialAppurtenantLand 미제공 시 no-op.
   // STEP 0.35(:249 CB 환산)보다 **먼저** 실행되지만, 그 STEP이 spread로 재구성하므로
   // 여기서 주입한 isNonBusinessLand·nonBusinessLandAreaRatio는 보존된다.
-  effectiveInput = runCommercialAppurtenantLandStep(effectiveInput, steps);
+  effectiveInput = runCommercialAppurtenantLandStep(effectiveInput, steps, warnings);
   return {
     surchargeExclusionByReduction,
     multiHouseSurchargeResult,

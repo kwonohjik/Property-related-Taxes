@@ -32,6 +32,7 @@ import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/Re
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { APPURTENANT_ZONE_OPTIONS } from "./appurtenant-zone-options";
 import { NblDesignatedAreaQuestion } from "./nbl/NblDesignatedAreaQuestion";
+import { NblExcessConfirmNotice } from "./NblExcessConfirmNotice";
 import { commercialAppurtenantNblAreaOfAsset } from "@/lib/calc/transfer-tax-api-commercial";
 
 interface Props {
@@ -177,6 +178,8 @@ export function CommercialAppurtenantLandSection({ asset, onChange, transferDate
 
       {/* 양도일 2009.3.16.~2015.12.31. + 기준면적 초과분이 있으면 그 초과분(비사업용 토지)의 8호 중과 유예 요건(지정지역 여부).
           초과 판정은 엔진과 같은 함수(`commercialAppurtenantNblAreaOfAsset` → `judgeAppurtenantLandExcess`)다 — 무허가 단서 포함. */}
+      {/* NBL2611-V10-BX06 — 초과분이 있으면 «판정하지 않은 사항» 고지(같은 술어). 「양도일 현재 상태」 고지는 일반건물 한정이라 싣지 않는다. */}
+      {commercialAppurtenantNblAreaOfAsset(asset) > 0 && <NblExcessConfirmNotice includeStateNotice={false} />}
       {commercialAppurtenantNblAreaOfAsset(asset) > 0 && (
         <NblDesignatedAreaQuestion
           transferDate={transferDate}

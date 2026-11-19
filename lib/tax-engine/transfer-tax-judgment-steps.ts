@@ -8,6 +8,7 @@
  */
 import { NBL } from "./legal-codes";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
+import { NBL_BUILDING_SITE_EXCESS_UNJUDGED_NOTICE } from "./nbl-confirm-notices";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { linkTaxIncentiveHouse5ho, withTaxIncentiveHouseNotices } from "./surcharge-tax-incentive-house-link";
@@ -699,6 +700,8 @@ export function runNonBusinessLandStep(
 export function runCommercialAppurtenantLandStep(
   workingInput: TransferTaxInput,
   steps: CalculationStep[],
+  /** 초과분이 있을 때 «판정하지 않은 사항» 고지를 싣는다(NBL2611-V10-BX06). 생략하면 싣지 않는다. */
+  warnings?: string[],
 ): TransferTaxInput {
   const cal = workingInput.commercialAppurtenantLand;
   if (workingInput.propertyType !== "commercial_building" || !cal) return workingInput;
@@ -721,6 +724,8 @@ export function runCommercialAppurtenantLandStep(
     amount: 0,
     legalBasis: NBL.MAIN,
   });
+  // 판정은 도입하지 않는다(리뷰 §7.2 기각) — 다목·§101③·2% 단서·공장 구분을 판정하지 않았다는 사실만 알린다(NBL2611-V10-BX06).
+  if (warnings && !warnings.includes(NBL_BUILDING_SITE_EXCESS_UNJUDGED_NOTICE)) warnings.push(NBL_BUILDING_SITE_EXCESS_UNJUDGED_NOTICE);
 
   return {
     ...workingInput,

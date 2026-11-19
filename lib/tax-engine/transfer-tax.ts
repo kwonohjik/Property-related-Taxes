@@ -163,6 +163,7 @@ function calculateTransferTaxCore(
     parsedRates,
     steps,
     hceGeneralHouseAcquisitionDate,
+    warnings,
   );
   const { surchargeExclusionByReduction, multiHouseSurchargeResult, nonBusinessLandJudgment } =
     surchargeAndLand;

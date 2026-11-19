@@ -20,7 +20,7 @@
 import { computeEstimatedDeduction, computeLumpSumDeductionBase } from "./tax-utils";
 import { TRANSFER, ESTIMATED_DEDUCTION_RATE, estimatedDeductionRate } from "./legal-codes";
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
-import { splitLandCarryover } from "./carryover-land-split";
+import { planGbLandCards } from "./general-building-land-cards";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { buildGeneralBuildingAssetCardsWithExtension } from "./general-building-extension";
@@ -446,114 +446,35 @@ export function buildGeneralBuildingAssetCards(
 
   const assetCards: AssetCardForAggregate[] = [];
 
-  if (!isWithinNblRatio && nonBusinessRatio >= 1) {
-    // 전체 비사업용 (1장) — 인정면적 0이라 사업용분이 존재하지 않는다.
-    //
-    // 2026-07-29 정정(#591 감사 R7 — 표시 전용, 세액 불변): 종전에는 이 경우에도 분할 분기로
-    // 들어가 **전액 0원짜리 "토지-사업용(1001)" 유령 카드**가 생성됐다. 무허가건축물
-    // (`isUnregistered` → `allowedLandArea = 0`)이 대표 케이스다.
-    // 근거: 지방세법 시행령 §101①단서 + 소득세법 §104의3①4호나목 — 무허가건축물 부속토지는
-    // **전체 비사업용**으로 사업용분이 없다. 0원 카드는 양도차익 기여가 0이라 세액은 같지만,
-    // 결과 화면에 존재하지 않는 자산이 한 장 더 뜨고 신고서 행 수가 어긋난다.
+  /**
+   * 토지 카드 구성(NBL2611-V10-BX08) — 한도 이내 1장 · 전체 비사업용 1장(무허가 단서의 0원 사업용 유령 카드 금지) · 사업용+초과분 2장.
+   * 증축·실거래가 경로와 **같은 leaf**(`general-building-land-cards.ts`)가 정한다 — 여기서 분기를 재구현하지 않는다.
+   * 🔴 이월과세 입력도 같은 leaf가 가른다 — 두 카드에 통째로 주면 취득가액·증여 당시 평가액·증여세가 2배로 들어간다(실측 과소 8,706,426).
+   */
+  const landPlan = planGbLandCards({ isWithinLimit: isWithinNblRatio, nonBusinessRatio, businessArea: allowedLandArea, landArea: input.landArea });
+  for (const slice of landPlan.slices) {
+    const acqPart = slice.portion(acquisition.land);
+    const expPart = slice.portion(estimatedDeduction.land);
     assetCards.push({
-      propertyId: "land_nbl",
-      propertyLabel: "토지-비사업용(1001)",
+      propertyId: slice.propertyId,
+      propertyLabel: slice.propertyLabel,
       propertyType: "land",
-      transferPrice: allocation.land,
-      acquisitionPrice: acquisition.land,
-      expenses: estimatedDeduction.land,
+      transferPrice: slice.portion(allocation.land),
+      acquisitionPrice: acqPart,
+      expenses: expPart,
       usedEstimatedAcquisition: partAcq.landUsedEstimated,
       acquisitionMode: partAcq.landMode,
       ...(partAcq.landMode === "actual" ? { actualSource: "part_input" as const, ...landSec1639 } : {}),
-      estimatedBase: partAcq.landUsedEstimated ? acquisition.land : 0,
-      estimatedDeduction: estimatedDeduction.land,
+      estimatedBase: partAcq.landUsedEstimated ? acqPart : 0,
+      estimatedDeduction: expPart,
       acquisitionDate: landAcqDate,
       transferDate: input.transferDate,
-      isNonBusinessLand: true,
-      ...(input.isDesignatedArea !== undefined ? { isDesignatedArea: input.isDesignatedArea } : {}),
+      isNonBusinessLand: slice.isNonBusinessLand,
+      ...(slice.isNonBusinessLand && input.isDesignatedArea !== undefined ? { isDesignatedArea: input.isDesignatedArea } : {}),
       landAcquisitionCause: input.landAcquisitionCause,
       decedentAcquisitionDate: input.decedentAcquisitionDate,
       donorAcquisitionDate: input.donorAcquisitionDate,
-      carryoverTaxation: input.landCarryoverTaxation,
-    });
-  } else if (!isWithinNblRatio && nonBusinessRatio > 0) {
-    // 토지 카드 1: 사업용 (인정면적 직접 안분 — round 의존 제거)
-    const landBusinessTransfer = apportionLandByBusinessArea(allocation.land, allowedLandArea, input.landArea);
-    const landBusinessAcq = apportionLandByBusinessArea(acquisition.land, allowedLandArea, input.landArea);
-    const landBusinessExp = apportionLandByBusinessArea(estimatedDeduction.land, allowedLandArea, input.landArea);
-    /**
-     * 🔴 이월과세 입력도 **함께 갈라야 한다** — 종전에는 두 카드가 `landCarryoverTaxation`을
-     *    통째로 받아 취득가액·증여 당시 평가액·증여세가 전부 **2배**로 들어갔다
-     *    (실측 과소분 8,706,426). 위 세 줄과 **같은 면적 비율**을 쓴다.
-     */
-    const splitCt = splitLandCarryover(
-      input.landCarryoverTaxation,
-      allowedLandArea,
-      input.landArea,
-    );
-    assetCards.push({
-      propertyId: "land_business",
-      propertyLabel: "토지-사업용(1001)",
-      propertyType: "land",
-      transferPrice: landBusinessTransfer,
-      acquisitionPrice: landBusinessAcq,
-      expenses: landBusinessExp,
-      usedEstimatedAcquisition: partAcq.landUsedEstimated,
-      acquisitionMode: partAcq.landMode,
-      ...(partAcq.landMode === "actual" ? { actualSource: "part_input" as const, ...landSec1639 } : {}),
-      estimatedBase: partAcq.landUsedEstimated ? landBusinessAcq : 0,
-      estimatedDeduction: landBusinessExp,
-      acquisitionDate: landAcqDate,
-      transferDate: input.transferDate,
-      isNonBusinessLand: false,
-      landAcquisitionCause: input.landAcquisitionCause,
-      decedentAcquisitionDate: input.decedentAcquisitionDate,
-      donorAcquisitionDate: input.donorAcquisitionDate,
-      carryoverTaxation: splitCt.business,
-    });
-    // 토지 카드 2: 비사업용 초과분 (원단위 잔여 흡수)
-    assetCards.push({
-      propertyId: "land_nbl",
-      propertyLabel: "토지-비사업용초과분(1002)",
-      propertyType: "land",
-      transferPrice: allocation.land - landBusinessTransfer,
-      acquisitionPrice: acquisition.land - landBusinessAcq,
-      expenses: estimatedDeduction.land - landBusinessExp,
-      usedEstimatedAcquisition: partAcq.landUsedEstimated,
-      acquisitionMode: partAcq.landMode,
-      ...(partAcq.landMode === "actual" ? { actualSource: "part_input" as const, ...landSec1639 } : {}),
-      estimatedBase: partAcq.landUsedEstimated ? acquisition.land - landBusinessAcq : 0,
-      estimatedDeduction: estimatedDeduction.land - landBusinessExp,
-      acquisitionDate: landAcqDate,
-      transferDate: input.transferDate,
-      isNonBusinessLand: true,
-      ...(input.isDesignatedArea !== undefined ? { isDesignatedArea: input.isDesignatedArea } : {}),
-      landAcquisitionCause: input.landAcquisitionCause,
-      decedentAcquisitionDate: input.decedentAcquisitionDate,
-      donorAcquisitionDate: input.donorAcquisitionDate,
-      carryoverTaxation: splitCt.nbl,
-    });
-  } else {
-    // 전체 사업용 (1장)
-    assetCards.push({
-      propertyId: "land",
-      propertyLabel: "토지(1001)",
-      propertyType: "land",
-      transferPrice: allocation.land,
-      acquisitionPrice: acquisition.land,
-      expenses: estimatedDeduction.land,
-      usedEstimatedAcquisition: partAcq.landUsedEstimated,
-      acquisitionMode: partAcq.landMode,
-      ...(partAcq.landMode === "actual" ? { actualSource: "part_input" as const, ...landSec1639 } : {}),
-      estimatedBase: partAcq.landUsedEstimated ? acquisition.land : 0,
-      estimatedDeduction: estimatedDeduction.land,
-      acquisitionDate: landAcqDate,
-      transferDate: input.transferDate,
-      isNonBusinessLand: false,
-      landAcquisitionCause: input.landAcquisitionCause,
-      decedentAcquisitionDate: input.decedentAcquisitionDate,
-      donorAcquisitionDate: input.donorAcquisitionDate,
-      carryoverTaxation: input.landCarryoverTaxation,
+      carryoverTaxation: slice.portionCarryover(input.landCarryoverTaxation),
     });
   }
 

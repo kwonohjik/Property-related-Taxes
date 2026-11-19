@@ -177,3 +177,15 @@ describe("CB-6 (C-14) — 비율만 주입하고 플래그를 안 켜면 무효 
     expect(viaStep.calculatedTax).toBeGreaterThan(ratioOnly.calculatedTax);
   });
 });
+
+// NBL2611-C1 (V10-BX06) — 초과분이 있을 때만 «판정하지 않은 사항» 확인 필요 고지. 세액은 고지 유무와 무관하다.
+describe("CB-NBL2611-BX06 — 초과분 고지(warnings)", () => {
+  it("초과분이 있으면 warnings에 고지 · 기준면적 이내·판정 입력 없음은 고지 없음", async () => {
+    const { NBL_BUILDING_SITE_EXCESS_UNJUDGED_NOTICE } = await import("@/lib/tax-engine/nbl-confirm-notices");
+    const over = calculateTransferTax(cb({ commercialAppurtenantLand: { ...totals, zoneType: "commercial" } }), rates);
+    expect(over.warnings ?? []).toContain(NBL_BUILDING_SITE_EXCESS_UNJUDGED_NOTICE);
+    const within = calculateTransferTax(cb({ commercialAppurtenantLand: { ...totals, zoneType: "green" } }), rates);
+    expect(within.warnings ?? []).not.toContain(NBL_BUILDING_SITE_EXCESS_UNJUDGED_NOTICE);
+    expect(calculateTransferTax(cb(), rates).warnings ?? []).not.toContain(NBL_BUILDING_SITE_EXCESS_UNJUDGED_NOTICE);
+  });
+});

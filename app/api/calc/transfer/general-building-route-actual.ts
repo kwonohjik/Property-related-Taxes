@@ -9,11 +9,10 @@
  */
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import {
-  apportionLandByBusinessArea,
   allocateBundledTransferPrice,
   applyCarryoverEstimationBasis,
 } from "@/lib/tax-engine/general-building-valuation";
-import { splitLandCarryover } from "@/lib/tax-engine/carryover-land-split";
+import { planGbLandCards } from "@/lib/tax-engine/general-building-land-cards";
 import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import type { ApportionBasisKind } from "@/lib/tax-engine/sale-split-apportion-basis";
 import { judgeAppurtenantLandExcess } from "@/lib/tax-engine/appurtenant-land-excess";
@@ -428,52 +427,22 @@ export function buildActualGeneralBuildingCards(
     context: "일반건물(실거래가)",
   });
 
-  // 토지 카드 생성 (초과 시 사업용·비사업용 분할 — 인정면적 직접 안분, round 의존 제거)
+  /**
+   * 토지 카드 생성 — 환산·증축 경로와 **같은 leaf**(`general-building-land-cards.ts`)가 구성을 정한다(NBL2611-V10-BX08).
+   * 🔴 종전에는 「전체 비사업용」 분기가 없어 무허가 단서에서 0원 「토지-사업용(1001)」 유령 카드 + 「비사업용초과분(1002)」 오표기가 생겼다(세액 불변).
+   * 안분 분자는 종전 그대로 `landArea − nonBusinessArea`다(`allowedLandArea`와 같은 값이나 부동소수 한 자리 차이를 만들지 않으려 값을 바꾸지 않는다).
+   * 🔴 이월과세 입력도 같은 leaf가 가른다 — 두 카드에 통째로 복사하면 증여자 취득가액·증여 당시 평가액·증여세가 2배로 들어간다.
+   */
   const cards: AssetCardForAggregate[] = [];
-  if (!isWithinNblRatio && nonBusinessRatio > 0) {
-    const businessArea = landArea - nonBusinessArea; // 사업용 인정면적 (무허가=0)
-    const landBizTransfer = apportionLandByBusinessArea(landTransfer, businessArea, landArea);
-    const landBizAcq = apportionLandByBusinessArea(landAcq, businessArea, landArea);
-    const landBizExp = apportionLandByBusinessArea(landExp, businessArea, landArea);
-    const landBizCapex = apportionLandByBusinessArea(landCapexExp, businessArea, landArea);
-    /**
-     * 🔴 이월과세 입력도 **함께 갈라야 한다** — 환산 경로와 **같은 헬퍼·같은 인자**다
-     *    (`general-building-valuation.ts:460`). 두 카드에 통째로 복사하면 증여자 취득가액·
-     *    증여 당시 평가액·증여세가 전부 **2배**로 들어간다(환산에서 실측된 과소 8,706,426).
-     *
-     * 🔑 인자가 실제로 같다: 환산은 `splitLandCarryover(ct, allowedLandArea, landArea)`를
-     *    쓰는데, 이 분기의 `businessArea = landArea − nonBusinessArea`이고
-     *    `nonBusinessArea = max(0, landArea − allowedLandArea)`(`appurtenant-land-excess.ts:124`)라
-     *    분기 조건(`landArea > allowedLandArea`) 아래에서 `businessArea === allowedLandArea`다.
-     *    위 세 줄의 `apportionLandByBusinessArea`와도 같은 술어·같은 인자다
-     *    (메모리 `feedback_shared_predicate_argument_parity`).
-     */
-    const splitCt = splitLandCarryover(landCarryoverTaxation, businessArea, landArea);
+  const landPlan = planGbLandCards({ isWithinLimit: isWithinNblRatio, nonBusinessRatio, businessArea: landArea - nonBusinessArea, landArea });
+  for (const slice of landPlan.slices) {
     cards.push({
-      propertyId: "land_business", propertyLabel: "토지-사업용(1001)", propertyType: "land",
-      transferPrice: landBizTransfer, acquisitionPrice: landBizAcq, expenses: landBizExp, expensesCapex: landBizCapex,
+      propertyId: slice.propertyId, propertyLabel: slice.propertyLabel, propertyType: "land",
+      transferPrice: slice.portion(landTransfer), acquisitionPrice: slice.portion(landAcq), expenses: slice.portion(landExp), expensesCapex: slice.portion(landCapexExp),
       usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
-      acquisitionDate: landCardDate, transferDate, isNonBusinessLand: false,
-      carryoverTaxation: splitCt.business,
-    } as unknown as AssetCardForAggregate);
-    cards.push({
-      propertyId: "land_nbl", propertyLabel: "토지-비사업용초과분(1002)", propertyType: "land",
-      transferPrice: landTransfer - landBizTransfer,
-      acquisitionPrice: landAcq - landBizAcq,
-      expenses: landExp - landBizExp,
-      expensesCapex: landCapexExp - landBizCapex,
-      usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
-      acquisitionDate: landCardDate, transferDate, isNonBusinessLand: true,
-      ...(isDesignatedArea !== undefined ? { isDesignatedArea } : {}),
-      carryoverTaxation: splitCt.nbl,
-    } as unknown as AssetCardForAggregate);
-  } else {
-    cards.push({
-      propertyId: "land", propertyLabel: "토지(1001)", propertyType: "land",
-      transferPrice: landTransfer, acquisitionPrice: landAcq, expenses: landExp, expensesCapex: landCapexExp,
-      usedEstimatedAcquisition: false, estimatedBase: 0, estimatedDeduction: 0,
-      acquisitionDate: landCardDate, transferDate, isNonBusinessLand: false,
-      carryoverTaxation: landCarryoverTaxation,
+      acquisitionDate: landCardDate, transferDate, isNonBusinessLand: slice.isNonBusinessLand,
+      ...(slice.isNonBusinessLand && isDesignatedArea !== undefined ? { isDesignatedArea } : {}),
+      carryoverTaxation: slice.portionCarryover(landCarryoverTaxation),
     } as unknown as AssetCardForAggregate);
   }
   /**

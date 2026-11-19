@@ -28,6 +28,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { NblDesignatedAreaQuestion } from "./nbl/NblDesignatedAreaQuestion";
+import { NblExcessConfirmNotice } from "./NblExcessConfirmNotice";
 import { getBuildingSiteMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 
@@ -145,6 +146,8 @@ export function GeneralBuildingNblSection({ asset, onChange, transferDate }: Pro
               무허가건축물 — 토지 전체 비사업용 (배율 계산 없음)
             </div>
           )}
+          {/* NBL2611-V10-BX06·V2-C2 — 초과분이 생기는 입력이면 «판정하지 않은 사항·상태 가정» 고지(카드 안, 같은 분기 `hasNblPart`). */}
+          {hasNblPart && <NblExcessConfirmNotice />}
         </ToneCard>
         {/* 양도일 2009.3.16.~2015.12.31.의 비사업용 토지 카드 — 8호 중과 유예 요건(지정지역 여부). 그 기간·그 카드가 있을 때만 뜬다. */}
         {hasNblPart && (
