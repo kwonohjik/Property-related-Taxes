@@ -62,6 +62,8 @@ export interface NblOtherFormSlice {
   nblOtherBuildingValue: string;
   nblOtherLandValue: string;
   nblOtherIsRelatedToResidence: boolean;
+  /** NBL2611-Q-10(나) — 저장된 이력에 레거시 「거주·사업 직접 관련」이 켜져 있었으나 호가 없어 false로 정규화됨: 「호 재선택」 고지 표지(표시 전용 — ④가 보내지 않는다) */
+  nblOtherLegacyRelatedReselect: boolean;
   /** §104의3①4호나목 — 건축물(건물·시설물) 부속토지 여부. false=나대지 간주(종합합산). true=시가표준액 2% 비교(지방세령§101①2호나목): 2% 이상이면 사용자 재산세 유형 적용, 2% 미달이면 종합합산 강제(바닥면적분만 별도합산 유지·아래 nblOtherBuildingFloorArea). */
   nblOtherHasBuilding: boolean;
   /** §101①2호나목 — 건축물 바닥면적(㎡). 2% 미달 시 이 면적만 별도합산(사업용) 유지·잔여 부속토지는 종합합산(비사업용) */

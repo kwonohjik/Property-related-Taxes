@@ -107,6 +107,8 @@ export interface NblJudgmentFormSlice {
   nblVillaCombinedStdValue: string;
   nblVillaIsInRestrictedArea: boolean;
   nblVillaIsAfter20150101: boolean;
+  /** NBL2611-Q-12 — 「별장으로 사용한 기간 없음」 명시 확인. 사용기간 0행이면 ⑧·⑫가 1행 이상 또는 이 확인을 요구한다. */
+  nblVillaNoUseConfirmed: boolean;
   // nblOther*·nblRevenue* (기타토지 §168의11) 일체는 NblOtherFormSlice로 분리 (calc-wizard-asset-nbl-other.ts).
 
   // ── NBL 부득이한 사유 (§168의14①·§83의5①) ──

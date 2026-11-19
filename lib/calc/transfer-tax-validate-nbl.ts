@@ -10,7 +10,7 @@
  */
 import { parseAmount } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
-import { GRACE_REASON_SPECS } from "@/lib/tax-engine/non-business-land/grace-reason-period";
+import { graceRowIssue } from "@/lib/tax-engine/non-business-land/grace-row-issue";
 import { evaluateUnconditionalExemption, nblAcquisitionDateOf } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { isUrbanResidentialCommercialIndustrial } from "@/lib/tax-engine/non-business-land/urban-area";
 import { isUrbanForFarmland } from "@/lib/tax-engine/non-business-land/urban-area";
@@ -27,6 +27,15 @@ import { parseTaxPeriodYears } from "@/lib/tax-engine/non-business-land/disquali
 import { nblLandSigunguCodeOf } from "./nbl-land-sigungu";
 import { nblBusinessUsePeriodsApply, nblResidenceHistoryApplies } from "./nbl-period-rows-scope";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
+import { consumesMetropolitanArea } from "@/lib/tax-engine/non-business-land/land-category";
+import { deemedTransferDateIssue } from "@/lib/tax-engine/non-business-land/deemed-transfer-date-range";
+import { deemedTransferDateIssueMessage } from "@/lib/tax-engine/non-business-land/deemed-transfer-date-range";
+import { periodRowIssue } from "@/lib/tax-engine/non-business-land/period-row-issue";
+import { periodRowIssueField } from "@/lib/tax-engine/non-business-land/period-row-issue";
+import { periodRowIssueMessage } from "@/lib/tax-engine/non-business-land/period-row-issue";
+import { priorRevenueWithoutLandValue } from "@/lib/tax-engine/non-business-land/revenue-test";
+import { PRIOR_REVENUE_LAND_VALUE_REQUIRED_MESSAGE } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
+import { VILLA_NO_USE_REQUIRED_MESSAGE } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
 
 /** 폼의 3-state 값을 엔진 `LandDivision`으로 — ④ form-mapper와 **같은 접기 규칙**(3중 패턴). */
 function nblLandDivisionOf(asset: AssetForm): LandDivision | undefined {
@@ -178,8 +187,9 @@ export function validateNblDetailedJudgment(
   //    이미 `villa_land`까지 넓혀져 있는(E1-02) 것과 **같은 경로의 나머지 한 축**이다.
   //    종전에는 이 게이트만 `housing_site`에 머물러, 별장은 값을 넣을 화면도 없고
   //    차단도 되지 않은 채 3배(불리)로 계산됐다.
+  // NBL2611-B1 — 수도권 칸을 보는 지목은 엔진 소비 술어가 정한다(⑤ 렌더·④ 전송과 같은 표).
   if (
-    (asset.nblLandType === "housing_site" || asset.nblLandType === "villa_land") &&
+    consumesMetropolitanArea(asset.nblLandType) &&
     isUrbanResidentialCommercialIndustrial(asset.nblZoneType as ZoneType) &&
     (!asset.nblIsMetropolitanArea || asset.nblIsMetropolitanArea === "unknown")
   ) {
@@ -233,6 +243,13 @@ export function validateNblDetailedJudgment(
   //    요구하며 영구 차단**됐다(리셋 패치 없음).
   if (requiresDeemedTransferDate(asset) && !asset.nblDeemedTransferDate)
     return fieldError("nblDeemedTransferDate", `${label}: 양도일 의제 사유를 선택했습니다. 의제일(최초 경매기일·공매일·공고일 등)을 입력하세요.`);
+  // NBL2611-V2-PR04 — 의제일은 취득 이후·양도 이전의 날이다. 범위 밖이면 소유일수 0 → 비사업용으로 조용히 뒤집힌다(2026-09 E1-05).
+  if (requiresDeemedTransferDate(asset) && asset.nblDeemedTransferDate) {
+    const acq = nblAcquisitionDateOf(asset) ?? "";
+    const issue = deemedTransferDateIssue(asset.nblDeemedTransferDate, acq, formTransferDate);
+    if (issue)
+      return fieldError("nblDeemedTransferDate", `${label}: ${deemedTransferDateIssueMessage(issue, asset.nblDeemedTransferDate, acq, formTransferDate ?? "")}`);
+  }
   // §168의11①·⑤·⑥ 기타토지 정밀판정 입력 검증 (별도 파일 분리 — 800줄 정책)
   if (asset.nblLandType === "other_land") {
     const nblOtherErr = validateNblOtherLand(asset, label);
@@ -257,6 +274,18 @@ export function validateNblDetailedJudgment(
         // 한 메시지가 두 칸을 물으면 비어 있는 칸으로 간다
         return fieldError(pc > 0 ? "nblRevenuePriorOtherLandValue" : "nblRevenuePriorCommonRevenue", `${label}: 직전 공통수입 안분은 공통수입금액과 '그 밖의 토지가액'을 함께 입력하세요.`);
     }
+    // NBL2611-V9-DM06 — (더 구체적인 위 공통쌍 오류가 먼저 나오도록 그 뒤에 둔다) 직전 수입 쪽만 넣고 직전 토지가액을 비우면 비율②(당해+직전)가 조용히 빠진다. 직전 토지가액만 있는 쪽은 ②≤①이라 막지 않는다.
+    if (
+      priorRevenueWithoutLandValue({
+        priorRevenue: parseAmount(asset.nblRevenuePriorRevenue || "0"),
+        priorDeposit: parseAmount(asset.nblRevenuePriorDeposit || "0"),
+        priorRentDays: parseAmount(asset.nblRevenuePriorRentDays || "0"),
+        commonApportion: !!asset.nblRevenueCommonApportion,
+        priorCommonRevenue: parseAmount(asset.nblRevenuePriorCommonRevenue || "0"),
+        priorLandValue: parseAmount(asset.nblRevenuePriorLandValue || "0"),
+      })
+    )
+      return fieldError("nblRevenuePriorLandValue", `${label}: ${PRIOR_REVENUE_LAND_VALUE_REQUIRED_MESSAGE}`);
   }
   /**
    * 기간·이력 배열의 **행 단위** 필수 입력 (V2-b·A1-02, 2026-09-02 코드리뷰).
@@ -298,28 +327,26 @@ export function validateNblDetailedJudgment(
   ];
   for (const { rows, what, applies, fieldOf } of rowArrays) {
     if (!applies) continue;
+    // NBL2611-V8-VL02 — 빈·해석 불가·역순·같은 날 행은 엔진이 조용히 버린다. ⑫ `refineNonBusinessLandRaw`와 같은 helper·같은 문구.
     for (const [i, r] of (rows ?? []).entries()) {
-      if (!r.startDate)
-        return fieldError(fieldOf(i, "startDate"), `${label}: ${what} ${i + 1}번째 행 — 시작일을 입력하세요. (미입력 행은 판정에서 제외되어 결과가 달라집니다)`);
-      if (!r.endDate)
-        return fieldError(fieldOf(i, "endDate"), `${label}: ${what} ${i + 1}번째 행 — 종료일을 입력하세요. (미입력 행은 판정에서 제외되어 결과가 달라집니다)`);
+      const kind = periodRowIssue(r.startDate, r.endDate);
+      if (kind)
+        return fieldError(fieldOf(i, periodRowIssueField(kind)), `${label}: ${periodRowIssueMessage(what, i, kind, r.startDate, r.endDate)}`);
     }
   }
 
-  // §168의14①·§83의5① 유예기간 — 사유별 필수 기산일/종료일 (자동 안분 fallback 금지)
+  // NBL2611-Q-12 (a) — 별장 사용기간이 0행이면 «사용 안 함»을 명시 확인해야 한다. 0행은 비별장 100%로 읽혀 주택부수토지로
+  // 재분류되고(사업용 가능, −55,750,000) 형제 지목(농지 자경·목장 축산)은 0행이 불리 방향이라 같은 기준으로 맞춘다.
+  if (asset.nblLandType === "villa_land" && (asset.nblVillaUsePeriods ?? []).length === 0 && !asset.nblVillaNoUseConfirmed)
+    return fieldError("nblVillaNoUseConfirmed", `${label}: ${VILLA_NO_USE_REQUIRED_MESSAGE}`);
+
+  // §168의14①·§83의5① 유예기간 — 사유별 필수 기산일/종료일 + 역순·같은 날 (자동 안분 fallback 금지) — ⑫와 같은 helper(`graceRowIssue`)
   for (const [gi, g] of (asset.nblGracePeriods ?? []).entries()) {
-    const spec = GRACE_REASON_SPECS[g.reasonCode];
-    if (!spec) continue;
-    if (spec.lengthKind === "compound_5") {
-      if (!g.secondaryDate) return fieldError(`nblGracePeriods.${gi}.secondaryDate`, `${label}: 건설 착공(5호) 유예기간 — 착공일을 입력하세요.`);
-    } else if (spec.lengthKind === "fixed_from_anchor") {
-      if (!spec.anchorFromAcquisition && !g.anchorDate)
-        return fieldError(`nblGracePeriods.${gi}.anchorDate`, `${label}: ${spec.label} 유예기간 — 기산일을 입력하세요.`);
-    } else {
-      // event_window · anchor_to_input_end
-      if (!g.anchorDate) return fieldError(`nblGracePeriods.${gi}.anchorDate`, `${label}: ${spec.label} 유예기간 — 개시일을 입력하세요.`);
-      if (!g.endDate) return fieldError(`nblGracePeriods.${gi}.endDate`, `${label}: ${spec.label} 유예기간 — 종료일을 입력하세요.`);
-    }
+    const gIssue = graceRowIssue(g, gi);
+    // 칸 키는 정적 앵커 게이트가 읽도록 리터럴 접미로 분기한다
+    if (gIssue?.part === "secondaryDate") return fieldError(`nblGracePeriods.${gi}.secondaryDate`, `${label}: ${gIssue.message}`);
+    if (gIssue?.part === "anchorDate") return fieldError(`nblGracePeriods.${gi}.anchorDate`, `${label}: ${gIssue.message}`);
+    if (gIssue?.part === "endDate") return fieldError(`nblGracePeriods.${gi}.endDate`, `${label}: ${gIssue.message}`);
   }
   return null;
 }

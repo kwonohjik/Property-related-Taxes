@@ -19,7 +19,8 @@ import type {
   NonBusinessLandJudgmentRules,
 } from "./types";
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "./types";
-import { classifyLandCategory, consumesPeriodJudgmentDate } from "./land-category";
+import { classifyLandCategory, consumesGracePeriods, consumesPeriodJudgmentDate } from "./land-category";
+import { deemedTransferDateIssue, deemedTransferDateIssueMessage } from "./deemed-transfer-date-range";
 import { checkUnconditionalExemption } from "./unconditional-exemption";
 import { judgeFarmland } from "./farmland";
 import { judgeForest } from "./forest";
@@ -116,6 +117,34 @@ export function judgeNonBusinessLand(
 
   // ── Step 3 준비: 유예기간(§168의14①·§83의5①) — form-mapper에서 사유별 자동산정 완료 ──
   const engineInput: NonBusinessLandInput = input;
+
+  // NBL2611-V2-C1 — 이 지목의 판정은 유예기간 입력을 읽지 않는다(`consumesGracePeriods`). 화면이 「사업용 사용 기간에 가산됩니다」라고
+  // 안내하던 입력이 결과에 닿지 않으므로 사실대로 알린다. 반영 구현은 기타토지 B3(R08)·주택부수토지 D1(R20).
+  if (input.gracePeriods.length > 0 && !consumesGracePeriods(input.landType)) {
+    warnings.push(
+      `부득이한 사유 유예기간(${NBL.UNAVOIDABLE_PERIOD}) 입력이 ${category.categoryLabel} 판정에는 반영되지 않았습니다 — ` +
+        "해당 사유가 있으면 이 판정에 반영되지 않았음을 전제로 확인이 필요합니다(모름 = 혜택 불성립).",
+    );
+  }
+  // NBL2611-V2-PR04 — 양도일 의제일이 취득일과 같거나 빠르거나 양도일보다 늦으면 소유일수가 0이 되어 비사업용으로 접힌다(입력 오류).
+  if (
+    consumesPeriodJudgmentDate(input.landType) &&
+    input.deemedTransferReason &&
+    input.deemedTransferReason !== "none" &&
+    input.deemedTransferDate
+  ) {
+    const dIssue = deemedTransferDateIssue(input.deemedTransferDate, input.acquisitionDate, input.transferDate);
+    if (dIssue) {
+      warnings.push(
+        deemedTransferDateIssueMessage(
+          dIssue,
+          input.deemedTransferDate.toISOString().slice(0, 10),
+          input.acquisitionDate.toISOString().slice(0, 10),
+          input.transferDate.toISOString().slice(0, 10),
+        ),
+      );
+    }
+  }
 
   // ── Step 4: 개별 지목별 judge ─────────────────────────────────────
   let catResult: CategoryJudgeResult;

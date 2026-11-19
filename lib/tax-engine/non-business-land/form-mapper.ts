@@ -19,6 +19,9 @@ import type {
 } from "./types";
 import { resolveGraceIntervals } from "./grace-reason-period";
 import { isFarmlandType } from "./types";
+import { consumesMetropolitanArea } from "./land-category";
+import { consumesPeriodJudgmentDate } from "./land-category";
+import { consumesUrbanIncorporationDate } from "./land-category";
 import { parseTaxPeriodYears } from "./disqualified-tax-periods";
 import { lookupSigungu } from "@/lib/korean-law/sigungu-codes";
 import { resolveAdjacentUnitCodes } from "@/lib/geo/sigungu-unit";
@@ -142,9 +145,12 @@ export function mapAssetToNblInput(
     }];
   });
 
-  // 도시편입일 / 수도권 여부
-  const urbanIncorporationDate = parseDate(asString(asset.nblUrbanIncorporationDate));
-  const metroRaw = asString(asset.nblIsMetropolitanArea);
+  // 도시편입일 / 수도권 여부 — NBL2611-B1: 그 값을 **판정에 쓰는 지목**에만 싣는다(엔진 소비 술어 — ⑤ 렌더·⑧·④와 같은 표).
+  // 별장·주택부수·기타토지의 도시편입일은 어느 judge도 읽지 않는데 `urbanIncorporationGrace` echo만 만들어 적용된 것처럼 보였다.
+  const urbanIncorporationDate = consumesUrbanIncorporationDate(landType)
+    ? parseDate(asString(asset.nblUrbanIncorporationDate))
+    : undefined;
+  const metroRaw = consumesMetropolitanArea(landType) ? asString(asset.nblIsMetropolitanArea) : "";
   const isMetropolitanArea: boolean | undefined =
     metroRaw === "yes" ? true : metroRaw === "no" ? false : undefined;
 
@@ -165,8 +171,9 @@ export function mapAssetToNblInput(
   return {
     landType, landArea, zoneType, acquisitionDate, transferDate,
     // §168조의14② 양도일 의제 (기간기준 전용)
-    deemedTransferReason: (asString(asset.nblDeemedTransferReason) || "none") as DeemedTransferReason,
-    deemedTransferDate:   parseDate(asString(asset.nblDeemedTransferDate)),
+    // 의제를 소비하지 않는 지목(주택·건물 부수토지)에는 싣지 않는다 — 적용되지 않은 의제를 적용했다고 말하지 않게(NBL2611-B1).
+    deemedTransferReason: (consumesPeriodJudgmentDate(landType) ? (asString(asset.nblDeemedTransferReason) || "none") : "none") as DeemedTransferReason,
+    deemedTransferDate:   consumesPeriodJudgmentDate(landType) ? parseDate(asString(asset.nblDeemedTransferDate)) : undefined,
     nonHeirBequest:       isNonHeirBequest(asset) || undefined,
     carryoverOwnership:   asString(asset.acquisitionCause) === "carryover_gift" || undefined,
     farmingSelf:             asBool(asset.nblFarmingSelf),

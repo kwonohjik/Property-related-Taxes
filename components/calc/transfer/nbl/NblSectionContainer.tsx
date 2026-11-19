@@ -30,6 +30,7 @@ import { VillaLandDetailSection } from "./VillaLandDetailSection";
 import { OtherLandDetailSection } from "./OtherLandDetailSection";
 import { DeemedTransferSection } from "./DeemedTransferSection";
 import { isDeemedTransferApplicable } from "@/lib/calc/nbl-deemed-transfer-scope";
+import { consumesUrbanIncorporationDate } from "@/lib/tax-engine/non-business-land/land-category";
 import { NblUrbanZoneCheckButton } from "./NblLandAutoFetch";
 import { nblLandSigunguCodeOf } from "@/lib/calc/nbl-land-sigungu";
 
@@ -271,7 +272,10 @@ export function NblSectionContainer({
           </div>
         )}
 
-        {/* 5. 공통 지원 필드 */}
+        {/* 5. 도시편입일 — 편입유예를 판정에 쓰는 지목(농지·임야·목장)에만. 별장·주택부수·기타토지는 어느 judge도 읽지 않는다
+            (NBL2611-V10-PU10·V8-VL08). 숨긴 칸의 값은 store에 남기고(이력 복원 보존) ④가 보내지 않는다. 같은 `consumesUrbanIncorporationDate`를
+            ④(`buildNonBusinessLandRaw`)·서버 매퍼가 쓴다. */}
+        {consumesUrbanIncorporationDate(asset.nblLandType) && (
         <div className="mt-3">
           <FieldCard field="nblUrbanIncorporationDate" label="도시편입일" hint="도시지역 편입 시 3년 유예 적용. 편입일은 토지이용계획확인원에서 확인해 입력하세요(자동조회 불가)">
             <DateInput
@@ -286,6 +290,7 @@ export function NblSectionContainer({
             <NblUrbanZoneCheckButton jibun={asset.addressJibun} transferDate={transferDate ?? ""} />
           </FieldCard>
         </div>
+        )}
 
         {/* 6. 부득이한 사유 */}
         <div className="mt-3">

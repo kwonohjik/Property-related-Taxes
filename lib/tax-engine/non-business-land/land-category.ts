@@ -76,9 +76,64 @@ export function getLandCategoryGroup(landType: LandType): LandCategoryGroup {
  * 게이트를 한 곳에서만 바꾸면 같은 병이 재발한다(R11).
  */
 export function consumesPeriodJudgmentDate(landType: LandType | "" | undefined): boolean {
-  if (!landType) return false;
-  const group = getLandCategoryGroup(landType);
-  return group !== "housing" && group !== "building_site";
+  return consumption(landType).deemedTransfer;
+}
+
+/**
+ * NBL2611-B1 (R05 · V10-PU10 · V8-VL08 · V2-C1) — **지목별 공통 입력 소비 지도** (단일 소스).
+ *
+ * 도시편입일·부득이한 사유(유예)·양도일 의제·수도권 여부는 지목에 매이지 않는 «공통» 칸이지만 엔진은 지목별 judge가
+ * 일부만 읽는다. ⑤ 렌더 · ⑧ 검증 · ④ 전송 · 매퍼 · 엔진 고지가 **같은 표**를 보게 해 «화면에 있는데 판정엔 안 쓰이는 칸»
+ * (별장의 도시편입일 · 주택부수토지의 유예 안내 「가산됩니다」)을 한 곳에서 없앤다. 각 칸은 judge 소스에서 실제 호출을 확인했다:
+ *
+ *   · 도시편입일 `urbanIncorporationDate` — farmland.ts(편입유예·§168의8⑤) · pasture.ts(§168의10⑤) · forest.ts
+ *     (시업중·특수산림사업지구일 때만 — 그 조건은 ⑧이 따로 건다. 표에는 «소비 가능»으로 true).
+ *   · 유예 `gracePeriods` — farmland · forest · pasture · villa는 `meetsPeriodCriteria`에 넘긴다.
+ *     **other_land는 false**: 비사업용으로 끝나는 분기는 기간 판정이 없고, 사업용 분기는 `fullPeriod`(전 기간)를 넘겨
+ *     유예가 합집합에 더해질 일수가 0이다(NBL2611-V2-C1). housing·building_site는 호출 자체가 없다.
+ *     → B3(R08 · 기타토지 유예 소비)·D1(R20 · 주택 유예)이 구현되면 해당 칸을 true로 바꾼다.
+ *   · 양도일 의제 `getPeriodJudgmentDate` — farmland · forest · pasture · villa · other_land. housing·building_site는
+ *     2026-07-31 사용자 방침(법령 구조 아님 — NBL2611-V2-C2)으로 부르지 않는다.
+ *   · 수도권 `isMetropolitanArea` — housing-land.ts만. 별장은 REDIRECT 재분류 뒤 주택부수토지 판정에서 소비한다.
+ *
+ * `satisfies Record<LandCategoryGroup, …>`가 새 그룹 추가 시 이 표 누락을 컴파일 오류로 만든다.
+ */
+interface InputConsumption {
+  urbanIncorporationDate: boolean;
+  gracePeriods: boolean;
+  deemedTransfer: boolean;
+  metropolitanArea: boolean;
+}
+
+const INPUT_CONSUMPTION = {
+  farmland:      { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false },
+  forest:        { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false },
+  pasture:       { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false },
+  housing:       { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: false, metropolitanArea: true  },
+  building_site: { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: false, metropolitanArea: false },
+  villa:         { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: true,  metropolitanArea: true  },
+  other_land:    { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: true,  metropolitanArea: false },
+  unknown:       { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: false, metropolitanArea: false },
+} as const satisfies Record<LandCategoryGroup, InputConsumption>;
+
+function consumption(landType: LandType | "" | undefined): InputConsumption {
+  if (!landType) return INPUT_CONSUMPTION.unknown;
+  return INPUT_CONSUMPTION[getLandCategoryGroup(landType)];
+}
+
+/** 도시편입일(편입유예)을 판정에 쓰는 지목 — 농지·임야·목장용지. 별장·주택부수·기타토지에는 입력칸이 의미가 없다. */
+export function consumesUrbanIncorporationDate(landType: LandType | "" | undefined): boolean {
+  return consumption(landType).urbanIncorporationDate;
+}
+
+/** 부득이한 사유 유예기간(영 §168의14①)을 판정에 쓰는 지목 — false인 지목은 입력해도 결과가 바뀌지 않는다(확인 필요 고지 대상). */
+export function consumesGracePeriods(landType: LandType | "" | undefined): boolean {
+  return consumption(landType).gracePeriods;
+}
+
+/** 수도권 여부(영 §168의12 배율)를 판정에 쓰는 지목 — 주택부수토지, 그리고 재분류되는 별장. */
+export function consumesMetropolitanArea(landType: LandType | "" | undefined): boolean {
+  return consumption(landType).metropolitanArea;
 }
 
 export function classifyLandCategory(input: NonBusinessLandInput): LandCategoryResult {

@@ -698,10 +698,12 @@ export const NBL_DEFAULTS = {
   nblVillaCombinedStdValue: "",
   nblVillaIsInRestrictedArea: false,
   nblVillaIsAfter20150101: false,
+  nblVillaNoUseConfirmed: false,
   nblOtherPropertyTaxType: "",
   nblOtherBuildingValue: "",
   nblOtherLandValue: "",
   nblOtherIsRelatedToResidence: false,
+  nblOtherLegacyRelatedReselect: false,
   nblOtherHasBuilding: false,
   nblOtherBuildingFloorArea: "",
   // §168의11① 호별 면적기준 (갭 3a)

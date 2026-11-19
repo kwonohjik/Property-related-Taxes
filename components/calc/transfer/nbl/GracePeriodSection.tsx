@@ -18,6 +18,8 @@ import {
   GRACE_REASON_SPECS,
   resolveGraceIntervals,
 } from "@/lib/tax-engine/non-business-land/grace-reason-period";
+import { consumesGracePeriods } from "@/lib/tax-engine/non-business-land/land-category";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 type ReasonCode = NblGracePeriodInput["reasonCode"];
 
@@ -59,6 +61,9 @@ export function GracePeriodSection({
 }) {
   const periods = asset.nblGracePeriods ?? [];
   const dealer = asset.nblBusinessIsRealEstateDealer ?? false;
+  // NBL2611-V2-C1 — 이 지목의 판정이 유예기간을 읽는가(엔진 소비 술어). 기타토지·주택부수토지는 아직 읽지 않는다(B3·D1에서 구현).
+  // 지목 미선택은 아직 모르는 상태라 «반영되지 않음»이라 단정하지 않는다.
+  const graceConsumed = !asset.nblLandType || consumesGracePeriods(asset.nblLandType);
 
   function addPeriod() {
     onAssetChange({
@@ -98,9 +103,22 @@ export function GracePeriodSection({
     <div className="space-y-3">
       <SectionHeader
         title="부득이한 사유 유예기간 (§168의14①·§83의5①)"
-        description="해당 기간은 사업용 사용 기간에 가산됩니다. 종료일은 사유별 법정기간으로 자동 산정됩니다."
+        description={
+          graceConsumed
+            ? "해당 기간은 사업용 사용 기간에 가산됩니다. 종료일은 사유별 법정기간으로 자동 산정됩니다."
+            : "종료일은 사유별 법정기간으로 자동 산정됩니다."
+        }
         action={<LawArticleModal legalBasis="소득세법 시행규칙 §83의5①" label="§83의5① 부득이 사유" />}
       />
+
+      {!graceConsumed && (
+        <ToneCard tone="amber" title="이 지목의 판정에는 아직 반영되지 않습니다 — 확인 필요">
+          <p data-testid="nbl-grace-not-applied-notice" className="text-xs text-amber-800 dark:text-amber-200 leading-snug">
+            기타토지·주택 부수 토지 판정은 아래 부득이한 사유(유예기간)를 사업용 사용 기간에 가산하지 않습니다. 입력해도 이 계산 결과는 바뀌지 않습니다.
+            해당 사유가 있으면 반영되지 않은 결과임을 전제로 확인하세요.
+          </p>
+        </ToneCard>
+      )}
 
       {/* §83의5① 단서 — 부동산매매업 매매용부동산(1·2호 배제) */}
       <ToggleCard
@@ -177,7 +195,7 @@ export function GracePeriodSection({
                   <FieldCard field={`nblGracePeriods.${idx}.secondaryDate`} label="착공일">
                     <DateInput value={p.secondaryDate ?? ""} onChange={(v) => updatePeriod(idx, { secondaryDate: v })} />
                   </FieldCard>
-                  <FieldCard label="건설진행 종료일" hint="미입력 시 양도일까지 진행 가정">
+                  <FieldCard field={`nblGracePeriods.${idx}.endDate`} label="건설진행 종료일" hint="미입력 시 양도일까지 진행 가정">
                     <DateInput value={p.endDate} onChange={(v) => updatePeriod(idx, { endDate: v })} />
                   </FieldCard>
                 </div>

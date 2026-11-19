@@ -47,7 +47,7 @@ const emptyResidenceRow = { sigunguCode: "", sigunguName: "", startDate: "", end
  */
 const LAND_BASE: Partial<Record<LandType, Partial<AssetForm>>> = {
   other_land: { nblOtherPropertyTaxType: "separate" },
-  villa_land: { nblHousingFootprint: "100" },
+  villa_land: { nblHousingFootprint: "100", nblVillaNoUseConfirmed: true }, // NBL2611-Q-12: 사용기간 0행이면 「사용 없음」 확인이 행 검사보다 앞선다
 };
 const rowMessage = (over: Partial<AssetForm>) => {
   const base = over.nblLandType ? LAND_BASE[over.nblLandType] ?? {} : {};

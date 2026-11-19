@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { NBL_PROPERTY_TAX_TYPE_VALUES, NBL_RELATED_BUSINESS_TYPE_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
+import { refineNonBusinessLandRaw } from "./transfer-tax-schema-nbl-refines";
 
 // ─── NBL 정밀판정 raw 페이로드 (⑫) — store nbl* 평면 1:1 ──────────
 // 아키텍처 B: 클라이언트가 raw 평면을 전송 → route가 mapAssetToNblInput로 nested+Date 변환.
@@ -57,7 +59,11 @@ export const NBL_UI_LAND_TYPE_VALUES = [
   "farmland", "forest", "pasture", "housing_site", "villa_land", "other_land",
 ] as const;
 
-export const nonBusinessLandRawSchema = z.object({
+/**
+ * refine 이전의 객체 스키마 — `.partial()`·`.extend()`는 refine이 붙은 스키마에 쓸 수 없다(zod 4). 키 목록·부분 파싱이 필요한 곳(테스트)은 이것을 쓴다.
+ * 운반 스키마는 아래 `nonBusinessLandRawSchema`(⑧ 거울 refine 포함)다.
+ */
+export const nonBusinessLandRawBaseSchema = z.object({
   // 필수 (빌더 가드: nblUseDetailedJudgment && acquisitionArea && acquisitionDate,
   //  + 지목·용도지역은 무조건 의제 미성립 시 필수 — 의제 성립 시 "" 허용)
   nblUseDetailedJudgment: z.boolean(),
@@ -145,8 +151,11 @@ export const nonBusinessLandRawSchema = z.object({
   nblVillaCombinedStdValue: z.string().optional(),
   nblVillaIsInRestrictedArea: z.boolean().optional(),
   nblVillaIsAfter20150101: z.boolean().optional(),
+  /** NBL2611-Q-12 — 「별장으로 사용한 기간 없음」 명시 확인(사용기간 0행일 때 ⑧·⑫가 요구) */
+  nblVillaNoUseConfirmed: z.boolean().optional(),
   // 기타토지
-  nblOtherPropertyTaxType: z.string().optional(),
+  // NBL2611-V6-D — 자유 문자열이던 분류·호를 엔진 union과 같은 목록으로(미지원 값이 `!== "comprehensive"`로 사업용 쪽에 읽히던 침묵 과소 차단). ""는 비선택(⑧이 막는다).
+  nblOtherPropertyTaxType: z.enum(NBL_PROPERTY_TAX_TYPE_VALUES).or(z.literal("")).optional(),
   nblOtherBuildingValue: z.string().optional(),
   nblOtherLandValue: z.string().optional(),
   nblOtherIsRelatedToResidence: z.boolean().optional(),
@@ -162,7 +171,7 @@ export const nonBusinessLandRawSchema = z.object({
   nblOtherUseParcels: z.boolean().optional(),
   nblOtherParcels: z.array(nblOtherParcelRawSchema).optional(),
   // §168의11① 호별 면적기준 (갭 3a)
-  nblOtherRelatedBusinessType: z.string().optional(),
+  nblOtherRelatedBusinessType: z.enum(NBL_RELATED_BUSINESS_TYPE_VALUES).or(z.literal("")).optional(),
   nblOtherStandardAreaLimit: z.string().optional(),
   nblOtherMaxAnnualArea: z.string().optional(),
   nblOtherYouthCapacity: z.string().optional(),
@@ -254,3 +263,6 @@ export const nonBusinessLandRawSchema = z.object({
   nblResidenceHistories: z.array(nblResidenceHistoryRawSchema).optional(),
   nblGracePeriods: z.array(nblGracePeriodRawSchema).optional(),
 });
+
+/** ⑫ 운반 스키마 = 객체 스키마 + ⑧ 거울 refine(NBL2611-B1) */
+export const nonBusinessLandRawSchema = nonBusinessLandRawBaseSchema.superRefine(refineNonBusinessLandRaw);
