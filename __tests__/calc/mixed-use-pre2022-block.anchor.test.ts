@@ -37,7 +37,7 @@ beforeEach(() => {
 const BLOCK = "2022.1.1. 전 양도분은 겸용주택 분리계산 범위 밖입니다";
 const MIXED = {
   assetKind: "housing", isMixedUseHouse: true, residentialFloorArea: "60", nonResidentialFloorArea: "40", buildingFootprintArea: "50",
-  mixedUseTotalLandArea: "900", mixedZoneType: "general_residential", mixedTransferHousingPrice: "900000000", mixedTransferCommercialBuildingPrice: "300000000",
+  mixedUseTotalLandArea: "900", mixedZoneType: "general_residential", mixedIsMetropolitanArea: true, mixedTransferHousingPrice: "900000000", mixedTransferCommercialBuildingPrice: "300000000",
   mixedTransferLandPricePerSqm: "2000000", mixedAcqHousingPrice: "300000000", mixedAcqCommercialBuildingPrice: "100000000", mixedAcqLandPricePerSqm: "1000000",
   acquisitionCause: "purchase", acquisitionDate: "2000-01-01", useEstimatedAcquisition: false, fixedAcquisitionPrice: "400000000",
 };

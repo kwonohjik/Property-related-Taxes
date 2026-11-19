@@ -10,6 +10,8 @@
 import { round2 } from "@/lib/tax-engine/area-utils";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import { getHousingMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
+import { isMixedMetroSelectionRequired, MIXED_METRO_REQUIRED_DETAIL } from "@/lib/tax-engine/mixed-use-metro-required";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import { APPURTENANT_ZONE_OPTIONS } from "@/components/calc/transfer/appurtenant-zone-options";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -77,6 +79,29 @@ export function validateMixedUseAreas(
     const v = parseFloat(raw);
     if (!Number.isFinite(v) || v < 0 || v > max)
       return fieldError(field, `${label}: ${name} 면적은 0 이상 ${maxLabel} 이하로 입력하세요. (면적 정보)`);
+  }
+
+  /**
+   * ── V4 수도권 여부(NBL2611-V4-HS06) — 3-state: 미선택이면 **배율이 실제로 갈릴 때만** 막는다 ──
+   *
+   * 종전에는 폼 기본값이 «수도권»(true)이라 이 칸이 묻지 않았고, 수도권 밖 부동산이 3배로 계산됐다. 판정은 엔진 leaf(`mixed-use-metro-required.ts`) —
+   * ⑫(Zod)·엔진 가드와 같은 함수라 «⑧ 통과 ↔ ⑫ 400» 모순이 없다. UI 표시 순서(수도권 → 용도지역)대로 용도지역보다 먼저 묻는다.
+   */
+  if (asset.mixedIsMetropolitanArea === undefined) {
+    const metroRequired = isMixedMetroSelectionRequired(
+      {
+        residentialFloorArea: parseFloat(asset.residentialFloorArea) || 0,
+        nonResidentialFloorArea: parseFloat(asset.nonResidentialFloorArea) || 0,
+        buildingFootprintArea: footprintV,
+        totalLandArea: totalLandV,
+        ...(landOv !== "" ? { residentialLandAreaOverride: parseFloat(landOv) || 0 } : {}),
+        ...(commLandOv !== "" ? { commercialLandAreaOverride: parseFloat(commLandOv) || 0 } : {}),
+        ...(fpOv !== "" ? { residentialFootprintOverride: parseFloat(fpOv) || 0 } : {}),
+        ...((asset.mixedZoneType ?? "").trim() ? { zoneType: asset.mixedZoneType } : {}),
+      },
+      toOptionalDate(formTransferDate),
+    );
+    if (metroRequired) return fieldError("mixedIsMetropolitanArea", `${label}: ${MIXED_METRO_REQUIRED_DETAIL} (면적 정보)`);
   }
 
   /**

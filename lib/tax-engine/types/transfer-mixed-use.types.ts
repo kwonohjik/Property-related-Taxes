@@ -967,8 +967,21 @@ export interface MixedUseNonBusinessLandPart {
   longTermDeductionAmount: number;
   /** 양도소득금액 */
   incomeAmount: number;
-  /** 비사업용토지 +10%p 가산율 (고정) */
-  additionalRate: 0.10;
+  /**
+   * 비사업용토지 가산율 — 기본 0.10(+10%p, 「소득세법」 §104①8호). 2009.3.16.~2012.12.31. 취득 토지는 0
+   * (「소득세법」 부칙 제9270호 §14① — §104①1호 세율). NBL2611-V4-HS01: 종전에는 0.10 리터럴이라 위기취득도 가산됐다.
+   */
+  additionalRate: number;
+  /** 가산이 배제된 사유 — 배제가 아니면 없다(단건·다건 `nblSurchargeExcludedBy`와 같은 값 집합). */
+  surchargeExcludedBy?: "crisis_acquisition" | "transfer_deferral";
+  /**
+   * 한도 비교의 대상이 된 토지·정착면적 echo — **결과 산식 표시 전용**(NBL2611-V10-BX09).
+   * 단서 경로는 주택 부수토지 × 주택 정착면적, OH-17(`wholeBuildingDeemedHouse`)은 **전체 토지 × 건물 전체 정착면적**이라
+   * 표시가 한 가지 문구로 고정되면 값과 어긋난다.
+   */
+  excessBasis?: { landArea: number; footprintArea: number; wholeBuildingDeemedHouse: boolean };
+  /** OH-17 — 상가 부수토지분 양도차익 중 이 파트로 옮긴 몫(`transferGain`에 이미 포함). OH-17이 아니면 없다. */
+  commercialLandTransferredGain?: number;
 }
 
 /** 합산 세액 */

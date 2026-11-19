@@ -250,7 +250,7 @@ describe("EX §164⑨ — 비우면 400 (종전 200 + 특례가 조용히 빠진
     nonResidentialFloorArea: "40",
     buildingFootprintArea: "50",
     mixedUseTotalLandArea: "600",
-    mixedZoneType: "general_residential",
+    mixedZoneType: "general_residential", mixedIsMetropolitanArea: true,
     mixedTransferHousingPrice: "900000000",
     mixedTransferCommercialBuildingPrice: "300000000",
     mixedTransferLandPricePerSqm: "2000000",

@@ -74,6 +74,9 @@ import { buildMixedIncomeDeductionStep, mixedLandPriorNotice, resolveMixedIncome
 import { assertMixedInheritedSplitDateSupported } from "./mixed-use-inherited-split-date";
 import { buildingDirectShare, hasMixedBuildingExtras, isConversionAcq, prepareMixedSaleSplit, salePartsFor } from "./mixed-use-sale-split";
 import { assetContractDateForCause } from "./transfer-reductions/asset-contract-date";
+import { resolveMixedNblRate } from "./transfer-tax-mixed-use-nbl-rate";
+import { assertMixedMetroSelected } from "./mixed-use-metro-required";
+import { mixedCommercialLandUnjudgedNotice, mixedWholeBuildingLandBasisNotice } from "./transfer-tax-mixed-use-nbl-notices";
 
 // ──────────────────────────────────────────
 // 메인 함수
@@ -189,6 +192,8 @@ function calcMixedUseCore(
   // NH-09 — 감면주택 중과 배제 선판정(아래 §104⑦ 블록)이 고가주택 판정 가액으로 주택분 안분 결과를 읽으므로 안분을 먼저 한다(계산은 순수 — 순서만 앞당김).
   // 파생값 (면적 비율)
   const derived = computeDerivedAreas(asset);
+  // NBL2611-V4-HS06 — 수도권 여부 미선택 + 배율이 갈리면 기본값(수도권)으로 계산하지 않는다(⑧·⑫가 먼저 막으므로 직접·내부 호출 방어선).
+  assertMixedMetroSelected(asset, transferDate);
   // 보유 중 일부 용도변경 시 취득시 면적 파생값 (시행령 §166⑥)
   const acqDerived = computeAcqDerivedAreas(asset, derived);
 
@@ -546,16 +551,30 @@ function calcMixedUseCore(
     );
   }
 
+  // NBL2611-V4-BX04·BX05 — 상가 부수토지의 비사업용 판정 한계 고지(세액 불변 · Q-8 (가)). OH-17이면 상가 부수토지를 주택 배율로 가른 사실, 아니면 기준면적 미판정.
+  const landNotice = commercialAsHouse
+    ? (excessResult.excessArea > 0 ? mixedWholeBuildingLandBasisNotice(excessResult.multiplier) : undefined)
+    : mixedCommercialLandUnjudgedNotice(derived.commercialLandArea);
+  if (landNotice) warnings.push(landNotice);
+
   steps.push(buildHousingStep(housingPart, apportionment));
   steps.push(buildCommercialStep(commercialPart, apportionment));
 
   // STEP 8: 비사업용토지 부분 (배율초과 시)
+  // NBL2611-V4-HS01 — 위기취득(2009.3.16.~2012.12.31. 토지 취득)이면 +10%p 가산 배제(부칙 제9270호 §14①) · V10-BX09 — 한도 비교 대상 echo.
+  const nblRate = resolveMixedNblRate(asset.landAcquisitionDate);
   const nonBusinessLandPart = buildNonBusinessPart(
     housingPart,
     excessResult,
     housingGainSplit.landHoldingYears,
     isUnregistered,
-    commercialAsHouse?.nonBusinessTransferredGain ?? 0,
+    {
+      additionalTransferredGain: commercialAsHouse?.nonBusinessTransferredGain ?? 0,
+      rate: nblRate,
+      excessBasis: wholeBuildingDeemedHouse
+        ? { landArea: asset.totalLandArea, footprintArea: asset.buildingFootprintArea, wholeBuildingDeemedHouse: true }
+        : { landArea: derived.residentialLandArea, footprintArea: derived.residentialFootprintArea, wholeBuildingDeemedHouse: false },
+    },
   );
   if (nonBusinessLandPart) {
     steps.push(buildNonBusinessStep(nonBusinessLandPart, excessResult, derived));
@@ -632,6 +651,7 @@ function calcMixedUseCore(
       warnings,
     },
     incomeDeduction,
+    nblRate.additionalRate,
   );
   // 차감 step — 적용이든 적용 불가든 사유를 남긴다(주택분 차감 후 소득은 통산 안분 반영값).
   if (incomeDeduction?.stepLabel) {

@@ -44,6 +44,7 @@ import type {
   MixedUseTotalTax,
 } from "./types/transfer-mixed-use.types";
 import type { TaxBracket } from "./types";
+import { MIXED_NBL_ADDITIONAL_RATE, type MixedNblRate } from "./transfer-tax-mixed-use-nbl-rate";
 
 /** 비사업용토지 부분 조립 */
 export function buildNonBusinessPart(
@@ -52,14 +53,22 @@ export function buildNonBusinessPart(
   landHoldingYears: number,
   /** §95② 미등기양도자산 장기보유특별공제 배제. */
   isUnregistered = false,
-  /**
-   * OH-17 — §154③ 본문(건물 전부 주택)이면 **상가 부수토지분의 배율 초과 양도차익**도 비사업용 토지로
-   * 옮겨 온다(토지 전부가 주택 부수토지라 배율 한도가 토지 전체에 걸린다). 단서 경로는 0.
-   */
-  additionalTransferredGain = 0,
+  opts: {
+    /**
+     * OH-17 — §154③ 본문(건물 전부 주택)이면 **상가 부수토지분의 배율 초과 양도차익**도 비사업용 토지로
+     * 옮겨 온다(토지 전부가 주택 부수토지라 배율 한도가 토지 전체에 걸린다). 단서 경로는 0.
+     */
+    additionalTransferredGain?: number;
+    /** 가산율(+ 배제 사유) — 생략하면 기본 +10%p. 위기취득 배제는 `resolveMixedNblRate`가 정한다(NBL2611-V4-HS01). */
+    rate?: MixedNblRate;
+    /** 결과 산식 표시용 한도 비교 대상(NBL2611-V10-BX09) — 값에는 영향이 없다. */
+    excessBasis?: NonNullable<MixedUseNonBusinessLandPart["excessBasis"]>;
+  } = {},
 ): MixedUseNonBusinessLandPart | null {
   if (excessResult.excessArea <= 0) return null;
 
+  const additionalTransferredGain = opts.additionalTransferredGain ?? 0;
+  const rate = opts.rate ?? { additionalRate: MIXED_NBL_ADDITIONAL_RATE };
   const transferredGain = housingPart.nonBusinessTransferredGain + additionalTransferredGain;
   const deductionRate = calcLongTermRate(landHoldingYears, 0, false, isUnregistered);
   const longTermDeductionAmount = applyFairMarketRatio(Math.max(transferredGain, 0), deductionRate);
@@ -71,7 +80,10 @@ export function buildNonBusinessPart(
     longTermDeductionRate: deductionRate,
     longTermDeductionAmount,
     incomeAmount: transferredGain - longTermDeductionAmount,
-    additionalRate: 0.10,
+    additionalRate: rate.additionalRate,
+    ...(rate.surchargeExcludedBy ? { surchargeExcludedBy: rate.surchargeExcludedBy } : {}),
+    ...(opts.excessBasis ? { excessBasis: opts.excessBasis } : {}),
+    ...(opts.excessBasis?.wholeBuildingDeemedHouse ? { commercialLandTransferredGain: additionalTransferredGain } : {}),
   };
 }
 
@@ -177,6 +189,11 @@ export function buildTotalTax(
    * 미전달이면 종전과 같다(차감 0). 차감은 파트 차손 통산 **뒤** 주택분에서 하고, 농특세는 차감 전·후 산출세액 차에서 구한다.
    */
   incomeDeduction?: IncomeDeductionResolution,
+  /**
+   * `rateParts` 미전달 fallback 경로의 비사업용 가산율 — 위기취득 토지는 0(NBL2611-V4-HS01). 생략하면 기본 +10%p.
+   * `rateParts`가 있으면 비사토 파트 자신의 `surchargeAddon`이 정한다(이 값은 읽히지 않는다).
+   */
+  nonBizAdditionalRate = MIXED_NBL_ADDITIONAL_RATE,
 ): MixedUseTotalTax {
   const BASIC_DEDUCTION = isUnregistered ? 0 : basicDeductionLimit;
   const inputs = { housingIncome, commercialIncome, nonBizIncome, rateParts };
@@ -300,7 +317,7 @@ export function buildTotalTax(
   // 총액에 별도로 얹지 않는다(얹으면 이중 가산이고, 그것이 곧 폐기된 모델 A다).
   // `rateParts` 미전달 fallback 경로에서만 종전 모델을 유지한다.
   const nonBizInRateParts = rateParts?.some((p) => p.kind === "non_business_land") ?? false;
-  const nonBusinessSurcharge = nonBizInRateParts ? 0 : applyRate(nonBizSurchargeBase, 0.10);
+  const nonBusinessSurcharge = nonBizInRateParts ? 0 : applyRate(nonBizSurchargeBase, nonBizAdditionalRate);
   // §104⑤1호 — 해당 과세기간의 양도소득과세표준 **합계액**에 §55①에 따른 세율을 적용한
   // 산출세액. **가산 항이 없다.**
   const clause1 = taxByBasicRate + nonBusinessSurcharge;
@@ -322,6 +339,7 @@ export function buildTotalTax(
     housingDeductionApplied > 0
       ? buildTotalTax(
           inputs.housingIncome, inputs.commercialIncome, inputs.nonBizIncome, brackets, basicDeductionLimit, inputs.rateParts, isUnregistered,
+          undefined, undefined, nonBizAdditionalRate,
         ).transferTax
       : transferTax;
   const deductionEcho = incomeDeduction ? pickIncomeDeductionDetails(incomeDeduction) : undefined;

@@ -16,6 +16,7 @@ import { refineNew994CapitalRegion } from "./transfer-tax-schema-reduction-refin
 import { rentalHousingPathApplies } from "@/lib/tax-engine/transfer-reductions/track-127-7-message";
 import { refineMixedUseBurdenedGift } from "./transfer-tax-schema-mixed-bg-refines";
 import { refineMixedUseInheritedSplitDate } from "./transfer-tax-schema-mixed-bg-refines";
+import { refineMixedMetroSelected } from "./transfer-tax-schema-mixed-metro-refine";
 import { refineDonorBuiltOuter, type DonorBuiltWire } from "./transfer-tax-schema-donor-built";
 import { refineSelfBuiltHousing, isSeparatedLike } from "./transfer-tax-schema-self-built-housing";
 import { refineTemporaryTwoHouseCross } from "./transfer-tax-schema-temp-two-house";
@@ -362,6 +363,8 @@ export function addPropertyRefines(
   refineMixedUseBurdenedGift(data, ctx);
   // 겸용 상속·증여 × 토지·건물 취득일 중 한쪽만 1985.1.1. 전 — 일반 양도(부담부증여는 위 collector)
   refineMixedUseInheritedSplitDate(data, ctx);
+  // 겸용 「수도권 여부」 미선택 — 배율이 갈리면 기본값으로 계산하지 않고 막는다(NBL2611-V4-HS06 · 단건·컴패니언 공통)
+  refineMixedMetroSelected(data, ctx);
   // 이월과세 × 증여자 신축·증축(§114조의2) — 자산 종류·취득원인 의존 규칙(서브객체 수준 규칙은 shape 가 한다)
   refineDonorBuiltOuter(data, ctx);
   // 일체 주택 본인 신축 × 건물분 가산세 입력(Q-12) — 단건·다건 공용(컴패니언은 `transfer-tax-schema.ts` 루프)

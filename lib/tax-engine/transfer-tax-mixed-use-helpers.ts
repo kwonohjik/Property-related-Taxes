@@ -228,6 +228,7 @@ export function calcExcessLandRatio(
   transferDate?: Date,
 ): ExcessLandResult {
   const zoneType = asset.zoneType ?? "residential";
+  // NBL2611-V4-HS06 — 미선택(undefined)은 `assertMixedMetroSelected`가 «배율이 갈릴 때» 이미 막았다. 여기 도달한 미선택은 수도권 여부와 무관하게 같은 값이다.
   const isMetro = asset.isMetropolitanArea ?? true;
   const { multiplier: rawMultiplier } = getHousingMultiplier(zoneType, isMetro, transferDate);
   const multiplier = (rawMultiplier as 3 | 5 | 10);

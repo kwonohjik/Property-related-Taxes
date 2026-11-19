@@ -7,6 +7,8 @@
  * 동작 무변경 — 순수 이동이다.
  */
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { nblExclusionBannerText } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
 import {
   DivRow,
   ResultSection,
@@ -23,11 +25,16 @@ interface Props {
   landTransferGain: number;
   /** 배율초과 비율 (`housingPart.nonBusinessTransferRatio`) */
   nonBusinessTransferRatio: number;
+  /** 상가 토지분 양도차익 (`commercialPart.landTransferGain`) — OH-17(§154③ 본문)에서 같은 비율로 이 파트에 옮겨 온 몫의 원값 */
+  commercialLandTransferGain?: number;
   open: boolean;
   onToggle: () => void;
 }
 
-export function MixedUseNblSection({ nb, landTransferGain, nonBusinessTransferRatio, open, onToggle }: Props) {
+export function MixedUseNblSection({ nb, landTransferGain, nonBusinessTransferRatio, commercialLandTransferGain, open, onToggle }: Props) {
+  // V10-BX09 — OH-17(§154③ 본문)이면 한도는 「전체 토지 × 건물 전체 정착면적」, 양도차익은 주택·상가 토지분의 합이다. 문구가 한 가지로 고정되면 값과 어긋난다.
+  const whole = nb.excessBasis?.wholeBuildingDeemedHouse === true;
+  const addPct = Math.round(nb.additionalRate * 100);
   return (
     <ResultSection
       title="④ 비사업용토지 (주택부수토지 배율초과)"
@@ -43,12 +50,20 @@ export function MixedUseNblSection({ nb, landTransferGain, nonBusinessTransferRa
       <Row
         label="배율초과 면적"
         value={fmtSqm(nb.excessArea)}
-        formula="주택부수토지 면적 - (주택 정착면적 × 배율)"
+        formula={
+          whole && nb.excessBasis
+            ? `전체 토지 ${fmtPlain(nb.excessBasis.landArea)}㎡ - (건물 전체 정착면적 ${fmtPlain(nb.excessBasis.footprintArea)}㎡ × ${nb.appliedMultiplier}배) — 주택 연면적이 더 커 토지 전부가 주택 부수토지(시행령 §154③ 본문)`
+            : "주택부수토지 면적 - (주택 정착면적 × 배율)"
+        }
       />
       <Row
         label="비사업용 양도차익"
         value={fmt(nb.transferGain)}
-        formula={`주택 토지분 양도차익 ${fmtPlain(landTransferGain)} × 배율초과 비율 ${fmtPct(nonBusinessTransferRatio)}`}
+        formula={
+          whole && commercialLandTransferGain !== undefined
+            ? `주택 토지분 양도차익 ${fmtPlain(landTransferGain)} × 배율초과 비율 ${fmtPct(nonBusinessTransferRatio)} + 상가 부수토지분 양도차익 ${fmtPlain(commercialLandTransferGain)} × 같은 비율 (각각 원 미만 절사)`
+            : `주택 토지분 양도차익 ${fmtPlain(landTransferGain)} × 배율초과 비율 ${fmtPct(nonBusinessTransferRatio)}`
+        }
       />
       <Row
         label={`장기보유공제 (표1, ${fmtPct(nb.longTermDeductionRate)})`}
@@ -57,11 +72,16 @@ export function MixedUseNblSection({ nb, landTransferGain, nonBusinessTransferRa
       />
       <DivRow />
       <Row
-        label="비사업용토지 양도소득금액 (+10%p 가산)"
+        label={addPct > 0 ? `비사업용토지 양도소득금액 (+${addPct}%p 가산)` : "비사업용토지 양도소득금액 (위기취득 — 가산 없음)"}
         value={fmt(nb.incomeAmount)}
         highlight
         formula={`양도차익 ${fmtPlain(nb.transferGain)} - 장기보유공제 ${fmtPlain(nb.longTermDeductionAmount)} (세율 가산은 합산세액에서 처리)`}
       />
+      {nb.surchargeExcludedBy && (
+        <ToneCard tone="amber" bodyClassName="space-y-1">
+          <p data-testid="mixed-nbl-surcharge-excluded">{nblExclusionBannerText(nb.surchargeExcludedBy)}</p>
+        </ToneCard>
+      )}
     </ResultSection>
   );
 }

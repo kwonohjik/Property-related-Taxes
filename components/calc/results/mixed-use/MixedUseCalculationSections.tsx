@@ -723,6 +723,7 @@ export function MixedUseCalculationSections({
           nb={nb}
           landTransferGain={h.landTransferGain}
           nonBusinessTransferRatio={h.nonBusinessTransferRatio}
+          commercialLandTransferGain={c.landTransferGain}
           open={openSections.nbl}
           onToggle={() => toggleSection("nbl")}
         />

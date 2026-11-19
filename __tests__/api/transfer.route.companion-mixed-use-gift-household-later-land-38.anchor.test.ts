@@ -39,7 +39,7 @@ async function run(f: Form) {
 }
 const MIXED = {
   assetKind: "housing", isMixedUseHouse: true, residentialFloorArea: "60", nonResidentialFloorArea: "40", buildingFootprintArea: "50",
-  mixedUseTotalLandArea: "600", mixedZoneType: "general_residential", mixedTransferHousingPrice: "900000000", mixedTransferCommercialBuildingPrice: "300000000",
+  mixedUseTotalLandArea: "600", mixedZoneType: "general_residential", mixedIsMetropolitanArea: true, mixedTransferHousingPrice: "900000000", mixedTransferCommercialBuildingPrice: "300000000",
   mixedTransferLandPricePerSqm: "2000000", mixedAcqHousingPrice: "300000000", mixedAcqCommercialBuildingPrice: "100000000", mixedAcqLandPricePerSqm: "1000000",
 };
 const GIFT_SAME = {

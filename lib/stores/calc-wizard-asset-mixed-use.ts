@@ -100,7 +100,8 @@ export const MIXED_USE_DEFAULTS: Pick<
   mixedAcqLandPricePerSqmAtBuildingAcq: "",
   mixedAcqHousingBuildingStdPrice: "",
   mixedTransferHousingBuildingStdPrice: "",
-  mixedIsMetropolitanArea: true,
+  /** 3-state 미선택(`undefined`) — 기본값 «수도권»을 두지 않는다(NBL2611-V4-HS06). */
+  mixedIsMetropolitanArea: undefined,
   /**
    * 부수토지 배율 판정 용도지역 (영 §168의12·§154⑦) — `""`는 **미선택**이다 (2026-09-06 · UI 리뷰).
    *
@@ -196,7 +197,8 @@ export function migrateMixedUseFields(a: Record<string, unknown>): void {
   if (!a.mixedAcqLandPricePerSqmAtBuildingAcq) a.mixedAcqLandPricePerSqmAtBuildingAcq = "";
   if (!a.mixedAcqHousingBuildingStdPrice) a.mixedAcqHousingBuildingStdPrice = "";
   if (!a.mixedTransferHousingBuildingStdPrice) a.mixedTransferHousingBuildingStdPrice = "";
-  if (a.mixedIsMetropolitanArea === undefined) a.mixedIsMetropolitanArea = true;
+  // NBL2611-V4-HS06 — 부재 = **미선택**이다. 종전에는 `true`(수도권)를 지어 넣어 사용자가 고르지 않은 값이 선택된 것처럼 복원됐다.
+  //   저장된 `true`/`false`는 그 값으로 계산된 이력이라 그대로 복원한다(기본값으로 둔 `true`와 구별할 수 없다 — 남은 한계).
   if (a.mixedZoneType === undefined) a.mixedZoneType = "";
 
   // 상속 취득 겸용주택 — §163⑨ 취득가액 직접 산정 (신규 — 엔진 정합)

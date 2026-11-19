@@ -66,7 +66,7 @@ const MIXED = {
   mixedUseTotalLandArea: "300",
   // 부수토지가 정착면적의 3배를 넘어 배율이 세액을 가른다 ⇒ 용도지역 필수 (2026-09-06 · UI 리뷰).
   // 이 anchor의 주제(12억 분모)와 무관한 축이라 값만 채운다.
-  mixedZoneType: "general_residential",
+  mixedZoneType: "general_residential", mixedIsMetropolitanArea: true,
   mixedTransferHousingPrice: "1600000000",
   mixedTransferCommercialBuildingPrice: "200000000",
   mixedTransferLandPricePerSqm: "1000000",
