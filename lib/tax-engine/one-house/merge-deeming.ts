@@ -323,12 +323,22 @@ export type TwoHouseMergeAxis = {
 export function resolveTwoHouseMergeAxis(
   input: Pick<
     MergeDeemingReqInput,
-    "marriageMerge" | "parentalCareMerge" | "householdHousingCount" | "houses" | "sellingHouseId" | "knownHouseExclusionHouseIds"
+    | "marriageMerge"
+    | "parentalCareMerge"
+    | "householdHousingCount"
+    | "houses"
+    | "sellingHouseId"
+    | "knownHouseExclusionHouseIds"
+    | "noMergeRosterInputPath"
   >,
 ): TwoHouseMergeAxis | undefined {
   const marriageDate = input.marriageMerge?.marriageDate;
   const parentalDate = input.parentalCareMerge?.mergeDate;
   if (!marriageDate && !parentalDate) return undefined;
+  // 명부가 없는 화면(증여 부담부증여 · 표식 `noMergeRosterInputPath`)의 2주택에 두 합가일이 함께 오면 어느 합가가 2주택을 만들었는지 가를 행이 없다 —
+  //   축을 고르지 않는다(두 합가 모두 불성립 + 확인 필요 · 결정 Q-28 ② · 2026-11 리뷰 D-83). 종전에는 늘 혼인 축이라 무주택 배우자와의 혼인 뒤
+  //   동거봉양 합가(④ 성립)가 과세였다. 증여 ⑧이 이 입력을 막으므로 직접 API에서만 닿는다.
+  if (input.noMergeRosterInputPath === true && marriageDate && parentalDate && input.householdHousingCount === 2) return undefined;
   const legacy: TwoHouseMergeAxis = marriageDate
     ? { kind: "marriage", mergeDate: marriageDate, secondMergeSide: false }
     : { kind: "parental_care", mergeDate: parentalDate!, secondMergeSide: false };

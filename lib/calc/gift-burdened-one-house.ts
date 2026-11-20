@@ -375,6 +375,19 @@ export function giftBurdenedMergeSlice(bgt: BurdenedGiftTransferTaxInput): Merge
 }
 
 /** ⑧ — 동거봉양 합가일을 넣고 직계존속 연령을 고르지 않음(결정 #9 하위 1 가). ⑤·④와 같은 게이트. 오류 문구 또는 null. */
+/**
+ * 증여 화면 2주택에 혼인일·동거봉양 합가일을 함께 넣었는가 — 이 화면에는 보유 주택 목록이 없어 어느 합가로 2주택이 됐는지 가를 수 없다.
+ * ⑧이 막는다(결정 Q-28 ① · 2026-11 리뷰 D-83). 엔진은 직접 호출 방어로 두 합가 모두 불성립 + 확인 필요다(`resolveTwoHouseMergeAxis`).
+ */
+export function giftBurdenedTwoMergeDatesError(bgt: BurdenedGiftTransferTaxInput): string | null {
+  if (!giftBurdenedMergeInScope(bgt) || (bgt.householdHousingCount ?? 1) !== 2) return null;
+  if (!bgt.marriageDate || !bgt.parentalCareMergeDate) return null;
+  return (
+    "세대 2주택에서는 2주택이 되게 한 합가 하나만 입력하세요 — 혼인 합가(§155⑤)와 동거봉양 합가(§155④)는 별개 특례이고, " +
+    "이 화면에는 보유 주택 목록이 없어 어느 합가인지 판정할 수 없습니다."
+  );
+}
+
 export function giftBurdenedMergeAgeError(bgt: BurdenedGiftTransferTaxInput): string | null {
   if (!giftBurdenedMergeInScope(bgt)) return null;
   return parentalCareParentAgeMissing(giftBurdenedMergeSlice(bgt)) ? PARENTAL_CARE_PARENT_AGE_REQUIRED_MESSAGE : null;

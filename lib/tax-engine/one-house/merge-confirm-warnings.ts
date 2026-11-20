@@ -21,6 +21,20 @@ import { parentalCareAgeVerdict } from "./parental-care-age";
  * 증여세 마법사 3주택 합가 고지 문구 — 비과세뿐 아니라 다주택 중과 배제도 판정하지 않았음을 함께 적는다.
  * 「소득세법 시행령」 §167의3①13호(3주택 이상 중과 배제 — 제155조에 따라 1세대 1주택으로 보는 주택).
  */
+/** 명부 없는 화면 2주택 + 두 합가일 — 축을 고르지 않아 두 합가 모두 불성립으로 보았다(결정 Q-28 ② · 2026-11 리뷰 D-83). */
+export const NO_ROSTER_TWO_MERGE_DATES_NOTICE =
+  "§155④⑤ 합가 특례 — 확인 필요: 혼인일과 동거봉양 합가일이 함께 입력됐는데 이 화면에는 보유 주택 목록이 없어 어느 합가로 2주택이 됐는지 " +
+  "판정할 수 없어, 두 합가 특례 모두 적용하지 않았습니다. 2주택이 되게 한 합가 하나만 입력하세요.";
+
+/**
+ * 명부 없는 화면(증여 부담부증여)에서 2주택 단일 합가 특례가 **결론을 낸 비과세** — 합가 전 각자 1주택이었는지(구성)를 확인하지 않고 성립시켰다
+ * (결정 #27 Q-10 허용). 그 사실을 알린다(결정 Q-32 「예」 · 2026-11 리뷰 I-34). §155①로 선 비과세에는 내지 않는다.
+ */
+export const NO_ROSTER_SINGLE_MERGE_NOTICE =
+  "§155④⑤ 합가 특례 — 확인 필요: 증여세 계산 화면에는 다른 보유 주택 목록 입력 칸이 없어, 합가 전에 각자 1주택을 보유했는지" +
+  "(다른 주택도 합가 전에 취득했는지)를 확인하지 않고 합가 특례가 성립한 것으로 계산했습니다. " +
+  "양도소득세 계산기(부담부증여)에서 보유 주택 목록과 합가 전 보유자를 입력하면 판정합니다.";
+
 /** 합가 구성·직계존속 연령 「모름」 확인 필요 고지의 머리 — 계산기 요건 검토 고지가 같은 원인의 행을 뺄 때 본다. */
 export const MERGE_CONFIRM_NOTICE_PREFIX = "§155④⑤ 합가 특례 — 확인 필요: ";
 
@@ -65,6 +79,16 @@ export function mergeConfirmWarnings(
 ): string[] {
   if (!meetsHoldingResidence) return [];
   const out: string[] = [];
+  if (
+    input.noMergeRosterInputPath === true &&
+    input.isOneHousehold &&
+    input.householdHousingCount === 2 &&
+    input.marriageMerge?.marriageDate &&
+    input.parentalCareMerge?.mergeDate &&
+    input.isFirstTransferredInMerge === true
+  ) {
+    out.push(NO_ROSTER_TWO_MERGE_DATES_NOTICE);
+  }
   const single = resolveMergeCompositionConfirmNotice(input);
   if (single) out.push(`${MERGE_CONFIRM_NOTICE_PREFIX}${single}`);
   // 1세대가 아니면 구성과 무관하게 과세다 — 고지하지 않는다(결정 #26 조건).

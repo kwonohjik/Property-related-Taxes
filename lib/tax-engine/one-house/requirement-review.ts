@@ -149,7 +149,9 @@ export function buildRequirementReview(
 
   // 합가를 선언했는데 결론이 나지 않았다 — 어느 요건에서 떨어졌는지 보여 준다.
   //   (§155①도 함께 성립 가능한 2주택은 위 분기가 먼저 잡는다 — 그쪽이 법이 가리키는 다음 경로다.)
-  if (!settled && mergeDeclared && (input.householdHousingCount === 2 || input.householdHousingCount === 3)) {
+  //   명부 없는 화면의 2주택 + 두 합가일은 축을 고르지 않는다(D-83) — 검토표 대신 확인 필요 고지(`NO_ROSTER_TWO_MERGE_DATES_NOTICE`)가 말한다.
+  const axisResolvable = input.householdHousingCount === 3 || resolveTwoHouseMergeAxis(input) !== undefined;
+  if (!settled && mergeDeclared && axisResolvable && (input.householdHousingCount === 2 || input.householdHousingCount === 3)) {
     return { scheme: "155-4-5-merge", items: mergeItems(input, rule, twoHouseRule, judgmentBaseDate) };
   }
 

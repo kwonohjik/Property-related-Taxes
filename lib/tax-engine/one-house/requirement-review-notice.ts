@@ -13,7 +13,7 @@
  *    계산기에는 기준일이 없어 이미 지난 기한을 제안하게 된다(리뷰 게이트 R2 · 기한은 facts에 남는다).
  */
 import { TRANSFER } from "../legal-codes";
-import { MERGE_CONFIRM_NOTICE_PREFIX } from "./merge-confirm-warnings";
+import { MERGE_CONFIRM_NOTICE_PREFIX, NO_ROSTER_THREE_HOUSE_MERGE_NOTICE } from "./merge-confirm-warnings";
 import { DOUBLE_MERGE_COMPOSITION_LABEL, REACHABLE_DEADLINE_NOTE_PATTERN } from "./requirement-review";
 import type { OneHouseJudgment, OneHouseRequirementCheck, OneHouseRequirementReview } from "./types";
 
@@ -66,8 +66,12 @@ export function requirementReviewUnmetNotice(
   const review = judgment.requirementReview;
   if (!review || judgment.isExempt || judgment.isPartialExempt) return undefined;
   const mergeConfirmShown = shown.some((w) => w.startsWith(MERGE_CONFIRM_NOTICE_PREFIX));
+  // 증여 화면 3주택 합가 「판정하지 않고 계산」 고지가 나갔으면 합가 구성 행은 같은 원인이다 — 그 화면은 §155① 날짜를 받지 않아
+  //   「그 기간 요건을 충족하지 않습니다」는 평가하지 않은 요건을 단정한다(2026-11 리뷰 D-92 · R1과 같은 모양).
+  const noRosterShown = shown.includes(NO_ROSTER_THREE_HOUSE_MERGE_NOTICE);
   const alreadyShown = (i: OneHouseRequirementCheck) => {
     if (mergeConfirmShown && isConfirmRow(i)) return true;
+    if (noRosterShown && i.id === "merge-composition") return true;
     const note = noteOf(i);
     return !!note && shown.some((w) => w.includes(note));
   };

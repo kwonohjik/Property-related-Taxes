@@ -58,6 +58,7 @@ import {
 } from "@/lib/calc/gift-burdened-temp-two-house";
 import { eraFormWithOriginDates, temporaryTwoHouseEraIssues } from "@/lib/calc/temporary-two-house-era-facts";
 import { declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
+import { directResidenceMonthsOverflowError } from "@/lib/calc/residence-interval-validate";
 import { collectExemptionProvisoErrors } from "@/lib/calc/exemption-proviso-validate";
 import { effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
 import { collectFinalHouseRestartErrors } from "@/lib/calc/final-house-restart";
@@ -69,6 +70,7 @@ import {
   giftBurdenedPartialOwnershipError,
   giftBurdenedWinWinError,
   giftBurdenedMergeAgeError,
+  giftBurdenedTwoMergeDatesError,
   giftBurdenedOneHouseSlice,
   giftBurdenedProvisoMode,
   giftBurdenedRegionCode,
@@ -269,6 +271,20 @@ export function validateStep(step: number, form: FormState): string | null {
         if (bgt.residencePeriodMonths === undefined || bgt.residencePeriodMonths < 0) {
           return `${itemLabel}: 1세대1주택 여부가 활성화되어 있으면 거주기간(개월)을 입력하세요.`;
         }
+        // 거주 개월은 보유기간(취득일~증여일)을 넘을 수 없다 — ⑫(`residenceMonthsOverflowIssue`)와 같은 leaf. 종전에는 ⑧이 통과하고 route가
+        //   400을 내 양도세 카드 대신 엉뚱한 배너가 떴다(2026-11 리뷰 D-91). 상속이면 취득일 = 상속개시일이다(§154⑧3호 거주는 별도 칸).
+        const acqYmd = (bgt.acquisitionDate instanceof Date ? bgt.acquisitionDate.toISOString() : String(bgt.acquisitionDate)).slice(0, 10);
+        const overflow = directResidenceMonthsOverflowError({
+          months: bgt.residencePeriodMonths,
+          acquisitionDate: acqYmd,
+          transferDate: form.giftDate,
+          field: "residencePeriodMonths",
+        });
+        if (overflow) return `${itemLabel}: ${overflow}`;
+      }
+      // 세대 보유 주택 수는 정수다 — ⑫ `z.number().int()`와 같은 규칙. 옛 기록의 소수값(2.5)은 ⑧이 막는다(D-94 · ④에서 조용히 내리지 않는다).
+      if (bgt.householdHousingCount !== undefined && !Number.isInteger(bgt.householdHousingCount)) {
+        return `${itemLabel}: 세대 보유 주택 수는 정수로 입력하세요(현재 ${bgt.householdHousingCount}).`;
       }
       // 일부 지분만 증여(1h-G1-6) — ⑤ 토글과 같은 주택 게이트. 지분율·물건 전체 가액 입력이 없어 12억 판정이 틀리므로 막는다.
       const partialOwnershipError = giftBurdenedPartialOwnershipError(bgt, propertyType === "housing");
@@ -287,6 +303,9 @@ export function validateStep(step: number, form: FormState): string | null {
         // §155④ 동거봉양 합가 직계존속 연령(결정 #9) — 칸(`MergeDateSection`)과 같은 게이트.
         const mergeAgeError = giftBurdenedMergeAgeError(bgt);
         if (mergeAgeError) return `${itemLabel}: ${mergeAgeError}`;
+        // 2주택 + 두 합가일 — 어느 합가인지 가를 목록이 없다(결정 Q-28 ① · D-83).
+        const twoMergeDatesError = giftBurdenedTwoMergeDatesError(bgt);
+        if (twoMergeDatesError) return `${itemLabel}: ${twoMergeDatesError}`;
         // §155① 입력을 건드렸는데 신규 주택 취득일이 비었다 — ④가 싣지 않으니(미완성 사실은 불성립) 침묵하지 않고 막는다(1h-G1-5).
         const tempTwoIncomplete = giftBurdenedTempTwoHouseIncompleteError(bgt);
         if (tempTwoIncomplete) return `${itemLabel}: ${tempTwoIncomplete}`;
