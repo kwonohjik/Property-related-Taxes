@@ -81,6 +81,8 @@ type IssueSpec = {
   enginePosition: ContestedPositionKey;
   A: PositionText;
   B: PositionText;
+  /** 두 결론이 갈릴 때만 카드를 보인다 — C8(결정 #43 D 「그 갈래에서 결론이 갈릴 때만 함께 표시」 · 결정 Q-30 (a) · 2026-11 리뷰 D-89) */
+  shownOnlyWhenConclusionsDiffer?: boolean;
 };
 
 const SPECS: Record<OneHouseContestedIssueId, IssueSpec> = {
@@ -159,6 +161,7 @@ const SPECS: Record<OneHouseContestedIssueId, IssueSpec> = {
     title: "종전주택 보유 중 취득한 분양권이 완공된 뒤 종전주택 양도",
     legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}①`,
     enginePosition: "A",
+    shownOnlyWhenConclusionsDiffer: true,
     A: {
       summary:
         "완공된 신규 주택을 일시적 2주택(§155①)의 신규 주택으로 보고 완공일부터 처분기한을 셉니다 — 분양권 상태가 아니라 주택을 취득한 것으로 판정했습니다.",
@@ -338,6 +341,11 @@ export function contestedVerdictOf(j: Pick<OneHouseJudgment, "isExempt" | "isPar
 }
 
 /** 본 판정 결론과 반대 입장 재판정 결론으로 화면용 쟁점을 만든다. */
+/** 결과에 카드를 싣는가 — route가 한 곳에서 거른다(결과뷰·이력·중과 요약은 그대로 route 값을 읽는다 · D-89). */
+export function isContestedIssueShown(issue: Pick<OneHouseContestedIssue, "id" | "conclusionsDiffer">): boolean {
+  return !SPECS[issue.id].shownOnlyWhenConclusionsDiffer || issue.conclusionsDiffer;
+}
+
 export function buildContestedIssue(
   detected: Pick<DetectedContestedIssue, "id" | "houseIds" | "otherPositionNote" | "otherPositionUnresolved">,
   engineVerdict: ContestedVerdict,

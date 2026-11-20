@@ -27,6 +27,7 @@ import {
   buildContestedIssue,
   contestedVerdictOf,
   detectContestedIssues,
+  isContestedIssueShown,
   type OneHouseContestedIssue,
 } from "@/lib/tax-engine/one-house/contested-issues";
 import { runOneHouseJudgmentPipeline } from "./judgment-pipeline";
@@ -222,7 +223,7 @@ export function buildOneHouseExemptionPayload(
         runOneHouseJudgmentPipeline(d.otherPositionInput, parsedRates, judgmentBaseDate, isRightSale).judgment,
       ),
     ),
-  );
+  ).filter(isContestedIssueShown);
 
   // 입주권 양도 판정이 「다른 주택」에서 빼는 것은 해석례로 확인된 보유 감면주택 4개 조문과 명부 도출 §71의2①뿐이다(§99의4·§98의9·
   // 그 밖의 조문은 효과가 없다) — 명세도 판정과 같은 목록으로 만든다(`oneRightInputAfterSpecialActExclusionOf`와 같은 leaf · S03-6 · 결정 #42).

@@ -174,7 +174,13 @@ export function evaluateTemporaryTwoHouseTiming(
 
   // 신규 주택이 권리(분양권·조합원입주권)로 취득해 완공된 주택이면 갈래를 가른다 — 순차 사례는 §155① 부적용(결정 #43 · G6-4).
   const origin = judgeNewHouseOrigin(input, oneYearWaived);
-  return { provisoRelaxesHolding, oneYearWaived, timing: origin.blocked ? { ...timing, overall: false } : timing, era, origin };
+  // C8 반대 입장(§156의3②·③으로만 판정)이면 §155① 타이밍 결론을 그 판정 결론으로 바꾼다(D-81) — §154① 보유·거주와 주택 수 게이트는 그대로다.
+  const judged = origin.timingReplaced
+    ? { ...timing, overall: !origin.blocked }
+    : origin.blocked
+      ? { ...timing, overall: false }
+      : timing;
+  return { provisoRelaxesHolding, oneYearWaived, timing: judged, era, origin };
 }
 
 /**

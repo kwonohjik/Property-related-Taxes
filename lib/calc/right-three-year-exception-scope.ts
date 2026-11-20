@@ -32,7 +32,7 @@ import { effectiveMemberOrigin } from "@/lib/calc/right-member-origin-scope";
 import { isRightThreeYearExceeded } from "@/lib/tax-engine/transfer-tax-89-2-exclusion";
 import { presaleRightDefinitionAcquisitionDate } from "@/lib/tax-engine/presale-right-definition-date";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
-import { isOriginRedevRightCounted } from "@/lib/tax-engine/one-house/new-house-origin";
+import { isOriginRedevRightCounted, NEW_HOUSE_ORIGIN_PRESALE_START } from "@/lib/tax-engine/one-house/new-house-origin";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 /**
@@ -74,9 +74,18 @@ export function rightThreeYearExceptionRightKinds(form: TransferFormData): ("red
     const approval = h.rightApprovalDate ? new Date(h.rightApprovalDate) : undefined;
     return isOriginRedevRightCounted(h.acquisitionOrigin, acquired, approval) && isRightThreeYearExceeded({ rightAcquisitionDate: acquired, transferDate });
   });
+  // D-80 — 종전주택 보유 중(2021.1.1. 이후 · 양도 주택 취득 뒤) 취득한 분양권으로 완공된 **신규 주택 행**도 그 분양권 취득일부터 3년을 넘기면
+  //   §156의3③ 선언 대상이다 — 판정 메뉴 양론 C8의 반대 입장(`judgeNewHouseOrigin` 156_3 갈래)이 같은 선언을 읽는다(엔진 `isHoldingPresaleOrigin`과 같은 조건).
+  const presaleRowExceeded = (form.houses ?? []).some((h) => {
+    if (h.acquisitionOrigin !== "presale" || !h.rightAcquisitionDate) return false;
+    const acquired = new Date(h.rightAcquisitionDate);
+    if (acquired.getTime() < NEW_HOUSE_ORIGIN_PRESALE_START.getTime()) return false;
+    if (!sellingAcq || h.rightAcquisitionDate.slice(0, 10) <= sellingAcq.slice(0, 10)) return false;
+    return isRightThreeYearExceeded({ rightAcquisitionDate: acquired, transferDate });
+  });
   const kinds: ("redevelopment_right" | "presale_right")[] = [];
   if (originRowExceeded || exceeded.some((r) => r.type === "redevelopment_right")) kinds.push("redevelopment_right");
-  if (exceeded.some((r) => r.type === "presale_right")) kinds.push("presale_right");
+  if (presaleRowExceeded || exceeded.some((r) => r.type === "presale_right")) kinds.push("presale_right");
   return kinds;
 }
 
