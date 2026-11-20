@@ -14,8 +14,10 @@ import {
   resolveExemptionProviso,
 } from "@/lib/tax-engine/transfer-tax-exemption";
 import type { ResidenceReqInput } from "@/lib/tax-engine/transfer-tax-exemption-requirements";
+import { isCapitalAreaByRegionCode } from "@/lib/geo/rural-house-location";
 import {
   meetsPublicInstitutionRelocationRegion,
+  relocationContextOf,
   resolveRegulatedAtNewAcquisition,
   resolveTemporaryTwoHouseDeadline,
   resolveTemporaryTwoHouseDeadlineFor,
@@ -62,6 +64,8 @@ export type TempTwoHouseVerdict =
       threeYearMet: boolean;
       /** §155① 후단(E-5) — 잔존 주택 양도일로는 기한을 넘었지만 종전 주택 일부 수용일로 요건 B를 충족 */
       remnantApplied?: boolean;
+      /** 종전 주택 주소가 수도권 밖이다 — ⑯ 「수도권에 1주택을 소유한 경우에 한정」(D-08) · 위젯이 토글을 막거나(꺼짐) 알린다(켜짐) */
+      relocationPreviousOutsideCapital?: boolean;
       /**
        * §155①2호 — 신규 취득일 기준 조정 여부와 새 입력의 노출 판단(⑤ 게이트).
        *   `relevant`: 두 주택 조정 여부가 기한을 바꾸는 양도 시기 · `previous`/`next`: 판정값(미입력 undefined)
@@ -240,7 +244,7 @@ export function judgeTempTwoHouseFromForm(p: {
   const deadlineRule = { disposalDeadlineYears: TEMP_TWO_HOUSE_UI_DEADLINE_YEARS };
   const era = resolveTemporaryTwoHouseDeadline(engineLike, deadlineRule);
   const deadlineYears = era.years;
-  const relocation = meetsPublicInstitutionRelocationRegion(engineLike.temporaryTwoHouse);
+  const relocation = meetsPublicInstitutionRelocationRegion(engineLike.temporaryTwoHouse, relocationContextOf(engineLike));
   // §155⑯(5년)이 연혁상 조정 기한을 **덮는 경우에만** 두 주택 조정 여부·전입이 결론을 바꾸지 않는다. 조정→조정 단축 기한(2년·1년)은
   //   「3년」이 아니라 5년으로 덮이지 않으므로 그 독법에서는 입력 칸이 열려야 한다(#29). 5년이 덮는 독법은 조정 여부와 무관하다.
   const relocationOverridesRegulated = resolveTemporaryTwoHouseDeadlineFor(engineLike, deadlineRule, true).relocationFiveYearApplied;
@@ -314,6 +318,9 @@ export function judgeTempTwoHouseFromForm(p: {
 
   return {
     status: t.overall && !originVerdict?.blocked ? "eligible" : "ineligible",
+    ...(isCapitalAreaByRegionCode(relocationContextOf(engineLike).previousHouseRegionCode) === false
+      ? { relocationPreviousOutsideCapital: true }
+      : {}),
     ...(originVerdict && originNotes.length > 0 ? { origin: { blocked: originVerdict.blocked, notes: originNotes } } : {}),
     oneYearThreshold: t.oneYearThreshold,
     oneYearMet: t.oneYearMet,

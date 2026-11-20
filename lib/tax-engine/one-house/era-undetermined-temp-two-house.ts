@@ -17,7 +17,7 @@ import { resolveTemporaryTwoHouseDeadlineFor } from "../transfer-tax-temporary-t
 import { resolveDisposalDelay } from "../data/temporary-two-house-delay-era";
 import { resolveRegulatedShortenedClauseRef } from "../data/temporary-two-house-regulated-clause";
 import { MERGED_SPECIAL_CITY_START } from "@/lib/geo/relocation-region-unit";
-import { relocationRegionReadingsDiverge } from "@/lib/geo/relocation-region-unit";
+import { gunwiBoundaryReadingsDiverge, relocationRegionReadingsDiverge } from "@/lib/geo/relocation-region-unit";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import { resolveTempTwoHouseRemnantDisposalDate } from "./expropriation-remnant-155-1";
 import { hwaseongTemporaryTwoHouseWindowNotice } from "./hwaseong-announcement-window";
@@ -183,6 +183,40 @@ export function collectTempTwoHouseEraUndetermined(
             `옛 광주광역시 5개 자치구를 하나의 시로, 옛 전라남도 시·군을 각각의 시·군으로 보아 판정했습니다. ` +
             `${TRANSFER.MERGED_SPECIAL_CITY_OTHER_LAWS}①(다른 법령의 「광역시」에 통합특별시를 포함)과 같은 조 ⑩(광역시·도 규정이 ` +
             `다르면 자치구 구역에는 광역시, 시·군 구역에는 도 규정) 중 어느 쪽으로 읽느냐에 따라 이 양도의 결론이 달라집니다 — 확인이 필요합니다.`,
+        });
+      }
+    }
+    /*
+     * D-54 — 군위군 대구 편입(2023.7.1.) 경계. 연접 판정은 양도일 행정구역으로 했다(결정 Q-21). 신규 주택 취득일 기준·부칙 제5조②(2023.12.31.까지
+     * 군위를 경북으로 봄) 독법에서 지역 요건이 갈리고 그것이 §155① 결론을 가를 때만 낸다.
+     */
+    if (
+      tt.publicInstitutionRelocation &&
+      from &&
+      to &&
+      gunwiBoundaryReadingsDiverge(from, to, getAdjacentSigunguCodes, {
+        transferDate: input.transferDate,
+        newAcquisitionDate: tt.newAcquisitionDate,
+      })
+    ) {
+      const overall = (relocationMet: boolean) =>
+        evaluateTemporaryTwoHouseTiming(
+          {
+            ...input,
+            temporaryTwoHouse: relocationMet
+              ? { ...tt, relocatedSigunguCode: undefined, newHouseSigunguCode: undefined }
+              : { ...tt, publicInstitutionRelocation: false },
+          },
+          twoHouseRule,
+        ).timing.overall;
+      if (overall(true) !== overall(false)) {
+        out.push({
+          id: "155-16-gunwi-boundary-era",
+          reason:
+            `공공기관·법인 지방이전 특례(${TRANSFER.TEMPORARY_TWO_HOUSE}⑯)의 「이전한 시·군 또는 이와 연접한 시·군」을 양도일의 행정구역으로 판정했습니다 — ` +
+            "군위군은 2023. 7. 1. 대구광역시로 편입됐고(편입 전에는 경상북도의 군), " +
+            `신규 주택 취득일의 행정구역으로 보거나 ${TRANSFER.GUNWI_DAEGU_JURISDICTION_ADDENDA} 제5조②(2023. 12. 31.까지 군위군을 경상북도 관할구역으로 보아 적용)를 ` +
+            "적용하면 이 양도의 결론이 달라집니다 — 확인이 필요합니다.",
         });
       }
     }

@@ -21,8 +21,9 @@ const iso = (d: Date | undefined) => d?.toISOString().slice(0, 10);
 const GANGNAM = "1168010100"; // 2017-08-03 이후 계속 조정
 const SEOCHO = "1165010100";
 const OSAN = "4137010100"; // 2020-06-19 지정(효력일 = 공고일)
-const CHEONAN_DN = "4413110100"; // 천안시 동남구 — 비조정
 const CHEONAN_DN2 = "4413110300";
+// §155⑯ 「수도권에 1주택을 소유한 경우에 한정」(2026-11 리뷰 D-08) — ⑯ 시료의 종전 주택은 수도권이어야 한다. 가평은 조정대상지역이었던 적이 없다.
+const GAPYEONG = "4182025021";
 
 function verdict(p: { aAcq: string; bAcq: string; transfer: string; aCode: string; bCode: string; right?: Partial<PresaleRight> }) {
   return resolveArticle89Clause2(
@@ -80,7 +81,7 @@ describe("② 연혁 부칙 계약일 — 2019.12.16. 이전 계약", () => {
 
 describe("③ §155⑯ 공공기관·법인 지방이전", () => {
   // 비조정 지역끼리 · B 취득 2019-01-01 · 양도 2023-06-01(3년 초과 5년 이내)
-  const late = { aAcq: "2015-01-01", bAcq: "2019-01-01", transfer: "2023-06-01", aCode: CHEONAN_DN, bCode: CHEONAN_DN2 };
+  const late = { aAcq: "2015-01-01", bAcq: "2019-01-01", transfer: "2023-06-01", aCode: GAPYEONG, bCode: CHEONAN_DN2 };
   it("이전지 코드 없음(자기선언) → 5년 기한 · 예외 성립", () => {
     const v = verdict({ ...late, right: { originalMemberPublicInstitutionRelocation: true } });
     expect(v.status).toBe("exception_met");
@@ -105,7 +106,7 @@ describe("③ §155⑯ 공공기관·법인 지방이전", () => {
   });
 
   // ⑯ 후단 — A 취득 6개월 뒤 B 취득(1년 요건 미충족)
-  const short = { aAcq: "2018-07-01", bAcq: "2019-01-01", transfer: "2021-06-01", aCode: CHEONAN_DN, bCode: CHEONAN_DN2 };
+  const short = { aAcq: "2018-07-01", bAcq: "2019-01-01", transfer: "2021-06-01", aCode: GAPYEONG, bCode: CHEONAN_DN2 };
   it("⑯ 후단 1년 요건 면제 → 예외 성립", () => {
     expect(verdict({ ...short, right: { originalMemberPublicInstitutionRelocation: true } }).status).toBe("exception_met");
   });

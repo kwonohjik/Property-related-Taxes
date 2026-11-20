@@ -153,7 +153,7 @@ function judgeTiming(input: OriginalMemberInput, right: PresaleRight, oneYearWai
   const candidates =
     previous === false || next === false ? [false] : previous === true && next === true ? [true] : [true, false];
   // §155⑯ 후단(1년 요건 면제)은 전단의 지역 요건과 같은 술어로 연다(정본 `evaluateTemporaryTwoHouseTiming`과 같다).
-  const relocation = meetsPublicInstitutionRelocationRegion(tt);
+  const relocation = meetsPublicInstitutionRelocationRegion(tt, { previousHouseRegionCode: input.regionCode, asOf: input.transferDate });
 
   const outcomes = candidates.map((bothRegulated): TimingOutcome => {
     // 연혁 기한(부칙 계약일 포함) + §155⑯ 5년 — 일시적 2주택 경로와 같은 함수다.

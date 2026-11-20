@@ -34,7 +34,7 @@ const meets = (from: string, to: string) =>
     publicInstitutionRelocation: true,
     relocatedSigunguCode: from,
     newHouseSigunguCode: to,
-  } as NonNullable<TransferTaxInput["temporaryTwoHouse"]>);
+  } as NonNullable<TransferTaxInput["temporaryTwoHouse"]>, { previousHouseRegionCode: undefined, asOf: new Date("2026-08-01") });
 
 const screen = (from: string, to: string) =>
   judgeRelocationRegion({ publicInstitutionRelocation: true, relocatedSigunguCode: from, newHouseSigunguCode: to })?.ok;

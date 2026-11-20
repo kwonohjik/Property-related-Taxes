@@ -53,6 +53,7 @@ import { buildRequirementReview, isDeadlineStillReachable } from "./one-house/re
 import type { OneHouseSpecialRulesData } from "./schemas/rate-table.schema";
 import {
   describePublicInstitutionRelocationEffects,
+  relocationContextOf,
   relocationEffectsLabel,
 } from "./transfer-tax-temporary-two-house-timing";
 
@@ -469,7 +470,7 @@ function checkExemptionCore(
       }
       // ⑯ 근거 표시는 **실제로 바꾼 것**만 — 5년이 기한을 바꿨는지·1년 요건 면제가 걸렸는지를 나누고, 둘 다 아니면 표시하지 않는다(#29).
       const relocationLabel = relocationEffectsLabel(
-        describePublicInstitutionRelocationEffects(input.temporaryTwoHouse, input.transferDate, era, provisoRelaxesHolding),
+        describePublicInstitutionRelocationEffects(input.temporaryTwoHouse, relocationContextOf(input), era, provisoRelaxesHolding),
       );
       if (relocationLabel) {
         basisParts.push(`§155⑯ ${relocationLabel}`);

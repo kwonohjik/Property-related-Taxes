@@ -26,7 +26,7 @@ import {
   meetsOneHouseHoldingResidence,
   presaleRightStartDate,
 } from "./transfer-tax-helpers";
-import { meetsPublicInstitutionRelocationRegion, resolveIsRegulatedAtTransfer } from "./transfer-tax-temporary-two-house-timing";
+import { meetsPublicInstitutionRelocationRegion, relocationContextOf, resolveIsRegulatedAtTransfer } from "./transfer-tax-temporary-two-house-timing";
 import { evaluateNew994Para5, type New994Para5Result } from "./transfer-reductions/new-99-4-para5";
 import { NEW_99_4_PARA5 } from "./legal-codes/transfer";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
@@ -573,7 +573,7 @@ export function runMultiHouseSurchargeStep(
         // §155⑯ 세대 5년 — 재산세제과-129. §155① 기한과 **같은 지역 술어**를 쓴다.
         publicInstitutionRelocationMet:
           workingInput.temporaryTwoHouse !== undefined &&
-          meetsPublicInstitutionRelocationRegion(workingInput.temporaryTwoHouse),
+          meetsPublicInstitutionRelocationRegion(workingInput.temporaryTwoHouse, relocationContextOf(workingInput)),
       }),
       rightDeemingCitedByOldClause1: deemed?.citedByOldClause1,
       marriageMerge: workingInput.marriageMerge,

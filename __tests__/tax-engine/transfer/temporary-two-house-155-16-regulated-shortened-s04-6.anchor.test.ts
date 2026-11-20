@@ -223,7 +223,7 @@ describe("#29 ⑯ 표시 — 「5년 적용」과 「1년 요건 면제만 적�
   const eff = (prev: string, newAcq: string, transfer: string, extra: Partial<TT>) => {
     const tt: TT = { previousAcquisitionDate: D(prev), newAcquisitionDate: D(newAcq), ...extra };
     const era = resolveTemporaryTwoHouseDeadline({ isRegulatedArea: false, transferDate: D(transfer), temporaryTwoHouse: tt }, twoHouseRule);
-    return relocationEffectsLabel(describePublicInstitutionRelocationEffects(tt, D(transfer), era, false));
+    return relocationEffectsLabel(describePublicInstitutionRelocationEffects(tt, { previousHouseRegionCode: undefined, asOf: D(transfer) }, era, false));
   };
 
   it("D1 비조정 · 1년 자연 충족 → 5년만", () => {

@@ -34,6 +34,7 @@ import type { DeemedOneHouseBasis, HouseInfo } from "../types/multi-house-surcha
 import {
   judgeTemporaryTwoHouseTiming,
   meetsPublicInstitutionRelocationRegion,
+  relocationContextOf,
   resolveTemporaryTwoHouseDeadline,
 } from "../transfer-tax-temporary-two-house-timing";
 import {
@@ -164,7 +165,7 @@ export function evaluateTemporaryTwoHouseTiming(
     // §155⑯ 후단(1년 면제) · §155⑱(기한 예외) — 정본 한 곳에서 전달해 비과세·중과가 같은 값을 쓴다.
     //   ⑯ 후단 「이 경우」는 전단의 지역 요건(이전한 시·군 또는 연접 시·군) 충족을 받는다 — 기한 5년과
     //   **같은 술어**로 연다(OH-35 · 원시 토글을 넘기면 비연접에도 1년 요건이 면제됐다).
-    publicInstitutionRelocation: meetsPublicInstitutionRelocationRegion(input.temporaryTwoHouse!),
+    publicInstitutionRelocation: meetsPublicInstitutionRelocationRegion(input.temporaryTwoHouse!, relocationContextOf(input)),
     disposalDelayReason: input.temporaryTwoHouse!.disposalDelayReason,
     disposalDelayDisposedByThatMethod: input.temporaryTwoHouse!.disposalDelayDisposedByThatMethod,
     // §155① 후단(E-5) — 종전 주택 일부 수용 뒤 잔존 주택 양도면 요건 B를 수용일로도 판정한다.

@@ -25,6 +25,7 @@ import { governingDesignationStart, isRegulatedByBjdCode } from "./data/regulate
 import { PRE_DESIGNATION_CONTRACT_EXCLUSION } from "./legal-codes";
 import { getAdjacentSigunguCodes } from "@/lib/geo/administrative-district-adjacency";
 import { classifyRelocationRegion } from "@/lib/geo/relocation-region-unit";
+import { isCapitalAreaByRegionCode } from "@/lib/geo/rural-house-location";
 import {
   resolveTemporaryTwoHouseDeadlineEra,
   isOneYearHoldRequiredForTemporaryTwoHouse,
@@ -164,18 +165,41 @@ export function judgeTemporaryTwoHouseTiming(p: {
  * 자동 판정을 근거로 사용자 입력을 부정하지 않는다(판정 불가 ≠ 미충족).
  *
  * 인접 매트릭스: `lib/geo/administrative-district-adjacency.ts` (Vworld 경계 + turf, 2026-07-31).
+ *
+ * 🔑 ⑯ 괄호 「(수도권에 1주택을 소유한 경우에 한정한다)」 — 종전 주택 법정동코드가 있고 수도권이 아니면 불성립이다(2026-11 리뷰 D-08).
+ *    코드가 없으면 자기선언을 유지한다(W-2 규약 — 판정 불가 ≠ 미충족). 연접 판정의 행정구역 기준일은 양도일이다(D-54 · 결정 Q-21).
+ * 🔑 `ctx`는 필수다 — 소비처가 종전 주택 코드·기준일을 빠뜨리면 타입이 막는다(`relocationContextOf`).
  */
 export function meetsPublicInstitutionRelocationRegion(
   p: NonNullable<TransferTaxInput["temporaryTwoHouse"]>,
+  ctx: RelocationRegionContext,
   adjacentCodes: (code: string) => string[] = getAdjacentSigunguCodes,
 ): boolean {
   if (!p.publicInstitutionRelocation) return false;
+  if (ctx.previousHouseRegionCode && isCapitalAreaByRegionCode(ctx.previousHouseRegionCode) === false) return false;
   const from = p.relocatedSigunguCode;
   const to = p.newHouseSigunguCode;
   if (!from || !to) return true; // 코드 미입력 → 자기선언 유지
   // 판정 단위는 시·군(광역시 전체·일반구의 소속 시) — 구 단위로 비교하면 같은 광역시 안의 다른 구가 미충족이 된다
   //   (2026-11-12 리뷰 E-1 · `lib/geo/relocation-region-unit.ts`). 매트릭스 미보유 지역은 판정 불가 → 자기선언 유지.
-  return classifyRelocationRegion(from, to, adjacentCodes) !== "not_adjacent";
+  return classifyRelocationRegion(from, to, adjacentCodes, ctx.asOf) !== "not_adjacent";
+}
+
+/** ⑯ 지역 요건 판정 맥락 — 종전 주택 법정동코드(수도권 1주택 한정)와 행정구역 기준일(양도일). */
+export type RelocationRegionContext = { previousHouseRegionCode: string | undefined; asOf: Date };
+
+/**
+ * 입력에서 ⑯ 맥락을 만든다 — 종전 주택은 양도 주택(`regionCode`)이고, 합가 D8 상대 쪽 짝이면 명부 행(`previousHouseRegionCode`)이다
+ * (`previousHouseIsRosterRow` — §155①2호 조정 판정과 같은 규약).
+ */
+export function relocationContextOf(
+  input: Pick<TransferTaxInput, "regionCode" | "transferDate" | "temporaryTwoHouse">,
+): RelocationRegionContext {
+  const tt = input.temporaryTwoHouse;
+  return {
+    previousHouseRegionCode: tt?.previousHouseIsRosterRow ? tt.previousHouseRegionCode : input.regionCode,
+    asOf: input.transferDate,
+  };
 }
 
 /**
@@ -335,11 +359,12 @@ function resolveNewHousePreAnnouncement(
  */
 export function describePublicInstitutionRelocationEffects(
   tt: NonNullable<TransferTaxInput["temporaryTwoHouse"]>,
-  transferDate: Date,
+  ctx: RelocationRegionContext,
   era: Pick<TemporaryTwoHouseDeadlineResolution, "relocationFiveYearApplied">,
   oneYearWaivedByProviso: boolean,
 ): { fiveYear: boolean; oneYear: boolean } {
-  if (!meetsPublicInstitutionRelocationRegion(tt)) return { fiveYear: false, oneYear: false };
+  const transferDate = ctx.asOf;
+  if (!meetsPublicInstitutionRelocationRegion(tt, ctx)) return { fiveYear: false, oneYear: false };
   return {
     fiveYear: era.relocationFiveYearApplied,
     oneYear:
@@ -403,7 +428,7 @@ export function resolveTemporaryTwoHouseDeadlineFor(
   //   부동산납세과-707(2023.3.15.)도 「허용기간이 3년인 경우에는 5년」으로 범위를 그었다. 2026 개정 1호(2년)에는 해석례가 없으나
   //   ⑯ 문언이 바뀌지 않아 같은 논리다.
   //   2012-06-29 전 양도분은 그대로 5년이다 — 2008.2.22.~2012.6.28.에는 ⑯이 당시 1년·2년 기한도 5년으로 바꿨다(결정 #29 조건).
-  if (tt && meetsPublicInstitutionRelocationRegion(tt)) {
+  if (tt && meetsPublicInstitutionRelocationRegion(tt, relocationContextOf(p))) {
     const regulatedShortened =
       p.transferDate.getTime() >= TT_3Y_AND_ONE_YEAR_HOLD_TRANSFER_START.getTime() && era.years < twoHouseRule.disposalDeadlineYears;
     if (!regulatedShortened) {
