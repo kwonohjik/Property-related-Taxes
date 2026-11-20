@@ -46,6 +46,8 @@ export const temporaryTwoHouseSchema = z.object({
    * 신규 주택의 취득 경위(분양권·조합원입주권 유래 갈래) — 결정 #43 · G6-4. 키가 없으면 판정하지 않는다(직접 호출·옛 기록).
    * 화면 경로는 항상 싣는다(미답 = `unknown`, 명부 행이 없는 경로 = `not_collected`).
    */
+  /** ⑫ 명부에서 신규 주택으로 도출된 행 id — 엔진이 그 행의 동일세대 상속 여부를 본다(D-76). */
+  newHouseRowId: z.string().optional(),
   newHouseOrigin: z
     .object({
       kind: z.enum([

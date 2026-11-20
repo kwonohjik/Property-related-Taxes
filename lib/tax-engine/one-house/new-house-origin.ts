@@ -31,6 +31,7 @@ import { TRANSFER } from "../legal-codes";
 import { rightTimingCore, type RightTimingCoreInput } from "../transfer-tax-89-2-right-timing-core";
 import type { PresaleRight } from "../types/multi-house-surcharge.types";
 import type { TransferTaxInput } from "../types/transfer.types";
+import { isHouseholdUnconfirmed, passesHouseholdGate } from "../transfer-inheritance-exclusion";
 
 /** 분양권이 주택 수 산정에 드는 시작일 — 법률 제17477호 부칙 제4조(시드 `presaleRightStartDate`와 같은 값, 일치는 anchor가 지킨다). */
 export const NEW_HOUSE_ORIGIN_PRESALE_START = new Date("2021-01-01");
@@ -44,7 +45,9 @@ export const NEW_HOUSE_PRESALE_HOLDING_ID = "155-1-presale-holding-156-3-unverif
 export type NewHouseOriginInput = RightTimingCoreInput &
   Pick<TransferTaxInput, "temporaryTwoHouse"> &
   /** 합가 세대 가드(아래) — 호출부가 합가 사실을 넘기면 권리 유래 신규 주택을 판정 보류로 막는다 */
-  Partial<Pick<TransferTaxInput, "marriageMerge" | "parentalCareMerge">>;
+  Partial<Pick<TransferTaxInput, "marriageMerge" | "parentalCareMerge">> &
+  /** 동일세대 상속 가드(아래) — `temporaryTwoHouse.newHouseRowId`가 가리키는 명부 행 */
+  Partial<Pick<TransferTaxInput, "houses">>;
 
 const RIGHT_ORIGIN_KINDS = new Set(["presale", "successor_right", "original_member_non_house"]);
 
@@ -118,9 +121,48 @@ export function temporaryTwoHouseOrderReason(previous: Date, next: Date): string
   );
 }
 
+const SAME_HOUSEHOLD_INHERITANCE_AUTHORITY = "사전-2023-법규재산-0464";
+
+/**
+ * 신규 주택이 **동일세대 안에서 상속받은** 명부 행인가(2026-11 리뷰 D-76 · 결정 Q-27 안 A).
+ *
+ * 사전-2023-법규재산-0464(법규과-2159, 2023.8.23.) 요지: 「2주택 보유세대의 1주택이 동일세대 내에서 상속이 이루어진 경우, 새로운 주택의 취득에
+ * 해당하지 않으므로 상속개시일을 신규주택 취득일로 보아 일시적 2주택 특례를 적용할 수 없는 것임」. 그 사실관계는 조합원입주권 상태의 상속이라
+ * 주택으로 상속받은 경우를 정면으로 다룬 해석은 확인하지 못했다 — 사유에 그 한계를 밝힌다. 피상속인 세대 판정은 §155② 단서와 같은 게이트
+ * (`passesHouseholdGate` — 동거봉양 합가 전 보유 예외 · D17 재상속 포함)다. 모르거나 답하지 않았으면 불성립 + 확인 필요(#42-2).
+ */
+function sameHouseholdInheritedNewHouse(input: NewHouseOriginInput): NewHouseOriginVerdict | undefined {
+  const id = input.temporaryTwoHouse?.newHouseRowId;
+  const row = id ? input.houses?.find((h) => h.id === id) : undefined;
+  if (!row?.isInherited || passesHouseholdGate(row)) return undefined;
+  const at = row.inheritedDate ? `(${fmt(row.inheritedDate)} 상속개시)` : "";
+  if (isHouseholdUnconfirmed(row)) {
+    return {
+      ...PASS,
+      blocked: true,
+      unconfirmed: [
+        `신규 주택${at}을 상속받을 때 피상속인과 같은 세대였는지 모른다고 답해(답하지 않은 경우 포함) 일시적 2주택(${TRANSFER.TEMPORARY_TWO_HOUSE}①)을 적용하지 않았습니다 — ` +
+          `동일세대 안의 상속은 새로운 주택의 취득이 아니라는 해석이 있습니다(${SAME_HOUSEHOLD_INHERITANCE_AUTHORITY}). 별도세대였다면 결론이 달라질 수 있습니다(확인 필요).`,
+      ],
+    };
+  }
+  return {
+    ...PASS,
+    blocked: true,
+    reasons: [
+      `신규 주택${at}은 상속개시 당시 피상속인과 같은 세대에서 상속받은 주택입니다 — 동일세대 안의 상속은 새로운 주택의 취득에 해당하지 않아 ` +
+        `상속개시일을 신규 주택 취득일로 보아 일시적 2주택(${TRANSFER.TEMPORARY_TWO_HOUSE}①)을 적용할 수 없다는 해석이 있어 적용하지 않았습니다(${SAME_HOUSEHOLD_INHERITANCE_AUTHORITY}). ` +
+        "이 해석은 조합원입주권 상태로 상속받은 사안이라 주택으로 상속받은 경우를 정면으로 다룬 해석은 확인하지 못했습니다(확인 필요).",
+    ],
+  };
+}
+
 /** 신규 주택 경위 판정 — `oneYearWaived`는 §154① 단서로 「종전주택 취득 후 1년」이 면제되는가(`waivesPriorHouseOneYearGap`). */
 export function judgeNewHouseOrigin(input: NewHouseOriginInput, oneYearWaived: boolean): NewHouseOriginVerdict {
   const tth = input.temporaryTwoHouse;
+  // D-76 — 동일세대 상속 행은 경위(일반·권리 유래)와 무관하게 「신규 주택 취득」이 아니다.
+  const inherited = sameHouseholdInheritedNewHouse(input);
+  if (inherited) return inherited;
   const o = tth?.newHouseOrigin;
   if (!tth || !o) return PASS; // 키 없음 — 종전 동작(직접 호출·옛 기록)
   const P = tth.previousAcquisitionDate;

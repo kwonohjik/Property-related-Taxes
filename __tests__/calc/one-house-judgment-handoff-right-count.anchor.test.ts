@@ -221,6 +221,8 @@ describe("OH-34(병합) 레거시 표식 — 판정 폼 값으로 확정한다",
       newAcquisitionDate: "2024-05-30",
       // 결정 #43 — 명부 행(경위 「일반 취득」)에서 도출한 신규 주택은 그 경위를 싣는다.
       newHouseOrigin: { kind: "general" },
+      // D-76 — 명부에서 도출한 신규 주택 행 id(엔진이 그 행의 동일세대 상속 여부를 본다).
+      newHouseRowId: "h-new",
     });
   });
 
