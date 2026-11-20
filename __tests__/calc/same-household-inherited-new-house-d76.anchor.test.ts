@@ -14,7 +14,8 @@
  * | E | 동일세대 · 3년 경과 → 과세(불변) |
  */
 import { describe, it, expect } from "vitest";
-import { observeCase, type RulingCase } from "./one-house-rulings/harness";
+import { observeCase, buildCaseForm, type RulingCase } from "./one-house-rulings/harness";
+import { judgmentTempTwoHouseVerdict } from "@/lib/calc/one-house-judgment-temp-two-house";
 
 type Row = Record<string, unknown>;
 function menu(m: Row, transferDate = "2017-06-01"): RulingCase {
@@ -67,5 +68,13 @@ describe("D-76 동일세대 상속 명부 행은 §155① 신규 주택이 아�
   it("E 동일세대 · 상속개시일부터 3년 경과(2018-06-01) → 과세(불변)", async () => {
     const o = await observeCase(menu(SAME, "2018-06-01"));
     expect(o.isExempt).toBe(false);
+  });
+
+  it("⑤ 일시적 2주택 카드도 같은 판정 — 동일세대면 불성립 · 0464 · 별도세대 행은 경위 판정에 걸리지 않는다", () => {
+    const same = judgmentTempTwoHouseVerdict(buildCaseForm(menu(SAME)));
+    expect(same.status).toBe("ineligible");
+    expect(same.status !== "pending" && (same.origin?.notes ?? []).join("\n")).toContain("사전-2023-법규재산-0464");
+    const sep = judgmentTempTwoHouseVerdict(buildCaseForm(menu(SEPARATE)));
+    expect(sep.status !== "pending" && sep.origin?.blocked).not.toBe(true);
   });
 });

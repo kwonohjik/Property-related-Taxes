@@ -152,6 +152,11 @@ export function judgeTempTwoHouseFromForm(p: {
   rightThreeYearException?: RightThreeYearException;
   /** 혼인·동거봉양 합가 선언(합가 + 권리 유래 신규 주택 가드) — ④가 싣는 합가일과 같은 사실 */
   hasMerge?: boolean;
+  /**
+   * 명부에서 신규 주택으로 도출된 행(④ `buildOtherHousesPayload`와 같은 변환 · 상속개시일은 Date) — 엔진이 그 행의 동일세대 상속 여부를 본다
+   * (`temporaryTwoHouse.newHouseRowId` · 사전-2023-법규재산-0464 · 2026-11 리뷰 D-76). 카드가 결과와 같은 판정을 하게 한다.
+   */
+  newHouseRow?: NonNullable<TransferTaxInput["houses"]>[number];
 }): TempTwoHouseVerdict {
   if (!p.previousAcquisitionDate || !p.newHouseAcquisitionDate || !p.transferDate) {
     return { status: "pending" };
@@ -290,9 +295,11 @@ export function judgeTempTwoHouseFromForm(p: {
           transferDate: transfer,
           rightThreeYearException: p.rightThreeYearException,
           ...(p.hasMerge ? { marriageMerge: { marriageDate: prev } } : {}),
+          ...(p.newHouseRow ? { houses: [p.newHouseRow] } : {}),
           temporaryTwoHouse: {
             previousAcquisitionDate: prev,
             newAcquisitionDate: nw,
+            ...(p.newHouseRow ? { newHouseRowId: p.newHouseRow.id } : {}),
             newHouseOrigin: {
               kind: o.kind as NonNullable<NonNullable<TransferTaxInput["temporaryTwoHouse"]>["newHouseOrigin"]>["kind"],
               rightAcquisitionDate: optDate(o.rightAcquisitionDate),

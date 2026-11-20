@@ -12,7 +12,9 @@ import { deriveJudgmentResidenceMonths } from "@/lib/calc/one-house-exemption-ap
 import { buildRightThreeYearExceptionPayload, buildSameHouseholdInheritancePayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { eraFormWithOriginDates } from "@/lib/calc/temporary-two-house-era-facts";
 import { declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
-import type { RightThreeYearException } from "@/lib/tax-engine/types/transfer.types";
+import type { RightThreeYearException, TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
+import { buildOtherHousesPayload } from "@/lib/calc/transfer-tax-api-houses";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import { judgmentSaleIsHousing, type OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
@@ -88,7 +90,24 @@ export function judgmentTempTwoHouseVerdict(
     newHouseOrigin: derivedNewHouse?.newHouseOrigin,
     rightThreeYearException: engineRightThreeYearException(form),
     hasMerge: !!(form.marriageDate || form.parentalCareMergeDate),
+    newHouseRow: newHouseRowFacts(form, derivedNewHouse?.newHouseRowId),
   });
+}
+
+/** 신규 주택으로 도출된 명부 행 → 엔진 행(④ `buildOtherHousesPayload`와 같은 변환 · 상속개시일만 Date로) — D-76 동일세대 상속 판정용. */
+function newHouseRowFacts(
+  form: OneHouseJudgmentFormData,
+  rowId: string | undefined,
+): NonNullable<TransferTaxInput["houses"]>[number] | undefined {
+  const row = rowId ? form.houses?.find((h) => h.id === rowId) : undefined;
+  if (!row?.isInherited) return undefined;
+  const payload = buildOtherHousesPayload([row])[0] as Record<string, unknown> | undefined;
+  if (!payload) return undefined;
+  return {
+    ...payload,
+    acquisitionDate: toOptionalDate(payload.acquisitionDate),
+    inheritedDate: toOptionalDate(payload.inheritedDate),
+  } as unknown as NonNullable<TransferTaxInput["houses"]>[number];
 }
 
 /** ④ `buildRightThreeYearExceptionPayload`가 싣는 3년 경과 예외 선언을 카드용 Date 모양으로 — 엔진 route(⑭)와 같은 변환. */
