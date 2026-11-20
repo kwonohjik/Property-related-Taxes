@@ -122,7 +122,7 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
    *
    * 🔴 종전 다건 ⑬은 `nonHousingToHousingConversion` 키를 **아예 만들지 않았다**. Zod 는 받고
    *    (`transfer-tax-schema-refines.ts:36`) 엔진은 장특공제(`transfer-tax-lthd.ts:291`)와
-   *    1세대1주택 보유·거주 기산(`transfer-tax-exemption-requirements.ts:272·350·419`)에 쓰는데,
+   *    1세대1주택 보유·거주 기산(`resolveResidenceJudgmentDate`·`resolveWasRegulatedAtAcquisition`·`resolveExemptionHoldingStartDate` — `transfer-tax-exemption-holding.ts`)에 쓰는데,
    *    **아무도 보내지 않아 조용히 무시**됐다 — 같은 자산이 단건과 다건에서 다른 세액이 된다.
    *    입력 위젯은 자산 카드(`AssetSectionBasic`·`AssetSectionAcquisition`)에 있어 다건 화면에도
    *    **뜬다**. 분양권·입주권(P1-02)이 같은 이유로 이미 한 번 고쳐진 자리다

@@ -119,7 +119,10 @@ export const PRE2010_PARENTAL_CARE_EXCEPTION_ID = "155-2-pre2010-parental-care-e
 
 export const FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID = "154-5-final-one-house-restart-unverified";
 
-/** §154⑫ 신설(대통령령 제31442호, 2021.2.17.) — 시행 이후 양도분부터 적용(검토 문서 인용, 부칙 원문 재확인 필요). */
+/**
+ * §154⑫ 신설(대통령령 제31442호, MST 229391, 2021.2.17. 공포·시행) — 부칙 제2조② 「이 영 중 양도소득세에 관한 개정규정은 이 영 시행 이후
+ * 양도하는 분부터 적용한다」(§154⑫ 별도 적용례 없음 — 제9조·제10조는 다른 조항). KoreanLaw 부칙 원문 실독 2026-11-21(2026-11 리뷰 I-36).
+ */
 const CO_INHERITED_RESIDENCE_TRANSFER_START = new Date("2021-02-17");
 /** §154⑫ 개정(대통령령 제34265호, 2024.2.29.) — 「거주한 공동상속인 중 거주기간이 가장 긴 사람」. 그 전 양도분은 종전 문언. */
 const CO_INHERITED_RESIDENCE_LONGEST_TRANSFER_START = new Date("2024-02-29");

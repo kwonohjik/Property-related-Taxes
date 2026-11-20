@@ -212,7 +212,7 @@ export function toMultiEngineItem(
      *
      * 🔴 ⑬·⑭ **두 층이 모두 비어 있었다**(P1-02 분양권과 같은 형태). ⑫ Zod 는 이 키를
      *    수락하고 엔진은 장특공제(`transfer-tax-lthd.ts:291`)·1세대1주택 기산
-     *    (`transfer-tax-exemption-requirements.ts:272·350·419`)에 쓰는데, 아무도 보내지
+     *    (`resolveResidenceJudgmentDate`·`resolveWasRegulatedAtAcquisition`·`resolveExemptionHoldingStartDate` — `transfer-tax-exemption-holding.ts`)에 쓰는데, 아무도 보내지
      *    않아 **같은 자산이 단건과 다건에서 다른 세액**이 됐다. 한쪽만 고치면 도달하지
      *    않으므로 ⑬(`multi-transfer-tax-api.ts`)과 같은 PR 에서 배선한다.
      */
