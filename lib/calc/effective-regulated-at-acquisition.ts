@@ -17,6 +17,7 @@ import { z } from "zod";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import {
   buildGiftHouseholdPayload,
+  buildSuccessorGiftHouseholdPayload,
   calcGiftHouseholdFactAsked,
   giftHouseholdFactErrors,
 } from "@/lib/calc/gift-household-payload";
@@ -115,6 +116,22 @@ export function calcGiftHouseholdBasis(asset: AssetForm, scope: GiftHouseholdSco
       true,
     );
   }
+  // 승계조합원 증여 승계 통산(완공APT) — ④가 별도 빌더(`buildSuccessorGiftHouseholdPayload`)로 싣는 사실을 같은 leaf로 읽는다. 종전에는 이 갈래가 없어
+  //   화면·⑤⑧·주소 문자열 경로 ④ boolean이 준공일 하나로 판정하고, 엔진은 [세대 보유 시작일, 증여일] 모두 지정 여부로 판정해 갈렸다
+  //   (2026-11 리뷰 D-86 · 결정 Q-29 (a) — 엔진은 현행, 화면을 엔진에 맞춘다). 0691 이전 거주 개월은 싣지 않는다(엔진 번역이 지우고 0691 칸이 받는다).
+  if (scope.isPrimary) {
+    const successor = buildSuccessorGiftHouseholdPayload(asset);
+    const giftDate = toOptionalDate(asset.acquisitionDate);
+    const donorAcquisitionDate = toOptionalDate(asset.donorAcquisitionDate);
+    if (successor.giftSameHouseholdContinuous === true && giftDate && donorAcquisitionDate) {
+      return {
+        giftDate,
+        donorAcquisitionDate,
+        continuousSameHousehold: true,
+        householdHoldingStartDate: toOptionalDate(successor.giftHouseholdHoldingStartDate),
+      };
+    }
+  }
   // 결정 #38-6 — 증여자 사망이면 「계속 같은 세대」를 묻지 않으므로 답이 없어도 사실이 있다. basis는 ④ 조각(`buildGiftHouseholdPayload`)에서 만든다
   // — 사망은 통산 없이(`continuousSameHousehold` 미지정 + `donorDeceased`), 재결합은 「아니오」 + `rejoinedAfterDivorce`로 엔진과 같다.
   if ((!asset.giftSameHousehold && !asset.giftDonorDeceased) || !calcGiftHouseholdFactAsked(asset, scope)) return undefined;
@@ -160,7 +177,8 @@ export function calcEffectiveWasRegulatedAtAcquisition(
 
 /**
  * 「주택 취득 당시」 기준일 — 엔진 `resolveResidenceJudgmentDate`와 같은 순서다: 용도변경 주거용 사용 개시일 → §154⑧3호 동일세대 상속의
- * 동일세대 보유 개시일 → 이월과세 증여일/세대 보유 시작일 → 승계조합원 완공APT 준공일 → 취득일. ⑤ 자동 판정 카드·⑧·⑤ §155⑳ 카드가 같은 날짜를 본다
+ * 동일세대 보유 개시일 → 이월과세 증여일/세대 보유 시작일 → 승계조합원 완공APT 준공일 → 취득일. 승계 증여 통산이 서면 엔진은 이 날짜 대신
+ * basis([세대 보유 시작일, 증여일])로 판정한다 — 실효값은 `calcGiftHouseholdBasis` 승계 갈래가 맞춘다(D-86). ⑤ 자동 판정 카드·⑧·⑤ §155⑳ 카드가 같은 날짜를 본다
  * (동일세대 상속을 빠뜨리면 카드가 엔진과 다른 값을 「자동」이라며 보였다).
  */
 export function calcResidenceJudgmentDate(asset: AssetForm): string {
