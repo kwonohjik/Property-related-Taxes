@@ -153,6 +153,11 @@ export const propertyBaseShape = {
   // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback householdRightCount ?? 0.
   householdRightCount: z.number().int().nonnegative().optional(),
   residencePeriodMonths: z.number().int().nonnegative(),
+  // ⑫ 거주 구간(2026-11 리뷰 I-07) — 판정 메뉴 구간 모드만 싣는다. 엔진은 구간 합이 거주 개월과 같을 때만 기한 말일 현재 거주를 센다.
+  residenceIntervals: z
+    .array(z.object({ start: z.string().date(), end: z.string().date() }).refine((iv) => iv.start <= iv.end, "거주 구간의 전출일이 전입일보다 빠릅니다"))
+    .max(60)
+    .optional(),
   isRegulatedArea: z.boolean(),
   wasRegulatedAtAcquisition: z.boolean(),
   /** ⑫ 법정동코드 10자리 — 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정, 미제공 시 isRegulatedArea boolean fallback */

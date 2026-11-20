@@ -64,6 +64,7 @@ export function toOneHouseJudgeInput(facts: OneHouseFacts, sale: OneHouseSale): 
     isFirstTransferredInMerge: facts.household.isFirstTransferredInMerge,
     // ── 거주·지역 ──
     residencePeriodMonths: sale.residencePeriodMonths,
+    residenceIntervals: sale.residenceIntervals,
     residenceTransitionAcquisitionDate: facts.residenceTransitionAcquisitionDate,
     isRegulatedArea: facts.isRegulatedArea,
     wasRegulatedAtAcquisition: facts.wasRegulatedAtAcquisition,
@@ -212,6 +213,7 @@ export function extractOneHouseSale(input: OneHouseJudgeInput): OneHouseSale {
     totalPropertyTransferPrice: input.totalPropertyTransferPrice,
     burdenedGiftDenominator: input.burdenedGiftDenominator,
     residencePeriodMonths: input.residencePeriodMonths,
+    residenceIntervals: input.residenceIntervals,
   } satisfies OneHouseSale;
 
   type _Sale = typeof sale;

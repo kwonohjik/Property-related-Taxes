@@ -87,6 +87,11 @@ export function buildTransferEngineInput(
     // optional: right_to_move_in 이외 자산 유형에서는 미전달 → 엔진 fallback (householdRightCount ?? 0)
     householdRightCount: data.householdRightCount,
     residencePeriodMonths: data.residencePeriodMonths,
+    // ⑭ I-07 — 거주 구간 string → Date(date-coerce)
+    residenceIntervals: data.residenceIntervals?.map((iv, i) => ({
+      start: toDate(iv.start, `residenceIntervals.${i}.start`),
+      end: toDate(iv.end, `residenceIntervals.${i}.end`),
+    })),
     isRegulatedArea: data.isRegulatedArea,
     wasRegulatedAtAcquisition: data.wasRegulatedAtAcquisition,
     // ⑭ 법정동코드 — Zod 통과 시 string(10), 미제공 시 undefined (Date 변환 불필요)

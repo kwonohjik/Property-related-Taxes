@@ -10,6 +10,7 @@
  */
 import { baseRequirementPhrase } from "./base-requirement-phrase";
 import { addMonths } from "../utc-date";
+import { residenceIntervalsUsable, residenceMonthsAsOf } from "./residence-as-of";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import { meetsOneHouseHoldingResidence, type ExemptionReqInput } from "../transfer-tax-exemption-requirements";
 
@@ -21,7 +22,20 @@ export function meetsHoldingResidenceOnDeadline(
   rule: OneHouseRule,
   deadlineEnd: Date,
 ): boolean {
-  return meetsOneHouseHoldingResidence({ ...input, transferDate: deadlineEnd }, rule);
+  // I-07 — 거주 구간이 있으면 말일 현재 거주를 정확히 센다(구간 합이 입력 개월과 같을 때만).
+  const atDeadline = residenceMonthsAtDeadline(input, deadlineEnd);
+  return meetsOneHouseHoldingResidence(
+    { ...input, transferDate: deadlineEnd, ...(atDeadline !== undefined ? { residencePeriodMonths: atDeadline } : {}) },
+    rule,
+  );
+}
+
+/** 말일 현재 거주 개월 — 쓸 수 있는 거주 구간이 있을 때만(2026-11 리뷰 I-07). 없으면 `undefined`(1단계 하한·확인 필요). */
+export function residenceMonthsAtDeadline(input: ExemptionReqInput, deadlineEnd: Date): number | undefined {
+  if (input.transferDate.getTime() <= deadlineEnd.getTime()) return undefined;
+  return residenceIntervalsUsable(input.residenceIntervals, input.residencePeriodMonths ?? 0)
+    ? residenceMonthsAsOf(input.residenceIntervals, deadlineEnd)
+    : undefined;
 }
 
 /**
@@ -42,6 +56,8 @@ export function residenceMonthsLowerBoundAtDeadline(months: number, deadlineEnd:
  */
 export function residenceAtDeadlineUnconfirmed(input: ExemptionReqInput, rule: OneHouseRule, deadlineEnd: Date): boolean {
   if (input.transferDate.getTime() <= deadlineEnd.getTime()) return false;
+  // I-07 — 구간으로 정확히 셌으면 확인할 것이 없다(충족이면 조건 없는 약속, 미충족이면 위 술어가 이미 약속을 막는다).
+  if (residenceMonthsAtDeadline(input, deadlineEnd) !== undefined) return false;
   if (!meetsHoldingResidenceOnDeadline(input, rule, deadlineEnd)) return false;
   const lower = residenceMonthsLowerBoundAtDeadline(input.residencePeriodMonths ?? 0, deadlineEnd, input.transferDate);
   return !meetsOneHouseHoldingResidence({ ...input, transferDate: deadlineEnd, residencePeriodMonths: lower }, rule);

@@ -56,6 +56,7 @@ export type OneHouseJudgeInput = Pick<
   | "isFirstTransferredInMerge"
   // ── 거주·지역 ──
   | "residencePeriodMonths"
+  | "residenceIntervals"
   | "residenceTransitionAcquisitionDate"
   | "isRegulatedArea"
   | "wasRegulatedAtAcquisition"
@@ -248,6 +249,8 @@ export type OneHouseSale = {
   burdenedGiftDenominator?: number;
   /** §154① 거주요건 판정용 실거주 개월 수 */
   residencePeriodMonths: number;
+  /** 거주 구간 — 기한 말일 현재 거주를 셀 때만(I-07) */
+  residenceIntervals?: { start: Date; end: Date }[];
 };
 
 /**

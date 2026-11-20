@@ -59,6 +59,7 @@ export type ResidenceReqInput = Pick<
   | "acquisitionDate"
   | "transferDate"
   | "residencePeriodMonths"
+  | "residenceIntervals"
   | "oneHouseExemptionProviso"
   | "regionCode"
   | "regionInDesignatedDistrict"

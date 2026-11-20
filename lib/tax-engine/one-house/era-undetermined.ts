@@ -27,6 +27,7 @@
  * 계산기(`transfer-tax.ts`)도 같은 항목을 경고로 낸다 — 판정 메뉴와 계산기가 같은 사실을 말한다.
  * §155① 일시적 2주택 축(`155-1-*`·`155-18-*`·`155-16-*`)의 수집은 `era-undetermined-temp-two-house.ts`에 있다(800줄 정책 분리).
  */
+import { residenceIntervalsUsable, residenceMonthsDayShifted } from "./residence-as-of";
 import {
   DEADLINE_HOLIDAY_EXTENSION_161,
   ONE_HOUSE_PROVISO_2006_ADDENDA as TRANSFER_PROVISO_2006,
@@ -112,6 +113,8 @@ export {
 /** D17 재상속 기준일 고지 — 비과세 전제(`revoke-exemption.ts` 회수 목록 · D-69). */
 /** I-31 — §154⑧2호 「3년」 기산 확인 필요 */
 export const NON_RESIDENT_THREE_YEAR_COUNT_ID = "154-8-2-holding-count-start-unverified";
+/** I-25 · Q-26 — 비연속 거주 통산 셈법(구간별 완성 개월 vs 날수 이어 붙임) 확인 필요 */
+export const RESIDENCE_INTERVAL_CONSOLIDATION_ID = "154-1-residence-interval-consolidation-unverified";
 
 export const REINHERITANCE_REFERENCE_DATE_ID = "155-2-reinheritance-reference-date-unverified";
 /** 2010.2.18. 전 동거봉양 예외 고지 — 비과세 전제(D-69). */
@@ -188,6 +191,8 @@ export interface EraNoticeRelevance {
    */
   /** I-31 — ⑧2호 「3년」을 비거주 기간만으로 센 반사실(통산 불성립)의 본체 판정 결론이 다른가 */
   nonResidentThreeYearReadingDecides?: () => boolean;
+  /** I-25 — 거주 구간을 날수로 이어 붙여 센 개월이면 과세 → 비과세·부분과세로 바뀌는가(반대 방향은 고지하지 않는다 — Q-26) */
+  residenceConsolidationDecides?: (dayShiftedMonths: number) => boolean;
   temporaryTwoHouseVariantsDecide?: (
     a: NonNullable<OneHouseJudgeInput["temporaryTwoHouse"]>,
     b: NonNullable<OneHouseJudgeInput["temporaryTwoHouse"]>,
@@ -453,6 +458,22 @@ export function collectEraUndetermined(
         "이 호의 「3년 이상 계속 보유」를 취득일부터 세어 판정했는데, 비거주자로 보유한 기간만으로 3년을 세면 통산하지 않아 결론이 달라집니다 — " +
         "정면 해석을 확인하지 못해 확인이 필요합니다.",
     });
+  }
+
+  /*
+   * I-25 · 결정 Q-26 — 비연속 거주를 구간마다 완성 개월로 내림해 더했다. 날수를 이어 붙여 세면 더 길어 결론이 비과세로 바뀔 때만 확인 필요
+   * (재산세과-646 등은 「통산·합산하여 판정」만 말하고 셈법은 정하지 않았다). 구간 합이 입력 개월과 같을 때만(용도변경 등 조정이 없을 때).
+   */
+  if (residenceIntervalsUsable(input.residenceIntervals, input.residencePeriodMonths ?? 0)) {
+    const shifted = residenceMonthsDayShifted(input.residenceIntervals);
+    if (shifted !== undefined && shifted > (input.residencePeriodMonths ?? 0) && (relevance?.residenceConsolidationDecides?.(shifted) ?? false)) {
+      out.push({
+        id: RESIDENCE_INTERVAL_CONSOLIDATION_ID,
+        reason:
+          `떨어진 거주 구간을 구간마다 완성 개월로 세어 더했습니다(${input.residencePeriodMonths}개월). 구간의 날수를 이어 붙여 세면 ${shifted}개월이라 ` +
+          "결론이 달라집니다 — 비연속 거주의 통산 셈법은 정면 해석을 확인하지 못해 확인이 필요합니다.",
+      });
+    }
   }
 
   /*
