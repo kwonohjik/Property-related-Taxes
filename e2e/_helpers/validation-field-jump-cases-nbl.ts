@@ -113,6 +113,9 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "nbl: 건축물 바닥면적", field: "nblOtherBuildingFloorArea", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 바닥면적/, form: other({ nblOtherHasBuilding: true, nblOtherBuildingFloorArea: "" }) },
   { name: "nbl: 부설주차장 기준면적", field: "nblOtherStandardAreaLimit", step: 0, assetIndex: A, message: /^자산: 선택한 호의 기준면적/, form: other({ nblOtherRelatedBusinessType: "parking_attached" }) },
   { name: "nbl: 휴양시설", field: "nblOtherResortOutdoorArea", step: 0, assetIndex: A, message: /^자산: 휴양시설 — 옥외방목장/, form: other({ nblOtherRelatedBusinessType: "resort" }) },
+  // NBL2611-V9-DM09 — 6호 «상한 이내 실제 면적»: 상한(설치기준면적·바닥면적)만 있고 실제 면적이 빈 경우
+  { name: "nbl: 휴양시설 — 실제 부설주차장 면적이 빔", field: "nblOtherResortParkingActualArea", step: 0, assetIndex: A, message: /^자산: 휴양시설 — 부설주차장 설치기준면적을 입력했으면/, form: other({ nblOtherRelatedBusinessType: "resort", nblOtherResortParkingStdArea: "100" }) },
+  { name: "nbl: 휴양시설 — 실제 건축물 부속토지 면적이 빔", field: "nblOtherResortBuildingArea", step: 0, assetIndex: A, message: /^자산: 휴양시설 — 건축물 바닥면적을 입력했으면/, form: other({ nblOtherRelatedBusinessType: "resort", nblOtherResortBuildingFloorArea: "30" }) },
   { name: "nbl: 종업원 체육시설 — 종업원 수가 빔", field: "nblOtherEmployeeCount", step: 0, assetIndex: A, message: /^자산: 종업원 체육시설 — 종업원 수와 보유 시설/, form: other({ nblOtherRelatedBusinessType: "sports", nblOtherSportsCategory: "employee" }) },
   {
     name: "nbl: 종업원 체육시설 — 시설 선택이 빔(직접입력 칸으로)", field: "nblOtherStandardAreaLimit", step: 0, assetIndex: A, message: /^자산: 종업원 체육시설 — 종업원 수와 보유 시설/,

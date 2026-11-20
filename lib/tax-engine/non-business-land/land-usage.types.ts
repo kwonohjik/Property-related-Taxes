@@ -231,9 +231,14 @@ export interface OtherLandUsage {
   employeeFacilityKinds?: Array<"field" | "court" | "indoor">;
   /** 6호 휴양 §83의4⑫1호 — 옥외 동물방목장·식물원 면적(㎡). F2 Phase B(B-3). */
   resortOutdoorArea?: number;
-  /** 6호 휴양 §83의4⑫2호 — 부설주차장 설치기준면적(㎡). 엔진이 ×2(2배 이내). */
+  /** 6호 휴양 §83의4⑫2호 — 부설주차장 설치기준면적(㎡). 상한은 이 값의 2배(2배 이내). 실제 면적(`resortParkingActualArea`)과 함께 입력해야 한다. */
   resortParkingStdArea?: number;
-  /** 6호 휴양 §83의4⑫3호 — 건축물 부속토지 면적(㎡, 용도지역별 배율 적용 후·직접입력). residential 등 배율 매핑 불가 시 fallback. */
+  /** 6호 휴양 §83의4⑫2호 — 실제 부설주차장용 토지 면적(㎡). 인정 면적 = min(실제, 설치기준면적 × 2) (NBL2611-V9-DM09). */
+  resortParkingActualArea?: number;
+  /**
+   * 6호 휴양 §83의4⑫3호 — **실제** 건축물 부속토지 면적(㎡). 바닥면적(`resortBuildingFloorArea`) × 용도지역별 배율 상한과 비교해 작은 쪽을 인정한다(NBL2611-V9-DM09).
+   * 용도지역이 §101② 배율표에 없으면(residential 등) 상한을 계산할 수 없어 사용자가 상한 이내로 확정한 면적을 그대로 쓴다.
+   */
   resortBuildingAttachedArea?: number;
   /** 6호 휴양 §83의4⑫3호 — 건축물 바닥면적(㎡). zoneType→§101②(지방세법 시행령) 용도지역별 배율 자동(바닥 × 배율). F2 Phase B(B-3 배율 자동). */
   resortBuildingFloorArea?: number;

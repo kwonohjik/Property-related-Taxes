@@ -186,6 +186,8 @@ export const nonBusinessLandRawBaseSchema = z.object({
   // F2 Phase B(B-3) — 6호 휴양 §83의4⑫ 3요소
   nblOtherResortOutdoorArea: z.string().optional(),
   nblOtherResortParkingStdArea: z.string().optional(),
+  /** NBL2611-V9-DM09 — 실제 부설주차장용 토지 면적(㎡). 누락 시 strip되어 엔진이 상한 자체를 면적으로 읽는다 */
+  nblOtherResortParkingActualArea: z.string().optional(),
   nblOtherResortBuildingArea: z.string().optional(),
   // F2 Phase B(B-2) — 선수가산·실내미설치·종목합산
   nblOtherSportsPlayerCount: z.string().optional(),

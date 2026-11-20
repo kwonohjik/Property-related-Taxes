@@ -9,6 +9,7 @@
 import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
+import { resortAreaIssue } from "@/lib/tax-engine/non-business-land/resort-area-issue";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
 /** 기타토지(other_land) 정밀판정 입력 검증. 첫 오류 메시지 또는 null. */
@@ -53,12 +54,25 @@ export function validateNblOtherLand(asset: AssetForm, label: string): string | 
     const has3Element =
       (!!asset.nblOtherResortOutdoorArea && parseDecimal(asset.nblOtherResortOutdoorArea) > 0) ||
       (!!asset.nblOtherResortParkingStdArea && parseDecimal(asset.nblOtherResortParkingStdArea) > 0) ||
+      (!!asset.nblOtherResortParkingActualArea && parseDecimal(asset.nblOtherResortParkingActualArea) > 0) ||
       (!!asset.nblOtherResortBuildingArea && parseDecimal(asset.nblOtherResortBuildingArea) > 0) ||
       (!!asset.nblOtherResortBuildingFloorArea && parseDecimal(asset.nblOtherResortBuildingFloorArea) > 0);
     const hasDirect = !!asset.nblOtherStandardAreaLimit && parseDecimal(asset.nblOtherStandardAreaLimit) > 0;
     if (!has3Element && !hasDirect)
       // 3요소 칸이 먼저 보이고, 직접입력 칸은 3요소 중 하나라도 채워야 열린다(OtherLandDetailSection) — 첫 요소 칸으로
       return fieldError("nblOtherResortOutdoorArea", `${label}: 휴양시설 — 옥외방목장·부설주차장·건축물 부속토지 중 하나 또는 기준면적(㎡)을 입력하세요. (§83의4⑫)`);
+    // NBL2611-V9-DM09 — 2·3호는 «상한 이내 실제 면적»이다. 상한만 있고 실제 면적이 없으면 상한이 면적으로 읽히므로 막는다(엔진·⑫와 같은 술어).
+    const issue = resortAreaIssue({
+      parkingStd: parseDecimal(asset.nblOtherResortParkingStdArea),
+      parkingActual: parseDecimal(asset.nblOtherResortParkingActualArea),
+      buildingFloor: parseDecimal(asset.nblOtherResortBuildingFloorArea),
+      buildingActual: parseDecimal(asset.nblOtherResortBuildingArea),
+      zoneMapped: !!getZoneAreaMultiplier(asset.nblZoneType),
+    });
+    if (issue) {
+      const field = { parkingActual: "nblOtherResortParkingActualArea", parkingStd: "nblOtherResortParkingStdArea", buildingActual: "nblOtherResortBuildingArea" } as const;
+      return fieldError(field[issue.part], `${label}: ${issue.message}`);
+    }
   }
   // F2 Phase B — sports 유형별: employee→종업원수·보유시설 / workplace·business→종목 OR 직접입력
   if (bt === "sports") {

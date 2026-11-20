@@ -342,6 +342,7 @@ export function buildOtherLand(
     // F2 Phase B(B-3) — 6호 휴양 §83의4⑫ 3요소
     resortOutdoorArea:              parseNumber(asString(a.nblOtherResortOutdoorArea)),
     resortParkingStdArea:           parseNumber(asString(a.nblOtherResortParkingStdArea)),
+    resortParkingActualArea:        parseNumber(asString(a.nblOtherResortParkingActualArea)),
     resortBuildingAttachedArea:     parseNumber(asString(a.nblOtherResortBuildingArea)),
     // F2 Phase B(B-2) — 선수가산·실내미설치·종목합산
     sportsPlayerCount:              parseNumber(asString(a.nblOtherSportsPlayerCount)),

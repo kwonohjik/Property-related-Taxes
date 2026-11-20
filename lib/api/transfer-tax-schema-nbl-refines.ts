@@ -14,7 +14,9 @@
 import { z } from "zod";
 import { isNblRawUnconditionallyExempt } from "@/lib/calc/non-business-land-request";
 import { nblBusinessUsePeriodsApply, nblResidenceHistoryApplies } from "@/lib/calc/nbl-period-rows-scope";
-import { parseAmount } from "@/lib/calc/number-parse";
+import { parseAmount, parseDecimal } from "@/lib/calc/number-parse";
+import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
+import { resortAreaIssue } from "@/lib/tax-engine/non-business-land/resort-area-issue";
 import { graceRowIssue, type GraceRowLike } from "@/lib/tax-engine/non-business-land/grace-row-issue";
 import { deemedTransferDateIssue, deemedTransferDateIssueMessage } from "@/lib/tax-engine/non-business-land/deemed-transfer-date-range";
 import { consumesPeriodJudgmentDate } from "@/lib/tax-engine/non-business-land/land-category";
@@ -52,6 +54,12 @@ export interface NblRawRefineInput {
   nblRevenueCommonApportion?: boolean;
   nblRevenuePriorCommonRevenue?: string;
   nblRevenuePriorLandValue?: string;
+  nblZoneType?: string;
+  nblOtherRelatedBusinessType?: string;
+  nblOtherResortParkingStdArea?: string;
+  nblOtherResortParkingActualArea?: string;
+  nblOtherResortBuildingFloorArea?: string;
+  nblOtherResortBuildingArea?: string;
 }
 
 export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.RefinementCtx): void {
@@ -121,4 +129,19 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
     })
   )
     issue(["nblRevenuePriorLandValue"], PRIOR_REVENUE_LAND_VALUE_REQUIRED_MESSAGE);
+
+  // NBL2611-V9-DM09 — 6호 휴양시설 2·3호는 «상한 이내 실제 면적» — 상한만 있고 실제 면적이 없으면 400 (⑧ 휴양시설 블록과 같은 술어·같은 문구)
+  if (raw.nblLandType === "other_land" && raw.nblOtherRelatedBusinessType === "resort") {
+    const resort = resortAreaIssue({
+      parkingStd: parseDecimal(raw.nblOtherResortParkingStdArea),
+      parkingActual: parseDecimal(raw.nblOtherResortParkingActualArea),
+      buildingFloor: parseDecimal(raw.nblOtherResortBuildingFloorArea),
+      buildingActual: parseDecimal(raw.nblOtherResortBuildingArea),
+      zoneMapped: !!getZoneAreaMultiplier(raw.nblZoneType ?? ""),
+    });
+    if (resort) {
+      const key = { parkingActual: "nblOtherResortParkingActualArea", parkingStd: "nblOtherResortParkingStdArea", buildingActual: "nblOtherResortBuildingArea" } as const;
+      issue([key[resort.part]], resort.message);
+    }
+  }
 }
