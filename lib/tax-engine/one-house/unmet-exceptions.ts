@@ -37,6 +37,7 @@ import {
 import { collectRental4hoUnmet, RENTAL_4HO_UNMET_ID } from "./rental-registration-4ho";
 import { PARENTAL_CARE_AGE_CONFIRM_NOTICE, PARENTAL_CARE_AGE_UNMET_REASON, parentalCareAgeVerdict } from "./parental-care-age";
 import { checkReturnToFarmFacts } from "./rural-return-to-farm-facts";
+import { declaredRowAlreadyExcluded } from "../declared-row-excluded";
 import { deadlineHoldingUnmetReason } from "./deadline-holding";
 import { baseRequirementPhrase } from "./base-requirement-phrase";
 import { overlappedTemporaryTwoHouseTimingReasons } from "./unmet-deadline-reasons";
@@ -369,6 +370,7 @@ function collectTemporaryTwoHouseUnmet(
         { ...input, temporaryTwoHouse: input.temporaryTwoHouse },
         twoHouseRule,
         "농어촌주택(§155⑦)과 겹쳐 3주택이 된 경우에도 이 기한 안에 양도해야 합니다.",
+        true, // 선후 사유는 아래 순서 항목이 낸다(D-70)
       ),
     );
   }
@@ -378,6 +380,7 @@ function collectTemporaryTwoHouseUnmet(
         { ...input, temporaryTwoHouse: input.temporaryTwoHouse },
         twoHouseRule,
         "문화유산 주택(§155⑥)과 겹쳐 3주택이 된 경우에도 이 기한 안에 양도해야 합니다(상속증여세과-212).",
+        true, // 선후 사유는 아래 순서 항목이 낸다(D-70)
       ),
     );
   }
@@ -477,6 +480,17 @@ function pushTwoHouseCountReason(
 }
 
 /**
+ * 선언한 ⑥⑦⑧ 특례 주택 행이 **이미 다른 제외로 주택 수에서 빠진** 경우의 사유(2026-11 리뷰 D-23) — 정본(`declaredRowAlreadyExcluded`)은
+ * 그 행을 「각각 1개씩」의 상대방으로 다시 쓰지 않아 불성립인데, 종전에는 사유가 0건이었다.
+ */
+function pushAlreadyExcludedRowReason(reasons: string[], input: OneHouseJudgeInput, houseId: string | undefined, what: string): void {
+  if (!declaredRowAlreadyExcluded(input, houseId)) return;
+  reasons.push(
+    `${what}으로 선언한 주택이 이미 다른 특례(상속주택·조특법 감면주택 등)로 세대 주택 수에서 빠져 있어, 같은 주택을 이 특례의 상대방으로 다시 쓰지 않습니다 — 한 주택은 한 번만 반영합니다.`,
+  );
+}
+
+/**
  * §155⑧ 수도권 밖 부득이한 사유 주택 — 불성립 사유.
  *
  * 🔑 **「양도일 현재 미해소」 선택은 사유가 아니다.** 정본(`qualifiesUnavoidableOutsideCapital`)이 기한을 기산하지 않고
@@ -495,6 +509,7 @@ function collectUnavoidableUnmet(
   if (!u) return []; // 선언하지 않은 특례는 말하지 않는다
 
   const reasons: string[] = [];
+  pushAlreadyExcludedRowReason(reasons, input, u.houseId, "부득이한 사유로 취득한 수도권 밖 주택");
   // Q-18 (b) — ⑧ 부득이 주택 + 일반주택 + 신규 주택 3주택(일시적 2주택과 겹침)은 과세를 유지하되 「2주택에만 적용」으로 단정하지 않는다.
   //   ⑥·⑦은 겹침을 인정한 해석(상속증여세과-212 · 서면4팀-3617·-977)이 있지만 ⑧+①은 인정·부인 모두 정면 해석이 없다.
   if (input.householdHousingCount === 3 && input.temporaryTwoHouse) {
@@ -548,6 +563,7 @@ function collectCulturalHeritageUnmet(
   if (input.culturalHeritageHouse !== true) return []; // 선언하지 않은 특례는 말하지 않는다
 
   const reasons: string[] = [];
+  pushAlreadyExcludedRowReason(reasons, input, input.culturalHeritageHouseId, "문화유산 주택");
   // D3(D-02) — ⑥이 §155①과 겹친 3주택은 엔진이 성립시키는 주택 수다(`heritageTemporaryTwoHouseOverlapCountHolds`). 「2주택에만 적용」은 틀린 사유다.
   //   신규 주택(일시적 2주택 사실)이 없는 3주택은 겹침 모양이 아니라 그 사유가 맞다.
   if (!(heritageTemporaryTwoHouseOverlapCountHolds(input) && input.temporaryTwoHouse)) {
@@ -582,9 +598,11 @@ function collectRuralUnmet(
   if (!r) return []; // 선언하지 않은 특례는 말하지 않는다
 
   const reasons: string[] = [];
+  pushAlreadyExcludedRowReason(reasons, input, r.houseId, "농어촌주택");
   // D3 — ⑦이 §155①과 겹친 3주택은 엔진이 성립시키는 주택 수다(`ruralTemporaryTwoHouseOverlapCountHolds`). 「2주택에만 적용」은 틀린 사유다.
   //   귀농 5년 기한만 넘긴 3주택도 같다 — 탈락 원인은 기한이고, 그 기한은 2주택처럼 pending이 날짜와 함께 안내한다(D-07).
-  if (!ruralTemporaryTwoHouseOverlapApartFromDeadline(input)) {
+  //   신규 주택(일시적 2주택 사실)이 없는 3주택은 겹침 모양이 아니라 그 사유가 맞다 — ⑥과 같은 조건(I-03 격자가 찾은 무사유 과세).
+  if (!(ruralTemporaryTwoHouseOverlapApartFromDeadline(input) && input.temporaryTwoHouse)) {
     pushTwoHouseCountReason(reasons, input.householdHousingCount, "농어촌주택");
   }
   pushInheritedBothPoolsCapReason(reasons, input, "농어촌주택 특례(§155⑦)");

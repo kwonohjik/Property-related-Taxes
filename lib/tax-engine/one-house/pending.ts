@@ -48,6 +48,7 @@ import {
   mergeDeemingHouseCountHolds,
   qualifiesLongTermMortgageResidenceExemption,
   qualifiesRuralHouseApartFromDeadline,
+  qualifiesUnavoidableOutsideCapital,
   resolveExemptionHoldingStartDate,
   RURAL_RETURN_TO_FARM_TRANSFER_YEARS,
   ruralReturnToFarmDeadlineApplies,
@@ -64,7 +65,7 @@ import {
   resolveHighValuePriceCheck,
 } from "./threshold";
 import { resolveFinalOneHouseRestart } from "./final-house-restart";
-import { meetsHoldingResidenceOnDeadline } from "./deadline-holding";
+import { meetsHoldingResidenceOnDeadline, withResidenceAtDeadlineNote } from "./deadline-holding";
 import type {
   OneHouseAppliedException,
   OneHouseJudgeInput,
@@ -245,8 +246,12 @@ export function collectPendingConditions(
         id: "155-1-disposal-deadline",
         kind: "transfer_by",
         description: `신규주택 취득일부터 이 날짜까지 종전주택을 양도해야 ${exempt}`,
-        deadline: timing.deadline,
-        ...(timing.deadlineNote ? { deadlineNote: timing.deadlineNote } : {}),
+        // D-05 — 말일 현재 거주가 하한으로 확인되지 않으면 조건을 붙인다.
+        ...withResidenceAtDeadlineNote(
+          { deadline: timing.deadline, ...(timing.deadlineNote ? { deadlineNote: timing.deadlineNote } : {}) },
+          input,
+          rule,
+        ),
         /**
          * 🔴 **`shortArticle`을 쓰지 않는다.** 이 필드는 `exemptReason` 문장 속 인라인 인용이
          *    아니라 화면이 `LawArticleModal legalBasis=`로 넘기는 **구조화 인용**이다.
@@ -309,11 +314,13 @@ export function collectPendingConditions(
     // 기한 내인데 과세면 원인이 다른 곳이다
     if (isWithinDeadline(axis.mergeDate, years, input.transferDate)) continue;
     if (!meetsOneHouseHoldingResidence(input, rule)) continue;
+    // 기한 말일에 양도했더라도 §154① 보유·거주를 채워야 이룰 수 있는 약속이다 — ⑦3호·⑧·§155① 축과 같은 확인(2026-11 리뷰 D-05 · 종전에는 이 축만 없었다).
+    if (!meetsHoldingResidenceOnDeadline(input, rule, dl.end)) continue;
     pending.push({
       id: axis.id,
       kind: "transfer_by",
       description: `${axis.label}부터 이 날짜까지 두 주택 중 먼저 양도하는 주택을 양도해야 ${exempt}`,
-      ...deadlineFields(dl),
+      ...withResidenceAtDeadlineNote(deadlineFields(dl), input, rule),
       legalBasis: axis.basis,
     });
   }
@@ -325,10 +332,13 @@ export function collectPendingConditions(
    * 막고, 엔진은 직접 호출 방어로 불성립이다(#31). 2012.2.2. 전 해소분은 기한이 없어 기한 안내도 없다.
    */
   const unavoidable = input.unavoidableOutsideCapitalHouse;
-  if (unavoidable?.resolvedDate && unavoidableResolvedDeadlineApplies(unavoidable.resolvedDate) && twoHouseSpecialCountHolds(input)) {
+  if (unavoidable?.resolvedDate && unavoidableResolvedDeadlineApplies(unavoidable.resolvedDate)) {
     const dl = deadlineEndFrom(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS);
     if (
       !isWithinDeadline(unavoidable.resolvedDate, UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS, input.transferDate) &&
+      // 정본 반사실 — 말일에 양도했다면 ⑧이 서는가(2주택 게이트·이미 주택 수에서 빠진 행 대조를 정본이 본다 · 2026-11 리뷰 D-19).
+      //   종전에는 주택 수 게이트만 봐서 이미 빠진 부득이 행에도 「이 날까지 양도하면 비과세」를 약속했다.
+      qualifiesUnavoidableOutsideCapital({ ...input, transferDate: dl.end }) &&
       meetsOneHouseHoldingResidence(input, rule) &&
       // 기한일에 양도해도 §154① 보유 2년이 모자라면 이룰 수 없는 약속이다(S07-4) — 사유는 `collectUnavoidableUnmet`이 말한다.
       meetsHoldingResidenceOnDeadline(input, rule, dl.end)
@@ -337,7 +347,7 @@ export function collectPendingConditions(
         id: "155-8-unavoidable-resolved",
         kind: "transfer_by",
         description: `부득이한 사유가 해소된 날부터 이 날짜까지 일반주택을 양도해야 ${exempt}`,
-        ...deadlineFields(dl),
+        ...withResidenceAtDeadlineNote(deadlineFields(dl), input, rule),
         legalBasis: TRANSFER.UNAVOIDABLE_OUTSIDE_CAPITAL,
       });
     }
@@ -367,7 +377,7 @@ export function collectPendingConditions(
         id: "155-7-3ho-return-to-farm",
         kind: "transfer_by",
         description: `귀농주택 취득일부터 이 날짜까지 일반주택을 양도해야 ${exempt}`,
-        ...deadlineFields(dl),
+        ...withResidenceAtDeadlineNote(deadlineFields(dl), input, rule),
         // 위와 같은 이유로 법령명을 남긴다 — `§155⑦3호`만으로는 파싱되지 않는다.
         legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦3호`,
       });
@@ -406,15 +416,18 @@ export function collectPendingConditions(
               id: "155-7-3ho-return-to-farm",
               kind: "transfer_by",
               description: `귀농주택 취득일부터 이 날짜까지 일반주택을 양도해야 ${exempt}`,
-              ...deadlineFields(ruralDl),
+              ...withResidenceAtDeadlineNote(deadlineFields(ruralDl), input, rule),
               legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦3호`,
             }
           : {
               id: "155-1-disposal-deadline",
               kind: "transfer_by",
               description: `신규주택 취득일부터 이 날짜까지 종전주택을 양도해야 ${exempt}`,
-              deadline: timing.deadline,
-              ...(timing.deadlineNote ? { deadlineNote: timing.deadlineNote } : {}),
+              ...withResidenceAtDeadlineNote(
+                { deadline: timing.deadline, ...(timing.deadlineNote ? { deadlineNote: timing.deadlineNote } : {}) },
+                input,
+                rule,
+              ),
               legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}①`,
             },
       );

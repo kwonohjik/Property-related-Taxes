@@ -52,6 +52,7 @@ import {
 } from "../transfer-tax-exemption-requirements";
 import { twoHouseSpecialCountHolds } from "../transfer-tax-exemption-holding";
 import { meetsTemporaryTwoHouseHoldingOnDeadline } from "./pending";
+import { residenceAtDeadlineNote, residenceAtDeadlineUnconfirmed } from "./deadline-holding";
 import { baseRequirementPhrase } from "./base-requirement-phrase";
 import {
   formatHighValueThresholdLabel,
@@ -94,7 +95,9 @@ export const DOUBLE_MERGE_COMPOSITION_LABEL = "혼인·동거봉양 두 합가�
 function reachableDeadlineNote(deadline: Date): string {
   return `${fmt(deadline)}까지 양도하면 이 요건을 충족합니다.`;
 }
-export const REACHABLE_DEADLINE_NOTE_PATTERN = /\s*\d{4}-\d{2}-\d{2}까지 양도하면 이 요건을 충족합니다\./;
+// D-05 — 뒤에 붙는 말일 현재 거주 조건(`residenceAtDeadlineNote`)도 같은 날짜를 가리키므로 함께 걷어 낸다.
+export const REACHABLE_DEADLINE_NOTE_PATTERN =
+  /\s*\d{4}-\d{2}-\d{2}까지 양도하면 이 요건을 충족합니다\.(?: 이 날짜에 양도할 때 [^]*?\(확인 필요\)\.)?/;
 
 /**
  * 「이 날까지 양도」 기한이 **판정 기준일에 아직 이룰 수 있는가** — 기한 당일까지 양도할 수 있다.
@@ -273,7 +276,9 @@ function temporaryTwoHouseItems(
           !meetsTemporaryTwoHouseHoldingOnDeadline(input, rule, provisoRelaxesHolding, timing.deadline)
           ? `처분기한(${fmt(timing.deadline)})에 양도했더라도 그 날에는 종전주택이 ${baseRequirementPhrase(timing.deadline, rule)} ` +
             "요건을 충족하지 못해, 기한 안에 양도하는 것으로는 이 특례가 성립하지 않습니다."
-          : reachableDeadlineNote(timing.deadline),
+          : reachableDeadlineNote(timing.deadline) +
+            // D-05 — 말일 현재 거주가 하한으로 확인되지 않으면 pending과 같은 조건을 붙인다.
+            (residenceAtDeadlineUnconfirmed(input, rule, timing.deadline) ? ` ${residenceAtDeadlineNote(rule, timing.deadline)}` : ""),
     );
   }
   if (timing.deadlineNote) deadlineNotes.push(timing.deadlineNote);
