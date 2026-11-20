@@ -350,6 +350,7 @@ export async function POST(request: NextRequest) {
         // ⑭ §164⑨ 1호 공익수용 특례 (토지 전용 — D16-GB): top-level 특례 필드 전달.
         {
           transferCause: data.transferCause,
+          expropriationNoticeDate: engineInput.appurtenantExcessFacts?.expropriationNoticeDate, // NBL2611-C4
           compensationPerSqm: data.compensationPerSqm,
           compensationBasisStdPrice: data.compensationBasisStdPrice,
         },

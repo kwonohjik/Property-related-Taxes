@@ -26,6 +26,7 @@
  * ※ 영 §154⑦(§89①3호 위임)은 **비과세 축**이라 여기서는 근거가 아니다 — 배율 수치만 동일하다.
  */
 
+import { toEngineAppurtenantExcessFacts } from "@/lib/api/appurtenant-excess-coerce";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { toEngineRedevelopment } from "./engine-input";
 import { withRedevCommonExpense } from "./engine-input";
@@ -382,6 +383,7 @@ export function buildCompanionEngineInputs(
     // 엔진이 게이트 판정(적격 자산·환산·수용·2009.02.04·후보>0) — 여기선 원값만 전달.
     // ⚠️ 이 매핑이 없으면 ⑫ Zod를 통과한 값이 엔진에 **도달하지 못한다**(명시 매핑 = 침묵 strip 지점).
     transferCause: c.transferCause,
+    appurtenantExcessFacts: toEngineAppurtenantExcessFacts(c.appurtenantExcessFacts), // ⑭ NBL2611-C4 — 컴패니언 주택·상가 배율 초과분 수용 의제·유예 사실
     standardPricePerSqmAtTransfer: c.standardPricePerSqmAtTransfer,
     transferArea: c.transferArea,
     compensationPerSqm: c.compensationPerSqm,
@@ -543,6 +545,7 @@ export function buildCompanionEngineInputs(
         // §164⑨1호 공익수용 — 단건 `dispatchGeneralBuilding`과 같은 3필드(빠지면 특례가 조용히 사라진다 · anchor `bundled-gb-expropriation`)
         expropriation: {
           transferCause: companionEngine.transferCause,
+          expropriationNoticeDate: companionEngine.appurtenantExcessFacts?.expropriationNoticeDate, // NBL2611-C4
           compensationPerSqm: companionEngine.compensationPerSqm,
           compensationBasisStdPrice: companionEngine.compensationBasisStdPrice,
         },

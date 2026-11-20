@@ -3,6 +3,7 @@
  * transfer-tax-api.ts 800줄 정책에 따라 분리.
  */
 
+import { buildAppurtenantExcessFacts } from "./appurtenant-excess-facts";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { sec164LandAreaField } from "./transfer-163-9-base-date";
 import { exprCompensationSendGates } from "./transfer-tax-validate-expropriation";
@@ -434,8 +435,11 @@ export { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
  */
 export function buildExpropriationInput(primary: AssetForm, transferDate: string | undefined) {
   const send = exprCompensationSendGates(primary, transferDate);
+  const excessFacts = buildAppurtenantExcessFacts(primary, transferDate);
   return {
     transferCause: primary.transferCause,
+    // NBL2611-C4 — 배율 초과분 수용 의제(고시일)·유예기간. 단건·다건이 이 함수를 같이 쓴다.
+    ...(excessFacts ? { appurtenantExcessFacts: excessFacts } : {}),
     // §164⑨1호 per-sqm(가~다목) — **per-sqm 적격 자산일 때만** 전송(`buildAssetPayload` 컴패니언과 대칭).
     // ⚠️ 무게이트면 land→housing 전환 시 stale per-sqm 값이 주택 총액 트랙을 침묵 shadowing한다
     //    (엔진도 housing 배제로 방어하나 여기서도 원천 차단 — 코드리뷰 2026-07-16).

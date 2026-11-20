@@ -79,15 +79,19 @@ export const NBL_PROPERTY_TAX_TYPE_MIXED_NOTICE =
   `${NBL.BUILDING_SITE_SEPARATE_AGG_PROVISO}(허가 등을 받지 않은 건축물, 사용승인 없이 사용 중인 건축물의 부속토지는 별도합산 제외) 해당 여부는 판정하지 않으며, ` +
   `어느 쪽을 선택했는지에 따라 비사업용 판정이 달라질 수 있습니다 — 확인 필요.`;
 
-/** 일반건물 결과 상세에서 초과분(전체 비사업용 포함)이 있으면 붙는 고지 목록. 한도 이내면 빈 목록. */
-export function gbExcessConfirmNotices(detail: { nonBusinessRatio?: number } | undefined): string[] {
-  return (detail?.nonBusinessRatio ?? 0) > 0
-    ? [NBL_BUILDING_SITE_EXCESS_UNJUDGED_NOTICE, NBL_STATE_AT_TRANSFER_APPLIED_NOTICE]
-    : [];
+/**
+ * 일반건물 결과 상세에서 초과분(전체 비사업용 포함)이 있으면 붙는 고지 목록. 한도 이내면 빈 목록.
+ * NBL2611-C4 — 수용 의제 고지(`expropriationDeemNotices`)는 초과분이 없어도(의제로 비사업용에서 빠진 경우 포함) 싣는다.
+ */
+export function gbExcessConfirmNotices(detail: { nonBusinessRatio?: number; expropriationDeemNotices?: string[] } | undefined): string[] {
+  return [
+    ...((detail?.nonBusinessRatio ?? 0) > 0 ? [NBL_BUILDING_SITE_EXCESS_UNJUDGED_NOTICE, NBL_STATE_AT_TRANSFER_APPLIED_NOTICE] : []),
+    ...(detail?.expropriationDeemNotices ?? []),
+  ];
 }
 
 /** 여러 일반건물 상세의 고지를 중복 없이 모은다 — 함께 양도·다건이 자산마다 같은 문구를 반복하지 않게. */
-export function mergeGbExcessConfirmNotices(details: ReadonlyArray<{ nonBusinessRatio?: number } | undefined>): string[] {
+export function mergeGbExcessConfirmNotices(details: ReadonlyArray<{ nonBusinessRatio?: number; expropriationDeemNotices?: string[] } | undefined>): string[] {
   return [...new Set(details.flatMap(gbExcessConfirmNotices))];
 }
 
@@ -119,3 +123,19 @@ export function cbMixedSignLthdNotice(part: { applied: boolean; landGain: number
   if (!part?.applied) return undefined;
   return (part.landGain > 0 && part.buildingGain < 0) || (part.landGain < 0 && part.buildingGain > 0) ? NBL_CB_MIXED_SIGN_LTHD_NOTICE : undefined;
 }
+
+/**
+ * NBL2611-C4 (R16 · Q-3b) — 공익수용 양도인데 사업인정 고시일이 비어 배율 초과분의 무조건 의제(영 §168의14③3호)를 판정하지 못했다는 고지.
+ * 「모름 = 혜택 불성립」 — 의제하지 않고 초과분을 비사업용으로 보았다. 입력을 막지는 않는다(고시일을 모르는 납세자도 계산은 받는다).
+ */
+export const NBL_EXPROPRIATION_NOTICE_DATE_MISSING_NOTICE =
+  `공익사업 수용 양도이나 사업인정 고시일이 입력되지 않아 배율(기준면적) 초과분에 대한 ${NBL.UNCONDITIONAL_PUBLIC}의 무조건 사업용 의제를 판정하지 못했습니다. ` +
+  `의제하지 않고 초과분을 비사업용 토지로 보아 계산했습니다 — 사업인정 고시일을 입력하면 다시 판정합니다 — 확인 필요.`;
+
+/**
+ * NBL2611-C4 — 건물(비주택) 부속토지 초과분의 수용 의제에서 이월과세(법 §97의2) 토지는 적용 여부가 비교과세로 정해져 증여자 취득일로 소급할 수 없다는 고지.
+ * 일반건물·상가 카드는 시나리오 분기 전에 초과분을 가르므로 수증일을 기준으로 판정했다 — 이월과세가 적용되면 증여자 취득일 기준이라 결과가 달라질 수 있다.
+ */
+export const NBL_EXPROPRIATION_CARRYOVER_BASIS_NOTICE =
+  `배율 초과분의 ${NBL.UNCONDITIONAL_PUBLIC} 판정에서 이월과세(소득세법 §97의2) 토지는 수증일을 취득일로 보았습니다. ` +
+  `이월과세가 적용되면 증여한 배우자 또는 직계존비속이 해당 자산을 취득한 날이 기준이라(같은 호 나목 괄호) 의제 여부가 달라질 수 있습니다 — 확인 필요.`;

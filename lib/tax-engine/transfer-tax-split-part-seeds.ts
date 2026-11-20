@@ -106,7 +106,7 @@ export function buildSplitPartSeeds(
       raw: (nbPart.taxableGainAfterProration ?? nbPart.gain) - nbPart.longTermDeduction,
       // 주택 단기세율(§104①2·3호)이 아니라 §104①8호 누진 + 10%p. `propertyType`을 토지로 두어야
       // `calcTax`의 주택 분기(70%/60%)에 걸리지 않는다.
-      rateInput: buildNblPartRateInput(input, nbBasisDate),
+      rateInput: buildNblPartRateInput(input, nbBasisDate, nbPart.deemedBusiness !== undefined),
     });
   }
   return seeds;

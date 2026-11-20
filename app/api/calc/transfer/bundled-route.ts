@@ -300,6 +300,7 @@ export function calculateBundledTransfer(
           // §164⑨1호 공익수용 — 단건 `dispatchGeneralBuilding`과 같은 최상위 3필드(빠지면 특례가 조용히 사라진다 · anchor `bundled-gb-expropriation`)
           expropriation: {
             transferCause: primaryItem.transferCause,
+            expropriationNoticeDate: primaryItem.appurtenantExcessFacts?.expropriationNoticeDate, // NBL2611-C4
             compensationPerSqm: primaryItem.compensationPerSqm,
             compensationBasisStdPrice: primaryItem.compensationBasisStdPrice,
           },

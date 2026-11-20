@@ -55,6 +55,9 @@ import {
 import { MixedUseAreaInputs } from "../mixed-use/MixedUseAreaInputs";
 import { NblDesignatedAreaQuestion } from "../nbl/NblDesignatedAreaQuestion";
 import { housingExcessAreaOfAsset } from "@/lib/calc/housing-excess-split";
+import { housingExcessGraceApplies } from "@/lib/calc/appurtenant-excess-facts";
+import { GracePeriodSection } from "../nbl/GracePeriodSection";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   AssetFootprintField,
   isFootprintConsumed,
@@ -546,6 +549,21 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsse
           idSuffix={`housing-${asset.assetId ?? "primary"}`}
           subject="배율 초과 부수토지(비사업용 토지)"
         />
+      )}
+      {/* NBL2611-C4 — 배율 초과분(주택 부수토지)을 비사업용 토지로 보지 않는 사유. 수용 의제는 「공익수용」 카드의 사업인정고시일(영 §168의14③3호),
+          유예는 NBL 섹션과 같은 입력(영 §168의14①). 노출·④ 전송·⑧ 검증이 같은 술어(`housingExcessGraceApplies`)다. */}
+      {housingExcessGraceApplies(asset, transferDate) && (
+        <div className="space-y-2" data-testid="housing-excess-grace">
+          {asset.transferCause === "public_expropriation" && (
+            <ToneCard tone="amber" title="공익수용 — 사업인정고시일로 초과분을 판정합니다">
+              <p className="text-xs text-amber-800 dark:text-amber-200 leading-snug">
+                배율 초과분은 사업인정고시일 전에 취득한 토지(고시일이 2006.12.31. 이전이거나 취득일이 고시일부터 일정 기간 이전)이면 비사업용 토지로 보지 않습니다
+                (「소득세법 시행령」 §168의14③3호). 「공익수용」 카드의 사업인정고시일을 입력하세요 — 비어 있으면 의제하지 않고 초과분을 비사업용으로 계산합니다 — 확인 필요.
+              </p>
+            </ToneCard>
+          )}
+          <GracePeriodSection asset={asset} onAssetChange={onChange} transferDate={transferDate} />
+        </div>
       )}
     </>
   );

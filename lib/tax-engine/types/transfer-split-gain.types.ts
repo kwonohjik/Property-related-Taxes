@@ -331,6 +331,19 @@ export interface SplitNonBusinessLandPart {
   /** 장기보유특별공제율 (표1) */
   longTermRate: number;
   longTermDeduction: number;
+  /**
+   * NBL2611-C4(R16) — 배율을 넘는 면적이지만 영 §168의14③3호(공익수용 무조건 의제) 또는 ①(유예기간)으로 **비사업용 토지로 보지 않는** 초과분.
+   * 초과분은 비과세 범위(영 §154⑦)가 아니라서 여전히 이 파트로 떼어 과세하되, 세율 판정은 비사업용(+10%p)이 아니라 일반 토지다. 없으면 비사업용 토지.
+   */
+  deemedBusiness?: DeemedBusinessExcess;
+}
+
+/** 배율 초과분을 비사업용 토지로 보지 않은 사유 — `SplitNonBusinessLandPart.deemedBusiness` */
+export interface DeemedBusinessExcess {
+  reason: "public_expropriation" | "grace_period";
+  /** 결과 카드·고지에 쓰는 한 문장 */
+  detail: string;
+  legalBasis: string;
 }
 
 /**

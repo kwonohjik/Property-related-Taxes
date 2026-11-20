@@ -4,6 +4,7 @@
  * 800줄 정책에 따라 `transfer-tax-schema-sub.ts`에서 분리(2026-09-30). 공개 경로는 종전대로
  * `transfer-tax-schema-sub.ts`의 재export다.
  */
+import { appurtenantExcessFactsSchema } from "./transfer-tax-schema-appurtenant-excess";
 import { preDeemedPurchaseSchema } from "./transfer-tax-schema-pre-deemed-purchase";
 import { z } from "zod";
 import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
@@ -205,6 +206,8 @@ export const companionAssetSchema = z.object({
    * ⚠️ 2호(공매·경락)는 조문상 수용을 요건으로 하지 않는다 — `transferCause`에 종속시키지 말 것.
    */
   transferCause: z.enum(["general", "public_expropriation"]).optional(),
+  // ⑫ NBL2611-C4 — 배율 초과분 수용 의제(영 §168의14③3호)·유예(①) 판정 사실. 누락 시 침묵 strip → 엔진 미도달.
+  appurtenantExcessFacts: appurtenantExcessFactsSchema,
   /** §164⑨1호 원/㎡ 트랙 (가·나목) — 엔진이 게이트, 여기선 strip 방지 */
   standardPricePerSqmAtTransfer: z.number().int().nonnegative().optional(),
   transferArea: z.number().positive().optional(),

@@ -8,6 +8,7 @@
  * ⚠️ **명시 필드 매핑**(spread 아님)이라 신규 엔진 필드는 여기 추가하지 않으면 **침묵 strip**된다
  *    (memory `feedback_explicit_prop_mapping_strip`). ⑫ Zod(`companionAssetSchema`)도 함께 넓힐 것.
  */
+import { buildAppurtenantExcessFacts } from "./appurtenant-excess-facts";
 import { inheritedPresalePayload } from "./unsold-98-inherited-presale";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
@@ -358,6 +359,11 @@ export function buildAssetPayload(
       isHousingExprEligibleAssetKind(asset.assetKind)) && asset.transferCause
       ? { transferCause: asset.transferCause }
       : {}),
+    // NBL2611-C4 — 컴패니언 주택·상가의 배율 초과분 수용 의제·유예 사실(주 자산과 같은 빌더)
+    ...(() => {
+      const f = buildAppurtenantExcessFacts(asset, form?.transferDate);
+      return f ? { appurtenantExcessFacts: f } : {};
+    })(),
     // min[] 3후보 값은 여기서 실어야
     // `buildCompanionEngineInputs`가 엔진 input에 매핑할 수 있다(⑫ 컴패니언 스키마 동반 필수).
     //

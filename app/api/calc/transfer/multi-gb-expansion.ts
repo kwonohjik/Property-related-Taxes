@@ -146,6 +146,7 @@ export function expandMultiGeneralBuildings(
         // §164⑨ 1호 — 단건 route가 `dispatchGeneralBuilding`에 넘기는 최상위 3필드(V-G3: 빠지면 환산 분모 특례가 사라진다)
         expropriation: {
           transferCause: item.transferCause,
+          expropriationNoticeDate: item.appurtenantExcessFacts?.expropriationNoticeDate, // NBL2611-C4
           compensationPerSqm: item.compensationPerSqm,
           compensationBasisStdPrice: item.compensationBasisStdPrice,
         },
