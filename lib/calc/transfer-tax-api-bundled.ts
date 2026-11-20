@@ -21,6 +21,8 @@ import { neutralizeCarryoverDonorSplitForCompanion } from "./transfer-land-part-
 import type { buildPrimaryContext } from "./transfer-tax-api-primary-context";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { buildFractionalShareNblRecord } from "./non-business-land-request";
+import { buildAppurtenantExcessFacts } from "./appurtenant-excess-facts";
+import { appurtenantExcessShareView } from "./appurtenant-excess-facts";
 import { companionRegulatedFlags } from "./effective-regulated-at-acquisition";
 
 /**
@@ -84,7 +86,8 @@ export function buildBundledPrimaryPayload(c: {
       //    신고 단위 1회만 보내고 엔진이 §100② 후단(가액 비례)으로 안분한다(Q08).
       //    자산별 직접 입력분(`transferExpense`)은 그대로 `directExpenses`로 더해진다.
       .map((a, ci) => {
-        const payload = buildAssetPayload(neutralizeCarryoverDonorSplitForCompanion(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, true), effBundledSaleMode, form.transferDate, totalContractPrice, undefined, form.assets[0], form.isOneHousehold, companionBgDebtOverrides?.[ci + 1], form);
+        const companionAsset = neutralizeCarryoverDonorSplitForCompanion(fractionalBundleMerge ? mergePrimaryBasic(a, primary) : a, true);
+        const payload = buildAssetPayload(companionAsset, effBundledSaleMode, form.transferDate, totalContractPrice, undefined, form.assets[0], form.isOneHousehold, companionBgDebtOverrides?.[ci + 1], form);
         // ⑬ 축 B 토지 지분 — 첫 카드 정밀판정을 이 지분 취득 사실로 다시 판정하게 싣는다(없으면 첫 카드 표지 `true`만 남아 «사업용» 판정이어도 +10%p).
         // NBL2611-V6-PU01 — 비지분 컴패니언 토지도 자기 카드의 정밀판정을 싣는다. 종전에는 raw가 없어 화면이 「무조건 사업용」·「사업용」을
         //   확정해도 서버는 표지(`isNonBusinessLand: true`)만 보고 이 카드 전량에 +10%p를 붙였다. 주 자산(`transfer-tax-api.ts`)과 같은 빌더다.
@@ -120,6 +123,10 @@ export function buildBundledPrimaryPayload(c: {
             : {};
         return {
           ...payload,
+          // NBL2611-C6 — 축 B 지분 카드의 배율 초과분 사실(수용 의제 고시일·유예 행)은 첫 카드 값 + 지분 자신의 취득일 기산. 지분 카드에는 두 칸이 없어 payload 안(병합 자산) 값은 비어 있다.
+          ...(fractionalBundleMerge
+            ? { appurtenantExcessFacts: buildAppurtenantExcessFacts(appurtenantExcessShareView(companionAsset, primary), form.transferDate) }
+            : {}),
           // ⑬ 컴패니언 주택은 자기 소재지·날짜로 조정대상지역을 판정한다(없으면 ⑭가 주 자산 값) — 같은 물건 지분(축 B)은 소재지가 주 자산과 같다.
           ...(fractionalBundleMerge ? {} : companionRegulatedFlags(a, form.transferDate)),
           ...hfReductions,

@@ -81,3 +81,26 @@ export function buildAppurtenantExcessFacts(asset: AssetForm, transferDate: stri
     ...(graceIntervals.length > 0 ? { graceIntervals } : {}),
   };
 }
+
+/**
+ * 축 B(같은 물건 지분 분할) 지분 카드가 배율 초과분 사실을 읽는 «뷰» (NBL2611-C6).
+ *
+ * 지분 카드는 ① 기본정보·② 양도정보를 숨겨 사업인정 고시일(② `ExpropriationBlock`)과 유예 행(① `AssetAreaSection`)을 받을 칸이 없다 — 두 사실은 첫 카드에만 있다.
+ * 둘 다 **땅(물건) 단위 사실**이라 첫 카드 값을 읽는다(토지 지분이 `buildFractionalShareNblRecord`로 땅 사실은 첫 카드·취득 사실은 지분 값을 쓰는 것과 같은 규약).
+ * 유예 구간의 기산(취득일)은 지분 카드 자신의 값 그대로다 — `housingExcessGraceIntervals`가 자산 취득일로 기산하므로 같은 행이 지분마다 따로 해석된다.
+ *
+ * 🔴 `mergePrimaryBasic`에 두 키를 **넣지 않는다**: 그 병합값은 ⑧·감면 변환·사이드바가 함께 읽는다. 실측(2026-11-21)으로 넣으면
+ *   ⑧이 지분 카드에 «고칠 칸 없는» 유예 행 오류(자산 2: 종료일을 입력하세요)를 내고, 지분 카드의 공익수용 감면 행(고시일 공란)은 ⑧ 오류 대신 첫 카드 고시일로
+ *   조용히 채워졌다(§77 `businessApprovalDate` "" → 첫 카드 값). 이 함수는 ④가 `appurtenantExcessFacts`를 만드는 한 지점에서만 쓴다.
+ *
+ * @param share `mergePrimaryBasic`을 거친 지분 카드(양도원인·초과분 면적이 첫 카드 값으로 병합된 자산)
+ */
+export function appurtenantExcessShareView(share: AssetForm, primary: AssetForm): AssetForm {
+  return {
+    ...share,
+    expropriationNoticeDate: primary.expropriationNoticeDate,
+    nblGracePeriods: primary.nblGracePeriods,
+    // 유예 사유 «부동산매매업자 사정» 해석이 읽는 표지 — 첫 카드 NBL 섹션 값(땅·사업 단위)
+    nblBusinessIsRealEstateDealer: primary.nblBusinessIsRealEstateDealer,
+  };
+}
