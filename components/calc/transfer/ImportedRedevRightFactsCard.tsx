@@ -25,6 +25,7 @@
  * 🔑 **선언된 것만 보여 준다.** 4필드를 전부 나열하면 「—」가 쌓여 실제 선언이 묻힌다.
  */
 import Link from "next/link";
+import { OpenSourceJudgmentLink } from "./OpenSourceJudgmentLink";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
@@ -133,7 +134,7 @@ export function ImportedRedevRightFactsCard({
             <LawArticleModal legalBasis="소득세법 §89 ① 4호" label="법 §89①4호" />
           </p>
           <p className="text-caption text-muted-foreground">
-            이 화면에서는 수정할 수 없습니다 — 고치려면 판정 메뉴로 돌아가 다시 판정하세요.
+            이 화면에서는 수정할 수 없습니다 — 고치려면 판정 메뉴로 돌아가 다시 판정하세요. <OpenSourceJudgmentLink />
           </p>
           <dl className="space-y-1 text-sm">
             {rows.map((r) => (
