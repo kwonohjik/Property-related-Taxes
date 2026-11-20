@@ -18,6 +18,9 @@ import {
   resolve1562DeadlineYears,
 } from "./data/article-156-2-completion-era";
 
+/** 일반 배제 사유 카드 제목(D-47·D-21) — 판정 메뉴 불성립 사유 카드와 계산기 경고가 같은 낱말을 쓴다. */
+export const ARTICLE_89_2_GENERAL_EXCLUSION_LABEL = "주택과 조합원입주권·분양권을 함께 보유한 세대의 §89② 예외";
+
 const fmtDate = (d: Date) => `${d.getUTCFullYear()}.${d.getUTCMonth() + 1}.${d.getUTCDate()}.`;
 
 /** 이 코어가 읽는 입력 — 양도 주택 취득일(종전주택)·양도일·3년 초과 예외 선언뿐이다. */
@@ -46,6 +49,7 @@ export function rightTimingCore(
   if (rightDay < houseDay) {
     return {
       status: "excluded",
+      exclusionLabel: ARTICLE_89_2_GENERAL_EXCLUSION_LABEL,
       exclusionReasons: [
         `${rightLabel}을 양도 주택 취득일(${fmtDate(input.acquisitionDate)})보다 앞선 ${fmtDate(rightAcq)}에 취득했습니다 — ` +
           `1주택을 가진 세대가 그 주택을 양도하기 전에 권리를 취득한 경우가 아니라 ${clauseLabel}을 적용하지 않습니다(서면-2021-법규재산-8011).`,
@@ -145,6 +149,13 @@ export function rightTimingCore(
       status: "excluded",
       ...(thirdClauseOpen ? { deadline, ...(note ? { deadlineNote: note } : {}) } : {}),
       ...completionNotice,
+      exclusionLabel: ARTICLE_89_2_GENERAL_EXCLUSION_LABEL,
+      exclusionBasis: fourthClause,
+      exclusionReasons: [
+        declared.kind === "none"
+          ? `${rightLabel} 취득일(${fmtDate(rightAcq)})부터 ${clause3Years}년이 지나 양도했고, 3년 경과 예외(${fourthClause})에 해당하지 않는다고 선언해 적용하지 않았습니다.`
+          : `${rightLabel} 취득일(${fmtDate(rightAcq)})부터 ${clause3Years}년이 지나 양도했고, 선언한 3년 경과 예외(${declared.kind === "delay" ? "소득세법 시행규칙 §75 ①" : fourthClause})의 요건을 갖추지 못해 적용하지 않았습니다.`,
+      ],
     };
   }
 
@@ -153,7 +164,15 @@ export function rightTimingCore(
    * 한정) 2022-02-15 이후 취득 권리라 1년 요건을 함께 요구한다. 나머지 예외는 위에서 전부
    * 배제됐다. ⇒ §89② 본문이 그대로 적용된다.
    */
-  return { status: "excluded" };
+  return {
+    status: "excluded",
+    exclusionLabel: ARTICLE_89_2_GENERAL_EXCLUSION_LABEL,
+    exclusionBasis: `소득세법 시행령 ${clause}`,
+    exclusionReasons: [
+      `양도 주택 취득일(${fmtDate(input.acquisitionDate)})부터 1년이 지나기 전(${fmtDate(rightAcq)})에 ${rightLabel}을 취득했습니다 — ` +
+        `${clause}는 종전주택을 취득한 날부터 1년 이상이 지난 후 권리를 취득해야 하고, 그 요건을 면제하는 사유(§154①1호·2호가목·3호)도 없어 적용하지 않았습니다.`,
+    ],
+  };
 }
 
 /**
