@@ -513,6 +513,19 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
       )}
 
       {/*
+        미등기 — 엔진의 첫 관문이다(「소득세법」 §91① — 비과세 규정 배제). 계획서 step-reorder §5의 「거주기간 · 미등기」 순서대로 특례 칸보다 앞에 둔다
+        (2026-11 리뷰 D-30 — 종전엔 화면 맨 끝이라 §154⑩ 답을 먼저 요구받았다).
+      */}
+      <ToggleCard
+        data-testid="one-house-unregistered"
+        checked={form.isUnregistered}
+        onCheckedChange={(isUnregistered) => onChange({ isUnregistered })}
+        title="미등기 양도자산입니다"
+        description={`미등기 양도는 비과세(소득세법 §91①)와 감면(조세특례제한법 §129②)이 모두 배제됩니다. ${UNREGISTERED_EXCLUSION_HINT}`}
+        tone="rose"
+      />
+
+      {/*
         ── §155의2 · §155의3 · §155⑳ — 거주요건을 면제하는 특례 3종 (2026-09-23 ③에서 이동) ──
 
         셋 다 **양도 대상 주택 자신**에 매달리고, 세 판정이 모두 위 「거주기간」 축을 면제한다.
@@ -539,7 +552,7 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
           lawRefs={[{ legalBasis: "소득세법 시행령 §155의2", label: "영 §155의2" }]}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <FieldCard label="계약체결일">
+            <FieldCard label="계약체결일" required field="longTermMortgageContractDate">
               <DateInput
                 data-testid="ltm-contract-date"
                 value={form.longTermMortgageContractDate}
@@ -548,14 +561,14 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
                 }
               />
             </FieldCard>
-            <FieldCard label="계약체결일 현재 가입자 나이" hint="만 나이(세)">
+            <FieldCard label="계약체결일 현재 가입자 나이" hint="만 나이(세)" required field="longTermMortgageBorrowerAge">
               <IntegerInput
                 allowEmpty
                 value={form.longTermMortgageBorrowerAge === "" ? undefined : Number(form.longTermMortgageBorrowerAge)}
                 onChange={(v) => onChange({ longTermMortgageBorrowerAge: v === undefined ? "" : String(v) })}
               />
             </FieldCard>
-            <FieldCard label="계약기간" hint="연 단위">
+            <FieldCard label="계약기간" hint="연 단위" required field="longTermMortgageContractYears">
               <IntegerInput
                 allowEmpty
                 value={form.longTermMortgageContractYears === "" ? undefined : Number(form.longTermMortgageContractYears)}
@@ -666,14 +679,6 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
       />
       )}
 
-      <ToggleCard
-        data-testid="one-house-unregistered"
-        checked={form.isUnregistered}
-        onCheckedChange={(isUnregistered) => onChange({ isUnregistered })}
-        title="미등기 양도자산입니다"
-        description={`미등기 양도는 비과세(소득세법 §91①)와 감면(조세특례제한법 §129②)이 모두 배제됩니다. ${UNREGISTERED_EXCLUSION_HINT}`}
-        tone="rose"
-      />
     </div>
   );
 }

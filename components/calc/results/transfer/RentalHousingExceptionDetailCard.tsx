@@ -123,7 +123,8 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
       {/* 헤더 */}
       <div className="flex items-center gap-2 flex-wrap">
         <p className="text-sm font-semibold text-violet-900 dark:text-violet-200">
-          장기임대주택 보유자 거주주택 비과세 특례
+          {/* D-28 — B는 §154⑩ 기간분 한정(판정 결과 카드와 같은 술어) */}
+          {isScenarioB ? "직전거주주택보유주택 — 기간분 비과세" : "장기임대주택 보유자 거주주택 비과세 특례"}
         </p>
         <ScenarioBadge id={scenarioId} threshold={thresholdLabel(detail)} />
         <span className="text-micro text-muted-foreground">{rentalHousingBasisOf(detail.eligibility.laws)}</span>

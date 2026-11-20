@@ -29,9 +29,19 @@ const VERDICT_CLASS: Record<ContestedVerdict, string> = {
 type Props = {
   issues: OneHouseContestedIssue[];
   sectionNum: string;
+  /**
+   * 엔진이 따른 입장을 가리키는 곳 — 호출부가 정한다(메뉴를 추론하는 플래그를 쓰지 않는다 · `judgment-menu-flags.ts` 원칙).
+   * 1주택 결과뷰는 기본값(그 화면 아래에 판정 내역이 있다). 다주택 중과 결과뷰는 판정 내역이 없어 계산기만 가리킨다(2026-11 리뷰 D-90).
+   */
+  engineRef?: { marker: string; note: (position: string) => string };
 };
 
-export function OneHouseContestedIssuesCard({ issues, sectionNum }: Props) {
+const DEFAULT_ENGINE_REF: NonNullable<Props["engineRef"]> = {
+  marker: "(아래 판정 내역)",
+  note: (pos) => `이 화면 아래의 판정 내역과 양도소득세 계산기는 입장 ${pos}에 따릅니다.`,
+};
+
+export function OneHouseContestedIssuesCard({ issues, sectionNum, engineRef = DEFAULT_ENGINE_REF }: Props) {
   return (
     <ToneCard tone="violet" sectionNum={sectionNum} title="해석이 갈리는 쟁점">
       <p className="text-sm text-muted-foreground">
@@ -56,7 +66,7 @@ export function OneHouseContestedIssuesCard({ issues, sectionNum }: Props) {
                 <p className="text-xs font-semibold text-violet-800 dark:text-violet-200">
                   입장 {p.key}
                   {p.key === issue.enginePosition && (
-                    <span className="ml-1 font-normal text-muted-foreground">(아래 판정 내역)</span>
+                    <span className="ml-1 font-normal text-muted-foreground">{engineRef.marker}</span>
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground" data-testid={`one-house-contested-${issue.id}-${p.key}-source`}>
@@ -79,7 +89,7 @@ export function OneHouseContestedIssuesCard({ issues, sectionNum }: Props) {
           </div>
           <p className="text-xs text-muted-foreground" data-testid={`one-house-contested-${issue.id}-note`}>
             {issue.conclusionsDiffer
-              ? `이 화면 아래의 판정 내역과 양도소득세 계산기는 입장 ${issue.enginePosition}에 따릅니다.`
+              ? engineRef.note(issue.enginePosition)
               : // 반대 입장의 §155①을 다시 따지지 않은 경우엔 결론이 같다고 단정하지 않는다(2026-11 리뷰 D-79).
                 (issue.otherPositionUnresolved ?? "두 입장의 결론이 같습니다.")}
           </p>

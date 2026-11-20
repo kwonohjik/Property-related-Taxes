@@ -29,6 +29,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { HANDOFF_OWNERSHIP_SHARE_NOTE, HANDOFF_REMAINING_INPUTS_SUMMARY } from "@/lib/calc/judgment-handoff-remaining";
 import {
   Dialog,
   DialogContent,
@@ -161,8 +162,10 @@ export function OneHouseJudgmentLoadModal({
         )}
 
         <p className="border-t pt-3 text-xs text-muted-foreground">
-          ⓘ 판정 메뉴가 묻지 않은 <b>취득가액·필요경비</b>는 이 계산기에서 이어서 입력해야
-          세액이 나옵니다.
+          {/* 2026-11 리뷰 I-15·D-49 — 계산기 ⑧이 실제로 막는 값(실측) · 불러오면 지분율이 100%가 된다. */}
+          ⓘ 판정 메뉴가 묻지 않은 값 — {HANDOFF_REMAINING_INPUTS_SUMMARY} — 은 이 계산기에서 이어서 입력해야 세액이 나옵니다.
+          {" "}
+          {HANDOFF_OWNERSHIP_SHARE_NOTE}
         </p>
       </DialogContent>
     </Dialog>

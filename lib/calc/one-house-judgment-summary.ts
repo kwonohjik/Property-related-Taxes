@@ -3,6 +3,7 @@
  * validate 파일이 이 함수를 그대로 다시 내보낸다).
  */
 import { parseAmount } from "@/lib/calc/number-parse";
+import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import {
   judgmentHouseCountExclusionReductions,
   judgmentReplacementHouseVisible,
@@ -98,6 +99,10 @@ export function computeOneHouseJudgmentSummary(
     judgmentReplacementHouseVisible(form) && form.replacementHouseSpecial && "대체주택",
     judgmentSaleIsHousing(form) && form.longTermMortgageSpecial && "장기저당담보주택",
     judgmentSaleIsHousing(form) && form.winWinRentalSpecial && "상생임대주택",
+    // 2026-11 리뷰 D-29 — ⑳·§154⑩도 적는다. 게이트는 ④ leaf(`toRentalHousingExceptionApi` + 양도 대상 주택), 라벨은 시나리오로 가른다
+    //   (A = 거주주택 특례 · B = 직전거주주택보유주택 기간분 — §154⑩ 사실 질문 「예」도 B 선언이다).
+    judgmentSaleIsHousing(form) && form.assets[0] && toRentalHousingExceptionApi(form.assets[0]) !== undefined &&
+      (form.assets[0].rentalHousingException?.scenario === "B" ? "직전거주주택보유주택(§154⑩)" : "장기임대주택 보유자 거주주택(§155⑳)"),
     // OH-18·OH-28 — ④가 실제로 싣는 조건(⑤·⑧과 같은 게이트)일 때만 적는다.
     judgmentSaleIsHousing(form) &&
       form.assets[0]?.acquisitionCause === "inheritance" &&

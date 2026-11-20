@@ -175,8 +175,9 @@ export function Step2({ form, onChange, menu = "one_house" }: Props) {
 
       <ToneCard tone="sky" bodyClassName="">
         <p className="text-sm leading-relaxed">
-          아래 목록에는 <b>양도할 주택을 뺀 나머지</b>를 입력합니다. 양도 대상은 ② 단계에서
-          이미 입력했으며, 판정 주택 수는 <b>양도 대상 1채 + 목록</b>으로 계산합니다.
+          아래 목록에는 <b>양도할 주택·입주권을 뺀 나머지</b>를 입력합니다. 양도 대상은 ② 단계에서
+          이미 입력했으며, 판정은 <b>양도 대상 1개 + 목록</b>으로 셉니다 — 양도하는 입주권은 분양권·입주권 목록에도 넣지
+          마세요(자동으로 1개를 셉니다).
         </p>
       </ToneCard>
 

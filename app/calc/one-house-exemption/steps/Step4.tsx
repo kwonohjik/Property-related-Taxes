@@ -21,9 +21,11 @@ type Props = {
   transferDate?: string;
   /** 폼의 「보유 주택」 명부 — 결과의 「보유 주택 N」을 화면 명부 순번으로 매긴다(S03-8). */
   houses?: readonly { id: string; acquisitionDate?: string }[];
+  /** I-15 — 계산기에서 더 넣어야 계산되는 값(`handoffRemainingInputs`) */
+  remainingInputs?: readonly string[];
 };
 
-export function Step4({ result, error, isLoading, onJudge, onCalculateTax, transferDate, houses }: Props) {
+export function Step4({ result, error, isLoading, onJudge, onCalculateTax, transferDate, houses, remainingInputs }: Props) {
   const triggered = useRef(false);
 
   useEffect(() => {
@@ -68,6 +70,7 @@ export function Step4({ result, error, isLoading, onJudge, onCalculateTax, trans
       onCalculateTax={onCalculateTax}
       transferDate={transferDate}
       houses={houses}
+      remainingInputs={remainingInputs}
     />
   );
 }

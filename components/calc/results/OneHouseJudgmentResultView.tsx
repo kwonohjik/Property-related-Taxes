@@ -22,6 +22,9 @@ import { RentalCancellationWindowNote } from "@/components/calc/results/transfer
 import { RentalSuccessionEchoNote } from "@/components/calc/results/transfer/RentalSuccessionEchoNote";
 import { OneHouseRequirementReviewCard } from "@/components/calc/results/OneHouseRequirementReviewCard";
 import { OneHouseContestedIssuesCard } from "@/components/calc/results/OneHouseContestedIssuesCard";
+import { DisclaimerBanner, JUDGMENT_DISCLAIMER } from "@/components/calc/shared/DisclaimerBanner";
+import { HANDOFF_OWNERSHIP_SHARE_NOTE, HANDOFF_REMAINING_INPUTS_SUMMARY } from "@/lib/calc/judgment-handoff-remaining";
+import { OneHousePendingCard, OneHouseUndeterminedCard, type PendingItem } from "@/components/calc/results/OneHouseJudgmentFollowUpCards";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import { oneHouseVerdictOf } from "@/lib/calc/one-house-judgment-verdict";
 import { resolveHighValueHouseThreshold } from "@/lib/tax-engine/one-house/threshold";
@@ -33,20 +36,6 @@ import { RENTAL_155_22_EXCEPTIONS_LONG } from "@/lib/calc/rental-155-22-exceptio
 import { DEMOLISHED_BEFORE_BALANCE_UNMET_ID } from "@/lib/tax-engine/data/demolished-before-balance-era";
 import { countExclusionHouseRef, type HouseRefRow } from "@/components/calc/results/transfer/count-exclusion-house-ref";
 
-/** JSON을 거치며 Date가 ISO 문자열이 된다 — 그 형태를 그대로 받는다. */
-type Serialized<T> = T extends Date ? string : T;
-type PendingItem = {
-  id: string;
-  description: string;
-  deadline: Serialized<Date>;
-  /** 민법 §161 연장·공휴일 표 밖 안내(엔진 값) */
-  deadlineNote?: string;
-  legalBasis: string;
-};
-
-function formatDate(v: string): string {
-  return String(v).slice(0, 10);
-}
 
 /**
  * 「보유 주택 N (취득일) — 」 — 명세 항목이 **어느 주택**인지(판정 메뉴 명부 행).
@@ -86,9 +75,11 @@ type Props = {
    * 없으면(이력 상세) 엔진이 결과에 실은 순번으로 후퇴한다.
    */
   houses?: readonly HouseRefRow[];
+  /** 계산기에서 더 넣어야 계산되는 값(`handoffRemainingInputs` — 오케스트레이터가 폼으로 구한다). 없으면 두 갈래 요약 문장. */
+  remainingInputs?: readonly string[];
 };
 
-export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDate, houses }: Props) {
+export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDate, houses, remainingInputs }: Props) {
   const {
     judgment,
     houseCount,
@@ -273,16 +264,22 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
       */}
       {rental && (
         <ToneCard
-          tone={rental.passed ? (rental.notAppliedReason ? "amber" : "emerald") : "rose"}
+          // 2026-11 리뷰 D-28 — B(직전거주주택보유주택 · 소령 §154⑩)는 혜택이 아니라 「기간분에 대해서만」 비과세를 적용하는 제한이다.
+          //   배지(`oneHouseVerdictOf` — B + 비과세면 amber 「기간분 비과세」)와 같은 술어로 제목·톤·문구를 맞춘다.
+          tone={rental.passed ? (rental.notAppliedReason || rental.scenario === "B" ? "amber" : "emerald") : "rose"}
           sectionNum={nextNo()}
-          title="장기임대주택 보유자 거주주택 특례"
+          title={rental.scenario === "B" ? "직전거주주택보유주택 — 기간분 비과세" : "장기임대주택 보유자 거주주택 특례"}
         >
           <p className="text-sm font-semibold" data-testid="one-house-rental-verdict">
             {rental.passed
               ? rental.notAppliedReason
                 ? "요건은 충족했으나 적용하지 않습니다"
-                : "요건 충족"
-              : "요건 미충족 — 특례가 적용되지 않습니다"}
+                : rental.scenario === "B"
+                  ? "직전거주주택 양도일 후의 기간분에 대해서만 1세대1주택 비과세를 적용합니다"
+                  : "요건 충족"
+              : rental.scenario === "B"
+                ? "요건 미충족 — 기간분 한정(소령 §154⑩)을 적용하지 않습니다"
+                : "요건 미충족 — 특례가 적용되지 않습니다"}
           </p>
           {/* D-60 — 최종 판정이 과세(비거주자·잔금 전 멸실 등)라 ⑳을 적용받지 않은 경우 */}
           {rental.notAppliedReason && (
@@ -342,9 +339,11 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
           <div className="flex flex-wrap gap-2 pt-1">
             <LawArticleModal legalBasis={rental.legalBasis} />
           </div>
-          <p className="text-xs text-muted-foreground">
-            B 시나리오의 §161① 안분(과세 범위)은 <b>세액 계산</b>에서 다룹니다.
-          </p>
+          {rental.scenario === "B" && (
+            <p className="text-xs text-muted-foreground">
+              과세되는 범위(소령 §161① 안분)는 <b>세액 계산</b>에서 다룹니다.
+            </p>
+          )}
         </ToneCard>
       )}
 
@@ -420,27 +419,7 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
         🔑 배지가 아니다(Q-1=B, 2026-09-29) — 입력한 양도(예정)일로는 과세이고, 이 카드는 「날짜를 바꾸면」의
            안내다. 판정 기준일 전에 지난 「이 날까지 양도」 기한은 엔진이 이미 뺐다(이룰 수 없는 조건).
       */}
-      {pending.length > 0 && (
-        <ToneCard tone="amber" sectionNum={nextNo()} title="양도일을 조정하면 요건을 갖출 수 있습니다">
-          <ul className="space-y-3">
-            {pending.map((p) => (
-              <li key={p.id} className="text-sm" data-testid={`one-house-pending-${p.id}`}>
-                <p>
-                  <b className="font-mono tabular-nums">{formatDate(p.deadline)}</b>
-                  {"까지 — "}
-                  {p.description}
-                </p>
-                {p.deadlineNote && (
-                  <p className="text-xs text-muted-foreground" data-testid={`one-house-pending-note-${p.id}`}>
-                    {p.deadlineNote}
-                  </p>
-                )}
-                <LawArticleModal legalBasis={p.legalBasis} />
-              </li>
-            ))}
-          </ul>
-        </ToneCard>
-      )}
+      {pending.length > 0 && <OneHousePendingCard pending={pending} sectionNum={nextNo()} />}
 
       {/*
         ── 선언했으나 적용되지 않은 특례 ──
@@ -483,20 +462,7 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
            항목(「…로 판정했습니다(확인 필요)」). 머리 문구가 앞 종류만 말하면 뒤 종류와 모순된다(S13-13). 제목은 e2e가 잡는
            이름이라 그대로 두고 머리 문구만 두 종류를 포괄한다.
       */}
-      {judgment.undetermined.length > 0 && (
-        <ToneCard tone="rose" sectionNum={nextNo()} title="판정하지 않은 부분">
-          <p className="text-sm text-muted-foreground">
-            아래는 입력만으로 확정할 수 없어 확인이 필요한 부분입니다. 항목에 적은 대로 판정을 보류했거나, 적힌 기준으로 판정했습니다.
-          </p>
-          <ul className="ml-4 list-disc space-y-1 text-sm">
-            {judgment.undetermined.map((u) => (
-              <li key={u.id} data-testid={`one-house-undetermined-${u.id}`}>
-                {u.reason}
-              </li>
-            ))}
-          </ul>
-        </ToneCard>
-      )}
+      {judgment.undetermined.length > 0 && <OneHouseUndeterminedCard undetermined={judgment.undetermined} sectionNum={nextNo()} />}
 
       {/* ── 근거 조문 ── */}
       {judgment.legalBasis.length > 0 && (
@@ -517,9 +483,14 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
             결과를 복사하지 않고 <b>같은 엔진으로 다시 판정</b>하므로, 계산기에서 양도일·양도가액을
             바꾸면 판정도 그에 맞게 바뀝니다.
           </p>
-          <p className="text-sm text-muted-foreground">
-            세액을 내려면 계산기에서 <b>취득가액·필요경비</b>를 추가로 입력해야 합니다 — 이 화면은
-            그 값을 묻지 않습니다.
+          {/* 2026-11 리뷰 I-15 — 계산기 ⑧이 실제로 막는 값(실측). 필요경비·청산금은 ⑧ 필수가 아니다. */}
+          <p className="text-sm text-muted-foreground" data-testid="one-house-to-calculator-remaining">
+            세액을 내려면 계산기에서 다음 값을 더 입력해야 합니다(이 화면은 묻지 않습니다):{" "}
+            <b>{remainingInputs ? remainingInputs.join(" · ") : HANDOFF_REMAINING_INPUTS_SUMMARY}</b>. 필요경비는 있으면 입력하세요.
+          </p>
+          {/* D-49 — 넘기면 지분율이 100%가 된다(⑧이 막지 않는 값이라 따로 확인 안내). */}
+          <p className="text-sm text-muted-foreground" data-testid="one-house-to-calculator-share-note">
+            {HANDOFF_OWNERSHIP_SHARE_NOTE}
           </p>
           {/* D-56 — 판정 메뉴가 다루지 않는 물건(겸용 · 배율 초과 부수토지)은 계산기에서 그 사실을 넣어야 한다. 범위는 넓히지 않는다. */}
           <p className="text-sm text-muted-foreground" data-testid="one-house-to-calculator-scope-note">
@@ -540,6 +511,9 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
       <p className="text-xs text-muted-foreground">
         이 화면은 비과세 <b>판정</b>까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요.
       </p>
+
+      {/* 2026-11 리뷰 I-13 — 판정 결과에도 면책 고지(계산 결과뷰와 같은 배너 · 판정 문구) */}
+      <DisclaimerBanner body={JUDGMENT_DISCLAIMER} />
     </div>
   );
 }

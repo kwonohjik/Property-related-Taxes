@@ -20,6 +20,9 @@ import { SurchargeHouseTable } from "./surcharge/SurchargeHouseTable";
 import { SurchargeSellingDetail } from "./surcharge/SurchargeSellingDetail";
 import { SurchargeRateImpactCard } from "./surcharge/SurchargeRateImpactCard";
 import { ExemptionSummaryCard } from "./surcharge/ExemptionSummaryCard";
+import { DisclaimerBanner, JUDGMENT_DISCLAIMER } from "@/components/calc/shared/DisclaimerBanner";
+import { OneHouseContestedIssuesCard } from "./OneHouseContestedIssuesCard";
+import { OneHousePendingCard, OneHouseUndeterminedCard, type PendingItem } from "./OneHouseJudgmentFollowUpCards";
 import { rowConclusionLabel } from "./surcharge/surcharge-labels";
 
 const SCOPE_REASON_TEXT: Record<SurchargeJudgmentScopeReason, string> = {
@@ -116,6 +119,26 @@ export function MultiHouseSurchargeResultView({
       )}
 
       <ExemptionSummaryCard exemption={result.exemption} transferDate={result.transferDate} sectionNum={next()} />
+      {/*
+        2026-11 리뷰 D-55·D-90 — 요약 배지가 가리키는 「아래 …」를 이 화면에도 그린다(1주택 결과뷰와 같은 조건·같은 카드).
+        쟁점 카드의 엔진 입장 표시는 이 화면에 판정 내역이 없으므로 계산기만 가리킨다.
+      */}
+      {(result.exemption.contestedIssues?.length ?? 0) > 0 && (
+        <OneHouseContestedIssuesCard
+          issues={result.exemption.contestedIssues!}
+          sectionNum={next()}
+          engineRef={{
+            marker: "(양도소득세 계산기)",
+            note: (pos) => `「이 사실로 양도세 계산」으로 넘긴 양도소득세 계산기는 입장 ${pos}에 따릅니다.`,
+          }}
+        />
+      )}
+      {result.exemption.judgment.pending.length > 0 && (
+        <OneHousePendingCard pending={result.exemption.judgment.pending as unknown as PendingItem[]} sectionNum={next()} />
+      )}
+      {result.exemption.judgment.undetermined.length > 0 && (
+        <OneHouseUndeterminedCard undetermined={result.exemption.judgment.undetermined} sectionNum={next()} />
+      )}
 
       <div className="flex flex-wrap items-center justify-end gap-2 print:hidden">
         <button
@@ -132,6 +155,8 @@ export function MultiHouseSurchargeResultView({
           </CtaButton>
         )}
       </div>
+      {/* 2026-11 리뷰 I-13 — 판정 결과 면책 고지(1주택 판정 결과와 같은 문구) */}
+      <DisclaimerBanner body={JUDGMENT_DISCLAIMER} />
     </div>
   );
 }

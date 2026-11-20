@@ -312,7 +312,8 @@ export function RedevelopmentRightExemptionSection({
                 (기한은 양도일에 따라 1·2·3년 — 2005.12.31. 이전 양도분은 가목만).
                 <br />
                 어느 목이든 <span className="font-semibold">세대 보유 입주권 수 = 1개(양도 대상 포함)</span>여야
-                하며, 양도하는 입주권 자체도 카운트에 <span className="font-semibold">포함</span>됩니다.
+                합니다. <span className="font-semibold">양도하는 입주권은 목록에 넣지 마세요</span> — 자동으로 1개를 셉니다
+                (목록에는 그 밖의 입주권만).
               </p>
             </div>
 

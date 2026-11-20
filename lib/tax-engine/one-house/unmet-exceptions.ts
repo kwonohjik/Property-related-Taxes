@@ -704,3 +704,22 @@ function collectRuralUnmet(
 function fmtDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
+
+export const UNREGISTERED_UNMET_ID = "91-1-unregistered";
+
+/**
+ * 2026-11 리뷰 D-30 별건 — 미등기 양도는 비과세 판정의 첫 관문(`checkExemption` 진입부)에서 바로 과세로 끝나 결과 화면에 사유가 없었다.
+ * 「소득세법」 §91① 「미등기양도자산에 대하여는 … 비과세에 관한 규정을 적용하지 아니한다」. 주택 양도만(입주권은 등기 대상 자산이 아니다).
+ */
+export function unregisteredUnmet(input: Pick<OneHouseJudgeInput, "isUnregistered" | "propertyType">): OneHouseUnmetException[] {
+  if (!input.isUnregistered || input.propertyType !== "housing") return [];
+  return [
+    {
+      id: UNREGISTERED_UNMET_ID,
+      label: "미등기 양도자산 — 비과세 배제",
+      legalBasis: TRANSFER.EXEMPTION_UNREGISTERED_EXCLUSION,
+      reasons: [`미등기 양도자산이라 1세대1주택 비과세를 포함한 비과세 규정을 적용하지 않습니다(${TRANSFER.EXEMPTION_UNREGISTERED_EXCLUSION}).`],
+    },
+  ];
+}
+
