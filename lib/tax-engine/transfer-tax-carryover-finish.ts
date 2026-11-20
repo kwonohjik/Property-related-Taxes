@@ -9,6 +9,8 @@ import { lthdDeemedFloor } from "./transfer-tax-lthd-start";
 import { lumpSumDeductionRatioOf } from "./tax-utils";
 import { isBurdenedGiftCarryover } from "./transfer-tax-carryover-burdened-gift";
 import { buildInputB, ownerSplitPartEcho } from "./transfer-tax-carryover-inputs";
+import { giftHouseholdNotice } from "./one-house/gift-household-notice";
+import { CARRYOVER_B_GIFT_HOUSEHOLD_REASON } from "./one-house/gift-household-notice";
 import { burdenedGiftPerAssetTotals, bgRedevFilingAcquisition } from "./burdened-gift-totals";
 import { redevFilingTotals } from "./redev-acquisition-inverse";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -37,6 +39,7 @@ export function finishScenarios(args: {
     calculatedTax: number;
     isExempt?: boolean;
     isPartialExempt?: boolean;
+    warnings?: string[];
     splitDetail?: SplitGainResult;
     /** 부담부증여 §159 안분 명세 — 시나리오 B의 취득가액 echo(부담부증여는 §159①1호 안분값)를 여기서 읽는다. */
     transferBurdenedGiftBreakdown?: TransferBurdenedGiftBreakdown;
@@ -252,8 +255,15 @@ export function finishScenarios(args: {
     ...(spouseOneHouseExceptionApplied ? { spouseOneHouseExceptionApplied: true } : {}),
   };
 
+  // D-53 — A 채택 · A 비과세인데 B 계산이 증여 세대 고지를 냈다(= 세대 사실이 B의 비과세를 가른다 → ②2호 판단이 갈린다). B 고지 자체는
+  //   B 결과에만 있어 최종 결과로 넘어오지 않았다. 이월과세 전용 문장으로 승계한다(B 문장은 「증여일부터 보유」라 A 결과와 모순 — D-62).
+  const bGiftNotice = giftHouseholdNotice(inputB.giftHouseholdBasis, inputB.acquisitionCause)?.reason;
+  const inheritB =
+    adoptedScenario === "A" && args.scenarioAIsOneHouse && !!bGiftNotice && (resultB.warnings ?? []).includes(bGiftNotice);
+
   return {
     detail,
     adoptedInput: adoptedScenario === "A" ? inputAFinal : inputB,
+    ...(inheritB ? { inheritedWarnings: [CARRYOVER_B_GIFT_HOUSEHOLD_REASON] } : {}),
   };
 }

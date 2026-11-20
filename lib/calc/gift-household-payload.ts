@@ -11,6 +11,7 @@
  * 같은 leaf로 읽는다(계획서 `redev-apt-gift-household-fact.plan.md` Q-1 a).
  */
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
@@ -226,11 +227,19 @@ export function buildSuccessorGiftHouseholdPayload(
   return { giftSameHouseholdContinuous: true, giftHouseholdHoldingStartDate: primary.redevSuccessorGiftHouseholdStartDate };
 }
 
-/** 배우자는 혼인 유지, 그 밖의 친족은 같은 주소·생계 계속 — 질문 문구가 관계별로 다르다(결정 #38 조건). */
+/**
+ * 배우자는 혼인 유지, 그 밖의 친족은 같은 주소·생계 계속 — 질문 문구가 관계별로 다르다(결정 #38 조건).
+ * 「그 밖의 친족」은 1세대 범위(소득세법 §88 6호 — 직계존비속(그 배우자 포함)·형제자매) 안이어야 같은 세대라 그 범위를 덧붙인다(2026-11 리뷰 I-24 ·
+ * 결정 #34 조건 1). 해석례를 확인하지 않은 관계는 예시로 들지 않는다. 판정 메뉴·계산기가 같은 문구를 쓴다(`GiftedSameHouseholdField`).
+ */
 export function giftHouseholdQuestionText(relation: AssetForm["giftDonorRelation"]): string {
-  return relation === "spouse"
-    ? "증여일부터 양도일까지 혼인이 유지되었습니까? (법률상 이혼했어도 생계를 같이 하는 등 사실상 이혼으로 보기 어려우면 「예」)"
-    : "증여일부터 양도일까지 증여자와 같은 주소에서 생계를 같이 하는 같은 세대였습니까?";
+  if (relation === "spouse") {
+    return "증여일부터 양도일까지 혼인이 유지되었습니까? (법률상 이혼했어도 생계를 같이 하는 등 사실상 이혼으로 보기 어려우면 「예」)";
+  }
+  const base = "증여일부터 양도일까지 증여자와 같은 주소에서 생계를 같이 하는 같은 세대였습니까?";
+  return relation === "other"
+    ? `${base} (1세대는 본인·배우자와 그 직계존비속(그 배우자 포함)·형제자매로 구성됩니다 — ${TRANSFER.ONE_HOUSEHOLD_STATUTE_88_6}. 이 범위 밖의 친족이면 「아니오」)`
+    : base;
 }
 
 /**

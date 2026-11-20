@@ -60,6 +60,18 @@ const SUCCESSOR_CONSOLIDATION_REASON =
   "정면으로 다룬 해석은 확인하지 못해 확인이 필요합니다. 통산은 비과세 판정에만 쓰고 장기보유특별공제와 세율의 보유기간은 준공일(사용승인일) 기준으로 계산했습니다.";
 
 /**
+ * 2026-11 리뷰 D-53 — 이월과세 A(적용)를 채택한 비과세 결과에서, 이월과세를 적용하지 않은 계산(B)의 비과세가 증여자와의 세대 통산에 달려
+ * §97의2②2호(이월과세를 적용해야 비로소 1세대1주택이 되는 경우 배제) 판단과 결론이 갈리는 경우의 고지. A 자체는 보유기간을 증여자 취득일부터 세어
+ * 세대 사실이 A의 결론을 바꾸지 않으므로, B 계산이 낸 세대 고지를 이 문장으로 바꿔 승계한다(`finishScenarios`).
+ */
+export const CARRYOVER_B_GIFT_HOUSEHOLD_REASON =
+  `이월과세(${TRANSFER.CARRYOVER_TAXATION})를 적용한 계산(보유기간을 증여자 취득일부터 셈)으로 1세대1주택 비과세를 적용했습니다. ` +
+  `다만 이월과세를 적용하지 않은 계산(증여일부터 보유)도 비과세인지에 따라 ${TRANSFER.CARRYOVER_EXCLUSION}2호(이월과세를 적용해야 비로소 1세대1주택이 되는 경우 ` +
+  "이월과세를 적용하지 않음) 적용 여부가 갈리는데, 그 계산의 비과세는 증여자와 계속 같은 세대였다는 입력(세대 보유기간 통산)에 달려 있습니다. " +
+  "동일세대 증여의 보유기간 통산은 정면 해석을 확인하지 못했으니(조심 2022서7583은 지분 증여 사안) 확인이 필요합니다 — 같은 세대로 보지 않으면 " +
+  "이월과세가 배제되어 과세될 수 있습니다.";
+
+/**
  * 세대 사실 상태에 맞는 확인 필요 고지. 결론을 가르는지는 호출부가 `giftHouseholdFactDecides`로 따로 본다.
  * 사실이 없으면(`gift` 미전달) 증여 취득일 때만 「반영하지 못했다」를 낸다. 별도세대로 확인되면 고지가 없다.
  */
@@ -73,6 +85,12 @@ export function giftHouseholdNotice(
     if (!gift) return { id: GIFT_HOUSEHOLD_NOT_REFLECTED_ID, reason: SUCCESSOR_NOT_REFLECTED_REASON };
     if (giftHouseholdConsolidationStart(gift)) return { id: GIFT_HOUSEHOLD_CONSOLIDATION_DETAIL_ID, reason: SUCCESSOR_CONSOLIDATION_REASON };
   }
+  // 2026-11 리뷰 D-62 — 이월과세 시나리오 A(`holdingAlreadyAtDonor`)는 보유기간을 이미 증여자 취득일부터 센다(§97의2① · §95④ 단서).
+  //   「증여일부터 보유기간」·「장특·세율 보유기간은 증여일 기준」 문장은 그 계산과 모순이라 A에서는 갈라 쓴다.
+  const atDonor = gift?.holdingAlreadyAtDonor === true;
+  const holdingCounted = atDonor
+    ? "보유기간은 이월과세에 따라 증여자 취득일부터 세었지만 세대 보유 통산(「취득 당시」를 세대가 보유를 시작한 날로 보는 것)은 적용하지 않고"
+    : "통산 없이 증여일부터 보유기간을 세어";
   return !gift
     ? acquisitionCause === "gift"
       ? {
@@ -91,7 +109,7 @@ export function giftHouseholdNotice(
           id: GIFT_HOUSEHOLD_DONOR_DECEASED_ID,
           reason:
             "증여자가 양도 전에 사망한 경우 증여자 세대의 보유기간을 통산하는지에 대한 정면 해석은 확인하지 못했습니다. " +
-            "통산 없이 증여일부터 보유기간을 세어 판정했으니, 증여 후 양도 전까지 증여자와 계속 같은 세대였다면 확인이 필요합니다.",
+            `${holdingCounted} 판정했으니, 증여 후 양도 전까지 증여자와 계속 같은 세대였다면 확인이 필요합니다.`,
         }
       : gift.rejoinedAfterDivorce === true
         ? {
@@ -99,7 +117,7 @@ export function giftHouseholdNotice(
             reason:
               "증여 뒤 이혼했다가 같은 사람과 재결합한 경우 증여자 세대의 보유기간을 통산하는지에 대해서는 해석이 갈립니다 — " +
               "보유기간은 증여를 받은 날부터 센다는 회신(서면5팀-463·921)과 증여자의 취득일부터 센다는 회신(재산세과-445)이 있고 정면 해석은 확인하지 못했습니다. " +
-              "통산 없이 증여일부터 보유기간을 세어 판정했으니, 통산하면 결론이 달라질 수 있어 확인이 필요합니다.",
+              `${holdingCounted} 판정했으니, 통산하면 결론이 달라질 수 있어 확인이 필요합니다.`,
           }
       : giftHouseholdConfirmedSeparate(gift)
         ? undefined
@@ -107,26 +125,33 @@ export function giftHouseholdNotice(
           ? {
               id: GIFT_HOUSEHOLD_UNCONFIRMED_ID,
               reason:
-                "증여자와 증여일부터 양도일까지 계속 같은 세대였는지(배우자는 혼인 유지) 입력되지 않아, 증여일부터 보유기간을 세고 " +
+                "증여자와 증여일부터 양도일까지 계속 같은 세대였는지(배우자는 혼인 유지) 입력되지 않아, " +
+                (atDonor ? "보유기간은 이월과세에 따라 증여자 취득일부터 세고 " : "증여일부터 보유기간을 세고 ") +
                 "「취득 당시」 조정대상지역은 증여일과 증여자 취득일 중 어느 하나라도 지정 중이면 거주요건을 적용해 판정했습니다. " +
-                "같은 세대였다면 증여자 세대의 보유기간이 통산되어 결론이 달라질 수 있으니 확인이 필요합니다.",
+                (atDonor
+                  ? "같은 세대였다면 「취득 당시」가 세대가 보유를 시작한 날로 옮겨 결론이 달라질 수 있으니 확인이 필요합니다."
+                  : "같은 세대였다면 증여자 세대의 보유기간이 통산되어 결론이 달라질 수 있으니 확인이 필요합니다."),
             }
           : {
               id: GIFT_HOUSEHOLD_CONSOLIDATION_DETAIL_ID,
               reason:
-                "증여자와 계속 같은 세대였다는 입력에 따라 세대가 보유를 시작한 날부터 보유기간을 통산하고 그 날을 「취득 당시」로 보았습니다" +
+                (atDonor
+                  ? "증여자와 계속 같은 세대였다는 입력에 따라 세대가 보유를 시작한 날을 「취득 당시」로 보았습니다(보유기간은 이월과세에 따라 증여자 취득일부터 셌습니다)"
+                  : "증여자와 계속 같은 세대였다는 입력에 따라 세대가 보유를 시작한 날부터 보유기간을 통산하고 그 날을 「취득 당시」로 보았습니다") +
                 "(조심 2022서7583 — 보유기간은 양도인 세대 기준). 혼인·합가 전에 취득한 주택의 통산 시작일, 주택 전부를 증여한 경우, " +
                 "거주요건이 새로 붙는 방향의 「취득 당시」 이동은 정면 해석을 확인하지 못해 확인이 필요합니다(세대가 보유를 시작한 날에는 조정대상지역이었다가 " +
                 "해제된 뒤 증여한 주택은 증여일을 기준으로 보아 거주요건을 적용하지 않았습니다). 통산은 비과세 판정과 표2 대상 판정(증여 전 거주)에 쓰고 " +
-                "장기보유특별공제율의 보유·거주기간과 세율 보유기간은 증여일 기준으로 계산했습니다.",
+                (atDonor
+                  ? "장기보유특별공제율의 보유기간과 세율 보유기간은 이월과세에 따라 증여자 취득일부터, 공제율의 거주기간은 증여일부터(사전-2025-법규재산-1126) 계산했습니다."
+                  : "장기보유특별공제율의 보유·거주기간과 세율 보유기간은 증여일 기준으로 계산했습니다."),
             };
 }
 
 /**
  * 세대 사실을 바꾼 **반사실 판정**이 현재 판정(`base`)과 다른가 — 고지 게이트. `verdictOf`는 같은 입력에 세대 사실만 바꿔 다시 판정한 값이다.
  *
- * 반사실 입력은 세대 관계가 확정(통산 성립·별도세대)이라 이 고지를 다시 만들지 않는다 — 통산 성립 가정은 한 번 더 별도세대
- * 가정과 비교할 수 있으나 그 호출은 확정이므로 재귀 깊이가 2를 넘지 않는다.
+ * `verdictOf`는 결론 키만 계산한다(고지 게이트를 다시 부르지 않는다 — `era-notice-relevance.ts` `verdictKey` · D-01). 그래서 재귀는 없고,
+ * 통산 성립 입력은 반사실 판정을 최대 3번(별도세대 · strict · 시작일 = 증여자 취득일) 더 계산한다.
  */
 export function giftHouseholdFactDecides(
   g: GiftHouseholdBasis,
@@ -153,8 +178,14 @@ export function giftHouseholdFactDecides(
     return c !== undefined && c !== base;
   }
   // 통산 성립 — 별도세대 가정과 비교하고, 거울상(세대 보유 시작일에 지정 중 · 증여일에 비지정)을 세대 취득일로 읽는 가정(strict)과도 비교한다.
-  if (giftHouseholdConsolidationStart(g)) {
-    return separate() !== base || verdictOf({ ...g, householdDateStrict: true }) !== base;
+  //   + 통산 시작일(혼인·합가 전 취득분 — 정면 해석 없음) 축: 시작일을 가장 이른 값(증여자 취득일)으로 바꾼 판정과도 비교한다(2026-11 리뷰 D-52).
+  const start = giftHouseholdConsolidationStart(g);
+  if (start) {
+    if (separate() !== base || verdictOf({ ...g, householdDateStrict: true }) !== base) return true;
+    return (
+      start.getTime() > g.donorAcquisitionDate.getTime() &&
+      verdictOf({ ...g, householdHoldingStartDate: g.donorAcquisitionDate }) !== base
+    );
   }
   if (giftHouseholdUnconfirmed(g)) {
     const c = consolidated();
