@@ -57,7 +57,10 @@ export function collectTempTwoHouseEraUndetermined(
       out.push({ id: "155-1-regulated-announcement-date-unverified", reason: reg.announcementWarning });
     }
     // 결정 #3 하위 2 — 신규 주택 취득·계약이 화성시 지정 시작 열흘에 걸리고 처분기한 판정이 갈릴 때.
-    if (reg.determined) out.push(...hwaseongTemporaryTwoHouseWindowNotice(input, tt, reg.bothRegulated, yrs));
+    //   D-68 — 기한이 갈려도 결론(다른 사유 · 거주 미달 등)이 같으면 내지 않는다(조정 독법을 바꾼 본체 반사실).
+    if (reg.determined && (relevance?.regulatedReadingDecides() ?? true)) {
+      out.push(...hwaseongTemporaryTwoHouseWindowNotice(input, tt, reg.bothRegulated, yrs));
+    }
     if (!reg.determined && regulatedDecides) {
       out.push({
         id: "155-1-regulated-at-new-acquisition-unverified",
@@ -93,7 +96,10 @@ export function collectTempTwoHouseEraUndetermined(
   if (tt?.previousHouseIsRosterRow && twoHouseRule && waivesPriorHouseOneYearGap(input)) {
     const base = evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall;
     const waived = evaluateTemporaryTwoHouseTiming(input, twoHouseRule, { forceProvisoOneYearWaiver: true }).timing.overall;
-    if (!base && waived) {
+    // D-68 — 면제한 갈래(짝의 1년 요건이 채워진 입력 — 종전 취득일을 신규 취득 1년 하루 전으로)의 본체 판정 결론이 달라질 때만.
+    const n = tt.newAcquisitionDate;
+    const oneYearMetTt = { ...tt, previousAcquisitionDate: new Date(Date.UTC(n.getUTCFullYear() - 1, n.getUTCMonth(), n.getUTCDate() - 1)) };
+    if (!base && waived && (relevance?.temporaryTwoHouseVariantsDecide?.(tt, oneYearMetTt) ?? true)) {
       out.push({
         id: "155-1-roster-pair-one-year-waiver-unverified",
         reason:
@@ -175,7 +181,12 @@ export function collectTempTwoHouseEraUndetermined(
           },
           twoHouseRule,
         ).timing.overall;
-      if (overall(true) !== overall(false)) {
+      const variant = (relocationMet: boolean) =>
+        relocationMet
+          ? { ...tt, relocatedSigunguCode: undefined, newHouseSigunguCode: undefined }
+          : { ...tt, publicInstitutionRelocation: false };
+      // D-68 — 타이밍뿐 아니라 본체 판정 결론이 갈릴 때만(다른 사유로 과세가 정해졌으면 지역 독법이 결론을 바꾸지 않는다).
+      if (overall(true) !== overall(false) && (relevance?.temporaryTwoHouseVariantsDecide?.(variant(true), variant(false)) ?? true)) {
         out.push({
           id: "155-16-merged-special-city-unit",
           reason:
@@ -209,7 +220,12 @@ export function collectTempTwoHouseEraUndetermined(
           },
           twoHouseRule,
         ).timing.overall;
-      if (overall(true) !== overall(false)) {
+      const variant = (relocationMet: boolean) =>
+        relocationMet
+          ? { ...tt, relocatedSigunguCode: undefined, newHouseSigunguCode: undefined }
+          : { ...tt, publicInstitutionRelocation: false };
+      // D-68 — 타이밍뿐 아니라 본체 판정 결론이 갈릴 때만(다른 사유로 과세가 정해졌으면 지역 독법이 결론을 바꾸지 않는다).
+      if (overall(true) !== overall(false) && (relevance?.temporaryTwoHouseVariantsDecide?.(variant(true), variant(false)) ?? true)) {
         out.push({
           id: "155-16-gunwi-boundary-era",
           reason:

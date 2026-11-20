@@ -155,5 +155,21 @@ export function buildEraNoticeRelevance(ctx: {
     // §155⑱ 「그 방법으로 양도」 미확인(S15-14) — 방법을 확인했다고 읽은 반사실 판정이 결론을 바꿀 때만(리뷰 J-6).
     disposalMethodDecides: () =>
       counterfactualVerdictDiffers(input, core, article89Excluded, withDisposalDelayByThatMethod),
+    // I-31 — ⑧2호 「3년」 기산(취득일 vs 비거주 기간) 두 독법이 갈리는 입력에서만 통산 불성립 반사실 1회.
+    nonResidentThreeYearReadingDecides: () => {
+      const p = input.nonResidentHoldingPeriod;
+      if (!p || article89Excluded) return false;
+      const v = core({ ...input, nonResidentHoldingPeriod: { ...p, residedAtConversion: false } });
+      return `${v.isExempt}|${v.isPartialExempt}` !== `${verdict.isExempt}|${verdict.isPartialExempt}`;
+    },
+    // D-68 — §155① 축 고지(⑯ 통합특별시·군위 · J-3)는 두 갈래 본체 판정의 결론이 다를 때만.
+    temporaryTwoHouseVariantsDecide: (a, b) => {
+      if (article89Excluded) return false;
+      const key = (tt: typeof a) => {
+        const v = core({ ...input, temporaryTwoHouse: tt });
+        return `${v.isExempt}|${v.isPartialExempt}`;
+      };
+      return key(a) !== key(b);
+    },
   };
 }

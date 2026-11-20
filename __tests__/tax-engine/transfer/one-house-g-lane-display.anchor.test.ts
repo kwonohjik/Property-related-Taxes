@@ -115,9 +115,12 @@ describe("OH-60 §154① 단서 적용 근거 — 요건 판정 결과로 가드
   });
 
   it("3호 부득이 + 거주 12개월(요건 충족) → 단서가 근거로 찍힌다", () => {
+    // 2026-11 리뷰 D-20 — 단서는 결론을 바꿨을 때만 근거로 적는다. 종전 시료(비조정 · 8년 보유)는 본칙만으로 비과세라 단서가 결정적이지 않았다 —
+    //   보유 2년 미만(2022-01-01 취득 · 17개월)으로 옮겨 3호가 보유요건을 푼 경우를 본다.
     const r = calculateTransferTax(
       baseTransferInput({
         ...base,
+        acquisitionDate: new Date("2022-01-01"),
         residencePeriodMonths: 12,
         oneHouseExemptionProviso: { reason: "unavoidable" },
       }),

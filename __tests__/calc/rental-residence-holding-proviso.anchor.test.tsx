@@ -102,7 +102,9 @@ describe("계산기 — §155⑳ 거주주택 보유 2년 × §154① 단서", (
     expect(r.body.oneHouseExemptionProviso).toEqual({ reason: "unavoidable" });
     expect(r.result.totalTax).toBe(0);
     // 임대주택을 뺀 1주택 입력이라 ⑳이 서면 STEP 1a 전액 비과세 조기반환(판정 엔진 §154①)으로 끝난다 — 근거는 그 판정의 문구다.
-    expect(r.result.exemptReason).toBe("1세대1주택 비과세 (§154① 단서 3호 부득이)");
+    // 2026-11 리뷰 D-20 — 이 입력은 증여 세대 통산(2018~)으로 §154① 보유를 단서 없이 채우고 임대주택을 뺀 1주택이라, 3호 단서는 최종 결론
+    //   (§154① 비과세)을 바꾸지 않는다 — 근거에 적지 않는다. 단서가 ⑳ 보유 2년으로 결론을 가른 경우는 RC-5가 본다.
+    expect(r.result.exemptReason).toBe("1세대1주택 비과세");
     expect((r.result.warnings as string[]).some((w) => w.includes("정면 해석례가 없어 확인이 필요합니다"))).toBe(true);
   });
 

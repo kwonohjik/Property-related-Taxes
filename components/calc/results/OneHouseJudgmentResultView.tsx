@@ -273,13 +273,23 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
       */}
       {rental && (
         <ToneCard
-          tone={rental.passed ? "emerald" : "rose"}
+          tone={rental.passed ? (rental.notAppliedReason ? "amber" : "emerald") : "rose"}
           sectionNum={nextNo()}
           title="장기임대주택 보유자 거주주택 특례"
         >
           <p className="text-sm font-semibold" data-testid="one-house-rental-verdict">
-            {rental.passed ? "요건 충족" : "요건 미충족 — 특례가 적용되지 않습니다"}
+            {rental.passed
+              ? rental.notAppliedReason
+                ? "요건은 충족했으나 적용하지 않습니다"
+                : "요건 충족"
+              : "요건 미충족 — 특례가 적용되지 않습니다"}
           </p>
+          {/* D-60 — 최종 판정이 과세(비거주자·잔금 전 멸실 등)라 ⑳을 적용받지 않은 경우 */}
+          {rental.notAppliedReason && (
+            <p className="text-sm" data-testid="one-house-rental-not-applied">
+              {rental.notAppliedReason}
+            </p>
+          )}
           <p className="text-sm text-muted-foreground">
             {rental.scenario === "A"
               ? "거주주택을 양도하고 임대주택은 계속 보유하는 경우입니다."

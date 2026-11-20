@@ -19,6 +19,7 @@ import { resolveRentalResidenceComposition } from "@/lib/tax-engine/transfer-tax
 import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judge";
 import { buildRentalHousingVerdict, applyRentalHousingVerdict } from "@/lib/tax-engine/one-house/rental-housing-verdict";
 import { settleRentalVerdictForOtherExemption } from "@/lib/tax-engine/one-house/rental-housing-verdict";
+import { settleRentalVerdictForFinalTaxation } from "@/lib/tax-engine/one-house/rental-housing-verdict";
 import { rosterCountsRentalUnits } from "@/lib/tax-engine/transfer-tax-rental-housing-judge";
 import {
   mergeRentalCarveoutMissingNotice,
@@ -153,7 +154,8 @@ export function runOneHouseJudgmentPipeline(
 
   return {
     exclusion,
-    rentalVerdict,
+    // D-60 — 최종 판정(6.7·6.8 뒤)이 과세면 ⑳을 적용받지 않았다 — ㉒ 안내·「요건 충족」 초록 카드를 정리한다.
+    rentalVerdict: settleRentalVerdictForFinalTaxation(rentalVerdict, judgment),
     oneRightVerdict,
     judgment,
     rentalDeemedHouseIds: rentalRowIds,

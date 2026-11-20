@@ -17,6 +17,20 @@ import type { TransferTaxInput } from "../types/transfer.types";
 /** §154⑧2호 「3년 이상 계속 보유」 */
 const SECTION_154_8_2_HOLDING_YEARS = 3;
 
+/**
+ * I-31 · 결정 Q-23 — ⑧2호 「3년 이상 계속 보유」를 취득일부터 셌을 때(현행)만 통산이 서고, 비거주 기간만으로 세면 3년이 안 되는 입력인가.
+ * 두 독법이 갈리는 좁은 경우에만 본체 반사실을 한 번 돌려 결론이 갈리면 확인 필요를 낸다(`era-undetermined.ts`).
+ */
+export function nonResidentThreeYearReadingsDiverge(
+  input: Pick<TransferTaxInput, "nonResidentHoldingPeriod" | "acquisitionDate">,
+): boolean {
+  const p = input.nonResidentHoldingPeriod;
+  if (!p || p.residedAtConversion !== true) return false;
+  if (calculateHoldingPeriod(input.acquisitionDate, p.endDate).years < SECTION_154_8_2_HOLDING_YEARS) return false;
+  const from = p.startDate && p.startDate > input.acquisitionDate ? p.startDate : input.acquisitionDate;
+  return calculateHoldingPeriod(from, p.endDate).years < SECTION_154_8_2_HOLDING_YEARS;
+}
+
 export function excludeNonResidentHoldingPeriod(
   input: Pick<TransferTaxInput, "nonResidentHoldingPeriod" | "acquisitionDate">,
   baseStart: Date,

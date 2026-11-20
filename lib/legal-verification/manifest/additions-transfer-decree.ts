@@ -175,6 +175,8 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     citation: "소득세법 시행령 §154",
     keywords: [
       "1세대1주택의 범위",
+      // ⑧2호 — 비거주 기간 통산(`non-resident-holding.ts` · 「3년」 기산 확인 필요 `154-8-2-holding-count-start-unverified` · 2026-11 리뷰 I-31). 현행 캐시 본문 1회.
+      "비거주자가 해당 주택을 3년 이상 계속 보유하고 그 주택에서 거주한 상태로 거주자로 전환된 경우",
       "보유기간이 2년",
       "조정대상지역",
       "그 보유기간 중 거주기간이 2년 이상인 것",

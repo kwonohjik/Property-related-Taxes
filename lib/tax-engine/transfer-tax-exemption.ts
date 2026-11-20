@@ -71,6 +71,8 @@ import {
   qualifiesWinWinRental,
   RURAL_HOUSE_LABEL,
 } from "./transfer-tax-exemption-requirements";
+import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption-residence-waivers";
+import { resolveExemptionRequirementResidenceMonths } from "./one-house/residence-months";
 
 // ── 요건 술어부 재수출 (분리 전 import 경로 보존 — CB-08) ──
 export * from "./transfer-tax-exemption-requirements";
@@ -528,8 +530,13 @@ function checkExemptionCore(
   // 🔑 원시 선택값이 아니라 **요건 판정 결과**로 가드한다(OH-60) — 3호 거주 1년 미만·나·다목
   //    출국 2년 초과·가목 수용일 미입력처럼 단서가 성립하지 않았는데 본칙만으로 비과세가 된 경우,
   //    「§154① 단서 N호」를 적용 근거로 적으면 근거가 틀린다. E-3의 `provisoRelaxesHolding`과 같은 축.
+  //   2026-11 리뷰 D-20 — 성립했어도 **결론을 바꾼 것만** 근거로 적는다(형제 경로 §155 의제 D-3 · 겸용 MP-3와 같다): 단서를 뺀 정본이 거짓일 때만.
+  const longTermMortgageExempt = qualifiesLongTermMortgageResidenceExemption(input);
   const provisoReason =
-    resolveExemptionProviso(input) !== null ? input.oneHouseExemptionProviso?.reason : undefined;
+    resolveExemptionProviso(input) !== null &&
+    !meetsOneHouseHoldingResidence({ ...input, oneHouseExemptionProviso: undefined }, rule, longTermMortgageExempt)
+      ? input.oneHouseExemptionProviso?.reason
+      : undefined;
   // 삭제된 4호는 근거(종전 4호 + 부칙<제30395호> 제38조①/②)를 결과 문구에 함께 싣는다(OH-38).
   const provisoBasis =
     provisoReason === RENTAL_4HO_REASON ? ` — ${rental4hoLegalBasis(input.transferDate)}` : "";
@@ -546,19 +553,34 @@ function checkExemptionCore(
       legalBasis: provisoLegalBasis(provisoReason, input.transferDate),
     });
   }
-  if (qualifiesLongTermMortgageResidenceExemption(input)) {
+  // D-20 — 장기저당 면제 없이도 §154①을 충족하면(거주 2년 이상 등) 결론에 쓰이지 않았다.
+  if (longTermMortgageExempt && !meetsOneHouseHoldingResidence(input, rule, false)) {
     exceptions.push({
       id: "155-2-1-long-term-mortgage-residence",
       label: "장기저당담보주택 거주기간 제한 면제",
       legalBasis: TRANSFER.LONG_TERM_MORTGAGE_EXEMPT,
     });
   }
+  // D-20 · 결정 Q-6 — 상생임대는 §154① 거주(비과세 결론) 또는 고가주택의 §159의4 표2 거주 제한(장특) 중 실제로 가른 쪽만 적는다
+  //   (§155의3①은 두 거주 제한을 모두 면제한다 — 표2만 가른 경우는 라벨로 구분).
   if (qualifiesWinWinRental(input)) {
-    exceptions.push({
-      id: "155-3-1-win-win-rental",
-      label: "상생임대주택 거주기간 제한 면제",
-      legalBasis: TRANSFER.WIN_WIN_RENTAL_EXEMPT,
-    });
+    const withoutWinWin = { ...input, winWinRentalHouse: undefined };
+    if (!meetsOneHouseHoldingResidence(withoutWinWin, rule, longTermMortgageExempt)) {
+      exceptions.push({
+        id: "155-3-1-win-win-rental",
+        label: "상생임대주택 거주기간 제한 면제",
+        legalBasis: TRANSFER.WIN_WIN_RENTAL_EXEMPT,
+      });
+    } else if (
+      exemptionPriceCheck > highValueThreshold &&
+      !meetsTable2ResidenceRequirement(withoutWinWin, Math.floor(resolveExemptionRequirementResidenceMonths(input) / 12))
+    ) {
+      exceptions.push({
+        id: "155-3-1-win-win-rental-table2",
+        label: "상생임대주택 — 장기보유특별공제 표2 거주 제한 면제",
+        legalBasis: `${TRANSFER.WIN_WIN_RENTAL_EXEMPT} · ${TRANSFER.LONG_TERM_DEDUCTION_TABLE2_DECREE}`,
+      });
+    }
   }
   if (exemptionPriceCheck <= highValueThreshold) {
     return { isExempt: true, isPartialExempt: false, exemptReason: `1세대1주택 비과세${provisoLabel}`, appliedExceptions: exceptions };
