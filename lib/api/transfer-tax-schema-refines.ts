@@ -7,6 +7,9 @@ import { z } from "zod";
 import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 import { decedentOrderBasisDate } from "@/lib/calc/decedent-order-basis";
 import { toDate } from "@/lib/api/date-coerce";
+import { toOptionalDate } from "@/lib/api/date-coerce";
+import { priorResidenceTransferDateRange } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/prior-residence-range";
+import { TRANSFER_RENTAL_HOUSING } from "@/lib/tax-engine/legal-codes/transfer";
 import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
 
 import { refineRedevelopment166_3Inputs } from "./transfer-tax-schema-redev-166-3-refines";
@@ -72,7 +75,7 @@ export function addPropertyRefines(
   data: {
     propertyType?: string;
     /** 거주주택 특례(§155⑳) 선언 — 요청 본문에 있으면 ④가 첫 자산에서 실은 것이다(V-7 문구 안내 판정에만 쓴다) */
-    rentalHousingException?: { applyException?: boolean } | null;
+    rentalHousingException?: { applyException?: boolean; scenario?: string; priorResidenceTransferDate?: string } | null;
     useEstimatedAcquisition: boolean;
     standardPriceAtAcquisition?: number;
     standardPriceAtTransfer?: number;
@@ -187,6 +190,21 @@ export function addPropertyRefines(
     // V-7 — 요청 본문의 거주주택 특례 선언(④가 첫 자산에서만 싣는다)이 있는 주택이면 안내 문구. ⑧과 같은 술어(`rentalHousingPathApplies`).
     rentalHousingPath: rentalHousingPathApplies({ assetIndex: 0, assetKind: data.propertyType, declared: data.rentalHousingException?.applyException === true }),
   });
+  // D-61 · Q-25 — B 직전거주주택 양도일이 이 주택의 양도일 뒤면 막는다(⑧·엔진과 같은 술어). 취득일 전은 통산 주택이면 확인 필요라
+  //   ⑫에서 가르지 않고 엔진이 B 미적용 + 사유로 둔다. 같은 날은 §154⑨ 양도 순서 선택이라 막지 않는다.
+  const rhe = data.rentalHousingException;
+  if (rhe?.scenario === "B" && rhe.priorResidenceTransferDate) {
+    const prior = toOptionalDate(rhe.priorResidenceTransferDate.slice(0, 10));
+    const acq = toOptionalDate(data.acquisitionDate);
+    const transfer = toOptionalDate(data.transferDate);
+    if (prior && acq && transfer && priorResidenceTransferDateRange(prior, acq, transfer) === "after_transfer") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["rentalHousingException", "priorResidenceTransferDate"],
+        message: `직전거주주택 양도일이 이 주택의 양도일 뒤입니다 — 이 주택을 보유하는 동안 양도한 날이어야 합니다(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20} 후단)`,
+      });
+    }
+  }
   refineReductionRequiredInputs(data.reductions, data.assetContractDate, ctx, ["reductions"],
     data.redevelopment as { subject?: string; receiveOnlyMode?: boolean; completionDate?: string } | null | undefined, data.acquisitionCause);
   refineNew994CapitalRegion(data.reductions, data.transferDate, ctx, ["reductions"]);

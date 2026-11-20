@@ -138,7 +138,8 @@ export function toRentalHousingExceptionApi(asset: AssetForm): object | undefine
       // 혼인합가 1199 — 판정 메뉴에서만 입력(⑤). 엔진은 혼인합가 판정에서만 읽는다.
       mergeOrigin: u.mergeOrigin,
     })),
-    priorResidenceTransferDate: rh.priorResidenceTransferDate
+    // D-61 — 직전거주주택 양도일은 B 화면에만 있다. A로 바꾼 뒤 남은 값은 보내지 않는다(⑫ 범위 refine이 숨은 값으로 막지 않게).
+    priorResidenceTransferDate: rh.scenario === "B" && rh.priorResidenceTransferDate
       ? (rh.priorResidenceTransferDate.includes('T')
         ? rh.priorResidenceTransferDate
         : `${rh.priorResidenceTransferDate}T00:00:00.000Z`)

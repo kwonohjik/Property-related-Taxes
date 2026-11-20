@@ -14,6 +14,7 @@ import {
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
 import { RENTAL_155_22_EXCEPTIONS_LONG } from "./transfer-tax/rental-housing-exception/clawback-exceptions";
 import { MULTI_HOUSE } from "./legal-codes/transfer-house";
+import { resolveExemptionHoldingStartDate } from "./transfer-tax-exemption-holding";
 import { rentalUnitLowPriceFacts } from "./rental-card-surcharge-rows";
 import {
   checkEligibility,
@@ -68,6 +69,8 @@ export function buildEligibilityContext(effectiveInput: TransferTaxInput): Eligi
     wasRegulatedAtAcquisition: resolveWasRegulatedAtAcquisition(effectiveInput),
     // §154⑩ 경로 — 성립한 §154① 단서(V-R3 (a)). 판정 메뉴와 세액 경로가 이 맥락 하나를 쓴다.
     provisoWaiver: phrp154_10ProvisoWaiver(effectiveInput),
+    // D-61 — B 직전거주주택 양도일 범위의 통산 하한(동일세대 상속·증여 통산 · 용도변경은 본인 취득일보다 늦어 하한을 바꾸지 않는다)
+    residenceHoldingStartDate: resolveExemptionHoldingStartDate(effectiveInput),
   };
 }
 

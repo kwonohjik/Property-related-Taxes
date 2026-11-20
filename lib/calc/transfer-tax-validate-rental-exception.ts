@@ -38,6 +38,9 @@ import { aptDeadlineExtensionIncomplete, rentalUnitAptDeadlineInScope } from "./
 import { fieldError } from "./transfer-tax-validate-field";
 import { rentalResidenceRequirementStatus } from "./rental-residence-requirement-status";
 import { primaryAcquisitionDateOf } from "./transfer-tax-api-carryover";
+import { priorResidenceTransferDateRange } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/prior-residence-range";
+import { toOptionalDate } from "@/lib/api/date-coerce";
+import { TRANSFER_RENTAL_HOUSING } from "@/lib/tax-engine/legal-codes/transfer";
 import { MIXED_USE_RENTAL_B_UNSUPPORTED } from "@/lib/tax-engine/transfer-tax-mixed-use-rental-residence-message";
 import { resolveHighValueHouseThreshold, resolveHighValuePriceCheck } from "@/lib/tax-engine/one-house/threshold";
 
@@ -369,6 +372,9 @@ export function validateRentalHousingException(
       return fieldError("rentalHousingException.priorResidenceTransferDate", `${label}: PHRP 시나리오 — 직전거주주택 양도일을 입력하세요.`);
     }
   }
+  // D-61 · Q-25 — 직전거주주택 양도일 범위(엔진과 같은 술어).
+  const priorRangeError = priorResidenceDateFieldIssue(rh, asset, label, formTransferDate);
+  if (priorRangeError) return priorRangeError;
   if (rh.scenario === 'B' && mode === "full") {
     // 환산취득가 모드 연동 시 자산-수준 기준시가가 단일 소스 — API 변환(④)·UI(⑤)와 동일 ternary (3중 패턴)
     const linked = isPhrpStdPriceLinked(asset);
@@ -498,5 +504,32 @@ export function validateRentalHousingException(
     return fieldError(acquisitionDateField, `${label}: 장기임대주택 특례 — 거주주택 보유기간 2년 이상이 필요합니다. (${acquisitionDateLabel}~양도일: ${hp.years}년 ${hp.months}개월 ${hp.days}일)`);
   }
 
+  return null;
+}
+
+/**
+ * ⑧ D-61 · Q-25 — B 직전거주주택 양도일은 이 주택의 보유기간 안(본인 취득일 ~ 양도일 · 엔진 `priorResidenceTransferDateRange`와 같은 술어).
+ * ④가 B에서만 보내는 값이라 B에서만 본다. 본인 취득일 전은 동일세대 상속·증여·이월과세처럼 보유기간을 통산할 수 있는 취득이면 막지 않는다 —
+ * 엔진이 통산 범위를 보고 확인 필요로 둔다(⑧이 엔진보다 넓게 막지 않는다).
+ */
+export function priorResidenceDateFieldIssue(
+  rh: NonNullable<AssetForm["rentalHousingException"]>,
+  asset: Pick<AssetForm, "acquisitionDate" | "acquisitionCause">,
+  label: string,
+  formTransferDate?: string,
+): ReturnType<typeof fieldError> | null {
+  if (rh.scenario !== "B" || !rh.priorResidenceTransferDate) return null;
+  const prior = toOptionalDate(rh.priorResidenceTransferDate.slice(0, 10));
+  const acq = toOptionalDate(asset.acquisitionDate);
+  const transfer = toOptionalDate(formTransferDate);
+  if (!prior || !acq || !transfer) return null;
+  const range = priorResidenceTransferDateRange(prior, acq, transfer);
+  const mayConsolidate = asset.acquisitionCause === "inheritance" || asset.acquisitionCause === "gift" || asset.acquisitionCause === "carryover_gift";
+  if (range === "after_transfer") {
+    return fieldError("rentalHousingException.priorResidenceTransferDate", `${label}: 직전거주주택 양도일이 이 주택의 양도일 뒤입니다 — 이 주택을 보유하는 동안 양도한 날이어야 합니다(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20} 후단).`);
+  }
+  if (range === "before_acquisition" && !mayConsolidate) {
+    return fieldError("rentalHousingException.priorResidenceTransferDate", `${label}: 직전거주주택 양도일이 이 주택의 취득일 전입니다 — 이 주택을 보유하는 동안 양도한 날이어야 합니다(${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20} 후단).`);
+  }
   return null;
 }
