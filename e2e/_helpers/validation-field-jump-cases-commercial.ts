@@ -81,6 +81,20 @@ export const COMMERCIAL_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "commercial: 부수토지 cbTotalBuildingFootprintArea", field: "cbTotalBuildingFootprintArea", step: 0, assetIndex: A, message: /^자산: 부수토지 판정 — 집합건물 전체 바닥면적/, form: cb({ cbTotalLandArea: "200" }) },
   { name: "commercial: 부수토지 cbZoneType", field: "cbZoneType", step: 0, assetIndex: A, message: /^자산: 부수토지 판정 — 용도지역/, form: cb({ cbTotalLandArea: "200", cbTotalBuildingFootprintArea: "100", cbZoneType: "" }) },
 
+  // NBL2611-V5-BX01 — 초과분(상업 3배 · 대지 1,200 · 바닥 200)이 있으면 토지·건물 구분 기준시가 4칸이 필수
+  ...(["cbPartAcqLandStd", "cbPartAcqBuildingStd", "cbPartTransferLandStd", "cbPartTransferBuildingStd"] as const).map((field, i): FieldJumpCase => ({
+    name: `commercial: 초과분 토지·건물 구분 ${field}`,
+    field,
+    step: 0,
+    assetIndex: A,
+    message: /^자산: 부수토지 초과분 — .*기준시가\(원, 해당 호 총액\)를 입력하세요/,
+    // 앞 칸은 채우고 이 칸만 비운다 — 검증이 위에서부터 첫 빈 칸을 가리키므로 이 칸이 첫 빈 칸이 된다
+    form: cb({
+      cbTotalLandArea: "1200", cbTotalBuildingFootprintArea: "200", cbZoneType: "commercial",
+      ...Object.fromEntries((["cbPartAcqLandStd", "cbPartAcqBuildingStd", "cbPartTransferLandStd", "cbPartTransferBuildingStd"] as const).slice(0, i).map((k) => [k, "100000000"])),
+    }),
+  })),
+
   // ── 환산(호별고시) ──
   { name: "commercial: 환산 acquisitionDate (era 판정)", field: "acquisitionDate", step: 0, assetIndex: A, message: /^자산: 상업용건물·오피스텔 — 취득일을 입력하세요/, form: cbPost({ acquisitionDate: "", cbEra: "" }) },
   { name: "commercial: cbExclusiveArea", field: "cbExclusiveArea", step: 0, assetIndex: A, message: /^자산: 전용면적을 입력하세요/, form: cbPost({ cbExclusiveArea: "" }) },

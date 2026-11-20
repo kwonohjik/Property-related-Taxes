@@ -33,6 +33,7 @@ import type { CarryoverTaxationDetail } from "./transfer-carryover.types";
 import type { SelfBuiltEchoEntry, SelfBuiltHousingPenaltyEcho } from "./transfer-self-built-housing.types";
 import type { TransferBurdenedGiftBreakdown } from "./transfer-burdened-gift.types";
 import type { CommercialBuildingValuationResult } from "./commercial-building.types";
+import type { CommercialNblPartEcho } from "./commercial-appurtenant.types";
 import type { RedevelopmentResult } from "./transfer-redevelopment.types";
 import type { FamilyBusinessCgtDetail } from "../transfer-tax-family-business";
 import type { PreHousingDisclosureResult } from "./transfer-phd.types";
@@ -562,6 +563,11 @@ export interface TransferTaxResult {
    */
   commercialBuildingValuationDetail?: CommercialBuildingValuationResult;
   /**
+   * 상업용건물 부수토지 초과분의 **토지분·건물분 파트 산출 echo**(NBL2611-V5-BX01) — 초과분(또는 §101① 단서)이 있고 비사업용 판정이 난
+   * 상가에만 존재한다. 비사업용 파트는 토지분 양도차익 × 초과 비율이고 건물분에는 +10%p가 걸리지 않는다.
+   */
+  commercialNblPart?: CommercialNblPartEcho;
+  /**
    * 일반건물(토지+건물 일괄) 환산취득가 산정 상세 결과.
    * propertyType === "general_building" aggregate 경로에서만 포함.
    * 결과 카드 산식 표시·신고서 토지/건물 분리 표 재현에 사용.
@@ -645,6 +651,7 @@ export type TransferReductionDetailSource = Pick<
 export type TransferValuationDetailSource = Pick<
   TransferTaxResult,
   | "commercialBuildingValuationDetail"
+  | "commercialNblPart"
   | "nonBusinessLandJudgmentDetail"
   | "nblSurchargeExcluded"
   | "nblSurchargeExcludedBy"

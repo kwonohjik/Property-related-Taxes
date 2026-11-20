@@ -41,6 +41,8 @@ import { isBgPreDeemedAsset } from "./bg-pre-deemed";
 import { bgPreDeemedUsesThreeWay } from "./bg-pre-deemed-mode";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { fieldError } from "./transfer-tax-validate-field";
+import { commercialAppurtenantNblAreaOfAsset } from "./transfer-tax-api-commercial";
+import { commercialPartBasisOfAsset } from "./transfer-tax-api-commercial";
 
 /**
  * 상업용건물·오피스텔 + **상속** (소령 §163⑨) — 환산 검증 전 우선 인터셉트.
@@ -126,6 +128,30 @@ export function validateCommercialAppurtenantLand(asset: AssetForm, label: strin
     return fieldError("cbTotalBuildingFootprintArea", `${label}: 부수토지 판정 — 집합건물 전체 바닥면적을 입력하세요.`);
   if (!asset.cbUnapprovedBuilding && !asset.cbZoneType)
     return fieldError("cbZoneType", `${label}: 부수토지 판정 — 용도지역을 선택하세요 (지방세법 시행령 §101② 적용배율).`);
+
+  // NBL2611-V5-BX01 — 초과분(또는 §101① 단서)이 있으면 토지분·건물분 구분 기준시가 4값이 필요하다.
+  // 초과 비율은 «토지» 양도차익에만 곱하므로 가액을 토지·건물로 나눠야 하고, 자동 안분 fallback은 두지 않는다.
+  // 초과 판정은 엔진과 같은 함수(`commercialAppurtenantNblAreaOfAsset` → `judgeAppurtenantLandExcess`)다 — ⑤ 노출·④ 전송과 한 술어.
+  if (commercialAppurtenantNblAreaOfAsset(asset) > 0) {
+    const partFields = [
+      ["cbPartAcqLandStd", "취득 당시 토지 기준시가", asset.cbPartAcqLandStd],
+      ["cbPartAcqBuildingStd", "취득 당시 건물 기준시가", asset.cbPartAcqBuildingStd],
+      ["cbPartTransferLandStd", "양도 당시 토지 기준시가", asset.cbPartTransferLandStd],
+      ["cbPartTransferBuildingStd", "양도 당시 건물 기준시가", asset.cbPartTransferBuildingStd],
+    ] as const;
+    for (const [field, name, value] of partFields) {
+      if ((value ?? "").trim() === "")
+        return fieldError(field, `${label}: 부수토지 초과분 — ${name}(원, 해당 호 총액)를 입력하세요. 초과 비율은 토지분 양도차익에만 적용하므로 토지·건물 가액을 나눠야 합니다 (소득세법 §100②, 영 §166⑥).`);
+    }
+    const basis = commercialPartBasisOfAsset(asset);
+    // API(Zod)가 음수를 400으로 막는다 — UI 통과 ↔ 서버 차단 모순을 두지 않는다.
+    if (basis && Object.values(basis).some((v) => v < 0))
+      return fieldError("cbPartAcqLandStd", `${label}: 부수토지 초과분 — 토지·건물 기준시가는 0 이상으로 입력하세요.`);
+    if (basis && !(basis.acquisitionLandStd + basis.acquisitionBuildingStd > 0))
+      return fieldError("cbPartAcqLandStd", `${label}: 부수토지 초과분 — 취득 당시 토지·건물 기준시가의 합이 0보다 커야 합니다.`);
+    if (basis && !(basis.transferLandStd + basis.transferBuildingStd > 0))
+      return fieldError("cbPartTransferLandStd", `${label}: 부수토지 초과분 — 양도 당시 토지·건물 기준시가의 합이 0보다 커야 합니다.`);
+  }
 
   return null;
 }

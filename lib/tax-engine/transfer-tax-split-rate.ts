@@ -415,7 +415,7 @@ function computePartialNblTax(
   // 그 기준으로 나눈 값이 분리 신고와 같다(계획서 `transfer-partial-nbl-loss-offset.investigation.plan.md` §6).
   const w = ctx.partIncomeWeights?.length === 2 ? ctx.partIncomeWeights : undefined;
   const { nbl: nblRateInput, other: otherRateInput } = partialNblRateInputs(input);
-  const nblIncome = w ? w[0] : partialNblIncome(ctx.transferIncome, ratio);
+  const nblIncome = w ? w[0] : partialNblIncome(ctx.transferIncome, ratio, input.nonBusinessLandPartShare);
   const otherIncome = ctx.transferIncome - nblIncome;
   if (!w && (nblIncome <= 0 || otherIncome <= 0)) return null;
   const rateOf = (income: number, rateInput: TransferTaxInput) =>

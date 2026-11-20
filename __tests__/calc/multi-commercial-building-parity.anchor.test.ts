@@ -30,6 +30,7 @@ import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { CB_PART_FORM_LAND_ONLY } from "../tax-engine/_helpers/cb-part-basis";
 import { runSingle, runMulti, buildMultiBody, postMulti } from "./_helpers/single-multi-route-parity";
 
 beforeEach(() => {
@@ -135,6 +136,7 @@ describe("다건 — 상업용건물·오피스텔이 단건과 같은 세액이
       cbForm({
         acquisitionDate: "2015-06-03", fixedAcquisitionPrice: "250000000",
         cbTotalLandArea: "4000", cbTotalBuildingFootprintArea: "200", cbZoneType: "general_residential",
+        ...CB_PART_FORM_LAND_ONLY, // NBL2611-V5-BX01 — 초과분이 있으면 필수(토지 100% — 단건·다건 동치만 본다)
       }),
     );
     expect(single.r.surchargeType).toBe("non_business_land");

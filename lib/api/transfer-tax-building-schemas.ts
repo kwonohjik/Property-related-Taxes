@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 import { LOCAL_TAX_ZONE_INPUT_KEYS } from "@/lib/tax-engine/local-tax-zone-multiplier";
+import { judgeAppurtenantLandExcess } from "@/lib/tax-engine/appurtenant-land-excess";
 import { refineGbValuationRequired } from "./transfer-tax-schema-required-refines-gb";
 import { reductionSchema } from "./transfer-tax-schema-reductions";
 import { preDeemedPurchaseSchema } from "./transfer-tax-schema-pre-deemed-purchase";
@@ -638,6 +639,18 @@ export const commercialAppurtenantLandSchema = z
     zoneType: z.string().optional(),
     /** 「지방세법 시행령」 §101① 단서 — 허가·사용승인 미이행(불법 용도변경 포함, 해석례 25-0823) */
     unapprovedBuilding: z.boolean().optional(),
+    /**
+     * 해당 호의 토지·건물 기준시가(원, 총액) — 취득 당시 · 양도 당시. 초과분이 있으면 필수(NBL2611-V5-BX01).
+     * 초과 비율은 토지분 양도차익에만 곱하므로 가액을 토지·건물로 나눠야 한다(소득세법 §100②, 영 §166⑥).
+     */
+    partBasis: z
+      .object({
+        acquisitionLandStd: z.number().int().nonnegative(),
+        acquisitionBuildingStd: z.number().int().nonnegative(),
+        transferLandStd: z.number().int().nonnegative(),
+        transferBuildingStd: z.number().int().nonnegative(),
+      })
+      .optional(),
   })
   .superRefine((data, ctx) => {
     // 엔진(`appurtenant-land-excess.ts`)이 용도지역 없이는 배율을 결정하지 못하고 throw한다.
@@ -648,6 +661,40 @@ export const commercialAppurtenantLandSchema = z
         path: ["zoneType"],
         message:
           "상업용건물 부수토지 판정: 용도지역을 선택하세요 (「지방세법 시행령」 §101② 적용배율 결정).",
+      });
+      return;
+    }
+    // 초과분(또는 §101① 단서)이 있으면 토지·건물 구분 기준시가가 필수다 — 엔진 판정과 **같은 함수**로 초과 여부를 본다(3중 패턴).
+    // 자동 안분 fallback 금지: 없으면 400으로 막는다(엔진도 같은 이유로 거부한다).
+    let hasExcess = false;
+    try {
+      hasExcess =
+        judgeAppurtenantLandExcess({
+          landArea: data.totalLandArea,
+          buildingFootprintArea: data.totalBuildingFootprintArea,
+          zoneType: data.zoneType,
+          unapprovedBuilding: data.unapprovedBuilding,
+          context: "상업용건물",
+        }).nonBusinessArea > 0;
+    } catch {
+      return; // 용도지역 미등재 등은 엔진이 별도 메시지로 거부한다
+    }
+    if (!hasExcess) return;
+    const b = data.partBasis;
+    if (!b) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["partBasis"],
+        message:
+          "상업용건물 부수토지 초과분: 취득 당시·양도 당시 토지·건물 기준시가(partBasis)가 필요합니다 — 초과 비율은 토지분 양도차익에만 적용합니다(소득세법 §100②, 영 §166⑥).",
+      });
+      return;
+    }
+    if (!(b.acquisitionLandStd + b.acquisitionBuildingStd > 0) || !(b.transferLandStd + b.transferBuildingStd > 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["partBasis"],
+        message: "상업용건물 부수토지 초과분: 토지·건물 기준시가는 취득 당시·양도 당시 각각 합이 0보다 커야 합니다.",
       });
     }
   });

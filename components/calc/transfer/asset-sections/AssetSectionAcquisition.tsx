@@ -31,6 +31,7 @@ import { isGiftPreDeemedConversionAsset } from "@/lib/calc/gift-pre-deemed";
 import { CommercialInheritanceStdPriceSection } from "../CommercialInheritanceStdPriceSection";
 import { BuildingSec164Section } from "../BuildingSec164Section";
 import { CommercialAppurtenantLandSection } from "../CommercialAppurtenantLandSection";
+import { CommercialNblPartBasisFields } from "../CommercialNblPartBasisFields";
 import { GeneralBuildingBlock } from "../GeneralBuildingBlock";
 import { RedevelopmentBlock } from "../RedevelopmentBlock";
 import { SuccessorRightAcquisitionBlock } from "../SuccessorRightAcquisitionBlock";
@@ -340,6 +341,10 @@ export function AssetSectionAcquisition({
         <p data-testid="cb-share-appurtenant-note" className="text-caption text-muted-foreground">
           부수토지 판정(집합건물 전체 대지 · 바닥면적 · 용도지역)은 같은 물건이라 자산 1에서 입력한 값을 씁니다.
         </p>
+      )}
+      {/* 초과분의 토지·건물 구분 — 취득 당시 2칸은 지분마다 취득일이 달라 이 카드에서 입력한다(양도 당시 2칸은 자산 1 값). */}
+      {asset.assetKind === "commercial_building" && splitMode === "fractional" && !isFirst && (
+        <CommercialNblPartBasisFields asset={asset} onChange={onChange} scope="acq" />
       )}
 
       {/* 일반건물(토지+건물 일괄) — 취득방법 무관 항상 마운트 (2026-05-10 실거래가 모드 지원) */}

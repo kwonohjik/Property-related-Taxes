@@ -430,6 +430,12 @@ export interface TransferTaxInput {
    * 유예 기간 밖이거나 비사업용 토지가 아니면 읽지 않는다.
    */
   isDesignatedArea?: boolean;
+  /**
+   * 비사업용 토지 파트의 **양도소득 몫**(정수 분수) — 상업용건물처럼 건물분이 섞인 자산에서 엔진이 파생한다
+   * (토지분 양도차익 × 초과 면적 비율 ÷ 자산 양도차익, NBL2611-V5-BX01). 있으면 `nonBusinessLandAreaRatio`의
+   * 4자리 반올림 대신 이 분수로 파트 소득을 나눈다. 미지정=기존 면적비율 경로.
+   */
+  nonBusinessLandPartShare?: { numerator: number; denominator: number };
   nonBusinessLandAreaRatio?: number; // 부분 면적비율(목장 §168의10③·기타토지 §168의11①·복합용도 §168의11⑥·연접 다필지 §168의11⑤·바닥면적 외 §101①2호나목) — 엔진 파생(judgeNonBusinessLand), 미지정=1 전량중과
   /**
    * 조합원입주권 승계취득 여부 (propertyType === "right_to_move_in" 일 때만 의미).

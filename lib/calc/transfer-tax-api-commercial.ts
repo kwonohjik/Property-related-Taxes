@@ -33,13 +33,24 @@ export function buildCommercialAppurtenantLand(asset: AssetForm): object | undef
   const totalBuildingFootprintArea = parseDecimal(asset.cbTotalBuildingFootprintArea);
   if (!(totalLandArea > 0) || !(totalBuildingFootprintArea > 0)) return undefined;
 
+  const partBasis = commercialPartBasisOfAsset(asset);
   return {
     totalLandArea,
     totalBuildingFootprintArea,
     // §101① 단서 해당 시 배율이 불필요하므로 용도지역을 보내지 않아도 API refine을 통과한다.
     ...(asset.cbUnapprovedBuilding ? {} : { zoneType: asset.cbZoneType || undefined }),
     ...(asset.cbUnapprovedBuilding ? { unapprovedBuilding: true } : {}),
+    // 네 칸이 모두 채워졌을 때만 싣는다 — 일부만 싣으면 API refine이 400을 내 원인을 알기 어렵다. 초과분이 있는데 비면 ⑧이 막는다.
+    ...(partBasis ? { partBasis } : {}),
   };
+}
+
+/** 초과분 토지·건물 구분 기준시가 4칸(NBL2611-V5-BX01) — 네 칸이 모두 채워졌을 때만 값. ④와 ⑧이 같은 함수를 쓴다(3중 패턴). */
+export function commercialPartBasisOfAsset(asset: AssetForm) {
+  const fields = [asset.cbPartAcqLandStd, asset.cbPartAcqBuildingStd, asset.cbPartTransferLandStd, asset.cbPartTransferBuildingStd];
+  if (fields.some((f) => (f ?? "").trim() === "")) return undefined;
+  const [acquisitionLandStd, acquisitionBuildingStd, transferLandStd, transferBuildingStd] = fields.map((f) => parseAmount(f));
+  return { acquisitionLandStd, acquisitionBuildingStd, transferLandStd, transferBuildingStd };
 }
 
 /**

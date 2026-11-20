@@ -25,6 +25,11 @@ const TOTALS = {
   cbTotalLandArea: "1200",
   cbTotalBuildingFootprintArea: "200",
   cbZoneType: "commercial",
+  // NBL2611-V5-BX01 — 초과분이 있으면 토지·건물 구분 기준시가 4칸이 필수(양도 12억 = 토지 60% · 취득 6억 = 토지 60%)
+  cbPartAcqLandStd: "360000000",
+  cbPartAcqBuildingStd: "240000000",
+  cbPartTransferLandStd: "720000000",
+  cbPartTransferBuildingStd: "480000000",
 };
 
 function seedForm(appurtenant: Record<string, string> | null) {
@@ -89,6 +94,24 @@ test.describe("CB 부수토지 기준면적 초과분 중과", () => {
     // NBL2611-V10-BX06 — 초과분이 있으면 «판정하지 않은 사항» 확인 필요 고지(입력 화면). 상업용건물은 «양도일 현재 상태» 고지가 없다.
     await expect(page.getByText(/부설주차장 설치기준면적 이내의 토지 등\).*판정하지 않았습니다 — 확인 필요/)).toBeVisible();
     await expect(page.getByText(/양도일 현재의 상태로 판정해 소유기간 전체에 적용/)).toHaveCount(0);
+    // NBL2611-V5-BX01 — 초과분이 있으면 토지·건물 가액 구분 4칸이 열린다(없는 초과분이면 닫힘 — 아래 별도 케이스)
+    await expect(page.getByTestId("cb-part-basis")).toBeVisible();
+    await expect(page.locator('[data-field="cbPartAcqLandStd"]')).toBeVisible();
+    await expect(page.locator('[data-field="cbPartTransferBuildingStd"]')).toBeVisible();
+  });
+
+  test("초과분이 없으면(녹지 7배) 토지·건물 가액 구분 칸이 열리지 않는다", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seed(page, { ...TOTALS, cbZoneType: "green" });
+    await expect(page.getByTestId("cb-part-basis")).toHaveCount(0);
+  });
+
+  test("초과분이 있는데 토지·건물 가액 구분이 비면 계산이 막힌다 (자동 안분 fallback 금지)", async ({ page }) => {
+    test.setTimeout(60_000);
+    await seed(page, { ...TOTALS, cbPartAcqLandStd: "" });
+    await page.getByRole("button", { name: "가산세", exact: true }).first().click();
+    await page.getByRole("button", { name: "세금 계산하기" }).click();
+    await expect(page.getByText(/취득 당시 토지 기준시가\(원, 해당 호 총액\)를 입력하세요/).first()).toBeVisible();
   });
 
   test("§101① 단서 토글 ON → 배율 입력이 사라지고 전량 비사업용 안내", async ({ page }) => {
@@ -131,5 +154,9 @@ test.describe("CB 부수토지 기준면적 초과분 중과", () => {
     await expect(
       page.getByText(/기준면적 = 건축물 바닥면적 200㎡ × 3배 = 600㎡/).first(),
     ).toBeVisible();
+    // NBL2611-V5-BX01 — 비사업용 파트는 토지분 양도차익 × 초과 면적 비율(토지 360,000,000 · 건물 240,000,000 · 초과 50% → 180,000,000)
+    await expect(page.getByTestId("cb-nbl-part-land-gain").first()).toHaveText("360,000,000");
+    await expect(page.getByTestId("cb-nbl-part-building-gain").first()).toHaveText("240,000,000");
+    await expect(page.getByTestId("cb-nbl-part-nbl-gain").first()).toHaveText("180,000,000");
   });
 });
