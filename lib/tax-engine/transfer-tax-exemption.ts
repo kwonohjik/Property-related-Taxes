@@ -63,6 +63,7 @@ import {
   PROVISO_LABEL,
   resolveExemptionProviso,
   ruralTemporaryTwoHouseOverlapCountHolds,
+  heritageTemporaryTwoHouseOverlapCountHolds,
   twoHouseSpecialCountHolds,
   resolveExemptionHoldingStartDate,
   qualifiesLongTermMortgageResidenceExemption,
@@ -389,9 +390,10 @@ function checkExemptionCore(
     }
   }
 
-  // E-3: 일시적 2주택 — ⑦ 농어촌주택이 겹친 3주택도 같은 분기로 본다(D3 · `ruralTemporaryTwoHouseOverlapCountHolds`).
+  // E-3: 일시적 2주택 — ⑦ 농어촌주택·⑥ 문화유산 주택이 겹친 3주택도 같은 분기로 본다(D3 · D-02 상속증여세과-212).
   const ruralOverlap = ruralTemporaryTwoHouseOverlapCountHolds(input);
-  if ((twoHouseSpecialCountHolds(input) || ruralOverlap) && input.temporaryTwoHouse && twoHouseRule) {
+  const heritageOverlap = heritageTemporaryTwoHouseOverlapCountHolds(input);
+  if ((twoHouseSpecialCountHolds(input) || ruralOverlap || heritageOverlap) && input.temporaryTwoHouse && twoHouseRule) {
     const provisoReason = input.oneHouseExemptionProviso?.reason;
     const { provisoRelaxesHolding, timing, era } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
 
@@ -445,6 +447,14 @@ function checkExemptionCore(
           id: `155-7-rural:${input.ruralHouse!.kind}`,
           label: `농어촌주택 (${RURAL_HOUSE_LABEL[input.ruralHouse!.kind]})`,
           legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦`,
+        });
+      }
+      if (heritageOverlap) {
+        basisParts.push("§155⑥ 문화유산 주택 제외");
+        exceptions.push({
+          id: "155-6-1ho-cultural-heritage",
+          label: "문화유산 주택",
+          legalBasis: TRANSFER.CULTURAL_HERITAGE_HOUSE,
         });
       }
       // F-2 — 5호(공고 전 계약)·삭제 전 4호는 1년 요건이 아니라 거주요건만 면제한다. 실제로 성립했을 때만 근거로 남긴다(E-4와 같은 축).

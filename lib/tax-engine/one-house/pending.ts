@@ -51,7 +51,7 @@ import {
   resolveExemptionHoldingStartDate,
   RURAL_RETURN_TO_FARM_TRANSFER_YEARS,
   ruralReturnToFarmDeadlineApplies,
-  ruralTemporaryTwoHouseOverlapCountHolds,
+  specialHouseTemporaryTwoHouseOverlapCountHolds,
   twoHouseSpecialCountHolds,
   UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
   unavoidableResolvedDeadlineApplies,
@@ -214,7 +214,7 @@ export function collectPendingConditions(
    */
   // E-3(`checkExemptionCore`)와 같은 주택 수 게이트 — ⑦ 농어촌주택이 겹친 3주택(D3)도 같은 분기다(S07-5).
   if (
-    (twoHouseSpecialCountHolds(input) || ruralTemporaryTwoHouseOverlapCountHolds(input)) &&
+    (twoHouseSpecialCountHolds(input) || specialHouseTemporaryTwoHouseOverlapCountHolds(input)) &&
     input.temporaryTwoHouse &&
     twoHouseRule
   ) {
