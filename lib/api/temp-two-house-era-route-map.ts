@@ -25,6 +25,8 @@ export function mapTemporaryTwoHouseEraFacts(tt: Parsed) {
     newHouseContractDate: toOptionalDate(tt.newHouseContractDate),
     wholeHouseholdMoveInDate: toOptionalDate(tt.wholeHouseholdMoveInDate),
     existingTenantLeaseEndDate: toOptionalDate(tt.existingTenantLeaseEndDate),
+    // ⑭ 신규 주택 명부 행 id — 엔진이 그 행의 동일세대 상속 여부를 본다(D-76). 단건·다건 공용.
+    newHouseRowId: tt.newHouseRowId,
     // 신규 주택 취득 경위 — 날짜는 JSON 경유로 string이라 Date로 바꾼다. 단건·다건이 같은 함수를 쓴다(F04 전례).
     newHouseOrigin: tt.newHouseOrigin
       ? {

@@ -188,6 +188,8 @@ export function buildHouseholdSpecialPayload(form: TransferFormData, primary: As
             tempTwoHouse.newHouseInDesignatedDistrict,
             tempTwoHouse.previousHouse,
           ),
+          // ④⑬ 명부에서 도출한 신규 주택 행 — 엔진이 그 행의 동일세대 상속 여부를 본다(D-76 · 사전-2023-법규재산-0464).
+          ...(tempTwoHouse.newHouseRowId ? { newHouseRowId: tempTwoHouse.newHouseRowId } : {}),
           // 신규 주택 취득 경위(분양권·조합원입주권 유래 갈래) — 명부 행의 답, 직접 선언 경로는 `not_collected`(결정 #43 · G6-4).
           ...(tempTwoHouse.newHouseOrigin ? { newHouseOrigin: tempTwoHouse.newHouseOrigin } : {}),
         },

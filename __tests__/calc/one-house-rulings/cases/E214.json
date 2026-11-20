@@ -1,0 +1,41 @@
+[
+  {
+    "id": "E214-era",
+    "docNo": "사전-2023-법규재산-0464 [법규과-2159]",
+    "docDate": "2023.08.23.",
+    "basis": "era",
+    "today": "2023-07-01",
+    "summary": "부부 공유 A주택(2005) 보유 세대에서 남편 사망(2022.3.2.)으로 남편 명의 B(조합원입주권 상태)를 아내·자녀가 동일세대 내 상속, B 완공 뒤 A 양도 — 상속개시일을 신규주택 취득일로 보아 §155① 적용 불가",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2023-06-30",
+      "contractTotalPrice": "900000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2005-02-28"
+      },
+      "houses": [
+        {
+          "id": "b",
+          "region": "capital",
+          "acquisitionDate": "2022-03-02",
+          "acquisitionOrigin": "general",
+          "isInherited": true,
+          "inheritedDate": "2022-03-02",
+          "isCoInherited": true,
+          "isLargestCoInheritedShareholder": true,
+          "decedentSameHouseholdAtInheritance": true,
+          "decedentHouseholdSeparate": false
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": false,
+      "notAppliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match(2026-11 리뷰 D-76 수정 후). 회신: 「…2주택 보유세대의 1주택이 조합원입주권 상태에서 동일세대 내 상속이 이루어진 경우 상속개시일을 신규주택의 취득일로 볼 수 없으므로 같은 영 같은 조 같은 항의 특례를 적용할 수 없는 것」. 엔진: 명부에서 신규 주택으로 도출된 행(newHouseRowId)이 동일세대 상속 행이면 §155① 불성립(lib/tax-engine/one-house/new-house-origin.ts sameHouseholdInheritedNewHouse — §155② 단서와 같은 세대 게이트). 종전에는 상속개시일을 신규 주택 취득일로 써서 비과세였다. 표현: 원문 B는 입주권 상태로 상속(2022.3.2.) 후 완공 — 명부 행은 상속개시일을 취득일로 둔 주택 행(경위 일반)으로 근사했다(입주권 상속 경위 칸 없음). A의 남편 1/2 지분 상속은 양도 주택 보유기간(세대 기준 통산 — 서면4팀-1134)에 영향이 없어 생략. B 지분 4/10(최대 지분)·동일세대. 소재: A 서울 동작·B 서울 강남(2005 취득 A는 취득 당시 조정대상지역 제도 전 — 거주요건 없음). 가정값: 양도가 9억(원문에 가액 없음)."
+  }
+]

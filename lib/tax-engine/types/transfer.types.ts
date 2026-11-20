@@ -513,6 +513,11 @@ export interface TransferTaxInput {
      */
     existingTenantLeaseEndDate?: Date;
     /**
+     * 명부에서 신규 주택으로 도출된 행 id(`houses[].id`) — 엔진이 그 행의 상속 사실을 읽어, 동일세대에서 상속받은 주택이면
+     * 「신규 주택 취득」이 아니라고 본다(사전-2023-법규재산-0464 · 2026-11 리뷰 D-76 · `judgeNewHouseOrigin`). 직접 선언 경로는 없다.
+     */
+    newHouseRowId?: string;
+    /**
      * 신규 주택의 취득 경위 — 권리로 취득한 주택이면 갈래를 가른다(`one-house/new-house-origin.ts`).
      * 🔑 **키 자체가 없으면 판정하지 않는다(종전 동작)** — 직접 호출·옛 기록. 화면 경로는 항상 싣는다
      * (명부 행이 없는 경로가 경위를 답받지 못하면 `kind: "not_collected"`).
