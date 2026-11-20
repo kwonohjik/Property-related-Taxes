@@ -29,6 +29,7 @@ import { judgeHousingLand } from "./housing-land";
 import { judgeBuildingSiteLand } from "./building-site-land";
 import { judgeVillaLand } from "./villa-land";
 import { judgeOtherLand } from "./other-land";
+import { treatNegligibleExcessAsBusiness } from "./utils/area-proportioning";
 import { checkIncorporationGrace } from "./period-criteria";
 import { computeResidenceMatchSummary } from "./residence";
 import { applyCoOwnershipRatio } from "./co-ownership";
@@ -231,6 +232,9 @@ export function judgeNonBusinessLand(
         rules,
       });
   }
+
+  // NBL2611-V9-I · Q-7 (나) — 초과가 있어도 비율이 4자리 반올림으로 0이면 사업용(비사업용인데 비율 0 모순 방지).
+  catResult = treatNegligibleExcessAsBusiness(catResult);
 
   judgmentSteps.push(...catResult.steps);
   appliedLawArticles.push(...catResult.appliedLaws);

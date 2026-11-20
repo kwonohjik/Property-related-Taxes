@@ -5,6 +5,7 @@
  * 소득세법 시행령 §160 ① 단서 / §164 / §168의12 / §95 ②
  */
 
+import { areaTimes, judgeAreaLimit } from "./area-limit";
 import { highValueExcessLandTaxableGain } from "./high-value-excess-land";
 import { applyFairMarketRatio } from "./tax-utils"; // 장특 공제율 × 차익 — double 공제율(0.68 등)의 1원 과소 방지(일반 경로 `applyLthdRate`와 같은 leaf)
 import { calculateProration } from "./tax-utils";
@@ -233,10 +234,11 @@ export function calcExcessLandRatio(
   const { multiplier: rawMultiplier } = getHousingMultiplier(zoneType, isMetro, transferDate);
   const multiplier = (rawMultiplier as 3 | 5 | 10);
 
-  const allowedArea = derived.residentialFootprintArea * multiplier;
-  const excessArea = Math.max(0, derived.residentialLandArea - allowedArea);
-  const nonBizRatio =
-    derived.residentialLandArea > 0 ? excessArea / derived.residentialLandArea : 0;
+  // NBL2611-V9-I — 한도·초과는 정수 정확 비교(`area-limit.ts` 단일 소스).
+  const { excess: excessArea, ratio: nonBizRatio } = judgeAreaLimit(
+    derived.residentialLandArea,
+    areaTimes(derived.residentialFootprintArea, multiplier),
+  );
 
   return { multiplier, excessArea, nonBizRatio };
 }
@@ -611,9 +613,10 @@ export function calcWholeBuildingExcessLand(
   asset: MixedUseAssetInput,
   multiplier: ExcessLandResult["multiplier"],
 ): ExcessLandResult {
-  const allowedArea = asset.buildingFootprintArea * multiplier;
-  const excessArea = Math.max(0, asset.totalLandArea - allowedArea);
-  const nonBizRatio = asset.totalLandArea > 0 ? excessArea / asset.totalLandArea : 0;
+  const { excess: excessArea, ratio: nonBizRatio } = judgeAreaLimit(
+    asset.totalLandArea,
+    areaTimes(asset.buildingFootprintArea, multiplier),
+  );
   return { multiplier, excessArea, nonBizRatio };
 }
 

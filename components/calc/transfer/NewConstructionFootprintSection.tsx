@@ -22,6 +22,7 @@
 import { useMemo } from "react";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { areaTimes, judgeAreaLimit } from "@/lib/tax-engine/area-limit";
 
 type AppurtenantLandZone =
   | "metropolitan_residential"
@@ -114,12 +115,12 @@ export function NewConstructionFootprintSection({
   const footprint = parseDecimal(buildingFootprintArea) || 0;
   const multiplier = multiplierOf(appurtenantLandZone);
   // 미선택이면 한도가 정의되지 않는다 — 0으로 떨어뜨리면 "전량 초과"라는 거짓 판정이 된다.
-  const limitArea = multiplier !== null ? footprint * multiplier : null;
+  const limitArea = multiplier !== null ? areaTimes(footprint, multiplier) : null;
 
   const companionArea = companionLandArea ? parseDecimal(companionLandArea) || 0 : 0;
   const hasCompanionArea = companionArea > 0;
   const excessArea =
-    hasCompanionArea && limitArea !== null ? Math.max(0, companionArea - limitArea) : 0;
+    hasCompanionArea && limitArea !== null ? judgeAreaLimit(companionArea, limitArea).excess : 0;
 
   const isExcess = hasCompanionArea && limitArea !== null && excessArea > 0;
 

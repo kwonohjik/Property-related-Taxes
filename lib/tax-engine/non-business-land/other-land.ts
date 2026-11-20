@@ -22,6 +22,7 @@ import type {
 } from "./types";
 import { getPeriodJudgmentDate, meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
 import { getOwnershipStart } from "./utils/period-math";
+import { isAreaAtMost, isAreaOver, subtractAreas } from "../area-limit";
 import { computeAreaProportioning } from "./utils/area-proportioning";
 import { computeContiguousParcelNblAttribution } from "./utils/contiguous-parcel-proportioning";
 import { computeRevenueTest, REVENUE_BUSINESS_TYPE_LABEL } from "./revenue-test";
@@ -397,7 +398,7 @@ function judgeOtherLandCore(
       const fp = o.buildingFloorArea;
       const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
       appliedLaws.push(NBL.OTHER_LAND_FOOTPRINT_CARVEOUT);
-      if (fp >= input.landArea) {
+      if (isAreaAtMost(input.landArea, fp)) {
         // 부속토지 전부가 바닥면적분 → 전량 별도합산(사업용) 유지
         steps.push({
           id: "other_footprint_carveout",
@@ -547,7 +548,7 @@ function judgeOtherLandCore(
       }
       const areaProportioning: AreaProportioning = {
         totalArea: c.totalArea,
-        businessArea: c.totalArea - c.nonBusinessArea,
+        businessArea: subtractAreas(c.totalArea, c.nonBusinessArea),
         nonBusinessArea: c.nonBusinessArea,
         nonBusinessRatio: c.nonBusinessRatio,
         buildingMultiplier: 1,
@@ -578,7 +579,7 @@ function judgeOtherLandCore(
     }
 
     // 호별 기준면적 해석 — 초과분 비사업용 면적 안분 (§168의11①) [단일 필지]
-    if (areaLimit !== undefined && input.landArea > areaLimit) {
+    if (areaLimit !== undefined && isAreaOver(input.landArea, areaLimit)) {
       const areaProportioning: AreaProportioning = { ...computeAreaProportioning(input.landArea, areaLimit), legalBasis: [legalBasis] };
       steps.push({
         id: "other_area_limit",

@@ -28,6 +28,7 @@ import {
 import { isUrbanForPasture } from "./urban-area";
 import { isUrbanCriteriaRegion } from "./urban-region-scope";
 import { getOwnershipStart, threeYearsFrom } from "./utils/period-math";
+import { isAreaOver } from "../area-limit";
 import { computeAreaProportioning } from "./utils/area-proportioning";
 import { getLivestockStandardArea } from "./data/livestock-standards";
 import { includedFacilityLabels } from "../livestock-standard-area";
@@ -207,7 +208,7 @@ export function judgePasture(
     }
   }
 
-  if (resolvedStandardArea !== undefined && input.landArea > resolvedStandardArea) {
+  if (resolvedStandardArea !== undefined && isAreaOver(input.landArea, resolvedStandardArea)) {
     appliedLaws.push(NBL.PASTURE_AREA);
     areaProportioning = { ...computeAreaProportioning(input.landArea, resolvedStandardArea), legalBasis: [NBL.PASTURE_AREA] };
     steps.push({

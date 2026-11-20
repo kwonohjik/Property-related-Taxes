@@ -29,6 +29,7 @@
  */
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { NBL, TRANSFER } from "./legal-codes";
+import { toAreaMicro } from "./area-limit";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import { apportionByStdPrice } from "./std-price-apportion";
 import { safeMultiplyThenDivide } from "./tax-utils";
@@ -46,11 +47,8 @@ export interface CommercialBuildingAndNblPart {
   nblPart: CommercialNblPartEcho | undefined;
 }
 
-/**
- * 면적을 ㎡ × 100 정수로 — 초과 면적 비교·분수에 부동소수를 끌어들이지 않는다(1㎡의 100분의 1 단위 입력).
- * 배율은 §101② 표의 정수라 기준면적 × 100도 정수다.
- */
-const area100 = (m2: number): number => Math.round(m2 * 100);
+/** 결과 echo(`totalLandArea100`·`excessArea100`)는 ㎡ × 100 정수다 — 판정·분수는 마이크로㎡ 정수(`area-limit.ts`)로 하고 echo만 이 단위로 줄인다. */
+const microToArea100 = (micro: number): number => Math.round(micro / 10_000);
 
 /**
  * 필요경비 중 **취득 당시 기준시가 비율**로 나눌 몫.
@@ -117,9 +115,11 @@ export function resolveCommercialNblPart(args: {
   }
 
   // ── 면적 비율(정수 분수) — 지분율은 약분되므로 집합건물 전체 면적만 쓴다(계획서 §2.3 모델 ㉮)
-  const total100 = area100(cal.totalLandArea);
-  const allowed100 = judged.multiplier === 0 ? 0 : Math.round(cal.totalBuildingFootprintArea * 100 * judged.multiplier);
-  const excess100 = Math.max(0, total100 - allowed100);
+  // NBL2611-V9-I — 초과 면적은 `judgeAppurtenantLandExcess`(= `area-limit.ts`)가 낸 정수 정확 값을 그대로 쓴다. 판정(`nonBusinessArea <= 0`)과 분수가 한 값이다.
+  const totalMicro = toAreaMicro(cal.totalLandArea);
+  const excessMicro = toAreaMicro(judged.nonBusinessArea);
+  const total100 = microToArea100(totalMicro);
+  const excess100 = microToArea100(excessMicro);
 
   const totalGain = gain.gain;
   // 양도가액 · 취득가액 · 필요경비를 토지분/건물분으로 (취득시 / 양도시 기준시가)
@@ -136,7 +136,7 @@ export function resolveCommercialNblPart(args: {
   const landGain = t.land - a.land - e.land;
   const buildingGain = totalGain - landGain; // 잔액 흡수 — §97③ 감가상각비도 여기에 실린다
   // 초과 면적 몫은 양도차익(양수)에만 — 토지분 양도차손에는 비사업용 파트가 소득을 갖지 않는다
-  const nonBusinessGain = landGain > 0 && total100 > 0 ? safeMultiplyThenDivide(landGain, excess100, total100) : 0;
+  const nonBusinessGain = landGain > 0 && totalMicro > 0 ? safeMultiplyThenDivide(landGain, excessMicro, totalMicro) : 0;
   const businessLandGain = landGain - nonBusinessGain;
 
   const applied = totalGain > 0 && nonBusinessGain > 0;

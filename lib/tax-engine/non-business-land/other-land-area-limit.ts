@@ -23,6 +23,7 @@ import type {
   OtherLandUsage,
   ZoneType,
 } from "./types";
+import { snapArea } from "../area-limit";
 import { computeMixedUseProportioning } from "./utils/area-proportioning";
 import {
   NBL_AREA_MULTIPLIER,
@@ -101,7 +102,16 @@ function applySportsNotes(
   return result;
 }
 
+/**
+ * 호별 기준면적(㎡). NBL2611-V9-I — 표값 합·`min(바닥, 표값) × 배율`·종목 가산이 부동소수로 합쳐지므로(예: 100.1 × 3 = 300.29999999999995)
+ * 결과는 `snapArea`로 이진 잡음을 지운 값이다. 이 값을 토지 면적과 비교하는 곳은 `area-limit.ts`(`isAreaOver`·`judgeAreaLimit`)를 쓴다.
+ */
 export function resolveAreaLimit(o: OtherLandUsage, zoneType?: ZoneType): number | undefined {
+  const limit = resolveAreaLimitRaw(o, zoneType);
+  return limit === undefined ? undefined : snapArea(limit);
+}
+
+function resolveAreaLimitRaw(o: OtherLandUsage, zoneType?: ZoneType): number | undefined {
   const zoneMul = zoneType ? getZoneAreaMultiplier(zoneType)?.multiplier : undefined;
   switch (o.relatedBusinessType) {
     case "hatchang":

@@ -50,6 +50,7 @@
  * 가드가 필요하다(현재 없음 — 별건).
  */
 
+import { areaRatio4, minArea } from "../area-limit";
 import { differenceInDays } from "../utc-date";
 import { NBL } from "../legal-codes";
 import { judgeAppurtenantLandExcess } from "../appurtenant-land-excess";
@@ -108,9 +109,9 @@ export function judgeBuildingSiteLand(
 
   const area: AreaProportioning = {
     totalArea: input.landArea,
-    businessArea: Math.min(input.landArea, judged.allowedLandArea),
+    businessArea: minArea(input.landArea, judged.allowedLandArea),
     nonBusinessArea: judged.nonBusinessArea,
-    nonBusinessRatio: Math.round(judged.nonBusinessRatio * 10000) / 10000,
+    nonBusinessRatio: areaRatio4(judged.nonBusinessArea, input.landArea),
     buildingMultiplier: judged.multiplier,
     legalBasis: [NBL.BUILDING_SITE_MULTIPLIER],
   };

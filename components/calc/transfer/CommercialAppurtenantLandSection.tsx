@@ -29,6 +29,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
+import { areaTimes, judgeAreaLimit } from "@/lib/tax-engine/area-limit";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { APPURTENANT_ZONE_OPTIONS } from "./appurtenant-zone-options";
 import { NblDesignatedAreaQuestion } from "./nbl/NblDesignatedAreaQuestion";
@@ -54,9 +55,9 @@ export function CommercialAppurtenantLandSection({ asset, onChange, transferDate
   const totalFootprint = parseDecimal(asset.cbTotalBuildingFootprintArea);
   const multiplier = zone?.multiplier;
   const allowedArea =
-    totalFootprint > 0 && multiplier !== undefined ? totalFootprint * multiplier : null;
+    totalFootprint > 0 && multiplier !== undefined ? areaTimes(totalFootprint, multiplier) : null;
   const excessArea =
-    allowedArea !== null && totalLand > 0 ? Math.max(0, totalLand - allowedArea) : null;
+    allowedArea !== null && totalLand > 0 ? judgeAreaLimit(totalLand, allowedArea).excess : null;
   const excessRatio =
     excessArea !== null && totalLand > 0 ? (excessArea / totalLand) * 100 : null;
 
