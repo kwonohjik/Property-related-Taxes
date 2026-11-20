@@ -235,6 +235,10 @@ function TempTwoHouseCoreBlocks({
               onChange={onChange}
               relocationRegionVerdict={relocationRegionVerdict}
               newHouseLocationFromRoster={!!derivedNewHouseRegionCode}
+              // ⑯ 「수도권에 1주택을 소유한 경우에 한정」 — ⑤ 판정과 같은 술어(D-08)
+              previousHouseOutsideCapital={
+                tempTwoHouseVerdict.status !== "pending" && tempTwoHouseVerdict.relocationPreviousOutsideCapital === true
+              }
             />
 
             {/* §155①2호 조정대상지역 — 결론을 바꾸는 양도 시기에만(OH-01 A2b). 게이트는 판정 카드와 같은 leaf. */}
