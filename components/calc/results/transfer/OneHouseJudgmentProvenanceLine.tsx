@@ -26,19 +26,21 @@
 import { useEffect, useState } from "react";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
+  calcVerdictDiffers,
   detectJudgmentProvenance,
   hasJudgmentProvenance,
+  type CalcExemptionSlice,
   type JudgmentProvenance,
 } from "@/lib/calc/one-house-judgment-provenance";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 
 type FormSlice = Pick<
   TransferFormData,
-  "sourceJudgmentId" | "sourceJudgmentInputHash" | "importedOneHouseFacts"
+  "sourceJudgmentId" | "sourceJudgmentInputHash" | "importedOneHouseFacts" | "sourceJudgmentMenu"
 >;
 
 /** 상태별 문구 — 화면이 **아는 것만** 말한다. 모르면 모른다고 한다. */
-function describe(p: JudgmentProvenance): { tone: "sky" | "amber"; body: React.ReactNode } {
+function describe(p: JudgmentProvenance, menu: FormSlice["sourceJudgmentMenu"]): { tone: "sky" | "amber"; body: React.ReactNode } {
   if (p.state === "source_changed") {
     return {
       tone: "amber",
@@ -46,6 +48,18 @@ function describe(p: JudgmentProvenance): { tone: "sky" | "amber"; body: React.R
         <>
           <b>원본 판정이 그 뒤에 바뀌었습니다.</b> 아래 세액은 <b>넘겨받을 당시의 사실</b>로 계산한
           것입니다. 바뀐 판정을 반영하려면 판정 메뉴에서 다시 「이 결과로 세액 계산」을 누르세요.
+        </>
+      ),
+    };
+  }
+  // PR-13b — 다주택 중과 메뉴는 판정을 저장하지 않아(D4) 원본 기록이 없는 것이 정상이다 — 경고가 아니다.
+  if (p.state === "unknown" && menu === "surcharge") {
+    return {
+      tone: "sky",
+      body: (
+        <>
+          <b>다주택 중과 판정 메뉴</b>에서 넘겨받은 사실로 계산했습니다. 그 메뉴는 판정을 저장하지 않아 원본 판정과 대조하지
+          않습니다 — 계산기는 같은 엔진으로 다시 판정하므로, 이 화면의 계산 결과가 지금 입력의 결론입니다.
         </>
       ),
     };
@@ -83,9 +97,12 @@ function describe(p: JudgmentProvenance): { tone: "sky" | "amber"; body: React.R
 export function OneHouseJudgmentProvenanceLine({
   form,
   label,
+  calcExemption,
 }: {
   form: FormSlice | null | undefined;
   label?: string;
+  /** PR-13b — 이 화면 계산 결과의 비과세 축. 넘겨받을 당시 판정 결과와 다르면 배지를 단다(없으면 대조하지 않는다). */
+  calcExemption?: CalcExemptionSlice;
 }) {
   /**
    * 🔑 **지역 state다** — store에 넣지 않는다. 파생값을 persist되는 store에 넣으면
@@ -126,11 +143,20 @@ export function OneHouseJudgmentProvenanceLine({
    */
   if (!prov) return null;
 
-  const { tone, body } = describe(prov);
+  const menu = form?.sourceJudgmentMenu;
+  const { tone, body } = describe(prov, menu);
   const rec = prov.record;
+  const differs = rec ? calcVerdictDiffers(rec.verdictLabel, calcExemption) : undefined;
+  const title = label
+    ? `출처 — ${label}`
+    : menu === "surcharge"
+      ? "출처 — 다주택 중과 판정"
+      : menu === "one_house"
+        ? "출처 — 1세대1주택 비과세 판정"
+        : "출처 — 판정 메뉴에서 넘겨받은 사실";
   return (
     <div data-testid="one-house-judgment-provenance">
-      <ToneCard tone={tone} title={label ? `출처 — ${label}` : "출처 — 판정 메뉴에서 넘겨받은 사실"}>
+      <ToneCard tone={differs ? "amber" : tone} title={title}>
         <p className="text-sm leading-relaxed">{body}</p>
         {/*
           🔑 원본 record를 못 찾았으면 **판정 내용을 말하지 않는다.** 없는 값을 자리표시자로
@@ -144,6 +170,13 @@ export function OneHouseJudgmentProvenanceLine({
             <b data-testid="provenance-verdict">{rec.verdictLabel}</b>
             {" · 저장 "}
             <span className="font-mono tabular-nums">{rec.updatedAt.slice(0, 10)}</span>
+          </p>
+        )}
+        {/* PR-13b(계획서 OH-18 「판정 결과와 다름」) — 넘긴 뒤 계산기에서 명부·양도일 등을 고쳐 결론이 바뀐 경우 */}
+        {differs && (
+          <p className="text-sm" data-testid="provenance-verdict-differs">
+            <b>판정 결과와 다름</b> — 이 화면의 계산 결론이 넘겨받을 당시 판정 결과(「{rec?.verdictLabel}」)와 다릅니다. 넘긴 뒤 바뀐
+            입력(양도일·보유 주택 목록 등) 때문일 수 있습니다. 계산기 결론이 지금 입력의 결론입니다.
           </p>
         )}
       </ToneCard>

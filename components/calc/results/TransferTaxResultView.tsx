@@ -192,7 +192,8 @@ export function TransferTaxResultView({
            무관하게 항상 인쇄돼야 한다(`DisclaimerBanner`와 같은 층위).
         🔑 `formData`에서 읽는다 — 엔진 result에 실으면 어댑터 화이트리스트가 침묵 strip한다.
       */}
-      <OneHouseJudgmentProvenanceLine form={formData} />
+      {/* PR-13b — 계산 결론과 넘겨받을 당시 판정 결과를 대조한다(단건만 — 다건 자산별 결과에는 `isExemptCore` echo가 없어 대조하지 않는다). */}
+      <OneHouseJudgmentProvenanceLine form={formData} calcExemption={result} />
       <SameDayOrderLine form={formData} />
       <RegulatedAreaAssumptionLine form={formData} />
 
