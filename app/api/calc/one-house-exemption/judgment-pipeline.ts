@@ -5,6 +5,8 @@
  * 함수로 뺐다 — 재판정을 손으로 줄여 쓰면(예: `judgeOneHouseExemptionFromInput`만 부르기) §155⑳·§89①4호·
  * 비거주자 단계를 건너뛴 결론이 나온다(`feedback_early_return_branch_skips_pipeline_stages`).
  */
+import { withoutRosterRows } from "@/lib/tax-engine/one-house/without-roster-rows";
+import { rosterRentalRows } from "@/lib/tax-engine/one-house/roster-rental-rows";
 import { presaleRightStartDate, type ParsedRates } from "@/lib/tax-engine/transfer-tax-helpers";
 import { runHouseCountExclusionStep } from "@/lib/tax-engine/transfer-tax-house-exclusion-step";
 import { resolveHceGeneralHouseAcquisitionDate } from "@/lib/tax-engine/transfer-tax-precalc";
@@ -18,7 +20,6 @@ import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judg
 import { buildRentalHousingVerdict, applyRentalHousingVerdict } from "@/lib/tax-engine/one-house/rental-housing-verdict";
 import { settleRentalVerdictForOtherExemption } from "@/lib/tax-engine/one-house/rental-housing-verdict";
 import { rosterCountsRentalUnits } from "@/lib/tax-engine/transfer-tax-rental-housing-judge";
-import { deriveHouseholdHousingCount } from "@/lib/tax-engine/one-house/house-count";
 import { mergeRentalCarveoutNotice, withMergeRentalCarveout, MERGE_RENTAL_CARVEOUT_NOTICE_ID } from "@/lib/tax-engine/one-house/merge-rental-carveout";
 import { buildOneRightVerdict, applyOneRightVerdict } from "@/lib/tax-engine/one-house/one-right-verdict";
 import { applyNonResidentVerdict } from "@/lib/tax-engine/one-house/non-resident";
@@ -77,11 +78,11 @@ export function runOneHouseJudgmentPipeline(
    */
   const rentalRowIds =
     builtRentalVerdict?.passed && !roster.judgment.isExempt && !roster.judgment.isPartialExempt
-      ? (engineInput.houses ?? []).filter((h) => h.isLongTermRental === true).map((h) => h.id)
+      ? rosterRentalRows(engineInput).map((h) => h.id)
       : [];
   const { exclusion, judgment: coreJudgment } =
     rentalRowIds.length > 0
-      ? judgeRoster(withoutRosterRows(engineInput, rentalRowIds, isRightSale))
+      ? judgeRoster(withoutRosterRows(engineInput, rentalRowIds, !isRightSale))
       : roster;
   // F-1 Q-3 · composition-revoke Q-2 — 불성립이어도 명부에 「장기임대」 행이 있으면 엔진이 임대주택을 센 판정을 유지한다(계산기 STEP 0.96과 같은 술어).
   const afterRental = applyRentalHousingVerdict(coreJudgment, builtRentalVerdict, rosterCountsRentalUnits(engineInput));
@@ -141,8 +142,4 @@ export function runOneHouseJudgmentPipeline(
   return { exclusion, rentalVerdict, oneRightVerdict, judgment, rentalDeemedHouseIds: rentalRowIds };
 }
 
-/** 명부에서 행을 빼고 세대 주택 수를 다시 도출한다 — route의 도출(`deriveHouseholdHousingCount`)과 같은 식. */
-function withoutRosterRows(input: TransferTaxInput, ids: string[], isRightSale: boolean): TransferTaxInput {
-  const houses = (input.houses ?? []).filter((h) => !ids.includes(h.id));
-  return { ...input, houses, householdHousingCount: deriveHouseholdHousingCount(houses, !isRightSale) };
-}
+

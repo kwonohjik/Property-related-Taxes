@@ -5,6 +5,7 @@
  * 옮긴 것은 위치뿐이다 — step 파일이 같은 이름으로 재export한다(기존 import 경로 무변경).
  */
 
+import { rosterRentalRows } from "./one-house/roster-rental-rows";
 import {
   phrp154_10ProvisoWaiver,
   rentalResidenceProvisoNotice,
@@ -305,8 +306,8 @@ export function rentalUnitsToRestore(args: {
  * 명부에 「장기임대」로 표시한 행이 있는가 — 있으면 판정 엔진의 주택 수가 임대주택을 이미 센 것으로 본다.
  * 계산기 STEP 0.96(되돌림 생략)과 판정 메뉴 `applyRentalHousingVerdict`(불성립이어도 비과세 유지 — F-1 Q-3)가 같은 술어를 쓴다.
  */
-export function rosterCountsRentalUnits(input: Pick<TransferTaxInput, "houses">): boolean {
-  return (input.houses ?? []).some((h) => h.isLongTermRental === true);
+export function rosterCountsRentalUnits(input: Pick<TransferTaxInput, "houses" | "sellingHouseId">): boolean {
+  return rosterRentalRows(input).length > 0;
 }
 
 /** 다주택 중과가 이 계산에서 실제로 걸릴 수 있는가 — 양도일 조정대상지역이고 한시 배제(데이터 `surcharge_suspended`) 밖. 고지 문장 게이트 전용. */
