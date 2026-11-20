@@ -37,6 +37,8 @@ import {
 } from "./other-land-area-limit";
 import { applyGraceToNonBusinessRemainder, judgeRevenueBusinessStart, pickWiderExclusion } from "./other-land-merge";
 import { judgeHoRequirements } from "./other-land-ho-requirements";
+import { wholesaleItemIssue } from "./revenue-wholesale-item";
+import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
 import {
   bareLandStepDetail,
   buildPropertyTaxBasisEcho,
@@ -270,6 +272,9 @@ function judgeOtherLandCore(
   let revenueStartFailedReason: string | undefined; // NBL2611-D1 — 수입금액비율은 충족했으나 당해 사업개시일 이후 기간기준 미충족
   if (input.revenueTest && input.revenueTest.businessType !== "none") {
     revenueTestDetail = computeRevenueTest(input.revenueTest);
+    // NBL2611-V7-S · Q-6 (다) — 12호 도소매업은 규칙 §83조의4⑭ 열거 품목만(농·수·축산물은 시장·유사 장소 한정). 품목 미선택은 차단, 시장 요건 불충족은 불인정.
+    const wholesale = wholesaleItemIssue(input.revenueTest);
+    if (wholesale?.kind === "missing") throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, wholesale.message);
     steps.push({
       id: "other_revenue_test",
       label: "§168의11② 수입금액비율",
@@ -277,7 +282,16 @@ function judgeOtherLandCore(
       detail: revenueTestDetail.detail,
       legalBasis: NBL.REVENUE_TEST,
     });
-    if (revenueTestDetail.pass) {
+    if (wholesale?.kind === "not_in_market") {
+      steps.push({
+        id: "other_revenue_wholesale_item",
+        label: "§168의11①12호 도소매업 품목 (규칙 §83조의4⑭)",
+        status: "FAIL",
+        detail: wholesale.message,
+        legalBasis: NBL.OTHER_LAND_WHOLESALE_ITEMS,
+      });
+    }
+    if (revenueTestDetail.pass && wholesale === undefined) {
       appliedLaws.push(NBL.REVENUE_TEST);
       // NBL2611-D1 (DM-01 · Q-4 (나)) — 당해 사업개시일이 있고 직전 비율②가 미통과면 사업 구간을 [개시일, 양도일]로 본다. 기간기준을 못 채우면 다른 목(나목 등)을 이어서 본다.
       const startJudged = judgeRevenueBusinessStart(input, revenueTestDetail, rules);
@@ -496,6 +510,8 @@ function judgeOtherLandCore(
   // NBL2611-V7-DM02·V9-DM11 — 호의 면적 외 요건(5호 나목 용도지역 · 13호 나지)을 입력으로 판정할 수 있는 만큼 판정한다. 불충족이면 호를 인정하지 않는다.
   const hoReq = judgeHoRequirements(relatedType, o, input.zoneType);
   if (hoReq.failStep) steps.push(hoReq.failStep);
+  // NBL2611-V7-S · Q-5 (나) — 14호처럼 호를 인정하지 않는 사유가 «확인 필요»를 동반하면 판정 경로와 무관하게 결과에 남긴다.
+  if (hoReq.failNotice) warnings.push(hoReq.failNotice);
   const isRecognizedHo = relatedType !== undefined && relatedType !== "none" && !hoReq.failStep;
   // §168의11⑥ 복합용도 건축물 부속토지 안분 — 건축물에 거주·특정사업 사용분(특정용도분)이 있으면
   // 그 자체가 거주·사업관련(isRelated)에 해당 → mode 단독으로도 isRelated 의제.
@@ -506,7 +522,8 @@ function judgeOtherLandCore(
   const isRelated = isRecognizedHo || legacyRelated || mixedUse !== undefined;
 
   if (isRelated) {
-    const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+    // NBL2611-V7-S — 3호는 «조성 완료일부터 2년» 구간만 사업용 기간이다(`hoReq.businessPeriods`). 그 밖의 호는 소유기간 전체.
+    const r = meetsPeriodCriteria(hoReq.businessPeriods ?? fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
     const legalBasis = resolveAreaLegalBasis(relatedType);
     // Q-6 (다) — 호로 판정에 쓰는 경우(⑥ 복합용도 안분이 호별 기준면적을 대체하지 않을 때)에만 자기 선언 요건을 고지한다.
     if (isRecognizedHo && mixedUse === undefined && hoReq.notice) warnings.push(hoReq.notice);

@@ -6,20 +6,14 @@
  * 타입만 있던 엔진 union을 값으로 내려 Zod가 같은 목록을 쓰게 한다. 새 호·분류가 union에 생기면 아래 가드가
  * 컴파일 오류가 되어 이 목록이 따라간다.
  */
-import type { NblRelatedBusinessType, PropertyTaxType } from "./land-usage.types";
+import type { PropertyTaxType } from "./land-usage.types";
+import { OTHER_LAND_HO_IDS } from "./other-land-ho-meta";
 
-export const NBL_RELATED_BUSINESS_TYPE_VALUES = [
-  "sports",
-  "parking_attached",
-  "parking_garage",
-  "youth_training",
-  "reserve_forces",
-  "resort",
-  "hatchang",
-  "vacant_lot_1household",
-  "etc_14호",
-  "none",
-] as const satisfies readonly NblRelatedBusinessType[];
+/**
+ * 호 목록은 **`other-land-ho-meta.ts` 한 표가 단일 소스**다(NBL2611-V7-S) — 표가 `satisfies Record<NblRelatedBusinessType, …>`라
+ * union과 표가 어긋나면 그 파일에서 컴파일 오류가 난다. 여기서는 이름만 유지한다(⑫ Zod enum).
+ */
+export const NBL_RELATED_BUSINESS_TYPE_VALUES = OTHER_LAND_HO_IDS;
 
 export const NBL_PROPERTY_TAX_TYPE_VALUES = [
   "exempt",
@@ -29,11 +23,7 @@ export const NBL_PROPERTY_TAX_TYPE_VALUES = [
 ] as const satisfies readonly PropertyTaxType[];
 
 // 커버리지 가드 — union에 있는데 목록에 없는 값이 있으면 `true`를 `false` 타입에 대입하는 오류가 난다.
-const relatedCovered: Exclude<NblRelatedBusinessType, (typeof NBL_RELATED_BUSINESS_TYPE_VALUES)[number]> extends never
-  ? true
-  : false = true;
 const taxTypeCovered: Exclude<PropertyTaxType, (typeof NBL_PROPERTY_TAX_TYPE_VALUES)[number]> extends never
   ? true
   : false = true;
-void relatedCovered;
 void taxTypeCovered;

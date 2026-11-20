@@ -4,6 +4,8 @@
  * AssetForm이 extends. 800줄 정책으로 calc-wizard-asset.ts에서 분리(갭 3a).
  * 필드 값 기본/normalize는 calc-wizard-asset-factory.ts·calc-wizard-asset-nbl.ts가 담당.
  */
+import type { NblRelatedBusinessType } from "@/lib/tax-engine/non-business-land/land-usage.types";
+import type { WholesaleItem } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import type { PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 
 /** §168의11⑤ 연접 다필지 1건 (폼 — 전부 string). 엔진 NblParcel과 별개(취득가액 미보유). */
@@ -88,18 +90,10 @@ export interface NblOtherFormSlice {
   nblOtherUseParcels: boolean;
   nblOtherParcels: NblParcelFormItem[];
   // §168의11① 호별 면적기준 (갭 3a) — NblRelatedBusinessType
-  nblOtherRelatedBusinessType:
-    | ""
-    | "sports"
-    | "parking_attached"
-    | "parking_garage"
-    | "youth_training"
-    | "reserve_forces"
-    | "resort"
-    | "hatchang"
-    | "vacant_lot_1household"
-    | "etc_14호"
-    | "none";
+  // 호 목록은 엔진 `other-land-ho-meta.ts` 표가 단일 소스(NBL2611-V7-S) — "" = 미선택
+  nblOtherRelatedBusinessType: "" | NblRelatedBusinessType;
+  /** NBL2611-V7-S — 3호(민간투자사업 등 조성 토지) 조성 완료일(YYYY-MM-DD). 조성이 완료된 날부터 2년이 경과한 토지는 제외 → 2년 구간만 사업용 기간 */
+  nblOtherPrivateInvestCompletionDate: string;
   nblOtherStandardAreaLimit: string;
   nblOtherMaxAnnualArea: string;
   nblOtherYouthCapacity: string;
@@ -136,6 +130,10 @@ export interface NblOtherFormSlice {
     | "vehicle_repair_academy"
     | "agriculture_academy"
     | "wholesale_retail";
+  /** NBL2611-V7-S · Q-6 (다) — 12호 도소매업 취급 품목(규칙 §83조의4⑭). 도소매업 선택 시 필수 */
+  nblRevenueWholesaleItem: "" | WholesaleItem;
+  /** 농산물·수산물·축산물 도소매 — 「유통산업발전법」에 따른 시장·유사 장소 운영 여부 */
+  nblRevenueWholesaleInMarket: boolean;
   nblRevenueCurrentRevenue: string;
   nblRevenueCurrentLandValue: string;
   nblRevenuePriorRevenue: string;

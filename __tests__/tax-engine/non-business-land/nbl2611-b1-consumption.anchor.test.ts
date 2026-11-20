@@ -181,9 +181,9 @@ describe("직전 수입 ↔ 직전 토지가액 (V9-DM06) — ②≤① 경계",
 });
 
 describe("enum 단일 소스 (V6-D)", () => {
-  it("호 10종·재산세 분류 4종 — union과 같은 목록", () => {
+  it("호 16종(NBL2611-V7-S가 6종 추가)·재산세 분류 4종 — union과 같은 목록", () => {
     expect([...NBL_RELATED_BUSINESS_TYPE_VALUES]).toContain("etc_14호");
-    expect(NBL_RELATED_BUSINESS_TYPE_VALUES).toHaveLength(10);
+    expect(NBL_RELATED_BUSINESS_TYPE_VALUES).toHaveLength(16);
     expect([...NBL_PROPERTY_TAX_TYPE_VALUES].sort()).toEqual(["comprehensive", "exempt", "separate", "special_sum"]);
   });
 });

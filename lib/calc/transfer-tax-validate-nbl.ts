@@ -33,6 +33,7 @@ import { deemedTransferDateIssueMessage } from "@/lib/tax-engine/non-business-la
 import { periodRowIssue } from "@/lib/tax-engine/non-business-land/period-row-issue";
 import { periodRowIssueField } from "@/lib/tax-engine/non-business-land/period-row-issue";
 import { periodRowIssueMessage } from "@/lib/tax-engine/non-business-land/period-row-issue";
+import { wholesaleItemIssue } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import { priorRevenueWithoutLandValue } from "@/lib/tax-engine/non-business-land/revenue-test";
 import { revenueStartDateAfterTransfer } from "@/lib/tax-engine/non-business-land/revenue-test";
 import { PRIOR_REVENUE_LAND_VALUE_REQUIRED_MESSAGE } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
@@ -259,6 +260,9 @@ export function validateNblDetailedJudgment(
   }
   // §168의11② 수입금액비율 — 업종 선택 시 당해 수입금액·토지가액 필수
   if (asset.nblLandType === "other_land" && asset.nblRevenueBusinessType) {
+    // NBL2611-V7-S · Q-6 (다) — 12호 도소매업은 취급 품목 필수(규칙 §83조의4⑭). ⑫ refine과 같은 술어·같은 문구. 시장 요건 불충족은 차단이 아니라 12호 불인정이다.
+    const wholesale = wholesaleItemIssue({ businessType: asset.nblRevenueBusinessType, wholesaleItem: asset.nblRevenueWholesaleItem, wholesaleInMarket: asset.nblRevenueWholesaleInMarket });
+    if (wholesale?.kind === "missing") return fieldError("nblRevenueWholesaleItem", `${label}: ${wholesale.message}`);
     if (!asset.nblRevenueCurrentRevenue || parseAmount(asset.nblRevenueCurrentRevenue) <= 0)
       return fieldError("nblRevenueCurrentRevenue", `${label}: 수입금액비율 업종 선택 시 당해 과세기간 수입금액을 입력하세요.`);
     if (!asset.nblRevenueCurrentLandValue || parseAmount(asset.nblRevenueCurrentLandValue) <= 0)

@@ -210,6 +210,7 @@ import type {
   ForestUsageDetail,
   FarmlandDeemingInput,
 } from "./land-usage.types";
+import type { WholesaleItem } from "./revenue-wholesale-item";
 
 export type {
   PastureUsage,
@@ -250,6 +251,13 @@ export interface RevenueTestInput {
   priorRevenue?: number;
   /** 직전 과세기간 토지가액 (원) */
   priorLandValue?: number;
+  /**
+   * 12호 도소매업(`wholesale_retail`) 품목 — 규칙 §83조의4⑭ 열거 품목만 12호다(NBL2611-V7-S · Q-6 (다)).
+   * `wholesale_retail` 선택 시 필수 — 없으면 엔진이 던진다(⑧·⑫가 먼저 막는다). 다른 업종에서는 쓰지 않는다.
+   */
+  wholesaleItem?: WholesaleItem;
+  /** 농산물·수산물·축산물 도소매 — 「유통산업발전법」에 따른 시장과 그 밖에 이와 유사한 장소에서 운영하는지. 그 세 품목에서만 쓴다 */
+  wholesaleInMarket?: boolean;
   /** 직전 과세기간 중 사업영위 일수(초일산입). 미제공 시 직전 환산 안 함 */
   priorBusinessDays?: number;
   /** 직전 과세연도(윤년 판정용). 미제공 시 직전 환산 안 함 */
