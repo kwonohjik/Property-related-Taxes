@@ -4,6 +4,8 @@ import type { NonBusinessLandJudgment, JudgmentStep, StepStatus, DeemedTransferR
 import type { NblSurchargeExclusionReason } from "@/lib/tax-engine/types/transfer-result.types";
 import { nblExclusionBannerText } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
 import { nblLthdBannerPhrase } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
+import { resolvePeriodEvaluation } from "@/lib/tax-engine/non-business-land/period-evaluation";
+import { NBL } from "@/lib/tax-engine/legal-codes";
 
 interface Props {
   judgment: NonBusinessLandJudgment;
@@ -60,11 +62,11 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
   const area = judgment.areaProportioning;
   // NBL2611-V5-H — 장특 문구는 엔진 echo로 가른다(종전 고정 문구 「표1 적용」은 2016.1.1. 전 양도분에서 틀렸다).
   const lthdExcluded = judgment.surcharge?.longTermDeductionExcluded === true;
-  // NBL2611-V10-P — 기간 판정을 하지 않는 지목(배율축)·분기를 단계 id로 식별한다(판정 echo 신설 전 최소 조치).
-  const periodNotJudged = judgment.judgmentSteps.some(
-    (st) => st.id.startsWith("housing_") || st.id.startsWith("building_site_"),
-  );
-  const nonBusinessOtherLand = isNonBusiness && judgment.judgmentSteps.some((st) => st.id === "other_bare_land");
+  // NBL2611-V10-P — 「기간 분석」은 엔진 echo(`periodEvaluation`)가 정한다. 사용기간으로 실제 판정한 경우에만 일수·비율을 보이고,
+  // 양도일 상태를 전 기간에 적용했거나 기간기준을 판정하지 않은 경우의 값은 «판정 근거가 아닌 표시값»이라 숨기고 사실만 밝힌다.
+  const periodEval = resolvePeriodEvaluation(judgment);
+  const showPeriodTable = periodEval.basis === "usage_periods" && judgment.totalOwnershipDays > 0;
+  const periodBasisLabels = periodEval.legalBasis?.join(" · ");
 
   return (
     <div className="rounded-xl border border-border overflow-hidden">
@@ -199,10 +201,8 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
         </div>
       )}
 
-      {/* ③ 기간 분석 */}
-      {/* NBL2611-V10-P — 주택·건물 부속토지는 배율 × 면적 판정이라 소유기간 중 사업용 기간을 따지지 않는다. 그 경우 엔진이 채우는
-          일수·비율(소유기간 전체 · 면적 비율)은 기간 판정값이 아니므로 표시하지 않는다. 근본 해결(기간 판정 echo)은 R06. */}
-      {judgment.totalOwnershipDays > 0 && !periodNotJudged && (
+      {/* ③ 기간 분석 — NBL2611-V10-P: 엔진 echo(`periodEvaluation`)로 분기한다. */}
+      {showPeriodTable && (
         <div className="px-4 py-3 bg-muted/20 border-b border-border">
           <p className="text-xs font-medium text-muted-foreground mb-2">기간 분석</p>
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
@@ -219,18 +219,19 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
               </>
             )}
           </div>
-          {nonBusinessOtherLand && (
-            <p className="text-caption text-muted-foreground mt-2 leading-snug" data-testid="nbl-period-not-judged-notice">
-              비사업용으로 판정된 기타토지의 일부 분기는 소유기간 중 기간기준을 판정하지 않습니다. 이 경우 위 사업용 일수·비율은
-              소유기간 전체를 기준으로 채운 표시값이며 판정 근거가 아닙니다 — 확인 필요.
-            </p>
-          )}
         </div>
       )}
-      {periodNotJudged && (
+      {periodEval.basis === "state_at_transfer" && (
+        <div className="px-4 py-2 border-b border-border" data-testid="nbl-period-state-at-transfer-notice">
+          <p className="text-caption text-muted-foreground leading-snug">
+            양도일 현재의 이용 상태를 소유기간 전체에 적용해 판정했습니다. 소유기간 중 사용기간별 일수·비율은 판정 근거가 아니어서 표시하지 않습니다 — 확인 필요.
+          </p>
+        </div>
+      )}
+      {periodEval.basis === "not_judged" && periodBasisLabels && (
         <div className="px-4 py-2 border-b border-border" data-testid="nbl-period-skipped-notice">
           <p className="text-caption text-muted-foreground leading-snug">
-            주택·건물 부속토지는 배율 × 면적으로 판정하며 소유기간 중 사업용 기간(기간기준)은 판정에 반영되지 않습니다.
+            {NBL.CRITERIA}의 기간기준은 이 판정에 반영되지 않았습니다. {periodBasisLabels}의 배율 × 면적으로만 판정합니다.
           </p>
         </div>
       )}
@@ -279,7 +280,11 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
           )}
           {!nblSurchargeExcluded && (
             <p className="text-caption text-muted-foreground mt-2 leading-snug">
-              비사업용 면적분(전체의 {(area.nonBusinessRatio * 100).toFixed(1)}%)에만 중과세(+10%p)가 적용됩니다 — 중과분은 비사업용 면적비율로 안분 계산됩니다. (기준면적 초과분 — 목장 §168의10③·기타토지 §168의11①, 건축물 바닥면적 외 부속토지 §101①2호나목, 복합용도 건축물 §168의11⑥, 연접 다필지 §168의11⑤, 공장 부수토지 「지방세법 시행령」 §102①1호[별표6]·§101①1호.)
+              비사업용 면적분(전체의 {(area.nonBusinessRatio * 100).toFixed(1)}%)에만 중과세(+10%p)가 적용됩니다 — 중과분은 비사업용 면적비율로 안분 계산됩니다.{" "}
+              {area.legalBasis && area.legalBasis.length > 0
+                ? `(면적 안분 근거: ${area.legalBasis.join(" · ")}.)`
+                : /* 근거 echo가 없는 이력 복원 결과 — 일반 안내 */
+                  "(기준면적 초과분 — 주택 부수토지 영 §168의12, 건물 부수토지 「지방세법 시행령」 §101①2호, 목장 §168의10③·기타토지 §168의11①, 건축물 바닥면적 외 부속토지 §101①2호나목, 복합용도 건축물 §168의11⑥, 연접 다필지 §168의11⑤, 공장 부수토지 「지방세법 시행령」 §102①1호[별표6]·§101①1호.)"}
             </p>
           )}
         </div>

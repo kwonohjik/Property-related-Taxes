@@ -7,6 +7,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
+import { NBL } from "@/lib/tax-engine/legal-codes";
 
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
@@ -87,9 +88,10 @@ describe("[NBL-CARD] ⑦ 판정 상세 렌더 (raw→engine→judgment→card)",
     const judgment = judgeNonBusinessLand(input!, DEFAULT_NON_BUSINESS_LAND_RULES);
     const { container } = render(<NonBusinessLandResultCard judgment={judgment} />);
     expect(judgment.areaProportioning).toBeDefined();
-    expect(container.textContent).toMatch(/기준면적 초과분/);
-    expect(container.textContent).toMatch(/§168의10③/);
-    expect(container.textContent).toMatch(/§168의11①/);
+    // NBL2611-V10-P — 면적 안분 근거는 엔진 echo(`areaProportioning.legalBasis`)다. 종전 고정 열거(목장·기타토지·복합용도…)를 모두 늘어놓지 않고
+    // 이 판정을 실제로 정한 조문(영 §168의10③ 축산용 토지 기준면적)만 보인다.
+    expect(judgment.areaProportioning?.legalBasis).toEqual([NBL.PASTURE_AREA]);
+    expect(container.textContent).toContain(`면적 안분 근거: ${NBL.PASTURE_AREA}`);
     expect(container.textContent).not.toMatch(/§168의11⑤⑥/);
   });
 });

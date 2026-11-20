@@ -15,10 +15,17 @@ import type {
   JudgmentStep,
   NonBusinessLandInput,
   NonBusinessLandJudgmentRules,
+  PeriodEvaluation,
 } from "./types";
 import { getPeriodJudgmentDate, meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
 import { getOwnershipStart, invertPeriods } from "./utils/period-math";
 import { VILLA_REGION_LIST_EVOLVED_NOTICE, villaRuralValueLimit } from "../data/nbl-historical-values-era";
+import { NBL_STATE_AT_TRANSFER_APPLIED_NOTICE, NBL_VILLA_LAND_SCOPE_NOTICE } from "../nbl-confirm-notices";
+
+/** NBL2611-V10-P — 별장 비사용기간(입력한 별장 사용기간의 여집합)으로 기간기준을 실제로 셌다. */
+const VILLA_USAGE_PERIODS = { basis: "usage_periods" } as const;
+/** NBL2611-V10-P — 농어촌주택 경로는 소유기간 전체를 일괄 투입한다(양도일 현재 상태 적용 — V2-C2). 일수·비율은 표시값이다. */
+const VILLA_STATE_AT_TRANSFER = { basis: "state_at_transfer" } as const;
 
 export function judgeVillaLand(
   input: NonBusinessLandInput,
@@ -52,9 +59,13 @@ export function judgeVillaLand(
       gracePeriodDays: 0,
       businessUseRatio: 0,
       criteria: { rule2of3Years: false, rule5Years: false, rule80Percent: false },
+      periodEvaluation: { basis: "not_judged" },
       warnings,
     };
   }
+
+  // NBL2611-V8-VL04 — 부속토지 경계(법 §104의3①6호 후단: 불명확하면 바닥면적 10배)는 판정하지 않았다.
+  warnings.push(NBL_VILLA_LAND_SCOPE_NOTICE);
 
   // ── Step 3-1: 별장 비사용기간 기간기준 → REDIRECT ───────────────
   const villaUse: DateInterval[] = v.villaUsePeriods.map((p) => ({
@@ -88,6 +99,7 @@ export function judgeVillaLand(
       gracePeriodDays: r1.gracePeriodDays,
       businessUseRatio: r1.ratio,
       criteria: r1.criteria,
+      periodEvaluation: VILLA_USAGE_PERIODS,
       warnings,
     };
   }
@@ -118,6 +130,7 @@ export function judgeVillaLand(
       `「조세특례제한법」 §99의4①1호가목 제외지역 ${v.isInRestrictedArea ? "해당(✗)" : "아님(✓)"}`;
 
     if (reqMet) {
+      warnings.push(NBL_STATE_AT_TRANSFER_APPLIED_NOTICE); // NBL2611-V2-C2 — 농어촌주택 경로는 양도일 현재 상태를 소유기간 전체에 적용
       const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
       const r2 = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "villa", rules, input.gracePeriods);
       if (r2.meets) {
@@ -129,7 +142,7 @@ export function judgeVillaLand(
           legalBasis: NBL.VILLA,
         });
         return buildPass("읍·면 농어촌주택 부수토지", steps, appliedLaws, warnings, {
-          r: r2, totalOwnershipDays,
+          r: r2, totalOwnershipDays, pe: VILLA_STATE_AT_TRANSFER,
         });
       }
       steps.push({
@@ -140,7 +153,7 @@ export function judgeVillaLand(
         legalBasis: NBL.VILLA,
       });
       return buildFail("농어촌주택이나 기간기준 미충족", steps, appliedLaws, warnings, {
-        r: r2, totalOwnershipDays,
+        r: r2, totalOwnershipDays, pe: VILLA_STATE_AT_TRANSFER,
       });
     }
 
@@ -153,7 +166,7 @@ export function judgeVillaLand(
       legalBasis: NBL.VILLA,
     });
     return buildFail("농어촌주택 §168의13 요건 미충족 — 비사업용", steps, appliedLaws, warnings, {
-      r: r1, totalOwnershipDays,
+      r: r1, totalOwnershipDays, pe: VILLA_USAGE_PERIODS,
     });
   }
 
@@ -167,13 +180,14 @@ export function judgeVillaLand(
     legalBasis: NBL.VILLA,
   });
   return buildFail("별장부수토지 비사업용 (비사용기간·농어촌주택 모두 미해당)", steps, appliedLaws, warnings, {
-    r: r1, totalOwnershipDays,
+    r: r1, totalOwnershipDays, pe: VILLA_USAGE_PERIODS,
   });
 }
 
 interface Ctx {
   r: PeriodCriteriaResult;
   totalOwnershipDays: number;
+  pe: PeriodEvaluation;
 }
 
 function buildPass(
@@ -193,6 +207,7 @@ function buildPass(
     gracePeriodDays: ctx.r.gracePeriodDays,
     businessUseRatio: ctx.r.ratio,
     criteria: ctx.r.criteria,
+    periodEvaluation: ctx.pe,
     warnings,
   };
 }
@@ -214,6 +229,7 @@ function buildFail(
     gracePeriodDays: ctx.r.gracePeriodDays,
     businessUseRatio: ctx.r.ratio,
     criteria: ctx.r.criteria,
+    periodEvaluation: ctx.pe,
     warnings,
   };
 }

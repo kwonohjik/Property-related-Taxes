@@ -62,6 +62,15 @@ export function villaRuralValueLimit(transferDate: Date): 100_000_000 | 200_000_
   return transferDate < FROM_2015_02_03 ? 100_000_000 : 200_000_000;
 }
 
+/**
+ * 영 §168의13 2호 기준시가 한도의 **입력 칸 안내 문구** — 화면이 「2억원 이하」를 고정으로 쓰지 않게 한다(NBL2611-V8-VL01 화면 잔여).
+ * 양도일이 없으면 추정하지 않고 현행 한도와 연혁 사실을 함께 밝힌다.
+ */
+export function villaRuralValueLimitHint(transferDate: Date | undefined): string {
+  if (!transferDate) return "2억원 이하 (양도일 2015.2.3. 전 양도분은 1억원 이하 — 양도일 미입력, 현행 기준)";
+  return `${villaRuralValueLimit(transferDate) / 100_000_000}억원 이하`;
+}
+
 /** 별장 농어촌주택의 「제외지역」 선언이 읽는 조특법 §99의4①1호가목 열거 지역이 시기마다 달랐음을 알리는 고지(세액 불변). */
 export const VILLA_REGION_LIST_EVOLVED_NOTICE =
   "「조세특례제한법」 §99의4①1호가목의 제외지역 열거(영 §168의13 3호가 가리킨다)는 시행본마다 달라졌습니다(2016.1.1. 시행본은 수도권·도시지역 및 허가구역·지정지역·그 밖 4개 목, " +

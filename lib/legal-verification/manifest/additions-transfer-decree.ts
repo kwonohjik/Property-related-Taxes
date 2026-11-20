@@ -672,6 +672,8 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
       "공공공지",
       // NBL2611-V3-PR05 — ①9호 현행(양도일 2025.3.21. 이후 5년). 2년은 그 전 시행본.
       "멸실ㆍ철거되거나 무너진 날부터 5년",
+      // NBL2611-B2 — ④3~7호 «지원하지 않음» 고지(`NBL_UNCONDITIONAL_RULE_4_UNSUPPORTED_NOTICE`)가 기댄 사유 문언.
+      "부실징후기업과 채권금융기관협의회", "회생계획의 수행을 위하여 양도하는 토지",
     ],
     keywordMode: "ALL",
   },

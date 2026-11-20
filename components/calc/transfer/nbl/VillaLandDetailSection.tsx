@@ -11,6 +11,8 @@ import { BusinessUsePeriodsInput } from "./shared/BusinessUsePeriodsInput";
 import { MetropolitanAreaField } from "./shared/MetropolitanAreaField";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { FOOTPRINT_DEFINITION } from "@/lib/calc/footprint-definition-copy";
+import { villaRuralValueLimitHint } from "@/lib/tax-engine/data/nbl-historical-values-era";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 export interface VillaLandDetailSectionProps {
   asset: AssetForm;
@@ -118,7 +120,8 @@ export function VillaLandDetailSection({
 
           {/* ② 기준시가 요건 (영 §168의13 2호) */}
           <ToneCard tone="emerald" sectionNum="2" title="기준시가 요건 (2호)">
-            <FieldCard label="건물+부속토지 합산 기준시가" unit="원" hint="2억원 이하">
+            {/* NBL2611-V8-VL01 — 한도는 양도일 연혁(2015.2.3. 전 1억원 · 이후 2억원)이다. 엔진과 같은 leaf에서 파생한다. */}
+            <FieldCard label="건물+부속토지 합산 기준시가" unit="원" hint={villaRuralValueLimitHint(toOptionalDate(transferDate))}>
               <CurrencyInput
                 label="합산 기준시가"
                 hideLabel

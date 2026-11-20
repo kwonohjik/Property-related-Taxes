@@ -349,6 +349,11 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
     businessUseRatio,
     criteria,
     areaProportioning: categoryResult?.areaProportioning,
+    // NBL2611-V10-P — 기간기준 처리 방식 echo(표시 전용). 지목별 judge가 채우지 않은 지목(농지·임야·목장)은 사용기간으로 실제 판정한다.
+    // 무조건 사업용 의제 조기 확정·판정 불가(지목 분류 불가)는 기간기준을 보지 않는다.
+    periodEvaluation: categoryResult
+      ? (categoryResult.periodEvaluation ?? { basis: "usage_periods" })
+      : { basis: "not_judged" },
     /**
      * 양도일 의제(§168의14②) echo — **실제로 판정에 쓰인 경우에만** 싣는다 (F-1).
      *

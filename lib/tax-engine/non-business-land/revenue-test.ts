@@ -11,8 +11,24 @@
 import { differenceInCalendarDays, getDaysInYear } from "../utc-date";
 
 import type { RevenueTestInput, RevenueTestResult } from "./types";
-import { getNblRevenueThreshold } from "../legal-codes";
+import { getNblRevenueThreshold, type NblRevenueBusinessType } from "../legal-codes";
 import { safeMultiply, safeMultiplyThenDivide } from "../tax-utils";
+
+/**
+ * 수입금액비율 대상 업종의 **한국어 라벨**(율 제외) — 판정 사유에 enum 원문(`parking_operation`)이 나가지 않게 한다(NBL2611-V10-K).
+ * `satisfies`가 새 업종 추가 시 이 표의 누락을 컴파일 오류로 만든다.
+ */
+export const REVENUE_BUSINESS_TYPE_LABEL = {
+  parking_operation: "주차장운영업",
+  mineral_spring: "광천지",
+  fish_farm_other: "양어장·지소 기타",
+  block_stone_pipe_mfg: "블록·석물·토관 제조업",
+  landscaping_floriculture: "조경작물식재·화훼판매시설업",
+  vehicle_repair_academy: "자동차·중장비 정비·운전 학원",
+  agriculture_academy: "농업 학원",
+  wholesale_retail: "도소매업",
+  none: "해당 없음",
+} as const satisfies Record<NblRevenueBusinessType, string>;
 
 /**
  * §168의11③1호 간주임대료 = floor(보증금 × 임대일수 × rate.num ÷ (rate.den × 그해일수)).

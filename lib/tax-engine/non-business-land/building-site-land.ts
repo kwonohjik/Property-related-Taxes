@@ -63,6 +63,9 @@ import type {
 } from "./types";
 import { getOwnershipStart } from "./utils/period-math";
 
+/** NBL2611-V10-P — 건물 부수토지는 「지방세법 시행령」 §101①2호 배율 × 면적으로만 판정한다. 기간기준은 판정하지 않는다. */
+const BUILDING_SITE_PERIOD_EVALUATION = { basis: "not_judged", legalBasis: [NBL.BUILDING_SITE_MULTIPLIER] } as const;
+
 export function judgeBuildingSiteLand(
   input: NonBusinessLandInput,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -109,6 +112,7 @@ export function judgeBuildingSiteLand(
     nonBusinessArea: judged.nonBusinessArea,
     nonBusinessRatio: Math.round(judged.nonBusinessRatio * 10000) / 10000,
     buildingMultiplier: judged.multiplier,
+    legalBasis: [NBL.BUILDING_SITE_MULTIPLIER],
   };
 
   if (judged.isWithinLimit) {
@@ -130,6 +134,7 @@ export function judgeBuildingSiteLand(
       gracePeriodDays: 0,
       businessUseRatio: 1,
       criteria: { rule2of3Years: true, rule5Years: false, rule80Percent: false },
+      periodEvaluation: BUILDING_SITE_PERIOD_EVALUATION,
       warnings,
     };
   }
@@ -154,6 +159,7 @@ export function judgeBuildingSiteLand(
     gracePeriodDays: 0,
     businessUseRatio: 1 - area.nonBusinessRatio,
     criteria: { rule2of3Years: false, rule5Years: false, rule80Percent: false },
+    periodEvaluation: BUILDING_SITE_PERIOD_EVALUATION,
     warnings,
   };
 }

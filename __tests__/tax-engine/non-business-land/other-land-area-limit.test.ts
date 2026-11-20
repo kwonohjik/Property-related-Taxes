@@ -9,6 +9,7 @@ import { describe, it, expect } from "vitest";
 import { judgeOtherLand } from "@/lib/tax-engine/non-business-land/other-land";
 import type { NonBusinessLandInput } from "@/lib/tax-engine/non-business-land/types";
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-land/types";
+import { NBL } from "@/lib/tax-engine/legal-codes";
 
 const d = (iso: string) => new Date(iso);
 const R = DEFAULT_NON_BUSINESS_LAND_RULES;
@@ -54,6 +55,7 @@ describe("갭 3a — §168의11① 호별 면적기준 정밀판정", () => {
       nonBusinessArea: 800,
       nonBusinessRatio: 0.4,
       buildingMultiplier: 1,
+      legalBasis: [NBL.OTHER_LAND_AREA_PARKING], // NBL2611-V10-P echo
     });
   });
 
@@ -79,6 +81,7 @@ describe("갭 3a — §168의11① 호별 면적기준 정밀판정", () => {
       nonBusinessArea: 300,
       nonBusinessRatio: 0.2,
       buildingMultiplier: 1,
+      legalBasis: [NBL.OTHER_LAND_AREA_HATCHANG], // NBL2611-V10-P echo
     });
   });
 
