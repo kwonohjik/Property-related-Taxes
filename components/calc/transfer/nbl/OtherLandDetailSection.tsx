@@ -7,6 +7,7 @@ import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { OtherLandParcelSection } from "./OtherLandParcelSection";
 import { OtherLandHoSection } from "./OtherLandHoSection";
 import { RevenueWholesaleItemField } from "./RevenueWholesaleItemField";
+import { OtherLandPropertyTaxBasisField } from "./OtherLandPropertyTaxBasisField";
 import { FactoryLandSection } from "./FactoryLandSection";
 import { NblLandValueAutoFetchButton } from "./NblLandAutoFetch";
 // 공유 지분은 자산-수준 「공유 지분율」(%) 단일 소스 — NBL 전용 지분 입력칸은 폐지됐다(2026-09-04).
@@ -139,7 +140,7 @@ export function OtherLandDetailSection({
       <ToggleCard
         tone="amber"
         title="건축물(건물·시설물) 있음"
-        description="건물 없으면 나대지 간주(종합합산). 건물 있으면 시가표준액 2% 비교 후 재산세 유형 적용 — 소득세법 §104의3①4호나목·지방세법 시행령 §101①2호나목"
+        description="건물 없으면 재산세 분류 근거를 확인한 선언만 인정하고, 근거가 없으면 종합합산으로 봅니다. 건물 있으면 시가표준액 2% 비교 후 재산세 유형 적용 — 소득세법 §104의3①4호나목·지방세법 시행령 §101①2호나목"
         checked={asset.nblOtherHasBuilding}
         onCheckedChange={(c) => onAssetChange({ nblOtherHasBuilding: c })}
       />
@@ -168,6 +169,9 @@ export function OtherLandDetailSection({
           </p>
         </ToneCard>
       </FieldCard>
+
+      {/* NBL2611-V1-A (Q-1) — 재산세 분류 «근거». 선택지·표시 조건은 엔진 술어(`property-tax-basis.ts`)가 정한다. */}
+      <OtherLandPropertyTaxBasisField asset={asset} onAssetChange={onAssetChange} />
 
       {asset.nblOtherHasBuilding && (
         <>

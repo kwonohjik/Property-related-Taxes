@@ -68,6 +68,7 @@
  * (`one-house/roster-input-path.ts` · 1h-G1-12). 계산기(부담부증여 모드 포함)·판정 메뉴·표식 없는 API 직접
  * 호출·겸용주택은 이 플래그를 세우지 않으므로 PR-2의 「모름 → 불리」 동작 그대로다.
  */
+import { rosterRentalRows } from "./roster-rental-rows";
 import type { HouseInfo, MergeOrigin } from "../types/multi-house-surcharge.types";
 
 /** 명부 행 하나의 합가 전 위치. `undefined` = 합가 전 취득인데 소유 쪽을 입력하지 않았다. */
@@ -282,7 +283,7 @@ function judgeMarriageRentals(
   // 명부에 장기임대주택 행이 있으면 그 행이 정본이다 — 구성에서 이미 센 행(제외되지 않은 행)은 다시 세지 않고, 명부 밖
   // 임대주택 입력은 보지 않는다(같은 주택을 두 번 세지 않게 — 판정 메뉴는 이중 입력을 ⑧에서 경고한다).
   const excludedIds = new Set(input.knownHouseExclusionHouseIds ?? []);
-  const rosterRentals = (input.houses ?? []).filter((h) => h.isLongTermRental === true);
+  const rosterRentals = rosterRentalRows(input);
   const sides =
     rosterRentals.length > 0
       ? rosterRentals

@@ -62,6 +62,7 @@
  * 돌지 않아 원시 플래그 중과가 붙었다(거주 + 임대 1 · 20억 167,360,600 vs 명부 입력 102,086,600). 중과 쪽은
  * `runMultiHouseSurchargeStep`이 같은 사실로 행을 구성해 정밀 판정을 돌린다. 음수(입력 모순)만 판정 보류다.
  */
+import { rosterRentalRows } from "./one-house/roster-rental-rows";
 import { TRANSFER, TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
 import { resolveDeemedOneHouseBy155, resolveMergeCompositionConfirmNotice } from "./transfer-tax-exemption-requirements";
 import {
@@ -244,7 +245,7 @@ function judgeOtherHouse(
    * 1주택 합가」를 의도한 시료였으므로 `mergeOrigin: "counterpart_side"`를 더해 기대값(met)을
    * 보존했다 — 세액은 그대로다.
    */
-  const rentalHouseIds = input.houses?.filter((h) => h.isLongTermRental).map((h) => h.id) ?? [];
+  const rentalHouseIds = rosterRentalRows(input).map((h) => h.id);
   const mergeDeemingInput = {
     ...input,
     householdHousingCount: 2,

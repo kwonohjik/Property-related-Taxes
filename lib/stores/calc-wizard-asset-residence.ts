@@ -76,6 +76,23 @@ export function diffMonthsClamped(start: string, end: string): number {
 }
 
 /**
+ * 재개발 「거주개월 분리 입력」 카드의 개월 — 입주일·퇴거일이 있으면 정본 셈(`residenceIntervalMonths` — 초일 산입)으로 **다시 도출**한다
+ * (2026-11 리뷰 D-45). 옛 카드는 첫날을 빼고 세어(2022-03-10~2024-03-09 = 23) 정확히 2년 거주를 23개월로 저장했다 — 저장된 그 문자열을
+ * 믿지 않는다. 날짜가 없거나 순서가 뒤집혔으면 저장된 개월(직접 입력·옛 기록)을 쓴다. 카드 미리보기·④가 같은 함수를 쓴다.
+ */
+export function redevSplitResidenceMonths(start: string | undefined, end: string | undefined, stored: string | undefined): number | undefined {
+  if (start && end && start <= end) {
+    const s = new Date(start);
+    const e = new Date(end);
+    if (!isNaN(s.getTime()) && !isNaN(e.getTime())) return residenceIntervalMonths(start, end);
+  }
+  const raw = (stored ?? "").replace(/,/g, "").trim();
+  if (!raw) return undefined;
+  const n = parseInt(raw, 10);
+  return Number.isNaN(n) ? undefined : n;
+}
+
+/**
  * §154⑥ 거주 구간 개월 — 「전입일부터 전출일까지」 **초일 산입**(서면4팀-82 · 집행기준 89-154-20).
  * 응당일 전날 전출이 완성 개월이다(2020-03-10~2022-03-09 = 24). 빈값·무효는 0.
  */

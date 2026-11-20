@@ -180,6 +180,8 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
       "용도지역별 적용배율",
       "전용주거지역",
       "부설주차장 설치기준면적 이내의 토지",
+      // NBL2611-V1-A — ③ 공지상태 별도합산의 호별 면적 한도 고지(`NBL_PTAX_VACANT_STATE_LIMIT_NOTICE`)가 기댄 문언.
+      "최저보유차고면적기준의 1.5배에 해당하는 면적 이내의 토지",
       // NBL2611-B2 — ① 단서(`NBL.BUILDING_SITE_SEPARATE_AGG_PROVISO`): 재산세 분류 칸 혼재 고지서 안내가 기댄다.
       "사용승인(임시사용승인을 포함한다)을 받지 아니하고 사용 중인 건축물의 부속토지는 제외한다",
     ],
@@ -204,6 +206,8 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
       "1년이 지나지 않은 건축물 또는 주택의 부속토지",
       "용도지역별 적용배율",
       "빈집정비사업",
+      // NBL2611-V1-A — 철거ㆍ멸실 근거의 한시 지위 고지(`NBL_PTAX_DEMOLISHED_STATUS_NOTICE`)가 기댄 빈집 3년 문언.
+      "3년이 지나지 않은 빈집의 부속토지",
     ],
     keywordMode: "ALL",
   },

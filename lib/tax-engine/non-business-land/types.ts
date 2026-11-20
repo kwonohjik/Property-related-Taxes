@@ -197,6 +197,7 @@ export interface UnconditionalExemptionInput {
 // 지목별 사용 현황 — land-usage.types.ts 로 분리 (800줄 정책, 2026-08-05)
 // ============================================================
 
+import type { PropertyTaxBasisEcho } from "./property-tax-basis";
 import type {
   PastureUsage,
   VillaUsage,
@@ -530,6 +531,12 @@ export interface NonBusinessLandJudgment {
    */
   periodEvaluation?: PeriodEvaluation;
 
+  /**
+   * [echo] NBL2611-V1-A — 기타토지 재산세 분류 «근거» 모델을 적용했을 때만 싣는다(표시 전용 — 세액 불변).
+   * 건축물 부속토지 규칙·종합합산 선언처럼 근거 모델이 개입하지 않은 판정에는 없다.
+   */
+  propertyTaxBasis?: PropertyTaxBasisEcho;
+
   /** §168조의14② 양도일 의제 (경매·공매·신문공고) — 기간기준 판정 기준일 */
   deemedTransfer?: { reason: DeemedTransferReason; date: Date };
 
@@ -716,6 +723,9 @@ export interface CategoryJudgeResult {
 
   /** [echo] 기간기준 처리 방식 — 지목별 judge가 채운다. 비우면 엔진이 지목으로 정한다(NBL2611-V10-P). */
   periodEvaluation?: PeriodEvaluation;
+
+  /** [echo] NBL2611-V1-A — 재산세 분류 «근거» 모델 적용 결과(기타토지 judge가 채운다). */
+  propertyTaxBasis?: PropertyTaxBasisEcho;
 
   /** §168의11② 수입금액비율 테스트 결과 (judgeOtherLand에서 산출) */
   revenueTestDetail?: RevenueTestResult;

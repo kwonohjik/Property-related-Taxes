@@ -9,6 +9,7 @@
 import type { BusinessUsePeriod, ZoneType } from "./types";
 import type { SPORTS_OUTDOOR_STD, SPORTS_INDOOR_STD, RESERVE_FORCES_STD } from "./data/area-standards";
 import type { EmployeeSportsFacilityUsage } from "../factory-employee-sports-standard";
+import type { PropertyTaxBasis } from "./property-tax-basis";
 
 export interface PastureUsage {
   isLivestockOperator: boolean;
@@ -182,6 +183,13 @@ export interface FactoryLandUsage {
 
 export interface OtherLandUsage {
   propertyTaxType: PropertyTaxType;
+  /**
+   * NBL2611-V1-A (Q-1) — 재산세 분류 «근거». 건축물 없는 토지의 비종합합산 선언을 존중하는 사실이다.
+   * 미선택·「모름」·분류와 맞지 않는 값이면 엔진이 종합합산 + 확인 필요로 접는다(`property-tax-basis.ts`).
+   */
+  propertyTaxBasis?: PropertyTaxBasis;
+  /** NBL2611-V1-A — 근거가 «철거ㆍ멸실»일 때 철거 전 건축물의 바닥면적(㎡). 영 §103의2①1호 — 이 면적 × 영 §101② 적용배율이 별도합산 범위다. */
+  demolishedFloorArea?: number;
   hasBuilding: boolean;
   /**
    * 공장용 건축물 부속토지 기준면적 판정(§102①1호 별표6 / §101①1호 배율).
