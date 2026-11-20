@@ -7,7 +7,7 @@
 
 - **비사업용 토지 리뷰 2026-11(농지·임야·목장 외 지목) 종결** — 51 클러스터(critical 9) · 16묶음 PR #3464~#3499 머지.
   종결 기록 `docs/reviews/nbl-other-categories-review-2026-11.md` §12(묶음별 머지 · 마커 역grep 49/51 · 남은 기능 제약 7건).
-  V5-G2는 G-6 재제안 금지로 미착수. `verify:legal`은 법제처 접속 불가로 미판정 — 복구 후 `--id NBL` 재실행.
+  V5-G2는 G-6 재제안 금지로 미착수. `verify:legal -- --clear --id NBL` 16건 통과(집 회선은 law.go.kr 경로 차단 → 핫스팟으로 실행).
 
 ## 2026-11-03
 
