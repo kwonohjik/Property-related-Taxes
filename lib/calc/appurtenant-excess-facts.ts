@@ -41,7 +41,7 @@ export function housingExcessGraceIntervals(asset: AssetForm, transferDate: stri
 }
 
 export function buildAppurtenantExcessFacts(asset: AssetForm, transferDate: string | undefined): AppurtenantExcessFactsWire | undefined {
-  if (asset.assetKind !== "housing" && asset.assetKind !== "commercial_building" && asset.assetKind !== "building") return undefined;
+  if (asset.assetKind !== "housing" && asset.assetKind !== "commercial_building" && asset.assetKind !== "general_building") return undefined;
   if (asset.assetKind === "housing" && asset.isMixedUseHouse) return undefined;
   const expropriationNoticeDate =
     asset.transferCause === "public_expropriation" && asset.expropriationNoticeDate ? asset.expropriationNoticeDate.slice(0, 10) : undefined;

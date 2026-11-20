@@ -35,14 +35,15 @@ describe("④ buildAppurtenantExcessFacts — 사업인정 고시일(수용일 �
     expect(buildAppurtenantExcessFacts(house({ transferCause: "public_expropriation" }), TRANSFER)).toBeUndefined();
   });
   it("상가·일반건물도 고시일만 싣는다(영 §168의12는 주택 배율이라 유예 대상이 아니다)", () => {
-    for (const assetKind of ["commercial_building", "building"] as const) {
+    for (const assetKind of ["commercial_building", "general_building"] as const) {
       expect(buildAppurtenantExcessFacts(house({ ...expro, assetKind, nblGracePeriods: [{ reasonCode: "other_justifiable", anchorDate: "2020-01-01", endDate: "2020-06-01", description: "" }] }), TRANSFER)).toEqual({
         expropriationNoticeDate: "2021-03-01",
       });
     }
   });
-  it("토지·겸용주택은 이 입구가 아니다", () => {
+  it("토지·건물(토지 제외)·겸용주택은 이 입구가 아니다", () => {
     expect(buildAppurtenantExcessFacts(house({ ...expro, assetKind: "land" }), TRANSFER)).toBeUndefined();
+    expect(buildAppurtenantExcessFacts(house({ ...expro, assetKind: "building" }), TRANSFER)).toBeUndefined();
     expect(buildAppurtenantExcessFacts(house({ ...expro, isMixedUseHouse: true }), TRANSFER)).toBeUndefined();
   });
   it("단건·다건이 같이 쓰는 `buildExpropriationInput`이 이 값을 body에 싣는다", () => {
