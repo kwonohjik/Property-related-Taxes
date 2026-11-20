@@ -15,6 +15,7 @@
  * dual truth가 된다(`feedback_aggregate_display_rederives_engine_value`).
  */
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { JUDGMENT_HOUSING_SCOPE_HINT } from "@/lib/calc/judgment-scope-hints";
 import { CtaButton } from "@/components/calc/shared/WizardNav";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { RentalCancellationWindowNote } from "@/components/calc/results/transfer/RentalCancellationWindowNote";
@@ -509,6 +510,10 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
           <p className="text-sm text-muted-foreground">
             세액을 내려면 계산기에서 <b>취득가액·필요경비</b>를 추가로 입력해야 합니다 — 이 화면은
             그 값을 묻지 않습니다.
+          </p>
+          {/* D-56 — 판정 메뉴가 다루지 않는 물건(겸용 · 배율 초과 부수토지)은 계산기에서 그 사실을 넣어야 한다. 범위는 넓히지 않는다. */}
+          <p className="text-sm text-muted-foreground" data-testid="one-house-to-calculator-scope-note">
+            {JUDGMENT_HOUSING_SCOPE_HINT}
           </p>
           {judgment.unmetExceptions.some((u) => u.id === DEMOLISHED_BEFORE_BALANCE_UNMET_ID) && (
             <p className="text-sm text-muted-foreground" data-testid="one-house-to-calculator-demolished-note">

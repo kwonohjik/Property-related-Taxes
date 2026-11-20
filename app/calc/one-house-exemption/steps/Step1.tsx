@@ -10,6 +10,7 @@
  *    사용자가 직접 고르게 한다 — 그래서 안내 문구에서 요건을 빼거나 바꾸어 적지 않는다.
  */
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { HOUSEHOLD_DEFINITION_ERA_NOTE } from "@/lib/calc/judgment-scope-hints";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -52,6 +53,10 @@ export function Step1({ form, onChange }: Props) {
             </span>
           </li>
         </ul>
+        {/* I-30 — 연혁(사실상 이혼 괄호 2019.1.1. · 소득 기준 2024.2.29.). 이전 양도분 해석은 단정하지 않는다. */}
+        <p className="text-sm leading-relaxed text-muted-foreground" data-testid="household-definition-era-note">
+          {HOUSEHOLD_DEFINITION_ERA_NOTE}
+        </p>
         <div className="flex flex-wrap gap-2 pt-1">
           <LawArticleModal legalBasis="소득세법 §88" label="법 §88 6호" />
           <LawArticleModal legalBasis="소득세법 시행령 §152의3" label="영 §152의3" />
