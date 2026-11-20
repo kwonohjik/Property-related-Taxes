@@ -47,7 +47,7 @@ import {
   mergeDeemingHouseCountHolds,
   qualifiesLongTermMortgageResidenceExemption,
   resolveTwoHouseMergeAxis,
-  ruralTemporaryTwoHouseOverlapCountHolds,
+  specialHouseTemporaryTwoHouseOverlapCountHolds,
   type OneHouseResidenceBasis,
 } from "../transfer-tax-exemption-requirements";
 import { twoHouseSpecialCountHolds } from "../transfer-tax-exemption-holding";
@@ -132,7 +132,7 @@ export function buildRequirementReview(
   //   원시 `=== 2`가 아니라 E-3·pending과 같은 `twoHouseSpecialCountHolds`다 — 상속주택 두 풀 제외(세 특례)면
   //   §155①이 성립하지 않는데 행이 전부 충족으로 나왔다(2026-11-12 리뷰 J-2).
   if (
-    (twoHouseSpecialCountHolds(input) || ruralTemporaryTwoHouseOverlapCountHolds(input)) &&
+    (twoHouseSpecialCountHolds(input) || specialHouseTemporaryTwoHouseOverlapCountHolds(input)) &&
     input.temporaryTwoHouse &&
     twoHouseRule
   ) {

@@ -43,7 +43,7 @@ import {
   evaluateTemporaryTwoHouseTiming,
   meetsOneHouseResidenceRequirement,
   qualifiesLongTermMortgageResidenceExemption,
-  ruralTemporaryTwoHouseOverlapCountHolds,
+  specialHouseTemporaryTwoHouseOverlapCountHolds,
   twoHouseSpecialCountHolds,
 } from "../transfer-tax-exemption-requirements";
 import { isWinWinLeaseEndDateRequired, qualifiesWinWinRental } from "../transfer-tax-exemption-residence-waivers";
@@ -502,7 +502,7 @@ export function collectEraUndetermined(
   if (
     originRule &&
     input.temporaryTwoHouse?.newHouseOrigin &&
-    (twoHouseSpecialCountHolds(input) || ruralTemporaryTwoHouseOverlapCountHolds(input))
+    (twoHouseSpecialCountHolds(input) || specialHouseTemporaryTwoHouseOverlapCountHolds(input))
   ) {
     const { origin, timing } = evaluateTemporaryTwoHouseTiming(input, originRule);
     if (!settled && origin.blocked && origin.unconfirmed.length > 0 && (relevance?.newHouseOriginDecides?.() ?? true)) {

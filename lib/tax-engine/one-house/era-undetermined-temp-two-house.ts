@@ -7,7 +7,7 @@
 import { TRANSFER } from "../legal-codes";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import { evaluateTemporaryTwoHouseTiming } from "../transfer-tax-exemption-requirements";
-import { ruralTemporaryTwoHouseOverlapCountHolds } from "../transfer-tax-exemption-requirements";
+import { specialHouseTemporaryTwoHouseOverlapCountHolds } from "../transfer-tax-exemption-requirements";
 import { twoHouseSpecialCountHolds } from "../transfer-tax-exemption-requirements";
 import { waivesPriorHouseOneYearGap } from "../transfer-tax-exemption-requirements";
 import { judgeTemporaryTwoHouseTiming } from "../transfer-tax-temporary-two-house-timing";
@@ -104,7 +104,7 @@ export function collectTempTwoHouseEraUndetermined(
     }
   }
   // 주택 수 게이트는 비과세 판정(E-3)과 같은 술어다 — ⑦ 농어촌주택이 겹친 3주택(D3)도 §155① 분기로 판정한다(리뷰 J-6).
-  if ((twoHouseSpecialCountHolds(input) || ruralTemporaryTwoHouseOverlapCountHolds(input)) && tt && twoHouseRule) {
+  if ((twoHouseSpecialCountHolds(input) || specialHouseTemporaryTwoHouseOverlapCountHolds(input)) && tt && twoHouseRule) {
     if (resolveTemporaryTwoHouseDeadline(input, twoHouseRule).transition2002Unverified) {
       out.push({
         id: "155-1-2002-transition-unverified",

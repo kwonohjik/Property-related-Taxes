@@ -191,6 +191,39 @@ export function qualifiesCulturalHeritageHouse(
 }
 
 /**
+ * D3 — §155⑥1호(문화유산 주택)와 §155①(일시적 2주택)이 **겹쳐 3주택**인가 — 주택 수 축만 본다(2026-11 리뷰 D-02).
+ *
+ * ⑥은 ⑦과 같은 문형(「…각각 1개씩 소유하고 있는 1세대가 일반주택을 양도하는 경우에는 국내에 1개의 주택을 소유하고 있는 것으로 보아
+ * 제154조제1항을 적용한다」)이고, 국세청은 문화재주택 + 일반주택 + 신규 주택 3주택에서 종전 일반주택을 신규 취득일부터 3년 안에
+ * 양도하면 1세대1주택으로 보았다(상속증여세과-212, 2013.6.13.). 그래서 ⑥ 요건은 신규 주택을 뺀 2주택 기준으로 본다.
+ * 상속주택 제외까지 겹치면 세 특례라 인정 해석이 없다(`inheritedHouseExclusionCount` 주석 — ⑦ D3와 같은 상한).
+ */
+export function heritageTemporaryTwoHouseOverlapCountHolds(
+  input: Pick<
+    TransferTaxInput,
+    | "householdHousingCount"
+    | "inheritedHouseExclusionCount"
+    | "culturalHeritageHouse"
+    | "culturalHeritageHouseId"
+    | "knownHouseExclusionHouseIds"
+  >,
+): boolean {
+  if ((input.inheritedHouseExclusionCount ?? 0) > 0) return false;
+  return input.householdHousingCount === 3 && qualifiesCulturalHeritageHouse({ ...input, householdHousingCount: 2 });
+}
+
+/**
+ * D3 — ⑥(문화유산)·⑦(농어촌) 특수주택이 §155①과 겹친 3주택인가. 일시적 2주택 분기의 **주택 수 게이트**를 쓰는 소비처
+ * (비과세 E-3 · 중과 15호 의제 · pending · 요건 검토표 · 판정 보류 · 불성립 사유)가 이 하나를 쓴다. §155⑧(부득이)은 넣지 않는다 —
+ * ⑧+① 정면 해석이 없어 결정 Q-18 (b)로 과세를 유지하고 「확인 필요」 문구만 둔다.
+ */
+export function specialHouseTemporaryTwoHouseOverlapCountHolds(
+  input: Parameters<typeof ruralTemporaryTwoHouseOverlapCountHolds>[0] & Parameters<typeof heritageTemporaryTwoHouseOverlapCountHolds>[0],
+): boolean {
+  return ruralTemporaryTwoHouseOverlapCountHolds(input) || heritageTemporaryTwoHouseOverlapCountHolds(input);
+}
+
+/**
  * §155⑦ 농어촌주택 요건 중 **⑦ 단서의 5년 기한만 뺀** 나머지 — `qualifiesRuralHouse`와
  * pending 귀농 축(`one-house/pending.ts`)의 **같은 술어**(OH-23).
  *
