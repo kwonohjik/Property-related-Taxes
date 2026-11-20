@@ -302,7 +302,7 @@ export function collectPendingConditions(
     matchDoubleMergeApartFromWindow(input);
   for (const axis of mergeAxes) {
     if (!axis.mergeDate) continue;
-    // 엔진이 실제로 판정하는 축만 — 혼인·동거봉양이 둘 다 있으면 혼인만 본다.
+    // 엔진이 실제로 판정하는 축만 — 두 합가일이 다 있으면 정본이 명부 소유 쪽으로 고른 축(`resolveTwoHouseMergeAxis` · D-03).
     if (mergeApart?.kind !== axis.kind) continue;
     const years = resolveMergeExemptionYears(axis.kind, input.transferDate);
     const dl = deadlineEndFrom(axis.mergeDate, years);
