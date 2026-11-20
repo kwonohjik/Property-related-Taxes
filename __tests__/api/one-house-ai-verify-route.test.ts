@@ -7,7 +7,7 @@ import { NextRequest } from "next/server";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 
 const gate = vi.fn();
-vi.mock("@/lib/one-house-ai/access-guard", () => ({ checkOneHouseAiAccess: () => gate() }));
+vi.mock("@/lib/one-house-ai/access-guard", () => ({ checkOneHouseAiAccess: () => gate(), aiRateLimitBypass: (b: boolean) => b }));
 vi.mock("@/lib/one-house-ai/opinion/card-store", () => ({ loadOneHouseCards: async () => [], oneHouseCardsDir: () => "/cards" }));
 const statute = vi.fn();
 const doc = vi.fn();
@@ -80,6 +80,25 @@ describe("원문 검증 route", () => {
     expect(data.docs).toEqual([{ docNo: "DOC-F", status: "failed", reason: "국세법령정보시스템 오류 (500)" }]);
     expect(data.statutes[0]).toMatchObject({ key: "소득세법 시행령 §155㉑", status: "verified" });
     expect(data.model).toBe("claude-opus-5-5");
+  });
+
+  it("2026-11 리뷰 D-17 — 2차 대조가 답한 쟁점은 그 사유를 그대로 둔다(supported · not_supported) · 답하지 않은 쟁점만 「답하지 않았습니다」", async () => {
+    const two = { ...body, opinion: { ...body.opinion, points: [body.opinion.points[0], { ...body.opinion.points[0], topic: "둘째" }] } };
+    compare.mockResolvedValueOnce({
+      results: new Map([[0, { support: "supported", reason: "원문과 같다", unsupportedClaims: [] }]]),
+      model: "claude-opus-5-5",
+      usage: null,
+    });
+    const { data } = await (await call(two)).json();
+    expect(data.points[0]).toMatchObject({ support: "supported", reason: "원문과 같다" });
+    expect(data.points[1].reason).toBe("2차 대조가 이 쟁점에 답하지 않았습니다.");
+    compare.mockResolvedValueOnce({
+      results: new Map([[0, { support: "not_supported", reason: "원문에 없다", unsupportedClaims: ["x"] }]]),
+      model: "claude-opus-5-5",
+      usage: null,
+    });
+    const { data: d2 } = await (await call(body)).json();
+    expect(d2.points[0]).toMatchObject({ support: "not_supported", reason: "원문에 없다" });
   });
 
   it("한 쟁점의 인용 중 하나라도 확인되지 않으면 「원문 일치」가 아니라 최대 일부 일치", async () => {

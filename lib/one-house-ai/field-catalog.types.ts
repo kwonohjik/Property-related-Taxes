@@ -40,4 +40,6 @@ export type FieldSpec = {
   hint: string;
   /** 같이 채워야 의미가 있는 선행 조건(예: `houses[].isInherited = true`일 때만) */
   when?: string;
+  /** decimalString인데 음수가 될 수 없는 칸(개월·연·면적) — 추출 단계에서 막는다(2026-11 리뷰 D-35 — 화면 입력은 음수를 막는다). */
+  nonNegative?: true;
 };

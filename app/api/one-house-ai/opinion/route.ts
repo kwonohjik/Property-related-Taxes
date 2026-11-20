@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
-import { checkOneHouseAiAccess } from "@/lib/one-house-ai/access-guard";
+import { aiRateLimitBypass, checkOneHouseAiAccess } from "@/lib/one-house-ai/access-guard";
 import { ExtractionFailedError, type ExtractionRun } from "@/lib/one-house-ai/extract";
 import { ONE_HOUSE_AI_TEXT_MAX } from "@/lib/one-house-ai/text-limit";
 import { docKey } from "@/lib/korean-law/doc-key";
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
   const rl = checkRateLimit(`one-house-ai-opinion:${getClientIp(request)}`, {
     limit: 5,
     windowMs: 60_000,
-    bypass: shouldBypassRateLimit(request),
+    bypass: aiRateLimitBypass(shouldBypassRateLimit(request)),
   });
   if (!rl.allowed) return fail(429, "RATE_LIMITED", "요청이 너무 많습니다. 잠시 후 다시 시도하세요");
 

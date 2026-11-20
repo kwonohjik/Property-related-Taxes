@@ -134,8 +134,19 @@ export function safeCacheKey(str: string): string {
  * @param allowStale true면 TTL 만료 캐시도 반환 (법제처 접속 차단 시 fallback)
  * @param ttlMs 이 키만 더 짧게 볼 때 (기본 30일). 시점이 지나면 바뀌는 목록용 — 예: 행위시법 버전 목록.
  */
+/**
+ * 캐시 파일 경로 — 결과가 캐시 디렉터리 밖이면 `null`(2026-11 리뷰 D-71 경로 가드). 키를 만드는 쪽이 `safeCacheKey`를 빠뜨려도
+ * 「/」·「..」로 디렉터리를 벗어나지 못하게 마지막 관문을 둔다.
+ */
+function cacheFileOf(key: string): string | null {
+  const root = path.resolve(CACHE_DIR);
+  const file = path.resolve(root, `${key}.json`);
+  return file.startsWith(root + path.sep) ? file : null;
+}
+
 export async function readCache<T>(key: string, allowStale = false, ttlMs = CACHE_TTL_MS): Promise<T | null> {
-  const file = path.join(CACHE_DIR, `${key}.json`);
+  const file = cacheFileOf(key);
+  if (!file) return null;
   try {
     const stat = await fs.stat(file);
     if (!allowStale && Date.now() - stat.mtimeMs > ttlMs) return null;
@@ -146,8 +157,10 @@ export async function readCache<T>(key: string, allowStale = false, ttlMs = CACH
 }
 
 export async function writeCache(key: string, data: unknown): Promise<void> {
+  const file = cacheFileOf(key);
+  if (!file) return;
   await fs.mkdir(CACHE_DIR, { recursive: true });
-  await fs.writeFile(path.join(CACHE_DIR, `${key}.json`), JSON.stringify(data, null, 2), "utf-8");
+  await fs.writeFile(file, JSON.stringify(data, null, 2), "utf-8");
 }
 
 /**

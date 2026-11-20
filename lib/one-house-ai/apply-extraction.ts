@@ -7,6 +7,7 @@
  * 결과 모양은 평가셋 케이스의 `form`과 같다(최상위 필드 + `asset` = assets[0] + `houses` = 명부 행).
  */
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
+import { completeCountExclusion } from "@/lib/calc/house-count-exclusion-complete";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 import type { FieldSpec } from "./field-catalog.types";
 import type { OneHouseExtraction } from "./extraction-schema";
@@ -76,7 +77,9 @@ export function coerceValue(spec: FieldSpec, raw: string): { value: unknown } | 
     }
     case "decimalString": {
       const num = v.replace(/,/g, "");
-      return /^-?\d+(\.\d+)?$/.test(num) ? { value: num } : { error: `숫자가 아닙니다: ${raw}` };
+      if (!/^-?\d+(\.\d+)?$/.test(num)) return { error: `숫자가 아닙니다: ${raw}` };
+      // D-35 — 개월·연·면적 칸은 음수가 될 수 없다(종전엔 -24가 ⑧을 통과하고 ⑫에서 400이 났다).
+      return spec.nonNegative && num.startsWith("-") ? { error: `음수는 넣을 수 없습니다: ${raw}` } : { value: num };
     }
     case "int": {
       const digits = v.replace(/,/g, "");
@@ -149,8 +152,10 @@ function setAt(root: Node, segs: Segment[], value: unknown): string | null {
 export function applyExtraction(
   extraction: OneHouseExtraction,
   catalog: readonly FieldSpec[],
-): { form: ExtractedForm; issues: ExtractionIssue[] } {
+): { form: ExtractedForm; issues: ExtractionIssue[]; applied: boolean[] } {
   const specs = new Map(catalog.map((s) => [s.path, s]));
+  // D-36 — 사실마다 폼에 실제로 넣었는지(같은 순번). 화면 「N칸 채웠습니다」가 넣지 않은 값까지 셌다.
+  const applied: boolean[] = extraction.facts.map(() => false);
   const keys = new Set(specs.keys());
   const issues: ExtractionIssue[] = [];
   const root: Node = {};
@@ -166,7 +171,7 @@ export function applyExtraction(
   }
 
   const seen = new Set<string>();
-  for (const f of extraction.facts) {
+  for (const [fi, f] of extraction.facts.entries()) {
     const segs = parsePath(f.path);
     const spec = segs ? specs.get(catalogKeyOf(segs)) : undefined;
     if (!segs || !spec) {
@@ -183,6 +188,7 @@ export function applyExtraction(
       continue;
     }
     seen.add(f.path);
+    applied[fi] = true;
     const created = setAt(root, segs, coerced.value);
     if (created) {
       issues.push({ path: f.path, message: `rows에 선언되지 않은 행입니다(${created}) — 행을 새로 만들었습니다` });
@@ -199,12 +205,24 @@ export function applyExtraction(
   }
 
   const form = finalize(root, "") as ExtractedForm;
+  // 2026-11 리뷰 D-18 — 명부 행 `countExclusion`은 판별 유니온이다. 하위 판별 칸(`reduction.type`)이 없으면 어떤 감면인지 몰라 넣지 않고
+  //   그 행 경로를 안내로 남긴다(정규화 leaf `completeCountExclusion`이 같은 규칙으로 빼므로 화면 상태와 어긋나지 않는다).
+  for (const h of (form.houses as Array<Record<string, unknown>> | undefined) ?? []) {
+    if (h.countExclusion !== undefined && completeCountExclusion(h.countExclusion) === undefined) {
+      delete h.countExclusion;
+      const prefix = `houses[${String(h.id)}].countExclusion`;
+      extraction.facts.forEach((f, fi) => {
+        if (f.path.startsWith(prefix)) applied[fi] = false;
+      });
+      issues.push({ path: `houses[${String(h.id)}].countExclusion.reduction.type`, message: "조특법 주택 수 제외 사유의 감면 종류가 없어 넣지 않았습니다 — 행 편집에서 고르세요" });
+    }
+  }
   // 거주 구간을 받았으면 구간 입력으로 — 하네스·UI 기본값(직접 입력 개월)과 구분한다.
   const asset = form.asset as Record<string, unknown> | undefined;
   if (asset && Array.isArray(asset.residencePeriods) && asset.residencePeriods.length > 0) {
     asset.residenceInputMode = "interval";
   }
-  return { form, issues };
+  return { form, issues, applied };
 }
 
 /**

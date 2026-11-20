@@ -47,8 +47,10 @@ export function OneHouseAiReviewCard({ review, form, onAnswer, stepNames, onGoTo
         }
       >
         <p className="text-sm">
-          AI가 원문에서 사실 {review.facts.length}칸을 채웠습니다. 값이 원문과 맞는지 각 단계에서 확인하세요.
-          {review.issues.length > 0 && ` 형식이 맞지 않아 넣지 않은 값이 ${review.issues.length}건 있습니다.`}
+          {/* D-36 — 실제로 넣은 칸만 센다(`applied`). 넣지 않은 값은 안내 issue가 아니라 사실 기준으로 센다. 구 응답은 applied가 없어 모두 넣은 것으로 본다. */}
+          AI가 원문에서 사실 {review.facts.filter((f) => f.applied !== false).length}칸을 채웠습니다. 값이 원문과 맞는지 각 단계에서 확인하세요.
+          {review.facts.some((f) => f.applied === false) &&
+            ` 형식이 맞지 않거나 겹쳐서 넣지 않은 값이 ${review.facts.filter((f) => f.applied === false).length}건 있습니다.`}
         </p>
         <button
           type="button"
@@ -60,9 +62,10 @@ export function OneHouseAiReviewCard({ review, form, onAnswer, stepNames, onGoTo
         </button>
         {showFacts && (
           <ul className="space-y-1.5" data-testid="one-house-ai-review-facts">
-            {review.facts.map((f) => (
-              <li key={f.path} className="text-sm">
+            {review.facts.map((f, i) => (
+              <li key={`${i}-${f.path}`} className="text-sm">
                 <span className="font-medium">{f.label ?? f.path}</span> = <b>{factValueText(f)}</b>
+                {f.applied === false && <span className="ml-1 text-caption text-rose-700 dark:text-rose-300">(넣지 않음)</span>}
                 {f.evidence && <p className="text-caption text-muted-foreground">근거: 「{f.evidence}」</p>}
               </li>
             ))}

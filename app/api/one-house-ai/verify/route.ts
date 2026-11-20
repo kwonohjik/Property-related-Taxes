@@ -10,7 +10,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
-import { checkOneHouseAiAccess } from "@/lib/one-house-ai/access-guard";
+import { aiRateLimitBypass, checkOneHouseAiAccess } from "@/lib/one-house-ai/access-guard";
 import { ExtractionFailedError } from "@/lib/one-house-ai/extract";
 import { loadOneHouseCards } from "@/lib/one-house-ai/opinion/card-store";
 import { checkDoc, checkStatute, mapLimit, statuteKey, VERIFY_LIMITS } from "@/lib/one-house-ai/verify/verify";
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
   const rl = checkRateLimit(`one-house-ai-verify:${getClientIp(request)}`, {
     limit: 5,
     windowMs: 60_000,
-    bypass: shouldBypassRateLimit(request),
+    bypass: aiRateLimitBypass(shouldBypassRateLimit(request)),
   });
   if (!rl.allowed) return fail(429, "RATE_LIMITED", "요청이 너무 많습니다. 잠시 후 다시 시도하세요");
 
@@ -95,17 +95,21 @@ export async function POST(request: NextRequest) {
       usage = r.usage;
       for (const p of points) {
         const got = r.results.get(p.index);
-        if (got) Object.assign(p, got);
+        // 2026-11 리뷰 D-17 — 답 유무로 먼저 가른다. 종전엔 `else`가 아래 강등 if에 붙어 답한 쟁점의 사유까지 「답하지 않았습니다」로 덮었다.
+        if (!got) {
+          if (llmPoints.some((l) => l.index === p.index)) p.reason = "2차 대조가 이 쟁점에 답하지 않았습니다.";
+          continue;
+        }
+        Object.assign(p, got);
         // 인용 중 하나라도 확인되지 않았으면(없음·실패·불일치) 받은 원문만으로 「원문 일치」라 하지 않는다 — 최대 일부 일치
         const unconfirmed = [
           ...p.statuteKeys.filter((k) => statuteBy.get(k)?.status !== "verified"),
           ...p.docNos.filter((d) => docBy.get(docKey(d))?.status !== "fetched"),
         ];
-        if (got && p.support === "supported" && unconfirmed.length > 0) {
+        if (p.support === "supported" && unconfirmed.length > 0) {
           p.support = "partial";
           p.reason = `${p.reason} (확인되지 않은 인용: ${unconfirmed.join(", ")})`;
         }
-        else if (llmPoints.some((l) => l.index === p.index)) p.reason = "2차 대조가 이 쟁점에 답하지 않았습니다.";
       }
     } catch (e) {
       if (!(e instanceof ExtractionFailedError)) {

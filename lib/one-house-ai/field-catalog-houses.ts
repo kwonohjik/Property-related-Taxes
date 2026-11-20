@@ -208,6 +208,7 @@ export const ONE_HOUSE_FIELD_CATALOG_HOUSES = [
   {
     path: "houses[].ruralDecedentResidenceYears",
     kind: "decimalString",
+    nonNegative: true,
     label: "피상속인 거주 연수 (§155⑦1호)",
     hint: "피상속인이 취득 후 이 주택에 거주한 연수 — 5년 이상이어야 한다. 1호는 상속개시 당시 피상속인과의 세대도 묻는다(houses[].decedentSameHouseholdAtInheritance 등 같은 칸).",
     when: "houses[].ruralHouseKind = inherited",
@@ -215,6 +216,7 @@ export const ONE_HOUSE_FIELD_CATALOG_HOUSES = [
   {
     path: "houses[].ruralOwnerResidenceYears",
     kind: "decimalString",
+    nonNegative: true,
     label: "이농인 거주 연수 (§155⑦2호)",
     hint: "이농인이 취득일 후 이 주택에 거주한 연수 — 5년 이상이어야 한다.",
     when: "houses[].ruralHouseKind = farm_exit",
@@ -229,6 +231,7 @@ export const ONE_HOUSE_FIELD_CATALOG_HOUSES = [
   {
     path: "houses[].ruralLandAreaSqm",
     kind: "decimalString",
+    nonNegative: true,
     label: "귀농주택 대지면적",
     hint: "귀농주택 대지면적(㎡) — 660㎡ 이내여야 한다(§155⑩3호). 귀농주택 취득일은 이 행의 취득일이다.",
     when: "houses[].ruralHouseKind = return_to_farm",
@@ -403,6 +406,7 @@ export const ONE_HOUSE_FIELD_CATALOG_HOUSES = [
   {
     path: "houses[].countExclusion.reduction.ruralLandAreaSqm994",
     kind: "decimalString",
+    nonNegative: true,
     label: "대지면적(㎡)",
     hint: "2021.1.1. 전 양도분에만 쓴다 — 대지면적 660㎡ 이내 요건(종전 조특법 §99의4①1호나목·2호다목, 법률 제17759호 부칙 제21조②).",
     when: "houses[].countExclusion.reduction.type = new_99_4_rural 또는 new_99_4_hometown",
@@ -421,6 +425,7 @@ export const ONE_HOUSE_FIELD_CATALOG_HOUSES = [
   {
     path: "houses[].countExclusion.reduction.ruralHouseFloorAreaSqm994",
     kind: "decimalString",
+    nonNegative: true,
     label: "주택 연면적(㎡)",
     hint: "주택 유형이 그 밖의 주택(other)일 때만 — 2017.1.1. 전 양도분 연면적 150㎡ 이내 요건(종전 조특령 §99의4⑤).",
     when: "houses[].countExclusion.reduction.ruralHouseType994 = other",

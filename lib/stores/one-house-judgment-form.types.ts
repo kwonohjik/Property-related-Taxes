@@ -28,6 +28,7 @@
  *   만들지 않기로 했으므로(D-4) `TransferFormData`가 아니라 여기에 둔다.
  */
 import type { TransferFormData } from "./calc-wizard-form.types";
+import { withCompleteCountExclusions } from "@/lib/calc/house-count-exclusion-complete";
 import { createDefaultTransferFormData } from "./calc-wizard-store";
 import { migrateAsset } from "./calc-wizard-asset-migrate";
 
@@ -162,6 +163,8 @@ export function normalizeOneHouseJudgmentForm(
   return {
     ...merged,
     assets: (merged.assets ?? []).map(migrateAsset),
+    // D-18 — 저장된 상태(sessionStorage·이력)의 payload 없는 `countExclusion`도 고친다(새로고침 뒤 반복 크래시).
+    houses: withCompleteCountExclusions(merged.houses),
     /**
      * 조정대상지역 토글의 「직접 만짐」 표지 — 판정 메뉴 토글은 2026-11 전까지 표지를 세우지 않았다(계획서
      * `judgment-menu-regulated-area-address.plan.md` Q-4 a). 그 기록의 `true`는 사용자가 고른 값뿐이므로 표지를 세워 지킨다.

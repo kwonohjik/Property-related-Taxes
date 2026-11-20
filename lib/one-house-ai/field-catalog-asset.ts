@@ -189,6 +189,7 @@ export const ONE_HOUSE_FIELD_CATALOG_ASSET = [
   {
     path: "asset.residencePeriodMonthsAsset",
     kind: "decimalString",
+    nonNegative: true,
     label: "거주기간 (개월)",
     hint: "거주 구간(asset.residencePeriods[])을 모르고 총 개월만 알 때 이 주택에 실제 거주한 총 개월. 구간 입력 모드에서는 읽히지 않으므로 둘 중 하나만 쓴다. 상속개시 전 동일세대 거주분은 넣지 않는다.",
     when: "asset.assetKind = housing",
