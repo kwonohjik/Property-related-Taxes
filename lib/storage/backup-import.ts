@@ -138,6 +138,10 @@ export async function importBackup(
     ...toInsert.map((r) => r.id),
   ]);
   for (const rec of toInsert) {
+    // 2026-11 리뷰 D-74 — 계산기 record의 출처 판정 id(`inputData.sourceJudgmentId`)도 같은 idMap으로 옮긴다. 옮기지 않으면 출처 줄이
+    //   「unknown」이거나 id 충돌 경로에서 다른 판정을 원본으로 짚어 거짓 「원본 판정이 그 뒤에 바뀌었습니다」가 났다.
+    remapSourceId(rec, "sourceJudgmentId", idMap);
+    remapSourceId(rec, "sourceCalculationId", idMap);
     if (rec.linkedCalculationId) {
       const mapped = idMap.get(rec.linkedCalculationId) ?? rec.linkedCalculationId;
       if (allIds.has(mapped)) {
@@ -167,4 +171,13 @@ async function enforceLimit(uid: UserId): Promise<void> {
     .limit(excess)
     .toArray();
   await db.calculations.bulkDelete(oldest.map((r) => r.id));
+}
+
+/** `inputData`의 출처 id 한 칸을 idMap으로 옮긴다(가져오는 백업 안에서 id가 바뀐 record를 가리키면). */
+function remapSourceId(rec: { inputData?: unknown }, key: "sourceJudgmentId" | "sourceCalculationId", idMap: Map<string, string>): void {
+  const input = rec.inputData as Record<string, unknown> | undefined;
+  const id = input?.[key];
+  if (typeof id !== "string") return;
+  const mapped = idMap.get(id);
+  if (mapped && mapped !== id) rec.inputData = { ...input, [key]: mapped };
 }

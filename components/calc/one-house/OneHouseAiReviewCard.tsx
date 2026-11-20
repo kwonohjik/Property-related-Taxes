@@ -22,7 +22,7 @@ type Props = {
   review: OneHouseAiReview;
   /** 판정 메뉴의 지금 폼 — 바로 답한 값은 `onAnswer`로 통째로 돌려준다 */
   form: OneHouseJudgmentFormData;
-  onAnswer: (form: OneHouseJudgmentFormData) => void;
+  onAnswer?: (form: OneHouseJudgmentFormData) => void;
   stepNames: readonly string[];
   onGoToStep: (step: JudgmentInputStep) => void;
   onDismiss: () => void;
@@ -75,7 +75,7 @@ export function OneHouseAiReviewCard({ review, form, onAnswer, stepNames, onGoTo
           questions={review.questions}
           renderAction={(q) => {
             const target = answerTargetOf(q.path, q.field, form);
-            if (target) {
+            if (target && onAnswer) {
               return (
                 <OneHouseAiAnswerField
                   target={target}
