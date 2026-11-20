@@ -10,7 +10,7 @@ import {
   resolveDoubleMergeComposition,
   resolveMergeComposition,
 } from "./merge-composition";
-import { doubleMergeOrderOf, mergeAxisHouses, resolveTwoHouseMergeAxis } from "./merge-deeming";
+import { doubleMergeOrderOf, mergeAxisHouses, mergeDeemingHouseCountHolds, resolveTwoHouseMergeAxis } from "./merge-deeming";
 import { TRANSFER, shortArticle } from "../legal-codes";
 import { passesHouseholdGate } from "../transfer-inheritance-exclusion";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
@@ -110,12 +110,15 @@ function collectMergeUnmet(
   const unmet: OneHouseUnmetException[] = [];
 
   /**
-   * §155④⑤ — 혼인이 먼저다(E-3.5와 같은 순서). 둘 다 입력돼 있으면 혼인 축으로 안내한다.
-   * 입력이 아예 없으면 **선언하지 않은 특례**이므로 아무것도 내지 않는다.
+   * §155④⑤ — 정본(`matchMergeWindow`)이 고른 합가 축으로 안내한다. 입력이 아예 없으면 **선언하지 않은 특례**이므로 아무것도 내지 않는다.
    */
-  // D4 이중 합가 3주택은 먼저 합친 날·그 합가가 기준이다(`resolveDoubleMergeDeeming` — 순서 무관).
-  const doubleOrder = input.householdHousingCount === 3 ? doubleMergeOrderOf(input) : undefined;
-  // 그 밖에는 정본의 합가 축(`resolveTwoHouseMergeAxis` — 두 날짜가 있는 2주택은 명부 소유 쪽이 가리키는 합가, S04-3).
+  // D4 이중 합가 3주택은 먼저 합친 날·그 합가가 기준이다(`resolveDoubleMergeDeeming` — 순서 무관). §155①과 겹친 3주택(F-1)은 이중 합가가
+  //   아니다 — 요건 검토표(`requirement-review.ts` `mergeItems`)와 같은 조건으로 가른다(2026-11 리뷰 D-03 · 종전에는 3주택이면 늘 이중 합가 순서).
+  const doubleOrder =
+    input.householdHousingCount === 3 && !mergeDeemingHouseCountHolds(input, oneHouseRules.temporary_two_house)
+      ? doubleMergeOrderOf(input)
+      : undefined;
+  // 그 밖에는 정본의 합가 축(`resolveTwoHouseMergeAxis` — 두 날짜가 있으면 명부 소유 쪽이 가리키는 합가, S04-3 · D-03).
   const axis = doubleOrder ? undefined : resolveTwoHouseMergeAxis(input);
   const mergeDate = doubleOrder?.firstDate ?? axis?.mergeDate;
   if (!mergeDate) return unmet;

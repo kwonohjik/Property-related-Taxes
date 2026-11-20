@@ -169,6 +169,26 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
   }
 
   /**
+   * Q-15 (2026-11 리뷰 D-03) — 3주택에 두 합가일이 다 있어도 두 쪽(먼저·나중에 합친 쪽) 보유 주택이 모두 있지 않으면 이중 합가(D4)가 아니라
+   * 일시적 2주택과 겹친 **한 번의 합가**다. 엔진은 보유 주택의 합가 전 보유자로 어느 합가인지 고른다(`resolveTwoHouseMergeAxis`) — 비차단 안내.
+   */
+  const ctx3 =
+    judgmentMergeInputVisible(form) && form.marriageDate && form.parentalCareMergeDate && deriveJudgmentHouseCount(form) === 3
+      ? mergeContextOf(form)
+      : undefined;
+  if (ctx3) {
+    const sides = new Set((form.houses ?? []).map((h) => mergeHouseSideOf(h, ctx3)));
+    if (!(sides.has("counterpart_side") && sides.has("second_merge_side"))) {
+      errors.push(
+        warn(
+          "marriageDate",
+          "혼인일과 동거봉양 합가일을 모두 입력했습니다 — 먼저 합친 쪽과 나중에 합친 쪽의 주택이 모두 있지 않으면 두 합가가 겹친 특례가 아니라 일시적 2주택과 겹친 한 번의 합가로 보고, 보유 주택의 합가 전 보유자로 어느 합가인지 고릅니다(먼저 합친 쪽이면 앞선 합가, 나중에 합친 쪽이면 뒤의 합가).",
+        ),
+      );
+    }
+  }
+
+  /**
    * §155④⑤ 합가 전 보유 쪽 — **차단한다**(2026-10-05 정책 변경).
    *
    * 종전에는 경고만 내고 미입력이면 엔진이 구성을 판정하지 않은 채 종전처럼 합가일·선양도만으로

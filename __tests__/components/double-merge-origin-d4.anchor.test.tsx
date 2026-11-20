@@ -74,16 +74,27 @@ describe("W-1 ⑤ 편집 창", () => {
 });
 
 describe("V-1 ⑧ 두 합가일 경고", () => {
-  const warnings = (dates: { marriageDate: string; parentalCareMergeDate: string }, rows = 2) => {
+  // 3주택 이중 합가(D4)는 먼저 합친 쪽 + 나중에 합친 쪽 행이 하나씩이다(`resolveTwoHouseMergeAxis` · 2026-11 리뷰 D-03).
+  const D4_SIDES = ["counterpart_side", "second_merge_side"] as const;
+  const warnings = (
+    dates: { marriageDate: string; parentalCareMergeDate: string },
+    rows = 2,
+    sides: readonly ("counterpart_side" | "second_merge_side")[] = D4_SIDES,
+  ) => {
     const f = createInitialOneHouseJudgmentForm();
     Object.assign(f, dates, { isOneHousehold: true });
-    f.houses = Array.from({ length: rows }, (_, i) => row({ id: `h${i}`, mergeOrigin: "counterpart_side" }));
+    f.houses = Array.from({ length: rows }, (_, i) => row({ id: `h${i}`, mergeOrigin: rows === 1 ? "counterpart_side" : sides[i] }));
     return validateStep2(f).filter((e) => e.field === "marriageDate" && e.severity === "warning");
   };
   const REVERSE = { marriageDate: "2019-03-01", parentalCareMergeDate: "2018-01-01" };
-  it("3주택 — 두 순서 모두 경고 없음", () => {
+  it("3주택 이중 합가(두 쪽 행) — 두 순서 모두 경고 없음", () => {
     expect(warnings(DOUBLE)).toHaveLength(0);
     expect(warnings(REVERSE)).toHaveLength(0);
+  });
+  it("3주택인데 한쪽 행만 있으면 — Q-15 「합가 전 보유자로 축을 고릅니다」 비차단 안내 1건", () => {
+    const w = warnings(DOUBLE, 2, ["counterpart_side", "counterpart_side"]);
+    expect(w).toHaveLength(1);
+    expect(w[0].message).toContain("합가 전 보유자로 어느 합가인지 고릅니다");
   });
   it("2주택 — 두 순서 모두 「해당하는 쪽만」 경고", () => {
     expect(warnings(DOUBLE, 1)).toHaveLength(1);
