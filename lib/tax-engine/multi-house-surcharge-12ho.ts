@@ -11,7 +11,7 @@
  */
 
 import { MULTI_HOUSE } from "./legal-codes";
-import { classifyPopulationDeclineArea, toSigunguCode } from "./data/population-decline-areas";
+import { classifyPopulationDeclineArea, populationDeclineLocationExcluded, toSigunguCode } from "./data/population-decline-areas";
 import { isCapitalAreaByRegionCode } from "@/lib/geo/rural-house-location";
 import type { HouseInfo, PresaleRight } from "./types/multi-house-surcharge.types";
 
@@ -117,6 +117,8 @@ export function resolvePopulationDeclineSecondHome(
   // 가액 한도: 다목(수도권 밖 인구감소지역) 9억 / 라목(관심지역)·수도권 접경·그 외 4억.
   // populationAreaType 미입력 시 regionCode 자동판정(autoKind)으로 다·라목 구분 도출 (N-6).
   const effectiveAreaType = house.populationAreaType ?? autoKind ?? undefined;
+  // 다목 1) 단서·라목(수도권 밖) — 수도권 비접경·광역시 자치구는 소재지 사실이라 ④ 토글로 덮어도 대상이 아니다(D-50 (b)).
+  if (effectiveAreaType && populationDeclineLocationExcluded(house.regionCode, effectiveAreaType, house.acquisitionDate)) return null;
   const popCap =
     !isCapitalAreaHouse(house) && effectiveAreaType === "decline"
       ? MULTI_HOUSE.POP_DECLINE_PRICE_CAP_NONCAPITAL
