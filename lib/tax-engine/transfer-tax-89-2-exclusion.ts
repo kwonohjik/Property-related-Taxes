@@ -89,6 +89,7 @@ import { resolveMarriageThenPresaleRight, resolveMergedHouseholdVerdict } from "
 import {
   hasInheritedHouseOtherThanSelling,
   inheritedHousesHeldVerdict,
+  coInheritedMinorityReadingNote,
   qualifyInheritedRight,
   withClause2TraceNotes,
   type Article89Clause2Trace,
@@ -175,6 +176,11 @@ export interface Article89Clause2Result {
    * (`undeclaredMergeCompositionUndetermined`), 계산기는 경고로 낸다. 문구는 중립이다 — 특정 선택지를 유도하지 않는다.
    */
   undeclaredMergeArticles?: string[];
+  /**
+   * 예외를 적용했지만(`exception_met`) 그 결론이 **해석 공백 위의 한 독법**에 기대는 경우의 확인 필요 고지(D-42 공동상속 소수지분).
+   * 반대 독법이면 결론이 갈릴 때만 채운다 — 판정 메뉴는 「판정하지 않은 부분」(`89-2-reading:*`), 계산기는 경고로 낸다.
+   */
+  readingNotes?: string[];
   /** `exclusionReasons`가 가리키는 조문(불성립 사유 카드의 근거 표기) */
   exclusionBasis?: string;
   /**
@@ -272,7 +278,9 @@ export function resolveArticle89Clause2(
   presaleRightStartDate: Date | undefined,
 ): Article89Clause2Result {
   const trace: Article89Clause2Trace = {};
-  return withClause2TraceNotes(resolveArticle89Clause2Core(input, presaleRightStartDate, trace), trace);
+  const r = withClause2TraceNotes(resolveArticle89Clause2Core(input, presaleRightStartDate, trace), trace);
+  const readingNote = coInheritedMinorityReadingNote(input, r);
+  return readingNote ? { ...r, readingNotes: [...(r.readingNotes ?? []), readingNote] } : r;
 }
 
 function resolveArticle89Clause2Core(

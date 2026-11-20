@@ -40,6 +40,7 @@ import {
   meetsTemporaryTwoHousePrevHolding,
   undeclaredThreeYearExceptionUndetermined,
   article89ConfirmNotesUndetermined,
+  article89ReadingNotesUndetermined,
   article89ExclusionUnmet,
   undeclaredMergeCompositionUndetermined,
 } from "./one-house/pending";
@@ -226,6 +227,7 @@ export function checkExemption(
       ...undeclaredThreeYearExceptionUndetermined(article89Clause2, coreWouldPass, input.transferDate),
       ...undeclaredMergeCompositionUndetermined(article89Clause2, coreWouldPass),
       ...article89ConfirmNotesUndetermined(article89Clause2, coreWouldPass),
+      ...article89ReadingNotesUndetermined(article89Clause2),
       ...inheritedPresaleRightSeparateHouseholdUndetermined(input, article89Clause2, coreWouldPass, presaleRightStartDate),
       ...reverseDoubleMergeUndetermined(input, appliedExceptions, settled),
       ...inheritedSpecialOverlapUndetermined(input, appliedExceptions, settled),
