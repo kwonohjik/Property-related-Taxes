@@ -31,7 +31,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
    * 표시 fallback 전용이다(store에 쓰지 않는다 — `useEffect → store` 미러링 금지).
    */
   const autoPopulationAreaKind = house.regionCode
-    ? classifyPopulationDeclineArea(house.regionCode).kind
+    ? classifyPopulationDeclineArea(house.regionCode, house.acquisitionDate || undefined).kind
     : null;
 
   return (

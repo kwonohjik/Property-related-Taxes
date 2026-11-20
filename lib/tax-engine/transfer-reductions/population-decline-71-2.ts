@@ -37,7 +37,7 @@
  * 범위 밖(결정 #42 조건): 부담부증여 양도 경로(조특 주택 수 제외가 원래 전부 빠진 별개 공백) · 종부세 §71의2② · 명부 세컨드홈 카드(④)의 「등록」 토글.
  */
 import { TRANSFER } from "../legal-codes";
-import { classifyPopulationDeclineArea, toSigunguCode } from "../data/population-decline-areas";
+import { capitalBorderFromOf, classifyPopulationDeclineArea, toSigunguCode } from "../data/population-decline-areas";
 import type { HouseInfo } from "../types/multi-house-surcharge.types";
 import type { TransferTaxInput } from "../types/transfer.types";
 import { resolveInheritedSellingHouseId } from "../transfer-inheritance-exclusion";
@@ -156,12 +156,24 @@ function evaluate(h: PopDeclineHouse, p: PopDeclineInput): SpecialHouseExclusion
   if (acq.getTime() < POP_DECLINE_WINDOW_START.getTime() || acq.getTime() > POP_DECLINE_WINDOW_END.getTime()) return null;
 
   const code = h.regionCode;
-  const auto = code ? classifyPopulationDeclineArea(code).kind : null;
+  // 수도권 접경지역 편입 전 취득(가평 2025.3.11. 전) — 「취득 당시」 수도권(접경지역 제외) 소재라 §68의2①1호 가목 1) 단서로 대상이 아니다.
+  //   ④ 토글로 덮어도 같다(소재지 사실이다). 편입 뒤 양도이면 단서의 기준 시점(취득 당시·양도 당시)을 정한 해석이 없어 불성립 + 확인 필요.
+  const borderFrom = capitalBorderFromOf(code);
+  const borderPending = !!borderFrom && day(acq) < day(borderFrom);
+  if (borderFrom && borderPending && day(p.transferDate) < day(borderFrom)) return null;
+  // 지정은 고시마다 바뀐다 — 「취득 당시」 지정으로 판정한다(고시 제2026-61호 · D-43). 편입 대기 행은 편입일 지정으로 후보를 정한다.
+  const auto = code ? classifyPopulationDeclineArea(code, borderFrom && borderPending ? borderFrom : acq).kind : null;
   // 소재지는 중과 ④와 같은 인자로 읽는다 — `isPopulationDeclineArea ?? 자동판정`, `populationAreaType ?? 자동판정`(진실이 둘이 되지 않게).
   const isPop = h.isPopulationDeclineArea ?? auto !== null;
   if (!isPop) return null;
   const kind = h.populationAreaType ?? auto;
   const unconfirmed: string[] = [];
+  if (borderFrom && borderPending) {
+    unconfirmed.push(
+      `취득일(${fmt(acq)})에는 이 시·군이 수도권 접경지역(${TRANSFER.CAPITAL_BORDER_AREA_DECREE_2_2})이 아니어서 수도권(접경지역 제외) 소재 주택이었습니다 — ` +
+        `접경지역 편입일(${fmt(borderFrom)}) 뒤 양도분에 ${TRANSFER.POP_DECLINE_HOUSE_DECREE_68_2}①1호 가목 단서를 어느 시점으로 보는지 밝힌 해석을 확인하지 못했습니다.`,
+    );
+  }
 
   if (!code) {
     unconfirmed.push("주소(법정동코드)를 입력하지 않아 수도권·광역시·동일 시·군·구 여부를 판단할 수 없습니다.");
