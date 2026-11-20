@@ -7,6 +7,7 @@
  */
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import { evaluateTemporaryTwoHouseTiming } from "../transfer-tax-exemption-requirements";
+import { temporaryTwoHouseOrderReason } from "./new-house-origin";
 import type {
   OneHouseJudgeInput,
   OneHousePendingCondition,
@@ -69,12 +70,17 @@ export function overlappedTemporaryTwoHouseTimingReasons(
   input: OneHouseJudgeInput & { temporaryTwoHouse: NonNullable<OneHouseJudgeInput["temporaryTwoHouse"]> },
   twoHouseRule: NonNullable<OneHouseSpecialRulesData["temporary_two_house"]>,
   deadlineTail: string,
+  /** 취득 선후 사유를 호출부가 따로 낸다(일시적 2주택 카드의 순서 항목) — 여기서는 겹쳐 말하지 않는다. */
+  orderStatedElsewhere = false,
 ): string[] {
   const { timing, era } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
   const tt = input.temporaryTwoHouse;
   const lead = "겹쳐 있는 일시적 2주택 특례의 기간 요건을 충족하지 않습니다";
   const reasons: string[] = [];
-  if (!timing.oneYearMet) {
+  // 역순·같은 날 취득이면 원인은 선후다 — 「1년이 지난 뒤 취득해야」는 1년 요건이 면제되거나 없을 때도 틀린 문장이다(2026-11 리뷰 D-70).
+  if (!timing.acquiredInOrder) {
+    if (!orderStatedElsewhere) reasons.push(`${lead} — ${temporaryTwoHouseOrderReason(tt.previousAcquisitionDate, tt.newAcquisitionDate)}`);
+  } else if (!timing.oneYearMet) {
     reasons.push(
       `${lead} — 종전주택 취득일(${fmtDate(tt.previousAcquisitionDate)})부터 1년이 지난 뒤(${fmtDate(timing.oneYearThreshold)}부터) 신규주택을 취득해야 하는데 ${fmtDate(tt.newAcquisitionDate)}에 취득했습니다.`,
     );
