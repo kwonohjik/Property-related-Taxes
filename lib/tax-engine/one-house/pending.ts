@@ -449,6 +449,15 @@ export function undeclaredMergeCompositionUndetermined(
  * §89② 배제가 **모르는 사실 때문에** 특례를 적용하지 않은 것(`confirmNotes` — 원조합원·승계취득 미입력 등)의 확인 필요 고지.
  * 위 3년 경과 예외 고지와 같이 본체 판정이 통과했을 때만 낸다(결론을 가를 때만).
  */
+/**
+ * §89② 예외를 적용했지만 그 결론이 해석 공백 위의 한 독법에 기대는 경우의 확인 필요 고지(`readingNotes` — D-42 공동상속 소수지분).
+ * 생산자가 반대 독법이면 결론이 갈릴 때만 채우므로 여기서는 다시 거르지 않는다.
+ */
+export function article89ReadingNotesUndetermined(article89Clause2: Article89Clause2Result): OneHouseUndetermined[] {
+  if (article89Clause2.status !== "exception_met") return [];
+  return (article89Clause2.readingNotes ?? []).map((reason, i) => ({ id: `89-2-reading:${i}`, reason }));
+}
+
 export function article89ConfirmNotesUndetermined(
   article89Clause2: Article89Clause2Result,
   coreWouldPass: boolean,

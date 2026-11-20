@@ -622,10 +622,12 @@ describe("P2 — §89② 배제 예외 사실 (고지 조문으로 관측)", () 
         { ...withInheritedHouse.houses[1], inheritedDate: undefined, isCoInherited: true, isLargestCoInheritedShareholder: false },
       ],
     };
-    // 결정 #8 — 선언 토글을 폐지했다: 상속개시일을 모르면 불성립 + 확인 필요(종전: 판정 불가·비과세 유지).
+    // 2026-11 D-42 · Q-16 (A) — 공동상속 소수지분은 ⑦1호 「상속받은 주택」이 아니다(② 풀만). §155③으로 주택 수에서 빠지고
+    //   §156의2③④를 직접 적용하므로 ⑦ 후단의 상속개시일 확인을 묻지 않는다 — 이 사실관계는 3년 경과 예외 미선언으로 과세다.
+    //   ⑦ 후단 「상속개시일 모름 = 불성립 + 확인 필요」(결정 #8)의 구별력은 단독상속 시료로 옮겼다(`article-89-2-two-house-axis.anchor.test.ts`).
     expect(exempt(undated)).toBe(false);
-    expect(openArticles(undated)).toContain("§156의2 ⑦1호");
-    expect(openArticles(undated)).toContain("확인 필요");
+    expect(openArticles(undated)).not.toContain("§156의2 ⑦1호");
+    expect(openArticles(undated)).toContain("3년이 지나");
   });
 
   it("J-26 권리 자체가 없으면 이 축은 발동하지 않는다 (긍정 짝)", () => {

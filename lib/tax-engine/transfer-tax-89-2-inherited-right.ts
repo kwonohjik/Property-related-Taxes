@@ -11,7 +11,7 @@ import {
   isDecedentGiftExclusionApplicable,
   qualifiesAsInheritanceGeneralHouse,
 } from "./data/inheritance-general-house-era";
-import { isHeirInheritedHouse } from "./transfer-inheritance-exclusion";
+import { isHeirInheritedHouse, isSecondClausePoolHouse } from "./transfer-inheritance-exclusion";
 
 /**
  * 「상속개시 당시 보유한 주택」(§156의2⑥·⑦ · §156의3④·⑤ 후단) 요건이 날짜로 깨졌거나(`after`) 날짜를 몰라(`unknown`)
@@ -124,7 +124,43 @@ const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 export function hasInheritedHouseOtherThanSelling(input: Article89Clause2Input): boolean {
   const houses = input.houses ?? [];
   const sellingId = input.sellingHouseId ?? houses[0]?.id;
-  return houses.some((h) => isHeirInheritedHouse(h) && h.id !== sellingId);
+  return houses.some((h) => isSeventhClauseInheritedHouse(h) && h.id !== sellingId);
+}
+
+/**
+ * §156의2⑦1호 · §156의3⑤1호의 「상속받은 주택」 — **② 풀**(단독상속 · 공동상속 최대지분)만이다(D-42 · 결정 Q-16 (A)).
+ * 공동상속 소수지분(③ 풀)은 §155③이 「해당 거주자의 주택으로 보지 아니한다」라 주택 수에서 빠지고(보유 시점 괄호 없음),
+ * ⑦에는 공동상속주택 호가 없어 §156의2③④를 직접 적용한다(부동산거래관리과-128 · 2439·0109·법규과-1661도 ⑦을 거치지 않는다).
+ * 소수지분에 ⑦ 후단(「상속개시 당시 보유한 주택」 한정)을 건 해석은 없고, 상속 뒤 취득 사안의 2013년 이후 정면 해석도 없다 —
+ * 그 독법이면 결론이 갈리는 경우만 확인 필요를 단다(`coInheritedMinorityReadingNote`).
+ */
+function isSeventhClauseInheritedHouse(h: Parameters<typeof isHeirInheritedHouse>[0] & Parameters<typeof isSecondClausePoolHouse>[0]): boolean {
+  return isHeirInheritedHouse(h) && isSecondClausePoolHouse(h);
+}
+
+/**
+ * D-42 — 공동상속 소수지분을 ⑦1호로 세는 반대 독법(결정 Q-16 (B))이면 ⑦ 후단의 일반주택 한정이 깨져 배제였을 사안인가.
+ * 그럴 때만(결론을 가를 때만) 적용한 독법과 해석 공백을 알린다.
+ */
+export function coInheritedMinorityReadingNote(input: Article89Clause2Input, result: Article89Clause2Result): string | undefined {
+  if (result.status !== "exception_met") return undefined;
+  const houses = input.houses ?? [];
+  const sellingId = input.sellingHouseId ?? houses[0]?.id;
+  const minority = houses.filter((h) => isHeirInheritedHouse(h) && !isSecondClausePoolHouse(h) && h.id !== sellingId);
+  if (minority.length === 0) return undefined;
+  const altVerdicts = minority.map((h) =>
+    qualifiesAsInheritanceGeneralHouse({
+      generalHouseAcquisitionDate: input.acquisitionDate,
+      inheritedDate: h.inheritedDate,
+      transferDate: input.transferDate,
+    }),
+  );
+  if (altVerdicts.every((v) => v === "yes")) return undefined;
+  return (
+    `공동상속주택 소수지분은 ${TRANSFER.RIGHT_ONE_HOUSE_SPECIAL} ⑦1호의 「상속받은 주택」으로 세지 않고 주택 수에서 빼(§155③) ` +
+    `${result.exception ?? TRANSFER.RIGHT_ONE_HOUSE_SPECIAL}를 적용했습니다(부동산거래관리과-128). 소수지분에 ⑦ 후단(「상속개시 당시 보유한 주택」 한정)을 ` +
+    "거는 독법이면 상속개시 뒤 취득한 이 주택은 특례를 받지 못하는데, 2013년 ⑦ 후단 신설 뒤 이 모양을 정면으로 다룬 해석은 확인하지 못했습니다(확인 필요)."
+  );
 }
 
 /**
@@ -142,7 +178,7 @@ export function inheritedHousesHeldVerdict(input: Article89Clause2Input): "yes" 
   const houses = input.houses ?? [];
   const sellingId = input.sellingHouseId ?? houses[0]?.id;
   const verdicts = houses
-    .filter((h) => isHeirInheritedHouse(h) && h.id !== sellingId)
+    .filter((h) => isSeventhClauseInheritedHouse(h) && h.id !== sellingId)
     .map((h) =>
       qualifiesAsInheritanceGeneralHouse({
         generalHouseAcquisitionDate: input.acquisitionDate,

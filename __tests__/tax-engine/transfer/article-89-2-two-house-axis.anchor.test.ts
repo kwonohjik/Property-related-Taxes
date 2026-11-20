@@ -246,7 +246,7 @@ describe("⭐ §156의2⑦1호 후단 — 상속받은 **주택** 갈래", () =>
       sellingHouseId: "sell",
       houses: [
         house({ id: "sell" }),
-        house({ id: "inh", isInherited: true, isCoInherited: true, isLargestCoInheritedShareholder: false }),
+        house({ id: "inh", isInherited: true }),
       ],
       ...over,
     });
@@ -260,18 +260,21 @@ describe("⭐ §156의2⑦1호 후단 — 상속받은 **주택** 갈래", () =>
         house({
           id: "inh",
           isInherited: true,
-          isCoInherited: true,
-          isLargestCoInheritedShareholder: false,
           ...(inheritedDate ? { inheritedDate: new Date(inheritedDate) } : {}),
         }),
       ],
       ...over,
     });
 
-  it("🔴 종전: 후단 요건이 한 번도 검증되지 않았다 → 결정 #8: 상속개시일을 모르면 불성립 + 확인 필요(과세)", () => {
-    const r = run(withInheritedDate(undefined));
-    expect(r.isExempt).toBe(false); // 종전 동작(판정 불가·비과세 유지)에서 바뀜 — 모름 = 혜택 불성립
-    const joined = (r.warnings ?? []).join("\n");
+  /**
+   * 2026-11 D-42 · Q-16 (A) — ⑦1호 「상속받은 주택」은 ② 풀(단독상속·최대지분)만이다. 종전 시료는 날짜 없이 주택 수를 줄이려고
+   * 공동상속 소수지분을 썼는데, 소수지분은 이제 ⑦을 거치지 않는다(아래 「소수지분」 블록). 단독상속은 계산기 경로에서 §155② 괄호가
+   * 먼저 걸려 이 갈래에 오지 않으므로, 엔진이 §155②③ 제외를 마친 입력(주택 수 1)으로 술어를 직접 부른다.
+   */
+  it("🔴 종전: 후단 요건이 한 번도 검증되지 않았다 → 결정 #8: 상속개시일을 모르면 불성립 + 확인 필요", () => {
+    const v = verdict(withInheritedDate(undefined, { householdHousingCount: 1 }));
+    expect(v.status).toBe("excluded"); // 종전 동작(판정 불가·비과세 유지)에서 바뀜 — 모름 = 혜택 불성립
+    const joined = (v.confirmNotes ?? []).join("\n");
     expect(joined).toContain("§156의2 ⑦1호");
     expect(joined).toContain("확인 필요");
   });
@@ -282,10 +285,10 @@ describe("⭐ §156의2⑦1호 후단 — 상속받은 **주택** 갈래", () =>
     expect(r.warnings ?? []).toEqual([]);
   });
 
-  it("부정 짝 — 상속개시 **뒤**에 산 일반주택이면 후단 불성립 ⇒ 과세 + 사유", () => {
-    const r = run(withInheritedDate("2015-01-01"));
-    expect(r.isExempt).toBe(false);
-    expect((r.warnings ?? []).join("\n")).toContain("상속개시 뒤에 취득했습니다");
+  it("부정 짝 — 상속개시 **뒤**에 산 일반주택이면 후단 불성립 ⇒ 배제 + 사유", () => {
+    const v = verdict(withInheritedDate("2015-01-01", { householdHousingCount: 1 }));
+    expect(v.status).toBe("excluded");
+    expect((v.exclusionReasons ?? []).join("\n")).toContain("상속개시 뒤에 취득했습니다");
   });
 
   it("하위 결정 #8-1 — 신축주택 갈래(상속개시 당시 보유한 권리로 완공)도 ⑦1호 후단에는 포함되지 않는다 ⇒ 과세", () => {
