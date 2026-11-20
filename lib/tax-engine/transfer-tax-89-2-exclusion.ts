@@ -348,9 +348,17 @@ function resolveArticle89Clause2Core(
   const heritageDeclared =
     input.culturalHeritageHouse === true && !declaredRowAlreadyExcluded(input, input.culturalHeritageHouseId);
   const ruralDeclared = input.ruralHouse !== undefined && !declaredRowAlreadyExcluded(input, input.ruralHouse.houseId);
+  /**
+   * D-41 · Q-17 (a) — 2주택 + **권리 2개 이상**도 같은 이유로 닫는다. 2주택 축 여섯 항(§156의2⑦·⑩·⑪ · §156의3⑤·⑦·⑧)은 모두
+   * 「…각각 1개씩 소유하고 있는 1세대」라 권리가 둘 이상인 세대에는 성립할 수 없다(1주택 + 2권리의 P-0 · E011과 같은 논리).
+   * 범위는 사용자 결정대로 **좁게** — 특수주택 미선언 2주택에만 더한다(선언한 2+2와 3주택 + 2권리는 종전대로 판정 보류).
+   * 상속 권리 1 + 상속 외 권리 1(⑦·⑤ 모양)은 아래 상속 권리 축이 따로 판정하므로 닫지 않는다.
+   */
+  const article7LikeRights =
+    rights.filter(isHeirInheritedRight).length === 1 && rights.filter((r) => !isHeirInheritedRight(r)).length === 1;
   const twoHouseAxisClosed =
     input.householdHousingCount === 2 &&
-    rights.length === 1 &&
+    (rights.length === 1 || (rights.length >= 2 && !article7LikeRights)) &&
     twoHouseVia === undefined &&
     !heritageDeclared &&
     !ruralDeclared;
