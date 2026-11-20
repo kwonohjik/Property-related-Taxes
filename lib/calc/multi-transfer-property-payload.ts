@@ -4,11 +4,12 @@
  */
 
 import { inheritedPresalePayload } from "./unsold-98-inherited-presale";
+import { buildExemptionProvisoPayload } from "./exemption-proviso-payload";
 import { calcEffectiveIsRegulatedAtTransfer, calcEffectiveWasRegulatedAtAcquisition, calcStoredRegulatedFlags } from "@/lib/calc/effective-regulated-at-acquisition";
 import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { sellingHouseStdPricePayload } from "@/lib/calc/selling-std-price-scope";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
-import { buildRental4hoPayload } from "./rental-4ho-proviso";
+
 import { buildCalcGiftHouseholdPayload } from "./gift-household-payload";
 import { depreciationSupport } from "./depreciation-scope";
 import { buildFinalHouseRestartPayload, calcFinalHouseRestartInScope } from "./final-house-restart";
@@ -28,7 +29,7 @@ import {
 } from "@/lib/calc/transfer-tax-api-helpers";
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-helpers";
 import { applyRatio } from "@/lib/calc/transfer-tax-api-helpers";
-import { provisoGate, effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
+import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { resolveHouseholdHousingCount, resolveHouseholdRightCount, temporaryTwoHouseApplies } from "@/lib/calc/household-house-count";
 import { resolveExemptionHousingCount } from "@/lib/calc/exemption-house-count";
 import { isOneHouseExemptionAsset } from "@/lib/calc/housing-like-asset";
@@ -71,9 +72,7 @@ import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exc
 import { primaryReductionsWithRows } from "@/lib/calc/house-count-exclusion-rows";
 import { specialHouseExclusionsPayload } from "@/lib/calc/house-count-exclusion-rows";
 import { mergeContextOf } from "@/lib/calc/merge-house-origin";
-import { rentalLeaseResidencePayload } from "@/lib/calc/exemption-proviso-payload";
-import { departureOnlyHousePayload } from "@/lib/calc/exemption-proviso-payload";
-import { unconfirmedTempTwoHouseProviso4ho, unconfirmedTempTwoHouseProviso5 } from "@/lib/calc/exemption-proviso-payload";
+
 import { phdFlagEffective } from "./phd-toggle-scope";
 import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
@@ -239,13 +238,6 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
       rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
     }),
   }).mode;
-  const provisoCandidate = effectiveProvisoReason(provisoMode, form.provisoReason);
-  // F-2 — 일시적 2주택 맥락의 무주택 미확인 5호·미완 4호는 싣지 않는다(단건 ④와 같은 leaf).
-  const effectiveProviso =
-    unconfirmedTempTwoHouseProviso5(provisoMode, provisoCandidate, form.provisoPreContractNoHouse) ||
-    unconfirmedTempTwoHouseProviso4ho(provisoMode, provisoCandidate, form)
-    ? ""
-    : provisoCandidate;
 
   // 주의: 재개발(§166)·겸용주택·PHD(영 §164⑦)·다필지·가업상속(§97의2④)·건별 다자산(companion)은 다건 합산 route(⑭)가
   // 매핑하지 않으므로 여기서 전송하지 않는다 — ⑧(validateMultiSupportedMode)이 화면에서, ⑫(transfer-tax-schema-multi-refines)가
@@ -544,25 +536,8 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     // 🔴 §154① 단서 reason 정규화 — 단건 ④(`transfer-tax-api.ts:521`)와 **같은 두 leaf**를 쓴다.
     //    종전 다건은 `form.provisoReason`을 게이트 없이 그대로 실어, 카드가 숨겨진 상태(mode=null)나
     //    일시적 2주택에서 무효인 사유(나·다목)까지 엔진에 도달했다 — 화면에 없는 선언이 계산을 바꿨다.
-    ...(effectiveProviso
-      ? {
-          oneHouseExemptionProviso: {
-            reason: effectiveProviso,
-            ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
-            ...departureOnlyHousePayload(effectiveProviso, form.provisoDepartureOnlyHouse),
-            ...(form.provisoExpropriationDate ? { expropriationDate: form.provisoExpropriationDate } : {}),
-            ...(form.provisoBusinessApprovalDate ? { businessApprovalDate: form.provisoBusinessApprovalDate } : {}),
-            ...rentalLeaseResidencePayload(effectiveProviso, form.provisoRentalLeaseResidenceMonths),
-            ...(effectiveProviso === "rental_registration_4ho"
-              ? { rentalRegistration4ho: buildRental4hoPayload(form) }
-              : {}),
-            // O4 — 5호 무주택 확인(⑫가 true 필수 — 단건 ④ `exemption-proviso-payload.ts`와 같은 키)
-            ...(effectiveProviso === "pre_designation_contract"
-              ? { preContractNoHouse: form.provisoPreContractNoHouse === true }
-              : {}),
-          },
-        }
-      : {}),
+    // 2026-11 리뷰 I-16 — 단건 ④·판정 메뉴와 같은 빌더(`buildExemptionProvisoPayload` — 게이트 → 유효 사유 → 일시적 2주택 미완 5호·4호 제외).
+    ...buildExemptionProvisoPayload(form, provisoMode),
     // ⑬ OH-22 §154⑤ 단서 처분 이력 — 단건 ④와 같은 빌더·같은 노출 술어(자산별 form이라 native per-property)
     ...buildFinalHouseRestartPayload(form, calcFinalHouseRestartInScope(form)),
     // 자산별 가산세 — 단건 엔진이 자산별 결정세액 기준으로 계산.

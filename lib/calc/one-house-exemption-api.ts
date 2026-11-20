@@ -24,6 +24,8 @@
  * 사용자에게 받는다(③ 예상 양도가액).
  */
 import { buildGiftHouseholdPayload, giftHouseholdFactErrors } from "@/lib/calc/gift-household-payload";
+import { buildExemptionProvisoPayload } from "./exemption-proviso-payload";
+import { judgmentMenuFlags } from "./judgment-menu-flags";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
 import {
   calcEffectiveWasRegulatedAtAcquisition,
@@ -40,9 +42,7 @@ import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import { buildNonResidentPayload } from "./one-house-non-resident";
 import { buildDemolishedPayload } from "./one-house-demolished";
 import { buildOneHouseExtraFactsPayload } from "./one-house-extra-facts-payload";
-import { buildRental4hoPayload } from "./rental-4ho-proviso";
-import { rentalLeaseResidencePayload } from "./exemption-proviso-payload";
-import { departureOnlyHousePayload } from "./exemption-proviso-payload";
+
 import { buildFinalHouseRestartPayload, judgmentFinalHouseRestartInScope } from "./final-house-restart";
 import { landHouseholdBuildingInScope } from "./redev-field-scope";
 import {
@@ -50,7 +50,6 @@ import {
   buildRightThreeYearExceptionPayload,
   buildMergedHouseholdFirstHousePayload,
   buildSameHouseholdInheritancePayload,
-  effectiveProvisoReason,
   toEngineReductions,
 } from "./transfer-tax-api-helpers";
 import {
@@ -71,7 +70,6 @@ import { usesRentalStartDate } from "@/lib/tax-engine/transfer-reductions/unsold
 import { newHousingKindFieldsOf } from "@/lib/tax-engine/transfer-reductions/special-house-exclusion-kind";
 import { specialHouseInheritancePayload } from "./house-count-exclusion-rows";
 import { formatFieldErrors } from "./transfer-tax-error-format";
-
 
 /**
  * 판정 메뉴의 **거주 개월 정본** — ④ 본문과 ⑤ 일시적 2주택 요건 카드가 함께 쓴다(OH-56).
@@ -120,6 +118,8 @@ export function buildOneHouseExemptionApiBody(
     // §167의10 중과 축이라 판정 메뉴에는 입력 위젯이 없다 — 미전송(§3.2-C).
     undefined,
     form.transferDate,
+    // D-13 — 중과 메뉴와 공유하는 명부 행의 중과 전용 사실(3호 칩 · ⑪ 연장)은 이 메뉴에 칸이 없고 route도 읽지 않는다 — 싣지 않는다.
+    { omitSurchargeOnlyRowFacts: judgmentMenuFlags("one_house").hideSurchargeInputs },
   );
   const presaleRightsPayload = buildPresaleRightsPayload(primary.assetKind, form.presaleRights);
 
@@ -293,32 +293,8 @@ export function buildOneHouseExemptionApiBody(
       })),
     // §154① 단서 — 계산기와 같은 두 단계 정규화(게이트 → 유효 사유).
     // 🔑 맥락은 ⑧과 **같은 함수**로 정한다(`judgmentProvisoMode` — OH-06).
-    ...(() => {
-      const reason = effectiveProvisoReason(judgmentProvisoMode(form), form.provisoReason);
-      return reason
-        ? {
-            oneHouseExemptionProviso: {
-              reason,
-              ...(form.provisoDepartureDate ? { departureDate: form.provisoDepartureDate } : {}),
-              ...departureOnlyHousePayload(reason, form.provisoDepartureOnlyHouse),
-              ...(form.provisoExpropriationDate
-                ? { expropriationDate: form.provisoExpropriationDate }
-                : {}),
-              ...(form.provisoBusinessApprovalDate
-                ? { businessApprovalDate: form.provisoBusinessApprovalDate }
-                : {}),
-              ...rentalLeaseResidencePayload(reason, form.provisoRentalLeaseResidenceMonths),
-              ...(reason === "rental_registration_4ho"
-                ? { rentalRegistration4ho: buildRental4hoPayload(form) }
-                : {}),
-              // O4 — 5호 무주택 확인(⑫가 true 필수 — 계산기 ④ `exemption-proviso-payload.ts`와 같은 키)
-              ...(reason === "pre_designation_contract"
-                ? { preContractNoHouse: form.provisoPreContractNoHouse === true }
-                : {}),
-            },
-          }
-        : {};
-    })(),
+    //   2026-11 리뷰 I-16 — 계산기 단건·다건과 같은 빌더(`buildExemptionProvisoPayload`). 일시적 2주택 맥락의 미완 5호·4호는 빌더가 빼지만 판정 메뉴는 ⑧이 먼저 막는다.
+    ...buildExemptionProvisoPayload(form, judgmentProvisoMode(form)),
 
     // ⑬ OH-22 §154⑤ 단서 처분 이력 — 계산기와 같은 빌더, 노출 술어는 명부 파생 주택 수(⑤·⑧ 공용)
     ...buildFinalHouseRestartPayload(form, judgmentFinalHouseRestartInScope(form)),

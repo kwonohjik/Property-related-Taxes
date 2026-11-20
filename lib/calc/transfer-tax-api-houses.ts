@@ -135,7 +135,15 @@ export function buildHousesPayload(
    * 명부가 비어도 양도 주택 행 하나는 싣는다 — 다주택 중과 판정 메뉴 전용. 판정 메뉴에서 「목록 미입력 = 없음」이라
    * 보유 주택이 양도 주택뿐인 세대도 정밀 판정(주택 수 1 · 조정대상지역)과 설명문을 받아야 한다. 계산기는 넘기지 않는다.
    */
-  options?: { includeSellingWithoutRoster?: boolean },
+  options?: {
+    includeSellingWithoutRoster?: boolean;
+    /**
+     * 중과 전용 행 사실(§167의3①3호 감면대상장기임대주택 칩 · ⑪ 연장 사실)을 싣지 않는다 — 1주택 판정 메뉴 본문 전용(`judgmentMenuFlags` ·
+     * 2026-11 리뷰 D-13). 두 메뉴가 명부를 공유해 중과 메뉴에서 켠 미완 사실이 1주택 본문에 실려 400이 났는데, 1주택 화면에는 고칠 칸이 없고
+     * 1주택 route는 이 사실을 읽지 않는다(3호 on·off 판정 결과 동일 실측).
+     */
+    omitSurchargeOnlyRowFacts?: boolean;
+  },
 ): object[] | undefined {
   const hasMultiHouseEntries = houses.length > 0 || presaleRightsCount > 0;
   if (!isHousingLike(primary.assetKind) || (!hasMultiHouseEntries && !options?.includeSellingWithoutRoster)) return undefined;
@@ -273,7 +281,12 @@ export function buildHousesPayload(
       : {}),
   };
 
-  return [sellingHouse, ...buildOtherHousesPayload(housesOwnedAtTransfer(houses, transferDate, primary.assetKind))];
+  return [
+    sellingHouse,
+    ...buildOtherHousesPayload(housesOwnedAtTransfer(houses, transferDate, primary.assetKind), {
+      omitSurchargeOnlyRowFacts: options?.omitSurchargeOnlyRowFacts,
+    }),
+  ];
 }
 
 /**
@@ -284,7 +297,11 @@ export function buildHousesPayload(
  *    공동상속 게이트가 빠졌고, 엔진은 그 부재를 「게이트 통과」로 읽어 상속주택을 주택 수에서
  *    무조건 뺐다(리뷰 OH-10 — 단건 과세 ↔ 다건 비과세).
  */
-export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
+export function buildOtherHousesPayload(
+  houses: HouseEntry[],
+  /** D-13 — 1주택 판정 메뉴 본문은 중과 전용 행 사실(3호 칩 · ⑪ 연장)을 싣지 않는다(`buildHousesPayload` 옵션과 같은 값). */
+  options?: { omitSurchargeOnlyRowFacts?: boolean },
+): object[] {
   return houses
     .filter((h) => h.acquisitionDate)
     .map((h) => ({
@@ -443,16 +460,17 @@ export function buildOtherHousesPayload(houses: HouseEntry[]): object[] {
             // 가목2) 괄호 도시형 생활주택인 아파트 — ⑤가 묻는 범위에서 「예」일 때만(3호 선언이면 아래 3호 spread가 같은 칸 값을 싣는다)
             isUrbanLifeHousingApartment:
               rentalDeclarationUrbanLifeQuestionInScope(h) && h.isUrbanLifeHousingApartment === true ? true : undefined,
-            // §167의3⑪ 연장 사실 — 양도 주택 매핑과 같은 범위 술어
-            rentalAptDeadlineExtension: rentalDeclarationAptDeadlineInScope(h)
-              ? aptDeadlineExtensionPayload(h.rentalAptDeadlineExtension)
-              : undefined,
+            // §167의3⑪ 연장 사실 — 양도 주택 매핑과 같은 범위 술어(1주택 메뉴 본문에는 싣지 않는다 — D-13)
+            rentalAptDeadlineExtension:
+              !options?.omitSurchargeOnlyRowFacts && rentalDeclarationAptDeadlineInScope(h)
+                ? aptDeadlineExtensionPayload(h.rentalAptDeadlineExtension)
+                : undefined,
           }
         : {}),
       /**
        * ④⑬ §167의3①3호 감면대상장기임대주택 — 선언 시에만 키를 만든다. 임대기간·국민주택은 2호와
        * **같은 행 칸**이라 위 2호 매핑과 값이 같다(맨 뒤에 두어 2호 미선언이어도 실리게 한다).
        */
-      ...taxIncentiveRentalPayload(h),
+      ...(options?.omitSurchargeOnlyRowFacts ? {} : taxIncentiveRentalPayload(h)),
     }));
 }
