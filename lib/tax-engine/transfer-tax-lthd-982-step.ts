@@ -16,7 +16,7 @@ import { appurtenantLandLthdNoticeText } from "./appurtenant-land-lthd-rate";
 import { pushLongTermHoldingSteps } from "./transfer-tax-lthd-steps";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
-import type { UsageConversionDetail } from "./types/transfer-result.types";
+import type { NblPartLthdDetail, UsageConversionDetail } from "./types/transfer-result.types";
 import type { SplitGainResult, SplitPartResult } from "./types/transfer-split-gain.types";
 import type { Rental97Result } from "./transfer-reductions/types";
 import type { Unsold982LthdEcho } from "./transfer-reductions/unsold-hybrid-p4";
@@ -47,6 +47,8 @@ export interface Lthd982StepArgs {
   splitDetail?: SplitGainResult;
   /** §97의3·§97의4 echo — 장특 step 산식에서 혼합·가산 공제율을 풀어 쓴다(표시 전용, `transfer-tax-lthd-steps.ts`). */
   rental97LthdDetail?: Rental97Result;
+  /** 부분 비사업용 자산의 파트별 장특 echo(NBL2611-V5-G1) — 장특 step 산식 문구를 파트로 푼다. */
+  nblPartLthd?: NblPartLthdDetail;
 }
 
 export interface Lthd982StepResult {
@@ -140,6 +142,7 @@ export function applyLthd982AndPushSteps(a: Lthd982StepArgs): Lthd982StepResult 
     transferDate: exemptionJudgeInput.transferDate,
     splitDetail: a.splitDetail,
     rental97LthdDetail,
+    nblPartLthd: a.nblPartLthd,
   });
   // 기본통칙 95-0…1 — 토지가 주택보다 먼저 취득돼 토지분 공제율이 「표1·표2 중 큰 공제율」로 정해졌고 그 값이 토지 자신의
   // 보유연수로 표2를 적용한 값과 달라졌을 때만 고지한다(사실만 — 세액은 파트별 공제액이 정본). §98의2 특칙이 총액을 덮어쓴 경우는 제외.

@@ -55,7 +55,7 @@ import type { SplitPartResult } from "./types/transfer-split-gain.types";
 import type { UsageConversionDetail } from "./types/transfer-result.types";
 import { applyRental97Lthd } from "./transfer-tax-lthd-rental97";
 
-interface LongTermHoldingResult {
+export interface LongTermHoldingResult {
   deduction: number;
   rate: number;
   holdingPeriod: { years: number; months: number };

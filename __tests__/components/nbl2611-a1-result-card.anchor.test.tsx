@@ -48,6 +48,15 @@ describe("NBL2611-V5-H 비사업용 배너 — 장특 문구는 longTermDeductio
     expect(nblExclusionBannerText("crisis_acquisition", false)).toContain("장기보유특별공제 표1 적용");
     expect(nblExclusionBannerText("crisis_acquisition")).toContain("장기보유특별공제 표1 적용");
   });
+
+  it("NBL2611-V5-G1 — 한 필지 중 일부만 비사업용이면 배제는 비사업용 파트에만 걸리고 그 밖의 파트는 표1 적용을 알린다", () => {
+    const partial = nblExclusionBannerText("crisis_acquisition", true, 0.4);
+    expect(partial).toContain("비사업용 파트의 장기보유특별공제 배제");
+    expect(partial).toContain("그 밖의 파트는 표1 적용");
+    // 전량(비율 1)·비율 미지정은 종전 문구
+    expect(nblExclusionBannerText("crisis_acquisition", true, 1)).not.toContain("비사업용 파트의");
+    expect(nblExclusionBannerText("crisis_acquisition", true)).not.toContain("비사업용 파트의");
+  });
 });
 
 describe("NBL2611-V10-P 기간 분석 — 판정하지 않은 기간을 사업용 100%로 보이지 않는다", () => {

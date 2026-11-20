@@ -84,8 +84,8 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
             <p className={`text-sm font-bold ${isNonBusiness ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
               {isNonBusiness
                 ? nblSurchargeExcluded
-                  ? nblExclusionBannerText(nblSurchargeExcludedBy, lthdExcluded)
-                  : `비사업용 토지 — 기본세율 +10%p 중과 (${nblLthdBannerPhrase(lthdExcluded)}).`
+                  ? nblExclusionBannerText(nblSurchargeExcludedBy, lthdExcluded, judgment.surcharge?.nonBusinessAreaRatio)
+                  : `비사업용 토지 — 기본세율 +10%p 중과 (${nblLthdBannerPhrase(lthdExcluded, judgment.surcharge?.nonBusinessAreaRatio)}).`
                 : "사업용 토지 — 일반세율이 적용됩니다."}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">{judgment.judgmentReason}</p>

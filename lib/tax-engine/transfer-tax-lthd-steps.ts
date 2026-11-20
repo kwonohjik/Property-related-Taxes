@@ -13,7 +13,7 @@
  * 설계: docs/02-design/features/non-housing-to-housing-conversion.engine.design.md
  */
 import type { CalculationStep } from "./types/transfer.types";
-import type { UsageConversionDetail } from "./types/transfer-result.types";
+import type { NblPartLthdDetail, UsageConversionDetail } from "./types/transfer-result.types";
 import { TRANSFER, LTHD_EXCLUSION_LABEL } from "./legal-codes/transfer";
 import { TRANSFER_REDUCTION_ARTICLE } from "./legal-codes/transfer-house";
 import { applyRate } from "./tax-utils";
@@ -86,6 +86,8 @@ export interface LthdStepArgs {
    * 표 분해는 echo의 일반 공제율(`baseLthdRate`)로 쓴다. 표시 전용 — 공제액·세액과 무관하다.
    */
   rental97LthdDetail?: Rental97Result;
+  /** 부분 비사업용 자산의 파트별 장특 echo(NBL2611-V5-G1) — 있으면 장특 step 산식을 파트로 푼다(공제액은 두 파트 합). */
+  nblPartLthd?: NblPartLthdDetail;
 }
 
 /** 공제율(소수) → % 표시값(표시 전용 — 세액 계산에 쓰지 않는다) */
@@ -138,6 +140,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     transferDate,
     splitDetail,
     rental97LthdDetail,
+    nblPartLthd,
   } = args;
   // §98의2 특칙은 공제액을 덮어쓰고, §95⑤·§95④ 후단은 자기 분해 문구가 있다 — 그 경우 임대 특례 문구를 쓰지 않는다.
   const rentalView = lthd982Applied || conv || fbLthdFormula ? undefined : resolveRentalLthdView(rental97LthdDetail);
@@ -232,6 +235,8 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     label: "장기보유특별공제",
     formula: lthdExcluded
       ? `0 — ${LTHD_EXCLUSION_LABEL[lthdExclusionReason!]}`
+      : nblPartLthd
+      ? nblPartLthd.formula
       : splitFormula
       ? splitFormula
       : [
