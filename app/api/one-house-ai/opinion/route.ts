@@ -25,11 +25,15 @@ import type { OneHouseOpinion } from "@/lib/one-house-ai/opinion/opinion-schema"
 
 export const maxDuration = 120;
 
+
+/** 2026-11 리뷰 I-21 — 의견 입력 상한(정상 경로 최대값의 약 10배). 종전엔 메모 50 × 20만 자도 200이었다. */
+const OPINION_INPUT_LIMITS = { factsChars: 60_000, resultChars: 30_000, noteChars: 2_000 } as const;
+
 const bodySchema = z.object({
   form: z.record(z.string(), z.unknown()),
   result: z.object({ judgment: z.record(z.string(), z.unknown()) }).passthrough(),
   sourceText: z.string().max(ONE_HOUSE_AI_TEXT_MAX).optional(),
-  notes: z.array(z.string()).max(50).optional(),
+  notes: z.array(z.string().max(OPINION_INPUT_LIMITS.noteChars)).max(50).optional(),
 });
 
 /** 의견이 인용한 문서 — 카드면 card, 이번에 실시간으로 읽은 문서면 live(카드와 같은 문서면 card) */
@@ -92,12 +96,18 @@ export async function POST(request: NextRequest) {
 
   const { form, result, sourceText, notes } = parsed.data;
   const facts = compactJudgmentForm(form);
+  // I-21 — 원 폼은 정상 경로에서도 23~31k자라 상한을 걸지 않고, 압축한 사실·판정 결과에만 건다(정상 최대 5,810자 · 2,588자).
+  if (JSON.stringify(facts).length > OPINION_INPUT_LIMITS.factsChars || JSON.stringify(result).length > OPINION_INPUT_LIMITS.resultChars) {
+    return fail(400, "INPUT_TOO_LARGE", "참고 의견에 보낼 사실·판정 결과가 너무 큽니다");
+  }
   const cards = selectCards(allCards, [JSON.stringify(result), JSON.stringify(facts), sourceText ?? "", ...(notes ?? [])].join("\n"));
 
   let run: Awaited<ReturnType<typeof generateOneHouseOpinion>>;
   try {
-    run = await generateOneHouseOpinion({ judgment: result, facts, cards, sourceText, notes });
+    run = await generateOneHouseOpinion({ judgment: result, facts, cards, sourceText, notes }, undefined, request.signal);
   } catch (e) {
+    // I-28 — 요청이 끊겼다: 기록하지 않고 끝낸다
+    if (request.signal.aborted) return new Response(null, { status: 499 });
     if (e instanceof ExtractionFailedError) return fail(422, "OPINION_FAILED", e.message);
     console.error("[one-house-ai opinion] LLM 호출 실패", { name: (e as Error).name, message: (e as Error).message });
     return fail(502, "AI_UPSTREAM_ERROR", "AI 참고 의견 호출에 실패했습니다. 잠시 후 다시 시도하세요");

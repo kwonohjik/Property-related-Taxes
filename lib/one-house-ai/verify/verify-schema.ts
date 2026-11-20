@@ -5,7 +5,13 @@ import { z } from "zod";
 import { oneHouseOpinionSchema } from "../opinion/opinion-schema";
 import type { StatuteRef } from "../statute-ref";
 
-export const verifyBodySchema = z.object({
+/**
+ * 원문 검증 입력 상한 (2026-11 리뷰 I-21) — 의견 스키마(`oneHouseOpinionSchema`)는 LLM 출력 스키마와 같은 객체라 `.max`를 달지 않고
+ * 검증 본문에만 건다. 종전엔 조문 5,000개를 보내면 조문 조회가 5,000회 돌았다. 정상 의견은 쟁점 수 건 · 조문 수 개다.
+ */
+export const VERIFY_INPUT_LIMITS = { points: 20, statutesTotal: 60, docNosTotal: 60, textChars: 4000 } as const;
+
+const verifyBodyShape = z.object({
   /** 양도일 YYYY-MM-DD — 없으면 현행 조문으로 확인하고 그 사실을 표시한다 */
   transferDate: z
     .string()
@@ -22,6 +28,17 @@ export const verifyBodySchema = z.object({
       }),
     )
     .max(100),
+});
+export const verifyBodySchema = verifyBodyShape.superRefine((d, ctx) => {
+  const L = VERIFY_INPUT_LIMITS;
+  const pts = d.opinion.points;
+  if (pts.length > L.points) ctx.addIssue({ code: "custom", path: ["opinion", "points"], message: `쟁점은 ${L.points}개까지` });
+  if (pts.reduce((n, p) => n + p.statutes.length, 0) > L.statutesTotal)
+    ctx.addIssue({ code: "custom", path: ["opinion", "points"], message: `인용 조문은 모두 ${L.statutesTotal}개까지` });
+  if (pts.reduce((n, p) => n + p.citedDocNos.length, 0) > L.docNosTotal)
+    ctx.addIssue({ code: "custom", path: ["opinion", "points"], message: `인용 문서는 모두 ${L.docNosTotal}개까지` });
+  if (pts.some((p) => p.topic.length > L.textChars || p.opinion.length > L.textChars))
+    ctx.addIssue({ code: "custom", path: ["opinion", "points"], message: `쟁점·의견은 ${L.textChars}자까지` });
 });
 export type VerifyBody = z.infer<typeof verifyBodySchema>;
 

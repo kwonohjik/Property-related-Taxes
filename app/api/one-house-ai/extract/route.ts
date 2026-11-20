@@ -10,6 +10,7 @@
  * 응답의 `form`은 추출한 칸만 담은 조각이다 — 화면은 빈 판정 메뉴 폼 위에 덮어 현재 입력을 통째로 바꾼다(`mergeExtractedForm`).
  */
 import { NextRequest, NextResponse } from "next/server";
+import { EVIDENCE_NOT_IN_SOURCE_MESSAGE, evidenceInSource } from "@/lib/one-house-ai/evidence-check";
 import { z } from "zod";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
 import { aiRateLimitBypass, checkOneHouseAiAccess } from "@/lib/one-house-ai/access-guard";
@@ -100,8 +101,10 @@ export async function POST(request: NextRequest) {
   // 단계 4: 추출
   let run: ExtractionRun;
   try {
-    run = await extractOneHouseFacts(parsed.data.text);
+    run = await extractOneHouseFacts(parsed.data.text, undefined, request.signal);
   } catch (e) {
+    // I-28 — 사용자가 화면을 떠나 요청이 끊겼다: 기록하지 않고 끝낸다(응답을 받을 쪽이 없다)
+    if (request.signal.aborted) return new Response(null, { status: 499 });
     if (e instanceof ExtractionFailedError) return fail(422, "EXTRACTION_FAILED", e.message);
     console.error("[one-house-ai extract] LLM 호출 실패", { name: (e as Error).name, message: (e as Error).message });
     return fail(502, "AI_UPSTREAM_ERROR", "AI 사실 추출 호출에 실패했습니다. 잠시 후 다시 시도하세요");
@@ -110,6 +113,10 @@ export async function POST(request: NextRequest) {
   // 단계 5: 소재지 코드 칸 제거(주소 검색으로만 — 질문으로 바꾼다) → 사전 재검증 → 폼 조각 · 질문
   const extraction = withoutAddressCodes(run.extraction);
   const { form, issues, applied } = applyExtraction(extraction, ONE_HOUSE_FIELD_CATALOG);
+  // D-33 · Q-9 ① 경고 모드 — 넣은 값의 근거 구절이 원문에 없으면 안내한다(값은 그대로).
+  extraction.facts.forEach((f, i) => {
+    if (applied[i] && !evidenceInSource(f.evidence, parsed.data.text)) issues.push({ path: f.path, message: EVIDENCE_NOT_IN_SOURCE_MESSAGE });
+  });
   // 행 이름 없는 칸(`asset.residencePeriods[].moveInDate`)은 그 자체가 사전 키다
   const specOf = (path: string): FieldSpec | undefined => {
     const segs = parsePath(path);

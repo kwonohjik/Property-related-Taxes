@@ -101,6 +101,18 @@ describe("createLawTools", () => {
     expect(law.lookups.map((l) => l.ok)).toEqual([true, true, true, true, false]);
   });
 
+  it("2026-11 리뷰 I-27 — 본문 읽기는 요청당 6회 · 조문 조회는 10회까지(병렬 호출도 await 전에 센다)", async () => {
+    m(getTaxlawDocument).mockResolvedValue({ ntstDcmId: "1", kind: "interpretation", docNo: "D", title: "T", date: "2026.01.01.", gist: "g", answer: "a", body: "b", relatedStatutes: [], url: "u" });
+    m(getLawText).mockResolvedValue({ fullText: DECREE_155, title: "1세대1주택의 특례", sourceUrl: "u" });
+    const { tool } = setup();
+    const reads = await Promise.allSettled(Array.from({ length: 7 }, (_, i) => tool("read_interpretation")({ source: "nts", id: String(i + 1) })));
+    expect(reads.filter((r) => r.status === "fulfilled")).toHaveLength(6);
+    expect(getTaxlawDocument).toHaveBeenCalledTimes(6);
+    const looks = await Promise.allSettled(Array.from({ length: 11 }, () => tool("lookup_statute")({ lawName: "소득세법 시행령", article: "제155조" })));
+    expect(looks.filter((r) => r.status === "fulfilled")).toHaveLength(10);
+    expect(String((looks[10] as PromiseRejectedResult).reason)).toContain("요청당 10회까지");
+  });
+
   it("read_interpretation — 읽은 문서만 readDocs에 docKey로 쌓인다 · 없는 문서는 실패", async () => {
     m(getTaxlawDocument).mockImplementation(async (id: string) =>
       id === "200000000000021918"

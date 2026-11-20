@@ -43,6 +43,14 @@ export const ONE_HOUSE_FIELD_CATALOG_TOP = [
     hint: "입국해 국내에 주소를 둔 날 등 다시 거주자가 된 날. 비거주 기간이 있으면 필수.",
     when: "nonResidentPeriod = true",
   },
+  // 2026-11 리뷰 I-22 · 결정 Q-9 ② — 판정 메뉴 칸인데 사전에 없었다(평가셋 사례 0건 · 누락).
+  {
+    path: "nonResidentResidedAtConversion",
+    kind: "boolean",
+    label: "그 주택에 거주한 상태로 거주자가 됐습니다",
+    hint: "비거주자였다가 양도하는 그 주택에 거주한 상태로 거주자가 됐으면 켠다 — 취득일부터 거주자가 된 날까지 3년 이상 보유했으면 비거주 기간도 보유기간에 통산한다(시행령 §154⑧2호).",
+    when: "nonResidentPeriod = true",
+  },
 
   // ── ② 양도 대상 — 양도일·가액·현황 ───────────────────────
   {
@@ -98,6 +106,64 @@ export const ONE_HOUSE_FIELD_CATALOG_TOP = [
     kind: "intString",
     label: "거주기간 (개월)",
     hint: "폼-전역 옛 거주개월 칸 — 판정 메뉴 위젯이 이 칸을 쓰지 않는다. 거주 개월 판정은 asset.residencePeriods[](구간) 또는 asset.residencePeriodMonthsAsset(총 개월)을 읽고, 이 칸은 직접 입력 모드에서 자산 칸이 빈 문자열일 때만 대신 읽힌다. 거주기간은 자산 칸에 넣는다. (UI 라벨 미확인)",
+  },
+
+  // ── §155의2 장기저당담보주택 (2026-11 리뷰 I-22 · 결정 Q-9 ② — 사전 누락이었다) ───────
+  {
+    path: "longTermMortgageSpecial",
+    kind: "boolean",
+    label: "장기저당담보주택 특례",
+    hint: "양도 대상 주택(또는 동거봉양 합가로 2주택이 된 세대의 직계존속 주택)을 담보로 연금을 받는 장기저당담보대출 계약(역모기지)을 맺었으면 켠다 — 거주기간 요건이 면제된다(영 §155의2).",
+    when: "asset.assetKind = housing",
+  },
+  {
+    path: "longTermMortgageContractDate",
+    kind: "date",
+    label: "계약체결일",
+    hint: "장기저당담보대출 계약을 체결한 날(영 §155의2①1호).",
+    when: "longTermMortgageSpecial = true",
+  },
+  {
+    path: "longTermMortgageBorrowerAge",
+    kind: "intString",
+    label: "계약체결일 현재 가입자 나이",
+    hint: "계약체결일 현재 가입자의 만 나이(세) — 60세 이상이어야 한다(영 §155의2①1호).",
+    when: "longTermMortgageSpecial = true",
+  },
+  {
+    path: "longTermMortgageContractYears",
+    kind: "intString",
+    label: "계약기간",
+    hint: "장기저당담보대출 계약기간(년) — 10년 이상이어야 한다(영 §155의2①2호).",
+    when: "longTermMortgageSpecial = true",
+  },
+  {
+    path: "longTermMortgageMaturityLumpSum",
+    kind: "boolean",
+    label: "만기에 이 주택을 처분해 일시 상환하는 계약조건",
+    hint: "만기에 해당 주택을 처분해 일시 상환하는 계약조건이면 켠다(영 §155의2①3호).",
+    when: "longTermMortgageSpecial = true",
+  },
+  {
+    path: "longTermMortgageIsTransferredHouseMortgaged",
+    kind: "boolean",
+    label: "양도할 주택이 담보로 제공된 그 주택이다",
+    hint: "양도하는 주택이 담보로 제공한 주택 자체면 켠다 — 아니면 1주택 의제만 서고 거주요건은 그대로 본다(영 §155의2 「장기저당담보주택은」).",
+    when: "longTermMortgageSpecial = true",
+  },
+  {
+    path: "longTermMortgageParentalCareMerge",
+    kind: "boolean",
+    label: "담보주택을 보유한 직계존속과 동거봉양 합가로 2주택이 되었다",
+    hint: "담보주택을 보유한 직계존속을 동거봉양하려고 세대를 합쳐 2주택이 됐으면 켠다(영 §155의2②).",
+    when: "longTermMortgageSpecial = true",
+  },
+  {
+    path: "longTermMortgageTransferredBeforeMaturity",
+    kind: "boolean",
+    label: "계약기간이 끝나기 전에 양도한다",
+    hint: "계약기간 만료 전에 양도하면 켠다 — 그러면 ①②를 적용하지 않는다(영 §155의2③).",
+    when: "longTermMortgageSpecial = true",
   },
 
   // ── §155의3 상생임대주택 ─────────────────────────────────

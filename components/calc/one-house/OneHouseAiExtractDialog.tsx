@@ -12,6 +12,7 @@
  * 로컬 개발 서버 전용 — 버튼 노출 여부는 서버 페이지가 정한다(`page.tsx`).
  */
 import { useState } from "react";
+import { useUnmountSignal } from "./use-unmount-signal";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -68,6 +69,9 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
   // 추출 뒤 원문을 고쳤다 — 그대로 적용하면 참고 의견이 고친 글을 받는데 사실은 옛 글에서 나왔다(계획서 Q-2 c)
   const stale = data !== null && text.trim() !== extractedText;
 
+  // I-28 — 언마운트에서만 끊는다(대화창 닫기는 결과를 버리지 않는다)
+  const unmountSignal = useUnmountSignal();
+
   const extract = async () => {
     setLoading(true);
     setError(null);
@@ -75,6 +79,7 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
     setDraft(null);
     try {
       const res = await fetch("/api/one-house-ai/extract", {
+        signal: unmountSignal(),
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
@@ -94,6 +99,7 @@ export function OneHouseAiExtractDialog({ form, onApply }: Props) {
       setDraft(mergeExtractedForm(extracted.form));
       setExtractedText(text.trim());
     } catch {
+      if (unmountSignal()?.aborted) return; // I-28 — 화면이 사라졌다
       setError("AI 사실 추출 요청을 보내지 못했습니다. 네트워크를 확인하세요.");
     } finally {
       setLoading(false);
@@ -248,7 +254,8 @@ function ExtractionPreview({
       )}
 
       {data.issues.length > 0 && (
-        <ToneCard tone="amber" title={`넣지 않은 값 ${data.issues.length}건`}>
+        // D-33 — 원문 대조 경고(값은 넣었다)도 이 목록에 실린다 — 「넣지 않은 값」으로 묶지 않는다. 각 줄이 넣었는지 말한다.
+        <ToneCard tone="amber" title={`추출 안내 ${data.issues.length}건 — 넣지 않은 값 · 원문과 대조할 값`}>
           <ul className="list-disc space-y-1 pl-4 text-sm">
             {data.issues.map((i, n) => (
               <li key={`${i.path}-${n}`}>

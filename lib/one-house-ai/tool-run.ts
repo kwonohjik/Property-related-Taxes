@@ -19,6 +19,8 @@ export async function runStructured<T>(params: {
   schema: z.ZodType<T>;
   maxTokens: number;
   client?: Anthropic;
+  /** I-28 — 요청이 끊기면(화면 이탈) 모델 호출을 멈춘다 */
+  signal?: AbortSignal;
 }): Promise<Omit<ToolRunResult<T>, "iterations">> {
   const client = params.client ?? new Anthropic();
   const response = await client.beta.messages
@@ -30,7 +32,7 @@ export async function runStructured<T>(params: {
       output_config: { effort: "high", format: betaZodOutputFormat(params.schema) },
       system: [{ type: "text", text: params.system, cache_control: { type: "ephemeral", ttl: "1h" } }],
       messages: [{ role: "user", content: params.user }],
-    })
+    }, { signal: params.signal })
     .finalMessage();
   if (response.stop_reason === "refusal") throw new ExtractionFailedError(`거절: ${response.stop_details?.category ?? "unknown"}`);
   if (response.stop_reason === "max_tokens") throw new ExtractionFailedError("출력 한도에 걸려 응답이 잘렸습니다");
@@ -51,6 +53,8 @@ export async function runWithTools<T>(params: {
   maxIterations: number;
   maxTokens: number;
   client?: Anthropic;
+  /** I-28 — 요청이 끊기면 도구 루프의 다음 호출을 보내지 않는다 */
+  signal?: AbortSignal;
 }): Promise<ToolRunResult<T>> {
   const client = params.client ?? new Anthropic();
   const runner = client.beta.messages.toolRunner({
@@ -65,7 +69,7 @@ export async function runWithTools<T>(params: {
     system: [{ type: "text", text: params.system, cache_control: { type: "ephemeral", ttl: "1h" } }],
     messages: [{ role: "user", content: params.user }],
     tools: params.tools,
-  });
+  }, { signal: params.signal });
 
   const usage = { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 };
   let iterations = 0;

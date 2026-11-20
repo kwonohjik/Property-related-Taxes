@@ -41,8 +41,18 @@ export type ReadDoc = { source: InterpretationSource; id: string; docNo: string;
 /**
  * 도구 상한 — 본문은 시행령 §155 시행본 8,299~12,506자(계획 F-18).
  * 검색 횟수: 실호출(V-7, 2026-10-22)에서 카드 10장을 받고도 검색 8회(그중 6회 0건 — 긴 구절을 제목 검색에 넣음)였다 ⇒ 요청당 4회.
+ * 본문 읽기 6회 · 조문 조회 10회(2026-11 리뷰 I-27) — 상한이 검색에만 있어 가짜 SSE 8반복에서 읽기 32회 · 조회 16회가 모두 성공하고
+ * 마지막 요청의 도구 결과가 290,388자였다(도구 루프는 매 반복 누적 재전송). 실호출에서 과다 읽기는 관측되지 않았다.
  */
-export const LAW_TOOL_LIMITS = { statuteFull: 6000, statuteParagraph: 3000, docBody: 6000, queryMax: 40, searchesPerRequest: 4 } as const;
+export const LAW_TOOL_LIMITS = {
+  statuteFull: 6000,
+  statuteParagraph: 3000,
+  docBody: 6000,
+  queryMax: 40,
+  searchesPerRequest: 4,
+  readsPerRequest: 6,
+  lookupsPerRequest: 10,
+} as const;
 
 const SOURCE_LABEL: Record<InterpretationSource, string> = { nts: "국세청 해석", moef: "기획재정부 해석", tax_tribunal: "조세심판" };
 
@@ -66,6 +76,9 @@ export function createLawTools(opts: { allow: readonly LawToolName[] }): {
   const lookups: LawLookup[] = [];
   const readDocs = new Map<string, ReadDoc>();
   let searches = 0;
+  // I-27 — 카운터는 await 전에 올린다(SDK 도구 러너가 한 응답의 도구 호출을 병렬로 실행한다)
+  let reads = 0;
+  let statuteLookups = 0;
 
   /** 실행을 감싸 성공·실패를 기록한다. 실패는 그대로 던져 SDK가 `is_error` 결과로 모델에 돌려준다 */
   const recorded =
@@ -94,6 +107,9 @@ export function createLawTools(opts: { allow: readonly LawToolName[] }): {
       baseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("기준일 YYYY-MM-DD"),
     }),
     run: recorded("lookup_statute", async ({ lawName, article, paragraph, baseDate }) => {
+      if (++statuteLookups > LAW_TOOL_LIMITS.lookupsPerRequest) {
+        throw new Error(`조문 조회는 요청당 ${LAW_TOOL_LIMITS.lookupsPerRequest}회까지다 — 지금까지 받은 조문으로 답하라.`);
+      }
       let fullText: string;
       let title: string;
       let basis: string;
@@ -177,6 +193,9 @@ export function createLawTools(opts: { allow: readonly LawToolName[] }): {
       id: z.string().min(1).max(30).describe("search_interpretations 목록의 id"),
     }),
     run: recorded("read_interpretation", async ({ source, id }) => {
+      if (++reads > LAW_TOOL_LIMITS.readsPerRequest) {
+        throw new Error(`본문 읽기는 요청당 ${LAW_TOOL_LIMITS.readsPerRequest}회까지다 — 지금까지 읽은 문서로 답하라.`);
+      }
       let doc: ReadDoc;
       let text: string;
       if (source === "tax_tribunal") {

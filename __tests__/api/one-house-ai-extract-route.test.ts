@@ -72,6 +72,21 @@ describe("POST /api/one-house-ai/extract", () => {
     expect(extract).not.toHaveBeenCalled();
   });
 
+  it("2026-11 리뷰 D-33(경고 모드) — 근거 구절이 원문에 없는 값은 넣되 안내한다 · 원문에 있으면 안내 없음", async () => {
+    const TEXT = "2024.6.15. 양도 · 1세대 · 주택 · 2015.3.1. 취득 · 3년 거주 · 2023.5.1. B 취득 · 서울";
+    const ok = (await (await call({ text: TEXT })).json()).data;
+    expect(ok.issues.filter((i: { message: string }) => i.message.includes("원문에 없습니다"))).toEqual([]);
+    extract.mockResolvedValueOnce({
+      extraction: extraction({ facts: [...extraction().facts, { path: "contractTotalPrice", value: "900000000", evidence: "9억 원에 양도" }] }),
+      model: "claude-opus-5-5",
+      usage: { input: 1, cacheRead: 0, cacheWrite: 0, output: 1 },
+      lookups: [],
+    });
+    const warned = (await (await call({ text: TEXT })).json()).data;
+    expect(warned.issues.filter((i: { message: string }) => i.message.includes("원문에 없습니다")).map((i: { path: string }) => i.path)).toEqual(["contractTotalPrice"]);
+    expect(warned.form.contractTotalPrice).toBe("900000000");
+  });
+
   it("빈 원문 · 1만 자 초과는 400", async () => {
     expect((await call({ text: "  " })).status).toBe(400);
     expect((await call({ text: "가".repeat(10_001) })).status).toBe(400);
