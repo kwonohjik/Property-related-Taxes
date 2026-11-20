@@ -10,6 +10,7 @@
  * «양도일 현재 상태를 소유기간 전체에 적용»(V2-C2) 고지에도 같은 문구로 쓴다(B2·D1).
  */
 import { NBL } from "./legal-codes/transfer-nbl";
+import { TRANSFER } from "./legal-codes";
 
 /**
  * V10-BX06 — 건축물(비주택) 부속토지 기준면적 초과분을 비사업용으로 보았을 때, 사업용 해당 여부를 따로 판정하지 않았다는 고지.
@@ -96,3 +97,17 @@ export const NBL_RESERVE_FORCES_SELF_DECLARED_NOTICE =
 export const NBL_VACANT_LOT_SELF_DECLARED_NOTICE =
   `${NBL.OTHER_LAND_HO_VACANT_LOT}(무주택 1세대 1필지 나지)의 요건 중 주택을 소유하지 아니하는 1세대일 것, 1필지일 것(나지가 2필지 이상이면 소득세법 시행규칙 §83조의4 ⑰의 선택·순위), ` +
   `주택 신축이 금지·제한되는 지역에 소재하지 아니하고 지목이 대지이거나 실질적으로 주택을 신축할 수 있을 것(같은 조 ⑯)은 판정하지 않았습니다 — 자기 선언 요건, 확인 필요.`;
+
+/**
+ * NBL2611-V5-G1 (C2 남은 한계) — 상가의 토지분·건물분 양도차익 부호가 달라(한쪽이 양도차손) 장기보유특별공제와 통산을 자산 단위 순액으로 계산했다는 고지.
+ * 비사업용 파트와 그 밖의 파트의 장특은 파트로 가르지만, 건물분 차손과 사업용 토지분 차익은 한 파트(그 밖의 파트) 안에서 순액으로 합쳐진다.
+ */
+export const NBL_CB_MIXED_SIGN_LTHD_NOTICE =
+  `상가의 토지분과 건물분 양도차익의 부호가 달라(한쪽이 양도차손) 장기보유특별공제(${TRANSFER.LONG_TERM_DEDUCTION})와 양도차손 통산(${TRANSFER.LOSS_OFFSET})을 ` +
+  `비사업용 파트와 그 밖의 파트로만 나눠 계산하고 그 밖의 파트 안에서는 토지분·건물분 순액으로 보았습니다. 토지분과 건물분을 별개의 자산으로 보아 각각 장기보유특별공제를 공제한 뒤 통산하면 결과가 달라질 수 있습니다 — 확인 필요.`;
+
+/** 상가 비사업용 파트가 적용됐고 토지분·건물분 양도차익의 부호가 서로 다르면 고지, 아니면 `undefined`. */
+export function cbMixedSignLthdNotice(part: { applied: boolean; landGain: number; buildingGain: number } | undefined): string | undefined {
+  if (!part?.applied) return undefined;
+  return (part.landGain > 0 && part.buildingGain < 0) || (part.landGain < 0 && part.buildingGain > 0) ? NBL_CB_MIXED_SIGN_LTHD_NOTICE : undefined;
+}

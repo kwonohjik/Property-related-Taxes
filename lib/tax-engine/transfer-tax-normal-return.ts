@@ -40,6 +40,7 @@ export interface NormalReturnArgs extends FinalizeArgs {
   inheritedAcquisitionStep: ResultDetailArgs["inheritedAcquisitionStep"];
   cbStep: ResultDetailArgs["cbStep"];
   cbNblPart: ResultDetailArgs["cbNblPart"];
+  nblPartLthd: ResultDetailArgs["nblPartLthd"];
   rental97LthdDetail: TransferTaxResult["rental97LthdDetail"];
   usageConversionDetail: TransferTaxResult["usageConversionDetail"];
   lthdExclusionReason: TransferTaxResult["lthdExclusionReason"];
@@ -88,6 +89,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     inheritedAcquisitionStep,
     cbStep,
     cbNblPart,
+    nblPartLthd,
     rental97LthdDetail,
     usageConversionDetail,
     lthdExclusionReason,
@@ -170,7 +172,8 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     capitalExpenditureForDisplay: rawInput.capitalExpenditure ?? 0,
     longTermHoldingDeduction,
     longTermHoldingRate,
-    lthdStartDate: resolveLTHDStartDate(effectiveInput),
+    // 부분 비사업용 파트별 장특이면 대표 보유기간·공제율은 «그 밖의 파트» 것이다(비사업용 파트의 2016.1.1. 기산은 echo `nblPartLthd`가 말한다).
+    lthdStartDate: resolveLTHDStartDate(nblPartLthd ? { ...effectiveInput, isNonBusinessLand: false } : effectiveInput),
     basicDeduction,
     taxBase,
     appliedRate: taxResult.appliedRate,
@@ -229,6 +232,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
       inheritedAcquisitionStep,
       cbStep,
       cbNblPart,
+      nblPartLthd,
       splitDetail: splitDetailForRate,
     }),
     newHousingReductionDetail,

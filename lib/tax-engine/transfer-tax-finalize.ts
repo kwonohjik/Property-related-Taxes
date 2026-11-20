@@ -521,6 +521,8 @@ export function buildTransferResultDetails(ctx: {
   cbStep?: CommercialBuildingStepResult;
   /** 상가 부수토지 초과분 토지·건물 파트 echo(NBL2611-V5-BX01) */
   cbNblPart?: TransferTaxResult["commercialNblPart"];
+  /** 부분 비사업용 파트별 장특 echo(NBL2611-V5-G1) */
+  nblPartLthd?: TransferTaxResult["nblPartLthd"];
   splitDetail?: TransferTaxResult["splitDetail"];
 }): Pick<
   TransferTaxResult,
@@ -532,6 +534,7 @@ export function buildTransferResultDetails(ctx: {
   | "inheritedHouseValuationDetail"
   | "commercialBuildingValuationDetail"
   | "commercialNblPart"
+  | "nblPartLthd"
   | "splitDetail"
   | "preHousingDisclosureDetail"
   | "surchargeSuspensionBasis"
@@ -551,6 +554,7 @@ export function buildTransferResultDetails(ctx: {
     inheritedHouseValuationDetail: ctx.inheritedAcquisitionStep?.houseValuationResult,
     commercialBuildingValuationDetail: ctx.cbStep?.detail,
     commercialNblPart: ctx.cbNblPart,
+    nblPartLthd: ctx.nblPartLthd,
     splitDetail: ctx.splitDetail ?? undefined,
     preHousingDisclosureDetail: ctx.splitDetail?.preHousingDisclosureDetail,
   };

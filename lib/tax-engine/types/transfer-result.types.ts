@@ -91,6 +91,26 @@ export interface ReducibleIncomeBucket {
   rate: number;
 }
 
+/** 부분 비사업용 자산의 파트별 장특 echo — `transfer-tax-lthd-nbl-part.ts`가 만든다(표시 전용 + 다건·세율 파트 분리의 단일 소스). */
+export interface NblPartLthdDetail {
+  /** 비사업용 파트 양도차익 — 면적(또는 파트) 비율로 나눈 몫 */
+  nonBusinessGain: number;
+  /** 그 밖의 파트(사업용분·상가 건물분) 양도차익 */
+  businessGain: number;
+  /** 비사업용 파트 장특 공제액(2016.1.1. 전 양도는 0 — 구 §95② 괄호 배제) */
+  nonBusinessDeduction: number;
+  /** 그 밖의 파트 장특 공제액(표1 — 취득일 기산) */
+  businessDeduction: number;
+  /** 비사업용 파트가 구 §95② 괄호로 배제된 경우의 사유 — 배제가 아니면 없다 */
+  nonBusinessExclusionReason?: import("../legal-codes/transfer").LthdExclusionReason;
+  /** 비사업용 파트 보유기간이 §95④ 단서로 2016.1.1.부터 기산되는가(2016년 양도 · 2016.1.1. 이전 취득) */
+  nonBusinessAnchoredTo2016: boolean;
+  /** 장특 차감 **후** 비사업용 파트 소득의 몫(정수 분수) — 이후 §104⑤ 파트별 세율이 이 몫으로 소득을 나눈다 */
+  netShare?: { numerator: number; denominator: number };
+  /** step 산식 문구(풀어쓰기) */
+  formula: string;
+}
+
 export interface TransferTaxResult {
   /** 전액 비과세 여부 */
   isExempt: boolean;
@@ -568,6 +588,12 @@ export interface TransferTaxResult {
    */
   commercialNblPart?: CommercialNblPartEcho;
   /**
+   * 부분 비사업용 자산의 **파트별 장기보유특별공제 echo**(NBL2611-V5-G1 · R15) — 2016.1.1. 전 양도(구 §95② 괄호 배제) 또는
+   * 2016년 양도(§95④ 단서 2016.1.1. 기산)라 비사업용 파트와 그 밖의 파트(사업용분·상가 건물분)의 규칙이 갈릴 때만 존재한다.
+   * 이때 `longTermHoldingDeduction`은 두 파트 공제액의 합이다.
+   */
+  nblPartLthd?: NblPartLthdDetail;
+  /**
    * 일반건물(토지+건물 일괄) 환산취득가 산정 상세 결과.
    * propertyType === "general_building" aggregate 경로에서만 포함.
    * 결과 카드 산식 표시·신고서 토지/건물 분리 표 재현에 사용.
@@ -652,6 +678,7 @@ export type TransferValuationDetailSource = Pick<
   TransferTaxResult,
   | "commercialBuildingValuationDetail"
   | "commercialNblPart"
+  | "nblPartLthd"
   | "nonBusinessLandJudgmentDetail"
   | "nblSurchargeExcluded"
   | "nblSurchargeExcludedBy"

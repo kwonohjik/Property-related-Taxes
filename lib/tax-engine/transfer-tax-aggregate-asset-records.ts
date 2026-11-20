@@ -197,7 +197,7 @@ export function buildAssetRecords(
      *    그 값을 만든 곳은 단건 엔진뿐이다.
      */
     const cbNblPart = result.commercialNblPart;
-    const nblOverride = nblJudgment
+    const nblOverrideBase = nblJudgment
       ? {
           isNonBusinessLand: nblJudgment.isNonBusinessLand,
           nonBusinessLandAreaRatio: nblJudgment.surcharge.nonBusinessAreaRatio,
@@ -205,6 +205,10 @@ export function buildAssetRecords(
       : cbNblPart
         ? { ...cbNblPart.injected }
         : undefined;
+    // NBL2611-V5-G1 — 파트별 장특이 갈린 자산은 «장특 차감 후» 비사업용 파트 몫을 그대로 싣는다(자산 `income`이 장특 차감 후 값이다 — 면적 비율로 다시 나누면 파트 소득이 어긋난다).
+    const nblNetShare = result.nblPartLthd?.netShare;
+    // 원시 플래그(정밀 판정 없음)로 부분 비사업용을 넣은 자산은 `nblOverrideBase`가 없다 — 그래도 몫은 싣는다(단건 STEP 7과 같은 입력).
+    const nblOverride = nblNetShare ? { ...nblOverrideBase, nonBusinessLandPartShare: nblNetShare } : nblOverrideBase;
     /**
      * 배우자등 이월과세(§97의2) — **채택된 시나리오의 §104② 기산 사실**로 item을 교정.
      *
