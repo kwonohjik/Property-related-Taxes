@@ -267,4 +267,22 @@ describe("G1-5 — 상가: 건물분·사업용 토지분은 2016.1.1. 전 양�
     const same = calculateTransferTax(cb("2004-06-01", "2015-06-01", { ...UNAPPROVED, partBasis: cbStd(0.6, 0.6) }), rates);
     expect(same.warnings?.some((w) => w.includes("부호가 달라"))).toBe(false);
   });
+  it("다건(일괄) 입구 — 상가 + 일반 토지 2건의 결정세액 = 3카드(토지 비사업용·토지 사업용·건물) + 일반 토지 독립 검산 (2015 양도)", () => {
+    const acq = "2004-06-01";
+    const tr = "2015-06-01";
+    const plain = { ...baseTransferInput({ isOneHousehold: false, householdHousingCount: 0, residencePeriodMonths: 0, acquisitionDate: d(acq), transferDate: d(tr), propertyType: "land", transferPrice: 300_000_000, acquisitionPrice: 100_000_000 } as Partial<TransferTaxInput>), propertyId: "L2", propertyLabel: "L2" } as unknown as TransferTaxItemInput;
+    const cbItem = { ...cb(acq, tr, { ...EXCESS_75, partBasis: cbStd(0.8, 0.8) }), propertyId: "CB1", propertyLabel: "CB1" } as unknown as TransferTaxItemInput;
+    const got = calculateTransferTaxAggregate({ properties: [cbItem, plain], taxYear: 2015, annualBasicDeductionUsed: 0 }, rates).determinedTax;
+    const Tl = Math.floor(CT * 0.8);
+    const Al = Math.floor(CA * 0.8);
+    const nT = Math.floor((Tl * 3) / 4);
+    const nA = Math.floor((Al * 3) / 4);
+    const cards = [
+      { id: "N", type: "land", nbl: true, t: nT, a: nA },
+      { id: "L", type: "land", nbl: false, t: Tl - nT, a: Al - nA },
+      { id: "B", type: "building", nbl: false, t: CT - Tl, a: CA - Al },
+    ].map((c) => ({ ...baseTransferInput({ isOneHousehold: false, householdHousingCount: 0, residencePeriodMonths: 0, acquisitionDate: d(acq), transferDate: d(tr), propertyType: c.type, isNonBusinessLand: c.nbl, transferPrice: c.t, acquisitionPrice: c.a } as Partial<TransferTaxInput>), propertyId: c.id, propertyLabel: c.id }) as unknown as TransferTaxItemInput);
+    const oracleDet = calculateTransferTaxAggregate({ properties: [...cards, plain], taxYear: 2015, annualBasicDeductionUsed: 0 }, rates).determinedTax;
+    expect(got).toBe(oracleDet);
+  });
 });

@@ -38,7 +38,6 @@ export function pickValuationDetails(r: SingleResult): TransferValuationDetailSo
   return {
     commercialBuildingValuationDetail: r.commercialBuildingValuationDetail,
     commercialNblPart: r.commercialNblPart,
-    nblPartLthd: r.nblPartLthd,
     nonBusinessLandJudgmentDetail: r.nonBusinessLandJudgmentDetail,
     nblSurchargeExcluded: r.nblSurchargeExcluded,
     nblSurchargeExcludedBy: r.nblSurchargeExcludedBy,

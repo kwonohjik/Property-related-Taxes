@@ -678,7 +678,6 @@ export type TransferValuationDetailSource = Pick<
   TransferTaxResult,
   | "commercialBuildingValuationDetail"
   | "commercialNblPart"
-  | "nblPartLthd"
   | "nonBusinessLandJudgmentDetail"
   | "nblSurchargeExcluded"
   | "nblSurchargeExcludedBy"
