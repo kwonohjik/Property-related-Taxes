@@ -37,6 +37,7 @@ import {
 import { getZoneAreaMultiplier } from "../local-tax-zone-multiplier";
 import { consumedSportsInputs, heldSportsEvents } from "./sports-input-consumption";
 import { resortAreaIssue } from "./resort-area-issue";
+import { otherLandHoLegalBasis, type UnlimitedHo } from "./other-land-ho-meta";
 
 /**
  * NBL2611-V7-E — 「지방세법 시행령」 제101조 제2항 용도지역별 적용배율은 **정본 진입점 `getZoneAreaMultiplier`로만** 읽는다.
@@ -232,8 +233,13 @@ function resolveAreaLimitRaw(o: OtherLandUsage, zoneType?: ZoneType): number | u
       const sum = (o.resortOutdoorArea ?? 0) + parking + building;
       return sum > 0 ? sum : o.standardAreaLimit; // 3요소 미입력 시 직접입력 fallback
     }
-    default:
-      return undefined; // etc_14호 · none · 미설정 → 면적기준 없음 (boolean 유지)
+    default: {
+      // 면적기준 없는 호(`other-land-ho-meta.ts`의 `area.limited: false`) · none · 미설정 → 면적기준 없음.
+      // 표에서 면적 산식이 있는 호를 위 switch에 빠뜨리면 이 대입이 컴파일 오류가 된다(NBL2611-V7-S 커버리지 가드).
+      const unlimited: UnlimitedHo | undefined = o.relatedBusinessType;
+      void unlimited;
+      return undefined;
+    }
   }
 }
 
@@ -262,17 +268,7 @@ export function resolveMixedUseProportioning(
   return undefined;
 }
 
-/** §168의11① 호별 면적기준 legalBasis. 미해당(14호·legacy)은 OTHER_LAND_BUSINESS. */
+/** §168의11① 호별 결과 근거 — `other-land-ho-meta.ts` 표가 단일 소스. 미설정·해당 없음은 §168의11① 총칙. */
 export function resolveAreaLegalBasis(t: NblRelatedBusinessType | undefined): string {
-  switch (t) {
-    case "sports":                return NBL.OTHER_LAND_AREA_SPORTS;
-    case "parking_attached":      return NBL.OTHER_LAND_AREA_PARKING;
-    case "parking_garage":        return NBL.OTHER_LAND_AREA_GARAGE;
-    case "youth_training":        return NBL.OTHER_LAND_AREA_YOUTH;
-    case "reserve_forces":        return NBL.OTHER_LAND_AREA_RESERVE;
-    case "resort":                return NBL.OTHER_LAND_AREA_RESORT;
-    case "hatchang":              return NBL.OTHER_LAND_AREA_HATCHANG;
-    case "vacant_lot_1household": return NBL.OTHER_LAND_AREA_VACANT_LOT;
-    default:                      return NBL.OTHER_LAND_BUSINESS;
-  }
+  return otherLandHoLegalBasis(t);
 }

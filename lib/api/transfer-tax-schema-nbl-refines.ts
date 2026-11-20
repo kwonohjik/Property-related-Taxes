@@ -27,6 +27,8 @@ import {
 } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
 import { periodRowIssue, periodRowIssueField, periodRowIssueMessage } from "@/lib/tax-engine/non-business-land/period-row-issue";
 import { priorRevenueWithoutLandValue } from "@/lib/tax-engine/non-business-land/revenue-test";
+import { hoRequiredInputIssue } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
+import { wholesaleItemIssue } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 
 interface DatedRow {
   startDate?: string;
@@ -60,6 +62,13 @@ export interface NblRawRefineInput {
   nblOtherResortParkingActualArea?: string;
   nblOtherResortBuildingFloorArea?: string;
   nblOtherResortBuildingArea?: string;
+  nblOtherStandardAreaLimit?: string;
+  nblOtherMaxAnnualArea?: string;
+  nblOtherYouthCapacity?: string;
+  nblOtherMinGarageArea?: string;
+  nblOtherPrivateInvestCompletionDate?: string;
+  nblRevenueWholesaleItem?: string;
+  nblRevenueWholesaleInMarket?: boolean;
 }
 
 export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.RefinementCtx): void {
@@ -143,5 +152,17 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
       const key = { parkingActual: "nblOtherResortParkingActualArea", parkingStd: "nblOtherResortParkingStdArea", buildingActual: "nblOtherResortBuildingArea" } as const;
       issue([key[resort.part]], resort.message);
     }
+  }
+
+  // NBL2611-V7-S — 선택한 호의 단순 필수 입력(호 메타 표 `requiredInput`: 기준면적·최대면적·수용정원·최저차고기준면적·3호 조성 완료일). ⑧ `validateNblOtherLand`와 같은 표·같은 문구.
+  if (raw.nblLandType === "other_land") {
+    const ho = hoRequiredInputIssue(raw.nblOtherRelatedBusinessType, (f) => (raw as unknown as Record<string, string | undefined>)[f], parseDecimal);
+    if (ho) issue([ho.field], ho.message);
+  }
+
+  // NBL2611-V7-S · Q-6 (다) — 12호 도소매업은 품목 필수(규칙 §83조의4⑭). 시장 요건 불충족은 400이 아니라 12호 불인정이다(엔진).
+  if (raw.nblLandType === "other_land") {
+    const wh = wholesaleItemIssue({ businessType: raw.nblRevenueBusinessType, wholesaleItem: raw.nblRevenueWholesaleItem, wholesaleInMarket: raw.nblRevenueWholesaleInMarket });
+    if (wh?.kind === "missing") issue(["nblRevenueWholesaleItem"], wh.message);
   }
 }

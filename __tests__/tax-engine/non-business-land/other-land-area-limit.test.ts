@@ -161,8 +161,9 @@ describe("갭 3a — §168의11① 호별 면적기준 정밀판정", () => {
     expect(r.areaProportioning?.nonBusinessArea).toBe(140);
   });
 
-  // 14호 유사토지 — 면적기준 없음, boolean 유지(전량 사업용). 회귀 보호.
-  it("AT-AREA-ETC14: etc_14호 + 기간충족 → 전량 사업용(면적 안분 없음)", () => {
+  // 14호 유사토지 — NBL2611-V7-S Q-5 (나): 위임 규칙(소득세법 시행규칙 §83조의4)에 14호를 정한 항이 없어 선택만으로는 사업용으로 인정하지 않는다
+  //   (종전: 면적기준 없음 + boolean 유지로 전량 사업용 — 선택만으로 과소). 면적 안분이 아니라 호 불인정이므로 areaProportioning은 여전히 없다.
+  it("AT-AREA-ETC14: etc_14호 → 호 불인정(전량 비사업용·면적 안분 없음) + 확인 필요 (Q-5 (나))", () => {
     const r = judgeOtherLand(
       base({
         landArea: 5000,
@@ -175,7 +176,8 @@ describe("갭 3a — §168의11① 호별 면적기준 정밀판정", () => {
       }),
       R,
     );
-    expect(r.isBusiness).toBe(true);
+    expect(r.isBusiness).toBe(false);
+    expect((r.warnings ?? []).some((w) => w.includes("확인 필요") && w.includes("14호"))).toBe(true);
     expect(r.areaProportioning).toBeUndefined();
   });
 });

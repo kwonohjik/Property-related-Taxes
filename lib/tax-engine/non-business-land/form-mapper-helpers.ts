@@ -351,6 +351,8 @@ export function buildOtherLand(
     indoorFloorArea:                parseNumber(asString(a.nblOtherIndoorFloorArea)),
     // F2 Phase B(B-3) — 6호 휴양 건축물 바닥면적(§101② 용도지역별 배율 자동)
     resortBuildingFloorArea:        parseNumber(asString(a.nblOtherResortBuildingFloorArea)),
+    // NBL2611-V7-S — 3호 민간투자사업 등 조성 토지: 조성 완료일(2년 단서)
+    privateInvestmentCompletionDate: parseDate(asString(a.nblOtherPrivateInvestCompletionDate)),
     // §168의11⑤ 연접 다필지 (C·D)
     parcels:                        buildNblParcels(a, parseDate, parseNumber),
     // 공장용 건축물 부속토지 기준면적 (§102①1호 별표6 / §101①1호)
@@ -446,6 +448,13 @@ export function buildRevenueTest(
 
   return {
     businessType:     bt as NblRevenueBusinessType,
+    // NBL2611-V7-S · Q-6 (다) — 12호 도소매업 품목(규칙 §83조의4⑭). 도소매업일 때만 싣는다 — 업종을 바꿔 남은 stale 값이 닿지 않게.
+    ...(bt === "wholesale_retail"
+      ? {
+          wholesaleItem: (asString(a.nblRevenueWholesaleItem) || undefined) as RevenueTestInput["wholesaleItem"],
+          wholesaleInMarket: asBool(a.nblRevenueWholesaleInMarket),
+        }
+      : {}),
     currentRevenue:   parseNumber(asString(a.nblRevenueCurrentRevenue)) ?? 0,
     currentLandValue: parseNumber(asString(a.nblRevenueCurrentLandValue)) ?? 0,
     currentBusinessDays,
