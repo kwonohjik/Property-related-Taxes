@@ -81,3 +81,18 @@ export function gbExcessConfirmNotices(detail: { nonBusinessRatio?: number } | u
 export function mergeGbExcessConfirmNotices(details: ReadonlyArray<{ nonBusinessRatio?: number } | undefined>): string[] {
   return [...new Set(details.flatMap(gbExcessConfirmNotices))];
 }
+
+/**
+ * NBL2611-V7-DM02 · Q-6 (다) — 5호 예비군훈련장으로 인정한 토지에서 입력으로 판정할 수 없는 요건. 엔진은 나목(도시지역 주·상·공 지역 밖)과
+ * 다목의 기준면적만 판정한다. 가목(지목)·다목의 시설기준·라목(소유자)은 자기 선언이다.
+ */
+export const NBL_RESERVE_FORCES_SELF_DECLARED_NOTICE =
+  `${NBL.OTHER_LAND_HO_RESERVE}(예비군훈련장)의 요건 중 가목(지목이 대지 또는 공장용지가 아닐 것)·다목의 시설기준(소득세법 시행규칙 별표 6 제1호)·` +
+  `라목(수임 군부대의 장으로부터 예비군훈련의 실시를 위임받은 자가 소유할 것)은 판정하지 않았습니다 — 자기 선언 요건, 확인 필요.`;
+
+/**
+ * NBL2611-V9-DM11 · Q-6 (다) — 13호 무주택 1세대 나지로 인정한 토지에서 입력으로 판정할 수 없는 요건. 엔진은 «건축물 없음(나지)»과 660㎡ 한도만 판정한다.
+ */
+export const NBL_VACANT_LOT_SELF_DECLARED_NOTICE =
+  `${NBL.OTHER_LAND_HO_VACANT_LOT}(무주택 1세대 1필지 나지)의 요건 중 주택을 소유하지 아니하는 1세대일 것, 1필지일 것(나지가 2필지 이상이면 소득세법 시행규칙 §83조의4 ⑰의 선택·순위), ` +
+  `주택 신축이 금지·제한되는 지역에 소재하지 아니하고 지목이 대지이거나 실질적으로 주택을 신축할 수 있을 것(같은 조 ⑯)은 판정하지 않았습니다 — 자기 선언 요건, 확인 필요.`;

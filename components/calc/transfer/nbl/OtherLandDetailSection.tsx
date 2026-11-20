@@ -5,6 +5,7 @@ import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { OtherLandParcelSection } from "./OtherLandParcelSection";
+import { OtherLandSportsSection } from "./OtherLandSportsSection";
 import { FactoryLandSection } from "./FactoryLandSection";
 import { NblLandValueAutoFetchButton } from "./NblLandAutoFetch";
 // 공유 지분은 자산-수준 「공유 지분율」(%) 단일 소스 — NBL 전용 지분 입력칸은 폐지됐다(2026-09-04).
@@ -30,6 +31,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { nblAcquisitionDateOf } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
+import { judgeHoRequirements } from "@/lib/tax-engine/non-business-land/other-land-ho-requirements";
+import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { NBL_PROPERTY_TAX_TYPE_MIXED_NOTICE, NBL_PROPERTY_TAX_TYPE_SOURCE_HINT } from "@/lib/tax-engine/nbl-confirm-notices";
 
 export interface OtherLandDetailSectionProps {
@@ -50,10 +53,10 @@ const RELATED_BUSINESS_OPTIONS: RadioCardOption<Exclude<RelatedBusinessType, "">
   { value: "parking_garage", label: "업무용자동차 주차장 (2호 나목)", description: "최저차고기준면적 × 1.5까지 사업용", testId: "nbl-other-related-parking_garage" },
   { value: "sports", label: "체육시설 (1호)", description: "종목·종업원수로 별표3·4·5 기준면적 자동산출 (미선택 시 직접입력)", testId: "nbl-other-related-sports" },
   { value: "youth_training", label: "청소년수련시설 (4호)", description: "수용정원 × 200㎡까지 사업용", testId: "nbl-other-related-youth_training" },
-  { value: "reserve_forces", label: "예비군훈련시설 (5호 다목)", description: "부대편성인원·시설로 별표6 제2호 기준면적 자동산출 (미선택 시 직접입력)", testId: "nbl-other-related-reserve_forces" },
-  { value: "resort", label: "휴양시설업 (6호)", description: "옥외시설·부설주차장·건축물 3요소로 자동합산 (미입력 시 직접입력)", testId: "nbl-other-related-resort" },
+  { value: "reserve_forces", label: "예비군훈련시설 (5호 다목)", description: "부대편성인원·시설로 별표6 제2호 기준면적 자동산출 (미선택 시 직접입력). 도시지역 주·상·공 지역 안은 불인정(나목) · 지목(대지·공장용지 아님)·시설기준·수임 군부대 소유(라목)는 직접 확인", testId: "nbl-other-related-reserve_forces" },
+  { value: "resort", label: "휴양시설업 (6호)", description: "옥외시설·부설주차장·건축물 3요소 — 부설주차장·건축물은 상한(설치기준면적 × 2 · 바닥면적 × 배율) 이내의 실제 면적을 합산 (미입력 시 직접입력)", testId: "nbl-other-related-resort" },
   { value: "hatchang", label: "하치장·야적장·적치장 (7호)", description: "매년 최대 사용면적 × 120%까지 사업용", testId: "nbl-other-related-hatchang" },
-  { value: "vacant_lot_1household", label: "무주택1세대 1필지 나지 (13호)", description: "660㎡ 이내까지 사업용 (고정)", testId: "nbl-other-related-vacant_lot" },
+  { value: "vacant_lot_1household", label: "무주택1세대 1필지 나지 (13호)", description: "건축물 없는 나지만 660㎡ 이내까지 사업용 (건축물이 있으면 불인정) · 무주택 1세대·1필지·주택 신축 가능 여부는 직접 확인", testId: "nbl-other-related-vacant_lot" },
   { value: "etc_14호", label: "기타 거주 및 사업관련 토지", description: "제1~13호와 유사한 거주·사업관련 토지 (면적기준 없음)", testId: "nbl-other-related-etc14" },
 ];
 
@@ -93,25 +96,6 @@ const MIXED_USE_MODE_OPTIONS: RadioCardOption<"" | "single_building" | "multiple
   },
 ];
 
-// F2 Phase A/B — 체육시설 종목(실외 11 + 실내 3). 유형별 기준면적(별표3 직장 / 별표4 운동경기업)은 자동 산출 — 라벨은 종목명만.
-const SPORTS_FACILITY_OPTIONS = [
-  { value: "soccer", label: "축구장" },
-  { value: "baseball", label: "야구장" },
-  { value: "rugby", label: "럭비장" },
-  { value: "field_hockey", label: "필드하키장" },
-  { value: "tennis", label: "테니스장" },
-  { value: "soft_tennis", label: "연식정구장" },
-  { value: "american_football", label: "미식축구장" },
-  { value: "equestrian", label: "승마장" },
-  { value: "shooting", label: "사격장" },
-  { value: "archery", label: "궁도장" },
-  { value: "other_outdoor", label: "기타 실외" },
-  { value: "ball_court", label: "실내 구기·격투·체조 등" },
-  { value: "swimming", label: "수영·수구·다이빙" },
-  { value: "ice_rink", label: "아이스하키·피겨·롤러" },
-] as const;
-const SPORTS_FACILITY_LABEL: Record<string, string> = Object.fromEntries(SPORTS_FACILITY_OPTIONS.map((o) => [o.value, o.label]));
-
 const RESERVE_SIZE_OPTIONS = [
   { value: "le800", label: "중대·대대 (800명 이하)" },
   { value: "le2400", label: "대대·연대 (801~2,400명)" },
@@ -126,23 +110,6 @@ const RESERVE_FAC_OPTIONS = [
   { value: "range", label: "사격장" },
   { value: "basic", label: "기초훈련장" },
 ] as const;
-
-// F2 Phase B — 체육시설 유형(별표3 직장운동경기부 / 별표4 운동경기업 / 별표5 종업원)
-const SPORTS_CATEGORY_OPTIONS: RadioCardOption<"workplace" | "business" | "employee">[] = [
-  { value: "workplace", label: "직장운동경기부 (별표3)", description: "선수전용 — §83의4①", testId: "nbl-other-sports-category-workplace" },
-  { value: "business", label: "운동경기업 (별표4)", description: "선수전용 — §83의4③", testId: "nbl-other-sports-category-business" },
-  { value: "employee", label: "종업원 (별표5)", description: "종업원수 기준 — §83의4④", testId: "nbl-other-sports-category-employee" },
-];
-const EMPLOYEE_FACILITY_OPTIONS = [
-  { value: "field", label: "운동장" },
-  { value: "court", label: "코트" },
-  { value: "indoor", label: "실내체육시설" },
-] as const;
-const SPORTS_CATEGORY_BASIS: Record<string, { legalBasis: string; label: string }> = {
-  workplace: { legalBasis: "소득세법 시행규칙 §83의4①", label: "§83의4①(별표3)" },
-  business: { legalBasis: "소득세법 시행규칙 §83의4③", label: "§83의4③(별표4)" },
-  employee: { legalBasis: "소득세법 시행규칙 §83의4④", label: "§83의4④(별표5)" },
-};
 
 const REVENUE_BIZ_LABEL: Record<string, string> = {
   none: "해당 없음",
@@ -166,10 +133,9 @@ export function OtherLandDetailSection({
   const isLikelyBareground = landVal > 0 && buildingVal < landVal * 0.02;
   const relatedType = asset.nblOtherRelatedBusinessType;
   const areaBasis = relatedType ? AREA_LEGAL_BASIS[relatedType] : undefined;
-  const sportsFacilityLabel: string = SPORTS_FACILITY_LABEL[asset.nblOtherSportsFacilityType] ?? "선택 안 함 (직접입력)";
   const reserveSizeLabel: string = RESERVE_SIZE_LABEL[asset.nblOtherReserveUnitSize] ?? "선택 안 함 (직접입력)";
-  const sportsCategory = (asset.nblOtherSportsCategory || "workplace") as "workplace" | "business" | "employee";
-  const sportsBasis = SPORTS_CATEGORY_BASIS[sportsCategory];
+  // NBL2611-V7-DM02·V9-DM11 — 호의 면적 외 요건(5호 나목 용도지역 · 13호 나지)도 엔진 술어를 그대로 쓴다.
+  const hoFail = judgeHoRequirements(relatedType || undefined, { hasBuilding: asset.nblOtherHasBuilding }, asset.nblZoneType as ZoneType).failStep;
 
   // §168의11③3호 당해 연환산 preview — 엔진 헬퍼 단일 진실 (재구현 금지)
   const nblAcq = nblAcquisitionDateOf(asset); // 이월과세는 증여자 취득일 — 판정(④)과 같은 값
@@ -313,6 +279,13 @@ export function OtherLandDetailSection({
           onChange={(v) => onAssetChange({ nblOtherRelatedBusinessType: v, nblOtherLegacyRelatedReselect: false })}
         />
 
+        {/* NBL2611-V7-DM02·V9-DM11 — 엔진이 호를 인정하지 않는 사실(5호 나목 용도지역 · 13호 나지)을 판정 전에 알린다. 문구는 엔진 단계 사유 그대로. */}
+        {hoFail && (
+          <ToneCard tone="amber" title="이 호는 인정되지 않습니다">
+            <p data-testid="nbl-other-ho-fail-notice" className="text-xs text-amber-800 dark:text-amber-200 leading-snug">{hoFail.detail}</p>
+          </ToneCard>
+        )}
+
         {/* parking_attached — 기준면적 직접입력 (별표 자동산출 미지원) */}
         {relatedType === "parking_attached" && (
           <FieldCard
@@ -332,13 +305,16 @@ export function OtherLandDetailSection({
             <FieldCard field="nblOtherResortOutdoorArea" label="옥외 방목장·식물원 면적 (㎡)" unit="㎡" trailing={areaBasis && <LawArticleModal legalBasis={areaBasis.legalBasis} label={areaBasis.label} />}>
               <DecimalInput value={asset.nblOtherResortOutdoorArea} onChange={(v) => onAssetChange({ nblOtherResortOutdoorArea: v })} />
             </FieldCard>
-            <FieldCard label="부설주차장 설치기준면적 (㎡)" unit="㎡" hint="§83의4⑫2호 — 「주차장법」 설치기준면적. ×2(2배 이내) 자동 적용">
+            <FieldCard field="nblOtherResortParkingStdArea" label="부설주차장 설치기준면적 (㎡)" unit="㎡" hint="§83의4⑫2호 — 「주차장법」 설치기준면적. 그 2배가 인정 상한입니다(상한 자체가 면적은 아닙니다).">
               <DecimalInput value={asset.nblOtherResortParkingStdArea} onChange={(v) => onAssetChange({ nblOtherResortParkingStdArea: v })} />
             </FieldCard>
-            <FieldCard label="건축물 바닥면적 (㎡)" unit="㎡" hint="§83의4⑫3호 — 바닥면적 × 용도지역별 배율(지방세법 시행령 §101②) 자동 산출. 미매핑 용도지역(세분 전 주거지역 등)은 아래 직접입력.">
+            <FieldCard field="nblOtherResortParkingActualArea" label="실제 부설주차장용 토지 면적 (㎡)" unit="㎡" hint="설치기준면적을 입력했으면 필수. 인정 면적 = 실제 면적과 설치기준면적 × 2 중 작은 값.">
+              <DecimalInput value={asset.nblOtherResortParkingActualArea} onChange={(v) => onAssetChange({ nblOtherResortParkingActualArea: v })} />
+            </FieldCard>
+            <FieldCard label="건축물 바닥면적 (㎡)" unit="㎡" hint="§83의4⑫3호 — 바닥면적 × 용도지역별 배율(지방세법 시행령 §101②)이 인정 상한입니다. 미매핑 용도지역(세분 전 주거지역 등)은 상한을 계산할 수 없어 아래 면적을 그대로 씁니다.">
               <DecimalInput value={asset.nblOtherResortBuildingFloorArea} onChange={(v) => onAssetChange({ nblOtherResortBuildingFloorArea: v })} />
             </FieldCard>
-            <FieldCard label="(또는) 건축물 부속토지 직접입력 (㎡)" unit="㎡" hint="용도지역별 배율 미매핑 시 배율 적용 후 부속토지 면적을 직접 입력">
+            <FieldCard field="nblOtherResortBuildingArea" label="실제 건축물 부속토지 면적 (㎡)" unit="㎡" hint="바닥면적을 입력했으면 필수. 인정 면적 = 실제 면적과 바닥면적 × 배율 중 작은 값. 배율 미매핑 용도지역이면 상한 이내로 확정한 면적을 입력하세요.">
               <DecimalInput value={asset.nblOtherResortBuildingArea} onChange={(v) => onAssetChange({ nblOtherResortBuildingArea: v })} />
             </FieldCard>
             {/*
@@ -346,11 +322,12 @@ export function OtherLandDetailSection({
               빠뜨린 3요소였다. 그래서 **바닥면적만 입력한 사용자**에게 직접입력 칸이 계속
               보였고, 거기 넣은 값은 엔진이 무시했다(3요소가 우선). ⑧ validate(:28)는 처음부터
               바닥면적을 포함한 4요소로 판정하고 있었으므로 **UI↔validate가 서로 반대**였다.
-              ⇒ 게이트를 validate와 동일한 4요소로 맞춘다.
+              ⇒ 게이트를 validate와 동일한 요소로 맞춘다(NBL2611-V9-DM09로 실제 부설주차장 면적이 늘어 5요소).
             */}
             {!(
               asset.nblOtherResortOutdoorArea ||
               asset.nblOtherResortParkingStdArea ||
+              asset.nblOtherResortParkingActualArea ||
               asset.nblOtherResortBuildingArea ||
               asset.nblOtherResortBuildingFloorArea
             ) && (
@@ -361,122 +338,8 @@ export function OtherLandDetailSection({
           </>
         )}
 
-        {/* F2 Phase B — sports: 체육시설 유형(별표3/4/5) → 종목 lookup 또는 종업원수 선형보간 */}
-        {relatedType === "sports" && (
-          <>
-            <FieldCard label="체육시설 유형">
-              <RadioCardGroup
-                name={`nblOtherSportsCategory-${asset.assetId ?? "primary"}`}
-                tone="sky"
-                layout="inline"
-                options={SPORTS_CATEGORY_OPTIONS}
-                value={sportsCategory}
-                onChange={(v) => onAssetChange({ nblOtherSportsCategory: v })}
-              />
-            </FieldCard>
-
-            {/* workplace(별표3) · business(별표4) — 종목 선택 */}
-            {sportsCategory !== "employee" && (
-              <>
-                <FieldCard field="nblOtherSportsFacilityType" label="체육시설 종목" hint="유형(직장 별표3 / 운동경기업 별표4)에 따라 기준면적 자동 산출. 미선택 시 아래 직접입력." trailing={sportsBasis && <LawArticleModal legalBasis={sportsBasis.legalBasis} label={sportsBasis.label} />}>
-                  <Select
-                    value={asset.nblOtherSportsFacilityType || "__clear"}
-                    onValueChange={(v) => onAssetChange({ nblOtherSportsFacilityType: v && v !== "__clear" ? v : "" })}
-                  >
-                    <SelectTrigger><SelectValue>{sportsFacilityLabel}</SelectValue></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__clear">선택 안 함 (직접입력)</SelectItem>
-                      {SPORTS_FACILITY_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </FieldCard>
-                {/* B-2 종목합산 — 추가 보유 종목(각 면적 합산, 5종목군은 그 중 1개만) */}
-                {asset.nblOtherSportsFacilityType && (
-                  <div className="space-y-1.5">
-                    <p className="text-xs text-muted-foreground">추가 보유 종목 (각 면적 합산 — 축구·야구·럭비·필드하키·미식축구는 그 중 가장 넓은 1개만)</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {SPORTS_FACILITY_OPTIONS.filter((o) => o.value !== asset.nblOtherSportsFacilityType).map((o) => (
-                        <div key={o.value} data-testid={`nbl-other-sports-extra-${o.value}`}>
-                          <ToggleCard
-                            variant="chip"
-                            tone="sky"
-                            title={o.label}
-                            checked={asset.nblOtherSportsExtraEvents?.includes(o.value) ?? false}
-                            onCheckedChange={(c) => {
-                              const cur = asset.nblOtherSportsExtraEvents ?? [];
-                              onAssetChange({ nblOtherSportsExtraEvents: c ? [...cur, o.value] : cur.filter((x) => x !== o.value) });
-                            }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {/* B-2 선수가산 — 테니스·연식정구 */}
-                {(asset.nblOtherSportsFacilityType === "tennis" || asset.nblOtherSportsFacilityType === "soft_tennis") && (
-                  <FieldCard label="선수 수 (명)" unit="명" hint={`2인 초과 시 2인마다 ${sportsCategory === "business" ? "725" : "483"}㎡ 가산 (별표 비고)`}>
-                    <DecimalInput value={asset.nblOtherSportsPlayerCount} onChange={(v) => onAssetChange({ nblOtherSportsPlayerCount: v })} />
-                  </FieldCard>
-                )}
-                {/* B-2 실내 부속토지 — 실내 종목 바닥면적 × 배율 (비고1·3) */}
-                {["ball_court", "swimming", "ice_rink"].includes(asset.nblOtherSportsFacilityType) && (
-                  <FieldCard label="실내 시설 바닥면적 (㎡)" unit="㎡" hint="별표 비고1·3 — 바닥면적 × 용도지역별 배율(지방세법 시행령 §101②) 자동 산출. 미입력 시 표값 기준면적 적용.">
-                    <DecimalInput value={asset.nblOtherIndoorFloorArea} onChange={(v) => onAssetChange({ nblOtherIndoorFloorArea: v })} />
-                  </FieldCard>
-                )}
-                {/* B-2 실내 미설치 — workplace 실내 종목 (별표3 비고4) */}
-                {sportsCategory === "workplace" && ["ball_court", "swimming", "ice_rink"].includes(asset.nblOtherSportsFacilityType) && (
-                  <div data-testid="nbl-other-indoor-not-installed">
-                    <ToggleCard
-                      variant="card"
-                      tone="amber"
-                      title="실내체육시설 미설치"
-                      description="실내 운동경기부가 실내체육시설을 설치하지 않은 경우 → 800㎡ (별표3 비고4)"
-                      checked={asset.nblOtherIndoorNotInstalled}
-                      onCheckedChange={(c) => onAssetChange({ nblOtherIndoorNotInstalled: c })}
-                    />
-                  </div>
-                )}
-                {!asset.nblOtherSportsFacilityType && (
-                  <FieldCard field="nblOtherStandardAreaLimit" label="기준면적 직접입력 (㎡)" unit="㎡">
-                    <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
-                  </FieldCard>
-                )}
-              </>
-            )}
-
-            {/* employee(별표5) — 종업원수 + 보유 시설 다중 */}
-            {sportsCategory === "employee" && (
-              <>
-                <FieldCard field="nblOtherEmployeeCount" label="종업원 수 (명)" unit="명" hint="별표5 종업원수 구간 기준면적 자동 산출(50인 이하는 코트면적만). 미입력 시 아래 직접입력." trailing={sportsBasis && <LawArticleModal legalBasis={sportsBasis.legalBasis} label={sportsBasis.label} />}>
-                  <DecimalInput value={asset.nblOtherEmployeeCount} onChange={(v) => onAssetChange({ nblOtherEmployeeCount: v })} />
-                </FieldCard>
-                <div className="space-y-1.5">
-                  <p className="text-xs text-muted-foreground">보유 시설 (다중 — 각 기준면적 합산)</p>
-                  {EMPLOYEE_FACILITY_OPTIONS.map((f) => (
-                    <div key={f.value} data-testid={`nbl-other-employee-kind-${f.value}`}>
-                      <ToggleCard
-                        variant="chip"
-                        tone="sky"
-                        title={f.label}
-                        checked={asset.nblOtherEmployeeFacilityKinds?.includes(f.value) ?? false}
-                        onCheckedChange={(c) => {
-                          const cur = asset.nblOtherEmployeeFacilityKinds ?? [];
-                          onAssetChange({ nblOtherEmployeeFacilityKinds: c ? [...cur, f.value] : cur.filter((x) => x !== f.value) });
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-                {!(asset.nblOtherEmployeeCount && (asset.nblOtherEmployeeFacilityKinds?.length ?? 0) > 0) && (
-                  <FieldCard field="nblOtherStandardAreaLimit" label="기준면적 직접입력 (㎡)" unit="㎡">
-                    <DecimalInput value={asset.nblOtherStandardAreaLimit} onChange={(v) => onAssetChange({ nblOtherStandardAreaLimit: v })} />
-                  </FieldCard>
-                )}
-              </>
-            )}
-          </>
-        )}
+        {/* F2 Phase B — sports: 체육시설 유형(별표3/4/5) — 800줄 정책으로 분리 */}
+        {relatedType === "sports" && <OtherLandSportsSection asset={asset} onAssetChange={onAssetChange} />}
 
         {/* F2 Phase A — reserve_forces: 별표6 부대규모·시설 자동 합산, 미선택 시 직접입력 */}
         {relatedType === "reserve_forces" && (

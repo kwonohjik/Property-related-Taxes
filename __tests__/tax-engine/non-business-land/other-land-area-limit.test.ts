@@ -229,6 +229,8 @@ describe("F2 Phase A — 별표3·6 자동 기준면적 (체육시설·예비군
     const r = judgeOtherLand(
       base({
         landArea: 50000,
+        // NBL2611-V7-DM02 — 영 §168의11①5호 나목: 도시지역 주·상·공 지역 안은 불인정이라 그 밖의 지역(관리지역)으로 둔다
+        zoneType: "management",
         otherLand: {
           propertyTaxType: "comprehensive",
           hasBuilding: false,
@@ -443,6 +445,7 @@ describe("F2 Phase B (B-3) — 6호 휴양 3요소 합산", () => {
           relatedBusinessType: "resort",
           resortOutdoorArea: 5000,
           resortParkingStdArea: 1000,
+          resortParkingActualArea: 2000, // NBL2611-V9-DM09 — 실제 면적 = 상한(설치기준 × 2) 가득
           resortBuildingAttachedArea: 2000,
         } as never,
       }),
@@ -464,6 +467,7 @@ describe("F2 Phase B (B-3) — 6호 휴양 3요소 합산", () => {
           isRelatedToResidenceOrBusiness: false,
           relatedBusinessType: "resort",
           resortParkingStdArea: 1500,
+          resortParkingActualArea: 3000, // NBL2611-V9-DM09 — 실제 면적 = 상한(1,500 × 2) 가득
         } as never,
       }),
       R,
@@ -671,6 +675,7 @@ describe("F2 Phase B — §101② 용도지역별 배율 자동 (6호 3호)", ()
           relatedBusinessType: "resort",
           resortOutdoorArea: 2000,
           resortBuildingFloorArea: 1000,
+          resortBuildingAttachedArea: 4000, // NBL2611-V9-DM09 — 실제 부속토지 = 상한(1,000 × 4) 가득
         } as never,
       }),
       R,
@@ -690,6 +695,7 @@ describe("F2 Phase B — §101② 용도지역별 배율 자동 (6호 3호)", ()
           isRelatedToResidenceOrBusiness: false,
           relatedBusinessType: "resort",
           resortBuildingFloorArea: 1000,
+          resortBuildingAttachedArea: 7000, // NBL2611-V9-DM09 — 실제 부속토지 = 상한(1,000 × 7) 가득
         } as never,
       }),
       R,

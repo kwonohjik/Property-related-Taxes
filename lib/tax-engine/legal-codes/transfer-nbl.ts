@@ -124,6 +124,10 @@ export const NBL = {
   OTHER_LAND_AREA_RESERVE:        "소득세법 시행령 §168조의11 ① 5호 다목 + 소득세법 시행규칙 §83조의4 ⑨⑩",
   OTHER_LAND_AREA_RESORT:         "소득세법 시행령 §168조의11 ① 6호 + 소득세법 시행규칙 §83조의4 ⑪⑫",
   OTHER_LAND_AREA_HATCHANG:       "소득세법 시행령 §168조의11 ① 7호",
+  /** 5호 — 종업원 등의 예비군훈련 토지. 나목(도시지역 주·상·공 지역 밖)·가목·라목은 면적기준(다목)과 별개의 요건이다 (NBL2611-V7-DM02). */
+  OTHER_LAND_HO_RESERVE:          "소득세법 시행령 §168조의11 ① 5호",
+  /** 13호 — 무주택 1세대 1필지 나지. 「나지」는 어느 용도로도 사용되고 있지 아니한 토지다 (NBL2611-V9-DM11). */
+  OTHER_LAND_HO_VACANT_LOT:       "소득세법 시행령 §168조의11 ① 13호",
   OTHER_LAND_AREA_VACANT_LOT:     "소득세법 시행령 §168조의11 ① 13호 + 소득세법 시행규칙 §83조의4 ⑯⑰",
   // §101①2호나목 (지방세법 시행령) — 2% 미달 건축물 바닥면적분 별도합산 유지(cross-statute)
   OTHER_LAND_FOOTPRINT_CARVEOUT:  "지방세법 시행령 §101 ① 2호 나목",

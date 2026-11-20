@@ -163,6 +163,7 @@ describe("[U2-02] 휴양시설 — 직접입력 게이트가 바닥면적을 포
   it.each([
     ["nblOtherResortOutdoorArea"],
     ["nblOtherResortParkingStdArea"],
+    ["nblOtherResortParkingActualArea"], // NBL2611-V9-DM09 — ⑧ has3Element와 같은 5요소
     ["nblOtherResortBuildingArea"],
     ["nblOtherResortBuildingFloorArea"],
   ] as const)("%s 하나만 입력해도 직접입력 칸이 사라진다 (⑧ validate 4요소와 동일)", (field) => {

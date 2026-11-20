@@ -513,6 +513,9 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
       "종업원 체육시설용 토지",
       "주차장용 토지",
       "부설주차장",
+      // NBL2611-B4 — 5호 나목(예비군훈련장 용도지역) · 13호 나지 정의 (KoreanLaw 현행 본문 MST 290841, 2026-11-20 조회)
+      "도시지역의 주거지역ㆍ상업지역 및 공업지역 안에 소재하지 아니할 것",
+      "어느 용도로도 사용되고 있지 아니한 토지를 말한다",
     ],
     keywordMode: "ALL",
   },
@@ -659,6 +662,9 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
       "선수전용 체육시설의 기준면적",
       "종업원 체육시설의 기준면적",
       "대한체육회에 가맹된 경기단체",
+      // NBL2611-B4 — ⑫2·3호 «상한 이내의 면적»(KoreanLaw 현행 본문 MST 286379, 2026-11-20 조회)
+      "설치기준면적의 2배 이내의 부설주차장용 토지의 면적",
+      "면적 범위 안의 건축물 부속토지의 면적",
     ],
     keywordMode: "ALL",
   },

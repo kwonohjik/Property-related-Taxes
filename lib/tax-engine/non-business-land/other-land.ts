@@ -35,6 +35,7 @@ import {
   resolveMixedUseProportioning,
 } from "./other-land-area-limit";
 import { applyGraceToNonBusinessRemainder, pickWiderExclusion } from "./other-land-merge";
+import { judgeHoRequirements } from "./other-land-ho-requirements";
 
 /**
  * 나대지 간주 (소득세법 §104의3①4호나목 — 재산세 별도합산 제외 → 비사업용).
@@ -445,7 +446,10 @@ function judgeOtherLandCore(
   // ── Step 3-1-1: §168의11① 거주·사업관련 토지 (호별 면적기준) ──────────
   // relatedBusinessType(호) 우선, 미설정 시 legacy isRelatedToResidenceOrBusiness fallback.
   const relatedType = o.relatedBusinessType;
-  const isRecognizedHo = relatedType !== undefined && relatedType !== "none";
+  // NBL2611-V7-DM02·V9-DM11 — 호의 면적 외 요건(5호 나목 용도지역 · 13호 나지)을 입력으로 판정할 수 있는 만큼 판정한다. 불충족이면 호를 인정하지 않는다.
+  const hoReq = judgeHoRequirements(relatedType, o, input.zoneType);
+  if (hoReq.failStep) steps.push(hoReq.failStep);
+  const isRecognizedHo = relatedType !== undefined && relatedType !== "none" && !hoReq.failStep;
   // §168의11⑥ 복합용도 건축물 부속토지 안분 — 건축물에 거주·특정사업 사용분(특정용도분)이 있으면
   // 그 자체가 거주·사업관련(isRelated)에 해당 → mode 단독으로도 isRelated 의제.
   const mixedUse = resolveMixedUseProportioning(o, input.landArea);
@@ -457,6 +461,8 @@ function judgeOtherLandCore(
   if (isRelated) {
     const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
     const legalBasis = resolveAreaLegalBasis(relatedType);
+    // Q-6 (다) — 호로 판정에 쓰는 경우(⑥ 복합용도 안분이 호별 기준면적을 대체하지 않을 때)에만 자기 선언 요건을 고지한다.
+    if (isRecognizedHo && mixedUse === undefined && hoReq.notice) warnings.push(hoReq.notice);
 
     if (!r.meets) {
       steps.push({

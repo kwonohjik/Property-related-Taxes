@@ -109,6 +109,8 @@ export interface NblOtherFormSlice {
   // §168의11① F2 Phase B(B-3) — 6호 휴양 §83의4⑫ 3요소(옥외방목장·부설주차장·건축물 부속토지)
   nblOtherResortOutdoorArea: string;
   nblOtherResortParkingStdArea: string;
+  /** NBL2611-V9-DM09 — 실제 부설주차장용 토지 면적(㎡). 인정 면적 = min(실제, 설치기준면적 × 2). */
+  nblOtherResortParkingActualArea: string;
   nblOtherResortBuildingArea: string;
   // §168의11① F2 Phase B(B-2) — 선수가산(테니스·연식정구)·실내미설치·종목합산(별표3·4 비고)
   nblOtherSportsPlayerCount: string;

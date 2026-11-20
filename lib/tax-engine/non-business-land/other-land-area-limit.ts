@@ -8,7 +8,7 @@
  *   · 7호 최대면적×1.2 · 4호 수용정원×200㎡ · 2호나 최저차고×1.5 · 13호 660㎡
  *   · **1호 체육** 별표3(선수전용)·별표4(사업용)·별표5(종업원) — 종목합산·비고 가산 포함
  *   · **5호다 예비군** 별표6 제2호(부대편성인원 × 시설 합산)
- *   · **6호 휴양** 시행규칙 §83의4⑫ 3요소(옥외 방목장·식물원 + 부설주차장×2 + 건축물 부속토지)
+ *   · **6호 휴양** 시행규칙 §83의4⑫ 3요소(옥외 방목장·식물원 + 부설주차장 + 건축물 부속토지) — 2·3호는 상한(×2·바닥면적×배율) **이내 실제 면적**(NBL2611-V9-DM09)
  *
  * 직접입력이 **원칙**인 것은 **2호가목(부설주차장 설치기준면적) 하나**다. 나머지 호는
  * 자동산출이 재료 부족·표 밖 코드로 실패할 때만 `standardAreaLimit`으로 **fallback**한다
@@ -16,6 +16,7 @@
  */
 
 import { NBL } from "../legal-codes";
+import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
 import type {
   AreaProportioning,
   NblRelatedBusinessType,
@@ -32,13 +33,15 @@ import {
   RESERVE_FORCES_STD,
   employeeSportsArea,
 } from "./data/area-standards";
-import { LOCAL_TAX_ZONE_AREA_MULTIPLIER } from "./urban-area";
+import { getZoneAreaMultiplier } from "../local-tax-zone-multiplier";
+import { consumedSportsInputs, heldSportsEvents } from "./sports-input-consumption";
+import { resortAreaIssue } from "./resort-area-issue";
+
 /**
- * 「지방세법 시행령」 제101조 제2항 용도지역별 적용배율.
- * 정본은 `urban-area.ts`의 `LOCAL_TAX_ZONE_AREA_MULTIPLIER` — 여기서 재선언 금지.
- * residential(세분 전 주거지역)·미정의는 자동 제외(직접입력 fallback) — 추정 금지.
+ * NBL2611-V7-E — 「지방세법 시행령」 제101조 제2항 용도지역별 적용배율은 **정본 진입점 `getZoneAreaMultiplier`로만** 읽는다.
+ * 원시 맵을 직접 인덱싱하면 별칭 정규화(보전녹지 → 녹지 등)를 건너뛰어 배율이 사라진다.
+ * residential(세분 전 주거지역)·미정의는 `undefined` — 자동 제외(직접입력 fallback), 추정 금지.
  */
-const ZONE_AREA_MULTIPLIER = LOCAL_TAX_ZONE_AREA_MULTIPLIER;
 
 /** 별표3·4 비고2 5종목군(축구·야구·럭비·필드하키·미식축구) — 운동장 공유로 그 중 max1만 인정, 그 외 종목은 합산. */
 const SPORTS_BIG_FIELD_GROUP = new Set(["soccer", "baseball", "rugby", "field_hockey", "american_football"]);
@@ -86,9 +89,12 @@ function applySportsNotes(
    *    (주종목)만 보아, 테니스를 추가 종목으로 고른 경우 표값 650은 더해지면서 가산은 0이 됐다
    *    — 기준면적 과소 → 비사업용 과대(**납세자 불리** 방향).
    */
-  const hasTennis = [o.sportsFacilityType, ...(o.sportsExtraEvents ?? [])].some(
-    (e) => e === "tennis" || e === "soft_tennis",
-  );
+  // NBL2611-V7-F — 선수 수를 읽는 조건은 ⑤ 렌더 게이트와 같은 술어(`consumedSportsInputs`)다.
+  const hasTennis = consumedSportsInputs({
+    category: cat,
+    mainEvent: o.sportsFacilityType,
+    extraEvents: o.sportsExtraEvents,
+  }).playerCount;
   if (hasTennis && o.sportsPlayerCount !== undefined && o.sportsPlayerCount > 2) {
     result += Math.floor((o.sportsPlayerCount - 2) / 2) * (cat === "business" ? 725 : 483);
   }
@@ -96,7 +102,7 @@ function applySportsNotes(
 }
 
 export function resolveAreaLimit(o: OtherLandUsage, zoneType?: ZoneType): number | undefined {
-  const zoneMul = zoneType ? ZONE_AREA_MULTIPLIER[zoneType] : undefined;
+  const zoneMul = zoneType ? getZoneAreaMultiplier(zoneType)?.multiplier : undefined;
   switch (o.relatedBusinessType) {
     case "hatchang":
       return o.maxAnnualArea !== undefined ? o.maxAnnualArea * NBL_AREA_MULTIPLIER.HATCHANG_RATIO : undefined;
@@ -165,7 +171,7 @@ export function resolveAreaLimit(o: OtherLandUsage, zoneType?: ZoneType): number
         }
         return ind;
       };
-      const events = [o.sportsFacilityType, ...(o.sportsExtraEvents ?? [])].filter(Boolean) as string[];
+      const events = heldSportsEvents(o.sportsFacilityType, o.sportsExtraEvents);
       // 주종목을 「선택 안 함」으로 되돌리면 잔존 추가종목이 직접입력을 조용히 덮었다 (E4-01) —
       // UI·⑧ 게이트가 「주종목 선택 OR 직접입력」이므로 엔진도 주종목 부재 시 직접입력으로 떨어진다.
       if (!o.sportsFacilityType) return o.standardAreaLimit;
@@ -191,13 +197,29 @@ export function resolveAreaLimit(o: OtherLandUsage, zoneType?: ZoneType): number
     case "parking_attached":
       return o.standardAreaLimit; // 2호가목 설치기준면적 직접입력 (미입력 시 undefined → 면적기준 미적용)
     case "resort": {
-      // F2 Phase B(B-3) — 6호 휴양 §83의4⑫ 3요소 합산: 옥외 방목장·식물원 + 부설주차장×2 + 건축물 부속토지
-      // 건축물 부속토지: 바닥면적 × §101②(지방세법 시행령) 용도지역별 배율(자동). 매핑 불가(residential 등) 시 부속토지 직접입력 fallback
+      // 규칙 §83의4⑫ — 1호 옥외 방목장·식물원에 «사용되는 토지의 면적» + 2호 부설주차장 설치기준면적의 2배 «이내의» 부설주차장용 토지의 면적
+      // + 3호 바닥면적 × §101② 배율 면적 범위 «안의» 건축물 부속토지의 면적. 2·3호는 «상한 이내 **실제** 면적»이지 상한 자체가 아니다 (NBL2611-V9-DM09).
+      // 자동 fallback 금지 — 상한을 실제 면적으로 대신 쓰면 기준면적이 부풀어 비사업용이 조용히 줄어든다. ⑧·⑫가 먼저 막는 경로의 마지막 안전망(같은 술어).
+      const parkingStd = o.resortParkingStdArea ?? 0;
+      const parkingActual = o.resortParkingActualArea ?? 0;
+      const buildingActual = o.resortBuildingAttachedArea ?? 0;
+      const issue = resortAreaIssue({
+        parkingStd,
+        parkingActual,
+        buildingFloor: o.resortBuildingFloorArea ?? 0,
+        buildingActual,
+        zoneMapped: zoneMul !== undefined,
+      });
+      if (issue) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, issue.message);
+      const parking = Math.min(parkingActual, parkingStd * 2);
+
+      // 건축물 부속토지: 바닥면적 × 용도지역별 배율(자동)이 상한 — 실제 면적(`resortBuildingAttachedArea`)과 비교해 작은 쪽.
+      // 배율을 못 정하는 용도지역(residential 등)이면 상한을 계산할 수 없어 사용자가 확정한 부속토지 면적을 그대로 쓴다(종전 직접입력 경로).
       const building =
         o.resortBuildingFloorArea !== undefined && zoneMul !== undefined
-          ? o.resortBuildingFloorArea * zoneMul
-          : (o.resortBuildingAttachedArea ?? 0);
-      const sum = (o.resortOutdoorArea ?? 0) + (o.resortParkingStdArea ?? 0) * 2 + building;
+          ? Math.min(buildingActual, o.resortBuildingFloorArea * zoneMul)
+          : buildingActual;
+      const sum = (o.resortOutdoorArea ?? 0) + parking + building;
       return sum > 0 ? sum : o.standardAreaLimit; // 3요소 미입력 시 직접입력 fallback
     }
     default:
