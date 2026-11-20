@@ -33,6 +33,8 @@ const RULINGS =
  * @param original 번역 전 입력(`redevelopment`·`regionCode`를 읽는다)
  * @param translated `translateRedevAptForHousingJudgment`를 거친 판정 입력
  * @param verdictOf 번역된 판정 입력으로 1세대1주택 판정 전체를 돌려 「비과세·부분 비과세 결론」 키를 돌려주는 함수(호출부가 본체 판정을 넘긴다)
+ * @param verdictOfBeforeRental §155⑳ 반영 **전** 번역본으로 「⑳ 준비 → 판정 → 되돌림」 전체를 돌리는 함수 — 통산 고지(N3)의 반사실은
+ *   번역부터 다시 하므로 ⑳ 전 입력이다. 본체 판정만 돌리면 ⑳이 뺀 임대주택이 주택 수에 남아 통산과 무관하게 결론이 갈렸다(2026-11 리뷰 D-73).
  */
 export function redevLandAptResidenceNotices(
   original: TransferTaxInput,
@@ -42,6 +44,7 @@ export function redevLandAptResidenceNotices(
     "regulatedAreaMinResidenceYears" | "prePolicyDate" | "prePolicyExemptResidence"
   >,
   verdictOf: (judgeInput: TransferTaxInput) => string,
+  verdictOfBeforeRental: (preRentalInput: TransferTaxInput) => string = verdictOf,
 ): string[] {
   const redev = original.redevelopment;
   if (!redev || !isLandContributedOriginalApt(original)) return [];
@@ -91,7 +94,7 @@ export function redevLandAptResidenceNotices(
       ...original,
       redevelopment: { ...redev, householdBuilding: undefined },
     });
-    if (verdictOf(withoutCarry) !== current()) {
+    if (verdictOfBeforeRental(withoutCarry) !== verdictOfBeforeRental(translateRedevAptForHousingJudgment(original))) {
       notices.push(
         `세대원 건물 출자 통산을 적용했습니다 — 비과세 보유기간을 사용승인일 대신 세대원 건물 취득일(${format(carry.holdingStart, "yyyy-MM-dd")})부터 세고, ` +
           `건물 거주 ${carry.residenceMonths}개월을 거주기간에 더했습니다. ` +
