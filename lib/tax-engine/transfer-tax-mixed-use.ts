@@ -74,7 +74,7 @@ import { buildMixedIncomeDeductionStep, mixedLandPriorNotice, resolveMixedIncome
 import { assertMixedInheritedSplitDateSupported } from "./mixed-use-inherited-split-date";
 import { buildingDirectShare, hasMixedBuildingExtras, isConversionAcq, prepareMixedSaleSplit, salePartsFor } from "./mixed-use-sale-split";
 import { assetContractDateForCause } from "./transfer-reductions/asset-contract-date";
-import { resolveMixedNblRate } from "./transfer-tax-mixed-use-nbl-rate";
+import { mixedNblDeemNotices, resolveMixedNblRate } from "./transfer-tax-mixed-use-nbl-rate";
 import { assertMixedMetroSelected } from "./mixed-use-metro-required";
 import { mixedCommercialLandUnjudgedNotice, mixedWholeBuildingLandBasisNotice } from "./transfer-tax-mixed-use-nbl-notices";
 
@@ -562,7 +562,7 @@ function calcMixedUseCore(
 
   // STEP 8: 비사업용토지 부분 (배율초과 시)
   // NBL2611-V4-HS01 — 위기취득(2009.3.16.~2012.12.31. 토지 취득)이면 +10%p 가산 배제(부칙 제9270호 §14①) · V10-BX09 — 한도 비교 대상 echo.
-  const nblRate = resolveMixedNblRate(asset.landAcquisitionDate);
+  const nblRate = resolveMixedNblRate(asset, transferDate); // NBL2611-C5 — 수용 의제·유예도 같은 자리에서(가산율 0 + deemedBusiness)
   const nonBusinessLandPart = buildNonBusinessPart(
     housingPart,
     excessResult,
@@ -578,6 +578,7 @@ function calcMixedUseCore(
   );
   if (nonBusinessLandPart) {
     steps.push(buildNonBusinessStep(nonBusinessLandPart, excessResult, derived));
+    warnings.push(...mixedNblDeemNotices(asset, transferDate));
   }
 
   // STEP 9: 합산 세액

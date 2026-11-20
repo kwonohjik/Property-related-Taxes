@@ -551,9 +551,15 @@ export function AssetAreaSection({ asset, onChange, onAddAsset, hasIncrementAsse
         />
       )}
       {/* NBL2611-C4 — 배율 초과분(주택 부수토지)을 비사업용 토지로 보지 않는 사유. 수용 의제는 「공익수용」 카드의 사업인정고시일(영 §168의14③3호),
-          유예는 NBL 섹션과 같은 입력(영 §168의14①). 노출·④ 전송·⑧ 검증이 같은 술어(`housingExcessGraceApplies`)다. */}
+          유예는 NBL 섹션과 같은 입력(영 §168의14①). 노출·④ 전송·⑧ 검증이 같은 술어(`housingExcessGraceApplies`)다.
+          NBL2611-C5 — 겸용주택은 같은 칸을 주택분 부수토지 초과분에 쓴다(위 겸용 면적 카드 아래에 이어서 보인다). */}
       {housingExcessGraceApplies(asset, transferDate) && (
         <div className="space-y-2" data-testid="housing-excess-grace">
+          {isMixedUseSeparated(asset) && (
+            <p className="text-caption text-muted-foreground leading-snug" data-testid="housing-excess-grace-mixed">
+              겸용주택은 주택분 부수토지의 배율 초과분에만 적용합니다. 상가분 부수토지는 이 판정을 하지 않습니다 — 확인 필요.
+            </p>
+          )}
           {asset.transferCause === "public_expropriation" && (
             <ToneCard tone="amber" title="공익수용 — 사업인정고시일로 초과분을 판정합니다">
               <p className="text-xs text-amber-800 dark:text-amber-200 leading-snug">

@@ -1,7 +1,7 @@
 import type { ZoneType } from "../non-business-land/types";
 import type { PreHousingDisclosureInput, PreHousingDisclosureResult, TransferTaxInput } from "./transfer.types";
 import type { AmendmentDetail } from "./transfer-amendment.types";
-import type { SplitPartResult } from "./transfer-split-gain.types";
+import type { DeemedBusinessExcess, SplitPartResult } from "./transfer-split-gain.types";
 import type { ExprTotalValuationDetail } from "../transfer-tax-expropriation-valuation";
 import type { InheritedAcquisitionDetail } from "../transfer-tax-mixed-use-inheritance";
 import type {
@@ -465,6 +465,12 @@ export interface MixedUseAssetInput extends MixedUseSaleSplitFields {
   // 안분은 원값(§80⑧·§166⑥·D16-GB). 차감은 각 부분 환산 분모에만. PHD·4부분은 미적용(후속).
   /** 양도원인 — "public_expropriation" 시 §164⑨1호 게이트 */
   transferCause?: "general" | "public_expropriation";
+  /**
+   * NBL2611-C5 — 주택 부수토지 배율 초과분(비사업용 토지 파트)을 비사업용으로 보지 않는 사유의 사실(C4 `TransferTaxInput.appurtenantExcessFacts`와 같은 모양·같은 판정 leaf).
+   * 고시일은 `transferCause === "public_expropriation"`일 때만 읽고, 유예 구간은 영 §168의14① 주택 초과분 유예다. 상가분 부수토지는 이 사실을 읽지 않는다(Q-8 (가)).
+   * 이월과세는 겸용이 지원하지 않아(`mixed-use-carryover-scope.ts`) 증여자 취득일 소급이 없다.
+   */
+  appurtenantExcessFacts?: TransferTaxInput["appurtenantExcessFacts"];
   /** 주택분 보상액 총액 (원) — min(개별주택가격, 보상액, 보상기초) 후보 */
   housingCompensationTotal?: number;
   /** 주택분 보상액 산정 기초 기준시가 총액 (원) */
@@ -974,6 +980,11 @@ export interface MixedUseNonBusinessLandPart {
   additionalRate: number;
   /** 가산이 배제된 사유 — 배제가 아니면 없다(단건·다건 `nblSurchargeExcludedBy`와 같은 값 집합). */
   surchargeExcludedBy?: "crisis_acquisition" | "transfer_deferral";
+  /**
+   * NBL2611-C5 — 영 §168의14③3호(공익수용 무조건 의제)·①(유예)로 **비사업용 토지로 보지 않는** 초과분. 파트는 그대로 두고(비과세 범위 밖이라 분리·전액 과세) 가산율만 0이다.
+   * 위기취득 배제(`surchargeExcludedBy`)와 달리 «비사업용 토지가 아니다»라는 판정이라 두 사유가 겹치면 이 쪽만 싣는다.
+   */
+  deemedBusiness?: DeemedBusinessExcess;
   /**
    * 한도 비교의 대상이 된 토지·정착면적 echo — **결과 산식 표시 전용**(NBL2611-V10-BX09).
    * 단서 경로는 주택 부수토지 × 주택 정착면적, OH-17(`wholeBuildingDeemedHouse`)은 **전체 토지 × 건물 전체 정착면적**이라

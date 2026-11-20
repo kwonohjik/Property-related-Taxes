@@ -41,10 +41,10 @@ describe("④ buildAppurtenantExcessFacts — 사업인정 고시일(수용일 �
       });
     }
   });
-  it("토지·건물(토지 제외)·겸용주택은 이 입구가 아니다", () => {
+  it("토지·건물(토지 제외)은 이 입구가 아니다", () => {
     expect(buildAppurtenantExcessFacts(house({ ...expro, assetKind: "land" }), TRANSFER)).toBeUndefined();
     expect(buildAppurtenantExcessFacts(house({ ...expro, assetKind: "building" }), TRANSFER)).toBeUndefined();
-    expect(buildAppurtenantExcessFacts(house({ ...expro, isMixedUseHouse: true }), TRANSFER)).toBeUndefined();
+    // 겸용주택은 NBL2611-C5가 연결했다(이 파일의 이전 단언 «겸용은 보내지 않음»은 C5로 바뀌었다) — `nbl2611-c5-mixed-use-facts.anchor.test.ts`.
   });
   it("단건·다건이 같이 쓰는 `buildExpropriationInput`이 이 값을 body에 싣는다", () => {
     expect(buildExpropriationInput(house(expro), TRANSFER)).toMatchObject({ transferCause: "public_expropriation", appurtenantExcessFacts: { expropriationNoticeDate: "2021-03-01" } });

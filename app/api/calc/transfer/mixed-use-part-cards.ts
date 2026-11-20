@@ -51,6 +51,7 @@ import type { TransferTaxItemInput } from "@/lib/tax-engine/types/transfer-aggre
 import type { MixedUseAssetInput } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { MixedUseBurdenedGiftBreakdown } from "@/lib/tax-engine/types/mixed-use-burdened-gift.types";
 import { calcMixedUseTransferTax } from "@/lib/tax-engine/transfer-tax-mixed-use";
+import { mixedNblDeemNotices } from "@/lib/tax-engine/transfer-tax-mixed-use-nbl-rate";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { buildMixedUseAssetInput } from "./mixed-use-asset-input";
 import { sameHouseholdInheritanceOf } from "./mixed-use-asset-input";
@@ -101,9 +102,12 @@ export function buildMixedUsePartCards(
   assetLabel: string,
   /** 함께 양도 묶음 안 겸용 BG의 4부분 명세를 결과 슬롯(`aggregated.mixedUseBgDetailsByAsset`)에 싣는 훅 — 겸용 BG가 아니면 부르지 않는다. */
   onBgDetail?: (breakdown: MixedUseBurdenedGiftBreakdown) => void,
+  /** 배율 초과분 수용 의제·유예 고지(NBL2611-C5) — 서브엔진 `warnings`는 버려지므로 호출부가 결과 `warnings`에 싣는다. 초과분이 없으면 부르지 않는다. */
+  onNblDeemNotices?: (notices: string[]) => void,
 ): TransferTaxItemInput[] {
   const r = calcMixedUseTransferTax(partTransferPrice, transferDate, mixedAsset, rates);
   if (r.burdenedGift) onBgDetail?.(r.burdenedGift);
+  if (r.nonBusinessLandPart) onNblDeemNotices?.(mixedNblDeemNotices(mixedAsset, transferDate));
   /**
    * 2022.1.1. 전 양도는 엔진이 전부 0인 거부 결과를 낸다. 단건은 그 결과를 그대로 보여 주지만 여기서는 0인 파트 카드가 합산에 섞여
    * 겸용 주택이 **조용히 빠졌다**(실측 2026-10-18). ⑧이 먼저 막고, API 직접 호출은 여기서 400으로 막는다(주 자산·컴패니언 공통 지점).
@@ -388,7 +392,8 @@ export function buildMixedUsePartCards(
             false,
             { transferPrice: nblT + cnblT, acquisitionPrice: nblA + cnblA, expenses: nblE + cnblE },
             landAcqDate,
-            { ...nonHousing, isNonBusinessLand: true },
+            // NBL2611-C5 — 수용 의제·유예로 비사업용이 아닌 초과분은 같은 토지 카드이되 중과(+10%p)가 없다(단일 주택 `buildNblPartRateInput`과 같은 규칙).
+            { ...nonHousing, isNonBusinessLand: !nb.deemedBusiness },
           ),
         ]
       : []),
@@ -483,6 +488,8 @@ export function buildMixedUseCompanionItems(
     isAxisB?: boolean;
     /** 묶음 안 겸용 BG 4부분 명세 수집(자산 id 키) — `bundled-route.ts`가 `aggregated.mixedUseBgDetailsByAsset`에 싣는다. */
     onMixedBgDetail?: (assetId: string, breakdown: MixedUseBurdenedGiftBreakdown) => void;
+    /** 배율 초과분 수용 의제·유예 고지 수집(NBL2611-C5) — `bundled-route.ts`가 결과 `warnings`에 싣는다. */
+    onNblNotices?: (notices: string[]) => void;
     /**
      * §155⑳ 거주주택 · §155④⑤ 합가 상대 쪽 임대 — 선언을 받는 주 자산만 넘긴다(`route.ts`와 같은 `engineInput`).
      * 상가 카드의 주택 취급(§154③ 본문)이 이 판정을 본다. 근거 문장은 서브엔진 `warnings`가 버려지므로 `onNotices`로 돌려준다.
@@ -579,6 +586,8 @@ export function buildMixedUseCompanionItems(
     acquisitionCause: companionEngine.acquisitionCause,
     // US-07 — 분양권 상속 답도 그 자산의 것이다(컴패니언 item은 상속일 때만 싣는다 — `bundled-split-helpers.ts`). 취득 원인과 함께 있어야 STEP 0.45 게이트가 카드 판정과 갈리지 않는다.
     inheritedPresaleCompletedByHeir: companionEngine.inheritedPresaleCompletedByHeir,
+    // NBL2611-C5 — 배율 초과분 수용 의제·유예 사실도 그 자산의 item 값이다(주 자산 묶음은 primary item = `...engineInput`).
+    appurtenantExcessFacts: companionEngine.appurtenantExcessFacts,
   });
   asset.rentalResidence?.onNotices(resolveMixedUseRentalResidence(mixedAsset, parseRatesFromMap(ctx.mixedUseCtx.rates))?.notices ?? []);
   return buildMixedUsePartCards(
@@ -590,5 +599,7 @@ export function buildMixedUseCompanionItems(
     asset.assetId,
     asset.assetLabel,
     asset.onMixedBgDetail ? (b) => asset.onMixedBgDetail!(asset.assetId, b) : undefined,
+    // 묶음에는 겸용이 둘 이상일 수 있어 어느 자산의 고지인지 `[자산명]` 접두로 밝힌다(0061 고지와 같은 규약).
+    asset.onNblNotices ? (n) => asset.onNblNotices!(n.map((t) => (asset.assetLabel ? `[${asset.assetLabel}] ${t}` : t))) : undefined,
   );
 }

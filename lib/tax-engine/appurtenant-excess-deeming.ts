@@ -47,7 +47,7 @@ export function judgeExpropriationDeemOutcome(f: {
   return { status: deem.deemed ? "deemed" : "not_deemed", deem };
 }
 
-type HousingFacts = Pick<
+export type HousingFacts = Pick<
   TransferTaxInput,
   | "transferCause" | "appurtenantExcessFacts" | "transferDate" | "acquisitionDate" | "acquisitionCause" | "decedentAcquisitionDate" | "donorAcquisitionDate"
   | "nonHeirBequest" | "landAcquisitionDate" | "landAcquisitionCause" | "landDecedentAcquisitionDate" | "landDonorAcquisitionDate"

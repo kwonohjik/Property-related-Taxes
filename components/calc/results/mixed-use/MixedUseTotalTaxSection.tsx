@@ -119,7 +119,9 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
             const nbTerm = nb && t.nonBusinessSurcharge === 0
               ? nbAddPct > 0
                 ? ` + 비사업용토지분 과세표준 × (누진세율 + ${nbAddPct}%p, 소득세법 §104①8호)`
-                : ` + 비사업용토지분 과세표준 × 누진세율 (위기취득 — 부칙 제9270호 §14①로 가산 없음)`
+                : nb?.deemedBusiness
+                  ? ` + 비사업용토지분 과세표준 × 누진세율 (비사업용 토지로 보지 않아 가산 없음 — ${nb.deemedBusiness.legalBasis})` // NBL2611-C5
+                  : ` + 비사업용토지분 과세표준 × 누진세율 (위기취득 — 부칙 제9270호 §14①로 가산 없음)`
               : "";
             if (t.rateBasis === "clause2") {
               const addon = t.surchargeAddon;

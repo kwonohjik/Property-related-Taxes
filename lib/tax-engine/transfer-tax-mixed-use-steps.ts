@@ -342,7 +342,9 @@ export function buildNonBusinessStep(
       {
         label: nb.additionalRate > 0
           ? `비사업용토지 양도소득금액 (+${Math.round(nb.additionalRate * 100)}%p 가산)`
-          : "비사업용토지 양도소득금액 (위기취득 — 가산 없음)",
+          : nb.deemedBusiness
+            ? "비사업용토지 양도소득금액 (비사업용 토지로 보지 않아 가산 없음)" // NBL2611-C5 — 수용 의제·유예
+            : "비사업용토지 양도소득금액 (위기취득 — 가산 없음)",
         value: nb.incomeAmount,
         isResult: true,
       },

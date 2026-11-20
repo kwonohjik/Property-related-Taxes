@@ -288,6 +288,7 @@ export function calculateBundledTransfer(
             allocatedSalePrice: a.allocatedSalePrice,
             isAxisB: isFullFractionalBundle,
             onMixedBgDetail,
+            onNblNotices: (n) => mixedRentalNotices.push(...n), // NBL2611-C5 — 같은 sink(마지막에 중복 문장은 거른다)
             rentalResidence: { input: engineInput, onNotices: (n) => mixedRentalNotices.push(...n) },
           },
         );
@@ -387,6 +388,7 @@ export function calculateBundledTransfer(
       onGbCarryoverUnit,
       isAxisB: isFullFractionalBundle,
       onMixedBgDetail,
+      onMixedNblNotices: (n) => mixedRentalNotices.push(...n), // NBL2611-C5
     });
     if (reverseUnit && c.assetId === reverseUnit.houseAssetId) return built.map((it) => asReverseUnitHouse(it, reverseUnit, engineInput));
     // NH-14 후속 — 첫 자산이 주택이 아닌데 이 주택이 세대·주택 현황의 기준 자산이면(④가 id를 싣는다) 본문 최상위 세대 사실은 이 주택의 것이다.

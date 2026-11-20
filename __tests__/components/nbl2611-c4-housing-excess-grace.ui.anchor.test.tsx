@@ -41,7 +41,7 @@ describe("주택 배율 초과분 — 유예기간·수용 안내 노출", () =>
     cleanup();
     expect(view(house({ transferCause: "general" })).container.textContent).not.toContain("사업인정고시일로 초과분을 판정합니다");
   });
-  it("겸용주택은 이 입구가 아니다", () => {
+  it("겸용주택은 주택 `acquisitionArea`가 아니라 겸용 면적으로 판정한다 (NBL2611-C5 — 겸용 면적이 비면 초과분이 없다)", () => {
     const { container } = view(house({ isMixedUseHouse: true }));
     expect(container.querySelector('[data-testid="housing-excess-grace"]')).toBeNull();
   });
