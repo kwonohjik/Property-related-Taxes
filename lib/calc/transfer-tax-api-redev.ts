@@ -12,6 +12,7 @@
  * - firstDisclosureDate/Price → undefined (단서 미발동)
  */
 
+import { redevSplitResidenceMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio } from "./transfer-tax-api-helpers";
 import { parseDecimal } from "@/lib/calc/number-parse";
@@ -189,15 +190,16 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
     // #12 — 토지만 출자한 원조합원 완공APT는 멸실된 주택이 없어 종전주택 거주 칸이 화면에 없다(엔진도 신축 거주만 읽는다).
     //   남은 값이 표2 거주(통산)에 섞이지 않도록 이 축에서는 보내지 않는다.
     // 승계조합원은 증여자와 같은 세대로 보유한 증여 승계(`successorGiftHouseholdApplies`)일 때만 — 그 밖의 승계에서 종전주택 거주는 승계 전 타인의 거주라 엔진이 읽지 않는다.
+    // D-45 — 날짜가 있으면 정본 셈(초일 산입)으로 다시 도출한다(옛 카드가 첫날을 빼 저장한 개월을 믿지 않는다).
     priorHouseResidenceMonths:
       asset.redevPriorHouseResidenceMonths &&
       !landContributedOriginalApt(asset) &&
       (asset.redevIsSuccessorMember !== "yes" || successorGiftHouseholdApplies(asset))
-        ? parseInt(asset.redevPriorHouseResidenceMonths.replace(/,/g, ""), 10)
+        ? redevSplitResidenceMonths(asset.redevPriorResidenceStartDate, asset.redevPriorResidenceEndDate, asset.redevPriorHouseResidenceMonths)
         : undefined,
     // 신축 APT 거주월수 — 완공 APT 양도 전용(위 `isApt` 주석).
     newHouseResidenceMonths: isApt && asset.redevNewHouseResidenceMonths
-      ? parseInt(asset.redevNewHouseResidenceMonths.replace(/,/g, ""), 10)
+      ? redevSplitResidenceMonths(asset.redevNewResidenceStartDate, asset.redevNewResidenceEndDate, asset.redevNewHouseResidenceMonths)
       : undefined,
     // 거주기간(입주일·퇴거일) — 결과 카드 산정 근거 표시용 pass-through
     priorResidenceStartDate: landContributedOriginalApt(asset) ? undefined : asset.redevPriorResidenceStartDate || undefined,

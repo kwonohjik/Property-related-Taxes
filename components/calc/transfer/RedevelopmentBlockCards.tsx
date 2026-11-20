@@ -11,6 +11,7 @@
  *       인가일 비과세 자기선언 · 승계조합원 구분.
  */
 
+import { calculateHoldingPeriod } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { clearOutOfScopeRedevPatch } from "@/lib/calc/redev-field-scope";
@@ -249,11 +250,11 @@ export function ExemptionAtApprovalCard({
     const extended =
       declaredEnd && !Number.isNaN(declaredEnd.getTime()) && declaredEnd.getTime() > app.getTime();
     const end = extended ? declaredEnd! : app;
-    const y = end.getUTCFullYear() - acq.getUTCFullYear();
-    const m = end.getUTCMonth() - acq.getUTCMonth();
-    const d = end.getUTCDate() - acq.getUTCDate();
-    const months = y * 12 + m - (d < 0 ? 1 : 0);
-    return { months, eligible: months >= 24, extended };
+    // D-64 — 보유기간 정본 셈(`calculateHoldingPeriod` — 엔진 §154①·§95④와 같은 leaf). 종전 인라인 식은 첫날을 빼
+    //   2017-06-10~2019-06-09(정확히 2년)를 「1년 11개월 → 미충족」으로 안내했다.
+    const held = calculateHoldingPeriod(acq, end);
+    const months = held.years * 12 + held.months;
+    return { months, eligible: held.years >= 2, extended };
   }, [
     acquisitionDate,
     asset.redevApprovalDate,
