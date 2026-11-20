@@ -75,8 +75,16 @@ export function prepareRedevAptRentalResidence(
   if (verdict.passed) {
     const counted = rentalUnitsCounted(translated);
     const deemedCount = Math.max(1, translated.householdHousingCount - counted);
+    // 주택 수에서 뺀 명부 임대 행을 제외 목록에도 싣는다 — 합가 구성(`resolveMergeComposition`)은 명부 행 수를 판정 주택 수와 맞추는데,
+    //   빼지 않으면 행이 하나 남아 `roster_missing`(불성립)이다(2026-11 리뷰 D-04). 세대 구성 leaf(`resolveRentalResidenceComposition`)와 같은 행이다.
+    const rentalRowIds = rosterRentalRows(translated).map((h) => h.id);
+    const knownIds = [...new Set([...(translated.knownHouseExclusionHouseIds ?? []), ...rentalRowIds])];
     return {
-      judgeInput: { ...translated, householdHousingCount: deemedCount },
+      judgeInput: {
+        ...translated,
+        householdHousingCount: deemedCount,
+        ...(rentalRowIds.length > 0 ? { knownHouseExclusionHouseIds: knownIds } : {}),
+      },
       finalize: (j) => j,
       steps: [
         {

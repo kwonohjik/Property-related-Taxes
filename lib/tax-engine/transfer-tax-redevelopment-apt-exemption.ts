@@ -174,6 +174,13 @@ export function judgeRedevAptOneHouseExemption(
           const r = judgeOneHouseExemptionFromInput(judgeInput, parsedRates.oneHouseSpecialRules, presaleRightStartDate(parsedRates));
           return `${r.isExempt}|${r.isPartialExempt}`;
         },
+        // 통산 고지(N3)는 번역부터 다시 한다 — 위 본체와 같이 §155⑳ 준비 → 판정 → 되돌림을 모두 거친다(D-73).
+        (preRental) => {
+          const rr = prepareRedevAptRentalResidence(preRental, parsedRates, hceGeneralHouseAcquisitionDate);
+          const j = judgeOneHouseExemptionFromInput(rr.judgeInput, parsedRates.oneHouseSpecialRules, presaleRightStartDate(parsedRates));
+          const r = rr.finalize(j);
+          return `${r.isExempt}|${r.isPartialExempt}`;
+        },
       ),
     );
   }

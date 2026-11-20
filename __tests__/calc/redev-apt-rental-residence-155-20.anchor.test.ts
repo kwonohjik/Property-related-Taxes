@@ -21,6 +21,8 @@
  * | RR-8 | 조합원입주권 양도 — 카드를 닫아 ④가 싣지 않는다(Q-4 (a) · 1581) |
  * | RR-9 | 강남 20억 · 2026-08-01(한시 배제 종료 뒤) — 다주택 중과 없이 부분과세 · 순수 1주택과 같은 세액 |
  * | RR-11 | 재개발 카드의 분리 입력(종전 12 + 신축 12개월)만으로 거주 — ⑧이 엔진과 같은 leaf로 세어 통과 · 비과세 |
+ * | RR-12 | ⑳ 성립 + 혼인 합가(명부 임대 행 r1 양도자 쪽 · 배우자 주택 h3) — 임대 행을 제외 목록에 실어 합가 구성이 행 수로 맞는다 · 비과세(2026-11 리뷰 D-04 · 종전 124,366,000 roster_missing) |
+ * | RR-13 | 토지 출자 원조합원 · 세대원 건물 통산 + ⑳ 명부 임대 행 — 통산 고지(N3) 반사실을 ⑳ 준비→판정→되돌림 전체로 비교(D-73): 통산을 빼도 같은 결론이면 고지 없음 · 통산이 ⑳ 거주를 가르면(C5) 고지 유지 |
  * | RR-10 | §155⑳ 불성립(API 직접 · 요건 확인 OFF)이어도 명부의 임대주택이 일시적 2주택의 신규 주택이면 §155①으로 비과세 — 판정 메뉴처럼 무조건 거두지 않는다 |
  */
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -221,5 +223,64 @@ describe("완공APT × §155⑳ — 화면 경로", () => {
     );
     expect(r.issues).toEqual([]);
     expect(r.result.isExempt).toBe(true);
+  });
+
+  it("RR-12 ⑳ 성립 + 혼인 합가 — 명부 임대 행을 제외 목록에 실어 합가 구성이 성립 · 비과세(D-04)", async () => {
+    const form = (price: string) =>
+      redevAptForm({
+        price,
+        count: "3",
+        houses: [
+          other("r1", "2007-01-01", { isLongTermRental: true, mergeOrigin: "seller_side" }),
+          other("h3", "2010-01-01", { mergeOrigin: "counterpart_side" }),
+        ],
+        assetOver: { rentalHousingException: rhe() },
+        formOver: { marriageDate: "2022-01-01", isFirstTransferredInMerge: true } as never,
+      });
+    const r = await runCalc(form("1000000000"));
+    expect(r.issues).toEqual([]);
+    expect(r.result.isExempt).toBe(true);
+    expect(r.result.totalTax).toBe(0);
+    const hv = await runCalc(form("1500000000"));
+    expect(hv.result.isPartialExempt).toBe(true);
+  });
+
+  describe("RR-13 세대원 건물 통산 고지(N3) × ⑳ — 반사실도 ⑳ 전체 경로로(D-73)", () => {
+    const N3 = /세대원 건물 출자 통산을 적용했습니다/;
+    const landForm = (newMonths: string) =>
+      redevAptForm({
+        price: "900000000",
+        count: "2",
+        houses: [other("r1", "2007-01-01", { isLongTermRental: true })],
+        assetOver: {
+          acquisitionDate: "2005-01-01",
+          regionCode: NR,
+          residenceInputMode: "direct",
+          residencePeriods: [],
+          redevOriginalAssetType: "land",
+          redevApprovalDate: "2019-03-15",
+          redevCompletionDate: "2021-02-15",
+          redevNewHouseResidenceMonths: newMonths,
+          redevHouseholdBuildingCarryover: "yes",
+          redevHouseholdBuildingAcquisitionDate: "2010-05-01",
+          redevHouseholdBuildingResidenceMonths: "36",
+          redevActualAcquisitionPrice: "100000000",
+          fixedAcquisitionPrice: "100000000",
+          rentalHousingException: rhe(),
+        },
+        formOver: { residencePeriodMonths: "0" } as never,
+      });
+    it("신축 거주 36개월 — 통산 없이도 ⑳·§154① 충족(같은 비과세) → 고지 없음", async () => {
+      const r = await runCalc(landForm("36"));
+      expect(r.issues).toEqual([]);
+      expect(r.result.isExempt).toBe(true);
+      expect((r.result.warnings as string[]).join("\n")).not.toMatch(N3);
+    });
+    it("C5 — 신축 거주 12개월: 통산(36)이 있어야 ⑳ 거주 2년 → 통산을 빼면 과세 → 고지 유지", async () => {
+      const r = await runCalc(landForm("12"));
+      expect(r.issues).toEqual([]);
+      expect(r.result.isExempt).toBe(true);
+      expect((r.result.warnings as string[]).join("\n")).toMatch(N3);
+    });
   });
 });
