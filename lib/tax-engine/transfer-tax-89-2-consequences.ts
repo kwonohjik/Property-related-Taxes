@@ -134,6 +134,11 @@ export function article89Clause2Notices(
     }
   }
 
+  // 예외를 적용했지만 해석 공백 위의 한 독법에 기댄다(D-42 공동상속 소수지분) — 생산자가 결론을 가를 때만 채운다.
+  if (clause2?.status === "exception_met") {
+    for (const note of clause2.readingNotes ?? []) notices.push(note);
+  }
+
   // 원조합원 입주권의 2주택 축 준용 보류는 비과세 또는 중과 배제를 바꿀 때만(#32-4) — 어차피 과세·중과면 그 조문을 확인해도 결론이 같다.
   const openArticles = (clause2?.openArticles ?? []).filter(
     (a) => !isOriginalMemberOpenArticle(a) || settled || gate.surchargeDeclarationMatters,

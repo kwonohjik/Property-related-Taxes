@@ -33,7 +33,7 @@ describe("S05-8 anchor", () => {
   it("분양권+상속주택 → §156의3⑤ 준용", () => {
     const hs = [
       { id: "sell", acquisitionDate: D("2015-06-01"), isRegulatedArea: false },
-      { id: "inh", acquisitionDate: D("2015-06-01"), isRegulatedArea: false, isInherited: true, isCoInherited: true, isLargestCoInheritedShareholder: false, inheritedDate: D("2015-06-01") },
+      { id: "inh", acquisitionDate: D("2015-06-01"), isRegulatedArea: false, isInherited: true, inheritedDate: D("2015-06-01") },
     ];
     // 결정 #8 — 「상속개시 당시 보유」는 날짜로 판정한다(일반주택 2015-06-01 ≤ 상속개시일 2015-06-01).
     expect(norm(v(twoHouse("presale_right", { householdHousingCount: 1, sellingHouseId: "sell", houses: hs as never })).viaArticle)).toContain("§156의3⑤");
@@ -78,7 +78,7 @@ describe("S05-8 — 판정 불가 안내는 세대가 가진 권리 종류의 �
   const undatedInheritedHouse = (type: R) => {
     const hs = [
       { id: "sell", acquisitionDate: D("2015-06-01"), isRegulatedArea: false },
-      { id: "inh", acquisitionDate: D("2015-06-01"), isRegulatedArea: false, isInherited: true, isCoInherited: true, isLargestCoInheritedShareholder: false },
+      { id: "inh", acquisitionDate: D("2015-06-01"), isRegulatedArea: false, isInherited: true },
     ];
     const r = v(twoHouse(type, { householdHousingCount: 1, sellingHouseId: "sell", houses: hs as never }));
     expect(r.status).toBe("excluded");
