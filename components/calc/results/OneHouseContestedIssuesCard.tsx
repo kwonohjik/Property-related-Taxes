@@ -3,7 +3,8 @@
 /**
  * 판정 결과 — **해석이 갈리는 쟁점**(P4)
  *
- * 국세청 해석과 조세심판원 결정이 다른 결론을 낸 사실 패턴이면, 두 입장으로 각각 판정한 결론을 나란히 보여 준다.
+ * 해석이 갈리거나 한쪽 입장의 직접 근거가 확인되지 않은 사실 패턴이면, 두 입장으로 각각 판정한 결론을 나란히 보여 준다.
+ * 입장마다 근거 기관(`source`)을 밝힌다 — 머리말이 기관을 고정해 말하면 C6(심판원끼리)·C8(국세청끼리·직접 근거 없음)에서 사실과 달랐다(2026-11 리뷰 D-82).
  * 🔑 결론은 엔진이 낸 값(`contestedIssues[].positions[].verdict`)을 라벨로 옮길 뿐이다 — 여기서 다시 판정하지 않는다.
  */
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -34,8 +35,8 @@ export function OneHouseContestedIssuesCard({ issues, sectionNum }: Props) {
   return (
     <ToneCard tone="violet" sectionNum={sectionNum} title="해석이 갈리는 쟁점">
       <p className="text-sm text-muted-foreground">
-        아래 사실은 과세관청 해석과 조세심판원 결정의 결론이 다릅니다. 두 입장으로 각각 판정한 결론을 함께
-        보여 드리니 근거 문서를 확인해 판단하세요.
+        아래 사실은 해석이 갈리거나 한쪽 입장의 직접 근거가 확인되지 않은 쟁점입니다. 두 입장으로 각각 판정한 결론과
+        각 입장의 근거 기관을 함께 보여 드리니 근거 문서를 확인해 판단하세요.
       </p>
       {issues.map((issue) => (
         <div key={issue.id} className="space-y-2" data-testid={`one-house-contested-${issue.id}`}>
@@ -57,6 +58,9 @@ export function OneHouseContestedIssuesCard({ issues, sectionNum }: Props) {
                   {p.key === issue.enginePosition && (
                     <span className="ml-1 font-normal text-muted-foreground">(아래 판정 내역)</span>
                   )}
+                </p>
+                <p className="text-xs text-muted-foreground" data-testid={`one-house-contested-${issue.id}-${p.key}-source`}>
+                  근거: {p.source}
                 </p>
                 <p
                   className={`text-base font-bold ${VERDICT_CLASS[p.verdict]}`}
