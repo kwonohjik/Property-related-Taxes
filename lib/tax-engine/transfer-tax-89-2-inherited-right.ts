@@ -107,8 +107,9 @@ export function withClause2TraceNotes(r: Article89Clause2Result, trace: Article8
   return {
     ...r,
     ...(undeclaredMerge ? { undeclaredMergeArticles: undeclaredMerge } : {}),
+    // 상속 축 사유가 있으면 상속 카드(종전 id·라벨)가 우선이다 — 일반 배제 라벨(D-47)을 거둔다.
     ...(reasons.length > 0
-      ? { exclusionReasons: [...(r.exclusionReasons ?? []), ...reasons], exclusionBasis: basis ?? r.exclusionBasis }
+      ? { exclusionReasons: [...(r.exclusionReasons ?? []), ...reasons], exclusionBasis: basis ?? r.exclusionBasis, exclusionLabel: undefined }
       : {}),
     ...(confirm.length > 0 ? { confirmNotes: [...(r.confirmNotes ?? []), ...confirm] } : {}),
   };

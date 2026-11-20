@@ -478,8 +478,9 @@ export function article89ExclusionUnmet(
   if (!coreWouldPass || article89Clause2.status !== "excluded" || !article89Clause2.exclusionReasons?.length) return [];
   return [
     {
-      id: "89-2-inherited-general-house-unheld",
-      label: "상속받은 권리·주택을 이용한 §89② 예외",
+      // 일반 배제(D-47·D-21)는 새 id·라벨, 상속 축은 종전 id·라벨을 그대로 둔다(소비처가 id로 고정한 단언 보존).
+      id: article89Clause2.exclusionLabel ? "89-2-exclusion-unmet" : "89-2-inherited-general-house-unheld",
+      label: article89Clause2.exclusionLabel ?? "상속받은 권리·주택을 이용한 §89② 예외",
       legalBasis: article89Clause2.exclusionBasis ?? TRANSFER.RIGHT_ONE_HOUSE_SPECIAL,
       reasons: article89Clause2.exclusionReasons,
     },
