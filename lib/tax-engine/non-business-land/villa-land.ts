@@ -7,6 +7,7 @@
  *   둘 다 미달 → 비사업용
  */
 
+import { isAreaAtMost } from "../area-limit";
 import { differenceInDays } from "../utc-date";
 import { NBL } from "../legal-codes";
 import type {
@@ -118,8 +119,8 @@ export function judgeVillaLand(
     const RURAL_FLOOR_MAX = 150; // 영 §168의13 1호 건물 연면적(㎡)
     const RURAL_LAND_MAX = 660; // 영 §168의13 1호 건물 부속토지면적(㎡)
     const RURAL_VALUE_MAX = villaRuralValueLimit(input.transferDate); // 영 §168의13 2호 건물+부속토지 합산 기준시가(원) — 양도일 2015.2.3. 전 1억·이후 2억(NBL2611-V8-VL01)
-    const floorOk = v.buildingFloorArea !== undefined && v.buildingFloorArea <= RURAL_FLOOR_MAX;
-    const landOk = v.attachedLandArea !== undefined && v.attachedLandArea <= RURAL_LAND_MAX;
+    const floorOk = v.buildingFloorArea !== undefined && isAreaAtMost(v.buildingFloorArea, RURAL_FLOOR_MAX);
+    const landOk = v.attachedLandArea !== undefined && isAreaAtMost(v.attachedLandArea, RURAL_LAND_MAX);
     const valueOk = v.combinedStdValue !== undefined && v.combinedStdValue <= RURAL_VALUE_MAX;
     const areaOk = v.isInRestrictedArea !== true; // 영 §168의13 3호 — 「조세특례제한법」 §99의4①1호가목1)~4) 제외지역 아님
     const reqMet = floorOk && landOk && valueOk && areaOk; // 미입력(undefined)=요건 미충족(미입증=불인정)

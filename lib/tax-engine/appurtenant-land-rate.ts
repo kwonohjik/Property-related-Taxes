@@ -33,6 +33,7 @@
  *   TRANSFER.SELF_BUILT_ACQUISITION_DATE — 영 §162①4호 (자가건축 취득일)
  */
 
+import { areaTimes, isAreaAtMost, judgeAreaLimit, subtractAreas } from "./area-limit";
 import type { TransferTaxInput } from "./types/transfer.types";
 // 배율 세분 시행일(2022.1.1.)은 비사토 축(영 §168의12)과 **같은 부칙 호**로 움직인다 —
 // 날짜를 두 곳에 적으면 개정 시 한쪽만 고쳐지는 dual-truth가 된다.
@@ -116,11 +117,13 @@ export function appurtenantCardLimitShare(
   cardAreaM2: number,
   share: { houseLandAreaM2?: number; appurtenantCardsAreaM2?: number } = {},
 ): { limitArea: number; excessArea: number } {
-  const remaining = Math.max(0, limitArea - (share.houseLandAreaM2 ?? 0));
+  // NBL2611-V9-I — 남은 한도·묶음 비교는 정수 정확 연산(`area-limit.ts`). 여러 카드가 나눠 쓰는 비례 몫(`÷ group`)만 부동소수 나눗셈이다.
+  const remaining = Math.max(0, subtractAreas(limitArea, share.houseLandAreaM2 ?? 0));
   const group = Math.max(share.appurtenantCardsAreaM2 ?? 0, cardAreaM2);
-  if (group <= remaining) return { limitArea: cardAreaM2, excessArea: 0 };
+  if (isAreaAtMost(group, remaining)) return { limitArea: cardAreaM2, excessArea: 0 };
   // 부수토지 카드가 하나뿐이면 남은 한도 전부가 이 카드 몫이다(주택 카드 토지가 없으면 종전 값 — 정착면적 × 배율).
-  const cardLimit = group === cardAreaM2 ? remaining : (remaining * cardAreaM2) / group;
+  if (group === cardAreaM2) return { limitArea: remaining, excessArea: subtractAreas(cardAreaM2, remaining) };
+  const cardLimit = (remaining * cardAreaM2) / group;
   return { limitArea: cardLimit, excessArea: cardAreaM2 - cardLimit };
 }
 
@@ -296,9 +299,10 @@ export function resolveCompanionLandRate(
           ? "non_metropolitan_or_green"
           : "non_urban");
     const multiplier = appurtenantLandMultiplier(zone, transferDate);
-    const limitArea = primary.buildingFootprintArea! * multiplier;
+    // NBL2611-V9-I — 한도·초과는 정수 정확 연산(`area-limit.ts`).
+    const limitArea = areaTimes(primary.buildingFootprintArea!, multiplier);
     const companionArea = companion.area ?? 0;
-    const excessArea = companionArea > 0 ? Math.max(0, companionArea - limitArea) : 0;
+    const excessArea = companionArea > 0 ? judgeAreaLimit(companionArea, limitArea).excess : 0;
 
     if (excessArea > 0) {
       // 한도 초과분 분리:

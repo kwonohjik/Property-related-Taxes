@@ -40,6 +40,7 @@
  * 표에 없는 용도지역은 배율 결정 불가로 보고 차단한다.
  */
 
+import { areaTimes, judgeAreaLimit } from "./area-limit";
 import { getZoneAreaMultiplier } from "./local-tax-zone-multiplier";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 
@@ -117,19 +118,18 @@ export function judgeAppurtenantLandExcess(
     }
     multiplier = resolved.multiplier;
     multiplierDetail = resolved.detail;
-    allowedLandArea = buildingFootprintArea * multiplier;
+    // NBL2611-V9-I — 바닥면적 × 배율을 부동소수로 곱하면 한도와 정확히 같은 토지가 뒤집힌다(100.1 × 3 = 300.29999999999995). 정수 정확 곱·비교.
+    allowedLandArea = areaTimes(buildingFootprintArea, multiplier);
   }
 
-  const isWithinLimit = landArea <= allowedLandArea;
-  const nonBusinessArea = Math.max(0, landArea - allowedLandArea);
-  const nonBusinessRatio = landArea > 0 ? nonBusinessArea / landArea : 0;
+  const { within, excess, ratio } = judgeAreaLimit(landArea, allowedLandArea);
 
   return {
     multiplier,
     multiplierDetail,
     allowedLandArea,
-    isWithinLimit,
-    nonBusinessArea,
-    nonBusinessRatio,
+    isWithinLimit: within,
+    nonBusinessArea: excess,
+    nonBusinessRatio: ratio,
   };
 }

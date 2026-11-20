@@ -38,6 +38,7 @@
  * 실은 입력은 `housingExcessCapexNotice`가 반영하지 않은 금액을 고지한다.
  */
 import { appurtenantLandMultiplier, type AppurtenantLandZone } from "./appurtenant-land-rate";
+import { areaTimes, judgeAreaLimit } from "./area-limit";
 import { round2 } from "./area-utils";
 import { SEC_163_9_BUILDING_FIRST_DISCLOSURE, SEC_163_9_LAND_FIRST_DISCLOSURE } from "./transfer-split-part-cause";
 import { deriveLegacyAcqMode, type PartAcqMode } from "./transfer-tax-split-acq-price";
@@ -53,8 +54,9 @@ export function housingExcessAreaM2(p: {
 }): number {
   if (p.zone === undefined || p.transferDate === undefined) return 0;
   if (!(p.footprintM2 > 0) || !(p.landAreaM2 > 0)) return 0;
-  const limit = round2(p.footprintM2 * appurtenantLandMultiplier(p.zone, p.transferDate));
-  return round2(Math.max(0, p.landAreaM2 - limit));
+  // NBL2611-V9-I — 한도는 정수 정확 곱·비교(`area-limit.ts`). `round2`는 그 위에서 면적을 2자리로 확정하는 종전 역할만 한다.
+  const limit = round2(areaTimes(p.footprintM2, appurtenantLandMultiplier(p.zone, p.transferDate)));
+  return round2(judgeAreaLimit(p.landAreaM2, limit).excess);
 }
 
 export interface HousingExcessSplitFacts {

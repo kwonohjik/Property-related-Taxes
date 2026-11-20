@@ -5,6 +5,7 @@
  * 이 파일은 순수 함수다 — DB를 부르지 않는다.
  */
 
+import { isAreaOver } from "../area-limit";
 import { NBL } from "../legal-codes";
 import { NBL_EXCLUSION_RANGE_POSITION_NOTICE } from "../nbl-confirm-notices";
 import type {
@@ -45,7 +46,7 @@ export function pickWiderExclusion(
   const naArea = businessAreaOf(naMok, landArea);
   if (naArea <= 0) return daMok;
 
-  const picked = naArea > daArea ? naMok : daMok;
+  const picked = isAreaOver(naArea, daArea) ? naMok : daMok;
   if (daArea > 0) {
     if (!warnings.includes(NBL_EXCLUSION_RANGE_POSITION_NOTICE)) warnings.push(NBL_EXCLUSION_RANGE_POSITION_NOTICE);
     steps.push({

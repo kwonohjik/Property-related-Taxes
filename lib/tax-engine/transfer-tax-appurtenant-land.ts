@@ -14,6 +14,7 @@ import { calculateHoldingPeriod } from "./tax-utils";
 import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
 import { landOnlyHouseholdMergeDate } from "./land-only-owner-household";
 import { laterOfMergeDate } from "./land-only-owner-household";
+import { areaTimes, judgeAreaLimit } from "./area-limit";
 import { round2 } from "./area-utils";
 import { appurtenantLandMultiplier, expropriationZoneBaseDateNotice } from "./appurtenant-land-rate";
 import { resolveOneHouseMinHoldingYears } from "./data/one-house-holding-residence-era";
@@ -597,8 +598,9 @@ export function resolveAppurtenantLandExcess(
   const { zone, footprint, landArea } = zoneInputs;
 
   const multiplier = appurtenantLandMultiplier(zone, input.transferDate);
-  const limitArea = round2(footprint * multiplier);
-  const excessArea = round2(Math.max(0, landArea - limitArea));
+  // NBL2611-V9-I — 한도·초과는 정수 정확 연산(`area-limit.ts`). `round2`는 면적 2자리 확정 역할만 유지한다.
+  const limitArea = round2(areaTimes(footprint, multiplier));
+  const excessArea = round2(judgeAreaLimit(landArea, limitArea).excess);
   if (excessArea <= 0) return null;
   return { multiplier, limitArea, excessArea, nonBizRatio: excessArea / landArea };
 }

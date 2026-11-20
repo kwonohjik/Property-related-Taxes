@@ -11,6 +11,7 @@
  * 종전에는 `landType === "building_site"`를 이 모듈이 받아 주택 배율을 적용했다(A-BS-1, 2026-08-05 정정).
  */
 
+import { areaRatio4, areaTimes, judgeAreaLimit } from "../area-limit";
 import { differenceInDays } from "../utc-date";
 import { NBL } from "../legal-codes";
 import type {
@@ -91,7 +92,9 @@ export function judgeHousingLand(
     isMetropolitan,
     input.transferDate,
   );
-  const allowedArea = footprint * multiplier;
+  // NBL2611-V9-I — 한도·초과 면적은 정수 정확 비교(`area-limit.ts` 단일 소스).
+  const allowedArea = areaTimes(footprint, multiplier);
+  const limit = judgeAreaLimit(input.landArea, allowedArea);
 
   steps.push({
     id: "housing_multiplier",
@@ -101,7 +104,7 @@ export function judgeHousingLand(
     legalBasis: NBL.HOUSING_MULTIPLIER,
   });
 
-  if (input.landArea <= allowedArea) {
+  if (limit.within) {
     const area: AreaProportioning = {
       totalArea: input.landArea,
       businessArea: input.landArea,
@@ -133,12 +136,12 @@ export function judgeHousingLand(
     };
   }
 
-  const nonBusinessArea = input.landArea - allowedArea;
+  const nonBusinessArea = limit.excess;
   const area: AreaProportioning = {
     totalArea: input.landArea,
     businessArea: allowedArea,
     nonBusinessArea,
-    nonBusinessRatio: Math.round((nonBusinessArea / input.landArea) * 10000) / 10000,
+    nonBusinessRatio: areaRatio4(nonBusinessArea, input.landArea),
     buildingMultiplier: multiplier,
     legalBasis: [NBL.HOUSING_MULTIPLIER],
   };

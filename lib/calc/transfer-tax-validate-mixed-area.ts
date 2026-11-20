@@ -7,6 +7,7 @@
  *   빈값 = 자동 안분 / "0" = 적법한 0. 문자열 수준 분기(`(x ?? "").trim() !== ""`).
  */
 
+import { areaTimes, isAreaOver } from "@/lib/tax-engine/area-limit";
 import { round2 } from "@/lib/tax-engine/area-utils";
 import { computeDerivedAreas } from "@/lib/tax-engine/mixed-use-derived-areas";
 import { getHousingMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
@@ -146,7 +147,7 @@ export function validateMixedUseAreas(
     );
     if (
       derived.residentialFootprintArea > 0 &&
-      derived.residentialLandArea > derived.residentialFootprintArea * minMultiplier
+      isAreaOver(derived.residentialLandArea, areaTimes(derived.residentialFootprintArea, minMultiplier))
     ) {
       return fieldError("mixedZoneType", `${label}: 부수토지가 정착면적의 ${minMultiplier}배를 넘습니다 — 배율(3·5·10배)이 세액을 가르므로 용도지역을 선택하세요 (「소득세법 시행령」 §168의12·§154⑦). (면적 정보)`);
     }

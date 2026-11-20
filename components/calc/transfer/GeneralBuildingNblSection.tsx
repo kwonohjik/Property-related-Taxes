@@ -29,6 +29,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { NblDesignatedAreaQuestion } from "./nbl/NblDesignatedAreaQuestion";
 import { NblExcessConfirmNotice } from "./NblExcessConfirmNotice";
+import { areaTimes, isAreaOver } from "@/lib/tax-engine/area-limit";
 import { getBuildingSiteMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 
@@ -57,11 +58,11 @@ export function GeneralBuildingNblSection({ asset, onChange, transferDate }: Pro
   const landArea = parseDecimal(asset.gbLandArea);
   const multiplierNum = zoneMultiplier?.multiplier;
   const allowedArea =
-    footprint > 0 && multiplierNum !== undefined ? footprint * multiplierNum : null;
+    footprint > 0 && multiplierNum !== undefined ? areaTimes(footprint, multiplierNum) : null;
   // 엔진이 비사업용 토지 카드(`land_nbl`)를 만드는 경우 — 무허가건축물은 토지 전체, 아니면 한도 초과분. 아래 한도 미리보기와 같은 판정이다.
   const hasNblPart = asset.gbUnapprovedBuilding
     ? landArea > 0
-    : footprint > 0 && landArea > 0 && allowedArea !== null && landArea > allowedArea;
+    : footprint > 0 && landArea > 0 && allowedArea !== null && isAreaOver(landArea, allowedArea);
   return (
     <>
         {/* 비사업용토지 판정 (rose) — 항상 표시.

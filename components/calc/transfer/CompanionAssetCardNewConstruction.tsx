@@ -21,6 +21,7 @@ import {
   appurtenantLandMultiplier,
   type AppurtenantLandZone,
 } from "@/lib/tax-engine/appurtenant-land-rate";
+import { areaTimes } from "@/lib/tax-engine/area-limit";
 import { appurtenantCardLimitShare } from "@/lib/tax-engine/appurtenant-land-rate";
 import { appurtenantCardAreaM2 } from "@/lib/calc/transfer-tax-api-helpers";
 import { primaryEnginePropertyType } from "@/lib/calc/transfer-tax-api-helpers";
@@ -112,7 +113,7 @@ export function useUnifiedRateBadge(
           ? "non_metropolitan_or_green"
           : "non_urban");
     const multiplier = appurtenantLandMultiplier(zone, trnDate);
-    const limitArea = footprint * multiplier;
+    const limitArea = areaTimes(footprint, multiplier);
     /**
      * #17 후속(K1) — route(`resolveCompanionSplit`)가 주택 카드 토지를 한도에서 먼저 빼므로 배지도 같은 leaf로 잰다. 종전에는 카드 단독으로
      * 한도 전체와 비교해, 주택 토지가 이미 한도를 넘은 카드에 «자동 적용»을 띄우고 route는 그 카드를 전부 초과분(비사업용 토지)으로 계산했다.
