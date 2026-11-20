@@ -25,7 +25,7 @@ import {
 import { CALC_WARNING_UNMET_IDS } from "./one-house/unmet-exceptions";
 import { article89Clause2Notices, surchargeDeclarationMatters } from "./transfer-tax-89-2-consequences";
 import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
-import { mergeConfirmWarnings } from "./one-house/merge-confirm-warnings";
+import { mergeConfirmWarnings, NO_ROSTER_SINGLE_MERGE_NOTICE } from "./one-house/merge-confirm-warnings";
 import { requirementReviewUnmetNotice } from "./one-house/requirement-review-notice";
 
 /** 「적용되지 않은 특례」 1건 → 결과 경고 문장 — 겸용주택 경로(`transfer-tax-mixed-use-unmet-notices.ts`)와 같은 형식. */
@@ -120,6 +120,12 @@ export function oneHouseJudgmentWarnings(
         meetsOneHouseHoldingResidence(judgeInput, oneHouseRules.one_house_exemption),
       ),
     );
+  }
+
+  // Q-32 — 명부 없는 화면에서 2주택 단일 합가가 결론을 낸 비과세면 구성 미확인을 알린다(I-34). 표식은 증여 화면만 싣는다.
+  if ((exemptionResult.isExempt || exemptionResult.isPartialExempt) && judgeInput.noMergeRosterInputPath === true) {
+    const applied = (exemptionResult.appliedExceptions ?? []).map((e) => e.id);
+    if (applied.includes("155-5-marriage-merge") || applied.includes("155-4-parental-care-merge")) warnings.push(NO_ROSTER_SINGLE_MERGE_NOTICE);
   }
 
   // §155⑦3호 귀농주택 — ⑩4호·⑪은 입력으로 받아 판정한다(결정 #44). 장래 사실인 ⑫ 사후관리(추징)만 고지한다 — 판정 메뉴 결과와 같은 문장.

@@ -232,7 +232,8 @@ dateToStr(bgt.acquisitionDate)
         <DecimalInput
           value={householdCount > 0 ? String(householdCount) : "1"}
           onChange={(v) =>
-            set({ householdHousingCount: Math.max(1, parseDecimal(v) || 1) })
+            // 정수만 — ⑫ `.int()`와 같다. 붙여넣은 「2.5」가 소수로 저장되면 ⑧을 지나 400이 났다(2026-11 리뷰 D-94).
+            set({ householdHousingCount: Math.max(1, Math.floor(parseDecimal(v)) || 1) })
           }
           data-testid="bg-transfer-house-count"
         />
@@ -301,7 +302,7 @@ dateToStr(bgt.acquisitionDate)
       {(bgt.isOneHousehold) && (
         <FieldCard
           label="거주기간 (개월)"
-          hint="1세대1주택 장특공제 표2 적용을 위한 거주기간 (개월 정수)."
+          hint="보유기간(취득일~증여일) 중 실제 거주한 개월만 — 취득 전 임차 거주는 넣지 않습니다. 1세대1주택 거주요건(§154①)·장특 표2(§95②)에 쓰입니다."
           required
         >
           <div data-testid="bg-transfer-residence">
