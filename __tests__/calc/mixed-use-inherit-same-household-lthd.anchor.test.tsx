@@ -90,7 +90,8 @@ describe("겸용 동일세대 상속 · 장특 = 일반 경로(V-5)", () => {
     ["C 상속 2021-10 · 실거주 0 · 동일세대", "2021-10-01", "0", true, { table: 2, years: 2, rate: 0, amount: 0 }],
   ] as const)("%s", async (_n, inh, own, same, expected) => {
     const run = async (mixed: boolean) => {
-      const f = form({ mixed, same, price: "3000000000", start: "2015-06-01", cohabRes: "60" });
+      // D-12 — 개시 2015-06-01 ~ 상속개시 2019-10-01은 최대 52개월(종전 60은 ⑧·⑫가 막는다). 표2 대상 판정(2년 이상)은 그대로다.
+      const f = form({ mixed, same, price: "3000000000", start: "2015-06-01", cohabRes: "52" });
       Object.assign(f.assets[0], { acquisitionDate: inh, inheritanceStartDate: inh, residencePeriodMonthsAsset: own });
       Object.assign(f, { transferDate: "2024-09-18", filingDate: "2024-12-31" });
       const r = await runCalc(f);

@@ -29,7 +29,7 @@ const SAME_HOUSEHOLD: Partial<AssetForm> = {
   decedentAcquisitionDate: "2005-01-01",
   decedentSameHouseholdBeforeInheritance: true,
   decedentCohabitationHoldingStartDate: "2010-01-01",
-  decedentCohabitationResidenceMonths: "150",
+  decedentCohabitationResidenceMonths: "0", // D-12 — 개시일 경계 시료(상속개시 전날 등)에서도 상한(개시일~상속개시일) 안
   // ⑧의 다른 필수값 — 순서 검사 **외의** 사유로 막히지 않게 채운다(긍정 짝이 「전부 통과」를 본다).
   publishedValueAtInheritance: "300,000,000",
   addressRoad: "서울특별시 강남구 테헤란로 1",

@@ -148,3 +148,15 @@ export function directResidenceMonthsOverflowError(args: {
       `거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요.${args.giftPriorHint ? GIFT_PRIOR_HINT : args.landPriorHint ? LAND_PART_PRIOR_HINT : ""}`,
   );
 }
+
+/**
+ * §156의2⑤1호 대체주택 거주개월 상한(2026-11 리뷰 D-14 · 결정 Q-8) — 양도하는 주택이 대체주택이라 그 취득일부터 양도일까지(§154⑥ 초일 산입)를
+ * 넘을 수 없다(재산세과-1140 — 보유기간 동안의 전입~전출 통산). 판정 메뉴 ⑧·⑫ refine이 같은 기준을 쓴다. 날짜가 없으면 판정하지 않는다.
+ */
+export function replacementResidenceMonthsCapMessage(months: number, acquisitionDate?: string, transferDate?: string): string | null {
+  if (!acquisitionDate || !transferDate || transferDate < acquisitionDate) return null;
+  const max = residenceIntervalMonths(acquisitionDate, transferDate);
+  if (months <= max) return null;
+  return `대체주택 거주개월수 ${months}개월이 대체주택 취득일(${acquisitionDate})부터 양도일까지의 ${max}개월을 넘습니다 — 보유기간 중 거주만 셉니다(소령 §156의2⑤1호).`;
+}
+

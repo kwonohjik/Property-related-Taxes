@@ -8,6 +8,8 @@ import { isPhdEligible } from "@/lib/calc/phd-eligibility";
 import { decedentOrderBasisDate } from "@/lib/calc/decedent-order-basis";
 import { toDate } from "@/lib/api/date-coerce";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { replacementResidenceMonthsCapMessage } from "@/lib/calc/residence-interval-validate";
+import { cohabitationResidenceMonthsCap } from "@/lib/tax-engine/one-house/residence-months";
 import { priorResidenceTransferDateRange } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/prior-residence-range";
 import { TRANSFER_RENTAL_HOUSING } from "@/lib/tax-engine/legal-codes/transfer";
 import { maxPriorResidenceMonthsBetween } from "@/lib/tax-engine/one-house/gift-household-basis";
@@ -136,6 +138,7 @@ export function addPropertyRefines(
     houses?: ReadonlyArray<{ isInherited: boolean; inheritedDate?: string }>;
     decedentSameHouseholdBeforeInheritance?: boolean;
     decedentCohabitationHoldingStartDate?: string;
+    decedentCohabitationResidenceMonths?: number;
     /** §155① 교차 검증(`refineTemporaryTwoHouseCross`) — 주택 수·일시적 2주택·§154① 단서 */
     householdHousingCount?: number;
     temporaryTwoHouse?: { newAcquisitionDate: string } | null;
@@ -169,6 +172,28 @@ export function addPropertyRefines(
       path: ["decedentCohabitationHoldingStartDate"],
       message: "동일세대 상속이면 동일세대 거주·보유 개시일이 필요합니다 (소득세법 시행령 §154⑧3호)",
     });
+  }
+  // D-14 · Q-8 — 대체주택(양도 주택) 거주개월은 그 취득일부터 양도일까지를 넘을 수 없다(⑧ `replacementResidenceMonthsCapMessage`와 같은 기준).
+  const repl = (data as { replacementHouse?: { replacementResidenceMonths?: number } | null }).replacementHouse;
+  if (repl?.replacementResidenceMonths !== undefined) {
+    const msg = replacementResidenceMonthsCapMessage(repl.replacementResidenceMonths, data.acquisitionDate, data.transferDate);
+    if (msg) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["replacementHouse", "replacementResidenceMonths"], message: msg });
+  }
+  // D-12 — 상속개시 전 동일세대 거주 개월은 개시일부터 상속개시일까지를 넘을 수 없다(⑧ `cohabitationResidenceMonthsError`·엔진 클램프와 같은 상한).
+  if (
+    data.acquisitionCause === "inheritance" &&
+    data.propertyType === "housing" &&
+    data.decedentSameHouseholdBeforeInheritance === true &&
+    data.decedentCohabitationResidenceMonths !== undefined
+  ) {
+    const cap = cohabitationResidenceMonthsCap(toOptionalDate(data.decedentCohabitationHoldingStartDate), toOptionalDate(data.acquisitionDate));
+    if (cap !== undefined && data.decedentCohabitationResidenceMonths > cap) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["decedentCohabitationResidenceMonths"],
+        message: `상속개시 전 동일세대 거주 개월은 동일세대 개시일부터 상속개시일까지(${cap}개월)를 넘을 수 없습니다 (소득세법 시행령 §154⑧3호)`,
+      });
+    }
   }
   // 소유자 분리 — 토지 취득일 (소령 §166⑥, §168②). 단건·다건 공용. 다건 자산은 이 검증 없이 통과해
   // 토지 취득일 누락이 200 + 분리 없는 세액이 됐다(2026-09-30 — 단건만 걸려 있었다).

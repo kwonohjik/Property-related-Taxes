@@ -126,7 +126,8 @@ describe("OH-18 §154⑧3호 동일세대 상속 통산 — 판정 메뉴 ④ �
 
   it("[C2-18b2] 통산해도 2년이 안 되면 기한은 **통산 기산일**부터 — 2023-01-01 개시 → 2024-12-31", async () => {
     const d = await judgeForm(
-      jForm({}, { ...SAME_HOUSEHOLD, decedentCohabitationHoldingStartDate: "2023-01-01" }),
+      // D-12 — 2023-01-01 개시면 상속개시(2023-12-01)까지 통산 거주는 최대 11개월(종전 시료 150은 ⑧·⑫가 막는다)
+      jForm({}, { ...SAME_HOUSEHOLD, decedentCohabitationHoldingStartDate: "2023-01-01", decedentCohabitationResidenceMonths: "11" }),
     );
     expect(d.judgment.isExempt).toBe(false);
     expect(d.judgment.pending.map((p: { id: string }) => p.id)).toEqual(["154-1-holding-years"]);

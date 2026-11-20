@@ -7,6 +7,7 @@
  * `judgmentReplacementHouseVisible`). 두 곳에 같은 JSX를 복제하지 않으려고 뺐다.
  */
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { IntegerInput } from "@/components/calc/inputs/IntegerInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
@@ -92,14 +93,12 @@ export function ReplacementHouseSpecialBlock({
             <label className="text-sm font-medium">
               대체주택 거주개월수 <span className="text-destructive">*</span>
             </label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={form.replResidenceMonths}
-              onChange={(e) =>
-                onChange({ replResidenceMonths: e.target.value.replace(/[^0-9]/g, "") })
-              }
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            {/* D-14 — 정수 입력 공용 컴포넌트(native input 대체) */}
+            <IntegerInput
+              ariaLabel="대체주택 거주개월수"
+              allowEmpty
+              value={form.replResidenceMonths === "" ? undefined : Number(form.replResidenceMonths)}
+              onChange={(v) => onChange({ replResidenceMonths: v === undefined ? "" : String(v) })}
             />
             <p className="text-xs text-muted-foreground">대체주택에 실제 거주한 총 개월수 (1년 이상 = 12개월 이상)</p>
           </div>

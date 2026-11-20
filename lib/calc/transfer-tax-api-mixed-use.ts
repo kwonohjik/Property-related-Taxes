@@ -10,6 +10,8 @@
  */
 
 import { buildMixedLandHoldingResidencePayload } from "./transfer-land-holding-residence-scope";
+import { cohabitationResidenceMonthsCap } from "@/lib/tax-engine/one-house/residence-months";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { isMixedUseCaseA } from "./mixed-use-case";
 import {
@@ -286,6 +288,11 @@ export function buildMixedUsePayload(primary: AssetForm, form: TransferFormData)
         decedentSameHouseholdBeforeInheritance: primary.decedentSameHouseholdBeforeInheritance,
         decedentCohabitationResidenceMonths:
           parseInt(primary.decedentCohabitationResidenceMonths) || 0,
+        // D-12 — 엔진과 같은 상한(동일세대 개시일 ~ 상속개시일)
+        cohabitationCap: cohabitationResidenceMonthsCap(
+          toOptionalDate(primary.decedentCohabitationHoldingStartDate),
+          toOptionalDate(primary.acquisitionDate),
+        ),
       }) / 12,
     ),
     isMetropolitanArea: primary.mixedIsMetropolitanArea,

@@ -9,8 +9,9 @@
  * 이 파일은 그 파일의 **타입만** 가져온다(런타임 의존은 단방향).
  */
 import type { TransferTaxInput } from "../types/transfer.types";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { ResidenceReqInput } from "../transfer-tax-exemption-holding";
-import { giftHouseholdPriorResidenceMonths } from "./gift-household-basis";
+import { giftHouseholdPriorResidenceMonths, maxPriorResidenceMonthsBetween } from "./gift-household-basis";
 import { landPartPriorResidenceMonths } from "../transfer-split-land-residence";
 
 /**
@@ -25,15 +26,33 @@ export function consolidateResidenceMonths(
     acquisitionCause?: TransferTaxInput["acquisitionCause"];
     decedentSameHouseholdBeforeInheritance?: boolean;
     decedentCohabitationResidenceMonths?: number;
+    /** 상속개시 전 동일세대 거주 개월 상한(`cohabitationResidenceMonthsCap`) — 있으면 그 값으로 자른다(2026-11 리뷰 D-12). */
+    cohabitationCap?: number;
   },
 ): number {
   if (
     opts.acquisitionCause === "inheritance" &&
     opts.decedentSameHouseholdBeforeInheritance === true
   ) {
-    return residencePeriodMonths + (opts.decedentCohabitationResidenceMonths ?? 0);
+    const months = opts.decedentCohabitationResidenceMonths ?? 0;
+    return residencePeriodMonths + (opts.cohabitationCap === undefined ? months : Math.min(months, opts.cohabitationCap));
   }
   return residencePeriodMonths;
+}
+
+/**
+ * §154⑧3호 「상속개시 전에 상속인과 피상속인이 동일세대로서 거주하고 보유한 기간」의 상한 — 동일세대 개시일부터 상속개시일까지의 개월
+ * (2026-11 리뷰 D-12 — 상한이 없어 999개월로 거주요건을 채웠다). 증여 전 동일세대 거주(`maxPriorResidenceMonthsBetween`)와 같은 셈.
+ * 엔진 클램프·⑧(`cohabitationResidenceMonthsError`)·⑫ refine이 같은 값을 쓴다. 날짜가 없으면 `undefined`(⑧이 개시일을 먼저 받는다).
+ */
+export function cohabitationResidenceMonthsCap(
+  start: Date | string | undefined,
+  inheritanceDate: Date | string | undefined,
+): number | undefined {
+  // 화면 leaf(판정 카드 등)가 문자열 날짜로 엔진 입력을 만들어 부르는 경로가 있다 — 같은 값으로 읽는다.
+  const s = toOptionalDate(start);
+  const i = toOptionalDate(inheritanceDate);
+  return s && i ? maxPriorResidenceMonthsBetween(s, i) : undefined;
 }
 
 /**
@@ -69,7 +88,10 @@ export function consolidateResidenceMonths(
  */
 export function resolveExemptionResidenceMonths(input: ResidenceReqInput): number {
   if (input.nonHousingToHousingConversion) return input.residencePeriodMonths;
-  return consolidateResidenceMonths(input.residencePeriodMonths, input);
+  return consolidateResidenceMonths(input.residencePeriodMonths, {
+    ...input,
+    cohabitationCap: cohabitationResidenceMonthsCap(input.decedentCohabitationHoldingStartDate, input.acquisitionDate),
+  });
 }
 
 /**

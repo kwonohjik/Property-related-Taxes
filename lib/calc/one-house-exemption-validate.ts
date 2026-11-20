@@ -18,6 +18,8 @@
  * 여기서 막는 것은 **판정이 불가능한 입력**(필수값 부재·모순)뿐이다.
  */
 import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
+import { replacementResidenceMonthsCapMessage } from "./residence-interval-validate";
+import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { parentalCareAgeIssues } from "./parental-care-age-issue";
 import { generalHouseRightAtInheritanceVisible } from "./inheritance-general-house-scope";
 import { judgmentNonResidentPeriodVisible } from "./one-house-non-resident";
@@ -415,6 +417,21 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
       errors.push(
         err("replResidenceMonths", "대체주택 특례: 대체주택 거주개월수를 1개월 이상 입력하세요."),
       );
+    } else {
+      // D-14 · 결정 Q-8 — 칸은 유지하되 보유기간 상한(엔진·⑫와 같은 기준)과, 양도 주택 거주 위젯과 다르면 경고(같은 주택의 거주기간이다).
+      const replMonths = parseInt(form.replResidenceMonths, 10);
+      const replPrimary = form.assets?.[0];
+      const capMsg = replacementResidenceMonthsCapMessage(replMonths, replPrimary?.acquisitionDate, form.transferDate);
+      if (capMsg) errors.push(err("replResidenceMonths", `대체주택 특례: ${capMsg}`));
+      const widgetMonths = replPrimary ? deriveResidencePeriodMonths(replPrimary, form.transferDate, form.residencePeriodMonths) : undefined;
+      if (!capMsg && widgetMonths !== undefined && widgetMonths !== replMonths) {
+        errors.push(
+          warn(
+            "replResidenceMonths",
+            `대체주택 특례: 대체주택 거주개월수(${replMonths}개월)와 양도 주택 거주기간(${widgetMonths}개월)이 다릅니다 — 양도하는 주택이 대체주택이면 같은 기간입니다. 특례 판정에는 대체주택 거주개월수를 씁니다.`,
+          ),
+        );
+      }
     }
     if (!form.replWillResideNewHouse) {
       errors.push(

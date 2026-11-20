@@ -36,6 +36,7 @@ import { threeHouseMergeRequirementsHold } from "@/lib/tax-engine/one-house/merg
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { buildSameHouseholdInheritancePayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { sameHouseholdInheritanceOrderError } from "@/lib/calc/same-household-inheritance-order";
+import { cohabitationResidenceMonthsError } from "@/lib/calc/same-household-inheritance-order";
 import {
   buildWinWinRentalPayload,
   toWinWinRentalHouseFact,
@@ -287,7 +288,7 @@ export function giftBurdenedInheritanceError(
     if (!s.decedentCohabitationHoldingStartDate) {
       return "동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)";
     }
-    return sameHouseholdInheritanceOrderError(s);
+    return sameHouseholdInheritanceOrderError(s) ?? cohabitationResidenceMonthsError(s); // D-12 상한
   }
   return null;
 }

@@ -19,6 +19,7 @@ import { collectResidenceIntervalErrors } from "./residence-interval-validate";
 import { directResidenceMonthsOverflowError } from "./residence-interval-validate";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { sameHouseholdInheritanceOrderError } from "./same-household-inheritance-order";
+import { cohabitationResidenceMonthsError } from "./same-household-inheritance-order";
 import { winWinRentalFieldErrors } from "./one-house-extra-facts-payload";
 import { winWinResidenceExemptForJudgment } from "./one-house-extra-facts-payload";
 import { judgmentSaleIsHousing, type OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
@@ -107,6 +108,8 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
       // 순서(상속개시 전 · 피상속인 취득 후) — 계산기 ⑤·⑧과 **같은 leaf**(E-2).
       const order = sameHouseholdInheritanceOrderError(primary);
       if (order) errors.push(err("decedentCohabitationHoldingStartDate", order));
+      const cap = cohabitationResidenceMonthsError(primary); // D-12 — 엔진 클램프와 같은 상한
+      if (!order && cap) errors.push(err("decedentCohabitationResidenceMonths", cap));
     }
   }
 
