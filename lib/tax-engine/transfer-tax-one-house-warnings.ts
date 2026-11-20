@@ -105,7 +105,19 @@ export function oneHouseJudgmentWarnings(
   // OH-22 — §154⑤ 단서 재기산을 적용했으면 판정 메뉴 결과 카드와 같은 문장으로 알린다(재기산 기산일·근거).
   if (exemptionResult.finalOneHouseRestart?.applied) warnings.push(exemptionResult.finalOneHouseRestart.description);
   // OH-38 삭제 전 §154①4호 · §155① 취득 선후(D-1) 미충족이면 판정 메뉴의 「적용되지 않은 특례」와 같은 사유를 낸다.
-  for (const u of exemptionResult.unmetExceptions ?? []) if (CALC_WARNING_UNMET_IDS.has(u.id)) warnings.push(unmetExceptionWarning(u));
+  for (const u of exemptionResult.unmetExceptions ?? []) {
+    if (CALC_WARNING_UNMET_IDS.has(u.id)) {
+      warnings.push(unmetExceptionWarning(u));
+      continue;
+    }
+    // 2026-11 리뷰 I-10 · 결정 Q-5 — §155⑦ 농어촌주택·§155② 상속주택 불성립 사유도 옮긴다(판정 과세인데 계산기 경고 0건이던 시료 22/29).
+    //   판정 메뉴 전용 양론 카드를 가리키는 문장은 빼고, 이미 다른 경고가 말한 문장은 되풀이하지 않는다(문장 단위 중복 제거).
+    if (!isSpecialHouseUnmetForCalc(u.id)) continue;
+    const reasons = u.reasons
+      .map((r) => r.replace(CONTESTED_CARD_POINTER, CALC_CONTESTED_POINTER))
+      .filter((r) => !r.includes("해석이 갈리는 쟁점") && !warnings.some((w) => w.includes(r)));
+    if (reasons.length > 0) warnings.push(unmetExceptionWarning({ label: u.label, reasons }));
+  }
 
   /**
    * §155④⑤ 합가 — 「모름」으로 불성립했고 그것이 **결론을 가를 때만** 확인 필요를 고지한다
@@ -162,3 +174,14 @@ export function oneHouseJudgmentWarnings(
   }
   return warnings;
 }
+
+/** I-10 — 계산기 결과로 옮기는 §155⑦(`155-7-rural:*`)·§155②(`155-2-inherited-house`) 불성립 사유. */
+function isSpecialHouseUnmetForCalc(id: string): boolean {
+  return id.startsWith("155-7-rural:") || id === "155-2-inherited-house";
+}
+
+/** 판정 메뉴 결과의 양론 카드를 가리키는 꼬리 — 계산기에는 그 카드가 없어 계산이 따른 입장과 볼 곳으로 바꾼다(I-10 · 리뷰 주의 사항). */
+const CONTESTED_CARD_POINTER = " — 아래 「해석이 갈리는 쟁점」에서 두 결론을 함께 확인하세요.";
+const CALC_CONTESTED_POINTER =
+  " — 이 계산은 과세관청 해석을 따랐습니다. 두 입장의 결론은 1세대1주택 비과세 판정 메뉴에서 함께 볼 수 있습니다.";
+
