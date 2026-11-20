@@ -15,6 +15,10 @@
  * | P-2 | 일반 증여 격자 | 같은 5개 값이 엔진과 같다(예·아니오 × 시작일 × 증여일) |
  * | P-3 | 구별력 | 격자에 「단일 기준일이면 엔진과 갈리는 칸」이 실제로 있다(공허한 일치가 아니다) |
  * | P-4 | 게이트 | 다건 임베드·2번째 자산·용도변경 주택은 basis를 만들지 않는다 — 엔진도 증여 세대 사실을 받지 않는다 |
+ * | P-5 | 재개발 완공APT 격자 | 승계 증여(통산 예/아니오)·주택 출자 원조합원 증여(같은 세대 예/아니오)·토지 출자(#12 통산 예/아니오) × 마포 해제 2023-01-05 · 재지정 2025-10-16 경계 전날/당일 — 화면 값 = 엔진(번역 뒤) · 주소 문자열 경로 ④ boolean = 코드 경로 엔진 |
+ *
+ * 엔진 정답은 재개발 번역(`translateRedevAptForHousingJudgment`)을 거친 입력으로 낸다 — 엔진 판정 단계(`transfer-tax-judgment-steps.ts`)가 그렇게 읽는다.
+ * 번역 전 입력이면 재개발 칸의 정답 자체가 틀린다(2026-11 리뷰 I-37 · D-86).
  */
 import { describe, it, expect } from "vitest";
 import { propertySchema } from "@/lib/api/transfer-tax-schema";
@@ -30,6 +34,8 @@ import {
 import { buildResidenceReqInput } from "@/lib/calc/transfer-tax-api";
 import { resolveWasRegulatedAtAcquisition } from "@/lib/tax-engine/transfer-tax-exemption-holding";
 import { carryoverGiftHouseholdBasis } from "@/lib/tax-engine/one-house/gift-household-basis";
+import { translateRedevAptForHousingJudgment } from "@/lib/tax-engine/one-house/redev-apt-judgment-input";
+import { redevAptForm } from "./_helpers/redev-one-house-route";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { CARRYOVER_DEFAULTS } from "@/lib/stores/calc-wizard-asset-carryover";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -97,12 +103,13 @@ async function engineTruth(form: TransferFormData): Promise<{ truth: boolean; bo
     toOptionalDate(data.assetContractDate),
   );
   const basis = input.carryoverTaxation ? carryoverGiftHouseholdBasis(input.carryoverTaxation, true) : input.giftHouseholdBasis;
+  const judged = translateRedevAptForHousingJudgment({ ...input, giftHouseholdBasis: basis });
   const truth = resolveWasRegulatedAtAcquisition({
-    regionCode: input.regionCode,
-    regionInDesignatedDistrict: input.regionInDesignatedDistrict,
-    acquisitionDate: input.acquisitionDate,
-    wasRegulatedAtAcquisition: input.wasRegulatedAtAcquisition,
-    giftHouseholdBasis: basis,
+    regionCode: judged.regionCode,
+    regionInDesignatedDistrict: judged.regionInDesignatedDistrict,
+    acquisitionDate: judged.acquisitionDate,
+    wasRegulatedAtAcquisition: judged.wasRegulatedAtAcquisition,
+    giftHouseholdBasis: judged.giftHouseholdBasis,
   } as never);
   return { truth, bodyBoolean: data.wasRegulatedAtAcquisition };
 }
@@ -228,5 +235,90 @@ describe("P-4 게이트 — 엔진이 증여 세대 사실을 받지 않는 위�
   it("[P-4c] 답이 없거나 ⑧이 막는 사실(시작일 범위 밖)은 싣지 않는다 — ④와 같다", () => {
     expect(calcGiftHouseholdBasis({ ...reverse(), giftSameHousehold: "" } as AssetForm, PRIMARY)).toBeUndefined();
     expect(calcGiftHouseholdBasis({ ...reverse(), giftHouseholdHoldingStartDate: regGift } as AssetForm, PRIMARY)).toBeUndefined();
+  });
+});
+
+describe("P-5 재개발 완공APT — 화면 값 = 엔진(번역 뒤) · 주소 문자열 경로 = 코드 경로", () => {
+  // 마포 2023-01-05 해제 · 2025-10-16 재지정. 경계 전날/당일.
+  const B = { offBefore: "2023-01-04", offAt: "2023-01-05", onBefore: "2025-10-15", onAt: "2025-10-16" };
+  const redev = (assetOver: Record<string, unknown>, address = false) => {
+    const f = redevAptForm({
+      price: "1000000000",
+      assetOver: {
+        regionCode: address ? "" : MAPO,
+        addressJibun: "서울특별시 마포구 테스트동 1-1",
+        residenceInputMode: "direct",
+        residencePeriodMonthsAsset: "0",
+        residencePeriods: [],
+        redevPriorHouseResidenceMonths: "0",
+        redevNewHouseResidenceMonths: "0",
+        ...assetOver,
+      },
+      formOver: { transferDate: "2026-06-01", residencePeriodMonths: "0" } as never,
+    });
+    if (address) f.regionCode = "";
+    return f;
+  };
+  type RedevCell = { label: string; over: Record<string, unknown> };
+  const cells: RedevCell[] = [];
+  for (const completion of [B.onBefore, B.onAt])
+    for (const gift of [B.offBefore, B.offAt])
+      for (const consolidate of ["yes", "no"] as const)
+        cells.push({
+          label: `승계 증여 통산=${consolidate} 증여=${gift} 준공=${completion}`,
+          over: {
+            acquisitionCause: "gift", acquisitionDate: gift, donorAcquisitionDate: "2018-01-01", giftDonorRelation: "spouse",
+            redevOriginalAssetType: "housing", redevIsSuccessorMember: "yes", redevApprovalDate: "2019-06-01", redevCompletionDate: completion,
+            fixedAcquisitionPrice: "500000000", redevSettlementDirection: "", redevSettlementAmount: "",
+            redevSuccessorGiftSameHousehold: consolidate,
+            redevSuccessorGiftDonorHouseMember: consolidate === "yes" ? "yes" : "",
+            redevSuccessorGiftHouseholdStartDate: consolidate === "yes" ? "2018-01-01" : "",
+          },
+        });
+  for (const completion of [B.onBefore, B.onAt])
+    for (const gift of [B.offBefore, B.offAt])
+      for (const sh of ["yes", "no"] as const)
+        cells.push({
+          label: `주택 출자 원조합원 증여 같은 세대=${sh} 증여=${gift} 준공=${completion}`,
+          over: {
+            acquisitionCause: "gift", acquisitionDate: gift, donorAcquisitionDate: "2018-01-10", giftDonorRelation: "spouse",
+            fixedAcquisitionPrice: "400000000", giftSameHousehold: sh,
+            giftHouseholdHoldingStartDate: sh === "yes" ? "2018-01-10" : "", giftPriorHouseholdResidenceMonths: sh === "yes" ? "0" : "",
+            redevOriginalAssetType: "housing", redevIsSuccessorMember: "no", redevApprovalDate: "2023-06-01", redevCompletionDate: completion,
+          },
+        });
+  for (const completion of [B.onBefore, B.onAt])
+    for (const carry of ["yes", ""] as const)
+      cells.push({
+        label: `토지 출자 #12 통산=${carry || "없음"} 준공=${completion}`,
+        over: {
+          acquisitionDate: "2005-01-01", redevOriginalAssetType: "land", redevIsSuccessorMember: "no",
+          redevApprovalDate: "2023-06-01", redevCompletionDate: completion,
+          redevActualAcquisitionPrice: "100000000", fixedAcquisitionPrice: "100000000",
+          redevHouseholdBuildingCarryover: carry,
+          redevHouseholdBuildingAcquisitionDate: carry ? "2018-01-10" : "",
+          redevHouseholdBuildingResidenceMonths: carry ? "0" : "",
+        },
+      });
+
+  for (const c of cells) {
+    it(`[P-5] ${c.label}`, async () => {
+      const codeForm = redev(c.over);
+      const { truth } = await engineTruth(codeForm);
+      const a = codeForm.assets[0];
+      expect(calcEffectiveWasRegulatedAtAcquisition(a, false, codeForm.regionCode, PRIMARY), "⑤⑧ 실효값").toBe(truth);
+      expect(
+        regulatedVerdictForAcquisition({ regionCode: a.regionCode, date: calcResidenceJudgmentDate(a), giftHouseholdBasis: calcGiftHouseholdBasis(a, PRIMARY) })
+          ?.isRegulated,
+        "Step4 자동 판정",
+      ).toBe(truth);
+      const { bodyBoolean } = await engineTruth(redev(c.over, true));
+      expect(bodyBoolean, "주소 문자열 경로 ④ boolean").toBe(truth);
+    });
+  }
+  it("[P-5 구별력] 격자에 「취득 당시」 해당 칸과 미해당 칸이 모두 있다", async () => {
+    const truths = await Promise.all(cells.map(async (c) => (await engineTruth(redev(c.over))).truth));
+    expect(truths).toContain(true);
+    expect(truths).toContain(false);
   });
 });
