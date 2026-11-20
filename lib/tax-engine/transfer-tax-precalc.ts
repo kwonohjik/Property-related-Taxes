@@ -226,6 +226,8 @@ export function runPreCalculationSteps(
       // §114조의2 증여자 신축·증축 — 적용/미적용 안내를 경고 목록에도 싣는다(입력이 없으면 undefined)
       const donorBuiltNotice = donorBuiltPenaltyNotice(carryoverResult.detail.donorBuiltPenalty);
       if (donorBuiltNotice) warnings.push(donorBuiltNotice);
+      // D-53 — B 계산의 증여 세대 고지가 §97의2②2호 판단을 가르는 A 채택 비과세(이월과세 전용 문장)
+      for (const w of carryoverResult.inheritedWarnings ?? []) if (!warnings.includes(w)) warnings.push(w);
       steps.push({
         label: "배우자등 이월과세 판정",
         formula: carryoverResult.detail.isEligible

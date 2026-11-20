@@ -56,6 +56,11 @@ export interface CalcCarryoverResult {
    * "B" 이면 수증자 기준 inputB.
    */
   adoptedInput: TransferTaxInput;
+  /**
+   * 채택 결과에 승계할 경고 — A 채택 · A 비과세에서 B 계산의 증여 세대 고지가 §97의2②2호 판단을 가를 때(2026-11 리뷰 D-53).
+   * Orchestrator(`transfer-tax-precalc.ts`)가 결과 경고에 싣는다.
+   */
+  inheritedWarnings?: string[];
 }
 
 // ============================================================

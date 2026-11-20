@@ -38,7 +38,11 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
   {
     id: "TRANSFER.DEFINITIONS",
     citation: "소득세법 §88",
-    keywords: ["양도", "실지거래가액", "부담부증여", "1세대"],
+    keywords: [
+      "양도", "실지거래가액", "부담부증여", "1세대",
+      // 6호 1세대 범위 — 증여 세대 질문 안내(`TRANSFER.ONE_HOUSEHOLD_STATUTE_88_6` · I-24)가 기대는 문언(현행 본문 2026-11-20)
+      "거주자 및 그 배우자의 직계존비속(그 배우자를 포함한다) 및 형제자매를 말하며",
+    ],
     keywordMode: "ALL",
   },
   {
