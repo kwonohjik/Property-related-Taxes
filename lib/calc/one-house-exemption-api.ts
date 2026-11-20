@@ -132,7 +132,8 @@ export function buildOneHouseExemptionApiBody(
      *
      * 🔑 계산기와 **같은 필드**(`form.contractTotalPrice`)를 읽는다 — 자산-수준
      *    `actualSalePrice`가 아니다(`transfer-tax-api.ts:170` `totalContractPrice`와 동일 출처).
-     *    판정 메뉴는 단일 자산·지분 100% 전제이므로 안분(`applyRatio`)은 타지 않는다.
+     *    판정 메뉴의 예상 양도가액은 **주택 전체**(공동명의면 타인 몫 포함 — §156①)라 안분(`applyRatio`)은 타지 않는다.
+     *    공동명의 지분(결정 Q-24 — `JudgmentOwnershipShareField`)은 판정을 바꾸지 않고 계산기 넘기기(자산 통째)로만 간다.
      */
     transferPrice: parseAmount(form.contractTotalPrice),
     // ↓ 판정에 쓰이지 않는 세액 축 — 중립 placeholder.
