@@ -24,6 +24,7 @@ import type { NblRevenueBusinessType } from "../legal-codes";
 import { deriveCurrentBusinessDays } from "./revenue-test";
 import { resolveDeemedRentRate } from "../data/nbl-deemed-rent-rate";
 import { getZoneAreaMultiplier } from "../local-tax-zone-multiplier";
+import { propertyTaxBasisOptions, requiresDemolishedFloorArea, type PropertyTaxBasis } from "./property-tax-basis";
 import type { FactoryEntityType } from "../factory-employee-sports-standard";
 
 // ============================================================
@@ -300,9 +301,18 @@ export function buildOtherLand(
 ): OtherLandUsage | undefined {
   if (landType !== "other_land" && landType !== "vacant_lot" && landType !== "miscellaneous") return undefined;
   const relatedBusinessType = asString(a.nblOtherRelatedBusinessType) || undefined;
+  const propertyTaxType = (asString(a.nblOtherPropertyTaxType) || "comprehensive") as OtherLandUsage["propertyTaxType"];
+  const hasBuilding = asBool(a.nblOtherHasBuilding);
+  // NBL2611-V1-A — 재산세 분류 근거: 이 선언 + 건축물 유무에서 화면이 보여 주는 선택지일 때만 보낸다(숨겨진 stale 값은 전송하지 않는다 — §7.4).
+  const rawBasis = asString(a.nblOtherPropertyTaxBasis) as PropertyTaxBasis;
+  const propertyTaxBasis = propertyTaxBasisOptions(propertyTaxType, hasBuilding).includes(rawBasis) ? rawBasis : undefined;
   return {
-    propertyTaxType:                (asString(a.nblOtherPropertyTaxType) || "comprehensive") as OtherLandUsage["propertyTaxType"],
-    hasBuilding:                    asBool(a.nblOtherHasBuilding),
+    propertyTaxType,
+    propertyTaxBasis,
+    demolishedFloorArea:            requiresDemolishedFloorArea(propertyTaxType, hasBuilding, propertyTaxBasis)
+      ? parseNumber(asString(a.nblOtherDemolishedFloorArea))
+      : undefined,
+    hasBuilding,
     buildingFloorArea:              parseNumber(asString(a.nblOtherBuildingFloorArea)),
     /**
      * §168의11⑥ 복합용도 건축물 부속토지 안분 (B) — **「건축물 있음」 토글로 gate한다** (U2-01).

@@ -1,0 +1,88 @@
+[
+  {
+    "id": "E212-era",
+    "docNo": "상속증여세과-212",
+    "docDate": "2013.06.13.",
+    "basis": "era",
+    "today": "2015-06-16",
+    "summary": "§155⑥ 문화재주택 A(1970년 이전 상속) + 일반주택 B(2001 취득) 보유 세대가 신규 주택 C(2013.4. 취득)를 취득해 일시적 3주택, C 취득일부터 3년 이내 B 양도",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2015-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2001-06-01"
+      },
+      "houses": [
+        {
+          "id": "a",
+          "region": "non_capital",
+          "acquisitionDate": "1969-01-01",
+          "isInherited": true,
+          "inheritedDate": "1969-01-01",
+          "isCoInherited": false,
+          "decedentSameHouseholdAtInheritance": false,
+          "decedentHouseholdSeparate": true,
+          "acquisitionOrigin": "general",
+          "oneHouseCulturalHeritage": true
+        },
+        {
+          "id": "c",
+          "region": "capital",
+          "acquisitionDate": "2013-04-15",
+          "acquisitionOrigin": "general"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신: §155⑥ 문화재주택(A)과 일반주택(B)을 각각 1개씩 소유한 1세대가 새로운 주택(C)을 취득해 문화재주택을 포함하여 일시적으로 3주택이 된 경우, B 취득일부터 1년 이상 지난 후 C를 취득하고 C 취득일부터 3년 이내에 B를 양도하면 1세대1주택으로 보아 §154①을 적용(⑦ 선례 서면4팀-3617 인용). 엔진: 결론은 같고 경로가 다르다 — A가 상속주택이고 B는 2013-02-15 전 취득이라 「상속개시 당시 보유」 한정(대통령령 제24356호 부칙 제20조 — lib/tax-engine/data/inheritance-general-house-era.ts)이 걸리지 않아 §155②로 A가 주택 수에서 먼저 빠지고, 남은 B·C 2주택에 §155①이 적용된다(appliedExceptions 155-1). 회신은 ⑥ 경로로 답했다 — ⑥+① 겹침 경로는 E212-era-purchased-heritage가 고정한다. 원문 사실관계: A 1970년 이전 상속(경북 청송) · B 2001.00. 취득(서울 송파) · C 2013.04. 취득(서울 노원). 가정값: A 상속일 1969-01-01 · B 2001-06-01 · C 2013-04-15 · B 양도 2015-06-15(원문은 양도 전 질의) · 양도가 8억(원문에 가액 없음)."
+  },
+  {
+    "id": "E212-era-purchased-heritage",
+    "docNo": "상속증여세과-212",
+    "docDate": "2013.06.13.",
+    "basis": "era",
+    "today": "2015-06-16",
+    "summary": "E212-era의 변형 — 문화재주택 A를 상속이 아닌 매매로 취득(§155② 경로를 닫아 회신의 ⑥+① 겹침 경로만 남김)",
+    "form": {
+      "isOneHousehold": true,
+      "transferDate": "2015-06-15",
+      "contractTotalPrice": "800000000",
+      "asset": {
+        "assetKind": "housing",
+        "acquisitionDate": "2001-06-01"
+      },
+      "houses": [
+        {
+          "id": "a",
+          "region": "non_capital",
+          "acquisitionDate": "1969-01-01",
+          "acquisitionOrigin": "general",
+          "oneHouseCulturalHeritage": true
+        },
+        {
+          "id": "c",
+          "region": "capital",
+          "acquisitionDate": "2013-04-15",
+          "acquisitionOrigin": "general"
+        }
+      ]
+    },
+    "expected": {
+      "isExempt": true,
+      "appliedExceptions": [
+        "155-1-temporary-two-house",
+        "155-6-1ho-cultural-heritage"
+      ]
+    },
+    "bucket": "match",
+    "note": "match. 회신(상속증여세과-212)의 결론 문장은 A의 취득 원인을 요건으로 삼지 않는다(「§155⑥에 해당하는 문화재주택(A)과 일반주택(B)을 각각 1개씩 소유하고 있는 1세대가 새로운 주택(C)을 취득함으로써 … 일시적으로 3주택이 된 경우」). 엔진: §155① 분기(E-3)의 주택 수 게이트가 「⑥ 요건(신규 주택을 뺀 2주택 기준)을 갖춘 3주택」도 받는다(lib/tax-engine/transfer-tax-exemption-special-houses.ts heritageTemporaryTwoHouseOverlapCountHolds · 2026-11 리뷰 D-02 — 종전에는 과세). 가정값: A 매매 취득 1969-01-01 · 그 밖의 일자·가액은 E212-era와 같다."
+  }
+]

@@ -369,6 +369,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblVillaIsAfter20150101: false,
     nblVillaNoUseConfirmed: false,
     nblOtherPropertyTaxType: "",
+    nblOtherPropertyTaxBasis: "",
+    nblOtherDemolishedFloorArea: "",
     nblOtherBuildingValue: "",
     nblOtherLandValue: "",
     nblOtherIsRelatedToResidence: false,

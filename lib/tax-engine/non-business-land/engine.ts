@@ -358,6 +358,7 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
     periodEvaluation: categoryResult
       ? (categoryResult.periodEvaluation ?? { basis: "usage_periods" })
       : { basis: "not_judged" },
+    propertyTaxBasis: categoryResult?.propertyTaxBasis,
     /**
      * 양도일 의제(§168의14②) echo — **실제로 판정에 쓰인 경우에만** 싣는다 (F-1).
      *

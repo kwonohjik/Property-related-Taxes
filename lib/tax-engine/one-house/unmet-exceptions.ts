@@ -20,7 +20,7 @@ import {
   qualifiesLongTermMortgageContract,
   qualifiesLongTermMortgageResidenceExemption,
   RURAL_HOUSE_LABEL,
-  ruralTemporaryTwoHouseOverlapCountHolds,
+  ruralTemporaryTwoHouseOverlapApartFromDeadline,
   heritageTemporaryTwoHouseOverlapCountHolds,
   specialHouseTemporaryTwoHouseOverlapCountHolds,
   RURAL_HOUSE_RESIDENCE_YEARS,
@@ -350,7 +350,9 @@ function collectTemporaryTwoHouseUnmet(
    */
   const twoHouseRule = oneHouseRules.temporary_two_house;
   // 신규 주택의 취득 경위(분양권·조합원입주권 등 권리 유래) 때문에 불성립이면 그 사유를 밝힌다(결정 #43).
-  if (twoHouseRule && (twoHouseSpecialCountHolds(input) || specialHouseTemporaryTwoHouseOverlapCountHolds(input))) {
+  // D-07 — 귀농 기한만 넘긴 ⑦ 겹침 3주택도 §155① 쪽 사유(취득 경위·선후)를 밝힌다. 기한으로 치유되지 않는 사유라 기한 안내(pending)가 없다.
+  const ruralOverlapApart = ruralTemporaryTwoHouseOverlapApartFromDeadline(input);
+  if (twoHouseRule && (twoHouseSpecialCountHolds(input) || specialHouseTemporaryTwoHouseOverlapCountHolds(input) || ruralOverlapApart)) {
     const { origin, timing } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
     if (origin.blocked) reasons.push(...origin.reasons, ...origin.unconfirmed);
     // 종전·신규 취득 선후가 맞지 않으면(D-1) 1년 요건 면제 사유가 있어도 불성립이다 — 요건 표와 같은 문장 · 계산기 경고로도 옮긴다(아래 항목).
@@ -358,7 +360,7 @@ function collectTemporaryTwoHouseUnmet(
       orderReason = temporaryTwoHouseOrderReason(input.temporaryTwoHouse.previousAcquisitionDate, input.temporaryTwoHouse.newAcquisitionDate);
     }
   }
-  if (twoHouseRule && ruralTemporaryTwoHouseOverlapCountHolds(input)) {
+  if (twoHouseRule && ruralOverlapApart) {
     reasons.push(
       ...overlappedTemporaryTwoHouseTimingReasons(
         { ...input, temporaryTwoHouse: input.temporaryTwoHouse },
@@ -578,7 +580,8 @@ function collectRuralUnmet(
 
   const reasons: string[] = [];
   // D3 — ⑦이 §155①과 겹친 3주택은 엔진이 성립시키는 주택 수다(`ruralTemporaryTwoHouseOverlapCountHolds`). 「2주택에만 적용」은 틀린 사유다.
-  if (!ruralTemporaryTwoHouseOverlapCountHolds(input)) {
+  //   귀농 5년 기한만 넘긴 3주택도 같다 — 탈락 원인은 기한이고, 그 기한은 2주택처럼 pending이 날짜와 함께 안내한다(D-07).
+  if (!ruralTemporaryTwoHouseOverlapApartFromDeadline(input)) {
     pushTwoHouseCountReason(reasons, input.householdHousingCount, "농어촌주택");
   }
   pushInheritedBothPoolsCapReason(reasons, input, "농어촌주택 특례(§155⑦)");
@@ -656,7 +659,8 @@ function collectRuralUnmet(
     r.kind === "return_to_farm" &&
     r.acquisitionDate &&
     ruralReturnToFarmDeadlineApplies(r.acquisitionDate) &&
-    qualifiesRuralHouseApartFromDeadline(input) &&
+    // D3 3주택도 같다(D-07) — 겹친 §155① 기간 사유는 일시적 2주택 카드가 따로 말하므로 이 카드의 사유 수로 막지 않는다.
+    (qualifiesRuralHouseApartFromDeadline(input) || ruralTemporaryTwoHouseOverlapApartFromDeadline(input)) &&
     !isWithinDeadline(r.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate)
   ) {
     const dl = deadlineEndFrom(r.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS);

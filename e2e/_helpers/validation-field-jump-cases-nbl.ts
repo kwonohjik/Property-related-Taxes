@@ -110,6 +110,9 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
 
   // ── transfer-tax-validate-nbl-other.ts (기타토지 §168의11) ─────────────────
   { name: "nbl: 재산세 과세 분류", field: "nblOtherPropertyTaxType", step: 0, assetIndex: A, message: /^자산: 기타토지 — 재산세 과세 분류/, form: other({ nblOtherPropertyTaxType: "" }) },
+  // NBL2611-V1-A (Q-1) — 철거ㆍ멸실 근거: 종전 바닥면적 · 배율표에 있는 용도지역(근거 미선택은 막지 않는다)
+  { name: "nbl: 철거·멸실 종전 바닥면적", field: "nblOtherDemolishedFloorArea", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거ㆍ멸실 근거 — 철거 전 건축물의 바닥면적/, form: other({ nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedFloorArea: "" }) },
+  { name: "nbl: 철거·멸실 용도지역", field: "nblZoneType", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거ㆍ멸실 근거 — 용도지역/, form: other({ nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedFloorArea: "100", nblZoneType: "residential" }) },
   { name: "nbl: 건축물 바닥면적", field: "nblOtherBuildingFloorArea", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 바닥면적/, form: other({ nblOtherHasBuilding: true, nblOtherBuildingFloorArea: "" }) },
   { name: "nbl: 부설주차장 기준면적", field: "nblOtherStandardAreaLimit", step: 0, assetIndex: A, message: /^자산: 선택한 호의 기준면적/, form: other({ nblOtherRelatedBusinessType: "parking_attached" }) },
   { name: "nbl: 휴양시설", field: "nblOtherResortOutdoorArea", step: 0, assetIndex: A, message: /^자산: 휴양시설 — 옥외방목장/, form: other({ nblOtherRelatedBusinessType: "resort" }) },
