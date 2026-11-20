@@ -121,7 +121,7 @@ export async function resumeCalculationRecord(
      *    그대로 띄우면 사용자는 그것을 **지금 다시 판정한 값**으로 읽는다. ④에서 재판정한다
      *    (store의 `updateFormData`가 결과를 무효화하는 것과 같은 취지).
      */
-    const [{ useOneHouseJudgmentStore }, { normalizeOneHouseJudgmentForm }] = await Promise.all([
+    const [{ useOneHouseJudgmentStore, createInitialSurchargeSlot }, { normalizeOneHouseJudgmentForm }] = await Promise.all([
       import("@/lib/stores/one-house-judgment-store"),
       import("@/lib/stores/one-house-judgment-form.types"),
     ]);
@@ -132,6 +132,9 @@ export async function resumeCalculationRecord(
       resultClientId: null,
       error: null,
       isLoading: false,
+      // 2026-11 리뷰 D-15 — 두 메뉴가 한 store를 쓴다(「한 set에서 두 메뉴의 결과를 함께 비운다」 규약). 다주택 중과 슬롯도 비워야
+      //   다른 입력의 중과 결론이 재판정 없이 뜨지 않는다.
+      surcharge: createInitialSurchargeSlot(),
     });
     router.push(route);
     return null;

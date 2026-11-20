@@ -265,6 +265,34 @@ describe("importBackup", () => {
     expect(linker!.linkedCalculationId).toBe(backupX!.id); // 재매핑됨
   });
 
+  it("merge — id 충돌로 새 id를 받은 판정을 가리키는 계산기 record의 inputData.sourceJudgmentId도 재매핑(2026-11 리뷰 D-74)", async () => {
+    const x = await calcRepo.saveOrUpdateByBusinessKey(makeCalc({ taxType: "one_house_exemption", title: "현재 판정", inputData: { v: 1 } }));
+    const backup = {
+      format: BACKUP_FORMAT, version: BACKUP_VERSION, dbVersion: 6,
+      exportedAt: "2026-06-25T00:00:00.000Z", userProfile: null, clients: [],
+      calculations: [
+        {
+          id: x.id, userId: UID, taxType: "one_house_exemption" as const, title: "백업 판정(다른 내용)",
+          inputData: { v: 999 }, resultData: { isExempt: false }, taxLawVersion: "2025-01-01",
+          linkedCalculationId: null, clientId: null, contentHash: "different11111111",
+          createdAt: "2026-01-02T00:00:00.000Z", updatedAt: "2026-01-02T00:00:00.000Z",
+        },
+        {
+          id: "calc-from-judgment", userId: UID, taxType: "transfer" as const, title: "넘겨받은 계산",
+          inputData: { sourceJudgmentId: x.id }, resultData: { totalTax: 1 }, taxLawVersion: "2025-01-01",
+          linkedCalculationId: null, clientId: null,
+          createdAt: "2026-01-02T00:00:00.000Z", updatedAt: "2026-01-02T00:00:00.000Z",
+        },
+      ],
+    };
+    await importBackup(backup, "merge", UID);
+    const list = await calcRepo.list();
+    const backupJudgment = list.find((r) => r.title === "백업 판정(다른 내용)")!;
+    const calc = list.find((r) => r.title === "넘겨받은 계산")!;
+    expect(backupJudgment.id).not.toBe(x.id);
+    expect((calc.inputData as { sourceJudgmentId: string }).sourceJudgmentId).toBe(backupJudgment.id);
+  });
+
   it("orphan linkedCalculationId(참조 대상 없음) → null 정규화 + linksCleared 카운트", async () => {
     const backup = {
       format: BACKUP_FORMAT, version: BACKUP_VERSION, dbVersion: 6,

@@ -204,6 +204,8 @@ export async function applyOneHouseFactsToTransferForm(
   const { useCalcWizardStore } = await import("@/lib/stores/calc-wizard-store");
   const hash = judgmentId ? await readJudgmentInputHash(judgmentId) : undefined;
   const patch = toTransferFormPatch(form, judgmentId, hash);
+  // 2026-11 리뷰 D-16 — 이전 물건의 계산 결과가 남으면 사이드바가 그 값을 보이고 「저장」이 다른 물건 세액을 최종본으로 기록했다(결정 Q-3 B 형제 경로).
+  useCalcWizardStore.getState().clearResult();
   useCalcWizardStore.getState().updateFormData(patch);
   // 쓴 patch를 돌려준다 — 이동 없이 마운트된 채 남는 Step1이 화면 모드(`splitMode`)를 새 폼에서 다시 정한다.
   return patch;
@@ -227,7 +229,8 @@ export async function openTransferWithOneHouseFacts(
    *    「전달 당시」가 아닌 해시를 기준선으로 잡을 수 있다.
    */
   const hash = judgmentId ? await readJudgmentInputHash(judgmentId) : undefined;
-  const { updateFormData, setStep } = useCalcWizardStore.getState();
+  const { updateFormData, setStep, clearResult } = useCalcWizardStore.getState();
+  clearResult(); // D-16 — 이전 물건의 결과를 비운다(위 `applyOneHouseFactsToTransferForm`과 같다)
   updateFormData(toTransferFormPatch(form, judgmentId, hash));
   setStep(0);
   router.push(TRANSFER_ROUTE);

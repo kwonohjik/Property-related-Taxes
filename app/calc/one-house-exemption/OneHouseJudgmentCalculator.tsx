@@ -351,7 +351,9 @@ export default function OneHouseJudgmentCalculator({ aiExtractEnabled = false }:
           <OneHouseAiReviewCard
             review={aiReview}
             form={formData}
-            onAnswer={updateFormData}
+            // 2026-11 리뷰 D-27 — 결과 단계에서 답하면 결과를 비우기만 하고 재판정이 걸리지 않아 「판정을 준비하고 있습니다…」에 고정됐다 —
+            //   결과 단계에서는 바로 답하는 칸 대신 「그 단계에서 입력」 이동만 둔다.
+            onAnswer={currentStep === RESULT_STEP ? undefined : updateFormData}
             stepNames={STEPS}
             onGoToStep={onStepClick}
             onDismiss={() => setAiReview(null)}
