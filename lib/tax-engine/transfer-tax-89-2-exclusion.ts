@@ -75,6 +75,7 @@
  */
 
 import type { TransferTaxInput } from "./types/transfer.types";
+import { ARTICLE_89_2_GENERAL_EXCLUSION_LABEL } from "./transfer-tax-89-2-right-timing-core";
 import type { PresaleRight } from "./types/multi-house-surcharge.types";
 import { isWithinDeadline } from "./civil-period";
 import { TRANSFER } from "./legal-codes";
@@ -181,6 +182,11 @@ export interface Article89Clause2Result {
    * 반대 독법이면 결론이 갈릴 때만 채운다 — 판정 메뉴는 「판정하지 않은 부분」(`89-2-reading:*`), 계산기는 경고로 낸다.
    */
   readingNotes?: string[];
+  /**
+   * 불성립 사유 카드의 제목 — 상속 축이 아닌 **일반 배제**(권리 2개 이상 · 2주택 닫힘 · 1년 요건 · 선후 · 원조합원 §155①)가 채운다(D-47·D-21).
+   * 비어 있으면 상속 축 카드(「상속받은 권리·주택을 이용한 §89② 예외」)다 — 종전 id·라벨을 바꾸지 않는다.
+   */
+  exclusionLabel?: string;
   /** `exclusionReasons`가 가리키는 조문(불성립 사유 카드의 근거 표기) */
   exclusionBasis?: string;
   /**
@@ -457,8 +463,29 @@ function resolveArticle89Clause2Core(
    *
    * ⇒ 두 축이 모두 결론난 2권리 세대에는 적용될 예외가 **남지 않는다**.
    */
-  if (isTwoRightShape) return { status: "excluded" };
-  if (twoHouseAxisClosed) return { status: "excluded" };
+  if (isTwoRightShape) {
+    return {
+      status: "excluded",
+      exclusionLabel: ARTICLE_89_2_GENERAL_EXCLUSION_LABEL,
+      exclusionBasis: TRANSFER.RIGHT_HOLDING_EXCLUSION,
+      exclusionReasons: [
+        // P-0 — 「1주택과 1권리」를 전제한 항(③·④ 등)은 이 세대에 애초에 해당하지 않으므로 조문으로 가리키지 않는다.
+        `조합원입주권·분양권을 ${rights.length}개 보유한 세대입니다 — 1주택과 권리 1개를 전제한 예외는 해당하지 않고, ` +
+          "권리 2개 이상에 남는 예외(합가 전 보유 구성 · 상속받은 권리)에도 해당하지 않아 1세대1주택 비과세를 적용하지 않습니다.",
+      ],
+    };
+  }
+  if (twoHouseAxisClosed) {
+    return {
+      status: "excluded",
+      exclusionLabel: ARTICLE_89_2_GENERAL_EXCLUSION_LABEL,
+      exclusionBasis: TRANSFER.RIGHT_HOLDING_EXCLUSION,
+      exclusionReasons: [
+        "주택 2채와 조합원입주권·분양권을 함께 보유한 세대입니다 — 2주택 축의 예외(문화유산·이농·상속주택 준용)를 선언한 주택이 없고, " +
+          "일시적 2주택(§155①)과 주택·권리 특례를 겹쳐 적용하지 않는다는 해석(기획재정부 재산세제과-906)에 따라 1세대1주택 비과세를 적용하지 않습니다.",
+      ],
+    };
+  }
 
 
   /**
