@@ -273,6 +273,18 @@ export const ONE_HOUSE_FIELD_CATALOG_HOUSES = [
     when: "houses[].ruralHouseKind = return_to_farm",
   },
   {
+    path: "houses[].ruralHometownLocated",
+    kind: "enum",
+    values: [
+      { value: "yes", label: "예 — 연고지에 있습니다" },
+      { value: "no", label: "아니오 — 연고지가 아닙니다" },
+      { value: "unknown", label: "모름" },
+    ],
+    label: "귀농주택이 연고지에 있습니까 (종전 §155⑩1호)",
+    hint: "2016.2.17. 전에 취득한 귀농주택만 묻는다. 연고지는 본인·배우자·직계존속의 가족관계등록부 최초 등록기준지(그 읍·면과 연접 읍·면 포함)이거나 5년 이상 거주한 곳.",
+    when: "houses[].ruralHouseKind = return_to_farm · houses[].acquisitionDate < 2016-02-17",
+  },
+  {
     path: "houses[].ruralPriorReturnFarmExemption",
     kind: "enum",
     values: [

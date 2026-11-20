@@ -10,6 +10,7 @@ import { isWithinDeadline } from "./civil-period";
 import { passesHouseholdGate } from "./transfer-inheritance-exclusion";
 import { declaredRowAlreadyExcluded } from "./declared-row-excluded";
 import { checkReturnToFarmFacts } from "./one-house/rural-return-to-farm-facts";
+import { RURAL_2016_02_17_AMENDMENT_ACQ_START } from "./one-house/rural-return-to-farm-facts";
 import type { TransferTaxInput, UnavoidableReasonKind, RuralHouseKind } from "./types/transfer.types";
 
 export const UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS = 3;
@@ -42,7 +43,7 @@ export const RURAL_RETURN_TO_FARM_TRANSFER_YEARS = 5;
  * 적용한다」 · 제22조 「이 영 시행 전에 귀농주택을 취득한 경우에는 … 종전의 규정에 따른다」 — 기준축은 양도일이
  * 아니라 귀농주택 취득일이다.
  */
-export const RURAL_RETURN_TO_FARM_DEADLINE_ACQ_START = new Date("2016-02-17");
+export const RURAL_RETURN_TO_FARM_DEADLINE_ACQ_START = RURAL_2016_02_17_AMENDMENT_ACQ_START;
 
 /** ⑦ 단서(귀농주택 취득일부터 5년 이내 양도)가 이 귀농주택에 붙는가 — 2016-02-17 전 취득분은 종전 규정(단서 없음). */
 export function ruralReturnToFarmDeadlineApplies(acquisitionDate: Date): boolean {

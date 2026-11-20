@@ -284,7 +284,10 @@ describe("판정 메뉴 — 비과세 ↔ 과세 짝", () => {
   });
 
   it("R-10 990㎡ 표기 시기 고지 — 귀농주택 2006 취득 가목이면 있고, 2023 취득이면 없다", async () => {
-    const old = await observeCase(judgmentCase({ acquisitionDate: "2006-05-15" }, { asset: { assetKind: "housing", acquisitionDate: "2001-09-15" } }));
+    // 2016-02-17 전 취득이라 종전 ⑩1호 연고지가 걸린다(D-85) — 「예」로 두어 990㎡ 축만 시험한다(미답이면 그 불성립이 먼저 결론을 정한다).
+    const old = await observeCase(
+      judgmentCase({ acquisitionDate: "2006-05-15", ruralHometownLocated: "yes" }, { asset: { assetKind: "housing", acquisitionDate: "2001-09-15" } }),
+    );
     expect(old.undetermined).toContain("155-10-4-farmland-area-990-era-unverified");
     const recent = await observeCase(judgmentCase({}));
     expect(recent.undetermined).not.toContain("155-10-4-farmland-area-990-era-unverified");

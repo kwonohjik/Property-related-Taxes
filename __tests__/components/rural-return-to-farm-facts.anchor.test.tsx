@@ -10,6 +10,7 @@
  * | W-2 | ⑤ | 가·나·다목을 골라야 본인/배우자 질문이 열리고, 해당 없음·모름이면 지운다 |
  * | W-3 | ⑤ | 유형을 3호에서 다른 유형으로 바꾸면 3호 전용 답을 지운다(stale 답이 판정에 실리지 않는다) |
  * | V-1 | ⑧ 양 화면 | 미응답이면 계산기 Step1과 판정 메뉴가 같은 칸에 오류를 낸다 · 「모름」은 유효한 답이다 |
+ * | W-4 · V-2 | ⑤⑧ | 종전 ⑩1호 연고지 — 행 취득일이 2016-02-17 전일 때만 칸이 열리고 두 화면 ⑧이 묻는다 · 유형을 바꾸면 지운다(D-85) |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
@@ -136,5 +137,45 @@ describe("V-1 ⑧ 양 화면", () => {
     });
     expect(calcIssues(answered)).not.toContain("영농·영어의 목적");
     expect(menuErrs(answered).filter((f) => /rural(Farmland|Prior|General|Land)/.test(f))).toEqual([]);
+  });
+});
+
+describe("W-4 · V-2 종전 ⑩1호 연고지 (D-85)", () => {
+  const answered = { ruralFarmlandBasis: "ga", ruralFarmlandHolder: "self", ruralPriorReturnFarmExemption: "none", ruralGeneralHouseBeforeReturn: "yes" } as const;
+  it("2016-02-16 취득 행에만 칸이 열리고 고르면 같은 칸으로 올라간다 · 2016-02-17이면 없다", () => {
+    const onUpdate = vi.fn();
+    render(<HouseEntryRuralHouseBlock house={row({ acquisitionDate: "2016-02-16" })} onUpdate={onUpdate} />);
+    fireEvent.click(screen.getByTestId("house-row-rural-hometown-no"));
+    expect(onUpdate).toHaveBeenLastCalledWith({ ruralHometownLocated: "no" });
+    cleanup();
+    render(<HouseEntryRuralHouseBlock house={row({ acquisitionDate: "2016-02-17" })} onUpdate={vi.fn()} />);
+    expect(screen.queryByTestId("house-row-rural-hometown")).toBeNull();
+  });
+  it("유형을 바꾸면 연고지 답도 지운다", () => {
+    const onUpdate = vi.fn();
+    render(<HouseEntryRuralHouseBlock house={row({ acquisitionDate: "2016-02-16", ruralHometownLocated: "yes" })} onUpdate={onUpdate} />);
+    fireEvent.click(screen.getByText("1호 상속"));
+    expect(onUpdate).toHaveBeenLastCalledWith(expect.objectContaining({ ruralHometownLocated: undefined }));
+  });
+  it("⑧ 두 화면 — 2016-02-16 미답이면 막고 「모름」은 통과 · 2016-02-17은 묻지 않는다", () => {
+    const calc = (r: HouseEntry) => {
+      const f = createDefaultTransferFormData();
+      f.houses = [r];
+      return collectStep1Issues(f).map((i) => i.message).join(" | ");
+    };
+    const menu = (r: HouseEntry) => {
+      const f = createInitialOneHouseJudgmentForm();
+      f.houses = [r];
+      return validateAllSteps(f).filter((e) => e.severity === "error").map((e) => e.field);
+    };
+    const before = row({ acquisitionDate: "2016-02-16", ...answered });
+    expect(calc(before)).toContain("연고지");
+    expect(menu(before)).toContain("houses.0.ruralHometownLocated");
+    const unknown = row({ acquisitionDate: "2016-02-16", ...answered, ruralHometownLocated: "unknown" });
+    expect(calc(unknown)).not.toContain("연고지");
+    expect(menu(unknown)).not.toContain("houses.0.ruralHometownLocated");
+    const after = row({ acquisitionDate: "2016-02-17", ...answered });
+    expect(calc(after)).not.toContain("연고지");
+    expect(menu(after)).not.toContain("houses.0.ruralHometownLocated");
   });
 });

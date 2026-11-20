@@ -109,6 +109,7 @@ export const ROW_FIELD_DISPOSITION = {
   ruralFarmlandHolder: RURAL,
   ruralPriorReturnFarmExemption: RURAL,
   ruralGeneralHouseBeforeReturn: RURAL,
+  ruralHometownLocated: RURAL,
   oneHouseUnavoidableOutsideCapital: OUTSIDE_CAPITAL,
   unavoidableOutsideCapitalReason: OUTSIDE_CAPITAL,
   unavoidableOutsideCapitalResolvedDate: OUTSIDE_CAPITAL,

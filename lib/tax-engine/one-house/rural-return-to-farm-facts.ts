@@ -15,6 +15,7 @@
  * | 나목 | 귀농주택 **취득일** ≥ 2016-03-31 | 대통령령 제27074호 부칙 제1조 본문(공포일 시행) · 제2조(시행 전 취득분은 종전 규정) |
  * | 가·나목 배우자 | **양도일** ≥ 2019-02-12 | 대통령령 제29523호 부칙 제1조 본문(공포일 시행) · 제2조 제2항(시행 이후 양도분부터) |
  * | 다목 배우자 | **양도일** ≥ 2026-02-27 | 대통령령 제36129호 부칙 제1조 본문(공포일 시행) · 제8조(시행 이후 양도분부터) |
+ * | ⑩1호 연고지 | 귀농주택 **취득일** < 2016-02-17이면 요건이 걸린다(입력 `hometownLocated`) | 대통령령 제26982호 부칙 제10조 · 제22조(시행 전 취득분은 종전 규정) |
  *
  * 2016-03-31 전에 취득한 귀농주택은 나목이 없던 때라 **종전 가목**(귀농일 현재 농지 소유 — 취득 선후 무관)으로 읽는다.
  * 나목을 고른 그 세대를 불성립으로 두면 종전 가목에 해당하던 세대를 과세하게 된다(원칙 2).
@@ -33,6 +34,16 @@ export const RURAL_FARMLAND_SPOUSE_GA_NA_TRANSFER_START = new Date("2019-02-12")
 export const RURAL_FARMLAND_SPOUSE_DA_TRANSFER_START = new Date("2026-02-27");
 /** 농지 면적이 990㎡로 적혀 있던 시기의 끝(⑩ 연혁 표기 2007.2.28.) — 적용례 미확인. */
 export const RURAL_FARMLAND_990_ERA_END = new Date("2007-02-28");
+/**
+ * 대통령령 제26982호(2016.2.17. 공포·시행) — ⑩1호(연고지) 삭제와 ⑦ 단서(5년 기한) 신설. 부칙 제10조·제22조로 둘 다 **귀농주택 취득일**이 축이다
+ * (`RURAL_RETURN_TO_FARM_DEADLINE_ACQ_START`가 같은 날을 이 상수로 읽는다).
+ */
+export const RURAL_2016_02_17_AMENDMENT_ACQ_START = new Date("2016-02-17");
+
+/** ⑩1호 「연고지에 소재할 것」이 이 귀농주택에 걸리는가 — 2016-02-17 전 취득분만(종전 규정). 취득일을 모르면 묻지 않는다(⑧이 취득일을 받는다). */
+export function ruralHometownRequirementApplies(acquisitionDate: Date | undefined): boolean {
+  return !!acquisitionDate && acquisitionDate.getTime() < RURAL_2016_02_17_AMENDMENT_ACQ_START.getTime();
+}
 
 export const RURAL_FARM_FACTS_UNCONFIRMED_ID = "155-7-3ho-farm-facts-unconfirmed";
 export const RURAL_FARMLAND_990_ERA_ID = "155-10-4-farmland-area-990-era-unverified";
@@ -47,6 +58,8 @@ export interface ReturnToFarmFactsCheck {
 }
 
 const ART = {
+  hometown: TRANSFER.RURAL_RETURN_TO_FARM_HOMETOWN,
+  hometownRule: TRANSFER.RURAL_HOMETOWN_DEFINITION_RULE,
   purpose: TRANSFER.RURAL_RETURN_TO_FARM_PURPOSE,
   first: TRANSFER.RURAL_RETURN_TO_FARM_FIRST_ONLY,
 };
@@ -64,12 +77,30 @@ export function effectiveFarmlandBasis(r: Pick<RuralHouse, "farmlandBasis" | "ac
 export function checkReturnToFarmFacts(
   r: Pick<
     RuralHouse,
-    "farmlandBasis" | "farmlandHolder" | "priorReturnFarmExemption" | "generalHouseAcquiredBeforeReturn" | "acquisitionDate"
+    | "farmlandBasis"
+    | "farmlandHolder"
+    | "priorReturnFarmExemption"
+    | "generalHouseAcquiredBeforeReturn"
+    | "acquisitionDate"
+    | "hometownLocated"
   >,
   transferDate: Date,
 ): ReturnToFarmFactsCheck {
   const failed: string[] = [];
   const unconfirmed: string[] = [];
+
+  // ⑩1호 — 연고지 소재(2016-02-17 전 취득 귀농주택만 · 종전 규정). 이후 취득분은 값과 무관하게 보지 않는다.
+  if (ruralHometownRequirementApplies(r.acquisitionDate)) {
+    const era = `2016.2.17. 전에 취득한 귀농주택에는 종전 ${ART.hometown}의 「연고지에 소재할 것」 요건이 적용됩니다(같은 날 개정된 시행령의 부칙 — 그 전 취득분은 종전 규정)`;
+    const def = `연고지는 영농·영어에 종사하려는 사람과 그 배우자 또는 그 직계존속의 가족관계등록부 최초 등록기준지(그 읍·면과 연접한 읍·면 포함)이거나 5년 이상 거주한 사실이 있는 곳입니다(종전 ${ART.hometownRule})`;
+    if (r.hometownLocated === "no") {
+      failed.push(`귀농주택이 연고지에 있지 않아 귀농주택으로 인정되지 않습니다 — ${era}. ${def}.`);
+    } else if (r.hometownLocated !== "yes") {
+      unconfirmed.push(
+        `귀농주택이 연고지에 있는지 ${r.hometownLocated === "unknown" ? "모른다고 답해" : "답하지 않아"} 귀농주택으로 인정하지 않았습니다 — ${era}. ${def}.`,
+      );
+    }
+  }
 
   // ⑩4호 — 영농·영어의 목적(가·나·다목)
   const basis = effectiveFarmlandBasis(r);
@@ -136,6 +167,7 @@ export function withUnconfirmedFactsFavorable(r: RuralHouse): RuralHouse {
     farmlandHolder: r.farmlandHolder ?? "self",
     priorReturnFarmExemption: r.priorReturnFarmExemption === "has" ? "has" : "none",
     generalHouseAcquiredBeforeReturn: r.generalHouseAcquiredBeforeReturn === "no" ? "no" : "yes",
+    hometownLocated: r.hometownLocated === "no" ? "no" : "yes",
   };
 }
 

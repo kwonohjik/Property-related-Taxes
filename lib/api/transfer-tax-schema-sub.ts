@@ -71,6 +71,8 @@ export const ruralHouseSchema = z.object({
   farmlandHolder: z.enum(["self", "spouse"]).optional(),
   /** 3호 ⑪ 이미 이 특례로 일반주택을 비과세 양도했는가 */
   priorReturnFarmExemption: z.enum(["none", "has", "unknown"]).optional(),
+  /** 3호 ⑩1호 연고지 소재 — 2016-02-17 전 취득 귀농주택만(D-85). 누락하면 침묵 strip */
+  hometownLocated: z.enum(["yes", "no", "unknown"]).optional(),
   /** 3호 양도 일반주택을 귀농 전에 취득했는가 */
   generalHouseAcquiredBeforeReturn: z.enum(["yes", "no", "unknown"]).optional(),
 });
