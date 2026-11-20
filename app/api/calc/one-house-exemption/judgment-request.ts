@@ -199,7 +199,7 @@ export function buildOneHouseExemptionPayload(
   judgmentBaseDate: Date,
   isRightSale: boolean,
 ): OneHouseExemptionResponse {
-  // 단계 6~6.7: 주택 수 제외 → 판정 → §155⑳ → §89①4호 → 비거주자(`judgment-pipeline.ts`)
+  // 단계 6~6.9: 주택 수 제외 → 판정 → §155⑳ → §89①4호 → 비거주자 → 잔금 전 멸실 → 토지만 본인(`judgment-pipeline.ts`)
   const { exclusion, rentalVerdict, oneRightVerdict, judgment, rentalDeemedHouseIds, mergeRentalCarveout } = runOneHouseJudgmentPipeline(
     engineInput,
     parsedRates,
@@ -208,7 +208,7 @@ export function buildOneHouseExemptionPayload(
   );
 
   /**
-   * 단계 6.8: 해석이 갈리는 쟁점(P4) — 반대 입장 입력으로 **같은 파이프라인**을 한 번 더 돌려 두 결론을 싣는다.
+   * 단계 7: 해석이 갈리는 쟁점(P4) — 반대 입장 입력으로 **같은 파이프라인**을 한 번 더 돌려 두 결론을 싣는다.
    * 판정 메뉴 전용 — 계산기는 엔진 입장대로 세액을 낸다.
    */
   const engineVerdict = contestedVerdictOf(judgment);

@@ -231,22 +231,23 @@ describe("[고지] Q-1 보유 해당 · Q-2 12억 기준 — 확인 필요", () 
 
 /**
  * [V-1] 컴패니언 입주권이 받는 세대 사실(`oneRightHouseholdFacts` 9키) 가운데 **결론을 가르는 것**은 `householdRightCount`·
- * `householdNoPresaleRightsConfirmed`(CR-1~)와 `transferorNonResidentAtTransfer`(CR-15)뿐이다. 나머지(`houses`·`sellingHouseId`·
+ * `householdNoPresaleRightsConfirmed`(CR-1~)뿐이다(`transferorNonResidentAtTransfer`는 2026-11 리뷰 D-25로 계산기 route가 400 — CR-15). 나머지(`houses`·`sellingHouseId`·
  * `marriageMerge`·`parentalCareMerge`·`isFirstTransferredInMerge`·`contestedRightSaleParentalCareMergeApply`)는 뮤테이션으로 지워도
  * 결론이 같다 — ④는 세대 기준 자산이 토지일 때 `houses`를 본문에 싣지 않는 것을 실측했다(본문 `houses` 없음). 주택일 때는 양도 주택이
  * «다른 주택»으로 세어져 가목이 성립하지 않는 것(CR-6)까지만 측정했고, 합가 제외가 결론을 바꾸는 구성은 만들지 못했다(**확인 필요**).
  * 주 카드·축 B와 같은 사실을 보게 하려고 같은 객체를 싣는다(계획서 §4 · 관측 불가 키는 문서에 기록).
  */
 describe("[V-1] 입주권 컴패니언이 받는 세대 사실", () => {
-  it("CR-15 양도일 현재 비거주자(2020.1.1. 이후 양도) → 컴패니언 입주권 §89①4호 배제 (계산기 ④는 이 입력을 보내지 않아 본문 직접 주입)", async () => {
+  // 2026-11 리뷰 D-25 · 결정 Q-4 A — 비거주자는 판정 메뉴 전용 입력이라 계산기 route가 400으로 거절한다(종전엔 입주권 컴패니언에만 반영돼
+  //   한 조문이 부분 적용됐다 — 55,110,000원). 화면 ④는 이 키를 보내지 않는다.
+  it("CR-15 양도일 현재 비거주자 키 → 계산기 route 400(판정 메뉴 전용) · 키가 없으면 컴패니언 입주권 비과세 그대로", async () => {
     const f = mainPlusCompanionRight({ main: "land", hh: "0", elig: "yes", price: "500000000" });
     const body = await captureBody(f);
     const base = await postTransfer(body);
     expect(base.json.data.aggregated.properties.find((p: { propertyId: string }) => p.propertyId === "companion-fixed").isExempt).toBe(true);
     const r = await postTransfer({ ...body, transferorNonResidentAtTransfer: true });
-    expect(r.status).toBe(200);
-    const comp = r.json.data.aggregated.properties.find((p: { propertyId: string }) => p.propertyId === "companion-fixed");
-    expect(comp).toMatchObject({ isExempt: false, determinedTax: 55_110_000 });
+    expect(r.status).toBe(400);
+    expect(Object.keys(r.json.error.fieldErrors)).toEqual(["transferorNonResidentAtTransfer"]);
   });
 });
 

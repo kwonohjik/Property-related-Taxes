@@ -112,6 +112,29 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  /**
+   * 단계 2a-1: 판정 메뉴 전용 입력 거절(2026-11 리뷰 D-25 · 결정 Q-4 A). 비거주자(§121② 단서)·잔금 전 멸실 특약은 판정 메뉴만 받는 사실이다 —
+   * 계산기에 들어오면 비거주자는 주택(§154①)에는 반영되지 않고 입주권(§89①4호)에만 반영돼 한 조문이 부분 적용됐고, 멸실 특약은 소비처가 없었다.
+   * 화면 ④는 보내지 않는다(API 직접 호출에서만 닿는다). 스키마는 판정 route와 공용이라 여기서 막는다.
+   */
+  const judgmentOnly = (["transferorNonResidentAtTransfer", "demolishedBeforeBalance"] as const).filter(
+    (k) => parsed.data[k] !== undefined,
+  );
+  if (judgmentOnly.length > 0) {
+    return NextResponse.json(
+      {
+        error: {
+          code: TaxErrorCode.INVALID_INPUT,
+          message: "입력값이 올바르지 않습니다",
+          fieldErrors: Object.fromEntries(
+            judgmentOnly.map((k) => [k, ["1세대1주택 비과세 판정 메뉴 전용 입력이라 양도소득세 계산기에서는 받지 않습니다."]]),
+          ),
+        },
+      },
+      { status: 400 },
+    );
+  }
+
   // 단계 2b-0: 겸용주택 × §155⑳ B·§154⑩ — §161 안분을 겸용 4파트에 적용한 근거가 없어 계산하지 않는다(⑧과 같은 규칙).
   if (parsed.data.propertyType === "mixed-use-house" && parsed.data.rentalHousingException?.applyException && parsed.data.rentalHousingException.scenario === "B") {
     return NextResponse.json(

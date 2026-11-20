@@ -18,6 +18,8 @@
  *
  * ⚠️ 이 파일은 **판정하지 않는다**. 판정을 옮기는 것은 P4 착수 시점의 방향 전환이다
  *    (그때 `checkExemption`이 이 파일을 부르는 얇은 래퍼가 된다).
+ *    📌 2026-11 리뷰 I-02 · 결정 Q-14 — 이 「P4 방향 전환」은 실행되지 않았고 **보류**로 기록한다(폐기 아님). 위 다이어그램의
+ *    `judgeOneHouseExemption`은 외부 호출이 0건이다 — 두 화면 모두 `judgeOneHouseExemptionFromInput`(입력 왕복)을 쓴다.
  */
 import { checkExemption, type CheckExemptionOptions } from "../transfer-tax-exemption";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
@@ -111,8 +113,8 @@ export function toOneHouseJudgeInput(facts: OneHouseFacts, sale: OneHouseSale): 
 
   /**
    * ⚠️ 이 가드가 보는 것은 **키의 존재뿐**이다 — 값을 엉뚱한 곳에서 가져와도 통과한다.
-   *    그래서 왕복 anchor(`one-house-judge-extraction.anchor.test.ts`)와 685케이스 스냅샷 대조가
-   *    함께 있어야 한다(`feedback_mutation_zero_discrimination_is_not_proof`).
+   *    그래서 왕복 anchor(`one-house-judge-extraction.anchor.test.ts`)가 함께 있어야 한다(`feedback_mutation_zero_discrimination_is_not_proof`).
+   *    (종전 문구의 「685케이스 스냅샷」은 저장소에 없다 — 추출 커밋 본문의 2,089케이스는 1회 스윕이었다 · 2026-11 리뷰 I-02.)
    */
   type _Assembled = typeof judgeInput;
   const _judgeInputKeyCoverage: [

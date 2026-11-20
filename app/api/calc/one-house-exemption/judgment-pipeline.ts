@@ -1,5 +1,5 @@
 /**
- * 판정 메뉴 route 단계 6~6.8 — 주택 수 제외 → 판정 → §155⑳ → §89①4호 → 비거주자 → 잔금 전 멸실 특약.
+ * 판정 메뉴 route 단계 6~6.9 — 주택 수 제외 → 판정 → §155⑳ → §89①4호 → 비거주자 → 잔금 전 멸실 특약 → 토지만 본인 × 건물 소유자 세대.
  *
  * route에서 그대로 옮겼다. 양론 표시(P4)가 **같은 파이프라인을 반대 입장 입력으로 한 번 더** 돌려야 해서
  * 함수로 뺐다 — 재판정을 손으로 줄여 쓰면(예: `judgeOneHouseExemptionFromInput`만 부르기) §155⑳·§89①4호·
@@ -31,6 +31,7 @@ import {
 import { buildOneRightVerdict, applyOneRightVerdict } from "@/lib/tax-engine/one-house/one-right-verdict";
 import { applyNonResidentVerdict } from "@/lib/tax-engine/one-house/non-resident";
 import { applyDemolishedBeforeBalanceVerdict } from "@/lib/tax-engine/one-house/demolished-before-balance";
+import { applyLandOnlyHouseholdVerdict } from "@/lib/tax-engine/one-house/land-only-verdict";
 import type { CalculationStep, TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 
 export function runOneHouseJudgmentPipeline(
@@ -136,7 +137,13 @@ export function runOneHouseJudgmentPipeline(
    * 단계 6.8: 매매특약에 따른 잔금 전 주택 멸실(결정 #46) — 판정 메뉴 전용.
    * 2022-12-20 이후 계약이면 양도물건을 잔금청산일 현황(나대지)으로 판정해 주택 비과세를 거둔다.
    */
-  const afterBalance = applyDemolishedBeforeBalanceVerdict(afterNonResident, engineInput, isRightSale);
+  const afterDemolished = applyDemolishedBeforeBalanceVerdict(afterNonResident, engineInput, isRightSale);
+
+  /**
+   * 단계 6.9: 토지만 본인 × 건물 소유자 세대(2026-11 리뷰 D-39 · 결정 Q-7 (a)) — 계산기 STEP 1과 같은 leaf.
+   * 다른 세대면 이 토지는 이 세대 1주택의 부수토지가 아니다(비과세 거둠). 화면 ④는 `selfOwns`를 싣지 않아 API 직접 호출에서만 닿는다.
+   */
+  const afterBalance = isRightSale ? afterDemolished : applyLandOnlyHouseholdVerdict(afterDemolished, engineInput);
   // 판정 메뉴에는 계산기 경고 칸이 없다 — 적용 근거를 확인 사항으로 싣는다. 입력이 없어 이 경로를 열지 못했는데 결론을 가르면
   //   그 사실도 같은 자리에 싣는다(계산기 `transfer-tax-one-house-warnings.ts`와 같은 leaf · 2026-11 리뷰 D-10 · 사용자 결정 Q-3 (a)는 화면을 한정하지 않았다).
   //   「적용했지만 보유·거주가 모자라 과세」(`mergeRentalCarveoutUnmetNotice`)는 §155④ 사유가 이미 말하므로 싣지 않는다.

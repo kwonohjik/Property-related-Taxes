@@ -14,13 +14,18 @@
  * 별도 스키마를 새로 쓰면 필드가 하나 어긋나는 순간 판정 메뉴와 계산기가 다른 답을 낸다
  * (D-1 「화면은 나누고 엔진은 하나」의 배관 판).
  *
- * ## 이 route가 계산기와 다른 점은 넷뿐이다
+ * ## 이 route가 계산기와 다른 점 (2026-11 리뷰 I-02에서 정정 — 종전 「넷뿐」은 낡았다)
  *
  *   1. 세액을 계산하지 않는다 — `judgeOneHouseExemptionFromInput`까지만 간다.
  *   2. **주택 수를 명부에서 도출**해 덮어쓴다(G-1 · D-3). 본문이 보낸
  *      `householdHousingCount`는 **믿지 않는다** — 판정 메뉴에는 그 입력 위젯 자체가 없다.
  *   3. 주택 수 산정 명세(`houseCount`)를 응답에 함께 싣는다.
  *   4. 해석이 갈리는 쟁점(P4)이 있으면 반대 입장으로 한 번 더 판정해 두 결론을 싣는다(`contestedIssues`).
+ *   5. 판정 후처리 단계가 계산기 STEP 1a·2.5와 따로 조립돼 있다(`judgment-pipeline.ts` 6~6.9) — §155⑳ 6.5·⑳ 충족 시 명부 임대 행 빼고 재판정 6.55·
+ *      §89①4호 6.6·비거주자 6.7(판정 메뉴 전용)·잔금 전 멸실 특약 6.8(판정 메뉴 전용)·토지만 본인 × 건물 소유자 세대 6.9(계산기 STEP 1과 같은 leaf).
+ *      같은 TransferTaxInput 격자 대조: `__tests__/calc/api-direct-parity-pr14.anchor.test.ts`.
+ *   6. 판정 기준일(`judgmentBaseDate`)로 지난 기한을 거른다 · 같은 날 취득 권리(`sameDayAcquiredPresaleRights`)를 판정 메뉴가 넘긴다.
+ *   7. 계산기 route는 판정 메뉴 전용 키(비거주자 · 잔금 전 멸실 특약)를 400으로 거절한다(D-25 · 결정 Q-4 A) — 이 route는 받는다.
  */
 
 import { NextRequest, NextResponse } from "next/server";

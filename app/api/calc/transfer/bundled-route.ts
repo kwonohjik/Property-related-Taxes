@@ -349,7 +349,6 @@ export function calculateBundledTransfer(
         oneRightHouseholdFacts: {
           householdRightCount: engineInput.householdRightCount,
           householdNoPresaleRightsConfirmed: engineInput.householdNoPresaleRightsConfirmed,
-          transferorNonResidentAtTransfer: engineInput.transferorNonResidentAtTransfer,
           houses: engineInput.houses,
           sellingHouseId: engineInput.sellingHouseId,
           marriageMerge: engineInput.marriageMerge,
