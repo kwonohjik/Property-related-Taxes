@@ -30,7 +30,7 @@ describe("지목별 공통 입력 소비 표", () => {
     ["pasture", { inc: true, grace: true, deemed: true, metro: false }],
     ["housing_site", { inc: false, grace: false, deemed: false, metro: true }],
     ["villa_land", { inc: false, grace: true, deemed: true, metro: true }],
-    ["other_land", { inc: false, grace: false, deemed: true, metro: false }],
+    ["other_land", { inc: false, grace: true, deemed: true, metro: false }],
     ["building_site", { inc: false, grace: false, deemed: false, metro: false }],
     ["", { inc: false, grace: false, deemed: false, metro: false }],
   ];
@@ -55,28 +55,24 @@ describe("지목별 공통 입력 소비 표", () => {
     otherLand: { propertyTaxType: "comprehensive", hasBuilding: false, isRelatedToResidenceOrBusiness: false } as never,
     ...extra,
   });
-  const stripVolatile = (j: ReturnType<typeof judgeNonBusinessLand>) => ({ n: j.isNonBusinessLand, r: j.judgmentReason, ratio: j.businessUseRatio, days: j.effectiveBusinessDays });
 
-  it("other_land: 유예를 전 기간으로 넣어도 비사업용 판정이 그대로다 (gracePeriods=false의 근거 · V2-C1)", () => {
+  it("other_land: 유예를 전 기간으로 넣으면 사업용으로 바뀐다 (gracePeriods=true의 근거 · NBL2611-B3 V2-C1)", () => {
     const whole = [{ reasonCode: "use_prohibited" as const, startDate: d("2010-01-02"), endDate: d("2024-06-03") }];
     const without = judgeNonBusinessLand(baseOther(), R);
     const withGrace = judgeNonBusinessLand(baseOther({ gracePeriods: whole as never }), R);
     expect(without.isNonBusinessLand).toBe(true);
-    expect(stripVolatile(withGrace)).toEqual(stripVolatile(without));
-    // 같은 유예를 농지에 주면 사업용이 된다 — 표가 지목별로 갈리는 이유
-    const farm: NonBusinessLandInput = {
-      landType: "farmland", landArea: 1000, zoneType: "management", acquisitionDate: d("2010-01-01"), transferDate: d("2024-06-03"),
-      businessUsePeriods: [], gracePeriods: whole as never, farmingSelf: false,
-    };
-    expect(judgeNonBusinessLand(farm, R).isNonBusinessLand).toBe(false);
+    expect(withGrace.isNonBusinessLand).toBe(false);
+    expect(withGrace.periodEvaluation?.graceJudged?.meets).toBe(true);
   });
 
-  it("other_land 유예 입력 → 엔진이 「반영되지 않았습니다」 경고 · 농지는 경고 없음", () => {
+  it("유예 입력 → 기타토지·농지는 「반영되지 않았습니다」 경고 없음, 주택부수토지는 경고", () => {
     const whole = [{ reasonCode: "use_prohibited" as const, startDate: d("2010-01-02"), endDate: d("2024-06-03") }] as never;
     const j = judgeNonBusinessLand(baseOther({ gracePeriods: whole }), R);
-    expect(j.warnings.some((w) => w.includes("반영되지 않았습니다"))).toBe(true);
+    expect(j.warnings.some((w) => w.includes("반영되지 않았습니다"))).toBe(false);
     const farm = judgeNonBusinessLand({ landType: "farmland", landArea: 1000, zoneType: "management", acquisitionDate: d("2010-01-01"), transferDate: d("2024-06-03"), businessUsePeriods: [], gracePeriods: whole, farmingSelf: false }, R);
     expect(farm.warnings.some((w) => w.includes("반영되지 않았습니다"))).toBe(false);
+    const housing = judgeNonBusinessLand({ landType: "housing_site", landArea: 1000, zoneType: "general_residential", acquisitionDate: d("2010-01-01"), transferDate: d("2024-06-03"), housingFootprint: 100, isMetropolitanArea: false, businessUsePeriods: [], gracePeriods: whole }, R);
+    expect(housing.warnings.some((w) => w.includes("반영되지 않았습니다"))).toBe(true);
   });
 });
 

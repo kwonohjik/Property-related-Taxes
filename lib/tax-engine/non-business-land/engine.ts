@@ -119,7 +119,7 @@ export function judgeNonBusinessLand(
   const engineInput: NonBusinessLandInput = input;
 
   // NBL2611-V2-C1 — 이 지목의 판정은 유예기간 입력을 읽지 않는다(`consumesGracePeriods`). 화면이 「사업용 사용 기간에 가산됩니다」라고
-  // 안내하던 입력이 결과에 닿지 않으므로 사실대로 알린다. 반영 구현은 기타토지 B3(R08)·주택부수토지 D1(R20).
+  // 안내하던 입력이 결과에 닿지 않으므로 사실대로 알린다. 기타토지는 B3(R08)에서 반영했고, 남은 것은 주택부수토지 D1(R20)이다.
   if (input.gracePeriods.length > 0 && !consumesGracePeriods(input.landType)) {
     warnings.push(
       `부득이한 사유 유예기간(${NBL.UNAVOIDABLE_PERIOD}) 입력이 ${category.categoryLabel} 판정에는 반영되지 않았습니다 — ` +
