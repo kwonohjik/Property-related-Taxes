@@ -478,6 +478,11 @@ export interface PeriodEvaluation {
   basis: PeriodEvaluationBasis;
   /** 기간 대신 실제로 판정한 기준의 법령 근거(`not_judged`일 때 — 예: 주택부수토지는 영 §168의12 배율). 없을 수 있다. */
   legalBasis?: readonly string[];
+  /**
+   * 영 §168의14① 유예기간을 «빈 사업기간 + 유예»로 실제 판정에 쓴 경우의 사실(기타토지 — NBL2611-V2-C1). 유예 입력이 없으면 없다.
+   * `meets`가 참이면 그 유예 덕에 비사업용 잔여분이 사업용이 됐다는 뜻이다.
+   */
+  graceJudged?: { gracePeriodDays: number; totalOwnershipDays: number; meets: boolean };
 }
 
 /** 판정 엔진 반환 액션 (v2 신규 — 별장 REDIRECT 경로 지원) */

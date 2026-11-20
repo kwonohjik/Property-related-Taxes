@@ -89,9 +89,10 @@ export function consumesPeriodJudgmentDate(landType: LandType | "" | undefined):
  *   · 도시편입일 `urbanIncorporationDate` — farmland.ts(편입유예·§168의8⑤) · pasture.ts(§168의10⑤) · forest.ts
  *     (시업중·특수산림사업지구일 때만 — 그 조건은 ⑧이 따로 건다. 표에는 «소비 가능»으로 true).
  *   · 유예 `gracePeriods` — farmland · forest · pasture · villa는 `meetsPeriodCriteria`에 넘긴다.
- *     **other_land는 false**: 비사업용으로 끝나는 분기는 기간 판정이 없고, 사업용 분기는 `fullPeriod`(전 기간)를 넘겨
- *     유예가 합집합에 더해질 일수가 0이다(NBL2611-V2-C1). housing·building_site는 호출 자체가 없다.
- *     → B3(R08 · 기타토지 유예 소비)·D1(R20 · 주택 유예)이 구현되면 해당 칸을 true로 바꾼다.
+ *     **other_land도 true(NBL2611-B3 · V2-C1)**: 비사업용으로 끝난 잔여분(전량·부분)을 확정하기 직전에 «빈 사업기간 + 유예»로
+ *     기간기준을 판정한다(`other-land-merge.ts` `applyGraceToNonBusinessRemainder`). 사업용 분기의 `fullPeriod` 호출에 유예만 얹는 방식은
+ *     합집합 증가분이 0이라 효과가 없어 쓰지 않는다. housing·building_site는 호출 자체가 없다.
+ *     → D1(R20 · 주택 유예)이 구현되면 housing 칸을 true로 바꾼다.
  *   · 양도일 의제 `getPeriodJudgmentDate` — farmland · forest · pasture · villa · other_land. housing·building_site는
  *     2026-07-31 사용자 방침(법령 구조 아님 — NBL2611-V2-C2)으로 부르지 않는다.
  *   · 수도권 `isMetropolitanArea` — housing-land.ts만. 별장은 REDIRECT 재분류 뒤 주택부수토지 판정에서 소비한다.
@@ -112,7 +113,7 @@ const INPUT_CONSUMPTION = {
   housing:       { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: false, metropolitanArea: true  },
   building_site: { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: false, metropolitanArea: false },
   villa:         { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: true,  metropolitanArea: true  },
-  other_land:    { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: true,  metropolitanArea: false },
+  other_land:    { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false },
   unknown:       { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: false, metropolitanArea: false },
 } as const satisfies Record<LandCategoryGroup, InputConsumption>;
 

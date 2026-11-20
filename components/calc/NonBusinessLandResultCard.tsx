@@ -226,6 +226,13 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
           <p className="text-caption text-muted-foreground leading-snug">
             양도일 현재의 이용 상태를 소유기간 전체에 적용해 판정했습니다. 소유기간 중 사용기간별 일수·비율은 판정 근거가 아니어서 표시하지 않습니다 — 확인 필요.
           </p>
+          {periodEval.graceJudged && (
+            // NBL2611-V2-C1 — 유예기간을 «빈 사업기간 + 유예»로 실제 판정에 쓴 사실(엔진 echo). 충족하면 그 덕에 비사업용 잔여분이 사업용이 된 것이다.
+            <p className="text-caption text-muted-foreground leading-snug mt-1" data-testid="nbl-period-grace-judged-notice">
+              {NBL.UNAVOIDABLE_PERIOD}의 유예기간 {periodEval.graceJudged.gracePeriodDays.toLocaleString()}일(소유기간 {periodEval.graceJudged.totalOwnershipDays.toLocaleString()}일 중)을 사업용으로 보아 {NBL.CRITERIA}의 기간기준을 판정했습니다 —{" "}
+              {periodEval.graceJudged.meets ? "충족하여 비사업용 잔여분이 없는 것으로 봅니다." : "그래도 충족하지 않습니다."}
+            </p>
+          )}
         </div>
       )}
       {periodEval.basis === "not_judged" && periodBasisLabels && (
