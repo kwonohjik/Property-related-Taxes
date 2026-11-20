@@ -6,6 +6,8 @@ import { nblExclusionBannerText } from "@/components/calc/results/transfer/nbl-s
 import { nblLthdBannerPhrase } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
 import { resolvePeriodEvaluation } from "@/lib/tax-engine/non-business-land/period-evaluation";
 import { NBL } from "@/lib/tax-engine/legal-codes";
+import { PROPERTY_TAX_BASIS_LABEL, PROPERTY_TAX_BASIS_LEGAL } from "@/lib/tax-engine/non-business-land/property-tax-basis";
+import { propertyTaxTypeLabel } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 
 interface Props {
   judgment: NonBusinessLandJudgment;
@@ -198,6 +200,34 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
             <span className="text-muted-foreground">기준 비율</span>
             <span className="font-mono tabular-nums text-right">{(judgment.revenueTestDetail.threshold * 100).toFixed(0)}%</span>
           </div>
+        </div>
+      )}
+
+      {/* NBL2611-V1-A — 재산세 분류 «근거»(기타토지). 엔진 echo(`propertyTaxBasis`)가 있을 때만 — 선언·근거·판정에 쓴 분류를 한국어로 밝힌다. */}
+      {judgment.propertyTaxBasis && (
+        <div className="px-4 py-2 border-b border-border" data-testid="nbl-property-tax-basis-echo">
+          <p className="text-xs font-medium text-muted-foreground mb-1">재산세 분류 근거</p>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+            <span className="text-muted-foreground">선택한 재산세 분류</span>
+            <span className="text-right">{propertyTaxTypeLabel(judgment.propertyTaxBasis.declared)}</span>
+            <span className="text-muted-foreground">근거</span>
+            <span className="text-right">
+              {judgment.propertyTaxBasis.basis ? PROPERTY_TAX_BASIS_LABEL[judgment.propertyTaxBasis.basis] : "선택하지 않음"}
+            </span>
+            {judgment.propertyTaxBasis.basis && PROPERTY_TAX_BASIS_LEGAL[judgment.propertyTaxBasis.basis] && (
+              <>
+                <span className="text-muted-foreground">근거 조문</span>
+                <span className="text-right">{PROPERTY_TAX_BASIS_LEGAL[judgment.propertyTaxBasis.basis]}</span>
+              </>
+            )}
+            <span className="text-muted-foreground">판정에 쓴 분류</span>
+            <span className="text-right font-medium">{propertyTaxTypeLabel(judgment.propertyTaxBasis.effective)}</span>
+          </div>
+          {judgment.propertyTaxBasis.outcome === "unconfirmed" && (
+            <p className="text-caption text-amber-700 dark:text-amber-300 leading-snug mt-1.5" data-testid="nbl-property-tax-basis-unconfirmed-echo">
+              건축물이 없는 토지의 비종합합산 선언은 근거가 확인돼야 인정됩니다. 근거를 확인하지 못해 종합합산으로 판정했습니다 — 확인 필요.
+            </p>
+          )}
         </div>
       )}
 

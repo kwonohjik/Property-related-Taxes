@@ -51,7 +51,8 @@ import {
   resolveExemptionHoldingStartDate,
   RURAL_RETURN_TO_FARM_TRANSFER_YEARS,
   ruralReturnToFarmDeadlineApplies,
-  ruralTemporaryTwoHouseOverlapCountHolds,
+  ruralTemporaryTwoHouseOverlapApartFromDeadline,
+  specialHouseTemporaryTwoHouseOverlapCountHolds,
   twoHouseSpecialCountHolds,
   UNAVOIDABLE_OUTSIDE_CAPITAL_YEARS,
   unavoidableResolvedDeadlineApplies,
@@ -214,7 +215,7 @@ export function collectPendingConditions(
    */
   // E-3(`checkExemptionCore`)와 같은 주택 수 게이트 — ⑦ 농어촌주택이 겹친 3주택(D3)도 같은 분기다(S07-5).
   if (
-    (twoHouseSpecialCountHolds(input) || ruralTemporaryTwoHouseOverlapCountHolds(input)) &&
+    (twoHouseSpecialCountHolds(input) || specialHouseTemporaryTwoHouseOverlapCountHolds(input)) &&
     input.temporaryTwoHouse &&
     twoHouseRule
   ) {
@@ -370,6 +371,53 @@ export function collectPendingConditions(
         // 위와 같은 이유로 법령명을 남긴다 — `§155⑦3호`만으로는 파싱되지 않는다.
         legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦3호`,
       });
+    }
+  }
+  /**
+   * D3(⑦ + §155① 3주택)이 **귀농주택 기한으로만** 떨어진 경우(2026-11 리뷰 D-07) — 위 2주택 갈래와 같은 기한이지만, 겹친 §155①의
+   * 1년·전입·취득 경위·종전주택 보유도 기한으로 치유되지 않으므로 함께 확인하고, 귀농 기한과 §155① 처분기한 중 **더 이른 하나만** 약속한다.
+   * (귀농 기한이 지나지 않았으면 D3가 성립해 §155① 갈래(`155-1-disposal-deadline`)가 처분기한을 낸다.)
+   */
+  if (
+    rural?.kind === "return_to_farm" &&
+    rural.acquisitionDate &&
+    ruralReturnToFarmDeadlineApplies(rural.acquisitionDate) &&
+    !isWithinDeadline(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS, input.transferDate) &&
+    ruralTemporaryTwoHouseOverlapApartFromDeadline(input) &&
+    input.temporaryTwoHouse &&
+    twoHouseRule
+  ) {
+    const { provisoRelaxesHolding, timing, origin } = evaluateTemporaryTwoHouseTiming(input, twoHouseRule);
+    const ruralDl = deadlineEndFrom(rural.acquisitionDate, RURAL_RETURN_TO_FARM_TRANSFER_YEARS);
+    const ruralFirst = ruralDl.end.getTime() <= timing.deadline.getTime();
+    const promise = ruralFirst ? ruralDl.end : timing.deadline;
+    if (
+      timing.oneYearMet &&
+      timing.moveInMet !== false &&
+      !origin.blocked &&
+      meetsTemporaryTwoHousePrevHolding(input, rule, provisoRelaxesHolding) &&
+      meetsOneHouseHoldingResidence(input, rule) &&
+      // 말일 보유 미달이면 이룰 수 없는 약속이다(S07-4) — 사유는 `collectRuralUnmet`이 말한다.
+      meetsTemporaryTwoHouseHoldingOnDeadline(input, rule, provisoRelaxesHolding, promise)
+    ) {
+      pending.push(
+        ruralFirst
+          ? {
+              id: "155-7-3ho-return-to-farm",
+              kind: "transfer_by",
+              description: `귀농주택 취득일부터 이 날짜까지 일반주택을 양도해야 ${exempt}`,
+              ...deadlineFields(ruralDl),
+              legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}⑦3호`,
+            }
+          : {
+              id: "155-1-disposal-deadline",
+              kind: "transfer_by",
+              description: `신규주택 취득일부터 이 날짜까지 종전주택을 양도해야 ${exempt}`,
+              deadline: timing.deadline,
+              ...(timing.deadlineNote ? { deadlineNote: timing.deadlineNote } : {}),
+              legalBasis: `${TRANSFER.TEMPORARY_TWO_HOUSE}①`,
+            },
+      );
     }
   }
 

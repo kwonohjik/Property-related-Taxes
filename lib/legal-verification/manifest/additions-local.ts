@@ -198,7 +198,15 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
   {
     id: "PROPERTY.LAND_CLASSIFICATION",
     citation: "지방세법 §106",
-    keywords: ["종합합산과세대상", "별도합산과세대상", "분리과세대상", "과세기준일 현재 납세의무자"],
+    keywords: [
+      "종합합산과세대상",
+      "별도합산과세대상",
+      "분리과세대상",
+      "과세기준일 현재 납세의무자",
+      // NBL2611-V1-A — 기타토지 «재산세 분류 근거» 선택지(`NBL.PTAX_BASIS_VACANT_STATE`·`NBL.PTAX_BASIS_DEMOLISHED`)가 기댄 법 §106①2호 나목·다목 문언.
+      "업무 또는 경제활동에 활용되는 토지로서 대통령령으로 정하는 토지",
+      "철거ㆍ멸실된 건축물 또는 주택의 부속토지로서 대통령령으로 정하는 부속토지",
+    ],
     keywordMode: "ALL",
   },
   {
