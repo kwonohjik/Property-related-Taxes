@@ -120,9 +120,24 @@ export function ruralTemporaryTwoHouseOverlapCountHolds(
     "householdHousingCount" | "transferDate" | "ruralHouse" | "inheritedHouseExclusionCount" | "knownHouseExclusionHouseIds"
   >,
 ): boolean {
+  return ruralTemporaryTwoHouseOverlapApartFromDeadline(input) && qualifiesRuralHouse({ ...input, householdHousingCount: 2 });
+}
+
+/**
+ * D3 주택 수 술어에서 **⑦ 단서 5년 기한만 뺀** 것 — `ruralTemporaryTwoHouseOverlapCountHolds` = 이 술어 && 기한 내(2026-11 리뷰 D-07).
+ *
+ * 기한만 넘긴 3주택은 「주택 수가 3채라 2주택에만 적용」이 아니라 「귀농주택 기한을 넘겼다」가 탈락 원인이다. 불성립 사유 · 기한 안내(pending) ·
+ * 판정 메뉴의 신규 주택 후보 제외가 이 술어로 3주택 겹침을 알아본다 — 2주택의 `qualifiesRuralHouseApartFromDeadline`과 같은 짝이다.
+ */
+export function ruralTemporaryTwoHouseOverlapApartFromDeadline(
+  input: Pick<
+    TransferTaxInput,
+    "householdHousingCount" | "transferDate" | "ruralHouse" | "inheritedHouseExclusionCount" | "knownHouseExclusionHouseIds"
+  >,
+): boolean {
   // 상속주택 제외까지 겹치면 세 특례 — 인정 해석 없음(`inheritedHouseExclusionCount` 주석).
   if ((input.inheritedHouseExclusionCount ?? 0) > 0) return false;
-  return input.householdHousingCount === 3 && qualifiesRuralHouse({ ...input, householdHousingCount: 2 });
+  return input.householdHousingCount === 3 && qualifiesRuralHouseApartFromDeadline({ ...input, householdHousingCount: 2 });
 }
 
 /**
