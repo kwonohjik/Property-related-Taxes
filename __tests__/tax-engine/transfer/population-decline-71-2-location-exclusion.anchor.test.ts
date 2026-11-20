@@ -148,3 +148,21 @@ describe("R 판정 메뉴 route", () => {
     expect(after.isExempt).toBe(true);
   });
 });
+
+describe("T ④ 토글을 끈 답 — 현행 유지 + 결론을 가를 때만 확인 필요 (Q-19 (b) · PR-22c)", () => {
+  it("T-1 평창(주소로는 인구감소지역)에 토글 OFF — 끈 답을 따라 과세, 그 답이 결론을 갈라 확인 필요", async () => {
+    const o = await observeCase(menu({ region: "non_capital", regionCode: PYEONGCHANG, isPopulationDeclineArea: false }));
+    expect(o.validationErrors).toEqual([]);
+    expect(o.isExempt).toBe(false);
+    expect(o.undetermined).toContain(POP_DECLINE_71_2_UNCONFIRMED_ID);
+    // 대조 — 토글을 건드리지 않으면 자동판정으로 비과세
+    expect((await observeCase(menu({ region: "non_capital", regionCode: PYEONGCHANG }))).isExempt).toBe(true);
+  });
+
+  it("T-2 결론을 가르지 않으면(§155① 일시적 2주택으로 이미 비과세) 고지 없음", async () => {
+    // 신규 주택을 종전 주택 취득 1년 뒤(2026-07-01)에 취득 — 3년 안 양도라 §155①이 받친다.
+    const o = await observeCase(menu({ region: "non_capital", regionCode: PYEONGCHANG, acquisitionDate: "2026-07-01", isPopulationDeclineArea: false }));
+    expect(o.isExempt).toBe(true);
+    expect(o.undetermined).not.toContain(POP_DECLINE_71_2_UNCONFIRMED_ID);
+  });
+});

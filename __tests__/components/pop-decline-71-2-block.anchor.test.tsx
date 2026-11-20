@@ -152,10 +152,12 @@ describe("E-1 편집 모달 배선", () => {
 });
 
 describe("E-2 ④ 세컨드홈 카드", () => {
-  it("중과 주택 수 전용이라고 밝히고 §71의2는 명부에서 자동 판정한다고 안내한다", () => {
+  it("Q-19 (b) — 이 답이 중과 주택 수와 §71의2 특례에 함께 쓰이고, 끄면 두 판정 모두 인구감소지역이 아닌 것으로 본다고 안내한다", () => {
     render(<HouseEntrySpecialExclusionSection house={row({ isPopulationDeclineArea: true })} onUpdate={vi.fn()} />);
-    expect(screen.getByText(/중과 주택 수 전용/)).toBeTruthy();
-    expect(screen.getByText(/§71의2 인구감소지역주택/)).toBeTruthy();
+    expect(screen.getByText(/§167의3①12 다·라목\)와 1세대1주택 비과세의 인구감소지역주택 특례\(조특법 §71의2①\)에 함께 쓰이며/)).toBeTruthy();
+    expect(screen.getByText(/끄면 두 판정 모두 인구감소지역이 아닌 것으로 봅니다/)).toBeTruthy();
+    // 종전 문구는 반대로 안내해 끄도록 유도했다(D-50 (a)).
+    expect(screen.queryByText(/중과 주택 수 전용/)).toBeNull();
   });
 });
 

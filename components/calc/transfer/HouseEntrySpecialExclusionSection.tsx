@@ -19,11 +19,22 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { classifyPopulationDeclineArea } from "@/lib/tax-engine/data/population-decline-areas";
+import { MULTI_HOUSE } from "@/lib/tax-engine/legal-codes";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 
 interface Props {
   house: HouseEntry;
   onUpdate: (patch: Partial<HouseEntry>) => void;
 }
+
+/**
+ * 「인구감소지역 소재 주택」 토글 안내 — 이 답은 중과 주택 수(소령 §167의3①12호 다·라목)와 조특법 §71의2 인구감소지역주택 판정에 **함께** 쓰인다
+ * (엔진 `isPopulationDeclineArea ?? 자동판정`). 종전 문구 「중과 주택 수 전용 — §71의2는 자동 판정」은 반대로 안내해 끄도록 유도했다(D-50 (a)).
+ */
+const POP_DECLINE_TOGGLE_DESCRIPTION =
+  `주소를 입력하면 자동으로 정해집니다 — 사실과 다를 때만 바꾸세요. 이 답은 다주택 중과 주택 수(${MULTI_HOUSE.SECOND_HOME_DEPOPULATION})와 ` +
+  `1세대1주택 비과세의 인구감소지역주택 특례(${TRANSFER.POP_DECLINE_HOUSE_71_2})에 함께 쓰이며, 끄면 두 판정 모두 인구감소지역이 아닌 것으로 봅니다. ` +
+  "수도권(접경지역 제외)·광역시 자치구는 켜도 대상이 아닙니다.";
 
 export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
   /**
@@ -224,7 +235,7 @@ export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
           })
         }
         title="인구감소지역 소재 주택"
-        description="소령 §167의3①12 다·라목 — 2026.1.1. 이후 취득·가액 한도 이하·취득 전 보유주택과 다른 시·군·구면 제외(등록 요건 없음). 중과 주택 수 전용 — 조특법 §71의2 인구감소지역주택은 명부에서 자동 판정합니다."
+        description={POP_DECLINE_TOGGLE_DESCRIPTION}
       >
         <div className="space-y-2 pt-1">
           <div className="space-y-1">
