@@ -143,6 +143,11 @@ export function buildHousesPayload(
      * 1주택 route는 이 사실을 읽지 않는다(3호 on·off 판정 결과 동일 실측).
      */
     omitSurchargeOnlyRowFacts?: boolean;
+    /**
+     * 행의 §155⑧ 선언 echo(`isUnavoidableOutsideCapital`)를 싣지 않는다 — 판정 메뉴의 입주권 양도 전용(2026-11 리뷰 D-66).
+     * §155 특례는 일반주택을 양도할 때만 적용돼(서면-2015-부동산-1685) ⑤가 칸을 닫고 ⑧이 묻지 않는다 — 남은 선언이 ⑫ 「각각 1개씩」으로 400을 내지 않게.
+     */
+    omitOneHouseFactRows?: boolean;
   },
 ): object[] | undefined {
   const hasMultiHouseEntries = houses.length > 0 || presaleRightsCount > 0;
@@ -285,6 +290,7 @@ export function buildHousesPayload(
     sellingHouse,
     ...buildOtherHousesPayload(housesOwnedAtTransfer(houses, transferDate, primary.assetKind), {
       omitSurchargeOnlyRowFacts: options?.omitSurchargeOnlyRowFacts,
+      omitOneHouseFactRows: options?.omitOneHouseFactRows,
     }),
   ];
 }
@@ -300,7 +306,7 @@ export function buildHousesPayload(
 export function buildOtherHousesPayload(
   houses: HouseEntry[],
   /** D-13 — 1주택 판정 메뉴 본문은 중과 전용 행 사실(3호 칩 · ⑪ 연장)을 싣지 않는다(`buildHousesPayload` 옵션과 같은 값). */
-  options?: { omitSurchargeOnlyRowFacts?: boolean },
+  options?: { omitSurchargeOnlyRowFacts?: boolean; omitOneHouseFactRows?: boolean },
 ): object[] {
   return houses
     .filter((h) => h.acquisitionDate)
@@ -337,7 +343,7 @@ export function buildOtherHousesPayload(
       isCulturalHeritage: h.oneHouseCulturalHeritage,
       // ④⑬ §155⑧ 행 echo(#16) — 판정은 세대 단위 `unavoidableOutsideCapitalHouse`가 하고, 이 값은 영 §167의10①4호가
       //   「⑧ 주택이 중과 주택 수 2채 안에 있는가」를 가리는 데만 쓴다(`multi-house-surcharge-exclusion.ts`).
-      isUnavoidableOutsideCapital: h.oneHouseUnavoidableOutsideCapital,
+      isUnavoidableOutsideCapital: options?.omitOneHouseFactRows ? undefined : h.oneHouseUnavoidableOutsideCapital,
       // ⑬ 소형신축·준공후미분양 특례 (§167의3①12가·나목)
       acquisitionPrice: parseAmount(h.acquisitionPrice || "") || undefined,
       exclusiveArea: h.exclusiveArea ? parseFloat(h.exclusiveArea) : undefined,

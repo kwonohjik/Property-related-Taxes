@@ -13,6 +13,7 @@
  * 명부 행의 중과 칸(4호·8호·8호의2 · 배우자 보유 등)은 `buildOtherHousesPayload`가 이미 싣는다(두 본문 공통).
  */
 import { buildOneHouseExemptionApiBody } from "./one-house-exemption-api";
+import { judgmentSaleIsHousing } from "@/lib/stores/one-house-judgment-form.types";
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { gracePeriodInScope } from "./grace-period-scope";
 import { formatFieldErrors } from "./transfer-tax-error-format";
@@ -33,6 +34,8 @@ export function buildMultiHouseSurchargeApiBody(form: OneHouseJudgmentFormData):
     primary.assetKind === "right_to_move_in" ? parseAmount(form.surchargeSellingRightValue) || undefined : undefined;
   const houses = buildHousesPayload(primary, form.houses, form.presaleRights.length, form.sellingHouseExclusion, form.transferDate, {
     includeSellingWithoutRoster: true,
+    // D-66 — 1주택 본문과 같은 게이트(입주권 양도면 행의 §155⑧ echo를 싣지 않는다)
+    omitOneHouseFactRows: !judgmentSaleIsHousing(form),
   });
   return {
     property: {

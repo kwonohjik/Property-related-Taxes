@@ -19,6 +19,7 @@
  * 취득일·기준시가·지역을 전부 `assets[0]`에서 읽는다. ⇒ 양도 대상은 **여기서 직접** 받는다.
  */
 import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
+import { judgmentSaleAssetView } from "@/lib/calc/judgment-sale-asset-view";
 import { JudgmentOwnershipShareField } from "./JudgmentOwnershipShareField";
 import { JUDGMENT_HOUSING_SCOPE_HINT } from "@/lib/calc/judgment-scope-hints";
 import { JUDGMENT_SALE_PRICE_WHOLE_HOUSE_HINT } from "@/lib/calc/judgment-scope-hints";
@@ -105,30 +106,27 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
    *    들어온 순간 토글을 읽기 전용 자동 판정으로 바꾼다 — 그러지 않으면 사용자가 켠 값이
    *    조용히 버려진다.
    */
+  // 2026-11 리뷰 D-67 — 입주권 양도면 ②가 숨긴 주택 전용 사실(동일세대 상속·증여 세대 사실)을 기준일에 쓰지 않는다(④와 같은 뷰).
+  const basisAsset = useMemo(() => judgmentSaleAssetView(form), [form]);
   // M4 — §154⑧3호 동일세대 상속이면 「취득 당시」는 동일세대로 보유하기 시작한 날(엔진과 같은 함수).
   const sameHouseholdStart = useMemo(
     () =>
-      primary.acquisitionDate && primary.decedentCohabitationHoldingStartDate
+      basisAsset.acquisitionDate && basisAsset.decedentCohabitationHoldingStartDate
         ? sameHouseholdInheritanceHoldingStart({
-            acquisitionCause: primary.acquisitionCause,
-            decedentSameHouseholdBeforeInheritance: primary.decedentSameHouseholdBeforeInheritance,
-            decedentCohabitationHoldingStartDate: new Date(primary.decedentCohabitationHoldingStartDate),
-            acquisitionDate: new Date(primary.acquisitionDate),
+            acquisitionCause: basisAsset.acquisitionCause,
+            decedentSameHouseholdBeforeInheritance: basisAsset.decedentSameHouseholdBeforeInheritance,
+            decedentCohabitationHoldingStartDate: new Date(basisAsset.decedentCohabitationHoldingStartDate),
+            acquisitionDate: new Date(basisAsset.acquisitionDate),
           })
         : undefined,
-    [
-      primary.acquisitionCause,
-      primary.decedentSameHouseholdBeforeInheritance,
-      primary.decedentCohabitationHoldingStartDate,
-      primary.acquisitionDate,
-    ],
+    [basisAsset],
   );
   // 결정 #38·#38-10 — 증여받은 주택의 세대 사실. 계속 같은 세대로 확인되면 「취득 당시」는 세대 보유 시작일(엔진 leaf)이고, 조정대상지역은 세대
   // 보유 시작일과 증여일 둘 다 지정 중일 때만 거주요건이다 — 엔진 `resolveWasRegulatedAtAcquisition`이 같은 basis로 정한다.
   //   basis는 계산기 ④·⑧과 **같은 leaf**(`calcGiftHouseholdBasis`)로 만든다. 일자는 date-coerce로 바꾼다 — 입력 중 미완성 일자(예: 월 「0」 →
   //   2016-00-01)는 Invalid Date가 아니라 undefined가 되어 통산이 성립하지 않는다.
   // 렌더마다 새 객체가 되면 아래 `regulatedVerdict` 메모 의존성이 매번 바뀌어 메모가 무의미하다 — 자산 객체가 같으면 같은 basis다.
-  const giftBasis = useMemo(() => calcGiftHouseholdBasis(primary, GIFT_HOUSEHOLD_SCOPE_PRIMARY), [primary]);
+  const giftBasis = useMemo(() => calcGiftHouseholdBasis(basisAsset, GIFT_HOUSEHOLD_SCOPE_PRIMARY), [basisAsset]);
   const giftConsolidated = giftHouseholdConsolidationStart(giftBasis) !== undefined;
   // §154⑤ 단서 용도변경이면 「주택 취득 당시」는 주거용 사용 개시일이 먼저다(엔진 `resolveResidenceJudgmentDate` 순서).
   const conversionStart = judgmentUsageConversionStart(form);
