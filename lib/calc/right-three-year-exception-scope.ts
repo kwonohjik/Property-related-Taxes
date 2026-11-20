@@ -47,23 +47,24 @@ export function rightThreeYearExceptionRightKinds(form: TransferFormData): ("red
   if (!isOneHouseExemptionAsset(form.assets?.[0]?.assetKind)) return [];
   if (!form.transferDate) return [];
   const transferDate = new Date(form.transferDate);
-  const exceeded = (form.presaleRights ?? []).filter(
-    (r) =>
-      r.acquisitionDate &&
-      // 기존주택 원조합원 입주권은 §156의2④·시행규칙 §75①의 대상이 아니다 — §155①로 판정한다.
-      !(r.type === "redevelopment_right" && effectiveMemberOrigin(r) === "original_house") &&
-      isRightThreeYearExceeded({
-        // 동일세대 상속 분양권은 피상속인 취득일부터 센다 — 엔진 기한 판정과 같은 leaf(`resolveAcquiredRightTiming`).
-        rightAcquisitionDate: presaleRightDefinitionAcquisitionDate({
-          type: r.type,
-          acquisitionDate: new Date(r.acquisitionDate),
-          isInherited: r.isInherited,
-          decedentSameHouseholdAtInheritance: r.decedentSameHouseholdAtInheritance,
-          decedentAcquisitionDate: r.decedentAcquisitionDate ? new Date(r.decedentAcquisitionDate) : undefined,
-        }),
-        transferDate,
-      }),
-  );
+  const sellingAcq = form.assets?.[0]?.acquisitionDate;
+  const exceeded = (form.presaleRights ?? []).filter((r) => {
+    if (!r.acquisitionDate) return false;
+    // 기존주택 원조합원 입주권은 §156의2④·시행규칙 §75①의 대상이 아니다 — §155①로 판정한다.
+    if (r.type === "redevelopment_right" && effectiveMemberOrigin(r) === "original_house") return false;
+    // 동일세대 상속 분양권은 피상속인 취득일부터 센다 — 엔진 기한 판정과 같은 leaf(`resolveAcquiredRightTiming`).
+    const rightAcq = presaleRightDefinitionAcquisitionDate({
+      type: r.type,
+      acquisitionDate: new Date(r.acquisitionDate),
+      isInherited: r.isInherited,
+      decedentSameHouseholdAtInheritance: r.decedentSameHouseholdAtInheritance,
+      decedentAcquisitionDate: r.decedentAcquisitionDate ? new Date(r.decedentAcquisitionDate) : undefined,
+    });
+    // D-40 — 권리를 양도 주택보다 먼저(또는 같은 날) 취득했으면 ③·④ 모양이 아니라 엔진이 선언과 무관하게 적용하지 않는다
+    //   (`rightTimingCore` 선후 술어). 카드를 열면 쓸모없는 선언을 유도한다 — 양도 주택 취득일이 비면 「입력 중」이라 종전대로 둔다.
+    if (sellingAcq && rightAcq.toISOString().slice(0, 10) <= sellingAcq.slice(0, 10)) return false;
+    return isRightThreeYearExceeded({ rightAcquisitionDate: rightAcq, transferDate });
+  });
   // 결정 #43 — 승계 입주권·상가토지 원조합원으로 취득해 완공된 **신규 주택 행**도 권리 취득일부터 3년을 넘기면 §156의2④ 선언 대상이다
   // (엔진 `judgeNewHouseOrigin`이 같은 선언을 읽는다). 2006.1.1. 전 인가·승계분은 §89② 대상이 아니라 제외한다(엔진과 같은 술어).
   const originRowExceeded = (form.houses ?? []).some((h) => {

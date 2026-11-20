@@ -68,6 +68,9 @@ describe("G5-8 계산기 미선언 고지 게이트", () => {
 describe("G5-8 C — 구 §167의11①1호 시대(2023.2.28. 전) 중과: 선언이 세액을 바꾸므로 고지 유지", () => {
   const oldEra = (declare: boolean) => {
     const f = calcForm({ regulated: true, transferDate: "2022-03-02", price: "2000000000" });
+    // 양도 주택을 권리(2019-02-01)보다 1년 넘게 먼저 취득한 세대 — ③·④는 「주택 먼저, 권리 나중」 모양만 받는다(D-40).
+    //   종전 픽스처(주택 2019-06-01)는 권리가 먼저라 3년 경과 선언이 쓸모없는 사실관계였다.
+    f.assets[0].acquisitionDate = "2018-01-01";
     f.presaleRights = [{ id: "r1", type: "redevelopment_right", acquisitionDate: "2019-02-01", region: "capital", memberOrigin: "successor", managementDisposalApprovalDate: "2018-01-01" } as never];
     if (declare) Object.assign(f, { rightThreeYearExceptionKind: "before_completion", rightMovedInWithin3Years: true, rightResidedOneYearOrMore: true });
     return f;

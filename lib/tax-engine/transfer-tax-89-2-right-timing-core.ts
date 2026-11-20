@@ -18,6 +18,8 @@ import {
   resolve1562DeadlineYears,
 } from "./data/article-156-2-completion-era";
 
+const fmtDate = (d: Date) => `${d.getUTCFullYear()}.${d.getUTCMonth() + 1}.${d.getUTCDate()}.`;
+
 /** 이 코어가 읽는 입력 — 양도 주택 취득일(종전주택)·양도일·3년 초과 예외 선언뿐이다. */
 export type RightTimingCoreInput = Pick<TransferTaxInput, "acquisitionDate" | "transferDate" | "rightThreeYearException">;
 
@@ -31,6 +33,34 @@ export function rightTimingCore(
   rightAcq: Date,
   viaArticle: string | undefined,
 ): Article89Clause2Result {
+  const clauseLabel = right.type === "redevelopment_right" ? "§156의2 ③·④" : "§156의3 ②·③";
+  const rightLabel = right.type === "redevelopment_right" ? "조합원입주권" : "분양권";
+  /**
+   * D-40 — ③·④(§156의3②·③) 본문은 「국내에 1주택을 소유한 1세대가 그 주택을 양도하기 전에 조합원입주권(분양권)을 **취득함으로써**
+   * 일시적으로 1주택과 1조합원입주권을 소유하게 된 경우」다. 권리를 먼저 갖고 주택을 나중에 산 세대는 이 모양이 아니다
+   * (서면-2021-법규재산-8011 「국내에 1주택을 소유한 1세대가 조합원입주권을 취득한 경우에 해당하지 않으므로」). 후단(1년 요건 면제)은
+   * 선후를 면제하지 않는다. 같은 날 취득은 선후를 알 수 없어 불성립 + 확인 필요다(결정 #43 G6-4 형제 규칙과 같다).
+   */
+  const rightDay = Math.floor(rightAcq.getTime() / 86_400_000);
+  const houseDay = Math.floor(input.acquisitionDate.getTime() / 86_400_000);
+  if (rightDay < houseDay) {
+    return {
+      status: "excluded",
+      exclusionReasons: [
+        `${rightLabel}을 양도 주택 취득일(${fmtDate(input.acquisitionDate)})보다 앞선 ${fmtDate(rightAcq)}에 취득했습니다 — ` +
+          `1주택을 가진 세대가 그 주택을 양도하기 전에 권리를 취득한 경우가 아니라 ${clauseLabel}을 적용하지 않습니다(서면-2021-법규재산-8011).`,
+      ],
+      exclusionBasis: `소득세법 시행령 ${clauseLabel}`,
+    };
+  }
+  if (rightDay === houseDay) {
+    return {
+      status: "excluded",
+      confirmNotes: [
+        `${rightLabel} 취득일(${fmtDate(rightAcq)})이 양도 주택 취득일과 같은 날이라 어느 쪽이 먼저인지 알 수 없어 ${clauseLabel}을 적용하지 않았습니다(확인 필요).`,
+      ],
+    };
+  }
   // 「1년 이상이 지난 후」·「3년 이내」 모두 초일불산입 — 응당일 권리 취득은 1년 미경과(§155①과 같은 문언,
   //   조심2020서1405 · 서면2017법령해석재산-785). ③·②의 직접 선례는 미확보(계획서 §7-1).
   //   후단 — §154①1호·2호가목·3호에 해당하면 1년 요건을 적용하지 않는다(③·④ 모두 · §155① 후단과 같은 술어).
