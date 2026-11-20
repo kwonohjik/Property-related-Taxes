@@ -7,15 +7,19 @@
 
 import { isAreaOver } from "../area-limit";
 import { NBL } from "../legal-codes";
-import { NBL_EXCLUSION_RANGE_POSITION_NOTICE } from "../nbl-confirm-notices";
+import { NBL_EXCLUSION_RANGE_POSITION_NOTICE, NBL_REVENUE_BUSINESS_START_APPLIED_NOTICE } from "../nbl-confirm-notices";
+import { differenceInDays } from "../utc-date";
 import type {
   CategoryJudgeResult,
   JudgmentStep,
+  LandCategoryGroup,
   NonBusinessLandInput,
   NonBusinessLandJudgmentRules,
   PeriodEvaluation,
+  RevenueTestResult,
 } from "./types";
-import { getPeriodJudgmentDate, meetsPeriodCriteria } from "./period-criteria";
+import { getPeriodJudgmentDate, meetsPeriodCriteria, type PeriodCriteriaResult } from "./period-criteria";
+import { getOwnershipStart } from "./utils/period-math";
 
 /** 한 목이 사업용으로 인정한 면적(㎡). 전량 사업용이면 토지 전체, 면적 안분이 없는 비사업용(전량 비사업용)이면 0. */
 function businessAreaOf(r: CategoryJudgeResult, landArea: number): number {
@@ -63,9 +67,10 @@ export function pickWiderExclusion(
 }
 
 /**
- * 영 §168의14① 유예기간 — 비사업용으로 끝난 기타토지(전량·부분)의 **잔여분**을 확정하기 직전에 판정한다.
+ * 영 §168의14① 유예기간 — 비사업용으로 끝난 토지(전량·부분)의 **잔여분**을 확정하기 직전에 판정한다.
+ * 기타토지(NBL2611-V2-C1 · B3)와 주택부수토지 배율 초과분(NBL2611-D1 · Q-3a (나))이 같은 규칙을 쓴다 — `group`은 단계 id·기간 판정 지목만 가른다.
  *
- * 기타토지는 양도일 현재 상태를 소유기간 전체에 적용하므로(NBL2611-V2-C2) 사업용 사용기간이 없다.
+ * 이 두 지목은 양도일 현재 상태(건축물 없음·배율 초과)를 소유기간 전체에 적용하므로(NBL2611-V2-C2) 사업용 사용기간이 없다.
  * 그래서 «빈 사업기간 + 유예기간»으로 §168의6 기간기준(유예는 해당 기간을 사업용으로 본다는 의제)을 판정한다.
  * (기존 `fullPeriod` 호출에 유예만 얹으면 합집합 증가분이 0이라 효과가 없다.)
  *
@@ -76,15 +81,16 @@ export function applyGraceToNonBusinessRemainder(
   result: CategoryJudgeResult,
   input: NonBusinessLandInput,
   rules: NonBusinessLandJudgmentRules,
+  group: Extract<LandCategoryGroup, "other_land" | "housing"> = "other_land",
 ): { result: CategoryJudgeResult; graceJudged?: NonNullable<PeriodEvaluation["graceJudged"]> } {
   if (result.isBusiness || input.gracePeriods.length === 0) return { result };
 
   const pjDate = getPeriodJudgmentDate(input);
-  const r = meetsPeriodCriteria([], input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+  const r = meetsPeriodCriteria([], input.acquisitionDate, pjDate, group, rules, input.gracePeriods);
   const graceJudged = { gracePeriodDays: r.gracePeriodDays, totalOwnershipDays: r.totalOwnershipDays, meets: r.meets };
 
   const step: JudgmentStep = {
-    id: "other_grace_period",
+    id: group === "housing" ? "housing_grace_period" : "other_grace_period",
     label: "Step 4 유예기간(영 §168의14①) 기간기준",
     status: r.meets ? "PASS" : "FAIL",
     detail: r.meets
@@ -111,5 +117,60 @@ export function applyGraceToNonBusinessRemainder(
       areaProportioning: undefined,
     },
     graceJudged,
+  };
+}
+
+/**
+ * NBL2611-D1 (V2-C2 · DM-01 · 리뷰 Q-4 (나)) — 수입금액비율(영 §168의11②) 충족 토지의 **당해 사업개시일**을 기간기준 판정에 쓴다.
+ *
+ * 기타토지는 양도일 현재 상태를 소유기간 전체에 적용하므로(V2-C2) 수입금액비율을 충족하면 전 기간을 사업용으로 본다. 그런데 화면은
+ * 「당해 사업개시일」을 받아 연환산(§168의11③3호)에만 쓰고 판정에서는 버렸다 — 개시 직후 양도한 토지가 전 기간 사업용이 됐다(과소).
+ * 최소안: 개시일이 있고 **직전 비율②(당해+직전)가 기준 미통과**일 때만 사업 구간을 [개시일, 양도일]로 보아 기간기준(§168의6)을 판정한다.
+ * 직전 비율②가 통과면 직전 과세기간에도 이미 사업 실적이 있어 개시일 전도 사업에 쓴 것으로 보아 현행(전 기간)대로 둔다.
+ * 개시일 전 토지의 실제 이용 상태·상태 이력 입력 모델(Q-4 (다))은 이 최소안의 범위 밖이다 — 고지(`NBL_REVENUE_BUSINESS_START_APPLIED_NOTICE`)로 알린다.
+ *
+ * 개시일이 없거나 수입금액비율 미충족이면 `undefined`(아무것도 바꾸지 않는다). 유예기간은 [개시일, 양도일]과 합집합으로 본다.
+ */
+export function judgeRevenueBusinessStart(
+  input: NonBusinessLandInput,
+  revenue: RevenueTestResult,
+  rules: NonBusinessLandJudgmentRules,
+): { step: JudgmentStep; applied?: { r: PeriodCriteriaResult; revenue: RevenueTestResult; notice: string } } | undefined {
+  const start = input.revenueTest?.currentBusinessStartDate;
+  if (!start || !revenue.pass) return undefined;
+
+  const priorPass = revenue.ratioCombined !== undefined && revenue.ratioCombined >= revenue.threshold;
+  if (priorPass) {
+    return {
+      step: {
+        id: "other_revenue_business_start",
+        label: "§168의11② 당해 사업개시일 기간기준",
+        status: "NOT_APPLICABLE",
+        detail: "직전 비율②(당해+직전)가 기준을 충족해 직전 과세기간에도 사업 실적이 있다 — 당해 사업개시일을 기간기준에 쓰지 않고 전 기간으로 본다",
+        legalBasis: NBL.REVENUE_TEST,
+      },
+    };
+  }
+
+  const pjDate = getPeriodJudgmentDate(input);
+  const r = meetsPeriodCriteria(start < pjDate ? [{ start, end: pjDate }] : [], input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+  const ownershipStart = getOwnershipStart(input.acquisitionDate);
+  const businessDays = start < pjDate ? Math.max(0, differenceInDays(pjDate, start < ownershipStart ? ownershipStart : start)) : 0;
+  const startIso = start.toISOString().slice(0, 10);
+  return {
+    step: {
+      id: "other_revenue_business_start",
+      label: "§168의11② 당해 사업개시일 기간기준",
+      status: r.meets ? "PASS" : "FAIL",
+      detail:
+        `직전 비율②가 기준 미통과 — 사업 구간을 당해 사업개시일(${startIso})부터 양도일까지 ${businessDays}일로 보아 기간기준 ` +
+        `${r.meets ? "충족" : "미충족"} — ${r.detail}`,
+      legalBasis: NBL.REVENUE_TEST,
+    },
+    applied: {
+      r,
+      revenue: { ...revenue, businessStartJudged: { startDate: startIso, businessDays, totalOwnershipDays: r.totalOwnershipDays, meets: r.meets } },
+      notice: NBL_REVENUE_BUSINESS_START_APPLIED_NOTICE,
+    },
   };
 }

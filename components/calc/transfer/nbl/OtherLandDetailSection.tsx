@@ -307,7 +307,7 @@ export function OtherLandDetailSection({
                 <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">당해 과세기간 연환산 (§168의11③3호)</p>
                 <LawArticleModal legalBasis="소득세법 시행령 §168의11③" label="§168의11③" />
               </div>
-              <FieldCard label="당해 사업개시일" hint="당해연도 중 사업을 개시한 경우만 입력. 미입력 시 과세기간개시일(1.1) 또는 당해연도 취득일을 기산일로 자동 적용.">
+              <FieldCard field="nblRevenueCurrentBusinessStartDate" label="당해 사업개시일" hint="당해연도 중 사업을 개시한 경우만 입력. 미입력 시 과세기간개시일(1.1) 또는 당해연도 취득일을 기산일로 자동 적용. 입력하면 직전 과세기간 비율②가 기준에 미달할 때 사업 구간을 「사업개시일 ~ 양도일」로 보아 기간기준(영 §168의6)도 판정합니다.">
                 <DateInput value={asset.nblRevenueCurrentBusinessStartDate} onChange={(v) => onAssetChange({ nblRevenueCurrentBusinessStartDate: v })} />
               </FieldCard>
               {revenuePreview ? (

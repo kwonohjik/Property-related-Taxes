@@ -38,13 +38,13 @@ describe("V10-PU10·V8-VL08 — 도시편입일 칸은 소비 지목에만", () 
 });
 
 describe("V2-C1 — 유예기간 안내를 사실대로", () => {
-  it.each(["housing_site"] as const)("%s → 「반영되지 않음 — 확인 필요」 고지, 「가산됩니다」 문구 없음", (landType) => {
-    render(<GracePeriodSection asset={base({ nblLandType: landType })} onAssetChange={() => {}} transferDate="2024-06-03" />);
+  it.each(["building_site"] as const)("%s → 「반영되지 않음 — 확인 필요」 고지, 「가산됩니다」 문구 없음", (landType) => {
+    render(<GracePeriodSection asset={base({ nblLandType: landType as never })} onAssetChange={() => {}} transferDate="2024-06-03" />);
     expect(screen.getByTestId("nbl-grace-not-applied-notice").textContent).toContain("가산하지 않습니다");
     expect(screen.queryByText(/사업용 사용 기간에 가산됩니다/)).toBeNull();
   });
 
-  it.each(["farmland", "forest", "pasture", "villa_land", "other_land"] as const)("%s → 종전 안내 유지 · 고지 없음 (기타토지는 NBL2611-B3부터 유예를 읽는다)", (landType) => {
+  it.each(["farmland", "forest", "pasture", "villa_land", "other_land", "housing_site"] as const)("%s → 종전 안내 유지 · 고지 없음 (기타토지는 NBL2611-B3, 주택부수토지는 NBL2611-D1부터 유예를 읽는다)", (landType) => {
     render(<GracePeriodSection asset={base({ nblLandType: landType })} onAssetChange={() => {}} transferDate="2024-06-03" />);
     expect(screen.queryByTestId("nbl-grace-not-applied-notice")).toBeNull();
     expect(screen.getByText(/사업용 사용 기간에 가산됩니다/)).toBeTruthy();

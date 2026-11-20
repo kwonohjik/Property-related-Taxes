@@ -25,14 +25,18 @@ import { getHousingMultiplier } from "./urban-area";
 import { getOwnershipStart } from "./utils/period-math";
 import { NBL_STATE_AT_TRANSFER_APPLIED_NOTICE } from "../nbl-confirm-notices";
 import { expropriationZoneBaseDateNotice } from "../appurtenant-land-rate";
+import { applyGraceToNonBusinessRemainder } from "./other-land-merge";
 
-/** NBL2611-V10-P — 주택부수토지는 영 §168의12 배율 × 면적으로만 판정한다. 기간기준(영 §168의6)은 판정하지 않는다(2026-07-31 방침 · V2-C2). */
+/**
+ * NBL2611-V10-P — 주택부수토지는 영 §168의12 배율 × 면적으로 판정한다. 배율 초과 상태는 양도일 현재 상태를 소유기간 전체에 적용하며(V2-C2),
+ * 영 §168의6 기간기준은 **유예기간(영 §168의14①)만** 초과분에 반영한다(NBL2611-D1 · 리뷰 Q-3a (나) — 2026-07-31 방침(초과분 기간요건 일률)을 좁힘).
+ * 유예 입력이 없거나 초과분이 없으면 기간기준을 판정하지 않은 것(`not_judged`)이다. 사용기간 입력·양도일 의제(§168의14②)는 이 지목에서 받지 않는다.
+ */
 const HOUSING_PERIOD_EVALUATION = { basis: "not_judged", legalBasis: [NBL.HOUSING_MULTIPLIER] } as const;
 
 export function judgeHousingLand(
   input: NonBusinessLandInput,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _rules: NonBusinessLandJudgmentRules,
+  rules: NonBusinessLandJudgmentRules,
 ): CategoryJudgeResult {
   const steps: JudgmentStep[] = [];
   const appliedLaws: string[] = [NBL.HOUSING_MULTIPLIER];
@@ -152,7 +156,7 @@ export function judgeHousingLand(
     detail: `${input.landArea}㎡ > ${allowedArea}㎡ → 초과분 ${nonBusinessArea}㎡ 비사업용 (${Math.round(area.nonBusinessRatio * 100)}%)`,
     legalBasis: NBL.HOUSING_MULTIPLIER,
   });
-  return {
+  const excessResult: CategoryJudgeResult = {
     isBusiness: false,
     reason: `배율(${multiplier}배) 초과 — 초과분 ${nonBusinessArea}㎡ 비사업용`,
     steps,
@@ -165,5 +169,16 @@ export function judgeHousingLand(
     criteria: { rule2of3Years: false, rule5Years: false, rule80Percent: false },
     periodEvaluation: HOUSING_PERIOD_EVALUATION,
     warnings,
+  };
+  // NBL2611-D1 (V2-C1 · Q-3a (나)) — 초과분은 «빈 사업기간 + 유예기간»으로 기간기준을 본다(영 §168의14①). 충족하면 초과분이 사업용이 되어 전량 사업용이다.
+  const { result, graceJudged } = applyGraceToNonBusinessRemainder(excessResult, input, rules, "housing");
+  if (!graceJudged) return excessResult;
+  return {
+    ...result,
+    // 유예로 사업용이 돼도 배율·면적 정보는 남긴다(사업용 면적 = 전체, 초과 0).
+    areaProportioning: result.isBusiness
+      ? { ...area, businessArea: input.landArea, nonBusinessArea: 0, nonBusinessRatio: 0, legalBasis: [NBL.HOUSING_MULTIPLIER, NBL.UNAVOIDABLE_PERIOD] }
+      : result.areaProportioning,
+    periodEvaluation: { basis: "state_at_transfer", legalBasis: [NBL.HOUSING_MULTIPLIER], graceJudged },
   };
 }

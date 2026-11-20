@@ -28,6 +28,8 @@ import {
 } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
 import { periodRowIssue, periodRowIssueField, periodRowIssueMessage } from "@/lib/tax-engine/non-business-land/period-row-issue";
 import { priorRevenueWithoutLandValue } from "@/lib/tax-engine/non-business-land/revenue-test";
+import { revenueStartDateAfterTransfer } from "@/lib/tax-engine/non-business-land/revenue-test";
+import { REVENUE_START_DATE_AFTER_TRANSFER_MESSAGE } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
 import { hoRequiredInputIssue } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
 import { wholesaleItemIssue } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 
@@ -51,6 +53,7 @@ export interface NblRawRefineInput {
   nblVillaNoUseConfirmed?: boolean;
   nblGracePeriods?: GraceRowLike[];
   nblRevenueBusinessType?: string;
+  nblRevenueCurrentBusinessStartDate?: string;
   nblRevenuePriorRevenue?: string;
   nblRevenuePriorDeposit?: string;
   nblRevenuePriorRentDays?: string;
@@ -143,6 +146,15 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
     })
   )
     issue(["nblRevenuePriorLandValue"], PRIOR_REVENUE_LAND_VALUE_REQUIRED_MESSAGE);
+
+  // NBL2611-D1 (DM-01) — 당해 사업개시일은 양도일 이전 (⑧ 수입금액비율 블록과 같은 술어·같은 문구)
+  if (
+    raw.nblLandType === "other_land" &&
+    bt &&
+    bt !== "none" &&
+    revenueStartDateAfterTransfer(raw.nblRevenueCurrentBusinessStartDate, raw.transferDate)
+  )
+    issue(["nblRevenueCurrentBusinessStartDate"], REVENUE_START_DATE_AFTER_TRANSFER_MESSAGE);
 
   // NBL2611-V9-DM09 — 6호 휴양시설 2·3호는 «상한 이내 실제 면적» — 상한만 있고 실제 면적이 없으면 400 (⑧ 휴양시설 블록과 같은 술어·같은 문구)
   if (raw.nblLandType === "other_land" && raw.nblOtherRelatedBusinessType === "resort") {

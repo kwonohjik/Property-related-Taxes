@@ -469,6 +469,7 @@ export function buildRevenueTest(
     currentLandValue: parseNumber(asString(a.nblRevenueCurrentLandValue)) ?? 0,
     currentBusinessDays,
     currentTaxYear,
+    currentBusinessStartDate: startOverride,
     priorRevenue:     parseNumber(asString(a.nblRevenuePriorRevenue)),
     priorLandValue:   parseNumber(asString(a.nblRevenuePriorLandValue)),
     priorBusinessDays,

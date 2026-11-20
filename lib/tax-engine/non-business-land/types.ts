@@ -242,6 +242,11 @@ export interface RevenueTestInput {
   currentBusinessDays?: number;
   /** 당해 과세연도(윤년 판정용 총일수 365/366). 미제공 시 환산 안 함 */
   currentTaxYear?: number;
+  /**
+   * 당해 사업개시일(§168의11③3호 연환산의 영위 개시일 override) — NBL2611-D1(DM-01 · Q-4 (나)): 수입금액비율을 충족했더라도
+   * 직전 비율②가 미통과이면 이 업종의 사업 구간을 [개시일, 양도일]로 보아 기간기준(§168의6)을 판정한다. 미제공이면 전 기간(현행).
+   */
+  currentBusinessStartDate?: Date;
   /** 직전 과세기간 수입금액 (원). 미제공 시 비율② 생략 */
   priorRevenue?: number;
   /** 직전 과세기간 토지가액 (원) */
@@ -317,6 +322,11 @@ export interface RevenueTestResult {
   commonApportionedPrior: number;
   /** 간주임대료 입력 있으나 해당 연도 율 미검증으로 미적용된 경우 true (경고) */
   deemedRateUnavailable: boolean;
+  /**
+   * [echo] 당해 사업개시일을 기간기준 판정에 쓴 경우의 사실(NBL2611-D1 · DM-01). 수입금액비율 충족 + 개시일 입력 + 직전 비율② 미통과일 때만 있다.
+   * `meets`가 참이면 [개시일, 양도일]을 사업 구간으로 보아도 기간기준을 충족한 것이다.
+   */
+  businessStartJudged?: { startDate: string; businessDays: number; totalOwnershipDays: number; meets: boolean };
 }
 
 // ============================================================
@@ -479,7 +489,8 @@ export interface AreaProportioning {
  *
  * - `usage_periods`: 입력한 사용기간(자경·축산·별장 사용 등)으로 소유기간 중 사업용 기간을 실제로 셌다. 일수·비율이 판정 근거다.
  * - `state_at_transfer`: 양도일 현재의 이용 상태를 소유기간 전체에 적용했다. 일수·비율은 «전 기간 사업용»으로 채운 표시값이라 판정 근거가 아니다(리뷰 V2-C2).
- * - `not_judged`: 기간기준을 판정하지 않았다(배율 × 면적으로만 판정하는 주택·건물 부수토지, 무조건 사업용 의제, 판정 불가 등).
+ *   주택부수토지 배율 초과분에 유예를 판정에 쓴 경우도 이 값이다(`graceJudged` 동반 — NBL2611-D1).
+ * - `not_judged`: 기간기준을 판정하지 않았다(배율 × 면적으로만 판정하는 주택·건물 부수토지 — 주택부수토지는 유예 입력이 없거나 초과분이 없을 때, 무조건 사업용 의제, 판정 불가 등).
  */
 export type PeriodEvaluationBasis = "usage_periods" | "state_at_transfer" | "not_judged";
 
@@ -488,7 +499,7 @@ export interface PeriodEvaluation {
   /** 기간 대신 실제로 판정한 기준의 법령 근거(`not_judged`일 때 — 예: 주택부수토지는 영 §168의12 배율). 없을 수 있다. */
   legalBasis?: readonly string[];
   /**
-   * 영 §168의14① 유예기간을 «빈 사업기간 + 유예»로 실제 판정에 쓴 경우의 사실(기타토지 — NBL2611-V2-C1). 유예 입력이 없으면 없다.
+   * 영 §168의14① 유예기간을 «빈 사업기간 + 유예»로 실제 판정에 쓴 경우의 사실(기타토지 — NBL2611-V2-C1 · 주택부수토지 배율 초과분 — NBL2611-D1). 유예 입력이 없으면 없다.
    * `meets`가 참이면 그 유예 덕에 비사업용 잔여분이 사업용이 됐다는 뜻이다.
    */
   graceJudged?: { gracePeriodDays: number; totalOwnershipDays: number; meets: boolean };

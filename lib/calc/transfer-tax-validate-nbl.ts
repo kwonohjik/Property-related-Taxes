@@ -35,8 +35,10 @@ import { periodRowIssueField } from "@/lib/tax-engine/non-business-land/period-r
 import { periodRowIssueMessage } from "@/lib/tax-engine/non-business-land/period-row-issue";
 import { wholesaleItemIssue } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import { priorRevenueWithoutLandValue } from "@/lib/tax-engine/non-business-land/revenue-test";
+import { revenueStartDateAfterTransfer } from "@/lib/tax-engine/non-business-land/revenue-test";
 import { PRIOR_REVENUE_LAND_VALUE_REQUIRED_MESSAGE } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
 import { VILLA_NO_USE_REQUIRED_MESSAGE } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
+import { REVENUE_START_DATE_AFTER_TRANSFER_MESSAGE } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
 
 /** 폼의 3-state 값을 엔진 `LandDivision`으로 — ④ form-mapper와 **같은 접기 규칙**(3중 패턴). */
 function nblLandDivisionOf(asset: AssetForm): LandDivision | undefined {
@@ -278,6 +280,9 @@ export function validateNblDetailedJudgment(
         // 한 메시지가 두 칸을 물으면 비어 있는 칸으로 간다
         return fieldError(pc > 0 ? "nblRevenuePriorOtherLandValue" : "nblRevenuePriorCommonRevenue", `${label}: 직전 공통수입 안분은 공통수입금액과 '그 밖의 토지가액'을 함께 입력하세요.`);
     }
+    // NBL2611-D1 (DM-01) — 당해 사업개시일은 양도일 이전이어야 한다(⑫와 같은 술어·같은 문구). 개시일이 판정의 사업 구간 시작일이 된다.
+    if (revenueStartDateAfterTransfer(asset.nblRevenueCurrentBusinessStartDate, formTransferDate))
+      return fieldError("nblRevenueCurrentBusinessStartDate", `${label}: ${REVENUE_START_DATE_AFTER_TRANSFER_MESSAGE}`);
     // NBL2611-V9-DM06 — (더 구체적인 위 공통쌍 오류가 먼저 나오도록 그 뒤에 둔다) 직전 수입 쪽만 넣고 직전 토지가액을 비우면 비율②(당해+직전)가 조용히 빠진다. 직전 토지가액만 있는 쪽은 ②≤①이라 막지 않는다.
     if (
       priorRevenueWithoutLandValue({

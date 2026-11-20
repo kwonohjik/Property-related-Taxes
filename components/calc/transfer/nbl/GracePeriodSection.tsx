@@ -61,7 +61,7 @@ export function GracePeriodSection({
 }) {
   const periods = asset.nblGracePeriods ?? [];
   const dealer = asset.nblBusinessIsRealEstateDealer ?? false;
-  // NBL2611-V2-C1 — 이 지목의 판정이 유예기간을 읽는가(엔진 소비 술어). 기타토지는 B3에서 반영했고 주택·건물 부수토지는 아직 읽지 않는다(D1).
+  // NBL2611-V2-C1 — 이 지목의 판정이 유예기간을 읽는가(엔진 소비 술어). 기타토지는 B3, 주택부수토지는 D1에서 반영했고 건물(비주택) 부수토지만 아직 읽지 않는다.
   // 지목 미선택은 아직 모르는 상태라 «반영되지 않음»이라 단정하지 않는다.
   const graceConsumed = !asset.nblLandType || consumesGracePeriods(asset.nblLandType);
 
@@ -114,7 +114,7 @@ export function GracePeriodSection({
       {!graceConsumed && (
         <ToneCard tone="amber" title="이 지목의 판정에는 아직 반영되지 않습니다 — 확인 필요">
           <p data-testid="nbl-grace-not-applied-notice" className="text-xs text-amber-800 dark:text-amber-200 leading-snug">
-            주택·건물 부수 토지 판정은 아래 부득이한 사유(유예기간)를 사업용 사용 기간에 가산하지 않습니다. 입력해도 이 계산 결과는 바뀌지 않습니다.
+            건물(비주택) 부수 토지 판정은 아래 부득이한 사유(유예기간)를 사업용 사용 기간에 가산하지 않습니다. 입력해도 이 계산 결과는 바뀌지 않습니다.
             해당 사유가 있으면 반영되지 않은 결과임을 전제로 확인하세요.
           </p>
         </ToneCard>
