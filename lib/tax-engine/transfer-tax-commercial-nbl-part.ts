@@ -31,6 +31,7 @@ import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { NBL, TRANSFER } from "./legal-codes";
 import { toAreaMicro } from "./area-limit";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
+import { commercialExcessExpropriationDeem } from "./appurtenant-excess-deeming";
 import { apportionByStdPrice } from "./std-price-apportion";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import { calcTransferGain, applyCommercialBuildingStep, type CommercialBuildingStepResult } from "./transfer-tax-helpers";
@@ -94,6 +95,7 @@ export function resolveCommercialNblPart(args: {
     buildingFootprintArea: cal.totalBuildingFootprintArea,
     zoneType: cal.zoneType,
     unapprovedBuilding: cal.unapprovedBuilding,
+    expropriationDeem: commercialExcessExpropriationDeem(effectiveInput).deem, // NBL2611-C4 — STEP 0.62와 같은 수용 의제(한쪽만 의제하면 표지·파트가 갈린다)
     context: "상업용건물",
   });
   if (judged.nonBusinessArea <= 0) return { effectiveInput, nblPart: undefined };

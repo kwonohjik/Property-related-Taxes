@@ -578,7 +578,7 @@ function resolveRentalHousingSplitTax(
 
   const d = resolveClause5TaxDetailed({
     housingIncome,
-    nbl: { income: ctx.transferIncome - housingIncome, rateInput: buildNblPartRateInput(ctx.taxRateInput, nbBasisDate) },
+    nbl: { income: ctx.transferIncome - housingIncome, rateInput: buildNblPartRateInput(ctx.taxRateInput, nbBasisDate, nb.deemedBusiness !== undefined) },
     basicDeduction: ctx.basicDeduction,
     taxBase: ctx.taxBase,
     input: ctx.taxRateInput,

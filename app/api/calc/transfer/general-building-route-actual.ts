@@ -16,6 +16,7 @@ import { planGbLandCards } from "@/lib/tax-engine/general-building-land-cards";
 import type { SaleSplitJudgmentDetail } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import type { ApportionBasisKind } from "@/lib/tax-engine/sale-split-apportion-basis";
 import { judgeAppurtenantLandExcess } from "@/lib/tax-engine/appurtenant-land-excess";
+import { gbExcessDeemNotices, gbExcessExpropriationDeem } from "@/lib/tax-engine/appurtenant-excess-deeming";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
@@ -412,6 +413,19 @@ export function buildActualGeneralBuildingCards(
   }
 
   // NBL 판정 — 본체는 공용 헬퍼(`appurtenant-land-excess.ts`). 환산·증축 경로와 공유.
+  // NBL2611-C4(R16) — 공익수용 무조건 의제(영 §168의14③3호): 환산·증축 경로와 같은 입구 함수.
+  const gbDeem = gbExcessExpropriationDeem({
+    transferCause: payload.transferCause,
+    expropriationNoticeDate: payload.expropriationNoticeDate,
+    transferDate,
+    acquisitionDate,
+    landAcquisitionDate,
+    landAcquisitionCause,
+    decedentAcquisitionDate,
+    nonHeirBequest: payload.nonHeirBequest,
+    donorAcquisitionDate,
+    hasLandCarryover: landCarryoverTaxation !== undefined,
+  });
   const {
     isWithinLimit: isWithinNblRatio,
     nonBusinessArea,
@@ -419,11 +433,13 @@ export function buildActualGeneralBuildingCards(
     allowedLandArea,
     multiplier: appliedMultiplier,
     multiplierDetail,
+    expropriationDeemed,
   } = judgeAppurtenantLandExcess({
     landArea,
     buildingFootprintArea,
     zoneType,
     unapprovedBuilding,
+    expropriationDeem: gbDeem.deem,
     context: "일반건물(실거래가)",
   });
 
@@ -543,6 +559,7 @@ export function buildActualGeneralBuildingCards(
     // 부담부증여(§159)는 카드 취득가액이 채무비율 안분값이라 공제 대상이 아니다 — 싣지 않는다(⑧ validate가 먼저 막는다).
     cards: payload.burdenedGiftInfo ? cards : attachBuildingDepreciation(cards, payload.depreciationAmount),
     nonBusinessRatio,
+    ...(gbExcessDeemNotices(gbDeem, expropriationDeemed?.suppressedArea) ? { expropriationDeemNotices: gbExcessDeemNotices(gbDeem, expropriationDeemed?.suppressedArea) } : {}),
     nblDetail: {
       buildingFootprintArea,
       allowedLandArea,
@@ -678,6 +695,7 @@ export function runActualGeneralBuildingOnce(
   aggregated.generalBuildingValuationDetail = {
     assetCards: cards,
     nonBusinessRatio,
+    ...(built.expropriationDeemNotices ? { expropriationDeemNotices: built.expropriationDeemNotices } : {}),
     landStdTotal: landStdAtTransfer,
     buildingStdTotal: built.transferBuildingStdPrice,
     ...actualExpenseEcho(built),

@@ -2,6 +2,7 @@
  * 양도소득세 연간 합산 API — 건별 엔진 입력 매핑(⑭). `route.ts`에서 분리했다(800줄 정책 · 무동작 이동).
  */
 
+import { toEngineAppurtenantExcessFacts } from "@/lib/api/appurtenant-excess-coerce";
 import { toEngineSec163_9Inputs } from "../route-inherited-acquisition";
 import { toEngineOneHouseExemptionProviso } from "@/lib/api/exemption-proviso-coerce";
 import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce";
@@ -89,6 +90,7 @@ export function toMultiEngineItem(
      */
     // §164⑨ 1호(공익수용: ㎡단가·주택 총액·건물 분리 토지분)·2호(공매·경락)
     transferCause: p.transferCause,
+    appurtenantExcessFacts: toEngineAppurtenantExcessFacts(p.appurtenantExcessFacts), // ⑭ NBL2611-C4 — 배율 초과분 수용 의제·유예 사실(누락 시 침묵 strip)
     standardPricePerSqmAtTransfer: p.standardPricePerSqmAtTransfer,
     transferArea: p.transferArea,
     compensationPerSqm: p.compensationPerSqm,

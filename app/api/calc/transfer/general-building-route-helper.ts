@@ -117,6 +117,8 @@ export function dispatchGeneralBuilding(
    */
   expropriation?: {
     transferCause?: "general" | "public_expropriation";
+    /** NBL2611-C4 — 사업인정 고시일(배율 초과분 수용 의제) */
+    expropriationNoticeDate?: Date;
     compensationPerSqm?: number;
     compensationBasisStdPrice?: number;
   },
@@ -166,6 +168,8 @@ function dispatchCoercedGeneralBuilding(
   burdenedGiftInfo?: BurdenedGiftInfo,
   expropriation?: {
     transferCause?: "general" | "public_expropriation";
+    /** NBL2611-C4 — 사업인정 고시일(배율 초과분 수용 의제) */
+    expropriationNoticeDate?: Date;
     compensationPerSqm?: number;
     compensationBasisStdPrice?: number;
   },
@@ -185,6 +189,7 @@ function dispatchCoercedGeneralBuilding(
     // §164⑨ 1호 공익수용 특례 (토지 전용 — D16-GB): top-level 특례 필드 주입.
     // 환산 경로 엔진이 게이트(수용·환산·2009.02.04·보상 후보) 판정. undefined이면 무영향(회귀 0).
     ...(expropriation?.transferCause ? { transferCause: expropriation.transferCause } : {}),
+    ...(expropriation?.expropriationNoticeDate ? { expropriationNoticeDate: expropriation.expropriationNoticeDate } : {}),
     ...(expropriation?.compensationPerSqm !== undefined
       ? { compensationPerSqm: expropriation.compensationPerSqm }
       : {}),
@@ -239,6 +244,9 @@ function dispatchCoercedGeneralBuilding(
         landAcquisitionDate: landAcqDateCoerced,
         buildingAcquisitionDate: buildingAcqDate,
         buildingAcquisitionCause: buildingAcqCause,
+        // NBL2611-C4 — 배율 초과분 수용 의제(환산 경로는 `estimatedPayloadOf`가 같은 값을 싣는다)
+        ...(expropriation?.transferCause ? { transferCause: expropriation.transferCause } : {}),
+        ...(expropriation?.expropriationNoticeDate ? { expropriationNoticeDate: expropriation.expropriationNoticeDate } : {}),
       },
       taxYear, annualBasicDeductionUsed, priorReductionUsage, rates, assetLevel,
     );
@@ -249,6 +257,10 @@ function dispatchCoercedGeneralBuilding(
     );
   }
   withGbPreDeemedEcho(result.aggregated, preDeemed.echo);
+  // NBL2611-C4 — 배율 초과분 수용 의제 고지를 결과 경고에 싣는다(함께 양도·다건은 `mergeGbExcessConfirmNotices`가 같은 값을 모은다 — 화면에서 중복 제거).
+  for (const n of result.aggregated.generalBuildingValuationDetail?.expropriationDeemNotices ?? []) {
+    if (!result.aggregated.warnings.includes(n)) result.aggregated.warnings.push(n);
+  }
   return result;
 }
 

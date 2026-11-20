@@ -122,10 +122,14 @@ describe("V8-VL01 — 별장 농어촌주택 기준시가 한도(양도일 2015.
 
 describe("재발 방지 스캔 — 연혁 숫자 리터럴이 엔진 파일에 다시 박히지 않는다", () => {
   const read = (rel: string) => readFileSync(resolve(process.cwd(), rel), "utf8").replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
-  it("공익수용 의제: addYears(고시일, -5) 단일 기준 리터럴 없음 — leaf(publicNoticeLookback)만 읽는다", () => {
-    const src = read("lib/tax-engine/non-business-land/unconditional-exemption.ts");
-    expect(src).not.toMatch(/addYears\([^)]*,\s*-5\)/);
-    expect(src).toContain("publicNoticeLookback(");
+  it("공익수용 의제: addYears(고시일, -5) 단일 기준 리터럴 없음 — 판정 leaf(public-expropriation-deeming)가 publicNoticeLookback만 읽고, 엔진은 그 leaf를 부른다", () => {
+    // NBL2611-C4: 가목·나목·연혁 N 판정을 `judgePublicExpropriationDeemed` 한 곳으로 모았다(주택·건물 초과분 입구가 같은 leaf를 쓴다).
+    const engine = read("lib/tax-engine/non-business-land/unconditional-exemption.ts");
+    expect(engine).not.toMatch(/addYears\([^)]*,\s*-5\)/);
+    expect(engine).toContain("judgePublicExpropriationDeemed(");
+    const leaf = read("lib/tax-engine/non-business-land/public-expropriation-deeming.ts");
+    expect(leaf).not.toMatch(/addYears\([^)]*,\s*-5\)/);
+    expect(leaf).toContain("publicNoticeLookback(");
   });
   it("9호 멸실 유예: 연수를 demolitionGraceYears(양도일)로 정한다", () => {
     expect(read("lib/tax-engine/non-business-land/grace-reason-period.ts")).toContain("demolitionGraceYears(");

@@ -64,7 +64,7 @@ import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { publicExpropriationReducedPart } from "./public-expropriation-reduction";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
-import { isLaterAcquiredLandExemptExcluded, laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice, housingExcessCapexNotice, housingExcessAcqContractNotice, housingExcessInheritedNotice } from "./transfer-tax-appurtenant-land";
+import { isLaterAcquiredLandExemptExcluded, laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, appurtenantExcessDeemNoticesFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice, housingExcessCapexNotice, housingExcessAcqContractNotice, housingExcessInheritedNotice } from "./transfer-tax-appurtenant-land";
 import { buildingSec164ApportionNotice, houseLandSec164Notice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
 import { landRebuildNoticeOf } from "./transfer-tax-rebuild-notice";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
@@ -145,7 +145,7 @@ function calculateTransferTaxCore(
   // 배율 초과 부수토지 분리 파트(`splitDetail.nonBusinessLandPart`)도 비사업용 토지다 — 자산 단위 `isNonBusinessLand`가 꺼진 주택이라도 고지 대상에 든다.
   // 일반 경로(STEP 7 뒤)와 §155⑳ 특례 조기 반환(STEP 2.5)이 같은 입력으로 고지를 판정한다.
   const nblNoticeInputOf = (inp: TransferTaxInput, sd: TransferTaxResult["splitDetail"]): TransferTaxInput =>
-    sd?.nonBusinessLandPart ? { ...inp, isNonBusinessLand: true } : inp;
+    sd?.nonBusinessLandPart && !sd.nonBusinessLandPart.deemedBusiness ? { ...inp, isNonBusinessLand: true } : inp;
   const withUnregisteredNotice = (r: TransferTaxResult, inp: TransferTaxInput): TransferTaxResult => {
     const extra = [unregisteredNotice, selfFarmingMissingNotice, nblDeferralNoticeOf(r, inp)].filter((n): n is string => !!n);
     return withNotices(r, [...assetGate.notices, ...extra]);
@@ -472,7 +472,7 @@ function calculateTransferTaxCore(
   if (laterInheritedNotice) warnings.push(laterInheritedNotice);
   // G5-6 — 수용 양도(2025-11-28 이후)의 부수토지 배율 용도지역 기준일(사업인정 고시일 전날) 고지(세액 불변).
   // #17 — 배율 초과를 분리하지 못한 조합의 «초과분 미분리» 고지 · 분리 경로가 쓰지 않은 자산 단위 자본적지출 고지(세액 불변).
-  warnings.push(...[expropriationZoneNoticeFor(effectiveInput), housingExcessUnseparatedNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt), highValueExcessFormulaNotice(splitDetail, exemptionResult.isPartialExempt, effectiveInput.transferDate, isLaterAcquiredLandExemptExcluded(effectiveInput)), housingExcessCapexNotice(effectiveInput, splitDetail), housingExcessAcqContractNotice(splitDetail), housingExcessInheritedNotice(effectiveInput, splitDetail)].filter((n): n is string => !!n));
+  warnings.push(...appurtenantExcessDeemNoticesFor(effectiveInput), ...[expropriationZoneNoticeFor(effectiveInput), housingExcessUnseparatedNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt), highValueExcessFormulaNotice(splitDetail, exemptionResult.isPartialExempt, effectiveInput.transferDate, isLaterAcquiredLandExemptExcluded(effectiveInput)), housingExcessCapexNotice(effectiveInput, splitDetail), housingExcessAcqContractNotice(splitDetail), housingExcessInheritedNotice(effectiveInput, splitDetail)].filter((n): n is string => !!n));
 
   // 중과세 여부 판단 (장기보유공제·세액 결정에 공통 사용)
   // houses[] 제공 시: determineMultiHouseSurcharge 결과 사용

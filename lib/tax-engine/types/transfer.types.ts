@@ -1724,6 +1724,18 @@ export interface TransferTaxInput {
     zone?: "metropolitan_residential" | "non_metropolitan_or_green" | "non_urban";
   };
   /**
+   * NBL2611-C4(R16) — 배율 초과분(주택 부수토지 · 건물(비주택) 부속토지)을 **비사업용 토지로 보지 않는** 사유의 판정 사실.
+   * 배율을 넘는 면적은 비사업용 토지(법 §104의3①4·5호)가 원칙이나, 영 §168의14③3호(공익수용 무조건 의제 — 기간·지역·면적 기준과 무관)와
+   * ①(유예기간 — 주택 부수토지)은 그 면적을 비사업용으로 보지 않는다. 판정 leaf: `non-business-land/public-expropriation-deeming.ts`.
+   * 주택 배율 초과분(G-2·동일일 분리·§155⑳·함께 양도 주택 카드)과 일반건물·상업용건물 부속토지 초과분이 같은 사실을 읽는다.
+   */
+  appurtenantExcessFacts?: {
+    /** 공익수용 사업인정고시일 — `transferCause === "public_expropriation"`일 때만 읽는다. 미입력이면 의제 불성립 + 확인 필요(차단하지 않는다). */
+    expropriationNoticeDate?: Date;
+    /** 영 §168의14① 유예기간 구간 — **주택 배율 초과분만** 읽는다(건물 부속토지는 영 §168의12가 아니라 유예 대상이 아니다). 사유별 법정기간으로 이미 풀린 구간. */
+    graceIntervals?: { startDate: Date; endDate: Date }[];
+  };
+  /**
    * 장기임대주택 보유자 거주주택 비과세 특례 입력 (소령 §155⑳).
    * applyException=true 시 임대주택을 주택수에서 제외하여 1세대1주택 비과세 적용.
    * 시나리오 B(PHRP)는 §161① 기준시가 안분으로 직전거주주택 양도일 이후분만 비과세.

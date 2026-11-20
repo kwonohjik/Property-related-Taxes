@@ -88,6 +88,8 @@ export interface GbPartCards {
 /** §164⑨ 1호 공익수용 특례 입력 — 단건 route가 `dispatchGeneralBuilding`에 넘기는 최상위 3필드와 같다. */
 export interface GbExpropriationInput {
   transferCause?: "general" | "public_expropriation";
+  /** NBL2611-C4 — 사업인정 고시일(영 §168의14③3호 무조건 의제 — 배율 초과분). 환산·실거래가 두 경로 모두에 싣는다. */
+  expropriationNoticeDate?: Date;
   compensationPerSqm?: number;
   compensationBasisStdPrice?: number;
 }
@@ -143,6 +145,7 @@ export function buildGbPartCards(
     ownershipRatio,
     // §164⑨ 1호 — 환산 경로 엔진이 게이트(수용·환산·보상 후보)를 판정한다. 없으면 무영향.
     ...(expropriation?.transferCause ? { transferCause: expropriation.transferCause } : {}),
+    ...(expropriation?.expropriationNoticeDate ? { expropriationNoticeDate: expropriation.expropriationNoticeDate } : {}),
     ...(expropriation?.compensationPerSqm !== undefined ? { compensationPerSqm: expropriation.compensationPerSqm } : {}),
     ...(expropriation?.compensationBasisStdPrice !== undefined
       ? { compensationBasisStdPrice: expropriation.compensationBasisStdPrice }
@@ -188,6 +191,9 @@ export function buildGbPartCards(
       ...(burdenedGiftInfo ? { burdenedGiftInfo, burdenedGiftOwnershipRatio } : {}),
       // 이월과세 환산 카드의 개산공제 base 축소 전용 — 축 B 지분 · 컴패니언 모두(환산 분기는 아래 `ownershipRatio`가 같은 일을 한다)
       lumpSumDeductionOwnershipRatio: ownershipRatio,
+      // NBL2611-C4 — 배율 초과분 수용 의제(실거래가 경로도 같은 입구 함수를 쓴다)
+      ...(expropriation?.transferCause ? { transferCause: expropriation.transferCause } : {}),
+      ...(expropriation?.expropriationNoticeDate ? { expropriationNoticeDate: expropriation.expropriationNoticeDate } : {}),
     });
     return {
       cards: built.cards,
@@ -197,6 +203,7 @@ export function buildGbPartCards(
         nonBusinessRatio: built.nonBusinessRatio,
         // 구분 기재 없이 안분했을 때 basis 종류 — 지분(축 B) 실가 분기도 단건과 같이 싣는다(표시 전용 echo).
         ...(built.saleApportionBasisKind ? { saleApportionBasisKind: built.saleApportionBasisKind } : {}),
+        ...(built.expropriationDeemNotices ? { expropriationDeemNotices: built.expropriationDeemNotices } : {}),
         ...(built.preDeemedPurchaseDetail ? { preDeemedPurchase: built.preDeemedPurchaseDetail } : {}),
         ...echo,
       },

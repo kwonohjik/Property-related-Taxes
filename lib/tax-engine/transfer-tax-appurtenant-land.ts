@@ -17,6 +17,7 @@ import { laterOfMergeDate } from "./land-only-owner-household";
 import { areaTimes, judgeAreaLimit } from "./area-limit";
 import { round2 } from "./area-utils";
 import { appurtenantLandMultiplier, expropriationZoneBaseDateNotice } from "./appurtenant-land-rate";
+import { housingExcessDeemNotices, housingExcessDeemedBusiness } from "./appurtenant-excess-deeming";
 import { resolveOneHouseMinHoldingYears } from "./data/one-house-holding-residence-era";
 import { expropriationNoticeDateRequirementApplies } from "./data/one-house-154-1-proviso-era";
 import { resolveExemptionProviso, type ResidenceReqInput } from "./transfer-tax-exemption-holding";
@@ -26,7 +27,7 @@ import { coerceOptionalDate } from "./tax-utils";
 import { TRANSFER } from "./legal-codes";
 import { formatHighValueThresholdLabel, resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { appurtenantLandFactsOfInput, housingExcessAreaOfInput, housingExcessNeedsStdInputsOfInput, housingExcessSplitAppliesToInput } from "./housing-excess-split";
-import type { SplitGainResult } from "./types/transfer-split-gain.types";
+import type { DeemedBusinessExcess, SplitGainResult } from "./types/transfer-split-gain.types";
 import { disclosureDateLabel, houseDisclosureBoundary, isSec163_9HouseLandProviso } from "./transfer-split-part-cause";
 import { highValueExcessLandTaxableGain } from "./high-value-excess-land";
 export { highValueExcessLandTaxableGain, allocateUnitExcessShares } from "./high-value-excess-land";
@@ -144,11 +145,12 @@ export function buildLandRateInput(input: TransferTaxInput, basisDate: Date): Tr
  * 토지 본래 취득일(`basisDate`)이다. 자산 단위 면적안분 비율은 이미 초과분만 떼어낸 파트에 의미가 없다.
  * **단일 소스** — 일반 split(`computeSplitPartTax`)·§155⑳ 단건(`splitAppurtenantExcess`)·다건 §155⑳ 재계산이 같은 객체 형태를 써야 한다.
  */
-export function buildNblPartRateInput(input: TransferTaxInput, basisDate: Date): TransferTaxInput {
+export function buildNblPartRateInput(input: TransferTaxInput, basisDate: Date, deemedBusiness = false): TransferTaxInput {
   return {
     ...buildLandRateInput(input, basisDate),
     propertyType: "land",
-    isNonBusinessLand: true,
+    // NBL2611-C4 — 수용 의제·유예로 비사업용이 아닌 초과분은 같은 토지 파트이되 중과(+10%p)가 없다.
+    isNonBusinessLand: !deemedBusiness,
     nonBusinessLandAreaRatio: undefined,
   };
 }
@@ -566,6 +568,14 @@ export function expropriationZoneNoticeFor(input: TransferTaxInput): string | nu
   return expropriationZoneBaseDateNotice(input);
 }
 
+/**
+ * NBL2611-C4 — 배율 초과분의 수용 의제·유예 고지(세액 불변). 초과분이 있는 입구에서만 말한다(`resolveAppurtenantLandExcess`와 같은 게이트).
+ * 수용인데 고시일이 없으면 확인 필요 · 의제 성립이면 근거 · 유예를 입력했으나 기간기준 미충족이면 그 사실.
+ */
+export function appurtenantExcessDeemNoticesFor(input: TransferTaxInput): string[] {
+  return housingExcessDeemNotices(input, resolveAppurtenantLandExcess(input) !== null);
+}
+
 /** 주택 부수토지 배율 한도 판정 결과 (G-2) */
 export interface AppurtenantLandExcess {
   /** 적용 배율 (3/5/10) */
@@ -576,6 +586,8 @@ export interface AppurtenantLandExcess {
   excessArea: number;
   /** 토지 양도차익 중 비사업용으로 이전할 비율 */
   nonBizRatio: number;
+  /** NBL2611-C4 — 영 §168의14③3호(수용 의제)·①(유예)로 비사업용 토지로 보지 않는 초과분이면 그 사유(분리·과세는 그대로, 세율만 일반 토지) */
+  deemedBusiness?: DeemedBusinessExcess;
 }
 
 /**
@@ -602,7 +614,9 @@ export function resolveAppurtenantLandExcess(
   const limitArea = round2(areaTimes(footprint, multiplier));
   const excessArea = round2(judgeAreaLimit(landArea, limitArea).excess);
   if (excessArea <= 0) return null;
-  return { multiplier, limitArea, excessArea, nonBizRatio: excessArea / landArea };
+  // NBL2611-C4(R16) — 배율을 넘는 면적이라도 수용 무조건 의제(영 §168의14③3호)·유예기간(①)으로 비사업용이 아니면 세율만 일반 토지다. 비과세 범위(§154⑦)는 그대로라 분리는 유지한다.
+  const deemedBusiness = housingExcessDeemedBusiness(input);
+  return { multiplier, limitArea, excessArea, nonBizRatio: excessArea / landArea, ...(deemedBusiness ? { deemedBusiness } : {}) };
 }
 
 /**
@@ -711,6 +725,7 @@ export function applyHousingLandExclusions(args: {
       holdingYears: splitDetail.land.holdingYears,
       longTermRate: 0, // `calcLongTermHoldingDeduction`이 표1로 채운다
       longTermDeduction: 0,
+      ...(excess.deemedBusiness ? { deemedBusiness: excess.deemedBusiness } : {}),
     };
   }
 
@@ -718,7 +733,10 @@ export function applyHousingLandExclusions(args: {
   if (excess) {
     reasons.push(
       `배율 초과분 ${excess.excessArea.toFixed(2)}㎡(한도 정착면적 × ${excess.multiplier}배 = ` +
-        `${excess.limitArea.toFixed(2)}㎡)는 「소득세법」 제104조의3 제1항 제5호의 비사업용 토지 — ` +
+        `${excess.limitArea.toFixed(2)}㎡)는 ` +
+        (excess.deemedBusiness
+          ? `비과세 범위(영 §154⑦)를 넘어 — 비사업용 토지로 보지 않는 토지(${excess.deemedBusiness.legalBasis}) — `
+          : "「소득세법」 제104조의3 제1항 제5호의 비사업용 토지 — ") +
         `양도차익 ${nonBusinessGain.toLocaleString()}을 분리해 전액 과세`,
     );
   }
