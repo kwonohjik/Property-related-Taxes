@@ -115,7 +115,10 @@ describe("L-2 분양권", () => {
   it("양론 반대 입장(§156의3) 플래그 — 불충족이면 불성립", () => {
     const b = presale("2022-03-15", undefined, { holdingPresalePosition: "156_3" });
     expect(b.blocked).toBe(true);
-    expect(b.reasons).toHaveLength(1);
+    // 3년이 지났는데 ③(이사·거주)을 답하지 않은 불성립은 단정하지 않고 확인 필요로 낸다(2026-11 리뷰 D-80 — 입주권 갈래와 같은 모양).
+    expect(b.reasons).toEqual([]);
+    expect(b.unconfirmed.join(" ")).toContain("확인 필요");
+    expect(b.timingReplaced).toBe(true);
     expect(presale("2024-03-15", undefined, { holdingPresalePosition: "156_3" }).blocked).toBe(false);
   });
 
@@ -404,8 +407,8 @@ describe("R 판정 메뉴 route", () => {
       menu([{ id: "b", region: "capital", acquisitionDate: "2025-09-15", acquisitionOrigin: "presale", rightAcquisitionDate: "2024-03-15" }]),
     );
     expect(same.isExempt).toBe(true);
-    // 두 입장 결론이 같아도 쟁점 자체는 목록에 있으나 conclusionsDiffer=false — 평가셋 contested 단언은 id·A·B만 본다
-    expect(same.contested.find((c) => c.id === "155-1-presale-holding-completion")).toMatchObject({ A: "exempt", B: "exempt" });
+    // 두 입장 결론이 같으면 C8 카드를 싣지 않는다(결정 #43 D · Q-30 (a) · 2026-11 리뷰 D-89).
+    expect(same.contested.find((c) => c.id === "155-1-presale-holding-completion")).toBeUndefined();
   });
 
   it("R-6 권리 유래 행이면 폼 전역 계약일 칸이 아니라 행의 권리 취득일로 공고 전 취득을 판정한다 (원칙 4)", async () => {

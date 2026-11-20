@@ -64,6 +64,11 @@ export interface NewHouseOriginVerdict {
   holdingPresale: boolean;
   /** 이 판정이 §156의2③④·§156의3②③ 타이밍으로 성립을 정한 경우 그 조문 */
   viaTimingClause?: string;
+  /**
+   * §155① 타이밍(완공일 기준 1년 간격·연혁 처분기한·전입요건)을 이 판정이 **대신**하는가 — C8 반대 입장(§156의3②·③으로만 판정)일 때만 참.
+   * 종전에는 B 결론이 「§156의3 ∧ §155①」로 합성돼 §156의3에 없는 전입요건 등이 B를 과세로 뒤집었다(2026-11 리뷰 D-81).
+   */
+  timingReplaced?: boolean;
 }
 
 const PASS: NewHouseOriginVerdict = {
@@ -239,16 +244,28 @@ export function judgeNewHouseOrigin(input: NewHouseOriginInput, oneYearWaived: b
       );
       const strictPass = strict.status === "exception_met";
       if (o.holdingPresalePosition === "156_3") {
-        return strictPass
-          ? { ...PASS, holdingPresale: true, viaTimingClause: `${TRANSFER.PRESALE_ONE_HOUSE_SPECIAL}②·③` }
-          : {
-              ...PASS,
-              blocked: true,
-              holdingPresale: true,
-              reasons: [
+        if (strictPass) {
+          return { ...PASS, holdingPresale: true, timingReplaced: true, viaTimingClause: `${TRANSFER.PRESALE_ONE_HOUSE_SPECIAL}②·③` };
+        }
+        // 3년 경과 예외(③)를 선언하지 않아 불성립이면 단정하지 않는다 — 입주권 갈래(아래)와 같은 모양(2026-11 리뷰 D-80).
+        const undeclared = strict.undeclaredArticles?.length
+          ? [
+              `권리 취득일(${fmt(R)})부터 3년이 지났는데 3년 경과 예외(${strict.undeclaredArticles.join("·")})의 이사·거주 사실을 답하지 않아 ` +
+                `${TRANSFER.PRESALE_ONE_HOUSE_SPECIAL}②·③으로 판정하면 불성립으로 보았습니다(확인 필요).`,
+            ]
+          : [];
+        return {
+          ...PASS,
+          blocked: true,
+          holdingPresale: true,
+          timingReplaced: true,
+          reasons: undeclared.length
+            ? []
+            : [
                 `${label}를 종전주택 보유 중 취득했고(권리 취득일 ${fmt(R)}) 완공 후 양도라 ${TRANSFER.PRESALE_ONE_HOUSE_SPECIAL}②(권리 취득 후 1년·취득일부터 3년 이내 양도)·③의 요건으로 판정하면 충족하지 않습니다.`,
               ],
-            };
+          unconfirmed: undeclared,
+        };
       }
       return {
         ...PASS,
@@ -258,7 +275,10 @@ export function judgeNewHouseOrigin(input: NewHouseOriginInput, oneYearWaived: b
           : [
               `${label}를 종전주택 보유 중 취득했습니다(권리 취득일 ${fmt(R)}) — 일시적 2주택(${TRANSFER.TEMPORARY_TWO_HOUSE}①)을 완공일 기준으로 판정했습니다. ` +
                 `이 갈래에서 ①을 병용할 수 있다고 밝힌 해석은 확인하지 못했고, 완공 후 양도를 ${TRANSFER.PRESALE_ONE_HOUSE_SPECIAL}②·③으로만 본 회신이 있어 ` +
-                "그 요건으로 판정하면 충족하지 않습니다(확인 필요).",
+                // 3년 경과 예외의 이사·거주를 답하지 않았으면 「충족하지 않는다」고 단정하지 않는다(D-80).
+                (strict.undeclaredArticles?.length
+                  ? "그 요건으로 판정하면 3년 경과 예외의 이사·거주 사실을 답하지 않아 불성립으로 보았습니다(확인 필요)."
+                  : "그 요건으로 판정하면 충족하지 않습니다(확인 필요)."),
             ],
       };
     }
