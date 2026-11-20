@@ -515,6 +515,12 @@ export interface TransferFormData {
    */
   sourceJudgmentInputHash?: string;
   /**
+   * 넘긴 판정 메뉴 (2026-11 리뷰 PR-13b · 결정 Q-11) — 출처 줄이 원본 기록이 없는 이유를 메뉴로 가린다.
+   * 다주택 중과 메뉴는 판정을 저장하지 않아(D4) 늘 원본 id가 없다. 구 세션·직접 입력은 `undefined`.
+   * API로 보내지 않는다(`sourceJudgmentId`와 같은 계산기 전용 메타).
+   */
+  sourceJudgmentMenu?: "one_house" | "surcharge";
+  /**
    * 첫 자산 삭제 안내 마커 (Q-5, 계획서 `docs/00-pm/first-asset-change-step4-facts-notice.plan.md` §4-2).
    *
    * 폼 전역에 저장된 «양도하는 주택에 대한 선언»(조정대상지역·§154① 단서·합가 등)은 첫 자산을 지우면 새 첫 자산의

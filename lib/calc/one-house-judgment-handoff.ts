@@ -90,6 +90,8 @@ export function toTransferFormPatch(
    * (`one-house-judgment-provenance.ts` 머리 주석 ⛔).
    */
   judgmentInputHash?: string,
+  /** 넘긴 판정 메뉴(PR-13b) — 출처 줄 문구를 가른다 */
+  menu: "one_house" | "surcharge" = "one_house",
 ): Partial<TransferFormData> {
   // 비거주자·잔금 전 멸실 사실과 중과 메뉴 전용 입력은 판정 메뉴 전용이라 넘기지 않는다(`OneHouseJudgmentNonResidentFields`·`OneHouseJudgmentDemolishedFields`·`OneHouseJudgmentSurchargeFields` 주석).
   const extras = new Set([
@@ -142,6 +144,8 @@ export function toTransferFormPatch(
      */
     sourceJudgmentId: judgmentId || undefined,
     sourceJudgmentInputHash: judgmentInputHash || undefined,
+    // PR-13b — 같은 이유로 늘 싣는다(직전 전달의 메뉴가 남지 않게).
+    sourceJudgmentMenu: menu,
     /**
      * 🔴 **양도 자산에 붙는 계산기 전용 선택을 비운다**(S11-7) — 이 patch가 `assets`를 통째로 바꾸므로 계산기에 남은 값은
      *    **이전 물건의 것**이다. 비우지 않으면 이전 물건의 저당권 실행 선언(`sellingHouseExclusion`)이 새 물건 본문에 실려
@@ -222,6 +226,7 @@ export async function openTransferWithOneHouseFacts(
   form: OneHouseJudgmentFormData,
   router: AppRouter,
   judgmentId?: string,
+  menu: "one_house" | "surcharge" = "one_house",
 ): Promise<void> {
   const { useCalcWizardStore } = await import("@/lib/stores/calc-wizard-store");
   /**
@@ -231,7 +236,7 @@ export async function openTransferWithOneHouseFacts(
   const hash = judgmentId ? await readJudgmentInputHash(judgmentId) : undefined;
   const { updateFormData, setStep, clearResult } = useCalcWizardStore.getState();
   clearResult(); // D-16 — 이전 물건의 결과를 비운다(위 `applyOneHouseFactsToTransferForm`과 같다)
-  updateFormData(toTransferFormPatch(form, judgmentId, hash));
+  updateFormData(toTransferFormPatch(form, judgmentId, hash, menu));
   setStep(0);
   router.push(TRANSFER_ROUTE);
 }

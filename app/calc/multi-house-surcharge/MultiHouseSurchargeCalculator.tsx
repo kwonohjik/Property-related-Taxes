@@ -204,7 +204,7 @@ export default function MultiHouseSurchargeCalculator() {
    * 출처 id 없이 넘긴다. 양도 주택 자체 배제 사실·한시 유예도 판정 폼의 값이 실린다(§5.7 · P5).
    */
   const handleCalculateTax = useCallback(() => {
-    void openTransferWithOneHouseFacts(formData, router, undefined);
+    void openTransferWithOneHouseFacts(formData, router, undefined, "surcharge");
   }, [formData, router]);
 
   /** 단계 점프 — StepIndicator·사이드바 공용. 뒤로·제자리는 허용, 앞으로 갈 때만 건너뛰는 단계를 검사한다. */

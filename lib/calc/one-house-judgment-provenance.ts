@@ -149,3 +149,21 @@ export async function readJudgmentInputHash(id: string): Promise<string | undefi
     return undefined;
   }
 }
+
+/** 계산기 결과의 1세대1주택 비과세 축(`TransferTaxResult`에서 필요한 세 칸). */
+export type CalcExemptionSlice = { isExempt: boolean; isPartialExempt?: boolean; isExemptCore?: true };
+
+/**
+ * 2026-11 리뷰 PR-13b · D-31(결정 Q-11) — 계산기 결론이 넘겨받을 당시 판정 결과와 다른가.
+ *
+ * 비교할 수 있는 라벨(비과세·부분 비과세·과세)만 본다. 「기간분 비과세」(§161 안분은 계산기 몫)·「해석이 갈림」·라벨 없음과
+ * `isExemptCore`(전액 비과세 대상인데 부수토지·PHD로 정상 경로 — 비과세 여부를 두 플래그로 단정할 수 없다)는
+ * `undefined` — 대조하지 않는다(추측 금지).
+ */
+export function calcVerdictDiffers(verdictLabel: string, calc: CalcExemptionSlice | undefined): boolean | undefined {
+  if (!calc || calc.isExemptCore) return undefined;
+  const calcLabel = calc.isExempt ? "비과세" : calc.isPartialExempt ? "부분 비과세" : "과세";
+  if (verdictLabel !== "비과세" && verdictLabel !== "부분 비과세" && verdictLabel !== "과세") return undefined;
+  return calcLabel !== verdictLabel;
+}
+
