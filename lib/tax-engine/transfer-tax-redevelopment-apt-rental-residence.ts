@@ -19,6 +19,7 @@
  * ⚠️ 시나리오 B(직전거주주택보유주택 · 영 §161 기간 안분)는 §166 3분할과 결합할 근거가 없어 적용하지 않는다(Q-2 (a)) —
  *    비과세를 거두고 확인 필요를 알린다. 화면은 ⑧이 막는다.
  */
+import { rosterRentalRows } from "./one-house/roster-rental-rows";
 import { TRANSFER_RENTAL_HOUSING } from "./legal-codes/transfer";
 import { buildRentalHousingVerdict } from "./one-house/rental-housing-verdict";
 import { revokeOneHouseExemption } from "./one-house/revoke-exemption";
@@ -37,7 +38,7 @@ export const REDEV_APT_RENTAL_SCENARIO_B_NOTICE =
 /** 세대 주택 수에 이미 들어 있는 임대 호수 — `rentalUnitsToRestore`(STEP 0.96)와 같은 입력 전제의 거울. */
 function rentalUnitsCounted(input: TransferTaxInput): number {
   const roster = input.houses ?? [];
-  if (roster.length > 0) return roster.filter((h) => h.isLongTermRental).length;
+  if (roster.length > 0) return rosterRentalRows(input).length;
   // 명부가 없으면 주택 수 1은 거주주택만 센 값이다 — 2 이상은 임대주택을 이미 센 입력으로 본다(STEP 0.96과 같은 규칙).
   return input.householdHousingCount === 1 ? 0 : (input.rentalHousingException?.rentalUnits?.length ?? 0);
 }
