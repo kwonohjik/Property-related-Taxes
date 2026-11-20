@@ -14,3 +14,7 @@ export const PRIOR_REVENUE_LAND_VALUE_REQUIRED_MESSAGE =
 /** V6-PU11 정밀판정 ON인데 지목이 비었고 무조건 사업용 의제도 성립하지 않음 */
 export const LAND_TYPE_REQUIRED_MESSAGE =
   "비사업용 토지 정밀판정을 선택했습니다. 지목을 선택하세요. (무조건 사업용 의제가 성립하지 않으면 지목 없이는 「지목 분류 불가 — 비사업용 간주」로 판정됩니다)";
+
+/** NBL2611-D1 (DM-01) 당해 사업개시일이 양도일보다 늦음 — 사업 구간 [개시일, 양도일]이 성립하지 않는다 */
+export const REVENUE_START_DATE_AFTER_TRANSFER_MESSAGE =
+  "당해 사업개시일이 양도일보다 늦습니다. 사업개시일은 실제 양도일 이전의 날이어야 합니다 — 수입금액비율 충족 토지의 사업 구간을 「사업개시일 ~ 양도일」로 보아 기간기준(영 §168의6)을 판정하므로 이 값으로는 사업 구간이 없습니다.";

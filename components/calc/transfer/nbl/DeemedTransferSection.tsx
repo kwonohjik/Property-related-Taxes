@@ -27,7 +27,7 @@ const DEEMED_OPTIONS: RadioCardOption<DeemedReason>[] = [
 
 /**
  * §168의14② 양도일 의제 — 경매·공매·장기매각으로 양도 지연 시 의제일을 §168의6 기간기준 판정에만 적용.
- * 주택부수토지는 NblSectionContainer 게이트에서 제외 — 현행 엔진이 그 지목에 기간기준을 판정하지 않기 때문이다(2026-07-31 사용자 방침. 법령 구조 아님 · NBL2611-V2-C2).
+ * 주택부수토지는 NblSectionContainer 게이트에서 제외 — 현행 엔진이 그 지목에서 양도일 의제를 읽지 않기 때문이다(2026-07-31 사용자 방침을 Q-3a (나)로 «유예만 반영»까지만 좁혔다 — 법령 구조 아님 · NBL2611-V2-C2 · D1).
  */
 export function DeemedTransferSection({
   asset,

@@ -35,7 +35,7 @@ import {
   resolveAreaLegalBasis,
   resolveMixedUseProportioning,
 } from "./other-land-area-limit";
-import { applyGraceToNonBusinessRemainder, pickWiderExclusion } from "./other-land-merge";
+import { applyGraceToNonBusinessRemainder, judgeRevenueBusinessStart, pickWiderExclusion } from "./other-land-merge";
 import { judgeHoRequirements } from "./other-land-ho-requirements";
 
 /**
@@ -235,6 +235,7 @@ function judgeOtherLandCore(
 
   // ── §168의11② 수입금액비율 (2호다목·10·11다·12호 특정 업종) ──────────
   let revenueTestDetail: RevenueTestResult | undefined;
+  let revenueStartFailedReason: string | undefined; // NBL2611-D1 — 수입금액비율은 충족했으나 당해 사업개시일 이후 기간기준 미충족
   if (input.revenueTest && input.revenueTest.businessType !== "none") {
     revenueTestDetail = computeRevenueTest(input.revenueTest);
     steps.push({
@@ -246,10 +247,23 @@ function judgeOtherLandCore(
     });
     if (revenueTestDetail.pass) {
       appliedLaws.push(NBL.REVENUE_TEST);
-      const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
-      return buildPass(`수입금액비율 충족 (${REVENUE_BUSINESS_TYPE_LABEL[revenueTestDetail.businessType]})`, steps, appliedLaws, warnings, {
-        r, totalOwnershipDays, revenueTestDetail,
-      });
+      // NBL2611-D1 (DM-01 · Q-4 (나)) — 당해 사업개시일이 있고 직전 비율②가 미통과면 사업 구간을 [개시일, 양도일]로 본다. 기간기준을 못 채우면 다른 목(나목 등)을 이어서 본다.
+      const startJudged = judgeRevenueBusinessStart(input, revenueTestDetail, rules);
+      if (startJudged) steps.push(startJudged.step);
+      if (!startJudged?.applied) {
+        const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+        return buildPass(`수입금액비율 충족 (${REVENUE_BUSINESS_TYPE_LABEL[revenueTestDetail.businessType]})`, steps, appliedLaws, warnings, {
+          r, totalOwnershipDays, revenueTestDetail,
+        });
+      }
+      revenueTestDetail = startJudged.applied.revenue;
+      warnings.push(startJudged.applied.notice);
+      if (startJudged.applied.r.meets) {
+        return buildPass(`수입금액비율 충족 (${REVENUE_BUSINESS_TYPE_LABEL[revenueTestDetail.businessType]}) + 당해 사업개시일 이후 기간기준 충족`, steps, appliedLaws, warnings, {
+          r: startJudged.applied.r, totalOwnershipDays, revenueTestDetail,
+        });
+      }
+      revenueStartFailedReason = `수입금액비율은 충족하나 당해 사업개시일 이후 기간으로는 기간기준 미충족 — ${startJudged.applied.r.detail}`;
     }
   }
 
@@ -631,8 +645,9 @@ function judgeOtherLandCore(
     legalBasis: NBL.OTHER_LAND_BUSINESS,
   });
   const dummyR = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+  const failedReason = periodFailedReason ?? revenueStartFailedReason;
   return buildFail(
-    periodFailedReason ? `${periodFailedReason} → 비사업용` : "종합합산 + 거주·사업관련 미해당 → 비사업용",
+    failedReason ? `${failedReason} → 비사업용` : "종합합산 + 거주·사업관련 미해당 → 비사업용",
     steps, appliedLaws, warnings, {
       r: dummyR, totalOwnershipDays, revenueTestDetail,
     },

@@ -297,7 +297,7 @@ export function NblSectionContainer({
           <GracePeriodSection asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />
         </div>
 
-        {/* 7. 양도일 의제 (§168의14②) — 기간기준 5지목 (주택부수토지는 현행 엔진이 기간기준을 판정하지 않아 제외 — 2026-07-31 사용자 방침, 법령 구조 아님 · NBL2611-V2-C2) */}
+        {/* 7. 양도일 의제 (§168의14②) — 기간기준 5지목 (주택부수토지는 현행 엔진이 양도일 의제를 읽지 않아 제외 — 유예(§168의14①)만 반영하는 Q-3a (나) 범위, 법령 구조 아님 · NBL2611-V2-C2 · D1) */}
         {isDeemedTransferApplicable(asset.nblLandType) && (
           <div className="mt-3">
             <DeemedTransferSection asset={asset} onAssetChange={onAssetChange} />

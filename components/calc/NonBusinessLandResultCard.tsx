@@ -226,6 +226,13 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
           <p className="text-caption text-muted-foreground leading-snug">
             양도일 현재의 이용 상태를 소유기간 전체에 적용해 판정했습니다. 소유기간 중 사용기간별 일수·비율은 판정 근거가 아니어서 표시하지 않습니다 — 확인 필요.
           </p>
+          {judgment.revenueTestDetail?.businessStartJudged && (
+            // NBL2611-D1 (DM-01) — 수입금액비율 업종은 전 기간이 아니라 「당해 사업개시일 ~ 양도일」을 사업 구간으로 판정했다(엔진 echo).
+            <p className="text-caption text-muted-foreground leading-snug mt-1" data-testid="nbl-period-revenue-start-judged-notice">
+              수입금액비율 업종에 사용한 구간은 당해 사업개시일({judgment.revenueTestDetail.businessStartJudged.startDate})부터 양도일까지 {judgment.revenueTestDetail.businessStartJudged.businessDays.toLocaleString()}일(소유기간 {judgment.revenueTestDetail.businessStartJudged.totalOwnershipDays.toLocaleString()}일 중)로 보아 {NBL.CRITERIA}의 기간기준을 판정했습니다 —{" "}
+              {judgment.revenueTestDetail.businessStartJudged.meets ? "충족합니다." : "충족하지 않습니다."}
+            </p>
+          )}
           {periodEval.graceJudged && (
             // NBL2611-V2-C1 — 유예기간을 «빈 사업기간 + 유예»로 실제 판정에 쓴 사실(엔진 echo). 충족하면 그 덕에 비사업용 잔여분이 사업용이 된 것이다.
             <p className="text-caption text-muted-foreground leading-snug mt-1" data-testid="nbl-period-grace-judged-notice">

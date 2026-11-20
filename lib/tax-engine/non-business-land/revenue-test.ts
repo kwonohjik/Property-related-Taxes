@@ -8,6 +8,7 @@
  * §168의11③3호 연환산: 1과세기간 중 사업영위 기간이 1년 미만(토지 양도·신규개시·폐업 등)이면
  * 당해 기간 수입금액을 1년간으로 환산하여 연간수입금액을 산정한다. ①·② 분자 모두 환산값 사용.
  */
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import { differenceInCalendarDays, getDaysInYear } from "../utc-date";
 
 import type { RevenueTestInput, RevenueTestResult } from "./types";
@@ -127,6 +128,19 @@ export function priorRevenueWithoutLandValue(p: {
     ((p.priorDeposit ?? 0) > 0 && (p.priorRentDays ?? 0) > 0) ||
     (p.commonApportion === true && (p.priorCommonRevenue ?? 0) > 0);
   return hasRevenueSide && !((p.priorLandValue ?? 0) > 0);
+}
+
+/**
+ * NBL2611-D1 (DM-01) — 당해 사업개시일이 양도일보다 늦은 입력인가 (⑧·⑫ 공용). 비어 있거나 해석 불가면 다른 검증이 맡는다(false).
+ * 같은 날은 막지 않는다(영위일수 1일 — `deriveBusinessDays` 초일산입).
+ */
+export function revenueStartDateAfterTransfer(
+  startDate: string | Date | undefined,
+  transferDate: string | Date | undefined,
+): boolean {
+  const s = toOptionalDate(startDate);
+  const t = toOptionalDate(transferDate);
+  return !!s && !!t && s.getTime() > t.getTime();
 }
 
 /**

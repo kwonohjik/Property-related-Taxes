@@ -227,9 +227,9 @@ describe("V2-C1 — 유예기간(영 §168의14①)을 기타토지 판정에 �
     expect(judgeNonBusinessLand(bare([]), R).periodEvaluation).toEqual({ basis: "state_at_transfer" });
   });
 
-  it("VC-5: 소비 술어·엔진 고지 — 기타토지는 유예를 읽는다(「반영되지 않았습니다」 경고 없음), 주택부수토지는 그대로", () => {
+  it("VC-5: 소비 술어·엔진 고지 — 기타토지는 유예를 읽는다(「반영되지 않았습니다」 경고 없음), 건물(비주택) 부수토지는 그대로 (주택부수토지는 NBL2611-D1부터 읽는다)", () => {
     expect(consumesGracePeriods("other_land")).toBe(true);
-    expect(consumesGracePeriods("housing_site")).toBe(false);
+    expect(consumesGracePeriods("building_site")).toBe(false);
     const j = judgeNonBusinessLand(bare([grace("2014-01-02", "2024-01-01")]), R);
     expect(j.warnings.some((w) => w.includes("반영되지 않았습니다"))).toBe(false);
   });
