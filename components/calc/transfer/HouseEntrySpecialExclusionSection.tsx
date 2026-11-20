@@ -34,7 +34,7 @@ interface Props {
 const POP_DECLINE_TOGGLE_DESCRIPTION =
   `주소를 입력하면 자동으로 정해집니다 — 사실과 다를 때만 바꾸세요. 이 답은 다주택 중과 주택 수(${MULTI_HOUSE.SECOND_HOME_DEPOPULATION})와 ` +
   `1세대1주택 비과세의 인구감소지역주택 특례(${TRANSFER.POP_DECLINE_HOUSE_71_2})에 함께 쓰이며, 끄면 두 판정 모두 인구감소지역이 아닌 것으로 봅니다. ` +
-  "수도권(접경지역 제외)·광역시 자치구는 켜도 대상이 아닙니다.";
+  "수도권(접경지역 제외)·광역시 자치구는 켜도 대상이 아닙니다. 중과 주택 수 제외는 2026.1.1. 이후 취득·가액 한도 이하·취득 전 보유주택과 다른 시·군·구일 때입니다(등록 요건 없음).";
 
 export function HouseEntrySpecialExclusionSection({ house, onUpdate }: Props) {
   /**

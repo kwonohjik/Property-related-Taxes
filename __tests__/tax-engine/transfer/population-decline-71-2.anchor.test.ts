@@ -412,7 +412,7 @@ describe("R 판정 메뉴 route", () => {
     expect(o.undetermined).not.toContain("71-2-pop-decline-unconfirmed");
   });
 
-  it("R-2 D2 — ④ 인구감소 토글을 켜든 비워 두든(자동판정) 같은 비과세다 (④는 중과 주택 수 전용)", async () => {
+  it("R-2 D2 — ④ 인구감소 토글을 켜든 비워 두든(자동판정) 같은 비과세다 (④ 답은 중과 주택 수와 §71의2에 함께 쓰인다 — 켜면 자동판정과 같은 값)", async () => {
     for (const patch of [
       { isPopulationDeclineArea: true, populationAreaType: "decline" },
       {},
