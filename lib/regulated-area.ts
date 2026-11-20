@@ -48,6 +48,9 @@ export function parseAddressRegion(address: string): { sido: string; sigungu: st
   if (parts.length >= 3 && /^.+시$/.test(parts[1]) && /^.+구$/.test(parts[2])) {
     sigungu = `${parts[1]} ${parts[2]}`;
   }
+  // 붙여 쓴 일반구 「성남시분당구」 → 「성남시 분당구」(2026-11 리뷰 D-57).
+  const gluedGu = /^(\S+?시)(\S+구)$/.exec(sigungu);
+  if (gluedGu) sigungu = `${gluedGu[1]} ${gluedGu[2]}`;
 
   return { sido, sigungu };
 }
@@ -64,7 +67,11 @@ export function checkRegulatedArea(address: string, date: string): RegulatedArea
 
   const parsed = parseAddressRegion(address);
   if (!parsed) {
-    return { isRegulated: false, confidence: "low", basis: "주소 파싱 실패" };
+    // 한 어절 주소(「분당구」·「강남구역삼동123」·「서울특별시」) — 「아님(low)」으로 단정하지 않는다(2026-11 리뷰 D-58 · 결정 #60).
+    //   아는 시·도면 그 시·도 안 지정 유무, 데이터 미수록 시·도면 직접 확인(P-B), 모르는 어절이면 그날 지정된 곳이 있을 때 조정대상지역으로 본다.
+    const token = address.trim().replace(/^[([]?\d{5}[)\]]?\s+/, "").split(/\s+/)[0] ?? "";
+    if (!token) return { isRegulated: false, confidence: "low", basis: "주소 파싱 실패" };
+    return isRegulatedByAddress(canonicalSidoName(token) ?? token, "", date);
   }
 
   return isRegulatedByAddress(parsed.sido, parsed.sigungu, date);

@@ -312,6 +312,11 @@ function coveredSidoNamesOf(regions: RegulatedRegion[]): Set<string> {
  * @param sigungu 시군구명 (예: "강남구", "성남시 수정구"). 생략 시 시도 전역 엔트리만 조회.
  * @param date    YYYY-MM-DD (양도일 또는 취득일)
  */
+/** 행정구역 명칭 변경 — 주소에 옛 이름을 쓰면 데이터 이름으로 읽는다(인천 남구 → 미추홀구 2018.7.1.). */
+const SIGUNGU_RENAMED: Record<string, string> = {
+  "인천광역시 남구": "인천광역시 미추홀구",
+};
+
 export function isRegulatedByAddressIn(
   regions: RegulatedRegion[],
   sido: string,
@@ -322,7 +327,8 @@ export function isRegulatedByAddressIn(
     return { isRegulated: false, confidence: "low", basis: "시도 또는 날짜 누락" };
   }
 
-  const fullName = sigungu ? `${sido} ${sigungu}` : sido;
+  const typedName = sigungu ? `${sido} ${sigungu}` : sido;
+  const fullName = SIGUNGU_RENAMED[typedName] ?? typedName;
   // 1. 시군구 정확 매칭 (일반구 포함: "경기도 성남시 수정구")
   //    2. 시도 전역 폴백 (서울 전역 "11" — name이 시도명과 동일)
   //    3. 단층 시(세종 36110 — 시·군·구 어절이 없다): 둘째 어절이 읍·면·동이라 1번이 못 맞춘다. name이 시도명과 같은
@@ -333,8 +339,36 @@ export function isRegulatedByAddressIn(
     regions.find((r) => r.code.length === 2 && r.name === sido) ??
     singleTier;
 
+  // 2026-11 리뷰 D-57 — 일반구가 있는 시를 구 없이 쓴 주소(「경기도 성남시 정자동」): 시 엔트리가 없거나(성남) 시 엔트리가 그날 해제됐는데
+  //   구 엔트리가 따로 지정된 경우(화성 동탄구)에 「미지정(high)」으로 단정하지 않는다. 그날 지정된 구가 하나라도 있으면 지정 + 「구를 확인하세요」(medium).
+  const subGu = sigungu ? regions.filter((r) => r.code.length !== 2 && r.name.startsWith(`${fullName} `)) : [];
+  if (subGu.length > 0 && !(region && findActiveDesignation(region.designations, date))) {
+    const activeGu = subGu.filter((r) => findActiveDesignation(r.designations, date) !== null);
+    if (activeGu.length > 0) {
+      const names = activeGu.map((r) => r.name.slice(fullName.length + 1)).join("·");
+      const scope = activeGu.length === subGu.length ? "모든 구" : `일부 구(${names})`;
+      return {
+        isRegulated: true,
+        confidence: "medium",
+        basis: `${fullName} — ${date} 기준 ${scope} 지정 · 주소에서 구를 알아볼 수 없어 조정대상지역으로 보고 계산합니다(구를 확인하세요)`,
+      };
+    }
+    if (!region) return { isRegulated: false, confidence: "high", basis: `${fullName}(모든 구) — ${date} 기준 미지정` };
+  }
+
   if (!region) {
     const covered = coveredSidoNamesOf(regions).has(sido);
+    // 2026-11 리뷰 D-58 — 시·도 한 어절만 있는 주소(시군구 없음): 그 시·도 안에 그날 지정된 곳이 있으면 「미지정」으로 단정하지 않는다.
+    if (covered && !sigungu) {
+      const anyInSido = regions.some((r) => r.name.split(/\s+/)[0] === sido && findActiveDesignation(r.designations, date) !== null);
+      return anyInSido
+        ? {
+            isRegulated: true,
+            confidence: "low",
+            basis: `소재지 주소에 시·군·구가 없어 ${sido} 안의 조정대상지역 여부를 알 수 없습니다 — ${date} 기준 지정된 곳이 있어 조정대상지역으로 보고 계산합니다(주소검색으로 소재지를 고르거나 직접 확인 필요)`,
+          }
+        : { isRegulated: false, confidence: "high", basis: `${sido} — ${date} 기준 지정된 조정대상지역 없음` };
+    }
     if (covered) return { isRegulated: false, confidence: "high", basis: `${fullName} — ${date} 기준 미지정` };
     // 아는 시·도인데 데이터에 없다 — 종전대로 「미지정」으로 단정하지 않고 low(직접 확인)다(미수록 시도 안전장치 P-B).
     if (canonicalSidoName(sido) !== null) {
