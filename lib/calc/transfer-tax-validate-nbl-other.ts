@@ -10,6 +10,7 @@ import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { resortAreaIssue } from "@/lib/tax-engine/non-business-land/resort-area-issue";
+import { demolishedBasisIssue, type PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
 /** 기타토지(other_land) 정밀판정 입력 검증. 첫 오류 메시지 또는 null. */
@@ -28,6 +29,22 @@ export function validateNblOtherLand(asset: AssetForm, label: string): string | 
    */
   if (!asset.nblOtherPropertyTaxType)
     return fieldError("nblOtherPropertyTaxType", `${label}: 기타토지 — 재산세 과세 분류(종합합산·별도합산·분리과세·비과세)를 선택하세요. 미선택 시 종합합산으로 간주되어 비사업용 중과가 적용됩니다.`);
+
+  /**
+   * NBL2611-V1-A (Q-1) — 재산세 분류 «근거»는 **미선택을 막지 않는다**(엔진이 종합합산 + 확인 필요로 접는다 — 리뷰 Q-1 (나) 기각).
+   * 다만 «철거ㆍ멸실» 근거를 골랐다면 그 면적 범위를 계산할 사실(철거 전 바닥면적·배율표에 있는 용도지역)이 필요하다 — 자동 안분 fallback 금지.
+   * 같은 술어를 ⑫(`refineNonBusinessLandRaw`)가 쓴다.
+   */
+  const demolished = demolishedBasisIssue({
+    declared: asset.nblOtherPropertyTaxType as Parameters<typeof demolishedBasisIssue>[0]["declared"],
+    hasBuilding: asset.nblOtherHasBuilding,
+    basis: (asset.nblOtherPropertyTaxBasis || undefined) as PropertyTaxBasis | undefined,
+    floorArea: parseDecimal(asset.nblOtherDemolishedFloorArea),
+    zoneType: asset.nblZoneType,
+    zoneMapped: !!getZoneAreaMultiplier(asset.nblZoneType),
+  });
+  if (demolished)
+    return fieldError(demolished.part === "floorArea" ? "nblOtherDemolishedFloorArea" : "nblZoneType", `${label}: 기타토지 — ${demolished.message}`);
 
   /**
    * §101①2호 건물 부수토지 — **건축물이 있으면 바닥면적 필수** (R06).
