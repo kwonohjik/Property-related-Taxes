@@ -64,6 +64,7 @@ import {
 import { buildFailMessage } from "./fail-messages";
 import { terminationDutyYears } from "./fail-messages";
 import { checkPhrp154_10Eligibility } from "./phrp-154-10";
+import { priorResidenceTransferDateRange, priorResidenceRangeMessage } from "./prior-residence-range";
 import { registeredDateOf } from "../../rental-article/registered-date";
 import type {
   RentalUnitInput,
@@ -97,6 +98,11 @@ export type EligibilityContext = {
    * `residence_only`(5호·삭제 전 4호)는 거주만 푼다(사용자 결정 2026-10-26 V-R3 (a)). 호출부 leaf `phrp154_10ProvisoWaiver`.
    */
   provisoWaiver?: { label: string; kind: "both" | "residence_only" };
+  /**
+   * 거주주택의 §154① 통산 보유 기산일(`resolveExemptionHoldingStartDate`) — B 직전거주주택 양도일 범위(D-61 · Q-25)에서 본인 취득일보다
+   * 이르면 그 사이 날짜를 막지 않고 확인 필요로 둔다. 없으면 본인 취득일만 본다.
+   */
+  residenceHoldingStartDate?: Date;
 } & Pick<
   RentalHousingExceptionInput,
   | "postRegistrationResidenceMonths"
@@ -176,6 +182,19 @@ export function checkEligibility(
    * (§155⑳ 3요건·호별 판정)을 전부 건너뛰고 §154⑩을 따로 판정한다.
    */
   const isStandalone154_10 = ctx?.scenario === "B" && rentalUnits.length === 0;
+
+  // D-61 · Q-25 — B 직전거주주택 양도일은 이 주택의 보유기간(본인 취득일 ~ 양도일) 안이어야 한다(§155⑳ 후단 「그 보유기간 중」).
+  //   ⑧·⑫ 공백이라 취득 전·양도 뒤 날짜로도 B 과세분을 계산했다. 막으면 B 미적용 + 사유(자동 전환 없음), 통산 보유기간 안이면 확인 필요.
+  if (ctx?.scenario === "B" && ctx.priorResidenceTransferDate && !Number.isNaN(ctx.priorResidenceTransferDate.getTime())) {
+    const range = priorResidenceTransferDateRange(
+      ctx.priorResidenceTransferDate, ctx.residenceAcquisitionDate, ctx.transferDate, ctx.residenceHoldingStartDate,
+    );
+    if (range) {
+      const msg = priorResidenceRangeMessage(range, ctx.priorResidenceTransferDate, ctx.residenceAcquisitionDate, ctx.transferDate);
+      if (range === "before_acquisition_consolidated") notices.push(msg);
+      else residenceFailReasons.push(msg);
+    }
+  }
 
   // M3 — 특례 신설(2011.10.14.) 전 양도분. 판정 맥락(양도일)이 없는 직접 호출은 판정하지 않는다 — 종전 동작.
   if (ctx && !isRentalResidenceExceptionEnacted(ctx.transferDate)) {

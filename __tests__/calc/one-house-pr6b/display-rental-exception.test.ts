@@ -207,7 +207,8 @@ describe("S06-8 RH-A2 결과 echo — 실제 적용한 표2(52%)·§161① 라�
 
 // ───────────────────────── X2-9 ─────────────────────────
 describe("X2-9 §154⑩ 경로 보유기간 사유 인용", () => {
-  const mk = (acq: string) => mkB0({}, {}, { acquisitionDate: acq, residencePeriodMonthsAsset: "12" });
+  // D-61 — 직전거주주택 양도일(원 시료 2011-12-20)은 이 주택의 보유기간 안이어야 한다 — 취득일을 옮긴 시료라 보유기간 안 날짜로 함께 옮긴다.
+  const mk = (acq: string) => mkB0({}, { priorResidenceTransferDate: "2016-06-01" }, { acquisitionDate: acq, residencePeriodMonthsAsset: "12" });
   it("보유 1년: 「소령 §154⑤·법 §95④」 (소령 §95 아님)", async () => {
     const c = mk("2016-01-10");
     await withToday(c.today, async () => {

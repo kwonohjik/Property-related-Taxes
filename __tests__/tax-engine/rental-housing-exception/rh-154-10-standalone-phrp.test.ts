@@ -77,6 +77,9 @@ function makeInput(overrides: Partial<RentalHousingExceptionInput> = {}): Rental
   };
 }
 
+// D-61 — 직전거주주택 양도일은 이 주택의 보유기간 안이어야 한다(2020 취득 시료는 기본 2016-08-25가 취득 전이라 모순 — 보유기간 안 날짜로).
+const PRIOR_IN_2020_HOLDING = new Date("2021-06-01");
+
 describe("§154⑩ 표준 경로(I-5) — rentalUnits 0호인 시나리오 B", () => {
   it("결함 재현(RED 문서화): rentalUnits=[]이면 §154⑩ 사실이 충족돼도 checkEligibility는 종전에 무조건 불통과였다", () => {
     // ctx 없이 호출(구 동작 그대로) — allUnitsPassed 초기값이 rentalUnits.length > 0에 의존하던 종전 로직의
@@ -156,7 +159,7 @@ describe("§154⑩ 표준 경로(I-5) — rentalUnits 0호인 시나리오 B", (
   it("anchor: 2019.2.12 이후 취득(종전규정 아님) + postRegistrationResidenceMonths 미입력 → 판정 불가", () => {
     const result = checkEligibility(
       [], HOLD_YEARS, LIVE_YEARS, false,
-      makeCtx({ residenceAcquisitionDate: new Date("2020-01-01") }),
+      makeCtx({ residenceAcquisitionDate: new Date("2020-01-01"), priorResidenceTransferDate: PRIOR_IN_2020_HOLDING }),
     );
     expect(result.passed).toBe(false);
     expect(result.residenceFailReasons.some((r) => r.includes("괄호 준용"))).toBe(true);
@@ -166,7 +169,7 @@ describe("§154⑩ 표준 경로(I-5) — rentalUnits 0호인 시나리오 B", (
     const result = checkEligibility(
       [], HOLD_YEARS, LIVE_YEARS, false,
       makeCtx({
-        residenceAcquisitionDate: new Date("2020-01-01"),
+        residenceAcquisitionDate: new Date("2020-01-01"), priorResidenceTransferDate: PRIOR_IN_2020_HOLDING,
         postRegistrationResidenceMonths: 24,
         wasRegulatedAtAcquisition: false, // 지역 불문임을 확인
       }),
@@ -177,7 +180,7 @@ describe("§154⑩ 표준 경로(I-5) — rentalUnits 0호인 시나리오 B", (
   it("anchor: 2019.2.12 이후 취득 + postRegistrationResidenceMonths 24개월 미만 → 불충족", () => {
     const result = checkEligibility(
       [], HOLD_YEARS, LIVE_YEARS, false,
-      makeCtx({ residenceAcquisitionDate: new Date("2020-01-01"), postRegistrationResidenceMonths: 12 }),
+      makeCtx({ residenceAcquisitionDate: new Date("2020-01-01"), priorResidenceTransferDate: PRIOR_IN_2020_HOLDING, postRegistrationResidenceMonths: 12 }),
     );
     expect(result.passed).toBe(false);
     expect(result.residenceFailReasons.some((r) => r.includes("등록일 이후) 2년 미충족"))).toBe(true);
@@ -189,7 +192,7 @@ describe("§154⑩ 표준 경로(I-5) — rentalUnits 0호인 시나리오 B", (
       const result = checkEligibility(
         [], HOLD_YEARS, LIVE_YEARS, false,
         makeCtx({
-          residenceAcquisitionDate: new Date("2020-01-01"),
+          residenceAcquisitionDate: new Date("2020-01-01"), priorResidenceTransferDate: PRIOR_IN_2020_HOLDING,
           residenceTransitionUnderAddendum: true,
           residenceTransitionBasis,
           wasRegulatedAtAcquisition: false,
@@ -205,7 +208,7 @@ describe("§154⑩ 표준 경로(I-5) — rentalUnits 0호인 시나리오 B", (
       const result = checkEligibility(
         [], HOLD_YEARS, LIVE_YEARS, false,
         makeCtx({
-          residenceAcquisitionDate: new Date("2020-01-01"),
+          residenceAcquisitionDate: new Date("2020-01-01"), priorResidenceTransferDate: PRIOR_IN_2020_HOLDING,
           residenceTransitionUnderAddendum: true,
           residenceTransitionBasis,
           wasRegulatedAtAcquisition: false,
