@@ -211,7 +211,10 @@ export function buildOneHouseExemptionPayload(
    * 판정 메뉴 전용 — 계산기는 엔진 입장대로 세액을 낸다.
    */
   const engineVerdict = contestedVerdictOf(judgment);
-  const contestedIssues = detectContestedIssues(engineInput).map((d) =>
+  // STEP 0.95 정본 결과(echo)를 넘긴다 — 조특법으로 먼저 뺀 소수지분을 C7 대상으로 세지 않는다(D-87).
+  const contestedIssues = detectContestedIssues(engineInput, {
+    inheritedExclusion: exclusion.exemptionJudgeInput.inheritedHouseExclusionDetail,
+  }).map((d) =>
     buildContestedIssue(
       d,
       engineVerdict,

@@ -26,8 +26,10 @@ import {
   isHeirInheritedHouse,
   passesHouseholdGate,
   resolveInheritedHouseExclusionForJudgment,
+  resolveInheritedHouseExclusionFromInput,
+  type InheritedHouseExclusionResult,
 } from "../transfer-inheritance-exclusion";
-import { deriveHouseholdHousingCount } from "./house-count";
+import { withoutRosterRows } from "./without-roster-rows";
 import type { HouseInfo } from "../types/multi-house-surcharge.types";
 import type { TransferTaxInput } from "../types/transfer.types";
 import { isHoldingPresaleOrigin } from "./new-house-origin";
@@ -63,6 +65,11 @@ export type OneHouseContestedIssue = {
   positions: [OneHouseContestedPosition, OneHouseContestedPosition];
   /** 두 입장의 결론이 다르면 true — 판정 배지가 결론을 단언하지 않는다 */
   conclusionsDiffer: boolean;
+  /**
+   * 반대 입장 재판정에서 §155① 짝을 다시 만들지 않아 그 입장의 결론을 단정할 수 없는 경우의 안내(2026-11 리뷰 D-79 최소 안전망) —
+   * 있으면 화면이 「두 입장의 결론이 같습니다」를 쓰지 않는다.
+   */
+  otherPositionUnresolved?: string;
   /** 쟁점이 걸린 명부 행 id(입주권 쟁점은 빈 배열) */
   houseIds: string[];
 };
@@ -171,9 +178,35 @@ const SPECS: Record<OneHouseContestedIssueId, IssueSpec> = {
 export type DetectedContestedIssue = {
   id: OneHouseContestedIssueId;
   houseIds: string[];
-  /** 반대 입장 재판정 입력 — 이 쟁점 하나만 뒤집는다 */
+  /** 반대 입장 재판정 입력 — 이 쟁점 하나만 뒤집는다(2017.2.3. 전 C2·C7이 겹치면 두 B를 함께 — D-88) */
   otherPositionInput: TransferTaxInput;
+  /** 반대 입장을 겹쳐 적용했을 때 B 요지에 붙이는 문장(D-88) */
+  otherPositionNote?: string;
+  /** 반대 입장의 §155① 짝을 다시 만들지 않아 결론을 단정할 수 없다(D-79) */
+  otherPositionUnresolved?: string;
 };
+
+/**
+ * D-79 최소 안전망 — 반대 입장이 주택을 빼 2주택이 됐는데 §155① 짝이 없고, 양도 주택보다 나중에 취득한 행이 정확히 1채면 그 행이 신규 주택일 수 있다.
+ * 짝은 화면 ④에서만 만들어져(`resolveTemporaryTwoHouse`) 반대 입장 입력에는 실리지 않는다 — 그 입장의 결론을 단정하지 않는다.
+ * (완전한 수정은 반대 입장마다 짝을 다시 도출하는 것이다 — 리뷰 D-79 안 A. ⑤⑧의 신규 주택 경위 질문까지 함께 바꿔야 해 별건으로 남긴다.)
+ */
+function otherPositionPairUnresolved(input: TransferTaxInput, other: TransferTaxInput): string | undefined {
+  if (input.temporaryTwoHouse || other.temporaryTwoHouse) return undefined;
+  if (other.householdHousingCount !== 2 || input.householdHousingCount <= other.householdHousingCount) return undefined;
+  const later = (other.houses ?? []).filter(
+    (h) => h.id !== other.sellingHouseId && h.acquisitionDate.getTime() > other.acquisitionDate.getTime(),
+  );
+  if (later.length !== 1) return undefined;
+  return (
+    "반대 입장에서는 남은 다른 주택이 일시적 2주택(소득세법 시행령 §155①)의 신규 주택일 수 있는데, 이 판정은 그 특례를 다시 따져 보지 않아 " +
+    "반대 입장의 결론을 단정하지 않습니다 — 확인이 필요합니다."
+  );
+}
+
+/** 2017.2.3. 전 양도에서 C2·C7 반대 입장을 겹쳐 적용했을 때의 B 요지 보충(결정 #10 조건 형식 · 2026-11 리뷰 D-88). */
+const C2_C7_COMBINED_NOTE =
+  "2017. 2. 3. 전 양도라 공동상속주택 소수지분을 모두 주택 수에서 빼고 판정했습니다 — 동일세대 소수지분과 다른 소수지분이 한 사건에 함께 나온 결정은 확인하지 못했습니다(확인 필요).";
 
 function otherInheritedRows(input: TransferTaxInput): HouseInfo[] {
   return (input.houses ?? []).filter((h) => isHeirInheritedHouse(h) && h.id !== input.sellingHouseId);
@@ -187,8 +220,19 @@ function withRows(input: TransferTaxInput, ids: string[], patch: (h: HouseInfo) 
  * 판정 메뉴 엔진 입력(명부에서 주택 수를 도출한 뒤)에서 양론 사실 패턴을 찾는다.
  * 상속주택 쟁점(C1·C2)은 **주택 양도**일 때만 — 입주권 양도는 §155②③을 「다른 주택」에서 빼지 않는다(G065).
  */
-export function detectContestedIssues(input: TransferTaxInput): DetectedContestedIssue[] {
+export function detectContestedIssues(
+  input: TransferTaxInput,
+  /**
+   * STEP 0.95의 정본 상속주택 제외 결과(echo — `exemptionJudgeInput.inheritedHouseExclusionDetail`). 조특법으로 먼저 뺀 행을 「제외하지 못한
+   * 소수지분」으로 세지 않게 한다(NH-13 · 2026-11 리뷰 D-87). 입력에 펼치지 않는다 — 반대 입장 입력에 낡은 결과가 실려 재판정으로 새지 않게.
+   */
+  opts: { inheritedExclusion?: InheritedHouseExclusionResult } = {},
+): DetectedContestedIssue[] {
   const out: DetectedContestedIssue[] = [];
+  const withUnresolved = (d: DetectedContestedIssue) => {
+    const note = otherPositionPairUnresolved(input, d.otherPositionInput);
+    if (note) d.otherPositionUnresolved = note;
+  };
 
   if (input.propertyType === "housing") {
     // C1 — 엔진(B)은 상속주택 그대로. 반대(A)는 그 행을 상속주택이 아닌 주택으로.
@@ -227,11 +271,20 @@ export function detectContestedIssues(input: TransferTaxInput): DetectedConteste
       )
       .map((h) => h.id);
     if (minority.length > 0) {
+      const flipped = withRows(input, minority, (h) => ({ ...h, decedentSameHouseholdAtInheritance: false }));
+      // D-88 — 2017.2.3. 전 양도면 게이트를 연 뒤에도 「제외하지 못한 소수지분」(2채 이상 → 제외 0 · #172)이 남을 수 있다. 그 행은 C7의 B 입장으로
+      //   빼야 C2의 B 결론이 C7의 A 규칙에 묶이지 않는다. 낡은 결과(echo)를 지우고 정본으로 다시 센다.
+      const stillMinority = isBeforeCoInheritedRankingClause(input.transferDate)
+        ? resolveInheritedHouseExclusionFromInput(flipped).unexcludedCoMinorityHouseIds
+        : [];
       out.push({
         id: "155-3-same-household-co-inherited-minority",
         houseIds: minority,
-        otherPositionInput: withRows(input, minority, (h) => ({ ...h, decedentSameHouseholdAtInheritance: false })),
+        otherPositionInput:
+          stillMinority.length > 0 ? withoutRosterRows({ ...flipped, inheritedHouseExclusionDetail: undefined }, stillMinority, true) : flipped,
+        ...(stillMinority.length > 0 ? { otherPositionNote: C2_C7_COMBINED_NOTE } : {}),
       });
+      withUnresolved(out[out.length - 1]);
     }
 
     // C7 — 2017.2.3. 전 양도(「선순위 1주택」 한정 신설 전). 엔진(A)은 소수지분을 제외하지 못한 행을 주택 수에 남긴다.
@@ -239,14 +292,18 @@ export function detectContestedIssues(input: TransferTaxInput): DetectedConteste
     //   같은 피상속인으로 한정하지 않는다(부부가 각자 받은 소수지분도 개정 전 양도분이면 대상). C2(동일세대)는 게이트 통과 행만 센다.
     if (isBeforeCoInheritedRankingClause(input.transferDate)) {
       // STEP 0.95의 정본 결과(echo)를 이어받는다 — 조특법으로 이미 뺀 행을 「주택 수에 남은 소수지분」으로 세지 않는다(NH-13).
-      const ids = resolveInheritedHouseExclusionForJudgment(input).unexcludedCoMinorityHouseIds;
+      const ids = (opts.inheritedExclusion ?? resolveInheritedHouseExclusionForJudgment(input)).unexcludedCoMinorityHouseIds;
       if (ids.length > 0) {
-        const houses = (input.houses ?? []).filter((h) => !ids.includes(h.id));
+        // D-88 — 대칭으로 C2 대상(동일세대 소수지분 · 게이트 불통과)도 함께 뺀다. 그 행이 남으면 C7의 B가 C2의 A 규칙에 묶인다.
+        const sameHouseholdMinority = minority.filter((id) => !ids.includes(id));
         out.push({
           id: "155-3-co-inherited-minority-before-ranking-clause",
           houseIds: ids,
-          otherPositionInput: { ...input, houses, householdHousingCount: deriveHouseholdHousingCount(houses) },
+          // 행과 함께 그 행에 연결된 조특 제외·감면 선언도 걷는다 — 남기면 빼낸 주택을 한 번 더 뺀다(D-87 · D-59와 같은 leaf).
+          otherPositionInput: withoutRosterRows(input, [...ids, ...sameHouseholdMinority], true),
+          ...(sameHouseholdMinority.length > 0 ? { otherPositionNote: C2_C7_COMBINED_NOTE } : {}),
         });
+        withUnresolved(out[out.length - 1]);
       }
     }
   }
@@ -282,22 +339,26 @@ export function contestedVerdictOf(j: Pick<OneHouseJudgment, "isExempt" | "isPar
 
 /** 본 판정 결론과 반대 입장 재판정 결론으로 화면용 쟁점을 만든다. */
 export function buildContestedIssue(
-  detected: Pick<DetectedContestedIssue, "id" | "houseIds">,
+  detected: Pick<DetectedContestedIssue, "id" | "houseIds" | "otherPositionNote" | "otherPositionUnresolved">,
   engineVerdict: ContestedVerdict,
   otherVerdict: ContestedVerdict,
 ): OneHouseContestedIssue {
   const spec = SPECS[detected.id];
   const verdictOf = (key: ContestedPositionKey) => (key === spec.enginePosition ? engineVerdict : otherVerdict);
+  // 반대 입장 보충 문장(D-88)은 엔진 입장이 아닌 쪽 요지에 잇는다.
+  const noteFor = (key: ContestedPositionKey) =>
+    key !== spec.enginePosition && detected.otherPositionNote ? { summary: `${spec[key].summary} ${detected.otherPositionNote}` } : {};
   return {
     id: detected.id,
     title: spec.title,
     legalBasis: spec.legalBasis,
     enginePosition: spec.enginePosition,
     positions: [
-      { key: "A", ...spec.A, verdict: verdictOf("A") },
-      { key: "B", ...spec.B, verdict: verdictOf("B") },
+      { key: "A", ...spec.A, ...noteFor("A"), verdict: verdictOf("A") },
+      { key: "B", ...spec.B, ...noteFor("B"), verdict: verdictOf("B") },
     ],
     conclusionsDiffer: engineVerdict !== otherVerdict,
+    ...(detected.otherPositionUnresolved && engineVerdict === otherVerdict ? { otherPositionUnresolved: detected.otherPositionUnresolved } : {}),
     houseIds: detected.houseIds,
   };
 }

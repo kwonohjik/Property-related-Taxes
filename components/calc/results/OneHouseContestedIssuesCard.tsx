@@ -76,7 +76,8 @@ export function OneHouseContestedIssuesCard({ issues, sectionNum }: Props) {
           <p className="text-xs text-muted-foreground" data-testid={`one-house-contested-${issue.id}-note`}>
             {issue.conclusionsDiffer
               ? `이 화면 아래의 판정 내역과 양도소득세 계산기는 입장 ${issue.enginePosition}에 따릅니다.`
-              : "두 입장의 결론이 같습니다."}
+              : // 반대 입장의 §155①을 다시 따지지 않은 경우엔 결론이 같다고 단정하지 않는다(2026-11 리뷰 D-79).
+                (issue.otherPositionUnresolved ?? "두 입장의 결론이 같습니다.")}
           </p>
         </div>
       ))}
