@@ -129,6 +129,9 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "nbl: 하치장", field: "nblOtherMaxAnnualArea", step: 0, assetIndex: A, message: /^자산: 하치장 — 매년 최대 사용면적/, form: other({ nblOtherRelatedBusinessType: "hatchang" }) },
   { name: "nbl: 청소년수련시설", field: "nblOtherYouthCapacity", step: 0, assetIndex: A, message: /^자산: 청소년수련시설 — 수용정원/, form: other({ nblOtherRelatedBusinessType: "youth_training" }) },
   { name: "nbl: 업무용자동차 주차장", field: "nblOtherMinGarageArea", step: 0, assetIndex: A, message: /^자산: 업무용자동차 주차장 — 최저차고기준면적/, form: other({ nblOtherRelatedBusinessType: "parking_garage" }) },
+  // NBL2611-V7-S — 호 메타 표 `requiredInput`(3호 조성 완료일) · 12호 도소매업 품목. 키가 표에서 동적으로 나오는 메시지라 정적 게이트가 읽지 못한다.
+  { name: "nbl: 3호 조성 완료일", field: "nblOtherPrivateInvestCompletionDate", step: 0, assetIndex: A, message: /^자산: 민간투자사업 등 조성 토지\(3호\) — 토지 조성 완료일/, form: other({ nblOtherRelatedBusinessType: "private_investment_land" }) },
+  { name: "nbl: 12호 도소매업 품목", field: "nblRevenueWholesaleItem", step: 0, assetIndex: A, message: /^자산: 도소매업\(12호\) — 취급 품목/, form: revenue({ nblRevenueBusinessType: "wholesale_retail" }) },
 
   // 연접 다필지(§168의11⑤)
   { name: "nbl: 다필지 없음", field: "nblOtherParcels", step: 0, assetIndex: A, message: /^자산: 연접 다필지 입력을 켰습니다/, form: other({ nblOtherUseParcels: true, nblOtherParcels: [] }) },

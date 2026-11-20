@@ -202,6 +202,10 @@ export function migrateAsset(raw: unknown): AssetForm {
   // 종전에는 이 18필드만 가드가 없어 옛 이력을 되살리면 controlled→uncontrolled로 뒤집히고
   // 재계산 시 수입금액비율 입력이 조용히 빈 값으로 재전송됐다.
   if (a.nblRevenueBusinessType === undefined) a.nblRevenueBusinessType = "";
+  // NBL2611-V7-S — 구 이력에는 3호 조성 완료일·도소매업 품목이 없다. 빈 값으로 둔다(추정 금지): 3호를 골랐던 이력은 ⑧이 조성 완료일을, 도소매업을 골랐던 이력은 ⑧이 품목을 묻는다.
+  if (a.nblOtherPrivateInvestCompletionDate === undefined) a.nblOtherPrivateInvestCompletionDate = "";
+  if (a.nblRevenueWholesaleItem === undefined) a.nblRevenueWholesaleItem = "";
+  if (a.nblRevenueWholesaleInMarket === undefined) a.nblRevenueWholesaleInMarket = false;
   if (a.nblRevenueCurrentRevenue === undefined) a.nblRevenueCurrentRevenue = "";
   if (a.nblRevenueCurrentLandValue === undefined) a.nblRevenueCurrentLandValue = "";
   if (a.nblRevenuePriorRevenue === undefined) a.nblRevenuePriorRevenue = "";

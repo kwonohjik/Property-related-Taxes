@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NBL_PROPERTY_TAX_TYPE_VALUES, NBL_RELATED_BUSINESS_TYPE_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
+import { WHOLESALE_ITEM_VALUES } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import { PROPERTY_TAX_BASIS_VALUES } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { refineNonBusinessLandRaw } from "./transfer-tax-schema-nbl-refines";
 
@@ -200,6 +201,8 @@ export const nonBusinessLandRawBaseSchema = z.object({
   nblOtherIndoorFloorArea: z.string().optional(),
   // F2 Phase B(B-3) — 6호 휴양 건축물 바닥면적(§101② 배율 자동)
   nblOtherResortBuildingFloorArea: z.string().optional(),
+  /** NBL2611-V7-S — 3호 조성 완료일. 누락 시 strip되어 엔진이 던진다(⑫ refine이 먼저 400) */
+  nblOtherPrivateInvestCompletionDate: z.string().optional(),
   // ⑫ 공장용 건축물 부속토지 기준면적 (「지방세법 시행령」 §102①1호 별표6 / §101①1호)
   //
   // ⚠️ 누락 시 z.object가 조용히 strip → 엔진에 factory가 도달하지 않아 **한도 판정 자체가
@@ -249,6 +252,9 @@ export const nonBusinessLandRawBaseSchema = z.object({
   nblRevenueOtherLandValue: z.string().optional(),
   nblRevenuePriorCommonRevenue: z.string().optional(),
   nblRevenuePriorOtherLandValue: z.string().optional(),
+  // NBL2611-V7-S · Q-6 (다) — 12호 도소매업 품목(규칙 §83조의4⑭)·시장 운영 여부
+  nblRevenueWholesaleItem: z.enum(WHOLESALE_ITEM_VALUES).or(z.literal("")).optional(),
+  nblRevenueWholesaleInMarket: z.boolean().optional(),
   // 무조건 의제 (§168의14③)
   nblExemptInheritBefore2007: z.boolean().optional(),
   nblExemptInheritDate: z.string().optional(),
