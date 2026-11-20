@@ -186,8 +186,13 @@ describe("P-7 소재지 — 수도권·광역시 자치구는 후보가 아니�
   it("서울 중구 · 인구감소지역 아닌 곳 → 침묵", () => {
     expect(run({}, { regionCode: SEOUL_JUNGGU }).entries).toHaveLength(0);
   });
-  it("④ 지정(isPopulationDeclineArea=false)은 자동판정을 덮는다 — 중과 ④와 같은 인자", () => {
-    expect(run({}, { isPopulationDeclineArea: false }).entries).toHaveLength(0);
+  it("④ 지정(isPopulationDeclineArea=false)은 자동판정을 덮는다 — 중과 ④와 같은 인자 · 주소로는 대상이면 불성립 + 확인 필요(Q-19 (b))", () => {
+    const r = run({}, { isPopulationDeclineArea: false });
+    expect(eligible(r)).toBe(0);
+    expect(unconfirmed(r)).toHaveLength(1);
+    expect(unconfirmed(r)[0].reason).toMatch(/「인구감소지역 소재 주택」을 껐지만 주소\(법정동코드\)로는/);
+    // 주소로도 대상이 아니면(서울 노원) 끈 답은 사실과 같다 — 침묵
+    expect(run({}, { regionCode: NOWON, isPopulationDeclineArea: false }).entries).toHaveLength(0);
   });
   it("주소가 없으면 수도권·광역시 여부를 알 수 없다 → 후보(④ 지정)일 때 불성립 + 확인 필요", () => {
     const r = run({}, { regionCode: undefined, isPopulationDeclineArea: true, populationAreaType: "decline" });
@@ -407,7 +412,7 @@ describe("R 판정 메뉴 route", () => {
     expect(o.undetermined).not.toContain("71-2-pop-decline-unconfirmed");
   });
 
-  it("R-2 D2 — ④ 인구감소 토글을 켜든 비워 두든(자동판정) 같은 비과세다 (④는 중과 주택 수 전용)", async () => {
+  it("R-2 D2 — ④ 인구감소 토글을 켜든 비워 두든(자동판정) 같은 비과세다 (④ 답은 중과 주택 수와 §71의2에 함께 쓰인다 — 켜면 자동판정과 같은 값)", async () => {
     for (const patch of [
       { isPopulationDeclineArea: true, populationAreaType: "decline" },
       {},

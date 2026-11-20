@@ -10,7 +10,7 @@
  * | W-3 | 신고서 제출은 요건이 아니라 안내다(질문·게이트 없음) |
  * | W-4 | 상속·증여로 받은 행에서만 「피상속인·증여자는 별도세대였는가」를 묻고, 고르면 같은 칸으로 올라간다(결정 #42-2) |
  * | E-1 | 편집 모달은 후보 행(취득일 창 + 인구감소지역)에서 `popDeclineEnabled`일 때만 그린다 |
- * | E-2 | ④ 세컨드홈 카드 문구가 중과 주택 수 전용임을 밝힌다 |
+ * | E-2 | ④ 세컨드홈 카드 문구 — 이 답이 중과 주택 수와 §71의2에 함께 쓰임 (Q-19 (b) · 종전 「중과 주택 수 전용」은 반대 안내) |
  * | E-3 | 계산기 명부(`HousesListSection`)는 주택 양도와 **조합원입주권 양도**에서 질문을 연다 — 분양권 양도는 닫는다(결정 #42) |
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
@@ -152,10 +152,12 @@ describe("E-1 편집 모달 배선", () => {
 });
 
 describe("E-2 ④ 세컨드홈 카드", () => {
-  it("중과 주택 수 전용이라고 밝히고 §71의2는 명부에서 자동 판정한다고 안내한다", () => {
+  it("Q-19 (b) — 이 답이 중과 주택 수와 §71의2 특례에 함께 쓰이고, 끄면 두 판정 모두 인구감소지역이 아닌 것으로 본다고 안내한다", () => {
     render(<HouseEntrySpecialExclusionSection house={row({ isPopulationDeclineArea: true })} onUpdate={vi.fn()} />);
-    expect(screen.getByText(/중과 주택 수 전용/)).toBeTruthy();
-    expect(screen.getByText(/§71의2 인구감소지역주택/)).toBeTruthy();
+    expect(screen.getByText(/§167의3①12 다·라목\)와 1세대1주택 비과세의 인구감소지역주택 특례\(조특법 §71의2①\)에 함께 쓰이며/)).toBeTruthy();
+    expect(screen.getByText(/끄면 두 판정 모두 인구감소지역이 아닌 것으로 봅니다/)).toBeTruthy();
+    // 종전 문구는 반대로 안내해 끄도록 유도했다(D-50 (a)).
+    expect(screen.queryByText(/중과 주택 수 전용/)).toBeNull();
   });
 });
 

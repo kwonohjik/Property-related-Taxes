@@ -45,5 +45,6 @@ export function houseEntryHasSpecialExclusionFacts(house: SpecialExclusionFacts)
 
 /** 행 편집 창에 ④ 특수 배제 사유 카드를 그릴지 — 중과 입력을 연 화면은 항상, 닫은 화면(1주택 판정 메뉴)은 담긴 값이 있을 때만. */
 export function houseEntrySpecialExclusionVisible(house: SpecialExclusionFacts, hideSurchargeInputs: boolean): boolean {
-  return !hideSurchargeInputs || houseEntryHasSpecialExclusionFacts(house);
+  // 「인구감소지역 소재」를 **끈** 답도 담긴 값이다 — 엔진이 자동판정을 덮어 §71의2를 막으므로(Q-19 (b)), 판정 메뉴에서 되돌릴 수 있게 연다.
+  return !hideSurchargeInputs || houseEntryHasSpecialExclusionFacts(house) || house.isPopulationDeclineArea === false;
 }

@@ -171,12 +171,20 @@ function evaluate(h: PopDeclineHouse, p: PopDeclineInput): SpecialHouseExclusion
   // 지정은 고시마다 바뀐다 — 「취득 당시」 지정으로 판정한다(고시 제2026-61호 · D-43). 편입 대기 행은 편입일 지정으로 후보를 정한다.
   const auto = code ? classifyPopulationDeclineArea(code, borderFrom && borderPending ? borderFrom : acq).kind : null;
   // 소재지는 중과 ④와 같은 인자로 읽는다 — `isPopulationDeclineArea ?? 자동판정`, `populationAreaType ?? 자동판정`(진실이 둘이 되지 않게).
-  const isPop = h.isPopulationDeclineArea ?? auto !== null;
+  // ④에서 끈 답(false)은 자동판정을 덮는다(결정 #42 · Q-19 (b) 현행 유지). 다만 주소로는 인구감소지역(관심지역)이면 그 답이
+  //   특례를 막은 것이라 불성립 + 확인 필요로 남긴다 — 고지는 그 사실이 결론을 가를 때만 나간다(`popDeclineDecides`).
+  const toggledOff = h.isPopulationDeclineArea === false && auto !== null;
+  const isPop = toggledOff || (h.isPopulationDeclineArea ?? auto !== null);
   if (!isPop) return null;
-  const kind = h.populationAreaType ?? auto;
+  const kind = toggledOff ? auto : (h.populationAreaType ?? auto);
   // 세법이 소재지로 빼는 곳(수도권 비접경·광역시 자치구) — ④ 토글로 덮어도 대상이 아니다(D-50 (b)).
   if (code && kind && populationDeclineLocationExcluded(code, kind, borderFrom && borderPending ? borderFrom : acq)) return null;
   const unconfirmed: string[] = [];
+  if (toggledOff) {
+    unconfirmed.push(
+      "보유 주택 목록 ④에서 「인구감소지역 소재 주택」을 껐지만 주소(법정동코드)로는 취득 당시 인구감소지역(관심지역)입니다 — 끈 답을 따라 적용하지 않았습니다. 사실과 다르면 ④를 다시 켜세요.",
+    );
+  }
   if (borderFrom && borderPending) {
     unconfirmed.push(
       `취득일(${fmt(acq)})에는 이 시·군이 수도권 접경지역(${TRANSFER.CAPITAL_BORDER_AREA_DECREE_2_2})이 아니어서 수도권(접경지역 제외) 소재 주택이었습니다 — ` +
