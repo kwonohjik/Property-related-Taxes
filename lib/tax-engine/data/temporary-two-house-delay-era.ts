@@ -61,6 +61,36 @@ export function isDisposalDelayMethodRequired(transferDate: Date): boolean {
   return t >= TT_DELAY_METHOD_VERIFIED_FROM.getTime() && t < TT_DELAY_METHOD_DROPPED_TRANSFER_START.getTime();
 }
 
+/**
+ * §89①4호 나목 괄호의 ⑱ 사유에 「그 방법으로 양도」 요건이 걸린다고 실독으로 확인된 가장 이른 시행본 — 「소득세법 시행규칙」 §72①
+ * (2016.3.16. 시행, MST 181793)이 「영 제155조제1항 및 같은 조 제17항제2호」에 방법 요건을 둔다(2026-11 리뷰 D-06). 그 전 규칙이 나목
+ * 조항을 인용했는지는 확인하지 못해, 결정 Q-2 (b)대로 그 전 나목 양도분에는 방법 요건을 걸지 않고 확인 필요를 알린다.
+ */
+export const NA_DELAY_METHOD_VERIFIED_FROM = new Date("2016-03-16");
+
+/**
+ * §89①4호 나목 괄호 「3년 이내에 양도하지 못하는 경우로서 대통령령으로 정하는 사유」(시행령 §155⑱)가 처분기한을 치유하는가 — §155①과 같은
+ * 정본(`resolveDisposalDelay` — 호별 신설 시기 · 2022.2.15. 전 「그 방법으로 양도」)에 나목 연혁(`NA_DELAY_METHOD_VERIFIED_FROM`)만 더한다.
+ * 종전에는 사유를 고르기만 하면 양도일과 무관하게 3년 초과를 치유했다(D-06).
+ */
+export function resolveNaDisposalDelay(p: {
+  reason?: TemporaryTwoHouseDelayReason;
+  disposedByThatMethod?: boolean;
+  transferDate: Date;
+}): DisposalDelayResolution & { eraUnverified?: boolean } {
+  const base = resolveDisposalDelay(p);
+  if (!base.methodPending || p.transferDate.getTime() >= NA_DELAY_METHOD_VERIFIED_FROM.getTime()) return base;
+  return {
+    applied: true,
+    methodPending: false,
+    reasonUnavailable: false,
+    eraUnverified: true,
+    note:
+      `${day(NA_DELAY_METHOD_VERIFIED_FROM)} 전 양도분은 조합원입주권 비과세(나목)의 처분기한 예외 사유에 「해당 각 호의 방법으로 양도」 요건이 ` +
+      "걸렸는지 확인하지 못해 사유 해당만으로 처분기한 예외를 적용했습니다 — 그 방법으로 양도하지 않았다면 결론이 달라질 수 있습니다(확인 필요).",
+  };
+}
+
 /** 이 사유(호)가 이 양도일에 시행 중인 §155⑱에 있는가. */
 export function isDisposalDelayReasonAvailable(reason: TemporaryTwoHouseDelayReason, transferDate: Date): boolean {
   const t = transferDate.getTime();

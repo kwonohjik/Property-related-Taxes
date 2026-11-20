@@ -28,8 +28,9 @@ export type OneRightNaFactIssue = { field: string; message: string };
 
 export function oneRightNaFactIssues(form: OneHouseJudgmentFormData): OneRightNaFactIssue[] {
   const primary = form.assets?.[0];
-  // 입주권 양도에서만 나목 칸이 있다(⑤ `RedevelopmentRightExemptionSection`과 같은 게이트).
-  if (!primary || judgmentSaleIsHousing(form)) return [];
+  // 입주권 양도 + 「인가일 현재 §89①3호 가목 요건 충족」 토글이 켜졌을 때만 나목 칸이 보인다(⑤ `RedevelopmentRightExemptionSection`의
+  //   `isToggleOn`과 같은 게이트 — 2026-11 리뷰 D-65). 토글을 끄면 칸이 사라지는데 남은 값으로 막으면 고칠 칸이 화면에 없다.
+  if (!primary || judgmentSaleIsHousing(form) || primary.redevExemptionEligibleAtApproval !== "yes") return [];
   const na = primary.redevOtherHouseAcquisitionDate;
   if (!na) return []; // 미입력은 「판정 불가 + 사유 안내」(엔진) — 가목이면 비워 둔다.
 

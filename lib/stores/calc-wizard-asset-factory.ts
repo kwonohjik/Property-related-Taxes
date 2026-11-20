@@ -622,6 +622,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     redevPriorHouseHoldingMonths: "",
     redevOtherHouseAcquisitionDate: "", // §89①4호 나목 — 그 1주택 취득일
     redevOtherHouseDisposalDelayReason: "", // §89①4호 나목 괄호 — 시행령 §155⑱ 사유
+    redevOtherHouseDisposalDelayDisposedByThatMethod: false, // 나목 ⑱ 「그 방법으로 양도」(D-06)
     redevLandHouseholdOwnedBuilding: "", // §89①4호 본문 — 토지 출자 입주권의 세대원 건물 소유(#13)
     // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
     redevLandStdPriceAtAcq: "",      // @deprecated — legacy 총액 직접 입력 (sessionStorage 호환용)

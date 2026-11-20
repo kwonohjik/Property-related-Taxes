@@ -79,6 +79,8 @@ const FULL_PAYLOAD = {
   otherHouseAcquisitionDate: "2021-01-01",
   // S05-4 — §89①4호 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱)
   otherHouseDisposalDelayReason: "auction",
+  // 2026-11 리뷰 D-06 — 그 사유의 「매각 등의 방법으로 양도」
+  otherHouseDisposalDelayDisposedByThatMethod: true,
   // #11 — 공유지분 물건 전체 권리가액
   rightsValueWhole: 600_000_000,
   // #13 — 토지 출자 입주권의 세대원 건물 소유 선언

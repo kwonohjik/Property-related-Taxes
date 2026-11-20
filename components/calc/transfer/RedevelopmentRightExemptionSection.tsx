@@ -269,8 +269,23 @@ export function RedevelopmentRightExemptionSection({
                 이 칸이 없으면 사유가 있어도 3년을 넘긴 나목이 조용히 불성립한다(S05-4). 취득일을 넣은 뒤 3년이 지난
                 경우에 의미가 있고, 사유는 「그 1주택을 취득한 날부터 3년이 되는 날 현재」 기준이다. */}
             <TempTwoHouseDelayReasonInput
-              form={{ disposalDelayReason: asset.redevOtherHouseDisposalDelayReason ?? "" }}
-              onChange={(p) => onChange({ redevOtherHouseDisposalDelayReason: p.disposalDelayReason as AssetForm["redevOtherHouseDisposalDelayReason"] })}
+              form={{
+                disposalDelayReason: asset.redevOtherHouseDisposalDelayReason ?? "",
+                disposalDelayDisposedByThatMethod: asset.redevOtherHouseDisposalDelayDisposedByThatMethod === true,
+              }}
+              onChange={(p) =>
+                onChange({
+                  ...(p.disposalDelayReason !== undefined
+                    ? { redevOtherHouseDisposalDelayReason: p.disposalDelayReason as AssetForm["redevOtherHouseDisposalDelayReason"] }
+                    : {}),
+                  ...(p.disposalDelayDisposedByThatMethod !== undefined
+                    ? { redevOtherHouseDisposalDelayDisposedByThatMethod: p.disposalDelayDisposedByThatMethod }
+                    : {}),
+                })
+              }
+              // 양도일 연혁(호 신설 · 「그 방법으로 양도」)을 엔진과 같은 leaf로 가린다(D-06 — 종전에는 양도일을 넘기지 않았다).
+              transferDate={transferDate}
+              variant="na"
               name={`redevOtherHouseDisposalDelayReason-${asset.assetId}`}
               newHouseLabel="그 1주택"
               label="3년 이내 양도하지 못한 사유 (나목 괄호 · 시행령 §155⑱)"

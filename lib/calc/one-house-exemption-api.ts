@@ -361,6 +361,9 @@ export function buildOneHouseExemptionApiBody(
             otherHouseAcquisitionDate: primary.redevOtherHouseAcquisitionDate || undefined,
             // 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱) — 빈 값은 해당 없음/모름이라 보내지 않는다.
             otherHouseDisposalDelayReason: primary.redevOtherHouseDisposalDelayReason || undefined,
+            // 그 사유의 「매각 등의 방법으로 양도」(D-06) — 계산기 ④와 같은 규칙(사유를 골랐을 때만).
+            otherHouseDisposalDelayDisposedByThatMethod:
+              primary.redevOtherHouseDisposalDelayReason && primary.redevOtherHouseDisposalDelayDisposedByThatMethod ? true : undefined,
             // E-3 후속 — 분양권 요건 연혁(인가일 < 2022-01-01이면 종전 규정). 계산기와 같은 필드다.
             approvalDate: primary.redevApprovalDate || undefined,
             // #13 — 출자 자산과 세대원 건물 소유 선언(§89①4호 본문). 계산기 ④(`transfer-tax-api-redev.ts`)와 같은 규칙:

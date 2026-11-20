@@ -517,6 +517,7 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.redevOtherHouseAcquisitionDate === undefined) a.redevOtherHouseAcquisitionDate = "";
   // §89①4호 나목 괄호 — 시행령 §155⑱ 사유 (구 sessionStorage에는 없다)
   if (a.redevOtherHouseDisposalDelayReason === undefined) a.redevOtherHouseDisposalDelayReason = "";
+  if (a.redevOtherHouseDisposalDelayDisposedByThatMethod === undefined) a.redevOtherHouseDisposalDelayDisposedByThatMethod = false;
   // §89①4호 본문 — 토지 출자 입주권의 세대원 건물 소유 선언(#13). 구 저장분은 미답("") — 토지 출자면 불성립 + 확인 필요.
   if (a.redevLandHouseholdOwnedBuilding === undefined) a.redevLandHouseholdOwnedBuilding = "";
   // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")

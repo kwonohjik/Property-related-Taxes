@@ -21,6 +21,7 @@ type JudgmentFactKey =
   | "redevLandHouseholdOwnedBuilding"
   | "redevOtherHouseAcquisitionDate"
   | "redevOtherHouseDisposalDelayReason"
+  | "redevOtherHouseDisposalDelayDisposedByThatMethod"
   | "redevPriorHouseHoldingMonths"
   | "redevPriorHouseResidenceMonths";
 
@@ -59,6 +60,7 @@ export function soleSplitRightJudgmentFacts(
     redevLandHouseholdOwnedBuilding: primary.redevLandHouseholdOwnedBuilding,
     redevOtherHouseAcquisitionDate: primary.redevOtherHouseAcquisitionDate,
     redevOtherHouseDisposalDelayReason: primary.redevOtherHouseDisposalDelayReason,
+    redevOtherHouseDisposalDelayDisposedByThatMethod: primary.redevOtherHouseDisposalDelayDisposedByThatMethod,
     redevPriorHouseHoldingMonths: primary.redevPriorHouseHoldingMonths,
     redevPriorHouseResidenceMonths: primary.redevPriorHouseResidenceMonths,
   };
