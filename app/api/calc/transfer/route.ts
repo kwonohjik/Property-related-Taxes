@@ -287,6 +287,8 @@ export async function POST(request: NextRequest) {
         acquisitionCause: data.acquisitionCause,
         // ⑭ US-07 — 겸용 중과 배제 선판정의 취득 원인 게이트
         inheritedPresaleCompletedByHeir: data.acquisitionCause === "inheritance" ? data.inheritedPresaleCompletedByHeir : undefined,
+        // ⑭ NBL2611-C5 — 배율 초과분 수용 의제·유예 사실 — ⚠️ `engineInput`(Date 변환본)
+        appurtenantExcessFacts: engineInput.appurtenantExcessFacts,
       });
 
       const calcMixed = (ei: TransferTaxInput) =>

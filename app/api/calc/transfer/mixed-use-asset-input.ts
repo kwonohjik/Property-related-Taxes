@@ -151,6 +151,11 @@ export interface MixedUseAssetInputSources {
   acquisitionCause: MixedUseAssetInput["acquisitionCause"];
   /** US-07 — 상속 자산의 분양권 상속 답(`data.inheritedPresaleCompletedByHeir`). 컴패니언은 그 자산의 답(`mixed-use-part-cards.ts`). */
   inheritedPresaleCompletedByHeir: MixedUseAssetInput["inheritedPresaleCompletedByHeir"];
+  /**
+   * NBL2611-C5 — 주택 부수토지 배율 초과분의 수용 의제(고시일)·유예 구간. ⚠️ `toEngineAppurtenantExcessFacts`가 만든 Date 변환본(`engineInput.appurtenantExcessFacts`) —
+   * raw `data.appurtenantExcessFacts`는 날짜가 string이라 `Date <= string`이 침묵 false가 된다. 컴패니언·함께 양도 주 자산은 그 item(`companionEngine`)의 값이다.
+   */
+  appurtenantExcessFacts: MixedUseAssetInput["appurtenantExcessFacts"];
 }
 
 /** 겸용 엔진 입력 1건을 조립한다. 키 커버리지는 함수 안의 가드가 강제한다. */
@@ -296,6 +301,8 @@ export function buildMixedUseAssetInput(s: MixedUseAssetInputSources): MixedUseA
     burdenedGiftAxisB: s.burdenedGiftAxisB,
     acquisitionCause: s.acquisitionCause,
     inheritedPresaleCompletedByHeir: s.inheritedPresaleCompletedByHeir,
+    // ⑭ NBL2611-C5 — 배율 초과분 수용 의제·유예 사실(⑫ 최상위 `appurtenantExcessFacts`의 Date 변환본). 누락 시 침묵 strip(의제 미적용).
+    appurtenantExcessFacts: s.appurtenantExcessFacts,
     // 엔진 내부 전용(§163⑨ 자산 합계 비교가 후보로 다시 계산할 때만 켠다 — `mixed-use-sec163-9-compare.ts`). 요청으로는 받지 않는다.
     inheritedValuesAsIs: undefined,
     bgPreDeemedConverted: undefined,

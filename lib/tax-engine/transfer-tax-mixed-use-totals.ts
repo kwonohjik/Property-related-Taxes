@@ -82,6 +82,7 @@ export function buildNonBusinessPart(
     incomeAmount: transferredGain - longTermDeductionAmount,
     additionalRate: rate.additionalRate,
     ...(rate.surchargeExcludedBy ? { surchargeExcludedBy: rate.surchargeExcludedBy } : {}),
+    ...(rate.deemedBusiness ? { deemedBusiness: rate.deemedBusiness } : {}),
     ...(opts.excessBasis ? { excessBasis: opts.excessBasis } : {}),
     ...(opts.excessBasis?.wholeBuildingDeemedHouse ? { commercialLandTransferredGain: additionalTransferredGain } : {}),
   };

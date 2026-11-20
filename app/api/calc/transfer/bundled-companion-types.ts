@@ -220,6 +220,8 @@ export interface CompanionBuildContext {
   /** 묶음이 지분 분할 취득(축 B)인가 — 겸용 컴패니언 부담부증여 엔진 입력 `burdenedGiftAxisB`(PR-C). */
   isAxisB?: boolean;
   onMixedBgDetail?: (assetId: string, breakdown: import("@/lib/tax-engine/types/mixed-use-burdened-gift.types").MixedUseBurdenedGiftBreakdown) => void;
+  /** 겸용 컴패니언 배율 초과분의 수용 의제·유예 고지(NBL2611-C5) — 서브엔진 `warnings`가 버려지므로 route가 받아 싣는다. */
+  onMixedNblNotices?: (notices: string[]) => void;
 }
 
 /**
