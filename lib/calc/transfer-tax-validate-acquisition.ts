@@ -11,6 +11,7 @@
  * 종전 import 경로 호환을 위해 `transfer-tax-validate-asset.ts`가 재export한다.
  */
 import { isGbFirstDisclosureApplicable } from "./gb-first-disclosure";
+import { cohabitationResidenceMonthsError } from "./same-household-inheritance-order";
 import { isGbFirstDisclosureApplicableForProperty } from "./gb-first-disclosure";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { validateCarryoverAsset } from "./transfer-tax-validate-carryover-asset";
@@ -652,6 +653,9 @@ function validateAssetAcquisitionBranches(
         !asset.decedentCohabitationHoldingStartDate
       )
         return fieldError("decedentCohabitationHoldingStartDate", `${label}: 동일세대 상속이면 동일세대 거주·보유 개시일을 입력하세요. (§154⑧3호 통산)`);
+      // D-12 — 상속개시 전 동일세대 거주 개월 상한(판정 메뉴·증여 ⑧·⑫·엔진 클램프와 같은 기준)
+      const cohabCap = asset.assetKind === "housing" ? cohabitationResidenceMonthsError(asset) : null;
+      if (cohabCap) return fieldError("decedentCohabitationResidenceMonths", `${label}: ${cohabCap}`);
       // ~~P2c: 별도 취득가액 필수 검증 불요(엔진이 미입력 시 0 처리)~~
       // 🔴 **2026-08-07 정정** — 「엔진이 0 처리」로 두면 ①·② 미입력이 **「확인 불가」를 선언한 것과
       //   같은 효과**를 낸다(2026-10-22 3자 max로 돌아온 뒤에도 그 값이 max 후보에서 조용히 빠진다).

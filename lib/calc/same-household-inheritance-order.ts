@@ -18,6 +18,8 @@
  * 개시일 **미입력**은 여기서 보지 않는다 — 두 호출부가 각자 필수값 문구로 이미 막는다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+import { toOptionalDate } from "@/lib/api/date-coerce";
+import { cohabitationResidenceMonthsCap } from "@/lib/tax-engine/one-house/residence-months";
 
 export function sameHouseholdInheritanceOrderError(
   a: Pick<
@@ -38,4 +40,26 @@ export function sameHouseholdInheritanceOrderError(
   if (a.decedentAcquisitionDate && start < a.decedentAcquisitionDate)
     return "동일세대 거주·보유 개시일이 피상속인 취득일보다 빠릅니다. 피상속인이 이 주택을 취득한 날 이후로 입력하세요.";
   return null;
+}
+
+/**
+ * ⑧ §154⑧3호 상속개시 전 동일세대 거주 개월 상한(2026-11 리뷰 D-12) — 동일세대 개시일부터 상속개시일까지를 넘을 수 없다.
+ * 엔진 클램프(`cohabitationResidenceMonthsCap`)와 같은 셈이다. 판정 메뉴·계산기·증여 부담부증여 ⑧과 ⑫ refine이 이 문구·기준을 쓴다.
+ */
+export function cohabitationResidenceMonthsError(
+  a: Pick<
+    AssetForm,
+    | "acquisitionCause"
+    | "acquisitionDate"
+    | "decedentSameHouseholdBeforeInheritance"
+    | "decedentCohabitationHoldingStartDate"
+    | "decedentCohabitationResidenceMonths"
+  >,
+): string | null {
+  if (a.acquisitionCause !== "inheritance" || a.decedentSameHouseholdBeforeInheritance !== true) return null;
+  const months = Number.parseInt(a.decedentCohabitationResidenceMonths ?? "", 10);
+  if (!Number.isFinite(months)) return null;
+  const cap = cohabitationResidenceMonthsCap(toOptionalDate(a.decedentCohabitationHoldingStartDate), toOptionalDate(a.acquisitionDate));
+  if (cap === undefined || months <= cap) return null;
+  return `상속개시 전 동일세대 거주기간은 동일세대 거주·보유 개시일부터 상속개시일까지(${cap}개월)를 넘을 수 없습니다. (§154⑧3호)`;
 }

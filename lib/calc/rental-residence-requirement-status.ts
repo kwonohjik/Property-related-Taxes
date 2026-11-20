@@ -7,6 +7,8 @@
  * (`docs/00-pm/rhe-e1-notice-and-card-verdict-mismatch.plan.md` B · 실측 M1·M2·M4). 판정 순서는 ⑧ 그대로다.
  */
 import type { MergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
+import { cohabitationResidenceMonthsCap } from "@/lib/tax-engine/one-house/residence-months";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { isPreLifetimeLimitRegime } from "@/lib/tax-engine/data/rental-155-20-era";
@@ -95,7 +97,12 @@ function redevAptResidenceMonths(asset: AssetForm, step4Months: number): number 
 function rentalResidencePriorHouseholdMonths(asset: AssetForm, assetIndex: number): number {
   const inheritance = isUsageConversionActive(asset)
     ? 0
-    : consolidateResidenceMonths(0, { acquisitionCause: asset.acquisitionCause, ...buildSameHouseholdInheritancePayload(asset) });
+    : consolidateResidenceMonths(0, {
+        acquisitionCause: asset.acquisitionCause,
+        ...buildSameHouseholdInheritancePayload(asset),
+        // D-12 — 엔진과 같은 상한
+        cohabitationCap: cohabitationResidenceMonthsCap(toOptionalDate(asset.decedentCohabitationHoldingStartDate), toOptionalDate(asset.acquisitionDate)),
+      });
   return inheritance + giftHouseholdPriorResidenceMonths(calcGiftHouseholdBasis(asset, { isPrimary: assetIndex === 0 }));
 }
 

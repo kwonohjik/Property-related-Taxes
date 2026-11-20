@@ -51,7 +51,8 @@ export function InheritedCohabitationCard(props: {
           <label className="block text-caption text-muted-foreground font-medium">
             동일세대 통산 거주기간 (개월)
           </label>
-          <div className="w-32">
+          {/* D-12 — ⑧ 상한 오류(`decedentCohabitationResidenceMonths`)가 가리키는 앵커 */}
+          <div className="w-32" data-field="decedentCohabitationResidenceMonths">
             <DecimalInput
               value={asset.decedentCohabitationResidenceMonths}
               onChange={(v) => onChange({ decedentCohabitationResidenceMonths: v })}
