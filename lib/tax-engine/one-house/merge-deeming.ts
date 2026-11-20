@@ -226,7 +226,7 @@ export function resolveDeemedOneHouseBy155(
  * - 양도 주택이 합가(혼인) **전 또는 당일** 취득분 — 서면-2023-부동산-0231(동거봉양 합가일 = 취득일이면
  *   §155④ 적용 가능) · 부동산거래관리과-410(혼인일 = 취득일이면 납세자가 선택한 순서)
  *
- * 혼인·동거봉양 입력이 둘 다 있으면 혼인을 먼저 본다(종전 E-3.5 순서 유지).
+ * 혼인·동거봉양 입력이 둘 다 있으면 명부 소유 쪽이 가리키는 합가를 본다(`resolveTwoHouseMergeAxis` — 가를 근거가 없으면 혼인).
  */
 export function resolveMergeDeeming(
   input: MergeDeemingReqInput,
@@ -253,7 +253,7 @@ function matchMergeWindow(
  *
  * 「먼저 양도」 선언 · 합가(혼인) 이후 양도 · 양도 주택이 합가 **전 또는 당일** 취득분 ·
  * 합가 전 보유 구성(`resolveMergeComposition` — 각자 1주택, 판정할 수 없으면 통과).
- * 혼인·동거봉양이 둘 다 있으면 혼인을 본다(`matchMergeWindow`와 같은 순서).
+ * 혼인·동거봉양이 둘 다 있으면 명부 소유 쪽이 가리키는 합가를 본다(`resolveTwoHouseMergeAxis` · S04-3 · D-03).
  * **주택 수는 보지 않는다** — `mergeDeemingHouseCountHolds`.
  *
  * 창(窓)·날짜 게이트(① 「먼저 양도」 선언 ② 합가 이후 양도 ③ 합가 전 취득)를 지나야 비로소
@@ -297,7 +297,7 @@ export type TwoHouseMergeAxis = {
 };
 
 /**
- * 합가일이 **둘 다** 있는 2주택의 합가 축 — 명부 행의 합가 전 보유 쪽(`mergeOrigin`)이 가리키는 합가다 (S04-3).
+ * 합가일이 **둘 다** 있는 2주택(·§155① 중첩 3주택)의 합가 축 — 명부 행의 합가 전 보유 쪽(`mergeOrigin`)이 가리키는 합가다 (S04-3).
  *
  * 두 합가 중 2주택을 만든 것은 **한쪽뿐**이다 — 다른 주택의 보유자가 합친 쪽. 판정 메뉴·계산기 명부의 소유 쪽 정의
  * (`lib/calc/merge-house-origin.ts` `mergeContextOf` · `mergeSideLabel`)는 **먼저 합친 쪽 = `counterpart_side`,
@@ -310,8 +310,8 @@ export type TwoHouseMergeAxis = {
  *     `origin_missing`·`seller_side_only`로 불성립이다).
  *
  * 종전에는 두 날짜가 있어도 늘 혼인 축만 봤다 — 「무주택 배우자와 혼인한 뒤 1주택 부모와 동거봉양 합가」(④ 성립)는 과세되고,
- * 「동거봉양 합가 10년 경과 뒤 무주택 배우자와 혼인」(⑤ 불성립)은 비과세됐다. 3주택 이중 합가는 이 축이 아니다
- * (`resolveDoubleMergeDeeming` — 먼저 합친 날 기준).
+ * 「동거봉양 합가 10년 경과 뒤 무주택 배우자와 혼인」(⑤ 불성립)은 비과세됐다. §155①과 겹친 3주택(F-1)도 같은 규칙이다(D-03).
+ * 두 쪽 행이 모두 있는 3주택 이중 합가는 이 축이 아니다(`resolveDoubleMergeDeeming` — 먼저 합친 날 기준).
  */
 export function resolveTwoHouseMergeAxis(
   input: Pick<
@@ -326,15 +326,21 @@ export function resolveTwoHouseMergeAxis(
     ? { kind: "marriage", mergeDate: marriageDate, secondMergeSide: false }
     : { kind: "parental_care", mergeDate: parentalDate!, secondMergeSide: false };
   const order = doubleMergeOrderOf(input);
-  if (!order || input.householdHousingCount !== 2) return legacy;
+  if (!order) return legacy;
 
   const excluded = new Set(input.knownHouseExclusionHouseIds ?? []);
   const others = (input.houses ?? []).filter((h) => h.id !== input.sellingHouseId && !excluded.has(h.id));
+  const hasSecondSide = others.some((h) => h.mergeOrigin === "second_merge_side");
+  const hasCounterpart = others.some((h) => h.mergeOrigin === "counterpart_side");
+  // 3주택: 두 쪽 행이 다 있으면 이중 합가(D4 — `resolveDoubleMergeDeeming`)라 이 축이 아니다. 한쪽만 있으면 §155①과 겹친 **단일 합가**(F-1)다 —
+  //   2주택과 같이 그 행이 가리키는 합가가 축이다(2026-11 리뷰 D-03 · 종전에는 3주택이면 늘 혼인 축).
+  const singleMergeShape = input.householdHousingCount === 2 || (input.householdHousingCount === 3 && !(hasSecondSide && hasCounterpart));
+  if (!singleMergeShape) return legacy;
   const secondKind = order.first === "marriage" ? "parental_care" : "marriage";
-  if (others.some((h) => h.mergeOrigin === "second_merge_side")) {
+  if (hasSecondSide) {
     return { kind: secondKind, mergeDate: order.secondDate, secondMergeSide: true };
   }
-  if (others.some((h) => h.mergeOrigin === "counterpart_side")) {
+  if (hasCounterpart) {
     return { kind: order.first, mergeDate: order.firstDate, secondMergeSide: false };
   }
   return legacy;
