@@ -188,7 +188,7 @@ describe("P-1 ④ · ⑭", () => {
       unknown
     >[];
     expect(off.inheritedGiftedToHouseholdMember).toBeUndefined();
-    expect(mapHousesToEngine([on as never])?.[0]).toMatchObject({ inheritedGiftedToHouseholdMember: true });
+    expect(mapHousesToEngine([on as never], undefined)?.[0]).toMatchObject({ inheritedGiftedToHouseholdMember: true });
   });
 });
 

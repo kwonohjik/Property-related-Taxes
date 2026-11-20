@@ -11,7 +11,7 @@ import { mapHousesToEngine, mapGracePeriodToEngine, mapPresaleRightsToEngine } f
 
 describe("mapHousesToEngine", () => {
   it("undefined → undefined", () => {
-    expect(mapHousesToEngine(undefined)).toBeUndefined();
+    expect(mapHousesToEngine(undefined, undefined)).toBeUndefined();
   });
 
   it("string 날짜 신규 필드 → Date 변환 + 전체 필드 매핑", () => {
@@ -33,7 +33,7 @@ describe("mapHousesToEngine", () => {
         rentalPeriodYears: 8,
         rentalCancelledDate: "2024-02-20",
       },
-    ]);
+    ], undefined);
 
     expect(result).toHaveLength(1);
     const h = result![0];
@@ -77,7 +77,7 @@ describe("mapHousesToEngine", () => {
         firstSaleContractDate: "2009-01-01",
         rentalCancellationDate: "2021-05-01",
       },
-    ]);
+    ], undefined);
     const h = result![0];
     expect(h.rentalType).toBe("F");
     // 폼 이름(rentalLandArea) → 엔진 이름(landArea) 변환 — 침묵 strip이면 undefined가 되어 실패
@@ -117,7 +117,7 @@ describe("mapHousesToEngine", () => {
         dayCareEndDate: "2023-05-01",
         isCulturalHeritage: true,
       },
-    ]);
+    ], undefined);
     const h = result![0];
     expect(h.isUnavoidableReason).toBe(true);
     expect(h.unavoidableResidenceYears).toBe(2);
@@ -146,7 +146,7 @@ describe("mapHousesToEngine", () => {
         isOfficetel: false,
         isUnsoldHousing: false,
       },
-    ]);
+    ], undefined);
     const h = result![0];
     expect(h.inheritedDate).toBeUndefined();
     expect(h.rentalRegistrationDate).toBeUndefined();

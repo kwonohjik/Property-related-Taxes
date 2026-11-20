@@ -20,7 +20,13 @@ import { judgeOneHouseExemptionFromInput } from "@/lib/tax-engine/one-house/judg
 import { buildRentalHousingVerdict, applyRentalHousingVerdict } from "@/lib/tax-engine/one-house/rental-housing-verdict";
 import { settleRentalVerdictForOtherExemption } from "@/lib/tax-engine/one-house/rental-housing-verdict";
 import { rosterCountsRentalUnits } from "@/lib/tax-engine/transfer-tax-rental-housing-judge";
-import { mergeRentalCarveoutNotice, withMergeRentalCarveout, MERGE_RENTAL_CARVEOUT_NOTICE_ID } from "@/lib/tax-engine/one-house/merge-rental-carveout";
+import {
+  mergeRentalCarveoutMissingNotice,
+  mergeRentalCarveoutNotice,
+  withMergeRentalCarveout,
+  MERGE_RENTAL_CARVEOUT_MISSING_ID,
+  MERGE_RENTAL_CARVEOUT_NOTICE_ID,
+} from "@/lib/tax-engine/one-house/merge-rental-carveout";
 import { buildOneRightVerdict, applyOneRightVerdict } from "@/lib/tax-engine/one-house/one-right-verdict";
 import { applyNonResidentVerdict } from "@/lib/tax-engine/one-house/non-resident";
 import { applyDemolishedBeforeBalanceVerdict } from "@/lib/tax-engine/one-house/demolished-before-balance";
@@ -130,16 +136,30 @@ export function runOneHouseJudgmentPipeline(
    * 2022-12-20 이후 계약이면 양도물건을 잔금청산일 현황(나대지)으로 판정해 주택 비과세를 거둔다.
    */
   const afterBalance = applyDemolishedBeforeBalanceVerdict(afterNonResident, engineInput, isRightSale);
-  // 판정 메뉴에는 계산기 경고 칸이 없다 — 적용 근거를 확인 사항으로 싣는다.
+  // 판정 메뉴에는 계산기 경고 칸이 없다 — 적용 근거를 확인 사항으로 싣는다. 입력이 없어 이 경로를 열지 못했는데 결론을 가르면
+  //   그 사실도 같은 자리에 싣는다(계산기 `transfer-tax-one-house-warnings.ts`와 같은 leaf · 2026-11 리뷰 D-10 · 사용자 결정 Q-3 (a)는 화면을 한정하지 않았다).
+  //   「적용했지만 보유·거주가 모자라 과세」(`mergeRentalCarveoutUnmetNotice`)는 §155④ 사유가 이미 말하므로 싣지 않는다.
+  const exempt = afterBalance.isExempt || afterBalance.isPartialExempt;
+  const missing = exempt ? undefined : mergeRentalCarveoutMissingNotice(engineInput, parsedRates.oneHouseSpecialRules.one_house_exemption);
   const judgment =
-    engineInput.mergeRentalCarveout && (afterBalance.isExempt || afterBalance.isPartialExempt)
+    engineInput.mergeRentalCarveout && exempt
       ? {
           ...afterBalance,
           undetermined: [...afterBalance.undetermined, { id: MERGE_RENTAL_CARVEOUT_NOTICE_ID, reason: mergeRentalCarveoutNotice(engineInput) }],
         }
-      : afterBalance;
+      : missing
+        ? { ...afterBalance, undetermined: [...afterBalance.undetermined, { id: MERGE_RENTAL_CARVEOUT_MISSING_ID, reason: missing }] }
+        : afterBalance;
 
-  return { exclusion, rentalVerdict, oneRightVerdict, judgment, rentalDeemedHouseIds: rentalRowIds };
+  return {
+    exclusion,
+    rentalVerdict,
+    oneRightVerdict,
+    judgment,
+    rentalDeemedHouseIds: rentalRowIds,
+    // D-24 — 명세가 판정과 같은 주택 수를 보이게 한다(합가 상대 쪽 임대 1채를 뺐는가).
+    mergeRentalCarveout: engineInput.mergeRentalCarveout,
+  };
 }
 
 

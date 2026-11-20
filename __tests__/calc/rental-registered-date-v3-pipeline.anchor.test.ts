@@ -129,7 +129,7 @@ describe("다주택 중과배제 명부·양도 주택 — ⑧·④·⑫·⑭", 
       ...payload,
     });
     expect(parsed.success, JSON.stringify(parsed.error?.issues ?? [])).toBe(true);
-    const [engine] = mapHousesToEngine(parsed.success ? [parsed.data] : [])!;
+    const [engine] = mapHousesToEngine(parsed.success ? [parsed.data] : [], undefined)!;
     expect(engine.rentalRegisteredDate?.toISOString().slice(0, 10)).toBe("2018-04-04");
     expect(engine.rentalRegistrationDate?.toISOString().slice(0, 10)).toBe("2018-03-30");
   });

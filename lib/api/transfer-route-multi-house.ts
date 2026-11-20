@@ -50,10 +50,16 @@ export function toEngineAptDeadlineExtension(
   };
 }
 
-/** Zod houses[] → 엔진 HouseInfo[] (신규 필드 Date 변환 포함) */
-export function mapHousesToEngine(houses: HouseInput[] | undefined): HouseInfo[] | undefined {
+/**
+ * Zod houses[] → 엔진 HouseInfo[] (신규 필드 Date 변환 포함).
+ *
+ * 🔑 양도일 당일·이후 취득 행은 「양도일 현재 보유」가 아니라 싣지 않는다 — 화면 ④(`housesOwnedAtTransfer`)·권리 행(`splitPresaleRightsAtTransfer`)과
+ *    같은 술어(`isOwnedAtTransfer`)다. 종전에는 서버가 주택 행만 거르지 않아 직접 API 호출에서 같은 사실이 화면과 다른 결론을 냈다
+ *    (2026-11 리뷰 D-26). 양도 주택 행(`selling`)은 그대로 둔다. `transferDate`는 필수 — 빠뜨린 호출부를 타입이 찾는다.
+ */
+export function mapHousesToEngine(houses: HouseInput[] | undefined, transferDate: string | undefined): HouseInfo[] | undefined {
   if (!houses) return undefined;
-  return houses.map((h) => ({
+  return houses.filter((h) => h.id === "selling" || isOwnedAtTransfer(h.acquisitionDate, transferDate)).map((h) => ({
     id: h.id,
     region: h.region,
     // ⑭ 법정동코드 — sellingHouse에 제공 시 엔진 isRegulatedByBjdCode() 정밀 판정 (string, Date 변환 불필요)
