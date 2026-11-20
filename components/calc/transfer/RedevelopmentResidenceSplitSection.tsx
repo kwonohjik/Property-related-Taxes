@@ -11,6 +11,7 @@
  *  - useEffect → store 미러링 금지 → buildResidencePatch 단일 패치
  */
 
+import { redevSplitResidenceMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
@@ -156,16 +157,13 @@ export function RedevelopmentResidenceSplitSection({ asset, onChange, isOneHouse
   );
 }
 
+/**
+ * 입주일·퇴거일 → 거주 개월 — 정본 셈(초일 산입, `residenceIntervalMonths`)과 같은 leaf다(D-45). 종전 인라인 식은 첫날을 빼
+ * 2022-03-10~2024-03-09를 23개월로 저장했다(Step4 구간 입력은 24) — §154① 거주요건·표2가 뒤집혔다.
+ */
 function computeResidenceMonths(start: string, end: string): number | undefined {
-  if (!start || !end) return undefined;
-  const s = new Date(start);
-  const e = new Date(end);
-  if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) return undefined;
-  if (s.getTime() > e.getTime()) return undefined;
-  const y = e.getUTCFullYear() - s.getUTCFullYear();
-  const m = e.getUTCMonth() - s.getUTCMonth();
-  const d = e.getUTCDate() - s.getUTCDate();
-  return y * 12 + m - (d < 0 ? 1 : 0);
+  if (!start || !end || start > end) return undefined;
+  return redevSplitResidenceMonths(start, end, undefined);
 }
 
 function buildResidencePatch(which: "prior" | "new", start: string, end: string): Partial<AssetForm> {
