@@ -171,6 +171,14 @@ export const ONE_HOUSE_FIELD_CATALOG_HOUSES = [
     when: "houses[].isInherited = true",
   },
 
+  // ── ⑤ §155⑥1호 문화유산 주택 ─────────────────────────────
+  {
+    path: "houses[].oneHouseCulturalHeritage",
+    kind: "boolean",
+    label: "지정문화유산·국가등록문화유산·천연기념물등 주택 (§155⑥1호)",
+    hint: "이 주택이 지정·등록 문화유산 등이면 켠다 — 이 주택과 일반주택을 각각 1개씩 보유한 채 일반주택을 양도하면 1세대1주택으로 본다. 신규 주택을 취득해 일시적 3주택이 된 경우도 같다(상속증여세과-212).",
+  },
+
   // ── ⑤ §155⑦ 농어촌주택 ───────────────────────────────────
   {
     path: "houses[].oneHouseRuralHouse",

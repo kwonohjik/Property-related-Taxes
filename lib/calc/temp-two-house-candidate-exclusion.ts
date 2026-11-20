@@ -18,7 +18,7 @@
  * 후보에서 빼도 결론이 같다. 요건을 못 갖춘 농어촌주택은 보통 주택이라 후보에 남긴다(①의 신규 주택일 수 있다).
  */
 import { toOptionalDate } from "@/lib/api/date-coerce";
-import { qualifiesRuralHouse } from "@/lib/tax-engine/transfer-tax-exemption-holding";
+import { qualifiesRuralHouseApartFromDeadline } from "@/lib/tax-engine/transfer-tax-exemption-holding";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { deriveOneHouseFactsFromHouses, findRuralHouseRow } from "./one-house-row-facts";
 import { findCulturalHeritageRow } from "./one-house-row-facts";
@@ -99,6 +99,10 @@ export function inheritedCountExcludedHouseIds(form: CandidateFormLike): Readonl
 /**
  * §155⑦ 요건을 갖춘 농어촌주택 명부 행 id(엔진 판정 — 신규 주택을 뺀 2주택 기준). 양도일이 없거나 요건 미달이면 빈 집합.
  * 엔진에 실리는 것과 같은 행·같은 payload다(`findRuralHouseRow` · `deriveOneHouseFactsFromHouses`).
+ *
+ * 🔑 ⑦ 단서 귀농 5년 기한은 보지 않는다(`qualifiesRuralHouseApartFromDeadline` — 2026-11 리뷰 D-07). 기한을 넘긴 귀농 행이 신규 주택 후보에 남으면
+ *    일시적 2주택이 도출되지 않아 엔진이 「기한을 넘겼다」를 말하지 못하고 「3채」로만 과세했다. 귀농 행을 신규 주택으로 보는 §155①은
+ *    처분기한(최장 3년)이 귀농 5년보다 짧아, 귀농 기한이 지났으면 그 해석도 이미 성립하지 않는다.
  */
 export function ruralCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
   // 양도일 현재 보유 행만 — ④가 싣는 행·payload와 같다(`deriveOneHouseFactsFromHouses`의 `transferDate`).
@@ -110,7 +114,7 @@ export function ruralCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet
   const rural = deriveOneHouseFactsFromHouses(owned, {}, undefined, skipIds).ruralHouse;
   const transferDate = toOptionalDate(form.transferDate);
   if (!row?.id || !rural || !transferDate) return new Set();
-  const qualifies = qualifiesRuralHouse({
+  const qualifies = qualifiesRuralHouseApartFromDeadline({
     householdHousingCount: 2,
     transferDate,
     ruralHouse: { ...rural, acquisitionDate: toOptionalDate(rural.acquisitionDate) } as TransferTaxInput["ruralHouse"],
