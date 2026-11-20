@@ -24,6 +24,7 @@
  * 사용자에게 받는다(③ 예상 양도가액).
  */
 import { buildGiftHouseholdPayload, giftHouseholdFactErrors } from "@/lib/calc/gift-household-payload";
+import { judgmentSaleAssetView } from "./judgment-sale-asset-view";
 import { buildExemptionProvisoPayload } from "./exemption-proviso-payload";
 import { judgmentMenuFlags } from "./judgment-menu-flags";
 import { buildInheritanceGeneralHousePayload } from "@/lib/calc/inheritance-general-house-scope";
@@ -119,7 +120,8 @@ export function buildOneHouseExemptionApiBody(
     undefined,
     form.transferDate,
     // D-13 — 중과 메뉴와 공유하는 명부 행의 중과 전용 사실(3호 칩 · ⑪ 연장)은 이 메뉴에 칸이 없고 route도 읽지 않는다 — 싣지 않는다.
-    { omitSurchargeOnlyRowFacts: judgmentMenuFlags("one_house").hideSurchargeInputs },
+    // D-66 — 입주권 양도면 행의 §155 사실(⑤가 닫는 칸)을 싣지 않는다.
+    { omitSurchargeOnlyRowFacts: judgmentMenuFlags("one_house").hideSurchargeInputs, omitOneHouseFactRows: !judgmentSaleIsHousing(form) },
   );
   const presaleRightsPayload = buildPresaleRightsPayload(primary.assetKind, form.presaleRights);
 
@@ -165,8 +167,9 @@ export function buildOneHouseExemptionApiBody(
       stored: calcStoredRegulatedFlags(form).isRegulatedArea,
     }),
     // 결정 #38-10 — 증여받은 주택은 아래 `buildGiftHouseholdPayload`가 싣는 세대 사실과 같은 basis로 읽는다(⑤ 2-C·⑧과 한 값).
+    // D-67 — 입주권 양도면 주택 전용 숨은 사실(동일세대 상속 개시일·증여 세대 사실·용도변경)을 읽지 않는다(⑤ 2-C와 같은 뷰).
     wasRegulatedAtAcquisition: calcEffectiveWasRegulatedAtAcquisition(
-      primary,
+      judgmentSaleAssetView(form),
       calcStoredRegulatedFlags(form).wasRegulatedAtAcquisition,
       undefined,
       GIFT_HOUSEHOLD_SCOPE_PRIMARY,
@@ -248,7 +251,8 @@ export function buildOneHouseExemptionApiBody(
      *    읽는 것은 아래 `provisoGate` 하나뿐이고 거기엔 파생값을 직접 넘긴다.
      *    쓰이지 않는 사본은 「언젠가 필요할 것」이라는 추측이므로 두지 않는다.
      */
-    ...buildHouseholdSpecialPayload(form, primary),
+    // D-66 — 입주권 양도면 명부에서 도출한 §155⑥1호·⑦·⑧ 세대 사실을 싣지 않는다(일반주택 양도 특례 — 서면-2015-부동산-1685 · ⑤·⑧ 같은 게이트).
+    ...withoutOneHouseRowFacts(buildHouseholdSpecialPayload(form, primary), !judgmentSaleIsHousing(form)),
     /**
      * §156의2⑤ — ⑤·⑧과 **같은 게이트**(`judgmentReplacementHouseVisible`, OH-05).
      * 🔴 칸이 숨은 세대(입주권 없는 1주택)에서 남은 토글을 보내면 엔진 분기가 주택 수를 보지
@@ -405,3 +409,13 @@ function buildMergePayload(form: OneHouseJudgmentFormData) {
     ...(form.isFirstTransferredInMerge && firstTransferToggleVisible ? { isFirstTransferredInMerge: true } : {}),
   };
 }
+
+/** D-66 — 명부 행에서 도출한 §155⑥1호·⑦·⑧ 세대 사실 키. 입주권 양도 본문에서 뺀다. */
+const ONE_HOUSE_ROW_FACT_KEYS = ["culturalHeritageHouse", "culturalHeritageHouseId", "ruralHouse", "unavoidableOutsideCapitalHouse"] as const;
+function withoutOneHouseRowFacts(payload: object, omit: boolean): object {
+  if (!omit) return payload;
+  const out: Record<string, unknown> = { ...payload };
+  for (const k of ONE_HOUSE_ROW_FACT_KEYS) delete out[k];
+  return out;
+}
+

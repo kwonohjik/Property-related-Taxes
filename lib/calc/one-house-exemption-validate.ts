@@ -18,6 +18,7 @@
  * 여기서 막는 것은 **판정이 불가능한 입력**(필수값 부재·모순)뿐이다.
  */
 import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
+import { newHouseOriginIssue } from "./new-house-origin-scope";
 import type { JudgmentMenu } from "./judgment-menu-flags";
 import { replacementResidenceMonthsCapMessage } from "./residence-interval-validate";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
@@ -230,6 +231,7 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
   // 양도 주택이 기존주택의 연장이면 헐기 전 주택 취득일 필수 — ⑤ `HousesListSection`·④와 같은 leaf(결정 #43 하위 2).
   const sellingOrigin = sellingHouseOriginIssue(form.assets?.[0], form.houses?.length);
   if (sellingOrigin) errors.push(err(sellingOrigin.field, sellingOrigin.message));
+  const saleIsHousing = judgmentSaleIsHousing(form);
   form.houses?.forEach((h, i) => {
     if (!h.acquisitionDate) {
       errors.push(err(`houses.${i}.acquisitionDate`, `보유 주택 ${i + 1}: 취득일을 입력하세요.`));
@@ -243,7 +245,8 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     }
     // 명부 행 사실 답 누락 — D7 §155⑦1호 동일세대 · §155⑦2·3호 재귀농 · §155⑦3호 귀농 ⑩3·4호·⑪ · §155① 신규 주택 취득 경위(결정 #43·#44).
     //   「모름」은 불리 — 답을 받는다. 계산기 ⑧과 같은 leaf(`houseRowFactIssues`)다.
-    for (const issue of houseRowFactIssues(h, newHouseRowId)) {
+    // D-66 — 입주권 양도면 행의 §155 특례 사실(⑤ 카드)을 묻지 않는다(일반주택 양도 특례 — ⑤·④ 같은 게이트). 신규 주택 취득 경위는 그대로.
+    for (const issue of saleIsHousing ? houseRowFactIssues(h, newHouseRowId) : [newHouseOriginIssue(h, newHouseRowId)].filter((x) => x !== null)) {
       errors.push(err(`houses.${i}.${issue.field}`, `보유 주택 ${i + 1}: ${issue.message}`));
     }
     // §167의10①3호·7호 기산 상태 — 명부 행 ④ 칸이 이 화면에도 열리고 ⑫가 같은 조건으로 400을 낸다(계산기 ⑧과 같은 leaf).
@@ -267,13 +270,13 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
       errors.push(err(`houses.${i}.${specialUseIssue.field}`, `보유 주택 ${i + 1}: ${specialUseIssue.message}`));
     }
     // §155⑧ 사유 해소일 ↔ 「양도일 현재 미해소」 택일(#31) — 계산기 ⑧과 같은 leaf. 빈 값은 「모름」이라 ⑫가 400을 낸다.
-    const uocIssue = houseUnavoidableOutsideCapitalIssue(h, form.transferDate);
+    const uocIssue = saleIsHousing ? houseUnavoidableOutsideCapitalIssue(h, form.transferDate) : null;
     if (uocIssue) {
       errors.push(err(`houses.${i}.${uocIssue.field}`, `보유 주택 ${i + 1}: ${uocIssue.message}`));
     }
   });
   // §155⑧ 「각각 1개씩」 — 양도일 현재 보유 행 중 둘째 ⑧ 행부터 막는다(계산기 ⑧·⑫와 같은 leaf). 그 행의 ⑤ 토글을 끄면 풀린다.
-  for (const d of duplicateOwnedUnavoidableOutsideCapitalRows(form.houses, form.transferDate, form.assets?.[0]?.assetKind)) {
+  for (const d of saleIsHousing ? duplicateOwnedUnavoidableOutsideCapitalRows(form.houses, form.transferDate, form.assets?.[0]?.assetKind) : []) {
     errors.push(
       err(
         `houses.${d.index}.oneHouseUnavoidableOutsideCapital`,

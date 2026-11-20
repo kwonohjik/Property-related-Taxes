@@ -73,6 +73,11 @@ interface Props {
    */
   countExclusionEnabled?: boolean;
   /**
+   * ⑤ 「1세대1주택 비과세 특례 사실 (§155)」 카드를 연다(기본 연다). 판정 메뉴의 입주권 양도는 닫는다 — §155 특례는 일반주택을 양도할 때만
+   * 적용된다(서면-2015-부동산-1685 · 법규과-599 · 2026-11 리뷰 D-66). ⑧·④가 같은 게이트(`judgmentSaleIsHousing`)다.
+   */
+  oneHouseFactsEnabled?: boolean;
+  /**
    * 「특례 구분」에 §167의3①3호 감면대상장기임대주택 칩을 연다 — 계산기 전용(중과 축).
    * 판정 메뉴는 넘기지 않는다(그 화면은 중과 엔진을 부르지 않는다 · 연결은 후속).
    */
@@ -700,6 +705,7 @@ export function HouseEntryEditor({
   transferDate,
   mergeContext,
   countExclusionEnabled = false,
+  oneHouseFactsEnabled = true,
   taxIncentiveRentalEnabled = false,
   householdGiftEnabled = false,
   hideSurchargeInputs = false,
@@ -743,7 +749,18 @@ export function HouseEntryEditor({
         <HouseEntrySpecialExclusionSection house={house} onUpdate={onUpdate} />
       )}
       {/* ⑤ 비과세 축 — ④(중과 배제)와 **요건이 다르므로** 카드를 가른다(D-6). */}
-      <HouseEntryOneHouseFactsSection house={house} onUpdate={onUpdate} otherUocRowNumber={otherUocRowNumber} transferDate={transferDate} />
+      {oneHouseFactsEnabled ? (
+        <HouseEntryOneHouseFactsSection house={house} onUpdate={onUpdate} otherUocRowNumber={otherUocRowNumber} transferDate={transferDate} />
+      ) : (
+        <div data-testid="house-row-one-house-facts-right-sale-note">
+          <ToneCard tone="slate" sectionNum="⑤" title="1세대1주택 비과세 특례 사실 (§155)">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              조합원입주권을 양도할 때는 이 주택의 §155 특례 사실(국가유산·농어촌·수도권 밖 부득이 주택)을 적용하지 않습니다 — 그 특례는
+              다른 주택(일반주택)을 양도할 때만 적용됩니다(국세청 서면-2015-부동산-1685 · 법규과-599). 입력해 둔 값은 판정에 쓰지 않습니다.
+            </p>
+          </ToneCard>
+        </div>
+      )}
       {/* ⑥ 조특법 소유주택 의제 — ⑤(소령 §155)와 근거 법률·요건이 다르다 */}
       {countExclusionEnabled && (
         <HouseEntryCountExclusionSection house={house} onUpdate={onUpdate} transferDate={transferDate} />

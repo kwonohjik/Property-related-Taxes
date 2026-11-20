@@ -29,6 +29,8 @@
  * (`feedback_aggregate_display_rederives_engine_value`).
  */
 import type { useRouter } from "next/navigation";
+import { housingOnlyFactsCleared } from "./judgment-sale-asset-view";
+import { judgmentSaleIsHousing } from "@/lib/stores/one-house-judgment-form.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import {
   deriveJudgmentHouseCount,
@@ -134,7 +136,10 @@ export function toTransferFormPatch(
      * 받는다(`transfer-calc-count-exclusion-row-link.plan.md` §4-3). 종전(PR #1881)처럼 감면 저장소로
      * 옮기면 행과 저장소에 같은 선언이 두 벌 실린다.
      */
-    assets: withMirroredSalePrice(form).map((a, i) => (i === 0 ? giftHandoffAsset(a, form.transferDate) : a)),
+    // D-63 — 입주권 양도면 ②가 숨긴 주택 전용 사실(증여·상속 원인과 그 칸 · 용도변경)을 넘기지 않는다(계산기 원인 라디오의 잘못된 기본 선택).
+    assets: withMirroredSalePrice(form).map((a, i) =>
+      i === 0 ? giftHandoffAsset(judgmentSaleIsHousing(form) ? a : housingOnlyFactsCleared(a), form.transferDate) : a,
+    ),
     importedOneHouseFacts: pickOneHouseExtraFacts(form),
     /**
      * 🔴 **출처 두 키는 값이 없어도 키를 싣는다**(S11-7) — store가 얕은 병합이라 키가 아예 없으면 **직전 전달의 id·해시가

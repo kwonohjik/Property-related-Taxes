@@ -724,6 +724,8 @@ export function HousesListSection({
               transferDate={form.transferDate}
               mergeContext={mergeContext}
               countExclusionEnabled={countExclusionEnabled}
+              // D-66 — 판정 메뉴 입주권 양도는 §155 행 사실 카드를 닫는다(⑧·④ 같은 게이트). 계산기는 그대로 연다.
+              oneHouseFactsEnabled={!judgmentMenu || form.assets?.[0]?.assetKind !== "right_to_move_in"}
               taxIncentiveRentalEnabled={taxIncentiveRentalEnabled}
               householdGiftEnabled={householdGiftEnabled}
               hideSurchargeInputs={hideSurchargeInputs}
