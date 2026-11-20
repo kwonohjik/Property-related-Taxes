@@ -355,7 +355,7 @@ R01~R23을 선행 관계와 소유 파일 기준으로 16묶음으로 묶어 병
 | D1 | R20 | 기간 축 후속 — 주택 유예 · 당해 사업개시일 | Q-3a · Q-4 |
 | D2 | R19 | 재산세 분류 근거 모델 | Q-1 |
 | D3 | R18 | 다목 선택지 완비 + 14호 정리 | Q-5 · Q-6 |
-| D4 | R22 | 종결 계측·완료 문서 | — |
+| D4 | R22 | 종결 계측·완료 문서 — **§12** | — |
 
 **공통 게이트**: Pre-Do anchor로 FAIL 확보 → 구현 → `npx tsc --noEmit` 0 → `npx vitest run __tests__/tax-engine/non-business-land/ __tests__/lib/calc/`(+ 해당 축) → ⑧을 새로 막는 PR(R02·R05·R09·R10·R14·R17·R19)은 push 전 로컬 E2E transfer-* 1회 → 새 워크트리는 `npx husky` · push 전 `.next` 삭제 · load 게이트를 명령 안에서 → CI 전건 SUCCESS + headRefOid 일치 확인 후 머지.
 
@@ -417,6 +417,79 @@ R01~R23을 선행 관계와 소유 파일 기준으로 16묶음으로 묶어 병
 4. **브라우저·E2E 미실행.** 화면 노출 결함(V7-F·V7-E·V10-PU10·V8-VL08)은 JSX 판독·SSR 렌더가 근거다. 기존 기타토지 E2E도 돌리지 않았다.
 5. **probe가 휘발성이다.** 처방 PR의 Pre-Do anchor로 승격해야 재현 근거가 남는다(§8).
 6. **ID 네임스페이스.** 이번 클러스터 ID(V1-A …)는 2026-09의 V1-a …와 대소문자만 다르다. 마커는 반드시 `NBL2611-` 접두를 쓴다(§5.5의 정규식 결함과 같은 함정).
+
+---
+
+## 12. 종결 기록 (R22 · D4 — 2026-11-20)
+
+> 대상 `master` **339630345**(C4 #3499 머지 뒤). 16묶음 중 15묶음 머지 · 이 절이 D4다. 금액은 각 PR anchor의 모의 세율 값이다(§0.3).
+
+### 12.1 묶음별 머지 기록
+
+| 묶음 | PR | 머지 커밋 | 해소한 클러스터 | 세액 방향 |
+|---|---|---|---|---|
+| A1 | #3466 | 380d51e6f | quick wins 8건 · V8-VL05 · V4-Q · V6-PU07 · V9-J · V9-RI05 · Q-13 고지 | 0원(PU07만 판정 변동) |
+| A2 | #3464 | c335880bb | **V6-PU01** · **V4-HS02** · R21(Q-9) | 과대 해소 |
+| A3 | #3467 | 826b6491c | **V4-HS01** · V4-HS06 · V10-BX09 · V4-BX04·BX05 고지(Q-8 (가)) | 과대 해소 |
+| A4 | #3465 | fe86a2f9e | **V3-PR01** · V3-PR05 · V8-VL01 · R23(§5.1, Q-11) | 양방향 |
+| B1 | #3469 | e940e1f26 | V8-VL02 · V9-DM06 · V2-PR04 · V10-PU10 · V8-VL08 · V6-D(Q-10) · V6-PU11 · Q-12 | 오판 차단 |
+| B2 | #3474 | 75c1cdeef | V10-P · V10-K · V4-R · V8-VL04 · V3-O · V1-OL06 고지 · **V2-C2** 고지 | 0원 |
+| B3 | #3478 | a697fcac6 | **V1-B** · **V2-C1**(기타토지) · V6-D | 과대 해소 |
+| B4 | #3480 | f9acbb54e | V7-E · V7-F · V7-DM02 · V9-DM11 · V9-DM09 | 양방향 |
+| B5 | #3483 | 4edd5de1b | V9-I(Q-7 (나)) | 경계 해소 |
+| C1 | #3470 | d543bfba6 | V10-BX06 · V10-BX08 | 0원 |
+| C2 | #3476 | 68f7195ad | **V5-BX01** | 과대 해소 |
+| C3 | #3494 | be6746298 | V5-G1 · V5-H | 과대 해소 |
+| C4 | #3499 | 021d7eb7e | V3-BX03 · Q-3b · V2-C1(주택 초과분 입구) | 과대 해소 |
+| D1 | #3495 | 5597cebf7 | V2-C1(주택부수토지, Q-3a (나)) · V2-C2 DM-01(Q-4 (나)) | 양방향 |
+| D2 | #3490 | ed30a4a78 | **V1-A**(Q-1 (가)) | 과대 해소 |
+| D3 | #3492 | 0b9099a2d | V7-S(Q-5 (나) · Q-6 (다)) | 양방향 |
+
+굵게 표시한 것이 critical 9건이다. 전부 머지됐다(V2-C2는 Q-4 (나) 범위 — 고지 + DM-01 최소안).
+
+### 12.2 마커 역grep 계측
+
+`NBL2611-<클러스터 ID>`를 `lib`·`components`·`app`(코드)과 `__tests__`·`e2e`(테스트)에서 셌다(파일 수).
+
+- **51건 중 49건**은 코드 마커가 있다.
+- **V3-BX03**은 클러스터 ID 마커가 0건이다. C4가 묶음 마커 `NBL2611-C4`(41개 파일)로 처리했다.
+- **V5-G2**는 0건이 정상이다. G-6 «무시 확정·재제안 금지» 범위라 착수하지 않았다(Q-14 (가)).
+- 테스트 쪽 클러스터 마커가 0건인 클러스터가 있다(V1-B · V2-C1 · V2-C2 · V7-E · V7-F 등). 이들의 anchor는 묶음 이름 파일(`nbl2611-b3-*` 등)에 있어 클러스터 ID로는 잡히지 않는다. «테스트 없음»을 뜻하지 않는다.
+
+### 12.3 종결 검증 (master 339630345)
+
+| 검증 | 결과 |
+|---|---|
+| vitest `__tests__/tax-engine/non-business-land` · `tax-engine/transfer` · `calc` · `lib/calc` · `api` · `components` | 3,455 파일 · 43,122 테스트 통과 |
+| `npm run verify:legal` | **미판정** — 이 기기에서 `www.law.go.kr` 접속이 20초 타임아웃(github는 정상). `--id NBL` 16건 전부 「법령 검색 실패」(통과 0 · 실패 0 · 오류 16). C4가 추가한 영 §168의14 키워드는 KoreanLaw MCP 본문과 직접 대조했다. **법제처 접속이 복구되면 `npm run verify:legal -- --id NBL`을 다시 돌린다** |
+| E2E (NBL·부수토지 초과분·겸용 1주택 관련 스펙) | 798 통과 · 20 건너뜀 · 실패 0 (3.5분, 맥 스튜디오). 대상: `transfer-nbl-*` 8종 · `commercial-appurtenant-excess` · `commercial-building-appurtenant-land-61` · `general-building-nbl-section-in-basic` · `gb-excess-burdened-gift-screen` · `housing-excess-*` 3종 · `nh22-appurtenant-land-2x-notice` · `transfer-axis-b-*` 2종 · `transfer-multi-nbl-business-recalc` · `transfer-reverse-appurtenant-swap` · `transfer-split-excess-filing-form` · `mixed-use-one-house*`·`mixed-use-one-household-exempt` · `mixed-use-multi-house-surcharge`. C4 주택 초과분 화면은 이 스펙들의 기존 경로로만 지나갔고 전용 E2E는 없다. D2·D3가 추가한 필드 점프 케이스(`narrow-width-residual`)는 이번 실행에 넣지 않았고 각 PR의 CI E2E에서 통과했다 |
+
+### 12.4 남은 것 — 이번 리뷰 범위에서 닫지 않은 것
+
+**기능 제약(확인 필요 고지로 노출)**
+1. 겸용 주택분 초과분(`transfer-tax-mixed-use-totals.ts` `buildNonBusinessPart`)에는 수용 의제·유예가 닿지 않는다(C4 범위 밖).
+2. 기타토지 상태 이력 입력 모델(Q-4 (다))은 별도 계획 대상이다. 지금은 양도일 상태를 전 기간에 적용하고 고지한다.
+3. 유예 충족 시 토지 전체를 사업용으로 본다 — 부분 면적 유예 모델이 없다(B3).
+4. 재산세 근거 모델: 공지상태 호별 면적 한도 · 철거ㆍ멸실 한시 지위(1년 · 빈집 3년)를 판정하지 않는다(D2).
+5. 상가 토지분·건물분 부호가 다르면 장특·통산은 고지만 한다(C3). 한 덩어리 필요경비는 양도가액 비율로 나눈다 — 해석례 미확보(C2).
+6. 일반건물 이월과세 토지의 수용 의제는 수증일 기준이며, 증여자 취득일 기준 성립 여부는 고지만 한다(C4).
+7. 규칙 §83의4⑫2호 단서(교통영향 통보 면적)와 별표3 비고3 배율 해석은 판정하지 않는다(B4).
+
+**정밀도·구조**
+1. `appurtenantCardLimitShare` ÷group과 겸용·G-2 `floor(gain × ratio)`는 아직 부동소수다(B5 범위 밖).
+2. 상가 ⑧은 수용 의제가 성립해도 기준시가 4칸을 요구한다(과요구 — 막다른 길은 아님). 상가 화면 미리보기는 의제를 반영하지 않는다(C4).
+3. 800줄 근접 파일: `transfer-tax-appurtenant-land.ts` 774 · `transfer-tax-mixed-use.ts` 774 · `transfer-tax-api-companion-payload.ts` 761. 다음에 열 때 분리한다.
+
+**재제안 금지(유지)**
+- V5-G2 — G-6 범위(Q-14 (가)).
+- Q-8 (가) — 겸용 상가분 부수토지 «지방세법 시행령» §101② 판정은 해석례 확보가 착수 조건이다. 지금은 고지만 한다.
+
+### 12.5 프로세스 기록
+
+- 4단계 병렬(C3·D1·D2·D3)은 pre-push 전체 vitest가 겹쳐 부하 60~160에서 jsdom 5초·15초 타임아웃이 반복됐다. 고아가 된 pre-push 프로세스 1건이 1시간 동안 돌기도 했다. push는 한 번에 하나씩 직렬화해야 한다.
+- D2·D3가 `other-land.ts`·`OtherLandDetailSection.tsx`·Zod refines를 함께 고쳐 뒤에 머지한 D3에서 충돌 6건이 났다(전부 import·검증 블록 병치로 해소). 같은 파일을 쓰는 묶음은 병렬 착수 전에 순서를 정한다.
+- R16은 9개 입구 중 6곳에 사업인정고시일이 도달하지 않아 C3에서 떼어 C4로 옮겼다. 입구 표(9곳 × 처리 여부)를 착수 전에 grep으로 만든 것이 범위 판단의 근거가 됐다.
+- 리뷰 처방과 다르게 구현한 것: C4는 «`resolveAppurtenantLandExcess`가 null 반환» 처방을 기각했다(비과세 1주택의 초과분이 비과세로 새는 반대 결함). 초과분은 파트로 남기고 세율만 일반 토지로 둔다.
 
 ---
 
