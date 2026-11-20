@@ -461,7 +461,7 @@ R01~R23을 선행 관계와 소유 파일 기준으로 16묶음으로 묶어 병
 | 검증 | 결과 |
 |---|---|
 | vitest `__tests__/tax-engine/non-business-land` · `tax-engine/transfer` · `calc` · `lib/calc` · `api` · `components` | 3,455 파일 · 43,122 테스트 통과 |
-| `npm run verify:legal` | **미판정** — 이 기기에서 `www.law.go.kr` 접속이 20초 타임아웃(github는 정상). `--id NBL` 16건 전부 「법령 검색 실패」(통과 0 · 실패 0 · 오류 16). C4가 추가한 영 §168의14 키워드는 KoreanLaw MCP 본문과 직접 대조했다. **법제처 접속이 복구되면 `npm run verify:legal -- --id NBL`을 다시 돌린다** |
+| `npm run verify:legal -- --clear --id NBL` | **통과 16 · 실패 0 · 오류 0**(캐시 비우고 재조회, 2026-11-20). 처음 실행은 집 회선에서 `www.law.go.kr`·`www.korea.kr`·`www.gov.kr` TCP 연결이 통신사 구간 뒤에서 끊겨(DNS 정상, `nts.go.kr`은 정상) 전건 「법령 검색 실패」였다. 휴대폰 핫스팟 회선에서 다시 돌려 통과했다 |
 | E2E (NBL·부수토지 초과분·겸용 1주택 관련 스펙) | 798 통과 · 20 건너뜀 · 실패 0 (3.5분, 맥 스튜디오). 대상: `transfer-nbl-*` 8종 · `commercial-appurtenant-excess` · `commercial-building-appurtenant-land-61` · `general-building-nbl-section-in-basic` · `gb-excess-burdened-gift-screen` · `housing-excess-*` 3종 · `nh22-appurtenant-land-2x-notice` · `transfer-axis-b-*` 2종 · `transfer-multi-nbl-business-recalc` · `transfer-reverse-appurtenant-swap` · `transfer-split-excess-filing-form` · `mixed-use-one-house*`·`mixed-use-one-household-exempt` · `mixed-use-multi-house-surcharge`. C4 주택 초과분 화면은 이 스펙들의 기존 경로로만 지나갔고 전용 E2E는 없다. D2·D3가 추가한 필드 점프 케이스(`narrow-width-residual`)는 이번 실행에 넣지 않았고 각 PR의 CI E2E에서 통과했다 |
 
 ### 12.4 남은 것 — 이번 리뷰 범위에서 닫지 않은 것
