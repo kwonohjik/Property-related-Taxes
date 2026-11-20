@@ -37,7 +37,7 @@
  * 범위 밖(결정 #42 조건): 부담부증여 양도 경로(조특 주택 수 제외가 원래 전부 빠진 별개 공백) · 종부세 §71의2② · 명부 세컨드홈 카드(④)의 「등록」 토글.
  */
 import { TRANSFER } from "../legal-codes";
-import { capitalBorderFromOf, classifyPopulationDeclineArea, toSigunguCode } from "../data/population-decline-areas";
+import { capitalBorderFromOf, classifyPopulationDeclineArea, populationDeclineLocationExcluded, toSigunguCode } from "../data/population-decline-areas";
 import type { HouseInfo } from "../types/multi-house-surcharge.types";
 import type { TransferTaxInput } from "../types/transfer.types";
 import { resolveInheritedSellingHouseId } from "../transfer-inheritance-exclusion";
@@ -57,6 +57,13 @@ export const POP_DECLINE_WINDOW_END = new Date("2026-12-31");
 export const POP_DECLINE_CAP_SPLIT_FROM = new Date("2025-08-14");
 /** 법률 제21223호 부칙 제14조 — 인구감소관심지역은 2025.11.28. 이후 취득분부터 */
 export const POP_DECLINE_INTEREST_ACQ_FROM = new Date("2025-11-28");
+/**
+ * 인구감소관심지역 첫 지정 고시(행정안전부 고시 제2025-78호) 시행일 — 2026.1.1. 시행, 적용례 없음.
+ * 조특령 §68의2①2호 가목은 「취득 당시 … 인구감소관심지역에 소재할 것」이고 그 지역은 행정안전부장관이 지정·고시한다
+ * (지방자치분권 및 지역균형발전에 관한 특별법 시행령 §3②). 법률 부칙 제14조(2025.11.28. 이후 취득분)와 이 날 사이 취득분은
+ * 지정 전 취득이라 문언이 충돌하고 해석이 없다 — 미적용 + 확인 필요(결정 Q-20 (a) · D-51).
+ */
+export const POP_DECLINE_INTEREST_GOSI_FROM = new Date(Date.UTC(2026, 0, 1));
 /**
  * 시행령 제36127호(2026.2.27.)가 관심지역 호(§68의2①2호)를 신설 — 그 전 시행본(MST 282999)에는 호가 없다.
  * 부칙 제1조 본문(공포한 날 시행)이고 §68의2에 대한 적용례·경과조치가 없어(제2~35조 전수 확인), 이 날 이후 **양도**분부터 2호가 적용된다
@@ -167,6 +174,8 @@ function evaluate(h: PopDeclineHouse, p: PopDeclineInput): SpecialHouseExclusion
   const isPop = h.isPopulationDeclineArea ?? auto !== null;
   if (!isPop) return null;
   const kind = h.populationAreaType ?? auto;
+  // 세법이 소재지로 빼는 곳(수도권 비접경·광역시 자치구) — ④ 토글로 덮어도 대상이 아니다(D-50 (b)).
+  if (code && kind && populationDeclineLocationExcluded(code, kind, borderFrom && borderPending ? borderFrom : acq)) return null;
   const unconfirmed: string[] = [];
   if (borderFrom && borderPending) {
     unconfirmed.push(
@@ -184,6 +193,12 @@ function evaluate(h: PopDeclineHouse, p: PopDeclineInput): SpecialHouseExclusion
   if (kind === "interest") {
     // 법률 부칙 제21223호 제14조 — 2025.11.28. 이후 취득분. 그 전은 침묵(적용 대상이 아니다).
     if (acq.getTime() < POP_DECLINE_INTEREST_ACQ_FROM.getTime()) return null;
+    if (day(acq) < day(POP_DECLINE_INTEREST_GOSI_FROM)) {
+      unconfirmed.push(
+        `인구감소관심지역은 ${fmt(POP_DECLINE_INTEREST_GOSI_FROM)} 시행된 첫 지정 고시(행정안전부 고시 제2025-78호)로 정해졌는데 이 주택은 그 전(${fmt(acq)})에 취득했습니다 — ` +
+          `「취득 당시 … 인구감소관심지역에 소재할 것」(${TRANSFER.POP_DECLINE_HOUSE_DECREE_68_2}①2호)과 법률 부칙(${fmt(POP_DECLINE_INTEREST_ACQ_FROM)} 이후 취득분)이 갈리는 구간이고 해석을 확인하지 못해 적용하지 않았습니다.`,
+      );
+    }
     // 시행령 2호는 2026.2.27. 시행이고 적용례가 없다 — 양도일 현재 시행령을 따른다. 그 전 양도는 시행령에 호가 없어 미적용 + 확인 필요.
     if (day(p.transferDate) < day(POP_DECLINE_INTEREST_DECREE_FROM)) {
       unconfirmed.push(
@@ -191,7 +206,6 @@ function evaluate(h: PopDeclineHouse, p: PopDeclineInput): SpecialHouseExclusion
       );
     }
   }
-  if (code && isCapitalAreaByRegionCode(code) === true && kind === "interest") return null; // 관심지역은 수도권 밖만
 
   // 양도일은 취득일 뒤여야 한다(같은 날 취득은 양도 후 취득으로 본다 — 확정 결정).
   if (day(p.transferDate) <= day(acq)) return null;

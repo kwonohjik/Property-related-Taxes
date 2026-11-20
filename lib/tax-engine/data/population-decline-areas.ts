@@ -184,6 +184,42 @@ export function capitalBorderFromOf(regionCode: string | undefined): Date | unde
   return sgg ? CAPITAL_BORDER_FROM[sgg] : undefined;
 }
 
+/**
+ * 「접경지역 지원 특별법」 제2조제1호의 접경지역 중 **수도권** 시·군 — 시행령 §2①(비무장지대·북방한계선과 잇닿은 시·군)·§2②(대통령령으로 정하는 시·군).
+ * 고양시는 일반구 코드(덕양 41281·일산동 41285·일산서 41287)로만 온다. 가평군은 편입일(`CAPITAL_BORDER_FROM`)부터다.
+ */
+const CAPITAL_BORDER_SIGUNGU = new Set<string>([
+  "28710", "28720", // 인천 강화군·옹진군(§2①1호)
+  "41570", "41480", "41800", // 경기 김포시·파주시·연천군(§2①2호)
+  "41281", "41285", "41287", "41630", "41250", "41650", "41820", // 경기 고양시·양주시·동두천시·포천시·가평군(§2②1호)
+]);
+const CAPITAL_SIDO = new Set(["11", "28", "41"]);
+const METRO_CITY_SIDO = new Set(["26", "27", "28", "29", "30", "31"]);
+
+/**
+ * 인구감소지역(관심지역)으로 지정돼도 세법이 **소재지로 빼는** 곳인가 — 조특령 §68의2①1호 가목 1)·2), 2호 가목 본문·1)
+ * (소득세법 시행령 §167의3①12호 다·라목의 같은 단서). 소재지 사실이므로 ④ 토글(「인구감소지역 소재」)로 덮을 수 없다(D-50 (b)).
+ * - 인구감소지역(decline): 수도권(접경지역 제외) · 광역시(군 제외)
+ * - 인구감소관심지역(interest): 수도권(본문 「수도권 밖의 지역으로서」) · 광역시(군 제외)
+ * 광역시의 군은 시·군·구 코드 셋째 자리가 7이다(부산 기장 26710 · 대구 달성 27710·군위 27720 · 인천 강화 28710·옹진 28720 · 울산 울주 31710).
+ * @returns 빼는 사유(고지 문구용) — 빼지 않으면 `null`. 코드가 없으면 판단하지 않는다(`null`).
+ */
+export function populationDeclineLocationExcluded(
+  regionCode: string | undefined,
+  kind: "decline" | "interest",
+  asOf: Date | string,
+): "metro_district" | "capital" | null {
+  const sgg = toSigunguCode(regionCode);
+  if (!sgg) return null;
+  const sido = sgg.slice(0, 2);
+  if (METRO_CITY_SIDO.has(sido) && sgg[2] !== "7") return "metro_district";
+  if (!CAPITAL_SIDO.has(sido)) return null;
+  if (kind === "interest") return "capital";
+  const borderFrom = CAPITAL_BORDER_FROM[sgg];
+  const border = CAPITAL_BORDER_SIGUNGU.has(sgg) && !(borderFrom && toTime(asOf) < borderFrom.getTime());
+  return border ? null : "capital";
+}
+
 const toTime = (asOf: Date | string) => (typeof asOf === "string" ? Date.parse(`${asOf.slice(0, 10)}T00:00:00Z`) : asOf.getTime());
 
 /**

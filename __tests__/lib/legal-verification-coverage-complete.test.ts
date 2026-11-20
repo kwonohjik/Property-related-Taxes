@@ -197,3 +197,35 @@ describe("§39 증자 축 감시 문언 — verify:legal 키워드 유지", () =
     });
   }
 });
+
+/**
+ * 게이트: **조특법 §71의2 인구감소지역주택 감시 문언** (2026-11 리뷰 I-23 · 2026-11-20)
+ *
+ * 엔진은 취득기간(2024.1.4.~2026.12.31.)·가액 한도(9억·4억)·소재지 단서를 상수로 하드코딩한다. 종전 키워드에는 기간·한도가 없어
+ * ①만 연장·한도 변경·관심지역 호 삭제 같은 개정이 `verify:legal`을 모두 통과했다. 아래 문언이 빠지면 그 감시가 조용히 사라진다.
+ * 문자열은 법제처 원문(조특법 MST 284389 · 조특령 MST 288915, 시행 2026.9.18.) verbatim이다.
+ */
+describe("조특법 §71의2 감시 문언 — verify:legal 키워드 유지", () => {
+  const REQUIRED: Record<string, string[]> = {
+    "SPECIAL.POP_DECLINE_HOUSE_71_2": [
+      "같은 조 제6호의 1세대를 말한다)가 2024년 1월 4일부터 2026년 12월 31일까지의 기간 중에",
+      "수도권 밖의 지역으로서",
+    ],
+    "TRANSFER_DECREE.POP_DECLINE_HOUSE_68_2": [
+      "수도권 밖의 지역에 지정된 인구감소지역에 소재한 주택의 경우: 9억원",
+      "수도권에 지정된 인구감소지역에 소재한 주택의 경우: 4억원",
+      "현재 4억원을 초과하지 않을 것",
+      "제2조제1호에 따른 접경지역은 제외한다",
+      "광역시(광역시에 있는 군은 제외한다)",
+    ],
+  };
+
+  for (const [id, keywords] of Object.entries(REQUIRED)) {
+    it(`${id} — §71의2 문언 ${keywords.length}건이 키워드에 있다`, () => {
+      const rule = VERIFICATION_MANIFEST.find((r) => r.id === id);
+      expect(rule, `규칙 ${id}이 매니페스트에서 사라졌다`).toBeDefined();
+      const missing = keywords.filter((kw) => !rule!.keywords.includes(kw));
+      expect(missing, `빠진 감시 문언: ${missing.join(" · ")}`).toEqual([]);
+    });
+  }
+});
