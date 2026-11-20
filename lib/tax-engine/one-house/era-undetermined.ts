@@ -108,6 +108,11 @@ export {
 } from "./final-house-restart";
 
 /** §154⑤ 단서 재기산 이력 미답 — 비과세로 판정된 1주택 양도에만 내는 보류다(아래 `settled`). */
+/** D17 재상속 기준일 고지 — 비과세 전제(`revoke-exemption.ts` 회수 목록 · D-69). */
+export const REINHERITANCE_REFERENCE_DATE_ID = "155-2-reinheritance-reference-date-unverified";
+/** 2010.2.18. 전 동거봉양 예외 고지 — 비과세 전제(D-69). */
+export const PRE2010_PARENTAL_CARE_EXCEPTION_ID = "155-2-pre2010-parental-care-exception-unverified";
+
 export const FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID = "154-5-final-one-house-restart-unverified";
 
 /** §154⑫ 신설(대통령령 제31442호, 2021.2.17.) — 시행 이후 양도분부터 적용(검토 문서 인용, 부칙 원문 재확인 필요). */
@@ -170,6 +175,14 @@ export interface EraNoticeRelevance {
   regulatedReadingDecides: () => boolean;
   /** §155①2호 가목 전입일 고지(#30) — 세대전원이 1년 안에 전입했다고 읽은 반사실 판정이 실제 판정과 결론이 다른가. */
   moveInDecides: () => boolean;
+  /**
+   * §155① 축 고지(⑯ 통합특별시·군위 · J-3 짝 1년 면제) — 일시적 2주택 입력 두 갈래로 본체를 판정한 결론(비과세·부분과세)이 다른가
+   * (2026-11 리뷰 D-68 — 타이밍 술어만 비교하면 다른 사유로 과세가 정해진 판정에도 「결론이 달라집니다」를 냈다). 본체(`core`)만 쓴다(D-01).
+   */
+  temporaryTwoHouseVariantsDecide?: (
+    a: NonNullable<OneHouseJudgeInput["temporaryTwoHouse"]>,
+    b: NonNullable<OneHouseJudgeInput["temporaryTwoHouse"]>,
+  ) => boolean;
   /** 처분 이력 미답 고지(결정 #36) — 이력을 「없음」으로 답하면 비과세·부분 비과세로 바뀌는가 */
   finalHouseRestartNone: () => boolean;
   /**
@@ -435,13 +448,15 @@ export function collectEraUndetermined(
         h.reInheritedFromSeparateHousehold === true,
     )
     .map((h) => h.id);
+  // D-69 — 비과세가 선 판정에서만(그 행이 제외된 덕분에 선 결론의 전제다 · #32). 과세로 정해진 판정에서는 기준일이 결론을 바꾸지 않는다.
   const reInheritedMatters =
+    settled &&
     reInheritedIds.length > 0 &&
     input.acquisitionDate >= INHERITANCE_GENERAL_HOUSE_HELD_START &&
     resolveInheritedHouseExclusionForJudgment(input).excludedHouses.some((e) => reInheritedIds.includes(e.houseId));
   if (reInheritedMatters) {
     out.push({
-      id: "155-2-reinheritance-reference-date-unverified",
+      id: REINHERITANCE_REFERENCE_DATE_ID,
       reason:
         `별도세대에서 받은 상속주택을 동일세대원이 다시 상속받은 주택은 상속주택 지위를 이어받는 것으로 보았습니다(${INHERITED_HOUSE.EXEMPTION_SOLE_BASIS} 단서 — ` +
         "재산세과-2961 · 부동산납세과-624 · 서면-2022-법규재산-4747 등). 일반주택을 「상속개시 당시 보유한 주택」으로 한정하는 요건은 " +
@@ -454,18 +469,24 @@ export function collectEraUndetermined(
    * 동일세대 상속 배제는 단서 신설(2010.2.18.) 전 양도분에도 적용한다(조세심판관합동회의 조심2009서2497 — 게이트 주석).
    * 그 단서의 동거봉양 예외를 그 전 양도분에 인정한 해석은 확보하지 못했다 — 예외를 인정해 판정하고 밝힌다(사용자 결정 2026-10-07).
    */
-  const parentalCarePre2010 =
-    input.transferDate.getTime() < SAME_HOUSEHOLD_PROVISO_TRANSFER_START.getTime() &&
-    (input.houses ?? []).some(
+  // D-69 — 비과세가 선 판정에서, 예외로 그 행이 실제로 상속주택으로 제외됐을 때만(「예외를 인정해 판정했으니」가 사실이어야 한다).
+  const parentalCareIds = (input.houses ?? [])
+    .filter(
       (h) =>
         isHeirInheritedHouse(h) &&
         h.decedentSameHouseholdAtInheritance === true &&
         h.parentalCareMergeInheritedHouse === true &&
         h.reInheritedFromSeparateHousehold !== true,
-    );
+    )
+    .map((h) => h.id);
+  const parentalCarePre2010 =
+    settled &&
+    input.transferDate.getTime() < SAME_HOUSEHOLD_PROVISO_TRANSFER_START.getTime() &&
+    parentalCareIds.length > 0 &&
+    resolveInheritedHouseExclusionForJudgment(input).excludedHouses.some((e) => parentalCareIds.includes(e.houseId));
   if (parentalCarePre2010) {
     out.push({
-      id: "155-2-pre2010-parental-care-exception-unverified",
+      id: PRE2010_PARENTAL_CARE_EXCEPTION_ID,
       reason:
         `동거봉양 합가 전부터 보유하던 주택은 동일세대원으로부터 상속받아도 상속주택으로 보는 예외(${INHERITED_HOUSE.EXEMPTION_SOLE_BASIS} 단서)는 ` +
         "2010년 2월 18일 이후 양도분부터 적용되는 규정입니다(대통령령 제22034호 부칙 제3조). 그 전 양도분도 동일세대원으로부터 상속받은 주택은 " +

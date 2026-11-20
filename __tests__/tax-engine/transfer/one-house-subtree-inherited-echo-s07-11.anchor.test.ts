@@ -74,11 +74,18 @@ describe("S07-11 — 판정 서브트리는 STEP 0.95의 상속주택 제외 결
   });
 
   it("판정 보류(era-undetermined)도 같은 echo를 읽는다 — 재상속 상속주택이 STEP 0.95에서 제외되면 기준일 미확인 고지가 선다", () => {
-    const i = redevInput();
+    // 2026-11 리뷰 D-69 — 이 고지는 비과세가 선 판정에서만 낸다(전제 고지). 종전 시료(2016-12-01 양도)는 준공 후 1.5년 보유 미달로 과세라
+    //   고지가 결론을 가르지 않았다 — 보유 2년을 채운 양도일로 옮긴다(제외 echo를 읽는다는 이 테스트의 주장은 그대로).
+    const i = redevInput({ transfer: "2017-12-01" });
     const reinherited = { ...i, houses: i.houses!.map((h) => (h.id === "inh" ? { ...h, decedentSameHouseholdAtInheritance: true, reInheritedFromSeparateHousehold: true } : h)) };
     expect(resolveInheritedHouseExclusionFromInput(reinherited).excludedCount).toBe(1);
     const und = judgeRedevAptOneHouseExemption(reinherited, [], undefined, parsed).exemptionResult!.undetermined.map((u) => u.id);
     expect(und).toContain("155-2-reinheritance-reference-date-unverified");
+    // 짝(D-69) — 과세로 정해진 판정(보유 미달)에서는 기준일이 결론을 바꾸지 않아 고지가 없다.
+    const taxable = { ...reinherited, transferDate: D("2016-12-01") };
+    expect(judgeRedevAptOneHouseExemption(taxable, [], undefined, parsed).exemptionResult!.undetermined.map((u) => u.id)).not.toContain(
+      "155-2-reinheritance-reference-date-unverified",
+    );
   });
 
   it("계산기 결과는 이 정정으로 달라지지 않는다 — 제외 1채가 판정 주택 수에 반영된다(결정세액 불변)", () => {

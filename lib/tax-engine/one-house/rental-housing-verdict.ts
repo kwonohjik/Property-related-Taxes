@@ -43,6 +43,11 @@ export type OneHouseRentalHousingVerdict = {
   compositionFailReason?: string;
   /** §155㉑로 통과한 호(0-based) — ㉒ 사후 추징 대상임을 알린다 */
   periodPendingUnitIndexes: number[];
+  /**
+   * 요건은 충족했지만 최종 판정이 과세라(비거주자 §121② 단서 · 잔금 전 멸실 · §154① 보유·거주 미달 등) 이 특례를 적용받지 않은 경우의 안내
+   * (2026-11 리뷰 D-60 — `settleRentalVerdictForFinalTaxation`). 있으면 카드가 「요건 충족」(초록) 대신 「적용하지 않습니다」로 그린다.
+   */
+  notAppliedReason?: string;
   /** 결론을 바꾸지 않는 판정 보류·확인 필요 고지(OH-40 생애 1회 이력 미입력 · 계획서 §7-5) */
   notices: string[];
   /** §155㉓ 최초 말소일부터 5년 기한(I-4) — 말소일을 입력한 말소 호가 있을 때만 */
@@ -129,6 +134,25 @@ export function settleRentalVerdictForOtherExemption(
     ...verdict,
     periodPendingUnitIndexes: [],
     notices: compositionConfirmNotice ? verdict.notices.filter((n) => n !== compositionConfirmNotice) : verdict.notices,
+  };
+}
+
+/**
+ * D-60 — 최종 판정(비거주자 6.7 · 잔금 전 멸실 6.8 뒤)이 과세면 ⑳을 적용받지 않았다. 「1세대가 제21항을 적용받은 후에」(§155㉒)라 추징 차액도 없다 —
+ * ㉑ 통과 호를 비우고, 요건을 충족한 경우에는 「적용하지 않습니다」 안내를 단다(계산기는 ⑳ 미적용이면 ㉒ 안내를 내지 않는다 — CR-7).
+ */
+export const RENTAL_NOT_APPLIED_TAXABLE_REASON =
+  "요건은 충족했지만 이 판정은 과세(비과세 요건 미충족 또는 비거주자·잔금 전 멸실 등)라 이 특례를 적용받지 않습니다 — 적용받지 않았으므로 §155㉒ 사후 추징 대상도 아닙니다.";
+
+export function settleRentalVerdictForFinalTaxation(
+  verdict: OneHouseRentalHousingVerdict | null,
+  judgment: Pick<OneHouseJudgment, "isExempt" | "isPartialExempt">,
+): OneHouseRentalHousingVerdict | null {
+  if (!verdict || judgment.isExempt || judgment.isPartialExempt) return verdict;
+  return {
+    ...verdict,
+    periodPendingUnitIndexes: [],
+    ...(verdict.passed ? { notAppliedReason: RENTAL_NOT_APPLIED_TAXABLE_REASON } : {}),
   };
 }
 

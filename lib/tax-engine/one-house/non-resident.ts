@@ -24,6 +24,19 @@ import { deriveLegalBasis } from "./legal-basis";
 import { revokeOneHouseExemption } from "./revoke-exemption";
 import type { TransferTaxInput } from "../types/transfer.types";
 import type { OneHouseJudgment } from "./types";
+import { NEW_HOUSE_ORIGIN_UNCONFIRMED_ID } from "./new-house-origin";
+import { RURAL_FARM_FACTS_UNCONFIRMED_ID } from "./rural-return-to-farm-facts";
+import { POP_DECLINE_71_2_UNCONFIRMED_ID } from "../transfer-reductions/population-decline-71-2";
+
+/**
+ * 「모름」 사실을 유리하게 채운 반사실이 비과세일 때만 내는 확인 필요 고지(「답을 고르면 다시 판정합니다」) — 비거주자 강제 과세(§121② 단서)에서는
+ * 어떤 답을 골라도 과세라 결론을 가르지 않는다(2026-11 리뷰 D-38 · #32). 멸실(6.8)은 경위가 결론을 가를 수 있어 여기서만 거른다.
+ */
+const COUNTERFACTUAL_UNCONFIRMED_IDS: ReadonlySet<string> = new Set([
+  NEW_HOUSE_ORIGIN_UNCONFIRMED_ID,
+  RURAL_FARM_FACTS_UNCONFIRMED_ID,
+  POP_DECLINE_71_2_UNCONFIRMED_ID,
+]);
 
 const OVERSEAS_REASONS = new Set(["overseas_migration", "overseas_residence"]);
 
@@ -65,9 +78,10 @@ export function applyNonResidentVerdict(
    * 비거주자에게는 성립하지 않으므로 비우고, 과세 사유를 §121②로 밝힌다(입주권 형제 경로 `one-right-verdict.ts`와 같은 규칙).
    * 본체가 비과세였다면 비과세를 거둔다.
    */
-  const base = exempt
+  const revoked = exempt
     ? revokeOneHouseExemption(judgment)
     : { ...judgment, pending: [], legalBasis: deriveLegalBasis(judgment.appliedExceptions, []) };
+  const base = { ...revoked, undetermined: revoked.undetermined.filter((u) => !COUNTERFACTUAL_UNCONFIRMED_IDS.has(u.id)) };
   return {
     ...base,
     unmetExceptions: [

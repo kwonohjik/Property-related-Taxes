@@ -3,6 +3,10 @@ import { deriveLegalBasis } from "./legal-basis";
 import { REVERSE_DOUBLE_MERGE_UNVERIFIED_ID } from "./pending";
 import { INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID } from "./overlap-notice";
 import type { OneHouseJudgment } from "./types";
+import { NEW_HOUSE_ORIGIN_UNCOLLECTED_ID, NEW_HOUSE_PRESALE_HOLDING_ID } from "./new-house-origin";
+import { RURAL_FARMLAND_990_ERA_ID } from "./rural-return-to-farm-facts";
+import { isOriginalMemberOpenArticle } from "./original-member-right";
+import { PRE2010_PARENTAL_CARE_EXCEPTION_ID, REINHERITANCE_REFERENCE_DATE_ID } from "./era-undetermined";
 
 /**
  * **비과세로 판정됐을 때만** 내는 판정 보류 — 「그 비과세 결론의 전제」를 확인하라는 고지다
@@ -12,7 +16,20 @@ const SETTLED_PREMISE_UNDETERMINED_IDS: ReadonlySet<string> = new Set([
   FINAL_ONE_HOUSE_RESTART_UNVERIFIED_ID,
   REVERSE_DOUBLE_MERGE_UNVERIFIED_ID,
   INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID,
+  // 2026-11 리뷰 D-37 — 결정 #43·#44 고지도 `settled`로 게이트한다(`era-undetermined.ts`). 빠져 있어 비거주자·멸실 회수 뒤에도 남았다.
+  NEW_HOUSE_PRESALE_HOLDING_ID,
+  NEW_HOUSE_ORIGIN_UNCOLLECTED_ID,
+  RURAL_FARMLAND_990_ERA_ID,
+  // D-69 — 재상속 기준일·2010.2.18. 전 동거봉양 예외 고지(이제 `settled` 게이트)
+  REINHERITANCE_REFERENCE_DATE_ID,
+  PRE2010_PARENTAL_CARE_EXCEPTION_ID,
 ]);
+
+/** 비과세 전제 고지인가 — 고정 id 집합 + 원조합원 입주권 `89-2-open:*`(`pending.ts`가 `settled`로 게이트 · id가 동적이라 술어로 · D-37 2차 보강). */
+function isSettledPremiseUndetermined(id: string): boolean {
+  if (SETTLED_PREMISE_UNDETERMINED_IDS.has(id)) return true;
+  return id.startsWith("89-2-open:") && isOriginalMemberOpenArticle(id.slice("89-2-open:".length));
+}
 
 /**
  * 「임대주택을 주택 수에서 뺀」 전제로 낸 비과세를 거둔다 — 판정 메뉴(위)와 계산기 STEP 1(D12, §155⑳ 세대 구성
@@ -44,7 +61,7 @@ export function revokeOneHouseExemption(judgment: OneHouseJudgment): OneHouseJud
     exemptReason: undefined,
     deemedOneHouseBy155: undefined,
     appliedExceptions,
-    undetermined: judgment.undetermined.filter((u) => !SETTLED_PREMISE_UNDETERMINED_IDS.has(u.id)),
+    undetermined: judgment.undetermined.filter((u) => !isSettledPremiseUndetermined(u.id)),
     legalBasis: deriveLegalBasis(appliedExceptions, judgment.pending),
     requirementReview: undefined,
     // 사후관리(추징)는 받은 비과세가 전제다 — 거두면 고지도 없다(G5-7).
