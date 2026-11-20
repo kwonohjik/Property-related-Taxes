@@ -3,6 +3,7 @@
  * 동작 변화 없음. 규칙·fallback 원칙은 원 파일 머리 주석을 따른다.
  */
 import { judgmentOwnershipShareError } from "@/lib/calc/judgment-ownership-share";
+import type { JudgmentMenu } from "./judgment-menu-flags";
 import { giftHouseholdFactErrors, giftPriorResidenceAsked } from "@/lib/calc/gift-household-payload";
 import {
   isTransferDateBeforeSupported,
@@ -34,7 +35,7 @@ import { err, type Errors } from "./one-house-exemption-validate-shared";
  *    2번째 화면(`Step3.tsx`)을 맡는다. 이름을 그대로 둔 것은 저장소 관례이고, 유닛·anchor가
  *    `validateStep3`를 직접 부르기 때문이다.
  */
-export function validateStep3(form: OneHouseJudgmentFormData): Errors {
+export function validateStep3(form: OneHouseJudgmentFormData, menu: JudgmentMenu = "one_house"): Errors {
   const errors: Errors = [];
   const primary = form.assets[0];
 
@@ -229,7 +230,9 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
     if (rentalError) errors.push(err("rentalHousingException", rentalError));
     // §154⑩ 사실 질문(Q-1 (a)) — ⑤ `Phrp154_10FactQuestion`과 같은 게이트·도출(`phrp-154-10-fact-question.ts`).
     const phrpAnswerError = phrp154_10AnswerError(primary.rentalHousingException, form.transferDate);
-    if (phrpAnswerError) errors.push(err(PHRP_154_10_QUESTION_FIELD, phrpAnswerError));
+    // 2026-11 리뷰 D-30·결정 Q-10 — 미등기면 「소득세법」 §91①로 비과세가 배제돼 이 답이 결론을 가르지 않는다 → 1주택 메뉴에서는 필수를 푼다.
+    //   다주택 중과 메뉴는 그대로 둔다(Q-10 — 중과 메뉴는 실측 1건뿐이라 확인 전까지 유지).
+    if (phrpAnswerError && !(menu === "one_house" && form.isUnregistered)) errors.push(err(PHRP_154_10_QUESTION_FIELD, phrpAnswerError));
   }
 
   return errors;

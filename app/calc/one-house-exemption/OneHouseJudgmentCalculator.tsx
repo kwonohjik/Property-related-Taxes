@@ -11,6 +11,7 @@
  *   3. 이력에 남는 것은 **세액이 아니라 판정**이다(P4-2b-3).
  */
 import { useCallback, useMemo, useState } from "react";
+import { handoffRemainingInputs } from "@/lib/calc/judgment-handoff-remaining";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { StepIndicator } from "@/components/calc/StepIndicator";
@@ -396,6 +397,7 @@ export default function OneHouseJudgmentCalculator({ aiExtractEnabled = false }:
                 onCalculateTax={handleCalculateTax}
                 transferDate={formData.transferDate || undefined}
                 houses={formData.houses}
+                remainingInputs={handoffRemainingInputs(formData)}
               />
             )}
             {/* AI 참고 의견 — 판정이 나온 뒤, 버튼을 누를 때만(로컬 개발 서버 전용 — 원문으로 채우기와 같은 게이트) */}

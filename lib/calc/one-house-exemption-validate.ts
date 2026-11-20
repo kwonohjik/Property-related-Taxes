@@ -18,6 +18,7 @@
  * 여기서 막는 것은 **판정이 불가능한 입력**(필수값 부재·모순)뿐이다.
  */
 import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
+import type { JudgmentMenu } from "./judgment-menu-flags";
 import { replacementResidenceMonthsCapMessage } from "./residence-interval-validate";
 import { deriveResidencePeriodMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { parentalCareAgeIssues } from "./parental-care-age-issue";
@@ -311,6 +312,12 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
       );
     }
   });
+  // 2026-11 리뷰 D-11 — 입주권 양도에서 양도하는 입주권을 목록에 다시 넣으면 「입주권 2개」로 과세된다(엔진은 목록 + 양도 대상 1 —
+  //   「소득세법」 §89①4호 「조합원입주권을 1개 보유한 1세대」). 취득일·인가일이 양도 대상과 같은 입주권 행에 경고만 둔다
+  //   (같은 날 입주권 둘을 상속받는 경우가 있어 막지 않는다).
+  for (const i of rightRowsLikeSellingRight(form)) {
+    errors.push({ field: `presaleRights.${i}.acquisitionDate`, severity: "warning", message: `분양권·입주권 ${i + 1}: 양도하는 입주권과 취득일 또는 관리처분계획 인가일이 같습니다. 양도하는 입주권은 목록에 넣지 마세요 — 판정이 자동으로 1개를 셉니다. 다른 입주권이면 그대로 두세요.` });
+  }
   // 조합원입주권 취득 경위 — 주택 양도의 §89② 판정에서만 결론을 가른다(계산기와 같은 leaf).
   if (judgmentSaleIsHousing(form)) {
     for (const e of memberOriginErrors(form.presaleRights ?? [])) errors.push(err(e.field, e.message));
@@ -544,12 +551,12 @@ function collectTempTwoHouseEraIssues(form: OneHouseJudgmentFormData): Errors {
  * 「현재 단계의 전체 배열」을 필요로 하면서 세 벌째가 될 참이라 한 벌로 합쳤다 —
  * 매핑이 갈리면 배지·차단·경고가 서로 다른 단계를 가리킨다.
  */
-export function validateStepByIndex(form: OneHouseJudgmentFormData, step: number): Errors {
+export function validateStepByIndex(form: OneHouseJudgmentFormData, step: number, menu: JudgmentMenu = "one_house"): Errors {
   switch (step) {
     case 0:
       return validateStep1(form);
     case 1:
-      return validateStep3(form);
+      return validateStep3(form, menu);
     case 2:
       return validateStep2(form);
     default:
@@ -578,3 +585,18 @@ export function validateAllSteps(form: OneHouseJudgmentFormData): Errors {
 }
 
 export { computeOneHouseJudgmentSummary } from "./one-house-judgment-summary";
+
+/** D-11 — 입주권 양도일 때 취득일 또는 인가일이 양도 대상 입주권과 같은 입주권 행의 순번. */
+function rightRowsLikeSellingRight(form: OneHouseJudgmentFormData): number[] {
+  const p = form.assets[0];
+  if (!p || judgmentSaleIsHousing(form)) return [];
+  const out: number[] = [];
+  (form.presaleRights ?? []).forEach((r, i) => {
+    if (r.type !== "redevelopment_right") return;
+    const sameAcq = !!r.acquisitionDate && r.acquisitionDate === p.acquisitionDate;
+    const sameApproval = !!r.managementDisposalApprovalDate && r.managementDisposalApprovalDate === p.redevApprovalDate;
+    if (sameAcq || sameApproval) out.push(i);
+  });
+  return out;
+}
+

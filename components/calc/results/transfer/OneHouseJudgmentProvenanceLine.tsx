@@ -55,8 +55,10 @@ function describe(p: JudgmentProvenance): { tone: "sky" | "amber"; body: React.R
       tone: "amber",
       body: (
         <>
-          원본 판정이 그 뒤에 바뀌었는지 <b>확인할 수 없습니다</b>(기준값이 없는 이전 세션에서
-          넘어온 값입니다). 확실히 하려면 판정 메뉴에서 다시 넘겨 주세요.
+          {/* 2026-11 리뷰 D-32 — 원인을 하나로 단정하지 않는다(저장 전 전달 · 다주택 중과 메뉴 전달(판정을 저장하지 않는다) · 원본 삭제 · 조회 실패 · 이전 세션). */}
+          원본 판정이 그 뒤에 바뀌었는지 <b>확인할 수 없습니다</b> — 대조할 원본 판정 기록이 없습니다(판정을
+          저장하기 전에 넘겼거나, 다주택 중과 판정 메뉴에서 넘겼거나, 원본 판정을 지웠거나, 이전 세션에서 넘어온
+          값일 수 있습니다). 확실히 하려면 1세대1주택 비과세 판정 메뉴에서 다시 판정해 넘겨 주세요.
         </>
       ),
     };
@@ -66,8 +68,9 @@ function describe(p: JudgmentProvenance): { tone: "sky" | "amber"; body: React.R
     body: (
       <>
         판정 메뉴에서 넘겨받은 사실로 계산했습니다. 계산기는 판정 결과를 복사하지 않고{" "}
-        <b>같은 엔진으로 다시 판정</b>하므로, 이 화면에서 양도일·양도가액을 바꾸면 판정도 그에 맞게
-        바뀝니다.
+        <b>같은 엔진으로 다시 판정</b>하므로, 이 화면에서 양도일·양도가액·보유 주택 목록을 바꾸면 판정도 그에
+        맞게 바뀝니다. 아래 「넘겨받을 당시 판정 결과」는 그 변경을 반영하지 않습니다 — 지금 결론은 이 화면의
+        계산 결과를 보세요.
       </>
     ),
   };
@@ -127,7 +130,7 @@ export function OneHouseJudgmentProvenanceLine({
   const rec = prov.record;
   return (
     <div data-testid="one-house-judgment-provenance">
-      <ToneCard tone={tone} title={label ? `출처 — ${label}` : "출처 — 1세대1주택 비과세 판정"}>
+      <ToneCard tone={tone} title={label ? `출처 — ${label}` : "출처 — 판정 메뉴에서 넘겨받은 사실"}>
         <p className="text-sm leading-relaxed">{body}</p>
         {/*
           🔑 원본 record를 못 찾았으면 **판정 내용을 말하지 않는다.** 없는 값을 자리표시자로
@@ -136,7 +139,8 @@ export function OneHouseJudgmentProvenanceLine({
         {rec && (
           <p className="text-caption text-muted-foreground">
             판정 대상 양도(예정)일 <b className="font-mono tabular-nums">{rec.judgedFor}</b>
-            {" · 판정 결과 "}
+            {/* D-31 최소안 — 계산기에서 고쳐 결론이 바뀌어도 이 값은 원본 record의 결론이다(대조 배지는 PR-13b). */}
+            {" · 넘겨받을 당시 판정 결과 "}
             <b data-testid="provenance-verdict">{rec.verdictLabel}</b>
             {" · 저장 "}
             <span className="font-mono tabular-nums">{rec.updatedAt.slice(0, 10)}</span>

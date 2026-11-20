@@ -44,6 +44,7 @@ import {
   article89ExclusionUnmet,
   undeclaredMergeCompositionUndetermined,
 } from "./one-house/pending";
+import { unregisteredUnmet } from "./one-house/unmet-exceptions";
 import { describeFinalOneHouseRestart } from "./one-house/final-house-restart";
 import { checkDeemedOneHouseVerdict } from "./one-house/deemed-verdict";
 import { provisoLegalBasis } from "./one-house/decisive-proviso";
@@ -169,6 +170,7 @@ export function checkExemption(
   const unmetExceptions = settled
     ? []
     : [
+        ...unregisteredUnmet(input),
         ...(coreWouldPass ? [] : collectUnmetExceptions(input, oneHouseRules)),
         ...article89ExclusionUnmet(article89Clause2, coreWouldPass),
         ...collectLapsedDeadlineUnmet(allPending.filter(isLapsed), judgmentBaseDate, requirementReview?.scheme),

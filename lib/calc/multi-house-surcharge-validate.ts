@@ -70,7 +70,7 @@ function surchargeRosterIssues(form: OneHouseJudgmentFormData, oneHouse: Errors)
 
 /** 화면 인덱스 → 그 단계의 검증. 인덱스는 1주택 판정 메뉴와 같다(0 세대 · 1 양도 대상 · 2 보유 주택). */
 export function validateSurchargeStepByIndex(form: OneHouseJudgmentFormData, step: number): Errors {
-  const oneHouse = validateOneHouseStepByIndex(form, step);
+  const oneHouse = validateOneHouseStepByIndex(form, step, "surcharge");
   if (step === 1) return [...oneHouse, ...surchargeSaleIssues(form)];
   if (step === 2) return [...oneHouse, ...surchargeRosterIssues(form, oneHouse)];
   return oneHouse;
