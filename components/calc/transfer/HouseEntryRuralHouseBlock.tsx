@@ -41,6 +41,7 @@ import { classifyEupMyeon } from "@/lib/geo/rural-house-location";
 import { decedentHouseholdAnswer, decedentHouseholdPatch } from "@/lib/calc/decedent-household";
 import { judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
 import { resolveRuralLocationQualified } from "@/lib/calc/one-house-row-facts";
+import { ruralHometownAsked } from "@/lib/calc/one-house-row-facts";
 import {
   RURAL_FARMLAND_NA_ACQ_START,
   RURAL_FARMLAND_SPOUSE_DA_TRANSFER_START,
@@ -125,6 +126,7 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
                 ruralFarmlandHolder: undefined,
                 ruralPriorReturnFarmExemption: undefined,
                 ruralGeneralHouseBeforeReturn: undefined,
+                ruralHometownLocated: undefined,
               },
         )
       }
@@ -151,6 +153,7 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
                       ruralFarmlandHolder: undefined,
                       ruralPriorReturnFarmExemption: undefined,
                       ruralGeneralHouseBeforeReturn: undefined,
+                      ruralHometownLocated: undefined,
                     }
                   : {}),
               })
@@ -309,6 +312,40 @@ export function HouseEntryRuralHouseBlock({ house, onUpdate }: Props) {
               />
               <p className="text-xs text-muted-foreground">660㎡ 이내여야 합니다 (§155⑩3호).</p>
             </div>
+            {/* 종전 ⑩1호 — 2016.2.17. 전에 취득한 귀농주택은 연고지 요건이 걸린다(그 개정령 부칙 제22조 · D-85). 칸·⑧·④가 같은 술어. */}
+            {ruralHometownAsked(house) && (
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">귀농주택이 연고지에 있습니까 (종전 §155⑩1호)</label>
+                <RadioCardGroup
+                  name={`ruralHometown-${house.id}`}
+                  data-testid="house-row-rural-hometown"
+                  tone="emerald"
+                  layout="stack"
+                  options={[
+                    { value: "yes", label: "예 — 연고지에 있습니다", testId: "house-row-rural-hometown-yes" },
+                    {
+                      value: "no",
+                      label: "아니오 — 연고지가 아닙니다",
+                      description: "귀농주택으로 인정되지 않아 이 특례를 적용하지 않습니다.",
+                      testId: "house-row-rural-hometown-no",
+                    },
+                    {
+                      value: "unknown",
+                      label: "모름",
+                      description: "귀농주택으로 인정하지 않고 판정하며, 결론을 가를 때 확인 필요를 알립니다.",
+                      testId: "house-row-rural-hometown-unknown",
+                    },
+                  ]}
+                  value={house.ruralHometownLocated ?? ""}
+                  onChange={(v) => onUpdate({ ruralHometownLocated: v as HouseEntry["ruralHometownLocated"] })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  2016.2.17. 전에 취득한 귀농주택에는 종전 규정이 적용됩니다. 연고지란 귀농주택 소재지가 본인·배우자 또는 그
+                  직계존속의 가족관계등록부 최초 등록기준지(그 읍·면과 맞닿은 읍·면 포함)이거나, 그곳에 5년 이상 거주한 사실이 있는
+                  곳입니다(종전 소득세법 시행규칙 §73①②).
+                </p>
+              </div>
+            )}
             {/* ⑩4호 — 영농 또는 영어의 목적으로 취득(가·나·다목). 모르면 「모름」 — 불성립으로 판정하고 결론을 가를 때 확인 필요를 알린다. */}
             <div className="space-y-1.5">
               <label className="text-sm font-medium">영농·영어 목적 취득 요건 (§155⑩4호)</label>

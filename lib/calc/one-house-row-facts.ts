@@ -26,6 +26,8 @@ import { judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
 import { decedentHouseholdOf } from "./decedent-household";
 import { isOwnedAtTransfer } from "./household-house-count";
 import { unavoidableOutsideCapitalStatusPayload } from "./two-house-exclusion-status";
+import { toOptionalDate } from "@/lib/api/date-coerce";
+import { ruralHometownRequirementApplies } from "@/lib/tax-engine/one-house/rural-return-to-farm-facts";
 
 /**
  * 도출에 필요한 행 속성만 — 테스트가 전체 `HouseEntry`를 만들지 않아도 되게 좁힌다.
@@ -57,6 +59,7 @@ export type OneHouseFactRow = Partial<
     | "ruralFarmlandHolder"
     | "ruralPriorReturnFarmExemption"
     | "ruralGeneralHouseBeforeReturn"
+    | "ruralHometownLocated"
     | "oneHouseUnavoidableOutsideCapital"
     | "unavoidableOutsideCapitalReason"
     | "unavoidableOutsideCapitalResolvedDate"
@@ -86,6 +89,7 @@ export interface RuralHousePayload {
   farmlandHolder?: "self" | "spouse";
   priorReturnFarmExemption?: "none" | "has" | "unknown";
   generalHouseAcquiredBeforeReturn?: "yes" | "no" | "unknown";
+  hometownLocated?: "yes" | "no" | "unknown";
 }
 
 /** ④가 만드는 §155⑧ nested payload — 엔진 `TransferTaxInput["unavoidableOutsideCapitalHouse"]`. */
@@ -213,6 +217,20 @@ function landAreaSqmOf(row: Pick<HouseEntry, "ruralLandAreaSqm">): number | unde
 }
 
 /**
+ * ⑤⑧④ 공용 — 종전 §155⑩1호 「연고지에 소재할 것」을 묻는가: 3호 귀농 + 이 행의 취득일이 2016-02-17 전(엔진 `ruralHometownRequirementApplies`와 같은 leaf).
+ * 그 뒤 취득분은 칸을 보이지 않고, 남은 답도 싣지 않는다(엔진도 값과 무관하게 보지 않는다).
+ */
+export function ruralHometownAsked(
+  row: Pick<HouseEntry, "oneHouseRuralHouse" | "ruralHouseKind"> & Partial<Pick<HouseEntry, "acquisitionDate">>,
+): boolean {
+  return (
+    row.oneHouseRuralHouse === true &&
+    row.ruralHouseKind === "return_to_farm" &&
+    ruralHometownRequirementApplies(toOptionalDate(row.acquisitionDate))
+  );
+}
+
+/**
  * ⑧ §155⑦3호 귀농주택 — ⑩3호 대지면적 · ⑩4호 영농·영어 목적 · ⑪ 귀농 후 최초 1개 · 귀농 전 취득 일반주택에 **답이 없다**.
  * 「모름」은 유효한 답이다(불성립으로 판정하고 확인 필요를 알린다) — 막는 것은 답을 아예 안 한 경우다.
  * 판정 메뉴·계산기 ⑧이 같은 leaf를 쓴다(⑤ `HouseEntryRuralHouseBlock` 라디오·입력이 유일한 입력 경로 — 3중 패턴).
@@ -227,9 +245,17 @@ export function ruralReturnToFarmFactsIssue(
     | "ruralFarmlandHolder"
     | "ruralPriorReturnFarmExemption"
     | "ruralGeneralHouseBeforeReturn"
-  >,
+    | "ruralHometownLocated"
+  > &
+    Partial<Pick<HouseEntry, "acquisitionDate">>,
 ): { field: string; message: string } | null {
   if (row.oneHouseRuralHouse !== true || row.ruralHouseKind !== "return_to_farm") return null;
+  if (ruralHometownAsked(row) && !row.ruralHometownLocated) {
+    return {
+      field: "ruralHometownLocated",
+      message: "2016.2.17. 전에 취득한 귀농주택은 연고지에 있는지 선택하세요(종전 §155⑩1호) — 모르면 「모름」을 고르세요.",
+    };
+  }
   if (landAreaSqmOf(row) === undefined) {
     return { field: "ruralLandAreaSqm", message: "귀농주택 대지면적(㎡)을 입력하세요 — 비우면 660㎡ 이내 요건(§155⑩3호)을 확인할 수 없습니다." };
   }
@@ -315,6 +341,10 @@ function toRuralPayload(row: OneHouseFactRow): RuralHousePayload | undefined {
           ...(row.ruralFarmlandHolder ? { farmlandHolder: row.ruralFarmlandHolder } : {}),
           ...(row.ruralPriorReturnFarmExemption ? { priorReturnFarmExemption: row.ruralPriorReturnFarmExemption } : {}),
           ...(row.ruralGeneralHouseBeforeReturn ? { generalHouseAcquiredBeforeReturn: row.ruralGeneralHouseBeforeReturn } : {}),
+          // 종전 ⑩1호 연고지 — 2016-02-17 전 취득분만 싣는다(그 뒤 취득분에 남은 답은 보내지 않는다 · D-85).
+          ...(row.ruralHometownLocated && ruralHometownRequirementApplies(toOptionalDate(row.acquisitionDate))
+            ? { hometownLocated: row.ruralHometownLocated }
+            : {}),
         }
       : {}),
   };

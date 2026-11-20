@@ -272,6 +272,11 @@ export interface HouseEntry {
   ruralPriorReturnFarmExemption?: "none" | "has" | "unknown";
   /** 3호 — 양도하는 일반주택을 귀농 전에 취득했는가(예·아니오·모름). */
   ruralGeneralHouseBeforeReturn?: "yes" | "no" | "unknown";
+  /**
+   * 3호 §155⑩1호(2016.2.17. 삭제) — 귀농주택이 연고지에 있는가(예·아니오·모름). 이 행의 취득일이 2016-02-17 전일 때만 묻고 싣는다
+   * (`ruralHometownAsked` — 그 개정령 부칙 제22조 종전 규정 · 2026-11 리뷰 D-85).
+   */
+  ruralHometownLocated?: "yes" | "no" | "unknown";
   // ⚠️ 귀농주택 **취득일**은 별도 칸이 없다 — §155⑦ 단서의 「그 주택을 취득한 날」이
   //    곧 이 행의 `acquisitionDate`다. 소재지도 행의 `addressJibun`·`regionCode`를 쓴다.
 
