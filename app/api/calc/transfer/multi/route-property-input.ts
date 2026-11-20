@@ -360,7 +360,7 @@ export function toMultiEngineItem(
     // ⑭ 이월과세 배제(시나리오 B) 채택 시 NBL 소유기간 기산은 수증일 — 단건 route와 같은 leaf (NBL2611-R23)
     nonBusinessLandDetailsIfCarryoverExcluded: buildNblEngineInputGiftBasis(p.nonBusinessLandRaw, p.carryoverTaxation?.giftRegistryDate),
     // ⑭ 다건도 단건과 동일 공용 헬퍼 — P2 특례(인구감소·부득이사유·장기임대 등) + ⑬ 소형신축/미분양 전 필드 도달 (선재 strip 갭 해소)
-    houses: mapHousesToEngine(p.houses),
+    houses: mapHousesToEngine(p.houses, p.transferDate),
     // ⑭ 세대 보유 분양권·입주권 — 단건 route와 동일 공용 헬퍼(취득일 string→Date).
     //    ⑬과 함께 배선해야 도달한다(P1-02 — 종전에는 두 층 모두 비어 있었다).
     presaleRights: mapPresaleRightsToEngine(p.presaleRights, p.transferDate),

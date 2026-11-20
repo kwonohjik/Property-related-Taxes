@@ -199,7 +199,7 @@ export function buildOneHouseExemptionPayload(
   isRightSale: boolean,
 ): OneHouseExemptionResponse {
   // 단계 6~6.7: 주택 수 제외 → 판정 → §155⑳ → §89①4호 → 비거주자(`judgment-pipeline.ts`)
-  const { exclusion, rentalVerdict, oneRightVerdict, judgment, rentalDeemedHouseIds } = runOneHouseJudgmentPipeline(
+  const { exclusion, rentalVerdict, oneRightVerdict, judgment, rentalDeemedHouseIds, mergeRentalCarveout } = runOneHouseJudgmentPipeline(
     engineInput,
     parsedRates,
     judgmentBaseDate,
@@ -232,6 +232,7 @@ export function buildOneHouseExemptionPayload(
     inheritedExclusionApplies: !isRightSale,
     houses: engineInput.houses,
     rentalDeemedHouseIds,
+    mergeRentalCarveout,
   });
 
   const judgeInput = exclusion.exemptionJudgeInput;

@@ -168,7 +168,7 @@ describe("⑫⑭ — Zod가 벗기지 않고 매퍼가 Date로 옮긴다", () =>
       isUrbanLifeHousingApartment: false,
       taxIncentiveRentalAptDeadlineExtension: { relocationAnnouncementDate: "2027-06-01" },
     });
-    const [h] = mapHousesToEngine([parsed])!;
+    const [h] = mapHousesToEngine([parsed], undefined)!;
     expect(h.isTaxIncentiveRental).toBe(true);
     expect(h.isTaxIncentiveRentalPurchase).toBe(true);
     expect(h.taxIncentiveRentalRegistrationType).toBe("long_term_general");

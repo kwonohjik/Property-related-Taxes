@@ -186,6 +186,11 @@ export function buildOneHouseCountBreakdown(p: {
    * 판정은 그 행을 빼고 했으므로 명세도 같은 주택 수를 보인다 — 빠뜨리면 「2채 중 2채」 옆에 비과세가 뜬다.
    */
   rentalDeemedHouseIds?: string[];
+  /**
+   * §155④⑤ × ⑳ 합가 상대 쪽 장기임대주택(기준-2024-법규재산-0061)을 주택 수에서 뺐는가 — 엔진 표식(`mergeRentalCarveout`) 그대로.
+   * 빠뜨리면 판정은 2채인데 명세는 「3채 중 3채」였다(2026-11 리뷰 D-24). 판정 메뉴 임대주택은 명부 밖 입력이라 행 id가 없을 수 있다.
+   */
+  mergeRentalCarveout?: { rentalRowId?: string };
 }): OneHouseCountBreakdown {
   const others = (p.houses ?? []).filter((h) => h.id !== SELLING_HOUSE_ID);
   const locate = <T extends { houseId?: string }>(item: T): T => {
@@ -252,6 +257,13 @@ export function buildOneHouseCountBreakdown(p: {
     });
   }
 
+  if (p.mergeRentalCarveout) {
+    excluded.push({
+      ...(p.mergeRentalCarveout.rentalRowId ? { houseId: p.mergeRentalCarveout.rentalRowId } : {}),
+      label: "합가 상대 쪽 장기임대주택 — 요건을 갖춰 주택 수에서 빼고 합가 특례를 적용",
+      legalBasis: TRANSFER_RENTAL_HOUSING.PIT_RD_155_20,
+    });
+  }
   for (const houseId of p.rentalDeemedHouseIds ?? []) {
     excluded.push({
       houseId,

@@ -268,7 +268,7 @@ export function buildTransferEngineInput(
     // ⑭ 이월과세 배제(시나리오 B) 채택 시 NBL 소유기간 기산은 수증일 — 같은 raw를 일반 증여로 다시 매핑(NBL2611-R23)
     nonBusinessLandDetailsIfCarryoverExcluded: buildNblEngineInputGiftBasis(data.nonBusinessLandRaw, data.carryoverTaxation?.giftRegistryDate),
     // ⑭ 다주택 중과 houses[]·presaleRights — Date 변환 + 9유형/P2 필드 매핑 헬퍼 (800줄 정책)
-    houses: mapHousesToEngine(data.houses),
+    houses: mapHousesToEngine(data.houses, data.transferDate),
     // 양도일 현재 보유분만(양도일 당일·이후 취득 권리는 제외 — 코드 리뷰 결정 #1). 같은 날 취득분은 확인 필요 고지용으로 따로 싣는다.
     presaleRights: mapPresaleRightsToEngine(data.presaleRights, data.transferDate),
     sameDayAcquiredPresaleRights: mapSameDayPresaleRightsToEngine(data.presaleRights, data.transferDate),

@@ -9,6 +9,7 @@
  */
 import { mergeRentalRosterHolds } from "@/lib/tax-engine/one-house/merge-rental-carveout";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { housesOwnedAtTransfer } from "./household-house-count";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
 
@@ -17,6 +18,7 @@ export type MergeRentalState = "waived" | "unanswered" | "declined" | undefined;
 export function mergeRentalState(form: {
   assets?: AssetForm[];
   houses?: HouseEntry[];
+  transferDate?: string;
   marriageDate?: string;
   parentalCareMergeDate?: string;
   isFirstTransferredInMerge?: boolean;
@@ -29,7 +31,9 @@ export function mergeRentalState(form: {
   if (!!form.marriageDate === !!form.parentalCareMergeDate) return undefined;
   const mergeDate = toOptionalDate(form.marriageDate || form.parentalCareMergeDate);
   if (!mergeDate) return undefined;
-  const others = (form.houses ?? []).map((h) => ({
+  // 「그 밖의 1주택」은 양도일 현재 보유한 명부 행이다 — ④가 엔진에 싣는 것과 같은 술어(당일·이후 취득·「먼저 양도」 행 제외).
+  //   원시 명부로 세면 그런 행이 하나 섞일 때 화면은 2채로 보아 문항을 숨기고, 엔진은 성립하는 구조를 미답으로 과세했다(2026-11 리뷰 D-09).
+  const others = housesOwnedAtTransfer(form.houses, form.transferDate, asset.assetKind).map((h) => ({
     id: h.id,
     acquisitionDate: toOptionalDate(h.acquisitionDate) ?? new Date(NaN),
     isLongTermRental: h.isLongTermRental === true,

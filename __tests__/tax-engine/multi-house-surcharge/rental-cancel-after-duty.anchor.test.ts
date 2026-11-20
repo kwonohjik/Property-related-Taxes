@@ -155,7 +155,7 @@ describe("⑫⑭ · ④ 배관", () => {
       rentalCancelledDate: "2021-03-01",
       rentalCancellationReason: "after_duty",
     });
-    expect(mapHousesToEngine([parsed])![0].rentalCancellationReason).toBe("after_duty");
+    expect(mapHousesToEngine([parsed], undefined)![0].rentalCancellationReason).toBe("after_duty");
     expect(
       buildSellingRentalPayload({ isLongTermRental: true, rentalCancelledDate: "2021-03-01", rentalCancellationReason: "after_duty" }),
     ).toMatchObject({ rentalCancellationReason: "after_duty" });

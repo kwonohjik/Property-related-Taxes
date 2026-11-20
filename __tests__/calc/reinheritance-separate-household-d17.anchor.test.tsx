@@ -94,7 +94,7 @@ describe("P-1 ④ · R-1 ⑭", () => {
   });
   it("⑭ route 매핑이 엔진으로 넘긴다", () => {
     const [h] = buildOtherHousesPayload([row({ reInheritedFromSeparateHousehold: true })]) as never[];
-    expect(mapHousesToEngine([h])?.[0]).toMatchObject({ reInheritedFromSeparateHousehold: true });
+    expect(mapHousesToEngine([h], undefined)?.[0]).toMatchObject({ reInheritedFromSeparateHousehold: true });
   });
 });
 

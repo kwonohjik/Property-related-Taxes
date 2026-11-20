@@ -32,6 +32,8 @@ import { translateRedevAptForHousingJudgment } from "./redev-apt-judgment-input"
 export const MERGE_RENTAL_CARVEOUT_RULING = "기준-2024-법규재산-0061";
 /** 판정 메뉴 확인 사항 id */
 export const MERGE_RENTAL_CARVEOUT_NOTICE_ID = "155-20-merge-rental-carveout";
+/** 입력이 없어 이 경로를 열지 못했는데 결론을 가르는 경우(`mergeRentalCarveoutMissingNotice`) — 판정 메뉴 확인 사항 id(2026-11 리뷰 D-10). */
+export const MERGE_RENTAL_CARVEOUT_MISSING_ID = "155-20-merge-rental-carveout-missing";
 
 type RosterRow = { id: string; acquisitionDate: Date; isLongTermRental: boolean; mergeOrigin?: "seller_side" | "counterpart_side" };
 
