@@ -88,6 +88,7 @@ import {
   RURAL_FARM_FACTS_UNCONFIRMED_ID,
 } from "./rural-return-to-farm-facts";
 import { qualifiesRuralHouseApartFromDeadline } from "../transfer-tax-exemption-holding";
+import { nonResidentThreeYearReadingsDiverge } from "./non-resident-holding";
 import { POP_DECLINE_71_2_UNCONFIRMED_ID, popDeclineUnconfirmedNotice } from "../transfer-reductions/population-decline-71-2";
 import { NEW_HOUSE_ORIGIN_UNCOLLECTED_ID, NEW_HOUSE_ORIGIN_UNCONFIRMED_ID, NEW_HOUSE_PRESALE_HOLDING_ID } from "./new-house-origin";
 
@@ -109,6 +110,9 @@ export {
 
 /** §154⑤ 단서 재기산 이력 미답 — 비과세로 판정된 1주택 양도에만 내는 보류다(아래 `settled`). */
 /** D17 재상속 기준일 고지 — 비과세 전제(`revoke-exemption.ts` 회수 목록 · D-69). */
+/** I-31 — §154⑧2호 「3년」 기산 확인 필요 */
+export const NON_RESIDENT_THREE_YEAR_COUNT_ID = "154-8-2-holding-count-start-unverified";
+
 export const REINHERITANCE_REFERENCE_DATE_ID = "155-2-reinheritance-reference-date-unverified";
 /** 2010.2.18. 전 동거봉양 예외 고지 — 비과세 전제(D-69). */
 export const PRE2010_PARENTAL_CARE_EXCEPTION_ID = "155-2-pre2010-parental-care-exception-unverified";
@@ -179,6 +183,8 @@ export interface EraNoticeRelevance {
    * §155① 축 고지(⑯ 통합특별시·군위 · J-3 짝 1년 면제) — 일시적 2주택 입력 두 갈래로 본체를 판정한 결론(비과세·부분과세)이 다른가
    * (2026-11 리뷰 D-68 — 타이밍 술어만 비교하면 다른 사유로 과세가 정해진 판정에도 「결론이 달라집니다」를 냈다). 본체(`core`)만 쓴다(D-01).
    */
+  /** I-31 — ⑧2호 「3년」을 비거주 기간만으로 센 반사실(통산 불성립)의 본체 판정 결론이 다른가 */
+  nonResidentThreeYearReadingDecides?: () => boolean;
   temporaryTwoHouseVariantsDecide?: (
     a: NonNullable<OneHouseJudgeInput["temporaryTwoHouse"]>,
     b: NonNullable<OneHouseJudgeInput["temporaryTwoHouse"]>,
@@ -432,6 +438,20 @@ export function collectEraUndetermined(
    * 양도일 직전이 공휴일 표 밖의 해(또는 예정 공휴일 해)면 토·일요일만 반영했거나 임시공휴일을 빼고 계산했다. 그 한계가 판정을 바꾸는 것은
    * 선언한 기한 중 하나의 말일이 양도일 직전 최장 연휴 일수 안에 있을 때뿐이다 — 아래 고지가 그때만 낸다(#32).
    */
+  /*
+   * I-31 · 결정 Q-23 — §154⑧2호 「3년 이상 계속 보유」는 취득일부터 센다(현행). 비거주 기간만으로 세면 3년이 안 되는 입력에서 그 독법이
+   * 결론을 가를 때만 확인 필요를 낸다(부동산납세과-678·-126·서면4팀-1424는 일반 원칙만 답했고 ⑧2호 정면 해석은 없다).
+   */
+  if (nonResidentThreeYearReadingsDiverge(input) && (relevance?.nonResidentThreeYearReadingDecides?.() ?? true)) {
+    out.push({
+      id: NON_RESIDENT_THREE_YEAR_COUNT_ID,
+      reason:
+        `비거주자였던 기간도 보유기간에 통산했습니다(${TRANSFER.NON_RESIDENT_CONVERSION_154_8_2} — 그 주택에서 거주한 상태로 거주자가 된 경우). ` +
+        "이 호의 「3년 이상 계속 보유」를 취득일부터 세어 판정했는데, 비거주자로 보유한 기간만으로 3년을 세면 통산하지 않아 결론이 달라집니다 — " +
+        "정면 해석을 확인하지 못해 확인이 필요합니다.",
+    });
+  }
+
   /*
    * D17 — 재상속(별도세대에서 받은 상속주택을 동일세대원이 다시 상속)으로 §155② 단서를 통과한 행이 있으면, 일반주택
    * 「상속개시 당시 보유」 괄호를 재상속일로 판정했다는 것을 밝힌다(최초 상속일 기준인지 정면 해석은 확보되지 않았다 —

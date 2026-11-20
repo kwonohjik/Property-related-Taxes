@@ -20,6 +20,8 @@
 import { TRANSFER } from "../legal-codes/transfer";
 import { NON_RESIDENT_HOUSE_EXCLUSION_TRANSFER_START } from "../data/non-resident-exclusion-era";
 import { resolveExemptionProviso } from "../transfer-tax-exemption-holding";
+import { PROVISO_LABEL } from "../transfer-tax-exemption-requirements";
+import { provisoLegalBasis } from "./decisive-proviso";
 import { deriveLegalBasis } from "./legal-basis";
 import { revokeOneHouseExemption } from "./revoke-exemption";
 import type { TransferTaxInput } from "../types/transfer.types";
@@ -71,7 +73,17 @@ export function applyNonResidentVerdict(
   }
   // §154①2호 나·다목 요건을 충족한 비거주자는 §121② 단서의 제외 대상이다 — 본체 판정을 그대로 둔다.
   const reason = input.oneHouseExemptionProviso?.reason;
-  if (reason && OVERSEAS_REASONS.has(reason) && resolveExemptionProviso(input) === "both") return judgment;
+  if (reason && OVERSEAS_REASONS.has(reason) && resolveExemptionProviso(input) === "both") {
+    // 2026-11 리뷰 D-20 — E-4는 §154① 결론을 바꾼 단서만 근거로 적는다. 여기서는 그 단서가 비거주자 배제의 예외(§121② 단서)로 결론을 갈랐으므로
+    //   비과세면 단서 행을 근거로 싣는다(이미 있으면 그대로).
+    const id = `154-1-proviso:${reason}`;
+    if (!exempt || judgment.appliedExceptions.some((e) => e.id === id)) return judgment;
+    const appliedExceptions = [
+      ...judgment.appliedExceptions,
+      { id, label: `§154① 단서 ${PROVISO_LABEL[reason]}`, legalBasis: provisoLegalBasis(reason, input.transferDate) },
+    ];
+    return { ...judgment, appliedExceptions, legalBasis: deriveLegalBasis(appliedExceptions, judgment.pending) };
+  }
   /*
    * 2010.1.1. 이후 주택 양도 + 나·다목 예외 불성립 — §89①3호(와 §155 특례)가 **적용되지 않는다**(S02-6).
    * 본체가 과세여도 같다: 본체의 `pending`(「보유 2년 후 양도하면 비과세」 등 기한형 안내)은 거주자 기준 약속이라

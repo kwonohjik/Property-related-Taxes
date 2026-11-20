@@ -126,7 +126,7 @@ export function Step1({ form, onChange }: Props) {
                 checked={form.nonResidentResidedAtConversion}
                 onCheckedChange={(nonResidentResidedAtConversion) => onChange({ nonResidentResidedAtConversion })}
                 title="그 주택에 거주한 상태로 거주자가 됐습니다"
-                description="취득일부터 거주자가 된 날까지 3년 이상 보유했다면 비거주 기간도 통산합니다(시행령 §154⑧2호)."
+                description="취득일부터 거주자가 된 날까지 3년 이상 보유했다면 비거주 기간도 통산해 판정합니다(시행령 §154⑧2호). 「3년」을 비거주자로 보유한 기간만으로 세는지는 정면 해석이 없어, 결론이 갈리면 확인 필요로 알립니다."
                 tone="violet"
               />
             </div>

@@ -128,3 +128,31 @@ describe("D-68 J-3 짝 1년 고지 — 본체 결론이 갈릴 때만", () => {
     expect(ids(r)).not.toContain(NOTICE);
   });
 });
+
+describe("I-31 §154⑧2호 「3년」 기산 — 결론을 가를 때만 확인 필요", () => {
+  const NOTICE = "154-8-2-holding-count-start-unverified";
+  // 취득 2019-01-01 · 비거주 2019-11-01~2022-03-15(2.4년) · 그 주택에 거주한 채 거주자 전환 · 비조정 · 9억
+  const nr = (transfer: string, over: object = {}) =>
+    mkCase("2026-11-20", {
+      isOneHousehold: true, transferDate: transfer, contractTotalPrice: "900000000",
+      nonResidentPeriod: true, nonResidentStartDate: "2019-11-01", residentFromDate: "2022-03-15", nonResidentResidedAtConversion: true,
+      asset: { assetKind: "housing", acquisitionDate: "2019-01-01", residenceInputMode: "direct", residencePeriodMonthsAsset: "0" },
+      houses: [],
+      ...over,
+    });
+  const ids = (r: Awaited<ReturnType<typeof observeRaw>>) => (r.j?.undetermined ?? []).map((u: { id: string }) => u.id);
+  it("거주자 보유만으론 2년 미달(2022-09-01 양도) — 취득일 기산 통산으로 비과세 + 확인 필요", async () => {
+    const r = await observeRaw(nr("2022-09-01"));
+    expect(r.j.isExempt).toBe(true);
+    expect(ids(r)).toContain(NOTICE);
+  });
+  it("짝 — 거주자 보유만으로도 2년(2023-06-01 양도)이면 독법과 무관해 고지 없음", async () => {
+    const r = await observeRaw(nr("2023-06-01"));
+    expect(r.j.isExempt).toBe(true);
+    expect(ids(r)).not.toContain(NOTICE);
+  });
+  it("짝 — 비거주 기간 자체가 3년 이상이면 두 독법이 같아 고지 없음", async () => {
+    const r = await observeRaw(nr("2022-09-01", { nonResidentStartDate: "2019-02-01" }));
+    expect(ids(r)).not.toContain(NOTICE);
+  });
+});
