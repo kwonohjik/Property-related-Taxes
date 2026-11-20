@@ -199,7 +199,7 @@ describe("[NBL-CASES] buildNblEngineInput — 지목별 sub-object 엔진 도달
     expect(judgment.isNonBusinessLand).toBe(false);
   });
 
-  it("[④] 나대지(건물無) + 별도합산 선택 → 종합합산 override → 비사업용(override 정당)", () => {
+  it("[④] 나대지(건물無) + 별도합산 선택 + 근거 미선택 → 종합합산 + 확인 필요 → 비사업용(역버그 방지는 엔진 규칙 — NBL2611-V1-A로 «근거 미선택» 케이스로 재정의)", () => {
     // 동일 입력에서 hasBuilding만 false → 결과가 갈림(단일 필드 영향 증명)
     const input = buildNblEngineInput({
       nblUseDetailedJudgment: true,
@@ -213,6 +213,23 @@ describe("[NBL-CASES] buildNblEngineInput — 지목별 sub-object 엔진 도달
     } as never);
     const judgment = judgeNonBusinessLand(input!, DEFAULT_NON_BUSINESS_LAND_RULES);
     expect(judgment.isNonBusinessLand).toBe(true);
+    expect(judgment.warnings.some((w) => w.includes("재산세 분류") && w.includes("확인 필요"))).toBe(true);
+  });
+
+  it("[④-V1-A] 나대지(건물無) + 별도합산 선택 + 근거(공지상태) 선택 → 선언 존중 → 사업용 (매퍼 결선: nblOtherPropertyTaxBasis → propertyTaxBasis)", () => {
+    const input = buildNblEngineInput({
+      nblUseDetailedJudgment: true,
+      nblLandType: "other_land",
+      nblZoneType: "general_residential",
+      acquisitionArea: "500",
+      acquisitionDate: "2010-01-01",
+      transferDate: "2024-01-01",
+      nblOtherPropertyTaxType: "separate",
+      nblOtherHasBuilding: false,
+      nblOtherPropertyTaxBasis: "vacant_state",
+    } as never);
+    const judgment = judgeNonBusinessLand(input!, DEFAULT_NON_BUSINESS_LAND_RULES);
+    expect(judgment.isNonBusinessLand).toBe(false);
   });
 
   it("E2 ownershipRatio<1 — ownerProfile.ownershipRatio 도달 (매퍼 결선)", () => {

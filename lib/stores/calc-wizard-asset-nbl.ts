@@ -700,6 +700,8 @@ export const NBL_DEFAULTS = {
   nblVillaIsAfter20150101: false,
   nblVillaNoUseConfirmed: false,
   nblOtherPropertyTaxType: "",
+  nblOtherPropertyTaxBasis: "",
+  nblOtherDemolishedFloorArea: "",
   nblOtherBuildingValue: "",
   nblOtherLandValue: "",
   nblOtherIsRelatedToResidence: false,

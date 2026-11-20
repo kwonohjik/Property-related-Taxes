@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NBL_PROPERTY_TAX_TYPE_VALUES, NBL_RELATED_BUSINESS_TYPE_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
+import { PROPERTY_TAX_BASIS_VALUES } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { refineNonBusinessLandRaw } from "./transfer-tax-schema-nbl-refines";
 
 // ─── NBL 정밀판정 raw 페이로드 (⑫) — store nbl* 평면 1:1 ──────────
@@ -156,6 +157,9 @@ export const nonBusinessLandRawBaseSchema = z.object({
   // 기타토지
   // NBL2611-V6-D — 자유 문자열이던 분류·호를 엔진 union과 같은 목록으로(미지원 값이 `!== "comprehensive"`로 사업용 쪽에 읽히던 침묵 과소 차단). ""는 비선택(⑧이 막는다).
   nblOtherPropertyTaxType: z.enum(NBL_PROPERTY_TAX_TYPE_VALUES).or(z.literal("")).optional(),
+  // NBL2611-V1-A (Q-1) — 재산세 분류 «근거». 미선택("")을 막지 않는다(엔진이 종합합산 + 확인 필요로 접는다). 철거ㆍ멸실 근거의 바닥면적은 ⑫ refine이 요구한다.
+  nblOtherPropertyTaxBasis: z.enum(PROPERTY_TAX_BASIS_VALUES).or(z.literal("")).optional(),
+  nblOtherDemolishedFloorArea: z.string().optional(),
   nblOtherBuildingValue: z.string().optional(),
   nblOtherLandValue: z.string().optional(),
   nblOtherIsRelatedToResidence: z.boolean().optional(),
