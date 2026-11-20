@@ -21,6 +21,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { qualifiesRuralHouse } from "@/lib/tax-engine/transfer-tax-exemption-holding";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { deriveOneHouseFactsFromHouses, findRuralHouseRow } from "./one-house-row-facts";
+import { findCulturalHeritageRow } from "./one-house-row-facts";
 import { resolveInheritedHouseExclusionFromInput } from "@/lib/tax-engine/transfer-inheritance-exclusion";
 import { resolvePopulationDecline71_2 } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
 import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.types";
@@ -215,9 +216,21 @@ export function rentalResidenceCandidateHouseIds(form: CandidateFormLike): Reado
   return ids;
 }
 
-/** §155① 신규 주택 후보에서 뺄 행 — 주택 수 제외 행 ∪ ⑦ 농어촌주택. `resolveTemporaryTwoHouse`의 `excludedHouseIds`. */
+/**
+ * §155⑥1호 문화유산 주택으로 선언한 명부 행 id(D-02). ⑥은 선언 하나가 요건이라(2·3호 삭제) 그 행은 §155① 신규 주택 후보가 아니다 —
+ * 일반주택보다 나중에 취득한 문화유산 행이 후보에 남으면 신규 주택이 2채로 잡혀 `temporaryTwoHouse` 자체가 도출되지 않았다
+ * (상속증여세과-212의 겹침이 그 순서에서 과세로 남음). ⑦ 농어촌 행과 같은 형제 패턴이다.
+ */
+export function heritageCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
+  const owned = housesOwnedAtTransfer(form.houses, form.transferDate, form.assets?.[0]?.assetKind);
+  const row = findCulturalHeritageRow(owned, exemptionCountExcludedHouseIds(form));
+  return row?.id ? new Set([row.id]) : new Set();
+}
+
+/** §155① 신규 주택 후보에서 뺄 행 — 주택 수 제외 행 ∪ ⑦ 농어촌주택 ∪ ⑥ 문화유산 주택. `resolveTemporaryTwoHouse`의 `excludedHouseIds`. */
 export function temporaryTwoHouseCandidateExcludedIds(form: CandidateFormLike): ReadonlySet<string> {
   const ids = new Set(exemptionCountExcludedHouseIds(form));
   for (const id of ruralCountExcludedHouseIds(form)) ids.add(id);
+  for (const id of heritageCountExcludedHouseIds(form)) ids.add(id);
   return ids;
 }

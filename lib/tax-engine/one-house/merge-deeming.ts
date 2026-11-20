@@ -41,7 +41,7 @@ import {
   type ResidenceReqInput,
   resolveExemptionProviso,
   qualifiesRuralHouse,
-  ruralTemporaryTwoHouseOverlapCountHolds,
+  specialHouseTemporaryTwoHouseOverlapCountHolds,
   twoHouseSpecialCountHolds,
 } from "../transfer-tax-exemption-holding";
 
@@ -200,7 +200,7 @@ export function resolveDeemedOneHouseBy155(
   //   (3주택 세대의 명부가 중과 불산입 주택을 「신규 주택」으로 도출해 15호가 새던 결함 · 부동산납세과-1179).
   //   D3 — ⑦ 농어촌주택이 겹친 3주택도 비과세 E-3과 같은 게이트로 본다.
   if (
-    (twoHouseSpecialCountHolds(input) || ruralTemporaryTwoHouseOverlapCountHolds(input)) &&
+    (twoHouseSpecialCountHolds(input) || specialHouseTemporaryTwoHouseOverlapCountHolds(input)) &&
     input.temporaryTwoHouse &&
     twoHouseRule &&
     evaluateTemporaryTwoHouseTiming(input, twoHouseRule).timing.overall
