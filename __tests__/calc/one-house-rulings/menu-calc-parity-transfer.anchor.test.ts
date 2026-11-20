@@ -18,8 +18,8 @@
  * 변형 「양도 주택 2호 ON」(D-46 재발 방지)
  * - 판정 메뉴와 중과 메뉴는 같은 store를 쓴다. 중과 메뉴에서 양도 주택 자신의 §167의3①2호(장기임대) 선언을 켜면
  *   그 선언이 핸드오프로 계산기에 실린다. 1주택 메뉴 ④는 싣지 않는다. 같은 사실관계이므로 결론이 같아야 한다.
- * - 지금은 D-46(⑳ 명부 장기임대 행 술어가 양도 행을 거르지 않음) 때문에 갈린다. 갈리는 케이스를 `D46_KNOWN_DIVERGENT`에
- *   고정한다 — PR-18이 고치면 이 목록을 비워야 통과하고, 새 갈림이 생겨도 실패한다.
+ * - D-46(⑳ 명부 장기임대 행 술어가 양도 행을 거르지 않음) 때문에 갈리던 5건은 PR-18이 고쳤다. `D46_KNOWN_DIVERGENT`는 비어 있고,
+ *   새 갈림이 생기면 실패한다.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@/lib/db/tax-rates", async (importOriginal) => {
@@ -58,8 +58,11 @@ const cases: RulingCase[] = fs
 /** 중립값을 채워도 계산기가 400인 케이스 수의 상한(리뷰 실측: 인가일 미입력 입주권 6 · 이월과세 증여 평가액 7). */
 const MAX_UNCOMPARABLE = 13;
 
-/** D-46 — 「양도 주택 2호 ON」 변형에서 지금 결론이 갈리는 케이스. PR-18이 고치면 비운다. */
-const D46_KNOWN_DIVERGENT: string[] = ["E132-current", "E132-era", "E193-current", "E193-era", "E194-era"];
+/**
+ * D-46 — 「양도 주택 2호 ON」 변형에서 결론이 갈리는 케이스. PR-0 때 5건(E132×2·E193×2·E194-era)을 고정했고
+ * PR-18(⑳ 축 다섯 소비처가 `rosterRentalRows` — 양도 행 제외 — 를 공유)이 0건으로 만들었다. 새 갈림이 생기면 실패한다.
+ */
+const D46_KNOWN_DIVERGENT: string[] = [];
 
 /** 판정 메뉴 전용 사실이 기본값에서 벗어났는가 — 핸드오프가 넘기지 않는 키(`toTransferFormPatch` extras와 같은 원천). */
 function menuOnlyFactsPresent(form: OneHouseJudgmentFormData): boolean {

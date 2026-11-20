@@ -36,6 +36,7 @@
 import { format } from "../utc-date";
 import { isRegulatedByBjdCode } from "../data/regulated-areas";
 import { TRANSFER } from "../legal-codes";
+import { ARTICLE_89_2_GENERAL_EXCLUSION_LABEL } from "../transfer-tax-89-2-right-timing-core";
 import { judgeTemporaryTwoHouseTiming } from "../transfer-tax-temporary-two-house-timing";
 import { meetsPublicInstitutionRelocationRegion } from "../transfer-tax-temporary-two-house-timing";
 import { resolveRegulatedAtNewAcquisition } from "../transfer-tax-temporary-two-house-timing";
@@ -69,8 +70,10 @@ type OriginalMemberInput = Pick<
 
 type TimingOutcome =
   | { kind: "met"; deadline: Date }
-  | { kind: "unmet" }
+  | { kind: "unmet"; reasons: string[] }
   | { kind: "unknown"; reason: string };
+
+const fmtD = (d: Date) => `${d.getUTCFullYear()}.${d.getUTCMonth() + 1}.${d.getUTCDate()}.`;
 
 function regulatedAt(code: string | undefined, inDistrict: boolean | undefined, date: Date): boolean | undefined {
   if (!code) return undefined;
@@ -108,11 +111,37 @@ function asTemporaryTwoHouse(
   };
 }
 
+/** §155① 타이밍 불충족의 사유 — 일시적 2주택 경로와 같은 판정 결과(`judgeTemporaryTwoHouseTiming`)에서 읽는다. */
+function timingUnmetReasons(
+  t: { acquiredInOrder: boolean; oneYearMet: boolean; threeYearMet: boolean; deadline: Date; moveInMet?: boolean },
+  years: number,
+): string[] {
+  const out: string[] = [];
+  if (t.acquiredInOrder && !t.oneYearMet) {
+    out.push("양도 주택을 취득한 날부터 1년이 지나기 전에 입주권의 기존주택을 취득해 §155① 일시적 2주택(1년 요건)에 해당하지 않습니다.");
+  }
+  if (!t.threeYearMet) {
+    out.push(`기존주택 취득일부터 ${years}년의 처분기한(${fmtD(t.deadline)}까지)을 넘겨 양도해 §155① 일시적 2주택에 해당하지 않습니다.`);
+  }
+  if (t.moveInMet === false) {
+    out.push("기존주택 취득일부터 1년 안에 세대전원이 이사·전입하지 않아(§155①2호 가목) 일시적 2주택에 해당하지 않습니다.");
+  }
+  return out.length > 0 ? out : ["§155① 일시적 2주택 요건을 갖추지 못했습니다."];
+}
+
 /** 기존주택(B) 취득일 기준 §155① 타이밍(1년·처분기한·연혁상 전입 요건). */
 function judgeTiming(input: OriginalMemberInput, right: PresaleRight, oneYearWaived: boolean): TimingOutcome {
   const newAcq = right.acquisitionDate;
   // 양도 주택이 B보다 뒤에 취득됐으면 양도 주택이 「신규 주택」이다 — §155①은 종전 주택 양도만 받는다.
-  if (input.acquisitionDate.getTime() >= newAcq.getTime()) return { kind: "unmet" };
+  if (input.acquisitionDate.getTime() >= newAcq.getTime()) {
+    return {
+      kind: "unmet",
+      reasons: [
+        `입주권의 기존주택(${fmtD(newAcq)} 취득)보다 양도 주택(${fmtD(input.acquisitionDate)} 취득)을 나중에(또는 같은 날) 취득했습니다 — ` +
+          "§155① 일시적 2주택은 먼저 취득한 종전 주택을 양도하는 경우만 받습니다.",
+      ],
+    };
+  }
 
   const tt = asTemporaryTwoHouse(input, right);
   // `isRegulatedArea`는 `temporaryTwoHouse`가 없을 때의 대리 지표라 두 정본 함수가 여기서는 읽지 않는다.
@@ -161,10 +190,10 @@ function judgeTiming(input: OriginalMemberInput, right: PresaleRight, oneYearWai
             "분양권·입주권 목록의 그 입주권 행에 기존주택 전입일을 입력하세요",
         };
       }
-      return unmet.overall ? { kind: "met", deadline: unmet.deadline } : { kind: "unmet" };
+      return unmet.overall ? { kind: "met", deadline: unmet.deadline } : { kind: "unmet", reasons: timingUnmetReasons(unmet, era.years) };
     }
     const timing = timingOf(era.moveInMet);
-    return timing.overall ? { kind: "met", deadline: timing.deadline } : { kind: "unmet" };
+    return timing.overall ? { kind: "met", deadline: timing.deadline } : { kind: "unmet", reasons: timingUnmetReasons(timing, era.years) };
   });
 
   // 두 경우 모두 충족이면 결론은 같다 — 안내할 기한은 이른 쪽이다.
@@ -172,7 +201,9 @@ function judgeTiming(input: OriginalMemberInput, right: PresaleRight, oneYearWai
   if (met.length === outcomes.length) {
     return { kind: "met", deadline: new Date(Math.min(...met.map((o) => o.deadline.getTime()))) };
   }
-  if (outcomes.every((o) => o.kind === "unmet")) return { kind: "unmet" };
+  if (outcomes.every((o) => o.kind === "unmet")) {
+    return { kind: "unmet", reasons: [...new Set(outcomes.flatMap((o) => (o.kind === "unmet" ? o.reasons : [])))] };
+  }
   const pending = outcomes.find((o) => o.kind === "unknown");
   return {
     kind: "unknown",
@@ -199,7 +230,15 @@ function asOriginalMember(
   if (t.kind === "met") {
     return { status: "exception_met", exception: TRANSFER.ORIGINAL_MEMBER_RIGHT_TEMP_TWO_HOUSE, deadline: t.deadline };
   }
-  if (t.kind === "unmet") return { status: "excluded" };
+  if (t.kind === "unmet") {
+    // D-21 — 확정 불성립 사유를 남긴다(종전: 사유 없이 배제 → 판정 메뉴·계산기 모두 「과세」만 보였다).
+    return {
+      status: "excluded",
+      exclusionLabel: ARTICLE_89_2_GENERAL_EXCLUSION_LABEL,
+      exclusionBasis: TRANSFER.ORIGINAL_MEMBER_RIGHT_TEMP_TWO_HOUSE,
+      exclusionReasons: t.reasons,
+    };
+  }
   return { status: "excluded", confirmNotes: [`원조합원 입주권의 §155① 일시적 2주택 판정 — ${t.reason}(확인 필요).`] };
 }
 

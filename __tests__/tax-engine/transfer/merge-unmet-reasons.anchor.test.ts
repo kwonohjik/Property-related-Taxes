@@ -353,7 +353,9 @@ describe("UM — §155④⑤ 합가 불성립 사유", () => {
     const r = judgeOneHouseExemptionFromInput(input, RULES, new Date("2021-01-01"));
     expect(r.article89Clause2?.status).toBe("excluded");
     expect(r.isExempt).toBe(false);
-    expect(r.unmetExceptions).toEqual([]);
+    // 합가 사유는 0건이다. 남는 것은 결론을 뒤집은 §89② 자신의 배제 사유 한 장뿐이다
+    //   (2026-11 D-47 — 확정 배제는 사유를 남긴다: 선언한 3년 경과 예외가 요건 불충족).
+    expect(r.unmetExceptions.map((u) => u.id)).toEqual(["89-2-exclusion-unmet"]);
   });
 
   /**
