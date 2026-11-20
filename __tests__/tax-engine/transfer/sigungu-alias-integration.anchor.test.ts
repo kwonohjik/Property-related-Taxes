@@ -65,13 +65,13 @@ describe("D-1 — 광주 조정대상지역 (지정 2020-12-18 ~ 해제 2022-09-
 describe("D-2 — 전남 인구감소지역 세컨드홈 (§167의3①12 다목)", () => {
   it("🔴 구·신 코드 모두 인구감소지역으로 분류된다", () => {
     for (const code of ["4689010100", "1285010100"]) {
-      expect(classifyPopulationDeclineArea(code).kind, code).toBe("decline");
+      expect(classifyPopulationDeclineArea(code, undefined).kind, code).toBe("decline");
     }
   });
 
   it("인구감소지역이 아닌 곳은 그대로 null (무차별 매칭 아님)", () => {
-    expect(classifyPopulationDeclineArea("1168010100").kind).toBeNull(); // 서울 강남구
-    expect(classifyPopulationDeclineArea("1221010100").kind).toBeNull(); // 광주(통합) 동구
+    expect(classifyPopulationDeclineArea("1168010100", undefined).kind).toBeNull(); // 서울 강남구
+    expect(classifyPopulationDeclineArea("1221010100", undefined).kind).toBeNull(); // 광주(통합) 동구
   });
 
   it("🔴 세액 — 세컨드홈이 주택 수에서 빠져 중과가 풀린다", () => {

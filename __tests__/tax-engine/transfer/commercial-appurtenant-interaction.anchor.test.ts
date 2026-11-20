@@ -22,6 +22,7 @@ import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
+import { CB_PART_BASIS_LAND_ONLY } from "../_helpers/cb-part-basis";
 
 const rates = makeMockRates();
 
@@ -30,6 +31,8 @@ const APPURTENANT = {
   totalLandArea: 1200,
   totalBuildingFootprintArea: 200,
   zoneType: "commercial",
+  // NBL2611-V5-BX01 — 토지 100%(건물분 0): swap·수용 축과의 독립성만 보는 파일이라 결함 수정 전과 같은 세액을 유지한다.
+  partBasis: CB_PART_BASIS_LAND_ONLY,
 };
 
 /**

@@ -11,10 +11,13 @@ import { commercialAppurtenantLandSchema } from "@/lib/api/transfer-tax-building
 import { propertySchema as transferTaxRequestSchema } from "@/lib/api/transfer-tax-schema";
 import { buildTransferEngineInput } from "@/app/api/calc/transfer/engine-input";
 
+// 상업지역 3배 · 대지 1,200㎡ · 바닥 200㎡ → 기준면적 600㎡ · 초과 600㎡ — 초과분이 있어 토지·건물 구분 기준시가(partBasis)가 필수다(NBL2611-V5-BX01).
+const PART_BASIS = { acquisitionLandStd: 360_000_000, acquisitionBuildingStd: 240_000_000, transferLandStd: 720_000_000, transferBuildingStd: 480_000_000 };
 const CAL = {
   totalLandArea: 1200,
   totalBuildingFootprintArea: 200,
   zoneType: "commercial",
+  partBasis: PART_BASIS,
 };
 
 /** 최소 유효 요청 본문 — 상업용건물 실거래가 양도. */
@@ -70,6 +73,7 @@ describe("W-2 (⑩) — refine: 배율을 결정할 수 없는 입력은 API에�
       totalLandArea: 1200,
       totalBuildingFootprintArea: 200,
       unapprovedBuilding: true,
+      partBasis: PART_BASIS,
     });
     expect(r.success).toBe(true);
   });
@@ -81,6 +85,36 @@ describe("W-2 (⑩) — refine: 배율을 결정할 수 없는 입력은 API에�
     expect(
       commercialAppurtenantLandSchema.safeParse({ ...CAL, totalBuildingFootprintArea: -1 }).success,
     ).toBe(false);
+  });
+});
+
+describe("W-2b (⑫) — 초과분이 있으면 토지·건물 구분 기준시가가 필수다 (NBL2611-V5-BX01 · 자동 안분 fallback 금지)", () => {
+  const { partBasis: _omit, ...withoutBasis } = CAL;
+  void _omit;
+  it("초과분이 있는데 partBasis가 없으면 거부한다", () => {
+    const r = commercialAppurtenantLandSchema.safeParse(withoutBasis);
+    expect(r.success).toBe(false);
+    expect(r.error?.issues.some((i) => i.path.includes("partBasis"))).toBe(true);
+  });
+
+  it("§101① 단서(전량 비사업용)도 partBasis가 필수다", () => {
+    const r = commercialAppurtenantLandSchema.safeParse({ totalLandArea: 1200, totalBuildingFootprintArea: 200, unapprovedBuilding: true });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues.some((i) => i.path.includes("partBasis"))).toBe(true);
+  });
+
+  it("초과분이 없으면 partBasis 없이 통과한다 (녹지 7배 → 기준면적 1,400㎡ ≥ 대지)", () => {
+    expect(commercialAppurtenantLandSchema.safeParse({ ...withoutBasis, zoneType: "green" }).success).toBe(true);
+  });
+
+  it("취득 당시·양도 당시 각각 토지·건물 합이 0이면 거부한다", () => {
+    expect(commercialAppurtenantLandSchema.safeParse({ ...CAL, partBasis: { ...PART_BASIS, acquisitionLandStd: 0, acquisitionBuildingStd: 0 } }).success).toBe(false);
+    expect(commercialAppurtenantLandSchema.safeParse({ ...CAL, partBasis: { ...PART_BASIS, transferLandStd: 0, transferBuildingStd: 0 } }).success).toBe(false);
+  });
+
+  it("partBasis가 침묵 strip되지 않는다", () => {
+    const r = commercialAppurtenantLandSchema.safeParse(CAL);
+    expect(r.success && r.data.partBasis).toEqual(PART_BASIS);
   });
 });
 

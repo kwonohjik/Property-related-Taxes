@@ -62,7 +62,6 @@ export { classifyRateGroup };
 
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { ratesForTransferDate, type RatesByTransferDate } from "./transfer-tax-item-rates";
-import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
 import { separateLandCardReductionNotice } from "./transfer-reductions/new-housing-appurtenant-land-2x";
 import { incomeDeductionReducibleOf, incomeDeductionSourceIdOf, housingTaxReductionIdOf } from "./transfer-tax-aggregate-pickers";
 import { landOnlyRateInput } from "./land-only-owner-household";
@@ -193,30 +192,18 @@ export function buildAssetRecords(
      * (실측 그룹세액 −14,403,750원 → §104⑤ 1호 바닥 완충 후 최종 **11,683,750원 과소**).
      * clause8 echo도 0이 되어 §104⑤ 8호 크로스 조정이 함께 소실됐다.
      *
-     * ⇒ 단건 엔진과 **같은 leaf**(`judgeAppurtenantLandExcess`)로 재판정한다. 값을 새로 배관하는
-     *    대신 같은 함수를 부르므로 dual truth가 생기지 않는다(구분소유 지분율은 판정식에서 약분된다).
+     * ⇒ 단건 엔진이 낸 **echo**(`result.commercialNblPart.injected`)를 그대로 쓴다. 재판정하면 dual truth가 된다 — 2026-11 이후 비율은
+     *    면적 비율이 아니라 «토지분 양도차익 × 초과 비율 ÷ 자산 양도차익»(NBL2611-V5-BX01)이라 양도가액·취득가액·경비가 필요하고,
+     *    그 값을 만든 곳은 단건 엔진뿐이다.
      */
-    const cal = item.commercialAppurtenantLand;
-    const calExcess =
-      !nblJudgment && item.propertyType === "commercial_building" && cal
-        ? judgeAppurtenantLandExcess({
-            landArea: cal.totalLandArea,
-            buildingFootprintArea: cal.totalBuildingFootprintArea,
-            zoneType: cal.zoneType,
-            unapprovedBuilding: cal.unapprovedBuilding,
-            context: "상업용건물",
-          })
-        : undefined;
+    const cbNblPart = result.commercialNblPart;
     const nblOverride = nblJudgment
       ? {
           isNonBusinessLand: nblJudgment.isNonBusinessLand,
           nonBusinessLandAreaRatio: nblJudgment.surcharge.nonBusinessAreaRatio,
         }
-      : calExcess && calExcess.nonBusinessArea > 0
-        ? {
-            isNonBusinessLand: true,
-            nonBusinessLandAreaRatio: calExcess.nonBusinessRatio,
-          }
+      : cbNblPart
+        ? { ...cbNblPart.injected }
         : undefined;
     /**
      * 배우자등 이월과세(§97의2) — **채택된 시나리오의 §104② 기산 사실**로 item을 교정.

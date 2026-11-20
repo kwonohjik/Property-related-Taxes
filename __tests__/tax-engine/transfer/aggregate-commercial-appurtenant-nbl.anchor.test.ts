@@ -16,6 +16,7 @@ import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-agg
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
+import { CB_PART_BASIS_LAND_ONLY } from "../_helpers/cb-part-basis";
 
 const d = (s: string) => new Date(s);
 
@@ -36,6 +37,7 @@ function commercialWithExcessLand(id = "CB1"): TransferTaxInput {
       totalLandArea: 4_000,
       totalBuildingFootprintArea: 200,
       zoneType: "general_residential",
+      partBasis: CB_PART_BASIS_LAND_ONLY, // 토지 100%(건물분 0) — 결함 수정 전과 같은 세액. 건물분이 섞인 정답은 commercial-nbl-land-part.anchor
     },
   } as Partial<TransferTaxInput>);
 }

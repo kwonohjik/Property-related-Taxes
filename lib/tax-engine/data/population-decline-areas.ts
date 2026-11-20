@@ -1,6 +1,12 @@
 /**
  * 인구감소지역·인구감소관심지역 시군구코드 상수 및 자동 판정 함수.
- * 행안부 고시(지방자치분권 및 지역균형발전에 관한 특별법 §2 12호·12호의2) — 인구감소지역 89곳·관심지역 18곳.
+ * 행안부 고시(지방자치분권 및 지역균형발전에 관한 특별법 §2 12호·12호의2).
+ *
+ * ⏱️ 지정은 고시마다 바뀐다 — 판정은 **기준일**(호출부가 넘기는 취득일, 「취득 당시」 요건)로 한다(2026-11 리뷰 D-43·D-44).
+ *    - 아래 두 집합: 고시 제2025-78호(2026.1.1. 시행) 기준 — 인구감소지역 89곳·관심지역 18곳.
+ *    - 고시 제2026-61호(2026.10.20. 시행, 제2025-78호 폐지)로 세법 대상이 바뀐 곳은 `REDESIGNATION_2026_10_20` 증감분이다.
+ *      부칙 제3조(「인구활력+지역」 — 기존 지정 유지)로 남은 곳은 바뀌지 않는다.
+ *    - 수도권 접경지역 편입일(`CAPITAL_BORDER_FROM`) 전에는 그 시·군이 수도권(접경지역 제외)이라 다목 대상이 아니다.
  * 소령 §167의3①12 다목(인구감소지역)·라목(인구감소관심지역) 세컨드홈 특례 적용.
  *
  * ⚠️ 코드 체계: house.regionCode = PNU 앞 10자리(법정동코드)와 동일(Vworld 실측 전수 검증).
@@ -147,21 +153,67 @@ export function toSigunguCode(regionCode?: string): string | null {
   return regionCode.substring(0, 5);
 }
 
+/** 행정안전부 고시 제2026-61호 시행일 — 부칙 제1조 「2026년 10월 20일부터 시행」. */
+export const POP_DECLINE_REDESIGNATION_2026_10_20 = new Date(Date.UTC(2026, 9, 20));
+
+/**
+ * 고시 제2026-61호로 세법 대상이 바뀐 시·군 — 그 전 지정(제2025-78호) 대비 증감.
+ * - 동두천시: 관심지역(수도권이라 라목 제외) → 인구감소지역(수도권 접경 — 다목, 4억)
+ * - 통영시: 관심지역(라목) → 인구감소지역(다목, 수도권 밖 9억)
+ * - 예천군·칠곡군: 관심지역 신규(라목, 4억)
+ * 금정구·부산 북구·인천 제물포구 등은 광역시 자치구라 세법 대상이 아니다(위 단서).
+ */
+const REDESIGNATION_2026_10_20 = {
+  declineAdded: new Set<string>(["41250" /* 동두천시 */, "48220" /* 통영시 */]),
+  interestAdded: new Set<string>(["47900" /* 예천군 */, "47850" /* 칠곡군 */]),
+  interestRemoved: new Set<string>(["48220" /* 통영시 — 인구감소지역으로 */]),
+};
+
+/**
+ * 수도권 접경지역 편입일 — 「접경지역 지원 특별법 시행령」 §2②1호(`TRANSFER.CAPITAL_BORDER_AREA_DECREE_2_2`).
+ * 가평군은 2025.3.11. 시행본(대통령령 제35372호)에서 들어왔다 — 그 전 시행본(2024.6.8.)은 「고양시, 양주시, 동두천시, 포천시」뿐이다.
+ * 편입 전에는 수도권(접경지역 제외) 소재라 다목(인구감소지역) 세법 대상이 아니다.
+ */
+export const CAPITAL_BORDER_FROM: Readonly<Record<string, Date>> = {
+  "41820": new Date(Date.UTC(2025, 2, 11)), // 가평군
+};
+
+/** 그 시·군의 수도권 접경지역 편입일 — 편입 연혁이 없는 곳은 `undefined`. */
+export function capitalBorderFromOf(regionCode: string | undefined): Date | undefined {
+  const sgg = toSigunguCode(regionCode);
+  return sgg ? CAPITAL_BORDER_FROM[sgg] : undefined;
+}
+
+const toTime = (asOf: Date | string) => (typeof asOf === "string" ? Date.parse(`${asOf.slice(0, 10)}T00:00:00Z`) : asOf.getTime());
+
 /**
  * 시군구코드로 인구감소지역/관심지역 종류를 자동 판정한다.
+ * @param asOf 판정 기준일 — 「취득 당시」 요건이므로 호출부는 **취득일**을 넘긴다. 문자열이면 `YYYY-MM-DD`.
+ *   기준일을 모르는 화면 표시 fallback만 `undefined`를 넘긴다 — 현행(가장 늦은) 지정으로 본다.
  * @returns `{ kind }` — "decline"(다목·수도권밖 9억/수도권접경 4억)·"interest"(라목·4억)·null(해당 없음).
  *   가액 한도는 호출부(count.ts popCap)가 kind + 수도권 여부로 결정(여기서 한도 반환 안 함).
  */
-export function classifyPopulationDeclineArea(regionCode: string): {
+export function classifyPopulationDeclineArea(
+  regionCode: string,
+  asOf: Date | string | undefined,
+): {
   kind: "decline" | "interest" | null;
 } {
   const sgg = toSigunguCode(regionCode);
   if (!sgg) return { kind: null };
+  const t = asOf === undefined ? Number.POSITIVE_INFINITY : toTime(asOf);
+  const borderFrom = CAPITAL_BORDER_FROM[sgg];
+  if (borderFrom && t < borderFrom.getTime()) return { kind: null };
+  const redesignated = t >= POP_DECLINE_REDESIGNATION_2026_10_20.getTime();
   // 위 두 집합은 **구 코드**(전남 46·광주 29)로 작성돼 있는데 주소검색 PNU는 현행(12)을 준다.
   //   행정구역 개편(전남·광주 통합, 시행 2026-07-01)으로 코드가 바뀌었을 뿐 지역 실체는 같으므로
   //   구·신 코드를 모두 훑는다. 집합을 신 코드로 치환하면 저장된 이력·수동 입력이 깨진다
   //   (계획서 sigungu-code-system-drift D-2 — 실측 +388,410,000 과다과세).
   if (hasAnySigunguAlias(POPULATION_DECLINE_AREA_CODES, sgg)) return { kind: "decline" };
-  if (hasAnySigunguAlias(POPULATION_INTEREST_AREA_CODES, sgg)) return { kind: "interest" };
+  if (redesignated && REDESIGNATION_2026_10_20.declineAdded.has(sgg)) return { kind: "decline" };
+  if (redesignated && REDESIGNATION_2026_10_20.interestAdded.has(sgg)) return { kind: "interest" };
+  if (hasAnySigunguAlias(POPULATION_INTEREST_AREA_CODES, sgg) && !(redesignated && REDESIGNATION_2026_10_20.interestRemoved.has(sgg))) {
+    return { kind: "interest" };
+  }
   return { kind: null };
 }

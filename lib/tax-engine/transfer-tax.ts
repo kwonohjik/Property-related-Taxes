@@ -45,8 +45,8 @@ import { applyLthd982AndPushSteps } from "./transfer-tax-lthd-982-step";
 import {
   calcTransferGain,
   calcLongTermHoldingDeduction,
-  applyCommercialBuildingStep,
 } from "./transfer-tax-helpers";
+import { applyCommercialBuildingAndNblPart } from "./transfer-tax-commercial-nbl-part";
 import { oneHouseJudgmentWarnings } from "./transfer-tax-one-house-warnings";
 import { appurtenantLand2xNotice } from "./transfer-reductions/new-housing-appurtenant-land-2x";
 import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
@@ -355,9 +355,9 @@ function calculateTransferTaxCore(
 
   // STEP 0.35: 상업용건물·오피스텔 환산취득가 (소령 §164⑥ + §176조의2②2호 + §164⑨ 수용 특례).
   // 성공 시 effectiveInput을 실가 경로로 교체 (helpers로 추출 — 800줄 정책).
-  const cbApplied = applyCommercialBuildingStep(effectiveInput, inheritedAcquisitionStep?.result.preDeemedBreakdown?.selectedMethod === "converted");
+  const cbApplied = applyCommercialBuildingAndNblPart(effectiveInput, inheritedAcquisitionStep?.result.preDeemedBreakdown?.selectedMethod === "converted", steps);
   effectiveInput = cbApplied.effectiveInput;
-  const cbStep = cbApplied.cbStep;
+  const { cbStep, nblPart: cbNblPart } = cbApplied;
 
   // STEP 1.5: 다필지 분리 계산 (환지·합병 등)
   const mpBranchResult = handleMultiParcelBranch(
@@ -483,6 +483,7 @@ function calculateTransferTaxCore(
       carryoverDetail,
       inheritedAcquisitionStep,
       cbStep,
+      cbNblPart,
       splitDetail,
       /**
        * 🔴 **차손 자산도 세율·호를 싣는다** — 그러지 않으면 미등기 적용 여부를 **눈으로 확인할 수 없다**.
@@ -763,6 +764,7 @@ function calculateTransferTaxCore(
     carryoverDetail,
     inheritedAcquisitionStep,
     cbStep,
+    cbNblPart,
     rental97LthdDetail,
     usageConversionDetail,
     lthdExclusionReason,

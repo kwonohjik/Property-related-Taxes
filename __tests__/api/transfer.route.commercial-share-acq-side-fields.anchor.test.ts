@@ -100,11 +100,13 @@ describe("CS-2 매매 지분 × 환산 — 지분 취득일의 「취득시 ㎡�
   });
 });
 
-describe("CS-3 병합 규칙 — 물건 단위 10칸만 자산 1 값", () => {
+describe("CS-3 병합 규칙 — 물건 단위 12칸만 자산 1 값", () => {
   it("물건 단위 칸 목록", () => {
     expect([...CB_SHARE_OBJECT_FIELDS]).toEqual([
       "cbTotalLandArea", "cbTotalBuildingFootprintArea", "cbZoneType", "cbUnapprovedBuilding", "cbLandArea", "cbExclusiveArea", "cbSharedArea",
       "cbUnitPriceAtTransfer", "cbLandPricePerSqmAtTransfer", "cbBuildingStdPriceAtTransfer",
+      // NBL2611-V5-BX01 — 초과분 토지·건물 구분 기준시가의 양도 당시 2칸(취득 당시 2칸은 지분마다 달라 카드별 입력)
+      "cbPartTransferLandStd", "cbPartTransferBuildingStd",
     ]);
   });
   it("취득 쪽 칸(§164⑧ 준용 포함)은 지분 값 · 물건 단위 칸은 자산 1 값", () => {

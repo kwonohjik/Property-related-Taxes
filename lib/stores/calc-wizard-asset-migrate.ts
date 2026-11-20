@@ -538,6 +538,11 @@ export function migrateAsset(raw: unknown): AssetForm {
   if (a.cbTotalLandArea === undefined) a.cbTotalLandArea = "";
   if (a.cbTotalBuildingFootprintArea === undefined) a.cbTotalBuildingFootprintArea = "";
   if (a.cbZoneType === undefined) a.cbZoneType = "";
+  // NBL2611-V5-BX01 — 초과분 토지·건물 구분 기준시가 4칸. 구 이력에는 없으므로 «미입력»으로 복원한다(초과분이 있으면 ⑧이 요구).
+  if (a.cbPartAcqLandStd === undefined) a.cbPartAcqLandStd = "";
+  if (a.cbPartAcqBuildingStd === undefined) a.cbPartAcqBuildingStd = "";
+  if (a.cbPartTransferLandStd === undefined) a.cbPartTransferLandStd = "";
+  if (a.cbPartTransferBuildingStd === undefined) a.cbPartTransferBuildingStd = "";
   // 2026-08-11 개명(`cbIsUnregistered` → `cbUnapprovedBuilding`) — 구 세션 값 이전.
   if (a.cbUnapprovedBuilding === undefined) {
     a.cbUnapprovedBuilding = a.cbIsUnregistered ?? false;

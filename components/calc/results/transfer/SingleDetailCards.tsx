@@ -10,6 +10,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { CrossEngine1045Notice } from "@/components/calc/shared/CrossEngine1045Notice";
 import { CommercialBuildingValuationDetailCard } from "@/components/calc/results/CommercialBuildingValuationDetailCard";
+import { CommercialNblPartCard } from "@/components/calc/results/transfer/CommercialNblPartCard";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import { RedevelopmentDetailCard } from "@/components/calc/results/transfer/RedevelopmentDetailCard";
 import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
@@ -39,6 +40,7 @@ export function hasSingleDetailCards(result: TransferTaxResult): boolean {
     result.surchargeType === "non_business_land" ||
     !!result.nonBusinessLandJudgmentDetail?.isNonBusinessLand ||
     !!result.commercialBuildingValuationDetail ||
+    !!result.commercialNblPart ||
     !!result.transferBurdenedGiftBreakdown ||
     !!result.redevelopmentDetail ||
     !!result.rentalHousingExceptionDetail ||
@@ -96,6 +98,9 @@ export function SingleDetailCards({
           depreciation={result.swapApplied ? undefined : result.depreciationAmount}
         />
       )}
+
+      {/* ⑦ 상업용건물 부수토지 초과분 — 비사업용 파트(토지분 양도차익 × 초과 면적 비율) 산출근거 (NBL2611-V5-BX01) */}
+      {result.commercialNblPart && <CommercialNblPartCard part={result.commercialNblPart} />}
 
       {/* ⑦ 부담부증여 상증법 평가 명세 + Phase 2 증여세 (sibling 카드) */}
       {/* F-2 (2026-05-12): result.warnings 직접 연결 (케이스 12 다주택 중과 안내 등) */}

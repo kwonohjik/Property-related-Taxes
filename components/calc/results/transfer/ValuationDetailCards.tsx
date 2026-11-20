@@ -37,6 +37,7 @@ import { SplitGainDetailSection } from "@/components/calc/results/transfer/Split
 import { Pre1990LandValuationDetailCard } from "@/components/calc/results/transfer/Pre1990LandValuationDetailCard";
 import { PreDeemedPurchaseResultCard } from "@/components/calc/results/transfer/PreDeemedPurchaseResultCard";
 import { SelfBuiltPenaltyCard } from "@/components/calc/results/transfer/SelfBuiltPenaltyCard";
+import { CommercialNblPartCard } from "@/components/calc/results/transfer/CommercialNblPartCard";
 
 interface Props {
   /** `depreciationAmount`는 자산별 breakdown이 싣는 §97③ echo — 상가 환산 카드 산식이 공제 후 값과 맞도록 읽는다. */
@@ -82,6 +83,7 @@ export function ValuationDetailCards({
 }: Props) {
   const hasAny =
     !!result.commercialBuildingValuationDetail ||
+    !!result.commercialNblPart ||
     !!result.nonBusinessLandJudgmentDetail ||
     !!result.multiHouseSurchargeDetail ||
     !!result.expropriationValuationDetail ||
@@ -132,6 +134,7 @@ export function ValuationDetailCards({
           depreciation={result.depreciationAmount}
         />
       )}
+      {result.commercialNblPart && <CommercialNblPartCard part={result.commercialNblPart} />}
       {result.rentalHousingExceptionDetail && (
         <RentalHousingExceptionDetailCard detail={result.rentalHousingExceptionDetail} />
       )}

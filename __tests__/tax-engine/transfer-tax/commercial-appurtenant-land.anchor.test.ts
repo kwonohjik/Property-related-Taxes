@@ -10,6 +10,7 @@
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
+import { CB_PART_BASIS_LAND_ONLY } from "../_helpers/cb-part-basis";
 import type { TransferTaxInput, TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 
 const rates = makeMockRates();
@@ -33,7 +34,9 @@ const cb = (overrides: Partial<TransferTaxInput> = {}): TransferTaxInput =>
   });
 
 /** 집합건물 전체 — 대지 1,200㎡ / 바닥 200㎡. 상업지역 3배면 기준면적 600㎡ → 초과 600㎡(1/2). */
-const totals = { totalLandArea: 1200, totalBuildingFootprintArea: 200 };
+// NBL2611-V5-BX01 — 초과분이 있으면 토지·건물 구분 기준시가가 필수다. 이 파일은 «초과 비율 → 세액» 계약만 보므로 토지 100%(건물분 0)로
+// 두어 결함 수정 전과 같은 세액을 유지한다(건물분이 섞인 정답은 commercial-nbl-land-part.anchor.test.ts).
+const totals = { totalLandArea: 1200, totalBuildingFootprintArea: 200, partBasis: CB_PART_BASIS_LAND_ONLY };
 
 describe("CB-1 (C-1) — 기준면적 이내면 현행과 동일 (회귀 가드)", () => {
   it("녹지지역 7배 → 기준면적 1,400㎡ ≥ 대지 1,200㎡ → 중과 없음", () => {
@@ -77,6 +80,7 @@ describe("CB-2 (C-2) — 초과분이 있으면 중과된다", () => {
         commercialAppurtenantLand: {
           totalLandArea: 2400,
           totalBuildingFootprintArea: 400, // 배율 동일 → 초과비율 동일(0.5)
+          partBasis: CB_PART_BASIS_LAND_ONLY,
           zoneType: "commercial",
         },
       }),

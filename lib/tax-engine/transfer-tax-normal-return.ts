@@ -39,6 +39,7 @@ export interface NormalReturnArgs extends FinalizeArgs {
   carryoverDetail: ResultDetailArgs["carryoverDetail"];
   inheritedAcquisitionStep: ResultDetailArgs["inheritedAcquisitionStep"];
   cbStep: ResultDetailArgs["cbStep"];
+  cbNblPart: ResultDetailArgs["cbNblPart"];
   rental97LthdDetail: TransferTaxResult["rental97LthdDetail"];
   usageConversionDetail: TransferTaxResult["usageConversionDetail"];
   lthdExclusionReason: TransferTaxResult["lthdExclusionReason"];
@@ -86,6 +87,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     carryoverDetail,
     inheritedAcquisitionStep,
     cbStep,
+    cbNblPart,
     rental97LthdDetail,
     usageConversionDetail,
     lthdExclusionReason,
@@ -226,6 +228,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
       carryoverDetail,
       inheritedAcquisitionStep,
       cbStep,
+      cbNblPart,
       splitDetail: splitDetailForRate,
     }),
     newHousingReductionDetail,
