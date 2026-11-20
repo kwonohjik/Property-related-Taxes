@@ -19,6 +19,7 @@
  * 취득일·기준시가·지역을 전부 `assets[0]`에서 읽는다. ⇒ 양도 대상은 **여기서 직접** 받는다.
  */
 import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
+import { JudgmentOwnershipShareField } from "./JudgmentOwnershipShareField";
 import { JUDGMENT_HOUSING_SCOPE_HINT } from "@/lib/calc/judgment-scope-hints";
 import { JUDGMENT_SALE_PRICE_WHOLE_HOUSE_HINT } from "@/lib/calc/judgment-scope-hints";
 import { JUDGMENT_SALE_PRICE_WHOLE_RIGHT_HINT } from "@/lib/calc/judgment-scope-hints";
@@ -373,6 +374,8 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
             onChange={(contractTotalPrice) => onChange({ contractTotalPrice })}
           />
         </FieldCard>
+        {/* 결정 Q-24(PR-20b) — 공동명의 지분은 판정이 아니라 세액 계산 넘기기용. 예상 양도가액(주택 전체) 바로 뒤. */}
+        <JudgmentOwnershipShareField asset={primary} onChange={patchAsset} />
       </ToneCard>
 
       <ToneCard tone="rose" sectionNum="2-C" title="조정대상지역">

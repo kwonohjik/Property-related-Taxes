@@ -18,6 +18,7 @@
  * 여기서 막는 것은 **판정이 불가능한 입력**(필수값 부재·모순)뿐이다.
  */
 import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
+import { judgmentOwnershipShareError } from "@/lib/calc/judgment-ownership-share";
 import { parentalCareAgeIssues } from "./parental-care-age-issue";
 import { giftHouseholdFactErrors, giftPriorResidenceAsked } from "@/lib/calc/gift-household-payload";
 import {
@@ -573,6 +574,8 @@ export function validateStep3(form: OneHouseJudgmentFormData): Errors {
   if (parseAmount(form.contractTotalPrice) <= 0) {
     errors.push(err("contractTotalPrice", "예상 양도가액을 입력하세요."));
   }
+  const shareError = judgmentOwnershipShareError(primary); // 결정 Q-24 — 공동명의 지분율(⑤ `JudgmentOwnershipShareField`와 같은 게이트)
+  if (shareError) errors.push(err("ownershipNumerator", shareError));
 
   if (form.transferDate && primary?.acquisitionDate && form.transferDate < primary.acquisitionDate) {
     errors.push(err("transferDate", "양도 예정일이 취득일보다 빠릅니다."));
