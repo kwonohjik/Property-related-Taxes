@@ -29,6 +29,8 @@ import {
   resolveOneRightExemptionClause,
   oneRightPresaleGate,
   landContributionBlocksOneRight,
+  naDisposalDelay,
+  naDisposalDelayEraNotice,
 } from "../transfer-tax-redevelopment-transforms";
 import { TRANSFER } from "../legal-codes/transfer";
 import { REDEVELOPMENT } from "../legal-codes";
@@ -96,6 +98,9 @@ export function buildOneRightVerdict(
     householdRightCount: input.householdRightCount,
     eligibleAtApprovalDeclared: facts.exemptionEligibleAtApproval === true,
   });
+  // Q-2 (b) — 2016.3.16. 전 양도분이 ⑱ 사유로만 나목에 들면 확인 필요(계산기 경고와 같은 leaf).
+  const naEraNote = naDisposalDelayEraNotice(facts, input);
+  if (naEraNote) eraNotices.push(naEraNote);
   const requirementNotices = eraNotices.length > 0 ? { requirementNotices: eraNotices } : {};
   const marriageMerge = resolveRightSaleMarriageMerge(input);
   if (clause) {
@@ -191,10 +196,15 @@ export function buildOneRightVerdict(
     naYears !== null && // 앞 분기들이 연혁 없음·취득일 미입력을 이미 처리했다 — 타입 좁히기용
     facts.otherHouseAcquisitionDate &&
     // 판정(`resolveOneRightExemptionClause`)과 같은 leaf — 기한 안인데 다른 사유로 미성립이면 「넘겼습니다」를 적지 않는다(S05-7).
-    !isWithinDeadline(facts.otherHouseAcquisitionDate, naYears, input.transferDate)
+    !isWithinDeadline(facts.otherHouseAcquisitionDate, naYears, input.transferDate) &&
+    // ⑱ 사유가 기한을 치유했으면 「넘겼습니다」는 원인이 아니다 — 다른 사유가 막은 것이다(2026-11 리뷰 D-22 · 판정과 같은 leaf).
+    !naDisposalDelay(facts, input.transferDate).applied
   ) {
+    const delayNote = naDisposalDelay(facts, input.transferDate).note;
     reasons.push(
-      `나목 — 그 1주택을 취득한 날부터 ${naYears}년 이내에 입주권을 양도해야 합니다. ${naYears}년을 넘겼습니다.`,
+      `나목 — 그 1주택을 취득한 날부터 ${naYears}년 이내에 입주권을 양도해야 합니다. ${naYears}년을 넘겼습니다.` +
+        // 사유를 골랐지만 이 양도일에 적용되지 않으면 그 이유를 잇는다(호 신설 전 · 「그 방법으로 양도」 미확인 — D-06).
+        (delayNote ? ` ${delayNote}` : ""),
     );
   }
 

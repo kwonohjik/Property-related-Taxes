@@ -318,6 +318,7 @@ export function toMultiEngineItem(
                 p.oneRightExemptionFacts.otherHouseAcquisitionDate,
             ),
             otherHouseDisposalDelayReason: p.oneRightExemptionFacts.otherHouseDisposalDelayReason,
+            otherHouseDisposalDelayDisposedByThatMethod: p.oneRightExemptionFacts.otherHouseDisposalDelayDisposedByThatMethod,
             // E-3 후속 — 분양권 요건 연혁. Date 변환 필수.
             approvalDate: toOptionalDate(p.oneRightExemptionFacts.approvalDate),
             originalAssetType: p.oneRightExemptionFacts.originalAssetType,

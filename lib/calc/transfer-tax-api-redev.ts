@@ -256,6 +256,9 @@ export function buildRedevelopmentPayload(asset: AssetForm, ownershipRatio?: num
     otherHouseAcquisitionDate: asset.redevOtherHouseAcquisitionDate || undefined,
     // 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱ 1~5호) — 판정 메뉴 값을 그대로 싣는다(S05-4).
     otherHouseDisposalDelayReason: asset.redevOtherHouseDisposalDelayReason || undefined,
+    // 그 사유의 「매각 등의 방법으로 양도」(D-06) — 사유를 골랐을 때만. 연혁은 엔진(`resolveNaDisposalDelay`)이 가른다.
+    otherHouseDisposalDelayDisposedByThatMethod:
+      asset.redevOtherHouseDisposalDelayReason && asset.redevOtherHouseDisposalDelayDisposedByThatMethod ? true : undefined,
     // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
     // 3중 패턴(UI/API/validate): LandPriceLookupField(단가×면적) 우선 > legacy 총액 직접 입력 fallback.
     // UI·validate와 동일 우선순위 — API layer 단독 변환 금지(silent stripping 차단).

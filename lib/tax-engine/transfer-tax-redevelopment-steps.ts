@@ -26,6 +26,7 @@ import {
   applyAptOneHouseExemption,
   applyRental97LthdSpecial,
   oneRightHighValueBase,
+  naDisposalDelayEraNotice,
 } from "./transfer-tax-redevelopment-transforms";
 import { evaluateRental97Lthd } from "./transfer-reductions/rental-97-router";
 import { shouldApplyRental973Special } from "./transfer-tax-lthd-rental97";
@@ -550,6 +551,8 @@ export function runRedevelopmentGainSteps(
           }),
           // #13 — 토지만 출자한 입주권: 세대원 건물 소유 선언이 결론을 가르는 경우의 고지.
           ...oneRightLandContributionNotices(input, redevAfterRight),
+          // D-06 · Q-2 (b) — 2016.3.16. 전 양도분 나목 ⑱ 사유(판정 메뉴 `buildOneRightVerdict`와 같은 leaf).
+          ...(naDisposalDelayEraNotice(redevInfo, input) ? [naDisposalDelayEraNotice(redevInfo, input)!] : []),
         ]
       : [];
   // 2009-01-01 전 양도분은 표2 연혁을 지원하지 않아 현행 식으로 계산했다 — 일반 경로(`transfer-tax-lthd-982-step.ts`)와 같은 고지.

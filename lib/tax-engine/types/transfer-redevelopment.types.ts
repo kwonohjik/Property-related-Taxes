@@ -426,10 +426,12 @@ export interface RedevelopmentInfo {
    * 일시적 2주택(§155①)의 `disposalDelayReason`·원조합원 입주권 행의 `originalMemberDisposalDelayReason`과
    * **같은 값**이다. 선언하지 않으면(모름 포함) 사유가 없는 것으로 본다(혜택 불성립 + 입력 경로 안내).
    *
-   * ⚠️ 시행령 연혁(2017.2.3.·2020.2.11. 시행본에는 「…각 호의 매각 등의 방법으로 양도하는 경우」 요건이 더 있었고
-   *    호 수·범위도 달랐다)은 **가르지 않는다** — §155① 처분기한 예외(E-2)와 같은 취급이다. 확인 필요.
+   * 연혁은 정본 `resolveNaDisposalDelay`가 가른다 — 호별 신설 시기 · 2022.2.15. 전 양도분 「그 방법으로 양도」 요건(2016.3.16. 이후 양도분 ·
+   * 그 전은 확인 필요 — 결정 Q-2 (b)) · 2026-11 리뷰 D-06.
    */
   otherHouseDisposalDelayReason?: TemporaryTwoHouseDelayReason;
+  /** 나목 ⑱ 사유의 「해당 각 호의 매각 등의 방법으로 양도」 선언 — 2016.3.16.~2022.2.14. 양도분만 읽는다(D-06). */
+  otherHouseDisposalDelayDisposedByThatMethod?: boolean;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

@@ -264,6 +264,8 @@ export interface RedevelopmentFormSlice {
    * 빈문자열 = 해당 없음/모름 → 사유가 없는 것으로 보아 3년 기한만 본다(모름 = 혜택 불성립).
    */
   redevOtherHouseDisposalDelayReason: "" | "kamco" | "auction" | "public_sale" | "cash_settlement_suit" | "expropriation_suit";
+  /** 나목 ⑱ 사유의 「해당 각 호의 매각 등의 방법으로 양도」 선언 — 2016.3.16.~2022.2.14. 양도분만 묻는다(2026-11 리뷰 D-06 · Q-2 (b)). */
+  redevOtherHouseDisposalDelayDisposedByThatMethod: boolean;
   /**
    * **§89①4호 본문 — 토지만 출자한 입주권의 「기존주택 소유 세대」** (#13 · 2026-10-11 결정 B).
    *

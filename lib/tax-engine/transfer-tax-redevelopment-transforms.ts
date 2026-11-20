@@ -15,6 +15,7 @@
  */
 
 import { isWithinDeadline } from "./civil-period";
+import { resolveNaDisposalDelay } from "./data/temporary-two-house-delay-era";
 import { REDEVELOPMENT } from "./legal-codes";
 import { preApprovalNecessaryExpense } from "./redevelopment-split";
 import { oneRightOtherHouseCount } from "./one-house/right-sale-marriage-merge";
@@ -169,6 +170,8 @@ export type OneRightExemptionFacts = {
   otherHouseAcquisitionDate?: Date;
   /** 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱ 1~5호) — 「3년이 되는 날 현재」 해당하면 3년을 넘겨도 나목이 성립한다. */
   otherHouseDisposalDelayReason?: TemporaryTwoHouseDelayReason;
+  /** 나목 ⑱ 사유의 「그 방법으로 양도」 선언(D-06) */
+  otherHouseDisposalDelayDisposedByThatMethod?: boolean;
   /**
    * 양도하는 입주권의 관리처분계획인가일(= 원조합원의 입주권 취득일) — 분양권 요건 부칙 제7조②·③과
    * 재건축 기준일 고지에 쓴다(E-3 후속). 계산기는 `redevelopment.approvalDate`(필수), 판정 메뉴는 선택 입력.
@@ -192,6 +195,7 @@ export function pickOneRightExemptionFacts(
     exemptionEligibleAtApproval: facts.eligibleAtApproval,
     otherHouseAcquisitionDate: facts.otherHouseAcquisitionDate,
     otherHouseDisposalDelayReason: facts.otherHouseDisposalDelayReason,
+    otherHouseDisposalDelayDisposedByThatMethod: facts.otherHouseDisposalDelayDisposedByThatMethod,
     approvalDate: facts.approvalDate,
     originalAssetType: facts.originalAssetType,
     landHouseholdOwnedBuilding: facts.landHouseholdOwnedBuilding,
@@ -278,13 +282,38 @@ export function resolveOneRightExemptionClause(
     //   일시적 2주택(§155①)의 `judgeTemporaryTwoHouseTiming`(`threeYearMet = 사유 ∨ 기한 내`)과 같은 규칙이다.
     //   종전에는 이 입력 칸이 어느 층에도 없어(⑤·④·⑫·타입) 사유가 있어도 조용히 불성립했다(S05-4).
     //   사유는 「3년이 되는 날」을 기준으로 하므로 기산일(취득일)이 있어야 의미가 있다 — 위 `!acquired` 가드 뒤다.
-    return redevInfo.otherHouseDisposalDelayReason !== undefined ||
-      isWithinDeadline(acquired, naYears, input.transferDate)
+    //   사유의 연혁(호별 신설 · 2022.2.15. 전 「그 방법으로 양도」)은 §155①과 같은 정본으로 가린다(2026-11 리뷰 D-06).
+    return naDisposalDelay(redevInfo, input.transferDate).applied || isWithinDeadline(acquired, naYears, input.transferDate)
       ? "na"
       : undefined;
   }
 
   return undefined;
+}
+
+/**
+ * 나목이 **2016.3.16. 전 양도분의 ⑱ 사유로만** 성립했을 때의 확인 필요 고지(결정 Q-2 (b)) — 판정 메뉴 `buildOneRightVerdict`·계산기 경고가 같이 쓴다.
+ * 기한 안이면 사유가 결론을 가르지 않아 내지 않는다.
+ */
+export function naDisposalDelayEraNotice(facts: OneRightExemptionFacts, input: TransferTaxInput): string | undefined {
+  if (resolveOneRightExemptionClause(facts, input) !== "na") return undefined;
+  const naYears = oneRightClauseNaYears(input.transferDate);
+  const acquired = facts.otherHouseAcquisitionDate;
+  if (naYears === null || !acquired || isWithinDeadline(acquired, naYears, input.transferDate)) return undefined;
+  const delay = naDisposalDelay(facts, input.transferDate);
+  return delay.eraUnverified ? delay.note : undefined;
+}
+
+/** 나목 ⑱ 사유 판정 — 판정(`resolveOneRightExemptionClause`)·사유 문장(`one-right-verdict.ts`)·연혁 고지가 같은 값을 쓴다(D-06·D-22). */
+export function naDisposalDelay(
+  facts: Pick<OneRightExemptionFacts, "otherHouseDisposalDelayReason" | "otherHouseDisposalDelayDisposedByThatMethod">,
+  transferDate: Date,
+) {
+  return resolveNaDisposalDelay({
+    reason: facts.otherHouseDisposalDelayReason,
+    disposedByThatMethod: facts.otherHouseDisposalDelayDisposedByThatMethod,
+    transferDate,
+  });
 }
 
 /**

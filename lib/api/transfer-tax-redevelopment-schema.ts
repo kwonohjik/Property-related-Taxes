@@ -85,6 +85,8 @@ export const redevelopmentSchema = z
     otherHouseDisposalDelayReason: z
       .enum(["kamco", "auction", "public_sale", "cash_settlement_suit", "expropriation_suit"])
       .optional(),
+    // ⑫ 나목 ⑱ 「그 방법으로 양도」(D-06) — 침묵 stripping 차단.
+    otherHouseDisposalDelayDisposedByThatMethod: z.boolean().optional(),
     // 사례 37 — 토지 출자 §166③ 환산 (subject="right" + originalAssetType="land")
     // ★★★ 침묵 stripping 차단: Zod 객체 정의에 없으면 route handler에서 자동 제거됨.
     landStdPriceAtAcq: z.number().int().nonnegative().optional(),

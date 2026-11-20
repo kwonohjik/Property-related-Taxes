@@ -575,6 +575,8 @@ export const oneRightExemptionFactsSchema = z.object({
   otherHouseDisposalDelayReason: z
     .enum(["kamco", "auction", "public_sale", "cash_settlement_suit", "expropriation_suit"])
     .optional(),
+  /** ⑫ 나목 ⑱ 「그 방법으로 양도」(D-06) — 계산기 `redevelopment.otherHouseDisposalDelayDisposedByThatMethod`와 같은 사실 */
+  otherHouseDisposalDelayDisposedByThatMethod: z.boolean().optional(),
   /** 양도하는 입주권의 관리처분계획인가일 — 분양권 요건 연혁(법률 제18578호 부칙 제7조②·③) 판정용(E-3 후속) */
   approvalDate: z.string().date().optional(),
   /** 출자 자산(§89①4호 본문 「기존주택을 소유하는 세대」) — 계산기 `redevelopment.originalAssetType`과 같은 사실(#13 판정 메뉴 반영) */

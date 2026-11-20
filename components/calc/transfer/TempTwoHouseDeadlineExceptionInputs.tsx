@@ -26,7 +26,9 @@ import type { RelocationRegionVerdict } from "@/lib/calc/relocation-region-verdi
 import type { TempTwoHouseDeadlineExceptionFields } from "@/lib/calc/transfer-tax-api-body-blocks";
 import {
   isDisposalDelayMethodRequired,
+  NA_DELAY_METHOD_VERIFIED_FROM,
   resolveDisposalDelay,
+  resolveNaDisposalDelay,
   TT_DELAY_METHOD_DROPPED_TRANSFER_START,
 } from "@/lib/tax-engine/data/temporary-two-house-delay-era";
 import type { TemporaryTwoHouseDelayReason } from "@/lib/tax-engine/types/transfer.types";
@@ -74,6 +76,11 @@ type DelayReasonProps = {
   effectNote?: string;
   /** radio 그룹 제목 — 기본 「처분기한 예외 사유 (§155⑱)」 */
   label?: string;
+  /**
+   * 어느 조문의 ⑱인가 — `"155_1"`(일시적 2주택 요건 B · 기본)·`"na"`(§89①4호 나목 괄호). 나목은 「그 방법으로 양도」 요건이 실독으로 확인된
+   * 2016.3.16. 이후 양도분부터 묻는다(`resolveNaDisposalDelay` · 결정 Q-2 (b) · 2026-11 리뷰 D-06).
+   */
+  variant?: "155_1" | "na";
 };
 
 /** §155⑯ 공공기관·법인 지방이전 특례 — 토글 + 이전지·신규 주택 소재지 + 연접 판정 안내 */
@@ -195,14 +202,20 @@ export function TempTwoHouseDelayReasonInput({
   newHouseLabel = "신규 주택",
   effectNote = DEFAULT_EFFECT_NOTE,
   label = "처분기한 예외 사유 (§155⑱)",
+  variant = "155_1",
 }: DelayReasonProps) {
   // 양도일 연혁 — 엔진(요건 B)·판정 카드와 같은 leaf. 사유를 고르지 않았거나 양도일을 모르면 연혁 안내를 내지 않는다.
   const transfer = transferDate ? new Date(transferDate) : undefined;
   const dated = transfer !== undefined && !Number.isNaN(transfer.getTime());
   const reason = (form.disposalDelayReason || undefined) as TemporaryTwoHouseDelayReason | undefined;
-  const methodRequired = dated && reason !== undefined && isDisposalDelayMethodRequired(transfer);
+  const methodRequired =
+    dated &&
+    reason !== undefined &&
+    isDisposalDelayMethodRequired(transfer) &&
+    (variant === "155_1" || transfer.getTime() >= NA_DELAY_METHOD_VERIFIED_FROM.getTime());
+  const resolve = variant === "na" ? resolveNaDisposalDelay : resolveDisposalDelay;
   const delay = dated
-    ? resolveDisposalDelay({ reason, disposedByThatMethod: form.disposalDelayDisposedByThatMethod === true, transferDate: transfer })
+    ? resolve({ reason, disposedByThatMethod: form.disposalDelayDisposedByThatMethod === true, transferDate: transfer })
     : undefined;
   return (
     <div className="space-y-1.5">
@@ -231,8 +244,8 @@ export function TempTwoHouseDelayReasonInput({
       <p className="text-xs text-muted-foreground">
         <strong>{newHouseLabel}을 취득한 날부터 3년이 되는 날 현재</strong> 해당해야 합니다 (양도일 기준이 아닙니다).
         {effectNote}
-        {/* 2022.2.15. 전 양도분의 「매각 등의 방법」 요건(PR8a S15-14)은 §155① 요건 B 경로(기본 문구)에만 엔진이 적용한다 — 나목 등 다른 호출부는 effectNote를 따로 준다. */}
-        {effectNote === DEFAULT_EFFECT_NOTE && dated && transfer.getTime() < TT_DELAY_METHOD_DROPPED_TRANSFER_START.getTime()
+        {/* 2022.2.15. 전 양도분의 「매각 등의 방법」 요건(PR8a S15-14) — §155① 요건 B(기본 문구)와 나목(`variant="na"` · D-06)에 엔진이 적용한다. */}
+        {(variant === "na" ? methodRequired : effectNote === DEFAULT_EFFECT_NOTE && dated && transfer.getTime() < TT_DELAY_METHOD_DROPPED_TRANSFER_START.getTime())
           ? " 다만 2022. 2. 15. 전 양도분은 사유에 해당하는 것만으로는 부족하고, 그 사유의 매각 등의 방법으로 양도해야 합니다."
           : ""}
       </p>

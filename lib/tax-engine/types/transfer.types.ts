@@ -391,6 +391,8 @@ export interface TransferTaxInput {
     otherHouseAcquisitionDate?: Date;
     /** 나목 괄호 「대통령령으로 정하는 사유」(시행령 §155⑱ 1~5호) — `redevelopment.otherHouseDisposalDelayReason`과 같은 사실. */
     otherHouseDisposalDelayReason?: TemporaryTwoHouseDelayReason;
+    /** 나목 ⑱ 사유의 「그 방법으로 양도」 선언 — `redevelopment.otherHouseDisposalDelayDisposedByThatMethod`와 같은 사실(D-06). */
+    otherHouseDisposalDelayDisposedByThatMethod?: boolean;
     /**
      * 양도하는 입주권의 관리처분계획인가일(E-3 후속) — 분양권 요건(법률 제18578호 부칙 제7조②·③)과
      * 재건축 기준일 고지용. 계산기는 같은 값을 `redevelopment.approvalDate`(필수)로 보낸다.

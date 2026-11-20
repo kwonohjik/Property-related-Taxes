@@ -234,6 +234,8 @@ export function buildTransferEngineInput(
           ),
           // 문자열 enum이라 변환 없이 그대로 — 빠지면 사유가 있어도 나목이 조용히 불성립한다(S05-4).
           otherHouseDisposalDelayReason: data.oneRightExemptionFacts.otherHouseDisposalDelayReason,
+          // ⑭ 나목 ⑱ 「그 방법으로 양도」(D-06) — boolean이라 그대로.
+          otherHouseDisposalDelayDisposedByThatMethod: data.oneRightExemptionFacts.otherHouseDisposalDelayDisposedByThatMethod,
           // E-3 후속 — 분양권 요건 연혁(인가일 < 2022-01-01이면 종전 규정). 같은 이유로 Date 변환 필수.
           approvalDate: toOptionalDate(data.oneRightExemptionFacts.approvalDate),
           // #13 — 토지 출자 게이트(`landContributionBlocksOneRight`)가 판정 메뉴 상자에서도 돌게 한다. enum·boolean이라 변환 없음.
