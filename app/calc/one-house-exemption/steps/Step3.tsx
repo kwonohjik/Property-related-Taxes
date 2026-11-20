@@ -19,6 +19,9 @@
  * 취득일·기준시가·지역을 전부 `assets[0]`에서 읽는다. ⇒ 양도 대상은 **여기서 직접** 받는다.
  */
 import { mergeRentalState } from "@/lib/calc/merge-rental-carveout-form";
+import { JUDGMENT_HOUSING_SCOPE_HINT } from "@/lib/calc/judgment-scope-hints";
+import { JUDGMENT_SALE_PRICE_WHOLE_HOUSE_HINT } from "@/lib/calc/judgment-scope-hints";
+import { JUDGMENT_SALE_PRICE_WHOLE_RIGHT_HINT } from "@/lib/calc/judgment-scope-hints";
 import { RIGHT_TO_MOVE_IN_SCOPE_HINT } from "@/lib/calc/right-to-move-in-scope-hint";
 import { UNREGISTERED_EXCLUSION_HINT } from "@/lib/calc/unregistered-exclusion-hint";
 import { useMemo } from "react";
@@ -212,7 +215,7 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
             {
               value: "housing",
               label: "주택",
-              description: "소득세법 §89①3호 — 보유 2년(조정대상지역 취득 시 거주 2년) 요건과 §155 각 항 특례로 판정합니다.",
+              description: `소득세법 §89①3호 — 보유 2년(조정대상지역 취득 시 거주 2년) 요건과 §155 각 항 특례로 판정합니다. ${JUDGMENT_HOUSING_SCOPE_HINT}`,
             },
             {
               value: "right_to_move_in",
@@ -356,9 +359,10 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
         {!isRightSale && <UsageConversionField asset={primary} onChange={patchAsset} />}
 
         <FieldCard
-          label="예상 양도가액"
+          label={isRightSale ? "예상 양도가액 (입주권 전체)" : "예상 양도가액 (주택 전체)"}
           // 기준금액은 양도일 연혁(9억·6억·12억) — 엔진과 같은 leaf를 읽는다. 입주권 양도는 §89①4호의 연혁이 따로다(S01-9).
-          hint={`${(isRightSale ? oneRightHighValueThresholdForDisplay : highValueThresholdForDisplay)(form.transferDate).label} 초과 여부(고가주택)를 판정하는 데 쓰입니다`}
+          // D-48 — 공동명의는 다른 사람 몫을 포함한 전체 가액(§156①). 본인 지분 가액을 넣으면 고가주택이 비과세로 뒤집힌다.
+          hint={`${(isRightSale ? oneRightHighValueThresholdForDisplay : highValueThresholdForDisplay)(form.transferDate).label} 초과 여부(고가주택)를 판정하는 데 쓰입니다. ${isRightSale ? JUDGMENT_SALE_PRICE_WHOLE_RIGHT_HINT : JUDGMENT_SALE_PRICE_WHOLE_HOUSE_HINT}`}
         >
           <CurrencyInput
             data-testid="one-house-sale-price"

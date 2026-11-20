@@ -664,7 +664,8 @@ function highValueItem(input: OneHouseJudgeInput): OneHouseRequirementCheck {
       : `양도가액 ${label}원 이하 — 고가주택 아님`,
     status: over ? "partial" : "met",
     facts: [
-      { label: "양도가액", value: price.toLocaleString("ko-KR") },
+      // D-48 — 판정 가액은 주택 전체(공동명의면 타인 몫 포함 — §156①)라 「양도가액」이 본인 몫으로 읽히지 않게 이름을 붙인다.
+      { label: "고가주택 판정 가액(주택 전체)", value: price.toLocaleString("ko-KR") },
       { label: "고가주택 기준금액", value: label },
     ],
     ...(over ? { note: `고가주택이므로 양도차익 중 ${label}원 초과분에 해당하는 부분은 과세됩니다.` } : {}),
