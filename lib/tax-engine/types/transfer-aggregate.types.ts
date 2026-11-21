@@ -301,6 +301,8 @@ export interface PerPropertyBreakdown
   rateClause?: RateClause;
   /** [echo] 비사업용 토지 + 단기세율 채택 표지 — 신고서 ③ 1-35·1-36의 단일 소스(NBL2611-V9-RI05). 표시 전용(세액 불변). */
   nonBusinessLandShortTerm?: boolean;
+  /** [echo] §104⑦ 후단에서 단기세율이 이긴 다주택 중과 후보 호 — 신고서 ③ «중과 대상 단기» 코드의 단일 소스(R-c10-01). 표시 전용(세액 불변). */
+  surchargeShortTermClause?: import("../transfer-tax-rate-clause").SurchargeRateClause;
   /** [echo] 엔진이 정한 §104 밖 세율 특례 표지(조특법 §98 20%) — 신고서 ③ 1-92의 단일 소스. 표시 전용(세액 불변). */
   specialRateBasis?: import("../transfer-tax-rate-clause").SpecialRateBasis;
   /** 비사업용 +10%p 배제(부칙 <제9270호> §14① 또는 양도일 유예) — 정본 ⑮가 일반세율 코드로 분류한다. */

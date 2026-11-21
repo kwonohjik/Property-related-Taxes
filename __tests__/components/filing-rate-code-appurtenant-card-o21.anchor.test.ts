@@ -38,7 +38,11 @@ type Loose = Record<string, any>; // eslint-disable-line @typescript-eslint/no-e
 
 /** 정본 표(별지 제84호서식 작성방법 3쪽)의 «코드 → 단일세율» — 고정세율 코드만 */
 // NBL2611-V9-RI05 — ⑩ 1-35(1~2년 비사업용토지) 40% · ⑪ 1-36(1년 미만 비사업용토지) 50% 추가(별지 제84호서식 3쪽 코드표).
-const FIXED_RATE_BY_CODE: Record<string, string> = { "1-15": "40%", "1-20": "50%", "1-35": "40%", "1-36": "50%", "1-39": "60%", "1-46": "70%" };
+// R-c10-01 — 중과 대상 주택 단기세율 채택 코드 추가(별지 제84호서식 4쪽 · 2026-11-21 본문 실측): ㉙ 1-82 60% · ㉘ 1-84 70% · ㉟ 1-86 60% · ㉞ 1-88 70%.
+const FIXED_RATE_BY_CODE: Record<string, string> = {
+  "1-15": "40%", "1-20": "50%", "1-35": "40%", "1-36": "50%", "1-39": "60%", "1-46": "70%",
+  "1-82": "60%", "1-84": "70%", "1-86": "60%", "1-88": "70%",
+};
 
 const ZONE = { buildingFootprintArea: 100, isUrbanArea: true, appurtenantLandZone: "metropolitan_residential" };
 const land = (id: string, acq: string, area: number, extra: Loose = {}) => ({
@@ -71,14 +75,17 @@ async function filing(body: Loose, cardKind: string, cardNature: string | undefi
 const APP = "appurtenant_to_housing";
 
 describe("부수토지 카드 신고서 코드 — 주택 세율을 받으면 주택 코드", () => {
-  it("🔑 F1 중과 짝 · 둘 다 2025-01-01(1~2년 · 한 장): 주택·카드 모두 1-39 · 세율 60% (수정 전 카드 1-15)", async () => {
+  // R-c10-01 정정 — F1·F2·F4는 조정대상지역 2주택 «중과 짝»이라 §104⑦ 후단에서 단기세율이 이겨도 중과 대상 주택이다.
+  //   별지 제84호서식은 이를 ㉙ 1-82(1~2년) · ㉘ 1-84(1년 미만)로 적는다. 종전 단언 1-39 · 1-46은 일반 단기 주택 코드라 그 오기재를 고정하고 있었다.
+  //   주택 세율(60%/70%)을 받은 부수토지 카드가 주택 코드를 따른다는 이 파일의 축(O-21)은 그대로다 — 비중과 대조 F3는 1-39 불변.
+  it("🔑 F1 중과 짝 · 둘 다 2025-01-01(1~2년 · 한 장): 주택·카드 모두 1-82 · 세율 60% (수정 전 카드 1-15 · R-c10-01 전 1-39)", async () => {
     const r = await filing(fwd("2025-01-01", "2025-01-01"), "land", APP);
-    expect([r.code.primary, r.code.c1, r.rate.primary, r.rate.c1]).toEqual(["1-39", "1-39", "60%", "60%"]);
+    expect([r.code.primary, r.code.c1, r.rate.primary, r.rate.c1]).toEqual(["1-82", "1-82", "60%", "60%"]);
   });
 
-  it("🔑 F2 1년 미만(2025-12-01): 주택·카드 모두 1-46 · 70% (수정 전 카드 1-20)", async () => {
+  it("🔑 F2 1년 미만(2025-12-01): 주택·카드 모두 1-84 · 70% (수정 전 카드 1-20 · R-c10-01 전 1-46)", async () => {
     const r = await filing(fwd("2025-12-01", "2025-12-01"), "land", APP);
-    expect([r.code.primary, r.code.c1, r.rate.primary, r.rate.c1]).toEqual(["1-46", "1-46", "70%", "70%"]);
+    expect([r.code.primary, r.code.c1, r.rate.primary, r.rate.c1]).toEqual(["1-84", "1-84", "70%", "70%"]);
   });
 
   it("🔑 F3 중과 없음(1주택 · 비조정) 1~2년: 카드 1-39 — 중과와 무관하다", async () => {
@@ -86,11 +93,11 @@ describe("부수토지 카드 신고서 코드 — 주택 세율을 받으면 �
     expect([r.code.primary, r.code.c1, r.rate.c1]).toEqual(["1-39", "1-39", "60%"]);
   });
 
-  it("🔑 F4 분리 배치(200㎡ → 이내분·초과분): 이내분 1-39(60%) · **초과분 1-35(40%)** — NBL2611-V9-RI05 정정(종전 1-15)", async () => {
+  it("🔑 F4 분리 배치(200㎡ → 이내분·초과분): 이내분 1-82(60% · 중과 짝) · **초과분 1-35(40%)** — NBL2611-V9-RI05 정정(종전 1-15)", async () => {
     const r = await filing(fwd("2025-01-01", "2025-01-01", 200), "land", APP);
     // 초과분은 법 §104의3①5호의 비사업용 토지다 — 단기세율(40%)이 채택돼도 정본 코드는 ⑩ 1-35(비사업용토지 1~2년)이지 ② 1-15가 아니다.
     // 종전 단언 「1-15 그대로」는 이 오기재를 고정하고 있었다.
-    expect([r.code.primary, r.code.c1__appurtenant, r.code.c1__excess]).toEqual(["1-39", "1-39", "1-35"]);
+    expect([r.code.primary, r.code.c1__appurtenant, r.code.c1__excess]).toEqual(["1-82", "1-82", "1-35"]);
     expect([r.rate.c1__appurtenant, r.rate.c1__excess]).toEqual(["60%", "40%"]);
   });
 

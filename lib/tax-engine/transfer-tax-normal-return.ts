@@ -12,6 +12,7 @@ import { finalizeTransferTax, buildTransferResultDetails } from "./transfer-tax-
 import { publicExpropriationPartWiseNotice } from "./public-expropriation-reduction";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { UNSOLD_98_FLAT_RATE } from "./transfer-reductions/unsold-98-constants";
+import { surchargeClauseBeatenByShortTerm } from "./transfer-tax-rate-clause";
 import type { SurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 
@@ -207,6 +208,8 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     rateClause: taxResult.rateClause,
     ...(taxResult.specialRateBasis ? { specialRateBasis: taxResult.specialRateBasis } : {}),
     ...(taxResult.nonBusinessLandShortTerm ? { nonBusinessLandShortTerm: true } : {}),
+    // R-c10-01 — §104⑦ 후단에서 단기세율이 이긴 중과 대상 주택: 신고서 ③ 코드가 «중과 대상 단기»(1-82·1-84 등)로 적도록 후보 호를 싣는다(세액 무영향).
+    ...withSurchargeShortTermClause(taxResult),
     shortTermNote: taxResult.shortTermNote,
     reductionAmount,
     reductionType,
@@ -267,4 +270,10 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     transferBurdenedGiftBreakdown,
     ...(rentalHousingExceptionUnmetDetail ? { rentalHousingExceptionDetail: rentalHousingExceptionUnmetDetail } : {}),
   };
+}
+
+/** `surchargeShortTermClause` echo — 값이 있을 때만 싣는다(없으면 키 자체를 두지 않는다). */
+function withSurchargeShortTermClause(t: Parameters<typeof surchargeClauseBeatenByShortTerm>[0]) {
+  const c = surchargeClauseBeatenByShortTerm(t);
+  return c ? { surchargeShortTermClause: c } : {};
 }

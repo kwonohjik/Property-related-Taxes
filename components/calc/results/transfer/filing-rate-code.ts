@@ -28,12 +28,36 @@
  * 비우는 편이 낫다(자동 추정 금지).
  */
 
-import type { RateClause, SpecialRateBasis } from "@/lib/tax-engine/transfer-tax-rate-clause";
+import type { RateClause, SpecialRateBasis, SurchargeRateClause } from "@/lib/tax-engine/transfer-tax-rate-clause";
 import { SPECIAL_RATE_BASIS_CODE } from "./filing-form-codes";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 /** 「'21.6.1. 이후 양도분」 — 주택·조합원입주권·분양권 단기세율 개편 시행일 */
 const RATE_2021_06_01 = "2021-06-01";
+/** 「'18.4.1.~'21.5.31. 양도분」 — 정본 표의 조정대상지역 다주택 코드(⑲~㉖) 시작일 */
+const RATE_2018_04_01 = "2018-04-01";
+
+/**
+ * 중과 대상 주택인데 단기세율이 이긴 경우의 정본 코드 — [중과 호][단기 호].
+ *   '21.6.1. 이후: ㉘ 1-84 · ㉙ 1-82(1세대2주택) / ㉞ 1-88 · ㉟ 1-86(1세대3주택)
+ *   '18.4.1.~'21.5.31.: ⑳ 1-53(1세대2주택) / ㉔ 1-57(1세대3주택) — 1년 미만만 있다(1~2년 행 없음).
+ */
+const SURCHARGE_SHORT_TERM_CODE_AFTER_20210601 = {
+  "104-7-1": { "104-1-3": "1-84", "104-1-2": "1-82" },
+  "104-7-3": { "104-1-3": "1-88", "104-1-2": "1-86" },
+} as const;
+const SURCHARGE_UNDER_1Y_CODE_20180401_20210531 = { "104-7-1": "1-53", "104-7-3": "1-57" } as const;
+
+/** 중과 대상 주택 단기 코드. 정본에 그 시기·보유기간 행이 없으면 `undefined`(비운다). */
+function surchargeShortTermCode(
+  sur: SurchargeRateClause,
+  shortClause: "104-1-2" | "104-1-3",
+  transferDate: string | undefined,
+): string | undefined {
+  if (!transferDate || transferDate < RATE_2018_04_01) return undefined;
+  if (transferDate >= RATE_2021_06_01) return SURCHARGE_SHORT_TERM_CODE_AFTER_20210601[sur][shortClause];
+  return shortClause === "104-1-3" ? SURCHARGE_UNDER_1Y_CODE_20180401_20210531[sur] : undefined;
+}
 
 /** 자산이 정본 표의 「주택 및 조합원입주권」인가 */
 function isHousingLike(kind: AssetForm["assetKind"] | undefined): boolean {
@@ -81,6 +105,11 @@ export interface FilingRateCodeInput {
    * 별지 제84호서식은 이 경우를 ⑩ 1-35(1~2년)·⑪ 1-36(1년 미만) «비사업용토지»로 적는다. 호(`104-1-2`·`104-1-3`)만으로는 구분되지 않는다.
    */
   nonBusinessLandShortTerm?: boolean;
+  /**
+   * 조정대상지역 다주택 중과 대상 주택인데 §104⑦ 후단 비교에서 단기세율(2·3호)이 이김 — 엔진 echo `surchargeShortTermClause`(R-c10-01).
+   * 별지 제84호서식은 이 경우를 일반 단기 주택 코드(1-46·1-39·1-40)가 아니라 «조정대상지역 내 주택으로서 1세대2주택(3주택)» 단기 코드로 적는다.
+   */
+  surchargeShortTermClause?: SurchargeRateClause;
 }
 
 /**
@@ -95,6 +124,9 @@ export interface FilingRateCodeInput {
  *   ⑮ 1-10 비사업용토지 ’09.3.16.~’12.12.31. 취득분
  *   ⑲ 1-51 / ㉓ 1-55 조정대상지역 1세대2주택 / 3주택(’18.4.1.~’21.5.31.)
  *   ㉗ 1-47 / ㉝ 1-49 같은 취지(’21.6.1.~ — +20%p / +30%p)
+ *   ⑳ 1-53 / ㉔ 1-57 1년 미만 보유 조정대상지역 1세대2주택 / 3주택(’18.4.1.~’21.5.31.)
+ *   ㉘ 1-84 · ㉙ 1-82 / ㉞ 1-88 · ㉟ 1-86 1년 미만 · 1~2년 보유 조정대상지역 1세대2주택 / 3주택(’21.6.1.~)
+ *     (⑳㉔㉘㉙㉞㉟은 §104⑦ 후단 비교에서 단기세율이 채택된 중과 대상 주택 — 엔진 표지 `surchargeShortTermClause`. R-c10-01)
  */
 export function resolveFilingRateCode(input: FilingRateCodeInput): string | undefined {
   const { rateClause, assetKind, transferDate, nblSurchargeExcluded, specialRateBasis } = input;
@@ -118,11 +150,13 @@ export function resolveFilingRateCode(input: FilingRateCodeInput): string | unde
     case "104-1-3": // 1년 미만
       if (input.nonBusinessLandShortTerm) return "1-36"; // ⑪ 1년 미만 보유 비사업용토지 (50%)
       if (isPresaleRight(assetKind)) return after20210601 ? "1-46" : undefined;
+      if (housingLike && input.surchargeShortTermClause) return surchargeShortTermCode(input.surchargeShortTermClause, rateClause, transferDate);
       if (housingLike) return after20210601 ? "1-46" : "1-40";
       return "1-20";
     case "104-1-2": // 1년 이상 2년 미만
       if (input.nonBusinessLandShortTerm) return "1-35"; // ⑩ 1년 이상 2년 미만 보유 비사업용토지 (40%)
       if (isPresaleRight(assetKind)) return undefined; // 분양권은 ⑦(1-23)이 1년 이상 전체를 덮는다
+      if (housingLike && input.surchargeShortTermClause) return surchargeShortTermCode(input.surchargeShortTermClause, rateClause, transferDate);
       if (housingLike) return after20210601 ? "1-39" : undefined;
       return "1-15";
 
