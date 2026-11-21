@@ -123,7 +123,11 @@ describe("토지 출자 명세서 — ① 인가전 분 개산공제 base·율 e
     const result = calculateTransferTax({ ...landContribInput(), ...extra }, rates);
     const items = new Map<string, StatementItem>([["expenses", { label: "필요경비", value: 0 } as StatementItem]]);
     applyLandContribOverrides(items, result.redevelopmentDetail!, TRANSFER_PRICE);
-    return { formula: items.get("expenses")!.perAsset![0].formula, lcd: result.redevelopmentDetail!.landContribDetail! };
+    return {
+      formula: items.get("expenses")!.perAsset![0].formula,
+      lcd: result.redevelopmentDetail!.landContribDetail!,
+      rationale: result.redevelopmentDetail!.valuationMeta?.rationale ?? "",
+    };
   };
 
   it("LC-1 전체 소유 — 200,000,000 × 3% = 6,000,000 (종전과 같다)", () => {
@@ -140,5 +144,12 @@ describe("토지 출자 명세서 — ① 인가전 분 개산공제 base·율 e
     const r = preExpense({ isUnregistered: true });
     expect(r.lcd.estimatedDeductionRate).toBe(0.003);
     expect(r.formula).toBe("200,000,000 × 0.3% = 600,000 (1원 미만 절사)");
+    // 형제 경로 — RedevelopmentDetailCard 「환산취득가 적용 · rationale」도 같은 율(리뷰 mustFix · 종전 「× 3% = 600,000」).
+    expect(r.rationale).toContain("200,000,000 × 0.3% = 600,000");
+    expect(r.rationale).not.toContain("× 3%");
+  });
+
+  it("LC-4 등기 — rationale 율은 3% 그대로", () => {
+    expect(preExpense({}).rationale).toContain("200,000,000 × 3% = 6,000,000");
   });
 });

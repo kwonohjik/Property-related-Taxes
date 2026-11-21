@@ -68,7 +68,7 @@ test("ME-1: 시가 모드 담보 승 이월과세 함께 양도 — 200 · 자�
 
   const body = page.locator("body");
   await expect(body).toContainText("이월과세 비교과세 결과");
-  await expect(body).toContainText(/\[당초 증여자 취득가\]\s*150,000,000/);
+  await expect(body).toContainText(/\[당초 증여자 취득가 × 채무비율 · 소령 §159①1호\]\s*150,000,000/);
   await expect(body).toContainText(/\[수증자 취득가 × 채무비율 · 소령 §159①1호\]\s*500,000,000/);
   // 이월과세를 적용한 신고 전체 세액이 적용하지 않은 세액보다 크면 적용한다(§97의2②3호는 적용 시 세액이 더 적을 때만 배제).
   await expect(body).toContainText(/채택 시나리오:\s*A \(이월과세 적용\)/);
@@ -85,7 +85,7 @@ test("ME-2: 당초 증여자 기준시가가 높아 이월과세 세액이 더 �
   await seedAndOpen(page, [house(1, donorHigh), house(2, donorHigh)]);
   const r = await calculate(page);
   expect(r.status(), await r.text()).toBe(200);
-  await expect(page.locator("body")).toContainText(/\[당초 증여자 취득가\]\s*480,000,000/);
+  await expect(page.locator("body")).toContainText(/\[당초 증여자 취득가 × 채무비율 · 소령 §159①1호\]\s*480,000,000/);
   await expect(page.locator("body")).toContainText(/채택 시나리오:\s*B \(이월과세 미적용\)/);
 
   const side = await sidebarAfterCalc(page);

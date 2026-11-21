@@ -65,7 +65,7 @@ test("BU-E1: 담보 승 이월과세 함께 양도 — 200 · 자산마다 A/B �
 
   const body = page.locator("body");
   await expect(body).toContainText("이월과세 비교과세 결과");
-  await expect(body).toContainText(/\[당초 증여자 취득가\]\s*150,000,000/);
+  await expect(body).toContainText(/\[당초 증여자 취득가 × 채무비율 · 소령 §159①1호\]\s*150,000,000/);
   await expect(body).toContainText(/\[수증자 취득가 × 채무비율 · 소령 §159①1호\]\s*500,000,000/);
   await expect(body).toContainText(/채택 시나리오:\s*B \(이월과세 미적용\)/);
 

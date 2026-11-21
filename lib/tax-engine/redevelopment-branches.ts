@@ -33,6 +33,10 @@ import type {
 
 import { isLandContributedNewBuild, resolveRedevEffectiveOneHouseSingle, resolveRightResidenceMonths } from "./redevelopment-lthd";
 
+/** rationale 표시용 개산공제율(미등기 3/1000) — `estimatedDeductionRate` 단일 판정점. 「× 3%」 고정은 미등기에서 거짓 등식이 된다. */
+const lumpRatePct = (isUnregistered?: boolean): string =>
+  `${(estimatedDeductionRate(isUnregistered) * 100).toFixed(1).replace(/\.0$/, "")}%`;
+
 export function toBranchHolding(
   from: Date,
   to: Date,
@@ -213,7 +217,7 @@ export function runLandContribEstimated(
         input.ownershipRatio,
       ),
       denominator: redevelopment.landStdPriceAtApproval,
-      rationale: `§166③ 토지 환산취득가 = 권리가액 ${redevelopment.rightsValue.toLocaleString()} × 취득시공시지가 ${(redevelopment.landStdPriceAtAcq ?? 0).toLocaleString()} / 인가시공시지가 ${(redevelopment.landStdPriceAtApproval ?? 0).toLocaleString()} = ${landResult.convertedAcquisition.toLocaleString()} / 개산공제 §163⑥ = ${computeLumpSumDeductionBase(redevelopment.landStdPriceAtAcq ?? 0, input.ownershipRatio).toLocaleString()} × 3% = ${landResult.estimatedDeduction.toLocaleString()}`,
+      rationale: `§166③ 토지 환산취득가 = 권리가액 ${redevelopment.rightsValue.toLocaleString()} × 취득시공시지가 ${(redevelopment.landStdPriceAtAcq ?? 0).toLocaleString()} / 인가시공시지가 ${(redevelopment.landStdPriceAtApproval ?? 0).toLocaleString()} = ${landResult.convertedAcquisition.toLocaleString()} / 개산공제 §163⑥ = ${computeLumpSumDeductionBase(redevelopment.landStdPriceAtAcq ?? 0, input.ownershipRatio).toLocaleString()} × ${lumpRatePct(input.isUnregistered)} = ${landResult.estimatedDeduction.toLocaleString()}`,
     },
     estimatedLumpDeduction: landResult.estimatedDeduction,
     ...(landResult.carryoverGiftTaxApplied !== undefined
@@ -406,7 +410,7 @@ export function runHousingContribReceiveEstimated(
         ` × 취득시PHD ${(redevelopment.housingStdPriceAtAcq ?? 0).toLocaleString()}` +
         ` / 인가시PHD ${(redevelopment.housingStdPriceAtApproval ?? 0).toLocaleString()}` +
         ` = ${housingResult.convertedAcquisition.toLocaleString()}` +
-        ` / 개산공제 §163⑥ = ${computeLumpSumDeductionBase(redevelopment.housingStdPriceAtAcq ?? 0, input.ownershipRatio).toLocaleString()} × 3%` +
+        ` / 개산공제 §163⑥ = ${computeLumpSumDeductionBase(redevelopment.housingStdPriceAtAcq ?? 0, input.ownershipRatio).toLocaleString()} × ${lumpRatePct(input.isUnregistered)}` +
         ` = ${housingResult.estimatedDeduction.toLocaleString()}`,
     },
     estimatedLumpDeduction: housingResult.estimatedDeduction,
