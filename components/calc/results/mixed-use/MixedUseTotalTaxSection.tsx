@@ -27,6 +27,7 @@ import {
   DivRow,
 } from "@/components/calc/results/mixed-use/MixedUseResultCardParts";
 import { adoptedCalculatedTax, deriveBasicRateBracket } from "@/components/calc/results/mixed-use/MixedUseResultCardAdapter";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 
 interface Props {
   breakdown: MixedUseGainBreakdown;
@@ -58,6 +59,9 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
   // 주택분 양도소득금액 차감(§99·§99의3 NH-33 · §98의3~§98의8 US-13) — 엔진이 실제로 뺀 값(통산 안분 후). 0이면 차감 행을 두지 않는다.
   const di = t.incomeDeduction && t.incomeDeduction.reducibleIncome > 0 ? t.incomeDeduction : undefined;
   const diLabel = di ? INCOME_DEDUCTION_LABEL[di.appliedId] ?? "조세특례제한법 주택 특례" : "";
+  // 미등기(§104①10호 70% 단일세율)면 엔진 `transferTax`는 과세표준 × 70% 하나다 — 비사업용 가산은 세액에 들어가지 않는다(R-c02-01).
+  const unregistered = t.rateBasis === "unregistered";
+  const surchargeShown = t.nonBusinessSurcharge > 0 && !unregistered;
 
   return (
     <>
@@ -105,9 +109,12 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
         />
         <DivRow />
         <Row
-          label={t.rateBasis === "clause2" ? "산출세액 (자산별 합계)" : "산출세액 (기본세율)"}
+          label={unregistered ? "산출세액 (미등기 70%)" : t.rateBasis === "clause2" ? "산출세액 (자산별 합계)" : "산출세액 (기본세율)"}
           value={fmt(adoptedCalculatedTax(t))}
           formula={(() => {
+            if (unregistered) {
+              return `과세표준 ${fmtPlain(t.taxBase)} × 70% (${TRANSFER.UNREGISTERED_SURCHARGE} 미등기양도자산 단일세율 — 누진공제 없음)`;
+            }
             // §104⑤2호가 채택되면 세액은 파트별 산출세액의 합이라 `taxByBasicRate`(1호)와 다르다.
             // 1호 값을 그대로 인용하면 표시-계산 drift가 된다.
             // 배율 초과분(비사업용 토지)은 §104⑤ 본문 **후단**에 따라 **별개 자산**으로 보아
@@ -141,7 +148,7 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
             return `${fmtPlain(t.taxBase)} × ${fmtPct(rate)} - ${fmtPlain(deduction)} (소득세법 §104)${nbNote}`;
           })()}
         />
-        {t.nonBusinessSurcharge > 0 && (
+        {surchargeShown && (
           <Row
             label={`비사업용토지 +${Math.round((nb?.additionalRate ?? 0.1) * 100)}%p 가산세`}
             value={fmt(t.nonBusinessSurcharge)}
@@ -159,7 +166,7 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
           label="양도소득세"
           value={fmt(t.transferTax)}
           formula={`산출세액 ${fmtPlain(adoptedCalculatedTax(t))}${
-            t.nonBusinessSurcharge > 0
+            surchargeShown
               ? ` + 비사업용토지 가산세 ${fmtPlain(t.nonBusinessSurcharge)}`
               : ""
           }`}

@@ -133,7 +133,9 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
     basicDeduction: t.basicDeduction,
     taxBase: t.taxBase,
     appliedRate: t.appliedRate,
-    progressiveDeduction: t.progressiveDeduction,
+    // 미등기(§104①10호 70% 단일세율)는 누진공제가 없다 — 엔진 echo는 합산 누진 구간 값을 그대로 두므로
+    // 여기서 0으로 넘긴다(단건 엔진 `transfer-tax-rate-calc.ts` 미등기 분기와 같은 규약). 상세명세서 산식이 이 값을 읽는다.
+    progressiveDeduction: t.rateBasis === "unregistered" ? 0 : t.progressiveDeduction,
     calculatedTax: adoptedCalculatedTax(t),
     isSurchargeSuspended: false,
     /**
@@ -199,9 +201,13 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
  * 결과 카드·신고서 어댑터가 **같은 식**을 쓰도록 단일 소스로 둔다
  * (memory `feedback_engine_result_display_drift`).
  *
+ * 미등기(`"unregistered"`)이면 `transferTax`(과세표준 × 70%, 소득세법 §104①10호)가 채택값이다 —
+ * 그때 `taxByBasicRate`는 채택되지 않은 합산 누진 세액이다(R-c02-01).
+ *
  * `rateBasis` 미주입(구 캐시 결과)이면 종전 동작(1호)으로 fallback.
  */
 export function adoptedCalculatedTax(t: MixedUseTotalTax): number {
+  if (t.rateBasis === "unregistered") return t.transferTax;
   return t.rateBasis === "clause2" ? t.transferTax - t.nonBusinessSurcharge : t.taxByBasicRate;
 }
 
