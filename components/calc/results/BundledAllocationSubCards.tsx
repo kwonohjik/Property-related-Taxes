@@ -18,6 +18,7 @@ import type { HouseRefRow } from "@/components/calc/results/transfer/count-exclu
 import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/LocalIncomePenaltyNotice";
 import { comparativeTaxView } from "@/components/calc/results/transfer/comparative-tax-display";
 import { describeComparativeDecision } from "@/components/calc/results/transfer/comparative-tax-display";
+import { groupRateReproduces } from "@/components/calc/results/transfer/comparative-tax-display";
 
 
 
@@ -234,11 +235,19 @@ export function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTran
                 <Row
                   key={g.group}
                   label={`· ${g.group === "progressive" ? "일반 누진" : g.group === "short_term" ? "단기보유" : g.group === "multi_house_surcharge" ? "다주택 중과" : g.group === "non_business_land" ? "비사업용토지" : "미등기"} (과표 ${formatKRW(g.groupTaxBase)})`}
-                  value={`${(g.appliedRate * 100).toFixed(0)}%${g.surchargeRate ? ` (중과 ${(g.surchargeRate * 100).toFixed(0)}%p 포함)` : ""}`}
+                  value={
+                    // 군 메타가 군 세액을 재현하지 못하면(한 군에 호가 둘 이상) 최고세율을 근거처럼 적지 않는다 — 형제 `groupRateText`와 같은 검산.
+                    groupRateReproduces(g)
+                      ? `${(g.appliedRate * 100).toFixed(0)}%${g.surchargeRate ? ` (중과 ${(g.surchargeRate * 100).toFixed(0)}%p 포함)` : ""}`
+                      : "호별 합계"
+                  }
                   sub
                 />
               ))}
             </>
+          ) : aggregated.groupTaxes.length === 1 && !groupRateReproduces(aggregated.groupTaxes[0]) ? (
+            // 한 군에 호가 둘 이상이면 군 메타는 표시용 최고세율이라 산출세액을 재현하지 못한다(R-c01-02 형제).
+            <Row label="세율" value="호별 합계" />
           ) : aggregated.groupTaxes.length === 1 ? (
             // `appliedRate`는 이미 중과 포함 실효세율이다 — `surchargeRate`를 더하면 이중 계상(상세명세서·신고서와 같은 정정, O-18).
             <Row

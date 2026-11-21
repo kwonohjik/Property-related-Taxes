@@ -68,12 +68,19 @@ export function groupRateText(
     "groupTaxBase" | "groupCalculatedTax" | "appliedRate" | "surchargeRate" | "progressiveDeduction"
   >,
 ): string {
-  const reproduces =
-    g.groupTaxBase === 0 ||
-    // 세액과 같은 `applyRate`로 검산한다 — double 곱 floor는 1원 낮게 떨어져 재현되는 군을 「(호별 합계)」로 오판한다(R-c05-02).
-    applyRate(g.groupTaxBase, g.appliedRate) - g.progressiveDeduction === g.groupCalculatedTax;
-  if (!reproduces) return "(호별 합계)";
+  if (!groupRateReproduces(g)) return "(호별 합계)";
   // `appliedRate`는 이미 중과 포함 실효세율이다 — «+N%p»로 적으면 더하는 것으로 읽힌다(O-22).
   const surcharge = g.surchargeRate ? `, 중과 ${(g.surchargeRate * 100).toFixed(0)}%p 포함` : "";
   return `(${(g.appliedRate * 100).toFixed(1)}%${surcharge})`;
+}
+
+/** 군 메타 세율·누진공제가 군 산출세액을 재현하는가 — `groupRateText`와 일괄 「합산 과세 내역」 세율 행의 단일 소스(R-c01-02 형제). */
+export function groupRateReproduces(
+  g: Pick<GroupTaxResult, "groupTaxBase" | "groupCalculatedTax" | "appliedRate" | "progressiveDeduction">,
+): boolean {
+  return (
+    g.groupTaxBase === 0 ||
+    // 세액과 같은 `applyRate`로 검산한다 — double 곱 floor는 1원 낮게 떨어져 재현되는 군을 「(호별 합계)」로 오판한다(R-c05-02).
+    applyRate(g.groupTaxBase, g.appliedRate) - g.progressiveDeduction === g.groupCalculatedTax
+  );
 }
