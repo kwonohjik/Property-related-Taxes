@@ -20,6 +20,8 @@ import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/thresh
 import { RentalCancellationWindowNote } from "./RentalCancellationWindowNote";
 import { RentalSuccessionEchoNote } from "./RentalSuccessionEchoNote";
 import { rentalHousingBasisOf } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
+import { phrpIncomeClauseOf } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
+import { rentalArticleLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 
 interface Props {
   detail: RentalHousingExceptionResult;
@@ -162,7 +164,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           <ul className="text-xs text-muted-foreground space-y-0.5">
             {detail.eligibility.perUnitVerdict.map((v) => (
               <li key={v.unitIndex}>
-                {v.unitIndex + 1}호: {v.derivedArticle}목 · 의무임대기간 {v.requiredYears}년 · 기준시가 상한{" "}
+                {v.unitIndex + 1}호: {rentalArticleLabel(v.derivedArticle)} · 의무임대기간 {v.requiredYears}년 · 기준시가 상한{" "}
                 {(v.stdPriceCap / 100_000_000).toFixed(0)}억
                 {v.effectiveRegDate ? ` · 등록기준일 ${v.effectiveRegDate}` : ""}
               </li>
@@ -421,7 +423,7 @@ export function RentalHousingExceptionDetailCard({ detail }: Props) {
           </p>
         </div>
         <div className="rounded border border-emerald-200 bg-emerald-50/60 dark:border-emerald-800/30 dark:bg-emerald-950/20 p-2.5 text-center">
-          <p className="text-micro text-emerald-700 dark:text-emerald-400 font-medium">{isScenarioB ? "비과세 양도소득금액 (시행령 §161①)" : "비과세 양도소득금액"}</p>
+          <p className="text-micro text-emerald-700 dark:text-emerald-400 font-medium">{isScenarioB ? `비과세 양도소득금액 (시행령 ${phrpIncomeClauseOf(scenarioId)})` : "비과세 양도소득금액"}</p>
           <p className="text-sm font-mono font-semibold text-emerald-900 dark:text-emerald-200 mt-0.5">
             {formatN(exemptGain)}
           </p>
