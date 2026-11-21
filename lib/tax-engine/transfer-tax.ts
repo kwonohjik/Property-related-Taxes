@@ -410,6 +410,8 @@ function calculateTransferTaxCore(
        *   (STEP 7의 나머지 두 특칙 `forceFlatRate20`·`suppressShortTermRate`는 **소득공제형
        *    감면**이 전제라 양도소득금액이 0 이하인 이 경로에서는 성립하지 않는다.)
        */
+      // 짝 부수토지 카드가 받는 중과 판정(`toHouseVerdict`) — 정상 반환과 같은 echo. 짝 주택이 차손이어도 «주택(이에 딸린 토지를 포함한다)»의 중과·장특 배제(§104⑦·§95②)는 카드에 그대로 걸린다.
+      surchargeEcho: resolveSurchargeApplication(effectiveInput, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules),
       rateEcho: (() => {
         const tr = calcTax(0, parsedRates, landOnlyRateInput(effectiveInput), multiHouseSurchargeResult);
         // 위기취득 세율 배제 표지 — 정상 반환과 같은 술어(다건 세율군 분류가 읽는다 · 계획서 `surcharge-oos-remaining.plan.md` C)

@@ -303,7 +303,7 @@ export interface TransferTaxResult {
   surchargeShortTermClause?: import("../transfer-tax-rate-clause").SurchargeRateClause;
   /**
    * [echo] 차손 조기 반환의 다주택 중과 판정이 주택 수에 산입한 조합원입주권·분양권 수(`SurchargeApplication.countedRightCount`) — 신고서 ③ 코드 표시 전용(R-c10-04). 세액 무영향.
-   * 차손 부수토지 카드는 정밀 판정도 `surchargeEcho`도 싣지 않아(짝 판정을 `surchargeEcho`로 실으면 `toHouseVerdict`가 읽어 세액 축이 바뀐다) 이 수만 따로 싣는다.
+   * 차손 부수토지 카드는 정밀 판정을 싣지 않아 이 수만 따로 싣는다(차손 조기 반환도 `surchargeEcho`를 싣는다 — 짝 주택이 차손이어도 카드가 중과를 따른다).
    */
   surchargeCountedRightCount?: number;
   /**

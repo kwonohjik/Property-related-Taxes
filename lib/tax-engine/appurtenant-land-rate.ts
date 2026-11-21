@@ -38,6 +38,7 @@ import type { TransferTaxInput } from "./types/transfer.types";
 // 배율 세분 시행일(2022.1.1.)은 비사토 축(영 §168의12)과 **같은 부칙 호**로 움직인다 —
 // 날짜를 두 곳에 적으면 개정 시 한쪽만 고쳐지는 dual-truth가 된다.
 import { HOUSING_MULTIPLIER_SPLIT_EFFECTIVE_DATE } from "./non-business-land/urban-area";
+import { resolveShortTermRate } from "./data/short-term-rate-history";
 
 // ─── 타입 ──────────────────────────────────────────────────────
 
@@ -206,19 +207,28 @@ export interface CompanionLandRateResolution {
 // ─── 함수 ──────────────────────────────────────────────────────
 
 /**
+ * 「소득세법」 §104①2호 괄호 «주택(이에 딸린 토지로서 대통령령으로 정하는 토지를 포함한다. 이하 이 항에서 같다)»의 시행일 — 법률 제12169호(2014.1.1. 시행).
+ * 그 전 시행본(2013.1.1. 시행 제11611호 등)의 §104①2·3호에는 주택 괄호가 없어(1~2년 40% · 1년 미만 50%, 자산 구분 없음) 부수토지도 **토지 자신의 보유기간**으로
+ * 세율을 정한다 — 이 날 전 양도분에는 일체과세 세율 분기(주택 보유기간 기준)를 쓰지 않는다(`transfer-tax-rate-calc.ts` T-1.5).
+ */
+export const APPURTENANT_LAND_HOUSING_RATE_FROM = "2014-01-01";
+
+/**
  * primary 주택 보유기간(월)에 따라 부수토지 일체과세 적용 세율을 반환한다.
  *
  * [포괄적 일체과세 원칙]
- *   부수토지=Yes 선언 시 주택과 동일한 보유기간 기준 세율 적용 (§104①).
- *   - 1년 미만: 70% (§104①3호 괄호 — 주택·입주권·분양권)
- *   - 1년~2년: 60% (§104①2호 괄호 — 주택·입주권·분양권)
- *   - 2년 이상: 누진세율 (일반 세율, "progressive" 신호)
+ *   부수토지=Yes 선언 시 주택과 동일한 보유기간 기준 세율 적용 (§104①) — 세율은 **양도일 시행본**의 주택 세율이다
+ *   (`resolveShortTermRate`의 `housing_or_right` 열 · 「소득세법」 §104①):
+ *   - 2021.6.1. 이후 양도: 1년 미만 70%(3호 괄호) · 1년~2년 60%(2호 괄호) · 2년 이상 누진세율
+ *   - 2014.1.1.~2021.5.31. 양도: 1년 미만 40%(3호 괄호 «주택 및 조합원 입주권») · 1년 이상은 누진세율(2호가 주택을 «제외»)
+ *   양도일을 주지 않으면 현행(2021.6.1. 이후) 세율이다(종전 호출부 호환).
  *
  * 반환값:
- *   number: 단일세율 (0.70 또는 0.60)
+ *   number: 단일세율
  *   "progressive": 누진세율 적용 신호 — 호출부에서 `manualProgressive=true`로 처리
  */
-export function housingRateForHoldingPeriod(holdingMonths: number): number | "progressive" {
+export function housingRateForHoldingPeriod(holdingMonths: number, transferDate?: Date): number | "progressive" {
+  if (transferDate) return resolveShortTermRate(transferDate, holdingMonths, "housing_or_right").rate ?? "progressive";
   if (holdingMonths < 12) return 0.70;  // 1년 미만 → 70% (§104①3호)
   if (holdingMonths < 24) return 0.60;  // 1년~2년 → 60% (§104①2호)
   return "progressive";                  // 2년 이상 → 누진세율
@@ -286,7 +296,7 @@ export function resolveCompanionLandRate(
     primary.buildingFootprintArea !== undefined && primary.buildingFootprintArea > 0;
 
   // 주택 보유기간 기준 세율 결정 (포괄적 일체과세)
-  const rateDecision = housingRateForHoldingPeriod(primary.holdingMonths);
+  const rateDecision = housingRateForHoldingPeriod(primary.holdingMonths, transferDate);
 
   if (hasFootprintArea) {
     // 영 §167의5 부수토지 한도 계산 (정착면적 입력된 경우)
