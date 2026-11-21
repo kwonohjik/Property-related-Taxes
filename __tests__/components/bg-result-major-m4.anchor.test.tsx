@@ -170,15 +170,27 @@ describe("R-c04-01 · 부담부증여 증여세 행 — §57 할증과세액 행
   });
 });
 
-/** 「A × 지분 50% × (… 양도로 보는 채무액 N / … 증여가액 D) [× 개산공제율 3%] = V」 를 법대로 곱해(중간 floor) V와 대조한다. */
+/**
+ * 「A × 지분 50% × (… 양도로 보는 채무액 N / … 증여가액 D) [× 개산공제율 3%] = V」 를 법대로 곱해(중간 floor) V와 대조한다.
+ * 지분 항은 「P%」(십진) 또는 「p/q」(분수) — 적힌 값 그대로 정확히(BigInt) 곱한다.
+ */
+function shareFrac(s: string): [bigint, bigint] {
+  const f = s.match(/^(\d+)\/(\d+)$/);
+  if (f) return [BigInt(f[1]), BigInt(f[2])];
+  const [i, d = ""] = s.replace(/%$/, "").split(".");
+  return [BigInt(i + d), 100n * 10n ** BigInt(d.length)];
+}
 function evalLine(line: string) {
-  const m = line.match(/기준시가 ([\d,]+)( × 지분 ([\d.]+)%)? × \(\S+ 양도로 보는 채무액 ([\d,]+) \/ \S+ 증여가액 ([\d,]+)\)( × 개산공제율 ([\d.]+)%)? = ([\d,]+)/);
+  const m = line.match(/기준시가 ([\d,]+)( × 지분 ([\d.]+%|\d+\/\d+))? × \(\S+ 양도로 보는 채무액 ([\d,]+) \/ \S+ 증여가액 ([\d,]+)\)( × 개산공제율 ([\d.]+)%)? = ([\d,]+)/);
   if (!m) throw new Error(`산식 형식 불일치: ${line}`);
-  let x = num(m[1]);
-  if (m[3]) x = Math.floor((x * Number(m[3])) / 100);
-  x = Math.floor((x * num(m[4])) / num(m[5]));
-  if (m[7]) x = Math.floor((x * Number(m[7])) / 100);
-  return { computed: x, shown: num(m[8]), hasShare: m[2] !== undefined };
+  let x = BigInt(num(m[1]));
+  if (m[3]) {
+    const [p, q] = shareFrac(m[3]);
+    x = (x * p) / q;
+  }
+  x = (x * BigInt(num(m[4]))) / BigInt(num(m[5]));
+  if (m[7]) x = Math.floor((Number(x) * Number(m[7])) / 100) as unknown as bigint;
+  return { computed: Number(x), shown: num(m[8]), hasShare: m[2] !== undefined, share: m[3] };
 }
 
 describe("R-c04-02 · 겸용 부담부증여 공유지분 — 취득가액·개산공제 산식에 지분 항", () => {
@@ -206,6 +218,32 @@ describe("R-c04-02 · 겸용 부담부증여 공유지분 — 취득가액·개�
       expect(text.match(/기준시가 [\d,]+ × 지분 50% ×/g)?.length, side).toBe(4);
       cleanup();
     }
+  });
+
+  it.each([
+    // 레거시 저장값(분모 ≠ 100) — 순환 소수 지분. 4자리 % 반올림으로 적으면 1/3에서 −83원·−16원·−2원 어긋났다(리뷰 반영).
+    { name: "레거시 1/3 · 채무 5.5억", share: { ownershipNumerator: "1", ownershipDenominator: "3" }, debt: "550000000", term: "1/3" },
+    { name: "레거시 1/7 · 채무 2.5억", share: { ownershipNumerator: "1", ownershipDenominator: "7" }, debt: "250000000", term: "1/7" },
+    // 화면 % 칸에 소수 5자리 이상 — 유한 소수라 엔진은 정확 십진 계산, 적는 %도 잘라 내지 않는다.
+    { name: "33.33333% · 채무 5.5억", share: { ownershipNumerator: "33.33333", ownershipDenominator: "100" }, debt: "550000000", term: "33.33333%" },
+  ])("$name: 지분 항이 엔진이 곱한 지분 그대로 적히고 산식 = 값", async ({ share, debt, term }) => {
+    const { issues, status, result } = await calc({ ...BG_ON, bgMortgageDebtAmount: debt, ...share, ownershipRemainderThirdParty: "yes" });
+    expect(issues).toEqual([]);
+    expect(status).toBe(200);
+    const d = resolveBgMixedDisplay(result!)!;
+    expect(d.breakdown.acquisitionMethodUsed).toBe("standard_price");
+    const lines = [
+      ...buildBgMixedAcquisitionFormula(d).split("\n"),
+      ...buildBgMixedExpenseFormula(d).split("\n"),
+    ].filter((l) => l.includes("기준시가"));
+    expect(lines.length).toBe(8);
+    for (const l of lines) {
+      const e = evalLine(l);
+      expect(e.share, l).toBe(term);
+      expect(e.computed, l).toBe(e.shown);
+    }
+    const { container } = render(<MixedUseBgAcqRows bg={d.breakdown} side="housing" />);
+    expect(container.textContent?.split(`× 지분 ${term} ×`).length).toBe(5);
   });
 
   it("🔴 짝: 단독 소유(지분 없음) · 같은 담보 승 경로 → 지분 항 없음 · 산식 = 값", async () => {

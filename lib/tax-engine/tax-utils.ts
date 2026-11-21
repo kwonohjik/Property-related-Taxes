@@ -89,7 +89,7 @@ const POW10_BIGINT = Array.from({ length: RATIO_MAX_DECIMALS + 1 }, (_, k) => 10
  * 대신 k = 0..10에서 `round(ratio × 10^k) / 10^k`가 ratio와 2ulp 이내인 **가장 짧은** 표현을 찾는다.
  * 1/3·6/11 같은 순환 소수는 어느 k에서도 맞지 않는다(최소 간격 ≈ 3e-11 ≫ 허용 오차).
  */
-function decimalizeRatio(ratio: number): { n: bigint; k: number } | null {
+export function decimalizeRatio(ratio: number): { n: bigint; k: number } | null {
   const tol = Math.abs(ratio) * RATIO_ULP_TOLERANCE;
   for (let k = 0; k <= RATIO_MAX_DECIMALS; k++) {
     const scale = 10 ** k;
