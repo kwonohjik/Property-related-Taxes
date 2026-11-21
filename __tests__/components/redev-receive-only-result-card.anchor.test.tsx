@@ -74,6 +74,12 @@ describe("RO-C1 단독 신고 — 한 칸 카드", () => {
     expect(t).toContain("양도차익64,980,000");
     expect(t.match(/장기보유공제 \(/g)).toHaveLength(1);
   });
+  it("R-c08-11 일반 과세 박스 — 과세대상은 청산금 수령분(신고하지 않는 신축주택분을 가리키지 않는다)", () => {
+    const t = card(r);
+    expect(t).toContain("고가주택 안분 미적용 — 전체 과세");
+    expect(t).toContain("청산금 수령분 양도차익 전체가 과세대상");
+    expect(t).not.toContain("신축주택분 양도차익 전체가 과세대상");
+  });
 });
 
 describe("RO-C2 동시신고(수령) — 3분할 그대로", () => {
@@ -84,6 +90,7 @@ describe("RO-C2 동시신고(수령) — 3분할 그대로", () => {
     expect(t).toContain("② 인가후 기존건물분");
     expect(t).toContain("③ 청산금 수령분");
     expect(t).toContain("분양가 386,000,000");
+    expect(t).toContain("신축주택분 양도차익 전체가 과세대상"); // R-c08-11 짝 — 동시신고는 종전 문구
     // 동시신고도 열마다 필요경비 행을 그린다 — `redev-simultaneous-card-expenses.anchor.test.tsx`
     expect(t).toContain("안분 필요경비 등(=인가전 필요경비 등 × 청산금권리가액)2,280,000");
   });

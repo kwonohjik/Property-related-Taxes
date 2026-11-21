@@ -408,10 +408,11 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             <span className="rounded-full bg-sky-200 px-2 py-0.5 text-micro font-bold text-sky-800">일반 과세</span>
             <span className="font-semibold">고가주택 안분 미적용 — 전체 과세</span>
           </div>
+          {/* 단독 신고(사례 46)는 청산금 수령분 한 칸만 신고하므로 과세대상도 그 분이다 — 「신축주택분」이라 적으면 신고하지 않는 대상을 가리킨다(R-c08-11). */}
           {/* 1세대1주택 입력이어도 §154① 보유·거주 요건을 못 채우면 이 박스가 뜬다(E3-01·OH-19) —
               「1세대1주택이 아닌 입력」이라고만 적으면 그 경우에 사실과 다르다. */}
           <p className="text-sky-800 dark:text-sky-200">
-            <span className="font-semibold">1세대1주택이 아니거나, 1세대1주택 비과세 요건(보유·거주 — 시행령 §154①)을 충족하지 않은 것</span>으로 판정되어, §95③ 비과세 안분 없이 신축주택분 양도차익 전체가 과세대상입니다.
+            <span className="font-semibold">1세대1주택이 아니거나, 1세대1주택 비과세 요건(보유·거주 — 시행령 §154①)을 충족하지 않은 것</span>으로 판정되어, §95③ 비과세 안분 없이 {isReceiveOnly ? "청산금 수령분" : "신축주택분"} 양도차익 전체가 과세대상입니다.
             &ldquo;보유 상황&rdquo; 단계의 1세대 여부·보유 주택 수와 거주기간을 확인하세요.
           </p>
         </div>
