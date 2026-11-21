@@ -165,7 +165,6 @@ export interface CompanionBuildContext {
       TransferTaxItemInput,
       | "householdRightCount"
       | "householdNoPresaleRightsConfirmed"
-      | "transferorNonResidentAtTransfer"
       | "houses"
       | "sellingHouseId"
       | "marriageMerge"
