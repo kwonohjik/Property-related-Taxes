@@ -1,0 +1,251 @@
+{
+  "sameWithin3y": {
+    "judgment": {
+      "status": 200,
+      "isExempt": true,
+      "applied": [
+        "155-1-temporary-two-house"
+      ],
+      "und": [],
+      "unmet": [],
+      "unmetReasons": {},
+      "excluded": [],
+      "veErrors": [],
+      "bodyTth": {
+        "previousAcquisitionDate": "2012-11-21",
+        "newAcquisitionDate": "2015-03-01",
+        "newHouseOrigin": {
+          "kind": "general"
+        }
+      },
+      "contested": []
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "totalTax": 0,
+      "tth": {
+        "previousAcquisitionDate": "2012-11-21",
+        "newAcquisitionDate": "2015-03-01",
+        "source": "roster",
+        "newHouseRowId": "m",
+        "newHouseOrigin": {
+          "kind": "general"
+        }
+      },
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "warningsAll": [],
+      "warningsHit": []
+    }
+  },
+  "sameAfter3y": {
+    "judgment": {
+      "status": 200,
+      "isExempt": false,
+      "applied": [],
+      "und": [],
+      "unmet": [
+        "155-2-inherited-house"
+      ],
+      "unmetReasons": {
+        "155-2-inherited-house": [
+          "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+        ]
+      },
+      "excluded": [],
+      "veErrors": [],
+      "bodyTth": {
+        "previousAcquisitionDate": "2012-11-21",
+        "newAcquisitionDate": "2015-03-01",
+        "newHouseOrigin": {
+          "kind": "general"
+        }
+      },
+      "contested": []
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": false,
+      "totalTax": 48675000,
+      "tth": {
+        "previousAcquisitionDate": "2012-11-21",
+        "newAcquisitionDate": "2015-03-01",
+        "source": "roster",
+        "newHouseRowId": "m",
+        "newHouseOrigin": {
+          "kind": "general"
+        }
+      },
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "warningsAll": [
+        "\"일시적 2주택 비과세 특례(소득세법 시행령 §155①)를 적용하지 않았습니다 — 신규주택 취득일부터 3년 이내 종전주택 양도 미충족(신규주택 취득일 2015-03-01, 처분기한 2018-03-02, 양도(예정)일 2018-06-01) — 역상 말일 2018-03-01이 토요일·공휴일"
+      ],
+      "warningsHit": []
+    }
+  },
+  "separateWithin3y": {
+    "judgment": {
+      "status": 200,
+      "isExempt": true,
+      "applied": [],
+      "und": [],
+      "unmet": [],
+      "unmetReasons": {},
+      "excluded": [
+        "m:소득세법 시행령 §155②"
+      ],
+      "veErrors": [],
+      "contested": []
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "totalTax": 0,
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "warningsAll": [],
+      "warningsHit": []
+    }
+  },
+  "sameParentalCareWithin3y": {
+    "judgment": {
+      "status": 200,
+      "isExempt": true,
+      "applied": [],
+      "und": [],
+      "unmet": [],
+      "unmetReasons": {},
+      "excluded": [
+        "m:소득세법 시행령 §155②"
+      ],
+      "veErrors": [],
+      "contested": []
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "totalTax": 0,
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "warningsAll": [],
+      "warningsHit": []
+    }
+  },
+  "sameWithin3y_rowAcqIsDecedentDate": {
+    "judgment": {
+      "status": 200,
+      "isExempt": false,
+      "applied": [],
+      "und": [],
+      "unmet": [
+        "155-2-inherited-house"
+      ],
+      "unmetReasons": {
+        "155-2-inherited-house": [
+          "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+        ]
+      },
+      "excluded": [],
+      "veErrors": [],
+      "contested": []
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": false,
+      "totalTax": 51183000,
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "warningsAll": [],
+      "warningsHit": []
+    }
+  },
+  "unknownWithin3y": {
+    "judgment": {
+      "status": 200,
+      "isExempt": true,
+      "applied": [
+        "155-1-temporary-two-house"
+      ],
+      "und": [],
+      "unmet": [],
+      "unmetReasons": {},
+      "excluded": [],
+      "veErrors": [],
+      "bodyTth": {
+        "previousAcquisitionDate": "2012-11-21",
+        "newAcquisitionDate": "2015-03-01",
+        "newHouseOrigin": {
+          "kind": "general"
+        }
+      },
+      "contested": []
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "totalTax": 0,
+      "tth": {
+        "previousAcquisitionDate": "2012-11-21",
+        "newAcquisitionDate": "2015-03-01",
+        "source": "roster",
+        "newHouseRowId": "m",
+        "newHouseOrigin": {
+          "kind": "general"
+        }
+      },
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "warningsAll": [],
+      "warningsHit": []
+    }
+  },
+  "sameWithin3y_rowAcqIsDecedentDate2014": {
+    "judgment": {
+      "status": 200,
+      "isExempt": true,
+      "applied": [
+        "155-1-temporary-two-house"
+      ],
+      "und": [],
+      "unmet": [],
+      "unmetReasons": {},
+      "excluded": [],
+      "veErrors": [],
+      "bodyTth": {
+        "previousAcquisitionDate": "2012-11-21",
+        "newAcquisitionDate": "2014-01-01",
+        "newHouseOrigin": {
+          "kind": "general"
+        }
+      },
+      "contested": []
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "totalTax": 0,
+      "tth": {
+        "previousAcquisitionDate": "2012-11-21",
+        "newAcquisitionDate": "2014-01-01",
+        "source": "roster",
+        "newHouseRowId": "m",
+        "newHouseOrigin": {
+          "kind": "general"
+        }
+      },
+      "issues": [
+        "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+      ],
+      "warningsAll": [],
+      "warningsHit": []
+    }
+  }
+}

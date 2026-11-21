@@ -1,0 +1,31 @@
+{
+ "factsShown": [
+  "양도 예정일=2024-02-30",
+  "증여자와 계속 같은 세대였습니까=maybe",
+  "취득일=2015-03-01",
+  "취득일=2016-03-01"
+ ],
+ "factsCount": 4,
+ "form": {
+  "asset": {
+   "acquisitionDate": "2015-03-01"
+  }
+ },
+ "issues": [
+  {
+   "path": "transferDate",
+   "message": "날짜 형식이 아닙니다(YYYY-MM-DD): 2024-02-30"
+  },
+  {
+   "path": "asset.giftSameHousehold",
+   "message": "허용값이 아닙니다(, yes, no, rejoined): maybe"
+  },
+  {
+   "path": "asset.acquisitionDate",
+   "message": "같은 경로가 두 번 나왔습니다 — 뒤의 값은 버렸습니다"
+  }
+ ],
+ "opinionStatus": 200,
+ "opinionNotesChars": 10000000,
+ "opinionJudgmentChars": 200023
+}

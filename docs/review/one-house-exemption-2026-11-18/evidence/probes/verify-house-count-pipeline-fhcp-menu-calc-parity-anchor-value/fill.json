@@ -1,0 +1,831 @@
+[
+ {
+  "id": "E001-dual",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "E002-era",
+  "menuEx": false,
+  "menuP": true,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": true
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": true
+  }
+ },
+ {
+  "id": "E036-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"]}}}"
+  },
+  "calc_500000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"]}}}"
+  }
+ },
+ {
+  "id": "E093-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"]}}}"
+  },
+  "calc_500000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"]}}}"
+  }
+ },
+ {
+  "id": "E093-current",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"]}}}"
+  },
+  "calc_500000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"]}}}"
+  }
+ },
+ {
+  "id": "E093-current-twin",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"]}}}"
+  },
+  "calc_500000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"]}}}"
+  }
+ },
+ {
+  "id": "E094-dual",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "E119-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"]}}}"
+  },
+  "calc_500000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"]}}}"
+  }
+ },
+ {
+  "id": "E197-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "F011-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"]}}}"
+  },
+  "calc_500000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"]}}}"
+  }
+ },
+ {
+  "id": "F021-era",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  },
+  "calc_500000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  }
+ },
+ {
+  "id": "F217-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  },
+  "calc_500000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  }
+ },
+ {
+  "id": "F251-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  },
+  "calc_500000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  }
+ },
+ {
+  "id": "F251-current",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  },
+  "calc_500000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  }
+ },
+ {
+  "id": "F373-era",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  },
+  "calc_500000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  }
+ },
+ {
+  "id": "P-F373-era-60m",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  },
+  "calc_500000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  }
+ },
+ {
+  "id": "N-F373-era-59m",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  },
+  "calc_500000000": {
+   "st": 400,
+   "err": "\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액"
+  }
+ },
+ {
+  "id": "F390-current",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "F455-era",
+  "menuEx": false,
+  "menuP": true,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": true
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": true
+  }
+ },
+ {
+  "id": "F455-current",
+  "menuEx": false,
+  "menuP": true,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": true
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": true
+  }
+ },
+ {
+  "id": "F456-era",
+  "menuEx": false,
+  "menuP": true,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": true
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": true
+  }
+ },
+ {
+  "id": "P-F456-era-6eok",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "F456-current",
+  "menuEx": false,
+  "menuP": true,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": true
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": true
+  }
+ },
+ {
+  "id": "P-F456-current-12eok",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G019-era",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G019-current",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G021-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "G021-current",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "P-G021-current-3y",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "N-G021-current-3y1d",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "G022-era",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G023-era",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G024-era",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G035-era",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G049-era",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G049-current",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G050-era",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G050-current",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "G055-era",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G055-current",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G062-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "G062-current",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "N-G062-over3y",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "G065-era",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G066-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "G077-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "P-G077-later-sold",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G091-era",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G091-current",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "G133-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "G152-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "G154-era",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "G157-era-first",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ },
+ {
+  "id": "G157-era-second",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "S001-current",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "STAT-71-2-right",
+  "menuEx": true,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": true,
+   "p": false
+  }
+ },
+ {
+  "id": "STAT-71-2-right-unknown",
+  "menuEx": false,
+  "menuP": false,
+  "calc_100000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  },
+  "calc_500000000": {
+   "st": 200,
+   "ex": false,
+   "p": false
+  }
+ }
+]

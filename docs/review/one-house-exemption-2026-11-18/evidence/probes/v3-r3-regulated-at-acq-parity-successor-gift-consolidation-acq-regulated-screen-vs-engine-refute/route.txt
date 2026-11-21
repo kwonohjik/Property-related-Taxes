@@ -1,0 +1,43 @@
+D0 mapo 2018-01-01 regulated=true basis=2017-08-03 고시 — 서울특별시 지정
+D0 mapo 2020-01-01 regulated=true basis=2017-08-03 고시 — 서울특별시 지정
+D0 mapo 2023-01-04 regulated=true basis=2017-08-03 고시 — 서울특별시 지정
+D0 mapo 2023-01-05 regulated=false basis=서울특별시 — 2023-01-05 기준 미지정(지정 이력 없음 또는 해제됨)
+D0 mapo 2023-02-01 regulated=false basis=서울특별시 — 2023-02-01 기준 미지정(지정 이력 없음 또는 해제됨)
+D0 mapo 2023-06-01 regulated=false basis=서울특별시 — 2023-06-01 기준 미지정(지정 이력 없음 또는 해제됨)
+D0 mapo 2025-10-15 regulated=false basis=서울특별시 — 2025-10-15 기준 미지정(지정 이력 없음 또는 해제됨)
+D0 mapo 2025-10-16 regulated=true basis=2025-10-16 고시 — 서울특별시 지정
+D0 mapo 2025-11-01 regulated=true basis=2025-10-16 고시 — 서울특별시 지정
+P0 translated acquisitionDate=2023-06-01 basisKept=true plan={"dates":["2018-01-01","2020-01-01"],"mode":"all"}
+P0n same-household=false basisKept=false plan={"dates":["2023-06-01"],"mode":"any"}
+V-A1 정방향 · 코드 있음 (시작2018 T · 증여2020 T · 준공2023-06 F)
+  screen: {"judgmentDate":"2023-06-01","calcGiftBasis":"undefined","factVisible":false,"successorPayload":{"giftSameHouseholdContinuous":true,"giftHouseholdHoldingStartDate":"2018-01-01"},"step4AutoVerdict":"false | 서울특별시 — 2023-06-01 기준 미지정(지정 이력 없음 또는 해제됨)","effectiveScoped":false,"storedFlagAcq":false,"addrDecided":null}
+  engine: status=200 isExempt=false determinedTax=173060000 exemptReason=null ⑧issues=0 body{wasRegulatedAtAcquisition=false, regionCode=1144010100, giftSameHouseholdContinuous=true, giftHouseholdHoldingStartDate=2018-01-01}
+    warnings(조정)=["조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 신청했다면, 삭제 전 소득세법 시행령 §154①4호(거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 증액은 제외)가 적용됩니다(대통령령 제30395호 부칙 제","1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 미충족(취득 당시 조정대상지역 해당, 거주기간 6개월)."]
+V-A1s 정방향 · 주소 문자열만(regionCode 없음)
+  screen: {"judgmentDate":"2023-06-01","calcGiftBasis":"undefined","factVisible":false,"successorPayload":{"giftSameHouseholdContinuous":true,"giftHouseholdHoldingStartDate":"2018-01-01"},"step4AutoVerdict":"null(no code)","effectiveScoped":false,"storedFlagAcq":false,"addrDecided":{"date":"2023-06-01"}}
+  engine: status=200 isExempt=true determinedTax=0 exemptReason="1세대1주택 비과세" ⑧issues=0 body{wasRegulatedAtAcquisition=false, regionCode=undefined, giftSameHouseholdContinuous=true, giftHouseholdHoldingStartDate=2018-01-01}
+    warnings(조정)=[]
+V-A1r 정방향 · 코드 · 0691 종전주택 거주 18 → 합 24
+  screen: {"judgmentDate":"2023-06-01","calcGiftBasis":"undefined","factVisible":false,"successorPayload":{"giftSameHouseholdContinuous":true,"giftHouseholdHoldingStartDate":"2018-01-01"},"step4AutoVerdict":"false | 서울특별시 — 2023-06-01 기준 미지정(지정 이력 없음 또는 해제됨)","effectiveScoped":false,"storedFlagAcq":false,"addrDecided":null}
+  engine: status=200 isExempt=true determinedTax=0 exemptReason="1세대1주택 비과세" ⑧issues=0 body{wasRegulatedAtAcquisition=false, regionCode=1144010100, giftSameHouseholdContinuous=true, giftHouseholdHoldingStartDate=2018-01-01}
+    warnings(조정)=[]
+V-A3 대조 · 같은 세대 아니오 · 코드
+  screen: {"judgmentDate":"2023-06-01","calcGiftBasis":"undefined","factVisible":false,"successorPayload":{},"step4AutoVerdict":"false | 서울특별시 — 2023-06-01 기준 미지정(지정 이력 없음 또는 해제됨)","effectiveScoped":false,"storedFlagAcq":false,"addrDecided":null}
+  engine: status=200 isExempt=true determinedTax=0 exemptReason="1세대1주택 비과세" ⑧issues=0 body{wasRegulatedAtAcquisition=false, regionCode=1144010100, giftSameHouseholdContinuous=undefined, giftHouseholdHoldingStartDate=undefined}
+    warnings(조정)=[]
+V-A4 대조 · 같은 세대 예 · 증여자 유형 아니오 · 코드
+  screen: {"judgmentDate":"2023-06-01","calcGiftBasis":"undefined","factVisible":false,"successorPayload":{},"step4AutoVerdict":"false | 서울특별시 — 2023-06-01 기준 미지정(지정 이력 없음 또는 해제됨)","effectiveScoped":false,"storedFlagAcq":false,"addrDecided":null}
+  engine: status=200 isExempt=true determinedTax=0 exemptReason="1세대1주택 비과세" ⑧issues=0 body{wasRegulatedAtAcquisition=false, regionCode=1144010100, giftSameHouseholdContinuous=undefined, giftHouseholdHoldingStartDate=undefined}
+    warnings(조정)=[]
+V-A2 역방향 · 코드 (시작2023-02 F · 증여2023-06 F · 준공2025-11 T)
+  screen: {"judgmentDate":"2025-11-01","calcGiftBasis":"undefined","factVisible":false,"successorPayload":{"giftSameHouseholdContinuous":true,"giftHouseholdHoldingStartDate":"2023-02-01"},"step4AutoVerdict":"true | 2025-10-16 고시 — 서울특별시 지정","effectiveScoped":true,"storedFlagAcq":true,"addrDecided":null}
+  engine: status=200 isExempt=true determinedTax=0 exemptReason="1세대1주택 비과세" ⑧issues=0 body{wasRegulatedAtAcquisition=true, regionCode=1144010100, giftSameHouseholdContinuous=true, giftHouseholdHoldingStartDate=2023-02-01}
+    warnings(조정)=["증여자가 관리처분계획 인가 전부터 종전주택을 보유한 원조합원이고 계속 같은 세대였다는 입력에 따라, 세대가 종전주택 보유를 시작한 날부터 보유기간(종전주택·공사기간·신축주택)을 통산하고 그 날을 「취득 당시」로 보았습니다. 입주권 상태에서 동일세대원 간에 증여한 경우 증여자와 수증자의 보유기간을 통산한다"]
+V-A2s 역방향 · 주소 문자열만
+  screen: {"judgmentDate":"2025-11-01","calcGiftBasis":"undefined","factVisible":false,"successorPayload":{"giftSameHouseholdContinuous":true,"giftHouseholdHoldingStartDate":"2023-02-01"},"step4AutoVerdict":"null(no code)","effectiveScoped":true,"storedFlagAcq":true,"addrDecided":{"date":"2025-11-01"}}
+  engine: status=200 isExempt=false determinedTax=348250000 exemptReason=null ⑧issues=0 body{wasRegulatedAtAcquisition=true, regionCode=undefined, giftSameHouseholdContinuous=true, giftHouseholdHoldingStartDate=2023-02-01}
+    warnings(조정)=["조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 신청했다면, 삭제 전 소득세법 시행령 §154①4호(거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 증액은 제외)가 적용됩니다(대통령령 제30395호 부칙 제","1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 미충족(취득 당시 조정대상지역 해당, 거주기간 0개월)."]
+V-A2n 역방향 대조 · 같은 세대 아니오 · 코드
+  screen: {"judgmentDate":"2025-11-01","calcGiftBasis":"undefined","factVisible":false,"successorPayload":{},"step4AutoVerdict":"true | 2025-10-16 고시 — 서울특별시 지정","effectiveScoped":true,"storedFlagAcq":true,"addrDecided":null}
+  engine: status=200 isExempt=false determinedTax=348250000 exemptReason=null ⑧issues=0 body{wasRegulatedAtAcquisition=true, regionCode=1144010100, giftSameHouseholdContinuous=undefined, giftHouseholdHoldingStartDate=undefined}
+    warnings(조정)=["조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 신청했다면, 삭제 전 소득세법 시행령 §154①4호(거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 증액은 제외)가 적용됩니다(대통령령 제30395호 부칙 제","1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기산일 2025-11-01, 보유기간 0년 4개월) · 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 미충족(취득 당시 조정대상지역 해당, 거주기간 0개월)."]

@@ -1,0 +1,14 @@
+{
+  "calc_sameDay": {
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 146366000,
+    "issues": []
+  },
+  "calc_normal_control": {
+    "status": 200,
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": []
+  }
+}

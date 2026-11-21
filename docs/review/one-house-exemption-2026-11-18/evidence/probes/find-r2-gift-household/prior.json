@@ -1,0 +1,2040 @@
+[
+ {
+  "key": "both-reg|spouse|prior=|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "prior-residence-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 192159000,
+   "adopt": "A",
+   "lthd": 96000000,
+   "tags": [
+    "PRIORMISS"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|spouse|prior=|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "prior-residence-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 192159000,
+   "adopt": "A",
+   "lthd": 96000000,
+   "tags": [
+    "PRIORMISS"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|spouse|prior=|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "prior-residence-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 425188500,
+   "adopt": "A",
+   "lthd": 192000000,
+   "tags": [
+    "PRIORMISS"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|spouse|prior=|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "prior-residence-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 425188500,
+   "adopt": "A",
+   "lthd": 192000000,
+   "tags": [
+    "PRIORMISS"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|spouse|prior=0|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 192159000,
+   "adopt": "A",
+   "lthd": 96000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|spouse|prior=0|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 192159000,
+   "adopt": "A",
+   "lthd": 96000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|spouse|prior=0|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 425188500,
+   "adopt": "A",
+   "lthd": 192000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|spouse|prior=0|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 425188500,
+   "adopt": "A",
+   "lthd": 192000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|spouse|prior=24|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified",
+    "prior-residence-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [
+    "DETAIL",
+    "PRIOR"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|spouse|prior=24|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified",
+    "prior-residence-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [
+    "DETAIL",
+    "PRIOR"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|spouse|prior=24|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified",
+    "prior-residence-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 45238600,
+   "adopt": "A",
+   "lthd": 76800000,
+   "tags": [
+    "DETAIL",
+    "PRIOR",
+    "T2"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|spouse|prior=24|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified",
+    "prior-residence-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 45238600,
+   "adopt": "A",
+   "lthd": 76800000,
+   "tags": [
+    "DETAIL",
+    "PRIOR",
+    "T2"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|lineal|prior=|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "prior-residence-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 192159000,
+   "adopt": "A",
+   "lthd": 96000000,
+   "tags": [
+    "PRIORMISS"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|lineal|prior=|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "prior-residence-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 192159000,
+   "adopt": "A",
+   "lthd": 96000000,
+   "tags": [
+    "PRIORMISS"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|lineal|prior=|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "prior-residence-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 425188500,
+   "adopt": "A",
+   "lthd": 192000000,
+   "tags": [
+    "PRIORMISS"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|lineal|prior=|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "prior-residence-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 425188500,
+   "adopt": "A",
+   "lthd": 192000000,
+   "tags": [
+    "PRIORMISS"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|lineal|prior=0|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 192159000,
+   "adopt": "A",
+   "lthd": 96000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|lineal|prior=0|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 192159000,
+   "adopt": "A",
+   "lthd": 96000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|lineal|prior=0|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 425188500,
+   "adopt": "A",
+   "lthd": 192000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|lineal|prior=0|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 425188500,
+   "adopt": "A",
+   "lthd": 192000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|lineal|prior=24|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified",
+    "prior-residence-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [
+    "DETAIL",
+    "PRIOR"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|lineal|prior=24|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified",
+    "prior-residence-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [
+    "DETAIL",
+    "PRIOR"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|lineal|prior=24|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified",
+    "prior-residence-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 45238600,
+   "adopt": "A",
+   "lthd": 76800000,
+   "tags": [
+    "DETAIL",
+    "PRIOR",
+    "T2"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|lineal|prior=24|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified",
+    "prior-residence-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 45238600,
+   "adopt": "A",
+   "lthd": 76800000,
+   "tags": [
+    "DETAIL",
+    "PRIOR",
+    "T2"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|other|prior=|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "prior-residence-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": false,
+   "tax": 94897000,
+   "lthd": 18000000,
+   "tags": [
+    "PRIORMISS"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|other|prior=|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "prior-residence-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": false,
+   "tax": 94897000,
+   "lthd": 18000000,
+   "tags": [
+    "PRIORMISS"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|other|prior=|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "prior-residence-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": false,
+   "tax": 350163000,
+   "lthd": 54000000,
+   "tags": [
+    "PRIORMISS"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|other|prior=|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "prior-residence-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": false,
+   "tax": 350163000,
+   "lthd": 54000000,
+   "tags": [
+    "PRIORMISS"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|other|prior=0|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": false,
+   "tax": 94897000,
+   "lthd": 18000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|other|prior=0|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": false,
+   "tax": 94897000,
+   "lthd": 18000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|other|prior=0|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": false,
+   "tax": 350163000,
+   "lthd": 54000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|other|prior=0|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": false,
+   "tax": 350163000,
+   "lthd": 54000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|other|prior=24|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified",
+    "prior-residence-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "lthd": 0,
+   "tags": [
+    "DETAIL",
+    "PRIOR"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|other|prior=24|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified",
+    "prior-residence-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "lthd": 0,
+   "tags": [
+    "DETAIL",
+    "PRIOR"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|other|prior=24|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified",
+    "prior-residence-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": true,
+   "tax": 43232200,
+   "lthd": 21600000,
+   "tags": [
+    "DETAIL",
+    "PRIOR",
+    "T2"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "both-reg|other|prior=24|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified",
+    "prior-residence-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": true,
+   "tax": 43232200,
+   "lthd": 21600000,
+   "tags": [
+    "DETAIL",
+    "PRIOR",
+    "T2"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|spouse|prior=|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|spouse|prior=|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|spouse|prior=|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 61289800,
+   "adopt": "A",
+   "lthd": 38400000,
+   "tags": [
+    "DETAIL",
+    "T2"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|spouse|prior=|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 61289800,
+   "adopt": "A",
+   "lthd": 38400000,
+   "tags": [
+    "DETAIL",
+    "T2"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|spouse|prior=0|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|spouse|prior=0|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|spouse|prior=0|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 61289800,
+   "adopt": "A",
+   "lthd": 38400000,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|spouse|prior=0|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 61289800,
+   "adopt": "A",
+   "lthd": 38400000,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|spouse|prior=24|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|spouse|prior=24|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|spouse|prior=24|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 52261000,
+   "adopt": "B",
+   "excl": "tax_comparison",
+   "lthd": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|spouse|prior=24|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 52261000,
+   "adopt": "B",
+   "excl": "tax_comparison",
+   "lthd": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|lineal|prior=|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|lineal|prior=|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|lineal|prior=|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 61289800,
+   "adopt": "A",
+   "lthd": 38400000,
+   "tags": [
+    "DETAIL",
+    "T2"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|lineal|prior=|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 61289800,
+   "adopt": "A",
+   "lthd": 38400000,
+   "tags": [
+    "DETAIL",
+    "T2"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|lineal|prior=0|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|lineal|prior=0|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|lineal|prior=0|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 61289800,
+   "adopt": "A",
+   "lthd": 38400000,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|lineal|prior=0|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 61289800,
+   "adopt": "A",
+   "lthd": 38400000,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|lineal|prior=24|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|lineal|prior=24|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "lthd": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|lineal|prior=24|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 52261000,
+   "adopt": "B",
+   "excl": "tax_comparison",
+   "lthd": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|lineal|prior=24|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": true,
+   "tax": 52261000,
+   "adopt": "B",
+   "excl": "tax_comparison",
+   "lthd": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|other|prior=|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|other|prior=|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|other|prior=|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": true,
+   "tax": 52261000,
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|other|prior=|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": true,
+   "tax": 52261000,
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|other|prior=0|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|other|prior=0|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|other|prior=0|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": true,
+   "tax": 52261000,
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|other|prior=0|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [
+    "consolidation-detail-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": true,
+   "tax": 52261000,
+   "lthd": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|other|prior=24|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "lthd": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|other|prior=24|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "lthd": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|other|prior=24|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": true,
+   "tax": 52261000,
+   "lthd": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "mirror|other|prior=24|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": true,
+   "und": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": true,
+   "tax": 52261000,
+   "lthd": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "sep-reg|spouse|prior=|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 192159000,
+   "adopt": "A",
+   "lthd": 96000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "sep-reg|spouse|prior=|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 192159000,
+   "adopt": "A",
+   "lthd": 96000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "sep-reg|spouse|prior=|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 425188500,
+   "adopt": "A",
+   "lthd": 192000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "sep-reg|spouse|prior=|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 425188500,
+   "adopt": "A",
+   "lthd": 192000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "sep-reg|lineal|prior=|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 192159000,
+   "adopt": "A",
+   "lthd": 96000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "sep-reg|lineal|prior=|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 192159000,
+   "adopt": "A",
+   "lthd": 96000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "sep-reg|lineal|prior=|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 425188500,
+   "adopt": "A",
+   "lthd": 192000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "sep-reg|lineal|prior=|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "pex": false,
+   "tax": 425188500,
+   "adopt": "A",
+   "lthd": 192000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "sep-reg|other|prior=|90|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": false,
+   "tax": 94897000,
+   "lthd": 18000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "sep-reg|other|prior=|90|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": false,
+   "tax": 94897000,
+   "lthd": 18000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "sep-reg|other|prior=|15|res=0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": false,
+   "tax": 350163000,
+   "lthd": 54000000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "sep-reg|other|prior=|15|res=12",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "pex": false,
+   "tax": 350163000,
+   "lthd": 54000000,
+   "tags": [],
+   "issues": []
+  }
+ }
+]

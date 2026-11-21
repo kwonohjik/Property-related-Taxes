@@ -1,0 +1,1306 @@
+{
+ "E047-era-pre": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E093-current-twin": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E163-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E163-era-pos": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E163-era-sameday": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E166-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E166-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E167-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E175-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E175-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E177-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E177-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E178-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E178-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E180-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E182-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E182-era-pos": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E182-era-3": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E185-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E199-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E199-era-pos": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E203-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E203-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E204-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E208-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "E209-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F004-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F006-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F006-household": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F012-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F015-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F016-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F018-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F020-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F021-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F034-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F034-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F038-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F038-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F039-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F040-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F043-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F045-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F068-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F069-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F069-gate-20111013": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F069-gate-20111014": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F069-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F070-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F070-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F075-c-transfer": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F076-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F076-1day": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F128-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F154-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F154-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F154-current-whole13": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F169-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F169-transfer": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F170-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F170-gift": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F175-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F175-2021": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F180-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F180-acq-nonregulated": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F180-acq-regulated": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F187-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F187-one-day-short": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F193-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F193-separate-household": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F207-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F207-separate": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F217-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F217-after-departure": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F217-before-departure": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F242-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F242-no-residence": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F251-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F251-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F252-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F255-own-62m": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F256-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F256-59m": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F256-highvalue": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F259-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F259-lease-unset": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F260-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F262-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F262-acquired-after-notice": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F264-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F264-plan-decision-date": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F264-remnant-2y-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F264-remnant-5y-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F268-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F268-first-member-departure": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F275-acquired-after-departure": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F276-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F276-held-2y": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F281-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F281-only-house": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F295-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F295-excluding-post-approval": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F297-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F297-within-2y": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F303-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F303-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F303-physical-departure": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F305-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F311-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F312-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F312-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F316-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F322-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F322-current-within": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F322-current-over": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F355-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F355-era-maintained": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F361-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F361-era-6pct": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F366-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F366-era-17m": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F373-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F373-era-60m": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F373-era-59m": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F384-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F390-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F395-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F395-current-noconv": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F396-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F396-no-proviso": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F396-registered-20191217": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F409-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F450-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F450-current-over": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F451-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F455-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F455-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F456-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F456-era-6eok": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F456-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-F456-current-12eok": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "F461-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F461-no-proviso": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F461-acquired-after-approval": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-F461-no-proviso-2y6m": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "G019-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "G022-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "G023-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "G024-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "G035-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "G091-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "G091-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "G152-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "R030-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "R031-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "R031-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "P-R031-current-24m": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "R037-era": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "R043-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "N-R043-current-12eok": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "S001-current": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "SMOKE-1": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ },
+ "SMOKE-2": {
+  "onlyOne": [],
+  "onlySur": [
+   "houses",
+   "sellingHouseId"
+  ],
+  "changed": []
+ }
+}

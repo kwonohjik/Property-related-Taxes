@@ -1,0 +1,167 @@
+{
+  "modes": {
+    "one": "one_house",
+    "temp": "temporary_two_house",
+    "deemed": "deemed_one_house",
+    "rental": "rental_residence",
+    "hidden": null
+  },
+  "total": 320,
+  "diff": 8,
+  "diffUnblocked": 0,
+  "surchargeMismatch": 0,
+  "rows": [
+    {
+      "ctx": "temp",
+      "mode": "temporary_two_house",
+      "reason": "pre_designation_contract",
+      "noHouse": false,
+      "fourhoComplete": false,
+      "otherFilled": false,
+      "inline": {
+        "reason": "pre_designation_contract",
+        "preContractNoHouse": false
+      },
+      "provErrs": [
+        "§154① 단서(조정 공고 전 계약): 계약금 지급일 현재 무주택 여부를 확인하세요."
+      ],
+      "step2Errs": 1
+    },
+    {
+      "ctx": "temp",
+      "mode": "temporary_two_house",
+      "reason": "pre_designation_contract",
+      "noHouse": false,
+      "fourhoComplete": false,
+      "otherFilled": true,
+      "inline": {
+        "reason": "pre_designation_contract",
+        "departureDate": "2022-01-01",
+        "expropriationDate": "2023-06-01",
+        "businessApprovalDate": "2022-01-01",
+        "preContractNoHouse": false
+      },
+      "provErrs": [
+        "§154① 단서(조정 공고 전 계약): 계약금 지급일 현재 무주택 여부를 확인하세요."
+      ],
+      "step2Errs": 1
+    },
+    {
+      "ctx": "temp",
+      "mode": "temporary_two_house",
+      "reason": "pre_designation_contract",
+      "noHouse": false,
+      "fourhoComplete": true,
+      "otherFilled": false,
+      "inline": {
+        "reason": "pre_designation_contract",
+        "preContractNoHouse": false
+      },
+      "provErrs": [
+        "§154① 단서(조정 공고 전 계약): 계약금 지급일 현재 무주택 여부를 확인하세요."
+      ],
+      "step2Errs": 1
+    },
+    {
+      "ctx": "temp",
+      "mode": "temporary_two_house",
+      "reason": "pre_designation_contract",
+      "noHouse": false,
+      "fourhoComplete": true,
+      "otherFilled": true,
+      "inline": {
+        "reason": "pre_designation_contract",
+        "departureDate": "2022-01-01",
+        "expropriationDate": "2023-06-01",
+        "businessApprovalDate": "2022-01-01",
+        "preContractNoHouse": false
+      },
+      "provErrs": [
+        "§154① 단서(조정 공고 전 계약): 계약금 지급일 현재 무주택 여부를 확인하세요."
+      ],
+      "step2Errs": 1
+    },
+    {
+      "ctx": "temp",
+      "mode": "temporary_two_house",
+      "reason": "rental_registration_4ho",
+      "noHouse": false,
+      "fourhoComplete": false,
+      "otherFilled": false,
+      "inline": {
+        "reason": "rental_registration_4ho",
+        "rentalRegistration4ho": {}
+      },
+      "provErrs": [
+        "§154① 단서(4호 임대사업자 등록): 사업자등록 신청일을 입력하세요.",
+        "§154① 단서(4호 임대사업자 등록): 임대사업자 등록 신청일을 입력하세요.",
+        "§154① 단서(4호 임대사업자 등록): 신청 당시 세대가 조정대상지역 1주택만 보유했는지 선택하세요.",
+        "§154① 단서(4호 임대사업자 등록): 양도일 현재 임대사업자 등록 상태를 선택하세요."
+      ],
+      "step2Errs": 4
+    },
+    {
+      "ctx": "temp",
+      "mode": "temporary_two_house",
+      "reason": "rental_registration_4ho",
+      "noHouse": false,
+      "fourhoComplete": false,
+      "otherFilled": true,
+      "inline": {
+        "reason": "rental_registration_4ho",
+        "departureDate": "2022-01-01",
+        "expropriationDate": "2023-06-01",
+        "businessApprovalDate": "2022-01-01",
+        "rentalRegistration4ho": {}
+      },
+      "provErrs": [
+        "§154① 단서(4호 임대사업자 등록): 사업자등록 신청일을 입력하세요.",
+        "§154① 단서(4호 임대사업자 등록): 임대사업자 등록 신청일을 입력하세요.",
+        "§154① 단서(4호 임대사업자 등록): 신청 당시 세대가 조정대상지역 1주택만 보유했는지 선택하세요.",
+        "§154① 단서(4호 임대사업자 등록): 양도일 현재 임대사업자 등록 상태를 선택하세요."
+      ],
+      "step2Errs": 4
+    },
+    {
+      "ctx": "temp",
+      "mode": "temporary_two_house",
+      "reason": "rental_registration_4ho",
+      "noHouse": true,
+      "fourhoComplete": false,
+      "otherFilled": false,
+      "inline": {
+        "reason": "rental_registration_4ho",
+        "rentalRegistration4ho": {}
+      },
+      "provErrs": [
+        "§154① 단서(4호 임대사업자 등록): 사업자등록 신청일을 입력하세요.",
+        "§154① 단서(4호 임대사업자 등록): 임대사업자 등록 신청일을 입력하세요.",
+        "§154① 단서(4호 임대사업자 등록): 신청 당시 세대가 조정대상지역 1주택만 보유했는지 선택하세요.",
+        "§154① 단서(4호 임대사업자 등록): 양도일 현재 임대사업자 등록 상태를 선택하세요."
+      ],
+      "step2Errs": 4
+    },
+    {
+      "ctx": "temp",
+      "mode": "temporary_two_house",
+      "reason": "rental_registration_4ho",
+      "noHouse": true,
+      "fourhoComplete": false,
+      "otherFilled": true,
+      "inline": {
+        "reason": "rental_registration_4ho",
+        "departureDate": "2022-01-01",
+        "expropriationDate": "2023-06-01",
+        "businessApprovalDate": "2022-01-01",
+        "rentalRegistration4ho": {}
+      },
+      "provErrs": [
+        "§154① 단서(4호 임대사업자 등록): 사업자등록 신청일을 입력하세요.",
+        "§154① 단서(4호 임대사업자 등록): 임대사업자 등록 신청일을 입력하세요.",
+        "§154① 단서(4호 임대사업자 등록): 신청 당시 세대가 조정대상지역 1주택만 보유했는지 선택하세요.",
+        "§154① 단서(4호 임대사업자 등록): 양도일 현재 임대사업자 등록 상태를 선택하세요."
+      ],
+      "step2Errs": 4
+    }
+  ]
+}

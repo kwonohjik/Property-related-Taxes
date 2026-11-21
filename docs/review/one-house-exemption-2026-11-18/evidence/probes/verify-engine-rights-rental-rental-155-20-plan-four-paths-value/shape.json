@@ -1,0 +1,503 @@
+[
+  {
+    "name": "S1 RR-2 임대행(2007)·주택 수 2",
+    "status": 200,
+    "issues": [],
+    "calc": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "1세대1주택 비과세",
+      "totalTax": 0
+    },
+    "input": {
+      "rawCount": 2,
+      "translatedCount": 2,
+      "housesIds": [
+        "selling",
+        "r1(R)"
+      ],
+      "prepCount": 1,
+      "derivedFromFiltered": 1
+    },
+    "j3_redev": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "1세대1주택 비과세",
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_sameCount_filteredHouses": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "1세대1주택 비과세",
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_menuShape": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "1세대1주택 비과세",
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_menuPipeline": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "1세대1주택 비과세",
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "menuRentalDeemedIds": [
+      "r1"
+    ],
+    "prepSteps": [
+      "장기임대주택 거주주택 비과세 특례 :: 장기임대주택 1호의 요건과 거주주택 요건(보유기간 중 거주 2년 이상)을 충족해 임대주택을 세대 주택 수에서 빼고(2주택 → 1주택) 1세대1주택 비과세를 판정했습니다 — 거주기간은 멸실 전 주택과 신축 주택의 거주를 통산합니다(부동산납세과-827 · 서면-2015-부동산-1491)"
+    ],
+    "menuVerdictPassed": true
+  },
+  {
+    "name": "S1b RR-2 · 15억",
+    "status": 200,
+    "issues": [],
+    "calc": {
+      "isExempt": false,
+      "isPartialExempt": true,
+      "exemptReason": "1세대1주택 고가주택",
+      "totalTax": 15285600
+    },
+    "input": {
+      "rawCount": 2,
+      "translatedCount": 2,
+      "housesIds": [
+        "selling",
+        "r1(R)"
+      ],
+      "prepCount": 1,
+      "derivedFromFiltered": 1
+    },
+    "j3_redev": {
+      "isExempt": false,
+      "isPartialExempt": true,
+      "exemptReason": "1세대1주택 고가주택",
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_sameCount_filteredHouses": {
+      "isExempt": false,
+      "isPartialExempt": true,
+      "exemptReason": "1세대1주택 고가주택",
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_menuShape": {
+      "isExempt": false,
+      "isPartialExempt": true,
+      "exemptReason": "1세대1주택 고가주택",
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_menuPipeline": {
+      "isExempt": false,
+      "isPartialExempt": true,
+      "exemptReason": "1세대1주택 고가주택",
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "menuRentalDeemedIds": [
+      "r1"
+    ],
+    "prepSteps": [
+      "장기임대주택 거주주택 비과세 특례 :: 장기임대주택 1호의 요건과 거주주택 요건(보유기간 중 거주 2년 이상)을 충족해 임대주택을 세대 주택 수에서 빼고(2주택 → 1주택) 1세대1주택 비과세를 판정했습니다 — 거주기간은 멸실 전 주택과 신축 주택의 거주를 통산합니다(부동산납세과-827 · 서면-2015-부동산-1491)"
+    ],
+    "menuVerdictPassed": true
+  },
+  {
+    "name": "S2 P11형 임대행(2007)+일반(2023 신규)·주택 수 3",
+    "status": 200,
+    "issues": [],
+    "calc": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "일시적 2주택 비과세",
+      "totalTax": 0
+    },
+    "input": {
+      "rawCount": 3,
+      "translatedCount": 3,
+      "housesIds": [
+        "selling",
+        "r1(R)",
+        "o1"
+      ],
+      "prepCount": 2,
+      "derivedFromFiltered": 2,
+      "temporaryTwoHouse": {
+        "prev": "2008-01-01T00:00:00.000Z",
+        "next": "2023-01-01T00:00:00.000Z"
+      }
+    },
+    "j3_redev": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "일시적 2주택 비과세",
+      "deemed155": true,
+      "applied": [
+        "155-1-temporary-two-house"
+      ],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_sameCount_filteredHouses": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "일시적 2주택 비과세",
+      "deemed155": true,
+      "applied": [
+        "155-1-temporary-two-house"
+      ],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_menuShape": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "일시적 2주택 비과세",
+      "deemed155": true,
+      "applied": [
+        "155-1-temporary-two-house"
+      ],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_menuPipeline": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "일시적 2주택 비과세",
+      "deemed155": true,
+      "applied": [
+        "155-1-temporary-two-house"
+      ],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "menuRentalDeemedIds": [
+      "r1"
+    ],
+    "prepSteps": [
+      "장기임대주택 거주주택 비과세 특례 :: 장기임대주택 1호의 요건과 거주주택 요건(보유기간 중 거주 2년 이상)을 충족해 임대주택을 세대 주택 수에서 빼고(3주택 → 2주택) 1세대1주택 비과세를 판정했습니다 — 거주기간은 멸실 전 주택과 신축 주택의 거주를 통산합니다(부동산납세과-827 · 서면-2015-부동산-1491)"
+    ],
+    "menuVerdictPassed": true
+  },
+  {
+    "name": "S3 P4형 임대행이 일시적 2주택 신규(2023)·주택 수 2",
+    "status": 200,
+    "issues": [],
+    "calc": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "1세대1주택 비과세",
+      "totalTax": 0
+    },
+    "input": {
+      "rawCount": 2,
+      "translatedCount": 2,
+      "housesIds": [
+        "selling",
+        "r1(R)"
+      ],
+      "prepCount": 1,
+      "derivedFromFiltered": 1,
+      "temporaryTwoHouse": {
+        "prev": "2008-01-01T00:00:00.000Z",
+        "next": "2023-01-01T00:00:00.000Z"
+      }
+    },
+    "j3_redev": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "1세대1주택 비과세",
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_sameCount_filteredHouses": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "1세대1주택 비과세",
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_menuShape": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "1세대1주택 비과세",
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_menuPipeline": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "일시적 2주택 비과세",
+      "deemed155": true,
+      "applied": [
+        "155-1-temporary-two-house"
+      ],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "menuRentalDeemedIds": [],
+    "prepSteps": [
+      "장기임대주택 거주주택 비과세 특례 :: 장기임대주택 1호의 요건과 거주주택 요건(보유기간 중 거주 2년 이상)을 충족해 임대주택을 세대 주택 수에서 빼고(2주택 → 1주택) 1세대1주택 비과세를 판정했습니다 — 거주기간은 멸실 전 주택과 신축 주택의 거주를 통산합니다(부동산납세과-827 · 서면-2015-부동산-1491)"
+    ],
+    "menuVerdictPassed": true
+  },
+  {
+    "name": "S4 혼인 2022 · 임대행(seller)+배우자 주택(counterpart)·주택 수 3",
+    "status": 200,
+    "issues": [],
+    "calc": {
+      "isExempt": false,
+      "isPartialExempt": false,
+      "totalTax": 124366000
+    },
+    "input": {
+      "rawCount": 3,
+      "translatedCount": 3,
+      "housesIds": [
+        "selling",
+        "r1(R)",
+        "h3"
+      ],
+      "prepCount": 3,
+      "derivedFromFiltered": 2,
+      "marriage": {
+        "marriageDate": "2022-01-01T00:00:00.000Z"
+      }
+    },
+    "j3_redev": {
+      "isExempt": false,
+      "isPartialExempt": false,
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": [
+        "155-5-marriage-merge"
+      ]
+    },
+    "j_sameCount_filteredHouses": {
+      "isExempt": false,
+      "isPartialExempt": false,
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": [
+        "155-5-marriage-merge"
+      ]
+    },
+    "j_menuShape": {
+      "isExempt": false,
+      "isPartialExempt": false,
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": [
+        "155-5-marriage-merge"
+      ]
+    },
+    "j_menuPipeline": {
+      "isExempt": false,
+      "isPartialExempt": false,
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": [
+        "155-5-marriage-merge"
+      ]
+    },
+    "menuRentalDeemedIds": [],
+    "prepSteps": [
+      "장기임대주택 거주주택 비과세 특례 — 적용 불가 :: 거주주택 외에 장기임대주택이 아닌 주택이 1채 더 있고 일시적 2주택·상속주택 특례로 제외되지 않습니다 — 소득세법 시행령 §155⑳은 「장기임대주택과 그 밖의 1주택」을 소유한 1세대에 적용됩니다 (명부에서 장기임대주택 행은 「장기임대」로 표시해야 합니다)"
+    ],
+    "menuVerdictPassed": false
+  },
+  {
+    "name": "S4b 혼인 2022 · isFirstTransferredInMerge · 임대행(seller)+배우자 주택(counterpart)·주택 수 3",
+    "status": 200,
+    "issues": [],
+    "calc": {
+      "isExempt": false,
+      "isPartialExempt": false,
+      "totalTax": 124366000
+    },
+    "input": {
+      "rawCount": 3,
+      "translatedCount": 3,
+      "housesIds": [
+        "selling",
+        "r1(R)",
+        "h3"
+      ],
+      "prepCount": 2,
+      "derivedFromFiltered": 2,
+      "marriage": {
+        "marriageDate": "2022-01-01T00:00:00.000Z"
+      }
+    },
+    "j3_redev": {
+      "isExempt": false,
+      "isPartialExempt": false,
+      "applied": [],
+      "undetermined": [],
+      "pending": [],
+      "unmet": [
+        "155-5-marriage-merge"
+      ]
+    },
+    "j_sameCount_filteredHouses": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+      "deemed155": true,
+      "applied": [
+        "155-5-marriage-merge"
+      ],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_menuShape": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+      "deemed155": true,
+      "applied": [
+        "155-5-marriage-merge"
+      ],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_menuPipeline": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+      "deemed155": true,
+      "applied": [
+        "155-5-marriage-merge"
+      ],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "menuRentalDeemedIds": [
+      "r1"
+    ],
+    "prepSteps": [
+      "장기임대주택 거주주택 비과세 특례 :: 장기임대주택 1호의 요건과 거주주택 요건(보유기간 중 거주 2년 이상)을 충족해 임대주택을 세대 주택 수에서 빼고(3주택 → 2주택) 1세대1주택 비과세를 판정했습니다 — 거주기간은 멸실 전 주택과 신축 주택의 거주를 통산합니다(부동산납세과-827 · 서면-2015-부동산-1491)"
+    ],
+    "menuVerdictPassed": true
+  },
+  {
+    "name": "S4c 혼인 2022 · isFirstTransferredInMerge · 배우자 주택만(명부 임대행 없음)·주택 수 2",
+    "status": 200,
+    "issues": [],
+    "calc": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+      "totalTax": 0
+    },
+    "input": {
+      "rawCount": 2,
+      "translatedCount": 2,
+      "housesIds": [
+        "selling",
+        "h3"
+      ],
+      "prepCount": 2,
+      "derivedFromFiltered": 2,
+      "marriage": {
+        "marriageDate": "2022-01-01T00:00:00.000Z"
+      }
+    },
+    "j3_redev": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+      "deemed155": true,
+      "applied": [
+        "155-5-marriage-merge"
+      ],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_sameCount_filteredHouses": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+      "deemed155": true,
+      "applied": [
+        "155-5-marriage-merge"
+      ],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_menuShape": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+      "deemed155": true,
+      "applied": [
+        "155-5-marriage-merge"
+      ],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "j_menuPipeline": {
+      "isExempt": true,
+      "isPartialExempt": false,
+      "exemptReason": "혼인 합가 (§155⑤) 1세대1주택 비과세",
+      "deemed155": true,
+      "applied": [
+        "155-5-marriage-merge"
+      ],
+      "undetermined": [],
+      "pending": [],
+      "unmet": []
+    },
+    "menuRentalDeemedIds": [],
+    "prepSteps": [
+      "장기임대주택 거주주택 비과세 특례 :: 장기임대주택 1호의 요건과 거주주택 요건(보유기간 중 거주 2년 이상)을 충족해 임대주택을 세대 주택 수에서 뺀 채로 1세대1주택 비과세를 판정했습니다 — 거주기간은 멸실 전 주택과 신축 주택의 거주를 통산합니다(부동산납세과-827 · 서면-2015-부동산-1491)"
+    ],
+    "menuVerdictPassed": true
+  }
+]

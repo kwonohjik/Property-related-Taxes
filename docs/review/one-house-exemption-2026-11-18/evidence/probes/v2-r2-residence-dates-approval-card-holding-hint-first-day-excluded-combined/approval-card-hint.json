@@ -1,0 +1,115 @@
+[
+  {
+    "label": "F1 리뷰 시료: 인가 = 응당일 전날",
+    "acq": "2017-06-10",
+    "end": "2019-06-09",
+    "hint": "참고 — 취득일부터 관리처분계획인가일까지 1년 11개월 → 2년 요건 미충족.",
+    "calculateHoldingPeriod": {
+      "years": 2,
+      "months": 0,
+      "days": 0
+    },
+    "engineEligible2y": true
+  },
+  {
+    "label": "F2 2/29 기산",
+    "acq": "2016-02-29",
+    "end": "2018-02-28",
+    "hint": "참고 — 취득일부터 관리처분계획인가일까지 1년 11개월 → 2년 요건 미충족.",
+    "calculateHoldingPeriod": {
+      "years": 2,
+      "months": 0,
+      "days": 1
+    },
+    "engineEligible2y": true
+  },
+  {
+    "label": "F3 1/31 기산",
+    "acq": "2017-01-31",
+    "end": "2019-01-30",
+    "hint": "참고 — 취득일부터 관리처분계획인가일까지 1년 11개월 → 2년 요건 미충족.",
+    "calculateHoldingPeriod": {
+      "years": 2,
+      "months": 0,
+      "days": 0
+    },
+    "engineEligible2y": true
+  },
+  {
+    "label": "C1 대조군(미충족 양쪽): 응당일 2일 전",
+    "acq": "2017-06-10",
+    "end": "2019-06-08",
+    "hint": "참고 — 취득일부터 관리처분계획인가일까지 1년 11개월 → 2년 요건 미충족.",
+    "calculateHoldingPeriod": {
+      "years": 1,
+      "months": 11,
+      "days": 30
+    },
+    "engineEligible2y": false
+  },
+  {
+    "label": "C2 대조군(충족 양쪽): 응당일",
+    "acq": "2017-06-10",
+    "end": "2019-06-10",
+    "hint": "참고 — 취득일부터 관리처분계획인가일까지 2년 0개월 → 2년 요건 충족.",
+    "calculateHoldingPeriod": {
+      "years": 2,
+      "months": 0,
+      "days": 1
+    },
+    "engineEligible2y": true
+  },
+  {
+    "label": "C3 대조군(기존 테스트 7년)",
+    "acq": "2015-03-01",
+    "end": "2022-03-01",
+    "hint": "참고 — 취득일부터 관리처분계획인가일까지 7년 0개월 → 2년 요건 충족.",
+    "calculateHoldingPeriod": {
+      "years": 7,
+      "months": 0,
+      "days": 1
+    },
+    "engineEligible2y": true
+  },
+  {
+    "label": "C4 대조군(기존 테스트 3개월)",
+    "acq": "2021-12-01",
+    "end": "2022-03-01",
+    "hint": "참고 — 취득일부터 관리처분계획인가일까지 0년 3개월 → 2년 요건 미충족.",
+    "calculateHoldingPeriod": {
+      "years": 0,
+      "months": 3,
+      "days": 1
+    },
+    "engineEligible2y": false
+  },
+  {
+    "label": "F4 합산 경로: 인가 2019-01-01, 사실상 주거 사용 종료 2019-06-09",
+    "acq": "2017-06-10",
+    "end": "2019-01-01",
+    "over": {
+      "redevPostApprovalHousingUse": "yes",
+      "redevPostApprovalHousingUseEndDate": "2019-06-09"
+    },
+    "endForHolding": "2019-06-09",
+    "hint": "참고 — 취득일부터 사실상 주거용 사용 종료일까지 1년 11개월 → 2년 요건 미충족 (인가일 이후 사실상 주거용 사용 기간 합산).",
+    "calculateHoldingPeriod": {
+      "years": 2,
+      "months": 0,
+      "days": 0
+    },
+    "engineEligible2y": true
+  },
+  {
+    "label": "D1 월 표시만 차이(인가일 = 기산일-1 의 다른 달)",
+    "acq": "2017-06-10",
+    "end": "2018-03-09",
+    "hint": "참고 — 취득일부터 관리처분계획인가일까지 0년 8개월 → 2년 요건 미충족.",
+    "calculateHoldingPeriod": {
+      "years": 0,
+      "months": 9,
+      "days": 0
+    },
+    "engineEligible2y": false
+  }
+]

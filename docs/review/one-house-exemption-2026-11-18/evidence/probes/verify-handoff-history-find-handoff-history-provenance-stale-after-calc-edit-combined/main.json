@@ -1,0 +1,78 @@
+{
+  "judgment": {
+    "status": 200,
+    "ve": [],
+    "isExempt": true,
+    "label": "비과세"
+  },
+  "calcA_asHandedOff": {
+    "status": 200,
+    "isExempt": true,
+    "totalTax": 0,
+    "exemptReason": "1세대1주택 비과세",
+    "issues": [
+      "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+    ],
+    "warnings": []
+  },
+  "provA": {
+    "state": "fresh",
+    "record": {
+      "calculationId": "rec-J",
+      "judgedFor": "2026-03-01",
+      "updatedAt": "2026-11-18T00:00:00.000Z",
+      "verdictLabel": "비과세"
+    }
+  },
+  "calcB_rosterAdded": {
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 111166000,
+    "issues": [
+      "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+    ],
+    "warnings": []
+  },
+  "calcB_body_householdHousingCount": 2,
+  "provB": {
+    "state": "fresh",
+    "record": {
+      "calculationId": "rec-J",
+      "judgedFor": "2026-03-01",
+      "updatedAt": "2026-11-18T00:00:00.000Z",
+      "verdictLabel": "비과세"
+    }
+  },
+  "calcB_resultKeys": [
+    "isExempt",
+    "isPartialExempt",
+    "lthdTable2OneHouseAxis"
+  ],
+  "calcB_noticeVals": {},
+  "calcC_dateMoved": {
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 144815000,
+    "issues": [
+      "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+    ],
+    "warnings": [
+      "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기산일 2016-01-01, 보유기간 1년 5개월)."
+    ]
+  },
+  "provC": {
+    "state": "fresh",
+    "record": {
+      "calculationId": "rec-J",
+      "judgedFor": "2026-03-01",
+      "updatedAt": "2026-11-18T00:00:00.000Z",
+      "verdictLabel": "비과세"
+    }
+  },
+  "judgmentD_rosterAdded": {
+    "status": 200,
+    "ve": [],
+    "isExempt": false,
+    "label": "과세"
+  }
+}

@@ -1,0 +1,79 @@
+
+ RUN  v4.1.4 .
+
+ ❯ |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts (133 tests | 4 failed) 255ms
+     × [GJ-2d] 통산을 적용해 결론이 갈리면 정면 해석 없는 세부를 확인 필요로 고지한다 · 같아지는 짝은 고지하지 않는다 4ms
+     × [PR-3g] 통산 세부 고지(DETAIL)와 별개다 — 개월 때문에 결론이 갈릴 때만 PRIOR가 나고, 둘은 서로의 게이트를 막지 않는다 2ms
+     × [MG-1a] 같은 세대 확인(시작일 2000) → 주택분 비과세 · 상가분은 과세 그대로 5ms
+     × C-01-H1: 「예」 + 세대 보유 시작일 = 증여자 취득일(2006-05-21) → 비과세 · 결정세액 0 + 통산 안내 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > GJ-2 route — 통산 vs 증여일 기준 > [GJ-2d] 통산을 적용해 결론이 갈리면 정면 해석 없는 세부를 확인 필요로 고지한다 · 같아지는 짝은 고지하지 않는다
+AssertionError: expected [] to include 'gift-household-consolidation-detail-u…'
+ ❯ __tests__/calc/gift-household-judgment-g45.anchor.test.ts:103:81
+    101|   it("[GJ-2d] 통산을 적용해 결론이 갈리면 정면 해석 없는 세부를 확인 필요로 고지한다 · 같아지는 짝은 고지하지 …
+    102|     const decides = await runJudgment(jForm());
+    103|     expect(decides.data.judgment.undetermined.map((u: { id: string }) …
+       |                                                                                 ^
+    104|       "gift-household-consolidation-detail-unverified",
+    105|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3g] 통산 세부 고지(DETAIL)와 별개다 — 개월 때문에 결론이 갈릴 때만 PRIOR가 나고, 둘은 서로의 게이트를 막지 않는다
+AssertionError: expected [ Array(1) ] to include 'gift-household-consolidation-detail-u…'
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:244:20
+    242|   it("[PR-3g] 통산 세부 고지(DETAIL)와 별개다 — 개월 때문에 결론이 갈릴 때만 PRIOR가 나고, 둘은 서…
+    243|     const r = await runJudgment(jForm({ giftPriorHouseholdResidenceMon…
+    244|     expect(ids(r)).toContain(DETAIL); // 별도세대로 읽으면 과세 — 통산 자체가 결론을 가른다
+       |                    ^
+    245|     expect(ids(r)).toContain(PRIOR);
+    246|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > MG-1 겸용 §154① 보유 — 세대 통산이 결과에 반영된다 > [MG-1a] 같은 세대 확인(시작일 2000) → 주택분 비과세 · 상가분은 과세 그대로
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ __tests__/tax-engine/transfer/mixed-use-gift-household-38.anchor.test.ts:99:57
+     97|     expect(r.housingPart.incomeAmount).toBe(0);
+     98|     expect(r.commercialPart.incomeAmount).toBeGreaterThan(0);
+     99|     expect(hasNotice(r.warnings, CONSOLIDATION_NOTICE)).toBe(true);
+       |                                                         ^
+    100|   });
+    101|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > C-01 변형: 배우자와 계속 같은 세대 「예」 > C-01-H1: 「예」 + 세대 보유 시작일 = 증여자 취득일(2006-05-21) → 비과세 · 결정세액 0 + 통산 안내
+AssertionError: expected undefined to be true // Object.is equality
+
+- Expected:
+true
+
++ Received:
+undefined
+
+ ❯ __tests__/tax-engine/transfer-tax/carryover-pdf-case24.test.ts:315:76
+    313|     expect(result.determinedTax).toBe(0);
+    314|     expect(result.carryoverTaxationDetail?.scenarioB.determinedTax).to…
+    315|     expect(result.warnings?.some((w) => w.includes("계속 같은 세대였다는 입력에 따라…
+       |                                                                            ^
+    316|   });
+    317|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 129 passed (133)
+   Start at  22:53:43
+   Duration  4.15s (transform 2.59s, setup 0ms, import 3.78s, tests 255ms, environment 0ms)
+

@@ -1,0 +1,64 @@
+{
+ "rosterC_noSellingLtr": {
+  "ohErr": [
+   "보유 주택 1: 일시적 2주택의 신규 주택으로 판정된 주택입니다 — 이 주택을 어떻게 취득했는지(일반 취득·분양권·조합원입주권·재건축 등) 선택하세요. 모르면 「모름」을 고르세요."
+  ],
+  "scErr": [
+   "보유 주택 1: 일시적 2주택의 신규 주택으로 판정된 주택입니다 — 이 주택을 어떻게 취득했는지(일반 취득·분양권·조합원입주권·재건축 등) 선택하세요. 모르면 「모름」을 고르세요."
+  ],
+  "householdHousingCount": 2,
+  "rosterLtr": [
+   "c"
+  ],
+  "isExempt": true,
+  "applied": [],
+  "rentalPassed": true,
+  "houseCountTotal": {
+   "total": 2,
+   "countedForExemption": 1,
+   "excluded": [
+    {
+     "houseId": "c",
+     "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+     "legalBasis": "소득세법 시행령 §155⑳",
+     "houseNo": 1,
+     "houseAcquisitionDate": "2017-03-01"
+    }
+   ]
+  }
+ },
+ "rosterC_sellingLtr": {
+  "ohErr": [
+   "보유 주택 1: 일시적 2주택의 신규 주택으로 판정된 주택입니다 — 이 주택을 어떻게 취득했는지(일반 취득·분양권·조합원입주권·재건축 등) 선택하세요. 모르면 「모름」을 고르세요."
+  ],
+  "scErr": [
+   "보유 주택 1: 일시적 2주택의 신규 주택으로 판정된 주택입니다 — 이 주택을 어떻게 취득했는지(일반 취득·분양권·조합원입주권·재건축 등) 선택하세요. 모르면 「모름」을 고르세요."
+  ],
+  "householdHousingCount": 2,
+  "rosterLtr": [
+   "selling",
+   "c"
+  ],
+  "isExempt": true,
+  "applied": [],
+  "rentalPassed": true,
+  "houseCountTotal": {
+   "total": 2,
+   "countedForExemption": 0,
+   "excluded": [
+    {
+     "houseId": "selling",
+     "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+     "legalBasis": "소득세법 시행령 §155⑳"
+    },
+    {
+     "houseId": "c",
+     "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+     "legalBasis": "소득세법 시행령 §155⑳",
+     "houseNo": 1,
+     "houseAcquisitionDate": "2017-03-01"
+    }
+   ]
+  }
+ }
+}

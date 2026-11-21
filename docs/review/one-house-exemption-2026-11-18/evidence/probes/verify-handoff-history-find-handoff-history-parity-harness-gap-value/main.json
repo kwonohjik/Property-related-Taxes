@@ -1,0 +1,9531 @@
+[
+ {
+  "id": "E001-dual",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E002-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E004-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E004-era-declared",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "temporaryTwoHouseSpecial",
+   "newHouseAcquisitionDate"
+  ]
+ },
+ {
+  "id": "E004-era-late",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "temporaryTwoHouseSpecial",
+   "newHouseAcquisitionDate"
+  ]
+ },
+ {
+  "id": "E004-era-2",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E004-era-samehh",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E006-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E0061-parental-rental-counterpart",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "parentalCareParentAge",
+   "isFirstTransferredInMerge",
+   "wasRegulatedAtAcquisition",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E007-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E007-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E008-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E008-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E011-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "E011-era-2",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "E014-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E015-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E015-era-2",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E015-era-2-early",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E017-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E017-era-neg",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E018-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E019-era-1",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E022-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E022-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E022-current-rural-later",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E022-current-rural-later-unmet",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E023-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E028-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E029-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "isRegulatedArea",
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition"
+  ]
+ },
+ {
+  "id": "E033-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E033-era-within1y",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E036-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "E040-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "isRegulatedArea",
+   "newHouseExistingTenant",
+   "newHouseTenantLeaseEndDate",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "newHouseMoveInDate"
+  ]
+ },
+ {
+  "id": "E040-era-late",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "isRegulatedArea",
+   "newHouseExistingTenant",
+   "newHouseTenantLeaseEndDate",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "newHouseMoveInDate"
+  ]
+ },
+ {
+  "id": "E040-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "isRegulatedArea",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E045-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "isRegulatedArea",
+   "newHouseContractDate",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E045-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "isRegulatedArea",
+   "newHouseContractDate",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E046-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isRegulatedArea",
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "newHouseContractDate",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E046-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isRegulatedArea",
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "newHouseContractDate",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E047-era-pre",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "provisoPreContractNoHouse",
+   "wasRegulatedAtAcquisition",
+   "asset"
+  ]
+ },
+ {
+  "id": "E049-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "isRegulatedArea",
+   "wasRegulatedAtAcquisition",
+   "newHouseContractDate",
+   "isOneHousehold",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "transferDate"
+  ]
+ },
+ {
+  "id": "E049-era-within2y",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "isRegulatedArea",
+   "wasRegulatedAtAcquisition",
+   "newHouseContractDate",
+   "isOneHousehold",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "transferDate"
+  ]
+ },
+ {
+  "id": "E049-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "isRegulatedArea",
+   "newHouseContractDate",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "wasRegulatedAtAcquisition",
+   "houses"
+  ]
+ },
+ {
+  "id": "E050-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E050-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E050-current-within1y",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E053-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E053-era-daybefore",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E054-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E055-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E056-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "isRegulatedArea",
+   "newHouseContractDate",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E057-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "isRegulatedArea",
+   "newHouseExistingTenant",
+   "newHouseTenantLeaseEndDate",
+   "isOneHousehold",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "transferDate",
+   "newHouseMoveInDate"
+  ]
+ },
+ {
+  "id": "E057-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "isRegulatedArea",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E058-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "newHouseContractDate",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E061-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E062-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "newHouseContractDate",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E063-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "isRegulatedArea",
+   "newHouseContractDate",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E064-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "prevHouseRegulatedAtNewAcquisition",
+   "newHouseRegulatedAtAcquisition",
+   "isRegulatedArea",
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E067-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "N-E067-no-decedent-date",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "N-E067-separate-household",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "E070-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E071-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E071-era-pos",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E072-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E073-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "generalHouseRightAtInheritance",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E073-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "generalHouseRightAtInheritance",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E073-current-neg",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "generalHouseRightAtInheritance",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E074-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E074-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E076-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E077-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E083-dual",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E084-dual",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E086-dual",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E088-dual",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E091-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E091-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E091-current-single",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E093-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E093-current",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E093-current-twin",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E094-dual",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E095-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E098-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E100-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E100-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E103-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E107-dual",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "N-E107-not-gifted",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E109-dual",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E110-dual",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E112-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-E112-post2013",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "N-E112-post2013-acquired-after",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "generalHouseRightAtInheritance"
+  ]
+ },
+ {
+  "id": "N-E112-not-reinherited",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E115-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E117-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E118-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "wasRegulatedAtAcquisition",
+   "generalHouseRightAtInheritance",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E119-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E121-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E122-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E122-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E123-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E123-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E124-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E125-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E127-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E127-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E128-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E128-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E128-era-reverse",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E128-era-spouse2",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E129-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E129-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E129-era-noprior",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E132-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E132-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-E132-1062",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-E132-seller-rentals-only",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E133-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E139-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E140-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E140-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "E141-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "parentalCareParentAge",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E141-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "parentalCareMergeDate",
+   "parentalCareParentAge",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E143-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E143-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E144-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E145-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E146-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "generalHouseRightAtInheritance",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E146-era-pos",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "generalHouseRightAtInheritance",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E147-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E149-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E149-era-5y",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E150-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E156-farmexit",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-E156-farmexit-not-returned",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E160-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E162-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E163-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E163-era-pos",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E163-era-sameday",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E166-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E166-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E167-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E175-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E175-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E177-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E177-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E178-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E178-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E180-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E182-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E182-era-pos",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E182-era-3",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E185-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E190-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E193-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "temporaryTwoHouseSpecial",
+   "newHouseAcquisitionDate"
+  ]
+ },
+ {
+  "id": "E193-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "temporaryTwoHouseSpecial",
+   "newHouseAcquisitionDate"
+  ]
+ },
+ {
+  "id": "E194-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "temporaryTwoHouseSpecial",
+   "newHouseAcquisitionDate"
+  ]
+ },
+ {
+  "id": "E195-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E195-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E196-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E197-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "E199-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E199-era-pos",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E203-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E203-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E204-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E208-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E209-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "E211-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-E211-within",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-E211-sell-b",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F004-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F006-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "P-F006-household",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F007-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F011-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F012-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F015-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F016-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F016-same-household",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "parentalCareMergeDate",
+   "isFirstTransferredInMerge",
+   "parentalCareParentAge"
+  ]
+ },
+ {
+  "id": "F018-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F020-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F021-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F023-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F023-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F029-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F031-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F032-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F033-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F034-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F034-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F036-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F037-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F038-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F038-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "nonResidentPeriod",
+   "residentFromDate"
+  ]
+ },
+ {
+  "id": "F039-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F040-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F043-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F045-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "demolishedBeforeBalance",
+   "demolishedBeforeBalanceContractDate"
+  ]
+ },
+ {
+  "id": "F055-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "N-F055-approval-2006",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind"
+  ]
+ },
+ {
+  "id": "F055-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind"
+  ]
+ },
+ {
+  "id": "F056-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "P-F056-no-right",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F059-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "F059-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind"
+  ]
+ },
+ {
+  "id": "F060-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F061-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F067-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F068-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F068-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F069-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "P-F069-roster",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "N-F069-gate-20111013",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "P-F069-gate-20111014",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F069-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F070-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F070-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F075-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-F075-c-transfer",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F076-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F076-1day",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F115-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "N-F115-rental-undeclared",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F123-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "N-F123-over3y",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F128-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F154-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F154-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "P-F154-current-whole13",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F169-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "finalHouseRestartHistory",
+   "finalHouseRestartDisposals"
+  ]
+ },
+ {
+  "id": "N-F169-transfer",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "finalHouseRestartHistory",
+   "finalHouseRestartDisposals"
+  ]
+ },
+ {
+  "id": "F170-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "finalHouseRestartHistory",
+   "finalHouseRestartDisposals"
+  ]
+ },
+ {
+  "id": "N-F170-gift",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "finalHouseRestartHistory",
+   "finalHouseRestartDisposals"
+  ]
+ },
+ {
+  "id": "F175-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "finalHouseRestartHistory",
+   "finalHouseRestartDisposals"
+  ]
+ },
+ {
+  "id": "N-F175-2021",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "finalHouseRestartHistory",
+   "finalHouseRestartDisposals"
+  ]
+ },
+ {
+  "id": "F180-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "P-F180-acq-nonregulated",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "isRegulatedArea",
+   "wasRegulatedAtAcquisition",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F180-acq-regulated",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "isRegulatedArea",
+   "wasRegulatedAtAcquisition",
+   "asset"
+  ]
+ },
+ {
+  "id": "F187-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "wasRegulatedAtAcquisition",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F187-one-day-short",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "wasRegulatedAtAcquisition",
+   "asset"
+  ]
+ },
+ {
+  "id": "F190-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-F190-one-day-later",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F193-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F193-separate-household",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F207-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F207-separate",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F217-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "P-F217-after-departure",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoDepartureDate"
+  ]
+ },
+ {
+  "id": "N-F217-before-departure",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoDepartureDate"
+  ]
+ },
+ {
+  "id": "F242-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "wasRegulatedAtAcquisition",
+   "finalHouseRestartHistory",
+   "asset"
+  ]
+ },
+ {
+  "id": "P-F242-no-residence",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "finalHouseRestartHistory",
+   "asset"
+  ]
+ },
+ {
+  "id": "F243-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "isRegulatedArea",
+   "newHouseMoveInDate",
+   "newHouseRegulatedAtAcquisition",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-F243-resided24",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "isRegulatedArea",
+   "newHouseMoveInDate",
+   "newHouseRegulatedAtAcquisition",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F251-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F251-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F252-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "P-F255-own-62m",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "provisoRentalLeaseResidenceMonths",
+   "asset"
+  ]
+ },
+ {
+  "id": "F256-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "provisoRentalLeaseResidenceMonths",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F256-59m",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "provisoRentalLeaseResidenceMonths",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F256-highvalue",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "provisoRentalLeaseResidenceMonths",
+   "asset"
+  ]
+ },
+ {
+  "id": "F259-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "provisoRentalLeaseResidenceMonths",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F259-lease-unset",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "asset"
+  ]
+ },
+ {
+  "id": "F260-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoExpropriationDate",
+   "provisoBusinessApprovalDate"
+  ]
+ },
+ {
+  "id": "F262-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoExpropriationDate",
+   "provisoBusinessApprovalDate"
+  ]
+ },
+ {
+  "id": "N-F262-acquired-after-notice",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoExpropriationDate",
+   "provisoBusinessApprovalDate"
+  ]
+ },
+ {
+  "id": "F264-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoExpropriationDate",
+   "provisoBusinessApprovalDate"
+  ]
+ },
+ {
+  "id": "N-F264-plan-decision-date",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoExpropriationDate",
+   "provisoBusinessApprovalDate"
+  ]
+ },
+ {
+  "id": "N-F264-remnant-2y-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoExpropriationDate",
+   "provisoBusinessApprovalDate"
+  ]
+ },
+ {
+  "id": "P-F264-remnant-5y-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoExpropriationDate",
+   "provisoBusinessApprovalDate"
+  ]
+ },
+ {
+  "id": "F268-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "wasRegulatedAtAcquisition",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "N-F268-first-member-departure",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "wasRegulatedAtAcquisition",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "N-F275-acquired-after-departure",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "F276-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "P-F276-held-2y",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F281-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoDepartureDate",
+   "transferorNonResident",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "P-F281-only-house",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoDepartureDate",
+   "transferorNonResident",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "F289-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "provisoReason",
+   "provisoDepartureDate",
+   "transferorNonResident"
+  ]
+ },
+ {
+  "id": "F295-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "wasRegulatedAtAcquisition"
+  ]
+ },
+ {
+  "id": "N-F295-excluding-post-approval",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "wasRegulatedAtAcquisition"
+  ]
+ },
+ {
+  "id": "F297-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "wasRegulatedAtAcquisition",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "P-F297-within-2y",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "wasRegulatedAtAcquisition",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "F303-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "F303-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "wasRegulatedAtAcquisition",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "N-F303-physical-departure",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "wasRegulatedAtAcquisition",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "F305-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "F307-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "provisoReason",
+   "provisoDepartureDate",
+   "transferorNonResident"
+  ]
+ },
+ {
+  "id": "F311-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "F312-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoDepartureDate"
+  ]
+ },
+ {
+  "id": "F312-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "F316-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse"
+  ]
+ },
+ {
+  "id": "F318-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "provisoReason",
+   "provisoDepartureDate",
+   "transferorNonResident"
+  ]
+ },
+ {
+  "id": "F322-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse",
+   "asset"
+  ]
+ },
+ {
+  "id": "P-F322-current-within",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "wasRegulatedAtAcquisition",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F322-current-over",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "wasRegulatedAtAcquisition",
+   "provisoReason",
+   "provisoDepartureDate",
+   "provisoDepartureOnlyHouse",
+   "asset"
+  ]
+ },
+ {
+  "id": "F340-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F340-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-F340-current-12m",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "N-F340-current-11m",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "F355-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "wasRegulatedAtAcquisition",
+   "provisoReason",
+   "proviso4hoBusinessRegDate",
+   "proviso4hoRentalRegDate",
+   "proviso4hoRegulatedOneHouse",
+   "proviso4hoStatus",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F355-era-maintained",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "wasRegulatedAtAcquisition",
+   "provisoReason",
+   "proviso4hoBusinessRegDate",
+   "proviso4hoRentalRegDate",
+   "proviso4hoRegulatedOneHouse",
+   "proviso4hoStatus",
+   "proviso4hoDuringMandatory",
+   "proviso4hoRentOver5",
+   "asset"
+  ]
+ },
+ {
+  "id": "F361-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "wasRegulatedAtAcquisition",
+   "asset",
+   "winWinRentalSpecial",
+   "winWinRentalContractDate",
+   "winWinRentalIncreaseRatePct",
+   "winWinRentalPriorLeaseMonths",
+   "winWinRentalLeaseMonths"
+  ]
+ },
+ {
+  "id": "N-F361-era-6pct",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "wasRegulatedAtAcquisition",
+   "asset",
+   "winWinRentalSpecial",
+   "winWinRentalContractDate",
+   "winWinRentalIncreaseRatePct",
+   "winWinRentalPriorLeaseMonths",
+   "winWinRentalLeaseMonths"
+  ]
+ },
+ {
+  "id": "F366-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "wasRegulatedAtAcquisition",
+   "asset",
+   "winWinRentalSpecial",
+   "winWinRentalContractDate",
+   "winWinRentalIncreaseRatePct",
+   "winWinRentalPriorLeaseMonths",
+   "winWinRentalLeaseMonths"
+  ]
+ },
+ {
+  "id": "N-F366-era-17m",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "wasRegulatedAtAcquisition",
+   "asset",
+   "winWinRentalSpecial",
+   "winWinRentalContractDate",
+   "winWinRentalIncreaseRatePct",
+   "winWinRentalPriorLeaseMonths",
+   "winWinRentalLeaseMonths"
+  ]
+ },
+ {
+  "id": "F373-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "provisoRentalLeaseResidenceMonths",
+   "asset"
+  ]
+ },
+ {
+  "id": "P-F373-era-60m",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "provisoRentalLeaseResidenceMonths",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F373-era-59m",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "provisoReason",
+   "provisoRentalLeaseResidenceMonths",
+   "asset"
+  ]
+ },
+ {
+  "id": "F384-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "nonResidentPeriod",
+   "nonResidentStartDate",
+   "residentFromDate"
+  ]
+ },
+ {
+  "id": "F390-current",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "transferorNonResident"
+  ]
+ },
+ {
+  "id": "F395-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "isRegulatedArea",
+   "wasRegulatedAtAcquisition",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "F395-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "isRegulatedArea",
+   "wasRegulatedAtAcquisition"
+  ]
+ },
+ {
+  "id": "P-F395-current-noconv",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "isRegulatedArea",
+   "wasRegulatedAtAcquisition"
+  ]
+ },
+ {
+  "id": "F396-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "isRegulatedArea",
+   "wasRegulatedAtAcquisition",
+   "provisoReason",
+   "proviso4hoBusinessRegDate",
+   "proviso4hoRentalRegDate",
+   "proviso4hoRegulatedOneHouse",
+   "proviso4hoStatus"
+  ]
+ },
+ {
+  "id": "N-F396-no-proviso",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "isRegulatedArea",
+   "wasRegulatedAtAcquisition"
+  ]
+ },
+ {
+  "id": "N-F396-registered-20191217",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "isRegulatedArea",
+   "wasRegulatedAtAcquisition",
+   "provisoReason",
+   "proviso4hoBusinessRegDate",
+   "proviso4hoRentalRegDate",
+   "proviso4hoRegulatedOneHouse",
+   "proviso4hoStatus"
+  ]
+ },
+ {
+  "id": "F409-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "isUnregistered"
+  ]
+ },
+ {
+  "id": "F450-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F450-current-over",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F451-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F455-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F455-current",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F456-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "P-F456-era-6eok",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F456-current",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "P-F456-current-12eok",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "F461-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoExpropriationDate",
+   "provisoBusinessApprovalDate"
+  ]
+ },
+ {
+  "id": "N-F461-no-proviso",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-F461-acquired-after-approval",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoExpropriationDate",
+   "provisoBusinessApprovalDate"
+  ]
+ },
+ {
+  "id": "N-F461-no-proviso-2y6m",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "G016-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "rightThreeYearExceptionKind",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "P-G016-era-approval-2005",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "rightThreeYearExceptionKind",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "G017-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "rightThreeYearExceptionKind",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "P-G017-era-approval-2005",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "rightThreeYearExceptionKind",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "G019-current",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "G021-current",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-G021-current-3y",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "N-G021-current-3y1d",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G022-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "G023-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "G024-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "G035-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "wasRegulatedAtAcquisition"
+  ]
+ },
+ {
+  "id": "G049-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G049-current",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G050-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G050-current",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G055-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "marriageDate",
+   "isFirstTransferredInMerge"
+  ]
+ },
+ {
+  "id": "G055-current",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "marriageDate",
+   "isFirstTransferredInMerge"
+  ]
+ },
+ {
+  "id": "G062-current",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "N-G062-over3y",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G065-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G066-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G077-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "P-G077-later-sold",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G091-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "G091-current",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "G099-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "G099-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind"
+  ]
+ },
+ {
+  "id": "G100-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "G100-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind"
+  ]
+ },
+ {
+  "id": "G103-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G104-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G104-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G105-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "N-G105-over3y",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind"
+  ]
+ },
+ {
+  "id": "N-G105-completed",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "N-G105-completed-exception",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "rightThreeYearExceptionKind",
+   "rightNewHouseCompletionDate",
+   "rightMovedInWithin3Years",
+   "rightResidedOneYearOrMore"
+  ]
+ },
+ {
+  "id": "G106-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind",
+   "rightMovedInWithin3Years",
+   "rightResidedOneYearOrMore"
+  ]
+ },
+ {
+  "id": "N-G106-none",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind",
+   "rightMovedInWithin3Years",
+   "rightResidedOneYearOrMore"
+  ]
+ },
+ {
+  "id": "G107-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "G110-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "P-G110-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "N-G110-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind"
+  ]
+ },
+ {
+  "id": "G111-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind",
+   "rightMovedInWithin3Years",
+   "rightResidedOneYearOrMore",
+   "rightNewHouseCompletionDate"
+  ]
+ },
+ {
+  "id": "G116-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G116-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "N-G116-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G119-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G119-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "P-G119-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G120-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G120-era-origin",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G120-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G123-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G124-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "P-G124-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G125-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "N-G125-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse",
+   "rightThreeYearExceptionKind"
+  ]
+ },
+ {
+  "id": "N-G125-norepl",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind"
+  ]
+ },
+ {
+  "id": "G126-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G126-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G128-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G128-era-origin",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G129-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G129-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G131-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G132-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G133-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G148-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "isRegulatedArea",
+   "asset",
+   "houses",
+   "replacementHouseSpecial",
+   "replBusinessApprovalDate",
+   "replCompletionDate",
+   "replResidenceMonths",
+   "replWillResideNewHouse"
+  ]
+ },
+ {
+  "id": "G152-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "G154-era",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "G157-era-first",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "presaleRights"
+  ]
+ },
+ {
+  "id": "G157-era-second",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G162-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "G163-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "presaleRights",
+   "mergedHouseholdFirstHouseKind"
+  ]
+ },
+ {
+  "id": "G163-era-blank",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "presaleRights",
+   "mergedHouseholdFirstHouseKind"
+  ]
+ },
+ {
+  "id": "G163-era-none",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "presaleRights",
+   "mergedHouseholdFirstHouseKind"
+  ]
+ },
+ {
+  "id": "N-G163-blank-within1y",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "presaleRights",
+   "mergedHouseholdFirstHouseKind"
+  ]
+ },
+ {
+  "id": "N-G163-blank-right-before-marriage",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "presaleRights",
+   "mergedHouseholdFirstHouseKind"
+  ]
+ },
+ {
+  "id": "N-G163-none-over3y",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "presaleRights",
+   "mergedHouseholdFirstHouseKind"
+  ]
+ },
+ {
+  "id": "G163-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "presaleRights",
+   "mergedHouseholdFirstHouseKind"
+  ]
+ },
+ {
+  "id": "N-G163-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses",
+   "marriageDate",
+   "isFirstTransferredInMerge",
+   "presaleRights",
+   "mergedHouseholdFirstHouseKind"
+  ]
+ },
+ {
+  "id": "G164-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind",
+   "rightMovedInWithin3Years",
+   "rightResidedOneYearOrMore",
+   "rightNewHouseCompletionDate"
+  ]
+ },
+ {
+  "id": "R014-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-R014-era-no-officetel",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "R030-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "R031-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "R031-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "wasRegulatedAtAcquisition"
+  ]
+ },
+ {
+  "id": "P-R031-current-24m",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "wasRegulatedAtAcquisition"
+  ]
+ },
+ {
+  "id": "R033-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "R037-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "provisoReason",
+   "provisoDepartureDate"
+  ]
+ },
+ {
+  "id": "R043-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": true,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "N-R043-current-12eok",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset"
+  ]
+ },
+ {
+  "id": "S001-current",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "transferorNonResident"
+  ]
+ },
+ {
+  "id": "S006-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind",
+   "rightMovedInWithin3Years",
+   "rightResidedOneYearOrMore"
+  ]
+ },
+ {
+  "id": "S006-current",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "presaleRights",
+   "rightThreeYearExceptionKind",
+   "rightMovedInWithin3Years",
+   "rightResidedOneYearOrMore"
+  ]
+ },
+ {
+  "id": "S041-4022-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "S045-2019seo2002-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "S045-2017seo3603-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "T001-era",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-T001-separate-household",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "P-T001-parental-care",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "SMOKE-1",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "residencePeriodMonths",
+   "asset"
+  ]
+ },
+ {
+  "id": "SMOKE-2",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "residencePeriodMonths",
+   "asset"
+  ]
+ },
+ {
+  "id": "STAT-71-2-house",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "STAT-71-2-right",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "STAT-71-2-right-unknown",
+  "assetKind": "right_to_move_in",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 400,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "NTS-2025-2010-gift-separate",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "NTS-2025-2010-gift-same",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "NTS-2025-1621-inherit-separate",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": true,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": true,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "NTS-2025-1621-inherit-same",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "NTS-2025-1621-inherit-unknown",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ },
+ {
+  "id": "NTS-2025-1621-inherit-legacy-false",
+  "assetKind": "housing",
+  "jStatus": 200,
+  "jVe": 0,
+  "jExempt": false,
+  "jPartial": false,
+  "cStatus": 200,
+  "cExempt": false,
+  "cPartial": false,
+  "cIssues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "formKeys": [
+   "isOneHousehold",
+   "transferDate",
+   "contractTotalPrice",
+   "asset",
+   "houses"
+  ]
+ }
+]

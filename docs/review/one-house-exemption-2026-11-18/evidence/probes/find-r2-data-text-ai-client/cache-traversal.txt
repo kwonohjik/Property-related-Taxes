@@ -1,0 +1,8 @@
+CACHE_DIR=./.legal-cache
+id="/../../x" len=8 zodOk=true file=./x_full_v4.json insideCache=false
+id="/../../../../../../tmp/a" len=24 zodOk=true file=/tmp/a_full_v4.json insideCache=false
+id="../x" len=4 zodOk=true file=./.legal-cache/decision_text_ttSpecialDecc_../x_full_v4.json insideCache=true
+id="1?x=2" len=5 zodOk=true file=./.legal-cache/decision_text_ttSpecialDecc_1?x=2_full_v4.json insideCache=true
+id="https://evil/" len=13 zodOk=true file=./.legal-cache/decision_text_ttSpecialDecc_https:/evil/_full_v4.json insideCache=true
+id=" 12 " len=4 zodOk=true file=./.legal-cache/decision_text_ttSpecialDecc_ 12 _full_v4.json insideCache=true
+plantedId.len=181 result.caseNo=PLANTED-OUTSIDE-CACHE sourceUrl=https://example.invalid/

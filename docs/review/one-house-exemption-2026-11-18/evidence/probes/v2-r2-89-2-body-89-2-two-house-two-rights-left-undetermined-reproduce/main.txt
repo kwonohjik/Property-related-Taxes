@@ -1,0 +1,74 @@
+## T1 대조 2주택 + 입주권 1
+status=200 ⑧error=[]
+isExempt=false partial=false applied=[]
+89②=excluded open=[] undeclaredMerge=[]
+undetermined=[]
+confirm-ish=[]
+
+## T2 2주택 + 입주권 2
+status=200 ⑧error=[]
+isExempt=true partial=false applied=["155-1-temporary-two-house"]
+89②=undetermined open=["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"] undeclaredMerge=[]
+undetermined=["89-2-open:소득세법 시행령 §156의2 ⑦·⑩·⑪","89-2-open:소득세법 시행령 §156의3 ⑤·⑦·⑧"]
+confirm-ish=[]
+
+## T3 2주택 + 분양권 2
+status=200 ⑧error=[]
+isExempt=true partial=false applied=["155-1-temporary-two-house"]
+89②=undetermined open=["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"] undeclaredMerge=[]
+undetermined=["89-2-open:소득세법 시행령 §156의2 ⑦·⑩·⑪","89-2-open:소득세법 시행령 §156의3 ⑤·⑦·⑧"]
+confirm-ish=[]
+
+## T3b 대조 2주택 + 분양권 1
+status=200 ⑧error=[]
+isExempt=false partial=false applied=[]
+89②=excluded open=[] undeclaredMerge=[]
+undetermined=[]
+confirm-ish=[]
+
+## T4 2주택 + 입주권1 + 분양권1
+status=200 ⑧error=[]
+isExempt=true partial=false applied=["155-1-temporary-two-house"]
+89②=undetermined open=["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"] undeclaredMerge=[]
+undetermined=["89-2-open:소득세법 시행령 §156의2 ⑦·⑩·⑪","89-2-open:소득세법 시행령 §156의3 ⑤·⑦·⑧"]
+confirm-ish=[]
+
+## T5 혼인 2주택 + 입주권 2 · 구성 미선택
+status=200 ⑧error=[]
+isExempt=true partial=false applied=["155-5-marriage-merge"]
+89②=undetermined open=["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"] undeclaredMerge=[]
+undetermined=["89-2-open:소득세법 시행령 §156의2 ⑦·⑩·⑪","89-2-open:소득세법 시행령 §156의3 ⑤·⑦·⑧"]
+confirm-ish=[]
+
+## T5b 대조 혼인 2주택 + 입주권 1 · 구성 미선택
+status=200 ⑧error=[]
+isExempt=false partial=false applied=[]
+89②=excluded open=[] undeclaredMerge=["소득세법 시행령 §156의2 ⑨"]
+undetermined=["89-2-merged-household-composition-undeclared"]
+confirm-ish=["합가 전 보유 구성」에서 사실대로 선택하면 판정합니다."]
+
+## T6 대조 2주택 + 권리 0
+status=200 ⑧error=[]
+isExempt=true partial=false applied=["155-1-temporary-two-house"]
+89②=not_applicable open=[] undeclaredMerge=[]
+undetermined=[]
+confirm-ish=[]
+
+## E0 권리 0 calculateTransferTax
+isExempt=true exemptReason=일시적 2주택 비과세 totalTax=0
+warnings89②=[]
+
+## E1 권리 1 calculateTransferTax
+isExempt=false exemptReason= totalTax=177166000
+warnings89②=[]
+
+## E2 권리 2 calculateTransferTax
+isExempt=true exemptReason=일시적 2주택 비과세 totalTax=0
+warnings89②=["세대가 주택과 조합원입주권·분양권을 함께 보유한 상태에서 그 주택을 양도했습니다. 「소득세법」 §89②은 이 경우 1세대1주택 비과세(§89①3호)를 적용하지 않되, 시행령이 정하는 예외에 해당하면 그대로 적용합니다. 아래 조문의 요건 충족 여부를 직접 확인하세요 — 이 계산에는 §89② 배제를 적용하지 않았습니다: 소득세법 시행령 §156의2 ⑦·⑩·⑪ · 소득세법 시행령 §156의3 ⑤·⑦·⑧"]
+
+## L 2주택 + 권리 1 → excluded open=[]
+## L 2주택 + 권리 2 → undetermined open=["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"]
+## L 2주택 + 권리 3 → undetermined open=["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"]
+## L 1주택 + 권리 2 (P-0 대조) → excluded open=[]
+## L 혼인 2주택 + 권리 1 구성 미선언 → excluded open=[] undeclaredMerge=["소득세법 시행령 §156의2 ⑨"]
+## L 혼인 2주택 + 권리 2 구성 미선언 → undetermined open=["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"] undeclaredMerge=[]

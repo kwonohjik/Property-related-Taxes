@@ -1,0 +1,39 @@
+{
+  "mainCount": 3,
+  "mainReductions": [
+    {
+      "type": "new_99_4_rural",
+      "houseId": "m1",
+      "ruralHouseAcquisitionDate": "2014-03-01T00:00:00.000Z",
+      "ruralHouseStdPrice": 100000000,
+      "isRegisteredHanok": false,
+      "adjacentArea994": "no",
+      "meetsLocationRequirement": true,
+      "ruralLandAreaSqm994": 300,
+      "ruralHouseType994": "other",
+      "ruralHouseAreaSqm994": 100,
+      "ruralHouseRegionCode": "4783025000"
+    }
+  ],
+  "otherCount": 1,
+  "otherHouses": [
+    "selling"
+  ],
+  "otherReductions": [
+    {
+      "type": "new_99_4_rural",
+      "houseId": "m1",
+      "ruralHouseAcquisitionDate": "2014-03-01T00:00:00.000Z",
+      "ruralHouseStdPrice": 100000000,
+      "isRegisteredHanok": false,
+      "adjacentArea994": "no",
+      "meetsLocationRequirement": true,
+      "ruralLandAreaSqm994": 300,
+      "ruralHouseType994": "other",
+      "ruralHouseAreaSqm994": 100,
+      "ruralHouseRegionCode": "4783025000"
+    }
+  ],
+  "otherJudgeCount": 0,
+  "mainJudgeCount": 1
+}

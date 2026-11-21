@@ -1,0 +1,105 @@
+{
+  "C7_two_minority_plus_new": {
+    "isExempt": false,
+    "applied": [],
+    "excluded": [],
+    "contested": [
+      {
+        "id": "155-3-co-inherited-minority-before-ranking-clause",
+        "enginePosition": "A",
+        "A": "taxable",
+        "B": "taxable"
+      }
+    ],
+    "verr": [],
+    "und": [],
+    "tth": null
+  },
+  "C7_B_facts_as_form": {
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "excluded": [],
+    "contested": [],
+    "verr": [],
+    "und": [],
+    "tth": {
+      "previousAcquisitionDate": "2012-11-21T00:00:00.000Z",
+      "newAcquisitionDate": "2015-03-01T00:00:00.000Z",
+      "newHouseRegionCode": "2635010500",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    }
+  },
+  "C2_same_minority_plus_new": {
+    "isExempt": false,
+    "applied": [],
+    "excluded": [],
+    "contested": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "enginePosition": "A",
+        "A": "taxable",
+        "B": "taxable"
+      }
+    ],
+    "verr": [],
+    "und": [],
+    "tth": null
+  },
+  "C2_B_facts_as_form": {
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "excluded": [
+      {
+        "houseId": "m1",
+        "legalBasis": "소득세법 시행령 §155③"
+      }
+    ],
+    "contested": [],
+    "verr": [],
+    "und": [],
+    "tth": {
+      "previousAcquisitionDate": "2012-11-21T00:00:00.000Z",
+      "newAcquisitionDate": "2015-03-01T00:00:00.000Z",
+      "newHouseRegionCode": "2635010500",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    }
+  },
+  "C1_gift_plus_new": {
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "excluded": [
+      {
+        "houseId": "b",
+        "legalBasis": "소득세법 시행령 §155②"
+      }
+    ],
+    "contested": [
+      {
+        "id": "155-2-inherited-house-gifted-within-household",
+        "enginePosition": "B",
+        "A": "taxable",
+        "B": "exempt"
+      }
+    ],
+    "verr": [],
+    "und": [],
+    "tth": {
+      "previousAcquisitionDate": "2012-11-21T00:00:00.000Z",
+      "newAcquisitionDate": "2015-03-01T00:00:00.000Z",
+      "newHouseRegionCode": "2635010500",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    }
+  }
+}

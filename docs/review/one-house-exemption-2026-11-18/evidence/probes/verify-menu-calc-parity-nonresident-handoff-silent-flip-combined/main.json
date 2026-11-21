@@ -1,0 +1,227 @@
+{
+  "S09-NR": {
+    "J": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": false,
+      "unmet": [
+        "non-resident-121-2"
+      ],
+      "undetermined": []
+    },
+    "menuWarnings": [
+      "transferorNonResident: 비거주자 사실은 이 판정에만 반영됩니다 — 양도세 계산기로 넘기면 거주자 기준(1세대1주택 비과세·장기보유특"
+    ],
+    "menuErrors": [],
+    "patchResidentKeys": [],
+    "importedFactsKeys": [
+      "longTermMortgageSpecial",
+      "longTermMortgageContractDate",
+      "longTermMortgageBorrowerAge",
+      "longTermMortgageContractYears",
+      "longTermMortgageMaturityLumpSum",
+      "longTermMortgageTransferredBeforeMaturity",
+      "longTermMortgageIsTransferredHouseMortgaged",
+      "longTermMortgageParentalCareMerge",
+      "winWinRentalSpecial",
+      "winWinRentalContractDate",
+      "winWinRentalIncreaseRatePct",
+      "winWinRentalPriorLeaseMonths",
+      "winWinRentalLeaseMonths",
+      "winWinRentalLeaseEndDate"
+    ],
+    "K": {
+      "status": 200,
+      "isExempt": true,
+      "totalTax": 0,
+      "calcIssues": 1
+    },
+    "calcWarningsNR": []
+  },
+  "S09-control": {
+    "J": {
+      "status": 200,
+      "isExempt": true,
+      "isPartialExempt": false,
+      "unmet": [],
+      "undetermined": []
+    },
+    "menuWarnings": [],
+    "menuErrors": [],
+    "patchResidentKeys": [],
+    "importedFactsKeys": [
+      "longTermMortgageSpecial",
+      "longTermMortgageContractDate",
+      "longTermMortgageBorrowerAge",
+      "longTermMortgageContractYears",
+      "longTermMortgageMaturityLumpSum",
+      "longTermMortgageTransferredBeforeMaturity",
+      "longTermMortgageIsTransferredHouseMortgaged",
+      "longTermMortgageParentalCareMerge",
+      "winWinRentalSpecial",
+      "winWinRentalContractDate",
+      "winWinRentalIncreaseRatePct",
+      "winWinRentalPriorLeaseMonths",
+      "winWinRentalLeaseMonths",
+      "winWinRentalLeaseEndDate"
+    ],
+    "K": {
+      "status": 200,
+      "isExempt": true,
+      "totalTax": 0,
+      "calcIssues": 1
+    },
+    "calcWarningsNR": []
+  },
+  "S10-period": {
+    "J": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": false,
+      "unmet": [],
+      "undetermined": []
+    },
+    "menuWarnings": [
+      "nonResidentPeriod: 비거주자 사실은 이 판정에만 반영됩니다 — 양도세 계산기로 넘기면 거주자 기준(1세대1주택 비과세·장기보유특"
+    ],
+    "menuErrors": [],
+    "patchResidentKeys": [],
+    "importedFactsKeys": [
+      "longTermMortgageSpecial",
+      "longTermMortgageContractDate",
+      "longTermMortgageBorrowerAge",
+      "longTermMortgageContractYears",
+      "longTermMortgageMaturityLumpSum",
+      "longTermMortgageTransferredBeforeMaturity",
+      "longTermMortgageIsTransferredHouseMortgaged",
+      "longTermMortgageParentalCareMerge",
+      "winWinRentalSpecial",
+      "winWinRentalContractDate",
+      "winWinRentalIncreaseRatePct",
+      "winWinRentalPriorLeaseMonths",
+      "winWinRentalLeaseMonths",
+      "winWinRentalLeaseEndDate"
+    ],
+    "K": {
+      "status": 200,
+      "isExempt": true,
+      "totalTax": 0,
+      "calcIssues": 1
+    },
+    "calcWarningsNR": []
+  },
+  "S15-NR-1.5bn": {
+    "J": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": false,
+      "unmet": [
+        "non-resident-121-2"
+      ],
+      "undetermined": []
+    },
+    "menuWarnings": [
+      "transferorNonResident: 비거주자 사실은 이 판정에만 반영됩니다 — 양도세 계산기로 넘기면 거주자 기준(1세대1주택 비과세·장기보유특"
+    ],
+    "menuErrors": [],
+    "patchResidentKeys": [],
+    "importedFactsKeys": [
+      "longTermMortgageSpecial",
+      "longTermMortgageContractDate",
+      "longTermMortgageBorrowerAge",
+      "longTermMortgageContractYears",
+      "longTermMortgageMaturityLumpSum",
+      "longTermMortgageTransferredBeforeMaturity",
+      "longTermMortgageIsTransferredHouseMortgaged",
+      "longTermMortgageParentalCareMerge",
+      "winWinRentalSpecial",
+      "winWinRentalContractDate",
+      "winWinRentalIncreaseRatePct",
+      "winWinRentalPriorLeaseMonths",
+      "winWinRentalLeaseMonths",
+      "winWinRentalLeaseEndDate"
+    ],
+    "K": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": true,
+      "totalTax": 74833000,
+      "calcIssues": 1
+    },
+    "calcWarningsNR": []
+  },
+  "S15-control-1.5bn": {
+    "J": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": true,
+      "unmet": [],
+      "undetermined": []
+    },
+    "menuWarnings": [],
+    "menuErrors": [],
+    "patchResidentKeys": [],
+    "importedFactsKeys": [
+      "longTermMortgageSpecial",
+      "longTermMortgageContractDate",
+      "longTermMortgageBorrowerAge",
+      "longTermMortgageContractYears",
+      "longTermMortgageMaturityLumpSum",
+      "longTermMortgageTransferredBeforeMaturity",
+      "longTermMortgageIsTransferredHouseMortgaged",
+      "longTermMortgageParentalCareMerge",
+      "winWinRentalSpecial",
+      "winWinRentalContractDate",
+      "winWinRentalIncreaseRatePct",
+      "winWinRentalPriorLeaseMonths",
+      "winWinRentalLeaseMonths",
+      "winWinRentalLeaseEndDate"
+    ],
+    "K": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": true,
+      "totalTax": 74833000,
+      "calcIssues": 1
+    },
+    "calcWarningsNR": []
+  },
+  "S14-right-NR": {
+    "J": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": false,
+      "unmet": [],
+      "undetermined": []
+    },
+    "menuWarnings": [
+      "transferorNonResident: 비거주자 사실은 이 판정에만 반영됩니다 — 양도세 계산기로 넘기면 거주자 기준(1세대1주택 비과세·장기보유특"
+    ],
+    "menuErrors": [],
+    "patchResidentKeys": [],
+    "importedFactsKeys": [
+      "longTermMortgageSpecial",
+      "longTermMortgageContractDate",
+      "longTermMortgageBorrowerAge",
+      "longTermMortgageContractYears",
+      "longTermMortgageMaturityLumpSum",
+      "longTermMortgageTransferredBeforeMaturity",
+      "longTermMortgageIsTransferredHouseMortgaged",
+      "longTermMortgageParentalCareMerge",
+      "winWinRentalSpecial",
+      "winWinRentalContractDate",
+      "winWinRentalIncreaseRatePct",
+      "winWinRentalPriorLeaseMonths",
+      "winWinRentalLeaseMonths",
+      "winWinRentalLeaseEndDate"
+    ],
+    "K": {
+      "status": 200,
+      "isExempt": true,
+      "isPartialExempt": false,
+      "totalTax": 0,
+      "calcIssues": 1
+    },
+    "calcWarningsNR": []
+  }
+}

@@ -1,0 +1,14 @@
+## C1 1주택 + 입주권 2개
+isExempt=false totalTax=128766000
+warnings(89/권리 관련)=[]
+all warnings count=0
+
+## C2 ③ 1년 요건 미충족
+isExempt=false totalTax=190366000
+warnings(89/권리 관련)=[]
+all warnings count=0
+
+## C3 대조 — 권리 없음
+isExempt=true totalTax=0
+warnings(89/권리 관련)=[]
+all warnings count=0

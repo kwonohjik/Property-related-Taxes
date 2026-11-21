@@ -1,0 +1,60 @@
+{
+ "display": [
+  {
+   "s": "2022-03-10",
+   "e": "2024-03-09",
+   "card": "자동 산정 거주개월수: 23 개월",
+   "canonical": 24
+  },
+  {
+   "s": "2022-03-10",
+   "e": "2024-03-10",
+   "card": "자동 산정 거주개월수: 24 개월",
+   "canonical": 24
+  },
+  {
+   "s": "2021-01-31",
+   "e": "2021-02-28",
+   "card": "자동 산정 거주개월수: 0 개월",
+   "canonical": 1
+  },
+  {
+   "s": "2020-02-29",
+   "e": "2022-02-28",
+   "card": "자동 산정 거주개월수: 23 개월",
+   "canonical": 24
+  },
+  {
+   "s": "2021-08-31",
+   "e": "2023-08-30",
+   "card": "자동 산정 거주개월수: 23 개월",
+   "canonical": 24
+  }
+ ],
+ "patch": [
+  {
+   "redevNewResidenceStartDate": "2022-03-10",
+   "redevNewResidenceEndDate": "2024-03-09",
+   "redevNewHouseResidenceMonths": "23"
+  }
+ ],
+ "engine": [
+  {
+   "newMonths": 23,
+   "isExempt": false,
+   "isPartialExempt": false,
+   "totalTax": 164720285
+  },
+  {
+   "newMonths": 24,
+   "isExempt": true,
+   "isPartialExempt": false,
+   "totalTax": 0
+  }
+ ],
+ "viaStep4": {
+  "months": 24,
+  "isExempt": true,
+  "totalTax": 0
+ }
+}

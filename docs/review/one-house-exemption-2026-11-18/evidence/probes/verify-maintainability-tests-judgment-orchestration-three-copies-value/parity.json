@@ -1,0 +1,72 @@
+{
+  "plain-1house": {
+    "calc": {
+      "isExempt": true,
+      "calculatedTax": 0,
+      "hasOtherHouseholdNotice": false
+    },
+    "menu": {
+      "isExempt": true,
+      "isPartialExempt": false
+    }
+  },
+  "plain-2house": {
+    "calc": {
+      "isExempt": false,
+      "isPartialExempt": false,
+      "calculatedTax": 169860000,
+      "hasOtherHouseholdNotice": false
+    },
+    "menu": {
+      "isExempt": false,
+      "isPartialExempt": false
+    }
+  },
+  "short-holding": {
+    "calc": {
+      "isExempt": false,
+      "isPartialExempt": false,
+      "calculatedTax": 418250000,
+      "hasOtherHouseholdNotice": false
+    },
+    "menu": {
+      "isExempt": false,
+      "isPartialExempt": false
+    }
+  },
+  "land_only-same-household": {
+    "calc": {
+      "isExempt": true,
+      "calculatedTax": 0,
+      "hasOtherHouseholdNotice": false
+    },
+    "menu": {
+      "isExempt": true,
+      "isPartialExempt": false
+    }
+  },
+  "land_only-OTHER-household": {
+    "calc": {
+      "isExempt": false,
+      "isPartialExempt": false,
+      "calculatedTax": 72590000,
+      "hasOtherHouseholdNotice": true
+    },
+    "menu": {
+      "isExempt": true,
+      "isPartialExempt": false
+    }
+  },
+  "land_only-OTHER-household-HV": {
+    "calc": {
+      "isExempt": false,
+      "isPartialExempt": false,
+      "calculatedTax": 204090000,
+      "hasOtherHouseholdNotice": true
+    },
+    "menu": {
+      "isExempt": false,
+      "isPartialExempt": true
+    }
+  }
+}

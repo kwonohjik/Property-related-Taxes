@@ -1,0 +1,15 @@
+A ON·빈칸 LTM errs=["error:longTermMortgageContractDate:장기저당담보주택: 계약체결일을 입력하세요.","error:longTermMortgageBorrowerAge:장기저당담보주택: 계약체결일 현재 가입자 나이를 입력하세요.","error:longTermMortgageContractYears:장기저당담보주택: 계약기간(년)을 입력하세요."]
+A step index 2 first error=undefined
+A all step3 errors=["residencePeriods","longTermMortgageContractDate","longTermMortgageBorrowerAge","longTermMortgageContractYears","rentalHousingException.phrp154_10Answer"]
+B OFF LTM errs=[]
+C ON·채움 LTM errs=[]
+D 입주권·ON LTM errs=[]
+E 기본 필수 비움 errs=["transferDate","acquisitionDate","contractTotalPrice","residencePeriods","rentalHousingException.phrp154_10Answer"]
+card[계약체결일] data-field=없음 asterisk=false
+card[계약체결일 현재 가입자 나이] data-field=없음 asterisk=false
+card[계약기간] data-field=없음 asterisk=false
+card[매매계약일] data-field=demolishedBeforeBalanceContractDate asterisk=true
+card[취득일] data-field=없음 asterisk=false
+card[양도 예정일] data-field=없음 asterisk=false
+card[예상 양도가액] data-field=없음 asterisk=false
+data-field 전체=["demolishedBeforeBalanceContractDate","residencePeriods.0.moveInDate","residencePeriods.0.moveOutDate","rentalHousingException.phrp154_10Answer"]

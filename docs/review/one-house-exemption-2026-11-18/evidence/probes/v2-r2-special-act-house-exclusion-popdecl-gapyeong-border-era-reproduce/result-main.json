@@ -1,0 +1,151 @@
+{
+  "classify": {
+    "gapyeong": {
+      "kind": "decline"
+    },
+    "gapyeongCapital": true,
+    "yeoncheon": {
+      "kind": "decline"
+    },
+    "cheongju": {
+      "kind": null
+    }
+  },
+  "evaluator": {
+    "E_gapyeong_acq20240115_tr20250215": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "E_gapyeong_acq20240115_tr20250305": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "E_gapyeong_acq20240115_tr20250310": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "E_gapyeong_acq20240115_tr20250311": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "E_gapyeong_acq20240115_tr20260601": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "E_gapyeong_acq20250310_tr20260601": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "E_gapyeong_acq20250311_tr20260601": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "E_yeoncheon_acq20240115_tr20250305(대조:편입전부터접경)": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true
+        }
+      ]
+    },
+    "E_cheongju_acq20240115_tr20250305(대조:비인구감소)": {
+      "excludedCount": 0,
+      "entries": []
+    }
+  },
+  "route": {
+    "R_gapyeong_acq20240115_tr20250215": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": true,
+      "isPartialExempt": false,
+      "excludedHouses": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "appliedExceptions": [],
+      "undetermined": []
+    },
+    "R_gapyeong_acq20240115_tr20250305": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": true,
+      "isPartialExempt": false,
+      "excludedHouses": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "appliedExceptions": [],
+      "undetermined": []
+    },
+    "R_gapyeong_acq20240115_tr20260601": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": true,
+      "isPartialExempt": false,
+      "excludedHouses": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "appliedExceptions": [],
+      "undetermined": []
+    },
+    "R_yeoncheon_acq20240115_tr20250305": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": true,
+      "isPartialExempt": false,
+      "excludedHouses": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "appliedExceptions": [],
+      "undetermined": []
+    },
+    "R_cheongju_acq20240115_tr20250305": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": false,
+      "isPartialExempt": false,
+      "excludedHouses": [],
+      "appliedExceptions": [],
+      "undetermined": []
+    }
+  }
+}

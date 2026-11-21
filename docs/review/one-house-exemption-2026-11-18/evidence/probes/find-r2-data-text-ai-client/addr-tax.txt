@@ -1,0 +1,6 @@
+경기도 성남시 분당구 정자동 123 | transferDate=2026-02-16 | issues=[] | body=[true,true] | totalTax=237435000 | assumptionNotices=[]
+경기도 성남시 정자동 123 | transferDate=2026-02-16 | issues=[] | body=[false,false] | totalTax=0 | assumptionNotices=[]
+경기도 성남시분당구 정자동 123 | transferDate=2026-02-16 | issues=[] | body=[false,false] | totalTax=0 | assumptionNotices=[]
+경기도 고양시 행신동 123 | transferDate=2026-02-16 | issues=[] | body=[false,false] | totalTax=0 | assumptionNotices=[]
+분당구 | transferDate=2026-02-16 | issues=[] | body=[false,false] | totalTax=0 | assumptionNotices=[["transfer",false,"low","주소 파싱 실패"],["acquisition",false,"low","주소 파싱 실패"]]
+강남구역삼동123 | transferDate=2026-02-16 | issues=[] | body=[false,false] | totalTax=0 | assumptionNotices=[["transfer",false,"low","주소 파싱 실패"],["acquisition",false,"low","주소 파싱 실패"]]

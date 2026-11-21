@@ -1,0 +1,50 @@
+# N3 counterfactual probe 2026-11-18T14:10:26.339Z
+
+## C1 강남 · 통산 · 신축거주 30 · ⑳ A · 명부 임대 행(2주택) · 9억 [리뷰어 시나리오]
+issues(⑧)=[] status=200 body.householdHousingCount=2 body.householdBuilding=true
+결과: isExempt=true partial=false totalTax=0 N3고지=true
+통산 뺀 route 재계산: isExempt=true partial=false totalTax=0 → 통산이 결론을 가르는가=false
+leaf 시뮬: {"count_exemptionJudgeInput":2,"count_translatedJudgeInput":1,"count_withoutCarry":2,"res_translated":66,"res_withoutCarry":30,"current":"true|false","currentGate_N3":true,"fix1Gate_N3":false,"fullGate_N3":false,"fullCF":"true|false","rentalWithoutCarryJudgeCount":1}
+
+## C2 대조 — C1에서 통산 없음
+issues(⑧)=[] status=200 body.householdHousingCount=2 body.householdBuilding=false
+결과: isExempt=true partial=false totalTax=0 N3고지=false
+통산 뺀 route 재계산: isExempt=true partial=false totalTax=0 → 통산이 결론을 가르는가=false
+leaf 시뮬: {"count_exemptionJudgeInput":2,"count_translatedJudgeInput":1,"count_withoutCarry":2,"res_translated":30,"res_withoutCarry":30,"current":"true|false","currentGate_N3":true,"fix1Gate_N3":false,"fullGate_N3":false,"fullCF":"true|false","rentalWithoutCarryJudgeCount":1}
+
+## C3 대조 — 통산 · ⑳ 없음 · 1주택
+issues(⑧)=[] status=200 body.householdHousingCount=1 body.householdBuilding=true
+결과: isExempt=true partial=false totalTax=0 N3고지=false
+통산 뺀 route 재계산: isExempt=true partial=false totalTax=0 → 통산이 결론을 가르는가=false
+leaf 시뮬: {"count_exemptionJudgeInput":1,"count_translatedJudgeInput":1,"count_withoutCarry":1,"res_translated":66,"res_withoutCarry":30,"current":"true|false","currentGate_N3":false,"fix1Gate_N3":false,"fullGate_N3":false,"fullCF":"true|false","rentalWithoutCarryJudgeCount":1}
+
+## C4 긍정 대조 — 강남 · 통산 · 신축거주 12 · ⑳ A · 2주택(통산이 §154①·⑳ 거주를 가른다)
+issues(⑧)=[] status=200 body.householdHousingCount=2 body.householdBuilding=true
+결과: isExempt=true partial=false totalTax=0 N3고지=true
+통산 뺀 route 재계산: isExempt=false partial=false totalTax=184646000 → 통산이 결론을 가르는가=true
+leaf 시뮬: {"count_exemptionJudgeInput":2,"count_translatedJudgeInput":1,"count_withoutCarry":2,"res_translated":48,"res_withoutCarry":12,"current":"true|false","currentGate_N3":true,"fix1Gate_N3":true,"fullGate_N3":true,"fullCF":"false|false","rentalWithoutCarryJudgeCount":2}
+
+## C5 유성(인가·사용승인 비조정) · 통산 · 신축거주 12 · ⑳ A · 2주택(통산이 ⑳ 거주 2년만 가른다)
+issues(⑧)=[] status=200 body.householdHousingCount=2 body.householdBuilding=true
+결과: isExempt=true partial=false totalTax=0 N3고지=true
+통산 뺀 route 재계산: isExempt=false partial=false totalTax=184646000 → 통산이 결론을 가르는가=true
+leaf 시뮬: {"count_exemptionJudgeInput":2,"count_translatedJudgeInput":1,"count_withoutCarry":2,"res_translated":48,"res_withoutCarry":12,"current":"true|false","currentGate_N3":true,"fix1Gate_N3":false,"fullGate_N3":true,"fullCF":"false|false","rentalWithoutCarryJudgeCount":2}
+
+## C7 역방향 — 강남 · 통산 · 신축거주 30 · ⑳ A 불성립(임대 10개월) · 명부 없음(주택 수 1)
+issues(⑧)=[] status=200 body.householdHousingCount=1 body.householdBuilding=true
+결과: isExempt=true partial=false totalTax=0 N3고지=false
+통산 뺀 route 재계산: isExempt=true partial=false totalTax=0 → 통산이 결론을 가르는가=false
+leaf 시뮬: {"count_exemptionJudgeInput":1,"count_translatedJudgeInput":1,"count_withoutCarry":1,"res_translated":66,"res_withoutCarry":30,"current":"true|false","currentGate_N3":false,"fix1Gate_N3":false,"fullGate_N3":false,"fullCF":"true|false","rentalWithoutCarryJudgeCount":1}
+
+## C8 C7 대조 — 통산 없음
+issues(⑧)=[] status=200 body.householdHousingCount=1 body.householdBuilding=false
+결과: isExempt=true partial=false totalTax=0 N3고지=false
+통산 뺀 route 재계산: isExempt=true partial=false totalTax=0 → 통산이 결론을 가르는가=false
+leaf 시뮬: {"count_exemptionJudgeInput":1,"count_translatedJudgeInput":1,"count_withoutCarry":1,"res_translated":30,"res_withoutCarry":30,"current":"true|false","currentGate_N3":false,"fix1Gate_N3":false,"fullGate_N3":false,"fullCF":"true|false","rentalWithoutCarryJudgeCount":1}
+
+## C6 C1의 15억판(부분 비과세)
+issues(⑧)=[] status=200 body.householdHousingCount=2 body.householdBuilding=true
+결과: isExempt=false partial=true totalTax=35183500 N3고지=true
+통산 뺀 route 재계산: isExempt=false partial=true totalTax=35183500 → 통산이 결론을 가르는가=false
+leaf 시뮬: {"count_exemptionJudgeInput":2,"count_translatedJudgeInput":1,"count_withoutCarry":2,"res_translated":66,"res_withoutCarry":30,"current":"false|true","currentGate_N3":true,"fix1Gate_N3":false,"fullGate_N3":false,"fullCF":"false|true","rentalWithoutCarryJudgeCount":1}
+

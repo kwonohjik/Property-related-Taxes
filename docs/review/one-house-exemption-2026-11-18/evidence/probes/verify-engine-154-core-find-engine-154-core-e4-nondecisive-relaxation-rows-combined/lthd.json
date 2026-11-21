@@ -1,0 +1,18 @@
+{
+  "highValueWinWin": {
+    "determinedTax": 39910000,
+    "calculatedTax": 39910000,
+    "longTermHoldingDeduction": 40000000,
+    "longTermHoldingRate": 0.2,
+    "isExempt": false,
+    "exemptReason": "1세대1주택 고가주택"
+  },
+  "highValueNoWinWin": {
+    "determinedTax": 47510000,
+    "calculatedTax": 47510000,
+    "longTermHoldingDeduction": 20000000,
+    "longTermHoldingRate": 0.1,
+    "isExempt": false,
+    "exemptReason": "1세대1주택 고가주택"
+  }
+}

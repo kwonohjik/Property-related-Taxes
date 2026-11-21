@@ -1,0 +1,206 @@
+{
+  "engine": {
+    "spouse|yes|exc-off": {
+      "adopted": "A",
+      "A": 0,
+      "B": 0,
+      "tax": 0,
+      "exempt": true,
+      "giftWarnings": [],
+      "detailNotice": false
+    },
+    "spouse|no|exc-off": {
+      "excl": "one_house_exemption",
+      "adopted": "B",
+      "A": 0,
+      "B": 208250000,
+      "tax": 208250000,
+      "exempt": false,
+      "giftWarnings": [],
+      "detailNotice": false
+    },
+    "spouse|unconfirmed|exc-off": {
+      "excl": "one_house_exemption",
+      "adopted": "B",
+      "A": 0,
+      "B": 208250000,
+      "tax": 208250000,
+      "exempt": false,
+      "giftWarnings": [
+        "증여자와 증여일부터 양도일까지 계속 같은 세대였는지(배우자는 혼인 유지) 입력되지 않아, 증여일부터 보유기간을 세고 「취득 당시」 조정대상지역은 증여일과 증여자 "
+      ],
+      "detailNotice": false
+    },
+    "lineal|yes|exc-off": {
+      "adopted": "A",
+      "A": 0,
+      "B": 0,
+      "tax": 0,
+      "exempt": true,
+      "giftWarnings": [],
+      "detailNotice": false
+    },
+    "lineal|no|exc-off": {
+      "excl": "one_house_exemption",
+      "adopted": "B",
+      "A": 0,
+      "B": 208250000,
+      "tax": 208250000,
+      "exempt": false,
+      "giftWarnings": [],
+      "detailNotice": false
+    },
+    "lineal|unconfirmed|exc-off": {
+      "excl": "one_house_exemption",
+      "adopted": "B",
+      "A": 0,
+      "B": 208250000,
+      "tax": 208250000,
+      "exempt": false,
+      "giftWarnings": [
+        "증여자와 증여일부터 양도일까지 계속 같은 세대였는지(배우자는 혼인 유지) 입력되지 않아, 증여일부터 보유기간을 세고 「취득 당시」 조정대상지역은 증여일과 증여자 "
+      ],
+      "detailNotice": false
+    },
+    "spouse|yes|exc-on": {
+      "adopted": "A",
+      "A": 0,
+      "B": 0,
+      "tax": 0,
+      "exempt": true,
+      "giftWarnings": [],
+      "detailNotice": false
+    },
+    "spouse|no|exc-on": {
+      "excl": "tax_comparison",
+      "adopted": "B",
+      "A": 0,
+      "B": 208250000,
+      "spouseExc": true,
+      "tax": 208250000,
+      "exempt": false,
+      "giftWarnings": [],
+      "detailNotice": false
+    },
+    "MAPO2022|spouse|yes": {
+      "adopted": "A",
+      "A": 0,
+      "B": 0,
+      "tax": 0,
+      "exempt": true,
+      "giftWarnings": [
+        "증여자와 계속 같은 세대였다는 입력에 따라 세대가 보유를 시작한 날부터 보유기간을 통산하고 그 날을 「취득 당시」로 보았습니다(조심 2022서7583 — 보유기간"
+      ],
+      "detailNotice": true
+    },
+    "MAPO2022|spouse|no": {
+      "excl": "tax_comparison",
+      "adopted": "B",
+      "A": 150660000,
+      "B": 208250000,
+      "tax": 208250000,
+      "exempt": false,
+      "giftWarnings": [],
+      "detailNotice": false
+    },
+    "spouse|yes-start2025-03|exc-off": {
+      "excl": "one_house_exemption",
+      "adopted": "B",
+      "A": 0,
+      "B": 208250000,
+      "tax": 208250000,
+      "exempt": false,
+      "giftWarnings": [],
+      "detailNotice": false
+    },
+    "spouse|yes|late2028": {
+      "adopted": "A",
+      "A": 0,
+      "B": 0,
+      "tax": 0,
+      "exempt": true,
+      "giftWarnings": [],
+      "detailNotice": false
+    }
+  },
+  "route": [
+    {
+      "label": "spouse|yes",
+      "J": {
+        "status": 200,
+        "isExempt": true,
+        "und": [
+          "gift-household-consolidation-detail-unverified"
+        ]
+      },
+      "C": {
+        "status": 200,
+        "cause": "carryover_gift",
+        "spouseExc": false,
+        "adopted": "A",
+        "totalTax": 0,
+        "isExempt": true,
+        "giftWarnings": [],
+        "issues": []
+      }
+    },
+    {
+      "label": "spouse|no",
+      "J": {
+        "status": 200,
+        "isExempt": false,
+        "und": []
+      },
+      "C": {
+        "status": 200,
+        "cause": "carryover_gift",
+        "spouseExc": false,
+        "adopted": "B",
+        "excl": "one_house_exemption",
+        "totalTax": 229075000,
+        "isExempt": false,
+        "giftWarnings": [],
+        "issues": []
+      }
+    },
+    {
+      "label": "lineal|yes",
+      "J": {
+        "status": 200,
+        "isExempt": true,
+        "und": [
+          "gift-household-consolidation-detail-unverified"
+        ]
+      },
+      "C": {
+        "status": 200,
+        "cause": "carryover_gift",
+        "spouseExc": false,
+        "adopted": "A",
+        "totalTax": 0,
+        "isExempt": true,
+        "giftWarnings": [],
+        "issues": []
+      }
+    },
+    {
+      "label": "lineal|no",
+      "J": {
+        "status": 200,
+        "isExempt": false,
+        "und": []
+      },
+      "C": {
+        "status": 200,
+        "cause": "carryover_gift",
+        "spouseExc": false,
+        "adopted": "B",
+        "excl": "one_house_exemption",
+        "totalTax": 229075000,
+        "isExempt": false,
+        "giftWarnings": [],
+        "issues": []
+      }
+    }
+  ]
+}

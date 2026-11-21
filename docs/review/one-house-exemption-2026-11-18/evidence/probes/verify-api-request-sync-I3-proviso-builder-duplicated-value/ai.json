@@ -1,0 +1,19 @@
+{
+  "pre_designation_contract": {
+    "inlineZodIssues": [
+      "oneHouseExemptionProviso.preContractNoHouse :: §154① 5호(조정 공고 전 계약)는 계약금 지급일 현재 무주택 확인(preContractNoHouse: true)이 필요합니다"
+    ],
+    "sharedZodIssues": [],
+    "aiQuestions": [
+      "provisoReason :: §154① 단서(조정 공고 전 계약): 계약금 지급일 현재 무주택 여부를 확인하세요.",
+      "oneHouseExemptionProviso.preContractNoHouse :: oneHouseExemptionProviso.preContractNoHouse — 입력값을 확인하세요."
+    ]
+  },
+  "rental_registration_4ho": {
+    "inlineZodIssues": [],
+    "sharedZodIssues": [],
+    "aiQuestions": [
+      "provisoReason :: §154① 단서(4호 임대사업자 등록): 사업자등록 신청일을 입력하세요."
+    ]
+  }
+}

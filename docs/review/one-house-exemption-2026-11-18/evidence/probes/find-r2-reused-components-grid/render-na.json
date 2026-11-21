@@ -1,0 +1,85 @@
+[
+ {
+  "name": "ON-mismatch",
+  "naLabelShown": true,
+  "approvalShown": true,
+  "step3Errors": [
+   "redevOtherHouseAcquisitionDate: 나목 기산일(2023-01-01)이 보유 주택 명부의 1주택 취득일(2023-12-15)과 다릅니다 — 나목은 양도일 현재 보"
+  ],
+  "allErrors": 1,
+  "route": {
+   "status": 200,
+   "isExempt": false,
+   "clause": null,
+   "reasons": [
+    "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+   ]
+  }
+ },
+ {
+  "name": "OFF-mismatch",
+  "naLabelShown": false,
+  "approvalShown": false,
+  "step3Errors": [
+   "redevOtherHouseAcquisitionDate: 나목 기산일(2023-01-01)이 보유 주택 명부의 1주택 취득일(2023-12-15)과 다릅니다 — 나목은 양도일 현재 보"
+  ],
+  "allErrors": 1,
+  "route": {
+   "status": 200,
+   "isExempt": false,
+   "clause": null,
+   "reasons": [
+    "관리처분계획인가일 현재 §89①3호 가목 요건(보유 2년, 조정대상지역 취득 시 거주 2년)을 갖춘 기존주택 소유가 선언되지 않았습니다.",
+    "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+   ]
+  }
+ },
+ {
+  "name": "OFF-after-transfer",
+  "naLabelShown": false,
+  "approvalShown": false,
+  "step3Errors": [
+   "redevOtherHouseAcquisitionDate: 나목 기산일(2026-07-01)이 양도 예정일(2026-06-15)보다 뒤입니다 — 「그 1주택을 취득한 날」은 양도일 전이"
+  ],
+  "allErrors": 1,
+  "route": {
+   "status": 200,
+   "isExempt": false,
+   "clause": null,
+   "reasons": [
+    "관리처분계획인가일 현재 §89①3호 가목 요건(보유 2년, 조정대상지역 취득 시 거주 2년)을 갖춘 기존주택 소유가 선언되지 않았습니다."
+   ]
+  }
+ },
+ {
+  "name": "OFF-match",
+  "naLabelShown": false,
+  "approvalShown": false,
+  "step3Errors": [],
+  "allErrors": 0,
+  "route": {
+   "status": 200,
+   "isExempt": false,
+   "clause": null,
+   "reasons": [
+    "관리처분계획인가일 현재 §89①3호 가목 요건(보유 2년, 조정대상지역 취득 시 거주 2년)을 갖춘 기존주택 소유가 선언되지 않았습니다."
+   ]
+  }
+ },
+ {
+  "name": "OFF-empty",
+  "naLabelShown": false,
+  "approvalShown": false,
+  "step3Errors": [],
+  "allErrors": 0,
+  "route": {
+   "status": 200,
+   "isExempt": false,
+   "clause": null,
+   "reasons": [
+    "관리처분계획인가일 현재 §89①3호 가목 요건(보유 2년, 조정대상지역 취득 시 거주 2년)을 갖춘 기존주택 소유가 선언되지 않았습니다.",
+    "나목 판정에는 세대 보유 1주택의 취득일이 필요합니다. 입력하지 않으면 3년 요건을 판정할 수 없어 나목을 적용하지 않습니다."
+   ]
+  }
+ }
+]

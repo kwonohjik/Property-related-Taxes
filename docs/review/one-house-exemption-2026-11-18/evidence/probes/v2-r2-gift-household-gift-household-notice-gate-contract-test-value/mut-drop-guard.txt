@@ -1,0 +1,592 @@
+
+ RUN  v4.1.4 .
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > GJ-2 route — 통산 vs 증여일 기준 > [GJ-2c] 시작일이 통산 길이를 정한다 — 증여 8개월 전 합가는 2년 미달 → 과세, 통산 적용은 확인 필요로 고지
+[/api/calc/one-house-exemption] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > GJ-2 route — 통산 vs 증여일 기준 > [GJ-2d] 통산을 적용해 결론이 갈리면 정면 해석 없는 세부를 확인 필요로 고지한다 · 같아지는 짝은 고지하지 않는다
+[/api/calc/one-house-exemption] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > DR-3 route(판정 메뉴) — 통산 없이 계산 + 결론을 가를 때만 확인 필요 > [DR-3b] 부정 짝: 「아니오」는 같은 과세지만 재결합 고지가 없다 · 통산해도 결론이 같은 사안(증여 3년 뒤)은 재결합이어도 고지하지 않는다
+[/api/calc/one-house-exemption] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > DR-3 route(판정 메뉴) — 통산 없이 계산 + 결론을 가를 때만 확인 필요 > [DR-3d] 증여자 사망이어도 통산이 결론을 가르지 않으면(증여 3년 뒤) 고지하지 않는다
+[/api/calc/one-house-exemption] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > DR-5 route(계산기) — 이월과세 폼의 재결합도 같은 판정·같은 고지 > [DR-5a] 배우자 재결합 → 계산기에서 통산 없이 계산하고 재결합 확인 필요를 고지한다 · 「아니오」는 고지가 없다(긍정 짝)
+[/api/calc/transfer] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-2 ⑧·⑫ — 상한은 세대 보유 시작일부터 증여일까지의 개월 수 > [PR-2d] ⑫ API 직접 호출 — 상한 초과 400 · 「예」가 아닌데 개월을 보내도 400(조용히 무시되는 입력을 만들지 않는다) · 상한 이내는 200
+[/api/calc/one-house-exemption] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3a] 24개월은 비과세 · 23개월은 과세(경계 ±1) — 같은 사실, 개월만 다르다
+[/api/calc/one-house-exemption] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3b] 증여 후 본인 거주와 합산한다 — 증여 후 12개월 + 증여 전 12개월 = 24개월이면 비과세, 11개월이면 과세
+[/api/calc/one-house-exemption] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3c] 통산을 적용해 결론이 갈리면 확인 필요 — 국세청·법원 입장을 단정하지 않고 정면 해석 미확보를 적는다
+[/api/calc/one-house-exemption] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3d] 입력이 없으면 통산하지 않고(과세) 「거주했다면 달라진다」를 고지한다 · 입력 0은 고지가 없다(긍정 짝)
+[/api/calc/one-house-exemption] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3e] 결론을 가르지 않으면 고지하지 않는다 — 비조정지역(거주요건 없음) · 이미 거주 24개월 · 증여 후 개월이 이미 충분
+[/api/calc/one-house-exemption] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3f] 계속 같은 세대가 아니면(아니오) 개월은 통산에 쓰이지 않는다 — 남은 값이 있어도 과세 · 고지 없음
+[/api/calc/one-house-exemption] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3g] 통산 세부 고지(DETAIL)와 별개다 — 개월 때문에 결론이 갈릴 때만 PRIOR가 나고, 둘은 서로의 게이트를 막지 않는다
+[/api/calc/one-house-exemption] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 판정 통산(#38-9) · 미답 확인 필요 고지(#38-8) > [PR-4a] 증여 전 12개월을 통산하면 거주 24개월 → 과세에서 고가주택 부분 비과세로 바뀐다 (484,588,500 → 125,246,000 — 표2 대상이라 공제율 12%)
+[/api/calc/transfer] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 판정 통산(#38-9) · 미답 확인 필요 고지(#38-8) > [PR-4b] 표2 대상 판정에 통산한다 — 증여 전 12개월 + 증여 후 12개월 = 거주 2년 → 표2 · 공제율은 보유 3년 × 4% = 12%만이다(본인 거주 12개월은 거주분 0)
+[/api/calc/transfer] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 판정 통산(#38-9) · 미답 확인 필요 고지(#38-8) > [PR-4e] 공제율에는 통산하지 않는다 — 증여 전 거주를 상한 가까이(36개월) 넣어도 공제율은 12%로 같다(거주분은 본인 거주 12개월 기준 0)
+[/api/calc/transfer] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 판정 통산(#38-9) · 미답 확인 필요 고지(#38-8) > [PR-4c] 불발동 — 12억 이하(전액 비과세) · 입력 0 · 계속 같은 세대 아님 · 보유 3년 미만 · 이미 표2 대상
+[/api/calc/transfer] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+stderr | __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 판정 통산(#38-9) · 미답 확인 필요 고지(#38-8) > [PR-4d] 입력이 없으면 비과세 거주요건 고지만 난다 — 요건 미충족(과세)이면 표2 고지는 나지 않는다 · 비조정지역에서는 입력이 없어도 표2 고지가 난다(상한 가정)
+[/api/calc/transfer] engine error: Error: RECURSION>30
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+    at collectUndetermined (./lib/tax-engine/one-house/pending.ts:597:24)
+    at checkExemption (./lib/tax-engine/transfer-tax-exemption.ts:182:10)
+    at check (./lib/tax-engine/transfer-tax-exemption.ts:224:23)
+    at verdictOf (./lib/tax-engine/one-house/era-notice-relevance.ts:91:19)
+    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39)
+    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)
+    at collectEraUndetermined (./lib/tax-engine/one-house/era-undetermined.ts:216:33)
+
+ ❯ |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts (133 tests | 34 failed) 256ms
+     × [GJ-2c] 시작일이 통산 길이를 정한다 — 증여 8개월 전 합가는 2년 미달 → 과세, 통산 적용은 확인 필요로 고지 9ms
+     × [GJ-2d] 통산을 적용해 결론이 갈리면 정면 해석 없는 세부를 확인 필요로 고지한다 · 같아지는 짝은 고지하지 않는다 4ms
+     × G4-1-5 [거울상 · 결정 #38 하위 2 가] 계속 같은 세대 · 세대 보유 시작일에만 지정 중(증여일엔 해제) → 증여일 기준 유지 → 비과세 0 + 확인 필요 고지 2ms
+     × G4-1-5b 긍정 짝: 세대 보유 시작일과 증여일 모두 지정 중이면 거주요건이 적용된다 → 과세 3ms
+     × G4-1-6 미확인 · 증여자 취득 때만 지정 → 변화 없음(157,060,000) + 확인 필요 고지 2ms
+     × G4-1-8 [결정 #38-2] 관계 「그 외」도 질문을 묻는다 → 답이 없는 직접 호출은 미확인 — 통산하지 않고(증여일·증여자 취득일 중 지정 중이면 거주요건) 확인 필요 고지: 0 → 113,060,000 (종전 #34는 「그 외」를 별도 세대로 읽어 0 · 고지 없음) 2ms
+     × G4-1-8b 긍정 짝: 관계 「직계」는 같은 입력에서 미확인 → 보수 판정 157,060,000 + 확인 필요 고지 그대로 2ms
+     × G4-1-8c 「그 외」라도 호출자가 명시로 답한 사실(API 직접 호출)은 존중한다 — 계속 같은 세대 · 시작일 2021-01-15(지정 중)이면 통산 1ms
+     × G4-1-7 결론을 가르지 않으면 고지하지 않는다 — 두 날짜 모두 비지정인 지역은 미확인이어도 결론이 같다 3ms
+     × G4-2-1 [과다과세 수정] 혼인 유지(예) → 1세대1주택 비과세 0 (종전 208,250,000) 1ms
+     × G4-2-3 미확인(API 직접·옛 이력) → 현행 208,250,000 유지 + 확인 필요 고지(유리하게 읽지 않는다) 1ms
+     × G4-2-4 세대 보유 시작일이 통산 길이를 정한다 — 증여 전 6개월 시점에 합가했으면 2년 미달이라 과세 1ms
+     × G4-2-5 증여자 사망 → 통산하지 않고 계산, 확인 필요 고지 (사망 후 양도) 2ms
+     × G4-2-6 통산은 장기보유특별공제·세율 보유기간에 쓰지 않는다 — 시나리오 B 보유연수는 증여일 기준 1ms
+     × G4-2-9 경과규정 경계 ±1: 세대 보유 시작일 2017-08-02는 면제, 2017-08-03은 거주요건 적용 2ms
+     × [DR-3b] 부정 짝: 「아니오」는 같은 과세지만 재결합 고지가 없다 · 통산해도 결론이 같은 사안(증여 3년 뒤)은 재결합이어도 고지하지 않는다 3ms
+     × [DR-3d] 증여자 사망이어도 통산이 결론을 가르지 않으면(증여 3년 뒤) 고지하지 않는다 2ms
+     × [DR-5a] 배우자 재결합 → 계산기에서 통산 없이 계산하고 재결합 확인 필요를 고지한다 · 「아니오」는 고지가 없다(긍정 짝) 8ms
+     × [PR-2d] ⑫ API 직접 호출 — 상한 초과 400 · 「예」가 아닌데 개월을 보내도 400(조용히 무시되는 입력을 만들지 않는다) · 상한 이내는 200 3ms
+     × [PR-3a] 24개월은 비과세 · 23개월은 과세(경계 ±1) — 같은 사실, 개월만 다르다 2ms
+     × [PR-3b] 증여 후 본인 거주와 합산한다 — 증여 후 12개월 + 증여 전 12개월 = 24개월이면 비과세, 11개월이면 과세 2ms
+     × [PR-3c] 통산을 적용해 결론이 갈리면 확인 필요 — 국세청·법원 입장을 단정하지 않고 정면 해석 미확보를 적는다 2ms
+     × [PR-3d] 입력이 없으면 통산하지 않고(과세) 「거주했다면 달라진다」를 고지한다 · 입력 0은 고지가 없다(긍정 짝) 2ms
+     × [PR-3e] 결론을 가르지 않으면 고지하지 않는다 — 비조정지역(거주요건 없음) · 이미 거주 24개월 · 증여 후 개월이 이미 충분 2ms
+     × [PR-3f] 계속 같은 세대가 아니면(아니오) 개월은 통산에 쓰이지 않는다 — 남은 값이 있어도 과세 · 고지 없음 3ms
+     × [PR-3g] 통산 세부 고지(DETAIL)와 별개다 — 개월 때문에 결론이 갈릴 때만 PRIOR가 나고, 둘은 서로의 게이트를 막지 않는다 4ms
+     × [PR-4a] 증여 전 12개월을 통산하면 거주 24개월 → 과세에서 고가주택 부분 비과세로 바뀐다 (484,588,500 → 125,246,000 — 표2 대상이라 공제율 12%) 5ms
+     × [PR-4b] 표2 대상 판정에 통산한다 — 증여 전 12개월 + 증여 후 12개월 = 거주 2년 → 표2 · 공제율은 보유 3년 × 4% = 12%만이다(본인 거주 12개월은 거주분 0) 3ms
+     × [PR-4e] 공제율에는 통산하지 않는다 — 증여 전 거주를 상한 가까이(36개월) 넣어도 공제율은 12%로 같다(거주분은 본인 거주 12개월 기준 0) 4ms
+     × [PR-4c] 불발동 — 12억 이하(전액 비과세) · 입력 0 · 계속 같은 세대 아님 · 보유 3년 미만 · 이미 표2 대상 3ms
+     × [PR-4d] 입력이 없으면 비과세 거주요건 고지만 난다 — 요건 미충족(과세)이면 표2 고지는 나지 않는다 · 비조정지역에서는 입력이 없어도 표2 고지가 난다(상한 가정) 3ms
+     × [MG-4] 예·2018·강남 2ms
+     × [MG-6c] 단건 parity — 같은 사실의 단건 주택과 비과세 결론이 같다 · 계속 같은 세대가 아니면 개월은 쓰이지 않는다(짝) 2ms
+     × C-01-H3: 경과규정 경계 ±1 — 세대 보유 시작일 2017-08-02는 비과세 0, 2017-08-03은 거주요건 적용 64,684,518 2ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 34 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > GJ-2 route — 통산 vs 증여일 기준 > [GJ-2c] 시작일이 통산 길이를 정한다 — 증여 8개월 전 합가는 2년 미달 → 과세, 통산 적용은 확인 필요로 고지
+TypeError: Cannot read properties of undefined (reading 'judgment')
+ ❯ __tests__/calc/gift-household-judgment-g45.anchor.test.ts:96:19
+     94|   it("[GJ-2c] 시작일이 통산 길이를 정한다 — 증여 8개월 전 합가는 2년 미달 → 과세, 통산 적용은 확인 필요로…
+     95|     const r = await runJudgment(jForm({ giftHouseholdHoldingStartDate:…
+     96|     expect(r.data.judgment.isExempt).toBe(false);
+       |                   ^
+     97|     expect(r.data.judgment.pending[0].id).toBe("154-1-holding-years");
+     98|     // 11개월 통산 기한: 2027-02-28(2025-03-01 기산 2년 만료일)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > GJ-2 route — 통산 vs 증여일 기준 > [GJ-2d] 통산을 적용해 결론이 갈리면 정면 해석 없는 세부를 확인 필요로 고지한다 · 같아지는 짝은 고지하지 않는다
+TypeError: Cannot read properties of undefined (reading 'judgment')
+ ❯ __tests__/calc/gift-household-judgment-g45.anchor.test.ts:108:22
+    106|     // 증여 3년 뒤 양도 — 통산 없이도 2년 충족이라 통산이 결론을 가르지 않는다
+    107|     const same = await runJudgment(jForm({}, { transferDate: "2028-07-…
+    108|     expect(same.data.judgment.isExempt).toBe(true);
+       |                      ^
+    109|     expect(same.data.judgment.undetermined.map((u: { id: string }) => …
+    110|       "gift-household-consolidation-detail-unverified",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > G4-1 이월과세 A — 「취득 당시」 기준일은 세대 관계로 정한다 (regionCode 경로) > G4-1-5 [거울상 · 결정 #38 하위 2 가] 계속 같은 세대 · 세대 보유 시작일에만 지정 중(증여일엔 해제) → 증여일 기준 유지 → 비과세 0 + 확인 필요 고지
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > G4-1 이월과세 A — 「취득 당시」 기준일은 세대 관계로 정한다 (regionCode 경로) > G4-1-5b 긍정 짝: 세대 보유 시작일과 증여일 모두 지정 중이면 거주요건이 적용된다 → 과세
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > G4-1 이월과세 A — 「취득 당시」 기준일은 세대 관계로 정한다 (regionCode 경로) > G4-1-6 미확인 · 증여자 취득 때만 지정 → 변화 없음(157,060,000) + 확인 필요 고지
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > G4-1 이월과세 A — 「취득 당시」 기준일은 세대 관계로 정한다 (regionCode 경로) > G4-1-8 [결정 #38-2] 관계 「그 외」도 질문을 묻는다 → 답이 없는 직접 호출은 미확인 — 통산하지 않고(증여일·증여자 취득일 중 지정 중이면 거주요건) 확인 필요 고지: 0 → 113,060,000 (종전 #34는 「그 외」를 별도 세대로 읽어 0 · 고지 없음)
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > G4-1 이월과세 A — 「취득 당시」 기준일은 세대 관계로 정한다 (regionCode 경로) > G4-1-8b 긍정 짝: 관계 「직계」는 같은 입력에서 미확인 → 보수 판정 157,060,000 + 확인 필요 고지 그대로
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > G4-1 이월과세 A — 「취득 당시」 기준일은 세대 관계로 정한다 (regionCode 경로) > G4-1-8c 「그 외」라도 호출자가 명시로 답한 사실(API 직접 호출)은 존중한다 — 계속 같은 세대 · 시작일 2021-01-15(지정 중)이면 통산
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > G4-1 이월과세 A — 「취득 당시」 기준일은 세대 관계로 정한다 (regionCode 경로) > G4-1-7 결론을 가르지 않으면 고지하지 않는다 — 두 날짜 모두 비지정인 지역은 미확인이어도 결론이 같다
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > G4-2 이월과세 B — 계속 같은 세대면 증여자 세대의 보유기간을 비과세 판정에 통산 > G4-2-1 [과다과세 수정] 혼인 유지(예) → 1세대1주택 비과세 0 (종전 208,250,000)
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > G4-2 이월과세 B — 계속 같은 세대면 증여자 세대의 보유기간을 비과세 판정에 통산 > G4-2-3 미확인(API 직접·옛 이력) → 현행 208,250,000 유지 + 확인 필요 고지(유리하게 읽지 않는다)
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > G4-2 이월과세 B — 계속 같은 세대면 증여자 세대의 보유기간을 비과세 판정에 통산 > G4-2-4 세대 보유 시작일이 통산 길이를 정한다 — 증여 전 6개월 시점에 합가했으면 2년 미달이라 과세
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > G4-2 이월과세 B — 계속 같은 세대면 증여자 세대의 보유기간을 비과세 판정에 통산 > G4-2-5 증여자 사망 → 통산하지 않고 계산, 확인 필요 고지 (사망 후 양도)
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > G4-2 이월과세 B — 계속 같은 세대면 증여자 세대의 보유기간을 비과세 판정에 통산 > G4-2-6 통산은 장기보유특별공제·세율 보유기간에 쓰지 않는다 — 시나리오 B 보유연수는 증여일 기준
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > 2017.8.3. 경과규정 기준일도 같은 날짜를 쓴다 (결정 #33 하위 2 가) > G4-2-9 경과규정 경계 ±1: 세대 보유 시작일 2017-08-02는 면제, 2017-08-03은 거주요건 적용
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > MG-4 단건(비겸용) parity — 같은 사실이면 주택 부분 판정·세대 고지가 같다 > [MG-4] 예·2018·강남
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > MG-6 증여 전 동일세대 거주 개월(결정 #38-7) — 겸용도 같은 leaf로 §154① 거주요건에 통산한다 > [MG-6c] 단건 parity — 같은 사실의 단건 주택과 비과세 결론이 같다 · 계속 같은 세대가 아니면 개월은 쓰이지 않는다(짝)
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > C-01 변형: 배우자와 계속 같은 세대 「예」 > C-01-H3: 경과규정 경계 ±1 — 세대 보유 시작일 2017-08-02는 비과세 0, 2017-08-03은 거주요건 적용 64,684,518
+Error: RECURSION>30
+ ❯ fact __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13
+     17|     if (++depth > 30) {
+     18|       depth = 0;
+     19|       throw new Error("RECURSION>30");
+       |             ^
+     20|     }
+     21|     try {
+ ❯ Object.giftHouseholdDecides lib/tax-engine/one-house/era-notice-relevance.ts:106:14
+ ❯ collectEraUndetermined lib/tax-engine/one-house/era-undetermined.ts:216:33
+ ❯ collectUndetermined lib/tax-engine/one-house/pending.ts:597:24
+ ❯ checkExemption lib/tax-engine/transfer-tax-exemption.ts:182:10
+ ❯ check lib/tax-engine/transfer-tax-exemption.ts:224:23
+ ❯ verdictOf lib/tax-engine/one-house/era-notice-relevance.ts:91:19
+ ❯ fact __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:42:39
+ ❯ Object.giftHouseholdDecides lib/tax-engine/one-house/era-notice-relevance.ts:106:14
+ ❯ collectEraUndetermined lib/tax-engine/one-house/era-undetermined.ts:216:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > DR-3 route(판정 메뉴) — 통산 없이 계산 + 결론을 가를 때만 확인 필요 > [DR-3b] 부정 짝: 「아니오」는 같은 과세지만 재결합 고지가 없다 · 통산해도 결론이 같은 사안(증여 3년 뒤)은 재결합이어도 고지하지 않는다
+TypeError: Cannot read properties of undefined (reading 'judgment')
+ ❯ __tests__/calc/gift-household-death-rejoin-38-6.anchor.test.ts:146:23
+    144|     expect(ids(no)).not.toContain(REJOINED);
+    145|     const later = await runJudgment(jForm({}, { transferDate: "2028-07…
+    146|     expect(later.data.judgment.isExempt).toBe(true);
+       |                       ^
+    147|     expect(ids(later)).not.toContain(REJOINED);
+    148|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > DR-3 route(판정 메뉴) — 통산 없이 계산 + 결론을 가를 때만 확인 필요 > [DR-3d] 증여자 사망이어도 통산이 결론을 가르지 않으면(증여 3년 뒤) 고지하지 않는다
+TypeError: Cannot read properties of undefined (reading 'judgment')
+ ❯ __tests__/calc/gift-household-death-rejoin-38-6.anchor.test.ts:168:19
+    166|   it("[DR-3d] 증여자 사망이어도 통산이 결론을 가르지 않으면(증여 3년 뒤) 고지하지 않는다", async () =…
+    167|     const r = await runJudgment(jForm({ giftDonorRelation: "other", gi…
+    168|     expect(r.data.judgment.isExempt).toBe(true);
+       |                   ^
+    169|     expect(ids(r)).not.toContain(DECEASED);
+    170|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > DR-5 route(계산기) — 이월과세 폼의 재결합도 같은 판정·같은 고지 > [DR-5a] 배우자 재결합 → 계산기에서 통산 없이 계산하고 재결합 확인 필요를 고지한다 · 「아니오」는 고지가 없다(긍정 짝)
+AssertionError: {"error":{"code":"INTERNAL_ERROR","message":"RECURSION>30","stack":"Error: RECURSION>30\n    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)\n    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)\n    at collectEraUndetermined (./lib/tax-engi: expected 500 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 500
+
+ ❯ __tests__/calc/gift-household-death-rejoin-38-6.anchor.test.ts:222:29
+    220|     expect(f.assets[0].acquisitionCause).toBe("carryover_gift");
+    221|     const c = await runCalc(f);
+    222|     expect(c.status, c.err).toBe(200);
+       |                             ^
+    223|     expect(c.issues.filter((s) => /carryover/.test(s))).toEqual([]);
+    224|     const carry = c.body.carryoverTaxation as Record<string, unknown>;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-2 ⑧·⑫ — 상한은 세대 보유 시작일부터 증여일까지의 개월 수 > [PR-2d] ⑫ API 직접 호출 — 상한 초과 400 · 「예」가 아닌데 개월을 보내도 400(조용히 무시되는 입력을 만들지 않는다) · 상한 이내는 200
+AssertionError: {"error":{"code":"CALCULATION_FAILED","message":"RECURSION>30"}}: expected 500 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 500
+
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:166:48
+    164|     const base = buildOneHouseExemptionApiBody(jForm({ giftPriorHouseh…
+    165|     const ok = await postJudgment({ ...base });
+    166|     expect(ok.status, JSON.stringify(ok.json)).toBe(200);
+       |                                                ^
+    167|     const over = await postJudgment({ ...base, giftPriorHouseholdResid…
+    168|     expect(over.status).toBe(400);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3a] 24개월은 비과세 · 23개월은 과세(경계 ±1) — 같은 사실, 개월만 다르다
+TypeError: Cannot read properties of undefined (reading 'judgment')
+ ❯ at __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:189:111
+    187| describe("PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인…
+    188|   it("[PR-3a] 24개월은 비과세 · 23개월은 과세(경계 ±1) — 같은 사실, 개월만 다르다", async () …
+    189|     const at = async (m: string) => (await runJudgment(jForm({ giftPri…
+       |                                                                                                               ^
+    190|     expect(await at("23")).toBe(false);
+    191|     expect(await at("24")).toBe(true);
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:190:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3b] 증여 후 본인 거주와 합산한다 — 증여 후 12개월 + 증여 전 12개월 = 24개월이면 비과세, 11개월이면 과세
+TypeError: Cannot read properties of undefined (reading 'judgment')
+ ❯ at __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:196:115
+    194|   it("[PR-3b] 증여 후 본인 거주와 합산한다 — 증여 후 12개월 + 증여 전 12개월 = 24개월이면 비과세, 1…
+    195|     const at = async (m: string) =>
+    196|       (await runJudgment(jForm({ giftPriorHouseholdResidenceMonths: m,…
+       |                                                                                                                   ^
+    197|     expect(await at("11")).toBe(false);
+    198|     expect(await at("12")).toBe(true);
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:197:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3c] 통산을 적용해 결론이 갈리면 확인 필요 — 국세청·법원 입장을 단정하지 않고 정면 해석 미확보를 적는다
+AssertionError: {"error":{"code":"CALCULATION_FAILED","message":"RECURSION>30"}}: expected 500 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 500
+
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:202:46
+    200|   it("[PR-3c] 통산을 적용해 결론이 갈리면 확인 필요 — 국세청·법원 입장을 단정하지 않고 정면 해석 미확보를 적는…
+    201|     const r = await runJudgment(jForm({ giftPriorHouseholdResidenceMon…
+    202|     expect(r.status, JSON.stringify(r.json)).toBe(200);
+       |                                              ^
+    203|     expect(r.ve.filter((v) => v.startsWith("error"))).toEqual([]);
+    204|     expect(ids(r)).toContain(PRIOR);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3d] 입력이 없으면 통산하지 않고(과세) 「거주했다면 달라진다」를 고지한다 · 입력 0은 고지가 없다(긍정 짝)
+TypeError: Cannot read properties of undefined (reading 'judgment')
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:216:23
+    214|   it("[PR-3d] 입력이 없으면 통산하지 않고(과세) 「거주했다면 달라진다」를 고지한다 · 입력 0은 고지가 없다(긍정…
+    215|     const blank = await runJudgment(jForm({ giftPriorHouseholdResidenc…
+    216|     expect(blank.data.judgment.isExempt).toBe(false);
+       |                       ^
+    217|     expect(ids(blank)).toContain(PRIOR);
+    218|     expect(reasonOf(blank, PRIOR)).toContain("입력되지 않아");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3e] 결론을 가르지 않으면 고지하지 않는다 — 비조정지역(거주요건 없음) · 이미 거주 24개월 · 증여 후 개월이 이미 충분
+TypeError: Cannot read properties of undefined (reading 'judgment')
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:225:24
+    223|   it("[PR-3e] 결론을 가르지 않으면 고지하지 않는다 — 비조정지역(거주요건 없음) · 이미 거주 24개월 · 증여 …
+    224|     const nonReg = await runJudgment(jForm({ giftPriorHouseholdResiden…
+    225|     expect(nonReg.data.judgment.isExempt).toBe(true);
+       |                        ^
+    226|     expect(ids(nonReg)).not.toContain(PRIOR);
+    227|     const enough = await runJudgment(jForm({ giftPriorHouseholdResiden…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3f] 계속 같은 세대가 아니면(아니오) 개월은 통산에 쓰이지 않는다 — 남은 값이 있어도 과세 · 고지 없음
+TypeError: Cannot read properties of undefined (reading 'judgment')
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:240:21
+    238|     // 긍정 짝: 「예」면 같은 개월이 통산된다
+    239|     const yes = await runJudgment(jForm({ giftPriorHouseholdResidenceM…
+    240|     expect(yes.data.judgment.isExempt).toBe(true);
+       |                     ^
+    241|   });
+    242|   it("[PR-3g] 통산 세부 고지(DETAIL)와 별개다 — 개월 때문에 결론이 갈릴 때만 PRIOR가 나고, 둘은 서…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3g] 통산 세부 고지(DETAIL)와 별개다 — 개월 때문에 결론이 갈릴 때만 PRIOR가 나고, 둘은 서로의 게이트를 막지 않는다
+TypeError: Cannot read properties of undefined (reading 'judgment')
+ ❯ ids __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:76:87
+     74|   }) as unknown as OneHouseJudgmentFormData;
+     75|
+     76| const ids = (r: { data: { judgment: { undetermined: { id: string }[] }…
+       |                                                                                       ^
+     77| const reasonOf = (r: { data: { judgment: { undetermined: { id: string;…
+     78|   r.data.judgment.undetermined.find((u) => u.id === id)?.reason ?? "";
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:244:12
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 판정 통산(#38-9) · 미답 확인 필요 고지(#38-8) > [PR-4a] 증여 전 12개월을 통산하면 거주 24개월 → 과세에서 고가주택 부분 비과세로 바뀐다 (484,588,500 → 125,246,000 — 표2 대상이라 공제율 12%)
+AssertionError: {"error":{"code":"INTERNAL_ERROR","message":"RECURSION>30","stack":"Error: RECURSION>30\n    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)\n    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)\n    at collectEraUndetermined (./lib/tax-engi: expected 500 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 500
+
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:264:35
+    262|   it("[PR-4a] 증여 전 12개월을 통산하면 거주 24개월 → 과세에서 고가주택 부분 비과세로 바뀐다 (484,588…
+    263|     const none = await runCalc(calcForm({ giftPriorHouseholdResidenceM…
+    264|     expect(none.status, none.err).toBe(200);
+       |                                   ^
+    265|     expect(none.issues).toEqual([]);
+    266|     expect(none.r.isPartialExempt).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 판정 통산(#38-9) · 미답 확인 필요 고지(#38-8) > [PR-4b] 표2 대상 판정에 통산한다 — 증여 전 12개월 + 증여 후 12개월 = 거주 2년 → 표2 · 공제율은 보유 3년 × 4% = 12%만이다(본인 거주 12개월은 거주분 0)
+AssertionError: expected undefined to be 0.12 // Object.is equality
+
+- Expected:
+0.12
+
++ Received:
+undefined
+
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:277:42
+    275|   it("[PR-4b] 표2 대상 판정에 통산한다 — 증여 전 12개월 + 증여 후 12개월 = 거주 2년 → 표2 · 공제…
+    276|     const twelve = await runCalc(calcForm({ giftPriorHouseholdResidenc…
+    277|     expect(twelve.r.longTermHoldingRate).toBe(0.12); // 표1(6%)이 아니라 표2…
+       |                                          ^
+    278|     expect(twelve.r.longTermHoldingDeduction).toBe(48_000_000); // 과세 …
+    279|     // 통산이 표2를 열었으므로 조심 2025서3843(양도일 현재 별도세대 → 통산·표2 배제) 확인 필요를 고지한다(…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 판정 통산(#38-9) · 미답 확인 필요 고지(#38-8) > [PR-4e] 공제율에는 통산하지 않는다 — 증여 전 거주를 상한 가까이(36개월) 넣어도 공제율은 12%로 같다(거주분은 본인 거주 12개월 기준 0)
+AssertionError: {"error":{"code":"INTERNAL_ERROR","message":"RECURSION>30","stack":"Error: RECURSION>30\n    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)\n    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)\n    at collectEraUndetermined (./lib/tax-engi: expected 500 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 500
+
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:297:33
+    295|   it("[PR-4e] 공제율에는 통산하지 않는다 — 증여 전 거주를 상한 가까이(36개월) 넣어도 공제율은 12%로 같다(…
+    296|     const t36 = await runCalc(calcForm({ giftPriorHouseholdResidenceMo…
+    297|     expect(t36.status, t36.err).toBe(200);
+       |                                 ^
+    298|     expect(t36.r.longTermHoldingRate).toBe(0.12);
+    299|     const t12 = await runCalc(calcForm({ giftPriorHouseholdResidenceMo…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 판정 통산(#38-9) · 미답 확인 필요 고지(#38-8) > [PR-4c] 불발동 — 12억 이하(전액 비과세) · 입력 0 · 계속 같은 세대 아님 · 보유 3년 미만 · 이미 표2 대상
+AssertionError: {"error":{"code":"INTERNAL_ERROR","message":"RECURSION>30","stack":"Error: RECURSION>30\n    at fact (./__tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts:19:13)\n    at Object.giftHouseholdDecides (./lib/tax-engine/one-house/era-notice-relevance.ts:106:14)\n    at collectEraUndetermined (./lib/tax-engi: expected 500 to be 200 // Object.is equality
+
+- Expected
++ Received
+
+- 200
++ 500
+
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:304:37
+    302|   it("[PR-4c] 불발동 — 12억 이하(전액 비과세) · 입력 0 · 계속 같은 세대 아님 · 보유 3년 미만 · 이…
+    303|     const small = await runCalc(calcForm({ giftPriorHouseholdResidence…
+    304|     expect(small.status, small.err).toBe(200);
+       |                                     ^
+    305|     expect(small.totalTax).toBe(0);
+    306|     expect(has(small.warnings, TABLE2_NOTICE)).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/34]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 판정 통산(#38-9) · 미답 확인 필요 고지(#38-8) > [PR-4d] 입력이 없으면 비과세 거주요건 고지만 난다 — 요건 미충족(과세)이면 표2 고지는 나지 않는다 · 비조정지역에서는 입력이 없어도 표2 고지가 난다(상한 가정)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:318:43
+    316|   it("[PR-4d] 입력이 없으면 비과세 거주요건 고지만 난다 — 요건 미충족(과세)이면 표2 고지는 나지 않는다 · 비…
+    317|     const none = await runCalc(calcForm({ giftPriorHouseholdResidenceM…
+    318|     expect(has(none.warnings, "입력되지 않아")).toBe(true);
+       |                                           ^
+    319|     expect(has(none.warnings, TABLE2_NOTICE)).toBe(false);
+    320|     // 비조정지역 — 거주요건이 없어 고가주택 부분 비과세이고, 표2 대상 판정의 거주 2년은 별개다
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/34]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  34 failed | 99 passed (133)
+   Start at  22:54:05
+   Duration  4.17s (transform 2.62s, setup 0ms, import 3.80s, tests 256ms, environment 0ms)
+

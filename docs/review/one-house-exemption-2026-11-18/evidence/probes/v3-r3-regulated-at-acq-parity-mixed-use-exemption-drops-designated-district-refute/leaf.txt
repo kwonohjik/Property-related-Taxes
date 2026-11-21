@@ -1,0 +1,6 @@
+§154① meetsOneHouseHoldingResidence regionInDesignatedDistrict=absent => false
+§154① meetsOneHouseHoldingResidence regionInDesignatedDistrict=false => true
+§154① meetsOneHouseHoldingResidence regionInDesignatedDistrict=true => false
+§155① resolveDeemedOneHouseBy155 regionInDesignatedDistrict=absent => undefined(의제 불성립)
+§155① resolveDeemedOneHouseBy155 regionInDesignatedDistrict=false => "temporary_two_house"
+§155① resolveDeemedOneHouseBy155 regionInDesignatedDistrict=true => undefined(의제 불성립)

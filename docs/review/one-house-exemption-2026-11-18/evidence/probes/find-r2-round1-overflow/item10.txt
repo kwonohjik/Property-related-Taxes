@@ -1,0 +1,4 @@
+import={"added":1,"skipped":1,"linksCleared":0}
+records=[{"id":"38e357e7-3dda-4057-adf2-df463e805122","taxType":"transfer","linked":"other-device-id"},{"id":"other-device-id","taxType":"one_house_exemption","linked":null}]
+C.linkedCalculationId=other-device-id C.inputData.sourceJudgmentId=847e8ef2-b275-4809-941f-210bae238958
+provenance={"state":"unknown","record":null}

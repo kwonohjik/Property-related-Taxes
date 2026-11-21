@@ -1,0 +1,38 @@
+{
+  "only_counterpart": {
+    "rawGate": "unanswered",
+    "ownedGate": "unanswered",
+    "payloadIds": [
+      "selling",
+      "h1"
+    ],
+    "engineRosterHolds": true
+  },
+  "plus_same_day_acq": {
+    "rawGate": "undefined",
+    "ownedGate": "unanswered",
+    "payloadIds": [
+      "selling",
+      "h1"
+    ],
+    "engineRosterHolds": true
+  },
+  "plus_after_acq": {
+    "rawGate": "undefined",
+    "ownedGate": "unanswered",
+    "payloadIds": [
+      "selling",
+      "h1"
+    ],
+    "engineRosterHolds": true
+  },
+  "plus_first_sold_same_day": {
+    "rawGate": "undefined",
+    "ownedGate": "unanswered",
+    "payloadIds": [
+      "selling",
+      "h1"
+    ],
+    "engineRosterHolds": true
+  }
+}

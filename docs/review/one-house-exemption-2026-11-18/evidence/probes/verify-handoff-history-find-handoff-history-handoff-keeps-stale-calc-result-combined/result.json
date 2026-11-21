@@ -1,0 +1,41 @@
+{
+  "open": {
+    "currentStep": 0,
+    "resultKept": true,
+    "assetLabel": "주택 Y",
+    "fixedAcq": "",
+    "useEst": false,
+    "stale": {
+      "acqPrice": 200000000,
+      "acqPending": false,
+      "salePrice": 900000000
+    },
+    "clean": {
+      "acqPrice": 0,
+      "acqPending": false,
+      "salePrice": 900000000
+    }
+  },
+  "apply": {
+    "currentStep": 0,
+    "resultKept": true,
+    "stale": {
+      "acqPrice": 200000000,
+      "acqPending": false
+    },
+    "clean": {
+      "acqPrice": 0,
+      "acqPending": false
+    }
+  },
+  "controlEmpty": {
+    "resultKept": false,
+    "acqPrice": 0,
+    "acqPending": false
+  },
+  "controlCleared": {
+    "resultKept": false,
+    "acqPrice": 0,
+    "acqPending": false
+  }
+}

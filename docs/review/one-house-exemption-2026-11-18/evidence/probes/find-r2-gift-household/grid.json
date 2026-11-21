@@ -1,0 +1,1638 @@
+[
+ {
+  "key": "spouse|yesFull|2025-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "gift-household-consolidation-detail-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesFull|2025-06-01|-|sx=true",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "gift-household-consolidation-detail-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesFull|2025-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "gift-household-consolidation-detail-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesFull|2025-06-01|MAPO|sx=true",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "gift-household-consolidation-detail-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesFull|2022-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesFull|2022-06-01|-|sx=true",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesFull|2022-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "gift-household-consolidation-detail-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesFull|2022-06-01|MAPO|sx=true",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "gift-household-consolidation-detail-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesLate|2025-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2026-12-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "one_house_exemption",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesLate|2025-06-01|-|sx=true",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2026-12-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "tax_comparison",
+   "spEx": true,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesLate|2025-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2026-12-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "one_house_exemption",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesLate|2025-06-01|MAPO|sx=true",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2026-12-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "tax_comparison",
+   "spEx": true,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesLate|2022-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesLate|2022-06-01|-|sx=true",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesLate|2022-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 155166000,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|yesLate|2022-06-01|MAPO|sx=true",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 155166000,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|no|2025-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "one_house_exemption",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|no|2025-06-01|-|sx=true",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "tax_comparison",
+   "spEx": true,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|no|2025-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "one_house_exemption",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|no|2025-06-01|MAPO|sx=true",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "tax_comparison",
+   "spEx": true,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|no|2022-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|no|2022-06-01|-|sx=true",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|no|2022-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 155166000,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|no|2022-06-01|MAPO|sx=true",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 155166000,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|rejoined|2025-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "gift-household-rejoined-unverified"
+   ],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "one_house_exemption",
+   "tags": [
+    "REJOINED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|rejoined|2025-06-01|-|sx=true",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "gift-household-rejoined-unverified"
+   ],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "tax_comparison",
+   "spEx": true,
+   "tags": [
+    "REJOINED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|rejoined|2025-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "gift-household-rejoined-unverified"
+   ],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "one_house_exemption",
+   "tags": [
+    "REJOINED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|rejoined|2025-06-01|MAPO|sx=true",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "gift-household-rejoined-unverified"
+   ],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "tax_comparison",
+   "spEx": true,
+   "tags": [
+    "REJOINED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|rejoined|2022-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|rejoined|2022-06-01|-|sx=true",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|rejoined|2022-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "gift-household-rejoined-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 155166000,
+   "adopt": "A",
+   "tags": [
+    "REJOINED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|rejoined|2022-06-01|MAPO|sx=true",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "gift-household-rejoined-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 155166000,
+   "adopt": "A",
+   "tags": [
+    "REJOINED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|deceased|2025-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "gift-household-donor-deceased-unverified"
+   ],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 229075000,
+   "tags": [
+    "DECEASED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|deceased|2025-06-01|-|sx=true",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "gift-household-donor-deceased-unverified"
+   ],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 229075000,
+   "tags": [
+    "DECEASED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|deceased|2025-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "gift-household-donor-deceased-unverified"
+   ],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 229075000,
+   "tags": [
+    "DECEASED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|deceased|2025-06-01|MAPO|sx=true",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "gift-household-donor-deceased-unverified"
+   ],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 229075000,
+   "tags": [
+    "DECEASED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|deceased|2022-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|deceased|2022-06-01|-|sx=true",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|deceased|2022-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "gift-household-donor-deceased-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 94897000,
+   "tags": [
+    "DECEASED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "spouse|deceased|2022-06-01|MAPO|sx=true",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "gift-household-donor-deceased-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 94897000,
+   "tags": [
+    "DECEASED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|yesFull|2025-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "gift-household-consolidation-detail-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|yesFull|2025-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "gift-household-consolidation-detail-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|yesFull|2022-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|yesFull|2022-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "gift-household-consolidation-detail-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|yesLate|2025-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2026-12-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "one_house_exemption",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|yesLate|2025-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2026-12-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "one_house_exemption",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|yesLate|2022-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|yesLate|2022-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 155166000,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|no|2025-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "one_house_exemption",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|no|2025-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 229075000,
+   "adopt": "B",
+   "excl": "one_house_exemption",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|no|2022-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|no|2022-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 155166000,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|deceased|2025-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "gift-household-donor-deceased-unverified"
+   ],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 229075000,
+   "tags": [
+    "DECEASED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|deceased|2025-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "gift-household-donor-deceased-unverified"
+   ],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 229075000,
+   "tags": [
+    "DECEASED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|deceased|2022-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": true,
+   "tax": 0,
+   "adopt": "A",
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "lineal|deceased|2022-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "gift-household-donor-deceased-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "carryover_gift",
+   "ex": false,
+   "tax": 155166000,
+   "adopt": "A",
+   "tags": [
+    "DECEASED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|yesFull|2025-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "gift-household-consolidation-detail-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|yesFull|2025-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "gift-household-consolidation-detail-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|yesFull|2022-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|yesFull|2022-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [
+    "gift-household-consolidation-detail-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "tags": [
+    "DETAIL"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|yesLate|2025-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2026-12-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 229075000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|yesLate|2025-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2026-12-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 229075000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|yesLate|2022-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|yesLate|2022-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 94897000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|no|2025-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 229075000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|no|2025-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 229075000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|no|2022-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|no|2022-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 94897000,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|deceased|2025-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "gift-household-donor-deceased-unverified"
+   ],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 229075000,
+   "tags": [
+    "DECEASED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|deceased|2025-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "gift-household-donor-deceased-unverified"
+   ],
+   "pend": [
+    "154-1-holding-years@2027-05-31"
+   ],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 229075000,
+   "tags": [
+    "DECEASED"
+   ],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|deceased|2022-06-01|-|sx=false",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pex": false,
+   "und": [],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": true,
+   "tax": 0,
+   "tags": [],
+   "issues": []
+  }
+ },
+ {
+  "key": "other|deceased|2022-06-01|MAPO|sx=false",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pex": false,
+   "und": [
+    "154-1-residence-deadline-unavailable",
+    "gift-household-donor-deceased-unverified",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "pend": [],
+   "veErr": []
+  },
+  "C": {
+   "st": 200,
+   "cause": "gift",
+   "ex": false,
+   "tax": 94897000,
+   "tags": [
+    "DECEASED"
+   ],
+   "issues": []
+  }
+ }
+]

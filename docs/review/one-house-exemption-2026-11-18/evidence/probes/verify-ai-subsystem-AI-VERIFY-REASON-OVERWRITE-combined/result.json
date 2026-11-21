@@ -1,0 +1,37 @@
+{
+  "experiment": [
+    {
+      "support": "supported",
+      "reason": "2차 대조가 이 쟁점에 답하지 않았습니다.",
+      "unsupportedClaims": []
+    },
+    {
+      "support": "not_supported",
+      "reason": "2차 대조가 이 쟁점에 답하지 않았습니다.",
+      "unsupportedClaims": [
+        "X"
+      ]
+    },
+    {
+      "support": "cannot_verify",
+      "reason": "2차 대조가 이 쟁점에 답하지 않았습니다.",
+      "unsupportedClaims": []
+    }
+  ],
+  "controlPartial": [
+    {
+      "support": "partial",
+      "reason": "원문과 같다 (확인되지 않은 인용: DOC-F)"
+    }
+  ],
+  "controlOtherSupports": [
+    {
+      "support": "partial",
+      "reason": "2차 대조가 이 쟁점에 답하지 않았습니다."
+    },
+    {
+      "support": "cannot_verify",
+      "reason": "2차 대조가 이 쟁점에 답하지 않았습니다."
+    }
+  ]
+}

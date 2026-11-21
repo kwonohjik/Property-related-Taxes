@@ -1,0 +1,10 @@
+A1 succ right-first + 3호 waiver :: status=exception_met exception=소득세법 시행령 §156의2 ③ via=- undecl= :: isExempt=true totalTax=0
+A1c succ right-first no waiver :: status=excluded exception=- via=- undecl= :: isExempt=false totalTax=328350000
+A1d succ house-first + 3호 waiver (control, legal) :: status=exception_met exception=소득세법 시행령 §156의2 ③ via=- undecl= :: isExempt=true totalTax=0
+A2 presale right-first + 3호 waiver :: status=exception_met exception=소득세법 시행령 §156의3 ② via=- undecl= :: isExempt=true totalTax=0
+A2b presale right-first + 수용 :: status=exception_met exception=소득세법 시행령 §156의3 ② via=- undecl= :: isExempt=true totalTax=0
+B1 succ right-first(2020) ④ new_house :: status=exception_met exception=소득세법 시행령 §156의2 ④ via=- undecl= :: isExempt=true totalTax=0
+B1b succ right-first(2020) ④ before_completion :: status=exception_met exception=소득세법 시행령 §156의2 ④ via=- undecl= :: isExempt=true totalTax=0
+B1c succ right-first(2020) ④ undeclared :: status=excluded exception=- via=- undecl=소득세법 시행령 §156의2 ④ :: isExempt=false totalTax=137566000
+C1 2012-12 transfer waiver era :: status=exception_met exception=소득세법 시행령 §156의2 ③ via=- undecl= :: isExempt=true totalTax=0
+C2 pre-2012.6.29 right-first :: status=exception_met exception=소득세법 시행령 §156의2 ③ via=- undecl= :: isExempt=false totalTax=218900000

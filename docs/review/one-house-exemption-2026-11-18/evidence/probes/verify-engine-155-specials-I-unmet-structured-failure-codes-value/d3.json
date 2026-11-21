@@ -1,0 +1,23 @@
+[
+  {
+    "outside": true,
+    "d3CountHolds": true,
+    "isExempt": true,
+    "exemptReason": "일시적 2주택 비과세 (§155⑦1호 상속 농어촌주택 제외)",
+    "unmet": []
+  },
+  {
+    "outside": false,
+    "d3CountHolds": false,
+    "isExempt": false,
+    "unmet": [
+      {
+        "id": "155-7-rural:inherited",
+        "reasons": [
+          "세대 주택 수가 3채입니다 — 이 특례는 농어촌주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다.",
+          "농어촌주택이 수도권 밖의 읍(도시지역 제외)·면에 있다는 요건을 충족하지 않습니다 — 유형(상속·이농·귀농)과 무관한 공통 요건입니다."
+        ]
+      }
+    ]
+  }
+]

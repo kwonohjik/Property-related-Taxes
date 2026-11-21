@@ -1,0 +1,156 @@
+{
+  "house7": {
+    "status": 200,
+    "errors": [],
+    "bodyTransferPrice": 700000000,
+    "bodyTotal": null,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "reqReviewKeys": [
+      "scheme",
+      "items"
+    ],
+    "hv": {
+      "label": "양도가액 12억원 이하 — 고가주택 아님",
+      "facts": [
+        {
+          "label": "양도가액",
+          "value": "700,000,000"
+        },
+        {
+          "label": "고가주택 기준금액",
+          "value": "12억"
+        }
+      ]
+    },
+    "undet": [],
+    "legal": []
+  },
+  "house14": {
+    "status": 200,
+    "errors": [],
+    "bodyTransferPrice": 1400000000,
+    "bodyTotal": null,
+    "isExempt": false,
+    "isPartialExempt": true,
+    "reqReviewKeys": [
+      "scheme",
+      "items"
+    ],
+    "hv": {
+      "label": "고가주택(양도가액 12억원 초과) — 12억원 초과분 과세",
+      "facts": [
+        {
+          "label": "양도가액",
+          "value": "1,400,000,000"
+        },
+        {
+          "label": "고가주택 기준금액",
+          "value": "12억"
+        }
+      ]
+    },
+    "undet": [],
+    "legal": []
+  },
+  "house7ReqReview": {
+    "scheme": "154-1-one-house",
+    "items": [
+      {
+        "id": "one-house",
+        "label": "1세대가 양도일 현재 국내에 1주택 보유",
+        "status": "met",
+        "facts": [
+          {
+            "label": "판정에 세는 주택",
+            "value": "1채"
+          }
+        ],
+        "legalBasis": "소득세법 §89 ①"
+      },
+      {
+        "id": "holding",
+        "label": "보유기간 2년 이상",
+        "status": "met",
+        "facts": [
+          {
+            "label": "보유 기산일",
+            "value": "2020-03-01"
+          },
+          {
+            "label": "보유기간",
+            "value": "6년 4개월"
+          }
+        ],
+        "legalBasis": "소득세법 시행령 §154"
+      },
+      {
+        "id": "residence",
+        "label": "거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+        "status": "not_required",
+        "facts": [
+          {
+            "label": "취득 당시 조정대상지역",
+            "value": "비해당"
+          },
+          {
+            "label": "거주기간",
+            "value": "0개월"
+          }
+        ],
+        "note": "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다.",
+        "legalBasis": "소득세법 시행령 §154"
+      },
+      {
+        "id": "high-value",
+        "label": "양도가액 12억원 이하 — 고가주택 아님",
+        "status": "met",
+        "facts": [
+          {
+            "label": "양도가액",
+            "value": "700,000,000"
+          },
+          {
+            "label": "고가주택 기준금액",
+            "value": "12억"
+          }
+        ],
+        "legalBasis": "소득세법 §89 ①"
+      }
+    ]
+  },
+  "directHouse7Total14": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": true
+  },
+  "right10": {
+    "status": 200,
+    "errors": [],
+    "bodyTransferPrice": 1000000000,
+    "bodyTotal": null,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "reqReviewKeys": null,
+    "hv": null,
+    "undet": [],
+    "legal": []
+  },
+  "right20": {
+    "status": 200,
+    "errors": [],
+    "bodyTransferPrice": 2000000000,
+    "bodyTotal": null,
+    "isExempt": false,
+    "isPartialExempt": true,
+    "reqReviewKeys": null,
+    "hv": null,
+    "undet": [],
+    "legal": []
+  },
+  "directRight10Total20": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": true
+  }
+}

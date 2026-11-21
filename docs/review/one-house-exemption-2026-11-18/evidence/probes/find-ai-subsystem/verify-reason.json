@@ -1,0 +1,14 @@
+[
+  {
+    "support": "supported",
+    "reason": "2차 대조가 이 쟁점에 답하지 않았습니다."
+  },
+  {
+    "support": "not_supported",
+    "reason": "2차 대조가 이 쟁점에 답하지 않았습니다."
+  },
+  {
+    "support": "cannot_verify",
+    "reason": "2차 대조가 이 쟁점에 답하지 않았습니다."
+  }
+]

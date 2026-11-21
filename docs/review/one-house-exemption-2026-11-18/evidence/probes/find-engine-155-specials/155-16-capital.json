@@ -1,0 +1,31 @@
+{
+  "sellingDaeguDong": {
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house:일시적 2주택",
+      "155-16-public-institution-relocation:§155⑯ 지방이전 처분기한 5년"
+    ],
+    "und": []
+  },
+  "sellingNaju": {
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house:일시적 2주택",
+      "155-16-public-institution-relocation:§155⑯ 지방이전 처분기한 5년"
+    ],
+    "und": []
+  },
+  "sellingNoCode": {
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house:일시적 2주택",
+      "155-16-public-institution-relocation:§155⑯ 지방이전 처분기한 5년"
+    ],
+    "und": []
+  },
+  "sellingDaeguNoReloc": {
+    "isExempt": false,
+    "applied": [],
+    "und": []
+  }
+}

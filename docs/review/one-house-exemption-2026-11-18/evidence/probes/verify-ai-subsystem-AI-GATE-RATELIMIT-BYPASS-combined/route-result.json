@@ -1,0 +1,134 @@
+{
+  "A_extract_sameIp_noBypass": {
+    "statuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      429,
+      429,
+      429
+    ],
+    "llmCalls": 5
+  },
+  "A2_extract_noIpHeader_noBypass": {
+    "statuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      429,
+      429,
+      429
+    ],
+    "llmCalls": 5
+  },
+  "B_extract_sameIp_bypass": {
+    "statuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ],
+    "llmCalls": 8
+  },
+  "C_extract_rotatingIp": {
+    "statuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ],
+    "llmCalls": 8
+  },
+  "C2_extract_rotatingXff": {
+    "statuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ],
+    "llmCalls": 8
+  },
+  "D_extract_textPlain": {
+    "statuses": [
+      200
+    ],
+    "llmCalls": 1
+  },
+  "E_opinion_noBypass": {
+    "statuses": [
+      400,
+      400,
+      400,
+      400,
+      400,
+      429,
+      429,
+      429
+    ],
+    "llmCalls": 0
+  },
+  "E_opinion_bypass": {
+    "statuses": [
+      400,
+      400,
+      400,
+      400,
+      400,
+      400,
+      400,
+      400
+    ],
+    "llmCalls": 0
+  },
+  "E_verify_noBypass": {
+    "statuses": [
+      400,
+      400,
+      400,
+      400,
+      400,
+      429,
+      429,
+      429
+    ],
+    "llmCalls": 0
+  },
+  "E_verify_bypass": {
+    "statuses": [
+      400,
+      400,
+      400,
+      400,
+      400,
+      400,
+      400,
+      400
+    ],
+    "llmCalls": 0
+  },
+  "F_extract_production_bypass": {
+    "statuses": [
+      403,
+      403,
+      403
+    ],
+    "llmCalls": 0
+  },
+  "F_shouldBypass_production": false
+}

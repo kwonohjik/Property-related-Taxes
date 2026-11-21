@@ -1,0 +1,2 @@
+A1 승계 통산 예: label=준공일 date=2023-06-01 successorCompletionActive=true verdict=false (서울특별시 — 2023-06-01 기준 미지정(지정 이력 없음 또는 해제됨))
+A2 반대: label=준공일 date=2025-11-01 successorCompletionActive=true verdict=true (2025-10-16 고시 — 서울특별시 지정)

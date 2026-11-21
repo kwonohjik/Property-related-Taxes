@@ -1,0 +1,6 @@
+S3 거주→비거주(2.4년)→거주 · 전환 시 거주 예: start=2019-01-01 isExempt=true reason=1세대1주택 비과세
+S3' 같은 사실 · 전환 시 거주 아니오: start=2021-06-01 isExempt=false reason=undefined
+S1 거주 3년→비거주 1년→거주 · 전환 시 거주 예: start=2015-01-01 isExempt=true reason=1세대1주택 비과세
+S1' 전환 시 거주 아니오: start=2016-01-01 isExempt=true reason=1세대1주택 비과세
+S0 취득부터 비거주 3.1년 · 전환 거주 예: start=2018-01-01 isExempt=true reason=1세대1주택 비과세
+S0' 취득부터 비거주 2.1년 · 전환 거주 예 · 양도 2022-06: start=2021-02-01 isExempt=false reason=undefined

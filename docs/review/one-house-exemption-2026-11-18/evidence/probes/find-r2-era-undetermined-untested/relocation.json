@@ -1,0 +1,121 @@
+[
+  {
+    "k": "classify 대구동구→구미",
+    "v": "adjacent"
+  },
+  {
+    "k": "classify 대구동구→의성",
+    "v": "adjacent"
+  },
+  {
+    "k": "classify(군위 제외) 대구동구→구미",
+    "v": "not_adjacent"
+  },
+  {
+    "k": "classify(군위 제외) 대구동구→의성",
+    "v": "not_adjacent"
+  },
+  {
+    "k": "adj 구미 raw",
+    "v": [
+      "2772000000",
+      "4715000000",
+      "4725000000",
+      "4773000000",
+      "4785000000"
+    ]
+  },
+  {
+    "k": "adj 의성 raw",
+    "v": [
+      "2772000000",
+      "4717000000",
+      "4719000000",
+      "4725000000",
+      "4775000000",
+      "4790000000"
+    ]
+  },
+  {
+    "k": "2022 구미 verdict",
+    "v": {
+      "isExempt": true,
+      "isPartial": false,
+      "reason": "일시적 2주택 비과세 (§155⑯ 지방이전 처분기한 5년)",
+      "und": [],
+      "unmet": []
+    }
+  },
+  {
+    "k": "2022 포항 verdict",
+    "v": {
+      "isExempt": false
+    }
+  },
+  {
+    "k": "meets 구미",
+    "v": true
+  },
+  {
+    "k": "⑯merged holding-short",
+    "v": {
+      "isExempt": false,
+      "isPartial": false,
+      "und": [
+        "155-16-merged-special-city-unit"
+      ],
+      "unmet": []
+    }
+  },
+  {
+    "k": "⑯merged holding-short counterfactual met",
+    "v": {
+      "isExempt": false,
+      "isPartial": false
+    }
+  },
+  {
+    "k": "⑯merged control",
+    "v": {
+      "isExempt": false,
+      "und": [
+        "155-16-merged-special-city-unit"
+      ]
+    }
+  },
+  {
+    "k": "hwaseong res0",
+    "v": {
+      "isExempt": false,
+      "isPartial": false,
+      "und": [
+        "regulated-hwaseong-announcement-window-unverified"
+      ],
+      "unmet": []
+    }
+  },
+  {
+    "k": "hwaseong res24",
+    "v": {
+      "isExempt": false,
+      "isPartial": false,
+      "und": [
+        "regulated-hwaseong-announcement-window-unverified"
+      ]
+    }
+  },
+  {
+    "k": "hwaseong res0 cf(6.29 reading)",
+    "v": {
+      "isExempt": false,
+      "isPartial": false
+    }
+  },
+  {
+    "k": "hwaseong res24 cf(6.29 reading)",
+    "v": {
+      "isExempt": true,
+      "isPartial": false
+    }
+  }
+]

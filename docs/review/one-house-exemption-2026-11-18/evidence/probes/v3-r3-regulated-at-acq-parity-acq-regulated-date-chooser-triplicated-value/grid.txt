@@ -1,0 +1,53 @@
+A-fwd code | screen={"date":"2023-06-01","basis":"n","effective":false} | engine={"bodyBool":false,"bodyCode":"1144010100","untranslated":true,"translated":true,"acqUntr":"2020-01-01","acqTr":"2023-06-01","basisUntr":"y","basisTr":"y"} | route status=200 exempt=false tax=173060000 issues=0
+A-fwd addr | screen={"date":"2023-06-01","basis":"n","effective":false} | engine={"bodyBool":false,"untranslated":false,"translated":false,"acqUntr":"2020-01-01","acqTr":"2023-06-01","basisUntr":"y","basisTr":"y"} | route status=200 exempt=true tax=0 issues=0
+A-rev code | screen={"date":"2025-11-01","basis":"n","effective":true} | engine={"bodyBool":true,"bodyCode":"1144010100","untranslated":false,"translated":false,"acqUntr":"2023-06-01","acqTr":"2025-11-01","basisUntr":"y","basisTr":"y"} | route status=200 exempt=true tax=0 issues=0
+A-rev addr | screen={"date":"2025-11-01","basis":"n","effective":true} | engine={"bodyBool":true,"untranslated":true,"translated":true,"acqUntr":"2023-06-01","acqTr":"2025-11-01","basisUntr":"y","basisTr":"y"} | route status=200 exempt=false tax=348250000 issues=0
+A-ctl(동일세대 아니오) code | screen={"date":"2023-06-01","basis":"n","effective":false} | engine={"bodyBool":false,"bodyCode":"1144010100","untranslated":true,"translated":false,"acqUntr":"2020-01-01","acqTr":"2023-06-01","basisUntr":"n","basisTr":"n"} | route status=200 exempt=true tax=0 issues=0
+A-ctl(동일세대 아니오) addr | screen={"date":"2023-06-01","basis":"n","effective":false} | engine={"bodyBool":false,"untranslated":false,"translated":false,"acqUntr":"2020-01-01","acqTr":"2023-06-01","basisUntr":"n","basisTr":"n"} | route status=200 exempt=true tax=0 issues=0
+B mixed=false inDistrict=false screen=false | status=200 bodyInDistrict=false exempt=true tax=0 issues=0
+B mixed=false inDistrict=true screen=true | status=200 bodyInDistrict=true exempt=false tax=120260000 issues=0
+B mixed=true inDistrict=false screen=false | status=200 bodyInDistrict=false exempt=false tax=132286000 issues=0
+B mixed=true inDistrict=true screen=true | status=200 bodyInDistrict=true exempt=false tax=132286000 issues=0
+C code purchase acq=2016-01-01 | step3=false menu④=false
+C addr purchase acq=2016-01-01 | step3=false menu④=false
+C code purchase acq=2019-01-01 | step3=true menu④=true
+C addr purchase acq=2019-01-01 | step3=true menu④=true
+C code purchase acq=2023-06-01 | step3=false menu④=false
+C addr purchase acq=2023-06-01 | step3=false menu④=false
+C code gift sh=no start=- gift=2022-06-01 donor=2010-01-01 | step3=true menu④=true
+C addr gift sh=no start=- gift=2022-06-01 donor=2010-01-01 | step3=true menu④=true
+C code gift sh=yes start=2016-01-01 gift=2022-06-01 donor=2010-01-01 | step3=false menu④=false
+C addr gift sh=yes start=2016-01-01 gift=2022-06-01 donor=2010-01-01 | step3=false menu④=false
+C code gift sh=yes start=2018-01-10 gift=2022-06-01 donor=2010-01-01 | step3=true menu④=true
+C addr gift sh=yes start=2018-01-10 gift=2022-06-01 donor=2010-01-01 | step3=true menu④=true
+C code gift sh=no start=- gift=2022-06-01 donor=2018-01-01 | step3=true menu④=true
+C addr gift sh=no start=- gift=2022-06-01 donor=2018-01-01 | step3=true menu④=true
+C code gift sh=yes start=2018-01-10 gift=2022-06-01 donor=2018-01-01 | step3=true menu④=true
+C addr gift sh=yes start=2018-01-10 gift=2022-06-01 donor=2018-01-01 | step3=true menu④=true
+C code gift sh=no start=- gift=2023-06-01 donor=2010-01-01 | step3=false menu④=false
+C addr gift sh=no start=- gift=2023-06-01 donor=2010-01-01 | step3=false menu④=false
+C code gift sh=yes start=2016-01-01 gift=2023-06-01 donor=2010-01-01 | step3=false menu④=false
+C addr gift sh=yes start=2016-01-01 gift=2023-06-01 donor=2010-01-01 | step3=false menu④=false
+C code gift sh=yes start=2018-01-10 gift=2023-06-01 donor=2010-01-01 | step3=false menu④=false
+C addr gift sh=yes start=2018-01-10 gift=2023-06-01 donor=2010-01-01 | step3=false menu④=false
+C code gift sh=no start=- gift=2023-06-01 donor=2018-01-01 | step3=false menu④=false
+C addr gift sh=no start=- gift=2023-06-01 donor=2018-01-01 | step3=false menu④=false
+C code gift sh=yes start=2018-01-10 gift=2023-06-01 donor=2018-01-01 | step3=false menu④=false
+C addr gift sh=yes start=2018-01-10 gift=2023-06-01 donor=2018-01-01 | step3=false menu④=false
+C code inherit same-hh start=2016-01-01 acq=2023-06-01 | step3=false menu④=false
+C addr inherit same-hh start=2016-01-01 acq=2023-06-01 | step3=false menu④=false
+C code inherit same-hh start=2016-01-01 acq=2022-06-01 | step3=false menu④=false
+C addr inherit same-hh start=2016-01-01 acq=2022-06-01 | step3=false menu④=false
+C code inherit same-hh start=2018-01-10 acq=2023-06-01 | step3=true menu④=true
+C addr inherit same-hh start=2018-01-10 acq=2023-06-01 | step3=true menu④=true
+C code inherit same-hh start=2018-01-10 acq=2022-06-01 | step3=true menu④=true
+C addr inherit same-hh start=2018-01-10 acq=2022-06-01 | step3=true menu④=true
+C code conversion use=2016-01-01 | step3=false menu④=false
+C addr conversion use=2016-01-01 | step3=false menu④=false
+C code conversion use=2019-01-01 | step3=true menu④=true
+C addr conversion use=2019-01-01 | step3=true menu④=true
+C code RIGHT + stale inherit | step3=true menu④=true
+C addr RIGHT + stale inherit | step3=true menu④=true
+C code RIGHT + stale conversion | step3=false menu④=true  <<DIFF
+C addr RIGHT + stale conversion | step3=true menu④=true
+C total cells=42 diff=1

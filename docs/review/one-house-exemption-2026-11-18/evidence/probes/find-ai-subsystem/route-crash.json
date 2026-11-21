@@ -1,0 +1,59 @@
+{
+ "reductionKindOnly": {
+  "thrown": "TypeError: Cannot read properties of undefined (reading 'type')",
+  "stack": [
+   "TypeError: Cannot read properties of undefined (reading 'type')",
+   "    at ./lib/calc/house-count-exclusion-rows.ts:106:11",
+   "    at Array.flatMap (<anonymous>)",
+   "    at rowCountExclusionReductions (./lib/calc/house-count-exclusion-rows.ts:103:67)",
+   "    at linkedDeclarations (./lib/calc/house-count-exclusion-rows.ts:174:21)",
+   "    at eligibleCountExcludedHouseIds (./lib/calc/house-count-exclusion-rows.ts:235:36)"
+  ]
+ },
+ "presaleRowPartial": {
+  "status": 200,
+  "form": {
+   "presaleRights": [
+    {
+     "id": "P",
+     "acquisitionDate": "2023-01-01"
+    }
+   ],
+   "transferDate": "2024-06-15",
+   "isOneHousehold": true,
+   "contractTotalPrice": "900000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2015-03-01"
+   }
+  },
+  "questions": [
+   "asset.residencePeriods: 거주 구간 #1: 입주일을 입력하세요.",
+   "asset.rentalHousingException.phrp154_10Answer: 장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요.",
+   "presaleRights[P].type: 종류 — 입력값을 확인하세요.",
+   "presaleRights[P].region: 지역 구분 — 입력값을 확인하세요."
+  ]
+ },
+ "presaleRowEmpty": {
+  "status": 200,
+  "form": {
+   "presaleRights": [
+    {
+     "id": "P"
+    }
+   ],
+   "transferDate": "2024-06-15",
+   "isOneHousehold": true,
+   "contractTotalPrice": "900000000",
+   "asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2015-03-01"
+   }
+  },
+  "questions": [
+   "presaleRights[P].acquisitionDate: 분양권·입주권 1: 취득일을 입력하세요.",
+   "asset.residencePeriods: 거주 구간 #1: 입주일을 입력하세요.",
+   "asset.rentalHousingException.phrp154_10Answer: 장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요."
+  ]
+ }
+}

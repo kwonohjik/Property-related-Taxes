@@ -1,0 +1,25 @@
+{
+  "before": {
+    "step": 3,
+    "result": {
+      "conclusion": "3주택 이상 중과",
+      "tag": "X"
+    }
+  },
+  "after": {
+    "pushed": [
+      "/calc/one-house-exemption"
+    ],
+    "oneHouseResult": null,
+    "formTransferDate": "2026-02-16",
+    "surchargeStep": 3,
+    "surchargeResult": {
+      "conclusion": "3주택 이상 중과",
+      "tag": "X"
+    }
+  },
+  "controlUpdateFormData": {
+    "surchargeStep": 3,
+    "surchargeResult": null
+  }
+}

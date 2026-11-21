@@ -1,0 +1,46 @@
+{
+  "judgment": {
+    "status": 200,
+    "isExempt": true,
+    "ve": []
+  },
+  "calcAsHanded": {
+    "status": 200,
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": []
+  },
+  "calcAfterRosterEdit": {
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 181566000,
+    "issues": []
+  },
+  "provAfterRosterEdit": {
+    "state": "fresh",
+    "record": {
+      "calculationId": "rec-1",
+      "judgedFor": "2026-03-01",
+      "updatedAt": "2026-09-21T01:00:00.000Z",
+      "verdictLabel": "비과세"
+    }
+  },
+  "calcAfterDateEdit": {
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 230560000
+  },
+  "provAfterDateEdit": {
+    "state": "fresh",
+    "record": {
+      "calculationId": "rec-1",
+      "judgedFor": "2026-03-01",
+      "updatedAt": "2026-09-21T01:00:00.000Z",
+      "verdictLabel": "비과세"
+    }
+  },
+  "provSurchargePath": {
+    "state": "unknown",
+    "record": null
+  }
+}

@@ -1,0 +1,16 @@
+S0-nonresident	step=0	field=residentFromDate	exactAnchors=1	prefix=-(0)	msg=거주자가 된 날을 입력하세요 — 보유기간은 그날부터(비거주 전 보유분은 통산) 셉니다.
+== S0-nonresident step=0 errors=1 exact=1 prefixOnly=0 none=0 totalDataFieldInDom=2
+S1-initial	step=1	field=transferDate	exactAnchors=0	prefix=-(0)	msg=양도 예정일을 입력하세요.
+S1-initial	step=1	field=acquisitionDate	exactAnchors=0	prefix=-(0)	msg=양도 대상 주택의 취득일을 입력하세요.
+S1-initial	step=1	field=contractTotalPrice	exactAnchors=0	prefix=-(0)	msg=예상 양도가액을 입력하세요.
+S1-initial	step=1	field=residencePeriods	exactAnchors=0	prefix=-(0)	msg=거주 구간 #1: 입주일을 입력하세요.
+S1-initial	step=1	field=rentalHousingException.phrp154_10Answer	exactAnchors=1	prefix=-(0)	msg=장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 
+== S1-initial step=1 errors=5 exact=1 prefixOnly=0 none=4 totalDataFieldInDom=3
+S2-roster2-noacq	step=2	field=houses.0.acquisitionDate	exactAnchors=0	prefix=houses.0(1)	msg=보유 주택 1: 취득일을 입력하세요.
+S2-roster2-noacq	step=2	field=houses.1.acquisitionDate	exactAnchors=0	prefix=houses.1(1)	msg=보유 주택 2: 취득일을 입력하세요.
+== S2-roster2-noacq step=2 errors=2 exact=0 prefixOnly=2 none=0 totalDataFieldInDom=2
+S2-multi	step=2	field=houses.0.acquisitionDate	exactAnchors=0	prefix=houses.0(1)	msg=보유 주택 1: 취득일을 입력하세요.
+== S2-multi step=2 errors=1 exact=0 prefixOnly=1 none=0 totalDataFieldInDom=2
+S2-roster-inherit	step=2	field=houses.0.inheritedDate	exactAnchors=0	prefix=houses.0(1)	msg=보유 주택 1: 상속주택이면 상속개시일을 입력하세요.
+S2-roster-inherit	step=2	field=houses.1.acquisitionDate	exactAnchors=0	prefix=houses.1(1)	msg=보유 주택 2: 취득일을 입력하세요.
+== S2-roster-inherit step=2 errors=2 exact=0 prefixOnly=2 none=0 totalDataFieldInDom=2

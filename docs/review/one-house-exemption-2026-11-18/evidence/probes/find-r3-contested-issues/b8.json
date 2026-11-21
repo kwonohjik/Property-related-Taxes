@@ -1,0 +1,35 @@
+{
+  "o": {
+    "isExempt": false,
+    "applied": [],
+    "excluded": [
+      {
+        "houseId": "m2",
+        "legalBasis": "소득세법 시행령 §155③"
+      }
+    ],
+    "contested": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "enginePosition": "A",
+        "A": "taxable",
+        "B": "taxable"
+      }
+    ],
+    "verr": []
+  },
+  "c2Bfacts": {
+    "isExempt": false,
+    "contested": [
+      {
+        "id": "155-3-co-inherited-minority-before-ranking-clause",
+        "enginePosition": "A",
+        "A": "taxable",
+        "B": "exempt"
+      }
+    ]
+  },
+  "bothB": {
+    "isExempt": true
+  }
+}

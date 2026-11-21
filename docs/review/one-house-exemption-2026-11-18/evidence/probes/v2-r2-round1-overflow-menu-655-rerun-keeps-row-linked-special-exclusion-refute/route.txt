@@ -1,0 +1,603 @@
+## R1 r1(임대+§99의2) r2(임대)
+{
+  "label": "R1 r1(임대+§99의2) r2(임대)",
+  "status": 200,
+  "feIssues": [
+    "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해당하는지 보려면, 명부에 취득일과 함께 넣고 「장기임대 등록주택」으로 표시하세요."
+  ],
+  "bodySpecial": [
+    {
+      "article": "unsold_99_2",
+      "houseId": "r1",
+      "houseAcquisitionDate": "2013-07-01",
+      "houseContractDate": "2013-06-15",
+      "isNationalHousing": false,
+      "requirementsConfirmed": true
+    }
+  ],
+  "bodyHouseIds": [
+    "selling:false",
+    "r1:true",
+    "r2:true"
+  ],
+  "rentalPassed": true,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "houseCount": {
+    "total": 3,
+    "countedForExemption": 0,
+    "excluded": [
+      {
+        "houseId": "r1",
+        "label": "§99의2 신축주택등 — 주택 수 제외",
+        "legalBasis": "조특법 §99의2②",
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      },
+      {
+        "houseId": "r1",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      },
+      {
+        "houseId": "r2",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 2,
+        "houseAcquisitionDate": "2009-01-01"
+      }
+    ]
+  },
+  "calc": {
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": []
+  }
+}
+
+## R2 r1(일반+§99의2) r2(임대)
+{
+  "label": "R2 r1(일반+§99의2) r2(임대)",
+  "status": 200,
+  "feIssues": [
+    "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해당하는지 보려면, 명부에 취득일과 함께 넣고 「장기임대 등록주택」으로 표시하세요."
+  ],
+  "bodySpecial": [
+    {
+      "article": "unsold_99_2",
+      "houseId": "r1",
+      "houseAcquisitionDate": "2013-07-01",
+      "houseContractDate": "2013-06-15",
+      "isNationalHousing": false,
+      "requirementsConfirmed": true
+    }
+  ],
+  "bodyHouseIds": [
+    "selling:false",
+    "r1:false",
+    "r2:true"
+  ],
+  "rentalPassed": true,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "exemptReason": "1세대1주택 비과세",
+  "houseCount": {
+    "total": 3,
+    "countedForExemption": 1,
+    "excluded": [
+      {
+        "houseId": "r1",
+        "label": "§99의2 신축주택등 — 주택 수 제외",
+        "legalBasis": "조특법 §99의2②",
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      },
+      {
+        "houseId": "r2",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 2,
+        "houseAcquisitionDate": "2009-01-01"
+      }
+    ]
+  },
+  "calc": {
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": []
+  }
+}
+
+## R3 r1(임대) r2(임대)
+{
+  "label": "R3 r1(임대) r2(임대)",
+  "status": 200,
+  "feIssues": [
+    "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해당하는지 보려면, 명부에 취득일과 함께 넣고 「장기임대 등록주택」으로 표시하세요."
+  ],
+  "bodySpecial": [],
+  "bodyHouseIds": [
+    "selling:false",
+    "r1:true",
+    "r2:true"
+  ],
+  "rentalPassed": true,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "exemptReason": "1세대1주택 비과세",
+  "houseCount": {
+    "total": 3,
+    "countedForExemption": 1,
+    "excluded": [
+      {
+        "houseId": "r1",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      },
+      {
+        "houseId": "r2",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 2,
+        "houseAcquisitionDate": "2009-01-01"
+      }
+    ]
+  },
+  "calc": {
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": []
+  }
+}
+
+## R4 r1(임대+§99의2 창 밖) r2(임대)
+{
+  "label": "R4 r1(임대+§99의2 창 밖) r2(임대)",
+  "status": 200,
+  "feIssues": [
+    "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해당하는지 보려면, 명부에 취득일과 함께 넣고 「장기임대 등록주택」으로 표시하세요."
+  ],
+  "bodySpecial": [
+    {
+      "article": "unsold_99_2",
+      "houseId": "r1",
+      "houseAcquisitionDate": "2013-07-01",
+      "houseContractDate": "2014-02-01",
+      "isNationalHousing": false,
+      "requirementsConfirmed": true
+    }
+  ],
+  "bodyHouseIds": [
+    "selling:false",
+    "r1:true",
+    "r2:true"
+  ],
+  "rentalPassed": true,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "exemptReason": "1세대1주택 비과세",
+  "houseCount": {
+    "total": 3,
+    "countedForExemption": 1,
+    "excluded": [
+      {
+        "houseId": "r1",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      },
+      {
+        "houseId": "r2",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 2,
+        "houseAcquisitionDate": "2009-01-01"
+      }
+    ],
+    "notApplied": [
+      {
+        "houseId": "r1",
+        "label": "§99의2 신축주택등 — 요건 미충족으로 주택 수에서 빼지 않음",
+        "legalBasis": "조특법 §99의2②",
+        "reasons": [
+          "감면주택의 최초 매매계약일이 해당 조문의 취득기간 외입니다 (취득일은 기준이 아닙니다)."
+        ],
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      }
+    ]
+  },
+  "calc": {
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": []
+  }
+}
+
+## R5 r1·r3(임대+§99의2) r2(임대) · ⑳ 3호
+{
+  "label": "R5 r1·r3(임대+§99의2) r2(임대) · ⑳ 3호",
+  "status": 200,
+  "feIssues": [
+    "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해당하는지 보려면, 명부에 취득일과 함께 넣고 「장기임대 등록주택」으로 표시하세요."
+  ],
+  "bodySpecial": [
+    {
+      "article": "unsold_99_2",
+      "houseId": "r1",
+      "houseAcquisitionDate": "2013-07-01",
+      "houseContractDate": "2013-06-15",
+      "isNationalHousing": false,
+      "requirementsConfirmed": true
+    },
+    {
+      "article": "unsold_99_2",
+      "houseId": "r3",
+      "houseAcquisitionDate": "2013-08-01",
+      "houseContractDate": "2013-07-15",
+      "isNationalHousing": false,
+      "requirementsConfirmed": true
+    }
+  ],
+  "bodyHouseIds": [
+    "selling:false",
+    "r1:true",
+    "r2:true",
+    "r3:true"
+  ],
+  "rentalPassed": true,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "houseCount": {
+    "total": 4,
+    "countedForExemption": 0,
+    "excluded": [
+      {
+        "houseId": "r1",
+        "label": "§99의2 신축주택등 — 주택 수 제외",
+        "legalBasis": "조특법 §99의2②",
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      },
+      {
+        "houseId": "r3",
+        "label": "§99의2 신축주택등 — 주택 수 제외",
+        "legalBasis": "조특법 §99의2②",
+        "houseNo": 3,
+        "houseAcquisitionDate": "2013-08-01"
+      },
+      {
+        "houseId": "r1",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      },
+      {
+        "houseId": "r2",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 2,
+        "houseAcquisitionDate": "2009-01-01"
+      },
+      {
+        "houseId": "r3",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 3,
+        "houseAcquisitionDate": "2013-08-01"
+      }
+    ]
+  },
+  "calc": {
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": []
+  }
+}
+
+## R6 r1(임대+§99의4 reductions) r2(임대)
+{
+  "label": "R6 r1(임대+§99의4 reductions) r2(임대)",
+  "status": 200,
+  "feIssues": [
+    "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해당하는지 보려면, 명부에 취득일과 함께 넣고 「장기임대 등록주택」으로 표시하세요."
+  ],
+  "bodySpecial": [],
+  "bodyHouseIds": [
+    "selling:false",
+    "r1:true",
+    "r2:true"
+  ],
+  "rentalPassed": true,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "houseCount": {
+    "total": 3,
+    "countedForExemption": 0,
+    "excluded": [
+      {
+        "houseId": "r1",
+        "label": "농어촌주택등 — 소유주택으로 보지 않음",
+        "legalBasis": "조특법 §99의4 (농어촌주택)",
+        "notes": [
+          "적용 한도: 취득 당시 기준시가 합계 3억 이하 (조특법 §99의4①1호나목(고향주택 2호다목))",
+          "농어촌주택 보유기간 11년 (양도일 기준)",
+          "농어촌주택 보유 3년 이상 — 조특법 §99의4④의 3년 보유 전 양도 특례를 적용한 경우가 아니라 조특법 §99의4⑥ 사후관리 대상이 아닙니다"
+        ],
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      },
+      {
+        "houseId": "r1",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      },
+      {
+        "houseId": "r2",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 2,
+        "houseAcquisitionDate": "2009-01-01"
+      }
+    ]
+  },
+  "calc": {
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": []
+  }
+}
+
+## R6b r1(일반+§99의4) r2(임대) 짝
+{
+  "label": "R6b r1(일반+§99의4) r2(임대) 짝",
+  "status": 200,
+  "feIssues": [
+    "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해당하는지 보려면, 명부에 취득일과 함께 넣고 「장기임대 등록주택」으로 표시하세요."
+  ],
+  "bodySpecial": [],
+  "bodyHouseIds": [
+    "selling:false",
+    "r1:false",
+    "r2:true"
+  ],
+  "rentalPassed": true,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "exemptReason": "1세대1주택 비과세",
+  "houseCount": {
+    "total": 3,
+    "countedForExemption": 1,
+    "excluded": [
+      {
+        "houseId": "r1",
+        "label": "농어촌주택등 — 소유주택으로 보지 않음",
+        "legalBasis": "조특법 §99의4 (농어촌주택)",
+        "notes": [
+          "적용 한도: 취득 당시 기준시가 합계 3억 이하 (조특법 §99의4①1호나목(고향주택 2호다목))",
+          "농어촌주택 보유기간 11년 (양도일 기준)",
+          "농어촌주택 보유 3년 이상 — 조특법 §99의4④의 3년 보유 전 양도 특례를 적용한 경우가 아니라 조특법 §99의4⑥ 사후관리 대상이 아닙니다"
+        ],
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      },
+      {
+        "houseId": "r2",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 2,
+        "houseAcquisitionDate": "2009-01-01"
+      }
+    ]
+  },
+  "calc": {
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": []
+  }
+}
+
+## R7 r1(임대+§99의2) g(일반 2015)
+{
+  "label": "R7 r1(임대+§99의2) g(일반 2015)",
+  "status": 200,
+  "feIssues": [
+    "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해당하는지 보려면, 명부에 취득일과 함께 넣고 「장기임대 등록주택」으로 표시하세요."
+  ],
+  "bodySpecial": [
+    {
+      "article": "unsold_99_2",
+      "houseId": "r1",
+      "houseAcquisitionDate": "2013-07-01",
+      "houseContractDate": "2013-06-15",
+      "isNationalHousing": false,
+      "requirementsConfirmed": true
+    }
+  ],
+  "bodyHouseIds": [
+    "selling:false",
+    "r1:true",
+    "g:false"
+  ],
+  "rentalPassed": false,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "houseCount": {
+    "total": 3,
+    "countedForExemption": 2,
+    "excluded": [
+      {
+        "houseId": "r1",
+        "label": "§99의2 신축주택등 — 주택 수 제외",
+        "legalBasis": "조특법 §99의2②",
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      }
+    ]
+  },
+  "calc": {
+    "isExempt": false,
+    "totalTax": 128766000,
+    "issues": []
+  }
+}
+
+## R8 r1(임대+§99의2) r2(임대) g(일반 2020)
+{
+  "label": "R8 r1(임대+§99의2) r2(임대) g(일반 2020)",
+  "status": 200,
+  "feIssues": [
+    "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해당하는지 보려면, 명부에 취득일과 함께 넣고 「장기임대 등록주택」으로 표시하세요."
+  ],
+  "bodySpecial": [
+    {
+      "article": "unsold_99_2",
+      "houseId": "r1",
+      "houseAcquisitionDate": "2013-07-01",
+      "houseContractDate": "2013-06-15",
+      "isNationalHousing": false,
+      "requirementsConfirmed": true
+    }
+  ],
+  "bodyHouseIds": [
+    "selling:false",
+    "r1:true",
+    "r2:true",
+    "g:false"
+  ],
+  "rentalPassed": false,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "houseCount": {
+    "total": 4,
+    "countedForExemption": 3,
+    "excluded": [
+      {
+        "houseId": "r1",
+        "label": "§99의2 신축주택등 — 주택 수 제외",
+        "legalBasis": "조특법 §99의2②",
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      }
+    ]
+  },
+  "calc": {
+    "isExempt": false,
+    "totalTax": 128766000,
+    "issues": []
+  }
+}
+
+## R8b r1(임대+§99의2) r2(임대) g(일반 2023)
+{
+  "label": "R8b r1(임대+§99의2) r2(임대) g(일반 2023)",
+  "status": 200,
+  "feIssues": [
+    "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해당하는지 보려면, 명부에 취득일과 함께 넣고 「장기임대 등록주택」으로 표시하세요."
+  ],
+  "bodySpecial": [
+    {
+      "article": "unsold_99_2",
+      "houseId": "r1",
+      "houseAcquisitionDate": "2013-07-01",
+      "houseContractDate": "2013-06-15",
+      "isNationalHousing": false,
+      "requirementsConfirmed": true
+    }
+  ],
+  "bodyHouseIds": [
+    "selling:false",
+    "r1:true",
+    "r2:true",
+    "g:false"
+  ],
+  "rentalPassed": true,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "exemptReason": "1세대1주택 비과세",
+  "houseCount": {
+    "total": 4,
+    "countedForExemption": 1,
+    "excluded": [
+      {
+        "houseId": "r1",
+        "label": "§99의2 신축주택등 — 주택 수 제외",
+        "legalBasis": "조특법 §99의2②",
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      },
+      {
+        "houseId": "r1",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      },
+      {
+        "houseId": "r2",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 2,
+        "houseAcquisitionDate": "2009-01-01"
+      }
+    ]
+  },
+  "calc": {
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": []
+  }
+}
+
+## R8c 짝 r1(임대) r2(임대) g(일반 2023)
+{
+  "label": "R8c 짝 r1(임대) r2(임대) g(일반 2023)",
+  "status": 200,
+  "feIssues": [
+    "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해당하는지 보려면, 명부에 취득일과 함께 넣고 「장기임대 등록주택」으로 표시하세요."
+  ],
+  "bodySpecial": [],
+  "bodyHouseIds": [
+    "selling:false",
+    "r1:true",
+    "r2:true",
+    "g:false"
+  ],
+  "rentalPassed": true,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "exemptReason": "일시적 2주택 비과세",
+  "houseCount": {
+    "total": 4,
+    "countedForExemption": 2,
+    "excluded": [
+      {
+        "houseId": "r1",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 1,
+        "houseAcquisitionDate": "2013-07-01"
+      },
+      {
+        "houseId": "r2",
+        "label": "장기임대주택 — 거주주택 특례 요건 충족으로 거주주택을 1주택으로 봄",
+        "legalBasis": "소득세법 시행령 §155⑳",
+        "houseNo": 2,
+        "houseAcquisitionDate": "2009-01-01"
+      }
+    ]
+  },
+  "calc": {
+    "isExempt": true,
+    "totalTax": 0,
+    "issues": []
+  }
+}

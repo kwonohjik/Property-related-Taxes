@@ -1,0 +1,13 @@
+{
+  "both": {
+    "status": 200,
+    "isExempt": false,
+    "totalTax": 144052332,
+    "surchargeType": "multi_house_2"
+  },
+  "parentalOnly": {
+    "status": 200,
+    "isExempt": true,
+    "totalTax": 0
+  }
+}

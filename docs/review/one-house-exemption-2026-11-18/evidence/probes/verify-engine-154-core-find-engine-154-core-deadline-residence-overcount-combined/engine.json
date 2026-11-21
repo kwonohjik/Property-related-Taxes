@@ -1,0 +1,471 @@
+{
+  "months": {
+    "late_2025_12_01__2027_11_30": 24,
+    "deadline_2025_12_01__2027_06_03": 18,
+    "ctrl_2025_04_01__2027_11_30": 32,
+    "ctrl_2025_04_01__2027_06_03": 26
+  },
+  "late": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "pending": [
+      {
+        "id": "155-1-disposal-deadline",
+        "deadline": "2027-06-03",
+        "description": "신규주택 취득일부터 이 날짜까지 종전주택을 양도해야 비과세"
+      }
+    ],
+    "rows": [
+      {
+        "id": "one-year",
+        "status": "met",
+        "facts": [
+          {
+            "label": "종전주택 취득일",
+            "value": "2023-01-02"
+          },
+          {
+            "label": "1년 경과일",
+            "value": "2024-01-03"
+          },
+          {
+            "label": "신규주택 취득일",
+            "value": "2024-06-03"
+          }
+        ]
+      },
+      {
+        "id": "disposal-deadline",
+        "status": "unmet",
+        "note": "2027-06-03까지 양도하면 이 요건을 충족합니다.",
+        "facts": [
+          {
+            "label": "신규주택 취득일",
+            "value": "2024-06-03"
+          },
+          {
+            "label": "처분기한",
+            "value": "2027-06-03"
+          },
+          {
+            "label": "양도(예정)일",
+            "value": "2027-12-01"
+          }
+        ]
+      },
+      {
+        "id": "holding",
+        "status": "met",
+        "facts": [
+          {
+            "label": "보유 기산일",
+            "value": "2023-01-02"
+          },
+          {
+            "label": "보유기간",
+            "value": "4년 11개월"
+          }
+        ]
+      },
+      {
+        "id": "residence",
+        "status": "met",
+        "facts": [
+          {
+            "label": "취득 당시 조정대상지역",
+            "value": "해당"
+          },
+          {
+            "label": "거주기간",
+            "value": "24개월"
+          }
+        ]
+      },
+      {
+        "id": "high-value",
+        "status": "met",
+        "facts": [
+          {
+            "label": "양도가액",
+            "value": "500,000,000"
+          },
+          {
+            "label": "고가주택 기준금액",
+            "value": "12억"
+          }
+        ]
+      }
+    ],
+    "unmet": [],
+    "undetermined": []
+  },
+  "onDeadline": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "pending": [],
+    "rows": [
+      {
+        "id": "one-year",
+        "status": "met",
+        "facts": [
+          {
+            "label": "종전주택 취득일",
+            "value": "2023-01-02"
+          },
+          {
+            "label": "1년 경과일",
+            "value": "2024-01-03"
+          },
+          {
+            "label": "신규주택 취득일",
+            "value": "2024-06-03"
+          }
+        ]
+      },
+      {
+        "id": "disposal-deadline",
+        "status": "met",
+        "facts": [
+          {
+            "label": "신규주택 취득일",
+            "value": "2024-06-03"
+          },
+          {
+            "label": "처분기한",
+            "value": "2027-06-03"
+          },
+          {
+            "label": "양도(예정)일",
+            "value": "2027-06-03"
+          }
+        ]
+      },
+      {
+        "id": "holding",
+        "status": "met",
+        "facts": [
+          {
+            "label": "보유 기산일",
+            "value": "2023-01-02"
+          },
+          {
+            "label": "보유기간",
+            "value": "4년 5개월"
+          }
+        ]
+      },
+      {
+        "id": "residence",
+        "status": "unmet",
+        "facts": [
+          {
+            "label": "취득 당시 조정대상지역",
+            "value": "해당"
+          },
+          {
+            "label": "거주기간",
+            "value": "18개월"
+          }
+        ]
+      },
+      {
+        "id": "high-value",
+        "status": "met",
+        "facts": [
+          {
+            "label": "양도가액",
+            "value": "500,000,000"
+          },
+          {
+            "label": "고가주택 기준금액",
+            "value": "12억"
+          }
+        ]
+      }
+    ],
+    "unmet": [],
+    "undetermined": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ]
+  },
+  "ctrlLate": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "pending": [
+      {
+        "id": "155-1-disposal-deadline",
+        "deadline": "2027-06-03",
+        "description": "신규주택 취득일부터 이 날짜까지 종전주택을 양도해야 비과세"
+      }
+    ],
+    "rows": [
+      {
+        "id": "one-year",
+        "status": "met",
+        "facts": [
+          {
+            "label": "종전주택 취득일",
+            "value": "2023-01-02"
+          },
+          {
+            "label": "1년 경과일",
+            "value": "2024-01-03"
+          },
+          {
+            "label": "신규주택 취득일",
+            "value": "2024-06-03"
+          }
+        ]
+      },
+      {
+        "id": "disposal-deadline",
+        "status": "unmet",
+        "note": "2027-06-03까지 양도하면 이 요건을 충족합니다.",
+        "facts": [
+          {
+            "label": "신규주택 취득일",
+            "value": "2024-06-03"
+          },
+          {
+            "label": "처분기한",
+            "value": "2027-06-03"
+          },
+          {
+            "label": "양도(예정)일",
+            "value": "2027-12-01"
+          }
+        ]
+      },
+      {
+        "id": "holding",
+        "status": "met",
+        "facts": [
+          {
+            "label": "보유 기산일",
+            "value": "2023-01-02"
+          },
+          {
+            "label": "보유기간",
+            "value": "4년 11개월"
+          }
+        ]
+      },
+      {
+        "id": "residence",
+        "status": "met",
+        "facts": [
+          {
+            "label": "취득 당시 조정대상지역",
+            "value": "해당"
+          },
+          {
+            "label": "거주기간",
+            "value": "32개월"
+          }
+        ]
+      },
+      {
+        "id": "high-value",
+        "status": "met",
+        "facts": [
+          {
+            "label": "양도가액",
+            "value": "500,000,000"
+          },
+          {
+            "label": "고가주택 기준금액",
+            "value": "12억"
+          }
+        ]
+      }
+    ],
+    "unmet": [],
+    "undetermined": []
+  },
+  "ctrlOnDeadline": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "pending": [],
+    "rows": [
+      {
+        "id": "one-year",
+        "status": "met",
+        "facts": [
+          {
+            "label": "종전주택 취득일",
+            "value": "2023-01-02"
+          },
+          {
+            "label": "1년 경과일",
+            "value": "2024-01-03"
+          },
+          {
+            "label": "신규주택 취득일",
+            "value": "2024-06-03"
+          }
+        ]
+      },
+      {
+        "id": "disposal-deadline",
+        "status": "met",
+        "facts": [
+          {
+            "label": "신규주택 취득일",
+            "value": "2024-06-03"
+          },
+          {
+            "label": "처분기한",
+            "value": "2027-06-03"
+          },
+          {
+            "label": "양도(예정)일",
+            "value": "2027-06-03"
+          }
+        ]
+      },
+      {
+        "id": "holding",
+        "status": "met",
+        "facts": [
+          {
+            "label": "보유 기산일",
+            "value": "2023-01-02"
+          },
+          {
+            "label": "보유기간",
+            "value": "4년 5개월"
+          }
+        ]
+      },
+      {
+        "id": "residence",
+        "status": "met",
+        "facts": [
+          {
+            "label": "취득 당시 조정대상지역",
+            "value": "해당"
+          },
+          {
+            "label": "거주기간",
+            "value": "26개월"
+          }
+        ]
+      },
+      {
+        "id": "high-value",
+        "status": "met",
+        "facts": [
+          {
+            "label": "양도가액",
+            "value": "500,000,000"
+          },
+          {
+            "label": "고가주택 기준금액",
+            "value": "12억"
+          }
+        ]
+      }
+    ],
+    "unmet": [],
+    "undetermined": []
+  },
+  "nonRegLate": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "pending": [
+      {
+        "id": "155-1-disposal-deadline",
+        "deadline": "2027-06-03",
+        "description": "신규주택 취득일부터 이 날짜까지 종전주택을 양도해야 비과세"
+      }
+    ],
+    "rows": [
+      {
+        "id": "one-year",
+        "status": "met",
+        "facts": [
+          {
+            "label": "종전주택 취득일",
+            "value": "2023-01-02"
+          },
+          {
+            "label": "1년 경과일",
+            "value": "2024-01-03"
+          },
+          {
+            "label": "신규주택 취득일",
+            "value": "2024-06-03"
+          }
+        ]
+      },
+      {
+        "id": "disposal-deadline",
+        "status": "unmet",
+        "note": "2027-06-03까지 양도하면 이 요건을 충족합니다.",
+        "facts": [
+          {
+            "label": "신규주택 취득일",
+            "value": "2024-06-03"
+          },
+          {
+            "label": "처분기한",
+            "value": "2027-06-03"
+          },
+          {
+            "label": "양도(예정)일",
+            "value": "2027-12-01"
+          }
+        ]
+      },
+      {
+        "id": "holding",
+        "status": "met",
+        "facts": [
+          {
+            "label": "보유 기산일",
+            "value": "2023-01-02"
+          },
+          {
+            "label": "보유기간",
+            "value": "4년 11개월"
+          }
+        ]
+      },
+      {
+        "id": "residence",
+        "status": "met",
+        "facts": [
+          {
+            "label": "취득 당시 조정대상지역",
+            "value": "해당"
+          },
+          {
+            "label": "거주기간",
+            "value": "24개월"
+          }
+        ]
+      },
+      {
+        "id": "high-value",
+        "status": "met",
+        "facts": [
+          {
+            "label": "양도가액",
+            "value": "500,000,000"
+          },
+          {
+            "label": "고가주택 기준금액",
+            "value": "12억"
+          }
+        ]
+      }
+    ],
+    "unmet": [],
+    "undetermined": []
+  },
+  "predicate": {
+    "lateInputOnDeadline": true,
+    "sameButMonths18": false
+  }
+}

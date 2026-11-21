@@ -1,0 +1,351 @@
+[
+  {
+    "label": "V1 미답 · 명부 a만",
+    "menu": {
+      "gate": "unanswered",
+      "originSectionVisible": true,
+      "status": 200,
+      "veErrors": [
+        "error:rentalHousingException.counterpartHouseResidedTwoYears: 합가 상대 쪽 주택에 2년 이상 거주했는지 답하세요 — 「예」면 양도 주택에 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061)."
+      ],
+      "veWarnings": [
+        "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해"
+      ],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": false,
+      "undetermined": [],
+      "unmet": [],
+      "rentalVerdict": {
+        "passed": false
+      },
+      "missingNoticeAsk": false
+    },
+    "calc": {
+      "gate": "unanswered",
+      "formHouses": [
+        "a:2018-09-27::"
+      ],
+      "status": 200,
+      "errIssues": [
+        "0:rentalHousingException.counterpartHouseResidedTwoYears:자산: 합가 상대 쪽 주택에 2년 이상 거주했는지 답하세요 — 「예」면 양도 주택에는 거주주택 2년을 적용하지 않습니다(기준-2024-법규재산-"
+      ],
+      "issueCount": 1,
+      "allCalcIssues": [
+        "0:rentalHousingException.counterpartHouseResidedTwoYears:자산: 합가 상대 쪽 주택에 2년 이상 거주했는지 답하세요 — 「예」면 양도 주택에는 거주주택 2년을 적용하지 않습니다(기준-2024-법규재산-"
+      ],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": false,
+      "totalTax": 172766000,
+      "missingNoticeAsk": [
+        "합가 상대 쪽 장기임대주택 1채가 요건을 갖추면 주택 수에서 빼고 합가 특례를 적용할 수 있습니다(기준-2024-법규재산-0061) — 상대 쪽 주택에 2년 이상 거주했는지 답하세요. 입력이 없어 판정하지 않았습니다."
+      ]
+    }
+  },
+  {
+    "label": "V2 미답 · 명부 a + 같은 날 취득(late)",
+    "menu": {
+      "gate": "undefined",
+      "originSectionVisible": true,
+      "status": 200,
+      "veErrors": [],
+      "veWarnings": [
+        "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해"
+      ],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": false,
+      "undetermined": [],
+      "unmet": [],
+      "rentalVerdict": {
+        "passed": false
+      },
+      "missingNoticeAsk": false
+    },
+    "calc": {
+      "gate": "undefined",
+      "formHouses": [
+        "a:2018-09-27::",
+        "late:2023-09-18::"
+      ],
+      "status": 200,
+      "errIssues": [],
+      "issueCount": 0,
+      "allCalcIssues": [],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": false,
+      "totalTax": 172766000,
+      "missingNoticeAsk": [
+        "합가 상대 쪽 장기임대주택 1채가 요건을 갖추면 주택 수에서 빼고 합가 특례를 적용할 수 있습니다(기준-2024-법규재산-0061) — 상대 쪽 주택에 2년 이상 거주했는지 답하세요. 입력이 없어 판정하지 않았습니다."
+      ]
+    }
+  },
+  {
+    "label": "V3 예 · 명부 a + 같은 날 취득(late)",
+    "menu": {
+      "gate": "undefined",
+      "originSectionVisible": true,
+      "status": 200,
+      "veErrors": [],
+      "veWarnings": [
+        "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해"
+      ],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": true,
+      "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+      "undetermined": [
+        "155-20-merge-rental-carveout :: 합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061). 「소득세법 시행령」 §154① 보유·거주 요건은 그대로 봅니다."
+      ],
+      "unmet": [],
+      "missingNoticeAsk": false
+    },
+    "calc": {
+      "gate": "undefined",
+      "formHouses": [
+        "a:2018-09-27::",
+        "late:2023-09-18::"
+      ],
+      "status": 200,
+      "errIssues": [],
+      "issueCount": 0,
+      "allCalcIssues": [],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": true,
+      "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+      "totalTax": 0,
+      "missingNoticeAsk": [
+        "합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061). 「소득세법 시행령」 §154① 보유·거주 요건은 그대로 봅니다."
+      ]
+    }
+  },
+  {
+    "label": "V4 예 · 명부 a만",
+    "menu": {
+      "gate": "waived",
+      "originSectionVisible": true,
+      "status": 200,
+      "veErrors": [],
+      "veWarnings": [
+        "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해"
+      ],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": true,
+      "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+      "undetermined": [
+        "155-20-merge-rental-carveout :: 합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061). 「소득세법 시행령」 §154① 보유·거주 요건은 그대로 봅니다."
+      ],
+      "unmet": [],
+      "missingNoticeAsk": false
+    },
+    "calc": {
+      "gate": "waived",
+      "formHouses": [
+        "a:2018-09-27::"
+      ],
+      "status": 200,
+      "errIssues": [],
+      "issueCount": 0,
+      "allCalcIssues": [],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": true,
+      "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+      "totalTax": 0,
+      "missingNoticeAsk": [
+        "합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061). 「소득세법 시행령」 §154① 보유·거주 요건은 그대로 봅니다."
+      ]
+    }
+  },
+  {
+    "label": "V5 미답 · 명부 a + 양도 뒤 취득(2023-10-05)",
+    "menu": {
+      "gate": "undefined",
+      "originSectionVisible": true,
+      "status": 200,
+      "veErrors": [],
+      "veWarnings": [
+        "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해"
+      ],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": false,
+      "undetermined": [],
+      "unmet": [],
+      "rentalVerdict": {
+        "passed": false
+      },
+      "missingNoticeAsk": false
+    },
+    "calc": {
+      "gate": "undefined",
+      "formHouses": [
+        "a:2018-09-27::",
+        "late2:2023-10-05::"
+      ],
+      "status": 200,
+      "errIssues": [],
+      "issueCount": 0,
+      "allCalcIssues": [],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": false,
+      "totalTax": 172766000,
+      "missingNoticeAsk": [
+        "합가 상대 쪽 장기임대주택 1채가 요건을 갖추면 주택 수에서 빼고 합가 특례를 적용할 수 있습니다(기준-2024-법규재산-0061) — 상대 쪽 주택에 2년 이상 거주했는지 답하세요. 입력이 없어 판정하지 않았습니다."
+      ]
+    }
+  },
+  {
+    "label": "V6 미답 · 명부 a + §154⑨ 먼저 양도 행",
+    "menu": {
+      "gate": "undefined",
+      "originSectionVisible": true,
+      "status": 200,
+      "veErrors": [],
+      "veWarnings": [
+        "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해"
+      ],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": false,
+      "undetermined": [],
+      "unmet": [],
+      "rentalVerdict": {
+        "passed": false
+      },
+      "missingNoticeAsk": false
+    },
+    "calc": {
+      "gate": "undefined",
+      "formHouses": [
+        "a:2018-09-27::",
+        "first:2015-01-01:true:first"
+      ],
+      "status": 200,
+      "errIssues": [],
+      "issueCount": 0,
+      "allCalcIssues": [],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": false,
+      "totalTax": 172766000,
+      "missingNoticeAsk": [
+        "합가 상대 쪽 장기임대주택 1채가 요건을 갖추면 주택 수에서 빼고 합가 특례를 적용할 수 있습니다(기준-2024-법규재산-0061) — 상대 쪽 주택에 2년 이상 거주했는지 답하세요. 입력이 없어 판정하지 않았습니다."
+      ]
+    }
+  },
+  {
+    "label": "V7 예 · 명부 a + §154⑨ 먼저 양도 행",
+    "menu": {
+      "gate": "undefined",
+      "originSectionVisible": true,
+      "status": 200,
+      "veErrors": [],
+      "veWarnings": [
+        "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해"
+      ],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": true,
+      "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+      "undetermined": [
+        "155-20-merge-rental-carveout :: 합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061). 「소득세법 시행령」 §154① 보유·거주 요건은 그대로 봅니다."
+      ],
+      "unmet": [],
+      "missingNoticeAsk": false
+    },
+    "calc": {
+      "gate": "undefined",
+      "formHouses": [
+        "a:2018-09-27::",
+        "first:2015-01-01:true:first"
+      ],
+      "status": 200,
+      "errIssues": [],
+      "issueCount": 0,
+      "allCalcIssues": [],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": true,
+      "exemptReason": "동거봉양 합가 (§155④) 1세대1주택 비과세",
+      "totalTax": 0,
+      "missingNoticeAsk": [
+        "합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택 수에서 빼고 소득세법 시행령 §155④를 적용했습니다 — 상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(기준-2024-법규재산-0061). 「소득세법 시행령」 §154① 보유·거주 요건은 그대로 봅니다."
+      ]
+    }
+  },
+  {
+    "label": "V8 아니오 · 명부 a + late",
+    "menu": {
+      "gate": "undefined",
+      "originSectionVisible": true,
+      "status": 200,
+      "veErrors": [],
+      "veWarnings": [
+        "warning:houses: 장기임대주택 특례로 선언한 임대주택은 위 「보유 주택」 명부에 다시 넣지 마세요. 특례가 주택 수에서 빼 주는 대상이라, 명부에도 있으면 주택 수가 이중 계상됩니다. 다만 특례 요건을 갖추지 못한 경우 임대주택이 일시적 2주택의 신규 주택 등 다른 특례에 해"
+      ],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": false,
+      "undetermined": [],
+      "unmet": [],
+      "rentalVerdict": {
+        "passed": false
+      },
+      "missingNoticeAsk": false
+    },
+    "calc": {
+      "gate": "undefined",
+      "formHouses": [
+        "a:2018-09-27::",
+        "late:2023-09-18::"
+      ],
+      "status": 200,
+      "errIssues": [],
+      "issueCount": 0,
+      "allCalcIssues": [],
+      "bodyHouses": [
+        "selling",
+        "a"
+      ],
+      "isExempt": false,
+      "totalTax": 172766000,
+      "missingNoticeAsk": []
+    }
+  }
+]

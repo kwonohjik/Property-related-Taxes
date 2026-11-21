@@ -1,0 +1,91 @@
+[
+ {
+  "n": "R-rural-inherited",
+  "errs": [],
+  "status": 200,
+  "ex": false,
+  "applied": [],
+  "excluded": [],
+  "reasons": [
+   "나목 판정에는 세대 보유 1주택의 취득일이 필요합니다. 입력하지 않으면 3년 요건을 판정할 수 없어 나목을 적용하지 않습니다."
+  ],
+  "unmet": []
+ },
+ {
+  "n": "H-rural-inherited",
+  "errs": [
+   "generalHouseRightAtInheritance: 양도 주택을 상속개시 후 취득했습니다 — 상속개시 당시 보유한 조합원입주권·분양권으로 취득한 신축주택인지 선택하세요."
+  ],
+  "status": 200,
+  "ex": true,
+  "applied": [
+   "155-7-rural:inherited"
+  ],
+  "excluded": [],
+  "unmet": []
+ },
+ {
+  "n": "R-farm-unanswered",
+  "errs": [
+   "houses.0.ruralFarmlandBasis: 보유 주택 1: 귀농주택이 영농·영어의 목적으로 취득한 것인지(§155⑩4호 가·나·다목) 선택하세요 — 모르면 「모름」을 고르세요."
+  ],
+  "status": 200,
+  "ex": false,
+  "applied": [],
+  "excluded": [],
+  "reasons": [
+   "나목 판정에는 세대 보유 1주택의 취득일이 필요합니다. 입력하지 않으면 3년 요건을 판정할 수 없어 나목을 적용하지 않습니다."
+  ],
+  "unmet": []
+ },
+ {
+  "n": "H-farm-unanswered",
+  "errs": [
+   "houses.0.ruralFarmlandBasis: 보유 주택 1: 귀농주택이 영농·영어의 목적으로 취득한 것인지(§155⑩4호 가·나·다목) 선택하세요 — 모르면 「모름」을 고르세요.",
+   "houses.0.acquisitionOrigin: 보유 주택 1: 일시적 2주택의 신규 주택으로 판정된 주택입니다 — 이 주택을 어떻게 취득했는지(일반 취득·분양권·조합원입주권·재건축 등) 선택"
+  ],
+  "status": 200,
+  "ex": false,
+  "applied": [],
+  "excluded": [],
+  "unmet": [
+   "155-1-temporary-two-house: 신규 주택이 분양권·조합원입주권 등 권리로 취득한 주택인지 모른다고 답해(보유 주택 목록 행은 답하지 않은 경우 포함) 일시적 2주택(소득세법 시행령 §155①)을 적용하지 않았습니다.",
+   "155-7-rural:return_to_farm: 귀농주택의 「영농 또는 영어의 목적으로 취득」 요건(소득세법 시행령 §155⑩4호 가·나·다목)을 답하지 않아 귀농주택으로 인정하지 않았습니다./소득세법 시행령 §155⑪의 「귀농 후 최초로 양도하는 1개의 일반주택」 여부(이미 이 특례로 일반주택을 비과세 양도한 적)를 답하지 않아 특례를 적용하지 않았습니다./양도하는 일반주택을 귀농 이전에 취득했는지 답하지 않아 특례를 적용하지 않았습니다."
+  ]
+ },
+ {
+  "n": "R-heritage",
+  "errs": [],
+  "status": 200,
+  "ex": false,
+  "applied": [],
+  "excluded": [],
+  "reasons": [
+   "나목 판정에는 세대 보유 1주택의 취득일이 필요합니다. 입력하지 않으면 3년 요건을 판정할 수 없어 나목을 적용하지 않습니다."
+  ],
+  "unmet": []
+ },
+ {
+  "n": "H-heritage",
+  "errs": [],
+  "status": 200,
+  "ex": true,
+  "applied": [
+   "155-6-1ho-cultural-heritage"
+  ],
+  "excluded": [],
+  "unmet": []
+ },
+ {
+  "n": "R-plain-other",
+  "errs": [],
+  "status": 200,
+  "ex": false,
+  "applied": [],
+  "excluded": [],
+  "reasons": [
+   "나목 판정에는 세대 보유 1주택의 취득일이 필요합니다. 입력하지 않으면 3년 요건을 판정할 수 없어 나목을 적용하지 않습니다."
+  ],
+  "unmet": []
+ }
+]

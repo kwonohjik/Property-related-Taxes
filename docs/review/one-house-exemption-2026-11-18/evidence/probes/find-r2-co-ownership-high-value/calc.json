@@ -1,0 +1,50 @@
+{
+  "calc_half_whole14": {
+    "status": 200,
+    "isExempt": false,
+    "isPartial": true,
+    "totalTax": 3151500
+  },
+  "calc_full_whole14_handoff": {
+    "status": 200,
+    "isExempt": false,
+    "isPartial": true,
+    "totalTax": 8844000
+  },
+  "calc_full_share7": {
+    "status": 200,
+    "isExempt": true,
+    "totalTax": 0
+  },
+  "calc_half_handoff7": {
+    "status": 200,
+    "isExempt": true,
+    "totalTax": 0
+  },
+  "judge_700000000": {
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "appliedExceptions": [],
+    "undetermined": [],
+    "pending": [],
+    "unmetExceptions": [],
+    "unmetReasons": {},
+    "excludedHouses": [],
+    "contested": [],
+    "validationErrors": []
+  },
+  "judge_1400000000": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": true,
+    "appliedExceptions": [],
+    "undetermined": [],
+    "pending": [],
+    "unmetExceptions": [],
+    "unmetReasons": {},
+    "excludedHouses": [],
+    "contested": [],
+    "validationErrors": []
+  }
+}

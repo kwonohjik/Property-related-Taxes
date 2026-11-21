@@ -1,0 +1,164 @@
+{
+  "E001-dual": {
+    "surchargeStatus": 200,
+    "surchargeFe8Errors": [],
+    "surcharge": {
+      "scopeSupported": false,
+      "scopeReason": "before_2018_04_01",
+      "contested": [
+        {
+          "id": "155-4-parental-care-merge-right-sale",
+          "conclusionsDiffer": true,
+          "positions": [
+            "A:exempt",
+            "B:taxable"
+          ]
+        }
+      ],
+      "isExempt": false,
+      "summaryText": "21세대1주택 비과세 (요약)해석이 갈림 — 해석이 갈리는 쟁점이 있어 입장에 따라 결론이 다릅니다. 아래 「해석이 갈리는 쟁점」에서 두 입장의 결론과 근거를 확인하세요.비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다.비과세 판정에서 자세히 보기 →",
+      "verdictLabel": "해석이 갈림",
+      "contestedCardTitlePresent": true,
+      "contestedCardTestIds": [],
+      "nodesAfterSummary": [
+        "DIV :: 인쇄이 사실로 양도세 계산"
+      ],
+      "phraseCount": 2
+    },
+    "oneHouseStatus": 200,
+    "oneHouse": {
+      "verdictLabel": "해석이 갈림",
+      "contestedCardTestIds": [
+        "one-house-contested-155-4-parental-care-merge-right-sale"
+      ],
+      "phraseCount": 3
+    }
+  },
+  "E083-dual": {
+    "surchargeStatus": 200,
+    "surchargeFe8Errors": [],
+    "surcharge": {
+      "scopeSupported": true,
+      "contested": [
+        {
+          "id": "155-3-same-household-co-inherited-minority",
+          "conclusionsDiffer": true,
+          "positions": [
+            "A:taxable",
+            "B:exempt"
+          ]
+        }
+      ],
+      "isExempt": false,
+      "summaryText": "51세대1주택 비과세 (요약)해석이 갈림 — 해석이 갈리는 쟁점이 있어 입장에 따라 결론이 다릅니다. 아래 「해석이 갈리는 쟁점」에서 두 입장의 결론과 근거를 확인하세요.비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다.비과세 판정에서 자세히 보기 →",
+      "verdictLabel": "해석이 갈림",
+      "contestedCardTitlePresent": true,
+      "contestedCardTestIds": [],
+      "nodesAfterSummary": [
+        "DIV :: 인쇄이 사실로 양도세 계산"
+      ],
+      "phraseCount": 2
+    },
+    "oneHouseStatus": 200,
+    "oneHouse": {
+      "verdictLabel": "해석이 갈림",
+      "contestedCardTestIds": [
+        "one-house-contested-155-3-same-household-co-inherited-minority"
+      ],
+      "phraseCount": 3
+    }
+  },
+  "E110-dual": {
+    "surchargeStatus": 200,
+    "surchargeFe8Errors": [],
+    "surcharge": {
+      "scopeSupported": true,
+      "contested": [
+        {
+          "id": "155-2-inherited-house-gifted-within-household",
+          "conclusionsDiffer": true,
+          "positions": [
+            "A:taxable",
+            "B:exempt"
+          ]
+        }
+      ],
+      "isExempt": true,
+      "summaryText": "51세대1주택 비과세 (요약)해석이 갈림 — 해석이 갈리는 쟁점이 있어 입장에 따라 결론이 다릅니다. 아래 「해석이 갈리는 쟁점」에서 두 입장의 결론과 근거를 확인하세요.비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다.비과세 판정에서 자세히 보기 →",
+      "verdictLabel": "해석이 갈림",
+      "contestedCardTitlePresent": true,
+      "contestedCardTestIds": [],
+      "nodesAfterSummary": [
+        "DIV :: 인쇄이 사실로 양도세 계산"
+      ],
+      "phraseCount": 2
+    },
+    "oneHouseStatus": 200,
+    "oneHouse": {
+      "verdictLabel": "해석이 갈림",
+      "contestedCardTestIds": [
+        "one-house-contested-155-2-inherited-house-gifted-within-household"
+      ],
+      "phraseCount": 3
+    }
+  },
+  "E109-dual": {
+    "surchargeStatus": 200,
+    "surchargeFe8Errors": [],
+    "surcharge": {
+      "scopeSupported": false,
+      "scopeReason": "before_2018_04_01",
+      "contested": [
+        {
+          "id": "155-2-inherited-house-gifted-within-household",
+          "conclusionsDiffer": false,
+          "positions": [
+            "A:exempt",
+            "B:exempt"
+          ]
+        }
+      ],
+      "isExempt": true,
+      "summaryText": "21세대1주택 비과세 (요약)비과세 — 1세대1주택 비과세 요건을 충족합니다.비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다.비과세 판정에서 자세히 보기 →",
+      "verdictLabel": "비과세",
+      "contestedCardTitlePresent": false,
+      "contestedCardTestIds": [],
+      "nodesAfterSummary": [
+        "DIV :: 인쇄이 사실로 양도세 계산"
+      ],
+      "phraseCount": 0
+    },
+    "oneHouseStatus": 200,
+    "oneHouse": {
+      "verdictLabel": "비과세",
+      "contestedCardTestIds": [
+        "one-house-contested-155-2-inherited-house-gifted-within-household"
+      ],
+      "phraseCount": 1
+    }
+  },
+  "N-E107-not-gifted": {
+    "surchargeStatus": 200,
+    "surchargeFe8Errors": [],
+    "surcharge": {
+      "scopeSupported": false,
+      "scopeReason": "before_2018_04_01",
+      "contested": [],
+      "isExempt": true,
+      "summaryText": "21세대1주택 비과세 (요약)비과세 — 1세대1주택 비과세 요건을 충족합니다.비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다.비과세 판정에서 자세히 보기 →",
+      "verdictLabel": "비과세",
+      "contestedCardTitlePresent": false,
+      "contestedCardTestIds": [],
+      "nodesAfterSummary": [
+        "DIV :: 인쇄이 사실로 양도세 계산"
+      ],
+      "phraseCount": 0
+    },
+    "oneHouseStatus": 200,
+    "oneHouse": {
+      "verdictLabel": "비과세",
+      "contestedCardTestIds": [],
+      "phraseCount": 0
+    }
+  }
+}

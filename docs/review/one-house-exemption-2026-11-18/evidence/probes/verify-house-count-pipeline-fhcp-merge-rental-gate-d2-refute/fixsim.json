@@ -1,0 +1,38 @@
+{
+  "미답+late": {
+    "current": "undefined",
+    "fixed": "unanswered",
+    "filteredIds": [
+      "a"
+    ]
+  },
+  "예+late": {
+    "current": "undefined",
+    "fixed": "waived",
+    "filteredIds": [
+      "a"
+    ]
+  },
+  "미답+first": {
+    "current": "undefined",
+    "fixed": "unanswered",
+    "filteredIds": [
+      "a"
+    ]
+  },
+  "미답+순서 미정(soldSameDay만)": {
+    "current": "undefined",
+    "fixed": "undefined",
+    "filteredIds": [
+      "a",
+      "und"
+    ]
+  },
+  "미답 a만": {
+    "current": "unanswered",
+    "fixed": "unanswered",
+    "filteredIds": [
+      "a"
+    ]
+  }
+}

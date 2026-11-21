@@ -1,0 +1,11 @@
+## 통산 · ⑳ A · 2주택
+issues=[] status=200
+isExempt=true partial=false tax=0 N3=true
+
+## 통산 없음 · ⑳ A · 2주택
+issues=[] status=200
+isExempt=true partial=false tax=0 N3=false
+
+## 통산 · ⑳ 없음 · 1주택
+issues=[] status=200
+isExempt=true partial=false tax=0 N3=false

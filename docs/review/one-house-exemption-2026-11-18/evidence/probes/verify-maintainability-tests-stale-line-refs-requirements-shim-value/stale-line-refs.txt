@@ -1,0 +1,95 @@
+total=1569 resolved_unique=1449 out_of_range=71
+17	redevelopment.ts
+16	transfer-tax-aggregate.ts
+10	transfer-tax-exemption-requirements.ts
+4	route.ts
+3	inheritance-tax.ts
+2	transfer-tax-validate-asset.ts
+2	FilingFormTableHelpers.ts
+2	transfer-tax-carryover.ts
+2	CompanionAcqPurchaseBlock.tsx
+1	BuildingStdPriceForm.tsx
+1	transfer-tax-schema.ts
+1	inheritance.ts
+1	transfer-tax-exemption.ts
+1	BundledAllocationCard.tsx
+1	gift-burdened-transfer-api.ts
+1	KiwoomValuationAutoFetchButton.tsx
+1	TransferTaxResultView.tsx
+1	multi-house-surcharge-helpers.ts
+1	MixedUseResultCard.tsx
+1	LandBuildingSaleSplitSection.tsx
+1	inheritance-deductions.ts
+1	stock-transfer-tax-schema.ts
+---
+__tests__/api/one-house-exemption.route.anchor.test.ts:434 -> transfer-tax-exemption-requirements.ts:189 (len 60)
+__tests__/api/transfer.route.bundled-penalty-g02.anchor.test.ts:16 -> transfer-tax-aggregate.ts:458 (len 202)
+__tests__/api/transfer.route.gb-amendment.predo.anchor.test.ts:14 -> transfer-tax-aggregate.ts:386 (len 202)
+__tests__/calc/cross-102-2-wiring.predo.anchor.test.ts:19 -> transfer-tax-aggregate.ts:221 (len 202)
+__tests__/calc/judgment-region-code-transport.anchor.test.ts:9 -> transfer-tax-exemption-requirements.ts:473 (len 60)
+__tests__/calc/judgment-sale-address-regulated.ui.test.tsx:10 -> transfer-tax-exemption-requirements.ts:382 (len 60)
+__tests__/calc/judgment-transfer-regulated-region-code.predo.anchor.test.ts:8 -> transfer-tax-exemption-requirements.ts:382 (len 60)
+__tests__/calc/nts-report-acq-base-land.anchor.test.tsx:15 -> BuildingStdPriceForm.tsx:565 (len 539)
+__tests__/calc/usage-conversion-validate.test.ts:59 -> transfer-tax-validate-asset.ts:557 (len 496)
+__tests__/components/calc/results/transfer/DetailedStatementRedevelopmentBuilders.test.ts:44 -> redevelopment.ts:667 (len 211)
+__tests__/components/land-contrib-statement-settlement-slot.anchor.test.ts:6 -> lib/tax-engine/redevelopment.ts:267 (len 211)
+__tests__/components/redev-receive-only-filing-total.anchor.test.ts:242 -> redevelopment.ts:695 (len 211)
+__tests__/components/split-acq-date-mixed-note.test.tsx:147 -> app/api/calc/transfer/route.ts:568 (len 465)
+__tests__/components/transfer-local-tax-base.anchor.test.ts:8 -> transfer-tax-aggregate.ts:444 (len 202)
+__tests__/components/transfer-local-tax-base.anchor.test.ts:16 -> FilingFormTableHelpers.ts:753 (len 674)
+__tests__/components/ui-review-batch2.anchor.test.tsx:20 -> redevelopment.ts:540 (len 211)
+__tests__/lib/calc/multi-usage-conversion-plumbing.anchor.test.ts:12 -> transfer-tax-exemption-requirements.ts:272 (len 60)
+__tests__/lib/stores/migrate-asset-id-guard.anchor.test.ts:17 -> transfer-tax-validate-asset.ts:712 (len 496)
+__tests__/lib/stores/migrate-asset-id-guard.anchor.test.ts:21 -> transfer-tax-schema.ts:659 (len 613)
+__tests__/tax-engine/stock-transfer/carryover-97-2-comparison.anchor.test.ts:13 -> transfer-tax-carryover.ts:616 (len 538)
+__tests__/tax-engine/transfer-tax/basic-info-building-area.anchor.test.ts:86 -> FilingFormTableHelpers.ts:695 (len 674)
+__tests__/tax-engine/transfer-tax/redevelopment/carryover-detail-dropped.anchor.test.ts:22 -> transfer-tax-aggregate.ts:661 (len 202)
+__tests__/tax-engine/transfer-tax/redevelopment/carryover-detail-dropped.anchor.test.ts:254 -> transfer-tax-aggregate.ts:661 (len 202)
+__tests__/tax-engine/transfer-tax/redevelopment/case-redev-right-transfer-pay-lthd-split.test.ts:237 -> lib/tax-engine/redevelopment.ts:340 (len 211)
+__tests__/tax-engine/transfer-tax/redevelopment/land-contributed-right-no-one-house.anchor.test.ts:14 -> redevelopment.ts:535 (len 211)
+__tests__/tax-engine/transfer-tax/redevelopment/right-actual-settlement-dates.anchor.test.ts:6 -> redevelopment.ts:640 (len 211)
+__tests__/tax-engine/transfer-tax/redevelopment/right-actual-settlement-dates.anchor.test.ts:10 -> redevelopment.ts:293 (len 211)
+__tests__/tax-engine/transfer-tax/redevelopment/right-actual-settlement-dates.anchor.test.ts:11 -> redevelopment.ts:457 (len 211)
+__tests__/tax-engine/transfer-tax/redevelopment/right-receive-expenses-apportion.anchor.test.ts:64 -> redevelopment.ts:346 (len 211)
+__tests__/tax-engine/transfer/aggregate-partial-nbl-104-5.anchor.test.ts:11 -> transfer-tax-aggregate.ts:280 (len 202)
+__tests__/tax-engine/transfer/audit-fix-aggregate.test.ts:9 -> transfer-tax-aggregate.ts:411 (len 202)
+__tests__/tax-engine/transfer/audit-fix-transfer-tax-penalty.test.ts:8 -> app/api/calc/transfer/route.ts:756 (len 465)
+__tests__/tax-engine/transfer/estimated-acq-float-precision.mixed-use.anchor.test.ts:184 -> inheritance.ts:320 (len 246)
+__tests__/tax-engine/transfer/unregistered-91-1-exemption-bar.anchor.test.ts:14 -> transfer-tax-exemption.ts:572 (len 557)
+app/api/calc/transfer/bundled-route.ts:246 -> transfer-tax-aggregate.ts:458 (len 202)
+app/api/calc/transfer/bundled-route.ts:416 -> transfer-tax-aggregate.ts:461 (len 202)
+app/api/calc/transfer/bundled-split-helpers.ts:78 -> BundledAllocationCard.tsx:583 (len 566)
+app/api/calc/transfer/general-building-route-cards.ts:68 -> transfer-tax-aggregate.ts:386 (len 202)
+app/api/calc/transfer/multi/route-property-input.ts:214 -> transfer-tax-exemption-requirements.ts:272 (len 60)
+app/calc/one-house-exemption/steps/Step3.tsx:85 -> transfer-tax-exemption-requirements.ts:382 (len 60)
+components/calc/gift/StockBurdenedDebtSection.tsx:122 -> gift-burdened-transfer-api.ts:507 (len 475)
+components/calc/inheritance/listed-stock/KiwoomValuationResultCard.tsx:11 -> KiwoomValuationAutoFetchButton.tsx:193 (len 121)
+components/calc/results/MultiTransferPropertyBreakdown.tsx:76 -> transfer-tax-aggregate.ts:559 (len 202)
+components/calc/results/MultiTransferPropertyBreakdown.tsx:122 -> transfer-tax-aggregate.ts:520 (len 202)
+components/calc/results/mixed-use/MixedUseResultCard.tsx:197 -> TransferTaxResultView.tsx:709 (len 659)
+components/calc/results/transfer/DetailedStatementRedevOverrides.ts:68 -> lib/tax-engine/redevelopment.ts:267 (len 211)
+components/calc/results/transfer/DetailedStatementRedevelopmentBuilders.ts:405 -> redevelopment.ts:667 (len 211)
+components/calc/results/transfer/RedevRightReceiveBlocks.tsx:46 -> redevelopment.ts:407 (len 211)
+components/calc/results/transfer/receive-only-display.ts:19 -> lib/tax-engine/redevelopment.ts:695 (len 211)
+components/calc/transfer/CompanionAcqDateSection.tsx:279 -> app/api/calc/transfer/route.ts:568 (len 465)
+components/calc/transfer/HouseEntryRentalTypeSection.tsx:7 -> multi-house-surcharge-helpers.ts:108 (len 13)
+components/calc/transfer/HousingContribEstimatedSection.tsx:52 -> redevelopment.ts:540 (len 211)
+components/calc/transfer/LandBuildingSaleSplitSection.tsx:9 -> CompanionAcqPurchaseBlock.tsx:711 (len 647)
+lib/calc/cross-102-2-apply.ts:20 -> transfer-tax-aggregate.ts:221 (len 202)
+lib/calc/deduction-besshi-data.ts:64 -> inheritance-tax.ts:457 (len 455)
+lib/calc/deduction-besshi-data.ts:132 -> inheritance-tax.ts:725 (len 455)
+lib/calc/filing-form-9-data.ts:8 -> inheritance-tax.ts:667 (len 455)
+lib/calc/household-house-count.ts:19 -> transfer-tax-exemption-requirements.ts:65 (len 60)
+lib/calc/household-house-count.ts:663 -> app/api/calc/one-house-exemption/route.ts:176 (len 79)
+lib/calc/multi-transfer-property-payload.ts:126 -> transfer-tax-exemption-requirements.ts:272 (len 60)
+lib/calc/one-house-exemption-api.ts:177 -> transfer-tax-exemption-requirements.ts:382 (len 60)
+lib/calc/self-built-scope.ts:7 -> CompanionAcqPurchaseBlock.tsx:757 (len 647)
+lib/calc/transfer-tax-api-helpers.ts:399 -> lib/tax-engine/redevelopment.ts:786 (len 211)
+lib/calc/transfer-tax-validate-mixed-use-asset.ts:113 -> MixedUseResultCard.tsx:334 (len 205)
+lib/calc/transfer-tax-validate-split.ts:307 -> LandBuildingSaleSplitSection.tsx:183 (len 144)
+lib/tax-engine/deductions/personal-deduction-calc.ts:365 -> inheritance-deductions.ts:551 (len 515)
+lib/tax-engine/stock-transfer/stock-carryover.ts:18 -> transfer-tax-carryover.ts:616 (len 538)
+lib/tax-engine/stock-transfer/stock-transfer-aggregate-each-item.ts:52 -> lib/api/stock-transfer-tax-schema.ts:548 (len 520)
+lib/tax-engine/transfer-tax-redevelopment.ts:180 -> redevelopment.ts:535 (len 211)
+lib/tax-engine/transfer-tax-redevelopment.ts:605 -> transfer-tax-aggregate.ts:661 (len 202)
+lib/tax-engine/transfer-tax-redevelopment.ts:607 -> transfer-tax-aggregate.ts:508 (len 202)

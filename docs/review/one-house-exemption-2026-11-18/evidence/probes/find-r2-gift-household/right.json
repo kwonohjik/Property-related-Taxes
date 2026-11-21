@@ -1,0 +1,33 @@
+[
+ {
+  "cause": "purchase",
+  "judgmentVe": [],
+  "calcCause": "purchase",
+  "calcIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "calcBodyCause": "purchase",
+  "succ": false
+ },
+ {
+  "cause": "gift",
+  "judgmentVe": [],
+  "calcCause": "gift",
+  "calcIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "calcBodyCause": "gift",
+  "calcBodyDonor": "2005-01-01",
+  "succ": false
+ },
+ {
+  "cause": "inheritance",
+  "judgmentVe": [],
+  "calcCause": "inheritance",
+  "calcIssues": [
+   "0:addressJibun:자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ],
+  "calcBodyCause": "inheritance",
+  "succ": false
+ }
+]

@@ -1,0 +1,20 @@
+{
+  "houses=0": {
+    "perKeystrokeMs": 0.12,
+    "validateStep2Ms": 0.02,
+    "validateStep3Ms": 0.01,
+    "errs2": []
+  },
+  "houses=3": {
+    "perKeystrokeMs": 0.69,
+    "validateStep2Ms": 0.18,
+    "validateStep3Ms": 0.01,
+    "errs2": []
+  },
+  "houses=8": {
+    "perKeystrokeMs": 1.07,
+    "validateStep2Ms": 0.32,
+    "validateStep3Ms": 0.01,
+    "errs2": []
+  }
+}

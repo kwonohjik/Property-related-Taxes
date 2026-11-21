@@ -1,0 +1,139 @@
+/**
+ * @vitest-environment jsdom
+ *
+ * probe — 중과 메뉴 D3a 요약 카드가 「해석이 갈림 … 아래 「해석이 갈리는 쟁점」」을 띄우는데 그 카드가 화면에 없는지.
+ * 대조군: 같은 폼을 1주택 판정 route + 결과뷰로 돌리면 쟁점 카드가 있다. 결론이 같은 쟁점(E109)·쟁점 없음(N-E107)은 배지가 본 결론.
+ */
+import { describe, it, expect, afterEach, afterAll, vi } from "vitest";
+import { render, screen, cleanup } from "@testing-library/react";
+import { NextRequest } from "next/server";
+import { writeFileSync, mkdirSync } from "node:fs";
+import { POST as SURCHARGE_POST } from "@/app/api/calc/multi-house-surcharge-judgment/route";
+import { POST as ONE_HOUSE_POST } from "@/app/api/calc/one-house-exemption/route";
+import { MultiHouseSurchargeResultView } from "@/components/calc/results/MultiHouseSurchargeResultView";
+import { OneHouseJudgmentResultView } from "@/components/calc/results/OneHouseJudgmentResultView";
+import { buildMultiHouseSurchargeApiBody } from "@/lib/calc/multi-house-surcharge-api";
+import { validateAllSurchargeSteps } from "@/lib/calc/multi-house-surcharge-validate";
+import { buildOneHouseExemptionApiBody } from "@/lib/calc/one-house-exemption-api";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
+import { buildCaseForm, type RulingCase } from "../calc/one-house-rulings/harness";
+import E001 from "../calc/one-house-rulings/cases/E001.json";
+import E083 from "../calc/one-house-rulings/cases/E083.json";
+import E110 from "../calc/one-house-rulings/cases/E110.json";
+import E109 from "../calc/one-house-rulings/cases/E109.json";
+import E107 from "../calc/one-house-rulings/cases/E107.json";
+
+vi.mock("@/components/ui/law-article-modal", () => ({ LawArticleModal: ({ label }: { label?: string }) => <span>{label}</span> }));
+
+const OUT =
+  "<session>/scratchpad/probes/v3-r3-contested-issues-surcharge-summary-points-to-missing-contested-card-combined";
+const results: Record<string, unknown> = {};
+
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
+afterAll(() => {
+  mkdirSync(OUT, { recursive: true });
+  writeFileSync(`${OUT}/result.json`, JSON.stringify(results, null, 2));
+});
+
+const pick = (file: unknown, id: string) => (file as RulingCase[]).find((c) => c.id === id)!;
+
+async function post(handler: typeof SURCHARGE_POST, url: string, body: unknown) {
+  const res = await handler(
+    new NextRequest(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
+      body: JSON.stringify(body),
+    }),
+  );
+  const json = await res.json();
+  return { status: res.status, json };
+}
+
+async function runCase(c: RulingCase) {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(`${c.today}T03:00:00Z`));
+  const form = buildCaseForm(c);
+
+  // ── 중과 메뉴 ──
+  const s = await post(SURCHARGE_POST, "http://localhost/api/calc/multi-house-surcharge-judgment", buildMultiHouseSurchargeApiBody(form));
+  const out: Record<string, unknown> = { surchargeStatus: s.status, surchargeFe8Errors: validateAllSurchargeSteps(form) };
+  if (s.status === 200) {
+    const data = s.json.data;
+    render(
+      <MultiHouseSurchargeResultView
+        result={data}
+        formHouses={form.houses}
+        formRights={form.presaleRights}
+        sellingStdPrice={form.assets[0].standardPriceAtTransfer}
+        onCalculateTax={() => {}}
+      />,
+    );
+    const root = screen.getByTestId("surcharge-result");
+    out.surcharge = {
+      scopeSupported: data.scope?.supported,
+      scopeReason: data.scope?.reason,
+      contested: (data.exemption.contestedIssues ?? []).map((i: { id: string; conclusionsDiffer: boolean; positions: { key: string; verdict: string }[] }) => ({
+        id: i.id,
+        conclusionsDiffer: i.conclusionsDiffer,
+        positions: i.positions.map((p) => `${p.key}:${p.verdict}`),
+      })),
+      isExempt: data.exemption.judgment.isExempt,
+      summaryText: screen.getByTestId("surcharge-exemption-summary").textContent,
+      verdictLabel: screen.getByTestId("surcharge-exemption-verdict").textContent,
+      contestedCardTitlePresent: (root.textContent ?? "").includes("해석이 갈리는 쟁점」") ,
+      contestedCardTestIds: Array.from(root.querySelectorAll("[data-testid^='one-house-contested-']")).map((e) => e.getAttribute("data-testid")),
+      // 요약 카드 뒤에 오는 형제 노드(아래 섹션) 목록
+      nodesAfterSummary: (() => {
+        const sum = screen.getByTestId("surcharge-exemption-summary");
+        const after: string[] = [];
+        let n = sum.nextElementSibling;
+        while (n) {
+          after.push((n.getAttribute("data-testid") ?? n.tagName) + " :: " + (n.textContent ?? "").slice(0, 40));
+          n = n.nextElementSibling;
+        }
+        return after;
+      })(),
+      // 「해석이 갈리는 쟁점」 문자열 출현 횟수(요약 문구 안 1회 외에 카드 제목이 있는지)
+      phraseCount: ((root.textContent ?? "").match(/해석이 갈리는 쟁점/g) ?? []).length,
+    };
+    cleanup();
+  } else {
+    out.surchargeError = s.json.error;
+  }
+
+  // ── 대조군: 1주택 메뉴 ──
+  const o = await post(ONE_HOUSE_POST, "http://localhost/api/calc/one-house-exemption", buildOneHouseExemptionApiBody(form));
+  out.oneHouseStatus = o.status;
+  if (o.status === 200) {
+    render(<OneHouseJudgmentResultView result={o.json.data} />);
+    const root = screen.getByTestId("one-house-judgment-result");
+    out.oneHouse = {
+      verdictLabel: screen.getByTestId("one-house-verdict").textContent,
+      contestedCardTestIds: Array.from(root.querySelectorAll("[data-testid^='one-house-contested-']"))
+        .map((e) => e.getAttribute("data-testid"))
+        .filter((t) => !/-(A|B)(-verdict)?$|-note$/.test(t ?? "")),
+      phraseCount: ((root.textContent ?? "").match(/해석이 갈리는 쟁점/g) ?? []).length,
+    };
+  }
+  return out;
+}
+
+describe("probe", () => {
+  const cases: [string, unknown][] = [
+    ["E001-dual", E001],
+    ["E083-dual", E083],
+    ["E110-dual", E110],
+    ["E109-dual", E109],
+    ["N-E107-not-gifted", E107],
+  ];
+  for (const [id, file] of cases) {
+    it(id, async () => {
+      const r = await runCase(pick(file, id));
+      results[id] = r;
+      expect(r.surchargeStatus).toBe(200);
+    });
+  }
+});

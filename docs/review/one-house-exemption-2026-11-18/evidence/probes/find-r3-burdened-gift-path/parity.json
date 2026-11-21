@@ -1,0 +1,140 @@
+{
+  "P1_nonreg_1house": {
+    "gift": {
+      "v8": null,
+      "status": 200,
+      "isExempt": true,
+      "reason": "1세대1주택 비과세"
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "reason": "1세대1주택 비과세",
+      "issues": []
+    },
+    "menu": {
+      "status": 200,
+      "isExempt": true,
+      "applied": [],
+      "errs": []
+    }
+  },
+  "P2a_gangnam_res12": {
+    "gift": {
+      "v8": null,
+      "status": 200,
+      "isExempt": false
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": false,
+      "issues": []
+    },
+    "menu": {
+      "status": 200,
+      "isExempt": false,
+      "applied": [],
+      "errs": []
+    }
+  },
+  "P2b_gangnam_res24": {
+    "gift": {
+      "v8": null,
+      "status": 200,
+      "isExempt": true,
+      "reason": "1세대1주택 비과세"
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "reason": "1세대1주택 비과세",
+      "issues": []
+    },
+    "menu": {
+      "status": 200,
+      "isExempt": true,
+      "applied": [],
+      "errs": []
+    }
+  },
+  "P3a_temp_ok": {
+    "gift": {
+      "v8": null,
+      "status": 200,
+      "isExempt": true,
+      "reason": "일시적 2주택 비과세"
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "reason": "일시적 2주택 비과세",
+      "issues": []
+    },
+    "menu": {
+      "status": 200,
+      "isExempt": true,
+      "applied": [
+        "155-1-temporary-two-house"
+      ],
+      "errs": []
+    }
+  },
+  "P3b_temp_late": {
+    "gift": {
+      "v8": null,
+      "status": 200,
+      "isExempt": false
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": false,
+      "issues": []
+    },
+    "menu": {
+      "status": 200,
+      "isExempt": false,
+      "applied": [],
+      "errs": []
+    }
+  },
+  "P4_temp_gangnam_res24": {
+    "gift": {
+      "v8": null,
+      "status": 200,
+      "isExempt": true,
+      "reason": "일시적 2주택 비과세"
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": true,
+      "reason": "일시적 2주택 비과세",
+      "issues": []
+    },
+    "menu": {
+      "status": 200,
+      "isExempt": true,
+      "applied": [
+        "155-1-temporary-two-house"
+      ],
+      "errs": []
+    }
+  },
+  "P5_holding_short": {
+    "gift": {
+      "v8": null,
+      "status": 200,
+      "isExempt": false
+    },
+    "calc": {
+      "status": 200,
+      "isExempt": false,
+      "issues": []
+    },
+    "menu": {
+      "status": 200,
+      "isExempt": false,
+      "applied": [],
+      "errs": []
+    }
+  }
+}

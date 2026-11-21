@@ -1,0 +1,186 @@
+{
+ "F281-era": {
+  "match": true,
+  "isExempt": false,
+  "unmet": [
+   "non-resident-121-2"
+  ],
+  "und": [],
+  "applied": []
+ },
+ "F281-era|NR=false": {
+  "isExempt": true,
+  "applied": []
+ },
+ "P-F281-only-house": {
+  "match": true,
+  "isExempt": true,
+  "unmet": [],
+  "und": [],
+  "applied": [
+   "154-1-proviso:overseas_residence"
+  ]
+ },
+ "P-F281-only-house|NR=false": {
+  "isExempt": true,
+  "applied": [
+   "154-1-proviso:overseas_residence"
+  ]
+ },
+ "F289-era": {
+  "match": true,
+  "isExempt": false,
+  "unmet": [
+   "non-resident-121-2"
+  ],
+  "und": [],
+  "applied": []
+ },
+ "F289-era|NR=false": {
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ]
+ },
+ "F307-era": {
+  "match": true,
+  "isExempt": false,
+  "unmet": [
+   "non-resident-121-2"
+  ],
+  "und": [],
+  "applied": []
+ },
+ "F307-era|NR=false": {
+  "isExempt": true,
+  "applied": [
+   "155-1-temporary-two-house"
+  ]
+ },
+ "F318-era": {
+  "match": true,
+  "isExempt": false,
+  "unmet": [
+   "non-resident-121-2"
+  ],
+  "und": [],
+  "applied": []
+ },
+ "F318-era|NR=false": {
+  "isExempt": true,
+  "applied": [
+   "155-5-marriage-merge"
+  ]
+ },
+ "F390-current": {
+  "match": true,
+  "isExempt": false,
+  "unmet": [],
+  "und": [],
+  "applied": []
+ },
+ "F390-current|NR=false": {
+  "isExempt": true,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ]
+ },
+ "S001-current": {
+  "match": true,
+  "isExempt": false,
+  "unmet": [],
+  "und": [],
+  "applied": []
+ },
+ "S001-current|NR=false": {
+  "isExempt": true,
+  "applied": [
+   "one_right_89_1_4_ga"
+  ]
+ },
+ "S02-6 acq2023 NR": {
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "appliedExceptions": [],
+  "undetermined": [],
+  "pending": [],
+  "unmetExceptions": [
+   "non-resident-121-2"
+  ],
+  "unmetReasons": {
+   "non-resident-121-2": [
+    "양도일 현재 비거주자에게는 1세대1주택 비과세(§89①3호)와 그 특례를 적용하지 않습니다(소득세법 §121 ② 단서 · 소득세법 시행령 §180의2).",
+    "예외: 해외이주 또는 1년 이상 국외거주(취학·근무)로 세대전원이 출국하고, 출국일 현재 1주택을 출국일부터 2년 이내에 양도하는 경우(시행령 §154①2호 나·다목) — 해당하면 ③ 보유 주택·권리 단계의 「§154① 단서 — 보유·거주 요건 면제 사유」에서 고르세요."
+   ]
+  },
+  "excludedHouses": [],
+  "contested": [],
+  "validationErrors": []
+ },
+ "S02-6 acq2020 NR": {
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": false,
+  "appliedExceptions": [],
+  "undetermined": [],
+  "pending": [],
+  "unmetExceptions": [
+   "non-resident-121-2"
+  ],
+  "unmetReasons": {
+   "non-resident-121-2": [
+    "양도일 현재 비거주자에게는 1세대1주택 비과세(§89①3호)와 그 특례를 적용하지 않습니다(소득세법 §121 ② 단서 · 소득세법 시행령 §180의2).",
+    "예외: 해외이주 또는 1년 이상 국외거주(취학·근무)로 세대전원이 출국하고, 출국일 현재 1주택을 출국일부터 2년 이내에 양도하는 경우(시행령 §154①2호 나·다목) — 해당하면 ③ 보유 주택·권리 단계의 「§154① 단서 — 보유·거주 요건 면제 사유」에서 고르세요."
+   ]
+  },
+  "excludedHouses": [],
+  "contested": [],
+  "validationErrors": []
+ },
+ "S02-6 acq2020 resident": {
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "appliedExceptions": [],
+  "undetermined": [],
+  "pending": [],
+  "unmetExceptions": [],
+  "unmetReasons": {},
+  "excludedHouses": [],
+  "contested": [],
+  "validationErrors": []
+ },
+ "right-2019 NR": {
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "appliedExceptions": [
+   "one_right_89_1_4_ga"
+  ],
+  "undetermined": [
+   "121-2-pre2020-non-resident-right-unverified"
+  ],
+  "pending": [],
+  "unmetExceptions": [],
+  "unmetReasons": {},
+  "excludedHouses": [],
+  "contested": [],
+  "validationErrors": []
+ },
+ "right-2019 resident": {
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "appliedExceptions": [
+   "one_right_89_1_4_ga"
+  ],
+  "undetermined": [],
+  "pending": [],
+  "unmetExceptions": [],
+  "unmetReasons": {},
+  "excludedHouses": [],
+  "contested": [],
+  "validationErrors": []
+ }
+}

@@ -1,0 +1,57 @@
+{
+  "differ_presale_2022-03-15": {
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": true,
+    "undetermined": [
+      "155-1-presale-holding-156-3-unverified"
+    ],
+    "contestedIssues": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "A": "exempt",
+        "B": "taxable",
+        "conclusionsDiffer": true
+      }
+    ],
+    "badge": "해석이 갈림",
+    "cardRendered": true,
+    "cardHeaderText": "해석이 갈리는 쟁점",
+    "cardNote": "이 화면 아래의 판정 내역과 양도소득세 계산기는 입장 A에 따릅니다.",
+    "cardA": "비과세",
+    "cardB": "과세"
+  },
+  "same_presale_2024-03-15": {
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": true,
+    "undetermined": [],
+    "contestedIssues": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "A": "exempt",
+        "B": "exempt",
+        "conclusionsDiffer": false
+      }
+    ],
+    "badge": "비과세",
+    "cardRendered": true,
+    "cardHeaderText": "해석이 갈리는 쟁점",
+    "cardNote": "두 입장의 결론이 같습니다.",
+    "cardA": "비과세",
+    "cardB": "비과세"
+  },
+  "control_general": {
+    "status": 200,
+    "validationErrors": [],
+    "isExempt": true,
+    "undetermined": [],
+    "contestedIssues": [],
+    "badge": "비과세",
+    "cardRendered": false,
+    "cardHeaderText": null,
+    "cardNote": null,
+    "cardA": null,
+    "cardB": null
+  }
+}

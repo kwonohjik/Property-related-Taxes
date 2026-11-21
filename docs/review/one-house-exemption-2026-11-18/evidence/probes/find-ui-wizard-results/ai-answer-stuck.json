@@ -1,0 +1,14 @@
+{
+  "before": {
+    "result": true,
+    "calls": 1
+  },
+  "after": {
+    "result": false,
+    "preparing": 1,
+    "calls": 1,
+    "step": 3,
+    "storeResultNull": true,
+    "price": "1300000000"
+  }
+}

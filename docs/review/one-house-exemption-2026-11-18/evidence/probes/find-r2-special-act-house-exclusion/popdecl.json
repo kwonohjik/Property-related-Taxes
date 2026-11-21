@@ -1,0 +1,219 @@
+{
+  "A_classify": {
+    "PYEONGCHANG": "decline",
+    "DONGDUCHEON": null,
+    "TONGYEONG": "interest",
+    "YECHEON": null,
+    "CHILGOK": null,
+    "GAPYEONG": "decline",
+    "GANGNEUNG": "interest",
+    "BUSAN_DONGGU": null,
+    "BUSAN_BUKGU": null
+  },
+  "B_dongducheon_2e": {
+    "excludedCount": 0,
+    "entries": []
+  },
+  "B_tongyeong_6e": {
+    "excludedCount": 0,
+    "entries": []
+  },
+  "B_tongyeong_3e": {
+    "excludedCount": 1,
+    "entries": [
+      {
+        "eligible": true
+      }
+    ]
+  },
+  "B_yecheon_2e": {
+    "excludedCount": 0,
+    "entries": []
+  },
+  "B_chilgok_2e": {
+    "excludedCount": 0,
+    "entries": []
+  },
+  "B_scope_dongducheon": false,
+  "B_scope_yecheon": false,
+  "C_gapyeong_acq2024_tr2025_02": {
+    "excludedCount": 1,
+    "entries": [
+      {
+        "eligible": true
+      }
+    ]
+  },
+  "C_gapyeong_acq2024_tr2026": {
+    "excludedCount": 1,
+    "entries": [
+      {
+        "eligible": true
+      }
+    ]
+  },
+  "D_gangneung_acq2025_12_10": {
+    "excludedCount": 1,
+    "entries": [
+      {
+        "eligible": true
+      }
+    ]
+  },
+  "E_pyeongchang_toggle_false": {
+    "excludedCount": 0,
+    "entries": []
+  },
+  "E_busan_donggu_toggle_true": {
+    "excludedCount": 1,
+    "entries": [
+      {
+        "eligible": true
+      }
+    ]
+  },
+  "E_nowon_toggle_true": {
+    "excludedCount": 0,
+    "entries": []
+  },
+  "F_base_pyeongchang": {
+    "isExempt": true,
+    "val": [],
+    "excluded": [
+      {
+        "houseId": "p",
+        "legalBasis": "조특법 §71의2①"
+      }
+    ],
+    "und": []
+  },
+  "F_dongducheon": {
+    "isExempt": true,
+    "val": [],
+    "excluded": [],
+    "und": []
+  },
+  "F_tongyeong_6e": {
+    "isExempt": true,
+    "val": [],
+    "excluded": [],
+    "und": []
+  },
+  "F_yecheon": {
+    "isExempt": true,
+    "val": [],
+    "excluded": [],
+    "und": []
+  },
+  "F_gapyeong_tr2025_02": {
+    "isExempt": false,
+    "val": [],
+    "excluded": [
+      {
+        "houseId": "p",
+        "legalBasis": "조특법 §71의2①"
+      }
+    ],
+    "und": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ]
+  },
+  "F_pyeongchang_toggle_false": {
+    "isExempt": false,
+    "val": [],
+    "excluded": [],
+    "und": []
+  },
+  "F_busan_donggu_toggle_true": {
+    "isExempt": true,
+    "val": [],
+    "excluded": [
+      {
+        "houseId": "p",
+        "legalBasis": "조특법 §71의2①"
+      }
+    ],
+    "und": []
+  },
+  "F_gangneung_acq2025_12": {
+    "isExempt": true,
+    "val": [],
+    "excluded": [
+      {
+        "houseId": "p",
+        "legalBasis": "조특법 §71의2①"
+      }
+    ],
+    "und": []
+  },
+  "G_ctrl_nonpop": {
+    "isExempt": false,
+    "val": [],
+    "excluded": [],
+    "und": []
+  },
+  "G_dongducheon": {
+    "isExempt": false,
+    "val": [],
+    "excluded": [],
+    "und": []
+  },
+  "G_tongyeong_6e": {
+    "isExempt": false,
+    "val": [],
+    "excluded": [],
+    "und": []
+  },
+  "G_yecheon": {
+    "isExempt": false,
+    "val": [],
+    "excluded": [],
+    "und": []
+  },
+  "G_chilgok": {
+    "isExempt": false,
+    "val": [],
+    "excluded": [],
+    "und": []
+  },
+  "G_gapyeong_tr2025_02": {
+    "isExempt": true,
+    "val": [],
+    "excluded": [
+      {
+        "houseId": "p",
+        "legalBasis": "조특법 §71의2①"
+      }
+    ],
+    "und": []
+  },
+  "G_gapyeong_ctrl_nonpop": {
+    "isExempt": false,
+    "val": [],
+    "excluded": [],
+    "und": []
+  },
+  "G_gangneung_acq2025_12": {
+    "isExempt": true,
+    "val": [],
+    "excluded": [
+      {
+        "houseId": "p",
+        "legalBasis": "조특법 §71의2①"
+      }
+    ],
+    "und": []
+  },
+  "G_gangneung_ctrl_acq2026_01": {
+    "isExempt": true,
+    "val": [],
+    "excluded": [
+      {
+        "houseId": "p",
+        "legalBasis": "조특법 §71의2①"
+      }
+    ],
+    "und": []
+  }
+}

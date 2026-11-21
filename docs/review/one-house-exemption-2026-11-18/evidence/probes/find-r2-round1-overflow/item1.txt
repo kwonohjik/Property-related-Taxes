@@ -1,0 +1,19 @@
+## ⑧ 단독 2주택 (U+A)
+status=200 errors=[]
+isExempt=true reason=수도권 밖 부득이한 사유 주택 비과세 (§155⑧ 근무상 형편) applied=["155-8-unavoidable:work"]
+unmet=[]
+
+## ⑧ + ① 3주택 (U 2000 · A 2015 · N 2024 · 양도 2026)
+status=200 errors=[]
+isExempt=false reason=undefined applied=[]
+unmet=["155-8-unavoidable:work: 세대 주택 수가 3채입니다 — 이 특례는 부득이한 사유로 취득한 수도권 밖 주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."]
+
+## ① 단독 2주택 (A · N)
+status=200 errors=[]
+isExempt=true reason=일시적 2주택 비과세 applied=["155-1-temporary-two-house"]
+unmet=[]
+
+## ⑥ + ① 3주택 (D-02 비교)
+status=200 errors=[]
+isExempt=false reason=undefined applied=[]
+unmet=["155-6-1ho-cultural-heritage: 세대 주택 수가 3채입니다 — 이 특례는 문화유산 주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."]

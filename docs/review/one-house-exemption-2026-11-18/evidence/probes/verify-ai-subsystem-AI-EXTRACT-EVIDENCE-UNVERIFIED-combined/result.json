@@ -1,0 +1,173 @@
+{
+  "A": {
+    "status": 200,
+    "formContractTotalPrice": "900000000",
+    "evidenceInText": false,
+    "issues": [],
+    "questionPaths": [
+      "asset.residencePeriods",
+      "asset.rentalHousingException.phrp154_10Answer"
+    ],
+    "previewFact": {
+      "path": "contractTotalPrice",
+      "value": "900000000",
+      "evidence": "양도가액 9억원",
+      "label": "예상 양도가액"
+    }
+  },
+  "A_judge_9억": {
+    "status": 200,
+    "validationErrors": [
+      "residencePeriods: 거주 구간 #1: 입주일을 입력하세요.",
+      "rentalHousingException.phrp154_10Answer: 장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요."
+    ],
+    "isExempt": true,
+    "isPartialExempt": false,
+    "isHighValue": null,
+    "judgmentKeys": [
+      "isExempt",
+      "isPartialExempt",
+      "exemptReason",
+      "appliedExceptions",
+      "article89Clause2",
+      "pending",
+      "undetermined",
+      "unmetExceptions",
+      "requirementReview",
+      "legalBasis"
+    ]
+  },
+  "A_judge_13억": {
+    "status": 200,
+    "validationErrors": [
+      "residencePeriods: 거주 구간 #1: 입주일을 입력하세요.",
+      "rentalHousingException.phrp154_10Answer: 장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요."
+    ],
+    "isExempt": false,
+    "isPartialExempt": true,
+    "isHighValue": null,
+    "judgmentKeys": [
+      "isExempt",
+      "isPartialExempt",
+      "exemptReason",
+      "appliedExceptions",
+      "article89Clause2",
+      "pending",
+      "undetermined",
+      "unmetExceptions",
+      "requirementReview",
+      "legalBasis"
+    ]
+  },
+  "B": {
+    "status": 200,
+    "formContractTotalPrice": null,
+    "issues": [],
+    "questionPaths": [
+      "llm:contractTotalPrice",
+      "validation:asset.residencePeriods",
+      "validation:asset.rentalHousingException.phrp154_10Answer"
+    ]
+  },
+  "B_judge": {
+    "status": 400,
+    "validationErrors": [
+      "contractTotalPrice: 예상 양도가액을 입력하세요.",
+      "residencePeriods: 거주 구간 #1: 입주일을 입력하세요.",
+      "rentalHousingException.phrp154_10Answer: 장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요."
+    ],
+    "isHighValue": null,
+    "judgmentKeys": [],
+    "error": {
+      "code": "INVALID_INPUT",
+      "message": "입력값이 올바르지 않습니다",
+      "fieldErrors": {
+        "transferPrice": [
+          "Too small: expected number to be >0"
+        ]
+      }
+    }
+  },
+  "C": {
+    "formContractTotalPrice": null,
+    "questionPaths": [
+      "validation:contractTotalPrice",
+      "validation:asset.residencePeriods",
+      "validation:asset.rentalHousingException.phrp154_10Answer"
+    ]
+  },
+  "D": {
+    "formAcquisitionDate": "2023-03-01",
+    "evidenceInText": false,
+    "issues": []
+  },
+  "D_judge": {
+    "status": 200,
+    "validationErrors": [
+      "residencePeriods: 거주 구간 #1: 입주일을 입력하세요.",
+      "rentalHousingException.phrp154_10Answer: 장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요."
+    ],
+    "isExempt": false,
+    "isPartialExempt": false,
+    "isHighValue": null,
+    "judgmentKeys": [
+      "isExempt",
+      "isPartialExempt",
+      "article89Clause2",
+      "appliedExceptions",
+      "pending",
+      "undetermined",
+      "unmetExceptions",
+      "requirementReview",
+      "legalBasis"
+    ]
+  },
+  "E": {
+    "verbatimEvidences": [
+      [
+        "2024.6.15. 양도하였다",
+        true
+      ],
+      [
+        "1세대 1주택이다",
+        true
+      ],
+      [
+        "서울 아파트를 취득하여",
+        true
+      ],
+      [
+        "2015.3.1. 서울 아파트를 취득하여",
+        true
+      ]
+    ],
+    "fixtureStyleParaphrases": [
+      [
+        "2015.3.1. 취득",
+        false
+      ],
+      [
+        "2024.6.15. 양도",
+        true
+      ],
+      [
+        "1세대",
+        true
+      ],
+      [
+        "주택",
+        true
+      ]
+    ],
+    "fabricated": [
+      [
+        "양도가액 9억원",
+        false
+      ],
+      [
+        "2023.3.1. 취득",
+        false
+      ]
+    ]
+  }
+}

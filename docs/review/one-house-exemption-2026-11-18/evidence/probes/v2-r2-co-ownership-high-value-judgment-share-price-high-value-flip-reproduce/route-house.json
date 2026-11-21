@@ -1,0 +1,94 @@
+{
+  "share7": {
+    "status": 200,
+    "validateErrors": [],
+    "bodyTransferPrice": 700000000,
+    "bodyHasTotalPropertyTransferPrice": false,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "exemptReason": "1세대1주택 비과세",
+    "verdict": {
+      "label": "비과세",
+      "tone": "emerald",
+      "detail": "1세대1주택 비과세 요건을 충족합니다."
+    },
+    "warnings": [],
+    "highValueRow": {
+      "id": "high-value",
+      "label": "양도가액 12억원 이하 — 고가주택 아님",
+      "status": "met",
+      "facts": [
+        {
+          "label": "양도가액",
+          "value": "700,000,000"
+        },
+        {
+          "label": "고가주택 기준금액",
+          "value": "12억"
+        }
+      ],
+      "legalBasis": "소득세법 §89 ①"
+    }
+  },
+  "whole14": {
+    "status": 200,
+    "validateErrors": [],
+    "bodyTransferPrice": 1400000000,
+    "bodyHasTotalPropertyTransferPrice": false,
+    "isExempt": false,
+    "isPartialExempt": true,
+    "exemptReason": "1세대1주택 고가주택",
+    "verdict": {
+      "label": "부분 비과세",
+      "tone": "amber",
+      "detail": "고가주택이므로 12억 초과분에 해당하는 양도차익만 과세됩니다."
+    },
+    "warnings": [],
+    "highValueRow": {
+      "id": "high-value",
+      "label": "고가주택(양도가액 12억원 초과) — 12억원 초과분 과세",
+      "status": "partial",
+      "facts": [
+        {
+          "label": "양도가액",
+          "value": "1,400,000,000"
+        },
+        {
+          "label": "고가주택 기준금액",
+          "value": "12억"
+        }
+      ],
+      "note": "고가주택이므로 양도차익 중 12억원 초과분에 해당하는 부분은 과세됩니다.",
+      "legalBasis": "소득세법 §89 ①"
+    }
+  },
+  "directShare7Total14": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": true,
+    "exemptReason": "1세대1주택 고가주택",
+    "verdict": {
+      "label": "부분 비과세",
+      "tone": "amber",
+      "detail": "고가주택이므로 12억 초과분에 해당하는 양도차익만 과세됩니다."
+    },
+    "warnings": [],
+    "highValueRow": {
+      "id": "high-value",
+      "label": "고가주택(양도가액 12억원 초과) — 12억원 초과분 과세",
+      "status": "partial",
+      "facts": [
+        {
+          "label": "양도가액",
+          "value": "1,400,000,000"
+        },
+        {
+          "label": "고가주택 기준금액",
+          "value": "12억"
+        }
+      ],
+      "note": "고가주택이므로 양도차익 중 12억원 초과분에 해당하는 부분은 과세됩니다.",
+      "legalBasis": "소득세법 §89 ①"
+    }
+  }
+}

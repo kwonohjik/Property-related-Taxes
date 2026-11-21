@@ -1,0 +1,138 @@
+{
+  "16_control_gwangju_holding_ok": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "und": [
+      "155-16-merged-special-city-unit"
+    ],
+    "unmet": [],
+    "reasons": [
+      "공공기관·법인 지방이전 특례(소득세법 시행령 §155⑯)의 지역 요건을 전남광주통합특별시(2026. 7. 1. 설치) 구역에서 옛 광주광역시 5개 자치구를 하나의 시로, 옛 전라남도 시·군을 각각의 시·군으로 보아 "
+    ]
+  },
+  "16_control_gwangju_holding_ok_cf_notRelocated": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [],
+    "unmet": [],
+    "reasons": []
+  },
+  "16_control_yeosu_holding_ok": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [
+      "155-16-merged-special-city-unit"
+    ],
+    "unmet": [],
+    "reasons": [
+      "공공기관·법인 지방이전 특례(소득세법 시행령 §155⑯)의 지역 요건을 전남광주통합특별시(2026. 7. 1. 설치) 구역에서 옛 광주광역시 5개 자치구를 하나의 시로, 옛 전라남도 시·군을 각각의 시·군으로 보아 "
+    ]
+  },
+  "16_control_yeosu_holding_ok_cf_met": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "und": [],
+    "unmet": [],
+    "reasons": []
+  },
+  "16_short_yeosu": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [
+      "155-16-merged-special-city-unit"
+    ],
+    "unmet": [],
+    "reasons": [
+      "공공기관·법인 지방이전 특례(소득세법 시행령 §155⑯)의 지역 요건을 전남광주통합특별시(2026. 7. 1. 설치) 구역에서 옛 광주광역시 5개 자치구를 하나의 시로, 옛 전라남도 시·군을 각각의 시·군으로 보아 "
+    ]
+  },
+  "16_short_yeosu_cf_met": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [],
+    "unmet": [],
+    "reasons": []
+  },
+  "16_short_gwangju": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [
+      "155-16-merged-special-city-unit"
+    ],
+    "unmet": [],
+    "reasons": [
+      "공공기관·법인 지방이전 특례(소득세법 시행령 §155⑯)의 지역 요건을 전남광주통합특별시(2026. 7. 1. 설치) 구역에서 옛 광주광역시 5개 자치구를 하나의 시로, 옛 전라남도 시·군을 각각의 시·군으로 보아 "
+    ]
+  },
+  "16_short_gwangju_cf_notRelocated": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [],
+    "unmet": [],
+    "reasons": []
+  },
+  "16_yeosu_3houses": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [],
+    "unmet": [],
+    "reasons": []
+  },
+  "hw_res0": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [
+      "regulated-hwaseong-announcement-window-unverified"
+    ],
+    "unmet": [],
+    "reasons": [
+      "일시적 2주택 처분기한은 신규 주택 취득 당시 종전·신규 주택이 모두 조정대상지역이면 짧아지는데, 이 사안의 신규 주택 취득·계약이 화성시 지정 시작 열흘(2020.06.19.~2020.06.29.)에 걸려 있습니다"
+    ]
+  },
+  "hw_res0_cf629": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "unmet": [],
+    "reasons": []
+  },
+  "hw_res24": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [
+      "regulated-hwaseong-announcement-window-unverified"
+    ],
+    "unmet": [],
+    "reasons": [
+      "일시적 2주택 처분기한은 신규 주택 취득 당시 종전·신규 주택이 모두 조정대상지역이면 짧아지는데, 이 사안의 신규 주택 취득·계약이 화성시 지정 시작 열흘(2020.06.19.~2020.06.29.)에 걸려 있습니다"
+    ]
+  },
+  "hw_res24_cf629": {
+    "isExempt": true,
+    "isPartialExempt": false,
+    "und": [],
+    "unmet": [],
+    "reasons": []
+  },
+  "hw_holdShort": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [
+      "regulated-hwaseong-announcement-window-unverified"
+    ],
+    "unmet": [],
+    "reasons": [
+      "일시적 2주택 처분기한은 신규 주택 취득 당시 종전·신규 주택이 모두 조정대상지역이면 짧아지는데, 이 사안의 신규 주택 취득·계약이 화성시 지정 시작 열흘(2020.06.19.~2020.06.29.)에 걸려 있습니다"
+    ]
+  },
+  "hw_holdShort_cf629": {
+    "isExempt": false,
+    "isPartialExempt": false,
+    "und": [],
+    "unmet": [],
+    "reasons": []
+  }
+}

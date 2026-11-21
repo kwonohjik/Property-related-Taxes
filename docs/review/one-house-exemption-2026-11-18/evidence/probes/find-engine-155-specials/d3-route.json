@@ -1,0 +1,71 @@
+{
+  "d3_ok": {
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "appliedExceptions": [
+      "155-1-temporary-two-house",
+      "155-7-rural:return_to_farm"
+    ],
+    "undetermined": [],
+    "pending": [],
+    "unmetExceptions": [],
+    "unmetReasons": {},
+    "excludedHouses": [],
+    "contested": [],
+    "validationErrors": []
+  },
+  "d3_ruralDeadlinePassed": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "appliedExceptions": [],
+    "undetermined": [],
+    "pending": [],
+    "unmetExceptions": [
+      "155-7-rural:return_to_farm"
+    ],
+    "unmetReasons": {
+      "155-7-rural:return_to_farm": [
+        "세대 주택 수가 3채입니다 — 이 특례는 농어촌주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."
+      ]
+    },
+    "excludedHouses": [],
+    "contested": [],
+    "validationErrors": []
+  },
+  "twoHouse_ruralDeadlinePassed_future": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "appliedExceptions": [],
+    "undetermined": [],
+    "pending": [
+      "155-7-3ho-return-to-farm"
+    ],
+    "unmetExceptions": [],
+    "unmetReasons": {},
+    "excludedHouses": [],
+    "contested": [],
+    "validationErrors": []
+  },
+  "d3_ruralDeadlinePassed_future": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "appliedExceptions": [],
+    "undetermined": [],
+    "pending": [],
+    "unmetExceptions": [
+      "155-7-rural:return_to_farm"
+    ],
+    "unmetReasons": {
+      "155-7-rural:return_to_farm": [
+        "세대 주택 수가 3채입니다 — 이 특례는 농어촌주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."
+      ]
+    },
+    "excludedHouses": [],
+    "contested": [],
+    "validationErrors": []
+  }
+}

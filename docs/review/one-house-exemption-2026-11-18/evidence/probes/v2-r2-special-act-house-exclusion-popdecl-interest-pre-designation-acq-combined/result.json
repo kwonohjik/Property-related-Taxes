@@ -1,0 +1,208 @@
+{
+  "E": {
+    "2025-11-27": {
+      "excludedCount": 0,
+      "entries": [],
+      "scopeCandidate": false
+    },
+    "2025-11-28": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true,
+          "unconfirmed": false,
+          "reason": null
+        }
+      ],
+      "scopeCandidate": true
+    },
+    "2025-12-10": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true,
+          "unconfirmed": false,
+          "reason": null
+        }
+      ],
+      "scopeCandidate": true
+    },
+    "2025-12-31": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true,
+          "unconfirmed": false,
+          "reason": null
+        }
+      ],
+      "scopeCandidate": true
+    },
+    "2026-01-01": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true,
+          "unconfirmed": false,
+          "reason": null
+        }
+      ],
+      "scopeCandidate": true
+    },
+    "2026-01-05": {
+      "excludedCount": 1,
+      "entries": [
+        {
+          "eligible": true,
+          "unconfirmed": false,
+          "reason": null
+        }
+      ],
+      "scopeCandidate": true
+    }
+  },
+  "M": {
+    "G_gangneung_acq2025_12_10": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": true,
+      "appliedExceptions": [],
+      "excludedHouses": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "undetermined": [],
+      "unmet": []
+    },
+    "G_gangneung_acq2025_11_28": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": true,
+      "appliedExceptions": [],
+      "excludedHouses": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "undetermined": [],
+      "unmet": []
+    },
+    "G_gangneung_acq2025_12_31": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": true,
+      "appliedExceptions": [],
+      "excludedHouses": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "undetermined": [],
+      "unmet": []
+    },
+    "C_gangneung_acq2026_01_01": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": true,
+      "appliedExceptions": [],
+      "excludedHouses": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "undetermined": [],
+      "unmet": []
+    },
+    "C_gangneung_acq2026_01_05": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": true,
+      "appliedExceptions": [],
+      "excludedHouses": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "undetermined": [],
+      "unmet": []
+    },
+    "C_gangneung_acq2025_11_27": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": false,
+      "appliedExceptions": [],
+      "excludedHouses": [],
+      "undetermined": [],
+      "unmet": []
+    },
+    "C_pyeongchang_acq2025_12_10": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": true,
+      "appliedExceptions": [],
+      "excludedHouses": [
+        {
+          "houseId": "p",
+          "legalBasis": "조특법 §71의2①"
+        }
+      ],
+      "undetermined": [],
+      "unmet": []
+    },
+    "C_nowon_acq2025_12_10": {
+      "status": 200,
+      "validationErrors": [],
+      "isExempt": false,
+      "appliedExceptions": [],
+      "excludedHouses": [],
+      "undetermined": [],
+      "unmet": []
+    }
+  },
+  "C": {
+    "G_gangneung_acq2025_12_10": {
+      "status": 200,
+      "isExempt": true,
+      "totalTax": 0,
+      "entries": [
+        {
+          "article": "pop_decline_71_2",
+          "houseId": "p",
+          "articleLabel": "인구감소지역주택(조특법 §71의2①)",
+          "eligible": true,
+          "legalBasis": "조특법 §71의2①",
+          "notice": "양도소득과세표준신고와 함께 과세특례신고서를 제출해야 하며(조특령 §68의2②), 인구감소지역주택 취득 전에 조합원입주권·분양권을 보유했다면 그 보유를 증명하는 서류를 함께 냅니다(③)."
+        }
+      ],
+      "popWarn": []
+    },
+    "C_gangneung_acq2026_01_05": {
+      "status": 200,
+      "isExempt": true,
+      "totalTax": 0,
+      "entries": [
+        {
+          "article": "pop_decline_71_2",
+          "houseId": "p",
+          "articleLabel": "인구감소지역주택(조특법 §71의2①)",
+          "eligible": true,
+          "legalBasis": "조특법 §71의2①",
+          "notice": "양도소득과세표준신고와 함께 과세특례신고서를 제출해야 하며(조특령 §68의2②), 인구감소지역주택 취득 전에 조합원입주권·분양권을 보유했다면 그 보유를 증명하는 서류를 함께 냅니다(③)."
+        }
+      ],
+      "popWarn": []
+    },
+    "C_gangneung_acq2025_11_27": {
+      "status": 200,
+      "isExempt": false,
+      "totalTax": 245751000,
+      "popWarn": []
+    }
+  }
+}

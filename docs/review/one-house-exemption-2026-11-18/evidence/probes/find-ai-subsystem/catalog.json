@@ -1,0 +1,1052 @@
+[
+ {
+  "path": "isOneHousehold",
+  "kind": "boolean"
+ },
+ {
+  "path": "transferorNonResident",
+  "kind": "boolean"
+ },
+ {
+  "path": "nonResidentPeriod",
+  "kind": "boolean"
+ },
+ {
+  "path": "nonResidentStartDate",
+  "kind": "date"
+ },
+ {
+  "path": "residentFromDate",
+  "kind": "date"
+ },
+ {
+  "path": "transferDate",
+  "kind": "date"
+ },
+ {
+  "path": "contractTotalPrice",
+  "kind": "amount"
+ },
+ {
+  "path": "demolishedBeforeBalance",
+  "kind": "boolean"
+ },
+ {
+  "path": "demolishedBeforeBalanceContractDate",
+  "kind": "date"
+ },
+ {
+  "path": "isUnregistered",
+  "kind": "boolean"
+ },
+ {
+  "path": "wasRegulatedAtAcquisition",
+  "kind": "boolean"
+ },
+ {
+  "path": "isRegulatedArea",
+  "kind": "boolean"
+ },
+ {
+  "path": "residencePeriodMonths",
+  "kind": "intString"
+ },
+ {
+  "path": "winWinRentalSpecial",
+  "kind": "boolean"
+ },
+ {
+  "path": "winWinRentalContractDate",
+  "kind": "date"
+ },
+ {
+  "path": "winWinRentalIncreaseRatePct",
+  "kind": "decimalString"
+ },
+ {
+  "path": "winWinRentalPriorLeaseMonths",
+  "kind": "intString"
+ },
+ {
+  "path": "winWinRentalLeaseMonths",
+  "kind": "intString"
+ },
+ {
+  "path": "winWinRentalLeaseEndDate",
+  "kind": "date"
+ },
+ {
+  "path": "temporaryTwoHouseSpecial",
+  "kind": "boolean"
+ },
+ {
+  "path": "newHouseAcquisitionDate",
+  "kind": "date"
+ },
+ {
+  "path": "newHouseRegulatedAtAcquisition",
+  "kind": "enum",
+  "values": [
+   "",
+   "yes",
+   "no"
+  ]
+ },
+ {
+  "path": "prevHouseRegulatedAtNewAcquisition",
+  "kind": "enum",
+  "values": [
+   "",
+   "yes",
+   "no"
+  ]
+ },
+ {
+  "path": "newHouseContractDate",
+  "kind": "date"
+ },
+ {
+  "path": "newHouseMoveInDate",
+  "kind": "date"
+ },
+ {
+  "path": "newHouseExistingTenant",
+  "kind": "boolean"
+ },
+ {
+  "path": "newHouseTenantLeaseEndDate",
+  "kind": "date"
+ },
+ {
+  "path": "publicInstitutionRelocation",
+  "kind": "boolean"
+ },
+ {
+  "path": "relocatedSigunguCode",
+  "kind": "string"
+ },
+ {
+  "path": "newHouseSigunguCode",
+  "kind": "string"
+ },
+ {
+  "path": "marriageDate",
+  "kind": "date"
+ },
+ {
+  "path": "parentalCareMergeDate",
+  "kind": "date"
+ },
+ {
+  "path": "parentalCareParentAge",
+  "kind": "enum",
+  "values": [
+   "",
+   "over_60",
+   "care_benefit",
+   "none"
+  ]
+ },
+ {
+  "path": "isFirstTransferredInMerge",
+  "kind": "boolean"
+ },
+ {
+  "path": "mergedHouseholdFirstHouseKind",
+  "kind": "enum",
+  "values": [
+   "",
+   "house_only",
+   "initial_right",
+   "succeeded_right",
+   "presale_right",
+   "right_only",
+   "none"
+  ]
+ },
+ {
+  "path": "generalHouseRightAtInheritance",
+  "kind": "enum",
+  "values": [
+   "",
+   "redevelopment_right",
+   "presale_right",
+   "none"
+  ]
+ },
+ {
+  "path": "rightThreeYearExceptionKind",
+  "kind": "enum",
+  "values": [
+   "",
+   "new_house",
+   "before_completion",
+   "delay",
+   "none"
+  ]
+ },
+ {
+  "path": "rightNewHouseCompletionDate",
+  "kind": "date"
+ },
+ {
+  "path": "rightMovedInWithin3Years",
+  "kind": "boolean"
+ },
+ {
+  "path": "rightResidedOneYearOrMore",
+  "kind": "boolean"
+ },
+ {
+  "path": "replacementHouseSpecial",
+  "kind": "boolean"
+ },
+ {
+  "path": "replBusinessApprovalDate",
+  "kind": "date"
+ },
+ {
+  "path": "replCompletionDate",
+  "kind": "date"
+ },
+ {
+  "path": "replResidenceMonths",
+  "kind": "intString"
+ },
+ {
+  "path": "replWillResideNewHouse",
+  "kind": "boolean"
+ },
+ {
+  "path": "provisoReason",
+  "kind": "enum",
+  "values": [
+   "",
+   "rental_5yr_residence",
+   "expropriation",
+   "overseas_migration",
+   "overseas_residence",
+   "unavoidable",
+   "pre_designation_contract",
+   "rental_registration_4ho"
+  ]
+ },
+ {
+  "path": "provisoDepartureDate",
+  "kind": "date"
+ },
+ {
+  "path": "provisoDepartureOnlyHouse",
+  "kind": "enum",
+  "values": [
+   "",
+   "yes",
+   "no"
+  ]
+ },
+ {
+  "path": "provisoExpropriationDate",
+  "kind": "date"
+ },
+ {
+  "path": "provisoBusinessApprovalDate",
+  "kind": "date"
+ },
+ {
+  "path": "provisoRentalLeaseResidenceMonths",
+  "kind": "intString"
+ },
+ {
+  "path": "provisoPreContractNoHouse",
+  "kind": "boolean"
+ },
+ {
+  "path": "proviso4hoBusinessRegDate",
+  "kind": "date"
+ },
+ {
+  "path": "proviso4hoRentalRegDate",
+  "kind": "date"
+ },
+ {
+  "path": "proviso4hoRegulatedOneHouse",
+  "kind": "enum",
+  "values": [
+   "",
+   "yes",
+   "no"
+  ]
+ },
+ {
+  "path": "proviso4hoStatus",
+  "kind": "enum",
+  "values": [
+   "",
+   "maintained",
+   "auto_cancelled",
+   "voluntary_cancelled",
+   "demolition_cancelled",
+   "other"
+  ]
+ },
+ {
+  "path": "proviso4hoDuringMandatory",
+  "kind": "enum",
+  "values": [
+   "",
+   "yes",
+   "no"
+  ]
+ },
+ {
+  "path": "proviso4hoRentOver5",
+  "kind": "enum",
+  "values": [
+   "",
+   "yes",
+   "no"
+  ]
+ },
+ {
+  "path": "finalHouseRestartHistory",
+  "kind": "enum",
+  "values": [
+   "",
+   "yes",
+   "no"
+  ]
+ },
+ {
+  "path": "asset.assetKind",
+  "kind": "enum",
+  "values": [
+   "housing",
+   "right_to_move_in"
+  ]
+ },
+ {
+  "path": "asset.redevSubject",
+  "kind": "enum",
+  "values": [
+   "",
+   "right",
+   "apt"
+  ]
+ },
+ {
+  "path": "asset.regionCode",
+  "kind": "string"
+ },
+ {
+  "path": "asset.acquisitionDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.acquisitionCause",
+  "kind": "enum",
+  "values": [
+   "purchase",
+   "inheritance",
+   "gift"
+  ]
+ },
+ {
+  "path": "asset.decedentAcquisitionDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.decedentSameHouseholdBeforeInheritance",
+  "kind": "boolean"
+ },
+ {
+  "path": "asset.decedentCohabitationHoldingStartDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.decedentCohabitationResidenceMonths",
+  "kind": "intString"
+ },
+ {
+  "path": "asset.giftDonorRelation",
+  "kind": "enum",
+  "values": [
+   "",
+   "spouse",
+   "lineal",
+   "other"
+  ]
+ },
+ {
+  "path": "asset.donorAcquisitionDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.giftSameHousehold",
+  "kind": "enum",
+  "values": [
+   "",
+   "yes",
+   "no",
+   "rejoined"
+  ]
+ },
+ {
+  "path": "asset.giftHouseholdHoldingStartDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.hasNonHousingConversion",
+  "kind": "boolean"
+ },
+ {
+  "path": "asset.residentialUseStartDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.redevExemptionEligibleAtApproval",
+  "kind": "enum",
+  "values": [
+   "",
+   "yes",
+   "no"
+  ]
+ },
+ {
+  "path": "asset.redevApprovalDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.redevOtherHouseAcquisitionDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.residencePeriods[].moveInDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.residencePeriods[].moveOutDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.residencePeriodMonthsAsset",
+  "kind": "decimalString"
+ },
+ {
+  "path": "asset.rentalHousingException.applyException",
+  "kind": "boolean"
+ },
+ {
+  "path": "asset.rentalHousingException.scenario",
+  "kind": "enum",
+  "values": [
+   "A",
+   "B"
+  ]
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].businessRegistrationDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].rentalRegistrationDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].rentalRegisteredDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].rentalAcquisitionType",
+  "kind": "enum",
+  "values": [
+   "purchase",
+   "construction"
+  ]
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].rentalCategory",
+  "kind": "enum",
+  "values": [
+   "long_general",
+   "short_6y",
+   "existing_business",
+   "unsold_08_09",
+   "pre_2018"
+  ]
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].region",
+  "kind": "enum",
+  "values": [
+   "seoul-metro",
+   "non-metro"
+  ]
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].isApartment",
+  "kind": "boolean"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].isNationalSizeHousing",
+  "kind": "boolean"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].hasMinimum2Units",
+  "kind": "boolean"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].rentalMonths",
+  "kind": "intString"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].isInheritedRental",
+  "kind": "boolean"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].rentalSuccession",
+  "kind": "enum",
+  "values": [
+   "",
+   "inheritance",
+   "household_gift",
+   "assumption"
+  ]
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].decedentRentalMonths",
+  "kind": "intString"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].donorBusinessRegistrationDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].donorRentalRegistrationDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].donorRentalRegisteredDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].standardPriceAtRentalStart",
+  "kind": "amount"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].acquisitionOfficialPrice",
+  "kind": "amount"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].rentalAutoTermination",
+  "kind": "boolean"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].registrationCancellationDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].terminatedRegistrationType",
+  "kind": "enum",
+  "values": [
+   "",
+   "short_term",
+   "long_term_general"
+  ]
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].requirementsConfirmed",
+  "kind": "boolean"
+ },
+ {
+  "path": "asset.rentalHousingException.rentalUnits[].mergeOrigin",
+  "kind": "enum",
+  "values": [
+   "seller_side",
+   "counterpart_side",
+   "after_merge"
+  ]
+ },
+ {
+  "path": "asset.rentalHousingException.counterpartHouseResidedTwoYears",
+  "kind": "enum",
+  "values": [
+   "",
+   "yes",
+   "no"
+  ]
+ },
+ {
+  "path": "asset.rentalHousingException.priorRentalExemptionHistory",
+  "kind": "enum",
+  "values": [
+   "",
+   "none",
+   "used"
+  ]
+ },
+ {
+  "path": "asset.rentalHousingException.residenceTransitionUnderAddendum",
+  "kind": "boolean"
+ },
+ {
+  "path": "asset.rentalHousingException.residenceTransitionBasis",
+  "kind": "enum",
+  "values": [
+   "",
+   "residing",
+   "contract_with_prior_rental",
+   "contract_without_prior_rental"
+  ]
+ },
+ {
+  "path": "asset.rentalHousingException.postRegistrationResidenceMonths",
+  "kind": "intString"
+ },
+ {
+  "path": "asset.rentalHousingException.priorResidenceTransferDate",
+  "kind": "date"
+ },
+ {
+  "path": "asset.rentalHousingException.wasRegisteredRentalOrChildcare",
+  "kind": "boolean"
+ },
+ {
+  "path": "asset.rentalHousingException.phrp154_10Answer",
+  "kind": "enum",
+  "values": [
+   "yes",
+   "no"
+  ]
+ },
+ {
+  "path": "houses[].acquisitionDate",
+  "kind": "date"
+ },
+ {
+  "path": "houses[].region",
+  "kind": "enum",
+  "values": [
+   "capital",
+   "non_capital"
+  ]
+ },
+ {
+  "path": "houses[].regionCode",
+  "kind": "string"
+ },
+ {
+  "path": "houses[].isApartment",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].isOfficetel",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].acquisitionOrigin",
+  "kind": "enum",
+  "values": [
+   "general",
+   "presale",
+   "successor_right",
+   "original_member_non_house",
+   "original_member_house",
+   "self_rebuild",
+   "unknown"
+  ]
+ },
+ {
+  "path": "houses[].rightAcquisitionDate",
+  "kind": "date"
+ },
+ {
+  "path": "houses[].mergeOrigin",
+  "kind": "enum",
+  "values": [
+   "counterpart_side",
+   "seller_side",
+   "second_merge_side"
+  ]
+ },
+ {
+  "path": "houses[].isSpouseOwned",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].isLongTermRental",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].isInherited",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].inheritedDate",
+  "kind": "date"
+ },
+ {
+  "path": "houses[].isCoInherited",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].isLargestCoInheritedShareholder",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].decedentSameHouseholdAtInheritance",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].decedentHouseholdSeparate",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].decedentHouseholdUnknown",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].parentalCareMergeInheritedHouse",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].reInheritedFromSeparateHousehold",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].isRankingDisqualifiedInheritedHouse",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].inheritedGiftedToHouseholdMember",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].oneHouseRuralHouse",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].ruralHouseKind",
+  "kind": "enum",
+  "values": [
+   "inherited",
+   "farm_exit",
+   "return_to_farm"
+  ]
+ },
+ {
+  "path": "houses[].ruralOutsideCapitalEupMyeon",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].ruralDecedentResidenceYears",
+  "kind": "decimalString"
+ },
+ {
+  "path": "houses[].ruralOwnerResidenceYears",
+  "kind": "decimalString"
+ },
+ {
+  "path": "houses[].ruralReturnedToFarmExitHouse",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].ruralLandAreaSqm",
+  "kind": "decimalString"
+ },
+ {
+  "path": "houses[].ruralFarmlandBasis",
+  "kind": "enum",
+  "values": [
+   "ga",
+   "na",
+   "da",
+   "none",
+   "unknown"
+  ]
+ },
+ {
+  "path": "houses[].ruralFarmlandHolder",
+  "kind": "enum",
+  "values": [
+   "self",
+   "spouse"
+  ]
+ },
+ {
+  "path": "houses[].ruralWholeHouseholdMoved",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].ruralHighPriceAtAcquisition",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].ruralPriorReturnFarmExemption",
+  "kind": "enum",
+  "values": [
+   "none",
+   "has",
+   "unknown"
+  ]
+ },
+ {
+  "path": "houses[].ruralGeneralHouseBeforeReturn",
+  "kind": "enum",
+  "values": [
+   "yes",
+   "no",
+   "unknown"
+  ]
+ },
+ {
+  "path": "houses[].oneHouseUnavoidableOutsideCapital",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].unavoidableOutsideCapitalReason",
+  "kind": "enum",
+  "values": [
+   "study",
+   "work",
+   "illness",
+   "other"
+  ]
+ },
+ {
+  "path": "houses[].unavoidableOutsideCapitalUnresolved",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].countExclusion.kind",
+  "kind": "enum",
+  "values": [
+   "reduction",
+   "special"
+  ]
+ },
+ {
+  "path": "houses[].countExclusion.reduction.type",
+  "kind": "enum",
+  "values": [
+   "new_99_4_rural",
+   "new_99_4_hometown",
+   "unsold_98_9"
+  ]
+ },
+ {
+  "path": "houses[].countExclusion.reduction.ruralHouseAcquisitionDate",
+  "kind": "date"
+ },
+ {
+  "path": "houses[].countExclusion.reduction.ruralHouseStdPrice",
+  "kind": "amount"
+ },
+ {
+  "path": "houses[].countExclusion.reduction.isRegisteredHanok",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].countExclusion.reduction.meetsLocationRequirement",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].countExclusion.reduction.adjacentArea994",
+  "kind": "enum",
+  "values": [
+   "yes",
+   "no",
+   "unknown"
+  ]
+ },
+ {
+  "path": "houses[].countExclusion.reduction.ruralLandAreaSqm994",
+  "kind": "decimalString"
+ },
+ {
+  "path": "houses[].countExclusion.reduction.ruralHouseType994",
+  "kind": "enum",
+  "values": [
+   "multi_unit",
+   "other"
+  ]
+ },
+ {
+  "path": "houses[].countExclusion.reduction.ruralHouseFloorAreaSqm994",
+  "kind": "decimalString"
+ },
+ {
+  "path": "houses[].countExclusion.reduction.meetsHometownRequirement",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].countExclusion.special.article",
+  "kind": "enum",
+  "values": [
+   "",
+   "unsold_98",
+   "unsold_98_2",
+   "unsold_98_3",
+   "unsold_98_5",
+   "unsold_98_6",
+   "unsold_98_7",
+   "unsold_98_8",
+   "unsold_99_2",
+   "new_99",
+   "new_99_3",
+   "rental_97",
+   "rental_97_2"
+  ]
+ },
+ {
+  "path": "houses[].countExclusion.special.houseAcquisitionDate",
+  "kind": "date"
+ },
+ {
+  "path": "houses[].countExclusion.special.houseContractDate",
+  "kind": "date"
+ },
+ {
+  "path": "houses[].countExclusion.special.isNationalHousing",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].countExclusion.special.housingKind",
+  "kind": "enum",
+  "values": [
+   "purchase",
+   "self_built",
+   "original_purchase",
+   "original_self_built"
+  ]
+ },
+ {
+  "path": "houses[].countExclusion.special.originalOutsideMetropolitan",
+  "kind": "enum",
+  "values": [
+   "yes",
+   "no",
+   "unknown"
+  ]
+ },
+ {
+  "path": "houses[].countExclusion.special.originalNationalHousing",
+  "kind": "enum",
+  "values": [
+   "yes",
+   "no",
+   "unknown"
+  ]
+ },
+ {
+  "path": "houses[].countExclusion.special.requirementsConfirmed",
+  "kind": "boolean"
+ },
+ {
+  "path": "houses[].acquisitionOfficialPrice",
+  "kind": "amount"
+ },
+ {
+  "path": "houses[].popDeclSoleAtAcquisition",
+  "kind": "enum",
+  "values": [
+   "yes",
+   "no",
+   "unknown"
+  ]
+ },
+ {
+  "path": "houses[].popDeclAcquiredByGift",
+  "kind": "enum",
+  "values": [
+   "no",
+   "yes",
+   "unknown"
+  ]
+ },
+ {
+  "path": "houses[].popDeclDonorHousehold",
+  "kind": "enum",
+  "values": [
+   "separate",
+   "same",
+   "unknown"
+  ]
+ },
+ {
+  "path": "presaleRights[].type",
+  "kind": "enum",
+  "values": [
+   "presale_right",
+   "redevelopment_right"
+  ]
+ },
+ {
+  "path": "presaleRights[].memberOrigin",
+  "kind": "enum",
+  "values": [
+   "original_house",
+   "original_non_house",
+   "successor"
+  ]
+ },
+ {
+  "path": "presaleRights[].acquisitionDate",
+  "kind": "date"
+ },
+ {
+  "path": "presaleRights[].managementDisposalApprovalDate",
+  "kind": "date"
+ },
+ {
+  "path": "presaleRights[].region",
+  "kind": "enum",
+  "values": [
+   "capital",
+   "non_capital"
+  ]
+ },
+ {
+  "path": "presaleRights[].isInherited",
+  "kind": "boolean"
+ },
+ {
+  "path": "presaleRights[].decedentOwnedHouseAtDeath",
+  "kind": "boolean"
+ },
+ {
+  "path": "presaleRights[].decedentSameHouseholdAtInheritance",
+  "kind": "boolean"
+ },
+ {
+  "path": "presaleRights[].decedentHouseholdSeparate",
+  "kind": "boolean"
+ },
+ {
+  "path": "presaleRights[].decedentAcquisitionDate",
+  "kind": "date"
+ },
+ {
+  "path": "finalHouseRestartDisposals[].kind",
+  "kind": "enum",
+  "values": [
+   "",
+   "transfer",
+   "gift",
+   "conversion",
+   "other"
+  ]
+ },
+ {
+  "path": "finalHouseRestartDisposals[].date",
+  "kind": "date"
+ },
+ {
+  "path": "finalHouseRestartDisposals[].temporaryTwoHouse",
+  "kind": "enum",
+  "values": [
+   "",
+   "yes",
+   "no"
+  ]
+ }
+]

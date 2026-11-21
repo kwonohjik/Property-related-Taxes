@@ -1,0 +1,48 @@
+## A 거주자 (대조 — 비과세 + 고지 1건 기대)
+status=200 ⑧errors=[]
+isExempt=true partial=false exemptReason=문화유산 주택 비과세 (§155⑥1호) applied=["155-6-1ho-cultural-heritage"] unmet=[]
+undetermined=["89-2-open:소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)"]
+clause2.status=undetermined openArticles=["소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)"]
+화면에 원조합원 판정 보류 문장 렌더=true 화면머리=판정 결과비과세1세대1주택 비과세 요건을 충족합니다.문화유산 주택 비과세 (§155⑥1호)
+
+## B 양도일 현재 비거주자 (2024 양도)
+status=200 ⑧errors=[]
+isExempt=false partial=false exemptReason=undefined applied=[] unmet=["non-resident-121-2"]
+undetermined=["89-2-open:소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)"]
+clause2.status=undetermined openArticles=["소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)"]
+화면에 원조합원 판정 보류 문장 렌더=true 화면머리=판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2024-03-0
+
+## C 잔금 전 멸실 특약 · 계약 2023-06-01
+status=200 ⑧errors=[]
+isExempt=false partial=false exemptReason=undefined applied=[] unmet=["154-1-demolished-before-balance"]
+undetermined=["89-2-open:소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)","154-1-demolished-before-balance-unverified"]
+clause2.status=undetermined openArticles=["소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)"]
+화면에 원조합원 판정 보류 문장 렌더=true 화면머리=판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2024-03-0
+
+## D 대조 — 본체 과세(보유 미달 · 취득 2023-06-01) 거주자 → #32-4 게이트로 고지 없음 기대
+status=200 ⑧errors=[]
+isExempt=false partial=false exemptReason=undefined applied=[] unmet=["155-6-1ho-cultural-heritage"]
+undetermined=[]
+clause2.status=undetermined openArticles=["소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)"]
+화면에 원조합원 판정 보류 문장 렌더=false 화면머리=판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2024-03-0
+
+## E 대조 — 본체 과세(보유 미달) + 비거주자 → 고지 없음 기대
+status=200 ⑧errors=[]
+isExempt=false partial=false exemptReason=undefined applied=[] unmet=["155-6-1ho-cultural-heritage","non-resident-121-2"]
+undetermined=[]
+clause2.status=undetermined openArticles=["소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)"]
+화면에 원조합원 판정 보류 문장 렌더=false 화면머리=판정 결과과세현재 입력으로는 비과세 요건을 충족하지 않습니다.판정 기준일 2024-03-0
+
+## F 멸실 경계 전 계약 2022-12-19 (회수 안 함 → 비과세·고지 유지 기대)
+status=200 ⑧errors=[]
+isExempt=true partial=false exemptReason=문화유산 주택 비과세 (§155⑥1호) applied=["155-6-1ho-cultural-heritage"] unmet=[]
+undetermined=["89-2-open:소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)"]
+clause2.status=undetermined openArticles=["소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)"]
+화면에 원조합원 판정 보류 문장 렌더=true 화면머리=판정 결과비과세1세대1주택 비과세 요건을 충족합니다.문화유산 주택 비과세 (§155⑥1호)
+
+## leaf
+checkExemption isExempt=true 원조합원 open before revoke=["89-2-open:소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)"]
+revoke 후 isExempt=false 원조합원 open after revoke=["89-2-open:소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)"]
+계산기 경고 leaf — 회수 전 1건 / 회수 후 0건
+술어 필터 시뮬레이션 — 남은 undetermined=[]
+술어 — 일반 89-2-open 판별: false

@@ -1,0 +1,26 @@
+{
+  "-24": {
+    "issues": [],
+    "mode": "direct",
+    "v8": [],
+    "questions": [
+      "residencePeriodMonths: 거주기간 (개월) — 입력값을 확인하세요."
+    ],
+    "wrote": {
+      "top": "24",
+      "asset": "-24",
+      "mode": "direct"
+    },
+    "after": [
+      "residencePeriodMonths: 거주기간 (개월) — 입력값을 확인하세요."
+    ]
+  },
+  "36.5": {
+    "issues": [],
+    "mode": "direct",
+    "v8": [],
+    "questions": [],
+    "wrote": null,
+    "after": null
+  }
+}

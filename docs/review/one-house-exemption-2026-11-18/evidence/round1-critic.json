@@ -1,0 +1,107 @@
+{
+ "summary": "범위 디렉터리 파일 134개와, 그 파일들이 직접 import하는 범위 밖 모듈 193개를 대조했다. 193개는 28695a03e(2026-10-10)..HEAD 사이에 바뀐 파일과 겹치는지도 함께 확인했다. 그 결과 10개 축 어디도 담당하지 않은 큰 덩어리가 4개 나왔다.\n(1) §89② 본체(§156의2③④⑥~⑪·§156의3 — transfer-tax-89-2-*.ts 6파일 1,449줄). 판정기 7개 파일이 import하고 기준 커밋 이후 9커밋이 있다. rights-rental 축은 담당 밖이라고 명시했고, 154-core 축은 ⑤ 대체주택만 봤다.\n(2) 조특법 주택 수 제외 축. population-decline-71-2.ts(새 파일 317줄, §71의2 취득기간 2026.12.31. 종료 임박)와 special-house-exclusion-kind.ts(새 파일 152줄)다. house-count 축은 법령을 다시 조회하지 않았다.\n(3) 증여 세대 통산 축. gift-household-basis·notice와 lib/calc/gift-household-payload·handoff로, 155 축이 「훑기만」 했다. 20여 커밋과 revert 1건이 있고, notice는 직접 단위 테스트가 없다.\n(4) 클라이언트 거주 구간→개월 leaf. calc-wizard-asset-residence.ts가 구간마다 완성 개월을 floor한 뒤 합산해, 구간 사이 잔여 일수를 버린다. 다구간 통산의 법적 근거는 확인 필요다.\n\n시나리오 측면에서 한 번도 돌리지 않은 유형도 있다.\n- 공동명의(지분) 양도: 판정 메뉴는 지분 100%를 전제한다(one-house-exemption-api.ts:135). 그런데 「예상 양도가액」 칸에 공유 시 주택 전체 가액(영 §156①)을 넣으라는 안내가 없다.\n- 판정 메뉴 범위 밖 사실(겸용·다가구·부수토지·오피스텔)에 대한 화면 고지: 평가셋 inexpressible 290건 가운데 부수토지 62·겸용 24·지분 26·다가구 11건이 이 사유다. 이 버킷은 아무 축도 보지 않았다.\n- 재사용 계산기 컴포넌트를 판정 메뉴 문맥에서 돌렸을 때 ⑤·④·⑧이 맞는지: ui 축은 규칙 위반 grep만 했다.\n- 두 메뉴가 같은 폼으로 낸 「1세대1주택 요약」 비교: 중과 메뉴 route는 같은 파이프라인을 쓰지만 ④는 따로 조립한다.\n- 브라우저 실행: 10개 축 모두 0회이고, 판정 E2E spec(45개 이상)도 실행하지 않았다.\n- 운영 Supabase 규칙 행: 모든 probe가 로컬 fallback으로 돌았다.\n- 윤일·말일 날짜 경계 격자, 뮤테이션 감별력.\n\n조정대상지역 데이터(regulated-areas.ts 448줄)를 원문 공고와 대조하는 작업도 이번 라운드에 없었다.\n\n재제안 금지 결정(§154⑤ 재기산·표2 통산 유지·동일세대 증여 지분 통산 등)과 2009.3.15. 전 범위 밖은 gap에서 뺐다. final-house-restart.ts도 같은 이유로 제외했다. 작업 파일은 <session>/scratchpad/gap/ 에 있다(scope.txt·depth1-changed.txt·closure 스크립트).",
+ "gaps": [
+  {
+   "area": "§89② 본체 — §156의2③④⑥~⑪·§156의3②~⑧ (lib/tax-engine/transfer-tax-89-2-exclusion.ts 563 · -merged-household 190 · -inherited-right 249 · -right-timing-core 172(새 파일) · -acquired-right-timing 49 · -consequences 226)",
+   "why_it_matters": "1주택과 입주권·분양권을 함께 가진 세대가 종전주택을 양도하는 경우는 1세대1주택 판정의 핵심 시나리오다. resolveArticle89Clause2는 transfer-tax-exemption.ts·pending·requirement-review·era-undetermined·holiday-notice-deadlines·original-member-right·types 7곳이 import한다. 이 함수가 excluded면 era-notice-relevance가 고지를 단락하므로, 여기가 틀리면 결론과 고지가 같이 틀린다. 그런데 rights-rental 축은 '담당 목록 밖'이라고 명시했고, 154-core 축은 §156의2⑤ 대체주택만 봤다. 법령 원문 대조도 §156의2⑤1호뿐이다. 기준 커밋 이후 이 파일들에 9커밋이 있다(NH-12·13 이중 제외, 수유자 배제, 결정 #7·#8·#9, §156의2⑥ 입주권 취득일, 공휴일 기한 등).",
+   "suggested_probe": "① KoreanLaw MCP로 시행령 §156의2·§156의3 현행(MST 290841)과 2021.2.17.·2022.2.15. 시행본 전문을 조회해, 파일 머리 표(16개 항)와 항마다 요건을 대조한다. ② 판정 route(④ buildOneHouseExemptionApiBody→⑫→⑭)에 throwaway vitest probe를 건다. 격자는 16항 × {요건 충족 / 3년 경과 / 사실 미입력 / 2권리 / 합가 구성 미선택} × {입주권, 분양권}이다. excluded·exception_met·undetermined 세 갈래와 isExempt·unmet ID를 기록하고, excluded인 셀에서 era-notice-relevance가 고지를 실제로 생략하는지 본다. ③ 기준 커밋 이후 9커밋은 git diff 28695a03e..HEAD -- lib/tax-engine/transfer-tax-89-2-*.ts로 보고, 그 변경을 지키는 anchor가 있는지 역grep한다. 결과는 scratchpad/probes/gap-89-2/에 남긴다.",
+   "priority": "high"
+  },
+  {
+   "area": "공동명의(지분) 양도의 고가주택 판정 — 판정 메뉴 Step3 「예상 양도가액」",
+   "why_it_matters": "판정 메뉴는 「단일 자산·지분 100% 전제」다(lib/calc/one-house-exemption-api.ts:135 주석). 그런데 Step3.tsx:345-357의 hint는 기준금액 라벨만 보여 주고, 공유 시 주택 전체 실지거래가액(시행령 §156①)으로 판정한다는 안내가 없다. 판정 화면과 결과뷰를 grep해도 지분·공동명의 안내가 0건이다. 부부 50:50 공동명의는 흔하다. 14억 주택의 본인 몫 7억을 넣으면 「12억 이하 전액 비과세」가 나올 수 있다. menu-calc-parity 축은 겸용·다건·부담부증여만 범위 밖으로 뒀고, 공유지분은 아무 축도 돌리지 않았다.",
+   "suggested_probe": "① KoreanLaw로 시행령 §156① 「일부가 타인 소유인 경우 … 전체주택면적 비율」 문언을 현행과 2021.12.8. 시행본에서 확인한다. ② 판정 route probe를 돌린다. 같은 사실(14억 주택, 1/2 지분)에서 contractTotalPrice를 7억과 14억으로 각각 넣어 isExempt·고가 판정·결과 문구를 비교한다. ③ 핸드오프(toTransferFormPatch)한 뒤 계산기에서 축 B 지분 분할로 계산한 결론과 대조한다. ④ jsdom으로 Step3를 렌더해 지분 안내 유무를 단언한다. 착수 전에 memory archive_transfer_completed의 「공유지분 ⓑⓒ」 재제안 금지 범위와 겹치지 않는지 먼저 확인한다.",
+   "priority": "high"
+  },
+  {
+   "area": "조특법 주택 수 제외 축의 법령 대조 — lib/tax-engine/transfer-reductions/population-decline-71-2.ts(새 파일 317) · special-house-exclusion-kind.ts(새 파일 152) · unsold-hybrid-p5.ts · unsold-98-9.ts",
+   "why_it_matters": "이 모듈들은 판정 메뉴 결론을 직접 비과세↔과세로 바꾸는 「소유주택으로 보지 않는」 의제다(judgment-pipeline.ts·era-undetermined.ts·right-sale-special-act-exclusion.ts·one-house-exemption-api.ts가 import). house-count 축은 「법령 원문은 재조회하지 않았다」고 했고, 다른 축은 담당하지 않았다. population-decline-71-2.ts 머리 표에는 부칙 해석(제21223호 제14조, 제36127호 부칙 제1조, 제35877호 부칙 제3조)과 해석례 2건이 근거로 적혀 있지만, 이번 라운드에 검증된 적이 없다. 또 취득기간 끝이 2026.12.31.로 하드코딩돼 있다. 오늘은 2026-11-18이므로, 연말 조특법 개정으로 일몰이 연장되면 상수를 바로 갱신해야 한다.",
+   "suggested_probe": "① KoreanLaw search_law로 조특법 §71의2와 조특령 §68의2의 현행본·시행예정본(efYd)을 조회하고, 머리 표 요건 7행과 부칙 3건을 원문과 대조한다. 국회 계류 개정안(일몰 연장)이 있는지도 확인한다. ② §99·§99의3의 호별 기준일(매매계약일/사용승인일)과 원시 §99의3 부칙 제6501호 제13조를 원문과 대조한다. ③ throwaway probe 격자를 돌린다. 취득일 2024-01-03·01-04, 2026-12-31·2027-01-01 × 기준시가 4억·9억 경계 × 2025-08-14 전후 × 양도일 2026-02-26·02-27 × 상속·증여 세대 3상태로 판정 route 결론을 기록한다. ④ npm run verify:legal을 돌려 해당 상수가 manifest에 들어 있는지 확인한다.",
+   "priority": "medium"
+  },
+  {
+   "area": "증여 세대 통산 축 — lib/tax-engine/one-house/gift-household-basis.ts(250) · gift-household-notice.ts(206) · lib/calc/gift-household-payload.ts(274) · gift-household-handoff.ts(57)",
+   "why_it_matters": "155-specials 축은 「결정 #33·#34·#38 영역이라 훑기만」 했다. api 축은 gift-household-payload를 §154⑧3호 상한 결함 하나로만 건드렸다. 기준 커밋 이후 이 묶음에 20여 커밋이 있다(#38-1~#38-11, #2608 revert, 2026-11-16 분리취득 부수토지 서면-2025-법규재산-4289). gift-household-notice는 직접 import하는 단위 테스트가 0개다. 보유 기산일과 거주 개월을 옮기는 축이라 틀리면 세액이 조용히 바뀐다.",
+   "suggested_probe": "결정 기록(docs/review/one-house-exemption-2026-10-10/decisions.md — 미푸시 워크트리라 위치 확인 필요)을 읽고 격자를 만든다. 격자는 관계(배우자·직계·그 외) × 「증여자와 계속 같은 세대」(예·아니오·모름·미답) × 사망·이혼 후 재결합 × 이월과세 적용 여부 × 조정지역 취득 여부다. 이 격자를 판정 route와 핸드오프 계산기 route에 함께 돌려 isExempt, 보유 기산일(giftHouseholdHoldingStart), 거주 개월, 고지 ID를 비교한다. 재제안 금지 항목(표2 통산 #2609 유지·동일세대 증여 지분 통산 미구현)은 '현행 의도'로 허용 목록에 둔다.",
+   "priority": "medium"
+  },
+  {
+   "area": "거주 구간 → 개월 변환(클라이언트 leaf) — lib/stores/calc-wizard-asset-residence.ts(residenceIntervalMonths·sumResidenceMonths·clampResidenceToHousingPeriod) · lib/calc/residence-interval-validate.ts",
+   "why_it_matters": "판정 메뉴가 엔진에 보내는 거주 개월은 이 leaf가 만든다. sumResidenceMonths는 구간마다 completedMonthsInclusive로 완성 개월을 floor한 뒤 합산한다(코드 판독). 그래서 구간 사이 잔여 일수가 버려진다. 예를 들어 4개월 25일 구간이 5개면 20개월인데, 일수로 합하면 약 24개월 5일이다. 이 차이로 거주 2년 요건 결론이 갈릴 수 있다. 154-core 축은 엔진 residence-months.ts만 봤고, 이 leaf와 구간 검증(150줄)은 어느 축도 다루지 않았다. 다구간 통산을 일수 합산으로 해야 하는지는 해석례를 확인하지 않았다(확인 필요). 구간 1개짜리 사례는 영향이 없다.",
+   "suggested_probe": "① KoreanLaw와 국세법령정보에서 「거주기간 통산」「1개월 미만」「일수 합산」으로 해석례·집행기준을 검색해 원문을 확보한다. 근거가 없으면 '확인 필요'로만 보고한다. ② throwaway vitest probe를 돌린다. 구간 수 1~6 × 구간별 잔여 일수(0·15·29일) × 조정지역 취득으로 판정 route의 거주 행 상태와 isExempt를 기록하고, 일수 합산 대안 값과 비교한다. ③ diffMonthsClamped(초일 불산입, 임대 전용)를 거주 쪽에서 잘못 부르는 곳이 없는지 grep한다.",
+   "priority": "medium"
+  },
+  {
+   "area": "판정 메뉴 범위 밖 사실의 화면 고지와 평가셋 inexpressible 버킷 — __tests__/calc/one-house-rulings/cases (bucket=inexpressible 290건, 현행 기준 27건)",
+   "why_it_matters": "판정 메뉴에는 겸용·다가구·부수토지 배율·오피스텔·무허가 입력이 없다(one-house-exemption-api.ts:9 주석). 그런데 판정 화면과 결과뷰 grep에서 '이 메뉴가 다루지 않는다'는 안내는 0건이다. inexpressible 290건의 note 키워드 집계는 부수토지 62·겸용 24·지분 26·다가구 11·오피스텔 9다. 축들은 parity 측정에 match 448건만 썼고, 표현 불가 버킷은 아무도 열어 보지 않았다.",
+   "suggested_probe": "cases/*.json에서 inexpressible을 읽어 사유를 분류하는 스크립트를 만든다(note·summary 키워드, 그리고 양도일 2009.3.15. 이전은 '범위 밖 확정'으로 자동 분리). 현행 기준 27건은 원문을 확인해 셋으로 나눈다. (a) 화면 고지만 추가하면 되는 것, (b) 기존 계산기 leaf로 입력 경로를 열 후보, (c) 범위 밖 확정. 결과는 표로 scratchpad에 남긴다.",
+   "priority": "medium"
+  },
+  {
+   "area": "재사용 계산기 컴포넌트·⑧ leaf의 판정 메뉴 문맥 동작 — GiftedSameHouseholdField(새 파일 214) · RegulatedAreaField(새 파일 109) · ResidencePeriodSection · DeclaredNewHouseOriginBlock · RentalCounterpartResidedQuestion · TemporaryTwoHouseSection(+130) · ReplacementHouseSpecialBlock · HouseEntryEditor/HouseEntryOneHouseFactsSection + lib/calc/house-entry-judgment-scope.ts(새 파일) · house-row-required-issues.ts(새 파일 205) · house-row-fact-issues.ts · one-right-na-facts-validate.ts · selling-house-origin-scope.ts(새 파일 85) · phrp-154-10-fact-question.ts(새 파일 91)",
+   "why_it_matters": "ui 축은 재사용 컴포넌트 20개를 UI 규칙 위반 grep으로만 봤다. 판정 validate가 import하는 ⑧ leaf 6개도 커버리지 메모에 이름이 없다. 이 컴포넌트들은 계산기 폼 형상(첫 자산·D2·숨은 토글)을 전제로 한 표시 술어를 갖는다. api 축의 F2(중과 메뉴 3호 칩 → 1주택 메뉴 400)와 house-count 축의 0061 게이트 결함이 바로 이 계열이고, 아직 전수 점검은 없다.",
+   "suggested_probe": "jsdom 테스트로 판정 폼 fixture 격자를 만든다. 축은 주 자산 종류(주택·입주권·분양권) × 입주권 양도 여부 × 메뉴 전환(중과→1주택) 잔존값 × 이력 재개 잔존값이다. 각 셀에서 네 가지를 같이 계산한다. ⑤ 컴포넌트 표시 여부, ④ one-house-judgment-section-scope와 buildOneHouseExemptionApiBody의 키 존재, ⑧ validateStep* 오류, ⑫ propertySchema.safeParse다. 「⑤ 숨김인데 ④ 실림·⑧ 차단·⑫ 400」 셀을 목록으로 뽑는다(memory feedback_fe8_vs_12_parity_grid 절차).",
+   "priority": "medium"
+  },
+  {
+   "area": "era-undetermined 뒤 절반 · era-undetermined-temp-two-house.ts(새 파일 191) · lib/geo/relocation-region-unit.ts(새 파일 136) · 직접 단위 테스트가 없는 엔진 파일(deemed-verdict·era-notice-relevance·unmet-inherited·unmet-deadline-reasons·expropriation-remnant-155-1·temp-two-house-counterfactual)",
+   "why_it_matters": "155 축은 era-undetermined의 전반부만 읽었고, temp-two-house 분리본은 11-12~13 리뷰 범위라 깊이 보지 않았다. relocation-region-unit은 어느 축도 언급하지 않았다. collectEraUndetermined는 366줄 함수에 push가 21곳이고, 최근 5주 동안 +295줄로 가장 빨리 자랐다. 고지가 결론을 가르지 않는데 남는 계열의 결함이 이미 2건 확정됐다(revoke-exemption 누락, 반사실 게이트의 비거주·멸실 미반영). 그래서 같은 계열이 더 있을 개연성이 높다.",
+   "suggested_probe": "① push 21곳마다 반사실 probe를 돌린다. 그 고지가 묻는 사실의 답을 바꿨을 때 isExempt가 바뀌는지 기록하고, 바뀌지 않는데 고지가 남는 셀을 찾는다. 비거주·멸실·§89② excluded·⑳ 성립 조합을 포함한다. ② 고지 문구의 조문과 연혁 날짜를 legal-codes 상수, data/*-era.ts와 대조한다. ③ relocation-region-unit은 행정구역 개편 경계(군위군 대구 편입 2023.7.1., 전북특별자치도 2024.1.18. 등)에서 같은 시·군 판정을 probe한다.",
+   "priority": "medium"
+  },
+  {
+   "area": "판정 메뉴 E2E·브라우저 실측 0회",
+   "why_it_matters": "10개 축 모두 브라우저를 실행하지 않았다(store·route·순수 함수 probe만). e2e/ 아래 판정 관련 spec이 45개 이상(maintainability 집계 53) 있지만, 이번 라운드에 하나도 돌리지 않았다. CLAUDE.md 완료 기준은 브라우저 수동 확인을 요구한다. 실측된 화면 결함(AI 답하기 후 Step4 고정, 이력 재개 뒤 중과 슬롯 잔존, 핸드오프 사이드바 잔존, ⑳ 카드 초록 표시)도 실제 화면 재현은 확인하지 않았다.",
+   "suggested_probe": "워크트리에서 E2E_PORT=3200으로 판정 spec 전체를 실행한다(npx playwright test e2e/one-house* e2e/*judgment* e2e/multi-house-surcharge-flow.spec.ts). 이어서 확정 결함 4~5건을 Playwright 스크립트로 재현해 화면 문구 스크린샷과 Network request body를 남긴다. AI route는 개발 서버에서만 열린다. 끝나면 .next를 삭제한다(tsc OOM 함정).",
+   "priority": "medium"
+  },
+  {
+   "area": "1주택 판정 메뉴 ↔ 다주택 중과 판정 메뉴의 「1세대1주택 비과세 요약」 parity — app/api/calc/multi-house-surcharge-judgment/route.ts(새 파일) · surcharge-judgment-payload.ts(새 파일 288) · lib/calc/multi-house-surcharge-api.ts",
+   "why_it_matters": "중과 메뉴 route도 buildOneHouseExemptionPayload로 비과세 요약을 낸다. 하지만 ④ 본문은 별도 빌더가 조립한다. api 축은 공유 store에서 ⑧↔⑫ 모순을 찾았고, handoff 축은 중과 슬롯 잔존을 찾았다. 그러나 같은 폼으로 두 메뉴가 낸 비과세 결론 자체를 비교한 축은 없다. 두 화면이 같은 사실에 다른 비과세 답을 내면 사용자가 바로 알아챈다.",
+   "suggested_probe": "평가셋 match 448 폼을 두 ④ 빌더(one-house-exemption-api·multi-house-surcharge-api)로 각각 본문화해 두 route에 넣는다. exemption.isExempt, unmetExceptions ID, undetermined 고지 ID를 비교하고, 메뉴 전용 단계 차이는 허용 목록으로 처리한다. 두 본문의 키 단위 diff도 함께 저장한다.",
+   "priority": "medium"
+  },
+  {
+   "area": "조정대상지역 데이터·주소 문자열 매처 정확성 — lib/tax-engine/data/regulated-areas.ts(448줄) · lib/regulated-area.ts · lib/calc/effective-regulated-at-acquisition.ts(새 파일 503)",
+   "why_it_matters": "취득 당시 조정대상지역 여부는 거주 2년 요건을 결정하는 입력이다. 154-core 축은 resolveWasRegulatedAtAcquisition 로직만 읽었다. 데이터(지정·해제 일자, 동 단위 지정)를 원문 공고와 대조한 축은 없다. effective-regulated-at-acquisition.ts는 판정 Step3·validate·api가 import하는데도 커버리지 메모에 이름이 없다. 2026-10-11 PR2와 11-05 약칭 정규화 이후 다시 검증한 적이 없다.",
+   "suggested_probe": "① KoreanLaw admrul_search로 국토교통부 조정대상지역 지정·해제 공고(2016.11.3.~2023.1.5.)를 수집하고, regulated-areas.ts 항목별 [지정일, 해제일) 구간과 대조하는 스크립트를 만든다. ② 주소 문자열을 퍼징해(약칭·구 명칭·동 단위 부분 지정·알 수 없는 주소) judgeRegulatedArea의 판정과 신뢰도 등급, 그리고 '모르면 조정지역 + 확인 필요' 동작을 확인한다.",
+   "priority": "low"
+  },
+  {
+   "area": "운영 Supabase tax_rates 규칙 행 ↔ seed parity (special:one_house_exemption · temporary_two_house)",
+   "why_it_matters": "판정 엔진은 DB 파싱본의 one_house_exemption·temporary_two_house 규칙을 읽는다(transfer-tax-exemption.ts:267). 그런데 모든 축의 probe는 로컬 fallback이나 mock 세율로 돌았다. 운영 DB에 seed 변경이 반영되지 않은 전례도 있다(자경농지 DB 3행). 운영 판정이 테스트와 다를 위험은 아무도 측정하지 않았다.",
+   "suggested_probe": "Supabase MCP execute_sql로 읽기 전용 SELECT를 한다. tax_type='transfer' AND category='special' 행의 sub_category·effective_date·special_rules를 조회하고, lib/tax-engine/data/transfer-rate-seed.ts와 -historical.ts의 해당 행과 JSON diff를 뜬다. 쓰기와 시딩은 하지 않는다.",
+   "priority": "low"
+  },
+  {
+   "area": "날짜 경계 격자(윤일·말일·응당일) 미실측",
+   "why_it_matters": "civil-period는 154-core 축이 읽었지만, probe는 기한 거주·decisive·재귀 3개뿐이었다. 보유 2년, 일시적 2주택 기한 1·2·3년, §156의2③ 3년, 거주 24개월에서 취득일이 2/29나 말일일 때의 응당일 판정을 실측한 축이 없다. 또 개월 계산 규칙이 두 벌 있다(diffMonthsClamped는 초일 불산입, residenceIntervalMonths는 초일 산입).",
+   "suggested_probe": "throwaway vitest 격자를 만든다. 취득일 2020-02-29·2021-01-31·2021-08-31 × 양도일 응당일 −1·0·+1 × {보유, 일시적 2주택 기한, §156의2③, 거주 24개월}로 판정 route 결론을 기록하고, 민법 §157·§159·§160 기대값과 비교한다. 두 개월 함수의 호출처도 전수 grep한다.",
+   "priority": "low"
+  },
+  {
+   "area": "테스트 감별력(뮤테이션) 미측정",
+   "why_it_matters": "maintainability 축은 judge.ts의 「685케이스 스냅샷」이 테스트로 남아 있지 않고, 값 매핑 감별력은 측정하지 않았다고 지적만 했다. 직접 import 단위 테스트가 없는 엔진 파일도 15개 이상이다(scratchpad gap/testref 결과). 경계 술어가 바뀌어도 테스트가 초록인지 모른다.",
+   "suggested_probe": "경계 술어 10곳을 하나씩 뒤집는다. 대상은 pending 기한 비교, holding 보유연수 >=, 89-2 3년, threshold 초과 >, 거주 24개월, §155① 1년 요건, §154⑧2호 3년 등이다. 각 변경 뒤 npx vitest run __tests__/tax-engine/transfer __tests__/calc/one-house*와 rulings anchor를 돌려 생존 여부를 기록한다(memory hub_anchor_mutation_feedback 절차). 원복은 git checkout으로 한다.",
+   "priority": "low"
+  },
+  {
+   "area": "구 이력·세션 복원 뒤 새 필수 질문의 기본값",
+   "why_it_matters": "normalizeOneHouseJudgmentForm은 없는 필드를 초기값으로 채운다(one-house-judgment-store.ts:171-185). 기준 커밋 이후 생긴 3상태 질문(#38·#42·#43·#44)은 미답이면 '불성립 + 확인 필요'다. 그래서 옛 이력을 「편집」으로 열면 사용자가 아무것도 바꾸지 않아도 결론이 바뀔 수 있다. handoff·ui 축은 중과 슬롯 잔존만 봤고, 옛 형상 레코드를 재생한 축은 없다(코드 판독, 미실측).",
+   "suggested_probe": "git show 28695a03e:lib/stores/one-house-judgment-form.types.ts로 당시 폼 형상과 초기값을 재구성해 평가셋 폼 몇 건을 옛 형상으로 만든다. 이를 history-resume-entry로 재개한 뒤 판정 route에 넣어, 현재 형상으로 낸 결론과 비교한다.",
+   "priority": "low"
+  },
+  {
+   "area": "AI 보조 화면 3개와 법령 조회 클라이언트 — components/calc/one-house/OneHouseAiLawLookups.tsx · OneHouseAiSourceCitations.tsx · OneHouseAiUsageCost.tsx · lib/korean-law/client-taxlaw.ts(새 파일 160) · client-cgm-expc.ts(새 파일 120) · doc-key.ts",
+   "why_it_matters": "ai-subsystem 축의 읽은 목록에 화면 3개와 korean-law 신규 클라이언트가 없다. law-tools의 read_interpretation이 LLM이 고른 문서 id로 외부 요청 URL을 만들 때, 그 id를 검증하는지 확인하지 않았다. 개발 서버 전용이라 영향은 작다.",
+   "suggested_probe": "doc-key와 client-taxlaw·cgm-expc의 URL 조립에 비정상 id('../', '?x=', 절대 URL, 공백)를 넣어 생성 URL과 거부 여부를 기록한다. LawLookups와 SourceCitations에는 렌더 테스트로 링크 href 출처(코드·카드 대 LLM 문자열)를 확인한다.",
+   "priority": "low"
+  },
+  {
+   "area": "Step1 「1세대」 안내 문구의 법령 대조 — app/calc/one-house-exemption/steps/Step1.tsx:33-58 (소득세법 §88 6호 · 시행령 §152의3)",
+   "why_it_matters": "1세대 해당 여부는 사용자가 직접 고르는 토글이지만, 그 판단 근거로 보여 주는 요건(30세, 기준 중위소득 40%, 미성년자 예외)의 현행 문언과 연혁(개정 전 기준)을 대조한 축이 없다. 연혁 분기 없이 고정 문구라, 과거 양도일 판정에서 다른 기준을 안내할 수 있다.",
+   "suggested_probe": "KoreanLaw로 시행령 §152의3의 현행본과 직전 시행본을 조회해 문구를 대조하고, 개정 시행일을 확인한다. 2009.3.16. 이후 양도 범위 안에서 기준이 바뀌었으면 양도일 연혁 라벨이 필요한지 판단한다.",
+   "priority": "low"
+  }
+ ]
+}

@@ -1,0 +1,21 @@
+{
+  "calcSourceId": "idA",
+  "calcSourceHash": "hA",
+  "calcTransferDate": "2026-03-01",
+  "judgmentStoreTransferDateAfterApply": "2026-09-09",
+  "judgmentStoreStepAfterApply": 3,
+  "provState": "source_changed",
+  "resumeReturn": null,
+  "pushed": [
+    "/calc/one-house-exemption"
+  ],
+  "judgmentStoreTransferDateAfterResume": "2026-03-01",
+  "judgmentStoreStepAfterResume": 0,
+  "surchargeSlotAfterResume": {
+    "step": 4,
+    "result": {
+      "marker": "B-surcharge"
+    }
+  },
+  "persistedJudgmentKey": "{\"state\":{\"formData\":{\"assets\":[{\"assetId\":\"asset-1795005843996-1\",\"assetLabel\":\"자산 1\",\"assetKind\":\"housing\",\"isSuccesso"
+}

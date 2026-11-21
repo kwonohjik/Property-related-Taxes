@@ -1,0 +1,110 @@
+[
+  {
+    "rates": "default",
+    "k": "RE res0 reInherited=true",
+    "isExempt": false,
+    "determinedTax": 212560000,
+    "surcharge": "multi_house_2",
+    "surchargeRate": 0.2,
+    "reNotice": true,
+    "pcNotice": false
+  },
+  {
+    "rates": "default",
+    "k": "RE res0 reInherited=false",
+    "isExempt": false,
+    "determinedTax": 212560000,
+    "surcharge": "multi_house_2",
+    "surchargeRate": 0.2,
+    "reNotice": false,
+    "pcNotice": false
+  },
+  {
+    "rates": "default",
+    "k": "RE res24 reInherited=true",
+    "isExempt": true,
+    "determinedTax": 0,
+    "reNotice": true,
+    "pcNotice": false
+  },
+  {
+    "rates": "default",
+    "k": "RE res24 reInherited=false",
+    "isExempt": false,
+    "determinedTax": 212560000,
+    "surcharge": "multi_house_2",
+    "surchargeRate": 0.2,
+    "reNotice": false,
+    "pcNotice": false
+  },
+  {
+    "rates": "default",
+    "k": "PC parentalCare=true",
+    "isExempt": false,
+    "determinedTax": 39000000,
+    "reNotice": false,
+    "pcNotice": true
+  },
+  {
+    "rates": "default",
+    "k": "PC parentalCare=false",
+    "isExempt": false,
+    "determinedTax": 39000000,
+    "reNotice": false,
+    "pcNotice": false
+  },
+  {
+    "rates": "noSuspension",
+    "k": "RE res0 reInherited=true",
+    "isExempt": false,
+    "determinedTax": 212560000,
+    "surcharge": "multi_house_2",
+    "surchargeRate": 0.2,
+    "reNotice": true,
+    "pcNotice": false
+  },
+  {
+    "rates": "noSuspension",
+    "k": "RE res0 reInherited=false",
+    "isExempt": false,
+    "determinedTax": 212560000,
+    "surcharge": "multi_house_2",
+    "surchargeRate": 0.2,
+    "reNotice": false,
+    "pcNotice": false
+  },
+  {
+    "rates": "noSuspension",
+    "k": "RE res24 reInherited=true",
+    "isExempt": true,
+    "determinedTax": 0,
+    "reNotice": true,
+    "pcNotice": false
+  },
+  {
+    "rates": "noSuspension",
+    "k": "RE res24 reInherited=false",
+    "isExempt": false,
+    "determinedTax": 212560000,
+    "surcharge": "multi_house_2",
+    "surchargeRate": 0.2,
+    "reNotice": false,
+    "pcNotice": false
+  },
+  {
+    "rates": "noSuspension",
+    "k": "PC parentalCare=true",
+    "isExempt": false,
+    "determinedTax": 39000000,
+    "reNotice": false,
+    "pcNotice": true
+  },
+  {
+    "rates": "noSuspension",
+    "k": "PC parentalCare=false",
+    "isExempt": false,
+    "determinedTax": 39000000,
+    "reNotice": false,
+    "pcNotice": false
+  }
+]

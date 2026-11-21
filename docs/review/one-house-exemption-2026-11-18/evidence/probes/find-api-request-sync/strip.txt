@@ -1,0 +1,16 @@
+=== housing-rich
+⑧ errors: ["generalHouseRightAtInheritance: 양도 주택을 상속개시 후 취득했습니다 — 상속개시 당시 보유한 조합원입주권·분양권으로 취득한 신축주택인지 선택하세요."]
+body keys: propertyType,transferDate,acquisitionDate,transferPrice,acquisitionPrice,expenses,useEstimatedAcquisition,reductions,annualBasicDeductionUsed,isNonBusinessLand,isOneHousehold,isUnregistered,isRegulatedArea,wasRegulatedAtAcquisition,residencePeriodMonths,householdHousingCount,houses,sellingHouseId,marriageMerge,isFirstTransferredInMerge,nonResidentHoldingPeriod,demolishedBeforeBalance,generalHouseGiftedFromDecedentWithin2yr,generalHouseGiftDate,specialHouseExclusions,longTermMortgageHouse,winWinRentalHouse
+STRIPPED: []
+=== right-sale
+⑧ errors: []
+body keys: propertyType,transferDate,acquisitionDate,transferPrice,acquisitionPrice,expenses,useEstimatedAcquisition,reductions,annualBasicDeductionUsed,isNonBusinessLand,isOneHousehold,isUnregistered,isRegulatedArea,wasRegulatedAtAcquisition,residencePeriodMonths,householdHousingCount,specialHouseExclusions,oneRightExemptionFacts
+STRIPPED: []
+=== inherit
+⑧ errors: []
+body keys: propertyType,transferDate,acquisitionDate,transferPrice,acquisitionPrice,expenses,useEstimatedAcquisition,reductions,annualBasicDeductionUsed,isNonBusinessLand,isOneHousehold,isUnregistered,isRegulatedArea,wasRegulatedAtAcquisition,residencePeriodMonths,householdHousingCount,acquisitionCause,decedentAcquisitionDate,decedentSameHouseholdBeforeInheritance,decedentCohabitationHoldingStartDate,decedentCohabitationResidenceMonths,specialHouseExclusions
+STRIPPED: []
+=== rental-A
+⑧ errors: ["rentalHousingException: 장기임대주택 특례 임대주택 #1: 임대개시일 기준시가를 입력하세요."]
+body keys: propertyType,transferDate,acquisitionDate,transferPrice,acquisitionPrice,expenses,useEstimatedAcquisition,reductions,annualBasicDeductionUsed,isNonBusinessLand,isOneHousehold,isUnregistered,isRegulatedArea,wasRegulatedAtAcquisition,residencePeriodMonths,householdHousingCount,specialHouseExclusions,rentalHousingException
+STRIPPED: []

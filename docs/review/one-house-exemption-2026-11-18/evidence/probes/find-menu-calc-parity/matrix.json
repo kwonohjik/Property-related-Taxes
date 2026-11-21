@@ -1,0 +1,421 @@
+[
+ {
+  "name": "S01 단순1주택 조정취득 거주0",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pa": false,
+   "applied": [],
+   "unmet": [],
+   "undet": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "ve": [],
+   "houseCount": 1
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": false,
+   "pa": false,
+   "tax": 155166000,
+   "issues": [],
+   "warn": [
+    "조정대상지역 1주택을 2019년 12월 16일 이전에(분양권 상태 포함) 임대하기 위해 사업자등록과 임대사업자 등록을 신청했다면, 삭제 전 소득세법 시행령 §154①4호(거주기간 제한 없음 — 등록 유지 중 임대의무",
+    "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 미충족(취득 당시 조정대상지역 해당, 거주기간 0개월)."
+   ]
+  }
+ },
+ {
+  "name": "S02 단순1주택 조정취득 거주24",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pa": false,
+   "applied": [],
+   "unmet": [],
+   "undet": [],
+   "ve": [],
+   "houseCount": 1
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": true,
+   "reason": "1세대1주택 비과세",
+   "tax": 0,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S03 고가주택 15억 비조정",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pa": true,
+   "applied": [],
+   "unmet": [],
+   "undet": [],
+   "ve": [],
+   "houseCount": 1
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": false,
+   "pa": true,
+   "reason": "1세대1주택 고가주택",
+   "tax": 53264200,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S04 일시적2주택 기한내",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pa": false,
+   "applied": [
+    "155-1-temporary-two-house"
+   ],
+   "unmet": [],
+   "undet": [],
+   "ve": [],
+   "houseCount": 2
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": true,
+   "reason": "일시적 2주택 비과세",
+   "tax": 0,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S05 일시적2주택 기한경과",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pa": false,
+   "applied": [],
+   "unmet": [],
+   "undet": [],
+   "ve": [],
+   "houseCount": 2
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": false,
+   "pa": false,
+   "tax": 141966000,
+   "issues": [],
+   "warn": [
+    "일시적 2주택 비과세 특례(소득세법 시행령 §155①)를 적용하지 않았습니다 — 신규주택 취득일부터 3년 이내 종전주택 양도 미충족(신규주택 취득일 2022-03-15, 처분기한 2025-03-17, 양도(예정)일 "
+   ]
+  }
+ },
+ {
+  "name": "S06 별도세대 상속주택+일반",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pa": false,
+   "applied": [],
+   "unmet": [],
+   "undet": [],
+   "ve": [],
+   "houseCount": 2
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": true,
+   "reason": "1세대1주택 비과세",
+   "tax": 0,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S07 같은날 갈아타기(D2)",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pa": false,
+   "applied": [],
+   "unmet": [],
+   "undet": [],
+   "ve": [],
+   "houseCount": 1
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": true,
+   "reason": "1세대1주택 비과세",
+   "tax": 0,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S08 같은날 취득 다른 주택 2채(D2)",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pa": false,
+   "applied": [],
+   "unmet": [],
+   "undet": [],
+   "ve": [],
+   "houseCount": 1
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": true,
+   "reason": "1세대1주택 비과세",
+   "tax": 0,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S09 비거주자 주택",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pa": false,
+   "applied": [],
+   "unmet": [
+    "non-resident-121-2"
+   ],
+   "undet": [],
+   "ve": [],
+   "houseCount": 1
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": true,
+   "reason": "1세대1주택 비과세",
+   "tax": 0,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S10 비거주 기간 보유통산",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pa": false,
+   "applied": [],
+   "unmet": [],
+   "undet": [],
+   "ve": [],
+   "houseCount": 1
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": true,
+   "reason": "1세대1주택 비과세",
+   "tax": 0,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S11 잔금 전 멸실 2023계약",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pa": false,
+   "applied": [],
+   "unmet": [
+    "154-1-demolished-before-balance"
+   ],
+   "undet": [
+    "154-1-demolished-before-balance-unverified"
+   ],
+   "ve": [],
+   "houseCount": 1
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": true,
+   "reason": "1세대1주택 비과세",
+   "tax": 0,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S12 잔금 전 멸실 2022.12.19 계약",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pa": false,
+   "applied": [],
+   "unmet": [],
+   "undet": [],
+   "ve": [],
+   "houseCount": 1
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": true,
+   "reason": "1세대1주택 비과세",
+   "tax": 0,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S13 원조합원 입주권 가목",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pa": false,
+   "applied": [
+    "one_right_89_1_4_ga"
+   ],
+   "unmet": [],
+   "undet": [],
+   "ve": [],
+   "houseCount": 0
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": true,
+   "pa": false,
+   "tax": 0,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S14 비거주자 원조합원 입주권",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pa": false,
+   "applied": [],
+   "unmet": [],
+   "undet": [],
+   "ve": [],
+   "houseCount": 0
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": true,
+   "pa": false,
+   "tax": 0,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S16 직계 별도세대 증여 1년5월(이월과세)",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pa": false,
+   "applied": [],
+   "unmet": [],
+   "undet": [],
+   "ve": [],
+   "houseCount": 1
+  },
+  "cause": "carryover_gift",
+  "K": {
+   "st": 200,
+   "ex": false,
+   "pa": false,
+   "tax": 394350000,
+   "issues": [],
+   "warn": [
+    "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기산일 2025-01-15, 보유기간 1년 5개월)."
+   ]
+  }
+ },
+ {
+  "name": "S17 직계 별도세대 증여 3년(이월과세)",
+  "J": {
+   "st": 200,
+   "ex": true,
+   "pa": false,
+   "applied": [],
+   "unmet": [],
+   "undet": [],
+   "ve": [],
+   "houseCount": 1
+  },
+  "cause": "carryover_gift",
+  "K": {
+   "st": 200,
+   "ex": true,
+   "reason": "1세대1주택 비과세",
+   "tax": 0,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S18 직계 같은세대 증여 1년5월",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pa": false,
+   "applied": [],
+   "unmet": [],
+   "undet": [],
+   "ve": [
+    "error:giftHouseholdHoldingStartDate: 세대가 이 주택 보유를 시작한 날을 입력하세요. (§154① 통산)"
+   ],
+   "houseCount": 1
+  },
+  "cause": "carryover_gift",
+  "K": {
+   "st": 400,
+   "issues": [],
+   "warn": []
+  }
+ },
+ {
+  "name": "S15 비거주자 고가주택 (부분)",
+  "J": {
+   "st": 200,
+   "ex": false,
+   "pa": false,
+   "applied": [],
+   "unmet": [
+    "non-resident-121-2"
+   ],
+   "undet": [],
+   "ve": [],
+   "houseCount": 1
+  },
+  "cause": "purchase",
+  "K": {
+   "st": 200,
+   "ex": false,
+   "pa": true,
+   "reason": "1세대1주택 고가주택",
+   "tax": 53264200,
+   "issues": [],
+   "warn": []
+  }
+ }
+]

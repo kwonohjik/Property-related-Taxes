@@ -1,0 +1,12 @@
+S1 A: J.id=13c27431-e03a-45d6-a775-6b5159e061d5 C.src=13c27431-e03a-45d6-a775-6b5159e061d5 provOnA={"state":"fresh","record":{"calculationId":"13c27431-e03a-45d6-a775-6b5159e061d5","judgedFor":"2026-12-01","updatedAt":"2026-11-18T14:11:26.170Z","verdictLabel":"비과세"}}
+S1 B: Jb.id=563686aa-0584-44e7-85cd-8d19c1c267db sameContentHash=true sameInputHash=true
+S1 import={"added":1,"skipped":1,"linksCleared":0} records=2 Cb.src=13c27431-e03a-45d6-a775-6b5159e061d5 (J.id? true) exists=false
+S1 B provenance(현행)={"state":"unknown","record":null}
+S1 B provenance(재매핑 대조)={"state":"fresh","record":{"calculationId":"563686aa-0584-44e7-85cd-8d19c1c267db","judgedFor":"2026-12-01","updatedAt":"2026-11-18T14:11:26.173Z","verdictLabel":"비과세"}}
+S1 control(빈 기기 merge) provenance="fresh"
+S2 A: J1.id=997c07f8-c418-4dcf-b393-b12621c4be77 J2.id=997c07f8-c418-4dcf-b393-b12621c4be77 sameId=true C1.id=9e367755-13f8-47fe-9a67-7c34001ca44e C2.id=9e367755-13f8-47fe-9a67-7c34001ca44e provOnA={"state":"fresh","record":{"calculationId":"997c07f8-c418-4dcf-b393-b12621c4be77","judgedFor":"2026-12-01","updatedAt":"2026-11-18T14:11:26.179Z","verdictLabel":"과세"}}
+S2 B import1={"added":2,"skipped":0,"linksCleared":0} import2={"added":2,"skipped":0,"linksCleared":0} records=4
+S2 B newJ.id=1b35bad8-0e6c-4445-b660-9d1a3c85765e newJ.label?={"judgment":{"isExempt":false,"isPartialExempt":false}} newC.src=997c07f8-c418-4dcf-b393-b12621c4be77 (=J1.id? true)
+S2 B provenance(현행)={"state":"source_changed","record":{"calculationId":"997c07f8-c418-4dcf-b393-b12621c4be77","judgedFor":"2026-12-01","updatedAt":"2026-11-18T14:11:26.177Z","verdictLabel":"비과세"}}
+S2 B provenance(재매핑 대조)={"state":"fresh","record":{"calculationId":"1b35bad8-0e6c-4445-b660-9d1a3c85765e","judgedFor":"2026-12-01","updatedAt":"2026-11-18T14:11:26.179Z","verdictLabel":"과세"}}
+S3 A stale=[] | B import2={"added":1,"skipped":0,"linksCleared":0} stale=[{"propertyId":"p1","propertyLabel":"자산1","reason":"source_changed"}]

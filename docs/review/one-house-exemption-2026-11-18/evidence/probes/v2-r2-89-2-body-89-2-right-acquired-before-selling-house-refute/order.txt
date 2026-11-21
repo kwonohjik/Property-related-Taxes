@@ -1,0 +1,18 @@
+E1 right-first + 3호 :: 89②=exception_met exc=소득세법 시행령 §156의2 ③ undecl= :: isExempt=true totalTax=0
+E1c right-first no proviso :: 89②=excluded exc=- undecl= :: isExempt=false totalTax=328350000
+E1p presale right-first + 3호 :: 89②=exception_met exc=소득세법 시행령 §156의3 ② undecl= :: isExempt=true totalTax=0
+E1s same-day right=house + 3호 :: 89②=exception_met exc=소득세법 시행령 §156의2 ③ undecl= :: isExempt=true totalTax=0
+E1k control house-first(2023-01-16) right 2023-06-01 + 3호 :: 89②=exception_met exc=소득세법 시행령 §156의2 ③ undecl= :: isExempt=true totalTax=0
+E2 succ right-first ④ new_house :: 89②=exception_met exc=소득세법 시행령 §156의2 ④ undecl= :: isExempt=true totalTax=0
+E2p presale right-first ④(§156의3③) new_house :: 89②=exception_met exc=소득세법 시행령 §156의3 ③ undecl= :: isExempt=true totalTax=0
+E2u succ right-first undeclared :: 89②=excluded exc=- undecl=소득세법 시행령 §156의2 ④ :: isExempt=false totalTax=137566000
+E2n succ right-first declared none :: 89②=excluded exc=- undecl= :: isExempt=false totalTax=137566000
+E2o original_non_house right-first ④ new_house :: 89②=exception_met exc=소득세법 시행령 §156의2 ④ undecl= :: isExempt=true totalTax=0
+E2x original_house right-first (control, has order check) :: 89②=excluded exc=- undecl= :: isExempt=false totalTax=137566000
+E3 succ right 2010-01-10 < house 2010-03-01, transfer 2011-06-01 (2y era) :: 89②=exception_met exc=소득세법 시행령 §156의2 ③ undecl= :: isExempt=false totalTax=218900000
+R1 succ right-first + 3호 [judge] :: status=200 isExempt=true totalTax=undefined
+R1 succ right-first + 3호 [single] :: status=200 isExempt=true totalTax=0
+R1c succ right-first no proviso [judge] :: status=200 isExempt=false totalTax=undefined
+R1c succ right-first no proviso [single] :: status=200 isExempt=false totalTax=328350000
+R2 presale right-first(2021) ③ new_house [judge] :: status=200 isExempt=true totalTax=undefined
+R2 presale right-first(2021) ③ new_house [single] :: status=200 isExempt=true totalTax=0

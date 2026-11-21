@@ -1,0 +1,165 @@
+/**
+ * probe (독립 검증) — C7 감지가 STEP 0.95 echo를 받지 못하고, B 입력이 행 연결 §99의4 선언을 남기는지.
+ * 결과는 scratchpad probes 폴더에 JSON으로 쓴다. 단언 없음(관측 전용).
+ */
+import { describe, it } from "vitest";
+import { writeFileSync, mkdirSync } from "node:fs";
+import { observeCase, buildCaseForm, type RulingCase } from "../calc/one-house-rulings/harness";
+import { buildOneHouseExemptionApiBody } from "@/lib/calc/one-house-exemption-api";
+import { propertySchema } from "@/lib/api/transfer-tax-schema";
+import { buildJudgmentEngineInput, loadJudgmentRates } from "@/app/api/calc/one-house-exemption/judgment-request";
+import { runOneHouseJudgmentPipeline } from "@/app/api/calc/one-house-exemption/judgment-pipeline";
+import { detectContestedIssues } from "@/lib/tax-engine/one-house/contested-issues";
+import {
+  resolveInheritedHouseExclusionForJudgment,
+  resolveInheritedHouseExclusionFromInput,
+} from "@/lib/tax-engine/transfer-inheritance-exclusion";
+
+const OUT =
+  "<session>/scratchpad/probes/v3-r3-contested-issues-c7-detection-echo-not-passed-and-linked-reduction-left-combined";
+mkdirSync(OUT, { recursive: true });
+
+const rural994 = {
+  kind: "reduction",
+  reduction: {
+    type: "new_99_4_rural",
+    ruralHouseAcquisitionDate: "",
+    ruralHouseStdPrice: "60000000",
+    isRegisteredHanok: false,
+    adjacentArea994: "no",
+    ruralLandAreaSqm994: "330",
+    ruralHouseType994: "other",
+    ruralHouseFloorAreaSqm994: "100",
+    meetsLocationRequirement: true,
+  },
+};
+const coRow = (id: string, inheritedDate: string, over: Record<string, unknown> = {}) => ({
+  id,
+  region: "non_capital",
+  acquisitionDate: inheritedDate,
+  isInherited: true,
+  inheritedDate,
+  isCoInherited: true,
+  isLargestCoInheritedShareholder: false,
+  decedentSameHouseholdAtInheritance: false,
+  decedentHouseholdSeparate: true,
+  ...over,
+});
+const mk = (id: string, transferDate: string, houses: Record<string, unknown>[], today = "2016-06-10"): RulingCase =>
+  ({
+    id,
+    docNo: "probe",
+    docDate: "probe",
+    basis: "era",
+    today,
+    summary: "probe",
+    bucket: "match",
+    form: {
+      isOneHousehold: true,
+      transferDate,
+      contractTotalPrice: "500000000",
+      asset: { assetKind: "housing", acquisitionDate: "2012-11-21", residenceInputMode: "direct", residencePeriodMonthsAsset: "36" },
+      houses: houses as never,
+    },
+  }) as RulingCase;
+
+const CASES: Record<string, RulingCase> = {
+  // 리뷰어 시료 — m1 §99의4 + 소수지분, m2 소수지분
+  b: mk("b", "2016-05-01", [coRow("m1", "2014-03-01", { countExclusion: rural994 }), coRow("m2", "2015-03-01")]),
+  // 대조군 1 — §99의4 선언 없음(소수지분 2채, 결정 #10 본래 C7 시료)
+  ctrl_no994: mk("ctrl_no994", "2016-05-01", [coRow("m1", "2014-03-01"), coRow("m2", "2015-03-01")]),
+  // 대조군 2 — 같은 사실, 2017.2.3. 이후 양도(C7 감지 밖)
+  ctrl_post2017: mk("ctrl_post2017", "2017-05-01", [coRow("m1", "2014-03-01", { countExclusion: rural994 }), coRow("m2", "2015-03-01")], "2017-06-10"),
+  // 대조군 3 — §99의4 행이 상속이 아닌 일반 농어촌주택 + 소수지분 1채(카드 없어야 함)
+  ctrl_plain994: mk("ctrl_plain994", "2016-05-01", [
+    { id: "m1", region: "non_capital", acquisitionDate: "2014-03-01", countExclusion: rural994 },
+    coRow("m2", "2015-03-01"),
+  ]),
+  // 변형 — §99의4 행 1개 + 소수지분 2채(m2·m3) → 정본에서도 m2·m3는 적격 2채라 제외 못 함 → C7 정당 감지, 그러나 B 입력의 §99의4 잔존 여부
+  v3rows: mk("v3rows", "2016-05-01", [
+    coRow("m1", "2014-03-01", { countExclusion: rural994 }),
+    coRow("m2", "2015-03-01"),
+    coRow("m3", "2015-06-01"),
+  ]),
+  // 변형 — 일반 농어촌주택(§99의4, 상속 아님) + 소수지분 2채 → 정본 C7 대상 m2·m3, B 입력에서 §99의4 행은 그대로 남아야 정상
+  vPlain994Plus2: mk("vPlain994Plus2", "2016-05-01", [
+    { id: "r", region: "non_capital", acquisitionDate: "2014-03-01", countExclusion: rural994 },
+    coRow("m2", "2015-03-01"),
+    coRow("m3", "2015-06-01"),
+  ]),
+};
+
+describe("probe", () => {
+  it("observe + engine internals", async () => {
+    const result: Record<string, unknown> = {};
+    for (const [k, c] of Object.entries(CASES)) {
+      const o = await observeCase(c);
+      // 엔진 내부 — route와 같은 조립
+      const form = buildCaseForm(c);
+      const body = buildOneHouseExemptionApiBody(form);
+      const parsed = propertySchema.safeParse(body);
+      let internals: Record<string, unknown> = { parseOk: parsed.success };
+      if (parsed.success) {
+        const { engineInput, transferDate, isRightSale } = buildJudgmentEngineInput(parsed.data);
+        const rates = await loadJudgmentRates(transferDate, "probe");
+        const base = new Date(`${c.today}T00:00:00.000Z`);
+        const main = runOneHouseJudgmentPipeline(engineInput, rates, base, isRightSale);
+        const echo = main.exclusion.exemptionJudgeInput.inheritedHouseExclusionDetail;
+        const fallback = resolveInheritedHouseExclusionFromInput(engineInput);
+        const forJudgment = resolveInheritedHouseExclusionForJudgment(engineInput);
+        const detected = detectContestedIssues(engineInput);
+        // 대조: echo를 붙인 입력으로 감지하면?
+        const detectedWithEcho = detectContestedIssues({ ...engineInput, inheritedHouseExclusionDetail: echo });
+        const c7 = detected.find((d) => d.id === "155-3-co-inherited-minority-before-ranking-clause");
+        let bSide: Record<string, unknown> | undefined;
+        if (c7) {
+          const bIn = c7.otherPositionInput;
+          const bRun = runOneHouseJudgmentPipeline(bIn, rates, base, isRightSale);
+          bSide = {
+            houses: (bIn.houses ?? []).map((h) => h.id),
+            householdHousingCount: bIn.householdHousingCount,
+            reductions: (bIn.reductions ?? []).map((r) => ({ type: r.type, houseId: (r as { houseId?: string }).houseId })),
+            specialHouseExclusions: (bIn.specialHouseExclusions ?? []).map((s) => ({ kind: (s as { kind?: string }).kind, houseId: (s as { houseId?: string }).houseId })),
+            judgeCount: bRun.exclusion.exemptionJudgeInput.householdHousingCount,
+            knownExcluded: bRun.exclusion.exemptionJudgeInput.knownHouseExclusionCount,
+            hceApplied: bRun.exclusion.hceApplied?.map((a: unknown) => JSON.stringify(a).slice(0, 120)),
+            isExempt: bRun.judgment.isExempt,
+            isPartialExempt: bRun.judgment.isPartialExempt,
+            unmet: (bRun.judgment.unmetExceptions ?? []).map((u) => ({ id: u.id, reasons: u.reasons })),
+          };
+        }
+        internals = {
+          ...internals,
+          engineInputHasEcho: engineInput.inheritedHouseExclusionDetail !== undefined,
+          engineInputHouses: (engineInput.houses ?? []).map((h) => h.id),
+          engineInputCount: engineInput.householdHousingCount,
+          engineInputReductions: (engineInput.reductions ?? []).map((r) => ({ type: r.type, houseId: (r as { houseId?: string }).houseId })),
+          mainJudgeCount: main.exclusion.exemptionJudgeInput.householdHousingCount,
+          mainIsExempt: main.judgment.isExempt,
+          echo: { unexcluded: echo?.unexcludedCoMinorityHouseIds, covered: echo?.coveredBySpecialActHouseIds, excluded: echo?.excludedHouses },
+          fallback: { unexcluded: fallback.unexcludedCoMinorityHouseIds, covered: fallback.coveredBySpecialActHouseIds, excluded: fallback.excludedHouses },
+          forJudgmentSameAsFallback: JSON.stringify(forJudgment) === JSON.stringify(fallback),
+          detected: detected.map((d) => ({ id: d.id, houseIds: d.houseIds })),
+          detectedWithEcho: detectedWithEcho.map((d) => ({ id: d.id, houseIds: d.houseIds })),
+          bSide,
+        };
+      } else {
+        internals.parseErr = parsed.error.issues.slice(0, 5);
+      }
+      result[k] = {
+        observe: {
+          status: o.status,
+          isExempt: o.isExempt,
+          isPartialExempt: o.isPartialExempt,
+          contested: o.contested,
+          excluded: o.excludedHouses,
+          verr: o.validationErrors,
+          unmet: o.unmetExceptions,
+          error: (o as { error?: string }).error,
+        },
+        internals,
+      };
+    }
+    writeFileSync(`${OUT}/main.json`, JSON.stringify(result, null, 2));
+  }, 120_000);
+});

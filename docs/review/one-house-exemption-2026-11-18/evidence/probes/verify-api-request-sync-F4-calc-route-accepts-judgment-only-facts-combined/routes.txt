@@ -1,0 +1,24 @@
+[OH judgment-body] baseline: status=200 isExempt=true unmet=[] err=
+[CALC judgment-body] baseline: status=200 isExempt=true isPartialExempt=undefined determinedTax=0 exemptReason=1세대1주택 비과세
+[OH judgment-body] +nonResident: status=200 isExempt=false unmet=["non-resident-121-2"] err=
+[CALC judgment-body] +nonResident: status=200 isExempt=true isPartialExempt=undefined determinedTax=0 exemptReason=1세대1주택 비과세
+[OH judgment-body] +demolished(2024-01-10): status=200 isExempt=false unmet=["154-1-demolished-before-balance"] err=
+[CALC judgment-body] +demolished(2024-01-10): status=200 isExempt=true isPartialExempt=undefined determinedTax=0 exemptReason=1세대1주택 비과세
+[OH judgment-body] +demolished(2022-12-19 control): status=200 isExempt=true unmet=[] err=
+[CALC judgment-body] +demolished(2022-12-19 control): status=200 isExempt=true isPartialExempt=undefined determinedTax=0 exemptReason=1세대1주택 비과세
+[CALC form-body] keys has nonResident=false demolished=false
+[CALC form-body] baseline: status=200 isExempt=true isPartialExempt=undefined determinedTax=0 exemptReason=1세대1주택 비과세
+[OH form-body] baseline: status=200 isExempt=true unmet=[] err=
+[CALC form-body] +nonResident: status=200 isExempt=true isPartialExempt=undefined determinedTax=0 exemptReason=1세대1주택 비과세
+[OH form-body] +nonResident: status=200 isExempt=false unmet=["non-resident-121-2"] err=
+[CALC form-body] +demolished(2024-01-10): status=200 isExempt=true isPartialExempt=undefined determinedTax=0 exemptReason=1세대1주택 비과세
+[OH form-body] +demolished(2024-01-10): status=200 isExempt=false unmet=["154-1-demolished-before-balance"] err=
+[CALC form-body] +nonResidentHoldingPeriod(2019-06-01~2021-06-01): status=200 isExempt=true isPartialExempt=undefined determinedTax=0 exemptReason=1세대1주택 비과세
+[OH form-body] +nonResidentHoldingPeriod(2019-06-01~2021-06-01): status=200 isExempt=true unmet=[] err=
+[CALC right] right baseline: status=200 isExempt=true isPartialExempt=false determinedTax=0 exemptReason=
+[CALC right] right +nonResident: status=200 isExempt=false isPartialExempt=false determinedTax=55110000 exemptReason=
+[CALC form-body] +nonResidentHoldingPeriod(2019-06-01~2023-01-01): status=200 isExempt=false isPartialExempt=false determinedTax=153060000 exemptReason=
+[MULTI] body keys=taxYear,properties,annualBasicDeductionUsed,basicDeductionAllocation,priorPaidTax,priorPaidLocalTax,priorReductionUsage props=1
+[MULTI] baseline: status=200 err=""
+[MULTI] +nonResident: status=400 err={"properties.0.transferorNonResidentAtTransfer":["비거주자 입력은 1세대1주택 비과세 판정 메뉴에서만 지원됩니다."]}
+[MULTI] +demolished: status=400 err={"properties.0.demolishedBeforeBalance":["잔금 전 멸실 특약 입력은 1세대1주택 비과세 판정 메뉴에서만 지원됩니다."]}

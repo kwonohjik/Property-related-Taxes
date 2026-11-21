@@ -1,0 +1,142 @@
+/**
+ * 독립 검증 probe — 양론 반대 입장 재판정이 §155① 짝(temporaryTwoHouse)을 다시 도출하지 않는가.
+ * 결과는 scratchpad/probes/v3-r3-contested-issues-contested-opposite-input-stale-temp-two-house-refute/route.json
+ */
+import { it } from "vitest";
+import fs from "node:fs";
+import { NextRequest } from "next/server";
+import { POST } from "@/app/api/calc/one-house-exemption/route";
+import { buildOneHouseExemptionApiBody } from "@/lib/calc/one-house-exemption-api";
+import { validateAllSteps } from "@/lib/calc/one-house-exemption-validate";
+import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
+import { buildCaseForm, type RulingCase } from "../calc/one-house-rulings/harness";
+import { vi } from "vitest";
+
+const OUT =
+  "<session>/scratchpad/probes/v3-r3-contested-issues-contested-opposite-input-stale-temp-two-house-refute";
+
+type Obs = Record<string, unknown>;
+
+async function run(c: RulingCase, mutateBody?: (b: Record<string, unknown>) => void): Promise<Obs> {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(`${c.today}T03:00:00Z`));
+  try {
+    const form = buildCaseForm(c);
+    const verr = validateAllSteps(form)
+      .filter((e) => e.severity === "error")
+      .map((e) => `${e.field}: ${e.message}`);
+    const body = buildOneHouseExemptionApiBody(form) as Record<string, unknown>;
+    mutateBody?.(body);
+    const res = await POST(
+      new NextRequest("http://localhost/api/calc/one-house-exemption", {
+        method: "POST",
+        headers: { "content-type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" },
+        body: JSON.stringify(body),
+      }),
+    );
+    const json = await res.json();
+    const j = json?.data?.judgment;
+    return {
+      status: res.status,
+      verr,
+      bodyTemporaryTwoHouse: body.temporaryTwoHouse ?? null,
+      isExempt: j?.isExempt,
+      applied: (j?.appliedExceptions ?? []).map((x: { id?: string }) => x.id),
+      unmet: (j?.unmetExceptions ?? []).map((x: { id?: string; reasons?: string[] }) => ({ id: x.id, reasons: x.reasons })),
+      excluded: (json?.data?.houseCount?.excluded ?? []).map((x: { houseId?: string; legalBasis: string }) => `${x.houseId}:${x.legalBasis}`),
+      contested: (json?.data?.contestedIssues ?? []).map(
+        (ci: { id: string; enginePosition: string; conclusionsDiffer: boolean; positions: { verdict: string }[] }) => ({
+          id: ci.id,
+          engine: ci.enginePosition,
+          A: ci.positions[0].verdict,
+          B: ci.positions[1].verdict,
+          differ: ci.conclusionsDiffer,
+        }),
+      ),
+      ...(res.status !== 200 ? { error: JSON.stringify(json?.error ?? json).slice(0, 600) } : {}),
+    };
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
+const base = (id: string, houses: RulingCase["form"] extends infer F ? F extends { houses?: infer H } ? H : never : never): RulingCase => ({
+  id,
+  docNo: "probe",
+  docDate: "probe",
+  basis: "era",
+  today: "2016-04-20",
+  summary: id,
+  bucket: "match",
+  form: {
+    isOneHousehold: true,
+    transferDate: "2016-05-01",
+    contractTotalPrice: "500000000",
+    asset: { assetKind: "housing", acquisitionDate: "2012-11-21" },
+    houses,
+  } as RulingCase["form"],
+});
+
+const coMinority = (id: string, date: string, sameHousehold: boolean) => ({
+  id,
+  region: "non_capital",
+  acquisitionDate: date,
+  isInherited: true,
+  inheritedDate: date,
+  isCoInherited: true,
+  decedentSameHouseholdAtInheritance: sameHousehold,
+  ...(sameHousehold ? {} : { decedentHouseholdSeparate: true }),
+});
+const newHouse = { id: "N", region: "non_capital", acquisitionDate: "2015-03-01", acquisitionOrigin: "general" };
+
+it("probe", async () => {
+  fs.mkdirSync(OUT, { recursive: true });
+  const out: Record<string, Obs> = {};
+
+  // C7 — 2017.2.3. 전 양도, 별도세대 공동상속 소수지분 2채(양도 주택보다 나중 상속) + 신규 주택 N
+  const c7 = base("C7", [coMinority("m1", "2013-03-01", false), coMinority("m2", "2013-06-01", false), newHouse]);
+  out.C7_after_S = await run(c7);
+  // C7 — B 입장 사실 그대로(소수지분 행 없음)
+  out.C7_B_facts = await run(base("C7B", [newHouse]));
+  // C7 대조 — 소수지분이 양도 주택보다 먼저 상속(나중 취득 행 = N 1채 → 엔진 입장에서도 짝 도출)
+  out.C7_before_S = await run(base("C7pre", [coMinority("m1", "2010-03-01", false), coMinority("m2", "2010-06-01", false), newHouse]));
+  // C7 — 고친다면: B 입장 사실로 도출된 짝을 본문에 넣어(엔진 입장 A는 여전히 4주택) 반대 입장 재판정이 어떻게 되는가
+  const bBody = buildOneHouseExemptionApiBody(buildCaseForm(base("C7B", [newHouse]))) as Record<string, unknown>;
+  out.C7_after_S_with_B_pair_injected = await run(c7, (b) => {
+    b.temporaryTwoHouse = bBody.temporaryTwoHouse;
+  });
+
+  // C2 — 동일세대 소수지분 1채(양도 주택보다 나중 상속) + 신규 주택 N
+  out.C2_after_S = await run(base("C2", [coMinority("m1", "2013-03-01", true), newHouse]));
+  // C2 — B 입장 사실(동일세대 게이트 열림 = 별도세대 답과 같은 입력)
+  out.C2_B_facts = await run(base("C2B", [coMinority("m1", "2013-03-01", false), newHouse]));
+  // C2 대조 — 소수지분이 양도 주택보다 먼저 상속
+  out.C2_before_S = await run(base("C2pre", [coMinority("m1", "2010-03-01", true), newHouse]));
+  out.C2_after_S_with_B_pair_injected = await run(base("C2", [coMinority("m1", "2013-03-01", true), newHouse]), (b) => {
+    b.temporaryTwoHouse = bBody.temporaryTwoHouse;
+  });
+
+  // 화면 흐름 그대로 — 엔진 입장에서 짝이 없으니 ⑧이 N의 취득 경위를 묻지 않는다. 경위 미답 N으로 짝만 주입하면?
+  const nNoOrigin = { id: "N", region: "non_capital", acquisitionDate: "2015-03-01" };
+  const c7NoOrigin = base("C7n", [coMinority("m1", "2013-03-01", false), coMinority("m2", "2013-06-01", false), nNoOrigin]);
+  const bBodyNoOrigin = buildOneHouseExemptionApiBody(buildCaseForm(base("C7Bn", [nNoOrigin]))) as Record<string, unknown>;
+  out.C7_noOrigin_plain = await run(c7NoOrigin);
+  out.C7_noOrigin_with_B_pair_injected = await run(c7NoOrigin, (b) => {
+    b.temporaryTwoHouse = bBodyNoOrigin.temporaryTwoHouse;
+  });
+  // 현행(2023) C2 — 동일세대 소수지분(2020 상속) + N(2022) · 양도 2024, 비조정 지역
+  const cur = (id: string, houses: unknown[]): RulingCase => ({
+    ...base(id, houses as never),
+    today: "2024-05-20",
+    form: {
+      isOneHousehold: true,
+      transferDate: "2024-06-01",
+      contractTotalPrice: "500000000",
+      asset: { assetKind: "housing", acquisitionDate: "2018-03-01" },
+      houses,
+    } as RulingCase["form"],
+  });
+  out.C2cur_after_S = await run(cur("C2cur", [coMinority("m1", "2020-03-01", true), { ...newHouse, acquisitionDate: "2022-03-01" }]));
+  out.C2cur_B_facts = await run(cur("C2curB", [coMinority("m1", "2020-03-01", false), { ...newHouse, acquisitionDate: "2022-03-01" }]));
+  fs.writeFileSync(`${OUT}/route.json`, JSON.stringify(out, null, 2));
+}, 120_000);

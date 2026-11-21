@@ -1,0 +1,214 @@
+{
+  "menu_2021_auction": {
+    "status": 200,
+    "ve": [],
+    "bodyReason": "auction",
+    "bodyKeys": [
+      "eligibleAtApproval",
+      "otherHouseAcquisitionDate",
+      "otherHouseDisposalDelayReason",
+      "approvalDate",
+      "originalAssetType",
+      "landHouseholdOwnedBuilding"
+    ],
+    "isExempt": true,
+    "applied": [
+      "one_right_89_1_4_na"
+    ],
+    "clause": "na",
+    "reasons": [],
+    "confirmNotes": []
+  },
+  "menu_2021_none": {
+    "status": 200,
+    "ve": [],
+    "bodyReason": null,
+    "bodyKeys": [
+      "eligibleAtApproval",
+      "otherHouseAcquisitionDate",
+      "otherHouseDisposalDelayReason",
+      "approvalDate",
+      "originalAssetType",
+      "landHouseholdOwnedBuilding"
+    ],
+    "isExempt": false,
+    "applied": [],
+    "clause": null,
+    "reasons": [
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ],
+    "confirmNotes": []
+  },
+  "menu_2019_expro": {
+    "status": 200,
+    "ve": [],
+    "bodyReason": "expropriation_suit",
+    "bodyKeys": [
+      "eligibleAtApproval",
+      "otherHouseAcquisitionDate",
+      "otherHouseDisposalDelayReason",
+      "approvalDate",
+      "originalAssetType",
+      "landHouseholdOwnedBuilding"
+    ],
+    "isExempt": true,
+    "applied": [
+      "one_right_89_1_4_na"
+    ],
+    "clause": "na",
+    "reasons": [],
+    "confirmNotes": []
+  },
+  "menu_2019_auction": {
+    "status": 200,
+    "ve": [],
+    "bodyReason": "auction",
+    "bodyKeys": [
+      "eligibleAtApproval",
+      "otherHouseAcquisitionDate",
+      "otherHouseDisposalDelayReason",
+      "approvalDate",
+      "originalAssetType",
+      "landHouseholdOwnedBuilding"
+    ],
+    "isExempt": true,
+    "applied": [
+      "one_right_89_1_4_na"
+    ],
+    "clause": "na",
+    "reasons": [],
+    "confirmNotes": []
+  },
+  "menu_2019_none": {
+    "status": 200,
+    "ve": [],
+    "bodyReason": null,
+    "bodyKeys": [
+      "eligibleAtApproval",
+      "otherHouseAcquisitionDate",
+      "otherHouseDisposalDelayReason",
+      "approvalDate",
+      "originalAssetType",
+      "landHouseholdOwnedBuilding"
+    ],
+    "isExempt": false,
+    "applied": [],
+    "clause": null,
+    "reasons": [
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ],
+    "confirmNotes": []
+  },
+  "menu_2022_auction": {
+    "status": 200,
+    "ve": [],
+    "bodyReason": "auction",
+    "bodyKeys": [
+      "eligibleAtApproval",
+      "otherHouseAcquisitionDate",
+      "otherHouseDisposalDelayReason",
+      "approvalDate",
+      "originalAssetType",
+      "landHouseholdOwnedBuilding"
+    ],
+    "isExempt": true,
+    "applied": [
+      "one_right_89_1_4_na"
+    ],
+    "clause": "na",
+    "reasons": [],
+    "confirmNotes": []
+  },
+  "menu_2022_none": {
+    "status": 200,
+    "ve": [],
+    "bodyReason": null,
+    "bodyKeys": [
+      "eligibleAtApproval",
+      "otherHouseAcquisitionDate",
+      "otherHouseDisposalDelayReason",
+      "approvalDate",
+      "originalAssetType",
+      "landHouseholdOwnedBuilding"
+    ],
+    "isExempt": false,
+    "applied": [],
+    "clause": null,
+    "reasons": [
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ],
+    "confirmNotes": []
+  },
+  "leaf_2021_auction": {
+    "applied": false,
+    "methodPending": true,
+    "reasonUnavailable": false,
+    "note": "2022.02.15. 전 양도분의 소득세법 시행령 §155⑱은 「다른 주택을 취득한 날부터 3년이 되는 날 현재」 각 호의 사유에 해당하는 경우로서 「해당 각 호의 매각 등의 방법으로 양도하는 경우」에만 적용됩니다. 그 방법으로 양도했는지 확인되지 않아 처분기한 예외를 적용하지 않았습니다(확인 필요)."
+  },
+  "leaf_2021_auction_method": {
+    "applied": true,
+    "methodPending": false,
+    "reasonUnavailable": false
+  },
+  "leaf_2019_expro": {
+    "applied": false,
+    "methodPending": false,
+    "reasonUnavailable": true,
+    "note": "§155⑱ 5호 사유는 2020.02.11. 이후 양도분부터 있는 호입니다 — 이 양도일에 시행 중인 소득세법 시행령 §155⑱에는 없어 처분기한 예외를 적용하지 않았습니다."
+  },
+  "leaf_2022_auction": {
+    "applied": true,
+    "methodPending": false,
+    "reasonUnavailable": false
+  },
+  "tt_2021_auction": {
+    "oneYearThreshold": "2011-03-02T00:00:00.000Z",
+    "acquiredInOrder": true,
+    "oneYearMet": true,
+    "deadline": "2020-01-10T00:00:00.000Z",
+    "threeYearMet": false,
+    "remnantApplied": false,
+    "delay": {
+      "applied": false,
+      "methodPending": true,
+      "reasonUnavailable": false,
+      "note": "2022.02.15. 전 양도분의 소득세법 시행령 §155⑱은 「다른 주택을 취득한 날부터 3년이 되는 날 현재」 각 호의 사유에 해당하는 경우로서 「해당 각 호의 매각 등의 방법으로 양도하는 경우」에만 적용됩니다. 그 방법으로 양도했는지 확인되지 않아 처분기한 예외를 적용하지 않았습니다(확인 필요)."
+    },
+    "overall": false
+  },
+  "tt_2019_expro": {
+    "oneYearThreshold": "2011-03-02T00:00:00.000Z",
+    "acquiredInOrder": true,
+    "oneYearMet": true,
+    "deadline": "2019-01-10T00:00:00.000Z",
+    "threeYearMet": false,
+    "remnantApplied": false,
+    "delay": {
+      "applied": false,
+      "methodPending": false,
+      "reasonUnavailable": true,
+      "note": "§155⑱ 5호 사유는 2020.02.11. 이후 양도분부터 있는 호입니다 — 이 양도일에 시행 중인 소득세법 시행령 §155⑱에는 없어 처분기한 예외를 적용하지 않았습니다."
+    },
+    "overall": false
+  },
+  "calc_2021_auction": {
+    "clause": "na",
+    "totalTax": 0,
+    "directClause": "na"
+  },
+  "calc_2021_none": {
+    "clause": null,
+    "totalTax": 157806000,
+    "directClause": null
+  },
+  "calc_2019_expro": {
+    "clause": "na",
+    "totalTax": 0,
+    "directClause": "na"
+  },
+  "calc_2022_auction": {
+    "clause": "na",
+    "totalTax": 0,
+    "directClause": "na"
+  }
+}

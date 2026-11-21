@@ -1,0 +1,13 @@
+T0 1입주권: {"status":200,"isExempt":false,"isPartialExempt":false,"appliedExceptions":[],"undetermined":[],"pending":[],"unmetExceptions":[],"unmetReasons":{},"excludedHouses":[],"contested":[],"validationErrors":[]}
+T1 2입주권: {"status":200,"isExempt":true,"isPartialExempt":false,"appliedExceptions":["155-1-temporary-two-house"],"undetermined":["89-2-open:소득세법 시행령 §156의2 ⑦·⑩·⑪","89-2-open:소득세법 시행령 §156의3 ⑤·⑦·⑧"],"pending":[],"unmetExceptions":[],"unmetReasons":{},"excludedHouses":[],"contested":[],"validationErrors":[]}
+T2 2분양권: {"status":200,"isExempt":true,"isPartialExempt":false,"appliedExceptions":["155-1-temporary-two-house"],"undetermined":["89-2-open:소득세법 시행령 §156의2 ⑦·⑩·⑪","89-2-open:소득세법 시행령 §156의3 ⑤·⑦·⑧"],"pending":[],"unmetExceptions":[],"unmetReasons":{},"excludedHouses":[],"contested":[],"validationErrors":[]}
+T3 1분양권: {"status":200,"isExempt":false,"isPartialExempt":false,"appliedExceptions":[],"undetermined":[],"pending":[],"unmetExceptions":[],"unmetReasons":{},"excludedHouses":[],"contested":[],"validationErrors":[]}
+T4 입주권+분양권: {"status":200,"isExempt":true,"isPartialExempt":false,"appliedExceptions":["155-1-temporary-two-house"],"undetermined":["89-2-open:소득세법 시행령 §156의2 ⑦·⑩·⑪","89-2-open:소득세법 시행령 §156의3 ⑤·⑦·⑧"],"pending":[],"unmetExceptions":[],"unmetReasons":{},"excludedHouses":[],"contested":[],"validationErrors":[]}
+M1 혼인 2주택+1분양권 구성공란: {"status":200,"isExempt":false,"isPartialExempt":false,"appliedExceptions":[],"undetermined":["89-2-merged-household-composition-undeclared"],"pending":[],"unmetExceptions":[],"unmetReasons":{},"excludedHouses":[],"contested":[],"validationErrors":[]}
+M2 혼인 2주택+2분양권 구성공란: {"status":200,"isExempt":true,"isPartialExempt":false,"appliedExceptions":["155-5-marriage-merge"],"undetermined":["89-2-open:소득세법 시행령 §156의2 ⑦·⑩·⑪","89-2-open:소득세법 시행령 §156의3 ⑤·⑦·⑧"],"pending":[],"unmetExceptions":[],"unmetReasons":{},"excludedHouses":[],"contested":[],"validationErrors":[]}
+E1 1권리 verdict: {"status":"excluded"}
+E1 1권리 calc: {"isExempt":false,"totalTax":150766000}
+E2 2권리 verdict: {"status":"undetermined","openArticles":["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"]}
+E2 2권리 calc: {"isExempt":true,"totalTax":0,"exemptReason":"일시적 2주택 비과세","warnings":["세대가 주택과 조합원입주권·분양권을 함께 보유한 상태에서 그 주택을 양도했습니다. 「소득세법」 §89②은 이 경우 1세대1주택 비과세(§89①3호)를 적용하지 않되, 시행령이 정하는 예외에 해당하면 그대로 적용합니다. 아래 조문의 요건 충족 여부를 직접 확인하세요 — 이 계산에는 §89② 배제를 적용하지 않았습니다: 소득세법 시행령 §156의2 ⑦·⑩·⑪ · 소득세법 시행령 §156의3 ⑤·⑦·⑧"]}
+E3 문화유산 선언 2+2 verdict: {"status":"undetermined","openArticles":["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"]}
+E4 3주택+1권리 verdict: {"status":"undetermined","openArticles":["소득세법 시행령 §156의2 ⑦·⑩·⑪","소득세법 시행령 §156의3 ⑤·⑦·⑧"]}

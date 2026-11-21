@@ -1,0 +1,25 @@
+{
+  "A_fetchCalls": 1,
+  "A_conclusion": "3주택 이상 중과",
+  "A_resultText": "1양도 예정 주택 결론3주택 이상 중과양도일 2021-06-01 기준 판정입니다.2보유 주택별 판정⑤는 같은 양도일에 그 주택을 양도한다고 볼 때의 결론입니다. 양도 예정 주택은 정밀 판정, 나머지는 간이 판정입니다.주택① 판정기준② 기준시가③ 주택 수 산입④ 조정대상지역⑤ 양도한다면양도 예정 주택지역기준 (서울특별시)—○○3주택 이상 중과보유 주택 1 (2010-01-01 취득)지역기준 (서울특별시)500,000,000○○3주택 이상 중과 (간이)이 주택을 양도 예정 주택으로 바꿔 판정보유 주택 2 (2010-01-01 취득)지역기준 (서울특별시)500,000,000○○3주택 이상 중과 (간이)이 주택을 양도 예정 주택으로 바꿔 판정중과 판정 주택 수(조합원입주권·분양권 포함) 33양도 예정 주택 — 판정",
+  "A_resultExists": true,
+  "resumeReturn": null,
+  "pushedTo": "/calc/one-house-exemption",
+  "afterResume": {
+    "formTransferDate": "2027-01-15",
+    "formHouses": 0,
+    "oneHouseStep": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeResultIsSameRefAsA": true,
+    "surchargeResultNull": false
+  },
+  "B_newFetchCalls": 0,
+  "B_conclusion": "3주택 이상 중과",
+  "B_resultText": "1양도 예정 주택 결론3주택 이상 중과양도일 2021-06-01 기준 판정입니다.2보유 주택별 판정⑤는 같은 양도일에 그 주택을 양도한다고 볼 때의 결론입니다. 양도 예정 주택은 정밀 판정, 나머지는 간이 판정입니다.주택① 판정기준② 기준시가③ 주택 수 산입④ 조정대상지역⑤ 양도한다면양도 예정 주택지역기준 (서울특별시)—○○3주택 이상 중과보유 주택지역기준 (서울특별시)—○○3주택 이상 중과 (간이)보유 주택지역기준 (서울특별시)—○○3주택 이상 중과 (간이)중과 판정 주택 수(조합원입주권·분양권 포함) 33양도 예정 주택 — 판정 순서① 조정대상지역 — 조정대상지역양도일(2021-06-01) 현재 양도 예정 주택의 소재지는 조정대상지역입니다.2017-08-03 고시 — 서울특별시 강남구 지정 ↗② 판정기준",
+  "B_sameTextAsA": false,
+  "control_updateFormData_surchargeResultNull": true,
+  "control_newFetchCalls": 1,
+  "control_lastCallHouses": 1,
+  "control_conclusion": "중과 없음"
+}

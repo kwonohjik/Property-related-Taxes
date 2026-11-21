@@ -1,0 +1,38 @@
+{
+  "sameWithin3y": {
+    "isExempt": true,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "und": [],
+    "unmet": [],
+    "excluded": [],
+    "contested": [],
+    "verr": []
+  },
+  "sameAfter3y": {
+    "isExempt": false,
+    "applied": [],
+    "und": [],
+    "unmet": [
+      "155-2-inherited-house"
+    ],
+    "excluded": [],
+    "contested": [],
+    "verr": []
+  },
+  "separateWithin3y": {
+    "isExempt": true,
+    "applied": [],
+    "und": [],
+    "unmet": [],
+    "excluded": [
+      {
+        "houseId": "m",
+        "legalBasis": "소득세법 시행령 §155②"
+      }
+    ],
+    "contested": [],
+    "verr": []
+  }
+}

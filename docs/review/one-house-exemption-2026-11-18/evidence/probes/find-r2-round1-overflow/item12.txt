@@ -1,0 +1,2 @@
+item12 ⑧ errors: ["longTermMortgageContractDate: 장기저당담보주택: 계약체결일을 입력하세요.","longTermMortgageBorrowerAge: 장기저당담보주택: 계약체결일 현재 가입자 나이를 입력하세요.","longTermMortgageContractYears: 장기저당담보주택: 계약기간(년)을 입력하세요."]
+item11 summary: [{"label":"세대 보유 주택 수","value":"0채"},{"label":"세대 보유 입주권 수","value":"1개"},{"label":"분양권·입주권","value":"2건"}]

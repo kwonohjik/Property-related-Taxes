@@ -1,0 +1,32 @@
+{
+  "observe": {
+    "isExempt": true,
+    "contested": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "enginePosition": "A",
+        "A": "exempt",
+        "B": "taxable"
+      }
+    ],
+    "excluded": [
+      {
+        "houseId": "m2",
+        "legalBasis": "소득세법 시행령 §155③"
+      }
+    ],
+    "verr": [],
+    "und": []
+  },
+  "issues": [
+    [
+      "155-3-same-household-co-inherited-minority",
+      false
+    ]
+  ],
+  "houses": [
+    "selling",
+    "m1",
+    "m2"
+  ]
+}

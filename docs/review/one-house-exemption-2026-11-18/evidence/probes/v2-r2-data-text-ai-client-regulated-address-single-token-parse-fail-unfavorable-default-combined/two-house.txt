@@ -1,0 +1,4 @@
+분당구 | TWO | issues=0 | body=[false,false] | totalTax=230967000
+강남구역삼동123 | TWO | issues=0 | body=[false,false] | totalTax=230967000
+강남구 테헤란로 123 | TWO | issues=0 | body=[true,true] | totalTax=436161000
+서울특별시 강남구 테헤란로 123 | TWO | issues=0 | body=[true,true] | totalTax=436161000

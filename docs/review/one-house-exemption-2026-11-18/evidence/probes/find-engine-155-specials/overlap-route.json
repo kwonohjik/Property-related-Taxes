@@ -1,0 +1,38 @@
+{
+  "parentalOnly": {
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "appliedExceptions": [
+      "155-1-temporary-two-house",
+      "155-4-parental-care-merge"
+    ],
+    "undetermined": [],
+    "pending": [],
+    "unmetExceptions": [],
+    "unmetReasons": {},
+    "excludedHouses": [],
+    "contested": [],
+    "validationErrors": []
+  },
+  "withMarriage_second": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "appliedExceptions": [],
+    "undetermined": [],
+    "pending": [],
+    "unmetExceptions": [
+      "155-5-marriage-merge"
+    ],
+    "unmetReasons": {
+      "155-5-marriage-merge": [
+        "양도 주택을 혼인한 날(2010-05-01) 이후인 2015-01-01에 취득했습니다 — 이 특례는 합가 당시 이미 보유하던 주택에 적용됩니다.",
+        "혼인·동거봉양 이중 합가 특례는 배우자가 혼인 전부터 보유한 주택 1채와 동거봉양으로 합친 가족이 합가 전부터 보유한 주택 1채가 있는 3주택에 적용됩니다 — 보유 주택 목록의 합가 전 보유자 구성이 이와 다릅니다."
+      ]
+    },
+    "excludedHouses": [],
+    "contested": [],
+    "validationErrors": []
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "dayInputs": 4,
+  "patches": [
+    {
+      "redevNewResidenceStartDate": "2022-03-10",
+      "redevNewResidenceEndDate": "2024-03-09",
+      "redevNewHouseResidenceMonths": "23"
+    }
+  ],
+  "canonical": 24,
+  "previewBeforeRerender": [
+    24
+  ]
+}

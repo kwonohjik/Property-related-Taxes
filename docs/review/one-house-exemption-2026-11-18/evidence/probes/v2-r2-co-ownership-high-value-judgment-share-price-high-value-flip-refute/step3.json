@@ -1,0 +1,30 @@
+{
+  "housing": {
+    "Step1": {
+      "hits": [],
+      "priceCtx": null
+    },
+    "Step2": {
+      "hits": [],
+      "priceCtx": null
+    },
+    "Step3": {
+      "hits": [],
+      "priceCtx": "예상 양도가액12억 초과 여부(고가주택)를 판정하는 데 쓰입니다2-C조정대상지역취득 당시 조정대상지역이었다면 보유 2년에 더해 거주 2년이 필요"
+    }
+  },
+  "right_to_move_in": {
+    "Step1": {
+      "hits": [],
+      "priceCtx": null
+    },
+    "Step2": {
+      "hits": [],
+      "priceCtx": null
+    },
+    "Step3": {
+      "hits": [],
+      "priceCtx": "예상 양도가액12억 초과 여부(고가주택)를 판정하는 데 쓰입니다2-C조정대상지역취득 당시 조정대상지역이었다면 보유 2년에 더해 거주 2년이 필요"
+    }
+  }
+}

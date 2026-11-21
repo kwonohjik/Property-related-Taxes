@@ -1,0 +1,41 @@
+{
+  "hint": "참고 — 취득일부터 관리처분계획인가일까지 1년 11개월 → 2년 요건 미충족.",
+  "calculateHoldingPeriod": {
+    "years": 2,
+    "months": 0,
+    "days": 0
+  },
+  "yes": {
+    "totalTax": 41393000,
+    "taxBase": 151500000,
+    "lthdRates": [
+      0.8,
+      0.8,
+      0.2
+    ],
+    "settlementGain": 0,
+    "settlementLthd": 0
+  },
+  "no": {
+    "totalTax": 99913000,
+    "taxBase": 291500000,
+    "lthdRates": [
+      0.8,
+      0.8,
+      0.2
+    ],
+    "settlementGain": 175000000,
+    "settlementLthd": 35000000
+  },
+  "undeclared": {
+    "totalTax": 99913000,
+    "taxBase": 291500000,
+    "lthdRates": [
+      0.8,
+      0.8,
+      0.2
+    ],
+    "settlementGain": 175000000,
+    "settlementLthd": 35000000
+  }
+}

@@ -1,0 +1,153 @@
+{
+  "classifyCurrent": {
+    "GUMI": "adjacent",
+    "UISEONG": "adjacent",
+    "CHEONGSONG": "adjacent",
+    "YEONGCHEON": "adjacent",
+    "POHANG_BUK": "not_adjacent",
+    "GUNWI": "same_unit"
+  },
+  "classifyPreGunwiSimulated": {
+    "GUMI": "not_adjacent",
+    "UISEONG": "not_adjacent",
+    "CHEONGSONG": "not_adjacent",
+    "YEONGCHEON": "adjacent",
+    "POHANG_BUK": "not_adjacent",
+    "GUNWI": "same_unit"
+  },
+  "rawAdjacency": {
+    "GUMI": [
+      "2772000000",
+      "4715000000",
+      "4725000000",
+      "4773000000",
+      "4785000000"
+    ],
+    "UISEONG": [
+      "2772000000",
+      "4717000000",
+      "4719000000",
+      "4725000000",
+      "4775000000",
+      "4790000000"
+    ],
+    "CHEONGSONG": [
+      "2772000000",
+      "4711300000",
+      "4717000000",
+      "4723000000",
+      "4773000000",
+      "4776000000",
+      "4777000000"
+    ],
+    "GUNWI": [
+      "2714000000",
+      "4719000000",
+      "4723000000",
+      "4773000000",
+      "4775000000",
+      "4785000000"
+    ],
+    "DAEGU_DONG": [
+      "2711000000",
+      "2723000000",
+      "2726000000",
+      "2772000000",
+      "4723000000",
+      "4729000000",
+      "4785000000"
+    ]
+  },
+  "classifyJincheonToSangdang": "adjacent",
+  "rawSangdang": [
+    "3011000000",
+    "3023000000",
+    "4311200000",
+    "4311400000",
+    "4372000000",
+    "4374500000",
+    "4376000000"
+  ],
+  "reverseGumiToDalseo": {
+    "current": "adjacent",
+    "preGunwiSimulated": "not_adjacent"
+  },
+  "meetsGumi": true,
+  "meetsPohang": false,
+  "screenGumi": {
+    "ok": true,
+    "reason": "이전한 시·군과 연접한 시·군에 소재합니다 — 지역 요건 충족."
+  },
+  "screenUiseong": {
+    "ok": true,
+    "reason": "이전한 시·군과 연접한 시·군에 소재합니다 — 지역 요건 충족."
+  },
+  "screenPohang": {
+    "ok": false,
+    "reason": "이전한 시·군과 연접하지 않습니다 — §155⑯ 지역 요건 미충족으로 처분기한 5년이 적용되지 않습니다."
+  },
+  "engineDeadline": {
+    "gumi_2022": {
+      "isExempt": true,
+      "undetermined": []
+    },
+    "uiseong_2022": {
+      "isExempt": true,
+      "undetermined": []
+    },
+    "cheongsong_2022": {
+      "isExempt": true,
+      "undetermined": []
+    },
+    "yeongcheon_2022_control": {
+      "isExempt": true,
+      "undetermined": []
+    },
+    "pohang_2022_control": {
+      "isExempt": false,
+      "undetermined": []
+    },
+    "gumi_within3y_2021_control": {
+      "isExempt": true,
+      "undetermined": []
+    }
+  },
+  "engineOneYearWaiver": {
+    "gumi": {
+      "isExempt": true,
+      "undetermined": []
+    },
+    "pohang_control": {
+      "isExempt": false,
+      "undetermined": []
+    },
+    "yeongcheon_control": {
+      "isExempt": true,
+      "undetermined": []
+    }
+  },
+  "route": {
+    "single_gumi": {
+      "status": 200,
+      "isExempt": true,
+      "reason": "일시적 2주택 비과세 (§155⑯ 지방이전 처분기한 5년)",
+      "determinedTax": 0,
+      "totalTax": 0
+    },
+    "single_pohang": {
+      "status": 200,
+      "isExempt": false,
+      "determinedTax": 145600000,
+      "totalTax": 160160000
+    },
+    "judge_gumi": {
+      "status": 200,
+      "isExempt": true,
+      "reason": "일시적 2주택 비과세 (§155⑯ 지방이전 처분기한 5년)"
+    },
+    "judge_pohang": {
+      "status": 200,
+      "isExempt": false
+    }
+  }
+}

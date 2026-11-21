@@ -1,0 +1,142 @@
+/**
+ * THROWAWAY PROBE — 겸용 §154① 판정 입력이 「지정 지구 안인가」 선언을 버리는지 재현.
+ * 일반·겸용 × 지구 밖·안·미선언 (고양 덕양구 삼송동 4128111100, 취득 2020-01-10) + 제주 대조군.
+ */
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { cleanup } from "@testing-library/react";
+import { writeFileSync, mkdirSync } from "node:fs";
+import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
+vi.mock("@/lib/db/tax-rates", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/db/tax-rates")>();
+  return { ...actual, preloadTaxRates: vi.fn() };
+});
+vi.mock("@/lib/api/rate-limit", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/rate-limit")>()),
+  checkRateLimit: vi.fn().mockReturnValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 }),
+  getClientIp: vi.fn().mockReturnValue("127.0.0.1"),
+  shouldBypassRateLimit: vi.fn().mockReturnValue(true),
+}));
+import { preloadTaxRates } from "@/lib/db/tax-rates";
+import { runCalc, redevAptForm, allIssues, houseRow } from "../calc/_helpers/redev-one-house-route";
+import { calcEffectiveWasRegulatedAtAcquisition } from "@/lib/calc/effective-regulated-at-acquisition";
+import { resolveWasRegulatedAtAcquisition } from "@/lib/tax-engine/transfer-tax-exemption-holding";
+import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
+import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
+
+const OUT = "<session>/scratchpad/probes/v3-r3-regulated-at-acq-parity-mixed-use-exemption-drops-designated-district-reproduce";
+const lines: string[] = [];
+const log = (s: string) => lines.push(s);
+
+beforeEach(() => {
+  vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+const SAMSONG = "4128111100";
+const JEJU = "5011010100";
+const ACQ = "2020-01-10";
+const TRANSFER = "2024-06-03";
+const MIXED = {
+  isMixedUseHouse: true, residentialFloorArea: "100", nonResidentialFloorArea: "60", mixedUseTotalLandArea: "200", buildingFootprintArea: "100",
+  mixedTransferHousingPrice: "600000000", mixedTransferLandPricePerSqm: "5000000", mixedTransferCommercialBuildingPrice: "100000000",
+  mixedAcqHousingPrice: "300000000", mixedAcqLandPricePerSqm: "2500000", mixedAcqCommercialBuildingPrice: "50000000",
+  mixedAcqHousingBuildingStdPrice: "50000000", mixedTransferHousingBuildingStdPrice: "100000000", mixedIsMetropolitanArea: true,
+};
+
+function form(o: { mixed: boolean; code: string; inDistrict: boolean | undefined }) {
+  return redevAptForm({
+    kind: "housing",
+    price: "1000000000",
+    count: "1",
+    houses: [],
+    assetOver: {
+      ...(o.mixed ? MIXED : {}),
+      acquisitionDate: ACQ,
+      fixedAcquisitionPrice: "700000000",
+      regionCode: o.code,
+      regionInDesignatedDistrict: o.inDistrict,
+      residencePeriods: [],
+    },
+    formOver: { transferDate: TRANSFER, filingDate: "2024-08-31", residencePeriodMonths: "0" } as never,
+  });
+}
+
+describe("probe grid", () => {
+  it("leaf: isRegulatedByBjdCode 삼송동 2020-01-10", () => {
+    for (const d of [false, true, undefined]) {
+      const r = isRegulatedByBjdCode(SAMSONG, "2020-01-10", d);
+      log(`LEAF isRegulatedByBjdCode(${SAMSONG}, 2020-01-10, ${d}) = ${r.isRegulated} conf=${r.confidence} basis=${r.basis}`);
+    }
+    // 겸용 exemptionReqInput 모양(regionInDesignatedDistrict 키 없음) vs 일반 입력 모양
+    const base = { acquisitionDate: new Date(ACQ), transferDate: new Date(TRANSFER), residencePeriodMonths: 0, regionCode: SAMSONG, wasRegulatedAtAcquisition: false };
+    log(`LEAF resolveWasRegulatedAtAcquisition(mixed-shape, no key) = ${resolveWasRegulatedAtAcquisition(base as never)}`);
+    log(`LEAF resolveWasRegulatedAtAcquisition(+regionInDesignatedDistrict:false) = ${resolveWasRegulatedAtAcquisition({ ...base, regionInDesignatedDistrict: false } as never)}`);
+  });
+
+  for (const code of [SAMSONG, JEJU]) {
+    for (const inDistrict of code === SAMSONG ? [false, true, undefined] : [undefined]) {
+      for (const mixed of [false, true]) {
+        it(`route code=${code} mixed=${mixed} inDistrict=${inDistrict}`, async () => {
+          const f = form({ mixed, code, inDistrict });
+          const issues = allIssues(f);
+          const screen = calcEffectiveWasRegulatedAtAcquisition(f.assets[0] as AssetForm, undefined, f.regionCode);
+          const r = await runCalc(f);
+          const body = r.body as Record<string, unknown>;
+          const res = r.result ?? {};
+          const exempt = mixed ? res.housingPart?.isExempt : res.isExempt;
+          const tax = mixed ? res.total?.totalTax ?? res.total?.determinedTax ?? JSON.stringify(Object.keys(res.total ?? {})) : res.totalTax;
+          const regWarn = ((mixed ? res.warnings : res.warnings) ?? []).filter((w: string) => w.includes("취득 당시 조정대상지역"));
+          log(
+            `ROUTE code=${code} mixed=${mixed} inDistrict=${String(inDistrict)} | issues=${issues.length} screenEffective=${screen} ` +
+              `body.regionCode=${String(body.regionCode)} body.regionInDesignatedDistrict=${String(body.regionInDesignatedDistrict)} body.wasRegulatedAtAcquisition=${String(body.wasRegulatedAtAcquisition)} ` +
+              `| status=${r.status} exempt=${exempt} tax=${tax} exemptReason=${mixed ? res.housingPart?.exemptBasis : res.exemptReason}`,
+          );
+          for (const w of regWarn) log(`    warn: ${w.slice(0, 260)}`);
+          expect(r.status).toBe(200);
+        });
+      }
+    }
+  }
+
+  // §155① 일시적 2주택 — deemedInput이 exemptionReqInput을 펼쳐 같은 누락이 처분기한(조정→조정)으로 번지는가.
+  // 양도 주택: 삼송동(지구 밖 선언) 2015-01-01 취득(2017.8.3. 전 → 거주요건 없음) · 신규: 강남 2020-03-01(삼송 지구 한정 구간) · 양도 2021-06-01(15개월).
+  for (const inDistrict of [false, true, undefined]) {
+    for (const mixed of [false, true]) {
+      it(`TT route mixed=${mixed} inDistrict=${inDistrict}`, async () => {
+        const f = redevAptForm({
+          kind: "housing",
+          price: "1000000000",
+          count: "2",
+          houses: [houseRow("b", "2020-03-01", { region: "capital", regionCode: "1168010100", officialPrice: "500000000", acquisitionOrigin: "general" } as never)],
+          assetOver: {
+            ...(mixed ? MIXED : {}),
+            acquisitionDate: "2015-01-01",
+            fixedAcquisitionPrice: "700000000",
+            regionCode: SAMSONG,
+            regionInDesignatedDistrict: inDistrict,
+            residencePeriods: [],
+          },
+          formOver: { transferDate: "2022-06-02", filingDate: "2022-08-31", residencePeriodMonths: "0" } as never,
+        });
+        const issues = allIssues(f);
+        const r = await runCalc(f);
+        const res = r.result ?? {};
+        const exempt = mixed ? res.housingPart?.isExempt : res.isExempt;
+        const tax = mixed ? (res.total?.totalTax ?? `keys:${Object.keys(res).join(",")}|total:${JSON.stringify(res.total ?? null).slice(0, 300)}`) : res.totalTax;
+        const undeclared = ((res.warnings ?? []) as string[]).some((x) => x.includes("지구 안인지 고르지 않아"));
+        log(`TTU mixed=${mixed} inDistrict=${String(inDistrict)} undeclaredNotice=${undeclared}`);
+        const w = ((res.warnings ?? []) as string[]).filter((x) => /일시적|155|처분|조정/.test(x));
+        log(`TT mixed=${mixed} inDistrict=${String(inDistrict)} | issues=${JSON.stringify(issues.map((i) => i.message.slice(0, 80)))} status=${r.status} exempt=${exempt} tax=${tax} reason=${mixed ? res.housingPart?.exemptBasis : res.exemptReason}`);
+        for (const x of w) log(`    warn: ${x.slice(0, 220)}`);
+      });
+    }
+  }
+
+  it("flush", () => {
+    mkdirSync(OUT, { recursive: true });
+    writeFileSync(`${OUT}/grid.txt`, lines.join("\n") + "\n");
+  });
+});

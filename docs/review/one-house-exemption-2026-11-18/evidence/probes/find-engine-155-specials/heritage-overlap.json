@@ -1,0 +1,15 @@
+{
+  "heritage3": {
+    "isExempt": false,
+    "tax": 97860000
+  },
+  "rural3": {
+    "isExempt": true,
+    "reason": "일시적 2주택 비과세 (§155⑦1호 상속 농어촌주택 제외)",
+    "tax": 0
+  },
+  "heritage2": {
+    "isExempt": true,
+    "reason": "문화유산 주택 비과세 (§155⑥1호)"
+  }
+}

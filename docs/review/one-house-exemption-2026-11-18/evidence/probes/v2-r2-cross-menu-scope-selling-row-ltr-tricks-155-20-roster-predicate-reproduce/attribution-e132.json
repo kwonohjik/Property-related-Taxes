@@ -1,0 +1,191 @@
+[
+ {
+  "label": "E193-era +sellingLTR",
+  "ohErr": [],
+  "scErr": [],
+  "oneHouse": {
+   "status": 200,
+   "isExempt": false,
+   "applied": [],
+   "unmet": [],
+   "rentalPassed": false
+  },
+  "surchargeSummary": {
+   "status": 200,
+   "isExempt": true,
+   "applied": [
+    "155-1-temporary-two-house"
+   ],
+   "unmet": [],
+   "rentalPassed": false
+  },
+  "attribution": {
+   "asIs": {
+    "rosterRowsLtr": [
+     "selling"
+    ],
+    "sellingHouseId": "selling",
+    "rosterCountsRentalUnits": true,
+    "rentalUnitsToRestore": null,
+    "pipelineIsExempt": true,
+    "pipelineRentalPassed": false,
+    "rentalDeemedHouseIds": []
+   },
+   "sellingFlippedOff": {
+    "rosterRowsLtr": [],
+    "sellingHouseId": "selling",
+    "rosterCountsRentalUnits": false,
+    "rentalUnitsToRestore": {
+     "units": 1,
+     "cause": "composition",
+     "scenario": "A",
+     "hasRoster": true
+    },
+    "pipelineIsExempt": false,
+    "pipelineRentalPassed": false,
+    "rentalDeemedHouseIds": []
+   }
+  }
+ },
+ {
+  "label": "E132-era base",
+  "ohErr": [],
+  "scErr": [],
+  "oneHouse": {
+   "status": 200,
+   "isExempt": false,
+   "applied": [],
+   "unmet": [
+    "155-5-marriage-merge"
+   ],
+   "rentalPassed": false
+  },
+  "surchargeSummary": {
+   "status": 200,
+   "isExempt": false,
+   "applied": [],
+   "unmet": [
+    "155-5-marriage-merge"
+   ],
+   "rentalPassed": false
+  }
+ },
+ {
+  "label": "E132-era +sellingLTR",
+  "ohErr": [],
+  "scErr": [],
+  "oneHouse": {
+   "status": 200,
+   "isExempt": false,
+   "applied": [],
+   "unmet": [
+    "155-5-marriage-merge"
+   ],
+   "rentalPassed": false
+  },
+  "surchargeSummary": {
+   "status": 200,
+   "isExempt": true,
+   "applied": [
+    "155-5-marriage-merge"
+   ],
+   "unmet": [],
+   "rentalPassed": false
+  },
+  "attribution": {
+   "asIs": {
+    "rosterRowsLtr": [
+     "selling"
+    ],
+    "sellingHouseId": "selling",
+    "rosterCountsRentalUnits": true,
+    "rentalUnitsToRestore": null,
+    "pipelineIsExempt": true,
+    "pipelineRentalPassed": false,
+    "rentalDeemedHouseIds": []
+   },
+   "sellingFlippedOff": {
+    "rosterRowsLtr": [],
+    "sellingHouseId": "selling",
+    "rosterCountsRentalUnits": false,
+    "rentalUnitsToRestore": {
+     "units": 3,
+     "cause": "composition",
+     "scenario": "A",
+     "hasRoster": true
+    },
+    "pipelineIsExempt": false,
+    "pipelineRentalPassed": false,
+    "rentalDeemedHouseIds": []
+   }
+  }
+ },
+ {
+  "label": "P-E132-1062 base",
+  "ohErr": [],
+  "scErr": [],
+  "oneHouse": {
+   "status": 200,
+   "isExempt": true,
+   "applied": [
+    "155-5-marriage-merge"
+   ],
+   "unmet": [],
+   "rentalPassed": true
+  },
+  "surchargeSummary": {
+   "status": 200,
+   "isExempt": true,
+   "applied": [
+    "155-5-marriage-merge"
+   ],
+   "unmet": [],
+   "rentalPassed": true
+  }
+ },
+ {
+  "label": "P-E132-1062 +sellingLTR",
+  "ohErr": [],
+  "scErr": [],
+  "oneHouse": {
+   "status": 200,
+   "isExempt": true,
+   "applied": [
+    "155-5-marriage-merge"
+   ],
+   "unmet": [],
+   "rentalPassed": true
+  },
+  "surchargeSummary": {
+   "status": 200,
+   "isExempt": true,
+   "applied": [
+    "155-5-marriage-merge"
+   ],
+   "unmet": [],
+   "rentalPassed": false
+  },
+  "attribution": {
+   "asIs": {
+    "rosterRowsLtr": [
+     "selling"
+    ],
+    "sellingHouseId": "selling",
+    "rosterCountsRentalUnits": true,
+    "rentalUnitsToRestore": null,
+    "pipelineIsExempt": true,
+    "pipelineRentalPassed": false,
+    "rentalDeemedHouseIds": []
+   },
+   "sellingFlippedOff": {
+    "rosterRowsLtr": [],
+    "sellingHouseId": "selling",
+    "rosterCountsRentalUnits": false,
+    "rentalUnitsToRestore": null,
+    "pipelineIsExempt": true,
+    "pipelineRentalPassed": true,
+    "rentalDeemedHouseIds": []
+   }
+  }
+ }
+]

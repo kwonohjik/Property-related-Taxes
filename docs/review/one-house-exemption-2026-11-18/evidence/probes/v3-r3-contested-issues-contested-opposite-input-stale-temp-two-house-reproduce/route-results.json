@@ -1,0 +1,271 @@
+[
+  {
+    "id": "C7_two_minority_after_S_plus_new",
+    "status": 200,
+    "validationErrors": [],
+    "bodyTemporaryTwoHouse": null,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [
+      {
+        "id": "155-2-inherited-house",
+        "reasons": [
+          "제외 요건을 갖춘 공동상속주택(소수지분)이 2채여서 어느 것도 주택 수에서 빼지 않았습니다 — 이 양도는 §155③에 「선순위 1주택」 한정이 신설(2017.2.3.)되기 전이라 당시 문언에는 순위 요건이 없습니다. 과세관청 해석(재산세과-2922)은 비과세를 인정하지 않았고 조세심판원은 소수지분을 모두 뺐습니다(조심-2019-서-2002 등) — 아래 「해석이 갈리는 쟁점」에서 두 결론을 함께 확인하세요."
+        ]
+      }
+    ],
+    "undetermined": [],
+    "houseCountTotal": 4,
+    "excluded": [],
+    "contested": [
+      {
+        "id": "155-3-co-inherited-minority-before-ranking-clause",
+        "engine": "A",
+        "A": "taxable",
+        "B": "taxable",
+        "differ": false
+      }
+    ]
+  },
+  {
+    "id": "C7_B_facts_as_form_S_plus_N",
+    "status": 200,
+    "validationErrors": [],
+    "bodyTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2015-03-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "unmet": [],
+    "undetermined": [],
+    "houseCountTotal": 2,
+    "excluded": [],
+    "contested": []
+  },
+  {
+    "id": "C7_control_minority_before_S",
+    "status": 200,
+    "validationErrors": [],
+    "bodyTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2015-03-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [
+      {
+        "id": "155-2-inherited-house",
+        "reasons": [
+          "제외 요건을 갖춘 공동상속주택(소수지분)이 2채여서 어느 것도 주택 수에서 빼지 않았습니다 — 이 양도는 §155③에 「선순위 1주택」 한정이 신설(2017.2.3.)되기 전이라 당시 문언에는 순위 요건이 없습니다. 과세관청 해석(재산세과-2922)은 비과세를 인정하지 않았고 조세심판원은 소수지분을 모두 뺐습니다(조심-2019-서-2002 등) — 아래 「해석이 갈리는 쟁점」에서 두 결론을 함께 확인하세요."
+        ]
+      }
+    ],
+    "undetermined": [],
+    "houseCountTotal": 4,
+    "excluded": [],
+    "contested": [
+      {
+        "id": "155-3-co-inherited-minority-before-ranking-clause",
+        "engine": "A",
+        "A": "taxable",
+        "B": "exempt",
+        "differ": true
+      }
+    ]
+  },
+  {
+    "id": "C7_with_injected_tth_from_B_facts",
+    "status": 200,
+    "validationErrors": [],
+    "bodyTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2015-03-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [
+      {
+        "id": "155-2-inherited-house",
+        "reasons": [
+          "제외 요건을 갖춘 공동상속주택(소수지분)이 2채여서 어느 것도 주택 수에서 빼지 않았습니다 — 이 양도는 §155③에 「선순위 1주택」 한정이 신설(2017.2.3.)되기 전이라 당시 문언에는 순위 요건이 없습니다. 과세관청 해석(재산세과-2922)은 비과세를 인정하지 않았고 조세심판원은 소수지분을 모두 뺐습니다(조심-2019-서-2002 등) — 아래 「해석이 갈리는 쟁점」에서 두 결론을 함께 확인하세요."
+        ]
+      }
+    ],
+    "undetermined": [],
+    "houseCountTotal": 4,
+    "excluded": [],
+    "contested": [
+      {
+        "id": "155-3-co-inherited-minority-before-ranking-clause",
+        "engine": "A",
+        "A": "taxable",
+        "B": "exempt",
+        "differ": true
+      }
+    ],
+    "injected": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2015-03-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    }
+  },
+  {
+    "id": "C2_same_hh_minority_after_S_plus_new_2016",
+    "status": 200,
+    "validationErrors": [],
+    "bodyTemporaryTwoHouse": null,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [
+      {
+        "id": "155-2-inherited-house",
+        "reasons": [
+          "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+        ]
+      }
+    ],
+    "undetermined": [],
+    "houseCountTotal": 3,
+    "excluded": [],
+    "contested": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "engine": "A",
+        "A": "taxable",
+        "B": "taxable",
+        "differ": false
+      }
+    ]
+  },
+  {
+    "id": "C2_B_facts_as_form_m1_separate_2016",
+    "status": 200,
+    "validationErrors": [],
+    "bodyTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2015-03-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "unmet": [],
+    "undetermined": [],
+    "houseCountTotal": 3,
+    "excluded": [
+      "m1:소득세법 시행령 §155③"
+    ],
+    "contested": []
+  },
+  {
+    "id": "C2_control_minority_before_S_2016",
+    "status": 200,
+    "validationErrors": [],
+    "bodyTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2015-03-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [
+      {
+        "id": "155-2-inherited-house",
+        "reasons": [
+          "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+        ]
+      }
+    ],
+    "undetermined": [],
+    "houseCountTotal": 3,
+    "excluded": [],
+    "contested": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "engine": "A",
+        "A": "taxable",
+        "B": "exempt",
+        "differ": true
+      }
+    ]
+  },
+  {
+    "id": "C2_recent_same_hh_minority_after_S",
+    "status": 200,
+    "validationErrors": [],
+    "bodyTemporaryTwoHouse": null,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "unmet": [
+      {
+        "id": "155-2-inherited-house",
+        "reasons": [
+          "상속주택 1채는 상속개시 당시 피상속인과 동일세대였습니다 — 주택 수 제외 대상이 아닙니다(§155② 단서). 동거봉양 합가로 합친 뒤 합가 전부터 보유한 경우에만 예외로 인정됩니다."
+        ]
+      }
+    ],
+    "undetermined": [],
+    "houseCountTotal": 3,
+    "excluded": [],
+    "contested": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "engine": "A",
+        "A": "taxable",
+        "B": "taxable",
+        "differ": false
+      }
+    ]
+  },
+  {
+    "id": "C2_recent_B_facts_m1_separate",
+    "status": 200,
+    "validationErrors": [],
+    "bodyTemporaryTwoHouse": {
+      "previousAcquisitionDate": "2012-11-21",
+      "newAcquisitionDate": "2021-03-01",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "unmet": [],
+    "undetermined": [],
+    "houseCountTotal": 3,
+    "excluded": [
+      "m1:소득세법 시행령 §155③"
+    ],
+    "contested": []
+  }
+]

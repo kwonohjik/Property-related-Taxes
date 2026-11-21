@@ -1,0 +1,87 @@
+[
+ {
+  "id": "E036-era",
+  "hasBody": true,
+  "status": 400,
+  "error": {
+   "code": "INVALID_INPUT",
+   "message": "입력값이 올바르지 않습니다",
+   "fieldErrors": {
+    "redevelopment.approvalDate": [
+     "Invalid ISO date"
+    ]
+   }
+  },
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E093-era",
+  "hasBody": true,
+  "status": 400,
+  "error": {
+   "code": "INVALID_INPUT",
+   "message": "입력값이 올바르지 않습니다",
+   "fieldErrors": {
+    "redevelopment.approvalDate": [
+     "Invalid ISO date"
+    ]
+   }
+  },
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E093-current-twin",
+  "hasBody": true,
+  "status": 400,
+  "error": {
+   "code": "INVALID_INPUT",
+   "message": "입력값이 올바르지 않습니다",
+   "fieldErrors": {
+    "redevelopment.approvalDate": [
+     "Invalid ISO date"
+    ]
+   }
+  },
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "E119-era",
+  "hasBody": true,
+  "status": 400,
+  "error": {
+   "code": "INVALID_INPUT",
+   "message": "입력값이 올바르지 않습니다",
+   "fieldErrors": {
+    "redevelopment.approvalDate": [
+     "Invalid ISO date"
+    ]
+   }
+  },
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ },
+ {
+  "id": "F011-era",
+  "hasBody": true,
+  "status": 400,
+  "error": {
+   "code": "INVALID_INPUT",
+   "message": "입력값이 올바르지 않습니다",
+   "fieldErrors": {
+    "redevelopment.approvalDate": [
+     "Invalid ISO date"
+    ]
+   }
+  },
+  "issues": [
+   "step0[addressJibun]: 자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다."
+  ]
+ }
+]

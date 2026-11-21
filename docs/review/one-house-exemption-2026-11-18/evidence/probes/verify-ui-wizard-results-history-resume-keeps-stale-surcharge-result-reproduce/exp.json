@@ -1,0 +1,67 @@
+{
+  "exp.1_afterJudgeA.store": {
+    "formHouses": 1,
+    "formTransferDate": "2021-06-01",
+    "oneHouseStep": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeResultType": "multi_house_2",
+    "surchargeResultTransferDate": "2021-06-01",
+    "surchargeResultRows": 2
+  },
+  "exp.1_afterJudgeA.screen": {
+    "conclusionLabel": "2주택 중과",
+    "conclusionCard": "1양도 예정 주택 결론2주택 중과양도일 2021-06-01 기준 판정입니다.",
+    "hasResultView": true
+  },
+  "exp.1_afterJudgeA.calls": [
+    {
+      "url": "/api/calc/multi-house-surcharge-judgment",
+      "houses": 2
+    }
+  ],
+  "exp.2_resumeReturn": null,
+  "exp.2_routerPush": [
+    "/calc/one-house-exemption"
+  ],
+  "exp.2_afterResume.store": {
+    "formHouses": 0,
+    "formTransferDate": "2021-06-01",
+    "oneHouseStep": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeResultType": "multi_house_2",
+    "surchargeResultTransferDate": "2021-06-01",
+    "surchargeResultRows": 2
+  },
+  "exp.3_oneHouseMounted.store": {
+    "formHouses": 0,
+    "formTransferDate": "2021-06-01",
+    "oneHouseStep": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeResultType": "multi_house_2",
+    "surchargeResultTransferDate": "2021-06-01",
+    "surchargeResultRows": 2
+  },
+  "exp.3_crossLinkHref": "/calc/multi-house-surcharge",
+  "exp.4_surchargeRemount.store": {
+    "formHouses": 0,
+    "formTransferDate": "2021-06-01",
+    "oneHouseStep": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeResultType": "multi_house_2",
+    "surchargeResultTransferDate": "2021-06-01",
+    "surchargeResultRows": 2
+  },
+  "exp.4_surchargeRemount.screen": {
+    "conclusionLabel": "2주택 중과",
+    "conclusionCard": "1양도 예정 주택 결론2주택 중과양도일 2021-06-01 기준 판정입니다.",
+    "hasResultView": true
+  },
+  "exp.4_surchargeCallsAfterResume": [],
+  "ctl2_correctB.surchargeType": "none",
+  "ctl2_correctB.effectiveHouseCount": 1,
+  "ctl2_correctB.rows": 1
+}

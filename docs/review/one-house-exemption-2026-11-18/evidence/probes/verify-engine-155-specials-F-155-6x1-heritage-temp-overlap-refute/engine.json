@@ -1,0 +1,25 @@
+{
+  "heritage3": {
+    "isExempt": false,
+    "tax": 97860000
+  },
+  "heritage2_noTemp": {
+    "isExempt": true,
+    "reason": "문화유산 주택 비과세 (§155⑥1호)"
+  },
+  "heritage2_withTemp": {
+    "isExempt": true,
+    "reason": "일시적 2주택 비과세"
+  },
+  "rural3": {
+    "isExempt": true,
+    "reason": "일시적 2주택 비과세 (§155⑦3호 귀농 농어촌주택 제외)"
+  },
+  "plain3": {
+    "isExempt": false,
+    "tax": 97860000
+  },
+  "surcharge155": {
+    "heritage3": null
+  }
+}

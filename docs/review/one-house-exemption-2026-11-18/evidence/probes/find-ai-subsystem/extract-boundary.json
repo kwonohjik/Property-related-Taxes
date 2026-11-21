@@ -1,0 +1,15 @@
+{
+  "A_formContractTotalPrice": "900000000",
+  "A_evidenceInText": false,
+  "A_issues": [],
+  "B_asset": {
+    "assetKind": "housing",
+    "acquisitionDate": "2015-03-01",
+    "residencePeriodMonthsAsset": "-24"
+  },
+  "B_questions": [
+    "asset.rentalHousingException.phrp154_10Answer: 장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요.",
+    "residencePeriodMonths: 거주기간 (개월) — 입력값을 확인하세요."
+  ],
+  "C_textPlainStatus": 200
+}

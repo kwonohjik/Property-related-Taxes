@@ -1,0 +1,57 @@
+{
+ "F281-era": {
+  "match": false,
+  "isExempt": true,
+  "unmet": [],
+  "und": []
+ },
+ "P-F281-only-house": {
+  "match": true,
+  "isExempt": true,
+  "unmet": [],
+  "und": []
+ },
+ "F289-era": {
+  "match": false,
+  "isExempt": true,
+  "unmet": [],
+  "und": []
+ },
+ "F307-era": {
+  "match": false,
+  "isExempt": true,
+  "unmet": [],
+  "und": []
+ },
+ "F318-era": {
+  "match": false,
+  "isExempt": true,
+  "unmet": [],
+  "und": []
+ },
+ "F390-current": {
+  "match": true,
+  "isExempt": false,
+  "unmet": [],
+  "und": []
+ },
+ "S001-current": {
+  "match": true,
+  "isExempt": false,
+  "unmet": [],
+  "und": []
+ },
+ "S02-6 test1 would-pass": false,
+ "S02-6 acq2023 NR": {
+  "isExempt": false,
+  "pending": [
+   "154-1-holding-years"
+  ],
+  "unmet": []
+ },
+ "S02-6 test3 would-pass": false,
+ "S02-6 acq2020 NR": {
+  "isExempt": true,
+  "unmet": []
+ }
+}

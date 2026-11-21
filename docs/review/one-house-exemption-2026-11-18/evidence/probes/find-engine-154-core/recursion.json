@@ -1,0 +1,52 @@
+{
+  "k0": {
+    "ms": 16,
+    "undetermined": [
+      "regulated-district-undeclared:selling",
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "status": "not_applicable",
+    "isExempt": false
+  },
+  "k1": {
+    "ms": 3,
+    "undetermined": [
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "status": "excluded",
+    "isExempt": false
+  },
+  "k2": {
+    "ms": 2,
+    "undetermined": [
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "status": "excluded",
+    "isExempt": false
+  },
+  "k3": {
+    "ms": 10,
+    "undetermined": [
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "status": "excluded",
+    "isExempt": false
+  },
+  "k4": {
+    "ms": 62,
+    "undetermined": [
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "status": "excluded",
+    "isExempt": false
+  },
+  "k5": {
+    "ms": 578,
+    "undetermined": [
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "status": "excluded",
+    "isExempt": false
+  }
+}

@@ -1,0 +1,9 @@
+## T1 U(2000)+N
+householdHousingCount=3
+temporaryTwoHouse={"previousAcquisitionDate":"2015-06-01","newAcquisitionDate":"2024-04-01","newHouseOrigin":{"kind":"general"}}
+unavoidable={"houseId":"U","reason":"work","unresolvedAtTransfer":true}
+
+## T3 U(2018)+N
+householdHousingCount=3
+temporaryTwoHouse=undefined
+unavoidable={"houseId":"U","reason":"work","unresolvedAtTransfer":true}

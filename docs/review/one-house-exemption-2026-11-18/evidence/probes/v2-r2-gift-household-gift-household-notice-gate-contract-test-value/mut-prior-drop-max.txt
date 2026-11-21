@@ -1,0 +1,86 @@
+
+ RUN  v4.1.4 .
+
+ ❯ |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts (133 tests | 4 failed) 246ms
+     × [PR-3d] 입력이 없으면 통산하지 않고(과세) 「거주했다면 달라진다」를 고지한다 · 입력 0은 고지가 없다(긍정 짝) 4ms
+     × [PR-4d] 입력이 없으면 비과세 거주요건 고지만 난다 — 요건 미충족(과세)이면 표2 고지는 나지 않는다 · 비조정지역에서는 입력이 없어도 표2 고지가 난다(상한 가정) 3ms
+     × [MG-6b] 미답 → 통산하지 않고 과세 + 「거주했다면 달라진다」 고지 · 입력 0은 고지 없음(짝) 1ms
+     × [MG-6d] 결론을 가르지 않으면 고지하지 않는다 — 12개월 통산은 거주 12개월이라 어느 쪽이든 과세 · 입력이 없어도 상한(68개월)을 가정하면 비과세로 바뀌므로 고지(짝) 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-3 route(판정 메뉴) — 거주 24개월 경계 · 입력 없음은 통산하지 않고 결론을 가를 때만 확인 필요 > [PR-3d] 입력이 없으면 통산하지 않고(과세) 「거주했다면 달라진다」를 고지한다 · 입력 0은 고지가 없다(긍정 짝)
+AssertionError: expected [ …(2) ] to include 'gift-household-prior-residence-unveri…'
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:217:24
+    215|     const blank = await runJudgment(jForm({ giftPriorHouseholdResidenc…
+    216|     expect(blank.data.judgment.isExempt).toBe(false);
+    217|     expect(ids(blank)).toContain(PRIOR);
+       |                        ^
+    218|     expect(reasonOf(blank, PRIOR)).toContain("입력되지 않아");
+    219|     const zero = await runJudgment(jForm({ giftPriorHouseholdResidence…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > PR-4 route(계산기) — 고가주택 세액 방향과 표2 대상 판정 통산(#38-9) · 미답 확인 필요 고지(#38-8) > [PR-4d] 입력이 없으면 비과세 거주요건 고지만 난다 — 요건 미충족(과세)이면 표2 고지는 나지 않는다 · 비조정지역에서는 입력이 없어도 표2 고지가 난다(상한 가정)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ __tests__/calc/gift-prior-residence-38-7.anchor.test.ts:318:43
+    316|   it("[PR-4d] 입력이 없으면 비과세 거주요건 고지만 난다 — 요건 미충족(과세)이면 표2 고지는 나지 않는다 · 비…
+    317|     const none = await runCalc(calcForm({ giftPriorHouseholdResidenceM…
+    318|     expect(has(none.warnings, "입력되지 않아")).toBe(true);
+       |                                           ^
+    319|     expect(has(none.warnings, TABLE2_NOTICE)).toBe(false);
+    320|     // 비조정지역 — 거주요건이 없어 고가주택 부분 비과세이고, 표2 대상 판정의 거주 2년은 별개다
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > MG-6 증여 전 동일세대 거주 개월(결정 #38-7) — 겸용도 같은 leaf로 §154① 거주요건에 통산한다 > [MG-6b] 미답 → 통산하지 않고 과세 + 「거주했다면 달라진다」 고지 · 입력 0은 고지 없음(짝)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ __tests__/tax-engine/transfer/mixed-use-gift-household-38.anchor.test.ts:229:71
+    227|     const blank = mixed({ giftHouseholdBasis: yes(undefined), regionCo…
+    228|     expect(mixedExempt(blank)).toBe(false);
+    229|     expect((blank.warnings ?? []).some((w) => w.includes("입력되지 않아"))).…
+       |                                                                       ^
+    230|     const zero = mixed({ giftHouseholdBasis: yes(0), regionCode: GANGN…
+    231|     expect(mixedExempt(zero)).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |node-isolated| __tests__/__probe__/v2-r2-gift-household-gift-household-notice-gate-contract-test-value-mut.probe.test.ts > MG-6 증여 전 동일세대 거주 개월(결정 #38-7) — 겸용도 같은 leaf로 §154① 거주요건에 통산한다 > [MG-6d] 결론을 가르지 않으면 고지하지 않는다 — 12개월 통산은 거주 12개월이라 어느 쪽이든 과세 · 입력이 없어도 상한(68개월)을 가정하면 비과세로 바뀌므로 고지(짝)
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ __tests__/tax-engine/transfer/mixed-use-gift-household-38.anchor.test.ts:239:71
+    237|     expect((twelve.warnings ?? []).some((w) => w.includes(PRIOR_NOTICE…
+    238|     const blank = mixed({ giftHouseholdBasis: yes(undefined), regionCo…
+    239|     expect((blank.warnings ?? []).some((w) => w.includes("입력되지 않아"))).…
+       |                                                                       ^
+    240|   });
+    241|   it("[MG-6c] 단건 parity — 같은 사실의 단건 주택과 비과세 결론이 같다 · 계속 같은 세대가 아니면 개월은…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 129 passed (133)
+   Start at  22:54:10
+   Duration  4.19s (transform 2.64s, setup 0ms, import 3.83s, tests 246ms, environment 0ms)
+

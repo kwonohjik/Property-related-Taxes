@@ -1,0 +1,14 @@
+[J S1-gangnam-pre20170802 acq=2021-06-01] status=200 ve=[] isExempt=false undetermined=["154-1-residence-deadline-unavailable","154-1-4ho-rental-registration-unverified"]
+   review: one-house=met[판정에 세는 주택:1채] | holding=met[보유 기산일:2021-06-01;보유기간:3년 9개월] | residence=unmet[취득 당시 조정대상지역:해당;거주기간:12개월] | high-value=met[양도가액:1,000,000,000;고가주택 기준금액:12억]
+[J S1-gangnam-pre20170802 acq=2015-03-01] status=200 ve=[] isExempt=true undetermined=[]
+   review: one-house=met[판정에 세는 주택:1채] | holding=met[보유 기산일:2015-03-01;보유기간:10년 0개월] | residence=not_required[취득 당시 조정대상지역:비해당;거주기간:12개월] | high-value=met[양도가액:1,000,000,000;고가주택 기준금액:12억]
+[C-APT S1-gangnam-pre20170802 원조합원 주택출자 종전=2015-03-01 준공=2021-06-01] status=200 issues=[] isExempt=true tax=0 reason=1세대1주택 비과세
+[C-HOUSING S1-gangnam-pre20170802 acq=2021-06-01] status=200 issues=[] isExempt=false tax=161060000
+[C-HOUSING S1-gangnam-pre20170802 acq=2015-03-01] status=200 issues=[] isExempt=true tax=0
+[J S2-haeundae-reverse acq=2020-01-01] status=200 ve=[] isExempt=true undetermined=[]
+   review: one-house=met[판정에 세는 주택:1채] | holding=met[보유 기산일:2020-01-01;보유기간:2년 5개월] | residence=not_required[취득 당시 조정대상지역:비해당;거주기간:12개월] | high-value=met[양도가액:1,000,000,000;고가주택 기준금액:12억]
+[J S2-haeundae-reverse acq=2018-01-01] status=200 ve=[] isExempt=false undetermined=["154-1-residence-deadline-unavailable","154-1-4ho-rental-registration-unverified"]
+   review: one-house=met[판정에 세는 주택:1채] | holding=met[보유 기산일:2018-01-01;보유기간:4년 5개월] | residence=unmet[취득 당시 조정대상지역:해당;거주기간:12개월] | high-value=met[양도가액:1,000,000,000;고가주택 기준금액:12억]
+[C-APT S2-haeundae-reverse 원조합원 주택출자 종전=2018-01-01 준공=2020-01-01] status=200 issues=[] isExempt=false tax=157600000 reason=
+[C-HOUSING S2-haeundae-reverse acq=2020-01-01] status=200 issues=[] isExempt=true tax=0
+[C-HOUSING S2-haeundae-reverse acq=2018-01-01] status=200 issues=[] isExempt=false tax=157600000

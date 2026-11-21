@@ -1,0 +1,43 @@
+{
+  "none": {
+    "status": 200,
+    "issues": [],
+    "isExempt": true,
+    "body": {},
+    "oneRight": {
+      "clause": "ga",
+      "isExempt": true,
+      "isPartialExempt": false,
+      "highValueThreshold": 1200000000,
+      "reasons": [],
+      "legalBasis": "소득세법 §89 ① 4호"
+    },
+    "unmet": []
+  },
+  "selfListed": {
+    "status": 200,
+    "issues": [],
+    "isExempt": false,
+    "body": {
+      "presaleRights": [
+        {
+          "id": "pr1",
+          "type": "redevelopment_right",
+          "acquisitionDate": "2015-03-01",
+          "region": "capital"
+        }
+      ]
+    },
+    "oneRight": {
+      "clause": null,
+      "isExempt": false,
+      "isPartialExempt": false,
+      "highValueThreshold": 1200000000,
+      "reasons": [
+        "세대 보유 조합원입주권이 1개여야 합니다 (현재 2개 — 양도 대상 포함)."
+      ],
+      "legalBasis": "소득세법 §89 ① 4호"
+    },
+    "unmet": []
+  }
+}

@@ -1,0 +1,17 @@
+A iterations=8 requests=8
+A read={"ok":32,"fail":0} lookup={"ok":16,"fail":0} search={"ok":4,"fail":2}
+A {"req":1,"messages":1,"toolResultChars":0,"cacheMarksInMessages":0,"topLevelCacheControl":null,"systemCache":"{\"type\":\"ephemeral\",\"ttl\":\"1h\"}"}
+A {"req":2,"messages":3,"toolResultChars":48400,"cacheMarksInMessages":0,"topLevelCacheControl":null,"systemCache":"{\"type\":\"ephemeral\",\"ttl\":\"1h\"}"}
+A {"req":3,"messages":5,"toolResultChars":96800,"cacheMarksInMessages":0,"topLevelCacheControl":null,"systemCache":"{\"type\":\"ephemeral\",\"ttl\":\"1h\"}"}
+A {"req":4,"messages":7,"toolResultChars":145104,"cacheMarksInMessages":0,"topLevelCacheControl":null,"systemCache":"{\"type\":\"ephemeral\",\"ttl\":\"1h\"}"}
+A {"req":5,"messages":9,"toolResultChars":145284,"cacheMarksInMessages":0,"topLevelCacheControl":null,"systemCache":"{\"type\":\"ephemeral\",\"ttl\":\"1h\"}"}
+A {"req":6,"messages":11,"toolResultChars":193684,"cacheMarksInMessages":0,"topLevelCacheControl":null,"systemCache":"{\"type\":\"ephemeral\",\"ttl\":\"1h\"}"}
+A {"req":7,"messages":13,"toolResultChars":241988,"cacheMarksInMessages":0,"topLevelCacheControl":null,"systemCache":"{\"type\":\"ephemeral\",\"ttl\":\"1h\"}"}
+A {"req":8,"messages":15,"toolResultChars":290388,"cacheMarksInMessages":0,"topLevelCacheControl":null,"systemCache":"{\"type\":\"ephemeral\",\"ttl\":\"1h\"}"}
+A sumToolResultCharsAcrossRequests=1161648 lastRequestToolResultChars=290388
+B {"req":1,"messages":1,"toolResultChars":0,"cacheMarksInMessages":0,"topLevelCacheControl":null,"systemCache":"{\"type\":\"ephemeral\",\"ttl\":\"1h\"}"}
+B {"req":2,"messages":3,"toolResultChars":48,"cacheMarksInMessages":0,"topLevelCacheControl":null,"systemCache":"{\"type\":\"ephemeral\",\"ttl\":\"1h\"}"}
+B {"req":3,"messages":5,"toolResultChars":12124,"cacheMarksInMessages":0,"topLevelCacheControl":null,"systemCache":"{\"type\":\"ephemeral\",\"ttl\":\"1h\"}"}
+B {"req":4,"messages":7,"toolResultChars":18174,"cacheMarksInMessages":0,"topLevelCacheControl":null,"systemCache":"{\"type\":\"ephemeral\",\"ttl\":\"1h\"}"}
+B sumToolResultCharsAcrossRequests=30346
+C topLevelCacheControlPerRequest=[{"type":"ephemeral"},{"type":"ephemeral"}]

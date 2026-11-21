@@ -1,0 +1,89 @@
+[
+  {
+    "label": "R-0 rural control (row not excluded)",
+    "canonical": true,
+    "isExempt": true,
+    "unmetIds": [],
+    "unmetReasons": [],
+    "pending": [],
+    "undeterminedIds": []
+  },
+  {
+    "label": "R-1 rural row already excluded",
+    "canonical": false,
+    "isExempt": false,
+    "unmetIds": [],
+    "unmetReasons": [],
+    "pending": [],
+    "undeterminedIds": []
+  },
+  {
+    "label": "U-0 unavoidable control",
+    "canonical": true,
+    "isExempt": true,
+    "unmetIds": [],
+    "unmetReasons": [],
+    "pending": [],
+    "undeterminedIds": []
+  },
+  {
+    "label": "U-1 unavoidable row already excluded",
+    "canonical": false,
+    "isExempt": false,
+    "unmetIds": [],
+    "unmetReasons": [],
+    "pending": [],
+    "undeterminedIds": []
+  },
+  {
+    "label": "U-2 unavoidable resolved, past 3y, row excluded",
+    "canonical": false,
+    "isExempt": false,
+    "unmetIds": [],
+    "unmetReasons": [],
+    "pending": [
+      {
+        "id": "155-8-unavoidable-resolved",
+        "deadline": "2025-01-10T00:00:00.000Z"
+      }
+    ],
+    "undeterminedIds": [],
+    "deadline": "2025-01-10T00:00:00.000Z",
+    "canonicalIfTransferredOnDeadline": false,
+    "judgeIfTransferredOnDeadline": false
+  },
+  {
+    "label": "U-3 control: resolved past 3y, row NOT excluded",
+    "canonical": false,
+    "isExempt": false,
+    "unmetIds": [],
+    "unmetReasons": [],
+    "pending": [
+      {
+        "id": "155-8-unavoidable-resolved",
+        "deadline": "2025-01-10T00:00:00.000Z"
+      }
+    ],
+    "undeterminedIds": [],
+    "canonicalIfTransferredOnDeadline": true,
+    "judgeIfTransferredOnDeadline": true
+  },
+  {
+    "label": "C-0 cultural control",
+    "canonical": true,
+    "isExempt": true,
+    "unmetIds": [],
+    "unmetReasons": [],
+    "pending": [],
+    "undeterminedIds": []
+  },
+  {
+    "label": "C-1 cultural row already excluded",
+    "canonical": false,
+    "isExempt": false,
+    "unmetIds": [],
+    "unmetReasons": [],
+    "pending": [],
+    "undeterminedIds": []
+  }
+]

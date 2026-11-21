@@ -1,0 +1,10 @@
+{
+  "outcome": {
+    "id": "rec-new",
+    "created": true,
+    "isDraft": false
+  },
+  "title": "양도소득세 — 주택 Y (양도 2026.12.31)",
+  "inputAddr": "주택 Y",
+  "resultTotalTax": 12345678
+}

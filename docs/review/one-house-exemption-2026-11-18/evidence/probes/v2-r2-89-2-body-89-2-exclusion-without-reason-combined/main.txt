@@ -1,0 +1,147 @@
+## J0 대조 1주택만
+status=200 ⑧errors=[]
+isExempt=true partial=false 89②=not_applicable exc=- coreWouldPass=undefined keys89=status
+applied=[]
+unmet=[]
+undetermined=[]
+pending=[]
+requirementReview=154-1-one-house legalBasis=[]
+TEXT: 판정 결과 비과세 1세대1주택 비과세 요건을 충족합니다. 1세대1주택 비과세 판정 기준일 2024-05-01 1 주택 수 산정 세대 보유 주택 1채 중 비과세 판정에 세는 주택은 1채 입니다. 2 1세대1주택 비과세 요건 검토 법령이 정한 순서대로 각 요건을 검토한 결과입니다. 1. 충족 1세대가 양도일 현재 국내에 1주택 보유 판정에 세는 주택 1채 소득세법 §89 ① ↗ 2. 충족 보유기간 2년 이상 보유 기산일 2019-03-01 · 보유기간 5년 3개월 소득세법 시행령 §154 ↗ 3. 해당 없음 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 취득 당시 조정대상지역 비해당 · 거주기간 30개월 취득 당시 조정대상지역이 아니어서 거주요건이 없습니다. 소득세법 시행령 §154 ↗ 4. 충족 양도가액 12억원 이하 — 고가주택 아님 양도가액 800,000,000 · 고가주택 기준금액 12억 소득세법 §89 ① ↗ 이 화면은 비과세 판정 까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요.
+TEXT mentions §89②=false 입주권=false 분양권=false §156의2=false
+
+## J1 1주택 + 입주권 2개
+status=200 ⑧errors=[]
+isExempt=false partial=false 89②=excluded exc=- coreWouldPass=true keys89=status
+applied=[]
+unmet=[]
+undetermined=[]
+pending=[]
+requirementReview=none legalBasis=[]
+TEXT: 판정 결과 과세 현재 입력으로는 비과세 요건을 충족하지 않습니다. 판정 기준일 2024-05-01 1 주택 수 산정 세대 보유 주택 1채 중 비과세 판정에 세는 주택은 1채 입니다. 이 화면은 비과세 판정 까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요.
+TEXT mentions §89②=false 입주권=false 분양권=false §156의2=false
+
+## J1c 대조 1주택 + 입주권 1개(③ 충족)
+status=200 ⑧errors=[]
+isExempt=true partial=false 89②=exception_met exc=소득세법 시행령 §156의2 ③ coreWouldPass=undefined keys89=status,exception,byTimingClause,noticeDeadlines
+applied=[]
+unmet=[]
+undetermined=[]
+pending=[]
+requirementReview=154-1-one-house legalBasis=[]
+TEXT: 판정 결과 비과세 1세대1주택 비과세 요건을 충족합니다. 1세대1주택 비과세 판정 기준일 2024-05-01 1 주택 수 산정 세대 보유 주택 1채 중 비과세 판정에 세는 주택은 1채 입니다. 2 1세대1주택 비과세 요건 검토 법령이 정한 순서대로 각 요건을 검토한 결과입니다. 1. 충족 1세대가 양도일 현재 국내에 1주택 보유 판정에 세는 주택 1채 소득세법 §89 ① ↗ 2. 충족 보유기간 2년 이상 보유 기산일 2019-03-01 · 보유기간 5년 3개월 소득세법 시행령 §154 ↗ 3. 해당 없음 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 취득 당시 조정대상지역 비해당 · 거주기간 30개월 취득 당시 조정대상지역이 아니어서 거주요건이 없습니다. 소득세법 시행령 §154 ↗ 4. 충족 양도가액 12억원 이하 — 고가주택 아님 양도가액 800,000,000 · 고가주택 기준금액 12억 소득세법 §89 ① ↗ 이 화면은 비과세 판정 까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요.
+TEXT mentions §89②=false 입주권=false 분양권=false §156의2=false
+
+## J2 ③ 1년 미충족
+status=200 ⑧errors=[]
+isExempt=false partial=false 89②=excluded exc=- coreWouldPass=true keys89=status
+applied=[]
+unmet=[]
+undetermined=[]
+pending=[]
+requirementReview=none legalBasis=[]
+TEXT: 판정 결과 과세 현재 입력으로는 비과세 요건을 충족하지 않습니다. 판정 기준일 2025-01-10 1 주택 수 산정 세대 보유 주택 1채 중 비과세 판정에 세는 주택은 1채 입니다. 이 화면은 비과세 판정 까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요.
+TEXT mentions §89②=false 입주권=false 분양권=false §156의2=false
+
+## J2c 대조 ③ 1년 충족
+status=200 ⑧errors=[]
+isExempt=true partial=false 89②=exception_met exc=소득세법 시행령 §156의2 ③ coreWouldPass=undefined keys89=status,exception,byTimingClause,noticeDeadlines
+applied=[]
+unmet=[]
+undetermined=[]
+pending=[]
+requirementReview=154-1-one-house legalBasis=[]
+TEXT: 판정 결과 비과세 1세대1주택 비과세 요건을 충족합니다. 1세대1주택 비과세 판정 기준일 2025-01-10 1 주택 수 산정 세대 보유 주택 1채 중 비과세 판정에 세는 주택은 1채 입니다. 2 1세대1주택 비과세 요건 검토 법령이 정한 순서대로 각 요건을 검토한 결과입니다. 1. 충족 1세대가 양도일 현재 국내에 1주택 보유 판정에 세는 주택 1채 소득세법 §89 ① ↗ 2. 충족 보유기간 2년 이상 보유 기산일 2023-01-16 · 보유기간 2년 0개월 소득세법 시행령 §154 ↗ 3. 해당 없음 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 취득 당시 조정대상지역 비해당 · 거주기간 12개월 취득 당시 조정대상지역이 아니어서 거주요건이 없습니다. 소득세법 시행령 §154 ↗ 4. 충족 양도가액 12억원 이하 — 고가주택 아님 양도가액 800,000,000 · 고가주택 기준금액 12억 소득세법 §89 ① ↗ 이 화면은 비과세 판정 까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요.
+TEXT mentions §89②=false 입주권=false 분양권=false §156의2=false
+
+## J3 일시적 2주택 + 입주권 1개
+status=200 ⑧errors=[]
+isExempt=false partial=false 89②=excluded exc=- coreWouldPass=true keys89=status
+applied=[]
+unmet=[]
+undetermined=[]
+pending=[]
+requirementReview=none legalBasis=[]
+TEXT: 판정 결과 과세 현재 입력으로는 비과세 요건을 충족하지 않습니다. 판정 기준일 2023-11-01 1 주택 수 산정 세대 보유 주택 2채 중 비과세 판정에 세는 주택은 2채 입니다. 이 화면은 비과세 판정 까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요.
+TEXT mentions §89②=false 입주권=false 분양권=false §156의2=false
+
+## J3c 대조 일시적 2주택만
+status=200 ⑧errors=[]
+isExempt=true partial=false 89②=not_applicable exc=- coreWouldPass=undefined keys89=status
+applied=["155-1-temporary-two-house"]
+unmet=[]
+undetermined=[]
+pending=[]
+requirementReview=155-1-temporary-two-house legalBasis=["소득세법 시행령 §155"]
+TEXT: 판정 결과 비과세 1세대1주택 비과세 요건을 충족합니다. 일시적 2주택 비과세 판정 기준일 2023-11-01 1 주택 수 산정 세대 보유 주택 2채 중 비과세 판정에 세는 주택은 2채 입니다. 2 일시적 2주택 비과세 요건 검토 법령이 정한 순서대로 각 요건을 검토한 결과입니다. 1. 충족 종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득 종전주택 취득일 2019-03-01 · 1년 경과일 2020-03-02 · 신규주택 취득일 2021-06-01 소득세법 시행령 §155① ↗ 2. 충족 신규주택 취득일부터 3년 이내 종전주택 양도 신규주택 취득일 2021-06-01 · 처분기한 2024-06-03 · 양도(예정)일 2023-12-01 역상 말일 2024-06-01이 토요일·공휴일이라 기한이 2024-06-03까지 늘어났습니다(국세기본법 §4 → 민법 §161). 소득세법 시행령 §155① ↗ 3. 충족 종전주택 보유기간 2년 이상 보유 기산일 2019-03-01 · 보유기간 4년 9개월 소득세법 시행령 §154 ↗ 4. 해당 없음 종전주택 거주기간 2년 이상(취득 당시 조정대상지역인 경우) 취득 당시 조정대상지역 비해당 · 거주기간 30개월 취득 당시 조정대상지역이 아니어서 거주요건이 없습니다. 소득세법 시행령 §154 ↗ 5. 충족 양도가액 12억원 이하 — 고가주택 아님 양도가액 800,000,000 · 고가주택 기준금액 12억 소득세법 §89 ① ↗ 3 적용된 특례 일시적 2주택 소득세법 시행령 §155 ↗ 4 근거 조문 소득세법 시행령 §155 ↗ 이 화면은 비과세 판정 까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요.
+TEXT mentions §89②=false 입주권=false 분양권=false §156의2=false
+
+## J4 형제 3년 경과 미선언
+status=200 ⑧errors=[]
+isExempt=false partial=false 89②=excluded exc=- coreWouldPass=true keys89=status,undeclaredArticles,deadline
+applied=[]
+unmet=[["156-2-3-right-three-year:deadline-lapsed",["주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 3년 이내에 종전주택을 양도해야 비과세 — 이 기한(2023-03-15)이 판정 기준일(2024-05-01) 전에 지나 양도일을 조정해도 충족할 수 없습니다."]]]
+undetermined=["89-2-three-year-exception-undeclared"]
+pending=[]
+requirementReview=none legalBasis=[]
+TEXT: 판정 결과 과세 현재 입력으로는 비과세 요건을 충족하지 않습니다. 판정 기준일 2024-05-01 1 주택 수 산정 세대 보유 주택 1채 중 비과세 판정에 세는 주택은 1채 입니다. 2 선언했으나 적용되지 않은 특례 입력하신 특례가 아래 사유로 요건을 충족하지 않아 판정에 반영되지 않았습니다. 주택·조합원입주권(분양권) 보유 세대 — 권리 취득일부터 3년 이내 양도 (§89②) — 요건 미충족 주택과 조합원입주권·분양권을 함께 보유한 세대는 권리 취득일부터 3년 이내에 종전주택을 양도해야 비과세 — 이 기한(2023-03-15)이 판정 기준일(2024-05-01) 전에 지나 양도일을 조정해도 충족할 수 없습니다. 소득세법 §89 ② ↗ 3 판정하지 않은 부분 아래는 입력만으로 확정할 수 없어 확인이 필요한 부분입니다. 항목에 적은 대로 판정을 보류했거나, 적힌 기준으로 판정했습니다. 권리 취득일부터 3년이 지나 양도했고 그 예외(소득세법 시행령 §156의2 ④ · 소득세법 시행규칙 §75 ①) 해당 여부를 선언하지 않아 예외 없이 과세로 판정했습니다(확인 필요) — 해당하면 「3년 경과 예외」에서 선언하세요. 이 화면은 비과세 판정 까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요.
+TEXT mentions §89②=true 입주권=true 분양권=true §156의2=true
+
+## J5 형제 상속 권리 · 상속개시 뒤 취득
+status=200 ⑧errors=["generalHouseRightAtInheritance: 양도 주택을 상속개시 후 취득했습니다 — 상속개시 당시 보유한 조합원입주권·분양권으로 취득한 신축주택인지 선택하세요."]
+isExempt=false partial=false 89②=excluded exc=- coreWouldPass=true keys89=status,undeclaredArticles,exclusionReasons,exclusionBasis
+applied=[]
+unmet=[["89-2-inherited-general-house-unheld",["양도하는 주택을 상속받은 조합원입주권의 상속개시일(2017-01-10)보다 뒤에 취득했습니다 — 소득세법 시행령 §156의2 ⑥·⑦의 일반주택은 「상속개시 당시 보유한 주택」(또는 그때 보유한 권리로 사업시행 완료 후 취득한 신축주택)만 해당하므로 상속받은 조합원입주권의 특례를 적용하지 않고 일반 권리로 판정했습니다."]]]
+undetermined=["89-2-three-year-exception-undeclared"]
+pending=[]
+requirementReview=none legalBasis=[]
+TEXT: 판정 결과 과세 현재 입력으로는 비과세 요건을 충족하지 않습니다. 판정 기준일 2026-05-01 1 주택 수 산정 세대 보유 주택 1채 중 비과세 판정에 세는 주택은 1채 입니다. 2 선언했으나 적용되지 않은 특례 입력하신 특례가 아래 사유로 요건을 충족하지 않아 판정에 반영되지 않았습니다. 상속받은 권리·주택을 이용한 §89② 예외 — 요건 미충족 양도하는 주택을 상속받은 조합원입주권의 상속개시일(2017-01-10)보다 뒤에 취득했습니다 — 소득세법 시행령 §156의2 ⑥·⑦의 일반주택은 「상속개시 당시 보유한 주택」(또는 그때 보유한 권리로 사업시행 완료 후 취득한 신축주택)만 해당하므로 상속받은 조합원입주권의 특례를 적용하지 않고 일반 권리로 판정했습니다. 소득세법 시행령 §156의2 ⑥·⑦ ↗ 3 판정하지 않은 부분 아래는 입력만으로 확정할 수 없어 확인이 필요한 부분입니다. 항목에 적은 대로 판정을 보류했거나, 적힌 기준으로 판정했습니다. 권리 취득일부터 3년이 지나 양도했고 그 예외(소득세법 시행령 §156의2 ④) 해당 여부를 선언하지 않아 예외 없이 과세로 판정했습니다(확인 필요) — 해당하면 「3년 경과 예외」에서 선언하세요. 이 화면은 비과세 판정 까지만 다룹니다. 세액은 양도소득세 계산기에서 계산하세요.
+TEXT mentions §89②=true 입주권=true 분양권=false §156의2=true
+
+## CALC K0 대조 권리 없음
+isExempt=true totalTax=0 89②=not_applicable coreWouldPass=undefined keys89=status
+engine unmet=[] undet=[] pending=[]
+warnings(0)=[]
+warnings mention 89②/입주권=false
+result-json exemptReason=1세대1주택 비과세 hits=[]
+
+## CALC K1 1주택 + 입주권 2개
+isExempt=false totalTax=128766000 89②=excluded coreWouldPass=true keys89=status
+engine unmet=[] undet=[] pending=[]
+warnings(0)=[]
+warnings mention 89②/입주권=false
+result-json exemptReason=- hits=[]
+
+## CALC K2 ③ 1년 미충족
+isExempt=false totalTax=190366000 89②=excluded coreWouldPass=true keys89=status
+engine unmet=[] undet=[] pending=[]
+warnings(0)=[]
+warnings mention 89②/입주권=false
+result-json exemptReason=- hits=[]
+
+## CALC K2c 대조 ③ 1년 충족
+isExempt=true totalTax=0 89②=exception_met coreWouldPass=undefined keys89=status,exception,viaArticle,byTimingClause,noticeDeadlines
+engine unmet=[] undet=[] pending=[]
+warnings(0)=[]
+warnings mention 89②/입주권=false
+result-json exemptReason=1세대1주택 비과세 hits=[]
+
+## CALC K3 일시적 2주택 + 입주권 1개
+isExempt=false totalTax=172766000 89②=excluded coreWouldPass=true keys89=status
+engine unmet=[] undet=[] pending=[]
+warnings(0)=[]
+warnings mention 89②/입주권=false
+result-json exemptReason=- hits=[]
+
+## CALC K3c 대조 일시적 2주택만
+isExempt=true totalTax=0 89②=not_applicable coreWouldPass=undefined keys89=status
+engine unmet=[] undet=[] pending=[]
+warnings(0)=[]
+warnings mention 89②/입주권=false
+result-json exemptReason=일시적 2주택 비과세 hits=[]
+
+## CALC K4 형제 3년 경과 미선언
+isExempt=false totalTax=102421000 89②=excluded coreWouldPass=true keys89=status,undeclaredArticles,deadline
+engine unmet=[] undet=["89-2-three-year-exception-undeclared"] pending=["156-2-3-right-three-year"]
+warnings(1)=["조합원입주권·분양권 취득일부터 3년이 지나 주택을 양도했고, 그 예외(소득세법 시행령 §156의2 ④ · 소득세법 시행규칙 §75 ①) 해당 여부를 선언하지 않아 「소득세법」 §89② 배제를 적용했습니다(확인 필요). 해당하면 1세대1주택 판정 메뉴의 「3년 경과 예외」에서 선언하세요."]
+warnings mention 89②/입주권=true
+result-json exemptReason=- hits=["{\"isExempt\":false,\"isPartialExempt\":false,\"warnings\":[\"조합원입주권·분양권 취득일부터 3년이 지나 주택을 양도했고, 그 예외(소득세법 시행령 §156의2 ④ · 소득세법 시행규칙 §75 ①) 해당 여부를 선언하지 않아"," 「소득세법」 §89② 배제를 적용했습니다(확인 필요). 해당하면 1세대1주택 판정 메뉴의 「3년 경과 예외」에서 선언하세요.\"],\"transferGain\":5000"]

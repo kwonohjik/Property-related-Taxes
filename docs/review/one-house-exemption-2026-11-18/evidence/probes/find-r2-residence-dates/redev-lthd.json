@@ -1,0 +1,40 @@
+{
+ "rows": [
+  {
+   "prior": 47,
+   "new": 23,
+   "isExempt": false,
+   "isPartialExempt": true,
+   "lthd": 321371428,
+   "totalTax": 93487741
+  },
+  {
+   "prior": 48,
+   "new": 24,
+   "isExempt": false,
+   "isPartialExempt": true,
+   "lthd": 354285713,
+   "totalTax": 79729570
+  }
+ ],
+ "rows15": [
+  {
+   "price": 1500000000,
+   "reg": true,
+   "prior": 0,
+   "new": 23,
+   "isExempt": false,
+   "isPartialExempt": false,
+   "totalTax": 367983000
+  },
+  {
+   "price": 1500000000,
+   "reg": true,
+   "prior": 0,
+   "new": 24,
+   "isExempt": false,
+   "isPartialExempt": true,
+   "totalTax": 35117500
+  }
+ ]
+}

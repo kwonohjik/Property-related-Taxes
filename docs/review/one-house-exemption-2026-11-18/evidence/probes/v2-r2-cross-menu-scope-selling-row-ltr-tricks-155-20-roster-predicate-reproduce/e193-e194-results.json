@@ -1,0 +1,262 @@
+[
+ {
+  "label": "E193-era base",
+  "sectionVisibleBeforeDeclare": true,
+  "ohValidationErrors": [],
+  "surchargeValidationErrors": [],
+  "bodySellingIsLtr": {
+   "oneHouse": false,
+   "surcharge": false
+  },
+  "oneHouseMenu": {
+   "status": 200,
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "rentalPassed": false
+  },
+  "surchargeMenuExemptionSummary": {
+   "status": 200,
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "rentalPassed": false
+  },
+  "calcHandoff": {
+   "validationErrors": [],
+   "status": 200,
+   "sellingRowIsLtr": false,
+   "isExempt": false,
+   "totalTax": 84414000
+  }
+ },
+ {
+  "label": "E193-era +sellingLTR",
+  "sectionVisibleBeforeDeclare": true,
+  "ohValidationErrors": [],
+  "surchargeValidationErrors": [],
+  "bodySellingIsLtr": {
+   "oneHouse": false,
+   "surcharge": true
+  },
+  "oneHouseMenu": {
+   "status": 200,
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "rentalPassed": false
+  },
+  "surchargeMenuExemptionSummary": {
+   "status": 200,
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-1-temporary-two-house"
+   ],
+   "rentalPassed": false
+  },
+  "calcHandoff": {
+   "validationErrors": [],
+   "status": 200,
+   "sellingRowIsLtr": true,
+   "isExempt": true,
+   "totalTax": 0
+  }
+ },
+ {
+  "label": "E193-era B base",
+  "sectionVisibleBeforeDeclare": true,
+  "ohValidationErrors": [],
+  "surchargeValidationErrors": [],
+  "bodySellingIsLtr": {
+   "oneHouse": false,
+   "surcharge": false
+  },
+  "oneHouseMenu": {
+   "status": 200,
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "rentalPassed": false
+  },
+  "surchargeMenuExemptionSummary": {
+   "status": 200,
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "rentalPassed": false
+  },
+  "calcHandoff": {
+   "validationErrors": [],
+   "status": 200,
+   "sellingRowIsLtr": false,
+   "isExempt": false,
+   "totalTax": 84414000
+  }
+ },
+ {
+  "label": "E193-era B +sellingLTR auto-cancel",
+  "sectionVisibleBeforeDeclare": true,
+  "ohValidationErrors": [],
+  "surchargeValidationErrors": [],
+  "bodySellingIsLtr": {
+   "oneHouse": false,
+   "surcharge": true
+  },
+  "oneHouseMenu": {
+   "status": 200,
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "rentalPassed": false
+  },
+  "surchargeMenuExemptionSummary": {
+   "status": 200,
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-1-temporary-two-house"
+   ],
+   "rentalPassed": false
+  },
+  "calcHandoff": {
+   "validationErrors": [],
+   "status": 200,
+   "sellingRowIsLtr": true,
+   "isExempt": false,
+   "totalTax": 31831250
+  }
+ },
+ {
+  "label": "CTRL E193-era no ⑳ +sellingLTR",
+  "sectionVisibleBeforeDeclare": true,
+  "ohValidationErrors": [],
+  "surchargeValidationErrors": [],
+  "bodySellingIsLtr": {
+   "oneHouse": false,
+   "surcharge": true
+  },
+  "oneHouseMenu": {
+   "status": 200,
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "surchargeMenuExemptionSummary": {
+   "status": 200,
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-1-temporary-two-house"
+   ]
+  },
+  "calcHandoff": {
+   "validationErrors": [],
+   "status": 200,
+   "sellingRowIsLtr": true,
+   "isExempt": true,
+   "totalTax": 0
+  }
+ },
+ {
+  "label": "CTRL E193-era roster LTR row(b)",
+  "sectionVisibleBeforeDeclare": true,
+  "ohValidationErrors": [],
+  "surchargeValidationErrors": [],
+  "bodySellingIsLtr": {
+   "oneHouse": false,
+   "surcharge": false
+  },
+  "oneHouseMenu": {
+   "status": 200,
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "rentalPassed": false
+  },
+  "surchargeMenuExemptionSummary": {
+   "status": 200,
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "rentalPassed": false
+  },
+  "calcHandoff": {
+   "validationErrors": [],
+   "status": 200,
+   "sellingRowIsLtr": false,
+   "isExempt": false,
+   "totalTax": 84414000
+  }
+ },
+ {
+  "label": "E194-era base",
+  "sectionVisibleBeforeDeclare": true,
+  "ohValidationErrors": [],
+  "surchargeValidationErrors": [],
+  "bodySellingIsLtr": {
+   "oneHouse": false,
+   "surcharge": false
+  },
+  "oneHouseMenu": {
+   "status": 200,
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "rentalPassed": false
+  },
+  "surchargeMenuExemptionSummary": {
+   "status": 200,
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "rentalPassed": false,
+   "headlineEffectiveHouseCount": 3,
+   "headlineSurchargeType": "none"
+  },
+  "calcHandoff": {
+   "validationErrors": [],
+   "status": 200,
+   "sellingRowIsLtr": false,
+   "isExempt": false,
+   "totalTax": 234410000
+  }
+ },
+ {
+  "label": "E194-era +sellingLTR",
+  "sectionVisibleBeforeDeclare": true,
+  "ohValidationErrors": [],
+  "surchargeValidationErrors": [],
+  "bodySellingIsLtr": {
+   "oneHouse": false,
+   "surcharge": true
+  },
+  "oneHouseMenu": {
+   "status": 200,
+   "isExempt": false,
+   "isPartialExempt": false,
+   "applied": [],
+   "rentalPassed": false
+  },
+  "surchargeMenuExemptionSummary": {
+   "status": 200,
+   "isExempt": true,
+   "isPartialExempt": false,
+   "applied": [
+    "155-1-temporary-two-house"
+   ],
+   "rentalPassed": false,
+   "headlineEffectiveHouseCount": 2,
+   "headlineSurchargeType": "none"
+  },
+  "calcHandoff": {
+   "validationErrors": [],
+   "status": 200,
+   "sellingRowIsLtr": true,
+   "isExempt": true,
+   "totalTax": 0
+  }
+ }
+]

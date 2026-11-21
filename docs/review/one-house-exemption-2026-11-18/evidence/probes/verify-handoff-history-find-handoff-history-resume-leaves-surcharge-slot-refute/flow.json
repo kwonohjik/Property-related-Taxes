@@ -1,0 +1,93 @@
+{
+  "A_afterJudgeX": {
+    "formTransferDate": "2021-06-01",
+    "formHouses": 1,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeType": "multi_house_2",
+    "surchargeResultClientId": null,
+    "calls": [
+      2
+    ]
+  },
+  "A_afterResume": {
+    "formTransferDate": "2026-02-16",
+    "formHouses": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeType": "multi_house_2",
+    "surchargeResultClientId": null,
+    "reason": null,
+    "pushed": [
+      "/calc/one-house-exemption"
+    ]
+  },
+  "A_afterCrossLink": {
+    "formTransferDate": "2026-02-16",
+    "formHouses": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeType": "multi_house_2",
+    "surchargeResultClientId": null,
+    "newJudgeCalls": [],
+    "sellingDetailRendered": true,
+    "stepRows": 5,
+    "bodySnippetHasSurcharge": true
+  },
+  "B_afterResume": {
+    "formTransferDate": "2026-02-16",
+    "formHouses": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeType": "multi_house_2",
+    "surchargeResultClientId": "c1"
+  },
+  "B_afterCrossLink": {
+    "formTransferDate": "2026-02-16",
+    "formHouses": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeType": "multi_house_2",
+    "surchargeResultClientId": "c1",
+    "newJudgeCalls": [],
+    "sellingDetailRendered": true
+  },
+  "C_afterResume": {
+    "formTransferDate": "2026-02-16",
+    "formHouses": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 0,
+    "surchargeType": null,
+    "surchargeResultClientId": null
+  },
+  "D_afterUpdate": {
+    "formTransferDate": "2026-02-16",
+    "formHouses": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeType": null,
+    "surchargeResultClientId": null
+  },
+  "D_afterCrossLink": {
+    "formTransferDate": "2026-02-16",
+    "formHouses": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeType": "none",
+    "surchargeResultClientId": null,
+    "newJudgeCalls": [
+      1
+    ]
+  },
+  "E_freshY": {
+    "formTransferDate": "2026-02-16",
+    "formHouses": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeType": "none",
+    "surchargeResultClientId": null,
+    "calls": [
+      1
+    ]
+  }
+}

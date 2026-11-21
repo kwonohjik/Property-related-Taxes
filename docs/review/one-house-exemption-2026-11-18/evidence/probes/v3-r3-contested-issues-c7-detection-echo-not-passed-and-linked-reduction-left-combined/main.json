@@ -1,0 +1,498 @@
+{
+  "b": {
+    "observe": {
+      "status": 200,
+      "isExempt": true,
+      "isPartialExempt": false,
+      "contested": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "enginePosition": "A",
+          "A": "exempt",
+          "B": "taxable"
+        }
+      ],
+      "excluded": [
+        {
+          "houseId": "m1",
+          "legalBasis": "조특법 §99의4 (농어촌주택)"
+        },
+        {
+          "houseId": "m2",
+          "legalBasis": "소득세법 시행령 §155③"
+        }
+      ],
+      "verr": [],
+      "unmet": []
+    },
+    "internals": {
+      "parseOk": true,
+      "engineInputHasEcho": false,
+      "engineInputHouses": [
+        "selling",
+        "m1",
+        "m2"
+      ],
+      "engineInputCount": 3,
+      "engineInputReductions": [
+        {
+          "type": "new_99_4_rural",
+          "houseId": "m1"
+        }
+      ],
+      "mainJudgeCount": 1,
+      "mainIsExempt": true,
+      "echo": {
+        "unexcluded": [],
+        "covered": [
+          "m1"
+        ],
+        "excluded": [
+          {
+            "houseId": "m2",
+            "basis": "co_inherited"
+          }
+        ]
+      },
+      "fallback": {
+        "unexcluded": [
+          "m1",
+          "m2"
+        ],
+        "covered": [],
+        "excluded": []
+      },
+      "forJudgmentSameAsFallback": true,
+      "detected": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "houseIds": [
+            "m1",
+            "m2"
+          ]
+        }
+      ],
+      "detectedWithEcho": [],
+      "bSide": {
+        "houses": [
+          "selling"
+        ],
+        "householdHousingCount": 1,
+        "reductions": [
+          {
+            "type": "new_99_4_rural",
+            "houseId": "m1"
+          }
+        ],
+        "specialHouseExclusions": [],
+        "judgeCount": 0,
+        "knownExcluded": 1,
+        "isExempt": false,
+        "isPartialExempt": false,
+        "unmet": []
+      }
+    }
+  },
+  "ctrl_no994": {
+    "observe": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": false,
+      "contested": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "enginePosition": "A",
+          "A": "taxable",
+          "B": "exempt"
+        }
+      ],
+      "excluded": [],
+      "verr": [],
+      "unmet": [
+        "155-2-inherited-house"
+      ]
+    },
+    "internals": {
+      "parseOk": true,
+      "engineInputHasEcho": false,
+      "engineInputHouses": [
+        "selling",
+        "m1",
+        "m2"
+      ],
+      "engineInputCount": 3,
+      "engineInputReductions": [],
+      "mainJudgeCount": 3,
+      "mainIsExempt": false,
+      "echo": {
+        "unexcluded": [
+          "m1",
+          "m2"
+        ],
+        "covered": [],
+        "excluded": []
+      },
+      "fallback": {
+        "unexcluded": [
+          "m1",
+          "m2"
+        ],
+        "covered": [],
+        "excluded": []
+      },
+      "forJudgmentSameAsFallback": true,
+      "detected": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "houseIds": [
+            "m1",
+            "m2"
+          ]
+        }
+      ],
+      "detectedWithEcho": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "houseIds": [
+            "m1",
+            "m2"
+          ]
+        }
+      ],
+      "bSide": {
+        "houses": [
+          "selling"
+        ],
+        "householdHousingCount": 1,
+        "reductions": [],
+        "specialHouseExclusions": [],
+        "judgeCount": 1,
+        "knownExcluded": 0,
+        "isExempt": true,
+        "isPartialExempt": false,
+        "unmet": []
+      }
+    }
+  },
+  "ctrl_post2017": {
+    "observe": {
+      "status": 200,
+      "isExempt": true,
+      "isPartialExempt": false,
+      "contested": [],
+      "excluded": [
+        {
+          "houseId": "m1",
+          "legalBasis": "조특법 §99의4 (농어촌주택)"
+        },
+        {
+          "houseId": "m2",
+          "legalBasis": "소득세법 시행령 §155③"
+        }
+      ],
+      "verr": [],
+      "unmet": []
+    },
+    "internals": {
+      "parseOk": true,
+      "engineInputHasEcho": false,
+      "engineInputHouses": [
+        "selling",
+        "m1",
+        "m2"
+      ],
+      "engineInputCount": 3,
+      "engineInputReductions": [
+        {
+          "type": "new_99_4_rural",
+          "houseId": "m1"
+        }
+      ],
+      "mainJudgeCount": 1,
+      "mainIsExempt": true,
+      "echo": {
+        "unexcluded": [],
+        "covered": [
+          "m1"
+        ],
+        "excluded": [
+          {
+            "houseId": "m2",
+            "basis": "co_inherited"
+          }
+        ]
+      },
+      "fallback": {
+        "unexcluded": [
+          "m1",
+          "m2"
+        ],
+        "covered": [],
+        "excluded": []
+      },
+      "forJudgmentSameAsFallback": true,
+      "detected": [],
+      "detectedWithEcho": []
+    }
+  },
+  "ctrl_plain994": {
+    "observe": {
+      "status": 200,
+      "isExempt": true,
+      "isPartialExempt": false,
+      "contested": [],
+      "excluded": [
+        {
+          "houseId": "m1",
+          "legalBasis": "조특법 §99의4 (농어촌주택)"
+        },
+        {
+          "houseId": "m2",
+          "legalBasis": "소득세법 시행령 §155③"
+        }
+      ],
+      "verr": [],
+      "unmet": []
+    },
+    "internals": {
+      "parseOk": true,
+      "engineInputHasEcho": false,
+      "engineInputHouses": [
+        "selling",
+        "m1",
+        "m2"
+      ],
+      "engineInputCount": 3,
+      "engineInputReductions": [
+        {
+          "type": "new_99_4_rural",
+          "houseId": "m1"
+        }
+      ],
+      "mainJudgeCount": 1,
+      "mainIsExempt": true,
+      "echo": {
+        "unexcluded": [],
+        "covered": [],
+        "excluded": [
+          {
+            "houseId": "m2",
+            "basis": "co_inherited"
+          }
+        ]
+      },
+      "fallback": {
+        "unexcluded": [],
+        "covered": [],
+        "excluded": [
+          {
+            "houseId": "m2",
+            "basis": "co_inherited"
+          }
+        ]
+      },
+      "forJudgmentSameAsFallback": true,
+      "detected": [],
+      "detectedWithEcho": []
+    }
+  },
+  "v3rows": {
+    "observe": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": false,
+      "contested": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "enginePosition": "A",
+          "A": "taxable",
+          "B": "taxable"
+        }
+      ],
+      "excluded": [
+        {
+          "houseId": "m1",
+          "legalBasis": "조특법 §99의4 (농어촌주택)"
+        }
+      ],
+      "verr": [],
+      "unmet": [
+        "155-2-inherited-house"
+      ]
+    },
+    "internals": {
+      "parseOk": true,
+      "engineInputHasEcho": false,
+      "engineInputHouses": [
+        "selling",
+        "m1",
+        "m2",
+        "m3"
+      ],
+      "engineInputCount": 4,
+      "engineInputReductions": [
+        {
+          "type": "new_99_4_rural",
+          "houseId": "m1"
+        }
+      ],
+      "mainJudgeCount": 3,
+      "mainIsExempt": false,
+      "echo": {
+        "unexcluded": [
+          "m2",
+          "m3"
+        ],
+        "covered": [
+          "m1"
+        ],
+        "excluded": []
+      },
+      "fallback": {
+        "unexcluded": [
+          "m1",
+          "m2",
+          "m3"
+        ],
+        "covered": [],
+        "excluded": []
+      },
+      "forJudgmentSameAsFallback": true,
+      "detected": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "houseIds": [
+            "m1",
+            "m2",
+            "m3"
+          ]
+        }
+      ],
+      "detectedWithEcho": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "houseIds": [
+            "m2",
+            "m3"
+          ]
+        }
+      ],
+      "bSide": {
+        "houses": [
+          "selling"
+        ],
+        "householdHousingCount": 1,
+        "reductions": [
+          {
+            "type": "new_99_4_rural",
+            "houseId": "m1"
+          }
+        ],
+        "specialHouseExclusions": [],
+        "judgeCount": 0,
+        "knownExcluded": 1,
+        "isExempt": false,
+        "isPartialExempt": false,
+        "unmet": []
+      }
+    }
+  },
+  "vPlain994Plus2": {
+    "observe": {
+      "status": 200,
+      "isExempt": false,
+      "isPartialExempt": false,
+      "contested": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "enginePosition": "A",
+          "A": "taxable",
+          "B": "exempt"
+        }
+      ],
+      "excluded": [
+        {
+          "houseId": "r",
+          "legalBasis": "조특법 §99의4 (농어촌주택)"
+        }
+      ],
+      "verr": [],
+      "unmet": [
+        "155-2-inherited-house"
+      ]
+    },
+    "internals": {
+      "parseOk": true,
+      "engineInputHasEcho": false,
+      "engineInputHouses": [
+        "selling",
+        "r",
+        "m2",
+        "m3"
+      ],
+      "engineInputCount": 4,
+      "engineInputReductions": [
+        {
+          "type": "new_99_4_rural",
+          "houseId": "r"
+        }
+      ],
+      "mainJudgeCount": 3,
+      "mainIsExempt": false,
+      "echo": {
+        "unexcluded": [
+          "m2",
+          "m3"
+        ],
+        "covered": [],
+        "excluded": []
+      },
+      "fallback": {
+        "unexcluded": [
+          "m2",
+          "m3"
+        ],
+        "covered": [],
+        "excluded": []
+      },
+      "forJudgmentSameAsFallback": true,
+      "detected": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "houseIds": [
+            "m2",
+            "m3"
+          ]
+        }
+      ],
+      "detectedWithEcho": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "houseIds": [
+            "m2",
+            "m3"
+          ]
+        }
+      ],
+      "bSide": {
+        "houses": [
+          "selling",
+          "r"
+        ],
+        "householdHousingCount": 2,
+        "reductions": [
+          {
+            "type": "new_99_4_rural",
+            "houseId": "r"
+          }
+        ],
+        "specialHouseExclusions": [],
+        "judgeCount": 1,
+        "knownExcluded": 1,
+        "isExempt": true,
+        "isPartialExempt": false,
+        "unmet": []
+      }
+    }
+  }
+}

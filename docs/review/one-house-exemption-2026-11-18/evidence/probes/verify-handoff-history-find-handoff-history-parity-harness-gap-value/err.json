@@ -1,0 +1,434 @@
+[
+ {
+  "id": "E001-dual",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "E002-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "E036-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "E093-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "E093-current",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "E093-current-twin",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "E094-dual",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "E119-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "E197-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "F011-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.approvalDate\":[\"Invalid ISO date\"],\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "F021-era",
+  "assetKind": "housing",
+  "acquisitionCause": "gift",
+  "hCause": "carryover_gift",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "F217-era",
+  "assetKind": "housing",
+  "acquisitionCause": "gift",
+  "hCause": "carryover_gift",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "F251-era",
+  "assetKind": "housing",
+  "acquisitionCause": "gift",
+  "hCause": "carryover_gift",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "F251-current",
+  "assetKind": "housing",
+  "acquisitionCause": "gift",
+  "hCause": "carryover_gift",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "F373-era",
+  "assetKind": "housing",
+  "acquisitionCause": "gift",
+  "hCause": "carryover_gift",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "P-F373-era-60m",
+  "assetKind": "housing",
+  "acquisitionCause": "gift",
+  "hCause": "carryover_gift",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "N-F373-era-59m",
+  "assetKind": "housing",
+  "acquisitionCause": "gift",
+  "hCause": "carryover_gift",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"carryoverTaxation.giftDateValuation\":[\"이월과세 자산은 증여 당시 평가액 필수\"],\"carryoverTaxation.donorAcquisitionPrice\":[\"이월과세 자산은 증여자 취득가액 필수 (환산 사용 시 useEstimatedAcquisition=true)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "F390-current",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "F455-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "F455-current",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "F456-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "P-F456-era-6eok",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "F456-current",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "P-F456-current-12eok",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G019-current",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G021-current",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "P-G021-current-3y",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "N-G021-current-3y1d",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G022-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G023-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G024-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G035-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G049-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G049-current",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G050-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G050-current",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G055-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G055-current",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G062-current",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "N-G062-over3y",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G065-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G066-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G077-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "P-G077-later-sold",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G091-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G091-current",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G133-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G152-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G154-era",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G157-era-first",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "G157-era-second",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "S001-current",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "STAT-71-2-right",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ },
+ {
+  "id": "STAT-71-2-right-unknown",
+  "assetKind": "right_to_move_in",
+  "acquisitionCause": "purchase",
+  "hCause": "purchase",
+  "err": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"입력값이 올바르지 않습니다\",\"fieldErrors\":{\"redevelopment.rightsValue\":[\"권리가액을 입력하세요. 관리처분계획에서 정한 종전 부동산 평가액입니다. (소득세법 시행령 §166 ④ — 관리처분 가격이 없는 경우는 후속 PR)\"]}}}",
+  "issuesErr": []
+ }
+]

@@ -1,0 +1,118 @@
+{
+  "A": {
+    "dayInputs": 4,
+    "previewBefore_0310_0310": [
+      24
+    ],
+    "patches": [
+      {
+        "redevNewResidenceStartDate": "2022-03-10",
+        "redevNewResidenceEndDate": "2024-03-09",
+        "redevNewHouseResidenceMonths": "23"
+      }
+    ],
+    "canonical_0310_0309": 24,
+    "canonical_0310_0310": 24
+  },
+  "Aboundary": [
+    {
+      "start": "2022-03-10",
+      "end": "2024-03-09",
+      "card": [
+        23
+      ],
+      "canonical": 24
+    },
+    {
+      "start": "2022-03-10",
+      "end": "2024-03-08",
+      "card": [
+        23
+      ],
+      "canonical": 23
+    },
+    {
+      "start": "2022-03-10",
+      "end": "2024-03-10",
+      "card": [
+        24
+      ],
+      "canonical": 24
+    },
+    {
+      "start": "2014-03-10",
+      "end": "2018-03-09",
+      "card": [
+        47
+      ],
+      "canonical": 48
+    },
+    {
+      "start": "2016-01-01",
+      "end": "2019-12-31",
+      "card": [
+        47
+      ],
+      "canonical": 48
+    },
+    {
+      "start": "2021-01-31",
+      "end": "2021-02-28",
+      "card": [
+        0
+      ],
+      "canonical": 1
+    },
+    {
+      "start": "2020-02-29",
+      "end": "2022-02-28",
+      "card": [
+        23
+      ],
+      "canonical": 24
+    },
+    {
+      "start": "2022-03-10",
+      "end": "2022-03-10",
+      "card": [
+        0
+      ],
+      "canonical": 0
+    }
+  ],
+  "B": {
+    "newHouseResidenceMonths": 23,
+    "newResidenceStartDate": "2022-03-10",
+    "newResidenceEndDate": "2024-03-09"
+  },
+  "C": {
+    "1000000000_split23": {
+      "isExempt": false,
+      "totalTax": 164720285
+    },
+    "1000000000_split24": {
+      "isExempt": true,
+      "totalTax": 0,
+      "aptOneHouseExemptionApplied": true
+    },
+    "1000000000_step4_24_noSplit": {
+      "isExempt": true,
+      "totalTax": 0,
+      "aptOneHouseExemptionApplied": true
+    },
+    "1000000000_step4_canonical": 24,
+    "1500000000_split23": {
+      "isExempt": false,
+      "totalTax": 367983000
+    },
+    "1500000000_split24": {
+      "isExempt": false,
+      "totalTax": 35117500
+    },
+    "1500000000_step4_24_noSplit": {
+      "isExempt": false,
+      "totalTax": 36525500
+    },
+    "1500000000_step4_canonical": 24
+  }
+}

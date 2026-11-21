@@ -1,0 +1,294 @@
+[
+  {
+    "label": "spouse|start=2025-01-01",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": false,
+    "jPartial": false,
+    "jPending": [
+      "154-1-holding-years@2026-12-31"
+    ],
+    "jUnd": [],
+    "cCause": "carryover_gift",
+    "cStatus": 200,
+    "cIsExempt": false,
+    "cTotalTax": 229075000,
+    "cDetailWarn": false,
+    "cGiftWarns": [
+      "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기"
+    ],
+    "cIssuesErr": []
+  },
+  {
+    "label": "spouse|start=2010-03-01",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": true,
+    "jPartial": false,
+    "jPending": [],
+    "jUnd": [
+      "gift-household-consolidation-detail-unverified"
+    ],
+    "cCause": "carryover_gift",
+    "cStatus": 200,
+    "cIsExempt": true,
+    "cTotalTax": 0,
+    "cDetailWarn": false,
+    "cGiftWarns": [],
+    "cIssuesErr": []
+  },
+  {
+    "label": "spouse|start=2025-03-01",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": false,
+    "jPartial": false,
+    "jPending": [
+      "154-1-holding-years@2027-02-28"
+    ],
+    "jUnd": [],
+    "cCause": "carryover_gift",
+    "cStatus": 200,
+    "cIsExempt": false,
+    "cTotalTax": 229075000,
+    "cDetailWarn": false,
+    "cGiftWarns": [
+      "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기"
+    ],
+    "cIssuesErr": []
+  },
+  {
+    "label": "spouse|start=2023-01-01",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": true,
+    "jPartial": false,
+    "jPending": [],
+    "jUnd": [
+      "gift-household-consolidation-detail-unverified"
+    ],
+    "cCause": "carryover_gift",
+    "cStatus": 200,
+    "cIsExempt": true,
+    "cTotalTax": 0,
+    "cDetailWarn": false,
+    "cGiftWarns": [],
+    "cIssuesErr": []
+  },
+  {
+    "label": "spouse|no",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": false,
+    "jPartial": false,
+    "jPending": [
+      "154-1-holding-years@2027-05-31"
+    ],
+    "jUnd": [],
+    "cCause": "carryover_gift",
+    "cStatus": 200,
+    "cIsExempt": false,
+    "cTotalTax": 229075000,
+    "cDetailWarn": false,
+    "cGiftWarns": [
+      "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기"
+    ],
+    "cIssuesErr": []
+  },
+  {
+    "label": "lineal|start=2025-01-01",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": false,
+    "jPartial": false,
+    "jPending": [
+      "154-1-holding-years@2026-12-31"
+    ],
+    "jUnd": [],
+    "cCause": "carryover_gift",
+    "cStatus": 200,
+    "cIsExempt": false,
+    "cTotalTax": 229075000,
+    "cDetailWarn": false,
+    "cGiftWarns": [
+      "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기"
+    ],
+    "cIssuesErr": []
+  },
+  {
+    "label": "lineal|start=2010-03-01",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": true,
+    "jPartial": false,
+    "jPending": [],
+    "jUnd": [
+      "gift-household-consolidation-detail-unverified"
+    ],
+    "cCause": "carryover_gift",
+    "cStatus": 200,
+    "cIsExempt": true,
+    "cTotalTax": 0,
+    "cDetailWarn": false,
+    "cGiftWarns": [],
+    "cIssuesErr": []
+  },
+  {
+    "label": "lineal|start=2025-03-01",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": false,
+    "jPartial": false,
+    "jPending": [
+      "154-1-holding-years@2027-02-28"
+    ],
+    "jUnd": [],
+    "cCause": "carryover_gift",
+    "cStatus": 200,
+    "cIsExempt": false,
+    "cTotalTax": 229075000,
+    "cDetailWarn": false,
+    "cGiftWarns": [
+      "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기"
+    ],
+    "cIssuesErr": []
+  },
+  {
+    "label": "lineal|start=2023-01-01",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": true,
+    "jPartial": false,
+    "jPending": [],
+    "jUnd": [
+      "gift-household-consolidation-detail-unverified"
+    ],
+    "cCause": "carryover_gift",
+    "cStatus": 200,
+    "cIsExempt": true,
+    "cTotalTax": 0,
+    "cDetailWarn": false,
+    "cGiftWarns": [],
+    "cIssuesErr": []
+  },
+  {
+    "label": "lineal|no",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": false,
+    "jPartial": false,
+    "jPending": [
+      "154-1-holding-years@2027-05-31"
+    ],
+    "jUnd": [],
+    "cCause": "carryover_gift",
+    "cStatus": 200,
+    "cIsExempt": false,
+    "cTotalTax": 229075000,
+    "cDetailWarn": false,
+    "cGiftWarns": [
+      "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기"
+    ],
+    "cIssuesErr": []
+  },
+  {
+    "label": "other|start=2025-01-01",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": false,
+    "jPartial": false,
+    "jPending": [
+      "154-1-holding-years@2026-12-31"
+    ],
+    "jUnd": [],
+    "cCause": "gift",
+    "cStatus": 200,
+    "cIsExempt": false,
+    "cTotalTax": 229075000,
+    "cDetailWarn": false,
+    "cGiftWarns": [
+      "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기"
+    ],
+    "cIssuesErr": []
+  },
+  {
+    "label": "other|start=2010-03-01",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": true,
+    "jPartial": false,
+    "jPending": [],
+    "jUnd": [
+      "gift-household-consolidation-detail-unverified"
+    ],
+    "cCause": "gift",
+    "cStatus": 200,
+    "cIsExempt": true,
+    "cTotalTax": 0,
+    "cDetailWarn": true,
+    "cGiftWarns": [
+      "증여자와 계속 같은 세대였다는 입력에 따라 세대가 보유를 시작한 날부터 보유기간을 통산하고 그 날을 「취득 "
+    ],
+    "cIssuesErr": []
+  },
+  {
+    "label": "other|start=2025-03-01",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": false,
+    "jPartial": false,
+    "jPending": [
+      "154-1-holding-years@2027-02-28"
+    ],
+    "jUnd": [],
+    "cCause": "gift",
+    "cStatus": 200,
+    "cIsExempt": false,
+    "cTotalTax": 229075000,
+    "cDetailWarn": false,
+    "cGiftWarns": [
+      "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기"
+    ],
+    "cIssuesErr": []
+  },
+  {
+    "label": "other|start=2023-01-01",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": true,
+    "jPartial": false,
+    "jPending": [],
+    "jUnd": [
+      "gift-household-consolidation-detail-unverified"
+    ],
+    "cCause": "gift",
+    "cStatus": 200,
+    "cIsExempt": true,
+    "cTotalTax": 0,
+    "cDetailWarn": true,
+    "cGiftWarns": [
+      "증여자와 계속 같은 세대였다는 입력에 따라 세대가 보유를 시작한 날부터 보유기간을 통산하고 그 날을 「취득 "
+    ],
+    "cIssuesErr": []
+  },
+  {
+    "label": "other|no",
+    "jStatus": 200,
+    "veErrors": [],
+    "jIsExempt": false,
+    "jPartial": false,
+    "jPending": [
+      "154-1-holding-years@2027-05-31"
+    ],
+    "jUnd": [],
+    "cCause": "gift",
+    "cStatus": 200,
+    "cIsExempt": false,
+    "cTotalTax": 229075000,
+    "cDetailWarn": false,
+    "cGiftWarns": [
+      "1세대1주택 비과세(소득세법 시행령 §154①)를 적용하지 않았습니다 — 보유기간 2년 이상 미충족(보유 기"
+    ],
+    "cIssuesErr": []
+  }
+]

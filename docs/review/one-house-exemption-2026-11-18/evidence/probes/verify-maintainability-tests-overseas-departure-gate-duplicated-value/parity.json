@@ -1,0 +1,52 @@
+{
+  "fe8Constant": "2008-02-22",
+  "fe8EmptyTransferDate": 0,
+  "rows": [
+    {
+      "transferDate": "2008-02-20",
+      "engineUnanswered": "both",
+      "engineYes": "both",
+      "engineNo": "both",
+      "fe8ErrorCount": 0,
+      "engineRequiresAnswer": false,
+      "fe8RequiresAnswer": false
+    },
+    {
+      "transferDate": "2008-02-21",
+      "engineUnanswered": "both",
+      "engineYes": "both",
+      "engineNo": "both",
+      "fe8ErrorCount": 0,
+      "engineRequiresAnswer": false,
+      "fe8RequiresAnswer": false
+    },
+    {
+      "transferDate": "2008-02-22",
+      "engineUnanswered": null,
+      "engineYes": "both",
+      "engineNo": null,
+      "fe8ErrorCount": 1,
+      "engineRequiresAnswer": true,
+      "fe8RequiresAnswer": true
+    },
+    {
+      "transferDate": "2008-02-23",
+      "engineUnanswered": null,
+      "engineYes": "both",
+      "engineNo": null,
+      "fe8ErrorCount": 1,
+      "engineRequiresAnswer": true,
+      "fe8RequiresAnswer": true
+    },
+    {
+      "transferDate": "2009-01-01",
+      "engineUnanswered": null,
+      "engineYes": "both",
+      "engineNo": null,
+      "fe8ErrorCount": 1,
+      "engineRequiresAnswer": true,
+      "fe8RequiresAnswer": true
+    }
+  ],
+  "parity": true
+}

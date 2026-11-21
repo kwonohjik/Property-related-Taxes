@@ -1,0 +1,17 @@
+{
+  "C_gapyeong_tr20250305": {
+    "issues": [],
+    "status": 200,
+    "totalTax": 0,
+    "isExempt": true,
+    "warnings": []
+  },
+  "C_cheongju_tr20250305": {
+    "issues": [],
+    "status": 200,
+    "totalTax": 60621000,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "warnings": []
+  }
+}

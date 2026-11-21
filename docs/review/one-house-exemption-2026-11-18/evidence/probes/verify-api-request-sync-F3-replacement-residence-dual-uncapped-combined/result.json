@@ -1,0 +1,138 @@
+{
+  "A": {
+    "status": 200,
+    "errors": [],
+    "warnings": [],
+    "bodyResidence": 0,
+    "bodyRepl": {
+      "businessApprovalDate": "2020-01-01",
+      "soldBeforeCompletion": true,
+      "replacementResidenceMonths": 12,
+      "willResideNewHouse": true
+    },
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "156-2-5-replacement-house"
+    ],
+    "reason": "대체주택 특례 비과세 (§156의2⑤)"
+  },
+  "B": {
+    "status": 200,
+    "errors": [],
+    "warnings": [],
+    "bodyResidence": 24,
+    "bodyRepl": {
+      "businessApprovalDate": "2020-01-01",
+      "soldBeforeCompletion": true,
+      "replacementResidenceMonths": 1,
+      "willResideNewHouse": true
+    },
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": []
+  },
+  "C": {
+    "status": 200,
+    "errors": [],
+    "warnings": [],
+    "bodyResidence": 0,
+    "bodyRepl": {
+      "businessApprovalDate": "2020-01-01",
+      "soldBeforeCompletion": true,
+      "replacementResidenceMonths": 12,
+      "willResideNewHouse": true
+    },
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "156-2-5-replacement-house"
+    ],
+    "reason": "대체주택 특례 비과세 (§156의2⑤)"
+  },
+  "C2": {
+    "status": 200,
+    "errors": [],
+    "warnings": [],
+    "bodyResidence": 0,
+    "bodyRepl": {
+      "businessApprovalDate": "2020-01-01",
+      "soldBeforeCompletion": true,
+      "replacementResidenceMonths": 999,
+      "willResideNewHouse": true
+    },
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "156-2-5-replacement-house"
+    ],
+    "reason": "대체주택 특례 비과세 (§156의2⑤)"
+  },
+  "D": {
+    "status": 400,
+    "errors": [
+      "error:residencePeriodMonthsAsset: 거주기간: 12개월이 취득일(2023-01-01)부터 양도일까지의 5개월을 넘습니다. 거주기간은 보유기간 중 거주만 산입됩니다 (소령 §154①·법 §95⑤). 취득 전 임차 거주는 제외하고 입력하세요."
+    ],
+    "warnings": [],
+    "bodyResidence": 12,
+    "bodyRepl": {
+      "businessApprovalDate": "2020-01-01",
+      "soldBeforeCompletion": true,
+      "replacementResidenceMonths": 12,
+      "willResideNewHouse": true
+    },
+    "applied": []
+  },
+  "E": {
+    "status": 200,
+    "errors": [],
+    "warnings": [],
+    "bodyResidence": 24,
+    "bodyRepl": {
+      "businessApprovalDate": "2020-01-01",
+      "soldBeforeCompletion": true,
+      "replacementResidenceMonths": 6,
+      "willResideNewHouse": true
+    },
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": []
+  },
+  "F": {
+    "status": 200,
+    "errors": [],
+    "warnings": [],
+    "bodyResidence": 24,
+    "bodyRepl": {
+      "businessApprovalDate": "2020-01-01",
+      "soldBeforeCompletion": true,
+      "replacementResidenceMonths": 12,
+      "willResideNewHouse": true
+    },
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "156-2-5-replacement-house"
+    ],
+    "reason": "대체주택 특례 비과세 (§156의2⑤)"
+  },
+  "G": {
+    "status": 200,
+    "errors": [
+      "error:replResidenceMonths: 대체주택 특례: 대체주택 거주개월수를 1개월 이상 입력하세요."
+    ],
+    "warnings": [],
+    "bodyResidence": 0,
+    "bodyRepl": {
+      "businessApprovalDate": "2020-01-01",
+      "soldBeforeCompletion": true,
+      "replacementResidenceMonths": 0,
+      "willResideNewHouse": true
+    },
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": []
+  },
+  "Zod999": true,
+  "engine5mo": true
+}

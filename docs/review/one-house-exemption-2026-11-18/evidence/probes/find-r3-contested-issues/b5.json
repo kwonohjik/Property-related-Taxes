@@ -1,0 +1,154 @@
+{
+  "pre2017_same+sep": {
+    "A": {
+      "isExempt": true,
+      "applied": [
+        "155-1-temporary-two-house"
+      ],
+      "excluded": [
+        {
+          "houseId": "m2",
+          "legalBasis": "소득세법 시행령 §155③"
+        }
+      ],
+      "und": [],
+      "verr": []
+    },
+    "contested": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "enginePosition": "A",
+        "A": "exempt",
+        "B": "taxable"
+      }
+    ],
+    "tth": {
+      "previousAcquisitionDate": "2012-11-21T00:00:00.000Z",
+      "newAcquisitionDate": "2014-03-01T00:00:00.000Z",
+      "newHouseRegionCode": "2635010500",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "B": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "isExempt": false
+      }
+    ]
+  },
+  "post2017_same+sep_within3y": {
+    "A": {
+      "isExempt": true,
+      "applied": [
+        "155-1-temporary-two-house"
+      ],
+      "excluded": [
+        {
+          "houseId": "m2",
+          "legalBasis": "소득세법 시행령 §155③"
+        }
+      ],
+      "und": [],
+      "verr": []
+    },
+    "contested": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "enginePosition": "A",
+        "A": "exempt",
+        "B": "taxable"
+      }
+    ],
+    "tth": {
+      "previousAcquisitionDate": "2012-11-21T00:00:00.000Z",
+      "newAcquisitionDate": "2016-03-01T00:00:00.000Z",
+      "newHouseRegionCode": "2635010500",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "B": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "isExempt": false
+      }
+    ]
+  },
+  "pre2017_same_only_within3y": {
+    "A": {
+      "isExempt": true,
+      "applied": [
+        "155-1-temporary-two-house"
+      ],
+      "excluded": [],
+      "und": [],
+      "verr": []
+    },
+    "contested": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "enginePosition": "A",
+        "A": "exempt",
+        "B": "exempt"
+      }
+    ],
+    "tth": {
+      "previousAcquisitionDate": "2012-11-21T00:00:00.000Z",
+      "newAcquisitionDate": "2014-03-01T00:00:00.000Z",
+      "newHouseRegionCode": "2635010500",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "B": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "isExempt": true,
+        "review": [
+          "one-house:met",
+          "holding:met",
+          "residence:not_required",
+          "high-value:met"
+        ]
+      }
+    ]
+  },
+  "same_only_after3y": {
+    "A": {
+      "isExempt": false,
+      "applied": [],
+      "excluded": [],
+      "und": [],
+      "verr": []
+    },
+    "contested": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "enginePosition": "A",
+        "A": "taxable",
+        "B": "exempt"
+      }
+    ],
+    "tth": {
+      "previousAcquisitionDate": "2012-11-21T00:00:00.000Z",
+      "newAcquisitionDate": "2014-03-01T00:00:00.000Z",
+      "newHouseRegionCode": "2635010500",
+      "newHouseOrigin": {
+        "kind": "general"
+      }
+    },
+    "B": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "isExempt": true,
+        "review": [
+          "one-house:met",
+          "holding:met",
+          "residence:not_required",
+          "high-value:met"
+        ]
+      }
+    ]
+  }
+}

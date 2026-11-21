@@ -1,0 +1,128 @@
+{
+ "A_housing_noAddr": {
+  "judgmentErrors": [],
+  "seq": [
+   {
+    "step": 0,
+    "field": "addressJibun",
+    "message": "자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다.",
+    "all": [
+     "0:addressJibun"
+    ]
+   },
+   {
+    "step": 0,
+    "field": "fixedAcquisitionPrice",
+    "message": "자산: 취득가액을 입력하세요.",
+    "all": [
+     "0:fixedAcquisitionPrice"
+    ]
+   },
+   "CLEAR"
+  ]
+ },
+ "B_housing_addr": {
+  "judgmentErrors": [],
+  "seq": [
+   {
+    "step": 0,
+    "field": "fixedAcquisitionPrice",
+    "message": "자산: 취득가액을 입력하세요.",
+    "all": [
+     "0:fixedAcquisitionPrice"
+    ]
+   },
+   "CLEAR"
+  ]
+ },
+ "C_right_noAddr": {
+  "judgmentErrors": [],
+  "seq": [
+   {
+    "step": 0,
+    "field": "addressJibun",
+    "message": "자산: 소재지를 입력하세요. 계산 이력에서 물건을 구분하는 기준입니다.",
+    "all": [
+     "0:addressJibun"
+    ]
+   },
+   {
+    "step": 0,
+    "field": "redevApprovalDate",
+    "message": "자산: 관리처분/사업시행계획 인가일을 입력하세요.",
+    "all": [
+     "0:redevApprovalDate"
+    ]
+   },
+   {
+    "step": 0,
+    "field": "redevRightsValue",
+    "message": "자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)",
+    "all": [
+     "0:redevRightsValue"
+    ]
+   },
+   {
+    "step": 0,
+    "field": "redevActualAcquisitionPrice",
+    "message": "자산: 실가 모드 — 인가전 분 종전 주택 취득가액(실거래가)을 입력하세요. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§166①1호)",
+    "all": [
+     "0:redevActualAcquisitionPrice"
+    ]
+   },
+   "CLEAR"
+  ]
+ },
+ "D_right_addr": {
+  "judgmentErrors": [],
+  "seq": [
+   {
+    "step": 0,
+    "field": "redevApprovalDate",
+    "message": "자산: 관리처분/사업시행계획 인가일을 입력하세요.",
+    "all": [
+     "0:redevApprovalDate"
+    ]
+   },
+   {
+    "step": 0,
+    "field": "redevRightsValue",
+    "message": "자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)",
+    "all": [
+     "0:redevRightsValue"
+    ]
+   },
+   {
+    "step": 0,
+    "field": "redevActualAcquisitionPrice",
+    "message": "자산: 실가 모드 — 인가전 분 종전 주택 취득가액(실거래가)을 입력하세요. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§166①1호)",
+    "all": [
+     "0:redevActualAcquisitionPrice"
+    ]
+   },
+   "CLEAR"
+  ]
+ },
+ "E_right_addr_approval": {
+  "judgmentErrors": [],
+  "seq": [
+   {
+    "step": 0,
+    "field": "redevRightsValue",
+    "message": "자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)",
+    "all": [
+     "0:redevRightsValue"
+    ]
+   },
+   {
+    "step": 0,
+    "field": "redevActualAcquisitionPrice",
+    "message": "자산: 실가 모드 — 인가전 분 종전 주택 취득가액(실거래가)을 입력하세요. 취득가액 확인 불가 시 환산취득가 토글을 ON으로 전환하세요. (§166①1호)",
+    "all": [
+     "0:redevActualAcquisitionPrice"
+    ]
+   },
+   "CLEAR"
+  ]
+ }
+}

@@ -1,0 +1,230 @@
+{
+  "A": {
+    "d3": {
+      "status": 200,
+      "errors": [],
+      "isExempt": false,
+      "applied": [],
+      "pending": [],
+      "unmet": {
+        "155-7-rural:return_to_farm": [
+          "세대 주택 수가 3채입니다 — 이 특례는 농어촌주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."
+        ]
+      },
+      "undetermined": []
+    },
+    "two": {
+      "status": 200,
+      "errors": [],
+      "isExempt": false,
+      "applied": [],
+      "pending": [
+        "155-7-3ho-return-to-farm@2025-06-10"
+      ],
+      "unmet": {},
+      "undetermined": [],
+      "reviewScheme": "155-1-temporary-two-house"
+    },
+    "d3AtDeadline": {
+      "status": 200,
+      "errors": [],
+      "isExempt": true,
+      "applied": [
+        "155-1-temporary-two-house",
+        "155-7-rural:return_to_farm"
+      ],
+      "pending": [],
+      "unmet": {},
+      "undetermined": [],
+      "reviewScheme": "155-1-temporary-two-house",
+      "exemptReason": "일시적 2주택 비과세 (§155⑦3호 귀농 농어촌주택 제외)"
+    },
+    "d3AtDeadlineMinus": {
+      "status": 200,
+      "errors": [],
+      "isExempt": true,
+      "applied": [
+        "155-1-temporary-two-house",
+        "155-7-rural:return_to_farm"
+      ],
+      "pending": [],
+      "unmet": {},
+      "undetermined": [],
+      "reviewScheme": "155-1-temporary-two-house",
+      "exemptReason": "일시적 2주택 비과세 (§155⑦3호 귀농 농어촌주택 제외)"
+    },
+    "d3After": {
+      "status": 200,
+      "errors": [],
+      "isExempt": false,
+      "applied": [],
+      "pending": [],
+      "unmet": {
+        "155-7-rural:return_to_farm": [
+          "세대 주택 수가 3채입니다 — 이 특례는 농어촌주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."
+        ]
+      },
+      "undetermined": []
+    }
+  },
+  "B": {
+    "d3": {
+      "status": 200,
+      "errors": [],
+      "isExempt": false,
+      "applied": [],
+      "pending": [],
+      "unmet": {
+        "155-7-rural:return_to_farm": [
+          "세대 주택 수가 3채입니다 — 이 특례는 농어촌주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."
+        ]
+      },
+      "undetermined": []
+    },
+    "two": {
+      "status": 200,
+      "errors": [],
+      "isExempt": false,
+      "applied": [],
+      "pending": [
+        "155-7-3ho-return-to-farm@2027-01-11"
+      ],
+      "unmet": {},
+      "undetermined": [],
+      "reviewScheme": "155-1-temporary-two-house"
+    },
+    "d3AtDeadline": {
+      "status": 200,
+      "errors": [],
+      "isExempt": true,
+      "applied": [
+        "155-1-temporary-two-house",
+        "155-7-rural:return_to_farm"
+      ],
+      "pending": [],
+      "unmet": {},
+      "undetermined": [],
+      "reviewScheme": "155-1-temporary-two-house",
+      "exemptReason": "일시적 2주택 비과세 (§155⑦3호 귀농 농어촌주택 제외)"
+    }
+  },
+  "C": {
+    "d3": {
+      "status": 200,
+      "errors": [],
+      "isExempt": false,
+      "applied": [],
+      "pending": [],
+      "unmet": {
+        "155-7-rural:return_to_farm": [
+          "세대 주택 수가 3채입니다 — 이 특례는 농어촌주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."
+        ]
+      },
+      "undetermined": []
+    },
+    "two": {
+      "status": 200,
+      "errors": [],
+      "isExempt": false,
+      "applied": [],
+      "pending": [],
+      "unmet": {
+        "155-7-3ho-return-to-farm:deadline-lapsed": [
+          "귀농주택 취득일부터 이 날짜까지 일반주택을 양도해야 비과세 — 이 기한(2025-06-10)이 판정 기준일(2026-11-18) 전에 지나 양도일을 조정해도 충족할 수 없습니다."
+        ]
+      },
+      "undetermined": [],
+      "reviewScheme": "155-1-temporary-two-house"
+    }
+  },
+  "D": {
+    "d3": {
+      "status": 200,
+      "errors": [],
+      "isExempt": true,
+      "applied": [
+        "155-1-temporary-two-house",
+        "155-7-rural:return_to_farm"
+      ],
+      "pending": [],
+      "unmet": {},
+      "undetermined": [],
+      "reviewScheme": "155-1-temporary-two-house",
+      "exemptReason": "일시적 2주택 비과세 (§155⑦3호 귀농 농어촌주택 제외)"
+    }
+  },
+  "E": {
+    "d3": {
+      "status": 200,
+      "errors": [],
+      "isExempt": false,
+      "applied": [],
+      "pending": [],
+      "unmet": {
+        "155-7-rural:return_to_farm": [
+          "세대 주택 수가 3채입니다 — 이 특례는 농어촌주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다.",
+          "3호 귀농주택으로 세대전원이 이사해 거주한다고 선언하지 않았습니다(§155⑩5호)."
+        ]
+      },
+      "undetermined": []
+    }
+  },
+  "F": {
+    "d3": {
+      "status": 200,
+      "errors": [],
+      "isExempt": false,
+      "applied": [],
+      "pending": [],
+      "unmet": {
+        "155-7-rural:return_to_farm": [
+          "세대 주택 수가 3채입니다 — 이 특례는 농어촌주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."
+        ]
+      },
+      "undetermined": []
+    }
+  },
+  "G": {
+    "lapsed": {
+      "isExempt": false,
+      "pending": [],
+      "unmet": {
+        "155-7-rural:return_to_farm": [
+          "세대 주택 수가 3채입니다 — 이 특례는 농어촌주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다."
+        ]
+      }
+    },
+    "w5": {
+      "isExempt": false,
+      "pending": [],
+      "unmet": {
+        "155-7-rural:return_to_farm": [
+          "세대 주택 수가 3채입니다 — 이 특례는 농어촌주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다.",
+          "3호 귀농주택으로 세대전원이 이사해 거주한다고 선언하지 않았습니다(§155⑩5호)."
+        ]
+      }
+    },
+    "w5lapsed": {
+      "isExempt": false,
+      "pending": [],
+      "unmet": {
+        "155-7-rural:return_to_farm": [
+          "세대 주택 수가 3채입니다 — 이 특례는 농어촌주택과 일반주택을 각각 1개씩(2주택) 보유한 세대가 일반주택을 양도하는 경우에만 적용됩니다.",
+          "3호 귀농주택으로 세대전원이 이사해 거주한다고 선언하지 않았습니다(§155⑩5호)."
+        ]
+      }
+    },
+    "twoLapsed": {
+      "isExempt": false,
+      "pending": [
+        "155-7-3ho-return-to-farm@2025-06-10"
+      ],
+      "unmet": {}
+    },
+    "d3ok": {
+      "isExempt": true,
+      "pending": [],
+      "unmet": {}
+    }
+  }
+}

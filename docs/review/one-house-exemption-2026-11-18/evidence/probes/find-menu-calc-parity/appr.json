@@ -1,0 +1,14 @@
+[
+ {
+  "id": "E093-current-twin",
+  "issues": [
+   "step0[redevApprovalDate]: 자산: 관리처분/사업시행계획 인가일을 입력하세요."
+  ]
+ },
+ {
+  "id": "G021-current",
+  "issues": [
+   "step0[redevRightsValue]: 자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+  ]
+ }
+]

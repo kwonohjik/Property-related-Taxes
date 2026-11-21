@@ -1,0 +1,47 @@
+{
+  "ctrl_pyeongchang": {
+    "status": 200,
+    "isExempt": true,
+    "excluded": [
+      {
+        "houseId": "p",
+        "legalBasis": "조특법 §71의2①"
+      }
+    ],
+    "und": [],
+    "val": []
+  },
+  "dongducheon": {
+    "status": 200,
+    "isExempt": false,
+    "excluded": [],
+    "und": [],
+    "val": []
+  },
+  "yecheon": {
+    "status": 200,
+    "isExempt": false,
+    "excluded": [],
+    "und": [],
+    "val": []
+  },
+  "tongyeong_6e": {
+    "status": 200,
+    "isExempt": false,
+    "excluded": [],
+    "und": [],
+    "val": []
+  },
+  "dongducheon_toggle_decline": {
+    "status": 200,
+    "isExempt": true,
+    "excluded": [
+      {
+        "houseId": "p",
+        "legalBasis": "조특법 §71의2①"
+      }
+    ],
+    "und": [],
+    "val": []
+  }
+}

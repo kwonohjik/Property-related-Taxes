@@ -1,0 +1,286 @@
+{
+  "ON-mismatch": {
+    "opts": {
+      "toggle": "yes",
+      "na": "2023-01-01",
+      "rosterAcq": "2023-12-15"
+    },
+    "naLabelShown": true,
+    "approvalLabelShown": true,
+    "reasonLabelShown": true,
+    "naIssues": [
+      "나목 기산일(2023-01-01)이 보유 주택 명부의 1주택 취득일(2023-12-15)과 다릅니다 — 나목은 양도일 현재 보유한 그 1주택의 취득일부터 3년을 셉니다. 같은 날짜로 맞추세요(다른 주택이 없는 가목이면 이 칸을 비우세요). (소득세법 §89①4호나목)"
+    ],
+    "veCount": 1,
+    "ve": [
+      "redevOtherHouseAcquisitionDate: 나목 기산일(2023-01-01)이 보유 주택 명부의 1주택 취득일(2023-12-15)과 다릅니다 — 나목은 양도일 현재 보유한 그 1주택의 취득일부터 3년을 셉니다. 같은 날짜로 맞추세요(다른 주택이 없는 가목이면 이 칸을 비우세요). (소득세법 §89①4호나목)"
+    ],
+    "bodyFacts": {
+      "eligibleAtApproval": true,
+      "otherHouseAcquisitionDate": "2023-01-01",
+      "approvalDate": "2022-05-15",
+      "originalAssetType": "housing"
+    },
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "reasons": [
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ],
+    "clause": null
+  },
+  "ON-match": {
+    "opts": {
+      "toggle": "yes",
+      "na": "2023-12-15",
+      "rosterAcq": "2023-12-15"
+    },
+    "naLabelShown": true,
+    "approvalLabelShown": true,
+    "reasonLabelShown": true,
+    "naIssues": [],
+    "veCount": 0,
+    "ve": [],
+    "bodyFacts": {
+      "eligibleAtApproval": true,
+      "otherHouseAcquisitionDate": "2023-12-15",
+      "approvalDate": "2022-05-15",
+      "originalAssetType": "housing"
+    },
+    "status": 200,
+    "isExempt": true,
+    "applied": [
+      "one_right_89_1_4_na"
+    ],
+    "reasons": [],
+    "clause": "na"
+  },
+  "OFF-mismatch": {
+    "opts": {
+      "toggle": "",
+      "na": "2023-01-01",
+      "rosterAcq": "2023-12-15"
+    },
+    "naLabelShown": false,
+    "approvalLabelShown": false,
+    "reasonLabelShown": false,
+    "naIssues": [
+      "나목 기산일(2023-01-01)이 보유 주택 명부의 1주택 취득일(2023-12-15)과 다릅니다 — 나목은 양도일 현재 보유한 그 1주택의 취득일부터 3년을 셉니다. 같은 날짜로 맞추세요(다른 주택이 없는 가목이면 이 칸을 비우세요). (소득세법 §89①4호나목)"
+    ],
+    "veCount": 1,
+    "ve": [
+      "redevOtherHouseAcquisitionDate: 나목 기산일(2023-01-01)이 보유 주택 명부의 1주택 취득일(2023-12-15)과 다릅니다 — 나목은 양도일 현재 보유한 그 1주택의 취득일부터 3년을 셉니다. 같은 날짜로 맞추세요(다른 주택이 없는 가목이면 이 칸을 비우세요). (소득세법 §89①4호나목)"
+    ],
+    "bodyFacts": {
+      "eligibleAtApproval": false,
+      "otherHouseAcquisitionDate": "2023-01-01",
+      "approvalDate": "2022-05-15",
+      "originalAssetType": "housing"
+    },
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "reasons": [
+      "관리처분계획인가일 현재 §89①3호 가목 요건(보유 2년, 조정대상지역 취득 시 거주 2년)을 갖춘 기존주택 소유가 선언되지 않았습니다.",
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ],
+    "clause": null
+  },
+  "OFF-after-transfer": {
+    "opts": {
+      "toggle": "",
+      "na": "2026-07-01",
+      "rosterAcq": "2023-12-15"
+    },
+    "naLabelShown": false,
+    "approvalLabelShown": false,
+    "reasonLabelShown": false,
+    "naIssues": [
+      "나목 기산일(2026-07-01)이 양도 예정일(2026-06-15)보다 뒤입니다 — 「그 1주택을 취득한 날」은 양도일 전이어야 합니다. (소득세법 §89①4호나목)",
+      "나목 기산일(2026-07-01)이 보유 주택 명부의 1주택 취득일(2023-12-15)과 다릅니다 — 나목은 양도일 현재 보유한 그 1주택의 취득일부터 3년을 셉니다. 같은 날짜로 맞추세요(다른 주택이 없는 가목이면 이 칸을 비우세요). (소득세법 §89①4호나목)"
+    ],
+    "veCount": 2,
+    "ve": [
+      "redevOtherHouseAcquisitionDate: 나목 기산일(2026-07-01)이 양도 예정일(2026-06-15)보다 뒤입니다 — 「그 1주택을 취득한 날」은 양도일 전이어야 합니다. (소득세법 §89①4호나목)",
+      "redevOtherHouseAcquisitionDate: 나목 기산일(2026-07-01)이 보유 주택 명부의 1주택 취득일(2023-12-15)과 다릅니다 — 나목은 양도일 현재 보유한 그 1주택의 취득일부터 3년을 셉니다. 같은 날짜로 맞추세요(다른 주택이 없는 가목이면 이 칸을 비우세요). (소득세법 §89①4호나목)"
+    ],
+    "bodyFacts": {
+      "eligibleAtApproval": false,
+      "otherHouseAcquisitionDate": "2026-07-01",
+      "approvalDate": "2022-05-15",
+      "originalAssetType": "housing"
+    },
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "reasons": [
+      "관리처분계획인가일 현재 §89①3호 가목 요건(보유 2년, 조정대상지역 취득 시 거주 2년)을 갖춘 기존주택 소유가 선언되지 않았습니다."
+    ],
+    "clause": null
+  },
+  "OFF-match": {
+    "opts": {
+      "toggle": "",
+      "na": "2023-12-15",
+      "rosterAcq": "2023-12-15"
+    },
+    "naLabelShown": false,
+    "approvalLabelShown": false,
+    "reasonLabelShown": false,
+    "naIssues": [],
+    "veCount": 0,
+    "ve": [],
+    "bodyFacts": {
+      "eligibleAtApproval": false,
+      "otherHouseAcquisitionDate": "2023-12-15",
+      "approvalDate": "2022-05-15",
+      "originalAssetType": "housing"
+    },
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "reasons": [
+      "관리처분계획인가일 현재 §89①3호 가목 요건(보유 2년, 조정대상지역 취득 시 거주 2년)을 갖춘 기존주택 소유가 선언되지 않았습니다."
+    ],
+    "clause": null
+  },
+  "OFF-empty": {
+    "opts": {
+      "toggle": "",
+      "na": "",
+      "rosterAcq": "2023-12-15"
+    },
+    "naLabelShown": false,
+    "approvalLabelShown": false,
+    "reasonLabelShown": false,
+    "naIssues": [],
+    "veCount": 0,
+    "ve": [],
+    "bodyFacts": {
+      "eligibleAtApproval": false,
+      "approvalDate": "2022-05-15",
+      "originalAssetType": "housing"
+    },
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "reasons": [
+      "관리처분계획인가일 현재 §89①3호 가목 요건(보유 2년, 조정대상지역 취득 시 거주 2년)을 갖춘 기존주택 소유가 선언되지 않았습니다.",
+      "나목 판정에는 세대 보유 1주택의 취득일이 필요합니다. 입력하지 않으면 3년 요건을 판정할 수 없어 나목을 적용하지 않습니다."
+    ],
+    "clause": null
+  },
+  "OFF-match-over3y": {
+    "opts": {
+      "toggle": "",
+      "na": "2022-01-03",
+      "rosterAcq": "2022-01-03"
+    },
+    "naLabelShown": false,
+    "approvalLabelShown": false,
+    "reasonLabelShown": false,
+    "naIssues": [],
+    "veCount": 0,
+    "ve": [],
+    "bodyFacts": {
+      "eligibleAtApproval": false,
+      "otherHouseAcquisitionDate": "2022-01-03",
+      "approvalDate": "2022-05-15",
+      "originalAssetType": "housing"
+    },
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "reasons": [
+      "관리처분계획인가일 현재 §89①3호 가목 요건(보유 2년, 조정대상지역 취득 시 거주 2년)을 갖춘 기존주택 소유가 선언되지 않았습니다.",
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ],
+    "clause": null
+  },
+  "OFF-inherited-row-hidden-old": {
+    "opts": {
+      "toggle": "",
+      "na": "2020-01-01",
+      "rosterAcq": "2024-01-01",
+      "inherited": true
+    },
+    "naLabelShown": false,
+    "approvalLabelShown": false,
+    "reasonLabelShown": false,
+    "naIssues": [],
+    "veCount": 0,
+    "ve": [],
+    "bodyFacts": {
+      "eligibleAtApproval": false,
+      "otherHouseAcquisitionDate": "2020-01-01",
+      "approvalDate": "2022-05-15",
+      "originalAssetType": "housing"
+    },
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "reasons": [
+      "관리처분계획인가일 현재 §89①3호 가목 요건(보유 2년, 조정대상지역 취득 시 거주 2년)을 갖춘 기존주택 소유가 선언되지 않았습니다.",
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ],
+    "clause": null
+  },
+  "OFF-empty-inherited-control": {
+    "opts": {
+      "toggle": "",
+      "na": "",
+      "rosterAcq": "2024-01-01",
+      "inherited": true
+    },
+    "naLabelShown": false,
+    "approvalLabelShown": false,
+    "reasonLabelShown": false,
+    "naIssues": [],
+    "veCount": 0,
+    "ve": [],
+    "bodyFacts": {
+      "eligibleAtApproval": false,
+      "approvalDate": "2022-05-15",
+      "originalAssetType": "housing"
+    },
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "reasons": [
+      "관리처분계획인가일 현재 §89①3호 가목 요건(보유 2년, 조정대상지역 취득 시 거주 2년)을 갖춘 기존주택 소유가 선언되지 않았습니다.",
+      "나목 판정에는 세대 보유 1주택의 취득일이 필요합니다. 입력하지 않으면 3년 요건을 판정할 수 없어 나목을 적용하지 않습니다."
+    ],
+    "clause": null
+  },
+  "NO-mismatch": {
+    "opts": {
+      "toggle": "no",
+      "na": "2023-01-01",
+      "rosterAcq": "2023-12-15"
+    },
+    "naLabelShown": false,
+    "approvalLabelShown": false,
+    "reasonLabelShown": false,
+    "naIssues": [
+      "나목 기산일(2023-01-01)이 보유 주택 명부의 1주택 취득일(2023-12-15)과 다릅니다 — 나목은 양도일 현재 보유한 그 1주택의 취득일부터 3년을 셉니다. 같은 날짜로 맞추세요(다른 주택이 없는 가목이면 이 칸을 비우세요). (소득세법 §89①4호나목)"
+    ],
+    "veCount": 1,
+    "ve": [
+      "redevOtherHouseAcquisitionDate: 나목 기산일(2023-01-01)이 보유 주택 명부의 1주택 취득일(2023-12-15)과 다릅니다 — 나목은 양도일 현재 보유한 그 1주택의 취득일부터 3년을 셉니다. 같은 날짜로 맞추세요(다른 주택이 없는 가목이면 이 칸을 비우세요). (소득세법 §89①4호나목)"
+    ],
+    "bodyFacts": {
+      "eligibleAtApproval": false,
+      "otherHouseAcquisitionDate": "2023-01-01",
+      "approvalDate": "2022-05-15",
+      "originalAssetType": "housing"
+    },
+    "status": 200,
+    "isExempt": false,
+    "applied": [],
+    "reasons": [
+      "관리처분계획인가일 현재 §89①3호 가목 요건(보유 2년, 조정대상지역 취득 시 거주 2년)을 갖춘 기존주택 소유가 선언되지 않았습니다.",
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ],
+    "clause": null
+  }
+}

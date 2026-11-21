@@ -1,0 +1,25 @@
+{
+  "surchargeStep1_unreg_blank_hasPhrp": false,
+  "unreg_yes_status": 200,
+  "unreg_no_status": 200,
+  "unreg_yes_eq_no": false,
+  "unreg_no_head": "{\"data\":{\"scope\":{\"supported\":true},\"transferDate\":\"2021-06-01\",\"judgmentBaseDate\":\"2026-11-18\",\"exemption\":{\"judgment\":{\"isExempt\":false,\"isPartialExempt\":false,\"article89Clause2\":{\"status\":\"not_applicable\"},\"appliedExceptions\":[],\"pending\":[],\"undetermined\":[],\"unmetExceptions\":[],\"legalBasis\":[]},\"judgmentBaseDate\":\"2026-11-18\",\"houseCount\":{\"total\":3,\"countedForExemption\":3,\"excluded\":[]}},\"notices\":[],\"headline\":{\"result\":{\"effectiveHouseCount\":3,\"rawHouseCount\":3,\"excludedHouses\":[],\"excludedPresaleRights\":[],\"isRegulatedAtTransfer\":true,\"surchargeApplicable\":true,\"surchargeType\":\"multi_house_3plus\",\"isSurchargeSuspended\":false,\"exclusionReasons\":[],\"warnings\":[]},\"application\":{\"isSurchargeCase\":true,\"isSuspended\":false,\"isSurchargeApplied\":true,\"isRateSurchargeApplied\":true,\"effect",
+  "diff_at": {
+    "yes": "rticle89Clause2\":{\"status\":\"not_applicable\"},\"appliedExceptions\":[],\"pending\":[],\"undetermined\":[],\"unmetExceptions\":[],\"legalBasis\":[]},,\"houseCount\":{\"total\":3,\"countedForExemption\":3,\"excluded\":[]},\"rentalHousingException\":{\"scenario\":\"B\",\"passed\":false,\"residenceFailReasons\":[\"직전거주주택 양도일이 입력되지 않아 소령 §154⑩2호(직전거주주택보유주택) 요건을 판정할 수 없습니다.\"],\"unitFailReasons\":[],\"compositionFailReason\":\"거주주택 외에 장기임대주택이 아닌 주택이 2채 있습니다 — 소득세법 시행령 §155⑳은 「장기임대주택과 그 밖의 1주택」을 소유한 1세대에 적용되며, 다른 특례를 둘 이상 겹쳐 적용하지 않습니다\",\"",
+    "no": "rticle89Clause2\":{\"status\":\"not_applicable\"},\"appliedExceptions\":[],\"pending\":[],\"undetermined\":[],\"unmetExceptions\":[],\"legalBasis\":[]},,\"houseCount\":{\"total\":3,\"countedForExemption\":3,\"excluded\":[]}},\"notices\":[],\"headline\":{\"result\":{\"effectiveHouseCount\":3,\"rawHouseCount\":3,\"excludedHouses\":[],\"excludedPresaleRights\":[],\"isRegulatedAtTransfer\":true,\"surchargeApplicable\":true,\"surchargeType\":\"multi_house_3plus\",\"isSurchargeSuspended\":false,\"exclusionReasons\":[],\"warnings\":[]},\"application\":{\""
+  },
+  "unreg_headline_eq": true,
+  "unreg_rows_eq": true,
+  "unreg_keys": [
+    "scope",
+    "transferDate",
+    "judgmentBaseDate",
+    "exemption",
+    "notices",
+    "headline",
+    "rows",
+    "rateImpact"
+  ],
+  "unreg_yes_rhe": "present",
+  "reg_yes_eq_no": false
+}

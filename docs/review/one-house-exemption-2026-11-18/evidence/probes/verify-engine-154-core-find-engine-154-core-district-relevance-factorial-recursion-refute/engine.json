@@ -1,0 +1,209 @@
+[
+ {
+  "variant": "undeclared",
+  "k": 0,
+  "ms": 16,
+  "calls": 3,
+  "isExempt": false,
+  "status": "not_applicable",
+  "und": []
+ },
+ {
+  "variant": "undeclared",
+  "k": 1,
+  "ms": 3,
+  "calls": 13,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "undeclared",
+  "k": 2,
+  "ms": 2,
+  "calls": 79,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "undeclared",
+  "k": 3,
+  "ms": 10,
+  "calls": 633,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "undeclared",
+  "k": 4,
+  "ms": 69,
+  "calls": 6331,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "undeclared",
+  "k": 5,
+  "ms": 594,
+  "calls": 75973,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "undeclared",
+  "k": 6,
+  "ms": 7281,
+  "calls": 1063623,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "sellingDeclared",
+  "k": 0,
+  "ms": 1,
+  "calls": 1,
+  "isExempt": false,
+  "status": "not_applicable",
+  "und": []
+ },
+ {
+  "variant": "sellingDeclared",
+  "k": 1,
+  "ms": 0,
+  "calls": 3,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "sellingDeclared",
+  "k": 2,
+  "ms": 0,
+  "calls": 13,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "sellingDeclared",
+  "k": 3,
+  "ms": 1,
+  "calls": 79,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "sellingDeclared",
+  "k": 4,
+  "ms": 8,
+  "calls": 633,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "sellingDeclared",
+  "k": 5,
+  "ms": 65,
+  "calls": 6331,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "sellingDeclared",
+  "k": 6,
+  "ms": 600,
+  "calls": 75973,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "successor",
+  "k": 0,
+  "ms": 0,
+  "calls": 3,
+  "isExempt": false,
+  "status": "not_applicable",
+  "und": []
+ },
+ {
+  "variant": "successor",
+  "k": 1,
+  "ms": 0,
+  "calls": 3,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "successor",
+  "k": 2,
+  "ms": 0,
+  "calls": 3,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "successor",
+  "k": 3,
+  "ms": 0,
+  "calls": 3,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "successor",
+  "k": 4,
+  "ms": 0,
+  "calls": 3,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "successor",
+  "k": 5,
+  "ms": 0,
+  "calls": 3,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "successor",
+  "k": 6,
+  "ms": 0,
+  "calls": 3,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "successor",
+  "k": 7,
+  "ms": 0,
+  "calls": 3,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ },
+ {
+  "variant": "successor",
+  "k": 8,
+  "ms": 0,
+  "calls": 3,
+  "isExempt": false,
+  "status": "excluded",
+  "und": []
+ }
+]

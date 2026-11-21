@@ -1,0 +1,281 @@
+{
+ "P-E112-post2013": {
+  "kind": "exempt+undetermined",
+  "scStatus": 200,
+  "ohStatus": 200,
+  "scErrors": [],
+  "ohErrors": [],
+  "scope": {
+   "supported": true
+  },
+  "isExempt": true,
+  "isPartialExempt": false,
+  "ohIsExempt": true,
+  "undeterminedIds": [
+   "155-2-reinheritance-reference-date-unverified"
+  ],
+  "pendingIds": [],
+  "cardText": "9 1세대1주택 비과세 (요약) 비과세 — 1세대1주택 비과세 요건을 충족합니다. 비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다. 비과세 판정에서 자세히 보기 →",
+  "card_has_undetReason0": false,
+  "card_has_확인": false,
+  "card_has_아래안내": false,
+  "card_has_pendDeadline": "n/a",
+  "fullSc_has_undetReason0": false,
+  "fullSc_has_판정하지않은": false,
+  "fullSc_has_pendDeadline": "n/a",
+  "fullSc_has_pendDesc": "n/a",
+  "oh_has_판정하지않은": true,
+  "oh_has_undetReason0": true,
+  "oh_has_양도일조정카드": false,
+  "oh_has_pendDeadline": "n/a",
+  "reason0Head": "별도세대에서 받은 상속주택을 동일세대원이 다시 상속받은 주택은 상속주택 "
+ },
+ "E0061-parental-rental-counterpart": {
+  "kind": "exempt+undetermined",
+  "scStatus": 200,
+  "ohStatus": 200,
+  "scErrors": [
+   "standardPriceAtTransfer: 양도 대상 주택의 양도 당시 기준시가를 입력하세요 — 가액기준 지역이라 3억원 이하면 주택 수에서 빠집니다(소득세법 시행령 §167의3①1호)."
+  ],
+  "ohErrors": [],
+  "scope": {
+   "supported": true
+  },
+  "isExempt": true,
+  "isPartialExempt": false,
+  "ohIsExempt": true,
+  "undeterminedIds": [
+   "155-20-merge-rental-carveout"
+  ],
+  "pendingIds": [],
+  "cardText": "9 1세대1주택 비과세 (요약) 비과세 — 1세대1주택 비과세 요건을 충족합니다. 비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다. 비과세 판정에서 자세히 보기 →",
+  "card_has_undetReason0": false,
+  "card_has_확인": false,
+  "card_has_아래안내": false,
+  "card_has_pendDeadline": "n/a",
+  "fullSc_has_undetReason0": false,
+  "fullSc_has_판정하지않은": false,
+  "fullSc_has_pendDeadline": "n/a",
+  "fullSc_has_pendDesc": "n/a",
+  "oh_has_판정하지않은": true,
+  "oh_has_undetReason0": true,
+  "oh_has_양도일조정카드": false,
+  "oh_has_pendDeadline": "n/a",
+  "reason0Head": "합가 상대 쪽 장기임대주택 1채를 소득세법 시행령 §155⑳에 따라 주택"
+ },
+ "E128-era-reverse": {
+  "kind": "exempt+undetermined",
+  "scStatus": 200,
+  "ohStatus": 200,
+  "scErrors": [],
+  "ohErrors": [],
+  "scope": {
+   "supported": false,
+   "reason": "before_2018_04_01"
+  },
+  "isExempt": true,
+  "isPartialExempt": false,
+  "ohIsExempt": true,
+  "undeterminedIds": [
+   "155-4-5-double-merge-reverse-unverified"
+  ],
+  "pendingIds": [],
+  "cardText": "9 1세대1주택 비과세 (요약) 비과세 — 1세대1주택 비과세 요건을 충족합니다. 비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다. 비과세 판정에서 자세히 보기 →",
+  "card_has_undetReason0": false,
+  "card_has_확인": false,
+  "card_has_아래안내": false,
+  "card_has_pendDeadline": "n/a",
+  "fullSc_has_undetReason0": false,
+  "fullSc_has_판정하지않은": false,
+  "fullSc_has_pendDeadline": "n/a",
+  "fullSc_has_pendDesc": "n/a",
+  "oh_has_판정하지않은": true,
+  "oh_has_undetReason0": true,
+  "oh_has_양도일조정카드": false,
+  "oh_has_pendDeadline": "n/a",
+  "reason0Head": "동거봉양 합가 후 혼인으로 3주택이 된 세대를 1세대1주택으로 보아 판정"
+ },
+ "E149-era": {
+  "kind": "exempt+undetermined",
+  "scStatus": 200,
+  "ohStatus": 200,
+  "scErrors": [],
+  "ohErrors": [],
+  "scope": {
+   "supported": true
+  },
+  "isExempt": true,
+  "isPartialExempt": false,
+  "ohIsExempt": true,
+  "undeterminedIds": [
+   "155-10-4-farmland-area-990-era-unverified"
+  ],
+  "pendingIds": [],
+  "cardText": "9 1세대1주택 비과세 (요약) 비과세 — 1세대1주택 비과세 요건을 충족합니다. 비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다. 비과세 판정에서 자세히 보기 →",
+  "card_has_undetReason0": false,
+  "card_has_확인": false,
+  "card_has_아래안내": false,
+  "card_has_pendDeadline": "n/a",
+  "fullSc_has_undetReason0": false,
+  "fullSc_has_판정하지않은": false,
+  "fullSc_has_pendDeadline": "n/a",
+  "fullSc_has_pendDesc": "n/a",
+  "oh_has_판정하지않은": true,
+  "oh_has_undetReason0": true,
+  "oh_has_양도일조정카드": false,
+  "oh_has_pendDeadline": "n/a",
+  "reason0Head": "소득세법 시행령 §155⑩4호의 농지 면적 기준은 2007.2.28. 개"
+ },
+ "P-T001-parental-care": {
+  "kind": "exempt+undetermined",
+  "scStatus": 200,
+  "ohStatus": 200,
+  "scErrors": [],
+  "ohErrors": [],
+  "scope": {
+   "supported": false,
+   "reason": "before_2018_04_01"
+  },
+  "isExempt": true,
+  "isPartialExempt": false,
+  "ohIsExempt": true,
+  "undeterminedIds": [
+   "155-2-pre2010-parental-care-exception-unverified"
+  ],
+  "pendingIds": [],
+  "cardText": "9 1세대1주택 비과세 (요약) 비과세 — 1세대1주택 비과세 요건을 충족합니다. 비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다. 비과세 판정에서 자세히 보기 →",
+  "card_has_undetReason0": false,
+  "card_has_확인": false,
+  "card_has_아래안내": false,
+  "card_has_pendDeadline": "n/a",
+  "fullSc_has_undetReason0": false,
+  "fullSc_has_판정하지않은": false,
+  "fullSc_has_pendDeadline": "n/a",
+  "fullSc_has_pendDesc": "n/a",
+  "oh_has_판정하지않은": true,
+  "oh_has_undetReason0": true,
+  "oh_has_양도일조정카드": false,
+  "oh_has_pendDeadline": "n/a",
+  "reason0Head": "동거봉양 합가 전부터 보유하던 주택은 동일세대원으로부터 상속받아도 상속주"
+ },
+ "N-E067-no-decedent-date": {
+  "kind": "taxed+pending",
+  "scStatus": 200,
+  "ohStatus": 200,
+  "scErrors": [],
+  "ohErrors": [],
+  "scope": {
+   "supported": true
+  },
+  "isExempt": false,
+  "isPartialExempt": false,
+  "ohIsExempt": false,
+  "undeterminedIds": [
+   "89-2-three-year-exception-undeclared"
+  ],
+  "pendingIds": [
+   "156-2-3-right-three-year"
+  ],
+  "pend0Deadline": "2024-02-13",
+  "cardText": "9 1세대1주택 비과세 (요약) 과세 — 입력한 양도(예정)일로는 비과세 요건을 충족하지 않습니다. 아래 안내대로 양도일을 조정하면 요건을 갖출 수 있습니다. 비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다. 비과세 판정에서 자세히 보기 →",
+  "card_has_undetReason0": false,
+  "card_has_확인": false,
+  "card_has_아래안내": true,
+  "card_has_pendDeadline": false,
+  "fullSc_has_undetReason0": false,
+  "fullSc_has_판정하지않은": false,
+  "fullSc_has_pendDeadline": false,
+  "fullSc_has_pendDesc": false,
+  "oh_has_판정하지않은": true,
+  "oh_has_undetReason0": true,
+  "oh_has_양도일조정카드": true,
+  "oh_has_pendDeadline": true,
+  "reason0Head": "권리 취득일부터 3년이 지나 양도했고 그 예외(소득세법 시행령 §156의"
+ },
+ "E112-era": {
+  "kind": "control",
+  "scStatus": 200,
+  "ohStatus": 200,
+  "scErrors": [],
+  "ohErrors": [],
+  "scope": {
+   "supported": false,
+   "reason": "before_2018_04_01"
+  },
+  "isExempt": true,
+  "isPartialExempt": false,
+  "ohIsExempt": true,
+  "undeterminedIds": [],
+  "pendingIds": [],
+  "cardText": "9 1세대1주택 비과세 (요약) 비과세 — 1세대1주택 비과세 요건을 충족합니다. 비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다. 비과세 판정에서 자세히 보기 →",
+  "card_has_undetReason0": "n/a",
+  "card_has_확인": false,
+  "card_has_아래안내": false,
+  "card_has_pendDeadline": "n/a",
+  "fullSc_has_undetReason0": "n/a",
+  "fullSc_has_판정하지않은": false,
+  "fullSc_has_pendDeadline": "n/a",
+  "fullSc_has_pendDesc": "n/a",
+  "oh_has_판정하지않은": false,
+  "oh_has_undetReason0": "n/a",
+  "oh_has_양도일조정카드": false,
+  "oh_has_pendDeadline": "n/a"
+ },
+ "N-E112-not-reinherited": {
+  "kind": "control",
+  "scStatus": 200,
+  "ohStatus": 200,
+  "scErrors": [],
+  "ohErrors": [],
+  "scope": {
+   "supported": false,
+   "reason": "before_2018_04_01"
+  },
+  "isExempt": false,
+  "isPartialExempt": false,
+  "ohIsExempt": false,
+  "undeterminedIds": [],
+  "pendingIds": [],
+  "cardText": "9 1세대1주택 비과세 (요약) 과세 — 현재 입력으로는 비과세 요건을 충족하지 않습니다. 비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다. 비과세 판정에서 자세히 보기 →",
+  "card_has_undetReason0": "n/a",
+  "card_has_확인": false,
+  "card_has_아래안내": false,
+  "card_has_pendDeadline": "n/a",
+  "fullSc_has_undetReason0": "n/a",
+  "fullSc_has_판정하지않은": false,
+  "fullSc_has_pendDeadline": "n/a",
+  "fullSc_has_pendDesc": "n/a",
+  "oh_has_판정하지않은": false,
+  "oh_has_undetReason0": "n/a",
+  "oh_has_양도일조정카드": false,
+  "oh_has_pendDeadline": "n/a"
+ },
+ "E067-era": {
+  "kind": "control",
+  "scStatus": 200,
+  "ohStatus": 200,
+  "scErrors": [],
+  "ohErrors": [],
+  "scope": {
+   "supported": true
+  },
+  "isExempt": true,
+  "isPartialExempt": false,
+  "ohIsExempt": true,
+  "undeterminedIds": [],
+  "pendingIds": [],
+  "cardText": "9 1세대1주택 비과세 (요약) 비과세 — 1세대1주택 비과세 요건을 충족합니다. 비과세 판정의 주택 수와 중과 판정의 주택 수는 세는 기준이 다릅니다. 비과세 판정에서 자세히 보기 →",
+  "card_has_undetReason0": "n/a",
+  "card_has_확인": false,
+  "card_has_아래안내": false,
+  "card_has_pendDeadline": "n/a",
+  "fullSc_has_undetReason0": "n/a",
+  "fullSc_has_판정하지않은": false,
+  "fullSc_has_pendDeadline": "n/a",
+  "fullSc_has_pendDesc": "n/a",
+  "oh_has_판정하지않은": false,
+  "oh_has_undetReason0": "n/a",
+  "oh_has_양도일조정카드": false,
+  "oh_has_pendDeadline": "n/a"
+ }
+}

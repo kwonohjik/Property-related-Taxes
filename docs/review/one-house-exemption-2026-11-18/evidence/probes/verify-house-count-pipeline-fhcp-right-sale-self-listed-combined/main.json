@@ -1,0 +1,183 @@
+{
+  "A_none": {
+    "status": 200,
+    "validateAll": [],
+    "isExempt": true,
+    "applied": [
+      "one_right_89_1_4_ga"
+    ],
+    "oneRightClause": "ga",
+    "reasons": [],
+    "sidebar": [
+      {
+        "label": "양도 대상",
+        "value": "조합원입주권"
+      },
+      {
+        "label": "세대 보유 주택 수",
+        "value": "0채"
+      },
+      {
+        "label": "세대 보유 입주권 수",
+        "value": "1개"
+      }
+    ],
+    "step2HeaderHouseCount": 0,
+    "calcLeafRightCount": 1
+  },
+  "B_selfListedMinimal": {
+    "status": 200,
+    "validateAll": [],
+    "bodyPresaleRights": [
+      {
+        "id": "pr1",
+        "type": "redevelopment_right",
+        "acquisitionDate": "2015-03-01",
+        "region": "capital"
+      }
+    ],
+    "isExempt": false,
+    "applied": [],
+    "oneRightClause": null,
+    "reasons": [
+      "세대 보유 조합원입주권이 1개여야 합니다 (현재 2개 — 양도 대상 포함)."
+    ],
+    "sidebar": [
+      {
+        "label": "양도 대상",
+        "value": "조합원입주권"
+      },
+      {
+        "label": "세대 보유 주택 수",
+        "value": "0채"
+      },
+      {
+        "label": "세대 보유 입주권 수",
+        "value": "2개"
+      },
+      {
+        "label": "분양권·입주권",
+        "value": "1건"
+      }
+    ],
+    "step2HeaderHouseCount": 0,
+    "calcLeafRightCount": 2
+  },
+  "C_selfListedFull": {
+    "status": 200,
+    "validateAll": [],
+    "bodyPresaleRights": [
+      {
+        "id": "pr1",
+        "type": "redevelopment_right",
+        "acquisitionDate": "2015-03-01",
+        "region": "capital",
+        "managementDisposalApprovalDate": "2021-05-01",
+        "memberOrigin": "original_house"
+      }
+    ],
+    "isExempt": false,
+    "applied": [],
+    "oneRightClause": null,
+    "reasons": [
+      "세대 보유 조합원입주권이 1개여야 합니다 (현재 2개 — 양도 대상 포함)."
+    ],
+    "sidebar": [
+      {
+        "label": "양도 대상",
+        "value": "조합원입주권"
+      },
+      {
+        "label": "세대 보유 주택 수",
+        "value": "0채"
+      },
+      {
+        "label": "세대 보유 입주권 수",
+        "value": "2개"
+      },
+      {
+        "label": "분양권·입주권",
+        "value": "1건"
+      }
+    ],
+    "step2HeaderHouseCount": 0,
+    "calcLeafRightCount": 2
+  },
+  "D_genuineSecondRight": {
+    "status": 200,
+    "validateAll": [],
+    "bodyPresaleRights": [
+      {
+        "id": "pr2",
+        "type": "redevelopment_right",
+        "acquisitionDate": "2018-07-01",
+        "region": "capital",
+        "memberOrigin": "successor"
+      }
+    ],
+    "isExempt": false,
+    "applied": [],
+    "oneRightClause": null,
+    "reasons": [
+      "세대 보유 조합원입주권이 1개여야 합니다 (현재 2개 — 양도 대상 포함)."
+    ],
+    "sidebar": [
+      {
+        "label": "양도 대상",
+        "value": "조합원입주권"
+      },
+      {
+        "label": "세대 보유 주택 수",
+        "value": "0채"
+      },
+      {
+        "label": "세대 보유 입주권 수",
+        "value": "2개"
+      },
+      {
+        "label": "분양권·입주권",
+        "value": "1건"
+      }
+    ],
+    "step2HeaderHouseCount": 0,
+    "calcLeafRightCount": 2
+  },
+  "E_presaleOnly": {
+    "status": 200,
+    "validateAll": [],
+    "bodyPresaleRights": [
+      {
+        "id": "pr3",
+        "type": "presale_right",
+        "acquisitionDate": "2023-01-01",
+        "region": "capital"
+      }
+    ],
+    "isExempt": true,
+    "applied": [
+      "one_right_89_1_4_ga"
+    ],
+    "oneRightClause": "ga",
+    "reasons": [],
+    "sidebar": [
+      {
+        "label": "양도 대상",
+        "value": "조합원입주권"
+      },
+      {
+        "label": "세대 보유 주택 수",
+        "value": "0채"
+      },
+      {
+        "label": "세대 보유 입주권 수",
+        "value": "1개"
+      },
+      {
+        "label": "분양권·입주권",
+        "value": "1건"
+      }
+    ],
+    "step2HeaderHouseCount": 0,
+    "calcLeafRightCount": 1
+  }
+}

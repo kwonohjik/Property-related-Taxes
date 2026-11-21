@@ -1,0 +1,594 @@
+{
+ "E001-dual": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "E002-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "E004-era": [],
+ "E004-era-declared": [],
+ "E004-era-late": [],
+ "E004-era-2": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "E004-era-samehh": [],
+ "E006-era": [],
+ "E0061-parental-rental-counterpart": [],
+ "E007-era": [],
+ "E007-current": [],
+ "E008-era": [],
+ "E008-current": [],
+ "E011-era": [],
+ "E011-era-2": [],
+ "E014-era": [],
+ "E015-era": [],
+ "E015-era-2": [],
+ "E015-era-2-early": [],
+ "E017-era": [],
+ "E017-era-neg": [],
+ "E018-era": [],
+ "E019-era-1": [],
+ "E022-era": [],
+ "E022-current": [],
+ "E022-current-rural-later": [],
+ "E022-current-rural-later-unmet": [],
+ "E023-era": [],
+ "E028-era": [],
+ "E029-era": [],
+ "E033-era": [],
+ "E033-era-within1y": [],
+ "E036-era": [
+  "0:redevApprovalDate:자산: 관리처분/사업시행계획 인가일을 입력하세요."
+ ],
+ "E040-era": [],
+ "E040-era-late": [],
+ "E040-current": [],
+ "E045-era": [],
+ "E045-current": [],
+ "E046-era": [],
+ "E046-current": [],
+ "E047-era-pre": [],
+ "E049-era": [],
+ "E049-era-within2y": [],
+ "E049-current": [],
+ "E050-era": [],
+ "E050-current": [],
+ "E050-current-within1y": [],
+ "E053-era": [],
+ "E053-era-daybefore": [],
+ "E054-era": [],
+ "E055-era": [],
+ "E056-era": [],
+ "E057-era": [],
+ "E057-current": [],
+ "E058-era": [],
+ "E061-era": [],
+ "E062-era": [],
+ "E063-current": [],
+ "E064-current": [],
+ "E067-era": [],
+ "N-E067-no-decedent-date": [],
+ "N-E067-separate-household": [],
+ "E070-era": [],
+ "E071-era": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "E071-era-pos": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "E072-era": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "E073-era": [],
+ "E073-current": [],
+ "E073-current-neg": [],
+ "E074-era": [],
+ "E074-current": [],
+ "E076-era": [],
+ "E077-era": [],
+ "E083-dual": [],
+ "E084-dual": [],
+ "E086-dual": [],
+ "E088-dual": [],
+ "E091-era": [],
+ "E091-current": [],
+ "E091-current-single": [],
+ "E093-era": [
+  "0:redevApprovalDate:자산: 관리처분/사업시행계획 인가일을 입력하세요."
+ ],
+ "E093-current": [
+  "0:redevApprovalDate:자산: 관리처분/사업시행계획 인가일을 입력하세요."
+ ],
+ "E093-current-twin": [
+  "0:redevApprovalDate:자산: 관리처분/사업시행계획 인가일을 입력하세요."
+ ],
+ "E094-dual": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "E095-era": [],
+ "E098-era": [],
+ "E100-era": [],
+ "E100-current": [],
+ "E103-era": [],
+ "E107-dual": [],
+ "N-E107-not-gifted": [],
+ "E109-dual": [],
+ "E110-dual": [],
+ "E112-era": [],
+ "P-E112-post2013": [],
+ "N-E112-post2013-acquired-after": [],
+ "N-E112-not-reinherited": [],
+ "E115-era": [],
+ "E117-era": [],
+ "E118-era": [],
+ "E119-era": [
+  "0:redevApprovalDate:자산: 관리처분/사업시행계획 인가일을 입력하세요."
+ ],
+ "E121-era": [],
+ "E122-era": [],
+ "E122-current": [],
+ "E123-era": [],
+ "E123-current": [],
+ "E124-era": [],
+ "E125-era": [],
+ "E127-era": [],
+ "E127-current": [],
+ "E128-era": [],
+ "E128-current": [],
+ "E128-era-reverse": [],
+ "E128-era-spouse2": [],
+ "E129-era": [],
+ "E129-current": [],
+ "E129-era-noprior": [],
+ "E132-era": [],
+ "E132-current": [],
+ "P-E132-1062": [],
+ "P-E132-seller-rentals-only": [],
+ "E133-era": [],
+ "E139-era": [],
+ "E140-era": [],
+ "E140-current": [],
+ "E141-era": [],
+ "E141-current": [],
+ "E143-era": [],
+ "E143-current": [],
+ "E144-era": [],
+ "E145-era": [],
+ "E146-era": [],
+ "E146-era-pos": [],
+ "E147-era": [],
+ "E149-era": [],
+ "E149-era-5y": [],
+ "E150-era": [],
+ "E156-farmexit": [],
+ "P-E156-farmexit-not-returned": [],
+ "E160-era": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "E162-era": [],
+ "E163-era": [],
+ "E163-era-pos": [],
+ "E163-era-sameday": [],
+ "E166-era": [],
+ "E166-current": [],
+ "E167-era": [],
+ "E175-era": [],
+ "E175-current": [],
+ "E177-era": [],
+ "E177-current": [],
+ "E178-era": [],
+ "E178-current": [],
+ "E180-era": [],
+ "E182-era": [],
+ "E182-era-pos": [],
+ "E182-era-3": [],
+ "E185-era": [],
+ "E190-era": [],
+ "E193-era": [],
+ "E193-current": [],
+ "E194-era": [],
+ "E195-era": [],
+ "E195-current": [],
+ "E196-era": [],
+ "E197-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "E199-era": [],
+ "E199-era-pos": [],
+ "E203-era": [],
+ "E203-current": [],
+ "E204-current": [],
+ "E208-current": [],
+ "E209-current": [],
+ "E211-era": [],
+ "P-E211-within": [],
+ "P-E211-sell-b": [],
+ "F004-era": [],
+ "F006-era": [],
+ "P-F006-household": [],
+ "F007-era": [],
+ "F011-era": [
+  "0:redevApprovalDate:자산: 관리처분/사업시행계획 인가일을 입력하세요."
+ ],
+ "F012-era": [],
+ "F015-era": [],
+ "F016-era": [],
+ "N-F016-same-household": [],
+ "F018-era": [],
+ "F020-era": [],
+ "F021-era": [
+  "0:carryover.giftDateValuation:자산: 증여 당시 평가액을 입력하세요."
+ ],
+ "F023-era": [],
+ "F023-current": [],
+ "F029-era": [],
+ "F031-era": [],
+ "F032-era": [],
+ "F033-era": [],
+ "F034-era": [],
+ "F034-current": [],
+ "F036-era": [],
+ "F037-era": [],
+ "F038-era": [],
+ "F038-current": [],
+ "F039-era": [],
+ "F040-era": [],
+ "F043-era": [],
+ "F045-era": [],
+ "F055-era": [],
+ "N-F055-approval-2006": [],
+ "F055-current": [],
+ "F056-era": [],
+ "P-F056-no-right": [],
+ "F059-era": [],
+ "F059-current": [],
+ "F060-era": [],
+ "F061-era": [],
+ "F067-era": [],
+ "F068-era": [],
+ "F068-current": [],
+ "F069-era": [],
+ "P-F069-roster": [],
+ "N-F069-gate-20111013": [],
+ "P-F069-gate-20111014": [],
+ "F069-current": [],
+ "F070-era": [],
+ "F070-current": [],
+ "F075-era": [],
+ "P-F075-c-transfer": [],
+ "F076-era": [],
+ "N-F076-1day": [],
+ "F115-era": [],
+ "N-F115-rental-undeclared": [],
+ "F123-era": [],
+ "N-F123-over3y": [],
+ "F128-era": [],
+ "F154-era": [],
+ "F154-current": [],
+ "P-F154-current-whole13": [],
+ "F169-era": [],
+ "N-F169-transfer": [],
+ "F170-era": [],
+ "N-F170-gift": [],
+ "F175-era": [],
+ "N-F175-2021": [],
+ "F180-era": [],
+ "P-F180-acq-nonregulated": [],
+ "N-F180-acq-regulated": [],
+ "F187-current": [],
+ "N-F187-one-day-short": [],
+ "F190-era": [],
+ "P-F190-one-day-later": [],
+ "F193-era": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "N-F193-separate-household": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "F207-era": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "N-F207-separate": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "F217-era": [
+  "0:carryover.giftDateValuation:자산: 증여 당시 평가액을 입력하세요."
+ ],
+ "P-F217-after-departure": [],
+ "N-F217-before-departure": [],
+ "F242-era": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "P-F242-no-residence": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "F243-era": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "P-F243-resided24": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "F251-era": [
+  "0:carryover.giftDateValuation:자산: 증여 당시 평가액을 입력하세요."
+ ],
+ "F251-current": [
+  "0:carryover.giftDateValuation:자산: 증여 당시 평가액을 입력하세요."
+ ],
+ "F252-era": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "P-F255-own-62m": [],
+ "F256-era": [],
+ "N-F256-59m": [],
+ "N-F256-highvalue": [],
+ "F259-era": [],
+ "N-F259-lease-unset": [],
+ "F260-era": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "F262-era": [],
+ "N-F262-acquired-after-notice": [],
+ "F264-era": [],
+ "N-F264-plan-decision-date": [],
+ "N-F264-remnant-2y-era": [],
+ "P-F264-remnant-5y-current": [],
+ "F268-current": [],
+ "N-F268-first-member-departure": [],
+ "N-F275-acquired-after-departure": [],
+ "F276-current": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "P-F276-held-2y": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "F281-era": [],
+ "P-F281-only-house": [],
+ "F289-era": [],
+ "F295-current": [],
+ "N-F295-excluding-post-approval": [],
+ "F297-current": [],
+ "P-F297-within-2y": [],
+ "F303-era": [],
+ "F303-current": [],
+ "N-F303-physical-departure": [],
+ "F305-era": [],
+ "F307-era": [],
+ "F311-era": [],
+ "F312-era": [],
+ "F312-current": [],
+ "F316-era": [],
+ "F318-era": [],
+ "F322-era": [],
+ "P-F322-current-within": [],
+ "N-F322-current-over": [],
+ "F340-era": [],
+ "F340-current": [],
+ "P-F340-current-12m": [],
+ "N-F340-current-11m": [],
+ "F355-era": [],
+ "N-F355-era-maintained": [],
+ "F361-era": [],
+ "N-F361-era-6pct": [],
+ "F366-era": [],
+ "N-F366-era-17m": [],
+ "F373-era": [
+  "0:carryover.giftDateValuation:자산: 증여 당시 평가액을 입력하세요."
+ ],
+ "P-F373-era-60m": [
+  "0:carryover.giftDateValuation:자산: 증여 당시 평가액을 입력하세요."
+ ],
+ "N-F373-era-59m": [
+  "0:carryover.giftDateValuation:자산: 증여 당시 평가액을 입력하세요."
+ ],
+ "F384-era": [],
+ "F390-current": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "F395-era": [],
+ "F395-current": [],
+ "P-F395-current-noconv": [],
+ "F396-era": [],
+ "N-F396-no-proviso": [],
+ "N-F396-registered-20191217": [],
+ "F409-era": [],
+ "F450-current": [],
+ "N-F450-current-over": [],
+ "F451-current": [],
+ "F455-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "F455-current": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "F456-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "P-F456-era-6eok": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "F456-current": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "P-F456-current-12eok": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "F461-era": [],
+ "N-F461-no-proviso": [],
+ "N-F461-acquired-after-approval": [],
+ "N-F461-no-proviso-2y6m": [],
+ "G016-era": [],
+ "P-G016-era-approval-2005": [],
+ "G017-era": [],
+ "P-G017-era-approval-2005": [],
+ "G019-current": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G021-current": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "P-G021-current-3y": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "N-G021-current-3y1d": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G022-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G023-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G024-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G035-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G049-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G049-current": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G050-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G050-current": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G055-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G055-current": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G062-current": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "N-G062-over3y": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G065-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G066-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G077-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "P-G077-later-sold": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G091-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G091-current": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G099-era": [],
+ "G099-current": [],
+ "G100-era": [],
+ "G100-current": [],
+ "G103-era": [],
+ "G104-era": [],
+ "G104-current": [],
+ "G105-current": [],
+ "N-G105-over3y": [],
+ "N-G105-completed": [],
+ "N-G105-completed-exception": [],
+ "G106-era": [],
+ "N-G106-none": [],
+ "G107-era": [],
+ "G110-era": [],
+ "P-G110-current": [],
+ "N-G110-current": [],
+ "G111-era": [],
+ "G116-era": [],
+ "G116-current": [],
+ "N-G116-current": [],
+ "G119-era": [],
+ "G119-current": [],
+ "P-G119-current": [],
+ "G120-era": [],
+ "G120-era-origin": [],
+ "G120-current": [],
+ "G123-era": [],
+ "G124-era": [],
+ "P-G124-era": [],
+ "G125-era": [],
+ "N-G125-era": [],
+ "N-G125-norepl": [],
+ "G126-era": [],
+ "G126-current": [],
+ "G128-era": [],
+ "G128-era-origin": [],
+ "G129-era": [],
+ "G129-current": [],
+ "G131-era": [],
+ "G132-era": [],
+ "G133-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G148-era": [],
+ "G152-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G154-era": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G157-era-first": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G157-era-second": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "G162-era": [],
+ "G163-era": [],
+ "G163-era-blank": [],
+ "G163-era-none": [],
+ "N-G163-blank-within1y": [],
+ "N-G163-blank-right-before-marriage": [],
+ "N-G163-none-over3y": [],
+ "G163-current": [],
+ "N-G163-current": [],
+ "G164-era": [],
+ "R014-era": [],
+ "P-R014-era-no-officetel": [],
+ "R030-era": [],
+ "R031-era": [],
+ "R031-current": [],
+ "P-R031-current-24m": [],
+ "R033-current": [
+  "0:publishedValueAtInheritance:자산: 상속개시일 평가액(상속세 신고가액)을 입력하세요."
+ ],
+ "R037-era": [],
+ "R043-current": [],
+ "N-R043-current-12eok": [],
+ "S001-current": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "S006-era": [],
+ "S006-current": [],
+ "S041-4022-era": [],
+ "S045-2019seo2002-era": [],
+ "S045-2017seo3603-era": [],
+ "T001-era": [],
+ "P-T001-separate-household": [],
+ "P-T001-parental-care": [],
+ "SMOKE-1": [],
+ "SMOKE-2": [],
+ "STAT-71-2-house": [],
+ "STAT-71-2-right": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "STAT-71-2-right-unknown": [
+  "0:redevRightsValue:자산: 권리가액을 입력하세요. (시행령 §166④ 평가액 — 관리처분 가격이 없는 경우는 후속 PR)"
+ ],
+ "NTS-2025-2010-gift-separate": [],
+ "NTS-2025-2010-gift-same": [],
+ "NTS-2025-1621-inherit-separate": [],
+ "NTS-2025-1621-inherit-same": [],
+ "NTS-2025-1621-inherit-unknown": [],
+ "NTS-2025-1621-inherit-legacy-false": []
+}

@@ -1,0 +1,66 @@
+{
+  "toolsCutInThinking": {
+    "requests": 2,
+    "sent": [
+      {
+        "max_tokens": 16000,
+        "effort": "high"
+      },
+      {
+        "max_tokens": 16000,
+        "effort": "high"
+      }
+    ],
+    "error": {
+      "name": "Error",
+      "isExtractionFailed": true,
+      "message": "출력 한도에 걸려 응답이 잘렸습니다"
+    }
+  },
+  "toolsCutInJson": {
+    "requests": 2,
+    "sent": [
+      {
+        "max_tokens": 16000,
+        "effort": "high"
+      },
+      {
+        "max_tokens": 16000,
+        "effort": "high"
+      }
+    ],
+    "error": {
+      "name": "Error",
+      "isExtractionFailed": false,
+      "message": "Failed to parse structured output: SyntaxError: Unterminated string in JSON at position 21 (line 1 column 22)"
+    }
+  },
+  "structured": {
+    "cutInThinking": {
+      "sent": [
+        {
+          "max_tokens": 8000,
+          "effort": "high"
+        }
+      ],
+      "error": {
+        "name": "Error",
+        "isExtractionFailed": true,
+        "message": "출력 한도에 걸려 응답이 잘렸습니다"
+      }
+    },
+    "cutInJson": {
+      "sent": [
+        {
+          "max_tokens": 8000,
+          "effort": "high"
+        }
+      ],
+      "error": {
+        "name": "Error",
+        "isExtractionFailed": false,
+        "message": "Failed to parse structured output: SyntaxError: Unterminated string in JSON at position 21 (line 1 column 22)"
+      }
+    }
+  }
+}

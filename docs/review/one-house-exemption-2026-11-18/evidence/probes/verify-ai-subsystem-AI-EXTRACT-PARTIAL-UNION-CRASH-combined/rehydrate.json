@@ -1,0 +1,6 @@
+{
+  "normalizedCountExclusion": {
+    "kind": "reduction"
+  },
+  "step2": "TypeError: Cannot read properties of undefined (reading 'type')"
+}

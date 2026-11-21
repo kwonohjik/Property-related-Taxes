@@ -1,0 +1,674 @@
+{
+  "c8_inj": {
+    "main": {
+      "isExempt": false,
+      "review": {
+        "scheme": "155-1-temporary-two-house",
+        "items": [
+          {
+            "id": "new-house-origin",
+            "label": "신규주택의 취득 경위가 일시적 2주택 요건에 맞음",
+            "status": "met",
+            "facts": [
+              {
+                "label": "경위",
+                "value": "분양권으로 취득한 주택"
+              },
+              {
+                "label": "권리 취득일(기존주택 연장은 기존주택 취득일)",
+                "value": "2021-02-01"
+              },
+              {
+                "label": "종전주택 취득일",
+                "value": "2020-12-01"
+              }
+            ],
+            "legalBasis": "소득세법 시행령 §155①"
+          },
+          {
+            "id": "one-year",
+            "label": "종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득",
+            "status": "unmet",
+            "facts": [
+              {
+                "label": "종전주택 취득일",
+                "value": "2020-12-01"
+              },
+              {
+                "label": "1년 경과일",
+                "value": "2021-12-02"
+              },
+              {
+                "label": "신규주택 취득일",
+                "value": "2021-10-01"
+              }
+            ],
+            "legalBasis": "소득세법 시행령 §155①"
+          },
+          {
+            "id": "disposal-deadline",
+            "label": "신규주택 취득일부터 3년 이내 종전주택 양도",
+            "status": "met",
+            "facts": [
+              {
+                "label": "신규주택 취득일",
+                "value": "2021-10-01"
+              },
+              {
+                "label": "처분기한",
+                "value": "2024-10-02"
+              },
+              {
+                "label": "양도(예정)일",
+                "value": "2024-03-01"
+              }
+            ],
+            "note": "역상 말일 2024-10-01이 토요일·공휴일이라 기한이 2024-10-02까지 늘어났습니다(국세기본법 §4 → 민법 §161).",
+            "legalBasis": "소득세법 시행령 §155①"
+          },
+          {
+            "id": "holding",
+            "label": "종전주택 보유기간 2년 이상",
+            "status": "met",
+            "facts": [
+              {
+                "label": "보유 기산일",
+                "value": "2020-12-01"
+              },
+              {
+                "label": "보유기간",
+                "value": "3년 3개월"
+              }
+            ],
+            "legalBasis": "소득세법 시행령 §154"
+          },
+          {
+            "id": "residence",
+            "label": "종전주택 거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+            "status": "not_required",
+            "facts": [
+              {
+                "label": "취득 당시 조정대상지역",
+                "value": "비해당"
+              },
+              {
+                "label": "거주기간",
+                "value": "0개월"
+              }
+            ],
+            "note": "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다.",
+            "legalBasis": "소득세법 시행령 §154"
+          },
+          {
+            "id": "high-value",
+            "label": "양도가액 12억원 이하 — 고가주택 아님",
+            "status": "met",
+            "facts": [
+              {
+                "label": "양도가액",
+                "value": "800,000,000"
+              },
+              {
+                "label": "고가주택 기준금액",
+                "value": "12억"
+              }
+            ],
+            "legalBasis": "소득세법 §89 ①"
+          }
+        ]
+      },
+      "undetermined": [],
+      "unmet": []
+    },
+    "issues": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "houseIds": [],
+        "isExempt": false,
+        "unmet": [],
+        "review": {
+          "scheme": "155-1-temporary-two-house",
+          "items": [
+            {
+              "id": "new-house-origin",
+              "label": "신규주택의 취득 경위가 일시적 2주택 요건에 맞음",
+              "status": "met",
+              "facts": [
+                {
+                  "label": "경위",
+                  "value": "분양권으로 취득한 주택"
+                },
+                {
+                  "label": "권리 취득일(기존주택 연장은 기존주택 취득일)",
+                  "value": "2021-02-01"
+                },
+                {
+                  "label": "종전주택 취득일",
+                  "value": "2020-12-01"
+                }
+              ],
+              "legalBasis": "소득세법 시행령 §155①"
+            },
+            {
+              "id": "one-year",
+              "label": "종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득",
+              "status": "unmet",
+              "facts": [
+                {
+                  "label": "종전주택 취득일",
+                  "value": "2020-12-01"
+                },
+                {
+                  "label": "1년 경과일",
+                  "value": "2021-12-02"
+                },
+                {
+                  "label": "신규주택 취득일",
+                  "value": "2021-10-01"
+                }
+              ],
+              "legalBasis": "소득세법 시행령 §155①"
+            },
+            {
+              "id": "disposal-deadline",
+              "label": "신규주택 취득일부터 3년 이내 종전주택 양도",
+              "status": "met",
+              "facts": [
+                {
+                  "label": "신규주택 취득일",
+                  "value": "2021-10-01"
+                },
+                {
+                  "label": "처분기한",
+                  "value": "2024-10-02"
+                },
+                {
+                  "label": "양도(예정)일",
+                  "value": "2024-03-01"
+                }
+              ],
+              "note": "역상 말일 2024-10-01이 토요일·공휴일이라 기한이 2024-10-02까지 늘어났습니다(국세기본법 §4 → 민법 §161).",
+              "legalBasis": "소득세법 시행령 §155①"
+            },
+            {
+              "id": "holding",
+              "label": "종전주택 보유기간 2년 이상",
+              "status": "met",
+              "facts": [
+                {
+                  "label": "보유 기산일",
+                  "value": "2020-12-01"
+                },
+                {
+                  "label": "보유기간",
+                  "value": "3년 3개월"
+                }
+              ],
+              "legalBasis": "소득세법 시행령 §154"
+            },
+            {
+              "id": "residence",
+              "label": "종전주택 거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+              "status": "not_required",
+              "facts": [
+                {
+                  "label": "취득 당시 조정대상지역",
+                  "value": "비해당"
+                },
+                {
+                  "label": "거주기간",
+                  "value": "0개월"
+                }
+              ],
+              "note": "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다.",
+              "legalBasis": "소득세법 시행령 §154"
+            },
+            {
+              "id": "high-value",
+              "label": "양도가액 12억원 이하 — 고가주택 아님",
+              "status": "met",
+              "facts": [
+                {
+                  "label": "양도가액",
+                  "value": "800,000,000"
+                },
+                {
+                  "label": "고가주택 기준금액",
+                  "value": "12억"
+                }
+              ],
+              "legalBasis": "소득세법 §89 ①"
+            }
+          ]
+        },
+        "undetermined": []
+      }
+    ],
+    "tth": {
+      "previousAcquisitionDate": "2020-12-01T00:00:00.000Z",
+      "newAcquisitionDate": "2021-10-01T00:00:00.000Z",
+      "newHouseContractDate": "2021-02-01T00:00:00.000Z",
+      "newHouseOrigin": {
+        "kind": "presale",
+        "rightAcquisitionDate": "2021-02-01T00:00:00.000Z"
+      }
+    },
+    "r3": {
+      "kind": "new_house",
+      "completionDate": "2021-10-01T00:00:00.000Z",
+      "movedInWithin3Years": true,
+      "residedOneYearOrMore": true
+    },
+    "origin156_3": {
+      "blocked": false,
+      "reasons": [],
+      "unconfirmed": [],
+      "confirmNotes": [],
+      "holdingPresale": true,
+      "viaTimingClause": "소득세법 시행령 §156의3②·③"
+    }
+  },
+  "c8_movein": {
+    "main": {
+      "isExempt": false,
+      "review": {
+        "scheme": "155-1-temporary-two-house",
+        "items": [
+          {
+            "id": "new-house-origin",
+            "label": "신규주택의 취득 경위가 일시적 2주택 요건에 맞음",
+            "status": "met",
+            "facts": [
+              {
+                "label": "경위",
+                "value": "분양권으로 취득한 주택"
+              },
+              {
+                "label": "권리 취득일(기존주택 연장은 기존주택 취득일)",
+                "value": "2021-01-10"
+              },
+              {
+                "label": "종전주택 취득일",
+                "value": "2018-01-01"
+              }
+            ],
+            "legalBasis": "소득세법 시행령 §155①"
+          },
+          {
+            "id": "one-year",
+            "label": "종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득",
+            "status": "met",
+            "facts": [
+              {
+                "label": "종전주택 취득일",
+                "value": "2018-01-01"
+              },
+              {
+                "label": "1년 경과일",
+                "value": "2019-01-02"
+              },
+              {
+                "label": "신규주택 취득일",
+                "value": "2021-06-01"
+              }
+            ],
+            "legalBasis": "소득세법 시행령 §155①"
+          },
+          {
+            "id": "disposal-deadline",
+            "label": "신규주택 취득일부터 1년 이내 종전주택 양도",
+            "status": "met",
+            "facts": [
+              {
+                "label": "신규주택 취득일",
+                "value": "2021-06-01"
+              },
+              {
+                "label": "처분기한",
+                "value": "2022-06-02"
+              },
+              {
+                "label": "양도(예정)일",
+                "value": "2022-03-01"
+              }
+            ],
+            "note": "역상 말일 2022-06-01이 토요일·공휴일이라 기한이 2022-06-02까지 늘어났습니다(국세기본법 §4 → 민법 §161).",
+            "legalBasis": "소득세법 시행령 §155①"
+          },
+          {
+            "id": "move-in",
+            "label": "신규주택 취득일부터 1년 이내 세대 전원 이사·전입신고(조정대상지역 신규주택 취득분)",
+            "status": "unmet",
+            "facts": [],
+            "note": "세대 전원 전입일이 입력되지 않아 충족하지 않은 것으로 판정했습니다 — 확인 필요: 신규주택 취득일부터 1년 이내에 세대 전원이 이사·전입신고를 마쳤다면 전입일을 입력하세요.",
+            "legalBasis": "소득세법 시행령 §155①"
+          },
+          {
+            "id": "holding",
+            "label": "종전주택 보유기간 2년 이상",
+            "status": "met",
+            "facts": [
+              {
+                "label": "보유 기산일",
+                "value": "2018-01-01"
+              },
+              {
+                "label": "보유기간",
+                "value": "4년 2개월"
+              }
+            ],
+            "legalBasis": "소득세법 시행령 §154"
+          },
+          {
+            "id": "residence",
+            "label": "종전주택 거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+            "status": "unmet",
+            "facts": [
+              {
+                "label": "취득 당시 조정대상지역",
+                "value": "해당"
+              },
+              {
+                "label": "거주기간",
+                "value": "0개월"
+              }
+            ],
+            "legalBasis": "소득세법 시행령 §154"
+          },
+          {
+            "id": "high-value",
+            "label": "양도가액 12억원 이하 — 고가주택 아님",
+            "status": "met",
+            "facts": [
+              {
+                "label": "양도가액",
+                "value": "800,000,000"
+              },
+              {
+                "label": "고가주택 기준금액",
+                "value": "12억"
+              }
+            ],
+            "legalBasis": "소득세법 §89 ①"
+          }
+        ]
+      },
+      "undetermined": [],
+      "unmet": []
+    },
+    "issues": [
+      {
+        "id": "155-1-presale-holding-completion",
+        "houseIds": [],
+        "isExempt": false,
+        "unmet": [],
+        "review": {
+          "scheme": "155-1-temporary-two-house",
+          "items": [
+            {
+              "id": "new-house-origin",
+              "label": "신규주택의 취득 경위가 일시적 2주택 요건에 맞음",
+              "status": "met",
+              "facts": [
+                {
+                  "label": "경위",
+                  "value": "분양권으로 취득한 주택"
+                },
+                {
+                  "label": "권리 취득일(기존주택 연장은 기존주택 취득일)",
+                  "value": "2021-01-10"
+                },
+                {
+                  "label": "종전주택 취득일",
+                  "value": "2018-01-01"
+                }
+              ],
+              "legalBasis": "소득세법 시행령 §155①"
+            },
+            {
+              "id": "one-year",
+              "label": "종전주택 취득일부터 1년 이상 지난 뒤 신규주택 취득",
+              "status": "met",
+              "facts": [
+                {
+                  "label": "종전주택 취득일",
+                  "value": "2018-01-01"
+                },
+                {
+                  "label": "1년 경과일",
+                  "value": "2019-01-02"
+                },
+                {
+                  "label": "신규주택 취득일",
+                  "value": "2021-06-01"
+                }
+              ],
+              "legalBasis": "소득세법 시행령 §155①"
+            },
+            {
+              "id": "disposal-deadline",
+              "label": "신규주택 취득일부터 1년 이내 종전주택 양도",
+              "status": "met",
+              "facts": [
+                {
+                  "label": "신규주택 취득일",
+                  "value": "2021-06-01"
+                },
+                {
+                  "label": "처분기한",
+                  "value": "2022-06-02"
+                },
+                {
+                  "label": "양도(예정)일",
+                  "value": "2022-03-01"
+                }
+              ],
+              "note": "역상 말일 2022-06-01이 토요일·공휴일이라 기한이 2022-06-02까지 늘어났습니다(국세기본법 §4 → 민법 §161).",
+              "legalBasis": "소득세법 시행령 §155①"
+            },
+            {
+              "id": "move-in",
+              "label": "신규주택 취득일부터 1년 이내 세대 전원 이사·전입신고(조정대상지역 신규주택 취득분)",
+              "status": "unmet",
+              "facts": [],
+              "note": "세대 전원 전입일이 입력되지 않아 충족하지 않은 것으로 판정했습니다 — 확인 필요: 신규주택 취득일부터 1년 이내에 세대 전원이 이사·전입신고를 마쳤다면 전입일을 입력하세요.",
+              "legalBasis": "소득세법 시행령 §155①"
+            },
+            {
+              "id": "holding",
+              "label": "종전주택 보유기간 2년 이상",
+              "status": "met",
+              "facts": [
+                {
+                  "label": "보유 기산일",
+                  "value": "2018-01-01"
+                },
+                {
+                  "label": "보유기간",
+                  "value": "4년 2개월"
+                }
+              ],
+              "legalBasis": "소득세법 시행령 §154"
+            },
+            {
+              "id": "residence",
+              "label": "종전주택 거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+              "status": "unmet",
+              "facts": [
+                {
+                  "label": "취득 당시 조정대상지역",
+                  "value": "해당"
+                },
+                {
+                  "label": "거주기간",
+                  "value": "0개월"
+                }
+              ],
+              "legalBasis": "소득세법 시행령 §154"
+            },
+            {
+              "id": "high-value",
+              "label": "양도가액 12억원 이하 — 고가주택 아님",
+              "status": "met",
+              "facts": [
+                {
+                  "label": "양도가액",
+                  "value": "800,000,000"
+                },
+                {
+                  "label": "고가주택 기준금액",
+                  "value": "12억"
+                }
+              ],
+              "legalBasis": "소득세법 §89 ①"
+            }
+          ]
+        },
+        "undetermined": []
+      }
+    ],
+    "tth": {
+      "previousAcquisitionDate": "2018-01-01T00:00:00.000Z",
+      "newAcquisitionDate": "2021-06-01T00:00:00.000Z",
+      "newHouseRegionCode": "1168010100",
+      "newHouseContractDate": "2021-01-10T00:00:00.000Z",
+      "newHouseOrigin": {
+        "kind": "presale",
+        "rightAcquisitionDate": "2021-01-10T00:00:00.000Z"
+      }
+    },
+    "origin156_3": {
+      "blocked": false,
+      "reasons": [],
+      "unconfirmed": [],
+      "confirmNotes": [],
+      "holdingPresale": true,
+      "viaTimingClause": "소득세법 시행령 §156의3②·③"
+    }
+  },
+  "c7_echo": {
+    "observe": {
+      "isExempt": true,
+      "contested": [
+        {
+          "id": "155-3-co-inherited-minority-before-ranking-clause",
+          "enginePosition": "A",
+          "A": "exempt",
+          "B": "taxable"
+        }
+      ],
+      "validationErrors": [],
+      "excludedHouses": [
+        {
+          "houseId": "m1",
+          "legalBasis": "조특법 §99의4 (농어촌주택)"
+        },
+        {
+          "houseId": "m2",
+          "legalBasis": "소득세법 시행령 §155③"
+        }
+      ],
+      "status": 200
+    },
+    "main": {
+      "isExempt": true,
+      "review": {
+        "scheme": "154-1-one-house",
+        "items": [
+          {
+            "id": "one-house",
+            "label": "1세대가 양도일 현재 국내에 1주택 보유",
+            "status": "met",
+            "facts": [
+              {
+                "label": "판정에 세는 주택",
+                "value": "1채"
+              }
+            ],
+            "legalBasis": "소득세법 §89 ①"
+          },
+          {
+            "id": "holding",
+            "label": "보유기간 2년 이상",
+            "status": "met",
+            "facts": [
+              {
+                "label": "보유 기산일",
+                "value": "2012-11-21"
+              },
+              {
+                "label": "보유기간",
+                "value": "3년 5개월"
+              }
+            ],
+            "legalBasis": "소득세법 시행령 §154"
+          },
+          {
+            "id": "residence",
+            "label": "거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+            "status": "not_required",
+            "facts": [
+              {
+                "label": "취득 당시 조정대상지역",
+                "value": "비해당"
+              },
+              {
+                "label": "거주기간",
+                "value": "0개월"
+              }
+            ],
+            "note": "취득 당시 조정대상지역이 아니어서 거주요건이 없습니다.",
+            "legalBasis": "소득세법 시행령 §154"
+          },
+          {
+            "id": "high-value",
+            "label": "양도가액 9억원 이하 — 고가주택 아님",
+            "status": "met",
+            "facts": [
+              {
+                "label": "양도가액",
+                "value": "500,000,000"
+              },
+              {
+                "label": "고가주택 기준금액",
+                "value": "9억"
+              }
+            ],
+            "legalBasis": "소득세법 §89 ①"
+          }
+        ]
+      },
+      "undetermined": [],
+      "unmet": []
+    },
+    "issues": [
+      {
+        "id": "155-3-co-inherited-minority-before-ranking-clause",
+        "houseIds": [
+          "m1",
+          "m2"
+        ],
+        "isExempt": false,
+        "unmet": [],
+        "undetermined": []
+      }
+    ],
+    "step": {
+      "echoUnexcluded": [],
+      "echoCovered": [
+        "m1"
+      ],
+      "echoExcluded": [
+        {
+          "houseId": "m2",
+          "basis": "co_inherited"
+        }
+      ],
+      "hasEchoOnRawInput": false,
+      "fallbackUnexcluded": [
+        "m1",
+        "m2"
+      ]
+    }
+  }
+}

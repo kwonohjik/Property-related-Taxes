@@ -1,0 +1,64 @@
+{
+  "A_judgment": {
+    "status": 200,
+    "validateErrors": [],
+    "bodyKeysMixedOrArea": [
+      "isNonBusinessLand",
+      "isRegulatedArea"
+    ],
+    "bodyPropertyType": "housing",
+    "isExempt": true,
+    "verdictLabel": "비과세",
+    "verdictDetail": "1세대1주택 비과세 요건을 충족합니다.",
+    "responseKeywordHits": [],
+    "undetermined": []
+  },
+  "B_handoff": {
+    "assetKind": "housing",
+    "isMixedUseHouse": false,
+    "mixedUseTotalLandArea": ""
+  },
+  "C_calc": {
+    "general_housing": {
+      "status": 200,
+      "mode": "single",
+      "isExempt": true,
+      "totalTax": 0
+    },
+    "mixed_res100_non200": {
+      "status": 200,
+      "mode": "mixed-use",
+      "housingPartExempt": true,
+      "commercialPart": {
+        "transferGain": 311163267
+      },
+      "determinedTax": 73703633
+    },
+    "mixed_res200_non100": {
+      "status": 200,
+      "mode": "mixed-use",
+      "housingPartExempt": true,
+      "commercialPart": {
+        "transferGain": 225672036
+      },
+      "determinedTax": 0
+    }
+  },
+  "C_mixedKeys": [
+    "splitMode",
+    "apportionment",
+    "housingPart",
+    "commercialPart",
+    "nonBusinessLandPart",
+    "total",
+    "steps",
+    "calculationRoute",
+    "warnings"
+  ],
+  "D_staticScan": {
+    "app/calc/one-house-exemption/steps/UsageConversionField.tsx": [
+      "8[겸용]: * 계산기 패널은 §95⑤ 장기보유특별공제 분해 미리보기와 겸용주택 배타 안내를 함께 그리는데, 판정 메뉴에는",
+      "9[겸용]: * 세액 축도 겸용주택 토글도 없다."
+    ]
+  }
+}

@@ -1,0 +1,8 @@
+DIFF roster=1 reason=pre_designation_contract noHouse=false mode=temporary_two_house provisoErrors=1 inline={"reason":"pre_designation_contract","departureDate":"2023-06-01","expropriationDate":"2023-03-01","businessApprovalDate":"2022-01-01","preContractNoHouse":false} shared=undefined
+DIFF roster=1 reason=pre_designation_contract noHouse=undefined mode=temporary_two_house provisoErrors=1 inline={"reason":"pre_designation_contract","departureDate":"2023-06-01","expropriationDate":"2023-03-01","businessApprovalDate":"2022-01-01","preContractNoHouse":false} shared=undefined
+DIFF roster=1 reason=rental_registration_4ho noHouse=true mode=temporary_two_house provisoErrors=4 inline={"reason":"rental_registration_4ho","departureDate":"2023-06-01","expropriationDate":"2023-03-01","businessApprovalDate":"2022-01-01","rentalRegistration4ho":{}} shared=undefined
+DIFF roster=1 reason=rental_registration_4ho noHouse=false mode=temporary_two_house provisoErrors=4 inline={"reason":"rental_registration_4ho","departureDate":"2023-06-01","expropriationDate":"2023-03-01","businessApprovalDate":"2022-01-01","rentalRegistration4ho":{}} shared=undefined
+DIFF roster=1 reason=rental_registration_4ho noHouse=undefined mode=temporary_two_house provisoErrors=4 inline={"reason":"rental_registration_4ho","departureDate":"2023-06-01","expropriationDate":"2023-03-01","businessApprovalDate":"2022-01-01","rentalRegistration4ho":{}} shared=undefined
+total=42 diff=5
+formatFieldErrors: 입력값이 올바르지 않습니다
+• houses.1.rentalStartDate: 조특법 감면 임대주택(소득세법 시행령 §167의3①3호)은 임대개시일이 필요합니다

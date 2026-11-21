@@ -1,0 +1,12 @@
+[JUDGE] cohab=2 step2err=[] step3err=[] bodyCohab=2 status=200 isExempt=false reasonsSummary=null consolidation={"holdingStartDate":"2022-01-01","residenceMonths":2} err=
+[JUDGE] cohab=3 step2err=[] step3err=[] bodyCohab=3 status=200 isExempt=false reasonsSummary=null consolidation={"holdingStartDate":"2022-01-01","residenceMonths":3} err=
+[JUDGE] cohab=24 step2err=[] step3err=[] bodyCohab=24 status=200 isExempt=true reasonsSummary=null consolidation={"holdingStartDate":"2022-01-01","residenceMonths":24} err=
+[JUDGE] cohab=999 step2err=[] step3err=[] bodyCohab=999 status=200 isExempt=true reasonsSummary=null consolidation={"holdingStartDate":"2022-01-01","residenceMonths":999} err=
+[CALC] cohab=2 price=900,000,000 ⑧issues=[] bodyCohab=2 bodyRegAcq=true status=200 isExempt=false isPartialExempt=false totalTax=236511000 determinedTax=215010000 lthdRate=0 lthd=0 err=
+[CALC] cohab=24 price=900,000,000 ⑧issues=[] bodyCohab=24 bodyRegAcq=true status=200 isExempt=true isPartialExempt=undefined totalTax=0 determinedTax=0 lthdRate=0 lthd=0 err=
+[CALC] cohab=999 price=900,000,000 ⑧issues=[] bodyCohab=999 bodyRegAcq=true status=200 isExempt=true isPartialExempt=undefined totalTax=0 determinedTax=0 lthdRate=0 lthd=0 err=
+[CALC] cohab=2 price=1,500,000,000 ⑧issues=[] bodyCohab=2 bodyRegAcq=true status=200 isExempt=false isPartialExempt=false totalTax=520228500 determinedTax=472935000 lthdRate=0 lthd=0 err=
+[CALC] cohab=24 price=1,500,000,000 ⑧issues=[] bodyCohab=24 bodyRegAcq=true status=200 isExempt=false isPartialExempt=true totalTax=77341000 determinedTax=70310000 lthdRate=0 lthd=0 err=
+[ZOD-DIRECT] cohab=2 status=200 isExempt=false
+[ZOD-DIRECT] cohab=24 status=200 isExempt=true
+[ZOD-DIRECT] cohab=999 status=200 isExempt=true

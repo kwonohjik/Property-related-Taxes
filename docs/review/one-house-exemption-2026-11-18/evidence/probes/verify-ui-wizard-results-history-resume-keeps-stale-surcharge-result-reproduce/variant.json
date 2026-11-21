@@ -1,0 +1,38 @@
+{
+  "afterResume": {
+    "formHouses": 0,
+    "formTransferDate": "2021-07-15",
+    "oneHouseStep": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeResultType": "multi_house_2",
+    "surchargeResultTransferDate": "2021-06-01",
+    "surchargeResultRows": 2
+  },
+  "surchargeRemount.store": {
+    "formHouses": 0,
+    "formTransferDate": "2021-07-15",
+    "oneHouseStep": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeResultType": "multi_house_2",
+    "surchargeResultTransferDate": "2021-06-01",
+    "surchargeResultRows": 2
+  },
+  "surchargeRemount.screen": {
+    "conclusionLabel": "2주택 중과",
+    "conclusionCard": "1양도 예정 주택 결론2주택 중과양도일 2021-06-01 기준 판정입니다.",
+    "hasResultView": true
+  },
+  "callsAfterResume": [],
+  "base": {
+    "formHouses": 1,
+    "formTransferDate": "2021-06-01",
+    "oneHouseStep": 0,
+    "oneHouseResult": null,
+    "surchargeStep": 3,
+    "surchargeResultType": "multi_house_2",
+    "surchargeResultTransferDate": "2021-06-01",
+    "surchargeResultRows": 2
+  }
+}

@@ -1,0 +1,152 @@
+{
+  "o": {
+    "count": 3,
+    "engineExcluded": [
+      {
+        "houseId": "m2",
+        "basis": "co_inherited"
+      }
+    ],
+    "unexcludedCoMinority": [],
+    "issues": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "houseIds": [
+          "m1"
+        ],
+        "otherHouses": [
+          "selling:undefined",
+          "m1:false",
+          "m2:false"
+        ],
+        "otherCount": 3,
+        "otherExcluded": [],
+        "otherEligibleCoMinority": 2,
+        "nestedIssues": [
+          {
+            "id": "155-3-co-inherited-minority-before-ranking-clause",
+            "houseIds": [
+              "m1",
+              "m2"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "twoSame": {
+    "count": 3,
+    "engineExcluded": [],
+    "unexcludedCoMinority": [],
+    "issues": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "houseIds": [
+          "m1",
+          "m3"
+        ],
+        "otherHouses": [
+          "selling:undefined",
+          "m1:false",
+          "m3:false"
+        ],
+        "otherCount": 3,
+        "otherExcluded": [],
+        "otherEligibleCoMinority": 2,
+        "nestedIssues": [
+          {
+            "id": "155-3-co-inherited-minority-before-ranking-clause",
+            "houseIds": [
+              "m1",
+              "m3"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "sameSepSep": {
+    "count": 4,
+    "engineExcluded": [],
+    "unexcludedCoMinority": [
+      "m2",
+      "m4"
+    ],
+    "issues": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "houseIds": [
+          "m1"
+        ],
+        "otherHouses": [
+          "selling:undefined",
+          "m1:false",
+          "m2:false",
+          "m4:false"
+        ],
+        "otherCount": 4,
+        "otherExcluded": [],
+        "otherEligibleCoMinority": 3,
+        "nestedIssues": [
+          {
+            "id": "155-3-co-inherited-minority-before-ranking-clause",
+            "houseIds": [
+              "m1",
+              "m2",
+              "m4"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "155-3-co-inherited-minority-before-ranking-clause",
+        "houseIds": [
+          "m2",
+          "m4"
+        ],
+        "otherHouses": [
+          "selling:undefined",
+          "m1:true"
+        ],
+        "otherCount": 2,
+        "otherExcluded": [],
+        "otherEligibleCoMinority": 0,
+        "nestedIssues": [
+          {
+            "id": "155-3-same-household-co-inherited-minority",
+            "houseIds": [
+              "m1"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "post": {
+    "count": 3,
+    "engineExcluded": [
+      {
+        "houseId": "m2",
+        "basis": "co_inherited"
+      }
+    ],
+    "unexcludedCoMinority": [],
+    "issues": [
+      {
+        "id": "155-3-same-household-co-inherited-minority",
+        "houseIds": [
+          "m1"
+        ],
+        "otherHouses": [
+          "selling:undefined",
+          "m1:false",
+          "m2:false"
+        ],
+        "otherCount": 3,
+        "otherExcluded": [],
+        "otherEligibleCoMinority": 2,
+        "nestedIssues": []
+      }
+    ]
+  }
+}

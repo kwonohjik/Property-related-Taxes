@@ -1,0 +1,158 @@
+{
+  "unknownResident": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "undetermined": [
+      "155-1-new-house-origin-unconfirmed"
+    ],
+    "unmet": [
+      "155-1-temporary-two-house"
+    ],
+    "pending": [],
+    "validationErrors": []
+  },
+  "generalResident": {
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [
+      "155-1-temporary-two-house"
+    ],
+    "undetermined": [],
+    "unmet": [],
+    "pending": [],
+    "validationErrors": []
+  },
+  "unknownNonResident": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "undetermined": [
+      "155-1-new-house-origin-unconfirmed"
+    ],
+    "unmet": [
+      "155-1-temporary-two-house",
+      "non-resident-121-2"
+    ],
+    "pending": [],
+    "validationErrors": []
+  },
+  "generalNonResident": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "undetermined": [],
+    "unmet": [
+      "non-resident-121-2"
+    ],
+    "pending": [],
+    "validationErrors": []
+  },
+  "unknownNonResidentPre2010": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "undetermined": [],
+    "unmet": [
+      "155-1-temporary-two-house"
+    ],
+    "pending": [],
+    "validationErrors": []
+  },
+  "generalNonResidentPre2010": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "undetermined": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-capital-newtown-location-unverified"
+    ],
+    "unmet": [],
+    "pending": [],
+    "validationErrors": []
+  },
+  "unknownDemolished": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "undetermined": [
+      "155-1-new-house-origin-unconfirmed"
+    ],
+    "unmet": [
+      "155-1-temporary-two-house"
+    ],
+    "pending": [],
+    "validationErrors": []
+  },
+  "generalDemolished": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "undetermined": [
+      "154-1-demolished-before-balance-unverified"
+    ],
+    "unmet": [
+      "154-1-demolished-before-balance"
+    ],
+    "pending": [],
+    "validationErrors": []
+  },
+  "res0Resident": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "undetermined": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "unmet": [],
+    "pending": [],
+    "validationErrors": []
+  },
+  "res36Resident": {
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "applied": [],
+    "undetermined": [],
+    "unmet": [],
+    "pending": [],
+    "validationErrors": []
+  },
+  "res0NonResident": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "undetermined": [
+      "154-1-residence-deadline-unavailable",
+      "154-1-4ho-rental-registration-unverified"
+    ],
+    "unmet": [
+      "non-resident-121-2"
+    ],
+    "pending": [],
+    "validationErrors": []
+  },
+  "res36NonResident": {
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "applied": [],
+    "undetermined": [],
+    "unmet": [
+      "non-resident-121-2"
+    ],
+    "pending": [],
+    "validationErrors": []
+  }
+}

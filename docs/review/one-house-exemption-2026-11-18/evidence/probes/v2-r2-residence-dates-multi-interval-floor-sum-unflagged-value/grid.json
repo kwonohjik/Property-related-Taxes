@@ -1,0 +1,309 @@
+{
+ "rows": [
+  {
+   "label": "A one interval 24m",
+   "periods": [
+    {
+     "moveInDate": "2018-03-10",
+     "moveOutDate": "2020-03-09"
+    }
+   ],
+   "perInterval": [
+    24
+   ],
+   "perIntervalDays": [
+    731
+   ],
+   "totalDays": 731,
+   "sum": 24,
+   "bodyResidenceMonths": 24,
+   "bodyWasReg": true,
+   "status": 200,
+   "errs": [
+    "장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요."
+   ],
+   "isExempt": true,
+   "exemptReason": "1세대1주택 비과세",
+   "undetermined": [],
+   "notesSample": [
+    "거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+    "거주기간"
+   ]
+  },
+  {
+   "label": "B next-day split of A",
+   "periods": [
+    {
+     "moveInDate": "2018-03-10",
+     "moveOutDate": "2019-03-24"
+    },
+    {
+     "moveInDate": "2019-03-25",
+     "moveOutDate": "2020-03-09"
+    }
+   ],
+   "perInterval": [
+    12,
+    11
+   ],
+   "perIntervalDays": [
+    380,
+    351
+   ],
+   "totalDays": 731,
+   "sum": 23,
+   "bodyResidenceMonths": 23,
+   "bodyWasReg": true,
+   "status": 200,
+   "errs": [
+    "장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요."
+   ],
+   "isExempt": false,
+   "undetermined": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "notesSample": [
+    "거주기간 요건을 충족하게 되는 날짜는 계산하지 않았습니다 — 거주 개시일이 아니라 거주 개월 수를 입력받기 때문",
+    "거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 증액은 제외)가 적용됩니다(대통령령",
+    "거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+    "거주기간"
+   ]
+  },
+  {
+   "label": "C two gaps 730d",
+   "periods": [
+    {
+     "moveInDate": "2018-03-10",
+     "moveOutDate": "2019-03-24"
+    },
+    {
+     "moveInDate": "2019-06-10",
+     "moveOutDate": "2020-05-24"
+    }
+   ],
+   "perInterval": [
+    12,
+    11
+   ],
+   "perIntervalDays": [
+    380,
+    350
+   ],
+   "totalDays": 730,
+   "sum": 23,
+   "bodyResidenceMonths": 23,
+   "bodyWasReg": true,
+   "status": 200,
+   "errs": [
+    "장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요."
+   ],
+   "isExempt": false,
+   "undetermined": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "notesSample": [
+    "거주기간 요건을 충족하게 되는 날짜는 계산하지 않았습니다 — 거주 개시일이 아니라 거주 개월 수를 입력받기 때문",
+    "거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 증액은 제외)가 적용됩니다(대통령령",
+    "거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+    "거주기간"
+   ]
+  },
+  {
+   "label": "D six intervals",
+   "periods": [
+    {
+     "moveInDate": "2018-02-01",
+     "moveOutDate": "2018-06-29"
+    },
+    {
+     "moveInDate": "2018-08-01",
+     "moveOutDate": "2018-12-29"
+    },
+    {
+     "moveInDate": "2019-02-01",
+     "moveOutDate": "2019-06-29"
+    },
+    {
+     "moveInDate": "2019-08-01",
+     "moveOutDate": "2019-12-29"
+    },
+    {
+     "moveInDate": "2020-02-01",
+     "moveOutDate": "2020-06-29"
+    },
+    {
+     "moveInDate": "2020-08-01",
+     "moveOutDate": "2020-11-29"
+    }
+   ],
+   "perInterval": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    3
+   ],
+   "perIntervalDays": [
+    149,
+    151,
+    149,
+    151,
+    150,
+    121
+   ],
+   "totalDays": 871,
+   "sum": 23,
+   "bodyResidenceMonths": 23,
+   "bodyWasReg": true,
+   "status": 200,
+   "errs": [
+    "장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요."
+   ],
+   "isExempt": false,
+   "undetermined": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "notesSample": [
+    "거주기간 요건을 충족하게 되는 날짜는 계산하지 않았습니다 — 거주 개시일이 아니라 거주 개월 수를 입력받기 때문",
+    "거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 증액은 제외)가 적용됩니다(대통령령",
+    "거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+    "거주기간"
+   ]
+  },
+  {
+   "label": "E six next-day contiguous",
+   "periods": [
+    {
+     "moveInDate": "2018-02-01",
+     "moveOutDate": "2018-06-29"
+    },
+    {
+     "moveInDate": "2018-06-30",
+     "moveOutDate": "2018-11-28"
+    },
+    {
+     "moveInDate": "2018-11-29",
+     "moveOutDate": "2019-04-27"
+    },
+    {
+     "moveInDate": "2019-04-28",
+     "moveOutDate": "2019-09-26"
+    },
+    {
+     "moveInDate": "2019-09-27",
+     "moveOutDate": "2020-02-25"
+    },
+    {
+     "moveInDate": "2020-02-26",
+     "moveOutDate": "2020-06-24"
+    }
+   ],
+   "perInterval": [
+    4,
+    4,
+    4,
+    4,
+    4,
+    3
+   ],
+   "perIntervalDays": [
+    149,
+    152,
+    150,
+    152,
+    152,
+    120
+   ],
+   "totalDays": 875,
+   "sum": 23,
+   "bodyResidenceMonths": 23,
+   "bodyWasReg": true,
+   "status": 200,
+   "errs": [
+    "장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요."
+   ],
+   "isExempt": false,
+   "undetermined": [
+    "154-1-residence-deadline-unavailable",
+    "154-1-4ho-rental-registration-unverified"
+   ],
+   "notesSample": [
+    "거주기간 요건을 충족하게 되는 날짜는 계산하지 않았습니다 — 거주 개시일이 아니라 거주 개월 수를 입력받기 때문",
+    "거주기간 제한 없음 — 등록 유지 중 임대의무기간 내 양도·임대료 5% 초과 증액은 제외)가 적용됩니다(대통령령",
+    "거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+    "거주기간"
+   ]
+  },
+  {
+   "label": "E' same as one interval",
+   "periods": [
+    {
+     "moveInDate": "2018-02-01",
+     "moveOutDate": "2020-06-24"
+    }
+   ],
+   "perInterval": [
+    28
+   ],
+   "perIntervalDays": [
+    875
+   ],
+   "totalDays": 875,
+   "sum": 28,
+   "bodyResidenceMonths": 28,
+   "bodyWasReg": true,
+   "status": 200,
+   "errs": [
+    "장기임대주택 특례(소득세법 시행령 §154⑩): 이 주택을 임대주택으로 등록했거나 어린이집으로 운영한 적이 있고, 보유하는 동안 다른 거주주택을 §155⑳의 요건을 갖춘 상태로 양도한 적이 있는지(과세로 신고했어도 요건을 갖췄다면 「예」 — 사전-2023-법규재산-0393) 「예」 또는 「아니오」로 답하세요."
+   ],
+   "isExempt": true,
+   "exemptReason": "1세대1주택 비과세",
+   "undetermined": [],
+   "notesSample": [
+    "거주기간 2년 이상(취득 당시 조정대상지역인 경우)",
+    "거주기간"
+   ]
+  }
+ ],
+ "nonres": {
+  "shifted": "2018-03-02T00:00:00.000Z",
+  "nonres": [
+   {
+    "t": "2020-02-29",
+    "h": {
+     "years": 1,
+     "months": 11,
+     "days": 28
+    }
+   },
+   {
+    "t": "2020-03-01",
+    "h": {
+     "years": 2,
+     "months": 0,
+     "days": 0
+    }
+   },
+   {
+    "t": "2020-03-12",
+    "h": {
+     "years": 2,
+     "months": 0,
+     "days": 11
+    }
+   },
+   {
+    "t": "2020-03-13",
+    "h": {
+     "years": 2,
+     "months": 0,
+     "days": 12
+    }
+   }
+  ]
+ }
+}

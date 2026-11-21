@@ -1,0 +1,169 @@
+[
+  {
+    "k": 1,
+    "v": "declaredOutside",
+    "ms": 43,
+    "regulatedCalls": 15,
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  },
+  {
+    "k": 3,
+    "v": "declaredOutside",
+    "ms": 3,
+    "regulatedCalls": 14,
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  },
+  {
+    "k": 5,
+    "v": "declaredOutside",
+    "ms": 2,
+    "regulatedCalls": 14,
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  },
+  {
+    "k": 6,
+    "v": "declaredOutside",
+    "ms": 2,
+    "regulatedCalls": 14,
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  },
+  {
+    "k": 1,
+    "v": "successor",
+    "ms": 2,
+    "regulatedCalls": 13,
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  },
+  {
+    "k": 3,
+    "v": "successor",
+    "ms": 2,
+    "regulatedCalls": 14,
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  },
+  {
+    "k": 5,
+    "v": "successor",
+    "ms": 2,
+    "regulatedCalls": 14,
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  },
+  {
+    "k": 6,
+    "v": "successor",
+    "ms": 2,
+    "regulatedCalls": 14,
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  },
+  {
+    "k": 0,
+    "v": "undeclared",
+    "ms": 2,
+    "regulatedCalls": 13,
+    "status": 200,
+    "isExempt": true,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  },
+  {
+    "k": 1,
+    "v": "undeclared",
+    "ms": 3,
+    "regulatedCalls": 32,
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [
+      "regulated-district-undeclared:right-0"
+    ],
+    "validationErrors": []
+  },
+  {
+    "k": 2,
+    "v": "undeclared",
+    "ms": 2,
+    "regulatedCalls": 80,
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  },
+  {
+    "k": 3,
+    "v": "undeclared",
+    "ms": 4,
+    "regulatedCalls": 443,
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  },
+  {
+    "k": 4,
+    "v": "undeclared",
+    "ms": 18,
+    "regulatedCalls": 3490,
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  },
+  {
+    "k": 5,
+    "v": "undeclared",
+    "ms": 90,
+    "regulatedCalls": 34829,
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  },
+  {
+    "k": 6,
+    "v": "undeclared",
+    "ms": 898,
+    "regulatedCalls": 417860,
+    "status": 200,
+    "isExempt": false,
+    "isPartialExempt": false,
+    "undeterminedDistrict": [],
+    "validationErrors": []
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "afterResume": {
+    "formTransferDate": "2027-01-15",
+    "formHouses": 0,
+    "surchargeStep": 3,
+    "surchargeResult": {
+      "marker": "OLD_A"
+    },
+    "oneHouseResult": null
+  },
+  "shown": "STEP_RESULT marker=OLD_A houses=0",
+  "apiCalls": 0
+}

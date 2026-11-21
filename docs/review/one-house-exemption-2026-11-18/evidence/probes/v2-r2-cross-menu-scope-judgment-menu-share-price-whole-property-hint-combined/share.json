@@ -1,0 +1,50 @@
+{
+ "share7_own_half": {
+  "bodyTransferPrice": 700000000,
+  "bodyTotalPropertyTransferPrice": null,
+  "bodyShareKeys": [],
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "appliedExceptions": [],
+  "undetermined": [],
+  "validationErrors": [],
+  "error": null
+ },
+ "whole14": {
+  "bodyTransferPrice": 1400000000,
+  "bodyTotalPropertyTransferPrice": null,
+  "bodyShareKeys": [],
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": true,
+  "appliedExceptions": [],
+  "undetermined": [],
+  "validationErrors": [],
+  "error": null
+ },
+ "ctl_12eok_exact": {
+  "bodyTransferPrice": 1200000000,
+  "bodyTotalPropertyTransferPrice": null,
+  "bodyShareKeys": [],
+  "status": 200,
+  "isExempt": true,
+  "isPartialExempt": false,
+  "appliedExceptions": [],
+  "undetermined": [],
+  "validationErrors": [],
+  "error": null
+ },
+ "ctl_12eok_plus1": {
+  "bodyTransferPrice": 1200000001,
+  "bodyTotalPropertyTransferPrice": null,
+  "bodyShareKeys": [],
+  "status": 200,
+  "isExempt": false,
+  "isPartialExempt": true,
+  "appliedExceptions": [],
+  "undetermined": [],
+  "validationErrors": [],
+  "error": null
+ }
+}

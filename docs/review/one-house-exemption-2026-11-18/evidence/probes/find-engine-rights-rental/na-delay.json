@@ -1,0 +1,92 @@
+{
+  "menu_2021_auction": {
+    "status": 200,
+    "ex": true,
+    "partial": false,
+    "applied": [
+      "one_right_89_1_4_na"
+    ],
+    "und": [],
+    "pend": [],
+    "ve": [],
+    "clause": "na",
+    "reasons": [],
+    "bodyNaDate": "2017-01-10"
+  },
+  "menu_2021_none": {
+    "status": 200,
+    "ex": false,
+    "partial": false,
+    "applied": [],
+    "und": [],
+    "pend": [],
+    "ve": [],
+    "clause": null,
+    "reasons": [
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ],
+    "bodyNaDate": "2017-01-10"
+  },
+  "menu_2019_expropriation": {
+    "status": 200,
+    "ex": true,
+    "partial": false,
+    "applied": [
+      "one_right_89_1_4_na"
+    ],
+    "und": [],
+    "pend": [],
+    "ve": [],
+    "clause": "na",
+    "reasons": [],
+    "bodyNaDate": "2015-01-10"
+  },
+  "menu_2019_none": {
+    "status": 200,
+    "ex": false,
+    "partial": false,
+    "applied": [],
+    "und": [],
+    "pend": [],
+    "ve": [],
+    "clause": null,
+    "reasons": [
+      "나목 — 그 1주택을 취득한 날부터 3년 이내에 입주권을 양도해야 합니다. 3년을 넘겼습니다."
+    ],
+    "bodyNaDate": "2015-01-10"
+  },
+  "menu_2022_auction": {
+    "status": 200,
+    "ex": true,
+    "partial": false,
+    "applied": [
+      "one_right_89_1_4_na"
+    ],
+    "und": [],
+    "pend": [],
+    "ve": [],
+    "clause": "na",
+    "reasons": [],
+    "bodyNaDate": "2018-01-10"
+  },
+  "tt_2021_auction": {
+    "threeYearMet": false,
+    "delay": {
+      "applied": false,
+      "methodPending": true,
+      "reasonUnavailable": false,
+      "note": "2022.02.15. 전 양도분의 소득세법 시행령 §155⑱은 「다른 주택을 취득한 날부터 3년이 되는 날 현재」 각 호의 사유에 해당하는 경우로서 「해당 각 호의 매각 등의 방법으로 양도하는 경우」에만 적용됩니다. 그 방법으로 양도했는지 확인되지 않아 처분기한 예외를 적용하지 않았습니다(확인 필요)."
+    }
+  },
+  "tt_2019_expropriation": {
+    "threeYearMet": false,
+    "delay": {
+      "applied": false,
+      "methodPending": false,
+      "reasonUnavailable": true,
+      "note": "§155⑱ 5호 사유는 2020.02.11. 이후 양도분부터 있는 호입니다 — 이 양도일에 시행 중인 소득세법 시행령 §155⑱에는 없어 처분기한 예외를 적용하지 않았습니다."
+    }
+  },
+  "engine_clause_2021_auction": "na",
+  "engine_clause_2021_none": null
+}

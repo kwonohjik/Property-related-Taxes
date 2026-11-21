@@ -1,0 +1,35 @@
+## [J] 판정 메뉴 §154⑩ 경로 (취득 2018-06-01 · 양도 2020-07-01 · 8억)
+- 대조 「아니오」(⑩ 미선언): ⑧오류=[] status=200 isExempt=true isPartialExempt=false rhePassed=undefined scen=undefined
+    verdictLabel="비과세"
+    계산기: ⑧=[] status=200 isExempt=true determinedTax=0 totalTax=0 scenarioId=undefined applied=undefined
+- 예 · 직전 2019-03-01(보유기간 안): ⑧오류=[] status=200 isExempt=true isPartialExempt=false rhePassed=true scen=B
+    verdictLabel="기간분 비과세"
+    계산기: ⑧=[] status=200 isExempt=false determinedTax=19225000 totalTax=21147500 scenarioId=RH-B1 applied=true
+- 예 · 직전 2017-01-01(취득 전): ⑧오류=[] status=200 isExempt=true isPartialExempt=false rhePassed=true scen=B
+    verdictLabel="기간분 비과세"
+    계산기: ⑧=[] status=200 isExempt=false determinedTax=19225000 totalTax=21147500 scenarioId=RH-B1 applied=true
+- 예 · 직전 2018-06-01(취득일 당일): ⑧오류=[] status=200 isExempt=true isPartialExempt=false rhePassed=true scen=B
+    verdictLabel="기간분 비과세"
+    계산기: ⑧=[] status=200 isExempt=false determinedTax=19225000 totalTax=21147500 scenarioId=RH-B1 applied=true
+- 예 · 직전 2020-07-01(양도일 당일): ⑧오류=[] status=200 isExempt=true isPartialExempt=false rhePassed=true scen=B
+    verdictLabel="기간분 비과세"
+    계산기: ⑧=[] status=200 isExempt=false determinedTax=19225000 totalTax=21147500 scenarioId=RH-B1 applied=true
+- 예 · 직전 2020-12-01(양도 뒤): ⑧오류=[] status=200 isExempt=true isPartialExempt=false rhePassed=true scen=B
+    verdictLabel="기간분 비과세"
+    계산기: ⑧=[] status=200 isExempt=false determinedTax=19225000 totalTax=21147500 scenarioId=RH-B1 applied=true
+- 예 · 직전 1990-01-01(취득 28년 전): ⑧오류=[] status=200 isExempt=true isPartialExempt=false rhePassed=true scen=B
+    verdictLabel="기간분 비과세"
+    계산기: ⑧=[] status=200 isExempt=false determinedTax=19225000 totalTax=21147500 scenarioId=RH-B1 applied=true
+
+## [C] 계산기 ⑳ B 임대 1호 (취득 2013-08-12 · 양도 2024-06-01 · 10억 · 기준시가 3억/4.5억/5억)
+- 대조 A: ⑧=[] status=200 isExempt=true totalTax=0 scenarioId=undefined applied=undefined taxableGain=undefined body.prior="2020-01-01T00:00:00.000Z"
+- B · 2020-01-01(보유기간 안): ⑧=[] status=200 isExempt=false totalTax=105270000 scenarioId=RH-B1 applied=true taxableGain=306600000 body.prior="2020-01-01T00:00:00.000Z"
+- B · 2010-01-01(취득 전): ⑧=[] status=200 isExempt=false totalTax=105270000 scenarioId=RH-B1 applied=true taxableGain=306600000 body.prior="2010-01-01T00:00:00.000Z"
+- B · 2013-08-12(취득일 당일): ⑧=[] status=200 isExempt=false totalTax=105270000 scenarioId=RH-B1 applied=true taxableGain=306600000 body.prior="2013-08-12T00:00:00.000Z"
+- B · 2024-06-01(양도일 당일): ⑧=[] status=200 isExempt=false totalTax=105270000 scenarioId=RH-B1 applied=true taxableGain=306600000 body.prior="2024-06-01T00:00:00.000Z"
+- B · 2025-01-01(양도 뒤): ⑧=[] status=200 isExempt=false totalTax=105270000 scenarioId=RH-B1 applied=true taxableGain=306600000 body.prior="2025-01-01T00:00:00.000Z"
+- B · 2099-12-31(먼 미래): ⑧=[] status=200 isExempt=false totalTax=105270000 scenarioId=RH-B1 applied=true taxableGain=306600000 body.prior="2099-12-31T00:00:00.000Z"
+
+## [Z] rentalHousingExceptionSchema.safeParse
+- prior=2010-01-01: success=true
+- prior=2099-12-31: success=true
