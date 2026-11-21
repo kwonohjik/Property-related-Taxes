@@ -1,5 +1,6 @@
 # 기타토지 소유기간 중 상태 이력 입력 모델 — 엔진·판정·API(⑨~⑭) 측 계획
 
+> 🔴 **개정 2026-11-22 (v3)**: 사용자가 **V-1을 일 단위로 재결정**했다(통합 계획서 머리말 «v3 우선 규칙»). 이 문서의 v2 «과세기준일 접기» 서술(`foldStateToTaxBaseYears`·과세연도 버킷/표·6.1. 경계·Q-14)은 폐기이며, 법령·해석례 조사 기록과 V-2 결론만 근거 자료로 남는다. 판정·기대값은 일 단위 구간 기준(v1 모델 · §6 «일 단위» 열).
 > **Feature ID**: `nbl-other-land-state-history` (엔진 측) · 짝 문서: `nbl-other-land-state-history.ui.plan.md`(UI 측 — 이 문서는 건드리지 않는다)
 > 작성 2026-11-22 · base `origin/master` 10e86a809 · 워크트리 `plan-other-land-state-history` · 코드 변경 0(계획서만) · 리뷰 문서 `docs/reviews/nbl-other-categories-review-2026-11.md` §1.4 V2-C2 · §6 Q-4 (다) · §12.4-2
 > **번호 규칙**: 이 문서의 사용자 결정은 `Q-n`, 미검증은 `V-n`. UI 문서는 `UQ-n`·`UV-n`이다 — 합칠 때 재번호한다.
