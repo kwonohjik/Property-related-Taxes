@@ -32,6 +32,7 @@ import { getEffectiveAcquisitionDate } from "./transfer-tax-lthd-start";
 import { resolveRateBasisAcquisitionDate } from "./transfer-rate-holding-basis";
 import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
 import { resolveShortTermRate, type ShortTermAssetClass } from "./data/short-term-rate-history";
+import type { ShortTermRateResolution } from "./data/short-term-rate-history";
 // re-export — 기존 import 경로 하위 호환 유지
 export {
   resolveCompanionLandRate,
@@ -186,6 +187,12 @@ function presaleRightClause4UnmetNote(input: TransferTaxInput): string {
   if (unmet.length > 0) return ` — 단서 미확인: ${unmet.join("·")}`;
   // 세 요건이 모두 확인됐는데도 4호가 적용됐다면 영 §167의6 시행 전(2018.2.13 전) 양도분이다.
   return " — 해당 양도일에는 영 제167조의6이 아직 시행되지 않아(2018.2.13 시행) 단서를 적용할 수 없습니다";
+}
+
+/** §104①3호·4호 동률(조정대상지역 주택분양권 1년 미만, 2018.1.1.~2021.5.31. 양도) — 호·세액은 3호 그대로, 4호에도 해당함만 밝힌다. */
+function presaleRightClause4TiedNote(resolution: ShortTermRateResolution | null): string {
+  if (!resolution?.clause4Tied) return "";
+  return ` — 조정대상지역 주택분양권 세율(${TRANSFER.TAX_RATE_REGULATED_PRESALE_RIGHT})에도 해당하나 세율이 같아(${Math.round((resolution.rate ?? 0) * 100)}%) 보유기간 세율(${TRANSFER.TAX_RATE_SHORT_UNDER_1Y})로 적용`;
 }
 
 export function compareWithClause1(
@@ -603,7 +610,7 @@ export function calcTax(
             ? "분양권 60% 세율(소득세법 §104①1호)"
             : holdingMonthsTotal < 12
               ? "보유기간 1년 미만 특례세율 적용"
-              : "보유기간 2년 미만 특례세율 적용") + nonHeirRateNote;
+              : "보유기간 2년 미만 특례세율 적용") + presaleRightClause4TiedNote(shortTermResolution) + nonHeirRateNote;
 
   if (shortTermFlatRate !== null) {
     const shortTermTax = applyRate(taxBase, shortTermFlatRate);
