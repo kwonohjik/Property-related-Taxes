@@ -58,6 +58,8 @@ export function finishScenarios(args: {
   donorAcqPrice: number;
   /** `donorAcqPrice`가 §166 신고서 역산 값인가 — 카드 라벨 분기 전용. */
   acquisitionIsRedevelopmentFiling?: boolean;
+  /** `donorAcqPrice`가 부담부증여 §159①1호 안분값(§159 명세 슬롯 합)인가 — 카드 라벨 분기 전용. */
+  acquisitionIsBurdenedGiftShare?: boolean;
   giftTaxAddedToExpense: number;
   giftTaxLimitApplied: boolean;
   giftTaxLimitCap: number;
@@ -88,7 +90,11 @@ export function finishScenarios(args: {
   const redevGiftCap = redevGiftApplied !== undefined ? detailA?.carryoverGiftTaxCap : undefined;
   const scenarioA: CarryoverScenarioADetail = {
     acquisitionPrice: redevFilingAcqA ?? donorAcqPrice,
-    ...(args.acquisitionIsRedevelopmentFiling || redevFilingAcqA !== undefined ? { acquisitionIsRedevelopmentFiling: true } : {}),
+    ...(args.acquisitionIsRedevelopmentFiling || redevFilingAcqA !== undefined
+      ? { acquisitionIsRedevelopmentFiling: true }
+      : args.acquisitionIsBurdenedGiftShare
+      ? { acquisitionIsBurdenedGiftShare: true }
+      : {}),
     holdingPeriodYears: holdingA.years,
     giftTaxAddedToExpense: redevGiftApplied ?? args.giftTaxAddedToExpense,
     giftTaxLimitApplied: redevGiftCap !== undefined ? args.giftTaxAddedToExpense > redevGiftCap : args.giftTaxLimitApplied,

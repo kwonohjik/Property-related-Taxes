@@ -258,6 +258,11 @@ export interface CarryoverScenarioADetail {
   acquisitionPrice: number;
   /** `acquisitionPrice`가 부담부증여 × 재개발(§166)의 **신고서 취득가액**(인가 전·후·청산금 분 합 역산)인가 — 카드 라벨 분기 전용. */
   acquisitionIsRedevelopmentFiling?: boolean;
+  /**
+   * `acquisitionPrice`가 부담부증여 §159①1호 안분값(당초 증여자 취득가 × 채무액 / 증여가액 — §159 명세 슬롯 합)인가 — 카드 라벨 분기 전용
+   * (`CarryoverScenarioBDetail.acquisitionIsBurdenedGiftShare`와 같은 정의 · `acquisitionIsRedevelopmentFiling`과 배타).
+   */
+  acquisitionIsBurdenedGiftShare?: boolean;
   /** 증여자 취득일 기산 보유연수 (§95 ④) */
   holdingPeriodYears: number;
   /**

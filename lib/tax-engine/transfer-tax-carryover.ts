@@ -391,7 +391,7 @@ function calcCarryoverScenariosCore(
       inputAFinal: inputABase,
       resultA: resultABG,
       donorAcqPrice: bgAcqPrice,
-      ...(redevFilingAcqA !== undefined ? { acquisitionIsRedevelopmentFiling: true } : {}),
+      ...(redevFilingAcqA !== undefined ? { acquisitionIsRedevelopmentFiling: true } : bgBreakdown ? { acquisitionIsBurdenedGiftShare: true } : {}),
       giftTaxAddedToExpense: cg?.applied ?? 0,
       giftTaxLimitApplied: cg?.limitApplied ?? false,
       giftTaxLimitCap: cg?.cap ?? 0,

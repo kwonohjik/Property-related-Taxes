@@ -86,7 +86,7 @@ test("ME-2: 당초 증여자 기준시가가 높아 이월과세 세액이 더 �
   const r = await calculate(page);
   expect(r.status(), await r.text()).toBe(200);
   await expect(page.locator("body")).toContainText(/\[당초 증여자 취득가\]\s*480,000,000/);
-  await expect(page.locator("body")).toContainText(/채택 시나리오:\s*B \(비교과세 미적용\)/);
+  await expect(page.locator("body")).toContainText(/채택 시나리오:\s*B \(이월과세 미적용\)/);
 
   const side = await sidebarAfterCalc(page);
   expect(side).toContain("취득가액 500,000,000");
