@@ -23,18 +23,24 @@ const LAND_IDS = new Set(["land", "land_business", "land_nbl"]);
 /**
  * 토지가 사업용·비사업용 초과분 두 장(`planGbLandCards` split)이면 그 카드 몫을 토지 전체 값(같은 지분 두 장 합)에서 적는 꼬리.
  * 사업용분 = 전체 × 사업용 인정면적 비율, 비사업용 초과분 = 전체 − 사업용분(잔액). 한 장(한도 이내·전체 비사업용)이면 `undefined`.
+ * 엔진은 양도가액·취득가액·필요경비를 모두 토지 전체로 먼저 구한 뒤 같은 규칙으로 가른다 — `pick`·`self`로 금액 축을 고른다(기본 양도가액).
  */
-export function gbLandSplitTail(p: PerPropertyBreakdown, gb: GeneralBuildingOutput): { whole: number; tail: string; residual: boolean } | undefined {
+export function gbLandSplitTail(
+  p: PerPropertyBreakdown,
+  gb: GeneralBuildingOutput,
+  pick: (c: GeneralBuildingOutput["assetCards"][number]) => number = (c) => c.transferPrice,
+  self: number = p.transferPrice,
+): { whole: number; tail: string; residual: boolean } | undefined {
   const id = baseCardId(p.propertyId);
   if (id !== "land_business" && id !== "land_nbl") return undefined;
   const pair = (gb.assetCards ?? []).filter(
     (c) => (baseCardId(c.propertyId) === "land_business" || baseCardId(c.propertyId) === "land_nbl") && isSameShare(c.propertyId, p.propertyId),
   );
   if (pair.length < 2) return undefined;
-  const whole = pair.reduce((s, c) => s + c.transferPrice, 0);
+  const whole = pair.reduce((s, c) => s + pick(c), 0);
   return id === "land_business"
-    ? { whole, tail: `× 사업용 인정면적 비율 = ${fmt(p.transferPrice)}`, residual: false }
-    : { whole, tail: `- 사업용분 ${fmt(whole - p.transferPrice)} = ${fmt(p.transferPrice)}`, residual: true };
+    ? { whole, tail: `× 사업용 인정면적 비율 = ${fmt(self)}`, residual: false }
+    : { whole, tail: `- 사업용분 ${fmt(whole - self)} = ${fmt(self)}`, residual: true };
 }
 
 export function buildGbNonStdTransferFormula(p: PerPropertyBreakdown, gb: GeneralBuildingOutput, totalTransferPrice: number): string | undefined {
