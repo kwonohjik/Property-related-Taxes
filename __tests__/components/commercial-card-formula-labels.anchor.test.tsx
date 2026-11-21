@@ -190,3 +190,36 @@ describe("R-c01-04 — §97②2호 단서 swap이면 양도차익 산식 = 양�
     expect(rowLabel(container, "양도차익 =")).toContain("양도가액 1,000,000,000 − 필요경비(자본적지출 + 양도비) 460,000,000");
   });
 });
+
+/**
+ * MINOR R-c01-10 — 지방소득세 라벨이 「과세표준에 자체 세율표 직접 적용」이었다. 엔진은 applyRate(결정세액 + §114조의2 가산세, 0.1)다.
+ * 감면이 걸리면 두 산식이 갈린다 — 시료는 §77 공익수용(현금) 감면을 건다.
+ * MINOR R-c01-14 — 환산·개산공제·장특공 산식 라벨의 「INT(…)」 절사 표기를 뺐다(결과 산식은 한국어 풀어쓰기).
+ */
+describe("R-c01-10·R-c01-14 — 지방소득세 산식 = 엔진 축 · INT 표기 없음", () => {
+  const EXPROPRIATION = [{ type: "public_expropriation", cashCompensation: 1_000_000_000, bondCompensation: 0, bondHoldingYears: null, businessApprovalDate: "2022-01-01" }];
+
+  it("감면 시료 — 라벨 = 「결정세액 X × 10%」이고 그 값이 엔진 지방소득세다(산출세액 × 10%와 다르다)", async () => {
+    const f = form();
+    const r = await run(f, { reductions: EXPROPRIATION });
+    expect(r.reductionAmount, "감면이 0이면 산출세액·결정세액 축을 가르지 못한다").toBeGreaterThan(0);
+    expect(r.penaltyTax).toBe(0);
+    expect(Math.floor(r.determinedTax / 10)).toBe(r.localIncomeTax);
+    expect(Math.floor(r.calculatedTax / 10)).not.toBe(r.localIncomeTax);
+    const c = mountSingle(f, r);
+    const label = rowLabel(c, "지방소득세");
+    expect(label).toContain(`결정세액 ${r.determinedTax.toLocaleString()} × 10%`);
+    expect(label).not.toContain("자체 세율표");
+    expect(c.textContent).not.toContain("가정 금지");
+  });
+
+  it("산식 라벨에 INT( 표기가 없다", async () => {
+    const f = form();
+    const r = await run(f);
+    const c = mountSingle(f, r);
+    for (const prefix of ["환산취득가 합계", "개산공제 합계", "장기보유특별공제 ="]) {
+      expect(rowLabel(c, prefix)).not.toContain("INT(");
+    }
+    expect(c.textContent).not.toContain("INT(");
+  });
+});
