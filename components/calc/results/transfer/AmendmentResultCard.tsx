@@ -10,6 +10,7 @@ import { FormulaText } from "@/components/calc/results/shared/FormulaParts";
 import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/LocalIncomePenaltyNotice";
 import { AmendmentRuralSurtaxNotice } from "@/components/calc/results/shared/AmendmentRuralSurtaxNotice";
 import { shouldShowAmendmentRuralSurtaxNotice } from "@/lib/calc/amendment-rural-surtax-notice";
+import { RURAL_SURTAX_FILING_7_1 } from "@/lib/tax-engine/legal-codes";
 
 /** 금액 행 — 라벨 좌 / 금액 우측정렬 고정폭(amount-column-align 정책). */
 function Row({
@@ -53,7 +54,8 @@ function RuralSurtaxCorrectionRows({
   return (
     <div data-testid="amendment-rural-surtax" className={`mt-3 space-y-1 border-t pt-2 ${borderClass}`}>
       <p className="text-xs font-medium text-muted-foreground">
-        농어촌특별세 — 양도소득세와 상계하지 않고 따로 납부·환급합니다 (농어촌특별세법 §7①)
+        {/* §7①은 «별도 계산·표시»의 근거일 뿐이다 — 세목 간 상계를 하지 않는 것은 프로젝트 결정(Q-22·Q-26)이고 확인 필요라 아래 고지가 말한다(R-c03-01). */}
+        농어촌특별세 — 양도소득세 금액과 별도로 계산·표시합니다 ({RURAL_SURTAX_FILING_7_1})
       </p>
       <Row label="당초 농어촌특별세" value={formatKRW(rural.originalRuralSurtax)} />
       <Row label={`${amendedLabel} 농어촌특별세`} value={formatKRW(rural.amendedRuralSurtax)} />

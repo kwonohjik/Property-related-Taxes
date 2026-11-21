@@ -12,7 +12,7 @@ import { runMultiHouseSurchargeStep } from "@/lib/tax-engine/transfer-tax-judgme
 import { resolveHceGeneralHouseAcquisitionDate } from "@/lib/tax-engine/transfer-tax-precalc";
 import { loadFallbackTransferRates } from "@/lib/db/tax-rates";
 import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
-import { SURCHARGE_TRANSITION } from "@/lib/tax-engine/legal-codes";
+import { SURCHARGE_TRANSITION_CLAUSE } from "@/lib/tax-engine/legal-codes";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { baseTransferInput } from "../_helpers/mock-rates";
 
@@ -108,11 +108,11 @@ describe("MH-P7 단계 배열 — 판정이 끝난 단계에서 멈춘다", () =
     expect(step(n, "exclusion").houseNotes.map((h) => h.houseId).sort()).toEqual(["h2", "h3"]);
   });
 
-  it("[NR-8] 한시 유예(가목) → ⑤에서 끝 · 가목 근거", () => {
+  it("[NR-8] 한시 유예(가목) → ⑤에서 끝 · 가목 근거(주택 2 세대 — §167의10①12의2 하나 · R-c01-05)", () => {
     const { n } = narrate(input([house("selling", GANGNAM), house("h2", SEOCHO)], { transferDate: new Date("2024-03-01") }));
     expect(n.stage).toBe("suspended");
     expect(decisiveOf(n)).toEqual(["suspension"]);
-    expect(step(n, "suspension").basis).toEqual([SURCHARGE_TRANSITION.BASIS_A]);
+    expect(step(n, "suspension").basis).toEqual([`${SURCHARGE_TRANSITION_CLAUSE.TWO_HOUSE} 가목`]);
     expect(step(n, "conclusion").verdict).toBe("중과 없음");
   });
 

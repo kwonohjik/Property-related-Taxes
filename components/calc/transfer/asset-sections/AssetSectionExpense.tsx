@@ -24,6 +24,7 @@ import { redevPreApprovalExpensesScenarioDependent } from "@/lib/calc/redev-pre-
 import { REDEV_PRE_APPROVAL_SCENARIO_DEPENDENT_NOTE } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { isReceiveOnlyFiling } from "@/lib/calc/redev-field-scope";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-redevelopment";
+import { NECESSARY_EXPENSE } from "@/lib/tax-engine/legal-codes/transfer-necessary-expense";
 import { gbCapexBeforeExtensionSlots } from "@/lib/calc/gb-extension-capex-timing";
 import { carryoverPurchasedPartScope } from "@/lib/calc/carryover-gift-assumed-debt";
 import { carryoverGiftEventForm } from "@/lib/calc/carryover-gift-assumed-debt";
@@ -52,8 +53,8 @@ interface Props {
  *
  * | 항목 | 성격 | 안분 |
  * |---|---|---|
- * | 자본적지출(§97①가목) | **보유 중** 발생 — 물건 여러 부분에 공통될 수 있다 | ✅ 필요 |
- * | 양도비(§97①나목) | **양도 시** 발생(중개수수료·인지대) — 이미 양도분에 대한 지출 | ❌ 불필요 |
+ * | 자본적지출(§97①2호) | **보유 중** 발생 — 물건 여러 부분에 공통될 수 있다 | ✅ 필요 |
+ * | 양도비(§97①3호) | **양도 시** 발생(중개수수료·인지대) — 이미 양도분에 대한 지출 | ❌ 불필요 |
  *
  * ## 법령
  *
@@ -101,7 +102,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
   const redevReceiveOnly = redevPostOnly !== null && isReceiveOnlyFiling(asset);
   return (
     <>
-      {/* 필요경비 — 자본적지출 / 양도비 분리 입력 (소득세법 §97① 가목·나목)
+      {/* 필요경비 — 자본적지출 / 양도비 분리 입력 (소득세법 §97①2호·3호)
           두 필드 합 > 환산취득가+개산공제 → §97② 단서 swap 발동 */}
       <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
         <p className="text-xs font-semibold text-foreground">
@@ -141,7 +142,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
           </ToneCard>
         )}
         <CurrencyInput
-          label="자본적 지출액 (원) — §97① 가목"
+          label={`자본적 지출액 (원) — ${NECESSARY_EXPENSE.CAPITAL_EXPENDITURE}`}
           data-field="capitalExpenditure"
           value={asset.capitalExpenditure}
           onChange={(v) => onChange({ capitalExpenditure: v })}
@@ -178,7 +179,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
           const useFormLevel = formTotal > 0;
           return (
             <CurrencyInput
-              label="양도비 (원) — §97① 나목"
+              label={`양도비 (원) — ${NECESSARY_EXPENSE.TRANSFER_COST}`}
               // 지분 모드만 확정 금액을 보여 준다(가액 비례 = 지분 비례라 화면에서 계산 가능).
               // 컴패니언은 자산별 양도가액이 엔진에서 정해지므로 칸을 비워 둔다 — 잘못된
               // 숫자(총액)를 그대로 보여 주던 것이 Q08의 오해 지점이었다.

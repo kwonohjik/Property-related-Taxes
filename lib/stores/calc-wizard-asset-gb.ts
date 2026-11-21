@@ -141,7 +141,7 @@ export interface GeneralBuildingFormSlice {
   /**
    * 토지·건물(원건물) 일괄 취득 시 발생한 필요경비 (원).
    * 사례 33 일괄 모드 전용 — `useEstimatedAcquisition === false && gbHasExtension === true`일 때 의미 가짐.
-   * 중개수수료·취득세·인지대 등 §97① 가목 부대비용. 미입력 시 0원 처리.
+   * 중개수수료·취득세·인지대 등 취득가액(§97①1호 가목·시행령 §163①1호)에 드는 부대비용. 미입력 시 0원 처리.
    * 엔진은 토지·건물1 안분(취득시 기준시가 비율)에 사용 — `actualBundledExpenses`로 매핑.
    * 이 필드 신설 전(legacy)에는 `transferExpense`(양도비) 필드가 임시 매핑되었으나 의미 충돌로 분리.
    */

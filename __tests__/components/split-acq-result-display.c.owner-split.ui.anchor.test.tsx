@@ -110,7 +110,7 @@ describe("OV-1 단건 — 소유자 분리: 신고서 합계 열 · 상세명세
   it("명세서 양도가액 산식은 일괄 총액 중 소유 파트임을 밝힌다 · both는 종전 문구", () => {
     const land = run(SCN_N, COMBOS.AE, { selfOwns: "land_only" });
     const f = buildStatementItems(land, formFor(SCN_N), undefined, undefined, SCN_N.price).get("transferPrice")!.formula as string;
-    expect(f).toBe("본인 소유 파트 양도가 — 토지 675,000,000 (일괄양도가액 900,000,000 중 · 소령 §166⑥·§168②)");
+    expect(f).toBe("본인 소유 파트 양도가 — 토지 675,000,000 (일괄양도가액 900,000,000 중 · 소득세법 시행령 §166 ⑥)");
     const both = run(SCN_N, COMBOS.AE, { selfOwns: "both" });
     expect(buildStatementItems(both, formFor(SCN_N), undefined, undefined, SCN_N.price).get("transferPrice")!.formula).toBe(
       "사용자 입력 (실제 매매계약서상 거래금액)",

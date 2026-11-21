@@ -158,7 +158,7 @@ function computeRuralSurtaxCorrection(
   if (refund > 0) {
     steps.push({
       label: "농어촌특별세 환급",
-      formula: `당초 농어촌특별세 ${original.toLocaleString()} − ${amendedLabel} 농어촌특별세 ${ruralSurtax.toLocaleString()} (양도소득세와 상계하지 않음)`,
+      formula: `당초 농어촌특별세 ${original.toLocaleString()} − ${amendedLabel} 농어촌특별세 ${ruralSurtax.toLocaleString()} (양도소득세와 별도 계산)`,
       amount: refund,
       legalBasis: RURAL_SURTAX_FILING_7_1,
     });
@@ -167,7 +167,7 @@ function computeRuralSurtaxCorrection(
   if (totalPayable > 0) {
     steps.push({
       label: "농어촌특별세 납부세액",
-      formula: `추가 납부 ${additional.toLocaleString()}${latePaymentPenalty > 0 ? ` + 납부지연가산세 ${latePaymentPenalty.toLocaleString()}` : ""} (양도소득세와 별도 납부)`,
+      formula: `추가 납부 ${additional.toLocaleString()}${latePaymentPenalty > 0 ? ` + 납부지연가산세 ${latePaymentPenalty.toLocaleString()}` : ""} (양도소득세와 별도 계산)`,
       amount: totalPayable,
       legalBasis: RURAL_SURTAX_FILING_7_1,
     });

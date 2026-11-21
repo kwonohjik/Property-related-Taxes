@@ -199,6 +199,8 @@ function suspensionStep(headline: MultiHouseSurchargeResult, transferDate: Date)
   let verdict: string;
   if (headline.isSurchargeSuspended) {
     const b = headline.surchargeSuspensionBasis;
+    // 근거 호는 세대의 주택·권리 수로 고른 호(`surchargeSuspensionClause`) — 없으면 주택 2·3 이상 두 호 병기로 후퇴한다.
+    const clause = headline.surchargeSuspensionClause;
     if (b === "na" || b === "da") {
       const deadline = headline.surchargeSuspensionDeadline ? ymd(headline.surchargeSuspensionDeadline) : "기한";
       sentences.push(
@@ -206,10 +208,10 @@ function suspensionStep(headline: MultiHouseSurchargeResult, transferDate: Date)
           ? `토지거래허가 대상 주택으로 ${SURCHARGE_TRANSITION.DEADLINE}까지 허가를 신청하고 계약한 뒤 양도 기한(${deadline}) 안에 양도해 한시 유예됩니다.`
           : `${SURCHARGE_TRANSITION.DEADLINE}까지 매매계약을 하고 양도 기한(${deadline}) 안에 양도해 한시 유예됩니다.`,
       );
-      basis.push(SURCHARGE_TRANSITION.BASIS);
+      basis.push(clause ? `${clause} ${b === "na" ? "나목" : "다목"}` : SURCHARGE_TRANSITION.BASIS);
     } else {
       sentences.push(`보유기간 2년 이상인 주택을 ${SURCHARGE_TRANSITION.DEADLINE}까지 양도해 한시 유예됩니다.`);
-      basis.push(SURCHARGE_TRANSITION.BASIS_A);
+      basis.push(clause ? `${clause} 가목` : SURCHARGE_TRANSITION.BASIS_A);
     }
     sentences.push("중과 대상이지만 한시 유예 기간이라 다주택 중과를 적용하지 않습니다.");
     verdict = "한시 유예";

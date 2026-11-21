@@ -141,7 +141,7 @@ export function SplitGainDetailSection({
               <p className="text-sm font-semibold">토지/건물 분리 양도차익</p>
               {ownerLabel && (
                 <span className="text-xs rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">
-                  본인 신고분: {ownerLabel} (소령 §166⑥·§168②)
+                  본인 신고분: {ownerLabel}
                 </span>
               )}
             </div>

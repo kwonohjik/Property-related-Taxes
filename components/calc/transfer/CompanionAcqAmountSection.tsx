@@ -193,7 +193,7 @@ export function CompanionAcqAmountSection({
             onApply={props.onFixedAcquisitionPriceChange}
           />
         )}
-      {/* 사례 33 일괄 모드: 토지+원건물 일괄 취득 시 필요경비 (중개수수료·취득세·인지대 등 §97① 가목)
+      {/* 사례 33 일괄 모드: 토지+원건물 일괄 취득 시 필요경비 (중개수수료·취득세·인지대 등 취득가액(§97①1호 가목·시행령 §163①1호)에 드는 부대비용)
           엔진은 취득시 기준시가 비율로 토지·원건물에 자동 안분.
           ⚠️ 게이트가 `isMixedExtension`(증축분 환산 한정)이던 때는 「원건물 실가 + 증축 실가」에서
              이 칸이 **사라져 입력 경로가 없었다**(D-7). 그러면 ④의 `bundledExpenses` fallback이

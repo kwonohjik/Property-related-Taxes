@@ -180,7 +180,7 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
   // 추계 가액(감정가·매매사례가액) 전용 스케일 적용기 — 단건과 동일(`transfer-tax-api.ts:201`).
   const ratioed = makeRatioed(primaryRatio, primaryFractional);
   /**
-   * ④⑬ 토지·건물 분리 축(소령 §166⑥·§168②) — 단건 ④와 **같은 게이트·같은 빌더**(F-12).
+   * ④⑬ 토지·건물 분리 축(소령 §166⑥) — 단건 ④와 **같은 게이트·같은 빌더**(F-12).
    * PHD는 ⑧이 막아 도달하지 않는다. 부담부증여는 도달한다(트랙 BG) — 게이트 값이 단건과 같은 식이라 분리 축도 단건과 같이 꺼진다.
    */
   const isBurdenedGift =

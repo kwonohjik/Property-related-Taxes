@@ -25,7 +25,7 @@ import { splitCarryoverShape } from "./transfer-tax-schema-split-carryover";
 import { landRebuildShape } from "./transfer-tax-schema-land-rebuild";
 
 export const splitAcquisitionShape = {
-  // ─── 취득일 분리 (소득령 §166⑥·§168②) ────────────────────────────
+  // ─── 취득일 분리 (소득령 §166⑥) ────────────────────────────
   /** 토지 취득일 (건물 `acquisitionDate`와 다를 때) — `calcSplitGain` **진입 게이트**다. */
   landAcquisitionDate: z.string().date().optional(),
   /** 토지 파트 취득원인 — 「소득세법」 §104② 단서를 토지 파트에 적용 */

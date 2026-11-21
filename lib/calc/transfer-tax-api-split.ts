@@ -1,5 +1,5 @@
 /**
- * ④⑬ 토지·건물 분리(소령 §166⑥·§168②) API 페이로드 빌더 — `transfer-tax-api.ts`에서 분리(800줄 정책).
+ * ④⑬ 토지·건물 분리(소령 §166⑥) API 페이로드 빌더 — `transfer-tax-api.ts`에서 분리(800줄 정책).
  *
  * 분리 축의 게이트 판정과 파트 필드 전송을 **한 곳에 모은다**. 게이트가 본체에 흩어져 있으면
  * "UI는 칸을 노출하는데 API는 전송하지 않는" 침묵 누락이 재발한다(PR #837 §3.1 실사고).
@@ -231,7 +231,7 @@ export function buildSplitPayload(
       : null;
 
   return {
-    // 토지/건물 취득일 분리 + 소유자 분리 (소령 §166⑥, §168②)
+    // 토지/건물 취득일 분리 + 소유자 분리 (소령 §166⑥)
     selfOwns: selfOwnsEff !== "both" ? selfOwnsEff : undefined,
     // V-3′ 토지만 본인 주택의 건물(주택) 소유자 세대 — ⑤ 노출·⑧ 필수와 같은 술어. 범위 밖 잔재(건물만·소유자 같음)는 싣지 않는다.
     ...(asksBuildingOwnerHousehold(primary) ? { buildingOwnerSameHousehold: primary.buildingOwnerSameHousehold } : {}),

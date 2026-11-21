@@ -539,6 +539,7 @@ export function buildTransferResultDetails(ctx: {
   | "preHousingDisclosureDetail"
   | "surchargeSuspensionBasis"
   | "surchargeSuspensionDeadline"
+  | "surchargeSuspensionClause"
 > {
   return {
     multiHouseSurchargeDetail: ctx.multiHouseSurchargeResult
@@ -547,6 +548,7 @@ export function buildTransferResultDetails(ctx: {
     // ⑦ echo — 중과 유예 근거 목(가/나/다)·양도기한 (§167의3①12의2 나·다목 UI 표시용)
     surchargeSuspensionBasis: ctx.multiHouseSurchargeResult?.surchargeSuspensionBasis,
     surchargeSuspensionDeadline: ctx.multiHouseSurchargeResult?.surchargeSuspensionDeadline,
+    surchargeSuspensionClause: ctx.multiHouseSurchargeResult?.surchargeSuspensionClause,
     nonBusinessLandJudgmentDetail: ctx.nonBusinessLandJudgment,
     pre1990LandValuationDetail: ctx.pre1990LandResult,
     carryoverTaxationDetail: ctx.carryoverDetail,
@@ -590,7 +592,7 @@ export function buildExemptEarlyResult(p: {
   const grossForEcho = calcTransferGain(p.effectiveInput);
   /**
    * 소유자 분리(`selfOwns ≠ both`)의 gross는 **본인 소유 파트의 양도차익**이다 — 비과세가 아닌 경로의 `ownerRawGain`
-   * (`transfer-tax.ts` STEP 2 — 소령 §166⑥·§168②)과 같은 축이다. 종전에는 양 파트 gross를 실어, 같은 결과의 취득가액·필요경비
+   * (`transfer-tax.ts` STEP 2)과 같은 축이다. 종전에는 양 파트 gross를 실어, 같은 결과의 취득가액·필요경비
    * echo(소유 파트만)와 짝이 안 맞았다(land_only 실측: gross 673,500,000 · 소유 파트 550,000,000).
    * 🔒 **표시 전용** — 이 값은 비과세 판정·세액·12억 안분 어디에도 쓰이지 않는다(`exemptGrossGain` 소비처 전수 확인).
    */

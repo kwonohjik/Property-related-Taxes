@@ -1671,7 +1671,7 @@ export interface TransferTaxInput {
    */
   acquisitionArea?: number;
   /**
-   * 토지·건물의 소유자가 다른 경우 본인 소유 부분 지정 (소령 §166⑥, §168②).
+   * 토지·건물의 소유자가 다른 경우 본인 소유 부분 지정.
    * "both" (기본): 토지·건물 모두 본인 → 분리 양도차익 양쪽 합산.
    * "building_only": 건물만 본인 (토지는 배우자·타인 소유) → 건물 분만 자기 신고.
    * "land_only": 토지만 본인 → 토지 분만 자기 신고.

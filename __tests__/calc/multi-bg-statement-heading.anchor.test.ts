@@ -29,7 +29,7 @@ beforeEach(() => {
 });
 
 const BG_STD_HEAD = "자산별 취득가액 합계 — 취득시 기준시가 × 채무비율 (시행령 §159①1호)";
-const LUMP_HEAD = "자산별 개산공제·양도비 합계 — §97① 나목·시행령 §163⑥";
+const LUMP_HEAD = "자산별 개산공제·양도비 합계 — 소득세법 §97 ② 2호 + 시행령 §163 ⑥·소득세법 §97 ① 3호";
 const MKT = { bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "200,000,000", standardPriceAtTransfer: "200,000,000", standardPriceAtAcq: "80,000,000" };
 
 async function headings(o: Record<string, unknown>) {
@@ -55,7 +55,7 @@ describe("다건 상세 명세서 머리 — 부담부증여 취득가액 산정
     ],
     ["분리 없음 · 기준시가", { standardPriceAtTransfer: "200,000,000", standardPriceAtAcq: "80,000,000", bgGiftBuildingStdPriceAtTransfer: "200,000,000", bgOwnerSplitDebtConfirmed: false }, BG_STD_HEAD, LUMP_HEAD],
     ["시가 + 환산취득가액", { ...MKT, bgAcquisitionMethod: "converted" }, "자산별 환산취득가 합계 — 시행령 §163·§176의2②", LUMP_HEAD],
-    ["시가 + 실지취득가액", { ...MKT, bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "80,000,000" }, "자산별 실제 거래가액 합계 (자본적지출은 필요경비 — §97① 2호)", "자산별 양도비 합계 (중개수수료·법무사 비용 등) — §97① 나목"],
+    ["시가 + 실지취득가액", { ...MKT, bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "80,000,000" }, "자산별 실제 거래가액 합계 (자본적지출은 필요경비 — §97① 2호)", "자산별 양도비 합계 (중개수수료·법무사 비용 등) — 소득세법 §97 ① 3호"],
   ] as const)("%s", async (_n, o, acq, exp) => {
     const h = await headings(o as Record<string, unknown>);
     expect(h.acq).toBe(acq);

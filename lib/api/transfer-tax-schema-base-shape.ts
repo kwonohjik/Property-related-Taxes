@@ -115,9 +115,9 @@ export const propertyBaseShape = {
   giftDonorDeceased: z.boolean().optional(),
   giftRejoinedAfterDivorce: z.boolean().optional(),
   expenses: z.number().int().nonnegative(),
-  /** §97① 가목 자본적 지출 — §97② 단서 swap 분리 입력용 (선택). 미명시 시 swap 비활성, expenses fallback */
+  /** §97①2호 자본적 지출 — §97② 단서 swap 분리 입력용 (선택). 미명시 시 swap 비활성, expenses fallback */
   capitalExpenditure: z.number().int().nonnegative().optional(),
-  /** §97① 나목 양도비 — §97② 단서 swap 분리 입력용 (선택) */
+  /** §97①3호 양도비 — §97② 단서 swap 분리 입력용 (선택) */
   transferExpense: z.number().int().nonnegative().optional(),
   /** §97③ 감가상각비 — 사업소득금액 계산 시 필요경비에 산입한 금액. 취득가액에서 공제(선택). 미명시 = 0 */
   depreciationAmount: z.number().int().nonnegative().optional(),
@@ -334,7 +334,7 @@ export const propertyBaseShape = {
   // pre1990Land는 아래 `sec163_9AcquisitionShape` spread에 있다(컴패니언과 단일 소스 · CP-3)
   parcels: z.array(parcelSchema).max(10).optional(),
 
-  // ─── 토지/건물 취득일 분리 (소득령 §166⑥·§168②) ────────────────
+  // ─── 토지/건물 취득일 분리 (소득령 §166⑥) ────────────────
   /** 토지 취득일 (건물 acquisitionDate와 다를 때) */
   landAcquisitionDate: z.string().date().optional(),
   /** 토지 파트 취득원인 — 「소득세법」 제104조 제2항 단서를 토지 파트에 적용(G-4) */
@@ -630,7 +630,7 @@ export const propertyBaseShape = {
   /** 겸용주택(1세대 1주택 + 상가) 분리계산 입력 — propertyType === "mixed-use-house" 시 필수 */
   mixedUse: mixedUseAssetSchema.optional(),
   /**
-   * 토지·건물의 소유자가 다른 경우 본인 소유 부분 지정 (소령 §166⑥, §168②).
+   * 토지·건물의 소유자가 다른 경우 본인 소유 부분 지정.
    * "both" (기본): 토지·건물 모두 본인.
    * "building_only": 건물만 본인 (토지는 배우자·타인 소유).
    * "land_only": 토지만 본인.

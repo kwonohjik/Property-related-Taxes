@@ -65,6 +65,7 @@ import {
   type TransferPrintSectionId,
 } from "@/lib/print/transfer-print-sections";
 import { highValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
+import { SURCHARGE_TRANSITION } from "@/lib/tax-engine/legal-codes/surcharge-transition";
 import { FalseContractPriceNotice } from "@/components/calc/results/shared/FalseContractPriceNotice";
 import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/LocalIncomePenaltyNotice";
 import { shouldShowLocalIncomePenaltyNotice } from "@/lib/calc/local-income-penalty-notice";
@@ -504,12 +505,13 @@ export function TransferTaxResultView({
             {/* ⑦ echo — 중과 유예 근거 목(가/나/다) + 나·다목 양도기한 */}
             {result.surchargeSuspensionBasis && (
               <p className="mt-1 text-xs text-blue-700 dark:text-blue-400">
+                {/* 근거 호 = 엔진이 세대의 주택·권리 수로 고른 호(`surchargeSuspensionClause`) — 그 echo가 없는 구 결과만 두 호 병기(R-c01-05). */}
                 {result.surchargeSuspensionBasis === "a" &&
-                  "근거: 2026-05-09까지 양도 (소득세법 시행령 §167의3①12의2 가목)"}
+                  `근거: ${SURCHARGE_TRANSITION.DEADLINE}까지 양도 (${result.surchargeSuspensionClause ? `${result.surchargeSuspensionClause} 가목` : SURCHARGE_TRANSITION.BASIS_A})`}
                 {result.surchargeSuspensionBasis === "na" &&
-                  `근거: 토지거래허가 경과조치 (나목) — 양도기한 ${fmtDeadline(result.surchargeSuspensionDeadline)} 이내 충족`}
+                  `근거: 토지거래허가 경과조치 (나목) — 양도기한 ${fmtDeadline(result.surchargeSuspensionDeadline)} 이내 충족 (${result.surchargeSuspensionClause ? `${result.surchargeSuspensionClause} 나목` : SURCHARGE_TRANSITION.BASIS})`}
                 {result.surchargeSuspensionBasis === "da" &&
-                  `근거: 매매계약 경과조치 (다목) — 양도기한 ${fmtDeadline(result.surchargeSuspensionDeadline)} 이내 충족`}
+                  `근거: 매매계약 경과조치 (다목) — 양도기한 ${fmtDeadline(result.surchargeSuspensionDeadline)} 이내 충족 (${result.surchargeSuspensionClause ? `${result.surchargeSuspensionClause} 다목` : SURCHARGE_TRANSITION.BASIS})`}
               </p>
             )}
           </div>

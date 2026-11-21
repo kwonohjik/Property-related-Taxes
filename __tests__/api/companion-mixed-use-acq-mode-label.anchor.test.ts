@@ -71,7 +71,7 @@ describe("#10 컴패니언 겸용 산정방식 라벨", () => {
   it("부정형 짝 — 파트 모델 실가 파트는 실가 표시 그대로(필요경비 행 「양도비 합계」)", () => {
     const { exp } = run(asset({ separateAcquisition: { landMode: "actual", buildingMode: "appraisal", landAcquisitionPrice: 500_000_000, buildingAcquisitionPrice: 400_000_000 } }));
     const land = exp.perAsset!.find((r) => r.label === "자산 2 주택 부수토지")!;
-    expect(land.formula).toBe("자산별 양도비 합계 = 0 (§97① 나목)");
+    expect(land.formula).toBe("자산별 양도비 합계 = 0 (소득세법 §97 ① 3호)");
   });
 
   it("부정형 짝 — 상속(§163⑨ 평가액 = 실지거래가액 의제)은 echo 없음(종전 표시 그대로)", () => {

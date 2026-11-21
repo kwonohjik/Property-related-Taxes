@@ -83,7 +83,7 @@ describe("[단건] 상세명세서 필요경비 문구 — 파트별 개산공�
     const r = run(SCN_N, COMBOS.AA, { landDirectExpenses: 2_000_000, buildingDirectExpenses: 1_000_000 });
     const exp = buildStatementItems(r, FORM, undefined, undefined, SCN_N.price).get("expenses")!;
     expect(exp.value).toBe(3_000_000);
-    expect(text(exp.formula)).toBe("양도비 3,000,000 (중개수수료·법무사 비용 등) — §97① 나목");
+    expect(text(exp.formula)).toBe("양도비 3,000,000 (중개수수료·법무사 비용 등) — 소득세법 §97 ① 3호");
   });
 });
 
@@ -218,14 +218,14 @@ describe("[집계 소제목] G-4 — 자산별 echo에서 파생한다", () => {
     expect(a.properties[0].filingDisplay?.estimatedBase).toBeDefined();
     const h = headings(a);
     expect(h.acq).toBe("자산별 환산취득가 합계 — 시행령 §163·§176의2②");
-    expect(h.exp).toBe("자산별 개산공제·양도비 합계 — §97① 나목·시행령 §163⑥");
+    expect(h.exp).toBe("자산별 개산공제·양도비 합계 — 소득세법 §97 ② 2호 + 시행령 §163 ⑥·소득세법 §97 ① 3호");
   });
 
   it("전부 실가 — 종전 소제목 그대로 (회귀 0)", () => {
     const a = aggOf([plainLand(), { ...plainLand(), propertyId: "np3", propertyLabel: "건3" }]);
     const h = headings(a);
     expect(h.acq).toBe("자산별 실제 거래가액 합계 (자본적지출은 필요경비 — §97① 2호)");
-    expect(h.exp).toBe("자산별 양도비 합계 (중개수수료·법무사 비용 등) — §97① 나목");
+    expect(h.exp).toBe("자산별 양도비 합계 (중개수수료·법무사 비용 등) — 소득세법 §97 ① 3호");
   });
 
   it("어댑터 플래그는 상수 false가 아니라 echo 파생 — 전부 환산일 때만 true", () => {

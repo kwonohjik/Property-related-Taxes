@@ -83,10 +83,10 @@ describe("F-21 실가 파트 — §163⑥을 근거로 들지 않는다", () => 
     expect(buildGbExpenseFormula(prop("building", cardDed(out, "building")), out)).toContain("× 3%");
   });
 
-  it("F21-5 실가 파트에 양도비가 있으면 그 금액을 §97① 나목으로 적는다", () => {
+  it("F21-5 실가 파트에 양도비가 있으면 그 금액을 §97①3호로 적는다", () => {
     const out = run(LAND_ACTUAL);
     const f = buildGbExpenseFormula(prop("land", 5_000_000), out);
-    expect(f).toContain("자산별 양도비 = 5,000,000 (§97① 나목)");
+    expect(f).toContain("자산별 양도비 = 5,000,000 (소득세법 §97 ① 3호)");
     // 왜 개산공제가 없는지까지 밝힌다 — 금액만 적으면 「빠뜨린 것」과 구별되지 않는다.
     expect(f).toContain("§163⑥ 개산공제를 적용하지 않습니다");
     expect(f).not.toContain("× 3%");

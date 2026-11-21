@@ -156,7 +156,7 @@ export function refineHouseholdRequiredInputs(data: HouseholdRefineInput, ctx: z
   }
 
   /**
-   * M2 — 소유자 분리는 주택·건물 자산에만 (소령 §166⑥·§168②). 종전에는 **단건 superRefine에만** 있어
+   * M2 — 소유자 분리는 주택·건물 자산에만. 종전에는 **단건 superRefine에만** 있어
    * 다건은 같은 본문을 200으로 받았다(엔진이 무시). 단건·다건이 같은 결론을 내도록 공용 진입점으로 옮겼다.
    * UI에서는 ④가 범위 밖 잔재를 보내지 않는다(`lib/calc/self-owns-scope.ts`).
    */
