@@ -278,6 +278,21 @@ export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: Agg
                 {netOffset === 0 ? "0" : netOffset > 0 ? `+${formatKRW(netOffset)}` : `△${formatKRW(-netOffset)}`}
               </td>
             </tr>
+            {/* R-c07-04 — 통산되지 못하고 소멸한 결손. 이 행이 있어야 열마다 통산 전 + 결손 통산 + 소멸 = 통산 후가 성립한다. */}
+            {expiredLoss > 0 && (
+              <tr className="border-b border-border/40">
+                <td className="py-1 pr-2 text-muted-foreground text-caption">통산 못한 결손 소멸 (이월 불인정)</td>
+                {[land, bld1, bld2].map((a) => {
+                  const { expired } = offsetOf(a);
+                  return (
+                    <td key={a.propertyId} className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-xs text-muted-foreground">
+                      {expired > 0 ? `+${formatKRW(expired)}` : "-"}
+                    </td>
+                  );
+                })}
+                <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap text-xs text-muted-foreground">+{formatKRW(expiredLoss)}</td>
+              </tr>
+            )}
             {/* 통산 후 양도소득금액 */}
             <tr className="bg-muted/40 font-semibold">
               <td className="py-1.5 pr-2 text-sm">통산 후 양도소득금액</td>

@@ -75,6 +75,14 @@ const rowCells = (text: string, head: string) => {
   return [...tr!.querySelectorAll("td")].slice(1).map((td) => td.textContent);
 };
 
+const EXPIRED_ROW = "통산 못한 결손 소멸 (이월 불인정)";
+const num = (c: string | null) => (c === "-" || c === null ? 0 : c.startsWith("△") ? -Number(c.slice(1).replace(/,/g, "")) : Number(c.replace(/^\+/, "").replace(/,/g, "")));
+/** 열마다 통산 전 양도소득금액 + 결손 통산 + 소멸 결손 = 통산 후 양도소득금액(합계 열 포함). */
+const expectColumnsAddUp = (text: string) => {
+  const [before, offset, expired, after] = ["양도소득금액", OFFSET_ROW, EXPIRED_ROW, "통산 후 양도소득금액"].map((h) => rowCells(text, h).map(num));
+  expect(before.map((b, i) => b + offset[i] + expired[i])).toEqual(after);
+};
+
 describe("R-c07-04 — 단건: 흡수되지 못한 결손은 기여가 아니라 소멸", () => {
   it("결손 통산 행 = 실제 넘어간 몫(엔진 lossOffsetTable) · 합계 0 · 「다른 자산」 서술 없음 · 소멸 1,609,572,901 각주", async () => {
     const f = newForm();
@@ -83,6 +91,10 @@ describe("R-c07-04 — 단건: 흡수되지 못한 결손은 기여가 아니라
     const [text] = await tableText(f);
     // 종전: △605,670,105 | +2,210,015,710 | +5,227,296 | +1,609,572,901
     expect(rowCells(text, OFFSET_ROW)).toEqual(["△605,670,105", "+604,240,908", "+1,429,197", "0"]);
+    // 종전: 소멸 행이 없어 건물 열·합계 열이 통산 전 + 결손 통산 ≠ 통산 후였다.
+    // 건물1 604,240,908 + 1,605,774,802 = 2,210,015,710 · 건물2 1,429,197 + 3,798,099 = 5,227,296 (= 각 결손 전액)
+    expect(rowCells(text, EXPIRED_ROW)).toEqual(["-", "+1,605,774,802", "+3,798,099", "+1,609,572,901"]);
+    expectColumnsAddUp(text);
     expect(text).not.toContain("함께 양도한 다른 자산");
     expect(text).toContain("결손 중 1,609,572,901은 공제할 양도소득금액이 없어 통산되지 못하고 소멸합니다(이월 불인정).");
     expect(text).toContain(`이 표의 통산 후 합계는 통산 전보다 1,609,572,901 큽니다 (${TRANSFER.LOSS_OFFSET}).`);
@@ -104,6 +116,9 @@ describe("R-c07-01 + R-c07-04 — 함께 양도 · 자산 명칭 「상가 3001�
     // 종전: 1,265,243,006 | 1,265,243,006 | 44,772,704 | 2,575,258,716 (토지 카드가 건물1 열에도)
     expect(rowCells(text, "양도가액")).toEqual(["1,265,243,006", "289,984,290", "44,772,704", "1,600,000,000"]);
     expect(rowCells(text, OFFSET_ROW)).toEqual(["△605,670,105", "+1,162,919,479", "+2,750,626", "+560,000,000"]);
+    // 건물1 1,162,919,479 + 1,047,096,231 = 2,210,015,710 · 건물2 2,750,626 + 2,476,670 = 5,227,296
+    expect(rowCells(text, EXPIRED_ROW)).toEqual(["-", "+1,047,096,231", "+2,476,670", "+1,049,572,901"]);
+    expectColumnsAddUp(text);
     expect(text).toContain("결손 중 560,000,000은 함께 양도한 다른 자산의 양수 소득에 흡수되었습니다.");
     expect(text).toContain("결손 중 1,049,572,901은 공제할 양도소득금액이 없어 통산되지 못하고 소멸합니다(이월 불인정).");
     expect(text).toContain("이 표의 통산 후 합계는 통산 전보다 1,609,572,901 큽니다");

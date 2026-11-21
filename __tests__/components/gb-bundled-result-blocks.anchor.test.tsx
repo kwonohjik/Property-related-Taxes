@@ -139,6 +139,7 @@ describe("3-way 표 — 자산별 · 결손 통산 합계(Q-2 a)", () => {
     const t = threeWay().textContent!;
     expect(t).toContain("+429,821,909+7,513,3290통산 후");
     expect(t).toContain("양도소득금액 합계는 통산 전후 동일하지만");
+    expect(t).not.toContain("통산 못한 결손 소멸"); // R-c07-04 — 결손이 다 넘어가면 소멸 행 없음
   });
 
   it("🔴 함께 양도 결손이 다른 자산으로 넘어감 → 합계 +90,227,707 · 각주 교체(종전 하드코딩 0은 거짓)", async () => {
