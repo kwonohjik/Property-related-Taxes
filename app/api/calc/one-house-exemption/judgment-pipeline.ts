@@ -153,7 +153,7 @@ export function runOneHouseJudgmentPipeline(
     engineInput.mergeRentalCarveout && exempt
       ? {
           ...afterBalance,
-          undetermined: [...afterBalance.undetermined, { id: MERGE_RENTAL_CARVEOUT_NOTICE_ID, reason: mergeRentalCarveoutNotice(engineInput) }],
+          undetermined: [...afterBalance.undetermined, { id: MERGE_RENTAL_CARVEOUT_NOTICE_ID, reason: mergeRentalCarveoutNotice(engineInput, afterBalance.appliedExceptions.map((e) => e.id)) }],
         }
       : missing
         ? { ...afterBalance, undetermined: [...afterBalance.undetermined, { id: MERGE_RENTAL_CARVEOUT_MISSING_ID, reason: missing }] }

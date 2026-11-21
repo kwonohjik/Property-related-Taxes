@@ -147,7 +147,7 @@ export function oneHouseJudgmentWarnings(
 
   // §155④⑤ × ⑳ 상대 쪽 임대 — 적용했으면 근거를, 입력이 없어 못 열었으면 결론을 가를 때만 안내한다.
   if (exemptionResult.isExempt || exemptionResult.isPartialExempt) {
-    if (input.mergeRentalCarveout) warnings.push(mergeRentalCarveoutNotice(input));
+    if (input.mergeRentalCarveout) warnings.push(mergeRentalCarveoutNotice(input, (exemptionResult.appliedExceptions ?? []).map((e) => e.id)));
   } else {
     const missing = mergeRentalCarveoutMissingNotice(input, oneHouseRules.one_house_exemption);
     if (missing) warnings.push(missing);

@@ -18,6 +18,7 @@ import { TRANSFER } from "../legal-codes/transfer";
 import { CLAUSE_13_SURCHARGE_EXCLUSION_EFFECTIVE_DATE, MULTI_HOUSE, TRANSFER_RENTAL_HOUSING } from "../legal-codes";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import { resolveExemptionHouseCountExclusions } from "../transfer-tax-house-exclusion-step";
+import { resolveHceGeneralHouseAcquisitionDate } from "./hce-general-house-acquisition-date";
 import { judgeRentalHousingEligibility } from "../transfer-tax-rental-housing-judge";
 import {
   describeOneHouseHoldingRequirement,
@@ -92,8 +93,13 @@ function structureHolds(raw: TransferTaxInput): { rentalRowId?: string } | undef
   const roster = rosterOf(input, mergeDate);
   if (!roster.holds) return undefined;
   if (input.householdHousingCount !== (roster.rentalRowId ? 3 : 2)) return undefined;
-  const ex = resolveExemptionHouseCountExclusions(raw, raw.acquisitionDate); // 주택 수 제외는 번역 전 원본을 본다(`redev-apt-judgment-input.ts`)
-  if (ex.specialActExcludedCount + ex.inheritedExclusion.excludedCount > 0) return undefined; // 3중첩 불허(서면-2022-법규재산-4283)
+  // 주택 수 제외는 번역 전 원본을 본다(`redev-apt-judgment-input.ts`). 일반주택 취득일은 STEP 0.9와 같은 값 — 원본 취득일로 보면
+  //   동일세대 상속·증여 세대 통산에서 §99의4 순서가 STEP 0.9와 갈려 이 가드와 판정이 다른 집합을 봤다(2026-11 리뷰 D-72).
+  const ex = resolveExemptionHouseCountExclusions(raw, resolveHceGeneralHouseAcquisitionDate(raw));
+  // 3중첩 불허(서면-2022-법규재산-4283). 조특법 §99의4·§98의9 「소유주택으로 보지 아니한다」 제외(`hceApplied`)는 §155 특례가 아니라
+  //   중첩 수에 들지 않는다 — ⑳ 세대 구성 규칙(`transfer-tax-rental-residence-composition.ts` · 3686·0198)과 같다(사용자 결정 Q-22 (b)).
+  //   상속주택 제외·보유 감면주택 선언(인구감소지역 포함)은 그대로 막는다(Q-22 — 따로 확인).
+  if (ex.specialHouseExclusionDetail.excludedCount + ex.inheritedExclusion.excludedCount > 0) return undefined;
   return deemsWithoutRental(input, roster.rentalRowId) ? { rentalRowId: roster.rentalRowId } : undefined;
 }
 
@@ -112,11 +118,27 @@ export function withMergeRentalCarveout(input: TransferTaxInput): TransferTaxInp
   return { ...input, rentalHousingException: undefined, mergeRentalCarveout: structure };
 }
 
-/** 적용 고지 — 무엇을 빼고 무엇에 기댔는지. */
-export function mergeRentalCarveoutNotice(input: Pick<TransferTaxInput, "marriageMerge">): string {
+/** 합가 의제(§155④⑤)로 비과세했는가 — 적용 특례 id(`155-4-*` · `155-5-*`)로 본다. */
+const MERGE_EXCEPTION_ID = /^155-[45]-/;
+
+/**
+ * 적용 고지 — 무엇을 빼고 무엇에 기댔는지.
+ *
+ * `appliedExceptionIds`(판정 결과의 적용 특례)를 주면 실제 근거에 맞춘다: 조특법 §99의4·§98의9 등으로 다른 주택도 빠져 남은 주택이
+ * 양도 주택뿐이면 합가 의제 없이 1세대1주택으로 판정된다 — 그때 「§155④를 적용했습니다」라고 쓰면 근거 「1세대1주택 비과세」와
+ * 어긋난다(2026-11 리뷰 D-72). 주지 않으면(판정 전 — 겸용 경로) 합가 의제 문형이다.
+ */
+export function mergeRentalCarveoutNotice(
+  input: Pick<TransferTaxInput, "marriageMerge">,
+  appliedExceptionIds?: readonly string[],
+): string {
   const base = input.marriageMerge ? TRANSFER.MARRIAGE_MERGE_EXEMPT : TRANSFER.PARENTAL_CARE_MERGE_EXEMPT;
+  const viaMerge = appliedExceptionIds === undefined || appliedExceptionIds.some((id) => MERGE_EXCEPTION_ID.test(id));
+  const what = viaMerge
+    ? `주택 수에서 빼고 ${base}를 적용했습니다`
+    : `주택 수에서 뺐고, 다른 주택도 주택 수에서 빠져 남은 주택이 양도 주택뿐이라 ${base}의 합가 의제 없이 1세대1주택으로 판정했습니다`;
   const head =
-    `합가 상대 쪽 장기임대주택 1채를 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}에 따라 주택 수에서 빼고 ${base}를 적용했습니다 — ` +
+    `합가 상대 쪽 장기임대주택 1채를 ${TRANSFER_RENTAL_HOUSING.PIT_RD_155_20}에 따라 ${what} — ` +
     `상대 쪽 주택은 2년 이상 거주한 거주주택이라는 입력을 전제로, 양도 주택에는 같은 항 1호의 거주 2년을 적용하지 않습니다(${MERGE_RENTAL_CARVEOUT_RULING}). ` +
     "「소득세법 시행령」 §154① 보유·거주 요건은 그대로 봅니다.";
   return input.marriageMerge
