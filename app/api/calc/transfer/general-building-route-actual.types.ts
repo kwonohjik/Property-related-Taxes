@@ -41,7 +41,7 @@ export interface GeneralBuildingActualPricePayload {
   acquisitionBuildingStdPrice?: number;
   /**
    * 부담부증여 정보 (소령 §159).
-   * 제공 시 §159①1호 단서에 따라 사용자 입력 actualAcquisitionPrice를 무시하고
+   * 제공 시 §159①1호 괄호에 따라 사용자 입력 actualAcquisitionPrice를 무시하고
    * 취득시 기준시가 × 채무비율로 환산.
    */
   burdenedGiftInfo?: BurdenedGiftInfo;

@@ -547,7 +547,7 @@ export function validateBurdenedGiftAsset(
   }
 
   // (5-b) 일반건물(general_building) 부담부증여 — §159①1호 환산용 취득시 기준시가 필수
-  // §159①1호 단서(양도가액을 §99 기준시가로 산정 시 취득가액도 기준시가)에 따라
+  // §159①1호 괄호(양도가액을 §99 기준시가로 산정 시 취득가액도 기준시가)에 따라
   // 사용자가 실거래가를 입력했더라도 취득시 기준시가가 산식 입력으로 필요.
   if (asset.assetKind === "general_building") {
     // 1990.8.30. 전 상속·증여 토지는 등급 환산값(④·⑤ display fallback과 같은 leaf · PR-7b-2 G-3)

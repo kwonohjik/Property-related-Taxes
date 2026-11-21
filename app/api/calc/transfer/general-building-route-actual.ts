@@ -252,7 +252,7 @@ export function buildActualGeneralBuildingCards(
 
   // 부담부증여 §159①1호 분기 — 사용자 입력 actualAcquisitionPrice 무시,
   // 자산별 양도가/취득가/개산공제를 채무비율로 환산.
-  // §159①1호 단서: "양도가액을 §99 기준시가로 산정한 경우 취득가액도 §99 기준시가로 산정".
+  // §159①1호 괄호: "양도가액을 §99 기준시가로 산정한 경우 취득가액도 §99 기준시가로 산정".
   // 부담부증여는 채무액 자체가 양도가액이므로 기준시가 모드와 동치.
   let landTransfer: number;
   let buildingTransfer: number;

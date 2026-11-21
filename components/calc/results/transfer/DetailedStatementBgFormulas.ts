@@ -31,6 +31,61 @@ const PRESUMED_TEXT = {
   appraisal: { label: "감정가액", basis: "소득세법 시행령 §176의2③2호" },
 } as const;
 
+/** 어느 파트인가 — 호출처가 `perAsset.land`/`building`을 그대로 넘기므로 객체 동일성으로 안다. */
+const partOf = (bg: TransferBurdenedGiftBreakdown, a: BgAssetBreakdown): "land" | "building" | undefined =>
+  a === bg.perAsset.land ? "land" : a === bg.perAsset.building ? "building" : undefined;
+
+/**
+ * 이 파트의 `stdPriceAtAcquisition`이 의제취득일(1985.1.1.) 기준시가인가 — 엔진 echo `preDeemed`(의제취득일 전 상속·증여).
+ * 파트별(`three_way_parts`)이면 그 파트 echo가 있을 때만이다(의제취득일 전이 아닌 파트는 취득시 기준시가).
+ */
+function isPreDeemedPart(bg: TransferBurdenedGiftBreakdown, a: BgAssetBreakdown): boolean {
+  const p = bg.preDeemed;
+  if (!p) return false;
+  if (p.basis !== "three_way_parts") return true;
+  const k = partOf(bg, a);
+  return k !== undefined && p.parts?.[k] !== undefined;
+}
+
+const acqStdName = (bg: TransferBurdenedGiftBreakdown, a: BgAssetBreakdown): string =>
+  isPreDeemedPart(bg, a) ? "의제취득일(1985.1.1.) 기준시가" : "취득시 기준시가";
+
+/** 의제취득일 전 상속·증여 ①②③ 후보 이름 — 결과 카드 `BgPreDeemedThreeWayRows`와 같은 이름. */
+const PRE_DEEMED_NAME = {
+  reported: "① 상증법 평가액(신고가액)",
+  sec164: "② §164④~⑦ 취득당시 기준시가(의제취득일)",
+  converted: "③ 환산취득가액",
+} as const;
+
+/**
+ * 의제취득일(1985.1.1.) 전 상속·증여 × 시가 평가(엔진 echo `preDeemed.basis` = three_way·three_way_parts) — 취득가액 = ①②③ 중 큰 금액 × 채무액 / 증여가액.
+ * 매매 K-4·K-5 산식(실지취득가액 · 자산별 양도가액 × 취득시 기준시가 / 양도시 기준시가)과 가액·근거·계산 순서가 다르다(엔진은 ③ 전체 환산 뒤 채무비율을 곱한다).
+ * 해당하지 않으면 undefined.
+ */
+function preDeemedAcquisitionFormula(
+  bg: TransferBurdenedGiftBreakdown,
+  a: BgAssetBreakdown,
+  acquisitionPrice: number,
+): string | undefined {
+  const p = bg.preDeemed;
+  const k = partOf(bg, a);
+  if (!p || p.basis === "deemed_std" || !k) return undefined;
+  const e = p.basis === "three_way_parts" ? p.parts?.[k] : undefined;
+  const selected = p.basis === "three_way_parts" ? e?.selected : p.selected;
+  if (!selected) return undefined;
+  // 이 파트의 ①②③ 채택 금액(채무비율 안분 전). 단일 자산 3자 max는 물건 전체 금액을 의제취득일 기준시가 비율로 토지·건물에 나눈다(엔진) —
+  // ①② 채택이면 파트 몫이 `actualAcquisition`에 실리고, 한 파트뿐이면 전체 금액이 곧 그 파트 몫이다. 그 밖(두 파트 · ③)은 몫 금액 echo가 없어 문자로 적는다.
+  const other = bg.perAsset[k === "land" ? "building" : "land"];
+  const whole =
+    e?.wholeAcquisition ??
+    a.actualAcquisition ??
+    (other.stdPriceAtAcquisition === 0 && other.acquisitionPrice === 0 ? p.wholeAcquisition : undefined);
+  const name = p.basis === "three_way_parts" || whole === p.wholeAcquisition ? PRE_DEEMED_NAME[selected] : `${PRE_DEEMED_NAME[selected]} 중 이 파트 몫`;
+  const basis = selected === "converted" ? "소득세법 시행령 §176조의2④ · §159①1호" : "소득세법 시행령 §163⑨ · §159①1호";
+  const value = whole !== undefined ? fmt(whole) : `${fmt(p.wholeAcquisition ?? 0)} 중 이 파트 몫(의제취득일 기준시가 비율)`;
+  return `취득가액 = ${name} × 채무액 / 증여재산 평가액 (①②③ 중 큰 금액 · ${basis})\n        = ${value} × ${fmt(bg.assumedDebtAmount)} / ${fmt(bg.giftValuation.max)}\n        = ${fmt(acquisitionPrice)}`;
+}
+
 /** 자산별 취득가액 산식 — 방식(`perAsset.*.acquisitionMethod`)별. */
 export function buildBgAcquisitionFormula(
   bg: TransferBurdenedGiftBreakdown,
@@ -39,6 +94,9 @@ export function buildBgAcquisitionFormula(
 ): string {
   const debt = fmt(bg.assumedDebtAmount);
   const giftMax = fmt(bg.giftValuation.max);
+  const swapDirect = a.acquisitionMethod === "converted" && bg.necessaryExpenseSwap?.chosen === "direct";
+  const preDeemed = swapDirect ? undefined : preDeemedAcquisitionFormula(bg, a, acquisitionPrice);
+  if (preDeemed) return preDeemed;
   switch (a.acquisitionMethod) {
     case "actual":
       return `취득가액 = 실지취득가액 × 채무액 / 증여재산 평가액 (소득세법 §97①1호가목 · 시행령 §159①1호 본문)\n        = ${fmt(a.actualAcquisition ?? 0)} × ${debt} / ${giftMax}\n        = ${fmt(acquisitionPrice)}`;
@@ -54,8 +112,8 @@ export function buildBgAcquisitionFormula(
       }
       return `취득가액 = 자산별 양도가액 × 취득시 기준시가 / 양도시 기준시가 (소득세법 시행령 §176의2②2호 — 환산취득가액)\n        = ${fmt(a.transferPrice)} × ${fmt(a.stdPriceAtAcquisition)} / ${fmt(a.stdPriceAtTransfer)}\n        = ${fmt(acquisitionPrice)}`;
     default:
-      // standard_price(기준시가 모드 환산, 소령 §159①1호 괄호) · 방식 echo가 없는 옛 결과
-      return `취득가액 = 취득시 자산기준시가 × 채무액 / 증여재산 평가액 (소령 §159①1호 단서 — 기준시가 모드 환산)\n        = ${fmt(a.stdPriceAtAcquisition)} × ${debt} / ${giftMax}\n        = ${fmt(acquisitionPrice)}`;
+      // standard_price(기준시가 모드 환산, 소득세법 시행령 §159①1호 괄호) · 방식 echo가 없는 옛 결과
+      return `취득가액 = ${isPreDeemedPart(bg, a) ? "의제취득일(1985.1.1.) 자산기준시가" : "취득시 자산기준시가"} × 채무액 / 증여재산 평가액 (소득세법 시행령 §159①1호 괄호 — 기준시가 모드 환산)\n        = ${fmt(a.stdPriceAtAcquisition)} × ${debt} / ${giftMax}\n        = ${fmt(acquisitionPrice)}`;
   }
 }
 
@@ -87,7 +145,12 @@ function expenseFormulaOf(bg: TransferBurdenedGiftBreakdown, a: BgAssetBreakdown
    */
   const swapDirect = a.acquisitionMethod === "converted" && bg.necessaryExpenseSwap?.chosen === "direct";
   if (a.estimatedDeductionRate === undefined || swapDirect) {
-    return `필요경비 = 채무비율 안분 실비 (자본적지출·양도비)\n        = ${fmt(amount)}${addition}\n        ※ ${swapDirect ? "소득세법 §97②2호 단서 — 환산취득가액과 개산공제의 합계보다 실비가 커서 실비를 필요경비로 정했습니다." : "실지취득가액 경로라 §163⑥ 개산공제를 적용하지 않습니다."}`;
+    const note = swapDirect
+      ? "소득세법 §97②2호 단서 — 환산취득가액과 개산공제의 합계보다 실비가 커서 실비를 필요경비로 정했습니다."
+      : isPreDeemedPart(bg, a)
+      ? "①·② 채택 — 실지거래가액 의제(소득세법 시행령 §163⑨)라 §163⑥ 개산공제를 적용하지 않습니다."
+      : "실지취득가액 경로라 §163⑥ 개산공제를 적용하지 않습니다.";
+    return `필요경비 = 채무비율 안분 실비 (자본적지출·양도비)\n        = ${fmt(amount)}${addition}\n        ※ ${note}`;
   }
   const rate = pct(a.estimatedDeductionRate);
   // 기준시가 모드(K-1~K-3)는 취득가액이 곧 취득시 기준시가 × 채무비율이라 종전 표기를 유지한다.
@@ -99,7 +162,7 @@ function expenseFormulaOf(bg: TransferBurdenedGiftBreakdown, a: BgAssetBreakdown
     a.acquisitionMethod === "salesCase" || a.acquisitionMethod === "appraisal"
       ? `\n        ※ ${PRESUMED_TEXT[a.acquisitionMethod].label} 경로 — 필요경비는 개산공제만 인정하며 자본적지출·양도비는 공제하지 않습니다 (소득세법 §97②2호).`
       : "";
-  return `필요경비 = 취득시 기준시가 × 채무액 / 증여재산 평가액 × ${rate} (개산공제, 소령 §163⑥)\n        = ${fmt(a.stdPriceAtAcquisition)} × ${fmt(bg.assumedDebtAmount)} / ${fmt(bg.giftValuation.max)} × ${a.estimatedDeductionRate}\n        = ${fmt(amount)}${addition}${presumedNote}`;
+  return `필요경비 = ${acqStdName(bg, a)} × 채무액 / 증여재산 평가액 × ${rate} (개산공제, 소령 §163⑥)\n        = ${fmt(a.stdPriceAtAcquisition)} × ${fmt(bg.assumedDebtAmount)} / ${fmt(bg.giftValuation.max)} × ${a.estimatedDeductionRate}\n        = ${fmt(amount)}${addition}${presumedNote}`;
 }
 
 // ── 단건(비집계) 결과 — 명세서·신고서 양식 공용 ─────────────────────────────────
