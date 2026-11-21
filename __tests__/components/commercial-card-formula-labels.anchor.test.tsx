@@ -180,7 +180,7 @@ describe("R-c01-04 — §97②2호 단서 swap이면 양도차익 산식 = 양�
       useEstimatedAcquisition: true, transferCause: "general",
       commercialBuildingValuation: { isPreDisclosure: false, exclusiveArea: 150, commonArea: 50, unitPriceAtTransfer: 2_500_000, unitPriceAtAcquisition: 1_000_000 },
       capitalExpenditure: 450_000_000, transferExpense: 10_000_000,
-    } as Partial<TransferTaxInput>);
+    } as unknown as Partial<TransferTaxInput>);
     const agg = calculateTransferTaxAggregate({ properties: [item] as unknown as TransferTaxItemInput[], taxYear: 2020, annualBasicDeductionUsed: 0 }, rates);
     const b = agg.properties[0];
     expect(b.transferGain).toBe(540_000_000);
