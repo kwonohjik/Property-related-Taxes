@@ -19,6 +19,7 @@ import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/trans
 import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
 import { shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
 import { ESTIMATED_DEDUCTION_RATE } from "@/lib/tax-engine/legal-codes";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { NECESSARY_EXPENSE } from "@/lib/tax-engine/legal-codes/transfer-necessary-expense";
 import { capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
 import { splitAcqFormulaText, splitExpenseText } from "./split-acq-text";
@@ -95,6 +96,18 @@ function findSiblingCard(
     (c) => baseCardId(c.propertyId) === baseId && isSameShare(c.propertyId, selfPropertyId),
   );
 }
+
+/**
+ * 토지가 사업용·비사업용 초과분 두 장이면 토지 **전체** 식(`head`) 뒤에 이 카드 몫 꼬리를 붙인다(`gbLandSplitTail`).
+ * 엔진은 토지 전체를 먼저 환산·안분·개산공제한 뒤 인정면적 비율로 가른다 — 카드 몫에 비율을 바로 곱하면 좌변이 우변을 못 만든다(후보 ⑤).
+ */
+function withLandSplitTail(head: string, split: { tail: string; residual: boolean }): string {
+  return `${head}\n        ${split.tail}${split.residual ? " (비사업용 초과분 · 잔액)" : ""}`;
+}
+
+/** 이 카드 몫의 취득가액 꼬리 — 토지 두 장이 아니면 `undefined`. */
+const landAcqSplit = (p: PerPropertyBreakdown, gb: GeneralBuildingOutput) =>
+  gbLandSplitTail(p, gb, (c) => c.acquisitionPrice, p.acquisitionPrice);
 
 // ── 포맷 헬퍼 ────────────────────────────────────────────────────
 
@@ -387,7 +400,11 @@ function buildGbAcquisitionFormulaCore(
     if (landStd && buildingStd) {
       if (isLandProp(p.propertyId)) {
         // 토지 취득가 = 일괄 실가 × 토지기준시가 / (토지+건물 기준시가) — 기준시가 시점은 위 `apportionAtAcq`
-        return buildAllocationFormula(bundledAcq, landStd, [landStd, buildingStd], p.acquisitionPrice);
+        // 토지 두 장이면 우변은 토지 전체이고 카드 값은 그 몫이다(후보 ⑤).
+        const acqSplit = landAcqSplit(p, gb);
+        return acqSplit
+          ? withLandSplitTail(buildAllocationFormula(bundledAcq, landStd, [landStd, buildingStd], acqSplit.whole), acqSplit)
+          : buildAllocationFormula(bundledAcq, landStd, [landStd, buildingStd], p.acquisitionPrice);
       }
       if (isBuildingProp(p.propertyId)) {
         const landAcq = bundledAcq - p.acquisitionPrice;
@@ -409,18 +426,23 @@ function buildGbAcquisitionFormulaCore(
     if (isLandProp(p.propertyId)) {
       // 토지: bundledAcq × acqLandStd / (acqLandStd + acqB1Std) — 취득시 비율 안분
       // 짝 카드는 **같은 지분**에서 찾는다 — 지분마다 일괄 취득가가 다르다.
+      // 토지 두 장이면 일괄 총액은 토지 두 장 합 + 건물(3001)이고 우변은 토지 전체, 카드 값은 그 몫이다(후보 ⑤).
+      const acqSplit = landAcqSplit(p, gb);
       const bundledAcq =
-        displayValue +
+        (acqSplit ? acqSplit.whole : displayValue) +
         (findSiblingCard(gb.assetCards, "building1", p.propertyId)?.acquisitionPrice ?? 0);
-      return buildAllocationFormula(bundledAcq, acqLandStd, [acqLandStd, acqB1Std], p.acquisitionPrice);
+      return acqSplit
+        ? withLandSplitTail(buildAllocationFormula(bundledAcq, acqLandStd, [acqLandStd, acqB1Std], acqSplit.whole), acqSplit)
+        : buildAllocationFormula(bundledAcq, acqLandStd, [acqLandStd, acqB1Std], p.acquisitionPrice);
     }
     if (isBuilding1Prop(p.propertyId)) {
-      const landAcqCard = gb.assetCards.find(
-        (c) => isLandProp(c.propertyId) && isSameShare(c.propertyId, p.propertyId),
-      );
-      const bundledAcq = (landAcqCard?.acquisitionPrice ?? 0) + p.acquisitionPrice;
+      // 토지가 두 장(사업용·비사업용 초과분)이면 둘 다 더한다 — 한 장만 빼면 잔액식이 일괄 총액을 못 만든다(후보 ⑤).
+      const landAcq = gb.assetCards
+        .filter((c) => isLandProp(c.propertyId) && isSameShare(c.propertyId, p.propertyId))
+        .reduce((s, c) => s + c.acquisitionPrice, 0);
+      const bundledAcq = landAcq + p.acquisitionPrice;
       return buildResidualFormula(bundledAcq, [
-        { label: "토지", value: landAcqCard?.acquisitionPrice ?? 0 },
+        { label: "토지", value: landAcq },
       ], p.acquisitionPrice);
     }
     if (isBuilding2Prop(p.propertyId)) {
@@ -445,7 +467,24 @@ function buildGbAcquisitionFormulaCore(
   if (!landStd || !buildingStd || !acqLandStd || !acqB1Std) return undefined;
 
   if (isLandProp(p.propertyId)) {
-    return buildAllocationFormula(p.transferPrice, acqLandStd, [landStd], p.acquisitionPrice);
+    // §164⑨ 1호 공익수용 — 엔진은 토지 환산 분모를 낮춘 값으로 쓴다(`calculateConvertedAcquisition`). 원 기준시가를 적으면 산식 ≠ 값.
+    const exprDetail = gb.expropriationValuationDetail;
+    const exprDenom = exprDetail?.denominator;
+    // 특례 게이트만 통과하고 ㎡당 기준시가가 그대로 최소값이면 «낮춘 값»이 아니다 — 그때는 특례 적용 분모라고만 적는다.
+    const exprLowered = exprDetail !== undefined && exprDetail.chosenPerSqm < exprDetail.perSqmCandidates.standard;
+    const exprNote =
+      exprDenom === undefined
+        ? ""
+        : exprLowered
+          ? ` (분모: 양도 당시 토지기준시가를 ${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_1} 공익수용 특례로 낮춘 값)`
+          : ` (분모: ${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_1} 공익수용 특례 적용 — 양도 당시 토지기준시가가 가장 적은 금액)`;
+    const landDenom = exprDenom ?? landStd;
+    // 토지 두 장이면 엔진은 토지 전체 양도가액을 환산한 뒤 가른다 — 카드 몫 양도가액을 환산하면 ±원 어긋난다(후보 ⑤).
+    const acqSplit = landAcqSplit(p, gb);
+    const transferWhole = gbLandSplitTail(p, gb)?.whole;
+    return acqSplit && transferWhole !== undefined
+      ? withLandSplitTail(`${buildAllocationFormula(transferWhole, acqLandStd, [landDenom], acqSplit.whole)}${exprNote}`, acqSplit)
+      : `${buildAllocationFormula(p.transferPrice, acqLandStd, [landDenom], p.acquisitionPrice)}${exprNote}`;
   }
   if (isBuildingProp(p.propertyId)) {
     return buildAllocationFormula(p.transferPrice, acqB1Std, [buildingStd], p.acquisitionPrice);
@@ -717,7 +756,10 @@ export function buildGbExpenseFormula(
     if (isActualPart) return actualPartFormula();
     if (!gb.acqLandStdTotal) return undefined;
     // base는 엔진 echo(지분 기준시가) 우선 — 100% 값을 쓰면 지분 자산에서 산식이 값을 못 만든다.
-    return `취득시 토지기준시가 ${fmt(gb.estimatedDeduction?.landBase ?? gb.acqLandStdTotal)} × ${dedRatePct(gb.estimatedDeduction?.landRate)} = ${fmt(displayExp)}`;
+    const head = `취득시 토지기준시가 ${fmt(gb.estimatedDeduction?.landBase ?? gb.acqLandStdTotal)} × ${dedRatePct(gb.estimatedDeduction?.landRate)} = `;
+    // 토지 두 장이면 base는 토지 전체라 우변도 전체 개산공제이고 카드 값은 그 몫이다(후보 ⑤).
+    const expSplit = gbLandSplitTail(p, gb, (c) => c.expenses, displayExp);
+    return expSplit ? withLandSplitTail(`${head}${fmt(expSplit.whole)}`, expSplit) : `${head}${fmt(displayExp)}`;
   }
   if (isBuildingProp(p.propertyId)) {
     if (isActualPart) return actualPartFormula();
