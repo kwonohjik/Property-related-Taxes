@@ -30,6 +30,7 @@ import { BundledAllocationCard } from "@/components/calc/results/BundledAllocati
 import { collectSaleSplitUnenteredNotices } from "@/components/calc/results/transfer/sale-split-unentered-notice";
 import { classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import {
   GB_SAMPLES,
   LAND,
@@ -88,7 +89,8 @@ describe("블록 6종 — 함께 양도 자산별 묶음 = 단건", () => {
     renderCard(r, f);
     const block = within(screen.getByTestId("gb-result-blocks-primary"));
     expect(block.getByText(/토지분 취득가액/).closest("li")!.textContent).toBe("토지분 취득가액(상속개시일 평가액)300,000,000");
-    expect(block.getByText(/건물분 취득가액/).closest("li")!.textContent).toBe("건물분 취득가액(상속개시일 평가액)150,000,000");
+    // 건물 평가액 1억 < 영 §164⑤ 가액 1.5억 → 단서 2호 채택 — 카드 echo를 따른다(R-c07-03 · 종전 「(상속개시일 평가액)」은 거짓 라벨).
+    expect(block.getByText(/건물분 취득가액/).closest("li")!.textContent).toBe("건물분 취득가액(영 §164 가액)150,000,000");
   });
 
   it("§97②2호 단서 — 자산별 비교값 269,553,853 < 510,000,000", async () => {
@@ -124,11 +126,11 @@ describe("3-way 표 — 자산별 · 결손 통산 합계(Q-2 a)", () => {
     const f = bundledForm("EXT3");
     renderCard(await run(f), f);
     const bundled = threeWay().textContent!.replace(" — 주 자산", "");
-    const beforeOffset = (t: string) => t.slice(0, t.indexOf("결손 통산 (영§102②)"));
+    const beforeOffset = (t: string) => t.slice(0, t.indexOf(`결손 통산 (${TRANSFER.LOSS_OFFSET})`));
     expect(beforeOffset(bundled)).toBe(beforeOffset(single));
-    expect(single).toContain("결손 통산 (영§102②)△6,944,851△568,478+7,513,3290통산 후");
+    expect(single).toContain(`결손 통산 (${TRANSFER.LOSS_OFFSET})△6,944,851△568,478+7,513,3290통산 후`);
     // 5,599,450 + 458,349 + 1,455,530 = 7,513,329
-    expect(bundled).toContain("결손 통산 (영§102②)△5,599,450△458,349+7,513,329+1,455,530통산 후");
+    expect(bundled).toContain(`결손 통산 (${TRANSFER.LOSS_OFFSET})△5,599,450△458,349+7,513,329+1,455,530통산 후`);
   });
 
   it("단건 결손 → 통산 합계 0 · 「통산 전후 동일」 각주 그대로", async () => {
@@ -137,13 +139,14 @@ describe("3-way 표 — 자산별 · 결손 통산 합계(Q-2 a)", () => {
     const t = threeWay().textContent!;
     expect(t).toContain("+429,821,909+7,513,3290통산 후");
     expect(t).toContain("양도소득금액 합계는 통산 전후 동일하지만");
+    expect(t).not.toContain("통산 못한 결손 소멸"); // R-c07-04 — 결손이 다 넘어가면 소멸 행 없음
   });
 
   it("🔴 함께 양도 결손이 다른 자산으로 넘어감 → 합계 +90,227,707 · 각주 교체(종전 하드코딩 0은 거짓)", async () => {
     const f = bundledForm("EXT-LOSS");
     renderCard(await run(f), f);
     const t = threeWay().textContent!;
-    expect(t).toContain("결손 통산 (영§102②)△347,107,531+429,821,909+7,513,329+90,227,707");
+    expect(t).toContain(`결손 통산 (${TRANSFER.LOSS_OFFSET})△347,107,531+429,821,909+7,513,329+90,227,707`);
     expect(t).toContain("결손 중 90,227,707은 함께 양도한 다른 자산의 양수 소득에 흡수되어");
     expect(t).not.toContain("통산 전후 동일");
   });

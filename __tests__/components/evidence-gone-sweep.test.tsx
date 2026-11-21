@@ -57,9 +57,11 @@ describe("#14 — 인과 설명이 「일반 §97의 기준 = 상속개시일 �
 
 /* ── #16 — §102② 결손 통산 행이 결손 자산을 하드코딩하지 않는다 ─────────────── */
 
+/** 3자산 표는 열을 카드 id로 고른다(R-c07-01) — 엔진 카드 id를 쓴다. */
+const LEG_ID: Record<string, string> = { "토지(1001)": "land", "건물(3001)": "building1", "증축건물(3002)": "building2" };
 const leg = (label: string, income: number, same = 0, other = 0) =>
   ({
-    propertyId: label,
+    propertyId: LEG_ID[label] ?? label,
     propertyLabel: label,
     income,
     incomeAfterOffset: income + same + other,
@@ -81,7 +83,8 @@ const agg3way = (
   land: unknown,
   b1: unknown,
   b2: unknown,
-) => ({ properties: [land, b1, b2] }) as never;
+  lossOffsetTable: { fromPropertyId: string; toPropertyId: string; amount: number }[] = [],
+) => ({ properties: [land, b1, b2], lossOffsetTable }) as never;
 
 describe("#16 — 결손이 토지에서 나도 표가 성립한다", () => {
   it("🔑 C-1: 토지가 결손이면 토지 행에 **기여분(+)** 이 뜬다 — 「-」로 사라지지 않는다", () => {
@@ -91,6 +94,10 @@ describe("#16 — 결손이 토지에서 나도 표가 성립한다", () => {
           leg("토지(1001)", -50_000_000),
           leg("건물(3001)", 80_000_000, 0, 30_000_000),
           leg("증축건물(3002)", 40_000_000, 0, 20_000_000),
+          [
+            { fromPropertyId: "land", toPropertyId: "building1", amount: 30_000_000 },
+            { fromPropertyId: "land", toPropertyId: "building2", amount: 20_000_000 },
+          ],
         )}
       />,
     );
@@ -104,6 +111,10 @@ describe("#16 — 결손이 토지에서 나도 표가 성립한다", () => {
           leg("토지(1001)", 80_000_000, 0, 30_000_000),
           leg("건물(3001)", -50_000_000),
           leg("증축건물(3002)", 40_000_000, 0, 20_000_000),
+          [
+            { fromPropertyId: "building1", toPropertyId: "land", amount: 30_000_000 },
+            { fromPropertyId: "building1", toPropertyId: "building2", amount: 20_000_000 },
+          ],
         )}
       />,
     );

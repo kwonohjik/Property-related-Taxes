@@ -8,6 +8,7 @@
  *  - 둘 다 없으면(저장된 옛 결과) 빈 목록 — 종전처럼 미표시.
  */
 import type { GeneralBuildingOutput } from "@/lib/tax-engine/general-building-valuation";
+import type { GbSec1639Basis } from "@/lib/tax-engine/types/general-building.types";
 import type {
   AggregateTransferResult,
   GbShareBlockEcho,
@@ -43,6 +44,8 @@ export interface GbShareBlockView extends GbShareBlockEcho {
   partAcquisitionPrice: (kind: "land" | "building") => number | undefined;
   /** 그 지분의 파트 카드가 ③(추계)으로 계산됐는가 — ①②③ echo가 없을 때의 상속 라벨 근거. */
   partConverted: (kind: "land" | "building") => boolean;
+  /** 그 지분 파트 카드의 §163⑨ 근거 echo(본문 평가액 / 단서 §164 가액) — 구 이력은 `undefined`(R-c07-03). */
+  partSec1639Basis: (kind: "land" | "building") => GbSec1639Basis | undefined;
 }
 
 /** 파트 카드 중 §163⑨ 블록의 토지분·건물분 — 증축분(건물2)은 상속 대상이 아니라 뺀다(`partConverted`와 같은 축). */
@@ -74,6 +77,7 @@ function shareBlockViews(
           return card ? cardAcquisitionPriceWithPieces(properties, card.propertyId) : undefined;
         },
         partConverted: (kind) => !!partCard(kind)?.usedEstimatedAcquisition,
+        partSec1639Basis: (kind) => partCard(kind)?.sec1639Basis,
       } satisfies GbShareBlockView;
     });
 }

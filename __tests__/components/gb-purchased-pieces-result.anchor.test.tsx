@@ -80,7 +80,7 @@ describe("R-2 ★ 3-자산 요약 표 — 증축 케이스 + 꼬리 카드", () 
     card("building2", "증축건물2(3002)", { transferPrice: 200_000_000, acquisitionPrice: 100_000_000 }),
   ];
   const tail = card("land__purchased", "토지(1001)(매입분)", { transferPrice: 125_000_000, acquisitionPrice: 100_000_000, income: 50, incomeAfterOffset: 50 });
-  const agg = (props: Card[]) => ({ properties: props }) as unknown as AggregateTransferResult;
+  const agg = (props: Card[]) => ({ properties: props, lossOffsetTable: [] }) as unknown as AggregateTransferResult;
   it("카드 3장 → 표가 보인다(회귀 0)", () => {
     render(<GeneralBuilding3WayTable aggregated={agg(three)} />);
     expect(screen.getByText(/일반건물 3-자산 요약/)).toBeTruthy();

@@ -139,7 +139,8 @@ describe("§163⑨ 블록 — 라벨·문구가 엔진 채택을 따른다", () 
 
   it("1988 상속 — 보충 문장 없음(회귀 0)", async () => {
     const text = await view(form([asset(1, INH, { landAcquisitionDate: "1988-05-01", acquisitionDate: "1988-05-01" })]));
-    expect(text).toContain("토지분 취득가액(상속개시일 평가액)");
+    // 1990.8.30. 전 상속 토지 — 평가액 5천만 < 영 §164④ 가액 → 단서 1호 채택(카드 echo · R-c07-03). 종전 「(상속개시일 평가액)」은 거짓 라벨.
+    expect(text).toContain("토지분 취득가액(영 §164 가액)");
     expect(text).not.toContain(NOTE);
   });
 });

@@ -26,6 +26,8 @@ import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
 import { buildBgAcquisitionFormula, buildBgExpenseFormula, bgOwnerSplitPerAssetFormulas } from "./DetailedStatementBgFormulas";
 import { buildGbCarryoverExpenseFormula } from "./DetailedStatementGbCarryoverFormulas";
 import { apportionByStdPrice } from "@/lib/tax-engine/std-price-apportion";
+import { buildGbNonStdTransferFormula } from "./gb-sale-split-transfer-formula";
+import { gbLandSplitTail } from "./gb-sale-split-transfer-formula";
 
 /**
  * 묶음 카드별 명세(`cards`)가 있으면 이 파트 카드가 속한 지분·자산의 명세를 읽는다 — 카드 id 접미사(`land#0` → `0`)가 `cards[].propertyId`와 같다
@@ -177,6 +179,10 @@ export function buildGbTransferFormula(
     }
   }
 
+  // R-c05-01 — 구분 기재 채택·감정가액 안분은 기준시가 안분식이 등식이 아니다(그 값을 적는다).
+  const nonStd = gb ? buildGbNonStdTransferFormula(p, gb, totalTransferPrice) : undefined;
+  if (nonStd) return nonStd;
+
   // 일반건물(사례 31·33) 분기 — gbDetail 존재 시 §166⑥ 안분 산식
   if (gb && gb.landStdTotal && gb.buildingStdTotal) {
     const landStd = gb.landStdTotal;
@@ -188,7 +194,11 @@ export function buildGbTransferFormula(
         : [landStd, buildingStd];
 
     if (isLandProp(p.propertyId)) {
-      return buildAllocationFormula(totalTransferPrice, landStd, denomParts, p.transferPrice);
+      // 토지 두 장(사업용·비사업용 초과분)이면 안분식 우변은 토지 전체 값이고, 카드 값은 그 몫이다(R-c05-01 형제).
+      const landSplit = gbLandSplitTail(p, gb);
+      return landSplit
+        ? `${buildAllocationFormula(totalTransferPrice, landStd, denomParts, landSplit.whole)}\n        ${landSplit.tail}${landSplit.residual ? " (비사업용 초과분 · 잔액)" : ""}`
+        : buildAllocationFormula(totalTransferPrice, landStd, denomParts, p.transferPrice);
     }
     if (isBuildingProp(p.propertyId)) {
       return buildAllocationFormula(totalTransferPrice, buildingStd, denomParts, p.transferPrice);

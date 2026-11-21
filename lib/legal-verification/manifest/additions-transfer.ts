@@ -570,6 +570,13 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // transfer.ts SPLIT_DECLARED_VALUE — 토지·건물 등 함께 양도 시 각각 구분 기장 (KoreanLaw 실측 2026-11-21, 소득세법 MST 280405 시행 2026-01-01 본문)
+    id: "TRANSFER.SPLIT_DECLARED_VALUE",
+    citation: "소득세법 §100",
+    keywords: ["토지와 건물 등을 함께 취득하거나 양도한 경우에는 이를 각각 구분하여 기장하되"],
+    keywordMode: "ALL",
+  },
+  {
     // transfer.ts SPLIT_DEEMED_UNCLEAR — 토지·건물 구분 기장 가액 30% 이상 차이 → 불분명 의제 (KoreanLaw 실측, 소득세법 시행 2026-01-01 본문)
     id: "TRANSFER.SPLIT_DEEMED_UNCLEAR",
     citation: "소득세법 §100",
