@@ -136,6 +136,14 @@ describe("단건 — 미채택 요약·비교 카드 B 열은 §159 슬롯 취�
       expect(c.unadoptedText).toContain("취득가액 (수증자 취득가 × 채무비율 · 소령 §159①1호)" + acq.toLocaleString());
       expect(c.unadoptedText).not.toContain("증여 당시 평가액");
     }
+    // 결과뷰 리뷰 R-c04-03 — A 열도 §159 안분값이라 B와 같은 성격 표기(종전 「당초 증여자 취득가」 · 「증여자 취득 당시」)
+    const aAcq = c.co.scenarioA.acquisitionPrice.toLocaleString();
+    expect(c.co.scenarioA.acquisitionIsBurdenedGiftShare).toBe(true);
+    expect(c.compare).toContain("취득가액 [당초 증여자 취득가 × 채무비율 · 소령 §159①1호]" + aAcq);
+    if (adopted === "B") {
+      expect(c.unadoptedText).toContain("취득가액 (증여자 취득 당시 가액 × 채무비율 · 소령 §159①1호)" + aAcq);
+      expect(c.unadoptedText).toContain("취득가액 = 증여자 취득 당시 가액 × 채무비율(소령 §159①1호)");
+    }
   });
 
   it("주택(토지 100M · 건물 50M) — B 취득가액 60,000,000 · 라벨", async () => {
@@ -156,6 +164,7 @@ describe("단건 — 미채택 요약·비교 카드 B 열은 §159 슬롯 취�
       scenarioA: { acquisitionPrice: 100_000_000, holdingPeriodYears: 14, giftTaxAddedToExpense: 0, giftTaxLimitApplied: false, giftTaxLimitCap: 0, donorCapexAddedToExpense: 0, donorCapexGuardApplied: false, effectiveCapex: 0, transferGain: 300_000_000, determinedTax: 2 } };
     const cmp = norm(render(<CarryoverComparisonCard detail={detail as never} />).container);
     expect(cmp).toContain("취득가액 [증여 당시 평가액]300,000,000");
+    expect(cmp).toContain("취득가액 [당초 증여자 취득가]100,000,000");
   });
 });
 

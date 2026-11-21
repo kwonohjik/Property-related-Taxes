@@ -113,3 +113,43 @@ describe("토지 출자 명세서 — ② 인가후 분 슬롯", () => {
     expect(f).not.toContain("청산금");
   });
 });
+
+/**
+ * 결과뷰 리뷰 R-c05-08 — ① 인가전 분 개산공제 산식이 「100% 공시지가 × 3%」로 고정돼 지분·미등기에서 거짓 등식이었다
+ * (지분 0.5 「200,000,000 × 3% = 3,000,000」 · 미등기 「200,000,000 × 3% = 600,000」). base·율은 엔진 echo. 세액은 바뀌지 않는다.
+ */
+describe("토지 출자 명세서 — ① 인가전 분 개산공제 base·율 echo (R-c05-08)", () => {
+  const preExpense = (extra: Partial<TransferTaxInput>) => {
+    const result = calculateTransferTax({ ...landContribInput(), ...extra }, rates);
+    const items = new Map<string, StatementItem>([["expenses", { label: "필요경비", value: 0 } as StatementItem]]);
+    applyLandContribOverrides(items, result.redevelopmentDetail!, TRANSFER_PRICE);
+    return {
+      formula: items.get("expenses")!.perAsset![0].formula,
+      lcd: result.redevelopmentDetail!.landContribDetail!,
+      rationale: result.redevelopmentDetail!.valuationMeta?.rationale ?? "",
+    };
+  };
+
+  it("LC-1 전체 소유 — 200,000,000 × 3% = 6,000,000 (종전과 같다)", () => {
+    expect(preExpense({}).formula).toBe("200,000,000 × 3% = 6,000,000 (1원 미만 절사)");
+  });
+
+  it("LC-2 지분 1/2 — 지분 기준시가 100,000,000 × 3% = 3,000,000", () => {
+    const r = preExpense({ ownershipRatio: 0.5 });
+    expect(r.lcd.estimatedDeductionBase).toBe(100_000_000);
+    expect(r.formula).toBe("100,000,000 × 3% = 3,000,000 (1원 미만 절사)");
+  });
+
+  it("LC-3 미등기 — 200,000,000 × 0.3% = 600,000 (§163⑥1호 괄호 3/1000)", () => {
+    const r = preExpense({ isUnregistered: true });
+    expect(r.lcd.estimatedDeductionRate).toBe(0.003);
+    expect(r.formula).toBe("200,000,000 × 0.3% = 600,000 (1원 미만 절사)");
+    // 형제 경로 — RedevelopmentDetailCard 「환산취득가 적용 · rationale」도 같은 율(리뷰 mustFix · 종전 「× 3% = 600,000」).
+    expect(r.rationale).toContain("200,000,000 × 0.3% = 600,000");
+    expect(r.rationale).not.toContain("× 3%");
+  });
+
+  it("LC-4 등기 — rationale 율은 3% 그대로", () => {
+    expect(preExpense({}).rationale).toContain("200,000,000 × 3% = 6,000,000");
+  });
+});

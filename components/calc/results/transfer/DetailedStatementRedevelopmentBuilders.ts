@@ -322,9 +322,8 @@ export function buildRedevAcquisitionFormula(
       const settle = redev.settlement.apportionedTransfer;
       const rights = (redev.salePriceTotal ?? 0) + settle;
       const apportioned = redev.settlement.apportionedAcquisition;
-      // 종전 취득가액 = apportioned × rights / settle (역산)
-      const oldAcq = settle > 0 ? Math.round((apportioned * rights) / settle) : 0;
-      return `안분 취득가액 = ${fmt(oldAcq)} × (${fmt(settle)} ÷ ${fmt(rights)}) = ${fmt(apportioned)} (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE} — 종전 취득가 × 청산금 ÷ 권리가액, 1원 미만 절사)`;
+      // 종전 취득가액은 입력값이라 곱 앞의 항을 문자로 둔다(동시신고 분기와 같다) — 안분값에서 역산하면 엔진의 절사 때문에 입력값으로 돌아오지 않는다.
+      return `안분 취득가액 = 종전 취득가액 × (청산금 ${fmt(settle)}) ÷ (권리가액 ${fmt(rights)}) = ${fmt(apportioned)} (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE}, 1원 미만 절사)`;
     }
     return RECEIVE_ONLY_ZERO_FORMULA;
   }

@@ -129,7 +129,7 @@ function ScenarioAContent({ a, adopted, filingUnit, compared }: {
         ) : (
           <>
             {/* 소유자 분리 — 양도차익이 본인 파트 값이므로 취득가액도 본인 파트 값(엔진 echo · 계획서 V-4) */}
-            <InfoRow label={`취득가액 [${a.acquisitionIsRedevelopmentFiling ? "신고서 취득가액 · 인가 전·후 분 합 · 소령 §166①1호" : "당초 증여자 취득가"}${a.ownerSplitPart ? " · 본인 소유 파트" : ""}]`} value={fmt(a.ownerSplitPart?.acquisitionPrice ?? a.acquisitionPrice)} />
+            <InfoRow label={`취득가액 [${a.acquisitionIsRedevelopmentFiling ? "신고서 취득가액 · 인가 전·후 분 합 · 소령 §166①1호" : a.acquisitionIsBurdenedGiftShare ? "당초 증여자 취득가 × 채무비율 · 소령 §159①1호" : "당초 증여자 취득가"}${a.ownerSplitPart ? " · 본인 소유 파트" : ""}]`} value={fmt(a.ownerSplitPart?.acquisitionPrice ?? a.acquisitionPrice)} />
             <InfoRow label="보유기간 [당초 증여자 기산]" value={`${a.holdingPeriodYears}년`} />
             <InfoRow label="양도차익" value={fmt(a.transferGain)} />
           </>
@@ -150,7 +150,7 @@ function ScenarioAContent({ a, adopted, filingUnit, compared }: {
         )}
         {a.donorCapexGuardApplied && (
           <p className="text-micro text-amber-700 pl-2 dark:text-amber-400">
-            * 증여자 자본적지출: 2024.1.1. 이전 양도 — 가드 발동, 0 처리
+            * 2024.1.1. 전 양도 — 증여자 자본적지출 불산입 (§97조의2 ① 2호 시행일)
           </p>
         )}
         {/**
@@ -343,7 +343,7 @@ export function CarryoverComparisonCard({ detail }: Props) {
       {/* 하단 요약 */}
       <div className="rounded-md border-t pt-3 space-y-1 text-xs text-muted-foreground">
         <div className="flex justify-between font-semibold text-foreground text-sm">
-          <span>채택 시나리오: {detail.adoptedScenario} ({detail.adoptedScenario === "A" ? "이월과세 적용" : "비교과세 미적용"})</span>
+          <span>채택 시나리오: {detail.adoptedScenario} ({detail.adoptedScenario === "A" ? "이월과세 적용" : "이월과세 미적용"})</span>
           {filing === undefined && scenariosComputed && (
             <span data-testid="carryover-filing-tax">
               {compared
@@ -359,11 +359,11 @@ export function CarryoverComparisonCard({ detail }: Props) {
             </p>
             <div className="flex justify-between text-sky-900 tabular-nums dark:text-sky-200">
               <span>이월과세 적용 시</span>
-              <span>{fmt(filing.determinedTaxWithCarryover)}</span>
+              <span className="font-mono tabular-nums whitespace-nowrap">{fmt(filing.determinedTaxWithCarryover)}</span>
             </div>
             <div className="flex justify-between text-sky-900 tabular-nums dark:text-sky-200">
               <span>적용하지 않을 시</span>
-              <span>{fmt(filing.determinedTaxWithout)}</span>
+              <span className="font-mono tabular-nums whitespace-nowrap">{fmt(filing.determinedTaxWithout)}</span>
             </div>
             <p className="text-sky-700 dark:text-sky-300">
               {detail.scenarioA.purchasedPartSplit

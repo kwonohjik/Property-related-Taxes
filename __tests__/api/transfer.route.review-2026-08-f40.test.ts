@@ -175,6 +175,7 @@ describe("F40 — 컴패니언 §164⑨ 특례 배관 (④ transferCause emit + 
       chosenPerSqm: 1_500_000,
       area: 200,
       denominator: 300_000_000,
+      standardKind: "land",
     });
 
     // (261,866,668 × 2 − 2,500,000) × 42% − 35,400,000 = 183,518,001 (A1a 전 189,017,200)

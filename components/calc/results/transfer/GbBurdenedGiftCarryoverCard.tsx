@@ -97,7 +97,7 @@ export function GbBurdenedGiftCarryoverCard({ detail, assetLabel }: { detail: De
 
       <div className="rounded-md border-t pt-3 space-y-1 text-xs text-muted-foreground">
         <div className="flex flex-wrap justify-between gap-2 font-semibold text-foreground text-sm">
-          <span>채택 시나리오: {detail.adoptedScenario} ({adoptedA ? "이월과세 적용" : "비교과세 미적용"})</span>
+          <span>채택 시나리오: {detail.adoptedScenario} ({adoptedA ? "이월과세 적용" : "이월과세 미적용"})</span>
           {!perAsset && (
             <span data-testid="gb-bg-carryover-filing-tax">신고세액 = 시나리오 A·B 중 큰 금액 = {formatKRW(adoptedTax)}</span>
           )}

@@ -27,6 +27,9 @@ import {
   buildRedevPerAssetForIncome,
 } from "./DetailedStatementRedevelopmentBuilders";
 
+/** 개산공제율 표시 — 엔진 echo(§163⑥ 3/100 · 미등기 3/1000). */
+const lumpRatePct = (rate: number): string => `${(rate * 100).toFixed(1).replace(/\.0$/, "")}%`;
+
 // ──────────────────────────────────────────────────────────────────────────────
 // 진입 헬퍼 — DetailedStatementHelpers.ts buildStatementItems()에서 1줄 호출
 // ──────────────────────────────────────────────────────────────────────────────
@@ -134,7 +137,8 @@ export function applyLandContribOverrides(
         label: "① 인가전 분 (§163⑥)",
         value: pre.expenses ?? lcd.estimatedDeduction,
         formula:
-          `${fmt(lcd.landStdPriceAtAcq)} × 3% = ${fmt(lcd.estimatedDeduction)} (1원 미만 절사)` +
+          // base·율은 엔진 echo(지분 기준시가 · 미등기 3/1000) — echo가 없는 옛 결과만 100% 공시지가 × 3%로 적는다.
+          `${fmt(lcd.estimatedDeductionBase ?? lcd.landStdPriceAtAcq)} × ${lumpRatePct(lcd.estimatedDeductionRate ?? 0.03)} = ${fmt(lcd.estimatedDeduction)} (1원 미만 절사)` +
           (giftTax > 0 ? ` + 이월과세 증여세 상당액 ${fmt(giftTax)} (소득세법 §97의2①3호) = ${fmt(pre.expenses ?? 0)}` : ""),
       },
       {
@@ -413,8 +417,8 @@ export function applyRedevelopmentOverrides(
   const incomeItem = items.get("incomeAmount");
   if (incomeItem) {
     incomeItem.formula = isReceiveOnly
-      ? "청산금 수령분 양도차익 − 장기보유특별공제 (음수 시 0)"
-      : "재개발 §166 분할별 (양도차익 − 장기보유특별공제) 합 (음수 시 0)";
+      ? "청산금 수령분 양도차익 − 장기보유특별공제"
+      : "재개발 §166 분할별 (양도차익 − 장기보유특별공제) 합";
     incomeItem.legalBasis = "소득세법 §95①";
     incomeItem.perAsset = buildRedevPerAssetForIncome(redev, subject, settlementDirection);
   }

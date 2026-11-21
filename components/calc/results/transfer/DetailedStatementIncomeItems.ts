@@ -91,7 +91,7 @@ export function setIncomeAndBasicDeductionItems(
     label: "양도소득금액",
     value: isAggregate ? sumIncome : singleIncome,
     formula:
-      incomeStep?.formula ?? "과세대상 양도차익 − 장기보유특별공제 (음수 시 0)",
+      incomeStep?.formula ?? "과세대상 양도차익 − 장기보유특별공제",
     legalBasis: incomeStep?.legalBasis ?? "소득세법 §95①",
     note: isAggregate
       ? "다건 모드: §102② 차손통산(같은 그룹 우선·타군 안분) 후의 자산별 합계"

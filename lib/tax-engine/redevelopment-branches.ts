@@ -12,6 +12,7 @@
  */
 
 import { computeLumpSumDeductionBase, calculateHoldingPeriod, safeMultiplyThenDivide } from "./tax-utils";
+import { estimatedDeductionRate } from "./legal-codes";
 import {
   computeRedevelopmentSplit,
   preApprovalNecessaryExpense,
@@ -31,6 +32,10 @@ import type {
 } from "./types/transfer-redevelopment.types";
 
 import { isLandContributedNewBuild, resolveRedevEffectiveOneHouseSingle, resolveRightResidenceMonths } from "./redevelopment-lthd";
+
+/** rationale 표시용 개산공제율(미등기 3/1000) — `estimatedDeductionRate` 단일 판정점. 「× 3%」 고정은 미등기에서 거짓 등식이 된다. */
+const lumpRatePct = (isUnregistered?: boolean): string =>
+  `${(estimatedDeductionRate(isUnregistered) * 100).toFixed(1).replace(/\.0$/, "")}%`;
 
 export function toBranchHolding(
   from: Date,
@@ -212,7 +217,7 @@ export function runLandContribEstimated(
         input.ownershipRatio,
       ),
       denominator: redevelopment.landStdPriceAtApproval,
-      rationale: `§166③ 토지 환산취득가 = 권리가액 ${redevelopment.rightsValue.toLocaleString()} × 취득시공시지가 ${(redevelopment.landStdPriceAtAcq ?? 0).toLocaleString()} / 인가시공시지가 ${(redevelopment.landStdPriceAtApproval ?? 0).toLocaleString()} = ${landResult.convertedAcquisition.toLocaleString()} / 개산공제 §163⑥ = ${computeLumpSumDeductionBase(redevelopment.landStdPriceAtAcq ?? 0, input.ownershipRatio).toLocaleString()} × 3% = ${landResult.estimatedDeduction.toLocaleString()}`,
+      rationale: `§166③ 토지 환산취득가 = 권리가액 ${redevelopment.rightsValue.toLocaleString()} × 취득시공시지가 ${(redevelopment.landStdPriceAtAcq ?? 0).toLocaleString()} / 인가시공시지가 ${(redevelopment.landStdPriceAtApproval ?? 0).toLocaleString()} = ${landResult.convertedAcquisition.toLocaleString()} / 개산공제 §163⑥ = ${computeLumpSumDeductionBase(redevelopment.landStdPriceAtAcq ?? 0, input.ownershipRatio).toLocaleString()} × ${lumpRatePct(input.isUnregistered)} = ${landResult.estimatedDeduction.toLocaleString()}`,
     },
     estimatedLumpDeduction: landResult.estimatedDeduction,
     ...(landResult.carryoverGiftTaxApplied !== undefined
@@ -222,6 +227,9 @@ export function runLandContribEstimated(
     landContribDetail: {
       convertedAcquisition: landResult.convertedAcquisition,
       estimatedDeduction: landResult.estimatedDeduction,
+      // 개산공제 산식 표시 base·율 — 엔진이 실제로 쓴 지분 기준시가와 율(미등기 3/1000). 100% 공시지가 × 3%로 적으면 지분·미등기에서 거짓 등식이 된다.
+      estimatedDeductionBase: computeLumpSumDeductionBase(redevelopment.landStdPriceAtAcq ?? 0, input.ownershipRatio),
+      estimatedDeductionRate: estimatedDeductionRate(input.isUnregistered),
       landStdPriceAtAcq: redevelopment.landStdPriceAtAcq ?? 0,
       landStdPriceAtApproval: redevelopment.landStdPriceAtApproval ?? 0,
       preApprovalLTHD: landResult.preApprovalLTHD,
@@ -402,7 +410,7 @@ export function runHousingContribReceiveEstimated(
         ` × 취득시PHD ${(redevelopment.housingStdPriceAtAcq ?? 0).toLocaleString()}` +
         ` / 인가시PHD ${(redevelopment.housingStdPriceAtApproval ?? 0).toLocaleString()}` +
         ` = ${housingResult.convertedAcquisition.toLocaleString()}` +
-        ` / 개산공제 §163⑥ = ${computeLumpSumDeductionBase(redevelopment.housingStdPriceAtAcq ?? 0, input.ownershipRatio).toLocaleString()} × 3%` +
+        ` / 개산공제 §163⑥ = ${computeLumpSumDeductionBase(redevelopment.housingStdPriceAtAcq ?? 0, input.ownershipRatio).toLocaleString()} × ${lumpRatePct(input.isUnregistered)}` +
         ` = ${housingResult.estimatedDeduction.toLocaleString()}`,
     },
     estimatedLumpDeduction: housingResult.estimatedDeduction,
