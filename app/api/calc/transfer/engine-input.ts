@@ -11,6 +11,7 @@
  * Date 변환은 호출부(route.ts)가 `toDate`로 끝낸 값을 인자로 받는다 —
  * 이 모듈은 `toOptionalDate`만 자체 호출한다(`lib/api/date-coerce.ts` 필수 경로).
  */
+import { toEngineAppurtenantExcessFacts } from "@/lib/api/appurtenant-excess-coerce";
 import { toEngineOneHouseExemptionProviso } from "@/lib/api/exemption-proviso-coerce";
 import { toEngineFinalHouseRestart } from "@/lib/api/final-house-restart-coerce";
 import type { z } from "zod";
@@ -70,6 +71,8 @@ export function buildTransferEngineInput(
     sameAdjustmentPeriod: data.sameAdjustmentPeriod,
     // ⑭ §164⑨ 특례 (TS 미감지 침묵 strip 주의): 1호 per-sqm(가~다목)·2호 공매경락·1호 주택총액(라목)
     transferCause: data.transferCause,
+    // ⑭ NBL2611-C4 — 배율 초과분 수용 의제·유예 사실(⑫ 스키마 `appurtenantExcessFacts`). 누락 시 침묵 strip.
+    appurtenantExcessFacts: toEngineAppurtenantExcessFacts(data.appurtenantExcessFacts),
     standardPricePerSqmAtTransfer: data.standardPricePerSqmAtTransfer,
     transferArea: data.transferArea,
     compensationPerSqm: data.compensationPerSqm, compensationBasisStdPrice: data.compensationBasisStdPrice,

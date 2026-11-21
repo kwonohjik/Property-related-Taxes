@@ -9,6 +9,7 @@
 import type { BusinessUsePeriod, ZoneType } from "./types";
 import type { SPORTS_OUTDOOR_STD, SPORTS_INDOOR_STD, RESERVE_FORCES_STD } from "./data/area-standards";
 import type { EmployeeSportsFacilityUsage } from "../factory-employee-sports-standard";
+import type { PropertyTaxBasis } from "./property-tax-basis";
 
 export interface PastureUsage {
   isLivestockOperator: boolean;
@@ -58,25 +59,31 @@ export type PropertyTaxType =
   | "comprehensive";
 
 /**
- * §168의11① 호별 분기 — 면적기준 정밀판정.
- * 면적기준 자동산출: parking_garage(최저차고×1.5)·youth_training(수용정원×200㎡)·
- * hatchang(최대면적×1.2)·vacant_lot_1household(660㎡ 고정).
- * 별표 직접입력(standardAreaLimit): sports(별표3/4/5)·parking_attached(설치기준면적)·
- * reserve_forces(별표6제2호)·resort(휴양시설업 합산면적).
- * 면적기준 없음(boolean 유지): etc_14호(유사토지)·none.
+ * §168의11① 호별 분기. **호 목록·요건·면적 산식·근거·필요 입력은 `other-land-ho-meta.ts` 한 표가 단일 소스**다
+ * (그 표가 `satisfies Record<NblRelatedBusinessType, …>`라 이 union과 어긋나면 컴파일 오류 — NBL2611-V7-S).
+ * 면적기준 자동산출: parking_garage(최저차고×1.5)·youth_training(수용정원×200㎡)·hatchang(최대면적×1.2)·vacant_lot_1household(660㎡ 고정).
+ * 별표 직접입력(standardAreaLimit): sports(별표3/4/5)·parking_attached(설치기준면적)·reserve_forces(별표6제2호)·resort(휴양시설업 합산면적).
+ * 면적기준 없음(호 요건은 자기 선언): sports_facility_business·stadium_operation·private_investment_land·aggregate_extraction·waste_treatment·fish_farm_licensed.
+ * etc_14호 = 14호(위임 규칙 항 없음) — 선택해도 사업용으로 인정하지 않는다(Q-5 (나)).
  * 수입금액비율(2호다·10·11다·12호)은 §168의11② revenueTest 별도 경로.
  */
 export type NblRelatedBusinessType =
-  | "sports"                // 1호 체육시설 (별표3/4/5 — standardAreaLimit 직접입력)
-  | "parking_attached"      // 2호 가목 부설주차장 (설치기준면적 직접입력)
-  | "parking_garage"        // 2호 나목 업무용자동차 주차장 (최저차고기준면적 × 1.5)
-  | "youth_training"        // 4호 청소년수련시설 (수용정원 × 200㎡ 초과 제외)
-  | "reserve_forces"        // 5호 다목 예비군훈련 (별표6 제2호 — standardAreaLimit)
-  | "resort"                // 6호 휴양시설업 (합산 기준면적 직접입력)
-  | "hatchang"              // 7호 하치장·야적장 (최대면적 × 120%)
-  | "vacant_lot_1household" // 13호 무주택1세대 1필지 나지 (660㎡ 고정)
-  | "etc_14호"              // 14호 유사토지 (면적기준 없음 — boolean 유지)
-  | "none";                 // 호 미해당 (재산세유형·기간기준만)
+  | "sports"                    // 1호 가·나목 체육시설 (별표3/4/5 — standardAreaLimit 직접입력)
+  | "sports_facility_business"  // 1호 다목 체육시설업 영위자의 직접 사용 토지 (면적기준 없음)
+  | "stadium_operation"         // 1호 라목 경기장운영업 영위자의 직접 사용 토지 (면적기준 없음)
+  | "parking_attached"          // 2호 가목 부설주차장 (설치기준면적 직접입력)
+  | "parking_garage"            // 2호 나목 업무용자동차 주차장 (최저차고기준면적 × 1.5)
+  | "private_investment_land"   // 3호 민간투자사업 등 사업시행자 조성 토지 (조성 완료일부터 2년)
+  | "youth_training"            // 4호 청소년수련시설 (수용정원 × 200㎡ 초과 제외)
+  | "reserve_forces"            // 5호 다목 예비군훈련 (별표6 제2호 — standardAreaLimit)
+  | "resort"                    // 6호 휴양시설업 (합산 기준면적 직접입력)
+  | "hatchang"                  // 7호 하치장·야적장 (최대면적 × 120%)
+  | "aggregate_extraction"      // 8호 골재채취장 (면적기준 없음)
+  | "waste_treatment"           // 9호 폐기물처리업 (면적기준 없음)
+  | "fish_farm_licensed"        // 11호 가·나목 허가·면허·신고 양어장·지소 (면적기준 없음)
+  | "vacant_lot_1household"     // 13호 무주택1세대 1필지 나지 (660㎡ 고정)
+  | "etc_14호"                  // 14호 유사토지 — 위임 부령 없음 → 사업용 불인정 + 확인 필요
+  | "none";                     // 호 미해당 (재산세유형·기간기준만)
 
 /**
  * §168의11⑤ 연접 다필지 1건 (하나의 용도로 일괄 사용되는 연접 토지 묶음의 개별 필지).
@@ -176,6 +183,13 @@ export interface FactoryLandUsage {
 
 export interface OtherLandUsage {
   propertyTaxType: PropertyTaxType;
+  /**
+   * NBL2611-V1-A (Q-1) — 재산세 분류 «근거». 건축물 없는 토지의 비종합합산 선언을 존중하는 사실이다.
+   * 미선택·「모름」·분류와 맞지 않는 값이면 엔진이 종합합산 + 확인 필요로 접는다(`property-tax-basis.ts`).
+   */
+  propertyTaxBasis?: PropertyTaxBasis;
+  /** NBL2611-V1-A — 근거가 «철거ㆍ멸실»일 때 철거 전 건축물의 바닥면적(㎡). 영 §103의2①1호 — 이 면적 × 영 §101② 적용배율이 별도합산 범위다. */
+  demolishedFloorArea?: number;
   hasBuilding: boolean;
   /**
    * 공장용 건축물 부속토지 기준면적 판정(§102①1호 별표6 / §101①1호 배율).
@@ -209,6 +223,11 @@ export interface OtherLandUsage {
   isRelatedToResidenceOrBusiness: boolean;
   /** §168의11① 호별 분기. 미설정 시 legacy isRelatedToResidenceOrBusiness fallback. */
   relatedBusinessType?: NblRelatedBusinessType;
+  /**
+   * 3호(private_investment_land) — 토지의 **조성 완료일**. 「토지의 조성이 완료된 날부터 2년이 경과한 토지를 제외한다」(영 §168의11①3호 단서)에 따라
+   * [완료일, 완료일 + 2년)만 사업용 기간으로 센다(상속 3년과 같은 «기간» 해석 — `threeYearsFrom` 선례). 3호 선택 시 필수 — 없으면 엔진이 던진다(NBL2611-V7-S).
+   */
+  privateInvestmentCompletionDate?: Date;
   /** 별표/설치기준 직접입력 기준면적(㎡) — sports·parking_attached·reserve_forces·resort. */
   standardAreaLimit?: number;
   /** 7호 하치장: 매년 최대 사용면적(㎡). 엔진이 ×1.2 (§168의11①7호). */

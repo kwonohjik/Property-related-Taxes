@@ -53,6 +53,11 @@ async function start(page: Page) {
   await search(dialog, "대화동");
   await enableBurdenedTransferToggle(dialog);
   await fillApartmentTransferInfo(dialog);
+  // 공용 헬퍼의 거주 120개월은 이 시료(취득 2010-03-15 · 증여일 2020-03-02 — 보유 119개월)의 보유기간을 넘는다 — 증여 ⑧이 막는다
+  //   (2026-11 리뷰 D-91 · PR-30). 보유기간 안으로 바꾼다(이 스펙이 보는 것은 지정 지구 선언의 본문 전송이다).
+  const residence = dialog.locator("[data-testid='bg-transfer-residence'] input");
+  await residence.fill("110");
+  await expect(residence).toHaveValue("110");
   return { mock, dialog };
 }
 

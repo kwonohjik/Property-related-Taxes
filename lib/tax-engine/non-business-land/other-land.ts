@@ -35,8 +35,18 @@ import {
   resolveAreaLegalBasis,
   resolveMixedUseProportioning,
 } from "./other-land-area-limit";
-import { applyGraceToNonBusinessRemainder, pickWiderExclusion } from "./other-land-merge";
+import { applyGraceToNonBusinessRemainder, judgeRevenueBusinessStart, pickWiderExclusion } from "./other-land-merge";
 import { judgeHoRequirements } from "./other-land-ho-requirements";
+import { wholesaleItemIssue } from "./revenue-wholesale-item";
+import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
+import {
+  bareLandStepDetail,
+  buildPropertyTaxBasisEcho,
+  judgeDemolishedSite,
+  PROPERTY_TAX_BASIS_LEGAL,
+  propertyTaxBasisWarnings,
+  resolvePropertyTaxBasis,
+} from "./property-tax-basis";
 
 /**
  * 나대지 간주 (소득세법 §104의3①4호나목 — 재산세 별도합산 제외 → 비사업용).
@@ -49,6 +59,9 @@ import { judgeHoRequirements } from "./other-land-ho-requirements";
  * ⚠️ 「지방세법 시행령」 §101① 단서(무허가·사용승인 없이 사용 중인 건축물의 부속토지 제외)는 **처리하지 않는다**
  *    — 입력 칸이 없다(리뷰 Q-2 (가) 보류: 혼재 고지서 안내 + 확인 필요만). 단서 해당 여부는 판정하지 않는다.
  * 결과적으로 propertyTaxType을 "종합합산"으로 조정하는 판정용 술어다.
+ *
+ * NBL2611-V1-A — 이 술어는 «근거가 확인되지 않은 선언»에만 쓴다. 재산세 분류 근거(`property-tax-basis.ts`)가 확인된 비종합합산 선언은
+ * 이 술어를 거치지 않는다(법 §104의3①4호 가목·나목은 건축물을 요건으로 하지 않는다). 호출부는 `judgeOtherLandCore` Step 0.
  */
 export function isBareLand(input: NonBusinessLandInput): boolean {
   const o = input.otherLand;
@@ -77,6 +90,11 @@ export function judgeOtherLand(
   return {
     ...result,
     periodEvaluation: graceJudged ? { basis: "state_at_transfer", graceJudged } : { basis: "state_at_transfer" },
+    // NBL2611-V1-A — 재산세 분류 근거 모델이 개입했을 때만 echo(표시 전용).
+    ...(() => {
+      const echo = buildPropertyTaxBasisEcho(input.otherLand, resolvePropertyTaxBasis(input.otherLand));
+      return echo ? { propertyTaxBasis: echo } : {};
+    })(),
     warnings: [...(result.warnings ?? []), NBL_STATE_AT_TRANSFER_APPLIED_NOTICE],
   };
 }
@@ -118,22 +136,27 @@ function judgeOtherLandCore(
   }
 
   // Step 0: 나대지 간주
-  const bareLand = isBareLand(input);
+  // NBL2611-V1-A (Q-1 (가)) — 재산세 분류 «근거»가 확인된 선언은 나대지 간주(PR#291 override)·2% 강등을 적용하지 않는다.
+  // 근거 없는 선언(미선택·모름·호환 불가)은 건축물 없는 토지에서 종합합산으로 접는다 — 역버그 방지는 엔진 규칙으로 남는다.
+  const basisRes = resolvePropertyTaxBasis(o);
+  const basisKept = basisRes.kind === "accepted" || basisRes.kind === "demolished";
+  const bareLand = basisKept ? false : isBareLand(input);
   const effectiveTaxType: PropertyTaxType = bareLand ? "comprehensive" : o.propertyTaxType;
+  const keptBasis = basisKept && o.propertyTaxBasis && o.propertyTaxBasis !== "unknown" ? o.propertyTaxBasis : undefined;
+  // 가목(비과세·면제)이 확인되면 공장 경로가 그 선언을 덮지 못한다 — 가목을 먼저 본다.
+  const factoryInput = basisRes.kind === "accepted" && basisRes.basis === "statutory_exempt" ? undefined : o.factory;
   // NBL2611-V10-K — 재산세 분류는 한국어 라벨로 쓰고, 이 단계들의 근거는 법 §104의3①4호 가·나목이다(다목 위임조문 영 §168의11①이 아니다).
   const declaredLabel = propertyTaxTypeLabel(o.propertyTaxType);
   const effectiveLabel = propertyTaxTypeLabel(effectiveTaxType);
   appliedLaws.push(NBL.OTHER_LAND_PROPERTY_TAX_EXCLUSION);
+  if (keptBasis) appliedLaws.push(PROPERTY_TAX_BASIS_LEGAL[keptBasis]);
+  warnings.push(...propertyTaxBasisWarnings(basisRes, keptBasis, declaredLabel));
   steps.push({
     id: "other_bare_land",
     label: "Step 0 나대지 간주 검증 (2% 기준)",
     status: bareLand ? "FAIL" : "PASS",
-    detail: bareLand
-      ? (o.hasBuilding
-          ? `건축물 시가표준액 < 토지 시가표준액 × 2% → 별도합산 제외(종합합산 취급)`
-          : `건축물 없는 토지(나대지) → 종합합산 취급`)
-      : `건축물 부속토지 (선택한 재산세 분류 유지: ${declaredLabel})`,
-    legalBasis: NBL.OTHER_LAND_PROPERTY_TAX_EXCLUSION,
+    detail: bareLandStepDetail({ keptBasis, bareLand, hasBuilding: o.hasBuilding, unconfirmed: basisRes.kind === "unconfirmed", declaredLabel }),
+    legalBasis: keptBasis ? PROPERTY_TAX_BASIS_LEGAL[keptBasis] : NBL.OTHER_LAND_PROPERTY_TAX_EXCLUSION,
   });
 
   const fullPeriod: DateInterval[] = [{ start: ownershipStart, end: pjDate }];
@@ -155,8 +178,8 @@ function judgeOtherLandCore(
   let factoryTaxTypeOverride: PropertyTaxType | undefined;
   let factoryExcess: ReturnType<typeof judgeFactoryLandExcess> | undefined;
   let factoryLegalBasis: string | undefined;
-  if (o.factory) {
-    const f = judgeFactoryLandExcess(o.factory, "기타토지(공장)");
+  if (factoryInput) {
+    const f = judgeFactoryLandExcess(factoryInput, "기타토지(공장)");
     factoryLegalBasis =
       f.route === "separate_taxation" ? NBL.FACTORY_LAND_SEPARATE : NBL.FACTORY_LAND_AGGREGATE;
     appliedLaws.push(factoryLegalBasis);
@@ -166,7 +189,7 @@ function judgeOtherLandCore(
         id: "other_factory_area",
         label: "Step 0.5 공장용 건축물 부속토지 기준면적",
         status: "PASS",
-        detail: `${f.detail} ≥ 공장 전체 부속토지 ${o.factory.totalAppurtenantLandArea}㎡ → 전량 사업용`,
+        detail: `${f.detail} ≥ 공장 전체 부속토지 ${factoryInput.totalAppurtenantLandArea}㎡ → 전량 사업용`,
         legalBasis: factoryLegalBasis,
       });
       // 한도 이내 — 재산세 구분을 경로에 맞게 확정한다. 사용자가 `propertyTaxType`을
@@ -199,7 +222,7 @@ function judgeOtherLandCore(
   //    (같은 토지에 두 배율을 겹쳐 적용하지 않는다).
   let buildingExcess: ReturnType<typeof judgeAppurtenantLandExcess> | undefined;
   if (
-    !o.factory &&
+    !factoryInput &&
     !bareLand &&
     o.hasBuilding &&
     effectiveTaxType === "separate" && // 「별도합산」 선언 — 분리과세("special_sum")엔 배율 없음
@@ -225,18 +248,33 @@ function judgeOtherLandCore(
     if (!b.isWithinLimit) buildingExcess = b;
   }
 
+  // ── Step 0.6′ (NBL2611-V1-A): 철거ㆍ멸실 근거 — 종전 바닥면적 × 영 §101② 배율 범위만 별도합산. 한시 지위(1년·빈집 3년)는 판정하지 않는다(고지). 공장 입력은 공장 경로가 먼저다.
+  const excessIsDemolished = basisRes.kind === "demolished" && !factoryInput;
+  if (excessIsDemolished && basisRes.kind === "demolished") {
+    const d = judgeDemolishedSite(input.landArea, input.zoneType, basisRes.floorArea);
+    appliedLaws.push(NBL.PTAX_BASIS_DEMOLISHED);
+    steps.push(d.step);
+    if (!d.excess.isWithinLimit) buildingExcess = d.excess;
+  }
+  const excessLabel = excessIsDemolished ? "철거·멸실 부속토지" : "건물 부수토지";
+  const excessLegal = excessIsDemolished ? NBL.PTAX_BASIS_DEMOLISHED : NBL.BUILDING_SITE_MULTIPLIER;
+
   // ── Step 3-1: 재산세 종합합산이 아닌 토지 + 기간기준 ───────────────
   // 공장이 입력된 경우 나목 해당 여부는 **한도 판정 결과**가 정한다 — 초과면 나목에
   // 해당하지 않으므로 사용자가 고른 `propertyTaxType`으로 통과시키지 않는다.
   // 일반 건물도 같다 — 배율을 초과하면 그 선언을 그대로 신뢰하지 않는다.
-  const isNonComprehensive = o.factory
+  const isNonComprehensive = factoryInput
     ? factoryTaxTypeOverride !== undefined
     : effectiveTaxType !== "comprehensive" && buildingExcess === undefined;
 
   // ── §168의11② 수입금액비율 (2호다목·10·11다·12호 특정 업종) ──────────
   let revenueTestDetail: RevenueTestResult | undefined;
+  let revenueStartFailedReason: string | undefined; // NBL2611-D1 — 수입금액비율은 충족했으나 당해 사업개시일 이후 기간기준 미충족
   if (input.revenueTest && input.revenueTest.businessType !== "none") {
     revenueTestDetail = computeRevenueTest(input.revenueTest);
+    // NBL2611-V7-S · Q-6 (다) — 12호 도소매업은 규칙 §83조의4⑭ 열거 품목만(농·수·축산물은 시장·유사 장소 한정). 품목 미선택은 차단, 시장 요건 불충족은 불인정.
+    const wholesale = wholesaleItemIssue(input.revenueTest);
+    if (wholesale?.kind === "missing") throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, wholesale.message);
     steps.push({
       id: "other_revenue_test",
       label: "§168의11② 수입금액비율",
@@ -244,12 +282,34 @@ function judgeOtherLandCore(
       detail: revenueTestDetail.detail,
       legalBasis: NBL.REVENUE_TEST,
     });
-    if (revenueTestDetail.pass) {
-      appliedLaws.push(NBL.REVENUE_TEST);
-      const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
-      return buildPass(`수입금액비율 충족 (${REVENUE_BUSINESS_TYPE_LABEL[revenueTestDetail.businessType]})`, steps, appliedLaws, warnings, {
-        r, totalOwnershipDays, revenueTestDetail,
+    if (wholesale?.kind === "not_in_market") {
+      steps.push({
+        id: "other_revenue_wholesale_item",
+        label: "§168의11①12호 도소매업 품목 (규칙 §83조의4⑭)",
+        status: "FAIL",
+        detail: wholesale.message,
+        legalBasis: NBL.OTHER_LAND_WHOLESALE_ITEMS,
       });
+    }
+    if (revenueTestDetail.pass && wholesale === undefined) {
+      appliedLaws.push(NBL.REVENUE_TEST);
+      // NBL2611-D1 (DM-01 · Q-4 (나)) — 당해 사업개시일이 있고 직전 비율②가 미통과면 사업 구간을 [개시일, 양도일]로 본다. 기간기준을 못 채우면 다른 목(나목 등)을 이어서 본다.
+      const startJudged = judgeRevenueBusinessStart(input, revenueTestDetail, rules);
+      if (startJudged) steps.push(startJudged.step);
+      if (!startJudged?.applied) {
+        const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+        return buildPass(`수입금액비율 충족 (${REVENUE_BUSINESS_TYPE_LABEL[revenueTestDetail.businessType]})`, steps, appliedLaws, warnings, {
+          r, totalOwnershipDays, revenueTestDetail,
+        });
+      }
+      revenueTestDetail = startJudged.applied.revenue;
+      warnings.push(startJudged.applied.notice);
+      if (startJudged.applied.r.meets) {
+        return buildPass(`수입금액비율 충족 (${REVENUE_BUSINESS_TYPE_LABEL[revenueTestDetail.businessType]}) + 당해 사업개시일 이후 기간기준 충족`, steps, appliedLaws, warnings, {
+          r: startJudged.applied.r, totalOwnershipDays, revenueTestDetail,
+        });
+      }
+      revenueStartFailedReason = `수입금액비율은 충족하나 당해 사업개시일 이후 기간으로는 기간기준 미충족 — ${startJudged.applied.r.detail}`;
     }
   }
 
@@ -287,7 +347,7 @@ function judgeOtherLandCore(
       detail: factoryExcess
         ? "공장 기준면적 초과분이 종합합산 — 나목(별도합산·분리과세)으로는 전량 사업용이 되지 않는다"
         : buildingExcess
-          ? `선택한 재산세 분류(${declaredLabel})이나 건물 부수토지 배율 초과 — 초과분은 별도합산으로 보지 않는다`
+          ? `선택한 재산세 분류(${declaredLabel})이나 ${excessLabel} 배율 초과 — 초과분은 별도합산으로 보지 않는다`
           : "재산세 종합합산과세대상 (원칙 비사업용)",
       legalBasis: NBL.OTHER_LAND_PROPERTY_TAX_EXCLUSION,
     });
@@ -308,20 +368,20 @@ function judgeOtherLandCore(
       const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
       const areaProportioning: AreaProportioning = {
         ...computeAreaProportioning(input.landArea, buildingExcess.allowedLandArea),
-        legalBasis: [NBL.BUILDING_SITE_MULTIPLIER],
+        legalBasis: [excessLegal],
       };
       steps.push({
         id: "other_building_multiplier_apply",
-        label: "Step 3-1-2 건물 부수토지 배율 초과분",
+        label: `Step 3-1-2 ${excessLabel} 배율 초과분`,
         status: "FAIL",
         detail:
           `허용 ${buildingExcess.allowedLandArea}㎡ 초과분 ${areaProportioning.nonBusinessArea}㎡ 비사업용 ` +
-          `(§101①2호 배율 ${buildingExcess.multiplier}배)`,
-        legalBasis: NBL.BUILDING_SITE_MULTIPLIER,
+          `(${excessIsDemolished ? "영 §103의2①1호 → §101② 배율" : "§101①2호 배율"} ${buildingExcess.multiplier}배)`,
+        legalBasis: excessLegal,
       });
       return {
         isBusiness: false,
-        reason: `건물 부수토지 배율(${buildingExcess.multiplier}배) 초과 — 초과분 ${areaProportioning.nonBusinessArea}㎡ 비사업용`,
+        reason: `${excessLabel} 배율(${buildingExcess.multiplier}배) 초과 — 초과분 ${areaProportioning.nonBusinessArea}㎡ 비사업용`,
         steps,
         appliedLaws,
         areaProportioning,
@@ -357,7 +417,7 @@ function judgeOtherLandCore(
       // ⚠️ 한도 비교는 **공장 전체**로 끝났다(`factoryExcess.nonBusinessRatio`). 여기서는 그
       // 비율을 **양도 대상 토지**(`input.landArea`)에 적용한다 — 양도분이 공장 일부일 수 있으므로
       // `factoryExcess.standardArea`를 양도분과 직접 비교하면 안 된다(§1.4 약분 구조).
-      const factoryTotal = o.factory!.totalAppurtenantLandArea;
+      const factoryTotal = factoryInput!.totalAppurtenantLandArea;
       const businessAreaOfAsset = input.landArea * (1 - factoryExcess.nonBusinessRatio);
       const areaProportioning: AreaProportioning = {
         ...computeAreaProportioning(input.landArea, businessAreaOfAsset),
@@ -450,6 +510,8 @@ function judgeOtherLandCore(
   // NBL2611-V7-DM02·V9-DM11 — 호의 면적 외 요건(5호 나목 용도지역 · 13호 나지)을 입력으로 판정할 수 있는 만큼 판정한다. 불충족이면 호를 인정하지 않는다.
   const hoReq = judgeHoRequirements(relatedType, o, input.zoneType);
   if (hoReq.failStep) steps.push(hoReq.failStep);
+  // NBL2611-V7-S · Q-5 (나) — 14호처럼 호를 인정하지 않는 사유가 «확인 필요»를 동반하면 판정 경로와 무관하게 결과에 남긴다.
+  if (hoReq.failNotice) warnings.push(hoReq.failNotice);
   const isRecognizedHo = relatedType !== undefined && relatedType !== "none" && !hoReq.failStep;
   // §168의11⑥ 복합용도 건축물 부속토지 안분 — 건축물에 거주·특정사업 사용분(특정용도분)이 있으면
   // 그 자체가 거주·사업관련(isRelated)에 해당 → mode 단독으로도 isRelated 의제.
@@ -460,7 +522,8 @@ function judgeOtherLandCore(
   const isRelated = isRecognizedHo || legacyRelated || mixedUse !== undefined;
 
   if (isRelated) {
-    const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+    // NBL2611-V7-S — 3호는 «조성 완료일부터 2년» 구간만 사업용 기간이다(`hoReq.businessPeriods`). 그 밖의 호는 소유기간 전체.
+    const r = meetsPeriodCriteria(hoReq.businessPeriods ?? fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
     const legalBasis = resolveAreaLegalBasis(relatedType);
     // Q-6 (다) — 호로 판정에 쓰는 경우(⑥ 복합용도 안분이 호별 기준면적을 대체하지 않을 때)에만 자기 선언 요건을 고지한다.
     if (isRecognizedHo && mixedUse === undefined && hoReq.notice) warnings.push(hoReq.notice);
@@ -631,8 +694,9 @@ function judgeOtherLandCore(
     legalBasis: NBL.OTHER_LAND_BUSINESS,
   });
   const dummyR = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+  const failedReason = periodFailedReason ?? revenueStartFailedReason;
   return buildFail(
-    periodFailedReason ? `${periodFailedReason} → 비사업용` : "종합합산 + 거주·사업관련 미해당 → 비사업용",
+    failedReason ? `${failedReason} → 비사업용` : "종합합산 + 거주·사업관련 미해당 → 비사업용",
     steps, appliedLaws, warnings, {
       r: dummyR, totalOwnershipDays, revenueTestDetail,
     },

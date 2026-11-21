@@ -21,6 +21,8 @@ import { track127_7ConflictMessage } from "@/lib/tax-engine/transfer-reductions/
 import { rentalHousingPathApplies } from "@/lib/tax-engine/transfer-reductions/track-127-7-message";
 import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import { axisBEffectiveAsset } from "./axis-b-effective-asset";
+import { reductionNoticeDateOf } from "./axis-b-reduction-notice-date";
+import { isAxisBShareCard } from "./axis-b-reduction-notice-date";
 import { canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import { assetKindGateMessage } from "@/lib/tax-engine/transfer-reductions";
 import { asksInheritedPresaleQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
@@ -211,8 +213,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           const cash = parseAmount(r.expropriationCash || "0");
           const bond = parseAmount(r.expropriationBond || "0");
           if (cash + bond <= 0) return fail(fieldError("reduction.public_expropriation.expropriationCash", "현금 또는 채권 보상액 중 최소 하나를 입력하세요."));
-          // 고시일 fallback: reduction 미입력 시 Step1 단일 소스(expropriationNoticeDate) — UI↔validate 모순 방지
-          const approvalDate = r.expropriationApprovalDate || asset.expropriationNoticeDate;
+          // 고시일 fallback: reduction 미입력 시 Step1 단일 소스(expropriationNoticeDate) — UI↔validate 모순 방지.
+          // 축 B 지분 카드는 첫 카드 값(C9 — ④·⑤와 같은 leaf `reductionNoticeDateOf`)
+          const approvalDate = r.expropriationApprovalDate || reductionNoticeDateOf(form, ai);
           if (!approvalDate) return fail(fieldError("reduction.public_expropriation.expropriationApprovalDate", "사업인정고시일을 선택하세요."));
           if (form.transferDate && approvalDate >= form.transferDate)
             return fail(fieldError("reduction.public_expropriation.expropriationApprovalDate", "사업인정고시일은 양도일보다 이전이어야 합니다."));
@@ -233,6 +236,17 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
         if (r.type === "replacement_land_comp") {
           if (parseAmount(r.rlLandComp || "0") <= 0)
             return fail(fieldError("reduction.replacement_land_comp.rlLandComp", "대토(토지) 보상액을 입력하세요 (대토보상분만 감면 대상)."));
+          // NBL2611-C10 — §77의2①은 「사업인정고시일(…양도일)부터 소급하여 2년 이전에 취득한 토지등을 … 해당 공익사업의 시행자에게 양도」다.
+          //   시행자 양도(수용·협의매수)가 전제이고 고시일은 취득시기 요건의 필수 사실이다. 엔진은 고시일이 비면 불성립 + 확인 필요로 두므로
+          //   (`replacement-land-reduction.ts`) 여기서 먼저 막아 입력으로 돌려보낸다. 고시일은 ④와 같은 술어(`reductionNoticeDateOf` — 축 B 지분은 첫 카드).
+          //   축 B 지분 카드는 ② 양도정보가 숨어 있다 — 양도원인·고시일 칸이 첫 카드에만 있어 그쪽으로 보낸다(막다른 길 금지).
+          const shareCard = isAxisBShareCard(form, ai);
+          const failAt = (message: string): ValidationIssue => ({ step, assetIndex: shareCard ? 0 : ai, message });
+          const where = shareCard ? "첫 번째 자산의 ② 양도정보" : "② 양도정보";
+          if (asset.transferCause !== "public_expropriation")
+            return failAt(fieldError("transferType", `대토보상(§77의2)은 공익사업 시행자에게 양도(수용·협의매수)한 경우에만 적용됩니다 — ${where}의 「양도 형태·원인」에서 「공익수용·협의매수」를 선택하세요. 해당하지 않으면 이 감면 선택을 해제하세요.`));
+          if (!reductionNoticeDateOf(form, ai))
+            return failAt(fieldError("expropriationNoticeDate", `대토보상(§77의2): 사업인정고시일을 입력하세요 — ${where}의 「공익수용」 카드에 입력합니다 (고시일 소급 2년 이전 취득 요건 판정에 필요).`));
         }
         if (r.type === "self_farming") {
           // 조특령 §66⑪·⑫ — 피상속인 경작기간을 합산하려면 「1년 이상 계속 경작」 또는

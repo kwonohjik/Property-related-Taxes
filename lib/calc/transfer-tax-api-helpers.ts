@@ -3,6 +3,7 @@
  * transfer-tax-api.ts 800줄 정책에 따라 분리.
  */
 
+import { buildAppurtenantExcessFacts } from "./appurtenant-excess-facts";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { sec164LandAreaField } from "./transfer-163-9-base-date";
 import { exprCompensationSendGates } from "./transfer-tax-validate-expropriation";
@@ -270,6 +271,10 @@ function mergePrimaryBasicAll(a: AssetForm, primary: AssetForm): AssetForm {
     //    입력(`BurdenedGiftTrancheBasisBlock`)하고 엔진이 지분율을 곱해 합산한다. 여기에 넣으면 지분마다 취득일이 다른데
     //    같은 금액이 모든 지분 카드에 복제된다.
     isNonBusinessLand: primary.isNonBusinessLand,
+    // 주택 부수토지 소재지 구분(영 §154⑦ 배율 — 3·5·10배) — 같은 땅의 성질이라 **물건 단위 값**이다. 지분 카드에는 ① 기본정보가 숨어 칸이 없다(NBL2611-C7).
+    //   병합하지 않으면 ⑧(V9)이 자산 2에 「소재지 구분을 선택하세요」를 내는 막다른 길이었고, 직접 API는 둘째 이후 지분의 배율 초과분을 판정하지 않았다.
+    //   일반 주택만 — 상가·토지·겸용(`mixedZoneType`)·일반건물은 이 칸을 읽지 않으므로 stale 값이 닿지 않게 한다.
+    ...(primary.assetKind === "housing" && !primary.isMixedUseHouse ? { appurtenantLandZone: primary.appurtenantLandZone } : {}),
     // 지정지역 선언도 «물건 단위 값»(소재지)이라 전 지분 공통이다 — 비사업용 토지 8호 유예 판정용.
     isDesignatedArea: primary.isDesignatedArea,
     // 조합원입주권 §89①4호 판정 선언 — 판정 메뉴가 첫 카드에만 받는다. 입주권·비승계일 때만(완공APT는 카드별 입력).
@@ -434,8 +439,11 @@ export { buildRedevelopmentPayload } from "./transfer-tax-api-redev";
  */
 export function buildExpropriationInput(primary: AssetForm, transferDate: string | undefined) {
   const send = exprCompensationSendGates(primary, transferDate);
+  const excessFacts = buildAppurtenantExcessFacts(primary, transferDate);
   return {
     transferCause: primary.transferCause,
+    // NBL2611-C4 — 배율 초과분 수용 의제(고시일)·유예기간. 단건·다건이 이 함수를 같이 쓴다.
+    ...(excessFacts ? { appurtenantExcessFacts: excessFacts } : {}),
     // §164⑨1호 per-sqm(가~다목) — **per-sqm 적격 자산일 때만** 전송(`buildAssetPayload` 컴패니언과 대칭).
     // ⚠️ 무게이트면 land→housing 전환 시 stale per-sqm 값이 주택 총액 트랙을 침묵 shadowing한다
     //    (엔진도 housing 배제로 방어하나 여기서도 원천 차단 — 코드리뷰 2026-07-16).

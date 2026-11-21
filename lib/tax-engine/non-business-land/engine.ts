@@ -120,7 +120,7 @@ export function judgeNonBusinessLand(
   const engineInput: NonBusinessLandInput = input;
 
   // NBL2611-V2-C1 — 이 지목의 판정은 유예기간 입력을 읽지 않는다(`consumesGracePeriods`). 화면이 「사업용 사용 기간에 가산됩니다」라고
-  // 안내하던 입력이 결과에 닿지 않으므로 사실대로 알린다. 기타토지는 B3(R08)에서 반영했고, 남은 것은 주택부수토지 D1(R20)이다.
+  // 안내하던 입력이 결과에 닿지 않으므로 사실대로 알린다. 기타토지는 B3(R08), 주택부수토지는 D1(R20)에서 반영했고, 남은 것은 건물(비주택) 부수토지다.
   if (input.gracePeriods.length > 0 && !consumesGracePeriods(input.landType)) {
     warnings.push(
       `부득이한 사유 유예기간(${NBL.UNAVOIDABLE_PERIOD}) 입력이 ${category.categoryLabel} 판정에는 반영되지 않았습니다 — ` +
@@ -358,6 +358,7 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
     periodEvaluation: categoryResult
       ? (categoryResult.periodEvaluation ?? { basis: "usage_periods" })
       : { basis: "not_judged" },
+    propertyTaxBasis: categoryResult?.propertyTaxBasis,
     /**
      * 양도일 의제(§168의14②) echo — **실제로 판정에 쓰인 경우에만** 싣는다 (F-1).
      *
@@ -366,8 +367,8 @@ function assemble(args: AssembleArgs): NonBusinessLandJudgment {
      *   · `categoryResult` 존재 — 무조건 사업용 의제(§168의14③)로 Step 2에서 조기반환하면
      *     지목별 judge가 아예 돌지 않는다.
      *   · `consumesPeriodJudgmentDate(landType)` — 주택·건물 부수토지 judge는 현행 구현상
-     *     `getPeriodJudgmentDate`를 부르지 않는다(주택부수토지는 2026-07-31 사용자 방침이지
-     *     법령 구조가 아니다 — NBL2611-V2-C2).
+     *     양도일 의제를 받지 않는다(주택부수토지는 유예(§168의14①)만 반영하는 Q-3a (나) 범위이고
+     *     건물부수토지는 배율 판정만 한다 — 어느 쪽도 법령 구조가 아니다, NBL2611-V2-C2 · D1).
      * 종전에는 둘 다 보지 않아 적용되지 않은 의제를 적용했다고 표시했다.
      */
     deemedTransfer:

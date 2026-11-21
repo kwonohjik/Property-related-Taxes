@@ -61,8 +61,9 @@ export function getLandCategoryGroup(landType: LandType): LandCategoryGroup {
  * 농지·임야·목장·별장·기타토지뿐이고, **주택부수토지·건물부수토지는 부르지 않는다**.
  *
  * ⚠️ NBL2611-V2-C2 — 이것은 **법령 구조가 아니다**. 영 §168의6은 「법 제104조의3제1항 각 호 외의 부분」의
- *    기간기준이라 5호(주택부수토지)에도 걸린다. 주택부수토지가 빠지는 것은 **2026-07-31 사용자 방침**
- *    («주택 배율 초과분은 기간요건 판정 없이 일률»)에 따른 현행 구현이다(재결정 대상 — 리뷰 Q-3a·R20).
+ *    기간기준이라 5호(주택부수토지)에도 걸린다. 주택부수토지가 의제를 받지 않는 것은 **2026-07-31 사용자 방침**
+ *    («주택 배율 초과분은 기간요건 판정 없이 일률»)에서 비롯한 현행 구현이다. 그 방침은 Q-3a (나)(2026-11-19)로
+ *    **영 §168의14① 유예만 반영**하도록 좁혀졌고(NBL2611-D1), 양도일 의제(§168의14②)는 그 범위 밖이라 여전히 받지 않는다.
  *    건물부수토지도 현행 구현이 배율 판정만 한다.
  *
  * 🔴 이 술어가 없던 동안 `assemble()`은 지목을 보지 않고 `deemedTransfer`를 실었고,
@@ -91,10 +92,11 @@ export function consumesPeriodJudgmentDate(landType: LandType | "" | undefined):
  *   · 유예 `gracePeriods` — farmland · forest · pasture · villa는 `meetsPeriodCriteria`에 넘긴다.
  *     **other_land도 true(NBL2611-B3 · V2-C1)**: 비사업용으로 끝난 잔여분(전량·부분)을 확정하기 직전에 «빈 사업기간 + 유예»로
  *     기간기준을 판정한다(`other-land-merge.ts` `applyGraceToNonBusinessRemainder`). 사업용 분기의 `fullPeriod` 호출에 유예만 얹는 방식은
- *     합집합 증가분이 0이라 효과가 없어 쓰지 않는다. housing·building_site는 호출 자체가 없다.
- *     → D1(R20 · 주택 유예)이 구현되면 housing 칸을 true로 바꾼다.
+ *     합집합 증가분이 0이라 효과가 없어 쓰지 않는다.
+ *     **housing도 true(NBL2611-D1 · Q-3a (나))**: 배율 초과분(`judgeHousingLand`)에 같은 helper로 유예만 반영한다. building_site는 호출 자체가 없다.
  *   · 양도일 의제 `getPeriodJudgmentDate` — farmland · forest · pasture · villa · other_land. housing·building_site는
- *     2026-07-31 사용자 방침(법령 구조 아님 — NBL2611-V2-C2)으로 부르지 않는다.
+ *     부르지 않는다. 주택부수토지는 2026-07-31 사용자 방침(«초과분 기간요건 일률»)을 Q-3a (나)로 «유예만 반영»으로 좁혔을 뿐 의제(§168의14②)는
+ *     범위 밖이고, building_site는 현행 구현이 배율 판정만 한다(둘 다 법령 구조가 아니다 — NBL2611-V2-C2).
  *   · 수도권 `isMetropolitanArea` — housing-land.ts만. 별장은 REDIRECT 재분류 뒤 주택부수토지 판정에서 소비한다.
  *
  * `satisfies Record<LandCategoryGroup, …>`가 새 그룹 추가 시 이 표 누락을 컴파일 오류로 만든다.
@@ -110,7 +112,7 @@ const INPUT_CONSUMPTION = {
   farmland:      { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false },
   forest:        { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false },
   pasture:       { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false },
-  housing:       { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: false, metropolitanArea: true  },
+  housing:       { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: false, metropolitanArea: true  },
   building_site: { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: false, metropolitanArea: false },
   villa:         { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: true,  metropolitanArea: true  },
   other_land:    { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false },

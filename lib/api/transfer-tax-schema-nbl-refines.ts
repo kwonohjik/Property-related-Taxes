@@ -17,6 +17,7 @@ import { nblBusinessUsePeriodsApply, nblResidenceHistoryApplies } from "@/lib/ca
 import { parseAmount, parseDecimal } from "@/lib/calc/number-parse";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { resortAreaIssue } from "@/lib/tax-engine/non-business-land/resort-area-issue";
+import { demolishedBasisIssue, type PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { graceRowIssue, type GraceRowLike } from "@/lib/tax-engine/non-business-land/grace-row-issue";
 import { deemedTransferDateIssue, deemedTransferDateIssueMessage } from "@/lib/tax-engine/non-business-land/deemed-transfer-date-range";
 import { consumesPeriodJudgmentDate } from "@/lib/tax-engine/non-business-land/land-category";
@@ -27,6 +28,10 @@ import {
 } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
 import { periodRowIssue, periodRowIssueField, periodRowIssueMessage } from "@/lib/tax-engine/non-business-land/period-row-issue";
 import { priorRevenueWithoutLandValue } from "@/lib/tax-engine/non-business-land/revenue-test";
+import { revenueStartDateAfterTransfer } from "@/lib/tax-engine/non-business-land/revenue-test";
+import { REVENUE_START_DATE_AFTER_TRANSFER_MESSAGE } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
+import { hoRequiredInputIssue } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
+import { wholesaleItemIssue } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 
 interface DatedRow {
   startDate?: string;
@@ -48,6 +53,7 @@ export interface NblRawRefineInput {
   nblVillaNoUseConfirmed?: boolean;
   nblGracePeriods?: GraceRowLike[];
   nblRevenueBusinessType?: string;
+  nblRevenueCurrentBusinessStartDate?: string;
   nblRevenuePriorRevenue?: string;
   nblRevenuePriorDeposit?: string;
   nblRevenuePriorRentDays?: string;
@@ -55,11 +61,22 @@ export interface NblRawRefineInput {
   nblRevenuePriorCommonRevenue?: string;
   nblRevenuePriorLandValue?: string;
   nblZoneType?: string;
+  nblOtherPropertyTaxType?: string;
+  nblOtherPropertyTaxBasis?: string;
+  nblOtherDemolishedFloorArea?: string;
+  nblOtherHasBuilding?: boolean;
   nblOtherRelatedBusinessType?: string;
   nblOtherResortParkingStdArea?: string;
   nblOtherResortParkingActualArea?: string;
   nblOtherResortBuildingFloorArea?: string;
   nblOtherResortBuildingArea?: string;
+  nblOtherStandardAreaLimit?: string;
+  nblOtherMaxAnnualArea?: string;
+  nblOtherYouthCapacity?: string;
+  nblOtherMinGarageArea?: string;
+  nblOtherPrivateInvestCompletionDate?: string;
+  nblRevenueWholesaleItem?: string;
+  nblRevenueWholesaleInMarket?: boolean;
 }
 
 export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.RefinementCtx): void {
@@ -130,6 +147,15 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
   )
     issue(["nblRevenuePriorLandValue"], PRIOR_REVENUE_LAND_VALUE_REQUIRED_MESSAGE);
 
+  // NBL2611-D1 (DM-01) — 당해 사업개시일은 양도일 이전 (⑧ 수입금액비율 블록과 같은 술어·같은 문구)
+  if (
+    raw.nblLandType === "other_land" &&
+    bt &&
+    bt !== "none" &&
+    revenueStartDateAfterTransfer(raw.nblRevenueCurrentBusinessStartDate, raw.transferDate)
+  )
+    issue(["nblRevenueCurrentBusinessStartDate"], REVENUE_START_DATE_AFTER_TRANSFER_MESSAGE);
+
   // NBL2611-V9-DM09 — 6호 휴양시설 2·3호는 «상한 이내 실제 면적» — 상한만 있고 실제 면적이 없으면 400 (⑧ 휴양시설 블록과 같은 술어·같은 문구)
   if (raw.nblLandType === "other_land" && raw.nblOtherRelatedBusinessType === "resort") {
     const resort = resortAreaIssue({
@@ -143,5 +169,31 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
       const key = { parkingActual: "nblOtherResortParkingActualArea", parkingStd: "nblOtherResortParkingStdArea", buildingActual: "nblOtherResortBuildingArea" } as const;
       issue([key[resort.part]], resort.message);
     }
+  }
+
+  // NBL2611-V7-S — 선택한 호의 단순 필수 입력(호 메타 표 `requiredInput`: 기준면적·최대면적·수용정원·최저차고기준면적·3호 조성 완료일). ⑧ `validateNblOtherLand`와 같은 표·같은 문구.
+  if (raw.nblLandType === "other_land") {
+    const ho = hoRequiredInputIssue(raw.nblOtherRelatedBusinessType, (f) => (raw as unknown as Record<string, string | undefined>)[f], parseDecimal);
+    if (ho) issue([ho.field], ho.message);
+  }
+
+  // NBL2611-V7-S · Q-6 (다) — 12호 도소매업은 품목 필수(규칙 §83조의4⑭). 시장 요건 불충족은 400이 아니라 12호 불인정이다(엔진).
+  if (raw.nblLandType === "other_land") {
+    const wh = wholesaleItemIssue({ businessType: raw.nblRevenueBusinessType, wholesaleItem: raw.nblRevenueWholesaleItem, wholesaleInMarket: raw.nblRevenueWholesaleInMarket });
+    if (wh?.kind === "missing") issue(["nblRevenueWholesaleItem"], wh.message);
+  }
+
+  // NBL2611-V1-A (Q-1) — 철거ㆍ멸실 근거는 면적 범위를 계산할 사실(철거 전 바닥면적 · 배율표에 있는 용도지역)이 있어야 한다 (⑧ `validateNblOtherLand`와 같은 술어·같은 문구).
+  // 근거 미선택은 막지 않는다 — 엔진이 종합합산 + 확인 필요로 접는다.
+  if (raw.nblLandType === "other_land") {
+    const demolished = demolishedBasisIssue({
+      declared: (raw.nblOtherPropertyTaxType || "comprehensive") as Parameters<typeof demolishedBasisIssue>[0]["declared"],
+      hasBuilding: !!raw.nblOtherHasBuilding,
+      basis: (raw.nblOtherPropertyTaxBasis || undefined) as PropertyTaxBasis | undefined,
+      floorArea: parseDecimal(raw.nblOtherDemolishedFloorArea),
+      zoneType: raw.nblZoneType ?? "",
+      zoneMapped: !!getZoneAreaMultiplier(raw.nblZoneType ?? ""),
+    });
+    if (demolished) issue([demolished.part === "floorArea" ? "nblOtherDemolishedFloorArea" : "nblZoneType"], demolished.message);
   }
 }

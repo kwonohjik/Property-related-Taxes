@@ -31,9 +31,8 @@ import { rentalNoticesForEarlyReturn } from "./transfer-tax-rental-housing-step"
 import {
   RATE_SPECIAL_REDUCTION_IDS,
 } from "./transfer-reductions/income-deduction-router";
-import { stripAssetKindGatedReductions } from "./transfer-reductions/asset-kind-gate";
-import { stripAcquisitionCauseGatedReductions } from "./transfer-reductions/unsold-98-acquisition-cause";
 import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
+import { stripUnsold98GatedReductions } from "./transfer-tax-unsold98-gate";
 import { assetContractDateForCause } from "./transfer-reductions/asset-contract-date";
 import { runHouseCountExclusionStep, special15HoPendingNotice } from "./transfer-tax-house-exclusion-step";
 import { mergeRentalCarveoutSurchargeNotice, withMergeRentalCarveout } from "./one-house/merge-rental-carveout";
@@ -41,10 +40,9 @@ import { runIncomeAndBaseSteps } from "./transfer-tax-income-steps";
 import { runOneHouseJudgmentStep } from "./transfer-tax-one-house-judgment-step";
 import { applyLthd982AndPushSteps } from "./transfer-tax-lthd-982-step";
 
-import {
-  calcTransferGain,
-  calcLongTermHoldingDeduction,
-} from "./transfer-tax-helpers";
+import { calcTransferGain } from "./transfer-tax-helpers";
+import { calcLongTermHoldingDeductionByNblPart, withNblPartNetShare } from "./transfer-tax-lthd-nbl-part";
+import { cbMixedSignLthdNotice } from "./nbl-confirm-notices";
 import { applyCommercialBuildingAndNblPart } from "./transfer-tax-commercial-nbl-part";
 import { oneHouseJudgmentWarnings } from "./transfer-tax-one-house-warnings";
 import { appurtenantLand2xNotice } from "./transfer-reductions/new-housing-appurtenant-land-2x";
@@ -63,21 +61,23 @@ import { landOnlyOtherHouseholdRateNotice } from "./land-only-owner-household";
 import { landOnlyMergeDateAppliedNotice } from "./land-only-owner-household";
 import { nblDeferralAreaNotice } from "./transfer-tax-nbl-deferral-notice";
 import { handleMultiParcelBranch } from "./transfer-tax-multi-parcel-branch";
-import { handleRedevelopmentBranch } from "./transfer-tax-redevelopment-branch";
 import { resolveSplitAwareTax, buildCalculatedTaxStep, hasHousingLandExemptExclusion } from "./transfer-tax-split-rate";
 import { publicExpropriationReducedPart } from "./public-expropriation-reduction";
 import { resolveTaxableGain, buildGainFormula } from "./transfer-tax-taxable-gain";
-import { isLaterAcquiredLandExemptExcluded, laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice, housingExcessCapexNotice, housingExcessAcqContractNotice, housingExcessInheritedNotice } from "./transfer-tax-appurtenant-land";
+import { isLaterAcquiredLandExemptExcluded, laterLandExemptNotice, expropriationLaterLandNotices, expropriationZoneNoticeFor, appurtenantExcessDeemNoticesFor, housingExcessUnseparatedNotice, highValueExcessFormulaNotice, housingExcessCapexNotice, housingExcessAcqContractNotice, housingExcessInheritedNotice } from "./transfer-tax-appurtenant-land";
 import { buildingSec164ApportionNotice, houseLandSec164Notice, landBeforeBuildingAcquisitionRateNotice } from "./transfer-tax-appurtenant-land";
 import { landRebuildNoticeOf } from "./transfer-tax-rebuild-notice";
 import { buildExemptEarlyResult } from "./transfer-tax-finalize";
 import { attachSplitCarryoverEcho } from "./transfer-tax-split-carryover";
+import { isRedevelopmentActive } from "./transfer-tax-redevelopment";
+import { runRedevelopmentBranch } from "./transfer-tax-redevelopment-branch";
 import { burdenedGiftSurchargeSuspendedNotice } from "./burdened-gift-eligibility";
 import { hasNoMergeRosterInputPath } from "./one-house/roster-input-path";
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export { parseRatesFromMap } from "./transfer-tax-helpers";
 import { calcTax } from "./transfer-tax-rate-calc";
+import { surchargeClauseBeatenByShortTerm } from "./transfer-tax-rate-clause";
 import { unsold98RateNotices } from "./transfer-tax-unsold98-rate-notice";
 import { unregisteredReductionNotice } from "./transfer-tax-reductions-calc";
 import { selfFarmingRuleMissingNotice } from "./transfer-tax-reductions-calc";
@@ -146,7 +146,7 @@ function calculateTransferTaxCore(
   // 배율 초과 부수토지 분리 파트(`splitDetail.nonBusinessLandPart`)도 비사업용 토지다 — 자산 단위 `isNonBusinessLand`가 꺼진 주택이라도 고지 대상에 든다.
   // 일반 경로(STEP 7 뒤)와 §155⑳ 특례 조기 반환(STEP 2.5)이 같은 입력으로 고지를 판정한다.
   const nblNoticeInputOf = (inp: TransferTaxInput, sd: TransferTaxResult["splitDetail"]): TransferTaxInput =>
-    sd?.nonBusinessLandPart ? { ...inp, isNonBusinessLand: true } : inp;
+    sd?.nonBusinessLandPart && !sd.nonBusinessLandPart.deemedBusiness ? { ...inp, isNonBusinessLand: true } : inp;
   const withUnregisteredNotice = (r: TransferTaxResult, inp: TransferTaxInput): TransferTaxResult => {
     const extra = [unregisteredNotice, selfFarmingMissingNotice, nblDeferralNoticeOf(r, inp)].filter((n): n is string => !!n);
     return withNotices(r, [...assetGate.notices, ...extra]);
@@ -167,16 +167,30 @@ function calculateTransferTaxCore(
   // effectiveInput만 후속 STEP(0.35 환산 등)에서 파생 입력으로 재할당된다.
   let effectiveInput = surchargeAndLand.effectiveInput;
 
-  // STEP 0.65: 재개발/재건축 분기 — 시행령 §166. 닫힌 조기 반환(`transfer-tax-redevelopment-branch.ts` · 2026-11 리뷰 I-17).
-  const redevBranchResult = handleRedevelopmentBranch({
-    effectiveInput,
-    pre: { parsedRates, input, inheritedAcquisitionStep, carryoverDetail, transferBurdenedGiftBreakdown, hceGeneralHouseAcquisitionDate },
-    options,
-    multiHouseSurchargeResult,
-    steps,
-    warnings,
-  });
-  if (redevBranchResult) return redevBranchResult;
+  // STEP 0.65: 재개발/재건축 분기 — 시행령 §166. STEP 1: 비과세 판단
+  if (
+    isRedevelopmentActive(
+      effectiveInput.propertyType,
+      effectiveInput.redevelopment,
+      // 승계조합원 입주권은 §166①의 「조합에 기존건물을 제공하고 취득한 조합원」이 아니다 —
+      // 일반 분기(§97①1호 가목)로 내려보낸다. 근거는 `redevelopment-dispatch.ts` 주석.
+      effectiveInput.isSuccessorRightToMoveIn,
+    )
+  ) {
+    return runRedevelopmentBranch({
+      input,
+      effectiveInput,
+      options,
+      parsedRates,
+      steps,
+      warnings,
+      multiHouseSurchargeResult,
+      carryoverDetail,
+      inheritedAcquisitionStep,
+      transferBurdenedGiftBreakdown,
+      hceGeneralHouseAcquisitionDate: hceGeneralHouseAcquisitionDate,
+    });
+  }
 
   // STEP 0.9 + 0.95: 주택수 제외(§99의4·§98의9·보유 감면주택·상속주택) → 비과세 판정용 유효 주택수 산정.
   // 800줄 정책 분리 — runHouseCountExclusionStep (transfer-tax-house-exclusion-step.ts).
@@ -249,6 +263,8 @@ function calculateTransferTaxCore(
   const cbApplied = applyCommercialBuildingAndNblPart(effectiveInput, inheritedAcquisitionStep?.result.preDeemedBreakdown?.selectedMethod === "converted", steps);
   effectiveInput = cbApplied.effectiveInput;
   const { cbStep, nblPart: cbNblPart } = cbApplied;
+  const cbMixedSignNotice = cbMixedSignLthdNotice(cbNblPart); // NBL2611-V5-G1 — 토지분·건물분 부호가 다른 상가의 파트 장특 한계 고지(세액 불변)
+  if (cbMixedSignNotice) warnings.push(cbMixedSignNotice);
 
   // STEP 1.5: 다필지 분리 계산 (환지·합병 등)
   const mpBranchResult = handleMultiParcelBranch(
@@ -398,7 +414,8 @@ function calculateTransferTaxCore(
         const tr = calcTax(0, parsedRates, landOnlyRateInput(effectiveInput), multiHouseSurchargeResult);
         // 위기취득 세율 배제 표지 — 정상 반환과 같은 술어(다건 세율군 분류가 읽는다 · 계획서 `surcharge-oos-remaining.plan.md` C)
         const { rateSurchargeStatutoryExcluded } = resolveSurchargeApplication(effectiveInput, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules);
-        return { appliedRate: tr.appliedRate, rateClause: tr.rateClause, rateSurchargeStatutoryExcluded };
+        // R-c10-01 — 정상 반환과 같은 echo. 과세표준 0이면 단기·중과 세액이 0 대 0이라 단기 호가 이기고 §104⑦ 호는 후보에만 남는다.
+        return { appliedRate: tr.appliedRate, rateClause: tr.rateClause, rateSurchargeStatutoryExcluded, surchargeShortTermClause: surchargeClauseBeatenByShortTerm(tr) };
       })(),
     });
   }
@@ -457,7 +474,7 @@ function calculateTransferTaxCore(
   if (laterInheritedNotice) warnings.push(laterInheritedNotice);
   // G5-6 — 수용 양도(2025-11-28 이후)의 부수토지 배율 용도지역 기준일(사업인정 고시일 전날) 고지(세액 불변).
   // #17 — 배율 초과를 분리하지 못한 조합의 «초과분 미분리» 고지 · 분리 경로가 쓰지 않은 자산 단위 자본적지출 고지(세액 불변).
-  warnings.push(...[expropriationZoneNoticeFor(effectiveInput), housingExcessUnseparatedNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt), highValueExcessFormulaNotice(splitDetail, exemptionResult.isPartialExempt, effectiveInput.transferDate, isLaterAcquiredLandExemptExcluded(effectiveInput)), housingExcessCapexNotice(effectiveInput, splitDetail), housingExcessAcqContractNotice(splitDetail), housingExcessInheritedNotice(effectiveInput, splitDetail)].filter((n): n is string => !!n));
+  warnings.push(...appurtenantExcessDeemNoticesFor(effectiveInput), ...[expropriationZoneNoticeFor(effectiveInput), housingExcessUnseparatedNotice(effectiveInput, splitDetail, exemptionResult.isExempt || exemptionResult.isPartialExempt), highValueExcessFormulaNotice(splitDetail, exemptionResult.isPartialExempt, effectiveInput.transferDate, isLaterAcquiredLandExemptExcluded(effectiveInput)), housingExcessCapexNotice(effectiveInput, splitDetail), housingExcessAcqContractNotice(splitDetail), housingExcessInheritedNotice(effectiveInput, splitDetail)].filter((n): n is string => !!n));
 
   // 중과세 여부 판단 (장기보유공제·세액 결정에 공통 사용)
   // houses[] 제공 시: determineMultiHouseSurcharge 결과 사용
@@ -525,9 +542,11 @@ function calculateTransferTaxCore(
    * 표2 **대상** 축에만 쓰고 중과·12억 안분 축은 불변이다.
    */
   const deemedOneHouseBy155 = exemptionResult.deemedOneHouseBy155 === true;
+  // NBL2611-V5-G1 — 장특 판정 입력의 비사업용 사실은 STEP 0.35(상가 비사업용 파트) 이후 값이다(STEP 0.9 입력은 그 전 값). 부분 비사업용 자산은 파트별 장특.
+  const lthdInput = { ...exemptionJudgeInput, isNonBusinessLand: effectiveInput.isNonBusinessLand, nonBusinessLandAreaRatio: effectiveInput.nonBusinessLandAreaRatio, nonBusinessLandPartShare: effectiveInput.nonBusinessLandPartShare };
   // eslint-disable-next-line prefer-const -- deduction·rate는 STEP 4.05 §98의2 특칙에서 재할당
-  let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail, usageConversionDetail, exclusionReason: lthdExclusionReason, fbLthdFormula, appurtenantTable1Applied, appurtenantLthdNotice, landHoldingResidenceCap } =
-    calcLongTermHoldingDeduction(taxableGain, exemptionJudgeInput, isSurchargeCase, suspendedResult, splitDetail, deemedOneHouseBy155);
+  let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail, usageConversionDetail, exclusionReason: lthdExclusionReason, fbLthdFormula, appurtenantTable1Applied, appurtenantLthdNotice, landHoldingResidenceCap, nblPartLthd } =
+    calcLongTermHoldingDeductionByNblPart(taxableGain, lthdInput, isSurchargeCase, suspendedResult, splitDetail, deemedOneHouseBy155);
   // §154⑧3호: 표2 "대상 판정"용 통산 거주연수 (동일세대 상속 통산 반영) — rate calc와 동일 exemptionJudgeInput.
   // 거주분 공제율 표시는 실거주(residenceYearsForStep) 유지 — 대상판정/공제율 분리 (rate↔display drift 방지).
   // STEP 4.05(§98의2 특칙 재할당) · 장특 step 생성 · OH-31 표2 연혁 미지원 고지 — transfer-tax-lthd-982-step.ts (800줄 정책 분리).
@@ -551,6 +570,7 @@ function calculateTransferTaxCore(
     landHoldingResidenceCap,
     splitDetail,
     rental97LthdDetail,
+    nblPartLthd,
   });
   longTermHoldingDeduction = lthd982.longTermHoldingDeduction;
   longTermHoldingRate = lthd982.longTermHoldingRate;
@@ -566,7 +586,7 @@ function calculateTransferTaxCore(
   const rateSpecialActive =
     incomeDeduction.eligibleId !== undefined &&
     RATE_SPECIAL_REDUCTION_IDS.includes(incomeDeduction.eligibleId);
-  const taxRateInputBase = landOnlyRateInput(effectiveInput);
+  const taxRateInputBase = withNblPartNetShare(landOnlyRateInput(effectiveInput), nblPartLthd);
   // P5: §98①1호 — 세율 20% 단일 강제 (§104① 불구)
   const flatRate20Active = incomeDeduction.eligibleId === "unsold_98";
   const taxRateInput = flatRate20Active
@@ -659,6 +679,7 @@ function calculateTransferTaxCore(
     rental97LthdDetail,
     usageConversionDetail,
     lthdExclusionReason,
+    nblPartLthd,
     // 짝 부수토지 카드가 받는 표2 「1주택」 축 echo(S08-5 — `toHouseVerdict`) — L-3 게이트와 같은 술어.
     lthdTable2OneHouseAxis: resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155),
     surchargeEcho: surchargeApplication,
@@ -674,15 +695,4 @@ function calculateTransferTaxCore(
 function withNotices(r: TransferTaxResult, notices: readonly string[]): TransferTaxResult {
   const fresh = notices.filter((n) => !(r.warnings ?? []).includes(n));
   return fresh.length > 0 ? { ...r, warnings: [...(r.warnings ?? []), ...fresh] } : r;
-}
-
-/** §98 시리즈 6조문 진입 방어 — 자산 종류(US-44) → 취득 원인(US-07) 순으로 걷어 내고 고지를 모은다. */
-function stripUnsold98GatedReductions(input: TransferTaxInput): { reductions: TransferTaxInput["reductions"] | undefined; notices: string[] } {
-  const byKind = stripAssetKindGatedReductions(input.propertyType, input.reductions);
-  const byCause = stripAcquisitionCauseGatedReductions(
-    byKind.reductions,
-    reductionAcquisitionCauseOf(input),
-    input.inheritedPresaleCompletedByHeir,
-  );
-  return { reductions: byCause.reductions, notices: [...byKind.notices, ...byCause.notices] };
 }

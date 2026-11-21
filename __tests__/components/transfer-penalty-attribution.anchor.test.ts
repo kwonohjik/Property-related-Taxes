@@ -120,7 +120,7 @@ describe("P-1 단건 — 두 가산세를 각자의 조문으로 나눠 적는�
 });
 
 // ── 겸용 어댑터 형상 — 슬롯에 국기법분이 들어 있다 ─────────────────────
-/** `MixedUseResultCardAdapter`가 만드는 형상: penaltyTax = 국기법분, penaltyBase = 0, localTaxPenalty = 0. */
+/** `MixedUseResultCardAdapter`가 `penaltyDetail` 없는 result(G-43 전)에서 만드는 형상: penaltyTax = 국기법분, penaltyBase = 0, localTaxPenalty = 0. 상세가 있는 실엔진 형상은 `mixed-use-filing-penalty-double-c06.anchor.test.ts`. */
 function mixedUseShapedResult(): TransferTaxResult {
   const determinedTax = 141_060_000;
   return {

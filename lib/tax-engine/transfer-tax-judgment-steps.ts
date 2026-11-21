@@ -8,6 +8,7 @@
  */
 import { NBL } from "./legal-codes";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
+import { buildingExcessDeemNotices, commercialExcessExpropriationDeem } from "./appurtenant-excess-deeming";
 import { NBL_BUILDING_SITE_EXCESS_UNJUDGED_NOTICE } from "./nbl-confirm-notices";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
@@ -706,13 +707,19 @@ export function runCommercialAppurtenantLandStep(
   const cal = workingInput.commercialAppurtenantLand;
   if (workingInput.propertyType !== "commercial_building" || !cal) return workingInput;
 
+  // NBL2611-C4(R16) — 공익수용 무조건 의제(영 §168의14③3호)가 성립하면 초과분을 비사업용으로 보지 않는다. 유예(①)는 주택 배율 축이라 넣지 않는다.
+  const { deem, outcome } = commercialExcessExpropriationDeem(workingInput);
   const judged = judgeAppurtenantLandExcess({
     landArea: cal.totalLandArea,
     buildingFootprintArea: cal.totalBuildingFootprintArea,
     zoneType: cal.zoneType,
     unapprovedBuilding: cal.unapprovedBuilding,
+    expropriationDeem: deem,
     context: "상업용건물",
   });
+  if (warnings) {
+    for (const n of buildingExcessDeemNotices(outcome, judged.expropriationDeemed?.suppressedArea)) if (!warnings.includes(n)) warnings.push(n);
+  }
 
   if (judged.nonBusinessArea <= 0) return workingInput;
 

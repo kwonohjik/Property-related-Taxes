@@ -10,6 +10,8 @@ import { parseDecimal } from "@/lib/calc/number-parse";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { resortAreaIssue } from "@/lib/tax-engine/non-business-land/resort-area-issue";
+import { hoRequiredInputIssue } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
+import { demolishedBasisIssue, type PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
 /** 기타토지(other_land) 정밀판정 입력 검증. 첫 오류 메시지 또는 null. */
@@ -30,6 +32,22 @@ export function validateNblOtherLand(asset: AssetForm, label: string): string | 
     return fieldError("nblOtherPropertyTaxType", `${label}: 기타토지 — 재산세 과세 분류(종합합산·별도합산·분리과세·비과세)를 선택하세요. 미선택 시 종합합산으로 간주되어 비사업용 중과가 적용됩니다.`);
 
   /**
+   * NBL2611-V1-A (Q-1) — 재산세 분류 «근거»는 **미선택을 막지 않는다**(엔진이 종합합산 + 확인 필요로 접는다 — 리뷰 Q-1 (나) 기각).
+   * 다만 «철거ㆍ멸실» 근거를 골랐다면 그 면적 범위를 계산할 사실(철거 전 바닥면적·배율표에 있는 용도지역)이 필요하다 — 자동 안분 fallback 금지.
+   * 같은 술어를 ⑫(`refineNonBusinessLandRaw`)가 쓴다.
+   */
+  const demolished = demolishedBasisIssue({
+    declared: asset.nblOtherPropertyTaxType as Parameters<typeof demolishedBasisIssue>[0]["declared"],
+    hasBuilding: asset.nblOtherHasBuilding,
+    basis: (asset.nblOtherPropertyTaxBasis || undefined) as PropertyTaxBasis | undefined,
+    floorArea: parseDecimal(asset.nblOtherDemolishedFloorArea),
+    zoneType: asset.nblZoneType,
+    zoneMapped: !!getZoneAreaMultiplier(asset.nblZoneType),
+  });
+  if (demolished)
+    return fieldError(demolished.part === "floorArea" ? "nblOtherDemolishedFloorArea" : "nblZoneType", `${label}: 기타토지 — ${demolished.message}`);
+
+  /**
    * §101①2호 건물 부수토지 — **건축물이 있으면 바닥면적 필수** (R06).
    *
    * 🔴 종전에는 어느 층에도 요구가 없었고, ⑤ hint가 「건물 시가표준액이 토지의 2% 미만이면…」
@@ -46,9 +64,9 @@ export function validateNblOtherLand(asset: AssetForm, label: string): string | 
 
   // §168의11① 호별 면적기준 — 면적인자 요구 호 선택 시 해당 면적인자 필수 (자동 안분 fallback 금지)
   const bt = asset.nblOtherRelatedBusinessType;
-  const needsStandardArea = bt === "parking_attached";
-  if (needsStandardArea && (!asset.nblOtherStandardAreaLimit || parseDecimal(asset.nblOtherStandardAreaLimit) <= 0))
-    return fieldError("nblOtherStandardAreaLimit", `${label}: 선택한 호의 기준면적(㎡)을 입력하세요. (§168의11① 별표·설치기준면적)`);
+  // NBL2611-V7-S — 단순 필수 입력(2호 가·나목 면적 · 3호 조성 완료일 · 4호 수용정원 · 7호 최대면적)은 호 메타 표 하나에서 읽는다(⑫ refine과 같은 표·같은 문구).
+  const hoIssue = hoRequiredInputIssue(bt, (f) => (asset as unknown as Record<string, string | undefined>)[f], parseDecimal);
+  if (hoIssue) return fieldError(hoIssue.field as IssueField, `${label}: ${hoIssue.message}`);
   // F2 Phase B(B-3) — resort: 6호 휴양 3요소 중 하나 또는 기준면적 직접입력
   if (bt === "resort") {
     const has3Element =
@@ -93,12 +111,6 @@ export function validateNblOtherLand(asset: AssetForm, label: string): string | 
   // F2 Phase A — reserve_forces: 부대편성인원+시설 선택(별표6 자동) 또는 기준면적 직접입력 중 하나 필수
   if (bt === "reserve_forces" && !(asset.nblOtherReserveUnitSize && (asset.nblOtherReserveFacilities?.length ?? 0) > 0) && (!asset.nblOtherStandardAreaLimit || parseDecimal(asset.nblOtherStandardAreaLimit) <= 0))
     return fieldError("nblOtherReserveUnitSize", `${label}: 예비군훈련장 — 부대편성인원·시설을 선택하거나 기준면적(㎡)을 직접 입력하세요. (별표6)`);
-  if (bt === "hatchang" && (!asset.nblOtherMaxAnnualArea || parseDecimal(asset.nblOtherMaxAnnualArea) <= 0))
-    return fieldError("nblOtherMaxAnnualArea", `${label}: 하치장 — 매년 최대 사용면적(㎡)을 입력하세요. (§168의11①7호)`);
-  if (bt === "youth_training" && (!asset.nblOtherYouthCapacity || parseDecimal(asset.nblOtherYouthCapacity) <= 0))
-    return fieldError("nblOtherYouthCapacity", `${label}: 청소년수련시설 — 수용정원(명)을 입력하세요. (§168의11①4호)`);
-  if (bt === "parking_garage" && (!asset.nblOtherMinGarageArea || parseDecimal(asset.nblOtherMinGarageArea) <= 0))
-    return fieldError("nblOtherMinGarageArea", `${label}: 업무용자동차 주차장 — 최저차고기준면적(㎡)을 입력하세요. (§168의11①2호나목)`);
 
   // §168의11⑤ 연접 다필지 — ON 시 필지 1건↑·각 필지 면적·취득일 필수, 건축물 필지는 바닥면적 필수 (자동 fallback 금지)
   if (asset.nblOtherUseParcels) {

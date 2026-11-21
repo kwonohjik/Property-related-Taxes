@@ -8,6 +8,7 @@
  * ⚠️ **명시 필드 매핑**(spread 아님)이라 신규 엔진 필드는 여기 추가하지 않으면 **침묵 strip**된다
  *    (memory `feedback_explicit_prop_mapping_strip`). ⑫ Zod(`companionAssetSchema`)도 함께 넓힐 것.
  */
+import { buildAppurtenantExcessFacts } from "./appurtenant-excess-facts";
 import { inheritedPresalePayload } from "./unsold-98-inherited-presale";
 import { redevPreApprovalAcqMode } from "./redev-pre-approval-acq-mode";
 import { isBgPreDeemedAsset } from "./bg-pre-deemed";
@@ -149,8 +150,13 @@ export function buildAssetPayload(
    *    강제하므로 빠지면 400이 된다(침묵 오산이 아니라 명시 실패).
    */
   form?: TransferFormData,
+  /**
+   * 축 B 지분 카드 전용 — §77 감면 행 고시일 공란일 때 읽는 첫 카드 고시일(C9 · `axisBShareNoticeDate`).
+   * 넘기지 않으면(컴패니언·직접 호출) 자기 자산 값 그대로다. 지분 카드의 숨은 `expropriationNoticeDate`는 읽지 않는다 — 빈 문자열도 «첫 카드가 비었다»는 뜻으로 그대로 쓴다.
+   */
+  axisBShareNoticeDate?: string,
 ) {
-  const reductions = toEngineReductions(asset.reductions ?? [], asset, asset.expropriationNoticeDate);
+  const reductions = toEngineReductions(asset.reductions ?? [], asset, axisBShareNoticeDate ?? asset.expropriationNoticeDate);
 
   /**
    * §166⑥ **안분 키** — 사용자가 자산 카드에 입력한 「양도시 기준시가」(증환지 증가분은 파생값).
@@ -358,6 +364,11 @@ export function buildAssetPayload(
       isHousingExprEligibleAssetKind(asset.assetKind)) && asset.transferCause
       ? { transferCause: asset.transferCause }
       : {}),
+    // NBL2611-C4 — 컴패니언 주택·상가의 배율 초과분 수용 의제·유예 사실(주 자산과 같은 빌더)
+    ...(() => {
+      const f = buildAppurtenantExcessFacts(asset, form?.transferDate);
+      return f ? { appurtenantExcessFacts: f } : {};
+    })(),
     // min[] 3후보 값은 여기서 실어야
     // `buildCompanionEngineInputs`가 엔진 input에 매핑할 수 있다(⑫ 컴패니언 스키마 동반 필수).
     //

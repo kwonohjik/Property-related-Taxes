@@ -4,6 +4,10 @@
  * AssetForm이 extends. 800줄 정책으로 calc-wizard-asset.ts에서 분리(갭 3a).
  * 필드 값 기본/normalize는 calc-wizard-asset-factory.ts·calc-wizard-asset-nbl.ts가 담당.
  */
+import type { NblRelatedBusinessType } from "@/lib/tax-engine/non-business-land/land-usage.types";
+import type { WholesaleItem } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
+import type { PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
+
 /** §168의11⑤ 연접 다필지 1건 (폼 — 전부 string). 엔진 NblParcel과 별개(취득가액 미보유). */
 export interface NblParcelFormItem {
   id: string;
@@ -59,12 +63,16 @@ export interface NblOtherFormSlice {
   nblFactoryIsUnregistered: boolean;
 
   nblOtherPropertyTaxType: "" | "exempt" | "comprehensive" | "separate" | "special_sum";
+  /** NBL2611-V1-A (Q-1) — 재산세 분류 «근거»(건축물 없는 토지의 비종합합산 선언을 존중하는 사실). ""=미선택(엔진이 종합합산 + 확인 필요로 접는다 — ⑧ 차단 아님). 선언·건축물 유무에 맞지 않는 stale 값은 화면이 숨기고 매퍼가 보내지 않는다. */
+  nblOtherPropertyTaxBasis: "" | PropertyTaxBasis;
+  /** NBL2611-V1-A — 근거가 «철거ㆍ멸실»일 때 철거 전 건축물 바닥면적(㎡). 영 §103의2①1호 */
+  nblOtherDemolishedFloorArea: string;
   nblOtherBuildingValue: string;
   nblOtherLandValue: string;
   nblOtherIsRelatedToResidence: boolean;
   /** NBL2611-Q-10(나) — 저장된 이력에 레거시 「거주·사업 직접 관련」이 켜져 있었으나 호가 없어 false로 정규화됨: 「호 재선택」 고지 표지(표시 전용 — ④가 보내지 않는다) */
   nblOtherLegacyRelatedReselect: boolean;
-  /** §104의3①4호나목 — 건축물(건물·시설물) 부속토지 여부. false=나대지 간주(종합합산). true=시가표준액 2% 비교(지방세령§101①2호나목): 2% 이상이면 사용자 재산세 유형 적용, 2% 미달이면 종합합산 강제(바닥면적분만 별도합산 유지·아래 nblOtherBuildingFloorArea). */
+  /** §104의3①4호나목 — 건축물(건물·시설물) 부속토지 여부. false=나대지 간주(종합합산 — 단 NBL2611-V1-A: 재산세 분류 «근거»(nblOtherPropertyTaxBasis)가 확인된 비종합합산 선언은 존중). true=시가표준액 2% 비교(지방세령§101①2호나목): 2% 이상이면 사용자 재산세 유형 적용, 2% 미달이면 종합합산 강제(바닥면적분만 별도합산 유지·아래 nblOtherBuildingFloorArea). */
   nblOtherHasBuilding: boolean;
   /** §101①2호나목 — 건축물 바닥면적(㎡). 2% 미달 시 이 면적만 별도합산(사업용) 유지·잔여 부속토지는 종합합산(비사업용) */
   nblOtherBuildingFloorArea: string;
@@ -82,18 +90,10 @@ export interface NblOtherFormSlice {
   nblOtherUseParcels: boolean;
   nblOtherParcels: NblParcelFormItem[];
   // §168의11① 호별 면적기준 (갭 3a) — NblRelatedBusinessType
-  nblOtherRelatedBusinessType:
-    | ""
-    | "sports"
-    | "parking_attached"
-    | "parking_garage"
-    | "youth_training"
-    | "reserve_forces"
-    | "resort"
-    | "hatchang"
-    | "vacant_lot_1household"
-    | "etc_14호"
-    | "none";
+  // 호 목록은 엔진 `other-land-ho-meta.ts` 표가 단일 소스(NBL2611-V7-S) — "" = 미선택
+  nblOtherRelatedBusinessType: "" | NblRelatedBusinessType;
+  /** NBL2611-V7-S — 3호(민간투자사업 등 조성 토지) 조성 완료일(YYYY-MM-DD). 조성이 완료된 날부터 2년이 경과한 토지는 제외 → 2년 구간만 사업용 기간 */
+  nblOtherPrivateInvestCompletionDate: string;
   nblOtherStandardAreaLimit: string;
   nblOtherMaxAnnualArea: string;
   nblOtherYouthCapacity: string;
@@ -130,6 +130,10 @@ export interface NblOtherFormSlice {
     | "vehicle_repair_academy"
     | "agriculture_academy"
     | "wholesale_retail";
+  /** NBL2611-V7-S · Q-6 (다) — 12호 도소매업 취급 품목(규칙 §83조의4⑭). 도소매업 선택 시 필수 */
+  nblRevenueWholesaleItem: "" | WholesaleItem;
+  /** 농산물·수산물·축산물 도소매 — 「유통산업발전법」에 따른 시장·유사 장소 운영 여부 */
+  nblRevenueWholesaleInMarket: boolean;
   nblRevenueCurrentRevenue: string;
   nblRevenueCurrentLandValue: string;
   nblRevenuePriorRevenue: string;

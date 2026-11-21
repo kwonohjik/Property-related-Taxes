@@ -163,3 +163,24 @@ describe("S-1 §4 — 최초공시 검증 축(⑧)", () => {
     expect(allIssues(f).some((s) => s.startsWith("0:gbFirstDisclosurePrice:"))).toBe(true);
   });
 });
+
+// NBL2611-C9 — 일반건물 지분(축 B) × 공익수용 §77: 지분 카드 행 고시일 공란은 첫 카드 고시일을 읽는다(④ `buildGeneralBuildingShares`·⑧ 같은 술어).
+describe("C9 — 일반건물 지분 · §77 행 고시일 fallback", () => {
+  const row = (cash: string) => ({
+    type: "public_expropriation", expropriationCash: cash, expropriationBond: "0", expropriationBondHoldingYears: "none", expropriationApprovalDate: "",
+  });
+  const EXPR = { transferCause: "public_expropriation", expropriationNoticeDate: "2020-01-01" } as Partial<AssetForm>;
+
+  it("첫 카드에만 고시일 · 두 지분 §77 행 고시일 공란 → ⑧ 0건 · body 지분 2 businessApprovalDate = 첫 카드 고시일", async () => {
+    const f = shares([INH, HALF, EXPR, { reductions: [row("500000000")] } as Partial<AssetForm>], [INH, PURCHASE_EST, HALF, { reductions: [row("500000000")] } as Partial<AssetForm>]);
+    // 일반건물 수용은 환산 특례 보상가액 칸 등 다른 필수 칸이 따로 있다(이 anchor의 대상 아님) — 고시일 칸 오류만 본다.
+    expect(allIssues(f).filter((i) => i.includes("expropriationApprovalDate"))).toEqual([]);
+    const body = (await captureBody(f)) as { generalBuildingShares: { reductions?: { businessApprovalDate?: string }[] }[] };
+    expect(body.generalBuildingShares[1].reductions?.[0]?.businessApprovalDate).toBe("2020-01-01");
+  });
+
+  it("첫 카드 고시일도 없으면 ⑧이 지분 카드 행을 막는다", () => {
+    const f = shares([INH, HALF, { transferCause: "public_expropriation", reductions: [{ ...row("500000000"), expropriationApprovalDate: "2020-01-01" }] } as Partial<AssetForm>], [INH, PURCHASE_EST, HALF, { reductions: [row("500000000")] } as Partial<AssetForm>]);
+    expect(allIssues(f).filter((i) => i.includes("reduction.public_expropriation.expropriationApprovalDate"))).toHaveLength(1);
+  });
+});

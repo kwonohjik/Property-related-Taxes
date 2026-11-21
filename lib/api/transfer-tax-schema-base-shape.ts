@@ -9,6 +9,7 @@
  *    동기화 지점이다(루트 CLAUDE.md 14지점). 필드를 더할 때 ④⑬⑭도 함께 볼 것.
  */
 
+import { appurtenantExcessFactsSchema } from "./transfer-tax-schema-appurtenant-excess";
 import { preDeemedPurchaseSchema } from "./transfer-tax-schema-pre-deemed-purchase";
 import { z } from "zod";
 import { COMPANION_ASSETS_MAX } from "@/lib/calc/asset-card-count-cap";
@@ -129,6 +130,8 @@ export const propertyBaseShape = {
   sameAdjustmentPeriod: sameAdjustmentPeriodSchema.optional(),
   // ⑫ 공익수용 양도당시 기준시가 차감 특례 (소득세법 시행령 §164⑨ 1호) — 엔진이 게이트, strip 방지
   transferCause: z.enum(["general", "public_expropriation"]).optional(),
+  // ⑫ NBL2611-C4 — 배율 초과분 수용 의제(영 §168의14③3호)·유예(①) 판정 사실. 누락 시 침묵 strip → 엔진 미도달.
+  appurtenantExcessFacts: appurtenantExcessFactsSchema,
   standardPricePerSqmAtTransfer: z.number().int().nonnegative().optional(),
   transferArea: z.number().positive().optional(),
   compensationPerSqm: z.number().int().nonnegative().optional(),

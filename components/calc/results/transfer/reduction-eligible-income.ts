@@ -1,9 +1,12 @@
+import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
+
 /**
  * 별지 제84호서식 부표 1 ⑲ 세액감면대상금액 = 감면대상 양도소득금액
  * (소득세법 §90① 세액감면방식 — 감면율·기본공제 적용 前).
  *
  * 기재요령: ⑲ = 「양도자산의 감면소득금액」. §90①은 세액을 감면(소득금액 미차감).
  * ┌ §77 공익수용(public_expropriation) · §77의3 개발제한(gb_designated_land): 자산 전액이 감면대상 → 양도소득금액 전액.
+ * │   단 §77에서 한 파트만 「소급 2년 이전 취득」 요건을 채우면(5B) 그 파트 소득만 감면대상 → 엔진 echo(`partWise.eligibleIncome`).
  * ├ §77의2 대토보상(replacement_land_comp): 대토보상분만 감면대상 → 엔진 echo(eligibleTransferIncome).
  * └ 그 외(자경 §69 등): reducibleIncome이 이미 감면대상 소득(감면율 미곱) → 그대로.
  *
@@ -40,10 +43,16 @@ export function reductionEligibleIncome(
    * 엔진이 감면액 산식에 쓴 값(`PerPropertyBreakdown.eligibleIncomeAfterLoss`)이라 유형 분기보다 우선한다.
    */
   eligibleIncomeAfterLoss?: number,
+  /**
+   * §77 5B — 한 파트만 감면대상일 때 그 파트의 양도소득금액(`publicExpropriationDetail.partWise.eligibleIncome`).
+   * 엔진이 §90①의 B로 쓴 값이라 「양도소득금액 전액」보다 우선한다(R-c11-01).
+   */
+  partWiseEligibleIncome?: number,
 ): number {
   if (eligibleIncomeAfterLoss !== undefined) return eligibleIncomeAfterLoss;
   switch (reductionTypeApplied) {
     case "public_expropriation":
+      return partWiseEligibleIncome ?? fullTransferIncome;
     case "gb_designated_land":
       return fullTransferIncome;
     case "replacement_land_comp":
@@ -61,7 +70,7 @@ export function sumReductionEligibleIncome(
   properties: ReadonlyArray<
     Pick<
       import("@/lib/tax-engine/types/transfer-aggregate.types").PerPropertyBreakdown,
-      "reductionType" | "income" | "reducibleIncome" | "replacementLandDetail" | "eligibleIncomeAfterLoss"
+      "reductionType" | "income" | "reducibleIncome" | "replacementLandDetail" | "eligibleIncomeAfterLoss" | "publicExpropriationDetail"
     >
   >,
 ): number {
@@ -74,6 +83,7 @@ export function sumReductionEligibleIncome(
         p.reducibleIncome ?? 0,
         p.replacementLandDetail?.eligibleTransferIncome,
         p.eligibleIncomeAfterLoss,
+        p.publicExpropriationDetail?.partWise?.eligibleIncome,
       ),
     0,
   );
@@ -177,10 +187,16 @@ export function pickIncomeDeductionFormulaSource(
 export function eligibleIncomeBasisText(
   reductionTypeApplied: string | undefined,
   value: number,
+  /** §77 5B — 감면대상으로 한정된 파트(`publicExpropriationDetail.partWise.eligiblePart`). 있으면 그 파트분임을 밝힌다. */
+  partWiseEligiblePart?: "land" | "building",
 ): string {
   const v = value.toLocaleString();
   switch (reductionTypeApplied) {
     case "public_expropriation":
+      if (partWiseEligiblePart) {
+        const [ok, ng] = partWiseEligiblePart === "land" ? ["토지", "건물"] : ["건물", "토지"];
+        return `감면대상 ${ok}분 양도소득금액 ${v} (${ok}분만 「사업인정고시일부터 소급하여 2년 이전에 취득한」 요건 충족 — ${ng}분은 감면 제외, ${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION})`;
+      }
       return `양도소득금액 전액 ${v} (자산 전부가 감면 대상 — 조세특례제한법 §77)`;
     case "gb_designated_land":
       return `양도소득금액 전액 ${v} (자산 전부가 감면 대상 — 조세특례제한법 §77의3)`;

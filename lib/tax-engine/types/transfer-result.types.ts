@@ -91,6 +91,26 @@ export interface ReducibleIncomeBucket {
   rate: number;
 }
 
+/** 부분 비사업용 자산의 파트별 장특 echo — `transfer-tax-lthd-nbl-part.ts`가 만든다(표시 전용 + 다건·세율 파트 분리의 단일 소스). */
+export interface NblPartLthdDetail {
+  /** 비사업용 파트 양도차익 — 면적(또는 파트) 비율로 나눈 몫 */
+  nonBusinessGain: number;
+  /** 그 밖의 파트(사업용분·상가 건물분) 양도차익 */
+  businessGain: number;
+  /** 비사업용 파트 장특 공제액(2016.1.1. 전 양도는 0 — 구 §95② 괄호 배제) */
+  nonBusinessDeduction: number;
+  /** 그 밖의 파트 장특 공제액(표1 — 취득일 기산) */
+  businessDeduction: number;
+  /** 비사업용 파트가 구 §95② 괄호로 배제된 경우의 사유 — 배제가 아니면 없다 */
+  nonBusinessExclusionReason?: import("../legal-codes/transfer").LthdExclusionReason;
+  /** 비사업용 파트 보유기간이 §95④ 단서로 2016.1.1.부터 기산되는가(2016년 양도 · 2016.1.1. 이전 취득) */
+  nonBusinessAnchoredTo2016: boolean;
+  /** 장특 차감 **후** 비사업용 파트 소득의 몫(정수 분수) — 이후 §104⑤ 파트별 세율이 이 몫으로 소득을 나눈다 */
+  netShare?: { numerator: number; denominator: number };
+  /** step 산식 문구(풀어쓰기) */
+  formula: string;
+}
+
 export interface TransferTaxResult {
   /** 전액 비과세 여부 */
   isExempt: boolean;
@@ -274,6 +294,12 @@ export interface TransferTaxResult {
    */
   nonBusinessLandShortTerm?: boolean;
   /**
+   * §104⑦ 후단 비교에서 단기세율(§104①2·3호)이 이긴 다주택 중과 후보 호 — 신고서 ③ 세율구분 코드
+   * (별지 제84호서식 «1년 미만 / 1년 이상 2년 미만 보유 조정대상지역 내 주택으로서 1세대2주택(3주택)에 해당하는 주택») 표시 전용(R-c10-01). 세액 무영향.
+   * 출처: `calcTax`의 `candidateClauses`(`surchargeClauseBeatenByShortTerm`).
+   */
+  surchargeShortTermClause?: import("../transfer-tax-rate-clause").SurchargeRateClause;
+  /**
    * §104 밖 세율 특례 표지(조특법 §98①1호 20%) — 신고서 ③ 세율구분 코드(1-92) 표시 전용.
    * `rateClause`(§104 호 축)에 섞지 않는다 — 그룹핑 키가 그 값을 읽는다.
    */
@@ -356,7 +382,8 @@ export interface TransferTaxResult {
    * 제외된다(지방세법 §103의3). 엔진이 직접 산출한 result는 `penaltyTax` 자체가
    * §114조의2분만이라 이 필드가 없어도 되지만, **어댑터를 거친 result**는 그렇지 않다:
    *   · `aggregateToFilingResult`      → `penaltyTax`에 국기법분이 합산돼 있다
-   *   · `mixedUseToFilingResult`       → `penaltyTax`가 **국기법분 그 자체**다(겸용엔 §114조의2가 없다)
+   *   · `mixedUseToFilingResult`       → 겸용엔 §114조의2가 없어 `penaltyTax`는 `penaltyDetail`에 담기지 않은 국기법분이다
+   *                                      (상세가 있으면 0 — R-c06-01, 없는 G-43 전 result는 국기법분 그 자체)
    *   · `breakdownToFilingResult`      → `penaltyTax`에 국기법분이 합산돼 있다
    * 따라서 지방소득세 산식을 쓰는 표시부는 `penaltyTax`가 아니라 이 필드를 봐야 한다
    * (`local-income-tax-display.ts` 단일 소스). 미지정이면 `penaltyTax`로 폴백한다.
@@ -567,6 +594,12 @@ export interface TransferTaxResult {
    * 상가에만 존재한다. 비사업용 파트는 토지분 양도차익 × 초과 비율이고 건물분에는 +10%p가 걸리지 않는다.
    */
   commercialNblPart?: CommercialNblPartEcho;
+  /**
+   * 부분 비사업용 자산의 **파트별 장기보유특별공제 echo**(NBL2611-V5-G1 · R15) — 2016.1.1. 전 양도(구 §95② 괄호 배제) 또는
+   * 2016년 양도(§95④ 단서 2016.1.1. 기산)라 비사업용 파트와 그 밖의 파트(사업용분·상가 건물분)의 규칙이 갈릴 때만 존재한다.
+   * 이때 `longTermHoldingDeduction`은 두 파트 공제액의 합이다.
+   */
+  nblPartLthd?: NblPartLthdDetail;
   /**
    * 일반건물(토지+건물 일괄) 환산취득가 산정 상세 결과.
    * propertyType === "general_building" aggregate 경로에서만 포함.

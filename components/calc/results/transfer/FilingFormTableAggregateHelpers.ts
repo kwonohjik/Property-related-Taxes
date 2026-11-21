@@ -260,7 +260,7 @@ export function buildAggregateRows(
 
     // 양도차익 / 비과세 / 과세대상 (자산별 역산)
     // 비과세 자산은 엔진 transferGain=0 → exemptGrossGain echo 사용 (전액 비과세 → 과세대상 0).
-    // 비-비과세는 assetTaxableGain = max(0, income) + 장특공제 (income = taxableGain - 장특).
+    // 비-비과세는 assetTaxableGain = income + 장특공제 (income = taxableGain - 장특 · 차손 자산은 엔진 과세분 income 그대로 — R-c10-02).
     // 자산별 신고서 어댑터(`MultiTransferPropertyBreakdown`)와 **같은 leaf**를 쓴다 —
     // 두 표가 같은 자산을 다르게 표시하던 것을 막는다(#019).
     const transferGain = effectiveGrossGain(p);
@@ -302,6 +302,7 @@ export function buildAggregateRows(
         p.reducibleIncome ?? 0,
         p.replacementLandDetail?.eligibleTransferIncome,
         p.eligibleIncomeAfterLoss,
+        p.publicExpropriationDetail?.partWise?.eligibleIncome,
       ),
     );
     setNum("reductionTargetIncome2", col, p.incomeDeductionReducible ?? 0);
@@ -350,6 +351,7 @@ export function buildAggregateRows(
       transferDate: colTransferDate,
       nblSurchargeExcluded: p.nblSurchargeExcluded,
       nonBusinessLandShortTerm: p.nonBusinessLandShortTerm,
+      surchargeShortTermClause: p.surchargeShortTermClause,
     });
     if (!isGbPartColumn && assetCode) setStr("rateCode", col, assetCode);
     if (isGbPartColumn) {

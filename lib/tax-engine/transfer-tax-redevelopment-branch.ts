@@ -1,45 +1,49 @@
 /**
- * STEP 0.65 재개발·재건축 분기 (시행령 §166) — `transfer-tax.ts`에서 닫힌 조기 반환으로 추출(2026-11 리뷰 I-17 · 800줄 정책).
- * `handleMultiParcelBranch`와 같은 꼴이다: 분기에 들지 않으면 `null`, 들면 결과를 돌려준다. 본문은 옮기기만 했다(동작 불변).
+ * STEP 0.65 재개발/재건축 분기 — 시행령 §166. `transfer-tax.ts` 800줄 정책 분리(NBL2611-C3 선행 분리 — **동작 불변**,
+ * 본문을 그대로 옮겼다). 호출부는 `isRedevelopmentActive`일 때만 이 함수의 결과를 그대로 return 한다.
  */
 import { resolveInheritedRedevelopmentAcqPrice } from "./inheritance-acquisition-helpers";
 import { mergeRentalCarveoutSurchargeNotice } from "./one-house/merge-rental-carveout";
 import { oneHouseJudgmentWarnings } from "./transfer-tax-one-house-warnings";
 import { meetsOneHouseHoldingResidence } from "./transfer-tax-exemption";
-import { isRedevelopmentActive, calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
+import { calculateRedevelopmentTax } from "./transfer-tax-redevelopment";
 import { judgeRedevAptOneHouseExemption } from "./transfer-tax-redevelopment-apt-exemption";
 import { detectRedevelopmentBurdenedGiftNotice } from "./redevelopment-burdened-gift";
-import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
-import type { PreCalcResult } from "./transfer-tax-precalc";
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
+import type { PreCalcResult } from "./transfer-tax-precalc";
+import type { runSurchargeAndLandSteps } from "./transfer-tax-precalc";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 
-export interface RedevelopmentBranchContext {
+export interface RedevelopmentBranchArgs {
+  /** 원본 입력(고지 판정용) */
+  input: TransferTaxInput;
+  /** STEP 0.45~0.62 이후 파생 입력 */
   effectiveInput: TransferTaxInput;
-  pre: Pick<
-    PreCalcResult,
-    "parsedRates" | "input" | "inheritedAcquisitionStep" | "carryoverDetail" | "transferBurdenedGiftBreakdown" | "hceGeneralHouseAcquisitionDate"
-  >;
   options: TransferTaxAcquisitionOptions | undefined;
-  multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
+  parsedRates: PreCalcResult["parsedRates"];
   steps: CalculationStep[];
   warnings: string[];
+  multiHouseSurchargeResult: ReturnType<typeof runSurchargeAndLandSteps>["multiHouseSurchargeResult"];
+  carryoverDetail: PreCalcResult["carryoverDetail"];
+  inheritedAcquisitionStep: PreCalcResult["inheritedAcquisitionStep"];
+  transferBurdenedGiftBreakdown: PreCalcResult["transferBurdenedGiftBreakdown"];
+  hceGeneralHouseAcquisitionDate: Date;
 }
 
-// STEP 0.65: 재개발/재건축 분기 — 시행령 §166. STEP 1: 비과세 판단
-export function handleRedevelopmentBranch(ctx: RedevelopmentBranchContext): TransferTaxResult | null {
-  const { effectiveInput, options, multiHouseSurchargeResult, steps, warnings } = ctx;
-  const { parsedRates, input, inheritedAcquisitionStep, carryoverDetail, transferBurdenedGiftBreakdown, hceGeneralHouseAcquisitionDate } = ctx.pre;
-  if (
-    !isRedevelopmentActive(
-      effectiveInput.propertyType,
-      effectiveInput.redevelopment,
-      // 승계조합원 입주권은 §166①의 「조합에 기존건물을 제공하고 취득한 조합원」이 아니다 —
-      // 일반 분기(§97①1호 가목)로 내려보낸다. 근거는 `redevelopment-dispatch.ts` 주석.
-      effectiveInput.isSuccessorRightToMoveIn,
-    )
-  )
-    return null;
+export function runRedevelopmentBranch(a: RedevelopmentBranchArgs): TransferTaxResult {
+  const {
+    input,
+    effectiveInput,
+    options,
+    parsedRates,
+    steps,
+    warnings,
+    multiHouseSurchargeResult,
+    carryoverDetail,
+    inheritedAcquisitionStep,
+    transferBurdenedGiftBreakdown,
+    hceGeneralHouseAcquisitionDate,
+  } = a;
   // 상속 종전자산: §163⑨ 상속개시일 평가액이 확인되면 취득가액이 "확인 가능"하므로 §166③ 환산·
   // §163⑥ 개산공제를 배제하고 실가(상속평가액)를 종전자산 취득가액으로 사용한다(§166③은 취득가액
   // 확인 불가 시에만 적용). 미확인 시 override 미발동 → 현행 §166③ 유지.

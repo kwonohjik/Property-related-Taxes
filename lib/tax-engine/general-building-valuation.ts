@@ -22,6 +22,7 @@ import { TRANSFER, ESTIMATED_DEDUCTION_RATE, estimatedDeductionRate } from "./le
 import { apportionLandByBusinessArea } from "./general-building-area-apportion";
 import { planGbLandCards } from "./general-building-land-cards";
 import { judgeAppurtenantLandExcess } from "./appurtenant-land-excess";
+import { gbExcessDeemNotices, gbExcessExpropriationDeem } from "./appurtenant-excess-deeming";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { buildGeneralBuildingAssetCardsWithExtension } from "./general-building-extension";
 // 환산 모드 이월과세 분자·분모 주입 — 증축 분기와 공유하려고 leaf 로 옮겼다(PR-0). 종전 import 경로 유지를 위해 재수출한다.
@@ -419,6 +420,18 @@ export function buildGeneralBuildingAssetCards(
 
   // 판정 본체는 공용 헬퍼(`appurtenant-land-excess.ts`) — GB 환산·증축·실거래가 3경로와
   // CB가 같은 로직을 공유한다. 여기서 재구현 금지.
+  const gbDeem = gbExcessExpropriationDeem({
+    transferCause: input.transferCause,
+    expropriationNoticeDate: input.expropriationNoticeDate,
+    transferDate: input.transferDate,
+    acquisitionDate: input.acquisitionDate,
+    landAcquisitionDate: input.landAcquisitionDate,
+    landAcquisitionCause: input.landAcquisitionCause,
+    decedentAcquisitionDate: input.decedentAcquisitionDate,
+    nonHeirBequest: input.nonHeirBequest,
+    donorAcquisitionDate: input.donorAcquisitionDate,
+    hasLandCarryover: input.landCarryoverTaxation !== undefined,
+  });
   const {
     multiplier: appliedMultiplier,
     multiplierDetail,
@@ -426,11 +439,14 @@ export function buildGeneralBuildingAssetCards(
     isWithinLimit: isWithinNblRatio,
     nonBusinessArea,
     nonBusinessRatio,
+    expropriationDeemed,
   } = judgeAppurtenantLandExcess({
     landArea: input.landArea,
     buildingFootprintArea: input.buildingFootprintArea,
     zoneType: input.zoneType,
     unapprovedBuilding: input.unapprovedBuilding,
+    // NBL2611-C4(R16) — 공익수용 무조건 의제(영 §168의14③3호). 3경로가 같은 입구 함수(`gbExcessExpropriationDeem`)를 쓴다.
+    expropriationDeem: gbDeem.deem,
     context: "일반건물",
   });
 
@@ -570,6 +586,7 @@ export function buildGeneralBuildingAssetCards(
     isWithinNblRatio,
     nonBusinessArea,
     nonBusinessRatio,
+    ...(gbExcessDeemNotices(gbDeem, expropriationDeemed?.suppressedArea) ? { expropriationDeemNotices: gbExcessDeemNotices(gbDeem, expropriationDeemed?.suppressedArea) } : {}),
     assetCards,
     // ── 산식 변수 (사례 31 — 2-way 안분, extensionStdTotal·acqExtensionStdTotal 미사용)
     landStdTotal: landStdTotalForFormula,

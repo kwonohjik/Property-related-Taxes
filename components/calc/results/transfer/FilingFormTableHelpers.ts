@@ -472,7 +472,8 @@ export function buildRows(
     const effGain = result.isExempt ? (result.exemptGrossGain ?? 0) : result.transferGain;
     setNum("transferGain", "total", effGain);
     // 비과세 자산의 양도차손은 비과세 양도차익도 음수 — 「전체 = 비과세 + 과세대상」을 유지한다(`assetExemptGain`과 같은 규칙).
-    setNum("exemptGain", "total", isRH ? 0 : result.isExempt ? effGain - result.taxableGain : Math.max(0, effGain - result.taxableGain));
+    //   부분 비과세 차손(고가주택 기준금액 이하분 · 과세분이 gross보다 큰 배율 초과분 이익)도 0 바닥이 없다(R-c10-02).
+    setNum("exemptGain", "total", isRH ? 0 : effGain - result.taxableGain);
     setNum("taxableGain", "total", isRH ? effGain : result.taxableGain);
     /**
      * 양도차손 고지 — 「소득세법」 §102②.
@@ -569,6 +570,7 @@ export function buildRows(
       result.reducibleIncome ?? 0,
       result.replacementLandDetail?.eligibleTransferIncome,
       result.eligibleIncomeAfterLoss,
+      result.publicExpropriationDetail?.partWise?.eligibleIncome,
     ),
   );
   // 소득금액차감방식(§90②) 5년 안분 차감액 — §99의3·§99·§98의8·하이브리드 공용.
@@ -594,6 +596,7 @@ export function buildRows(
     transferDate,
     nblSurchargeExcluded: result.nblSurchargeExcluded,
     nonBusinessLandShortTerm: result.nonBusinessLandShortTerm,
+    surchargeShortTermClause: result.surchargeShortTermClause,
   });
   if (rateCode) setStr("rateCode", "total", rateCode);
   const ratePct = fmtRatePct(result.appliedRate);

@@ -43,6 +43,7 @@
 import { areaTimes, judgeAreaLimit } from "./area-limit";
 import { getZoneAreaMultiplier } from "./local-tax-zone-multiplier";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import type { PublicExpropriationDeemResult } from "./non-business-land/public-expropriation-deeming";
 
 /** §101① 단서 해당 시 표시 문구 — 배율 없이 전량 비사업용. */
 const UNAPPROVED_DETAIL = "허가·사용승인 미이행 건축물 — 전체 비사업용 (「지방세법 시행령」 제101조 제1항 단서)";
@@ -59,6 +60,12 @@ export interface AppurtenantLandExcessInput {
    * true면 배율과 무관하게 부속토지 전량이 비사업용이다.
    */
   unapprovedBuilding?: boolean;
+  /**
+   * NBL2611-C4(R16) — 영 §168의14③3호 공익수용 무조건 의제가 **성립**했다는 판정(`judgePublicExpropriationDeemed`). 있으면 초과면적이 있어도
+   * 비사업용으로 보지 않는다(기간·지역·면적 기준과 무관한 강행 의제 — Q-3b). 입구가 자기 취득 경위(소급 취득일)로 판정해 넘긴다.
+   * 유예기간(①)은 영 §168의12 주택 배율 축이라 이 건물 부속토지 판정에는 넣지 않는다.
+   */
+  expropriationDeem?: PublicExpropriationDeemResult;
   /**
    * 오류 메시지 접두사 — 어느 입력 경로에서 났는지 사용자가 알 수 있게 한다.
    * 예: `"일반건물"`, `"일반건물(증축)"`, `"일반건물(실거래가)"`, `"상업용건물"`.
@@ -79,6 +86,8 @@ export interface AppurtenantLandExcessResult {
   nonBusinessArea: number;
   /** 초과분 비율 (0~1) — 표시·안분용 정밀값(반올림하지 않는다) */
   nonBusinessRatio: number;
+  /** NBL2611-C4 — 수용 의제로 비사업용에서 뺀 면적(㎡)과 그 판정. 의제가 없거나 초과분이 없었으면 `undefined`. */
+  expropriationDeemed?: { suppressedArea: number; deem: PublicExpropriationDeemResult };
 }
 
 /**
@@ -123,6 +132,19 @@ export function judgeAppurtenantLandExcess(
   }
 
   const { within, excess, ratio } = judgeAreaLimit(landArea, allowedLandArea);
+
+  // NBL2611-C4(R16) — 수용 무조건 의제가 성립하면 초과면적(§101① 단서 전량 포함)을 비사업용으로 보지 않는다. 배율·기준면적 표시값은 그대로 둔다.
+  if (input.expropriationDeem?.deemed && !within) {
+    return {
+      multiplier,
+      multiplierDetail,
+      allowedLandArea,
+      isWithinLimit: true,
+      nonBusinessArea: 0,
+      nonBusinessRatio: 0,
+      expropriationDeemed: { suppressedArea: excess, deem: input.expropriationDeem },
+    };
+  }
 
   return {
     multiplier,

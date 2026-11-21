@@ -105,6 +105,8 @@ export type GeneralBuildingInput = {
   //     안분에 낮춘 값을 넣으면 토지 상대가치 인위적 하락 → 양도가가 건물로 과다 배분(입법의도 밖).
   /** 양도원인 — "public_expropriation" 시에만 §164⑨ 게이트 진입. */
   transferCause?: "general" | "public_expropriation";
+  /** NBL2611-C4 — 공익수용 사업인정 고시일(영 §168의14③3호 무조건 의제). 배율 초과분(토지 카드)의 비사업용 판정에 쓴다. 미입력이면 의제 불성립 + 확인 필요. */
+  expropriationNoticeDate?: Date;
   /** 토지 보상가액 (원/㎡) — §164⑨ 1호 후보. */
   compensationPerSqm?: number;
   /** 토지 보상산정 기초 개별공시지가 (원/㎡) — §164⑨ 1호 후보(시행규칙 §80⑧). */
@@ -697,6 +699,11 @@ export type GeneralBuildingOutput = {
   nonBusinessArea: number;
   /** 비사업용 초과 비율 (0~1). 토지 카드 분할 기준. */
   nonBusinessRatio: number;
+  /**
+   * NBL2611-C4 — 배율(기준면적) 초과분의 공익수용 무조건 의제(영 §168의14③3호) 고지: 수용인데 고시일이 없으면 확인 필요, 의제 성립이면 근거,
+   * 이월과세 토지는 수증일 기준이라 증여자 취득일 기준이면 달라질 수 있다는 고지. 없으면 `undefined`. 결과 화면이 `nonBusinessRatio` 고지와 함께 모은다.
+   */
+  expropriationDeemNotices?: string[];
 
   // aggregate 엔진에 넘길 자산 카드 2장
   assetCards: AssetCardForAggregate[];

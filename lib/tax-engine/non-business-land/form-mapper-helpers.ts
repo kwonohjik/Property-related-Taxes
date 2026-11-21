@@ -24,6 +24,7 @@ import type { NblRevenueBusinessType } from "../legal-codes";
 import { deriveCurrentBusinessDays } from "./revenue-test";
 import { resolveDeemedRentRate } from "../data/nbl-deemed-rent-rate";
 import { getZoneAreaMultiplier } from "../local-tax-zone-multiplier";
+import { propertyTaxBasisOptions, requiresDemolishedFloorArea, type PropertyTaxBasis } from "./property-tax-basis";
 import type { FactoryEntityType } from "../factory-employee-sports-standard";
 
 // ============================================================
@@ -300,9 +301,18 @@ export function buildOtherLand(
 ): OtherLandUsage | undefined {
   if (landType !== "other_land" && landType !== "vacant_lot" && landType !== "miscellaneous") return undefined;
   const relatedBusinessType = asString(a.nblOtherRelatedBusinessType) || undefined;
+  const propertyTaxType = (asString(a.nblOtherPropertyTaxType) || "comprehensive") as OtherLandUsage["propertyTaxType"];
+  const hasBuilding = asBool(a.nblOtherHasBuilding);
+  // NBL2611-V1-A — 재산세 분류 근거: 이 선언 + 건축물 유무에서 화면이 보여 주는 선택지일 때만 보낸다(숨겨진 stale 값은 전송하지 않는다 — §7.4).
+  const rawBasis = asString(a.nblOtherPropertyTaxBasis) as PropertyTaxBasis;
+  const propertyTaxBasis = propertyTaxBasisOptions(propertyTaxType, hasBuilding).includes(rawBasis) ? rawBasis : undefined;
   return {
-    propertyTaxType:                (asString(a.nblOtherPropertyTaxType) || "comprehensive") as OtherLandUsage["propertyTaxType"],
-    hasBuilding:                    asBool(a.nblOtherHasBuilding),
+    propertyTaxType,
+    propertyTaxBasis,
+    demolishedFloorArea:            requiresDemolishedFloorArea(propertyTaxType, hasBuilding, propertyTaxBasis)
+      ? parseNumber(asString(a.nblOtherDemolishedFloorArea))
+      : undefined,
+    hasBuilding,
     buildingFloorArea:              parseNumber(asString(a.nblOtherBuildingFloorArea)),
     /**
      * §168의11⑥ 복합용도 건축물 부속토지 안분 (B) — **「건축물 있음」 토글로 gate한다** (U2-01).
@@ -351,6 +361,8 @@ export function buildOtherLand(
     indoorFloorArea:                parseNumber(asString(a.nblOtherIndoorFloorArea)),
     // F2 Phase B(B-3) — 6호 휴양 건축물 바닥면적(§101② 용도지역별 배율 자동)
     resortBuildingFloorArea:        parseNumber(asString(a.nblOtherResortBuildingFloorArea)),
+    // NBL2611-V7-S — 3호 민간투자사업 등 조성 토지: 조성 완료일(2년 단서)
+    privateInvestmentCompletionDate: parseDate(asString(a.nblOtherPrivateInvestCompletionDate)),
     // §168의11⑤ 연접 다필지 (C·D)
     parcels:                        buildNblParcels(a, parseDate, parseNumber),
     // 공장용 건축물 부속토지 기준면적 (§102①1호 별표6 / §101①1호)
@@ -446,10 +458,18 @@ export function buildRevenueTest(
 
   return {
     businessType:     bt as NblRevenueBusinessType,
+    // NBL2611-V7-S · Q-6 (다) — 12호 도소매업 품목(규칙 §83조의4⑭). 도소매업일 때만 싣는다 — 업종을 바꿔 남은 stale 값이 닿지 않게.
+    ...(bt === "wholesale_retail"
+      ? {
+          wholesaleItem: (asString(a.nblRevenueWholesaleItem) || undefined) as RevenueTestInput["wholesaleItem"],
+          wholesaleInMarket: asBool(a.nblRevenueWholesaleInMarket),
+        }
+      : {}),
     currentRevenue:   parseNumber(asString(a.nblRevenueCurrentRevenue)) ?? 0,
     currentLandValue: parseNumber(asString(a.nblRevenueCurrentLandValue)) ?? 0,
     currentBusinessDays,
     currentTaxYear,
+    currentBusinessStartDate: startOverride,
     priorRevenue:     parseNumber(asString(a.nblRevenuePriorRevenue)),
     priorLandValue:   parseNumber(asString(a.nblRevenuePriorLandValue)),
     priorBusinessDays,

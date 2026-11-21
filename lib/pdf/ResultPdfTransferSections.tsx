@@ -83,6 +83,7 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows,
     reducibleIncome,
     (r.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
     num(r.eligibleIncomeAfterLoss),
+    (r.publicExpropriationDetail as { partWise?: { eligibleIncome?: number } } | undefined)?.partWise?.eligibleIncome,
   );
   // 신고서 코드 칸(③·⑯·㉑·㉒) — 화면 신고서 표 행과 같은 라벨·값(`buildFilingCodePdfRows`). PDF가 다시 계산하지 않는다.
   const codeRowsOf = (prefix: string) => (codeRows ?? []).filter((row) => row.label === prefix || row.label.startsWith(`${prefix} `));
@@ -447,6 +448,7 @@ export function TransferMultiSection({ r, selectedSectionIds, codeRows }: { r: R
       (num(p.reducibleIncome) ?? 0) as number,
       (p.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
       num(p.eligibleIncomeAfterLoss),
+      (p.publicExpropriationDetail as { partWise?: { eligibleIncome?: number } } | undefined)?.partWise?.eligibleIncome,
     );
     const np = p.new993Detail as { isEligible?: boolean; reducibleTransferIncome?: number; ruralSurtax?: number } | undefined;
     // 소득금액 감면대상 = 합산 엔진이 자산별로 실제 뺀 금액(`incomeDeductionReducible` — 화면 신고서 표 ⑳과 같은 정본).
@@ -548,6 +550,7 @@ export function TransferMultiSection({ r, selectedSectionIds, codeRows }: { r: R
               (num(p.reducibleIncome) ?? 0) as number,
               (p.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
               num(p.eligibleIncomeAfterLoss),
+              (p.publicExpropriationDetail as { partWise?: { eligibleIncome?: number } } | undefined)?.partWise?.eligibleIncome,
             );
             const propNew993Reducible = num(p.incomeDeductionReducible) ?? ((np?.isEligible && np.reducibleTransferIncome) ? np.reducibleTransferIncome : 0);
             // 영 §163⑨ 단서 1호·2호 채택값 각주 — 화면 합산 신고서(`FilingFormTableAggregateHelpers` acqNotes)와 같은 leaf·문구(#11).

@@ -72,11 +72,25 @@ export function MixedUseNblSection({ nb, landTransferGain, nonBusinessTransferRa
       />
       <DivRow />
       <Row
-        label={addPct > 0 ? `비사업용토지 양도소득금액 (+${addPct}%p 가산)` : "비사업용토지 양도소득금액 (위기취득 — 가산 없음)"}
+        label={
+          addPct > 0
+            ? `비사업용토지 양도소득금액 (+${addPct}%p 가산)`
+            : nb.deemedBusiness
+              ? "비사업용토지 양도소득금액 (비사업용 토지로 보지 않아 가산 없음)" // NBL2611-C5
+              : "비사업용토지 양도소득금액 (위기취득 — 가산 없음)"
+        }
         value={fmt(nb.incomeAmount)}
         highlight
         formula={`양도차익 ${fmtPlain(nb.transferGain)} - 장기보유공제 ${fmtPlain(nb.longTermDeductionAmount)} (세율 가산은 합산세액에서 처리)`}
       />
+      {/* NBL2611-C5 — 수용 의제(영 §168의14③3호)·유예(①)로 비사업용이 아닌 초과분: 분리·전액 과세는 그대로, +10%p 가산만 없다. */}
+      {nb.deemedBusiness && (
+        <ToneCard tone="amber" bodyClassName="space-y-1">
+          <p data-testid="mixed-nbl-deemed-business">
+            {nb.deemedBusiness.detail} — 비사업용 토지로 보지 않아 +10%p 가산을 적용하지 않았습니다 ({nb.deemedBusiness.legalBasis}). 배율 초과분은 비과세 범위가 아니라 과세 대상입니다.
+          </p>
+        </ToneCard>
+      )}
       {nb.surchargeExcludedBy && (
         <ToneCard tone="amber" bodyClassName="space-y-1">
           <p data-testid="mixed-nbl-surcharge-excluded">{nblExclusionBannerText(nb.surchargeExcludedBy)}</p>

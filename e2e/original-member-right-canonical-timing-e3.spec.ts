@@ -38,10 +38,11 @@ async function judge(page: Page) {
   return res.request().postDataJSON() as { presaleRights?: Record<string, unknown>[] };
 }
 
-// ⑯ — 비조정 지역끼리(천안) · 기존주택 취득 2019-01-01 · 양도 2023-06-01(3년 초과 · 5년 이내)
+// ⑯ — 종전 주택 가평(수도권 · 비조정) · 신규 천안(비조정) · 기존주택 취득 2019-01-01 · 양도 2023-06-01(3년 초과 · 5년 이내).
+//   ⑯은 「수도권에 1주택을 소유한 경우에 한정」이라 종전 주택이 수도권 밖(천안)이면 성립하지 않는다(2026-11 리뷰 D-08 · PR-5).
 const RELOCATION = {
   aAcq: "2015-01-01",
-  aCode: "4413110100",
+  aCode: "4182025021",
   transfer: "2023-06-01",
   right: { acquisitionDate: "2019-01-01", regionCode: "4413110300" },
 };

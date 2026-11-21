@@ -7,7 +7,7 @@ import { applyRate, calculateProgressiveTax } from "./tax-utils";
 import { NBL, TRANSFER } from "./legal-codes/transfer";
 import { calcTable1Rate } from "./transfer-tax/rental-housing-exception/ltc-table-split";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
-import type { SplitGainResult, SplitNonBusinessLandPart } from "./types/transfer-split-gain.types";
+import type { DeemedBusinessExcess, SplitGainResult, SplitNonBusinessLandPart } from "./types/transfer-split-gain.types";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { calcTax, computeBracketBreakdown } from "./transfer-tax-rate-calc";
 import type { RateGroup } from "./types/transfer-aggregate.types";
@@ -44,8 +44,10 @@ export interface AppurtenantExcessSplit {
   limitArea: number;
   excessArea: number;
   multiplier: number;
-  /** §104①8호(누진 + 10%p)를 적용할 세율 판정 입력 */
+  /** §104①8호(누진 + 10%p)를 적용할 세율 판정 입력 — 수용 의제·유예로 비사업용이 아닌 초과분(`deemedBusiness`)은 +10%p 없는 일반 토지 입력 */
   rateInput: TransferTaxInput;
+  /** NBL2611-C4 — 비사업용 토지로 보지 않는 사유(`resolveAppurtenantLandExcess`) */
+  deemedBusiness?: DeemedBusinessExcess;
   step: CalculationStep;
 }
 
@@ -85,12 +87,14 @@ export function splitAppurtenantExcess(
     limitArea: excess.limitArea,
     excessArea: excess.excessArea,
     multiplier: excess.multiplier,
-    rateInput: buildNblPartRateInput(input, basisDate),
+    rateInput: buildNblPartRateInput(input, basisDate, excess.deemedBusiness !== undefined),
+    ...(excess.deemedBusiness ? { deemedBusiness: excess.deemedBusiness } : {}),
     step: {
-      label: "부수토지 배율 초과분 분리 (비사업용 토지)",
+      label: excess.deemedBusiness ? "부수토지 배율 초과분 분리 (비사업용 토지로 보지 않음)" : "부수토지 배율 초과분 분리 (비사업용 토지)",
       formula:
         `배율 초과분 ${excess.excessArea.toFixed(2)}㎡(한도 정착면적 × ${excess.multiplier}배 = ` +
-        `${excess.limitArea.toFixed(2)}㎡)는 「소득세법」 제104조의3 제1항 제5호의 비사업용 토지 — ` +
+        `${excess.limitArea.toFixed(2)}㎡)는 ` +
+        (excess.deemedBusiness ? `비사업용 토지로 보지 않는 토지(${excess.deemedBusiness.legalBasis}) — ` : "「소득세법」 제104조의3 제1항 제5호의 비사업용 토지 — ") +
         `§155⑳ 특례(§154① 적용 의제)의 대상이 아니므로 양도차익 ${gain.toLocaleString()}을 ` +
         `분리해 전액 과세 (장기보유특별공제는 §95② 표1 ${Math.round(longTermRate * 100)}% ` +
         `${longTermDeduction.toLocaleString()})`,
@@ -243,6 +247,7 @@ export function toNonBusinessLandPart(nbl: AppurtenantExcessSplit): SplitNonBusi
     holdingYears: nbl.holdingYears,
     longTermRate: nbl.longTermRate,
     longTermDeduction: nbl.longTermDeduction,
+    ...(nbl.deemedBusiness ? { deemedBusiness: nbl.deemedBusiness } : {}),
   };
 }
 

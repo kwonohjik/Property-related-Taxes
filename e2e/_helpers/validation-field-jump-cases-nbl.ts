@@ -110,6 +110,9 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
 
   // ── transfer-tax-validate-nbl-other.ts (기타토지 §168의11) ─────────────────
   { name: "nbl: 재산세 과세 분류", field: "nblOtherPropertyTaxType", step: 0, assetIndex: A, message: /^자산: 기타토지 — 재산세 과세 분류/, form: other({ nblOtherPropertyTaxType: "" }) },
+  // NBL2611-V1-A (Q-1) — 철거ㆍ멸실 근거: 종전 바닥면적 · 배율표에 있는 용도지역(근거 미선택은 막지 않는다)
+  { name: "nbl: 철거·멸실 종전 바닥면적", field: "nblOtherDemolishedFloorArea", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거ㆍ멸실 근거 — 철거 전 건축물의 바닥면적/, form: other({ nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedFloorArea: "" }) },
+  { name: "nbl: 철거·멸실 용도지역", field: "nblZoneType", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거ㆍ멸실 근거 — 용도지역/, form: other({ nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedFloorArea: "100", nblZoneType: "residential" }) },
   { name: "nbl: 건축물 바닥면적", field: "nblOtherBuildingFloorArea", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 바닥면적/, form: other({ nblOtherHasBuilding: true, nblOtherBuildingFloorArea: "" }) },
   { name: "nbl: 부설주차장 기준면적", field: "nblOtherStandardAreaLimit", step: 0, assetIndex: A, message: /^자산: 선택한 호의 기준면적/, form: other({ nblOtherRelatedBusinessType: "parking_attached" }) },
   { name: "nbl: 휴양시설", field: "nblOtherResortOutdoorArea", step: 0, assetIndex: A, message: /^자산: 휴양시설 — 옥외방목장/, form: other({ nblOtherRelatedBusinessType: "resort" }) },
@@ -126,6 +129,9 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "nbl: 하치장", field: "nblOtherMaxAnnualArea", step: 0, assetIndex: A, message: /^자산: 하치장 — 매년 최대 사용면적/, form: other({ nblOtherRelatedBusinessType: "hatchang" }) },
   { name: "nbl: 청소년수련시설", field: "nblOtherYouthCapacity", step: 0, assetIndex: A, message: /^자산: 청소년수련시설 — 수용정원/, form: other({ nblOtherRelatedBusinessType: "youth_training" }) },
   { name: "nbl: 업무용자동차 주차장", field: "nblOtherMinGarageArea", step: 0, assetIndex: A, message: /^자산: 업무용자동차 주차장 — 최저차고기준면적/, form: other({ nblOtherRelatedBusinessType: "parking_garage" }) },
+  // NBL2611-V7-S — 호 메타 표 `requiredInput`(3호 조성 완료일) · 12호 도소매업 품목. 키가 표에서 동적으로 나오는 메시지라 정적 게이트가 읽지 못한다.
+  { name: "nbl: 3호 조성 완료일", field: "nblOtherPrivateInvestCompletionDate", step: 0, assetIndex: A, message: /^자산: 민간투자사업 등 조성 토지\(3호\) — 토지 조성 완료일/, form: other({ nblOtherRelatedBusinessType: "private_investment_land" }) },
+  { name: "nbl: 12호 도소매업 품목", field: "nblRevenueWholesaleItem", step: 0, assetIndex: A, message: /^자산: 도소매업\(12호\) — 취급 품목/, form: revenue({ nblRevenueBusinessType: "wholesale_retail" }) },
 
   // 연접 다필지(§168의11⑤)
   { name: "nbl: 다필지 없음", field: "nblOtherParcels", step: 0, assetIndex: A, message: /^자산: 연접 다필지 입력을 켰습니다/, form: other({ nblOtherUseParcels: true, nblOtherParcels: [] }) },

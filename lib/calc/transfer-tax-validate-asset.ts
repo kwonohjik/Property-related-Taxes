@@ -18,6 +18,7 @@
  * 799 → 697줄 (2026-08-07, 상가 3블록 위임 — 트리거 800 직하라 여유분 확보).
  */
 
+import { validateHousingExcessGrace } from "./transfer-tax-validate-housing-excess-grace";
 import { UNSOLD_98_SERIES_HOUSING_ONLY_IDS, UNSOLD_SPONSOR_FIRST_CONTRACT_EXTRA_IDS } from "@/lib/tax-engine/transfer-reductions/asset-kind-gate";
 import { REDUCTION_METADATA } from "@/lib/tax-engine/transfer-reductions/metadata";
 import { validateMixedSaleSplit } from "./transfer-tax-validate-mixed-use-sale-split";
@@ -336,6 +337,10 @@ export function validateAssetEntry(
   // #17 — 같은 날 취득 주택의 배율 초과분 분리 입력(기준시가 5칸) 필수. ⑤ 카드 노출·④ 전송·엔진 게이트와 같은 술어.
   const housingExcessError = validateHousingExcessSplitInputs(a, label, form.transferDate, index > 0);
   if (housingExcessError) return housingExcessError;
+
+  // NBL2611-C4 — 배율 초과분 유예기간 행(영 §168의14①) 필수 입력·역순 — NBL 섹션과 같은 helper(`graceRowIssue`). 입력이 보이는 자산(⑤ `housingExcessGraceApplies`)만 막는다.
+  const housingGraceError = validateHousingExcessGrace(a, label, form.transferDate);
+  if (housingGraceError) return housingGraceError;
 
   // NBL2611-V4-HS02 — 주 자산 주택 + 함께 양도 부수토지 카드: 카드 합계가 정착면적 × 3을 넘으면 소재지 구분 필수(⑫ `refineAppurtenantCardsZone`과 같은 술어).
   if (index === 0) {

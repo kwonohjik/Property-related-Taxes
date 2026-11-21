@@ -4,6 +4,7 @@
  */
 
 import type { RentalHousingType } from "@/lib/tax-engine/multi-house-surcharge";
+import type { WholesaleItem } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "./calc-wizard-asset-reduction";
 import type { AptDeadlineExtensionForm, TaxIncentiveRentalRegistrationType } from "./calc-wizard-asset-nbl-rental";
 
@@ -705,6 +706,8 @@ export const NBL_DEFAULTS = {
   nblVillaIsAfter20150101: false,
   nblVillaNoUseConfirmed: false,
   nblOtherPropertyTaxType: "",
+  nblOtherPropertyTaxBasis: "",
+  nblOtherDemolishedFloorArea: "",
   nblOtherBuildingValue: "",
   nblOtherLandValue: "",
   nblOtherIsRelatedToResidence: false,
@@ -718,6 +721,7 @@ export const NBL_DEFAULTS = {
   nblOtherYouthCapacity: "",
   nblOtherMinGarageArea: "",
   nblOtherSportsFacilityType: "", nblOtherReserveUnitSize: "", nblOtherReserveFacilities: [] as string[], nblOtherSportsCategory: "workplace", nblOtherEmployeeCount: "", nblOtherEmployeeFacilityKinds: [] as string[], nblOtherResortOutdoorArea: "", nblOtherResortParkingStdArea: "", nblOtherResortParkingActualArea: "", nblOtherResortBuildingArea: "", nblOtherSportsPlayerCount: "", nblOtherIndoorNotInstalled: false, nblOtherSportsExtraEvents: [] as string[], nblOtherIndoorFloorArea: "", nblOtherResortBuildingFloorArea: "",
+  nblOtherPrivateInvestCompletionDate: "",
   // §168의11② 수입금액비율 (기타토지 — 2호다목·10·11다·12호 특정 업종)
   nblRevenueBusinessType: "" as
     | ""
@@ -729,6 +733,8 @@ export const NBL_DEFAULTS = {
     | "vehicle_repair_academy"
     | "agriculture_academy"
     | "wholesale_retail",
+  nblRevenueWholesaleItem: "" as "" | WholesaleItem,
+  nblRevenueWholesaleInMarket: false,
   nblRevenueCurrentRevenue: "",
   nblRevenueCurrentLandValue: "",
   nblRevenuePriorRevenue: "",

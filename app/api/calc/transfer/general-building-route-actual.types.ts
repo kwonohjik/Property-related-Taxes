@@ -27,6 +27,9 @@ export interface GeneralBuildingActualPricePayload {
   unapprovedBuilding?: boolean;
   /** 「소득세법」 §104의2② 지정지역 선언 — 배율초과 토지 카드의 §104①8호 중과 유예 판정용(양도 2009.3.16.~2015.12.31.). */
   isDesignatedArea?: boolean;
+  /** NBL2611-C4 — 양도원인·공익수용 사업인정 고시일(영 §168의14③3호 무조건 의제). 환산 경로 `GeneralBuildingInput`과 같은 의미. */
+  transferCause?: "general" | "public_expropriation";
+  expropriationNoticeDate?: Date;
   /** 「소득세법」 §104③ 미등기양도자산 — 토지 축 / 건물 축(별개 등기부). */
   unregisteredLand?: boolean;
   unregisteredBuilding?: boolean;
@@ -196,6 +199,8 @@ export interface ActualGbCardsResult {
   cards: AssetCardForAggregate[];
   preDeemedPurchaseDetail?: PreDeemedPurchaseDetail;
   nonBusinessRatio: number;
+  /** NBL2611-C4 — 배율 초과분 수용 의제 고지(`GeneralBuildingOutput.expropriationDeemNotices`) */
+  expropriationDeemNotices?: string[];
   /** NBL 판정 명세 — 결과 카드(`GeneralBuildingValuationDetailCard`)가 **가드 없이** 읽는다. */
   nblDetail: {
     buildingFootprintArea: number;

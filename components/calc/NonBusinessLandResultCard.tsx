@@ -6,6 +6,8 @@ import { nblExclusionBannerText } from "@/components/calc/results/transfer/nbl-s
 import { nblLthdBannerPhrase } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
 import { resolvePeriodEvaluation } from "@/lib/tax-engine/non-business-land/period-evaluation";
 import { NBL } from "@/lib/tax-engine/legal-codes";
+import { PROPERTY_TAX_BASIS_LABEL, PROPERTY_TAX_BASIS_LEGAL } from "@/lib/tax-engine/non-business-land/property-tax-basis";
+import { propertyTaxTypeLabel } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 
 interface Props {
   judgment: NonBusinessLandJudgment;
@@ -82,8 +84,8 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
             <p className={`text-sm font-bold ${isNonBusiness ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
               {isNonBusiness
                 ? nblSurchargeExcluded
-                  ? nblExclusionBannerText(nblSurchargeExcludedBy, lthdExcluded)
-                  : `비사업용 토지 — 기본세율 +10%p 중과 (${nblLthdBannerPhrase(lthdExcluded)}).`
+                  ? nblExclusionBannerText(nblSurchargeExcludedBy, lthdExcluded, judgment.surcharge?.nonBusinessAreaRatio)
+                  : `비사업용 토지 — 기본세율 +10%p 중과 (${nblLthdBannerPhrase(lthdExcluded, judgment.surcharge?.nonBusinessAreaRatio)}).`
                 : "사업용 토지 — 일반세율이 적용됩니다."}
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">{judgment.judgmentReason}</p>
@@ -201,6 +203,34 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
         </div>
       )}
 
+      {/* NBL2611-V1-A — 재산세 분류 «근거»(기타토지). 엔진 echo(`propertyTaxBasis`)가 있을 때만 — 선언·근거·판정에 쓴 분류를 한국어로 밝힌다. */}
+      {judgment.propertyTaxBasis && (
+        <div className="px-4 py-2 border-b border-border" data-testid="nbl-property-tax-basis-echo">
+          <p className="text-xs font-medium text-muted-foreground mb-1">재산세 분류 근거</p>
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+            <span className="text-muted-foreground">선택한 재산세 분류</span>
+            <span className="text-right">{propertyTaxTypeLabel(judgment.propertyTaxBasis.declared)}</span>
+            <span className="text-muted-foreground">근거</span>
+            <span className="text-right">
+              {judgment.propertyTaxBasis.basis ? PROPERTY_TAX_BASIS_LABEL[judgment.propertyTaxBasis.basis] : "선택하지 않음"}
+            </span>
+            {judgment.propertyTaxBasis.basis && PROPERTY_TAX_BASIS_LEGAL[judgment.propertyTaxBasis.basis] && (
+              <>
+                <span className="text-muted-foreground">근거 조문</span>
+                <span className="text-right">{PROPERTY_TAX_BASIS_LEGAL[judgment.propertyTaxBasis.basis]}</span>
+              </>
+            )}
+            <span className="text-muted-foreground">판정에 쓴 분류</span>
+            <span className="text-right font-medium">{propertyTaxTypeLabel(judgment.propertyTaxBasis.effective)}</span>
+          </div>
+          {judgment.propertyTaxBasis.outcome === "unconfirmed" && (
+            <p className="text-caption text-amber-700 dark:text-amber-300 leading-snug mt-1.5" data-testid="nbl-property-tax-basis-unconfirmed-echo">
+              건축물이 없는 토지의 비종합합산 선언은 근거가 확인돼야 인정됩니다. 근거를 확인하지 못해 종합합산으로 판정했습니다 — 확인 필요.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* ③ 기간 분석 — NBL2611-V10-P: 엔진 echo(`periodEvaluation`)로 분기한다. */}
       {showPeriodTable && (
         <div className="px-4 py-3 bg-muted/20 border-b border-border">
@@ -226,6 +256,13 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
           <p className="text-caption text-muted-foreground leading-snug">
             양도일 현재의 이용 상태를 소유기간 전체에 적용해 판정했습니다. 소유기간 중 사용기간별 일수·비율은 판정 근거가 아니어서 표시하지 않습니다 — 확인 필요.
           </p>
+          {judgment.revenueTestDetail?.businessStartJudged && (
+            // NBL2611-D1 (DM-01) — 수입금액비율 업종은 전 기간이 아니라 「당해 사업개시일 ~ 양도일」을 사업 구간으로 판정했다(엔진 echo).
+            <p className="text-caption text-muted-foreground leading-snug mt-1" data-testid="nbl-period-revenue-start-judged-notice">
+              수입금액비율 업종에 사용한 구간은 당해 사업개시일({judgment.revenueTestDetail.businessStartJudged.startDate})부터 양도일까지 {judgment.revenueTestDetail.businessStartJudged.businessDays.toLocaleString()}일(소유기간 {judgment.revenueTestDetail.businessStartJudged.totalOwnershipDays.toLocaleString()}일 중)로 보아 {NBL.CRITERIA}의 기간기준을 판정했습니다 —{" "}
+              {judgment.revenueTestDetail.businessStartJudged.meets ? "충족합니다." : "충족하지 않습니다."}
+            </p>
+          )}
           {periodEval.graceJudged && (
             // NBL2611-V2-C1 — 유예기간을 «빈 사업기간 + 유예»로 실제 판정에 쓴 사실(엔진 echo). 충족하면 그 덕에 비사업용 잔여분이 사업용이 된 것이다.
             <p className="text-caption text-muted-foreground leading-snug mt-1" data-testid="nbl-period-grace-judged-notice">

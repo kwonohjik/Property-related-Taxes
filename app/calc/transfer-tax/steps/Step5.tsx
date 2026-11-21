@@ -15,6 +15,7 @@ import { isGbClaimRouteAllowedForAssetKind } from "@/lib/tax-engine/transfer-red
 import { selfFarmingOwnYearsSufficient } from "@/lib/calc/self-farming-own-years";
 import { selfFarmingDecedentAggregable } from "@/lib/calc/self-farming-own-years";
 import { axisBEffectiveAsset } from "@/lib/calc/axis-b-effective-asset";
+import { reductionNoticeDateOf } from "@/lib/calc/axis-b-reduction-notice-date";
 
 // ============================================================
 // Step 5 (→ Step 4): 감면·공제 (자산별 체크박스 복수 선택)
@@ -52,11 +53,14 @@ function AssetReductionBlock({
   asset,
   assetIndex,
   transferDate,
+  noticeDateFallback,
   onChange,
 }: {
   asset: AssetForm;
   assetIndex: number;
   transferDate: string;
+  /** §77 사업인정고시일 칸의 표시 fallback(행 값이 비었을 때) — ④·⑧과 같은 leaf(`reductionNoticeDateOf`). 저장하지 않는다(mirror-pattern). */
+  noticeDateFallback: string;
   onChange: (patch: Partial<AssetForm>) => void;
 }) {
   const reductions = asset.reductions ?? [];
@@ -327,7 +331,7 @@ function AssetReductionBlock({
             <label className="block text-xs font-medium mb-1">사업인정고시일</label>
             <DateInput
               data-field="reduction.public_expropriation.expropriationApprovalDate"
-              value={expropriation.expropriationApprovalDate || asset.expropriationNoticeDate}
+              value={expropriation.expropriationApprovalDate || noticeDateFallback}
               onChange={(v) =>
                 updateReduction("public_expropriation", {
                   expropriationApprovalDate: v,
@@ -650,6 +654,8 @@ export function Step5({
           asset={axisBEffectiveAsset(form, i)}
           assetIndex={i}
           transferDate={form.transferDate ?? ""}
+          // 축 B 지분 카드는 ② 양도정보가 숨어 자기 고시일 칸이 없다 — 첫 카드 값을 보여 준다(C9). 표시 전용, store에 쓰지 않는다.
+          noticeDateFallback={reductionNoticeDateOf(form, i)}
           onChange={(patch) => updateAsset(i, patch)}
         />
       ))}
