@@ -122,10 +122,11 @@ test.describe("NBL2611-E2E-C6C8 · 축 B 지분 × 배율 초과분", () => {
       await fill3(card(pg, 0).getByTestId("expr-notice-date"), "2021", "03", "01");
       // 수용 선택 시 자동 활성되는 §77 감면을 끈다 — 이 시나리오는 사업용 의제(영 §168의14③3호)만 본다(anchor도 감면 없음)
       await pg.getByRole("button", { name: "감면·공제" }).first().click();
-      // 지분 카드마다 스위치가 있다(켜진 것은 수용을 고른 첫 카드뿐) — 켜진 것만 끈다
+      // C9부터 축 B 지분 카드도 같은 이벤트에서 §77 스위치가 켜진다(첫 카드 + 지분 카드 = 지분 모드 2장 · 단건 1장) — 켜진 것을 모두 끈다
       const on77 = pg.locator('[role="switch"][aria-label*="공익사업 수용 감면"][aria-checked="true"]');
-      await expect(on77).toHaveCount(1);
-      await on77.click();
+      const n = await on77.count();
+      expect(n).toBeGreaterThanOrEqual(1);
+      for (let k = 0; k < n; k++) await on77.first().click();
       await expect(on77).toHaveCount(0);
     };
     await seed(page, [hShare(1, ZONED), hShare(2)], "fractional");
@@ -162,6 +163,65 @@ test.describe("NBL2611-E2E-C6C8 · 축 B 지분 × 배율 초과분", () => {
     expect(share.req.appurtenantExcessFacts.graceIntervals).toEqual([{ startDate: "2014-01-01", endDate: "2016-01-01" }]); // 첫 지분: 토지 2014-01-01 + 2년
     expect(share.req.companionAssets[0].appurtenantExcessFacts.graceIntervals).toEqual([{ startDate: "2018-01-01", endDate: "2020-01-01" }]); // 둘째 지분: 자기 토지 취득일 + 2년
     console.log("[C6-2] 지분 총세액", totalOf(share), propsOf(share).map((p) => [p.rateGroup, p.income]));
+  });
+});
+
+test.describe("NBL2611-C9 · 축 B 지분 × 공익수용 §77 감면", () => {
+  const sw77 = (pg: Page) => pg.locator('[role="switch"][aria-label*="공익사업 수용 감면"][aria-checked="true"]');
+  const notice77 = (pg: Page, i: number) => card(pg, i).getByTestId("expr-77-notice-date");
+
+  test("[C9] 첫 카드 공익수용 선택 → 지분 카드 §77도 켜짐·고시일 칸에 첫 카드 값 표시 → 보상액(1억/9억)만 넣으면 계산 · body 지분 고시일 · §77 켠 단건 100%와 총세액 동일", async ({ page }) => {
+    test.setTimeout(150_000);
+    const select = async (pg: Page, cash: string) => {
+      await expandAssetSection(pg, 2);
+      await card(pg, 0).getByTestId("expr-cause-radio").click();
+      await money(card(pg, 0), "expr-cash").fill(cash);
+      await fill3(card(pg, 0).getByTestId("expr-notice-date"), "2021", "03", "01");
+      await pg.getByRole("button", { name: "감면·공제" }).first().click();
+    };
+    await seed(page, [hShare(1, ZONED), hShare(2)], "fractional");
+    await select(page, "100000000");
+    // 첫 카드와 지분 카드 모두 §77 켜짐 (종전: 첫 카드뿐)
+    await expect(sw77(page)).toHaveCount(2);
+    // 지분 카드는 ② 양도정보가 없어 고시일 칸이 없다 — 감면 패널 칸에 첫 카드 값을 «표시»한다(저장하지 않는다)
+    const noticeShare = notice77(page, 1);
+    await expect(noticeShare.getByLabel("연도", { exact: true })).toHaveValue("2021");
+    await expect(noticeShare.getByLabel("월", { exact: true })).toHaveValue("3");
+    await expect(noticeShare.getByLabel("일", { exact: true })).toHaveValue("1");
+    // 지분 카드 보상액은 비어 있으면(0) 막힌다 — 숨은 fallback 없음. 막다른 길이 아님: 같은 카드의 보상액 칸에 입력한다.
+    await gotoLastStep(page);
+    await page.getByRole("button", { name: "세금 계산하기" }).click();
+    await expect(page.getByText(/입력 확인이 필요합니다/).first()).toBeVisible();
+    await expect(page.getByText(/현금 또는 채권 보상액 중 최소 하나를 입력하세요/).first()).toBeVisible();
+    await page.getByRole("button", { name: "감면·공제" }).first().click();
+    await card(page, 1).locator('[data-field="reduction.public_expropriation.expropriationCash"]').locator("xpath=descendant-or-self::input").first().fill("900000000");
+    const share = await calc(page);
+    expect(share.status, JSON.stringify(share.json).slice(0, 300)).toBe(200);
+    expect(share.req.companionAssets[0].reductions[0]).toMatchObject({ type: "public_expropriation", cashCompensation: 900_000_000, businessApprovalDate: "2021-03-01" });
+    console.log("[C9] 지분 총세액", totalOf(share), propsOf(share).map((p) => [p.propertyId, p.reductionAmount]));
+    expect(propsOf(share).every((p) => p.reductionAmount > 0)).toBe(true);
+    // 정답 기준 — §77을 켠 채로 같은 주택 100% 단건(보상 10억)
+    await seed(page, [hShare(1, { ...ZONED, ...SINGLE_100 })], "single");
+    await select(page, "1000000000");
+    await expect(sw77(page)).toHaveCount(1);
+    const single = await calc(page);
+    expect(single.status, JSON.stringify(single.json).slice(0, 300)).toBe(200);
+    console.log("[C9] 단건 100% §77 총세액", totalOf(single));
+    expect(totalOf(share)).toBe(totalOf(single));
+  });
+
+  test("[C9-off] 선택 → 해제(일반 양도)하면 첫 카드·지분 카드 §77이 모두 꺼진다", async ({ page }) => {
+    test.setTimeout(90_000);
+    await seed(page, [hShare(1, ZONED), hShare(2)], "fractional");
+    await expandAssetSection(page, 2);
+    await card(page, 0).getByTestId("expr-cause-radio").click();
+    await page.getByRole("button", { name: "감면·공제" }).first().click();
+    await expect(sw77(page)).toHaveCount(2);
+    await page.getByRole("button", { name: "자산 목록" }).first().click();
+    await expandAssetSection(page, 2);
+    await card(page, 0).getByRole("radio", { name: "일반 양도" }).click();
+    await page.getByRole("button", { name: "감면·공제" }).first().click();
+    await expect(sw77(page)).toHaveCount(0);
   });
 });
 

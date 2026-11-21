@@ -150,8 +150,13 @@ export function buildAssetPayload(
    *    강제하므로 빠지면 400이 된다(침묵 오산이 아니라 명시 실패).
    */
   form?: TransferFormData,
+  /**
+   * 축 B 지분 카드 전용 — §77 감면 행 고시일 공란일 때 읽는 첫 카드 고시일(C9 · `axisBShareNoticeDate`).
+   * 넘기지 않으면(컴패니언·직접 호출) 자기 자산 값 그대로다. 지분 카드의 숨은 `expropriationNoticeDate`는 읽지 않는다 — 빈 문자열도 «첫 카드가 비었다»는 뜻으로 그대로 쓴다.
+   */
+  axisBShareNoticeDate?: string,
 ) {
-  const reductions = toEngineReductions(asset.reductions ?? [], asset, asset.expropriationNoticeDate);
+  const reductions = toEngineReductions(asset.reductions ?? [], asset, axisBShareNoticeDate ?? asset.expropriationNoticeDate);
 
   /**
    * §166⑥ **안분 키** — 사용자가 자산 카드에 입력한 「양도시 기준시가」(증환지 증가분은 파생값).

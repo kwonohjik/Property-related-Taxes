@@ -21,6 +21,7 @@ import { track127_7ConflictMessage } from "@/lib/tax-engine/transfer-reductions/
 import { rentalHousingPathApplies } from "@/lib/tax-engine/transfer-reductions/track-127-7-message";
 import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import { axisBEffectiveAsset } from "./axis-b-effective-asset";
+import { reductionNoticeDateOf } from "./axis-b-reduction-notice-date";
 import { canCalcReductionPhd } from "@/lib/tax-engine/transfer-reductions";
 import { assetKindGateMessage } from "@/lib/tax-engine/transfer-reductions";
 import { asksInheritedPresaleQuestion } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";
@@ -211,8 +212,9 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           const cash = parseAmount(r.expropriationCash || "0");
           const bond = parseAmount(r.expropriationBond || "0");
           if (cash + bond <= 0) return fail(fieldError("reduction.public_expropriation.expropriationCash", "현금 또는 채권 보상액 중 최소 하나를 입력하세요."));
-          // 고시일 fallback: reduction 미입력 시 Step1 단일 소스(expropriationNoticeDate) — UI↔validate 모순 방지
-          const approvalDate = r.expropriationApprovalDate || asset.expropriationNoticeDate;
+          // 고시일 fallback: reduction 미입력 시 Step1 단일 소스(expropriationNoticeDate) — UI↔validate 모순 방지.
+          // 축 B 지분 카드는 첫 카드 값(C9 — ④·⑤와 같은 leaf `reductionNoticeDateOf`)
+          const approvalDate = r.expropriationApprovalDate || reductionNoticeDateOf(form, ai);
           if (!approvalDate) return fail(fieldError("reduction.public_expropriation.expropriationApprovalDate", "사업인정고시일을 선택하세요."));
           if (form.transferDate && approvalDate >= form.transferDate)
             return fail(fieldError("reduction.public_expropriation.expropriationApprovalDate", "사업인정고시일은 양도일보다 이전이어야 합니다."));

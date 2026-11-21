@@ -160,7 +160,9 @@ describe("C6 — 병합 비채택: 두 키를 mergePrimaryBasic에 넣으면 바
     expect(issues).toEqual(["0:nblGracePeriods.0.endDate"]);
   });
 
-  it("감면 — 지분 카드의 공익수용 감면 행(고시일 공란)은 ⑧이 막고 첫 카드 고시일로 조용히 채우지 않는다", async () => {
+  // NBL2611-C9: 이 시료는 C6 당시 «⑧이 막는다»를 고정했다. C9(사용자 결정 «지분에도 자동 적용»)부터 지분 카드의 §77 행 고시일 공란은 첫 카드 고시일을 읽는다 —
+  //   ④·⑤·⑧ 3층이 같은 술어(`axis-b-reduction-notice-date.ts`)이고 `mergePrimaryBasic` 병합은 여전히 하지 않는다(위 첫 두 단언). 정답 값·판별은 C9 anchor가 고정한다.
+  it("감면 — 지분 카드의 공익수용 감면 행(고시일 공란)은 C9부터 첫 카드 고시일(2020-01-01)을 읽는다: ⑧ 0건 · body businessApprovalDate", async () => {
     const LAND = {
       assetKind: "land", acquisitionArea: "300", transferArea: "300", addressJibun: "서울 강남구 테스트동 1", acquisitionCause: "purchase", acquisitionDate: "2014-01-02",
       fixedAcquisitionPrice: "400000000", standardPriceAtTransfer: "500000000", isNonBusinessLand: true, nblUseDetailedJudgment: true,
@@ -174,9 +176,9 @@ describe("C6 — 병합 비채택: 두 키를 mergePrimaryBasic에 넣으면 바
         { ...makeDefaultAsset(2), acquisitionCause: "purchase", acquisitionDate: "2019-06-03", fixedAcquisitionPrice: "400000000", ownershipNumerator: "50", ownershipDenominator: "100", reductions },
       ],
     } as unknown as TransferFormData;
-    expect(issuesOf(f)).toEqual(["1:reduction.public_expropriation.expropriationApprovalDate"]);
+    expect(issuesOf(f)).toEqual([]);
     const body = (await captureBody(f as never)) as Loose;
-    expect(body.companionAssets[0].reductions[0].businessApprovalDate).toBe("");
+    expect(body.companionAssets[0].reductions[0].businessApprovalDate).toBe("2020-01-01");
   });
 });
 
