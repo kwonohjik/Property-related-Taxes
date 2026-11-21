@@ -171,11 +171,13 @@ export function surchargeClauseBeatenByShortTerm(r: {
  *
  * 별지 제84호서식은 «1세대가 주택과 조합원입주권 또는 분양권을 보유한 경우»의 중과 대상 주택을 «1세대N주택»과 다른 코드로 적는다.
  * 엔진이 같은 호(104-7-1·104-7-3)를 내므로 호만으로는 가를 수 없어, 정밀 판정이 센 권리 수(`countedRightCount`)를 **재판정 없이** 읽는다.
- * 정밀 판정이 그 결과에 없으면(부수토지 카드) 짝 주택에서 받은 판정 echo(`surchargeEcho`)를 본다. 세액·그룹핑에는 쓰지 않는다.
+ * 정밀 판정이 그 결과에 없으면(부수토지 카드) 짝 주택에서 받은 판정 echo(`surchargeEcho`)를 보고, 그것도 없는 차손 조기 반환은
+ * `surchargeCountedRightCount`(같은 판정의 산입 수만 실은 echo)를 본다. 세액·그룹핑에는 쓰지 않는다.
  */
 export function surchargeHouseholdHasCountedRight(r: {
   multiHouseSurchargeEvaluation?: { countedRightCount?: number };
   surchargeEcho?: { countedRightCount?: number };
+  surchargeCountedRightCount?: number;
 }): boolean {
-  return ((r.multiHouseSurchargeEvaluation ?? r.surchargeEcho)?.countedRightCount ?? 0) > 0;
+  return ((r.multiHouseSurchargeEvaluation ?? r.surchargeEcho)?.countedRightCount ?? r.surchargeCountedRightCount ?? 0) > 0;
 }

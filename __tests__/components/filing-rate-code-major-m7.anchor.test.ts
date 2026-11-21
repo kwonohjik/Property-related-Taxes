@@ -241,4 +241,19 @@ describe("R-c10-04 다건 — 부수토지 카드도 짝 주택의 권리 산입
     const r = await aggregate(bundle("2022-03-01", "2015-01-01"));
     expect([r.code.primary, r.code.c1]).toEqual(["1-47", "1-47"]);
   });
+  /** 카드만 차손(취득가액 9억 > 안분 양도가액) — 차손 조기 반환 경로 */
+  const lossCard = (over: Loose = {}) => {
+    const b = bundle("2022-03-01", "2015-01-01", over);
+    return { ...b, companionAssets: [{ ...b.companionAssets[0], fixedAcquisitionPrice: 900_000_000 }] };
+  };
+  it("🔴 카드가 차손이어도 주택1 + 입주권1 세대면 주택·카드 모두 ㉚ 1-48 (종전 카드 1-47)", async () => {
+    const r = await aggregate(lossCard(ROSTER));
+    const card = r.properties.find((p) => p.propertyId === "c1") ?? {};
+    expect([card.rateClause, card.transferGain < 0, card.surchargeHouseholdHasCountedRight]).toEqual(["104-7-1", true, true]);
+    expect([r.code.primary, r.code.c1]).toEqual(["1-48", "1-48"]);
+  });
+  it("대조: 카드 차손 · 권리 없는 2주택 중과 짝은 ㉗ 1-47 그대로", async () => {
+    const r = await aggregate(lossCard());
+    expect([r.code.primary, r.code.c1]).toEqual(["1-47", "1-47"]);
+  });
 });
