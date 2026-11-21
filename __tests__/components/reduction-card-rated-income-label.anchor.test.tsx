@@ -125,7 +125,7 @@ describe("§77 계열 상세카드 — `(B − C) × E`를 ⑲와 같은 이름�
   it("T4: §77의2 카드 — 같은 어휘·같은 안내", () => {
     const r = single([
       {
-        type: "replacement_land_comp",
+        type: "replacement_land_comp", transferCause: "public_expropriation",
         cashCompensation: 0,
         replacementLandComp: 600_000_000,
         businessApprovalDate: D("2013-01-01"),

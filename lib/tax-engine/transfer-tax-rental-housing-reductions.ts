@@ -129,6 +129,7 @@ export function applyRentalHousingReductions(args: {
      * 겸용주택 경로(`transfer-tax-mixed-use-totals.ts`)와 같이 주택분만 넘긴다.
      */
     Math.max(0, housingIncome),
+    effectiveInput.transferCause, // §77의2① 「시행자에게 양도」 요건의 대체값 (NBL2611-C11)
   );
 
   const cap = applyReductionStatutoryCap({

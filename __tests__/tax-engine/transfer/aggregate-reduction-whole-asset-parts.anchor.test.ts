@@ -141,7 +141,7 @@ describe("G — 조특법 §69 자경도 같다, §133 한도는 호별 합계�
 
 describe("Q-2 — 재지 않은 감면 유형은 합산 + 안내를 유지한다", () => {
   it("조특법 §77의2 대토보상", () => {
-    const r = agg([partial([{ type: "replacement_land_comp", cashCompensation: 0, replacementLandComp: 900_000_000, businessApprovalDate: D("2018-01-01") }]), unreg()]);
+    const r = agg([partial([{ type: "replacement_land_comp", transferCause: "public_expropriation", cashCompensation: 0, replacementLandComp: 900_000_000, businessApprovalDate: D("2018-01-01") }]), unreg()]);
     expect(r.reductionAmount).toBeGreaterThan(0);
     expect(r.reductionBreakdown[0].clauseBasis).toBeUndefined();
     expect(warned(r)).toBe(true);

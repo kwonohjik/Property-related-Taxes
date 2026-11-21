@@ -110,6 +110,8 @@ describe("§77의2 — 같은 의제 규정이 없다(상속개시일 기준 유
     const bought2000 = calculateTransferTax(land({ reductions: RL as never, acquisitionDate: new Date("2000-01-01") }), rates);
     expect(bought2000.replacementLandDetail?.isEligible).toBe(true);
     expect(inh.replacementLandDetail?.isEligible).toBe(false);
+    // 양도원인(수용 — 위 land() 최상위 transferCause)이 아니라 취득시기 요건 때문에 불성립이어야 한다 — NBL2611-C11 이후 다른 사유로도 같은 결과가 나므로 사유를 고정한다.
+    expect(inh.replacementLandDetail?.notEligibleReason).toContain("취득시기 요건 미충족");
     expect(inh.reductionAmount).toBe(0);
   });
 });

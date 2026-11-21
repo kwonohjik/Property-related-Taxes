@@ -643,6 +643,7 @@ function calcMixedUseCore(
       expropriationAcquisitionDate:
         landInherited && asset.nonHeirBequest !== true ? asset.decedentAcquisitionDate : undefined,
       nonHeirBequest: asset.nonHeirBequest,
+      transferCause: asset.transferCause, // §77의2① 「시행자에게 양도」 요건의 대체값 (NBL2611-C11)
       // CB-05 — §97의2①2호·§97의5①1호처럼 **계약일이 기준**인 조문의 시한 판정용.
       assetContractDate: asset.assetContractDate,
       priorReductionUsage: asset.priorReductionUsage,

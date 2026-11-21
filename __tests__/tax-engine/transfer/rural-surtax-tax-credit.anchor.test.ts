@@ -53,7 +53,7 @@ const EXPROPRIATION = [
 ];
 const REPLACEMENT = [
   {
-    type: "replacement_land_comp" as const,
+    type: "replacement_land_comp" as const, transferCause: "public_expropriation" as const,
     cashCompensation: 1_000_000_000,
     replacementLandComp: 1_000_000_000,
     businessApprovalDate: D("2023-06-01"),

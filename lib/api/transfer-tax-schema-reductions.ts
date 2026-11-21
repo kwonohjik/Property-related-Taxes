@@ -110,6 +110,8 @@ export const reductionSchema = z.discriminatedUnion("type", [
     replacementLandComp: z.number().int().nonnegative(),
     // §77의2① 소급 2년 취득요건 — 자산-수준 사업인정고시일 재사용(미상 시 생략)
     businessApprovalDate: z.string().date().optional(),
+    // §77의2① 「시행자에게 양도」 — 자산-수준 양도원인. 미상 시 생략(엔진이 불성립 + 확인 필요로 둔다 · NBL2611-C11). 400 차단은 하지 않는다.
+    transferCause: z.enum(["general", "public_expropriation"]).optional(),
   }).refine(
     (v) => v.replacementLandComp > 0,
     { message: "대토보상액은 0보다 커야 합니다" },

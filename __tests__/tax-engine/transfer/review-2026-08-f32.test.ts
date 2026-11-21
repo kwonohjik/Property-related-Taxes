@@ -35,7 +35,7 @@ describe("F32 — §77의2·§77의3 감면 detail이 단건 결과에 실린다
         ...landBase,
         reductions: [
           {
-            type: "replacement_land_comp",
+            type: "replacement_land_comp", transferCause: "public_expropriation",
             cashCompensation: 500_000_000,
             replacementLandComp: 500_000_000,
             businessApprovalDate: new Date("2023-06-01"),
@@ -72,7 +72,7 @@ describe("F32 — §77의2·§77의3 감면 detail이 단건 결과에 실린다
         ...landBase,
         reductions: [
           {
-            type: "replacement_land_comp",
+            type: "replacement_land_comp", transferCause: "public_expropriation",
             cashCompensation: 500_000_000,
             replacementLandComp: 500_000_000,
             businessApprovalDate: new Date("2023-06-01"),

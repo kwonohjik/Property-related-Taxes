@@ -456,6 +456,8 @@ export interface MixedUsePostTaxInput {
   expropriationAcquisitionDate?: Date;
   /** 상속인이 아닌 수유자 — §69 피상속인 경작기간을 합산하지 않는다(`calcReductions` 끝 인자). */
   nonHeirBequest?: boolean;
+  /** 양도원인 — §77의2① 「시행자에게 양도」 요건의 대체값(`calcReductions` 끝 인자). 감면 행의 `transferCause`가 우선이다. */
+  transferCause?: "general" | "public_expropriation";
   /** §97 시리즈 시한 판정 기준일 — 미전달 시 `period-check`가 취득일로 후퇴한다 (CB-05) */
   assetContractDate?: Date;
   /** 조특법 §133 5년 누적 한도 판정용 과거 이력 */
@@ -628,6 +630,7 @@ function computeMixedUsePostTax(
            * 주택분만 B로 넘겨 「소득세법」 §90① A × (B − C) ÷ D로 계산한다.
            */
           housingIncome,
+          input.transferCause, // §77의2① 「시행자에게 양도」 요건의 대체값 (NBL2611-C11)
         )
       : { reductionAmount: 0, reductionType: undefined, reductionTypeApplied: undefined };
 

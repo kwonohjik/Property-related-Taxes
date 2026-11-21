@@ -143,7 +143,7 @@ describe("다건 감면 카드 — 「합산 감면대상소득」은 §90①의
   it("E4: §77의2 대토보상 — 현금분은 감면대상이 아니므로 B에서 빠진다", () => {
     const agg = aggregate([
       {
-        type: "replacement_land_comp",
+        type: "replacement_land_comp", transferCause: "public_expropriation",
         cashCompensation: 200_000_000,
         replacementLandComp: 400_000_000,
         businessApprovalDate: D("2013-01-01"),

@@ -55,7 +55,7 @@ const EXPROPRIATION = [
 /** §77의2 대토보상 — 추징 고지가 **조건 없이** 생성되는 유일한 경로다. */
 const REPLACEMENT = [
   {
-    type: "replacement_land_comp" as const,
+    type: "replacement_land_comp" as const, transferCause: "public_expropriation" as const,
     cashCompensation: 500_000_000,
     replacementLandComp: 500_000_000,
     businessApprovalDate: D("2023-06-01"),
