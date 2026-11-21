@@ -189,6 +189,12 @@ export function calcReductions(
    * 합계라 주택분만 넘긴다. 미제공이면 `transferIncome` 전체.
    */
   rental975ReducibleBaseIncome?: number,
+  /**
+   * 입력 최상위 양도원인 — §77의2① 「해당 공익사업의 시행자에게 양도」 요건의 **대체값**이다(`replacement-land-reduction.ts`).
+   * 감면 행의 `transferCause`(④가 자산-수준 값을 싣는다)가 우선이고, 행에 없을 때만 이 값을 쓴다 — 직접 API는 최상위 `transferCause`를 싣기 때문이다.
+   * 둘 다 없으면 «모름»이라 불성립 + 확인 필요(NBL2611-C11).
+   */
+  transferCause?: "general" | "public_expropriation",
 ): ReductionsResult & {
   newHousingReductionDetail?: NewHousingReductionResult;
   publicExpropriationDetail?: PublicExpropriationReductionResult;
@@ -424,6 +430,8 @@ export function calcReductions(
       cashCompensation: reduction.cashCompensation,
       replacementLandComp: reduction.replacementLandComp,
       businessApprovalDate: reduction.businessApprovalDate,
+      // §77의2① 「시행자에게 양도」 — 수용·협의매수만 성립(NBL2611-C11). 행 값(④) > 입력 최상위 값(직접 API)
+      transferCause: reduction.transferCause ?? transferCause,
       acquisitionDate, // §77의2① '고시일 소급 2년 이전 취득' 요건 — §77의2에는 §77⑨ 같은 상속 의제 규정이 없다
       transferDate,
       calculatedTax,

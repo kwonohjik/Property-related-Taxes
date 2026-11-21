@@ -239,6 +239,7 @@ export function validateStep2Reductions(step: number, form: TransferFormData): V
           // NBL2611-C10 — §77의2①은 「사업인정고시일(…양도일)부터 소급하여 2년 이전에 취득한 토지등을 … 해당 공익사업의 시행자에게 양도」다.
           //   시행자 양도(수용·협의매수)가 전제이고 고시일은 취득시기 요건의 필수 사실이다. 엔진은 고시일이 비면 불성립 + 확인 필요로 두므로
           //   (`replacement-land-reduction.ts`) 여기서 먼저 막아 입력으로 돌려보낸다. 고시일은 ④와 같은 술어(`reductionNoticeDateOf` — 축 B 지분은 첫 카드).
+          //   양도원인도 엔진이 같은 요건을 본다(NBL2611-C11 — ④가 감면 행에 이 자산의 양도원인을 싣는다) — ⑧이 먼저 막는 것은 입력으로 돌려보내기 위해서다.
           //   축 B 지분 카드는 ② 양도정보가 숨어 있다 — 양도원인·고시일 칸이 첫 카드에만 있어 그쪽으로 보낸다(막다른 길 금지).
           const shareCard = isAxisBShareCard(form, ai);
           const failAt = (message: string): ValidationIssue => ({ step, assetIndex: shareCard ? 0 : ai, message });

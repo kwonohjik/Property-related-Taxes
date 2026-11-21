@@ -91,6 +91,13 @@ export type TransferReduction =
       replacementLandComp: number;
       /** 사업인정고시일 — §77의2① 소급 2년 취득요건. 자산-수준 expropriationNoticeDate 재사용(고시일 미상 시 undefined → 요건 미검증) */
       businessApprovalDate?: Date;
+      /**
+       * 양도원인 — §77의2① 「해당 공익사업의 시행자에게 양도」 요건. `public_expropriation`(수용·협의매수)만 성립하고,
+       * "general"은 불성립, 미입력은 «모름»이라 불성립 + 확인 필요(NBL2611-C11).
+       * 고시일(`businessApprovalDate`)과 같이 ④가 자산-수준 값을 이 행에 싣는다 — 행이 모든 경로(일반건물 카드·겸용 파트 카드·컴패니언)를 지나므로
+       * 최상위 `transferCause`가 닿지 않는 카드에서도 같은 사실을 본다.
+       */
+      transferCause?: "general" | "public_expropriation";
     }
   // Phase 1 (2026-05-06): 23개 조문 인벤토리 stub union — 별도 파일 분리 (800줄 정책)
   | TransferReductionStub;

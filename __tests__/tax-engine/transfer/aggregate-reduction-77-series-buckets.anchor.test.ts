@@ -113,7 +113,7 @@ describe("§77 계열 다건 감면 = 단건 (§90①의 C 버킷 흡수)", () =
     const { single, multi } = bothWays({
       reductions: [
         {
-          type: "replacement_land_comp",
+          type: "replacement_land_comp", transferCause: "public_expropriation",
           cashCompensation: 0,
           replacementLandComp: 600_000_000,
           businessApprovalDate: D("2013-01-01"),
@@ -129,7 +129,7 @@ describe("§77 계열 다건 감면 = 단건 (§90①의 C 버킷 흡수)", () =
     const { single, multi } = bothWays({
       reductions: [
         {
-          type: "replacement_land_comp",
+          type: "replacement_land_comp", transferCause: "public_expropriation",
           cashCompensation: 200_000_000,
           replacementLandComp: 400_000_000,
           businessApprovalDate: D("2013-01-01"),
@@ -205,8 +205,8 @@ describe("버킷 합 = 별지84호 부표1 ⑲ (감면대상 양도소득금액)
   const cases: Array<[string, Record<string, unknown>, number]> = [
     ["§77 현금 6억", { reductions: [{ type: "public_expropriation", cashCompensation: 600_000_000, bondCompensation: 0, businessApprovalDate: D("2013-01-01") }] }, 2024],
     ["§77 현금3억+채권3억", { reductions: [{ type: "public_expropriation", cashCompensation: 300_000_000, bondCompensation: 300_000_000, bondHoldingYears: 3, businessApprovalDate: D("2013-01-01") }] }, 2024],
-    ["§77의2 현금2억+대토4억", { reductions: [{ type: "replacement_land_comp", cashCompensation: 200_000_000, replacementLandComp: 400_000_000, businessApprovalDate: D("2013-01-01") }] }, 2024],
-    ["§77의2 대토 6억", { reductions: [{ type: "replacement_land_comp", cashCompensation: 0, replacementLandComp: 600_000_000, businessApprovalDate: D("2013-01-01") }] }, 2024],
+    ["§77의2 현금2억+대토4억", { reductions: [{ type: "replacement_land_comp", transferCause: "public_expropriation", cashCompensation: 200_000_000, replacementLandComp: 400_000_000, businessApprovalDate: D("2013-01-01") }] }, 2024],
+    ["§77의2 대토 6억", { reductions: [{ type: "replacement_land_comp", transferCause: "public_expropriation", cashCompensation: 0, replacementLandComp: 600_000_000, businessApprovalDate: D("2013-01-01") }] }, 2024],
     ["§77의3 1호 40%", { acquisitionDate: D("2000-01-01"), reductions: [{ type: "gb_designated_land", branch: "purchase", designationDate: D("2005-01-01"), triggerDate: D("2024-01-01"), residedFromAcqToTrigger: true }] }, 2024],
   ];
 

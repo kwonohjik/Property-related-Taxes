@@ -64,7 +64,7 @@ export function toEngineReductions(
   owner:
     | AssetForm["acquisitionCause"]
     | (Pick<AssetForm, "acquisitionCause" | "nonHeirBequest"> &
-        Partial<Pick<AssetForm, "assetKind" | "redevSubject" | "redevIsSuccessorMember" | "redevOriginalAssetType" | "redevReceiveOnlyMode" | "redevCompletionDate" | "acquisitionDate">>),
+        Partial<Pick<AssetForm, "transferCause" | "assetKind" | "redevSubject" | "redevIsSuccessorMember" | "redevOriginalAssetType" | "redevReceiveOnlyMode" | "redevCompletionDate" | "acquisitionDate">>),
   // 파급C: 매퍼는 asset 컨텍스트 없음 → §77 고시일 fallback 소스를 명시 주입
   expropriationNoticeDate?: string,
 ) {
@@ -169,6 +169,8 @@ export function toEngineReductions(
         replacementLandComp: parseAmount(r.rlLandComp || "0"),
         // 고시일: Step1 단일 소스(expropriationNoticeDate) 재사용 — §77의2① 소급 2년 취득요건용
         businessApprovalDate: expropriationNoticeDate || undefined,
+        // §77의2① 「시행자에게 양도」 — 그 감면을 단 자산의 양도원인(⑧이 막는 술어와 같은 값). 자산을 넘기지 않는 호출(취득원인 문자열)은 «모름»이라 undefined.
+        transferCause: ownerAsset.transferCause,
       };
     }
     // ── Phase 2 (2026-05-06): §99의3 신축주택 과세특례 본격 변환 ──

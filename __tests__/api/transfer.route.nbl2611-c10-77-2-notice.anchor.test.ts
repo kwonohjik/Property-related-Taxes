@@ -7,6 +7,7 @@
  * 종전: 엔진이 고시일 미입력이면 요건 검증을 건너뛰고(`acquisitionDate !== undefined && businessApprovalDate !== undefined`일 때만 검증), ⑧은 고시일도 양도원인도 보지 않았다 →
  *   양도원인 «일반»(시행자 양도 아님) + 고시일 없음 + §77의2 행 = 감면 100,000,000(연간 한도까지) · 고지 없음.
  * 이제: ⑧이 막고(양도원인 · 고시일 · 축 B 지분은 첫 카드 칸으로), ⑧을 우회한 직접 API는 엔진이 불성립 + 「확인 필요」로 둔다.
+ *   (양도원인 요건은 ⑧만 막던 한계를 NBL2611-C11이 엔진에도 넣었다 — `transfer.route.nbl2611-c11-77-2-cause-engine.anchor.test.ts`.)
  *
  * 수치는 mock 세율표 실측값이지 정본 세액이 아니다. 수정 전 수치는 같은 시료를 수정 없이 돌린 실측(2026-11-21)이다.
  */
@@ -35,7 +36,10 @@ import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
-import { REPLACEMENT_LAND_NOTICE_UNKNOWN_REASON } from "@/lib/tax-engine/replacement-land-reduction";
+import {
+  REPLACEMENT_LAND_NOT_EXPROPRIATION_REASON,
+  REPLACEMENT_LAND_NOTICE_UNKNOWN_REASON,
+} from "@/lib/tax-engine/replacement-land-reduction";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -97,8 +101,19 @@ describe("C10 — ⑧ 화면 검증 (단건)", () => {
 });
 
 describe("C10 — 엔진 (⑧ 우회 직접 API · ④ → ⑭)", () => {
-  it("🔑 양도원인 «일반» + 고시일 없음(⑧ 우회): 감면 0 + 「확인 필요」 사유 — 수정 전 감면 66,024,000(결정세액 122,144,400) · 고지 없음", async () => {
+  it("🔑 양도원인 «일반» + 고시일 없음(⑧ 우회): 감면 0 — 수정 전 감면 66,024,000(결정세액 122,144,400) · 고지 없음. 사유는 NBL2611-C11부터 «시행자 양도 아님»이 먼저다(고시일 사유는 아래 수용 시료가 지킨다)", async () => {
     const r = await run(single({}));
+    expect(r.status, JSON.stringify(r.j).slice(0, 300)).toBe(200);
+    expect(r.body.reductions?.[0]?.businessApprovalDate).toBeUndefined();
+    const d = r.result?.replacementLandDetail;
+    expect(d?.isEligible).toBe(false);
+    expect(d?.notEligibleReason).toBe(REPLACEMENT_LAND_NOT_EXPROPRIATION_REASON);
+    expect(r.result?.reductionAmount ?? 0).toBe(0);
+    expect(r.total).toBeGreaterThan(122_144_400); // 감면이 빠진 만큼 세액이 늘어난다
+  });
+
+  it("🔑 공익수용 + 고시일 없음(⑧ 우회): 감면 0 + 「확인 필요」 사유 — C10이 고친 «고시일 미입력 통과»는 양도원인 요건이 생겨도 그대로 막힌다", async () => {
+    const r = await run(single({ ...EXPR, expropriationNoticeDate: "" }));
     expect(r.status, JSON.stringify(r.j).slice(0, 300)).toBe(200);
     expect(r.body.reductions?.[0]?.businessApprovalDate).toBeUndefined();
     const d = r.result?.replacementLandDetail;
@@ -106,7 +121,6 @@ describe("C10 — 엔진 (⑧ 우회 직접 API · ④ → ⑭)", () => {
     expect(d?.notEligibleReason).toBe(REPLACEMENT_LAND_NOTICE_UNKNOWN_REASON);
     expect(d?.notEligibleReason).toContain("확인 필요");
     expect(r.result?.reductionAmount ?? 0).toBe(0);
-    expect(r.total).toBeGreaterThan(122_144_400); // 감면이 빠진 만큼 세액이 늘어난다
   });
 
   it("🔑 공익수용 + 고시일 2020-01-01 · 취득 2014-01-02(고시일 소급 2년 이전) → 감면 성립 — 기존 값 불변", async () => {

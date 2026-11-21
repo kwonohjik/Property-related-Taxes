@@ -98,7 +98,7 @@ describe("R-1 비분리 자산 — 받은 차손 × B / 통산 전 양도소득�
     // B 197,333,334(대토분) · 감면 외 98,666,666 — 받은 차손 100,000,000 중 감면분 66,666,666을 B에서 뺀다.
     // 기본공제는 남은 감면 외 소득이 먼저 흡수한다(§103②) — B를 통산 전 값으로 보면 감면 외 소득이 0이 되어 C = 2,500,000이 된다.
     const R = baseTransferInput({
-      ...land([{ type: "replacement_land_comp", cashCompensation: 200_000_000, replacementLandComp: 400_000_000, businessApprovalDate: D("2022-06-01") }]),
+      ...land([{ type: "replacement_land_comp", transferCause: "public_expropriation", cashCompensation: 200_000_000, replacementLandComp: 400_000_000, businessApprovalDate: D("2022-06-01") }]),
       transferPrice: 600_000_000,
     } as Partial<TransferTaxInput>);
     const r = agg([R, house(100_000_000)]);
@@ -109,7 +109,7 @@ describe("R-1 비분리 자산 — 받은 차손 × B / 통산 전 양도소득�
 
   it("§103② 1단계 — 차손 반영 후 남은 감면 외 소득이 먼저 양도한 자산이면 기본공제를 받는다 (단기 토지가 아니라)", () => {
     const R = baseTransferInput({
-      ...land([{ type: "replacement_land_comp", cashCompensation: 200_000_000, replacementLandComp: 400_000_000, businessApprovalDate: D("2022-06-01") }]),
+      ...land([{ type: "replacement_land_comp", transferCause: "public_expropriation", cashCompensation: 200_000_000, replacementLandComp: 400_000_000, businessApprovalDate: D("2022-06-01") }]),
       transferPrice: 600_000_000, transferDate: D("2023-03-10"),
     } as Partial<TransferTaxInput>);
     const S = baseTransferInput({ ...gainLand(20_000_000), acquisitionDate: D("2021-09-20"), transferDate: D("2023-03-25") } as Partial<TransferTaxInput>);
