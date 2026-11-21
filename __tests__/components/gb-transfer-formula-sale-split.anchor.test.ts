@@ -66,17 +66,45 @@ describe("R-c05-01 — 구분 기재 채택이면 계약서 구분 기재 가액
 
 describe("R-c05-01 — 감정평가가액 비율 안분은 기준시가 식을 그리지 않는다", () => {
   const APPR = { landAppraisalAtTransfer: "800000000", buildingAppraisalAtTransfer: "100000000" } as Partial<AssetForm>;
-  const VIA_APPRAISAL = (v: string) => `양도가액 총액을 양도 당시 감정평가가액 비율로 안분 = ${v} (${TRANSFER.BUNDLED_APPORTIONMENT})`;
+  const VIA_APPRAISAL = (total: string, v: string, of = "") =>
+    `양도가액 총액${of} ${total}을 양도 당시 감정평가가액 비율로 안분 = ${v} (${TRANSFER.BUNDLED_APPORTIONMENT})`;
 
   it("구분 기재 없음 · 감정 basis — 925,000,000 × 800/900 = 822,222,222", async () => {
     const r = await formulas(form(925_000_000, [asset(1, EST, APPR)]));
-    expect(r.land).toBe(VIA_APPRAISAL("822,222,222"));
-    expect(r.building).toBe(VIA_APPRAISAL("102,777,778"));
+    expect(r.land).toBe(VIA_APPRAISAL("925,000,000", "822,222,222"));
+    expect(r.building).toBe(VIA_APPRAISAL("925,000,000", "102,777,778"));
   });
 
   it("§100③ 발동 · 감정 basis — 같은 문구", async () => {
     const r = await formulas(form(925_000_000, [asset(1, EST, APPR, { saleSplitMode: "actual", landTransferPrice: "500000000", buildingTransferPrice: "425000000" } as Partial<AssetForm>)]));
-    expect(r.land).toBe(VIA_APPRAISAL("822,222,222"));
+    expect(r.land).toBe(VIA_APPRAISAL("925,000,000", "822,222,222"));
+  });
+
+  it("축 B 지분 50%+50% · 감정 basis — 지분 몫 총액 462,500,000 × 800/900 = 411,111,111(종전: 총액·지분 표시 없이 411,111,111)", async () => {
+    const half = { ownershipNumerator: "50", ownershipDenominator: "100", saleSplitMode: "apportioned" } as Partial<AssetForm>;
+    const r = await formulas(form(925_000_000, [asset(1, EST, APPR, half), asset(2, EST, APPR, half)]));
+    expect(r["land#0"]).toBe(VIA_APPRAISAL("462,500,000", "411,111,111", "(지분 몫)"));
+    expect(r["building#1"]).toBe(VIA_APPRAISAL("462,500,000", "51,388,889", "(지분 몫)"));
+  });
+});
+
+describe("R-c05-01 — 토지 두 장(사업용·비사업용 초과분)은 각자 몫을 적는다(바닥면적 20㎡ · 인정 80㎡ / 205㎡)", () => {
+  const FP20 = { gbBuildingFootprintArea: "20" } as Partial<AssetForm>;
+  const BUY = GB_SAMPLES["S100-act"][0][0];
+
+  it("구분 기재 채택 — 사업용분은 비율 몫, 비사업용 초과분은 잔액(종전: 두 장 모두 「사업용 인정면적 비율 몫」)", async () => {
+    const r = await formulas(form(T, [asset(1, BUY, FP20)]));
+    // 1,300,000,000 × 80 / 205 = 507,317,073 · 잔액 792,682,927
+    expect(r.land_business).toBe(`계약서 구분 기재 토지 가액 1,300,000,000 × 사업용 인정면적 비율 = 507,317,073 (${ADOPTED})`);
+    expect(r.land_nbl).toBe(`계약서 구분 기재 토지 가액 1,300,000,000 - 사업용분 507,317,073 = 792,682,927 (비사업용 초과분 잔액 · ${ADOPTED})`);
+  });
+
+  it("기준시가 안분 — 안분식 우변은 토지 전체 1,301,667,489, 카드 값은 그 몫(종전: 두 장 모두 안분식 = 카드 값)", async () => {
+    const std = { saleSplitMode: "apportioned", landTransferPrice: "", buildingTransferPrice: "" } as Partial<AssetForm>;
+    const r = await formulas(form(T, [asset(1, BUY, FP20, std)]));
+    const alloc = "1,600,000,000 × 1,130,370,000 / (1,130,370,000+259,072,400) = 1,301,667,489";
+    expect(r.land_business).toBe(`${alloc}\n        × 사업용 인정면적 비율 = 507,967,800`);
+    expect(r.land_nbl).toBe(`${alloc}\n        - 사업용분 507,967,800 = 793,699,689 (비사업용 초과분 · 잔액)`);
   });
 });
 

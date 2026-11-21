@@ -20,11 +20,34 @@ import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 const LAND_IDS = new Set(["land", "land_business", "land_nbl"]);
 
-export function buildGbNonStdTransferFormula(p: PerPropertyBreakdown, gb: GeneralBuildingOutput): string | undefined {
+/**
+ * 토지가 사업용·비사업용 초과분 두 장(`planGbLandCards` split)이면 그 카드 몫을 토지 전체 값(같은 지분 두 장 합)에서 적는 꼬리.
+ * 사업용분 = 전체 × 사업용 인정면적 비율, 비사업용 초과분 = 전체 − 사업용분(잔액). 한 장(한도 이내·전체 비사업용)이면 `undefined`.
+ */
+export function gbLandSplitTail(p: PerPropertyBreakdown, gb: GeneralBuildingOutput): { whole: number; tail: string; residual: boolean } | undefined {
+  const id = baseCardId(p.propertyId);
+  if (id !== "land_business" && id !== "land_nbl") return undefined;
+  const pair = (gb.assetCards ?? []).filter(
+    (c) => (baseCardId(c.propertyId) === "land_business" || baseCardId(c.propertyId) === "land_nbl") && isSameShare(c.propertyId, p.propertyId),
+  );
+  if (pair.length < 2) return undefined;
+  const whole = pair.reduce((s, c) => s + c.transferPrice, 0);
+  return id === "land_business"
+    ? { whole, tail: `× 사업용 인정면적 비율 = ${fmt(p.transferPrice)}`, residual: false }
+    : { whole, tail: `- 사업용분 ${fmt(whole - p.transferPrice)} = ${fmt(p.transferPrice)}`, residual: true };
+}
+
+export function buildGbNonStdTransferFormula(p: PerPropertyBreakdown, gb: GeneralBuildingOutput, totalTransferPrice: number): string | undefined {
   const j = gb.saleSplitJudgment;
   const basisKind = j ? (j.deemedUnclear ? j.basisKind : undefined) : gb.saleApportionBasisKind;
+  // 공유지분(축 A `share` · 축 B 지분 카드) — 카드 값은 지분 몫이다.
+  const of = j?.share || shareIndexOf(p.propertyId) !== undefined ? "(지분 몫)" : "";
+  const landSplit = gbLandSplitTail(p, gb);
   if (basisKind === "appraisal") {
-    return `양도가액 총액을 양도 당시 감정평가가액 비율로 안분 = ${fmt(p.transferPrice)} (${TRANSFER.BUNDLED_APPORTIONMENT})`;
+    const head = `양도가액 총액${of} ${fmt(totalTransferPrice)}을 양도 당시 감정평가가액 비율로 안분`;
+    return landSplit
+      ? `${head}한 토지 가액 ${fmt(landSplit.whole)} ${landSplit.tail} (${landSplit.residual ? "비사업용 초과분 잔액 · " : ""}${TRANSFER.BUNDLED_APPORTIONMENT})`
+      : `${head} = ${fmt(p.transferPrice)} (${TRANSFER.BUNDLED_APPORTIONMENT})`;
   }
   if (!j || j.deemedUnclear) return undefined;
 
@@ -36,18 +59,15 @@ export function buildGbNonStdTransferFormula(p: PerPropertyBreakdown, gb: Genera
         : `안분가액과 30% 미만 차이 — ${TRANSFER.SPLIT_DEEMED_UNCLEAR}`;
   const basis = `${TRANSFER.SPLIT_DECLARED_VALUE} · ${qualifier}`;
   const id = baseCardId(p.propertyId);
-  // 공유지분(축 A `share` · 축 B 지분 카드) — 카드 값은 계약서(100%) 구분 기재 가액의 지분 몫이다.
-  const of = j.share || shareIndexOf(p.propertyId) !== undefined ? "(지분 몫)" : "";
   const sameShare = (base: (id: string) => boolean) =>
     (gb.assetCards ?? []).filter((c) => base(baseCardId(c.propertyId)) && isSameShare(c.propertyId, p.propertyId));
   const sum = (cards: { transferPrice: number }[]) => cards.reduce((s, c) => s + c.transferPrice, 0);
 
   if (LAND_IDS.has(id)) {
-    const landTotal = sum(sameShare((x) => LAND_IDS.has(x)));
-    // 토지가 사업용·비사업용 초과분 두 장이면 구분 기재 토지 가액을 사업용 인정면적 비율로 나눈 몫이다(`planGbLandCards`).
-    return landTotal === p.transferPrice || landTotal === 0
-      ? `계약서 구분 기재 토지 가액${of} = ${fmt(p.transferPrice)} (${basis})`
-      : `계약서 구분 기재 토지 가액${of} ${fmt(landTotal)} 중 사업용 인정면적 비율 몫 = ${fmt(p.transferPrice)} (${basis})`;
+    // 토지가 사업용·비사업용 초과분 두 장이면 구분 기재 토지 가액을 사업용분(인정면적 비율)과 초과분(잔액)으로 나눈 몫이다(`planGbLandCards`).
+    return landSplit
+      ? `계약서 구분 기재 토지 가액${of} ${fmt(landSplit.whole)} ${landSplit.tail} (${landSplit.residual ? "비사업용 초과분 잔액 · " : ""}${basis})`
+      : `계약서 구분 기재 토지 가액${of} = ${fmt(p.transferPrice)} (${basis})`;
   }
   const hasExtensionCard = sameShare((x) => x === "building2").length > 0;
   if (id === "building" || (id === "building1" && !hasExtensionCard)) return `계약서 구분 기재 건물 가액${of} = ${fmt(p.transferPrice)} (${basis})`;
