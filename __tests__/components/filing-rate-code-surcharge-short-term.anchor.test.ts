@@ -117,20 +117,61 @@ describe("[정본 ㉘㉙㉞㉟ ⑳㉔] 단건 신고서 — 중과 대상 주택
   });
 });
 
+/** 조정대상지역 다주택 양도차손 — 양도가액 6억 · 취득가액 7억(차손 1억). 차손 조기 반환 경로(`transfer-tax-loss-return.ts`)를 탄다 */
+function surchargeHouseLoss(count: number, acq: string, trn: string) {
+  return calculateTransferTax(
+    baseTransferInput({
+      householdHousingCount: count,
+      isRegulatedArea: true,
+      wasRegulatedAtAcquisition: true,
+      residencePeriodMonths: 0,
+      acquisitionDate: d(acq),
+      transferDate: d(trn),
+      transferPrice: 600_000_000,
+      acquisitionPrice: 700_000_000,
+    }),
+    makeMockRates(),
+  );
+}
+
+describe("[정본 ㉘㉙㉞ ⑳] 단건 신고서 — 양도차손 자산도 같은 코드(차손 조기 반환 경로)", () => {
+  it("전제: 차손이라 과세표준·세액 0, 호는 단기(104-1-3) — 세액은 바뀌지 않는다", () => {
+    const r = surchargeHouseLoss(2, "2021-12-01", "2022-06-01");
+    expect([r.transferGain < 0, r.taxBase, r.calculatedTax, r.rateClause]).toEqual([true, 0, 0, "104-1-3"]);
+  });
+  it("🔴 ㉘ 2주택 1년 미만 차손 → 1-84 (종전 1-46 · 같은 자산의 소액 차익은 1-84)", () => {
+    expect(single(surchargeHouseLoss(2, "2021-12-01", "2022-06-01"), "2022-06-01").code).toBe("1-84");
+  });
+  it("🔴 ㉙ 2주택 1~2년 차손 → 1-82 (종전 1-39)", () => {
+    expect(single(surchargeHouseLoss(2, "2021-01-01", "2022-06-01"), "2022-06-01").code).toBe("1-82");
+  });
+  it("🔴 ㉞ 3주택 1년 미만 차손 → 1-88 (종전 1-46)", () => {
+    expect(single(surchargeHouseLoss(3, "2021-12-01", "2022-06-01"), "2022-06-01").code).toBe("1-88");
+  });
+  it("🔴 ⑳ 2주택 1년 미만(’18.4.1.~’21.5.31.) 차손 → 1-53 (종전 1-40)", () => {
+    expect(single(surchargeHouseLoss(2, "2020-06-01", "2021-03-01"), "2021-03-01").code).toBe("1-53");
+  });
+  it("대조: 같은 세대 2년 이상 보유 차손은 중과 호(104-7-1)가 이겨 ㉗ 1-51 그대로", () => {
+    const r = surchargeHouseLoss(2, "2018-01-01", "2021-03-01");
+    expect(r.rateClause).toBe("104-7-1");
+    expect(r.surchargeShortTermClause).toBeUndefined();
+  });
+});
+
 describe("다건(부수토지 카드 일괄) 신고서 — 자산 열도 같은 규칙", () => {
   const ZONE = { buildingFootprintArea: 100, isUrbanArea: true, appurtenantLandZone: "metropolitan_residential" };
-  const body = (acq: string) => ({
+  const body = (acq: string, cardAcqPrice = 200_000_000) => ({
     transferDate: "2026-06-15", acquisitionCause: "purchase", expenses: 0, useEstimatedAcquisition: false, residencePeriodMonths: 60,
     isRegulatedArea: true, wasRegulatedAtAcquisition: true, isUnregistered: false, isNonBusinessLand: false, reductions: [], annualBasicDeductionUsed: 0,
     isOneHousehold: true, householdHousingCount: 2, ...ZONE, propertyType: "housing", acquisitionDate: acq,
     transferPrice: 1_600_000_000, acquisitionPrice: 800_000_000, acquisitionArea: 100, totalSalePrice: 2_000_000_000, standardPriceAtTransferForApportion: 1_600_000,
     companionAssets: [{
       assetId: "c1", assetLabel: "부수토지 c1", assetKind: "land", landNature: "appurtenant_to_housing", acquisitionCause: "purchase", acquisitionDate: acq,
-      fixedAcquisitionPrice: 200_000_000, standardPriceAtTransfer: 400_000, directExpenses: 0, isOneHousehold: true, areaM2: 100, reductions: [],
+      fixedAcquisitionPrice: cardAcqPrice, standardPriceAtTransfer: 400_000, directExpenses: 0, isOneHousehold: true, areaM2: 100, reductions: [],
     }],
   });
-  async function aggregate(acq: string) {
-    const res = await postTransfer(capResidenceToHolding(body(acq)));
+  async function aggregate(acq: string, cardAcqPrice?: number) {
+    const res = await postTransfer(capResidenceToHolding(body(acq, cardAcqPrice)));
     expect(res.status, JSON.stringify((res.json as Loose).error)).toBe(200);
     const a = (res.json as Loose).data.aggregated;
     const f = createDefaultTransferFormData() as Loose;
@@ -138,7 +179,7 @@ describe("다건(부수토지 카드 일괄) 신고서 — 자산 열도 같은 
     f.assets = [{ assetId: "primary", assetKind: "housing" }, { assetId: "c1", assetKind: "land", landNature: "appurtenant_to_housing" }];
     const rows = buildAggregateRows(aggregateToFilingResult(a), { properties: a.properties, aggregated: a } as never, f as never) as Loose[];
     const pick = (label: string) => (rows.find((r) => r.label === label)?.values ?? {}) as Record<string, string | undefined>;
-    return { code: pick("세율구분 코드"), rate: pick("세율") };
+    return { code: pick("세율구분 코드"), rate: pick("세율"), properties: a.properties as Loose[] };
   }
   it("🔴 2주택 1~2년: 주택·카드 모두 1-82 · 60% (종전 1-39)", async () => {
     const r = await aggregate("2025-01-01");
@@ -147,6 +188,12 @@ describe("다건(부수토지 카드 일괄) 신고서 — 자산 열도 같은 
   it("🔴 2주택 1년 미만: 주택·카드 모두 1-84 · 70% (종전 1-46)", async () => {
     const r = await aggregate("2025-12-01");
     expect([r.code.primary, r.code.c1, r.rate.primary, r.rate.c1]).toEqual(["1-84", "1-84", "70%", "70%"]);
+  });
+  it("🔴 카드가 양도차손(취득가액 5억)이어도 카드 열 1-84 — 차손 자산의 breakdown도 echo를 싣는다(종전 1-46)", async () => {
+    const r = await aggregate("2025-12-01", 500_000_000);
+    const card = r.properties.find((p) => p.propertyId === "c1") ?? {};
+    expect([card.transferGain < 0, card.determinedTax, card.rateClause]).toEqual([true, 0, "104-1-3"]);
+    expect([r.code.primary, r.code.c1]).toEqual(["1-84", "1-84"]);
   });
 });
 
@@ -161,6 +208,7 @@ describe("resolveFilingRateCode — 중과 후보 echo", () => {
   });
   it("’18.4.1.~’21.5.31.: 1년 미만 2주택 1-53 · 3주택 1-57 / 1~2년은 정본에 코드가 없어 비운다", () => {
     expect(code("104-1-3", "housing", "2021-05-31", "104-7-1")).toBe("1-53");
+    expect(code("104-1-3", "housing", "2021-06-01", "104-7-1")).toBe("1-84"); // 경계 짝 — ’21.6.1. 당일부터 ㉘
     expect(code("104-1-3", "housing", "2018-04-01", "104-7-3")).toBe("1-57");
     expect(code("104-1-2", "housing", "2020-06-01", "104-7-1")).toBeUndefined();
   });
