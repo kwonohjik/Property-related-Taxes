@@ -17,6 +17,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { AssetReductionForm } from "@/lib/stores/calc-wizard-asset-reduction";
+import { UNSOLD_98_9_CPT_APPLICATION } from "@/lib/tax-engine/legal-codes/transfer-house";
 
 type Unsold989Form = Extract<AssetReductionForm, { type: "unsold_98_9" }>;
 
@@ -149,7 +150,8 @@ export function Unsold989InputForm({ value, onChange, rowFacts }: Props) {
         </p>
         <p className="text-micro text-emerald-700 dark:text-emerald-300">
           ※ 종합부동산세 1세대 1주택자 특례(§98의9②)는 본 계산기에 반영되지 않습니다 — 해당 연도
-          9월 16일~30일에 관할 세무서장에게 별도 신청 (조특령 §98의8④)
+          9월 16일부터 9월 30일까지 관할 세무서장에게 별도 신청 ({UNSOLD_98_9_CPT_APPLICATION.PERIOD}) · 최초 신청 연도의
+          다음 연도부터는 신청 내용에 변동이 없으면 신청 생략 가능 ({UNSOLD_98_9_CPT_APPLICATION.DOCS_AND_PROVISO} 단서)
         </p>
       </div>
     </div>

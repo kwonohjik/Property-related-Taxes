@@ -40,6 +40,17 @@ function AcqCell({ owned, part, testId, hideNotOwned = false }: { owned: boolean
   );
 }
 
+/**
+ * 개산공제 칸 보조 줄 — swap 파트는 엔진이 개산공제를 0으로 두지만 `stdPriceAtAcq`는 그대로 싣는다.
+ * 「취득시 기준시가 × 3%」를 함께 적으면 0원과 산식이 어긋나 공제가 누락된 것처럼 읽힌다(R-c09-06).
+ */
+function LumpSwapNote({ testId }: { testId: string }) {
+  return (
+    <span className="block text-muted-foreground font-normal" data-testid={testId}>
+      개산공제 미적용 ({NECESSARY_EXPENSE.SWAP_PROVISO} — 자본적지출·양도비 택일)
+    </span>
+  );
+}
 
 /**
  * 토지·건물 분리 양도차익 상세 (소득령 §166⑥ · §100②).
@@ -73,6 +84,7 @@ import { formatLumpRate } from "./split-acq-text";
 import { cn } from "@/lib/utils";
 import { BG_NOT_OWNED_NOTE } from "@/lib/calc/bg-owner-split-result";
 import { appurtenantLandLthdNoticeText } from "@/lib/tax-engine/appurtenant-land-lthd-rate";
+import { NECESSARY_EXPENSE } from "@/lib/tax-engine/legal-codes/transfer-necessary-expense";
 
 type SplitDetail = NonNullable<TransferTaxResult["splitDetail"]>;
 
@@ -250,13 +262,13 @@ export function SplitGainDetailSection({
               {splitDetail.land.appraisalDeduction.toLocaleString()}
               {/* base는 엔진이 실제로 쓴 값(지분 기준시가)을 노출한다 — 100% 값을 쓰면
                   지분 자산에서 산식이 표시된 개산공제를 못 만든다. */}
-              {splitDetail.land.stdPriceAtAcq != null && (
+              {splitDetail.land.swapApplied ? <LumpSwapNote testId="split-card-lump-swap-land" /> : splitDetail.land.stdPriceAtAcq != null && (
                 <span className="block text-muted-foreground font-normal" data-testid="split-card-lump-base-land">취득시 기준시가 {(splitDetail.land.lumpDeductionBase ?? splitDetail.land.stdPriceAtAcq).toLocaleString()} × {lumpRateLabel(splitDetail.land.lumpDeductionRate)}</span>
               )}
             </span>}
             {hideBuilding ? <NotOwnedCell /> : <span className={colCls(buildingIsOwned)}>
               {splitDetail.building.appraisalDeduction.toLocaleString()}
-              {splitDetail.building.stdPriceAtAcq != null && (
+              {splitDetail.building.swapApplied ? <LumpSwapNote testId="split-card-lump-swap-building" /> : splitDetail.building.stdPriceAtAcq != null && (
                 <span className="block text-muted-foreground font-normal" data-testid="split-card-lump-base-building">취득시 기준시가 {(splitDetail.building.lumpDeductionBase ?? splitDetail.building.stdPriceAtAcq).toLocaleString()} × {lumpRateLabel(splitDetail.building.lumpDeductionRate)}</span>
               )}
             </span>}

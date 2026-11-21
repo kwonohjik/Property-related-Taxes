@@ -116,6 +116,7 @@ export const TRANSFER_DECREE_UNSOLD98_ADDITIONS: VerificationRule[] = [
   },
   {
     // 법 §98의9 위임령(령 §98의8). ①1~5호. 원문 MST 288915 실독 2026-11-10
+    // ④ 단서(종부세 특례 신청 생략 — `UNSOLD_98_9_CPT_APPLICATION.DOCS_AND_PROVISO`) 실독 2026-11-22
     id: "TRANSFER_DECREE.UNSOLD_98_9_REQUIREMENTS",
     citation: "조특령 §98의8",
     keywords: [
@@ -123,6 +124,7 @@ export const TRANSFER_DECREE_UNSOLD98_ADDITIONS: VerificationRule[] = [
       "취득가액이 7억원 이하일 것",
       "양수자가 해당 주택에 대한 매매계약",
       "선착순의 방법으로 공급하는 것일 것",
+      "최초로 신청을 한 연도의 다음 연도부터는 그 신청 내용에 변동이 없으면 신청하지 않을 수 있다",
     ],
     keywordMode: "ALL",
   },

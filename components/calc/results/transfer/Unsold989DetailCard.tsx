@@ -9,6 +9,7 @@
  */
 
 import type { Unsold989Result } from "@/lib/tax-engine/types/transfer.types";
+import { UNSOLD_98_9_CPT_APPLICATION } from "@/lib/tax-engine/legal-codes/transfer-house";
 
 interface Props {
   detail: Unsold989Result;
@@ -78,7 +79,9 @@ export function Unsold989DetailCard({ detail, houseRef }: Props) {
       <div className="rounded-md border border-sky-200 bg-sky-50 dark:border-sky-800/40 dark:bg-sky-950/30 px-3 py-2">
         <p className="text-caption text-sky-800 dark:text-sky-300">
           종합부동산세 1세대 1주택자 특례(§98의9②)는 본 계산기에 반영되지 않습니다 — 해당 연도
-          9월 16일~30일에 관할 세무서장에게 별도 신청해야 합니다 (조특령 §98의8④)
+          9월 16일부터 9월 30일까지 관할 세무서장에게 별도 신청해야 합니다 ({UNSOLD_98_9_CPT_APPLICATION.PERIOD}).
+          최초로 신청한 연도의 다음 연도부터는 신청 내용에 변동이 없으면 신청하지 않을 수 있습니다
+          ({UNSOLD_98_9_CPT_APPLICATION.DOCS_AND_PROVISO} 단서)
         </p>
       </div>
 
