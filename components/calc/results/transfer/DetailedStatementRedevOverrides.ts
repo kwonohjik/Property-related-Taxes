@@ -294,14 +294,14 @@ export function applyRedevelopmentOverrides(
       transferItem.formula = `합계 = 신축주택 양도가액 ${fmt(totalTransferPrice)} + 청산금 수령액 ${fmt(separate)} — 동시신고 단위의 대가 전부(§166①2호 가목은 별개의 양도다)`;
       transferItem.legalBasis = "소득세법 시행령 §166①2호 가목 · §166②·④";
     } else if (isRightReceive) {
-      transferItem.formula = "합계 = 실지 양도가액. 분할 표시는 §166①2호 — 인가전(권리가액−청산금 의제)·청산금 수령분(청산금 의제)이며 단계별 의제라 합계와 다르다";
+      transferItem.formula = "합계 = 실지 양도가액. 분할 표시는 §166①2호 — 인가전(나목 — 평가액 − 지급받은 청산금으로 의제)·인가후 분(가목 — 양도가액 전액)이며 단계별 의제라 합계와 다르다";
       transferItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166④";
     } else if (redev.successorMemberApplied === true) {
       transferItem.formula = "합계 = 실지 양도가액. 승계조합원은 §166 안분을 하지 않아 「승계조합원 신축APT」 칸이 양도가액 전액이다 (단순 차감)";
       transferItem.legalBasis = "소득세법 시행령 §162 ① 4호";
     } else {
       transferItem.formula = isRightSubject
-        ? "합계 = 실지 양도가액. 분할 표시는 §166① — 인가전(권리가액 의제)·인가후·청산금(양도가액 − 권리가액 − 청산금 납부액)이며 단계별 의제라 합계와 다르다"
+        ? "합계 = 실지 양도가액. 분할 표시는 §166① — 인가전(권리가액 의제)·인가후·청산금(양도가액 − 평가액)이며 단계별 의제라 합계와 다르다"
         : "합계 = 실지 양도가액. 분할 표시는 §166 — 인가전(권리가액 의제)·인가후(분양가 안분)·청산금(분양가 안분)이며 단계별 의제라 합계와 다르다";
       transferItem.legalBasis = isRightSubject ? "소득세법 시행령 §166①·④" : "소득세법 시행령 §166①·②·④";
     }
@@ -322,14 +322,14 @@ export function applyRedevelopmentOverrides(
         : `취득가액 = 종전 취득가액을 평가액 대비 청산금 수령액 비율로 안분 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
       acqItem.legalBasis = provisoApplied ? REDEVELOPMENT.REDEV_RECEIVE_ONLY_CONVERSION_PROVISO : REDEVELOPMENT.EVALUATION;
     } else if (isRightReceive) {
-      acqItem.formula = "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166①2호 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(실가 또는 환산 − 안분 취득가)·청산금 분(종전취득가 × 청산금/권리가)";
+      acqItem.formula = "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166①2호 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(나목 — 종전 취득가액 또는 환산취득가를 평가액 대비 (평가액 − 지급받은 청산금) 비율로 안분)·인가후 분(가목 — 평가액 − 지급받은 청산금)";
       acqItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목 · §166③";
     } else if (redev.successorMemberApplied === true) {
       acqItem.formula = "합계 취득가액 = 승계 취득가액. 승계조합원은 §166 안분을 하지 않아 「승계조합원 신축APT」 칸의 취득가액을 양도가액에서 단순 차감한다";
       acqItem.legalBasis = "소득세법 시행령 §162 ① 4호";
     } else {
       acqItem.formula = isRightSubject
-        ? "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(§166③ 환산 또는 실가)·인가후·청산금(권리가액+청산금 의제)"
+        ? "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(§166③ 환산 또는 실가)·인가후·청산금(납부한 청산금)"
         : "합계 취득가액 = 양도가액 − 필요경비 − 양도차익 (§166 단계별 의제 구조상 파트 합과 다름). 분할 표시는 인가전(§166③ 환산 또는 실가)·인가후(권리가액 의제)·청산금(청산금 의제)";
       acqItem.legalBasis = isRightSubject ? "소득세법 시행령 §166①③ · §163" : "소득세법 시행령 §166③ · §163";
     }
@@ -345,7 +345,9 @@ export function applyRedevelopmentOverrides(
       expItem.formula = `필요경비 = 종전 부동산의 필요경비를 평가액 대비 청산금 수령액 비율로 안분 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
       expItem.legalBasis = redev.receiveOnlyProvisoComparison?.chosen === "direct" ? REDEVELOPMENT.REDEV_RECEIVE_ONLY_CONVERSION_PROVISO : "소득세법 §97 ①";
     } else {
-      expItem.formula = "분할별 필요경비 합 — 인가전 개산공제(§163⑥) + 인가후·청산금 분 필요경비";
+      expItem.formula = isRightReceive
+        ? "분할별 필요경비 합 — 인가전 개산공제(§163⑥) 또는 필요경비(나목 비율 안분) + 인가후 필요경비"
+        : "분할별 필요경비 합 — 인가전 개산공제(§163⑥) + 인가후·청산금 분 필요경비";
       expItem.legalBasis = "소득세법 시행령 §163⑥";
     }
     expItem.perAsset = buildRedevPerAssetForExpense(redev, subject, settlementDirection);
@@ -358,7 +360,7 @@ export function applyRedevelopmentOverrides(
       gainItem.formula = `양도차익 = 청산금 수령액 − 안분 취득가액 − 안분 필요경비 (${REDEVELOPMENT.REDEV_RECEIVE_ONLY_GAIN_GUIDELINE})`;
       gainItem.legalBasis = "소득세법 §88 1호";
     } else if (isRightReceive) {
-      gainItem.formula = "입주권 §166①2호 분할별 양도차익 합 = 인가전(나목 축소) + 청산금(가목)";
+      gainItem.formula = "입주권 §166①2호 분할별 양도차익 합 = 인가전(나목 축소) + 인가후 분(가목)";
       gainItem.legalBasis = "소득세법 시행령 §166①2호 가목·나목";
     } else {
       gainItem.formula = isRightSubject
@@ -382,7 +384,7 @@ export function applyRedevelopmentOverrides(
       ltItem.formula = "청산금 수령분 — 취득일부터 청산금분 양도일까지의 보유기간으로 장기보유특별공제 적용 (재산-439)";
       ltItem.legalBasis = "소득세법 §95 ④";
     } else if (isRightReceive) {
-      ltItem.formula = "§95② 본문 괄호 + §166⑤1호 — 인가전(나목) 분만 장기보유특별공제 적용. 청산금(가목) 분 장기보유특별공제 0 (§94①2호)";
+      ltItem.formula = "§95② 본문 괄호 + §166⑤1호 — 인가전(나목) 분만 장기보유특별공제 적용. 인가후 분(가목) 장기보유특별공제 0 (§94①2호)";
       ltItem.legalBasis = "소득세법 §95② 본문 괄호 · §94①2호 · 시행령 §166⑤1호 · §166①2호 가목";
     } else {
       ltItem.formula = isRightSubject

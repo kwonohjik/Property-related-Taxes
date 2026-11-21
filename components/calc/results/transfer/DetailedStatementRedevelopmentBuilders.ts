@@ -392,6 +392,8 @@ function successorEstimateFormulas(redev: RedevelopmentResult): { acquisition: s
 export function buildRedevExpenseFormula(
   branch: RedevBranch,
   redev: RedevelopmentResult,
+  /** 입주권(§166①)의 청산금 칸은 인가후 분 필요경비다 — 「청산금 분」으로 적지 않는다. 미전달이면 종전 표시. */
+  subject?: "apt" | "right",
 ): string {
   // 사례 46 receiveOnly — 필요경비 등을 청산금 비율로 안분한 값 (집행기준 100-166-10)
   if (redev.receiveOnlyMode === true) {
@@ -437,7 +439,9 @@ export function buildRedevExpenseFormula(
       const P_A = redev.valuationMeta.lumpDeductionBase ?? redev.valuationMeta.numerator;
       // 토지만 제공한 환산은 개별공시지가(§163⑥1호), 주택은 주택 기준시가(2호 가목) — 종전 인용 「§164④ 라목」은 없는 조문이다 (R-c05-05).
       const land = redev.valuationMeta.lumpBaseIsLandPrice === true;
-      const lumpFormula = `개산공제 = 취득 당시 ${land ? "개별공시지가" : "주택 기준시가"} ${fmt(P_A)} × 3% = ${fmt(lump)} (${land ? REDEVELOPMENT.LUMP_DEDUCTION_LAND : REDEVELOPMENT.LUMP_DEDUCTION_HOUSE}, 1원 미만 절사)`;
+      // 율은 미등기(§163⑥ 각 호 괄호 — 3/1000)로 갈리는데 결과에 플래그가 없다 — 엔진의 두 값(base·개산공제)에서 역산한다(`RedevelopmentDetailCard`와 같은 방식).
+      const ratePct = Number(((lump / P_A) * 100).toFixed(2));
+      const lumpFormula = `개산공제 = 취득 당시 ${land ? "개별공시지가" : "주택 기준시가"} ${fmt(P_A)} × ${ratePct}% = ${fmt(lump)} (${land ? REDEVELOPMENT.LUMP_DEDUCTION_LAND : REDEVELOPMENT.LUMP_DEDUCTION_HOUSE}, 1원 미만 절사)`;
       // 개산공제 외 성분(인가전 필요경비·수령 분기 안분)이 있으면 **합계를 함께** 밝힌다.
       return amount === lump
         ? lumpFormula
@@ -454,7 +458,7 @@ export function buildRedevExpenseFormula(
   }
   // 인가후·청산금 분에는 개산공제(§163⑥)가 없다 — 다만 그 분할 몫의 필요경비는 있을 수 있다.
   return amount > 0
-    ? `${branch === "settlement" ? "청산금 분" : "인가후 기존건물분"} 필요경비 ${fmt(amount)} (개산공제 미적용)`
+    ? `${branch === "settlement" ? (subject === "right" ? "인가후" : "청산금 분") : "인가후 기존건물분"} 필요경비 ${fmt(amount)} (개산공제 미적용)`
     : "해당 분할에는 개산공제 미적용";
 }
 
@@ -662,7 +666,7 @@ export function buildRedevPerAssetForExpense(
   return buildPerAsset(
     redev,
     (b, r) => r[b].expenses ?? 0,
-    (b, r) => buildRedevExpenseFormula(b, r),
+    (b, r) => buildRedevExpenseFormula(b, r, subject),
     subject,
     settlementDirection,
   );

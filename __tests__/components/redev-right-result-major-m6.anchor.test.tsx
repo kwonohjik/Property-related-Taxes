@@ -205,3 +205,81 @@ describe("R-c08-05 형제 경로 — 토지만 제공한 입주권(환산) 명�
     expect(item.legalBasis).toContain("표2");
   });
 });
+
+/* ── 리뷰 후속 (2026-11-21) — 같은 명세서 항목의 합계 산식이 고친 분할 행과 같은 구조를 말한다 ── */
+function statementItems(d: RedevelopmentResult, dir: "pay" | "receive") {
+  type Item = import("@/components/calc/results/transfer/DetailedStatementHelpers").StatementItem;
+  const keys = ["transferPrice", "acquisitionPrice", "expenses", "transferGain", "ltDeduction"];
+  const items = new Map(keys.map((k) => [k, { key: k, label: k, value: 0 } as unknown as Item]));
+  return import("@/components/calc/results/transfer/DetailedStatementRedevOverrides").then(({ applyRedevelopmentOverrides }) => {
+    applyRedevelopmentOverrides(items, d, 520_000_000, "right", dir);
+    return items;
+  });
+}
+const RECV_POST = right("receive", { rights: 300_000_000, settle: 100_000_000, tp: 520_000_000, acq: 100_000_000, post: 1_000_000 });
+
+describe("R-c05-06/R-c08-03 형제 — 입주권 수령 명세서 합계 산식 = 가목(인가후 분)", () => {
+  it("합계 산식에 폐기한 「청산금 수령분 = 청산금 의제」 구조가 없다", async () => {
+    const items = await statementItems(RECV_POST, "receive");
+    const totals = [...items.values()].map((i) => String(i.formula ?? ""));
+    for (const f of totals) {
+      expect(f).not.toContain("청산금 의제");
+      expect(f).not.toContain("종전취득가 × 청산금");
+      expect(f).not.toContain("청산금(가목)");
+    }
+    expect(items.get("transferPrice")!.formula).toContain("양도가액 전액");
+    expect(items.get("acquisitionPrice")!.formula).toContain("평가액 − 지급받은 청산금");
+    expect(items.get("ltDeduction")!.formula).toContain("인가후 분(가목)");
+  });
+  it("필요경비 ② 행은 「인가후 필요경비」 (청산금 분 아님)", async () => {
+    const items = await statementItems(RECV_POST, "receive");
+    const row = items.get("expenses")!.perAsset![1];
+    expect(row.formula).toContain(`인가후 필요경비 ${fmt(1_000_000)}`);
+    expect(row.formula).not.toContain("청산금 분");
+  });
+});
+
+describe("R-c05-06 형제 — 입주권 납부 명세서 합계 산식 = ② 양도가액 − 평가액 / 납부한 청산금", () => {
+  it("양도가액·취득가액 합계 산식이 ② 행과 같은 구조", async () => {
+    const items = await statementItems(PAY, "pay");
+    expect(items.get("transferPrice")!.formula).toContain("인가후·청산금(양도가액 − 평가액)");
+    expect(items.get("transferPrice")!.formula).not.toContain("청산금 납부액");
+    expect(items.get("acquisitionPrice")!.formula).toContain("인가후·청산금(납부한 청산금)");
+    expect(items.get("acquisitionPrice")!.formula).not.toContain("청산금 의제");
+  });
+});
+
+describe("R-c08-01 형제 — 토지만 제공한 입주권(환산) 납부 카드 ② 취득가액 라벨", () => {
+  it("엔진이 권리가액을 싣는 칸을 「=청산금」으로 적지 않는다", () => {
+    const d = runRedevelopment({
+      redevelopment: {
+        subject: "right", approvalLawBasis: "urban_renovation_art_74", approvalDate: new Date("2018-10-23"), rightsValue: 300_000_000,
+        settlementDirection: "pay", settlementAmount: 100_000_000, preApprovalExpenses: 0, postApprovalExpenses: 2_000_000, originalAssetType: "land",
+        landStdPriceAtAcq: 100_000_000, landStdPriceAtApproval: 200_000_000,
+      },
+      acquisitionDate: new Date("2013-04-09"), transferDate: new Date("2023-03-02"), transferPrice: 520_000_000, useEstimatedAcquisition: true,
+    } as Parameters<typeof runRedevelopment>[0]);
+    expect(d.landContribDetail).toBeDefined();
+    expect(d.settlement.apportionedAcquisition).toBe(300_000_000);
+    const t = card(d, "pay");
+    expect(t).toContain(`취득가액(=권리가액 의제)${fmt(300_000_000)}`);
+    expect(t).not.toContain("안분 취득가액(=청산금)");
+  });
+});
+
+describe("R-c05-05 후속 — 개산공제율은 엔진 값에서 (미등기 3/1000)", () => {
+  it("미등기 토지 출자 완공 APT(환산) — 「× 0.3% = 300,000」", () => {
+    const d = runRedevelopment({
+      redevelopment: {
+        subject: "apt", approvalLawBasis: "urban_renovation_art_74", approvalDate: new Date("2013-10-23"), rightsValue: 300_000_000,
+        settlementDirection: "pay", settlementAmount: 50_000_000, preApprovalExpenses: 0, postApprovalExpenses: 0, originalAssetType: "land",
+        landStdPriceAtAcq: 100_000_000, landStdPriceAtApproval: 200_000_000,
+      },
+      acquisitionDate: new Date("2008-04-09"), transferDate: new Date("2023-03-02"), transferPrice: 420_000_000, useEstimatedAcquisition: true, isUnregistered: true,
+    } as Parameters<typeof runRedevelopment>[0]);
+    expect(d.preApproval.expenses).toBe(300_000);
+    const f = buildRedevPerAssetForExpense(d, "apt", "pay")[0].formula;
+    expect(f).toContain(`${fmt(100_000_000)} × 0.3% = ${fmt(300_000)}`);
+    expect(f).not.toContain("× 3%");
+  });
+});

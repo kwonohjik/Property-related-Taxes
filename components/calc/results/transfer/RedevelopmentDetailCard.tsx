@@ -587,6 +587,8 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
                 ? "취득가액"
                 : (isRightSubject || isAptReceive) && settlementDirection === "receive"
                 ? <>안분 취득가액(=종전취득가 × <Frac top="청산금" bottom="권리가액" />)</>
+                : detail.landContribDetail
+                ? "취득가액(=권리가액 의제)" // 토지만 제공한 환산 — 엔진이 이 칸에 권리가액을 싣는다(redevelopment-branches.ts runLandContribEstimated)
                 : "안분 취득가액(=청산금)"
             }
             value={settlement.apportionedAcquisition}
