@@ -8,7 +8,7 @@
  *
  * 산식 표기 규칙 (강제):
  *  - 변수 약어(P_F, Sum_A) 금지 → 한국어 풀어쓰기
- *  - "산출세액 × 10%" 라벨 금지 → 지방세법 §103조의3 누진 함수 직접 호출 명시
+ *  - 지방소득세: 엔진 산식 `(결정세액 + 소득세법 §114조의2 가산세) × 10%` 문구 — 단일 소스 `transfer/local-income-tax-display.ts`(R-c01-10)
  *  - 보유기간: "만 21년 2개월 (1년 미만 절사 → 21년)" 형식
  *  - 장특공: "MIN(15, 보유연수) × 2%" 명시
  *  - 개산공제율: "토지·건물 3% (시행령 §163⑥)" 명시
@@ -67,6 +67,8 @@ interface Props {
   rateClause?: RateClause;
   /** 엔진 적용 세율 — 단일세율 호(§104①2·3·10호)의 산식에만 쓴다. */
   appliedRate?: number;
+  /** 지방소득세 산식 문구 — 호출부가 `localCalculatedTaxFormula`(단일 소스)로 만든다. 없으면 산식을 적지 않는다. */
+  localTaxFormula?: string;
 }
 
 /** 산출세액 근거 — 엔진이 고른 §104 호. 상가 단건에서 도달하는 호만 둔다(그 밖은 조문 없이 「산출세액」). */
@@ -97,12 +99,12 @@ function Row({ label, value, sub = false, highlight = false }: {
   return (
     <tr className={highlight ? "bg-emerald-50/60 font-semibold dark:bg-emerald-950/40" : ""}>
       <td className={`py-1 pr-3 text-xs ${sub ? "pl-4 text-muted-foreground" : "font-medium"}`}>{label}</td>
-      <td className="py-1 text-right text-xs tabular-nums">{fmt}</td>
+      <td className="py-1 text-right text-xs font-mono tabular-nums whitespace-nowrap">{fmt}</td>
     </tr>
   );
 }
 
-export function CommercialBuildingValuationDetailCard({ detail, transferPrice: transferPriceProp, acquisitionGain, longTermDeduction, taxableIncome, taxBase, taxAmount, localTax, totalTax, holdingYears, holdingMonths, lthdRate, landGain, buildingGain, swapApplied, depreciation, swapDirectSide, basicDeduction, rateClause, appliedRate }: Props) {
+export function CommercialBuildingValuationDetailCard({ detail, transferPrice: transferPriceProp, acquisitionGain, longTermDeduction, taxableIncome, taxBase, taxAmount, localTax, totalTax, holdingYears, holdingMonths, lthdRate, landGain, buildingGain, swapApplied, depreciation, swapDirectSide, basicDeduction, rateClause, appliedRate, localTaxFormula }: Props) {
   const isPreDisclosure = detail.estimatedBasisAtAcq !== undefined;
   // 산식의 「양도가액」은 엔진이 환산에 넣은 값(지분 적용 후 echo)이 정본이다 — echo 이전 저장 결과만 호출부 값(R-c09-01)
   const transferPrice = detail.transferPrice ?? transferPriceProp;
@@ -144,13 +146,13 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice: t
             </thead>
             <tbody>
               {detail.combinedStdAtAcq !== undefined && (
-                <tr><td className="py-1 text-amber-800 dark:text-amber-200">취득시</td><td className="py-1 text-right tabular-nums">{formatKRW(detail.combinedStdAtAcq)}</td></tr>
+                <tr><td className="py-1 text-amber-800 dark:text-amber-200">취득시</td><td className="py-1 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(detail.combinedStdAtAcq)}</td></tr>
               )}
               {detail.combinedStdAtFirst !== undefined && (
-                <tr><td className="py-1 text-amber-800 dark:text-amber-200">최초고시시(2005)</td><td className="py-1 text-right tabular-nums">{formatKRW(detail.combinedStdAtFirst)}</td></tr>
+                <tr><td className="py-1 text-amber-800 dark:text-amber-200">최초고시시(2005)</td><td className="py-1 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(detail.combinedStdAtFirst)}</td></tr>
               )}
               {detail.combinedStdAtTransfer !== undefined && (
-                <tr><td className="py-1 text-emerald-800 dark:text-emerald-200">양도시</td><td className="py-1 text-right tabular-nums">{formatKRW(detail.combinedStdAtTransfer)}</td></tr>
+                <tr><td className="py-1 text-emerald-800 dark:text-emerald-200">양도시</td><td className="py-1 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(detail.combinedStdAtTransfer)}</td></tr>
               )}
             </tbody>
           </table>
@@ -168,19 +170,19 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice: t
             <Row label={`양도시 호별총액 = 양도시 ㎡당 호별고시가 × 연면적 ${detail.floorAreaTotal.toFixed(2)} ㎡`} value={detail.unitPriceTotalAtTransfer} />
             {isPreDisclosure && detail.estimatedBasisAtAcq !== undefined && (
               <Row
-                label={<>취득시 환산기준시가 = INT(최초고시 호별총액 × <Frac top="취득시 기준시가합" bottom="최초고시시 기준시가합" />) — 시행령 §164⑥</>}
+                label={<>취득시 환산기준시가 = 최초고시 호별총액 × <Frac top="취득시 기준시가합" bottom="최초고시시 기준시가합" /> — 시행령 §164⑥</>}
                 value={detail.estimatedBasisAtAcq}
                 sub
               />
             )}
             <Row
-              label={<>환산취득가 합계 = INT(양도가액 {formatKRW(transferPrice)} × <Frac top="취득시 환산기준시가" bottom="양도시 호별총액" />) — §176조의2②2호</>}
+              label={<>환산취득가 합계 = 양도가액 {formatKRW(transferPrice)} × <Frac top="취득시 환산기준시가" bottom="양도시 호별총액" /> — §176조의2②2호</>}
               value={detail.estimatedAcquisitionTotal}
               highlight
             />
             {acqSplitAvailable ? (
               <>
-                <Row label={<>환산취득가 토지분 = INT(합계 × <Frac top="취득시 토지기준시가" bottom="취득시 기준시가합" />)</>} value={detail.estimatedAcquisitionLand} sub />
+                <Row label={<>환산취득가 토지분 = 합계 × <Frac top="취득시 토지기준시가" bottom="취득시 기준시가합" /></>} value={detail.estimatedAcquisitionLand} sub />
                 <Row label="환산취득가 건물분 = 합계 − 토지분" value={detail.estimatedAcquisitionBuilding} sub />
               </>
             ) : (
@@ -215,7 +217,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice: t
         <p className="text-caption text-muted-foreground mb-1">= 취득시 기준시가 × 3% (소득세법 §97②2호 + 시행령 §163⑥ 토지·건물 3%)</p>
         <table className="w-full border-collapse">
           <tbody>
-            <Row label={`개산공제 합계 = INT(${formatKRW(detail.lumpDeductionBase ?? detail.estimatedBasisAtAcq ?? 0)} × 3%)`} value={detail.estimatedDeductionTotal} highlight />
+            <Row label={`개산공제 합계 = ${formatKRW(detail.lumpDeductionBase ?? detail.estimatedBasisAtAcq ?? 0)} × 3%`} value={detail.estimatedDeductionTotal} highlight />
             {acqSplitAvailable && (
               <>
                 <Row label="개산공제 토지분" value={detail.estimatedDeductionLand} sub />
@@ -247,30 +249,30 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice: t
             <tbody>
               <tr>
                 <td className="py-1 text-xs">환산취득가</td>
-                <td className="py-1 text-right text-xs tabular-nums">{formatKRW(detail.estimatedAcquisitionLand)}</td>
-                <td className="py-1 text-right text-xs tabular-nums">{formatKRW(detail.estimatedAcquisitionBuilding)}</td>
-                <td className="py-1 text-right text-xs tabular-nums font-semibold">{formatKRW(detail.estimatedAcquisitionTotal)}</td>
+                <td className="py-1 text-right text-xs font-mono tabular-nums whitespace-nowrap">{formatKRW(detail.estimatedAcquisitionLand)}</td>
+                <td className="py-1 text-right text-xs font-mono tabular-nums whitespace-nowrap">{formatKRW(detail.estimatedAcquisitionBuilding)}</td>
+                <td className="py-1 text-right text-xs font-mono tabular-nums whitespace-nowrap font-semibold">{formatKRW(detail.estimatedAcquisitionTotal)}</td>
               </tr>
               <tr>
                 <td className="py-1 text-xs">개산공제</td>
-                <td className="py-1 text-right text-xs tabular-nums">{formatKRW(detail.estimatedDeductionLand)}</td>
-                <td className="py-1 text-right text-xs tabular-nums">{formatKRW(detail.estimatedDeductionBuilding)}</td>
-                <td className="py-1 text-right text-xs tabular-nums font-semibold">{formatKRW(detail.estimatedDeductionTotal)}</td>
+                <td className="py-1 text-right text-xs font-mono tabular-nums whitespace-nowrap">{formatKRW(detail.estimatedDeductionLand)}</td>
+                <td className="py-1 text-right text-xs font-mono tabular-nums whitespace-nowrap">{formatKRW(detail.estimatedDeductionBuilding)}</td>
+                <td className="py-1 text-right text-xs font-mono tabular-nums whitespace-nowrap font-semibold">{formatKRW(detail.estimatedDeductionTotal)}</td>
               </tr>
               {depreciation !== undefined && depreciation > 0 && (
                 <tr>
                   <td className="py-1 text-xs">감가상각비 공제 (§97③)</td>
-                  <td className="py-1 text-right text-xs tabular-nums">—</td>
-                  <td className="py-1 text-right text-xs tabular-nums">—</td>
-                  <td className="py-1 text-right text-xs tabular-nums font-semibold">{formatKRW(depreciation)}</td>
+                  <td className="py-1 text-right text-xs font-mono tabular-nums whitespace-nowrap">—</td>
+                  <td className="py-1 text-right text-xs font-mono tabular-nums whitespace-nowrap">—</td>
+                  <td className="py-1 text-right text-xs font-mono tabular-nums whitespace-nowrap font-semibold">{formatKRW(depreciation)}</td>
                 </tr>
               )}
               {(landGain !== undefined || buildingGain !== undefined) && (
                 <tr className="bg-emerald-50/60 dark:bg-emerald-950/40">
                   <td className="py-1 text-xs font-semibold">양도차익</td>
-                  <td className="py-1 text-right text-xs tabular-nums font-semibold">{landGain !== undefined ? formatKRW(landGain) : "—"}</td>
-                  <td className="py-1 text-right text-xs tabular-nums font-semibold">{buildingGain !== undefined ? formatKRW(buildingGain) : "—"}</td>
-                  <td className="py-1 text-right text-xs tabular-nums font-semibold">{acquisitionGain !== undefined ? formatKRW(acquisitionGain) : "—"}</td>
+                  <td className="py-1 text-right text-xs font-mono tabular-nums whitespace-nowrap font-semibold">{landGain !== undefined ? formatKRW(landGain) : "—"}</td>
+                  <td className="py-1 text-right text-xs font-mono tabular-nums whitespace-nowrap font-semibold">{buildingGain !== undefined ? formatKRW(buildingGain) : "—"}</td>
+                  <td className="py-1 text-right text-xs font-mono tabular-nums whitespace-nowrap font-semibold">{acquisitionGain !== undefined ? formatKRW(acquisitionGain) : "—"}</td>
                 </tr>
               )}
             </tbody>
@@ -310,7 +312,7 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice: t
                 <Row
                   label={
                     lthdRatePct
-                      ? `장기보유특별공제 = INT(양도차익 ${formatKRW(acquisitionGain)} × ${lthdRatePct})`
+                      ? `장기보유특별공제 = 양도차익 ${formatKRW(acquisitionGain)} × ${lthdRatePct}`
                       : `장기보유특별공제 (양도차익 ${formatKRW(acquisitionGain)}에서 차감)`
                   }
                   value={longTermDeduction}
@@ -326,18 +328,13 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice: t
                 <Row label={taxAmountLabel(rateClause, appliedRate)} value={taxAmount} highlight />
               )}
               {localTax !== undefined && (
-                <Row label="지방소득세 (지방세법 §103조의3 양도소득분 누진세율 — 과세표준에 자체 세율표 직접 적용)" value={localTax} />
+                <Row label={localTaxFormula ? `지방소득세 = ${localTaxFormula}` : "지방소득세"} value={localTax} />
               )}
               {totalTax !== undefined && (
                 <Row label="총 납부세액" value={totalTax} highlight />
               )}
             </tbody>
           </table>
-          {taxAmount !== undefined && localTax !== undefined && (
-            <p className="text-micro text-muted-foreground mt-1">
-              ※ 지방소득세는 §103조의3 자체 누진세율표 직접 적용 (산출세액 × 10% 가정 금지)
-            </p>
-          )}
         </div>
       )}
     </div>

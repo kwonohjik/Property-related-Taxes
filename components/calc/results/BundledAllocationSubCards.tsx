@@ -190,6 +190,8 @@ export function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTran
     0,
   );
   const nationalTax = aggregated.determinedTax + totalPenalty;
+  // §90② 소득금액차감 감면(§99의3 등) — 엔진은 이 금액을 뺀 소득으로 과세표준을 낸다. 행이 없으면 검산이 끊긴다(R-c01-06).
+  const incomeDeduction = aggregated.properties.reduce((s, p) => s + (p.incomeDeductionReducible ?? 0), 0);
 
   return (
     <div className="rounded-lg border bg-card p-4 shadow-sm">
@@ -201,6 +203,10 @@ export function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTran
             label="양도소득금액 (합산)"
             value={formatKRW(aggregated.totalIncomeAfterOffset)}
           />
+
+          {incomeDeduction > 0 && (
+            <Row label="소득금액 감면대상" value={`△${formatKRW(incomeDeduction)}`} sub />
+          )}
 
           {/* 기본공제 */}
           {aggregated.basicDeduction > 0 && (

@@ -22,6 +22,8 @@ import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { isBgSuccessorRight } from "@/lib/calc/transfer-successor-right";
 import { bgOwnedPartOfResult } from "@/lib/calc/bg-owner-split-result";
+import { localCalculatedTaxFormula } from "@/components/calc/results/transfer/local-income-tax-display";
+import { localTaxablePenaltyOf } from "@/components/calc/results/transfer/local-income-tax-display";
 
 /** 승계조합원 입주권 부담부증여 — 결과 명세 취득가 라벨(V-2). 자산이 없으면 false. */
 const isBgSuccessorRightOf = (a: AssetForm | undefined): boolean => !!a && isBgSuccessorRight(a);
@@ -101,6 +103,8 @@ export function SingleDetailCards({
           basicDeduction={result.basicDeduction}
           rateClause={result.rateClause}
           appliedRate={result.appliedRate}
+          /* 지방소득세 산식 — 엔진 `applyRate(결정세액 + §114조의2 가산세, 0.1)`과 같은 축(R-c01-10). 행이 없으면(지방소득세 미전달) 만들지 않는다. */
+          localTaxFormula={result.localIncomeTax != null ? localCalculatedTaxFormula(result.determinedTax, localTaxablePenaltyOf(result)) : undefined}
         />
       )}
 

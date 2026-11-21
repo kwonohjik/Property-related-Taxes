@@ -82,7 +82,7 @@ function ResultRow({
       )}
     >
       <span>{label}</span>
-      <span className={value < 0 ? "text-red-700 dark:text-red-400" : ""}>{formatKRW(value)}</span>
+      <span className={cn("font-mono tabular-nums whitespace-nowrap", value < 0 ? "text-red-700 dark:text-red-400" : "")}>{formatKRW(value)}</span>
     </div>
   );
 }
@@ -115,6 +115,8 @@ export function MultiTransferTaxSummaryCard({
   //  비과세분이 0이면 행을 숨긴다(전 자산 과세).
   const gains = sumAssetGains(result.properties);
   const exemptGain = gains.exempt;
+  // §90② 소득금액차감 감면(§99의3 등) — 엔진은 이 금액을 뺀 소득으로 과세표준을 낸다. 행이 없으면 검산이 끊긴다(R-c01-07).
+  const incomeDeduction = result.properties.reduce((s, p) => s + (p.incomeDeductionReducible ?? 0), 0);
 
   // 확정신고 기납부세액 정산 (§111③) — 엔진 단일진실(approach A). UI 재계산 금지.
   // 기존 autoPriorPaid(앞 자산 결정세액 단순합)는 §107② 위반이라 제거, 엔진 settlement 필드 read.
@@ -168,6 +170,7 @@ export function MultiTransferTaxSummaryCard({
             className="text-muted-foreground"
           />
         )}
+        {incomeDeduction > 0 && <ResultRow label="소득금액 감면대상" value={-incomeDeduction} />}
         <ResultRow label="양도소득 기본공제" value={-result.basicDeduction} />
         <ResultRow label="양도소득 과세표준" value={result.taxBase} highlight />
 

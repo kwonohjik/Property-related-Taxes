@@ -347,6 +347,54 @@ describe("I-2 일괄 「합산 과세 내역」 — 엔진 값을 그대로 그�
   });
 });
 
+// ── I-2c 소득금액차감 감면(§90②) 시료 — 두 집계 카드의 과세표준 검산 (R-c01-06 · R-c01-07) ──
+/**
+ * §77 시료(위)는 세액감면형이라 소득금액이 줄지 않는다. §99 신축주택은 소득금액에서 직접 뺀다 —
+ * 종전 두 카드에는 그 행이 없어 「양도소득금액 − 기본공제 ≠ 과세표준」이었다(차이 = 감면대상 122,500,000).
+ */
+describe("I-2c 소득금액차감 감면 시료 — 양도소득금액 − 감면대상 − 기본공제 = 과세표준", () => {
+  const N99 = {
+    type: "new_99", contractDate99: D("1999-02-01"), standardPriceAtAcquisition99: 100_000_000, standardPriceAt5Years99: 150_000_000,
+    standardPriceAtTransfer99: 300_000_000, exclusiveAreaSqm99: 84, isResident99: true, isHousingConstructionBusiness99: false,
+    acquisitionType99: "from_builder", firstContract99: "yes",
+  };
+  function agg99() {
+    const house = { ...baseTransferInput({ propertyType: "housing", isOneHousehold: true, householdHousingCount: 2, transferPrice: 800_000_000, acquisitionPrice: 100_000_000, acquisitionDate: D("1999-06-01"), transferDate: D("2024-06-01"), reductions: [N99] } as never), propertyId: "H", propertyLabel: "주택 H" };
+    const land2 = { ...baseTransferInput({ propertyType: "land", isOneHousehold: false, householdHousingCount: 0, transferPrice: 600_000_000, acquisitionPrice: 400_000_000, acquisitionDate: D("2010-01-01"), transferDate: D("2024-06-01") } as never), propertyId: "L", propertyLabel: "토지 L" };
+    return calculateTransferTaxAggregate({ taxYear: 2024, annualBasicDeductionUsed: 0, properties: [house, land2] } as never, rates);
+  }
+  const deduction = (a: ReturnType<typeof agg99>) => a.properties.reduce((s, p) => s + (p.incomeDeductionReducible ?? 0), 0);
+
+  it("💰 시료 — 감면대상 122,500,000 · 양도소득금액 634,000,000 · 과세표준 509,000,000", () => {
+    const a = agg99();
+    expect([deduction(a), a.totalIncomeAfterOffset, a.basicDeduction, a.taxBase]).toEqual([122_500_000, 634_000_000, 2_500_000, 509_000_000]);
+    expect(a.reductionAmount, "세액감면형이 아니다 — 감면세액 행이 0이라 검산은 이 행 하나에 달렸다").toBe(0);
+  });
+
+  it("다건 「합산 결과」 카드 (R-c01-07)", () => {
+    const a = agg99();
+    const rows = rowMap(renderMulti(a).container.querySelector('[data-print-id="summary"]')!);
+    expect(get(rows, "소득금액 감면대상")).toBe(-deduction(a));
+    expect(get(rows, "양도소득금액") + get(rows, "소득금액 감면대상") + get(rows, "양도소득 기본공제")).toBe(get(rows, "양도소득 과세표준"));
+  });
+
+  it("일괄 「합산 과세 내역」 (R-c01-06)", () => {
+    const a = agg99();
+    const { container } = render(
+      <BundledAllocationCard apportionment={APPORTIONMENT as never} aggregated={a} formData={createDefaultTransferFormData()} onBack={() => {}} onReset={() => {}} />,
+    );
+    const t = [...container.querySelectorAll("table")].find((x) => (x.textContent ?? "").includes("총납부세액"))!;
+    const cells = cellMap(t);
+    expect(get(cells, "소득금액 감면대상")).toBe(-deduction(a));
+    expect(get(cells, "양도소득금액 (합산)") + get(cells, "소득금액 감면대상") + get(cells, "기본공제")).toBe(get(cells, "과세표준"));
+  });
+
+  it("감면대상 0인 §77 시료는 행을 그리지 않는다", () => {
+    const rows = rowMap(renderMulti(agg2()).container.querySelector('[data-print-id="summary"]')!);
+    expect(rows.has("소득금액 감면대상")).toBe(false);
+  });
+});
+
 // ── I-2b 겸용 결과뷰 「합산 세액」 (#058) ──────────────────────────────
 /**
  * 리뷰 실측: 겸용 본문 **96개 표시 지점을 일괄 +11,111,111 해도 0건 실패**했다.
