@@ -361,7 +361,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
                 <strong>{previewValue.toLocaleString()}</strong>
               </p>
               <p className="text-micro text-emerald-700 dark:text-emerald-400">
-                ※ 최종 의제 취득가액은 엔진 계산 결과로 확인하세요. 일반 §97 산식과 비교과세 후 불리한 경우 §18의2⑩ 공제 적용.
+                ※ 최종 의제 취득가액은 엔진 계산 결과로 확인하세요.
               </p>
             </div>
           )}
@@ -371,8 +371,8 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
           <div className="rounded-md border border-rose-200 bg-rose-50/60 px-3 py-2 text-xs text-rose-800 dark:text-rose-200 dark:bg-rose-950/40">
             <p className="font-semibold">소법 §97의2④ 본문 강제 적용</p>
             <p className="mt-0.5">
-              의제 취득가액이 일반 §97 취득가액보다 불리하더라도 반드시 적용됩니다.
-              의제 산식 결정세액이 일반 산식보다 높은 경우 §18의2⑩에 따라 차액을 공제합니다.
+              의제 취득가액이 일반 §97 취득가액과 달라도 반드시 적용됩니다.
+              의제 산식 결정세액이 일반 산식보다 높은 경우 그 차액은 가업상속 사후관리로 상속세를 부과할 때 상속세 산출세액에서 공제됩니다(§18의2⑩).
             </p>
           </div>
           )}
