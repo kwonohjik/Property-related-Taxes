@@ -206,8 +206,8 @@ export type DetectedContestedIssue = {
 
 /**
  * D-79 최소 안전망 — 반대 입장이 주택을 빼 2주택이 됐는데 §155① 짝이 없고, 양도 주택보다 나중에 취득한 행이 정확히 1채면 그 행이 신규 주택일 수 있다.
- * 짝은 화면 ④에서만 만들어져(`resolveTemporaryTwoHouse`) 반대 입장 입력에는 실리지 않는다 — 그 입장의 결론을 단정하지 않는다.
- * (완전한 수정은 반대 입장마다 짝을 다시 도출하는 것이다 — 리뷰 D-79 안 A. ⑤⑧의 신규 주택 경위 질문까지 함께 바꿔야 해 별건으로 남긴다.)
+ * 판정 메뉴 화면은 ④가 반대 입장 짝을 다시 도출해 보내므로(`contestedTemporaryTwoHouse` · 안 A) 이 안전망을 거치지 않는다 — 그 키 없이 오는 입력
+ * (직접 API·중과 메뉴)에서만 그 입장의 결론을 단정하지 않는다.
  */
 function otherPositionPairUnresolved(input: TransferTaxInput, other: TransferTaxInput): string | undefined {
   if (input.temporaryTwoHouse || other.temporaryTwoHouse) return undefined;
@@ -247,7 +247,16 @@ export function detectContestedIssues(
   opts: { inheritedExclusion?: InheritedHouseExclusionResult } = {},
 ): DetectedContestedIssue[] {
   const out: DetectedContestedIssue[] = [];
+  /**
+   * D-79 안 A — 판정 메뉴 ④가 반대 입장의 제외 결과로 §155① 짝을 다시 도출해 보낸다(`contestedTemporaryTwoHouse`). 받았으면 C2·C7 반대 입장 입력의
+   * 짝을 그 값으로 바꾼다(엔진 입장의 짝은 그대로). 보내지 않은 입력(직접 API·중과 메뉴)은 종전 동작 — 짝을 다시 만들지 않았으니 결론을 단정하지 않는
+   * 최소 안전망을 둔다.
+   */
   const withUnresolved = (d: DetectedContestedIssue) => {
+    if (input.contestedTemporaryTwoHouse !== undefined) {
+      d.otherPositionInput = { ...d.otherPositionInput, temporaryTwoHouse: input.contestedTemporaryTwoHouse ?? undefined };
+      return;
+    }
     const note = otherPositionPairUnresolved(input, d.otherPositionInput);
     if (note) d.otherPositionUnresolved = note;
   };
@@ -349,6 +358,32 @@ export function detectContestedIssues(
   }
 
   return out;
+}
+
+/** §155① 짝을 반대 입장 기준으로 다시 도출하는 쟁점 — 반대 입장이 주택 수에서 빼는 행이 달라지는 것(D-79). */
+const PAIR_REDERIVED_ISSUES: ReadonlySet<OneHouseContestedIssueId> = new Set([
+  "155-3-same-household-co-inherited-minority",
+  "155-3-co-inherited-minority-before-ranking-clause",
+]);
+
+/**
+ * C2·C7 반대 입장이 주택 수에서 빼는 명부 행 id — 반대 입장 입력에서 걷어 낸 행 ∪ 그 입력의 상속주택 제외 행(D-79 안 A).
+ * 판정 메뉴 ④가 §155① 신규 주택 후보에서 이 행들을 더 빼고 짝을 다시 도출한다. 감지·반대 입장 입력은 `detectContestedIssues` 한 곳에서 만든다 —
+ * 화면이 술어를 다시 쓰지 않는다(single-source). 쟁점이 없으면 빈 배열.
+ */
+export function contestedPairPositionExcludedRowIds(
+  input: TransferTaxInput,
+  opts: { inheritedExclusion?: InheritedHouseExclusionResult; specialActHouseIds?: ReadonlySet<string> } = {},
+): string[] {
+  const ids = new Set<string>();
+  for (const d of detectContestedIssues(input, { inheritedExclusion: opts.inheritedExclusion })) {
+    if (!PAIR_REDERIVED_ISSUES.has(d.id)) continue;
+    const kept = new Set((d.otherPositionInput.houses ?? []).map((h) => h.id));
+    for (const h of input.houses ?? []) if (!kept.has(h.id)) ids.add(h.id);
+    const other = { ...d.otherPositionInput, inheritedHouseExclusionDetail: undefined };
+    for (const e of resolveInheritedHouseExclusionFromInput(other, opts.specialActHouseIds).excludedHouses) ids.add(e.houseId);
+  }
+  return [...ids];
 }
 
 export function contestedVerdictOf(j: Pick<OneHouseJudgment, "isExempt" | "isPartialExempt">): ContestedVerdict {

@@ -14,6 +14,7 @@ import { deriveStatutoryDeadline } from "@/lib/calc/transfer-amendment-helpers";
 import { derivePre1990PlainHousePhdLandPricePerSqmAtAcq } from "@/lib/calc/transfer-pre1990-phd-bridge";
 import { deriveOneHouseFactsFromHouses } from "@/lib/calc/one-house-row-facts";
 import { housesOwnedAtTransfer, resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
+import type { TemporaryTwoHouseDates } from "@/lib/calc/household-house-count";
 import { toTemporaryTwoHouseEraFacts } from "@/lib/calc/temporary-two-house-era-facts";
 import { eraFormWithOriginDates } from "@/lib/calc/temporary-two-house-era-facts";
 import { declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
@@ -162,37 +163,45 @@ export function deriveCalcTemporaryTwoHouse(form: TransferFormData, primary: Ass
   });
 }
 
+/**
+ * 엔진 `temporaryTwoHouse` 본문 — 도출한 짝 하나를 싣는 모양(§155⑯·⑱ 기한 예외 · ①2호 era 사실 · 신규 주택 행·경위).
+ * 계산기·판정 메뉴의 엔진 입장 짝과 판정 메뉴 양론 반대 입장 짝(`contestedTemporaryTwoHouse` · 2026-11 리뷰 D-79)이 같은 모양으로 싣는다.
+ */
+export function temporaryTwoHousePayloadOf(form: TransferFormData, tempTwoHouse: TemporaryTwoHouseDates): object {
+  return {
+    previousAcquisitionDate: tempTwoHouse.previousAcquisitionDate,
+    newAcquisitionDate: tempTwoHouse.newAcquisitionDate,
+    // §155⑯·⑱ — 증여세 부담부증여 경로와 공용 leaf(E-1 한계 G3). 신규 주택 소재 시·군은 명부 행 주소가 정본(C-1).
+    ...buildTempTwoHouseDeadlineExceptionFacts({
+      ...form,
+      newHouseSigunguCode: resolveTempTwoHouseNewHouseSigunguCode(
+        form.newHouseSigunguCode,
+        tempTwoHouse.newHouseRegionCode,
+      ),
+    }),
+    // §155①2호 — 신규 취득 당시 두 주택의 조정 여부·계약일·전입·임차인 단서 (OH-01 A2b).
+    //   ⑤ 판정 카드와 같은 leaf로 편다. 신규 주택 코드는 명부 행에서만 온다.
+    ...toTemporaryTwoHouseEraFacts(
+      // 권리 유래 신규 주택은 §155①1호 괄호의 「권리 취득」 시점을 행의 권리 취득일로 본다 — 폼 전역 계약일 칸은 그 행에 쓰지 않는다(결정 #43).
+      eraFormWithOriginDates(form, tempTwoHouse.newHouseOrigin),
+      tempTwoHouse.newHouseRegionCode,
+      tempTwoHouse.newHouseInDesignatedDistrict,
+      tempTwoHouse.previousHouse,
+    ),
+    // ④⑬ 명부에서 도출한 신규 주택 행 — 엔진이 그 행의 동일세대 상속 여부를 본다(D-76 · 사전-2023-법규재산-0464).
+    ...(tempTwoHouse.newHouseRowId ? { newHouseRowId: tempTwoHouse.newHouseRowId } : {}),
+    // 신규 주택 취득 경위(분양권·조합원입주권 유래 갈래) — 명부 행의 답, 직접 선언 경로는 `not_collected`(결정 #43 · G6-4).
+    ...(tempTwoHouse.newHouseOrigin ? { newHouseOrigin: tempTwoHouse.newHouseOrigin } : {}),
+  };
+}
+
 export function buildHouseholdSpecialPayload(form: TransferFormData, primary: AssetForm): object {
   const tempTwoHouse = deriveCalcTemporaryTwoHouse(form, primary);
 
   return {
   ...(tempTwoHouse
     ? {
-        temporaryTwoHouse: {
-          previousAcquisitionDate: tempTwoHouse.previousAcquisitionDate,
-          newAcquisitionDate: tempTwoHouse.newAcquisitionDate,
-          // §155⑯·⑱ — 증여세 부담부증여 경로와 공용 leaf(E-1 한계 G3). 신규 주택 소재 시·군은 명부 행 주소가 정본(C-1).
-          ...buildTempTwoHouseDeadlineExceptionFacts({
-            ...form,
-            newHouseSigunguCode: resolveTempTwoHouseNewHouseSigunguCode(
-              form.newHouseSigunguCode,
-              tempTwoHouse.newHouseRegionCode,
-            ),
-          }),
-          // §155①2호 — 신규 취득 당시 두 주택의 조정 여부·계약일·전입·임차인 단서 (OH-01 A2b).
-          //   ⑤ 판정 카드와 같은 leaf로 편다. 신규 주택 코드는 명부 행에서만 온다.
-          ...toTemporaryTwoHouseEraFacts(
-            // 권리 유래 신규 주택은 §155①1호 괄호의 「권리 취득」 시점을 행의 권리 취득일로 본다 — 폼 전역 계약일 칸은 그 행에 쓰지 않는다(결정 #43).
-            eraFormWithOriginDates(form, tempTwoHouse.newHouseOrigin),
-            tempTwoHouse.newHouseRegionCode,
-            tempTwoHouse.newHouseInDesignatedDistrict,
-            tempTwoHouse.previousHouse,
-          ),
-          // ④⑬ 명부에서 도출한 신규 주택 행 — 엔진이 그 행의 동일세대 상속 여부를 본다(D-76 · 사전-2023-법규재산-0464).
-          ...(tempTwoHouse.newHouseRowId ? { newHouseRowId: tempTwoHouse.newHouseRowId } : {}),
-          // 신규 주택 취득 경위(분양권·조합원입주권 유래 갈래) — 명부 행의 답, 직접 선언 경로는 `not_collected`(결정 #43 · G6-4).
-          ...(tempTwoHouse.newHouseOrigin ? { newHouseOrigin: tempTwoHouse.newHouseOrigin } : {}),
-        },
+        temporaryTwoHouse: temporaryTwoHousePayloadOf(form, tempTwoHouse),
       }
     : {}),
   // ④⑬ §155⑧ 수도권 밖 부득이 주택 FLAT → nested. 해소일은 미입력 시 미전송(= 미해소).

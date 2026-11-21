@@ -176,6 +176,8 @@ export const propertyBaseShape = {
   isSuccessorRightToMoveIn: z.boolean().optional(),
   isOneHousehold: z.boolean(),
   temporaryTwoHouse: temporaryTwoHouseSchema.optional(),
+  // ⑫ 판정 메뉴 전용(2026-11 리뷰 D-79 안 A) — 양론 반대 입장 기준으로 다시 도출한 §155① 짝. null = 다시 도출했는데 짝이 없다.
+  contestedTemporaryTwoHouse: temporaryTwoHouseSchema.nullable().optional(),
   unavoidableOutsideCapitalHouse: unavoidableOutsideCapitalHouseSchema.optional(),
   ruralHouse: ruralHouseSchema.optional(),
   /** ⑫ §155⑥1호 문화유산 주택 — §156의2⑩·§156의3⑦의 특수주택 판정에도 쓰인다. */

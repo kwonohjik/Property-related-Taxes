@@ -32,13 +32,17 @@ const RIGHT_KINDS = new Set(["successor_right", "original_member_house", "origin
 export function newHouseOriginIssue(
   row: Pick<HouseEntry, "id" | "acquisitionDate" | "acquisitionOrigin" | "rightAcquisitionDate"> & Partial<Pick<HouseEntry, "rightApprovalDate">>,
   newHouseRowId: string | undefined,
+  /** 판정 메뉴 양론 반대 입장 짝의 신규 주택 행(D-79 안 A) — 엔진 입장은 이 행을 신규 주택으로 판정하지 않았다. */
+  contestedPosition = false,
 ): { field: string; message: string } | null {
   if (!newHouseRowId || row.id !== newHouseRowId) return null;
   if (!row.acquisitionOrigin) {
+    const head = contestedPosition
+      ? "해석이 갈리는 쟁점의 다른 입장에서는 일시적 2주택의 신규 주택이 되는 주택입니다"
+      : "일시적 2주택의 신규 주택으로 판정된 주택입니다";
     return {
       field: "acquisitionOrigin",
-      message:
-        "일시적 2주택의 신규 주택으로 판정된 주택입니다 — 이 주택을 어떻게 취득했는지(일반 취득·분양권·조합원입주권·재건축 등) 선택하세요. 모르면 「모름」을 고르세요.",
+      message: `${head} — 이 주택을 어떻게 취득했는지(일반 취득·분양권·조합원입주권·재건축 등) 선택하세요. 모르면 「모름」을 고르세요.`,
     };
   }
   if (RIGHT_KINDS.has(row.acquisitionOrigin)) {

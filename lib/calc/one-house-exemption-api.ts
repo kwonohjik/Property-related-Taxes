@@ -39,6 +39,8 @@ import { clampResidenceToHousingPeriod } from "@/lib/stores/calc-wizard-asset-re
 import { buildHousesPayload } from "./transfer-tax-api-houses";
 import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { buildHouseholdSpecialPayload, buildParentalCareMergeFact } from "./transfer-tax-api-body-blocks";
+import { temporaryTwoHousePayloadOf } from "./transfer-tax-api-body-blocks";
+import { judgmentContestedNewHouse } from "./one-house-judgment-new-house";
 import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import { buildNonResidentPayload } from "./one-house-non-resident";
 import { buildDemolishedPayload } from "./one-house-demolished";
@@ -255,6 +257,8 @@ export function buildOneHouseExemptionApiBody(
      */
     // D-66 — 입주권 양도면 명부에서 도출한 §155⑥1호·⑦·⑧ 세대 사실을 싣지 않는다(일반주택 양도 특례 — 서면-2015-부동산-1685 · ⑤·⑧ 같은 게이트).
     ...withoutOneHouseRowFacts(buildHouseholdSpecialPayload(form, primary), !judgmentSaleIsHousing(form)),
+    // D-79 안 A — 양론 C2·C7 반대 입장 기준으로 다시 도출한 §155① 짝. 쟁점이 없으면 싣지 않고, 짝이 없으면 null(「다시 도출했는데 없다」).
+    ...judgmentContestedTemporaryTwoHousePayload(form),
     /**
      * §156의2⑤ — ⑤·⑧과 **같은 게이트**(`judgmentReplacementHouseVisible`, OH-05).
      * 🔴 칸이 숨은 세대(입주권 없는 1주택)에서 남은 토글을 보내면 엔진 분기가 주택 수를 보지
@@ -419,6 +423,16 @@ function withoutOneHouseRowFacts(payload: object, omit: boolean): object {
   const out: Record<string, unknown> = { ...payload };
   for (const k of ONE_HOUSE_ROW_FACT_KEYS) delete out[k];
   return out;
+}
+
+/**
+ * D-79 안 A — 본문 `contestedTemporaryTwoHouse`. 모양은 엔진 입장 `temporaryTwoHouse`와 같은 빌더(`temporaryTwoHousePayloadOf`)다.
+ * 엔진은 양론 반대 입장 재판정 입력에만 이 값을 쓴다(`detectContestedIssues`) — 판정 결론·계산기 세액은 보지 않는다.
+ */
+function judgmentContestedTemporaryTwoHousePayload(form: OneHouseJudgmentFormData): { contestedTemporaryTwoHouse?: object | null } {
+  const pair = judgmentContestedNewHouse(form);
+  if (pair === undefined) return {};
+  return { contestedTemporaryTwoHouse: pair === null ? null : temporaryTwoHousePayloadOf(form, pair) };
 }
 
 /**
