@@ -13,6 +13,10 @@ const base = {
   transferIncome: 100_000_000,
   basicDeduction: 2_500_000,
   taxBase: 97_500_000,
+  // §77의2① 취득시기 요건 충족 사실 — 고시일이 없으면 요건을 판정할 수 없어 불성립이다(NBL2611-C10).
+  //   안분·기본공제·한도 산식을 지키는 R77-2-1·2·5가 요건 사실을 갖추도록 base에 둔다(고시 2026-04-01 소급 2년 = 2024-04-01 ≥ 취득 2020-01-01).
+  businessApprovalDate: new Date("2026-04-01"),
+  acquisitionDate: new Date("2020-01-01"),
 } as const;
 
 describe("R77-2-1: 현금:대토 = 1:1 안분 40% 감면", () => {
@@ -120,13 +124,27 @@ describe("R77-2-ACQ: §77의2① 사업인정고시일 소급 2년 이전 취득
     expect(r.notEligibleReason).toContain("취득시기");
   });
 
-  it("고시일 미입력 → 취득요건 미검증(백워드 호환, 적격 유지)", () => {
+  // NBL2611-C10 — 종전 단언(「미입력 → 미검증 · 적격 유지」)은 법 근거 없는 통과였다. 「모름」은 혜택 불성립 + 확인 필요.
+  it("고시일 미입력 → 요건 판정 불가 → 불성립 + 확인 필요 (NBL2611-C10)", () => {
     const r = calculateReplacementLandReduction({
       ...acqBase,
-      acquisitionDate: new Date("2025-01-01"), // 최근 취득이어도 고시일 없으면 미검증
+      businessApprovalDate: undefined,
+      acquisitionDate: new Date("2020-01-01"), // 충분히 오래된 취득이어도 고시일이 없으면 판정 불가
     });
-    expect(r.isEligible).toBe(true);
-    expect(r.reductionAmount).toBe(10_256_410);
+    expect(r.isEligible).toBe(false);
+    expect(r.reductionAmount).toBe(0);
+    expect(r.notEligibleReason).toContain("사업인정고시일이 없어");
+    expect(r.notEligibleReason).toContain("확인 필요");
+  });
+
+  it("취득일 미입력 → 요건 판정 불가 → 불성립 + 확인 필요 (NBL2611-C10)", () => {
+    const r = calculateReplacementLandReduction({
+      ...acqBase,
+      acquisitionDate: undefined,
+    });
+    expect(r.isEligible).toBe(false);
+    expect(r.notEligibleReason).toContain("취득일이 없어");
+    expect(r.notEligibleReason).toContain("확인 필요");
   });
 });
 

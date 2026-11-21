@@ -100,8 +100,8 @@ async function post(over: object = {}) {
 }
 
 /** ⑧ 검증용 최소 폼 — 자산 1건 + 감면 1건. */
-function formWith(reductions: AssetReductionForm[], assetKind: AssetForm["assetKind"] = "land") {
-  const asset = { ...makeDefaultAsset(1), assetKind, acquisitionDate: "2000-01-01", reductions };
+function formWith(reductions: AssetReductionForm[], assetKind: AssetForm["assetKind"] = "land", assetPatch: Partial<AssetForm> = {}) {
+  const asset = { ...makeDefaultAsset(1), assetKind, acquisitionDate: "2000-01-01", reductions, ...assetPatch };
   return { assets: [asset], transferDate: "2026-03-01" } as unknown as TransferFormData;
 }
 
@@ -166,7 +166,9 @@ describe("§69 자산 종류 게이트", () => {
       rlLandComp: "1,500,000,000",
     } as AssetReductionForm;
     expect(validateStep2Reductions(2, formWith([exp], "building"))).toBeNull();
-    expect(validateStep2Reductions(2, formWith([rl], "building"))).toBeNull();
+    // NBL2611-C10 — §77의2는 시행자 양도(공익수용)·사업인정고시일이 요건 사실이라 ⑧이 요구한다. 이 대조군은 «자산 종류 게이트»만 보므로 그 사실을 갖춘다.
+    const c10Facts = { transferCause: "public_expropriation", expropriationNoticeDate: "2024-01-01" } as const;
+    expect(validateStep2Reductions(2, formWith([rl], "building", c10Facts))).toBeNull();
   });
 });
 

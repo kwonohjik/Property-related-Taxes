@@ -178,6 +178,7 @@ export function ExpropriationBlock({
             value={asset.expropriationNoticeDate}
             onChange={(v) => onChange({ expropriationNoticeDate: v })}
             data-testid="expr-notice-date"
+            data-field="expropriationNoticeDate"
           />
           <p className="text-xs text-muted-foreground">
             §168의14③3호(사업용 의제)·§77 감면 판정에 공용. 취득·양도 시점과 대비해 자동 판정됩니다.
