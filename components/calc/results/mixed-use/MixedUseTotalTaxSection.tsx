@@ -58,7 +58,7 @@ const INCOME_DEDUCTION_LABEL: Record<string, string> = {
 function clause2TermText(x: NonNullable<MixedUseGainBreakdown["total"]["clause2Terms"]>[number]): string {
   const head = `${x.kinds.map((k) => PART_LABEL[k]).join("·")} 과세표준 ${fmtPlain(x.taxBase)}`;
   const pct = (r: number) => `${Math.round(r * 100)}%`;
-  const cite = x.shortTermClause === "104-1-3" ? TRANSFER.SHORT_TERM_RATE_UNDER_1Y : TRANSFER.SHORT_TERM_RATE_1_2Y;
+  const cite = x.shortTermClause === "104-1-3" ? TRANSFER.TAX_RATE_SHORT_UNDER_1Y : TRANSFER.TAX_RATE_SHORT_1Y_TO_2Y;
   const st = x.shortTermRate !== undefined ? `단기세율 ${pct(x.shortTermRate)}` : "";
   const surcharged = x.addon !== undefined ? `누진세율 + ${pct(x.addon)}p` : "누진세율";
   // 보유 2년 미만이면 단기세율과 비교한 큰 쪽이 채택된다(§104① 후단·§104⑦ 후단) — 진 쪽을 [ ]에 적는다.

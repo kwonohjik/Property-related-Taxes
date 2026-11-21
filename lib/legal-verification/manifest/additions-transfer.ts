@@ -535,19 +535,6 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywords: ["양도소득 기본공제", "미등기양도자산의 양도소득금액에 대해서는 그러하지 아니하다"],
     keywordMode: "ALL",
   },
-  // KoreanLaw 실측 본문(MST 280405, 2026-11-21) — 단기세율 2호·3호(겸용 §104⑤2호 산식 R-c02-04).
-  {
-    id: "TRANSFER.SHORT_TERM_RATE_1_2Y",
-    citation: "소득세법 §104 ①2호",
-    keywords: ["그 보유기간이 1년 이상 2년 미만인 것", "양도소득 과세표준의 100분의 40"],
-    keywordMode: "ALL",
-  },
-  {
-    id: "TRANSFER.SHORT_TERM_RATE_UNDER_1Y",
-    citation: "소득세법 §104 ①3호",
-    keywords: ["그 보유기간이 1년 미만인 것", "양도소득 과세표준의 100분의 50"],
-    keywordMode: "ALL",
-  },
   // KoreanLaw 실측 본문(MST 280405) — 미등기양도자산 비과세 배제(F-8 · §155⑳ 경로).
   {
     id: "TRANSFER.EXEMPTION_UNREGISTERED_EXCLUSION",
