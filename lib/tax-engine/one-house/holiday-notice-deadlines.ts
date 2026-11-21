@@ -10,6 +10,7 @@
  * §154① 단서(수용·출국) · §89② 권리 3년(충족·배제 갈래 모두) · §156의2④·§156의3③ 완성 후 N년 · §156의2⑤ 대체주택 · §155㉓ 임대주택 말소 후 5년. 기한은 각 정본 술어와 **같은 연수 함수**로 센다.
  * 정본이 모르는 사실(날짜 미입력 등)은 기한이 없다 — 그 축은 말일이 없으므로 고지 대상이 아니다.
  */
+import { addDays } from "../utc-date";
 import { deadlineEnd, deadlineEndFrom, deadlineEndHolidayUncertaintyNear, type DeadlineEnd } from "../civil-period";
 import { resolveMergeExemptionYears } from "../data/merge-exemption-era";
 import { resolve1562DeadlineYears } from "../data/article-156-2-completion-era";
@@ -100,6 +101,28 @@ export function declaredDeadlineEnds(
   const first = units ? firstTerminationCancellation(units, t) : null;
   if (first) out.push(terminationDeadline(first.date));
 
+  return out;
+}
+
+/**
+ * 공휴일 표 한계 고지의 반사실 양도일(I-26) — 한계가 걸리는 기한마다 기한을 「지킨 쪽」과 「넘긴 쪽」으로 양도일을 옮긴다.
+ * · 양도일이 말일 뒤: 표에 없는 공휴일로 기한이 늘었다면 지킨 것 — 양도일 = 말일.
+ * · 양도일이 말일 이전 · 예정 공휴일 해(provisional): 예정 공휴일이 지정되지 않으면 기한이 짧아질 수 있다 — 양도일 = 말일 다음 날.
+ *   표 밖 해(uncovered)는 토·일요일만 반영해 더 늘어날 수만 있으므로 이미 지킨 기한은 결론을 바꾸지 못한다.
+ */
+export function holidayCounterfactualTransferDates(
+  input: OneHouseJudgeInput,
+  oneHouseRules: OneHouseSpecialRulesData,
+  article89Clause2: Pick<Article89Clause2Result, "deadline" | "noticeDeadlines">,
+): Date[] {
+  const t = input.transferDate.getTime();
+  const out: Date[] = [];
+  for (const d of declaredDeadlineEnds(input, oneHouseRules, article89Clause2)) {
+    const kind = deadlineEndHolidayUncertaintyNear(d.end, input.transferDate);
+    if (!kind) continue;
+    if (d.end.getTime() < t) out.push(d.end);
+    else if (kind === "provisional") out.push(addDays(d.end, 1));
+  }
   return out;
 }
 

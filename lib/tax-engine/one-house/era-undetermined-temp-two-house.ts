@@ -24,10 +24,15 @@ import { hwaseongTemporaryTwoHouseWindowNotice } from "./hwaseong-announcement-w
 import type { EraNoticeRelevance } from "./era-undetermined";
 import type { OneHouseJudgeInput, OneHouseUndetermined } from "./types";
 
+/** §155① 2002 부칙 ③ 1호 경과조치 확인 필요 — 비과세 전제 고지(`revoke-exemption.ts` 회수 목록 · I-26). */
+export const TRANSITION_2002_UNVERIFIED_ID = "155-1-2002-transition-unverified";
+
 export function collectTempTwoHouseEraUndetermined(
   input: OneHouseJudgeInput,
   oneHouseRules: OneHouseSpecialRulesData,
   relevance: EraNoticeRelevance | undefined,
+  /** 본체 판정이 비과세(부분 포함)인가 — 기한을 줄이는 쪽 독법만 남은 고지(2002 경과조치)의 게이트(I-26). 생략 = 종전 동작. */
+  settled?: boolean,
 ): OneHouseUndetermined[] {
   const out: OneHouseUndetermined[] = [];
   /*
@@ -111,9 +116,11 @@ export function collectTempTwoHouseEraUndetermined(
   }
   // 주택 수 게이트는 비과세 판정(E-3)과 같은 술어다 — ⑦ 농어촌주택이 겹친 3주택(D3)도 §155① 분기로 판정한다(리뷰 J-6).
   if ((twoHouseSpecialCountHolds(input) || specialHouseTemporaryTwoHouseOverlapCountHolds(input)) && tt && twoHouseRule) {
-    if (resolveTemporaryTwoHouseDeadline(input, twoHouseRule).transition2002Unverified) {
+    // I-26 — 계산한 독법(취득일부터 2년)으로 기한을 지켰을 때만 이 고지가 생긴다. 다른 독법(부칙 ③ 1호 본문·단서)은 기한을 줄이기만 하므로
+    //   본체 판정이 이미 과세면 결론을 바꾸지 못한다 — 비과세로 판정됐을 때만 낸다(비과세를 거두면 함께 거둔다 — `revoke-exemption.ts`).
+    if (resolveTemporaryTwoHouseDeadline(input, twoHouseRule).transition2002Unverified && settled !== false) {
       out.push({
-        id: "155-1-2002-transition-unverified",
+        id: TRANSITION_2002_UNVERIFIED_ID,
         reason:
           `신규주택을 2001년 3월 30일 이후 2002년 3월 29일 이전에 취득하고 그 후 종전주택을 양도하면 처분기한이 ` +
           `2년에서 1년으로 줄어든 개정의 경과조치(대통령령 제17555호 부칙 ③ 1호)에 따라 시행일(2002. 3. 30.)부터 ` +

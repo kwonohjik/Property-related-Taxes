@@ -7,6 +7,7 @@ import { NEW_HOUSE_ORIGIN_UNCOLLECTED_ID, NEW_HOUSE_PRESALE_HOLDING_ID } from ".
 import { RURAL_FARMLAND_990_ERA_ID } from "./rural-return-to-farm-facts";
 import { isOriginalMemberOpenArticle } from "./original-member-right";
 import { PRE2010_PARENTAL_CARE_EXCEPTION_ID, REINHERITANCE_REFERENCE_DATE_ID } from "./era-undetermined";
+import { TRANSITION_2002_UNVERIFIED_ID } from "./era-undetermined-temp-two-house";
 
 /**
  * **비과세로 판정됐을 때만** 내는 판정 보류 — 「그 비과세 결론의 전제」를 확인하라는 고지다
@@ -23,6 +24,8 @@ const SETTLED_PREMISE_UNDETERMINED_IDS: ReadonlySet<string> = new Set([
   // D-69 — 재상속 기준일·2010.2.18. 전 동거봉양 예외 고지(이제 `settled` 게이트)
   REINHERITANCE_REFERENCE_DATE_ID,
   PRE2010_PARENTAL_CARE_EXCEPTION_ID,
+  // 2026-11 리뷰 I-26 — 2002 부칙 경과조치 고지(이제 `settled` 게이트)
+  TRANSITION_2002_UNVERIFIED_ID,
 ]);
 
 /** 비과세 전제 고지인가 — 고정 id 집합 + 원조합원 입주권 `89-2-open:*`(`pending.ts`가 `settled`로 게이트 · id가 동적이라 술어로 · D-37 2차 보강). */

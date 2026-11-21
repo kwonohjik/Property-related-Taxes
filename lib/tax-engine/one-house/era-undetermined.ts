@@ -56,7 +56,7 @@ import {
 import { isCapitalNewTownResidenceEra } from "../data/one-house-holding-residence-era";
 import { expropriationNoticeDateRequirementApplies } from "../data/one-house-154-1-proviso-era";
 import { collectTempTwoHouseEraUndetermined } from "./era-undetermined-temp-two-house";
-import { holidayTableNoticeKind } from "./holiday-notice-deadlines";
+import { holidayCounterfactualTransferDates, holidayTableNoticeKind } from "./holiday-notice-deadlines";
 import {
   PUBLIC_HOLIDAY_TABLE_FIRST_YEAR,
   PUBLIC_HOLIDAY_TABLE_LAST_YEAR,
@@ -165,6 +165,13 @@ export const ERA_UNDETERMINED_IDS = new Set([
   NEW_HOUSE_ORIGIN_UNCOLLECTED_ID,
   NEW_HOUSE_PRESALE_HOLDING_ID,
   POP_DECLINE_71_2_UNCONFIRMED_ID,
+  // 2026-11 리뷰 I-26(사용자 결정 2026-11-21) — 수집기가 내는데 이 목록에 없어 계산기 경고에서 빠지던 다섯 고지. 머리 주석의 「계산기도 같은 항목을
+  //   경고로 낸다」 계약대로 넣는다. 수집기 id ⊆ 이 목록은 `__tests__/tax-engine/transfer/era-notice-contract/` 가드가 지킨다.
+  "155-16-merged-special-city-unit",
+  "155-16-gunwi-boundary-era",
+  "155-1-roster-pair-one-year-waiver-unverified",
+  NON_RESIDENT_THREE_YEAR_COUNT_ID,
+  RESIDENCE_INTERVAL_CONSOLIDATION_ID,
 ]);
 
 const law = (s: string) => `${TRANSFER.ONE_HOUSE_REQUIREMENT}${s}`;
@@ -193,6 +200,11 @@ export interface EraNoticeRelevance {
   nonResidentThreeYearReadingDecides?: () => boolean;
   /** I-25 — 거주 구간을 날수로 이어 붙여 센 개월이면 과세 → 비과세·부분과세로 바뀌는가(반대 방향은 고지하지 않는다 — Q-26) */
   residenceConsolidationDecides?: (dayShiftedMonths: number) => boolean;
+  /**
+   * 공휴일 표 한계 고지(`civil-161-holiday-table-uncovered`) — 기한을 지킨 쪽·넘긴 쪽으로 양도일을 옮긴 반사실(`holidayCounterfactualTransferDates`)의
+   * 결론이 다른가(2026-11 리뷰 I-26 — 종전에는 말일과 양도일의 거리만 봐 다른 사유로 과세가 정해진 판정에도 냈다).
+   */
+  holidayDeadlineDecides?: (counterfactualTransferDates: readonly Date[]) => boolean;
   temporaryTwoHouseVariantsDecide?: (
     a: NonNullable<OneHouseJudgeInput["temporaryTwoHouse"]>,
     b: NonNullable<OneHouseJudgeInput["temporaryTwoHouse"]>,
@@ -439,7 +451,7 @@ export function collectEraUndetermined(
   }
 
   // §155① 일시적 2주택 고지(OH-01 조정 여부·전입 · J-3 합가 짝 · 2002 경과조치 · §155⑱ 방법 · ⑯ 통합특별시) — 800줄 정책 분리(2026-11-13).
-  out.push(...collectTempTwoHouseEraUndetermined(input, oneHouseRules, relevance));
+  out.push(...collectTempTwoHouseEraUndetermined(input, oneHouseRules, relevance, settled));
 
   /*
    * L-1 — 「~이내」 기한(§155①④⑤⑦⑧·§154① 단서·§156의2·§156의3·§155㉓)은 말일이 토요일·공휴일이면 익일로 만료한다(민법 §161).
@@ -592,7 +604,12 @@ export function collectEraUndetermined(
   }
 
   // 어느 선언된 기한의 말일이 양도일 곁에 있어 공휴일 표 한계가 판정을 바꿀 수 있을 때만(#32 하위 1 가 — `holiday-notice-deadlines.ts`).
-  const holidayKind = holidayTableNoticeKind(input, oneHouseRules, article89Clause2 ?? {});
+  const holidayKindRaw = holidayTableNoticeKind(input, oneHouseRules, article89Clause2 ?? {});
+  // I-26 — 기한을 지켰다고 본 반사실이 결론을 바꿀 때만(게이트가 없는 호출은 종전 동작).
+  const holidayKind =
+    holidayKindRaw && (relevance?.holidayDeadlineDecides?.(holidayCounterfactualTransferDates(input, oneHouseRules, article89Clause2 ?? {})) ?? true)
+      ? holidayKindRaw
+      : undefined;
   if (holidayKind === "uncovered") {
     out.push({
       id: "civil-161-holiday-table-uncovered",
