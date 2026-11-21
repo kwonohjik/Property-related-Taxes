@@ -586,6 +586,16 @@ export function buildRows(
     ? Math.max(0, result.taxableGain - incomeDeductionAmount)
     : Math.max(0, incomeAmount - incomeDeductionAmount);
   setNum("incomeAmountAfter", "total", incomeAmountAfter);
+  // R-c06-05 — 소득금액 감면대상은 파트(열)별 귀속 echo가 없다. 차감이 있으면 파트 열 칸(차감 전 값)을 비우고 합계 열만 남긴다
+  //   (열 합이 합계와 어긋나 「감면후」 열에 차감 전 값이 찍히던 것 · UI에서 새로 안분하지 않는다).
+  const partCols = Object.keys(v.incomeAmountAfter ?? {}).filter((col) => col !== "total");
+  if (incomeDeductionAmount > 0 && partCols.length > 0) {
+    for (const col of partCols) {
+      setNum("incomeAmountAfter", col, null);
+      delete roseNotesMap.incomeAmountAfter?.[col];
+    }
+    setRoseNote("incomeAmountAfter", "total", "소득금액 감면대상을 파트별로 나누지 않으므로 감면후 소득금액은 합계 열에만 적습니다");
+  }
   setNum("priorIncomeAmount", "total", 0);
   setNum("basicDeduction", "total", result.basicDeduction);
   setNum("taxBase", "total", result.taxBase);

@@ -38,6 +38,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { kstDateOfIso } from "@/lib/utils/kst-date";
 import { calculationRepository } from "@/lib/storage/calculation-repository";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
 import {
@@ -153,7 +154,7 @@ export function OneHouseJudgmentLoadModal({
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     저장{" "}
-                    <span className="font-mono tabular-nums">{c.updatedAt.slice(0, 10)}</span>
+                    <span className="font-mono tabular-nums">{kstDateOfIso(c.updatedAt)}</span>
                   </div>
                 </div>
               </button>

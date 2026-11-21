@@ -315,6 +315,7 @@ export function calcPreHousingDisclosureGain(
     transferApportionRatio,
     acquisitionApportionRatio,
     totalEstimatedAcquisitionPrice,
+    ...(P_T_conv !== P_T ? { conversionDenominator: P_T_conv } : {}), // [echo] §164⑨1호 환산 분모 (표시 전용)
     landTransferPrice,
     buildingTransferPrice,
     landAcquisitionPrice,

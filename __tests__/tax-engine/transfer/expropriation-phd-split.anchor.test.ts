@@ -53,6 +53,7 @@ describe("주택 PHD split §164⑨ 1호 (P6b/D15)", () => {
     expect(r.preHousingDisclosureDetail?.totalEstimatedAcquisitionPrice).toBe(PHD_TOTAL_EST_ACQ);
     expect(r.transferGain).toBe(PHD_TOTAL_GAIN);
     expect(r.splitDetail?.housingExpropriationValuationDetail).toBeUndefined();
+    expect(r.preHousingDisclosureDetail?.conversionDenominator).toBeUndefined();
   });
 
   it("C-08 수용 → 환산 분모만 500M로 낮춤(환산 693,304,423↑) · 안분 P_T 원값 불변", () => {
@@ -70,6 +71,9 @@ describe("주택 PHD split §164⑨ 1호 (P6b/D15)", () => {
     expect(d?.compensationBasisTotal).toBe(550_000_000);
     expect(d?.chosen).toBe(500_000_000);
     expect(d?.denominator).toBe(500_000_000);
+    // [echo] R-c07-05 — PHD 섹션 「총 환산취득가」 산식 분모가 자기 값을 만들도록 낮춘 분모를 싣는다
+    expect(r.preHousingDisclosureDetail?.conversionDenominator).toBe(500_000_000);
+    expect(r.preHousingDisclosureDetail?.inputs.transferHousingPrice).toBe(627_000_000);
   });
 
   it("경계 — 보상·보상기초 둘 다 개별주택가격(627M) 초과 → chosen === 627M(차감 0)", () => {

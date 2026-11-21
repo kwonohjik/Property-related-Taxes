@@ -26,6 +26,7 @@
 import { useEffect, useState } from "react";
 import { OpenSourceJudgmentLink } from "@/components/calc/transfer/OpenSourceJudgmentLink";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { kstDateOfIso } from "@/lib/utils/kst-date";
 import {
   calcVerdictDiffers,
   detectJudgmentProvenance,
@@ -170,7 +171,7 @@ export function OneHouseJudgmentProvenanceLine({
             {" · 넘겨받을 당시 판정 결과 "}
             <b data-testid="provenance-verdict">{rec.verdictLabel}</b>
             {" · 저장 "}
-            <span className="font-mono tabular-nums">{rec.updatedAt.slice(0, 10)}</span>{" "}
+            <span className="font-mono tabular-nums">{kstDateOfIso(rec.updatedAt)}</span>{" "}
             {/* I-14 — 원본 판정을 이력 재개로 연다(다건 화면에서는 링크가 스스로 숨는다) */}
             <OpenSourceJudgmentLink />
           </p>
