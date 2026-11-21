@@ -351,6 +351,7 @@ export function buildAggregateRows(
       transferDate: colTransferDate,
       nblSurchargeExcluded: p.nblSurchargeExcluded,
       nonBusinessLandShortTerm: p.nonBusinessLandShortTerm,
+      surchargeShortTermClause: p.surchargeShortTermClause,
     });
     if (!isGbPartColumn && assetCode) setStr("rateCode", col, assetCode);
     if (isGbPartColumn) {

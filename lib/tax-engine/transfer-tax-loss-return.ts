@@ -24,6 +24,7 @@ import { resolveSplitBuildingPenaltyAxis } from "./transfer-tax-building-penalty
 import { resolveSelfBuiltHousingPenaltyAxis, selfBuiltHousingEchoOf } from "./transfer-tax-self-built-housing-penalty";
 import { TRANSFER } from "./legal-codes/transfer";
 import type { RateClause } from "./transfer-tax-rate-clause";
+import type { SurchargeRateClause } from "./transfer-tax-rate-clause";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 
 export interface LossReturnArgs {
@@ -80,7 +81,7 @@ export interface LossReturnArgs {
    * 세액은 전부 0이고 이 둘만 신고서 「세율」·「세율구분 코드」 열로 흘러간다.
    * 호출부(`transfer-tax.ts`)가 STEP 7과 같은 입력으로 `calcTax(0, …)`를 태워 만든다.
    */
-  rateEcho?: { appliedRate: number; rateClause?: RateClause; rateSurchargeStatutoryExcluded?: boolean };
+  rateEcho?: { appliedRate: number; rateClause?: RateClause; rateSurchargeStatutoryExcluded?: boolean; surchargeShortTermClause?: SurchargeRateClause };
 }
 
 export function buildLossTransferTaxResult({
@@ -222,6 +223,8 @@ export function buildLossTransferTaxResult({
     // 빠뜨리면 미등기 차손 자산이 `-`로 표시돼 적용 여부를 화면에서 판별할 수 없다(위 `rateEcho`).
     appliedRate: rateEcho?.appliedRate ?? 0,
     ...(rateEcho?.rateClause ? { rateClause: rateEcho.rateClause } : {}),
+    // R-c10-01 — §104⑦ 후단에서 단기세율이 이긴 중과 대상 주택: 정상 반환과 같은 echo(신고서 ③ «중과 대상 단기» 코드 · 세액 무영향).
+    ...(rateEcho?.surchargeShortTermClause ? { surchargeShortTermClause: rateEcho.surchargeShortTermClause } : {}),
     // 부칙 제9270호 §14① 위기취득 세율 배제 — 정상 반환(`transfer-tax-normal-return.ts`)과 같은 echo. 없으면 다건 분류가 원시 플래그로 중과 세율군을 붙인다.
     ...(rateEcho?.rateSurchargeStatutoryExcluded ? { rateSurchargeStatutoryExcluded: true } : {}),
     progressiveDeduction: 0,

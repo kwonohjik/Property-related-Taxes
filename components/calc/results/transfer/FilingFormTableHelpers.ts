@@ -596,6 +596,7 @@ export function buildRows(
     transferDate,
     nblSurchargeExcluded: result.nblSurchargeExcluded,
     nonBusinessLandShortTerm: result.nonBusinessLandShortTerm,
+    surchargeShortTermClause: result.surchargeShortTermClause,
   });
   if (rateCode) setStr("rateCode", "total", rateCode);
   const ratePct = fmtRatePct(result.appliedRate);

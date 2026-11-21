@@ -594,6 +594,7 @@ export function computeAggregateOnce(
       rateClause: r.result.rateClause,
       ...(r.result.specialRateBasis ? { specialRateBasis: r.result.specialRateBasis } : {}),
       ...(r.result.nonBusinessLandShortTerm ? { nonBusinessLandShortTerm: true } : {}),
+      ...(r.result.surchargeShortTermClause ? { surchargeShortTermClause: r.result.surchargeShortTermClause } : {}),
       nblSurchargeExcluded: r.result.nblSurchargeExcluded,
       nblSurchargeExcludedBy: r.result.nblSurchargeExcludedBy,
       progressiveDeduction: r.result.progressiveDeduction,

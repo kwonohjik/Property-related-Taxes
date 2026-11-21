@@ -146,3 +146,22 @@ export function provisoMergeId(
 ): string {
   return (candidates?.length ?? 0) >= 2 && !isSec104_5_2ProvisoInForce(transferDate) ? `${key}#${unit}` : key;
 }
+
+/** §104⑦ 다주택 중과 호 — 신고서 ③ 세율구분 «중과 대상 단기» 코드 표지(`surchargeShortTermClause`)의 값 */
+export type SurchargeRateClause = Extract<RateClause, "104-7-1" | "104-7-3">;
+
+/**
+ * §104⑦ 후단 비교에서 **단기세율(§104①2·3호)이 이긴** 다주택 중과 후보 호 — 신고서 ③ 세율구분 코드 표시 전용 echo.
+ *
+ * 승자가 단기 호이면 `rateClause`만으로는 중과 대상 주택인지 알 수 없다. 그런데 별지 제84호서식 작성방법은
+ * 그 경우를 «1년 미만 / 1년 이상 2년 미만 보유 조정대상지역 내 주택으로서 1세대2주택(3주택)에 해당하는 주택» 코드로
+ * 따로 적는다. 비교 대상이었던 호는 `calcTax`의 `candidateClauses`가 이미 들고 있으므로 **재판정하지 않고** 거기서 꺼낸다.
+ * 승자가 단기 호가 아니거나 중과 후보가 없으면 `undefined`. 세액·그룹핑에는 쓰지 않는다.
+ */
+export function surchargeClauseBeatenByShortTerm(r: {
+  rateClause?: RateClause;
+  candidateClauses?: readonly RateClause[];
+}): SurchargeRateClause | undefined {
+  if (r.rateClause !== "104-1-2" && r.rateClause !== "104-1-3") return undefined;
+  return r.candidateClauses?.find((c): c is SurchargeRateClause => c === "104-7-1" || c === "104-7-3");
+}

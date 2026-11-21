@@ -294,6 +294,12 @@ export interface TransferTaxResult {
    */
   nonBusinessLandShortTerm?: boolean;
   /**
+   * §104⑦ 후단 비교에서 단기세율(§104①2·3호)이 이긴 다주택 중과 후보 호 — 신고서 ③ 세율구분 코드
+   * (별지 제84호서식 «1년 미만 / 1년 이상 2년 미만 보유 조정대상지역 내 주택으로서 1세대2주택(3주택)에 해당하는 주택») 표시 전용(R-c10-01). 세액 무영향.
+   * 출처: `calcTax`의 `candidateClauses`(`surchargeClauseBeatenByShortTerm`).
+   */
+  surchargeShortTermClause?: import("../transfer-tax-rate-clause").SurchargeRateClause;
+  /**
    * §104 밖 세율 특례 표지(조특법 §98①1호 20%) — 신고서 ③ 세율구분 코드(1-92) 표시 전용.
    * `rateClause`(§104 호 축)에 섞지 않는다 — 그룹핑 키가 그 값을 읽는다.
    */

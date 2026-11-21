@@ -77,6 +77,7 @@ import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-o
 export type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 export { parseRatesFromMap } from "./transfer-tax-helpers";
 import { calcTax } from "./transfer-tax-rate-calc";
+import { surchargeClauseBeatenByShortTerm } from "./transfer-tax-rate-clause";
 import { unsold98RateNotices } from "./transfer-tax-unsold98-rate-notice";
 import { unregisteredReductionNotice } from "./transfer-tax-reductions-calc";
 import { selfFarmingRuleMissingNotice } from "./transfer-tax-reductions-calc";
@@ -413,7 +414,8 @@ function calculateTransferTaxCore(
         const tr = calcTax(0, parsedRates, landOnlyRateInput(effectiveInput), multiHouseSurchargeResult);
         // 위기취득 세율 배제 표지 — 정상 반환과 같은 술어(다건 세율군 분류가 읽는다 · 계획서 `surcharge-oos-remaining.plan.md` C)
         const { rateSurchargeStatutoryExcluded } = resolveSurchargeApplication(effectiveInput, multiHouseSurchargeResult, parsedRates.surchargeSpecialRules);
-        return { appliedRate: tr.appliedRate, rateClause: tr.rateClause, rateSurchargeStatutoryExcluded };
+        // R-c10-01 — 정상 반환과 같은 echo. 과세표준 0이면 단기·중과 세액이 0 대 0이라 단기 호가 이기고 §104⑦ 호는 후보에만 남는다.
+        return { appliedRate: tr.appliedRate, rateClause: tr.rateClause, rateSurchargeStatutoryExcluded, surchargeShortTermClause: surchargeClauseBeatenByShortTerm(tr) };
       })(),
     });
   }
