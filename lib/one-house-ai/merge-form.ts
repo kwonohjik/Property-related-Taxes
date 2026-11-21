@@ -5,6 +5,7 @@
  * 기본값(`createHouseEntry`) 위에 덮는다 — 추출해 넣은 행과 직접 추가한 행이 같은 모양이어야 ⑧ 검증·판정이 같다.
  */
 import { createInitialOneHouseJudgmentForm, type OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
+import { withCompleteCountExclusions } from "@/lib/calc/house-count-exclusion-complete";
 import { migrateAsset } from "@/lib/stores/calc-wizard-asset-migrate";
 import { createHouseEntry } from "@/lib/stores/house-entry-factory";
 import type { ExtractedForm } from "./apply-extraction";
@@ -27,6 +28,7 @@ export function mergeExtractedForm(fragment: ExtractedForm): OneHouseJudgmentFor
     ...top,
     // §154⑩ 사실 「예」는 칸 하나가 아니라 선언(B · 임대주택 0호)이다 — 화면 질문과 같은 쓰기를 거친다.
     assets: [withPhrp154_10Answer(merged, merged.rentalHousingException.phrp154_10Answer)],
-    houses: (houses ?? []).map((h, i) => ({ ...createHouseEntry(h.id ?? `house_ai_${i + 1}`), ...h })),
+    // D-18 — `countExclusion` 판별 유니온을 화면과 같은 모양으로 정규화한다(payload 없는 kind는 크래시 원인이었다).
+    houses: withCompleteCountExclusions((houses ?? []).map((h, i) => ({ ...createHouseEntry(h.id ?? `house_ai_${i + 1}`), ...h }))),
   } as OneHouseJudgmentFormData;
 }

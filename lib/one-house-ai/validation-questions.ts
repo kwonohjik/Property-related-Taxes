@@ -23,7 +23,9 @@ export type ValidationQuestion = {
 };
 
 /** API 본문 칸 이름이 폼과 다른 것 */
-const API_FIELD_ALIAS: Record<string, string> = { transferPrice: "contractTotalPrice" };
+// D-35 — 본문 `residencePeriodMonths`는 판정 메뉴의 자산 칸(`asset.residencePeriodMonthsAsset`)에서 온다. 옛 폼-전역 칸으로 이으면 답이
+//   화면에 없는 칸에 쓰이고 자산 칸 오류는 그대로 남았다.
+const API_FIELD_ALIAS: Record<string, string> = { transferPrice: "contractTotalPrice", residencePeriodMonths: "residencePeriodMonthsAsset" };
 
 const ROW_FIELD = /^(houses|presaleRights|rentalHousingException\.rentalUnits|rentalUnits)\.(\d+)(?:\.(.+))?$/;
 

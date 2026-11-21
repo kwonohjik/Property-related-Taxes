@@ -21,6 +21,7 @@
  */
 
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { defaultSpecialCountExclusion } from "@/lib/calc/house-count-exclusion-complete";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { New994InputForm } from "@/components/calc/transfer/New994InputForm";
 import { Unsold989InputForm } from "@/components/calc/transfer/Unsold989InputForm";
@@ -65,16 +66,8 @@ export function HouseEntryCountExclusionSection({
     if (next === "none") return onUpdate({ countExclusion: undefined });
     if (next === "special") {
       return onUpdate({
-        countExclusion: {
-          kind: "special",
-          special: {
-            article: "",
-            houseAcquisitionDate: "",
-            houseContractDate: "",
-            isNationalHousing: false,
-            requirementsConfirmed: false,
-          },
-        },
+        // 기본값은 정규화 leaf와 같은 소스(D-18)
+        countExclusion: { kind: "special", special: defaultSpecialCountExclusion() },
       });
     }
     const fresh = getReductionDefault(next) as RowCountExclusionReduction;

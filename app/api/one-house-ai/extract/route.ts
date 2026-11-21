@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { checkRateLimit, getClientIp, shouldBypassRateLimit } from "@/lib/api/rate-limit";
-import { checkOneHouseAiAccess } from "@/lib/one-house-ai/access-guard";
+import { aiRateLimitBypass, checkOneHouseAiAccess } from "@/lib/one-house-ai/access-guard";
 import {
   extractOneHouseFacts,
   ExtractionFailedError,
@@ -57,7 +57,7 @@ type ExtractQuestion = {
 export type OneHouseAiExtractData = {
   form: ExtractedForm;
   /** `label` = 칸 이름 · `valueLabel` = 선택지 뜻(선택형 칸일 때) */
-  facts: (ExtractedFact & { label?: string; valueLabel?: string })[];
+  facts: (ExtractedFact & { label?: string; valueLabel?: string; applied?: boolean })[];
   questions: ExtractQuestion[];
   notes: string[];
   issues: ExtractionIssue[];
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
   const rl = checkRateLimit(`one-house-ai-extract:${getClientIp(request)}`, {
     limit: 5,
     windowMs: 60_000,
-    bypass: shouldBypassRateLimit(request),
+    bypass: aiRateLimitBypass(shouldBypassRateLimit(request)),
   });
   if (!rl.allowed) return fail(429, "RATE_LIMITED", "요청이 너무 많습니다. 잠시 후 다시 시도하세요");
 
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
 
   // 단계 5: 소재지 코드 칸 제거(주소 검색으로만 — 질문으로 바꾼다) → 사전 재검증 → 폼 조각 · 질문
   const extraction = withoutAddressCodes(run.extraction);
-  const { form, issues } = applyExtraction(extraction, ONE_HOUSE_FIELD_CATALOG);
+  const { form, issues, applied } = applyExtraction(extraction, ONE_HOUSE_FIELD_CATALOG);
   // 행 이름 없는 칸(`asset.residencePeriods[].moveInDate`)은 그 자체가 사전 키다
   const specOf = (path: string): FieldSpec | undefined => {
     const segs = parsePath(path);
@@ -135,9 +135,15 @@ export async function POST(request: NextRequest) {
     const [x, y] = [groupOf(a), groupOf(b)];
     return x === y || x.startsWith(`${y}.`) || x.startsWith(`${y}[`) || y.startsWith(`${x}.`) || y.startsWith(`${x}[`);
   };
-  const validationQuestions = collectValidationQuestions(mergeExtractedForm(form), ONE_HOUSE_FIELD_CATALOG).filter(
-    (q) => !llmQuestions.some((l) => overlaps(l.path, q.path)),
-  );
+  // D-18 — 검증 질문 수집이 던져도 이미 비용을 낸 추출 결과는 돌려준다(종전엔 500으로 버려졌다).
+  let validationQuestions: ReturnType<typeof collectValidationQuestions> = [];
+  try {
+    validationQuestions = collectValidationQuestions(mergeExtractedForm(form), ONE_HOUSE_FIELD_CATALOG).filter(
+      (q) => !llmQuestions.some((l) => overlaps(l.path, q.path)),
+    );
+  } catch (e) {
+    console.error("[one-house-ai extract] 검증 질문 수집 실패", { name: (e as Error).name, message: (e as Error).message });
+  }
 
   // 단계 6: 원문 속 인용 대조 — 추출된 양도일이 있으면 그 날 시행본으로(조회 실패는 각 항목에 「확인 불가」로 남는다)
   const sourceCitations = await checkSourceCitations(parsed.data.text, typeof form.transferDate === "string" ? form.transferDate : null);
@@ -145,9 +151,10 @@ export async function POST(request: NextRequest) {
   const data: OneHouseAiExtractData = {
     form,
     // 화면은 필드 사전을 싣지 않는다 — 칸 이름과 선택지 뜻을 여기서 붙인다
-    facts: extraction.facts.map((f) => {
+    facts: extraction.facts.map((f, i) => {
       const spec = specOf(f.path);
-      return { ...f, label: spec?.label, valueLabel: spec?.values?.find((v) => v.value === f.value.trim())?.label };
+      // D-36 — 폼에 실제로 넣었는지(형식 오류·중복·사전 밖·판별 칸 없음은 false)
+      return { ...f, applied: applied[i], label: spec?.label, valueLabel: spec?.values?.find((v) => v.value === f.value.trim())?.label };
     }),
     questions: [...llmQuestions, ...validationQuestions.map((q) => ({ ...q, field: fieldOf(q.path) }))],
     notes: extraction.notes,

@@ -9,7 +9,7 @@ import type { OneHouseExtraction } from "@/lib/one-house-ai/extraction-schema";
 
 const gate = vi.fn();
 const extract = vi.fn();
-vi.mock("@/lib/one-house-ai/access-guard", () => ({ checkOneHouseAiAccess: () => gate() }));
+vi.mock("@/lib/one-house-ai/access-guard", () => ({ checkOneHouseAiAccess: () => gate(), aiRateLimitBypass: (b: boolean) => b }));
 vi.mock("@/lib/one-house-ai/extract", async (orig) => ({
   ...(await orig<typeof import("@/lib/one-house-ai/extract")>()),
   extractOneHouseFacts: (text: string) => extract(text),

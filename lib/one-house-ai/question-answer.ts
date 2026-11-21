@@ -12,6 +12,7 @@
  * 화면은 필드 사전을 싣지 않는다 — 칸 정보(`AnswerField`)는 추출 API가 질문마다 붙여 보낸다.
  */
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
+import { withCompleteCountExclusions } from "@/lib/calc/house-count-exclusion-complete";
 import type { FieldSpec } from "./field-catalog.types";
 import { catalogKeyOf, parsePath, ROW_ID_FIELD, type Segment } from "./apply-extraction";
 import { phrp154_10AnswerOf, withPhrp154_10Answer } from "@/lib/calc/phrp-154-10-fact-question";
@@ -91,5 +92,7 @@ export function writeAnswer(
   const loc = locate(next, target.segs, true);
   if (!loc?.parent) return form;
   loc.parent[target.segs[target.segs.length - 1].name] = value;
+  // D-18 — 명부 행 `countExclusion`을 건드렸으면 판별 유니온을 정규화한다(「reduction」만 답하면 payload가 없어 화면이 죽었다).
+  if (target.segs.some((s) => s.name === "countExclusion")) next.houses = withCompleteCountExclusions(next.houses);
   return next;
 }

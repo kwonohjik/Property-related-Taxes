@@ -8,7 +8,7 @@ import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import type { OneHouseCard } from "@/lib/one-house-ai/opinion/cards";
 
 const gate = vi.fn();
-vi.mock("@/lib/one-house-ai/access-guard", () => ({ checkOneHouseAiAccess: () => gate() }));
+vi.mock("@/lib/one-house-ai/access-guard", () => ({ checkOneHouseAiAccess: () => gate(), aiRateLimitBypass: (b: boolean) => b }));
 const loadCards = vi.fn();
 vi.mock("@/lib/one-house-ai/opinion/card-store", () => ({ loadOneHouseCards: () => loadCards(), oneHouseCardsDir: () => "/cards" }));
 const generate = vi.fn();

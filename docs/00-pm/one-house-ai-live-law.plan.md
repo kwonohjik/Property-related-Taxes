@@ -36,6 +36,7 @@
   결정례 검색 `searchDecisions`(prec·ttSpecialDecc·expc…) · 본문 `getDecisionText` · 인용 환각 검증 `verifyCitations`(**현행 조문 기준** — `verifyOne`이 `getLawText`를 부른다).
   **국세청·기재부 해석 도메인은 없다**(`DECISION_DOMAINS`).
 - 로컬 개발 서버 전용(`access-guard.ts`) · `ANTHROPIC_API_KEY` 필요 · 모델 `claude-opus-5-5`.
+- 2026-11-21 갱신(리뷰 D-34 · 결정 Q-9 ③): 개발 서버에서도 `ONE_HOUSE_AI_DEV=1`(opt-in)을 켜야 연다 — 개발 서버는 기본 0.0.0.0이라 LAN에서 닿는다. 비용 상한(분당 5회)의 우회 헤더는 테스트(NODE_ENV=test)에서만 받는다.
 
 ## 2. 실측 사실 (2026-10-21, 이 계획의 전제)
 

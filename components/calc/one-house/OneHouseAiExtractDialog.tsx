@@ -210,14 +210,15 @@ function ExtractionPreview({
 }) {
   return (
     <div className="space-y-3" data-testid="one-house-ai-extract-preview">
-      <ToneCard tone="sky" title={`추출한 사실 ${data.facts.length}칸`}>
+      <ToneCard tone="sky" title={`추출한 사실 ${data.facts.filter((f) => f.applied !== false).length}칸`}>
         {data.facts.length === 0 ? (
           <p className="text-sm">원문에서 뽑은 사실이 없습니다.</p>
         ) : (
           <ul className="space-y-1.5">
-            {data.facts.map((f) => (
-              <li key={f.path} className="text-sm">
+            {data.facts.map((f, i) => (
+              <li key={`${i}-${f.path}`} className="text-sm">
                 <span className="font-medium">{f.label ?? f.path}</span>
+                {f.applied === false && <span className="ml-1 text-caption text-rose-700 dark:text-rose-300">(넣지 않음)</span>}
                 {f.label && <span className="text-caption text-muted-foreground"> ({f.path})</span>}
                 {" = "}
                 <b>{factValueText(f)}</b>
