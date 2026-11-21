@@ -473,6 +473,11 @@ export interface RedevelopmentValuationMeta {
    */
   burdenedGiftStdLumpRate?: number;
   /**
+   * 분자(`numerator`)·개산공제 base가 **취득당시 개별공시지가**인가 — 토지만 제공한 §166③ 환산(`originalAssetType="land"`).
+   * 표시 산식이 개산공제 근거를 「소득세법 시행령」 §163⑥1호(토지)와 2호 가목(주택)으로 가른다. 없으면 주택 기준시가다(표시 echo · 산식 불변).
+   */
+  lumpBaseIsLandPrice?: true;
+  /**
    * 관리처분 인가일 기준시가 — §166③ 분모.
    * "successor_member_decree_162_1_4" 분기에서는 undefined (안분 미적용).
    */

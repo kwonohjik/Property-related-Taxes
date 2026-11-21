@@ -114,6 +114,8 @@ export interface RedevHousingContribReceiveEstimatedResult {
   salePriceTotal: number;
   /** 인가전 분 LTHD (표1 보유분, §95② 본문 괄호) */
   preApprovalLTHD: number;
+  /** 위 공제액 중 보유분(보유 공제율만 곱한 값) — 표2면 나머지가 거주분이다(결과 분해 표시 echo · 토지 경로와 같은 분해). */
+  preApprovalLTHDHoldingPart: number;
   /** 인가후 분 LTHD = 0 (§95② 본문 괄호 — 입주권 §94①2호 자산) */
   postApprovalLTHD: number;
   /** LTHD 합계 = 인가전만 */
@@ -268,6 +270,7 @@ export function calcRedevHousingContribReceiveEstimated(
   //    `rate`(= holdingRate + residenceRate)를 써야 한다. 표1에서는 residenceRate가 0이라
   //    종전 동작이 그대로 유지된다(하위호환).
   const preApprovalLTHD = applyLthdToGain(preApprovalGain, preApprovalBranch.rate);
+  const preApprovalLTHDHoldingPart = applyLthdToGain(preApprovalGain, preApprovalBranch.holdingRate);
 
   // 인가후 LTHD = 0 (§95② 본문 괄호 — 입주권은 부동산 외 §94①2호)
   const postApprovalLTHD = 0 as number; // TS 좁힘 회피를 위해 as number
@@ -292,6 +295,7 @@ export function calcRedevHousingContribReceiveEstimated(
     postApprovalGain,
     salePriceTotal,
     preApprovalLTHD,
+    preApprovalLTHDHoldingPart,
     postApprovalLTHD,
     totalLTHD: preApprovalLTHD + postApprovalLTHD,
     lthdHoldingStartDate: input.acquisitionDate,

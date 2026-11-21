@@ -70,6 +70,8 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
   const preApprovalGiftTax = preApproval.carryoverGiftTaxExpense ?? 0;
   // 완공 APT 동시신고(납부·수령) — 열마다 엔진이 뺀 필요경비를 그린다(없으면 화면 산식이 양도차익과 어긋났다 · 2026-11-12 실측).
   const isAptSplit = !isRightSubject && !successorMemberApplied;
+  // 입주권 납부(§166①1호) 2열 — 같은 규약으로 ①·② 열 필요경비를 그린다(R-c08-01 · 수령은 `RedevRightReceiveBlocks`).
+  const isRightPaySplit = isRightSubject && !successorMemberApplied;
   // 인가전 분 필요경비에서 증여세 상당액(아래 독립 행)을 뺀 몫 — 개산공제 또는 실비(택일), 수령이면 안분 후 값이다.
   const preApprovalBaseExpense = Math.max(0, (preApproval.expenses ?? 0) - preApprovalGiftTax);
 
@@ -221,7 +223,9 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
       {isRightSubject && !successorMemberApplied && (
         <div className="rounded-md bg-violet-100/60 border border-violet-200 p-2 text-caption text-violet-900 leading-relaxed dark:text-violet-200 dark:bg-violet-900/40">
           <span className="font-semibold">§166① 입주권 양도 구조</span> — 인가전 양도차익에만 장기보유특별공제 적용 (§95② 본문 괄호).
-          인가후·청산금 분은 장기보유특별공제 대상 외 (§94①2호 + §166①1호 산식 구조).
+          {settlementDirection === "receive"
+            ? "인가후 분(§166①2호 가목)은 장기보유특별공제 대상 외 (§95② 본문 괄호)."
+            : "인가후·청산금 분은 장기보유특별공제 대상 외 (§94①2호 + §166①1호 산식 구조)."}
           인가후 기존건물분(=0) 행은 표시 생략.
         </div>
       )}
@@ -253,16 +257,15 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             <span className="font-semibold">입주권 양도 + 청산금 수령 — 가목·나목 분기</span>
           </div>
           <p className="leading-relaxed">
-            <strong>가목 (청산금 수령분):</strong> 청산금 수령액 − 안분 취득가액(종전취득가 × 청산금 / 권리가액).
-            장기보유특별공제 대상 외 — §95② 본문 괄호(인가 전 토지분·건물분의 양도차익으로 한정) + 집행기준 보수적 적용으로 0 처리.
+            <strong>가목 (인가후 분):</strong> 양도가액 − (평가액 − 지급받은 청산금) − 필요경비.
+            장기보유특별공제 대상 외 — §95② 본문 괄호(인가 전 토지분·건물분의 양도차익으로 한정).
           </p>
           <p className="leading-relaxed">
             <strong>나목 (인가전 분 — 축소):</strong> 인가전양도차익 × (권리가액 − 청산금) / 권리가액.
             장기보유특별공제: §166⑤1호 (취득일~인가일 기산, 원조합원 한정).
           </p>
           <p className="text-micro text-violet-700 dark:text-violet-300">
-            청산금 분 장기보유특별공제 0 적용 사유: §94①2호(입주권은 토지·건물 범위 외) + §166①2호 가목 산식 구조상 장기보유특별공제 산정 불가.
-            별도 법령해석 확보 전 보수적 적용 유지.
+            인가후 분(가목) 장기보유특별공제 0 적용 사유: {REDEVELOPMENT.LTHD_RIGHT_GAIN_LIMIT} — 조합원입주권은 공제 대상 양도차익을 관리처분계획 인가 전 토지분·건물분의 양도차익으로 한정합니다.
           </p>
         </div>
       )}
@@ -496,7 +499,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           <Row label="취득가액" value={preApproval.apportionedAcquisition} />
           {/* 🔴 「라목값」 하드코딩이었다 — 토지 종전자산 분기의 base는 **가목(개별공시지가)**이다
               (2026-09-07 대장 재대조 · #32). 어느 분기인지는 echo 필드가 말해 준다. */}
-          {isAptSplit ? (
+          {isAptSplit || isRightPaySplit ? (
             preApprovalBaseExpense > 0 && (
               <Row
                 label={
@@ -584,6 +587,8 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
                 ? "취득가액"
                 : (isRightSubject || isAptReceive) && settlementDirection === "receive"
                 ? <>안분 취득가액(=종전취득가 × <Frac top="청산금" bottom="권리가액" />)</>
+                : detail.landContribDetail
+                ? "취득가액(=권리가액 의제)" // 토지만 제공한 환산 — 엔진이 이 칸에 권리가액을 싣는다(redevelopment-branches.ts runLandContribEstimated)
                 : "안분 취득가액(=청산금)"
             }
             value={settlement.apportionedAcquisition}
@@ -591,15 +596,20 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           {/* 단독 신고 — 필요경비 등(환산이면 개산공제 · 이월과세 증여세 상당액 포함)의 청산금분 몫(집행기준 100-166-10). 없으면 화면 산식이 양도차익과 맞지 않았다. */}
           {isReceiveOnly ? (
             <Row label={<>안분 필요경비 등(=필요경비 등 × <Frac top="청산금" bottom="권리가액" />)</>} value={settlement.expenses ?? 0} />
-          ) : isAptSplit && (settlement.expenses ?? 0) > 0 && (
-            <Row
-              label={
-                isAptReceive
-                  ? <>안분 필요경비 등(=인가전 필요경비 등 × <Frac top="청산금" bottom="권리가액" />)</>
-                  : <>안분 인가후 필요경비(=인가후 필요경비 × <Frac top="청산금" bottom="분양가" />)</>
-              }
-              value={settlement.expenses ?? 0}
-            />
+          ) : isAptSplit ? (
+            (settlement.expenses ?? 0) > 0 && (
+              <Row
+                label={
+                  isAptReceive
+                    ? <>안분 필요경비 등(=인가전 필요경비 등 × <Frac top="청산금" bottom="권리가액" />)</>
+                    : <>안분 인가후 필요경비(=인가후 필요경비 × <Frac top="청산금" bottom="분양가" />)</>
+                }
+                value={settlement.expenses ?? 0}
+              />
+            )
+          ) : isRightPaySplit && (settlement.expenses ?? 0) > 0 && (
+            // 토지만 제공한 환산(`landContribDetail`)은 엔진이 납부 청산금을 이 칸에 함께 싣는다(redevelopment-branches.ts runLandContribEstimated).
+            <Row label={detail.landContribDetail ? "납부 청산금 + 인가후 필요경비" : "인가후 필요경비"} value={settlement.expenses ?? 0} />
           )}
           {isRightSubject && !detail.settlementExemptionApplied ? (
             // 사례 36 입주권 양도 (subject="right") — §95② 본문 괄호 LTHD=0 명시

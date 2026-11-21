@@ -19,6 +19,8 @@ import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/thresh
 import { calcLongTermRate } from "@/lib/tax-engine/transfer-tax-mixed-use-inheritance";
 import { redevBranchTotals } from "./redev-acquisition-inverse";
 import { redevFilingTotals } from "./redev-acquisition-inverse";
+import { rightTransferFormula } from "./DetailedStatementRedevRightFormulas";
+import { rightAcquisitionFormula } from "./DetailedStatementRedevRightFormulas";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 분할 정의
@@ -38,7 +40,7 @@ const BRANCH_LABEL_PAY: Record<RedevBranch, BranchLabelDef> = {
 };
 
 // 사례 36 — subject="right" 입주권 양도 (납부 모드).
-// §166①1호 산식: 인가전·인가후+청산금 2분기. 인가후 기존건물분(=0) 행은 숨김 처리.
+// §166①1호 산식: 인가전·인가후+청산금 2분기. 인가후 기존건물분(엔진이 0으로 채운 칸) 행은 `buildPerAsset`이 뺀다(R-c05-06).
 // LTHD: 인가전 분만 적용 (§95② 본문 괄호). 인가후·청산금 분 LTHD=0 강제.
 const BRANCH_LABEL_RIGHT_PAY: Record<RedevBranch, BranchLabelDef> = {
   preApproval: { prefix: "① 인가전 분", legal: "§166①1호 · §166⑤1호 (취득일~인가일 기산)" },
@@ -119,7 +121,7 @@ const BRANCH_LABEL_RIGHT_RECEIVE_NAMOK: Record<RedevBranch, BranchLabelDef> = {
     legal: "§166①2호 · §95② 본문 괄호 (인가후분 = 0)",
   },
   settlement: {
-    prefix: "③ 인가후 분 (§166①2호 가목) — 장기보유특별공제 미적용",
+    prefix: "② 인가후 분 (§166①2호 가목) — 장기보유특별공제 미적용",
     legal: "§166①2호 가목 · §95② 본문 괄호 · §94①2호 (공제율 0 적용)",
   },
 };
@@ -253,6 +255,9 @@ export function buildRedevTransferFormula(
     return RECEIVE_ONLY_ZERO_FORMULA;
   }
 
+  // 입주권(§166①) — 완공 APT의 분양가 안분 문구를 쓰지 않는다 (R-c05-06 · `DetailedStatementRedevRightFormulas`).
+  if (axis?.subject === "right") return rightTransferFormula(branch, redev, axis.settlementDirection);
+
   const sale = redev.salePriceTotal ?? 0;
   if (branch === "preApproval") {
     // 인가전 분 의제 양도가액 = 권리가액 (§166④)
@@ -324,6 +329,12 @@ export function buildRedevAcquisitionFormula(
     return RECEIVE_ONLY_ZERO_FORMULA;
   }
 
+  // 입주권(§166①) — 인가후 분 칸·수령 인가전 나목 안분 (R-c05-06). 납부 인가전 분은 아래 산식 그대로다.
+  if (axis?.subject === "right") {
+    const right = rightAcquisitionFormula(branch, redev, axis.settlementDirection, axis.carryoverDonor === true);
+    if (right !== undefined) return right;
+  }
+
   if (branch === "preApproval") {
     const meta = redev.valuationMeta;
     if (
@@ -381,6 +392,8 @@ function successorEstimateFormulas(redev: RedevelopmentResult): { acquisition: s
 export function buildRedevExpenseFormula(
   branch: RedevBranch,
   redev: RedevelopmentResult,
+  /** 입주권(§166①)의 청산금 칸은 인가후 분 필요경비다 — 「청산금 분」으로 적지 않는다. 미전달이면 종전 표시. */
+  subject?: "apt" | "right",
 ): string {
   // 사례 46 receiveOnly — 필요경비 등을 청산금 비율로 안분한 값 (집행기준 100-166-10)
   if (redev.receiveOnlyMode === true) {
@@ -424,7 +437,11 @@ export function buildRedevExpenseFormula(
     if (lump > 0 && redev.valuationMeta && redev.valuationMeta.numerator !== undefined) {
       // base는 엔진 echo(지분 기준시가) 우선 — numerator는 물건 전체(100%) 값이다.
       const P_A = redev.valuationMeta.lumpDeductionBase ?? redev.valuationMeta.numerator;
-      const lumpFormula = `개산공제 = ${fmt(P_A)} × 3% = ${fmt(lump)} (§163⑥ — 취득 당시 개별주택가격(소득세법 시행령 §164④ 라목) × 3%, 1원 미만 절사)`;
+      // 토지만 제공한 환산은 개별공시지가(§163⑥1호), 주택은 주택 기준시가(2호 가목) — 종전 인용 「§164④ 라목」은 없는 조문이다 (R-c05-05).
+      const land = redev.valuationMeta.lumpBaseIsLandPrice === true;
+      // 율은 미등기(§163⑥ 각 호 괄호 — 3/1000)로 갈리는데 결과에 플래그가 없다 — 엔진의 두 값(base·개산공제)에서 역산한다(`RedevelopmentDetailCard`와 같은 방식).
+      const ratePct = Number(((lump / P_A) * 100).toFixed(2));
+      const lumpFormula = `개산공제 = 취득 당시 ${land ? "개별공시지가" : "주택 기준시가"} ${fmt(P_A)} × ${ratePct}% = ${fmt(lump)} (${land ? REDEVELOPMENT.LUMP_DEDUCTION_LAND : REDEVELOPMENT.LUMP_DEDUCTION_HOUSE}, 1원 미만 절사)`;
       // 개산공제 외 성분(인가전 필요경비·수령 분기 안분)이 있으면 **합계를 함께** 밝힌다.
       return amount === lump
         ? lumpFormula
@@ -441,7 +458,7 @@ export function buildRedevExpenseFormula(
   }
   // 인가후·청산금 분에는 개산공제(§163⑥)가 없다 — 다만 그 분할 몫의 필요경비는 있을 수 있다.
   return amount > 0
-    ? `${branch === "settlement" ? "청산금 분" : "인가후 기존건물분"} 필요경비 ${fmt(amount)} (개산공제 미적용)`
+    ? `${branch === "settlement" ? (subject === "right" ? "인가후" : "청산금 분") : "인가후 기존건물분"} 필요경비 ${fmt(amount)} (개산공제 미적용)`
     : "해당 분할에는 개산공제 미적용";
 }
 
@@ -602,7 +619,9 @@ function buildPerAsset(
   settlementDirection?: "pay" | "receive",
 ): PerAssetValue[] {
   const labels = getBranchLabels(redev, subject, settlementDirection);
-  return BRANCHES.map((branch) => ({
+  // 입주권(§166①)은 인가전·인가후 2분기다 — 엔진이 0으로 채운 인가후 기존건물분 행을 뺀다 (R-c05-06).
+  const twoBranch = labels === BRANCH_LABEL_RIGHT_PAY || labels === BRANCH_LABEL_RIGHT_RECEIVE_NAMOK;
+  return (twoBranch ? BRANCHES.filter((b) => b !== "postApprovalExistingHouse") : BRANCHES).map((branch) => ({
     label: `${labels[branch].prefix} (${labels[branch].legal})`,
     value: pickValue(branch, redev),
     formula: pickFormula(branch, redev),
@@ -647,7 +666,7 @@ export function buildRedevPerAssetForExpense(
   return buildPerAsset(
     redev,
     (b, r) => r[b].expenses ?? 0,
-    (b, r) => buildRedevExpenseFormula(b, r),
+    (b, r) => buildRedevExpenseFormula(b, r, subject),
     subject,
     settlementDirection,
   );

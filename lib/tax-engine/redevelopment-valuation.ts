@@ -319,6 +319,7 @@ export function computeRedevelopmentValuation(
         method: "estimated_post_disclosure_decree_166_3",
         numerator: acqLandPrice,
         denominator: approvalLandPrice,
+        lumpBaseIsLandPrice: true, // 표시 echo — 개산공제 근거가 §163⑥1호(토지)다
         rationale:
           `§166③ 토지 출자 환산 — 평가액 ${info.rightsValue.toLocaleString()} × ` +
           `(취득당시 개별공시지가 ${acqLandPrice.toLocaleString()} ÷ ` +

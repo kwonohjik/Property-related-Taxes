@@ -60,15 +60,21 @@ export function RedevRightReceiveBlocks({ detail, estimatedDeductionRateLabel, p
               />
             </>
           ) : (
-            /* 사례 38 — 실가 취득가액 */
-            <Row label="− 취득가액(실가) × 안분비율" value={preApproval.apportionedAcquisition} />
+            /* 사례 38 — 실가 취득가액 + 나목 비율로 안분된 필요경비(엔진 `preApproval.expenses` — 없으면 열 산식이 그만큼 어긋났다 · R-c08-02) */
+            <>
+              <Row label="− 취득가액(실가) × 안분비율" value={preApproval.apportionedAcquisition} />
+              {(preApproval.expenses ?? 0) - preApprovalGiftTax > 0 && (
+                <Row label="− 필요경비(안분 후)" value={(preApproval.expenses ?? 0) - preApprovalGiftTax} />
+              )}
+            </>
           )}
           {preApprovalGiftTax > 0 && (
             <Row label="− 이월과세 증여세 상당액(안분 후) — 소득세법 §97의2①3호" value={preApprovalGiftTax} />
           )}
           <Row label="인가전 양도차익" value={preApproval.gain} highlight />
           <p className="pt-1 border-t border-violet-100 text-micro text-violet-700 dark:text-violet-400">
-            장기보유공제 ({(preApproval.lthdResidencePart ?? 0) > 0 ? "표2" : "표1"} {fmtPct(preApproval.lthdRate)} · 만 {Math.floor(preApproval.holdingMonths / 12)}년 {preApproval.holdingMonths % 12}개월)
+            {/* 표2 단일축(보유 연 8% · 거주분 0)도 표2다 — 엔진 표지 `lthdHoldingOnlyTable2` (R-c08-05) */}
+            장기보유공제 ({preApproval.lthdHoldingOnlyTable2 || (preApproval.lthdResidencePart ?? 0) > 0 ? "표2" : "표1"} {fmtPct(preApproval.lthdRate)} · 만 {Math.floor(preApproval.holdingMonths / 12)}년 {preApproval.holdingMonths % 12}개월)
           </p>
           <Row label="장기보유특별공제 (인가전 분)" value={preApproval.lthd} />
           <div className="pt-1 border-t border-violet-100">
