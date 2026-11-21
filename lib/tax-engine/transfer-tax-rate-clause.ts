@@ -138,6 +138,8 @@ export function clauseBucketKey(
  * 🔑 키가 아니라 **식별자**만 가른다 — 다건 감면의 호 라벨(`clauseLabelOf`)이 키를 읽는다. `solo-*`로 바꾸면 「호 미상」이 된다.
  * ⚠️ 다건 버킷(`transfer-tax-aggregate-group-tax.ts`) · 단건 파트 묶음(`transfer-tax-split-rate.ts`) · 감면 파트 호
  *   (`public-expropriation-reduction.ts` `partClauseBasisOf`) **세 곳이 같은 식**이어야 한다 — 어긋나면 묶음과 감면 호가 갈린다.
+ *   다건 버킷만 이 식별자 앞에 `presale:`·`right:`(§104⑦2·4호 — 권리를 센 세대) 구분자를 더 붙인다. 둘 다 자산 단위 사실이라
+ *   한 자산 안 파트끼리만 비교하는 나머지 두 곳에서는 묶음이 달라지지 않는다.
  */
 export function provisoMergeId(
   key: string,

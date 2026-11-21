@@ -17,6 +17,7 @@ import { publicExpropriationReducedPart } from "./public-expropriation-reduction
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { clauseBucketKey } from "./transfer-tax-rate-calc";
 import { provisoMergeId } from "./transfer-tax-rate-clause";
+import { surchargeHouseholdHasCountedRight } from "./transfer-tax-rate-clause";
 import { PROGRESSIVE_RATE_CLAUSES } from "./transfer-tax-rate-clause";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import { applyRate } from "./tax-utils";
@@ -181,6 +182,11 @@ export function aggregateByGroup(
   assetPartBasic: Partial<Record<SplitRatePart["kind"], number>>[];
   /** 자산별 파트 종류 → 파트 소득(과세표준 + 파트 기본공제) — 감면소득을 파트에 귀속하는 데 쓴다. */
   assetPartIncome: Partial<Record<SplitRatePart["kind"], number>>[];
+  /**
+   * §104⑦3호·4호에 모두 해당하는 주택(주택 3채 이상 + 산입 조합원입주권·분양권)을 4호 버킷(`right:`)에 넣은 결과,
+   * 3호에만 해당하는 주택과 **합산하지 않게 된** 경우 true — 확인 필요 고지용(`bucketIdOf`). 세액 무영향.
+   */
+  surchargeClause3And4OverlapSplit: boolean;
 } {
   const groupMap = new Map<RateGroup, number[]>();
   const clauseTaxes = new Map<string, ClauseTaxEcho>();
@@ -363,7 +369,21 @@ export function aggregateByGroup(
    *   ❌ 1호를 「누진/단일」로 나눠 합산할지는 **법령 검토가 선행**이다(현행 규약 승계 — 계획서 §2.1).
    * 구분자는 **누진 호가 들어간 키에만** 붙인다 — 세율이 키에 들어가는 단일세율 호(예: 1년 미만 70%,
    *   주택·조합원입주권·분양권 공통)는 같은 호·같은 세율이므로 종전대로 다른 자산과 합산한다.
+   *
+   * **권리 구분자**(`right:`) — §104⑦은 1호(1세대 2주택)·2호(1주택과 조합원입주권 또는 분양권 1개)·3호(1세대 3주택 이상)·
+   *   4호(주택과 조합원입주권 또는 분양권의 수의 합이 3 이상)를 각 호로 따로 두는데, 호 표지(`RateClause`)는 가산율만 보아
+   *   `104-7-1`(1·2호)·`104-7-3`(3·4호) 둘뿐이다. 그대로 묶으면 §104⑤2호 단서의 「동일한 호」가 아닌 1호·2호(3호·4호) 주택이
+   *   과세표준을 합산한다(실측 1호 + 2호 520,510,000 → 호별 486,620,000 — `surcharge-clause-right-bucket.anchor.test.ts`).
+   *   ⇒ 중과 호 후보가 있고 정밀 판정이 권리를 센 세대(`surchargeHouseholdHasCountedRight` — 신고서 ③ 코드의 «주택과 조합원입주권
+   *   또는 분양권» 열과 같은 술어)이면 **식별자에만** 구분자를 붙인다. 호 키(`key`)·통산 키·신고서 코드·`RateClause`는 그대로다.
+   *   ⚠️ 3호·4호에 모두 해당하는 주택(주택 3채 이상 + 산입 권리)은 해석례를 찾지 못했다 — 신고서 코드(`withRight`)와 같이 4호로
+   *   보고, 그 선택으로 3호 주택과 갈릴 때만 확인 필요를 고지한다(`surchargeClause3And4OverlapSplit`).
+   *   단건 파트 묶음·감면 파트 호(`provisoMergeId`의 「세 곳」)는 **한 자산 안**의 파트끼리만 비교하고, 권리 산입 여부는 세대
+   *   판정이라 한 자산의 파트가 모두 같다 — 그쪽에는 구분자가 필요 없다.
    */
+  const surchargeRightOf = (u: ClausePart) =>
+    (u.candidateClauses ?? []).some((c) => c === "104-7-1" || c === "104-7-3") &&
+    surchargeHouseholdHasCountedRight(records[u.assetIdx].result);
   const bucketIdOf = (u: ClausePart, n: number) => {
     const key = clauseBucketKey(u.candidateClauses, u.appliedRate, n, u.bucketFlatRate);
     // 단일세율(`bucketFlatRate`)이 키에 들어간 버킷은 1호 후보가 있어도 «단일세율 호» 버킷이다(Q-F1 α) —
@@ -374,15 +394,28 @@ export function aggregateByGroup(
       (u.candidateClauses ?? []).some((c) => PROGRESSIVE_RATE_CLAUSES.has(c));
     // §104⑤2호 단서 시행 전(2019.1.1. 전 양도)의 복수 호 단위는 합산하지 않는다 — 식별자만 단위별로(`provisoMergeId`).
     const mergeId = provisoMergeId(key, u.candidateClauses, u.rateInput.transferDate, n);
-    return { key, id: presaleProgressiveKey ? `presale:${mergeId}` : mergeId };
+    const id = presaleProgressiveKey ? `presale:${mergeId}` : surchargeRightOf(u) ? `right:${mergeId}` : mergeId;
+    return { key, id, mergeId };
   };
+  const unitIds = units.map((u, n) => bucketIdOf(u, n));
   const buckets = new Map<string, { key: string; members: ClausePart[] }>();
   units.forEach((u, n) => {
-    const { key, id } = bucketIdOf(u, n);
+    const { key, id } = unitIds[n];
     const bucket = buckets.get(id);
     if (bucket) bucket.members.push(u);
     else buckets.set(id, { key, members: [u] });
   });
+  // 3호·4호 겹침 — 주택 수(권리 제외)는 정밀 판정의 유효 주택 수에서 산입 권리 수를 뺀 값이다(판정이 없으면 고지하지 않는다).
+  const isClause3And4Overlap = (u: ClausePart) => {
+    if (!(u.candidateClauses ?? []).includes("104-7-3") || !surchargeRightOf(u)) return false;
+    const r = records[u.assetIdx].result;
+    const ev = r.multiHouseSurchargeEvaluation ?? r.surchargeEcho;
+    return ev !== undefined && ev.effectiveHouseCount - (ev.countedRightCount ?? 0) >= 3;
+  };
+  // 구분자가 없었다면 같은 버킷이었을 단위(식별자 = 겹침 단위의 구분자 앞 식별자)는 같은 호 키·권리 미산입 — 곧 3호에만 해당하는 주택이다.
+  const surchargeClause3And4OverlapSplit = units.some(
+    (u, n) => isClause3And4Overlap(u) && unitIds.some((v) => v.id === unitIds[n].mergeId),
+  );
 
   /** 세율군별 표시 재료 — 그 세율군이 걸친 버킷과, 버킷 안 그 세율군 몫의 과세표준. */
   const groupTax = new Map<RateGroup, number>();
@@ -544,6 +577,7 @@ export function aggregateByGroup(
     ),
     assetPartBasic,
     assetPartIncome,
+    surchargeClause3And4OverlapSplit,
   };
 }
 

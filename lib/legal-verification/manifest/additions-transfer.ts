@@ -198,6 +198,17 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** 다건 §104⑤2호 합산 단위 — §104⑦ 3호·4호 겹침 확인 필요 고지(`TRANSFER.SURCHARGE_CLAUSES_3_AND_4` · 후보 ⑥) · KoreanLaw MST 280405 실측(2026-11-21). */
+    id: "TRANSFER.SURCHARGE_CLAUSES_3_AND_4",
+    citation: "소득세법 §104 ⑦",
+    keywords: [
+      "1세대가 1주택과 조합원입주권 또는 분양권을 1개 보유한 경우의 해당 주택",
+      "대통령령으로 정하는 1세대 3주택 이상에 해당하는 주택",
+      "1세대가 주택과 조합원입주권 또는 분양권을 보유한 경우로서 그 수의 합이 3 이상인 경우 해당 주택",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     /** 결과 카드 산출세액 근거 — §104① 1·2·3호(`TRANSFER.TAX_RATE_BASIC_CLAUSE`·`TAX_RATE_SHORT_1Y_TO_2Y`·`TAX_RATE_SHORT_UNDER_1Y` · R-c01-03) · KoreanLaw 현행 MST 280405 실측(2026-11-21). */
     id: "TRANSFER.TAX_RATE_CLAUSES_1_2_3",
     citation: "소득세법 §104 ①",
