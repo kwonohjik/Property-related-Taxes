@@ -314,7 +314,7 @@ export function buildAggregateRows(
     const offsetCell = received > 0 || given > 0 ? given - received : null;
     setNum("lossOffset", col, offsetCell);
     sumLossOffset += offsetCell ?? 0;
-    // 소멸 = 차손 − 통산으로 나간 몫. 이월이 없어 버려진다(§102② 단서).
+    // 소멸 = 차손 − 통산으로 나간 몫. 이월공제 규정이 없어 버려진다(소득세법 §102②·시행령 §167의2에 이월 규정 없음).
     const expiredCell = p.income < 0 && -p.income - given > 0 ? -p.income - given : null;
     setNum("lossExpired", col, expiredCell);
     sumLossExpired += expiredCell ?? 0;

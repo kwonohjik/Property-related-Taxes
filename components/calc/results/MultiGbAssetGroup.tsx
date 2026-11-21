@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { expandToggleClass, expandToggleLabel } from "./shared/ExpandToggleButton";
 import { PropertyBreakdownAccordion, formatKRW } from "@/components/calc/results/MultiTransferPropertyBreakdown";
+import { basicDeductionStepFormula } from "@/components/calc/results/MultiTransferPropertyBreakdown";
 import { GbResultBlocks } from "@/components/calc/results/transfer/GbResultBlocks";
 import { GeneralBuilding3WayTable } from "@/components/calc/results/transfer/GeneralBuilding3WayTable";
 import { gbAssetBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
@@ -51,7 +52,7 @@ export function MultiGbAssetGroup({
           <span className="text-xs text-muted-foreground">일반건물 · 토지·건물 나눠 계산</span>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm font-medium">{formatKRW(taxBaseShare)}</span>
+          <span className="text-sm font-medium font-mono tabular-nums whitespace-nowrap">{formatKRW(taxBaseShare)}</span>
           <span className={expandToggleClass("slate")}>{expandToggleLabel(open)}</span>
         </div>
       </div>
@@ -83,7 +84,7 @@ export function MultiGbAssetGroup({
         )}
         <div className="pt-3 space-y-2">
           {cards.map((c) => (
-            <PropertyBreakdownAccordion key={c.propertyId} breakdown={c} property={property} hideRefTax />
+            <PropertyBreakdownAccordion key={c.propertyId} breakdown={c} property={property} hideRefTax basicDeductionFormula={basicDeductionStepFormula(result)} />
           ))}
         </div>
       </CardContent>

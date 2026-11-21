@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { withLthdPartSteps } from "@/components/calc/results/transfer/lthd-split-display";
 import { assetTaxableGain } from "@/components/calc/results/transfer/exempt-gross-gain";
 import type { PerPropertyBreakdown, RateGroup } from "@/lib/tax-engine/transfer-tax-aggregate";
+import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
@@ -64,7 +65,8 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
    * 종전에는 `totalPenalty`를 넣어 자산별 지방세가 같은 화면의 합계 카드와 어긋났다.
    * 축 설명: `transfer/local-income-tax-display.ts`.
    */
-  const localIncomeTax = Math.floor((determinedTax + b.penaltyTax) * 0.1);
+  // 엔진(`transfer-tax-finalize.ts` STEP 10 · 집계 M-10)과 같은 정수 헬퍼 — 인라인 double 곱 금지(R-c01-12).
+  const localIncomeTax = applyRate(determinedTax + b.penaltyTax, 0.1);
   return {
     isExempt: b.isExempt,
     exemptReason: b.exemptReason,
@@ -193,6 +195,15 @@ export function formatKRW(amount: number): string {
   return amount < 0 ? `-${formatted}` : formatted;
 }
 
+/**
+ * 건별 「기본공제 배분액」 산식 — 엔진 「기본공제」 STEP 산식을 그대로 쓴다(R-c01-09).
+ * 배분 축 3종(양도일 순 §103②·첫 번째 자산·세율 높은 파트)이 모두 **순차 공제**라 「소득금액 비율안분」 고정 문구는 틀렸다.
+ * STEP이 없는 옛 저장 결과는 undefined — 산식을 적지 않는다.
+ */
+export function basicDeductionStepFormula(result: Pick<AggregateTransferResult, "steps">): string | undefined {
+  return result.steps?.find((s) => s.label === "기본공제")?.formula;
+}
+
 export const RATE_GROUP_LABELS: Record<RateGroup, string> = {
   progressive: "일반 누진",
   short_term: "단기보유",
@@ -215,9 +226,12 @@ export function PropertyBreakdownAccordion({
   breakdown,
   property,
   hideRefTax = false,
+  basicDeductionFormula,
 }: {
   breakdown: PerPropertyBreakdown;
   property?: PropertyItem;
+  /** 「기본공제 배분액」 산식 — 호출부가 `basicDeductionStepFormula(result)`로 넘긴다(엔진 배분 축 그대로). */
+  basicDeductionFormula?: string;
   /**
    * «산출세액 (참고)»·«결정세액 (참고)» 행을 숨긴다 — 일반건물이 쪼갠 계산 파트(토지·건물) 카드용.
    * 파트별 참고 세액은 합이 합계와 맞지 않아 신고서 건별 열·PDF와 같이 싣지 않는다(`transfer/gb-part-card.ts`).
@@ -292,7 +306,7 @@ export function PropertyBreakdownAccordion({
           )}
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm font-medium">
+          <span className="text-sm font-medium font-mono tabular-nums whitespace-nowrap">
             {breakdown.isExempt ? "0" : formatKRW(breakdown.taxBaseShare)}
           </span>
           <span className={expandToggleClass("slate")}>{expandToggleLabel(open)}</span>
@@ -380,7 +394,7 @@ export function PropertyBreakdownAccordion({
               {breakdown.allocatedBasicDeduction > 0 && (
                 <DetailRow
                   label="기본공제 배분액"
-                  formula="연 250만원 한도 — 소득금액 비율안분"
+                  formula={basicDeductionFormula}
                   value={-breakdown.allocatedBasicDeduction}
                 />
               )}
@@ -593,7 +607,7 @@ function DetailRow({
       </div>
       <span
         className={cn(
-          "text-sm tabular-nums shrink-0",
+          "text-sm font-mono tabular-nums whitespace-nowrap shrink-0",
           value < 0 ? "text-red-700 dark:text-red-400" : highlight ? "" : "text-foreground",
         )}
       >

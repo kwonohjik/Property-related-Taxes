@@ -34,6 +34,7 @@ import { FalseContractPriceNoticeForItems } from "@/components/calc/results/shar
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import {
   PropertyBreakdownAccordion,
+  basicDeductionStepFormula,
   formatKRW,
   resolveRefCalculatedTax,
   RATE_GROUP_LABELS,
@@ -43,6 +44,7 @@ import { MultiGbAssetGroup } from "@/components/calc/results/MultiGbAssetGroup";
 import { groupMultiResultRows } from "@/components/calc/results/transfer/multi-result-groups";
 import { multiFormPropertyIdOf } from "@/components/calc/results/transfer/multi-result-groups";
 import { lossOffsetGiverText } from "@/lib/tax-engine/transfer-tax-split-display";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
 import {
   BuildingStdPriceReportSection,
@@ -344,7 +346,7 @@ function LossOffsetTable({ result, properties }: { result: AggregateTransferResu
               <span className="text-muted-foreground">
                 [{labelMap.get(row.toPropertyId) ?? row.toPropertyId}]
               </span>
-              <span className="ml-auto font-medium text-red-700 dark:text-red-400">
+              <span className="ml-auto font-medium font-mono tabular-nums whitespace-nowrap text-red-700 dark:text-red-400">
                 -{formatKRW(row.amount)}
               </span>
               <Badge
@@ -361,8 +363,8 @@ function LossOffsetTable({ result, properties }: { result: AggregateTransferResu
         </div>
         {result.unusedLoss > 0 && (
           <div className="mt-3 pt-3 border-t flex justify-between text-sm">
-            <span className="text-muted-foreground">소멸 차손 (이월 불인정 — §102② 단서)</span>
-            <span className="text-destructive font-medium">-{formatKRW(result.unusedLoss)}</span>
+            <span className="text-muted-foreground">소멸 차손 (이월공제 규정 없음 — {TRANSFER.LOSS_OFFSET})</span>
+            <span className="text-destructive font-medium font-mono tabular-nums whitespace-nowrap">-{formatKRW(result.unusedLoss)}</span>
           </div>
         )}
       </CardContent>
@@ -394,21 +396,21 @@ function GroupTaxCards({ result }: { result: AggregateTransferResult }) {
               >
                 {RATE_GROUP_LABELS[g.group]}
               </span>
-              <span className="text-muted-foreground">과세표준 {formatKRW(g.groupTaxBase)}</span>
-              <span className="ml-auto font-medium">{formatKRW(g.groupCalculatedTax)}</span>
+              <span className="text-muted-foreground">과세표준 <span className="font-mono tabular-nums whitespace-nowrap">{formatKRW(g.groupTaxBase)}</span></span>
+              <span className="ml-auto font-medium font-mono tabular-nums whitespace-nowrap">{formatKRW(g.groupCalculatedTax)}</span>
               <span className="text-muted-foreground text-xs">{groupRateText(g)}</span>
             </div>
           ))}
           <Separator />
           <div className="flex justify-between font-medium">
             <span>세율군별 합계</span>
-            <span>{formatKRW(result.calculatedTaxByGroups)}</span>
+            <span className="font-mono tabular-nums whitespace-nowrap">{formatKRW(result.calculatedTaxByGroups)}</span>
           </div>
           {comparative && (
             <div className="space-y-1 text-sm" data-testid="comparative-tax-decision">
               <div className="flex justify-between text-muted-foreground">
                 <span>전체 누진세율 적용 (방법 A)</span>
-                <span>{formatKRW(comparative.methodA)}</span>
+                <span className="font-mono tabular-nums whitespace-nowrap">{formatKRW(comparative.methodA)}</span>
               </div>
               <p className="text-xs text-muted-foreground">
                 {describeComparativeDecision(comparative)} (소득세법 §104⑤)
@@ -472,6 +474,11 @@ export function MultiTransferTaxResultView({
     () => properties.flatMap((p) => p.form?.assets ?? []),
     [properties],
   );
+
+  // 증여세 카드가 같은 화면에 그려지는 두 경로 — 자산 펼침(`MultiTransferPropertyBreakdown`)과 일반건물 묶음(`MultiGbAssetGroup`).
+  const hasBurdenedGift =
+    result.properties.some((p) => !!p.transferBurdenedGiftBreakdown) ||
+    Object.values(result.generalBuildingDetailsByAsset ?? {}).some((d) => !!d.burdenedGiftBreakdown);
 
   // 현재 결과뷰에 실제 렌더되는 leaf id (설계 §2.6 — sub 컴포넌트 내부 가드라 7개 항상)
   const availablePrintIds = useMemo<Set<MultiTransferPrintSectionId>>(() => {
@@ -578,7 +585,12 @@ export function MultiTransferTaxResultView({
            Playwright strict 로케이터가 깨진다.
       */}
       {result.amendmentDetail && (
-        <AmendmentResultCard detail={result.amendmentDetail} fullTotalTax={result.totalTax} />
+        <AmendmentResultCard
+          detail={result.amendmentDetail}
+          fullTotalTax={result.totalTax}
+          /* 부담부증여는 자산 펼침에 증여세 카드가 함께 뜬다 — `result.totalTax`는 양도세분뿐이라 한정한다(단건·일괄과 같은 축, R-c01-11). */
+          {...(hasBurdenedGift ? { totalScopeNote: "양도세분" } : {})}
+        />
       )}
       <MultiTransferTaxSummaryCard
         result={result}
@@ -656,6 +668,7 @@ export function MultiTransferTaxResultView({
                 key={p.propertyId}
                 breakdown={p}
                 property={properties.find((x) => x.propertyId === g.formPropertyId)}
+                basicDeductionFormula={basicDeductionStepFormula(result)}
               />
             ))
           ),
