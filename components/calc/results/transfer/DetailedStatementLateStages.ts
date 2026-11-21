@@ -18,6 +18,7 @@
  */
 
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
+import { applyRate } from "@/lib/tax-engine/tax-utils";
 import { donorBuiltPenaltyView, resultDonorBuiltEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
 import { resultSelfBuiltEchoes, selfBuiltPenaltyView } from "@/lib/tax-engine/transfer-tax-self-built-display";
 import {
@@ -101,9 +102,10 @@ export function appendLateStageItems(
    *
    * ⇒ 대리 지표 대신 **주장하는 항등식 자체**를 검산한다. 재현하지 못하면 그 산식을 쓰지 않는다.
    */
+  // 세액과 같은 `applyRate`로 검산한다 — double 곱 floor는 95,000,000 × 0.35를 33,249,999로 내려 성립하는 산식을 버렸다(R-c05-02).
   const closedFormTax = Math.max(
     0,
-    Math.floor(result.taxBase * result.appliedRate) - result.progressiveDeduction,
+    applyRate(result.taxBase, result.appliedRate) - result.progressiveDeduction,
   );
   const closedFormHolds = closedFormTax === result.calculatedTax;
   const closedFormText = `과세표준 × 세율(${formatRatePct(result.appliedRate)}) − 누진공제 ${result.progressiveDeduction.toLocaleString()}`;

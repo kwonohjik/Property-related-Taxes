@@ -15,6 +15,10 @@ import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-en
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import type { HouseRefRow } from "@/components/calc/results/transfer/count-exclusion-house-ref";
+import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/LocalIncomePenaltyNotice";
+import { comparativeTaxView } from "@/components/calc/results/transfer/comparative-tax-display";
+import { describeComparativeDecision } from "@/components/calc/results/transfer/comparative-tax-display";
+import { groupRateReproduces } from "@/components/calc/results/transfer/comparative-tax-display";
 
 
 
@@ -168,6 +172,12 @@ export function PropertyCard({
 
 export function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferResult }) {
   const hasMultipleGroups = aggregated.groupTaxes.length > 1;
+  // §104⑤ 전체 누진(방법 A) 채택이면 세율군별 세율은 산출세액의 근거가 아니다(방법 B의 근거) — R-c01-02.
+  const comparative = comparativeTaxView(aggregated);
+  const generalAdopted = comparative?.applied === "general" ? comparative : null;
+  // 엔진 totalTax에 들어 있는 농특세 납부지연가산세·지방소득세 가산세 — 행이 없으면 행 합이 총납부세액과 어긋난다(R-c01-01).
+  const ruralPenalty = aggregated.ruralSurtaxDelayedPenalty ?? 0;
+  const localPenalty = aggregated.localIncomePenalty ?? 0;
 
   // aggregated.penaltyTax = 자산별 §114조의2 + 자산별 신고불성실/납부지연 합계
   const totalPenalty = aggregated.penaltyTax;
@@ -207,18 +217,37 @@ export function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTran
           <Row label="과세표준" value={formatKRW(aggregated.taxBase)} highlight />
 
           {/* 세율 */}
-          {hasMultipleGroups ? (
+          {generalAdopted ? (
+            <>
+              <Row label="세율" value="전체 누진세율" />
+              <Row label="· 방법 A 전체 누진세율 적용" value={formatKRW(generalAdopted.methodA)} sub />
+              <Row label="· 방법 B 세율군별 분리 산출" value={formatKRW(generalAdopted.methodB)} sub />
+              <tr>
+                <td colSpan={2} className="pb-1.5 pl-5 text-caption text-muted-foreground">
+                  {describeComparativeDecision(generalAdopted)}(소득세법 §104⑤ 비교과세).
+                </td>
+              </tr>
+            </>
+          ) : hasMultipleGroups ? (
             <>
               <Row label="세율" value="세율군별 복합" />
               {aggregated.groupTaxes.map((g) => (
                 <Row
                   key={g.group}
                   label={`· ${g.group === "progressive" ? "일반 누진" : g.group === "short_term" ? "단기보유" : g.group === "multi_house_surcharge" ? "다주택 중과" : g.group === "non_business_land" ? "비사업용토지" : "미등기"} (과표 ${formatKRW(g.groupTaxBase)})`}
-                  value={`${(g.appliedRate * 100).toFixed(0)}%${g.surchargeRate ? ` (중과 ${(g.surchargeRate * 100).toFixed(0)}%p 포함)` : ""}`}
+                  value={
+                    // 군 메타가 군 세액을 재현하지 못하면(한 군에 호가 둘 이상) 최고세율을 근거처럼 적지 않는다 — 형제 `groupRateText`와 같은 검산.
+                    groupRateReproduces(g)
+                      ? `${(g.appliedRate * 100).toFixed(0)}%${g.surchargeRate ? ` (중과 ${(g.surchargeRate * 100).toFixed(0)}%p 포함)` : ""}`
+                      : "호별 합계"
+                  }
                   sub
                 />
               ))}
             </>
+          ) : aggregated.groupTaxes.length === 1 && !groupRateReproduces(aggregated.groupTaxes[0]) ? (
+            // 한 군에 호가 둘 이상이면 군 메타는 표시용 최고세율이라 산출세액을 재현하지 못한다(R-c01-02 형제).
+            <Row label="세율" value="호별 합계" />
           ) : aggregated.groupTaxes.length === 1 ? (
             // `appliedRate`는 이미 중과 포함 실효세율이다 — `surchargeRate`를 더하면 이중 계상(상세명세서·신고서와 같은 정정, O-18).
             <Row
@@ -338,6 +367,20 @@ export function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTran
               value={formatKRW(aggregated.ruralSurtax)}
               sub
             />
+          )}
+
+          {ruralPenalty > 0 && (
+            <Row label="농어촌특별세 납부지연가산세" value={formatKRW(ruralPenalty)} sub />
+          )}
+          {localPenalty > 0 && (
+            <>
+              <Row label="지방소득세 가산세 (지방세기본법 §53~§55)" value={formatKRW(localPenalty)} sub />
+              <tr>
+                <td colSpan={2} className="pb-1.5 pl-5">
+                  <LocalIncomePenaltyNotice />
+                </td>
+              </tr>
+            </>
           )}
 
           <Divider />

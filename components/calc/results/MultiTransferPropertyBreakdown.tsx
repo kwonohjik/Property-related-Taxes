@@ -37,6 +37,7 @@ import { isSaleSplitActual } from "@/components/calc/results/transfer/sale-split
 import { isPhdApartment } from "@/components/calc/results/transfer/phd-housing-term";
 import { nblExclusionBadgeText } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
 import { bgOwnedPartOfResult } from "@/lib/calc/bg-owner-split-result";
+import { applyRate } from "@/lib/tax-engine/tax-utils";
 
 
 /**
@@ -177,10 +178,11 @@ export function resolveRefCalculatedTax(b: PerPropertyBreakdown): number {
    * `appliedRate`가 이미 중과 포함 실효세율이다(`types/transfer-aggregate.types.ts:191`).
    * 여기는 **fallback 계산**이라 더하면 라벨이 아니라 **금액 자체가** 틀린다 —
    * 비사업용 토지에서 55% 대신 65%로 산출됐다.
+   * 곱은 엔진 정상 경로와 같은 `applyRate` — double 곱 floor는 경계 아래로 1원 떨어진다(R-c05-02 형제).
    */
   return Math.max(
     0,
-    Math.floor((b.taxBaseShare ?? 0) * (b.appliedRate ?? 0)) - (b.progressiveDeduction ?? 0),
+    applyRate(b.taxBaseShare ?? 0, b.appliedRate ?? 0) - (b.progressiveDeduction ?? 0),
   );
 }
 
