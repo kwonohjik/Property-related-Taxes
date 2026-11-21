@@ -133,8 +133,13 @@ export interface PreHousingDisclosureResult {
   /** 안분 비율 (취득시 기준시가 비율) — 취득가액·개산공제 분리 */
   acquisitionApportionRatio: { land: number; building: number };
 
-  /** 총 환산취득가 = floor(totalTransfer × P_A_est / P_T) */
+  /** 총 환산취득가 = floor(totalTransfer × P_A_est / P_T) — §164⑨1호 특례면 분모는 `conversionDenominator` */
   totalEstimatedAcquisitionPrice: number;
+  /**
+   * [echo] 소득세법 시행령 §164⑨1호 공익수용 특례로 낮춘 환산 분모(양도당시 주택가격) — 원 P_T와 다를 때만 (표시 전용).
+   * 양도가액 토지·건물 안분은 원 P_T(`inputs.transferHousingPrice`)를 그대로 쓴다. 없으면 분모 = 원 P_T.
+   */
+  conversionDenominator?: number;
   /** 토지 양도가액 */
   landTransferPrice: number;
   /** 건물 양도가액 */

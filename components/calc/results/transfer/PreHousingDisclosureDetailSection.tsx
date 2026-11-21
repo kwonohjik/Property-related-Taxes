@@ -11,6 +11,7 @@ import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 type PhdSource = Pick<TransferTaxResult, "preHousingDisclosureDetail">;
 import { Frac, FormulaText } from "@/components/calc/results/shared/FormulaParts";
 import { phdConvertedPriceName } from "@/components/calc/results/transfer/phd-housing-term";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 
 interface PhdRowProps {
   label: string;
@@ -129,7 +130,12 @@ export function PreHousingDisclosureDetailSection({ result, phdApartment, onPrin
             양도가액 {fmt(i.totalTransferPrice)} ×{" "}
             <Frac
               top={`${convertedName} ${fmt(phd.estimatedHousingPriceAtAcquisition)}`}
-              bottom={`양도시 주택가격 ${fmt(i.transferHousingPrice)}`}
+              bottom={
+                // R-c07-05 — §164⑨1호 특례면 환산 분모는 낮춘 값이다(안분은 아래처럼 원 양도시 주택가격). 엔진 echo를 그대로 쓴다.
+                phd.conversionDenominator !== undefined
+                  ? `양도시 주택가격(${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_1} 적용) ${fmt(phd.conversionDenominator)}`
+                  : `양도시 주택가격 ${fmt(i.transferHousingPrice)}`
+              }
             />
           </>
         }

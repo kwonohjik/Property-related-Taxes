@@ -10,6 +10,7 @@ import type { PreDeemedPurchaseDetail } from "@/lib/tax-engine/types/transfer-pr
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { PRE_DEEMED_PPI_FOOTNOTE } from "@/components/calc/results/PreDeemedAcquisitionResultCard";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 const num = (n: number) => n.toLocaleString("ko-KR");
 const METHOD: Record<NonNullable<PreDeemedPurchaseDetail["clause1Method"]>, string> = {
@@ -54,10 +55,20 @@ export function PreDeemedPurchaseResultCard({ detail }: { detail: PreDeemedPurch
                 <td className="px-3 py-2">
                   ② 취득 당시 실지거래가액 + 생산자물가상승분{picked2 && " ← 채택"}
                   <span className="block text-caption font-normal text-amber-700 dark:text-amber-300">
-                    실지거래가액 {num(detail.actualBase)} × {detail.ratio.toFixed(4)}
-                    {detail.ratioSource === "table"
-                      ? ` (${detail.deemedPrevMonth} 지수 ${detail.ppiAtDeemedPrev}를 ${detail.acquisitionMonth} 지수 ${detail.ppiAtAcquisition}로 나눈 비율)`
-                      : " (직접 입력 배율)"}
+                    {/*
+                      R-c07-07 — 반올림한 배율(소수 4자리)을 산식 인수로 적으면 식대로 계산해도 옆 칸 금액이 나오지 않는다.
+                      엔진이 쓴 원천 수량을 적는다: 지수표 경로는 두 지수 그대로(직전 달 지수를 취득월 지수로 나눈 분수),
+                      직접 입력 경로는 엔진 `ratioToScaled6`와 같은 소수 6자리.
+                    */}
+                    실지거래가액 {num(detail.actualBase)} ×{" "}
+                    {detail.ratioSource === "table" ? (
+                      <Frac
+                        top={`${detail.deemedPrevMonth} 지수 ${detail.ppiAtDeemedPrev}`}
+                        bottom={`${detail.acquisitionMonth} 지수 ${detail.ppiAtAcquisition}`}
+                      />
+                    ) : (
+                      `${Number(detail.ratio.toFixed(6))} (직접 입력 배율)`
+                    )}
                   </span>
                 </td>
                 <td className="px-3 py-2 text-right font-mono tabular-nums whitespace-nowrap">{num(detail.clause2Amount)}</td>
