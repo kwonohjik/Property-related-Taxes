@@ -547,13 +547,14 @@ export function computeAggregateOnce(
     // 파트가 있는 자산(토지·건물 분리취득 · 한 필지 중 일부만 비사업용)은 **자산 단독 세액**을
     // 그대로 쓴다. 아래 근사식은 `appliedRate`가 그 자산에서 **파트 최고세율**이라
     // 자산 과세표준 전체에 곱해지면 과대해진다(계획서 §4.12 — 실측 +87,140,000).
-    // ⚠️ 파트가 없는 자산은 **종전 산식 그대로** — `calcTax`와 floor 위치가 달라 ±1원이
-    //    어긋날 수 있어 건드리지 않는다(Surgical).
+    // ⚠️ 파트가 없는 자산은 닫힌 산식 「과세표준 × 세율 − 누진공제」 — 상세명세서가 이 등식을 그대로 적는다.
+    //    곱은 세액과 같은 `applyRate`로 한다 — double 곱 floor는 95,000,000 × 0.35를 33,249,999로 떨어뜨려
+    //    등식이 1원 틀린다(17,809,999 · 결과뷰 리뷰 2026-11-21 R-c05-02 형제).
     const partAssetTax = assetPartTax[idx];
     const refCalculatedTax = r.result.isExempt
       ? 0
       : (partAssetTax?.tax ??
-        Math.max(0, Math.floor(taxBaseShare * effectiveRate) - r.result.progressiveDeduction));
+        Math.max(0, applyRate(taxBaseShare, effectiveRate) - r.result.progressiveDeduction));
     // 🔴 감면은 **배분액(reductionAggregated)** 으로 뺀다 — `standalone`은 기본공제 전(skipBasicDeduction) 소득 기준이라
     //    기본공제 후 `refCalculatedTax`에서 빼면 기준이 섞여 1건에서도 단건·합산 결정세액과 어긋나고 산식 «A − B = C»가 등식이 아니다
     //    (§97 본문 84,030,000 ≠ 84,530,000 — 계획서 multi-per-asset-reduction-display.plan.md Q-1 a). 유형별 재계산 엔트리가 없으면 위에서 `standalone` 그대로다.

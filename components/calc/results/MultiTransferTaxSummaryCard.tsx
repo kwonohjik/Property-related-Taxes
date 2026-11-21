@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/LocalIncomePenaltyNotice";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
+import { applyRate } from "@/lib/tax-engine/tax-utils";
 
 /**
  * 자산별 다건 컨텍스트 결정세액 — 엔진이 채운 refDeterminedTax 우선,
@@ -30,9 +31,10 @@ export function getRefDeterminedTax(p: PerPropertyBreakdown): number {
   if (p.isExempt) return 0;
   // `appliedRate`는 이미 중과 포함 실효세율이다 — `surchargeRate`를 더하면 이중 계상(형제 `resolveRefCalculatedTax`와 같은 정정, V-9).
   const rate = p.appliedRate ?? 0;
+  // 곱은 엔진 정상 경로와 같은 `applyRate` — double 곱 floor는 경계 아래로 1원 떨어진다(R-c05-02 형제).
   const refCalc = Math.max(
     0,
-    Math.floor((p.taxBaseShare ?? 0) * rate) - (p.progressiveDeduction ?? 0),
+    applyRate(p.taxBaseShare ?? 0, rate) - (p.progressiveDeduction ?? 0),
   );
   // 정상 경로(`transfer-tax-aggregate-once.ts`)와 같은 규칙 — 뺄셈의 감면은 배분액이다(없던 시절 이력은 단독값으로 내려간다).
   return Math.max(0, refCalc - (p.reductionAggregated ?? p.reductionAmount ?? 0));
