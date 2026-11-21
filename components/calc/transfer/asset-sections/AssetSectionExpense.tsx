@@ -24,6 +24,7 @@ import { redevPreApprovalExpensesScenarioDependent } from "@/lib/calc/redev-pre-
 import { REDEV_PRE_APPROVAL_SCENARIO_DEPENDENT_NOTE } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { isReceiveOnlyFiling } from "@/lib/calc/redev-field-scope";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-redevelopment";
+import { NECESSARY_EXPENSE } from "@/lib/tax-engine/legal-codes/transfer-necessary-expense";
 import { gbCapexBeforeExtensionSlots } from "@/lib/calc/gb-extension-capex-timing";
 import { carryoverPurchasedPartScope } from "@/lib/calc/carryover-gift-assumed-debt";
 import { carryoverGiftEventForm } from "@/lib/calc/carryover-gift-assumed-debt";
@@ -141,7 +142,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
           </ToneCard>
         )}
         <CurrencyInput
-          label="자본적 지출액 (원) — §97① 가목"
+          label={`자본적 지출액 (원) — ${NECESSARY_EXPENSE.CAPITAL_EXPENDITURE}`}
           data-field="capitalExpenditure"
           value={asset.capitalExpenditure}
           onChange={(v) => onChange({ capitalExpenditure: v })}
@@ -178,7 +179,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
           const useFormLevel = formTotal > 0;
           return (
             <CurrencyInput
-              label="양도비 (원) — §97① 나목"
+              label={`양도비 (원) — ${NECESSARY_EXPENSE.TRANSFER_COST}`}
               // 지분 모드만 확정 금액을 보여 준다(가액 비례 = 지분 비례라 화면에서 계산 가능).
               // 컴패니언은 자산별 양도가액이 엔진에서 정해지므로 칸을 비워 둔다 — 잘못된
               // 숫자(총액)를 그대로 보여 주던 것이 Q08의 오해 지점이었다.

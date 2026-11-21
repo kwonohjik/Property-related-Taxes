@@ -10,6 +10,7 @@
  */
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
+import { NECESSARY_EXPENSE } from "@/lib/tax-engine/legal-codes/transfer-necessary-expense";
 
 const fmt = (n: number) => n.toLocaleString("ko-KR");
 
@@ -68,7 +69,7 @@ export function buildGbCarryoverExpenseFormula(p: PerPropertyBreakdown, rateLabe
   const transfer = base - donorCapex;
   return (
     join([
-      transfer > 0 ? `양도비 등 ${fmt(transfer)} (중개수수료·법무사 비용 등) — §97① 나목` : undefined,
+      transfer > 0 ? `양도비 등 ${fmt(transfer)} (중개수수료·법무사 비용 등) — ${NECESSARY_EXPENSE.TRANSFER_COST}` : undefined,
       donorCapex > 0 ? `증여자 자본적지출 ${fmt(donorCapex)} — 이월과세 §97의2①2호` : undefined,
       giftTerm,
     ]) ?? "필요경비 없음 — 본인 양도비·증여자 자본적지출·증여세 상당액이 없습니다"

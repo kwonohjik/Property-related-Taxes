@@ -10,6 +10,7 @@
  */
 import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
 import { isPurchasedPieceId } from "@/lib/tax-engine/general-building-share-id";
+import { NECESSARY_EXPENSE } from "@/lib/tax-engine/legal-codes/transfer-necessary-expense";
 import {
   splitAcqModeLabel,
   splitAcqBasisFormula,
@@ -314,9 +315,9 @@ export function aggregateAcqHeading(modes: Set<AggHeadingMode>): string | undefi
 /** 필요경비 집계 소제목 — 위와 같은 규칙. */
 export function aggregateExpenseHeading(modes: Set<AggHeadingMode>): string | undefined {
   if (modes.size === 0) return undefined;
-  if (modes.size === 1 && modes.has("actual")) return "자산별 양도비 합계 (중개수수료·법무사 비용 등) — §97① 나목";
+  if (modes.size === 1 && modes.has("actual")) return `자산별 양도비 합계 (중개수수료·법무사 비용 등) — ${NECESSARY_EXPENSE.TRANSFER_COST}`;
   // 부담부증여 기준시가 평가의 취득가액도 개산공제(취득시 기준시가 × 채무비율 × 3%)를 쓴다 — 환산과 같은 머리.
-  if (modes.size === 1 && (modes.has("estimated") || modes.has("bgStandard"))) return "자산별 개산공제·양도비 합계 — §97① 나목·시행령 §163⑥";
+  if (modes.size === 1 && (modes.has("estimated") || modes.has("bgStandard"))) return `자산별 개산공제·양도비 합계 — ${NECESSARY_EXPENSE.LUMP_DEDUCTION}·${NECESSARY_EXPENSE.TRANSFER_COST}`;
   const parts: string[] = [];
   if (modes.has("actual")) parts.push("실거래가 파트는 자본적지출·양도비");
   if ([...modes].some((m) => m !== "actual"))

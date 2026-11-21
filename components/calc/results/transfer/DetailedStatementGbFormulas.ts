@@ -19,6 +19,7 @@ import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/trans
 import { baseCardId, isSameShare } from "@/lib/tax-engine/general-building-share-id";
 import { shareIndexOf } from "@/lib/tax-engine/general-building-share-id";
 import { ESTIMATED_DEDUCTION_RATE } from "@/lib/tax-engine/legal-codes";
+import { NECESSARY_EXPENSE } from "@/lib/tax-engine/legal-codes/transfer-necessary-expense";
 import { capExInAcquisitionColumnOfProperty } from "./exempt-gross-gain";
 import { splitAcqFormulaText, splitExpenseText } from "./split-acq-text";
 import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
@@ -308,7 +309,7 @@ function buildGbAcquisitionFormulaCore(
   // gbDetail 없는 일반 다건(사례 27·28 등) fallback — 자본적지출 합산 산식 표기(예외 축 한정)
   if (!gb) {
     if (capExShift > 0) {
-      return `취득가액 ${fmt(p.acquisitionPrice)} + 자본적지출 ${fmt(capExShift)} = ${fmt(p.acquisitionPrice + capExShift)} (신고서 양식: 자본적지출 §97① 가목 합산 표시)`;
+      return `취득가액 ${fmt(p.acquisitionPrice)} + 자본적지출 ${fmt(capExShift)} = ${fmt(p.acquisitionPrice + capExShift)} (신고서 양식: 자본적지출(${NECESSARY_EXPENSE.CAPITAL_EXPENDITURE}) 합산 표시)`;
     }
     // 겸용 컴패니언 파트 카드 — 겸용 엔진이 정한 산정방식을 밝힌다(카드 자체는 실가 item이라 다른 echo가 없다, #10).
     const modeTag = p.displayAcquisitionMode ? `(${splitAcqModeLabel(p.displayAcquisitionMode)})` : "";
@@ -623,7 +624,7 @@ export function buildGbExpenseFormula(
     if (p.displayAcquisitionMode && p.displayAcquisitionMode !== "actual") {
       return `개산공제 등 필요경비 = ${fmt(displayExp)} (${splitAcqModeLabel(p.displayAcquisitionMode)} 파트 — 시행령 §163⑥)`;
     }
-    return `자산별 양도비 합계 = ${fmt(displayExp)} (§97① 나목)`;
+    return `자산별 양도비 합계 = ${fmt(displayExp)} (${NECESSARY_EXPENSE.TRANSFER_COST})`;
   }
 
   // ── 실가 모드 분기 (사례 35 등) — §166⑥ 양도가 비율로 일괄 실가 양도비 안분 ──
@@ -679,7 +680,7 @@ export function buildGbExpenseFormula(
       : partCard?.usedEstimatedAcquisition === false;
   const actualPartFormula = () =>
     displayExp > 0
-      ? `자산별 양도비 = ${fmt(displayExp)} (§97① 나목)\n        ※ 실거래가 파트라 §163⑥ 개산공제를 적용하지 않습니다.`
+      ? `자산별 양도비 = ${fmt(displayExp)} (${NECESSARY_EXPENSE.TRANSFER_COST})\n        ※ 실거래가 파트라 §163⑥ 개산공제를 적용하지 않습니다.`
       : `필요경비 없음 — 실거래가 파트라 §163⑥ 개산공제를 적용하지 않습니다.`;
 
   /*

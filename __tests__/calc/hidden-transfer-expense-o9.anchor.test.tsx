@@ -144,7 +144,7 @@ describe("O9-c 화면 — 같은 술어", () => {
 
   it("자산 카드 ④ — 총 양도비가 넘어오면 양도비 칸이 꺼지고, 빈 값이면 열린다", () => {
     const { rerender } = render(<AssetSectionExpense asset={land(1, { transferExpense: "3000000" })} onChange={() => {}} totalTransferExpense="10000000" />);
-    const input = () => screen.getByLabelText(/§97① 나목/) as HTMLInputElement;
+    const input = () => screen.getByLabelText(/양도비 \(원\) — 소득세법 §97 ① 3호/) as HTMLInputElement;
     expect(input().disabled).toBe(true);
     rerender(<AssetSectionExpense asset={land(1, { transferExpense: "3000000" })} onChange={() => {}} totalTransferExpense="" />);
     expect(input().disabled).toBe(false);

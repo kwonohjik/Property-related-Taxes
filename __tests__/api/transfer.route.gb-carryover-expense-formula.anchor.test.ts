@@ -79,12 +79,12 @@ describe("EXPF-A 시나리오 A 카드 — 필요경비 칸 = 본인 양도비 +
   it("환산 경로 · 단서 발동(150,000,000 / 5,000,000): 양도비 몫 4,122,021 + 증여세 50,000,000 = 54,122,021 (자본적지출 123,660,614 는 취득가액 칸)", async () => {
     const r = await formulaOf(estimatedBody(estimatedGbv({ capitalExpenditure: 150_000_000, transferExpense: 5_000_000 })));
     expect(r.cellExp).toBe(54_122_021);
-    expect(r.text).toBe(`양도비 등 4,122,021 (중개수수료·법무사 비용 등) — §97① 나목 + ${GIFT} = 54,122,021`);
+    expect(r.text).toBe(`양도비 등 4,122,021 (중개수수료·법무사 비용 등) — 소득세법 §97 ① 3호 + ${GIFT} = 54,122,021`);
   });
 
   it("환산 경로 · 단서 불발(3,000,000 / 5,000,000): 양도비 몫 4,122,020 + 증여세 = 54,122,020", async () => {
     const r = await formulaOf(estimatedBody(estimatedGbv({ capitalExpenditure: 3_000_000, transferExpense: 5_000_000 })));
-    expect(r.text).toBe(`양도비 등 4,122,020 (중개수수료·법무사 비용 등) — §97① 나목 + ${GIFT} = 54,122,020`);
+    expect(r.text).toBe(`양도비 등 4,122,020 (중개수수료·법무사 비용 등) — 소득세법 §97 ① 3호 + ${GIFT} = 54,122,020`);
   });
 
   it("증여자 자본적지출 20,000,000(본인 지출 없음): 증여자 자본적지출 20,000,000 + 증여세 = 70,000,000 — 「양도비 등」으로 적지 않는다", async () => {
@@ -96,7 +96,7 @@ describe("EXPF-A 시나리오 A 카드 — 필요경비 칸 = 본인 양도비 +
   it("실가 경로(20,000,000 / 5,000,000): 양도비 몫 4,825,066 + 증여세 = 54,825,066 — 「0 × … = …」 거짓 등식이 아니다", async () => {
     const r = await formulaOf(actualBody(actualGbv({ capitalExpenditure: 20_000_000, transferExpense: 5_000_000 })));
     expect(r.cellExp).toBe(54_825_066);
-    expect(r.text).toBe(`양도비 등 4,825,066 (중개수수료·법무사 비용 등) — §97① 나목 + ${GIFT} = 54,825,066`);
+    expect(r.text).toBe(`양도비 등 4,825,066 (중개수수료·법무사 비용 등) — 소득세법 §97 ① 3호 + ${GIFT} = 54,825,066`);
   });
 
   it("증여자 환산 · 본문(증여세 0): 개산공제 1,200,000 = 증여자 취득시 기준시가 40,000,000 × 3% — 카드 자체 기준시가(79,800,000)가 아니다", async () => {
@@ -140,6 +140,6 @@ describe("EXPF-C 증여자 환산 + 단서 / 채무 매입분 증여분 조각",
     };
     const r = await formulaOf({ ...COMMON, transferDate: "2026-03-01", transferPrice: 1_000_000_000, totalPropertyTransferPrice: 1_000_000_000, acquisitionDate: "2021-03-01", generalBuildingValuation: gbv });
     expect(r.cellExp).toBe(8_700_000);
-    expect(r.text).toBe("양도비 등 1,500,000 (중개수수료·법무사 비용 등) — §97① 나목 + 증여세 상당액 7,200,000 — 이월과세 §97의2①3호·시행령 §163의2② = 8,700,000");
+    expect(r.text).toBe("양도비 등 1,500,000 (중개수수료·법무사 비용 등) — 소득세법 §97 ① 3호 + 증여세 상당액 7,200,000 — 이월과세 §97의2①3호·시행령 §163의2② = 8,700,000");
   });
 });

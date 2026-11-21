@@ -18,6 +18,7 @@
 import { separateAcqExpenseText, separateAcqFormulaText } from "@/components/calc/results/mixed-use/mixed-use-separate-acq-text";
 import { createElement, Fragment, type ReactNode } from "react";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
+import { NECESSARY_EXPENSE } from "@/lib/tax-engine/legal-codes/transfer-necessary-expense";
 import { applyRate, safeMultiplyThenDivide } from "@/lib/tax-engine/tax-utils";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { ALLOCATION_DENOMINATOR_ZERO_FULL_NOTICE, ALLOCATION_NONPOSITIVE_DENOMINATOR_BELOW_FULL_RATE_NOTICE } from "@/lib/tax-engine/transfer-reductions/new-99-3";
@@ -688,8 +689,8 @@ export function buildNecessaryExpenseFormula(
     const heading = aggModes && aggregateExpenseHeading(aggModes);
     if (heading) return heading;
     return result.usedEstimatedAcquisition
-      ? "자산별 개산공제·양도비 합계 — §97① 나목·시행령 §163⑥"
-      : "자산별 양도비 합계 (중개수수료·법무사 비용 등) — §97① 나목";
+      ? `자산별 개산공제·양도비 합계 — ${NECESSARY_EXPENSE.LUMP_DEDUCTION}·${NECESSARY_EXPENSE.TRANSFER_COST}`
+      : `자산별 양도비 합계 (중개수수료·법무사 비용 등) — ${NECESSARY_EXPENSE.TRANSFER_COST}`;
   }
   // B1 — 겸용 별개 취득 파트 모델: 실거래가 파트는 실제 필요경비, 그 밖은 개산공제(echo `deemedDeduction`).
   const sepExpText = separateAcqExpenseText(result.mixedUseDetail, singleExp);
@@ -731,7 +732,7 @@ export function buildNecessaryExpenseFormula(
     const isLumpDeduction = a.necessaryExpenseIsLumpDeduction === true && lumpBase != null;
     const baseLabel = isLumpDeduction
       ? `개산공제 ${baseExp.toLocaleString()} = 취득시 기준시가 ${lumpBase!.toLocaleString()} × ${formatLumpRate(lumpRate)} — 시행령 §163⑥`
-      : `양도비 등 ${baseExp.toLocaleString()} (중개수수료·법무사 비용 등) — §97① 나목`;
+      : `양도비 등 ${baseExp.toLocaleString()} (중개수수료·법무사 비용 등) — ${NECESSARY_EXPENSE.TRANSFER_COST}`;
     // 증여자 자본적지출만 있고 양도비 등이 0 이면 「양도비 등 0」 항을 적지 않는다.
     const parts: string[] = donorCapex > 0 && baseExp === 0 ? [] : [baseLabel];
     if (donorCapex > 0) {
@@ -766,8 +767,8 @@ export function buildNecessaryExpenseFormula(
     const stdAcq = result.estimatedStdPriceAtAcquisition;
     const rateLabel = formatLumpRate(lumpRate);
     return stdAcq != null
-      ? `개산공제 ${ded} = 취득시 기준시가 ${stdAcq.toLocaleString()} × ${rateLabel} — 소득세법 §97① 나목·시행령 §163⑥`
-      : `개산공제 ${ded} (취득시 기준시가 × ${rateLabel}) — §97① 나목·시행령 §163⑥`;
+      ? `개산공제 ${ded} = 취득시 기준시가 ${stdAcq.toLocaleString()} × ${rateLabel} — ${NECESSARY_EXPENSE.LUMP_DEDUCTION}`
+      : `개산공제 ${ded} (취득시 기준시가 × ${rateLabel}) — ${NECESSARY_EXPENSE.LUMP_DEDUCTION}`;
   }
   // 실가 모드 — 자본적지출은 취득가액이 아니라 **필요경비**다(§97① 2호). 이 칸은 엔진이 차감한 전액이므로
   // 자본적지출과 양도비를 풀어 쓴다. (예외 축 swap·이월과세 A는 위 분기가 먼저 처리한다.)
@@ -778,5 +779,5 @@ export function buildNecessaryExpenseFormula(
       ? `자본적지출 ${capEx.toLocaleString()} + 양도비 ${transferExp.toLocaleString()} (중개수수료·법무사 비용 등) = ${singleExp.toLocaleString()} — §97① 2호·3호`
       : `자본적지출 ${capEx.toLocaleString()} — §97① 2호`;
   }
-  return `양도비 ${singleExp.toLocaleString()} (중개수수료·법무사 비용 등) — §97① 나목`;
+  return `양도비 ${singleExp.toLocaleString()} (중개수수료·법무사 비용 등) — ${NECESSARY_EXPENSE.TRANSFER_COST}`;
 }

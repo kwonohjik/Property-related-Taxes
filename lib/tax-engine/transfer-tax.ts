@@ -328,7 +328,7 @@ function calculateTransferTaxCore(
   if (selfOwns !== "both" && splitDetail) {
     const selfLabel = selfOwns === "building_only" ? "건물" : "토지";
     steps.push({
-      label: `본인 신고분: ${selfLabel} (소령 §166⑥, §168②)`,
+      label: `본인 신고분: ${selfLabel} (${TRANSFER.BUNDLED_APPORTIONMENT})`,
       formula: `일괄양도가액 ${input.transferPrice.toLocaleString()} 중 ${selfLabel} 분만 신고 — 나머지는 타인 소유`,
       amount: transferGain,
       legalBasis: TRANSFER.TRANSFER_GAIN,

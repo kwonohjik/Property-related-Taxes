@@ -4,6 +4,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
+import { RURAL_SURTAX_FILING_7_1 } from "@/lib/tax-engine/legal-codes";
 import { resolveAmendmentReductionRate, resolveClaimDeadline } from "@/lib/tax-engine/transfer-tax-amendment";
 
 /**
@@ -58,7 +59,7 @@ export function AmendmentBlock({
             value={form.originalRuralSurtax ?? ""}
             onChange={(v) => onChange({ originalRuralSurtax: v })}
             data-field="originalRuralSurtax"
-            hint="당초 신고·납부한 농어촌특별세 (이력에서 자동 입력) — 양도소득세와 상계하지 않고 별도로 환급·추가 납부를 계산합니다 (농어촌특별세법 §7①)"
+            hint={`당초 신고·납부한 농어촌특별세 (이력에서 자동 입력) — 양도소득세 금액과 별도로 환급·추가 납부를 계산하며(${RURAL_SURTAX_FILING_7_1}), 양도소득세와 서로 상계하지 않습니다`}
           />
 
           <div className="space-y-1.5">
@@ -191,7 +192,7 @@ export function AmendmentBlock({
           value={form.originalRuralSurtax ?? ""}
           onChange={(v) => onChange({ originalRuralSurtax: v })}
           data-field="originalRuralSurtax"
-          hint="당초 신고·납부한 농어촌특별세 (이력에서 자동 입력) — 양도소득세와 상계하지 않고 별도로 추가 납부·환급을 계산합니다 (농어촌특별세법 §7①)"
+          hint={`당초 신고·납부한 농어촌특별세 (이력에서 자동 입력) — 양도소득세 금액과 별도로 추가 납부·환급을 계산하며(${RURAL_SURTAX_FILING_7_1}), 양도소득세와 서로 상계하지 않습니다`}
         />
         <div className="space-y-1.5">
           <label className="block text-sm font-medium">법정신고기한</label>

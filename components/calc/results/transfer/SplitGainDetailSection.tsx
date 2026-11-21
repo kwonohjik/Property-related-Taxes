@@ -73,6 +73,7 @@ import { formatLumpRate } from "./split-acq-text";
 import { cn } from "@/lib/utils";
 import { BG_NOT_OWNED_NOTE } from "@/lib/calc/bg-owner-split-result";
 import { appurtenantLandLthdNoticeText } from "@/lib/tax-engine/appurtenant-land-lthd-rate";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 
 type SplitDetail = NonNullable<TransferTaxResult["splitDetail"]>;
 
@@ -141,7 +142,7 @@ export function SplitGainDetailSection({
               <p className="text-sm font-semibold">토지/건물 분리 양도차익</p>
               {ownerLabel && (
                 <span className="text-xs rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">
-                  본인 신고분: {ownerLabel} (소령 §166⑥·§168②)
+                  본인 신고분: {ownerLabel} ({TRANSFER.BUNDLED_APPORTIONMENT})
                 </span>
               )}
             </div>

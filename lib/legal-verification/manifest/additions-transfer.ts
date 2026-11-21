@@ -139,6 +139,17 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** 필요경비 구성 항목 — ①2호 자본적지출액 · ①3호 양도비 · ②2호 본문 개산공제(`NECESSARY_EXPENSE`, 결과뷰 리뷰 R-c05-03·04·R-c11-02) · KoreanLaw 현행 MST 280405 실측(2026-11-21). */
+    id: "TRANSFER.NECESSARY_EXPENSE_ITEMS",
+    citation: "소득세법 §97",
+    keywords: [
+      "자본적지출액 등으로서 대통령령으로 정하는 것",
+      "양도비 등으로서 대통령령으로 정하는 것",
+      "자산별로 대통령령으로 정하는 금액을 더한 금액",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     // burdened-gift.ts K-6·K-7 — §97①1호 본문 단서·나목 (KoreanLaw 실측, 소득세법 MST 280405 · 2026-10-14)
     id: "TRANSFER.ACQUISITION_PRESUMED_NA",
     citation: "소득세법 §97",

@@ -26,6 +26,7 @@ import * as localTax from "@/lib/tax-engine/legal-codes/local-tax";
 import * as transferMixedUse from "@/lib/tax-engine/legal-codes/transfer-mixed-use";
 import * as transferRedevelopment from "@/lib/tax-engine/legal-codes/transfer-redevelopment";
 import * as transferRentalHousing from "@/lib/tax-engine/legal-codes/transfer-rental-housing";
+import * as transferNecessaryExpense from "@/lib/tax-engine/legal-codes/transfer-necessary-expense";
 
 import { isLegalCitation } from "./coverage";
 import { parseCitations, LAW_ALIAS } from "./citation-parser";
@@ -47,6 +48,7 @@ const MODULES: unknown[] = [
   transferMixedUse,
   transferRedevelopment,
   transferRentalHousing,
+  transferNecessaryExpense,
 ];
 
 /** 객체/배열을 재귀 순회하며 모든 문자열 leaf를 수집한다. */
