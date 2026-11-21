@@ -41,7 +41,6 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { RedevelopmentRightExemptionSection } from "@/components/calc/transfer/RedevelopmentRightExemptionSection";
 import { InheritedSameHouseholdField } from "@/components/calc/transfer/InheritedSameHouseholdField";
 import { GiftedSameHouseholdField } from "@/components/calc/transfer/GiftedSameHouseholdField";
-import { giftHouseholdConsolidationStart } from "@/lib/tax-engine/one-house/gift-household-basis";
 import { WinWinRentalSpecialField } from "@/components/calc/transfer/WinWinRentalSpecialField";
 import { winWinResidenceExemptForJudgment } from "@/lib/calc/one-house-extra-facts-payload";
 import { UsageConversionField } from "./UsageConversionField";
@@ -50,14 +49,14 @@ import { judgmentDemolishedDeclared, judgmentDemolishedVisible } from "@/lib/cal
 import { isRegulatedByBjdCode } from "@/lib/tax-engine/data/regulated-areas";
 import { highValueThresholdForDisplay, oneRightHighValueThresholdForDisplay } from "@/lib/calc/high-value-threshold-display";
 import {
+  calcEffectiveWasRegulatedAtAcquisition,
   calcGiftHouseholdBasis,
+  calcResidenceJudgmentDate,
   calcStoredRegulatedFlags,
-  effectiveWasRegulatedAtAcquisition,
   GIFT_HOUSEHOLD_SCOPE_PRIMARY,
   regulatedAddressVerdicts,
   regulatedVerdictForAcquisition,
 } from "@/lib/calc/effective-regulated-at-acquisition";
-import { sameHouseholdInheritanceHoldingStart } from "@/lib/tax-engine/one-house/same-household-inheritance-start";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import { DesignatedDistrictQuestion } from "@/components/calc/transfer/DesignatedDistrictQuestion";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes";
@@ -106,47 +105,29 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
    *    들어온 순간 토글을 읽기 전용 자동 판정으로 바꾼다 — 그러지 않으면 사용자가 켠 값이
    *    조용히 버려진다.
    */
-  // 2026-11 리뷰 D-67 — 입주권 양도면 ②가 숨긴 주택 전용 사실(동일세대 상속·증여 세대 사실)을 기준일에 쓰지 않는다(④와 같은 뷰).
+  // 2026-11 리뷰 D-67 — 입주권 양도면 ②가 숨긴 주택 전용 사실(동일세대 상속·증여 세대 사실·용도변경)을 기준일에 쓰지 않는다(④와 같은 뷰).
   const basisAsset = useMemo(() => judgmentSaleAssetView(form), [form]);
-  // M4 — §154⑧3호 동일세대 상속이면 「취득 당시」는 동일세대로 보유하기 시작한 날(엔진과 같은 함수).
-  const sameHouseholdStart = useMemo(
-    () =>
-      basisAsset.acquisitionDate && basisAsset.decedentCohabitationHoldingStartDate
-        ? sameHouseholdInheritanceHoldingStart({
-            acquisitionCause: basisAsset.acquisitionCause,
-            decedentSameHouseholdBeforeInheritance: basisAsset.decedentSameHouseholdBeforeInheritance,
-            decedentCohabitationHoldingStartDate: new Date(basisAsset.decedentCohabitationHoldingStartDate),
-            acquisitionDate: new Date(basisAsset.acquisitionDate),
-          })
-        : undefined,
-    [basisAsset],
-  );
-  // 결정 #38·#38-10 — 증여받은 주택의 세대 사실. 계속 같은 세대로 확인되면 「취득 당시」는 세대 보유 시작일(엔진 leaf)이고, 조정대상지역은 세대
-  // 보유 시작일과 증여일 둘 다 지정 중일 때만 거주요건이다 — 엔진 `resolveWasRegulatedAtAcquisition`이 같은 basis로 정한다.
-  //   basis는 계산기 ④·⑧과 **같은 leaf**(`calcGiftHouseholdBasis`)로 만든다. 일자는 date-coerce로 바꾼다 — 입력 중 미완성 일자(예: 월 「0」 →
-  //   2016-00-01)는 Invalid Date가 아니라 undefined가 되어 통산이 성립하지 않는다.
+  // 2026-11 리뷰 I-37 — 기준일·증여 basis를 여기서 다시 고르지 않는다. 메뉴 ④·⑧과 같은 leaf다:
+  //   기준일 `calcResidenceJudgmentDate`(용도변경 → §154⑧3호 동일세대 상속 → 취득일 — 엔진 `resolveResidenceJudgmentDate` 순서),
+  //   증여 basis `calcGiftHouseholdBasis`(결정 #38·#38-10 — 계속 같은 세대면 세대 보유 시작일과 증여일 둘 다 지정 중일 때만 해당).
+  //   판정 메뉴에는 이월과세·재개발 APT 선택지가 없어 그 갈래는 닿지 않는다. 기준일은 아래 2-C 라벨과 자동 판정에만 쓴다.
   // 렌더마다 새 객체가 되면 아래 `regulatedVerdict` 메모 의존성이 매번 바뀌어 메모가 무의미하다 — 자산 객체가 같으면 같은 basis다.
   const giftBasis = useMemo(() => calcGiftHouseholdBasis(basisAsset, GIFT_HOUSEHOLD_SCOPE_PRIMARY), [basisAsset]);
-  const giftConsolidated = giftHouseholdConsolidationStart(giftBasis) !== undefined;
-  // §154⑤ 단서 용도변경이면 「주택 취득 당시」는 주거용 사용 개시일이 먼저다(엔진 `resolveResidenceJudgmentDate` 순서).
+  const residenceJudgmentDate = calcResidenceJudgmentDate(basisAsset);
   const conversionStart = judgmentUsageConversionStart(form);
-  const residenceJudgmentDate =
-    conversionStart ??
-    (sameHouseholdStart
-      ? primary.decedentCohabitationHoldingStartDate
-      : giftConsolidated
-        ? primary.giftHouseholdHoldingStartDate
-        : primary.acquisitionDate);
+  /** 2-C 라벨 — 기준일이 취득일이 아니고 용도변경도 아니면 동일세대 상속 보유 개시일이다(판정 메뉴에서 남는 갈래는 그것뿐). */
+  const sameHouseholdStart = !conversionStart && residenceJudgmentDate !== basisAsset.acquisitionDate;
   // 증여 basis가 있으면 후보일·결합 방식(`all`/`any`)까지 엔진 plan대로 읽는다 — 거울상(시작일에만 지정 중)·반대 방향도 엔진과 같은 값이다.
-  const regulatedVerdict = useMemo(() => {
-    if (!primary.regionCode || !primary.acquisitionDate) return null;
-    return regulatedVerdictForAcquisition({
-      regionCode: primary.regionCode,
-      regionInDesignatedDistrict: primary.regionInDesignatedDistrict,
-      date: residenceJudgmentDate,
-      giftHouseholdBasis: conversionStart ? undefined : giftBasis,
-    });
-  }, [primary.regionCode, primary.regionInDesignatedDistrict, primary.acquisitionDate, residenceJudgmentDate, giftBasis, conversionStart]);
+  const regulatedVerdict = useMemo(
+    () =>
+      regulatedVerdictForAcquisition({
+        regionCode: primary.regionCode,
+        regionInDesignatedDistrict: primary.regionInDesignatedDistrict,
+        date: residenceJudgmentDate,
+        giftHouseholdBasis: giftBasis,
+      }),
+    [primary.regionCode, primary.regionInDesignatedDistrict, residenceJudgmentDate, giftBasis],
+  );
   /**
    * ⑳ 카드·입주권 카드가 읽는 「취득 당시 조정대상지역」 — 주소(법정동코드)가 있으면 위 2-C 자동 판정과 **같은 값**
    * (엔진은 코드가 있으면 숨은 토글 `form.wasRegulatedAtAcquisition`을 읽지 않는다). 원시 토글을 넘기면 같은 화면에서
@@ -158,16 +139,13 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
    */
   const storedRegulated = calcStoredRegulatedFlags(form);
   const addressVerdicts = regulatedAddressVerdicts(form);
-  const wasRegulatedAtAcquisition = effectiveWasRegulatedAtAcquisition({
-    regionCode: primary.regionCode,
-    regionInDesignatedDistrict: primary.regionInDesignatedDistrict,
-    judgmentDate: primary.acquisitionDate ? residenceJudgmentDate : undefined,
-    stored: storedRegulated.wasRegulatedAtAcquisition,
-    // 증여받은 주택은 증여일을 기준일(acquisitionDate)로 두고 basis가 세대 보유 시작일·증여자 취득일과의 결합을 정한다.
-    ...(giftBasis && !conversionStart && !sameHouseholdStart
-      ? { judgmentDate: primary.acquisitionDate, giftHouseholdBasis: giftBasis }
-      : {}),
-  });
+  // I-37 — 메뉴 ④(`buildOneHouseExemptionApiBody`)와 같은 호출이다.
+  const wasRegulatedAtAcquisition = calcEffectiveWasRegulatedAtAcquisition(
+    basisAsset,
+    storedRegulated.wasRegulatedAtAcquisition,
+    undefined,
+    GIFT_HOUSEHOLD_SCOPE_PRIMARY,
+  );
 
   /** ⑳ 카드 ③ 거주요건 표시용 상생임대 면제 — ⑧(`validateStep3`)과 같은 leaf·같은 사실. 카드 useMemo 의존성이라 객체를 메모한다. */
   const winWinResidenceExempt = winWinResidenceExemptForJudgment(form, form.transferDate, {
