@@ -75,6 +75,7 @@ import type {
   AggregateTransferResult,
 } from "./types/transfer-aggregate.types";
 import { ruralSurtaxDeductionBasis } from "./rural-surtax-basis";
+import { surchargeHouseholdHasCountedRight } from "./transfer-tax-rate-clause";
 
 /**
  * 기본공제 배분 전략 → 화면 라벨.
@@ -596,6 +597,7 @@ export function computeAggregateOnce(
       ...(r.result.specialRateBasis ? { specialRateBasis: r.result.specialRateBasis } : {}),
       ...(r.result.nonBusinessLandShortTerm ? { nonBusinessLandShortTerm: true } : {}),
       ...(r.result.surchargeShortTermClause ? { surchargeShortTermClause: r.result.surchargeShortTermClause } : {}),
+      ...(surchargeHouseholdHasCountedRight(r.result) ? { surchargeHouseholdHasCountedRight: true } : {}),
       nblSurchargeExcluded: r.result.nblSurchargeExcluded,
       nblSurchargeExcludedBy: r.result.nblSurchargeExcludedBy,
       progressiveDeduction: r.result.progressiveDeduction,

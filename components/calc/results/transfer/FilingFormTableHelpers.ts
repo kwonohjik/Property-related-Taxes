@@ -89,6 +89,7 @@ import { resolveBgSingleDisplay, resolveBgCarryoverSingleDisplay, bgSwapAcquisit
 import { mixedBgFilingNotes } from "./DetailedStatementBgMixedFormulas";
 import { redevFilingTotals } from "./redev-acquisition-inverse";
 import { redevInverseTransferPrice } from "@/lib/tax-engine/burdened-gift-totals";
+import { surchargeHouseholdHasCountedRight } from "@/lib/tax-engine/transfer-tax-rate-clause";
 import { appliedFormTotalTransferExpense } from "@/lib/calc/transfer-expense-in-scope";
 import { preDeemedAcqDateNote, preDeemedAcqPriceNote } from "./pre-deemed-purchase-filing-note";
 export { fmtCell } from "./FilingFormTableRowDefs";
@@ -597,6 +598,7 @@ export function buildRows(
     nblSurchargeExcluded: result.nblSurchargeExcluded,
     nonBusinessLandShortTerm: result.nonBusinessLandShortTerm,
     surchargeShortTermClause: result.surchargeShortTermClause,
+    surchargeHouseholdHasCountedRight: surchargeHouseholdHasCountedRight(result),
   });
   if (rateCode) setStr("rateCode", "total", rateCode);
   const ratePct = fmtRatePct(result.appliedRate);

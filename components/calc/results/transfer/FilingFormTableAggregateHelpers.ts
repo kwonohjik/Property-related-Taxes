@@ -352,6 +352,7 @@ export function buildAggregateRows(
       nblSurchargeExcluded: p.nblSurchargeExcluded,
       nonBusinessLandShortTerm: p.nonBusinessLandShortTerm,
       surchargeShortTermClause: p.surchargeShortTermClause,
+      surchargeHouseholdHasCountedRight: p.surchargeHouseholdHasCountedRight,
     });
     if (!isGbPartColumn && assetCode) setStr("rateCode", col, assetCode);
     if (isGbPartColumn) {

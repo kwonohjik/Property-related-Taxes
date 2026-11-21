@@ -881,6 +881,11 @@ export interface MultiHouseSurchargeResult {
   };
   /** #2b 산정에서 차감된 분양권/입주권 (혼인 §167의4⑤ 배우자 보유 차감). 미차감 시 빈 배열. */
   excludedPresaleRights?: Array<{ id: string; reason: "spouse_marriage_subtraction" }>;
+  /**
+   * [echo] 주택 수에 산입된 조합원입주권·분양권 수 — Step 4 이후 산정값(`isPresaleRightCounted` − ⑨ 차감분) 그대로. 0이면 싣지 않는다.
+   * 중과 유형이 정해진 반환(Step 7)에만 싣는다 — 신고서 ③ «주택과 조합원입주권 또는 분양권» 코드 표시 전용(R-c10-04). 세액 불변.
+   */
+  countedRightCount?: number;
 }
 
 // ============================================================

@@ -559,6 +559,8 @@ function computeMultiHouseSurcharge(
     ...(isSuspended && suspensionBasis ? { surchargeSuspensionBasis: suspensionBasis } : {}),
     ...(isSuspended && suspensionDeadline ? { surchargeSuspensionDeadline: suspensionDeadline } : {}),
     ...(statutoryRateExcluded ? { rateSurchargeStatutoryExcluded: true } : {}),
+    // R-c10-04 — 신고서 ③ «주택과 조합원입주권 또는 분양권» 코드 표지(세액 불변 echo)
+    ...(countedRightCount > 0 ? { countedRightCount } : {}),
     exclusionReasons,
     warnings,
   };
