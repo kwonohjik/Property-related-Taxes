@@ -20,9 +20,14 @@ export function axisBShareNoticeDate(primary: Pick<AssetForm, "expropriationNoti
   return primary.expropriationNoticeDate ?? "";
 }
 
+/** `index`번 카드가 축 B 지분 카드(둘째 이후 — ② 양도정보가 숨고 물건 값은 첫 카드에 있다)인가. */
+export function isAxisBShareCard(form: Pick<TransferFormData, "assets" | "assetSplitMode">, index: number): boolean {
+  return index > 0 && isFullFractionalBundle(form.assets, form.assetSplitMode);
+}
+
 /** 폼의 `index`번 카드가 §77 감면 행 고시일 공란일 때 읽는 «자산 고시일». 축 B 지분 카드면 첫 카드 값, 그 밖에는 그 카드 자신의 값. ⑤ 칸 표시·⑧이 쓴다. */
 export function reductionNoticeDateOf(form: Pick<TransferFormData, "assets" | "assetSplitMode">, index: number): string {
   const asset = form.assets[index];
-  if (index > 0 && isFullFractionalBundle(form.assets, form.assetSplitMode)) return axisBShareNoticeDate(form.assets[0]);
+  if (isAxisBShareCard(form, index)) return axisBShareNoticeDate(form.assets[0]);
   return asset?.expropriationNoticeDate ?? "";
 }

@@ -23,6 +23,9 @@ import { getInvoluntaryTransferLimits } from "./public-expropriation-reduction";
 
 export const REPLACEMENT_LAND_SUNSET = new Date("2026-12-31T23:59:59.999Z");
 export const REPLACEMENT_LAND_RATE = 0.4;
+/** 고시일·취득일이 비어 §77의2① 취득시기 요건을 판정할 수 없을 때의 불성립 사유 (NBL2611-C10) */
+export const REPLACEMENT_LAND_NOTICE_UNKNOWN_REASON =
+  "사업인정고시일이 없어 §77의2① 취득시기 요건(고시일 소급 2년 이전 취득)을 판정할 수 없습니다 — 확인 필요";
 
 export interface ReplacementLandInput {
   /** 현금 보상액 (원) */
@@ -30,9 +33,9 @@ export interface ReplacementLandInput {
   /** 대토(토지) 보상액 (원) — 감면 대상 */
   replacementLandComp: number;
   transferDate: Date;
-  /** 취득일 (상속 시 피상속인 취득일) — §77의2① 소급 2년 취득요건 검증용. 미입력 시 요건 미검증(백워드 호환) */
+  /** 취득일 — §77의2① 소급 2년 취득요건 검증용. 미입력 시 요건을 판정할 수 없어 불성립(NBL2611-C10) */
   acquisitionDate?: Date;
-  /** 사업인정고시일 — §77의2① '고시일(고시 전 양도 시 양도일) 소급 2년 이전 취득' 기준. 미입력 시 요건 미검증 */
+  /** 사업인정고시일 — §77의2① '고시일(고시 전 양도 시 양도일) 소급 2년 이전 취득' 기준. 미입력 시 요건을 판정할 수 없어 불성립(NBL2611-C10) */
   businessApprovalDate?: Date;
   calculatedTax: number;
   /** 양도소득금액 = 양도차익 − 장기보유특별공제 (기본공제 차감 전) */
@@ -92,9 +95,18 @@ export function calculateReplacementLandReduction(
   if (input.replacementLandComp <= 0) {
     return ineligible("대토보상액이 0 이하입니다 (대토보상분만 감면 대상)", annualLimit);
   }
-  // §77의2① 취득시기 요건 — 사업인정고시일(고시 전 양도 시 양도일) 소급 2년 이전 취득.
-  // 두 날짜 모두 존재할 때만 검증(미입력 시 skip — 법 근거 없는 차단 방지, 백워드 호환).
-  if (input.acquisitionDate !== undefined && input.businessApprovalDate !== undefined) {
+  // §77의2① 취득시기 요건 — 「사업인정고시일(사업인정고시일 전에 양도하는 경우에는 양도일)부터 소급하여 2년 이전에 취득한 토지등」.
+  // 고시일은 이 요건 판정의 필수 사실이다 — 비면 요건을 판정할 수 없으므로 불성립 + 확인 필요로 둔다(NBL2611-C10 ·
+  // 「모름」=혜택 불성립). 종전에는 비면 검증을 건너뛰어 요건 미확인 상태로 감면이 성립했다.
+  if (input.acquisitionDate === undefined || input.businessApprovalDate === undefined) {
+    return ineligible(
+      input.businessApprovalDate === undefined
+        ? REPLACEMENT_LAND_NOTICE_UNKNOWN_REASON
+        : "취득일이 없어 §77의2① 취득시기 요건(고시일 소급 2년 이전 취득)을 판정할 수 없습니다 — 확인 필요",
+      annualLimit,
+    );
+  }
+  {
     const acqBaselineDate =
       input.transferDate < input.businessApprovalDate
         ? input.transferDate
