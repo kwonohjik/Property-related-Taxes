@@ -135,6 +135,7 @@ export function setIncomeAndBasicDeductionItems(
       p.reducibleIncome ?? 0,
       p.replacementLandDetail?.eligibleTransferIncome,
       p.eligibleIncomeAfterLoss,
+      p.publicExpropriationDetail?.partWise?.eligibleIncome,
     );
   const eligibleValue = isAggregate
     ? properties.reduce((s, p) => s + eligibleIncomeOf(p), 0)
@@ -144,6 +145,7 @@ export function setIncomeAndBasicDeductionItems(
         result.reducibleIncome ?? 0,
         result.replacementLandDetail?.eligibleTransferIncome,
         result.eligibleIncomeAfterLoss,
+        result.publicExpropriationDetail?.partWise?.eligibleIncome,
       );
   items.set("reductionTargetIncome", {
     label: "세액감면대상금액",
@@ -152,7 +154,7 @@ export function setIncomeAndBasicDeductionItems(
     // 조문마다 기준이 달라(전액/대토보상분/임대기간 안분) 그 근거를 함께 보인다.
     formula: isAggregate
       ? `자산별 감면 적용 대상 양도소득금액 합계 = ${eligibleValue.toLocaleString()} (§90① 세액감면방식 — 감면율·기본공제 前)`
-      : `${eligibleIncomeBasisText(result.reductionTypeApplied, eligibleValue)} — §90① 세액감면방식이라 감면율·기본공제를 곱하기 전 금액이며, 소득금액에서 차감하지 않습니다`,
+      : `${eligibleIncomeBasisText(result.reductionTypeApplied, eligibleValue, result.publicExpropriationDetail?.partWise?.eligiblePart)} — §90① 세액감면방식이라 감면율·기본공제를 곱하기 전 금액이며, 소득금액에서 차감하지 않습니다`,
     legalBasis: "소득세법 §90① · 조세특례제한법 §127",
     perAsset: isAggregate
       ? buildPerAssetWithFormula(

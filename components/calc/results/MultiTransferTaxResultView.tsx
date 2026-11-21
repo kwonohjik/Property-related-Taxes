@@ -297,6 +297,7 @@ function ReductionRecalculationSection({
                                 p.reducibleIncome ?? 0,
                                 p.replacementLandDetail?.eligibleTransferIncome,
                                 p.eligibleIncomeAfterLoss,
+                                p.publicExpropriationDetail?.partWise?.eligibleIncome,
                               ).toLocaleString()}
                             </td>
                             <td className="text-right font-mono tabular-nums whitespace-nowrap font-medium">
