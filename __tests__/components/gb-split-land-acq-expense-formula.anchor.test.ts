@@ -24,7 +24,9 @@ import { buildGbAcquisitionFormula } from "@/components/calc/results/transfer/De
 import { buildGbExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementGbFormulas";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
-import { asset, form, run } from "./_helpers/gb-bundled-blocks-fixtures";
+import { asset } from "./_helpers/gb-bundled-blocks-fixtures";
+import { form } from "./_helpers/gb-bundled-blocks-fixtures";
+import { run } from "./_helpers/gb-bundled-blocks-fixtures";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -172,5 +174,37 @@ describe("후보 ⑤ — §164⑨ 공익수용 특례는 낮춘 분모를 적는
       `${n(tl)} × ${n(ACQ_LAND_STD)} / ${n(denom)} = ${n(al)} (분모: 양도 당시 토지기준시가를 ${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_1} 공익수용 특례로 낮춘 값)`,
     );
     expect(firstLineHolds(acq("land"))).toBe(true);
+  });
+});
+
+describe("후보 ⑤ 리뷰 — §164⑨ 게이트만 통과하고 ㎡당 기준시가가 그대로 최소면 «낮춘 값»이라 적지 않는다", () => {
+  it("보상액 6,000,000 · 기초 기준시가 7,000,000 > 기준시가 5,514,000 → 분모 = 원 기준시가 1,130,370,000 · 중립 문구", async () => {
+    const EXPR = {
+      gbBuildingFootprintArea: "135",
+      transferCause: "public_expropriation",
+      expropriationNoticeDate: "2020-01-01",
+      compensationPerSqm: "6000000",
+      compensationBasisStdPrice: "7000000",
+    } as Partial<AssetForm>;
+    const { acq } = await formulas(EST, EXPR);
+    const f = acq("land");
+    expect(f).not.toContain("낮춘 값");
+    expect(f).toContain(`${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_1} 공익수용 특례 적용`);
+    expect(f).toContain(`/ ${n(5_514_000n * 205n)} =`);
+    expect(firstLineHolds(f)).toBe(true);
+  });
+});
+
+describe("후보 ⑤ 리뷰 — §97②2호 단서(swap)로 집계 값이 카드 값과 갈리면 꼬리를 붙이지 않는다(음수 «사업용분» 금지)", () => {
+  it("환산 2-way + 자본적지출 900,000,000 → swap · 토지 두 장 산식에 음수 금액 없음", async () => {
+    const { by, acq, exp } = await formulas(EST, { capitalExpenditure: "900000000" } as Partial<AssetForm>);
+    for (const id of ["land_business", "land_nbl"]) {
+      expect(by[id]).toBeDefined();
+      for (const f of [acq(id), exp(id)]) {
+        expect(f).not.toMatch(/-\d|사업용분 -/);
+        expect(f).not.toContain("사업용 인정면적 비율 =");
+        expect(f).not.toContain("- 사업용분");
+      }
+    }
   });
 });

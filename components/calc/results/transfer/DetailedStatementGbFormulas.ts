@@ -468,9 +468,16 @@ function buildGbAcquisitionFormulaCore(
 
   if (isLandProp(p.propertyId)) {
     // §164⑨ 1호 공익수용 — 엔진은 토지 환산 분모를 낮춘 값으로 쓴다(`calculateConvertedAcquisition`). 원 기준시가를 적으면 산식 ≠ 값.
-    const exprDenom = gb.expropriationValuationDetail?.denominator;
+    const exprDetail = gb.expropriationValuationDetail;
+    const exprDenom = exprDetail?.denominator;
+    // 특례 게이트만 통과하고 ㎡당 기준시가가 그대로 최소값이면 «낮춘 값»이 아니다 — 그때는 특례 적용 분모라고만 적는다.
+    const exprLowered = exprDetail !== undefined && exprDetail.chosenPerSqm < exprDetail.perSqmCandidates.standard;
     const exprNote =
-      exprDenom !== undefined ? ` (분모: 양도 당시 토지기준시가를 ${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_1} 공익수용 특례로 낮춘 값)` : "";
+      exprDenom === undefined
+        ? ""
+        : exprLowered
+          ? ` (분모: 양도 당시 토지기준시가를 ${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_1} 공익수용 특례로 낮춘 값)`
+          : ` (분모: ${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_1} 공익수용 특례 적용 — 양도 당시 토지기준시가가 가장 적은 금액)`;
     const landDenom = exprDenom ?? landStd;
     // 토지 두 장이면 엔진은 토지 전체 양도가액을 환산한 뒤 가른다 — 카드 몫 양도가액을 환산하면 ±원 어긋난다(후보 ⑤).
     const acqSplit = landAcqSplit(p, gb);

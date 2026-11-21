@@ -37,6 +37,9 @@ export function gbLandSplitTail(
     (c) => (baseCardId(c.propertyId) === "land_business" || baseCardId(c.propertyId) === "land_nbl") && isSameShare(c.propertyId, p.propertyId),
   );
   if (pair.length < 2) return undefined;
+  // 자기 카드의 엔진 값이 집계 값과 다르면(§97②2호 단서 swap 등 — 집계가 카드 값을 바꿈) 꼬리가 거짓 등식·음수 «사업용분»이 된다 → 종전 식으로 둔다.
+  const own = pair.find((c) => c.propertyId === p.propertyId);
+  if (!own || pick(own) !== self) return undefined;
   const whole = pair.reduce((s, c) => s + pick(c), 0);
   return id === "land_business"
     ? { whole, tail: `× 사업용 인정면적 비율 = ${fmt(self)}`, residual: false }
