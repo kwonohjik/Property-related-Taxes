@@ -7,41 +7,22 @@
  * (`temporary-two-house-section-scope.ts` 머리 주석의 전례).
  */
 import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
-import { resolveTemporaryTwoHouse, type TemporaryTwoHouseDates } from "@/lib/calc/household-house-count";
+import type { TemporaryTwoHouseDates } from "@/lib/calc/household-house-count";
 import { deriveJudgmentResidenceMonths } from "@/lib/calc/one-house-exemption-api";
 import { buildRightThreeYearExceptionPayload, buildSameHouseholdInheritancePayload } from "@/lib/calc/transfer-tax-api-helpers";
 import { eraFormWithOriginDates } from "@/lib/calc/temporary-two-house-era-facts";
-import { declaredNewHouseOriginOf } from "@/lib/calc/declared-new-house-origin";
 import type { RightThreeYearException, TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { buildOtherHousesPayload } from "@/lib/calc/transfer-tax-api-houses";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { judgmentSaleIsHousing, type OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
-import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
-import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
-import { mergeContextOf } from "@/lib/calc/merge-house-origin";
 import { resolveTempTwoHouseNewHouseSigunguCode } from "./temp-two-house-new-house-sigungu";
 import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { effectiveProvisoReason } from "@/lib/calc/transfer-tax-api-helpers";
 import { judgmentProvisoMode } from "./one-house-judgment-section-scope";
 
-/** §155① 신규 주택 — 명부에서 도출(④ 변환과 같은 정본 `resolveTemporaryTwoHouse`). */
-export function judgmentDerivedNewHouse(form: OneHouseJudgmentFormData): TemporaryTwoHouseDates | undefined {
-  const primary = form.assets?.[0];
-  return resolveTemporaryTwoHouse({
-    primaryKind: primary?.assetKind,
-    // 양도 주택이 기존주택의 연장이면 헐기 전 주택 취득일이 종전주택 취득일이다(결정 #43 하위 2 · ⑤⑧과 같은 leaf).
-    primaryAcquisitionDate: sellingHousePreviousDateOverride(primary, form.houses?.length) ?? primary?.acquisitionDate ?? "",
-    houses: form.houses,
-    transferDate: form.transferDate,
-    legacyPrecedence: form.legacyHouseCountPrecedence === true,
-    declaredSpecial: form.temporaryTwoHouseSpecial === true,
-    declaredNewHouseDate: form.newHouseAcquisitionDate,
-    declaredNewHouseOrigin: declaredNewHouseOriginOf(form), // 결정 #43-3 — 직접 선언 경로의 신규 주택 경위(미답 = not_collected)
-    mergeContext: mergeContextOf(form), // D8 — 합가 세대는 같은 쪽 안에서 짝을 고른다
-    excludedHouseIds: temporaryTwoHouseCandidateExcludedIds(form),
-    rentalResidenceHouseIds: rentalResidenceCandidateHouseIds(form),
-  });
-}
+// 신규 주택 도출은 leaf(`one-house-judgment-new-house.ts`)가 정본이다 — 판정 메뉴 ④가 그 leaf를 부르므로 ④를 import하는 이 파일에 두지 않는다(순환 방지 · D-79).
+export { judgmentDerivedNewHouse, judgmentContestedNewHouse, judgmentNewHouseOriginRowIds } from "./one-house-judgment-new-house";
+import { judgmentDerivedNewHouse } from "./one-house-judgment-new-house";
 
 export function judgmentTempTwoHouseVerdict(
   form: OneHouseJudgmentFormData,

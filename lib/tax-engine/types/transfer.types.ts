@@ -410,6 +410,11 @@ export interface TransferTaxInput {
    * (`one-house/deadline-holding.ts`). 구간 합이 `residencePeriodMonths`와 다르면 쓰지 않는다.
    */
   residenceIntervals?: { start: Date; end: Date }[];
+  /**
+   * 판정 메뉴 전용 — 양론 반대 입장(C2·C7)이 빼는 행까지 빼고 다시 도출한 §155① 짝(2026-11 리뷰 D-79 안 A). `null`은 「다시 도출했는데 짝이 없다」,
+   * 키 없음은 「보내지 않았다」(직접 API·중과 메뉴 — 종전 동작). 양론 재판정 입력만 읽는다(`one-house/contested-issues.ts`) — 세액 경로는 보지 않는다.
+   */
+  contestedTemporaryTwoHouse?: TransferTaxInput["temporaryTwoHouse"] | null;
   /** 양도일 기준 조정대상지역 여부 */
   isRegulatedArea: boolean;
   /** 취득일 기준 조정대상지역 여부 */

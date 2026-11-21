@@ -139,20 +139,14 @@ export function buildTransferEngineInput(
     // ⑭ 이월과세 §97의2 — spread + 일자만 덮어쓰기(근거·주의는 `lib/api/carryover-engine-input.ts` 머리주석).
     carryoverTaxation: toEngineCarryoverTaxation(data.carryoverTaxation, "carryoverTaxation"),
     isOneHousehold: data.isOneHousehold,
-    temporaryTwoHouse: data.temporaryTwoHouse
-      ? {
-          previousAcquisitionDate: toDate(data.temporaryTwoHouse.previousAcquisitionDate, "temporaryTwoHouse.previousAcquisitionDate"),
-          newAcquisitionDate: toDate(data.temporaryTwoHouse.newAcquisitionDate, "temporaryTwoHouse.newAcquisitionDate"),
-          // ⑭ §155⑯·⑱ — 날짜가 아닌 boolean·enum이라 변환 없이 그대로 통과시킨다.
-          //    여기서 명시 전달하지 않으면 침묵 strip되어 처분기한 5년·기한 예외가 미도달한다.
-          publicInstitutionRelocation: data.temporaryTwoHouse.publicInstitutionRelocation,
-          relocatedSigunguCode: data.temporaryTwoHouse.relocatedSigunguCode,
-          newHouseSigunguCode: data.temporaryTwoHouse.newHouseSigunguCode,
-          disposalDelayReason: data.temporaryTwoHouse.disposalDelayReason,
-          // ⑭ §155①2호 — 신규 취득 당시 조정 여부·계약일·전입·임차인 단서(OH-01 A2b). 단건·다건 공용.
-          ...mapTemporaryTwoHouseEraFacts(data.temporaryTwoHouse),
-        }
-      : undefined,
+    temporaryTwoHouse: data.temporaryTwoHouse ? toEngineTemporaryTwoHouse(data.temporaryTwoHouse, "temporaryTwoHouse") : undefined,
+    // ⑭ 판정 메뉴 전용(D-79 안 A) — 양론 반대 입장 §155① 짝. 같은 변환 · null(짝 없음)은 그대로 전달한다.
+    contestedTemporaryTwoHouse:
+      data.contestedTemporaryTwoHouse === null
+        ? null
+        : data.contestedTemporaryTwoHouse
+          ? toEngineTemporaryTwoHouse(data.contestedTemporaryTwoHouse, "contestedTemporaryTwoHouse")
+          : undefined,
     // ⑭ §155⑧ — resolvedDate는 string이라 Date 변환 필수. 해소일 ↔ 「양도일 현재 미해소」 택일(⑫ 검증, #31) — 미해소 선택도 전달한다.
     unavoidableOutsideCapitalHouse: data.unavoidableOutsideCapitalHouse
       ? {
@@ -536,6 +530,25 @@ export function buildTransferEngineInput(
  *    한쪽만 필드가 늘어 **그 경로에서만 `Date < string` silent false**가 난다 —
  *    이 저장소가 `lib/api/date-coerce.ts`를 둔 이유와 같은 실패 모드다.
  */
+/** ⑭ §155① 짝 — 엔진 `temporaryTwoHouse`(판정 메뉴 양론 반대 입장 짝 `contestedTemporaryTwoHouse`도 같은 변환 · D-79). */
+function toEngineTemporaryTwoHouse(
+  tt: NonNullable<ValidatedTransferInput["temporaryTwoHouse"]>,
+  path: string,
+): NonNullable<TransferTaxInput["temporaryTwoHouse"]> {
+  return {
+    previousAcquisitionDate: toDate(tt.previousAcquisitionDate, `${path}.previousAcquisitionDate`),
+    newAcquisitionDate: toDate(tt.newAcquisitionDate, `${path}.newAcquisitionDate`),
+    // ⑭ §155⑯·⑱ — 날짜가 아닌 boolean·enum이라 변환 없이 그대로 통과시킨다.
+    //    여기서 명시 전달하지 않으면 침묵 strip되어 처분기한 5년·기한 예외가 미도달한다.
+    publicInstitutionRelocation: tt.publicInstitutionRelocation,
+    relocatedSigunguCode: tt.relocatedSigunguCode,
+    newHouseSigunguCode: tt.newHouseSigunguCode,
+    disposalDelayReason: tt.disposalDelayReason,
+    // ⑭ §155①2호 — 신규 취득 당시 조정 여부·계약일·전입·임차인 단서(OH-01 A2b). 단건·다건 공용.
+    ...mapTemporaryTwoHouseEraFacts(tt),
+  };
+}
+
 export function toEngineRedevelopment(
   redev: NonNullable<z.infer<typeof propertySchema>["redevelopment"]>,
 ) {

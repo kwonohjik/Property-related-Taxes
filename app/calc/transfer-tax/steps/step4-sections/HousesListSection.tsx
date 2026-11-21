@@ -60,7 +60,7 @@ import { popDeclineQuestionAsset } from "@/lib/calc/pop-decline-71-2-scope";
 import { newHouseOriginQuestionVisible } from "@/lib/calc/new-house-origin-scope";
 import { primaryAcquisitionDateOf } from "@/lib/calc/transfer-tax-api-carryover";
 import { deriveCalcTemporaryTwoHouse } from "@/lib/calc/transfer-tax-api-body-blocks";
-import { judgmentDerivedNewHouse } from "@/lib/calc/one-house-judgment-temp-two-house";
+import { judgmentNewHouseOriginRowIds } from "@/lib/calc/one-house-judgment-new-house";
 import type { OneHouseJudgmentFormData } from "@/lib/stores/one-house-judgment-form.types";
 import type { TransferFormData, HouseEntry } from "@/lib/stores/calc-wizard-store";
 import { GracePeriodSection } from "./GracePeriodSection";
@@ -742,10 +742,10 @@ export function HousesListSection({
                 sellingHousePreviousDateOverride(form.assets?.[0], houses.length) ?? primaryAcquisitionDateOf(form.assets?.[0]),
                 editingHouse,
                 // ⑧이 필수로 요구하는 행(도출된 신규 주택)은 항상 연다 — 판정 메뉴·계산기가 각자 ⑧과 같은 도출을 읽는다.
-                (judgmentMenu
-                  ? judgmentDerivedNewHouse(form as unknown as OneHouseJudgmentFormData)
-                  : deriveCalcTemporaryTwoHouse(form, form.assets?.[0])
-                )?.newHouseRowId,
+                // 판정 메뉴는 양론 반대 입장 짝의 신규 주택 행도 ⑧이 요구한다(D-79 안 A · `judgmentNewHouseOriginRowIds`).
+                judgmentMenu
+                  ? judgmentNewHouseOriginRowIds(form as unknown as OneHouseJudgmentFormData).find((id) => id === editingHouse.id)
+                  : deriveCalcTemporaryTwoHouse(form, form.assets?.[0])?.newHouseRowId,
               )}
             />
           )}

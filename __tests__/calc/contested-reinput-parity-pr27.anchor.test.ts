@@ -37,13 +37,15 @@ async function issues(c: RulingCase) {
 const C7 = "155-3-co-inherited-minority-before-ranking-clause";
 const C2 = "155-3-same-household-co-inherited-minority";
 
-describe("D-79 최소 안전망 — 반대 입장의 §155① 짝을 다시 만들지 않으면 「결론 같음」을 단정하지 않는다", () => {
-  it("C7 · 2016-05-01 · 일반 S + 별도세대 소수지분 m1·m2(S보다 나중) + 신규 N → 확인 필요 안내", async () => {
+// 화면 경로는 D-79 안 A로 반대 입장 짝을 다시 도출한다 — 안전망은 키 없이 오는 직접 API에만 남는다(`contested-temp-two-house-d79.anchor.test.ts` P-6).
+describe("D-79 화면 경로 — 반대 입장의 §155① 짝을 다시 도출해 결론을 낸다(안 A · 종전 최소 안전망 자리)", () => {
+  it("C7 · 2016-05-01 · 일반 S + 별도세대 소수지분 m1·m2(S보다 나중) + 신규 N → B 비과세 · 결론 갈림 · 안전망 문장 없음", async () => {
     const o = await issues(mk("2016-05-01", "2012-11-21", [inh("m1", "2013-03-01", false), inh("m2", "2013-06-01", false), { id: "n", region: "non_capital", acquisitionDate: "2015-03-01", acquisitionOrigin: "general" }]));
     expect(o.ve).toEqual([]);
     const i = o.list.find((x) => x.id === C7)!;
-    expect(i.conclusionsDiffer).toBe(false);
-    expect(i.otherPositionUnresolved).toContain("확인이 필요합니다");
+    expect(i.positions[1].verdict).toBe("exempt");
+    expect(i.conclusionsDiffer).toBe(true);
+    expect(i.otherPositionUnresolved).toBeUndefined();
   });
   it("대조 — 신규 주택이 없으면 안내 없이 결론 그대로", async () => {
     const o = await issues(mk("2016-05-01", "2012-11-21", [inh("m1", "2013-03-01", false), inh("m2", "2013-06-01", false)]));

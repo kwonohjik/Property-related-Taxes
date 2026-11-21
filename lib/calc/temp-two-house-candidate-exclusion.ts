@@ -23,6 +23,7 @@ import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 import { deriveOneHouseFactsFromHouses, findRuralHouseRow } from "./one-house-row-facts";
 import { findCulturalHeritageRow } from "./one-house-row-facts";
 import { resolveInheritedHouseExclusionFromInput } from "@/lib/tax-engine/transfer-inheritance-exclusion";
+import { contestedPairPositionExcludedRowIds } from "@/lib/tax-engine/one-house/contested-issues";
 import { resolvePopulationDecline71_2 } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
 import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -51,14 +52,15 @@ type CandidateFormLike = Partial<
   >
 >;
 
-/** §155②③으로 주택 수에서 빠지는 상속주택 명부 행 id(엔진 판정). 양도일·양도 주택 취득일이 없으면 빈 집합. */
-export function inheritedCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
+/**
+ * 상속주택 제외 판정용 엔진 입력(명부 payload는 route와 같은 빌더 · 날짜는 ⑭와 같은 규칙). 양도일·양도 주택 취득일이 없거나 상속 행이 없으면 undefined.
+ * `inheritedCountExcludedHouseIds`(엔진 입장)와 `contestedPairExcludedHouseIds`(양론 반대 입장 · D-79)가 같은 입력을 쓴다.
+ */
+function inheritanceJudgmentInput(form: CandidateFormLike) {
   const primary = form.assets?.[0];
   const acquisitionDate = toOptionalDate(primaryAcquisitionDateOf(primary));
   const transferDate = toOptionalDate(form.transferDate);
-  if (!primary || !acquisitionDate || !transferDate || !(form.houses ?? []).some((h) => h.isInherited)) {
-    return new Set();
-  }
+  if (!primary || !acquisitionDate || !transferDate || !(form.houses ?? []).some((h) => h.isInherited)) return undefined;
   const payload = buildHousesPayload(
     primary,
     form.houses ?? [],
@@ -66,7 +68,7 @@ export function inheritedCountExcludedHouseIds(form: CandidateFormLike): Readonl
     form.sellingHouseExclusion,
     form.transferDate,
   ) as Array<Record<string, unknown>> | undefined;
-  if (!payload) return new Set();
+  if (!payload) return undefined;
   const houses = payload.map((h) => ({
     ...h,
     acquisitionDate: toOptionalDate(h.acquisitionDate as string | undefined),
@@ -80,20 +82,43 @@ export function inheritedCountExcludedHouseIds(form: CandidateFormLike): Readonl
     generalHouseGiftDate: form.generalHouseGiftDate,
     generalHouseRightAtInheritance: form.generalHouseRightAtInheritance,
   } as Parameters<typeof buildInheritanceGeneralHousePayload>[0]);
-  const r = resolveInheritedHouseExclusionFromInput(
-    {
-      houses,
-      sellingHouseId: "selling", // route와 같은 양도 행 id(`transfer-tax-api.ts`·`one-house-exemption-api.ts`)
-      generalHouseGiftedFromDecedentWithin2yr: form.generalHouseGiftedFromDecedentWithin2yr === true,
-      generalHouseGiftDate: toOptionalDate(general.generalHouseGiftDate),
-      generalHouseRightAtInheritance: general.generalHouseRightAtInheritance,
-      acquisitionDate,
-      transferDate,
-    },
-    // 엔진 STEP 0.9와 같다 — 조특법(§99의4 등)으로 이미 뺀 행은 상속주택 제외 후보에서 뺀다(NH-13 · Q-1 A · Q-10 a).
-    eligibleCountExcludedHouseIds(form),
-  );
+  return {
+    houses,
+    sellingHouseId: "selling", // route와 같은 양도 행 id(`transfer-tax-api.ts`·`one-house-exemption-api.ts`)
+    generalHouseGiftedFromDecedentWithin2yr: form.generalHouseGiftedFromDecedentWithin2yr === true,
+    generalHouseGiftDate: toOptionalDate(general.generalHouseGiftDate),
+    generalHouseRightAtInheritance: general.generalHouseRightAtInheritance,
+    acquisitionDate,
+    transferDate,
+  };
+}
+
+/** §155②③으로 주택 수에서 빠지는 상속주택 명부 행 id(엔진 판정). 양도일·양도 주택 취득일이 없으면 빈 집합. */
+export function inheritedCountExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
+  const input = inheritanceJudgmentInput(form);
+  if (!input) return new Set();
+  // 엔진 STEP 0.9와 같다 — 조특법(§99의4 등)으로 이미 뺀 행은 상속주택 제외 후보에서 뺀다(NH-13 · Q-1 A · Q-10 a).
+  const r = resolveInheritedHouseExclusionFromInput(input, eligibleCountExcludedHouseIds(form));
   return new Set(r.excludedHouses.map((e) => e.houseId));
+}
+
+/**
+ * 판정 메뉴 양론 C2·C7 **반대 입장**이 주택 수에서 더 빼는 명부 행 id(2026-11 리뷰 D-79 안 A) — 엔진 감지(`contestedPairPositionExcludedRowIds`)를
+ * 그대로 부른다. 쟁점이 없으면 빈 집합 — 주택 양도인지는 호출부가 본다(엔진 감지도 주택 양도만). 엔진 입장 제외 행(`temporaryTwoHouseCandidateExcludedIds`)과
+ * 합쳐 §155① 짝을 다시 도출한다.
+ */
+export function contestedPairExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> {
+  const input = inheritanceJudgmentInput(form);
+  if (!input) return new Set();
+  const specialActHouseIds = eligibleCountExcludedHouseIds(form);
+  const engineInput = { ...input, propertyType: "housing" } as unknown as TransferTaxInput;
+  return new Set(
+    contestedPairPositionExcludedRowIds(engineInput, {
+      // 엔진 STEP 0.95의 정본 결과(echo)와 같은 값 — 조특법으로 먼저 뺀 행을 「제외하지 못한 소수지분」으로 세지 않는다(D-87).
+      inheritedExclusion: resolveInheritedHouseExclusionFromInput(input, specialActHouseIds),
+      specialActHouseIds,
+    }),
+  );
 }
 
 /**
