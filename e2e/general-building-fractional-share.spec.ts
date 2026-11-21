@@ -294,7 +294,9 @@ test.describe("일반건물 × 지분 분할 취득", () => {
     const rows = block.locator("li");
     await expect(rows).toHaveCount(2);
     await expect(rows.nth(0)).toHaveText(`자산 2 (지분 40%) 토지분 취득가액(상속개시일 평가액)${acq("land#1")}`, { useInnerText: false });
-    await expect(rows.nth(1)).toHaveText(`자산 2 (지분 40%) 건물분 취득가액(상속개시일 평가액)${acq("building#1")}`, { useInnerText: false });
+    // 건물분은 상속개시일 평가액 1억 × 40% = 4천만보다 영 §164⑤ 가액이 커 단서가 채택된다(R-c07-03 — 종전 라벨은 「상속개시일 평가액」으로 잘못 적었다).
+    expect(acq("building#1")).not.toBe((40_000_000).toLocaleString("ko-KR"));
+    await expect(rows.nth(1)).toHaveText(`자산 2 (지분 40%) 건물분 취득가액(영 §164 가액)${acq("building#1")}`, { useInnerText: false });
   });
 
   // ══════════════════════════════════════════════════════════════════
