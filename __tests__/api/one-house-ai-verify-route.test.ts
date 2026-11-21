@@ -101,6 +101,18 @@ describe("원문 검증 route", () => {
     expect(d2.points[0]).toMatchObject({ support: "not_supported", reason: "원문에 없다" });
   });
 
+  it("2026-11 리뷰 I-21 — 검증 입력 상한(쟁점 20 · 인용 조문 모두 60)을 넘으면 400이고 조회하지 않는다", async () => {
+    const many = { ...body, opinion: { ...body.opinion, points: [{ ...body.opinion.points[0], statutes: Array.from({ length: 61 }, () => ref) }] } };
+    const res = await call(many);
+    expect(res.status).toBe(400);
+    expect(statute).not.toHaveBeenCalled();
+  });
+
+  it("2026-11 리뷰 I-28 — 2차 대조에 요청의 AbortSignal을 넘긴다", async () => {
+    await call(body);
+    expect(compare.mock.calls[0][2]).toBeInstanceOf(AbortSignal);
+  });
+
   it("한 쟁점의 인용 중 하나라도 확인되지 않으면 「원문 일치」가 아니라 최대 일부 일치", async () => {
     const mixed = { ...body, opinion: { ...body.opinion, points: [{ topic: "혼합", opinion: "의견", citedDocNos: ["DOC-F"], statutes: [ref] }] } };
     const { data } = await (await call(mixed)).json();

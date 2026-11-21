@@ -10,6 +10,7 @@
  * 의견을 받으면 곧바로 원문 검증(`/api/one-house-ai/verify`)을 부른다 — 검증 결과도 그 검증을 낳은 의견에만 붙는다.
  */
 import { useRef, useState } from "react";
+import { useUnmountSignal } from "./use-unmount-signal";
 import { Button } from "@/components/ui/button";
 import type { OneHouseExemptionResponse } from "@/app/api/calc/one-house-exemption/route";
 import type { OneHouseAiOpinionData } from "@/app/api/one-house-ai/opinion/route";
@@ -43,10 +44,14 @@ export function OneHouseAiOpinionPanel({ form, result, sourceText, notes }: Prop
     notes && notes.length > 0 && `폼으로 표현하지 못한 메모 ${notes.length}건`,
   ].filter(Boolean) as string[];
 
+  // I-28 — 화면이 사라지면 진행 중인 AI 요청을 끊는다(서버가 모델 호출을 멈춘다)
+  const unmountSignal = useUnmountSignal();
+
   const runVerify = async (d: OneHouseAiOpinionData) => {
     setVerifyingFor(d);
     try {
       const res = await fetch("/api/one-house-ai/verify", {
+        signal: unmountSignal(),
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -65,6 +70,7 @@ export function OneHouseAiOpinionPanel({ form, result, sourceText, notes }: Prop
             : { for: d, data: null, error: "원문 검증 응답을 읽지 못했습니다. 다시 시도하세요." },
       );
     } catch {
+      if (unmountSignal()?.aborted) return; // I-28 — 화면이 사라졌다
       if (latestOpinion.current === d) setVerify({ for: d, data: null, error: "원문 검증 요청을 보내지 못했습니다. 네트워크를 확인하세요." });
     } finally {
       setVerifyingFor((cur) => (cur === d ? null : cur));
@@ -76,6 +82,7 @@ export function OneHouseAiOpinionPanel({ form, result, sourceText, notes }: Prop
     setError(null);
     try {
       const res = await fetch("/api/one-house-ai/opinion", {
+        signal: unmountSignal(),
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ form, result, sourceText, notes }),
@@ -95,6 +102,7 @@ export function OneHouseAiOpinionPanel({ form, result, sourceText, notes }: Prop
       setState({ for: result, data: d });
       void runVerify(d);
     } catch {
+      if (unmountSignal()?.aborted) return; // I-28 — 화면이 사라졌다
       setError("AI 참고 의견 요청을 보내지 못했습니다. 네트워크를 확인하세요.");
     } finally {
       setLoading(false);

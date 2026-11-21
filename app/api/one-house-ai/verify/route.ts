@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
   let usage: OneHouseAiVerifyData["usage"] = null;
   if (llmPoints.length > 0) {
     try {
-      const r = await compareWithSources(llmPoints);
+      const r = await compareWithSources(llmPoints, undefined, request.signal);
       model = r.model;
       usage = r.usage;
       for (const p of points) {
@@ -112,6 +112,8 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (e) {
+      // I-28 — 요청이 끊겼다: 기록하지 않고 끝낸다
+      if (request.signal.aborted) return new Response(null, { status: 499 });
       if (!(e instanceof ExtractionFailedError)) {
         console.error("[one-house-ai verify] LLM 호출 실패", { name: (e as Error).name, message: (e as Error).message });
       }

@@ -29,7 +29,7 @@ const SYSTEM_PROMPT = buildExtractionSystemPrompt(ONE_HOUSE_FIELD_CATALOG);
 /** 추출 단계 도구 반복 상한 — 용어 정의 조문 조회만 한다(계획 §3.3) */
 export const EXTRACTION_MAX_ITERATIONS = 4;
 
-export async function extractOneHouseFacts(text: string, client?: Anthropic): Promise<ExtractionRun> {
+export async function extractOneHouseFacts(text: string, client?: Anthropic, signal?: AbortSignal): Promise<ExtractionRun> {
   // 스트리밍 도구 루프 — max_tokens가 커서 SDK가 비스트리밍 요청을 「10분 넘게 걸릴 수 있다」며 보내기 전에 막는다.
   //   정책 거절(refusal) 시 서버가 기본 대체 모델로 다시 돌린다 · 법적 사실을 가려 읽어야 해서 effort high(`runWithTools`).
   //   도구는 lookup_statute 하나 — 칸의 뜻(용어 정의)만 확인하고 값은 여전히 원문 구절로만 넣는다.
@@ -42,6 +42,7 @@ export async function extractOneHouseFacts(text: string, client?: Anthropic): Pr
     maxIterations: EXTRACTION_MAX_ITERATIONS,
     maxTokens: 32000,
     client,
+    signal,
   });
   return { extraction: run.parsed, model: run.model, usage: run.usage, lookups: law.lookups };
 }

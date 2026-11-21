@@ -5,6 +5,7 @@
  * (계획 §3.4 — 국세청·기재부 해석, 조세심판, 조문). 읽은 문서(`readDocs`)만 인용 가능 집합에 더해진다(route가 거른다).
  */
 import type Anthropic from "@anthropic-ai/sdk";
+import { AI_STREAMING_MAX_TOKENS } from "../model";
 import type { ExtractionRun } from "../extract";
 import { createLawTools, type LawLookup, type ReadDoc } from "../law-tools";
 import { runWithTools } from "../tool-run";
@@ -27,6 +28,7 @@ export type OpinionRun = {
 export async function generateOneHouseOpinion(
   input: Parameters<typeof buildOpinionUserMessage>[0],
   client?: Anthropic,
+  signal?: AbortSignal,
 ): Promise<OpinionRun> {
   const law = createLawTools({ allow: ["lookup_statute", "search_interpretations", "read_interpretation"] });
   const run = await runWithTools({
@@ -35,8 +37,9 @@ export async function generateOneHouseOpinion(
     schema: oneHouseOpinionSchema,
     tools: law.tools,
     maxIterations: OPINION_MAX_ITERATIONS,
-    maxTokens: 16000,
+    maxTokens: AI_STREAMING_MAX_TOKENS,
     client,
+    signal,
   });
   return { opinion: run.parsed, model: run.model, usage: run.usage, readDocs: [...law.readDocs.values()], lookups: law.lookups };
 }

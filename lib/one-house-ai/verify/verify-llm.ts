@@ -5,6 +5,7 @@
  * 여기 보내지 않는다(서버가 cannot_verify로 정한다).
  */
 import type Anthropic from "@anthropic-ai/sdk";
+import { AI_STREAMING_MAX_TOKENS } from "../model";
 import { runStructured } from "../tool-run";
 import { verifyLlmSchema, type PointSupport } from "./verify-schema";
 
@@ -21,6 +22,7 @@ export type VerifyLlmPoint = { index: number; topic: string; opinion: string; ex
 export async function compareWithSources(
   points: readonly VerifyLlmPoint[],
   client?: Anthropic,
+  signal?: AbortSignal,
 ): Promise<{ results: Map<number, { support: PointSupport; reason: string; unsupportedClaims: string[] }>; model: string; usage: { input: number; cacheRead: number; cacheWrite: number; output: number } }> {
   const user = points
     .map(
@@ -29,7 +31,7 @@ export async function compareWithSources(
         p.excerpts.map((e) => `### 원문 발췌 — ${e.label}\n${e.text}`).join("\n"),
     )
     .join("\n\n");
-  const run = await runStructured({ system: VERIFY_SYSTEM_PROMPT, user, schema: verifyLlmSchema, maxTokens: 8000, client });
+  const run = await runStructured({ system: VERIFY_SYSTEM_PROMPT, user, schema: verifyLlmSchema, maxTokens: AI_STREAMING_MAX_TOKENS, client, signal });
   const wanted = new Set(points.map((p) => p.index));
   const results = new Map<number, { support: PointSupport; reason: string; unsupportedClaims: string[] }>();
   for (const r of run.parsed.points) {
