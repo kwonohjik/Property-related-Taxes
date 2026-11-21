@@ -75,15 +75,30 @@ export function redevPreApprovalAcqMode(asset: RedevPreApprovalAcqModeFields, is
 export function redevSec166DisplayOf(result: {
   transferBurdenedGiftBreakdown?: { acquisitionMethodUsed: string };
   redevelopmentDetail?: {
-    valuationMeta?: { method: string };
+    valuationMeta?: { method: string; lumpDeductionBase?: number };
     preApproval: { apportionedAcquisition: number };
     estimatedLumpDeduction?: number;
   };
-}): { acquisition: number; lumpDeduction: number } | undefined {
+}): { acquisition: number; lumpDeduction: number; lumpDeductionBase?: number } | undefined {
   const d = result.redevelopmentDetail;
   if (result.transferBurdenedGiftBreakdown?.acquisitionMethodUsed !== "converted") return undefined;
   if (!d?.valuationMeta?.method.startsWith("estimated")) return undefined;
-  return { acquisition: d.preApproval.apportionedAcquisition, lumpDeduction: d.estimatedLumpDeduction ?? 0 };
+  return {
+    acquisition: d.preApproval.apportionedAcquisition,
+    lumpDeduction: d.estimatedLumpDeduction ?? 0,
+    // 개산공제 base echo(취득일 기준시가 × 채무비율 — 엔진이 실제로 쓴 값). 구 결과에는 없다.
+    ...(d.valuationMeta.lumpDeductionBase !== undefined ? { lumpDeductionBase: d.valuationMeta.lumpDeductionBase } : {}),
+  };
+}
+
+/**
+ * ⑦ 「인가전 분 개산공제」 산식의 율 표기 (R-c03-06) — 율은 미등기 여부로 갈린다(3/100 · 미등기 3/1000, 「소득세법 시행령」 §163⑥).
+ * 카드에는 그 플래그가 없어 엔진이 쓴 base와 공제액에서 **역산**한다(`RedevelopmentDetailCard`와 같은 규약).
+ * 「3%」로 고정하면 미등기에서 적힌 산식이 적힌 금액을 만들지 못한다. base가 없으면(구 결과) 율 값을 적지 않는다.
+ */
+export function redevSec166LumpRateLabel(v: { lumpDeduction: number; lumpDeductionBase?: number } | undefined): string {
+  if (!v?.lumpDeductionBase || !v.lumpDeduction) return "개산공제율";
+  return `${Number(((v.lumpDeduction / v.lumpDeductionBase) * 100).toFixed(2))}%`;
 }
 
 /**

@@ -503,7 +503,7 @@ export const TRANSFER = {
   EXPROPRIATION_VALUATION:       "소득세법 시행령 §164⑨",
   /** 소득세법 시행령 §164⑨ 1호 — 협의매수·수용 시 min[기준시가, 보상액, 보상액 산정 기초 기준시가] */
   EXPROPRIATION_VALUATION_CLAUSE_1: "소득세법 시행령 §164⑨ 1호",
-  /** 소득세법 시행령 §164⑨ 2호 — 공매·경락 시 min[기준시가, 공매 또는 경락가액] (미구현 — 계획 P4) */
+  /** 소득세법 시행령 §164⑨ 2호 — 공매·경락 시 min[기준시가, 공매 또는 경락가액] */
   EXPROPRIATION_VALUATION_CLAUSE_2: "소득세법 시행령 §164⑨ 2호",
   /** 소득세법 §114조의2 — 신축·증축 건물 환산취득가액·감정가액 적용 시 가산세 (5%) */
   BUILDING_PENALTY:              "소득세법 §114조의2",

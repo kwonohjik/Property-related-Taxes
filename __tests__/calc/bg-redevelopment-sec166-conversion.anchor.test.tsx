@@ -27,6 +27,7 @@ import { POST } from "@/app/api/calc/transfer/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { redevPreApprovalAcqMode, redevSec166DisplayOf } from "@/lib/calc/redev-pre-approval-acq-mode";
+import { redevSec166LumpRateLabel } from "@/lib/calc/redev-pre-approval-acq-mode";
 import { isRedevPhdTriggered } from "@/lib/calc/redev-phd-trigger";
 import { BurdenedGiftDetailCard } from "@/components/calc/results/transfer/BurdenedGiftDetailCard";
 import { validateRedevelopmentAsset } from "@/lib/calc/transfer-tax-validate-redev";
@@ -228,10 +229,69 @@ describe("④ → ⑫ → ⑭ → 엔진", () => {
       transferBurdenedGiftBreakdown: Parameters<typeof BurdenedGiftDetailCard>[0]["breakdown"];
     };
     const display = redevSec166DisplayOf(result);
-    expect(display).toEqual({ acquisition: 150_000_000, lumpDeduction: 3_600_000 });
+    // 개산공제 base echo(취득일 기준시가 3억 × 채무비율 0.4) — R-c03-06 율 표기가 이 값에서 역산한다
+    expect(display).toEqual({ acquisition: 150_000_000, lumpDeduction: 3_600_000, lumpDeductionBase: 120_000_000 });
     render(<BurdenedGiftDetailCard breakdown={result.transferBurdenedGiftBreakdown} propertyType="redevelopment_apt" redevSec166={display} />);
     expect(screen.getByTestId("bg-redev-sec166-acquisition").textContent).toContain("§166③");
+    expect(screen.getByTestId("bg-redev-sec166-lump").textContent).toContain("× 3% (시행령 §163⑥)");
     expect(screen.queryByText(/건물 환산취득가 = 양도가액/)).toBeNull();
+  });
+
+  /** 폼 → route → 엔진 결과(부담부증여 명세 카드 입력) — W-5·W-7 공용 */
+  async function postBg(extra: Record<string, unknown>) {
+    const b = await body(form(asset()));
+    const res = await POST(
+      new NextRequest("http://localhost/api/calc/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          isRegulatedArea: false,
+          wasRegulatedAtAcquisition: false,
+          isUnregistered: false,
+          isNonBusinessLand: false,
+          annualBasicDeductionUsed: 0,
+          ...b,
+          isOneHousehold: false,
+          householdHousingCount: 2,
+          residencePeriodMonths: 0,
+          ...extra,
+        }),
+      }),
+    );
+    const json = (await res.json()) as { data?: { result?: unknown }; error?: unknown };
+    expect(res.status, JSON.stringify(json.error ?? "")).toBe(200);
+    return json.data!.result as Parameters<typeof redevSec166DisplayOf>[0] & {
+      transferBurdenedGiftBreakdown: Parameters<typeof BurdenedGiftDetailCard>[0]["breakdown"];
+      warnings: string[];
+    };
+  }
+
+  it("[W-5] R-c03-06 🔴 미등기 — 인가전 분 개산공제 줄이 엔진 율(3/1000)을 적는다(종전 「× 3%」 고정 · 금액 360,000과 10배 어긋남)", async () => {
+    const result = await postBg({ isUnregistered: true });
+    const display = redevSec166DisplayOf(result);
+    // 시료 전제 — 엔진은 미등기 율 3/1000을 썼다(120,000,000 × 0.003)
+    expect(display).toEqual({ acquisition: 150_000_000, lumpDeduction: 360_000, lumpDeductionBase: 120_000_000 });
+    render(<BurdenedGiftDetailCard breakdown={result.transferBurdenedGiftBreakdown} propertyType="redevelopment_apt" redevSec166={display} />);
+    const line = screen.getByTestId("bg-redev-sec166-lump").textContent ?? "";
+    expect(line).toContain("× 0.3% (시행령 §163⑥)");
+    expect(line).not.toContain("× 3%");
+  });
+
+  it("[W-7] R-c03-02 엔진 warnings — 공용 「확인이 필요한 사항」 카드로 그린다(종전 자체 「⚠️ 안내」 배너)", async () => {
+    const result = await postBg({});
+    const warnings = result.warnings.length > 0 ? result.warnings : ["시료 경고"];
+    render(<BurdenedGiftDetailCard breakdown={result.transferBurdenedGiftBreakdown} propertyType="redevelopment_apt" warnings={warnings} />);
+    expect(screen.getByText("확인이 필요한 사항")).toBeTruthy();
+    expect(screen.queryByText("⚠️ 안내")).toBeNull();
+    for (const w of warnings) expect(screen.getByText(w)).toBeTruthy();
+  });
+
+  it("[W-6] 율 표기 leaf — base 없음(구 결과)·0이면 율 값을 지어내지 않는다", () => {
+    expect(redevSec166LumpRateLabel(undefined)).toBe("개산공제율");
+    expect(redevSec166LumpRateLabel({ lumpDeduction: 3_600_000 })).toBe("개산공제율");
+    expect(redevSec166LumpRateLabel({ lumpDeduction: 0, lumpDeductionBase: 120_000_000 })).toBe("개산공제율");
+    // 1원 미만 절사된 공제액에서도 율이 흔들리지 않는다(123,456,789 × 3% = 3,703,703.67 → 3,703,703)
+    expect(redevSec166LumpRateLabel({ lumpDeduction: 3_703_703, lumpDeductionBase: 123_456_789 })).toBe("3%");
   });
 
   it("[W-4] 🔴 대조군 — K-4면 §166③ 표시 값이 없다(명세 그대로)", () => {

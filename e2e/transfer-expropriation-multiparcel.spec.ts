@@ -60,7 +60,7 @@ test.describe("다필지 공익수용 §164⑨ 1호 — 필지별 보상 2필드
     await expect(page.getByTestId(COMP_PER_SQM)).toBeVisible();
     await expect(page.getByTestId(COMP_BASIS)).toBeVisible();
     // 근거 표기 — 폐기된 "집행기준 99-164-12"가 아니라 시행령이어야 한다
-    await expect(page.getByText("공익수용 양도당시 기준시가 특례 (소득령 §164⑨ 1호)")).toBeVisible();
+    await expect(page.getByText("공익수용 양도당시 기준시가 특례 (소득세법 시행령 §164⑨ 1호)")).toBeVisible();
   });
 
   test("양도원인 일반(수용 아님) → 미노출", async ({ page }) => {
