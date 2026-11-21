@@ -120,7 +120,13 @@ export function effectiveGrossGainOfProperty(p: {
  * 자산별 **과세대상 양도차익** — 12억 초과 고가주택 안분 후의 값.
  *
  * 엔진 breakdown은 안분 결과를 `income`(양도소득금액)으로만 남기므로 표시부가 역산한다:
- *   과세대상 = min(gross, max(0, income) + 장특공제)
+ *   과세대상 = income + 장특공제 (차손이면 장특공제 0이라 income 그대로)
+ *   엔진 자산 기록이 `income = 과세 양도차익 − 장특공제`로 만든다(`transfer-tax-aggregate-asset-records.ts`).
+ *
+ * 🔴 R-c10-02 — 종전에는 「차손이면 gross = 과세대상」(#3337)이라 gross ≤ 0이면 gross를 돌려주고, 차익이면 `min(gross, …)`로 눌렀다.
+ *   엔진(a1bd2c352)은 자산 전체가 차손이어도 과세분을 따로 정한다 — 고가주택은 기준금액 초과분만(조심2016부0323),
+ *   비과세 건물 차손 + 배율 초과 부수토지 이익은 과세분이 양수이고 자산 전체 차익보다 클 수 있다(비과세분 차손은 통산하지 않는다).
+ *   실측: 15억 · 취득 16억 → −100,000,000 표시(엔진 −20,000,000) · 건물 차손 + 배율 초과분 → −240,000,000 표시(엔진 280,000,000).
  *
  * 🔴 다건 자산별 신고서 어댑터는 이 역산을 하지 않고 `Math.max(0, b.transferGain)`을 썼다.
  *   12억 초과 고가주택에서 **과세대상·양도소득금액이 안분 전 값으로 부풀었다**(#019).
@@ -135,9 +141,8 @@ export function assetTaxableGain(p: {
   income: number;
   longTermHoldingDeduction: number;
 }): number {
-  const gross = effectiveGrossGain(p);
   if (p.isExempt) return 0;
-  return gross > 0 ? Math.min(gross, Math.max(0, p.income) + p.longTermHoldingDeduction) : gross;
+  return p.income < 0 ? p.income : p.income + p.longTermHoldingDeduction;
 }
 
 /**
@@ -145,11 +150,11 @@ export function assetTaxableGain(p: {
  *
  * 비과세 자산의 양도차손은 gross가 음수이고 과세대상은 0이라 **비과세 양도차익도 음수**다 — 0으로 누르면 「gross = 비과세 + 과세대상」이 깨져
  * 합산 신고서·요약 카드·PDF가 어긋난다(엔진이 비과세 gross의 0 바닥을 걷은 뒤 — 계획서 `docs/00-pm/exempt-loss-gross-gain-display.plan.md` Q-1 a).
- * 비과세가 아닌 자산은 종전대로 0 바닥(차손이면 gross = 과세대상이라 0).
+ * 부분 비과세 자산도 0 바닥이 없다(R-c10-02) — 고가주택 차손은 비과세분 차손이 음수이고(15억 · 취득 16억 → −80,000,000),
+ * 비과세 건물 차손 + 배율 초과분 이익은 과세분이 gross보다 커서 음수다(−520,000,000). 일반 자산은 과세대상 = gross라 0이다.
  */
 export function assetExemptGain(p: Parameters<typeof assetTaxableGain>[0]): number {
-  const gain = effectiveGrossGain(p) - assetTaxableGain(p);
-  return p.isExempt ? gain : Math.max(0, gain);
+  return effectiveGrossGain(p) - assetTaxableGain(p);
 }
 
 /**

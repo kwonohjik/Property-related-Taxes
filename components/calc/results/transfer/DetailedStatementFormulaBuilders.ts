@@ -90,16 +90,20 @@ export function buildTaxableGainFormula(p: PerPropertyBreakdown): string {
   const tg = effectiveGrossGain(p);
   const inc = Math.max(0, p.income);
   const lth = p.longTermHoldingDeduction;
-  if (tg <= 0) return `차손 자산 — 양도차익 ${fmt(tg)} (음수)`;
+  const taxable = assetTaxableGain(p);
+  if (tg <= 0 && (p.isExempt || taxable === tg)) return `차손 자산 — 양도차익 ${fmt(tg)} (음수)`;
   // §155⑳ 특례 × 12억 초과 — 장특이 전체 차익 기준이라 «양도소득금액 + 장특» 역산이 법정 율에 안 맞는다(위 파일 머리 주석).
   const rhBasis = rhPartialBasis(p);
-  if (rhBasis) return rhPartialTaxableGainFormula(rhBasis, assetTaxableGain(p));
+  if (rhBasis) return rhPartialTaxableGainFormula(rhBasis, taxable);
+  // R-c10-02 — 엔진은 차손 자산도 과세분을 따로 정한다(고가주택은 기준금액 초과분만 · 배율 초과분 이익은 비과세분 차손과 통산하지 않는다).
+  if (taxable < 0) return `양도차손 ${fmt(tg)} 중 과세분 = ${fmt(taxable)} (비과세분 차손은 다른 자산과 통산하지 않는다)`;
+  if (taxable > tg) return `양도소득금액 ${fmt(inc)} + 장특공제 ${fmt(lth)} = ${fmt(taxable)} (전체 양도차익 ${fmt(tg)} 중 비과세분 차손은 과세분에서 빼지 않는다)`;
   // 🔴 종전 문구는 `min(양도차익 A, 양도소득금액 B + 장특공제 C = sum) = 결과`였다
   //    (2026-09-08 · 산식 한국어 풀어쓰기). 두 가지가 규약 위반이었다 —
   //    ① 함수 표기 `min(...)` ② 괄호 안의 **중간 산술 결과** `= sum`
   //    (`feedback_result_view_korean_formula`: 「중간 산술 결과 표기 금지」).
   //    형제 산식(:62·:93·:145)은 전부 「입력값과 연산 기호 + = 결과값」 한 겹이다.
-  return `양도차익 ${fmt(tg)}과 (양도소득금액 ${fmt(inc)} + 장특공제 ${fmt(lth)}) 중 작은 금액 = ${fmt(assetTaxableGain(p))}`;
+  return `양도차익 ${fmt(tg)}과 (양도소득금액 ${fmt(inc)} + 장특공제 ${fmt(lth)}) 중 작은 금액 = ${fmt(taxable)}`;
 }
 
 /** 장특공제 = 과세대상양도차익 × 율 */
@@ -112,11 +116,9 @@ export function buildLthFormula(p: PerPropertyBreakdown): string {
   }
   const rhBasis = rhPartialBasis(p);
   if (rhBasis) return rhPartialLthFormula(rhBasis, p.longTermHoldingDeduction);
-  // 과세대상양도차익 추정 (다건은 정확값 노출 없음 — taxable = min(tg, income+lth))
-  const tg = p.transferGain;
-  const inc = Math.max(0, p.income);
+  // 과세대상양도차익 — 자산별 정본 leaf(`assetTaxableGain`). 종전 인라인 `차손이면 transferGain`은 배율 초과분 이익 자산의 분모를 차손으로 잡았다(R-c10-02).
   const lth = p.longTermHoldingDeduction;
-  const taxable = tg > 0 ? Math.min(tg, inc + lth) : tg;
+  const taxable = assetTaxableGain(p);
   if (taxable <= 0) return `장특공제 ${fmt(lth)}`;
   const ratePct = ((lth / taxable) * 100).toFixed(1).replace(/\.0$/, "");
   return `과세대상양도차익 ${fmt(taxable)} × ${ratePct}% = ${fmt(lth)}`;
@@ -135,10 +137,9 @@ export function buildIncomeFormula(
   lossGiven = 0,
   givenParts: (keyof typeof LOSS_OFFSET_PART_LABEL)[] = [],
 ): string {
-  const tg = p.transferGain;
-  const inc = Math.max(0, p.income);
   const lth = p.longTermHoldingDeduction;
-  const taxable = tg > 0 ? Math.min(tg, inc + lth) : tg;
+  // 과세대상양도차익 — 자산별 정본 leaf(`assetTaxableGain`). 종전 인라인 `차익이면 min(gross, …) · 차손이면 gross`는 과세분이 따로 정해진 차손 자산에서 좌변이 우변을 만들지 못했다(R-c10-02).
+  const taxable = assetTaxableGain(p);
   const rhBasis = rhPartialBasis(p);
   const base = rhBasis ? rhPartialIncomeFormula(rhBasis, lth, p.income) : `${fmt(taxable)} - ${fmt(lth)} = ${fmt(p.income)}`;
   if (p.income === p.incomeAfterOffset) return base;
