@@ -30,6 +30,7 @@ import { BundledAllocationCard } from "@/components/calc/results/BundledAllocati
 import { collectSaleSplitUnenteredNotices } from "@/components/calc/results/transfer/sale-split-unentered-notice";
 import { classifyAmendableTransfer } from "@/lib/calc/transfer-amendment-entry";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import {
   GB_SAMPLES,
   LAND,
@@ -125,11 +126,11 @@ describe("3-way 표 — 자산별 · 결손 통산 합계(Q-2 a)", () => {
     const f = bundledForm("EXT3");
     renderCard(await run(f), f);
     const bundled = threeWay().textContent!.replace(" — 주 자산", "");
-    const beforeOffset = (t: string) => t.slice(0, t.indexOf("결손 통산 (영§102②)"));
+    const beforeOffset = (t: string) => t.slice(0, t.indexOf(`결손 통산 (${TRANSFER.LOSS_OFFSET})`));
     expect(beforeOffset(bundled)).toBe(beforeOffset(single));
-    expect(single).toContain("결손 통산 (영§102②)△6,944,851△568,478+7,513,3290통산 후");
+    expect(single).toContain(`결손 통산 (${TRANSFER.LOSS_OFFSET})△6,944,851△568,478+7,513,3290통산 후`);
     // 5,599,450 + 458,349 + 1,455,530 = 7,513,329
-    expect(bundled).toContain("결손 통산 (영§102②)△5,599,450△458,349+7,513,329+1,455,530통산 후");
+    expect(bundled).toContain(`결손 통산 (${TRANSFER.LOSS_OFFSET})△5,599,450△458,349+7,513,329+1,455,530통산 후`);
   });
 
   it("단건 결손 → 통산 합계 0 · 「통산 전후 동일」 각주 그대로", async () => {
@@ -144,7 +145,7 @@ describe("3-way 표 — 자산별 · 결손 통산 합계(Q-2 a)", () => {
     const f = bundledForm("EXT-LOSS");
     renderCard(await run(f), f);
     const t = threeWay().textContent!;
-    expect(t).toContain("결손 통산 (영§102②)△347,107,531+429,821,909+7,513,329+90,227,707");
+    expect(t).toContain(`결손 통산 (${TRANSFER.LOSS_OFFSET})△347,107,531+429,821,909+7,513,329+90,227,707`);
     expect(t).toContain("결손 중 90,227,707은 함께 양도한 다른 자산의 양수 소득에 흡수되어");
     expect(t).not.toContain("통산 전후 동일");
   });

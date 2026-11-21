@@ -7,6 +7,7 @@ import { baseCardId } from "@/lib/tax-engine/general-building-share-id";
 import { foldPurchasedPieces } from "@/lib/tax-engine/general-building-purchased-pieces";
 import { foldGbLandCards } from "@/lib/tax-engine/general-building-land-cards";
 import { gbViewProperties, type GbBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 
 /** 꼬리 카드(매입분)를 부모에 합칠 때 더하는 수치 — 이 표가 읽는 행들이다(세율·공제율 같은 비율은 더하지 않는다). */
 const THREE_WAY_SUM_KEYS = [
@@ -27,7 +28,7 @@ const LAND_COLUMN_IDS = new Set(["land", "land_business", "land_nbl"]);
 
 /**
  * 일반건물 증축 케이스(사례 33) 전용 — 토지(1001)·건물1(3001)·건물2(3002) 3열 요약 표.
- * 영 §102② 결손 통산 전·후 양도소득금액을 자산별로 분리 표시.
+ * 결손 통산(소득세법 §102② · 시행령 §167의2) 전·후 양도소득금액을 자산별로 분리 표시.
  *
  * 진입 조건: 그 일반건물의 카드가 정확히 3장이고 그중 「증축건물(3002)」이 있을 때.
  *
@@ -152,7 +153,7 @@ export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: Agg
   return (
     <div className="rounded-lg border bg-card p-4 shadow-sm">
       <h3 className="font-semibold text-base mb-1">
-        일반건물 3-자산 요약 (영 §102② 결손 통산){view?.label ? ` — ${view.label}` : ""}
+        일반건물 3-자산 요약 (결손 통산 — {TRANSFER.LOSS_OFFSET}){view?.label ? ` — ${view.label}` : ""}
       </h3>
       <p className="text-xs text-muted-foreground mb-3">
         토지(1001) · 건물1(3001) · 증축건물2(3002) 소득 라인을 분리 표시.
@@ -265,10 +266,10 @@ export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: Agg
                 {fmt(land.income + bld1.income + bld2.income)}
               </td>
             </tr>
-            {/* 영 §102② 통산 흡수 */}
+            {/* 결손 통산 흡수 (소득세법 §102② · 시행령 §167의2) */}
             <tr className="border-b border-border/40">
               <td className="py-1 pr-2 text-muted-foreground text-caption">
-                결손 통산 (영§102②)
+                결손 통산 ({TRANSFER.LOSS_OFFSET})
               </td>
               <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-xs ${landOffsetCell.tone}`}>{landOffsetCell.text}</td>
               <td className={`py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-xs ${bld1OffsetCell.tone}`}>{bld1OffsetCell.text}</td>
@@ -306,24 +307,24 @@ export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: Agg
             )}
             결손 중 {formatKRW(expiredLoss)}은 공제할 양도소득금액이 없어 통산되지 못하고 소멸합니다(이월 불인정).{" "}
             {netOffset + expiredLoss === 0
-              ? "이 표의 통산 후 합계는 통산 전과 같습니다 (영 §102②)."
-              : `이 표의 통산 후 합계는 통산 전보다 ${formatKRW(Math.abs(netOffset + expiredLoss))} ${netOffset + expiredLoss > 0 ? "큽니다" : "작습니다"} (영 §102②).`}
+              ? `이 표의 통산 후 합계는 통산 전과 같습니다 (${TRANSFER.LOSS_OFFSET}).`
+              : `이 표의 통산 후 합계는 통산 전보다 ${formatKRW(Math.abs(netOffset + expiredLoss))} ${netOffset + expiredLoss > 0 ? "큽니다" : "작습니다"} (${TRANSFER.LOSS_OFFSET}).`}
           </>
         ) : netOffset === 0 ? (
           <>
             양도소득금액 합계는 통산 전후 동일하지만,{" "}
             <strong>자산별 분포가 변경</strong>됩니다. 결손 자산의 손실이 나머지 자산의 양수에 흡수되어
-            세율 적용 기준 양도소득금액이 자산 단위로 재분배됩니다 (영 §102②).
+            세율 적용 기준 양도소득금액이 자산 단위로 재분배됩니다 ({TRANSFER.LOSS_OFFSET}).
           </>
         ) : netOffset > 0 ? (
           <>
             결손 중 {formatKRW(netOffset)}은 <strong>함께 양도한 다른 자산</strong>의 양수 소득에 흡수되어, 이 표의 통산 후
-            합계는 통산 전보다 그만큼 큽니다 (영 §102②).
+            합계는 통산 전보다 그만큼 큽니다 ({TRANSFER.LOSS_OFFSET}).
           </>
         ) : (
           <>
             <strong>함께 양도한 다른 자산</strong>의 결손 {formatKRW(-netOffset)}을 이 물건이 흡수해, 이 표의 통산 후 합계는
-            통산 전보다 그만큼 작습니다 (영 §102②).
+            통산 전보다 그만큼 작습니다 ({TRANSFER.LOSS_OFFSET}).
           </>
         )}
       </p>

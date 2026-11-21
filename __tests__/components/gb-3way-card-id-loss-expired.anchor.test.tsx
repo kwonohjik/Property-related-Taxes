@@ -24,6 +24,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { GeneralBuilding3WayTable } from "@/components/calc/results/transfer/GeneralBuilding3WayTable";
 import { gbBlockViewsOf } from "@/components/calc/results/transfer/gb-result-block-views";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
@@ -65,6 +66,8 @@ async function tableText(f: TransferFormData): Promise<string[]> {
     return container.textContent ?? "";
   });
 }
+/** 결손 통산 행 — 근거는 소득세법 §102② + 시행령 §167의2(종전 「영§102②」는 시행령 §102 채권등의 범위 — 오기). */
+const OFFSET_ROW = `결손 통산 (${TRANSFER.LOSS_OFFSET})`;
 /** 행 하나의 칸(구분 · 토지 · 건물1 · 건물2 · 합계). */
 const rowCells = (text: string, head: string) => {
   const tr = [...document.querySelectorAll("tr")].find((r) => r.querySelector("td")?.textContent === head);
@@ -79,10 +82,11 @@ describe("R-c07-04 — 단건: 흡수되지 못한 결손은 기여가 아니라
     f.assets = [Object.assign({ ...makeDefaultAsset(1) }, GB) as AssetForm];
     const [text] = await tableText(f);
     // 종전: △605,670,105 | +2,210,015,710 | +5,227,296 | +1,609,572,901
-    expect(rowCells(text, "결손 통산 (영§102②)")).toEqual(["△605,670,105", "+604,240,908", "+1,429,197", "0"]);
+    expect(rowCells(text, OFFSET_ROW)).toEqual(["△605,670,105", "+604,240,908", "+1,429,197", "0"]);
     expect(text).not.toContain("함께 양도한 다른 자산");
     expect(text).toContain("결손 중 1,609,572,901은 공제할 양도소득금액이 없어 통산되지 못하고 소멸합니다(이월 불인정).");
-    expect(text).toContain("이 표의 통산 후 합계는 통산 전보다 1,609,572,901 큽니다");
+    expect(text).toContain(`이 표의 통산 후 합계는 통산 전보다 1,609,572,901 큽니다 (${TRANSFER.LOSS_OFFSET}).`);
+    expect(text).not.toMatch(/영 ?§102②/);
   });
 });
 
@@ -99,7 +103,7 @@ describe("R-c07-01 + R-c07-04 — 함께 양도 · 자산 명칭 「상가 3001�
     expect(text).toContain("상가 3001호");
     // 종전: 1,265,243,006 | 1,265,243,006 | 44,772,704 | 2,575,258,716 (토지 카드가 건물1 열에도)
     expect(rowCells(text, "양도가액")).toEqual(["1,265,243,006", "289,984,290", "44,772,704", "1,600,000,000"]);
-    expect(rowCells(text, "결손 통산 (영§102②)")).toEqual(["△605,670,105", "+1,162,919,479", "+2,750,626", "+560,000,000"]);
+    expect(rowCells(text, OFFSET_ROW)).toEqual(["△605,670,105", "+1,162,919,479", "+2,750,626", "+560,000,000"]);
     expect(text).toContain("결손 중 560,000,000은 함께 양도한 다른 자산의 양수 소득에 흡수되었습니다.");
     expect(text).toContain("결손 중 1,049,572,901은 공제할 양도소득금액이 없어 통산되지 못하고 소멸합니다(이월 불인정).");
     expect(text).toContain("이 표의 통산 후 합계는 통산 전보다 1,609,572,901 큽니다");
