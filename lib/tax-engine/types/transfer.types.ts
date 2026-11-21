@@ -405,6 +405,11 @@ export interface TransferTaxInput {
   };
   /** 거주기간 (월) */
   residencePeriodMonths: number;
+  /**
+   * 거주 구간(전입일~전출일) — 판정 메뉴 구간 입력 모드만 싣는다(2026-11 리뷰 I-07). 기한 말일 현재 거주를 정확히 셀 때만 쓴다
+   * (`one-house/deadline-holding.ts`). 구간 합이 `residencePeriodMonths`와 다르면 쓰지 않는다.
+   */
+  residenceIntervals?: { start: Date; end: Date }[];
   /** 양도일 기준 조정대상지역 여부 */
   isRegulatedArea: boolean;
   /** 취득일 기준 조정대상지역 여부 */

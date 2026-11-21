@@ -112,6 +112,8 @@ const JUDGE_INPUT_KEYS = [
   "redevSuccessorGift",
   // 결정 #42 — 조특법 §71의2 후보 중 사실을 확정하지 못한 건(엔진이 채운다 · 주택 수 제외 스텝의 echo)
   "popDecline71_2Unconfirmed",
+  // 2026-11 리뷰 I-07 — 판정 메뉴 거주 구간(기한 말일 현재 거주)
+  "residenceIntervals",
 ] as const;
 
 const _frozenKeyGuards: [
@@ -149,6 +151,7 @@ const MAXIMAL: Partial<TransferTaxInput> = {
   parentalCareMerge: { mergeDate: D("2019-09-10"), parentAge: "over_60" as const },
   isFirstTransferredInMerge: true,
   residencePeriodMonths: 37,
+  residenceIntervals: [{ start: new Date("2019-01-01"), end: new Date("2022-01-31") }],
   residenceTransitionAcquisitionDate: D("2017-01-03"),
   isRegulatedArea: true,
   wasRegulatedAtAcquisition: true,

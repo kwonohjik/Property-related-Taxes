@@ -162,6 +162,12 @@ export function buildEraNoticeRelevance(ctx: {
       const v = core({ ...input, nonResidentHoldingPeriod: { ...p, residedAtConversion: false } });
       return `${v.isExempt}|${v.isPartialExempt}` !== `${verdict.isExempt}|${verdict.isPartialExempt}`;
     },
+    // I-25 — 거주 구간을 날수로 이어 붙인 개월로 본체 판정 1회. 과세 → 비과세·부분과세 방향만(Q-26).
+    residenceConsolidationDecides: (months) => {
+      if (article89Excluded || verdict.isExempt || verdict.isPartialExempt) return false;
+      const v = core({ ...input, residencePeriodMonths: months });
+      return v.isExempt || v.isPartialExempt;
+    },
     // D-68 — §155① 축 고지(⑯ 통합특별시·군위 · J-3)는 두 갈래 본체 판정의 결론이 다를 때만.
     temporaryTwoHouseVariantsDecide: (a, b) => {
       if (article89Excluded) return false;

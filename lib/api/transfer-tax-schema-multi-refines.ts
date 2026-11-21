@@ -102,6 +102,8 @@ export const MULTI_REJECT_RULES: Record<string, (v: unknown, data?: Record<strin
  * 근거를 적지 못하는 키는 여기에 넣지 말고 ⑭에 매핑하거나 거부 규칙에 넣는다.
  */
 export const MULTI_IGNORED_KEYS: Record<string, string> = {
+  // 2026-11 리뷰 I-07 — 판정 메뉴 구간 모드만 싣는 거주 구간(기한 말일 현재 거주). 다건 ④는 보내지 않고 ⑭도 옮기지 않는다 — 다건 엔진은 입력 거주 개월로만 판정한다.
+  residenceIntervals: "판정 메뉴 전용(기한 말일 현재 거주 · I-07)",
   // 일괄양도 안분 입력 — 단건 route는 `companions.length > 0`일 때만 읽는다. 컴패니언은 위에서 거부한다.
   totalSalePrice: "일괄양도 분기 전용(route.ts bundledOk)",
   bundledSaleMode: "일괄양도 분기 전용",

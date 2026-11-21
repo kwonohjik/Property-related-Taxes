@@ -17,6 +17,7 @@
  * 범위: 판정 메뉴만(사용자 결정 2026-10-08). 계산기는 이 입력을 보내지 않는다 — §95② 단서(장기보유특별공제 표2)도
  * 계산기 몫이라 다루지 않는다.
  */
+import { RESIDENCE_INTERVAL_CONSOLIDATION_ID } from "./era-undetermined";
 import { TRANSFER } from "../legal-codes/transfer";
 import { NON_RESIDENT_HOUSE_EXCLUSION_TRANSFER_START } from "../data/non-resident-exclusion-era";
 import { resolveExemptionProviso } from "../transfer-tax-exemption-holding";
@@ -38,6 +39,8 @@ const COUNTERFACTUAL_UNCONFIRMED_IDS: ReadonlySet<string> = new Set([
   NEW_HOUSE_ORIGIN_UNCONFIRMED_ID,
   RURAL_FARM_FACTS_UNCONFIRMED_ID,
   POP_DECLINE_71_2_UNCONFIRMED_ID,
+  // I-25 — 날수 이어 붙임 반사실이 비과세라는 고지는 비거주자로 거둔 판정에서 사실이 아니다
+  RESIDENCE_INTERVAL_CONSOLIDATION_ID,
 ]);
 
 const OVERSEAS_REASONS = new Set(["overseas_migration", "overseas_residence"]);

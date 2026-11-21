@@ -207,6 +207,8 @@ export function buildOneHouseExemptionApiBody(
      *    전까지 드러나지 않는다(`feedback_fixture_default_masks_gate_defect`).
      */
     residencePeriodMonths: deriveJudgmentResidenceMonths(form),
+    // ④ I-07 — 구간 모드면 구간을 함께 싣는다(용도변경 전 거주는 위 개월과 같이 잘라 낸다 — 합이 개월과 같아야 엔진이 쓴다).
+    ...judgmentResidenceIntervalsPayload(form),
     householdHousingCount: houseCount,
     /**
      * §154⑤ 단서 비주택 → 주택 용도변경 — 계산기 ④(`transfer-tax-api.ts`)와 같은 모양. ⑫⑭·엔진은 이미 읽는다
@@ -417,5 +419,20 @@ function withoutOneHouseRowFacts(payload: object, omit: boolean): object {
   const out: Record<string, unknown> = { ...payload };
   for (const k of ONE_HOUSE_ROW_FACT_KEYS) delete out[k];
   return out;
+}
+
+/**
+ * I-07 — 판정 메뉴 거주 구간 → 본문 `residenceIntervals`. 전입·전출이 모두 있는 구간만, 주거용 사용 개시일(용도변경) 전은 잘라 낸다
+ * (`clampResidenceToHousingPeriod`와 같은 규칙). 직접 입력 모드·구간 없음은 싣지 않는다.
+ */
+function judgmentResidenceIntervalsPayload(form: OneHouseJudgmentFormData): { residenceIntervals?: { start: string; end: string }[] } {
+  const primary = form.assets[0];
+  if (!primary || primary.residenceInputMode !== "interval") return {};
+  const from = judgmentUsageConversionStart(form);
+  const intervals = primary.residencePeriods
+    .filter((p) => p.moveInDate && p.moveOutDate)
+    .map((p) => ({ start: from && p.moveInDate < from ? from : p.moveInDate, end: p.moveOutDate }))
+    .filter((iv) => iv.start <= iv.end);
+  return intervals.length > 0 ? { residenceIntervals: intervals } : {};
 }
 
