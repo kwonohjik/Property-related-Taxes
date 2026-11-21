@@ -17,6 +17,7 @@
  * (`feedback_aggregate_display_rederives_engine_value`).
  */
 import { unconfirmedTempTwoHouseProviso4ho } from "@/lib/calc/exemption-proviso-payload";
+import { OpenSourceJudgmentLink } from "./OpenSourceJudgmentLink";
 import type { Rental4hoFormSlice } from "@/lib/calc/rental-4ho-proviso";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -327,7 +328,7 @@ export function ImportedOneHouseFactsCard({
     <ToneCard tone="violet" title="판정 메뉴에서 넘겨받은 사실" className="space-y-3">
       <p className="text-sm text-muted-foreground">
         아래는 <b>1세대1주택 비과세 판정</b> 메뉴에서 입력한 값입니다. 이 화면에서는 수정할 수
-        없습니다 — 고치려면 판정 메뉴로 돌아가 다시 판정하세요.
+        없습니다 — 고치려면 판정 메뉴로 돌아가 다시 판정하세요. <OpenSourceJudgmentLink />
       </p>
 
       {hasMortgage && (

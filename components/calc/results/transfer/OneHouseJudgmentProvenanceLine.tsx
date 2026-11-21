@@ -24,6 +24,7 @@
  * `DisclaimerBanner`가 4종 전건에서 같은 자리에 같은 이유로 놓여 있다.
  */
 import { useEffect, useState } from "react";
+import { OpenSourceJudgmentLink } from "@/components/calc/transfer/OpenSourceJudgmentLink";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import {
   calcVerdictDiffers,
@@ -169,7 +170,9 @@ export function OneHouseJudgmentProvenanceLine({
             {" · 넘겨받을 당시 판정 결과 "}
             <b data-testid="provenance-verdict">{rec.verdictLabel}</b>
             {" · 저장 "}
-            <span className="font-mono tabular-nums">{rec.updatedAt.slice(0, 10)}</span>
+            <span className="font-mono tabular-nums">{rec.updatedAt.slice(0, 10)}</span>{" "}
+            {/* I-14 — 원본 판정을 이력 재개로 연다(다건 화면에서는 링크가 스스로 숨는다) */}
+            <OpenSourceJudgmentLink />
           </p>
         )}
         {/* PR-13b(계획서 OH-18 「판정 결과와 다름」) — 넘긴 뒤 계산기에서 명부·양도일 등을 고쳐 결론이 바뀐 경우 */}
