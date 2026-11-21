@@ -277,6 +277,11 @@ export const TRANSFER = {
   TAX_RATE_SHORT_UNDER_1Y:       "소득세법 §104 ①3호",
   /** 소득세법 §104 ⑦ — 다주택 중과세율 (+20%p / +30%p) */
   SURCHARGE:                     "소득세법 §104 ⑦",
+  /**
+   * 소득세법 §104 ⑦ 3호(1세대 3주택 이상)·4호(주택과 조합원입주권 또는 분양권의 수의 합이 3 이상) — 두 호에 모두 해당하는
+   * 주택의 §104⑤2호 합산 단위 확인 필요 고지(`transfer-tax-aggregate-group-tax.ts` `bucketIdOf` · 후보 ⑥).
+   */
+  SURCHARGE_CLAUSES_3_AND_4:     "소득세법 §104 ⑦3호·4호",
   /** 소득세법 §55 ① — 양도소득 기본세율의 표(§104①1호가 「제55조제1항에 따른 세율」로 연결) */
   PROGRESSIVE_RATE_TABLE:        "소득세법 §55 ①",
   /**

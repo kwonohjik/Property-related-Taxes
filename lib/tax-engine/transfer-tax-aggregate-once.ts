@@ -279,7 +279,15 @@ export function computeAggregateOnce(
     assetPartClauseKeys,
     assetPartBasic,
     assetPartIncome,
+    surchargeClause3And4OverlapSplit,
   } = computeGroupsAndComparison(assetRecords, taxableAfterReduction, allocatedBasic, rates, partBasic);
+  if (surchargeClause3And4OverlapSplit) {
+    warnings.push(
+      `${TRANSFER.SURCHARGE_CLAUSES_3_AND_4} — 주택 3채 이상과 산입된 조합원입주권·분양권을 함께 보유한 세대의 주택은 3호와 4호에 모두 해당합니다. ` +
+        `이 계산은 그 주택을 4호로 보아, 같은 과세기간에 3호에만 해당하는 주택과 과세표준을 합산하지 않았습니다(${TRANSFER.COMPARATIVE_TAXATION} 2호 단서 «동일한 호»). ` +
+        "두 호에 모두 해당하는 주택의 합산 단위에 관한 해석례를 확인하지 못했습니다 — 확인 필요.",
+    );
+  }
 
   // §104⑤ 괄호 — 호별 감면(F-9)이 두 경로에서 달라지면 **감면 차감 후** 세액으로 고른다.
   const m8Base = {
