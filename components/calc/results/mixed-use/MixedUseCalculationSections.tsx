@@ -20,6 +20,8 @@
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { MIXED_USE } from "@/lib/tax-engine/legal-codes/transfer-mixed-use";
+import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer-house";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { mixedPartLthdRates } from "@/lib/tax-engine/transfer-tax-mixed-use-inheritance";
 import { mixedPartLthdRateText } from "@/lib/tax-engine/transfer-tax-mixed-use-inheritance";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
@@ -95,6 +97,8 @@ export function MixedUseCalculationSections({
    * echo가 있으면 취득가액·양도차익 행은 파트별 산정방식을 그린다(아래 `sep ? … : 종전`).
    */
   const sep = breakdown.separateAcquisition;
+  // R-c02-02 — 미등기(§104③)면 장특(§95② 본문 괄호)·기본공제·비과세(§91①)가 배제된다. 엔진이 확정한 세율 근거를 읽는다(재도출 금지).
+  const unregistered = t.rateBasis === "unregistered";
   const isInheritedAcq = acqRoute === "inheritance_direct" || acqRoute === "inheritance_phd_max";
   const isGiftAcq = acqRoute === "gift_direct" || acqRoute === "gift_phd_max";
   // 매매 취득 실거래가 직접 안분(법 §100²·§97①1호가목) — 실가 산식(개산공제 미표시), 라벨 구분.
@@ -111,18 +115,22 @@ export function MixedUseCalculationSections({
   // 새 안분(계약서 구분·감정가액) + 환산 — 엔진이 토지·건물 파트별로 환산한다(Q-8). 그 경우만 산식을 바꾼다(M-2).
   const perPartConversion = breakdown.saleSplit && !isDeemedAcq && !isAppraisalSalesAcq ? breakdown.saleSplit : undefined;
 
+  /** §163⑨ 의제 취득가액 문구 — 주택분·상가분 공용. 평가 기준일은 증여 취득이면 증여일(R-c02-05). */
+  const deemedAcqBase = (d: NonNullable<typeof h.inheritedAcquisitionDetail>, phdMax: boolean) => {
+    const day = isGiftAcq ? "증여일" : "상속개시일";
+    return d.selected === "reported"
+      ? `${day} 신고가액 ${fmtPlain(d.reportedValue)}`
+      : `${day} 보충적평가액(상증법 §60~66) ${fmtPlain(d.standardPriceCandidate)}` +
+          (phdMax && d.reportedValue !== null
+            ? ` (신고가액 ${fmtPlain(d.reportedValue)}과 §164⑦ 환산가액 중 큰 값 — 소령 §163⑨2호)`
+            : "");
+  };
+
   /** 주택 취득가액 산식 — 종전 행과 B1 환산 파트 행이 **같은 산식**을 쓴다(복제 금지). */
   const housingAcqFormula = (): React.ReactNode => {
             if (sec163_9 && sec163_9.selected !== "converted") return mixedSec163_9PartFormula(sec163_9, "housing", h.estimatedAcquisitionPrice);
             if (isDeemedAcq && h.inheritedAcquisitionDetail) {
-              const d = h.inheritedAcquisitionDetail;
-              const base =
-                d.selected === "reported"
-                  ? `상속개시일 신고가액 ${fmtPlain(d.reportedValue)}`
-                  : `상속개시일 보충적평가액(상증법 §60~66) ${fmtPlain(d.standardPriceCandidate)}` +
-                    (acqRoute === "inheritance_phd_max" && d.reportedValue !== null
-                      ? ` (신고가액 ${fmtPlain(d.reportedValue)}과 §164⑦ 환산가액 중 큰 값 — 소령 §163⑨2호)`
-                      : "");
+              const base = deemedAcqBase(h.inheritedAcquisitionDetail, acqRoute === "inheritance_phd_max" || acqRoute === "gift_phd_max");
               return `${base} — 취득당시 실지거래가액으로 의제 (소령 §163⑨)`;
             }
             if (isAppraisalSalesAcq) {
@@ -244,7 +252,9 @@ export function MixedUseCalculationSections({
         <span className="font-semibold">
           1세대 1주택 비과세:{" "}
           {breakdown.calculationRoute.highValueRule === "non_one_house_full_taxation"
-            ? "미적용 (전액 과세 + 표1 공제)"
+            ? unregistered
+              ? `미적용 (미등기 양도자산 — 비과세 배제(${TRANSFER.EXEMPTION_UNREGISTERED_EXCLUSION}) · 장기보유특별공제·기본공제 배제)`
+              : "미적용 (전액 과세 + 표1 공제)"
             : breakdown.calculationRoute.highValueRule === "below_threshold_exempt"
               ? h.laterLandExemptExcluded
                 ? "적용 (12억 이하 비과세 — 나중에 취득한 부수토지분은 보유요건 미달로 과세)"
@@ -448,6 +458,14 @@ export function MixedUseCalculationSections({
                   formula={
                     base <= 1_200_000_000 ? (
                       `${baseLabel} ${fmtPlain(base)} ≤ 12억 → 12억 초과분 없음 — 산식은 주택 부분만 (${MIXED_USE.HIGH_VALUE_FORMULA_HOUSING_ONLY})`
+                    ) : h.laterLandExemptExcluded ? (
+                      // R-c02-03 — 나중에 취득한 부수토지분은 보유요건 미달로 안분하지 않고 전액 과세, 건물분만 안분(엔진 landProratio = 1).
+                      <FLine>
+                        부수토지 양도차익 {fmtPlain(h.landTransferGain - h.nonBusinessTransferredGain)} 전액
+                        {h.nonBusinessTransferredGain > 0 ? ` (비사업용 이전분 ${fmtPlain(h.nonBusinessTransferredGain)} 제외)` : ""}
+                        {" "}+ 건물분 {fmtPlain(h.buildingTransferGain)} ×{" "}
+                        <Frac top={`${baseLabel} ${fmtPlain(base)} - 12억`} bottom={`${baseLabel} ${fmtPlain(base)}`} />
+                      </FLine>
                     ) : h.highValueExcessRuling ? (
                       // 재산세제과-915(2011.10.27.) 회신 방식 — 엔진 echo를 그대로 읽는다(안분 후 값에서 초과분을 한 번만 뺀다).
                       <FLine>
@@ -500,7 +518,7 @@ export function MixedUseCalculationSections({
           return (
             <Row
               label={
-                excl
+                excl || unregistered
                   ? "장기보유공제 (배제)"
                   : rates
                     ? `장기보유공제 (${mixedPartLthdRateText(rates, fmtPct)})`
@@ -508,7 +526,9 @@ export function MixedUseCalculationSections({
               }
               value={`△ ${fmt(h.longTermDeductionAmount)}`}
               formula={
-                excl
+                unregistered
+                  ? LTHD_EXCLUSION_LABEL.unregistered
+                  : excl
                   ? `조정대상지역 ${excl.houseCount}주택 중과 대상 주택 — 장기보유특별공제 배제 (소득세법 §95② 본문 괄호·§104⑦)` +
                     (excl.fromFallback
                       ? " ※ 다른 보유 주택 목록 미입력 — 「세대 보유 주택 수」로 판정한 근사입니다."
@@ -589,12 +609,7 @@ export function MixedUseCalculationSections({
             formula={(() => {
               if (sec163_9 && sec163_9.selected !== "converted") return mixedSec163_9PartFormula(sec163_9, "commercial", c.estimatedAcquisitionPrice);
               if (isDeemedAcq && c.inheritedAcquisitionDetail) {
-                const d = c.inheritedAcquisitionDetail;
-                const base =
-                  d.selected === "reported"
-                    ? `상속개시일 신고가액 ${fmtPlain(d.reportedValue)}`
-                    : `상속개시일 보충적평가액(상증법 §60~66) ${fmtPlain(d.standardPriceCandidate)}`;
-                return `${base} — 취득당시 실지거래가액으로 의제 (소령 §163⑨)`;
+                return `${deemedAcqBase(c.inheritedAcquisitionDetail, false)} — 취득당시 실지거래가액으로 의제 (소령 §163⑨)`;
               }
               if (perPartConversion) {
                 return (
@@ -692,13 +707,17 @@ export function MixedUseCalculationSections({
               return (
                 <Row
                   label={
-                    rates
+                    unregistered
+                      ? "장기보유공제 (배제)"
+                      : rates
                       ? `장기보유공제 (${mixedPartLthdRateText(rates, fmtPct)})`
                       : `장기보유공제 (표1, ${fmtPct(c.longTermDeductionRate)})`
                   }
                   value={`△ ${fmt(c.longTermDeductionAmount)}`}
                   formula={
-                    rates
+                    unregistered
+                      ? LTHD_EXCLUSION_LABEL.unregistered
+                      : rates
                       ? `토지분 ${fmtPlain(rates.land.echo.taxableGain)} × ${fmtPct(rates.land.echo.longTermRate)}${yrs(rates.land.echo.holdingYears)} = ${fmtPlain(rates.land.echo.longTermDeduction)}` +
                         ` + 건물분 ${fmtPlain(rates.building.echo.taxableGain)} × ${fmtPct(rates.building.echo.longTermRate)}${yrs(rates.building.echo.holdingYears)} = ${fmtPlain(rates.building.echo.longTermDeduction)}`
                       : "보유연수×2% (최대 30%) — 토지/건물 별 보유연수 적용"
@@ -724,6 +743,7 @@ export function MixedUseCalculationSections({
           landTransferGain={h.landTransferGain}
           nonBusinessTransferRatio={h.nonBusinessTransferRatio}
           commercialLandTransferGain={c.landTransferGain}
+          unregistered={unregistered}
           open={openSections.nbl}
           onToggle={() => toggleSection("nbl")}
         />

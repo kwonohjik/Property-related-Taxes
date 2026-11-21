@@ -8,6 +8,7 @@
  */
 import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixed-use.types";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { nblExclusionBannerText } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
 import {
   DivRow,
@@ -27,11 +28,13 @@ interface Props {
   nonBusinessTransferRatio: number;
   /** 상가 토지분 양도차익 (`commercialPart.landTransferGain`) — OH-17(§154③ 본문)에서 같은 비율로 이 파트에 옮겨 온 몫의 원값 */
   commercialLandTransferGain?: number;
+  /** 미등기(`total.rateBasis === "unregistered"`) — 장기보유특별공제 배제(§95② 본문 괄호, R-c02-02) */
+  unregistered?: boolean;
   open: boolean;
   onToggle: () => void;
 }
 
-export function MixedUseNblSection({ nb, landTransferGain, nonBusinessTransferRatio, commercialLandTransferGain, open, onToggle }: Props) {
+export function MixedUseNblSection({ nb, landTransferGain, nonBusinessTransferRatio, commercialLandTransferGain, unregistered, open, onToggle }: Props) {
   // V10-BX09 — OH-17(§154③ 본문)이면 한도는 「전체 토지 × 건물 전체 정착면적」, 양도차익은 주택·상가 토지분의 합이다. 문구가 한 가지로 고정되면 값과 어긋난다.
   const whole = nb.excessBasis?.wholeBuildingDeemedHouse === true;
   const addPct = Math.round(nb.additionalRate * 100);
@@ -66,9 +69,9 @@ export function MixedUseNblSection({ nb, landTransferGain, nonBusinessTransferRa
         }
       />
       <Row
-        label={`장기보유공제 (표1, ${fmtPct(nb.longTermDeductionRate)})`}
+        label={unregistered ? "장기보유공제 (배제)" : `장기보유공제 (표1, ${fmtPct(nb.longTermDeductionRate)})`}
         value={`△ ${fmt(nb.longTermDeductionAmount)}`}
-        formula="토지 보유연수×2% (최대 30%)"
+        formula={unregistered ? LTHD_EXCLUSION_LABEL.unregistered : "토지 보유연수×2% (최대 30%)"}
       />
       <DivRow />
       <Row

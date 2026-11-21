@@ -54,6 +54,19 @@ const INCOME_DEDUCTION_LABEL: Record<string, string> = {
   unsold_98_8: "조세특례제한법 §98의8 준공후미분양주택 과세특례",
 };
 
+/** §104⑤2호 자산별 산출세액 한 항 — 엔진 echo 그대로(R-c02-04). */
+function clause2TermText(x: NonNullable<MixedUseGainBreakdown["total"]["clause2Terms"]>[number]): string {
+  const head = `${x.kinds.map((k) => PART_LABEL[k]).join("·")} 과세표준 ${fmtPlain(x.taxBase)}`;
+  const pct = (r: number) => `${Math.round(r * 100)}%`;
+  const cite = x.shortTermClause === "104-1-3" ? TRANSFER.SHORT_TERM_RATE_UNDER_1Y : TRANSFER.SHORT_TERM_RATE_1_2Y;
+  const st = x.shortTermRate !== undefined ? `단기세율 ${pct(x.shortTermRate)}` : "";
+  const surcharged = x.addon !== undefined ? `누진세율 + ${pct(x.addon)}p` : "누진세율";
+  // 보유 2년 미만이면 단기세율과 비교한 큰 쪽이 채택된다(§104① 후단·§104⑦ 후단) — 진 쪽을 [ ]에 적는다.
+  if (x.applied === "short_term") return `${head} × ${st}[${cite} — ${surcharged}보다 큼]`;
+  const lost = st ? `[${st}(${cite})보다 큼]` : "";
+  return x.applied === "surcharge" ? `${head} × (${surcharged})${lost}` : `${head} × 누진세율${lost}`;
+}
+
 export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }: Props) {
   const { housingPart: h, commercialPart: c, nonBusinessLandPart: nb, total: t } = breakdown;
   // 주택분 양도소득금액 차감(§99·§99의3 NH-33 · §98의3~§98의8 US-13) — 엔진이 실제로 뺀 값(통산 안분 후). 0이면 차감 행을 두지 않는다.
@@ -98,9 +111,9 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
           }${di ? ` - 양도소득금액 차감 ${fmtPlain(di.reducibleIncome)}` : ""}${t.partLossOffset ? " — 부분별 양도차손을 위와 같이 통산한 뒤의 합계(통산하지 못한 차손은 소멸)" : ""}`}
         />
         <Row
-          label="기본공제"
+          label={unregistered ? "기본공제 (배제)" : "기본공제"}
           value={`△ ${fmt(t.basicDeduction)}`}
-          formula="연 250만원 (소득세법 §103)"
+          formula={unregistered ? `미등기 양도자산 — 양도소득 기본공제 배제 (${TRANSFER.BASIC_DEDUCTION_UNREGISTERED_EXCLUSION})` : "연 250만원 (소득세법 §103)"}
         />
         <Row
           label="과세표준"
@@ -132,9 +145,16 @@ export function MixedUseTotalTaxSection({ breakdown, formData, open, onToggle }:
               : "";
             if (t.rateBasis === "clause2") {
               const addon = t.surchargeAddon;
-              return addon !== undefined
-                ? `주택분 과세표준 × (누진세율 + ${fmtPct(addon)}) + 상가분 과세표준 × 누진세율${nbTerm} — 자산별 산출세액 합계가 합산 누진(${fmtPlain(t.taxByBasicRate)})보다 커서 채택 (소득세법 §104⑤ 2호·§104⑦)`
-                : `파트별 과세표준 × 각 적용세율 합계${nbTerm} — 합산 누진(${fmtPlain(t.taxByBasicRate)})보다 커서 채택 (소득세법 §104⑤ 2호)`;
+              // R-c02-04 — 중과 파트가 있으면 엔진 echo(`clause2Terms`)로 항마다 실제 적용세율을 적는다(상가분 단기세율·1년 미만 주택 70% 포함).
+              // echo가 없으면(구 저장 결과) 세율을 단정하지 않는 일반 문구로 둔다.
+              if (addon !== undefined) {
+                const terms = t.clause2Terms;
+                const body = terms
+                  ? terms.map(clause2TermText).join(" + ") // 배율 초과분도 echo의 한 항이다(nbTerm 중복 금지)
+                  : `파트별 과세표준 × 각 적용세율 합계(주택분은 누진세율 + ${fmtPct(addon)}, 보유 2년 미만이면 단기세율과 비교한 큰 것)${nbTerm}`;
+                return `${body} — 자산별 산출세액 합계가 합산 누진(${fmtPlain(t.taxByBasicRate)})보다 커서 채택 (소득세법 §104⑤ 2호·§104⑦)`;
+              }
+              return `파트별 과세표준 × 각 적용세율 합계${nbTerm} — 합산 누진(${fmtPlain(t.taxByBasicRate)})보다 커서 채택 (소득세법 §104⑤ 2호)`;
             }
             if (t.taxBase <= 0) return "과세표준 × 누진세율 (6%~45% 8구간) — 소득세법 §104";
             // 엔진이 신규 필드를 채웠으면 그대로 사용, 아니면 taxBase로부터 도출 (캐시 fallback)
