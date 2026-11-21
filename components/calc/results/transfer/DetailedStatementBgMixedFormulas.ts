@@ -89,6 +89,15 @@ function ratioText(bg: MixedUseBurdenedGiftBreakdown, side: Side): string {
   )}`;
 }
 
+/**
+ * 공유지분 항 — echo `stdPriceAtAcquisition`은 물건 전체 값이고 엔진은 지분만큼 줄인 뒤 채무비율을 곱한다
+ * (`mixed-use-burdened-gift.ts` basisOf). 단독 소유면 빈 문자열(R-c04-02). 결과 카드(`MixedUseBurdenedGiftSection`)도 같이 쓴다.
+ */
+export function mixedBgShareTerm(bg: MixedUseBurdenedGiftBreakdown): string {
+  const r = bg.ownershipRatio;
+  return r === undefined ? "" : ` × 지분 ${(r * 100).toFixed(4).replace(/\.?0+$/, "")}%`;
+}
+
 /** 겸용 부담부증여 명세서 표시값 — 엔진 4부분 슬롯의 합. 역산이 아니라 echo다. */
 export interface BgMixedDisplay {
   breakdown: MixedUseBurdenedGiftBreakdown;
@@ -151,7 +160,7 @@ export function buildBgMixedAcquisitionFormula(d: BgMixedDisplay): string {
     }
     switch (p.acquisitionMethod) {
       case "standard_price":
-        return `${label}: ${mixedBgAcqStdLabel(bg)} ${fmt(p.stdPriceAtAcquisition)} × (${ratioText(bg, side)}) = ${fmt(p.acquisitionPrice)}`;
+        return `${label}: ${mixedBgAcqStdLabel(bg)} ${fmt(p.stdPriceAtAcquisition)}${mixedBgShareTerm(bg)} × (${ratioText(bg, side)}) = ${fmt(p.acquisitionPrice)}`;
       case "converted":
         return `${label}: 양도가액 ${fmt(p.transferPrice)} × 취득시 기준시가 ${fmt(p.stdPriceAtAcquisition)} / 양도시 기준시가 ${fmt(p.stdPriceAtTransfer)} = ${fmt(p.acquisitionPrice)} (시행령 §176의2②2호)`;
       default:
@@ -169,7 +178,7 @@ export function buildBgMixedExpenseFormula(d: BgMixedDisplay): string {
     if (p.estimatedDeductionRate === undefined) {
       return `${label}: 자본적지출·양도비 등 실제 필요경비 중 이 부분 몫 × (${ratioText(bg, side)}) = ${fmt(p.estimatedDeduction)}`;
     }
-    return `${label}: ${mixedBgAcqStdLabel(bg)} ${fmt(p.stdPriceAtAcquisition)} × (${ratioText(bg, side)}) × 개산공제율 ${pct(p.estimatedDeductionRate)} = ${fmt(p.estimatedDeduction)} (개산공제, 소령 §163⑥)`;
+    return `${label}: ${mixedBgAcqStdLabel(bg)} ${fmt(p.stdPriceAtAcquisition)}${mixedBgShareTerm(bg)} × (${ratioText(bg, side)}) × 개산공제율 ${pct(p.estimatedDeductionRate)} = ${fmt(p.estimatedDeduction)} (개산공제, 소령 §163⑥)`;
   });
 }
 
