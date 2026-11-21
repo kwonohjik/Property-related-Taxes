@@ -13,6 +13,8 @@ import { maxAssetCards } from "@/lib/calc/asset-card-count-cap";
 import { assetCardCapMessage } from "@/lib/calc/asset-card-count-cap";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { mixedBgBundleMember } from "@/lib/calc/burdened-gift-mixed-use-preview";
+import { applyCardPatchWithAxisBExpropriation } from "./axis-b-expropriation-sync";
+import { withAxisBExpropriationRow } from "./axis-b-expropriation-sync";
 
 interface Props {
   assets: AssetForm[];
@@ -120,7 +122,10 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
 
   function addAsset(patch?: Partial<AssetForm>) {
     const base = makeDefaultAsset(assetsRef.current.length + 1);
-    commitAssets([...assetsRef.current, patch ? { ...base, ...patch } : base]);
+    const added = patch ? { ...base, ...patch } : base;
+    // 축 B — 첫 카드가 이미 수용이면 새 지분도 §77 기본행을 받는다(C9 · 선택 시점에 없던 지분이 뒤늦게 생기는 경우).
+    const share = splitMode === "fractional" && assetsRef.current[0]?.transferCause === "public_expropriation" ? withAxisBExpropriationRow(added) : added;
+    commitAssets([...assetsRef.current, share]);
   }
 
   function removeAsset(idx: number) {
@@ -144,9 +149,8 @@ export function CompanionAssetsSection({ assets, bundledSaleMode, onChange, sing
       commitAssets(latest.map((a) => (a.assetId === id ? { ...a, ...patch } : a)));
       return;
     }
-    commitAssets(
-      assetsRef.current.map((a, i) => (i === idx ? { ...a, ...patch } : a)),
-    );
+    // 축 B 첫 카드의 공익수용 선택·해제는 지분 카드의 §77 행에도 같은 이벤트에서 반영한다(C9 · 사용자 입력 핸들러 — useEffect 아님).
+    commitAssets(applyCardPatchWithAxisBExpropriation(assetsRef.current, idx, patch, splitMode === "fractional"));
   }
 
   return (

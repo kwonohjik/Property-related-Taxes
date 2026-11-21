@@ -14,6 +14,7 @@ import { getOwnershipRatio, mergePrimaryBasic, isFullFractionalBundle } from "./
 import { fixedAcquisitionPriceRaw } from "./transfer-tax-api-companion-payload";
 import { parseAmount } from "@/lib/calc/number-parse";
 import { toEngineReductions } from "./transfer-tax-api-reductions";
+import { axisBShareNoticeDate } from "./axis-b-reduction-notice-date";
 import { buildBurdenedGiftInfo, type BurdenedGiftInfoPayload } from "./transfer-tax-api-burdened-gift";
 import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { carryoverEventForm } from "./transfer-tax-api-carryover";
@@ -300,7 +301,7 @@ export function buildGeneralBuildingShares(
       expenses: applyRatio(parseAmount(asset.directExpenses), ratio),
       // 자본적지출·양도비는 `valuation` 안에 있고 `applyShareScale`이 이미 × r 했다.
       valuation: scaled,
-      ...(i > 0 ? { reductions: toEngineReductions(asset.reductions ?? [], merged, asset.expropriationNoticeDate) } : {}),
+      ...(i > 0 ? { reductions: toEngineReductions(asset.reductions ?? [], merged, axisBShareNoticeDate(primary)) } : {}),
       // 🔴 지분마다 싣는다 — 빠지면 route 5-0이 그 지분을 일반 양도로 계산한다(채무 전액이 양도차익, 취득가액 0). ⑫가 누락을 400으로 막는다.
       ...(isBurdenedGift ? { burdenedGiftInfo: buildBurdenedGiftInfo(merged, ratio, transferDate) } : {}),
       // 증여세 상당액은 지분마다 자기 입력값 그대로(Q-2 a) · 금액 3칸은 100% 기준 입력 × 지분율(최상위와 같은 leaf).

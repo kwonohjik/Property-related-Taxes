@@ -42,6 +42,7 @@ import { firstAssetChangeNoteOnRemoval } from "@/lib/calc/first-asset-facts";
 import { formTotalTransferExpenseInScope } from "@/lib/calc/transfer-expense-in-scope";
 import { householdFactsKindOfForm } from "@/lib/calc/household-facts-asset";
 import { confirmClearPatchOnKindChange } from "@/lib/calc/household-house-count";
+import { withAxisBExpropriationRow } from "@/components/calc/transfer/axis-b-expropriation-sync";
 
 /**
  * 자산 목록 + 저장된 사용자 선택 → Step1 화면 모드. 마운트(세션 복원) 때와 「판정 불러오기」 인계 직후에만 쓴다 —
@@ -155,11 +156,13 @@ export function Step1({
         ownershipDenominator: "",
       };
       if (form.assets.length === 1) {
-        const sib: AssetForm = {
+        // 첫 카드가 이미 공익수용이면 새 지분도 §77 기본행을 받는다(C9).
+        const sibBase: AssetForm = {
           ...makeDefaultAsset(2),
           ownershipNumerator: "",
           ownershipDenominator: "",
         };
+        const sib = first.transferCause === "public_expropriation" ? withAxisBExpropriationRow(sibBase) : sibBase;
         onChange({ assetSplitMode: "fractional", assets: [first, sib] });
       } else {
         onChange({ assetSplitMode: "fractional", assets: [first, ...form.assets.slice(1)] });
