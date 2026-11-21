@@ -139,10 +139,11 @@ export function SaleSplitJudgmentBlock({
             </p>
           </>
         )}
+        {/* 공유지분이면 신고 단위 양도가액은 지분 적용 가액이다 — 위 표의 적용 가액은 계약서(100%) 금액(R-c08-04). */}
         {j.deemedUnclear && (
           <p className="text-caption leading-snug text-muted-foreground">
-            ※ 신고서 양도가액은 <strong>안분가액</strong>(토지 {j.applied.land.toLocaleString()} · 건물{" "}
-            {j.applied.building.toLocaleString()})으로 기재됩니다 — 계약서상 구분 기재 금액과 다릅니다.
+            ※ 신고서 양도가액은 <strong>안분가액</strong>(토지 {(j.share?.applied ?? j.applied).land.toLocaleString()} · 건물{" "}
+            {(j.share?.applied ?? j.applied).building.toLocaleString()})으로 기재됩니다 — 계약서상 구분 기재 금액과 다릅니다.
           </p>
         )}
       </ToneCard>

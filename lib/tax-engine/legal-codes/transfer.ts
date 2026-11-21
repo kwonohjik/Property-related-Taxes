@@ -461,6 +461,10 @@ export const TRANSFER = {
   REDUCTION_REPLACEMENT_LAND: "조특법 §77의2",
   /** 조특법 §77의3 — 개발제한구역 지정에 따른 매수대상 토지등 양도소득세 감면 (40%/25%) */
   REDUCTION_GB_DESIGNATED_LAND: "조특법 §77의3",
+  /** 조특법 §77의3① — 개발제한구역 내 토지등 매수청구·협의매수 (MST 284389 실독 2026-11-21) */
+  REDUCTION_GB_DESIGNATED_LAND_IN_ZONE: "조특법 §77의3①",
+  /** 조특법 §77의3② — 개발제한구역에서 해제된 토지등 협의매수·수용 (해제일부터 1년·5년 이내 사업인정고시 한정) */
+  REDUCTION_GB_DESIGNATED_LAND_RELEASED: "조특법 §77의3②",
   /** 조특법 §133② — 비자발적 양도(§77·§77의2·§77의3) 감면 종합한도 (2025+ 1년 2억 / 5년 3억) */
   REDUCTION_OVERALL_LIMIT_INVOLUNTARY: "조특법 §133②",
   /** 조특법 §133 — 감면 종합한도 (공익사업 수용 1년 2억 / 5년 3억) */

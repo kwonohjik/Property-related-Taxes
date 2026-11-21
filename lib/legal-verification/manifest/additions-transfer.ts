@@ -580,6 +580,27 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  {
+    // transfer.ts REDUCTION_GB_DESIGNATED_LAND_IN_ZONE — ① 구역 내 매수청구·협의매수 (MST 284389 본문 verbatim · 실독 2026-11-21 · R-c06-02)
+    id: "TRANSFER.REDUCTION_GB_DESIGNATED_LAND_IN_ZONE",
+    citation: "조특법 §77의3①",
+    keywords: [
+      "제17조에 따른 토지매수의 청구 또는 같은 법 제20조에 따른 협의매수를 통하여",
+      "취득일부터 매수청구일 또는 협의매수일까지",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // transfer.ts REDUCTION_GB_DESIGNATED_LAND_RELEASED — ② 해제 토지 협의매수·수용 (MST 284389 본문 verbatim · 실독 2026-11-21 · R-c06-02)
+    id: "TRANSFER.REDUCTION_GB_DESIGNATED_LAND_RELEASED",
+    citation: "조특법 §77의3②",
+    keywords: [
+      "개발제한구역에서 해제된 해당 토지등을",
+      "개발제한구역 해제일부터 1년",
+      "취득일부터 사업인정고시일까지",
+    ],
+    keywordMode: "ALL",
+  },
   // ── 원천징수(예금·적금 이자) — `legal-codes/income-tax.ts` 가 인용한다.
   //    2026-08-27 커버리지 수집기에 그 모듈을 추가하면서 모수에 들어왔다(F-39).
   //    키워드는 KoreanLaw 실측 본문(MST 280405, 시행 2026-07-01).
