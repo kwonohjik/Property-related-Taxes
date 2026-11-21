@@ -129,7 +129,8 @@ test.describe("겸용주택 다주택 중과 (§104⑦·§95②)", () => {
     // ⑦ §104⑤2호 — 자산별 산출세액 합계가 채택되면 라벨·산식이 바뀐다
     await expect(page.getByText("산출세액 (자산별 합계)").first()).toBeVisible();
     await expect(
-      page.getByText("주택분 과세표준 × (누진세율 + 20.00%)", { exact: false }).first(),
+      // R-c02-04 — 항마다 엔진 echo(clause2Terms)의 과세표준·적용세율을 적는다(장기 보유 주택부분 = 누진세율 + 20%p).
+      page.getByText(/주택부분 과세표준 [\d,]+ × \(누진세율 \+ 20%p\)/).first(),
     ).toBeVisible();
   });
 
