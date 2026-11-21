@@ -19,6 +19,7 @@ import { clauseBucketKey } from "./transfer-tax-rate-calc";
 import { provisoMergeId } from "./transfer-tax-rate-clause";
 import { PROGRESSIVE_RATE_CLAUSES } from "./transfer-tax-rate-clause";
 import { safeMultiplyThenDivide } from "./tax-utils";
+import { applyRate } from "./tax-utils";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { RateGroup, GroupTaxResult } from "./types/transfer-aggregate.types";
 import type { AssetRecord } from "./transfer-tax-aggregate-helpers";
@@ -498,10 +499,12 @@ export function aggregateByGroup(
        * 승계한 메타로 **그룹 산출세액을 재현할 수 있을 때만** 채택한다.
        * 재현하지 못하면 표시가 거짓 등식이 되므로 종전 규약(최고세율 · 0)으로 남긴다 —
        * 그때는 소비부가 「단일 산식으로 표시할 수 없다」로 분기한다(PR #1640).
+       * 검산도 세액과 같은 `applyRate`로 한다 — double 곱 floor는 95,000,000 × 0.35를 33,249,999로 내려
+       * 호 하나인 군을 「재현 불가」로 오판했다(결과뷰 리뷰 R-c05-02).
        */
       const metaReproducesTax =
         onlyBucketMeta !== undefined &&
-        Math.floor(groupTaxBase * onlyBucketMeta.appliedRate) - onlyBucketMeta.progressiveDeduction ===
+        applyRate(groupTaxBase, onlyBucketMeta.appliedRate) - onlyBucketMeta.progressiveDeduction ===
           groupCalculatedTax;
       // 버킷이 둘 이상이면 호마다 누진공제가 달라 그룹 단위로 합산 표시할 수 없다 — 0을 유지한다.
       appliedRate = metaReproducesTax

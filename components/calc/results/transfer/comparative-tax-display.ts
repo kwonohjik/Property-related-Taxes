@@ -7,6 +7,7 @@
  */
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { GroupTaxResult } from "@/lib/tax-engine/types/transfer-aggregate.types";
+import { applyRate } from "@/lib/tax-engine/tax-utils";
 
 export interface ComparativeTaxView {
   /** 방법 A — 전체 과세표준에 누진세율 */
@@ -69,7 +70,8 @@ export function groupRateText(
 ): string {
   const reproduces =
     g.groupTaxBase === 0 ||
-    Math.floor(g.groupTaxBase * g.appliedRate) - g.progressiveDeduction === g.groupCalculatedTax;
+    // 세액과 같은 `applyRate`로 검산한다 — double 곱 floor는 1원 낮게 떨어져 재현되는 군을 「(호별 합계)」로 오판한다(R-c05-02).
+    applyRate(g.groupTaxBase, g.appliedRate) - g.progressiveDeduction === g.groupCalculatedTax;
   if (!reproduces) return "(호별 합계)";
   // `appliedRate`는 이미 중과 포함 실효세율이다 — «+N%p»로 적으면 더하는 것으로 읽힌다(O-22).
   const surcharge = g.surchargeRate ? `, 중과 ${(g.surchargeRate * 100).toFixed(0)}%p 포함` : "";

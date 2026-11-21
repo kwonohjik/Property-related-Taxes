@@ -15,6 +15,9 @@ import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-en
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import type { HouseRefRow } from "@/components/calc/results/transfer/count-exclusion-house-ref";
+import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/LocalIncomePenaltyNotice";
+import { comparativeTaxView } from "@/components/calc/results/transfer/comparative-tax-display";
+import { describeComparativeDecision } from "@/components/calc/results/transfer/comparative-tax-display";
 
 
 
@@ -168,6 +171,12 @@ export function PropertyCard({
 
 export function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTransferResult }) {
   const hasMultipleGroups = aggregated.groupTaxes.length > 1;
+  // §104⑤ 전체 누진(방법 A) 채택이면 세율군별 세율은 산출세액의 근거가 아니다(방법 B의 근거) — R-c01-02.
+  const comparative = comparativeTaxView(aggregated);
+  const generalAdopted = comparative?.applied === "general" ? comparative : null;
+  // 엔진 totalTax에 들어 있는 농특세 납부지연가산세·지방소득세 가산세 — 행이 없으면 행 합이 총납부세액과 어긋난다(R-c01-01).
+  const ruralPenalty = aggregated.ruralSurtaxDelayedPenalty ?? 0;
+  const localPenalty = aggregated.localIncomePenalty ?? 0;
 
   // aggregated.penaltyTax = 자산별 §114조의2 + 자산별 신고불성실/납부지연 합계
   const totalPenalty = aggregated.penaltyTax;
@@ -207,7 +216,18 @@ export function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTran
           <Row label="과세표준" value={formatKRW(aggregated.taxBase)} highlight />
 
           {/* 세율 */}
-          {hasMultipleGroups ? (
+          {generalAdopted ? (
+            <>
+              <Row label="세율" value="전체 누진세율" />
+              <Row label="· 방법 A 전체 누진세율 적용" value={formatKRW(generalAdopted.methodA)} sub />
+              <Row label="· 방법 B 세율군별 분리 산출" value={formatKRW(generalAdopted.methodB)} sub />
+              <tr>
+                <td colSpan={2} className="pb-1.5 pl-5 text-caption text-muted-foreground">
+                  {describeComparativeDecision(generalAdopted)}(소득세법 §104⑤ 비교과세).
+                </td>
+              </tr>
+            </>
+          ) : hasMultipleGroups ? (
             <>
               <Row label="세율" value="세율군별 복합" />
               {aggregated.groupTaxes.map((g) => (
@@ -338,6 +358,20 @@ export function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTran
               value={formatKRW(aggregated.ruralSurtax)}
               sub
             />
+          )}
+
+          {ruralPenalty > 0 && (
+            <Row label="농어촌특별세 납부지연가산세" value={formatKRW(ruralPenalty)} sub />
+          )}
+          {localPenalty > 0 && (
+            <>
+              <Row label="지방소득세 가산세 (지방세기본법 §53~§55)" value={formatKRW(localPenalty)} sub />
+              <tr>
+                <td colSpan={2} className="pb-1.5 pl-5">
+                  <LocalIncomePenaltyNotice />
+                </td>
+              </tr>
+            </>
           )}
 
           <Divider />
