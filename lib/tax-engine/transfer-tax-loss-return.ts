@@ -25,6 +25,7 @@ import { resolveSelfBuiltHousingPenaltyAxis, selfBuiltHousingEchoOf } from "./tr
 import { TRANSFER } from "./legal-codes/transfer";
 import type { RateClause } from "./transfer-tax-rate-clause";
 import type { SurchargeRateClause } from "./transfer-tax-rate-clause";
+import type { SurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 
 export interface LossReturnArgs {
@@ -82,6 +83,8 @@ export interface LossReturnArgs {
    * 호출부(`transfer-tax.ts`)가 STEP 7과 같은 입력으로 `calcTax(0, …)`를 태워 만든다.
    */
   rateEcho?: { appliedRate: number; rateClause?: RateClause; rateSurchargeStatutoryExcluded?: boolean; surchargeShortTermClause?: SurchargeRateClause; countedRightCount?: number };
+  /** [echo] 이 자산에 푼 다주택 중과 판정 — 정상 반환과 같은 값. 짝 부수토지 카드가 `toHouseVerdict`로 받는다(차손 주택의 카드도 중과·장특 배제를 따른다). */
+  surchargeEcho?: SurchargeApplication;
 }
 
 export function buildLossTransferTaxResult({
@@ -110,6 +113,7 @@ export function buildLossTransferTaxResult({
   houseCountExclusionDetails,
   specialHouseExclusionDetail,
   rateEcho,
+  surchargeEcho,
 }: LossReturnArgs): TransferTaxResult {
   // ⚠️ acquisitionMethod 판정은 effectiveInput 기준 — finalize.ts penaltyBase와 동일 이유·동일 근거
   // (부담부증여는 §159 스텝이 정규화하나 원본 input에는 UI가 보존한 stale 산정방식이 남는다).
@@ -229,6 +233,7 @@ export function buildLossTransferTaxResult({
     ...(rateEcho?.countedRightCount ? { surchargeCountedRightCount: rateEcho.countedRightCount } : {}),
     // 부칙 제9270호 §14① 위기취득 세율 배제 — 정상 반환(`transfer-tax-normal-return.ts`)과 같은 echo. 없으면 다건 분류가 원시 플래그로 중과 세율군을 붙인다.
     ...(rateEcho?.rateSurchargeStatutoryExcluded ? { rateSurchargeStatutoryExcluded: true } : {}),
+    ...(surchargeEcho ? { surchargeEcho } : {}),
     progressiveDeduction: 0,
     calculatedTax: 0,
     isSurchargeSuspended: false,

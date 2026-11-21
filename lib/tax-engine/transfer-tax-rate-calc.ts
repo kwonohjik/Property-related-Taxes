@@ -26,6 +26,7 @@ import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate"
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { resolveCompanionLandRate } from "./appurtenant-land-rate";
+import { APPURTENANT_LAND_HOUSING_RATE_FROM } from "./appurtenant-land-rate";
 import { appurtenantCardHouseHoldingMonths } from "./land-only-owner-household";
 import { getEffectiveAcquisitionDate } from "./transfer-tax-lthd-start";
 import { resolveRateBasisAcquisitionDate } from "./transfer-rate-holding-basis";
@@ -277,7 +278,13 @@ export function calcTax(
         manualHoldingPeriodOverride: input.manualHoldingPeriodOverride,
         // 다른 세대 토지만 본인 주택의 부수토지 카드는 일반 토지다 — 자동 일체과세만 끈다(수동 오버라이드는 위 입력이라 그대로 먼저 처리된다).
         // 중과 대상 짝 주택의 카드도 일체과세 분기(주택 단기 70/60·누진 조기 반환)를 끈다 — §104⑦ 경로가 큰 세액을 정한다. 수동 지정은 그대로 먼저 처리된다.
-        landNature: input.appurtenantHouseVerdict?.houseLandOnlyOtherHousehold === true || appurtenantCardFollowsSurchargeRate(input) ? undefined : input.landNature,
+        // 2014.1.1. 전 양도분은 §104① 주택 괄호에 «이에 딸린 토지»가 없다 — 토지 자신의 보유기간 세율(아래 일반 경로)이다(`APPURTENANT_LAND_HOUSING_RATE_FROM`).
+        landNature:
+          input.appurtenantHouseVerdict?.houseLandOnlyOtherHousehold === true ||
+          appurtenantCardFollowsSurchargeRate(input) ||
+          input.transferDate < new Date(APPURTENANT_LAND_HOUSING_RATE_FROM)
+            ? undefined
+            : input.landNature,
       },
       ctx
         ? {

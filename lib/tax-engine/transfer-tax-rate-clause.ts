@@ -69,10 +69,11 @@ export const shortTermClause = (holdingMonths: number): RateClause =>
 
 /**
  * 부수토지 일체과세 단일세율 → 호. 주택 단기세율만 나오므로 70%=3호·60%=2호다.
+ * 40%는 2014.1.1.~2021.5.31. 양도분의 주택 1년 미만(3호 괄호 «주택 및 조합원 입주권의 경우에는 100분의 40»)이다 — 그 구간 주택 1~2년은 2호가 주택을 제외해 누진세율이라 40%가 2호로 나오지 않는다.
  * 그 밖의 값은 호를 단정할 수 없어 undefined(묶지 않음 = 안전측).
  */
 export const unifiedShortTermClause = (rate: number): RateClause | undefined =>
-  rate === 0.70 ? "104-1-3" : rate === 0.60 ? "104-1-2" : undefined;
+  rate === 0.70 || rate === 0.40 ? "104-1-3" : rate === 0.60 ? "104-1-2" : undefined;
 
 /** 다주택 중과 호 — §104⑦1호(2주택) / 3호(3주택 이상). 정본 R7 감사와 같은 구분. */
 export const surchargeClause = (surchargeType: string): RateClause =>
