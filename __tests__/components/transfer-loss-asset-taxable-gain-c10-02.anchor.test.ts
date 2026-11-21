@@ -95,6 +95,10 @@ describe("LA-1 1세대1주택 고가주택 15억 · 취득 16억 + 토지 — �
     expect(stmt.get("taxableGain")?.perAsset?.map((x) => x.value)).toEqual([-20_000_000, 200_000_000]);
     expect(stmt.get("exemptGain")?.value).toBe(-80_000_000);
     expect(stmt.get("taxableGain")?.perAsset?.[0].formula).not.toContain("차손 자산 — 양도차익 -100,000,000 (음수)");
+    expect(stmt.get("taxableGain")?.perAsset?.[0].formula).toBe("양도차손 -100,000,000 중 과세분 = -20,000,000 (비과세분 차손은 다른 자산과 통산하지 않는다)");
+  });
+  it("집계 상세명세서 양도소득금액 자산 행 — 과세대상 −20,000,000에서 출발(종전 gross −100,000,000)", () => {
+    expect(stmt.get("incomeAmount")?.perAsset?.[0].formula).toMatch(/^-20,000,000 - 0 = -20,000,000 /);
   });
   it("단건 신고서·명세서 — 비과세 −80,000,000 (종전 0 바닥) · 과세대상 −20,000,000", () => {
     const { s, rows, stmt: st } = singleViews(oneHouse(1_500_000_000, 1_600_000_000));
@@ -125,7 +129,13 @@ describe("LA-2 비과세 건물 차손 + 배율 초과 부수토지 이익 — g
     expect(stmt.get("taxableGain")?.value).toBe(280_000_000);
     expect(stmt.get("taxableGain")?.perAsset?.[0].value).toBe(280_000_000);
     expect(stmt.get("taxableGain")?.perAsset?.[0].formula).not.toContain("차손 자산");
+    expect(stmt.get("taxableGain")?.perAsset?.[0].formula).toBe(
+      "양도소득금액 229,600,000 + 장특공제 50,400,000 = 280,000,000 (전체 양도차익 -240,000,000 중 비과세분 차손은 과세분에서 빼지 않는다)",
+    );
     expect(stmt.get("ltDeduction")?.perAsset?.[0].formula).toBe("과세대상양도차익 280,000,000 × 18% = 50,400,000");
+  });
+  it("집계 상세명세서 양도소득금액 — 과세대상 280,000,000 − 장특 50,400,000 = 229,600,000 (종전 gross −240,000,000에서 출발)", () => {
+    expect(stmt.get("incomeAmount")?.perAsset?.[0]).toMatchObject({ value: 229_600_000, formula: "280,000,000 - 50,400,000 = 229,600,000" });
   });
   it("단건 토지·건물 분리 신고서 — 합계 열 비과세 −520,000,000 = 토지 280,000,000 + 건물 −800,000,000 (종전 0 바닥)", () => {
     const { s, rows, stmt: st } = singleViews(splitHouse(1_000_000_000));
@@ -137,12 +147,18 @@ describe("LA-2 비과세 건물 차손 + 배율 초과 부수토지 이익 — g
 });
 
 describe("LA-3 같은 구조로 자산 전체 차익 +10,000,000 — 과세분 280,000,000이 gross에 잘리지 않는다", () => {
-  const { a, aggRows } = views([asItem(splitHouse(750_000_000), "h")]);
+  const { a, aggRows, stmt } = views([asItem(splitHouse(750_000_000), "h")]);
   const h = a.properties[0];
   it("엔진 income 229,600,000 · 장특 50,400,000 → 과세대상 280,000,000 · 비과세 −270,000,000 (종전 10,000,000 · 0)", () => {
     expect([h.transferGain, h.income, h.longTermHoldingDeduction]).toEqual([10_000_000, 229_600_000, 50_400_000]);
     expect([assetExemptGain(h), assetTaxableGain(h)]).toEqual([-270_000_000, 280_000_000]);
     expect(colOf(aggRows, "h")).toEqual([10_000_000, -270_000_000, 280_000_000, 50_400_000, 229_600_000]);
+  });
+  it("집계 상세명세서 — 과세대상 산식·양도소득금액 산식이 과세분 280,000,000에서 출발(종전 gross 10,000,000)", () => {
+    expect(stmt.get("taxableGain")?.perAsset?.[0].formula).toBe(
+      "양도소득금액 229,600,000 + 장특공제 50,400,000 = 280,000,000 (전체 양도차익 10,000,000 중 비과세분 차손은 과세분에서 빼지 않는다)",
+    );
+    expect(stmt.get("incomeAmount")?.perAsset?.[0]).toMatchObject({ value: 229_600_000, formula: "280,000,000 - 50,400,000 = 229,600,000" });
   });
 });
 

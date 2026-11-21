@@ -137,10 +137,9 @@ export function buildIncomeFormula(
   lossGiven = 0,
   givenParts: (keyof typeof LOSS_OFFSET_PART_LABEL)[] = [],
 ): string {
-  const tg = p.transferGain;
-  const inc = Math.max(0, p.income);
   const lth = p.longTermHoldingDeduction;
-  const taxable = tg > 0 ? Math.min(tg, inc + lth) : tg;
+  // 과세대상양도차익 — 자산별 정본 leaf(`assetTaxableGain`). 종전 인라인 `차익이면 min(gross, …) · 차손이면 gross`는 과세분이 따로 정해진 차손 자산에서 좌변이 우변을 만들지 못했다(R-c10-02).
+  const taxable = assetTaxableGain(p);
   const rhBasis = rhPartialBasis(p);
   const base = rhBasis ? rhPartialIncomeFormula(rhBasis, lth, p.income) : `${fmt(taxable)} - ${fmt(lth)} = ${fmt(p.income)}`;
   if (p.income === p.incomeAfterOffset) return base;
