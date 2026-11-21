@@ -157,18 +157,27 @@ export function mixedUseToFilingResult(b: MixedUseGainBreakdown): TransferTaxRes
     // §114조의2 환산가액적용가산세는 겸용 경로에 없다 — 신고불성실·납부지연만 온다
     // (`transfer-tax-mixed-use-totals.ts`: `penaltyTax: penalty?.totalPenalty ?? 0`).
     penaltyBase: 0,
-    penaltyTax: t.penaltyTax,
+    /**
+     * 🔴 R-c06-01: 슬롯은 단건 엔진 형상을 따른다 — `penaltyTax` = `penaltyDetail`에 담기지 않은 가산세.
+     *
+     * 신고서 표·상세명세서는 가산세를 `penaltyTax + penaltyDetail.totalPenalty`로 합산한다
+     * (단건 엔진: §114조의2분 + 국기법분). G-43 뒤로 이 어댑터가 국기법분을 슬롯과
+     * `penaltyDetail` 양쪽에 실어 같은 가산세가 **두 번** 더해졌다. 엔진은 `penaltyDetail.totalPenalty
+     * === penaltyTax`를 보장하므로(G-43 MP-1) 지금 값은 0이고, 상세가 없는 result(G-43 전)는 슬롯에 남는다.
+     * anchor: `__tests__/components/mixed-use-filing-penalty-double-c06.anchor.test.ts`
+     */
+    penaltyTax: t.penaltyTax - (t.penaltyDetail?.totalPenalty ?? 0),
     /**
      * 🔴 G-43: 가산세 **산출근거** 승계.
      *
      * 종전에는 이 슬롯이 비어 있어 결과 화면에 금액만 뜨고 세율·산정일수·기준금액 행이
      * 하나도 생성되지 않았다(`TransferTaxResultView.tsx:395`·`FilingFormTableHelpers.ts:650`이
-     * `penaltyDetail`을 국기법 가산세의 근거로 읽는다). 세액은 위 `penaltyTax`가 정본이므로
-     * 이 승계로 금액이 바뀌지는 않는다.
+     * `penaltyDetail`을 국기법 가산세의 근거로 읽는다). 국기법 가산세 세액은 이 `totalPenalty`가
+     * 싣는다(위 `penaltyTax` 주석).
      */
     ...(t.penaltyDetail ? { penaltyDetail: t.penaltyDetail } : {}),
     /**
-     * 지방소득세 과세표준 산입분 = **0**. 위 `penaltyTax` 슬롯이 담고 있는 것은 국기법
+     * 지방소득세 과세표준 산입분 = **0**. 겸용 경로의 가산세는 모두 국기법
      * §47의2~§47의4 가산세이고, 그것은 지방세법 §103의2 3호 열거에 없어 지방소득세 대상이 아니다.
      * 겸용 엔진도 `applyRate(determinedTax, 0.10)`으로 가산세를 base에서 빼고 있다.
      * 이 필드가 없으면 신고서·명세서가 슬롯을 §114조의2로 오인해 base를 부풀린다.
