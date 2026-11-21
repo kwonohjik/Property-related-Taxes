@@ -5,6 +5,7 @@
  * 각 게이트는 모르는 사실을 바꾼 **반사실 판정**이 현재 판정과 다를 때만 참이다. 반사실 결론 키(`verdictKey`)와 본체 판정
  * (`checkExemptionCore`)는 순환 import를 피하려고 호출부가 콜백으로 넘긴다.
  */
+import { differenceInMonths, subYears } from "../utc-date";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import { describeOneHouseHoldingRequirement } from "../transfer-tax-exemption-holding";
 import type { EraNoticeRelevance } from "./era-undetermined";
@@ -100,7 +101,18 @@ export function buildEraNoticeRelevance(ctx: {
         // 재개발 승계조합원 증여 승계 — 증여자와 같은 세대가 아니거나 증여자가 주택을 출자한 원조합원이 아니라고 답했으면 통산할 세대의
         //   주택 보유가 없다(계획서 redev-successor-gift-holding D-6).
         if (input.redevSuccessorGift?.declinedConsolidation) return false;
-        return !settled;
+        if (settled || article89Excluded) return false;
+        // I-26 — 세대 사실이 없어 통산할 날짜도 모른다. 가장 유리한 통산(증여자가 양도일 20년 전 취득 · 그때부터 같은 세대로 거주)으로 다시 판정해도
+        //   결론이 같으면 다른 사유로 과세가 정해진 것이다 — 「같은 세대였다면 결론이 달라질 수 있다」고 말하지 않는다. 판정 모양은 엔진 통산 경로 그대로다.
+        const earliest = subYears(input.transferDate, 20);
+        const best: GiftHouseholdBasis = {
+          giftDate: input.acquisitionDate,
+          donorAcquisitionDate: earliest,
+          continuousSameHousehold: true,
+          householdHoldingStartDate: earliest,
+          priorHouseholdResidenceMonths: Math.max(0, differenceInMonths(input.acquisitionDate, earliest)),
+        };
+        return verdictKey({ ...input, giftHouseholdBasis: best }) !== `${verdict.isExempt}|${verdict.isPartialExempt}`;
       }
       return giftHouseholdFactDecides(g, `${verdict.isExempt}|${verdict.isPartialExempt}`, verdictOf);
     },
@@ -169,6 +181,16 @@ export function buildEraNoticeRelevance(ctx: {
       return v.isExempt || v.isPartialExempt;
     },
     // D-68 — §155① 축 고지(⑯ 통합특별시·군위 · J-3)는 두 갈래 본체 판정의 결론이 다를 때만.
+    // I-26 — 공휴일 표 한계: 기한을 지킨 쪽·넘긴 쪽으로 양도일을 옮긴 반사실의 결론 키가 다를 때만. 기한이 §89② 배제를 가르기도 해
+    //   (권리 3년) 배제 확정으로 일찍 거르지 않고 전체 판정 키(`verdictKey`)로 본다. §155① 조정 여부를 모르면 비조정 독법에서도 본다(두 독법의
+    //   말일이 모두 후보 — S07-9). 양도일을 옮기면 보유 개월도 바뀌지만 그 차이는 공휴일 연휴 일수 안이다.
+    holidayDeadlineDecides: (dates) => {
+      const readings = [input, withNotBothRegulated(input)].filter((v): v is OneHouseJudgeInput => v !== undefined);
+      return readings.some((v) => {
+        const base = verdictKey(v);
+        return dates.some((d) => verdictKey({ ...v, transferDate: d }) !== base);
+      });
+    },
     temporaryTwoHouseVariantsDecide: (a, b) => {
       if (article89Excluded) return false;
       const key = (tt: typeof a) => {
