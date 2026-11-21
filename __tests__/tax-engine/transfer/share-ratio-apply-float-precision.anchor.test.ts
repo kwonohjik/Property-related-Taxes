@@ -99,8 +99,8 @@ describe("applyRatio — 백분율 입력(유한 소수)은 참값과 같다", (
   });
 });
 
-describe("applyRatio — 레거시 분자/분모(순환 소수)는 현행 값을 유지한다", () => {
-  it("1/3 · 2/3 — 참값과 같고 옛 식과도 같다 (십진 정확 방식은 1 과소가 나는 지점)", () => {
+describe("applyRatio — 레거시 분자/분모(순환 소수)는 분수 복원으로 참값 (2026-11-21 — share-ratio-apply-rational.anchor)", () => {
+  it("1/3 · 2/3 — 참값과 같고 옛 식과도 같다 (15자리 십진화로는 1 과소가 나는 지점)", () => {
     expect(applyRatio(300_000_000, 1 / 3)).toBe(100_000_000);
     expect(applyRatio(900_000_000, 2 / 3)).toBe(600_000_000);
     expect(applyRatio(3_000_000, 1 / 3)).toBe(1_000_000);
@@ -109,7 +109,7 @@ describe("applyRatio — 레거시 분자/분모(순환 소수)는 현행 값을
       expect(applyRatio(x, 2 / 3)).toBe(oldApply(x, 2 / 3));
     }
   });
-  it("그 밖의 순환 소수 분수(6/11 · 3/7 · 1/7 · 15/26)는 옛 식과 같은 값 (이 PR이 건드리지 않는 갈래)", () => {
+  it("순환 소수 분수(6/11 · 3/7 · 1/7 · 15/26) — 이 금액들은 옛 식도 참값이라 같은 값 (옛 식이 1원 과소인 금액은 share-ratio-apply-rational.anchor가 고정)", () => {
     for (const [n, d] of [[6, 11], [3, 7], [1, 7], [15, 26]]) {
       for (const x of [100_000_000, 700_000_000, 1_518_341_200]) {
         expect(applyRatio(x, n / d)).toBe(oldApply(x, n / d));
