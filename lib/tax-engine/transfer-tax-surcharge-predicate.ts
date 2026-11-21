@@ -145,6 +145,11 @@ export interface SurchargeApplication {
   effectiveSurchargeType: "none" | "multi_house_2" | "multi_house_3plus";
   effectiveHouseCount: number;
   surchargeTypeKey: "multi_house_2" | "multi_house_3plus";
+  /**
+   * [echo] 정밀 판정의 산입 조합원입주권·분양권 수(`MultiHouseSurchargeResult.countedRightCount`) 그대로 — 짝 부수토지 카드가 이 판정을 받으므로 함께 실린다.
+   * 신고서 ③ 코드 표시 전용(R-c10-04). fallback(명부 없음)은 권리를 세지 않아 싣지 않는다.
+   */
+  countedRightCount?: number;
 }
 
 /**
@@ -268,6 +273,7 @@ export function resolveSurchargeApplication(
         (input.householdHousingCount >= 3 ? "multi_house_3plus" : "multi_house_2")),
     effectiveHouseCount,
     surchargeTypeKey,
+    ...(isSubjectAsset && multiHouseSurchargeResult?.countedRightCount ? { countedRightCount: multiHouseSurchargeResult.countedRightCount } : {}),
   };
 }
 
