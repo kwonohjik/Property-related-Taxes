@@ -257,6 +257,8 @@ export interface TransferTaxResult {
   surchargeSuspensionBasis?: "a" | "na" | "da";
   /** 나·다목 유예 시 계산된 양도 기한(절대기한 반영 후). basis가 na/da일 때만 유의미. */
   surchargeSuspensionDeadline?: Date;
+  /** 한시 유예 근거 호 — §167의10①12의2 / §167의3①12의2 / §167의11①12호 / §167의4③6의2 (echo, MultiHouseSurchargeResult에서 전파 · 없으면 구 결과) */
+  surchargeSuspensionClause?: string;
   /**
    * 부칙 §9270호 §14① — 2009.3.16~2012.12.31 취득 주택 세율 중과배제(조정지역 다주택이어도 기본세율).
    * 세율만 배제·§95② 장기보유특별공제 배제는 유지(서울고법 2024누55534 → 대법원 2025두33460 심리불속행 · 서울행정법원 2024구단68630).

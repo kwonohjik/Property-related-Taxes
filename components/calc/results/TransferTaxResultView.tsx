@@ -505,13 +505,13 @@ export function TransferTaxResultView({
             {/* ⑦ echo — 중과 유예 근거 목(가/나/다) + 나·다목 양도기한 */}
             {result.surchargeSuspensionBasis && (
               <p className="mt-1 text-xs text-blue-700 dark:text-blue-400">
-                {/* 유예면 엔진이 `surchargeType`을 싣지 않아 주택 수로 조문을 고를 수 없다 — 2주택(§167의10)·3주택 이상(§167의3)을 병기한 단일 소스(R-c01-05). */}
+                {/* 근거 호 = 엔진이 세대의 주택·권리 수로 고른 호(`surchargeSuspensionClause`) — 그 echo가 없는 구 결과만 두 호 병기(R-c01-05). */}
                 {result.surchargeSuspensionBasis === "a" &&
-                  `근거: ${SURCHARGE_TRANSITION.DEADLINE}까지 양도 (${SURCHARGE_TRANSITION.BASIS_A})`}
+                  `근거: ${SURCHARGE_TRANSITION.DEADLINE}까지 양도 (${result.surchargeSuspensionClause ? `${result.surchargeSuspensionClause} 가목` : SURCHARGE_TRANSITION.BASIS_A})`}
                 {result.surchargeSuspensionBasis === "na" &&
-                  `근거: 토지거래허가 경과조치 (나목) — 양도기한 ${fmtDeadline(result.surchargeSuspensionDeadline)} 이내 충족 (${SURCHARGE_TRANSITION.BASIS})`}
+                  `근거: 토지거래허가 경과조치 (나목) — 양도기한 ${fmtDeadline(result.surchargeSuspensionDeadline)} 이내 충족 (${result.surchargeSuspensionClause ? `${result.surchargeSuspensionClause} 나목` : SURCHARGE_TRANSITION.BASIS})`}
                 {result.surchargeSuspensionBasis === "da" &&
-                  `근거: 매매계약 경과조치 (다목) — 양도기한 ${fmtDeadline(result.surchargeSuspensionDeadline)} 이내 충족 (${SURCHARGE_TRANSITION.BASIS})`}
+                  `근거: 매매계약 경과조치 (다목) — 양도기한 ${fmtDeadline(result.surchargeSuspensionDeadline)} 이내 충족 (${result.surchargeSuspensionClause ? `${result.surchargeSuspensionClause} 다목` : SURCHARGE_TRANSITION.BASIS})`}
               </p>
             )}
           </div>

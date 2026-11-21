@@ -25,6 +25,26 @@ export const SURCHARGE_TRANSITION = {
 } as const;
 
 /**
+ * 12의2(한시 유예)가 든 호 — 네 호의 문언이 같고, 세대가 가진 주택·조합원입주권·분양권 수로 호만 갈린다
+ * (MST 290841 실독 2026-11-21): 주택 2 §167의10①12의2 · 주택 3 이상 §167의3①12의2 ·
+ * 주택과 권리 각 1 §167의11①12호 · 주택과 권리 합 3 이상 §167의4③6의2.
+ * 호 선택은 `LONG_HOLDING_TEMPORARY_EXCLUSION`·`PRE_DESIGNATION_CONTRACT_EXCLUSION`(transfer-house.ts)과 같은 규칙이다.
+ */
+export const SURCHARGE_TRANSITION_CLAUSE = {
+  TWO_HOUSE: "소득세법 시행령 §167의10①12의2",
+  THREE_PLUS: "소득세법 시행령 §167의3①12의2",
+  HOUSE_RIGHT_ONE_EACH: "소득세법 시행령 §167의11①12호",
+  HOUSE_RIGHT_THREE_PLUS: "소득세법 시행령 §167의4③6의2",
+} as const;
+
+/** @param effectiveHouseCount 중과 주택 수(산입 주택 + 산입 권리) · @param countedRightCount 그중 산입 권리 수 */
+export function surchargeTransitionClause(effectiveHouseCount: number, countedRightCount: number): string {
+  const c = SURCHARGE_TRANSITION_CLAUSE;
+  if (countedRightCount > 0) return effectiveHouseCount >= 3 ? c.HOUSE_RIGHT_THREE_PLUS : c.HOUSE_RIGHT_ONE_EACH;
+  return effectiveHouseCount >= 3 ? c.THREE_PLUS : c.TWO_HOUSE;
+}
+
+/**
  * 나목4) 표 = 소재 지역별 양도 기한 (국세청 해설서 이미지45, 2026-07-24 확정).
  * 4개월 = 강남·서초·송파·용산 4구. 6개월 = 2025-10-16 추가 지정 조정대상지역.
  * 6개월 명단은 REGULATED_REGIONS(data/regulated-areas.ts) designatedDate==="2025-10-16" 파생

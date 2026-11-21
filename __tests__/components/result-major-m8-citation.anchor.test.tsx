@@ -6,7 +6,7 @@
  * | R-c05-03 | 단건·집계 필요경비 산식이 양도비를 「§97① 나목」, 개산공제를 「§97① 나목·시행령 §163⑥」으로 적는다 | 양도비 = 소득세법 §97 ① 3호 · 개산공제 = 소득세법 §97 ② 2호 + 시행령 §163 ⑥ |
  * | R-c05-04 | 일반건물 명세서가 양도비를 「§97① 나목」, 자본적지출을 「§97① 가목」으로 적는다 | ①3호 · ①2호 |
  * | R-c11-02 | 집계 소제목(`aggregateExpenseHeading`)이 「§97① 나목」 | ①3호 · ②2호 + §163⑥ |
- * | R-c01-05 | 한시유예 가목 근거가 2주택에서도 §167의3(3주택 이상)만 | `SURCHARGE_TRANSITION.BASIS_A`(§167의3·§167의10 병기) · 나·다목에도 조문 |
+ * | R-c01-05 | 한시유예 가목 근거가 2주택에서도 §167의3(3주택 이상)만 | 엔진이 세대의 주택·권리 수로 고른 호(`surchargeSuspensionClause` — §167의10·§167의3·§167의11·§167의4) 하나 · 나·다목에도 조문 |
  * | R-c03-01 | 농특세 정정 줄 머리말이 「상계하지 않고 따로 납부·환급」의 근거로 §7①을 든다 | §7①은 «별도 계산·표시»에만 · 상계 여부는 아래 고지(확인 필요)에 맡긴다 |
  * | R-c09-02 | 소유자 분리 배지·명세서·엔진 단계 라벨이 주식 대주주 조문(소령 §168②)을 든다 | §168② 삭제 |
  *
@@ -26,6 +26,7 @@ import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { computeAmendment } from "@/lib/tax-engine/transfer-tax-amendment";
 import { ResultPdfDocument } from "@/lib/pdf/ResultPdfDocument";
+import { SURCHARGE_TRANSITION } from "@/lib/tax-engine/legal-codes/surcharge-transition";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
@@ -135,13 +136,15 @@ describe("R-c01-05 다주택 중과 한시유예 근거 줄 (TransferTaxResultVi
     });
     return rates;
   }
-  const twoHouses = (transferDate: string, contractDate: string) =>
+  const right = (id: string) => ({ id, type: "redevelopment_right", acquisitionDate: new Date("2021-01-01"), region: "capital", managementDisposalApprovalDate: new Date("2020-06-01") });
+  const household = (transferDate: string, contractDate: string, nHouses = 2, nRights = 0) =>
     calculateTransferTax(
       baseTransferInput({
         transferPrice: 500_000_000, acquisitionPrice: 300_000_000,
         acquisitionDate: new Date("2020-01-01"), transferDate: new Date(transferDate),
-        isRegulatedArea: true, householdHousingCount: 2, isOneHousehold: true, sellingHouseId: "h1",
-        houses: [makeHouseInfo("h1", { regionCode: "11680" }), makeHouseInfo("h2")],
+        isRegulatedArea: true, householdHousingCount: nHouses, isOneHousehold: true, sellingHouseId: "h1",
+        houses: Array.from({ length: nHouses }, (_, i) => makeHouseInfo(`h${i + 1}`, i === 0 ? { regionCode: "11680" } : {})),
+        presaleRights: Array.from({ length: nRights }, (_, i) => right(`r${i + 1}`)) as never,
         gracePeriod: { contractDate: new Date(contractDate), isLandPermitTarget: false, depositReceiptConfirmed: true },
       }),
       suspendedRates(),
@@ -149,18 +152,27 @@ describe("R-c01-05 다주택 중과 한시유예 근거 줄 (TransferTaxResultVi
   const view = (r: TransferTaxResult) =>
     render(<TransferTaxResultView result={r} formData={createDefaultTransferFormData()} onReset={() => {}} onBack={() => {}} />).container.textContent ?? "";
 
-  it("M8-11 2주택 가목 — §167의10①12의2 가목이 함께 적힌다(§167의3 단독 아님)", () => {
-    const r = twoHouses("2026-05-09", "2026-06-01");
-    // 유예면 엔진이 `surchargeType`을 싣지 않는다(실측 undefined) — 주택 수로 조문을 고를 수 없어 두 조문을 병기한 단일 소스를 쓴다.
-    expect([r.isSurchargeSuspended, r.surchargeSuspensionBasis, r.surchargeType, r.multiHouseSurchargeDetail?.effectiveHouseCount]).toEqual([true, "a", undefined, 2]);
+  it.each([
+    ["주택 2", 2, 0, 2, "소득세법 시행령 §167의10①12의2"],
+    ["주택 3", 3, 0, 3, "소득세법 시행령 §167의3①12의2"],
+    ["주택 1 + 조합원입주권 1", 1, 1, 2, "소득세법 시행령 §167의11①12호"],
+    ["주택 2 + 조합원입주권 1", 2, 1, 3, "소득세법 시행령 §167의4③6의2"],
+  ] as const)("M8-11 가목 — %s 세대는 그 세대의 호 하나만 적는다", (_l, nH, nR, count, clause) => {
+    const r = household("2026-05-09", "2026-06-01", nH, nR);
+    expect([r.isSurchargeSuspended, r.surchargeSuspensionBasis, r.multiHouseSurchargeDetail?.effectiveHouseCount, r.surchargeSuspensionClause]).toEqual([true, "a", count, clause]);
     const t = view(r);
-    expect(t).toContain("근거: 2026-05-09까지 양도 (소득세법 시행령 §167의3①12의2 가목 · §167의10①12의2 가목)");
+    expect(t).toContain(`근거: 2026-05-09까지 양도 (${clause} 가목)`);
   });
 
-  it("M8-12 다목 — 경과조치 줄에도 조문이 붙는다", () => {
-    const r = twoHouses("2026-08-01", "2026-04-01");
+  it("M8-12 다목 — 경과조치 줄에도 그 세대의 호가 붙는다", () => {
+    const r = household("2026-08-01", "2026-04-01");
     expect(r.surchargeSuspensionBasis).toBe("da");
-    expect(view(r)).toMatch(/근거: 매매계약 경과조치 \(다목\) — 양도기한 \S+ 이내 충족 \(소득세법 시행령 §167의3①12의2 나·다목 · §167의10①12의2 나·다목\)/);
+    expect(view(r)).toMatch(/근거: 매매계약 경과조치 \(다목\) — 양도기한 \S+ 이내 충족 \(소득세법 시행령 §167의10①12의2 다목\)/);
+  });
+
+  it("M8-12b echo가 없는 구 결과 — 두 호 병기로 후퇴한다", () => {
+    const r = { ...household("2026-05-09", "2026-06-01"), surchargeSuspensionClause: undefined };
+    expect(view(r)).toContain(`근거: 2026-05-09까지 양도 (${SURCHARGE_TRANSITION.BASIS_A})`);
   });
 });
 

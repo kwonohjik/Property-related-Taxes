@@ -24,6 +24,7 @@ import { afterDutyCancellationNotices } from "./multi-house-rental-after-duty";
 import type { SurchargeSpecialRulesData } from "./schemas/rate-table.schema";
 import { MULTI_HOUSE } from "./legal-codes";
 import { isCrisisAcqExempt } from "./legal-codes";
+import { surchargeTransitionClause } from "./legal-codes";
 import { isRegulatedByBjdCode } from "./data/regulated-areas";
 import { REVERSE_DOUBLE_MERGE_NOTICE } from "./one-house/merge-deeming";
 import { INHERITED_SPECIAL_OVERLAP_NOTICE } from "./one-house/overlap-notice";
@@ -558,6 +559,7 @@ function computeMultiHouseSurcharge(
     isSurchargeSuspended: isSuspended,
     ...(isSuspended && suspensionBasis ? { surchargeSuspensionBasis: suspensionBasis } : {}),
     ...(isSuspended && suspensionDeadline ? { surchargeSuspensionDeadline: suspensionDeadline } : {}),
+    ...(isSuspended ? { surchargeSuspensionClause: surchargeTransitionClause(effectiveHouseCount, countedRightCount) } : {}),
     ...(statutoryRateExcluded ? { rateSurchargeStatutoryExcluded: true } : {}),
     exclusionReasons,
     warnings,
