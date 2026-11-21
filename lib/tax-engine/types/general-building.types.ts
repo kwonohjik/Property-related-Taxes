@@ -360,11 +360,11 @@ export type GeneralBuildingInput = {
   firstDisclosureBuildingStdPrice?: number;
   // ── §97②2호 단서 swap (환산 전용, 자산-총액 단위) ──
   /**
-   * 자본적지출 (원, 자산 총액 — §97① 가목). §97②2호 단서 swap 판정용.
+   * 자본적지출 (원, 자산 총액 — §97①2호). §97②2호 단서 swap 판정용.
    * 나목(자본적지출+양도비) > 가목(환산취득가+개산공제 합) 시 나목을 필요경비로 적용.
    */
   capitalExpenditure?: number;
-  /** 양도비 (원, 자산 총액 — §97① 나목). swap 판정용. */
+  /** 양도비 (원, 자산 총액 — §97①3호). swap 판정용. */
   transferExpense?: number;
   /**
    * 감가상각비 (원, §97③) — **건물분**에 귀속된다(조심2013서4988 「건물분 감가상각누계액」).

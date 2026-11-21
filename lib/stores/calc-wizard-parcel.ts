@@ -15,9 +15,9 @@ export interface ParcelFormItem {
    * 신규 입력은 `capitalExpenditure` + `transferExpense` 분리 사용.
    */
   expenses: string;
-  /** 자본적 지출액 (소득세법 §97① 가목) — §97② 단서 swap 비교에 사용 */
+  /** 자본적 지출액 (소득세법 §97①2호) — §97② 단서 swap 비교에 사용 */
   capitalExpenditure: string;
-  /** 양도비 (소득세법 §97① 나목) — §97② 단서 swap 비교에 사용 */
+  /** 양도비 (소득세법 §97①3호) — §97② 단서 swap 비교에 사용 */
   transferExpense: string;
   useDayAfterReplotting: boolean;
   replottingConfirmDate: string;

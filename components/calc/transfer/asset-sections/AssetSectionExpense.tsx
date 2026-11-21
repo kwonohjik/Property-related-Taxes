@@ -53,8 +53,8 @@ interface Props {
  *
  * | 항목 | 성격 | 안분 |
  * |---|---|---|
- * | 자본적지출(§97①가목) | **보유 중** 발생 — 물건 여러 부분에 공통될 수 있다 | ✅ 필요 |
- * | 양도비(§97①나목) | **양도 시** 발생(중개수수료·인지대) — 이미 양도분에 대한 지출 | ❌ 불필요 |
+ * | 자본적지출(§97①2호) | **보유 중** 발생 — 물건 여러 부분에 공통될 수 있다 | ✅ 필요 |
+ * | 양도비(§97①3호) | **양도 시** 발생(중개수수료·인지대) — 이미 양도분에 대한 지출 | ❌ 불필요 |
  *
  * ## 법령
  *
@@ -102,7 +102,7 @@ export function AssetSectionExpense({ asset, onChange, totalTransferExpense, isS
   const redevReceiveOnly = redevPostOnly !== null && isReceiveOnlyFiling(asset);
   return (
     <>
-      {/* 필요경비 — 자본적지출 / 양도비 분리 입력 (소득세법 §97① 가목·나목)
+      {/* 필요경비 — 자본적지출 / 양도비 분리 입력 (소득세법 §97①2호·3호)
           두 필드 합 > 환산취득가+개산공제 → §97② 단서 swap 발동 */}
       <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
         <p className="text-xs font-semibold text-foreground">

@@ -155,7 +155,7 @@ export interface BlockProps {
    */
   asset?: AssetForm;
   onAssetChange?: (patch: Partial<AssetForm>) => void;
-  /** 토지·건물 소유자 분리 — 본인 소유 부분 (소령 §166⑥, §168②) */
+  /** 토지·건물 소유자 분리 — 본인 소유 부분 */
   selfOwns?: "both" | "building_only" | "land_only";
   onSelfOwnsChange?: (v: "both" | "building_only" | "land_only") => void;
   /** 매매사례가액 추계(§176의2③1호) 모드 토글 */

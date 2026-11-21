@@ -248,9 +248,9 @@ export const companionAssetSchema = z.object({
   transferType: z.enum(["regular", "burdened_gift"]).optional(),
   /** 자산 직접 귀속 필요경비 (원, 선택) */
   directExpenses: z.number().int().nonnegative().optional(),
-  /** 자본적 지출액 (소득세법 §97① 가목) — §97② 단서 swap 비교에 사용. 지분 모드는 × ratio 적용된 값 */
+  /** 자본적 지출액 (소득세법 §97①2호) — §97② 단서 swap 비교에 사용. 지분 모드는 × ratio 적용된 값 */
   capitalExpenditure: z.number().int().nonnegative().optional(),
-  /** 양도비 (소득세법 §97① 나목) — §97② 단서 swap 비교에 사용. 지분 모드는 × ratio 적용된 값 */
+  /** 양도비 (소득세법 §97①3호) — §97② 단서 swap 비교에 사용. 지분 모드는 × ratio 적용된 값 */
   transferExpense: z.number().int().nonnegative().optional(),
   /** 감가상각비 (소득세법 §97③) — 취득가액에서 공제. 지분 모드는 × ratio 적용된 값 */
   depreciationAmount: z.number().int().nonnegative().optional(),

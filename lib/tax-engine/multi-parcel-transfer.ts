@@ -72,9 +72,9 @@ export interface ParcelInput {
    * 신규 입력은 `capitalExpenditure` + `transferExpense` 분리 사용.
    */
   expenses?: number;
-  /** 자본적 지출액 (§97① 가목) — §97② 단서 swap 비교에 사용 (actual/estimated 모드 공통) */
+  /** 자본적 지출액 (§97①2호) — §97② 단서 swap 비교에 사용 (actual/estimated 모드 공통) */
   capitalExpenditure?: number;
-  /** 양도비 (§97① 나목) — §97② 단서 swap 비교에 사용 */
+  /** 양도비 (§97①3호) — §97② 단서 swap 비교에 사용 */
   transferExpense?: number;
   /** 미등기 여부 (true이면 장기보유특별공제 0%) */
   isUnregistered?: boolean;

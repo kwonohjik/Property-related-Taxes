@@ -184,7 +184,7 @@ export const propertySchema = z
       });
     }
 
-    // 소유자 분리 유효성 (소령 §166⑥, §168②) — 토지 취득일 요구는 `addPropertyRefines`, 주택·건물 외 자산
+    // 소유자 분리 유효성 — 토지 취득일 요구는 `addPropertyRefines`, 주택·건물 외 자산
     // 거부는 `refinePropertyRequiredInputs`(M2 — 단건·다건 공용 `transfer-tax-schema-household-refines.ts`).
 
     // 일괄양도 유효성 (소득세법 시행령 §166 ⑥)

@@ -134,7 +134,7 @@ export function deriveColumns(
     };
   }
   if (sp) {
-    // 토지·건물 소유자 분리 — 본인이 소유하지 않는 파트 컬럼 제거 (소령 §166⑥, §168②).
+    // 토지·건물 소유자 분리 — 본인이 소유하지 않는 파트 컬럼 제거.
     // building_only → 토지 컬럼 없음 / land_only → 건물 컬럼 없음.
     const selfOwns = sp.selfOwns ?? "both";
     const columns: Column[] = [{ key: "total", label: "합계" }];

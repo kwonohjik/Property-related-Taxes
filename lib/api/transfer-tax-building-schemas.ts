@@ -438,11 +438,11 @@ export const generalBuildingValuationSchema = z.object({
    */
   bundledExpenseNature: z.enum(["capital", "transfer", "mixed"]).optional(),
   // ── ⑫ §97②2호 단서 swap (자산총액) — 비-증축 전체환산(G2). 침묵 strip 방지 명시. ──
-  /** 자본적지출 (원, 자산총액 — §97① 가목). */
+  /** 자본적지출 (원, 자산총액 — §97①2호). */
   capitalExpenditure: z.number().int().nonnegative().optional(),
   /** 자본적지출 중 증축 전 지출액 (원, 자산총액 · 토지분 포함) — 증축분에 배분하지 않는다. 침묵 strip 방지 명시. */
   capitalExpenditureBeforeExtension: z.number().int().nonnegative().optional(),
-  /** 양도비 (원, 자산총액 — §97① 나목). */
+  /** 양도비 (원, 자산총액 — §97①3호). */
   transferExpense: z.number().int().nonnegative().optional(),
   /** 감가상각비 (원, §97③) — **건물분**에 귀속, 원건물 카드의 취득가액에서 공제. 침묵 strip 방지 명시. */
   depreciationAmount: z.number().int().nonnegative().optional(),
