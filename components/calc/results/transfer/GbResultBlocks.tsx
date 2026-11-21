@@ -22,6 +22,8 @@ import { GbPreDeemedAcquisitionBlock } from "@/components/calc/results/transfer/
 import { PreDeemedPurchaseResultCard } from "@/components/calc/results/transfer/PreDeemedPurchaseResultCard";
 import type { GbBlockView, GbShareBlockView } from "@/components/calc/results/transfer/gb-result-block-views";
 import type { GbPreDeemedEcho } from "@/lib/tax-engine/types/general-building.types";
+import type { GbSec1639Basis } from "@/lib/tax-engine/types/general-building.types";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { PreDeemedPurchaseDetail } from "@/lib/tax-engine/types/transfer-pre-deemed-purchase.types";
 
 /** §163⑨ 상속 블록의 파트 라벨 — 의제취득일 전 상속 파트는 엔진이 채택한 후보를 따른다(PR-4). */
@@ -45,6 +47,8 @@ interface InheritUnit {
   purchase?: PreDeemedPurchaseDetail;
   acq: (kind: "land" | "building") => number | undefined;
   converted: (kind: "land" | "building") => boolean;
+  /** 파트 카드의 §163⑨ 근거 echo — 단서(영 §164④·⑤ 가액) 채택이면 `adopted: "sec164"`(R-c07-03). */
+  basis: (kind: "land" | "building") => GbSec1639Basis | undefined;
 }
 
 const shareName = (s: GbShareBlockView) =>
@@ -57,6 +61,11 @@ export function GbResultBlocks({ view }: { view: GbBlockView }) {
     (d.assetCards ?? []).some((c) =>
       c.usedEstimatedAcquisition &&
       (kind === "land" ? c.propertyType === "land" : c.propertyType === "general_building_unit" && !c.propertyId.includes("building2")));
+  /** 그 파트 카드의 §163⑨ 근거 echo — 파트 카드는 `partConverted`와 같은 축으로 고른다. */
+  const partBasis = (kind: "land" | "building") =>
+    (d.assetCards ?? []).find((c) =>
+      c.sec1639Basis &&
+      (kind === "land" ? c.propertyType === "land" : c.propertyType === "general_building_unit" && !c.propertyId.includes("building2")))?.sec1639Basis;
   const units: InheritUnit[] = view.shares
     ? view.shares.map((s) => ({
         key: s.key,
@@ -67,6 +76,7 @@ export function GbResultBlocks({ view }: { view: GbBlockView }) {
         purchase: s.preDeemedPurchase,
         acq: s.partAcquisitionPrice,
         converted: s.partConverted,
+        basis: s.partSec1639Basis,
       }))
     : [{
         key: "",
@@ -76,8 +86,19 @@ export function GbResultBlocks({ view }: { view: GbBlockView }) {
         purchase: d.preDeemedPurchase,
         acq: view.partAcquisitionPrice,
         converted: partConverted,
+        basis: partBasis,
       }];
   const inheritedUnits = units.filter((u) => u.land || u.building);
+  /**
+   * 상속 파트 라벨 — 의제취득일 전 ①②③ echo가 있으면 그 채택, 없으면 파트 카드의 §163⑨ 근거 echo(R-c07-03 — 단서 채택인데 「상속개시일 평가액」이라 적었다),
+   * 둘 다 없는 구 이력은 종전(추계 여부).
+   */
+  const adoptedOf = (u: InheritUnit, kind: "land" | "building") =>
+    u.preDeemed?.[kind]?.adopted ?? u.basis(kind)?.adopted ?? (u.converted(kind) ? "converted" : "reported");
+  /** §163⑨ 단서(영 §164④ 토지 · §164⑤ 건물 가액)가 채택된 상속 파트 — ①②③ 비교 파트는 그 블록이 따로 설명한다. */
+  const provisoCitations = (["land", "building"] as const)
+    .filter((kind) => inheritedUnits.some((u) => u[kind] && !u.preDeemed?.[kind] && u.acq(kind) !== undefined && u.basis(kind)?.adopted === "sec164"))
+    .map((kind) => (kind === "land" ? TRANSFER.INHERITED_AFTER_DEEMED_LAND_MAX : TRANSFER.INHERITED_AFTER_DEEMED_BUILDING_MAX));
   const preDeemedUnits = units.filter((u) => u.preDeemed);
   const purchaseUnits = units.filter((u) => u.purchase);
   // 지분 판정이 30% 경계에서 갈려 물건 전체 판정을 싣지 못한 경우(엔진 D-2 🔴) — 지분별 판정을 그대로 그린다.
@@ -125,6 +146,8 @@ export function GbResultBlocks({ view }: { view: GbBlockView }) {
             봅니다. 그 파트는 환산취득가·개산공제(§163⑥)를 적용하지 않습니다.
             {inheritedUnits.some((u) => u.preDeemed || (u.land && u.converted("land")) || (u.building && u.converted("building"))) &&
               " 다만 1985.1.1. 전 상속 파트는 환산취득가액이 더 크면 환산취득가액과 개산공제를 적용합니다."}
+            {provisoCitations.length > 0 &&
+              ` 기준시가 고시 전에 상속받은 파트는 평가액과 영 §164 가액(취득당시 기준시가) 중 많은 금액으로 합니다(${provisoCitations.join(" · ")}).`}
           </p>
           <ul className="text-xs text-violet-900 space-y-0.5 pt-1 dark:text-violet-200">
             {inheritedUnits.flatMap((u) =>
@@ -137,9 +160,7 @@ export function GbResultBlocks({ view }: { view: GbBlockView }) {
                       {u.name && `${u.name} `}
                       {kind === "land" ? "토지분" : "건물분"} 취득가액
                       <span className="ml-1 text-violet-700 dark:text-violet-400">
-                        {u[kind]
-                          ? PRE_DEEMED_ADOPTED_LABEL[u.preDeemed?.[kind]?.adopted ?? (u.converted(kind) ? "converted" : "reported")]
-                          : "(상속 아님 — 종전 산정)"}
+                        {u[kind] ? PRE_DEEMED_ADOPTED_LABEL[adoptedOf(u, kind)] : "(상속 아님 — 종전 산정)"}
                       </span>
                     </span>
                     <span className="font-mono tabular-nums font-semibold whitespace-nowrap">

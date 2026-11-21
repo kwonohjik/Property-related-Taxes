@@ -25,6 +25,7 @@ import { splitAcqModeLabel } from "@/lib/tax-engine/transfer-tax-split-display";
 import { buildBgAcquisitionFormula, buildBgExpenseFormula, bgOwnerSplitPerAssetFormulas } from "./DetailedStatementBgFormulas";
 import { buildGbCarryoverExpenseFormula } from "./DetailedStatementGbCarryoverFormulas";
 import { apportionByStdPrice } from "@/lib/tax-engine/std-price-apportion";
+import { buildGbNonStdTransferFormula } from "./gb-sale-split-transfer-formula";
 
 /**
  * 묶음 카드별 명세(`cards`)가 있으면 이 파트 카드가 속한 지분·자산의 명세를 읽는다 — 카드 id 접미사(`land#0` → `0`)가 `cards[].propertyId`와 같다
@@ -175,6 +176,10 @@ export function buildGbTransferFormula(
       return `양도가액 = 자산기준시가 × 채무액 / 양도시 보충적평가 (소령 §159①2호)\n        = ${fmt(asset.sangjeungbeopValue)} × ${fmt(debt)} / ${fmt(max)}\n        = ${fmt(p.transferPrice)}`;
     }
   }
+
+  // R-c05-01 — 구분 기재 채택·감정가액 안분은 기준시가 안분식이 등식이 아니다(그 값을 적는다).
+  const nonStd = gb ? buildGbNonStdTransferFormula(p, gb) : undefined;
+  if (nonStd) return nonStd;
 
   // 일반건물(사례 31·33) 분기 — gbDetail 존재 시 §166⑥ 안분 산식
   if (gb && gb.landStdTotal && gb.buildingStdTotal) {

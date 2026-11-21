@@ -88,7 +88,8 @@ describe("블록 6종 — 함께 양도 자산별 묶음 = 단건", () => {
     renderCard(r, f);
     const block = within(screen.getByTestId("gb-result-blocks-primary"));
     expect(block.getByText(/토지분 취득가액/).closest("li")!.textContent).toBe("토지분 취득가액(상속개시일 평가액)300,000,000");
-    expect(block.getByText(/건물분 취득가액/).closest("li")!.textContent).toBe("건물분 취득가액(상속개시일 평가액)150,000,000");
+    // 건물 평가액 1억 < 영 §164⑤ 가액 1.5억 → 단서 2호 채택 — 카드 echo를 따른다(R-c07-03 · 종전 「(상속개시일 평가액)」은 거짓 라벨).
+    expect(block.getByText(/건물분 취득가액/).closest("li")!.textContent).toBe("건물분 취득가액(영 §164 가액)150,000,000");
   });
 
   it("§97②2호 단서 — 자산별 비교값 269,553,853 < 510,000,000", async () => {

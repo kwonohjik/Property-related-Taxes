@@ -56,6 +56,12 @@ type Props = Detail &
     surchargeExclusionBasis?: string;
     /** 차감형 농특세 근거(엔진 단계 `legalBasis` — 양도일별 시행령 §5①/§5②). 없으면 현행(§5②). */
     ruralSurtaxBasis?: string;
+    /**
+     * 함께 양도·다건(합산 재계산 경로) — 5년 이내 세액감면 모드의 감면세액은 합산 엔진이 합산 산출세액으로 다시 계산해 정한다(R-c07-02).
+     * 자산별 단건 값으로 「산출세액 × 감면율 = 감면세액」·농어촌특별세를 찍으면 실제 적용액과 다르다 — 그 줄을 합산 안내로 바꾼다.
+     * `aggregateApplied`는 소득금액차감(income_deduction) 경로만 고르므로 이 신호를 따로 받는다.
+     */
+    aggregatedContext?: boolean;
   };
 
 const TITLES: Record<Detail["kind"], string> = {
@@ -142,11 +148,13 @@ function Unsold986RentalPeriodLine({ echo, testId = "unsold986-rental-period" }:
   );
 }
 
-export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggregateApplied, surchargeExclusionBasis, ruralSurtaxBasis }: Props) {
+export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggregateApplied, surchargeExclusionBasis, ruralSurtaxBasis, aggregatedContext = false }: Props) {
   const title = TITLES[kind];
   // P2·P3 하이브리드 — 5년 내 양도 = 세액감면 경로 (소득금액 차감 아님)
   const isHybrid = HYBRID_KINDS.includes(kind);
   const isTaxAmountMode = isHybrid && (result as UnsoldHybridResult).effectCategory === "tax_amount";
+  /** 합산 경로의 세액감면 — 이 카드의 감면세액·농특세는 자산 단독 값이라 실제 적용액이 아니다(R-c07-02). */
+  const aggregatedTaxAmount = aggregatedContext && isTaxAmountMode;
   // §98의2 특칙 전용 (감면세액 없음) / §98의4 중과 배제 비대상 (소령 §167의3①5호 비열거)
   const hybridEffect = isHybrid ? (result as UnsoldHybridResult).effectCategory : undefined;
   const isSpecialOnly = hybridEffect === "lthd_rate_special" || hybridEffect === "flat_rate_20";
@@ -212,7 +220,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
             )}
           </div>
         ))}
-        {!isSpecialOnly && (
+        {!isSpecialOnly && !aggregatedTaxAmount && (
           <div className="border-t border-emerald-200 dark:border-emerald-800/40 pt-1.5 flex items-baseline justify-between">
             <span className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
               {isTaxAmountMode ? `감면세액 (산출세액의 ${hybridRatePct}%)` : "과세대상소득금액에서 차감한 양도소득금액"}
@@ -233,16 +241,31 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
       {isTaxAmountMode && (
         <div className="rounded border border-emerald-200 bg-white/70 dark:border-emerald-800/40 dark:bg-emerald-950/40 p-2.5 space-y-1.5">
           <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">감면세액 산출근거</p>
-          <p className="text-caption text-muted-foreground">감면세액 = 산출세액 × 감면율</p>
-          <p className="text-xs font-mono tabular-nums font-semibold text-emerald-900 dark:text-emerald-200">
-            {calculatedTax.toLocaleString()} × {hybridRatePct}% ={" "}
-            {(result as UnsoldHybridResult).reductionAmount.toLocaleString()}
-          </p>
+          {aggregatedTaxAmount ? (
+            <p data-testid="hybrid-aggregate-reduction" className="text-caption text-muted-foreground">
+              감면세액은 여러 건을 합산한 산출세액으로 다시 계산해 확정합니다 — 합산 결과의 감면세액 참조
+            </p>
+          ) : (
+            <>
+              <p className="text-caption text-muted-foreground">감면세액 = 산출세액 × 감면율</p>
+              <p className="text-xs font-mono tabular-nums font-semibold text-emerald-900 dark:text-emerald-200">
+                {calculatedTax.toLocaleString()} × {hybridRatePct}% ={" "}
+                {(result as UnsoldHybridResult).reductionAmount.toLocaleString()}
+              </p>
+            </>
+          )}
         </div>
       )}
 
-      {aggregateApplied !== undefined && result.ruralSurtax > 0 && <AggregateRuralSurtaxNote basis={ruralSurtaxBasis} />}
-      {aggregateApplied === undefined && result.ruralSurtax > 0 && (
+      {aggregatedTaxAmount && result.ruralSurtax > 0 && (
+        <div data-testid="hybrid-aggregate-rural" className={cn("rounded-md border px-3 py-2", TONE.sky.card)}>
+          <p className="text-caption text-sky-900 dark:text-sky-300">
+            농어촌특별세는 합산 결과에서 확정한 감면세액 × 20%로 산정합니다({TRANSFER.RURAL_SURTAX_REDUCTION}).
+          </p>
+        </div>
+      )}
+      {!aggregatedTaxAmount && aggregateApplied !== undefined && result.ruralSurtax > 0 && <AggregateRuralSurtaxNote basis={ruralSurtaxBasis} />}
+      {!aggregatedTaxAmount && aggregateApplied === undefined && result.ruralSurtax > 0 && (
         <div className={cn("rounded-md border px-3 py-2", TONE.sky.card)}>
           <p className="text-caption text-sky-900 dark:text-sky-300">
             농어촌특별세: 감면세액 {result.taxReductionForRuralSurtax.toLocaleString()} × 20% ={" "}

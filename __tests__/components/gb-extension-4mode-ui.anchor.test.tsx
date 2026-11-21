@@ -411,6 +411,7 @@ function makeAggregated(modes: {
       prop("building1", "건물(3001)"),
       prop("building2", "증축건물(3002)"),
     ],
+    lossOffsetTable: [],
     generalBuildingValuationDetail: {
       assetCards: [
         { propertyId: "land", usedEstimatedAcquisition: modes.land },

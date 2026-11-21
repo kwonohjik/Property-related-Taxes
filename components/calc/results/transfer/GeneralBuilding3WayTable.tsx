@@ -19,7 +19,11 @@ const THREE_WAY_SUM_KEYS = [
   "lossOffsetFromSameGroup",
   "lossOffsetFromOtherGroup",
   "incomeAfterOffset",
+  "lossGiven",
 ] as const;
+
+/** 토지 열 카드 id — 한도 이내 `land` · 사업용+초과분(합친 뒤 `land_business`) · 전체 비사업용 `land_nbl`. */
+const LAND_COLUMN_IDS = new Set(["land", "land_business", "land_nbl"]);
 
 /**
  * 일반건물 증축 케이스(사례 33) 전용 — 토지(1001)·건물1(3001)·건물2(3002) 3열 요약 표.
@@ -33,17 +37,23 @@ const THREE_WAY_SUM_KEYS = [
 export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: AggregateTransferResult; view?: GbBlockView }) {
   // 3-way 유효성 확인: 정확히 3개 카드이고, 마지막 카드가 "증축건물(3002)"일 때만 렌더
   // 당초 증여 때 인수한 채무 부분(매입분) 꼬리 카드는 부모(증여분) 카드에 합쳐 세 열로 그린다 — 합치지 않으면 카드가 4장이 되어 이 표가 통째로 사라진다.
-  const pieceFolded = foldPurchasedPieces(view ? gbViewProperties(aggregated, view) : aggregated.properties, THREE_WAY_SUM_KEYS);
+  // R-c07-04 — 결손 자산이 실제로 다른 자산에 넘긴 몫(엔진 `lossOffsetTable`). |양도소득금액| 전액이 아니다 — 흡수되지 못한 결손은 소멸한다.
+  //   카드를 합치기 전에 원래 id로 구해 꼬리·토지 두 몫도 같이 더한다.
+  const lossGivenOf = (id: string) => aggregated.lossOffsetTable.reduce((s, r) => (r.fromPropertyId === id ? s + r.amount : s), 0);
+  const rows = (view ? gbViewProperties(aggregated, view) : aggregated.properties).map((p) => ({ ...p, lossGiven: lossGivenOf(p.propertyId) }));
+  const pieceFolded = foldPurchasedPieces(rows, THREE_WAY_SUM_KEYS);
   // NBL2611-V10-BX08 — 토지가 사업용·비사업용 초과분 두 장으로 갈려도 토지 한 열로 합쳐 세 열을 지킨다(합치지 않으면 4장이 되어 표가 사라졌다).
   const props = foldGbLandCards(pieceFolded, THREE_WAY_SUM_KEYS);
   const landSplit = props.length < pieceFolded.length;
   if (props.length !== 3) return null;
-  const hasExtension = props.some((p) => p.propertyLabel.includes("3002"));
+  // R-c07-01 — 열은 카드 id로 고른다. 라벨에는 사용자가 쓴 자산 명칭·지분 이름이 앞에 붙어(「상가 3001호 토지(1001)」) 코드 부분 문자열로 찾으면 다른 카드를 집는다.
+  const idOf = (p: (typeof props)[number]) => baseCardId(p.propertyId);
+  const hasExtension = props.some((p) => idOf(p) === "building2");
   if (!hasExtension) return null;
 
-  const land = props.find((p) => p.propertyLabel.includes("1001")) ?? props[0];
-  const bld1 = props.find((p) => p.propertyLabel.includes("3001")) ?? props[1];
-  const bld2 = props.find((p) => p.propertyLabel.includes("3002")) ?? props[2];
+  const land = props.find((p) => LAND_COLUMN_IDS.has(idOf(p))) ?? props[0];
+  const bld1 = props.find((p) => idOf(p) === "building1") ?? props[1];
+  const bld2 = props.find((p) => idOf(p) === "building2") ?? props[2];
 
   /**
    * 🔴 **자산별 취득가액 산정 방식은 카드에서 파생한다** (2026-08-12 D-9).
@@ -99,10 +109,16 @@ export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: Agg
    *    흡수분이 있는데도 부호가 뒤집혀 **합계 0이 거짓**이 됐다(2026-09-07 대장 재대조).
    *    결손 자산은 흡수분이 0이므로 한 함수로 세 자산을 모두 처리할 수 있다.
    */
-  const offsetOf = (a: { income: number; lossOffsetFromSameGroup: number; lossOffsetFromOtherGroup: number }) => {
-    const contributed = a.income < 0 ? Math.abs(a.income) : 0;
+  // R-c07-04 — 기여분은 실제로 넘어간 몫이다. 종전 |양도소득금액| 전액은 흡수되지 못하고 소멸한 결손까지 「+」로 셌다.
+  //   엔진 행 귀속(`lossOffsetTable`)은 결손 자산 사이에 1원 단위 배분 오차가 있다(실측 429,821,908 / 7,513,330 — 결손 429,821,909 / 7,513,329).
+  //   그래서 이 표의 결손이 다 넘어갔으면(넘긴 합 ≥ 결손 합) 결손 전액을 기여로 두고, 남았을 때만 행 귀속으로 자산별 몫을 가른다.
+  const lossCols = [land, bld1, bld2].filter((a) => a.income < 0);
+  const fullyGiven = lossCols.reduce((s, a) => s + a.lossGiven, 0) >= lossCols.reduce((s, a) => s - a.income, 0);
+  const offsetOf = (a: { income: number; lossGiven: number; lossOffsetFromSameGroup: number; lossOffsetFromOtherGroup: number }) => {
+    const contributed = a.income >= 0 ? 0 : fullyGiven ? -a.income : Math.min(-a.income, a.lossGiven);
+    const expired = a.income < 0 ? -a.income - contributed : 0;
     const absorbed = a.lossOffsetFromSameGroup + a.lossOffsetFromOtherGroup;
-    return { contributed, absorbed };
+    return { contributed, expired, absorbed };
   };
 
   const fmt = (n: number) => {
@@ -120,13 +136,15 @@ export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: Agg
     return { text: "-", tone: "text-muted-foreground" };
   };
   /**
-   * 결손 통산 합계 — 세 칸의 「기여 − 흡수」 합. 단건은 결손이 이 물건 안에서만 오가 늘 0이다.
+   * 결손 통산 합계 — 세 칸의 「기여 − 흡수」 합. 단건은 결손이 이 물건 안에서만 오가 늘 0이다(흡수되지 못한 결손은 기여가 아니라 소멸 — `expiredLoss`).
    * 함께 양도는 결손이 다른 자산으로 넘어가거나(+) 다른 자산의 결손을 흡수한다(△) — 하드코딩 0은 거짓이 된다(계획서 C-4 · Q-2 a).
    */
   const netOffset = [land, bld1, bld2].reduce((s, a) => {
     const { contributed, absorbed } = offsetOf(a);
     return s + contributed - absorbed;
   }, 0);
+  /** 통산되지 못하고 소멸한 결손(이월 불인정) — 이 표의 결손 자산 몫만. */
+  const expiredLoss = [land, bld1, bld2].reduce((s, a) => s + offsetOf(a).expired, 0);
   const landOffsetCell = offsetCell(land);
   const bld1OffsetCell = offsetCell(bld1);
   const bld2OffsetCell = offsetCell(bld2);
@@ -273,7 +291,25 @@ export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: Agg
         </table>
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        {netOffset === 0 ? (
+        {expiredLoss > 0 ? (
+          // R-c07-04 — 흡수되지 못하고 소멸한 결손이 있으면 통산 후 합계 − 통산 전 합계 = 넘겨준 결손 − 흡수한 결손 + 소멸한 결손이다.
+          <>
+            {netOffset > 0 && (
+              <>
+                결손 중 {formatKRW(netOffset)}은 <strong>함께 양도한 다른 자산</strong>의 양수 소득에 흡수되었습니다.{" "}
+              </>
+            )}
+            {netOffset < 0 && (
+              <>
+                <strong>함께 양도한 다른 자산</strong>의 결손 {formatKRW(-netOffset)}을 이 물건이 흡수했습니다.{" "}
+              </>
+            )}
+            결손 중 {formatKRW(expiredLoss)}은 공제할 양도소득금액이 없어 통산되지 못하고 소멸합니다(이월 불인정).{" "}
+            {netOffset + expiredLoss === 0
+              ? "이 표의 통산 후 합계는 통산 전과 같습니다 (영 §102②)."
+              : `이 표의 통산 후 합계는 통산 전보다 ${formatKRW(Math.abs(netOffset + expiredLoss))} ${netOffset + expiredLoss > 0 ? "큽니다" : "작습니다"} (영 §102②).`}
+          </>
+        ) : netOffset === 0 ? (
           <>
             양도소득금액 합계는 통산 전후 동일하지만,{" "}
             <strong>자산별 분포가 변경</strong>됩니다. 결손 자산의 손실이 나머지 자산의 양수에 흡수되어

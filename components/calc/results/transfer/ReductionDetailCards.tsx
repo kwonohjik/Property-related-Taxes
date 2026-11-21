@@ -266,37 +266,37 @@ export function ReductionDetailCards({
         </>
       )}
       {/* P1 차감형 (2026-06-11): §99 신축주택 IMF 1차 · §98의8 준공후미분양 50% */}
-      {result.new99Detail && <IncomeDeductionDetailCard kind="new_99" result={result.new99Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.new99Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} />}
+      {result.new99Detail && <IncomeDeductionDetailCard kind="new_99" result={result.new99Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.new99Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />}
       {result.unsold988Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_8" result={result.unsold988Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold988Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} />
+        <IncomeDeductionDetailCard kind="unsold_98_8" result={result.unsold988Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold988Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
       )}
       {/* P2 하이브리드 (2026-06-11): §98의7 9억↓ 미분양 · §99의2 신축·미분양·1세대1주택 */}
       {result.unsold987Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_7" result={result.unsold987Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold987Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} />
+        <IncomeDeductionDetailCard kind="unsold_98_7" result={result.unsold987Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold987Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
       )}
       {result.unsold992Detail && (
-        <IncomeDeductionDetailCard kind="unsold_99_2" result={result.unsold992Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold992Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} />
+        <IncomeDeductionDetailCard kind="unsold_99_2" result={result.unsold992Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold992Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
       )}
       {/* P3 하이브리드 (2026-06-12) */}
       {result.unsold983Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_3" result={result.unsold983Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold983Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} />
+        <IncomeDeductionDetailCard kind="unsold_98_3" result={result.unsold983Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold983Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
       )}
       {result.unsold985Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_5" result={result.unsold985Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold985Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} />
+        <IncomeDeductionDetailCard kind="unsold_98_5" result={result.unsold985Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold985Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
       )}
       {result.unsold986Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_6" result={result.unsold986Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold986Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} />
+        <IncomeDeductionDetailCard kind="unsold_98_6" result={result.unsold986Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold986Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
       )}
       {/* P4 (2026-06-12) */}
       {result.unsold982Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_2" result={result.unsold982Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold982Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} />
+        <IncomeDeductionDetailCard kind="unsold_98_2" result={result.unsold982Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold982Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
       )}
       {result.unsold984Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_4" result={result.unsold984Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold984Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} />
+        <IncomeDeductionDetailCard kind="unsold_98_4" result={result.unsold984Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold984Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
       )}
       {/* P5 (2026-06-12) */}
       {result.unsold98Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98" result={result.unsold98Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold98Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} />
+        <IncomeDeductionDetailCard kind="unsold_98" result={result.unsold98Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold98Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
       )}
       {/* §99의3 신축주택 과세특례 — 양도소득금액 차감 방식 5년 안분 산식 */}
       {result.new993Detail && <New993DetailCard detail={result.new993Detail} aggregateApplied={appliedOf(result.new993Detail)} />}

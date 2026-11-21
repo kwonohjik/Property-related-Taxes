@@ -23,7 +23,7 @@ const card = (propertyId: string, label: string, v: Partial<Record<string, numbe
   propertyId, propertyLabel: label, transferPrice: 0, acquisitionPrice: 0, necessaryExpense: 0, transferGain: 0, longTermHoldingDeduction: 0, income: 0,
   lossOffsetFromSameGroup: 0, lossOffsetFromOtherGroup: 0, incomeAfterOffset: 0, ...v,
 });
-const agg = (props: Card[]) => ({ properties: props }) as unknown as AggregateTransferResult;
+const agg = (props: Card[]) => ({ properties: props, lossOffsetTable: [] }) as unknown as AggregateTransferResult;
 const b1 = card("building1", "건물(3001)", { transferPrice: 300_000_000 });
 const b2 = card("building2", "증축건물(3002)", { transferPrice: 200_000_000 });
 
