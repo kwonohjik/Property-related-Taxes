@@ -153,6 +153,50 @@ describe("3호·4호 겹침(주택 3채 이상 + 산입 권리) — 4호 버킷 
   });
 });
 
+/**
+ * 보유 1년 이상 2년 미만(§104①2호) ⑦1호 + ⑦2호 — 현행 유지(호가 다르면 합산하지 않음) + 확인 필요 고지 (사용자 결정 2026-11-22)
+ * 시료(리뷰 probe와 같음): 각 13억 양도 · 3억 취득 · 2025-03-01 취득 · 2026-06-01 / 2026-09-01 양도 → 양도차익 각 10억 · 장특 0.
+ *   현행(호별): 자산마다 60%가 중과(누진 + 20%p)보다 크다 → 997,500,000 × 60% + 1,000,000,000 × 60% = 598,500,000 + 600,000,000 = 1,198,500,000
+ *   넓은 읽기(①2호 공유 = 동일한 호 · 합산 과세표준에 ⑦ 세율): 1,997,500,000 × 65% − 65,940,000 = 1,232,435,000 (⑦1+⑦1 대조군 값)
+ */
+describe("1~2년 단기 ⑦1호 + ⑦2호 — 합산하지 않음 + 해석례 미확인 고지", () => {
+  const SHORT_NOTICE = "단기 세율의 호를 함께 쓰는 경우의 합산 단위";
+  const short = (id: string, transferDate: string, houses: string[], rights: string[]) => ({
+    ...asset(id, 1_300_000_000, transferDate, houses, rights),
+    acquisitionDate: new Date("2025-03-01"),
+  }) as TransferTaxItemInput;
+  const notices = (r: ReturnType<typeof run>) => r.warnings.filter((w) => w.includes(SHORT_NOTICE));
+
+  it("검산 — 손계산 상수", () => {
+    expect(Number((997_500_000n * 60n) / 100n + (1_000_000_000n * 60n) / 100n)).toBe(1_198_500_000);
+    expect(Number((1_997_500_000n * 65n) / 100n - 65_940_000n)).toBe(1_232_435_000);
+  });
+
+  it("ST-1 ⑦1호 + ⑦2호(둘 다 1~2년) → 1,198,500,000 · 고지 1건(유리·불리 표현 없음)", () => {
+    const r = run([short("A", "2026-06-01", ["A", "B"], []), short("B", "2026-09-01", ["B"], ["R1"])]);
+    expect(r.properties.map((p) => p.surchargeHouseholdHasCountedRight ?? false)).toEqual([false, true]);
+    expect(r.calculatedTax).toBe(1_198_500_000);
+    const n = notices(r);
+    expect(n).toHaveLength(1);
+    expect(n[0]).toContain("확인 필요");
+    expect(n[0]).not.toMatch(/유리|불리/);
+  });
+
+  it("ST-2 대조 ⑦1호 + ⑦1호(둘 다 1~2년) → 같은 호 합산 1,232,435,000 · 고지 없음", () => {
+    const r = run([short("A", "2026-06-01", ["A", "B"], []), short("B", "2026-09-01", ["B", "C"], [])]);
+    expect(r.calculatedTax).toBe(1_232_435_000);
+    expect(notices(r)).toHaveLength(0);
+  });
+
+  it("ST-3 대조 2년 이상 ⑦1호 + ⑦2호(S-1) → 단기 고지 없음", () => {
+    expect(notices(run([A(["A", "B"], []), B(["B"], ["R1"])]))).toHaveLength(0);
+  });
+
+  it("ST-4 한쪽만 1~2년 ⑦1호 + 2년 이상 ⑦2호 → 단기 고지 없음", () => {
+    expect(notices(run([short("A", "2026-06-01", ["A", "B"], []), B(["B"], ["R1"])]))).toHaveLength(0);
+  });
+});
+
 describe("다건 route POST — ⑫ Zod → ⑭ 매핑 → 엔진", () => {
   /** JSON 경유(날짜 문자열) — 위 엔진 시나리오 S-1과 같은 사실관계 */
   const jsonHouse = (id: string) => ({
