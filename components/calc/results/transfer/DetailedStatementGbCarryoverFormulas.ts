@@ -5,7 +5,7 @@
  * 적힌 산식이 적힌 값을 못 만들었다 — 이월과세 A 카드의 필요경비 칸은 개산공제가 아니라 본인 양도비 + 증여자 자본적지출 + 증여세 상당액이고,
  * 비교과세(B) 카드는 #2676 이후 개산공제 없이 본인 자본적지출·양도비뿐이다. 값은 전부 엔진 echo(`carryoverTaxationDetail`)와 카드 값에서 읽고 새로 계산하지 않는다.
  *
- * 계획서 `docs/00-pm/carryover-a-gb-card-filing-acq-cell-label.plan.md` §10-6 V-2. 단건 경로의 같은 분기: `DetailedStatementFormulaBuilders.buildNecessaryExpenseFormula`(A 채택).
+ * 계획서 `docs/00-pm/carryover-a-gb-card-filing-acq-cell-label.plan.md` §10-6 V-2. 단건 경로의 같은 분기: `DetailedStatementAcqExpenseFormulas.buildNecessaryExpenseFormula`(A 채택).
  * `DetailedStatementGbFormulas`가 이 파일을 import 하는 **단방향** 의존이다(순환 금지 — 포맷은 로컬에 둔다).
  */
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
