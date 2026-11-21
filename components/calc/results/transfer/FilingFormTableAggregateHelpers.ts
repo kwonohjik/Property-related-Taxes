@@ -302,6 +302,7 @@ export function buildAggregateRows(
         p.reducibleIncome ?? 0,
         p.replacementLandDetail?.eligibleTransferIncome,
         p.eligibleIncomeAfterLoss,
+        p.publicExpropriationDetail?.partWise?.eligibleIncome,
       ),
     );
     setNum("reductionTargetIncome2", col, p.incomeDeductionReducible ?? 0);
