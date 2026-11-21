@@ -983,8 +983,12 @@ export interface RedevelopmentResult {
   landContribDetail?: {
     /** §166③ 환산취득가 (원) */
     convertedAcquisition: number;
-    /** §163⑥ 개산공제 (원) = floor(취득당시공시지가 × 3%) */
+    /** §163⑥ 개산공제 (원) = floor(개산공제 base × 율) */
     estimatedDeduction: number;
+    /** [echo] 개산공제 base — 지분 기준시가(`computeLumpSumDeductionBase`). 이 필드가 생기기 전에 저장된 결과에는 없다. */
+    estimatedDeductionBase?: number;
+    /** [echo] 개산공제율 — 3/100(미등기 3/1000, 소득세법 시행령 §163⑥1호). 이 필드가 생기기 전에 저장된 결과에는 없다. */
+    estimatedDeductionRate?: number;
     /** 취득당시 토지 기준시가 (원, §166③ 분자) */
     landStdPriceAtAcq: number;
     /** 관리처분인가 당시 토지 기준시가 (원, §166③ 분모) */

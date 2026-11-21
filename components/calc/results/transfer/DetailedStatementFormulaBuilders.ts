@@ -301,10 +301,25 @@ export function buildSurtaxAndLocalTaxItems(
   aggregateRuralSurtax?: number,
 ): void {
   const ruralSurtaxValue = resolveRuralSurtax(result, aggregateRuralSurtax);
+  // 산식은 엔진 농특세 단계(세액감면형 「감면세액 × 20%」 / 차감형 「(감면 전 − 감면 후 산출세액) × 20%」)를 그대로 읽는다 — 단계 금액 합이 값과 같을 때만.
+  // 단계가 없거나(집계 어댑터 등) 합이 다르면 종전 문구로 대신한다. 값이 0이면 해당 없음이다.
+  const ruralSteps = (result.steps ?? []).filter(
+    (st) =>
+      st.amount > 0 &&
+      (st.legalBasis === TRANSFER.RURAL_SURTAX_REDUCTION ||
+        st.legalBasis?.startsWith(TRANSFER.RURAL_SURTAX_DEDUCTION) ||
+        st.legalBasis?.startsWith(TRANSFER.RURAL_SURTAX_DEDUCTION_BEFORE_2013_08_27)),
+  );
+  const ruralFormula =
+    ruralSurtaxValue === 0
+      ? "해당 없음"
+      : ruralSteps.length > 0 && ruralSteps.reduce((n, st) => n + st.amount, 0) === ruralSurtaxValue
+      ? ruralSteps.map((st) => st.formula).join("\n")
+      : `(감면 전 산출세액 − 감면 후 산출세액) × 20% = ${ruralSurtaxValue.toLocaleString()} (§99의3·§99·§98의8 등 소득금액차감 감면 적용 시)`;
   items.set("ruralSurtax", {
     label: "농어촌특별세",
     value: ruralSurtaxValue,
-    formula: `(감면 전 산출세액 − 감면 후 산출세액) × 20% = ${ruralSurtaxValue.toLocaleString()} (§99의3·§99·§98의8 등 소득금액차감 감면 적용 시)`,
+    formula: ruralFormula,
     // 근거는 엔진 농특세 단계(세액감면형 §5①1호 / 차감형 §5①1호·③·시행령 §5②)를 그대로 읽는다 — 단계가 없으면 차감형(US-83)
     legalBasis:
       result.steps?.find((st) => st.legalBasis === TRANSFER.RURAL_SURTAX_REDUCTION || st.legalBasis === TRANSFER.RURAL_SURTAX_DEDUCTION || st.legalBasis === TRANSFER.RURAL_SURTAX_DEDUCTION_BEFORE_2013_08_27)?.legalBasis ??

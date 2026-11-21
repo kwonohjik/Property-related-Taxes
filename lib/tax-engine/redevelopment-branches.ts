@@ -12,6 +12,7 @@
  */
 
 import { computeLumpSumDeductionBase, calculateHoldingPeriod, safeMultiplyThenDivide } from "./tax-utils";
+import { estimatedDeductionRate } from "./legal-codes";
 import {
   computeRedevelopmentSplit,
   preApprovalNecessaryExpense,
@@ -222,6 +223,9 @@ export function runLandContribEstimated(
     landContribDetail: {
       convertedAcquisition: landResult.convertedAcquisition,
       estimatedDeduction: landResult.estimatedDeduction,
+      // 개산공제 산식 표시 base·율 — 엔진이 실제로 쓴 지분 기준시가와 율(미등기 3/1000). 100% 공시지가 × 3%로 적으면 지분·미등기에서 거짓 등식이 된다.
+      estimatedDeductionBase: computeLumpSumDeductionBase(redevelopment.landStdPriceAtAcq ?? 0, input.ownershipRatio),
+      estimatedDeductionRate: estimatedDeductionRate(input.isUnregistered),
       landStdPriceAtAcq: redevelopment.landStdPriceAtAcq ?? 0,
       landStdPriceAtApproval: redevelopment.landStdPriceAtApproval ?? 0,
       preApprovalLTHD: landResult.preApprovalLTHD,

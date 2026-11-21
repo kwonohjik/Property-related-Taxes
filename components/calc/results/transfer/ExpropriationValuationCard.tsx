@@ -7,13 +7,21 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
  *
  * ※ 종전 "집행기준 99-164-12" 표기는 국세청 행정규칙 — 법령 근거는 시행령 §164⑨이다(2026-07-16 정정).
  */
+/** 첫 후보(양도당시 기준시가 ㎡당) 라벨 — 엔진 echo `standardKind`(법 §99①1호 가·나·다목). echo가 없는 옛 결과는 종전 라벨. */
+const STANDARD_LABEL = {
+  land: "개별공시지가",
+  building: "건물 기준시가 (국세청 고시)",
+  commercial_building: "오피스텔·상업용 건물 기준시가 (국세청 고시 ㎡당)",
+  legacy: "공시지가",
+} as const;
+
 export function ExpropriationValuationCard({
   detail,
 }: {
   detail: NonNullable<TransferTaxResult["expropriationValuationDetail"]>;
 }) {
   const rows = [
-    { label: "공시지가", value: detail.perSqmCandidates.standard },
+    { label: STANDARD_LABEL[detail.standardKind ?? "legacy"], value: detail.perSqmCandidates.standard },
     { label: "보상 ㎡당가액", value: detail.perSqmCandidates.compensation },
     { label: "보상산정 기초 기준시가", value: detail.perSqmCandidates.basis },
   ];

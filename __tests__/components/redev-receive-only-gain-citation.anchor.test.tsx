@@ -117,13 +117,57 @@ describe("상세명세서", () => {
     expect(text).not.toContain("인가일 기산");
     expect(text).toContain("0 (청산금 수령분만 신고 대상)");
     expect(text).toContain(`청산금 수령액 = 114,000,000 (${GUIDELINE} — 양도가액)`);
-    expect(text).toContain(`안분 취득가액 = 200,000,000 × (114,000,000 ÷ 500,000,000) = 45,600,000 (${GUIDELINE}`);
+    // 결과뷰 리뷰 R-c05-10 — 종전 취득가액을 안분값에서 Math.round로 역산하지 않는다(절사 때문에 입력값과 달라졌다 · 문자로 둔다)
+    expect(text).toContain(`안분 취득가액 = 종전 취득가액 × (청산금 114,000,000) ÷ (권리가액 500,000,000) = 45,600,000 (${GUIDELINE}, 1원 미만 절사)`);
     expect(text).toContain(`양도가액 = 청산금 수령액 (종전 부동산의 분할양도 — ${RULING})`);
     expect(text).toContain(`취득가액 = 종전 취득가액을 평가액 대비 청산금 수령액 비율로 안분 (${GUIDELINE})`);
-    expect(text).toContain("청산금 수령분 양도차익 − 장기보유특별공제 (음수 시 0)");
+    // 결과뷰 리뷰 R-c05-11 — 차손을 보존하는 값과 모순되는 「(음수 시 0)」 꼬리표를 지웠다
+    expect(text).toContain("청산금 수령분 양도차익 − 장기보유특별공제");
+    expect(text).not.toContain("음수 시 0");
     expect(text).not.toContain("§166 분할별");
     expect(text).toContain(`양도차익 = 청산금 수령액 − 안분 취득가액 − 안분 필요경비 (${GUIDELINE})`);
     expect(text).toContain("청산금 수령분 — 취득일부터 청산금분 양도일까지");
+  });
+
+  it("R-c05-10 종전 취득가액 123,456,789 — 역산값 123,456,780(입력과 9원 차이)을 적지 않는다", () => {
+    const result = calculateTransferTax(
+      baseTransferInput({
+        propertyType: "redevelopment_apt", transferPrice: 50_000_000, transferDate: new Date("2024-01-26"), acquisitionDate: new Date("2002-04-09"),
+        acquisitionPrice: 123_456_789, expenses: 0, useEstimatedAcquisition: false, isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0,
+        redevelopment: {
+          subject: "apt", approvalLawBasis: "urban_renovation_art_74", approvalDate: new Date("2009-10-23"), rightsValue: 500_000_000,
+          settlementDirection: "receive", settlementAmount: 50_000_000, settlementSaleDate: new Date("2024-01-26"), preApprovalExpenses: 0,
+          postApprovalExpenses: 0, originalAssetType: "housing", exemptionEligibleAtApproval: false, receiveOnlyMode: true,
+        },
+      }),
+      rates,
+    );
+    expect(result.redevelopmentDetail!.settlement.apportionedAcquisition).toBe(12_345_678);
+    const text = statementText(result);
+    expect(text).toContain(`안분 취득가액 = 종전 취득가액 × (청산금 50,000,000) ÷ (권리가액 500,000,000) = 12,345,678 (${GUIDELINE}, 1원 미만 절사)`);
+    expect(text).not.toContain("123,456,780");
+  });
+
+  it("R-c05-11 차손(종전 취득가액 7억 > 평가액) — 양도소득금액 음수 그대로 · 「(음수 시 0)」 없음", () => {
+    const result = calculateTransferTax(
+      baseTransferInput({
+        propertyType: "redevelopment_apt", transferPrice: 114_000_000, transferDate: new Date("2024-01-26"), acquisitionDate: new Date("2002-04-09"),
+        acquisitionPrice: 700_000_000, expenses: 0, useEstimatedAcquisition: false, isOneHousehold: false, householdHousingCount: 2, residencePeriodMonths: 0,
+        redevelopment: {
+          subject: "apt", approvalLawBasis: "urban_renovation_art_74", approvalDate: new Date("2009-10-23"), rightsValue: 500_000_000,
+          settlementDirection: "receive", settlementAmount: 114_000_000, settlementSaleDate: new Date("2024-01-26"), preApprovalExpenses: 0,
+          postApprovalExpenses: 0, originalAssetType: "housing", exemptionEligibleAtApproval: false, receiveOnlyMode: true,
+        },
+      }),
+      rates,
+    );
+    const form = {
+      transferDate: "2024-01-26", filingDate: "2024-03-31", contractTotalPrice: "114000000",
+      assets: [{ ...makeDefaultAsset(1), acquisitionDate: "2002-04-09" }],
+    } as unknown as TransferFormData;
+    const income = buildStatementItems(result, form, undefined, undefined, undefined).get("incomeAmount")!;
+    expect(income.value).toBe(-45_600_000);
+    expect(income.formula).toBe("청산금 수령분 양도차익 − 장기보유특별공제");
   });
 
   it("근거 칸은 조문 모달로 열리므로 집행기준·해석례를 넣지 않는다", () => {

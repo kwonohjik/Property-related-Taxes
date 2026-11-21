@@ -41,6 +41,11 @@ export interface ExpropriationValuationDetail {
   area: number;
   /** 환산 분모(총액) = chosenPerSqm × area (floor) */
   denominator: number;
+  /**
+   * [echo] `perSqmCandidates.standard`의 종류 — 카드 라벨 전용(법 §99①1호 가목 개별공시지가 · 나목 건물 기준시가 · 다목 상업용 건물 ㎡당 고시가).
+   * 일반건물은 토지 분모에만 적용하므로 가목이다. 이 필드가 생기기 전에 저장된 결과에는 없다.
+   */
+  standardKind?: "land" | "building" | "commercial_building";
 }
 
 export interface ExpropriationValuationParams {
@@ -137,6 +142,8 @@ export function applyExpropriationValuation(
       chosenPerSqm,
       area: area2,
       denominator,
+      standardKind:
+        p.propertyType === "commercial_building" ? "commercial_building" : p.propertyType === "building" ? "building" : "land",
     },
   };
 }
