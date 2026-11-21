@@ -110,7 +110,7 @@ export interface FamilyBusinessCgtDetail {
    */
   cgtUnderSection97: number;
   /**
-   * §18의2⑩ 상속세 상당액 공제액 (원)
+   * §18의2⑩ 양도소득세 상당액 공제액 (원) — 이 양도세에서 빼지 않는다(사후관리 상속세 산출세액에서 공제)
    * = max(0, 의제 산식 결정세액 − 일반 산식 결정세액)
    * 의제 산식이 일반보다 낮으면 0 (음수 가드)
    */

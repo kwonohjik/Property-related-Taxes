@@ -16,6 +16,17 @@ import { RATED_REDUCIBLE_INCOME_LABEL } from "@/components/calc/results/transfer
 import { ELIGIBLE_INCOME_VS_FORM_NOTE } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { ReductionStatutoryCapRow } from "@/components/calc/results/transfer/ReductionStatutoryCapRow";
 import { ReductionDetailWarnings } from "@/components/calc/results/transfer/ReductionDetailWarnings";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
+
+/**
+ * 적용 항 인용 — ①구역 내 / ②해제 후는 엔진 echo(`branch`)로 가른다(R-c06-02).
+ * 두 항의 감면율이 같아 세액으로는 구별할 수 없다. echo가 없는 종전 저장 결과는 항 번호 없이 조만 적는다.
+ */
+function appliedParagraphCitation(branch: NonNullable<TransferTaxResult["gbDesignatedLandDetail"]>["branch"]): string {
+  if (branch === "released") return TRANSFER.REDUCTION_GB_DESIGNATED_LAND_RELEASED;
+  if (branch === "in_zone") return TRANSFER.REDUCTION_GB_DESIGNATED_LAND_IN_ZONE;
+  return TRANSFER.REDUCTION_GB_DESIGNATED_LAND;
+}
 
 export function GbDesignatedLand77_3DetailCard({
   detail: d,
@@ -61,7 +72,7 @@ export function GbDesignatedLand77_3DetailCard({
       </div>
       <div className="space-y-0.5">
         <p className="text-muted-foreground">
-          ① 적용 감면율{d.appliedClause ? ` (§77의3① ${d.appliedClause})` : ""}
+          ① 적용 감면율{d.appliedClause ? ` (${appliedParagraphCitation(d.branch)} ${d.appliedClause})` : ""}
         </p>
         <p>{(d.reductionRate * 100).toFixed(0)}%</p>
       </div>

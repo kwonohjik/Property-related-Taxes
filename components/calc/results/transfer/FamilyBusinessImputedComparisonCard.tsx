@@ -9,7 +9,8 @@
  *        **상속개시일 현재 평가액**을 취득가액으로 보고 계산한다. 피상속인의 원취득가액이
  *        쓰이는 곳은 §97의2④1호(의제) 쪽이다 — 두 행의 설명이 서로 뒤바뀌어 있었다.
  *   ② 의제 §97의2④ 결정세액 (의제 취득가액 기준)
- *   ③ §18의2⑩ 상속세 상당액 공제액 = max(0, 의제세액 − 일반세액)
+ *   ③ §18의2⑩ 양도소득세 상당액 공제액 = max(0, 의제세액 − 일반세액)
+ *     — 이 양도세에서 빼지 않는다. 사후관리(상증법 §18의2⑤·⑧2호)로 상속세를 부과할 때 상속세 산출세액에서 공제한다(R-c06-03).
  *   ④ 적용 분기 (의제 세액이 더 낮으면 의제 적용, 높으면 의제 + §18의2⑩ 공제)
  *
  * 음수 가드: creditAmount=0 시 (의제 산식이 일반보다 유리) sky 안내 배지
@@ -87,7 +88,7 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
         </p>
         <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
           <LawArticleModal legalBasis="소득세법 §97의2④" label="§97의2④ 가업상속 의제" />
-          <LawArticleModal legalBasis="상속세및증여세법 §18의2⑩" label="§18의2⑩ 상속세 상당액 공제" />
+          <LawArticleModal legalBasis="상속세및증여세법 §18의2⑩" label="§18의2⑩ 양도소득세 상당액 공제" />
         </div>
       </div>
 
@@ -148,7 +149,7 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
             {/* §18의2⑩ 공제액 */}
             <Row
               label="§18의2⑩ 공제액 = 의제 결정세액 − 일반 결정세액 (음수면 0)"
-              value={creditAmount > 0 ? `- ${formatKRW(creditAmount)}` : formatKRW(0)}
+              value={formatKRW(creditAmount)}
               highlight
             />
 
@@ -183,8 +184,8 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
             의제 결정세액({formatKRW(cgtUnderSection97_2_4)})이 일반 결정세액({formatKRW(cgtUnderSection97)})보다 높습니다.
           </p>
           <p>
-            소법 §97의2④ 본문에 따라 의제 산식을 강제 적용하되,
-            차액({formatKRW(creditAmount)})을 §18의2⑩ 상속세 상당액 공제로 차감합니다.
+            소법 §97의2④ 본문에 따라 의제 산식을 강제 적용합니다.
+            차액({formatKRW(creditAmount)})은 가업상속 사후관리로 상속세를 부과할 때 상속세 산출세액에서 공제됩니다(§18의2⑩).
           </p>
         </div>
       )}

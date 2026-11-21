@@ -50,6 +50,12 @@ export interface GbDesignatedLandResult {
   isEligible: boolean;
   reductionRate: 0 | 0.25 | 0.4;
   appliedClause?: "1호" | "2호";
+  /**
+   * 적용 항 echo — ①구역 내(매수청구·협의매수) / ②해제 후(협의매수·수용). 입력 `branch` 그대로(산식 불변).
+   * 두 항의 감면율이 같아 세액으로는 구별되지 않으므로 결과 카드가 인용 항을 가르는 데 쓴다(R-c06-02).
+   * 종전 저장 결과에는 없다.
+   */
+  branch?: GbDesignatedLandInput["branch"];
   /** 감면대상소득 산정 기준 = 양도소득금액 − 기본공제 (감면율 적용 전 base) — 산출과정 표시용 echo */
   taxableIncome?: number;
   /** 감면대상소득금액 = (양도소득금액 − 기본공제) × 감면율 */
@@ -190,6 +196,7 @@ export function calculateGbDesignatedLandReduction(
     isEligible: true,
     reductionRate: rate,
     appliedClause: clause,
+    branch: input.branch,
     taxableIncome,
     reducibleIncome,
     rawReductionAmount,
