@@ -65,7 +65,7 @@ export function Row({
     <div className="space-y-0.5">
       <div className={`flex justify-between items-center ${small ? "text-xs text-muted-foreground" : "text-sm"}`}>
         <span className={highlight ? "font-medium" : ""}>{label}</span>
-        <span className={`font-mono ${highlight ? "font-semibold text-primary" : ""} ${large ? "text-base" : ""}`}>
+        <span className={`font-mono tabular-nums whitespace-nowrap text-right ${highlight ? "font-semibold text-primary" : ""} ${large ? "text-base" : ""}`}>
           {value}
         </span>
       </div>
