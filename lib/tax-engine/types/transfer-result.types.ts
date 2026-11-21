@@ -376,7 +376,8 @@ export interface TransferTaxResult {
    * 제외된다(지방세법 §103의3). 엔진이 직접 산출한 result는 `penaltyTax` 자체가
    * §114조의2분만이라 이 필드가 없어도 되지만, **어댑터를 거친 result**는 그렇지 않다:
    *   · `aggregateToFilingResult`      → `penaltyTax`에 국기법분이 합산돼 있다
-   *   · `mixedUseToFilingResult`       → `penaltyTax`가 **국기법분 그 자체**다(겸용엔 §114조의2가 없다)
+   *   · `mixedUseToFilingResult`       → 겸용엔 §114조의2가 없어 `penaltyTax`는 `penaltyDetail`에 담기지 않은 국기법분이다
+   *                                      (상세가 있으면 0 — R-c06-01, 없는 G-43 전 result는 국기법분 그 자체)
    *   · `breakdownToFilingResult`      → `penaltyTax`에 국기법분이 합산돼 있다
    * 따라서 지방소득세 산식을 쓰는 표시부는 `penaltyTax`가 아니라 이 필드를 봐야 한다
    * (`local-income-tax-display.ts` 단일 소스). 미지정이면 `penaltyTax`로 폴백한다.
