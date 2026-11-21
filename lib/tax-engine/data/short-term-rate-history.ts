@@ -157,6 +157,11 @@ export interface ShortTermRateResolution {
    * `assetClass !== "presale_right"`거나 그 시행 구간이 아니면 항상 `false`.
    */
   clause4Excluded: boolean;
+  /**
+   * §104①4호(조정대상지역 주택분양권)가 성립했고 보유기간 호(1년 미만 3호)와 **세율이 같아**
+   * 보유기간 호를 유지했는가 — 결과 화면 안내문 전용(엔진 산식·적용 호에는 영향 없음, echo-field-pattern).
+   */
+  clause4Tied: boolean;
 }
 
 /**
@@ -169,7 +174,7 @@ export interface ShortTermRateResolution {
  * …산출세액 중 큰 것」. 조정대상지역 주택분양권(4호, 50%)은 **보유기간과 무관하게** 성립하므로
  * 1~3호(보유기간별)와 **동시에 해당할 수 있다** — 종전에는 1년 미만·1~2년 구간에서 이 비교 없이
  * 바로 반환해, 1~2년 보유 분양권이 4호(50%)보다 낮은 40%(2호)로 과소과세됐다(2026-10-06 수정).
- * 과세표준이 같으므로 세율 비교로 충분하다. 동률이면 보유기간 호(기존 라벨)를 유지한다.
+ * 과세표준이 같으므로 세율 비교로 충분하다. 동률이면 보유기간 호(기존 라벨)를 유지하고 `clause4Tied`로 4호 해당을 안내문에 echo한다.
  *
  * @param transferDate 양도일
  * @param holdingMonthsTotal 보유기간(월). §104② 기산 특례가 반영된 값을 넘길 것.
@@ -228,14 +233,14 @@ export function resolveShortTermRate(
 
   if (clause4Rate !== null && bucketRate !== null) {
     return clause4Rate > bucketRate
-      ? { rate: clause4Rate, clause: "104-1-4", tierFrom: tier.from, clause4Excluded }
-      : { rate: bucketRate, clause: bucketClause, tierFrom: tier.from, clause4Excluded };
+      ? { rate: clause4Rate, clause: "104-1-4", tierFrom: tier.from, clause4Excluded, clause4Tied: false }
+      : { rate: bucketRate, clause: bucketClause, tierFrom: tier.from, clause4Excluded, clause4Tied: clause4Rate === bucketRate };
   }
   if (clause4Rate !== null) {
-    return { rate: clause4Rate, clause: "104-1-4", tierFrom: tier.from, clause4Excluded };
+    return { rate: clause4Rate, clause: "104-1-4", tierFrom: tier.from, clause4Excluded, clause4Tied: false };
   }
   if (bucketRate !== null) {
-    return { rate: bucketRate, clause: bucketClause, tierFrom: tier.from, clause4Excluded };
+    return { rate: bucketRate, clause: bucketClause, tierFrom: tier.from, clause4Excluded, clause4Tied: false };
   }
-  return { rate: null, clause: null, tierFrom: tier.from, clause4Excluded };
+  return { rate: null, clause: null, tierFrom: tier.from, clause4Excluded, clause4Tied: false };
 }
