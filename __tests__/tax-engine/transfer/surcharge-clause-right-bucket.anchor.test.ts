@@ -1,7 +1,7 @@
 /**
  * anchor: §104⑤2호 «동일한 호» 합산 버킷 — §104⑦1호와 2호, 3호와 4호를 한 버킷에 넣지 않는다 (후보 ⑥ · 2026-11-21)
  *
- * ## 법령 (KoreanLaw MCP 본문 실독 · 소득세법 MST 280405 · 시행 2026-01-01본)
+ * ## 법령 (KoreanLaw MCP 본문 실독 · 소득세법 현행 시행 2026-07-01본)
  *
  * §104⑤2호 단서 — 「둘 이상의 자산에 대하여 제1항 각 호, 제4항 각 호 및 제7항 각 호에 따른 세율 중 **동일한 호**의 세율이
  * 적용되고 … 각 자산의 양도소득과세표준을 합산한 것에 대하여 … 각 해당 호별 세율을 적용」.
@@ -49,7 +49,7 @@ const merged = (addPct: bigint) => Number(progressive(A_GAIN + B_GAIN - BASIC, a
 const right = (id: string) => ({
   id,
   type: "redevelopment_right" as const,
-  acquisitionDate: new Date("2026-07-01"),
+  acquisitionDate: new Date("2025-01-01"),
   region: "capital" as const,
 });
 
@@ -187,7 +187,7 @@ describe("다건 route POST — ⑫ Zod → ⑭ 매핑 → 엔진", () => {
     reductions: [],
     regionCode: "1168010100",
     houses: houseIds.map(jsonHouse),
-    presaleRights: rightIds.map((r) => ({ id: r, type: "redevelopment_right", acquisitionDate: "2026-07-01", region: "capital" })),
+    presaleRights: rightIds.map((r) => ({ id: r, type: "redevelopment_right", acquisitionDate: "2025-01-01", region: "capital" })),
     sellingHouseId: houseIds[0],
   });
 

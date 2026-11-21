@@ -170,12 +170,15 @@ export function surchargeClauseBeatenByShortTerm(r: {
 }
 
 /**
- * 다주택 중과 판정에서 주택 수에 조합원입주권·분양권이 산입된 세대인가 — 신고서 ③ 세율구분 코드 표시 전용(R-c10-04).
+ * 다주택 중과 판정에서 주택 수에 조합원입주권·분양권이 산입된 세대인가 — §104⑦2·4호(«주택과 조합원입주권 또는 분양권») 축.
+ *
+ * ⚠️ **세액 축이다.** 다건 §104⑤2호 버킷 식별자(`transfer-tax-aggregate-group-tax.ts` `bucketIdOf`의 `right:`)가 이 술어로 ⑦1호와 2호·3호와 4호를 가른다 —
+ * 바꾸면 «동일한 호» 합산이 바뀌어 세액이 달라진다(`surcharge-clause-right-bucket.anchor.test.ts`). 신고서 ③ 세율구분 코드(R-c10-04)도 같은 술어를 읽는다.
  *
  * 별지 제84호서식은 «1세대가 주택과 조합원입주권 또는 분양권을 보유한 경우»의 중과 대상 주택을 «1세대N주택»과 다른 코드로 적는다.
  * 엔진이 같은 호(104-7-1·104-7-3)를 내므로 호만으로는 가를 수 없어, 정밀 판정이 센 권리 수(`countedRightCount`)를 **재판정 없이** 읽는다.
  * 정밀 판정이 그 결과에 없으면(부수토지 카드) 짝 주택에서 받은 판정 echo(`surchargeEcho`)를 보고, 그것도 없는 차손 조기 반환은
- * `surchargeCountedRightCount`(같은 판정의 산입 수만 실은 echo)를 본다. 세액·그룹핑에는 쓰지 않는다.
+ * `surchargeCountedRightCount`(같은 판정의 산입 수만 실은 echo)를 본다.
  */
 export function surchargeHouseholdHasCountedRight(r: {
   multiHouseSurchargeEvaluation?: { countedRightCount?: number };
