@@ -100,3 +100,57 @@ describe("R-c08-13 배너는 ToneCard amber 톤", () => {
     for (const c of TONE.amber.card.split(" ")) expect(banners[0].className).toContain(c);
   });
 });
+
+/**
+ * R-c08-06 후보 조건 — 카드 종류별 가드(리뷰 mustFix: §77만 고정돼 자경·§77의2·§77의3 조건을 되돌려도 통과했다).
+ * 실제 엔진이 만든 **적격** detail을 각 칸에 넣고 승자를 다른 감면으로 두면 배너가 붙고(구별력),
+ * 같은 detail을 부적격으로 바꾸면 배너가 없어야 한다. 수정 전 master 코드는 부적격에도 배너를 붙였다(리뷰 probe).
+ */
+describe("R-c08-06 카드 종류별 — 부적격 detail에는 배너 없음 · 적격 진 후보에는 배너", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type AnyResult = any;
+  const land = (reductions: unknown[], over: Record<string, unknown> = {}): AnyResult =>
+    calculateTransferTax(baseTransferInput({
+      propertyType: "land", isOneHousehold: false, householdHousingCount: 0,
+      transferPrice: 600_000_000, acquisitionPrice: 200_000_000, acquisitionDate: D("2010-01-01"), transferDate: D("2024-06-01"),
+      reductions, ...over,
+    } as never), makeMockRates());
+  const show = (base: AnyResult, patch: Record<string, unknown>, winner: string) => {
+    cleanup();
+    const { container } = render(
+      <ReductionDetailCards result={{ ...base, ...patch }} calculatedTax={base.calculatedTax} taxBase={base.taxBase}
+        longTermHoldingDeduction={base.longTermHoldingDeduction} appliedReductionType={winner} appliedReductionAmount={base.reductionAmount} />,
+    );
+    return container.textContent ?? "";
+  };
+
+  it("자경농지 — qualifies false면 배너 없음 · 적격이면 배너", () => {
+    const base = land([{ type: "self_farming", farmingYears: 10, isResidenceRequirementMet: true }]);
+    const sf = base.selfFarmingReductionDetail;
+    expect(sf?.qualifies, "적격 시료여야 구별력이 있다").toBe(true);
+    expect(sf.reducibleIncome).toBeGreaterThan(0);
+    expect(show(base, { selfFarmingReductionDetail: sf }, "public_expropriation")).toContain(BANNER);
+    expect(show(base, { selfFarmingReductionDetail: { ...sf, qualifies: false } }, "public_expropriation")).not.toContain(BANNER);
+  });
+
+  it("§77의2 대토보상 — 부적격이면 배너 없음 · 적격이면 배너", () => {
+    const base = land([{ type: "replacement_land_comp", transferCause: "public_expropriation", cashCompensation: 0, replacementLandComp: 600_000_000, businessApprovalDate: D("2013-01-01") }]);
+    const rl = base.replacementLandDetail;
+    expect(rl?.isEligible, "적격 시료여야 구별력이 있다").toBe(true);
+    expect(rl.reductionAmount).toBeGreaterThan(0);
+    expect(show(base, { replacementLandDetail: rl }, "public_expropriation")).toContain(BANNER);
+    expect(show(base, { replacementLandDetail: { ...rl, isEligible: false, reductionAmount: 0, notEligibleReason: "요건 미충족" } }, "public_expropriation")).not.toContain(BANNER);
+  });
+
+  it("§77의3 개발제한구역 — 부적격이면 배너 없음 · 적격이면 배너", () => {
+    const base = land(
+      [{ type: "gb_designated_land", branch: "purchase", designationDate: D("2005-01-01"), triggerDate: D("2024-01-01"), residedFromAcqToTrigger: true }],
+      { acquisitionDate: D("2000-01-01") },
+    );
+    const gb = base.gbDesignatedLandDetail;
+    expect(gb?.isEligible, "적격 시료여야 구별력이 있다").toBe(true);
+    expect(gb.reductionAmount).toBeGreaterThan(0);
+    expect(show(base, { gbDesignatedLandDetail: gb }, "public_expropriation")).toContain(BANNER);
+    expect(show(base, { gbDesignatedLandDetail: { ...gb, isEligible: false, reductionAmount: 0, notEligibleReason: "요건 미충족" } }, "public_expropriation")).not.toContain(BANNER);
+  });
+});
