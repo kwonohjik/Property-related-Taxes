@@ -35,6 +35,10 @@ import { ReplacementLand77_2DetailCard } from "./ReplacementLand77_2DetailCard";
 import { GbDesignatedLand77_3DetailCard } from "./GbDesignatedLand77_3DetailCard";
 import { UsageConversionDetailCard } from "./UsageConversionDetailCard";
 import { ReductionOverlapExclusionBanner } from "./ReductionOverlapExclusionBanner";
+import type { UnsoldHybridResult } from "@/lib/tax-engine/types/transfer.types";
+
+/** 하이브리드(5년 이내 세액감면형) 카드 종류 — `IncomeDeductionDetailCard`의 `kind`. */
+type HybridKind = "unsold_98_7" | "unsold_99_2" | "unsold_98_3" | "unsold_98_5" | "unsold_98_6" | "unsold_98_2" | "unsold_98_4" | "unsold_98";
 
 interface Props {
   /**
@@ -165,6 +169,18 @@ export function ReductionDetailCards({
    */
   const excludedByOverlap = (...ownTypes: string[]) =>
     !!appliedReductionType && !ownTypes.includes(appliedReductionType);
+  /**
+   * §127⑦ **후보였는가** — 엔진은 적격이고 감면세액 > 0인 detail만 후보에 넣는다(`calcReductions`).
+   * 부적격 detail도 사유 표시용으로 실리므로, 이 조건 없이 배너를 붙이면 요건 미충족을 중복배제로 적는다(R-c08-06).
+   */
+  const wasCandidate = (d: { isEligible: boolean; reductionAmount: number }) => d.isEligible && d.reductionAmount > 0;
+  const sf = result.selfFarmingReductionDetail;
+  const sfExcluded = !!sf && sf.qualifies && sf.reducibleIncome > 0 && excludedByOverlap(...SELF_FARMING_TYPES);
+  const r97 = result.rental97TaxDetail;
+  const r97Excluded = !!r97 && r97.isEligible && r97.effectCategory === "tax_amount" && wasCandidate(r97) && excludedByOverlap(r97.id);
+  const peExcluded = !!result.publicExpropriationDetail && wasCandidate(result.publicExpropriationDetail) && excludedByOverlap("public_expropriation");
+  const rlExcluded = !!result.replacementLandDetail && wasCandidate(result.replacementLandDetail) && excludedByOverlap("replacement_land_comp");
+  const gbExcluded = !!result.gbDesignatedLandDetail && wasCandidate(result.gbDesignatedLandDetail) && excludedByOverlap("gb_designated_land");
   const hasAny = hasReductionDetailCards(result);
   if (!hasAny) return null;
   /**
@@ -175,6 +191,19 @@ export function ReductionDetailCards({
     ? (result.new993Detail ?? result.new99Detail ?? result.unsold988Detail ?? activeIncomeDeductionHybrid(result))
     : undefined;
   const appliedOf = (d: unknown) => (d !== undefined && d === incomeDeductionOwner ? incomeDeductionApplied : undefined);
+  /**
+   * 하이브리드 카드 — 5년 이내 세액감면형이면 §127⑦ 후보다. 진 후보의 detail은 감면세액 0으로 남으므로(`mergeHybridTaxDetail`은 승자만 채운다)
+   * 배너를 붙이고 카드의 「× 감면율 = 0」 산식을 배제 문구로 바꾼다(R-c08-07).
+   */
+  const hybridCard = (kind: HybridKind, d: UnsoldHybridResult) => {
+    const excluded = d.isEligible && d.effectCategory === "tax_amount" && excludedByOverlap(d.id);
+    return (
+      <>
+        {excluded && <ReductionOverlapExclusionBanner appliedType={appliedReductionType!} />}
+        <IncomeDeductionDetailCard kind={kind} result={d} calculatedTax={calculatedTax} aggregateApplied={appliedOf(d)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} excludedByOverlap={excluded} />
+      </>
+    );
+  };
 
   return (
     <>
@@ -188,7 +217,7 @@ export function ReductionDetailCards({
       )}
       {result.selfFarmingReductionDetail && (
         <>
-          {excludedByOverlap(...SELF_FARMING_TYPES) && (
+          {sfExcluded && (
             <ReductionOverlapExclusionBanner appliedType={appliedReductionType!} />
           )}
           <SelfFarmingReductionDetailCard detail={result.selfFarmingReductionDetail} />
@@ -226,7 +255,7 @@ export function ReductionDetailCards({
       )}
       {/* §127⑦ 배너는 이 카드의 조문 id(`rental_97_main`·`rental_97_proviso`·`rental_97_2`·`rental_97_5`)로 판정한다 —
           `calcReductions` 후보 type이 곧 `rental97TaxDetail.id`다. 종전 `"long_term_rental"` 비교는 §97이 승자여도 배너를 붙였다. */}
-      {result.rental97TaxDetail && excludedByOverlap(result.rental97TaxDetail.id) && (
+      {r97Excluded && (
         <ReductionOverlapExclusionBanner appliedType={appliedReductionType!} />
       )}
       {result.rental97TaxDetail && (
@@ -235,6 +264,7 @@ export function ReductionDetailCards({
           effectLabel="장기임대주택 세액감면"
           calculatedTax={calculatedTax}
           aggregatedContext={aggregatedContext}
+          excludedByOverlap={r97Excluded}
         />
       )}
       {/* §99의4 농어촌·고향주택 주택수 제외 (2026-06-11) */}
@@ -271,33 +301,17 @@ export function ReductionDetailCards({
         <IncomeDeductionDetailCard kind="unsold_98_8" result={result.unsold988Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold988Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
       )}
       {/* P2 하이브리드 (2026-06-11): §98의7 9억↓ 미분양 · §99의2 신축·미분양·1세대1주택 */}
-      {result.unsold987Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_7" result={result.unsold987Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold987Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
-      )}
-      {result.unsold992Detail && (
-        <IncomeDeductionDetailCard kind="unsold_99_2" result={result.unsold992Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold992Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
-      )}
+      {result.unsold987Detail && hybridCard("unsold_98_7", result.unsold987Detail)}
+      {result.unsold992Detail && hybridCard("unsold_99_2", result.unsold992Detail)}
       {/* P3 하이브리드 (2026-06-12) */}
-      {result.unsold983Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_3" result={result.unsold983Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold983Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
-      )}
-      {result.unsold985Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_5" result={result.unsold985Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold985Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
-      )}
-      {result.unsold986Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_6" result={result.unsold986Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold986Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
-      )}
+      {result.unsold983Detail && hybridCard("unsold_98_3", result.unsold983Detail)}
+      {result.unsold985Detail && hybridCard("unsold_98_5", result.unsold985Detail)}
+      {result.unsold986Detail && hybridCard("unsold_98_6", result.unsold986Detail)}
       {/* P4 (2026-06-12) */}
-      {result.unsold982Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_2" result={result.unsold982Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold982Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
-      )}
-      {result.unsold984Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98_4" result={result.unsold984Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold984Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
-      )}
+      {result.unsold982Detail && hybridCard("unsold_98_2", result.unsold982Detail)}
+      {result.unsold984Detail && hybridCard("unsold_98_4", result.unsold984Detail)}
       {/* P5 (2026-06-12) */}
-      {result.unsold98Detail && (
-        <IncomeDeductionDetailCard kind="unsold_98" result={result.unsold98Detail} calculatedTax={calculatedTax} aggregateApplied={appliedOf(result.unsold98Detail)} surchargeExclusionBasis={surchargeExclusionBasis} ruralSurtaxBasis={ruralSurtaxBasis} aggregatedContext={aggregatedContext} />
-      )}
+      {result.unsold98Detail && hybridCard("unsold_98", result.unsold98Detail)}
       {/* §99의3 신축주택 과세특례 — 양도소득금액 차감 방식 5년 안분 산식 */}
       {result.new993Detail && <New993DetailCard detail={result.new993Detail} aggregateApplied={appliedOf(result.new993Detail)} />}
       {/* 비자발적 양도 감면 §77·§77의2·§77의3 — 감면세액 산출근거(변수값).
@@ -306,7 +320,7 @@ export function ReductionDetailCards({
           미입력 시 카드가 뜨지 않는다. */}
       {result.publicExpropriationDetail && (
         <>
-          {excludedByOverlap("public_expropriation") && (
+          {peExcluded && (
             <ReductionOverlapExclusionBanner appliedType={appliedReductionType!} />
           )}
           <PublicExpropriationDetailCard
@@ -314,14 +328,14 @@ export function ReductionDetailCards({
             calculatedTax={calculatedTax}
             taxBase={taxBase}
             aggregatedContext={aggregatedContext}
-            excludedByOverlap={excludedByOverlap("public_expropriation")}
+            excludedByOverlap={peExcluded}
             appliedReductionAmount={appliedReductionAmount}
           />
         </>
       )}
       {result.replacementLandDetail && (
         <>
-          {excludedByOverlap("replacement_land_comp") && (
+          {rlExcluded && (
             <ReductionOverlapExclusionBanner appliedType={appliedReductionType!} />
           )}
           <ReplacementLand77_2DetailCard
@@ -329,14 +343,14 @@ export function ReductionDetailCards({
             calculatedTax={calculatedTax}
             taxBase={taxBase}
             aggregatedContext={aggregatedContext}
-            excludedByOverlap={excludedByOverlap("replacement_land_comp")}
+            excludedByOverlap={rlExcluded}
             appliedReductionAmount={appliedReductionAmount}
           />
         </>
       )}
       {result.gbDesignatedLandDetail && (
         <>
-          {excludedByOverlap("gb_designated_land") && (
+          {gbExcluded && (
             <ReductionOverlapExclusionBanner appliedType={appliedReductionType!} />
           )}
           <GbDesignatedLand77_3DetailCard
@@ -344,7 +358,7 @@ export function ReductionDetailCards({
             calculatedTax={calculatedTax}
             taxBase={taxBase}
             aggregatedContext={aggregatedContext}
-            excludedByOverlap={excludedByOverlap("gb_designated_land")}
+            excludedByOverlap={gbExcluded}
             appliedReductionAmount={appliedReductionAmount}
           />
         </>

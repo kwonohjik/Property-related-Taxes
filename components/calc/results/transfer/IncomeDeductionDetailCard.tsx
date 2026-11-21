@@ -62,6 +62,11 @@ type Props = Detail &
      * `aggregateApplied`는 소득금액차감(income_deduction) 경로만 고르므로 이 신호를 따로 받는다.
      */
     aggregatedContext?: boolean;
+    /**
+     * 조특법 §127⑦로 **배제된 세액감면 후보**인가(하이브리드 5년 이내 세액감면형만) — 진 후보의 detail은 감면세액 0으로 남아
+     * 「산출세액 × 감면율 = 0」이 적용된 산식처럼 보였다(R-c08-07). 배제 사실은 `ReductionOverlapExclusionBanner`가 카드 위에 적는다.
+     */
+    excludedByOverlap?: boolean;
   };
 
 const TITLES: Record<Detail["kind"], string> = {
@@ -148,13 +153,15 @@ function Unsold986RentalPeriodLine({ echo, testId = "unsold986-rental-period" }:
   );
 }
 
-export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggregateApplied, surchargeExclusionBasis, ruralSurtaxBasis, aggregatedContext = false }: Props) {
+export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggregateApplied, surchargeExclusionBasis, ruralSurtaxBasis, aggregatedContext = false, excludedByOverlap = false }: Props) {
   const title = TITLES[kind];
   // P2·P3 하이브리드 — 5년 내 양도 = 세액감면 경로 (소득금액 차감 아님)
   const isHybrid = HYBRID_KINDS.includes(kind);
   const isTaxAmountMode = isHybrid && (result as UnsoldHybridResult).effectCategory === "tax_amount";
   /** 합산 경로의 세액감면 — 이 카드의 감면세액·농특세는 자산 단독 값이라 실제 적용액이 아니다(R-c07-02). */
   const aggregatedTaxAmount = aggregatedContext && isTaxAmountMode;
+  /** §127⑦로 진 세액감면 후보 — 감면세액 줄·산출근거를 배제 문구로 바꾼다(§77 계열 카드와 같은 규약). */
+  const excludedTaxAmount = excludedByOverlap && isTaxAmountMode;
   // §98의2 특칙 전용 (감면세액 없음) / §98의4 중과 배제 비대상 (소령 §167의3①5호 비열거)
   const hybridEffect = isHybrid ? (result as UnsoldHybridResult).effectCategory : undefined;
   const isSpecialOnly = hybridEffect === "lthd_rate_special" || hybridEffect === "flat_rate_20";
@@ -220,7 +227,7 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
             )}
           </div>
         ))}
-        {!isSpecialOnly && !aggregatedTaxAmount && (
+        {!isSpecialOnly && !aggregatedTaxAmount && !excludedTaxAmount && (
           <div className="border-t border-emerald-200 dark:border-emerald-800/40 pt-1.5 flex items-baseline justify-between">
             <span className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
               {isTaxAmountMode ? `감면세액 (산출세액의 ${hybridRatePct}%)` : "과세대상소득금액에서 차감한 양도소득금액"}
@@ -241,7 +248,11 @@ export function IncomeDeductionDetailCard({ kind, result, calculatedTax, aggrega
       {isTaxAmountMode && (
         <div className="rounded border border-emerald-200 bg-white/70 dark:border-emerald-800/40 dark:bg-emerald-950/40 p-2.5 space-y-1.5">
           <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">감면세액 산출근거</p>
-          {aggregatedTaxAmount ? (
+          {excludedTaxAmount ? (
+            <p data-testid="hybrid-overlap-excluded" className="text-caption text-muted-foreground">
+              감면세액 — 조특법 §127⑦ 중복배제로 <b>적용되지 않았습니다</b>
+            </p>
+          ) : aggregatedTaxAmount ? (
             <p data-testid="hybrid-aggregate-reduction" className="text-caption text-muted-foreground">
               감면세액은 여러 건을 합산한 산출세액으로 다시 계산해 확정합니다 — 합산 결과의 감면세액 참조
             </p>

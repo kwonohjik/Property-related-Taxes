@@ -4,6 +4,7 @@
 import { TRANSFER_RENTAL_HOUSING } from "../../legal-codes/transfer";
 import type { ArticleFailCode } from "../../rental-article/check";
 import type { RentalArticle, RentalUnitInput } from "./types";
+import { rentalArticleLabel } from "./display-labels";
 
 /**
  * 종전 「민간임대주택에 관한 특별법」 임대의무기간(년) — §43①이 가리키는 §2 5호(장기일반 「8년 이상」)·
@@ -134,7 +135,7 @@ export function buildFailMessage(
       );
     case "APT_TRANSFER_DEADLINE_EXCEEDED":
       return (
-        `${n}호: 해당 유형(${article === "구법" ? "구 임대주택법 매입임대 — 가목" : `${article}목`})의 아파트는 ${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11}에 따른 양도기한` +
+        `${n}호: 해당 유형(${rentalArticleLabel(article)})의 아파트는 ${TRANSFER_RENTAL_HOUSING.PIT_RD_167_3_11}에 따른 양도기한` +
         "(2027.12.31 — 임대의무기간 2027.1.1 이후 종료·2027.1.1 이후 조정대상지역 신규지정·정비사업 이전고시로 " +
         "각각 1년 연장될 수 있음)이 지난 후에도 양도하지 않아 장기임대주택으로 인정되지 않습니다."
       );

@@ -11,6 +11,7 @@
  *   §154①이고 12억 초과분은 법 §95③·시행령 §160①2호로 계산한다.
  */
 import { TRANSFER_RENTAL_HOUSING } from "../../legal-codes/transfer";
+import type { RentalArticle } from "./types";
 
 type RentalHousingScenarioId = "RH-A1" | "RH-A2" | "RH-B1" | "RH-B2";
 
@@ -29,7 +30,25 @@ export function rentalHousingBasisShort(basis: string): string {
   return basis.replace(/^소득세법 시행령 /, "");
 }
 
-/** 비과세 양도소득금액 행 라벨 — 「(소령 §161①)」은 B에만. */
+/**
+ * B 시나리오 양도소득금액 산식의 근거 항 — 고가주택(RH-B2)은 §161②(「제1항에도 불구하고 … 고가주택인 경우 … 합산한 금액」), 그 밖의 B는 §161①.
+ * A는 §161 대상이 아니라 undefined(R-c08-10).
+ */
+export function phrpIncomeClauseOf(id: RentalHousingScenarioId | string | undefined): "§161①" | "§161②" | undefined {
+  if (!isPhrpScenarioId(id)) return undefined;
+  return id === "RH-B2" ? "§161②" : "§161①";
+}
+
+/** 비과세 양도소득금액 행 라벨 — 「(소령 §161①)」(고가주택 B2는 「§161②」)은 B에만. */
 export function nontaxableIncomeLabel(id: RentalHousingScenarioId | string | undefined): string {
-  return isPhrpScenarioId(id) ? "비과세 양도소득금액 (소령 §161①)" : "비과세 양도소득금액";
+  const clause = phrpIncomeClauseOf(id);
+  return clause ? `비과세 양도소득금액 (소령 ${clause})` : "비과세 양도소득금액";
+}
+
+/**
+ * 도출 목 표기 — 「구법」은 목 이름이 아니라 구 「임대주택법」 매입 등록분 표지다(`derive.ts`). 민특법 부칙<제13499호> 제3조①로
+ * 민간매입임대주택 인용에 들어가 가목이므로 「구 임대주택법 매입임대 — 가목」으로 적는다(미충족 문구·호별 판정 기준 공용 · R-c08-09).
+ */
+export function rentalArticleLabel(article: RentalArticle): string {
+  return article === "구법" ? "구 임대주택법 매입임대 — 가목" : `${article}목`;
 }

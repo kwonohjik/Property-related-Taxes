@@ -31,6 +31,11 @@ interface Props {
    * 그 카드들만 고치고 여기를 빠뜨렸다(2026-09-07 대장 재대조 · 종전 #044와 동형).
    */
   aggregatedContext?: boolean;
+  /**
+   * 조특법 §127⑦로 **배제된 후보**인가(세액감면형만) — 승자가 아니면 감면세액 단정을 감춘다(R-c08-08).
+   * §77 계열 카드(`ReplacementLand77_2DetailCard` 등)와 같은 규약이다. 배제 사실은 `ReductionOverlapExclusionBanner`가 카드 위에 적는다.
+   */
+  excludedByOverlap?: boolean;
 }
 
 function formatN(n: number): string {
@@ -56,7 +61,7 @@ const ARTICLE_LABELS: Record<string, string> = {
   rental_97_5: "§97의5 — 장기일반민간임대 100% 감면",
 };
 
-export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggregatedContext = false }: Props) {
+export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggregatedContext = false, excludedByOverlap = false }: Props) {
   if (!detail.isEligible) {
     return (
       <div className="rounded-lg border border-rose-300 bg-rose-50/80 dark:border-rose-700/50 dark:bg-rose-950/30 p-4 space-y-3">
@@ -407,9 +412,15 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
           </div>
           <div className="flex justify-between border-t border-emerald-100 dark:border-emerald-800/30 pt-1.5 mt-0.5">
             <span className="text-muted-foreground">감면세액</span>
-            <span className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
-              {formatN(taxEffect.reductionAmount)}
-            </span>
+            {excludedByOverlap ? (
+              <span data-testid="rental97-overlap-excluded" className="text-muted-foreground">
+                조특법 §127⑦ 중복배제로 <b>적용되지 않았습니다</b>
+              </span>
+            ) : (
+              <span className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
+                {formatN(taxEffect.reductionAmount)}
+              </span>
+            )}
           </div>
           {taxEffect.rentalGainRatio < 1 && (
             <div className="flex justify-between">
@@ -439,7 +450,11 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
         {/* 산출근거 — 라벨 산식 + 값 대입 (§77의2 카드와 동일 규약) */}
         <div className="rounded bg-white/70 dark:bg-white/5 border border-emerald-100 dark:border-emerald-800/30 p-2.5 text-xs space-y-1.5">
           <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">감면세액 산출근거</p>
-          {aggregatedContext ? (
+          {excludedByOverlap ? (
+            <p className="text-muted-foreground">
+              감면세액 — 조특법 §127⑦ 중복배제로 <b>적용되지 않았습니다</b>
+            </p>
+          ) : aggregatedContext ? (
             <p className="text-muted-foreground">
               감면세액은 여러 건 합산 재계산(§133 한도) 후 확정 — 「감면세액 합산 재계산 내역」 참조
             </p>
