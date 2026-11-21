@@ -163,6 +163,7 @@ export function computeGroupsAndComparison(
   const {
     groupTaxes, assetPartTax, clause8TaxBase, clause8Tax, clause1BucketTaxBase, clause1BucketTax,
     clauseTaxes, assetClauseKeys, assetPartClauseKeys, assetPartBasic, assetPartIncome, surchargeClause3And4OverlapSplit,
+    surchargeRightSplitSharesShortTerm,
   } = aggregateByGroup(records, incomeArray, allocatedBasic, partBasic);
   const calculatedTaxByGroups = groupTaxes.reduce((s, g) => s + g.groupCalculatedTax, 0);
   /**
@@ -244,7 +245,7 @@ export function computeGroupsAndComparison(
       : hasSurchargeGroup
         ? "groups"
         : "none";
-  return { groupTaxes, assetPartTax, calculatedTaxByGroups, calculatedTaxByGeneral, calculatedTax, comparedTaxApplied, clause8TaxBase, clause8Tax, clause1BucketTaxBase, clause1BucketTax, clauseTaxes, assetClauseKeys, assetPartClauseKeys, assetPartBasic, assetPartIncome, surchargeClause3And4OverlapSplit };
+  return { groupTaxes, assetPartTax, calculatedTaxByGroups, calculatedTaxByGeneral, calculatedTax, comparedTaxApplied, clause8TaxBase, clause8Tax, clause1BucketTaxBase, clause1BucketTax, clauseTaxes, assetClauseKeys, assetPartClauseKeys, assetPartBasic, assetPartIncome, surchargeClause3And4OverlapSplit, surchargeRightSplitSharesShortTerm };
 }
 
 /** 감면 유형별 주 법령 조문 매핑 (한도 조문과 별개) */

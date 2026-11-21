@@ -94,7 +94,8 @@ const B = (houses: string[], rights: string[]) => asset("B", 700_000_000, "2026-
 const run = (props: TransferTaxItemInput[]) =>
   calculateTransferTaxAggregate({ taxYear: 2026, annualBasicDeductionUsed: 0, properties: props }, rates);
 
-const OVERLAP_NOTICE = "확인 필요";
+/** 3·4호 겹침 고지에만 있는 구절 — 단기 비합산 고지도 「3호와 4호」·「확인 필요」를 담으므로 그것으로는 두 고지가 갈리지 않는다. */
+const OVERLAP_NOTICE = "두 호에 모두 해당하는 주택";
 
 describe("§104⑦ 1·2호 / 3·4호 — 동일한 호가 아니면 합산하지 않는다", () => {
   it("검산 — 손계산 상수", () => {
@@ -117,7 +118,7 @@ describe("§104⑦ 1·2호 / 3·4호 — 동일한 호가 아니면 합산하지
     expect(r.properties.map((p) => p.surchargeHouseholdHasCountedRight ?? false)).toEqual([false, true]);
     expect(r.calculatedTax).toBe(perClause(30n));
     // 3호·4호 겹침 자산이 없으면 고지하지 않는다.
-    expect(r.warnings.some((w) => w.includes(OVERLAP_NOTICE) && w.includes("3호"))).toBe(false);
+    expect(r.warnings.some((w) => w.includes(OVERLAP_NOTICE))).toBe(false);
   });
 
   it("C-1 대조 ⑦1호 + ⑦1호 → 같은 호 합산 520,510,000", () => {
@@ -141,7 +142,7 @@ describe("3호·4호 겹침(주택 3채 이상 + 산입 권리) — 4호 버킷 
   it("O-1 겹침 자산 + 순수 3호 자산 → 4호로 보아 따로(576,370,000) + 확인 필요 고지", () => {
     const r = run([A(["A", "B", "C"], []), B(["B", "C", "D"], ["R1"])]);
     expect(r.calculatedTax).toBe(perClause(30n));
-    const notice = r.warnings.filter((w) => w.includes(OVERLAP_NOTICE) && w.includes("3호") && w.includes("4호"));
+    const notice = r.warnings.filter((w) => w.includes(OVERLAP_NOTICE));
     expect(notice).toHaveLength(1);
     expect(notice[0]).not.toMatch(/유리|불리/);
   });
@@ -149,7 +150,59 @@ describe("3호·4호 겹침(주택 3채 이상 + 산입 권리) — 4호 버킷 
   it("O-2 겹침 자산 + 순수 4호 자산 → 4호 버킷 합산(610,260,000) · 고지 없음", () => {
     const r = run([A(["A", "B"], ["R0"]), B(["B", "C", "D"], ["R1"])]);
     expect(r.calculatedTax).toBe(merged(30n));
-    expect(r.warnings.some((w) => w.includes(OVERLAP_NOTICE) && w.includes("3호") && w.includes("4호"))).toBe(false);
+    expect(r.warnings.some((w) => w.includes(OVERLAP_NOTICE))).toBe(false);
+  });
+});
+
+/**
+ * 보유 1년 이상 2년 미만(§104①2호) ⑦1호 + ⑦2호 — 현행 유지(호가 다르면 합산하지 않음) + 확인 필요 고지 (사용자 결정 2026-11-22)
+ * 시료(리뷰 probe와 같음): 각 13억 양도 · 3억 취득 · 2025-03-01 취득 · 2026-06-01 / 2026-09-01 양도 → 양도차익 각 10억 · 장특 0.
+ *   현행(호별): 자산마다 60%가 중과(누진 + 20%p)보다 크다 → 997,500,000 × 60% + 1,000,000,000 × 60% = 598,500,000 + 600,000,000 = 1,198,500,000
+ *   넓은 읽기(①2호 공유 = 동일한 호 · 합산 과세표준에 ⑦ 세율): 1,997,500,000 × 65% − 65,940,000 = 1,232,435,000 (⑦1+⑦1 대조군 값)
+ */
+describe("1~2년 단기 ⑦1호 + ⑦2호 — 합산하지 않음 + 해석례 미확인 고지", () => {
+  const SHORT_NOTICE = "단기 세율의 호를 함께 쓰는 경우의 합산 단위";
+  const short = (id: string, transferDate: string, houses: string[], rights: string[]) => ({
+    ...asset(id, 1_300_000_000, transferDate, houses, rights),
+    acquisitionDate: new Date("2025-03-01"),
+  }) as TransferTaxItemInput;
+  const notices = (r: ReturnType<typeof run>) => r.warnings.filter((w) => w.includes(SHORT_NOTICE));
+
+  it("검산 — 손계산 상수", () => {
+    expect(Number((997_500_000n * 60n) / 100n + (1_000_000_000n * 60n) / 100n)).toBe(1_198_500_000);
+    expect(Number((1_997_500_000n * 65n) / 100n - 65_940_000n)).toBe(1_232_435_000);
+  });
+
+  it("ST-1 ⑦1호 + ⑦2호(둘 다 1~2년) → 1,198,500,000 · 고지 1건(유리·불리 표현 없음)", () => {
+    const r = run([short("A", "2026-06-01", ["A", "B"], []), short("B", "2026-09-01", ["B"], ["R1"])]);
+    expect(r.properties.map((p) => p.surchargeHouseholdHasCountedRight ?? false)).toEqual([false, true]);
+    expect(r.calculatedTax).toBe(1_198_500_000);
+    const n = notices(r);
+    expect(n).toHaveLength(1);
+    expect(n[0]).toContain("확인 필요");
+    expect(n[0]).not.toMatch(/유리|불리/);
+  });
+
+  it("ST-2 대조 ⑦1호 + ⑦1호(둘 다 1~2년) → 같은 호 합산 1,232,435,000 · 고지 없음", () => {
+    const r = run([short("A", "2026-06-01", ["A", "B"], []), short("B", "2026-09-01", ["B", "C"], [])]);
+    expect(r.calculatedTax).toBe(1_232_435_000);
+    expect(notices(r)).toHaveLength(0);
+  });
+
+  it("ST-3 대조 2년 이상 ⑦1호 + ⑦2호(S-1) → 단기 고지 없음", () => {
+    expect(notices(run([A(["A", "B"], []), B(["B"], ["R1"])]))).toHaveLength(0);
+  });
+
+  it("ST-3b ⑦3호 + ⑦4호(둘 다 1~2년) → 호별 1,366,320,000 · 단기 고지 1건 · 겹침 고지 없음", () => {
+    const r = run([short("A", "2026-06-01", ["A", "B", "C"], []), short("B", "2026-09-01", ["B", "C"], ["R1"])]);
+    // 자산마다 중과(42% + 30%p)가 60%보다 크다: 997,500,000 × 72% − 35,940,000 = 682,260,000 · 1,000,000,000 × 72% − 35,940,000 = 684,060,000
+    expect(r.calculatedTax).toBe(1_366_320_000);
+    expect(notices(r)).toHaveLength(1);
+    expect(r.warnings.some((w) => w.includes(OVERLAP_NOTICE))).toBe(false);
+  });
+
+  it("ST-4 한쪽만 1~2년 ⑦1호 + 2년 이상 ⑦2호 → 단기 고지 없음", () => {
+    expect(notices(run([short("A", "2026-06-01", ["A", "B"], []), B(["B"], ["R1"])]))).toHaveLength(0);
   });
 });
 
