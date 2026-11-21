@@ -57,6 +57,16 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** 재개발 §166③ 환산 개산공제 근거 — 토지 1호(`REDEVELOPMENT.LUMP_DEDUCTION_LAND`) · 주택 2호 가목(`REDEVELOPMENT.LUMP_DEDUCTION_HOUSE`) · KoreanLaw 현행 MST 290841 실측(2026-11-21). */
+    id: "TRANSFER.REDEV_LUMP_DEDUCTION_163_6",
+    citation: "소득세법 시행령 §163",
+    keywords: [
+      "취득당시의 법 제99조제1항제1호 가목의 규정에 의한 개별공시지가",
+      "동호 라목의 규정에 의한 주택 취득당시의 법 제99조제1항제1호 다목 또는 라목의 가액",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     /** 이월과세 × 당초 증여 채무 부분(매입분) — 「양도로 보는 부분」만 법문이 정한다(KoreanLaw 현행 본문 2026-10-27). */
     id: "TRANSFER.CARRYOVER_DEBT_PURCHASED_PART",
     citation: "소득세법 §88",

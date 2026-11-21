@@ -129,6 +129,16 @@ const ALLOWLIST: { file: string; snippet: string; 사유: string }[] = [
     사유: "DetailedCalculationStatementCard가 FormulaText로 렌더",
   },
   {
+    file: "results/transfer/DetailedStatementRedevRightFormulas.ts",
+    snippet: "÷ (관리처분계획 인가일 현재 기준시가",
+    사유: "입주권 수령 환산 §166③ 원액(R-c05-06) — DetailedCalculationStatementCard가 FormulaText로 렌더, 양쪽 괄호로 분수 변환",
+  },
+  {
+    file: "results/transfer/DetailedStatementRedevRightFormulas.ts",
+    snippet: "÷ (평가액) =",
+    사유: "입주권 수령 인가전 분 나목 안분(R-c05-06) — DetailedCalculationStatementCard가 FormulaText로 렌더, 양쪽 괄호로 분수 변환",
+  },
+  {
     file: "transfer/RedevelopmentValuationSection.tsx",
     snippet: "step1Formula = ",
     사유: "같은 파일 :378이 FormulaText로 렌더 (step1Formula)",

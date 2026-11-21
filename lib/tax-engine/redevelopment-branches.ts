@@ -205,6 +205,7 @@ export function runLandContribEstimated(
     valuationMeta: {
       method: "estimated_post_disclosure_decree_166_3",
       numerator: redevelopment.landStdPriceAtAcq,
+      lumpBaseIsLandPrice: true, // 표시 echo — 개산공제 근거가 §163⑥1호(토지)다
       // 개산공제 산식 표시 base — 100% 공시지가가 아니라 엔진이 실제로 쓴 지분 기준시가.
       lumpDeductionBase: computeLumpSumDeductionBase(
         redevelopment.landStdPriceAtAcq ?? 0,
@@ -320,10 +321,13 @@ export function runHousingContribReceiveEstimated(
     ...(housingDisplayGiftTax > 0 ? { carryoverGiftTaxExpense: housingDisplayGiftTax } : {}),
     residenceStartDate: undefined,
     residenceEndDate: undefined,
-    residenceMonths: undefined,
+    // 표2(거주분 > 0)일 때만 — 토지 경로와 같다(거주분 공제가 찍히는데 신고서 거주기간 칸이 「-」가 되지 않게)
+    residenceMonths:
+      housingResult.preApprovalLTHD > housingResult.preApprovalLTHDHoldingPart ? resolveRightResidenceMonths(input) : undefined,
     ...(housingResult.holdingOnlyTable2 ? { lthdHoldingOnlyTable2: true as const } : {}),
-    lthdHoldingPart: housingResult.preApprovalLTHD, // 표1 = 보유분만
-    lthdResidencePart: 0,
+    // 표2(거주분 > 0)면 보유분·거주분으로 나눈다 — 토지 경로·실가 경로와 같은 분해(표시 echo · 공제액 불변). 종전 상수 0은 결과 카드를 「표1」로 떨어뜨렸다(R-c08-05).
+    lthdHoldingPart: housingResult.preApprovalLTHDHoldingPart,
+    lthdResidencePart: housingResult.preApprovalLTHD - housingResult.preApprovalLTHDHoldingPart,
   };
 
   // postApprovalExistingHouse: 항상 0 (입주권 right — §95② 본문 괄호)
