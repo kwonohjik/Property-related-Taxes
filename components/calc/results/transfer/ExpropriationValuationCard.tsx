@@ -1,5 +1,7 @@
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 
 /**
  * 공익수용 양도당시 기준시가 차감 특례 산출근거 (**소득세법 시행령 §164⑨ 1호**).
@@ -26,10 +28,8 @@ export function ExpropriationValuationCard({
     { label: "보상산정 기초 기준시가", value: detail.perSqmCandidates.basis },
   ];
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
-      <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-        공익수용 양도당시 기준시가 특례 (소득령 §164⑨ 1호)
-      </p>
+    // R-c03-04 — 톤은 `ToneCard`(tones.ts 단일 소스), 조문은 법령 상수(verify:legal 추적 대상)에서 가져온다.
+    <ToneCard tone="amber" title={`공익수용 양도당시 기준시가 특례 (${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_1})`} bodyClassName="space-y-0">
       <p className="mt-1 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
         수용(2009.02.04 이후) 자산의 환산취득가액 계산 시 양도당시 기준시가는 아래 셋 중 가장 작은 금액을 적용합니다.
       </p>
@@ -58,6 +58,6 @@ export function ExpropriationValuationCard({
         <b className="font-mono tabular-nums">{formatKRW(detail.denominator)}</b>{" "}
         <span className="text-xs text-muted-foreground">(환산취득가액 분모)</span>
       </p>
-    </div>
+    </ToneCard>
   );
 }

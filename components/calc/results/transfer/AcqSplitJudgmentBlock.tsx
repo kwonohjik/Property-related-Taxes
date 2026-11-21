@@ -30,8 +30,8 @@ export function AcqSplitJudgmentBlock({ j }: { j: AcqSplitJudgmentDetail }) {
   const row = (label: string, land: string, building: string, strong = false) => (
     <>
       <span className="text-muted-foreground">{label}</span>
-      <span className={cn("font-mono text-right", strong && "font-semibold")}>{land}</span>
-      <span className={cn("font-mono text-right", strong && "font-semibold")}>{building}</span>
+      <span className={cn("font-mono tabular-nums whitespace-nowrap text-right", strong && "font-semibold")}>{land}</span>
+      <span className={cn("font-mono tabular-nums whitespace-nowrap text-right", strong && "font-semibold")}>{building}</span>
     </>
   );
   return (
@@ -42,10 +42,10 @@ export function AcqSplitJudgmentBlock({ j }: { j: AcqSplitJudgmentDetail }) {
           <span />
           <span className="font-medium text-center">토지</span>
           <span className="font-medium text-center">건물</span>
-          {row("계약서 구분금액", j.declared.land.toLocaleString(), j.declared.building.toLocaleString())}
-          {row("취득시 기준시가 안분 가액", j.apportioned.land.toLocaleString(), j.apportioned.building.toLocaleString())}
+          {row("계약서 구분금액", j.declared.land.toLocaleString("ko-KR"), j.declared.building.toLocaleString("ko-KR"))}
+          {row("취득시 기준시가 안분 가액", j.apportioned.land.toLocaleString("ko-KR"), j.apportioned.building.toLocaleString("ko-KR"))}
           {j.outcome !== "before_effective" && row("차이", pct(j.landDeviationBp), pct(j.buildingDeviationBp))}
-          {row("적용 가액", j.applied.land.toLocaleString(), j.applied.building.toLocaleString(), true)}
+          {row("적용 가액", j.applied.land.toLocaleString("ko-KR"), j.applied.building.toLocaleString("ko-KR"), true)}
         </div>
         <p className="text-caption mt-1.5 leading-snug text-muted-foreground">
           근거: {TRANSFER.SPLIT_DEEMED_UNCLEAR}

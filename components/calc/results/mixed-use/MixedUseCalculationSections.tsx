@@ -254,7 +254,9 @@ export function MixedUseCalculationSections({
           {breakdown.calculationRoute.highValueRule === "non_one_house_full_taxation"
             ? unregistered
               ? `미적용 (미등기 양도자산 — 비과세 배제(${TRANSFER.EXEMPTION_UNREGISTERED_EXCLUSION}) · 장기보유특별공제·기본공제 배제)`
-              : "미적용 (전액 과세 + 표1 공제)"
+              : surchargeLthdExclusion
+                ? "미적용 (전액 과세 · 다주택 중과 대상 — 주택분 장기보유특별공제 배제)" // R-c02-07 — 아래 장특 행과 같은 엔진 echo
+                : "미적용 (전액 과세 + 표1 공제)"
             : breakdown.calculationRoute.highValueRule === "below_threshold_exempt"
               ? h.laterLandExemptExcluded
                 ? "적용 (12억 이하 비과세 — 나중에 취득한 부수토지분은 보유요건 미달로 과세)"
@@ -749,6 +751,7 @@ export function MixedUseCalculationSections({
           nonBusinessTransferRatio={h.nonBusinessTransferRatio}
           commercialLandTransferGain={c.landTransferGain}
           unregistered={unregistered}
+          transferDate={formData?.transferDate}
           open={openSections.nbl}
           onToggle={() => toggleSection("nbl")}
         />

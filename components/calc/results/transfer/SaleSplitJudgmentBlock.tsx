@@ -75,8 +75,8 @@ export function SaleSplitJudgmentBlock({
   const row = (label: string, land: string, building: string, strong = false) => (
     <>
       <span className="text-muted-foreground">{label}</span>
-      <span className={cn("font-mono text-right", strong && "font-semibold")}>{land}</span>
-      <span className={cn("font-mono text-right", strong && "font-semibold")}>{building}</span>
+      <span className={cn("font-mono tabular-nums whitespace-nowrap text-right", strong && "font-semibold")}>{land}</span>
+      <span className={cn("font-mono tabular-nums whitespace-nowrap text-right", strong && "font-semibold")}>{building}</span>
     </>
   );
 
@@ -89,20 +89,20 @@ export function SaleSplitJudgmentBlock({
           <span />
           <span className="font-medium text-center">토지</span>
           <span className="font-medium text-center">건물</span>
-          {row("구분 기재 가액", j.declared.land.toLocaleString(), j.declared.building.toLocaleString())}
+          {row("구분 기재 가액", j.declared.land.toLocaleString("ko-KR"), j.declared.building.toLocaleString("ko-KR"))}
           {!beforeEffective && j.apportioned && (
             <>
-              {row("안분 가액", j.apportioned.land.toLocaleString(), j.apportioned.building.toLocaleString())}
+              {row("안분 가액", j.apportioned.land.toLocaleString("ko-KR"), j.apportioned.building.toLocaleString("ko-KR"))}
               {row("차이", pct(j.landDeviationBp), pct(j.buildingDeviationBp))}
             </>
           )}
-          {row("적용 가액", j.applied.land.toLocaleString(), j.applied.building.toLocaleString(), true)}
+          {row("적용 가액", j.applied.land.toLocaleString("ko-KR"), j.applied.building.toLocaleString("ko-KR"), true)}
           {/* 공유지분 — 위 표는 계약서(100%) 금액이고, 판정 결론을 그 지분에 적용한 가액이 이것이다(엔진 echo 그대로). */}
           {j.share &&
             row(
               `지분 ${(j.share.ownershipRatio * 100).toLocaleString("ko-KR", { maximumFractionDigits: 2 })}% 적용 가액`,
-              j.share.applied.land.toLocaleString(),
-              j.share.applied.building.toLocaleString(),
+              j.share.applied.land.toLocaleString("ko-KR"),
+              j.share.applied.building.toLocaleString("ko-KR"),
               true,
             )}
         </div>
@@ -142,8 +142,8 @@ export function SaleSplitJudgmentBlock({
         {/* 공유지분이면 신고 단위 양도가액은 지분 적용 가액이다 — 위 표의 적용 가액은 계약서(100%) 금액(R-c08-04). */}
         {j.deemedUnclear && (
           <p className="text-caption leading-snug text-muted-foreground">
-            ※ 신고서 양도가액은 <strong>안분가액</strong>(토지 {(j.share?.applied ?? j.applied).land.toLocaleString()} · 건물{" "}
-            {(j.share?.applied ?? j.applied).building.toLocaleString()})으로 기재됩니다 — 계약서상 구분 기재 금액과 다릅니다.
+            ※ 신고서 양도가액은 <strong>안분가액</strong>(토지 {(j.share?.applied ?? j.applied).land.toLocaleString("ko-KR")} · 건물{" "}
+            {(j.share?.applied ?? j.applied).building.toLocaleString("ko-KR")})으로 기재됩니다 — 계약서상 구분 기재 금액과 다릅니다.
           </p>
         )}
       </ToneCard>

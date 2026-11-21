@@ -25,6 +25,8 @@ import { BgPreDeemedStdCaption } from "@/components/calc/results/transfer/BgPreD
 import { BgPreDeemedPartsRows } from "@/components/calc/results/transfer/BgPreDeemedAcqRows";
 import { BgBundleCardAcqRows } from "@/components/calc/results/transfer/BgBundleCardAcqRows";
 import { BurdenedGiftGiftTaxRows } from "@/components/calc/results/transfer/BurdenedGiftGiftTaxRows";
+import { CalculationWarningsCard } from "@/components/calc/results/shared/CalculationWarningsCard";
+import { redevSec166LumpRateLabel } from "@/lib/calc/redev-pre-approval-acq-mode";
 import {
   BG_NOT_OWNED_NOTE,
   BG_PART_LABEL,
@@ -62,7 +64,7 @@ interface Props {
    * 재개발 완공 아파트 × 환산(K-5) — 엔진이 §159 명세의 일반 환산(§176의2②2호) 대신 §166③으로 계산한 값(채무비율 안분 후).
    * 있으면 환산 행을 이것으로 바꾼다 — 명세의 일반 환산값은 계산에 쓰이지 않는다(`transfer-tax-burdened-gift-step.ts` `redevSec166Conversion`).
    */
-  redevSec166?: { acquisition: number; lumpDeduction: number };
+  redevSec166?: { acquisition: number; lumpDeduction: number; lumpDeductionBase?: number };
   /**
    * 원조합원 입주권·재개발 완공 아파트(§166 자산) — 신고서 취득가액 합계(단건 `redevFilingTotals` · 묶음 엔진 표시 echo).
    * 명세의 자산별 취득가액은 인가 전 분(종전 부동산)뿐이라, 있으면 그 행을 「종전 부동산 취득가(인가 전 분)」로 부르고
@@ -121,15 +123,8 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
 
   return (
     <div className="rounded-lg border border-fuchsia-200 bg-fuchsia-50/40 p-4 space-y-2 print:break-inside-avoid dark:bg-fuchsia-950/40">
-      {/* Phase 2: warnings[] 상단 amber/rose 배너 — 8개 동기화 지점 ⑦ */}
-      {warnings && warnings.length > 0 && (
-        <div className="rounded-lg border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-amber-900 dark:text-amber-200 space-y-1">
-          <p className="font-semibold">⚠️ 안내</p>
-          {warnings.map((w, idx) => (
-            <p key={idx}>{w}</p>
-          ))}
-        </div>
-      )}
+      {/* Phase 2: warnings[] 상단 배너 — 8개 동기화 지점 ⑦. 단건 부담부증여는 공용 카드를 빼고 여기에 맡긴다(TransferTaxResultView) — 같은 공용 카드로 그린다(R-c03-02). */}
+      <CalculationWarningsCard warnings={warnings} />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <p className="text-sm font-semibold text-fuchsia-900 dark:text-fuchsia-200">
           부담부증여 평가 명세 (소득세법 시행령 §159)
@@ -271,7 +266,9 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
                 <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(redevSec166.acquisition)}</td>
               </tr>
               <tr>
-                <td className="py-1 pr-2 pl-3">인가전 분 개산공제 = 취득일 기준시가 × 채무비율 × 3% (시행령 §163⑥)</td>
+                <td className="py-1 pr-2 pl-3" data-testid="bg-redev-sec166-lump">
+                  인가전 분 개산공제 = 취득일 기준시가 × 채무비율 × {redevSec166LumpRateLabel(redevSec166)} (시행령 §163⑥)
+                </td>
                 <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(redevSec166.lumpDeduction)}</td>
               </tr>
             </>
