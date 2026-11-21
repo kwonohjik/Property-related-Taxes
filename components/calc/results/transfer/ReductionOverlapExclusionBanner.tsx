@@ -19,12 +19,13 @@
  */
 
 import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 export function ReductionOverlapExclusionBanner({ appliedType }: { appliedType: string }) {
   return (
-    <div className="mx-2 mt-2 rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700/50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+    <ToneCard tone="amber" bodyClassName="" className="mx-2 mt-2 text-xs text-amber-900 dark:text-amber-200">
       ⚠ 조세특례제한법 §127⑦ 중복배제 — 아래 감면은 <b>적용되지 않았습니다</b>. 채택된 감면은{" "}
       <b>{reductionTypeLabelOf(appliedType)}</b>입니다.
-    </div>
+    </ToneCard>
   );
 }

@@ -118,4 +118,29 @@ describe("§97 세액감면 카드 §127⑦ 배너 — 승자 id = rental97TaxDe
     expect(r.rental97TaxDetail?.id).toBe("rental_97_main");
     expect(bannerBeforeRental97Card(r)).toBe(true);
   });
+
+  /**
+   * R-c08-08 — 배너 아래 §97 카드가 감면세액을 확정값처럼 찍었다(수정 전 「감면세액 29,455,000」·「58,910,000 × 50% = 29,455,000」 · 채택은 신축 47,128,000).
+   * §77 계열 카드와 같은 규약으로 감면세액 행·산출근거를 배제 문구로 바꾼다. 세액 불변.
+   */
+  it("R-c08-08 B-2 배제된 §97 카드 — 감면세액·산식 결과 대신 배제 문구 · B-1 승자는 그대로(구별력)", () => {
+    const cardText = (result: ReturnType<typeof run>) => {
+      cleanup();
+      return render(
+        <ReductionDetailCards result={result} calculatedTax={result.calculatedTax} taxBase={result.taxBase}
+          longTermHoldingDeduction={result.longTermHoldingDeduction} appliedReductionType={result.reductionTypeApplied} />,
+      ).container.textContent ?? "";
+    };
+    const loser = run("rental_97_main", 0.8);
+    expect([loser.reductionTypeApplied, loser.reductionAmount, (loser.rental97TaxDetail as { reductionAmount?: number } | undefined)?.reductionAmount]).toEqual(["new_housing", 47_128_000, 29_455_000]);
+    const t = cardText(loser);
+    expect(t).not.toContain("29,455,000");
+    expect(t).toContain("감면세액조특법 §127⑦ 중복배제로 적용되지 않았습니다");
+    expect(t).toContain("감면세액 — 조특법 §127⑦ 중복배제로 적용되지 않았습니다");
+
+    const winner = run("rental_97_proviso", 0.5);
+    const w = cardText(winner);
+    expect(w).toContain(`× 100% = ${(winner.rental97TaxDetail as { reductionAmount: number }).reductionAmount.toLocaleString()}`);
+    expect(w).not.toContain("중복배제로 적용되지 않았습니다");
+  });
 });
