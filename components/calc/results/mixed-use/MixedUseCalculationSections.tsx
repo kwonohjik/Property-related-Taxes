@@ -456,7 +456,12 @@ export function MixedUseCalculationSections({
                   label="12억 초과 안분 후 과세대상 양도차익"
                   value={fmt(h.proratedTaxableGain)}
                   formula={
-                    base <= 1_200_000_000 ? (
+                    base <= 1_200_000_000 && h.laterLandExemptExcluded ? (
+                      // R-c02-03 후속 — L-10(건물 전체로 고가 · 주택분 ≤ 12억)이어도 나중 토지분은 전액 과세(엔진 landProratio = 1), 건물분은 0.
+                      `부수토지 양도차익 ${fmtPlain(h.landTransferGain - h.nonBusinessTransferredGain)} 전액${
+                        h.nonBusinessTransferredGain > 0 ? ` (비사업용 이전분 ${fmtPlain(h.nonBusinessTransferredGain)} 제외)` : ""
+                      } + 건물분 ${fmtPlain(h.buildingTransferGain)} × 0 (${baseLabel} ${fmtPlain(base)} ≤ 12억 → 건물분 12억 초과분 없음 — ${MIXED_USE.HIGH_VALUE_FORMULA_HOUSING_ONLY})`
+                    ) : base <= 1_200_000_000 ? (
                       `${baseLabel} ${fmtPlain(base)} ≤ 12억 → 12억 초과분 없음 — 산식은 주택 부분만 (${MIXED_USE.HIGH_VALUE_FORMULA_HOUSING_ONLY})`
                     ) : h.laterLandExemptExcluded ? (
                       // R-c02-03 — 나중에 취득한 부수토지분은 보유요건 미달로 안분하지 않고 전액 과세, 건물분만 안분(엔진 landProratio = 1).

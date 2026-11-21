@@ -145,6 +145,32 @@ describe("R-c02-03 12억 초과 + 나중에 취득한 부수토지 — 토지분
     expect(land + Math.floor((h.buildingTransferGain * (base - 1_200_000_000)) / base)).toBe(h.proratedTaxableGain);
   });
 
+  // 리뷰 후속 — L-10(건물 전체로 고가 판정 · 주택분 ≤ 12억)에서도 나중 토지분은 전액 과세(엔진 landProratio = 1), 건물분은 0.
+  for (const [title, price, over] of [
+    ["L-10 15억", 1_500_000_000, {}],
+    ["L-10 18억", 1_800_000_000, {}],
+    ["L-10 + 배율 초과 25억", 2_500_000_000, { totalLandArea: 1000 }],
+  ] as const) {
+    it(`형제 ${title} — 주택분 ≤ 12억 분기도 「부수토지 양도차익 X 전액 + 건물분 Y × 0」, 산식대로 계산하면 표시값`, () => {
+      const bl = calc(price, D("2024-06-01"), asset(over), makeMockRates());
+      const hl = bl.housingPart;
+      expect(hl.laterLandExemptExcluded).toBe(true);
+      expect(hl.isExempt).toBe(false);
+      expect(hl.highValueBase!).toBeLessThanOrEqual(1_200_000_000);
+      expect(hl.highValueJudgmentBase!).toBeGreaterThan(1_200_000_000);
+      expect(hl.proratedTaxableGain).toBeGreaterThan(0);
+      const [row] = rowsOf(draw(bl), LABEL);
+      expect(row.value.replace(/[^\d]/g, "")).toBe(String(hl.proratedTaxableGain));
+      const land = hl.landTransferGain - hl.nonBusinessTransferredGain;
+      expect(row.formula).toContain(`부수토지 양도차익 ${n(land)} 전액`);
+      expect(row.formula).toContain(`건물분 ${n(hl.buildingTransferGain)} × 0`);
+      expect(row.formula).not.toContain("산식은 주택 부분만");
+      if (hl.nonBusinessTransferredGain > 0) expect(row.formula).toContain(`비사업용 이전분 ${n(hl.nonBusinessTransferredGain)} 제외`);
+      // 자기일관 — 표시된 산식으로 검산(건물분 × 0)
+      expect(land).toBe(hl.proratedTaxableGain);
+    });
+  }
+
   it("대조 — 토지·건물 같은 날이면 종전 일반 산식 그대로", () => {
     const bs = calc(2_500_000_000, D("2024-06-01"), asset({ landAcquisitionDate: D("2021-06-01") }), makeMockRates());
     expect(bs.housingPart.laterLandExemptExcluded).toBeFalsy();
