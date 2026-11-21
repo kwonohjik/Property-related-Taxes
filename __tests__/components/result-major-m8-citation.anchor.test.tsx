@@ -24,6 +24,8 @@ import { AmendmentBlock } from "@/components/calc/transfer/AmendmentBlock";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
+import { computeAmendment } from "@/lib/tax-engine/transfer-tax-amendment";
+import { ResultPdfDocument } from "@/lib/pdf/ResultPdfDocument";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
@@ -199,5 +201,54 @@ describe("R-c03-01 농어촌특별세 정정 줄 머리말 (AmendmentResultCard)
     const t = container.textContent ?? "";
     expect(t).toContain(`당초 신고·납부한 농어촌특별세 (이력에서 자동 입력) — ${tail}`);
     expect(t).not.toContain("상계하지 않고 별도로");
+  });
+});
+
+describe("R-c03-01 후속 — 엔진 농특세 정정 단계(PDF 「계산 단계」가 formula·legalBasis를 한 줄로 찍는다)", () => {
+  type Node = { type?: unknown; props?: { children?: unknown } };
+  function collect(node: unknown, out: string[] = []): string[] {
+    if (node === null || node === undefined || typeof node === "boolean") return out;
+    if (typeof node === "string" || typeof node === "number") { out.push(String(node)); return out; }
+    if (Array.isArray(node)) { for (const c of node) collect(c, out); return out; }
+    const el = node as Node;
+    if (typeof el.type === "function") {
+      try { collect((el.type as (p: unknown) => unknown)(el.props), out); } catch { /* 렌더 불가 노드 */ }
+      return out;
+    }
+    collect((el.props ?? {}).children, out);
+    return out;
+  }
+
+  it("M8-15 환급 단계 — §7①이 붙은 줄에 «상계하지 않음»을 쓰지 않는다 (PDF 토큰)", () => {
+    const r = calculateTransferTax(
+      {
+        ...baseTransferInput({ propertyType: "land", transferPrice: 600_000_000, acquisitionPrice: 200_000_000, transferDate: new Date("2024-03-01"), acquisitionDate: new Date("2009-03-01") }),
+        amendment: {
+          originalDeterminedTax: 10_000_000, originalRuralSurtax: 500_000,
+          applyUnderReportingPenalty: false, underReportingReason: "normal", underReductionMode: "exempt", applyLatePaymentPenalty: false,
+        },
+      } as never,
+      makeMockRates(),
+    );
+    const t = collect(ResultPdfDocument({ taxType: "transfer", taxTypeLabel: "양도소득세", createdAt: "2026-11-21", resultData: r as never }));
+    const i = t.indexOf("농어촌특별세 환급");
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(t.slice(i, i + 4)).toEqual([
+      "농어촌특별세 환급",
+      "당초 농어촌특별세 500,000 − 수정 농어촌특별세 0 (양도소득세와 별도 계산)",
+      "농어촌특별세법 §7①",
+      "500,000",
+    ]);
+    expect(t.join("|")).not.toMatch(/상계하지 않|별도 납부/);
+  });
+
+  it("M8-16 납부세액 단계 — «별도 납부»(§7① 「함께 신고·납부」와 어긋남)를 쓰지 않는다", () => {
+    const d = computeAmendment(
+      { originalDeterminedTax: 0, originalRuralSurtax: 100_000, applyUnderReportingPenalty: false, underReportingReason: "normal", underReductionMode: "exempt", applyLatePaymentPenalty: false } as never,
+      0,
+      400_000,
+    );
+    const step = d.steps.find((s) => s.label === "농어촌특별세 납부세액")!;
+    expect([step.formula, step.legalBasis, step.amount]).toEqual(["추가 납부 300,000 (양도소득세와 별도 계산)", "농어촌특별세법 §7①", 300_000]);
   });
 });
