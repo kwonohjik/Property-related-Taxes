@@ -113,25 +113,51 @@ export function decimalizeRatio(ratio: number): { n: bigint; k: number } | null 
  * 예: 1,518,341,200 × 70% → 1,062,838,839(참값 …840). 정수 % 1~99 전체로는 0.04%지만
  * 70%는 1.51% · 35%는 0.73% · 57%는 0.48%다.
  *
- * ⇒ `ratio`가 소수 10자리 이하 십진수이고 `amount`가 안전정수이면 `BigInt(amount) × N / 10^k`의 floor(정확).
- * 그 밖은 **옛 식 그대로**다:
- *  - 11자리 이상(1/3·6/11 같은 순환 소수, 레거시 분자/분모 이력, 채무비율 B/C) — 15자리까지 십진화하면
- *    오히려 틀린다: 1/3은 `String`이 16자리(0.3333333333333333)라 15자리로 잘려
- *    300,000,000 × 0.333333333333333 = 99,999,999.9999999 → **1 과소**가 된다. 옛 식은 1/3·2/3·1/7에서 참값과 같다.
- *  - 정수가 아닌 금액·안전정수 밖 금액·NaN/∞ — 십진 정확 계산 대상이 아니다.
+ * ⇒ `amount`가 안전정수이면 두 단계로 참 비율을 복원해 BigInt floor로 정확히 계산한다:
+ *  1. 소수 10자리 이하 십진수(`decimalizeRatio`) → `BigInt(amount) × N / 10^k`.
+ *  2. 그 밖이면 분모 q ≤ 1000의 기약분수 p/q(`rationalizeRatio`) → `BigInt(amount) × p / q`.
+ *     레거시 분자/분모 지분(3/11·6/11 — 분모 상한은 화면 `ownershipRatioError`의 d ≤ 1000)은 순환 소수라 1단계가 못 잡고,
+ *     double(3/11) < 3/11이라 옛 식은 880,000,000 × 3/11 → 239,999,999(**1 과소**)였다(2026-11-21 사용자 결정으로 고침 —
+ *     2026-10-21 Q1 (a) «순환 소수는 옛 식» 결정을 뒤집음). 1/3·2/3·1/7은 옛 식도 참값이라 결과가 같다.
+ *     ⚠️ 15자리 십진화로 대신하면 오히려 틀린다: 1/3은 15자리로 잘려 300,000,000 × 0.333333333333333 → 1 과소.
+ * 둘 다 아니면 **옛 식 그대로**다:
+ *  - 분모가 1000을 넘는 비율(채무비율 B/C 등 큰 정수의 비) — 근사 분수를 고르면 다른 수가 된다.
+ *  - 정수가 아닌 금액·안전정수 밖 금액·NaN/∞ — 정확 계산 대상이 아니다.
  * 음수 금액은 BigInt 나눗셈이 0 방향 절사라 floor로 보정한다.
  */
 export function applyRatio(amount: number, ratio: number): number {
   if (Number.isSafeInteger(amount)) {
     const dec = decimalizeRatio(ratio);
-    if (dec) {
-      const num = BigInt(amount) * dec.n;
-      const den = POW10_BIGINT[dec.k];
-      const q = num / den;
-      return Number(num < 0n && q * den !== num ? q - 1n : q);
+    const frac = dec ? { p: dec.n, q: POW10_BIGINT[dec.k] } : rationalizeRatio(ratio);
+    if (frac) {
+      const num = BigInt(amount) * frac.p;
+      const q = num / frac.q;
+      return Number(num < 0n && q * frac.q !== num ? q - 1n : q);
     }
   }
   return Math.floor(amount * ratio);
+}
+
+/**
+ * `applyRatio`가 분수로 복원하는 비율의 최대 분모 — 화면 지분 형식 규칙 `ownershipRatioError`
+ * (`lib/calc/transfer-tax-api-asset-basics.ts`)의 분모 상한 `d ≤ 1000`과 같다.
+ */
+const RATIO_MAX_DENOMINATOR = 1000;
+
+/**
+ * `ratio`가 분모 1000 이하 분수 p/q의 가장 가까운 double이면 가장 작은 q의 `{p, q}`, 아니면 null.
+ *
+ * `Math.round(ratio × q)`는 **비율을 복원하는 데만** 쓰는 반올림이다(금액 반올림 아님 — `decimalizeRatio`와 같은 방식).
+ * 허용 오차는 `decimalizeRatio`와 같은 2ulp(`RATIO_ULP_TOLERANCE`) — 분모 ≤ 1000인 서로 다른 두 분수의 간격은
+ * 1/(1000 × 1000) = 1e-6 이상이라 다른 분수를 잘못 집지 않는다.
+ */
+function rationalizeRatio(ratio: number): { p: bigint; q: bigint } | null {
+  const tol = Math.abs(ratio) * RATIO_ULP_TOLERANCE;
+  for (let q = 1; q <= RATIO_MAX_DENOMINATOR; q++) {
+    const p = Math.round(ratio * q);
+    if (Math.abs(ratio - p / q) <= tol) return { p: BigInt(p), q: BigInt(q) };
+  }
+  return null;
 }
 
 /**
