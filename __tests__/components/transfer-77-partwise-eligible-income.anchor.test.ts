@@ -37,9 +37,11 @@ import { buildRows } from "@/components/calc/results/transfer/FilingFormTableHel
 import { deriveColumns } from "@/components/calc/results/transfer/FilingFormTableColumns";
 import { buildStatementItems } from "@/components/calc/results/transfer/DetailedStatementHelpers";
 import { sumReductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
+import { eligibleIncomeBasisText } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
 import { breakdownToFilingResult } from "@/components/calc/results/MultiTransferPropertyBreakdown";
 import { TransferSection } from "@/lib/pdf/ResultPdfTransferSections";
+import { TransferMultiSection } from "@/lib/pdf/ResultPdfTransferSections";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 
@@ -181,5 +183,28 @@ describe("R-c11-01 다건 — 같은 split 자산(건물만 충족) + 비사업�
     const fr = breakdownToFilingResult(p0);
     const assetRow19 = buildRows(fr, deriveColumns(fr).mode, f).find((x) => x.label === ROW19);
     expect(assetRow19?.values.total).toBe(pw!.eligibleIncome);
+
+    // 다건 상세명세서 ⑲ — 합계 값·자산별 값(`DetailedStatementIncomeItems` 다건 분기)
+    const item = buildStatementItems(adapter, f, undefined, { properties: agg.properties, aggregated: agg }, undefined).get(
+      "reductionTargetIncome",
+    );
+    expect(item?.value).toBe(pw!.eligibleIncome);
+    expect(item?.perAsset?.find((x) => x.label === "A0")?.value).toBe(pw!.eligibleIncome);
+
+    // 다건 결과 PDF ⑲ — 합계 블록과 자산 A0 블록 두 줄(저장 결과처럼 JSON 왕복). A1(비사업용 토지)은 감면 없음 → 0.
+    const saved = JSON.parse(JSON.stringify(agg)) as Record<string, unknown>;
+    const pdf = textOf(TransferMultiSection({ r: saved }));
+    const want = `${ROW19} ${pw!.eligibleIncome.toLocaleString()}`;
+    expect(pdf.split(want).length - 1).toBe(2);
+    expect(pdf).not.toContain(`${ROW19} ${p0.income.toLocaleString()}`);
+  });
+});
+
+describe("R-c11-01 근거 문구 — 감면대상 파트별", () => {
+  it("토지분만 충족(eligiblePart='land')이면 토지분만 감면대상·건물분 감면 제외로 적는다", () => {
+    const text = eligibleIncomeBasisText("public_expropriation", 120_000_000, "land");
+    expect(text).toContain("감면대상 토지분 양도소득금액 120,000,000");
+    expect(text).toContain("건물분은 감면 제외");
+    expect(text).not.toContain("자산 전부가 감면 대상");
   });
 });

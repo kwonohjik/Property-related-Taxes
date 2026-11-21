@@ -116,7 +116,7 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     /**
      * 🔴 종전에는 이 필드를 싣지 않았다. 신고서 ⑲ 「세액감면대상금액」은
      *   `reductionEligibleIncome(reductionTypeApplied, …)`으로 갈리는데(§77·§77의3은
-     *   양도소득금액 전액 / §77의2는 대토분 echo / 그 외는 `reducibleIncome`),
+     *   양도소득금액 전액 — 단 §77 5B는 `partWise.eligibleIncome` / §77의2는 대토분 echo / 그 외는 `reducibleIncome`),
      *   식별자가 없으면 **default 분기**로 떨어져 `reducibleIncome`이 실린다.
      *   §77 계열의 `reducibleIncome`은 **감면율이 이미 곱해진 값**이라 ⑲에 쓰면 안 된다
      *   (`reduction-eligible-income.ts` 주석이 명시). 실측(공익수용 9억): ⑲가

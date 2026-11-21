@@ -195,7 +195,7 @@ export function eligibleIncomeBasisText(
     case "public_expropriation":
       if (partWiseEligiblePart) {
         const [ok, ng] = partWiseEligiblePart === "land" ? ["토지", "건물"] : ["건물", "토지"];
-        return `감면대상 ${ok}분 양도소득금액 ${v} (${ok}분만 「소급 2년 이전 취득」 요건 충족 — ${ng}분은 감면 제외, ${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION})`;
+        return `감면대상 ${ok}분 양도소득금액 ${v} (${ok}분만 「사업인정고시일부터 소급하여 2년 이전에 취득한」 요건 충족 — ${ng}분은 감면 제외, ${TRANSFER.REDUCTION_PUBLIC_EXPROPRIATION})`;
       }
       return `양도소득금액 전액 ${v} (자산 전부가 감면 대상 — 조세특례제한법 §77)`;
     case "gb_designated_land":
