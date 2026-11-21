@@ -1,4 +1,5 @@
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
+import { TRANSFER_REDUCTION_ARTICLE } from "@/lib/tax-engine/legal-codes/transfer-house";
 
 /**
  * 별지 제84호서식 부표 1 ⑲ 세액감면대상금액 = 감면대상 양도소득금액
@@ -206,11 +207,15 @@ export function eligibleIncomeBasisText(
     case "self_farming_incorp":
     case "self_farming_inherited":
       return `자경 감면 대상 양도소득금액 ${v} (조세특례제한법 §69 — 편입 부분감면 시 감면비율 반영)`;
+    // §97①·§97의2①은 「그 주택을 양도함으로써 발생하는 소득」 전부가 대상이다 — 엔진 rentalGainRatio = 1(R-c11-03).
     case "rental_97_main":
+      return `양도소득금액 전액 ${v} (${TRANSFER_REDUCTION_ARTICLE.RENTAL_97_MAIN} — 임대기간 안분 없음)`;
     case "rental_97_proviso":
+      return `양도소득금액 전액 ${v} (${TRANSFER_REDUCTION_ARTICLE.RENTAL_97_PROVISO} — 임대기간 안분 없음)`;
     case "rental_97_2":
+      return `양도소득금액 전액 ${v} (${TRANSFER_REDUCTION_ARTICLE.RENTAL_97_2} — 임대기간 안분 없음)`;
     case "rental_97_5":
-      return `임대기간 중 발생한 양도소득 ${v} (조세특례제한법 §97 계열 — 임대기간 분 안분)`;
+      return `임대기간 중 발생한 양도소득 ${v} (${TRANSFER_REDUCTION_ARTICLE.RENTAL_97_5}① — 임대기간 분 안분)`;
     default:
       return value > 0
         ? `감면 적용 대상 양도소득금액 ${v}`

@@ -471,7 +471,8 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
   {
     id: "SPECIAL.LOCAL_COMPLETED_UNSOLD_2024",
     citation: "조특법 §98의9",
-    keywords: ["1주택을 보유한 1세대", "2024년 1월 10일부터 2026년 12월 31일", "수도권 밖의 지역에 소재할 것"],
+    // ③ 종부세 특례 신청 기간(`UNSOLD_98_9_CPT_APPLICATION.PERIOD`) — 원문 MST 284389 실독 2026-11-22
+    keywords: ["1주택을 보유한 1세대", "2024년 1월 10일부터 2026년 12월 31일", "수도권 밖의 지역에 소재할 것", "해당 연도 9월 16일부터 9월 30일까지"],
     keywordMode: "ALL",
   },
   {

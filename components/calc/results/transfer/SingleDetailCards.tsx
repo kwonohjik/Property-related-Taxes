@@ -155,10 +155,11 @@ export function SingleDetailCards({
           subject={
             formData?.assets?.[0]?.assetKind === "right_to_move_in"
               ? "right"
-              : (formData?.assets?.[0]?.redevSubject as "apt" | "right" | undefined) ?? "apt"
+              : ((formData?.assets?.[0]?.redevSubject || "apt") as "apt" | "right")
           }
           settlementDirection={
-            (formData?.assets?.[0]?.redevSettlementDirection as "pay" | "receive" | undefined) ?? "pay"
+            // 팩토리 기본값이 ""라 `??`로는 fallback이 안 걸린다 — 입력 위젯·API·validate·형제 결과뷰와 같은 `||`(R-c09-03).
+            ((formData?.assets?.[0]?.redevSettlementDirection || "pay") as "pay" | "receive")
           }
           {...(result.lthdExclusionReason ? { lthdExclusionReason: result.lthdExclusionReason } : {})}
         />
