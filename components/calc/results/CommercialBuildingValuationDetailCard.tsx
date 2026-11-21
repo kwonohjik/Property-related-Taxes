@@ -17,6 +17,8 @@
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import type { CommercialBuildingValuationResult } from "@/lib/tax-engine/types/commercial-building.types";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
+import type { RateClause } from "@/lib/tax-engine/transfer-tax-rate-clause";
 
 /**
  * 엔진 결과 타입 — `lib/tax-engine/types/commercial-building.types.ts` **직접 사용**.
@@ -57,6 +59,31 @@ interface Props {
    * 환산취득가에서 빼서 보인다 — 없으면 같은 화면의 신고서·명세서(공제 후)와 산술이 어긋난다.
    */
   depreciation?: number;
+  /** §97②2호 단서 swap 나목(자본적지출 + 양도비) — `swapApplied`일 때 양도차익 산식의 필요경비. */
+  swapDirectSide?: number;
+  /** 엔진이 실제 공제한 기본공제(미등기 0·연간 기사용분 차감) — 없으면 산식에 금액을 적지 않는다. */
+  basicDeduction?: number;
+  /** 엔진이 적용한 §104 호(`result.rateClause`) — 산출세액 근거 조문. 없으면 조문을 적지 않는다. */
+  rateClause?: RateClause;
+  /** 엔진 적용 세율 — 단일세율 호(§104①2·3·10호)의 산식에만 쓴다. */
+  appliedRate?: number;
+}
+
+/** 산출세액 근거 — 엔진이 고른 §104 호. 상가 단건에서 도달하는 호만 둔다(그 밖은 조문 없이 「산출세액」). */
+const RATE_CLAUSE_BASIS: Partial<Record<RateClause, { citation: string; flat: boolean }>> = {
+  "104-1-1": { citation: `${TRANSFER.TAX_RATE_BASIC_CLAUSE} — ${TRANSFER.PROGRESSIVE_RATE_TABLE} 기본세율`, flat: false },
+  "104-1-2": { citation: `${TRANSFER.TAX_RATE_SHORT_1Y_TO_2Y} — 보유기간 1년 이상 2년 미만`, flat: true },
+  "104-1-3": { citation: `${TRANSFER.TAX_RATE_SHORT_UNDER_1Y} — 보유기간 1년 미만`, flat: true },
+  "104-1-10": { citation: `${TRANSFER.UNREGISTERED_SURCHARGE} — 미등기양도자산`, flat: true },
+};
+
+function taxAmountLabel(rateClause: RateClause | undefined, appliedRate: number | undefined): string {
+  const basis = rateClause ? RATE_CLAUSE_BASIS[rateClause] : undefined;
+  if (!basis) return "산출세액";
+  if (basis.flat && appliedRate !== undefined) {
+    return `산출세액 = 과세표준 × ${Number((appliedRate * 100).toFixed(1))}% (${basis.citation})`;
+  }
+  return `산출세액 (${basis.citation})`;
 }
 
 function Row({ label, value, sub = false, highlight = false }: {
@@ -75,8 +102,10 @@ function Row({ label, value, sub = false, highlight = false }: {
   );
 }
 
-export function CommercialBuildingValuationDetailCard({ detail, transferPrice, acquisitionGain, longTermDeduction, taxableIncome, taxBase, taxAmount, localTax, totalTax, holdingYears, holdingMonths, lthdRate, landGain, buildingGain, swapApplied, depreciation }: Props) {
+export function CommercialBuildingValuationDetailCard({ detail, transferPrice: transferPriceProp, acquisitionGain, longTermDeduction, taxableIncome, taxBase, taxAmount, localTax, totalTax, holdingYears, holdingMonths, lthdRate, landGain, buildingGain, swapApplied, depreciation, swapDirectSide, basicDeduction, rateClause, appliedRate }: Props) {
   const isPreDisclosure = detail.estimatedBasisAtAcq !== undefined;
+  // 산식의 「양도가액」은 엔진이 환산에 넣은 값(지분 적용 후 echo)이 정본이다 — echo 이전 저장 결과만 호출부 값(R-c09-01)
+  const transferPrice = detail.transferPrice ?? transferPriceProp;
   /**
    * 환산취득가·개산공제의 **토지·건물 분리** 가능 여부.
    * 안분 산식이 `합계 × 취득시토지기준시가 / 취득시기준시가합` 이라 취득당시 토지·건물 기준시가가
@@ -257,7 +286,11 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
             <tbody>
               <Row
                 label={
-                  depreciation !== undefined && depreciation > 0
+                  swapApplied && swapDirectSide !== undefined
+                    ? `양도차익 = 양도가액 ${formatKRW(transferPrice)} − 필요경비(자본적지출 + 양도비) ${formatKRW(swapDirectSide)} (${TRANSFER.CARRYOVER_ESTIMATED_EXPENSE_PROVISO} — 환산취득가 미차감)`
+                    : swapApplied
+                    ? "양도차익 = 양도가액 − 필요경비(자본적지출 + 양도비)"
+                    : depreciation !== undefined && depreciation > 0
                     ? `양도차익 = 양도가액 ${formatKRW(transferPrice)} − (환산취득가 ${formatKRW(detail.estimatedAcquisitionTotal)} − 감가상각비 ${formatKRW(depreciation)}) − 개산공제 ${formatKRW(detail.estimatedDeductionTotal)}`
                     : `양도차익 = 양도가액 ${formatKRW(transferPrice)} − 환산취득가 ${formatKRW(detail.estimatedAcquisitionTotal)} − 개산공제 ${formatKRW(detail.estimatedDeductionTotal)}`
                 }
@@ -287,10 +320,10 @@ export function CommercialBuildingValuationDetailCard({ detail, transferPrice, a
                 <Row label={`양도소득금액 = 양도차익 − 장기보유특별공제`} value={taxableIncome} />
               )}
               {taxBase !== undefined && (
-                <Row label={`과세표준 = 양도소득금액 − 기본공제 2,500,000 (절사 규정 없음)`} value={taxBase} />
+                <Row label={basicDeduction !== undefined ? `과세표준 = 양도소득금액 − 기본공제 ${formatKRW(basicDeduction)} (절사 규정 없음)` : "과세표준 = 양도소득금액 − 기본공제 (절사 규정 없음)"} value={taxBase} />
               )}
               {taxAmount !== undefined && (
-                <Row label="산출세액 (소법 §55 양도연도 적용 누진세율)" value={taxAmount} highlight />
+                <Row label={taxAmountLabel(rateClause, appliedRate)} value={taxAmount} highlight />
               )}
               {localTax !== undefined && (
                 <Row label="지방소득세 (지방세법 §103조의3 양도소득분 누진세율 — 과세표준에 자체 세율표 직접 적용)" value={localTax} />

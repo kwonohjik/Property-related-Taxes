@@ -177,6 +177,19 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** 결과 카드 산출세액 근거 — §104① 1·2·3호(`TRANSFER.TAX_RATE_BASIC_CLAUSE`·`TAX_RATE_SHORT_1Y_TO_2Y`·`TAX_RATE_SHORT_UNDER_1Y` · R-c01-03) · KoreanLaw 현행 MST 280405 실측(2026-11-21). */
+    id: "TRANSFER.TAX_RATE_CLAUSES_1_2_3",
+    citation: "소득세법 §104 ①",
+    keywords: [
+      "제55조제1항에 따른 세율(분양권의 경우에는 양도소득 과세표준의 100분의 60)",
+      "그 보유기간이 1년 이상 2년 미만인 것",
+      "양도소득 과세표준의 100분의 40",
+      "그 보유기간이 1년 미만인 것",
+      "양도소득 과세표준의 100분의 50",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     /**
      * 국외주식(§94①3호다목)에 §118의2~§118의4·§118의6을 준용하는 **다리 조문**.
      * 이 조가 바뀌면 국외주식 트랙 전체(5년 요건·필요경비·외국납부세액)가 흔들린다.

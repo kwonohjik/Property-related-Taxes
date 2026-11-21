@@ -95,7 +95,12 @@ export function SingleDetailCards({
           localTax={result.localIncomeTax ?? undefined}
           totalTax={result.totalTax ?? undefined}
           swapApplied={result.swapApplied ?? undefined}
+          swapDirectSide={result.swapComparison?.directSide}
           depreciation={result.swapApplied ? undefined : result.depreciationAmount}
+          /* 과세표준·산출세액 산식 — 엔진이 실제 공제한 기본공제·적용한 §104 호(R-c01-03) */
+          basicDeduction={result.basicDeduction}
+          rateClause={result.rateClause}
+          appliedRate={result.appliedRate}
         />
       )}
 

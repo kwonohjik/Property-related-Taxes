@@ -211,4 +211,11 @@ export interface CommercialBuildingValuationResult {
    * 준용이 실제로 적용된 경우에만 존재한다(B·C 미입력 시 undefined — 탐지만 하고 계산 미변경).
    */
   sec164_8AdjustedDenominator?: number;
+
+  /**
+   * [echo] 환산취득가 산식(§176조의2②2호)에 **실제로 넣은 양도가액** — 표시 전용(산식 불변).
+   * 지분 자산은 지분 적용 후 값이다(`TransferTaxInput.transferPrice`). 결과 카드가 폼의 계약 총액(100%)을
+   * 「양도가액」으로 찍어 산식이 결과값과 어긋나던 결함(R-c09-01)의 단일 소스. 이 echo 이전 저장 결과에는 없다.
+   */
+  transferPrice?: number;
 }

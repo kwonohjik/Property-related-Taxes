@@ -41,7 +41,12 @@ import { CommercialNblPartCard } from "@/components/calc/results/transfer/Commer
 
 interface Props {
   /** `depreciationAmount`는 자산별 breakdown이 싣는 §97③ echo — 상가 환산 카드 산식이 공제 후 값과 맞도록 읽는다. */
-  result: TransferValuationDetailSource & { depreciationAmount?: number };
+  result: TransferValuationDetailSource & {
+    depreciationAmount?: number;
+    /** 자산별 §97②2호 단서 swap echo(`PerPropertyBreakdown.filingDisplay`)·엔진 필요경비 — 상가 환산 카드 양도차익 산식(R-c01-04). */
+    filingDisplay?: { swapApplied?: boolean };
+    necessaryExpense?: number;
+  };
   /**
    * 상가 환산 카드(§164⑥)가 쓰는 자산-수준 금액.
    * 일괄에서는 **안분된 자산별 값**을 넘긴다 — 단건의 총계약가와 의미가 다르므로
@@ -132,6 +137,8 @@ export function ValuationDetailCards({
           longTermDeduction={longTermDeduction}
           taxableIncome={taxableIncome}
           depreciation={result.depreciationAmount}
+          swapApplied={result.filingDisplay?.swapApplied}
+          swapDirectSide={result.filingDisplay?.swapApplied ? result.necessaryExpense : undefined}
         />
       )}
       {result.commercialNblPart && <CommercialNblPartCard part={result.commercialNblPart} />}

@@ -213,11 +213,11 @@ export function calculateCommercialBuildingValuation(
   // ── 공통: 양도시 호별총액 (floor 정합 — 원 단위 정수) ──
   const unitPriceTotalAtTransfer = multiplyByArea(input.unitPriceAtTransfer, floorAreaTotal);
 
-  if (input.isPreDisclosure) {
-    return _calcPreDisclosure(input, transferPrice, floorAreaTotal, unitPriceTotalAtTransfer);
-  } else {
-    return _calcPostDisclosure(input, transferPrice, floorAreaTotal, unitPriceTotalAtTransfer);
-  }
+  const result = input.isPreDisclosure
+    ? _calcPreDisclosure(input, transferPrice, floorAreaTotal, unitPriceTotalAtTransfer)
+    : _calcPostDisclosure(input, transferPrice, floorAreaTotal, unitPriceTotalAtTransfer);
+  // [echo] 환산 산식에 넣은 양도가액 그대로(지분 적용 후) — 결과 카드 산식 표시 전용(R-c09-01 · 산식 불변)
+  return { ...result, transferPrice };
 }
 
 // ============================================================
