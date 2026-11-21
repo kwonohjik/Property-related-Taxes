@@ -7,6 +7,7 @@
  * 증여세는 물건 단위이고 겸용 4부분 구조와 무관하므로 한 곳에 둔다(복제하면 두 카드가 갈린다).
  */
 import type { TransferBurdenedGiftBreakdown } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
+import { GIFT } from "@/lib/tax-engine/legal-codes/inheritance-gift";
 
 // ⚠️ `Record<string, string>`이라 키 커버리지 가드가 없다 — `DonorRelation` 확장 시 함께 볼 것.
 const RELATION_LABEL: Record<string, string> = {
@@ -27,7 +28,7 @@ export function BurdenedGiftGiftTaxRows({ giftTax }: { giftTax: GiftTax }) {
     <>
     <tr className="border-t border-fuchsia-300">
       <td className="py-1 pr-2 font-semibold text-fuchsia-900 dark:text-fuchsia-200">
-        증여세 (수증자 자진납부) — 상증법 §53·§56·§69
+        증여세 (수증자 자진납부) — 상증법 §53·§56·§57·§69
       </td>
       <td />
     </tr>
@@ -47,6 +48,13 @@ export function BurdenedGiftGiftTaxRows({ giftTax }: { giftTax: GiftTax }) {
       <td className="py-1 pr-2 pl-3">{"  └ 증여세 산출세액"}</td>
       <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(giftTax.computedTax)}</td>
     </tr>
+    {giftTax.generationSkipSurcharge !== undefined &&
+      giftTax.generationSkipSurcharge > 0 && (
+        <tr>
+          <td className="py-1 pr-2 pl-3">{`  └ 세대생략 할증과세액 (${GIFT.GENERATION_SKIP})`}</td>
+          <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(giftTax.generationSkipSurcharge)}</td>
+        </tr>
+      )}
     {giftTax.priorGiftCredit !== undefined &&
       giftTax.priorGiftCredit > 0 && (
         <tr>

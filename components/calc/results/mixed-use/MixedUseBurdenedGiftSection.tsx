@@ -26,6 +26,7 @@ import {
   mixedBgAcqStdLabel,
   mixedBgPreDeemedConverted,
 } from "@/components/calc/results/transfer/DetailedStatementBgMixedFormulas";
+import { mixedBgShareTerm } from "@/components/calc/results/transfer/DetailedStatementBgMixedFormulas";
 import {
   DivRow,
   FLine,
@@ -217,7 +218,7 @@ function acqFormulaLine(bg: MixedUseBurdenedGiftBreakdown, side: MixedBgSide, k:
     case "standard_price":
       return (
         <FLine>
-          {MIXED_BG_PART_LABEL[k]}: {mixedBgAcqStdLabel(bg)} {fmtPlain(p.stdPriceAtAcquisition)} × {ratioFrac(bg, side)}
+          {MIXED_BG_PART_LABEL[k]}: {mixedBgAcqStdLabel(bg)} {fmtPlain(p.stdPriceAtAcquisition)}{mixedBgShareTerm(bg)} × {ratioFrac(bg, side)}
         </FLine>
       );
     case "converted":
@@ -273,7 +274,7 @@ export function MixedUseBgAcqRows({ bg, side }: { bg: MixedUseBurdenedGiftBreakd
                 const p = bg.perPart[k];
                 return (
                   <FLine key={k}>
-                    {MIXED_BG_PART_LABEL[k]}: {mixedBgAcqStdLabel(bg)} {fmtPlain(p.stdPriceAtAcquisition)} × {ratioFrac(bg, side)} × 개산공제율{" "}
+                    {MIXED_BG_PART_LABEL[k]}: {mixedBgAcqStdLabel(bg)} {fmtPlain(p.stdPriceAtAcquisition)}{mixedBgShareTerm(bg)} × {ratioFrac(bg, side)} × 개산공제율{" "}
                     {rateLabel(p.estimatedDeductionRate ?? 0)}
                   </FLine>
                 );

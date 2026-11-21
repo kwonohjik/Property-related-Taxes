@@ -668,8 +668,13 @@ export interface TransferBurdenedGiftBreakdown {
     deduction: number;
     /** 과세표준 = gross − deduction */
     taxBase: number;
-    /** 산출세액 (§56 누진세율) */
+    /** 산출세액 (§56 누진세율) — §57 할증 전 값 */
     computedTax: number;
+    /**
+     * 상증법 §57 할증과세액(세대생략) — `calcGiftTax` 결과 `generationSkipSurcharge` echo(산식 불변).
+     * `finalTax` = computedTax + 이 값 − 공제. 이 echo가 없던 저장 결과는 undefined(R-c04-01).
+     */
+    generationSkipSurcharge?: number;
     /** 신고세액공제 (§69 3%) */
     filingCredit: number;
     /**

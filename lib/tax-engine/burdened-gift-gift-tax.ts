@@ -105,6 +105,8 @@ export function buildBurdenedGiftGiftTax(params: {
     deduction: giftResult.totalDeduction,
     taxBase: giftResult.taxBase,
     computedTax: giftResult.computedTax,
+    // §57 할증과세액 echo — 결과 행이 산출세액 + 할증 − 공제 = 결정세액으로 맞도록(R-c04-01). 산식 불변.
+    generationSkipSurcharge: giftResult.generationSkipSurcharge,
     filingCredit: giftResult.creditDetail.filingCredit,
     // §58 기납부세액공제 — calcGiftTaxCredits 결과의 giftTaxCredit(= priorPaidCredit) (PR3)
     priorGiftCredit: giftResult.creditDetail.giftTaxCredit,
