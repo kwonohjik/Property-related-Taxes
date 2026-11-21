@@ -7,7 +7,7 @@
  * ## 왜 이 축에 anchor가 필요한가
  *
  * 엔진은 `regionCode`가 있으면 **사용자 토글을 무시한다**
- * (`transfer-tax-exemption-requirements.ts:382-390` `resolveWasRegulatedAtAcquisition`).
+ * (`transfer-tax-exemption-holding.ts` `resolveWasRegulatedAtAcquisition`).
  * 그래서 화면이 주소가 있을 때도 토글을 그대로 띄우면 사용자가 켠 값이 **조용히 버려진다**
  * (`feedback_ui_engine_dual_truth_avoidance`). ⑤가 엔진과 같은 판단을 보여 주는지를 고정한다.
  *

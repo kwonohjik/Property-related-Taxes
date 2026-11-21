@@ -16,9 +16,10 @@
  *
  * | 술어 | 게이트 |
  * |---|---|
- * | `qualifiesRuralHouse` | `transfer-tax-exemption-requirements.ts:65` — `!== 2`면 false |
- * | `qualifiesUnavoidableOutsideCapital` | `:103` — 같다 |
- * | §155⑥ 문화유산 | `transfer-tax-exemption.ts:374` — `=== 2` |
+ * | `qualifiesRuralHouse` | `twoHouseSpecialCountHolds`(`transfer-tax-exemption-special-houses.ts`) — 주택 수 2(상속 두 풀 제외 아님)일 때만 |
+ * | `qualifiesUnavoidableOutsideCapital` | 같은 파일 — 같다 |
+ * | §155⑥ 문화유산 | `qualifiesCulturalHeritageHouse`(같은 파일) — 같다 |
+ * (2026-11 리뷰 I-20 — 종전 행번호 인용은 60줄 재수출 shim을 가리켰다)
  *
  * D-6이 이 사실들을 **명부 행**으로 옮기면 사용자는 그 주택을 **행으로 추가**한다. 그런데
  * 게이트는 여전히 스칼라를 본다 ⇒ **화면엔 입력이 있는데 특례가 조용히 불성립**한다.

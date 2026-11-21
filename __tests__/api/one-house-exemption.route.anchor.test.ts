@@ -431,7 +431,7 @@ describe("P4-2b-0 — §155의3 상생임대주택 입력 경로", () => {
   /**
    * 🔑 **이것이 Date 변환의 관측 지점이다.** `qualifiesWinWinRental`은
    *    `winWinContractDate >= WIN_WIN_CONTRACT_START`로 **Date끼리 비교**한다
-   *    (`transfer-tax-exemption-requirements.ts:189`). 변환이 빠져 string이 들어오면
+   *    (`qualifiesWinWinRental` — `transfer-tax-exemption-residence-waivers.ts`). 변환이 빠져 string이 들어오면
    *    관계 연산자가 양쪽을 number로 강제해 `NaN >= number` → **항상 false**가 되므로
    *    WW-1·WW-2·WW-3이 **동시에** 깨진다. 경계 ±1일은 그 위에 창(window) 판정까지 고정한다.
    */

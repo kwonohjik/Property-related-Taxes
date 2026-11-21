@@ -178,7 +178,7 @@ export function buildOneHouseExemptionApiBody(
      * ④ 양도 물건 법정동코드 — ② 화면의 소재지 검색(PNU 앞 10자리)이 세운다.
      *
      * 🔑 **제공 시 엔진이 boolean 토글을 무시한다** — `resolveWasRegulatedAtAcquisition`
-     *    (`transfer-tax-exemption-requirements.ts:382-390`)이 `regionCode`를 우선해
+     *    (`resolveWasRegulatedAtAcquisition` — `transfer-tax-exemption-holding.ts`)이 `regionCode`를 우선해
      *    `isRegulatedByBjdCode(취득일)`로 읍·면·동·택지지구 예외까지 정밀 판정한다.
      *    그래서 ⑤(2-C)가 주소가 있을 때 토글 대신 **자동 판정 결과를 읽기 전용으로** 보여준다.
      *    셋이 어긋나면 사용자가 켠 값이 조용히 버려진다(3중 패턴 — ⑤/④/⑧).

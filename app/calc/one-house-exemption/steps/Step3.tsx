@@ -100,9 +100,9 @@ export function Step3({ form, onChange, menu = "one_house" }: Props) {
    * 🔴 여기서 별도 판정식을 쓰면 dual-truth가 된다. `regulated-areas.ts` 머리 주석이
    *    「엔진·클라이언트 판별이 이 모듈의 데이터·헬퍼를 공유한다. 별도 매칭/판정 함수 재정의
    *    금지」라고 못 박았고, 엔진 쪽 소비처는
-   *    `transfer-tax-exemption-requirements.ts:382-390` `resolveWasRegulatedAtAcquisition`이다.
+   *    `transfer-tax-exemption-holding.ts` `resolveWasRegulatedAtAcquisition`이다.
    *
-   * 🔑 **`regionCode`가 있으면 엔진이 토글을 무시한다**(같은 함수 `:383`). 그래서 주소가
+   * 🔑 **`regionCode`가 있으면 엔진이 토글을 무시한다**(같은 함수 첫 분기 `if (input.regionCode)`). 그래서 주소가
    *    들어온 순간 토글을 읽기 전용 자동 판정으로 바꾼다 — 그러지 않으면 사용자가 켠 값이
    *    조용히 버려진다.
    */

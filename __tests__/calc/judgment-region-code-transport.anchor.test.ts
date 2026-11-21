@@ -6,7 +6,7 @@
  *
  * 엔진은 정밀 판정 경로를 **이미 갖고 있었다**:
  *   `one-house/judge.ts:65` → `meetsOneHouseResidenceRequirement`
- *   → `transfer-tax-exemption-requirements.ts:473` `resolveWasRegulatedAtAcquisition(input)`
+ *   → `transfer-tax-exemption-holding.ts` `resolveWasRegulatedAtAcquisition(input)`
  *   → `regionCode`가 있으면 `isRegulatedByBjdCode(취득일)`, 없으면 boolean fallback(`:389`).
  *
  * ⑫ Zod(`transfer-tax-schema-base-shape.ts:116`)·⑭ 매핑(`engine-input.ts:68`)도 이미 있었다.

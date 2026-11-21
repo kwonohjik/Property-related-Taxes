@@ -9,7 +9,7 @@
  * (`transfer-tax-schema-refines.ts:36`) 엔진은 두 곳에서 **세액에 쓴다**:
  *
  * · `transfer-tax-lthd.ts:291` — 장기보유특별공제 기간 분할
- * · `transfer-tax-exemption-requirements.ts:272·350·419` — 1세대1주택 보유·거주 기산
+ * · `resolveResidenceJudgmentDate`·`resolveWasRegulatedAtAcquisition`·`resolveExemptionHoldingStartDate`(`transfer-tax-exemption-holding.ts`) — 1세대1주택 보유·거주 기산
  *
  * 그런데 **⑬·⑭ 두 층이 모두 비어 있었다** — P1-02(분양권)와 같은 형태다:
  *

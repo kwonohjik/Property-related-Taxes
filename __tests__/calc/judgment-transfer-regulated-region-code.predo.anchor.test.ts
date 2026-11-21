@@ -5,7 +5,7 @@
  * ## 고치기 전 상태 (실측)
  *
  * 「취득 당시」는 이미 `resolveWasRegulatedAtAcquisition`이 `regionCode`를 **우선**한다
- * (`transfer-tax-exemption-requirements.ts:382-390`). 다주택 중과도 그렇다
+ * (`resolveWasRegulatedAtAcquisition` — `transfer-tax-exemption-holding.ts`). 다주택 중과도 그렇다
  * (`multi-house-surcharge.ts:226` — 양도일 기준 `isRegulatedByBjdCode`).
  *
  * 그런데 **§155① 처분기한만** boolean `isRegulatedArea`를 직접 읽었다(`:635`).
