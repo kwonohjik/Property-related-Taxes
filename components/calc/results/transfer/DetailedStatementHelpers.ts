@@ -257,6 +257,10 @@ export function buildStatementItems(
    */
   const ownerSplitTransfer =
     splitSummary && result.splitDetail && result.splitDetail.selfOwns !== "both" ? splitSummary : undefined;
+  // 소령 §166⑥은 「가액의 구분이 불분명한 때」의 안분 조항이다 — 엔진이 일괄양도가액을 실제로 안분했을 때만
+  // (구분 기재 없음 → `saleApportionBasisKind` · §100③ 「불분명한 때로 본다」 발동 → `deemedUnclear`) 붙인다(R-c09-02).
+  const ownerSplitApportioned =
+    result.splitDetail?.saleApportionBasisKind != null || result.splitDetail?.saleSplitJudgment?.deemedUnclear === true;
 
   const sumPropTransfer = isAggregate
     ? properties.reduce((s, p) => s + p.transferPrice, 0)
@@ -277,7 +281,7 @@ export function buildStatementItems(
           ? "자산별 청산금 수령액 합계"
           : "자산별 양도가액 합계 — §166⑥ 안분(토지·건물·증축건물 기준시가 비율) 후"
         : ownerSplitTransfer
-          ? `본인 소유 파트 양도가 — ${ownerSplitTransfer.parts.map((p) => `${p.label} ${p.transferPrice.toLocaleString()}`).join(" + ")} (일괄양도가액 ${totalTransferPrice.toLocaleString()} 중 · ${TRANSFER.BUNDLED_APPORTIONMENT})`
+          ? `본인 소유 파트 양도가 — ${ownerSplitTransfer.parts.map((p) => `${p.label} ${p.transferPrice.toLocaleString()}`).join(" + ")} (일괄양도가액 ${totalTransferPrice.toLocaleString()} 중${ownerSplitApportioned ? ` · ${TRANSFER.BUNDLED_APPORTIONMENT}` : ""})`
           : "사용자 입력 (실제 매매계약서상 거래금액)",
     legalBasis: burdenedGift || bgMixed
       ? "소득세법 시행령 §159·§166"

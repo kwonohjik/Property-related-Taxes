@@ -8,7 +8,7 @@
  * | R-c11-02 | 집계 소제목(`aggregateExpenseHeading`)이 「§97① 나목」 | ①3호 · ②2호 + §163⑥ |
  * | R-c01-05 | 한시유예 가목 근거가 2주택에서도 §167의3(3주택 이상)만 | 엔진이 세대의 주택·권리 수로 고른 호(`surchargeSuspensionClause` — §167의10·§167의3·§167의11·§167의4) 하나 · 나·다목에도 조문 |
  * | R-c03-01 | 농특세 정정 줄 머리말이 「상계하지 않고 따로 납부·환급」의 근거로 §7①을 든다 | §7①은 «별도 계산·표시»에만 · 상계 여부는 아래 고지(확인 필요)에 맡긴다 |
- * | R-c09-02 | 소유자 분리 배지·명세서·엔진 단계 라벨이 주식 대주주 조문(소령 §168②)을 든다 | §168② 삭제 |
+ * | R-c09-02 | 소유자 분리 배지·명세서·엔진 단계 라벨이 주식 대주주 조문(소령 §168②)을 든다 | §168② 삭제 · 배지·라벨은 조문 없음 · 명세서 §166⑥은 양도가액을 실제로 안분했을 때만 |
  *
  * 법령 본문: 소득세법 §97(MST 280405) · 소득세법 시행령 §163·§166·§168(MST 290841) — KoreanLaw 실독 2026-11-21.
  */
@@ -104,25 +104,37 @@ describe("R-c05-04 일반건물 명세서 (DetailedStatementGbFormulas · gbDeta
   });
 });
 
-describe("R-c09-02 소유자 분리 — 주식 대주주 조문(소령 §168②)을 들지 않는다", () => {
+describe("R-c09-02 소유자 분리 — 주식 대주주 조문(소령 §168②)을 들지 않고, §166⑥은 양도가액을 실제로 안분했을 때만", () => {
   const land = () => run(SCN_N, COMBOS.AE, { selfOwns: "land_only" });
+  // 구분 기재(계약서상 토지 680,000,000 · 건물 220,000,000) — 안분값 675,000,000/225,000,000과 30% 미만 차이라 기재액을 쓴다(§100③ 불발동).
+  const declared = () => run(SCN_N, COMBOS.AE, { selfOwns: "land_only", saleSplitMode: "actual", landTransferPrice: 680_000_000, buildingTransferPrice: 220_000_000 } as never);
   const form = { transferDate: "2026-07-01", contractTotalPrice: String(SCN_N.price), assets: [{ residencePeriodMonthsAsset: "0" }] } as unknown as TransferFormData;
 
-  it("M8-8 결과 카드 배지", () => {
+  it("M8-8 결과 카드 배지 — 조문을 붙이지 않는다(«본인 소유분만 신고»의 근거로 §166⑥ 안분 조항은 맞지 않는다)", () => {
     const { container } = render(<SplitGainDetailSection splitDetail={land().splitDetail!} />);
     const t = container.textContent ?? "";
-    expect(t).toContain("본인 신고분: 토지 (소득세법 시행령 §166 ⑥)");
+    expect(t).toContain("본인 신고분: 토지");
+    expect(t).not.toMatch(/본인 신고분: 토지 \(/);
     expect(t).not.toContain("§168");
   });
 
-  it("M8-9 상세명세서 양도가액 산식", () => {
-    const f = buildStatementItems(land(), form, undefined, undefined, SCN_N.price).get("transferPrice")!.formula as string;
+  it("M8-9 상세명세서 양도가액 산식 — 일괄양도가액을 안분했으면 §166⑥", () => {
+    const r = land();
+    expect(r.splitDetail?.saleApportionBasisKind).toBeDefined();
+    const f = buildStatementItems(r, form, undefined, undefined, SCN_N.price).get("transferPrice")!.formula as string;
     expect(f).toBe("본인 소유 파트 양도가 — 토지 675,000,000 (일괄양도가액 900,000,000 중 · 소득세법 시행령 §166 ⑥)");
   });
 
-  it("M8-10 엔진 계산 과정 단계 라벨", () => {
+  it("M8-9b 상세명세서 양도가액 산식 — 구분 기재액을 그대로 썼으면(안분 없음) §166⑥을 붙이지 않는다", () => {
+    const r = declared();
+    expect([r.splitDetail?.saleApportionBasisKind, r.splitDetail?.saleSplitJudgment?.deemedUnclear, r.splitDetail?.land.transferPrice]).toEqual([undefined, false, 680_000_000]);
+    const f = buildStatementItems(r, form, undefined, undefined, SCN_N.price).get("transferPrice")!.formula as string;
+    expect(f).toBe("본인 소유 파트 양도가 — 토지 680,000,000 (일괄양도가액 900,000,000 중)");
+  });
+
+  it("M8-10 엔진 계산 과정 단계 라벨 — 조문을 붙이지 않는다", () => {
     const step = land().steps.find((s) => s.label.startsWith("본인 신고분"));
-    expect(step?.label).toBe("본인 신고분: 토지 (소득세법 시행령 §166 ⑥)");
+    expect(step?.label).toBe("본인 신고분: 토지");
   });
 });
 

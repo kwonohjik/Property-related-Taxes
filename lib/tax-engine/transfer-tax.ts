@@ -283,7 +283,7 @@ function calculateTransferTaxCore(
   // 상가(CB) 경로는 STEP 0.35에서 useEstimatedAcquisition=false로 교체돼 calcTransferGain이
   // 특례 detail을 내지 않는다 → cbStep의 산출근거를 result로 승격(§164⑨ CB 배선, D16).
   const expropriationValuationDetail = gainExprDetail ?? cbStep?.expropriationValuationDetail;
-  // 소유자 분리: 본인 신고분 양도차익만 추출 (소령 §166⑥, §168②)
+  // 소유자 분리: 본인 신고분 양도차익만 추출 (파트 양도가액 안분은 `resolveTransferPriceSplit` — 안분 시 소령 §166⑥)
   // splitDetail이 있고 selfOwns !== "both" 이면 본인 소유 파트의 gain만 사용
   const selfOwns = effectiveInput.selfOwns ?? "both";
   const ownerRawGain = splitDetail && selfOwns !== "both"
@@ -328,7 +328,7 @@ function calculateTransferTaxCore(
   if (selfOwns !== "both" && splitDetail) {
     const selfLabel = selfOwns === "building_only" ? "건물" : "토지";
     steps.push({
-      label: `본인 신고분: ${selfLabel} (${TRANSFER.BUNDLED_APPORTIONMENT})`,
+      label: `본인 신고분: ${selfLabel}`,
       formula: `일괄양도가액 ${input.transferPrice.toLocaleString()} 중 ${selfLabel} 분만 신고 — 나머지는 타인 소유`,
       amount: transferGain,
       legalBasis: TRANSFER.TRANSFER_GAIN,
