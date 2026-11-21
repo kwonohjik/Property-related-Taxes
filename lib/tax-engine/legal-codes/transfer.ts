@@ -263,6 +263,8 @@ export const TRANSFER = {
   FINAL_HOUSE_RESTART_PRE_DELETION: "소득세법 시행령 §154⑤ 단서(2022.5.31. 삭제 전)",
   /** 소득세법 §103 — 기본공제 (연 250만원) */
   BASIC_DEDUCTION:               "소득세법 §103",
+  /** 소득세법 §103①1호 단서 — 「다만, 제104조제3항에 따른 미등기양도자산의 양도소득금액에 대해서는 그러하지 아니하다.」 (KoreanLaw MST 280405, 2026-11-21 확인) */
+  BASIC_DEDUCTION_UNREGISTERED_EXCLUSION: "소득세법 §103①1호 단서",
 
   // ── 세율 ──
   /** 소득세법 §104 ① — 양도소득세율 (누진·단기·비사업용) */

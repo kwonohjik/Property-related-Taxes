@@ -1038,6 +1038,21 @@ export interface MixedUseTotalTax {
   rateBasis?: "progressive" | "clause2" | "unregistered";
   /** 적용된 §104⑦ 다주택 중과 가산율(0.20·0.30). 미적용 시 undefined. */
   surchargeAddon?: number;
+  /**
+   * §104⑤2호 자산별 산출세액의 항(R-c02-04) — **표시 전용 echo, 산식 불변**. `rateBasis === "clause2"`일 때만 있다.
+   * 엔진 `clause2` 계산과 같은 단위다(누진 호 합산 1항 · 같은 단기세율 합산 1항 · 가산 파트 단독). `tax` 합 = `transferTax`.
+   *   applied — 채택된 세율: "progressive"(§55① 누진) · "short_term"(§104①2·3호 단기세율) · "surcharge"(누진 + `addon`)
+   *   shortTermRate·shortTermClause — 보유 2년 미만 단기세율 후보(채택 여부와 무관) · addon — 가산율(§104⑦·§104①8호)
+   */
+  clause2Terms?: {
+    kinds: ("housing" | "commercial_land" | "commercial_building" | "non_business_land")[];
+    taxBase: number;
+    tax: number;
+    applied: "progressive" | "short_term" | "surcharge";
+    shortTermRate?: number;
+    shortTermClause?: "104-1-2" | "104-1-3";
+    addon?: number;
+  }[];
   /** 양도소득세 **산출세액** (감면 차감 전) */
   transferTax: number;
   /**

@@ -275,7 +275,11 @@ export function buildTotalTax(
     //   ⚠️ 규칙을 손으로 다시 쓰지 않는다 — 후단 비교는 단건 정본 `compareWithClause1`에 위임한다.
     let progressiveBase = 0;
     let sum = 0;
-    const shortTermBuckets = new Map<number, { base: number; kind: MixedUseRatePart["kind"] }>();
+    // R-c02-04 — 표시 전용 echo(항별 세율·세액). 아래 합산과 같은 값만 싣는다(산식 불변).
+    const terms: NonNullable<MixedUseTotalTax["clause2Terms"]> = [];
+    const progressiveKinds: MixedUseRatePart["kind"][] = [];
+    const clauseOf = (i: number) => (rateParts[i].holdingYears < 1 ? "104-1-3" : "104-1-2") as "104-1-3" | "104-1-2";
+    const shortTermBuckets = new Map<number, { base: number; kind: MixedUseRatePart["kind"]; kinds: MixedUseRatePart["kind"][]; clause: "104-1-2" | "104-1-3" }>();
     rateParts.forEach((part, i) => {
       const addon = addonOf(i);
       if (addon > 0) {
@@ -284,25 +288,42 @@ export function buildTotalTax(
         const surcharged = calculateProgressiveTax(bases[i], brackets) + applyRate(bases[i], addon);
         const st = rates[i];
         // §104⑦ **후단** — 보유 2년 미만이면 §104①2·3호 세액과 MAX
-        sum += st === null ? surcharged : Math.max(surcharged, applyRate(bases[i], st));
+        const partTax = st === null ? surcharged : Math.max(surcharged, applyRate(bases[i], st));
+        sum += partTax;
+        terms.push({
+          kinds: [part.kind], taxBase: bases[i], tax: partTax, addon,
+          applied: st !== null && partTax > surcharged ? "short_term" : "surcharge",
+          ...(st !== null ? { shortTermRate: st, shortTermClause: clauseOf(i) } : {}),
+        });
         return;
       }
       const r = rates[i];
       if (r === null) {
         progressiveBase += bases[i]; // 누진 호(§104①1호)는 과세표준 합산 후 1회
+        progressiveKinds.push(part.kind);
         return;
       }
       const bucket = shortTermBuckets.get(r);
-      if (bucket) bucket.base += bases[i];
-      else shortTermBuckets.set(r, { base: bases[i], kind: part.kind });
+      if (bucket) {
+        bucket.base += bases[i];
+        bucket.kinds.push(part.kind);
+      } else shortTermBuckets.set(r, { base: bases[i], kind: part.kind, kinds: [part.kind], clause: clauseOf(i) });
     });
-    for (const [r, { base, kind }] of shortTermBuckets) {
+    for (const [r, { base, kind, kinds, clause }] of shortTermBuckets) {
       const shortTermTax = applyRate(base, r);
       const clause1 = compareWithClause1(base, brackets, shortTermTax, undefined, `${kind} 단기세율 ${(r * 100).toFixed(0)}%`);
       sum += clause1 ? clause1.calculatedTax : shortTermTax;
+      terms.push({
+        kinds, taxBase: base, tax: clause1 ? clause1.calculatedTax : shortTermTax,
+        applied: clause1 ? "progressive" : "short_term", shortTermRate: r, shortTermClause: clause,
+      });
     }
-    if (progressiveBase > 0) sum += calculateProgressiveTax(progressiveBase, brackets);
-    return { tax: sum, maxRate: Math.max(...rateParts.map((_, i) => effRate(i))) };
+    if (progressiveBase > 0) {
+      const progressiveTax = calculateProgressiveTax(progressiveBase, brackets);
+      sum += progressiveTax;
+      terms.push({ kinds: progressiveKinds, taxBase: progressiveBase, tax: progressiveTax, applied: "progressive" });
+    }
+    return { tax: sum, maxRate: Math.max(...rateParts.map((_, i) => effRate(i))), terms };
   })();
   // 적용된 누진세율 구간 추출 (UI 산식 표시용)
   const applicable = brackets.find((b) => taxBase <= (b.max ?? Infinity)) ?? brackets[brackets.length - 1];
@@ -371,6 +392,7 @@ export function buildTotalTax(
     progressiveDeduction: usesClause2 ? 0 : progressiveDeduction,
     rateBasis: isUnregistered ? "unregistered" : usesClause2 ? "clause2" : "progressive",
     ...(housingSurchargeAddon !== undefined ? { surchargeAddon: housingSurchargeAddon } : {}),
+    ...(usesClause2 ? { clause2Terms: clause2.terms } : {}),
     nonBusinessSurcharge,
     transferTax,
     reductionAmount: post.reductionAmount,
