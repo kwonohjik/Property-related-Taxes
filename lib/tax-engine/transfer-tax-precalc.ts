@@ -36,7 +36,8 @@ import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-o
 import { runSameAdjustmentPeriodStep } from "./transfer-tax-same-period-step";
 import { runPreDeemedPurchaseStep } from "./transfer-pre-deemed-purchase";
 import type { PreDeemedPurchaseDetail } from "./types/transfer-pre-deemed-purchase.types";
-import { calcCarryoverScenarios, resolveHouseCountExclusionAcqDate } from "./transfer-tax-carryover";
+import { calcCarryoverScenarios } from "./transfer-tax-carryover";
+import { resolveHceGeneralHouseAcquisitionDate } from "./one-house/hce-general-house-acquisition-date";
 import { donorBuiltPenaltyNotice } from "./transfer-tax-carryover-donor-display";
 import { donorBuiltFactsOf } from "./transfer-tax-carryover-donor-penalty";
 import {
@@ -44,8 +45,6 @@ import {
   splitCarryoverStepLines,
   type SplitCarryoverDetail,
 } from "./transfer-tax-split-carryover";
-import { resolveHouseCountExclusionDate } from "./one-house/gift-household-basis";
-import { sameHouseholdInheritanceHoldingStart } from "./one-house/same-household-inheritance-start";
 import { pickRateBasisFacts } from "./transfer-rate-holding-basis";
 import { runBurdenedGiftStep } from "./transfer-tax-burdened-gift-step";
 import { resolveSurchargeExclusionByReduction } from "./transfer-reductions/income-deduction-router";
@@ -63,8 +62,6 @@ import {
 import { parseRatesFromMap } from "./transfer-tax-helpers";
 import { TRANSFER } from "./legal-codes";
 import { carryoverExclusionReasonLabel } from "./transfer-carryover-exclusion-labels";
-import { isLandContributedOriginalApt } from "./one-house/redev-apt-judgment-input";
-import { householdBuildingCarryover } from "./one-house/redev-apt-judgment-input";
 import { assertSelfBuiltHousingInput } from "./transfer-tax-self-built-housing-penalty";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type {
@@ -310,23 +307,8 @@ export function runPreCalculationSteps(
 }
 
 
-/**
- * §99의4①·§98의9①의 「그 주택 취득 전에 보유하던 다른 주택」 판정용 일반주택 취득일 — STEP 0.9·STEP 0.5 공용 (D4-05 · 결정 #33).
- * 다주택 중과 판정 메뉴 route가 계산기와 같은 값을 쓰도록 export한다(계획서 §4.1 단계 9). 근거는 호출부 주석.
- */
-export function resolveHceGeneralHouseAcquisitionDate(input: TransferTaxInput): Date {
-  return (
-    input.houseCountExclusionAcquisitionDate ??
-    // #12 — 토지만 출자한 원조합원 신축주택의 취득시기는 사용승인서 교부일이다(영 §162①4호). 비과세 판정 번역과 같은 날짜로 맞춘다.
-    //   세대원 건물 출자 통산이면 그 건물 취득일 — §155① 종전주택 취득일과 같은 날짜(Q-B2 사용자 결정 2026-10-26).
-    (isLandContributedOriginalApt(input)
-      ? (householdBuildingCarryover(input.redevelopment!)?.holdingStart ?? input.redevelopment!.completionDate!)
-      : input.carryoverTaxation
-        ? resolveHouseCountExclusionAcqDate(input, input.carryoverTaxation)
-        : // 동일세대 상속은 「1세대」가 보유한 날 — 피상속인과 동일세대로 보유하기 시작한 날(기준-2017-0222: 같은 세대원 간 이전은 이전한 사람의 취득일 기준).
-          (sameHouseholdInheritanceHoldingStart(input) ?? resolveHouseCountExclusionDate(input.acquisitionDate, input.giftHouseholdBasis)))
-  );
-}
+/** 정본은 leaf(`one-house/hce-general-house-acquisition-date.ts`) — 기존 호출부를 위해 다시 내보낸다(2026-11 리뷰 D-72). */
+export { resolveHceGeneralHouseAcquisitionDate };
 
 /**
  * STEP 0.45 ~ 0.62 — **중과·비사업용 판정 전처리**
