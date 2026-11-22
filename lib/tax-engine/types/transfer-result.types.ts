@@ -138,6 +138,12 @@ export interface TransferTaxResult {
   /** 비과세 사유 */
   exemptReason?: string;
   /**
+   * [echo] §89② 예외(「소득세법 시행령」 §156의2·§156의3)로 받은 비과세의 표시 줄 — 1주택 판정의 같은 이름 필드를 그대로 싣는다
+   * (`OneHouseJudgment.article89ExceptionApplied`). `exemptReason`(예: 「혼인 합가 (§155⑤) 1세대1주택 비과세」)만 보이면
+   * 조합원입주권·분양권이 있는 세대가 실제로 기댄 조문이 결과 화면에서 사라진다. 세액 계산에는 미사용.
+   */
+  article89ExceptionApplied?: { label: string; legalBasis: string[] };
+  /**
    * 정보성 경고 메시지 — F-2 (2026-05-12).
    * 비스코프 케이스 안내·계산 가정·실무 주의사항 등을 결과 카드·사이드바에 amber 배지로 노출.
    * 미설정 시 undefined (현재 케이스 12 다주택 중과 + 부담부증여에서만 채워짐).

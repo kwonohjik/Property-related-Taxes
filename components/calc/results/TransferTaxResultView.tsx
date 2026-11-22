@@ -13,6 +13,7 @@ import { AmendmentResultCard } from "@/components/calc/results/transfer/Amendmen
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { CalculationWarningsCard } from "@/components/calc/results/shared/CalculationWarningsCard";
 import { PartialExemptBasisCard } from "@/components/calc/results/shared/PartialExemptBasisCard";
+import { Article89ExceptionBasisLine } from "@/components/calc/results/shared/Article89ExceptionBasisLine";
 import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
 import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurchargeDetailCard";
@@ -344,6 +345,8 @@ export function TransferTaxResultView({
             <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
               {result.exemptReason ?? "비과세"}
             </p>
+            {/* §89② 예외(§156의2·§156의3) 근거 — 사유 문구는 본체 특례만 말한다. 판정 메뉴 「적용된 특례」와 같은 엔진 echo. */}
+            <Article89ExceptionBasisLine applied={result.article89ExceptionApplied} className="mt-1 text-sm text-emerald-700 dark:text-emerald-400" />
             <p className="text-2xl font-bold mt-1">납부세액 0</p>
             {/* 소득세법 §91② 범위 밖 고지 (결정 #48) — 비과세 결과 안의 짧은 안내 줄. 공용 술어·문구. */}
             <FalseContractPriceNotice

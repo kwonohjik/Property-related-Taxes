@@ -111,7 +111,7 @@ export function calculateRedevelopmentTax(
      * §89①3호가목 비과세 판정 결과 (subject="apt" 전용 — `transfer-tax.ts` STEP 0.65에서 산정).
      * 조합원입주권(subject="right")은 §89①4호이고 `applyOneRightExemption`이 담당하므로 undefined다.
      */
-    exemptionResult?: { isExempt: boolean; isPartialExempt: boolean; exemptReason?: string };
+    exemptionResult?: { isExempt: boolean; isPartialExempt: boolean; exemptReason?: string; article89ExceptionApplied?: TransferTaxResult["article89ExceptionApplied"] };
     /**
      * 완공APT **표2·§154① 축** 「1주택」 = 실제 1주택 ∨ §155 의제 (G3-2) — `judgeRedevAptOneHouseExemption` 산출.
      * 장특 표2·§97의4① 단서·청산금 수령분 비과세가 읽는다. 12억 판정은 `exemptionResult`가 이미 의제를 포함한다.
@@ -604,6 +604,7 @@ export function calculateRedevelopmentTax(
     ...(opts?.exemptionResult?.exemptReason
       ? { exemptReason: opts.exemptionResult.exemptReason }
       : {}),
+    ...(opts?.exemptionResult?.article89ExceptionApplied ? { article89ExceptionApplied: opts.exemptionResult.article89ExceptionApplied } : {}),
     /**
      * 🔴 **§97의2 이월과세 A/B 판정 근거 — 종전에는 통째로 소실됐다** (E3-06).
      *

@@ -1,5 +1,6 @@
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { Article89ExceptionBasisLine } from "@/components/calc/results/shared/Article89ExceptionBasisLine";
 
 /**
  * 부분 비과세(고가주택) 근거 — 어느 특례로 1세대1주택 의제가 성립했는지 남기지 않으면 기준금액 초과분만 과세된 이유를
@@ -17,7 +18,7 @@ export function PartialExemptBasisCard({
   priceLabel = "양도가액",
   className,
 }: {
-  result: Pick<TransferTaxResult, "isExempt" | "isPartialExempt" | "exemptReason" | "steps">;
+  result: Pick<TransferTaxResult, "isExempt" | "isPartialExempt" | "exemptReason" | "steps" | "article89ExceptionApplied">;
   /** 엔진 STEP 라벨에 기준금액이 없을 때 쓰는 문구(예: 「12억」) */
   fallbackThresholdLabel: string;
   /** 12억 판정에 쓰인 가액의 이름 — 부담부증여는 「증여가액」(소령 §159 해석 B 분모 C) */
@@ -35,6 +36,8 @@ export function PartialExemptBasisCard({
           .find(Boolean) ?? fallbackThresholdLabel}
         원 초과분에 대해서만 과세됩니다 (소득세법 §89①3호·시행령 §160).
       </p>
+      {/* §89② 예외(§156의2·§156의3) 근거 — 제목의 사유 문구는 본체 특례만 말한다. */}
+      <Article89ExceptionBasisLine applied={result.article89ExceptionApplied} className="text-xs text-emerald-800 dark:text-emerald-400" />
     </ToneCard>
   );
 }
