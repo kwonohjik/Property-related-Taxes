@@ -5,10 +5,9 @@
  * 결정(2026-11-22 사용자): V-1 **일 단위**(영 §168조의6 «기간의 계산은 일수로 한다» — 과세기준일(6.1.) 단위 «접기»는 재제안·재구현 금지) ·
  *   Q-15 **(가′)** — 사업용 구간 = 이력상 사업 구간 ∪ ((이전 구간 ∪ 꼬리 구간) ∩ core 자체 사업기간) · 「모름」 = 혜택 불성립 + 확인 필요 · 자동 안분 fallback 금지.
  *
- * ## 🔴 E1에서는 판정 경로에 연결하지 않는다
- * `judgeOtherLand`·⑫ Zod·⑭ 매퍼·⑧ 어디서도 이 파일을 import하지 않는다(세액 불변 — E0 골든 스냅샷이 증명).
- * 연결(`applyStateHistory` 후처리 · `CategoryJudgeResult.businessPeriodsUsed` · echo · ⑫ · ⑭)은 E2다.
- * 도달 불가 가드: `__tests__/lib/nbl-state-history-leaf-unreachable.test.ts` — E2가 배선하면 그 테스트가 빨개지는 것이 정상이며, E2가 그 가드를 갱신한다.
+ * ## 배선(E2)
+ * E1에서는 어디에도 연결하지 않았고, **E2가** `applyStateHistory`(`other-land-state-history-apply.ts` — 판정) · ⑫ Zod refine(`transfer-tax-schema-nbl-refines.ts`) ·
+ * ⑭ 매퍼(`form-mapper-helpers.ts`)에 연결했다. 배선 확인 가드: `__tests__/lib/nbl-state-history-leaf-unreachable.test.ts`(이름은 E1 유래 — 이제 «도달 가능 + 허용 목록» 가드다).
  *
  * ## 이 파일이 소유하는 것 (⑤ 미리보기 · ⑦ 구간표 · ⑧ · ⑫ · ⑭ · 판정이 모두 같은 함수를 쓴다 — 3중 패턴)
  *   1. `deriveOtherLandStateIntervals` — 사건 → 소유기간을 빈틈·겹침 없이 덮는 일 단위 구간. 마지막 원소 = 꼬리(양도일 현재 상태).
@@ -58,7 +57,7 @@ export const STATE_PROPERTY_TAX_TYPE_LABEL = {
 
 const EVENT_KINDS = Object.keys(STATE_EVENT_KIND_LABEL) as StateEventKind[];
 
-function isEventKind(value: string): value is StateEventKind {
+export function isEventKind(value: string): value is StateEventKind {
   return (EVENT_KINDS as string[]).includes(value);
 }
 
@@ -138,6 +137,14 @@ export function stateEventSequenceIssue(events: ReadonlyArray<StateEventRowLike>
 export function hasBuildingAtTransfer(events: ReadonlyArray<{ kind: string }>): boolean | undefined {
   if (events.length === 0) return undefined;
   return events[events.length - 1].kind === "building_built";
+}
+
+/**
+ * 양도일 현재 「건축물 있음」 — `changed`이면 **사건에서 파생**한 값이 이긴다(직접 API가 숨은 토글을 모순되게 보내도 사건이 이긴다 · 엔진 V-19 · P-15).
+ * 아니면 입력 토글 그대로다. ⑫ refine · ⑭ 매퍼가 같은 함수를 쓴다(⑤⑧ 술어는 U0가 같은 함수를 재사용).
+ */
+export function effectiveOtherHasBuilding(raw: boolean, mode: string | undefined, events: ReadonlyArray<{ kind: string }>): boolean {
+  return mode === "changed" ? (hasBuildingAtTransfer(events) ?? raw) : raw;
 }
 
 export interface StateTail {

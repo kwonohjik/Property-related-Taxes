@@ -21,6 +21,9 @@ import { demolishedBasisIssue, type PropertyTaxBasis } from "@/lib/tax-engine/no
 import { graceRowIssue, type GraceRowLike } from "@/lib/tax-engine/non-business-land/grace-row-issue";
 import { deemedTransferDateIssue, deemedTransferDateIssueMessage } from "@/lib/tax-engine/non-business-land/deemed-transfer-date-range";
 import { consumesPeriodJudgmentDate } from "@/lib/tax-engine/non-business-land/land-category";
+import { consumesStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
+import { effectiveOtherHasBuilding } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { stateEventSequenceIssue } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import {
   LAND_TYPE_REQUIRED_MESSAGE,
   PRIOR_REVENUE_LAND_VALUE_REQUIRED_MESSAGE,
@@ -65,6 +68,8 @@ export interface NblRawRefineInput {
   nblOtherPropertyTaxBasis?: string;
   nblOtherDemolishedFloorArea?: string;
   nblOtherHasBuilding?: boolean;
+  nblOtherStateHistoryMode?: string;
+  nblOtherStateEvents?: { kind: string; date: string }[];
   nblOtherRelatedBusinessType?: string;
   nblOtherResortParkingStdArea?: string;
   nblOtherResortParkingActualArea?: string;
@@ -93,6 +98,13 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
     return;
   }
   const landType = raw.nblLandType as Parameters<typeof nblBusinessUsePeriodsApply>[0];
+
+  // NBL-STATE-HISTORY-E2 — 소유기간 중 건축물 사건: `changed`일 때만 행·순서·0건을 검사한다(⑧ 거울 — 같은 leaf · 같은 문구). **하한(소유 시작 전 사건) 규칙은 ⑫에 없다** —
+  // 컴패니언 스키마가 지분 raw마다 이 refine을 돌려 늦게 취득한 지분이 400이 되기 때문이다(엔진은 지분 소유기간으로 클립). `""`·`unchanged`·`unknown`은 막지 않는다(현행).
+  if (consumesStateHistory(landType) && raw.nblOtherStateHistoryMode === "changed") {
+    const stateIssue = stateEventSequenceIssue(raw.nblOtherStateEvents ?? [], { transferDate: raw.transferDate ?? "" });
+    if (stateIssue) issue(stateIssue.index === null ? ["nblOtherStateEvents"] : ["nblOtherStateEvents", stateIssue.index, stateIssue.field], stateIssue.message);
+  }
 
   // NBL2611-V8-VL02 — 기간 행: 빈·해석 불가·역순·같은 날 (⑧ rowArrays와 같은 4종·같은 적용 지목)
   const rowArrays: ReadonlyArray<{ key: string; rows: DatedRow[] | undefined; what: string; applies: boolean }> = [
@@ -188,7 +200,8 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
   if (raw.nblLandType === "other_land") {
     const demolished = demolishedBasisIssue({
       declared: (raw.nblOtherPropertyTaxType || "comprehensive") as Parameters<typeof demolishedBasisIssue>[0]["declared"],
-      hasBuilding: !!raw.nblOtherHasBuilding,
+      // NBL-STATE-HISTORY-E2 — `changed`이면 사건에서 파생한 양도일 현재 유무(⑭ 매퍼와 같은 함수 — 3중 패턴).
+      hasBuilding: effectiveOtherHasBuilding(!!raw.nblOtherHasBuilding, raw.nblOtherStateHistoryMode, raw.nblOtherStateEvents ?? []),
       basis: (raw.nblOtherPropertyTaxBasis || undefined) as PropertyTaxBasis | undefined,
       floorArea: parseDecimal(raw.nblOtherDemolishedFloorArea),
       zoneType: raw.nblZoneType ?? "",

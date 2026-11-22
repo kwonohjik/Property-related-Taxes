@@ -4,6 +4,7 @@
  */
 import type {
   CategoryJudgeResult,
+  DateInterval,
   JudgmentStep,
   NonBusinessLandInput,
   RevenueTestResult,
@@ -33,6 +34,17 @@ export function isBareLand(input: NonBusinessLandInput): boolean {
     if (o.buildingStandardValue < o.landStandardValue * 0.02) return true;
   }
   return false;
+}
+
+/**
+ * core(`judgeOtherLandCore`)가 `fullPeriod`가 아닌 **자기 사업기간**으로 판정한 경로의 구간 — 상태 이력 판정(`applyStateHistory`)이 읽는다(Q-15 (가′) · 엔진 V-18).
+ *   · DM-01 — 당해 사업개시일 `[개시일, 양도일)`(직전 비율② 미통과 + 개시일 있음일 때만)
+ *   · 3호 — 조성 완료 `[완료일, +2년)`
+ * `own`이 없으면 그런 경로가 적용되지 않았다(빈 배열도 «적용됨 · 비어 있음»). `decisiveOwn` = core의 사업용 결론이 자체 구간에서 나왔다(거짓이고 core가 사업용이면 `fullPeriod`(양도일 현재 상태)에서 나왔다 — 꼬리 구간도 사업용으로 센다).
+ */
+export interface OtherLandOwnTrace {
+  own?: DateInterval[];
+  decisiveOwn?: boolean;
 }
 
 export interface Ctx {

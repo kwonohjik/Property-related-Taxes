@@ -63,7 +63,10 @@ export const GRID: Record<string, NonBusinessLandInput> = {
   } as unknown as NonBusinessLandInput,
 };
 
-/** 모드 4종 — 지금은 엔진이 `landStateHistory`를 모른다(E1 이전). 미전송 = 키 자체가 없다. */
+/**
+ * 모드 4종 — 미전송 = 키 자체가 없다. E2부터 엔진은 `landStateHistory`를 읽는다: `""`·`unchanged`는 현행 그대로(바이트 동일),
+ * `unknown`은 현행 판정 + `NBL_STATE_HISTORY_UNKNOWN_NOTICE` 한 줄만 더한다(통합 Q-6 «모름 = 현행 + 확인 필요 고지»).
+ */
 export const MODES: ReadonlyArray<readonly [string, Record<string, unknown>]> = [
   ["미전송", {}],
   ['""', { landStateHistory: { mode: "", events: [] } }],

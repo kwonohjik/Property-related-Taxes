@@ -209,6 +209,8 @@ import type {
   OtherLandUsage,
   ForestUsageDetail,
   FarmlandDeemingInput,
+  LandStateHistoryInput,
+  StateHistoryEcho,
 } from "./land-usage.types";
 import type { WholesaleItem } from "./revenue-wholesale-item";
 
@@ -398,6 +400,8 @@ export interface NonBusinessLandInput {
   villa?: VillaUsage;
   // 기타토지
   otherLand?: OtherLandUsage;
+  /** 기타토지 소유기간 중 건축물 신축·멸실 이력(NBL-STATE-HISTORY) — `mode === "changed"`일 때만 판정에 쓴다. 미전송·`""`·`unchanged`는 현행. */
+  landStateHistory?: LandStateHistoryInput;
 
   // 무조건 의제
   unconditionalExemption?: UnconditionalExemptionInput;
@@ -490,9 +494,10 @@ export interface AreaProportioning {
  * - `usage_periods`: 입력한 사용기간(자경·축산·별장 사용 등)으로 소유기간 중 사업용 기간을 실제로 셌다. 일수·비율이 판정 근거다.
  * - `state_at_transfer`: 양도일 현재의 이용 상태를 소유기간 전체에 적용했다. 일수·비율은 «전 기간 사업용»으로 채운 표시값이라 판정 근거가 아니다(리뷰 V2-C2).
  *   주택부수토지 배율 초과분에 유예를 판정에 쓴 경우도 이 값이다(`graceJudged` 동반 — NBL2611-D1).
+ * - `state_history`: 기타토지 소유기간 중 건축물 신축·멸실 사건을 일 단위 구간으로 만들어 영 §168의6 기간기준을 판정했다(`stateHistory`에 구간표·3기준 수치). 일수·비율이 판정 근거다.
  * - `not_judged`: 기간기준을 판정하지 않았다(배율 × 면적으로만 판정하는 주택·건물 부수토지 — 주택부수토지는 유예 입력이 없거나 초과분이 없을 때, 무조건 사업용 의제, 판정 불가 등).
  */
-export type PeriodEvaluationBasis = "usage_periods" | "state_at_transfer" | "not_judged";
+export type PeriodEvaluationBasis = "usage_periods" | "state_at_transfer" | "state_history" | "not_judged";
 
 export interface PeriodEvaluation {
   basis: PeriodEvaluationBasis;
@@ -503,6 +508,8 @@ export interface PeriodEvaluation {
    * `meets`가 참이면 그 유예 덕에 비사업용 잔여분이 사업용이 됐다는 뜻이다.
    */
   graceJudged?: { gracePeriodDays: number; totalOwnershipDays: number; meets: boolean };
+  /** `state_history`일 때만 — 일 단위 사건 구간표와 영 §168의6 가·나·다목 수치(표시 전용). */
+  stateHistory?: StateHistoryEcho;
 }
 
 /** 판정 엔진 반환 액션 (v2 신규 — 별장 REDIRECT 경로 지원) */
@@ -757,5 +764,7 @@ export interface CategoryJudgeResult {
   };
   /** 실제 산출된 재촌 기간 (감사용) */
   residencePeriodsUsed?: DateInterval[];
+  /** 상태 이력 판정(`state_history`)이 §168의6에 넘긴 사업용 구간(감사용 — 이력상 사업 구간 ∪ core 자체 사업기간 교차, 병합 전). */
+  businessPeriodsUsed?: DateInterval[];
   warnings?: string[];
 }

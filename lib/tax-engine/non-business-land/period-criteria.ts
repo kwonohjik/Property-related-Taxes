@@ -75,6 +75,19 @@ export interface PeriodCriteriaResult {
   ownershipBucket?: 1 | 2 | 3;
   /** 사람이 읽을 수 있는 설명 */
   detail: string;
+  /**
+   * 영 §168의6 가·나·다목 구조화 수치(NBL-STATE-HISTORY-E2 · 표시 전용 — 판정은 이 값으로 바뀌지 않는다). 0일 보유 조기 반환에는 없다.
+   * 가목 충족 ⇔ 비사업용 일수 > `limitGa`(소유 5년 이상은 `nonBizInWindow5`, 그 밖은 `nonBizTotal`) · 나목 ⇔ `nonBizInWindow3` > `limitNa` · 다목 ⇔ `nonBizTotal` > `limitDa`.
+   * `null` = 그 목 없음(3호 나목 · 소유 2년 미만의 가목).
+   */
+  window5Days?: number;
+  nonBizInWindow5?: number;
+  window3Days?: number;
+  nonBizInWindow3?: number;
+  nonBizTotal?: number;
+  limitGa?: number | null;
+  limitNa?: number | null;
+  limitDa?: number;
 }
 
 // §168조의6 일수 환산 상수 (법문 "기간의 계산은 일수로 한다").
@@ -246,8 +259,10 @@ export function meetsPeriodCriteria(
   let isNonBusiness: boolean;
   let bucketDetail: string;
   let applyBucket3A = false;
+  let limitGa: number | null; // 가목 임계 일수(없으면 null) — echo 전용
 
   if (ownershipBucket === 1) {
+    limitGa = TWO_YEARS_DAYS;
     nbA = nonBizInWindow5 > TWO_YEARS_DAYS; // 가. 직전 5년 중 2년(730일) 초과
     nbB3y = nonBizInWindow3 > ONE_YEAR_DAYS; // 나. 직전 3년 중 1년(365일) 초과
     isNonBusiness = nbA && nbB3y && overRatio; // 다. 40% 초과
@@ -256,6 +271,7 @@ export function meetsPeriodCriteria(
       `직전3년 비사업 ${nonBizInWindow3}일(나 ${nbB3y ? "충족" : "미충족"}), ` +
       `전체 비사업 ${nonBizTotal}일(다 ${overRatio ? "충족" : "미충족"})`;
   } else if (ownershipBucket === 2) {
+    limitGa = totalOwnershipDays - THREE_YEARS_DAYS;
     nbA = nonBizTotal > totalOwnershipDays - THREE_YEARS_DAYS; // 가. 소유기간−3년 초과
     nbB3y = nonBizInWindow3 > ONE_YEAR_DAYS; // 나. 직전 3년 중 1년 초과
     isNonBusiness = nbA && nbB3y && overRatio; // 다. 40% 초과
@@ -266,6 +282,7 @@ export function meetsPeriodCriteria(
   } else {
     // 3호(소유 3년 미만): 가(소유−2년) · 나(40%). 단서: 소유 2년 미만이면 가목 미적용.
     applyBucket3A = totalOwnershipDays >= TWO_YEARS_DAYS;
+    limitGa = applyBucket3A ? totalOwnershipDays - TWO_YEARS_DAYS : null;
     nbA = applyBucket3A && nonBizTotal > totalOwnershipDays - TWO_YEARS_DAYS;
     nbB3y = false; // 버킷3엔 직전3년 1년초과 목 없음
     isNonBusiness = applyBucket3A ? nbA && overRatio : overRatio;
@@ -288,6 +305,8 @@ export function meetsPeriodCriteria(
     ratio, bizInLast3, bizInLast5, thresholdRatio,
     totalOwnershipDays, effectiveBusinessDays, gracePeriodDays: gracePeriodDaysApplied,
     ownershipBucket,
+    window5Days: win5len, nonBizInWindow5, window3Days: win3len, nonBizInWindow3, nonBizTotal,
+    limitGa, limitNa: ownershipBucket === 3 ? null : ONE_YEAR_DAYS, limitDa: Math.floor((totalOwnershipDays * nonBizPercent) / 100),
   };
 
   // criteriaUsed: 사업용 결정 lens. 우선순위 직전3년 > 가목(장기) > 비율 (기존 순서 유지).
@@ -306,7 +325,8 @@ function buildResult(
   meets: boolean,
   criteriaUsed: PeriodCriteriaUsed,
   criteria: PeriodCriteriaResult["criteria"],
-  metrics: Pick<PeriodCriteriaResult, "ratio" | "bizInLast3" | "bizInLast5" | "thresholdRatio" | "totalOwnershipDays" | "effectiveBusinessDays" | "gracePeriodDays" | "ownershipBucket">,
+  metrics: Pick<PeriodCriteriaResult, "ratio" | "bizInLast3" | "bizInLast5" | "thresholdRatio" | "totalOwnershipDays" | "effectiveBusinessDays" | "gracePeriodDays" | "ownershipBucket"> &
+    Partial<Pick<PeriodCriteriaResult, "window5Days" | "nonBizInWindow5" | "window3Days" | "nonBizInWindow3" | "nonBizTotal" | "limitGa" | "limitNa" | "limitDa">>,
   detail: string,
 ): PeriodCriteriaResult {
   return { meets, criteriaUsed, criteria, ...metrics, detail };

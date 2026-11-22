@@ -47,7 +47,9 @@ import {
   propertyTaxBasisWarnings,
   resolvePropertyTaxBasis,
 } from "./property-tax-basis";
+import { applyStateHistory } from "./other-land-state-history-apply";
 import { buildFail } from "./other-land-helpers";
+import type { OtherLandOwnTrace } from "./other-land-helpers";
 import { buildPass } from "./other-land-helpers";
 import { isBareLand } from "./other-land-helpers";
 
@@ -55,33 +57,36 @@ export { isBareLand };
 
 /**
  * NBL2611-V10-P · V2-C2 — 기타토지는 소유기간 중 사용기간을 입력으로 받지 않고 **양도일 현재 상태를 소유기간 전체(`fullPeriod`)에 적용**한다.
- * 그래서 기간기준 일수·비율은 «전 기간 사업용»으로 채운 표시값이며 판정 근거가 아니다. 이 사실을 echo(`periodEvaluation`)와 고지로 남긴다
- * (건물 철거·신축 등 소유기간 중 상태 변화는 반영되지 않는다. 상태 이력 모델은 리뷰 Q-4.)
- * 예외로 영 §168의14① 유예기간만은 판정에 쓴다 — 비사업용 잔여분에 «빈 사업기간 + 유예»로 기간기준을 본다(NBL2611-V2-C1, `other-land-merge.ts`).
+ * 그래서 기간기준 일수·비율은 «전 기간 사업용»으로 채운 표시값이며 판정 근거가 아니다. 이 사실을 echo(`periodEvaluation`)와 고지로 남긴다.
+ * 예외 ① 영 §168의14① 유예기간은 판정에 쓴다 — 비사업용 잔여분에 «빈 사업기간 + 유예»로 기간기준을 본다(NBL2611-V2-C1, `other-land-merge.ts`).
+ * 예외 ② 소유기간 중 건축물 신축·멸실 사건(`landStateHistory.mode === "changed"`)을 입력하면 일 단위 구간으로 판정한다(NBL-STATE-HISTORY-E2, `other-land-state-history-apply.ts`).
  */
 export function judgeOtherLand(
   input: NonBusinessLandInput,
   rules: NonBusinessLandJudgmentRules,
 ): CategoryJudgeResult {
-  const core = judgeOtherLandCore(input, rules);
+  const trace: OtherLandOwnTrace = {};
+  const core = judgeOtherLandCore(input, rules, trace);
   if (!input.otherLand) return { ...core, periodEvaluation: { basis: "not_judged" } };
+  // NBL2611-V1-A — 재산세 분류 근거 모델이 개입했을 때만 echo(표시 전용).
+  const basisEcho = buildPropertyTaxBasisEcho(input.otherLand, resolvePropertyTaxBasis(input.otherLand));
+  const basisPart = basisEcho ? { propertyTaxBasis: basisEcho } : {};
+  const history = applyStateHistory(core, input, rules, trace);
+  if (history.applied) return { ...history.result, ...basisPart };
   // NBL2611-V2-C1 — 비사업용으로 끝난 잔여분(전량·부분)은 «빈 사업기간 + 유예기간»으로 기간기준을 다시 본다(영 §168의14①). 유예 입력이 없으면 그대로다.
   const { result, graceJudged } = applyGraceToNonBusinessRemainder(core, input, rules);
   return {
     ...result,
     periodEvaluation: graceJudged ? { basis: "state_at_transfer", graceJudged } : { basis: "state_at_transfer" },
-    // NBL2611-V1-A — 재산세 분류 근거 모델이 개입했을 때만 echo(표시 전용).
-    ...(() => {
-      const echo = buildPropertyTaxBasisEcho(input.otherLand, resolvePropertyTaxBasis(input.otherLand));
-      return echo ? { propertyTaxBasis: echo } : {};
-    })(),
-    warnings: [...(result.warnings ?? []), NBL_STATE_AT_TRANSFER_APPLIED_NOTICE],
+    ...basisPart,
+    warnings: [...(result.warnings ?? []), NBL_STATE_AT_TRANSFER_APPLIED_NOTICE, ...history.notices],
   };
 }
 
 function judgeOtherLandCore(
   input: NonBusinessLandInput,
   rules: NonBusinessLandJudgmentRules,
+  trace: OtherLandOwnTrace,
 ): CategoryJudgeResult {
   const steps: JudgmentStep[] = [];
   const appliedLaws: string[] = [NBL.OTHER_LAND];
@@ -284,6 +289,9 @@ function judgeOtherLandCore(
       }
       revenueTestDetail = startJudged.applied.revenue;
       warnings.push(startJudged.applied.notice);
+      // NBL-STATE-HISTORY-E2 · Q-15 (가′) — 자체 사업기간 [개시일, 양도일)을 이력 판정에 넘긴다(충족해 여기서 끝나면 이 구간이 결론의 근거다).
+      trace.own = startJudged.applied.periods;
+      trace.decisiveOwn = startJudged.applied.r.meets;
       if (startJudged.applied.r.meets) {
         return buildPass(`수입금액비율 충족 (${REVENUE_BUSINESS_TYPE_LABEL[revenueTestDetail.businessType]}) + 당해 사업개시일 이후 기간기준 충족`, steps, appliedLaws, warnings, {
           r: startJudged.applied.r, totalOwnershipDays, revenueTestDetail,
@@ -504,6 +512,10 @@ function judgeOtherLandCore(
   if (isRelated) {
     // NBL2611-V7-S — 3호는 «조성 완료일부터 2년» 구간만 사업용 기간이다(`hoReq.businessPeriods`). 그 밖의 호는 소유기간 전체.
     const r = meetsPeriodCriteria(hoReq.businessPeriods ?? fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+    if (hoReq.businessPeriods) {
+      trace.own = [...(trace.own ?? []), ...hoReq.businessPeriods]; // Q-15 (가′) — 3호 [조성 완료일, +2년)
+      trace.decisiveOwn = true;
+    }
     const legalBasis = resolveAreaLegalBasis(relatedType);
     // Q-6 (다) — 호로 판정에 쓰는 경우(⑥ 복합용도 안분이 호별 기준면적을 대체하지 않을 때)에만 자기 선언 요건을 고지한다.
     if (isRecognizedHo && mixedUse === undefined && hoReq.notice) warnings.push(hoReq.notice);
