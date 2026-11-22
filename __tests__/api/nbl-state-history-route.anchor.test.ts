@@ -7,7 +7,7 @@
  *
  * 계획서(정본): docs/01-plan/features/nbl-other-land-state-history.plan.md §4 E0
  *   엔진 계획서: docs/01-plan/features/nbl-other-land-state-history.engine.plan.md §7.2 Anchor 2·3 · §4.4
- * 결정: Q-15 (가) · V-1 일 단위. 입력 경로 = 화면 폼 → ④ `callTransferTaxAPI` 본문 → 실제 route(⑫⑭) → 엔진.
+ * 결정: Q-15 (가′) · V-1 일 단위. 입력 경로 = 화면 폼 → ④ `callTransferTaxAPI` 본문 → 실제 route(⑫⑭) → 엔진.
  *
  * ⚠️ 모드 4종은 «지금은 ⑫ Zod가 새 칸을 모르고 침묵 strip한다»는 사실에 기댄다. E2가 ⑫에 칸을 열면 `""`·`unchanged`·`unknown`은 «현행 그대로»여야 하므로
  *    같은 단언이 계속 성립한다(P-11 — 조기 반환 제거 시 이 파일이 실패해야 한다).

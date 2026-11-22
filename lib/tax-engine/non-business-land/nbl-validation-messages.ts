@@ -18,3 +18,48 @@ export const LAND_TYPE_REQUIRED_MESSAGE =
 /** NBL2611-D1 (DM-01) 당해 사업개시일이 양도일보다 늦음 — 사업 구간 [개시일, 양도일]이 성립하지 않는다 */
 export const REVENUE_START_DATE_AFTER_TRANSFER_MESSAGE =
   "당해 사업개시일이 양도일보다 늦습니다. 사업개시일은 실제 양도일 이전의 날이어야 합니다 — 수입금액비율 충족 토지의 사업 구간을 「사업개시일 ~ 양도일」로 보아 기간기준(영 §168의6)을 판정하므로 이 값으로는 사업 구간이 없습니다.";
+
+/**
+ * NBL-STATE-HISTORY-E1 — 기타토지 소유기간 중 상태 이력(사건 행) 검증 문구. ⑧·⑫ 공용 leaf(`other-land-state-history.ts`)가 쓴다.
+ * 행 번호(`index`)는 0부터이고 문구에는 1부터 적는다. 종류 라벨은 leaf의 `STATE_EVENT_KIND_LABEL`이 넘긴다(문구가 라벨을 새로 짓지 않는다).
+ */
+
+/** `changed` + 사건 0건 — 이력 없음을 «바뀐 적 있음»으로 위장한 입력의 침묵 통과를 막는다(통합 §1). */
+export const STATE_EVENTS_REQUIRED_MESSAGE =
+  "소유기간 중 건축물이 새로 생기거나 없어진 적이 있다고 답했으나 사건이 없습니다. 사건을 1건 이상 입력하거나 「바뀐 적 없음」 또는 「모름」을 선택하세요.";
+
+export function stateEventKindRequiredMessage(index: number): string {
+  return `건축물 사건 ${index + 1}번째 행 — 종류(건축물 신축 / 건축물 멸실·철거·붕괴)를 선택하세요. (미선택 행은 판정에서 제외되어 결과가 달라집니다)`;
+}
+
+export function stateEventDateEmptyMessage(index: number): string {
+  return `건축물 사건 ${index + 1}번째 행 — 날짜를 입력하세요. (미입력 행은 판정에서 제외되어 결과가 달라집니다)`;
+}
+
+export function stateEventDateInvalidMessage(index: number, date: string): string {
+  return `건축물 사건 ${index + 1}번째 행 — 날짜(${date})를 날짜(YYYY-MM-DD)로 읽을 수 없습니다. (읽을 수 없는 행은 판정에서 제외되어 결과가 달라집니다)`;
+}
+
+/** 앞 사건보다 빠름 — 자동 정렬하지 않는다(침묵 보정 금지). */
+export function stateEventReversedMessage(index: number, date: string, prevDate: string): string {
+  return `건축물 사건 ${index + 1}번째 행 — 사건일(${date})이 앞 사건(${prevDate})보다 빠릅니다. 사건은 날짜 순서대로 입력하세요.`;
+}
+
+export function stateEventSameDayMessage(index: number, date: string): string {
+  return `건축물 사건 ${index + 1}번째 행 — 사건일(${date})이 앞 사건과 같은 날입니다. 같은 날의 사건은 0일 구간을 만들어 판정에 쓰이지 않습니다. 하루 이상 간격을 두고 입력하세요.`;
+}
+
+/** 같은 종류 연속(신축 뒤 신축 · 멸실 뒤 멸실). `prevStateLabel` = 앞 사건 뒤의 상태(「건축물 있음」/「건축물 없음」), `missingKindLabel` = 빠진 사건 종류 라벨. */
+export function stateEventSameKindMessage(index: number, prevStateLabel: string, missingKindLabel: string): string {
+  return `건축물 사건 ${index + 1}번째 행 — 앞 사건이 이미 「${prevStateLabel}」입니다. 사이에 「${missingKindLabel}」 사건이 빠졌습니까? (신축과 멸실은 번갈아 입력합니다)`;
+}
+
+/** 하한일(⑧만 — 이월과세는 증여자 취득일 · 일반은 취득일 · 축 B 번들은 가장 이른 취득일) 당일 또는 그 이전. */
+export function stateEventAtOrBeforeFloorMessage(index: number, date: string, floorDate: string): string {
+  return `건축물 사건 ${index + 1}번째 행 — 사건일(${date})이 소유 시작 전입니다. 취득일(${floorDate}) 당일 또는 그 이전의 사건은 소유기간에 속하지 않아 판정에 쓰이지 않습니다. 취득일 다음 날부터 입력하세요.`;
+}
+
+/** 양도일 당일 또는 그 이후 — 양도일 현재 상태 구간이 1일 미만이 된다. */
+export function stateEventAtOrAfterTransferMessage(index: number, date: string, transferDate: string): string {
+  return `건축물 사건 ${index + 1}번째 행 — 사건일(${date})이 양도일(${transferDate}) 당일 또는 그 이후입니다. 양도일 당일 또는 그 이후의 사건은 판정에 쓰이지 않습니다. 양도일 이전의 날로 입력하세요.`;
+}
