@@ -55,10 +55,13 @@ const APPLY = "lib/tax-engine/non-business-land/other-land-state-history-apply.t
 const MAPPER = "lib/tax-engine/non-business-land/form-mapper-helpers.ts";
 const REFINES = "lib/api/transfer-tax-schema-nbl-refines.ts";
 const SCHEMA = "lib/api/transfer-tax-schema-nbl.ts";
+// U0(UI, 화면 없음) 배선 — ①②③ 상태·복원 정규화와 ④⑤⑧ 공용 술어.
+const SCOPE = "lib/calc/nbl-other-state-history-scope.ts";
+const MIGRATE = "lib/stores/calc-wizard-asset-migrate-nbl.ts";
 
 const NEXT_PR_HINT = "새 사용처가 생겼다면 UI 배선(U1·U2)일 것이다 — 이 허용 목록을 그 파일로 갱신한다(삭제 금지). 계획서 plan.md §4 U1·U2.";
 
-describe("배선 확인 — 상태 이력 leaf는 E2에서 판정(apply)·⑫ refine·⑭ 매퍼에만 연결됐다", () => {
+describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭ 매퍼(E2)와 UI 술어·복원 정규화(U0)에 연결돼 있다", () => {
   it("WIRE-0 (공허 방지): leaf가 실제로 존재하고 핵심 함수를 export한다", () => {
     const leaf = FILES.find((f) => f.path === LEAF);
     expect(leaf, "leaf 파일이 없다").toBeDefined();
@@ -67,10 +70,10 @@ describe("배선 확인 — 상태 이력 leaf는 E2에서 판정(apply)·⑫ re
     }
   });
 
-  it("WIRE-1: `other-land-state-history`를 import하는 프로덕션 파일 = 판정(apply) · ⑭ 매퍼 · ⑫ refine 정확히 셋", () => {
+  it("WIRE-1: `other-land-state-history`를 import하는 프로덕션 파일 = 판정(apply) · ⑭ 매퍼 · ⑫ refine(E2) + UI 술어 · ③ 복원 정규화(U0)", () => {
     const re = /^\s*import[\s\S]*?from\s+["'][^"']*other-land-state-history["']/m;
     const importers = FILES.filter((f) => re.test(f.src)).map((f) => f.path).sort();
-    expect(importers, NEXT_PR_HINT).toEqual([APPLY, REFINES, MAPPER].sort());
+    expect(importers, NEXT_PR_HINT).toEqual([APPLY, REFINES, MAPPER, SCOPE, MIGRATE].sort());
   });
 
   it("WIRE-2: 판정은 구간 변환(derive)과 구간 산식(stateHistoryBusinessIntervals)을 쓰고, ⑫ refine은 공용 issue leaf를, ⑭ 매퍼·⑫는 `effectiveOtherHasBuilding`을 쓴다 — 3중 패턴", () => {
@@ -83,9 +86,9 @@ describe("배선 확인 — 상태 이력 leaf는 E2에서 판정(apply)·⑫ re
     expect(src(MAPPER)).toMatch(/\bisEventKind\(/);
   });
 
-  it("WIRE-3: 소비표 술어 `consumesStateHistory`는 ⑭ 매퍼·⑫ refine이 쓴다 — ④⑤⑧(UI)은 아직 쓰지 않는다(U1)", () => {
+  it("WIRE-3: 소비표 술어 `consumesStateHistory`는 ⑭ 매퍼·⑫ refine과 UI 공용 술어(`nblOtherStateHistoryApplies` — ④⑤⑧이 이 한 곳을 읽는다)가 쓴다", () => {
     const users = usersOf("consumesStateHistory", [CATEGORY]).sort();
-    expect(users, NEXT_PR_HINT).toEqual([REFINES, MAPPER].sort());
+    expect(users, NEXT_PR_HINT).toEqual([REFINES, MAPPER, SCOPE].sort());
   });
 
   it("WIRE-4: 판정이 쓰는 고지 상수 = apply 한 곳 · UI 전용 상수(unchanged·유예 안내)는 아직 쓰는 곳이 없다", () => {
@@ -107,11 +110,18 @@ describe("배선 확인 — 상태 이력 leaf는 E2에서 판정(apply)·⑫ re
     expect(src(SCHEMA)).toMatch(/propertyTaxTypeBefore:\s*z\.enum\(NBL_PROPERTY_TAX_TYPE_VALUES\)\.or\(z\.literal\(""\)\)/);
   });
 
-  it("WIRE-6: 이력 칸 이름은 UI(store·components·lib/calc)에 아직 없다 — U0·U1이 추가한다(⑫⑭만 열린 상태 = 직접 API 전용)", () => {
+  it("WIRE-6: 이력 칸 이름을 읽는 UI(store·components·lib/calc) 파일 = ①②③ 상태·복원 + 공용 술어 — 화면(⑤)·전송(④)·검증(⑧)은 U1이 연결한다", () => {
     const uiUsers = FILES.filter(
       (f) => /^(components|lib\/(stores|calc))\//.test(f.path) && /nblOtherStateEvents|nblOtherStateHistoryMode/.test(f.src),
-    ).map((f) => f.path);
-    expect(uiUsers, NEXT_PR_HINT).toEqual([]);
+    ).map((f) => f.path).sort();
+    const expected = [
+      "lib/stores/calc-wizard-asset-nbl-other.ts", // ① 타입
+      "lib/stores/calc-wizard-asset-nbl.ts", // ② NBL_DEFAULTS
+      "lib/stores/calc-wizard-asset-factory.ts", // ② factory
+      MIGRATE, // ③ 복원 정규화
+      SCOPE, // ④⑤⑧ 공용 술어
+    ].sort();
+    expect(uiUsers, NEXT_PR_HINT).toEqual(expected);
   });
 
   it("WIRE-7: 엔진 입력 `landStateHistory`는 types · 매퍼 · 판정(apply)만 읽는다", () => {

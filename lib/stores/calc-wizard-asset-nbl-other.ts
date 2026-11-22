@@ -5,6 +5,9 @@
  * 필드 값 기본/normalize는 calc-wizard-asset-factory.ts·calc-wizard-asset-nbl.ts가 담당.
  */
 import type { NblRelatedBusinessType } from "@/lib/tax-engine/non-business-land/land-usage.types";
+import type { PropertyTaxType } from "@/lib/tax-engine/non-business-land/land-usage.types";
+import type { StateEventKind } from "@/lib/tax-engine/non-business-land/land-usage.types";
+import type { StateHistoryMode } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { WholesaleItem } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import type { PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 
@@ -29,6 +32,16 @@ export interface NblFactorySegmentFormItem {
   ratePercent: string;
   /** 업종명 — 표시용(계산 무관) */
   industryLabel: string;
+}
+
+/**
+ * NBL-STATE-HISTORY-U0 — 기타토지 소유기간 중 건축물 신축·멸실 사건 1건(폼 — 전부 string). 엔진 `StateEvent`(Date)와 별개.
+ * `kind ""` = 아직 종류를 고르지 않은 행(⑧ 차단). `propertyTaxTypeBefore`는 **철거 행에서만** 뜻이 있고 `""` = 모름(종합합산 + 확인 필요).
+ */
+export interface NblOtherStateEventInput {
+  kind: "" | StateEventKind;
+  date: string;
+  propertyTaxTypeBefore: "" | PropertyTaxType;
 }
 
 export interface NblOtherFormSlice {
@@ -74,6 +87,13 @@ export interface NblOtherFormSlice {
   nblOtherLegacyRelatedReselect: boolean;
   /** §104의3①4호나목 — 건축물(건물·시설물) 부속토지 여부. false=나대지 간주(종합합산 — 단 NBL2611-V1-A: 재산세 분류 «근거»(nblOtherPropertyTaxBasis)가 확인된 비종합합산 선언은 존중). true=시가표준액 2% 비교(지방세령§101①2호나목): 2% 이상이면 사용자 재산세 유형 적용, 2% 미달이면 종합합산 강제(바닥면적분만 별도합산 유지·아래 nblOtherBuildingFloorArea). */
   nblOtherHasBuilding: boolean;
+  /**
+   * NBL-STATE-HISTORY-U0 — 「소유기간 중 이 토지 위 건축물이 새로 생기거나 없어진 적이 있습니까?」 답. `""` = 아직 답하지 않음(⑧만 차단 — ⑫·엔진은 현행).
+   * `changed`이면 `nblOtherStateEvents`가 판정에 쓰이고 「건축물 있음」 토글 대신 마지막 사건이 양도일 현재 유무를 정한다(`effectiveOtherHasBuildingOf`).
+   */
+  nblOtherStateHistoryMode: StateHistoryMode;
+  /** NBL-STATE-HISTORY-U0 — 사건 행(날짜순). `changed`일 때만 판정에 쓴다. 자산마다 새 배열 인스턴스. */
+  nblOtherStateEvents: NblOtherStateEventInput[];
   /** §101①2호나목 — 건축물 바닥면적(㎡). 2% 미달 시 이 면적만 별도합산(사업용) 유지·잔여 부속토지는 종합합산(비사업용) */
   nblOtherBuildingFloorArea: string;
   // §168의11⑥ 복합용도 건축물 부속토지 안분 (B) — ""=미적용·single_building=⑥1호(연면적비)·multiple_buildings=⑥2호(바닥면적비)

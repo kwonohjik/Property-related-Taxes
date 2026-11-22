@@ -3,10 +3,10 @@
  * calc-wizard-asset.ts 800줄 정책에 따라 분리 (2026-05-11).
  */
 
-import type { RentalHousingType } from "@/lib/tax-engine/multi-house-surcharge";
 import type { WholesaleItem } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "./calc-wizard-asset-reduction";
-import type { AptDeadlineExtensionForm, TaxIncentiveRentalRegistrationType } from "./calc-wizard-asset-nbl-rental";
+import type { NblOtherStateEventInput } from "./calc-wizard-asset-nbl-other";
+import type { StateHistoryMode } from "@/lib/tax-engine/non-business-land/land-usage.types";
 
 // 분리된 장기임대 선언 타입 — 기존 import 경로(`calc-wizard-asset-nbl`)를 유지한다.
 export type {
@@ -176,6 +176,8 @@ export const NBL_DEFAULTS = {
   nblOtherIsRelatedToResidence: false,
   nblOtherLegacyRelatedReselect: false,
   nblOtherHasBuilding: false,
+  nblOtherStateHistoryMode: "" as StateHistoryMode,
+  nblOtherStateEvents: [] as NblOtherStateEventInput[],
   nblOtherBuildingFloorArea: "",
   // §168의11① 호별 면적기준 (갭 3a)
   nblOtherRelatedBusinessType: "",

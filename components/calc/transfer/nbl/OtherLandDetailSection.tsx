@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { nblAcquisitionDateOf } from "@/lib/calc/nbl-unconditional-exemption-status";
+import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-scope";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 import { NBL_PROPERTY_TAX_TYPE_MIXED_NOTICE, NBL_PROPERTY_TAX_TYPE_SOURCE_HINT } from "@/lib/tax-engine/nbl-confirm-notices";
@@ -86,6 +87,8 @@ export function OtherLandDetailSection({
   onAssetChange,
   transferDate,
 }: OtherLandDetailSectionProps) {
+  // NBL-STATE-HISTORY-U0 — 양도일 현재 「건축물 있음」: `changed`이면 마지막 사건이 정한다(아래 하위 칸 노출 3곳과 호별·근거 칸이 모두 이 값을 읽는다).
+  const hasBuilding = effectiveOtherHasBuildingOf(asset);
   const buildingVal = parseFloat(asset.nblOtherBuildingValue || "0") || 0;
   const landVal = parseFloat(asset.nblOtherLandValue || "0") || 0;
   const isLikelyBareground = landVal > 0 && buildingVal < landVal * 0.02;
@@ -138,10 +141,11 @@ export function OtherLandDetailSection({
       />
 
       <ToggleCard
+        data-testid="nbl-other-has-building-toggle"
         tone="amber"
         title="건축물(건물·시설물) 있음"
         description="건물 없으면 재산세 분류 근거를 확인한 선언만 인정하고, 근거가 없으면 종합합산으로 봅니다. 건물 있으면 시가표준액 2% 비교 후 재산세 유형 적용 — 소득세법 §104의3①4호나목·지방세법 시행령 §101①2호나목"
-        checked={asset.nblOtherHasBuilding}
+        checked={hasBuilding}
         onCheckedChange={(c) => onAssetChange({ nblOtherHasBuilding: c })}
       />
 
@@ -173,7 +177,7 @@ export function OtherLandDetailSection({
       {/* NBL2611-V1-A (Q-1) — 재산세 분류 «근거». 선택지·표시 조건은 엔진 술어(`property-tax-basis.ts`)가 정한다. */}
       <OtherLandPropertyTaxBasisField asset={asset} onAssetChange={onAssetChange} />
 
-      {asset.nblOtherHasBuilding && (
+      {hasBuilding && (
         <>
           {/* NBL2611-V10-OL11 — 법문 기준은 「시가표준액」(지방세법 시행령 §101①2호나목)이다. 「가액」은 시가·실거래가로 읽힌다. */}
           <FieldCard label="건축물 시가표준액" unit="원">
@@ -220,7 +224,7 @@ export function OtherLandDetailSection({
       <FactoryLandSection asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />
 
       {/* §168의11⑥ 복합용도 건축물 부속토지 안분 (건축물 존재 시) */}
-      {asset.nblOtherHasBuilding && (
+      {hasBuilding && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 dark:border-emerald-800 p-3 space-y-2">
           <div className="flex items-center gap-2">
             <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">§168의11⑥ 복합용도 건축물 부속토지 안분</p>

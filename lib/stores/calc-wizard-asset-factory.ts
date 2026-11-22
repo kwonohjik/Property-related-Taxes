@@ -376,6 +376,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblOtherIsRelatedToResidence: false,
     nblOtherLegacyRelatedReselect: false,
     nblOtherHasBuilding: false,
+    nblOtherStateHistoryMode: "",
+    nblOtherStateEvents: [],
     nblOtherBuildingFloorArea: "",
     nblOtherMixedUseMode: "",
     nblOtherMixedUseSpecificFloorArea: "",

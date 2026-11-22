@@ -12,6 +12,7 @@ import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplie
 import { resortAreaIssue } from "@/lib/tax-engine/non-business-land/resort-area-issue";
 import { hoRequiredInputIssue } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
 import { demolishedBasisIssue, type PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
+import { effectiveOtherHasBuildingOf } from "./nbl-other-state-history-scope";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
 /** 기타토지(other_land) 정밀판정 입력 검증. 첫 오류 메시지 또는 null. */
@@ -38,7 +39,7 @@ export function validateNblOtherLand(asset: AssetForm, label: string): string | 
    */
   const demolished = demolishedBasisIssue({
     declared: asset.nblOtherPropertyTaxType as Parameters<typeof demolishedBasisIssue>[0]["declared"],
-    hasBuilding: asset.nblOtherHasBuilding,
+    hasBuilding: effectiveOtherHasBuildingOf(asset),
     basis: (asset.nblOtherPropertyTaxBasis || undefined) as PropertyTaxBasis | undefined,
     floorArea: parseDecimal(asset.nblOtherDemolishedFloorArea),
     zoneType: asset.nblZoneType,
@@ -57,7 +58,7 @@ export function validateNblOtherLand(asset: AssetForm, label: string): string | 
    *    「미입력은 검증 오류로 차단」 원칙(루트 CLAUDE.md)대로 여기서 막는다.
    */
   if (
-    asset.nblOtherHasBuilding &&
+    effectiveOtherHasBuildingOf(asset) &&
     (!asset.nblOtherBuildingFloorArea || parseDecimal(asset.nblOtherBuildingFloorArea) <= 0)
   )
     return fieldError("nblOtherBuildingFloorArea", `${label}: 기타토지 — 건축물 바닥면적(㎡)을 입력하세요. 부속토지 배율 한도(지방세법 시행령 제101조 제1항 제2호) 판정에 쓰이며, 미입력 시 한도 초과분이 사업용으로 남습니다.`);
