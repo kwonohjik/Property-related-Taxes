@@ -494,7 +494,9 @@ export function runRentalHousingExceptionStep(
   const incomeDeduction = resolveRentalHousingIncomeDeduction({ input, effectiveInput, housingIncome: rhe.taxableGain, steps });
   const housingTaxableGain = rhe.taxableGain - incomeDeduction.applied;
   const totalTaxableIncomeBeforeDeduction = rhe.taxableGain + (nbl?.income ?? 0) + laterLandIncome;
-  const rheBasicDeduction = Math.min(rheBasicDeductionRemaining, Math.max(0, totalTaxableIncomeBeforeDeduction));
+  // 다건 집계는 이 경로도 `skipBasicDeduction: true`로 부른다 — 기본공제는 집계가 소득세법 §103②대로 신고 단위에서 배분한다(일반 경로 `transfer-tax-income-steps.ts`와 같다).
+  //   종전에는 여기서 250만원을 또 빼 §77 등 감면 상세가 기본공제를 쓴 것으로 보였다(basicDeductionOnCash 2,500,000).
+  const rheBasicDeduction = effectiveInput.skipBasicDeduction ? 0 : Math.min(rheBasicDeductionRemaining, Math.max(0, totalTaxableIncomeBeforeDeduction));
   const taxAtHousingIncome = (housingIncome: number) => {
     const totalIncome = housingIncome + (nbl?.income ?? 0) + laterLandIncome;
     const taxBase = truncateToWon(Math.max(0, totalIncome - rheBasicDeduction));
@@ -753,6 +755,9 @@ export function runRentalHousingExceptionStep(
     reductionType: reductionResult.reductionType,
     reductionTypeApplied: reductionResult.reductionTypeApplied,
     reducibleIncome: reductionResult.reducibleIncome,
+    // 소득세법 §90①의 B(감면율 전)·E — 없으면 다건 M-8이 율이 곱해진 `reducibleIncome`을 B로 합성해(율 1) 감면 주택에 감면 외 소득이 있는 것처럼 보고
+    //   §103② 기본공제를 그 주택에 붙였다(실측 15억 거주주택 §77 현금 + 토지 3억: 감면 4,608,201 → 일반 경로와 같은 4,719,942).
+    reducibleIncomeBuckets: reductionResult.reducibleIncomeBuckets,
     aggregateReductionRate: reductionResult.aggregateReductionRate,
     publicExpropriationDetail: reductionResult.publicExpropriationDetail,
     gbDesignatedLandDetail: reductionResult.gbDesignatedLandDetail,
