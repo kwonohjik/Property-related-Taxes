@@ -12,6 +12,7 @@ import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/R
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-scope";
 import {
   PROPERTY_TAX_BASIS_LABEL,
   PROPERTY_TAX_BASIS_LEGAL,
@@ -31,7 +32,9 @@ export function OtherLandPropertyTaxBasisField({ asset, onAssetChange }: Props) 
   const declared = asset.nblOtherPropertyTaxType;
   if (!declared) return null;
   const declaredType = declared as PropertyTaxType;
-  const options = propertyTaxBasisOptions(declaredType, asset.nblOtherHasBuilding);
+  // NBL-STATE-HISTORY-U0 — `changed`이면 양도일 현재(마지막 사건) 유무로 근거 선택지를 정한다(⑧·⑫·⑭와 같은 파생).
+  const hasBuilding = effectiveOtherHasBuildingOf(asset);
+  const options = propertyTaxBasisOptions(declaredType, hasBuilding);
   if (options.length === 0) return null;
 
   // 선언·건축물 유무에 맞지 않는 stale 값은 «미선택»으로 보인다(store 값은 그대로 — 매퍼가 보내지 않는다).
@@ -69,7 +72,7 @@ export function OtherLandPropertyTaxBasisField({ asset, onAssetChange }: Props) 
         </ToneCard>
       )}
 
-      {requiresDemolishedFloorArea(declaredType, asset.nblOtherHasBuilding, value || undefined) && (
+      {requiresDemolishedFloorArea(declaredType, hasBuilding, value || undefined) && (
         <FieldCard
           field="nblOtherDemolishedFloorArea"
           label="철거ㆍ멸실 전 건축물 바닥면적"

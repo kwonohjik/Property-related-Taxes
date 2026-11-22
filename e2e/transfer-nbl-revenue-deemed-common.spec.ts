@@ -196,6 +196,10 @@ test.describe("§168의11③1·2호 간주임대료·공통수입 안분 — 풀
     // 용도지역 (NBL detailed 필수 — 미설정 시 raw 미전송·검증 차단)
     await chooseFromSelect(page, "용도지역", "일반주거지역", "일반주거지역");
 
+    // NBL-STATE-HISTORY-U1 — 소유기간 중 건축물 이력 질문은 ⑧ #1 필수 입력(재산세 과세 분류보다 앞)이다. 이 스펙의 주제와 무관해 «바뀐 적 없습니다».
+    await page.getByTestId("nbl-other-state-mode-unchanged").click();
+    await expect(page.getByTestId("nbl-other-state-mode-unchanged")).toBeChecked();
+
     // 재산세 과세 분류 (기타토지 필수 — PR-1/A1-01. 미선택 시 매퍼가 「종합합산」으로 접어
     // 조용히 비사업용 중과가 붙던 것을 ⑧에서 차단하도록 바꿨다)
     await chooseFromSelect(page, "재산세 과세 분류", "종합합산", "종합합산");

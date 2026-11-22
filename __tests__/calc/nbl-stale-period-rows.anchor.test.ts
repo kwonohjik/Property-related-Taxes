@@ -46,7 +46,8 @@ const emptyResidenceRow = { sigunguCode: "", sigunguName: "", startDate: "", end
  * 별장은 주택 정착면적이 먼저 나온다).
  */
 const LAND_BASE: Partial<Record<LandType, Partial<AssetForm>>> = {
-  other_land: { nblOtherPropertyTaxType: "separate" },
+  // NBL-STATE-HISTORY-U1: 건축물 이력 질문(⑧ #1)도 행 검사보다 앞선 필수 입력이다 — 답해 둔다.
+  other_land: { nblOtherPropertyTaxType: "separate", nblOtherStateHistoryMode: "unchanged" },
   villa_land: { nblHousingFootprint: "100", nblVillaNoUseConfirmed: true }, // NBL2611-Q-12: 사용기간 0행이면 「사용 없음」 확인이 행 검사보다 앞선다
 };
 const rowMessage = (over: Partial<AssetForm>) => {

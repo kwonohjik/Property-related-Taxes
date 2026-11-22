@@ -85,6 +85,9 @@ async function fillUpToTaxType(page: Page) {
   await openNblDetailedJudgment(page);
   await chooseFromSelect(page, "토지 지목", "기타 토지 (나대지·잡종지)", "기타 토지");
   await chooseFromSelect(page, "용도지역", "일반주거지역", "일반주거지역");
+  // NBL-STATE-HISTORY-U1 — 소유기간 중 건축물 이력 질문은 ⑧ #1 필수 입력이다. 이 스펙의 주제와 무관해 «바뀐 적 없습니다».
+  await page.getByTestId("nbl-other-state-mode-unchanged").click();
+  await expect(page.getByTestId("nbl-other-state-mode-unchanged")).toBeChecked();
   await chooseFromSelect(page, "재산세 과세 분류", "별도합산", "별도합산");
 }
 

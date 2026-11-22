@@ -12,11 +12,21 @@ import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplie
 import { resortAreaIssue } from "@/lib/tax-engine/non-business-land/resort-area-issue";
 import { hoRequiredInputIssue } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
 import { demolishedBasisIssue, type PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
+import { effectiveOtherHasBuildingOf } from "./nbl-other-state-history-scope";
+import { validateNblStateHistory } from "./transfer-tax-validate-nbl-state-history";
+import type { StateHistoryValidateCtx } from "./transfer-tax-validate-nbl-state-history";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
 /** 기타토지(other_land) 정밀판정 입력 검증. 첫 오류 메시지 또는 null. */
-export function validateNblOtherLand(asset: AssetForm, label: string): string | null {
+export function validateNblOtherLand(asset: AssetForm, label: string, stateHistory?: StateHistoryValidateCtx): string | null {
   if (asset.nblLandType !== "other_land") return null;
+
+  /**
+   * NBL-STATE-HISTORY-U1 — 소유기간 중 건축물 이력(질문 · 사건 행). **지목 게이트 직후 = 재산세 과세 분류 검사보다 앞**에 둔다 — 질문이 섹션 맨 위라 첫 오류도 화면 순서와 같아야 한다.
+   * 게이트·규칙은 ⑤ 렌더·④ 전송과 같은 술어, ⑫와 같은 leaf(`stateEventSequenceIssue`)다.
+   */
+  const stateHistoryErr = validateNblStateHistory(asset, label, stateHistory);
+  if (stateHistoryErr) return stateHistoryErr;
 
   /**
    * §168의11 재산세 과세 분류 — 미선택 차단 (A1-01, 2026-09-02 코드리뷰).
@@ -38,7 +48,7 @@ export function validateNblOtherLand(asset: AssetForm, label: string): string | 
    */
   const demolished = demolishedBasisIssue({
     declared: asset.nblOtherPropertyTaxType as Parameters<typeof demolishedBasisIssue>[0]["declared"],
-    hasBuilding: asset.nblOtherHasBuilding,
+    hasBuilding: effectiveOtherHasBuildingOf(asset),
     basis: (asset.nblOtherPropertyTaxBasis || undefined) as PropertyTaxBasis | undefined,
     floorArea: parseDecimal(asset.nblOtherDemolishedFloorArea),
     zoneType: asset.nblZoneType,
@@ -57,7 +67,7 @@ export function validateNblOtherLand(asset: AssetForm, label: string): string | 
    *    「미입력은 검증 오류로 차단」 원칙(루트 CLAUDE.md)대로 여기서 막는다.
    */
   if (
-    asset.nblOtherHasBuilding &&
+    effectiveOtherHasBuildingOf(asset) &&
     (!asset.nblOtherBuildingFloorArea || parseDecimal(asset.nblOtherBuildingFloorArea) <= 0)
   )
     return fieldError("nblOtherBuildingFloorArea", `${label}: 기타토지 — 건축물 바닥면적(㎡)을 입력하세요. 부속토지 배율 한도(지방세법 시행령 제101조 제1항 제2호) 판정에 쓰이며, 미입력 시 한도 초과분이 사업용으로 남습니다.`);

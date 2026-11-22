@@ -46,6 +46,8 @@ const OTHER_LAND = {
   nblOtherPropertyTaxType: "separate",
   nblOtherBuildingValue: "50000000",
   nblOtherLandValue: "400000000",
+  // NBL-STATE-HISTORY-U1 픽스처 보정 — 기타토지는 「소유기간 중 건축물 이력」 질문에 답해야 ⑧을 통과한다(미선택 `""`은 ⑧ #1이 막는다). 이 파일의 주제와 무관해 «바뀐 적 없음».
+  nblOtherStateHistoryMode: "unchanged",
 } as Partial<AssetForm>;
 
 /** 컴패니언 토지 카드(자산 2) — `over`가 표지·정밀판정 입력을 정한다. */

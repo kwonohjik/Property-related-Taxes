@@ -2,7 +2,7 @@
 
 > 🔴 **개정 2026-11-22 (v3)**: 사용자가 **V-1을 일 단위로 재결정**했다(통합 계획서 머리말 «v3 우선 규칙»). 이 문서의 v2 «과세기준일 접기» 서술(`foldStateToTaxBaseYears`·과세연도 버킷/표·6.1. 경계·Q-14)은 폐기이며, 법령·해석례 조사 기록과 V-2 결론만 근거 자료로 남는다. 판정·기대값은 일 단위 구간 기준(v1 모델 · §6 «일 단위» 열).
 > **Feature ID**: `nbl-other-land-state-history` (UI 측) · 짝 문서: `nbl-other-land-state-history.engine.plan.md`(엔진·API 측 — 이 문서는 건드리지 않는다)
-> **작성일**: 2026-11-22 · **base**: origin/master `10e86a809` → **자가 검토 base `0972e2618`**(file:line 재실측 — §18) · **상태**: 계획(코드 수정 0 · 브라우저 미수행 · mutation probe 3건은 §18.3)
+> **작성일**: 2026-11-22 · **base**: origin/master `10e86a809` → **자가 검토 base `0972e2618`**(file:line 재실측 — §18) · **상태**: 계획 + **U0·U1 구현됨(2026-11-23 · 브랜치 `feat/nbl-state-history-u1` · 구현 기록 §19)** — U2(⑦ 결과 카드)·U3(E2E 6건·`ui-engine-sync-checker`)는 남음 · mutation probe 3건은 §18.3
 > **근거 결정**: 리뷰 `docs/reviews/nbl-other-categories-review-2026-11.md` §1.4 V2-C2 · §6 Q-4 (다) · §12.4 항목 2 — 「별도 계획서로 상태 이력 입력 모델을 계획한다」(Q-4 (나)는 D1 #3495로 이미 완료)
 > **번호 규칙**: 이 문서의 사용자 결정은 `UQ-n`, 미검증은 `UV-n`(엔진 계획서의 Q/V 번호와 충돌 방지 — 합칠 때 재번호).
 > **검증 표기**: 「확인」= 이 세션에서 파일을 읽어 file:line을 대조한 사실. 「확인 필요」= 읽지 않았거나 실측·법령 조회가 남은 것. 새 시나리오의 세액 숫자는 쓰지 않는다(엔진 Pre-Do anchor가 확정) — ±55,750,000은 리뷰 실측 인용이다.
@@ -201,8 +201,8 @@ Step1 자산 카드(토지) ─ 「비사업용 토지 여부 검토」 토글 O
    | 복합용도 ⑥(`:223`) | 건축물 있음 | 마지막 구간에 건축물 있음 + «양도일 현재 값을 전 기간에 적용» 안내(UQ-9) |
    | 「재산세 과세 분류」 FieldCard(`:149-171`) | (라벨 없음) | 라벨을 **「재산세 과세 분류 (양도일 현재)」**로 — 같은 섹션의 철거 사건 행이 «철거 직전 재산세 구분»을 따로 묻기 때문에 두 질문이 같은 것으로 읽히면 안 된다(계산 순서상 사건 행이 앞) |
    **실측 근거(자가 검토)**: `propertyTaxBasisOptions("separate", true)`는 `[]`(근거를 묻지 않음 — `property-tax-basis.ts:71-83`)이고 `requiresDemolishedFloorArea`는 `!hasBuilding`일 때만 참(`:125-127`)이며 ⑧ `:60`은 `hasBuilding`일 때만 바닥면적을 요구한다 → **마지막 구간 기준이면 «건축물 바닥면적»과 «종전 바닥면적»이 동시에 필요한 입력 상태가 없다.** 따라서 통합 Q-12 (가)의 «두 바닥면적 통합»은 별도 병합(`nblOtherBuildingFloorArea`를 철거 근거에도 읽게 하는 ④⑧⑫⑭ 4층 파생)이 아니라 **«마지막 구간 기준 노출»로 충족**된다(UQ-6 정밀화 — §14).
-6. **이력 모드 안내(고정 문구 2줄, ToneCard amber)**: 「건축물 유무 외의 이용 상태(업종·호별 용도·재산세 분류)는 양도일 현재 값을 소유기간 전체에 적용합니다 — 확인 필요」「착공부터 준공까지의 기간은 아래 «부득이한 사유 유예기간»의 건설 착공(5호)에서 입력합니다」. 후자는 자동 연동이 아니라 안내다(UQ-8). 양도일 의제(§168의14②) 사유가 선택돼 있으면 한 줄을 더한다: 「양도일 의제 사유를 선택하면 이 이력은 판정에 쓰이지 않습니다」(통합 Q-9 (가) — 엔진 문구 단일 소스).
-7. **`changed`일 때 «당해 사업개시일» 칸 안내**(`OtherLandDetailSection.tsx:310` — 현재 hint가 «사업 구간을 「사업개시일 ~ 양도일」로 보아 기간기준도 판정합니다»라고 약속한다): 통합 Q-9 (가)로 엔진은 `changed`일 때 DM-01을 건너뛴다 → 그 칸의 값이 **판정에 쓰이지 않는데 화면에 남는다**. 칸은 숨기지 않고(복원 보존) FieldCard 아래에 ToneCard 한 줄을 둔다 — 「건축물 이력을 입력해 이 날짜는 판정에 쓰이지 않습니다」. 조건 술어는 `effectiveStateHistoryMode(asset) === "changed" && nblOtherStateHistoryApplies(asset)`(표시 전용 — ④가 값을 보내는지는 엔진 Q-9 소관이므로 UV-17).
+6. **이력 모드 안내(ToneCard amber — 문구는 전부 엔진 상수 `nbl-confirm-notices.ts` 단일 소스)**: `unchanged` → `NBL_STATE_HISTORY_UNCHANGED_NOTICE` · `unknown` → `NBL_STATE_HISTORY_UNKNOWN_NOTICE` · `changed` → `NBL_STATE_HISTORY_APPLIED_NOTICE`(건축물 유무·철거 직전 재산세 구분만 기간별 판정 — 그 밖의 이용 상태는 양도일 현재 값 전 기간 적용) + `NBL_STATE_HISTORY_GRACE_ROW_NOTICE`(착공~준공은 유예 5호·철거는 9호 유예 행에서 직접 입력 — 자동 생성 안 함 · 통합 Q-10). 양도일 의제(§168의14②) 사유가 선택돼 있으면 `NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE`(«이 이력은 판정에 쓰지 않았다»)를 더하고 미리보기 표는 숨긴다(통합 Q-9 (가) — 엔진 문구 단일 소스).
+7. **`changed`일 때 «당해 사업개시일» 칸 안내**(`OtherLandDetailSection.tsx` — 그 칸의 hint는 «입력하면 … 사업 구간을 「사업개시일 ~ 양도일」로 보아 기간기준도 판정합니다»라고 약속한다): 🔴 **Q-15 (가′) 정정(2026-11-23)** — 초판은 «`changed`이면 엔진이 DM-01을 건너뛰므로 이 날짜는 판정에 쓰이지 않는다»였으나 **틀렸다.** 엔진은 개시일이 있으면 **소유기간 ∩ 그 구간을 사업용 구간으로 세어 이력의 사업용 구간과 함께 판정**한다(통합 §5 Q-15 (가′) · 엔진 상수 `NBL_STATE_HISTORY_REVENUE_START_NOTICE` — «이력과 함께 판정»). 칸은 숨기지 않고(복원 보존) FieldCard 아래에 그 **엔진 상수를 그대로** ToneCard로 보인다(문구를 UI가 새로 짓지 않는다 — R14). 조건 술어는 `nblOtherStateEventsInUse(asset)`(= 질문 적용 ∧ `changed`).
 
 ### 5.4 UI 순서 = 계산 순서
 
@@ -389,7 +389,7 @@ Step1 자산 카드(토지) ─ 「비사업용 토지 여부 검토」 토글 O
 | M12 | changed | 날짜 역순 / 하한일 이전·같은 날 / 양도일 당일·이후 / 같은 종류 연속 | — | ⑧ 차단(하한일만 ⑫ 허용) | 행 점프 |
 | M13 | changed + 이월과세 | 사건일이 증여자 취득일~수증일 사이 | — | 기산일 = 증여자 취득일 기준 범위. 시나리오 B(수증일 기산) 카드는 엔진 echo 기준 | 카드 구간표 ≠ 미리보기 가능(§8.3) |
 | M14 | changed + 양도일 의제 | 사건이 의제일 앞·뒤 모두 | — | **이력 미적용 + 고지**(통합 Q-9 (가) — 차단 없음) | 미리보기 대체 문구 · 섹션 안내 |
-| M15 | changed + 「당해 사업개시일」 입력 | — | — | 엔진이 DM-01을 건너뜀(Q-9) | 그 칸 아래 ToneCard 안내(§5.3-7) |
+| M15 | changed + 「당해 사업개시일」 입력 | — | — | 엔진이 개시일 이후 구간을 사업용 구간으로 세어 **이력과 함께 판정**(Q-15 (가′) — 건너뛰지 않음) | 그 칸 아래 ToneCard 안내(§5.3-7 — 엔진 상수) |
 | M16 | changed | 철거 행 종류를 «신축»으로 변경 | — | `propertyTaxTypeBefore` `""` 로 리셋 | 라디오 사라짐 · 값 stale 없음 |
 | M17 | changed → unchanged | — | — | 「건축물 있음」 토글 값 = 마지막 파생값(onChange 1회 쓰기) | 토글이 다시 보임 |
 | M18 | changed + 부분 면적 경로(배율 초과 등) | — | — | 이력 미적용 + 고지(통합 Q-8 (가)) | 카드 `state_at_transfer` 분기 + warnings |
@@ -458,7 +458,7 @@ U1·U2는 한 PR로 합칠 수 있다(카드가 echo 없는 구 결과를 처리
 | R11 | ~~`deemedTransfer`(양도일 의제)와 사건 범위의 관계~~ — **해소**(통합 Q-9 (가): 의제와 동시면 이력 미적용 + 고지). 엔진은 그때 `warnings`로 사유를 밝힌다(`basis`는 `state_at_transfer` 유지) | ⑧ 규칙 #9 삭제 |
 | R12 | 법령 인용 상수는 `legal-codes`에서, **새로 인용하는 조문은 `lib/legal-verification/manifest/additions-*.ts`에도 등록**(루트 규칙 — 게이트 `legal-verification-coverage-complete`) | UI는 모달 prop 문자열만 쓴다 |
 | R13 | **⑫ refine의 `hasBuilding` 파생**: `refineNonBusinessLandRaw`가 `mode=changed`이고 사건이 유효하면 raw `nblOtherHasBuilding` 대신 사건 파생값으로 `demolishedBasisIssue`를 부른다 | ⑧↔⑫ 일치 — 직접 API는 ④의 덮어쓰기를 거치지 않는다(§6.1) |
-| R14 | 문구 상수 2종 — `propertyTaxTypeBefore` «모름» 행 안내 · DM-01 칸 «이력 입력으로 판정에 쓰이지 않음» 안내(`nbl-confirm-notices.ts`). UI는 문구를 새로 짓지 않는다 | ⑤ §5.3-2·§5.3-7 |
+| R14 | 문구 상수 2종 — `propertyTaxTypeBefore` «모름» 행 안내 · DM-01 칸 «이력과 함께 판정» 안내(`nbl-confirm-notices.ts` — **Q-15 (가′) 이후 문구: «판정에 쓰이지 않음»이 아니다**). UI는 문구를 새로 짓지 않는다 | ⑤ §5.3-2·§5.3-7 |
 | R15 | `changed` + 사건 0행의 ⑫ 계약(UV-18) — 권장: 400 아님(마지막 구간뿐 → 현행과 같은 판정 + 고지) | ⑧ #2 ↔ ⑫ parity |
 
 ---
@@ -488,7 +488,7 @@ U1·U2는 한 PR로 합칠 수 있다(카드가 echo 없는 구 결과를 처리
 |---|---|---|---|
 | UV-1 | 소비표 새 열의 `consumes*` 소비처 전수 | ✅ **해소** — `git grep`: ④ `non-business-land-request.ts:159-163` · ⑤ `NblSectionContainer.tsx:278`·`GracePeriodSection.tsx:66`·`lib/calc/nbl-deemed-transfer-scope.ts:31` · ⑧ `transfer-tax-validate-nbl.ts:195` · ⑫ `transfer-tax-schema-nbl-refines.ts:124` · ⑭ `form-mapper.ts:150-176` · 엔진 `engine.ts:124-132·376`. 새 열(`stateHistory`)의 소비처는 ④⑤⑧⑫⑭ 5곳이고 열 추가 시 `InputConsumption` 인터페이스(`land-category.ts:104-109`)도 고친다(§1-8) | — |
 | UV-2 | 면적 × 시간 이중축 | ✅ **해소(범위 밖)** — 통합 Q-8 (가): 부분 면적 경로는 이력 미적용 + 고지(세액 현행 유지). 카드에 «구간 안 일부 면적» 표현이 생기지 않는다(§7.1) · 재검토 신호(부동산납세과-68)는 엔진 E3 | — |
-| UV-3 | 「신축」 사건 날짜의 법령상 의미(사용승인일·준공일·사실상 사용일) | ⏳ **부분 해소 · 설계 영향 없음(라벨 문구만)** — 재산세 구분은 허가·사용승인을 받지 않은 건축물의 부속토지를 별도합산에서 빼고(지방세법 시행령 §101①단서), 건축허가 후 **공사에 착수한 건축물도 건축물에 포함**한다(같은 영 §103①3 — 과세기준일 현재 정당한 사유 없이 6개월 이상 공사 중단은 제외 · 본문 확인). 라벨은 U1 전 확정 — 확정 전에는 «건축물 신축일» 중립 표기, **본문에 없는 해석(사용승인일 단정)을 화면 문구로 쓰지 않는다** | U1 착수 전 라벨 확정(KoreanLaw MCP — 지방세법 시행령 §101·§103) |
+| UV-3 | 「신축」 사건 날짜의 법령상 의미(사용승인일·준공일·사실상 사용일) | ✅ **U1 라벨 확정(2026-11-23)** — 신축 행 날짜 hint = 「건축물이 있는 것으로 보는 첫날입니다. 사용승인일(준공일)과 재산세상 건축물로 보는 첫날이 다를 수 있습니다 — 확인 필요.」 (조문 번호를 새로 인용하지 않는다 → manifest 등록 없음 · 단정 문구 없음). 아래 근거 기록은 유지: **부분 해소 · 설계 영향 없음(라벨 문구만)** — 재산세 구분은 허가·사용승인을 받지 않은 건축물의 부속토지를 별도합산에서 빼고(지방세법 시행령 §101①단서), 건축허가 후 **공사에 착수한 건축물도 건축물에 포함**한다(같은 영 §103①3 — 과세기준일 현재 정당한 사유 없이 6개월 이상 공사 중단은 제외 · 본문 확인). 라벨은 U1 전 확정 — 확정 전에는 «건축물 신축일» 중립 표기, **본문에 없는 해석(사용승인일 단정)을 화면 문구로 쓰지 않는다** | U1 착수 전 라벨 확정(KoreanLaw MCP — 지방세법 시행령 §101·§103) |
 | UV-4 | 사건일 = 양도일 · 양도일 의제 이후 사건 · 양도일 이후 사건 | ✅ **해소** — 사건일 ≥ 양도일은 마지막 구간 0일이라 ⑧·⑫가 차단(엔진 §3.6 — ⑧ #7). 의제(§168의14②) 동시 입력은 통합 Q-9 (가): 이력 미적용 + 고지라 의제일 이후 사건을 막을 필요가 없다(⑧ #9 삭제 — §8.1) | — |
 | UV-5 | 축 B에서 첫 카드가 가장 이른 취득일인가 | ✅ **해소(실측)** — 보장 없음: `isFullFractionalBundle`(`transfer-tax-api-asset-basics.ts:165`)은 개수·분수 여부만 본다. 대응: ⑧ #6 하한 = 번들 최이른 취득일 · ⑫는 하한 없음 · 질문 문구 «이 토지(전 지분)가 소유되던 기간 중»(§8.3) | — |
 | UV-6 | 축 B 지분별 판정 결과의 화면 표시(`nonBusinessLandJudgmentDetail`이 1건일 때 지분별 구간표) | ⏳ **미해소 · 설계 영향 있음(⑦ 한정)** — 카드 사용처가 단일 result 두 곳뿐(`TransferTaxResultView.tsx:529`·`ValuationDetailCards.tsx:114`)이라 지분 2·3의 구간표가 어디에도 안 보일 수 있다. ⑤⑧④(U1)에는 무관 | **U2 착수 전** `TransferTaxResultView.tsx:526-529`·축 B 결과 경로 정독 + E5로 실측 |
@@ -501,7 +501,7 @@ U1·U2는 한 PR로 합칠 수 있다(카드가 echo 없는 구 결과를 처리
 | UV-13 | 톤 선택(`amber`) | 기록 — `tones.ts` 의미표에 «시간 분해»가 없어 현행 «건축물 있음» ToggleCard와 같은 amber. **설계 영향 없음**(디자인 리뷰) | 디자인 리뷰 |
 | UV-14 | 브라우저 입력 흐름·모바일 폭(375px) 행 레이아웃 | ⏳ **미수행 · 설계 영향 없음** | U3 Playwright 실측 |
 | UV-15·16 | ~~과세연도 표 행 수·모바일 폭 / «같은 해 안 변화» 안내 위치~~ | **폐기**(v3 — 일 단위, §17.2) | — |
-| UV-17 | `changed`일 때 «당해 사업개시일»(`nblRevenueCurrentBusinessStartDate`)의 전송 여부 — ④가 보내도 엔진이 DM-01을 건너뛰는지(엔진 Q-9) | ⏳ **미해소 · 설계 영향 없음(안내 문구만)** — 칸은 숨기지 않고 안내 ToneCard(§5.3-7) | 엔진 E2 anchor 확정 후 |
+| UV-17 | `changed`일 때 «당해 사업개시일»(`nblRevenueCurrentBusinessStartDate`)의 전송 여부 — ④가 보내도 엔진이 DM-01을 건너뛰는지(엔진 Q-9) | ✅ **해소(2026-11-23)** — ④는 칸을 그대로 보낸다(prefix-pick). 엔진은 Q-15 (가′)로 건너뛰지 않고 이력과 함께 판정한다(E2). 안내는 엔진 상수 단일 소스. 이전 판정: ⏳ **설계 영향 없음(안내 문구만)** — 칸은 숨기지 않고 안내 ToneCard(§5.3-7) | 엔진 E2 anchor 확정 후 |
 | UV-18 | `changed` + 사건 0행의 ⑫ 계약(R15) | ⏳ **미해소 · 설계 영향 있음(⑧ #2 ↔ ⑫ parity)** — 권장: ⑫ 400 아님. 400이면 ⑧도 막으므로 UI 모순은 없고 직접 API 계약만 다르다 | 엔진 시니어 결정 — **E-b 착수 전** |
 | UV-19 | U0에서 요청 body에 새 칸(`""`·`[]`)이 실려 `toEqual` 테스트가 바뀌는지 | ⏳ **부분 실측 · 설계 영향 없음(테스트 보정)** — 두 필드를 `NBL_DEFAULTS`·factory에 심고 `nbl`·`non-business` 이름 필터로 174파일 2,053건 실행 → **0건 실패**(§18.3 P-4). 이름 필터 밖(`transfer-tax-api*` 등)은 미확인 | U0에서 `vitest run __tests__/lib/calc __tests__/api` 확대 실행 |
 
@@ -644,3 +644,29 @@ U1·U2는 한 PR로 합칠 수 있다(카드가 echo 없는 구 결과를 처리
 ### 18.6 verdict
 
 **`needs-fix`** — 이 문서 안의 지적 19건(Critical 1 · High 6 포함)은 이번 정정으로 해소했다. 그러나 (a) **UV-6(⑦ 한정)·UV-18(엔진 결정)** 이 설계 영향 있는 미해소이고 (b) **통합·엔진 문서에 v2 서술과 위 정정 요청 19건이 남아** 정본과 어긋난다 — 스킬 게이트상 `clean`이 아니다. 진행 순서 권고: 통합·엔진 정정(18.5) → UV-18 결정 → E0 anchor → U0. UV-6은 U2 착수 전에 닫으면 U0·U1은 막지 않는다. blast-radius 재검토: 정정이 바꾼 이름(`nblOtherStateHistoryApplies`·`effectiveOtherHasBuilding`·R13~R15·§5.3-7·§8.4·UQ-10·UV-17~19)과 폐기 이름(`taxBaseYears`·`fold…`·`hasBuildingInterval`·`hasBareInterval`·Q-14)을 문서 전체에서 grep해 참조처를 대조했고 신규 지적은 0건이었다(미해소 참조 없음).
+
+
+---
+
+## 19. 구현 기록 — U0 · U1 (2026-11-23 · 브랜치 `feat/nbl-state-history-u1`)
+
+> 계획서(이 문서)와 달라진 점·확정한 점만 적는다. 14지점 점검표·mutation 표는 PR 본문.
+
+### 19.1 달라진 점 (조용히 고치지 않고 명시)
+
+1. **§5.3-7 DM-01 칸 안내 · R14 · M15 · UV-17** — Q-15 (가′) 이후 틀린 «`changed`일 때 DM-01을 건너뜀 / 이 날짜는 판정에 쓰이지 않음»을 정정했다(§5.3-7). 화면은 엔진 상수 `NBL_STATE_HISTORY_REVENUE_START_NOTICE`(이력과 함께 판정)를 그대로 보인다.
+2. **미리보기 «사업용?» 열 → «사업용 토지 요건(건축물·재산세 구분)»** — 이전 구간의 사업용 여부는 core 자체 사업기간(DM-01 · 3호 · 다목 호 인정)이 (가′)로 더해지므로 화면이 «비사업용»이라고 단정하면 틀릴 수 있다. 열 이름을 «사업용 토지 요건»으로 바꾸고 값을 «충족/미충족(건축물·재산세 구분 기준)»으로만 보이며, 마지막 구간은 «결과 계산 후 확정», 표 아래에 «소유기간 전체의 비사업용 여부는 계산 결과에서 확정» 고지를 둔다.
+3. **파일 배치** — 술어 `nblOtherStateHistoryApplies`·`effectiveOtherHasBuildingOf`·`stateHistoryWireFields` = `lib/calc/nbl-other-state-history-scope.ts`(서버 모듈 `non-business-land-request.ts`도 import — React import 금지) · 미리보기 = `lib/calc/nbl-other-state-history-preview.ts` · ⑧ = `lib/calc/transfer-tax-validate-nbl-state-history.ts`(`stateHistoryFloorDate` 포함 — React 컴포넌트를 import하는 `transfer-tax-api-asset-basics`를 쓰므로 서버 모듈과 분리). 위젯 = `OtherLandStateHistorySection.tsx`(`OtherLandDetailSection`에 마운트 1곳).
+4. **노출 술어에 «정밀판정 ON» 포함** — `nblOtherStateHistoryApplies` = `nblUseDetailedJudgment ∧ consumesStateHistory(지목) ∧ ¬연접 다필지`. `validateNblOtherLand`는 정밀판정 ON일 때만 도달하므로 동치이고, 정밀판정 OFF 직접 호출 픽스처가 질문에 막히지 않는다(픽스처 보정 범위가 계획 실측 43건보다 줄었다 — §19.3).
+5. **⑧ ctx** — `validateNblDetailedJudgment`에 4번째 인자(`{ floorDate, skip }`) · `validateNblOtherLand`에 3번째 인자. `skip` = 축 B 둘째 이후 지분 카드(질문이 첫 카드에만 있다). 하한일 = `stateHistoryFloorDate(form, asset)`(번들 최이른 취득일).
+6. **④ 파생 `nblOtherHasBuilding` 덮어쓰기** — `nblOtherStateEventsInUse`일 때만. 숨은 토글값이 모순돼도 사건이 이긴다(⑫·⑭와 같은 `effectiveOtherHasBuilding` leaf). 신축 행의 stale 철거 직전 구분은 와이어에서 `""`로 정규화한다.
+7. **«건축물 유무 직접 읽기 11곳»** — ⑤ 6 · ⑧ 2는 U0에서 `effectiveOtherHasBuildingOf`로 교체. ⑫ 1 · ④ 서버 매퍼 2는 **E2가 이미 `effectiveOtherHasBuilding` leaf로 교체**했다(U0 재확인: `git grep nblOtherHasBuilding` — 남은 직접 읽기는 쓰기 1곳(토글 onChange)과 슬라이스 정의뿐).
+
+### 19.2 확정 문구 (UV-3 포함)
+
+- 신축 행 날짜 hint: 「건축물이 있는 것으로 보는 첫날입니다. 사용승인일(준공일)과 재산세상 건축물로 보는 첫날이 다를 수 있습니다 — 확인 필요.」 · 철거 행: 「건축물이 없어진 첫날(멸실·철거·붕괴일)입니다.」
+- ⑧ #1: `STATE_HISTORY_MODE_REQUIRED_MESSAGE`(`nbl-validation-messages.ts` — ⑧ 전용).
+
+### 19.3 픽스처 보정 (⑧ #1이 모드 `""`을 차단 — 통합 Q-5)
+
+실측 12파일 83건(최초 실행)이 새 ⑧에 반응했다. 의도 보존 보정은 PR 본문 표. E2E 헬퍼 1 + 스펙 3(`transfer-nbl-ptax-basis` · `transfer-nbl-revenue-deemed-common` · `transfer-dead-end-defects` · `nbl2611-c10`)에 «바뀐 적 없습니다»(또는 seed `unchanged`)를 더했다. 모드 `""` 차단 부정 anchor는 별도 유지(`nbl-state-history-u1-validate-parity` #1 · `nbl-state-history-gates`).

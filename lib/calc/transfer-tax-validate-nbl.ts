@@ -101,6 +101,8 @@ export function validateNblDetailedJudgment(
   asset: AssetForm,
   label: string,
   formTransferDate?: string,
+  /** 건축물 이력 검증(⑧ #6 하한일 · 축 B 둘째 이후 지분 카드 건너뜀) — `validateAssetAcquisition`이 폼 맥락으로 계산해 넘긴다. 없으면 하한 규칙은 건너뛴다. */
+  stateHistory?: { floorDate?: string; skip?: boolean },
 ): string | null {
   if (asset.assetKind !== "land" || !asset.nblUseDetailedJudgment) return null;
 
@@ -255,7 +257,7 @@ export function validateNblDetailedJudgment(
   }
   // §168의11①·⑤·⑥ 기타토지 정밀판정 입력 검증 (별도 파일 분리 — 800줄 정책)
   if (asset.nblLandType === "other_land") {
-    const nblOtherErr = validateNblOtherLand(asset, label);
+    const nblOtherErr = validateNblOtherLand(asset, label, { transferDate: formTransferDate, floorDate: stateHistory?.floorDate, skip: stateHistory?.skip });
     if (nblOtherErr) return nblOtherErr;
   }
   // §168의11② 수입금액비율 — 업종 선택 시 당해 수입금액·토지가액 필수

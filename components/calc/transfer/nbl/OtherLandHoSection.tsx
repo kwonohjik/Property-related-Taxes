@@ -15,6 +15,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-scope";
 import { judgeHoRequirements } from "@/lib/tax-engine/non-business-land/other-land-ho-requirements";
 import { OTHER_LAND_HO_IDS, OTHER_LAND_HO_META, type OtherLandHoMeta } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
 import type { NblRelatedBusinessType, ZoneType } from "@/lib/tax-engine/non-business-land/types";
@@ -57,7 +58,7 @@ export function OtherLandHoSection({ asset, onAssetChange }: OtherLandHoSectionP
   const hoFail =
     relatedType === "private_investment_land"
       ? undefined
-      : judgeHoRequirements(relatedType || undefined, { hasBuilding: asset.nblOtherHasBuilding }, asset.nblZoneType as ZoneType).failStep;
+      : judgeHoRequirements(relatedType || undefined, { hasBuilding: effectiveOtherHasBuildingOf(asset) }, asset.nblZoneType as ZoneType).failStep;
   // 면적기준·전용 입력 칸이 없는 호(1호 다·라 · 8 · 9 · 11호 가·나) — 요건 고지를 선택 즉시 보인다. 3호는 조성 완료일 칸이 따로 있고 고지는 결과에 남는다.
   const selfDeclaredHo = meta && meta.verification === "self_declared" ? meta : undefined;
 

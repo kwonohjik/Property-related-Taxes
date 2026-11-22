@@ -6,6 +6,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { OtherLandParcelSection } from "./OtherLandParcelSection";
 import { OtherLandHoSection } from "./OtherLandHoSection";
+import { OtherLandStateHistorySection } from "./OtherLandStateHistorySection";
 import { RevenueWholesaleItemField } from "./RevenueWholesaleItemField";
 import { OtherLandPropertyTaxBasisField } from "./OtherLandPropertyTaxBasisField";
 import { FactoryLandSection } from "./FactoryLandSection";
@@ -31,9 +32,14 @@ import {
 } from "@/components/ui/select";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { nblAcquisitionDateOf } from "@/lib/calc/nbl-unconditional-exemption-status";
+import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-scope";
+import { nblOtherStateEventsInUse } from "@/lib/calc/nbl-other-state-history-scope";
+import { nblOtherStateHistoryApplies } from "@/lib/calc/nbl-other-state-history-scope";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
-import { NBL_PROPERTY_TAX_TYPE_MIXED_NOTICE, NBL_PROPERTY_TAX_TYPE_SOURCE_HINT } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_PROPERTY_TAX_TYPE_MIXED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_PROPERTY_TAX_TYPE_SOURCE_HINT } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_REVENUE_START_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 
 export interface OtherLandDetailSectionProps {
   asset: AssetForm;
@@ -86,6 +92,10 @@ export function OtherLandDetailSection({
   onAssetChange,
   transferDate,
 }: OtherLandDetailSectionProps) {
+  // NBL-STATE-HISTORY-U0 — 양도일 현재 「건축물 있음」: `changed`이면 마지막 사건이 정한다(아래 하위 칸 노출 3곳과 호별·근거 칸이 모두 이 값을 읽는다).
+  const hasBuilding = effectiveOtherHasBuildingOf(asset);
+  // 이력(`changed`)이 판정에 쓰이면 「건축물 있음」 토글은 숨기고(사건이 정한다 — 같은 사실을 두 곳에서 받지 않는다) 「재산세 과세 분류」 라벨에 «양도일 현재»를 붙인다.
+  const stateEventsInUse = nblOtherStateEventsInUse(asset);
   const buildingVal = parseFloat(asset.nblOtherBuildingValue || "0") || 0;
   const landVal = parseFloat(asset.nblOtherLandValue || "0") || 0;
   const isLikelyBareground = landVal > 0 && buildingVal < landVal * 0.02;
@@ -137,16 +147,22 @@ export function OtherLandDetailSection({
         action={<LawArticleModal legalBasis="소득세법 시행령 §168의11①" label="§168의11① 기타토지" />}
       />
 
-      <ToggleCard
-        tone="amber"
-        title="건축물(건물·시설물) 있음"
-        description="건물 없으면 재산세 분류 근거를 확인한 선언만 인정하고, 근거가 없으면 종합합산으로 봅니다. 건물 있으면 시가표준액 2% 비교 후 재산세 유형 적용 — 소득세법 §104의3①4호나목·지방세법 시행령 §101①2호나목"
-        checked={asset.nblOtherHasBuilding}
-        onCheckedChange={(c) => onAssetChange({ nblOtherHasBuilding: c })}
-      />
+      {/* NBL-STATE-HISTORY-U1 — 소유기간 중 건축물 유무 이력(질문 → 사건 행 → 미리보기). 건축물 관련 모든 칸을 지배하는 모드 선택이라 맨 위(영향받는 칸 직전)에 둔다. */}
+      {nblOtherStateHistoryApplies(asset) && <OtherLandStateHistorySection asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />}
+
+      {!stateEventsInUse && (
+        <ToggleCard
+          data-testid="nbl-other-has-building-toggle"
+          tone="amber"
+          title="건축물(건물·시설물) 있음"
+          description="건물 없으면 재산세 분류 근거를 확인한 선언만 인정하고, 근거가 없으면 종합합산으로 봅니다. 건물 있으면 시가표준액 2% 비교 후 재산세 유형 적용 — 소득세법 §104의3①4호나목·지방세법 시행령 §101①2호나목"
+          checked={hasBuilding}
+          onCheckedChange={(c) => onAssetChange({ nblOtherHasBuilding: c })}
+        />
+      )}
 
       {/* NBL2611-V1-OL06 (Q-2 (가)) — 출처 안내 + 혼재 고지서 선택 안내. 판정 로직은 바꾸지 않는다. 라벨은 엔진과 같은 표다(V10-K). */}
-      <FieldCard field="nblOtherPropertyTaxType" label="재산세 과세 분류" hint={NBL_PROPERTY_TAX_TYPE_SOURCE_HINT}>
+      <FieldCard field="nblOtherPropertyTaxType" label={stateEventsInUse ? "재산세 과세 분류 (양도일 현재)" : "재산세 과세 분류"} hint={NBL_PROPERTY_TAX_TYPE_SOURCE_HINT}>
         <Select
           value={asset.nblOtherPropertyTaxType ?? ""}
           onValueChange={(v) => v && onAssetChange({ nblOtherPropertyTaxType: v as PropertyTaxType })}
@@ -173,7 +189,7 @@ export function OtherLandDetailSection({
       {/* NBL2611-V1-A (Q-1) — 재산세 분류 «근거». 선택지·표시 조건은 엔진 술어(`property-tax-basis.ts`)가 정한다. */}
       <OtherLandPropertyTaxBasisField asset={asset} onAssetChange={onAssetChange} />
 
-      {asset.nblOtherHasBuilding && (
+      {hasBuilding && (
         <>
           {/* NBL2611-V10-OL11 — 법문 기준은 「시가표준액」(지방세법 시행령 §101①2호나목)이다. 「가액」은 시가·실거래가로 읽힌다. */}
           <FieldCard label="건축물 시가표준액" unit="원">
@@ -220,7 +236,7 @@ export function OtherLandDetailSection({
       <FactoryLandSection asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />
 
       {/* §168의11⑥ 복합용도 건축물 부속토지 안분 (건축물 존재 시) */}
-      {asset.nblOtherHasBuilding && (
+      {hasBuilding && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 dark:border-emerald-800 p-3 space-y-2">
           <div className="flex items-center gap-2">
             <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">§168의11⑥ 복합용도 건축물 부속토지 안분</p>
@@ -310,6 +326,12 @@ export function OtherLandDetailSection({
               <FieldCard field="nblRevenueCurrentBusinessStartDate" label="당해 사업개시일" hint="당해연도 중 사업을 개시한 경우만 입력. 미입력 시 과세기간개시일(1.1) 또는 당해연도 취득일을 기산일로 자동 적용. 입력하면 직전 과세기간 비율②가 기준에 미달할 때 사업 구간을 「사업개시일 ~ 양도일」로 보아 기간기준(영 §168의6)도 판정합니다.">
                 <DateInput value={asset.nblRevenueCurrentBusinessStartDate} onChange={(v) => onAssetChange({ nblRevenueCurrentBusinessStartDate: v })} />
               </FieldCard>
+              {/* NBL-STATE-HISTORY-U1 (통합 Q-15 (가′)) — 건축물 이력이 판정에 쓰이면 개시일은 이력과 합쳐 판정한다(건너뛰지 않는다). 칸은 숨기지 않는다(복원 보존). */}
+              {stateEventsInUse && (
+                <ToneCard tone="amber">
+                  <p className="text-caption leading-snug" data-testid="nbl-state-history-revenue-start-notice">{NBL_STATE_HISTORY_REVENUE_START_NOTICE}</p>
+                </ToneCard>
+              )}
               {revenuePreview ? (
                 revenuePreview.applied ? (
                   <div className="rounded-md bg-amber-100/60 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-800 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 space-y-0.5">

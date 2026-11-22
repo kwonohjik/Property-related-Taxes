@@ -55,6 +55,7 @@ import { redevLegacyExpenseUnused } from "./redev-legacy-expense-unused";
 import { redevLegacyExpenseUnusedMessage } from "./redev-legacy-expense-unused";
 import { validateGeneralPhdEstimated } from "./transfer-tax-validate-phd-general";
 import { validateNblDetailedJudgment } from "./transfer-tax-validate-nbl";
+import { stateHistoryFloorDate } from "./transfer-tax-validate-nbl-state-history";
 import { validateSplitDirectInputs } from "./transfer-tax-validate-split";
 import { appurtenantZoneRequiredError } from "./transfer-tax-validate-housing-excess";
 import { validateLandPartCause } from "./transfer-tax-validate-split";
@@ -364,7 +365,11 @@ function validateAssetAcquisitionBranches(
    *    NBL 판정은 취득원인·취득모드와 **직교**하므로 여기서 한 번만 검사한다.
    *    (본체는 800줄 정책으로 transfer-tax-validate-nbl.ts에 분리)
    */
-  const nblErr = validateNblDetailedJudgment(asset, label, formTransferDate);
+  // NBL-STATE-HISTORY-U1 — 건축물 이력 ⑧ #6 하한일(축 B 번들은 전 지분 중 가장 이른 취득일) · 축 B 둘째 이후 지분 카드는 질문이 없어 요구하지 않는다(첫 카드에만).
+  const nblErr = validateNblDetailedJudgment(asset, label, formTransferDate, {
+    floorDate: form ? stateHistoryFloorDate(form, asset) : undefined,
+    skip: isFractionalSplitAxis === true && isNonPrimaryAsset,
+  });
   if (nblErr) return nblErr;
 
   // 겸용주택 분리계산 × 이월과세는 지원하지 않는다 — 아래 이월과세 분기가 겸용 분기보다 먼저라 통과한 뒤 서버가 이월과세를 조용히 무시했다

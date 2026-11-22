@@ -18,6 +18,9 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { evaluateUnconditionalExemption } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { buildUncondSourceRecord, nblAcquisitionDateOf } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { nblLandSigunguCodeOf } from "./nbl-land-sigungu";
+import { effectiveOtherHasBuildingOf } from "./nbl-other-state-history-scope";
+import { nblOtherStateEventsInUse } from "./nbl-other-state-history-scope";
+import { stateHistoryWireFields } from "./nbl-other-state-history-scope";
 import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
 import { getLandCategoryGroup } from "@/lib/tax-engine/non-business-land/land-category";
 import { consumesMetropolitanArea } from "@/lib/tax-engine/non-business-land/land-category";
@@ -163,6 +166,14 @@ export function buildNonBusinessLandRaw(
   };
   return {
     ...nblFields,
+    /**
+     * NBL-STATE-HISTORY-U1 — 기타토지 소유기간 중 건축물 이력. **⑤ 렌더·⑧ 검증과 같은 전체 술어**(`nblOtherStateHistoryApplies`)가 거짓이면 `""`·`[]`로 비워 보낸다 —
+     * 연접 다필지로 질문이 숨은 뒤 남은 stale `changed`·잘못된 사건 행이 닿으면 ⑧은 건너뛰는데 ⑫는 400으로 막는 막다른 길이 된다.
+     * 참이고 `unchanged`·`unknown`이면 모드는 유지하고 사건만 비운다(엔진이 고지를 모드로 가른다). `changed`이면 사건 행을 그대로 싣는다.
+     * `nblFields` 스프레드 **뒤**에 둔다(저장된 stale 값을 덮어쓴다). 양도일 현재 「건축물 있음」도 `changed`이면 사건이 정한다(⑫·⑭와 같은 파생 — 숨은 토글값이 모순돼도 사건이 이긴다).
+     */
+    ...stateHistoryWireFields(asset),
+    ...(nblOtherStateEventsInUse(asset) ? { nblOtherHasBuilding: effectiveOtherHasBuildingOf(asset) } : {}),
     /**
      * 공유 지분 — 자산-수준 「공유 지분율」(%) **단일 소스**에서 파생한다 (2026-09-04).
      *
