@@ -71,6 +71,9 @@ describe("컴패니언 입주권 PR-3 V-5 — 일괄 자산 카드의 4호 근�
     const t = screen.getByTestId("companion-right-high-value-note").textContent ?? "";
     expect(t).toContain("12억");
     expect(t).toContain("20.00%");
+    // R-c04-11 — 「…을 넘어 넘는 비율」 중복 표현을 「…을 넘는 부분의 비율」로
+    expect(t).toContain("12억을 넘는 부분의 비율(20.00%)");
+    expect(t).not.toContain("넘어 넘는");
     expect(t).toContain("960,000,000");
     expect(t).toContain("240,000,000");
     expect(t).toContain("1,500,000,000");

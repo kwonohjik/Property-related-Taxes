@@ -21,8 +21,6 @@ import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 import { applyRate } from "@/lib/tax-engine/tax-utils";
 import { donorBuiltPenaltyView, resultDonorBuiltEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
 import { resultSelfBuiltEchoes, selfBuiltPenaltyView } from "@/lib/tax-engine/transfer-tax-self-built-display";
-import {
-} from "@/components/calc/results/transfer/exempt-gross-gain";
 import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -30,8 +28,6 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import type { AggregateMeta } from "./FilingFormTableHelpers";
 import { comparativeTaxView, describeComparativeTax } from "./comparative-tax-display";
-import {
-} from "./FilingFormTableHelpers";
 import {
   buildCalculatedTaxFormula,
   buildDeterminedTaxFormula,

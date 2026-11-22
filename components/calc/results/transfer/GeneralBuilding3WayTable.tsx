@@ -243,15 +243,19 @@ export function GeneralBuilding3WayTable({ aggregated, view }: { aggregated: Agg
             {/* 장기보유공제 */}
             <tr className="border-b border-border/40">
               <td className="py-1 pr-2 text-muted-foreground">장기보유공제</td>
-              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">△{formatKRW(land.longTermHoldingDeduction)}</td>
-              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap text-muted-foreground">
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
+                {land.longTermHoldingDeduction > 0 ? `△${formatKRW(land.longTermHoldingDeduction)}` : "0"}
+              </td>
+              <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
                 {bld1.longTermHoldingDeduction > 0 ? `△${formatKRW(bld1.longTermHoldingDeduction)}` : "0"}
               </td>
               <td className="py-1 pr-2 text-right font-mono tabular-nums whitespace-nowrap">
                 {bld2.longTermHoldingDeduction > 0 ? `△${formatKRW(bld2.longTermHoldingDeduction)}` : "0"}
               </td>
               <td className="py-1 text-right font-mono tabular-nums whitespace-nowrap font-semibold">
-                △{formatKRW(land.longTermHoldingDeduction + bld1.longTermHoldingDeduction + bld2.longTermHoldingDeduction)}
+                {land.longTermHoldingDeduction + bld1.longTermHoldingDeduction + bld2.longTermHoldingDeduction > 0
+                  ? `△${formatKRW(land.longTermHoldingDeduction + bld1.longTermHoldingDeduction + bld2.longTermHoldingDeduction)}`
+                  : "0"}
               </td>
             </tr>
             {/* 양도소득금액 (통산 전) */}

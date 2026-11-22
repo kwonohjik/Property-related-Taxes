@@ -15,6 +15,7 @@ import { splitCarryoverDateText } from "./split-acq-text";
 import type { SplitGainResult } from "@/lib/tax-engine/types/transfer-split-gain.types";
 import type { PreDeemedPurchaseDetail } from "@/lib/tax-engine/types/transfer-pre-deemed-purchase.types";
 import { preDeemedAcqDateNote } from "./pre-deemed-purchase-filing-note";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
 
 interface DateItemsArgs {
   isAggregate: boolean;
@@ -122,22 +123,24 @@ export function setDateAndResidenceItems(items: Map<string, StatementItem>, args
   const lastMoveOut = periods.length > 0
     ? (periods[periods.length - 1].moveOutDate || transferDate)
     : "";
+  // moveOut·moveIn·residencePeriod는 STATEMENT_GROUPS에 없어 지금은 렌더되지 않는다(일자 그룹을 다시 열 때를 위한 근거 표기).
+  // 거주기간의 근거는 장기보유특별공제 표2 대상 요건(시행령 §159의4 「보유기간 중 거주기간이 2년 이상」)이다 — §161은 직전거주주택보유주택 양도소득금액 계산 조문이다.
   items.set("moveOut", {
     label: "퇴거일",
     value: lastMoveOut ? fmtDate(lastMoveOut) : "-",
     formula: "마지막 거주기간 종료일",
-    legalBasis: "소득세법 시행령 §161",
+    legalBasis: TRANSFER.LONG_TERM_DEDUCTION_TABLE2_DECREE,
   });
   items.set("moveIn", {
     label: "입주일",
     value: firstMoveIn ? fmtDate(firstMoveIn) : "-",
     formula: "최초 거주 시작일",
-    legalBasis: "소득세법 시행령 §161",
+    legalBasis: TRANSFER.LONG_TERM_DEDUCTION_TABLE2_DECREE,
   });
   items.set("residencePeriod", {
     label: "거주기간",
     value: fmtPeriod(residenceMs),
     formula: periods.length > 0 ? `${periods.map((pp) => `${fmtDate(pp.moveInDate)}~${fmtDate(pp.moveOutDate || transferDate)}`).join(" + ")} = ${fmtPeriod(residenceMs)}` : `${fmtPeriod(residenceMs)} (직접 입력 · 월 단위)`,
-    legalBasis: "소득세법 §95②·시행령 §161",
+    legalBasis: `소득세법 §95②·${TRANSFER.LONG_TERM_DEDUCTION_TABLE2_DECREE}`,
   });
 }

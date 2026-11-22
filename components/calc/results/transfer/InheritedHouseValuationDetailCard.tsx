@@ -76,7 +76,6 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
           : "applied"
         : "clause_a"
       : "no_clause_b";
-  const convertedApplied = convertedState === "applied";
 
   return (
     <div className="rounded-lg border border-sky-200 bg-sky-50/50 dark:border-sky-800/40 dark:bg-sky-950/20 p-4 space-y-4">
@@ -188,7 +187,7 @@ export function InheritedHouseValuationDetailCard({ detail, acquisitionDetail }:
             </span>
           )}
         </div>
-        <p className={convertedApplied ? "text-muted-foreground" : "text-muted-foreground"}>
+        <p className="text-muted-foreground">
           환산취득가액 = 양도가액 ×{" "}
           <Frac
             top={

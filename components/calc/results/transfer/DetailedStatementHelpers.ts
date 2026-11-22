@@ -183,9 +183,7 @@ export function buildStatementItems(
     }, (pid) => multiFormAssetOf(aggregate?.propertyFormMap?.get(pid), pid));
   // 부담부증여 모드 — 자산별 §159 산식 빌더에 전달할 분모/분자 변수 (perAsset.{land,building}).
   // 비-부담부증여 모드에서는 undefined → 빌더가 일반건물·기본 분기로 진행.
-  const burdenedGift = (result as unknown as {
-    transferBurdenedGiftBreakdown?: import("@/lib/tax-engine/types/transfer-burdened-gift.types").TransferBurdenedGiftBreakdown;
-  }).transferBurdenedGiftBreakdown;
+  const burdenedGift = result.transferBurdenedGiftBreakdown;
 
   // 단건 부담부증여: §159 슬롯 echo에서 읽는다(`contractTotalPrice`가 빈 칸이라 역산하면 음수).
   // 소유자 분리 부담부증여(증여한 파트만 §159)는 분리 열이 있어 `resolveBgSingleDisplay`가 비켜선다 — 증여한 파트의 슬롯 echo로 같은 산식을 그린다.
