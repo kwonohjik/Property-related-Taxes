@@ -21,7 +21,6 @@ import type { MixedUseGainBreakdown } from "@/lib/tax-engine/types/transfer-mixe
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { MIXED_USE } from "@/lib/tax-engine/legal-codes/transfer-mixed-use";
 import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer-house";
-import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import { mixedPartLthdRates } from "@/lib/tax-engine/transfer-tax-mixed-use-inheritance";
 import { mixedPartLthdRateText } from "@/lib/tax-engine/transfer-tax-mixed-use-inheritance";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
@@ -31,6 +30,7 @@ import { mixedSec163_9PartFormula } from "@/components/calc/results/mixed-use/Mi
 import { MixedUseNblSection } from "@/components/calc/results/mixed-use/MixedUseNblSection";
 import { MixedUseTotalTaxSection } from "@/components/calc/results/mixed-use/MixedUseTotalTaxSection";
 import { MixedUseHousingStdSplit } from "@/components/calc/results/mixed-use/MixedUseHousingStdSplit";
+import { MixedUseOneHouseExemptRow } from "@/components/calc/results/mixed-use/MixedUseOneHouseExemptRow";
 import {
   MixedUseApportionSection,
   MixedBuildingExtrasNote,
@@ -241,36 +241,7 @@ export function MixedUseCalculationSections({
       {/* 부담부증여 — 양도 없는 쪽은 「양도 없음」(비과세 아님)으로 그린다 */}
       {bg && <MixedBgNoTransferBanner bg={bg} />}
       {/* 1세대 1주택 비과세 적용 여부 표시 — 주택분 양도가 없으면 판정 대상이 아니라 그리지 않는다 */}
-      {bgHousingOn && (
-      <div
-        className={`rounded-md px-3 py-2 text-xs border ${
-          breakdown.calculationRoute.highValueRule === "non_one_house_full_taxation"
-            ? "bg-amber-50/60 border-amber-200 text-amber-900 dark:text-amber-200 dark:bg-amber-950/40"
-            : "bg-emerald-50/60 border-emerald-200 text-emerald-900 dark:text-emerald-200 dark:bg-emerald-950/40"
-        }`}
-      >
-        <span className="font-semibold">
-          1세대 1주택 비과세:{" "}
-          {breakdown.calculationRoute.highValueRule === "non_one_house_full_taxation"
-            ? unregistered
-              ? `미적용 (미등기 양도자산 — 비과세 배제(${TRANSFER.EXEMPTION_UNREGISTERED_EXCLUSION}) · 장기보유특별공제·기본공제 배제)`
-              : surchargeLthdExclusion
-                ? "미적용 (전액 과세 · 다주택 중과 대상 — 주택분 장기보유특별공제 배제)" // R-c02-07 — 아래 장특 행과 같은 엔진 echo
-                : "미적용 (전액 과세 + 표1 공제)"
-            : breakdown.calculationRoute.highValueRule === "below_threshold_exempt"
-              ? h.laterLandExemptExcluded
-                ? "적용 (12억 이하 비과세 — 나중에 취득한 부수토지분은 보유요건 미달로 과세)"
-                : "적용 (12억 이하 비과세)"
-              : h.laterLandExemptExcluded
-                ? "적용 (12억 초과 안분 과세 — 나중에 취득한 부수토지분은 보유요건 미달로 전액 과세)"
-                : "적용 (12억 초과 안분 과세)"}
-        </span>
-        {/* 비과세 근거 — 일반 주택 결과의 `exemptReason`에 해당(`mixed-use-exempt-basis-row.plan.md`). 엔진 echo 그대로 싣는다. */}
-        {breakdown.calculationRoute.highValueRule !== "non_one_house_full_taxation" && h.exemptBasis && (
-          <p className="mt-1" data-testid="mixed-use-exempt-basis">근거: {h.exemptBasis}</p>
-        )}
-      </div>
-      )}
+      {bgHousingOn && <MixedUseOneHouseExemptRow breakdown={breakdown} unregistered={unregistered} />}
 
       {/* 계산 섹션 전체 접기/펼치기 */}
       <div className="flex justify-end">

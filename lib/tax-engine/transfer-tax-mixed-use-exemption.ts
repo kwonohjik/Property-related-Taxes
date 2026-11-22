@@ -54,6 +54,7 @@ import { resolvePopulationDecline71_2 } from "./transfer-reductions/population-d
 import { resolveHouseCountExclusion, resolveSpecialHouseExclusions } from "./transfer-reductions";
 import type { HouseCountExclusionDetail } from "./transfer-reductions/unsold-98-9";
 import { resolveArticle89Clause2, type Article89Clause2Result } from "./transfer-tax-89-2-exclusion";
+import { article89ExceptionApplied } from "./transfer-tax-89-2-consequences";
 import { mixedUseUnmetNotices } from "./transfer-tax-mixed-use-unmet-notices";
 import { mixedUseRequirementReviewNotice } from "./transfer-tax-mixed-use-unmet-notices";
 import { mixedUseResidenceYearsLabel } from "./transfer-tax-mixed-use-unmet-notices";
@@ -113,6 +114,8 @@ export function judgeMixedUseOneHouseExemption(
   isOneHouseExempt: boolean;
   /** 비과세 근거 문구(`mixedUseExemptBasis`) — 비과세(`isOneHouseExempt`)일 때만. */
   exemptBasis: string | undefined;
+  /** §89② 예외(영 §156의2·§156의3)로 받은 비과세의 표시 줄 — 단건·판정 메뉴와 같은 leaf. 비과세(`isOneHouseExempt`)일 때만. */
+  article89ExceptionApplied: { label: string; legalBasis: string[] } | undefined;
   /** 주택보다 나중에 취득한 부수토지가 보유요건(영 §154①) 미만 — 그 토지분은 비과세에서 뺀다(분리취득 G-3과 같은 술어). */
   laterLandExemptExcluded: boolean;
   /** 영 §167의10①15호 ① 요소 — §155①④⑤ 의제 또는 §155②③ 상속주택 경로. */
@@ -655,6 +658,8 @@ export function judgeMixedUseOneHouseExemption(
     isUnregistered,
     isOneHouseExempt,
     exemptBasis,
+    // 겸용 근거 문구에는 §156의2⑤ 같은 §89② 예외 조문이 들어가지 않는다 — 중복 제거 목록은 비운다.
+    article89ExceptionApplied: article89ExceptionApplied(article89Clause2, isOneHouseExempt, []),
     laterLandExemptExcluded,
     // E-14d — §155②③(상속주택 + 일반주택)은 주택 수가 1로 줄어 §155①④⑤ 의제 분기에 걸리지 않는다
     //   ⇒ 단건(`resolveSurchargeDeemedOneHouse`)과 같은 술어로 경로를 연다.
