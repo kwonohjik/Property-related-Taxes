@@ -18,7 +18,11 @@ import { reductionEligibleIncome } from "@/components/calc/results/transfer/redu
 import { incomeDeductionReducible } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { incomeDeductionRuralSurtax } from "@/components/calc/results/transfer/reduction-eligible-income";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
-import { assetTaxableGain, sumAssetGains } from "@/components/calc/results/transfer/exempt-gross-gain";
+import { sumFilingStageGains } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { filingTaxableGainOf } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { filingNontaxableIncomeOf } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { aggregateNontaxableIncomeLabel } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import { isGbPartCard } from "@/components/calc/results/transfer/gb-part-card";
 import { multiFormPropertyIdOf } from "@/components/calc/results/transfer/multi-result-groups";
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
@@ -459,15 +463,18 @@ export function TransferMultiSection({ r, selectedSectionIds, codeRows }: { r: R
   // 농특세 총액 echo가 정본(화면 합산 신고서 표 총액 칸과 같다) — detail 합은 총액 echo가 없는 옛 저장 결과 전용 폴백.
   aggRuralSurtax = num(r.ruralSurtax) ?? aggRuralSurtax;
   // G2-6 — 부분 비과세(고가주택·§155⑳)가 있으면 `totalTransferGain`은 안분 전 값이라 정본 leaf 합으로 3행을 낸다(요약 카드와 같은 규칙).
-  const aggGains = sumAssetGains(
-    props.map((p) => ({
-      isExempt: bool(p.isExempt),
-      exemptGrossGain: num(p.exemptGrossGain) as number | undefined,
-      transferGain: (num(p.transferGain) ?? 0) as number,
-      income: (num(p.income) ?? 0) as number,
-      longTermHoldingDeduction: (num(p.longTermHoldingDeduction) ?? 0) as number,
-    })),
-  );
+  //   자산 열 leaf는 화면 합산 신고서와 같다 — §155⑳ 부분과세 자산은 비과세가 양도소득금액 단계(R-c06-04). 판정에 쓰는 표지·시나리오만 더 싣는다.
+  const stageOf = (p: R) => ({
+    isExempt: bool(p.isExempt),
+    exemptGrossGain: num(p.exemptGrossGain) as number | undefined,
+    transferGain: (num(p.transferGain) ?? 0) as number,
+    income: (num(p.income) ?? 0) as number,
+    longTermHoldingDeduction: (num(p.longTermHoldingDeduction) ?? 0) as number,
+    rentalHousingApplied: bool(p.rentalHousingApplied),
+    rentalHousingScenarioId: str(p.rentalHousingScenarioId),
+    splitDetail: p.splitDetail,
+  }) as unknown as PerPropertyBreakdown;
+  const aggGains = sumFilingStageGains(props.map(stageOf));
   const totalIncomeAfterOffset = (num(r.totalIncomeAfterOffset) ?? 0) as number;
   // D-14 — 세액감면분(aggReducibleIncome)은 소득금액에서 빼지 않는다(위 단건과 같은 근거)
   const incomeAmountAfter = Math.max(0, totalIncomeAfterOffset - aggNew993Reducible);
@@ -497,8 +504,10 @@ export function TransferMultiSection({ r, selectedSectionIds, codeRows }: { r: R
         )}
         {num(r.totalLongTermHoldingDeduction) !== undefined && (r.totalLongTermHoldingDeduction as number) > 0 && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제</Text><Text style={s.val}>- {fmt(r.totalLongTermHoldingDeduction)}</Text></View>)}
         {codeLines("장기보유특별공제 코드")}
-        <View style={s.row}><Text style={s.lbl}>통산 후 양도소득금액</Text><Text style={s.val}>{fmt(totalIncomeAfterOffset)}</Text></View>
+        {/* §155⑳ 부분과세 자산의 양도소득금액은 비과세 양도소득금액 차감 전이다(화면 합산 신고서·요약 카드와 같은 축) — 그 몫은 아래 행에서 뺀다. */}
+        <View style={s.row}><Text style={s.lbl}>통산 후 양도소득금액</Text><Text style={s.val}>{fmt(totalIncomeAfterOffset + aggGains.nontaxableIncome)}</Text></View>
         {(num(r.unusedLoss) ?? 0) > 0 && (<View style={s.row}><Text style={s.lblSub}>소멸 차손 (이월 불인정)</Text><Text style={s.val}>- {fmt(r.unusedLoss)}</Text></View>)}
+        {aggGains.nontaxableIncome > 0 && (<View style={s.row}><Text style={s.lblSub}>{aggregateNontaxableIncomeLabel(props.map(stageOf))}</Text><Text style={s.val}>- {fmt(aggGains.nontaxableIncome)}</Text></View>)}
         <View style={s.row}><Text style={s.lbl}>세액감면대상금액</Text><Text style={s.val}>{aggReducibleIncome > 0 ? fmt(aggReducibleIncome) : "0"}</Text></View>
         <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{aggNew993Reducible > 0 ? fmt(aggNew993Reducible) : "0"}</Text></View>
         {codeLines("감면종류·감면율")}
@@ -537,13 +546,9 @@ export function TransferMultiSection({ r, selectedSectionIds, codeRows }: { r: R
              * 양도소득금액」이 된다. 역산은 화면 아코디언·신고서 어댑터와 같은 leaf다(#019).
              */
             const propTransferGain = (num(p.transferGain) ?? 0) as number;
-            const propTaxableGain = assetTaxableGain({
-              isExempt: bool(p.isExempt),
-              exemptGrossGain: num(p.exemptGrossGain) as number | undefined,
-              transferGain: propTransferGain,
-              income: propIncome,
-              longTermHoldingDeduction: (num(p.longTermHoldingDeduction) ?? 0) as number,
-            });
+            // 자산 열 leaf — §155⑳ 부분과세 자산은 단건 규약(과세대상 = 전체 양도차익 · 양도소득금액은 비과세 양도소득금액 차감 전 · R-c06-04).
+            const propTaxableGain = filingTaxableGainOf(stageOf(p));
+            const propNontaxableIncome = filingNontaxableIncomeOf(stageOf(p));
             const propReducibleIncome = reductionEligibleIncome(
               p.reductionType as string | undefined,
               propIncome,
@@ -586,9 +591,10 @@ export function TransferMultiSection({ r, selectedSectionIds, codeRows }: { r: R
                     <View style={s.row}><Text style={s.lbl}>전체 양도차익</Text><Text style={s.val}>{fmt(p.transferGain)}</Text></View>
                     {propTaxableGain !== propTransferGain && (<View style={s.row}><Text style={s.lblSub}>과세대상 양도차익</Text><Text style={s.val}>{fmt(propTaxableGain)}</Text></View>)}
                     {(num(p.longTermHoldingDeduction) ?? 0) > 0 && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제</Text><Text style={s.val}>- {fmt(p.longTermHoldingDeduction)}</Text></View>)}
-                    <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(propIncome)}</Text></View>
+                    <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(propIncome + propNontaxableIncome)}</Text></View>
                     {(num(p.lossOffsetFromSameGroup) ?? 0) > 0 && (<View style={s.row}><Text style={s.lblSub}>차손 통산 (동일그룹, §102②)</Text><Text style={s.val}>- {fmt(p.lossOffsetFromSameGroup)}</Text></View>)}
                     {(num(p.lossOffsetFromOtherGroup) ?? 0) > 0 && (<View style={s.row}><Text style={s.lblSub}>차손 통산 (타군안분, 시행령 §167의2)</Text><Text style={s.val}>- {fmt(p.lossOffsetFromOtherGroup)}</Text></View>)}
+                    {propNontaxableIncome > 0 && (<View style={s.row}><Text style={s.lblSub}>{nontaxableIncomeLabel(str(p.rentalHousingScenarioId))}</Text><Text style={s.val}>- {fmt(propNontaxableIncome)}</Text></View>)}
                     <View style={s.row}><Text style={s.lbl}>세액감면대상금액</Text><Text style={s.val}>{propReducibleIncome > 0 ? fmt(propReducibleIncome) : "0"}</Text></View>
                     <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{propNew993Reducible > 0 ? fmt(propNew993Reducible) : "0"}</Text></View>
                     <View style={s.row}><Text style={s.lbl}>감면후 소득금액</Text><Text style={s.val}>{fmt(propIncomeAfter)}</Text></View>

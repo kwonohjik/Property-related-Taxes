@@ -19,6 +19,7 @@ import { effectiveGrossGain } from "./exempt-gross-gain";
 import { assetExemptGain } from "./exempt-gross-gain";
 import { assetTaxableGain } from "./exempt-gross-gain";
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
+import { findStepByLabel } from "./DetailedStatementLeaf";
 
 export interface RhPartialBasis {
   /** 전체(12억 안분 전) 양도차익 */
@@ -54,6 +55,24 @@ export function filingNontaxableIncomeOf(p: PerPropertyBreakdown): number {
 }
 
 /**
+ * 다건 요약 카드·PDF 합산 표 공용 — 자산 열 leaf(`effectiveGrossGain`·`filingExemptGainOf`·`filingTaxableGainOf`·`filingNontaxableIncomeOf`)의 합.
+ * 합산 신고서 합계 열과 같은 축이다(§155⑳ 부분과세 자산은 비과세가 양도소득금액 단계 · R-c06-04). 그 밖 자산은 `sumAssetGains`와 같다.
+ */
+export function sumFilingStageGains(properties: readonly PerPropertyBreakdown[]): { gross: number; exempt: number; taxable: number; nontaxableIncome: number } {
+  let gross = 0;
+  let exempt = 0;
+  let taxable = 0;
+  let nontaxableIncome = 0;
+  for (const p of properties) {
+    gross += effectiveGrossGain(p);
+    exempt += filingExemptGainOf(p);
+    taxable += filingTaxableGainOf(p);
+    nontaxableIncome += filingNontaxableIncomeOf(p);
+  }
+  return { gross, exempt, taxable, nontaxableIncome };
+}
+
+/**
  * 합산 표 「비과세 양도소득금액」 행 라벨 — 단건과 같은 `nontaxableIncomeLabel`(「(소령 §161①)」은 B에만 · A는 §155⑳ 전단 → §154①).
  * 값이 있는 자산이 없으면 종전 라벨, 시나리오가 둘 이상 섞이면 조문 없는 라벨이다.
  */
@@ -61,6 +80,16 @@ export function aggregateNontaxableIncomeLabel(properties: readonly PerPropertyB
   const labels = new Set(properties.filter((p) => rhPartialBasis(p)).map((p) => nontaxableIncomeLabel(p.rentalHousingScenarioId)));
   if (labels.size === 0) return "비과세 양도소득금액 (소령 §161①)";
   return labels.size === 1 ? [...labels][0] : nontaxableIncomeLabel(undefined);
+}
+
+/**
+ * 합산 명세서 「비과세 양도소득금액」 행 법령 근거 — 단건과 같은 소스다. 단건 명세서는 엔진 비과세 양도소득금액 step의 `legalBasis`를 쓰고,
+ * 그 값은 판정 조문(`rentalHousingBasisOf(eligibility.laws)` — §155⑳ 또는 §154⑩ 상수)이다(`transfer-tax-rental-housing-step.ts`).
+ * 부분과세 자산의 근거가 하나로 모이면 그 조문, 자산이 없거나 step이 없는 구 이력·근거가 둘 이상 섞이면 undefined(호출부 종전 폴백).
+ */
+export function aggregateNontaxableIncomeBasis(properties: readonly PerPropertyBreakdown[]): string | undefined {
+  const bases = new Set(properties.filter((p) => rhPartialBasis(p)).map((p) => findStepByLabel(p.steps, "비과세 양도소득금액")?.legalBasis));
+  return bases.size === 1 ? [...bases][0] : undefined;
 }
 
 /** 과세대상 양도차익 = 전체 양도차익 (단건 명세서 §155⑳ 문구와 같다) */

@@ -267,6 +267,7 @@ export function buildAggregateRows(
     // 자산별 신고서 어댑터(`MultiTransferPropertyBreakdown`)와 **같은 leaf**를 쓴다 —
     // 두 표가 같은 자산을 다르게 표시하던 것을 막는다(#019).
     // R-c06-04 — §155⑳ 부분과세 자산은 단건 신고서 규약(비과세는 양도소득금액 단계 — 비과세 양도차익 0 · 과세대상 = 전체 양도차익)이다.
+    //   어댑터도 같은 판정(`rhPartialBasis`)으로 그 자산을 단건 `isRH` 분기에 태우고 비과세 양도소득금액은 `filingNontaxableIncomeOf`를 싣는다.
     const transferGain = effectiveGrossGain(p);
     const longTermDed = p.longTermHoldingDeduction;
     const taxableGainOfAsset = filingTaxableGainOf(p);

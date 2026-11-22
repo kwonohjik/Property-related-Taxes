@@ -19,6 +19,8 @@ import { buildAggregateRows } from "@/components/calc/results/transfer/FilingFor
 import { buildRows } from "@/components/calc/results/transfer/FilingFormTableHelpers";
 import { buildStatementItems } from "@/components/calc/results/transfer/DetailedStatementHelpers";
 import { aggregateNontaxableIncomeLabel } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { aggregateNontaxableIncomeBasis } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { TRANSFER_RENTAL_HOUSING } from "@/lib/tax-engine/legal-codes/transfer-rental-housing";
 
 vi.mock("@/lib/db/tax-rates", async (io) => {
   const a = await io<typeof import("@/lib/db/tax-rates")>();
@@ -151,6 +153,32 @@ describe("합산 신고서 — §155⑳ 부분과세 자산 열은 단건 규약
     expect(items.get("nontaxableIncome")!.label).toBe("비과세 양도소득금액");
     expect(String(items.get("nontaxableIncome")!.formula)).toContain("= 422,400,000");
   });
+
+  it("🔑 감면후 소득금액 산식 — 위 행 양도소득금액(668,000,000)이 비과세 차감 전이므로 비과세 양도소득금액을 산식에 적는다(값 245,600,000 불변)", async () => {
+    const { items } = await aggregateTable(true);
+    expect(items.get("incomeAmountAfter")!.value).toBe(245_600_000);
+    expect(items.get("incomeAmountAfter")!.formula).toBe("자산별 (양도소득금액 − 비과세 양도소득금액 − 소득금액 감면대상) 합계 = 245,600,000");
+  });
+
+  it("짝 — §155⑳ 부분과세 자산이 없으면 종전 산식", async () => {
+    const { items } = await aggregateTable(false);
+    expect(items.get("incomeAmountAfter")!.formula).toBe(`자산별 (양도소득금액 − 소득금액 감면대상) 합계 = ${(items.get("incomeAmountAfter")!.value ?? 0).toLocaleString()}`);
+  });
+
+  it("🔑 비과세 양도소득금액 행 법령 근거 — 단건과 같은 소스(엔진 step의 판정 조문 §155⑳) · 시나리오 A에 §161을 적지 않는다(종전 고정 «소득세법 시행령 §161·§155⑳»)", async () => {
+    const { items, agg } = await aggregateTable(true);
+    expect(items.get("nontaxableIncome")!.legalBasis).toBe(TRANSFER_RENTAL_HOUSING.PIT_RD_155_20);
+    const s = form(true, false);
+    const rs = await runCalc(s);
+    const single = buildStatementItems(rs.json.data.result, s, s.assets[0], undefined, undefined);
+    expect(items.get("nontaxableIncome")!.legalBasis).toBe(single.get("nontaxableIncome")!.legalBasis);
+    expect(agg.properties[0].rentalHousingScenarioId).toMatch(/^RH-A/);
+  });
+
+  it("짝 — §155⑳ 부분과세 자산이 없으면 종전 폴백 근거", async () => {
+    const { items } = await aggregateTable(false);
+    expect(items.get("nontaxableIncome")!.legalBasis).toBe("소득세법 시행령 §161·§155⑳");
+  });
 });
 
 describe("aggregateNontaxableIncomeLabel — 단건 `nontaxableIncomeLabel` 규칙", () => {
@@ -165,5 +193,24 @@ describe("aggregateNontaxableIncomeLabel — 단건 `nontaxableIncomeLabel` 규�
     expect(aggregateNontaxableIncomeLabel([rh("RH-A2")])).toBe("비과세 양도소득금액");
     expect(aggregateNontaxableIncomeLabel([rh(undefined)])).toBe("비과세 양도소득금액");
     expect(aggregateNontaxableIncomeLabel([rh("RH-B1"), rh("RH-B2")])).toBe("비과세 양도소득금액");
+  });
+});
+
+describe("aggregateNontaxableIncomeBasis — 자산 엔진 step의 근거(단건과 같은 소스)", () => {
+  const rh = (basis?: string) =>
+    ({
+      rentalHousingApplied: true, isExempt: false, transferGain: 1_200_000_000, longTermHoldingDeduction: 672_000_000, income: 105_600_000,
+      steps: basis ? [{ label: "비과세 양도소득금액", formula: "", amount: 422_400_000, legalBasis: basis }] : [],
+    }) as unknown as PerPropertyBreakdown;
+  const plain = { isExempt: false, transferGain: 200_000_000, longTermHoldingDeduction: 60_000_000, income: 140_000_000, steps: [] } as unknown as PerPropertyBreakdown;
+  it("근거가 하나면 그 조문 — §155⑳ · §154⑩", () => {
+    expect(aggregateNontaxableIncomeBasis([rh(TRANSFER_RENTAL_HOUSING.PIT_RD_155_20), plain])).toBe(TRANSFER_RENTAL_HOUSING.PIT_RD_155_20);
+    expect(aggregateNontaxableIncomeBasis([rh(TRANSFER_RENTAL_HOUSING.PIT_RD_154_10)])).toBe(TRANSFER_RENTAL_HOUSING.PIT_RD_154_10);
+  });
+  it("부분과세 자산 없음 · step 없는 구 이력 · 근거 혼재 → undefined(호출부 종전 폴백)", () => {
+    expect(aggregateNontaxableIncomeBasis([plain])).toBeUndefined();
+    expect(aggregateNontaxableIncomeBasis([rh(undefined)])).toBeUndefined();
+    expect(aggregateNontaxableIncomeBasis([rh(TRANSFER_RENTAL_HOUSING.PIT_RD_155_20), rh(TRANSFER_RENTAL_HOUSING.PIT_RD_154_10)])).toBeUndefined();
+    expect(aggregateNontaxableIncomeBasis([rh(TRANSFER_RENTAL_HOUSING.PIT_RD_155_20), rh(undefined)])).toBeUndefined();
   });
 });

@@ -158,7 +158,8 @@ export function assetExemptGain(p: Parameters<typeof assetTaxableGain>[0]): numb
 }
 
 /**
- * 다건 합산 표시용 — 자산별 gross / 비과세 / 과세대상 양도차익의 합 (요약 카드·PDF 합산 표 공용).
+ * 다건 합산 표시용 — 자산별 gross / 비과세 / 과세대상 양도차익의 합.
+ * 다건 요약 카드·PDF 합산 표는 §155⑳ 부분과세 자산을 단건 규약으로 적는 `sumFilingStageGains`(`DetailedStatementRhPartialFormulas`)를 쓴다(R-c06-04).
  *
  * `result.totalTransferGain`(= 자산별 `transferGain` 합)은 12억 초과 고가주택·§155⑳에서 **안분 전** 값이라
  * 「양도차익 − 비과세 = 과세대상」「과세대상 − 장특 = 양도소득금액」 행 검산이 깨진다(G2-6).
