@@ -8,8 +8,6 @@
 import { useState, useMemo } from "react";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import { NavButton, CtaButton } from "@/components/calc/shared/WizardNav";
-// LawArticleModal은 EngineStepsSubToggle로 이전되었으나, 감면 상세 카드 인용 링크화를 위해 재도입 (2026-06-15)
-import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { formatKRW, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { AmendmentResultCard } from "@/components/calc/results/transfer/AmendmentResultCard";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";

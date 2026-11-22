@@ -36,11 +36,12 @@ import {
   type BgOwnedPart,
 } from "@/lib/calc/bg-owner-split-result";
 
-const SELECTED_LABEL: Record<string, string> = {
+// `satisfies`로 키를 가둔다 — selectedMode union에 값이 늘 때 여기서 컴파일 오류가 나야 라벨이 빈칸으로 렌더되지 않는다.
+const SELECTED_LABEL = {
   supplementary: "보충적평가 (상증법 §61)",
   mortgage: "담보평가 (상증법 §66)",
   rental: "임대평가 (상증법 §61⑤ · 시행령 §50⑦)",
-};
+} satisfies Record<TransferBurdenedGiftBreakdown["sangjeungbeopValuation"]["selectedMode"], string>;
 
 // `satisfies`로 키 커버리지를 가둔다 — 방식 union에 값이 늘 때 여기서 컴파일 오류가 나야 「기준시가 안분」으로 조용히 떨어지지 않는다.
 const ACQ_METHOD_LABEL = {
@@ -207,7 +208,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
             <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.sangjeungbeopValuation.rental)}</td>
           </tr>
           <tr className="border-t border-fuchsia-300 font-semibold">
-            <td className="py-1 pr-2">Max 채택 (양도세): {SELECTED_LABEL[bg.sangjeungbeopValuation.selectedMode]}</td>
+            <td className="py-1 pr-2">가장 큰 금액 채택 (양도세): {SELECTED_LABEL[bg.sangjeungbeopValuation.selectedMode]}</td>
             <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.sangjeungbeopValuation.max)}</td>
           </tr>
           {bg.giftValuation && bg.giftValuation.max !== bg.sangjeungbeopValuation.max && (
@@ -222,7 +223,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
                 <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.giftValuation.supplementary)}</td>
               </tr>
               <tr className="border-t border-fuchsia-300 font-semibold">
-                <td className="py-1 pr-2">Max 채택 (증여세): {SELECTED_LABEL[bg.giftValuation.selectedMode]}</td>
+                <td className="py-1 pr-2">가장 큰 금액 채택 (증여세): {SELECTED_LABEL[bg.giftValuation.selectedMode]}</td>
                 <td className="text-right font-mono tabular-nums whitespace-nowrap">{fmt(bg.giftValuation.max)}</td>
               </tr>
             </>
@@ -432,7 +433,7 @@ export function BurdenedGiftDetailCard({ breakdown: bg, propertyType, warnings, 
         </tbody>
       </table>
       <p className="text-xs text-fuchsia-700 mt-2 dark:text-fuchsia-400">
-        ※ 자산별 양도가액·취득가액은 위 Max 평가액을 분모로 채무비율 안분 (소령 §159 ① 1호·2호).
+        ※ 자산별 양도가액·취득가액은 위에서 채택한 가장 큰 평가액을 분모로 채무비율 안분 (소령 §159 ① 1호·2호).
         증여세는 무상이전분에 대해 수증자가 별도 신고.
       </p>
       {mixedBundleNote && (

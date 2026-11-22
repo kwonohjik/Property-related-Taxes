@@ -17,6 +17,8 @@ function Part({ title, standardLabel, detail }: { title: string; standardLabel: 
     { label: "보상액 총액", value: detail.compensationTotal },
     { label: "보상산정 기초 기준시가 총액", value: detail.compensationBasisTotal },
   ];
+  // 두 후보가 같은 금액이면 두 행 모두 「적용」으로 표시되므로 동일 금액임을 함께 적는다.
+  const tie = rows.filter((x) => x.value === detail.chosen).length > 1;
   return (
     <div className="rounded-md border border-amber-200 bg-amber-100/40 p-2.5 dark:border-amber-900/50 dark:bg-amber-950/30">
       <p className="text-caption font-semibold text-amber-800 dark:text-amber-300">{title}</p>
@@ -28,7 +30,7 @@ function Part({ title, standardLabel, detail }: { title: string; standardLabel: 
               <tr key={r.label} className={isChosen ? "font-semibold text-amber-900 dark:text-amber-200" : ""}>
                 <td className="py-0.5">
                   {r.label}
-                  {isChosen && <span className="ml-1 text-xs">← 적용(최솟값)</span>}
+                  {isChosen && <span className="ml-1 text-xs">← 적용(최솟값{tie ? " · 동일 금액" : ""})</span>}
                 </td>
                 <td className="py-0.5 text-right font-mono tabular-nums whitespace-nowrap">{formatKRW(r.value)}</td>
               </tr>

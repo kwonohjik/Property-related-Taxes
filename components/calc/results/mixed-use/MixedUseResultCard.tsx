@@ -25,8 +25,6 @@ import {
   MIXED_USE_PRINT_SECTIONS,
   type MixedUsePrintSectionId,
 } from "@/lib/print/mixed-use-print-sections";
-import {
-} from "@/components/calc/results/mixed-use/MixedUseResultCardParts";
 import { MixedUseCalculationSections } from "@/components/calc/results/mixed-use/MixedUseCalculationSections";
 import { MixedUseBurdenedGiftDetailCard } from "@/components/calc/results/mixed-use/MixedUseBurdenedGiftDetailCard";
 import {

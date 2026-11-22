@@ -54,7 +54,7 @@ export function PrintSelectionPanel({
   availableIds,
   onChange,
   onPrintPdf,
-  pdfReady = false,
+  pdfReady = true,
   pdfBusy = false,
 }: {
   /** 세목별 출력 항목 레지스트리 (예: INHERITANCE_PRINT_SECTIONS) */
@@ -65,7 +65,7 @@ export function PrintSelectionPanel({
   onChange: (next: Set<string>) => void;
   /** 선택 항목 서버 PDF 다운로드 (PR-2). 미지정 시 PDF 버튼 숨김 */
   onPrintPdf?: (pdfSections: string[]) => void;
-  /** 로그인+저장 완료 — PDF 다운로드 가능 여부 */
+  /** PDF 다운로드 가능 여부 (기본 true — PDF는 클라이언트에서 생성하므로 로그인·저장이 필요 없다) */
   pdfReady?: boolean;
   pdfBusy?: boolean;
 }) {
@@ -155,11 +155,9 @@ export function PrintSelectionPanel({
               onClick={() => onPrintPdf(pdfSelected)}
               disabled={!pdfReady || pdfBusy || pdfSelected.length === 0}
               title={
-                !pdfReady
-                  ? "로그인 후 또는 화면 인쇄(PDF 저장)로 이용하세요"
-                  : pdfSelected.length === 0
-                    ? "PDF로 출력할 수 있는 항목을 선택하세요"
-                    : undefined
+                pdfSelected.length === 0
+                  ? "PDF로 출력할 수 있는 항목을 선택하세요"
+                  : undefined
               }
               className="inline-flex items-center gap-1.5 rounded-md border border-sky-600 px-3.5 py-2 text-sm font-medium text-sky-700 dark:text-sky-300 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -179,11 +177,6 @@ export function PrintSelectionPanel({
           </button>
         </div>
       </div>
-      {onPrintPdf && !pdfReady && (
-        <p className="mt-2 text-caption text-sky-700 dark:text-sky-400">
-          ※ 서버 PDF는 로그인·저장 후 이용할 수 있습니다. 비로그인 시 “선택 항목 인쇄”의 PDF 저장을 이용하세요.
-        </p>
-      )}
     </div>
   );
 }
