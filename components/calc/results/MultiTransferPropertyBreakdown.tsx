@@ -39,6 +39,13 @@ import { isPhdApartment } from "@/components/calc/results/transfer/phd-housing-t
 import { nblExclusionBadgeText } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
 import { bgOwnedPartOfResult } from "@/lib/calc/bg-owner-split-result";
 import { applyRate } from "@/lib/tax-engine/tax-utils";
+import { rhPartialBasis } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { filingNontaxableIncomeOf } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { filingTaxableGainOf } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { findStepByLabel } from "@/components/calc/results/transfer/DetailedStatementLeaf";
+import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
+import { reductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
+import type { RentalHousingExceptionResult } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
 
 
 /**
@@ -67,6 +74,13 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
    */
   // 엔진(`transfer-tax-finalize.ts` STEP 10 · 집계 M-10)과 같은 정수 헬퍼 — 인라인 double 곱 금지(R-c01-12).
   const localIncomeTax = applyRate(determinedTax + b.penaltyTax, 0.1);
+  /**
+   * §155⑳ 부분과세 자산(`rhPartialBasis` — 합산 신고서 자산 열과 같은 판정)은 단건 신고서 규약으로 적는다(R-c06-04 · 사용자 결정 2026-11-22 a) —
+   * 단건 `buildRows`의 `isRH` 분기를 태운다: 비과세 양도차익 0 · 과세대상 = 전체 양도차익 · 양도소득금액 = 전체 양도차익 − 장특 ·
+   * 비과세 양도소득금액 = `filingNontaxableIncomeOf`. 그 분기에서 `taxableGain`은 단건 엔진처럼 **과세대상 양도소득금액**(= `income`)이다.
+   * 분기가 읽는 특례 결과 필드는 `applied`·`scenarioId`뿐이다(`appliedTable` 없음 = 종전 장특 분해 · 파트 열은 `splitDetail`이 없어 타지 않는다).
+   */
+  const rhBasis = rhPartialBasis(b);
   return {
     isExempt: b.isExempt,
     exemptReason: b.exemptReason,
@@ -96,7 +110,13 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
      *   과세대상·양도소득금액이 부풀었다(#019). 같은 화면의 합산 서식은 정확히 역산하고
      *   있었으므로 두 표가 어긋났다. 이제 같은 leaf를 부른다.
      */
-    taxableGain: assetTaxableGain(b),
+    taxableGain: rhBasis ? b.income : assetTaxableGain(b),
+    ...(rhBasis
+      ? {
+          rentalHousingExceptionDetail: { applied: true, scenarioId: b.rentalHousingScenarioId } as RentalHousingExceptionResult,
+          nontaxableGainAmount: filingNontaxableIncomeOf(b),
+        }
+      : {}),
     // 자산 echo(`splitDetail`·`filingDisplay`)에서 파생 — 종전 상수 `false`는 환산 자산도 실가로 읽혔다(G-4).
     // `estimatedBase`는 싣지 않으므로 신고서 환산 분기(`estimatedDisplay`)는 종전과 같이 비활성이다.
     usedEstimatedAcquisition: allEstimated(aggregateAcqModes([b], undefined)),
@@ -113,7 +133,11 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     reductionType: b.reductionType,
     reducibleIncome: b.reducibleIncome,
     // 영 §167의2② 반영 후 B — 자산별 신고서 ⑲가 합계 카드와 같은 수를 보이게(Q-3).
-    eligibleIncomeAfterLoss: b.eligibleIncomeAfterLoss,
+    // §155⑳ 부분과세 자산의 ⑲는 이 결정 범위 밖이다 — `isRH` 분기는 ⑲를 비과세 차감 전 양도소득금액으로 잡으므로, 합산 신고서 자산 열과 같은 값
+    //   (`income` 기준 · `FilingFormTableAggregateHelpers`)을 미리 정해 넘겨 종전 값을 유지한다(단건·다건 ⑲ 기준은 법령 판단 대기).
+    eligibleIncomeAfterLoss: rhBasis
+      ? reductionEligibleIncome(b.reductionType, b.income, b.reducibleIncome ?? 0, b.replacementLandDetail?.eligibleTransferIncome, b.eligibleIncomeAfterLoss, b.publicExpropriationDetail?.partWise?.eligibleIncome)
+      : b.eligibleIncomeAfterLoss,
     // §77 5B 파트별 감면 echo — 자산별 신고서 ⑲가 감면대상 파트 소득만 싣게(R-c11-01). 표시 전용(세액 불변).
     publicExpropriationDetail: b.publicExpropriationDetail,
     /**
@@ -253,8 +277,12 @@ export function PropertyBreakdownAccordion({
    *    `income`은 안분 후 차익에서 장특공제를 뺀 값이다. 그 사이 행이 없으면 「양도소득금액 =
    *    양도차익 − 장특공제」 산식이 화면에서 성립하지 않는다. 역산은 신고서 어댑터와 같은 leaf다(#019).
    *    기준금액은 엔진 STEP 라벨(`과세 양도차익 (9억 초과분)` 등)을 그대로 쓴다 — 12억 리터럴 금지.
+   *    §155⑳ 부분과세 자산(`rhPartialBasis`)은 아래 자산별 신고서·PDF 자산별 표와 같은 단건 규약이다(R-c06-04) — 과세대상 = 전체 양도차익이라
+   *    이 행이 없고, 양도소득금액은 비과세 양도소득금액 차감 전(`income` + 그 몫)이며 그 몫은 아래 「비과세 양도소득금액」 행에서 뺀다.
    */
-  const taxableGain = assetTaxableGain(breakdown);
+  const taxableGain = filingTaxableGainOf(breakdown);
+  const nontaxableIncome = filingNontaxableIncomeOf(breakdown);
+  const nontaxableStep = nontaxableIncome > 0 ? findStepByLabel(breakdown.steps, "비과세 양도소득금액") : undefined;
   const hasProration = !breakdown.isExempt && taxableGain !== breakdown.transferGain;
   const prorationStep = breakdown.steps.find((s) => /과세 양도차익 \(\d+억 초과분\)/.test(s.label));
   const incomeBase = hasProration ? taxableGain : breakdown.transferGain;
@@ -363,7 +391,7 @@ export function PropertyBreakdownAccordion({
                     ? `${formatKRW(incomeBase)} - ${formatKRW(breakdown.longTermHoldingDeduction)}`
                     : undefined
                 }
-                value={breakdown.income}
+                value={breakdown.income + nontaxableIncome}
               />
 
               {/* 차손 통산 */}
@@ -379,6 +407,16 @@ export function PropertyBreakdownAccordion({
                   label="차손 통산 (타군안분)"
                   formula="타 세율군 잔여 차손 비율안분 (시행령 §167의2)"
                   value={-breakdown.lossOffsetFromOtherGroup}
+                />
+              )}
+
+              {/* 비과세 양도소득금액 — §155⑳ 부분과세 자산만(단건 규약 · PDF 자산별 표와 같은 순서 · R-c06-04) */}
+              {nontaxableIncome > 0 && (
+                <DetailRow
+                  label={nontaxableIncomeLabel(breakdown.rentalHousingScenarioId)}
+                  formula={nontaxableStep?.formula}
+                  legalBasis={nontaxableStep?.legalBasis}
+                  value={-nontaxableIncome}
                 />
               )}
 

@@ -12,7 +12,9 @@
 
 import { comparativeTaxView } from "@/components/calc/results/transfer/comparative-tax-display";
 import { Badge } from "@/components/ui/badge";
-import { effectiveGrossGain, sumAssetGains } from "@/components/calc/results/transfer/exempt-gross-gain";
+import { effectiveGrossGain } from "@/components/calc/results/transfer/exempt-gross-gain";
+import { sumFilingStageGains } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { aggregateNontaxableIncomeLabel } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
@@ -113,7 +115,8 @@ export function MultiTransferTaxSummaryCard({
   const sums = sumFromBreakdown(result.properties);
   // 비과세분·과세대상 = 자산별 정본 leaf 합(G2-6). `result.totalTransferGain`은 고가주택에서 안분 전 값이다.
   //  비과세분이 0이면 행을 숨긴다(전 자산 과세).
-  const gains = sumAssetGains(result.properties);
+  //  합산 신고서 합계 열과 같은 leaf — §155⑳ 부분과세 자산은 비과세가 양도소득금액 단계라 아래 「비과세 양도소득금액」 행에 싣는다(R-c06-04).
+  const gains = sumFilingStageGains(result.properties);
   const exemptGain = gains.exempt;
   // §90② 소득금액차감 감면(§99의3 등) — 엔진은 이 금액을 뺀 소득으로 과세표준을 낸다. 행이 없으면 검산이 끊긴다(R-c01-07).
   const incomeDeduction = result.properties.reduce((s, p) => s + (p.incomeDeductionReducible ?? 0), 0);
@@ -162,13 +165,17 @@ export function MultiTransferTaxSummaryCard({
           </>
         )}
         <ResultRow label="장기보유특별공제" value={-result.totalLongTermHoldingDeduction} />
-        <ResultRow label="양도소득금액" value={result.totalIncomeAfterOffset} />
+        {/* §155⑳ 부분과세 자산의 양도소득금액은 비과세 양도소득금액 차감 전이다(합산 신고서와 같은 축) — 통산 후 + 그 몫. */}
+        <ResultRow label="양도소득금액" value={result.totalIncomeAfterOffset + gains.nontaxableIncome} />
         {result.unusedLoss > 0 && (
           <ResultRow
             label="소멸 차손 (이월 불인정)"
             value={-result.unusedLoss}
             className="text-muted-foreground"
           />
+        )}
+        {gains.nontaxableIncome > 0 && (
+          <ResultRow label={aggregateNontaxableIncomeLabel(result.properties)} value={-gains.nontaxableIncome} />
         )}
         {incomeDeduction > 0 && <ResultRow label="소득금액 감면대상" value={-incomeDeduction} />}
         <ResultRow label="양도소득 기본공제" value={-result.basicDeduction} />

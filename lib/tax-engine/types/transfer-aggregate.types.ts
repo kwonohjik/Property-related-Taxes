@@ -223,6 +223,11 @@ export interface PerPropertyBreakdown
    * 명세서 자산별 행이 «과세대상 = min(차익, 양도소득금액 + 장특)» 역산을 쓰지 않도록 가른다(`DetailedStatementRhPartialFormulas.ts`).
    */
   rentalHousingApplied?: boolean;
+  /**
+   * [echo] §155⑳ 특례 시나리오 — 표시 전용(세액 불변). 합산 신고서·명세서 「비과세 양도소득금액」 행 라벨을 단건과 같은 규칙
+   * (`nontaxableIncomeLabel` — 「(소령 §161①)」은 B에만)으로 고른다. 구 이력에는 없다.
+   */
+  rentalHousingScenarioId?: import("../transfer-tax/rental-housing-exception/types").RentalHousingExceptionResult["scenarioId"];
   exemptReason?: string;
   /**
    * 양도가액 — **표시 전용**. 일반 자산은 입력값(`singleInput.transferPrice`), 토지·건물 분리 자산은 **소유 파트의 양도가 합**이다

@@ -17,8 +17,6 @@ import { multiFormAssetOf } from "./multi-result-groups";
 import type { ReactNode } from "react";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import {
-  assetExemptGain,
-  assetTaxableGain,
   effectiveGrossGain,
   inverseAcquisitionForDisplay,
   capExInAcquisitionColumnOfResult,
@@ -112,6 +110,8 @@ import { carryoverPurchasedPartLine } from "@/lib/tax-engine/transfer-tax-carryo
 import { splitCarryoverDebtNotices } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
 import { splitCarryoverView } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
+import { filingExemptGainOf } from "./DetailedStatementRhPartialFormulas";
+import { filingTaxableGainOf } from "./DetailedStatementRhPartialFormulas";
 import { companionRightStatementText } from "./companion-right-exemption-facts";
 export { findStepByLabel, buildPerAssetWithFormula };
 
@@ -507,11 +507,12 @@ export function buildStatementItems(
   // 비과세 자산의 양도차손은 비과세 양도차익도 음수다(`assetExemptGain`과 같은 규칙 — 「전체 = 비과세 + 과세대상」 유지).
   //   부분 비과세 차손도 0 바닥이 없다(R-c10-02 — 신고서 `FilingFormTableHelpers`와 같다).
   const exemptGainSingle = isRentalHousingException ? 0 : singleGrossGain - result.taxableGain;
-  const exemptGainAgg = isAggregate ? properties.reduce((s, p) => s + assetExemptGain(p), 0) : 0;
+  //   §155⑳ 부분과세 자산은 단건과 같이 0이다(비과세분은 양도소득금액 단계 — 합산 신고서와 같은 leaf · R-c06-04).
+  const exemptGainAgg = isAggregate ? properties.reduce((s, p) => s + filingExemptGainOf(p), 0) : 0;
   const exemptVal = isAggregate ? exemptGainAgg : exemptGainSingle;
   // 집계는 자산별 정본 leaf(`assetTaxableGain`) 합 — 종전 인라인 `차손이면 transferGain`은 엔진 과세분을 버렸다(R-c10-02).
   const taxableGainVal = isAggregate
-    ? properties.reduce((s, p) => s + assetTaxableGain(p), 0)
+    ? properties.reduce((s, p) => s + filingTaxableGainOf(p), 0)
     : isRentalHousingException
       ? singleGrossGain
       : result.taxableGain;
@@ -559,7 +560,7 @@ export function buildStatementItems(
     perAsset: isAggregate
       ? properties.map((p) => ({
           label: p.propertyLabel,
-          value: assetTaxableGain(p),
+          value: filingTaxableGainOf(p),
           // 함께 양도(일괄) 컴패니언 입주권의 §89①4호 비과세·12억 안분 — 화면 카드(`CompanionRightExemptionNote`)와 같은 근거를 밝힌다.
           // 다건(`propertyFormMap` 있음)은 자산마다 따로 양도하므로 「함께 양도 가액 안분」 문구가 맞지 않아 붙이지 않는다.
           formula: appendCompanionRightText(buildTaxableGainFormula(p), aggregate?.propertyFormMap ? undefined : companionRightStatementText(p.redevelopmentDetail, p.transferPrice)),

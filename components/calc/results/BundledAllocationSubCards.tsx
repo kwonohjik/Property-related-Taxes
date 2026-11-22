@@ -19,6 +19,10 @@ import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/Local
 import { comparativeTaxView } from "@/components/calc/results/transfer/comparative-tax-display";
 import { describeComparativeDecision } from "@/components/calc/results/transfer/comparative-tax-display";
 import { groupRateReproduces } from "@/components/calc/results/transfer/comparative-tax-display";
+import { filingNontaxableIncomeOf } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { sumFilingStageGains } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { aggregateNontaxableIncomeLabel } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 
 
 
@@ -108,7 +112,15 @@ export function PropertyCard({
             <>
               <Row label="양도차익" value={formatKRW(breakdown.transferGain)} sub />
               <Row label="장특공" value={`△${formatKRW(breakdown.longTermHoldingDeduction)}`} sub />
-              <Row label="양도소득금액" value={formatKRW(breakdown.income)} />
+              {/* §155⑳ 부분과세 자산은 단건 규약(§161① 양도소득금액 단계) — 같은 화면 합산 신고서 표·다건 아코디언과 같은 leaf(R-c06-04). */}
+              <Row label="양도소득금액" value={formatKRW(breakdown.income + filingNontaxableIncomeOf(breakdown))} />
+              {filingNontaxableIncomeOf(breakdown) > 0 && (
+                <Row
+                  label={nontaxableIncomeLabel(breakdown.rentalHousingScenarioId)}
+                  value={`△${formatKRW(filingNontaxableIncomeOf(breakdown))}`}
+                  sub
+                />
+              )}
             </>
           )}
           {breakdown.isExempt && (
@@ -192,6 +204,8 @@ export function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTran
   const nationalTax = aggregated.determinedTax + totalPenalty;
   // §90② 소득금액차감 감면(§99의3 등) — 엔진은 이 금액을 뺀 소득으로 과세표준을 낸다. 행이 없으면 검산이 끊긴다(R-c01-06).
   const incomeDeduction = aggregated.properties.reduce((s, p) => s + (p.incomeDeductionReducible ?? 0), 0);
+  // §155⑳ 부분과세 자산의 비과세 양도소득금액 — 단건 규약(§161①)으로 양도소득금액에 포함하고 별도 행으로 뺀다(다건 요약 카드와 같은 leaf · R-c06-04).
+  const filingStage = sumFilingStageGains(aggregated.properties);
 
   return (
     <div className="rounded-lg border bg-card p-4 shadow-sm">
@@ -201,8 +215,16 @@ export function AggregatedTaxSummary({ aggregated }: { aggregated: AggregateTran
           {/* 양도소득금액 합산 */}
           <Row
             label="양도소득금액 (합산)"
-            value={formatKRW(aggregated.totalIncomeAfterOffset)}
+            value={formatKRW(aggregated.totalIncomeAfterOffset + filingStage.nontaxableIncome)}
           />
+
+          {filingStage.nontaxableIncome > 0 && (
+            <Row
+              label={aggregateNontaxableIncomeLabel(aggregated.properties)}
+              value={`△${formatKRW(filingStage.nontaxableIncome)}`}
+              sub
+            />
+          )}
 
           {incomeDeduction > 0 && (
             <Row label="소득금액 감면대상" value={`△${formatKRW(incomeDeduction)}`} sub />

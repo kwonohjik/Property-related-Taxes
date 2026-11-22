@@ -85,8 +85,9 @@ export function buildTaxableGainFormula(p: PerPropertyBreakdown): string {
   const taxable = assetTaxableGain(p);
   if (tg <= 0 && (p.isExempt || taxable === tg)) return `차손 자산 — 양도차익 ${fmt(tg)} (음수)`;
   // §155⑳ 특례 × 12억 초과 — 장특이 전체 차익 기준이라 «양도소득금액 + 장특» 역산이 법정 율에 안 맞는다(위 파일 머리 주석).
+  //   R-c06-04 — 과세대상 = 전체 양도차익(단건 규약 · 비과세분은 양도소득금액 단계). 값은 `filingTaxableGainOf`.
   const rhBasis = rhPartialBasis(p);
-  if (rhBasis) return rhPartialTaxableGainFormula(rhBasis, taxable);
+  if (rhBasis) return rhPartialTaxableGainFormula(rhBasis);
   // R-c10-02 — 엔진은 차손 자산도 과세분을 따로 정한다(고가주택은 기준금액 초과분만 · 배율 초과분 이익은 비과세분 차손과 통산하지 않는다).
   if (taxable < 0) return `양도차손 ${fmt(tg)} 중 과세분 = ${fmt(taxable)} (비과세분 차손은 다른 자산과 통산하지 않는다)`;
   if (taxable > tg) return `양도소득금액 ${fmt(inc)} + 장특공제 ${fmt(lth)} = ${fmt(taxable)} (전체 양도차익 ${fmt(tg)} 중 비과세분 차손은 과세분에서 빼지 않는다)`;
@@ -132,10 +133,16 @@ export function buildIncomeFormula(
   const lth = p.longTermHoldingDeduction;
   // 과세대상양도차익 — 자산별 정본 leaf(`assetTaxableGain`). 종전 인라인 `차익이면 min(gross, …) · 차손이면 gross`는 과세분이 따로 정해진 차손 자산에서 좌변이 우변을 만들지 못했다(R-c10-02).
   const taxable = assetTaxableGain(p);
-  const rhBasis = rhPartialBasis(p);
-  const base = rhBasis ? rhPartialIncomeFormula(rhBasis, lth, p.income) : `${fmt(taxable)} - ${fmt(lth)} = ${fmt(p.income)}`;
-  if (p.income === p.incomeAfterOffset) return base;
   const received = p.lossOffsetFromSameGroup + p.lossOffsetFromOtherGroup;
+  // R-c06-04 — §155⑳ 부분과세 자산은 단건 규약: 양도소득금액 = 전체 양도차익 − 장특(비과세 양도소득금액은 아래 행에서 뺀다).
+  //   이 자산은 파트가 없어(`splitDetail` 제외) 차손을 내지 않는다 — 받은 통산만 잇는다. 값은 `incomeAfterOffset + 비과세 양도소득금액`.
+  const rhBasis = rhPartialBasis(p);
+  if (rhBasis) {
+    const base = rhPartialIncomeFormula(rhBasis, lth);
+    return received > 0 ? `${base} − 결손금 통산 ${fmt(received)} = ${fmt(p.incomeAfterOffset + rhBasis.nontaxableIncome)}` : base;
+  }
+  const base = `${fmt(taxable)} - ${fmt(lth)} = ${fmt(p.income)}`;
+  if (p.income === p.incomeAfterOffset) return base;
   // **이익 자산**이 자기 파트(대개 건물) 차손을 다른 자산에 준 경우 — 토지·건물은 통산에서 각각의 자산이라(국심2007중3718) 그 차손이
   //   신고 전체의 같은 세율 자산부터 공제된다(영 §167의2①). 자산 양도소득금액(파트 합)에서 이미 뺀 몫이므로 되돌려 더한다(계획서 P2 Q-3).
   if (lossGiven > 0 && p.income > 0) {
