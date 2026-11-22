@@ -130,6 +130,18 @@ describe("단건 §155⑳ 특례 ⑲ = 과세대상 양도소득금액(엔진 B)
     expect(l.stmt.formula).not.toContain("525,720,000");
   });
 
+  it("감면 없는 §155⑳ 특례 — ⑲ 0 · 산식에 「과세대상 양도소득금액 기준」 꼬리 문구 없음(리뷰 반영 · 종전 「감면 대상 없음 — …」 그대로)", async () => {
+    const f = form("A");
+    (f.assets[0] as unknown as { reductions: unknown[] }).reductions = [];
+    const r = await runCalc(f);
+    expect(r.status).toBe(200);
+    const res = r.json.data.result;
+    expect(res.rentalHousingExceptionDetail?.applied).toBe(true);
+    const stmt = buildStatementItems(res, f, f.assets[0], undefined, undefined).get("reductionTargetIncome")!;
+    expect(stmt.value).toBe(0);
+    expect(stmt.formula).not.toContain("과세대상 양도소득금액 기준");
+  });
+
   it("세액 불변 — 감면세액·총세액은 엔진값 그대로", async () => {
     const a = await layers("A");
     expect(a.res.reductionAmount).toBe(3_072_810);
