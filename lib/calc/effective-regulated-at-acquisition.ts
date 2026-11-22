@@ -157,7 +157,7 @@ export function calcGiftHouseholdBasis(asset: AssetForm, scope: GiftHouseholdSco
  * 기준일은 Step4 「조정대상지역 자동 판별」(`residenceJudgmentDate`)과 같은 순서다(용도변경 사용개시일 → 승계조합원 준공일 → 취득일).
  * `stored`는 폼-전역 숨은 토글(`form.wasRegulatedAtAcquisition`), `formRegionCode`는 ④의 폴백(`primary.regionCode || form.regionCode`)이다.
  *
- * `giftScope`를 주면 증여받은 주택의 세대 사실(이월과세 · 일반 증여)을 엔진과 같은 basis로 읽는다 — 단건·판정 메뉴 호출부만 준다.
+ * `giftScope`를 주면 증여받은 주택의 세대 사실(이월과세 · 일반 증여)을 엔진과 같은 basis로 읽는다 — 단건·다건 ④와 판정 메뉴 호출부가 준다.
  * 다건 편집에 임베드된 마법사도 같은 scope를 준다(#38-3 — 다건 ④가 건마다 사실을 싣는다). 주지 않는 호출부는 단일 기준일이다.
  */
 export function calcEffectiveWasRegulatedAtAcquisition(
