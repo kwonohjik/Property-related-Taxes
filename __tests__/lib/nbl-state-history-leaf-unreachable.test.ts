@@ -55,13 +55,17 @@ const APPLY = "lib/tax-engine/non-business-land/other-land-state-history-apply.t
 const MAPPER = "lib/tax-engine/non-business-land/form-mapper-helpers.ts";
 const REFINES = "lib/api/transfer-tax-schema-nbl-refines.ts";
 const SCHEMA = "lib/api/transfer-tax-schema-nbl.ts";
-// U0(UI, 화면 없음) 배선 — ①②③ 상태·복원 정규화와 ④⑤⑧ 공용 술어.
+// U0·U1(UI) 배선 — ④ 전송·⑤ 렌더·⑧ 검증이 같은 술어·같은 leaf를 쓴다.
 const SCOPE = "lib/calc/nbl-other-state-history-scope.ts";
+const PREVIEW = "lib/calc/nbl-other-state-history-preview.ts";
+const VALIDATE = "lib/calc/transfer-tax-validate-nbl-state-history.ts";
 const MIGRATE = "lib/stores/calc-wizard-asset-migrate-nbl.ts";
+const SECTION = "components/calc/transfer/nbl/OtherLandStateHistorySection.tsx";
+const DETAIL = "components/calc/transfer/nbl/OtherLandDetailSection.tsx";
 
 const NEXT_PR_HINT = "새 사용처가 생겼다면 UI 배선(U1·U2)일 것이다 — 이 허용 목록을 그 파일로 갱신한다(삭제 금지). 계획서 plan.md §4 U1·U2.";
 
-describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭ 매퍼(E2)와 UI 술어·복원 정규화(U0)에 연결돼 있다", () => {
+describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭ 매퍼(E2)와 UI(U0·U1: ④⑤⑧·③)에 연결돼 있다", () => {
   it("WIRE-0 (공허 방지): leaf가 실제로 존재하고 핵심 함수를 export한다", () => {
     const leaf = FILES.find((f) => f.path === LEAF);
     expect(leaf, "leaf 파일이 없다").toBeDefined();
@@ -70,10 +74,10 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
     }
   });
 
-  it("WIRE-1: `other-land-state-history`를 import하는 프로덕션 파일 = 판정(apply) · ⑭ 매퍼 · ⑫ refine(E2) + UI 술어 · ③ 복원 정규화(U0)", () => {
+  it("WIRE-1: `other-land-state-history`를 import하는 프로덕션 파일 = 판정(apply) · ⑭ 매퍼 · ⑫ refine(E2) + UI(술어 · 미리보기 · ⑧ · ③ 복원 정규화 · ⑤ 위젯)", () => {
     const re = /^\s*import[\s\S]*?from\s+["'][^"']*other-land-state-history["']/m;
     const importers = FILES.filter((f) => re.test(f.src)).map((f) => f.path).sort();
-    expect(importers, NEXT_PR_HINT).toEqual([APPLY, REFINES, MAPPER, SCOPE, MIGRATE].sort());
+    expect(importers, NEXT_PR_HINT).toEqual([APPLY, REFINES, MAPPER, SCOPE, PREVIEW, VALIDATE, MIGRATE, SECTION].sort());
   });
 
   it("WIRE-2: 판정은 구간 변환(derive)과 구간 산식(stateHistoryBusinessIntervals)을 쓰고, ⑫ refine은 공용 issue leaf를, ⑭ 매퍼·⑫는 `effectiveOtherHasBuilding`을 쓴다 — 3중 패턴", () => {
@@ -91,11 +95,11 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
     expect(users, NEXT_PR_HINT).toEqual([REFINES, MAPPER, SCOPE].sort());
   });
 
-  it("WIRE-4: 판정이 쓰는 고지 상수 = apply 한 곳 · UI 전용 상수(unchanged·유예 안내)는 아직 쓰는 곳이 없다", () => {
-    const used = usersOf("NBL_STATE_HISTORY_(?:APPLIED|UNKNOWN|PARTIAL_AREA|DEEMED_TRANSFER|REMOVED_TAX_TYPE_UNKNOWN|REVENUE_START)_NOTICE", [NOTICES]);
-    expect(used, NEXT_PR_HINT).toEqual([APPLY]);
+  it("WIRE-4: 판정이 쓰는 고지 상수 = apply + 입력 화면(위젯 · 당해 사업개시일 칸 안내) · UI 전용 상수(unchanged·유예 안내)는 위젯만 쓴다", () => {
+    const used = usersOf("NBL_STATE_HISTORY_(?:APPLIED|UNKNOWN|PARTIAL_AREA|DEEMED_TRANSFER|REMOVED_TAX_TYPE_UNKNOWN|REVENUE_START)_NOTICE", [NOTICES]).sort();
+    expect(used, NEXT_PR_HINT).toEqual([APPLY, DETAIL, SECTION].sort());
     const uiOnly = usersOf("NBL_STATE_HISTORY_(?:UNCHANGED|GRACE_ROW)_NOTICE", [NOTICES]);
-    expect(uiOnly, NEXT_PR_HINT).toEqual([]);
+    expect(uiOnly, NEXT_PR_HINT).toEqual([SECTION]);
     const messages = usersOf("STATE_EVENTS_REQUIRED_MESSAGE|stateEvent[A-Za-z]+Message", [MESSAGES, LEAF]).sort();
     expect(messages, NEXT_PR_HINT).toEqual([APPLY]);
   });
@@ -110,7 +114,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
     expect(src(SCHEMA)).toMatch(/propertyTaxTypeBefore:\s*z\.enum\(NBL_PROPERTY_TAX_TYPE_VALUES\)\.or\(z\.literal\(""\)\)/);
   });
 
-  it("WIRE-6: 이력 칸 이름을 읽는 UI(store·components·lib/calc) 파일 = ①②③ 상태·복원 + 공용 술어 — 화면(⑤)·전송(④)·검증(⑧)은 U1이 연결한다", () => {
+  it("WIRE-6: 이력 칸 이름을 읽는 UI(store·components·lib/calc) 파일 = ①②③ 상태·복원 · ④ 전송 · ⑤ 위젯 · ⑧ 검증·술어·미리보기 — 정확히 이 열 곳", () => {
     const uiUsers = FILES.filter(
       (f) => /^(components|lib\/(stores|calc))\//.test(f.path) && /nblOtherStateEvents|nblOtherStateHistoryMode/.test(f.src),
     ).map((f) => f.path).sort();
@@ -119,9 +123,19 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
       "lib/stores/calc-wizard-asset-nbl.ts", // ② NBL_DEFAULTS
       "lib/stores/calc-wizard-asset-factory.ts", // ② factory
       MIGRATE, // ③ 복원 정규화
-      SCOPE, // ④⑤⑧ 공용 술어
+      "lib/calc/non-business-land-request.ts", // ④ 전송(파생 nblOtherHasBuilding 덮어쓰기 포함)
+      SCOPE, PREVIEW, VALIDATE, // ④⑤⑧ 공용 술어 · 미리보기 · ⑧ 규칙
+      SECTION, DETAIL, // ⑤ 위젯 · 마운트
     ].sort();
     expect(uiUsers, NEXT_PR_HINT).toEqual(expected);
+  });
+
+  it("WIRE-8: ⑧은 ⑫와 같은 issue leaf(`stateEventSequenceIssue`)를 쓰고 하한일(`floorDate`)은 ⑧만 넘긴다 — ⑫가 넘기면 축 B 늦은 지분이 400", () => {
+    const src = (p: string) => FILES.find((f) => f.path === p)!.src;
+    expect(src(VALIDATE)).toMatch(/\bstateEventSequenceIssue\(/);
+    expect(src(VALIDATE)).toMatch(/floorDate:\s*ctx\.floorDate/);
+    expect(src(REFINES)).toMatch(/\bstateEventSequenceIssue\(/);
+    expect(src(REFINES), "⑫는 floorDate를 넘기지 않는다").not.toMatch(/floorDate/);
   });
 
   it("WIRE-7: 엔진 입력 `landStateHistory`는 types · 매퍼 · 판정(apply)만 읽는다", () => {

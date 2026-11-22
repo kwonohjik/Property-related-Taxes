@@ -52,7 +52,7 @@ async function seedAndOpen(page: Page, assetPatch: Record<string, unknown>) {
 
 const panel = (page: Page) => page.getByTestId("validation-issues");
 const next = (page: Page) => page.getByRole("button", { name: "다음", exact: true });
-const EXPR = { transferCause: "public_expropriation", isNonBusinessLand: true, nblUseDetailedJudgment: true, nblLandType: "other_land", nblZoneType: "residential" };
+const EXPR = { transferCause: "public_expropriation", isNonBusinessLand: true, nblUseDetailedJudgment: true, nblLandType: "other_land", nblZoneType: "residential", nblOtherStateHistoryMode: "unchanged" /* NBL-STATE-HISTORY-U1 — 기타토지는 건축물 이력 질문에 답해야 ⑧을 통과한다(이 스펙의 주제와 무관) */ };
 
 test.describe("§77의2 대토보상 — 양도원인·고시일 ⑧ (NBL2611-C10)", () => {
   test("양도원인 «일반» + §77의2 → 차단 메시지(공익수용·협의매수 선택 안내)", async ({ page }) => {

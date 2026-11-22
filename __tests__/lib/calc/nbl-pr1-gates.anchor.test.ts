@@ -113,8 +113,9 @@ describe("[c1] ⑧ NBL 검증은 취득원인 분기보다 앞이다 (A3-01·V9-
 // ────────────────────────────────────────────────────────────────────────
 describe("[c2] 기타토지 재산세 과세 분류 미선택 차단 (A1-01)", () => {
   it("other_land + nblOtherPropertyTaxType 공란이 차단된다", () => {
+    // NBL-STATE-HISTORY-U1: 건축물 이력 질문(⑧ #1)이 화면 순서상 재산세 과세 분류보다 앞선다 — 답해 두어야 이 게이트에 닿는다.
     const err = validateNblDetailedJudgment(
-      landAsset({ nblLandType: "other_land", nblOtherPropertyTaxType: "" }),
+      landAsset({ nblLandType: "other_land", nblOtherPropertyTaxType: "", nblOtherStateHistoryMode: "unchanged" }),
       "자산1",
       TRANSFER,
     );
@@ -123,7 +124,7 @@ describe("[c2] 기타토지 재산세 과세 분류 미선택 차단 (A1-01)", (
 
   it("분류를 선택하면 그 사유로는 차단되지 않는다", () => {
     const err = validateNblDetailedJudgment(
-      landAsset({ nblLandType: "other_land", nblOtherPropertyTaxType: "separate" }),
+      landAsset({ nblLandType: "other_land", nblOtherPropertyTaxType: "separate", nblOtherStateHistoryMode: "unchanged" }),
       "자산1",
       TRANSFER,
     );

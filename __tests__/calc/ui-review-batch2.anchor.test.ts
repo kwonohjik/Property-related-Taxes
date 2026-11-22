@@ -22,6 +22,8 @@ const land = (over: Partial<AssetForm> = {}): AssetForm => ({
   nblZoneType: "urban_residential",
   acquisitionArea: "500",
   nblOtherPropertyTaxType: "separate",
+  // NBL-STATE-HISTORY-U1 픽스처 보정 — 건축물 이력 질문은 ⑧ #1이 요구하는 앞선 필수 입력이다(이 파일의 주제와 무관 — «바뀐 적 없음»).
+  nblOtherStateHistoryMode: "unchanged",
   ...over,
 });
 

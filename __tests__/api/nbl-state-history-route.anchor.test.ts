@@ -48,6 +48,8 @@ function form(own: Partial<AssetForm>): TransferFormData {
       assetKind: "land", acquisitionCause: "purchase", acquisitionDate: "2014-01-01", acquisitionArea: "1000", transferArea: "1000",
       addressJibun: "서울 강남구 테스트동 1", fixedAcquisitionPrice: "300000000", actualSalePrice: "1000000000",
       isNonBusinessLand: true, nblUseDetailedJudgment: true, nblLandType: "other_land", nblZoneType: "general_residential",
+      // NBL-STATE-HISTORY-U1 픽스처 보정 — 질문에 «바뀐 적 없음»(⑧ #1 통과). 엔진은 `unchanged`를 미전송과 바이트 동일하게 다룬다(E2) — 모드 4종 대조는 `run`의 rawExtra가 raw를 덮어써서 그대로 유지된다.
+      nblOtherStateHistoryMode: "unchanged",
     }, own) as AssetForm,
   ];
   return f;

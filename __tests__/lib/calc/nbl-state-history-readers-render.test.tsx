@@ -42,12 +42,14 @@ const mount = (a: AssetForm) => render(<OtherLandDetailSection asset={a} onAsset
 const has = (field: string) => document.querySelector(`[data-field="${field}"]`) !== null;
 
 describe("⑤ 6곳 — 양도일 현재 유무는 사건 파생값", () => {
-  it("[DetailSection :144] 「건축물 있음」 토글 값 — 마지막 사건이 신축이면 켜짐, 멸실이면 꺼짐", () => {
+  it("[DetailSection :144] 「건축물 있음」 토글 — U1: changed이면 토글을 숨기고 사건 파생 줄이 대신한다(마지막 사건 = 신축 → 있음 · 멸실 → 없음). 읽는 값이 저장 토글이면 줄이 틀린다", () => {
     const { unmount } = mount(lastBuilt());
-    expect(screen.getByTestId("nbl-other-has-building-toggle").getAttribute("data-checked")).toBe("true");
+    expect(screen.queryByTestId("nbl-other-has-building-toggle")).toBeNull();
+    expect(screen.getByTestId("nbl-state-history-at-transfer").textContent).toContain("양도일 현재 건축물: 있음");
     unmount();
     mount(lastRemoved());
-    expect(screen.getByTestId("nbl-other-has-building-toggle").getAttribute("data-checked")).toBeNull();
+    expect(screen.queryByTestId("nbl-other-has-building-toggle")).toBeNull();
+    expect(screen.getByTestId("nbl-state-history-at-transfer").textContent).toContain("양도일 현재 건축물: 없음");
   });
 
   it("[DetailSection :176] 시가표준액·바닥면적 칸 — 마지막 구간에 건축물이 있을 때만", () => {
@@ -90,7 +92,7 @@ describe("⑤ 6곳 — 양도일 현재 유무는 사건 파생값", () => {
     expect(has("nblOtherDemolishedFloorArea")).toBe(false);
   });
 
-  it("changed가 아니면 저장 토글값 그대로(이력 없음 경로 불변)", () => {
+  it("changed가 아니면 저장 토글값 그대로(이력 없음 경로 불변) — 토글이 보이고 그 값을 읽는다", () => {
     mount(withEvents({ nblOtherStateHistoryMode: "unchanged", nblOtherHasBuilding: true }));
     expect(screen.getByTestId("nbl-other-has-building-toggle").getAttribute("data-checked")).toBe("true");
     expect(has("nblOtherBuildingFloorArea")).toBe(true);

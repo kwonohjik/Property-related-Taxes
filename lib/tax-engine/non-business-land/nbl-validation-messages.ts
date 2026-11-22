@@ -63,3 +63,7 @@ export function stateEventAtOrBeforeFloorMessage(index: number, date: string, fl
 export function stateEventAtOrAfterTransferMessage(index: number, date: string, transferDate: string): string {
   return `건축물 사건 ${index + 1}번째 행 — 사건일(${date})이 양도일(${transferDate}) 당일 또는 그 이후입니다. 양도일 당일 또는 그 이후의 사건은 판정에 쓰이지 않습니다. 양도일 이전의 날로 입력하세요.`;
 }
+
+/** ⑧ 전용(⑫는 `""`·미전송 = 현행이라 이 문구를 쓰지 않는다 — 통합 Q-5) — 질문 미선택. 「모름」을 고르면 현행 판정 + 확인 필요로 진행한다. */
+export const STATE_HISTORY_MODE_REQUIRED_MESSAGE =
+  "소유기간 중 이 토지 위 건축물이 새로 생기거나 없어진 적이 있는지 선택하세요. 모르면 「모름」을 고르세요. (미선택은 「바뀐 적 없음」으로 보지 않습니다)";

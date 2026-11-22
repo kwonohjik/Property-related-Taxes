@@ -67,7 +67,13 @@ async function runSingle(f: TransferFormData, mutateRaw?: (raw: Loose) => void) 
 
 describe("E2 route 관통 — 엔진 §6 «일 단위» 열 전 행(단건): 입력 → ⑫ → ⑭ → 엔진 → 세액", () => {
   it.each(E2_ROWS.map((r) => [r.id, r.scenario, r] as const))("%s — %s", async (_id, _s, row: E2Row) => {
-    const r = await runSingle(formOf(row));
+    // 연접 다필지 행은 화면 경로(④)에서는 이력 질문이 숨고 ④가 `""`·`[]`로 비워 보낸다(U1 — 통합 Q-13 배타). 이 행은 «직접 API로 보낸 raw»의 엔진 계약이라 body 캡처 뒤 이력 칸을 다시 얹는다.
+    const directApi = row.extra?.nblOtherUseParcels === true;
+    const r = await runSingle(formOf(row), directApi ? (raw) => {
+      const src = e2RowRaw(row);
+      raw.nblOtherStateHistoryMode = src.nblOtherStateHistoryMode;
+      raw.nblOtherStateEvents = src.nblOtherStateEvents;
+    } : undefined);
     expect(r.status, JSON.stringify(r.json).slice(0, 400)).toBe(200);
     expect(r.body.nonBusinessLandRaw, "④가 raw를 싣는다").toBeDefined();
     expect(r.nbl?.periodEvaluation?.basis).toBe("state_history");
@@ -301,6 +307,15 @@ describe("E2 ⑭ — callTransferTaxAPI body에 이력 칸이 그대로 실린�
     await callTransferTaxAPI(formOf(M6));
     vi.unstubAllGlobals();
     expect(cap.body?.nonBusinessLandRaw?.nblOtherStateHistoryMode).toBe("changed");
-    expect(cap.body?.nonBusinessLandRaw?.nblOtherStateEvents).toEqual([{ kind: "building_built", date: "2023-06-01" }]);
+    // ④가 신축 행의 «철거 직전 재산세 구분»을 `""`로 정규화해 싣는다(U1 — `stateHistoryWireFields`).
+    expect(cap.body?.nonBusinessLandRaw?.nblOtherStateEvents).toEqual([{ kind: "building_built", date: "2023-06-01", propertyTaxTypeBefore: "" }]);
+  });
+
+  it("U1 ④ — 연접 다필지 ON + stale `changed`: 이력 칸을 비워 보내 400이 아니라 현행(`state_at_transfer`) 판정이 된다", async () => {
+    const row = E2_ROWS.find((r) => r.id === "Da-연접다필지")!;
+    const r = await runSingle(formOf(row));
+    expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);
+    expect(r.body.nonBusinessLandRaw).toMatchObject({ nblOtherStateHistoryMode: "", nblOtherStateEvents: [] });
+    expect(r.nbl?.periodEvaluation?.basis).toBe("state_at_transfer");
   });
 });

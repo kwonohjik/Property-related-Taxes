@@ -13,11 +13,20 @@ import { resortAreaIssue } from "@/lib/tax-engine/non-business-land/resort-area-
 import { hoRequiredInputIssue } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
 import { demolishedBasisIssue, type PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { effectiveOtherHasBuildingOf } from "./nbl-other-state-history-scope";
+import { validateNblStateHistory } from "./transfer-tax-validate-nbl-state-history";
+import type { StateHistoryValidateCtx } from "./transfer-tax-validate-nbl-state-history";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
 /** 기타토지(other_land) 정밀판정 입력 검증. 첫 오류 메시지 또는 null. */
-export function validateNblOtherLand(asset: AssetForm, label: string): string | null {
+export function validateNblOtherLand(asset: AssetForm, label: string, stateHistory?: StateHistoryValidateCtx): string | null {
   if (asset.nblLandType !== "other_land") return null;
+
+  /**
+   * NBL-STATE-HISTORY-U1 — 소유기간 중 건축물 이력(질문 · 사건 행). **지목 게이트 직후 = 재산세 과세 분류 검사보다 앞**에 둔다 — 질문이 섹션 맨 위라 첫 오류도 화면 순서와 같아야 한다.
+   * 게이트·규칙은 ⑤ 렌더·④ 전송과 같은 술어, ⑫와 같은 leaf(`stateEventSequenceIssue`)다.
+   */
+  const stateHistoryErr = validateNblStateHistory(asset, label, stateHistory);
+  if (stateHistoryErr) return stateHistoryErr;
 
   /**
    * §168의11 재산세 과세 분류 — 미선택 차단 (A1-01, 2026-09-02 코드리뷰).

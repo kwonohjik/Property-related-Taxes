@@ -31,9 +31,12 @@ const nbl = (patch: Record<string, unknown> = {}) => () =>
 const urbanFarm = (patch: Record<string, unknown> = {}) =>
   nbl({ nblZoneType: "general_residential", nblLandSigunguCode: "41550", nblLandSigunguName: "안성시", ...patch });
 
-/** 기타토지 — 재산세 과세 분류를 골라 둔 상태 */
+/** 기타토지 — 재산세 과세 분류를 골라 두고 건축물 이력 질문에 «바뀐 적 없음»을 답한 상태(NBL-STATE-HISTORY-U1: 질문 미선택은 ⑧ #1이 먼저 막는다 — 화면 순서상 맨 위) */
 const other = (patch: Record<string, unknown> = {}) =>
-  nbl({ nblLandType: "other_land", nblOtherPropertyTaxType: "separate", ...patch });
+  nbl({ nblLandType: "other_land", nblOtherPropertyTaxType: "separate", nblOtherStateHistoryMode: "unchanged", ...patch });
+
+/** 건축물 이력 사건 행 */
+const ev = (kind: "" | "building_built" | "building_removed", date: string) => ({ kind, date, propertyTaxTypeBefore: "" });
 
 /** 기타토지 + 수입금액비율 업종 선택 */
 const revenue = (patch: Record<string, unknown> = {}) =>
@@ -68,6 +71,16 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "nbl: 소재지 행정구역 단위", field: "nblLandDivision", step: 0, assetIndex: A, message: /^자산: 도시지역 농지 — 소재지 행정구역 단위/, form: urbanFarm({ nblLandDivision: "" }) },
   { name: "nbl: 도시지역 편입일", field: "nblUrbanIncorporationDate", step: 0, assetIndex: A, message: /^자산: 도시지역 농지 — 도시지역 편입일을/, form: urbanFarm({ nblLandDivision: "dong", nblUrbanIncorporationDate: "" }) },
   { name: "nbl: 양도일 의제일", field: "nblDeemedTransferDate", step: 0, assetIndex: A, message: /^자산: 양도일 의제 사유를 선택했습니다/, form: nbl({ nblDeemedTransferReason: "auction", nblDeemedTransferDate: "" }) },
+
+  // 기타토지 소유기간 중 건축물 이력(NBL-STATE-HISTORY-U1) — 행 단위 키(`nblOtherStateEvents.i.date`)는 동적이라 이 케이스가 유일한 안전망이다.
+  { name: "nbl: 건축물 이력 질문 미선택", field: "nblOtherStateHistoryMode", step: 0, assetIndex: A, message: /^자산: 기타토지 — 소유기간 중 이 토지 위 건축물이 새로 생기거나 없어진 적이 있는지 선택하세요/, form: other({ nblOtherStateHistoryMode: "" }) },
+  { name: "nbl: 건축물 이력 사건 0행", field: "nblOtherStateEvents", step: 0, assetIndex: A, message: /^자산: 기타토지 — 소유기간 중 건축물이 새로 생기거나 없어진 적이 있다고 답했으나 사건이 없습니다/, form: other({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [] }) },
+  { name: "nbl: 건축물 사건 종류 미선택", field: "nblOtherStateEvents.0.kind", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 1번째 행 — 종류/, form: other({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("", "2020-01-01")] }) },
+  { name: "nbl: 건축물 사건일 빈 칸", field: "nblOtherStateEvents.0.date", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 1번째 행 — 날짜를 입력하세요/, form: other({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("building_removed", "")] }) },
+  { name: "nbl: 건축물 사건일 역순", field: "nblOtherStateEvents.1.date", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 2번째 행 — 사건일\(2018-01-01\)이 앞 사건\(2019-01-01\)보다 빠릅니다/, form: other({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("building_built", "2019-01-01"), ev("building_removed", "2018-01-01")] }) },
+  { name: "nbl: 건축물 사건일 소유 시작 전", field: "nblOtherStateEvents.0.date", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 1번째 행 — 사건일\(2010-01-01\)이 소유 시작 전입니다/, form: other({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("building_removed", "2010-01-01")] }) },
+  { name: "nbl: 건축물 사건일 양도일 이후", field: "nblOtherStateEvents.0.date", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 1번째 행 — 사건일\(2099-01-01\)이 양도일\(.+\) 당일 또는 그 이후입니다/, form: other({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("building_removed", "2099-01-01")] }) },
+  { name: "nbl: 건축물 사건 같은 종류 연속", field: "nblOtherStateEvents.1.kind", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 2번째 행 — 앞 사건이 이미 「건축물 있음」입니다/, form: other({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("building_built", "2018-01-01"), ev("building_built", "2019-01-01")] }) },
 
   // 수입금액비율(§168의11②)
   { name: "nbl: 수입금액", field: "nblRevenueCurrentRevenue", step: 0, assetIndex: A, message: /^자산: 수입금액비율 업종 선택 시 당해 과세기간 수입금액/, form: revenue({ nblRevenueCurrentRevenue: "" }) },

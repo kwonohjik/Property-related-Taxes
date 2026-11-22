@@ -451,7 +451,7 @@ test.describe("N1 — 비사업용 토지: 입력칸이 없는 지목에 남은 
 
   for (const [name, landType, extra] of [
     ["임야 + 빈 사업용 사용기간 행", "forest", { nblBusinessUsePeriods: [emptyBusinessRow] }],
-    ["기타토지 + 빈 사업용 사용기간 행", "other_land", { nblOtherPropertyTaxType: "separate", nblBusinessUsePeriods: [emptyBusinessRow] }],
+    ["기타토지 + 빈 사업용 사용기간 행", "other_land", { nblOtherPropertyTaxType: "separate", nblOtherStateHistoryMode: "unchanged" /* NBL-STATE-HISTORY-U1: 건축물 이력 질문은 행 검사보다 앞선 필수 입력 */, nblBusinessUsePeriods: [emptyBusinessRow] }],
     ["목장 + 빈 거주 이력 행", "pasture", { nblResidenceHistories: [emptyResidenceRow] }],
   ] as const) {
     test(`${name} → 막지 않고 다음 단계로`, async ({ page }) => {
