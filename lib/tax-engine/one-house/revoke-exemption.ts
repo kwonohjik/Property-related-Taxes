@@ -69,5 +69,7 @@ export function revokeOneHouseExemption(judgment: OneHouseJudgment): OneHouseJud
     requirementReview: undefined,
     // 사후관리(추징)는 받은 비과세가 전제다 — 거두면 고지도 없다(G5-7).
     postManagementNotices: undefined,
+    // §89② 예외 표시 줄도 받은 비과세가 전제다 — 거두면 지운다(위 `legalBasis` 재수집과 같은 이유).
+    article89ExceptionApplied: undefined,
   };
 }
