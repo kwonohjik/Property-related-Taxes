@@ -74,12 +74,13 @@ describe("OH-48 — 축 B 완공APT 지분 카드 분리 거주", () => {
     expect(missing(form({ second: { acquisitionDate: "2012-01-01" } }))).toBeNull();
   });
 
-  it("오라클 — 둘째 카드에 같은 값을 넣으면 두 지분 장특공제가 같다(181,236,362) · 결정세액 54,170,364", async () => {
+  it("오라클 — 둘째 카드에 같은 값을 넣으면 두 지분 장특공제가 같다(181,236,363) · 결정세액 54,170,364", async () => {
+    // R-c08-12(2026-11-22) — 지분 카드마다 고가 안분이 합계 먼저 · 분기 최대잉여 배분이라 장특공제 181,236,362 → 181,236,363(위 표는 2026-11-12 실측 당시 값)
     const r = await runCalc(form({ second: SPLIT }));
     expect(r.issues.map((i) => i.message)).toEqual([]);
     expect(r.status).toBe(200);
     const agg = r.json.data.aggregated;
-    expect(agg.properties.map((p: { longTermHoldingDeduction: number }) => p.longTermHoldingDeduction)).toEqual([181_236_362, 181_236_362]);
+    expect(agg.properties.map((p: { longTermHoldingDeduction: number }) => p.longTermHoldingDeduction)).toEqual([181_236_363, 181_236_363]);
     expect(agg.determinedTax).toBe(54_170_364);
   });
 });

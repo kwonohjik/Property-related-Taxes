@@ -160,17 +160,19 @@ describe("EN-4 부담부증여 지분 50% · K-5 · 담보 승 (K-5 전면 개�
 });
 
 describe("EN-5 1세대1주택 고가(15억) · 인가 전 차손", () => {
-  it("세 분기 모두 3/15로 안분(차손 포함) → 99,999,999 · 기존건물분 (−60,000,000 + 114,285,714) × 22% = 11,942,857 · 청산금 45,714,285 × 14% = 6,399,999", async () => {
+  it("세 분기 모두 3/15로 안분(차손 포함) → 100,000,000 · 기존건물분 (−60,000,000 + 114,285,714) × 22% = 11,942,857 · 청산금 45,714,286 × 14% = 6,400,000", async () => {
+    // R-c08-12(2026-11-22) — 합계 먼저(분기 합 5억 × 3/15 = 100,000,000) · 남은 1원은 나머지가 큰 청산금 분기.
+    // 종전 분기별 내림: 청산금 45,714,285 · 공제 6,399,999 · 합계 99,999,999(안분 박스 100,000,000과 1원 차). 양도소득금액 81,657,143 불변.
     const a = REG(1_500_000_000, 800_000_000, 500_000_000, 200_000_000, "pay");
     const d = rd(await post(regForm(a, 1_500_000_000, { isOneHousehold: true })));
     expect(d.preApproval.gain).toBe(-60_000_000);
     expect(d.preApproval.gainBeforeAllocation).toBe(-300_000_000);
     expect(d.postApprovalExistingHouse.gain).toBe(114_285_714);
-    expect(d.settlement.gain).toBe(45_714_285);
+    expect(d.settlement.gain).toBe(45_714_286);
     expect(d.postApprovalExistingHouse.lthdBaseGain).toBe(54_285_714);
     expect(d.postApprovalExistingHouse.lthd).toBe(11_942_857);
-    expect(d.settlement.lthd).toBe(6_399_999);
-    expect(d.total).toEqual({ gain: 99_999_999, lthd: 18_342_856, taxableIncome: 81_657_143 });
+    expect(d.settlement.lthd).toBe(6_400_000);
+    expect(d.total).toEqual({ gain: 100_000_000, lthd: 18_342_857, taxableIncome: 81_657_143 });
     expect(d.highValueAllocation.taxableGain).toBe(100_000_000);
   });
 });

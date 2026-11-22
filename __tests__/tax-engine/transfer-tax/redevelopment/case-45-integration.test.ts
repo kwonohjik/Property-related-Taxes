@@ -7,8 +7,9 @@
  * ★ Primary anchor (예제 xlsx C26·C29·C31 원단위 정합 — PDF p6 표기와 1원 차이는 PDF 단수 오차):
  *   전체 양도차익:    740,999,999  (1,500M − 750M − 9M, 단수 1)
  *   비과세 양도차익:  592,800,000  (= 740,999,999 − floor(740,999,999 × 0.2))
- *   과세대상 양도차익: 148,199,999  (분기별 floor 합 — 40M + 74,031,578 + 34,168,421)
- *   LTHD 합계:        74,569,261  (24M + 44,418,946 + 6,150,315)
+ *   과세대상 양도차익: 148,200,000  (분기 합 741,000,000 × 0.2 — R-c08-12 2026-11-22 합계 먼저 · 분기 최대잉여 배분
+ *                                   40M + 74,031,579 + 34,168,421. 종전 분기별 floor 합 148,199,999 · xlsx D17~F17 분기값과 인가후 1원 차)
+ *   LTHD 합계:        74,569,262  (24M + 44,418,947 + 6,150,315 — 종전 74,569,261. 양도소득금액·세액은 불변)
  *   양도소득금액:     73,630,738
  *   기본공제:          2,500,000
  *   과세표준:         71,130,738
@@ -72,19 +73,21 @@ describe("사례 45 통합 anchor — APT 1세대1주택 12억 초과 + 거주�
     expect(result.redevelopmentDetail?.settlement.lthdRate).toBeCloseTo(0.18, 5);
   });
 
-  it("분기별 LTHD 금액 — preApproval 24M / postApproval 44,418,946 / settlement 6,150,315", () => {
+  it("분기별 LTHD 금액 — preApproval 24M / postApproval 44,418,947 / settlement 6,150,315", () => {
     expect(result.redevelopmentDetail?.preApproval.lthd).toBe(24_000_000);
-    expect(result.redevelopmentDetail?.postApprovalExistingHouse.lthd).toBe(44_418_946);
+    // R-c08-12 — 인가후 분기가 최대잉여 1원(74,031,578 → 74,031,579)을 받아 공제도 44,418,946 → 44,418,947.
+    expect(result.redevelopmentDetail?.postApprovalExistingHouse.lthd).toBe(44_418_947);
     expect(result.redevelopmentDetail?.settlement.lthd).toBe(6_150_315);
   });
 
-  it("LTHD 합계 74,569,261", () => {
-    expect(result.redevelopmentDetail?.total.lthd).toBe(74_569_261);
+  it("LTHD 합계 74,569,262", () => {
+    expect(result.redevelopmentDetail?.total.lthd).toBe(74_569_262);
   });
 
-  it("12억 안분 — 비과세 양도차익 592,800,000 / 과세대상 양도차익 합계 148,199,999", () => {
+  it("12억 안분 — 비과세 양도차익 592,800,000 / 과세대상 양도차익 합계 148,200,000 (안분 박스 = 하단 합계)", () => {
     expect(result.redevelopmentDetail?.highValueAllocation?.nontaxableGain).toBe(592_800_000);
-    expect(result.redevelopmentDetail?.total.gain).toBe(148_199_999);
+    expect(result.redevelopmentDetail?.total.gain).toBe(148_200_000);
+    expect(result.redevelopmentDetail?.highValueAllocation?.taxableGain).toBe(result.redevelopmentDetail?.total.gain);
   });
 
   it("기본공제 2,500,000", () => {

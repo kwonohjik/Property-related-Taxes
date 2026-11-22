@@ -78,7 +78,8 @@ describe("E-4 ① 분리 입력(종전 66개월)이 표2를 만들고 Step4 거�
     expect(w.longTermHoldingDeduction).toBe(b.longTermHoldingDeduction);
     expect(w.determinedTax).toBe(b.determinedTax);
     // 종전 91,439,367 / 7,262,551 (표2 80% 위에 10% 가산)
-    expect(w.longTermHoldingDeduction).toBe(76_619_367);
+    // R-c08-12(2026-11-22) — 고가 안분 합계 먼저 · 분기 최대잉여 배분으로 인가후 분기 +1원 → 공제 76,619,367 → 76,619,368
+    expect(w.longTermHoldingDeduction).toBe(76_619_368);
     expect(w.determinedTax).toBe(10_819_351);
   });
 });
@@ -99,7 +100,8 @@ describe("E-4 ② Step4 거주 36개월 · 분리 입력(신축 12개월)이 표
     expect(w.determinedTax).toBeLessThan(b.determinedTax);
     // 종전 42,409,894 / 20,711,536 (Step4 36개월로 「표2 대상」 오판 → 미가산)
     expect(w.longTermHoldingDeduction).toBe(57_229_894);
-    expect(w.determinedTax).toBe(15_524_536);
+    // R-c08-12(2026-11-22) — 고가 안분 합계 먼저 · 분기 최대잉여 배분으로 양도차익 +1원 → 15,524,536 → 15,524,537
+    expect(w.determinedTax).toBe(15_524_537);
   });
 });
 
