@@ -8,6 +8,9 @@
  *
  * 규칙: 세대 조합원입주권 수 = 명부 입주권 수 + 묶음에서 양도하는 입주권 수(축 B는 물건 1개). 이 값이 1일 때만 4호 본문 성립.
  * 시료: 양도 2026-06-01 · 마포 · 입주권 취득 2018-03-01 · 인가 2019-06-01 · 원조합원(주택 출자) · 1세대 · 분양권 없음 확인.
+ *
+ * 2026-11-22: 컴패니언 카드 세액은 집계의 `skipBasicDeduction: true` 계산값이다 — 재개발 경로가 기본공제를 빼지 않게 되어(§103② · 일반 자산 카드와 같다)
+ *   과세 카드가 기본공제 2,500,000 × 38%만큼 크다(55,110,000 → 56,060,000 · 70,310,000 → 71,260,000). 묶음 결정세액은 그대로.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createDefaultTransferFormData, makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
@@ -106,7 +109,7 @@ async function run(f: TransferFormData) {
 }
 
 describe("[컴패니언 입주권 §89①4호] 열림 — 세대 주택 0채 + 선언 «예»", () => {
-  it("CR-1 주 자산 토지 · 입주권 5억 · 선언 예 → 컴패니언 가목 비과세 0 (열기 전 과세 55,110,000)", async () => {
+  it("CR-1 주 자산 토지 · 입주권 5억 · 선언 예 → 컴패니언 가목 비과세 0 (열기 전 과세 56,060,000)", async () => {
     const r = await run(mainPlusCompanionRight({ main: "land", hh: "0", elig: "yes", price: "500000000" }));
     expect(r.body.householdRightCount).toBe(1);
     expect(r.card("companion-fixed")).toMatchObject({ isExempt: true, determinedTax: 0 });
@@ -114,15 +117,15 @@ describe("[컴패니언 입주권 §89①4호] 열림 — 세대 주택 0채 + �
     expect(r.agg.determinedTax).toBe(32_685_000);
   });
 
-  it("CR-2 대조군: 선언 «아니오» → 컴패니언 과세 55,110,000", async () => {
+  it("CR-2 대조군: 선언 «아니오» → 컴패니언 과세 56,060,000", async () => {
     const r = await run(mainPlusCompanionRight({ main: "land", hh: "0", elig: "no", price: "500000000" }));
-    expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 55_110_000 });
+    expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 56_060_000 });
     expect(r.card("companion-fixed").redevelopmentDetail.oneRightExemptionClause).toBeUndefined();
   });
 
-  it("CR-3 입주권 15억(>12억) → 안분과세 70,310,000 (열기 전 472,935,000) — 12억은 입주권 몫 양도가액(Q-2)", async () => {
+  it("CR-3 입주권 15억(>12억) → 안분과세 71,260,000 (열기 전 472,935,000) — 12억은 입주권 몫 양도가액(Q-2)", async () => {
     const r = await run(mainPlusCompanionRight({ main: "land", hh: "0", elig: "yes", price: "1500000000" }));
-    expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 70_310_000 });
+    expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 71_260_000 });
     expect(r.card("companion-fixed").redevelopmentDetail.oneRightExemptionClause).toBe("ga");
     expect(r.agg.determinedTax).toBe(125_060_000);
   });
@@ -146,13 +149,13 @@ describe("[컴패니언 입주권 §89①4호] 불변 — 요건 불성립 칸�
   it("CR-5 세대 주택 1채 이상(주 자산 토지) → 가목 불성립 · 컴패니언 과세 그대로", async () => {
     for (const hh of ["1", "2"]) {
       const r = await run(mainPlusCompanionRight({ main: "land", hh, elig: "yes", price: "500000000" }));
-      expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 55_110_000 });
+      expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 56_060_000 });
     }
   });
 
   it("CR-6 Q-1 보유로 봄: 주 자산 주택(세대 주택 1 = 양도 주택) → 컴패니언 입주권 가목 불성립, 주 자산은 1세대1주택 비과세 그대로", async () => {
     const r = await run(mainPlusCompanionRight({ main: "housing", hh: "1", elig: "yes", price: "500000000" }));
-    expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 55_110_000 });
+    expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 56_060_000 });
     expect(r.card("primary")).toMatchObject({ isExempt: true, determinedTax: 0 });
   });
 });
@@ -166,8 +169,8 @@ describe("[Q-3] 묶음 안 입주권 수 = 세대 입주권 수", () => {
   it("CR-8 주 자산 입주권 + 컴패니언 입주권 → 세대 입주권 수 2 · 두 카드 모두 가목 불성립 (열기 전: 주 자산이 비과세 0)", async () => {
     const r = await run(twoRights("yes"));
     expect(r.body.householdRightCount).toBe(2);
-    expect(r.card("primary")).toMatchObject({ isExempt: false, determinedTax: 55_110_000 });
-    expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 55_110_000 });
+    expect(r.card("primary")).toMatchObject({ isExempt: false, determinedTax: 56_060_000 });
+    expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 56_060_000 });
   });
 
   it("CR-8b 대조군: 입주권 하나만 양도하면(단건) 같은 사실로 가목 비과세 — 규칙이 입주권 2개일 때만 막는다", async () => {
@@ -181,7 +184,7 @@ describe("[Q-3] 묶음 안 입주권 수 = 세대 입주권 수", () => {
     f.presaleRights = [{ id: "r1", type: "redevelopment_right", acquisitionDate: "2018-03-01", region: "capital" } as never];
     const r = await run(f);
     expect(r.body.householdRightCount).toBe(2);
-    expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 55_110_000 });
+    expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 56_060_000 });
   });
 });
 
@@ -239,7 +242,7 @@ describe("[고지] Q-1 보유 해당 · Q-2 12억 기준 — 확인 필요", () 
  */
 describe("[V-1] 입주권 컴패니언이 받는 세대 사실", () => {
   // 2026-11 리뷰 D-25 · 결정 Q-4 A — 비거주자는 판정 메뉴 전용 입력이라 계산기 route가 400으로 거절한다(종전엔 입주권 컴패니언에만 반영돼
-  //   한 조문이 부분 적용됐다 — 55,110,000원). 화면 ④는 이 키를 보내지 않는다.
+  //   한 조문이 부분 적용됐다 — 56,060,000원). 화면 ④는 이 키를 보내지 않는다.
   it("CR-15 양도일 현재 비거주자 키 → 계산기 route 400(판정 메뉴 전용) · 키가 없으면 컴패니언 입주권 비과세 그대로", async () => {
     const f = mainPlusCompanionRight({ main: "land", hh: "0", elig: "yes", price: "500000000" });
     const body = await captureBody(f);
@@ -262,13 +265,13 @@ describe("[V-8] 나목 · [V-2] 분양권 없음 확인", () => {
     expect(withDate.card("companion-fixed")).toMatchObject({ isExempt: true, determinedTax: 0 });
     expect(withDate.card("companion-fixed").redevelopmentDetail.oneRightExemptionClause).toBe("na");
     const without = await run(make());
-    expect(without.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 55_110_000 });
+    expect(without.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 56_060_000 });
   });
 
   it("CR-18 주 자산 토지 + 컴패니언 입주권에서 «분양권·입주권 없음» 확인이 없으면 4호 불성립(엔진) — 확인 칸·⑧ 차단은 PR-3에서 열렸다(`companion-right-4ho-open-pr3.*.test`)", async () => {
     const f = mainPlusCompanionRight({ main: "land", hh: "0", elig: "yes", price: "500000000" });
     f.householdNoPresaleRightsConfirmed = false as never;
     const r = await run(f);
-    expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 55_110_000 });
+    expect(r.card("companion-fixed")).toMatchObject({ isExempt: false, determinedTax: 56_060_000 });
   });
 });

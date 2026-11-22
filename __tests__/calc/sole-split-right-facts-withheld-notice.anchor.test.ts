@@ -118,9 +118,11 @@ describe("첫 지분 승계 + 둘째 지분 원조합원 — 선언 부재 확�
   it("W2 세액 불변 — 고지는 세액을 바꾸지 않는다(둘째 지분 선언을 직접 주입하면 달라지는 값과 대조)", async () => {
     const r = await runCalc(axisB({ primaryOver: SUCCESSOR_FIRST }));
     const tax = r.json.data.aggregated.totalTax as number;
-    // 고지는 표시일 뿐 — 둘째 지분은 §166 일반 경로 과세(결정세액 57,010,000 · 장특 70,000,000), 합계는 고지 추가 전과 같은 값이다.
+    // 고지는 표시일 뿐 — 둘째 지분은 §166 일반 경로 과세(카드 결정세액 57,960,000 · 장특 70,000,000), 합계는 고지 추가 전과 같은 값이다.
+    // 2026-11-22: 일괄 카드는 집계가 `skipBasicDeduction: true`로 계산한다 — 재개발 경로도 기본공제를 빼지 않게 되어(§103② · 일반 자산 카드와 같다)
+    //   카드 세액이 기본공제 2,500,000 × 38%만큼 크다(종전 57,010,000). 묶음 총세액은 그대로.
     expect(tax).toBe(194_106_000);
-    expect(props(r)[1].determinedTax).toBe(57_010_000);
+    expect(props(r)[1].determinedTax).toBe(57_960_000);
     // 대조군: 둘째 지분에 선언을 직접 넣으면(화면에는 입력 경로가 없는 값) 둘째 지분이 비과세가 된다 → 총세액이 줄고 고지도 없다.
     const injected = await runCalc(
       axisB({ primaryOver: SUCCESSOR_FIRST, companionOver: { redevExemptionEligibleAtApproval: "yes" } }),
