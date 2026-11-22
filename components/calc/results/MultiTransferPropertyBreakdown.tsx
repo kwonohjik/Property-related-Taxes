@@ -133,8 +133,9 @@ export function breakdownToFilingResult(b: PerPropertyBreakdown): TransferTaxRes
     reductionType: b.reductionType,
     reducibleIncome: b.reducibleIncome,
     // 영 §167의2② 반영 후 B — 자산별 신고서 ⑲가 합계 카드와 같은 수를 보이게(Q-3).
-    // §155⑳ 부분과세 자산의 ⑲는 이 결정 범위 밖이다 — `isRH` 분기는 ⑲를 비과세 차감 전 양도소득금액으로 잡으므로, 합산 신고서 자산 열과 같은 값
-    //   (`income` 기준 · `FilingFormTableAggregateHelpers`)을 미리 정해 넘겨 종전 값을 유지한다(단건·다건 ⑲ 기준은 법령 판단 대기).
+    // §155⑳ 부분과세 자산은 ⑲를 합산 신고서 자산 열과 같은 함수·인자(`income` 기준 · `FilingFormTableAggregateHelpers`)로 미리 정해 넘긴다.
+    //   단건 `isRH` 분기도 이제 과세대상 양도소득금액(= 위 `taxableGain` = `income`)을 쓰므로 §77·§77의3은 미리 정하지 않아도 같은 값이다.
+    //   남겨 두는 이유는 §77의2 대토보상 — 이 어댑터는 `replacementLandDetail`을 싣지 않아 단건 분기에 맡기면 대토분 echo 대신 `reducibleIncome`으로 떨어진다.
     eligibleIncomeAfterLoss: rhBasis
       ? reductionEligibleIncome(b.reductionType, b.income, b.reducibleIncome ?? 0, b.replacementLandDetail?.eligibleTransferIncome, b.eligibleIncomeAfterLoss, b.publicExpropriationDetail?.partWise?.eligibleIncome)
       : b.eligibleIncomeAfterLoss,

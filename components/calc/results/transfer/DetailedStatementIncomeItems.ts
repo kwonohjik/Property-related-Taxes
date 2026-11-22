@@ -80,7 +80,8 @@ export function setIncomeAndBasicDeductionItems(
    *   「양도소득금액」이 갈리지 않도록 **같은 식**을 쓴다(비과세분은 아래 「비과세 양도소득금액
    *   (소령 §161①)」 행이 별도로 보여 준다 — 신고서와 같은 구조다).
    *
-   * ⚠️ 이 값은 ⑲ 세액감면대상금액 산정에도 그대로 흘러간다(:515).
+   * ⚠️ ⑲ 세액감면대상금액은 이 값을 쓰지 않는다 — §90①의 B는 §95 양도소득금액 **안의** 감면대상 소득이라
+   *   §161 경로는 비과세분을 뺀 과세대상 양도소득금액(엔진 `taxableGain`)을 쓴다(아래 `eligibleValue`).
    *
    * 🔴 **`Math.max(0, …)`를 걷어냈다** (2026-09-16 · 양도차손 보존).
    *   엔진이 차손을 보존하게 되자 이 바닥이 **같은 화면의 두 카드를 갈랐다** —
@@ -153,12 +154,21 @@ export function setIncomeAndBasicDeductionItems(
     ? properties.reduce((s, p) => s + eligibleIncomeOf(p), 0)
     : reductionEligibleIncome(
         result.reductionTypeApplied,
-        singleIncome,
+        // §161 경로: 위 `singleIncome`은 비과세분 차감 전 — §90①의 B는 과세대상 양도소득금액(신고서 ⑲와 같은 값).
+        isRentalHousingException ? result.taxableGain : singleIncome,
         result.reducibleIncome ?? 0,
         result.replacementLandDetail?.eligibleTransferIncome,
         result.eligibleIncomeAfterLoss,
         result.publicExpropriationDetail?.partWise?.eligibleIncome,
       );
+  // §161 경로 꼬리 문구 — 위 `taxableGain` 인자가 실제로 ⑲ 값이 되는 경우(전액 기준 조문 · 차손 통산·파트 안분 없음)에만 붙인다.
+  const rhTaxableGainIsEligible =
+    !isAggregate &&
+    isRentalHousingException &&
+    eligibleValue > 0 &&
+    result.eligibleIncomeAfterLoss === undefined &&
+    ((result.reductionTypeApplied === "public_expropriation" && result.publicExpropriationDetail?.partWise?.eligibleIncome === undefined) ||
+      result.reductionTypeApplied === "gb_designated_land");
   items.set("reductionTargetIncome", {
     label: "세액감면대상금액",
     value: eligibleValue,
@@ -166,7 +176,7 @@ export function setIncomeAndBasicDeductionItems(
     // 조문마다 기준이 달라(전액/대토보상분/임대기간 안분) 그 근거를 함께 보인다.
     formula: isAggregate
       ? `자산별 감면 적용 대상 양도소득금액 합계 = ${eligibleValue.toLocaleString()} (§90① 세액감면방식 — 감면율·기본공제 前)`
-      : `${eligibleIncomeBasisText(result.reductionTypeApplied, eligibleValue, result.publicExpropriationDetail?.partWise?.eligiblePart)} — §90① 세액감면방식이라 감면율·기본공제를 곱하기 전 금액이며, 소득금액에서 차감하지 않습니다`,
+      : `${eligibleIncomeBasisText(result.reductionTypeApplied, eligibleValue, result.publicExpropriationDetail?.partWise?.eligiblePart)}${rhTaxableGainIsEligible ? " · 위 비과세 양도소득금액을 뺀 과세대상 양도소득금액 기준" : ""} — §90① 세액감면방식이라 감면율·기본공제를 곱하기 전 금액이며, 소득금액에서 차감하지 않습니다`,
     legalBasis: "소득세법 §90① · 조세특례제한법 §127",
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
