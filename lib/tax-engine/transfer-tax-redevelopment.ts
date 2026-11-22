@@ -292,19 +292,26 @@ export function calculateRedevelopmentTax(
   // ─ Step D: 기본공제 (STEP 5) ─
   // calcBasicDeduction(taxableGain, lth) 시그니처: afterLTH = taxableGain - lth.
   // redevAfterRight.total.gain 을 첫 인자로 전달 (taxableIncome 은 이미 lthd 차감 후 — 이중 차감 방지).
-  const basicDeduction = calcBasicDeduction(
-    redevAfterRight.total.gain,
-    redevAfterRight.total.lthd,
-    input.annualBasicDeductionUsed,
-    input.isUnregistered ?? false,
-    parsedRates.basicDeductionRules,
-  );
-  steps.push({
-    label: "기본공제",
-    formula: `연 한도 ${parsedRates.basicDeductionRules.annualLimit.toLocaleString()} - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()}`,
-    amount: basicDeduction,
-    legalBasis: TRANSFER.BASIC_DEDUCTION,
-  });
+  // 일괄 집계는 이 경로도 `skipBasicDeduction: true`로 부른다 — 기본공제는 집계가 소득세법 §103②대로 신고 단위에서 배분한다
+  //   (일반 경로 `transfer-tax-income-steps.ts`·§155⑳ `transfer-tax-rental-housing-step.ts`와 같다). 종전에는 여기서 또 빼
+  //   §77 감면 상세 basicDeductionOnCash 2,500,000이 율 곱한 감면소득에 들어갔다.
+  const basicDeduction = input.skipBasicDeduction
+    ? 0
+    : calcBasicDeduction(
+        redevAfterRight.total.gain,
+        redevAfterRight.total.lthd,
+        input.annualBasicDeductionUsed,
+        input.isUnregistered ?? false,
+        parsedRates.basicDeductionRules,
+      );
+  if (!input.skipBasicDeduction) {
+    steps.push({
+      label: "기본공제",
+      formula: `연 한도 ${parsedRates.basicDeductionRules.annualLimit.toLocaleString()} - 기사용 ${input.annualBasicDeductionUsed.toLocaleString()}`,
+      amount: basicDeduction,
+      legalBasis: TRANSFER.BASIC_DEDUCTION,
+    });
+  }
 
   // ─ Step E: 과세표준 (STEP 6) ─
   const taxBase = Math.max(0, transferIncome - basicDeduction);
@@ -396,6 +403,7 @@ export function calculateRedevelopmentTax(
     reductionType,
     reductionTypeApplied,
     reducibleIncome,
+    reducibleIncomeBuckets,
     aggregateReductionRate,
     newHousingReductionDetail,
     publicExpropriationDetail,
@@ -705,6 +713,9 @@ export function calculateRedevelopmentTax(
     reductionType,
     reductionTypeApplied,
     reducibleIncome,
+    // 소득세법 §90①의 B(감면율 전)·E — 없으면 일괄 집계가 율이 곱해진 `reducibleIncome`을 B(율 1)로 합성해
+    //   감면 주택에 감면 외 소득이 있는 것처럼 보고 §103② 기본공제를 그 주택에 붙였다.
+    reducibleIncomeBuckets,
     aggregateReductionRate,
     newHousingReductionDetail,
     publicExpropriationDetail,

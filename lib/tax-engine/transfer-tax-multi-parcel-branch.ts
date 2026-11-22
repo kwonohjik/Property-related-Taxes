@@ -145,6 +145,7 @@ export function handleMultiParcelBranch(
     reductionType: mpReductionType,
     reductionTypeApplied: mpReductionTypeApplied,
     reducibleIncome: mpReducibleIncome,
+    reducibleIncomeBuckets: mpReducibleIncomeBuckets,
     aggregateReductionRate: mpAggregateReductionRate,
     newHousingReductionDetail: mpNewHousingDetail,
     publicExpropriationDetail: mpExproDetail,
@@ -314,6 +315,9 @@ export function handleMultiParcelBranch(
     reductionType: mpReductionType,
     reductionTypeApplied: mpReductionTypeApplied,
     reducibleIncome: mpReducibleIncome,
+    // 소득세법 §90①의 B(감면율 전)·E — 없으면 일괄 집계가 율이 곱해진 `reducibleIncome`을 B(율 1)로 합성해
+    //   §103② 기본공제 흡수 잔여(C)를 율 없이 빼 감면이 과대해졌다(함께 양도한 자산 소득 < 기본공제일 때).
+    reducibleIncomeBuckets: mpReducibleIncomeBuckets,
     aggregateReductionRate: mpAggregateReductionRate,
     determinedTax: mpDeterminedTax,
     penaltyTax: mpPenaltyTax,
