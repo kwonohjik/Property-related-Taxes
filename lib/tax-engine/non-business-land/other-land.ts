@@ -72,7 +72,10 @@ export function judgeOtherLand(
   // NBL2611-V1-A — 재산세 분류 근거 모델이 개입했을 때만 echo(표시 전용).
   const basisEcho = buildPropertyTaxBasisEcho(input.otherLand, resolvePropertyTaxBasis(input.otherLand));
   const basisPart = basisEcho ? { propertyTaxBasis: basisEcho } : {};
-  const history = applyStateHistory(core, input, rules, trace);
+  const history = applyStateHistory(core, input, rules, trace, (i) => {
+    const t: OtherLandOwnTrace = {};
+    return { trace: t, isBusiness: judgeOtherLandCore(i, rules, t).isBusiness };
+  });
   if (history.applied) return { ...history.result, ...basisPart };
   // NBL2611-V2-C1 — 비사업용으로 끝난 잔여분(전량·부분)은 «빈 사업기간 + 유예기간»으로 기간기준을 다시 본다(영 §168의14①). 유예 입력이 없으면 그대로다.
   const { result, graceJudged } = applyGraceToNonBusinessRemainder(core, input, rules);
@@ -292,7 +295,7 @@ function judgeOtherLandCore(
       revenueTestDetail = startJudged.applied.revenue;
       warnings.push(startJudged.applied.notice);
       // NBL-STATE-HISTORY-E2 · Q-15 (가′) — 자체 사업기간 [개시일, 양도일)을 이력 판정에 넘긴다(충족해 여기서 끝나면 이 구간이 결론의 근거다).
-      markOwn(trace, startJudged.applied.periods, startJudged.applied.r.meets);
+      markOwn(trace, startJudged.applied.periods);
       if (startJudged.applied.r.meets) {
         return buildPass(`수입금액비율 충족 (${REVENUE_BUSINESS_TYPE_LABEL[revenueTestDetail.businessType]}) + 당해 사업개시일 이후 기간기준 충족`, steps, appliedLaws, warnings, {
           r: startJudged.applied.r, totalOwnershipDays, revenueTestDetail,
@@ -545,7 +548,7 @@ function judgeOtherLandCore(
           detail: `특정용도분 비율 ${pctBiz.toFixed(1)}% → 부속토지 전량 사업용`,
           legalBasis: mixedUse.legalBasis,
         });
-        markOwn(trace, hoReq.businessPeriods ?? fullPeriod); // 호 인정·복합용도·연접 = 다목 — 전 기간(3호는 자기 구간)
+        markOwn(trace, hoReq.businessPeriods ?? fullPeriod, relatedType); // 호 인정·복합용도·연접 = 다목 — 전 기간(3호는 자기 구간)
         return buildPass("복합용도 건축물 — 특정용도분 부속토지 전량 사업용 (§168의11⑥)", steps, appliedLaws, warnings, {
           r, totalOwnershipDays, revenueTestDetail,
         });
@@ -596,7 +599,7 @@ function judgeOtherLandCore(
           detail: `총면적 ${c.totalArea.toFixed(1)}㎡ ≤ 기준면적 ${areaLimit}㎡ → 전량 사업용`,
           legalBasis: NBL.OTHER_LAND_CONTIGUOUS,
         });
-        markOwn(trace, hoReq.businessPeriods ?? fullPeriod); // 호 인정·복합용도·연접 = 다목 — 전 기간(3호는 자기 구간)
+        markOwn(trace, hoReq.businessPeriods ?? fullPeriod, relatedType); // 호 인정·복합용도·연접 = 다목 — 전 기간(3호는 자기 구간)
         return buildPass("연접 다필지 — 기준면적 이내 전량 사업용 (§168의11⑤)", steps, appliedLaws, warnings, {
           r, totalOwnershipDays, revenueTestDetail,
         });
@@ -669,7 +672,7 @@ function judgeOtherLandCore(
         : "거주·사업과 직접 관련 + 기간기준 충족",
       legalBasis,
     });
-    markOwn(trace, hoReq.businessPeriods ?? fullPeriod); // 호 인정(레거시 boolean 포함) = 다목 — 전 기간(3호는 자기 구간)
+    markOwn(trace, hoReq.businessPeriods ?? fullPeriod, relatedType); // 호 인정(레거시 boolean 포함) = 다목 — 전 기간(3호는 자기 구간)
     return buildPass(
       areaLimit !== undefined ? "거주·사업관련 토지 + 기준면적 이내" : "거주·사업관련 토지 + 기간기준 충족",
       steps, appliedLaws, warnings, { r, totalOwnershipDays, revenueTestDetail },

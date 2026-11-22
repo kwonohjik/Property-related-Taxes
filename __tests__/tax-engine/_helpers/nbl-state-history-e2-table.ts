@@ -135,6 +135,35 @@ export const E2_ROWS: readonly E2Row[] = [
     extra: { nblZoneType: "commercial", nblOtherRelatedBusinessType: "sports_facility_business", ...revenueRaw("2024-03-01") },
     expect: { nonBusiness: false, eff: 3832, total: 3832 },
   },
+  // ── 경로 순서: core는 수입금액비율 → 나목 → 호 인정 순으로 첫 PASS에서 끝난다 — 나목이 먼저 PASS여도 다목(호)은 이력과 무관하게 전 기간 사업용으로 센다 ──
+  ...(["sports_facility_business", "hatchang"] as const).map((ho): E2Row => ({
+    id: `Dn-${ho === "hatchang" ? "7호" : "1호다목"}-신축`,
+    scenario: `현재 건축물 있음·별도합산(나목 PASS) + 호 인정(${ho}) + 신축 2023-06-01 — 나목이 먼저 끝나도 호 인정은 전 기간 사업용(이력 없음과 같다)`,
+    events: [built("2023-06-01")],
+    extra: { nblOtherRelatedBusinessType: ho, ...(ho === "hatchang" ? { nblOtherMaxAnnualArea: "1000" } : {}) },
+    expect: { nonBusiness: false, eff: 3651, total: 3651, tax: B },
+  })),
+  {
+    id: "Dn-레거시+신축", scenario: "현재 건축물 있음·별도합산(나목 PASS) + 레거시 boolean(거주·사업관련, 호 미설정) + 신축 2023-06-01", events: [built("2023-06-01")],
+    extra: { nblOtherRelatedBusinessType: "", nblOtherIsRelatedToResidence: true }, expect: { nonBusiness: false, eff: 3651, total: 3651, tax: B },
+  },
+  {
+    id: "Dn-수입금액+신축", scenario: "수입금액비율 충족(개시일 없음) + 현재 건축물 있음·별도합산 + 신축 2023-06-01 — 전 기간 사업용", events: [built("2023-06-01")],
+    extra: revenueRaw(), expect: { nonBusiness: false, eff: 3651, total: 3651, tax: B },
+  },
+  {
+    id: "Dn-가목비과세+호", scenario: "비과세·면제 선언(가목 — 나목과 같은 Step 3-1) + 호 인정(1호 다목) + 신축 2023-06-01", events: [built("2023-06-01")],
+    extra: { nblOtherPropertyTaxType: "exempt", nblOtherRelatedBusinessType: "sports_facility_business" }, expect: { nonBusiness: false, eff: 3651, total: 3651, tax: B },
+  },
+  {
+    id: "Dn-DM01충족+호", scenario: "DM-01 개시일 2021-06-01(기간기준 충족 — 수입금액비율 단계에서 먼저 끝난다) + 호 인정(1호 다목) + 신축 2023-06-01 — 호 인정 전 기간 ∪ DM-01 구간",
+    transfer: "2024-06-30", events: [built("2023-06-01")],
+    extra: { nblOtherRelatedBusinessType: "sports_facility_business", ...revenueRaw("2021-06-01") }, expect: { nonBusiness: false, eff: 3832, total: 3832 },
+  },
+  {
+    id: "Dn-DM01충족+나목꼬리", scenario: "DM-01 개시일 2021-06-01(충족 — 먼저 끝난다) + 현재 건축물 있음·별도합산(나목) + 신축 2020-01-01 — 사업용 구간 = DM-01 ∪ 나목 꼬리 = 신축일부터 양도일까지",
+    transfer: "2024-06-30", events: [built("2020-01-01")], extra: revenueRaw("2021-06-01"), expect: { nonBusiness: false, eff: 1642, total: 3832 },
+  },
   // ── Q-15 (가′) — core 자체 사업기간(3호 · DM-01)과 이력 ──
   {
     id: "V21-3호", scenario: "3호 조성 완료 2021-01-02 · 취득 2021-01-01 · 신축 2021-07-01 — (가′) 소유기간 ∩ 3호 = 730/1,094 사업용(초판 (가) 문언은 550 비사업용)",

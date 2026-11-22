@@ -42,21 +42,22 @@ export function isBareLand(input: NonBusinessLandInput): boolean {
  *   · 3호 — 조성 완료 `[완료일, +2년)`
  *   · 호 인정(3호 외)·복합용도·연접 다필지·레거시 boolean·수입금액비율 통과 — `fullPeriod`(소유기간 전체). 법 §104의3①4호 가·나·다목은 병렬 제외 사유라 다목은 건축물·재산세 구분 이력과 무관하다.
  * 나목(Step 3-1 비종합합산 · Step 3-2 바닥면적)은 건축물·재산세 구분 = 이력이 다루는 축이라 기록하지 않는다(꼬리 전용).
- * `own`이 없으면 그런 경로가 적용되지 않았다(빈 배열도 «적용됨 · 비어 있음»). `decisiveOwn` = core의 사업용 결론이 자체 구간에서 나왔다(거짓이고 core가 사업용이면 `fullPeriod`(양도일 현재 상태)에서 나왔다 — 꼬리 구간도 사업용으로 센다).
+ * `own`이 없으면 그런 경로가 적용되지 않았다(빈 배열도 «적용됨 · 비어 있음»). 이 기록은 core가 **실제로 지난 경로**만 담는다 — core는 수입금액비율 → 나목 → 호 인정 순으로 첫 PASS에서 끝나므로 뒤 경로의 다목은 빠질 수 있다.
+ * 상태 이력 판정(`applyStateHistory`)이 core를 다목만/나목만 켠 입력으로 다시 돌려(`CoreProbe`) 경로 순서와 무관하게 보충한다.
  */
 export interface OtherLandOwnTrace {
   own?: DateInterval[];
-  decisiveOwn?: boolean;
 }
 
 /**
- * 자체 사업기간 기록 — core가 사업용(또는 3호의 기간기준 판정)을 **자기 구간**으로 결론낸 경로에서 부른다. `decisive`(기본 참)는 그 결론이 이 구간에서 나왔다는 뜻이다.
+ * 자체 사업기간 기록 — core가 사업용(또는 3호의 기간기준 판정)을 **자기 구간**으로 결론낸 경로에서 부른다.
  * 다목(영 §168의11 호 인정 · ②수입금액비율)은 건축물·재산세 구분과 **독립한 축**이라 date 집합이 이력과 무관하다 — `fullPeriod`(소유기간 전체)를 넘기면
  * 상태 이력이 이 날들을 지우지 못한다(법 §104의3①4호 가·나·다목은 병렬 제외 사유 — 날짜 집합의 합집합). 나목(Step 3-1·3-2)은 이력이 다루는 축이라 기록하지 않는다.
  */
-export function markOwn(trace: OtherLandOwnTrace, periods: DateInterval[], decisive = true): void {
+export function markOwn(trace: OtherLandOwnTrace, periods: DateInterval[], ho?: string): void {
+  // 13호(나지)는 기록하지 않는다 — «어느 용도로도 사용되고 있지 아니한 토지»는 건축물이 있던 구간과 충돌하고 날짜별 적용 범위를 확인하지 못했다(확인 필요). 꼬리만 core 결론을 따른다.
+  if (ho === "vacant_lot_1household") return;
   trace.own = [...(trace.own ?? []), ...periods];
-  trace.decisiveOwn = decisive;
 }
 
 export interface Ctx {

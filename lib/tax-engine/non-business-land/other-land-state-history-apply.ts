@@ -12,9 +12,8 @@
  *   · `changed` + 전량 사업용/전량 비사업용 → ① 사건 → 일 단위 구간(`deriveOtherLandStateIntervals` — ⑤·⑦·⑧·⑫와 같은 leaf)
  *       ② 사업용 구간(`stateHistoryBusinessIntervals`) ③ 유예와 합집합으로 `meetsPeriodCriteria`(영 §168의6) 한 번.
  *
- * core가 자체 사업기간으로 판정한 경로(DM-01 · 3호)는 `trace`로 받는다. 그 경로가 적용됐지만 core의 사업용 결론이 `fullPeriod`(양도일 현재 상태)에서 나온 경우
- * (예: DM-01 구간은 기간기준을 못 채웠으나 재산세 별도합산 건축물로 사업용) 꼬리 구간도 사업용으로 센다 — 법 §104의3①4호 가·나·다목은 병렬 제외 사유이고
- * 법에 없는 «자체 사업기간이 있으면 양도일 현재 상태를 버린다»는 제한을 더하면 법 근거 없는 불리 적용이 되기 때문이다.
+ * core가 자체 사업기간으로 판정한 경로(DM-01 · 3호 · 다목 호 인정 · 수입금액비율)는 `trace`로 받고, core가 **첫 PASS에서 끝나 평가하지 못한 다목·나목**은 `daMokAndNaMok`가 core를
+ * 입력만 바꿔 다시 돌려 보충한다 — 법 §104의3①4호 가·나·다목은 병렬 제외 사유라 어느 경로에서 먼저 끝났는지로 날짜 집합이 달라지면 안 된다(법에 없는 불리 적용).
  */
 import { differenceInDays } from "../utc-date";
 import { NBL } from "../legal-codes";
@@ -35,6 +34,7 @@ import { meetsPeriodCriteria } from "./period-criteria";
 import { getOwnershipStart } from "./utils/period-math";
 import { mergeOverlappingPeriods } from "./utils/period-math";
 import { sumDaysInWindow } from "./utils/period-math";
+import type { DateInterval } from "./types";
 import type { PeriodCriteriaResult } from "./period-criteria";
 import type { OtherLandOwnTrace } from "./other-land-helpers";
 import type { StateHistoryCriteriaEcho } from "./land-usage.types";
@@ -70,11 +70,34 @@ function criteriaEcho(r: PeriodCriteriaResult): StateHistoryCriteriaEcho {
   };
 }
 
+/** core(`judgeOtherLandCore`)를 입력만 바꿔 한 번 더 돌리는 함수 — 자체 구간 기록(`trace`)과 전량 사업용 여부를 돌려준다. `other-land.ts`가 넘긴다(순환 import 방지). */
+export type CoreProbe = (input: NonBusinessLandInput) => { trace: OtherLandOwnTrace; isBusiness: boolean };
+
+/**
+ * 경로 순서와 무관한 **다목 자체 구간 · 나목 꼬리 인정**(Q-15 (가′) 보강). core는 수입금액비율 → 나목(Step 3-1) → 호 인정 순으로 첫 PASS에서 끝나 뒤 경로를 평가하지 않는다.
+ * 법 §104의3①4호 가·나·다목은 병렬 제외 사유라 어느 경로에서 먼저 끝났는지로 다목 날짜를 셀지가 달라지면 안 된다 → 이력이 적용될 때만 core를 다시 돌려 보충한다(이력 없는 경로는 손대지 않는다).
+ *   · 다목 호 인정 구간: 나목·수입금액비율을 끈 입력(재산세 종합합산 선언 · 근거·공장·수입금액 제거)으로 돌려 호 인정·복합용도·연접·레거시 PASS의 구간(3호는 `[완료일, +2년)`)을 얻는다.
+ *     13호(나지)는 제외한다 — «나지»는 건축물이 있던 구간과 충돌하고 날짜별 적용 범위를 확인하지 못했다(확인 필요). 호 요건 실패(5호 용도지역 등)·부분 면적은 기록되지 않는다.
+ *   · 나목 꼬리 인정: 다목을 끈 입력(호 none · 복합용도·연접 제거 · 수입금액 제거)이 전량 사업용이면 양도일 현재 상태(꼬리)는 나목으로도 사업용이다.
+ */
+function daMokAndNaMok(input: NonBusinessLandInput, core: CategoryJudgeResult, trace: OtherLandOwnTrace, probe: CoreProbe): { own?: DateInterval[]; naMokTail: boolean } {
+  const o = input.otherLand!;
+  const ho = o.relatedBusinessType;
+  const hasDaMokHo = ho ? ho !== "none" && ho !== "vacant_lot_1household" : o.isRelatedToResidenceOrBusiness || !!o.mixedUseBuildingMode;
+  const noNaMok = { ...o, propertyTaxType: "comprehensive" as const, propertyTaxBasis: undefined, demolishedFloorArea: undefined, factory: undefined };
+  const haOwn = hasDaMokHo ? probe({ ...input, revenueTest: undefined, otherLand: noNaMok }).trace.own : undefined;
+  const own = trace.own || haOwn ? [...(trace.own ?? []), ...(haOwn ?? [])] : undefined;
+  if (!own) return { naMokTail: core.isBusiness };
+  const noDaMok = { ...o, relatedBusinessType: "none" as const, isRelatedToResidenceOrBusiness: false, mixedUseBuildingMode: undefined, parcels: undefined };
+  return { own, naMokTail: probe({ ...input, revenueTest: undefined, otherLand: noDaMok }).isBusiness };
+}
+
 export function applyStateHistory(
   core: CategoryJudgeResult,
   input: NonBusinessLandInput,
   rules: NonBusinessLandJudgmentRules,
   trace: OtherLandOwnTrace,
+  probe: CoreProbe,
 ): StateHistoryOutcome {
   const history = input.landStateHistory;
   if (!history || history.mode === "" || history.mode === "unchanged") return { applied: false, notices: [] };
@@ -96,10 +119,10 @@ export function applyStateHistory(
     propertyTaxType: o.propertyTaxType,
   });
 
-  // 자체 사업기간 경로가 적용됐지만 core의 사업용 결론이 양도일 현재 상태(fullPeriod)에서 나왔다면 꼬리 구간도 사업용이다(위 헤더).
+  // 다목 자체 구간(경로 순서 무관) + 나목 꼬리 인정 — `daMokAndNaMok`. 자체 구간이 있으면 나목이 인정하는 꼬리도 사업용 구간에 더한다(법에 없는 «자체 사업기간이 있으면 양도일 현재 상태를 버린다» 제한 금지).
   const tail = intervals[intervals.length - 1];
-  const ownBusinessPeriods =
-    trace.own && core.isBusiness && !trace.decisiveOwn && tail ? [...trace.own, { start: tail.start, end: tail.end }] : trace.own;
+  const da = daMokAndNaMok(input, core, trace, probe);
+  const ownBusinessPeriods = da.own && da.naMokTail && tail ? [...da.own, { start: tail.start, end: tail.end }] : da.own;
   const businessIntervals = stateHistoryBusinessIntervals(intervals, { isBusiness: core.isBusiness, ownBusinessPeriods });
   const r = meetsPeriodCriteria(businessIntervals, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
 

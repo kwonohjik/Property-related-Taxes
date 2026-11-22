@@ -120,6 +120,32 @@ describe("E2 Anchor 5 — 다목(호 인정·수입금액비율·레거시)은 �
   });
 });
 
+describe("E2 Anchor 6 — 경로 순서: 나목·수입금액비율이 먼저 PASS여도 다목(호)·나목 꼬리가 빠지지 않는다 (core는 첫 PASS에서 끝난다)", () => {
+  const DN_ROWS = E2_ROWS.filter((r) => r.id.startsWith("Dn-"));
+  it("행 7개(호 2종 + 레거시 + 수입금액 + 가목 비과세 + DM-01 충족 + 호 · DM-01 충족 + 나목 꼬리)", () => {
+    expect(DN_ROWS.length).toBe(7);
+  });
+  it.each(DN_ROWS.map((r) => [r.id, r] as const))("%s: 판정이 이력 없음(현행)과 같다", (_id, row: E2Row) => {
+    const control = judge(fromRaw({ ...e2RowRaw(row), nblOtherStateHistoryMode: "", nblOtherStateEvents: [] }));
+    const j = judge(fromRaw(e2RowRaw(row)));
+    expect(control.isNonBusinessLand).toBe(false);
+    expect(j.isNonBusinessLand).toBe(false);
+  });
+  it("대조: 호를 빼면(`none`) 같은 신축 이력은 나목(건축물 축)만 세어 비사업용(214/3,651) — 다목이 없을 때의 정상 동작", () => {
+    const row = E2_ROWS.find((r) => r.id === "Dn-1호다목-신축")!;
+    const j = judge(fromRaw({ ...e2RowRaw(row), nblOtherRelatedBusinessType: "none" }));
+    expect([j.isNonBusinessLand, j.effectiveBusinessDays]).toEqual([true, 214]);
+  });
+  it("13호(나지)는 자체 구간으로 세지 않는다 — 건축물 있던 구간과 충돌하고 날짜별 적용 범위 미확인(확인 필요): 꼬리만 사업용(214/3,651 비사업용)", () => {
+    const row = E2_ROWS.find((r) => r.id === "Da-1호다목-종합")!; // 철거 2023-06-01(종합합산) · 현재 나대지
+    const vacant = { nblOtherRelatedBusinessType: "vacant_lot_1household", acquisitionArea: "600" }; // 13호 660㎡ 이내
+    const control = judge(fromRaw({ ...e2RowRaw(row), ...vacant, nblOtherStateHistoryMode: "", nblOtherStateEvents: [] }));
+    expect(control.isNonBusinessLand).toBe(false); // 이력 없음: 13호 나지 인정
+    const j = judge(fromRaw({ ...e2RowRaw(row), ...vacant }));
+    expect([j.isNonBusinessLand, j.effectiveBusinessDays]).toEqual([true, 214]);
+  });
+});
+
 describe("E2 판정 연결 — 고지·echo·미적용 경로", () => {
   const base = GRID["G01 나대지·종합합산 → 전량 비사업용(253,960,000)"];
   const removedSep = [{ kind: "building_removed" as const, date: d("2021-01-01"), propertyTaxTypeBefore: "separate" as const }];
