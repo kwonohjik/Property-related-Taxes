@@ -16,6 +16,7 @@ import { appurtenantCardHeldTooShort } from "./transfer-tax-appurtenant-land";
 import { appurtenantCardCoveredByExpropriationProviso } from "./transfer-tax-appurtenant-land";
 import { resolveArticle89Clause2 } from "./transfer-tax-89-2-exclusion";
 import { article89Clause2PostManagementNotice } from "./transfer-tax-89-2-consequences";
+import { article89ExceptionApplied } from "./transfer-tax-89-2-consequences";
 import { meetsReplacementHouse } from "./one-house/replacement-house";
 import { buildEraNoticeRelevance } from "./one-house/era-notice-relevance";
 import { returnToFarmPostManagementNotice } from "./one-house/rural-return-to-farm-facts";
@@ -178,7 +179,8 @@ export function checkExemption(
 
   // §156의2⑬·§156의3⑩ 사후관리(추징) — 계산기 경고와 같은 leaf·같은 문장(G5-7). 자기선언으로 비과세를 받았을 때만 있다.
   const postManagementNotice = article89Clause2PostManagementNotice(article89Clause2, settled, input.transferDate);
-  const clause2Exception = article89Clause2.exception;
+  // §89② 예외로 받은 비과세의 표시 줄 — 「적용된 특례」 카드와 「근거 조문」이 같이 읽는다.
+  const article89Applied = article89ExceptionApplied(article89Clause2, settled, appliedExceptions.map((e) => e.legalBasis));
   // §155⑫ 귀농주택 사후관리(추징) — 계산기 경고와 같은 문장(`returnToFarmPostManagementNotice`). 귀농 특례로 비과세를 받았을 때만 있다.
   const ruralNotice =
     settled && appliedExceptions.some((e) => e.id === "155-7-rural:return_to_farm")
@@ -192,6 +194,7 @@ export function checkExemption(
     // §89② 배제일 때만 — 계산기 미선언·확인 필요 고지가 「결론을 가를 때만」 나가도록 본체 판정 결과를 올린다(G5-8).
     ...(excluded ? { coreWouldPass } : {}),
     ...(postNotices.length > 0 ? { postManagementNotices: postNotices } : {}),
+    ...(article89Applied ? { article89ExceptionApplied: article89Applied } : {}),
     appliedExceptions,
     pending,
     undetermined: [
@@ -242,11 +245,11 @@ export function checkExemption(
     // OH-22 — §154⑤ 단서 재기산 판정 echo(구간 안 1주택 · 이력 입력 시). 결과 카드·계산기 안내가 같은 문장을 쓴다.
     ...finalOneHouseRestartEchoOf(input),
     ...requirementReviewEchoOf(requirementReview),
-    // ④·§156의3③ 자기선언으로 받은 비과세는 적용 특례 카드(`appliedExceptions`)가 없어 근거 조문이 비었다 — 그 조문을 싣는다(G5-7).
+    // §89② 예외로 받은 비과세는 본체 특례 카드(`appliedExceptions`)만으로는 그 조문이 빠진다 — 그 조문을 싣는다(G5-7 · ④·§156의3③에서 전체로 넓힘).
     legalBasis: [
       ...new Set([
         ...deriveLegalBasis(appliedExceptions, pending),
-        ...(postManagementNotice && clause2Exception !== undefined ? [clause2Exception] : []),
+        ...(article89Applied?.legalBasis ?? []),
       ]),
     ],
   };

@@ -14,6 +14,7 @@ import { TRANSFER } from "./legal-codes";
 import { isOriginalMemberOpenArticle } from "./one-house/original-member-right";
 import { resolve1562Clause3Years, resolve1562DeadlineYears } from "./data/article-156-2-completion-era";
 import { isOldSurchargeClauseEra } from "./data/surcharge-old-clauses-era";
+import { ARTICLE_89_2_GENERAL_EXCLUSION_LABEL } from "./transfer-tax-89-2-right-timing-core";
 
 /**
  * §156의2⑬ · §156의3⑩ **사후관리(추징) 신고·납부** — 고지(계산기·판정 메뉴)와 입력 카드가 같은 문구를 읽는 단일 소스(S15-8 · G5-7).
@@ -40,6 +41,25 @@ export type Article89Clause2NoticeGate = { coreWouldPass: boolean; surchargeDecl
 /** 구 §167의11①1호 시대 양도 + 중과 대상이면 3년 경과 예외 선언이 세액(중과 배제)을 바꿀 수 있다. */
 export function surchargeDeclarationMatters(transferDate: Date, surchargeApplicable: boolean | undefined): boolean {
   return isOldSurchargeClauseEra(transferDate) && surchargeApplicable === true;
+}
+
+/**
+ * §89② 예외로 받은 비과세의 **표시 줄** — 판정 메뉴 결과 「적용된 특례」 카드(`article89ExceptionApplied`)와 「근거 조문」이 같은 값을 읽는다.
+ *
+ * 비과세가 실제로 났고(`settled`) §89② 예외가 성립했을 때만 낸다. 본체 특례 카드가 이미 같은 조문을 말하면(⑤ 대체주택 · 원조합원 §155①)
+ * 다시 내지 않는다. 준용(⑦⑩⑪ · §156의3⑥)이면 경유 조문을 함께 싣는다. 라벨은 불성립 카드(`89-2-exclusion-unmet`)와 같은 말이다.
+ */
+export function article89ExceptionApplied(
+  clause2: Article89Clause2Result | undefined,
+  settled: boolean,
+  appliedLegalBases: readonly string[],
+): { label: string; legalBasis: string[] } | undefined {
+  if (!settled || clause2?.status !== "exception_met" || !clause2.exception) return undefined;
+  if (appliedLegalBases.includes(clause2.exception)) return undefined;
+  return {
+    label: ARTICLE_89_2_GENERAL_EXCLUSION_LABEL,
+    legalBasis: clause2.viaArticle ? [clause2.exception, clause2.viaArticle] : [clause2.exception],
+  };
 }
 
 /**

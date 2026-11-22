@@ -450,6 +450,12 @@ export type OneHouseJudgment = {
    */
   postManagementNotices?: string[];
   /**
+   * §89② 예외(「소득세법 시행령」 §156의2·§156의3)로 비과세를 받았을 때의 표시 줄 — 결과 「적용된 특례」 카드가 읽는다.
+   * 본체 특례(`appliedExceptions` — 예: 혼인 2+2의 §155⑤)만 보이면 권리가 있는 세대가 실제로 기댄 조문(§156의2⑨ 등)이 화면에서 사라진다.
+   * leaf `article89ExceptionApplied`가 만들고, 받은 비과세가 전제라 비과세를 거두면(`revokeOneHouseExemption`) 함께 지운다.
+   */
+  article89ExceptionApplied?: { label: string; legalBasis: string[] };
+  /**
    * 적용된 특례 — **빈 배열은 「없음」을 뜻한다**(「아직 안 만듦」이 아니다).
    *
    * `checkExemptionCore`의 비과세·부분과세 반환 지점이 채우고, `checkExemption`이

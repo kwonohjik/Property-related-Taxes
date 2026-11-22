@@ -399,7 +399,7 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
       )}
 
       {/* ── 적용된 특례 ── */}
-      {judgment.appliedExceptions.length > 0 && (
+      {(judgment.appliedExceptions.length > 0 || judgment.article89ExceptionApplied) && (
         <ToneCard tone="emerald" sectionNum={nextNo()} title="적용된 특례">
           <ul className="ml-4 list-disc space-y-1 text-sm">
             {judgment.appliedExceptions.map((e) => (
@@ -410,6 +410,17 @@ export function OneHouseJudgmentResultView({ result, onCalculateTax, transferDat
                 </span>
               </li>
             ))}
+            {/* §89② 예외(§156의2·§156의3)로 받은 비과세 — 본체 특례만 보이면 권리가 있는 세대가 기댄 조문이 사라진다. 엔진 echo를 그대로 읽는다. */}
+            {judgment.article89ExceptionApplied && (
+              <li data-testid="one-house-applied-89-2-exception">
+                {judgment.article89ExceptionApplied.label}
+                {judgment.article89ExceptionApplied.legalBasis.map((b) => (
+                  <span key={b} className="ml-2">
+                    <LawArticleModal legalBasis={b} />
+                  </span>
+                ))}
+              </li>
+            )}
           </ul>
         </ToneCard>
       )}
