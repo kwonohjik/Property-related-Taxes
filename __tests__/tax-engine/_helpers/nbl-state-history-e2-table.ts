@@ -65,6 +65,10 @@ export const E2_ROWS: readonly E2Row[] = [
     id: "M7", scenario: "M6 + 5호 유예(취득 후 2년 + 착공 2022-06-01~준공 2023-06-01) — 합집합이라 이중 계상 없음", events: [built("2023-06-01")],
     grace: [{ reasonCode: "construction_in_progress", secondaryDate: "2022-06-01", endDate: "2023-06-01" }], expect: { nonBusiness: true, eff: 1308, total: 3651, graceDays: 1094, tax: N },
   },
+  {
+    id: "M7b", scenario: "M7 변형: 5호 건설진행이 준공 2023-09-01까지 이어져 신축 이후 구간(2023-06-01~)과 92일 겹침 — 합집합이라 M7과 같은 1,308 (산술 합산이면 1,400)", events: [built("2023-06-01")],
+    grace: [{ reasonCode: "construction_in_progress", secondaryDate: "2022-06-01", endDate: "2023-09-01" }], expect: { nonBusiness: true, eff: 1308, total: 3651, graceDays: 1094, tax: N },
+  },
   { id: "M8a", scenario: "나목 경계: 준공 2022-01-01 — 직전 3년 비사업 365(미충족)", events: [built("2022-01-01")], expect: { nonBusiness: false, eff: 730, total: 3651, tax: B } },
   { id: "M8b", scenario: "나목 경계: 준공 2022-01-02 — 비사업 366(충족)", events: [built("2022-01-02")], expect: { nonBusiness: true, eff: 729, total: 3651, tax: N } },
   { id: "M8c-731", scenario: "윤일 낀 창: 양도 2024-03-01 · 준공 2022-03-01(꼬리 731일)", transfer: "2024-03-01", events: [built("2022-03-01")], expect: { nonBusiness: false, eff: 731, total: 3711 } },

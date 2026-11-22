@@ -111,6 +111,7 @@ describe("E2 판정 연결 — 고지·echo·미적용 경로", () => {
     const j = judge(withHistory(base, "changed"));
     expect(j.warnings).toContain(NBL_STATE_HISTORY_APPLIED_NOTICE);
     expect(j.warnings).not.toContain(NBL_STATE_AT_TRANSFER_APPLIED_NOTICE);
+    expect(j.warnings.filter((w) => w.includes("양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다"))).toEqual([]);
     expect(j.warnings.filter((w) => w === NBL_STATE_HISTORY_APPLIED_NOTICE)).toHaveLength(1);
   });
 
@@ -137,6 +138,23 @@ describe("E2 판정 연결 — 고지·echo·미적용 경로", () => {
       ownershipBucket: 1, window5Days: 1826, nonBizInWindow5: 1095, window3Days: 1095, nonBizInWindow3: 1095, nonBizTotal: 1095,
       limitGa: 730, limitNa: 365, limitDa: 1460,
     });
+  });
+
+  it("echo 가목 임계: 소유 3~5년(2호)은 «소유기간 − 3년»(M17: 1,460 − 1,095 = 365) · 5년 이상(1호)은 730", () => {
+    const two = judge(fromRaw(e2RowRaw(E2_ROWS.find((r) => r.id === "M17")!))).periodEvaluation!.stateHistory!.criteria;
+    expect([two.ownershipBucket, two.limitGa, two.limitNa, two.limitDa]).toEqual([2, 365, 365, 584]);
+  });
+
+  it("echo 불변식(표 전수): 구간 Σ days = 소유일수 · 모든 구간 days > 0 · 사업용 일수 ≤ 일수 — 클립이 0일·음수 구간을 남기지 않는다(P-10)", () => {
+    for (const row of E2_ROWS) {
+      const j = judge(fromRaw(e2RowRaw(row)));
+      const iv = j.periodEvaluation!.stateHistory!.intervals;
+      expect(iv.reduce((s, i) => s + i.days, 0), row.id).toBe(j.totalOwnershipDays);
+      for (const i of iv) {
+        expect(i.days, `${row.id} 구간 길이`).toBeGreaterThan(0);
+        expect(i.businessDays, row.id).toBeLessThanOrEqual(i.days);
+      }
+    }
   });
 
   it("echo: 3호 버킷(소유 3년 미만)은 나목이 없다(`limitNa` null) · 소유 2년 미만이면 가목도 없다(`limitGa` null — 3호 단서)", () => {
