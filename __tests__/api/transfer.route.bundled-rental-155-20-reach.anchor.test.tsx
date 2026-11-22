@@ -233,8 +233,12 @@ function expectRentalPathTax(s: TransferTaxResult, p: PerPropertyBreakdown & Obj
   expect(s.rentalHousingExceptionDetail?.applied).toBe(true);
   expect(s.totalTax).toBe(RH_SINGLE_TOTAL);
   expect((p.rentalHousingExceptionDetail as { applied?: boolean } | undefined)?.applied).toBe(true);
-  expect(p.determinedTax).toBe(RH_DETERMINED);
-  expect(p.determinedTax).toBe(s.determinedTax);
+  // 자산별 결정세액(화면 표시값)은 다건 컨텍스트 재계산 `refDeterminedTax`다. 원시 `determinedTax`는 다건이 단건 엔진을
+  // `skipBasicDeduction: true`로 부른 값(기본공제 전)이다 — 종전 §155⑳ 경로만 기본공제를 빼 92,806,000이었고,
+  // 일반 경로와 같게 고친 뒤 93,756,000(2026-11-22 · §103② 다건 기본공제 배분 정정).
+  expect(p.refDeterminedTax).toBe(RH_DETERMINED);
+  expect(p.refDeterminedTax).toBe(s.determinedTax);
+  expect(p.determinedTax).toBe(93_756_000);
   // 주 자산과 컴패니언을 **같은 날** 양도하므로 기본공제는 납세자에게 유리한 쪽(재일46014-1685)에 붙는다. 이 사안은
   // 어느 쪽에 붙어도 세액이 같아, 일괄양도 규약(한계세율 ↓ → 자산 번호 ↑ — 계획서
   // transfer-basic-deduction-bulk-equal-tax-order.plan.md)대로 세율이 높은 주 자산(0.38 > 토지 0.35)이 받는다 — 단건과 같은 과세표준.
