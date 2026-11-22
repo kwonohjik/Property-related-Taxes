@@ -188,12 +188,16 @@ function appliedTable(branches: RedevelopmentBranchDetail[]): "table1" | "table2
 /**
  * 고가주택·고가 입주권 안분(영 §160①)을 분기 양도차익에 나눠 적용한다 — R-c08-12(2026-11-22 사용자 결정 b).
  *
- * - **합계** = 양도차익 전체(분기 합) × 분자 ÷ 분모를 한 번 내림한 값. 안분 박스의 「과세대상 양도차익」과 같은 값이다.
- * - **분기** = 각 분기 × 분자 ÷ 분모를 내림한 뒤, 합계에 모자라는 원을 나머지가 큰 분기부터 1원씩 더한다
- *   (최대잉여 방식 · 나머지가 같으면 배열 앞 분기 = 인가전 → 인가후 → 청산금). 분기 합 = 합계가 정확히 성립한다.
+ * - **합계** = 양도차익 전체(분기 합) × 분자 ÷ 분모를 한 번 절사한 값. 안분 박스의 「과세대상 양도차익」과 같은 값이다.
+ * - **분기** = 각 분기 × 분자 ÷ 분모를 절사한 뒤, 합계와의 차이를 1원씩 나눈다(최대잉여 방식). 모자라면 나머지가 큰 분기부터
+ *   1원씩 더하고, 넘치면(차손 분기가 섞인 경우) 나머지가 작은 분기부터 1원씩 뺀다. 나머지가 같으면 배열 앞 분기
+ *   (인가전 → 인가후 → 청산금). 분기 합 = 합계가 정확히 성립하고, 분기마다 정확값의 내림·올림 중 하나다.
  *
- * 정수(BigInt) 연산이다. 음수(차손) 분기도 같은 비율을 곱하며, 내림은 음의 무한대 방향이다.
- * 분기별로 따로 내림하면 분기 합이 합계보다 최대 (분기 수 − 1)원 작아진다(종전 실측 148,148,147 vs 148,148,148).
+ * 절사는 0 방향이다 — 음수(차손)는 절댓값을 안분해 부호를 붙인 값이다(종전 분기 안분 `−prorate(−차손)`·
+ * 청산금 수령분 `applySettlementExemption`과 같은 방향). 분기 합이 음수면 부호를 뒤집어 배분한 뒤
+ * 다시 부호를 붙이는 것과 같다 — 합계는 종전 안분 박스 `prorate(분기 합)`(큰 값의 BigInt 0 방향 절사)과 같은 값이다.
+ *
+ * 정수(BigInt) 연산이다. 분기별로 따로 절사하면 분기 합이 합계보다 최대 (분기 수 − 1)원 작아진다(종전 실측 148,148,147 vs 148,148,148).
  */
 export function prorateBranchGains(
   gains: number[],
@@ -202,23 +206,24 @@ export function prorateBranchGains(
 ): { shares: number[]; total: number } {
   const n = BigInt(numerator);
   const d = BigInt(denominator);
-  const floorDiv = (a: bigint): bigint => {
-    const q = a / d;
-    return a % d !== 0n && a < 0n ? q - 1n : q;
-  };
   const products = gains.map((g) => BigInt(g) * n);
-  const floors = products.map(floorDiv);
-  const remainders = products.map((p, i) => p - floors[i] * d);
-  const total = floorDiv(products.reduce((a, b) => a + b, 0n));
-  let left = total - floors.reduce((a, b) => a + b, 0n);
+  // BigInt 나눗셈은 0 방향 절사다.
+  const bases = products.map((p) => p / d);
+  const remainders = products.map((p, i) => p - bases[i] * d); // 이익 분기 [0, d) · 차손 분기 (−d, 0]
+  const total = products.reduce((a, b) => a + b, 0n) / d;
+  let left = total - bases.reduce((a, b) => a + b, 0n);
+  const step = left > 0n ? 1n : -1n;
   const order = gains
     .map((_, i) => i)
-    .sort((a, b) => (remainders[b] > remainders[a] ? 1 : remainders[b] < remainders[a] ? -1 : a - b));
-  const shares = [...floors];
+    .sort((a, b) => {
+      const diff = step > 0n ? remainders[b] - remainders[a] : remainders[a] - remainders[b];
+      return diff > 0n ? 1 : diff < 0n ? -1 : a - b;
+    });
+  const shares = [...bases];
   for (const i of order) {
-    if (left <= 0n) break;
-    shares[i] += 1n;
-    left -= 1n;
+    if (left === 0n) break;
+    shares[i] += step;
+    left -= step;
   }
   return { shares: shares.map(Number), total: Number(total) };
 }
@@ -228,7 +233,7 @@ export function prorateBranchGains(
  *
  * 산식 (시행령 §160):
  *   taxableRatio  = (transferPrice − 12억) / transferPrice            (표시용 비율)
- *   과세대상 양도차익 합계 = floor(분기 양도차익 합 × (transferPrice − 12억) / transferPrice)   (곱셈 먼저 — 정수 비례)
+ *   과세대상 양도차익 합계 = 분기 양도차익 합 × (transferPrice − 12억) / transferPrice 를 0 방향 절사   (곱셈 먼저 — 정수 비례)
  *   branchTaxableGain = 합계를 분기 비율로 나눈 값(최대잉여 방식 — `prorateBranchGains`)
  *   branchTaxableLthd = floor(branchTaxableGain × branchRate)
  *
@@ -266,7 +271,7 @@ export function applyHighValueAllocation(
   const taxableRatio = (transferPrice - threshold) / transferPrice;
   const nontaxableThreshold = threshold;
 
-  // 분기별 과세대상 양도차익 (정수연산 — 합계를 먼저 내림하고 분기에 최대잉여 방식으로 나눈다 · `prorateBranchGains`).
+  // 분기별 과세대상 양도차익 (정수연산 — 합계를 먼저 절사하고 분기에 최대잉여 방식으로 나눈다 · `prorateBranchGains`).
   // 양도차손 분기도 같은 비율로 안분한다(2026-11-16) — §160①의 대상은 신축주택 양도차익 전체(분기 합)라 분기마다 같은 비율을 곱해야
   // 합계를 안분한 값과 같다. 종전에는 손실 분기를 안분하지 않아 손실 전액이 안분된 이익을 지웠다(인가전 −3억 · 양도 15억 → 합계 −140,000,001,
   // 맞는 값 99,999,999). 일반 경로 `calcOneHouseProration`도 부호와 무관하게 안분한다.

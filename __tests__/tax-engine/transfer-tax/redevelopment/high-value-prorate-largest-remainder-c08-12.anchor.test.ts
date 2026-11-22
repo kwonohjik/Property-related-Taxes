@@ -1,8 +1,9 @@
 /**
  * R-c08-12 (2026-11-22 사용자 결정 b) — 고가주택·고가 입주권 안분(영 §160①)의 합계와 분기 배분.
  *
- * 합계 = 분기 양도차익 합 × (양도가액 − 기준금액) ÷ 양도가액을 한 번 내림한 값(= 안분 박스의 「과세대상 양도차익」).
- * 분기 = 각 분기를 내림한 뒤 남은 원을 나머지가 큰 분기부터 1원씩(동률은 인가전 → 인가후 → 청산금).
+ * 합계 = 분기 양도차익 합 × (양도가액 − 기준금액) ÷ 양도가액을 한 번 0 방향 절사한 값(= 안분 박스의 「과세대상 양도차익」).
+ * 분기 = 각 분기를 0 방향 절사한 뒤(차손은 절댓값 안분 후 부호) 합계와의 차이를 1원씩 — 모자라면 나머지가 큰 분기부터 더하고,
+ * 넘치면 나머지가 작은 분기부터 뺀다(동률은 인가전 → 인가후 → 청산금). 분기 합이 음수면 부호를 뒤집어 배분한 것과 같다.
  *
  * 종전에는 분기마다 내림해 합산해서 하단 「합계 양도차익」(total.gain)이 안분 박스(highValueAllocation.taxableGain)보다
  * 1원 작았다(실측 148,148,147 vs 148,148,148).
@@ -12,6 +13,7 @@ import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { applyHighValueAllocation } from "@/lib/tax-engine/transfer-tax-redevelopment-lthd";
 import { prorateBranchGains } from "@/lib/tax-engine/transfer-tax-redevelopment-lthd";
+import { calculateProration } from "@/lib/tax-engine/tax-utils";
 import type {
   RedevelopmentBranchDetail,
   RedevelopmentInfo,
@@ -51,11 +53,34 @@ describe("prorateBranchGains — 합계 먼저 · 분기 최대잉여 배분", (
     expect(r.shares).toEqual([100_000_000, 100_000_000, 33_333_334]);
   });
 
-  it("차손 분기 — 내림은 음의 무한대 방향, 분기 합 = 합계", () => {
-    // −100,000,001/3 = −33,333,333.67 → −33,333,334 · 400,000,000/3 → 133,333,333 · 합계 299,999,999/3 → 99,999,999
+  it("차손 분기 — 절댓값 안분 후 부호, 분기 합이 합계를 넘으면 나머지가 작은 분기에서 1원 뺀다", () => {
+    // −100,000,001/3 = −33,333,333.67 → 절사 −33,333,333 · 400,000,000/3 → 133,333,333 · 분기 합 100,000,000
+    // 합계 299,999,999/3 → 99,999,999 → 1원 넘침 → 나머지가 가장 작은(−2/3) 차손 분기가 −33,333,334
     const r = prorateBranchGains([-100_000_001, 400_000_000], 600_000_000, PRICE_18);
     expect(r.total).toBe(99_999_999);
     expect(r.shares).toEqual([-33_333_334, 133_333_333]);
+  });
+
+  it("차손 분기가 섞이고 분기 절사 합 = 합계면 종전 분기값 그대로 — 이익 분기로 1원을 옮기지 않는다", () => {
+    // −100,000,001/3 → −33,333,333 (종전 −prorate(100,000,001)) · 200,000,000/3 → 66,666,666 · 합계 99,999,999/3 = 33,333,333
+    // 음의 무한대 방향 내림이었다면 −33,333,334 + 66,666,666 = 33,333,332 → 이익 분기에 1원 → [−33,333,334, 66,666,667]
+    const r = prorateBranchGains([-100_000_001, 200_000_000], 600_000_000, PRICE_18);
+    expect(r.total).toBe(33_333_333);
+    expect(r.shares).toEqual([-33_333_333, 66_666_666]);
+  });
+
+  it("분기 합이 음수(전체 차손) — 합계 = 종전 안분 박스 prorate(분기 합), 부호를 뒤집어 배분한 값과 같다", () => {
+    // −1,000,000,001 × 6억은 2^53을 넘어 종전 calculateProration도 0 방향 절사 → −333,333,333
+    const r = prorateBranchGains([-1_000_000_001, 0, 0], 600_000_000, PRICE_18);
+    expect(calculateProration(-1_000_000_001, 600_000_000, PRICE_18)).toBe(-333_333_333);
+    expect(r.total).toBe(-333_333_333);
+    expect(r.shares).toEqual([-333_333_333, 0, 0]);
+    const gains = [-600_000_002, -400_000_001, 100_000_000];
+    const flipped = prorateBranchGains(gains.map((g) => -g), 600_000_000, PRICE_18);
+    const m = prorateBranchGains(gains, 600_000_000, PRICE_18);
+    expect(m.total).toBe(-flipped.total);
+    expect(m.shares).toEqual(flipped.shares.map((x) => -x));
+    expect(m.shares.reduce((a, b) => a + b, 0)).toBe(m.total);
   });
 
   it("곱이 2^53을 넘어도 정수로 정확하다", () => {
@@ -96,6 +121,14 @@ describe("applyHighValueAllocation — 하단 합계(total.gain) = 안분 박스
     expect(r.highValueAllocation?.taxableGain).toBe(148_148_148);
     expect(r.highValueAllocation?.nontaxableGain).toBe(444_444_445 - 148_148_148);
     expect(r.total.gain).toBe(148_148_148 + 50_000_001);
+  });
+
+  it("전체 차손(분기 합 < 0) — 안분 박스 = 종전 값 −333,333,333 = 하단 합계", () => {
+    const r = applyHighValueAllocation(raw(-1_000_000_001, 0, 0), PRICE_18, aptInfo, TRANSFER_DATE);
+    expect(r.highValueAllocation?.taxableGain).toBe(-333_333_333);
+    expect(r.preApproval.gain).toBe(-333_333_333);
+    expect(r.total.gain).toBe(-333_333_333);
+    expect(r.highValueAllocation?.nontaxableGain).toBe(-1_000_000_001 + 333_333_333);
   });
 
   it("차손 분기가 섞여도 분기 합 = 안분 박스 (종전 100,000,000 vs 99,999,999)", () => {

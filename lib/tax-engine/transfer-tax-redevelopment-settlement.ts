@@ -123,7 +123,7 @@ export function applySettlementExemption(
     // 양도차손도 같은 비율로 안분한다(2026-11-16 · V-5) — 비율은 부호와 무관하다(일반 경로 `calcOneHouseProration`·
     // 신축주택 분기 `applyHighValueAllocation`과 같음). 종전에는 손실을 안분하지 않아, 권리가격이 기준금액 이하면 손실 0(비과세)인데
     // 1원만 넘어도 손실 전액이 신축주택 양도차익을 지웠다(권리 15억 · 손실 −60,000,000 → 맞는 값 −12,000,000).
-    // 음수는 절댓값을 안분해 부호를 붙인다(양수와 같은 방향으로 절사).
+    // 음수는 절댓값을 안분해 부호를 붙인다(양수와 같은 방향으로 절사 — 신축주택 분기 `prorateBranchGains`의 0 방향 절사와 같다).
     if (s.gain === 0) return redev;
     const taxableGain =
       s.gain < 0

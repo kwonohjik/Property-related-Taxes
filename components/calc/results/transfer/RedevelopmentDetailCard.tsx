@@ -203,7 +203,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
             <span className="font-semibold">1세대1입주권 {formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold)} 초과 안분 적용</span>
           </div>
           <p className="text-amber-800 dark:text-amber-200">
-            양도가액이 {formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold)}을 초과하여 초과 비율 분에 대해서만 과세됩니다. 각 분기 양도차익에 과세대상 비율을 곱한 값이 최종 과세 양도차익입니다.
+            양도가액이 {formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold)}을 초과하여 초과 비율 분에 대해서만 과세됩니다. 양도차익 합계에 과세대상 비율을 곱한 금액(원 미만 절사)을 분기별 양도차익 크기대로 나눈 값이 분기별 과세 양도차익입니다.
           </p>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-1">
             <Row label={`비과세 기준 (${formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold)})`} value={highValueAllocation.nontaxableThreshold} />
@@ -212,7 +212,7 @@ export function RedevelopmentDetailCard({ detail, subject = "apt", settlementDir
           </div>
           <p className="text-micro text-amber-700 mt-1 dark:text-amber-300">
             <FLine>
-              산식: 각 분기 양도차익 × <Frac top={`양도가액 − ${formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold)}`} bottom="양도가액" />
+              산식: 양도차익 합계 × <Frac top={`양도가액 − ${formatHighValueThresholdLabel(highValueAllocation.nontaxableThreshold)}`} bottom="양도가액" /> (분기별 양도차익 크기대로 나눔)
             </FLine>
             <FLine>근거: §89①4호 각 목 외의 부분 단서 + §95③ + 시행령 §160 준용.</FLine>
           </p>
