@@ -5,6 +5,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { RURAL_SURTAX_FILING_7_1 } from "@/lib/tax-engine/legal-codes";
+import { REFUND_GAIN_RATE_ANNUAL } from "@/lib/tax-engine/legal-codes";
 import { resolveAmendmentReductionRate, resolveClaimDeadline } from "@/lib/tax-engine/transfer-tax-amendment";
 
 /**
@@ -155,7 +156,7 @@ export function AmendmentBlock({
           )}
 
           <p className="text-xs leading-relaxed text-muted-foreground">
-            ⓘ 환급금에는 국세환급가산금(납부일 다음날부터 지급결정일까지, 연 3.1%)이 가산되며,
+            ⓘ 환급금에는 국세환급가산금(납부일 다음날부터 지급결정일까지, 연 {(REFUND_GAIN_RATE_ANNUAL * 100).toFixed(1)}%)이 가산되며,
             세무서가 산정·지급합니다.
           </p>
         </div>

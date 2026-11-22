@@ -423,36 +423,6 @@ function GroupTaxCards({ result }: { result: AggregateTransferResult }) {
   );
 }
 
-// ─── 결과 행 공통 컴포넌트 ────────────────────────────────────
-
-function ResultRow({
-  label,
-  value,
-  highlight,
-  compact,
-  className,
-}: {
-  label: string;
-  value: number;
-  highlight?: boolean;
-  compact?: boolean;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex justify-between",
-        compact ? "text-sm" : "",
-        highlight ? "font-semibold" : "text-muted-foreground",
-        className,
-      )}
-    >
-      <span>{label}</span>
-      <span className={value < 0 ? "text-red-700 dark:text-red-400" : ""}>{formatKRW(value)}</span>
-    </div>
-  );
-}
-
 // ─── 메인 컴포넌트 ─────────────────────────────────────────────
 
 export function MultiTransferTaxResultView({

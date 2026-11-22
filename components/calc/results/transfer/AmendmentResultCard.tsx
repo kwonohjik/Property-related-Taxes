@@ -11,6 +11,9 @@ import { LocalIncomePenaltyNotice } from "@/components/calc/results/shared/Local
 import { AmendmentRuralSurtaxNotice } from "@/components/calc/results/shared/AmendmentRuralSurtaxNotice";
 import { shouldShowAmendmentRuralSurtaxNotice } from "@/lib/calc/amendment-rural-surtax-notice";
 import { RURAL_SURTAX_FILING_7_1 } from "@/lib/tax-engine/legal-codes";
+import { CLAIM_PERIOD_ORDINARY_YEARS } from "@/lib/tax-engine/legal-codes";
+import { CLAIM_PERIOD_POSTERIOR_MONTHS } from "@/lib/tax-engine/legal-codes";
+import { REFUND_GAIN_RATE_ANNUAL } from "@/lib/tax-engine/legal-codes";
 
 /** 금액 행 — 라벨 좌 / 금액 우측정렬 고정폭(amount-column-align 정책). */
 function Row({
@@ -116,7 +119,7 @@ export function AmendmentResultCard({
         <p className="text-3xl font-bold">{formatKRW(refund)}</p>
         {noRefund && (
           <p className="mt-1 text-xs text-muted-foreground">
-            환급액 없음 — 경정 결정세액이 당초 결정세액 이상입니다 (경정청구 실익 없음).
+            환급액 없음 — 경정 결정세액이 당초 결정세액 이상입니다.
           </p>
         )}
 
@@ -139,7 +142,7 @@ export function AmendmentResultCard({
         {detail.claimDeadline && (
           <div className="mt-2">
             <Row
-              label={`청구기한 (${detail.claimReasonType === "posterior" ? "후발적 3개월" : "일반 5년"})`}
+              label={`청구기한 (${detail.claimReasonType === "posterior" ? `후발적 ${CLAIM_PERIOD_POSTERIOR_MONTHS}개월` : `일반 ${CLAIM_PERIOD_ORDINARY_YEARS}년`})`}
               value={detail.isDeadlineExceeded ? `${detail.claimDeadline} · 경과 ⚠️` : detail.claimDeadline}
             />
           </div>
@@ -155,7 +158,7 @@ export function AmendmentResultCard({
         </div>
 
         <p className="mt-2 text-caption leading-relaxed text-muted-foreground">
-          ⓘ 환급금에는 국세환급가산금(납부일 다음날~지급결정일, 연 3.1%)이 가산되며 세무서가 산정·지급합니다.
+          ⓘ 환급금에는 국세환급가산금(납부일 다음날~지급결정일, 연 {(REFUND_GAIN_RATE_ANNUAL * 100).toFixed(1)}%)이 가산되며 세무서가 산정·지급합니다.
         </p>
 
         {detail.steps.length > 0 && (

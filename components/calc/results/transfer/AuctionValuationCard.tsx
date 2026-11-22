@@ -16,6 +16,8 @@ export function AuctionValuationCard({
     { label: "양도당시 기준시가 총액", value: detail.standardTotal },
     { label: "공매·경락가액", value: detail.auctionPrice },
   ];
+  // 두 후보가 같은 금액이면 두 행 모두 「적용」으로 표시되므로 동일 금액임을 함께 적는다.
+  const tie = rows.filter((x) => x.value === detail.chosen).length > 1;
   return (
     // R-c03-04 — 톤은 `ToneCard`(tones.ts 단일 소스), 조문은 법령 상수(verify:legal 추적 대상)에서 가져온다.
     <ToneCard tone="amber" title={`공매·경락 양도당시 기준시가 특례 (${TRANSFER.EXPROPRIATION_VALUATION_CLAUSE_2})`} bodyClassName="space-y-0">
@@ -30,7 +32,7 @@ export function AuctionValuationCard({
               <tr key={r.label} className={isChosen ? "font-semibold text-amber-900 dark:text-amber-200" : ""}>
                 <td className="py-0.5">
                   {r.label}
-                  {isChosen && <span className="ml-1 text-xs">← 적용(최솟값)</span>}
+                  {isChosen && <span className="ml-1 text-xs">← 적용(최솟값{tie ? " · 동일 금액" : ""})</span>}
                 </td>
                 <td className="py-0.5 text-right font-mono tabular-nums whitespace-nowrap">
                   {formatKRW(r.value)}

@@ -88,7 +88,7 @@ export function BgBundleCardAcqRows({
                 <td className="py-1 pr-2 pl-3">
                   {b.preDeemed?.basis === "deemed_std"
                     ? // 카드의 취득시 기준시가 슬롯 = 의제취득일 기준시가(지분 카드는 지분분 — echo `stdAtDeemed`는 물건 전체라 쓰지 않는다)
-                      `취득가액 = 의제취득일(1985.1.1.) 기준시가 ${fmt(b.perAsset.land.stdPriceAtAcquisition + b.perAsset.building.stdPriceAtAcquisition)} × 채무비율 ${rate}`
+                      `취득가액 = 의제취득일(1985.1.1.) 기준시가${share} ${fmt(b.perAsset.land.stdPriceAtAcquisition + b.perAsset.building.stdPriceAtAcquisition)} × 채무비율 ${rate}`
                     : basis
                       ? `${acqName} = ${basis.name}${share} ${fmt(basis.value)} × 채무비율 ${rate}`
                       : `${acqName} (채무비율 ${rate})`}

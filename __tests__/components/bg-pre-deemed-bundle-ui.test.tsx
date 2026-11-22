@@ -160,7 +160,7 @@ describe("D-1 ⑦ 묶음 명세 카드 — 카드별 행 (Q-33)", () => {
     expect(container.querySelector('[data-testid="bg-bundle-acquisition-total"]')?.textContent).toContain("53,102,126");
     const rows = [...container.querySelectorAll('[data-testid="bg-bundle-card-acquisition"]')].map((e) => e.textContent ?? "");
     // 지분 카드 의제취득일 기준시가 = 등급 환산 84,443,174의 지분분(42,221,587) — echo `stdAtDeemed`(물건 전체)가 아니다
-    expect(rows[0]).toContain("의제취득일(1985.1.1.) 기준시가 42,221,587");
+    expect(rows[0]).toContain("의제취득일(1985.1.1.) 기준시가(지분분) 42,221,587");
     expect(rows[0]).toContain("15,620,645");
     // 단일 자산 분기(물건 전체 재계산의 「토지 취득가 = 취득기준시가 …」)는 그리지 않는다
     expect(container.textContent).not.toContain("토지 취득가 = 취득기준시가");
