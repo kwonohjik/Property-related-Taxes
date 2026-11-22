@@ -16,6 +16,7 @@ import { RentalCounterpartResidedQuestion } from "./RentalCounterpartResidedQues
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { PeriodRangeEditor } from "./PeriodRangeEditor";
+import { residenceIntervalMonths } from "@/lib/stores/calc-wizard-asset-residence";
 import { HousingStdPriceLookupField } from "@/components/calc/inputs/HousingStdPriceLookupField";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
@@ -554,6 +555,7 @@ export function RentalHousingExceptionSection({
                   endHint="양도일까지 거주한 경우 양도일을 퇴거일로 입력"
                   rowLabel="거주 구간"
                   totalLabel="합계 거주기간"
+                  countMonths={residenceIntervalMonths}
                   testidPrefix="residence-period"
                   periods={(asset.residencePeriods ?? []).map((p) => ({
                     start: p.moveInDate,

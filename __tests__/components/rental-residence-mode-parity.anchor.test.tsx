@@ -124,3 +124,31 @@ describe("🔴 대조군 — echo는 필요할 때만 뜬다", () => {
     expect(deriveResidencePeriodMonths(asset, TRANSFER_DATE, "")).toBe(36);
   });
 });
+
+describe("🔴 구간 에디터의 거주 개월 = 실시간 판정의 거주 개월 (§154⑥ 초일 산입 · 2026-11 리뷰 D-45 형제)", () => {
+  // 2022-03-10 ~ 2024-03-09는 첫날을 넣으면 정확히 24개월이다. 종전 에디터는 임대기간용 셈(`diffMonthsClamped` — 첫날 불산입)을 그대로 써서
+  //   같은 카드 안에서 「합계 거주기간 1년 11개월」을 보이면서 실시간 판정은 24개월로 읽었다.
+  const boundary = makeAsset({
+    residenceInputMode: "interval",
+    residencePeriods: [{ moveInDate: "2022-03-10", moveOutDate: "2024-03-09" }],
+    residencePeriodMonthsAsset: "",
+  });
+
+  it("정확히 2년 구간 → 에디터 합계 「2년 0개월 (24개월)」 · 판정 24", () => {
+    renderSection(boundary);
+    expect(deriveResidencePeriodMonths(boundary, TRANSFER_DATE, "")).toBe(24);
+    expect(screen.getByTestId("residence-period-total").textContent).toContain("2년 0개월 (24개월)");
+    expect(screen.getByTestId("residence-period-editor").textContent).toContain("이 구간: 2년 0개월");
+  });
+
+  it("짝 — 하루 모자라면(퇴거 2024-03-08) 23개월 · 판정도 23", () => {
+    const short = makeAsset({
+      residenceInputMode: "interval",
+      residencePeriods: [{ moveInDate: "2022-03-10", moveOutDate: "2024-03-08" }],
+      residencePeriodMonthsAsset: "",
+    });
+    renderSection(short);
+    expect(deriveResidencePeriodMonths(short, TRANSFER_DATE, "")).toBe(23);
+    expect(screen.getByTestId("residence-period-total").textContent).toContain("(23개월)");
+  });
+});

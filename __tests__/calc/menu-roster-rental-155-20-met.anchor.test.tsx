@@ -14,6 +14,7 @@
  * | RM-5 | 임대 행 + 일반 주택(2023 · 일시적 2주택 신규) | 종전 과세 → **비과세(일시적 2주택)** · 3채 중 2채 | 계산기 0 |
  * | RM-6 | 임대 행이 일시적 2주택 신규 주택 · ⑳ 충족 | 불변 — 엔진이 임대주택을 센 비과세를 둔다(D-2 · 계산기 STEP 1a) · 2채 중 2채 | 계산기 같은 사유 |
  * | RM-7 | ⑳ 불성립(기준시가 7억 · 거주 1년 · 세대 구성) | 불변 과세 · 카드에 ⑳ 줄 없음 | 계산기 과세 |
+ * | RM-8 | r1(장기임대 + §99의2 또는 §99의4 행 연결) · r2(장기임대) · ⑳ 2호 | 종전 「3채 중 0채」 과세 → **비과세** · 3채 중 1채(D-59) | 연결 없는 짝 같음 · 계산기 0 |
  */
 import { describe, it, expect } from "vitest";
 import { buildCaseForm, type RulingCase } from "./one-house-rulings/harness";
@@ -224,5 +225,53 @@ describe("판정 메뉴 × 명부의 「장기임대」 행 — §155⑳ 충족�
     expect(v.j.isPartialExempt).toBe(false);
     expect(v.hc.countedForExemption).toBe(houses.length + 1);
     expect(v.hc.excluded).toEqual([]);
+  });
+});
+
+describe("RM-8 (D-59) — 6.55 재판정은 뺀 임대 행에 연결된 조특 제외 선언도 함께 걷어낸다", () => {
+  // 리뷰 재현(2026-11-18 evidence `menu-655-rerun-keeps-row-linked-special-exclusion`): r1 = 장기임대 + §99의2 행 연결(2013 창 안),
+  //   r2 = 장기임대. 6.55가 r1·r2 행을 빼고 r1의 §99의2를 남기면 양도 주택 A까지 빼 「3채 중 0채」 과세가 됐다(계산기는 0원).
+  const UNSOLD_99_2 = {
+    countExclusion: {
+      kind: "special",
+      special: { article: "unsold_99_2", houseAcquisitionDate: "", houseContractDate: "2013-06-15", isNationalHousing: false, requirementsConfirmed: true },
+    },
+  };
+  const RURAL_99_4 = {
+    region: "non_capital",
+    countExclusion: {
+      kind: "reduction",
+      reduction: { type: "new_99_4_rural", ruralHouseAcquisitionDate: "", ruralHouseStdPrice: "150000000", isRegisteredHanok: false, adjacentArea994: "no", meetsLocationRequirement: true },
+    },
+  };
+  const r2 = rentalRow("2009-01-01", { id: "r2" });
+  const twoUnits = (houses: object[]) => {
+    const c = mk({ houses }) as unknown as { form: { asset: { rentalHousingException: { rentalUnits: object[] } } } };
+    c.form.asset.rentalHousingException.rentalUnits = [unit(), unit("250000000", { unitId: "c" })];
+    return c as unknown as RulingCase;
+  };
+
+  it.each([
+    ["§99의2 감면주택", UNSOLD_99_2],
+    ["§99의4 농어촌주택", RURAL_99_4],
+  ])("r1(장기임대 + %s) · r2(장기임대) · ⑳ 2호 충족 → 비과세 · 3채 중 1채 · 계산기 0", async (_, link) => {
+    const c = twoUnits([rentalRow("2013-07-01", link), r2]);
+    const v = await menu(c);
+    expect(v.passed).toBe(true);
+    expect(v.isExempt).toBe(true);
+    expect(v.j.exemptReason).toBe("1세대1주택 비과세");
+    expect(v.hc).toMatchObject({ total: 3, countedForExemption: 1 });
+    expect(v.text).toContain("세대 보유 주택 3채 중 비과세 판정에 세는 주택은 1채입니다.");
+
+    const r = await calc(c);
+    expect(r.isExempt).toBe(true);
+    expect(r.totalTax).toBe(0);
+  });
+
+  it("긍정 짝 — 연결 선언이 없는 같은 명부(r1·r2 장기임대)도 비과세 · 3채 중 1채", async () => {
+    const v = await menu(twoUnits([rentalRow("2013-07-01"), r2]));
+    expect(v.passed).toBe(true);
+    expect(v.isExempt).toBe(true);
+    expect(v.hc).toMatchObject({ total: 3, countedForExemption: 1 });
   });
 });
