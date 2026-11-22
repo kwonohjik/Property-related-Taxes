@@ -50,6 +50,7 @@ import type {
  *    `import` 도 함께 둔다(재export는 외부 import 사이트 보존용).
  */
 import {
+  prorateBranchGains,
   scaleLthdParts,
   zeroLthdParts,
 } from "./transfer-tax-redevelopment-lthd";
@@ -445,13 +446,20 @@ export function applyOneRightExemption(
     // 단, isOneHouseSingle 조건(householdHousingCount===1)과 별개로 right 전용 처리
     // 분모는 위 비교와 **같은 값**이다 (부담부증여면 증여가액 C, 그 외 양도가액).
     const taxableRatio = (highValueBase - highValueThreshold) / highValueBase;
+    // R-c08-12(2026-11-22) — 완공 APT(`applyHighValueAllocation`)와 같은 규약: 정수 비례 + 최대잉여 배분(`prorateBranchGains`).
+    // 이익 분기만 배분 대상이다(차손·0 분기는 종전대로 안분하지 않는다) — 이익 분기만 있으면 분기 합 = 아래 합계.
+    const branchesIn = [redev.preApproval, redev.postApprovalExistingHouse, redev.settlement];
+    const { shares } = prorateBranchGains(
+      branchesIn.map((b) => Math.max(0, b.gain)),
+      highValueBase - highValueThreshold,
+      highValueBase,
+    );
 
-    const scaleBranch = (branch: RedevelopmentResult["preApproval"]) => {
+    const scaleBranch = (branch: RedevelopmentResult["preApproval"], taxableGain: number) => {
       if (branch.gain <= 0) {
         return { ...branch, gainBeforeAllocation: branch.gain, nontaxableGain: 0 };
       }
       const originalGain = branch.gain;
-      const taxableGain = Math.floor(originalGain * taxableRatio);
       const nontaxableGain = originalGain - taxableGain;
       // subject="right": postApprovalExistingHouse.gain=0, settlement LTHD=0 (§94①2호)
       const taxableLthd = branch.lthdRate > 0 ? applyFairMarketRatio(taxableGain, branch.lthdRate) : 0;
@@ -467,14 +475,18 @@ export function applyOneRightExemption(
       };
     };
 
-    const preApproval = scaleBranch(redev.preApproval);
-    const postApprovalExistingHouse = scaleBranch(redev.postApprovalExistingHouse);
-    const settlement = scaleBranch(redev.settlement);
+    const preApproval = scaleBranch(redev.preApproval, shares[0]);
+    const postApprovalExistingHouse = scaleBranch(redev.postApprovalExistingHouse, shares[1]);
+    const settlement = scaleBranch(redev.settlement, shares[2]);
 
     const totalGain = preApproval.gain + postApprovalExistingHouse.gain + settlement.gain;
     const totalLthd = preApproval.lthd + postApprovalExistingHouse.lthd + settlement.lthd;
-    const nontaxableGainTotal = redev.total.gain - Math.floor(redev.total.gain * taxableRatio);
-    const taxableGainTotal = Math.floor(redev.total.gain * taxableRatio);
+    const { total: taxableGainTotal } = prorateBranchGains(
+      [redev.total.gain],
+      highValueBase - highValueThreshold,
+      highValueBase,
+    );
+    const nontaxableGainTotal = redev.total.gain - taxableGainTotal;
 
     return {
       ...redev,

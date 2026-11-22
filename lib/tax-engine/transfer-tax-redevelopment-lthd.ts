@@ -17,7 +17,6 @@ import type {
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { applyFairMarketRatio } from "./tax-utils";
 import { applyRentalGainShare } from "./transfer-reductions/rental-97-shared-helpers";
-import { calculateProration } from "./tax-utils";
 import { isLandContributedNewBuild } from "./redevelopment-lthd";
 import { existingBuildingLthdBases } from "./redevelopment-existing-netting";
 
@@ -187,14 +186,59 @@ function appliedTable(branches: RedevelopmentBranchDetail[]): "table1" | "table2
 }
 
 /**
+ * 고가주택·고가 입주권 안분(영 §160①)을 분기 양도차익에 나눠 적용한다 — R-c08-12(2026-11-22 사용자 결정 b).
+ *
+ * - **합계** = 양도차익 전체(분기 합) × 분자 ÷ 분모를 한 번 절사한 값. 안분 박스의 「과세대상 양도차익」과 같은 값이다.
+ * - **분기** = 각 분기 × 분자 ÷ 분모를 절사한 뒤, 합계와의 차이를 1원씩 나눈다(최대잉여 방식). 모자라면 나머지가 큰 분기부터
+ *   1원씩 더하고, 넘치면(차손 분기가 섞인 경우) 나머지가 작은 분기부터 1원씩 뺀다. 나머지가 같으면 배열 앞 분기
+ *   (인가전 → 인가후 → 청산금). 분기 합 = 합계가 정확히 성립하고, 분기마다 정확값의 내림·올림 중 하나다.
+ *
+ * 절사는 0 방향이다 — 음수(차손)는 절댓값을 안분해 부호를 붙인 값이다(종전 분기 안분 `−prorate(−차손)`·
+ * 청산금 수령분 `applySettlementExemption`과 같은 방향). 분기 합이 음수면 부호를 뒤집어 배분한 뒤
+ * 다시 부호를 붙이는 것과 같다 — 합계는 종전 안분 박스 `prorate(분기 합)`(큰 값의 BigInt 0 방향 절사)과 같은 값이다.
+ *
+ * 정수(BigInt) 연산이다. 분기별로 따로 절사하면 분기 합이 합계보다 최대 (분기 수 − 1)원 작아진다(종전 실측 148,148,147 vs 148,148,148).
+ */
+export function prorateBranchGains(
+  gains: number[],
+  numerator: number,
+  denominator: number,
+): { shares: number[]; total: number } {
+  const n = BigInt(numerator);
+  const d = BigInt(denominator);
+  const products = gains.map((g) => BigInt(g) * n);
+  // BigInt 나눗셈은 0 방향 절사다.
+  const bases = products.map((p) => p / d);
+  const remainders = products.map((p, i) => p - bases[i] * d); // 이익 분기 [0, d) · 차손 분기 (−d, 0]
+  const total = products.reduce((a, b) => a + b, 0n) / d;
+  let left = total - bases.reduce((a, b) => a + b, 0n);
+  const step = left > 0n ? 1n : -1n;
+  const order = gains
+    .map((_, i) => i)
+    .sort((a, b) => {
+      const diff = step > 0n ? remainders[b] - remainders[a] : remainders[a] - remainders[b];
+      return diff > 0n ? 1 : diff < 0n ? -1 : a - b;
+    });
+  const shares = [...bases];
+  for (const i of order) {
+    if (left === 0n) break;
+    shares[i] += step;
+    left -= step;
+  }
+  return { shares: shares.map(Number), total: Number(total) };
+}
+
+/**
  * 1세대1주택 + 양도가액 > 12억 시 분기별 양도차익·LTHD 를 과세대상으로 축소.
  *
  * 산식 (시행령 §160):
  *   taxableRatio  = (transferPrice − 12억) / transferPrice            (표시용 비율)
- *   branchTaxableGain = floor(branchGain × (transferPrice − 12억) / transferPrice)   (곱셈 먼저 — 정수 비례)
+ *   과세대상 양도차익 합계 = 분기 양도차익 합 × (transferPrice − 12억) / transferPrice 를 0 방향 절사   (곱셈 먼저 — 정수 비례)
+ *   branchTaxableGain = 합계를 분기 비율로 나눈 값(최대잉여 방식 — `prorateBranchGains`)
  *   branchTaxableLthd = floor(branchTaxableGain × branchRate)
  *
- * 분기별로 floor 적용 — 예제 xlsx 결과 일치 (xlsx D17·E17·F17 각각 분기별 산정 후 합산).
+ * 합계를 먼저 정하고 분기에 나눈다(R-c08-12 · 2026-11-22) — 종전에는 분기마다 내림해 합산해서
+ * 분기 합이 안분 박스의 합계보다 1원 작을 수 있었다.
  *
  * @param redevRaw runRedevelopment 결과 (분기별 gain·lthd 가 전체 양도차익 기준)
  * @param transferPrice 12억 비교·안분 분모 — 호출부가 판정과 **같은 값**을 넘긴다(지분 모드면 물건 전체 가액,
@@ -226,16 +270,22 @@ export function applyHighValueAllocation(
   const threshold = resolveHighValueHouseThreshold(transferDate);
   const taxableRatio = (transferPrice - threshold) / transferPrice;
   const nontaxableThreshold = threshold;
-  // 일반 경로 `calcOneHouseProration`과 같은 정수 비례 leaf — 곱셈 먼저 · 나눗셈 나중(부동소수점 비율 금지).
-  const prorate = (gain: number) => calculateProration(gain, transferPrice - threshold, transferPrice);
 
-  // 분기별 과세대상 양도차익 (정수연산 — 분기별 floor).
+  // 분기별 과세대상 양도차익 (정수연산 — 합계를 먼저 절사하고 분기에 최대잉여 방식으로 나눈다 · `prorateBranchGains`).
   // 양도차손 분기도 같은 비율로 안분한다(2026-11-16) — §160①의 대상은 신축주택 양도차익 전체(분기 합)라 분기마다 같은 비율을 곱해야
   // 합계를 안분한 값과 같다. 종전에는 손실 분기를 안분하지 않아 손실 전액이 안분된 이익을 지웠다(인가전 −3억 · 양도 15억 → 합계 −140,000,001,
-  // 맞는 값 99,999,999). 음수는 절댓값을 안분해 부호를 붙인다. 일반 경로 `calcOneHouseProration`도 부호와 무관하게 안분한다.
-  const scaleGain = (branch: RedevelopmentBranchDetail): RedevelopmentBranchDetail => {
+  // 맞는 값 99,999,999). 일반 경로 `calcOneHouseProration`도 부호와 무관하게 안분한다.
+  // 🔴 수령 방향(keepSettlement)은 청산금 분기를 배분 대상에서 뺀다 — 합계도 신축주택분(인가전 분 + 인가후 기존건물분)만이다.
+  const scaledInputs = keepSettlement
+    ? [redevRaw.preApproval, redevRaw.postApprovalExistingHouse]
+    : [redevRaw.preApproval, redevRaw.postApprovalExistingHouse, redevRaw.settlement];
+  const { shares, total: taxableGainTotal } = prorateBranchGains(
+    scaledInputs.map((b) => b.gain),
+    transferPrice - threshold,
+    transferPrice,
+  );
+  const scaleGain = (branch: RedevelopmentBranchDetail, taxableGain: number): RedevelopmentBranchDetail => {
     const originalGain = branch.gain;
-    const taxableGain = originalGain < 0 ? -prorate(-originalGain) : prorate(originalGain);
     // 정수연산 보존: 비과세 = 안분 전 - 과세대상
     return { ...branch, gain: taxableGain, gainBeforeAllocation: originalGain, nontaxableGain: originalGain - taxableGain };
   };
@@ -251,23 +301,20 @@ export function applyHighValueAllocation(
     };
   };
 
-  const preScaled = scaleGain(redevRaw.preApproval);
-  const postScaled = scaleGain(redevRaw.postApprovalExistingHouse);
+  const preScaled = scaleGain(redevRaw.preApproval, shares[0]);
+  const postScaled = scaleGain(redevRaw.postApprovalExistingHouse, shares[1]);
   const bases = redevInfo.subject === "apt" ? existingBuildingLthdBases(preScaled, postScaled) : undefined;
   const preApproval = withLthd(preScaled, bases?.pre ?? preScaled.gain, bases !== undefined);
   const postApprovalExistingHouse = withLthd(postScaled, bases?.post ?? postScaled.gain, bases !== undefined);
-  const settlementScaled = keepSettlement ? undefined : scaleGain(redevRaw.settlement);
+  const settlementScaled = keepSettlement ? undefined : scaleGain(redevRaw.settlement, shares[2]);
   const settlement = settlementScaled ? withLthd(settlementScaled, settlementScaled.gain, false) : redevRaw.settlement;
 
   const totalGain = preApproval.gain + postApprovalExistingHouse.gain + settlement.gain;
   const totalLthd = preApproval.lthd + postApprovalExistingHouse.lthd + settlement.lthd;
   const taxableIncome = totalGain - totalLthd;
 
-  // 12억 안분 메타 (UI·결과카드 표시용) — keepSettlement면 신축주택분만
-  const allocationBase = keepSettlement
-    ? redevRaw.preApproval.gain + redevRaw.postApprovalExistingHouse.gain
-    : redevRaw.total.gain;
-  const taxableGainTotal = prorate(allocationBase);
+  // 12억 안분 메타 (UI·결과카드 표시용) — keepSettlement면 신축주택분만. 과세대상 = 위 분기 배분의 합계(같은 값).
+  const allocationBase = scaledInputs.reduce((s, b) => s + b.gain, 0);
   const nontaxableGain = allocationBase - taxableGainTotal;
 
   // LTHD 거주월수 귀속 메타 (사전법령해석재산 2020-386 + §154⑧ 노출)

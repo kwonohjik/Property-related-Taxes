@@ -77,7 +77,8 @@ function branchSums(p: PerPropertyBreakdown) {
 }
 
 const CASES = [
-  { kind: "redevelopment_apt" as const, holding: 121_347_367, residence: 35_873_684 },
+  // R-c08-12(2026-11-22) — 고가 안분 합계 먼저 · 분기 최대잉여 배분으로 보유분 121,347,367 → 121,347,368
+  { kind: "redevelopment_apt" as const, holding: 121_347_368, residence: 35_873_684 },
   { kind: "right_to_move_in" as const, holding: 40_000_000, residence: 12_000_000 },
 ];
 

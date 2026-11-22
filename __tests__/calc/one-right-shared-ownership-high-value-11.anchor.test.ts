@@ -95,7 +95,7 @@ describe("#11 ② 입주권 — 지분 모드 12억 비교·안분은 물건 전
     expect(r.result.redevelopmentDetail.highValueAllocation.taxableRatio).toBeCloseTo(0.6, 10);
   });
 
-  it("지분 50%의 과세대상 양도차익 = 단독의 절반(±2원 — 분기별 floor)", async () => {
+  it("지분 50%의 과세대상 양도차익 = 단독의 절반(±2원 — 지분분 양도차익·안분 합계의 원 미만 절사 · 이 시료는 0원 차)", async () => {
     const half = await runCalc(rightForm("2000000000", HALF, "25000000"));
     const sole = await runCalc(rightForm("2000000000", undefined, "50000000"));
     const h = half.result.redevelopmentDetail.highValueAllocation;

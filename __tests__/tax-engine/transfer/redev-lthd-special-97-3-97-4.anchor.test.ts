@@ -165,7 +165,8 @@ describe("재개발 × §97의4 — 추가율 가산", () => {
   it("R974-3: 🔑 **분기별 가산 = 전체 가산** — Σ 차익ᵢ × 추가율 = 총차익 × 추가율", () => {
     const added = with974.longTermHoldingDeduction - base.longTermHoldingDeduction;
     const whole = Math.floor(with974.transferGain * 0.1);
-    // 분기별 floor 때문에 최대 분기 수(3)만큼의 원 단위 오차만 허용된다
+    // 분기마다 공제(차익ᵢ × 추가율)를 원 미만 절사하므로 최대 분기 수(3)만큼의 원 단위 오차만 허용된다
+    // (고가주택 안분과 무관 — 이 시료는 5.25억 · 안분 분기 배분은 R-c08-12로 합계 먼저)
     expect(Math.abs(added - whole)).toBeLessThanOrEqual(3);
   });
 
