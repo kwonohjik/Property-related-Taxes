@@ -7,6 +7,7 @@
  */
 
 import { cn } from "@/lib/utils";
+import { TONE } from "@/components/calc/shared/tones";
 import type { TransferBurdenedGiftAcquisitionMethodUsed } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import {
   type FilingFormTableProps,
@@ -134,7 +135,7 @@ export function FilingFormTable({
                   {title}
                 </h3>
                 {adopted === true && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-caption font-bold text-emerald-700">
+                  <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-caption font-bold", TONE.emerald.chip)}>
                     ✓ 신고 채택
                   </span>
                 )}

@@ -351,9 +351,7 @@ function buildGbAcquisitionFormulaCore(
   // 실가 파트(혼합 환산의 기존 거짓 등식)는 Phase C 범위다(Q-F).
   const gbModeCard = gb.assetCards.find(
     (c) => baseCardId(c.propertyId) === baseCardId(p.propertyId) && isSameShare(c.propertyId, p.propertyId),
-  ) as
-    | { acquisitionMode?: string; actualSource?: "part_input" | "bundled_apportion" | "inherited"; sec1639Basis?: GbSec1639Basis }
-    | undefined;
+  );
   if (gbModeCard?.acquisitionMode === "appraisal" || gbModeCard?.acquisitionMode === "salesCase") {
     return gbModeCard.acquisitionMode === "appraisal"
       ? `자산별 취득가액 = ${fmt(displayValue)} (감정가액 — 소득세법 §97①1호 나목 · 같은 법 시행령 §176의2③2호)`
@@ -720,7 +718,7 @@ export function buildGbExpenseFormula(
    */
   const partCard = gb.assetCards.find(
     (c) => baseCardId(c.propertyId) === baseCardId(p.propertyId) && isSameShare(c.propertyId, p.propertyId),
-  ) as { usedEstimatedAcquisition?: boolean; acquisitionMode?: string } | undefined;
+  );
   // 🔑 E-1 `acquisitionMode` echo가 정본이다 — boolean만 보면 감정·매매사례 파트(개산공제 적용)가 「실지거래가액 파트」로 읽혀
   //    「개산공제를 적용하지 않습니다」가 개산공제가 적용된 금액 옆에 붙는다(A2 §9.2 D1). 옛 이력(echo 없음)은 종전 boolean 판정.
   const isActualPart =

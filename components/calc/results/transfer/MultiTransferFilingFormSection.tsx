@@ -6,7 +6,6 @@ import { aggregateToFilingResult } from "@/components/calc/results/BundledAlloca
 import { buildAggregateMeta } from "./build-aggregate-meta";
 import type { AggregateTransferResult } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
-import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 /**
  * 다건 결과탭 상단 합산 신고서 양식 (합계 + 자산별 컬럼).

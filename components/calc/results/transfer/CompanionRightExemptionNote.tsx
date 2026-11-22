@@ -22,7 +22,7 @@ export function CompanionRightExemptionNote({ detail, transferPrice }: { detail:
       <ToneCard tone="amber" title={`§89①4호 ${label} — ${threshold} 초과 안분`} bodyClassName="space-y-1">
         <div data-testid="companion-right-high-value-note" className="space-y-1 text-caption leading-relaxed text-amber-900 dark:text-amber-200">
           <p>
-            이 입주권 몫의 양도가액: {formatKRW(transferPrice)} — {threshold}을 넘어 넘는 비율({(facts.taxableRatio * 100).toFixed(2)}%)만 과세합니다.
+            이 입주권 몫의 양도가액: {formatKRW(transferPrice)} — {threshold}을 넘는 부분의 비율({(facts.taxableRatio * 100).toFixed(2)}%)만 과세합니다.
             비과세 양도차익 {formatKRW(facts.nontaxableGain)} · 과세 양도차익 {formatKRW(facts.taxableGain)}.
           </p>
           <p className="text-micro">{threshold} 비교는 함께 양도 가액을 안분한 이 입주권 몫의 양도가액으로 했습니다(확인 필요).</p>

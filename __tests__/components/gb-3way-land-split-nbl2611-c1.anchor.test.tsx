@@ -46,6 +46,21 @@ describe("증축 3자산 요약표 × 토지 카드 구성", () => {
   });
 });
 
+describe("R-c07-11 — 장기보유공제 행 표기 통일", () => {
+  it("공제가 모두 0이면 토지·건물·합계 네 칸이 같은 «0»(△0 없음) · 공제가 있으면 △금액", () => {
+    const row = () => screen.getByText("장기보유공제").closest("tr") as HTMLElement;
+    const cells = () => Array.from(row().querySelectorAll("td")).slice(1).map((td) => td.textContent);
+    render(<GeneralBuilding3WayTable aggregated={agg([card("land_nbl", "토지-비사업용(1001)", { transferPrice: 500_000_000 }), b1, b2])} />);
+    expect(cells()).toEqual(["0", "0", "0", "0"]);
+    cleanup();
+    render(<GeneralBuilding3WayTable aggregated={agg([
+      card("land_nbl", "토지-비사업용(1001)", { transferPrice: 500_000_000, longTermHoldingDeduction: 1_000 }), b1,
+      card("building2", "증축건물(3002)", { transferPrice: 200_000_000, longTermHoldingDeduction: 500 }),
+    ])} />);
+    expect(cells()).toEqual(["△1,000", "0", "△500", "△1,500"]);
+  });
+});
+
 describe("V10-BX06·V2-C2 — 확인 필요 고지 단일 소스", () => {
   it("초과분(비율 > 0)이 있을 때만 두 문구 · 한도 이내·없음은 빈 목록", () => {
     expect(gbExcessConfirmNotices({ nonBusinessRatio: 0.7 })).toEqual([NBL_BUILDING_SITE_EXCESS_UNJUDGED_NOTICE, NBL_STATE_AT_TRANSFER_APPLIED_NOTICE]);

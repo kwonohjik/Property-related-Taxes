@@ -17,6 +17,7 @@ import {
   CARRYOVER_EXCLUSION_REASON_LABELS,
   carryoverComparisonPerformed,
   carryoverScenariosComputed,
+  type CarryoverExclusionReason,
 } from "@/lib/tax-engine/transfer-carryover-exclusion-labels";
 import type {
   CarryoverTaxationDetail,
@@ -234,14 +235,14 @@ function ScenarioBContent({ b, determinedTax, adopted, isComparisonExclusion, fi
  * ✅ `one_house_exemption`의 출처는 D45(2026-09-18)부터 엔진 echo `oneHouseExclusionSource`로 가른다 —
  *    선언 토글은 없어졌고, 선언은 옛 이력의 레거시 플래그로만 남는다. echo가 없으면(옛 결과) 둘 다 적는다.
  */
-const EXCLUSION_REASON_SOURCE: Record<string, string> = {
+const EXCLUSION_REASON_SOURCE = {
   expropriation: "사용자 선언",
   one_house_exemption: "사용자 선언 또는 엔진 자동 판정",
   period_exceeded: "엔진 자동 판정",
   relation_invalid: "엔진 자동 판정",
   family_business: "사용자 선언",
   tax_comparison: "엔진 자동 판정",
-};
+} as const satisfies Record<CarryoverExclusionReason, string>;
 
 // ── 메인 컴포넌트 ────────────────────────────────────────────────
 
