@@ -160,7 +160,7 @@ describe("3호·4호 겹침(주택 3채 이상 + 산입 권리) — 4호 버킷 
  *   현행(호별): 자산마다 60%가 중과(누진 + 20%p)보다 크다 → 997,500,000 × 60% + 1,000,000,000 × 60% = 598,500,000 + 600,000,000 = 1,198,500,000
  *   넓은 읽기(①2호 공유 = 동일한 호 · 합산 과세표준에 ⑦ 세율): 1,997,500,000 × 65% − 65,940,000 = 1,232,435,000 (⑦1+⑦1 대조군 값)
  */
-describe("1~2년 단기 ⑦1호 + ⑦2호 — 합산하지 않음 + 해석례 미확인 고지", () => {
+describe("단기(①2·3호) 공유 + ⑦ 호가 다른 조합 — 합산하지 않음 + 해석례 미확인 고지", () => {
   const SHORT_NOTICE = "단기 세율의 호를 함께 쓰는 경우의 합산 단위";
   const short = (id: string, transferDate: string, houses: string[], rights: string[]) => ({
     ...asset(id, 1_300_000_000, transferDate, houses, rights),
@@ -203,6 +203,101 @@ describe("1~2년 단기 ⑦1호 + ⑦2호 — 합산하지 않음 + 해석례 �
 
   it("ST-4 한쪽만 1~2년 ⑦1호 + 2년 이상 ⑦2호 → 단기 고지 없음", () => {
     expect(notices(run([short("A", "2026-06-01", ["A", "B"], []), B(["B"], ["R1"])]))).toHaveLength(0);
+  });
+
+  /**
+   * 고지 범위 확대(사용자 결정 2026-11-22 · 세액 불변) — 같은 쟁점인 (i) 1년 미만(§104①3호) 공유 · (ii) 처음부터 ⑦ 호 키가 다른 조합.
+   *   (i) 각 13억 양도 · 3억 취득 · A 2025-12-01 / B 2026-01-01 취득 · 2026-06-01 / 2026-09-01 양도(둘 다 1년 미만):
+   *       ⑦3+⑦4 호별 — 자산마다 70%가 중과(42% + 30%p)보다 크다 → 997,500,000 × 70% + 1,000,000,000 × 70% = 698,250,000 + 700,000,000 = 1,398,250,000
+   *       ⑦3+⑦3 합산 — 1,997,500,000 × 75% − 65,940,000 = 1,432,185,000
+   *   (ii) 1~2년(2025-03-01 취득) ⑦1호(A 2주택) + ⑦3호(B 3주택) — 호 키가 다르다(104-7-1 / 104-7-3):
+   *       A 60%(598,500,000) > 62% 누진(582,510,000) · B 72% 누진 1,000,000,000 × 72% − 35,940,000 = 684,060,000 > 60%(600,000,000)
+   *       → 598,500,000 + 684,060,000 = 1,282,560,000
+   */
+  const under1y = (id: string, acq: string, transferDate: string, houses: string[], rights: string[]) => ({
+    ...asset(id, 1_300_000_000, transferDate, houses, rights),
+    acquisitionDate: new Date(acq),
+  }) as TransferTaxItemInput;
+  const uA = (houses: string[], rights: string[]) => under1y("A", "2025-12-01", "2026-06-01", houses, rights);
+  const uB = (houses: string[], rights: string[]) => under1y("B", "2026-01-01", "2026-09-01", houses, rights);
+
+  it("검산 — 범위 확대 손계산 상수", () => {
+    expect(Number((997_500_000n * 70n) / 100n + (1_000_000_000n * 70n) / 100n)).toBe(1_398_250_000);
+    expect(Number((1_997_500_000n * 75n) / 100n - 65_940_000n)).toBe(1_432_185_000);
+    expect(Number((997_500_000n * 60n) / 100n + (1_000_000_000n * 72n) / 100n - 35_940_000n)).toBe(1_282_560_000);
+  });
+
+  it("ST-5 (i) ⑦3호 + ⑦4호(둘 다 1년 미만) → 호별 1,398,250,000 · 단기 고지 1건 · 겹침 고지 없음", () => {
+    const r = run([uA(["A", "B", "C"], []), uB(["B", "C"], ["R1"])]);
+    expect(r.properties.map((p) => p.surchargeHouseholdHasCountedRight ?? false)).toEqual([false, true]);
+    expect(r.calculatedTax).toBe(1_398_250_000);
+    const n = notices(r);
+    expect(n).toHaveLength(1);
+    expect(n[0]).toContain("확인 필요");
+    expect(n[0]).not.toMatch(/유리|불리/);
+    expect(r.warnings.some((w) => w.includes(OVERLAP_NOTICE))).toBe(false);
+  });
+
+  it("ST-6 대조 ⑦3호 + ⑦3호(둘 다 1년 미만) → 같은 호 합산 1,432,185,000 · 고지 없음", () => {
+    const r = run([uA(["A", "B", "C"], []), uB(["B", "C", "D"], [])]);
+    expect(r.calculatedTax).toBe(1_432_185_000);
+    expect(notices(r)).toHaveLength(0);
+  });
+
+  it("ST-7 (ii) ⑦1호(1~2년 2주택) + ⑦3호(1~2년 3주택) → 1,282,560,000 · 단기 고지 1건", () => {
+    const r = run([short("A", "2026-06-01", ["A", "B"], []), short("B", "2026-09-01", ["B", "C", "D"], [])]);
+    expect(r.properties.map((p) => p.surchargeHouseholdHasCountedRight ?? false)).toEqual([false, false]);
+    expect(r.calculatedTax).toBe(1_282_560_000);
+    const n = notices(r);
+    expect(n).toHaveLength(1);
+    expect(n[0]).not.toMatch(/유리|불리/);
+  });
+
+  it("ST-8 대조 서로 다른 단기 호 — ⑦1호(1~2년 · ①2호) + ⑦3호(1년 미만 · ①3호) → 고지 없음", () => {
+    expect(notices(run([short("A", "2026-06-01", ["A", "B"], []), uB(["B", "C", "D"], [])]))).toHaveLength(0);
+  });
+
+  it("ST-9 대조 (ii) 한쪽만 단기 — ⑦1호(1~2년) + ⑦3호(2년 이상) → 고지 없음", () => {
+    expect(notices(run([short("A", "2026-06-01", ["A", "B"], []), B(["B", "C", "D"], [])]))).toHaveLength(0);
+  });
+
+  it("ST-11 대조 ⑦1호(1~2년 주택) + 1~2년 분양권(⑦ 후보 없음) → 고지 없음", () => {
+    const presale = {
+      ...short("B", "2026-09-01", ["B"], []),
+      propertyType: "presale_right",
+      houses: [],
+      sellingHouseId: undefined,
+    } as unknown as TransferTaxItemInput;
+    const r = run([short("A", "2026-06-01", ["A", "B"], []), presale]);
+    // 전제 — 분양권도 ①2호 단기 세율이다(호 공유는 있으나 ⑦ 후보가 없다).
+    expect(r.properties[1].rateClause).toBe("104-1-2");
+    expect(r.properties.map((p) => p.surchargeShortTermClause)).toEqual(["104-7-1", undefined]);
+    expect(notices(r)).toHaveLength(0);
+  });
+
+  it("ST-12 대조 ⑦1호(1~2년 주택) + 비조정지역 1~2년 주택(⑦ 후보 없음) → 고지 없음", () => {
+    const plain = { ...short("B", "2026-09-01", ["B"], []), isRegulatedArea: false, wasRegulatedAtAcquisition: false } as TransferTaxItemInput;
+    const r = run([short("A", "2026-06-01", ["A", "B"], []), plain]);
+    expect(r.properties.map((p) => p.rateClause)).toEqual(["104-1-2", "104-1-2"]);
+    expect(r.properties.map((p) => p.surchargeShortTermClause)).toEqual(["104-7-1", undefined]);
+    expect(notices(r)).toHaveLength(0);
+  });
+
+  it("ST-10 대조 §104⑤2호 단서 시행 전(2018 양도) ⑦1호 + ⑦1호(둘 다 1년 미만) → 단위별 식별자라도 고지 없음", () => {
+    const pre = (id: string, acq: string, transferDate: string, houses: string[]) => ({
+      ...under1y(id, acq, transferDate, houses, []),
+    }) as TransferTaxItemInput;
+    const r = calculateTransferTaxAggregate(
+      {
+        taxYear: 2018,
+        annualBasicDeductionUsed: 0,
+        properties: [pre("A", "2017-12-01", "2018-06-01", ["A", "B"]), pre("B", "2018-01-01", "2018-09-01", ["B", "C"])],
+      },
+      rates,
+    );
+    // 전제 — 두 자산 모두 ⑦ 후보와 ①3호 후보를 가진다(단서 시행 전이라 버킷이 단위별로 갈린다).
+    expect(r.properties.map((p) => p.surchargeShortTermClause ?? p.rateClause)).toEqual(["104-7-1", "104-7-1"]);
+    expect(notices(r)).toHaveLength(0);
   });
 });
 

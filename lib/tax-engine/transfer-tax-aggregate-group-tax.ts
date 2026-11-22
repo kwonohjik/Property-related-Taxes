@@ -188,10 +188,11 @@ export function aggregateByGroup(
    */
   surchargeClause3And4OverlapSplit: boolean;
   /**
-   * 권리 구분자(`right:`)로 갈린 두 단위가 **둘 다 §104①2호(1년 이상 2년 미만) 후보**를 가진 경우 true — ①2호를 함께 써도
-   * §104⑦의 호가 다르면 합산하지 않는다(현행 유지 · 사용자 결정 2026-11-22). 해석례 미확인 고지용. 세액 무영향.
+   * 서로 다른 자산의 두 단위가 **다른 버킷**에 있고, 둘 다 §104⑦ 후보를 가지며 **같은 단기 호**(둘 다 §104①2호 또는 둘 다 3호)
+   * 후보를 함께 가진 경우 true — 단기 호를 함께 써도 §104⑦의 호가 다르면 합산하지 않는다(현행 유지 · 사용자 결정 2026-11-22,
+   * 범위 확대 같은 날). 해석례 미확인 고지용. 세액 무영향.
    */
-  surchargeRightSplitSharesShortTerm: boolean;
+  surchargeSplitSharesShortTerm: boolean;
 } {
   const groupMap = new Map<RateGroup, number[]>();
   const clauseTaxes = new Map<string, ClauseTaxEcho>();
@@ -421,14 +422,26 @@ export function aggregateByGroup(
   const surchargeClause3And4OverlapSplit = units.some(
     (u, n) => isClause3And4Overlap(u) && unitIds.some((v) => v.id === unitIds[n].mergeId),
   );
-  // ⑦1·2호(3·4호)가 권리 구분자로 갈렸는데 두 단위가 §104①2호(1~2년 단기)를 함께 후보로 가진 경우 — 넓게 읽으면(①2호 공유 =
-  // 「동일한 호」) 합산 과세표준에 ⑦ 세율까지 적용해 세액이 커진다(실측 1,198,500,000 ↔ 1,232,435,000). 현행은 합산하지 않고 고지만.
-  const hasShortTerm = (u: ClausePart) => (u.candidateClauses ?? []).includes("104-1-2");
-  const surchargeRightSplitSharesShortTerm = units.some(
+  // ⑦의 호가 달라 갈린 두 중과 단위가 같은 단기 호(§104①2호 또는 3호)를 함께 후보로 가진 경우 — 넓게 읽으면(단기 호 공유 =
+  // 「동일한 호」) 합산 과세표준에 ⑦ 세율까지 적용해 세액이 커진다(실측 1~2년 ⑦1+⑦2 1,198,500,000 ↔ 1,232,435,000). 현행은 합산하지 않고 고지만.
+  // 단서 시행 전(식별자가 단위별 — `mergeId !== key`)·같은 자산의 파트끼리·같은 버킷은 이 쟁점이 아니다.
+  // 분양권은 ⑦ 후보가 없어(`SURCHARGE_SUBJECT_PROPERTY_TYPES`에 없다) 아래 ⑦ 요건에서 이미 빠진다.
+  const shortClausesOf = (u: ClausePart) =>
+    (u.candidateClauses ?? []).some((c) => c === "104-7-1" || c === "104-7-3")
+      ? (u.candidateClauses ?? []).filter((c) => c === "104-1-2" || c === "104-1-3")
+      : [];
+  const provisoInForce = (n: number) => unitIds[n].mergeId === unitIds[n].key;
+  const surchargeSplitSharesShortTerm = units.some(
     (u, n) =>
-      unitIds[n].id === `right:${unitIds[n].mergeId}` &&
-      hasShortTerm(u) &&
-      units.some((v, m) => unitIds[m].id === unitIds[n].mergeId && hasShortTerm(v)),
+      provisoInForce(n) &&
+      units.some(
+        (v, m) =>
+          // 방어용 — 현행 구조상 도달 불가: 같은 자산의 파트는 세대 판정(⑦ 호·right: 구분)이 같아 같은 단기 호면 같은 버킷이다.
+          v.assetIdx !== u.assetIdx &&
+          provisoInForce(m) &&
+          unitIds[m].id !== unitIds[n].id &&
+          shortClausesOf(u).some((c) => shortClausesOf(v).includes(c)),
+      ),
   );
 
   /** 세율군별 표시 재료 — 그 세율군이 걸친 버킷과, 버킷 안 그 세율군 몫의 과세표준. */
@@ -592,7 +605,7 @@ export function aggregateByGroup(
     assetPartBasic,
     assetPartIncome,
     surchargeClause3And4OverlapSplit,
-    surchargeRightSplitSharesShortTerm,
+    surchargeSplitSharesShortTerm,
   };
 }
 
