@@ -1,0 +1,549 @@
+/**
+ * 주택 수 산정용 폼 항목 — 다른 보유 주택(HouseEntry)·세대 보유 분양권·입주권(PresaleRightEntry).
+ * `calc-wizard-asset-nbl.ts` 800줄 정책(≥750 위험구간 기회주의적 분리, NBL-STATE-HISTORY-U0)으로 분리 — 기존 import 경로(`calc-wizard-asset-nbl`)는 재수출로 유지한다.
+ */
+
+import type { RentalHousingType } from "@/lib/tax-engine/multi-house-surcharge";
+import type { HouseCountExclusionRowFact } from "./calc-wizard-asset-nbl";
+import type { AptDeadlineExtensionForm } from "./calc-wizard-asset-nbl-rental";
+import type { TaxIncentiveRentalRegistrationType } from "./calc-wizard-asset-nbl-rental";
+
+/** 다른 보유 주택 항목 (폼 문자열 버전) */
+export interface HouseEntry {
+  id: string;
+  region: "capital" | "non_capital";
+  acquisitionDate: string;
+  officialPrice: string;
+  isInherited: boolean;
+  isLongTermRental: boolean;
+  isApartment: boolean;
+  isOfficetel: boolean;
+  isUnsoldHousing: boolean;
+  /**
+   * 소득세법 시행령 §154⑨ — 이 주택도 **현재 양도하는 주택과 같은 날 양도**한다(표시). 같은 날 판 주택을 서로의 명부에 넣을 때 쓴다.
+   * 의미·두 단계는 `lib/calc/same-day-transfer-order.ts`. 같은 날 **증여**한 주택은 대상이 아니다. 엔진은 모른다(④가 행을 빼서 보낸다).
+   */
+  soldSameDay?: boolean;
+  /** `soldSameDay`일 때 — `first` 이 주택을 현재 양도하는 주택보다 **먼저** 양도한 것으로 선택(주택 수에서 뺀다) / `later` 나중에(산입). 미선택=산입+고지. */
+  sameDayTransferOrder?: "first" | "later";
+  /**
+   * §155① 신규 주택 **취득 경위** (결정 #43 · G6-4) — 이 행이 양도 주택보다 나중에 취득한 행(신규 주택 후보)일 때 묻는다.
+   * 분양권·조합원입주권으로 취득해 완공된 주택에 완공일을 「취득일」로 넣으면 해석이 부적용으로 본 순차 사례까지 비과세가 나왔다.
+   * `undefined`는 「아직 답하지 않음」 — ⑧이 막고, 엔진은 「모름」과 같이 불성립으로 본다(결론을 가를 때 확인 필요).
+   * `NewHouseOriginKind`에서 `not_collected`만 뺀 값이다(그 값은 명부 행이 없는 경로가 엔진에 싣는 표지).
+   */
+  acquisitionOrigin?:
+    | "general"
+    | "successor_right"
+    | "original_member_house"
+    | "original_member_non_house"
+    | "presale"
+    | "self_rebuild"
+    | "unknown";
+  /**
+   * 권리 취득일(`YYYY-MM-DD`) — 의미는 `acquisitionOrigin`마다 다르다: 승계 입주권 = 승계취득일 · 분양권 = 취득일(청약은 당첨일,
+   * 선착순은 동·호 지정 후 계약일) · 상가·토지 원조합원 = 관리처분계획 인가일 · 원조합원(기존주택)·자가 재건축 = 기존(헐기 전) 주택 취득일.
+   * 이 칸은 `completionDate`(§167의3①12가목 소형신축 준공일)와 다른 사실이다 — 섞지 않는다.
+   */
+  rightAcquisitionDate?: string;
+  /** 승계취득한 조합원입주권의 관리처분계획 인가일 — 2006.1.1. 전 인가·승계분은 §89② 대상이 아니다(법률 제7837호 부칙 §12). 선택 입력. */
+  rightApprovalDate?: string;
+  /** 취득가액(원, 문자열) — 소형신축·준공후미분양 특례 가액 기준 (§167의3①12가·나목) */
+  acquisitionPrice?: string;
+  /** 전용면적(㎡, 문자열) — 소형신축 60㎡·미분양 85㎡ 판정 */
+  exclusiveArea?: string;
+  /** 준공후미분양 여부 (나목 §167의3①12나목) */
+  isUnsoldNewHouse?: boolean;
+  /** 준공일 (가목 3호 §167의3①12가목 — 2024.1.10~2027.12.31 준공). 미입력 시 가목 미발동 */
+  completionDate?: string;
+  /** #2a 배우자 단독 보유 주택 여부 (§167의3⑨ 3주택↑ 혼인 5년내 차감 대상). 혼인합가일 입력 시에만 의미 */
+  isSpouseOwned?: boolean;
+  /**
+   * §167의3⑨ 「양도일 현재 양도자의 배우자가 보유한」 주택인가 — 계산기 3-state 응답(결정 #47: 예/아니오/모름). 있으면 `isSpouseOwned`(레거시 칩)보다 우선한다.
+   * 키 없음(미응답)·모름은 차감하지 않는다. 혼인 전 보유자(`mergeOrigin`)와 **다른 사실**이다. 판정 메뉴는 묻지 않는다.
+   */
+  spouseHeldAtTransfer?: "yes" | "no" | "unknown";
+  /**
+   * §155④⑤ 합가 전 보유 쪽 — 판정 메뉴·계산기 공통 입력(엔진 `HouseInfo.mergeOrigin`, 합가일이 있을 때 노출).
+   * 합가일보다 나중에 취득한 행은 이 값과 무관하게 「합가 후 취득」으로 본다(날짜가 먼저).
+   * 미입력이면 구성 판정을 하지 못해 합가 특례는 불성립 + 확인 필요다. ⑧이 미입력을 막는다(구 저장분 호환).
+   */
+  mergeOrigin?: "seller_side" | "counterpart_side" | "second_merge_side";
+  /**
+   * 상속인이 아닌 사람이 유증·사인증여로 받은 주택(isInherited=true 시에만 의미). 1세대1주택 상속 특례에서 상속주택으로
+   * 보지 않는다(부동산거래관리과-307). 다주택 중과는 지금처럼 상속주택으로 본다(계획서 `nbl-bequest-non-heir.plan.md` §4-4).
+   */
+  nonHeirBequest?: boolean;
+  /** 상속개시일 (isInherited=true 시 상속 5년 배제 기산 — 소령 §167의3①7호). 미입력 시 배제 미발동. */
+  inheritedDate?: string;
+  /** 공동상속주택 여부 (§155③, 2-A2). isInherited=true 시에만 의미 */
+  isCoInherited?: boolean;
+  /** 공동상속 최대지분 상속인 여부 (§155③ 단서 — true=소유로 봄, 일반주택 양도 시 §155② 요건으로 제외 판정 · false·미제공=소수지분 §155③ 제외후보) */
+  isLargestCoInheritedShareholder?: boolean;
+  /**
+   * 상속개시 당시 피상속인과 동일세대 여부 (§155② 단서 — true=특례 원칙 배제). isInherited=true 시 의미.
+   * 한 칸의 3상태(별도세대·동일세대·모름) 중 「동일세대」만 이 칸 단독으로 읽는다 — `false`는 별도세대의 **표시일 뿐 답이 아니다**
+   * (종전 「+ 주택 추가」 팩토리가 2026-07-19~10-11에 `false`를 미리 넣어 사용자가 고른 것과 구별되지 않는다). 읽기·쓰기는 `lib/calc/decedent-household.ts` leaf.
+   */
+  decedentSameHouseholdAtInheritance?: boolean;
+  /** 「모름」을 사용자가 명시했다 — 위 boolean이 비어 있을 때만 의미(쓰기는 leaf가 모순 없이) */
+  decedentHouseholdUnknown?: boolean;
+  /** 「별도세대」를 사용자가 **직접 골랐다**(3택 라디오가 쓴다) — 이 표시가 없는 `false`는 낡은 기본값이라 미답으로 읽는다(leaf) */
+  decedentHouseholdSeparate?: boolean;
+  /** 동거봉양 합가+합가 전 피상속인 보유분 여부 (§155② 단서 예외). 동일세대=true 시에만 의미 */
+  parentalCareMergeInheritedHouse?: boolean;
+  /**
+   * D17 재상속 — 피상속인이 **별도세대**로부터 상속받은 상속주택(§155②)을 피상속인 사망으로 동일세대원인 상속인이
+   * 다시 상속받았다. 상속주택 지위를 이어받아 §155② 단서(동일세대 상속 배제)를 받지 않는다(재산세과-2961 ·
+   * 부동산납세과-624 · 서면-2022-법규재산-4747 등). 동일세대=true 시에만 의미.
+   */
+  reInheritedFromSeparateHousehold?: boolean;
+  /**
+   * P4 양론 C1 — 상속받은 이 주택(또는 그 지분)을 동일세대원(배우자 등)에게 증여했다. 판정 메뉴 전용 입력 —
+   * 판정 결론은 바꾸지 않고, 「해석이 갈리는 쟁점」 카드에 반대 입장 결론을 띄운다. 상속주택=true 시에만 의미.
+   */
+  inheritedGiftedToHouseholdMember?: boolean;
+  /** 피상속인 2주택↑ 중 순위상 상속주택 아님 (§155②1~4호 순위 부적격 — true=제외 안 함) */
+  isRankingDisqualifiedInheritedHouse?: boolean;
+
+  // ── 1세대1주택 비과세 특례 사실 (D-6 · 영 §155) ──
+  /**
+   * §155⑥**1호** 국가유산주택 — 이 행의 주택이 지정문화유산·국가등록문화유산·천연기념물등인가.
+   *
+   * 법문(실독 2026-09-21 · MST 286211): 「다음 각 호의 어느 하나에 해당하는 주택과 그밖의
+   * 주택(일반주택)을 국내에 **각각 1개씩** 소유하고 있는 1세대가 일반주택을 양도하는 경우에는
+   * 국내에 1개의 주택을 소유하고 있는 것으로 보아 제154조제1항을 적용한다」
+   * ⇒ 문화유산주택은 **보유 중인 다른 주택**이므로 명부 행의 속성이다(양도 대상이 아니다).
+   *
+   * ✅ **두 축에 모두 흐른다** (2026-09-22 — D-6 후속 ①).
+   *
+   * | 축 | 엔진 칸 | 경유 |
+   * |---|---|---|
+   * | 비과세 §155⑥1호 | `culturalHeritageHouse` | `deriveOneHouseFactsFromHouses` |
+   * | 중과 배제 §167의3①**6호** | `HouseInfo.isCulturalHeritage` | 명부 행 map(단건·다건) |
+   *
+   * 근거는 **6호 법문이 §155⑥1호를 그대로 인용**한다는 것이다(실독 2026-09-22 · MST 286211):
+   * 「6. 제155조제6항제1호에 해당하는 국가유산주택」. §155⑥1호는 주택의 **정의**뿐이고
+   * 「각각 1개씩」은 ⑥ **본문**에 있어 6호로 넘어오지 않는다 ⇒ 같은 사실, 같은 칸.
+   *
+   * ⚠️ 이름이 다른 것은 **필드가 달라서가 아니라** `HouseInfo`가 엔진 타입이고 이쪽이 폼 타입이기
+   *    때문이다. 두 축이 **갈라지는** 동명이축(`isUnavoidableReason` ↔
+   *    `oneHouseUnavoidableOutsideCapital`)과 혼동하지 말 것
+   *    ([[feedback_rename_same_name_two_axes]]).
+   */
+  oneHouseCulturalHeritage?: boolean;
+
+  /**
+   * §155⑦ 농어촌주택 — 이 행의 주택이 상속·이농·귀농 농어촌주택인가.
+   *
+   * 법문 「… 수도권 밖의 지역 중 읍지역(도시지역안의 지역을 제외한다) 또는 면지역에 소재하는
+   * 주택(농어촌주택)과 그 밖의 주택(일반주택)을 국내에 **각각 1개씩** 소유」 ⇒ 명부 행이다.
+   */
+  oneHouseRuralHouse?: boolean;
+  /** §155⑦ 1호 상속 · 2호 이농 · 3호 귀농. */
+  ruralHouseKind?: "inherited" | "farm_exit" | "return_to_farm";
+  /**
+   * 소재 요건(수도권 밖 읍·면, 도시지역 읍 제외) **사용자 지정값**.
+   *
+   * 🔑 `undefined`면 **자동 판정을 쓴다**(행 주소에서 도출). 종전 세대 단위 필드는 비-optional
+   * boolean이라 `false`가 「자동이 아니라고 했다」인지 「사용자가 아니라고 했다」인지 구별되지
+   * 않았고, 그래서 `ruralHouseLocationTouched` 플래그가 따로 필요했다. optional로 두면
+   * **그 플래그가 사라진다**.
+   */
+  ruralOutsideCapitalEupMyeon?: boolean;
+  /**
+   * 읍지역 용도지역 조회 결과 — 「도시지역안의 지역을 제외한다」 판정용.
+   *
+   * 🔑 **조회 결과(데이터)를 저장하는 것**이지 파생 boolean을 미러링하는 것이 아니다.
+   * 종전 세대 단위 구현은 `useEffect`로 파생값을 store에 써 넣었는데(미러링 금지 위반),
+   * 여기서는 조회 응답만 남기고 **판정은 읽는 시점에** `judgeRuralHouseLocation`이 한다.
+   * 면·수도권·동은 조회 없이 순수 판정되므로 이 값은 **읍일 때만** 채워진다.
+   */
+  ruralUrbanZone?: "urban" | "non_urban" | "unknown";
+  /** 1호 — 피상속인이 취득 후 거주한 연수(5년 이상 요건). */
+  ruralDecedentResidenceYears?: string;
+  /** 2호 — 이농인이 취득일 후 거주한 연수(5년 이상 요건). */
+  ruralOwnerResidenceYears?: string;
+  /** 3호 §155⑩3호 — 대지면적(㎡). 660㎡ 이내. */
+  ruralLandAreaSqm?: string;
+  /** 3호 §155⑩5호 — 세대전원 이사·거주. */
+  ruralWholeHouseholdMoved?: boolean;
+  /** 3호 §155⑩2호 — 취득 당시 고가주택 해당(해당하면 귀농주택 요건 불충족). */
+  ruralHighPriceAtAcquisition?: boolean;
+  /**
+   * 2호·3호 — 이 주택에 5년 이상 거주하다 이농한 뒤 **다시 이 주택으로 돌아와** 영농·영어에 종사하고 있다(재귀농).
+   * 그러면 영농 목적으로 취득한 귀농주택이 아니고(재산세과-1504 · 부동산납세과-67) 이농주택 특례도 적용되지
+   * 않는다(부동산납세과-67). `undefined`는 「아직 답하지 않음」 — ⑧이 막는다(모름은 불리).
+   */
+  ruralReturnedToFarmExitHouse?: boolean;
+  /**
+   * 3호 §155⑩4호 — 「영농 또는 영어의 목적으로 취득」 요건의 목(가·나·다). `undefined`는 「아직 답하지 않음」 — ⑧이 막는다(모름은 불리).
+   * `unknown`은 「모름」이라는 **답**이다 — 불성립으로 판정하고 결론을 가를 때 확인 필요를 알린다(결정 #44).
+   */
+  ruralFarmlandBasis?: "ga" | "na" | "da" | "none" | "unknown";
+  /** 3호 §155⑩4호 — 농지 소유자·어업인이 본인인가 배우자인가(가·나·다목을 골랐을 때만). 배우자 인정은 목마다 시행 시기가 다르다. */
+  ruralFarmlandHolder?: "self" | "spouse";
+  /** 3호 §155⑪ — 이 귀농주택 특례로 이미 일반주택을 비과세 양도한 적이 있는가(없음·있음·모름). */
+  ruralPriorReturnFarmExemption?: "none" | "has" | "unknown";
+  /** 3호 — 양도하는 일반주택을 귀농 전에 취득했는가(예·아니오·모름). */
+  ruralGeneralHouseBeforeReturn?: "yes" | "no" | "unknown";
+  /**
+   * 3호 §155⑩1호(2016.2.17. 삭제) — 귀농주택이 연고지에 있는가(예·아니오·모름). 이 행의 취득일이 2016-02-17 전일 때만 묻고 싣는다
+   * (`ruralHometownAsked` — 그 개정령 부칙 제22조 종전 규정 · 2026-11 리뷰 D-85).
+   */
+  ruralHometownLocated?: "yes" | "no" | "unknown";
+  // ⚠️ 귀농주택 **취득일**은 별도 칸이 없다 — §155⑦ 단서의 「그 주택을 취득한 날」이
+  //    곧 이 행의 `acquisitionDate`다. 소재지도 행의 `addressJibun`·`regionCode`를 쓴다.
+
+  /**
+   * §155⑧ — 부득이한 사유로 취득한 **수도권 밖** 주택.
+   *
+   * 법문 「재정경제부령으로 정하는 취학, 근무상의 형편, 질병의 요양, 그 밖에 부득이한 사유로
+   * 취득한 **수도권 밖에 소재하는 주택**과 그 밖의 주택(일반주택)을 국내에 **각각 1개씩**
+   * 소유하고 있는 1세대가 부득이한 사유가 **해소된 날부터 3년 이내**에 일반주택을 양도하는
+   * 경우에는 …」(실독 2026-09-21 · MST 286211)
+   *
+   * ⛔ **`isUnavoidableReason`과 다른 호다 — 한 토글로 합치지 말 것.**
+   *
+   * | | `isUnavoidableReason` | 이 필드 |
+   * |---|---|---|
+   * | 조문 | 영 §167의10①**3호** | §155⑧ = 영 §167의10①**4호** |
+   * | 축 | 중과 배제 전용 | **비과세 + 중과 배제** |
+   * | 기준시가 | 취득 당시 **3억 이하** | 요건 **없음** |
+   * | 거주 | **1년 이상** | 요건 **없음** |
+   * | 소재 | 제한 없음 | **수도권 밖** |
+   *
+   * 엔진에서 **4호가 3호보다 먼저 early-return** 한다
+   * (`multi-house-surcharge-exclusion.ts:547` vs `:567`) — 합치면 3호 요건이 4호에 붙어
+   * 조용히 좁아진다([[feedback_one_field_serving_two_legal_axes]]).
+   */
+  oneHouseUnavoidableOutsideCapital?: boolean;
+  /** §155⑧ 부득이한 사유 종류 — 소칙이 정하는 4종. */
+  unavoidableOutsideCapitalReason?: "study" | "work" | "illness" | "other";
+  /**
+   * §155⑧ 사유 **해소일** — `unavoidableOutsideCapitalUnresolved`와 택일. 해소일이 있으면 3년 기한(2012.2.2. 전 해소분은 없음).
+   * ⚠️ 3호의 `unavoidableReasonResolvedDate`와 **다른 칸**이다 — 요건이 다르므로 공유하지 않는다.
+   */
+  unavoidableOutsideCapitalResolvedDate?: string;
+  /**
+   * 「사유가 양도일 현재 해소되지 않음」 — 해소일과 택일(`two-house-exclusion-status.ts`). 둘 다 없으면 ⑧ 차단(#31 —
+   * 종전에는 해소일 빈 값이 「미해소」였고 같은 빈 값에 「모름」이 겹쳤다). 구 저장분은 이관하지 않는다 — ⑧이 선택을 요구한다.
+   */
+  unavoidableOutsideCapitalUnresolved?: boolean;
+  // ⚠️ 「수도권 밖」 요건에 별도 칸을 두지 않는다 — 행의 `regionCode`로 판정한다.
+  //    다만 이 PR은 **순수 이관**이라 엔진 게이트를 새로 넣지 않고 화면 경고로만 알린다.
+  /**
+   * 조특법 **주택 수 제외** — 이 주택을 「소유주택이 아닌 것으로 보는」 사유 (판정 메뉴 행 사실).
+   *
+   * §99의4(농어촌·고향)·§98의9(준공후미분양)·감면주택(§98 등)은 법문의 대상이 「그 주택」이라
+   * 세대 단위 선언이 아니라 **행의 속성**이다 — §155⑥⑦⑧(D-6)과 같은 결정
+   * (`docs/00-pm/one-house-judgment-count-exclusion-row-link.plan.md`). 종전에는 선언이 명부와
+   * 따로 놀아 신규 주택 후보에 섞이거나(일시적 2주택 불성립) 명부에 없는 주택을 빼 주었다.
+   *
+   * 🔑 취득일·주소·취득가액·전용면적·수도권 여부는 **행 값**을 쓴다 — 선언의 같은 칸은
+   *    `lib/calc/house-count-exclusion-rows.ts`가 행 값으로 덮어쓴다(두 벌 입력 금지).
+   * ⚠️ `isUnsoldHousing`(중과 배제, 소령 §167의3①5호)과 **다른 축**이다 — 그 행은 주택 수에 산입한다.
+   * 판정 메뉴와 계산기가 모두 이 행에서 받는다(계산기: `transfer-calc-count-exclusion-row-link.plan.md` —
+   * 판정 → 계산기 전달도 행째로 넘긴다).
+   */
+  countExclusion?: HouseCountExclusionRowFact;
+  /**
+   * §167의3①3호 감면대상장기임대주택 사실 — `TaxIncentiveRentalFacts` 주석 참조.
+   * 「5년 이상 임대」·「국민주택」은 장기임대(2호)와 **같은 칸**(`rentalPeriodYears`·`isNationalSizeHousing`)을
+   * 쓴다 — 한 주택의 같은 사실이라 두 벌로 두면 두 진실이 된다.
+   */
+  isTaxIncentiveRental?: boolean;
+  isTaxIncentiveRentalPurchase?: boolean;
+  taxIncentiveRentalRegistrationType?: TaxIncentiveRentalRegistrationType;
+  isUrbanLifeHousingApartment?: boolean;
+  taxIncentiveRentalAptDeadlineExtension?: AptDeadlineExtensionForm;
+  /**
+   * 장기임대 등록임대 경로(legacy) 정밀 입력 — isLongTermRental=true 시.
+   * 엔진 isLongTermRentalHousingExempt legacy 분기: 등록사업자 + 등록일 2종 + 임대기간 5년↑ → 배제.
+   * (가~자목 9유형 세부 매트릭스는 후속 과제 — rentalType 미노출.)
+   */
+  isRegisteredRental?: boolean;
+  /** 임대사업자 등록 신청일 — 「등록 신청」 경계(2020.7.11.·8.18.) */
+  rentalRegistrationDate?: string;
+  /** 지자체 임대사업자 등록일(등록증) — 「등록을 한」 경계·§167의3③ 기산(V-3). ⑧ 필수 */
+  rentalRegisteredDate?: string;
+  /** 사업자 등록일 */
+  businessRegistrationDate?: string;
+  /**
+   * 임대기간(년) — **화면은 더 이상 받지 않는다**(옛 기록 값 · ④도 보내지 않음). 임대개시일(`rentalStartDate`)로
+   * 엔진이 계산한다(계획서 `surcharge-rental-period-dates.plan.md` Q-3).
+   */
+  rentalPeriodYears?: string;
+  /**
+   * 임대개시일(YYYY-MM-DD) — 2호·3호 같은 칸. 엔진은 2호만 세무서 사업자등록일·지자체 등록일 중 늦은 날로 자른다
+   * (소령 §167의3③), 3호는 그대로 센다(`multi-house-rental-period.ts`).
+   */
+  rentalStartDate?: string;
+  /** 임대 종료일(YYYY-MM-DD) — 비우면 양도일까지 임대한 것으로 본다(Q-1) */
+  rentalEndDate?: string;
+  /** 2호 상속 — 상속받아 계속 임대(조특령 §97⑤3호, 소령 §167의3③ 준용). undefined = 아님 */
+  isInheritedRental?: boolean;
+  /** 2호 상속 — 피상속인 임대개월(문자열). `isInheritedRental`일 때만 ④가 싣는다 */
+  decedentRentalMonths?: string;
+  /**
+   * 2호 상속 — 피상속인의 세무서 사업자등록일·지자체 등록 신청일·등록일(YYYY-MM-DD, 선택). 가·다목 「2018년 3월 31일까지
+   * 사업자등록등」만 이 날짜로 본다(서면-2020-법규재산-1959). 앞의 두 날짜가 다 있을 때만 ④가 싣는다(`rentalPeriodDatesPayload`).
+   */
+  decedentBusinessRegistrationDate?: string;
+  decedentRentalRegistrationDate?: string;
+  decedentRentalRegisteredDate?: string;
+  /** 임대사업자 말소일 (양도일 이전 말소 시 임대 배제 해제) */
+  rentalCancelledDate?: string;
+  /** 말소 사유 — 자동말소면 가·다~마목은 §167의3①2호 단서로 임대기간요건 간주 충족 · after_duty = 의무기간 후 말소 신청(§6①3호). ""·undefined = 미선택 */
+  rentalCancellationReason?: "" | "auto" | "voluntary" | "after_duty";
+  /** 증여로 받은 주택이면 증여자의 세대(S-4) — 말소된 등록이 있을 때만 묻는다(`rental-gift-donor-scope.ts`). ""·undefined = 미답 */
+  rentalGiftDonorHousehold?: "" | "none" | "same" | "separate";
+
+  // ── 장기임대 9유형 매트릭스 (가~자목) — 신규 18필드 ──
+  /**
+   * 장기임대주택 유형 (가~자목).
+   * 설정 시 엔진이 유형별 정밀 검사(isLongTermRentalHousingExempt) 수행.
+   * 미설정 시 legacy boolean 경로.
+   */
+  rentalType?: RentalHousingType;
+  /** 임대료 증가율 5% 이하 충족 여부 — A·C·E·F·H·I */
+  rentIncreaseUnder5Pct?: boolean;
+  /**
+   * 5%를 넘게 올린 임대차계약의 체결·갱신일(YYYY-MM-DD · 여럿이면 가장 늦은 날) — 가·다·마·바목(사목 base 포함).
+   * 대통령령 제29523호 부칙 제6조: 5% 요건은 2019-02-12 이후 체결·갱신 계약분부터. ⑤·④ 범위는
+   * `rentIncreaseContractDateInScope`(등록 2019-02-12 전 + 미충족 선언일 때만 묻고 싣는다).
+   */
+  rentIncreaseContractDate?: string;
+  /** 국민주택규모(85㎡ 이하) 여부 — B */
+  isNationalSizeHousing?: boolean;
+  /** 같은 시·군 내 2호 이상 보유 여부 — B·C·F·I */
+  hasMinimum2Units?: boolean;
+  /** 같은 시·군 내 5호 이상 보유 여부 — D */
+  hasMinimum5UnitsInCity?: boolean;
+  /** 대지면적 (㎡, 폼 문자열) — C·D·F·I (298㎡ 이하 요건) */
+  rentalLandArea?: string;
+  /** 연면적 (㎡, 폼 문자열) — C·D·F·I (149㎡ 이하 요건) */
+  rentalTotalFloorArea?: string;
+  /** 분양전환 여부 — C·F */
+  isConvertedToSale?: boolean;
+  /** 최초 분양계약일 (YYYY-MM-DD) — D */
+  firstSaleContractDate?: string;
+  /** 취득 당시 공시가격 (원, 폼 문자열) — B·D */
+  acquisitionOfficialPrice?: string;
+  /** 임대개시 당시 공시가격 (원, 폼 문자열) — A·C·E·F·H·I */
+  rentalStartOfficialPrice?: string;
+  /** 임대의무기간 1/2 이상 충족 여부 — G */
+  hasHalfDutyPeriodMet?: boolean;
+  /** 말소일 이후 1년 이내 양도 여부 — G */
+  isSoldWithin1YearOfCancellation?: boolean;
+  /** 자진·자동 말소일 (YYYY-MM-DD) — G (rentalCancelledDate와 별개) */
+  rentalCancellationDate?: string;
+  /** 사목(G) base 목 (가·다·라·마) — §167조의3①2호 사목 "해당 목의 다른 요건" 검증 대상 */
+  saMokBaseArticle?: "가" | "다" | "라" | "마";
+  /** 2018.9.14 이후 조정지역 취득 제외 해당 여부 — E·H */
+  isExcluded918Rule?: boolean;
+  /** 2020.7.11 이후 등록 아파트 제외 해당 여부 — D·E */
+  isExcludedAfter20200711Apt?: boolean;
+  /** 단기→장기 변경신고 제외 해당 여부 — E·F */
+  isExcludedShortToLongChange?: boolean;
+  /** 조정대상지역 공고 전 취득·계약금 지급 증빙 보유 여부 — E·H (마목 1)·아목 4) 918 배제 예외) */
+  hasContractDepositProof?: boolean;
+  /**
+   * §167의3⑪ 기한 연장 사실 — 가목2)·나목2)·라목8)·마목4) **아파트**일 때만 묻는다(A·B·D·E).
+   * 미입력(undefined) = 「모름」 → 엔진은 기한 2027.12.31. + 확인 필요 고지. ⑤·④·⑧ 범위는 `lib/calc/apt-deadline-extension-scope.ts`.
+   * 3호 칸(`taxIncentiveRentalAptDeadlineExtension`)과 별개다(호마다 입력 화면이 다르다).
+   */
+  rentalAptDeadlineExtension?: AptDeadlineExtensionForm;
+
+  // ── P2 특수 배제 사유 (다른 보유 주택 기준 — 2주택 전용·인구감소) ──
+  /** 부득이한 사유(취학·근무·질병) 취득 주택 — 소령 §167의10①3호 (기준시가 3억↓·1년↑ 거주) */
+  isUnavoidableReason?: boolean;
+  /** 부득이한 사유 주택 거주기간(년) — 1년 이상 요건 */
+  unavoidableResidenceYears?: string;
+  /** 부득이한 사유 해소일 (YYYY-MM-DD) — 해소 후 3년 이내 양도 시 배제 유지 */
+  unavoidableReasonResolvedDate?: string;
+  /** 「양도일 현재 사유가 해소되지 않음」 — 해소일과 택일(`two-house-exclusion-status.ts`). 둘 다 없으면 ⑧ 차단 */
+  unavoidableReasonUnresolved?: boolean;
+  /** 소송으로 취득/소송 진행 중 주택 — 소령 §167의10①7호 */
+  isLitigationHousing?: boolean;
+  /** 소송 **확정판결일** (YYYY-MM-DD) — 3년 이내면 배제. 필드명은 legacy(F-17). 미입력은 더 이상 「진행 중」이 아니다 */
+  litigationAcquisitionDate?: string;
+  /** 「양도일 현재 소송 진행 중」 — 확정판결일과 택일(`two-house-exclusion-status.ts`). 둘 다 없으면 ⑧ 차단 */
+  litigationPending?: boolean;
+  // ── 3주택+ 중과 배제(소령 §167의3①4호·8호·8호의2 — 2주택은 §167의10①2호 준용) · D7. 양도 주택 `sellingHouseExclusion`과 같은 이름·의미 ──
+  /** 저당권 실행·채권변제로 취득한 주택 — 취득일부터 3년이 경과하지 않은 동안(8호) */
+  isMortgageExecution?: boolean;
+  /** 종업원에게 무상 제공하는 사용자 소유 주택(4호 장기사원용주택) */
+  isEmployeeHousing?: boolean;
+  /** 무상 제공 기간(년) — 10년 이상 요건 */
+  freeProvisionYears?: string;
+  /** 인가·위탁 어린이집으로 사용하는 주택(8호의2) */
+  isDayCareCenter?: boolean;
+  /** 어린이집 사용 기간(년) — 5년 이상 요건(가·나목 전환 시 합산) */
+  dayCareOperationYears?: string;
+  /** 어린이집으로 사용하지 않게 된 날 — 「사용 중」과 택일(`daycare-usage-status.ts`) */
+  dayCareEndDate?: string;
+  /** 「양도일 현재 어린이집으로 사용 중」 */
+  dayCareInUse?: boolean;
+  /** 정비구역(재개발·재건축) 지정 주택 — 기준시가 1억↓ 소형 배제에서 제외(정비구역은 산입) */
+  isRedevelopmentZone?: boolean;
+  /** 인구감소지역 소재 주택 — 소령 §167의3①12 다·라목 (세컨드홈 특례) */
+  isPopulationDeclineArea?: boolean;
+  /** 인구감소지역 유형 (다목 decline 9억 / 라목 interest 4억) — 가액한도 구분 */
+  populationAreaType?: "decline" | "interest";
+
+  // ── 조특법 §71의2① 인구감소지역주택(결정 #42) — 명부에 없는 **과거 사실** 3종. 적용 여부를 고르는 토글은 없다(강행 의제 — 명부에서 도출).
+  //    모름·미답은 불성립 + 확인 필요(`transfer-reductions/population-decline-71-2.ts`). 소재지·가액은 이 행의 주소(`regionCode`)·`acquisitionOfficialPrice`를 쓴다. ──
+  /** 이 주택을 취득할 당시 세대가 주택·조합원입주권·분양권 중 1채(1개)만 보유했는가 */
+  popDeclSoleAtAcquisition?: "yes" | "no" | "unknown";
+  /** 이 주택을 증여로 취득했는가(상속은 `isInherited`) — 증여로 받았으면 `popDeclDonorHousehold`로 증여자의 별도세대 여부를 본다 */
+  popDeclAcquiredByGift?: "no" | "yes" | "unknown";
+  /**
+   * **증여**로 취득한 경우만 — 증여자가 **별도세대**였는가(국세청 해석은 별도세대만 적용). 같은 세대·모름·미답은 미적용 + 확인 필요.
+   * 상속 행은 이 칸을 쓰지 않는다 — 「상속 정보」의 피상속인 세대 한 칸(`decedentSameHouseholdAtInheritance`·`decedentHouseholdUnknown`)이 §155②와 이 특례에 함께 쓰인다(④가 엔진 입력으로 옮긴다).
+   */
+  popDeclDonorHousehold?: "separate" | "same" | "unknown";
+  /** 양도 주택이 이 행보다 늦게 취득된 것으로 기록된 경우에만 — 양도(종전) 주택을 분양권·조합원입주권으로 받았는가 */
+  popDeclPriorRight?: "no" | "yes" | "unknown";
+  /** `popDeclPriorRight`가 「그렇다」일 때 그 권리를 가진 날(`YYYY-MM-DD`) — 선후는 이 날로 본다 */
+  popDeclPriorRightDate?: string;
+  // ── 소재지 주소검색 (AddressSearch 재표시 + regionCode 파생 · 공시가격/전유면적 자동조회) ──
+  addressRoad?: string;
+  addressJibun?: string;
+  buildingName?: string;
+  addressDetail?: string;
+  addressDong?: string;
+  addressHo?: string;
+  longitude?: string;
+  latitude?: string;
+  /** 법정동 10자리 (PNU 앞 10자리) — §167의3 지역기준 판정. 있으면 지역 구분 자동 파생 */
+  regionCode?: string;
+  /**
+   * 소재 법정동이 「동 안 일부 지구만 조정대상지역」인 동일 때 — 지정 지구 안인가(사용자 선언). 주소를 바꾸면 지운다.
+   * 엔진 `isRegulatedByBjdCode`의 `inDistrict`. 미선언 = 지정(모름=불리) + 확인 필요.
+   */
+  inDesignatedDistrict?: boolean;
+  /** 19자리 PNU — UI 재조회용 */
+  addressPnu?: string;
+  /** 공시가격·전유면적을 주소조회로 자동채움한 표식 — 사용자 수정 시 제거(조회값 배지) */
+  addressLookupFilled?: boolean;
+  /** 공시가격 조회 기준연도 (사용자 선택) — UI 전용, 엔진 미전송 */
+  officialPriceYear?: string;
+}
+
+/**
+ * 세대 보유 분양권·입주권 항목 (폼 문자열 버전).
+ * 소령 §167의11·§167의3①: 분양권은 2021.1.1 이후 취득분만(법률 제17477호 부칙 제4조), 입주권은 취득일 무관하게 주택 수 산정에 포함.
+ */
+export interface PresaleRightEntry {
+  id: string;
+  /** 분양권 / 입주권(재개발·재건축 조합원입주권) */
+  type: "presale_right" | "redevelopment_right";
+  acquisitionDate: string;
+  region: "capital" | "non_capital";
+  /** 지역기준 (REGION 수도권·광역시·세종 / VALUE 지방) — 3억 배제 판정 (§167의4②1호) */
+  regionCriteria?: "REGION" | "VALUE";
+  /** 가액(원, 문자열) — 분양권 공급가격/입주권 종전주택가격 */
+  rightValue?: string;
+  /** #2b 배우자 단독 보유 분양권/입주권 (§167의4⑤ 3↑ 혼인 5년내 차감 대상). 혼인합가일 입력 시에만 의미 */
+  isSpouseOwned?: boolean;
+  /** §167의4⑤ 「양도일 현재 배우자 보유」 3-state 응답(결정 #47). 키 없음·모름은 차감하지 않는다. */
+  spouseHeldAtTransfer?: "yes" | "no" | "unknown";
+  /**
+   * 소재지 코드 — 공급주택 시·군·구 판정용 (인구감소지역 세컨드홈 다·라목 2호 동일 시·군·구 비교).
+   * 주소검색 PNU 앞 10자리 또는 시·군·구 5자리(앞 5자리만 사용).
+   */
+  regionCode?: string;
+  /**
+   * 소재 법정동이 「동 안 일부 지구만 조정대상지역」인 동일 때 — 지정 지구 안인가(사용자 선언). 주소를 바꾸면 지운다.
+   * 엔진 `isRegulatedByBjdCode`의 `inDistrict`. 미선언 = 지정(모름=불리) + 확인 필요.
+   */
+  inDesignatedDistrict?: boolean;
+  /** 소재지 주소 요약 — UI 표시 전용(AddressSearch 선택 결과). 엔진/API 미전송. */
+  regionName?: string;
+  /**
+   * 상속받은 권리인가 — 「소득세법 시행령」 §156의2⑥·⑦ · §156의3④·⑤ (§89② 배제의 예외).
+   * 순위 규칙은 미구현이라, 엔진은 이 값을 **판정 불가 신호**로만 쓴다(잘못된 배제 방지).
+   */
+  /**
+   * 관리처분계획 인가일(「주택건설촉진법」 §33 주택재건축 사업계획승인일 포함) — **조합원입주권 전용**.
+   *
+   * §89②의 조합원입주권 축 시행일 게이트(법률 제7837호 부칙 §12①). 분양권은 취득일 축이라
+   * 이 값을 쓰지 않는다. 미입력은 원칙(적용)으로 읽는다.
+   */
+  managementDisposalApprovalDate?: string;
+  /**
+   * 조합원입주권 취득 경위 — **조합원입주권 전용**. `acquisitionDate`는 기존주택 원조합원이면 기존주택 취득일,
+   * 상가·토지 원조합원이면 관리처분계획인가일, 승계취득이면 승계취득일이다.
+   * 기존주택 원조합원은 §155①, 나머지는 §156의2③·④(엔진 `one-house/original-member-right.ts`).
+   * 1세대1주택 비과세 판정 대상(주택 양도)이면 필수(⑧).
+   */
+  memberOrigin?: "original_house" | "original_non_house" | "successor";
+  /**
+   * 기존주택 원조합원 행 전용 — 입주권이 된 기존주택(철거 대상 건물)을 누가 소유했는가.
+   * `"household_member"` = 본인은 토지만 출자하고 건물은 같은 세대원 소유 → 입주권을 새로 취득한 경우처럼
+   * §156의2③·④로 판정한다(`effectiveMemberOrigin` — 엔진은 `original_non_house`로 받는다, 사용자 결정 2026-10-13).
+   * 미입력은 `"self"`(종전 동작 — §155①). 다른 경위로 바꾸면 ④가 읽지 않는다.
+   */
+  originalHouseBuildingOwner?: "self" | "household_member";
+  /*
+   * 기존주택 원조합원 전용(§155① — 엔진 `one-house/original-member-right.ts`). 다른 경위로 바꾸면 ④가 싣지 않는다.
+   */
+  /** §155①2호 가목 — 기존주택으로 세대전원 이사·전입신고한 날(YYYY-MM-DD) */
+  originalMemberMoveInDate?: string;
+  /** §155①2호 단서 — 기존주택 취득일 현재 기존 임차인이 거주했다 */
+  originalMemberExistingTenant?: boolean;
+  /** §155①2호 단서 — 전 소유자와 임차인 간 임대차계약 종료일(YYYY-MM-DD) */
+  originalMemberTenantLeaseEndDate?: string;
+  /** §155⑱ 처분기한 예외 사유("" = 해당 없음) */
+  originalMemberDisposalDelayReason?: string;
+  /** §155⑱ 「해당 각 호의 매각 등의 방법으로 양도」 — 2022-02-15 전 양도분의 요건 */
+  originalMemberDisposalDelayDisposedByThatMethod?: boolean;
+  /** 기존주택 매매계약 체결·계약금 지급일(YYYY-MM-DD) — §155①2호 괄호·연혁 부칙(리뷰 E-3) */
+  originalMemberContractDate?: string;
+  /** §155⑯ 공공기관·법인 지방이전 특례 */
+  originalMemberPublicInstitutionRelocation?: boolean;
+  /** §155⑯ 이전한 기관·법인 소재지 지번(표시용) */
+  originalMemberRelocatedInstitutionJibun?: string;
+  /** §155⑯ 이전한 시·군 코드(10자리) — 위 주소에서 파생 */
+  originalMemberRelocatedSigunguCode?: string;
+  isInherited?: boolean;
+  /**
+   * 상속인이 아닌 사람이 유증·사인증여로 받은 권리(isInherited=true 시에만 의미) — §156의2⑥⑦ · §156의3④⑤의 「상속받은」
+   * 권리로 보지 않는다(직접 해석 없음 — 확인 필요 · 계획서 `non-heir-bequest-followups.plan.md` §1 C).
+   */
+  nonHeirBequest?: boolean;
+  /**
+   * §156의2⑥·⑦ · §156의3④·⑤ 상속 권리 인정 요건 — `isInherited === true`일 때만 의미.
+   * 순위는 **계산하지 않고 자기선언**으로 받는다(주택 축 §155②③과 같은 규약).
+   */
+  isRankingDisqualifiedInheritedRight?: boolean;
+  isCoInherited?: boolean;
+  isLargestCoInheritedShareholder?: boolean;
+  /** 피상속인이 상속개시 당시 **주택**을 소유했는가 — ⑮ 선택으로도 면제되지 않는다 */
+  decedentOwnedHouseAtDeath?: boolean;
+  /** 피상속인이 **다른 종류의 권리**를 소유했는가 — ⑮ 선택이 이 요건만 면제한다 */
+  decedentOwnedOtherRightTypeAtDeath?: boolean;
+  /**
+   * ⑥ 단서 — 상속개시 당시 상속인·피상속인이 1세대였는가. 한 칸의 3상태(별도세대·동일세대·모름)로 답한다 —
+   * 이 boolean은 동일세대(true)만 확정하고, 모름·별도세대 표시는 아래 두 칸이 맡는다(`decedent-household` leaf, 주택 행과 같은 규약 · #42-2).
+   */
+  decedentSameHouseholdAtInheritance?: boolean;
+  /** 「모름」을 골랐다 — 미답과 같이 읽는다(모름 = 불성립 + 확인 필요). */
+  decedentHouseholdUnknown?: boolean;
+  /** 「별도세대」를 직접 골랐다 — boolean `false`만으로는 답이 아니다(낡은 기본값과 구별되지 않는다). */
+  decedentHouseholdSeparate?: boolean;
+  /** 단서의 예외 — 입주권: §156의2⑥ 단서(합가 전부터 보유하던 주택이 입주권으로 전환된 경우) · 분양권: §156의3④ 단서(합치기 이전부터 보유하던 분양권, 전환 요건 없음) */
+  parentalCareMergeInheritedRight?: boolean;
+  /**
+   * 상속받은 **조합원입주권**의 상속개시일(YYYY-MM-DD) — 입주권·상속 행 전용(결정 #8). §156의2⑥·⑦ 후단 「상속개시 당시 보유한
+   * 주택」을 날짜로 판정하는 데만 쓴다(기산일은 바꾸지 않는다). 분양권 행은 `acquisitionDate`가 상속개시일이라 쓰지 않는다.
+   * 비우면 모름 — 상속 입주권 특례를 적용하지 않고 확인 필요로 알린다.
+   */
+  inheritedDate?: string;
+  /**
+   * 상속받은 **분양권** — 피상속인이 그 분양권을 취득한 날(YYYY-MM-DD). `acquisitionDate`는 상속개시일이다.
+   * 동일세대 상속이면 2021.1.1. 적용례(§89②·§104⑦)를 이 날로 본다(재산세제과-1033). 분양권·상속 행에서만 싣는다.
+   */
+  decedentAcquisitionDate?: string;
+}
