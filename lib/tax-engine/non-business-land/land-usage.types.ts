@@ -301,7 +301,7 @@ export interface FarmlandDeemingInput {
 // ============================================================
 // 기타토지 소유기간 중 상태 이력 (NBL-STATE-HISTORY · E1)
 // 계획서: docs/01-plan/features/nbl-other-land-state-history.{plan,engine.plan}.md
-// E1에서는 **판정 경로에 연결하지 않는다** — `NonBusinessLandInput`에도 붙이지 않았다(E2).
+// E1: leaf·타입만(판정 미연결). **E2: `NonBusinessLandInput.landStateHistory` · echo(`periodEvaluation.stateHistory`)로 판정에 연결**했다.
 // ============================================================
 
 /** 사건 종류 — v1은 건축물 신축·멸실만(통합 Q-4). */
@@ -329,4 +329,46 @@ export interface LandStateInterval {
   end: Date;
   hasBuilding: boolean;
   propertyTaxType: PropertyTaxType | "unknown";
+}
+
+/**
+ * 엔진 입력 — ⑭ 매퍼가 raw 사건(`nblOtherStateEvents`)을 Date로 변환해 싣는다. `mode === "changed"`일 때만 판정에 쓴다(`""`·`unchanged`는 현행 그대로 ·
+ * `unknown`은 현행 + 확인 필요 고지). 일 단위 구간은 판정 안(`applyStateHistory`)에서 `deriveOtherLandStateIntervals`로 만든다 — ⑤·⑦·⑧·⑫와 같은 leaf.
+ */
+export interface LandStateHistoryInput {
+  mode: StateHistoryMode;
+  events: StateEvent[];
+}
+
+/** [echo] 사건 구간표 한 행 — `businessDays` = 이 구간 안에서 사업용으로 센 일수(유예 제외 · 이력·자체 사업기간 기준), `business` = 구간 전체가 사업용. Σ `days` = 소유일수. */
+export interface StateHistoryIntervalEcho {
+  start: Date;
+  end: Date;
+  days: number;
+  hasBuilding: boolean;
+  propertyTaxType: PropertyTaxType | "unknown";
+  business: boolean;
+  businessDays: number;
+}
+
+/**
+ * [echo] 영 §168의6 가·나·다목 구조화 수치(UI 풀어쓰기용). 가목 충족 ⇔ 비사업용 일수 > `limitGa`(소유 5년 이상: `nonBizInWindow5` · 그 밖: `nonBizTotal`),
+ * 나목 ⇔ `nonBizInWindow3` > `limitNa`, 다목 ⇔ `nonBizTotal` > `limitDa`. `null` = 그 목이 없다(3호 나목 없음 · 3호 단서 소유 2년 미만 가목 미적용).
+ */
+export interface StateHistoryCriteriaEcho {
+  ownershipBucket: 1 | 2 | 3;
+  window5Days: number;
+  nonBizInWindow5: number;
+  window3Days: number;
+  nonBizInWindow3: number;
+  nonBizTotal: number;
+  limitGa: number | null;
+  limitNa: number | null;
+  limitDa: number;
+}
+
+/** [echo] 상태 이력 판정(`periodEvaluation.basis = "state_history"`)의 구간표와 3기준 수치. 표시 전용(세액은 판정 결과로만 달라진다). */
+export interface StateHistoryEcho {
+  intervals: StateHistoryIntervalEcho[];
+  criteria: StateHistoryCriteriaEcho;
 }

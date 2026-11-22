@@ -26,6 +26,12 @@ import { resolveDeemedRentRate } from "../data/nbl-deemed-rent-rate";
 import { getZoneAreaMultiplier } from "../local-tax-zone-multiplier";
 import { propertyTaxBasisOptions, requiresDemolishedFloorArea, type PropertyTaxBasis } from "./property-tax-basis";
 import type { FactoryEntityType } from "../factory-employee-sports-standard";
+import { consumesStateHistory } from "./land-category";
+import { effectiveOtherHasBuilding } from "./other-land-state-history";
+import { isEventKind } from "./other-land-state-history";
+import type { LandStateHistoryInput } from "./land-usage.types";
+import type { StateEvent } from "./land-usage.types";
+import type { StateHistoryMode } from "./land-usage.types";
 
 // ============================================================
 // Raw 입력 타입 (store 필드 그대로)
@@ -292,17 +298,38 @@ function buildNblParcels(
   return parcels.length > 0 ? parcels : undefined;
 }
 
+/**
+ * NBL-STATE-HISTORY-E2 — 기타토지 소유기간 중 건축물 신축·멸실 이력(⑭). 그 이력을 쓰는 지목(`consumesStateHistory`)이 아니거나 질문 답이 `""`·미전송이면 undefined(= 미전송 — 현행).
+ * `changed`가 아니면 사건은 싣지 않는다(`unchanged`·`unknown`은 모드만 운반 — 고지용). 종류·날짜를 읽을 수 없는 행은 ⑧·⑫가 먼저 막으므로 여기서는 건너뛴다(다른 raw 배열 행과 같은 규약).
+ */
+export function buildLandStateHistory(a: Record<string, unknown>, landType: LandType, parseDate: ParseDate): LandStateHistoryInput | undefined {
+  if (!consumesStateHistory(landType)) return undefined;
+  const mode = asString(a.nblOtherStateHistoryMode);
+  if (mode !== "changed" && mode !== "unchanged" && mode !== "unknown") return undefined;
+  if (mode !== "changed") return { mode: mode as StateHistoryMode, events: [] };
+  const events = asArray<{ kind?: string; date?: string; propertyTaxTypeBefore?: string }>(a.nblOtherStateEvents).flatMap((row): StateEvent[] => {
+    const kind = asString(row.kind);
+    const date = parseDate(asString(row.date));
+    if (!isEventKind(kind) || !date) return [];
+    const before = asString(row.propertyTaxTypeBefore);
+    return [{ kind, date, ...(kind === "building_removed" ? { propertyTaxTypeBefore: before as StateEvent["propertyTaxTypeBefore"] } : {}) }];
+  });
+  return { mode: "changed", events };
+}
+
 export function buildOtherLand(
   a: Record<string, unknown>,
   landType: LandType,
   parseNumber: ParseNumber,
   parseDate: ParseDate,
   zoneType?: ZoneType,
+  stateHistory?: LandStateHistoryInput,
 ): OtherLandUsage | undefined {
   if (landType !== "other_land" && landType !== "vacant_lot" && landType !== "miscellaneous") return undefined;
   const relatedBusinessType = asString(a.nblOtherRelatedBusinessType) || undefined;
   const propertyTaxType = (asString(a.nblOtherPropertyTaxType) || "comprehensive") as OtherLandUsage["propertyTaxType"];
-  const hasBuilding = asBool(a.nblOtherHasBuilding);
+  // NBL-STATE-HISTORY-E2 — `changed`이면 양도일 현재 건축물 유무는 사건이 정한다(숨은 토글 값과 모순돼도 사건이 이긴다 · V-19). 아래 건축물 의존 칸(근거·복합용도 안분)도 같은 값을 쓴다.
+  const hasBuilding = effectiveOtherHasBuilding(asBool(a.nblOtherHasBuilding), stateHistory?.mode, stateHistory?.events ?? []);
   // NBL2611-V1-A — 재산세 분류 근거: 이 선언 + 건축물 유무에서 화면이 보여 주는 선택지일 때만 보낸다(숨겨진 stale 값은 전송하지 않는다 — §7.4).
   const rawBasis = asString(a.nblOtherPropertyTaxBasis) as PropertyTaxBasis;
   const propertyTaxBasis = propertyTaxBasisOptions(propertyTaxType, hasBuilding).includes(rawBasis) ? rawBasis : undefined;
@@ -323,7 +350,7 @@ export function buildOtherLand(
      * 않는 채로** 판정을 뒤집었다(실측 비사업용 0㎡ → 750㎡). §168의11⑥ 본문도 건축물의 존재를
      * 전제하므로 요건상으로도 gate가 맞다.
      */
-    ...(asBool(a.nblOtherHasBuilding)
+    ...(hasBuilding
       ? {
           mixedUseBuildingMode:     (asString(a.nblOtherMixedUseMode) || undefined) as OtherLandUsage["mixedUseBuildingMode"],
           specificUseFloorArea:     parseNumber(asString(a.nblOtherMixedUseSpecificFloorArea)),

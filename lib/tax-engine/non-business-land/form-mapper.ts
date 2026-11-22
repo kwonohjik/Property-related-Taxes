@@ -36,6 +36,7 @@ import {
   resolveInheritanceStartDate,
   isNonHeirBequest,
   buildVilla,
+  buildLandStateHistory,
   buildOtherLand,
   buildRevenueTest,
   type NblBusinessUsePeriod,
@@ -168,6 +169,9 @@ export function mapAssetToNblInput(
       ? { residenceHistories, ...(ownershipRatio !== 1 ? { ownershipRatio } : {}) }
       : undefined;
 
+  // NBL-STATE-HISTORY-E2 — 기타토지 소유기간 중 건축물 신축·멸실 이력. `buildOtherLand`가 `changed`일 때 건축물 유무를 사건에서 파생한다.
+  const landStateHistory = buildLandStateHistory(asset, landType, parseDate);
+
   return {
     landType, landArea, zoneType, acquisitionDate, transferDate,
     // §168조의14② 양도일 의제 (기간기준 전용)
@@ -186,7 +190,8 @@ export function mapAssetToNblInput(
     forestDetail:            buildForestDetail(asset, landType, inheritanceStartDate),
     pasture:                 buildPasture(asset, landType, parseDate, parseNumber, inheritanceStartDate),
     villa:                   buildVilla(asset, landType, parseDate, parseNumber),
-    otherLand:               buildOtherLand(asset, landType, parseNumber, parseDate, zoneType),
+    otherLand:               buildOtherLand(asset, landType, parseNumber, parseDate, zoneType, landStateHistory),
+    ...(landStateHistory ? { landStateHistory } : {}),
     revenueTest:             buildRevenueTest(asset, landType, parseNumber, parseDate, transferDate, acquisitionDate),
     unconditionalExemption:  buildUnconditionalExemption(asset, parseDate),
     urbanIncorporationDate,

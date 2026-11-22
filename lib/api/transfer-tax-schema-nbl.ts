@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NBL_PROPERTY_TAX_TYPE_VALUES, NBL_RELATED_BUSINESS_TYPE_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
+import { NBL_STATE_HISTORY_MODE_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
 import { WHOLESALE_ITEM_VALUES } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import { PROPERTY_TAX_BASIS_VALUES } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { refineNonBusinessLandRaw } from "./transfer-tax-schema-nbl-refines";
@@ -46,6 +47,16 @@ const nblResidenceHistoryRawSchema = z.object({
   // 거주지 좌표 (직선거리 30km 재촌 판정, §153③3호) — 주소검색 파생. string→number는 form-mapper.
   lat: z.string().optional(),
   lng: z.string().optional(),
+});
+
+/**
+ * NBL-STATE-HISTORY-E2 — 기타토지 소유기간 중 건축물 사건 raw 행. 종류·날짜는 `z.string()` — 검증은 `changed`일 때만 ⑫ refine(공용 leaf `stateEventSequenceIssue`)이 한다
+ * (질문 답이 `unchanged`·`unknown`·`""`일 때 남은 stale 행이 400을 만들지 않게). 철거 직전 재산세 구분은 enum(`""` = 모름 허용) — 빠지면 중첩 칸이 **침묵 strip**돼 모름과 구분되지 않는다(Q-3).
+ */
+const nblStateEventRawSchema = z.object({
+  kind: z.string(),
+  date: z.string(),
+  propertyTaxTypeBefore: z.enum(NBL_PROPERTY_TAX_TYPE_VALUES).or(z.literal("")).optional(),
 });
 
 /** 별표6 2호다 — 업종별 (연면적, 기준공장면적률). 값은 UI 문자열 그대로, 파싱은 form-mapper. */
@@ -165,6 +176,9 @@ export const nonBusinessLandRawBaseSchema = z.object({
   nblOtherLandValue: z.string().optional(),
   nblOtherIsRelatedToResidence: z.boolean().optional(),
   nblOtherHasBuilding: z.boolean().optional(),
+  // NBL-STATE-HISTORY-E2 — 소유기간 중 건축물 신축·멸실 이력. 누락 시 침묵 strip → 엔진에 이력이 도달하지 않는다(⑫⑬⑭ TS 미감지). `""`·미전송 = 현행(⑧만 질문 필수 — 통합 Q-5).
+  nblOtherStateHistoryMode: z.enum(NBL_STATE_HISTORY_MODE_VALUES).optional(),
+  nblOtherStateEvents: z.array(nblStateEventRawSchema).optional(),
   nblOtherBuildingFloorArea: z.string().optional(),
   // §168의11⑥ 복합용도 건축물 부속토지 안분 (B)
   nblOtherMixedUseMode: z.string().optional(),

@@ -11,6 +11,7 @@ import { NBL_EXCLUSION_RANGE_POSITION_NOTICE, NBL_REVENUE_BUSINESS_START_APPLIED
 import { differenceInDays } from "../utc-date";
 import type {
   CategoryJudgeResult,
+  DateInterval,
   JudgmentStep,
   LandCategoryGroup,
   NonBusinessLandInput,
@@ -135,7 +136,7 @@ export function judgeRevenueBusinessStart(
   input: NonBusinessLandInput,
   revenue: RevenueTestResult,
   rules: NonBusinessLandJudgmentRules,
-): { step: JudgmentStep; applied?: { r: PeriodCriteriaResult; revenue: RevenueTestResult; notice: string } } | undefined {
+): { step: JudgmentStep; applied?: { r: PeriodCriteriaResult; revenue: RevenueTestResult; notice: string; periods: DateInterval[] } } | undefined {
   const start = input.revenueTest?.currentBusinessStartDate;
   if (!start || !revenue.pass) return undefined;
 
@@ -153,7 +154,8 @@ export function judgeRevenueBusinessStart(
   }
 
   const pjDate = getPeriodJudgmentDate(input);
-  const r = meetsPeriodCriteria(start < pjDate ? [{ start, end: pjDate }] : [], input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+  const periods: DateInterval[] = start < pjDate ? [{ start, end: pjDate }] : [];
+  const r = meetsPeriodCriteria(periods, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
   const ownershipStart = getOwnershipStart(input.acquisitionDate);
   const businessDays = start < pjDate ? Math.max(0, differenceInDays(pjDate, start < ownershipStart ? ownershipStart : start)) : 0;
   const startIso = start.toISOString().slice(0, 10);
@@ -171,6 +173,7 @@ export function judgeRevenueBusinessStart(
       r,
       revenue: { ...revenue, businessStartJudged: { startDate: startIso, businessDays, totalOwnershipDays: r.totalOwnershipDays, meets: r.meets } },
       notice: NBL_REVENUE_BUSINESS_START_APPLIED_NOTICE,
+      periods,
     },
   };
 }

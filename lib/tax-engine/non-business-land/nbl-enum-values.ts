@@ -7,6 +7,7 @@
  * 컴파일 오류가 되어 이 목록이 따라간다.
  */
 import type { PropertyTaxType } from "./land-usage.types";
+import type { StateHistoryMode } from "./land-usage.types";
 import { OTHER_LAND_HO_IDS } from "./other-land-ho-meta";
 
 /**
@@ -27,3 +28,11 @@ const taxTypeCovered: Exclude<PropertyTaxType, (typeof NBL_PROPERTY_TAX_TYPE_VAL
   ? true
   : false = true;
 void taxTypeCovered;
+
+/** NBL-STATE-HISTORY-E2 — 상태 이력 질문 답(⑫ Zod enum의 단일 소스). `""` = 미선택(⑫는 막지 않는다 — 엔진은 현행). */
+export const NBL_STATE_HISTORY_MODE_VALUES = ["", "unchanged", "changed", "unknown"] as const satisfies readonly StateHistoryMode[];
+
+const stateHistoryModeCovered: Exclude<StateHistoryMode, (typeof NBL_STATE_HISTORY_MODE_VALUES)[number]> extends never
+  ? true
+  : false = true;
+void stateHistoryModeCovered;
