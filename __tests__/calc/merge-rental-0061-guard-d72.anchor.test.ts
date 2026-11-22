@@ -10,6 +10,10 @@
  * | G-2 | 고지 문형이 근거와 어긋남 | 동일세대 상속(I) — 근거 「1세대1주택 비과세」이면 고지에 「§155④를 적용했습니다」가 없다 · 판정 메뉴와 계산기가 같은 문장 |
  * | G-3 | 동치 | 같은 세대 보유 시작일(2005)이면 상속(I)·매매(VI)가 같은 결론·같은 고지 |
  * | C-1 | 대조 | 별도세대 상속(II)·§99의4 선언 없음(III)은 §155④ 적용 문형 그대로 |
+ * | G-4 | 형제 제외(§98의9)도 세지 않음 | 상대 쪽 행이 §98의9 준공후미분양(2024-03-01)이어도 2005 매매·동일세대 상속 모두 비과세 · 고지 문형 G-2와 같음 |
+ *
+ * G-4는 §98의9 취득 창(2024.1.10.~) 때문에 합가일·양도일을 1년 뒤로 옮긴다. 같은 이동만 한 §99의4 짝이 G-1·G-2와 같은 결론이라
+ * 날짜 이동이 결론을 바꾸지 않는다. 상대 쪽 주택은 합가일 전에 취득해야 한다 — 합가 뒤 취득이면 「합가 상대 쪽 주택」이 아니어서 이 경로를 타지 않는다.
  *
  * 감면주택 선언(§98의8)은 계속 막는다 — `parental-merge-rental-155-20.anchor.test.tsx` MR-21 「3중첩」.
  * 가드 날짜 정렬(STEP 0.9와 같은 일반주택 취득일)은 §99의4를 가드에서 빼면 이 시료에서 결론을 가르지 않는다 — 상속 제외 후보 집합에만 남는다.
@@ -32,7 +36,13 @@ const RURAL = {
   type: "new_99_4_rural", ruralHouseAcquisitionDate: "", ruralHouseStdPrice: "100000000", isRegisteredHanok: false,
   adjacentArea994: "no", meetsLocationRequirement: true, ruralLandAreaSqm994: "330", ruralHouseType994: "other", ruralHouseAreaSqm994: "99",
 };
-type Shape = { inh: "same" | "sep" | "none"; rural?: boolean };
+/** §98의9 수도권 밖 준공후미분양 — 취득 창(2024.1.10.~2026.12.31.) 안 · 취득가액·면적·수도권 여부는 행 값 */
+const UNSOLD_98_9 = {
+  type: "unsold_98_9", unsoldHouseAcquisitionDate: "", unsoldHouseAcquisitionPrice: "", unsoldHouseExclusiveArea: "",
+  isNonCapitalRegion: false, wasOneHouseholdAtAcquisition: true, meetsSellerAndContractRequirement: true,
+};
+/** `unsold989`: 상대 쪽 행을 §98의9 주택(2024-03-01 취득)으로 — 취득 창 때문에 합가일·양도일을 1년 뒤(2024-06-28 · 2024-09-18)로 옮긴다(`shift`는 같은 이동만 한 §99의4 짝). */
+type Shape = { inh: "same" | "sep" | "none"; rural?: boolean; unsold989?: boolean; shift?: boolean };
 const sample = (o: Shape): RulingCase => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 평가셋 폼을 깊이 복제해 칸만 바꾼다
   const c: any = JSON.parse(JSON.stringify(E0061));
@@ -43,10 +53,19 @@ const sample = (o: Shape): RulingCase => {
     a.decedentSameHouseholdBeforeInheritance = o.inh === "same";
     if (o.inh === "same") a.decedentCohabitationHoldingStartDate = "2005-03-01";
   }
-  c.form.houses = [{
-    id: "x", region: "non_capital", acquisitionDate: "2012-05-01", mergeOrigin: "counterpart_side", officialPrice: "100000000",
-    ...(o.rural === false ? {} : { countExclusion: { kind: "reduction", reduction: { ...RURAL } } }),
-  }];
+  if (o.unsold989 || o.shift) Object.assign(c.form, { parentalCareMergeDate: "2024-06-28", transferDate: "2024-09-18" });
+  c.form.houses = [
+    o.unsold989
+      ? {
+          id: "x", region: "non_capital", regionCode: "4719025000", acquisitionDate: "2024-03-01", mergeOrigin: "counterpart_side",
+          officialPrice: "100000000", acquisitionPrice: "300000000", exclusiveArea: "84",
+          countExclusion: { kind: "reduction", reduction: { ...UNSOLD_98_9 } },
+        }
+      : {
+          id: "x", region: "non_capital", acquisitionDate: "2012-05-01", mergeOrigin: "counterpart_side", officialPrice: "100000000",
+          ...(o.rural === false ? {} : { countExclusion: { kind: "reduction", reduction: { ...RURAL } } }),
+        },
+  ];
   return c;
 };
 const menu = async (o: Shape) => {
@@ -122,5 +141,29 @@ describe("D-72 0061 합가 상대 쪽 임대 — 3중첩 가드에서 조특법 
     expect(r.appliedExceptions).toContain("155-4-parental-care-merge");
     expect(reason).toContain(APPLIED_MERGE);
     expect(calc(o).notice).toBe(reason);
+  });
+});
+
+
+describe("D-72 G-4 — 조특법 §98의9 제외도 3중첩 가드에서 세지 않는다(Q-22 b · 리뷰 때 남긴 시료)", () => {
+  it.each([
+    ["2005 매매(VI)", "none"],
+    ["동일세대 상속(I)", "same"],
+  ] as const)("[G-4] %s · 상대 쪽 §98의9 → 판정 메뉴 비과세 · 계산기 0 · 고지 「§155④ 적용」 없음 · 같은 날짜 §99의4 짝과 같은 결론", async (_l, inh) => {
+    const { r, reason } = await carveoutReason({ inh, unsold989: true });
+    expect(r.isExempt).toBe(true);
+    expect(r.appliedExceptions).toEqual([]);
+    expect(r.undetermined).toContain("155-20-merge-rental-carveout");
+    expect(r.excludedHouses.map((x) => x.legalBasis)).toEqual(["조특법 §98의9", "소득세법 시행령 §155⑳"]);
+    expect(reason).toBeDefined();
+    expect(reason).not.toContain(APPLIED_MERGE);
+    const c = calc({ inh, unsold989: true });
+    expect(c.isExempt).toBe(true);
+    expect(c.totalTax).toBe(0);
+    expect(c.notice).toBe(reason);
+
+    const twin = await carveoutReason({ inh, shift: true });
+    expect(twin.r.isExempt).toBe(true);
+    expect(twin.reason).toBe(reason);
   });
 });

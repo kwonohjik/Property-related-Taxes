@@ -5,7 +5,8 @@
  *
  * 항상 표시(토글 없음). 최소 1행을 기본 노출 — 사용자는 반드시 1건 이상 입력해야 하므로
  * "활성화" 단계가 불필요. 비연속 다중 구간(공실·거주이탈 제외) 허용.
- * 법 badge·문맥 문구는 포함하지 않음(호출처 주입). 개월은 whole-month(diffMonthsClamped) 재사용.
+ * 법 badge·문맥 문구는 포함하지 않음(호출처 주입). 개월 셈은 축마다 다르다 — 임대기간은 `diffMonthsClamped`(기본값),
+ * 거주기간은 호출처가 `countMonths`로 §154⑥ 초일 산입 셈(`residenceIntervalMonths`)을 준다(2026-11 리뷰 D-45 형제).
  */
 
 import { DateInput } from "@/components/ui/date-input";
@@ -37,6 +38,8 @@ export interface PeriodRangeEditorProps {
   /** 합계 라벨 (예: "합계 임대기간") */
   totalLabel: string;
   periods: PeriodRow[];
+  /** 구간 개월 셈 — 기본은 임대기간 셈(`diffMonthsClamped` · 첫날 불산입). 거주기간은 `residenceIntervalMonths`를 준다. */
+  countMonths?: (start: string, end: string) => number;
   /** E2E 셀렉터 prefix (예: "rental-period"/"residence-period") */
   testidPrefix: string;
   onChange: (patch: { periods: PeriodRow[] }) => void;
@@ -52,10 +55,11 @@ export function PeriodRangeEditor({
   periods = [],
   testidPrefix,
   onChange,
+  countMonths = diffMonthsClamped,
 }: PeriodRangeEditorProps) {
   // 최소 1행 표시(빈 상태에서도 입력 가능). 실제 저장은 사용자 입력 시 onChange로 생성.
   const rows: PeriodRow[] = periods.length > 0 ? periods : [{ start: "", end: "" }];
-  const totalMonths = rows.reduce((s, p) => s + diffMonthsClamped(p.start, p.end), 0);
+  const totalMonths = rows.reduce((s, p) => s + Math.max(0, countMonths(p.start, p.end)), 0);
 
   const toneText =
     tone === "emerald" ? "text-emerald-700 dark:text-emerald-300" : tone === "violet" ? "text-violet-700 dark:text-violet-300" : "text-sky-700 dark:text-sky-300";
@@ -93,7 +97,7 @@ export function PeriodRangeEditor({
       className={`rounded-lg border ${toneBorder} ${toneBg} p-3 space-y-2`}
     >
       {rows.map((p, idx) => {
-        const m = diffMonthsClamped(p.start, p.end);
+        const m = Math.max(0, countMonths(p.start, p.end));
         const isStartOnly = !!p.start && !p.end;
         return (
           <div key={idx} className={`rounded-md border ${toneBorder} bg-white dark:bg-gray-900 p-3 space-y-2`}>
