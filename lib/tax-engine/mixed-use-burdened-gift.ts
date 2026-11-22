@@ -132,6 +132,7 @@ export function applyMixedBurdenedGift(args: {
   const ded = {} as Record<MixedUsePartKey, number>;
   const beforeSwap: Partial<Record<MixedUsePartKey, number>> = {};
   const beforeRatio: Partial<Record<MixedUsePartKey, number>> = {};
+  const expenseBeforeRatio: Partial<Record<MixedUsePartKey, number>> = {};
   let lumpRate: number | undefined;
   let proviso: MixedBgApplied["proviso"];
 
@@ -161,11 +162,14 @@ export function applyMixedBurdenedGift(args: {
       }
       case "salesCase":
       case "appraisal": // K-6/K-7 — 추계가액 × B'/C, 개산공제만(실비 미반영)
+        beforeRatio[k] = e.acq;
         acq[k] = scale(e.acq, k);
         ded[k] = lump(k);
         lumpRate = rate;
         break;
       default: // "actual" · "deemed" — 실지거래가액(의제) × B'/C, 실비 × B'/C (개산공제 아님)
+        beforeRatio[k] = e.acq;
+        expenseBeforeRatio[k] = e.ded;
         acq[k] = scale(e.acq, k);
         ded[k] = scale(e.ded, k);
     }
@@ -175,14 +179,12 @@ export function applyMixedBurdenedGift(args: {
   const provisoDeclared = asset.capitalExpenditure !== undefined || asset.transferExpense !== undefined;
   if ((bg.acqPath === "converted" || bg.acqPath === "converted_pre_deemed") && provisoDeclared) {
     const exp = args.expThunk();
-    const directOf = (k: MixedUsePartKey) =>
-      scale(
-        k === "housingLand" ? exp.housing.landAppraisalDed
-          : k === "housingBuilding" ? exp.housing.buildingAppraisalDed
-          : k === "commercialLand" ? exp.commercial.landAppraisalDed
-          : exp.commercial.buildingAppraisalDed,
-        k,
-      );
+    const directRawOf = (k: MixedUsePartKey) =>
+      k === "housingLand" ? exp.housing.landAppraisalDed
+        : k === "housingBuilding" ? exp.housing.buildingAppraisalDed
+        : k === "commercialLand" ? exp.commercial.landAppraisalDed
+        : exp.commercial.buildingAppraisalDed;
+    const directOf = (k: MixedUsePartKey) => scale(directRawOf(k), k);
     const estimatedSide = KEYS.reduce((n, k) => n + acq[k] + ded[k], 0);
     const directSide = KEYS.reduce((n, k) => n + directOf(k), 0);
     const chosen: "estimated" | "direct" = directSide > estimatedSide ? "direct" : "estimated";
@@ -191,6 +193,7 @@ export function applyMixedBurdenedGift(args: {
       for (const k of KEYS) {
         beforeSwap[k] = acq[k];
         acq[k] = 0;
+        expenseBeforeRatio[k] = directRawOf(k);
         ded[k] = directOf(k);
       }
       lumpRate = undefined;
@@ -245,8 +248,8 @@ export function applyMixedBurdenedGift(args: {
       ...(lumpRate !== undefined ? { estimatedDeductionRate: lumpRate } : {}),
       acquisitionMethod: method,
       ...(beforeSwap[k] !== undefined ? { acquisitionBeforeSwap: beforeSwap[k] } : {}),
-      ...(bg.acqPath === "deemed" ? { acquisitionBeforeRatio: g(k).acq } : {}),
       ...(beforeRatio[k] !== undefined ? { acquisitionBeforeRatio: beforeRatio[k] } : {}),
+      ...(expenseBeforeRatio[k] !== undefined ? { expenseBeforeRatio: expenseBeforeRatio[k] } : {}),
       transferred: num[s] > 0,
     };
   }

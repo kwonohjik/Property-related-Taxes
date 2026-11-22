@@ -81,6 +81,14 @@ export function mixedBgPreDeemedConverted(bg: MixedUseBurdenedGiftBreakdown, k: 
   };
 }
 
+/**
+ * 「… 중 이 부분 몫」 뒤에 붙는 금액 — 엔진 echo(`acquisitionBeforeRatio`·`expenseBeforeRatio`: 채무비율을 곱하기 전 값)가 있을 때만 적는다.
+ * 없으면(구 이력) 빈 문자열이라 종전 문구 그대로다. 0도 엔진이 정한 값이므로 적는다(`undefined`만 생략).
+ */
+export function mixedBgShareAmountTerm(beforeRatio: number | undefined): string {
+  return beforeRatio === undefined ? "" : ` ${fmt(beforeRatio)}`;
+}
+
 /** 부분별 채무비율 «양도로 보는 채무액 / 그 쪽 증여가액» — 분자·분모를 숫자로 적는다. */
 function ratioText(bg: MixedUseBurdenedGiftBreakdown, side: Side): string {
   const d = bg.debtAttribution;
@@ -179,7 +187,7 @@ export function buildBgMixedAcquisitionFormula(d: BgMixedDisplay): string {
       case "converted":
         return `${label}: 양도가액 ${fmt(p.transferPrice)} × 취득시 기준시가 ${fmt(p.stdPriceAtAcquisition)} / 양도시 기준시가 ${fmt(p.stdPriceAtTransfer)} = ${fmt(p.acquisitionPrice)} (시행령 §176의2②2호)`;
       default:
-        return `${label}: ${mixedBgValueLabel(bg, p.acquisitionMethod, side)} 중 이 부분 몫 × (${ratioText(bg, side)}) = ${fmt(p.acquisitionPrice)}`;
+        return `${label}: ${mixedBgValueLabel(bg, p.acquisitionMethod, side)} 중 이 부분 몫${mixedBgShareAmountTerm(p.acquisitionBeforeRatio)} × (${ratioText(bg, side)}) = ${fmt(p.acquisitionPrice)}`;
     }
   });
 }
@@ -191,7 +199,7 @@ export function buildBgMixedExpenseFormula(d: BgMixedDisplay): string {
     const p = bg.perPart[k];
     const label = MIXED_BG_PART_LABEL[k];
     if (p.estimatedDeductionRate === undefined) {
-      return `${label}: 자본적지출·양도비 등 실제 필요경비 중 이 부분 몫 × (${ratioText(bg, side)}) = ${fmt(p.estimatedDeduction)}`;
+      return `${label}: 자본적지출·양도비 등 실제 필요경비 중 이 부분 몫${mixedBgShareAmountTerm(p.expenseBeforeRatio)} × (${ratioText(bg, side)}) = ${fmt(p.estimatedDeduction)}`;
     }
     return `${label}: ${mixedBgAcqStdLabel(bg)} ${fmt(p.stdPriceAtAcquisition)}${mixedBgShareTerm(bg)} × (${ratioText(bg, side)}) × 개산공제율 ${pct(p.estimatedDeductionRate)} = ${fmt(p.estimatedDeduction)} (개산공제, 소령 §163⑥)`;
   });

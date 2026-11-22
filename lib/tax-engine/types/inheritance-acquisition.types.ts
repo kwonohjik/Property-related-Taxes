@@ -245,6 +245,12 @@ export interface PreDeemedBreakdown {
   convertedAmount: number;
   /** ③의 산식 — 재개발·재건축 종전자산이면 「소득세법 시행령」 §166③(표시용). 없으면 §176조의2④. */
   convertedBasis?: "redevelopment_166_3";
+  /**
+   * ③ 환산취득가(§176조의2④)의 분모 = 엔진이 ③에 실제로 쓴 양도시 기준시가(`calcPreDeemed`의 `input.standardPriceAtTransfer` —
+   * 수용·공매·경락이면 `withConversionDenominator`가 차액을 뺀 값). ③을 이 산식으로 계산하지 않았으면(재개발 §166③ · 입력 부족) 없다.
+   * 결과 산식 「의제취득일 기준시가 ÷ 양도시 기준시가」의 분모 금액이다(구 이력은 없다 — 금액 없는 종전 문구).
+   */
+  convertedDenominator?: number;
   /** ② §164④~⑦ 취득당시 기준시가 (§163⑨1호·2호) — null=미주입(opt-in) */
   sec164Amount: number | null;
   /** 채택된 후보 (max) */

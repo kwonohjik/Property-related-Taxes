@@ -40,6 +40,7 @@ function preDeemedParamOf(inheritedStep: InheritedAcquisitionStepResult | undefi
       reported: b.reportedAmount,
       sec164: b.sec164Amount,
       converted: b.convertedAmount,
+      convertedDenominator: b.convertedDenominator,
     },
   };
 }

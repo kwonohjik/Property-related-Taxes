@@ -126,6 +126,7 @@ function calcPreDeemed(
   // ③ 환산취득가: 양도가 × (의제취득일 기준시가 ÷ 양도시 기준시가) — §176조의2④·③3호
   //   재개발·재건축 종전자산은 §166③ 금액(Q-8 a — 재개발 분기가 실제로 적용하는 산식). §176조의2④ 입력은 쓰지 않는다.
   let converted = 0;
+  let convertedDenominator: number | undefined;
   if (isRedevelopment) {
     converted = redevelopment166_3Price ?? 0;
   } else if (
@@ -139,6 +140,7 @@ function calcPreDeemed(
       input.standardPriceAtDeemedDate,
       input.standardPriceAtTransfer,
     );
+    convertedDenominator = input.standardPriceAtTransfer;
   }
 
   // ① 상증법 §60~66 평가액 (상속세 신고가액)
@@ -182,6 +184,7 @@ function calcPreDeemed(
     sec164Amount: sec164 > 0 ? sec164 : null,
     selectedMethod,
     ...(isRedevelopment && { convertedBasis: "redevelopment_166_3" as const }),
+    ...(convertedDenominator !== undefined && { convertedDenominator }),
   };
 
   return {

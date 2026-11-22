@@ -597,6 +597,11 @@ export interface TransferBurdenedGiftBreakdown {
     reported?: number | null;
     sec164?: number | null;
     converted?: number;
+    /**
+     * ③ 환산취득가액의 분모 — 엔진이 ③에 쓴 양도시 기준시가(`PreDeemedBreakdown.convertedDenominator` echo · 수용·공매·경락이면 차액을 뺀 값).
+     * 결과 산식 「의제취득일 기준시가 ÷ 양도시 기준시가」의 분모 금액이다. `three_way`(단일 자산)에만 있고, 구 이력에는 없다.
+     */
+    convertedDenominator?: number;
     selected?: "reported" | "sec164" | "converted";
     wholeAcquisition?: number;
     parts?: { land?: BgPartPreDeemedEcho; building?: BgPartPreDeemedEcho };

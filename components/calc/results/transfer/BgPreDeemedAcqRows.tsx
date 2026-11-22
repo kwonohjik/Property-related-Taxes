@@ -48,7 +48,10 @@ export function BgPreDeemedThreeWayRows({
             </>
           ) : (
             <>
-              ③ 환산취득가액 = 증여가액 {fmt(bg.giftValuation.max)} × <Frac top={`의제취득일 기준시가 ${fmt(p.stdAtDeemed)}`} bottom="양도시 기준시가" />
+              ③ 환산취득가액 = 증여가액 {fmt(bg.giftValuation.max)} × <Frac
+                top={`의제취득일 기준시가 ${fmt(p.stdAtDeemed)}`}
+                bottom={p.convertedDenominator !== undefined ? `양도시 기준시가 ${fmt(p.convertedDenominator)}` : "양도시 기준시가"}
+              />
             </>
           )}
           {mark("converted")}
