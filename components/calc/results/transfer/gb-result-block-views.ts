@@ -11,6 +11,7 @@ import type { GeneralBuildingOutput } from "@/lib/tax-engine/general-building-va
 import type { GbSec1639Basis } from "@/lib/tax-engine/types/general-building.types";
 import type {
   AggregateTransferResult,
+  GbBundledAssetDetail,
   GbShareBlockEcho,
   GbSwapComparison,
   PerPropertyBreakdown,
@@ -142,8 +143,7 @@ export function gbAssetBlockView(
   };
 }
 
-const shareEchoOf = (detail: GeneralBuildingOutput): Record<string, GbShareBlockEcho> | undefined =>
-  (detail as { shareBlockEcho?: Record<string, GbShareBlockEcho> }).shareBlockEcho;
+const shareEchoOf = (detail: GbBundledAssetDetail): Record<string, GbShareBlockEcho> | undefined => detail.shareBlockEcho;
 
 /** 3-way 표가 읽는 그 일반건물의 파트 카드 결과 — 단건은 전 카드, 함께 양도는 같은 접미사 카드만. */
 export function gbViewProperties(aggregated: AggregateTransferResult, view: GbBlockView): PerPropertyBreakdown[] {

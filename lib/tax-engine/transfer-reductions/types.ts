@@ -451,6 +451,11 @@ export interface RentalLthdEffect {
   deductionWithoutSpecial?: number;
   /** 안분 전 양도차익 (음수 clamp 후) */
   gainApplied?: number;
+  /**
+   * [echo] §98의2 특칙 장특이 이 조문의 공제액을 대체한 경우 엔진이 실제 공제한 §98의2 공제액 (US-16 · Q-2).
+   * `transfer-tax-lthd-982-step.ts`가 결과 사본에 덧붙인다. 대체하지 않았으면 undefined. 결과 카드 표시·신고서 코드 판정 전용.
+   */
+  replacedBy982Deduction?: number;
 }
 
 /** §97 본문/단서·§97의2·§97의5 — 산출세액 단계(STEP 7) 효과 */

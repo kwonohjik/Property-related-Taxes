@@ -75,6 +75,11 @@ export type GbBundledAssetDetail = import("../general-building-valuation").Gener
    * 증여계약 전체 1건(`AggregateTransferResult.burdenedGift`)이다(계획서 `multi-carryover-bg-gb-shares.plan.md` 트랙 BG · V-BG1·V-BG2).
    */
   burdenedGiftBreakdown?: import("./transfer-burdened-gift.types").TransferBurdenedGiftBreakdown;
+  /**
+   * 연간 합산(다건) 지분 분할(트랙 GS) — 이 일반건물의 지분별 결과 카드 블록 재료. `GbValuationDetail.shareBlockEcho`와 같은 값
+   * (`assembleShareDetail`이 싣고 `multi-gb-expansion.ts`가 자산별 상세로 옮긴다). 지분 분할이 아니면 없다.
+   */
+  shareBlockEcho?: Record<string, GbShareBlockEcho>;
 };
 
 /**

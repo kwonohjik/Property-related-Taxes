@@ -42,7 +42,7 @@ export function preDeemedDetailOfCard(
   const suffix = propertyId.slice(base.length + SHARE_ID_SEPARATOR.length);
   const assetDetail = aggregated.generalBuildingDetailsByAsset?.[cardSuffixOf(propertyId) ?? suffix];
   const idx = shareIndexOf(propertyId);
-  const assetShare = idx !== undefined ? (assetDetail as { shareBlockEcho?: Record<string, { preDeemedPurchase?: PreDeemedPurchaseDetail }> } | undefined)?.shareBlockEcho?.[String(idx)] : undefined;
+  const assetShare = idx !== undefined ? assetDetail?.shareBlockEcho?.[String(idx)] : undefined;
   const d = (detail?.shareBlockEcho?.[suffix] ?? assetShare ?? assetDetail ?? detail)?.preDeemedPurchase;
   return d && (!d.part || d.part === kind) ? d : undefined;
 }
