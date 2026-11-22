@@ -3,7 +3,7 @@
  *
  * 계획서(정본): docs/01-plan/features/nbl-other-land-state-history.plan.md §4 E0 · §7(P-3)
  *   엔진 계획서: docs/01-plan/features/nbl-other-land-state-history.engine.plan.md §4.3(고지 표) · §7.1 P-3a·b · §7.2 Anchor 3
- * 결정: Q-15 (가) · V-1 일 단위.
+ * 결정: Q-15 (가′) · V-1 일 단위.
  *
  * 왜 필요한가 — 착수 전 mutation(P-3a)에서 고지 미탑재를 잡는 기존 테스트는 1건(`nbl2611-b2-echo`)뿐이었다. E1·E2는 이 고지 옆에
  * «이력 있음이면 한정 고지로 대체(`changed`)» 분기를 넣는다. 이력 없음·`""`·`unchanged`·`unknown` 경로의 고지는 **현행 그대로**여야 한다는 것을

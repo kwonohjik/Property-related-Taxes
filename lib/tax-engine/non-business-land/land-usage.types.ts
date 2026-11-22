@@ -297,3 +297,36 @@ export interface FarmlandDeemingInput {
    */
   inheritanceStartDate?: Date;
 }
+
+// ============================================================
+// 기타토지 소유기간 중 상태 이력 (NBL-STATE-HISTORY · E1)
+// 계획서: docs/01-plan/features/nbl-other-land-state-history.{plan,engine.plan}.md
+// E1에서는 **판정 경로에 연결하지 않는다** — `NonBusinessLandInput`에도 붙이지 않았다(E2).
+// ============================================================
+
+/** 사건 종류 — v1은 건축물 신축·멸실만(통합 Q-4). */
+export type StateEventKind = "building_built" | "building_removed";
+
+/** 질문 답 — `""` = 미선택(⑧만 차단 · ⑫·엔진은 현행). */
+export type StateHistoryMode = "" | "unchanged" | "changed" | "unknown";
+
+/**
+ * 사용자가 입력한 사건. 날짜 = **새 상태의 첫날**(규칙 §83의5①9호 «날부터»).
+ * `propertyTaxTypeBefore`는 `building_removed` 행에서만 뜻이 있다 — 철거 직전 «건축물 있던 구간»의 재산세 구분. `""` = 모름(종합합산 + 확인 필요).
+ */
+export interface StateEvent {
+  kind: StateEventKind;
+  date: Date;
+  propertyTaxTypeBefore?: PropertyTaxType | "";
+}
+
+/**
+ * 일 단위 상태 구간 `[start, end)`. `deriveOtherLandStateIntervals`가 만든 배열은 소유기간을 빈틈·겹침 없이 덮고
+ * **마지막 원소 = 꼬리(양도일 현재 상태)**다. `"unknown"` = 철거 사건의 재산세 구분이 모름(`""`)이었던 건축물 구간.
+ */
+export interface LandStateInterval {
+  start: Date;
+  end: Date;
+  hasBuilding: boolean;
+  propertyTaxType: PropertyTaxType | "unknown";
+}

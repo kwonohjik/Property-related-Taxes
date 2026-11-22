@@ -3,7 +3,7 @@
  *
  * 계획서(정본): docs/01-plan/features/nbl-other-land-state-history.plan.md §4 E0 · §7
  *   엔진 계획서: docs/01-plan/features/nbl-other-land-state-history.engine.plan.md §4.4 · §7.2 Anchor 2 · §7.3 P-11
- * 결정: Q-15 (가) · V-1 일 단위(과세기준일 단위 재제안 금지) — 이 anchor는 판정 단위와 무관하게 «이력 칸이 판정 결과를 바꾸지 않는다»만 고정한다.
+ * 결정: Q-15 (가′) · V-1 일 단위(과세기준일 단위 재제안 금지) — 이 anchor는 판정 단위와 무관하게 «이력 칸이 판정 결과를 바꾸지 않는다»만 고정한다.
  *
  * 구조
  *   · 격자 GRID(대표 입력 N개)의 `judgeNonBusinessLand` 결과 객체 **전체**(steps·warnings·echo 포함) + 같은 거래의 세액(`calculateTransferTax`)을
