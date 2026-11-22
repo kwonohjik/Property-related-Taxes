@@ -98,12 +98,55 @@ export const E2_ROWS: readonly E2Row[] = [
   { id: "P1", scenario: "취득 2021-09-01 · 신축 2022-03-01 · 양도 2024-01-01(소유 851일, 3호 버킷)", acq: "2021-09-01", events: [built("2022-03-01")], expect: { nonBusiness: false, eff: 671, total: 851, tax: 257_010_000 } },
   { id: "P2", scenario: "양도 2024-03-15 · 철거 2024-02-01(꼬리 43일)", transfer: "2024-03-15", events: [rm("2024-02-01")], expect: { nonBusiness: false, eff: 3682, total: 3725, tax: B } },
   { id: "P3", scenario: "양도 2024-09-15 · 신축 2024-07-01", transfer: "2024-09-15", events: [built("2024-07-01")], expect: { nonBusiness: true, eff: 76, total: 3909, tax: N } },
+  // ── 다목(영 §168의11 호 인정 · ②수입금액비율)은 건축물·재산세 구분과 독립한 축 — 이력이 그 날들을 지우지 못한다(법 §104의3①4호 가·나·다목 병렬 제외 = 날짜 집합 합집합) ──
+  ...(["sports_facility_business", "hatchang"] as const).flatMap((ho) =>
+    (["comprehensive", "separate"] as const).map((before): E2Row => ({
+      id: `Da-${ho === "hatchang" ? "7호" : "1호다목"}-${before === "comprehensive" ? "종합" : "별도"}`,
+      scenario: `호 인정(${ho}) + 철거 2023-06-01(철거 직전 ${before}) — 현재 나대지·종합합산이어도 호 인정이 전 기간 사업용이라 이력과 무관하게 사업용`,
+      events: [rm("2023-06-01", before)],
+      extra: { nblOtherRelatedBusinessType: ho, ...(ho === "hatchang" ? { nblOtherMaxAnnualArea: "1000" } : {}) },
+      expect: { nonBusiness: false, eff: 3651, total: 3651, tax: B },
+    })),
+  ),
+  {
+    id: "Da-수입금액", scenario: "수입금액비율 충족(개시일 없음) + 철거 2023-06-01(종합합산 선언) — 다목이 전 기간 사업용", events: [rm("2023-06-01", "comprehensive")],
+    extra: { nblZoneType: "commercial", ...revenueRaw() }, expect: { nonBusiness: false, eff: 3651, total: 3651, tax: B },
+  },
+  {
+    id: "Da-레거시", scenario: "레거시 boolean(거주·사업관련, 호 미설정) + 철거 2023-06-01(종합합산 선언)", events: [rm("2023-06-01", "comprehensive")],
+    extra: { nblOtherRelatedBusinessType: "", nblOtherIsRelatedToResidence: true }, expect: { nonBusiness: false, eff: 3651, total: 3651, tax: B },
+  },
+  {
+    id: "Da-복합용도", scenario: "복합용도 건축물(영 §168의11⑥) 특정용도분 100% + 신축 2023-06-01(종합합산) — 부속토지 전량이 다목이라 전 기간 사업용", events: [built("2023-06-01")],
+    extra: { nblOtherPropertyTaxType: "comprehensive", nblOtherMixedUseMode: "single_building", nblOtherMixedUseSpecificFloorArea: "100", nblOtherMixedUseTotalFloorArea: "100" },
+    expect: { nonBusiness: false, eff: 3651, total: 3651, tax: B },
+  },
+  {
+    id: "Da-연접다필지", scenario: "연접 다필지(영 §168의11⑤) 기준면적 이내 + 호 인정(7호) + 철거 2023-06-01(종합합산)", events: [rm("2023-06-01", "comprehensive")],
+    extra: {
+      nblOtherRelatedBusinessType: "hatchang", nblOtherMaxAnnualArea: "1000", nblOtherUseParcels: true,
+      nblOtherParcels: [{ id: "p1", landArea: "1000", acquisitionDate: "2014-01-01", hasBuilding: false }],
+    },
+    expect: { nonBusiness: false, eff: 3651, total: 3651, tax: B },
+  },
+  {
+    id: "Da-DM01미충족+호", scenario: "DM-01 개시일 2024-03-01(121일 — 기간기준 미충족) + 호 인정(1호 다목) + 철거 2023-06-01 — DM-01 자체 구간 ∪ 호 인정 전 기간 = 전 기간 사업용",
+    transfer: "2024-06-30", events: [rm("2023-06-01", "comprehensive")],
+    extra: { nblZoneType: "commercial", nblOtherRelatedBusinessType: "sports_facility_business", ...revenueRaw("2024-03-01") },
+    expect: { nonBusiness: false, eff: 3832, total: 3832 },
+  },
   // ── Q-15 (가′) — core 자체 사업기간(3호 · DM-01)과 이력 ──
   {
     id: "V21-3호", scenario: "3호 조성 완료 2021-01-02 · 취득 2021-01-01 · 신축 2021-07-01 — (가′) 소유기간 ∩ 3호 = 730/1,094 사업용(초판 (가) 문언은 550 비사업용)",
     acq: "2021-01-01", events: [built("2021-07-01")],
     extra: { nblZoneType: "management", nblOtherPropertyTaxType: "comprehensive", nblOtherRelatedBusinessType: "private_investment_land", nblOtherPrivateInvestCompletionDate: "2021-01-02" },
     expect: { nonBusiness: false, eff: 730, total: 1094 },
+  },
+  {
+    id: "V21-3호-미충족", scenario: "3호 조성 완료 2014-01-02(구간 730일뿐 — core 기간기준 미충족) + 신축 2020-01-01 — 자체 구간 730일은 core가 사업용 결론을 못 내도 사업용으로 센다(Q15a와 같은 구조)",
+    events: [built("2020-01-01")],
+    extra: { nblZoneType: "management", nblOtherPropertyTaxType: "comprehensive", nblOtherRelatedBusinessType: "private_investment_land", nblOtherPrivateInvestCompletionDate: "2014-01-02" },
+    expect: { nonBusiness: true, eff: 730, total: 3651 },
   },
   {
     id: "V21-DM01", scenario: "DM-01 개시일 2022-01-01 · 신축 2023-01-01 · 양도 2024-06-30 — (가′) 911/3,832 사업용(초판 (가) 문언은 546 비사업용)",
@@ -119,12 +162,12 @@ export const E2_ROWS: readonly E2Row[] = [
   },
 ];
 
-function revenueRaw(startDate: string): Record<string, unknown> {
+function revenueRaw(startDate?: string): Record<string, unknown> {
   return {
     nblRevenueBusinessType: "parking_operation",
     nblRevenueCurrentRevenue: "20000000",
     nblRevenueCurrentLandValue: "100000000",
-    nblRevenueCurrentBusinessStartDate: startDate,
+    ...(startDate ? { nblRevenueCurrentBusinessStartDate: startDate } : {}),
   };
 }
 

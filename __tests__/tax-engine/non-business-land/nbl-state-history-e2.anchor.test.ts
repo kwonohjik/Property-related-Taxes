@@ -101,6 +101,25 @@ describe("E2 Anchor 4 — Q-15 (가′): 이력 한 건이 core의 자체 사업
   });
 });
 
+describe("E2 Anchor 5 — 다목(호 인정·수입금액비율·레거시)은 이력과 독립한 축: 이력 한 건이 다목 결론을 뒤집지 않는다 (법 §104의3①4호 가·나·다목 병렬 제외)", () => {
+  const DA_ROWS = E2_ROWS.filter((r) => r.id.startsWith("Da-"));
+  it("다목 행 9개(호 2종 × 철거 직전 구분 2종 + 수입금액비율 + 레거시 + 복합용도 + 연접 다필지 + DM-01 미충족 + 호)", () => {
+    expect(DA_ROWS.length).toBe(9);
+  });
+  it.each(DA_ROWS.map((r) => [r.id, r] as const))("%s: 이력 있음 = 이력 없음(현행) — 판정·사업용 일수 동일(전 기간 사업용)", (_id, row: E2Row) => {
+    const control = judge(fromRaw({ ...e2RowRaw(row), nblOtherStateHistoryMode: "", nblOtherStateEvents: [] }));
+    const j = judge(fromRaw(e2RowRaw(row)));
+    expect(control.isNonBusinessLand).toBe(false);
+    expect([j.isNonBusinessLand, j.effectiveBusinessDays, j.totalOwnershipDays]).toEqual([control.isNonBusinessLand, row.expect.eff, control.totalOwnershipDays]);
+    expect(j.periodEvaluation?.basis).toBe("state_history");
+  });
+  it("대조: 같은 시료에서 다목을 빼면(호 미설정) 이력은 그대로 건축물 축만 센다 — 철거 직전 종합합산이면 비사업용(214/3,651)", () => {
+    const row = E2_ROWS.find((r) => r.id === "Da-1호다목-종합")!;
+    const j = judge(fromRaw({ ...e2RowRaw(row), nblOtherRelatedBusinessType: "" }));
+    expect([j.isNonBusinessLand, j.effectiveBusinessDays]).toEqual([true, 0]);
+  });
+});
+
 describe("E2 판정 연결 — 고지·echo·미적용 경로", () => {
   const base = GRID["G01 나대지·종합합산 → 전량 비사업용(253,960,000)"];
   const removedSep = [{ kind: "building_removed" as const, date: d("2021-01-01"), propertyTaxTypeBefore: "separate" as const }];
