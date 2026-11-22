@@ -209,11 +209,12 @@ describe("R-4 의제취득일 전 상속 컴패니언 · §166③ 칸 비움 —
 });
 
 describe("R-5 막지 않는다", () => {
-  it("C0 정상 컴패니언 13,023,566 · 묶음 31,552,700 / C2 매매 K-4(실지) · §166③ 비움 9,245,083", async () => {
+  it("C0 정상 컴패니언 카드 13,623,566 · 묶음 31,552,700 / C2 매매 K-4(실지) · §166③ 비움 카드 9,845,083", async () => {
     const ok = await run(bundle(K5));
-    expect([ok.status, ok.compTax, ok.total]).toEqual([200, 13_023_566, 31_552_700]);
+    // 2026-11-22: 일괄 카드는 집계가 `skipBasicDeduction: true`로 계산한다 — 재개발 경로도 기본공제를 빼지 않게 되어(§103② · 일반 자산 카드와 같다) 카드 세액이 기본공제 × 세율만큼 크다. 묶음 총세액은 그대로.
+    expect([ok.status, ok.compTax, ok.total]).toEqual([200, 13_623_566, 31_552_700]);
     const actual = await run(bundle({ acquisitionCause: "purchase", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "200,000,000", ...NO_D, ...NO_NUM }));
-    expect([actual.status, actual.compTax]).toEqual([200, 9_245_083]);
+    expect([actual.status, actual.compTax]).toEqual([200, 9_845_083]);
   });
   it("최초공시일 전 취득 · §164⑦ 본문 입력만 있고 분자 칸이 비면 엔진이 P_A를 만든다 — 주 자산·컴패니언 200", async () => {
     const preDisclosure = (rd: Loose) => {

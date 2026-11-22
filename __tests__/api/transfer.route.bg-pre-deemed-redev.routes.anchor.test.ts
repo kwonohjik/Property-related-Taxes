@@ -244,22 +244,24 @@ describe("PR-7b-4 · 리뷰 게이트 반영 (F-1 컴패니언 · F-2 입주권 
     return { fields, status: r.status, companion: body.companionAssets?.[0], total: r.json?.data?.aggregated?.determinedTax, compTax: comp?.determinedTax };
   }
 
-  it("C-1 컴패니언 · ① 2억 — ⑧ 통과 → 200(종전 400 막다른 길) · 매매 K-4 실지 2억 컴패니언과 같다(9,245,083 · 묶음 26,042,413)", async () => {
+  it("C-1 컴패니언 · ① 2억 — ⑧ 통과 → 200(종전 400 막다른 길) · 매매 K-4 실지 2억 컴패니언과 같다(카드 9,845,083 · 묶음 26,042,413)", async () => {
     const pd = await bundle({ publishedValueAtInheritance: "200,000,000" });
     const buy = await bundle({ acquisitionCause: "purchase", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "200,000,000" });
     expect(pd.fields).toEqual([]);
     expect(pd.status).toBe(200);
     expect(pd.companion.inheritedAcquisition).toMatchObject({ mode: "pre-deemed", reportedValue: 200_000_000 });
     expect(pd.companion.useEstimatedAcquisition).toBe(true);
-    expect([pd.compTax, pd.total]).toEqual([9_245_083, 26_042_413]);
+    // 2026-11-22: 일괄 카드는 집계가 `skipBasicDeduction: true`로 계산한다 — 재개발 경로도 기본공제를 빼지 않게 되어(§103② · 일반 자산 카드와 같다) 카드 세액이 기본공제 × 세율만큼 크다. 묶음 총세액은 그대로.
+    expect([pd.compTax, pd.total]).toEqual([9_845_083, 26_042_413]);
     expect([pd.compTax, pd.total]).toEqual([buy.compTax, buy.total]);
   });
 
-  it("C-2 컴패니언 · ① 1억 → ③ §166③ — 매매 K-5 컴패니언과 같다(13,023,566 · 묶음 31,552,700) · ③ 후보가 실린다(useEstimatedAcquisition)", async () => {
+  it("C-2 컴패니언 · ① 1억 → ③ §166③ — 매매 K-5 컴패니언과 같다(카드 13,623,566 · 묶음 31,552,700) · ③ 후보가 실린다(useEstimatedAcquisition)", async () => {
     const pd = await bundle({ publishedValueAtInheritance: "100,000,000" });
     const buy = await bundle({ acquisitionCause: "purchase", bgAcquisitionMethod: "converted" });
     expect(pd.fields).toEqual([]);
-    expect([pd.compTax, pd.total]).toEqual([13_023_566, 31_552_700]);
+    // 2026-11-22: 일괄 카드는 집계가 `skipBasicDeduction: true`로 계산한다 — 재개발 경로도 기본공제를 빼지 않게 되어(§103② · 일반 자산 카드와 같다) 카드 세액이 기본공제 × 세율만큼 크다. 묶음 총세액은 그대로.
+    expect([pd.compTax, pd.total]).toEqual([13_623_566, 31_552_700]);
     expect([pd.compTax, pd.total]).toEqual([buy.compTax, buy.total]);
   });
 
