@@ -21,6 +21,8 @@ export interface BgWholePreDeemed {
   reported: number | null;
   sec164: number | null;
   converted: number;
+  /** ③ 분모(엔진이 ③에 쓴 양도시 기준시가) — 결과 echo용. 없으면 echo 생략. */
+  convertedDenominator?: number;
 }
 
 /** STEP 4~5.5가 읽는 값 — 모두 지분 축소 후(`scaleBurdenedGiftInfo`)다. */

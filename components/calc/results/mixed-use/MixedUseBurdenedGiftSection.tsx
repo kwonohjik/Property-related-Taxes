@@ -26,6 +26,7 @@ import {
   mixedBgAcqStdLabel,
   mixedBgPreDeemedConverted,
 } from "@/components/calc/results/transfer/DetailedStatementBgMixedFormulas";
+import { mixedBgShareAmountTerm } from "@/components/calc/results/transfer/DetailedStatementBgMixedFormulas";
 import { mixedBgShareTerm } from "@/components/calc/results/transfer/DetailedStatementBgMixedFormulas";
 import {
   DivRow,
@@ -231,7 +232,7 @@ function acqFormulaLine(bg: MixedUseBurdenedGiftBreakdown, side: MixedBgSide, k:
     default:
       return (
         <FLine>
-          {MIXED_BG_PART_LABEL[k]}: {mixedBgValueLabel(bg, p.acquisitionMethod, side)} 중 이 부분 몫 × {ratioFrac(bg, side)}
+          {MIXED_BG_PART_LABEL[k]}: {mixedBgValueLabel(bg, p.acquisitionMethod, side)} 중 이 부분 몫{mixedBgShareAmountTerm(p.acquisitionBeforeRatio)} × {ratioFrac(bg, side)}
         </FLine>
       );
   }
@@ -287,9 +288,20 @@ export function MixedUseBgAcqRows({ bg, side }: { bg: MixedUseBurdenedGiftBreakd
           label={`${label} 필요경비`}
           value={fmt(sumOf(bg, side, (p) => p.estimatedDeduction))}
           formula={
-            <FLine>
-              자본적지출·양도비 등 실제 필요경비 중 이 부분 몫 × {ratioFrac(bg, side)} (실지거래가액 경로 — 개산공제 아님)
-            </FLine>
+            [land, building].every((k) => bg.perPart[k].expenseBeforeRatio !== undefined) ? (
+              <>
+                {[land, building].map((k) => (
+                  <FLine key={k}>
+                    {MIXED_BG_PART_LABEL[k]}: 자본적지출·양도비 등 실제 필요경비 중 이 부분 몫{mixedBgShareAmountTerm(bg.perPart[k].expenseBeforeRatio)} ×{" "}
+                    {ratioFrac(bg, side)} (실지거래가액 경로 — 개산공제 아님)
+                  </FLine>
+                ))}
+              </>
+            ) : (
+              <FLine>
+                자본적지출·양도비 등 실제 필요경비 중 이 부분 몫 × {ratioFrac(bg, side)} (실지거래가액 경로 — 개산공제 아님)
+              </FLine>
+            )
           }
         />
       )}

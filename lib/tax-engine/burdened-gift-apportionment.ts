@@ -111,6 +111,8 @@ export function buildBurdenedGiftBreakdown(params: {
     reported: number | null;
     sec164: number | null;
     converted: number;
+    /** ③ 분모(엔진이 ③에 쓴 양도시 기준시가) — 결과 echo `preDeemed.convertedDenominator`로 그대로 싣는다. */
+    convertedDenominator?: number;
   };
   /**
    * 일반건물 — 의제취득일(1985.1.1.) 전 상속·증여 **파트**의 ①②(`generalBuildingValuation.{land,building}PreDeemedClauseA`).
@@ -513,6 +515,7 @@ export function buildBurdenedGiftBreakdown(params: {
                 reported: preDeemed.reported,
                 sec164: preDeemed.sec164,
                 converted: preDeemed.converted,
+                ...(preDeemed.convertedDenominator !== undefined ? { convertedDenominator: preDeemed.convertedDenominator } : {}),
                 selected: preDeemed.selected,
                 wholeAcquisition: preDeemed.acquisition,
               },
