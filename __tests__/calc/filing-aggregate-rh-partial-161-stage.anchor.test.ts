@@ -198,10 +198,12 @@ function after(t: string[], label: string | RegExp): string | undefined {
   if (i < 0) return undefined;
   return t[i + 1] === "- " ? `- ${t[i + 2]}` : t[i + 1];
 }
-/** 장특 행 — 라벨이 「장기보유특별공제 (」 · 율 · 「)」 세 조각이고 값이 그 뒤다. */
+/** 장특 행 — 합산 PDF는 율 없이 라벨 「장기보유특별공제」 한 조각이고 값이 그 뒤다(사용자 결정 2026-11-22). rate는 율 조각이 있으면 그 값. */
 function lthd(t: string[]) {
-  const i = t.indexOf("장기보유특별공제 (");
-  return { rate: t[i + 1], value: t[i + 3] };
+  const withRate = t.indexOf("장기보유특별공제 (");
+  if (withRate >= 0) return { rate: t[withRate + 1], value: t[withRate + 3] };
+  const i = t.indexOf("장기보유특별공제");
+  return { rate: undefined, value: after(t, "장기보유특별공제") ?? t[i + 1] };
 }
 async function bundledPdf(rh: boolean) {
   const f = form(rh);
@@ -219,7 +221,7 @@ describe("일괄 PDF 신고서 양식(TransferSection) — 화면 합산 신고�
     const { byLabel } = await aggregateTable(true);
     expect(after(t, "전체 양도차익")).toBe("1,400,000,000");
     expect(t.indexOf("과세대상 양도차익")).toBe(-1);
-    expect(lthd(t)).toEqual({ rate: "52.3%", value: "- 732,000,000" });
+    expect(lthd(t)).toEqual({ rate: undefined, value: "- 732,000,000" });
     expect(after(t, "양도소득금액")).toBe("668,000,000");
     expect(after(t, "비과세 양도소득금액")).toBe("- 422,400,000");
     expect(after(t, "감면후 소득금액")).toBe("245,600,000");
@@ -234,9 +236,10 @@ describe("일괄 PDF 신고서 양식(TransferSection) — 화면 합산 신고�
     expect(t.indexOf("비과세 양도소득금액")).toBeLessThan(t.indexOf("세액감면대상금액"));
   });
 
-  it("🔑 장특 율 표시 — 분모가 과세대상 양도차익 합(1,400,000,000)이 된다: 732,000,000 ÷ 1,400,000,000 (종전 ÷ 977,600,000)", async () => {
+  it("🔑 장특 율 표시 없음 — 합산 PDF는 섞인 실효율(732,000,000 ÷ 1,400,000,000 = 52.3%)을 적지 않는다(사용자 결정 2026-11-22)", async () => {
     const { t } = await bundledPdf(true);
-    expect(lthd(t).rate).toBe("52.3%"); // 732,000,000 ÷ 1,400,000,000 = 52.29% (종전 74.9%)
+    expect(lthd(t).rate).toBeUndefined();
+    expect(t.some((x) => x.startsWith("장기보유특별공제 ("))).toBe(false);
   });
 
   it("🔑 차손 자산이 낀 일괄 — 통산 후 양도소득금액도 비과세 양도소득금액 차감 전(양도소득금액 − 통산액)이고, 비과세 행을 뺀 값이 감면후 소득금액이다", async () => {
@@ -262,7 +265,7 @@ describe("일괄 PDF 신고서 양식(TransferSection) — 화면 합산 신고�
     expect(filing.aggregateNontaxableIncome).toBe(0);
     expect(after(t, "전체 양도차익")).toBe("1,400,000,000");
     expect(after(t, "과세대상 양도차익")).toBe("440,000,000");
-    expect(lthd(t)).toEqual({ rate: "44.2%", value: "- 194,400,000" });
+    expect(lthd(t)).toEqual({ rate: undefined, value: "- 194,400,000" });
     expect(after(t, "양도소득금액")).toBe("245,600,000");
     expect(t.some((x) => x.startsWith("비과세 양도소득금액"))).toBe(false);
     expect(after(t, "감면후 소득금액")).toBe("245,600,000");

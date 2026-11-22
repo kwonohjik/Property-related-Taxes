@@ -80,18 +80,20 @@ describe("일괄 PDF — 전체 양도차익·과세대상 양도차익·장특 
     expect(after(t, "양도소득금액")).toBe(won(380_000_000)); // 불변
   });
 
-  it("🔑 장특 율 = 공제액 ÷ 과세대상 양도차익 — 15억 고가주택 + 토지: 212,000,000 ÷ 370,000,000 = 57.3% (종전 17% = ÷ 전체 1,250,000,000)", async () => {
+  it("🔑 합산 PDF는 장특 율을 적지 않는다(자산마다 법정 율이 달라 섞인 값 — 사용자 결정 2026-11-22 · 종전 57.3% = 212,000,000 ÷ 370,000,000) · 금액은 그대로", async () => {
     const { t } = await pdfOf(houseForm("1500000000"));
-    const i = t.findIndex((x) => x.startsWith("장기보유특별공제"));
-    expect(t[i + 1]).toBe("57.3%");
+    const i = t.indexOf("장기보유특별공제");
+    expect(i).toBeGreaterThanOrEqual(0);
+    expect(t[i + 1]).toBe(`- ${won(212_000_000)}`);
+    expect(t.some((x) => x.startsWith("장기보유특별공제 ("))).toBe(false);
   });
 
-  it("짝 — 비과세·안분이 없으면(전체 = 과세대상) 과세대상 줄 없음 · 장특 율은 어댑터 율 그대로 30%", () => {
+  it("짝 — 비과세·안분이 없으면(전체 = 과세대상) 과세대상 줄 없음 · 합산 어댑터 결과라 장특 율 없음", () => {
     const t = collect(TransferSection({ r: { transferGain: 100_000_000, taxableGain: 100_000_000, aggregateGrossGain: 100_000_000, aggregateTaxableGain: 100_000_000, longTermHoldingDeduction: 30_000_000, longTermHoldingRate: 0.3 } }));
     expect(after(t, "전체 양도차익")).toBe(won(100_000_000));
     expect(after(t, "과세대상 양도차익")).toBeUndefined();
-    const i = t.findIndex((x) => x.startsWith("장기보유특별공제"));
-    expect(t[i + 1]).toBe("30%");
+    expect(t.indexOf("장기보유특별공제")).toBeGreaterThanOrEqual(0);
+    expect(t.some((x) => x.startsWith("장기보유특별공제 ("))).toBe(false);
   });
 
   it("짝 — 새 필드가 없는 구 이력(aggregateGrossGain 없음)은 종전 값(transferGain)으로 그린다", () => {
