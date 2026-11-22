@@ -436,6 +436,7 @@ export function aggregateByGroup(
       provisoInForce(n) &&
       units.some(
         (v, m) =>
+          // 방어용 — 현행 구조상 도달 불가: 같은 자산의 파트는 세대 판정(⑦ 호·right: 구분)이 같아 같은 단기 호면 같은 버킷이다.
           v.assetIdx !== u.assetIdx &&
           provisoInForce(m) &&
           unitIds[m].id !== unitIds[n].id &&
