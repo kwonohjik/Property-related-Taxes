@@ -280,7 +280,7 @@ export function computeAggregateOnce(
     assetPartBasic,
     assetPartIncome,
     surchargeClause3And4OverlapSplit,
-    surchargeRightSplitSharesShortTerm,
+    surchargeSplitSharesShortTerm,
   } = computeGroupsAndComparison(assetRecords, taxableAfterReduction, allocatedBasic, rates, partBasic);
   if (surchargeClause3And4OverlapSplit) {
     warnings.push(
@@ -290,10 +290,10 @@ export function computeAggregateOnce(
     );
   }
 
-  if (surchargeRightSplitSharesShortTerm) {
+  if (surchargeSplitSharesShortTerm) {
     warnings.push(
-      `${TRANSFER.SURCHARGE} — 같은 과세기간에 양도한 중과 주택이 둘 다 보유기간 1년 이상 2년 미만(${TRANSFER.TAX_RATE_SHORT_1Y_TO_2Y})이어도 ` +
-        `1호와 2호(또는 3호와 4호)처럼 중과의 호가 다르면 이 계산은 과세표준을 합산하지 않았습니다(${TRANSFER.COMPARATIVE_TAXATION} 2호 단서 «동일한 호»). ` +
+      `${TRANSFER.SURCHARGE} — 같은 과세기간에 양도한 중과 주택이 둘 다 보유기간 2년 미만(${TRANSFER.TAX_RATE_SHORT_1Y_TO_2Y} 또는 ${TRANSFER.TAX_RATE_SHORT_UNDER_1Y})으로 같은 단기 세율의 호에 해당해도 ` +
+        `중과의 호(같은 항 1~4호)가 다르면 이 계산은 과세표준을 합산하지 않았습니다(${TRANSFER.COMPARATIVE_TAXATION} 2호 단서 «동일한 호»). ` +
         "단기 세율의 호를 함께 쓰는 경우의 합산 단위에 관한 해석례를 확인하지 못했습니다 — 확인 필요.",
     );
   }
