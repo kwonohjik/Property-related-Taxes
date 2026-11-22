@@ -468,7 +468,7 @@ export function TransferTaxResultView({
         {!result.isExempt && result.swapApplied && result.swapComparison && (
           <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 text-sm space-y-1 dark:bg-amber-950/40">
             <p className="font-semibold text-amber-900 dark:text-amber-200">
-              필요경비 swap 적용 — 소득세법 §97② 2호 단서
+              필요경비 자본적지출·양도비 적용 — 소득세법 §97② 2호 단서
             </p>
             <p className="text-xs text-amber-800 dark:text-amber-200">
               환산취득가(또는 감정가액·매매사례가액) + 개산공제 {formatKRW(result.swapComparison.estimatedSide)}
@@ -481,7 +481,7 @@ export function TransferTaxResultView({
         )}
         {!result.isExempt && !result.swapApplied && result.swapComparison && (
           <div className="rounded-lg border border-border bg-muted/20 p-2 text-xs text-muted-foreground">
-            §97② 본문 적용 — 환산+개산공제 {formatKRW(result.swapComparison.estimatedSide)} ≥ 자본+양도비 {formatKRW(result.swapComparison.directSide)} (swap 미발동)
+            §97② 본문 적용 — 환산+개산공제 {formatKRW(result.swapComparison.estimatedSide)} ≥ 자본+양도비 {formatKRW(result.swapComparison.directSide)} (단서 미적용)
           </div>
         )}
 

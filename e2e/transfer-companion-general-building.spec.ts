@@ -147,6 +147,6 @@ test.describe("컴패니언 × 일반건물 (시행령 §166⑥ 2단 안분)", (
     const blocks = page.getByTestId(`gb-result-blocks-${gbId}`);
     await expect(blocks).toBeVisible();
     await expect(blocks.getByRole("heading", { name: /^일반건물 — / })).toBeVisible();
-    await expect(blocks).toContainText("필요경비 swap 적용 — 소득세법 §97② 2호 단서");
+    await expect(blocks).toContainText("필요경비 자본적지출·양도비 적용 — 소득세법 §97② 2호 단서");
   });
 });

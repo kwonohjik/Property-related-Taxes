@@ -3,7 +3,7 @@
  *
  * 검증: 일반건물을 환산취득가 모드로 양도하면서 자본적지출+양도비(나목)가 환산 카드
  *   estimatedSide 합(가목)보다 크면, §97②2호 단서 자산총액 판정(안 A)으로 나목을 필요경비 적용.
- *   → 결과뷰에 "필요경비 swap 적용 — 소득세법 §97② 2호 단서" 표시(aggregated.swapApplied=true).
+ *   → 결과뷰에 "필요경비 자본적지출·양도비 적용 — 소득세법 §97② 2호 단서" 표시(aggregated.swapApplied=true).
  *   반대면 본문 유지·미표시.
  *
  * 엔진 수치(115,000,000 등)는 anchor(general-building-97-2-swap.anchor.test.ts) 담당.
@@ -66,7 +66,7 @@ async function seedAndCalc(page: Page, capitalExpenditure: string, transferExpen
   await page.getByText("신고서 양식", { exact: false }).first().waitFor({ timeout: 20000 });
 }
 
-const SWAP_HEADING = "필요경비 swap 적용 — 소득세법 §97② 2호 단서";
+const SWAP_HEADING = "필요경비 자본적지출·양도비 적용 — 소득세법 §97② 2호 단서";
 
 test.describe("일반건물 환산 §97②2호 단서 swap 자산총액 (Phase 2 G2)", () => {
   test("나목(자본 8억+양도비 1천만) > 가목 → swap 발동 표시", async ({ page }) => {

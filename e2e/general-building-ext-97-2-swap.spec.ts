@@ -78,7 +78,7 @@ async function seedAndCalc(page: Page, capitalExpenditure: string, capexBeforeEx
   await page.getByText("신고서 양식", { exact: false }).first().waitFor({ timeout: 20000 });
 }
 
-const SWAP_HEADING = "필요경비 swap 적용 — 소득세법 §97② 2호 단서";
+const SWAP_HEADING = "필요경비 자본적지출·양도비 적용 — 소득세법 §97② 2호 단서";
 
 test.describe("일반건물 증축(G3) 환산 §97②2호 단서 swap", () => {
   test("자본적지출 5억 · 전부 증축 전 → 증축분 몫 없음 · swap 아님 · 원건물 실가 파트에 §97②1호 가산", async ({ page }) => {

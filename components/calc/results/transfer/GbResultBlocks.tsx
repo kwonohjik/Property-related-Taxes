@@ -250,7 +250,7 @@ export function GbResultBlocks({ view }: { view: GbBlockView }) {
       {view.swapComparison && (
         <div className="rounded-lg border border-amber-300 bg-amber-50/60 p-3 text-sm space-y-1 dark:bg-amber-950/40">
           <p className="font-semibold text-amber-900 dark:text-amber-200">
-            필요경비 swap 적용 — 소득세법 §97② 2호 단서
+            필요경비 자본적지출·양도비 적용 — 소득세법 §97② 2호 단서
           </p>
           <p className="text-xs text-amber-800 dark:text-amber-200">
             환산취득가 + 개산공제 합 {formatKRW(view.swapComparison.estimatedSide)}

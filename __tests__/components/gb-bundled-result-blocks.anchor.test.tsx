@@ -100,6 +100,11 @@ describe("블록 6종 — 함께 양도 자산별 묶음 = 단건", () => {
     expect(r.aggregated.generalBuildingDetailsByAsset?.primary.swapComparison).toEqual({
       estimatedSide: 269_553_853, directSide: 510_000_000, chosen: "direct",
     });
+    // R-c07-10 — 화면 제목에 개발 용어 「swap」을 쓰지 않는다.
+    renderCard(r, f);
+    const block = screen.getByTestId("gb-result-blocks-primary");
+    expect(block.textContent).toContain("필요경비 자본적지출·양도비 적용 — 소득세법 §97② 2호 단서");
+    expect(block.textContent).not.toMatch(/swap/i);
   });
 
   it("일반건물 둘 + 토지 → 블록이 자산별로 섞이지 않는다", async () => {
