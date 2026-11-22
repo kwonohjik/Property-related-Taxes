@@ -6,6 +6,7 @@
 import { inheritedPresalePayload } from "./unsold-98-inherited-presale";
 import { buildExemptionProvisoPayload } from "./exemption-proviso-payload";
 import { calcEffectiveIsRegulatedAtTransfer, calcEffectiveWasRegulatedAtAcquisition, calcStoredRegulatedFlags } from "@/lib/calc/effective-regulated-at-acquisition";
+import { GIFT_HOUSEHOLD_SCOPE_PRIMARY } from "@/lib/calc/effective-regulated-at-acquisition";
 import { sellingHousePreviousDateOverride } from "@/lib/calc/selling-house-origin-scope";
 import { sellingHouseStdPricePayload } from "@/lib/calc/selling-std-price-scope";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
@@ -388,8 +389,10 @@ export function buildPropertyPayload(formInput: TransferFormData, filingUnitAmen
     residencePeriodMonths: residence.months,
     // 결정 #5(G7-6) 하위 1 — 단건(`transfer-tax-api.ts`)과 같은 leaf: 주소가 있으면 저장된 토글 대신 주소 판정값.
     isRegulatedArea: calcEffectiveIsRegulatedAtTransfer(form),
+    // 증여 세대 사실은 위 `buildCalcGiftHouseholdPayload`가 싣는 것과 같은 범위(첫 자산)로 읽는다 — 범위 없이 내면 코드 경로에서 엔진과 값이 갈렸다
+    //   (일반 증여 통산 · 이월과세 — 엔진은 코드가 있으면 이 값을 읽지 않아 세액은 같았다 · I-37 (a) 판단 격자).
     wasRegulatedAtAcquisition: primary
-      ? calcEffectiveWasRegulatedAtAcquisition(primary, calcStoredRegulatedFlags(form).wasRegulatedAtAcquisition, form.regionCode)
+      ? calcEffectiveWasRegulatedAtAcquisition(primary, calcStoredRegulatedFlags(form).wasRegulatedAtAcquisition, form.regionCode, GIFT_HOUSEHOLD_SCOPE_PRIMARY)
       : form.wasRegulatedAtAcquisition,
     // §104①4호 단서(영 §167의6 1·2호) — presale_right 전용. 단건(`transfer-tax-api.ts`)과 같은 게이트.
     presaleRightNoOtherRight:
