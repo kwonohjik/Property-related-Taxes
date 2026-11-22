@@ -26,6 +26,7 @@ import { buildRows } from "@/components/calc/results/transfer/FilingFormTableHel
 import { buildStatementItems } from "@/components/calc/results/transfer/DetailedStatementHelpers";
 import { breakdownToFilingResult } from "@/components/calc/results/MultiTransferPropertyBreakdown";
 import { MultiTransferTaxSummaryCard } from "@/components/calc/results/MultiTransferTaxSummaryCard";
+import { PropertyBreakdownAccordion } from "@/components/calc/results/MultiTransferPropertyBreakdown";
 import { TransferMultiSection } from "@/lib/pdf/ResultPdfTransferSections";
 
 vi.mock("@/lib/db/tax-rates", async (io) => {
@@ -145,6 +146,51 @@ describe("① 자산별 신고서 어댑터 — §155⑳ 부분과세 자산은 
     expect(items.get("reductionTargetIncome")!.value).toBe(105_600_000);
     const s = await runCalc(houseForm(true));
     expect(valueOf(buildRows(s.json.data.result, "single", hf, hf.assets[0]) as Rows, "세액감면대상금액")).toBe(528_000_000);
+  });
+});
+
+/** 아코디언 상세 행 — 라벨 · 산식 · 값(표시 문자열) */
+function accordionRows(b: PerPropertyBreakdown) {
+  const { container } = render(<PropertyBreakdownAccordion breakdown={b} />);
+  return Array.from(container.querySelectorAll("div.divide-y > div")).map((d) => {
+    const ps = d.querySelectorAll("p");
+    return { label: ps[0]?.textContent ?? "", formula: ps.length > 1 ? (ps[1]?.textContent ?? "") : "", legal: d.querySelector("p.text-micro")?.textContent ?? "", value: d.querySelector("span")?.textContent ?? "" };
+  });
+}
+
+describe("①-2 자산 카드 아코디언 — 아래 자산별 신고서·PDF 자산별 표와 같은 단계", () => {
+  it("🔑 주택 — 과세대상 행 없음 · 양도소득금액 1,200,000,000 − 672,000,000 = 528,000,000 · 그 아래 비과세 양도소득금액 −422,400,000 (종전 과세대상 777,600,000 · 양도소득금액 105,600,000)", async () => {
+    const { house } = await multi();
+    const rows = accordionRows(house);
+    const labels = rows.map((r) => r.label);
+    expect(labels.some((l) => l.startsWith("과세대상 양도차익") || /과세 양도차익 \(\d+억 초과분\)/.test(l))).toBe(false);
+    const income = rows.find((r) => r.label === "양도소득금액")!;
+    expect(income.value).toBe("528,000,000");
+    expect(income.formula).toBe("1,200,000,000 - 672,000,000");
+    const nt = rows.find((r) => r.label === "비과세 양도소득금액")!;
+    expect(nt.value).toBe("-422,400,000");
+    expect(nt.legal).toBe(TRANSFER_RENTAL_HOUSING.PIT_RD_155_20);
+    // 순서 — PDF 자산별 표와 같다: 장특 → 양도소득금액 → (차손 통산) → 비과세 양도소득금액 → 과세표준 기여분
+    const order = ["양도차익", "장기보유특별공제", "양도소득금액", "비과세 양도소득금액", "기본공제 배분액", "과세표준 기여분"].map((l) => labels.indexOf(l));
+    expect(order.every((i) => i >= 0)).toBe(true);
+    expect([...order].sort((x, y) => x - y)).toEqual(order);
+    // 행 검산 — 양도차익 − 장특 = 양도소득금액 · 양도소득금액 − 비과세 양도소득금액 = 통산 후 소득(과세표준 기여분 산식의 출발점)
+    expect(1_200_000_000 - 672_000_000).toBe(528_000_000);
+    expect(528_000_000 - 422_400_000).toBe(house.incomeAfterOffset);
+    // 같은 카드 아래 자산별 신고서(단건 규약)와 같은 값
+    const hf = houseForm();
+    const frows = buildRows(breakdownToFilingResult(house), "single", hf, hf.assets[0]) as Rows;
+    expect(Number(income.value.replace(/,/g, ""))).toBe(valueOf(frows, "양도소득금액"));
+    expect(-Number(nt.value.replace(/,/g, ""))).toBe(valueOf(frows, /^비과세 양도소득금액/));
+  });
+
+  it("짝 — 토지 카드는 종전 그대로(과세대상 행 없음 · 양도소득금액 140,000,000 · 비과세 양도소득금액 행 없음)", async () => {
+    const { a } = await multi();
+    const rows = accordionRows(a.properties[1]);
+    expect(rows.find((r) => r.label === "양도소득금액")!.value).toBe("140,000,000");
+    expect(rows.find((r) => r.label === "양도소득금액")!.formula).toBe("200,000,000 - 60,000,000");
+    expect(rows.some((r) => r.label.startsWith("비과세 양도소득금액"))).toBe(false);
+    expect(rows.some((r) => r.label.startsWith("과세대상 양도차익"))).toBe(false);
   });
 });
 

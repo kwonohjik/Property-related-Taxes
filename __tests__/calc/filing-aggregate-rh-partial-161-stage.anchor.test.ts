@@ -8,6 +8,7 @@
  * 시료: `statement-rh-partial-exempt-bundled.anchor.test.ts`와 같다(강남 주택 15억 + 토지 3억 일괄 actual).
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { ReactElement } from "react";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset, makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
 import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
@@ -21,6 +22,7 @@ import { buildStatementItems } from "@/components/calc/results/transfer/Detailed
 import { aggregateNontaxableIncomeLabel } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
 import { aggregateNontaxableIncomeBasis } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
 import { TRANSFER_RENTAL_HOUSING } from "@/lib/tax-engine/legal-codes/transfer-rental-housing";
+import { TransferSection } from "@/lib/pdf/ResultPdfTransferSections";
 
 vi.mock("@/lib/db/tax-rates", async (io) => {
   const a = await io<typeof import("@/lib/db/tax-rates")>();
@@ -178,6 +180,92 @@ describe("합산 신고서 — §155⑳ 부분과세 자산 열은 단건 규약
   it("짝 — §155⑳ 부분과세 자산이 없으면 종전 폴백 근거", async () => {
     const { items } = await aggregateTable(false);
     expect(items.get("nontaxableIncome")!.legalBasis).toBe("소득세법 시행령 §161·§155⑳");
+  });
+});
+
+function collect(node: unknown, out: string[] = []): string[] {
+  if (node === null || node === undefined || typeof node === "boolean") return out;
+  if (typeof node === "string" || typeof node === "number") { out.push(String(node)); return out; }
+  if (Array.isArray(node)) { for (const c of node) collect(c, out); return out; }
+  const el = node as ReactElement<{ children?: unknown }> & { type?: unknown };
+  if (typeof el.type === "function") { collect((el.type as (p: unknown) => unknown)(el.props), out); return out; }
+  collect((el.props as { children?: unknown } | undefined)?.children, out);
+  return out;
+}
+/** 라벨 바로 뒤 값 — 차감 행은 부호 문자열(`- `)이 따로 붙으므로 이어 읽는다. */
+function after(t: string[], label: string | RegExp): string | undefined {
+  const i = t.findIndex((x) => (typeof label === "string" ? x === label : label.test(x)));
+  if (i < 0) return undefined;
+  return t[i + 1] === "- " ? `- ${t[i + 2]}` : t[i + 1];
+}
+/** 장특 행 — 라벨이 「장기보유특별공제 (」 · 율 · 「)」 세 조각이고 값이 그 뒤다. */
+function lthd(t: string[]) {
+  const i = t.indexOf("장기보유특별공제 (");
+  return { rate: t[i + 1], value: t[i + 3] };
+}
+async function bundledPdf(rh: boolean) {
+  const f = form(rh);
+  const r = await runCalc(f);
+  expect(r.status).toBe(200);
+  const agg = r.json.data.aggregated;
+  const filing = aggregateToFilingResult(agg);
+  const t = collect(TransferSection({ r: filing as unknown as Record<string, unknown> }));
+  return { agg, filing, t };
+}
+
+describe("일괄 PDF 신고서 양식(TransferSection) — 화면 합산 신고서 합계 열과 같은 규약", () => {
+  it("🔑 §155⑳ 부분과세 — 과세대상 행 없음(= 전체 1,400,000,000) · 장특 732,000,000 · 양도소득금액 668,000,000 · 비과세 양도소득금액 − 422,400,000 · 감면후 245,600,000 (종전 과세대상 977,600,000 · 양도소득금액 245,600,000 · 비과세 행 없음)", async () => {
+    const { agg, t } = await bundledPdf(true);
+    const { byLabel } = await aggregateTable(true);
+    expect(after(t, "전체 양도차익")).toBe("1,400,000,000");
+    expect(t.indexOf("과세대상 양도차익")).toBe(-1);
+    expect(lthd(t)).toEqual({ rate: "52.3%", value: "- 732,000,000" });
+    expect(after(t, "양도소득금액")).toBe("668,000,000");
+    expect(after(t, "비과세 양도소득금액")).toBe("- 422,400,000");
+    expect(after(t, "감면후 소득금액")).toBe("245,600,000");
+    expect(after(t, "과세표준")).toBe("243,100,000");
+    // 화면 합산 신고서 합계 열과 같은 값 · 행 검산
+    expect(after(t, "양도소득금액")).toBe((byLabel("양도소득금액")!.values.total as number).toLocaleString());
+    expect(after(t, "비과세 양도소득금액")).toBe(`- ${(byLabel(/^비과세 양도소득금액/)!.values.total as number).toLocaleString()}`);
+    expect(1_400_000_000 - 732_000_000 - 422_400_000).toBe(245_600_000);
+    expect(agg.taxBase).toBe(243_100_000);
+    // 순서 — 양도소득금액 → 비과세 양도소득금액 → 세액감면대상금액
+    expect(t.indexOf("양도소득금액")).toBeLessThan(t.indexOf("비과세 양도소득금액"));
+    expect(t.indexOf("비과세 양도소득금액")).toBeLessThan(t.indexOf("세액감면대상금액"));
+  });
+
+  it("🔑 장특 율 표시 — 분모가 과세대상 양도차익 합(1,400,000,000)이 된다: 732,000,000 ÷ 1,400,000,000 (종전 ÷ 977,600,000)", async () => {
+    const { t } = await bundledPdf(true);
+    expect(lthd(t).rate).toBe("52.3%"); // 732,000,000 ÷ 1,400,000,000 = 52.29% (종전 74.9%)
+  });
+
+  it("🔑 차손 자산이 낀 일괄 — 통산 후 양도소득금액도 비과세 양도소득금액 차감 전(양도소득금액 − 통산액)이고, 비과세 행을 뺀 값이 감면후 소득금액이다", async () => {
+    const f = form(true);
+    f.assets.push({ ...makeDefaultAsset(3), assetKind: "land", landNature: "standalone", acquisitionDate: "2010-01-01", acquisitionArea: "300", fixedAcquisitionPrice: "200,000,000", actualSalePrice: "150,000,000" } as never);
+    f.contractTotalPrice = String(1_500_000_000 + 300_000_000 + 150_000_000);
+    const r = await runCalc(f);
+    expect(r.status).toBe(200);
+    const agg = r.json.data.aggregated;
+    const t = collect(TransferSection({ r: aggregateToFilingResult(agg) as unknown as Record<string, unknown> }));
+    const n = (x: string | undefined) => Number((x ?? "").replace(/[-,\s]/g, ""));
+    const income = n(after(t, "양도소득금액"));
+    const afterOffset = n(after(t, "통산 후 양도소득금액"));
+    const nontaxable = n(after(t, "비과세 양도소득금액"));
+    expect(nontaxable).toBe(422_400_000);
+    expect(afterOffset).toBe(agg.totalIncomeAfterOffset + 422_400_000);
+    expect(income - afterOffset).toBe(agg.totalIncomeBeforeOffset - agg.totalIncomeAfterOffset - agg.unusedLoss);
+    expect(afterOffset - nontaxable).toBe(n(after(t, "감면후 소득금액")));
+  });
+
+  it("짝 — 일반 경로 15억(§155⑳ 없음)은 종전 그대로: 과세대상 440,000,000 · 양도소득금액 245,600,000 · 비과세 양도소득금액 행 없음", async () => {
+    const { t, filing } = await bundledPdf(false);
+    expect(filing.aggregateNontaxableIncome).toBe(0);
+    expect(after(t, "전체 양도차익")).toBe("1,400,000,000");
+    expect(after(t, "과세대상 양도차익")).toBe("440,000,000");
+    expect(lthd(t)).toEqual({ rate: "44.2%", value: "- 194,400,000" });
+    expect(after(t, "양도소득금액")).toBe("245,600,000");
+    expect(t.some((x) => x.startsWith("비과세 양도소득금액"))).toBe(false);
+    expect(after(t, "감면후 소득금액")).toBe("245,600,000");
   });
 });
 

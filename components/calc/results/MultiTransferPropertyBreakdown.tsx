@@ -41,6 +41,9 @@ import { bgOwnedPartOfResult } from "@/lib/calc/bg-owner-split-result";
 import { applyRate } from "@/lib/tax-engine/tax-utils";
 import { rhPartialBasis } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
 import { filingNontaxableIncomeOf } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { filingTaxableGainOf } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+import { findStepByLabel } from "@/components/calc/results/transfer/DetailedStatementLeaf";
+import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 import { reductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
 import type { RentalHousingExceptionResult } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
 
@@ -274,8 +277,12 @@ export function PropertyBreakdownAccordion({
    *    `income`은 안분 후 차익에서 장특공제를 뺀 값이다. 그 사이 행이 없으면 「양도소득금액 =
    *    양도차익 − 장특공제」 산식이 화면에서 성립하지 않는다. 역산은 신고서 어댑터와 같은 leaf다(#019).
    *    기준금액은 엔진 STEP 라벨(`과세 양도차익 (9억 초과분)` 등)을 그대로 쓴다 — 12억 리터럴 금지.
+   *    §155⑳ 부분과세 자산(`rhPartialBasis`)은 아래 자산별 신고서·PDF 자산별 표와 같은 단건 규약이다(R-c06-04) — 과세대상 = 전체 양도차익이라
+   *    이 행이 없고, 양도소득금액은 비과세 양도소득금액 차감 전(`income` + 그 몫)이며 그 몫은 아래 「비과세 양도소득금액」 행에서 뺀다.
    */
-  const taxableGain = assetTaxableGain(breakdown);
+  const taxableGain = filingTaxableGainOf(breakdown);
+  const nontaxableIncome = filingNontaxableIncomeOf(breakdown);
+  const nontaxableStep = nontaxableIncome > 0 ? findStepByLabel(breakdown.steps, "비과세 양도소득금액") : undefined;
   const hasProration = !breakdown.isExempt && taxableGain !== breakdown.transferGain;
   const prorationStep = breakdown.steps.find((s) => /과세 양도차익 \(\d+억 초과분\)/.test(s.label));
   const incomeBase = hasProration ? taxableGain : breakdown.transferGain;
@@ -384,7 +391,7 @@ export function PropertyBreakdownAccordion({
                     ? `${formatKRW(incomeBase)} - ${formatKRW(breakdown.longTermHoldingDeduction)}`
                     : undefined
                 }
-                value={breakdown.income}
+                value={breakdown.income + nontaxableIncome}
               />
 
               {/* 차손 통산 */}
@@ -400,6 +407,16 @@ export function PropertyBreakdownAccordion({
                   label="차손 통산 (타군안분)"
                   formula="타 세율군 잔여 차손 비율안분 (시행령 §167의2)"
                   value={-breakdown.lossOffsetFromOtherGroup}
+                />
+              )}
+
+              {/* 비과세 양도소득금액 — §155⑳ 부분과세 자산만(단건 규약 · PDF 자산별 표와 같은 순서 · R-c06-04) */}
+              {nontaxableIncome > 0 && (
+                <DetailRow
+                  label={nontaxableIncomeLabel(breakdown.rentalHousingScenarioId)}
+                  formula={nontaxableStep?.formula}
+                  legalBasis={nontaxableStep?.legalBasis}
+                  value={-nontaxableIncome}
                 />
               )}
 

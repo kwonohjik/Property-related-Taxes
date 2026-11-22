@@ -84,7 +84,9 @@ interface Props {
  *
  * MultiTransferTaxResultView·BundledAllocationCard·DetailedCalculationStatementCard에서 공유.
  */
-export function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult & { aggregateIncomeDeductionReducible: number; aggregateReductionEligibleIncome: number; aggregateTaxableGain: number; aggregateGrossGain: number; aggregateIncomeAfterOffset: number; aggregateUnusedLoss: number; aggregateLossOffsetTable: AggregateTransferResult["lossOffsetTable"] } {
+export function aggregateToFilingResult(a: AggregateTransferResult): TransferTaxResult & { aggregateIncomeDeductionReducible: number; aggregateReductionEligibleIncome: number; aggregateTaxableGain: number; aggregateNontaxableIncome: number; aggregateNontaxableIncomeLabel: string; aggregateGrossGain: number; aggregateIncomeAfterOffset: number; aggregateUnusedLoss: number; aggregateLossOffsetTable: AggregateTransferResult["lossOffsetTable"] } {
+  // 자산 열 leaf 합 — 화면 합산 신고서 합계 열과 같다(§155⑳ 부분과세 자산은 비과세가 양도소득금액 단계 · R-c06-04).
+  const stage = sumFilingStageGains(a.properties);
   return {
     isExempt: false,
     transferGain: a.totalTransferGain,
@@ -156,8 +158,16 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
      * `transferGain`/`taxableGain`은 `totalTransferGain`(자산별 단건 `transferGain`의 합)이라 뜻이 경로마다 다르다 —
      * 12억 초과 고가주택은 전체 차익, 비과세는 0, 입주권 4호 안분은 과세분. PDF가 이 합에서 양도소득금액을 다시 계산하면
      * 고가주택이 섞인 일괄에서 과세표준과 어긋났다(1,038,000,000 ↔ 158,000,000). 다른 소비처는 건드리지 않도록 별도 필드로 싣는다(NH-65 방식).
+     * §155⑳ 부분과세 자산(`rhPartialBasis`)은 화면 합산 표가 단건 규약(과세대상 = 전체 양도차익)으로 적으므로 그 자산의 비과세 양도소득금액을 더한다
+     *   (`filingTaxableGainOf` − `assetTaxableGain` = `filingNontaxableIncomeOf` — 그 밖 자산은 0이라 종전 값 그대로 · R-c06-04).
      */
-    aggregateTaxableGain: a.totalIncomeBeforeOffset + a.totalLongTermHoldingDeduction,
+    aggregateTaxableGain: a.totalIncomeBeforeOffset + a.totalLongTermHoldingDeduction + stage.nontaxableIncome,
+    /**
+     * 「비과세 양도소득금액」 행 — 화면 합산 신고서 합계 열과 같은 leaf 합(`filingNontaxableIncomeOf`)·라벨(`aggregateNontaxableIncomeLabel`).
+     * PDF는 위 과세대상 합 − 장특을 양도소득금액(비과세 양도소득금액 차감 전)으로 적고 이 행에서 뺀다. 표시 전용이다(R-c06-04).
+     */
+    aggregateNontaxableIncome: stage.nontaxableIncome,
+    aggregateNontaxableIncomeLabel: aggregateNontaxableIncomeLabel(a.properties),
     /**
      * 전체 양도차익 합 = 자산별 `effectiveGrossGain`(비과세는 `exemptGrossGain`, 입주권은 분기 합) 합 — 화면 신고서 표 합계 열의 「전체 양도차익」과 같은 leaf(`sumAssetGains`)다.
      * `transferGain`은 비과세 자산을 0으로, 입주권 §89①4호 안분을 과세분으로 담아 PDF가 비과세·안분분을 뺀 채 «전체 양도차익»으로 찍었다
@@ -184,6 +194,8 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
 // ─── 카드·요약 서브 컴포넌트 — BundledAllocationSubCards.tsx로 분리 (800줄 정책) ───
 import { PropertyCard, AggregatedTaxSummary } from "./BundledAllocationSubCards";
 import { sumAssetGains } from "./transfer/exempt-gross-gain";
+import { sumFilingStageGains } from "./transfer/DetailedStatementRhPartialFormulas";
+import { aggregateNontaxableIncomeLabel } from "./transfer/DetailedStatementRhPartialFormulas";
 
 
 // ─── 메인 컴포넌트 ────────────────────────────────────────────

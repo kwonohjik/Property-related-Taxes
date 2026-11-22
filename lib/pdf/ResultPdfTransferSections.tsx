@@ -108,6 +108,9 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows,
   const incomeAmountAfter = isRH ? ((num(r.taxableGain) ?? 0) as number) : Math.max(0, (aggIncomeAfterOffset ?? incomeAmount) - incomeDeduction);
   // 일괄 «양도소득금액» 표시 — 통산 前 자산별 합(차손 자산이 있으면 음수 가능). 0으로 접으면 아래 통산·소멸 차손이 어디서 왔는지 안 보인다.
   const incomeAmountShown = !isRH && aggTaxable !== undefined ? aggTaxable - ltdAmount : incomeAmount;
+  // 「비과세 양도소득금액」 — 단건 §155⑳는 엔진 `nontaxableGainAmount`, 함께 양도 어댑터는 자산 열 leaf 합(`aggregateNontaxableIncome` · 화면 합산 표 합계 열과 같다 · R-c06-04).
+  //   합산의 양도소득금액(`aggTaxable − 장특`)·통산 후 양도소득금액은 이 몫을 빼기 전이고, 이 행에서 뺀다(감면후 소득금액은 종전 값 그대로).
+  const nontaxableIncome = (num(r.aggregateNontaxableIncome) ?? num(r.nontaxableGainAmount) ?? 0) as number;
   const aggUnusedLoss = (num(r.aggregateUnusedLoss) ?? 0) as number;
   const aggLossTable = Array.isArray(r.aggregateLossOffsetTable) ? (r.aggregateLossOffsetTable as R[]) : [];
   const showLossOffset = aggIncomeAfterOffset !== undefined && (aggLossTable.length > 0 || aggUnusedLoss > 0);
@@ -163,9 +166,9 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows,
         {num(r.longTermHoldingRate) !== undefined && (<View style={s.row}><Text style={s.lbl}>장기보유특별공제 ({fmtRate(lthRate)})</Text><Text style={s.val}>{ltdAmount > 0 ? `- ${fmt(ltdAmount)}` : "해당없음"}</Text></View>)}
         {codeLines("장기보유특별공제 코드")}
         <View style={s.row}><Text style={s.lbl}>양도소득금액</Text><Text style={s.val}>{fmt(incomeAmountShown)}</Text></View>
-        {showLossOffset && (<View style={s.row}><Text style={s.lbl}>통산 후 양도소득금액</Text><Text style={s.val}>{fmt(aggIncomeAfterOffset)}</Text></View>)}
+        {showLossOffset && (<View style={s.row}><Text style={s.lbl}>통산 후 양도소득금액</Text><Text style={s.val}>{fmt((aggIncomeAfterOffset ?? 0) + nontaxableIncome)}</Text></View>)}
         {showLossOffset && aggUnusedLoss > 0 && (<View style={s.row}><Text style={s.lblSub}>소멸 차손 (이월 불인정)</Text><Text style={s.val}>- {fmt(aggUnusedLoss)}</Text></View>)}
-        {num(r.nontaxableGainAmount) !== undefined && (r.nontaxableGainAmount as number) > 0 && (<View style={s.row}><Text style={s.lblSub}>{nontaxableIncomeLabel(rhDetail?.scenarioId)}</Text><Text style={s.val}>- {fmt(r.nontaxableGainAmount)}</Text></View>)}
+        {nontaxableIncome > 0 && (<View style={s.row}><Text style={s.lblSub}>{str(r.aggregateNontaxableIncomeLabel) ?? nontaxableIncomeLabel(rhDetail?.scenarioId)}</Text><Text style={s.val}>- {fmt(nontaxableIncome)}</Text></View>)}
         <View style={s.row}><Text style={s.lbl}>세액감면대상금액</Text><Text style={s.val}>{eligible19 > 0 ? fmt(eligible19) : "0"}</Text></View>
         <View style={s.row}><Text style={s.lbl}>소득금액 감면대상</Text><Text style={s.val}>{incomeDeduction > 0 ? fmt(incomeDeduction) : "0"}</Text></View>
         {codeLines("감면종류·감면율")}
