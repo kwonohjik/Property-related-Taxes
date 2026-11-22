@@ -82,9 +82,10 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows,
   const showLthRate = !(!isRH && aggTaxable !== undefined);
   const reducibleIncome = (num(r.reducibleIncome) ?? 0) as number;
   // 함께 양도·다건 어댑터(`aggregateToFilingResult`)는 자산별 ⑲의 합을 따로 싣는다(US-67) — 있으면 그 값이 정본(화면 신고서 표 합계 열과 같은 함수).
+  // §161 경로(`isRH`)의 ⑲는 비과세분 차감 전 `incomeAmount`가 아니라 과세대상 양도소득금액(엔진 `taxableGain`)이다 — 화면 신고서 ⑲와 같은 인자(소득세법 §90①의 B).
   const eligible19 = num(r.aggregateReductionEligibleIncome) ?? reductionEligibleIncome(
     r.reductionTypeApplied as string | undefined,
-    incomeAmount,
+    isRH ? (num(r.taxableGain) ?? 0) : incomeAmount,
     reducibleIncome,
     (r.replacementLandDetail as { eligibleTransferIncome?: number } | undefined)?.eligibleTransferIncome,
     num(r.eligibleIncomeAfterLoss),

@@ -562,12 +562,14 @@ export function buildRows(
   // §161 비과세 양도소득금액 — 양도소득금액 단계 차감 (§95①에서 안분)
   setNum("nontaxableIncome", "total", isRH ? (result.nontaxableGainAmount ?? 0) : 0);
   // ⑲ 세액감면대상금액 = 감면대상 양도소득금액 (§90① — 감면율 前). §77 계열 reducibleIncome은 감면율 곱값이라 부적합.
+  // §90①의 B는 §95 양도소득금액 **안의** 감면대상 소득이다 — §161 경로는 위 `incomeAmount`가 비과세분 차감 전이므로
+  //   과세대상 양도소득금액(엔진 `taxableGain` — 아래 「감면후 소득금액」과 같은 축)을 넘긴다. 일반 고가주택 경로·다건 ⑲와 같은 값이다.
   setNum(
     "reductionTargetIncome",
     "total",
     reductionEligibleIncome(
       result.reductionTypeApplied,
-      incomeAmount,
+      isRH ? result.taxableGain : incomeAmount,
       result.reducibleIncome ?? 0,
       result.replacementLandDetail?.eligibleTransferIncome,
       result.eligibleIncomeAfterLoss,

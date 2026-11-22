@@ -136,7 +136,7 @@ describe("① 자산별 신고서 어댑터 — §155⑳ 부분과세 자산은 
     expect(valueOf(rows, /^비과세 양도소득금액/)).toBe(0);
   });
 
-  it("⑲ 세액감면대상금액은 이 결정 밖 — §77 감면 시료에서 어댑터 ⑲는 합산 표 자산 열과 같은 105,600,000(단건 신고서는 528,000,000 · 법령 판단 대기)", async () => {
+  it("⑲ 세액감면대상금액 — §77 감면 시료에서 어댑터 ⑲ · 합산 명세서 · 단건 신고서가 모두 과세대상 양도소득금액 105,600,000(단건 종전 528,000,000 · 소득세법 §90①의 B)", async () => {
     const { a, house } = await multi(true);
     expect(house.reductionType).toBe("public_expropriation");
     const hf = houseForm(true);
@@ -145,7 +145,14 @@ describe("① 자산별 신고서 어댑터 — §155⑳ 부분과세 자산은 
     const items = buildStatementItems(aggregateToFilingResult(a) as never, hf, hf.assets[0], { properties: a.properties, aggregated: a }, undefined);
     expect(items.get("reductionTargetIncome")!.value).toBe(105_600_000);
     const s = await runCalc(houseForm(true));
-    expect(valueOf(buildRows(s.json.data.result, "single", hf, hf.assets[0]) as Rows, "세액감면대상금액")).toBe(528_000_000);
+    expect(valueOf(buildRows(s.json.data.result, "single", hf, hf.assets[0]) as Rows, "세액감면대상금액")).toBe(105_600_000);
+    // 짝 — 같은 주택의 일반 고가주택 경로(특례 없음 · 1주택) 단건 ⑲와 같은 값
+    const gf = houseForm(true);
+    Object.assign(gf, { householdHousingCount: "1", houses: [] });
+    (gf.assets[0] as unknown as { rentalHousingException: object }).rentalHousingException = { ...gf.assets[0].rentalHousingException, applyException: false };
+    const g = await runCalc(gf);
+    expect(g.json.data.result.rentalHousingExceptionDetail?.applied).not.toBe(true);
+    expect(valueOf(buildRows(g.json.data.result, "single", gf, gf.assets[0]) as Rows, "세액감면대상금액")).toBe(105_600_000);
   });
 });
 
