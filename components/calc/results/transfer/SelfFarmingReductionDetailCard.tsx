@@ -24,7 +24,6 @@ export function SelfFarmingReductionDetailCard({ detail }: Props) {
     reducibleRatio,
     nonReducibleIncome,
     partialReductionApplied,
-    incorporationGraceExpired,
     legalBasis,
     breakdown,
   } = detail;
@@ -60,11 +59,6 @@ export function SelfFarmingReductionDetailCard({ detail }: Props) {
           자경농지 양도소득세 감면
         </p>
         <span className="text-micro text-muted-foreground">{legalBasis}</span>
-        {incorporationGraceExpired && (
-          <span className="text-micro rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 px-2 py-0.5">
-            편입 유예기간 경과 — 감면 상실
-          </span>
-        )}
       </div>
 
       {/* 판정 요약 */}

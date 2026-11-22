@@ -92,44 +92,7 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
 
   // LTHD 특례 (§97의3·§97의4)
   if (effect.effectCategory === "long_term_holding_special" || effect.effectCategory === "long_term_holding_additional") {
-    const lthdEffect = effect as typeof effect & {
-      overrideRate?: number;
-      additionalRate?: number;
-      rentalGainRatio: number;
-      eligibleRentalYears: number;
-      // [echo] transfer-tax-lthd.ts가 공제액 산출 직후 실어 보낸다 (표시 전용)
-      baseLthdRate?: number;
-      gainApplied?: number;
-      rentalGainApplied?: number;
-      nonRentalGainApplied?: number;
-      deductionApplied?: number;
-      // [echo] §97의3 특례·일반 공제액 비교 (조특법 §97의3③ — `transfer-tax-lthd-rental97.ts`). 구 이력은 없다.
-      specialApplied?: boolean;
-      deductionWithSpecial?: number;
-      deductionWithoutSpecial?: number;
-      // [echo] §98의2 특칙 장특이 이 조문의 공제액을 대체한 경우 엔진이 실제 공제한 §98의2 공제액 (US-16 · Q-2). 구 이력은 없다.
-      replacedBy982Deduction?: number;
-      // [echo] §97의4 임대기간 구간(조특령 §97의4② 기산 · §97⑤3호 상속 합산 · 자동말소 종점). 구 이력은 없다.
-      rentalPeriod974?: {
-        heir?: { start: string; end: string };
-        decedent?: { start: string; end: string };
-        endReason: "transfer" | "auto_cancel" | "voluntary_cancel";
-      };
-      // [echo] V-14 — §97의3 상속 합산 구간(조특령 §97의3④ → §97⑤3호). 구 이력은 없다.
-      rentalPeriod973?: {
-        decedent: { start: string; end: string };
-        heir: { start: string; end: string };
-      };
-      // [echo] 구 조특령 §97의3②2호 — 자동말소 8년 등록·임대 간주. 구 이력은 없다.
-      autoCancelDeemed973?: { cancelledDate: string; actualYears: number };
-      // [echo] PR-C — 단기→장기 변경신고 주택의 임대개시 의제(조특령 §97의3④ 후단). 구 이력은 없다.
-      shortTermConversionDetail?: {
-        era: "old" | "old_grandfathered" | "new_before_end" | "new_after_end";
-        deemedStartDate: string;
-        obligationYears?: number;
-        creditedDays?: number;
-      };
-    };
+    const lthdEffect = effect;
     // 산식은 echo가 모두 있을 때만 — 구 저장 이력에는 없다(graceful fallback)
     const hasLthdEcho =
       lthdEffect.gainApplied !== undefined &&
@@ -376,14 +339,7 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
 
   // 산출세액 감면 (§97·§97의2·§97의5)
   if (effect.effectCategory === "tax_amount") {
-    const taxEffect = effect as typeof effect & {
-      reductionRate: number;
-      reductionAmount: number;
-      rentalGainRatio: number;
-      isFullExemption: boolean;
-      section90?: { reducibleIncome: number; basicDeductionAllocated: number; taxBase: number };
-      rentalPeriod975?: { decedent: { start: string; end: string }; heir: { start: string; end: string } };
-    };
+    const taxEffect = effect;
     const s90 = taxEffect.section90;
     const p975 = taxEffect.rentalPeriod975;
     return (
@@ -417,7 +373,7 @@ export function Rental97DetailCard({ detail, effectLabel, calculatedTax, aggrega
                 조특법 §127⑦ 중복배제로 <b>적용되지 않았습니다</b>
               </span>
             ) : (
-              <span className="font-mono font-semibold text-emerald-900 dark:text-emerald-200">
+              <span className="font-mono tabular-nums whitespace-nowrap text-right font-semibold text-emerald-900 dark:text-emerald-200">
                 {formatN(taxEffect.reductionAmount)}
               </span>
             )}

@@ -60,10 +60,8 @@ export function resolveLthdFilingKind(result: TransferTaxResult, ambiguous = fal
     // 공제 0원 — 양도차익이 있어야 「배제」다(차손·비과세는 칸이 의미 없다).
     return result.taxableGain > 0 ? "excluded" : undefined;
   }
-  const r97 = result.rental97LthdDetail as
-    | { isEligible?: boolean; effectCategory?: string; specialApplied?: boolean; replacedBy982Deduction?: number }
-    | undefined;
-  if (r97?.isEligible === true && r97.replacedBy982Deduction === undefined) {
+  const r97 = result.rental97LthdDetail;
+  if (r97?.isEligible === true && r97.effectCategory !== "tax_amount" && r97.replacedBy982Deduction === undefined) {
     if (r97.effectCategory === "long_term_holding_special" && r97.specialApplied !== false) return "rental_97_3";
     if (r97.effectCategory === "long_term_holding_additional") return "rental_97_4";
   }
