@@ -67,7 +67,7 @@ export interface LossReturnArgs {
   usedEstimated: boolean;
   /** [echo] §97③ 엔진이 취득가액에서 실제로 공제한 감가상각비 — 표시 전용(세액 불변). 비워 두면 집계 역산 필요경비가 `E − D`로 오염된다. */
   depreciationAmount?: number;
-  exemptionResult: { isPartialExempt: boolean; exemptReason?: string };
+  exemptionResult: { isPartialExempt: boolean; exemptReason?: string; article89ExceptionApplied?: TransferTaxResult["article89ExceptionApplied"] };
   transferBurdenedGiftBreakdown: TransferTaxResult["transferBurdenedGiftBreakdown"];
   multiHouseSurchargeResult: Parameters<typeof buildTransferResultDetails>[0]["multiHouseSurchargeResult"];
   nonBusinessLandJudgment: Parameters<typeof buildTransferResultDetails>[0]["nonBusinessLandJudgment"];
@@ -201,6 +201,7 @@ export function buildLossTransferTaxResult({
     //   당초 농특세가 있었다면 기본값 0으로 환급 줄이 나온다(anchor transfer.route.amendment-rural-surtax-exempt-loss.us28).
     amendmentDetail: input.amendment ? computeAmendment(input.amendment, 0) : undefined,
     exemptReason: exemptionResult.exemptReason,
+    ...(exemptionResult.article89ExceptionApplied ? { article89ExceptionApplied: exemptionResult.article89ExceptionApplied } : {}),
     warnings: warnings.length > 0 ? warnings : undefined,
     transferGain: transferGain,
     taxableGain,

@@ -574,6 +574,7 @@ export function buildExemptEarlyResult(p: {
   effectiveInput: TransferTaxInput;
   steps: CalculationStep[];
   exemptReason: TransferTaxResult["exemptReason"];
+  article89ExceptionApplied?: TransferTaxResult["article89ExceptionApplied"];
   new994Detail: TransferTaxResult["new994Detail"];
   unsold989Detail: TransferTaxResult["unsold989Detail"];
   houseCountExclusionDetails: TransferTaxResult["houseCountExclusionDetails"];
@@ -609,6 +610,7 @@ export function buildExemptEarlyResult(p: {
     //   당초 농특세가 있었다면 기본값 0으로 환급 줄이 나온다(anchor transfer.route.amendment-rural-surtax-exempt-loss.us28).
     amendmentDetail: p.input.amendment ? computeAmendment(p.input.amendment, 0) : undefined,
     exemptReason: p.exemptReason,
+    ...(p.article89ExceptionApplied ? { article89ExceptionApplied: p.article89ExceptionApplied } : {}),
     new994Detail: p.new994Detail,
     unsold989Detail: p.unsold989Detail,
     houseCountExclusionDetails: p.houseCountExclusionDetails,

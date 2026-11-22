@@ -46,6 +46,7 @@ import { findStepByLabel } from "@/components/calc/results/transfer/DetailedStat
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 import { reductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
 import type { RentalHousingExceptionResult } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
+import { Article89ExceptionBasisLine } from "@/components/calc/results/shared/Article89ExceptionBasisLine";
 
 
 /**
@@ -351,9 +352,11 @@ export function PropertyBreakdownAccordion({
       */}
       <CardContent className={cn("pt-0 border-t", open ? "block" : "hidden print:block")}>
           {breakdown.isExempt ? (
-            <p className="py-4 text-sm text-muted-foreground text-center">
-              {breakdown.exemptReason ?? "비과세 대상"}
-            </p>
+            <div className="py-4 text-sm text-muted-foreground text-center">
+              <p>{breakdown.exemptReason ?? "비과세 대상"}</p>
+              {/* §89② 예외(§156의2·§156의3) 근거 — 사유 문구는 본체 특례만 말한다(단건 결과와 같은 줄). */}
+              <Article89ExceptionBasisLine applied={breakdown.article89ExceptionApplied} className="mt-1" />
+            </div>
           ) : (
             <div className="py-3 space-y-0 text-sm divide-y divide-border/50">
               {/* 양도차익 */}

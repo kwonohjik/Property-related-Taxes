@@ -243,6 +243,7 @@ function calculateTransferTaxCore(
       effectiveInput,
       steps,
       exemptReason: exemptionResult.exemptReason,
+      article89ExceptionApplied: exemptionResult.article89ExceptionApplied,
       new994Detail,
       unsold989Detail,
       houseCountExclusionDetails,

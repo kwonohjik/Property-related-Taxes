@@ -585,6 +585,7 @@ export function computeAggregateOnce(
       isPartialExempt: r.result.isPartialExempt, // [echo] §91② 범위 밖 고지 술어용 (표시 전용)
       ...(r.result.rentalHousingExceptionDetail?.applied === true ? { rentalHousingApplied: true, rentalHousingScenarioId: r.result.rentalHousingExceptionDetail.scenarioId } : {}), // [echo] §155⑳ 경로 표지·시나리오 — 장특 기준(전체 차익)·비과세 양도소득금액 행 라벨 표시 분기 (표시 전용)
       exemptReason: r.result.exemptReason,
+      ...(r.result.article89ExceptionApplied ? { article89ExceptionApplied: r.result.article89ExceptionApplied } : {}),
       transferPrice: effectiveTransferPrice,
       acquisitionPrice: effectiveAcquisitionPrice,
       necessaryExpense: effectiveNecessaryExpense,
