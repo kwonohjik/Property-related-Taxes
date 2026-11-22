@@ -1,0 +1,169 @@
+/**
+ * 합산 신고서 표 — 일괄(함께 양도) × §155⑳ 특례 × 12억 초과(부분과세) 자산 열의 비과세 단계 (R-c06-04 · 사용자 결정 2026-11-22 a).
+ *
+ * 종전: 합산 표(`FilingFormTableAggregateHelpers`)는 자산마다 «과세대상 = 양도소득금액 + 장특» 역산(`assetTaxableGain`)을 써서
+ *   §155⑳ 자산의 비과세분을 **양도차익 단계**(비과세 양도차익 422,400,000 · 과세대상 777,600,000)에 싣고, 「비과세 양도소득금액」 행을 0으로 고정했다.
+ *   같은 주택의 단건 표는 비과세 양도차익 0 · 과세대상 1,200,000,000 · 양도소득금액 528,000,000 · 비과세 양도소득금액 422,400,000(양도소득금액 단계)이다.
+ * 결정: `rentalHousingApplied && !isExempt && !splitDetail` 자산 열은 단건 규약 — 표시 전용(세액 79,681,800 불변).
+ * 시료: `statement-rh-partial-exempt-bundled.anchor.test.ts`와 같다(강남 주택 15억 + 토지 3억 일괄 actual).
+ */
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
+import { makeDefaultAsset, makeDefaultRentalUnit } from "@/lib/stores/calc-wizard-asset-factory";
+import type { HouseEntry } from "@/lib/stores/calc-wizard-asset-nbl";
+import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
+import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
+import { runCalc } from "./_helpers/redev-one-house-route";
+import { aggregateToFilingResult } from "@/components/calc/results/BundledAllocationCard";
+import { buildAggregateRows } from "@/components/calc/results/transfer/FilingFormTableAggregateHelpers";
+import { buildRows } from "@/components/calc/results/transfer/FilingFormTableHelpers";
+import { buildStatementItems } from "@/components/calc/results/transfer/DetailedStatementHelpers";
+import { aggregateNontaxableIncomeLabel } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
+
+vi.mock("@/lib/db/tax-rates", async (io) => {
+  const a = await io<typeof import("@/lib/db/tax-rates")>();
+  return { ...a, preloadTaxRates: vi.fn() };
+});
+vi.mock("@/lib/api/rate-limit", () => ({
+  checkRateLimit: vi.fn().mockReturnValue({ allowed: true, limit: 30, remaining: 29, resetAt: Date.now() + 60_000 }),
+  getClientIp: vi.fn().mockReturnValue("127.0.0.1"),
+  shouldBypassRateLimit: vi.fn().mockReturnValue(true),
+}));
+import { preloadTaxRates } from "@/lib/db/tax-rates";
+
+beforeEach(() => {
+  vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates());
+});
+
+const GANGNAM = "1168010100";
+const ROW: HouseEntry = { id: "h2", region: "capital", regionCode: GANGNAM, acquisitionDate: "2012-01-01", officialPrice: "300000000", isInherited: false, isLongTermRental: false, isApartment: true, isOfficetel: false, isUnsoldHousing: false };
+const RENTAL: HouseEntry = { ...ROW, id: "h4", acquisitionDate: "2016-01-01", isLongTermRental: true, isApartment: false };
+
+function form(rh: boolean, withLand = true) {
+  const f = createDefaultTransferFormData();
+  f.isOneHousehold = true;
+  f.assets[0] = { ...f.assets[0], assetKind: "housing", acquisitionDate: "2015-01-01", fixedAcquisitionPrice: "300,000,000", regionCode: GANGNAM, actualSalePrice: "1,500,000,000", addressJibun: "서울 강남구 역삼동 1" } as never;
+  if (withLand) {
+    f.assets.push({ ...makeDefaultAsset(2), assetKind: "land", landNature: "standalone", acquisitionDate: "2010-01-01", acquisitionArea: "300", fixedAcquisitionPrice: "100,000,000", actualSalePrice: "300,000,000" } as never);
+  }
+  const total = 1_500_000_000 + (withLand ? 300_000_000 : 0);
+  Object.assign(f, { transferDate: "2026-09-18", contractTotalPrice: String(total), bundledSaleMode: "actual", residencePeriodMonths: "0", householdHousingCount: rh ? "2" : "1", isRegulatedArea: true, wasRegulatedAtAcquisition: false, houses: rh ? [RENTAL] : [] });
+  const a = f.assets[0] as unknown as { residenceInputMode: string; residencePeriodMonthsAsset: string; rentalHousingException: object };
+  a.residenceInputMode = "direct";
+  a.residencePeriodMonthsAsset = "48";
+  if (rh) {
+    a.rentalHousingException = { ...a.rentalHousingException, applyException: true, scenario: "A", rentalUnits: [{ ...makeDefaultRentalUnit(), businessRegistrationDate: "2019-03-01", rentalRegistrationDate: "2019-03-01", standardPriceAtRentalStart: "250,000,000", rentalInputMode: "direct", rentalMonths: "90", requirementsConfirmed: true }] };
+  }
+  return f;
+}
+
+const GAIN_ROWS = ["전체 양도차익", "비과세 양도차익", "과세대상 양도차익", "장기보유특별공제", "양도소득금액", "감면후 소득금액"] as const;
+
+async function aggregateTable(rh: boolean) {
+  const f = form(rh);
+  const r = await runCalc(f);
+  expect(r.status).toBe(200);
+  const agg = r.json.data.aggregated;
+  const filing = aggregateToFilingResult(agg) as never;
+  const rows = buildAggregateRows(filing, { properties: agg.properties, aggregated: agg }, f);
+  const byLabel = (label: string | RegExp) => rows.find((row) => (typeof label === "string" ? row.label === label : label.test(row.label)));
+  const [house, land] = agg.properties.map((p: PerPropertyBreakdown) => p.propertyId) as [string, string];
+  const items = buildStatementItems(filing, f, f.assets[0], { properties: agg.properties, aggregated: agg }, undefined);
+  return { agg, rows, byLabel, house, land, items };
+}
+
+describe("합산 신고서 — §155⑳ 부분과세 자산 열은 단건 규약(비과세는 양도소득금액 단계)", () => {
+  it("🔑 주택 열 — 비과세 양도차익 0 · 과세대상 1,200,000,000 · 양도소득금액 528,000,000 · 비과세 양도소득금액 422,400,000 (종전 422,400,000 · 777,600,000 · 105,600,000 · 0)", async () => {
+    const { byLabel, house } = await aggregateTable(true);
+    expect(byLabel("전체 양도차익")!.values[house]).toBe(1_200_000_000);
+    expect(byLabel("비과세 양도차익")!.values[house]).toBe(0);
+    expect(byLabel("과세대상 양도차익")!.values[house]).toBe(1_200_000_000);
+    expect(byLabel("장기보유특별공제")!.values[house]).toBe(672_000_000);
+    expect(byLabel("양도소득금액")!.values[house]).toBe(528_000_000);
+    expect(byLabel(/^비과세 양도소득금액/)!.values[house]).toBe(422_400_000);
+    expect(byLabel("감면후 소득금액")!.values[house]).toBe(105_600_000);
+  });
+
+  it("🔑 단건 표와 같은 값 — 같은 주택 단독 양도의 단건 신고서 행·엔진 `nontaxableGainAmount`", async () => {
+    const { byLabel, house } = await aggregateTable(true);
+    const s = form(true, false);
+    const rs = await runCalc(s);
+    expect(rs.json.data.mode).toBe("single");
+    const single = rs.json.data.result;
+    expect(single.nontaxableGainAmount).toBe(422_400_000);
+    const srows = buildRows(single, "single", s, s.assets[0]);
+    const sv = (label: string | RegExp) => srows.find((row) => (typeof label === "string" ? row.label === label : label.test(row.label)))!.values.total;
+    for (const label of ["비과세 양도차익", "과세대상 양도차익", "장기보유특별공제", "양도소득금액"]) {
+      expect(byLabel(label)!.values[house], label).toBe(sv(label));
+    }
+    expect(byLabel(/^비과세 양도소득금액/)!.values[house]).toBe(sv(/^비과세 양도소득금액/));
+  });
+
+  it("🔑 행 라벨 — 시나리오 A는 단건과 같이 조문 없는 「비과세 양도소득금액」(「(소령 §161①)」은 B에만)", async () => {
+    const { agg, rows } = await aggregateTable(true);
+    expect(agg.properties[0].rentalHousingScenarioId).toMatch(/^RH-A/);
+    expect(rows.some((row) => row.label === "비과세 양도소득금액")).toBe(true);
+    expect(rows.some((row) => row.label.includes("§161"))).toBe(false);
+  });
+
+  it("토지 열 불변 · 합계 열 = 자산 칸 합 · 열 안 항등식", async () => {
+    const { byLabel, house, land } = await aggregateTable(true);
+    expect(byLabel("비과세 양도차익")!.values[land]).toBe(0);
+    expect(byLabel("과세대상 양도차익")!.values[land]).toBe(200_000_000);
+    expect(byLabel("양도소득금액")!.values[land]).toBe(140_000_000);
+    expect(byLabel(/^비과세 양도소득금액/)!.values[land]).toBe(0);
+    const n = (label: string | RegExp, col: string) => byLabel(label)!.values[col] as number;
+    for (const label of [...GAIN_ROWS, /^비과세 양도소득금액/]) {
+      expect(n(label, house) + n(label, land), String(label)).toBe(n(label, "total"));
+    }
+    expect(n("과세대상 양도차익", "total")).toBe(1_400_000_000);
+    expect(n("양도소득금액", "total")).toBe(668_000_000);
+    expect(n(/^비과세 양도소득금액/, "total")).toBe(422_400_000);
+    for (const col of [house, land, "total"]) {
+      expect(n("전체 양도차익", col) - n("비과세 양도차익", col)).toBe(n("과세대상 양도차익", col));
+      expect(n("과세대상 양도차익", col) - n("장기보유특별공제", col)).toBe(n("양도소득금액", col));
+      expect(n("양도소득금액", col) - n(/^비과세 양도소득금액/, col)).toBe(n("감면후 소득금액", col));
+    }
+  });
+
+  it("세액 불변 — 총세액 79,681,800 · 과세표준 243,100,000 · 일반 경로 15억과 같다", async () => {
+    const a = await aggregateTable(true);
+    const b = await aggregateTable(false);
+    expect(a.agg.totalTax).toBe(79_681_800);
+    expect(a.byLabel("과세표준")!.values.total).toBe(243_100_000);
+    expect(a.agg.totalTax).toBe(b.agg.totalTax);
+  });
+
+  it("짝 — 일반 경로(§155⑳ 없음) 15억은 종전 규약: 비과세분이 양도차익 단계(고가주택 §95③) · 비과세 양도소득금액 0 · 종전 라벨", async () => {
+    const { byLabel, house } = await aggregateTable(false);
+    expect(byLabel("비과세 양도차익")!.values[house]).toBe(960_000_000);
+    expect(byLabel("과세대상 양도차익")!.values[house]).toBe(240_000_000);
+    expect(byLabel("양도소득금액")!.values[house]).toBe(105_600_000);
+    expect(byLabel("비과세 양도소득금액 (소령 §161①)")!.values[house]).toBe(0);
+  });
+
+  it("🔑 상세명세서 다건 쪽도 같은 규약 — 비과세 양도차익 합 0 · 과세대상 합 1,400,000,000 · 양도소득금액 합 668,000,000 · 비과세 양도소득금액 422,400,000", async () => {
+    const { items, byLabel } = await aggregateTable(true);
+    expect(items.get("exemptGain")!.value).toBe(byLabel("비과세 양도차익")!.values.total);
+    expect(items.get("taxableGain")!.value).toBe(byLabel("과세대상 양도차익")!.values.total);
+    expect(items.get("incomeAmount")!.value).toBe(668_000_000);
+    expect(items.get("nontaxableIncome")!.value).toBe(422_400_000);
+    expect(items.get("nontaxableIncome")!.label).toBe("비과세 양도소득금액");
+    expect(String(items.get("nontaxableIncome")!.formula)).toContain("= 422,400,000");
+  });
+});
+
+describe("aggregateNontaxableIncomeLabel — 단건 `nontaxableIncomeLabel` 규칙", () => {
+  const rh = (id?: string) => ({ rentalHousingApplied: true, rentalHousingScenarioId: id, isExempt: false, transferGain: 1_200_000_000, longTermHoldingDeduction: 672_000_000, income: 105_600_000 }) as unknown as PerPropertyBreakdown;
+  const plain = { isExempt: false, transferGain: 200_000_000, longTermHoldingDeduction: 60_000_000, income: 140_000_000 } as unknown as PerPropertyBreakdown;
+  it("부분과세 자산 없음 → 종전 라벨", () => expect(aggregateNontaxableIncomeLabel([plain])).toBe("비과세 양도소득금액 (소령 §161①)"));
+  it("B1 → §161① · B2 → §161②", () => {
+    expect(aggregateNontaxableIncomeLabel([rh("RH-B1"), plain])).toBe("비과세 양도소득금액 (소령 §161①)");
+    expect(aggregateNontaxableIncomeLabel([rh("RH-B2")])).toBe("비과세 양도소득금액 (소령 §161②)");
+  });
+  it("A · 구 이력(시나리오 없음) · 시나리오 혼재 → 조문 없는 라벨", () => {
+    expect(aggregateNontaxableIncomeLabel([rh("RH-A2")])).toBe("비과세 양도소득금액");
+    expect(aggregateNontaxableIncomeLabel([rh(undefined)])).toBe("비과세 양도소득금액");
+    expect(aggregateNontaxableIncomeLabel([rh("RH-B1"), rh("RH-B2")])).toBe("비과세 양도소득금액");
+  });
+});

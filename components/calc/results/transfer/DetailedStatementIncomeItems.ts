@@ -29,6 +29,8 @@ import { pickIncomeDeductionFormulaSource } from "./reduction-eligible-income";
 import { eligibleIncomeBasisText } from "./reduction-eligible-income";
 import { INCOME_DEDUCTION_5YEAR_FORMULA } from "./DetailedStatementFormulaNodes";
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
+import { filingNontaxableIncomeOf } from "./DetailedStatementRhPartialFormulas";
+import { aggregateNontaxableIncomeLabel } from "./DetailedStatementRhPartialFormulas";
 
 /** 4단계 — `items` 에 **set 만** 한다(반환 없음). */
 export function setIncomeAndBasicDeductionItems(
@@ -58,8 +60,10 @@ export function setIncomeAndBasicDeductionItems(
     result.steps?.filter((s) => !s.label?.includes("비과세") && !s.label?.includes("양도소득금액 차감")),
     "양도소득금액",
   );
+  // R-c06-04 — §155⑳ 부분과세 자산 행은 단건 규약(비과세 양도소득금액 차감 전)이라 그 몫을 더한다 — 합산 신고서와 같은 leaf.
+  const incomeOfAsset = (p: PerPropertyBreakdown) => p.incomeAfterOffset + filingNontaxableIncomeOf(p);
   const sumIncome = isAggregate
-    ? properties.reduce((s, p) => s + p.incomeAfterOffset, 0)
+    ? properties.reduce((s, p) => s + incomeOfAsset(p), 0)
     : 0;
   /**
    * §161(장기임대주택 보유자 거주주택 비과세, `isRH`)만 **분기한다** (2026-09-06 · UI 리뷰
@@ -101,7 +105,7 @@ export function setIncomeAndBasicDeductionItems(
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,
-          (p) => p.incomeAfterOffset,
+          incomeOfAsset,
           (p) => {
             const given = (aggregate?.aggregated.lossOffsetTable ?? []).filter((row) => row.fromPropertyId === p.propertyId);
             return buildIncomeFormula(
@@ -116,13 +120,19 @@ export function setIncomeAndBasicDeductionItems(
 
   // 비과세 양도소득금액 — 엔진이 emit한 §161① step의 산식·법령 우선 사용 (정확한 변수값).
   const nontaxStep = findStepByLabel(result.steps, "비과세 양도소득금액");
+  const aggNontaxableIncome = isAggregate ? properties.reduce((s, p) => s + filingNontaxableIncomeOf(p), 0) : undefined;
   items.set("nontaxableIncome", {
     // 특례 적용 결과만 시나리오별 라벨 — 미적용은 종전 라벨(행은 특례 때만 값이 있다).
-    label: isRentalHousingException ? nontaxableIncomeLabel(rhScenarioId) : "비과세 양도소득금액 (소령 §161①)",
-    value: result.nontaxableGainAmount ?? 0,
+    // 다건·일괄은 자산별 §155⑳ 부분과세 몫의 합 — 합산 신고서 합계 열과 같은 leaf·같은 라벨 규칙(R-c06-04).
+    label: isAggregate
+      ? aggregateNontaxableIncomeLabel(properties)
+      : isRentalHousingException ? nontaxableIncomeLabel(rhScenarioId) : "비과세 양도소득금액 (소령 §161①)",
+    value: aggNontaxableIncome ?? (result.nontaxableGainAmount ?? 0),
     formula:
-      nontaxStep?.formula ??
-      "§95① 양도소득금액 − 과세대상 양도소득금액 — §155⑳ + §161 안분 비과세 부분",
+      aggNontaxableIncome
+        ? `자산별 (§95① 양도소득금액 − 과세대상 양도소득금액) 합계 = ${aggNontaxableIncome.toLocaleString()}`
+        : (nontaxStep?.formula ??
+          "§95① 양도소득금액 − 과세대상 양도소득금액 — §155⑳ + §161 안분 비과세 부분"),
     legalBasis: nontaxStep?.legalBasis ?? "소득세법 시행령 §161·§155⑳",
     note: "장기임대주택 거주주택 비과세 특례 시만 표시",
   });

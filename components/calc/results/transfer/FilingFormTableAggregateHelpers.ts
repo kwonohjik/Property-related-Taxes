@@ -11,10 +11,12 @@ import { multiFormAssetOf } from "./multi-result-groups";
 import type { TransferTaxResult } from "@/lib/tax-engine/transfer-tax";
 import {
   effectiveGrossGain,
-  assetTaxableGain,
-  assetExemptGain,
   capExInAcquisitionColumnOfProperty,
 } from "@/components/calc/results/transfer/exempt-gross-gain";
+import { filingExemptGainOf } from "./DetailedStatementRhPartialFormulas";
+import { filingTaxableGainOf } from "./DetailedStatementRhPartialFormulas";
+import { filingNontaxableIncomeOf } from "./DetailedStatementRhPartialFormulas";
+import { aggregateNontaxableIncomeLabel } from "./DetailedStatementRhPartialFormulas";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { residenceIntervalMonths } from "@/lib/stores/calc-wizard-asset-residence";
@@ -169,6 +171,7 @@ export function buildAggregateRows(
   let sumLtDeduction = 0;
   let sumLtHolding = 0;
   let sumLtResidence = 0;
+  let sumNontaxableIncome = 0;
   // 산출세액 행 주석: 자산별 shortTermNote (부수토지 일체과세 등 특수 세율)
   const taxNotes: Record<string, string> = {};
   // 취득가액 행 주석: 영 §163⑨ 단서 1호·2호 채택값(D1-4·D2-4) — 단건 신고서(`FilingFormTableHelpers` split 분기)와 같은 leaf·같은 문구.
@@ -263,10 +266,11 @@ export function buildAggregateRows(
     // 비-비과세는 assetTaxableGain = income + 장특공제 (income = taxableGain - 장특 · 차손 자산은 엔진 과세분 income 그대로 — R-c10-02).
     // 자산별 신고서 어댑터(`MultiTransferPropertyBreakdown`)와 **같은 leaf**를 쓴다 —
     // 두 표가 같은 자산을 다르게 표시하던 것을 막는다(#019).
+    // R-c06-04 — §155⑳ 부분과세 자산은 단건 신고서 규약(비과세는 양도소득금액 단계 — 비과세 양도차익 0 · 과세대상 = 전체 양도차익)이다.
     const transferGain = effectiveGrossGain(p);
     const longTermDed = p.longTermHoldingDeduction;
-    const taxableGainOfAsset = assetTaxableGain(p);
-    const exemptGainOfAsset = assetExemptGain(p);
+    const taxableGainOfAsset = filingTaxableGainOf(p);
+    const exemptGainOfAsset = filingExemptGainOf(p);
     setNum("transferGain", col, transferGain);
     setNum("exemptGain", col, exemptGainOfAsset);
     setNum("taxableGain", col, taxableGainOfAsset);
@@ -290,9 +294,11 @@ export function buildAggregateRows(
     setNum("ltHoldingPart", col, split.holdingAmount);
     setNum("ltResidencePart", col, split.residenceAmount);
 
-    // 양도소득금액
-    setNum("incomeAmount", col, p.income);
-    setNum("nontaxableIncome", col, 0);
+    // 양도소득금액 — §155⑳ 부분과세 자산은 비과세 양도소득금액을 빼기 전(단건 `전체 양도차익 − 장특`) · 비과세분은 바로 아래 행(R-c06-04).
+    const nontaxableIncomeOfAsset = filingNontaxableIncomeOf(p);
+    setNum("incomeAmount", col, p.income + nontaxableIncomeOfAsset);
+    setNum("nontaxableIncome", col, nontaxableIncomeOfAsset);
+    sumNontaxableIncome += nontaxableIncomeOfAsset;
     setNum(
       "reductionTargetIncome",
       col,
@@ -431,14 +437,15 @@ export function buildAggregateRows(
   setNum("ltResidencePart", "total", sumLtResidence);
   // 합계도 자산 칸과 **같은 축(통산 전)** — `totalIncomeAfterOffset`은 통산 후라 소멸 차손이 있으면
   // 칸의 합과 갈린다(`양도소득금액 + 통산 + 소멸 = 통산 후`이 가로로 성립해야 한다).
+  // §155⑳ 부분과세 자산 칸은 비과세 양도소득금액 차감 전이라 그 몫을 함께 더한다(자산 칸 합 = 합계 · R-c06-04).
   setNum(
     "incomeAmount",
     "total",
-    properties.reduce((sum, p) => sum + p.income, 0),
+    properties.reduce((sum, p) => sum + p.income, 0) + sumNontaxableIncome,
   );
   setNum("lossOffset", "total", sumLossOffset);
   setNum("lossExpired", "total", sumLossExpired);
-  setNum("nontaxableIncome", "total", 0);
+  setNum("nontaxableIncome", "total", sumNontaxableIncome);
   setNum("reductionTargetIncome", "total", sumReductionEligibleIncome(properties));
   setNum(
     "reductionTargetIncome2",
@@ -584,7 +591,7 @@ export function buildAggregateRows(
     ...(hasLossExpiredRow
       ? ([["lossExpired", "통산되지 못한 차손 소멸 (이월 불가)"]] as Array<[string, string]>)
       : []),
-    ["nontaxableIncome", "비과세 양도소득금액 (소령 §161①)", { indent: true }],
+    ["nontaxableIncome", aggregateNontaxableIncomeLabel(properties), { indent: true }],
     ["reductionTargetIncome", "세액감면대상금액"],
     ["reductionTargetIncome2", "소득금액 감면대상"],
     ...(hasAnyValue(v, "reductionKind") ? ([["reductionKind", FILING_CODE_ROW_LABEL.reductionKind]] as Array<[string, string]>) : []),
