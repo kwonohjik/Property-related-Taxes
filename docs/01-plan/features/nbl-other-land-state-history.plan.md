@@ -1,6 +1,6 @@
 # 기타토지 상태 이력 입력 모델 — 통합 계획서 (Q-4 (다))
 
-> 상태: **Plan v3.2 — Q-15 (가) → (가′) 정정 반영(2026-11-22 · 근거 V-21 실측 · §5-1-1)** · **남은 사용자 결정 0건** · E0 Pre-Do anchor 구현됨(테스트·문서만) · **E1 구현됨(leaf·타입·소비표·고지·검증 문구·단위 테스트 — 판정·⑫·⑭ 미연결 = 세액 불변, §4 · §7-2)** · **V-22 해소(2026-11-22 — 3호 사업기간의 이전 구간 적용은 법 §104의3①4호 각 목 합집합 구조로 근거 확인)** · 남은 확인 = UV-6(U2 전)
+> 상태: **Plan v3.2 — Q-15 (가) → (가′) 정정 반영(2026-11-22 · 근거 V-21 실측 · §5-1-1)** · **남은 사용자 결정 0건** · E0 Pre-Do anchor 구현됨(테스트·문서만) · **E1 구현됨(leaf·타입·소비표·고지·검증 문구·단위 테스트 — 판정·⑫·⑭ 미연결 = 세액 불변, §4 · §7-2)** · **V-22 해소(2026-11-22 — 3호 사업기간의 이전 구간 적용은 법 §104의3①4호 각 목 합집합 구조로 근거 확인)** · **E2 구현됨(2026-11-22 — 판정 연결·⑫·⑭·echo · §4 · §7-3)** · 남은 확인 = UV-6(U2 전)
 > 출처: 비사업용 토지 리뷰 2026-11 `docs/reviews/nbl-other-categories-review-2026-11.md` §1.4 V2-C2 · Q-4 · §12.4 기능 제약 2번
 > 결정 이력(2026-11-22 사용자): ① Q-1~Q-13 전부 추천안 승인(Q-6 «모름 = 현행 + 고지»는 «모름 = 혜택 불성립» 원칙과의 긴장을 알고 승인) ② V-1을 처음엔 «과세기준일(6.1.) 단위»로 정했다가, 조사 결과(6.1. 상태를 일수에 배정하는 조문 없음 · 해석례·재결례는 일 단위 우세 — 서면법규과-16(사안: 일부 멸실 후 증축) «신축일부터 양도일까지» · 사전-2019-법령해석재산-0289 «존재하는 기간» · 국심2007부2520은 «전년도 과세기준일부터 기산» 주장 배척)를 보고 **일 단위로 재결정**(Q-14 14-1 (나)). 과세기준일 접기와 Q-14 14-2~14-4는 폐기 — **재제안 금지**. ③ **Q-15 = (가′)**(2026-11-22 사용자 — 같은 날 초판 (가)를 정정): core 자체 사업기간(DM-01 당해 사업개시일 · 3호 조성 완료 `[완료일, +2년)` 등)이 있으면 **사업용 구간 = 이력상 사업 구간(pastBusiness) ∪ ((이전 구간 ∪ 꼬리 구간) ∩ core 자체 사업기간)** — 마지막 사건일 앞 구간에 걸친 core 자체 사업기간도 사업용으로 센다. 초판 (가) 문언(꼬리 ∩ core 자체 사업기간만)은 E0 실측(V-21)에서 **이력 한 건을 넣는 것만으로 과세가 늘었다**(3호 시료 현행 730 사업용 → 550 비사업용 · DM-01 시료 911 사업용 → 546 비사업용) — 사용자가 (가′)를 택했다. 이력 우선 · 양도일 의제 동시 시 이력 미적용 유지(§5 · §5-1 · §5-1-1). «3호의 법적 근거»는 V-22에서 확인했다(법 §104의3①4호 각 목 합집합 · 2026-11-22).
 > 세부 계획서(이 문서가 정본 — 어긋나면 이 문서가 이긴다):
@@ -73,7 +73,7 @@ judgeNonBusinessLand
    - ✅ **구현됨(브랜치 `test/nbl-state-history-e0` · 테스트·문서만)**: `__tests__/tax-engine/non-business-land/nbl-state-history.predo.anchor.test.ts`(Anchor 1 · 66건) · `…-compat.anchor.test.ts` + `__snapshots__/…snap`(Anchor 2 엔진 · 83건 — 격자 20 × 모드 4) · `…-notice.anchor.test.ts`(Anchor 3 엔진 · 79건) · `__tests__/api/nbl-state-history-route.anchor.test.ts`(Anchor 2·3 route · 6건 — 세액 2값 + 모드 4종 응답 전체 + 고지) · 공용 표 `__tests__/tax-engine/_helpers/nbl-state-history-{day-table,grid}.ts`(E1 leaf 단위 테스트가 같은 표로 대조). mutation 실측은 §7-1.
 2. **E1** ✅ **구현됨(브랜치 `feat/nbl-state-history-e1` · 판정 경로 미연결 — 세액 불변)**: 엔진 leaf(신규 파일 `other-land-state-history.ts`: `deriveOtherLandStateIntervals`·`stateEventRowIssue`·`stateEventSequenceIssue`·`isStateIntervalBusiness`·`hasBuildingAtTransfer`·`stateHistoryBusinessIntervals`(Q-15 (가′) 구간 산식)·라벨 표) · 타입(기존 `land-usage.types.ts`에 추가 — `NonBusinessLandInput`에는 E2) · 소비표 `stateHistory` 열 · 고지 상수 8종 · ⑧⑫ 공용 issue leaf·문구. **`applyStateHistory` 분담**: 이 문서 초판은 E1에 적었으나 엔진 계획서 §7.4는 E2(`businessPeriodsUsed`·echo·`PeriodEvaluationBasis` 확장이 따라붙는 결과 조립)다 — **E1은 그 안의 «구간 산식»(사업용 구간 = 이전 구간 ∪ 자체 사업기간 교차)만 leaf로 두고, 결과 객체 조립·판정 연결은 E2**로 했다(§7-2). **새 조문 인용 없음**(`PROPERTY.TAX_BASE_DATE`는 manifest 미등록 — 인용하게 되면 등록 + `verify:legal`). 도달 불가 가드 `__tests__/lib/nbl-state-history-leaf-unreachable.test.ts`.
 3. **U0** UI 무화면: ①②③ + 술어(`effectiveOtherHasBuilding` 등 — 건축물 유무 직접 읽기 11곳: ⑤ 6 · ⑧ 2 · ⑫ 1 · ④ 서버 매퍼 2, 곳마다 anchor).
-4. **E2** 판정 연결·⑫·⑭·echo `intervals[]`·`applyStateHistory` 결과 조립·`CategoryJudgeResult.businessPeriodsUsed` + Anchor 4(이력 + DM-01 조합 — 현 안전망 0건 · 3호 조합 포함 · **(가′) 값으로 E0 Anchor 1의 (가) 문언 값 교체**). **착수 게이트: Q-15 (가′) 해소(2026-11-22) · V-18 해소 · V-21 해소((가′)) · V-22 해소(3호 법적 근거).** E2는 도달 불가 가드(E1)를 배선 확인으로 갱신한다.
+4. **E2** ✅ **구현됨(브랜치 `feat/nbl-state-history-e2` — 세액이 바뀌는 경로 = `changed` + 사건 입력뿐)**: `other-land-state-history-apply.ts`의 `applyStateHistory`(사건 → 일 단위 구간 → 사업용 구간 (가′) → `meetsPeriodCriteria` 한 번 · 한정 고지로 교체 · `periodEvaluation.basis = "state_history"` + 구간표·3기준 수치 echo) · ⑫ `nblOtherStateHistoryMode`·`nblOtherStateEvents`(철거 직전 구분 enum) + refine(하한 규칙 없음) · ⑭ `buildLandStateHistory` + `hasBuilding` 파생(`effectiveOtherHasBuilding` — ⑫ 거울과 같은 함수) · `PeriodCriteriaResult` optional 수치. **설계와 달라진 점 3가지**: ① 엔진 입력은 구간이 아니라 **사건**(`landStateHistory: { mode, events }` — 구간은 판정 안에서 같은 leaf로 파생. 매퍼가 구간까지 가는 안은 꼬리의 재산세 구분·건축물 유무를 두 곳이 따로 알아야 해 단일 소스가 약했다) ② core의 자체 사업기간은 `CategoryJudgeResult.businessPeriodsUsed`가 아니라 **`OtherLandOwnTrace`**(`other-land-helpers.ts`)로 전달 — core 반환 지점이 수십 곳이라 필드 운반이 더 위험했다. `businessPeriodsUsed`는 판정이 §168의6에 넘긴 사업용 구간의 감사용 echo로 쓴다 ③ **(가′) 보강 — 꼬리 보존**: 자체 사업기간 경로(DM-01)가 적용됐지만 core의 사업용 결론이 `fullPeriod`(양도일 현재 상태: 별도합산 건축물 등)에서 나왔다면 꼬리 구간도 사업용으로 센다 — 안 세면 «자체 사업기간이 있으면 양도일 현재 상태를 버린다»는 법에 없는 제한이라 법 근거 없는 불리 적용이다. **`unknown`만 E0 골든과 달라진다**: 현행 판정 + `NBL_STATE_HISTORY_UNKNOWN_NOTICE` 한 줄(세액·steps·echo 불변 — E0 모드 4종 anchor를 «`""`·`unchanged`는 바이트 동일 · `unknown`은 고지 한 줄»로 갱신). `unchanged`는 바이트 동일(UI 전용 `NBL_STATE_HISTORY_UNCHANGED_NOTICE`는 U1이 쓴다). 기회주의적 분리: `other-land.ts` 754 → 696(`other-land-helpers.ts`) · `types.ts` 770 → 669(`revenue-test.types.ts`). Anchor 4 = `nbl-state-history-e2.anchor.test.ts` · route 관통 = `__tests__/api/nbl-state-history-e2-route.anchor.test.ts`(§6 «일 단위» 열 표 `_helpers/nbl-state-history-e2-table.ts` 공유) · 도달 불가 가드는 **배선 확인(허용 목록)**으로 갱신. 세액 변화·mutation 실측 §7-3. 착수 게이트였던 Q-15 (가′) · V-18 · V-21 · V-22는 모두 해소돼 있었다.
 5. **U1** ⑤ 위젯 + ⑧ + ④ + 픽스처 보정(실측: ⑧ «모드 `""` 차단» 시 `__tests__/calc`·`components` **7파일 43건** · E2E 헬퍼 1 + 스펙 6 · `__tests__/lib`·`api`는 미실측).
 6. **U2** ⑦ 결과 카드(구간표 + 영 §168의6 풀어쓰기). 착수 게이트: UV-6.
 7. **U3** E2E 5건(철거 후 양도 / 신축 직후 양도 / 모름 / ⑧ 오류 3종 + 필드 점프 / 축 B 지분) + 일 단위 임계선 쌍 E2E 1건(예: 준공 2022-01-01/01-02) + 브라우저 확인 + `ui-engine-sync-checker`.
@@ -146,7 +146,7 @@ judgeNonBusinessLand
 | **V-18** | core 자체 사업기간 경로 전수(DM-01 · 3호) | ✅ **해소(2026-11-22)** — 전수 표는 엔진 §8.2 V-18. 자체 구간 경로는 DM-01 둘(`other-land.ts:297` → `other-land-merge.ts:156`)과 3호(`:526`)뿐, 나머지 `meetsPeriodCriteria` 호출은 `fullPeriod`·빈 구간+유예(`other-land-merge.ts:89`)·타 지목. 3호도 (가)/(다)가 갈림을 실측(§5-1: 550 비사업용 vs 914 사업용) | 없음 — Q-15 (가′)로 확정 |
 | **V-21** | **Q-15 (가) 문언의 이전 구간 교차 범위** — «꼬리 ∩ core 자체 사업기간»은 core 자체 사업기간 중 **마지막 사건일 앞(이전 구간)에 걸친 부분**을 사업용으로 세지 않는다 | ✅ **해소(2026-11-22 — 사용자 결정 (가′))**: 3호 시료 550 비사업용(현행 730 사업용) · DM-01 시료 546 비사업용(현행 911 사업용)이라 (가) 문언은 과세를 늘렸다 → 사용자가 «(이전 구간 ∪ 꼬리) ∩ core 자체 사업기간 + pastBusiness»(가′)를 택했다(§5-1-1) | 없음 — E1 leaf가 (가′)로 구현·고정 |
 | **V-22** | **3호 사업기간의 이전 구간 적용 법적 근거** — (가′)는 3호 `[조성 완료일, +2년)`이 신축 앞 나대지 구간에 걸친 부분도 사업용으로 센다. 3호 = 법 §104의3①4호 다목 ← 영 §168의11①3호(초판 «영 §168의11①3호 다목»은 오인용 — 3호에 목 없음) | ✅ **해소(2026-11-22 · KoreanLaw MCP 현행 본문)** — 법 §104의3①4호 «다음 각 목을 제외한 토지»(가·나·다목 중 어느 하나면 제외) × 영 §168의6 «기간의 계산은 일수로» → 날마다 나목(재산세 별도합산·분리과세 — 건축물 이력) 또는 다목(영 §168의11①3호 — 요건은 «사업시행자가 조성한 토지 + 조성 완료일부터 2년»뿐, 건축물 요건 없음 · 규칙 §83의4⑦ 조성 주체 5종도 같음)이면 사업용 = 두 날짜 집합의 합집합 = (가′). (가) 문언은 법령에 없는 «뒤 사건이 앞 3호 날짜를 지운다» 제한을 더한다. 해석례는 서면인터넷방문상담4팀-3521(2007.12.11. — 조성 완료일 = 준공인가일 · 그 전 사실상 사용 가능일)뿐, 건축물 결합 사례·재결례 0건(검색) | 없음 — (가′) 유지 |
-| V-19 | `changed` 시 `hasBuilding` 파생 vs 직접 API 모순 입력 | §1 «`hasBuilding` 파생»으로 설계 확정 · 구현 시 anchor | E2 |
+| V-19 | `changed` 시 `hasBuilding` 파생 vs 직접 API 모순 입력 | ✅ **해소(E2)** — 사건이 이긴다(`effectiveOtherHasBuilding` — ⑭ 매퍼·⑫ refine 공용). 400하지 않고 파생값 사용. anchor: 엔진 §매퍼 2건 · route 2건 · P-15 | — |
 | V-20 | ⑧·⑫ 사건일 경계 문구 동일성 | ⏳ | 없음(공용 leaf) |
 | UV-3 | «신축» 라벨 — 재산세상 건축물로 보는 첫날(시행령 §103①3: 허가 후 착공 포함)과 사용승인일이 다를 수 있음 | ⏳ | U1 문구 |
 | **UV-6** | 축 B 지분별 구간표 표시 | ⏳ | **U2 착수 전** |
@@ -209,12 +209,50 @@ E2 몫(P-4·P-8·P-9·P-11·P-14)은 아직 대응 코드가 없다. 첫 실측�
 
 **V-9 실측(E1)**: `npx vitest run __tests__/tax-engine/non-business-land/ __tests__/calc/ __tests__/lib/ __tests__/api/` — 1,897 파일 · 26,365 통과(305 todo) · 실패 0(224초). E1이 새 export·타입 추가만 하고 기존 경로를 건드리지 않아 `toEqual` 반전 0건. `npx tsc --noEmit` 0건.
 
+### 7-3. E2 구현 후 세액 변화와 mutation 실측 (2026-11-22 — probe 실측)
+
+**세액이 바뀌는 경로**: `landStateHistory.mode === "changed"` + 사건 ≥ 1건 + (양도일 의제 없음) + (면적 일부만 비사업용 아님)일 때만. 그 밖(미전송·`""`·`unchanged`·`unknown`·부분 면적·의제)은 세액·판정 불변(E0 골든). 시료 = 잡종지 1,000㎡ · 양도 10억 · 취득 3억 · `makeMockRates` · 산출세액(현행 = 같은 입력에서 이력 칸만 뺀 값).
+
+| 시나리오 | 현행 → E2 | 산출세액 현행 → E2 |
+|---|---|---|
+| M1·M3·M4·G2·R1·R2·Z-1460·GA-730·M14-1·M17b·P2(철거 후 나대지) | 비사업용 → 사업용 | 253,960,000 → 198,210,000 (−55,750,000) |
+| M6·M6b·M7·M8b·M8c-730·G1·P3(신축 직후) | 사업용 → 비사업용 | 198,210,000 → 253,960,000 (+55,750,000) |
+| M13(단기 보유 신축) | 사업용 → 비사업용 | 279,000,000 → 326,760,000 (+47,760,000) |
+| M17(윤년 신축) | 사업용 → 비사업용 | 233,490,000 → 297,640,000 (+64,150,000) |
+| M2·M5·M8a·M8c-731·S1·P1·M14-2·M14-3·Z-1461/1462·GA-731·R3·S2·M16·Q15a·V21-3호·V21-DM01 | 판정 동일 | 변동 0 (일수·echo·고지만 달라짐) |
+
+mutation(제품 코드 1줄 → 실패 `건수/전체` → 원복): 범위 = E0 4파일 + E1 3파일 + E2 3파일(`nbl-state-history*`). 분모는 측정 시점(e2 62 · e2-route 62 · leaf 120 · E0 route 6 — 보강 뒤 e2 65 · e2-route 63)이다. 대응 anchor만 실패(E0 compat·notice·route는 `unknown` 관련 mutation에서만 함께 실패 — 의도).
+
+| mutation | 실패 파일(건수/전체) |
+|---|---|
+| P-4 core 결과 그대로 | e2 24 · e2-route 28 |
+| P-5 (가) 문언 / P-5b 꼬리 전체 | e2 5 · leaf 2/120 · e2-route 2 / e2 7 · leaf 5 · e2-route 3 |
+| P-6 철거 직전 구분 항상 종합합산 / P-7 항상 별도합산 | e2 26 · leaf 29 · route 26 / e2 2 · leaf 5 · route 2 |
+| P-8 ⑫ Zod에서 이벤트 칸 삭제(strip) | route 56 · 배선 가드 1/8 |
+| P-9 ⑭ 매퍼가 이력을 안 넘김 | e2 51 · route 48 · E0 route 2/6 |
+| P-10 클립 제거 | e2 1(echo 불변식) · leaf 6/120 |
+| P-11 `unchanged`도 이력 경로 | E0 compat 18/83 · notice 15/79 · route 4/6 · e2 1 · e2-route 1 |
+| P-12 같은 날 허용 / P-13 양도일 당일 허용 | leaf 1 / leaf 1 · e2-route 1 |
+| P-14 유예 합집합 → 산술 가산 | e2 1(M7b 겹침 행) · e2-route 1 |
+| P-15 `changed` hasBuilding 파생 제거 | e2 2 · e2-route 3 |
+| N-1 꼬리 보존 제거 / N-2 3호 decisiveOwn 미기록 | e2 1 / e2 3 · e2-route 1 |
+| N-4 부분 면적 가드 제거 / N-4b 의제 가드 제거 / N-7 0건 throw 제거 | e2 1 / e2 1 / e2 1 |
+| N-3 현행 고지 병기 / N-10 개시일 고지 교체 제거 / N-12 모름 고지 미탑재 | e2 1 / e2 1 / e2 1 |
+| N-5 ⑫ refine 제거 / N-6 ⑫에 하한 규칙 추가 / N-11 ⑫ 철거 근거 파생 제거 | e2-route 7 / 4 / 1(+ 가드 1) |
+| N-8 echo 가목 임계 변경 / N-9 매퍼 소비표 가드 제거 | e2 1 / e2 1 |
+| N-13·N-14 DM-01·3호 자체 구간 미기록 | e2 4 · route 2 / e2 3 · route 1 |
+| N-15 unknown 고지 미탑재 / N-16 철거 구분 미운반 / N-17 ⑫ 구분 enum 삭제 | E0 compat 18 · route 2 / e2 27 · route 26 / route 27 · 가드 1 |
+
+첫 실측에서 **살아남은 mutation 4건**(P-14 · N-3 · N-8 + P-10의 e2 쪽)은 anchor를 보강해 잡았다: M7이 유예와 사업용 구간이 겹치지 않는 시료라 이중 계상을 못 잡아 **겹침 행 M7b**를 추가, 고지 교체 단언이 상수 정확 일치만 봐서 문구 포함 단언을 추가, 가목 임계는 2호 echo 단언 추가, 클립은 echo 불변식(Σ일수 = 소유일수 · 구간 길이 > 0) 추가. P-12는 route 단에서 엔진의 같은 날 throw가 400을 만들어 e2-route가 못 잡는다 — leaf 1건이 대응 anchor다.
+
+**V-9 실측(E2)**: `npx vitest run __tests__/tax-engine/non-business-land/ __tests__/calc/ __tests__/lib/ __tests__/api/` — 1,899 파일 · 26,495 통과(305 todo) · 실패 0. 추가로 `__tests__/components/ __tests__/tax-engine/` 2,524 파일 통과. `npx tsc --noEmit` 0건. 기존 테스트 반전 0건(기대값을 바꾼 기존 단언은 E0 모드 4종의 `unknown`뿐).
+
 ## 8. 검토 판정 (2026-11-22)
 
 - 엔진 검토: 정정 Critical/High 2 · 오류 7 · v2 잔존 약 20곳 · 누락 11행 · §6 «일 단위» 열 정정 0건(손 유도 + probe 전 행 일치).
 - UI 검토: 정정 19건(Critical 1 · High 6 · Medium 10 · Low 2) · 판정 뒤집힘 5건 · 인용 재실측 정정 다수(UI §18).
 - 통합 문서: 이 v3 재작성으로 양쪽 정정 요청(엔진 11 · UI 13) 반영.
-- **verdict: `needs-fix`(축소)** — 해소: **Q-15((가′) 결정 2026-11-22) · V-18(전수 + 3호 실측, E0) · V-21(사용자 결정 (가′))**. · **V-22(3호 법적 근거 — 법 §104의3①4호 각 목 합집합, 2026-11-22)**. 남음: **UV-6(U2 전)**. E0·**E1은 구현됨**, U0·E2는 착수 가능, U2는 UV-6 해소 전 금지.
+- **verdict: `needs-fix`(축소)** — 해소: **Q-15((가′) 결정 2026-11-22) · V-18(전수 + 3호 실측, E0) · V-21(사용자 결정 (가′))**. · **V-22(3호 법적 근거 — 법 §104의3①4호 각 목 합집합, 2026-11-22)**. 남음: **UV-6(U2 전)**. E0·E1·**E2는 구현됨**, U0·U1은 착수 가능, U2는 UV-6 해소 전 금지.
 
 ## 9. 재제안 금지·기결정 준수
 
@@ -226,4 +264,4 @@ E2 몫(P-4·P-8·P-9·P-11·P-14)은 아직 대응 코드가 없다. 첫 실측�
 
 1. ✅ 사용자 Q-15 결정((가) → (가′) 정정 · 2026-11-22).
 2. ✅ E0 anchor(1·2·3) 구현 → ✅ E1 구현(판정 미연결) → U0 (Q-15와 무관 — 바로 착수 가능).
-3. ✅ V-18 실측(3호 경로 · E0에서 해소) · ✅ V-21 해소((가′)) → ✅ V-22 해소(3호 법적 근거) → E2 → U1 → UV-6 결정 → U2 → U3.
+3. ✅ V-18 실측(3호 경로 · E0에서 해소) · ✅ V-21 해소((가′)) → ✅ V-22 해소(3호 법적 근거) → ✅ E2 → U0 → U1 → UV-6 결정 → U2 → U3.
