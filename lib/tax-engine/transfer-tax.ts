@@ -492,6 +492,7 @@ function calculateTransferTaxCore(
     propertyType: effectiveInput.propertyType,
     isRegulatedArea: effectiveInput.isRegulatedArea,
     householdHousingCount: effectiveInput.householdHousingCount,
+    presaleRights: effectiveInput.presaleRights, // fallback 전용 — 명부 없이 보낸 권리를 주택 수에 더한다
     transferDate: input.transferDate,
     // 리터럴이라 반사실 플래그·소유 사실·fallback 사실을 명시 전달한다 — 빠지면 장특 축만 중과로 남는다(MH-P9).
     forceNoMultiHouseSurcharge: effectiveInput.forceNoMultiHouseSurcharge,
@@ -510,6 +511,7 @@ function calculateTransferTaxCore(
   const surchargeFallbackNotice = noRosterSurchargeFallbackNotice({
     houses: effectiveInput.houses, rosterInputUnavailable: hasNoMergeRosterInputPath(effectiveInput),
     householdHousingCount: effectiveInput.householdHousingCount,
+    presaleRights: effectiveInput.presaleRights,
     multiHouseSurchargeResult,
     // 부수토지 카드는 짝 주택의 판정을 따른 것이라 «목록 없이 원시 플래그로 걸었다»는 고지는 주 카드 몫이다(같은 문안 중복 방지).
     isSurchargeApplied: isSurchargeCase && !suspendedResult && !appurtenantCardHouseSurcharge(effectiveInput),

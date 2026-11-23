@@ -120,8 +120,66 @@ describe("명부 없는 권리 보유 1주택 세대 — 권리를 중과 주택
     expect(r.determinedTax).toBe(1_427_435_000);
   });
 
-  it("세대 주택 수 2 이상은 종전대로 원시 플래그 + 「확인 필요」 고지(다른 주택의 사실을 모른다)", async () => {
+  it("세대 주택 수 2 이상은 원시 플래그 + 「확인 필요」 고지(다른 주택의 사실을 모른다)", async () => {
     const r = await post({ householdHousingCount: 2, presaleRights: [RIGHT] });
     expect((r.warnings ?? []).some((w) => w.includes(NO_ROSTER_NOTICE))).toBe(true);
+  });
+});
+
+/**
+ * 세대 주택 2 + 권리 — fallback이 권리를 더해 주택과 권리의 합 3(법 §104⑦4호)으로 중과한다 (사용자 결정 2026-11-23 1안).
+ *
+ * 🔴 종전: 권리를 세지 않아 2주택 중과 1,427,435,000. 같은 세대를 명부 [양도 · 강남 9억] + 권리로 보내면 1,657,185,000(−229,750,000).
+ *    다른 주택이 지방 저가(영 §167의4②1호)라 수에서 빠지는지는 모른다 — 모르는 사실은 불리하게 두고 고지한다.
+ */
+describe("명부 없는 세대 주택 2 + 권리 — 권리를 더해 합 3 이상 중과", () => {
+  beforeEach(() => {
+    vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRatesWithHouseEngine());
+  });
+  const TWO = { householdHousingCount: 2 };
+  const H2 = { ...SELLING, id: "h2", acquisitionDate: "2018-06-01", officialPrice: 900_000_000 };
+
+  it("대조군 — 권리 없음: 2주택 중과 1,427,435,000(종전과 같다)", async () => {
+    const r = await post(TWO);
+    expect(r.surchargeRate).toBe(0.2);
+    expect(r.determinedTax).toBe(1_427_435_000);
+  });
+
+  it("입주권 1 → +30%p 1,657,185,000 — 명부 [양도 · 강남 9억] + 입주권과 같다 · 고지가 권리 수와 §167의4를 밝힌다", async () => {
+    const noRoster = await post({ ...TWO, presaleRights: [RIGHT] });
+    const roster = await post({ ...TWO, presaleRights: [RIGHT], houses: [SELLING, H2], sellingHouseId: "selling" });
+    expect(noRoster.surchargeRate).toBe(0.3);
+    expect(noRoster.determinedTax).toBe(1_657_185_000);
+    expect(noRoster.determinedTax).toBe(roster.determinedTax);
+    const notice = (noRoster.warnings ?? []).find((w) => w.includes(NO_ROSTER_NOTICE));
+    expect(notice).toContain("조합원입주권·분양권 1개를 더한 3개");
+    expect(notice).toContain("소득세법 시행령 §167의4②");
+  });
+
+  it("분양권 1(2021.1.1. 뒤 취득) → 같은 1,657,185,000", async () => {
+    const r = await post({ ...TWO, presaleRights: [PRESALE] });
+    expect(r.determinedTax).toBe(1_657_185_000);
+  });
+
+  it("2021.1.1. 전 취득 분양권은 산입하지 않는다(법률 제17477호 부칙 제4조) — 2주택 1,427,435,000 · 고지는 주택만 문안", async () => {
+    const r = await post({ ...TWO, presaleRights: [{ ...PRESALE, acquisitionDate: "2020-06-01" }] });
+    expect(r.determinedTax).toBe(1_427_435_000);
+    const notice = (r.warnings ?? []).find((w) => w.includes(NO_ROSTER_NOTICE));
+    expect(notice).toContain("1세대 2주택 중과");
+  });
+
+  it("지방 가액 3억 이하 입주권은 산입하지 않는다(영 §167의4②1호) — 2주택 1,427,435,000", async () => {
+    const r = await post({
+      ...TWO,
+      presaleRights: [{ ...RIGHT, region: "non_capital", regionCode: "4311110100", rightValue: 200_000_000 }],
+    });
+    expect(r.determinedTax).toBe(1_427_435_000);
+  });
+
+  it("세대 주택 3 + 입주권 1 — 이미 최고 단계라 세액은 같다(1,657,185,000)", async () => {
+    const base = await post({ householdHousingCount: 3 });
+    const withRight = await post({ householdHousingCount: 3, presaleRights: [RIGHT] });
+    expect(withRight.determinedTax).toBe(base.determinedTax);
+    expect(withRight.determinedTax).toBe(1_657_185_000);
   });
 });

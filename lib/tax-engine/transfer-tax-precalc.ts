@@ -51,6 +51,7 @@ import { resolveSurchargeExclusionByReduction } from "./transfer-reductions/inco
 import { withSurchargeExclusionRegime } from "./transfer-reductions/income-deduction-router";
 import { buildSurchargeExclusionStep } from "./transfer-reductions/income-deduction-router";
 import { isFallbackSurchargeCandidate } from "./transfer-tax-surcharge-predicate";
+import { noRosterCountedRightCount } from "./transfer-tax-surcharge-predicate";
 import { reductionAcquisitionCauseOf } from "./transfer-reductions/new-99-acquisition-cause";
 import { redevMemberNewHouseOf } from "./transfer-reductions/new-99-redev-member";
 import { isRedevelopmentActive } from "./redevelopment-dispatch";
@@ -390,11 +391,15 @@ export function runSurchargeAndLandSteps(
    */
   const fallbackExcludedByReduction =
     !multiHouseSurchargeResult && surchargeExclusionByReduction.excluded && isFallbackSurchargeCandidate(workingInput);
-  // 명부가 없으면 세대 구성은 입력 주택 수뿐이다(권리 없음) — 3주택 이상은 §167의3① 직접, 2주택은 §167의10①2호 준용(US-85)
+  // 명부가 없으면 세대 구성은 입력 주택 수 + 함께 보낸 산입 권리 수다(`noRosterCountedRightCount` — 2026-11-23 전에는 권리를 세지 않았다).
+  //   주택만이면 3주택 이상 §167의3① 직접, 2주택 §167의10①2호 준용(US-85) · 권리가 있으면 `surchargeExclusionBasis`가 §167의4·§167의11로 가른다.
   if (fallbackExcludedByReduction) {
     steps.push(buildSurchargeExclusionStep(withSurchargeExclusionRegime(
       surchargeExclusionByReduction,
-      { countedRightCount: 0, effectiveHouseCount: workingInput.householdHousingCount },
+      {
+        countedRightCount: noRosterCountedRightCount(workingInput.presaleRights),
+        effectiveHouseCount: workingInput.householdHousingCount + noRosterCountedRightCount(workingInput.presaleRights),
+      },
     )));
   }
 
