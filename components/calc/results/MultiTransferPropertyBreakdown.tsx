@@ -377,6 +377,9 @@ export function PropertyBreakdownAccordion({
                 />
               )}
 
+              {/* §89② 예외(§156의2·§156의3) 근거 — 고가주택 부분 비과세·차손 자산(전액 비과세는 위 분기 · 단건 PartialExemptBasisCard와 같은 줄) */}
+              <Article89ExceptionBasisLine applied={breakdown.article89ExceptionApplied} className="py-2 text-xs text-emerald-700 dark:text-emerald-400" />
+
               {/* 장기보유특별공제 */}
               {breakdown.longTermHoldingDeduction > 0 && (
                 <DetailRow
