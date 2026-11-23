@@ -415,6 +415,11 @@ export interface TransferTaxInput {
    * 키 없음은 「보내지 않았다」(직접 API·중과 메뉴 — 종전 동작). 양론 재판정 입력만 읽는다(`one-house/contested-issues.ts`) — 세액 경로는 보지 않는다.
    */
   contestedTemporaryTwoHouse?: TransferTaxInput["temporaryTwoHouse"] | null;
+  /**
+   * 판정 메뉴 전용 — 양론 C1(상속주택 지분 동일세대원 증여) 반대 입장(A) 기준으로 다시 도출한 §155① 짝(D-79 C1 변형). 뜻은 `contestedTemporaryTwoHouse`와 같다 —
+   * C2·C7 짝과 반대 입장이 달라(C1은 행을 되돌리고 C2·C7은 뺀다) 따로 싣는다. 양론 재판정 입력만 읽는다.
+   */
+  contestedGiftedInheritedTemporaryTwoHouse?: TransferTaxInput["temporaryTwoHouse"] | null;
   /** 양도일 기준 조정대상지역 여부 */
   isRegulatedArea: boolean;
   /** 취득일 기준 조정대상지역 여부 */

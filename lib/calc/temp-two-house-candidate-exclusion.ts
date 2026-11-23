@@ -24,6 +24,7 @@ import { deriveOneHouseFactsFromHouses, findRuralHouseRow } from "./one-house-ro
 import { findCulturalHeritageRow } from "./one-house-row-facts";
 import { resolveInheritedHouseExclusionFromInput } from "@/lib/tax-engine/transfer-inheritance-exclusion";
 import { contestedPairPositionExcludedRowIds } from "@/lib/tax-engine/one-house/contested-issues";
+import { contestedGiftedPositionExcludedRowIds } from "@/lib/tax-engine/one-house/contested-issues";
 import { resolvePopulationDecline71_2 } from "@/lib/tax-engine/transfer-reductions/population-decline-71-2";
 import type { HouseInfo } from "@/lib/tax-engine/types/multi-house-surcharge.types";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
@@ -119,6 +120,27 @@ export function contestedPairExcludedHouseIds(form: CandidateFormLike): Readonly
       specialActHouseIds,
     }),
   );
+}
+
+/**
+ * 판정 메뉴 양론 C1 **반대 입장(A)**의 §155① 신규 주택 후보에서 뺄 행(D-79 C1 변형) — 엔진 입장 후보 제외에서 상속주택 제외 몫을 반대 입장의
+ * 상속 관련 제외(`contestedGiftedPositionExcludedRowIds` — 엔진 감지를 그대로 부른다)로 바꾼다. A는 증여한 행을 일반 주택으로 보므로 그 행이 후보로 돌아온다.
+ * 쟁점이 없으면 undefined.
+ */
+export function contestedGiftedPairExcludedHouseIds(form: CandidateFormLike): ReadonlySet<string> | undefined {
+  const input = inheritanceJudgmentInput(form);
+  if (!input) return undefined;
+  const specialActHouseIds = eligibleCountExcludedHouseIds(form);
+  const engineInput = { ...input, propertyType: "housing" } as unknown as TransferTaxInput;
+  const other = contestedGiftedPositionExcludedRowIds(engineInput, {
+    inheritedExclusion: resolveInheritedHouseExclusionFromInput(input, specialActHouseIds),
+    specialActHouseIds,
+  });
+  if (!other) return undefined;
+  const ids = new Set(temporaryTwoHouseCandidateExcludedIds(form));
+  for (const id of inheritedCountExcludedHouseIds(form)) ids.delete(id);
+  for (const id of other) ids.add(id);
+  return ids;
 }
 
 /**

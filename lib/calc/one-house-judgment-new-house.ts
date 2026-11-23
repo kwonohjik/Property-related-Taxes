@@ -10,6 +10,7 @@ import { judgmentSaleIsHousing, type OneHouseJudgmentFormData } from "@/lib/stor
 import { temporaryTwoHouseCandidateExcludedIds } from "./temp-two-house-candidate-exclusion";
 import { rentalResidenceCandidateHouseIds } from "./temp-two-house-candidate-exclusion";
 import { contestedPairExcludedHouseIds } from "./temp-two-house-candidate-exclusion";
+import { contestedGiftedPairExcludedHouseIds } from "./temp-two-house-candidate-exclusion";
 
 /** §155① 신규 주택 — 명부에서 도출(④ 변환과 같은 정본 `resolveTemporaryTwoHouse`). */
 export function judgmentDerivedNewHouse(form: OneHouseJudgmentFormData): TemporaryTwoHouseDates | undefined {
@@ -28,9 +29,34 @@ export function judgmentContestedNewHouse(form: OneHouseJudgmentFormData): Tempo
   return resolveJudgmentTemporaryTwoHouse(form, new Set([...temporaryTwoHouseCandidateExcludedIds(form), ...extra])) ?? null;
 }
 
+/**
+ * 양론 C1(상속주택 지분 동일세대원 증여) **반대 입장(A)**의 §155① 짝(D-79 C1 변형) — 엔진 입장의 상속주택 제외 대신 A의 제외로 같은 정본을 다시 부른다.
+ * A는 증여한 행을 일반 주택으로 보아 그 행(별도세대 상속)이 신규 주택 후보로 돌아온다. 쟁점이 없거나 주택 양도가 아니면 `undefined`, 짝이 없으면 `null`.
+ */
+export function judgmentContestedGiftedNewHouse(form: OneHouseJudgmentFormData): TemporaryTwoHouseDates | null | undefined {
+  if (!judgmentSaleIsHousing(form)) return undefined;
+  const excluded = contestedGiftedPairExcludedHouseIds(form);
+  if (!excluded) return undefined;
+  // 상속받은 주택의 취득시기는 상속개시일이다(「소득세법 시행령」 §162①5호). 행 「취득일」에 피상속인 취득일을 넣었으면(상속개시일보다 앞)
+  //   신규 주택 선후·기한을 상속개시일로 본다 — 둘 중 늦은 날(조합원 권리를 상속받아 나중에 준공된 행은 준공일이 늦다).
+  const houses = form.houses?.map((h) =>
+    h.isInherited && h.inheritedGiftedToHouseholdMember && h.inheritedDate && h.inheritedDate > (h.acquisitionDate ?? "")
+      ? { ...h, acquisitionDate: h.inheritedDate }
+      : h,
+  );
+  return resolveJudgmentTemporaryTwoHouse({ ...form, houses }, excluded) ?? null;
+}
+
+/** 양론 반대 입장 짝(C2·C7 · C1)의 신규 주택 행 — 엔진 입장 짝의 행과 같으면 뺀다. ⑧이 「다른 입장」 문구로 경위를 요구한다. */
+export function judgmentContestedNewHouseRowIds(form: OneHouseJudgmentFormData): string[] {
+  const engineRow = judgmentDerivedNewHouse(form)?.newHouseRowId;
+  const ids = [judgmentContestedNewHouse(form)?.newHouseRowId, judgmentContestedGiftedNewHouse(form)?.newHouseRowId];
+  return [...new Set(ids.filter((id): id is string => !!id && id !== engineRow))];
+}
+
 /** ⑧이 취득 경위를 요구하는 신규 주택 행 — 엔진 입장 짝 · 반대 입장 짝(D-79). ⑤ 질문 노출과 같은 집합이다. */
 export function judgmentNewHouseOriginRowIds(form: OneHouseJudgmentFormData): string[] {
-  const ids = [judgmentDerivedNewHouse(form)?.newHouseRowId, judgmentContestedNewHouse(form)?.newHouseRowId];
+  const ids = [judgmentDerivedNewHouse(form)?.newHouseRowId, ...judgmentContestedNewHouseRowIds(form)];
   return [...new Set(ids.filter((id): id is string => !!id))];
 }
 
