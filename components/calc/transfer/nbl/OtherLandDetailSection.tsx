@@ -342,7 +342,7 @@ export function OtherLandDetailSection({
               </div>
               {/* 영위 기간 ON이면 이 칸(같은 키)은 위 «업종 영위 기간» 블록으로 옮겨 가 한 시점에 한 인스턴스만 보인다(E3-② UQ-3). */}
               {!periodOn && (
-                <FieldCard field="nblRevenueCurrentBusinessStartDate" label="당해 사업개시일" hint="사업을 개시한 날 — 어느 해에 개시했든 입력할 수 있습니다(연환산은 당해 과세기간 안의 영위일만 셉니다). 미입력 시 과세기간개시일(1.1) 또는 당해연도 취득일을 기산일로 자동 적용. 입력하면 직전 과세기간 비율②가 기준에 미달할 때 사업 구간을 「사업개시일 ~ 양도일」로 보아 기간기준(영 §168의6)도 판정합니다.">
+                <FieldCard field="nblRevenueCurrentBusinessStartDate" label="당해 사업개시일" hint="사업을 개시한 날(어느 해든 입력 가능 — 연환산은 당해 과세기간 안의 영위일만 셉니다). 미입력 시 1.1 또는 당해연도 취득일이 기산일. 입력하면 직전 비율②가 기준 미달일 때 사업 구간을 「사업개시일 ~ 양도일」로 보아 기간기준(영 §168의6)도 판정합니다.">
                   <DateInput value={asset.nblRevenueCurrentBusinessStartDate} onChange={(v) => onAssetChange({ nblRevenueCurrentBusinessStartDate: v })} />
                 </FieldCard>
               )}

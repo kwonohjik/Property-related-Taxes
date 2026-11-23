@@ -62,7 +62,7 @@ describe("토글 — 기본 꺼짐 = 현행(기존 칸·라벨 불변)", () => {
   it("UV-10: 기존 «당해 사업개시일» 힌트는 «당해연도 중 …만 입력»이 아니다(DM-01은 어느 해든 개시일을 쓴다) · 라벨은 불변", () => {
     mount(asset());
     expect(body()).not.toContain("당해연도 중 사업을 개시한 경우만 입력");
-    expect(body()).toContain("어느 해에 개시했든 입력할 수 있습니다");
+    expect(body()).toContain("어느 해든 입력 가능");
     // e2e(`transfer-nbl-revenue-autofetch`)가 `getByText("당해 사업개시일")`을 단일 요소로 찾는다 — 힌트에 같은 어구가 들어가면 strict mode 위반
     const hits = [...document.querySelectorAll("*")].filter((el) => el.children.length === 0 && (el.textContent ?? "").includes("당해 사업개시일"));
     expect(hits).toHaveLength(1);
@@ -179,5 +179,23 @@ describe("영위 구간 표시 · 입력 도움말(의미)", () => {
     mount(asset({ nblRevenuePeriodOn: true, nblRevenueCurrentBusinessStartDate: "2019-06-01" }));
     const sec = screen.getByTestId("nbl-revenue-period");
     for (const input of sec.querySelectorAll("input")) expect(input.getAttribute("placeholder") ?? "", input.outerHTML).not.toMatch(/\d{3}/);
+  });
+});
+
+describe("당해 연환산 미리보기 — ON이면 영위 기간(폐업일 전날까지)에서 계산한 영위일수", () => {
+  const base = { nblRevenueCurrentRevenue: "2600000", nblRevenueCurrentLandValue: "100000000" };
+  const preview = () => document.body.textContent?.replace(/\s+/g, "") ?? "";
+  it("OFF: 양도일(2024-06-30)까지 182일 · ON + 폐업 2024-03-01: 2024-01-01~02-29 = 60일(엔진 leaf와 같은 값)", () => {
+    mount(asset(base));
+    expect(preview()).toContain("182일");
+    cleanup();
+    mount(asset({ ...base, nblRevenuePeriodOn: true, nblRevenueBusinessEndDate: "2024-03-01" }));
+    expect(preview()).toContain("60일");
+    expect(preview()).not.toContain("영위182일");
+  });
+  it("ON + 폐업이 양도연도 이전: 이 해는 영위일이 없어 연환산 미리보기를 보이지 않는다", () => {
+    mount(asset({ ...base, nblRevenuePeriodOn: true, nblRevenueBusinessEndDate: "2021-06-01" }));
+    expect(preview()).toContain("연환산금액이표시됩니다");
+    expect(preview()).not.toContain("연간환산수입금액");
   });
 });

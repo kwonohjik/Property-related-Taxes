@@ -1,6 +1,6 @@
 # 기타토지 상태 이력 E3-② 「업종 개시·폐업(과세기간별 수입금액)」 — 화면·클라이언트(①~⑧) 계획서
 
-> 상태: **Plan v1 (2026-11-23 · 코드 변경 0 · 사용자 결정 대기 — UQ-1~UQ-11)**
+> 상태: **Plan v1 → UI 구현 완료(2026-11-23 — 하단 «구현 기록 (UI)»가 본문과 다르면 그쪽이 정본)** · 계획 당시: Plan v1 (코드 변경 0 · 사용자 결정 대기 — UQ-1~UQ-11)
 > 범위: 통합 계획서 E3 후속 목록 ② — 주차장운영업·광천지·양어장·블록제조업 등 **수입금액비율 업종**(영 §168의11①2호다목·10·11다·12호)을 **소유기간 중 개시했거나 폐업한 경우**(엔진 계획서 M9·M10·M11 — `nbl-other-land-state-history.engine.plan.md:403-405`)를 입력받아 판정에 쓰는 화면. 현행 UQ-3(`nbl-other-land-state-history.ui.plan.md:472`)이 «과세기간별 수입금액이 필요해 v1 제외»로 닫아 둔 항목이다.
 > **범위 밖(재제안 금지)**: 건축물 사건·재산세 구분 변경(E3-①·E3-1b 완료) · 철거 후 재산세 한시 지위(E3-⑤) · 주택부수토지(Q-1) · 13호 × 이력 · 과세기준일 접기(V-1 일 단위 확정) · Q-15 (가′) · 「모름」 = 혜택 불성립 + 확인 필요 · 자동 안분 fallback.
 > 엔진 쪽은 같은 시각 별도 문서(`nbl-state-history-e3-2-business-period.engine.plan.md`)가 쓴다 — **이 문서의 엔진 모델명·필드명·함수명은 «제안»**이며 어긋나면 메인 세션이 합친다(UV-3).
@@ -416,3 +416,69 @@ V-1 일 단위(과세기준일 접기 ⛔ — 이 계획의 연도 표는 **판�
 - **공통 — 모두 추천안 승인**: ① 입력 = 수입금액비율 카드 안 «영위 기간» 토글(UI UQ-2 — 기본 꺼짐, 꺼지면 현행과 바이트 동일) — 켜면 개시일·폐업일 1쌍 + 양도연도 T−2 이전 과세기간별 수입금액·토지가액 표(T·T−1은 기존 `nblRevenue*` 칸이 말함) · 업종 1개·영위 기간 1건(엔진 Q-7·UI UQ-10). **모델 정합(메인 세션)**: 엔진 (B)와 UI (B2)는 같은 정보(개시·폐업 1쌍 + 연도 표)를 담으므로 하나로 합친다 — 화면 진입은 UI안(토글, 개시일은 기존 `nblRevenueCurrentBusinessStartDate` 단일 소스 재사용 UQ-3), 엔진 입력 형태·필드명은 엔진 계획 §6 계약을 기준으로 구현 PR에서 확정(⑫ 신규 키 누락 = 침묵 strip → route 관통 anchor 필수 · OFF에서 echo 키 부재 R-3). ② 과거 연도 간주임대료·공통수입은 칸 없이 수입금액에 합산 + 고지(엔진 Q-3·UI UQ-6) ③ 연도별 토지가액은 직접 입력 + 명시 클릭 공시지가 조회(UQ-7) ④ 연도 행 누락 = 모름 → 그 연도 불통과 + 확인 필요, 차단 없음 ⑤ 영위 기간 ON이면 DM-01(당해 사업개시일) 판정 대체, OFF면 현행 유지 ⑥ 폐업 후 유예(규칙 §83의5①10호)는 기존 유예 칸에 사용자가 입력(자동 생성 안 함 · UQ-9), 영위 통산 일수가 유예 기산일 이전 2년 미만이면 그 유예만 제외 + 고지(엔진 Q-5 — V-7 해소).
 - **엔진 Q-2(통과 과세기간 → 사업용 기간 환산) = (가) 통과 과세기간 ∩ 실제 영위일** — 개시 전·폐업 후는 사업용 아님. 근거: 법 «사업에 사용하는 토지» · 영 §168의11③ 연환산(영위 기간 기준) · 서면4팀-1048(임대한 기간은 사업에 사용한 토지로 보지 않음). 직접 규정·해석례 0건(V-1)이라 고지에 «확인 필요». (나) 역년 전체·(다) 직전 ② 통과 시 개시 전까지 보정(현행 DM-3 휴리스틱)은 기각. 토글 OFF 경로의 DM-3 현행 동작은 그대로(이 결정은 ON일 때만 적용).
 - PR 순서(엔진 계획 §PR): E3c-0(테스트만 — 10호 유예 안전망 0건·3% 정확 경계 anchor 선신설) → E3c-1(leaf·판정·⑫·⑭·고지) → E3c-2(V-7 검사) → UI → E2E. 엔진이 한 PR로 판정까지 열면 UI도 한 PR(UQ-11).
+
+
+## 구현 기록 (UI, 2026-11-23)
+
+> 브랜치 `feat/nbl-e3-2-business-period` — 엔진 6커밋 위에 UI 커밋. 엔진 «구현 기록»의 계약을 그대로 받았다(와이어 칸 3개 · leaf · echo · 고지 상수). 본문 §4~§9 중 아래와 다른 곳은 이 기록이 정본이다.
+
+### 계획 대비 확정·변경
+
+| 항목 | 계획서 본문 | 구현(확정) | 이유 |
+|---|---|---|---|
+| 폐업 모드의 기존 당해·직전 카드 | 폐업일이 있으면 숨김 + 표가 직전·당해까지 받음(UQ-4 (가)) | **숨기지 않는다.** 엔진은 그 해에 영위일이 있으면 기존 칸을 읽는다(폐업이 T−1·T 안). 영위일이 없는 해(폐업이 그 해 이전)만 위젯 ③ 블록이 «영위일이 없는 해라 판정에 쓰지 않습니다»로 알리고 ⑧이 그 해의 «필수» 입력을 요구하지 않는다 | 필요한 칸을 숨기면 «모름 → 불통과». 읽는 해의 판정은 `revenuePeriodReadsYear`(엔진 `operatingDaysInYear`) 단일 술어 |
+| 폐업일 = 개시일 | 같은 날 허용(P4) | **허용하지 않는다** — 폐업일 > 개시일 · 폐업일 < 양도일(엔진 leaf 문구 그대로) | 폐업일 = 영업을 하지 않게 된 첫날 |
+| ⑧ 하한 | P2 개시일 < 소유 시작 | 개시일 < 취득일 · 폐업일 ≤ 취득일은 ⑧만 차단(`stateHistoryFloorDate`). ⑫ 거울 없음(축 B 늦은 지분 400 방지) | 엔진 계약 |
+| 연접 다필지 배타 | 토글 비노출(§4.2-8) | **배제하지 않는다** | 엔진 ⑭는 필지와 무관하게 토지 단위 수입금액비율을 읽는다 |
+| 직전 영위일수 칸 | ON에서도 직접 입력 | ON이면 칸을 숨기고 개시·폐업일에서 파생(③ 블록에 표시) | 엔진이 ON에서 직접 입력값을 읽지 않는다 |
+| 개시일 FieldCard | ON이면 새 블록으로 이동(UQ-3) | 그대로 — 같은 키 한 인스턴스(`!periodOn`으로 기존 자리에서 제외) · ON 전용 라벨 «사업 개시일» | — |
+| DM-01 «이력과 함께 판정» 고지 | (미정) | ON이면 숨김(엔진은 ON에서 DM-01 echo·고지를 쓰지 않는다) | — |
+| 연도 행 점프 키 | `…YearRows.{index}…` | `nblRevenueYearRows.{year}.revenue|landValue` — 연도 키 | 행 위치가 아니라 연도로 저장하므로 |
+| 공시지가 조회 | `LandPriceLookupField` 필수 확인 | **쓰지 않는다** — ㎡당 가격 + 단일 기준연도 선택 위젯이라 연도별 N행 표에 맞지 않는다. 같은 NBL 카드의 당해·직전 조회(`NblLandValueAutoFetchButton`)와 같은 헬퍼(`lookupLandPrice`·`multiplyByAreaShare`)로 명시 클릭 · **빈 토지가액 칸만** 채움 · 실패 연도는 빈 칸 + 연도 표시 | UQ-7 |
+
+### UV-10 처리
+
+기존 «당해 사업개시일» 힌트(«당해연도 중 사업을 개시한 경우만 입력»)가 DM-01 실제 동작(`judgeRevenueBusinessStart` — 어느 해든 `[개시일, 양도일)`)과 어긋나는 것을 **이 PR에서 정정**했다: «사업을 개시한 날(어느 해든 입력 가능 — 연환산은 당해 과세기간 안의 영위일만 셉니다)…» (hint-length-policy 150자 이내). 라벨 «당해 사업개시일»은 불변이고 힌트에 같은 어구를 넣지 않아 e2e `getByText("당해 사업개시일")`(strict)을 깨지 않는다 — anchor가 라벨 단일 요소를 고정한다. 판정·세액 변화 없음(표시 문구만).
+
+### 14지점
+
+| 지점 | 변경 |
+|---|---|
+| ① | `calc-wizard-asset-nbl-other.ts` — `nblRevenuePeriodOn: boolean` · `nblRevenueBusinessEndDate: string` · `nblRevenueYearRows: NblRevenueYearRowInput[]`(`{year,revenue,landValue}` 문자열) |
+| ② | `NBL_DEFAULTS` + `makeDefaultAsset`(`false`·`""`·`[]` — 호출마다 새 배열) |
+| ③ | `migrateNblRevenuePeriod`(`calc-wizard-asset-migrate-nbl.ts`) — 키 없음 = 꺼짐·빈 값 · 형 방어 · 4자리 아닌 행 제거 · 같은 연도 마지막 값 · 범위 밖 연도 행은 보존 |
+| ④ | `revenuePeriodWireFields`(`nbl-revenue-period-scope.ts`)를 `buildNonBusinessLandRaw`의 prefix-pick 뒤에 얹는다 — 술어 거짓이면 `false`·`""`·`[]` · 참이면 폐업일 + **표가 받는 연도의 행만**(오름차순) |
+| ⑤ | `RevenuePeriodSection.tsx`(ToggleCard violet · ToneCard amber ①②③ · 연도 행 · 명시 클릭 조회) · `OtherLandDetailSection.tsx` 마운트(개시일 이동 · 직전 영위일수 숨김 · 미리보기 영위일수 파생) · 미리보기 `nbl-revenue-period-preview.ts`(④ 와이어 레코드 → ⑭ 빌더 → 엔진 `evaluateRevenueHistory`) |
+| ⑥ | 영향 없음 — `git grep -i "nbl\|NonBusiness"` (`calc-wizard-store.ts` · `transfer-per-asset-summary-helpers.ts` · `WizardSidebar.tsx`)이 타입 import 2줄뿐 |
+| ⑦ | `NblRevenuePeriodTable.tsx` — 연도 · 영위일수 / 총일수 · 연간수입금액(연환산 후) · 당해 비율 · 합산 비율 · 기준 비율 · 수입금액비율(충족·미충족·모름 — 불통과) · 사업용 일수 + 합계 · 사업용 구간 · 모름 연도 · 10호 유예 제외 문장 · 영위일수/사업용 일수 차이 설명. echo 있을 때만(OFF = 표 없음) · 기존 구간표 불변 |
+| ⑧ | `transfer-tax-validate-nbl-revenue-period.ts` — leaf `revenueHistoryInputIssue`(⑫와 같은 함수·문구, 접두 «자산: 기타토지 영위 기간 — ») + ⑧ 전용 하한 · `transfer-tax-validate-nbl.ts` 수입금액 블록: 영위일이 없는 양도연도의 «당해 수입금액·토지가액·당해 공통수입» 필수 규칙만 건너뜀(직전 공통쌍·DM06은 ⑫가 ON·OFF 무관 거울이라 유지) |
+| ⑨⑩⑪ | 해당 없음 |
+| ⑫ | 엔진 커밋이 완료(새 칸 3개 + refine). UI는 `__tests__/lib/nbl-revenue-period-wire-guard.test.ts`로 침묵 strip을 고정 |
+| ⑬ | `nbl*` prefix-pick + ④ 덮어쓰기 — e2e가 body 도달 확인(본체·companion) |
+| ⑭ | 엔진 `buildRevenueHistory` — UI 미리보기도 같은 빌더 호출 |
+
+3중 패턴: 연도 행 값에 표시 fallback·자동 채움 없음(빈 금액 = 모름). ④ 전송·⑤ 렌더·⑧ 검증이 `nblRevenuePeriodOn()`·`revenuePeriodRowYears()`·`revenuePeriodWireRows()`·`revenuePeriodReadsYear()` 한 곳을 읽는다. `useEffect → store` 미러링 0.
+
+### 테스트
+
+| 층 | 파일 |
+|---|---|
+| 술어·전송·복원·미리보기 | `__tests__/lib/calc/nbl-revenue-period-scope.test.ts`(27) |
+| 엔진 표 21행 폼 상태 → ⑧ → ④ → ⑫ → 엔진 → 세액 · OFF·stale 차단 · 세액 변화 | `__tests__/api/nbl-revenue-period-client.anchor.test.ts`(29) |
+| ⑧ ↔ ⑫ parity 격자 30행(⑧만 막는 행 명시) | `__tests__/api/nbl-revenue-period-validate-parity.anchor.test.ts` |
+| ⑤ 위젯 | `__tests__/components/nbl-revenue-period-section-render.test.tsx`(20) |
+| ⑦ 결과 카드(엔진 표 → 실제 엔진 판정 렌더 · JSON 왕복) | `__tests__/components/nbl-revenue-period-result-card.anchor.test.tsx` |
+| 침묵 소실 grep 게이트 | `__tests__/lib/nbl-revenue-period-wire-guard.test.ts` |
+| 필드 점프 | `e2e/_helpers/validation-field-jump-cases-nbl.ts` 6행 |
+| E2E | `e2e/transfer-nbl-revenue-period.spec.ts` 9건(M11′ · M9′ OFF/ON · 모름 · V-7 · OFF byte-identical · 축 B · 자동조회 · ⑧ 차단 · 시각) |
+
+### mutation (제품 코드 1줄 무력화 → 대응 anchor 실패 → 원복)
+
+M1 ④ 범위 밖 행 전송 → 8 · M2 ④ OFF stale 전송 → 5 · M3 ⑫ 행 스키마 키 누락 → 16 · M4 ⑧ «읽는 해» 게이트 제거 → 10 · M5 ⑧ 영위 기간 검증 호출 제거 → 13 · M6 개시일 FieldCard 이중 노출 → 1 · M7 표 연도 상한 T−2 → T−1 → 9 · M8 ⑦ 표 렌더 제거 → 6 · M9 ③ 복원 정규화 제거 → 1 · M10 ⑧ 개시일 하한 제거 → 1 · M11 빈 행 삭제 제거 → 1 · M12 점프 키를 인덱스로 → 2 · M13 직전 영위일수 칸 노출 → 1 · M14 ⑧ 당해 필수 항상 건너뜀 → 2 · M15 미리보기 영위일수 파생 무시 → 1(**처음 0건 — anchor 신설 후 실패**) · M16 모름 문구 제거 → 1 · M17 유예 안내 상시 표시 → 1 · M18 폐업일 하한 `<=` → `<` → 1 · M19 자동조회가 값 있는 칸 덮어씀 → E2E 1.
+
+### 남은 확인 필요 (비차단)
+
+- UV-4 후반·V-6: 과거 과세기간에 현행 기준비율 적용(규칙 §83의4 연혁) — 엔진 소관, 화면은 «기준 비율»을 엔진 값 그대로 표시.
+- UV-11: 사용자가 귀속연도·신고연도·부가세 포함 여부를 구분해 입력하는가 — 도움말(`ROW_HINT`)은 «실제 수입금액(연환산 전)»만 단정하고 정의는 단정하지 않는다(UV-2).
+- UV-5: 연도별 공시지가 조회는 순차 호출(연도 수 × 1회). 한도·미공시 연도는 실패 연도 표시로만 대응.
+- 입력 표는 연도당 카드 1장이라 연도가 많으면 세로로 길다(375px에서도 가로 스크롤 없음). 압축 표 레이아웃은 후속 판단.
