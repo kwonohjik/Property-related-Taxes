@@ -6,7 +6,6 @@
 import { judgeOneHouseExemptionFromInput } from "./one-house/judge";
 import { hasNoMergeRosterInputPath } from "./one-house/roster-input-path";
 import { applyLandOnlyHouseholdRule, landOnlyMergeResidenceNotice } from "./land-only-owner-household";
-import { landOnlyMergeNoticeSuppressed } from "./transfer-tax-appurtenant-land";
 import { presaleRightStartDate, type ParsedRates } from "./transfer-tax-helpers";
 import { restoreRentalUnitsToHouseCount, revokeExemptionOnStandardPathUnmet } from "./transfer-tax-rental-housing-judge";
 import { prhpUnmetOtherExemptionNotice, resolvePrhpUnmet } from "./transfer-tax-rental-housing-judge";
@@ -42,8 +41,8 @@ export function runOneHouseJudgmentStep(args: {
     judgeOneHouseExemptionFromInput(exemptionJudgeInput, parsedRates.oneHouseSpecialRules, presaleRightStartDate(parsedRates)),
     effectiveInput,
   );
-  // V-3′ — 토지만 본인 × 건물(주택) 소유자 다른 세대면 이 세대의 1주택에 딸린 토지가 아니다 · 같은 세대면 합가일 고지(`land-only-owner-household.ts`).
-  const landOnlyHousehold = applyLandOnlyHouseholdRule(rentalComposition.judgment, effectiveInput, landOnlyMergeNoticeSuppressed(effectiveInput));
+  // V-3′ — 토지만 본인 × 건물(주택) 소유자 다른 세대면 이 세대의 1주택에 딸린 토지가 아니다(`land-only-owner-household.ts`).
+  const landOnlyHousehold = applyLandOnlyHouseholdRule(rentalComposition.judgment, effectiveInput);
   const exemptionResult = landOnlyHousehold.judgment;
   // §155⑳ 불성립 원인(호별·거주 · 세대 구성) — 조기 반환·㉒ 안내·불성립 고지가 한 판정을 본다(composition-revoke D-2).
   const prhpUnmet =

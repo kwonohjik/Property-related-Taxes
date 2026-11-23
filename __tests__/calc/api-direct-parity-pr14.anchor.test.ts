@@ -19,7 +19,7 @@ import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/tr
 import { runOneHouseJudgmentPipeline } from "@/app/api/calc/one-house-exemption/judgment-pipeline";
 import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import { baseTransferInput, makeMockRates } from "../tax-engine/_helpers/mock-rates";
-import { LAND_ONLY_OTHER_HOUSEHOLD_UNMET_ID, LAND_ONLY_SAME_HOUSEHOLD_MERGE_ID } from "@/lib/tax-engine/one-house/land-only-verdict";
+import { LAND_ONLY_OTHER_HOUSEHOLD_UNMET_ID } from "@/lib/tax-engine/one-house/land-only-verdict";
 
 async function post(route: typeof judgePOST, url: string, body: Record<string, unknown>) {
   const res = await route(
@@ -73,11 +73,13 @@ describe("D-39 · I-02 격자 — 같은 TransferTaxInput을 계산기 엔진과
     expect(calculateTransferTax(i, rates).isExempt).toBe(exempt);
     expect(pipeline(i).isExempt).toBe(exempt);
   });
-  it("다른 세대는 사유 카드 · 같은 세대(합가 여부 미응답)는 합가일 확인", () => {
+  it("다른 세대는 사유 카드 · 같은 세대는 판정 그대로(합가일 확인 고지는 route로 닿지 않아 2026-11-23 지웠다)", () => {
     const other = pipeline(input({ selfOwns: "land_only", buildingOwnerSameHousehold: false } as Partial<TransferTaxInput>));
     expect(other.unmetExceptions.map((u) => u.id)).toContain(LAND_ONLY_OTHER_HOUSEHOLD_UNMET_ID);
     const same = pipeline(input({ selfOwns: "land_only", buildingOwnerSameHousehold: true } as Partial<TransferTaxInput>));
-    expect(same.undetermined.map((u) => u.id)).toContain(LAND_ONLY_SAME_HOUSEHOLD_MERGE_ID);
+    expect(same.isExempt).toBe(true);
+    expect(same.undetermined.filter((u) => u.id.startsWith("154-1-land-only"))).toEqual([]);
+    expect(same.unmetExceptions.filter((u) => u.id.startsWith("154-1-land-only"))).toEqual([]);
   });
 });
 

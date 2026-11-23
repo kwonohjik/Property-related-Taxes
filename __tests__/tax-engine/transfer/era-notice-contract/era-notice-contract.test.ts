@@ -10,7 +10,7 @@
  * | 완전성 ④ | `checkExemption`의 `undetermined` 배열에 덧붙는 함수 · 판정 route 파이프라인이 판정 뒤에 붙이는 단계가 내는 id도 전부 표에 있다(같은 날 표 확장 — 묶음 F) |
  *
  * 표 키 = 판정 메뉴 「판정하지 않은 부분」에 실릴 수 있는 id 전부 — `collectUndetermined`(직접 id · 연혁 수집기 · 지정 지구) ∪ `checkExemption`이
- * 덧붙이는 §89② 계열 ∪ 판정 route 단계(비거주자 · 잔금 전 멸실 · 토지만 · 같은 날 권리 · 합가 상대 쪽 임대). id 끝의 `*`는 접두 묶음이다.
+ * 덧붙이는 §89② 계열 ∪ 판정 route 단계(비거주자 · 잔금 전 멸실 · 같은 날 권리 · 합가 상대 쪽 임대). id 끝의 `*`는 접두 묶음이다.
  * 「적용되지 않은 특례」(`unmetExceptions`) 채널은 판정 보류가 아니라 이 표 밖이다.
  */
 import { describe, it, expect } from "vitest";
@@ -30,7 +30,6 @@ import { ROWS_E } from "./rows-e";
 import { ROWS_F } from "./rows-f";
 import * as Pending from "@/lib/tax-engine/one-house/pending";
 import * as SameDay from "@/lib/tax-engine/one-house/same-day-right";
-import * as LandOnly from "@/lib/tax-engine/one-house/land-only-verdict";
 import * as Demolished from "@/lib/tax-engine/data/demolished-before-balance-era";
 import * as MergeRental from "@/lib/tax-engine/one-house/merge-rental-carveout";
 import { DESIGNATED_DISTRICT_UNDECLARED_ID_PREFIX } from "@/lib/tax-engine/one-house/designated-district-undeclared";
@@ -87,7 +86,7 @@ const PIPELINE_STAGE_KEYS: Record<string, string[]> = {
   applyOneRightVerdict: [],
   applyNonResidentVerdict: ["121-2-pre2020-non-resident-right-unverified", "121-2-pre2010-non-resident-unverified"],
   applyDemolishedBeforeBalanceVerdict: [Demolished.DEMOLISHED_BEFORE_BALANCE_UNVERIFIED_ID],
-  applyLandOnlyHouseholdVerdict: [LandOnly.LAND_ONLY_SAME_HOUSEHOLD_MERGE_ID],
+  applyLandOnlyHouseholdVerdict: [], // 다른 세대 사유는 「적용되지 않은 특례」 채널(표 밖) · 같은 세대 합가일 고지는 2026-11-23 지웠다
 };
 
 const SUB_COLLECTOR_KEYS: Record<string, string[]> = {

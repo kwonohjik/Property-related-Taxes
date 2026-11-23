@@ -45,11 +45,6 @@ export const LAND_ONLY_REPEATED_MERGE_NOTE =
   "합쳤다가 분가한 뒤 다시 합친 경우에는 양도일 현재까지 계속 같은 세대였던 기간의 시작일(마지막 합가일)을 합가일로 입력해야 하며, " +
   "분가했던 기간까지 통산하는지는 해석을 찾지 못해 확인이 필요합니다(재산46014-610은 «세대합가 이전기간» 제외만 답했습니다).";
 
-export const LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE =
-  "토지만 본인 소유이고 건물(주택) 소유자가 같은 세대라 이 토지를 그 주택의 부수토지로 보아 1세대1주택 비과세를 판정했습니다. " +
-  "다만 건물 소유자와 세대를 합치기 전의 기간은 이 토지를 주택부수토지로서 보유한 기간에 들어가지 않습니다(재산46014-610). " +
-  "세대를 합친 날부터 양도일까지가 「소득세법 시행령」 §154①의 보유요건에 못 미치면 비과세 대상이 아닙니다 — 세대를 합친 날은 입력받지 않았으므로 확인이 필요합니다.";
-
 /**
  * 합가일 — 토지만 본인 × 같은 세대 × 「합가함」으로 답하고 날짜를 넣은 경우만. 그 밖에는 `undefined`(처음부터 같은 세대로 본다).
  * 계획서 `land-only-household-merge-date.plan.md`.
@@ -104,13 +99,12 @@ export function landOnlyBuildingOwnerOtherHousehold(
  *
  * - 다른 세대: 판정이 비과세·부분 비과세를 냈으면 거두고 고지를 단다 — 과세 판정은 그대로(표2는 `isLthdTable2SubjectAsset`이 따로 끈다).
  *   §155⑳ 특례를 선언했으면 판정이 과세여도 고지한다 — 그 특례 단계를 건너뛰는 이유를 말한다(리뷰 게이트 F-1).
- * - 같은 세대: 판정은 그대로 두고 합가일 고지를 단다(비과세·부분 비과세 또는 §155⑳ 선언). 나중 취득 토지가 이미 G-3로 비과세에서
- *   빠졌거나 보유요건이 면제되는 단서면(`mergeNoticeSuppressed` — `landOnlyMergeNoticeSuppressed`) 말하지 않는다.
+ * - 같은 세대: 판정은 그대로 둔다. 합가 여부(처음부터 같은 세대 · 합가함 + 합가일)는 Zod(⑫ `landOnlyHouseholdMergeIssue`)가 필수로 받아
+ *   보유·거주 기산에 이미 반영된다 — 종전 「합가일 확인 필요」 고지는 그 답이 없을 때만 떴는데 route로는 닿지 않아 지웠다(2026-11-23 I-26 표 확장 실측 · 사용자 지시).
  */
 export function applyLandOnlyHouseholdRule(
   judgment: OneHouseJudgment,
-  input: Pick<TransferTaxInput, "selfOwns" | "buildingOwnerSameHousehold" | "buildingOwnerHouseholdMerged" | "rentalHousingException">,
-  mergeNoticeSuppressed: boolean,
+  input: Pick<TransferTaxInput, "selfOwns" | "buildingOwnerSameHousehold" | "rentalHousingException">,
 ): { judgment: OneHouseJudgment; notice?: string } {
   if (input.selfOwns !== "land_only") return { judgment };
   const settled = judgment.isExempt || judgment.isPartialExempt;
@@ -118,8 +112,7 @@ export function applyLandOnlyHouseholdRule(
   if (landOnlyBuildingOwnerOtherHousehold(input)) {
     return { judgment: settled ? revokeOneHouseExemption(judgment) : judgment, notice: LAND_ONLY_OTHER_HOUSEHOLD_NOTICE };
   }
-  // 합가 여부를 답했으면(처음부터 같은 세대 · 합가일 입력) 합가일을 확인하라는 고지는 필요 없다.
-  return mergeNoticeSuppressed || input.buildingOwnerHouseholdMerged !== undefined ? { judgment } : { judgment, notice: LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE };
+  return { judgment };
 }
 
 /**

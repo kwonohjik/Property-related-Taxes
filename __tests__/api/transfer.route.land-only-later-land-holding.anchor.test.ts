@@ -28,7 +28,6 @@ import { POST as MULTI } from "@/app/api/calc/transfer/multi/route";
 import { callMultiTransferTaxAPI } from "@/lib/calc/multi-transfer-tax-api";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
-import { LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE } from "@/lib/tax-engine/land-only-owner-household";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
 
@@ -99,19 +98,16 @@ describe("D-1 화면 경로 — 토지만 본인 × 같은 세대 × 나중 취�
     expect([r.body.selfOwns, r.body.isSeparateAcquisition, r.body.landAcquisitionDate]).toEqual(["land_only", true, "2022-06-01"]);
     expect(r.steps).toContain("부수토지 비과세 제외");
     // G-3로 이미 과세됐으니 합가일 고지는 없다
-    expect(r.warnings).not.toContain(LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE);
   });
 
   it("토지 보유 2년 이상(2020-06-01)이면 비과세 그대로 — 합가 여부를 답했으니 합가일 확인 고지는 없다(`land-only-household-merge-date` Q-1 b — 그 고지는 엔진 직접 호출 미응답에만)", async () => {
     const r = await run({ ...PUR, ...LAND_ONLY_SAME, landAcquisitionDate: "2020-06-01" });
     expect([r.fields, r.status, r.isExempt, r.tax]).toEqual([[], 200, true, 0]);
-    expect(r.warnings).not.toContain(LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE);
   });
 
   it("소유자 같음 대조 — 같은 250,250,000 · 합가일 고지 없음", async () => {
     const r = await run(PUR);
     expect([r.fields, r.status, r.tax]).toEqual([[], 200, 250_250_000]);
-    expect(r.warnings).not.toContain(LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE);
   });
 });
 
