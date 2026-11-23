@@ -152,26 +152,36 @@ export function NblStateHistoryPeriodTable({ stateHistory, totalOwnershipDays, e
           «사업용 여부»는 그 구간의 토지가 사업용 토지에 해당하는지이고, 소유기간 전체의 비사업용 여부는 아래 기준으로 판정합니다.
         </p>
 
-        <div className="space-y-1" data-testid="nbl-state-history-criteria">
-          <p className="text-xs font-medium">
-            소유기간 {totalOwnershipDays.toLocaleString()}일({BUCKET_LABEL[criteria.ownershipBucket]} — {NBL.CRITERIA})에서 사업용으로 본 기간{" "}
-            {effectiveBusinessDays.toLocaleString()}일
-            {gracePeriodDays > 0 && `(사업용 구간 ${businessOnlyDays.toLocaleString()}일 + 유예기간 가산 ${gracePeriodDays.toLocaleString()}일)`}, 비사업용으로 본 기간{" "}
-            {criteria.nonBizTotal.toLocaleString()}일
-          </p>
-          <ul className="space-y-0.5">
-            {rows.map((r) => (
-              <li key={r.key} data-testid={`nbl-state-history-criterion-${r.key}`} className="text-xs flex flex-wrap gap-x-1.5">
-                <span className="text-muted-foreground">· {r.clause}</span>
-                <span className="flex-1 min-w-0">{r.text}</span>
-                <span className="font-medium whitespace-nowrap">→ {r.met ? "충족" : "미충족"}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-caption text-muted-foreground leading-snug" data-testid="nbl-state-history-criteria-verdict">
-            위 기준을 모두 충족해야 비사업용입니다 — {isNonBusiness ? "모두 충족해 비사업용으로 봅니다." : "미충족인 기준이 있어 사업용으로 봅니다."}
-          </p>
-        </div>
+        {totalOwnershipDays === 0 && isNonBusiness ? (
+          // 소유기간 0일 — 엔진은 기간기준 비교 없이 비사업용으로 처리한다(`meetsPeriodCriteria` 0일 보유 가드). 수치 echo가 없어 기준 행을 그리면
+          // «미충족인데 모두 충족해 비사업용»처럼 최종 판정과 어긋난다 — 기준 행·판정 문구 대신 엔진 처리 그대로를 밝힌다.
+          <div className="space-y-1" data-testid="nbl-state-history-criteria">
+            <p className="text-xs" data-testid="nbl-state-history-zero-days">
+              소유기간이 0일이어서 사업용으로 본 기간이 없습니다. 이 경우 기간기준(가·나·다목) 비교 없이 비사업용으로 봅니다 — 확인 필요.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-1" data-testid="nbl-state-history-criteria">
+            <p className="text-xs font-medium">
+              소유기간 {totalOwnershipDays.toLocaleString()}일({BUCKET_LABEL[criteria.ownershipBucket]} — {NBL.CRITERIA})에서 사업용으로 본 기간{" "}
+              {effectiveBusinessDays.toLocaleString()}일
+              {gracePeriodDays > 0 && `(사업용 구간 ${businessOnlyDays.toLocaleString()}일 + 유예기간 가산 ${gracePeriodDays.toLocaleString()}일)`}, 비사업용으로 본 기간{" "}
+              {criteria.nonBizTotal.toLocaleString()}일
+            </p>
+            <ul className="space-y-0.5">
+              {rows.map((r) => (
+                <li key={r.key} data-testid={`nbl-state-history-criterion-${r.key}`} className="text-xs flex flex-wrap gap-x-1.5">
+                  <span className="text-muted-foreground">· {r.clause}</span>
+                  <span className="flex-1 min-w-0">{r.text}</span>
+                  <span className="font-medium whitespace-nowrap">→ {r.met ? "충족" : "미충족"}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-caption text-muted-foreground leading-snug" data-testid="nbl-state-history-criteria-verdict">
+              위 기준을 모두 충족해야 비사업용입니다 — {isNonBusiness ? "모두 충족해 비사업용으로 봅니다." : "미충족인 기준이 있어 사업용으로 봅니다."}
+            </p>
+          </div>
+        )}
       </ToneCard>
     </div>
   );
