@@ -346,6 +346,7 @@ export function runRedevelopmentGainSteps(
     : noRosterSurchargeFallbackNotice({
         houses: input.houses,
         householdHousingCount: input.householdHousingCount,
+        presaleRights: input.presaleRights,
         multiHouseSurchargeResult,
         isSurchargeApplied: surchargeApplication.isSurchargeApplied,
       });

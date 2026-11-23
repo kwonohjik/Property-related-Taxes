@@ -54,6 +54,8 @@ import { isCrisisAcqExempt } from "./legal-codes";
 import { appurtenantCardHouseSurcharge } from "./appurtenant-card-surcharge";
 import { landOnlyBuildingOwnerOtherHousehold } from "./land-only-owner-household";
 import type { TransferTaxInput } from "./types/transfer.types";
+import { presaleRightCountReason } from "./multi-house-surcharge-count";
+import { HOUSE_COUNT_EXCLUSION_RULES } from "./data/transfer-rate-seed";
 
 /**
  * `tax-utils.ts`의 `SurchargeSpecialRules`는 **미export**다 — 새 export를 만들어
@@ -99,10 +101,27 @@ export function isSurchargeFallbackPropertyType(propertyType: string): boolean {
   return SURCHARGE_FALLBACK_PROPERTY_TYPES.has(propertyType);
 }
 
+/**
+ * 명부(`houses[]`) 없는 fallback이 주택 수에 더하는 조합원입주권·분양권 수 — 정밀 경로(`countEffectiveHouses`)와 같은 술어
+ * (`presaleRightCountReason` — 2021.1.1. 전 취득 분양권 · 지방 3억 이하 권리 불산입, 영 §167의4②1호·§167의11②1호).
+ *
+ * 🔴 종전에는 fallback이 `householdHousingCount`만 봐 함께 보낸 권리가 빠졌다 — 세대 주택 2 + 입주권 1(강남 · 2026-06-01 양도)이
+ *    2주택 중과 1,427,435,000이었다(같은 세대를 명부로 보내면 주택과 권리의 합 3 · 법 §104⑦4호 1,657,185,000).
+ *    다른 주택이 1호(지방 저가) 등이라 수에서 빠지는지는 모른다 — 모르는 사실은 불리하게 둔다(사용자 결정 2026-10-04 · 2026-11-23).
+ * 분양권 산입 시작일은 법률 제17477호 부칙 제4조의 취득일 게이트(시드와 같은 값 — 양도일 연혁과 무관)다.
+ */
+export function noRosterCountedRightCount(presaleRights: TransferTaxInput["presaleRights"]): number {
+  if (!presaleRights || presaleRights.length === 0) return 0;
+  const start = new Date(HOUSE_COUNT_EXCLUSION_RULES.presaleRightStartDate);
+  return presaleRights.filter((r) => presaleRightCountReason(r, start) === "counted").length;
+}
+
 export interface SurchargeApplicationInput {
   propertyType: string;
   isRegulatedArea?: boolean;
   householdHousingCount: number;
+  /** 세대 보유 조합원입주권·분양권 — **fallback 전용**(`noRosterCountedRightCount`). 정밀 판정이 있으면 읽지 않는다. */
+  presaleRights?: TransferTaxInput["presaleRights"];
   transferDate: Date;
   /** 반사실 시뮬레이션 — 참이면 정밀·fallback과 무관하게 중과를 닫는다(`TransferTaxInput.forceNoMultiHouseSurcharge`) */
   forceNoMultiHouseSurcharge?: boolean;
@@ -152,7 +171,7 @@ export interface SurchargeApplication {
   surchargeTypeKey: "multi_house_2" | "multi_house_3plus";
   /**
    * [echo] 정밀 판정의 산입 조합원입주권·분양권 수(`MultiHouseSurchargeResult.countedRightCount`) 그대로 — 짝 부수토지 카드가 이 판정을 받으므로 함께 실린다.
-   * 신고서 ③ 코드 표시 전용(R-c10-04). fallback(명부 없음)은 권리를 세지 않아 싣지 않는다.
+   * 신고서 ③ 코드 표시 전용(R-c10-04). fallback(명부 없음)은 함께 보낸 권리의 산입 수(`noRosterCountedRightCount`)를 싣는다.
    */
   countedRightCount?: number;
 }
@@ -162,9 +181,13 @@ export interface SurchargeApplication {
  * STEP 0.45 배제 단계를 fallback에서도 남길지 가르는 데 쓴다(정밀 경로는 `houseSet`이 있을 때 남긴다 — 리뷰 US-38).
  */
 export function isFallbackSurchargeCandidate(
-  input: Pick<SurchargeApplicationInput, "propertyType" | "isRegulatedArea" | "householdHousingCount">,
+  input: Pick<SurchargeApplicationInput, "propertyType" | "isRegulatedArea" | "householdHousingCount" | "presaleRights">,
 ): boolean {
-  return SURCHARGE_FALLBACK_PROPERTY_TYPES.has(input.propertyType) && input.isRegulatedArea === true && input.householdHousingCount >= 2;
+  return (
+    SURCHARGE_FALLBACK_PROPERTY_TYPES.has(input.propertyType) &&
+    input.isRegulatedArea === true &&
+    input.householdHousingCount + noRosterCountedRightCount(input.presaleRights) >= 2
+  );
 }
 
 /**
@@ -223,13 +246,16 @@ export function resolveSurchargeApplication(
 
   // fallback도 정밀 경로가 반영하는 양도 주택 자신의 사실 둘은 본다(리뷰 US-38 · US-08) — 다른 주택의 각 호 해당 여부(모름 = 불리)와 달리
   //   양도 자산의 입력(감면 판정·취득일)만으로 정해진다(사용자 결정 2026-10-04의 「모르는 사실」 대상이 아니다).
+  // fallback 주택 수 = 세대 주택 수 + 함께 보낸 산입 권리 수(법 §104⑦2호·4호 「주택과 조합원입주권 또는 분양권」 — `noRosterCountedRightCount`).
+  const fallbackRightCount = multiHouseSurchargeResult ? 0 : noRosterCountedRightCount(input.presaleRights);
+  const fallbackHouseCount = input.householdHousingCount + fallbackRightCount;
   const isSurchargeCase =
     isSubjectAsset &&
     (multiHouseSurchargeResult
       ? multiHouseSurchargeResult.surchargeType !== "none"
       : SURCHARGE_FALLBACK_PROPERTY_TYPES.has(input.propertyType) &&
         input.isRegulatedArea === true &&
-        input.householdHousingCount >= 2 &&
+        fallbackHouseCount >= 2 &&
         // 감면주택(영 §167의3①5호·3호)은 §104⑦ 각 호 주택이 아니다 — 세율 축·장특 축이 함께 닫힌다(정밀 경로 `tax_special_exemption`과 같다).
         input.surchargeExcludedByReduction !== true);
   // 부칙 제9270호 §14① — 세율만 기본세율(§104①1호). `isSurchargeCase`(§95② 장특 배제)는 유지한다(정밀 경로 `multi-house-surcharge.ts`와 같다).
@@ -242,7 +268,7 @@ export function resolveSurchargeApplication(
 
   const effectiveHouseCount = multiHouseSurchargeResult
     ? multiHouseSurchargeResult.effectiveHouseCount
-    : input.householdHousingCount;
+    : fallbackHouseCount;
 
   const surchargeTypeKey = effectiveHouseCount >= 3 ? "multi_house_3plus" : "multi_house_2";
 
@@ -271,14 +297,15 @@ export function resolveSurchargeApplication(
       : fallbackRateStatutoryExcluded
         ? { rateSurchargeStatutoryExcluded: true }
         : {}),
-    // fallback은 **원시 주택수**(`effectiveHouseCount` 아님)를 쓴다 — 종전 `calcTax` 동작 보존.
+    // fallback은 **원시 주택수 + 산입 권리 수**(`fallbackHouseCount`)를 쓴다 — 각 호 제외는 모른다(종전 `calcTax` 동작 + 권리).
     effectiveSurchargeType: !isSubjectAsset
       ? "none"
       : (multiHouseSurchargeResult?.surchargeType ??
-        (input.householdHousingCount >= 3 ? "multi_house_3plus" : "multi_house_2")),
+        (fallbackHouseCount >= 3 ? "multi_house_3plus" : "multi_house_2")),
     effectiveHouseCount,
     surchargeTypeKey,
     ...(isSubjectAsset && multiHouseSurchargeResult?.countedRightCount ? { countedRightCount: multiHouseSurchargeResult.countedRightCount } : {}),
+    ...(isSubjectAsset && fallbackRightCount > 0 ? { countedRightCount: fallbackRightCount } : {}),
   };
 }
 
@@ -302,6 +329,25 @@ const LOW_VALUE_REGIONAL_HOUSE =
  *
  * 문언: 소득세법 시행령 §167의10①·§167의3① 각 호(MST 290841 실독).
  */
+/** 영 §167의4②1호·§167의11②1호 공통 문언 — 수에 산입하지 않는 지방 저가 주택·조합원입주권·분양권(MST 290841 실독 2026-11-23) */
+const LOW_VALUE_REGIONAL_HOUSE_OR_RIGHT =
+  "수도권 및 광역시ㆍ특별자치시(…) 외의 지역에 소재하는 주택, 조합원입주권 또는 분양권으로서 해당 주택의 기준시가, " +
+  "조합원입주권의 가액(…) 또는 분양권의 가액[…]이 해당 주택 또는 그 밖의 주택의 양도 당시 3억원을 초과하지 않는 주택, 조합원입주권 또는 분양권";
+
+/** 권리를 더한 fallback의 각 호 문안 — 합 3 이상은 영 §167의4(법 §104⑦4호), 각각 1개씩은 영 §167의11(법 §104⑦2호). */
+function rightClauses(total: number): string {
+  return total >= 3
+    ? `${MULTI_HOUSE.HOUSE_RIGHT_3PLUS_RULE}②은 1호(${LOW_VALUE_REGIONAL_HOUSE_OR_RIGHT})·2호에 해당하는 주택·조합원입주권·분양권을 수에 산입하지 않고, ` +
+        `③은 2호(제167조의3제1항제2호 내지 제8호 및 제8호의2 중 어느 하나에 해당하는 주택)·` +
+        `4호(1세대가 제1호 및 제2호에 해당하는 주택을 제외하고 1개의 주택만을 소유하고 있는 경우의 당해 주택)·` +
+        `7호(제155조, 제156조의2, 제156조의3 또는 「조세특례제한법」에 따라 1세대가 국내에 1개의 주택을 소유하고 있는 것으로 보거나 ` +
+        `1세대 1주택으로 보아 제154조제1항이 적용되는 주택으로서 같은 항의 요건을 모두 충족하는 주택) 등에 해당하는 주택을 중과 대상에서 제외합니다`
+    : `${MULTI_HOUSE.HOUSE_RIGHT_ONE_EACH_RULE}②은 1호(${LOW_VALUE_REGIONAL_HOUSE_OR_RIGHT})·2호에 해당하는 주택·조합원입주권·분양권을 수에 산입하지 않고, ` +
+        `①은 2호(제167조의3제1항제2호부터 제8호까지 및 제8호의2 중 어느 하나에 해당하는 주택)·` +
+        `13호(제156조의2, 제156조의3 또는 「조세특례제한법」에 따라 1세대가 국내에 1개의 주택을 소유하고 있는 것으로 보거나 ` +
+        `1세대 1주택으로 보아 제154조제1항이 적용되는 주택으로서 같은 항의 요건을 모두 충족하는 주택) 등에 해당하는 주택을 중과 대상에서 제외합니다`;
+}
+
 export function noRosterSurchargeFallbackNotice(args: {
   /**
    * 이 입력을 보내는 화면에 세대 보유 주택 목록 입력 칸이 **없다**(증여세 마법사 — `burdenedGiftInfo.houseRosterInputUnavailable`).
@@ -310,11 +356,27 @@ export function noRosterSurchargeFallbackNotice(args: {
   rosterInputUnavailable?: boolean;
   houses?: readonly unknown[];
   householdHousingCount: number;
+  /** 세대 보유 조합원입주권·분양권 — fallback이 주택 수에 더한 산입 권리(`noRosterCountedRightCount`)를 문안에 밝힌다 */
+  presaleRights?: TransferTaxInput["presaleRights"];
   multiHouseSurchargeResult: MultiHouseSurchargeResult | undefined;
   isSurchargeApplied: boolean;
 }): string | undefined {
   if (args.multiHouseSurchargeResult || (args.houses?.length ?? 0) > 0 || !args.isSurchargeApplied) return undefined;
   const n = args.householdHousingCount;
+  const r = noRosterCountedRightCount(args.presaleRights);
+  const tail = args.rosterInputUnavailable
+    ? `보유 주택이 이에 해당하면 중과가 배제될 수 있으나, 증여세 계산 화면에는 다른 보유 주택 목록 입력 칸이 없어 판정하지 않았습니다. ` +
+      `양도소득세 계산기(부담부증여)에서 다른 보유 주택 목록을 입력해 확인하세요(확인 필요)`
+    : `보유 주택이 이에 해당하면 중과가 배제될 수 있으니, 다른 보유 주택 목록에 주택을 입력하면 판정합니다(확인 필요)`;
+  if (r > 0) {
+    const total = n + r;
+    return (
+      `다른 보유 주택 목록이 입력되지 않아 「세대 보유 주택 수」(${n}채)에 함께 입력한 조합원입주권·분양권 ${r}개를 더한 ${total}개와 ` +
+      `조정대상지역 여부만으로 ` +
+      (total >= 3 ? "주택과 조합원입주권·분양권 수의 합이 3 이상인 1세대" : "주택과 조합원입주권·분양권을 각각 1개씩 소유한 1세대") +
+      ` 중과를 적용했습니다. ${rightClauses(total)} — ${tail}`
+    );
+  }
   const clauses =
     n >= 3
       ? `${MULTI_HOUSE.HOUSE_COUNT_RULE}①은 1호(${LOW_VALUE_REGIONAL_HOUSE})·12호에 해당하는 주택을 주택의 수에 산입하지 않고, ` +
@@ -329,10 +391,6 @@ export function noRosterSurchargeFallbackNotice(args: {
         `제154조제1항이 적용되는 주택으로서 같은 항의 요건을 모두 충족하는 주택) 등에 해당하는 주택을 중과 대상에서 제외합니다`;
   return (
     `다른 보유 주택 목록이 입력되지 않아 「세대 보유 주택 수」(${n}채)와 조정대상지역 여부만으로 ` +
-    `${n >= 3 ? "1세대 3주택 이상" : "1세대 2주택"} 중과를 적용했습니다. ${clauses} — ` +
-    (args.rosterInputUnavailable
-      ? `보유 주택이 이에 해당하면 중과가 배제될 수 있으나, 증여세 계산 화면에는 다른 보유 주택 목록 입력 칸이 없어 판정하지 않았습니다. ` +
-        `양도소득세 계산기(부담부증여)에서 다른 보유 주택 목록을 입력해 확인하세요(확인 필요)`
-      : `보유 주택이 이에 해당하면 중과가 배제될 수 있으니, 다른 보유 주택 목록에 주택을 입력하면 판정합니다(확인 필요)`)
+    `${n >= 3 ? "1세대 3주택 이상" : "1세대 2주택"} 중과를 적용했습니다. ${clauses} — ${tail}`
   );
 }
