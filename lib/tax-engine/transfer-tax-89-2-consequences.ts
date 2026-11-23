@@ -153,8 +153,9 @@ export function article89Clause2Notices(
     }
   }
 
-  // 예외를 적용했지만 해석 공백 위의 한 독법에 기댄다(D-42 공동상속 소수지분) — 생산자가 결론을 가를 때만 채운다.
-  if (clause2?.status === "exception_met") {
+  // 예외를 적용했지만 해석 공백 위의 한 독법에 기댄다(D-42 공동상속 소수지분) — 생산자가 §89② 상태를 가를 때만 채우고, 비과세가 섰거나
+  // 중과 배제를 가를 때만 낸다(I-26 표 확장 — 판정 메뉴 `article89ReadingNotesUndetermined`와 같은 `settled` 게이트 + 중과 배제 축).
+  if (clause2?.status === "exception_met" && (settled || gate.surchargeDeclarationMatters)) {
     for (const note of clause2.readingNotes ?? []) notices.push(note);
   }
 
