@@ -42,6 +42,9 @@ const ev = (kind: "" | "building_built" | "building_removed" | "tax_type_changed
 const revenue = (patch: Record<string, unknown> = {}) =>
   other({ nblRevenueBusinessType: "parking_operation", nblRevenueCurrentRevenue: "10000000", nblRevenueCurrentLandValue: "100000000", ...patch });
 
+/** 기타토지 + 수입금액비율 업종 + 「영위 기간」 토글 ON (NBL-STATE-HISTORY-E3-②) */
+const period = (patch: Record<string, unknown> = {}) => revenue({ nblRevenuePeriodOn: true, ...patch });
+
 /** 기타토지 + 공장 부수토지 — 읍·면/산업단지 경로 */
 const factory = (patch: Record<string, unknown> = {}) =>
   other({ nblFactoryEnabled: true, nblFactoryLocationCategory: "eup_myeon_or_complex", nblFactoryTotalLandArea: "5000", ...patch });
@@ -102,6 +105,14 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
     name: "nbl: 직전 공통쌍 — 공통수입금액이 빔", field: "nblRevenuePriorCommonRevenue", step: 0, assetIndex: A, message: /^자산: 직전 공통수입 안분은 공통수입금액과/,
     form: revenue({ nblRevenueCommonApportion: true, nblRevenueCommonRevenue: "5000000", nblRevenueOtherLandValue: "50000000", nblRevenuePriorOtherLandValue: "30000000" }),
   },
+
+  // 업종 영위 기간(NBL-STATE-HISTORY-E3-②) — 폐업일·개시일 하한·연도 행(키가 연도: `nblRevenueYearRows.{year}.…`). 취득 2015-03-01 · 양도 2024-03-01 → 표가 받는 연도 2015~2022.
+  { name: "nbl: 영위 기간 폐업일이 양도일 이후", field: "nblRevenueBusinessEndDate", step: 0, assetIndex: A, message: /^자산: 기타토지 영위 기간 — 폐업일\(2024-03-01\)이 양도일\(2024-03-01\) 당일 또는 그 이후/, form: period({ nblRevenueBusinessEndDate: "2024-03-01" }) },
+  { name: "nbl: 영위 기간 폐업일이 개시일 이전", field: "nblRevenueBusinessEndDate", step: 0, assetIndex: A, message: /^자산: 기타토지 영위 기간 — 폐업일\(2018-01-01\)이 사업 개시일\(2019-01-01\) 당일 또는 그 이전/, form: period({ nblRevenueCurrentBusinessStartDate: "2019-01-01", nblRevenueBusinessEndDate: "2018-01-01" }) },
+  { name: "nbl: 영위 기간 개시일이 취득일 이전", field: "nblRevenueCurrentBusinessStartDate", step: 0, assetIndex: A, message: /^자산: 기타토지 영위 기간 — 사업 개시일\(2010-01-01\)이 취득일\(2015-03-01\)보다 앞섭니다/, form: period({ nblRevenueCurrentBusinessStartDate: "2010-01-01" }) },
+  { name: "nbl: 영위 기간 연도 행 수입금액 형식", field: "nblRevenueYearRows.2020.revenue", step: 0, assetIndex: A, message: /^자산: 기타토지 영위 기간 — 과세기간별 수입금액 1번째 행 — 수입금액\(abc\)을/, form: period({ nblRevenueYearRows: [{ year: "2020", revenue: "abc", landValue: "100000000" }] }) },
+  { name: "nbl: 영위 기간 연도 행 토지가액 형식", field: "nblRevenueYearRows.2021.landValue", step: 0, assetIndex: A, message: /^자산: 기타토지 영위 기간 — 과세기간별 수입금액 1번째 행 — 토지가액\(x1\)을/, form: period({ nblRevenueYearRows: [{ year: "2021", revenue: "1000000", landValue: "x1" }] }) },
+  { name: "nbl: 영위 기간 — 양도연도에 영위(폐업이 양도연도 안)면 당해 수입금액은 필수", field: "nblRevenueCurrentRevenue", step: 0, assetIndex: A, message: /^자산: 수입금액비율 업종 선택 시 당해 과세기간 수입금액/, form: period({ nblRevenueBusinessEndDate: "2024-02-01", nblRevenueCurrentRevenue: "" }) },
 
   // 행 단위(기간·이력) — 키가 동적(`배열.i.startDate`)
   { name: "nbl: 자경기간 시작일", field: "nblBusinessUsePeriods.0.startDate", step: 0, assetIndex: A, message: /^자산: 사업용 사용기간\(자경 등\) 1번째 행 — 시작일/, form: nbl({ nblBusinessUsePeriods: [{ ...emptyRow }] }) },

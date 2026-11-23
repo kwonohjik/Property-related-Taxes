@@ -7,6 +7,7 @@ import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { OtherLandParcelSection } from "./OtherLandParcelSection";
 import { OtherLandHoSection } from "./OtherLandHoSection";
 import { OtherLandStateHistorySection } from "./OtherLandStateHistorySection";
+import { RevenuePeriodSection } from "./RevenuePeriodSection";
 import { RevenueWholesaleItemField } from "./RevenueWholesaleItemField";
 import { OtherLandPropertyTaxBasisField } from "./OtherLandPropertyTaxBasisField";
 import { FactoryLandSection } from "./FactoryLandSection";
@@ -36,6 +37,9 @@ import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-
 import { nblOtherBuildingToggleHidden } from "@/lib/calc/nbl-other-state-history-scope";
 import { nblOtherStateEventsInUse } from "@/lib/calc/nbl-other-state-history-scope";
 import { nblOtherStateHistoryApplies } from "@/lib/calc/nbl-other-state-history-scope";
+import { nblRevenuePeriodOn } from "@/lib/calc/nbl-revenue-period-scope";
+import { revenuePeriodRange } from "@/lib/calc/nbl-revenue-period-scope";
+import { operatingDaysInYear } from "@/lib/tax-engine/non-business-land/revenue-history";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 import { NBL_PROPERTY_TAX_TYPE_MIXED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
@@ -104,6 +108,10 @@ export function OtherLandDetailSection({
   const isLikelyBareground = landVal > 0 && buildingVal < landVal * 0.02;
   // §168의11③3호 당해 연환산 preview — 엔진 헬퍼 단일 진실 (재구현 금지)
   const nblAcq = nblAcquisitionDateOf(asset); // 이월과세는 증여자 취득일 — 판정(④)과 같은 값
+  // E3-② 「영위 기간」 — 켜지면 개시일 칸은 위 영위 기간 블록으로 옮겨 가고(같은 키 한 인스턴스), 당해 영위일수는 영위 기간(개시·폐업)에서 계산한 값이다.
+  const periodOn = nblRevenuePeriodOn(asset);
+  // 영위 기간 ON — 엔진 leaf(`operatingDaysInYear`)와 같은 양도연도 영위일수(폐업일 전날까지). 0이면 이 해는 판정에 쓰지 않는다.
+  const periodCurrentDays = periodOn && transferDate ? operatingDaysInYear(revenuePeriodRange(asset, transferDate), Number.parseInt(transferDate.slice(0, 4), 10)) : undefined;
   const revenuePreview = useMemo(() => {
     if (!asset.nblRevenueBusinessType || !transferDate || !nblAcq) return undefined;
     const rawCurrent = parseFloat((asset.nblRevenueCurrentRevenue || "0").replace(/,/g, "")) || 0;
@@ -114,11 +122,14 @@ export function OtherLandDetailSection({
     const startOverride = asset.nblRevenueCurrentBusinessStartDate
       ? parseISO(asset.nblRevenueCurrentBusinessStartDate)
       : undefined;
-    const { days, taxYear } = deriveCurrentBusinessDays(
+    const derived = deriveCurrentBusinessDays(
       transferObj,
       acqObj,
       startOverride && !Number.isNaN(startOverride.getTime()) ? startOverride : undefined,
     );
+    if (periodCurrentDays !== undefined && periodCurrentDays <= 0) return undefined;
+    const taxYear = derived.taxYear;
+    const days = periodCurrentDays ?? derived.days;
     const res = computeRevenueTest({
       businessType: asset.nblRevenueBusinessType as NblRevenueBusinessType,
       currentRevenue: rawCurrent,
@@ -138,6 +149,7 @@ export function OtherLandDetailSection({
     asset.nblRevenueCurrentRevenue,
     asset.nblRevenueCurrentLandValue,
     asset.nblRevenueCurrentBusinessStartDate,
+    periodCurrentDays,
     nblAcq,
     transferDate,
   ]);
@@ -315,6 +327,8 @@ export function OtherLandDetailSection({
 
         {asset.nblRevenueBusinessType && (
           <div className="space-y-2">
+            {/* NBL-STATE-HISTORY-E3-② — 업종 영위 기간(개시·폐업) 토글. 계산 순서(영위 기간 → 과세기간별 표 → 당해·직전)대로 당해 수입금액 칸 앞에 둔다. 꺼짐 = 현행. */}
+            <RevenuePeriodSection asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />
             <FieldCard field="nblRevenueCurrentRevenue" label="당해 과세기간 수입금액" unit="원" hint="해당 기간 중 실제 수입금액(연환산 전). 양도일까지 1과세기간 미만 영위 시 아래에서 1년으로 환산됩니다.">
               <CurrencyInput label="당해 수입금액" hideLabel hideUnit value={asset.nblRevenueCurrentRevenue} onChange={(v) => onAssetChange({ nblRevenueCurrentRevenue: v })} />
             </FieldCard>
@@ -326,11 +340,14 @@ export function OtherLandDetailSection({
                 <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">당해 과세기간 연환산 (§168의11③3호)</p>
                 <LawArticleModal legalBasis="소득세법 시행령 §168의11③" label="§168의11③" />
               </div>
-              <FieldCard field="nblRevenueCurrentBusinessStartDate" label="당해 사업개시일" hint="당해연도 중 사업을 개시한 경우만 입력. 미입력 시 과세기간개시일(1.1) 또는 당해연도 취득일을 기산일로 자동 적용. 입력하면 직전 과세기간 비율②가 기준에 미달할 때 사업 구간을 「사업개시일 ~ 양도일」로 보아 기간기준(영 §168의6)도 판정합니다.">
-                <DateInput value={asset.nblRevenueCurrentBusinessStartDate} onChange={(v) => onAssetChange({ nblRevenueCurrentBusinessStartDate: v })} />
-              </FieldCard>
+              {/* 영위 기간 ON이면 이 칸(같은 키)은 위 «업종 영위 기간» 블록으로 옮겨 가 한 시점에 한 인스턴스만 보인다(E3-② UQ-3). */}
+              {!periodOn && (
+                <FieldCard field="nblRevenueCurrentBusinessStartDate" label="당해 사업개시일" hint="사업을 개시한 날 — 어느 해에 개시했든 입력할 수 있습니다(연환산은 당해 과세기간 안의 영위일만 셉니다). 미입력 시 과세기간개시일(1.1) 또는 당해연도 취득일을 기산일로 자동 적용. 입력하면 직전 과세기간 비율②가 기준에 미달할 때 사업 구간을 「사업개시일 ~ 양도일」로 보아 기간기준(영 §168의6)도 판정합니다.">
+                  <DateInput value={asset.nblRevenueCurrentBusinessStartDate} onChange={(v) => onAssetChange({ nblRevenueCurrentBusinessStartDate: v })} />
+                </FieldCard>
+              )}
               {/* NBL-STATE-HISTORY-U1 (통합 Q-15 (가′)) — 건축물 이력이 판정에 쓰이면 개시일은 이력과 합쳐 판정한다(건너뛰지 않는다). 칸은 숨기지 않는다(복원 보존). */}
-              {stateEventsInUse && (
+              {stateEventsInUse && !periodOn && (
                 <ToneCard tone="amber">
                   <p className="text-caption leading-snug" data-testid="nbl-state-history-revenue-start-notice">{NBL_STATE_HISTORY_REVENUE_START_NOTICE}</p>
                 </ToneCard>
@@ -370,9 +387,12 @@ export function OtherLandDetailSection({
             <FieldCard label="직전 과세기간 수입금액" unit="원" hint="입력 시 (당해+직전) 합산비율과 비교해 큰 값 적용 (§168의11②)">
               <CurrencyInput label="직전 수입금액" hideLabel hideUnit value={asset.nblRevenuePriorRevenue} onChange={(v) => onAssetChange({ nblRevenuePriorRevenue: v })} />
             </FieldCard>
-            <FieldCard label="직전 과세기간 영위일수" unit="일" hint="직전연도 중 사업을 개시·폐업하여 영위기간이 1년 미만인 경우만 입력. 미입력 시 직전 수입금액은 연환산하지 않습니다 (§168의11③3호).">
-              <DecimalInput value={asset.nblRevenuePriorBusinessDays} onChange={(v) => onAssetChange({ nblRevenuePriorBusinessDays: v })} />
-            </FieldCard>
+            {/* 영위 기간 ON이면 직전 영위일수는 개시·폐업일에서 계산한다 — 직접 입력은 엔진이 읽지 않는다(`evaluateRevenueHistory`). */}
+            {!periodOn && (
+              <FieldCard label="직전 과세기간 영위일수" unit="일" hint="직전연도 중 사업을 개시·폐업하여 영위기간이 1년 미만인 경우만 입력. 미입력 시 직전 수입금액은 연환산하지 않습니다 (§168의11③3호).">
+                <DecimalInput value={asset.nblRevenuePriorBusinessDays} onChange={(v) => onAssetChange({ nblRevenuePriorBusinessDays: v })} />
+              </FieldCard>
+            )}
             <FieldCard field="nblRevenuePriorLandValue" label="직전 토지가액" unit="원" hint="직전 수입금액을 입력했으면 필수입니다 — 없으면 (당해+직전) 합산비율②가 계산되지 않습니다.">
               <CurrencyInput label="직전 토지가액" hideLabel hideUnit value={asset.nblRevenuePriorLandValue} onChange={(v) => onAssetChange({ nblRevenuePriorLandValue: v })} />
             </FieldCard>

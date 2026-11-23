@@ -6,6 +6,7 @@
 import type { WholesaleItem } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "./calc-wizard-asset-reduction";
 import type { NblOtherStateEventInput } from "./calc-wizard-asset-nbl-other";
+import type { NblRevenueYearRowInput } from "./calc-wizard-asset-nbl-other";
 import type { StateHistoryMode } from "@/lib/tax-engine/non-business-land/land-usage.types";
 
 // 분리된 장기임대 선언 타입 — 기존 import 경로(`calc-wizard-asset-nbl`)를 유지한다.
@@ -215,6 +216,10 @@ export const NBL_DEFAULTS = {
   nblRevenueOtherLandValue: "",
   nblRevenuePriorCommonRevenue: "",
   nblRevenuePriorOtherLandValue: "",
+  // NBL-STATE-HISTORY-E3-② 업종 영위 기간 — 꺼짐 = 현행
+  nblRevenuePeriodOn: false,
+  nblRevenueBusinessEndDate: "",
+  nblRevenueYearRows: [] as NblRevenueYearRowInput[],
   nblGracePeriods: [] as NblGracePeriodInput[],
   // §83의5① 단서 — 부동산매매업 매매용부동산(1·2호 배제) 게이트
 nblOtherMixedUseMode: "",
