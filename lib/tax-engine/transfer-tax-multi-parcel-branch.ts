@@ -28,6 +28,7 @@ import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
 import { resolveTaxCreditRuralSurtax, HYBRID_ARTICLE } from "./transfer-tax-rural-surtax";
 import { ruralSurtaxUnknownStep } from "./transfer-tax-rural-surtax";
 import { ruralSurtaxDeductionBasis } from "./rural-surtax-basis";
+import { filingRateEcho } from "./transfer-tax-rate-clause";
 
 // ============================================================
 // H-MP: handleMultiParcelBranch — 다필지 분리 계산 (소령 §166)
@@ -306,6 +307,7 @@ export function handleMultiParcelBranch(
     basicDeduction: mpBasicDeduction,
     taxBase: mpTaxBase,
     appliedRate: mpTaxResult.appliedRate,
+    ...filingRateEcho(mpTaxResult), // 신고서 ③ — 종전에는 호를 싣지 않아 「-」였다(다필지 40%·70%·50% 실측 2026-11-23)
     progressiveDeduction: mpTaxResult.progressiveDeduction,
     calculatedTax: mpTaxResult.calculatedTax,
     surchargeType: mpTaxResult.surchargeType,

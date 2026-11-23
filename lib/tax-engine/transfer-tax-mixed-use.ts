@@ -31,6 +31,8 @@ import {
 import { resolveSurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import { resolveSurchargeAddonRate } from "./data/multi-house-surcharge-rate-history";
 import { buildMixedRateParts } from "./transfer-tax-mixed-use-rate-parts";
+import { surchargeClause } from "./transfer-tax-rate-clause";
+import type { SurchargeRateClause } from "./transfer-tax-rate-clause";
 import { applyMixedAcqModeGainSplits } from "./transfer-tax-mixed-use-acq-mode";
 import {
   applyBurdenedGiftAssetOverrides, buildMixedBurdenedGiftStep,
@@ -541,6 +543,8 @@ function calcMixedUseCore(
   const rateParts = buildMixedRateParts({
     housingPart, housingGainSplit, commercialGainSplit, commercialPart, nonBusinessLandPart,
     landRateYears, buildingRateYears, surchargeAddon,
+    // 신고서 ③ — 중과 호는 주택 수 판정이 정한다(가산율은 시기마다 2주택·3주택 값이 달라 호를 못 가른다)
+    ...(surchargeAddon !== undefined && surchargeApplication.effectiveSurchargeType !== "none" ? { surchargeClause: surchargeClause(surchargeApplication.effectiveSurchargeType) as SurchargeRateClause } : {}),
   });
   const total = buildTotalTax(
     housingPart.incomeAmount,

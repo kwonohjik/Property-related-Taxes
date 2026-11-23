@@ -76,6 +76,7 @@ import { fillRedev4SplitBranchData, fillRedevRightPayBranchData, fillRedevRightR
 import { buildRowsFromOrder, fmtRatePct } from "./FilingFormTableRowDefs";
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
 import { resolveFilingRateCode } from "./filing-rate-code";
+import { fillMixedRateCodeCells } from "./FilingFormMixedRateCode";
 import { resolveLthdFilingCode } from "./filing-form-codes";
 import { resolveFilingReductionKind } from "./filing-form-codes";
 import { resolveRuralSurtaxReductionBase } from "./filing-form-codes";
@@ -273,6 +274,7 @@ export function buildRows(
       setStr("residencePeriod", "housingBuilding", fmtPeriod(residenceMonthsTotal));
     }
     fourPartFinancials(hp, cp, mu.nonBusinessLandPart, setNum);
+    fillMixedRateCodeCells(mu, transferDate, setStr); // ③ 열별 세율구분 코드(엔진 파트 호 echo)
     // 겸용 × 부담부증여 — 양도 없는 쪽 열의 양도가액 칸에 사유를 단다(0원 양도가 아니라 양도 자체가 없다).
     if (mu.burdenedGift) mixedBgFilingNotes(mu.burdenedGift, setRoseNote);
   } else if (mode === "split-2col" && sp) {

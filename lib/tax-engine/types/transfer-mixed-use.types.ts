@@ -998,6 +998,17 @@ export interface MixedUseNonBusinessLandPart {
 }
 
 /** 합산 세액 */
+/** 겸용 파트별 적용 호 — 신고서 ③ 세율구분 코드 표시 전용 echo(`mixedPartRateClauses`). 세액 무영향. */
+export interface MixedUsePartRateClause {
+  kind: "housing" | "commercial_land" | "commercial_building" | "non_business_land";
+  /** 그 파트에 적용된 §104 호. 주택 중과 파트인데 중과 판정 호가 없으면 undefined(빈 칸). */
+  rateClause?: import("../transfer-tax-rate-clause").RateClause;
+  /** §104⑦ 후단에서 단기세율이 이긴 주택 중과 파트의 중과 후보 호 */
+  surchargeShortTermClause?: import("../transfer-tax-rate-clause").SurchargeRateClause;
+  /** §104① 후단에서 단기세율이 이긴 비사업용 토지(배율 초과분) 파트 */
+  nonBusinessLandShortTerm?: true;
+}
+
 export interface MixedUseTotalTax {
   /** 합산 양도소득금액 */
   aggregateIncome: number;
@@ -1038,6 +1049,8 @@ export interface MixedUseTotalTax {
    * 미주입(구 캐시 결과) 시 결과 카드는 값 비교로 fallback 추론한다.
    */
   rateBasis?: "progressive" | "clause2" | "unregistered";
+  /** 파트별 적용 호(신고서 ③ — 열마다 코드) · 과세표준 0이면 없다 · 표시 전용(`mixedPartRateClauses`) */
+  partRateClauses?: MixedUsePartRateClause[];
   /** 적용된 §104⑦ 다주택 중과 가산율(0.20·0.30). 미적용 시 undefined. */
   surchargeAddon?: number;
   /**

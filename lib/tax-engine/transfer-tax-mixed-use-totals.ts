@@ -5,6 +5,8 @@
 
 import { applyRate, calculateProgressiveTax } from "./tax-utils";
 import { applyFairMarketRatio } from "./tax-utils";
+import type { SurchargeRateClause } from "./transfer-tax-rate-clause";
+import { mixedPartRateClauses } from "./transfer-tax-mixed-use-part-rate-clause";
 import { calcReductions } from "./transfer-tax-reductions-calc";
 import { unregisteredReductionNotice } from "./transfer-tax-reductions-calc";
 import { applyReductionStatutoryCap } from "./transfer-tax-reduction-cap";
@@ -120,6 +122,8 @@ export interface MixedUseRatePart {
    * 미적용(비조정·유예·2008위기취득·2018-04-01 이전 양도) 시 undefined.
    */
   surchargeAddon?: number;
+  /** §104⑦ 중과 호(주택 수로 정해진 `104-7-1`·`104-7-3`) — 주택분 전용 · 신고서 ③ 표시 전용(세액 계산에 쓰지 않는다) */
+  surchargeClause?: SurchargeRateClause;
 }
 
 /**
@@ -393,6 +397,7 @@ export function buildTotalTax(
     rateBasis: isUnregistered ? "unregistered" : usesClause2 ? "clause2" : "progressive",
     ...(housingSurchargeAddon !== undefined ? { surchargeAddon: housingSurchargeAddon } : {}),
     ...(usesClause2 ? { clause2Terms: clause2.terms } : {}),
+    ...withPartRateClauses(mixedPartRateClauses(rateParts, clause2?.terms, taxBase, isUnregistered)),
     nonBusinessSurcharge,
     transferTax,
     reductionAmount: post.reductionAmount,
@@ -702,4 +707,9 @@ function computeMixedUsePostTax(
     ...(ruralSurtaxDelayedPenalty ? { ruralSurtaxDelayedPenalty } : {}),
     ...(localIncomePenalty ? { localIncomePenalty } : {}),
   };
+}
+
+/** 파트별 적용 호 echo — 있을 때만 싣는다(신고서 ③ 표시 전용). */
+function withPartRateClauses(c: ReturnType<typeof mixedPartRateClauses>) {
+  return c ? { partRateClauses: c } : {};
 }

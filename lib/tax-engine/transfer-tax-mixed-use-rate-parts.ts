@@ -4,6 +4,7 @@
  * 로직은 오케스트레이터에 있던 것을 **그대로** 옮겼다(동작 불변) — 호출부 한 곳.
  */
 import type { MixedUseRatePart } from "./transfer-tax-mixed-use-totals";
+import type { SurchargeRateClause } from "./transfer-tax-rate-clause";
 import type { HousingGainSplit } from "./transfer-tax-mixed-use-housing";
 import type { CommercialGainSplit } from "./transfer-tax-mixed-use-commercial";
 import type { buildHousingPart, buildCommercialPart, buildNonBusinessPart } from "./transfer-tax-mixed-use-helpers";
@@ -19,9 +20,11 @@ export function buildMixedRateParts(args: {
   buildingRateYears: (lthdYears: number) => number;
   /** §104⑦ 가산율 — 주택 파트 전용 */
   surchargeAddon: number | undefined;
+  /** §104⑦ 중과 호 — 가산율과 함께만 싣는다(신고서 ③ 표시 전용) */
+  surchargeClause?: SurchargeRateClause;
 }): MixedUseRatePart[] | undefined {
   const { housingPart, housingGainSplit, commercialGainSplit, commercialPart, nonBusinessLandPart } = args;
-  const { landRateYears, buildingRateYears, surchargeAddon } = args;
+  const { landRateYears, buildingRateYears, surchargeAddon, surchargeClause } = args;
   const commercialLandIncome = commercialPart.landIncomeAmount;
   const commercialBuildingIncome = commercialPart.buildingIncomeAmount;
   return commercialLandIncome !== undefined &&
@@ -37,7 +40,7 @@ export function buildMixedRateParts(args: {
             buildingRateYears(housingGainSplit.buildingHoldingYears),
           ),
           // §104⑦ — 상가 파트에는 붙이지 않는다(대상이 「주택+딸린 토지」).
-          ...(surchargeAddon !== undefined ? { surchargeAddon } : {}),
+          ...(surchargeAddon !== undefined ? { surchargeAddon, ...(surchargeClause ? { surchargeClause } : {}) } : {}),
         },
         {
           kind: "commercial_land" as const,
