@@ -7,13 +7,16 @@
  *
  * 시료 — A 2018-01-01 취득 · 원조합원 입주권(기존주택 B) 2021-06-01 · 문화유산 주택 보유(§156의2⑩ 경로) · 양도 2024-03-01.
  * 메뉴(`checkExemption`)와 계산기 경고(`calculateTransferTax`)가 같은 규약이다.
+ *
+ * 2026-11 리뷰 I-26(사용자 결정 2026-11-23) — 같은 게이트를 원조합원 갈래만이 아니라 모든 판정 보류 조문으로 넓혔다. 그래서 「3주택 일반 판정 보류는
+ * 종전대로 고지」 단언을 뒤집었고, 일반 조문의 긍정 짝(본체 비과세 → 고지)은 I-26 계약 표 `89-2-open:*` 행이 맡는다.
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { checkExemption } from "@/lib/tax-engine/transfer-tax-exemption";
 import { article89Clause2Notices } from "@/lib/tax-engine/transfer-tax-89-2-consequences";
 import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
-import { isOriginalMemberOpenArticle } from "@/lib/tax-engine/one-house/original-member-right";
+import { revokeOneHouseExemption } from "@/lib/tax-engine/one-house/revoke-exemption";
 import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 
@@ -59,31 +62,47 @@ describe("#32-4 원조합원 입주권 2주택 축 준용 판정 보류 — 비�
     expect(openWarn(i)).toHaveLength(0);
   });
 
-  it("3주택 일반 판정 보류(원조합원 표지 없음)는 이 변경이 건드리지 않는다 — 종전대로 고지", () => {
+  it("3주택 일반 판정 보류(원조합원 표지 없음)도 본체가 과세면 고지 없음(I-26 — 종전: 고지)", () => {
     const i = mk({ householdHousingCount: 3 });
-    expect(menu(i).undetermined.some((u) => u.id.startsWith("89-2-open:"))).toBe(true);
-    expect((calc(i).warnings ?? []).some((w) => OPEN_WARNING.test(w))).toBe(true);
+    expect(menu(i).isExempt).toBe(false);
+    expect(menu(i).article89Clause2?.status).toBe("undetermined");
+    expect(menu(i).undetermined.some((u) => u.id.startsWith("89-2-open:"))).toBe(false);
+    expect((calc(i).warnings ?? []).some((w) => OPEN_WARNING.test(w))).toBe(false);
   });
 
-  it("술어 — 원조합원 표지가 있는 항목만 고른다", () => {
-    expect(isOriginalMemberOpenArticle("소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)")).toBe(true);
-    expect(isOriginalMemberOpenArticle("소득세법 시행령 §156의2 ⑦·⑩·⑪")).toBe(false);
-  });
-
-  it("leaf — 과세·중과 무관이면 원조합원 항목만 빠지고, 섞여 있으면 나머지는 남는다", () => {
+  it("leaf — 과세·중과 무관이면 원조합원·일반 항목 모두 빠지고, 비과세 또는 중과 배제를 가르면 둘 다 남는다", () => {
     const orig = "소득세법 시행령 §155 ①(원조합원 입주권 — 소득세법 시행령 §156의2 ⑩ 경로)";
     const other = "소득세법 시행령 §156의3 ⑤·⑦·⑧";
     const clause2 = { status: "undetermined" as const, openArticles: [orig, other] };
     const gate = { coreWouldPass: false, surchargeDeclarationMatters: false };
     const t = D("2024-03-01");
-    const w = article89Clause2Notices(clause2, false, t, gate).join("\n");
+    expect(article89Clause2Notices(clause2, false, t, gate)).toEqual([]);
+    const w = article89Clause2Notices(clause2, true, t, gate).join("\n");
     expect(w).toContain(other);
-    expect(w).not.toContain(orig);
+    expect(w).toContain(orig);
+    expect(article89Clause2Notices({ status: "undetermined", openArticles: [other] }, false, t, gate)).toEqual([]);
+    expect(article89Clause2Notices({ status: "undetermined", openArticles: [other] }, false, t, { ...gate, surchargeDeclarationMatters: true })).toHaveLength(1);
     expect(article89Clause2Notices({ status: "undetermined", openArticles: [orig] }, false, t, gate)).toEqual([]);
     expect(article89Clause2Notices({ status: "undetermined", openArticles: [orig] }, true, t, gate)).toHaveLength(1);
     // 구 중과 배제 시대 + 중과 대상이면 과세여도 그 조문이 중과 배제를 가른다
     expect(
       article89Clause2Notices({ status: "undetermined", openArticles: [orig] }, false, t, { ...gate, surchargeDeclarationMatters: true }),
     ).toHaveLength(1);
+  });
+
+  it("비과세를 거두면(회수) 일반 조문 판정 보류도 함께 지운다 — 비과세 전제 고지(I-26 · 종전: 원조합원 갈래만)", () => {
+    const i = baseTransferInput({
+      acquisitionDate: D("2015-05-10"),
+      transferDate: D("2023-10-15"),
+      transferPrice: 800_000_000,
+      presaleRights: [
+        { id: "a", type: "redevelopment_right", acquisitionDate: D("2022-01-01"), region: "non_capital" as const, isInherited: true },
+        { id: "b", type: "redevelopment_right", acquisitionDate: D("2022-02-01"), region: "non_capital" as const, isInherited: true },
+      ],
+    });
+    const j = checkExemption(i as never, rules, D("2022-01-01"));
+    expect(j.isExempt).toBe(true);
+    expect(j.undetermined.some((u) => u.id === "89-2-open:소득세법 시행령 §156의2 ⑥·⑦")).toBe(true);
+    expect(revokeOneHouseExemption(j).undetermined.some((u) => u.id.startsWith("89-2-open:"))).toBe(false);
   });
 });

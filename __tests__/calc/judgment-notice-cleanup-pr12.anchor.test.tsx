@@ -41,11 +41,11 @@ const ORIGINAL_OPEN = "89-2-open:소득세법 시행령 §156의2⑦(원조합�
 const GENERAL_OPEN = "89-2-open:소득세법 시행령 §156의2⑤";
 
 describe("D-37 비과세 회수 필터", () => {
-  it("#43·#44 비과세 전제 고지·원조합원 89-2-open은 거르고 일반 89-2-open·다른 고지는 남긴다", () => {
+  it("#43·#44 비과세 전제 고지·89-2-open(원조합원·일반 모두 — I-26)은 거르고 다른 고지는 남긴다", () => {
     const j = revokeOneHouseExemption(
       withUndetermined([NEW_HOUSE_PRESALE_HOLDING_ID, RURAL_FARMLAND_990_ERA_ID, ORIGINAL_OPEN, GENERAL_OPEN, "other-notice"]),
     );
-    expect(j.undetermined.map((u) => u.id)).toEqual([GENERAL_OPEN, "other-notice"]);
+    expect(j.undetermined.map((u) => u.id)).toEqual(["other-notice"]);
   });
 });
 

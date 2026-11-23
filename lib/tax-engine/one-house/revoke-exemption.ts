@@ -5,7 +5,6 @@ import { INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID } from "./overlap-notice";
 import type { OneHouseJudgment } from "./types";
 import { NEW_HOUSE_ORIGIN_UNCOLLECTED_ID, NEW_HOUSE_PRESALE_HOLDING_ID } from "./new-house-origin";
 import { RURAL_FARMLAND_990_ERA_ID } from "./rural-return-to-farm-facts";
-import { isOriginalMemberOpenArticle } from "./original-member-right";
 import { PRE2010_PARENTAL_CARE_EXCEPTION_ID, REINHERITANCE_REFERENCE_DATE_ID } from "./era-undetermined";
 import { TRANSITION_2002_UNVERIFIED_ID } from "./era-undetermined-temp-two-house";
 
@@ -28,10 +27,9 @@ const SETTLED_PREMISE_UNDETERMINED_IDS: ReadonlySet<string> = new Set([
   TRANSITION_2002_UNVERIFIED_ID,
 ]);
 
-/** 비과세 전제 고지인가 — 고정 id 집합 + 원조합원 입주권 `89-2-open:*`(`pending.ts`가 `settled`로 게이트 · id가 동적이라 술어로 · D-37 2차 보강). */
+/** 비과세 전제 고지인가 — 고정 id 집합 + §89② 판정 보류 `89-2-open:*`(`pending.ts`가 `settled`로 게이트 · id가 동적이라 접두로 · D-37 2차 보강 → I-26 모든 항). */
 function isSettledPremiseUndetermined(id: string): boolean {
-  if (SETTLED_PREMISE_UNDETERMINED_IDS.has(id)) return true;
-  return id.startsWith("89-2-open:") && isOriginalMemberOpenArticle(id.slice("89-2-open:".length));
+  return SETTLED_PREMISE_UNDETERMINED_IDS.has(id) || id.startsWith("89-2-open:");
 }
 
 /**
