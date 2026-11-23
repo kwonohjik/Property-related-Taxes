@@ -9,7 +9,7 @@
  * 🔑 판정은 단건과 같은 함수다. 겸용은 주택 수·의제 축만 받고 12억 안분·표2·§154①은 겸용 경로(`meetsOneHouseRequirements`·주택분 계산)가 맡는다.
  * 🔑 B(직전거주주택보유주택)·§154⑩은 받지 않는다 — §161 안분을 겸용 4파트에 적용한 근거가 없다. ⑧·⑫가 막는다.
  */
-import { mergeRentalCarveoutMissingNotice, mergeRentalCarveoutNotice, withMergeRentalCarveout } from "./one-house/merge-rental-carveout";
+import { mergeRentalCarveoutMissingNotice, withMergeRentalCarveout } from "./one-house/merge-rental-carveout";
 import { resolveMixedHouseCountExclusionDate } from "./one-house/gift-household-basis";
 import { assembleSurchargeHouseSet } from "./transfer-tax-judgment-steps";
 import {
@@ -34,7 +34,10 @@ export interface MixedUseRentalResidence {
   deemed: boolean;
   /** ⑳ 불성립 — 주택 수에 되돌릴 임대 호수(이중 계상 규칙은 `rentalUnitsToRestore`) */
   restoredUnits: number;
-  /** 0061 경로가 섰는가 — 임대를 빼고 §155④⑤로 판정한다 */
+  /**
+   * 0061 경로가 섰는가 — 임대를 빼고 §155④⑤로 판정한다. 적용 고지는 판정 **뒤에** 실제 근거로 만든다(`judgeMixedUseOneHouseExemption`의
+   * `mergeRentalNotice` — 단건 `oneHouseJudgmentWarnings`와 같은 leaf). 여기서 만들면 근거가 「1세대1주택」이어도 「§155④를 적용했습니다」였다(D-72).
+   */
   mergeCarved: boolean;
   mergeRentalRowId?: string;
   /** 명부 없음 · 불성립 카드 행처럼 명부와 다른 중과 판정 주택 집합 */
@@ -51,7 +54,7 @@ export function resolveMixedUseRentalResidence(asset: MixedUseAssetInput, parsed
 
   const carved = withMergeRentalCarveout(source);
   if (carved.mergeRentalCarveout) {
-    return { ...NONE, mergeCarved: true, mergeRentalRowId: carved.mergeRentalCarveout.rentalRowId, notices: [mergeRentalCarveoutNotice(carved)] };
+    return { ...NONE, mergeCarved: true, mergeRentalRowId: carved.mergeRentalCarveout.rentalRowId, notices: [] };
   }
 
   const rhe = source.rentalHousingException;

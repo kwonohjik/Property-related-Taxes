@@ -1247,6 +1247,11 @@ export interface MixedUseGainBreakdown {
   /** 경고 메시지 (PHD 적합성, 22.1.1 이전 양도일 등) */
   warnings: string[];
   /**
+   * [echo] §155⑳ 거주주택·0061 합가 상대 쪽 임대 고지 — `warnings`에도 같은 문장이 있다. 함께 양도 파트 카드(`mixed-use-part-cards.ts`)는
+   * 서브엔진 `warnings`를 버리므로 이 값을 결과 경고로 옮긴다. 0061 문형은 판정 뒤 실제 근거로 고른다(D-72). 선언이 없으면 키가 없다.
+   */
+  rentalResidenceNotices?: string[];
+  /**
    * 법 §104⑦ 다주택 중과 판정 결과 — `asset.multiHouse` 미주입 시 undefined.
    * 세율(§104⑦)·장특 배제(§95②)의 단일 근거이며 결과 카드 표시에도 그대로 쓴다
    * (계산-표시 drift 차단 — `feedback_engine_result_display_drift`).

@@ -170,6 +170,7 @@ function calcMixedUseCore(
     isOneHouseExempt,
     exemptBasis,
     article89ExceptionApplied,
+    mergeRentalNotice,
     laterLandExemptExcluded,
     surchargeDeemedOneHouseBy155,
     surchargeDeemedOneHouseSource,
@@ -188,6 +189,7 @@ function calcMixedUseCore(
     presaleRightStartDate(parsedRates),
     rentalResidence,
   );
+  if (mergeRentalNotice) warnings.push(mergeRentalNotice);
 
   // NH-09 — 감면주택 중과 배제 선판정(아래 §104⑦ 블록)이 고가주택 판정 가액으로 주택분 안분 결과를 읽으므로 안분을 먼저 한다(계산은 순수 — 순서만 앞당김).
   // 파생값 (면적 비율)
@@ -620,6 +622,8 @@ function calcMixedUseCore(
     apportionment,
     // 비과세 근거 echo — 결과 「근거:」 줄(`mixed-use-exempt-basis-row.plan.md`). 세액 불변.
     housingPart: { ...housingPart, ...(exemptBasis ? { exemptBasis } : {}), ...(article89ExceptionApplied ? { article89ExceptionApplied } : {}) },
+    // 함께 양도 파트 카드는 서브엔진 `warnings`를 버린다 — ⑳·0061 고지를 판정 뒤 문형 그대로 넘긴다(D-72).
+    ...(rentalResidence ? { rentalResidenceNotices: [...rentalResidence.notices, ...(mergeRentalNotice ? [mergeRentalNotice] : [])] } : {}),
     commercialPart,
     nonBusinessLandPart,
     total,
