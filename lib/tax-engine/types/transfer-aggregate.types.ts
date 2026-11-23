@@ -231,6 +231,8 @@ export interface PerPropertyBreakdown
   exemptReason?: string;
   /** [echo] §89② 예외 표시 줄 — 자산 결과(`TransferTaxResult.article89ExceptionApplied`)를 그대로 싣는다(표시 전용). */
   article89ExceptionApplied?: { label: string; legalBasis: string[] };
+  /** [echo] 부수토지 비과세 제외가 적용된 1세대1주택 전액 비과세 대상 — 자산 결과(`TransferTaxResult.housingLandExemptExclusion`)를 그대로 싣는다(표시 전용). */
+  housingLandExemptExclusion?: { excessLand: boolean; laterLand: boolean; landOnly?: true };
   /**
    * 양도가액 — **표시 전용**. 일반 자산은 입력값(`singleInput.transferPrice`), 토지·건물 분리 자산은 **소유 파트의 양도가 합**이다
    * (소유자 분리 `selfOwns ≠ both`에서 비소유 파트의 일괄 총액이 섞이지 않는다 — `summarizeSplitGain`).

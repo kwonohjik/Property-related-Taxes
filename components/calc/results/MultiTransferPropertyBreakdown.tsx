@@ -47,6 +47,7 @@ import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-hous
 import { reductionEligibleIncome } from "@/components/calc/results/transfer/reduction-eligible-income";
 import type { RentalHousingExceptionResult } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
 import { Article89ExceptionBasisLine } from "@/components/calc/results/shared/Article89ExceptionBasisLine";
+import { LandExclusionExemptBasisCard } from "@/components/calc/results/shared/LandExclusionExemptBasisCard";
 
 
 /**
@@ -377,8 +378,15 @@ export function PropertyBreakdownAccordion({
                 />
               )}
 
-              {/* §89② 예외(§156의2·§156의3) 근거 — 고가주택 부분 비과세·차손 자산(전액 비과세는 위 분기 · 단건 PartialExemptBasisCard와 같은 줄) */}
-              <Article89ExceptionBasisLine applied={breakdown.article89ExceptionApplied} className="py-2 text-xs text-emerald-700 dark:text-emerald-400" />
+              {/* 부수토지 비과세 제외(G-2·G-3) 자산은 비과세 사유 카드(§89② 근거 줄 포함) · 그 밖은 §89② 예외(§156의2·§156의3) 근거 줄만 —
+                  고가주택 부분 비과세·차손 자산(전액 비과세는 위 분기 · 단건 PartialExemptBasisCard와 같은 줄) */}
+              {breakdown.housingLandExemptExclusion ? (
+                <div className="py-2">
+                  <LandExclusionExemptBasisCard result={breakdown} />
+                </div>
+              ) : (
+                <Article89ExceptionBasisLine applied={breakdown.article89ExceptionApplied} className="py-2 text-xs text-emerald-700 dark:text-emerald-400" />
+              )}
 
               {/* 장기보유특별공제 */}
               {breakdown.longTermHoldingDeduction > 0 && (
