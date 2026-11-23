@@ -87,7 +87,7 @@ const runRow = (r: E3cRow) => run(formOf(r));
 const errorText = (r: { json: Loose }) => JSON.stringify(r.json);
 
 describe("E3c-1 route 관통 — 케이스 표(영위 기간 ON, 단건): 입력 → ⑫ → ⑭ → 엔진 → 세액 · 고지", () => {
-  it.each(E3C_ON_ROWS.filter((r) => !r.notices?.includes("grace10Premise")).map((r) => [r.id, r.scenario, r] as const))("%s — %s", async (_id, _s, r: E3cRow) => {
+  it.each(E3C_ON_ROWS.map((r) => [r.id, r.scenario, r] as const))("%s — %s", async (_id, _s, r: E3cRow) => {
     const res = await runRow(r);
     expect(res.status, JSON.stringify(res.json).slice(0, 400)).toBe(200);
     expect(res.raw.nblRevenuePeriodOn, "④가 영위 기간 칸을 싣는다(직접 raw)").toBe(true);

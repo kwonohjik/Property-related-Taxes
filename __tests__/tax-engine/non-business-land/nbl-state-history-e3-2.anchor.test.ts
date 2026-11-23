@@ -42,8 +42,7 @@ const onRaw = (r: E3cRow, over: Record<string, unknown> = {}) => ({ ...e3cRowRaw
 const days = (iv: { start: Date; end: Date }) => Math.round((iv.end.getTime() - iv.start.getTime()) / 86_400_000);
 
 describe("E3c-1 — 케이스 표(영위 기간 ON): 입력 → 판정·일수·세액 = 오라클", () => {
-  // V-7 전제 검사 행(V7b·V7d)은 E3c-2가 활성화한다 — 이 PR(E3c-1)에서는 유예 제외가 아직 없다.
-  it.each(E3C_ON_ROWS.filter((r) => !r.notices?.includes("grace10Premise")).map((r) => [r.id, r.scenario, r] as const))("%s — %s", (_id, _s, r) => {
+  it.each(E3C_ON_ROWS.map((r) => [r.id, r.scenario, r] as const))("%s — %s", (_id, _s, r) => {
     const input = fromRaw(onRaw(r));
     expect(input.revenueHistory, "⑭가 영위 기간을 엔진 입력으로 변환한다").toBeDefined();
     const j = judge(input);
@@ -322,3 +321,69 @@ describe("E3c-1 — 방어: 입력이 모순돼도 엔진이 조용히 틀리지
   });
 });
 
+
+describe("E3c-2 — V-7: 규칙 §83의5①10호 «2년 이상 사업에 사용한 토지» 전제 — 영위 통산 일수가 기산일 − 2년 미만이면 그 10호 유예만 제외 + 고지 (X-8·X-9·X-10)", () => {
+  const closing = (over: Partial<E3cRow> = {}): E3cRow => ({ ...row("V7b"), ...over });
+  const useProhibited = { reasonCode: "use_prohibited", anchorDate: "2023-03-01", endDate: "2024-06-30" } as const; // 10호와 같은 487일을 덮는 다른 사유
+
+  it("V7b: 영위 181일 < 730 → 10호 유예 제외(유예 가산 0 · 181/729 비사업용 · 세액 +69,750,000 — 현행 B 257,010,000 → N 326,760,000) · echo `excludedGrace10` · 고지 1건", () => {
+    const input = fromRaw(onRaw(row("V7b")));
+    expect(input.gracePeriods).toHaveLength(1); // ⑭는 입력 그대로 — 제외는 판정 진입 전 정리(`prepareRevenueHistory`)가 한다
+    const j = judge(input);
+    expect([j.isNonBusinessLand, j.effectiveBusinessDays, j.gracePeriodDays]).toEqual([true, 181, 0]);
+    expect(j.periodEvaluation!.revenueHistory!.excludedGrace10).toEqual([{ anchorDate: new Date("2023-03-01T00:00:00Z"), operatingDaysBefore: 181, requiredDays: 730 }]);
+    expect(j.warnings.filter((w) => w === NBL_REVENUE_HISTORY_GRACE10_PREMISE_NOTICE)).toHaveLength(1);
+    expect(taxOf(input)).toBe(326_760_000);
+    expect(taxOf(fromRaw(e3cRowRaw(row("V7b"), false)))).toBe(257_010_000); // OFF(현행) — 전제를 검사하지 않는다
+  });
+
+  it("경계(X-9): 영위 731일(개시 2022-03-01 · 폐업·기산 2024-03-01) 충족 → 유예 유지(echo 없음·고지 없음) · 730일(개시 2022-03-02) 미충족 → 제외", () => {
+    const met = judge(fromRaw(onRaw(row("V7c"))));
+    expect(met.periodEvaluation!.revenueHistory!.excludedGrace10).toBeUndefined();
+    expect(met.warnings).not.toContain(NBL_REVENUE_HISTORY_GRACE10_PREMISE_NOTICE);
+    expect(met.gracePeriodDays).toBe(213); // [2024-03-01, 양도일) — 유예 2년은 양도일까지만
+    const unmet = judge(fromRaw(onRaw(row("V7d"))));
+    expect(unmet.periodEvaluation!.revenueHistory!.excludedGrace10).toEqual([{ anchorDate: new Date("2024-03-01T00:00:00Z"), operatingDaysBefore: 730, requiredDays: 731 }]);
+    expect(unmet.gracePeriodDays).toBe(0);
+  });
+
+  it("비율 통과와 무관(X-8): 연도 비율이 전부 미달이어도 영위 통산 2년 이상이면 10호 유예를 유지한다 — «사업에 사용한» 사실이지 다목 인정 여부가 아니다", () => {
+    const j = judge(fromRaw(onRaw(closing({ acq: "2021-01-01", transfer: "2024-09-30", start: "2022-03-01", end: "2024-03-01", years: { 2022: [0, 100_000_000], 2023: [0, 100_000_000], 2024: [0, 100_000_000] }, grace: [{ reasonCode: "business_closure_relocation", anchorDate: "2024-03-01" }] }))));
+    expect(j.periodEvaluation!.revenueHistory!.businessIntervals).toEqual([]);
+    expect(j.periodEvaluation!.revenueHistory!.excludedGrace10).toBeUndefined();
+    expect(j.gracePeriodDays).toBe(213);
+  });
+
+  it("10호만 제외(X-10): 같은 입력에 다른 사유(법령상 사용 제한) 유예가 있으면 그것은 그대로 — 영위 181 ∪ 사용 제한 487 = 668/729 사업용", () => {
+    const j = judge(fromRaw(onRaw(closing({ grace: [{ reasonCode: "business_closure_relocation", anchorDate: "2023-03-01" }, useProhibited] }))));
+    expect(j.periodEvaluation!.revenueHistory!.excludedGrace10).toHaveLength(1);
+    expect([j.isNonBusinessLand, j.effectiveBusinessDays, j.gracePeriodDays]).toEqual([false, 668, 487]);
+  });
+
+  it("10호 행이 둘이면 행마다 검사한다 — 기산일 이전 영위 통산이 충분한 행은 유지 · 모자란 행만 제외", () => {
+    const r = closing({ acq: "2014-01-01", transfer: "2024-06-30", start: "2020-01-01", end: "2023-03-01",
+      years: { 2020: [5_000_000, 100_000_000], 2021: [5_000_000, 100_000_000], 2022: [5_000_000, 100_000_000], 2023: [700_000, 100_000_000], 2024: [0, 100_000_000] },
+      grace: [{ reasonCode: "business_closure_relocation", anchorDate: "2023-03-01" }, { reasonCode: "business_closure_relocation", anchorDate: "2020-06-01" }] });
+    const ex = judge(fromRaw(onRaw(r))).periodEvaluation!.revenueHistory!.excludedGrace10!;
+    expect(ex.map((e) => e.anchorDate.toISOString().slice(0, 10))).toEqual(["2020-06-01"]); // 2020-06-01 이전 영위 152일 < 730 · 2023-03-01 이전 1,155일 ≥ 730
+    expect(ex[0].operatingDaysBefore).toBe(152);
+  });
+
+  it("영위 기간 ON이 아니면 검사하지 않는다 — OFF(키 없음)·토글 꺼짐·양도일 의제는 10호 유예가 현행 그대로(V7b 입력의 현행 B 487/729)", () => {
+    const off = judge(fromRaw(e3cRowRaw(row("V7b"), false)));
+    expect([off.isNonBusinessLand, off.effectiveBusinessDays, off.gracePeriodDays]).toEqual([false, 487, 487]);
+    const toggledOff = judge(fromRaw({ ...e3cRowRaw(row("V7b"), true), nblRevenuePeriodOn: false }));
+    expect([toggledOff.isNonBusinessLand, toggledOff.gracePeriodDays]).toEqual([false, 487]);
+    const deemed = judge(fromRaw(onRaw(row("V7b"), { nblDeemedTransferReason: "auction", nblDeemedTransferDate: "2024-06-01" })));
+    expect(deemed.warnings).not.toContain(NBL_REVENUE_HISTORY_GRACE10_PREMISE_NOTICE);
+    expect(deemed.warnings).toContain(NBL_REVENUE_HISTORY_DEEMED_TRANSFER_NOTICE);
+    expect(deemed.gracePeriodDays).toBeGreaterThan(0);
+  });
+
+  it("폐업일은 있는데 10호 행이 없으면 «자동으로 만들지 않는다» 고지(`closureGrace`) — 행이 있으면(충족·미충족 모두) 이 고지가 없다", () => {
+    expect(judge(fromRaw(onRaw(row("M11p")))).warnings).toContain(NBL_REVENUE_HISTORY_CLOSURE_GRACE_NOTICE);
+    for (const id of ["M11p-10ho", "V7b", "V7d"]) expect(judge(fromRaw(onRaw(row(id)))).warnings, id).not.toContain(NBL_REVENUE_HISTORY_CLOSURE_GRACE_NOTICE);
+    // 폐업일이 없으면(영위 중) 고지하지 않는다
+    expect(judge(fromRaw(onRaw(row("M9p")))).warnings).not.toContain(NBL_REVENUE_HISTORY_CLOSURE_GRACE_NOTICE);
+  });
+});

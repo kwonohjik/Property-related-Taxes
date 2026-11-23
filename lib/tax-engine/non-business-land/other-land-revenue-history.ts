@@ -14,6 +14,7 @@ import { getNblRevenueThreshold } from "../legal-codes";
 import { NBL_REVENUE_HISTORY_APPLIED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_REVENUE_HISTORY_CLOSURE_GRACE_NOTICE } from "../nbl-confirm-notices";
 import { NBL_REVENUE_HISTORY_DEEMED_TRANSFER_NOTICE } from "../nbl-confirm-notices";
+import { NBL_REVENUE_HISTORY_GRACE10_PREMISE_NOTICE } from "../nbl-confirm-notices";
 import { NBL_REVENUE_HISTORY_PAST_YEARS_NOTICE } from "../nbl-confirm-notices";
 import { NBL_REVENUE_HISTORY_ROW_UNKNOWN_NOTICE } from "../nbl-confirm-notices";
 import { TaxCalculationError } from "../tax-errors";
@@ -25,7 +26,10 @@ import { judgeRevenueBusinessStart } from "./other-land-merge";
 import { meetsPeriodCriteria } from "./period-criteria";
 import { computeRevenueTest } from "./revenue-test";
 import { REVENUE_BUSINESS_TYPE_LABEL } from "./revenue-test";
+import { closurePremise } from "./revenue-history";
+import { deriveOperatingRange } from "./revenue-history";
 import { evaluateRevenueHistory } from "./revenue-history";
+import { getOwnershipStart } from "./utils/period-math";
 import { wholesaleItemIssue } from "./revenue-wholesale-item";
 import type { OtherLandOwnTrace } from "./other-land-helpers";
 import type { PeriodCriteriaResult } from "./period-criteria";
@@ -36,6 +40,7 @@ import type { NonBusinessLandInput } from "./types";
 import type { NonBusinessLandJudgmentRules } from "./types";
 import type { PeriodEvaluation } from "./types";
 import type { RevenueHistoryEcho } from "./revenue-test.types";
+import type { RevenueHistoryExcludedGrace } from "./revenue-test.types";
 import type { RevenueHistoryYearEcho } from "./revenue-test.types";
 import type { RevenueTestInput } from "./revenue-test.types";
 import type { RevenueTestResult } from "./revenue-test.types";
@@ -235,17 +240,36 @@ export interface RevenueHistoryPre {
   input: NonBusinessLandInput;
   /** 판정 끝에서 `warnings`에 더할 고지(ON 경로 고지는 `finishRevenueHistory`가 앞에 붙인다). */
   notices: string[];
+  /** V-7 — 영위 통산 2년 미만이라 판정에서 뺀 10호 유예 행(echo `excludedGrace10`). */
+  excluded: RevenueHistoryExcludedGrace[];
 }
 
-/** 판정 진입 전 정리. OFF는 입력을 그대로 돌려준다(같은 객체 — 바이트 동일). */
+/**
+ * 판정 진입 전 정리. OFF는 입력을 그대로 돌려준다(같은 객체 — 바이트 동일).
+ * ON이면 V-7 — 규칙 §83의5①10호 «거주자가 **2년 이상 사업에 사용한 토지**»의 전제를 영위 통산 일수로 검사해(비율 통과와 무관), 미충족인 **10호 유예 행만** 뺀다.
+ * 다른 사유의 유예는 건드리지 않는다. 뺀 입력을 core·이력·유예 잔여분 재판정이 모두 쓴다(어느 경로에서도 같은 유예 집합).
+ */
 export function prepareRevenueHistory(input: NonBusinessLandInput): RevenueHistoryPre {
   const scope = revenueHistoryScope(input);
-  if (scope === "off") return { input, notices: [] };
-  if (scope === "deemed") return { input, notices: [NBL_REVENUE_HISTORY_DEEMED_TRANSFER_NOTICE] };
+  if (scope === "off") return { input, notices: [], excluded: [] };
+  if (scope === "deemed") return { input, notices: [NBL_REVENUE_HISTORY_DEEMED_TRANSFER_NOTICE], excluded: [] };
+  const history = input.revenueHistory!;
+  const is10 = (g: { reasonCode: string }) => g.reasonCode === "business_closure_relocation";
   const notices: string[] = [];
   // 폐업(휴업·이전)일이 있는데 10호 유예 행이 없다 — 자동으로 만들지 않는다(결정 ⑥ · UQ-9).
-  if (input.revenueHistory!.businessEndDate && !input.gracePeriods.some((g) => g.reasonCode === "business_closure_relocation")) notices.push(NBL_REVENUE_HISTORY_CLOSURE_GRACE_NOTICE);
-  return { input, notices };
+  if (history.businessEndDate && !input.gracePeriods.some(is10)) notices.push(NBL_REVENUE_HISTORY_CLOSURE_GRACE_NOTICE);
+  const range = deriveOperatingRange(history, input.acquisitionDate, input.transferDate);
+  const ownershipStart = getOwnershipStart(input.acquisitionDate);
+  const excluded: RevenueHistoryExcludedGrace[] = [];
+  const kept = input.gracePeriods.filter((g) => {
+    if (!is10(g)) return true;
+    const p = closurePremise(range, ownershipStart, g.startDate);
+    if (p.met) return true;
+    excluded.push({ anchorDate: g.startDate, operatingDaysBefore: p.operatingDaysBefore, requiredDays: p.requiredDays });
+    return false;
+  });
+  if (excluded.length > 0) notices.push(NBL_REVENUE_HISTORY_GRACE10_PREMISE_NOTICE);
+  return { input: excluded.length > 0 ? { ...input, gracePeriods: kept } : input, notices, excluded };
 }
 
 /** 판정 끝에서 echo·고지를 붙인다. ON 경로를 타지 않았고 고지도 없으면 `result`를 **그대로** 돌려준다(R-3 — OFF 바이트 동일). */
@@ -261,7 +285,7 @@ export function finishRevenueHistory(result: CategoryJudgeResult, trace: OtherLa
   notices.push(...pre.notices);
   const base: PeriodEvaluation = result.periodEvaluation ?? { basis: "state_at_transfer" };
   const periodEvaluation: PeriodEvaluation = rh
-    ? { ...base, basis: rh.decided && base.basis === "state_at_transfer" ? "usage_periods" : base.basis, revenueHistory: rh.echo }
+    ? { ...base, basis: rh.decided && base.basis === "state_at_transfer" ? "usage_periods" : base.basis, revenueHistory: { ...rh.echo, ...(pre.excluded.length > 0 ? { excludedGrace10: pre.excluded } : {}) } }
     : base;
   return { ...result, periodEvaluation, warnings: [...(result.warnings ?? []), ...notices] };
 }
