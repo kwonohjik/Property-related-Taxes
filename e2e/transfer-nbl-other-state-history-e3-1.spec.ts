@@ -12,12 +12,15 @@
  *  4) 변경 직전 구분 «모름»: 확인 필요 안내 + body "" + 비사업용(종합합산 + 확인 필요).
  *  5) 변경 전후 같은 구분: 비차단 안내만(계산은 진행) · 375px 폭에서 종류 3종 라디오가 화면 안.
  *  6) 축 B 지분(fractional): 재산세 변경 사건이 지분별 구간표 2행씩으로 이어진다.
+ *  7) 시각: 입력 영역·결과 카드의 라이트/다크 대비 · 결과 카드 375px 페이지 가로 스크롤 없음(스크린샷 `e2e/_artifacts/e3-1-*.png`).
  *
  * 폼은 sessionStorage로 시드한다. 외부 API 의존 없음 — mock 불필요.
  *
  * 실행: E2E_PORT=<포트> npx playwright test e2e/transfer-nbl-other-state-history-e3-1.spec.ts
  */
 import { test, expect, type Locator, type Page } from "@playwright/test";
+import { expectDarkContrast, expectLightContrast } from "./_helpers/dark-contrast";
+import { expectNoPageHScroll } from "./_helpers/no-page-hscroll";
 import { createDefaultTransferFormData } from "../lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 
@@ -314,5 +317,32 @@ test.describe("기타토지 재산세 과세 구분 변경 사건(E3-①) — �
     }
     await expect(periods.nth(0).getByTestId("nbl-state-history-interval-0")).toContainText("2014-01-02 ~ 2022-05-31");
     await expect(periods.nth(1).getByTestId("nbl-state-history-interval-0")).toContainText("2014-01-03 ~ 2022-05-31");
+  });
+});
+
+test.describe("기타토지 재산세 과세 구분 변경 사건(E3-①) — 시각(라이트·다크·375px)", () => {
+  test("M12 입력 영역·결과 카드: 라이트/다크 글자 대비 4.5 이상 · 결과 카드 375px 페이지 가로 스크롤 없음", async ({ page }) => {
+    test.setTimeout(150_000);
+    await seed(page, [landAsset({ ...BUILDING_COMPREHENSIVE, nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [{ kind: "tax_type_changed", date: "2022-06-01", propertyTaxTypeBefore: "separate" }] })]);
+    await gotoHolding(page);
+    const section = page.getByTestId("nbl-other-state-history");
+    await section.scrollIntoViewIfNeeded();
+    await section.screenshot({ path: "e2e/_artifacts/e3-1-input-light.png" });
+    await expectLightContrast(page, section);
+    await expectDarkContrast(page, section);
+    await section.screenshot({ path: "e2e/_artifacts/e3-1-input-dark.png" });
+    await page.emulateMedia({ media: "screen", colorScheme: "light" });
+
+    const r = await calc(page);
+    expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);
+    const card = page.getByTestId("nbl-state-history-period");
+    await card.scrollIntoViewIfNeeded();
+    await card.screenshot({ path: "e2e/_artifacts/e3-1-card-light.png" });
+    await expectLightContrast(page, card);
+    await expectDarkContrast(page, card);
+    await card.screenshot({ path: "e2e/_artifacts/e3-1-card-dark.png" });
+    await expectNoPageHScroll(page, 375);
+    await card.scrollIntoViewIfNeeded();
+    await card.screenshot({ path: "e2e/_artifacts/e3-1-card-375.png" });
   });
 });

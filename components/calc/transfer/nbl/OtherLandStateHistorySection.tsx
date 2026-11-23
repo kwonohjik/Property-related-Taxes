@@ -30,6 +30,7 @@ import { NBL_STATE_HISTORY_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-n
 import { NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_GRACE_ROW_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_UNCHANGED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
@@ -129,6 +130,7 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
   const eventsComplete = events.length > 0 && events.every((e) => isEventKind(e.kind));
   // 양도일 현재 건축물 = 마지막 «건축물 사건»(leaf `hasBuildingAtTransfer`). 건축물 사건이 0건이면 줄 대신 「건축물 있음」 토글이 보인다(`OtherLandDetailSection`).
   const hasBuildingEvent = events.some((e) => isBuildingEventKind(e.kind));
+  const hasTaxChange = events.some((e) => e.kind === "tax_type_changed");
   const lastBuilding = eventsComplete ? hasBuildingAtTransfer(events) : undefined;
   const lastBuildingKind = [...events].reverse().find((e) => isBuildingEventKind(e.kind))?.kind;
 
@@ -254,8 +256,8 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                     <p className="text-xs text-muted-foreground px-1" data-testid={`nbl-other-state-event-${i}-after`}>
                       변경 후: {afterTaxTypeText(afterRow)}
                     </p>
-                    {/* UQ-3 (가) — 변경 전후 구분이 같아도 막지 않는다(비차단 안내). 직전 구분이 «모름»이거나 변경 후가 «모름»이면 비교하지 않는다. */}
-                    {ev.propertyTaxTypeBefore && afterRow.propertyTaxType !== "unknown" && ev.propertyTaxTypeBefore === afterRow.propertyTaxType && (
+                    {/* UQ-3 (가) — 변경 전후 구분이 같아도 막지 않는다(비차단 안내). 직전 구분 «모름»(`""`)·변경 후 «모름»(`"unknown"`)은 어떤 실제 구분과도 같지 않아 비교에서 자연히 빠진다. */}
+                    {ev.propertyTaxTypeBefore === afterRow.propertyTaxType && (
                       <ToneCard tone="amber">
                         <p className="text-caption leading-snug" data-testid={`nbl-other-state-event-${i}-same-notice`}>
                           변경 전후 구분이 같습니다. 바뀐 적이 없으면 이 행을 삭제하세요.
@@ -325,7 +327,8 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
 
           <ToneCard tone="amber">
             <div className="space-y-1.5 text-caption leading-snug">
-              <p data-testid="nbl-state-history-applied-notice">{NBL_STATE_HISTORY_APPLIED_NOTICE}</p>
+              {/* 결과 경고와 같은 문구 — 엔진은 구분 변경 사건이 1건 이상이면 종전 한정 고지를 변형 고지로 «대체»한다(`applyStateHistory`). */}
+              <p data-testid="nbl-state-history-applied-notice">{hasTaxChange ? NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE : NBL_STATE_HISTORY_APPLIED_NOTICE}</p>
               <p data-testid="nbl-state-history-grace-row-notice">{NBL_STATE_HISTORY_GRACE_ROW_NOTICE}</p>
             </div>
           </ToneCard>

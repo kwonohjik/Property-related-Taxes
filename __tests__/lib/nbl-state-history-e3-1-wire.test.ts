@@ -82,10 +82,10 @@ describe("E3-① 3중 패턴 배선 — ⑧·⑫가 같은 leaf에 같은 초기
   });
 });
 
-describe("E3-① 고지 2종 배선 — APPLIED는 엔진 apply만 싣고, UNKNOWN(모름 안내)은 위젯이 행 아래에 읽는다", () => {
-  it("결과 경고 `…TAX_CHANGE_APPLIED_NOTICE`는 `applyStateHistory`만 싣는다(UI가 다시 그리지 않는다 — 결과 카드는 엔진 warnings를 그린다)", () => {
+describe("E3-① 고지 2종 배선 — 엔진 apply(결과 경고)와 입력 위젯이 같은 엔진 상수를 읽는다", () => {
+  it("결과 경고 `…TAX_CHANGE_APPLIED_NOTICE`는 엔진 `applyStateHistory`가 싣고(결과 카드는 엔진 warnings를 그린다), 입력 위젯이 같은 문구를 보인다 — 문구는 엔진 상수 단일 소스", () => {
     const users = FILES.filter((f) => f.path !== NOTICES && /\bNBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE\b/.test(f.src)).map((f) => f.path).sort();
-    expect(users).toEqual([APPLY]);
+    expect(users, "새 사용처가 생겼다면 이 허용 목록을 갱신한다(삭제 금지)").toEqual([APPLY, SECTION].sort());
   });
   it("행 아래 «모름» 안내 `…TAX_CHANGE_UNKNOWN_NOTICE`는 엔진 apply(결과 경고)와 위젯 두 곳이 읽는다 — 문구는 엔진 상수 단일 소스", () => {
     const users = FILES.filter((f) => f.path !== NOTICES && /\bNBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE\b/.test(f.src)).map((f) => f.path).sort();

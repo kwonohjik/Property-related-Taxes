@@ -11,7 +11,9 @@ import { render, screen, fireEvent, cleanup, within } from "@testing-library/rea
 import { OtherLandDetailSection } from "@/components/calc/transfer/nbl/OtherLandDetailSection";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { NBL_STATE_HISTORY_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { STATE_EVENT_KIND_LABEL } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 
@@ -49,7 +51,9 @@ describe("종류 3종 라디오 · 행 카드 제목", () => {
     mount(asset({ nblOtherHasBuilding: true, nblOtherStateEvents: [built("2016-01-01"), tax("2022-06-01")] }));
     const body = document.body.textContent ?? "";
     expect(body).toContain("건축물 사건");
-    expect(body.match(new RegExp(STATE_EVENT_KIND_LABEL.tax_type_changed, "g"))!.length).toBeGreaterThanOrEqual(2); // 라디오 라벨 + 제목
+    // 카드 제목(ToneCard `<p>`) — 재산세 변경 행만 종류 라벨, 건축물 행은 «건축물 사건»
+    const titles = [...document.querySelectorAll("p")].map((p) => p.textContent).filter((t) => t === "건축물 사건" || t === STATE_EVENT_KIND_LABEL.tax_type_changed);
+    expect(titles).toEqual(["건축물 사건", STATE_EVENT_KIND_LABEL.tax_type_changed]);
   });
   it("종류를 3번째로 바꾸면 직전 구분을 \"\"로 함께 리셋(철거 → 구분 변경 전환 시 재선택) · 날짜는 유지", () => {
     const onChange = vi.fn();
@@ -198,6 +202,16 @@ describe("«변경 후» 줄 · 비차단 «같은 구분» 안내 (UQ-3 (가))"
     mount(asset({ nblOtherHasBuilding: false, nblOtherStateEvents: [tax("2022-06-01", "separate")] }));
     expect(screen.queryByTestId("nbl-other-state-event-0-after")).toBeNull();
     expect(screen.getByTestId("nbl-state-history-preview-empty")).toBeTruthy();
+  });
+});
+
+describe("한정 고지 — 결과 경고와 같은 문구(엔진은 구분 변경 사건이 있으면 종전 고지를 «대체»)", () => {
+  it("재산세 변경 사건이 있으면 TAX_CHANGE_APPLIED 한 문구만 · 건축물 사건만이면 종전 APPLIED(불변)", () => {
+    const { unmount } = mount(asset({ nblOtherHasBuilding: true, nblOtherStateEvents: [tax("2022-06-01")] }));
+    expect(text("nbl-state-history-applied-notice")).toBe(NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE);
+    unmount();
+    mount(asset({ nblOtherStateEvents: [removed("2021-01-01")] }));
+    expect(text("nbl-state-history-applied-notice")).toBe(NBL_STATE_HISTORY_APPLIED_NOTICE);
   });
 });
 
