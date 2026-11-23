@@ -64,7 +64,7 @@ const taxOf = (input: NonBusinessLandInput) =>
 describe("E3d-0 Anchor 1 — §6.1 A 행: 판정 · 일수 (일 단위 정답표)", () => {
   it("표 규모·id 중복 없음 · 핵심 행 포함", () => {
     expect(new Set(E3D_A_ROWS.map((r) => r.id)).size).toBe(E3D_A_ROWS.length);
-    for (const id of ["M15", "M15b", "M15c", "M15d", "M8a", "M8b", "G1", "M8c-731", "M8c-730", "H3", "H3b", "H3c", "H3d", "H3e", "H3f", "H8", "H8b", "H9", "M13p", "P3p", "P2-1", "P2-2", "P3-clip"])
+    for (const id of ["M15", "M15b", "M15c", "M15e", "M15d", "M8a", "M8b", "G1", "M8c-731", "M8c-730", "H3", "H3b", "H3c", "H3d", "H3e", "H3f", "H8", "H8b", "H9", "M13p", "P3p", "P2-1", "P2-2", "P3-clip"])
       expect(E3D_A_ROWS.map((r) => r.id), id).toContain(id);
   });
 
@@ -124,7 +124,7 @@ describe("E3d-0 현행 열 — 같은 입력을 **이력 칸 없이** 넣은 값
 
   it("기대와 현행이 반대인 행(과소 해소 대상) vs 일치하는 행 — 표의 존재 이유", () => {
     const flipIds = E3D_A_ROWS.filter((r) => r.expect.nonBusiness !== r.current.nonBusiness).map((r) => r.id);
-    expect(flipIds).toEqual(["M15", "M15b", "M15c", "M15d", "M8b", "G1", "M8c-730", "H3c", "H3d", "H3e", "H3f", "H8", "H9", "M13p", "P3p", "P2-1", "P2-2"]);
+    expect(flipIds).toEqual(["M15", "M15b", "M15c", "M15e", "M15d", "M8b", "G1", "M8c-730", "H3c", "H3d", "H3e", "H3f", "H8", "H9", "M13p", "P3p", "P2-1", "P2-2"]);
     const sameIds = E3D_A_ROWS.filter((r) => r.expect.nonBusiness === r.current.nonBusiness).map((r) => r.id);
     expect(sameIds).toEqual(["M8a", "M8c-731", "H3", "H3b", "H8b", "P3-clip"]);
   });
