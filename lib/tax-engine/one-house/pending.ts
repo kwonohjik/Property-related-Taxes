@@ -511,10 +511,11 @@ export function undeclaredMergeCompositionUndetermined(
  */
 /**
  * §89② 예외를 적용했지만 그 결론이 해석 공백 위의 한 독법에 기대는 경우의 확인 필요 고지(`readingNotes` — D-42 공동상속 소수지분).
- * 생산자가 반대 독법이면 결론이 갈릴 때만 채우므로 여기서는 다시 거르지 않는다.
+ * 생산자는 반대 독법이면 §89② 상태가 갈릴 때만 채운다. 그래도 본체가 과세면(미등기 등) 어느 독법이어도 결론이 같다 — 비과세가 섰을 때만
+ * 낸다(2026-11 리뷰 I-26 표 확장이 찾음 · `89-2-open`과 같은 규약 — 사용자 결정 2026-11-23).
  */
-export function article89ReadingNotesUndetermined(article89Clause2: Article89Clause2Result): OneHouseUndetermined[] {
-  if (article89Clause2.status !== "exception_met") return [];
+export function article89ReadingNotesUndetermined(article89Clause2: Article89Clause2Result, settled: boolean): OneHouseUndetermined[] {
+  if (!settled || article89Clause2.status !== "exception_met") return [];
   return (article89Clause2.readingNotes ?? []).map((reason, i) => ({ id: `89-2-reading:${i}`, reason }));
 }
 

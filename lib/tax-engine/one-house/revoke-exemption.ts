@@ -27,9 +27,12 @@ const SETTLED_PREMISE_UNDETERMINED_IDS: ReadonlySet<string> = new Set([
   TRANSITION_2002_UNVERIFIED_ID,
 ]);
 
-/** 비과세 전제 고지인가 — 고정 id 집합 + §89② 판정 보류 `89-2-open:*`(`pending.ts`가 `settled`로 게이트 · id가 동적이라 접두로 · D-37 2차 보강 → I-26 모든 항). */
+/**
+ * 비과세 전제 고지인가 — 고정 id 집합 + §89② 판정 보류 `89-2-open:*`·독법 고지 `89-2-reading:*`(`pending.ts`가 `settled`로 게이트 ·
+ * id가 동적이라 접두로 · D-37 2차 보강 → I-26 모든 항 · 표 확장에서 독법 고지).
+ */
 function isSettledPremiseUndetermined(id: string): boolean {
-  return SETTLED_PREMISE_UNDETERMINED_IDS.has(id) || id.startsWith("89-2-open:");
+  return SETTLED_PREMISE_UNDETERMINED_IDS.has(id) || id.startsWith("89-2-open:") || id.startsWith("89-2-reading:");
 }
 
 /**
