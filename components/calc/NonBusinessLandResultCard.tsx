@@ -8,6 +8,7 @@ import { resolvePeriodEvaluation } from "@/lib/tax-engine/non-business-land/peri
 import { NBL } from "@/lib/tax-engine/legal-codes";
 import { PROPERTY_TAX_BASIS_LABEL, PROPERTY_TAX_BASIS_LEGAL } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { propertyTaxTypeLabel } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
+import { NblStateHistoryPeriodTable } from "@/components/calc/NblStateHistoryPeriodTable";
 
 interface Props {
   judgment: NonBusinessLandJudgment;
@@ -250,6 +251,16 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
             )}
           </div>
         </div>
+      )}
+      {/* NBL-STATE-HISTORY-U2 — 건축물 이력(일 단위 구간)으로 판정한 경우: 구간표 + 영 §168조의6 기준. 고지는 아래 「주의사항」(엔진 warnings)이 맡는다. */}
+      {periodEval.basis === "state_history" && periodEval.stateHistory && (
+        <NblStateHistoryPeriodTable
+          stateHistory={periodEval.stateHistory}
+          totalOwnershipDays={judgment.totalOwnershipDays}
+          effectiveBusinessDays={judgment.effectiveBusinessDays}
+          gracePeriodDays={judgment.gracePeriodDays}
+          isNonBusiness={isNonBusiness}
+        />
       )}
       {periodEval.basis === "state_at_transfer" && (
         <div className="px-4 py-2 border-b border-border" data-testid="nbl-period-state-at-transfer-notice">

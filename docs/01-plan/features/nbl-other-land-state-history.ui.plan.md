@@ -2,7 +2,7 @@
 
 > 🔴 **개정 2026-11-22 (v3)**: 사용자가 **V-1을 일 단위로 재결정**했다(통합 계획서 머리말 «v3 우선 규칙»). 이 문서의 v2 «과세기준일 접기» 서술(`foldStateToTaxBaseYears`·과세연도 버킷/표·6.1. 경계·Q-14)은 폐기이며, 법령·해석례 조사 기록과 V-2 결론만 근거 자료로 남는다. 판정·기대값은 일 단위 구간 기준(v1 모델 · §6 «일 단위» 열).
 > **Feature ID**: `nbl-other-land-state-history` (UI 측) · 짝 문서: `nbl-other-land-state-history.engine.plan.md`(엔진·API 측 — 이 문서는 건드리지 않는다)
-> **작성일**: 2026-11-22 · **base**: origin/master `10e86a809` → **자가 검토 base `0972e2618`**(file:line 재실측 — §18) · **상태**: 계획 + **U0·U1 구현됨(2026-11-23 · 브랜치 `feat/nbl-state-history-u1` · 구현 기록 §19)** — U2(⑦ 결과 카드)·U3(E2E 6건·`ui-engine-sync-checker`)는 남음 · mutation probe 3건은 §18.3
+> **작성일**: 2026-11-22 · **base**: origin/master `10e86a809` → **자가 검토 base `0972e2618`**(file:line 재실측 — §18) · **상태**: 계획 + **U0·U1 구현됨(2026-11-23 · 브랜치 `feat/nbl-state-history-u1` · 구현 기록 §19)** — **U2(⑦ 결과 카드) 구현됨(2026-11-23 · §20)** · U3(E2E 6건·`ui-engine-sync-checker`)는 남음 · mutation probe 3건은 §18.3
 > **근거 결정**: 리뷰 `docs/reviews/nbl-other-categories-review-2026-11.md` §1.4 V2-C2 · §6 Q-4 (다) · §12.4 항목 2 — 「별도 계획서로 상태 이력 입력 모델을 계획한다」(Q-4 (나)는 D1 #3495로 이미 완료)
 > **번호 규칙**: 이 문서의 사용자 결정은 `UQ-n`, 미검증은 `UV-n`(엔진 계획서의 Q/V 번호와 충돌 방지 — 합칠 때 재번호).
 > **검증 표기**: 「확인」= 이 세션에서 파일을 읽어 file:line을 대조한 사실. 「확인 필요」= 읽지 않았거나 실측·법령 조회가 남은 것. 새 시나리오의 세액 숫자는 쓰지 않는다(엔진 Pre-Do anchor가 확정) — ±55,750,000은 리뷰 실측 인용이다.
@@ -491,9 +491,9 @@ U1·U2는 한 PR로 합칠 수 있다(카드가 echo 없는 구 결과를 처리
 | UV-3 | 「신축」 사건 날짜의 법령상 의미(사용승인일·준공일·사실상 사용일) | ✅ **U1 라벨 확정(2026-11-23)** — 신축 행 날짜 hint = 「건축물이 있는 것으로 보는 첫날입니다. 사용승인일(준공일)과 재산세상 건축물로 보는 첫날이 다를 수 있습니다 — 확인 필요.」 (조문 번호를 새로 인용하지 않는다 → manifest 등록 없음 · 단정 문구 없음). 아래 근거 기록은 유지: **부분 해소 · 설계 영향 없음(라벨 문구만)** — 재산세 구분은 허가·사용승인을 받지 않은 건축물의 부속토지를 별도합산에서 빼고(지방세법 시행령 §101①단서), 건축허가 후 **공사에 착수한 건축물도 건축물에 포함**한다(같은 영 §103①3 — 과세기준일 현재 정당한 사유 없이 6개월 이상 공사 중단은 제외 · 본문 확인). 라벨은 U1 전 확정 — 확정 전에는 «건축물 신축일» 중립 표기, **본문에 없는 해석(사용승인일 단정)을 화면 문구로 쓰지 않는다** | U1 착수 전 라벨 확정(KoreanLaw MCP — 지방세법 시행령 §101·§103) |
 | UV-4 | 사건일 = 양도일 · 양도일 의제 이후 사건 · 양도일 이후 사건 | ✅ **해소** — 사건일 ≥ 양도일은 마지막 구간 0일이라 ⑧·⑫가 차단(엔진 §3.6 — ⑧ #7). 의제(§168의14②) 동시 입력은 통합 Q-9 (가): 이력 미적용 + 고지라 의제일 이후 사건을 막을 필요가 없다(⑧ #9 삭제 — §8.1) | — |
 | UV-5 | 축 B에서 첫 카드가 가장 이른 취득일인가 | ✅ **해소(실측)** — 보장 없음: `isFullFractionalBundle`(`transfer-tax-api-asset-basics.ts:165`)은 개수·분수 여부만 본다. 대응: ⑧ #6 하한 = 번들 최이른 취득일 · ⑫는 하한 없음 · 질문 문구 «이 토지(전 지분)가 소유되던 기간 중»(§8.3) | — |
-| UV-6 | 축 B 지분별 판정 결과의 화면 표시(`nonBusinessLandJudgmentDetail`이 1건일 때 지분별 구간표) | ⏳ **미해소 · 설계 영향 있음(⑦ 한정)** — 카드 사용처가 단일 result 두 곳뿐(`TransferTaxResultView.tsx:529`·`ValuationDetailCards.tsx:114`)이라 지분 2·3의 구간표가 어디에도 안 보일 수 있다. ⑤⑧④(U1)에는 무관 | **U2 착수 전** `TransferTaxResultView.tsx:526-529`·축 B 결과 경로 정독 + E5로 실측 |
+| UV-6 | 축 B 지분별 판정 결과의 화면 표시(지분별 구간표) | ✅ **해소(실측 2026-11-23, U2 E2E 고정)** — 축 B 지분은 `aggregated.properties[]` 지분마다 `nonBusinessLandJudgmentDetail`(+`periodEvaluation.basis = state_history` echo)을 따로 갖고, 결과 화면 «자산별 계산 결과»에서 `BundledAllocationSubCards.tsx:167` → `ValuationDetailCards.tsx:114` → `NonBusinessLandResultCard`가 **지분 카드마다** 그려진다(단건은 `TransferTaxResultView.tsx:528` · 다건 `MultiTransferPropertyBreakdown.tsx:555`는 NBL 입력이 없어 해당 없음 — UV-7). 시료: 지분1(취득 2014-01-02)·지분2(취득 2020-01-01) 같은 철거 사건 → 지분1 구간 2,555일(별도합산)+1,249일 · 지분2 365일+1,249일 → 지분1 사업용·지분2 비사업용 각각 구간표 표시(`e2e/transfer-nbl-other-state-history-result.spec.ts`). 설계 변경 없음 | — |
 | UV-7 | 다건(연간 합산)의 NBL echo 표시·입력 | ✅ **해소** — 다건 입력 화면에 NBL 섹션 마운트 0건(`git grep -l nblUseDetailedJudgment -- app components`) · 다건 ⑧(`multi-transfer-tax-validate.ts`)도 NBL 참조 0건 · 다건 결과뷰는 카드 미사용 → 질문·echo 소비처 모두 없음. 다건으로 온 폼의 `""` = 현행(⑫ 허용) | — |
-| UV-8 | 「계산 결과 선택 출력」(8 결과뷰)에서 카드 구간표의 인쇄·PDF 반영 · print CSS 토글 | ⏳ **미해소 · 설계 영향 없음(표시 방식)** | **U2 착수 전** 결과뷰 선택 출력 설정 정독 + 인쇄 E2E(`feedback_print_media_needs_section_selection`) |
+| UV-8 | 「계산 결과 선택 출력」(8 결과뷰)에서 카드 구간표의 인쇄·PDF 반영 · print CSS 토글 | ⏳ **부분 해소(U2)** — 구간표는 접힘이 없어 인쇄 시 별도 처리가 필요 없고 표 래퍼에 `print:overflow-visible`만 둔다. «선택 출력» 인쇄 E2E는 **미수행** | **U2 착수 전** 결과뷰 선택 출력 설정 정독 + 인쇄 E2E(`feedback_print_media_needs_section_selection`) |
 | UV-9 | `calc-wizard-asset-nbl.ts` 776줄 — 위험구간 | ⏳ **부분 해소** — 새 타입은 `calc-wizard-asset-nbl-other.ts`로 가고(§5.1) 이 파일은 `NBL_DEFAULTS` 2줄(776→778)뿐. ≥750 위험구간이라 U0에서 «기회주의적 분리» 판단. 이음매 후보(실측): `HouseEntry`(`:97`~`:522`)·`PresaleRightEntry`(`:523`~)는 NBL과 무관한 타입이라 옮길 수 있고 `export type {…}` 재수출로 import 경로를 유지한다(`:12-17` 선례). **설계 영향 없음** | U0 PR 시점 줄 수 재측정 |
 | UV-10 | 테스트 보정 규모 · dedup 키 | ✅ **실측 반영** — dedup 키: `lib/storage/business-key.ts`에 `nbl` 0건. vitest·E2E 보정 규모는 **§18.3 P-3**(추정 «기타토지 픽스처 18 + E2E 6~7»을 실측으로 대체) | U1에서 필드 추가 후 재확인 |
 | UV-11 | 철거 후 한시 지위(영 §103의2 — 철거ㆍ멸실 1년·빈집 3년) 판정 가능성 | 기록 — 본문 확인: 지방세법 시행령 §103의2 「과세기준일 현재 … 사실상 철거ㆍ멸실된 날부터 1년이 지나지 않은 …」(빈집 3년 · 허가·사용승인 없는 건축물·건축 용도 외 사용 제외 · 바닥면적 × §101② 배율). 판정 자동화는 사실 칸이 더 필요해 v1 제외(엔진 E3) — 이 계획 범위 밖. **설계 영향 없음** | — |
@@ -670,3 +670,14 @@ U1·U2는 한 PR로 합칠 수 있다(카드가 echo 없는 구 결과를 처리
 ### 19.3 픽스처 보정 (⑧ #1이 모드 `""`을 차단 — 통합 Q-5)
 
 실측 12파일 83건(최초 실행)이 새 ⑧에 반응했다. 의도 보존 보정은 PR 본문 표. E2E 헬퍼 1 + 스펙 3(`transfer-nbl-ptax-basis` · `transfer-nbl-revenue-deemed-common` · `transfer-dead-end-defects` · `nbl2611-c10`)에 «바뀐 적 없습니다»(또는 seed `unchanged`)를 더했다. 모드 `""` 차단 부정 anchor는 별도 유지(`nbl-state-history-u1-validate-parity` #1 · `nbl-state-history-gates`).
+
+---
+
+## 20. 구현 기록 — U2 ⑦ 결과 카드 (2026-11-23 · 브랜치 `feat/nbl-state-history-u2`)
+
+- **UV-6 해소**: §15 UV-6 행. 설계 변경 없음.
+- **신규** `components/calc/NblStateHistoryPeriodTable.tsx` — 입력은 엔진 echo(`periodEvaluation.stateHistory`)뿐. 구간표(시작~종료 전날·일수·건축물·재산세 구분(`PROPERTY_TAX_TYPE_LABEL` · «모름» = «종합합산(모름 — 확인 필요)»)·사업용 일수·사업용 여부) + 유예 가산 행(`gracePeriodDays > 0`) + 소유기간 합계 행 + 영 §168조의6 기준(소유기간 버킷 제1~3호 · 가목 · 나목 · 다목(3호는 40% 기준이 나목) 각각 충족/미충족 · 버킷에 없는 목은 행 없음 · 3호 단서(소유 2년 미만)는 가목 없음). 카드는 `<ToneCard tone="sky">` · 숫자 칸 `font-mono tabular-nums text-right` · 접힘 없음(v3 «접기 삭제» — 표가 구간 수만큼만 길어진다).
+- `NonBusinessLandResultCard.tsx`(437 → 448줄) — `basis === "state_history"`이면 위 블록을 그린다. 고지는 기존 «주의사항»(엔진 `warnings`)이 맡고 블록은 문구를 새로 짓지 않는다 · 이력이 판정을 뒤집은 사유는 배너의 `judgmentReason`(엔진 문구)이 이미 보인다.
+- **«100분의 N»**: echo에 비율이 없어 `limitDa`(= floor(소유일수 × N ÷ 100))에서 40/20을 되짚는다. 가릴 수 없으면 비율 문구를 생략한다 — 엔진 수정 없음.
+- **변경 없음(확인)**: 카드 사용처는 단건·지분·합산 하위 카드 한 경로(`ValuationDetailCards`)뿐 — PDF·이력 저장 뷰에 별도 카드 경로 없음(grep).
+- 테스트: `__tests__/components/nbl-state-history-result-card.anchor.test.tsx`(14건 · 엔진 `E2_ROWS` 실결과 렌더) · `e2e/transfer-nbl-other-state-history-result.spec.ts`(2건 — 단건 + UV-6 지분 2장 · 라이트/다크 대비 · 375px 가로 스크롤 없음).
