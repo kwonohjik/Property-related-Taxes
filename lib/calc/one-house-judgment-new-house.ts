@@ -47,6 +47,20 @@ export function judgmentContestedGiftedNewHouse(form: OneHouseJudgmentFormData):
   return resolveJudgmentTemporaryTwoHouse({ ...form, houses }, excluded) ?? null;
 }
 
+/**
+ * §155①2호 연혁 사실(폼 전역 칸 — 신규 주택 취득 당시 조정 여부·계약일·세대전원 전입일·임차인)이 가리키는 짝 — 엔진 입장 짝, 없으면 양론 반대 입장 짝
+ * (C2·C7 → C1). 반대 입장 짝도 ④가 같은 칸으로 연혁 사실을 싣는다(`temporaryTwoHousePayloadOf`) — 엔진 입장 짝이 없을 때 ⑤가 그 칸을 열지 않으면 답할 길이
+ * 없었다(D-79). ⑤ 질문 노출·⑧ 연혁 칸 검증이 이 한 짝을 읽는다. `contested`면 화면이 「다른 입장」의 짝이라고 밝힌다.
+ */
+export function judgmentEraFactsNewHouse(
+  form: OneHouseJudgmentFormData,
+): (TemporaryTwoHouseDates & { contested: boolean }) | undefined {
+  const engine = judgmentDerivedNewHouse(form);
+  if (engine) return { ...engine, contested: false };
+  const other = judgmentContestedNewHouse(form) ?? judgmentContestedGiftedNewHouse(form);
+  return other ? { ...other, contested: true } : undefined;
+}
+
 /** 양론 반대 입장 짝(C2·C7 · C1)의 신규 주택 행 — 엔진 입장 짝의 행과 같으면 뺀다. ⑧이 「다른 입장」 문구로 경위를 요구한다. */
 export function judgmentContestedNewHouseRowIds(form: OneHouseJudgmentFormData): string[] {
   const engineRow = judgmentDerivedNewHouse(form)?.newHouseRowId;

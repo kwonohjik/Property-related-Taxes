@@ -9,6 +9,8 @@
  *   보아 비과세가 되어 갈리지 않는다(CT-1c · 2026-11 리뷰 D-79 C1 변형 · 서면인터넷방문상담4팀-3513).
  * - CT-2(C2): 동일세대 부친에게서 공동상속받은 주택 소수지분을 보유한 세대가 일반주택 양도(서면-2021-법규재산-0843 ↔
  *   조심-2023-중-7006).
+ * - CT-3(C2 · 2026-11 리뷰 D-79): 엔진 입장에는 §155① 짝이 없고 반대 입장(B)에만 짝이 서는 세대(서울 · 동일세대 소수지분 2019 · 신규 주택 2020-06 ·
+ *   2021-05 양도). B 짝의 §155①2호 세대전원 전입일 칸이 ③ 화면에 열리고, 미답이면 카드가 B 결론을 단정하지 않으며, 답하면 B 비과세로 갈린다.
  */
 import { test, expect, type Page } from "@playwright/test";
 import { gotoJudgmentHoldingsStep } from "./_helpers/judgment-seed";
@@ -98,4 +100,49 @@ test("[CT-2] 동일세대 공동상속 소수지분 → 「해석이 갈림」 �
   await expect(page.getByTestId(`one-house-contested-${C2}-A-verdict`)).toHaveText("과세");
   await expect(page.getByTestId(`one-house-contested-${C2}-B-verdict`)).toHaveText("비과세");
   await expect(page.getByTestId(`one-house-contested-${C2}-note`)).toContainText("입장 A에 따릅니다");
+});
+
+const SEOUL = "1168010100";
+const ROW = {
+  region: "capital", regionCode: SEOUL, officialPrice: "300000000",
+  isInherited: false, isLongTermRental: false, isApartment: true, isOfficetel: false, isUnsoldHousing: false,
+};
+async function seedEra(page: Page) {
+  await gotoJudgmentHoldingsStep(page, {
+    transferDate: "2021-05-01",
+    contractTotalPrice: "500000000",
+    wasRegulatedAtAcquisition: false,
+    isRegulatedArea: true,
+    assets: [{ assetKind: "housing", acquisitionDate: "2015-01-01", regionCode: SEOUL, residenceInputMode: "direct", residencePeriodMonthsAsset: "48" }],
+    houses: [
+      {
+        ...ROW, id: "m1", acquisitionDate: "2019-03-01", isInherited: true, inheritedDate: "2019-03-01",
+        isCoInherited: true, isLargestCoInheritedShareholder: false, decedentSameHouseholdAtInheritance: true,
+      },
+      { ...ROW, id: "n", acquisitionDate: "2020-06-01", acquisitionOrigin: "general" },
+    ],
+  });
+}
+
+test("[CT-3a] 반대 입장에만 짝 → ③에 그 짝의 전입일 칸 · 미답이면 카드가 B 결론을 단정하지 않는다", async ({ page }) => {
+  await seedEra(page);
+  const block = page.getByTestId("contested-temp-two-house-era");
+  await expect(block).toContainText("해석이 갈리는 쟁점의 다른 입장에서는 보유 주택 목록의 2번째 주택이");
+  await expect(block.getByTestId("temp-two-house-move-in-date")).toBeVisible();
+  await judge(page);
+  await expect(page.getByTestId(`one-house-contested-${C2}-note`)).toContainText("반대 입장으로 다시 판정하면 확인이 필요한 사실이 남아");
+  await expect(page.getByTestId(`one-house-contested-${C2}-note`)).not.toHaveText("두 입장의 결론이 같습니다.");
+});
+
+test("[CT-3b] 같은 칸에 전입일을 답하면 본문 반대 입장 짝에 실리고 → 입장 B 비과세 · 「해석이 갈림」", async ({ page }) => {
+  await seedEra(page);
+  const moveIn = page.getByTestId("contested-temp-two-house-era").getByTestId("temp-two-house-move-in-date");
+  await moveIn.getByRole("textbox", { name: "연도" }).fill("2021");
+  await moveIn.getByRole("textbox", { name: "월" }).fill("1");
+  await moveIn.getByRole("textbox", { name: "일" }).fill("10");
+  await expect(moveIn.getByRole("textbox", { name: "일" })).toHaveValue("10");
+  const body = (await judge(page)) as { contestedTemporaryTwoHouse?: Record<string, unknown> };
+  expect(body.contestedTemporaryTwoHouse).toMatchObject({ newHouseRowId: "n", wholeHouseholdMoveInDate: "2021-01-10" });
+  await expect(page.getByTestId(`one-house-contested-${C2}-B-verdict`)).toHaveText("비과세");
+  await expect(page.getByTestId("one-house-verdict")).toHaveText("해석이 갈림");
 });

@@ -414,6 +414,21 @@ export function contestedPairPositionExcludedRowIds(
   return [...ids];
 }
 
+/**
+ * 반대 입장 재판정에만 남은 「확인 필요」(판정 보류 · `undetermined`) — 있으면 그 입장의 결론을 단정하지 않는다(D-79). 엔진 입장의 같은 미답은
+ * 판정 보류로 이미 고지되지만, 반대 입장 결론은 카드의 결론 한 칸뿐이라 「두 입장의 결론이 같습니다」로 단언됐다(예: 반대 입장 §155① 짝의 세대전원 전입일 미답).
+ * 판정 보류는 「결론을 가를 때만」 내는 고지라 반대 입장 결론이 그 사실에 달려 있다는 뜻이다.
+ */
+export function otherPositionUndeterminedNote(
+  engine: Pick<OneHouseJudgment, "undetermined">,
+  other: Pick<OneHouseJudgment, "undetermined">,
+): string | undefined {
+  const own = new Set(engine.undetermined.map((u) => u.id));
+  const extra = other.undetermined.filter((u) => !own.has(u.id));
+  if (extra.length === 0) return undefined;
+  return `반대 입장으로 다시 판정하면 확인이 필요한 사실이 남아 그 입장의 결론을 단정하지 않습니다 — ${extra.map((u) => u.reason).join(" ")}`;
+}
+
 export function contestedVerdictOf(j: Pick<OneHouseJudgment, "isExempt" | "isPartialExempt">): ContestedVerdict {
   return j.isExempt ? "exempt" : j.isPartialExempt ? "partial" : "taxable";
 }

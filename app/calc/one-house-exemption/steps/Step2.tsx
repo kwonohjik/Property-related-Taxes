@@ -57,6 +57,9 @@ import {
   judgmentDerivedNewHouse,
   judgmentTempTwoHouseVerdict,
 } from "@/lib/calc/one-house-judgment-temp-two-house";
+import { judgmentEraFactsNewHouse } from "@/lib/calc/one-house-judgment-new-house";
+import { TempTwoHouseRegulatedInputs } from "@/components/calc/transfer/TempTwoHouseRegulatedInputs";
+import { contractDateFromRightOrigin } from "@/lib/calc/declared-new-house-origin";
 import { LegacyCountExclusionNotice } from "./LegacyCountExclusionNotice";
 import { RentalUnitsMarriageOriginSection } from "./RentalUnitsMarriageOriginSection";
 import { eligibleCountExcludedHouseIds } from "@/lib/calc/house-count-exclusion-rows";
@@ -102,6 +105,19 @@ export function Step2({ form, onChange, menu = "one_house" }: Props) {
   const tempTwoHouseVerdict = useMemo(
     () => judgmentTempTwoHouseVerdict(form, derivedNewHouse),
     [form, derivedNewHouse],
+  );
+
+  /**
+   * D-79 — 엔진 입장에 §155① 짝이 없고 양론 반대 입장에만 짝이 있으면, 그 짝의 §155①2호 연혁 사실(전입일 등)을 여기서 받는다. 위 섹션은 엔진 입장 짝이
+   * 있을 때만 그 칸을 연다. ④가 반대 입장 짝에 같은 폼 칸을 싣고 ⑧이 같은 짝(`judgmentEraFactsNewHouse`)으로 검증한다.
+   */
+  const contestedEraPair = useMemo(() => {
+    const pair = judgmentEraFactsNewHouse(form);
+    return pair?.contested ? pair : undefined;
+  }, [form]);
+  const contestedEraVerdict = useMemo(
+    () => (contestedEraPair ? judgmentTempTwoHouseVerdict(form, contestedEraPair) : undefined),
+    [form, contestedEraPair],
   );
 
   /**
@@ -246,6 +262,27 @@ export function Step2({ form, onChange, menu = "one_house" }: Props) {
           */
         />
       )}
+
+      {judgmentTemporaryTwoHouseVisible(form) &&
+        contestedEraPair &&
+        contestedEraVerdict &&
+        contestedEraVerdict.status !== "pending" &&
+        contestedEraVerdict.regulated.relevant && (
+          <div data-testid="contested-temp-two-house-era" className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              해석이 갈리는 쟁점의 다른 입장에서는 보유 주택 목록의{" "}
+              {(form.houses ?? []).findIndex((h) => h.id === contestedEraPair.newHouseRowId) + 1}번째 주택이 일시적 2주택(소득세법
+              시행령 §155①)의 신규 주택이 됩니다 — 아래 사실은 그 입장의 판정에 씁니다.
+            </p>
+            <TempTwoHouseRegulatedInputs
+              form={viewForm}
+              onChange={onChange}
+              regulated={contestedEraVerdict.regulated}
+              newHouseAcquisitionDate={contestedEraPair.newAcquisitionDate}
+              contractDateFromRow={contractDateFromRightOrigin(contestedEraPair.newHouseOrigin)}
+            />
+          </div>
+        )}
 
       {/* 결정 #43-3 — 신규 주택 취득일을 직접 선언한 경로(명부 행 없음)의 취득 경위. 게이트는 ④⑧과 같은 `derivedNewHouse`다. */}
       {judgmentTemporaryTwoHouseVisible(form) && derivedNewHouse?.source === "declared" && (

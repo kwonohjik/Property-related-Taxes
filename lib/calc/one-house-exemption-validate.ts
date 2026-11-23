@@ -44,6 +44,7 @@ import {
 } from "./one-house-judgment-section-scope";
 import { judgmentDerivedNewHouse, judgmentTempTwoHouseVerdict } from "./one-house-judgment-temp-two-house";
 import { judgmentContestedNewHouseRowIds } from "./one-house-judgment-new-house";
+import { judgmentEraFactsNewHouse } from "./one-house-judgment-new-house";
 import { sellingHouseOriginIssue } from "./selling-house-origin-scope";
 import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
@@ -539,8 +540,9 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
  */
 function collectTempTwoHouseEraIssues(form: OneHouseJudgmentFormData): Errors {
   if (!judgmentTemporaryTwoHouseVisible(form)) return [];
-  const derived = judgmentDerivedNewHouse(form);
-  const v = judgmentTempTwoHouseVerdict(form, derived);
+  // ⑤와 같은 짝 — 엔진 입장 짝이 없으면 양론 반대 입장 짝(D-79). 연혁 칸은 그 짝의 신규 주택을 말한다.
+  const derived = judgmentEraFactsNewHouse(form);
+  const v = judgmentTempTwoHouseVerdict(form, derived ?? judgmentDerivedNewHouse(form));
   if (v.status === "pending" || !v.regulated.relevant) return [];
   // 규칙 본문은 증여세 부담부증여(E-1)와 공용 leaf다 — 두 벌로 두지 않는다.
   // 권리 유래 신규 주택은 그 행의 권리 취득일이 「권리 취득」 시점이다 — 숨겨진 폼 전역 계약일 칸의 낡은 값으로 막지 않는다(결정 #43 · ④·⑤와 같은 leaf).
