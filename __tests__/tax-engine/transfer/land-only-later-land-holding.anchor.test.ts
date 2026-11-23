@@ -1,5 +1,6 @@
 /**
- * 토지만 본인 주택 — 주택보다 나중에 취득한 부수토지 보유요건(G-3) · 다건 세율 기산 · 합가일 고지
+ * 토지만 본인 주택 — 주택보다 나중에 취득한 부수토지 보유요건(G-3) · 다건 세율 기산
+ * (Q-3 (a) 합가일 확인 고지는 route로 닿지 않아 2026-11-23 지웠다 — Zod가 합가 여부를 필수로 받는다.)
  * (계획서 `docs/02-design/features/land-only-later-land-holding.plan.md` Q-1·Q-2·Q-3 (a)).
  *
  * 근거: 재산46014-610(2000.05.22.) — 동일세대원이 주택과 부수토지를 각각 소유해도 1세대 1주택이지만, 그 토지를 「주택부수토지로서 보유」한
@@ -9,7 +10,7 @@ import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/types/transfer-aggregate.types";
-import { LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE, LAND_ONLY_OTHER_HOUSEHOLD_NOTICE } from "@/lib/tax-engine/land-only-owner-household";
+import { LAND_ONLY_OTHER_HOUSEHOLD_NOTICE } from "@/lib/tax-engine/land-only-owner-household";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 
 const rates = makeMockRates();
@@ -49,7 +50,6 @@ const expropriation = (businessApprovalDate: string) =>
 
 const calc = (over: Partial<TransferTaxInput>) => calculateTransferTax(house(over), rates);
 const excludedStep = (r: { steps: { label: string }[] }) => r.steps.some((s) => s.label.startsWith("부수토지 비과세 제외"));
-const mergeNotice = (r: { warnings?: string[] }) => (r.warnings ?? []).includes(LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE);
 const agg = (input: TransferTaxInput) =>
   calculateTransferTaxAggregate(
     { taxYear: input.transferDate.getFullYear(), properties: [{ ...input, propertyId: "p1", propertyLabel: "p1" } as unknown as TransferTaxItemInput], annualBasicDeductionUsed: 0 },
@@ -156,21 +156,5 @@ describe("D-2 다건 엔진 — 토지만 본인의 세율 기산(Q-2 a)", () =>
   it("A-13 토지를 먼저 산 경우(토지 2010 · 주택 2023-09 · 거주 9개월)는 다건이 종전대로 주택 취득일 기산 — (300,000,000 − 장특 84,000,000 − 2,500,000) × 70% × 1.1 = 164,395,000", () => {
     const early = house({ ...LO, acquisitionDate: D("2023-09-01"), landAcquisitionDate: D("2010-01-01"), residencePeriodMonths: 9 });
     expect(agg(early).totalTax).toBe(164_395_000);
-  });
-});
-
-describe("Q-3 a 합가일 고지 — 토지만 본인 × 같은 세대 × 비과세 판정 × G-3 아님", () => {
-  it("A-14 토지 2년 5개월(비과세)에만 — G-3 과세 · 소유자 같음 · 다른 세대 · 수용 단서(보유요건 면제)에는 없다", () => {
-    expect(mergeNotice(calc({ ...LO, landAcquisitionDate: D("2022-01-01") }))).toBe(true);
-    expect(mergeNotice(calc({ ...LO, landAcquisitionDate: D("2010-01-01") }))).toBe(true);
-    expect(mergeNotice(calc(LO))).toBe(false);
-    expect(mergeNotice(calc({ landAcquisitionDate: D("2022-01-01") }))).toBe(false);
-    expect(mergeNotice(calc({ selfOwns: "land_only", buildingOwnerSameHousehold: false, landAcquisitionDate: D("2022-01-01") }))).toBe(false);
-    expect(mergeNotice(calc({ ...LO, ...expropriation("2024-01-01") }))).toBe(false);
-    expect(LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE).not.toMatch(/유리|불리|절감|절세/);
-  });
-
-  it("§155⑳ 선언이면 판정이 과세여도 단다 — 특례 경로도 같은 세대 토지를 그 주택의 부수토지로 본다", () => {
-    expect(mergeNotice(calc({ ...LO, landAcquisitionDate: D("2022-01-01"), householdHousingCount: 2, isOneHousehold: false, rentalHousingException: RENTAL_A }))).toBe(true);
   });
 });

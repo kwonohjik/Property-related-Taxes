@@ -8,7 +8,6 @@ import fs from "node:fs";
 import type { PipelineCell, PipelineContractRow } from "./contract-pipeline";
 import { INHERITED_PRESALE_RIGHT_SEPARATE_HOUSEHOLD_ID, INHERITED_SPECIAL_OVERLAP_UNVERIFIED_ID, REVERSE_DOUBLE_MERGE_UNVERIFIED_ID } from "@/lib/tax-engine/one-house/pending";
 import { SAME_DAY_RIGHT_UNVERIFIED_ID } from "@/lib/tax-engine/one-house/same-day-right";
-import { LAND_ONLY_SAME_HOUSEHOLD_MERGE_ID } from "@/lib/tax-engine/one-house/land-only-verdict";
 import { DEMOLISHED_BEFORE_BALANCE_UNVERIFIED_ID } from "@/lib/tax-engine/data/demolished-before-balance-era";
 import { MERGE_RENTAL_CARVEOUT_MISSING_ID, MERGE_RENTAL_CARVEOUT_NOTICE_ID } from "@/lib/tax-engine/one-house/merge-rental-carveout";
 
@@ -211,15 +210,6 @@ export const ROWS_F: PipelineContractRow[] = [
     id: SAME_DAY_RIGHT_UNVERIFIED_ID,
     decides: SAME_DAY, decidesWhy: "당일 권리를 보유로 세면 2주택 + 1권리 §89② 배제로 과세",
     silent: unregistered(SAME_DAY), silentWhy: "미등기 — 권리를 어느 쪽으로 세도 과세",
-  },
-  {
-    id: LAND_ONLY_SAME_HOUSEHOLD_MERGE_ID,
-    decides: null,
-    decidesWhy:
-      "route로 닿지 않음 — Zod(⑫)가 토지만 본인 × 같은 세대 건물 소유자에 「처음부터 같은 세대·중간 합가」 답(`buildingOwnerHouseholdMerged`)을 요구하고, " +
-      "답이 있으면 `applyLandOnlyHouseholdRule`이 고지를 억제한다(엔진 직접 호출에서만 나온다 · 2026-11-23 실측)",
-    silent: null,
-    silentWhy: "결론을 가르는 셀이 없다",
   },
   {
     id: "121-2-pre2010-non-resident-unverified",

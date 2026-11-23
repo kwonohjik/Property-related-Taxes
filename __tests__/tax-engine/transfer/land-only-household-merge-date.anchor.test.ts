@@ -11,7 +11,6 @@ import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/types/transfer-aggregate.types";
-import { LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE } from "@/lib/tax-engine/land-only-owner-household";
 import { baseTransferInput, makeMockRates } from "../_helpers/mock-rates";
 
 const rates = makeMockRates();
@@ -69,13 +68,12 @@ describe("비과세 보유요건 — 토지가 15년 됐어도 합가가 양도 
     expect(calc(house(1_000_000_000, "2008-07-01", merged("2005-01-01"))).calculatedTax).toBe(0);
   });
 
-  it("합가 안 함(false) · 미응답(엔진 직접 호출)은 종전 — 비과세 0 · 미응답만 합가일 확인 고지", () => {
+  it("합가 안 함(false) · 미응답(엔진 직접 호출 — route는 Zod가 막는다)은 종전 — 비과세 0(합가일 확인 고지는 2026-11-23 지웠다)", () => {
     const no = calc(house(1_000_000_000, "2008-07-01", { buildingOwnerHouseholdMerged: false, buildingOwnerHouseholdMergeDate: D("2023-12-01") }));
     expect([no.isExempt, no.calculatedTax]).toEqual([true, 0]);
-    expect(no.warnings ?? []).not.toContain(LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE);
     const unanswered = calc(house(1_000_000_000, "2008-07-01"));
     expect(unanswered.calculatedTax).toBe(0);
-    expect(unanswered.warnings).toContain(LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE);
+    expect((unanswered.warnings ?? []).some((w) => w.includes("세대를 합친 날은 입력받지 않았으므로"))).toBe(false);
   });
 
   it("§155⑳ 거주주택 특례 on = off — 같은 사실에서 같은 세액(M1 145,250,000)", () => {
@@ -106,10 +104,9 @@ describe("장특 표2 보유연수 — 「주택 부수토지로서의 보유기
 });
 
 describe("세율 기산 · 고지 · 다건", () => {
-  it("합가일 반영 고지 — 합가일이 취득일보다 늦어 계산이 달라졌을 때만, 합가일 확인 고지는 달지 않는다", () => {
+  it("합가일 반영 고지 — 합가일이 취득일보다 늦어 계산이 달라졌을 때만", () => {
     const r = calc(house(1_000_000_000, "2008-07-01", merged("2023-12-01")));
     expect(warn(r, "입력하신 세대 합가일(2023-12-01)")).toBe(true);
-    expect(r.warnings ?? []).not.toContain(LAND_ONLY_SAME_HOUSEHOLD_MERGE_NOTICE);
     expect(warn(calc(house(1_000_000_000, "2008-07-01", merged("2005-01-01"))), "입력하신 세대 합가일")).toBe(false);
   });
 

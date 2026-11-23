@@ -177,14 +177,6 @@ export function isLaterAcquiredLandExemptExcluded(input: TransferTaxInput): bool
   return laterLandFailsHoldingRequirement(input) && !laterLandCoveredByExpropriationProviso(input);
 }
 
-/**
- * 토지만 본인 × 같은 세대의 합가일 고지(`applyLandOnlyHouseholdRule`)를 생략하는가 — 나중 취득 토지가 이미 G-3로 비과세에서 빠졌거나,
- * 보유요건 자체가 면제되는 단서(영 §154① 단서 — `resolveExemptionProviso`가 "both")라 합가일이 판정에 쓰이지 않을 때.
- */
-export function landOnlyMergeNoticeSuppressed(input: TransferTaxInput): boolean {
-  return isLaterAcquiredLandExemptExcluded(input) || resolveExemptionProviso(input) === "both";
-}
-
 /** G-3 입력 게이트 + 보유요건 미달 — 단서(5A) 반영 전. 비과세 제외와 5A 고지가 같은 게이트를 쓴다. */
 function laterLandFailsHoldingRequirement(input: TransferTaxInput): boolean {
   if (input.propertyType !== "housing") return false;
