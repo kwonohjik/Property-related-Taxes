@@ -6,6 +6,9 @@
  */
 import { describe, it, expect } from "vitest";
 import { E3D_HOUSE_LIMIT_ROWS } from "@/__tests__/tax-engine/_helpers/nbl-state-history-e3-3-table";
+import { E2_ROWS, e2RowRaw } from "@/__tests__/tax-engine/_helpers/nbl-state-history-e2-table";
+import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
+import { judgeNonBusinessLand } from "@/lib/tax-engine/non-business-land/engine";
 import { houseFootprintIssue, judgeHousingLimit, resolveHouseInterval, HOUSING_METRO_DEFAULTED_WARNING } from "@/lib/tax-engine/non-business-land/housing-limit";
 import { judgeHousingLand } from "@/lib/tax-engine/non-business-land/housing-land";
 import {
@@ -24,7 +27,18 @@ import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-l
 import type { NonBusinessLandInput, ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import type { StateEvent } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { HouseIntervalCtx } from "@/lib/tax-engine/non-business-land/housing-limit";
-import { STATE_EVENTS_REQUIRED_MESSAGE, stateEventsRequiredMessage } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
+import {
+  STATE_EVENTS_REQUIRED_MESSAGE,
+  stateEventAtOrAfterTransferMessage,
+  stateEventAtOrBeforeFloorMessage,
+  stateEventDateEmptyMessage,
+  stateEventDateInvalidMessage,
+  stateEventKindRequiredMessage,
+  stateEventReversedMessage,
+  stateEventSameDayMessage,
+  stateEventSameKindMessage,
+  stateEventsRequiredMessage,
+} from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
 
 const d = (s: string) => new Date(`${s}T00:00:00Z`);
 const CTX: HouseIntervalCtx = { zoneType: "general_residential", isMetropolitanArea: false, landArea: 500, transferDate: d("2024-01-01") };
@@ -280,5 +294,32 @@ describe("deriveOtherLandStateIntervals — 주택 꼬리(`buildingKind: house`)
     const iv = deriveOtherLandStateIntervals([ev("building_removed", "2021-01-01", { propertyTaxTypeBefore: "separate", houseFootprintBefore: 100 })], OS, T, { hasBuilding: false, propertyTaxType: "comprehensive" });
     expect(iv[0]).toEqual({ start: OS, end: d("2021-01-01"), hasBuilding: true, propertyTaxType: "separate" });
     expect(iv[0]).not.toHaveProperty("buildingKind");
+  });
+});
+
+describe("D-9 · D-4 회귀 가드 — 문구 기본값(건축물 사건)과 공용 echo helper(기타토지 echo 바이트 동일)", () => {
+  it("검증 문구 함수를 `subject` 없이 직접 불러도 «건축물 사건 N번째 행»이다(기본값 바이트 동일 — Y-23) · `house`만 «주택 사건»", () => {
+    const calls = (subject?: "house") => [
+      stateEventKindRequiredMessage(0, subject),
+      stateEventDateEmptyMessage(0, "building_built", subject),
+      stateEventDateInvalidMessage(0, "x", "building_built", subject),
+      stateEventReversedMessage(0, "2020-01-01", "2021-01-01", "building_built", subject),
+      stateEventSameDayMessage(0, "2020-01-01", "building_built", subject),
+      stateEventSameKindMessage(0, "건축물 있음", "건축물 멸실·철거·붕괴", subject),
+      stateEventAtOrBeforeFloorMessage(0, "2014-01-01", "2014-01-01", "building_built", subject),
+      stateEventAtOrAfterTransferMessage(0, "2024-01-01", "2024-01-01", "building_built", subject),
+    ];
+    for (const m of calls()) expect(m).toMatch(/^건축물 사건 1번째 행 — /);
+    for (const m of calls("house")) expect(m).toMatch(/^주택 사건 1번째 행 — /);
+    // 재산세 구분 변경 행 접두는 주체와 무관하다
+    expect(stateEventSameDayMessage(0, "2020-01-01", "tax_type_changed")).toMatch(/^재산세 과세 구분 변경 사건 1번째 행/);
+  });
+
+  it("공용 echo helper(`intervalEcho`): 구간 일부만 사업용이면 `business`는 false · `businessDays`는 실제 일수 — 기타토지 DM-01(Q15a: 개시일 2024-03-01 → 나대지 구간 중 121일)", () => {
+    const q15a = E2_ROWS.find((r) => r.id === "Q15a")!;
+    const j = judgeNonBusinessLand(buildNblEngineInput(e2RowRaw(q15a) as never)!, DEFAULT_NON_BUSINESS_LAND_RULES);
+    const iv = j.periodEvaluation!.stateHistory!.intervals;
+    expect(iv.map((v) => [v.hasBuilding, v.business, v.businessDays])).toEqual([[true, true, expect.any(Number)], [false, false, 121]]);
+    for (const v of iv) expect(v).not.toHaveProperty("buildingKind"); // 기타토지 echo에는 주택 키가 없다(종전과 바이트 동일)
   });
 });
