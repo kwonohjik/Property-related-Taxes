@@ -15,6 +15,7 @@
  */
 import { parseAmount } from "@/lib/calc/number-parse";
 import { applyRatio } from "@/lib/tax-engine/tax-utils";
+import { RATIO_MAX_DECIMALS } from "@/lib/tax-engine/tax-utils";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { isSec163_9HouseAsset, isSec163_9LandAsset } from "./transfer-163-9-base-date";
 
@@ -129,8 +130,18 @@ export function ownershipRatioError(
     const pct = parseFloat(((n / d) * 100).toFixed(4));
     return `지분율은 100%를 초과할 수 없습니다 (입력값 ${pct}%).`;
   }
+  // 백분율 칸(분모 100)의 소수 자릿수 상한 — 비율 = 입력/100이라 자릿수가 2 늘어난다. 상한을 넘으면
+  // 엔진이 십진 정확 계산(`decimalizeRatio`)을 못 해 옛 식으로 곱하고, 겸용 부담부증여 산식은 지분을
+  // 「약 33.3333%」로 반올림해 적어 적힌 산식과 결과가 수백 원 어긋난다(2026-11-23 실측 · 결정 2).
+  const isPercent = (denominator ?? "").trim() === "" || d === 100;
+  const decimals = /\.(\d+)$/.exec(numerator.trim())?.[1].length ?? 0;
+  if (isPercent && decimals > OWNERSHIP_PCT_MAX_DECIMALS)
+    return `지분율은 소수점 아래 ${OWNERSHIP_PCT_MAX_DECIMALS}자리까지 입력하세요.`;
   return null;
 }
+
+/** 지분 % 칸 소수 자릿수 상한 — 엔진 십진 정확 계산 상한(`RATIO_MAX_DECIMALS`)에서 백분율 2자리를 뺀 값. */
+export const OWNERSHIP_PCT_MAX_DECIMALS = RATIO_MAX_DECIMALS - 2;
 
 /**
  * 자산의 공유 지분 비율을 [0..1] 실수로 계산.

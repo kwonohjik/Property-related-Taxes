@@ -120,6 +120,35 @@ describe("[OWN-PCT] ⑤ 인라인 경고 ↔ ⑧ 계산 전 차단이 같은 문
   });
 });
 
+/**
+ * 백분율 칸 소수 자릿수 상한 8 (2026-11-23 결정 2). 비율 = 입력/100이라 9자리부터 엔진 십진 정확 계산
+ * (`decimalizeRatio` 10자리) 밖으로 나가고, 겸용 부담부증여 산식이 지분을 「약 33.3333%」로 적어
+ * 적힌 산식대로 곱한 값이 결과와 수백 원 어긋났다(기준시가 987,654,321 × 33.333333333% 기준 −329원).
+ */
+const OVER_8_DECIMALS = "지분율은 소수점 아래 8자리까지 입력하세요.";
+describe("[OWN-PCT] 백분율 소수 자릿수 상한 8", () => {
+  it.each([
+    ["33.33333333", "100", null], // 8자리 — 경계 통과
+    ["33.333333333", "100", OVER_8_DECIMALS], // 9자리 — 차단
+    ["0.123456789", "", OVER_8_DECIMALS], // 빈 분모 = 백분율 칸
+    ["12.5", "100", null],
+    ["1.123456789", "3", null], // 레거시 분모 ≠ 100 은 백분율 칸이 아니다
+    ["150.123456789", "100", "지분율은 100%를 초과할 수 없습니다 (입력값 150.1235%)."], // 초과 문구가 먼저
+  ])("%s/%s → %s", (n, d, expected) => {
+    expect(ownershipRatioError(n, d)).toBe(expected);
+  });
+
+  it("⑧ 계산 전 차단도 같은 문구다", () => {
+    const form = formWith("33.333333333", "100");
+    expect(validateAssetEntry(form.assets[0], 0, form)).toContain(OVER_8_DECIMALS);
+  });
+
+  it("⑤ 위젯이 9자리를 친 순간 같은 문구를 띄운다", () => {
+    render(<OwnershipRatioInput numerator="33.333333333" denominator="100" onChange={vi.fn()} />);
+    expect(screen.getByText(OVER_8_DECIMALS)).toBeTruthy();
+  });
+});
+
 describe("[OWN-PCT] 지분 표시는 화면 위젯과 같은 백분율 표기다", () => {
   it.each([
     ["50", "100", "50%"],

@@ -69,8 +69,11 @@ export function applyRate(amount: number, rate: number): number {
   return Math.floor(amount * rate);
 }
 
-/** `applyRatio`가 십진 정확 계산으로 다루는 비율의 최대 소수 자릿수 (Q4 — 계획서 §6) */
-const RATIO_MAX_DECIMALS = 10;
+/**
+ * `applyRatio`가 십진 정확 계산으로 다루는 비율의 최대 소수 자릿수 (Q4 — 계획서 §6).
+ * 화면 지분 % 칸의 소수 자릿수 상한(`ownershipRatioError` · 이 값 − 2)이 여기서 파생된다.
+ */
+export const RATIO_MAX_DECIMALS = 10;
 /**
  * 「`ratio`가 십진수의 가장 가까운 double이다」로 볼 상대 허용 오차 = 약 2ulp.
  * 화면 지분은 `parseFloat(P) / parseFloat("100")`이라 `P`의 이진 오차(≤ 0.5ulp)와 나눗셈 반올림(≤ 0.5ulp)이 겹쳐
