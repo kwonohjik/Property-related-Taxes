@@ -65,7 +65,7 @@ describe("③ normalize — 값·행 수준 방어", () => {
       { kind: "", date: "", propertyTaxTypeBefore: "" },
     ]);
   });
-  it("정상 행은 그대로 · 신축 행의 stale 철거 직전 구분은 \"\"", () => {
+  it("정상 행은 그대로 · 신축 행의 직전 구분도 보존(E3-1b 의도된 반전 — 신축 앞 나대지 선언)", () => {
     const a = migrated({
       nblOtherStateEvents: [
         { kind: "building_built", date: "2016-01-01", propertyTaxTypeBefore: "separate" },
@@ -73,7 +73,7 @@ describe("③ normalize — 값·행 수준 방어", () => {
       ],
     });
     expect(a.nblOtherStateEvents).toEqual([
-      { kind: "building_built", date: "2016-01-01", propertyTaxTypeBefore: "" },
+      { kind: "building_built", date: "2016-01-01", propertyTaxTypeBefore: "separate" },
       { kind: "building_removed", date: "2021-01-01", propertyTaxTypeBefore: "special_sum" },
     ]);
   });

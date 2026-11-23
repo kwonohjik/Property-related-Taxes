@@ -12,13 +12,13 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { differenceInDays } from "@/lib/tax-engine/utc-date";
 import type { LandStateInterval, StateEvent } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import { deriveOtherLandStateIntervals } from "@/lib/tax-engine/non-business-land/other-land-state-history";
-import { eventCarriesTaxTypeBefore } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { isStateIntervalBusiness } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { stateEventSequenceIssue } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { getOwnershipStart } from "@/lib/tax-engine/non-business-land/utils/period-math";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { nblAcquisitionDateOf } from "./nbl-unconditional-exemption-status";
 import { nblOtherStateEventsInUse } from "./nbl-other-state-history-scope";
+import { stateEventWireRow } from "./nbl-other-state-history-scope";
 
 export interface StateHistoryPreviewRow {
   /** 시작일(포함) ISO */
@@ -28,6 +28,10 @@ export interface StateHistoryPreviewRow {
   days: number;
   hasBuilding: boolean;
   propertyTaxType: LandStateInterval["propertyTaxType"];
+  /** E3-1b — 나대지 구간 선언의 근거 해석(leaf echo). 선언이 없는 구간은 키 없음 = 종전 행과 같다. */
+  basisOutcome?: LandStateInterval["basisOutcome"];
+  basis?: LandStateInterval["basis"];
+  foldReason?: LandStateInterval["foldReason"];
   /** 마지막 구간(양도일 현재 — 현행 입력이 그대로 판정) */
   isTail: boolean;
   /** 이전 구간의 건축물·재산세 구분 기준 사업용 토지 요건 충족 여부. 마지막 구간은 `null`(계산 결과에서 확정). */
@@ -50,14 +54,19 @@ export function buildStateHistoryPreview(asset: AssetForm, transferDate: string 
   const transfer = toOptionalDate(transferDate);
   if (!acq || !transfer || !transferDate) return null;
   const rows = asset.nblOtherStateEvents ?? [];
-  // E3-① — ⑧·⑫와 같은 값(`tailHasBuilding` = 입력 토글)을 넘긴다. 빠지면 «건축물 없음»으로 읽혀 tax-only 이력의 미리보기가 null이 된다.
-  if (stateEventSequenceIssue(rows, { transferDate, floorDate, tailHasBuilding: asset.nblOtherHasBuilding })) return null;
+  if (stateEventSequenceIssue(rows, { transferDate, floorDate })) return null;
 
-  const events: StateEvent[] = rows.map((e) => ({
-    kind: e.kind as StateEvent["kind"],
-    date: toOptionalDate(e.date)!, // issue 없음 → 해석 가능
-    propertyTaxTypeBefore: eventCarriesTaxTypeBefore(e.kind) ? e.propertyTaxTypeBefore : undefined,
-  }));
+  // E3-1b — 전송형(`stateEventWireRow`)을 그대로 쓴다: ④ 와이어·⑭ 매퍼와 같은 «나대지 구간을 닫는 행만 선언 칸을 싣는다» 규칙이라 미리보기 = 계산에 쓰인 구간이다.
+  const events: StateEvent[] = rows.map((_, i) => {
+    const w = stateEventWireRow(rows, i, asset.nblOtherHasBuilding);
+    return {
+      kind: w.kind as StateEvent["kind"],
+      date: toOptionalDate(w.date)!, // issue 없음 → 해석 가능
+      propertyTaxTypeBefore: w.propertyTaxTypeBefore,
+      propertyTaxBasisBefore: w.propertyTaxBasisBefore,
+      areaWithinLimitBefore: w.areaWithinLimitBefore,
+    };
+  });
   const intervals = deriveOtherLandStateIntervals(events, getOwnershipStart(acq), transfer, {
     hasBuilding: asset.nblOtherHasBuilding,
     propertyTaxType: (asset.nblOtherPropertyTaxType || "comprehensive") as LandStateInterval["propertyTaxType"],
@@ -74,6 +83,7 @@ export function buildStateHistoryPreview(asset: AssetForm, transferDate: string 
       days: differenceInDays(iv.end, iv.start),
       hasBuilding: iv.hasBuilding,
       propertyTaxType: iv.propertyTaxType,
+      ...(iv.basisOutcome ? { basisOutcome: iv.basisOutcome, ...(iv.basis ? { basis: iv.basis } : {}), ...(iv.foldReason ? { foldReason: iv.foldReason } : {}) } : {}),
       isTail,
       meetsBuildingRequirement: isTail ? null : isStateIntervalBusiness(iv),
     };

@@ -142,10 +142,11 @@ describe("사건 행", () => {
 });
 
 describe("철거 행의 «철거 직전 그 토지의 재산세 구분»", () => {
-  it("철거 행에만 5지선다가 있다(신축 행 없음)", () => {
+  it("철거 행은 5지선다(모름 포함) · 신축 행은 4지선다(E3-1b 의도된 반전 — 신축 앞 나대지 선언 · 모름 없음)", () => {
     mount(asset({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [built("2016-01-01"), removed("2021-01-01")] }));
     for (const v of ["exempt", "special_sum", "separate", "comprehensive", "unknown"]) expect(screen.getByTestId(`nbl-other-state-event-1-ptax-${v}`), v).toBeTruthy();
-    for (const v of ["exempt", "special_sum", "separate", "comprehensive", "unknown"]) expect(screen.queryByTestId(`nbl-other-state-event-0-ptax-${v}`), v).toBeNull();
+    for (const v of ["exempt", "special_sum", "separate", "comprehensive"]) expect(screen.getByTestId(`nbl-other-state-event-0-ptax-${v}`), v).toBeTruthy();
+    expect(screen.queryByTestId("nbl-other-state-event-0-ptax-unknown")).toBeNull();
   });
   it("라벨은 PROPERTY_TAX_TYPE_LABEL 단일 소스 — separate=별도합산 · special_sum=분리과세", () => {
     mount(asset({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [removed("2021-01-01")] }));

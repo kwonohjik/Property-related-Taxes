@@ -50,7 +50,7 @@ describe("③ 복원 — 새 종류 허용 · 재산세 변경 행의 직전 구
       { kind: "tax_type_changed", date: "2023-06-01", propertyTaxTypeBefore: "" },
     ]);
   });
-  it("신축 행의 stale 직전 구분은 \"\" · 철거 행은 보존 · 허용값 밖 종류는 \"\"(⑧이 행 단위로 짚는다)", () => {
+  it("신축 행의 직전 구분도 보존(E3-1b 의도된 반전 — 신축 앞 나대지 선언) · 철거 행은 보존 · 허용값 밖 종류는 \"\"(⑧이 행 단위로 짚는다)", () => {
     const a = migrated({
       nblOtherStateEvents: [
         { kind: "building_built", date: "2016-01-01", propertyTaxTypeBefore: "separate" },
@@ -59,7 +59,7 @@ describe("③ 복원 — 새 종류 허용 · 재산세 변경 행의 직전 구
       ],
     });
     expect(a.nblOtherStateEvents).toEqual([
-      { kind: "building_built", date: "2016-01-01", propertyTaxTypeBefore: "" },
+      { kind: "building_built", date: "2016-01-01", propertyTaxTypeBefore: "separate" },
       { kind: "building_removed", date: "2021-01-01", propertyTaxTypeBefore: "special_sum" },
       { kind: "", date: "2022-01-01", propertyTaxTypeBefore: "" },
     ]);
@@ -79,10 +79,11 @@ describe("④ 와이어 — 재산세 변경 행의 직전 구분을 지우지 �
     const w = stateHistoryWireFields(asset({ nblOtherStateEvents: [tax("2022-06-01", "separate")] }));
     expect(w.nblOtherStateEvents).toEqual([{ kind: "tax_type_changed", date: "2022-06-01", propertyTaxTypeBefore: "separate" }]);
   });
-  it("신축 행의 stale 직전 구분은 \"\"로 정규화(불변) · 철거 행은 보존", () => {
-    const stale = { kind: "building_built" as const, date: "2016-01-01", propertyTaxTypeBefore: "separate" as const };
-    const w = stateHistoryWireFields(asset({ nblOtherStateEvents: [stale, tax("2018-01-01", "comprehensive"), removed("2021-01-01", "special_sum")] }));
-    expect(w.nblOtherStateEvents.map((e) => e.propertyTaxTypeBefore)).toEqual(["", "comprehensive", "special_sum"]);
+  it("신축 행의 직전 구분도 와이어에 실린다(E3-1b 의도된 반전 — 신축 앞 나대지 선언) · 철거 행은 보존 · 멸실 행의 stale 선언 칸(근거·한도)은 싣지 않는다", () => {
+    const built1 = { kind: "building_built" as const, date: "2016-01-01", propertyTaxTypeBefore: "separate" as const };
+    const w = stateHistoryWireFields(asset({ nblOtherStateEvents: [built1, tax("2018-01-01", "comprehensive"), { ...removed("2021-01-01", "special_sum"), propertyTaxBasisBefore: "separate_taxation" as const }] }));
+    expect(w.nblOtherStateEvents.map((e) => e.propertyTaxTypeBefore)).toEqual(["separate", "comprehensive", "special_sum"]);
+    expect(w.nblOtherStateEvents[2]).toEqual({ kind: "building_removed", date: "2021-01-01", propertyTaxTypeBefore: "special_sum" });
   });
   it("요청 body(`buildNonBusinessLandRaw`): tax-only 이력은 토글 저장값(true)을 그대로 싣는다 — 사건이 건축물 유무를 덮어쓰지 않는다", () => {
     const raw = buildNonBusinessLandRaw(asset({ nblOtherStateEvents: [tax("2022-06-01", "separate")] }), "2024-01-01") as Record<string, unknown>;

@@ -8,14 +8,12 @@
  * 숨겨진 칸의 값은 store에서 지우지 않는다(이력 복원값 보존). 매퍼가 보내지 않을 뿐이다.
  */
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
-import { RadioCardGroup, type RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
+import { PropertyTaxBasisRadio } from "./PropertyTaxBasisRadio";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-scope";
 import {
-  PROPERTY_TAX_BASIS_LABEL,
-  PROPERTY_TAX_BASIS_LEGAL,
   propertyTaxBasisOptions,
   requiresDemolishedFloorArea,
   type PropertyTaxBasis,
@@ -40,12 +38,6 @@ export function OtherLandPropertyTaxBasisField({ asset, onAssetChange }: Props) 
   // 선언·건축물 유무에 맞지 않는 stale 값은 «미선택»으로 보인다(store 값은 그대로 — 매퍼가 보내지 않는다).
   const stored = asset.nblOtherPropertyTaxBasis;
   const value: "" | PropertyTaxBasis = stored && options.includes(stored) ? stored : "";
-  const radioOptions: RadioCardOption<PropertyTaxBasis>[] = options.map((b) => ({
-    value: b,
-    label: PROPERTY_TAX_BASIS_LABEL[b],
-    description: PROPERTY_TAX_BASIS_LEGAL[b],
-    testId: `nbl-other-tax-basis-${b}`,
-  }));
   const unconfirmed = value === "" || value === "unknown";
 
   return (
@@ -55,12 +47,13 @@ export function OtherLandPropertyTaxBasisField({ asset, onAssetChange }: Props) 
         label="재산세 분류 근거"
         hint={`건축물이 없는 토지에 「${PROPERTY_TAX_TYPE_LABEL[declaredType]}」을 선택한 근거입니다. 재산세 과세내역(고지서)에서 확인해 고르세요 — 모르면 「모름」을 고르면 됩니다.`}
       >
-        <RadioCardGroup
+        <PropertyTaxBasisRadio
           name={`nblOtherPropertyTaxBasis-${asset.assetId ?? "primary"}`}
           tone="sky"
-          options={radioOptions}
+          options={options}
           value={value}
           onChange={(v) => onAssetChange({ nblOtherPropertyTaxBasis: v })}
+          testIdOf={(b) => `nbl-other-tax-basis-${b}`}
         />
       </FieldCard>
 

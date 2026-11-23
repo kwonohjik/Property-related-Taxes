@@ -47,6 +47,7 @@ const VALIDATE = "lib/calc/transfer-tax-validate-nbl-state-history.ts";
 const NOTICES = "lib/tax-engine/nbl-confirm-notices.ts";
 const LEAF = "lib/tax-engine/non-business-land/other-land-state-history.ts"; // 종류 의미(건축물 사건 판별·replay)를 정의하는 파일 — 리터럴이 정의다
 const SECTION = "components/calc/transfer/nbl/OtherLandStateHistorySection.tsx";
+const BARE_FIELDS = "components/calc/transfer/nbl/OtherLandBareIntervalFields.tsx"; // E3-1b ⑤ 나대지 구간 선언 카드
 // U4가 술어로 교체한 «Before 운반» 4곳 — ⑤ 미리보기 · ④ 와이어 정규화 · ③ 복원 정규화 + ⑤ 위젯의 직전 구분 칸 노출 술어(`removed &&` — UI 계획서 S4)
 const PREVIEW = "lib/calc/nbl-other-state-history-preview.ts";
 const SCOPE = "lib/calc/nbl-other-state-history-scope.ts";
@@ -65,20 +66,33 @@ describe("E3-① 침묵 소실 grep 게이트 — `kind === \"building_removed\"
 
   it("UI 쪽에도 없다 — 영구 0건 게이트(`git grep 'kind === \"building_removed\"' lib components app` 0건, leaf 정의 파일 제외)", () => {
     expect(withLiteral, "리터럴 분기 금지 — 단일 술어 `eventCarriesTaxTypeBefore`(Before 운반) · `isBuildingEventKind`(건축물 사건)를 쓴다").toEqual(UI_PENDING_REMOVED_LITERAL);
-    for (const p of [PREVIEW, SCOPE, MIGRATE, SECTION]) {
+    for (const p of [SCOPE, MIGRATE, SECTION]) {
       expect(src(p), `${p}는 Before 운반을 단일 술어로 판정한다`).toMatch(/\beventCarriesTaxTypeBefore\(/);
     }
+    // E3-1b — ⑤ 미리보기는 ④ 전송형(`stateEventWireRow`)을 그대로 읽는다(자체 운반 판정을 두지 않는다 — 전송 = 미리보기).
+    expect(src(PREVIEW)).toMatch(/\bstateEventWireRow\(/);
   });
 });
 
-describe("E3-① 3중 패턴 배선 — ⑧·⑫가 같은 leaf에 같은 초기 건축물 상태(`tailHasBuilding`)를 넘긴다", () => {
-  it("⑫ refine = `!!raw.nblOtherHasBuilding` · ⑧ = `asset.nblOtherHasBuilding` — 빠지면 «없음»(안전 쪽)으로 읽혀 정상 tax-only 이력이 영구 차단된다(막다른 길)", () => {
-    expect(src(REFINES)).toMatch(/tailHasBuilding:\s*!!raw\.nblOtherHasBuilding/);
-    expect(src(VALIDATE)).toMatch(/tailHasBuilding:\s*asset\.nblOtherHasBuilding/);
+describe("E3-1b 3중 패턴 배선 — 「나대지 구간을 닫는 행」은 단일 술어 `eventClosesBareInterval`이 정하고, 같은 초기 건축물 상태(입력 토글 저장값)를 넘긴다", () => {
+  it("⑭ 매퍼 · ④ 와이어 · ⑤ 미리보기 · ⑤ 위젯 · ③ 복원 5곳이 모두 이 술어(또는 그것을 쓰는 `stateEventWireRow`)를 읽는다 — 한 곳만 어긋나면 «화면에 있는데 판정에 안 쓰이는 칸»이 된다", () => {
+    expect(src(MAPPER)).toMatch(/\beventClosesBareInterval\(/);
+    expect(src(SCOPE)).toMatch(/\beventClosesBareInterval\(/);
+    expect(src(SECTION)).toMatch(/\beventClosesBareInterval\(/);
+    expect(src(MIGRATE)).toMatch(/\beventClosesBareInterval\(/);
+    expect(src(PREVIEW)).toMatch(/\bstateEventWireRow\(/);
   });
 
-  it("⑤ 미리보기도 같은 값(`tailHasBuilding: asset.nblOtherHasBuilding`)을 넘긴다 — 빠지면 «없음»으로 읽혀 tax-only 이력의 미리보기가 null이 된다", () => {
-    expect(src(PREVIEW)).toMatch(/tailHasBuilding:\s*asset\.nblOtherHasBuilding/);
+  it("초기 건축물 상태 인자 = 입력 토글 저장값 — ⑭ `asBool(a.nblOtherHasBuilding)` · ④ `asset.nblOtherHasBuilding`(와이어 · 미리보기 · 위젯). 빠지거나 다른 값이면 tax-only 이력의 갈래가 ⑭와 어긋난다", () => {
+    expect(src(MAPPER)).toMatch(/const tailHasBuilding = asBool\(a\.nblOtherHasBuilding\)/);
+    expect(src(MAPPER)).toMatch(/eventClosesBareInterval\(rows, i, tailHasBuilding\)/);
+    expect(src(SCOPE)).toMatch(/stateEventWireRow\(events, i, asset\.nblOtherHasBuilding\)/);
+    expect(src(PREVIEW)).toMatch(/stateEventWireRow\(rows, i, asset\.nblOtherHasBuilding\)/);
+    expect(src(SECTION)).toMatch(/eventClosesBareInterval\(events, i, asset\.nblOtherHasBuilding\)/);
+  });
+
+  it("순서 검증(⑧·⑫·⑤ 미리보기)은 `tailHasBuilding`을 넘기지 않는다 — 「건축물 없는 구간 위 구분 변경」 차단 규칙이 삭제돼 결과에 영향이 없는 인자였고, 인터페이스에서 제거했다", () => {
+    for (const p of [REFINES, VALIDATE, PREVIEW]) expect(src(p), `${p}`).not.toMatch(/tailHasBuilding:/);
   });
 });
 
@@ -89,6 +103,12 @@ describe("E3-① 고지 2종 배선 — 엔진 apply(결과 경고)와 입력 �
   });
   it("행 아래 «모름» 안내 `…TAX_CHANGE_UNKNOWN_NOTICE`는 엔진 apply(결과 경고)와 위젯 두 곳이 읽는다 — 문구는 엔진 상수 단일 소스", () => {
     const users = FILES.filter((f) => f.path !== NOTICES && /\bNBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE\b/.test(f.src)).map((f) => f.path).sort();
-    expect(users, "새 사용처가 생겼다면 이 허용 목록을 갱신한다(삭제 금지)").toEqual([APPLY, SECTION].sort());
+    expect(users, "새 사용처가 생겼다면 이 허용 목록을 갱신한다(삭제 금지)").toEqual([APPLY, SECTION, BARE_FIELDS].sort());
+  });
+  it("E3-1b 나대지 구간 고지 3종(`…BARE_BASIS_UNCONFIRMED` · `…BARE_ACCEPTED` · `…BARE_AREA_LIMIT`)도 엔진 apply(결과 경고)와 입력 카드가 같은 상수를 읽는다 — 위젯이 문구를 따로 쓰지 않는다", () => {
+    for (const name of ["BARE_BASIS_UNCONFIRMED", "BARE_ACCEPTED", "BARE_AREA_LIMIT"]) {
+      const users = FILES.filter((f) => f.path !== NOTICES && new RegExp(`\\bNBL_STATE_HISTORY_${name}_NOTICE\\b`).test(f.src)).map((f) => f.path).sort();
+      expect(users, name).toEqual([APPLY, BARE_FIELDS].sort());
+    }
   });
 });

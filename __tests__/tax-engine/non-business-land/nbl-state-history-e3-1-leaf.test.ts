@@ -200,19 +200,16 @@ describe("E3-1a leaf — 술어: 종류 판별 · Before 운반(단일 술어) �
 
 describe("E3-1a leaf — `stateEventSequenceIssue`: 순서·교대·초기 건축물 상태 (Anchor 4·5 leaf 측)", () => {
   const row = (kind: string, date: string) => ({ kind, date });
-  const issue = (events: Array<{ kind: string; date: string }>, tailHasBuilding?: boolean, floorDate?: string) =>
-    stateEventSequenceIssue(events, { transferDate: T, tailHasBuilding, floorDate });
+  const issue = (events: Array<{ kind: string; date: string }>, floorDate?: string) => stateEventSequenceIssue(events, { transferDate: T, floorDate });
 
-  it("tax-only(E3-1b 의도된 반전): 초기 건축물 상태가 «없음»(토글 off · 생략)이어도 차단하지 않는다 — 나대지 구간 선언이다 · `tailHasBuilding`은 결과에 영향이 없다(호출자 호환용으로만 받는다)", () => {
+  it("tax-only(E3-1b 의도된 반전): 초기 건축물 상태가 «없음»(토글 off · 생략)이어도 차단하지 않는다 — 나대지 구간 선언이다 · `tailHasBuilding` 인자는 UI 정리 PR에서 제거됐다", () => {
     const ev = [row("tax_type_changed", "2022-06-01")];
-    expect(issue(ev, true)).toBeNull();
-    expect(issue(ev, false)).toBeNull();
     expect(issue(ev)).toBeNull();
   });
 
   it("건축물 사건이 있을 때도 구분 변경 위치와 무관하게 순서 규칙만 본다(E3-1b 의도된 반전) — 철거 앞 구분 변경 · 신축 앞 구분 변경 모두 통과, 건축물 교대 위반은 여전히 차단", () => {
-    expect(issue([row("tax_type_changed", "2019-01-01"), row("building_removed", "2021-01-01")], false)).toBeNull();
-    expect(issue([row("tax_type_changed", "2019-01-01"), row("building_built", "2021-01-01")], true)).toBeNull();
+    expect(issue([row("tax_type_changed", "2019-01-01"), row("building_removed", "2021-01-01")])).toBeNull();
+    expect(issue([row("tax_type_changed", "2019-01-01"), row("building_built", "2021-01-01")])).toBeNull();
     expect(issue([row("building_built", "2019-01-01"), row("building_built", "2021-01-01")])).toMatchObject({ index: 1, field: "kind" });
   });
 
@@ -233,17 +230,17 @@ describe("E3-1a leaf — `stateEventSequenceIssue`: 순서·교대·초기 건�
 
   it("같은 날은 종류와 무관한 전 사건 기준 — 건축물 + 구분 변경 · 구분 변경 + 건축물 · 구분 변경끼리 모두 차단 (P-E3-11)", () => {
     expect(issue([row("building_built", "2019-01-01"), row("tax_type_changed", "2019-01-01")])).toMatchObject({ index: 1, field: "date" });
-    expect(issue([row("tax_type_changed", "2019-01-01"), row("building_removed", "2019-01-01")], true)).toMatchObject({ index: 1, field: "date" });
-    expect(issue([row("tax_type_changed", "2019-01-01"), row("tax_type_changed", "2019-01-01")], true)).toMatchObject({ index: 1, field: "date" });
+    expect(issue([row("tax_type_changed", "2019-01-01"), row("building_removed", "2019-01-01")])).toMatchObject({ index: 1, field: "date" });
+    expect(issue([row("tax_type_changed", "2019-01-01"), row("tax_type_changed", "2019-01-01")])).toMatchObject({ index: 1, field: "date" });
   });
 
   it("역순 · 하한일 · 양도일은 구분 변경 행에도 같은 규칙 — 문구 접두는 종류별(구분 변경 행 «재산세 과세 구분 변경 사건 N번째 행», 건축물 행은 종전 그대로)", () => {
     const rev = issue([row("building_built", "2020-01-01"), row("tax_type_changed", "2019-01-01")]);
     expect(rev).toMatchObject({ index: 1, field: "date" });
     expect(rev?.message.startsWith("재산세 과세 구분 변경 사건 2번째 행 — ")).toBe(true);
-    const floor = issue([row("tax_type_changed", "2014-01-01")], true, "2014-01-01");
+    const floor = issue([row("tax_type_changed", "2014-01-01")], "2014-01-01");
     expect(floor?.message.startsWith("재산세 과세 구분 변경 사건 1번째 행 — ")).toBe(true);
-    const after = issue([row("tax_type_changed", T)], true);
+    const after = issue([row("tax_type_changed", T)]);
     expect(after?.message.startsWith("재산세 과세 구분 변경 사건 1번째 행 — ")).toBe(true);
     // 건축물 행 접두는 바이트 동일
     expect(issue([row("building_built", T)])?.message.startsWith("건축물 사건 1번째 행 — 사건일(2024-01-01)이 양도일(2024-01-01)")).toBe(true);
@@ -258,7 +255,7 @@ describe("E3-1a leaf — `stateEventSequenceIssue`: 순서·교대·초기 건�
   });
 
   it("구분 변경 행의 Before가 같은 구분(= 바로 뒤 구간 구분)이어도 차단하지 않는다 — 무해한 분할(Q-6) · derive는 구간만 둘로 가른다", () => {
-    expect(issue([row("tax_type_changed", "2022-06-01")], true)).toBeNull();
+    expect(issue([row("tax_type_changed", "2022-06-01")])).toBeNull();
     const ev: StateEvent[] = [{ kind: "tax_type_changed", date: dayDate("2022-06-01"), propertyTaxTypeBefore: "separate" }];
     const out = deriveOtherLandStateIntervals(ev, getOwnershipStart(dayDate("2014-01-01")), dayDate(T), { hasBuilding: true, propertyTaxType: "separate" });
     expect(out.map((i) => i.propertyTaxType)).toEqual(["separate", "separate"]);

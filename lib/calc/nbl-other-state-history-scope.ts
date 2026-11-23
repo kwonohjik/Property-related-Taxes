@@ -15,7 +15,9 @@ import type { NblOtherStateEventInput } from "@/lib/stores/calc-wizard-asset-nbl
 import { consumesStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
 import type { StateHistoryMode } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import { effectiveOtherHasBuilding } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { eventBasisOptions } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventCarriesTaxTypeBefore } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { eventClosesBareInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { isBuildingEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { isEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 
@@ -58,6 +60,30 @@ export function effectiveOtherHasBuildingOf(asset: AssetForm): boolean {
   return effectiveOtherHasBuilding(asset.nblOtherHasBuilding, "changed", events);
 }
 
+/**
+ * 사건 `i`번째 행의 **전송형** — ④ 와이어 · ⑤ 미리보기가 같이 읽는다(⑭ 매퍼 `buildLandStateHistory`와 같은 규칙 — 3중 패턴). E3-1b.
+ *
+ * 나대지 구간을 닫는 행(leaf `eventClosesBareInterval` — 신축 행 · 직전 건축물이 없는 구분 변경 행)에서만 선언 칸 2개를 싣는다. 건축물 있는 구간을 닫는 행(멸실 · 건축물 위 구분 변경)의
+ * 숨은 stale 값은 싣지 않는다. 키는 값이 있을 때만 만든다 — 신축 행의 `""`·미선택은 키 없음 = 종전 와이어와 byte-identical.
+ *  · 근거: 선언이 비종합합산이고 그 선언의 나대지 선택지(`eventBasisOptions` — `demolished` 제외 · 「모름」 포함)에 있을 때만(구분을 바꿔 맞지 않게 된 값은 «미선택»으로 보이고 보내지 않는다).
+ *  · 면적한도: 근거가 `vacant_state`일 때만.
+ * `tailHasBuilding`은 건축물 사건이 0건일 때만 초기 건축물 상태로 쓰인다 — ⑧·⑫·⑭와 같은 값(입력 토글 저장값).
+ */
+export function stateEventWireRow(events: ReadonlyArray<NblOtherStateEventInput>, i: number, tailHasBuilding: boolean): NblOtherStateEventInput {
+  const e = events[i];
+  const closesBare = eventClosesBareInterval(events, i, tailHasBuilding);
+  const before = eventCarriesTaxTypeBefore(e.kind) || closesBare ? (e.propertyTaxTypeBefore ?? "") : "";
+  const basis = closesBare && before ? (eventBasisOptions(before).find((b) => b === e.propertyTaxBasisBefore) ?? "") : "";
+  const limit = basis === "vacant_state" ? (e.areaWithinLimitBefore ?? "") : "";
+  return {
+    kind: e.kind,
+    date: e.date,
+    propertyTaxTypeBefore: before,
+    ...(basis ? { propertyTaxBasisBefore: basis } : {}),
+    ...(limit ? { areaWithinLimitBefore: limit } : {}),
+  };
+}
+
 /** ④가 와이어에 싣는 이력 필드 — 술어가 거짓이면 비워 보낸다(`""` · `[]`). 참이고 `changed`가 아니면 모드는 유지하고 사건만 비운다(엔진이 `unchanged`·`unknown` 고지를 모드로 가른다). */
 export function stateHistoryWireFields(asset: AssetForm): {
   nblOtherStateHistoryMode: StateHistoryMode;
@@ -66,13 +92,9 @@ export function stateHistoryWireFields(asset: AssetForm): {
   if (!nblOtherStateHistoryApplies(asset)) return { nblOtherStateHistoryMode: "", nblOtherStateEvents: [] };
   const mode = asset.nblOtherStateHistoryMode;
   if (mode !== "changed") return { nblOtherStateHistoryMode: mode, nblOtherStateEvents: [] };
+  const events = asset.nblOtherStateEvents ?? [];
   return {
     nblOtherStateHistoryMode: "changed",
-    // 신축 행의 «직전 재산세 구분»은 뜻이 없다 — 와이어에는 `""`로 정규화한다(onChange가 이미 리셋하지만 복원 값 방어). 운반 여부는 leaf 단일 술어(철거·구분 변경 = 운반).
-    nblOtherStateEvents: (asset.nblOtherStateEvents ?? []).map((e) => ({
-      kind: e.kind,
-      date: e.date,
-      propertyTaxTypeBefore: eventCarriesTaxTypeBefore(e.kind) ? e.propertyTaxTypeBefore : "",
-    })),
+    nblOtherStateEvents: events.map((_, i) => stateEventWireRow(events, i, asset.nblOtherHasBuilding)),
   };
 }
