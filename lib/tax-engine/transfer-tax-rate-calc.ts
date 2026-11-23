@@ -603,11 +603,11 @@ export function calcTax(
     shortTermFlatRate === null
       ? undefined
       : (shortTermResolution?.clause === "104-1-4"
-        ? `조정대상지역 주택분양권 50% 세율(소득세법 §104①4호 — 2018.1.1~2021.5.31 양도분)${presaleRightClause4UnmetNote(input)}`
+        ? `조정대상지역 주택분양권 50% 세율(${TRANSFER.TAX_RATE_REGULATED_PRESALE_RIGHT} — 2018.1.1~2021.5.31 양도분)${presaleRightClause4UnmetNote(input)}`
         : shortTermResolution?.clause4Excluded
-          ? "단서(소득세법 시행령 §167의6) 요건 충족으로 §104①4호(조정대상지역 주택분양권 50%)가 배제되어 보유기간별 특례세율만 적용"
+          ? `단서(${TRANSFER.PRESALE_RIGHT_NO_HOUSE_PROVISO}) 요건 충족으로 ${TRANSFER.TAX_RATE_REGULATED_PRESALE_RIGHT}(조정대상지역 주택분양권 50%)가 배제되어 보유기간별 특례세율만 적용`
           : shortTermResolution?.clause === "104-1-1"
-            ? "분양권 60% 세율(소득세법 §104①1호)"
+            ? `분양권 60% 세율(${TRANSFER.TAX_RATE_BASIC_CLAUSE})`
             : holdingMonthsTotal < 12
               ? "보유기간 1년 미만 특례세율 적용"
               : "보유기간 2년 미만 특례세율 적용") + presaleRightClause4TiedNote(shortTermResolution) + nonHeirRateNote;
