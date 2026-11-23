@@ -293,6 +293,22 @@ describe("E3c-1 — 유예와의 결합: 영위 구간 ∪ 유예(합집합) · 
   });
 });
 
+describe("E3c-1 — 끝 단계 기간 수치: 영위 구간 판정이 결과의 근거면 그 값을 쓴다(유예 단독 재판정이 덮지 않는다) · basis `usage_periods`", () => {
+  it("C4a + 짧은 유예(2019-01-01 ~ 07-01, 181일): 영위 1,825 ∪ 유예 181 = 2,006/3,832 비사업용 — 유예 단독(181)으로 수치를 덮어쓰지 않고 `graceJudged`도 없다", () => {
+    const j = judge(fromRaw(onRaw({ ...row("C4a"), grace: [{ reasonCode: "use_prohibited", anchorDate: "2019-01-01", endDate: "2019-07-01" }] })));
+    expect([j.isNonBusinessLand, j.effectiveBusinessDays, j.gracePeriodDays, j.periodEvaluation!.basis]).toEqual([true, 2006, 181, "usage_periods"]);
+    expect(j.periodEvaluation!.graceJudged).toBeUndefined();
+  });
+
+  it("다른 목이 결과를 끝내면(영위 구간 미충족 + 나목 재산세 분리과세 기간기준 충족) basis는 `state_at_transfer` 그대로 — 영위 echo만 남는다", () => {
+    const j = judge(fromRaw(onRaw(row("C4a"), { nblOtherPropertyTaxType: "special_sum", nblOtherPropertyTaxBasis: "separate_taxation" }))); // 나목(재산세 분리과세) + 기간기준 충족이 결과를 끝낸다
+    expect(j.isNonBusinessLand).toBe(false);
+    expect(j.periodEvaluation!.revenueHistory).toBeDefined();
+    expect(j.periodEvaluation!.revenueHistory!.meets).toBe(false); // 영위 구간 자체로는 미충족
+    expect(j.periodEvaluation!.basis).toBe("state_at_transfer");
+  });
+});
+
 describe("E3c-1 — 방어: 입력이 모순돼도 엔진이 조용히 틀리지 않는다", () => {
   it("개시일이 양도일 이후(⑧·⑫가 먼저 막는 입력)이면 영위일이 없다 — 사업용 구간 0 · 던지지 않는다", () => {
     const j = judge(fromRaw(onRaw(row("M9p"), { nblRevenueCurrentBusinessStartDate: "2025-01-01" })));
