@@ -86,9 +86,11 @@ describe("E3-1b 3중 패턴 배선 — 「나대지 구간을 닫는 행」은 �
   it("초기 건축물 상태 인자 = 입력 토글 저장값 — ⑭ `asBool(a.nblOtherHasBuilding)` · ④ `asset.nblOtherHasBuilding`(와이어 · 미리보기 · 위젯). 빠지거나 다른 값이면 tax-only 이력의 갈래가 ⑭와 어긋난다", () => {
     expect(src(MAPPER)).toMatch(/const tailHasBuilding = asBool\(a\.nblOtherHasBuilding\)/);
     expect(src(MAPPER)).toMatch(/eventClosesBareInterval\(rows, i, tailHasBuilding\)/);
-    expect(src(SCOPE)).toMatch(/stateEventWireRow\(events, i, asset\.nblOtherHasBuilding\)/);
-    expect(src(PREVIEW)).toMatch(/stateEventWireRow\(rows, i, asset\.nblOtherHasBuilding\)/);
-    expect(src(SECTION)).toMatch(/eventClosesBareInterval\(events, i, asset\.nblOtherHasBuilding\)/);
+    // E3-③ A(UI-A) — 주택부수토지 카드는 토글이 없어 «양도일 현재 주택 있음» = `true`(⑭ `tailHasBuilding = true`와 같은 값)가 초기 상태 인자다: 기타토지 = 토글 저장값 · 주택 = `house || 토글`.
+    expect(src(SCOPE)).toMatch(/stateEventWireRow\(events, i, house \|\| asset\.nblOtherHasBuilding, house \? "house" : undefined\)/);
+    expect(src(PREVIEW)).toMatch(/stateEventWireRow\(rows, i, house \|\| asset\.nblOtherHasBuilding, house \? "house" : undefined\)/);
+    expect(src(SECTION)).toMatch(/const tailHasBuilding = house \|\| asset\.nblOtherHasBuilding/);
+    expect(src(SECTION)).toMatch(/eventClosesBareInterval\(events, i, tailHasBuilding\)/);
   });
 
   it("순서 검증(⑧·⑫·⑤ 미리보기)은 `tailHasBuilding`을 넘기지 않는다 — 「건축물 없는 구간 위 구분 변경」 차단 규칙이 삭제돼 결과에 영향이 없는 인자였고, 인터페이스에서 제거했다", () => {

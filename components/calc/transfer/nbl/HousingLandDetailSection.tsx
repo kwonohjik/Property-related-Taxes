@@ -5,6 +5,8 @@ import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { MetropolitanAreaField } from "./shared/MetropolitanAreaField";
+import { OtherLandStateHistorySection } from "./OtherLandStateHistorySection";
+import { nblStateHistoryApplies } from "@/lib/calc/nbl-other-state-history-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { FOOTPRINT_DEFINITION } from "@/lib/calc/footprint-definition-copy";
 import { HOUSING_MULTIPLIER_SPLIT_EFFECTIVE_DATE } from "@/lib/tax-engine/non-business-land/urban-area";
@@ -58,6 +60,10 @@ export function HousingLandDetailSection({
               : "비수도권: 도시지역 5배, 도시지역 외 10배."}
         </div>
       )}
+
+      {/* E3-③ A — 소유기간 중 주택 신축·멸실 이력(질문 → 사건 행 → 미리보기). 계산 순서(정착면적·배율 → 기간 → 유예)대로 정착면적·배율 안내 뒤, 유예 섹션 앞에 둔다.
+          마운트 조건 = ④⑧과 같은 지목 축 단일 술어(`nblStateHistoryApplies`) — 배율 이내 여부는 조건이 아니다(런타임 분기 — 엔진이 가른다). */}
+      {nblStateHistoryApplies(asset) && <OtherLandStateHistorySection variant="housing" asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />}
     </div>
   );
 }

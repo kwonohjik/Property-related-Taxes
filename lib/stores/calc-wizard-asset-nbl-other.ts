@@ -51,6 +51,11 @@ export interface NblOtherStateEventInput {
   propertyTaxTypeBefore: "" | PropertyTaxType;
   propertyTaxBasisBefore?: "" | PropertyTaxBasis;
   areaWithinLimitBefore?: AreaWithinLimit;
+  /**
+   * E3-③ A — **주택부수토지 카드**의 철거 행(= 주택 구간을 닫는 행 — leaf `eventClosesHouseInterval`)이 받는 «철거 직전 주택 정착면적(㎡)». 숫자 문자열 · **빈칸은 빈칸**(표시 fallback·가정값 없음 — ⑧ H9가 막는다).
+   * optional — 키 부재 = 종전 행과 byte-identical(③ 복원도 키를 새로 만들지 않는다). 철거 행이 아닌 행·기타토지 행의 stale 값은 ④가 보내지 않는다.
+   */
+  houseFootprintBefore?: string;
 }
 
 export interface NblOtherFormSlice {

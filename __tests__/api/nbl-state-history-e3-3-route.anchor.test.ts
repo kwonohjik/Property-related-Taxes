@@ -136,7 +136,8 @@ describe("E3d-1 route 관통 — 엔진 계획서 §6.1 A 행(단건): 입력 �
     const res = await runRow(row("H3c"));
     const iv = res.nbl?.periodEvaluation?.stateHistory?.intervals as Loose[];
     expect(iv.map((v) => [v.hasBuilding, v.buildingKind ?? null])).toEqual([[true, "house"], [false, null], [true, "house"]]);
-    expect((res.body.nonBusinessLandRaw as Loose).nblOtherHasBuilding).not.toBe(true);
+    // UI-A(2026-11-24) — ④가 주택 카드의 `nblOtherHasBuilding`을 true로 고정해 싣는다(A-12 · ⑭ `tailHasBuilding = true`와 같은 값). 종전(엔진 PR)에는 저장 토글 그대로였다.
+    expect((res.body.nonBusinessLandRaw as Loose).nblOtherHasBuilding).toBe(true);
   });
 });
 

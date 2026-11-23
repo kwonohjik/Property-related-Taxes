@@ -111,9 +111,11 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
     expect(messages, NEXT_PR_HINT).toEqual([APPLY, HOUSING_APPLY].sort());
   });
 
-  it("WIRE-4b (E3-③ A): 주택부수토지 이력 고지 상수(DAYWISE·HOUSING_APPLIED·HOUSE_*·NON_HOUSE_BUILDING)는 `applyHousingStateHistory`만 싣는다 — UI 후속 PR이 입력 화면 사용처를 더하면 이 목록을 갱신한다", () => {
+  it("WIRE-4b (E3-③ A): 주택부수토지 이력 고지 상수(DAYWISE·HOUSING_APPLIED·HOUSE_*·NON_HOUSE_BUILDING)는 `applyHousingStateHistory`(결과 고지)와 입력 위젯(UI-A — 같은 상수를 읽는다)만 쓴다. `WITHIN_UNCONFIRMED`는 위젯이 쓰지 않는다(UI는 ⑧이 차단 — 직접 API 접힘 고지)", () => {
     const used = usersOf("NBL_STATE_HISTORY_(?:DAYWISE_NO_RULING|HOUSING_APPLIED|HOUSE_BEFORE|HOUSE_WITHIN_UNCONFIRMED|HOUSE_EXCEEDED|HOUSE_EXCEEDED_GRACE|HOUSING_NON_HOUSE_BUILDING)_NOTICE", [NOTICES]).sort();
-    expect(used, NEXT_PR_HINT).toEqual([HOUSING_APPLY]);
+    expect(used, NEXT_PR_HINT).toEqual([HOUSING_APPLY, SECTION].sort());
+    const widget = FILES.find((f) => f.path === SECTION)!.src;
+    expect(widget, "위젯은 ⑧이 막는 직접 API 접힘 고지를 쓰지 않는다").not.toMatch(/NBL_STATE_HISTORY_HOUSE_WITHIN_UNCONFIRMED_NOTICE/);
   });
 
   it("WIRE-3b (E3-③ A): 주택 소비 술어 `consumesHousingStateHistory` = 사건 주체 leaf(`stateEventSubjectOf` — ⑧·⑫ 문구 변형) · ⑭ 매퍼(tailHasBuilding=true · 정착면적 운반) · UI 기타토지 전용 술어(주택 제외)", () => {
@@ -127,7 +129,8 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
 
   it("WIRE-9 (E3-③ A): 배율 helper `housing-limit.ts`는 `judgeHousingLand`(양도일 현재)와 과거 주택 구간(leaf)이 같이 쓴다 — 단일 소스(D-12). `getHousingMultiplier`를 직접 부르는 주택 판정이 더 생기면 배율이 갈라진다", () => {
     const users = usersOf("judgeHousingLimit|resolveHouseInterval", [HOUSING_LIMIT]).sort();
-    expect(users, NEXT_PR_HINT).toEqual([HOUSING_LAND, LEAF].sort());
+    // UI-A — ⑤ 미리보기(철거 행 허용 면적·양도일 현재 배율 초과 안내)도 **같은 leaf를 직접 부른다**(표시 전용 — 배율표·비교를 UI가 따로 쓰지 않는다).
+    expect(users, NEXT_PR_HINT).toEqual([HOUSING_LAND, LEAF, PREVIEW].sort());
   });
 
   it("WIRE-5: ⑫ Zod가 두 칸(`nblOtherStateHistoryMode`·`nblOtherStateEvents`)을 가진다 — 빠지면 침묵 strip · ⑭ 매퍼·⑫ refine이 둘 다 읽는다", () => {
