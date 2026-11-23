@@ -37,7 +37,14 @@ export function judgmentContestedGiftedNewHouse(form: OneHouseJudgmentFormData):
   if (!judgmentSaleIsHousing(form)) return undefined;
   const excluded = contestedGiftedPairExcludedHouseIds(form);
   if (!excluded) return undefined;
-  return resolveJudgmentTemporaryTwoHouse(form, excluded) ?? null;
+  // 상속받은 주택의 취득시기는 상속개시일이다(「소득세법 시행령」 §162①5호). 행 「취득일」에 피상속인 취득일을 넣었으면(상속개시일보다 앞)
+  //   신규 주택 선후·기한을 상속개시일로 본다 — 둘 중 늦은 날(조합원 권리를 상속받아 나중에 준공된 행은 준공일이 늦다).
+  const houses = form.houses?.map((h) =>
+    h.isInherited && h.inheritedGiftedToHouseholdMember && h.inheritedDate && h.inheritedDate > (h.acquisitionDate ?? "")
+      ? { ...h, acquisitionDate: h.inheritedDate }
+      : h,
+  );
+  return resolveJudgmentTemporaryTwoHouse({ ...form, houses }, excluded) ?? null;
 }
 
 /** 양론 반대 입장 짝(C2·C7 · C1)의 신규 주택 행 — 엔진 입장 짝의 행과 같으면 뺀다. ⑧이 「다른 입장」 문구로 경위를 요구한다. */

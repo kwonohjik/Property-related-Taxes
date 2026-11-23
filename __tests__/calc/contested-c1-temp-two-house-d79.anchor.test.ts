@@ -17,6 +17,7 @@
  * | Q-4 | 동일세대 상속 | A 과세(0464 — 신규 주택 아님) · ④ 짝 null |
  * | Q-5 | 평가셋 E107·E110(상속 뒤 한참 지나 양도) | 종전 결론 그대로(A 과세 · B 비과세) |
  * | Q-6 | ⑧ — Q-1에서 B 행 취득 경위 미답 | 「다른 입장」 문구로 경위를 요구 |
+ * | Q-7 | Q-1에서 행 「취득일」에 피상속인 취득일(1995)을 넣고 상속개시일은 따로 | 상속개시일로 신규 주택 취득일을 본다(§162①5) — Q-1과 같은 결론 |
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
@@ -84,6 +85,13 @@ describe("D-79 C1 변형 — 반대 입장(A)이 증여한 별도세대 상속 �
   it.each(["E107", "E110"])("Q-5 평가셋 %s → 종전 결론 그대로(A 과세 · B 비과세)", async (id) => {
     const { issue } = await c1(fixture(id));
     expect(issue).toMatchObject({ A: "taxable", B: "exempt" });
+  });
+
+  it("Q-7 행 취득일이 피상속인 취득일(상속개시일보다 앞)이면 상속개시일을 신규 주택 취득일로 본다 — Q-1과 같은 결론", async () => {
+    const c = mk("2023-06-02", "2015-03-01", "2023-06-01", { acquisitionDate: "1995-06-15" });
+    const { issue } = await c1(c);
+    expect(issue).toMatchObject({ A: "exempt", B: "exempt" });
+    expect(body(c).contestedGiftedInheritedTemporaryTwoHouse).toMatchObject({ newHouseRowId: "B", newAcquisitionDate: "2022-01-10" });
   });
 
   it("Q-6 ⑧ — 반대 입장 짝의 신규 주택(B 행) 취득 경위를 다른 입장 문구로 요구", () => {
