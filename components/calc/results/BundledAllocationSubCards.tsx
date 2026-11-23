@@ -12,6 +12,7 @@ import { ReductionDetailCards } from "@/components/calc/results/transfer/Reducti
 import { ValuationDetailCards } from "@/components/calc/results/transfer/ValuationDetailCards";
 import { CompanionRightExemptionNote } from "@/components/calc/results/transfer/CompanionRightExemptionNote";
 import { Article89ExceptionBasisLine } from "@/components/calc/results/shared/Article89ExceptionBasisLine";
+import { LandExclusionExemptBasisCard } from "@/components/calc/results/shared/LandExclusionExemptBasisCard";
 import type { AggregateTransferResult, PerPropertyBreakdown } from "@/lib/tax-engine/transfer-tax-aggregate";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { reductionTypeLabelOf } from "@/lib/tax-engine/transfer-reduction-type-labels";
@@ -133,8 +134,13 @@ export function PropertyCard({
           )}
         </tbody>
       </table>
-      {/* §89② 예외(§156의2·§156의3)로 받은 비과세·고가 부분 비과세의 근거 — 단건 결과·다건 카드와 같은 줄(겸용은 파트 카드마다 echo가 온다) */}
-      <Article89ExceptionBasisLine applied={breakdown.article89ExceptionApplied} className="text-xs text-emerald-700 dark:text-emerald-400" />
+      {/* §89② 예외(§156의2·§156의3)로 받은 비과세·고가 부분 비과세의 근거 — 단건 결과·다건 카드와 같은 줄(겸용은 파트 카드마다 echo가 온다).
+          부수토지 비과세 제외(G-2·G-3) 자산은 그 줄을 품은 비과세 사유 카드를 대신 그린다(단건·다건과 같은 카드). */}
+      {breakdown.housingLandExemptExclusion ? (
+        <LandExclusionExemptBasisCard result={breakdown} />
+      ) : (
+        <Article89ExceptionBasisLine applied={breakdown.article89ExceptionApplied} className="text-xs text-emerald-700 dark:text-emerald-400" />
+      )}
       {/*
         감면·취득가액 산출근거 — 단건 결과 화면과 **같은 컴포넌트**를 재사용한다.
         종전에는 집계가 Detail을 버려서 "감면" 배지만 뜨고 근거를 볼 수 없었다.

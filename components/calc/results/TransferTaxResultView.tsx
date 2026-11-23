@@ -14,6 +14,7 @@ import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { CalculationWarningsCard } from "@/components/calc/results/shared/CalculationWarningsCard";
 import { PartialExemptBasisCard } from "@/components/calc/results/shared/PartialExemptBasisCard";
 import { Article89ExceptionBasisLine } from "@/components/calc/results/shared/Article89ExceptionBasisLine";
+import { LandExclusionExemptBasisCard } from "@/components/calc/results/shared/LandExclusionExemptBasisCard";
 import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
 import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurchargeDetailCard";
@@ -440,6 +441,9 @@ export function TransferTaxResultView({
           result={result}
           fallbackThresholdLabel={highValueThresholdForDisplay(formData?.transferDate).label}
         />
+
+        {/* 전액 비과세 대상인데 부수토지 일부(배율 초과분 G-2 · 나중 취득 토지 보유요건 미달 G-3)만 과세된 결과 — 위 두 카드가 모두 빠지는 경로라 사유를 따로 남긴다. */}
+        <LandExclusionExemptBasisCard result={result} />
 
         {/* 소득세법 §91② 범위 밖 고지 (결정 #48) — 부분 비과세·감면 결과. 전액 비과세는 위 카드 안에 이미 있다(경정 환급 카드는 예외). */}
         {(!result.isExempt || result.amendmentDetail?.correctionKind === "refund_claim") && (

@@ -135,6 +135,13 @@ export interface TransferTaxResult {
    * 소비자: 주택 split 파트 이월과세의 §97의2②2호 판정(`transfer-tax-split-carryover.ts` — G-3 토지만 과세여도 건물은 비과세 해당이다).
    */
   isExemptCore?: true;
+  /**
+   * [echo] `isExemptCore` 중 **부수토지 비과세 제외가 실제로 적용된** 결과 — 배율 초과분(G-2 · `excessLand`)·나중 취득 토지 보유요건 미달(G-3 · `laterLand`).
+   * 건물분(과 G-2의 배율 이내 토지분)은 비과세다. `isExemptCore`만으로는 고를 수 없다 — §155⑳ 시나리오 B 미적용도 같은 플래그로
+   * 정상 경로를 타지만 부수토지 제외 없이 전액 과세된다. `landOnly`는 토지만 본인 소유(건물분은 본인 신고분이 아니다)다 — 토지만 본인 × G-3처럼
+   * 비과세로 남는 몫이 없으면 싣지 않는다. 결과 화면의 비과세 사유 카드(`LandExclusionExemptBasisCard`)만 읽는다. 세액 계산에는 미사용.
+   */
+  housingLandExemptExclusion?: { excessLand: boolean; laterLand: boolean; landOnly?: true };
   /** 비과세 사유 */
   exemptReason?: string;
   /**

@@ -13,6 +13,7 @@ import { publicExpropriationPartWiseNotice } from "./public-expropriation-reduct
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
 import { UNSOLD_98_FLAT_RATE } from "./transfer-reductions/unsold-98-constants";
 import { surchargeClauseBeatenByShortTerm } from "./transfer-tax-rate-clause";
+import { isLaterAcquiredLandExemptExcluded } from "./transfer-tax-appurtenant-land";
 import type { SurchargeApplication } from "./transfer-tax-surcharge-predicate";
 import type { CalculationStep, TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 
@@ -55,6 +56,25 @@ export interface NormalReturnArgs extends FinalizeArgs {
   steps: CalculationStep[];
   /** ⑳ 호별·거주 요건 불성립 판정(`applied: false`) — 결과 카드가 「적용 불가 + 미충족 사유」를 보이게 싣는다(V-7 · 세액 불변). */
   rentalHousingExceptionUnmetDetail?: TransferTaxResult["rentalHousingExceptionDetail"];
+}
+
+/**
+ * `housingLandExemptExclusion` echo — 전액 비과세 대상(`isExempt`)인데 STEP 3 `applyHousingLandExclusions`가 부수토지를 실제로 뗐는가.
+ * 그 함수는 분리 결과(`splitDetail`)가 있어야 돌고, 배율 초과분을 떼면 `nonBusinessLandPart`를 남긴다. G-3 게이트는 같은 술어
+ * (`isLaterAcquiredLandExemptExcluded`)다. 토지만 본인 × G-3은 비과세로 남는 몫이 없어(건물은 본인 신고분이 아니고 토지는 전부 과세) 싣지 않는다.
+ */
+function landExclusionEcho(
+  isExempt: boolean,
+  effectiveInput: TransferTaxInput,
+  splitDetail: NormalReturnArgs["splitDetailForRate"],
+): Pick<TransferTaxResult, "housingLandExemptExclusion"> {
+  if (!isExempt || !splitDetail) return {};
+  const excessLand = splitDetail.nonBusinessLandPart !== undefined;
+  const laterLand = isLaterAcquiredLandExemptExcluded(effectiveInput);
+  const landOnly = effectiveInput.selfOwns === "land_only";
+  if (!excessLand && !laterLand) return {};
+  if (landOnly && laterLand) return {};
+  return { housingLandExemptExclusion: { excessLand, laterLand, ...(landOnly ? { landOnly: true as const } : {}) } };
 }
 
 export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTaxResult {
@@ -154,6 +174,7 @@ export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTa
     isPartialExempt: exemptionResult.isPartialExempt,
     // 전액 비과세 대상인데 부수토지 제외(G-2·G-3)·PHD로 조기반환하지 않은 경우 — §97의2②2호 판정(split 파트 이월과세)이 읽는다.
     ...(exemptionResult.isExempt ? { isExemptCore: true as const } : {}),
+    ...landExclusionEcho(exemptionResult.isExempt === true, effectiveInput, splitDetailForRate),
     exemptReason: exemptionResult.exemptReason,
     ...(exemptionResult.article89ExceptionApplied ? { article89ExceptionApplied: exemptionResult.article89ExceptionApplied } : {}),
     warnings: warnings.length > 0 ? warnings : undefined,
