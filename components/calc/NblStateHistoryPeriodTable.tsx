@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * NBL-STATE-HISTORY-U2 — ⑦ 결과 카드: 소유기간 중 건축물 유무 이력(일 단위 구간)과 영 §168조의6 기간기준.
+ * NBL-STATE-HISTORY-U2 — ⑦ 결과 카드: 소유기간 중 건축물 유무·재산세 구분 이력(일 단위 구간)과 영 §168조의6 기간기준.
  * 계획서: docs/01-plan/features/nbl-other-land-state-history.ui.plan.md §7
  *
  * 입력은 엔진 echo(`periodEvaluation.stateHistory`)뿐이다 — 카드가 소유기간 버킷·창 길이·기준 일수를 추정하지 않는다.
@@ -100,7 +100,7 @@ export function NblStateHistoryPeriodTable({ stateHistory, totalOwnershipDays, e
 
   return (
     <div className="px-4 py-3 border-b border-border" data-testid="nbl-state-history-period">
-      <ToneCard tone="sky" title="기간 분석 — 소유기간 중 건축물 유무 이력 반영">
+      <ToneCard tone="sky" title="기간 분석 — 소유기간 중 건축물 유무·재산세 구분 이력 반영">
         <div className="overflow-x-auto print:overflow-visible">
           <table className="w-full min-w-[34rem] text-xs" data-testid="nbl-state-history-intervals">
             <thead>

@@ -12,6 +12,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { differenceInDays } from "@/lib/tax-engine/utc-date";
 import type { LandStateInterval, StateEvent } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import { deriveOtherLandStateIntervals } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { eventCarriesTaxTypeBefore } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { isStateIntervalBusiness } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { stateEventSequenceIssue } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { getOwnershipStart } from "@/lib/tax-engine/non-business-land/utils/period-math";
@@ -36,7 +37,7 @@ export interface StateHistoryPreviewRow {
 export interface StateHistoryPreview {
   rows: StateHistoryPreviewRow[];
   totalDays: number;
-  /** 양도일 현재 건축물 유무 = 마지막 사건 종류 */
+  /** 양도일 현재 건축물 유무 = 마지막 «건축물 사건» 종류(건축물 사건이 없으면 입력 토글) */
   hasBuildingAtTransfer: boolean;
 }
 
@@ -49,12 +50,13 @@ export function buildStateHistoryPreview(asset: AssetForm, transferDate: string 
   const transfer = toOptionalDate(transferDate);
   if (!acq || !transfer || !transferDate) return null;
   const rows = asset.nblOtherStateEvents ?? [];
-  if (stateEventSequenceIssue(rows, { transferDate, floorDate })) return null;
+  // E3-① — ⑧·⑫와 같은 값(`tailHasBuilding` = 입력 토글)을 넘긴다. 빠지면 «건축물 없음»으로 읽혀 tax-only 이력의 미리보기가 null이 된다.
+  if (stateEventSequenceIssue(rows, { transferDate, floorDate, tailHasBuilding: asset.nblOtherHasBuilding })) return null;
 
   const events: StateEvent[] = rows.map((e) => ({
     kind: e.kind as StateEvent["kind"],
     date: toOptionalDate(e.date)!, // issue 없음 → 해석 가능
-    propertyTaxTypeBefore: e.kind === "building_removed" ? e.propertyTaxTypeBefore : undefined,
+    propertyTaxTypeBefore: eventCarriesTaxTypeBefore(e.kind) ? e.propertyTaxTypeBefore : undefined,
   }));
   const intervals = deriveOtherLandStateIntervals(events, getOwnershipStart(acq), transfer, {
     hasBuilding: asset.nblOtherHasBuilding,
