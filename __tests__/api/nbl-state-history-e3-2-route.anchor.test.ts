@@ -213,3 +213,32 @@ describe("E3c-1 route 관통 — 다건 입구", () => {
     }
   });
 });
+
+describe("E3c-1 route 관통 — 축 B 지분(컴패니언 raw)", () => {
+  it("영위 기간은 땅 사실(첫 카드), 소유기간은 지분 취득일 — M11p: 지분1(2014) 2,707/3,832 사업용 · 지분2(2020-01-01 취득) 영위 516/1,641 비사업용(소유 전 연도 행은 읽지 않는다)", async () => {
+    const r = row("M11p");
+    const f = createDefaultTransferFormData();
+    f.transferDate = "2024-06-30";
+    f.filingDate = "2025-12-31";
+    f.contractTotalPrice = "1000000000";
+    f.assetSplitMode = "fractional";
+    const base = { assetKind: "land", acquisitionCause: "purchase", acquisitionArea: "1000", transferArea: "1000", addressJibun: "서울 강남구 테스트동 1", fixedAcquisitionPrice: "150000000", isNonBusinessLand: true } as Partial<AssetForm>;
+    f.assets = [
+      Object.assign({ ...makeDefaultAsset(1) }, base, { acquisitionDate: "2014-01-01", ownershipNumerator: "50", ownershipDenominator: "100" }, nblKeysOf(r, true)) as AssetForm,
+      Object.assign({ ...makeDefaultAsset(2) }, base, { acquisitionDate: "2020-01-01", ownershipNumerator: "50", ownershipDenominator: "100" }) as AssetForm,
+    ];
+    const body = await captureBody(f);
+    const onKeys = { nblRevenuePeriodOn: true, nblRevenueBusinessEndDate: "2021-06-01", nblRevenueYearRows: e3cRowRaw(r, true).nblRevenueYearRows };
+    Object.assign(body.nonBusinessLandRaw as Loose, onKeys);
+    for (const c of (body.companionAssets as Loose[]) ?? []) if (c.nonBusinessLandRaw) Object.assign(c.nonBusinessLandRaw, onKeys);
+    const res = await postTransfer(body);
+    expect(res.status, JSON.stringify(res.json).slice(0, 500)).toBe(200);
+    const details = (res.json.data.aggregated.properties as Loose[]).map((p) => p.nonBusinessLandJudgmentDetail);
+    expect(details.map((d) => d?.periodEvaluation?.revenueHistory !== undefined)).toEqual([true, true]);
+    expect(details.map((d) => [d?.isNonBusinessLand, d?.effectiveBusinessDays, d?.totalOwnershipDays])).toEqual([
+      [false, 2707, 3832],
+      [true, 516, 1641],
+    ]);
+  });
+});
+

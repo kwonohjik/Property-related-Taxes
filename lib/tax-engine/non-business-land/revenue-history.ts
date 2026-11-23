@@ -159,7 +159,7 @@ export function evaluateRevenueHistory(history: RevenueHistoryInput, rt: Revenue
   const window: DateInterval = { start: getOwnershipStart(acquisitionDate), end: transferDate };
   const range = deriveOperatingRange(history, acquisitionDate, transferDate);
   const transferYear = transferDate.getUTCFullYear();
-  const rows = new Map(history.rows.filter((r) => r.taxYear <= transferYear - 2).map((r) => [r.taxYear, r] as const));
+  const rows = new Map(history.rows.map((r) => [r.taxYear, r] as const)); // T·T−1 연도는 `yearCell`이 행을 보지 않고 기존 당해·직전 칸을 쓴다
   const od = (y: number) => operatingDaysInYear(range, y);
 
   const years: RevenueYearJudgment[] = [];

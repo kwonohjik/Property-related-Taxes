@@ -15,6 +15,7 @@ import {
 } from "@/lib/tax-engine/non-business-land/revenue-history";
 import { computeRevenueTest } from "@/lib/tax-engine/non-business-land/revenue-test";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
+import { consumesRevenueHistory } from "@/lib/tax-engine/non-business-land/land-category";
 import { dayDate } from "@/__tests__/tax-engine/_helpers/nbl-state-history-day-table";
 import { E3C_ON_ROWS, E3C_ROWS, e3cRowRaw } from "@/__tests__/tax-engine/_helpers/nbl-state-history-e3-2-table";
 import type { RevenueTestInput } from "@/lib/tax-engine/non-business-land/revenue-test.types";
@@ -216,5 +217,24 @@ describe("E3c-1 leaf — Anchor 5: ⑧·⑫ 공용 issue leaf `revenueHistoryInp
 
   it("하한(개시일·폐업일이 소유 시작 전)은 leaf에 없다 — 축 B 늦은 지분이 400이 되지 않게(엔진은 소유기간으로 자른다)", () => {
     expect(issue({ startDate: "1990-01-01", endDate: "1995-01-01" })).toBeNull();
+  });
+});
+
+describe("E3c-1 소비 술어 `consumesRevenueHistory` — ④⑤⑧⑭가 같은 표를 쓴다: 수입금액비율 경로는 기타토지(잡종지·나대지 포함)만", () => {
+  it.each([
+    ["other_land", true], ["vacant_lot", true], ["miscellaneous", true],
+    ["farmland", false], ["paddy", false], ["field", false], ["orchard", false], ["forest", false], ["pasture", false],
+    ["housing_site", false], ["villa_land", false], ["building_site", false], ["", false],
+  ] as const)("%s → %s", (landType, expected) => {
+    expect(consumesRevenueHistory(landType as never)).toBe(expected);
+  });
+
+  it("⑭: 기타토지가 아니면 토글이 켜져 있어도 영위 기간 입력을 만들지 않는다 — 지목을 바꿔 남은 stale 값이 닿지 않게", () => {
+    const r = E3C_ROWS.find((x) => x.id === "M9p")!;
+    for (const landType of ["farmland", "forest", "pasture", "housing_site", "villa_land"]) {
+      const input = buildNblEngineInput({ ...e3cRowRaw(r, true), nblLandType: landType } as never);
+      expect(input === undefined || input.revenueHistory === undefined, landType).toBe(true);
+    }
+    expect(buildNblEngineInput(e3cRowRaw(r, true) as never)!.revenueHistory).toBeDefined();
   });
 });
