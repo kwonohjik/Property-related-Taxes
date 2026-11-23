@@ -94,6 +94,11 @@ const SURCHARGE_FALLBACK_PROPERTY_TYPES: ReadonlySet<string> = new Set([
   "redevelopment_apt",
 ]);
 
+/** 원시 플래그 fallback이 중과를 거는 자산 종류인가 — 명부 없는 권리 보유 세대의 양도 행 구성(`noRosterRightHolderHouses`)이 같은 집합을 본다. */
+export function isSurchargeFallbackPropertyType(propertyType: string): boolean {
+  return SURCHARGE_FALLBACK_PROPERTY_TYPES.has(propertyType);
+}
+
 export interface SurchargeApplicationInput {
   propertyType: string;
   isRegulatedArea?: boolean;
