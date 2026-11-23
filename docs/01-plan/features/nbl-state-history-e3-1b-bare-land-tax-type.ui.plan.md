@@ -483,7 +483,7 @@ V-1 일 단위(과세기준일 접기 ⛔) · Q-15 (가′) · «모름» = 혜�
 - E2E 엔진 쪽 2곳(`validation-field-jump-cases-nbl.ts` 1행 · `e3-1.spec.ts` 1건) 실행 확인 · 기존 `transfer-nbl-other-state-history*.spec.ts` 22건 + `transfer-validation-field-jump -g "nbl:"` 통과.
 - 브라우저(Playwright · 입력 → 계산 → 결과): R1 산출세액 **198,210,000**(사업용) vs 대조군(선언 없음) **253,960,000**(비사업용) = −55,750,000 · R7 198,210,000 · 면적한도 일부 초과·모름 = 비사업용 · 라이트/다크 대비 4.5 · 375px 사건 영역·카드 안.
 
-### mutation (제품 코드 1줄 → 대응 anchor만 실패 → 원복 · 21건 전부 검출)
+### mutation (제품 코드 1줄 → 대응 anchor만 실패 → 원복 · 20건 전부 검출)
 
 | # | 변이 | 실패한 곳 |
 |---|---|---|
