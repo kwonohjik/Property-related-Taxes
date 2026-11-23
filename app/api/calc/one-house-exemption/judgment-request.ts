@@ -27,6 +27,7 @@ import {
   buildContestedIssue,
   contestedVerdictOf,
   detectContestedIssues,
+  otherPositionUndeterminedNote,
   isContestedIssueShown,
   type OneHouseContestedIssue,
 } from "@/lib/tax-engine/one-house/contested-issues";
@@ -215,15 +216,12 @@ export function buildOneHouseExemptionPayload(
   // STEP 0.95 정본 결과(echo)를 넘긴다 — 조특법으로 먼저 뺀 소수지분을 C7 대상으로 세지 않는다(D-87).
   const contestedIssues = detectContestedIssues(engineInput, {
     inheritedExclusion: exclusion.exemptionJudgeInput.inheritedHouseExclusionDetail,
-  }).map((d) =>
-    buildContestedIssue(
-      d,
-      engineVerdict,
-      contestedVerdictOf(
-        runOneHouseJudgmentPipeline(d.otherPositionInput, parsedRates, judgmentBaseDate, isRightSale).judgment,
-      ),
-    ),
-  ).filter(isContestedIssueShown);
+  }).map((d) => {
+    const other = runOneHouseJudgmentPipeline(d.otherPositionInput, parsedRates, judgmentBaseDate, isRightSale).judgment;
+    // D-79 — 반대 입장 재판정에만 남은 확인 필요가 있으면 그 입장의 결론을 단정하지 않는다(짝 미재도출 안전망이 먼저).
+    const unresolved = d.otherPositionUnresolved ?? otherPositionUndeterminedNote(judgment, other);
+    return buildContestedIssue({ ...d, ...(unresolved ? { otherPositionUnresolved: unresolved } : {}) }, engineVerdict, contestedVerdictOf(other));
+  }).filter(isContestedIssueShown);
 
   // 입주권 양도 판정이 「다른 주택」에서 빼는 것은 해석례로 확인된 보유 감면주택 4개 조문과 명부 도출 §71의2①뿐이다(§99의4·§98의9·
   // 그 밖의 조문은 효과가 없다) — 명세도 판정과 같은 목록으로 만든다(`oneRightInputAfterSpecialActExclusionOf`와 같은 leaf · S03-6 · 결정 #42).
