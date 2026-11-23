@@ -63,6 +63,16 @@ const nblStateEventRawSchema = z.object({
   areaWithinLimitBefore: z.enum(NBL_AREA_WITHIN_LIMIT_VALUES).or(z.literal("")).optional(),
 });
 
+/**
+ * NBL-STATE-HISTORY-E3-② — 업종 영위 기간의 양도연도 T−2 이전 과세기간 행(연도·수입금액·토지가액 — 전부 문자열, 빈 금액 = 모름). 검증은 「영위 기간」 토글이 켜졌을 때만 ⑫ refine(공용 leaf `revenueHistoryInputIssue`)이 한다.
+ * 빠지면 칸이 **침묵 strip**돼 엔진에 닿지 않는다(TS 미감지 — route 관통 anchor가 고정). 연도 키는 `year`다(`taxYear`가 아니다).
+ */
+const nblRevenueYearRowRawSchema = z.object({
+  year: z.string(),
+  revenue: z.string().optional(),
+  landValue: z.string().optional(),
+});
+
 /** 별표6 2호다 — 업종별 (연면적, 기준공장면적률). 값은 UI 문자열 그대로, 파싱은 form-mapper. */
 const nblFactorySegmentRawSchema = z.object({
   id: z.string(),
@@ -270,6 +280,13 @@ export const nonBusinessLandRawBaseSchema = z.object({
   nblRevenueOtherLandValue: z.string().optional(),
   nblRevenuePriorCommonRevenue: z.string().optional(),
   nblRevenuePriorOtherLandValue: z.string().optional(),
+  // NBL-STATE-HISTORY-E3-② — 업종 영위 기간(개시·폐업) · 과세기간별 수입금액. 개시일은 위 `nblRevenueCurrentBusinessStartDate`(단일 소스)를 쓴다. 누락 시 침묵 strip → 엔진에 도달하지 않아 현행 판정으로 남는다(⑫⑭ TS 미감지).
+  // 토글 OFF·미전송 = 현행(키 부재 — 바이트 동일). 토글 ON이어야 폐업일·연도 행이 판정에 쓰인다.
+  nblRevenuePeriodOn: z.boolean().optional(),
+  /** 폐업일 = 영업을 하지 않게 된 첫날(휴업·폐업·이전). 비면 양도일 현재도 영위. */
+  nblRevenueBusinessEndDate: z.string().optional(),
+  /** 양도연도 T−2 이전 과세기간 행. T·T−1은 위 당해·직전 칸이 말한다. */
+  nblRevenueYearRows: z.array(nblRevenueYearRowRawSchema).optional(),
   // NBL2611-V7-S · Q-6 (다) — 12호 도소매업 품목(규칙 §83조의4⑭)·시장 운영 여부
   nblRevenueWholesaleItem: z.enum(WHOLESALE_ITEM_VALUES).or(z.literal("")).optional(),
   nblRevenueWholesaleInMarket: z.boolean().optional(),

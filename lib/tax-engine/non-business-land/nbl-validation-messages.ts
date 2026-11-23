@@ -79,3 +79,44 @@ export function stateEventAtOrAfterTransferMessage(index: number, date: string, 
 /** ⑧ 전용(⑫는 `""`·미전송 = 현행이라 이 문구를 쓰지 않는다 — 통합 Q-5) — 질문 미선택. 「모름」을 고르면 현행 판정 + 확인 필요로 진행한다. */
 export const STATE_HISTORY_MODE_REQUIRED_MESSAGE =
   "소유기간 중 이 토지 위 건축물이 새로 생기거나 없어진 적이 있는지 선택하세요. 모르면 「모름」을 고르세요. (미선택은 「바뀐 적 없음」으로 보지 않습니다)";
+
+/**
+ * NBL-STATE-HISTORY-E3-② — 업종 영위 기간(폐업일·연도 행) 검증 문구. ⑧·⑫ 공용 leaf(`revenue-history.ts`의 `revenueHistoryInputIssue`)가 쓴다.
+ * 행 번호(`index`)는 0부터이고 문구에는 1부터 적는다. 비어 있는 금액·누락 연도는 막지 않는다 — «모름»은 그 연도 불통과 + 확인 필요다(차단 없음).
+ */
+
+/** 폐업일이 날짜로 읽히지 않는다 — 읽히지 않으면 «폐업하지 않음»으로 판정되어 결과가 달라진다. */
+export function revenueEndDateInvalidMessage(endDate: string): string {
+  return `폐업일(${endDate})을 날짜(YYYY-MM-DD)로 읽을 수 없습니다. (읽을 수 없는 값은 폐업하지 않은 것으로 판정되어 결과가 달라집니다)`;
+}
+
+/** 폐업일 ≤ 개시일 — 폐업일은 영업을 하지 않게 된 첫날이라 개시일보다 뒤여야 영위일이 생긴다. */
+export function revenueEndDateNotAfterStartMessage(endDate: string, startDate: string): string {
+  return `폐업일(${endDate})이 사업 개시일(${startDate}) 당일 또는 그 이전입니다. 폐업일은 영업을 하지 않게 된 첫날이라 개시일보다 뒤여야 영위한 날이 생깁니다.`;
+}
+
+/** 폐업일 ≥ 양도일 — 양도일 현재도 영위 중이면 폐업일을 비워 둔다. */
+export function revenueEndDateAtOrAfterTransferMessage(endDate: string, transferDate: string): string {
+  return `폐업일(${endDate})이 양도일(${transferDate}) 당일 또는 그 이후입니다. 양도일 현재도 영위 중이면 폐업일을 비워 두고, 폐업했다면 양도일 이전의 날로 입력하세요.`;
+}
+
+function revenueRowPrefix(index: number): string {
+  return `과세기간별 수입금액 ${index + 1}번째 행`;
+}
+
+export function revenueRowYearInvalidMessage(index: number, year: string): string {
+  return `${revenueRowPrefix(index)} — 과세연도(${year})를 4자리 연도로 읽을 수 없습니다. (읽을 수 없는 행은 판정에서 제외되어 결과가 달라집니다)`;
+}
+
+export function revenueRowYearDuplicateMessage(index: number, year: string): string {
+  return `${revenueRowPrefix(index)} — 과세연도(${year})가 앞 행과 같습니다. 같은 연도는 한 행만 입력하세요.`;
+}
+
+/** T−1·T 이후 — 그 두 해는 기존 «직전 과세기간»·«당해 과세기간» 칸이 말한다(같은 사실을 두 번 받지 않는다). */
+export function revenueRowYearTooLateMessage(index: number, year: string, transferYear: number): string {
+  return `${revenueRowPrefix(index)} — 과세연도(${year})는 양도연도(${transferYear}) 또는 직전 과세기간(${transferYear - 1})입니다. 그 두 해는 「당해 과세기간」·「직전 과세기간」 칸에 입력하세요.`;
+}
+
+export function revenueRowAmountInvalidMessage(index: number, what: "수입금액" | "토지가액", value: string): string {
+  return `${revenueRowPrefix(index)} — ${what}(${value})을 0 이상의 금액으로 읽을 수 없습니다. 모르면 비워 두세요. (비워 두면 그 연도는 수입금액비율 불통과로 보고 확인 필요로 표시합니다)`;
+}

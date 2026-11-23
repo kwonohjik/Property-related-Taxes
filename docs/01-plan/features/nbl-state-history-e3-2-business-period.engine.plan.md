@@ -1,6 +1,6 @@
 # 기타토지 상태 이력 E3-② 「업종 개시·폐업(과세기간별 수입금액)」 — 엔진·판정·API(⑨~⑭) 측 계획
 
-> 상태: **Plan v1 (2026-11-23) · 코드 변경 0(계획서만)** — throwaway probe(`__tests__/zz-probe-e3-2.test.ts` · `zz-probe2.test.ts`)와 mutation 6건은 실측 후 삭제·원복했고 `git status`에 이 문서·UI 계획서 외 변경이 없음을 확인했다.
+> 상태: **Plan v1 (2026-11-23) → 엔진 구현 완료(E3c-0·E3c-1·E3c-2 — 하단 «구현 기록 (엔진, 2026-11-23)»)**. 아래 본문은 계획 당시 그대로이며 **«결정 기록»과 «구현 기록»이 본문과 다르면 그쪽이 정본**이다. 계획 당시: Plan v1 · 코드 변경 0(계획서만) — throwaway probe(`__tests__/zz-probe-e3-2.test.ts` · `zz-probe2.test.ts`)와 mutation 6건은 실측 후 삭제·원복했고 `git status`에 이 문서·UI 계획서 외 변경이 없음을 확인했다.
 > base: `origin/master` 768683e33 · 워크트리 `Property-related-Taxes-nbl-e3-2` · 짝 문서: `nbl-state-history-e3-2-business-period.ui.plan.md`(UI 시니어 — 이 문서는 건드리지 않는다)
 > 선행 정본: `nbl-other-land-state-history.{plan,engine.plan}.md`(§2.1 표 «업종 개시·폐업» · §6 M9·M10·M11 · V-7 · Q-15 (가′) · V-18 · §8.3) · `nbl-state-history-e3-1*.md`(사건 배열 + Before 사슬 · 각 목 합집합 · 호 probe)
 > **번호 규칙**: 이 문서는 `Q-n`(사용자 결정) · `V-n`(미검증). 합칠 때 `E3c-Q-n`·`E3c-V-n`으로 재번호한다(UI 문서는 `UQ-n`·`UV-n`).
@@ -355,3 +355,69 @@ interface RevenueHistoryInput { mode: StateHistoryMode; events: BusinessEvent[];
 - **공통 — 모두 추천안 승인**: ① 입력 = 수입금액비율 카드 안 «영위 기간» 토글(UI UQ-2 — 기본 꺼짐, 꺼지면 현행과 바이트 동일) — 켜면 개시일·폐업일 1쌍 + 양도연도 T−2 이전 과세기간별 수입금액·토지가액 표(T·T−1은 기존 `nblRevenue*` 칸이 말함) · 업종 1개·영위 기간 1건(엔진 Q-7·UI UQ-10). **모델 정합(메인 세션)**: 엔진 (B)와 UI (B2)는 같은 정보(개시·폐업 1쌍 + 연도 표)를 담으므로 하나로 합친다 — 화면 진입은 UI안(토글, 개시일은 기존 `nblRevenueCurrentBusinessStartDate` 단일 소스 재사용 UQ-3), 엔진 입력 형태·필드명은 엔진 계획 §6 계약을 기준으로 구현 PR에서 확정(⑫ 신규 키 누락 = 침묵 strip → route 관통 anchor 필수 · OFF에서 echo 키 부재 R-3). ② 과거 연도 간주임대료·공통수입은 칸 없이 수입금액에 합산 + 고지(엔진 Q-3·UI UQ-6) ③ 연도별 토지가액은 직접 입력 + 명시 클릭 공시지가 조회(UQ-7) ④ 연도 행 누락 = 모름 → 그 연도 불통과 + 확인 필요, 차단 없음 ⑤ 영위 기간 ON이면 DM-01(당해 사업개시일) 판정 대체, OFF면 현행 유지 ⑥ 폐업 후 유예(규칙 §83의5①10호)는 기존 유예 칸에 사용자가 입력(자동 생성 안 함 · UQ-9), 영위 통산 일수가 유예 기산일 이전 2년 미만이면 그 유예만 제외 + 고지(엔진 Q-5 — V-7 해소).
 - **엔진 Q-2(통과 과세기간 → 사업용 기간 환산) = (가) 통과 과세기간 ∩ 실제 영위일** — 개시 전·폐업 후는 사업용 아님. 근거: 법 «사업에 사용하는 토지» · 영 §168의11③ 연환산(영위 기간 기준) · 서면4팀-1048(임대한 기간은 사업에 사용한 토지로 보지 않음). 직접 규정·해석례 0건(V-1)이라 고지에 «확인 필요». (나) 역년 전체·(다) 직전 ② 통과 시 개시 전까지 보정(현행 DM-3 휴리스틱)은 기각. 토글 OFF 경로의 DM-3 현행 동작은 그대로(이 결정은 ON일 때만 적용).
 - PR 순서(엔진 계획 §PR): E3c-0(테스트만 — 10호 유예 안전망 0건·3% 정확 경계 anchor 선신설) → E3c-1(leaf·판정·⑫·⑭·고지) → E3c-2(V-7 검사) → UI → E2E. 엔진이 한 PR로 판정까지 열면 UI도 한 PR(UQ-11).
+
+## 구현 기록 (엔진, 2026-11-23)
+
+> 브랜치 `feat/nbl-e3-2-business-period`(origin/master 0a35779c4 기준) · 커밋 6건(push·PR 없음 — UI 시니어가 같은 브랜치에서 화면을 구현한 뒤 한 PR) · 엔진 측 E3c-0 + E3c-1 + E3c-2.
+> 커밋: `bac77ed5a` E3c-0(테스트만) · `fe361055c` E3c-1 · `01913baeb` E3c-2 · `cc85faa1f`·`eea642516` anchor 보강 · 이 구현 기록 커밋.
+
+### 계획 대비 확정·변경 (결정 기록이 우선)
+
+| 항목 | 계획서 본문 | 구현(확정) | 이유 |
+|---|---|---|---|
+| 입력 모델 | `RevenueHistoryInput { mode, events[], rows[] }` (사건 배열 + 모드 4종) | **`RevenueHistoryInput { businessStartDate?, businessEndDate?, rows[] }`** — 「영위 기간」 ON일 때만 엔진 입력에 있다. 모드 4종·사건 배열·`unchanged`/`unknown` 고지 폐기 | 사용자 결정: 토글 ON/OFF · 영위 기간 1건 · UI UQ-2. OFF = 키 부재 |
+| 와이어 칸 | `nblRevenueHistoryMode` · `nblRevenueEvents` · `nblRevenueRows` | **`nblRevenuePeriodOn: boolean` · `nblRevenueBusinessEndDate: string` · `nblRevenueYearRows: {year, revenue?, landValue?}[]`** + 개시일 = **기존 `nblRevenueCurrentBusinessStartDate`**(단일 소스) | UI 계획 R-1 · UQ-3 |
+| 연도 행 범위 | T−2 이전 | 동일. **T·T−1은 기존 `nblRevenue*` 칸**이 말하고, **그 해에 영위일이 있을 때만** 읽는다(폐업 후 남은 값은 읽지 않음) | 결정 ① · R-7 |
+| 폐업일 의미 | 영업하지 않게 된 **첫날** | 동일. ⑧·⑫: **폐업일 > 개시일(같은 날 불가) · 폐업일 < 양도일(같은 날 불가)** — UI 계획 P4의 «같은 날 허용»과 다르다(첫날 의미라 같은 날 = 영위 0일) | E3-① 사건 규칙과 같은 엄격 증가 |
+| 직전 영위일수 칸 | 입력 가능 | **ON에서는 쓰지 않는다** — 날짜에서 파생(`od(T−1)`)한 값이 연환산 영위일수를 덮는다 | 단일 소스 |
+| 판정 echo basis | `state_history` | 건축물 이력이 없으면 영위 경로가 **결과의 기간 수치 자체**일 때(사업용 판정 · 영위 구간 미충족으로 끝난 비사업용) `usage_periods` · 다른 목이 결과를 끝냈으면 `state_at_transfer` · 건축물 이력이 있으면 `state_history` | 카드의 «전 기간 사업용으로 채운 표시값» 문구가 ON에서 거짓이 되지 않게 |
+| 사업용 구간 없음 + 유예 단독 충족 | (미기술) | 종전처럼 **유예 단독 재판정이 비사업용을 사업용으로 돌린다**(`failedR` 없음) — 영위 기간 ON이 유예 구제를 막지 않는다 | OFF와 같은 결과 |
+| C9(휴업·재개) · V7a(전제 미검사) | 표 행 | **오라클 전용 행** — 영위 기간 1건 결정으로 표현 불가(C9) · 반사실(V7a, 전제를 검사하지 않았다면) | 결정: 영위 기간 1건 |
+| `other-land.ts` | 700줄 | **665줄** — 수입금액비율 블록을 `other-land-revenue-history.ts`로 이동(OFF 무변경) | 800줄 정책 · ≤700 |
+
+### 파일 (줄 수)
+
+`revenue-history.ts` 287(신규 leaf) · `other-land-revenue-history.ts` 291(신규 — core 단계·`prepare`/`finish`) · `other-land.ts` 700→665 · `types.ts` 675 · `revenue-test.types.ts` 106→186 · `form-mapper-helpers.ts` 535→560 · `nbl-confirm-notices.ts` 226→259 · `nbl-validation-messages.ts` 81→122 · `land-category.ts` 161→168 · ⑫ `transfer-tax-schema-nbl.ts` 298→315 · ⑫′ `…-refines.ts` 213→224. 테스트: 표 `_helpers/nbl-state-history-e3-2-table.ts`(23행·임계쌍 4) · `nbl-grace-10ho` · `nbl-revenue-ratio-boundary` · `nbl-state-history-e3-2.predo`(+스냅샷) · `…-leaf` · `…e3-2.anchor` · route `nbl-state-history-e3-2-route.anchor`.
+
+### UI가 이어받을 계약
+
+- **엔진 입력**(⑭ `buildRevenueHistory`, `form-mapper-helpers.ts`): 지목 소비(`consumesRevenueHistory`) ∧ `nblRevenuePeriodOn === true` ∧ 업종 선택이어야 `revenueHistory`가 생긴다. 개시일 = `nblRevenueCurrentBusinessStartDate` · 폐업일 = `nblRevenueBusinessEndDate` · 행 `{year, revenue, landValue}`(문자열 — 빈 금액 = 모름). **④ 와이어가 OFF·술어 거짓에서 `nblRevenuePeriodOn: false`·`""`·`[]`로 덮어야** stale이 안 닿는다(`nblRevenue*` prefix-pick은 저장값을 그대로 싣는다).
+- **leaf**(순수 — ⑤ 미리보기·⑦ 표·⑧가 그대로 호출): `deriveOperatingRange` · `operatingDaysInYear` · `operatingIntervalInYear` · `evaluateRevenueHistory(history, revenueTest, acquisitionDate, transferDate)` → `{ range, operatingInterval, operatingDays, years[], businessIntervals, unknownYears }` · `closurePremise(range, ownershipStart, anchor)` · **⑧·⑫ 공용 `revenueHistoryInputIssue({ startDate, endDate, transferDate, rows })`** → `{ field, index?, part?, message }`(⑧은 이 함수·같은 문구를 쓴다 — ⑧ 앞 라벨 접두는 UI).
+- **⑧ 규칙(leaf가 정한 것)**: 폐업일 읽을 수 없음 · 폐업일 ≤ 개시일 · 폐업일 ≥ 양도일 · 행 연도 4자리 · 연도 중복 · 연도 ≥ T−1 · 금액 형식(0 이상 정수, **빈 칸은 모름이라 막지 않는다**). 하한(소유 시작 전)은 ⑫에 없고 ⑧에서만(`stateHistoryFloorDate` 재사용 — UI 계획 P2). 행 **누락**은 막지 않는다.
+- **echo**: `periodEvaluation.revenueHistory`(ON 경로 일 때만, OFF = 키 없음) = `{ operatingInterval, operatingDays, years[{ taxYear, operatingDays, yearDays, source: "current"|"prior"|"row", known, ratioCurrent?, ratioCombined?, annualizedRevenue?, threshold, pass, businessDays }], businessIntervals, businessDays, unknownYears, meets, excludedGrace10? }`. `known:false`는 «모름 → 불통과». 양도일 의제로 이력을 쓰지 않으면 echo는 없다(고지만).
+- **고지 상수**(`nbl-confirm-notices.ts` — 위젯·결과 카드가 같은 문구를 읽는다): `NBL_REVENUE_HISTORY_APPLIED_NOTICE`(Q-2 «직접 규정·해석례 없음 — 확인 필요» · 업종 1개/영위 기간 1건 · 호별·면적·건축물은 양도일 현재값) · `…_ROW_UNKNOWN_NOTICE` · `…_PAST_YEARS_NOTICE`(과거 연도 간주임대료·공통수입을 수입금액에 합산) · `…_CLOSURE_GRACE_NOTICE`(폐업 후 10호 유예 자동 미생성) · `…_GRACE10_PREMISE_NOTICE`(V-7) · `…_DEEMED_TRANSFER_NOTICE`. 기존 문구는 바이트 동일. DM-01 echo(`businessStartJudged`)·고지는 **ON에서 나오지 않는다**.
+- **정합 주의**: UI 계획의 «폐업일이 있으면 기존 당해·직전 카드 전부 숨기고 표가 직전·당해도 받는다»는 결정(T·T−1 = 기존 칸)과 다르다. 엔진은 **폐업이 T−1·T 안에 있으면 그 해는 기존 칸을 읽는다**(그 해 영위일이 있으므로) — 폐업이 T−2 이전이면 두 칸은 읽지 않는다. 화면이 그 해의 칸을 숨기면 «모름 → 불통과»가 된다.
+
+### 케이스 표 실측 (오라클 대비 — 전 행 일치, 불일치 0)
+
+오라클(`meetsPeriodCriteria`에 손으로 쓴 `biz`)과 leaf·엔진·route 실측이 **전 행 일치**했다(판정 · 유효일수 · 소유일수 · 세액). 표를 맞춘 행 없음. 현행(OFF) 열도 실측: M9′ B → 기대 N(+55,750,000) · M11′ N → B(−55,750,000) · C4b N → B · V7b B(257,010,000) → N(326,760,000, +69,750,000) · C10b/C11/C12b B → N · 일치 행 M10′·C4a·C10a·B/A/L 쌍·V7c.
+
+| 행 | 현행(OFF) | 영위 기간 ON(실측 = 오라클) |
+|---|---|---|
+| M9′ | B 198,210,000 | N 253,960,000 — 577/3,832 |
+| M9-orig | B | N — 579/3,651 |
+| M10′ | N | N — 577/3,832(일치) |
+| M11′ | N | B — 2,707/3,832 |
+| M11′+10호 | N | B — 3,437/3,832 |
+| C4a / C4b | N / N | N 1,825 / B 2,556 |
+| V7b | B 257,010,000 (유예 단독 487/729) | N 326,760,000 — 181/729 (+69,750,000) |
+| V7c / V7d | B / B | B 944/1,367 (영위 731 충족) / N 730 (미충족 → 10호 유예 제외) |
+| B-3.0M / B-2.999M | B / N | B 364/364 / N 0/364 |
+| A-2,515,069 / -068 | B / N | B 305/364 / N 0/364 |
+| L-1,000,000 / -999,999 | B / N | B 121/181 / N 0/181 |
+| C10a / C10b / C10c | B / B / B | B 911 / N 181(모름) / N 181(모름) |
+| C11 | B | N — 건축물 729 ∪ 영업 577 = 1,306/3,832 |
+| C12b | B | N — 546/3,832(2014~2022 모름) |
+
+### mutation 실측 (제품 코드 1줄 무력화 → 실패 anchor 확인 → 원복, 각 뮤테이션 후 `git status` clean)
+
+계획 X-1~X-16 + 새 anchor마다 1개(N-1~N-21). 전건 **대응 anchor 실패**(0건 실패 = 동치 뮤턴트 1건 제거). 상세는 완료 보고. 요약: X-1 46 · X-2 3 · X-3 14 · X-4 1 · X-5 23 · X-6 26 · X-7 12 · X-8 1 · X-9 6 · X-10 2 · X-11 60 · X-12 3 · X-13(행·폐업일·토글) 17·9·26 · X-14 53 · X-15 2 · X-16 1 · N-1 2 · N-2~N-6 1~2 · N-7 6 · N-8 2 · N-9 1 · N-10 2 · N-11 3 · N-12 8 · N-13 1 · N-14 1 · N-15 56 · N-16 5 · N-17 4 · N-19 1 · N-20 105. (N-18 «T−2 이후 행 필터 제거»는 `yearCell`이 T·T−1에서 행을 보지 않아 **도달 불가한 중복 코드** — 필터를 지웠다.)
+
+### 남은 확인 필요 (비차단)
+
+- **V-1**: 과세기간별 판정 → 일 단위 사업용 기간 환산의 직접 규정·해석례 없음(Q-2 (가)는 사용자 결정 — 고지에 «확인 필요»).
+- V-2: 규칙 §83의5①10호 «2년 이상 사업에 사용» 통산/계속 직접 해석 미확보(문언대로 통산 · 요구 일수 = 기산일 − 2년, 윤일 포함 730·731). V-4: 필지별 수입금액비율 미지원. V-5: 과거 연도 간주임대료·공통수입 안분 칸 없음(고지). V-6: 규칙 §83의4 율 연혁(2007.1.1. 본은 현행과 같음·중간 시행본 미조회 — `getNblRevenueThreshold`에 era 인자 없음).
+- 연도별 토지가액(영 §168의11④ 과세기간 종료일 기준시가) 입력 신뢰는 UI(공시지가 조회) 소관.
+- 개시일 의미(처음 영업한 날 — 사업자등록일과 다를 수 있음)·폐업일 의미(영업을 하지 않게 된 첫날)는 UI 도움말.
+- `npm run verify:legal`은 실행하지 않았다 — 새 조문 인용 없음(고지는 기존 `NBL.*` 상수만 조립 · 오프라인 `legal-verification-coverage-complete` 게이트 통과).
+

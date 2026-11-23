@@ -189,4 +189,20 @@ export interface NblOtherFormSlice {
   nblRevenuePriorCommonRevenue: string;
   /** §168의11③2호 직전 그 밖의 토지가액 (원) */
   nblRevenuePriorOtherLandValue: string;
+  /**
+   * NBL-STATE-HISTORY-E3-② 「영위 기간」 토글 — 이 토지에서 업종을 소유기간 중 개시했거나 폐업한 경우. 기본 꺼짐 = 현행(양도일 현재 업종을 소유기간 전체에 적용).
+   * 켜면 개시일(`nblRevenueCurrentBusinessStartDate` — 단일 소스)·폐업일·T−2 이전 과세기간별 수입금액·토지가액을 받아 과세기간별로 판정한다.
+   */
+  nblRevenuePeriodOn: boolean;
+  /** 폐업일 = 영업을 하지 않게 된 첫날(휴업·폐업·이전). 비면 양도일 현재도 영위. 개시일은 위 `nblRevenueCurrentBusinessStartDate`. */
+  nblRevenueBusinessEndDate: string;
+  /** 양도연도 T−2 이전 과세기간별 수입금액·토지가액 — 연도 키 희소 목록(개시일을 바꿔도 값이 밀리지 않는다). T·T−1은 위 당해·직전 칸이 말한다. */
+  nblRevenueYearRows: NblRevenueYearRowInput[];
+}
+
+/** 영위 기간 표의 한 해 — 전부 문자열(폼 규칙). 금액이 비면 «모름»(그 연도 불통과 + 확인 필요 — 차단하지 않는다). */
+export interface NblRevenueYearRowInput {
+  year: string;
+  revenue: string;
+  landValue: string;
 }

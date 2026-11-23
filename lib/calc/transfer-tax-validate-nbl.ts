@@ -23,6 +23,8 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { resolveNblUrbanIncorporationDate } from "./non-business-land-request";
 import { validateNblOtherLand } from "./transfer-tax-validate-nbl-other";
+import { validateNblRevenuePeriod } from "./transfer-tax-validate-nbl-revenue-period";
+import { revenuePeriodReadsYear } from "./nbl-revenue-period-scope";
 import { parseTaxPeriodYears } from "@/lib/tax-engine/non-business-land/disqualified-tax-periods";
 import { nblLandSigunguCodeOf } from "./nbl-land-sigungu";
 import { nblBusinessUsePeriodsApply, nblResidenceHistoryApplies } from "./nbl-period-rows-scope";
@@ -265,15 +267,21 @@ export function validateNblDetailedJudgment(
     // NBL2611-V7-S · Q-6 (다) — 12호 도소매업은 취급 품목 필수(규칙 §83조의4⑭). ⑫ refine과 같은 술어·같은 문구. 시장 요건 불충족은 차단이 아니라 12호 불인정이다.
     const wholesale = wholesaleItemIssue({ businessType: asset.nblRevenueBusinessType, wholesaleItem: asset.nblRevenueWholesaleItem, wholesaleInMarket: asset.nblRevenueWholesaleInMarket });
     if (wholesale?.kind === "missing") return fieldError("nblRevenueWholesaleItem", `${label}: ${wholesale.message}`);
-    if (!asset.nblRevenueCurrentRevenue || parseAmount(asset.nblRevenueCurrentRevenue) <= 0)
+    // NBL-STATE-HISTORY-E3-② — 「영위 기간」 토글 ON이면 개시일·폐업일·연도 행을 ⑫와 같은 leaf로 검증한다(OFF·술어 거짓은 null — 현행). 칸 순서 = 화면 순서(영위 기간 → 표 → 기존 당해·직전 칸).
+    const periodErr = validateNblRevenuePeriod(asset, label, { transferDate: formTransferDate, floorDate: stateHistory?.floorDate });
+    if (periodErr) return periodErr;
+    // ON에서 양도연도에 영위일이 없는 경우(폐업이 직전연도 이전)는 엔진이 당해 칸을 읽지 않는다 — 읽지 않는 칸의 «필수» 입력을 요구하면 막다른 길이다. OFF는 항상 true.
+    // 직전 칸은 «필수» 규칙이 없고 아래 «직전 수입만 있고 토지가액 없음»(DM06)은 ⑫가 같은 술어로 거울이라(ON·OFF 무관) 건너뛰지 않는다 — 그래야 ⑧ 통과 ↔ ⑫ 400 모순이 없다.
+    const readsCurrent = revenuePeriodReadsYear(asset, formTransferDate, "current");
+    if (readsCurrent && (!asset.nblRevenueCurrentRevenue || parseAmount(asset.nblRevenueCurrentRevenue) <= 0))
       return fieldError("nblRevenueCurrentRevenue", `${label}: 수입금액비율 업종 선택 시 당해 과세기간 수입금액을 입력하세요.`);
-    if (!asset.nblRevenueCurrentLandValue || parseAmount(asset.nblRevenueCurrentLandValue) <= 0)
+    if (readsCurrent && (!asset.nblRevenueCurrentLandValue || parseAmount(asset.nblRevenueCurrentLandValue) <= 0))
       return fieldError("nblRevenueCurrentLandValue", `${label}: 수입금액비율 업종 선택 시 당해 토지가액을 입력하세요.`);
     // §168의11③2호 공통수입 안분 토글 ON → 당해 공통수입·그 밖의 토지가액 필수쌍
     if (asset.nblRevenueCommonApportion) {
-      if (!asset.nblRevenueCommonRevenue || parseAmount(asset.nblRevenueCommonRevenue) <= 0)
+      if (readsCurrent && (!asset.nblRevenueCommonRevenue || parseAmount(asset.nblRevenueCommonRevenue) <= 0))
         return fieldError("nblRevenueCommonRevenue", `${label}: 공통수입 안분 시 당해 공통수입금액을 입력하세요.`);
-      if (!asset.nblRevenueOtherLandValue || parseAmount(asset.nblRevenueOtherLandValue) <= 0)
+      if (readsCurrent && (!asset.nblRevenueOtherLandValue || parseAmount(asset.nblRevenueOtherLandValue) <= 0))
         return fieldError("nblRevenueOtherLandValue", `${label}: 공통수입 안분 시 당해 '그 밖의 토지가액'을 입력하세요.`);
       // 직전 공통쌍은 선택이나 한쪽만 입력 시 나머지도 필수
       const pc = parseAmount(asset.nblRevenuePriorCommonRevenue || "0");

@@ -4,6 +4,7 @@
  */
 import type { NblRevenueBusinessType } from "../legal-codes";
 import type { WholesaleItem } from "./revenue-wholesale-item";
+import type { DateInterval } from "./types";
 
 export interface RevenueTestInput {
   businessType: NblRevenueBusinessType;
@@ -103,4 +104,83 @@ export interface RevenueTestResult {
    * `meets`가 참이면 [개시일, 양도일]을 사업 구간으로 보아도 기간기준을 충족한 것이다.
    */
   businessStartJudged?: { startDate: string; businessDays: number; totalOwnershipDays: number; meets: boolean };
+}
+
+// ── NBL-STATE-HISTORY-E3-② 업종 영위 기간 · 과세기간별 수입금액 ─────────────────────────────────────
+
+/**
+ * 양도연도 T−2 이전 과세기간 한 해의 수입금액·토지가액(연환산 전 raw). T·T−1은 이 행이 아니라 기존 칸(`currentRevenue`·`priorRevenue` 등)이 말한다.
+ * 한 칸이라도 없거나 토지가액이 0 이하이면 «모름» — 그 연도는 수입금액비율을 통과하지 않은 것으로 본다(차단하지 않고 확인 필요 고지).
+ */
+export interface RevenueYearRow {
+  taxYear: number;
+  revenue?: number;
+  landValue?: number;
+}
+
+/**
+ * 「영위 기간」 입력(E3-②) — **ON일 때만** 엔진에 닿는다(`NonBusinessLandInput.revenueHistory`; OFF는 키 자체가 없다 = 현행과 바이트 동일).
+ * 업종은 하나(`revenueTest.businessType`)·영위 기간은 1건이다. 개시일의 단일 소스는 `revenueTest.currentBusinessStartDate`(UI 기존 칸)와 같은 값을 ⑭가 여기로 옮긴다.
+ */
+export interface RevenueHistoryInput {
+  /** 처음 영업한 날. 없으면 소유 시작부터 영위. */
+  businessStartDate?: Date;
+  /** 영업을 하지 않게 된 첫날(휴업·폐업·이전). 없으면 양도일 현재도 영위. 개시일보다 뒤·양도일보다 앞이어야 한다(⑧·⑫ 공용 leaf). */
+  businessEndDate?: Date;
+  /** 양도연도 T−2 이전 과세기간 행. 연도 중복·T·T−1 행은 ⑧·⑫가 막는다(엔진은 T−1 이후 행을 읽지 않는다). */
+  rows: RevenueYearRow[];
+}
+
+/** 과세기간 한 해의 판정 echo(표시 전용 — 세액 불변). */
+export interface RevenueHistoryYearEcho {
+  taxYear: number;
+  /** 그 해의 영위일수(초일산입 — 양도연도는 양도일 포함, 폐업일은 비영업). */
+  operatingDays: number;
+  /** 그 해의 총일수(365·366). */
+  yearDays: number;
+  /** 입력 출처 — T = 기존 당해 칸 · T−1 = 기존 직전 칸 · 그 이전 = 연도 행. */
+  source: "current" | "prior" | "row";
+  /** 비율을 계산할 입력이 갖춰졌는가. false = «모름» → 불통과 + 확인 필요. */
+  known: boolean;
+  /** 비율① (연환산 후 당해 수입 ÷ 당해 토지가액). `known`일 때만. */
+  ratioCurrent?: number;
+  /** 비율② (당해+직전). 직전 과세기간 입력이 없으면 없다. */
+  ratioCombined?: number;
+  /** 연환산 후 연간수입금액. `known`일 때만. */
+  annualizedRevenue?: number;
+  /** 업종별 기준비율(규칙 §83의4). */
+  threshold: number;
+  /** 수입금액비율 통과(= 그 해의 영위일이 사업용 구간이 된다). */
+  pass: boolean;
+  /** 이 해에서 사업용 구간으로 센 일수(반열린 — 양도일 제외, 소유기간 안). */
+  businessDays: number;
+}
+
+/** 기산일 이전 영위 통산 일수가 2년에 못 미쳐 판정에서 뺀 10호(휴·폐업·이전) 유예 행(V-7 — E3c-2). */
+export interface RevenueHistoryExcludedGrace {
+  anchorDate: Date;
+  /** 기산일 이전 소유기간 중 영위 통산 일수. */
+  operatingDaysBefore: number;
+  /** 요구 일수 = 기산일 − 2년(윤일 포함 730 또는 731). */
+  requiredDays: number;
+}
+
+/** `periodEvaluation.revenueHistory` — 영위 기간 ON 경로를 탔을 때만 있다(OFF = 키 부재 · R-3). */
+export interface RevenueHistoryEcho {
+  /** 소유기간 중 영위 구간(반열린 `[start, end)` — 양도일 제외). 영위일이 없으면 null. */
+  operatingInterval: DateInterval | null;
+  /** 소유기간 중 영위 통산 일수 = `operatingInterval` 길이. */
+  operatingDays: number;
+  /** 영위일이 있는 과세기간별 판정(오래된 해부터). */
+  years: RevenueHistoryYearEcho[];
+  /** 통과한 과세기간 ∩ 영위일 — 영 §168의6 기간기준에 넘긴 사업용 구간(병합 후). */
+  businessIntervals: DateInterval[];
+  /** 사업용 구간 일수(`businessIntervals` 합). */
+  businessDays: number;
+  /** «모름»으로 불통과 처리한 연도. */
+  unknownYears: number[];
+  /** 이 수입금액비율 경로만으로(사업용 구간 ∪ 유예) 기간기준을 충족했는가. */
+  meets: boolean;
+  /** 판정에서 뺀 10호 유예(V-7). 없으면 키 없음. */
+  excludedGrace10?: RevenueHistoryExcludedGrace[];
 }

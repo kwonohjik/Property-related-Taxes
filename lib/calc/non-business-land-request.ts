@@ -19,6 +19,7 @@ import { evaluateUnconditionalExemption } from "@/lib/calc/nbl-unconditional-exe
 import { buildUncondSourceRecord, nblAcquisitionDateOf } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { nblLandSigunguCodeOf } from "./nbl-land-sigungu";
 import { effectiveOtherHasBuildingOf } from "./nbl-other-state-history-scope";
+import { revenuePeriodWireFields } from "./nbl-revenue-period-scope";
 import { nblOtherStateEventsInUse } from "./nbl-other-state-history-scope";
 import { stateHistoryWireFields } from "./nbl-other-state-history-scope";
 import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
@@ -41,7 +42,7 @@ function deriveOwnershipRatio(asset: AssetForm): number {
   return Math.min(n / d, 1);
 }
 
-function parseRawNumber(s: string): number | undefined {
+export function parseRawNumber(s: string): number | undefined {
   const n = parseFloat(String(s).replace(/,/g, ""));
   return Number.isFinite(n) ? n : undefined;
 }
@@ -174,6 +175,11 @@ export function buildNonBusinessLandRaw(
      */
     ...stateHistoryWireFields(asset),
     ...(nblOtherStateEventsInUse(asset) ? { nblOtherHasBuilding: effectiveOtherHasBuildingOf(asset) } : {}),
+    /**
+     * NBL-STATE-HISTORY-E3-② — 업종 영위 기간. **⑤ 렌더·⑧ 검증과 같은 술어**(`nblRevenuePeriodOn`)가 거짓이면 `false`·`""`·`[]`로 덮어 쓴다 — `nbl*` prefix-pick은 저장값을 그대로 싣고,
+     * 숨은 stale 값이 닿으면 ⑧은 건너뛰는데 ⑫가 400으로 막는다. 참이면 폐업일과 **표가 받는 연도의 행만** 싣는다(개시일은 기존 `nblRevenueCurrentBusinessStartDate`가 prefix-pick으로 간다).
+     */
+    ...revenuePeriodWireFields(asset, transferDate),
     /**
      * 공유 지분 — 자산-수준 「공유 지분율」(%) **단일 소스**에서 파생한다 (2026-09-04).
      *

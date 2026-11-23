@@ -19,6 +19,7 @@ import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/prop
  */
 export function migrateNblB1Fields(a: Record<string, unknown>): void {
   migrateNblStateHistory(a);
+  migrateNblRevenuePeriod(a);
   // NBL2611-V1-A (Q-1) — 구 이력에는 «재산세 분류 근거» 칸이 없다 → 미선택. 건축물 없는 토지의 비종합합산 선언은 종전에도 종합합산이었고(PR#291 override)
   // 이제 «근거 미선택 → 종합합산 + 확인 필요»로 읽혀 세액은 그대로다. 사용자가 근거를 고르면 그 근거로 판정한다.
   if (a.nblOtherPropertyTaxBasis === undefined) a.nblOtherPropertyTaxBasis = "";
@@ -65,4 +66,28 @@ function migrateNblStateHistory(a: Record<string, unknown>): void {
       ...(mayCloseBare && limit ? { areaWithinLimitBefore: limit } : {}),
     };
   });
+}
+
+/**
+ * NBL-STATE-HISTORY-E3-② — 업종 영위 기간(`nblRevenuePeriodOn`·`nblRevenueBusinessEndDate`·`nblRevenueYearRows`) 복원 정규화.
+ *
+ * 키가 없던 구 저장값에는 «꺼짐·빈 폐업일·빈 표»만 채운다(= 종전 판정과 같다 — 현행 경로). 이미 값이 있으면 **형만** 방어한다:
+ *  · 토글이 boolean이 아니면 꺼짐 · 폐업일이 문자열이 아니면 `""`.
+ *  · 표가 배열이 아니면 `[]`. 행은 객체이고 `year`가 4자리 문자열일 때만 남기고, 금액이 문자열이 아니면 `""`. **같은 연도는 마지막 행만** 남긴다.
+ * 범위 밖 연도의 행은 지우지 않는다 — 개시일·양도일을 되돌리면 복원된다(④가 범위 안 연도만 보낸다).
+ */
+function migrateNblRevenuePeriod(a: Record<string, unknown>): void {
+  if (typeof a.nblRevenuePeriodOn !== "boolean") a.nblRevenuePeriodOn = false;
+  if (typeof a.nblRevenueBusinessEndDate !== "string") a.nblRevenueBusinessEndDate = "";
+  if (!Array.isArray(a.nblRevenueYearRows)) {
+    a.nblRevenueYearRows = [];
+    return;
+  }
+  const byYear = new Map<string, { year: string; revenue: string; landValue: string }>();
+  for (const row of a.nblRevenueYearRows as unknown[]) {
+    const r = row && typeof row === "object" ? (row as Record<string, unknown>) : {};
+    if (typeof r.year !== "string" || !/^\d{4}$/.test(r.year)) continue;
+    byYear.set(r.year, { year: r.year, revenue: typeof r.revenue === "string" ? r.revenue : "", landValue: typeof r.landValue === "string" ? r.landValue : "" });
+  }
+  a.nblRevenueYearRows = [...byYear.values()];
 }

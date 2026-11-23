@@ -10,6 +10,7 @@ import type {
   RevenueTestResult,
 } from "./types";
 import type { PeriodCriteriaResult } from "./period-criteria";
+import type { RevenueHistoryEcho } from "./revenue-test.types";
 
 /**
  * 나대지 간주 (소득세법 §104의3①4호나목 — 재산세 별도합산 제외 → 비사업용).
@@ -47,6 +48,11 @@ export function isBareLand(input: NonBusinessLandInput): boolean {
  */
 export interface OtherLandOwnTrace {
   own?: DateInterval[];
+  /**
+   * E3-② — 영위 기간 ON 수입금액비율 경로를 탔을 때만(OFF·probe 재실행에는 없다). `echo`는 `periodEvaluation.revenueHistory`로 나가고,
+   * `decided`는 이 경로의 사업용 구간 판정이 **결과의 기간 수치 그 자체**일 때 참이다(다른 목이 끝낸 결과의 표시값과 구별 — basis `usage_periods`·유예 잔여분 재판정 생략).
+   */
+  revenueHistory?: { echo: RevenueHistoryEcho; decided: boolean };
 }
 
 /**

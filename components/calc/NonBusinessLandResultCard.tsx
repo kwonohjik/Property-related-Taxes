@@ -9,6 +9,7 @@ import { NBL } from "@/lib/tax-engine/legal-codes";
 import { PROPERTY_TAX_BASIS_LABEL, PROPERTY_TAX_BASIS_LEGAL } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { propertyTaxTypeLabel } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 import { NblStateHistoryPeriodTable } from "@/components/calc/NblStateHistoryPeriodTable";
+import { NblRevenuePeriodTable } from "@/components/calc/NblRevenuePeriodTable";
 
 interface Props {
   judgment: NonBusinessLandJudgment;
@@ -290,6 +291,9 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
           </p>
         </div>
       )}
+
+      {/* NBL-STATE-HISTORY-E3-② — 업종 영위 기간(개시·폐업)으로 과세기간별 판정을 한 경우: 연도별 수입금액비율 표. 엔진 echo가 있을 때만 — 꺼짐은 키 부재 = 표 없음. 기존 구간표는 불변. */}
+      {periodEval.revenueHistory && <NblRevenuePeriodTable history={periodEval.revenueHistory} />}
 
       {/* ④ 면적 안분 시각화 (주택·목장 해당 시) */}
       {area && (
