@@ -119,6 +119,30 @@ export const TRANSFER_DECREE_SURCHARGE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // 주택 + 권리 합 3 이상(법 §104⑦4호)의 수 계산 ②1호(수도권 밖 3억 이하 미산입)·③4호(유일한 일반주택).
+    // 명부 없는 직접 API의 권리 수 산입(`noRosterCountedRightCount` · `HOUSE_RIGHT_3PLUS_RULE` · #3607)과 그 고지가
+    // 이 문언에 기댄다. KoreanLaw MST 290841 실독 2026-11-23.
+    id: "TRANSFER_DECREE.HOUSE_RIGHT_3PLUS_COUNT_RULE",
+    citation: "소득세법 시행령 §167의4",
+    keywords: [
+      "법 제104조제7항제4호에서 1세대가 소유한 주택(주택에 딸린 토지를 포함한다. 이하 이 조에서 같다)과 조합원입주권 또는 분양권의 수를 계산할 때 다음 각 호의 주택, 조합원입주권 또는 분양권은 이를 산입하지 않는다",
+      "분양권의 가액[주택에 대한 공급계약서상의 공급가격(선택품목에 대한 가격은 제외한다)을 말한다]이 해당 주택 또는 그 밖의 주택의 양도 당시 3억원을 초과하지 않는 주택, 조합원입주권 또는 분양권",
+      "1세대가 제1호 및 제2호에 해당하는 주택을 제외하고 1개의 주택만을 소유하고 있는 경우의 당해 주택",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    // 주택 + 권리 각 1개(법 §104⑦2호)의 수 계산 ②1호(수도권 밖 3억 이하 미산입).
+    // `noRosterCountedRightCount` · `HOUSE_RIGHT_ONE_EACH_RULE`(#3607)이 기댄다. KoreanLaw MST 290841 실독 2026-11-23.
+    id: "TRANSFER_DECREE.HOUSE_RIGHT_ONE_EACH_COUNT_RULE",
+    citation: "소득세법 시행령 §167의11",
+    keywords: [
+      "법 제104조제7항제2호에서 1세대가 보유한 주택(주택에 딸린 토지를 포함한다. 이하 이 조에서 같다)과 조합원입주권 또는 분양권의 수를 계산할 때 다음 각 호의 주택, 조합원입주권 또는 분양권은 이를 산입하지 않는다",
+      "분양권의 가액[주택에 대한 공급계약서상의 공급가격(선택품목에 대한 가격은 제외한다)을 말한다]이 해당 주택 또는 그 밖의 주택의 양도 당시 3억원을 초과하지 않는 주택, 조합원입주권 또는 분양권",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     // 결정 #47 — 혼인 5년 내 「양도일 현재」 배우자 보유 차감. 응답 질문·엔진 차감·확인 필요 고지가 이 문언에 기댄다(MST 290841 실독 2026-10-11).
     id: "TRANSFER_DECREE.MARRIAGE_SUBTRACT_THREE_HOUSE",
     citation: "소득세법 시행령 §167의3",
