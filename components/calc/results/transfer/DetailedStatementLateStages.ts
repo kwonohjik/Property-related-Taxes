@@ -18,6 +18,7 @@
  */
 
 import { TRANSFER } from "@/lib/tax-engine/legal-codes/transfer";
+import { PENALTY } from "@/lib/tax-engine/legal-codes/common";
 import { applyRate } from "@/lib/tax-engine/tax-utils";
 import { donorBuiltPenaltyView, resultDonorBuiltEcho } from "@/lib/tax-engine/transfer-tax-carryover-donor-display";
 import { resultSelfBuiltEchoes, selfBuiltPenaltyView } from "@/lib/tax-engine/transfer-tax-self-built-display";
@@ -240,7 +241,7 @@ export function appendLateStageItems(
     // §47은 「가산세 **부과**」 총칙, §48은 「가산세 **감면** 등」이라 산정 근거가 아니다.
     // 엔진이 실제로 적용하는 조문은 §47의2(무신고)·§47의3(과소신고)·§47의4(납부지연)이고,
     // §92③3호도 「§47의2부터 §47의4까지」라고 지목한다 (결과탭 코드리뷰 #029).
-    legalBasis: "소득세법 §114조의2 / 국세기본법 §47의2·§47의3·§47의4",
+    legalBasis: penaltyLegalBasis(section114_2Penalty, statutoryPenalty),
     perAsset: isAggregate
       ? buildPerAssetWithFormula(
           properties,
@@ -339,4 +340,23 @@ function splitCarryoverNote(sd: Parameters<typeof splitCarryoverDateText>[0]): s
   if (!t) return undefined;
   const rate = splitCarryoverRateDateText(sd);
   return `이월과세(§97의2①) 장기보유특별공제 기산일: ${t}${rate ? ` · 세율 기산일: ${rate}` : ""}`;
+}
+
+/**
+ * 가산세액 행 법령 배지 — **실제로 붙은 가산세**의 조문만 적는다(결과뷰 리뷰 후속 3번 · 사용자 결정 1 · 2026-11-23).
+ *
+ * 종전엔 모든 경로가 「소득세법 §114조의2 / 국세기본법 …」 고정이었고, 배지(`LawArticleModal`)는 첫 조문만 연다
+ * (`parseLawRef` → 소득세법 §114의2). 그래서 §114조의2 가산세가 **없는** 겸용(엔진 경로에 없음)·국기법분만 있는
+ * 단건·집계에서도 §114의2 본문이 열렸고, 「가산세 없음」에도 배지가 남았다.
+ * 둘 다 있으면 종전처럼 함께 적는다. 둘 다 0이면 배지를 숨긴다(undefined).
+ */
+function penaltyLegalBasis(section114_2Penalty: number, statutoryPenalty: number): string | undefined {
+  const statutory = [PENALTY.NON_FILING, PENALTY.UNDER_FILING, PENALTY.DELAYED_PAYMENT]
+    .map((c, i) => (i === 0 ? c : c.replace(/^국세기본법 /, "")))
+    .join("·");
+  const parts = [
+    ...(section114_2Penalty > 0 ? [TRANSFER.BUILDING_PENALTY] : []),
+    ...(statutoryPenalty > 0 ? [statutory] : []),
+  ];
+  return parts.length > 0 ? parts.join(" / ") : undefined;
 }
