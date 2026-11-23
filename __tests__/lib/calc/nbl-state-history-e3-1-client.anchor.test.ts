@@ -50,7 +50,7 @@ describe("③ 복원 — 새 종류 허용 · 재산세 변경 행의 직전 구
       { kind: "tax_type_changed", date: "2023-06-01", propertyTaxTypeBefore: "" },
     ]);
   });
-  it("신축 행의 stale 직전 구분은 \"\" · 철거 행은 보존 · 허용값 밖 종류는 \"\"(⑧이 행 단위로 짚는다)", () => {
+  it("신축 행의 직전 구분도 보존(E3-1b 의도된 반전 — 신축 앞 나대지 선언) · 철거 행은 보존 · 허용값 밖 종류는 \"\"(⑧이 행 단위로 짚는다)", () => {
     const a = migrated({
       nblOtherStateEvents: [
         { kind: "building_built", date: "2016-01-01", propertyTaxTypeBefore: "separate" },
@@ -59,7 +59,7 @@ describe("③ 복원 — 새 종류 허용 · 재산세 변경 행의 직전 구
       ],
     });
     expect(a.nblOtherStateEvents).toEqual([
-      { kind: "building_built", date: "2016-01-01", propertyTaxTypeBefore: "" },
+      { kind: "building_built", date: "2016-01-01", propertyTaxTypeBefore: "separate" },
       { kind: "building_removed", date: "2021-01-01", propertyTaxTypeBefore: "special_sum" },
       { kind: "", date: "2022-01-01", propertyTaxTypeBefore: "" },
     ]);
@@ -79,10 +79,11 @@ describe("④ 와이어 — 재산세 변경 행의 직전 구분을 지우지 �
     const w = stateHistoryWireFields(asset({ nblOtherStateEvents: [tax("2022-06-01", "separate")] }));
     expect(w.nblOtherStateEvents).toEqual([{ kind: "tax_type_changed", date: "2022-06-01", propertyTaxTypeBefore: "separate" }]);
   });
-  it("신축 행의 stale 직전 구분은 \"\"로 정규화(불변) · 철거 행은 보존", () => {
-    const stale = { kind: "building_built" as const, date: "2016-01-01", propertyTaxTypeBefore: "separate" as const };
-    const w = stateHistoryWireFields(asset({ nblOtherStateEvents: [stale, tax("2018-01-01", "comprehensive"), removed("2021-01-01", "special_sum")] }));
-    expect(w.nblOtherStateEvents.map((e) => e.propertyTaxTypeBefore)).toEqual(["", "comprehensive", "special_sum"]);
+  it("신축 행의 직전 구분도 와이어에 실린다(E3-1b 의도된 반전 — 신축 앞 나대지 선언) · 철거 행은 보존 · 멸실 행의 stale 선언 칸(근거·한도)은 싣지 않는다", () => {
+    const built1 = { kind: "building_built" as const, date: "2016-01-01", propertyTaxTypeBefore: "separate" as const };
+    const w = stateHistoryWireFields(asset({ nblOtherStateEvents: [built1, tax("2018-01-01", "comprehensive"), { ...removed("2021-01-01", "special_sum"), propertyTaxBasisBefore: "separate_taxation" as const }] }));
+    expect(w.nblOtherStateEvents.map((e) => e.propertyTaxTypeBefore)).toEqual(["separate", "comprehensive", "special_sum"]);
+    expect(w.nblOtherStateEvents[2]).toEqual({ kind: "building_removed", date: "2021-01-01", propertyTaxTypeBefore: "special_sum" });
   });
   it("요청 body(`buildNonBusinessLandRaw`): tax-only 이력은 토글 저장값(true)을 그대로 싣는다 — 사건이 건축물 유무를 덮어쓰지 않는다", () => {
     const raw = buildNonBusinessLandRaw(asset({ nblOtherStateEvents: [tax("2022-06-01", "separate")] }), "2024-01-01") as Record<string, unknown>;
@@ -122,8 +123,11 @@ describe("⑤ 미리보기 — M12(건물 불변 · 별도합산 → 종합합�
     expect(p.totalDays).toBe(3651);
     expect(p.hasBuildingAtTransfer).toBe(true);
   });
-  it("tax-only 이력의 미리보기는 `tailHasBuilding`(= 입력 토글)을 ⑧·⑫와 같이 넘겨야 그려진다 — 토글 off면 null(건축물 없는 구간의 구분 변경)", () => {
-    expect(m12({ nblOtherHasBuilding: false })).toBeNull();
+  it("tax-only 이력의 미리보기 — E3-1b 의도된 반전: 토글 off(건축물 없는 구간의 구분 변경)여도 그려진다 · 나대지 선언이므로 변경 전 구간은 근거 없는 별도합산 → 종합합산(접힘)", () => {
+    const p = m12({ nblOtherHasBuilding: false })!;
+    expect(p).not.toBeNull();
+    expect(p.rows.map((r) => [r.hasBuilding, r.propertyTaxType, r.isTail])).toEqual([[false, "comprehensive", false], [false, "comprehensive", true]]);
+    expect(p.hasBuildingAtTransfer).toBe(false);
   });
   it("«모름»(직전 구분 \"\")이면 변경 전 구간은 종합합산(모름) · 요건 미충족 — 직전 구분이 미리보기까지 운반된다(별도합산 → 모름으로 접히지 않는다)", () => {
     expect(m12({ nblOtherStateEvents: [tax("2022-06-01", "")] })!.rows[0]).toMatchObject({ propertyTaxType: "unknown", meetsBuildingRequirement: false });
@@ -167,17 +171,15 @@ describe("⑧ — tailHasBuilding 3중 패턴(⑤ 미리보기 ↔ ⑧): 같은 
     expect(issue(a)).toBeNull();
     expect(preview(a)).not.toBeNull();
   });
-  it("M12 + 토글 off → ⑧ 차단(앵커 `nblOtherStateEvents.0.kind`) + 미리보기 null — «건축물 있음」을 켜거나 건축물 사건 순서를 확인", () => {
+  it("M12 + 토글 off → E3-1b 의도된 반전: ⑧ 통과 + 미리보기 있음(건축물 없는 구간의 구분 변경 차단 규칙 삭제 — 나대지 선언이다)", () => {
     const a = asset({ nblOtherHasBuilding: false, nblOtherStateEvents: [tax("2022-06-01")] });
-    const m = issue(a)!;
-    expect(m.message).toContain("재산세 과세 구분 변경 사건 1번째 행 — 이 날짜 직전에는 건축물이 없습니다");
-    expect(m.field).toBe("nblOtherStateEvents.0.kind");
-    expect(preview(a)).toBeNull();
+    expect(issue(a)).toBeNull();
+    expect(preview(a)).not.toBeNull();
   });
-  it("철거 뒤 구분 변경(나대지 위) → ⑧ 차단 + 미리보기 null(토글과 무관)", () => {
+  it("철거 뒤 구분 변경(나대지 위) → E3-1b 의도된 반전: ⑧ 통과 + 미리보기 있음(토글과 무관) · 3구간(건축물 | 나대지 접힘 | 꼬리)", () => {
     const a = asset({ nblOtherHasBuilding: true, nblOtherStateEvents: [removed("2019-01-01"), tax("2021-01-01")] });
-    expect(issue(a)!.field).toBe("nblOtherStateEvents.1.kind");
-    expect(preview(a)).toBeNull();
+    expect(issue(a)).toBeNull();
+    expect(preview(a)!.rows.map((r) => [r.hasBuilding, r.propertyTaxType])).toEqual([[true, "separate"], [false, "comprehensive"], [false, "comprehensive"]]);
   });
   it("재산세 변경 + 철거 같은 날 → ⑧ 차단(날짜 칸) + 미리보기 null", () => {
     const a = asset({ nblOtherStateEvents: [tax("2021-01-01"), removed("2021-01-01", "comprehensive")] });

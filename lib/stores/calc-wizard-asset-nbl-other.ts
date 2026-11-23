@@ -6,6 +6,7 @@
  */
 import type { NblRelatedBusinessType } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { PropertyTaxType } from "@/lib/tax-engine/non-business-land/land-usage.types";
+import type { AreaWithinLimit } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { StateEventKind } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { StateHistoryMode } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { WholesaleItem } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
@@ -36,12 +37,20 @@ export interface NblFactorySegmentFormItem {
 
 /**
  * NBL-STATE-HISTORY-U0 — 기타토지 소유기간 중 사건 1건(폼 — 전부 string): 건축물 신축·멸실 또는 재산세 과세 구분 변경(E3-①). 엔진 `StateEvent`(Date)와 별개.
- * `kind ""` = 아직 종류를 고르지 않은 행(⑧ 차단). `propertyTaxTypeBefore`는 **철거·재산세 과세 구분 변경 행에서만** 뜻이 있고(운반 여부 = leaf `eventCarriesTaxTypeBefore`) `""` = 모름(종합합산 + 확인 필요).
+ * `kind ""` = 아직 종류를 고르지 않은 행(⑧ 차단). `propertyTaxTypeBefore`는 그 사건이 닫는 구간의 재산세 구분이다 —
+ * 철거·건축물 있는 구간 위 구분 변경 행은 `""` = 모름(종합합산 + 확인 필요) · **신축 행·나대지 위 구분 변경 행**(E3-1b — 나대지 구간을 닫는 행, 판정 = leaf `eventClosesBareInterval`)은 나대지 선언이다.
+ * 신축 행의 `""` = 선언 없음(종합합산 · 고지 없음).
+ *
+ * E3-1b 선언 칸 2개는 **optional** — 키가 없는 기존 행과 byte-identical이다(③ 복원은 키를 새로 만들지 않는다).
+ *  · `propertyTaxBasisBefore` : 비종합합산 선언의 근거(V1-A 열거 — 나대지 구간은 `demolished` 제외). `""`·부재 = 미선택(종합합산으로 접히고 확인 필요).
+ *  · `areaWithinLimitBefore`  : 근거가 공지상태(`vacant_state`)일 때만 — 호별 면적한도 이내 여부 3지선다. `""`·부재 = 미선택(「모름」과 같이 접힘).
  */
 export interface NblOtherStateEventInput {
   kind: "" | StateEventKind;
   date: string;
   propertyTaxTypeBefore: "" | PropertyTaxType;
+  propertyTaxBasisBefore?: "" | PropertyTaxBasis;
+  areaWithinLimitBefore?: AreaWithinLimit;
 }
 
 export interface NblOtherFormSlice {

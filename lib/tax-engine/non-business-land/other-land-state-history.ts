@@ -26,14 +26,17 @@ import { stateEventKindRequiredMessage } from "./nbl-validation-messages";
 import { stateEventReversedMessage } from "./nbl-validation-messages";
 import { stateEventSameDayMessage } from "./nbl-validation-messages";
 import { stateEventSameKindMessage } from "./nbl-validation-messages";
-import { stateEventTaxChangeWithoutBuildingMessage } from "./nbl-validation-messages";
 import { STATE_EVENTS_REQUIRED_MESSAGE } from "./nbl-validation-messages";
+import { propertyTaxBasisOptions } from "./property-tax-basis";
+import { resolvePropertyTaxBasis } from "./property-tax-basis";
 import { PROPERTY_TAX_TYPE_LABEL } from "./property-tax-type-label";
 import { getOverlappingPeriods } from "./utils/period-math";
+import type { BareFoldReason } from "./land-usage.types";
 import type { LandStateInterval } from "./land-usage.types";
 import type { PropertyTaxType } from "./land-usage.types";
 import type { StateEvent } from "./land-usage.types";
 import type { StateEventKind } from "./land-usage.types";
+import type { PropertyTaxBasis } from "./property-tax-basis";
 import type { DateInterval } from "./types";
 
 // ── 라벨 ─────────────────────────────────────────────────────
@@ -72,12 +75,38 @@ export function isBuildingEventKind(kind: string): kind is BuildingEventKind {
 }
 
 /**
- * 이 종류의 사건이 `propertyTaxTypeBefore`(그 사건이 닫는 구간의 재산세 구분)를 **운반**하는가 — 단일 술어.
- * ⑭ 매퍼 · ④ 와이어 정규화 · ③ 복원 정규화 · ⑤ 미리보기가 모두 이 함수를 읽는다(각자 `=== "building_removed"` 리터럴을 두면 새 종류의 값이 침묵으로 `""`(모름)이 된다).
- * 신축 앞은 나대지 — 종합합산 고정(V-6 닫힘)이라 신축 행에는 뜻이 없다.
+ * 이 종류의 사건이 `propertyTaxTypeBefore`(그 사건이 닫는 구간의 재산세 구분)를 **건축물 있는 구간에서** 운반하는가 — 철거·재산세 과세 구분 변경(E3-①).
+ * ④ 와이어 정규화 · ③ 복원 정규화 · ⑤ 미리보기가 읽는다. **E3-1b**: 신축 행도 나대지 구간을 닫으므로 Before를 운반할 수 있다 — 그 판정은 종류만으로 못 하고
+ * 사건 순서 replay가 필요해 `eventClosesBareInterval`이 맡는다(⑭는 둘을 함께 읽는다). 이 술어의 의미는 E3-①과 같다(UI가 두 술어로 교체한다).
  */
 export function eventCarriesTaxTypeBefore(kind: string): boolean {
   return isEventKind(kind) && kind !== "building_built";
+}
+
+/**
+ * `index`번째 사건이 **나대지 구간(건축물 없는 구간)을 닫는가** — 신축 행은 항상(신축 앞은 나대지) · 철거 행은 never(철거는 건축물 있던 구간을 닫는다) ·
+ * 재산세 과세 구분 변경 행은 사건 직전 건축물 상태를 replay해 «없음»일 때. 초기 건축물 상태는 첫 건축물 사건(신축이면 «없음» · 멸실이면 «있음»)이고,
+ * 건축물 사건이 하나도 없으면 `tailHasBuilding`(= 입력 토글)이다. 나대지 구간 선언(`propertyTaxBasisBefore`·`areaWithinLimitBefore`)을 **읽고 · 실어 보내고 · 보이는** 곳이
+ * 모두 이 술어 하나를 쓴다(⑭ · ④ 와이어 · ③ 복원 · ⑤ 미리보기 · ⑤ 입력 카드 — 숨은 stale 값을 싣지 않기 위해).
+ */
+export function eventClosesBareInterval(events: ReadonlyArray<{ kind: string }>, index: number, tailHasBuilding: boolean): boolean {
+  const ev = events[index];
+  if (!ev) return false;
+  if (ev.kind === "building_built") return true;
+  if (ev.kind !== "tax_type_changed") return false;
+  let hasBuilding = initialHasBuilding(events, tailHasBuilding);
+  for (let i = 0; i < index; i++) {
+    if (isBuildingEventKind(events[i].kind)) hasBuilding = events[i].kind === "building_built";
+  }
+  return !hasBuilding;
+}
+
+/**
+ * 나대지 구간 선언에서 고를 수 있는 근거 선택지(「모름」 포함) — V1-A 선택지(`propertyTaxBasisOptions(declared, false)`)에서 **`demolished` 제외**(철거 후 한시 지위는 파생 경계가 필요한
+ * E3 ⑤ 축이고, 유예기간 9호가 이미 덮는다 — 결정 2026-11-23). 빈 배열 = 근거를 묻지 않는다(종합합산).
+ */
+export function eventBasisOptions(declared: PropertyTaxType): readonly PropertyTaxBasis[] {
+  return propertyTaxBasisOptions(declared, false).filter((b) => b !== "demolished");
 }
 
 // ── 사건 행·순서 검증 (⑧·⑫ 공용) ─────────────────────────────
@@ -113,12 +142,6 @@ export interface StateEventSequenceOptions {
    * 사건일 ≤ 하한일(당일 포함)이면 소유 시작 전이라 차단한다. ⑫는 넘기지 않는다 — 지분별 raw가 다른 취득일을 가져 늦은 지분이 400이 되는 것을 막는다.
    */
   floorDate?: string;
-  /**
-   * 건축물 사건이 **하나도 없을 때만** 쓰는 초기 건축물 상태(= 입력 토글 `nblOtherHasBuilding`) — ⑧은 `asset.nblOtherHasBuilding` · ⑫는 `!!raw.nblOtherHasBuilding`.
-   * 건축물 사건이 있으면 첫 건축물 사건이 정한다(신축이면 «없음» · 멸실이면 «있음»). 생략하면 «없음»(안전 쪽 — 재산세 과세 구분 변경만 입력한 이력이 차단된다).
-   * ⑧·⑫·⑤ 미리보기가 **같은 값**을 넘겨야 한다(건축물 사건만 있는 이력에는 영향이 없다).
-   */
-  tailHasBuilding?: boolean;
 }
 
 /** 소유 첫날의 건축물 상태 — 첫 건축물 사건이 신축이면 «없음»·멸실이면 «있음», 건축물 사건이 하나도 없으면 `fallback`(입력 토글). */
@@ -135,13 +158,12 @@ function initialHasBuilding(events: ReadonlyArray<{ kind: string }>, fallback: b
  *   · 앞 사건보다 빠름 · 같은 날 (자동 정렬하지 않는다 — 침묵 보정 금지)
  *   · 하한일 이하(`floorDate`가 있을 때만) · 양도일 이후(당일 포함)
  *   · 같은 종류 연속(신축 뒤 신축 · 멸실 뒤 멸실) — **직전 «건축물 사건»과만** 비교한다(재산세 과세 구분 변경은 교대에 참여하지 않는다)
- *   · 건축물 없는 구간의 재산세 과세 구분 변경(E3-① · V-6 닫힘) — 사건 직전 건축물 상태를 replay해 «없음»이면 차단한다. 초기 상태는 첫 건축물 사건 또는 `tailHasBuilding`.
+ *   · (E3-1b 삭제 — `tailHasBuilding` 인자도 함께 제거) 건축물 없는 구간의 재산세 과세 구분 변경 차단 — 이제 나대지 구간을 닫는 구분 변경은 «나대지 선언»을 말하는 정상 입력이다(근거 미선택·모름은 막지 않고 접은 뒤 고지한다).
  */
 export function stateEventSequenceIssue(events: ReadonlyArray<StateEventRowLike>, opts: StateEventSequenceOptions): StateEventIssue | null {
   if (events.length === 0) return { index: null, field: "events", message: STATE_EVENTS_REQUIRED_MESSAGE };
   const transfer = toOptionalDate(opts.transferDate);
   const floor = opts.floorDate ? toOptionalDate(opts.floorDate) : undefined;
-  let hasBuilding = initialHasBuilding(events, opts.tailHasBuilding ?? false); // 사건 직전 건축물 유무(replay)
   let prevBuildingKind: BuildingEventKind | null = null;
   for (let i = 0; i < events.length; i++) {
     const row = events[i];
@@ -157,16 +179,12 @@ export function stateEventSequenceIssue(events: ReadonlyArray<StateEventRowLike>
     }
     if (floor && t <= floor.getTime()) return { index: i, field: "date", message: stateEventAtOrBeforeFloorMessage(i, row.date, opts.floorDate!, row.kind) };
     if (transfer && t >= transfer.getTime()) return { index: i, field: "date", message: stateEventAtOrAfterTransferMessage(i, row.date, opts.transferDate, row.kind) };
-    if (!isBuildingEventKind(row.kind)) {
-      if (!hasBuilding) return { index: i, field: "kind", message: stateEventTaxChangeWithoutBuildingMessage(i) };
-      continue;
-    }
+    if (!isBuildingEventKind(row.kind)) continue;
     if (prevBuildingKind === row.kind) {
       const missingKind: BuildingEventKind = row.kind === "building_built" ? "building_removed" : "building_built";
       return { index: i, field: "kind", message: stateEventSameKindMessage(i, STATE_AFTER_EVENT_LABEL[row.kind], STATE_EVENT_KIND_LABEL[missingKind]) };
     }
     prevBuildingKind = row.kind;
-    hasBuilding = row.kind === "building_built";
   }
   return null;
 }
@@ -199,11 +217,66 @@ export interface StateTail {
   propertyTaxType: LandStateInterval["propertyTaxType"];
 }
 
-interface Segment {
+interface Segment extends Omit<LandStateInterval, "start" | "end"> {
   /** 이 구간을 닫는 사건일. `null` = 꼬리(양도일까지). */
   end: Date | null;
-  hasBuilding: boolean;
-  propertyTaxType: LandStateInterval["propertyTaxType"];
+}
+
+/** 나대지 구간 선언의 해석 — 구간의 `propertyTaxType`과 (비종합합산 선언이 있을 때만) 근거 echo 필드. */
+type BareDeclaration = Pick<LandStateInterval, "propertyTaxType" | "basisOutcome" | "basis" | "declaredPropertyTaxType" | "foldReason">;
+
+/**
+ * **나대지 구간을 닫는 사건**(`eventClosesBareInterval`)의 선언 3칸을 해석한다 — 구간마다 V1-A 해석기 `resolvePropertyTaxBasis`(hasBuilding=false)를 그대로 호출한다.
+ *   · 구분 없음(`""`·미전송): 신축 행 = 선언 없음 → 종합합산(고지 없음 · 종전과 바이트 동일) · 구분 변경 행 = **모름** → `"unknown"`(종합합산 + 확인 필요 — E3-① 같은 정책).
+ *   · `comprehensive`: 종합합산(근거를 묻지 않는다).
+ *   · 비종합합산 + 근거: `accepted`이면 선언한 구분 그대로 · `unconfirmed`(미선택·모름·호환 불가·`demolished`)이면 종합합산으로 접는다.
+ *     `demolished`는 나대지 구간 근거로 받지 않는다(철거 후 한시 = E3 ⑤ · 유예 9호가 덮음) — 바닥면적을 넘기지 않으므로 V1-A도 접지만 사유를 `demolished_unsupported`로 구별한다.
+ *   · 근거 `vacant_state`는 면적한도: `within`만 인정 — `exceeded`·`unknown`·`""`는 그 구간 **전체**를 종합합산으로 접는다(부분 면적 자동 안분 없음 · 「일부 초과」가 「모름」보다 유리하지 않다).
+ */
+export function resolveBareDeclaration(ev: Pick<StateEvent, "kind" | "propertyTaxTypeBefore" | "propertyTaxBasisBefore" | "areaWithinLimitBefore">): BareDeclaration {
+  const declared = ev.propertyTaxTypeBefore;
+  if (!declared) return { propertyTaxType: ev.kind === "building_built" ? "comprehensive" : "unknown" };
+  if (declared === "comprehensive") return { propertyTaxType: "comprehensive" };
+  const basis = ev.propertyTaxBasisBefore || undefined;
+  const echo = { ...(basis ? { basis } : {}), declaredPropertyTaxType: declared };
+  const fold = (foldReason: BareFoldReason): BareDeclaration => ({ propertyTaxType: "comprehensive", basisOutcome: "unconfirmed", ...echo, foldReason });
+  if (basis === "demolished") return fold("demolished_unsupported");
+  const res = resolvePropertyTaxBasis({ propertyTaxType: declared, hasBuilding: false, propertyTaxBasis: basis });
+  if (res.kind !== "accepted") return fold(res.kind === "unconfirmed" ? res.reason : "incompatible");
+  if (res.basis === "vacant_state" && ev.areaWithinLimitBefore !== "within") return fold(ev.areaWithinLimitBefore === "exceeded" ? "area_exceeded" : "area_unknown");
+  return { propertyTaxType: declared, basisOutcome: "accepted", ...echo };
+}
+
+/** 나대지 구간 근거의 표 안 짧은 라벨 — 입력 미리보기(⑤)와 결과 구간표(⑦)가 같은 표를 읽는다(근거 선택지의 긴 법 인용 라벨은 입력 화면 전용). */
+export const BARE_BASIS_SHORT_LABEL = {
+  statutory_exempt: "비과세·면제 토지 근거",
+  separate_taxation: "분리과세대상 근거",
+  vacant_state: "공지상태 근거",
+  demolished: "철거·멸실 근거",
+  unknown: "근거 모름",
+} as const satisfies Record<PropertyTaxBasis, string>;
+
+/** 나대지 선언을 종합합산으로 접은 사유의 표 안 문구. */
+export const BARE_FOLD_REASON_TEXT = {
+  unselected: "근거 미선택",
+  unknown: "근거 모름",
+  incompatible: "구분과 맞지 않는 근거",
+  demolished_area_missing: "근거 미확인",
+  demolished_unsupported: "철거 후 한시 지위 — 유예기간으로 입력",
+  area_exceeded: "면적한도 일부 초과",
+  area_unknown: "면적한도 모름",
+} as const satisfies Record<BareFoldReason, string>;
+
+/**
+ * 나대지 구간(`hasBuilding=false`) 중 **비종합합산 선언이 있는 구간**의 «재산세 구분» 표 문구 — 선언이 없으면 `undefined`(호출자가 종전 문구를 쓴다).
+ * 받아들인 구간 = 「별도합산(나대지 — 공지상태 근거)」 · 접힌 구간 = 「종합합산(나대지 — {사유} · 확인 필요)」. ⑤ 미리보기 · ⑦ 결과 구간표가 같은 함수를 쓴다.
+ */
+export function bareIntervalTaxTypeText(iv: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome" | "basis" | "foldReason">): string | undefined {
+  if (iv.hasBuilding || !iv.basisOutcome) return undefined;
+  if (iv.basisOutcome === "accepted") {
+    return `${PROPERTY_TAX_TYPE_LABEL[iv.propertyTaxType as PropertyTaxType]}(나대지 — ${BARE_BASIS_SHORT_LABEL[iv.basis ?? "unknown"]})`;
+  }
+  return `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(나대지 — ${BARE_FOLD_REASON_TEXT[iv.foldReason ?? "unselected"]} · 확인 필요)`;
 }
 
 /**
@@ -213,12 +286,12 @@ interface Segment {
  * **Before 사슬**: 각 사건은 직전 사건(또는 소유 첫날)부터 그 사건까지의 구간을 닫고, 그 구간의 재산세 구분은 **그 사건의 `propertyTaxTypeBefore`**(`""` → `"unknown"`)다.
  * 꼬리 구분은 사건이 아니라 기존 입력(`tail.propertyTaxType`)이 말한다.
  *   · 건축물 상태는 따로 추적(replay)한다 — 첫 건축물 사건이 신축이면 그 전은 나대지, 멸실이면 건축물 있음. 건축물 사건이 없으면 `tail.hasBuilding`이 초기 상태다.
- *   · 신축이 닫는 구간 = 나대지 · 재산세 구분 «종합합산» 고정(V-6 닫힘 — 신축 행의 Before는 뜻이 없다) · 멸실·구분 변경이 닫는 구간 = 건축물 있음 + 그 사건의 Before.
- *   · 재산세 과세 구분 변경은 건축물 유무를 바꾸지 않는다 — 건축물 있는 구간만 둘로 가른다(나대지 구간 위의 구분 변경은 오류).
+ *   · 멸실이 닫는 구간 = 건축물 있음 + 그 사건의 Before · 신축이 닫는 구간 = 나대지 + **나대지 선언**(E3-1b — 선언이 없으면 종합합산 고정이라 종전과 같다 · V-6 «고정»은 선언 없는 경우로 좁아졌다).
+ *   · 재산세 과세 구분 변경은 건축물 유무를 바꾸지 않는다 — 닫는 구간이 건축물 있음이면 그 Before, 나대지이면 나대지 선언(`resolveBareDeclaration`)이다. 건축물 없는 구간 위 구분 변경은 더 이상 오류가 아니다.
  *   · 사건일 ≤ `ownershipStart`는 **클립**한다(축 B 늦은 지분 · 사건일 = 소유 첫날): 앞 구간이 0일이라 버려지고 그 사건 이후 상태가 소유 첫날 상태가 된다.
  *   · 소유 0일 이하(`endDate ≤ ownershipStart`)면 구간이 없다.
  *
- * 사전 조건(⑧·⑫가 이미 막는다 — 어기면 침묵 보정하지 않고 오류): 사건일이 엄격 증가 · 건축물 사건이 번갈아 옴 · 마지막 사건일 < 양도일 · 구분 변경 직전 건축물 있음.
+ * 사전 조건(⑧·⑫가 이미 막는다 — 어기면 침묵 보정하지 않고 오류): 사건일이 엄격 증가 · 건축물 사건이 번갈아 옴 · 마지막 사건일 < 양도일.
  */
 export function deriveOtherLandStateIntervals(
   events: ReadonlyArray<StateEvent>,
@@ -244,16 +317,18 @@ export function deriveOtherLandStateIntervals(
       throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, "사건일은 양도일보다 앞이어야 합니다(양도일 현재 상태 구간이 1일 이상이어야 함).", { index: i });
     }
     if (ev.kind === "tax_type_changed") {
-      if (!hasBuilding) {
-        throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, "재산세 과세 구분 변경 사건 직전에는 건축물이 있어야 합니다(건축물 없는 구간은 종합합산으로 본다).", { index: i });
-      }
-      segments.push({ end: ev.date, hasBuilding, propertyTaxType: ev.propertyTaxTypeBefore ? ev.propertyTaxTypeBefore : "unknown" });
+      // 건축물 있는 구간 = 구분만 가른다(E3-①) · 건축물 없는 구간(나대지) = 선언 3칸을 해석한다(E3-1b — 종전 «차단» 규칙 삭제).
+      segments.push(
+        hasBuilding
+          ? { end: ev.date, hasBuilding, propertyTaxType: ev.propertyTaxTypeBefore ? ev.propertyTaxTypeBefore : "unknown" }
+          : { end: ev.date, hasBuilding: false, ...resolveBareDeclaration(ev) },
+      );
       continue;
     }
     prevBuildingKind = ev.kind;
     segments.push(
       ev.kind === "building_built"
-        ? { end: ev.date, hasBuilding: false, propertyTaxType: "comprehensive" }
+        ? { end: ev.date, hasBuilding: false, ...resolveBareDeclaration(ev) }
         : { end: ev.date, hasBuilding: true, propertyTaxType: ev.propertyTaxTypeBefore ? ev.propertyTaxTypeBefore : "unknown" },
     );
     hasBuilding = ev.kind === "building_built";
@@ -262,11 +337,11 @@ export function deriveOtherLandStateIntervals(
 
   const intervals: LandStateInterval[] = [];
   let cursor = ownershipStart;
-  for (const seg of segments) {
-    const end = seg.end ?? endDate;
+  for (const { end: segEnd, ...fields } of segments) {
+    const end = segEnd ?? endDate;
     // 소유 시작 전(≤ cursor)에 끝나는 구간은 0일이라 버려진다(클립) — 그 사건 이후 상태가 소유 첫날 상태가 된다.
     if (end.getTime() > cursor.getTime()) {
-      intervals.push({ start: cursor, end, hasBuilding: seg.hasBuilding, propertyTaxType: seg.propertyTaxType });
+      intervals.push({ start: cursor, end, ...fields });
       cursor = end;
     }
   }
@@ -282,13 +357,14 @@ const BUSINESS_PROPERTY_TAX_TYPES: ReadonlySet<PropertyTaxType | "unknown"> = ne
 ]);
 
 /**
- * **이전 구간**(꼬리 제외)의 사업용 확정 — 법 §104의3①4호 가·나목: 건축물이 있고 재산세 구분이 비과세·면제·분리과세·별도합산인 구간.
- * 나대지(`hasBuilding=false`) · 종합합산 · 모름(`"unknown"`)은 비사업용이다(「모름」 = 혜택 불성립 — 2026-10-04 원칙).
+ * **이전 구간**(꼬리 제외)의 사업용 확정 — 법 §104의3①4호 가·나목: 재산세 구분이 비과세·면제·분리과세·별도합산인 구간. 건축물이 있는 구간은 그 구분만으로,
+ * **나대지(`hasBuilding=false`)는 나대지 선언이 근거와 함께 받아들여졌을 때만**(`basisOutcome === "accepted"` — E3-1b) 사업용이다.
+ * 종합합산 · 모름(`"unknown"`) · 근거를 확인하지 못해 접힌 나대지는 비사업용이다(「모름」 = 혜택 불성립 — 2026-10-04 원칙).
  * 건축물 구간의 배율·2% 요건은 구간별로 재판정하지 않는다(건축물 바닥면적·시가표준액 이력이 없다 — 엔진 V-5, 고지 대상).
  * 꼬리는 core가 판정하므로 이 함수를 쓰지 않는다(`stateHistoryBusinessIntervals`).
  */
-export function isStateIntervalBusiness(interval: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType">): boolean {
-  return interval.hasBuilding && BUSINESS_PROPERTY_TAX_TYPES.has(interval.propertyTaxType);
+export function isStateIntervalBusiness(interval: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome">): boolean {
+  return (interval.hasBuilding || interval.basisOutcome === "accepted") && BUSINESS_PROPERTY_TAX_TYPES.has(interval.propertyTaxType);
 }
 
 /** core(양도일 현재 상태 판정)가 `applyStateHistory`에 넘기는 것. */

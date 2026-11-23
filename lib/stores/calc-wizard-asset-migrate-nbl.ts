@@ -1,6 +1,9 @@
 import { NBL_STATE_HISTORY_MODE_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
 import { eventCarriesTaxTypeBefore } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { eventClosesBareInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { isEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { NBL_AREA_WITHIN_LIMIT_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
+import { PROPERTY_TAX_BASIS_VALUES } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 
 /**
@@ -36,6 +39,9 @@ export function migrateNblB1Fields(a: Record<string, unknown>): void {
  *  · 모드가 허용값 밖이면 `""`(미선택). **`""`을 `unchanged`로 접지 않는다** — 미입력 ≠ 미해당(⑧이 질문을 요구한다).
  *  · 사건이 배열이 아니면 `[]`. 행이 객체가 아니면 빈 행. 행의 `kind`·`propertyTaxTypeBefore`가 허용값 밖이면 `""`, `date`가 문자열이 아니면 `""`.
  *    허용값 밖 `kind`는 ⑧이 행 단위로 짚는다(침묵 제거 금지).
+ *  · E3-1b — 신축 행도 나대지 구간을 닫으므로 `propertyTaxTypeBefore`를 보존한다(유효 종류 모두 운반). 선언 칸 2개(`propertyTaxBasisBefore`·`areaWithinLimitBefore`)는
+ *    **값이 허용값 안이고 그 종류의 행이 나대지 구간을 닫을 수 있을 때만** 남기고, 키가 없던 행에는 키를 만들지 않는다(구 스냅샷 byte-identical).
+ *    행이 지금 나대지를 닫는지(건축물 토글)는 여기서 보지 않는다 — 숨은 값은 보존하고 ④가 갈래에 맞을 때만 보낸다(토글을 되돌리면 복원).
  */
 function migrateNblStateHistory(a: Record<string, unknown>): void {
   if (!(NBL_STATE_HISTORY_MODE_VALUES as readonly unknown[]).includes(a.nblOtherStateHistoryMode)) a.nblOtherStateHistoryMode = "";
@@ -47,6 +53,16 @@ function migrateNblStateHistory(a: Record<string, unknown>): void {
     const r = row && typeof row === "object" ? (row as Record<string, unknown>) : {};
     const kind = typeof r.kind === "string" && isEventKind(r.kind) ? r.kind : "";
     const before = typeof r.propertyTaxTypeBefore === "string" && Object.hasOwn(PROPERTY_TAX_TYPE_LABEL, r.propertyTaxTypeBefore) ? r.propertyTaxTypeBefore : "";
-    return { kind, date: typeof r.date === "string" ? r.date : "", propertyTaxTypeBefore: eventCarriesTaxTypeBefore(kind) ? before : "" };
+    // 이 종류의 행이 나대지 구간을 «닫을 수 있는가» — 토글과 무관하게 종류만 본다(`eventClosesBareInterval` 한 행짜리 호출: 신축·구분 변경 = true · 멸실·미선택 = false).
+    const mayCloseBare = eventClosesBareInterval([{ kind }], 0, false);
+    const basis = typeof r.propertyTaxBasisBefore === "string" && (PROPERTY_TAX_BASIS_VALUES as readonly string[]).includes(r.propertyTaxBasisBefore) ? r.propertyTaxBasisBefore : "";
+    const limit = typeof r.areaWithinLimitBefore === "string" && (NBL_AREA_WITHIN_LIMIT_VALUES as readonly string[]).includes(r.areaWithinLimitBefore) ? r.areaWithinLimitBefore : "";
+    return {
+      kind,
+      date: typeof r.date === "string" ? r.date : "",
+      propertyTaxTypeBefore: eventCarriesTaxTypeBefore(kind) || mayCloseBare ? before : "",
+      ...(mayCloseBare && basis ? { propertyTaxBasisBefore: basis } : {}),
+      ...(mayCloseBare && limit ? { areaWithinLimitBefore: limit } : {}),
+    };
   });
 }

@@ -102,8 +102,8 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
   // NBL-STATE-HISTORY-E2 — 소유기간 중 건축물 사건: `changed`일 때만 행·순서·0건을 검사한다(⑧ 거울 — 같은 leaf · 같은 문구). **하한(소유 시작 전 사건) 규칙은 ⑫에 없다** —
   // 컴패니언 스키마가 지분 raw마다 이 refine을 돌려 늦게 취득한 지분이 400이 되기 때문이다(엔진은 지분 소유기간으로 클립). `""`·`unchanged`·`unknown`은 막지 않는다(현행).
   if (consumesStateHistory(landType) && raw.nblOtherStateHistoryMode === "changed") {
-    // E3-① — `tailHasBuilding`(= 입력 토글)은 건축물 사건이 0건일 때만 초기 건축물 상태로 쓰인다(⑧이 같은 값을 넘긴다 — 3중 패턴).
-    const stateIssue = stateEventSequenceIssue(raw.nblOtherStateEvents ?? [], { transferDate: raw.transferDate ?? "", tailHasBuilding: !!raw.nblOtherHasBuilding });
+    // E3-1b — 「건축물 없는 구간 위 구분 변경」 차단 규칙이 삭제돼 초기 건축물 상태(`tailHasBuilding`)를 넘기지 않는다(순서 검증은 `kind`·`date`만 본다).
+    const stateIssue = stateEventSequenceIssue(raw.nblOtherStateEvents ?? [], { transferDate: raw.transferDate ?? "" });
     if (stateIssue) issue(stateIssue.index === null ? ["nblOtherStateEvents"] : ["nblOtherStateEvents", stateIssue.index, stateIssue.field], stateIssue.message);
   }
 

@@ -12,6 +12,7 @@ import { toDate } from "@/lib/api/date-coerce";
 import { NBL } from "@/lib/tax-engine/legal-codes";
 import type { StateHistoryEcho } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { StateHistoryIntervalEcho } from "@/lib/tax-engine/non-business-land/land-usage.types";
+import { bareIntervalTaxTypeText } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 import { addDays } from "@/lib/tax-engine/utc-date";
 
@@ -35,8 +36,10 @@ const BUCKET_LABEL = {
 
 const iso = (d: Date): string => d.toISOString().slice(0, 10);
 
-/** 재산세 구분 라벨 — 「모름」(`unknown`)은 종합합산으로 보되 확인 필요임을 밝힌다. */
+/** 재산세 구분 라벨 — 「모름」(`unknown`)은 종합합산으로 보되 확인 필요임을 밝힌다. 나대지 구간의 비종합합산 선언(E3-1b)은 받아들임·접힘 + 근거를 보인다(입력 미리보기와 같은 leaf 문구). */
 function taxTypeText(iv: StateHistoryIntervalEcho): string {
+  const bare = bareIntervalTaxTypeText(iv);
+  if (bare) return bare;
   return iv.propertyTaxType === "unknown" ? `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(모름 — 확인 필요)` : PROPERTY_TAX_TYPE_LABEL[iv.propertyTaxType];
 }
 

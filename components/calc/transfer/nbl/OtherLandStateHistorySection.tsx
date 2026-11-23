@@ -5,6 +5,7 @@
  * (`nbl-state-history-e3-1-tax-type-change.ui.plan.md` §4 — 사건 종류 3종: 건축물 신축 · 건축물 멸실·철거·붕괴 · 재산세 과세 구분 변경).
  *
  * 질문(3지선다) → 사건 행(종류·날짜·철거/구분 변경 행의 «직전 재산세 구분») → 이 이력으로 나뉜 소유기간(읽기전용 미리보기).
+ * E3-1b — 나대지 구간을 닫는 행(신축 · 건축물 없는 구간의 구분 변경 — leaf `eventClosesBareInterval`)은 «직전 구분» 대신 «나대지 선언» 카드(`OtherLandBareIntervalFields` — 구분 → 근거 → 공지상태 면적한도)를 보인다.
  * «직전 구분» 칸 노출 여부는 leaf 단일 술어 `eventCarriesTaxTypeBefore`가 정한다(`=== "building_removed"` 리터럴 금지 — 새 종류의 값이 침묵으로 «모름»이 된다).
  * 구간은 엔진 공용 leaf가 만든다(`buildStateHistoryPreview`) — 결과 카드·판정과 같은 구간이다. 저장·미러링 없음(`useMemo` 표시 전용).
  *
@@ -20,8 +21,10 @@ import { SectionHeader } from "@/components/calc/shared/SectionHeader";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { buildStateHistoryPreview } from "@/lib/calc/nbl-other-state-history-preview";
+import type { StateHistoryPreviewRow } from "@/lib/calc/nbl-other-state-history-preview";
 import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-scope";
 import { nblOtherStateEventsInUse } from "@/lib/calc/nbl-other-state-history-scope";
+import { stateEventWireRow } from "@/lib/calc/nbl-other-state-history-scope";
 import { hasDeemedTransferReason } from "@/lib/calc/nbl-deemed-transfer-scope";
 import { isDeemedTransferApplicable } from "@/lib/calc/nbl-deemed-transfer-scope";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
@@ -36,13 +39,15 @@ import { NBL_STATE_HISTORY_UNCHANGED_NOTICE } from "@/lib/tax-engine/nbl-confirm
 import { NBL_STATE_HISTORY_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import type { PropertyTaxType } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { StateEventKind } from "@/lib/tax-engine/non-business-land/land-usage.types";
+import { bareIntervalTaxTypeText } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventCarriesTaxTypeBefore } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { eventClosesBareInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { hasBuildingAtTransfer } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { isBuildingEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { isEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { STATE_EVENT_KIND_LABEL } from "@/lib/tax-engine/non-business-land/other-land-state-history";
-import { STATE_PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
+import { OtherLandBareIntervalFields, ptaxOptions } from "./OtherLandBareIntervalFields";
 
 export interface OtherLandStateHistorySectionProps {
   asset: AssetForm;
@@ -65,14 +70,6 @@ const KIND_OPTIONS = (i: number): RadioCardOption<StateEventKind>[] => [
   { value: "tax_type_changed", label: STATE_EVENT_KIND_LABEL.tax_type_changed, testId: `nbl-other-state-event-${i}-kind-taxchange` },
 ];
 
-/** 철거·재산세 과세 구분 변경 행의 «직전 재산세 구분» 선택지 — 라벨은 `PROPERTY_TAX_TYPE_LABEL` 단일 소스(enum 이름과 라벨이 직관과 다르다: separate=별도합산 · special_sum=분리과세). 순서: 비과세·면제 / 분리과세 / 별도합산 / 종합합산 / 모름. */
-const PTAX_ORDER = ["exempt", "special_sum", "separate", "comprehensive"] as const satisfies readonly PropertyTaxType[];
-type PtaxChoice = PropertyTaxType | "unknown";
-const PTAX_OPTIONS = (i: number): RadioCardOption<PtaxChoice>[] => [
-  ...PTAX_ORDER.map((v) => ({ value: v as PtaxChoice, label: PROPERTY_TAX_TYPE_LABEL[v], testId: `nbl-other-state-event-${i}-ptax-${v}` })),
-  { value: "unknown", label: STATE_PROPERTY_TAX_TYPE_LABEL.unknown, testId: `nbl-other-state-event-${i}-ptax-unknown` },
-];
-
 const BUILT_DATE_HINT =
   "건축물이 있는 것으로 보는 첫날입니다. 사용승인일(준공일)과 재산세상 건축물로 보는 첫날이 다를 수 있습니다 — 확인 필요.";
 const REMOVED_DATE_HINT = "건축물이 없어진 첫날(멸실·철거·붕괴일)입니다.";
@@ -81,7 +78,7 @@ const TAX_CHANGE_DATE_HINT =
 const NEUTRAL_DATE_HINT = "새 상태가 시작되는 첫날입니다. 같은 날의 사건은 입력할 수 없습니다.";
 const KIND_HINT_FIRST_ROW =
   "취득 당시 건축물이 있었다면 «건축물 멸실·철거·붕괴»부터 입력합니다. 건축물이 없던 토지라면 «건축물 신축»부터 입력합니다. 지분을 나눠 취득한 토지는 가장 이른 지분의 취득일 이후 사건부터 입력합니다. " +
-  "건축물은 그대로인데 재산세 과세 구분만 바뀐 적이 있으면 «재산세 과세 구분 변경»을 입력합니다. 건축물이 없던 기간에는 입력할 수 없습니다(나대지는 종합합산으로 봅니다).";
+  "재산세 과세 구분만 바뀐 적이 있으면 «재산세 과세 구분 변경»을 입력합니다. 건축물이 없던 기간(나대지)에도 입력할 수 있고, 나대지의 별도합산·분리과세·비과세는 근거를 함께 고릅니다.";
 
 /** 종류별 사건일 hint — `Record<StateEventKind, …>`라 새 종류가 생기면 컴파일 오류로 알려 준다. 미선택·허용값 밖은 중립 문구. */
 const DATE_HINT: Record<StateEventKind, string> = { building_built: BUILT_DATE_HINT, building_removed: REMOVED_DATE_HINT, tax_type_changed: TAX_CHANGE_DATE_HINT };
@@ -93,9 +90,14 @@ function afterTaxTypeText(row: { propertyTaxType: PropertyTaxType | "unknown"; i
   return row.propertyTaxType === "unknown" ? `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(선언 없음 — 확인 필요)` : `${PROPERTY_TAX_TYPE_LABEL[row.propertyTaxType]}(선언)`;
 }
 
-function rowTaxTypeText(row: { hasBuilding: boolean; propertyTaxType: PropertyTaxType | "unknown"; isTail: boolean }): string {
+function rowTaxTypeText(row: Pick<StateHistoryPreviewRow, "hasBuilding" | "propertyTaxType" | "isTail" | "basisOutcome" | "basis" | "foldReason">): string {
   if (row.isTail) return "양도일 현재 선언 기준";
-  if (!row.hasBuilding) return `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(나대지 — 고정)`;
+  if (!row.hasBuilding) {
+    // E3-1b — 비종합합산 선언이 있는 나대지 구간은 근거 해석(받아들임·접힘)을 보이고, 선언이 없으면 종전 문구 그대로(주장 없음 = 종합합산).
+    const bare = bareIntervalTaxTypeText(row);
+    if (bare) return bare;
+    return row.propertyTaxType === "unknown" ? `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(나대지 — 선언 없음 · 확인 필요)` : `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(나대지 — 고정)`;
+  }
   if (row.propertyTaxType === "unknown") return `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(선언 없음 — 확인 필요)`;
   return `${PROPERTY_TAX_TYPE_LABEL[row.propertyTaxType]}(선언)`;
 }
@@ -174,7 +176,9 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
           )}
 
           {events.map((ev, i) => {
-            const carriesBefore = eventCarriesTaxTypeBefore(ev.kind);
+            // 나대지 구간을 닫는 행(신축 · 건축물 없는 구간의 구분 변경)은 «나대지 선언» 카드, 건축물 있는 구간을 닫는 행(철거 · 건축물 위 구분 변경)은 종전 «직전 구분» 카드다 — 둘 다 leaf 술어가 정한다.
+            const closesBare = eventClosesBareInterval(events, i, asset.nblOtherHasBuilding);
+            const carriesBefore = eventCarriesTaxTypeBefore(ev.kind) && !closesBare;
             const taxChange = ev.kind === "tax_type_changed";
             // 「변경 후」 = 이 사건일에 시작하는 미리보기 구간(표시 전용 — 저장·전송·검증 없음). 미리보기 불가·클립(사건일 ≤ 소유 첫날)이면 줄을 그리지 않는다.
             const afterRow = taxChange && !deemedBlocks ? preview?.rows.find((r) => r.start === ev.date) : undefined;
@@ -205,8 +209,9 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                     layout="inline"
                     options={KIND_OPTIONS(i)}
                     value={isEventKind(ev.kind) ? ev.kind : ""}
-                    // 종류를 바꾸면 «직전 재산세 구분»을 함께 리셋한다(이벤트 시점 쓰기 — 신축 행에 stale 값이 남지 않게 · 철거 ↔ 구분 변경 전환 시 재선택).
-                    onChange={(v) => patchEvent(i, { kind: v, propertyTaxTypeBefore: "" })}
+                    // 종류를 바꾸면 «직전 재산세 구분»과 나대지 선언(근거·면적한도)을 함께 리셋한다 — 행을 `{kind, date, propertyTaxTypeBefore:""}`로 **다시 만들어** 선언 키도 지운다
+                    // (이벤트 시점 쓰기 — 신축 행에 stale 값이 남지 않게 · 철거 ↔ 구분 변경 전환 시 재선택 · 키가 없던 행은 키가 없는 채로 남는다).
+                    onChange={(v) => onAssetChange({ nblOtherStateEvents: events.map((e, idx) => (idx === i ? { kind: v, date: e.date, propertyTaxTypeBefore: "" } : e)) })}
                     data-field={`nblOtherStateEvents.${i}.kind`}
                   />
                 </FieldCard>
@@ -219,6 +224,17 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                     data-testid={`nbl-other-state-event-${i}-date`}
                   />
                 </FieldCard>
+
+                {closesBare && (
+                  <OtherLandBareIntervalFields
+                    index={i}
+                    idKey={idKey}
+                    taxChange={taxChange}
+                    event={ev}
+                    wire={stateEventWireRow(events, i, asset.nblOtherHasBuilding)}
+                    patchEvent={(patch) => patchEvent(i, patch)}
+                  />
+                )}
 
                 {carriesBefore && (
                   <FieldCard
@@ -234,7 +250,7 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                         name={`nblOtherStatePtax-${idKey}-${i}`}
                         tone="amber"
                         layout="inline"
-                        options={PTAX_OPTIONS(i)}
+                        options={ptaxOptions(i, true)}
                         // 표시 fallback: 저장값 `""`(모름)은 «모름»이 선택된 것으로 보인다. 저장·전송·⑧(규칙 없음)·⑫(enum)·엔진 모두 `""` = 모름 → 종합합산 + 확인 필요.
                         value={ev.propertyTaxTypeBefore || "unknown"}
                         onChange={(v) => patchEvent(i, { propertyTaxTypeBefore: v === "unknown" ? "" : v })}

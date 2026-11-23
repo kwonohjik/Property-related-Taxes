@@ -70,14 +70,17 @@ describe("종류 3종 라디오 · 행 카드 제목", () => {
 });
 
 describe("«직전 재산세 구분» 칸 — 노출 술어 `eventCarriesTaxTypeBefore` (S4)", () => {
-  it("재산세 변경 행에도 5지선다가 있고 라벨은 «변경 직전…» · 철거 행은 «철거 직전…»(불변) · 신축 행에는 없다", () => {
+  it("건축물 위 재산세 변경 행에도 5지선다가 있고 라벨은 «변경 직전…» · 철거 행은 «철거 직전…»(불변) · 신축 행은 «신축 직전 나대지…»(E3-1b 의도된 반전 — 4지선다 · 모름 없음)", () => {
     mount(asset({ nblOtherHasBuilding: true, nblOtherStateEvents: [built("2016-01-01"), tax("2018-01-01"), removed("2021-01-01")] }));
     for (const v of PTAX) {
       expect(screen.getByTestId(`nbl-other-state-event-1-ptax-${v}`), `변경 ${v}`).toBeTruthy();
       expect(screen.getByTestId(`nbl-other-state-event-2-ptax-${v}`), `철거 ${v}`).toBeTruthy();
-      expect(screen.queryByTestId(`nbl-other-state-event-0-ptax-${v}`), `신축 ${v}`).toBeNull();
+      // E3-1b — 신축 행은 «나대지 선언» 카드: 4지선다(모름 없음 — `""` = 선언 없음 = 종합합산)
+      if (v === "unknown") expect(screen.queryByTestId(`nbl-other-state-event-0-ptax-${v}`), "신축 모름").toBeNull();
+      else expect(screen.getByTestId(`nbl-other-state-event-0-ptax-${v}`), `신축 ${v}`).toBeTruthy();
     }
     const body = document.body.textContent ?? "";
+    expect(body).toContain("신축 직전 나대지 기간의 재산세 구분");
     expect(body).toContain("변경 직전 그 토지의 재산세 구분");
     expect(body).toContain("철거 직전 그 토지의 재산세 구분");
   });
@@ -198,10 +201,10 @@ describe("«변경 후» 줄 · 비차단 «같은 구분» 안내 (UQ-3 (가))"
     expect(text("nbl-other-state-event-0-after")).toContain("종합합산(선언 없음 — 확인 필요)");
     expect(screen.queryByTestId("nbl-other-state-event-0-same-notice")).toBeNull();
   });
-  it("미리보기를 그릴 수 없으면(건축물 없는 구간의 구분 변경 = ⑧ 차단) «변경 후» 줄을 그리지 않는다 — 구간을 지어내지 않는다", () => {
+  it("E3-1b 의도된 반전: 건축물 없는 구간의 구분 변경도 미리보기가 그려진다(⑧ 차단 규칙 삭제 — 나대지 선언) — «변경 후» 줄이 있고 «미리보기 없음» 안내는 없다", () => {
     mount(asset({ nblOtherHasBuilding: false, nblOtherStateEvents: [tax("2022-06-01", "separate")] }));
-    expect(screen.queryByTestId("nbl-other-state-event-0-after")).toBeNull();
-    expect(screen.getByTestId("nbl-state-history-preview-empty")).toBeTruthy();
+    expect(screen.queryByTestId("nbl-other-state-event-0-after")).not.toBeNull();
+    expect(screen.queryByTestId("nbl-state-history-preview-empty")).toBeNull();
   });
 });
 
@@ -225,8 +228,10 @@ describe("질문 문구 확장 (UQ-2 (가)) — 새 필수 칸 없음", () => {
     for (const m of ["unchanged", "changed", "unknown"]) expect(screen.getByTestId(`nbl-other-state-mode-${m}`)).toBeTruthy();
     expect(document.querySelectorAll('[data-field="nblOtherStateHistoryMode"] input[type="radio"]')).toHaveLength(3);
   });
-  it("첫 행 종류 hint에 «건축물이 없던 기간에는 입력할 수 없습니다» 안내가 덧붙는다", () => {
+  it("첫 행 종류 hint — E3-1b 의도된 반전: «입력할 수 없습니다» 안내가 «나대지에도 입력할 수 있고 근거를 함께 고른다»로 바뀐다", () => {
     mount(asset({ nblOtherStateEvents: [removed("2021-01-01")] }));
-    expect(document.body.textContent).toContain("건축물이 없던 기간에는 입력할 수 없습니다(나대지는 종합합산으로 봅니다)");
+    const body = document.body.textContent ?? "";
+    expect(body).not.toContain("건축물이 없던 기간에는 입력할 수 없습니다");
+    expect(body).toContain("건축물이 없던 기간(나대지)에도 입력할 수 있고, 나대지의 별도합산·분리과세·비과세는 근거를 함께 고릅니다");
   });
 });

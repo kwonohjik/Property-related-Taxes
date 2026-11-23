@@ -204,31 +204,19 @@ test.describe("기타토지 재산세 과세 구분 변경 사건(E3-①) — �
     console.log("[M12 대조군] 산출세액", JSON.stringify(base.json.data?.result?.calculatedTax ?? base.json.data?.aggregated?.totalTax));
   });
 
-  test("건축물 없는 구간의 구분 변경: ⑧ 차단 + 그 행의 «종류» 칸으로 점프 → 「건축물 있음」 토글을 켜면 통과", async ({ page }) => {
+  test("건축물 없는 구간의 구분 변경(E3-1b 의도된 반전): ⑧ 차단 없음 — 미리보기가 그려지고 계산이 통과한다(나대지 선언 — 근거가 없으면 종합합산으로 접힌다)", async ({ page }) => {
     test.setTimeout(150_000);
     await seed(page, [landAsset({ nblOtherHasBuilding: false, nblOtherPropertyTaxType: "comprehensive" })]);
     await gotoHolding(page);
     await chooseMode(page, "changed");
     await addEvent(page, "taxchange", "2022-06-01", "separate");
-    // 건축물 없음 + 구분 변경 — 미리보기를 그릴 수 없다(구간을 지어내지 않는다)
-    await expect(page.getByTestId("nbl-state-history-preview-empty")).toBeVisible();
-    await expect(page.getByTestId("nbl-other-state-event-0-after")).toHaveCount(0);
+    // 건축물 없음 + 구분 변경 — 종전(E3-①)엔 미리보기를 그릴 수 없었으나(⑧ 차단) 이제 나대지 구간으로 그린다
+    await expect(page.getByTestId("nbl-state-history-preview-empty")).toHaveCount(0);
+    await expect(page.getByTestId("nbl-other-state-event-0-after")).toHaveCount(1);
 
-    await calcExpectBlocked(page);
-    await expectJumpTo(page, /재산세 과세 구분 변경 사건 1번째 행 — 이 날짜 직전에는 건축물이 없습니다/, "nblOtherStateEvents.0.kind");
-
-    // 토글을 켠다(건축물 유무를 받는 곳) + 바닥면적 입력
-    await page.getByRole("button", { name: "보유 상황" }).first().click();
-    const toggle = page.getByTestId("nbl-other-has-building-toggle").getByRole("switch");
-    await expect(async () => {
-      if ((await toggle.getAttribute("aria-checked")) !== "true") await toggle.click();
-      await expect(toggle).toHaveAttribute("aria-checked", "true", { timeout: 3_000 });
-    }).toPass({ timeout: 15_000 });
-    await expect(page.getByTestId("nbl-state-history-preview-row-1")).toBeVisible();
-    await page.locator('[data-field="nblOtherBuildingFloorArea"] input').first().fill("250");
     const r = await calc(page);
     expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);
-    expect(r.req.nonBusinessLandRaw?.nblOtherHasBuilding).toBe(true);
+    expect(r.req.nonBusinessLandRaw?.nblOtherHasBuilding).toBe(false);
   });
 
   test("같은 날 사건(신축 + 구분 변경 같은 날): ⑧ 차단 — 종류별 접두 «재산세 과세 구분 변경 사건 2번째 행» + 날짜 칸으로 점프", async ({ page }) => {

@@ -10,6 +10,7 @@ import type { BusinessUsePeriod, ZoneType } from "./types";
 import type { SPORTS_OUTDOOR_STD, SPORTS_INDOOR_STD, RESERVE_FORCES_STD } from "./data/area-standards";
 import type { EmployeeSportsFacilityUsage } from "../factory-employee-sports-standard";
 import type { PropertyTaxBasis } from "./property-tax-basis";
+import type { UnconfirmedReason } from "./property-tax-basis";
 
 export interface PastureUsage {
   isLivestockOperator: boolean;
@@ -313,17 +314,32 @@ export type StateEventKind = "building_built" | "building_removed" | "tax_type_c
 /** 질문 답 — `""` = 미선택(⑧만 차단 · ⑫·엔진은 현행). */
 export type StateHistoryMode = "" | "unchanged" | "changed" | "unknown";
 
+/** 공지상태 별도합산의 호별 면적한도 이내 여부 — `""` = 미선택(«모름»과 같이 접힘). 호별 한도는 판정하지 않고 사용자 3지선다로 받는다(E3-1b). */
+export type AreaWithinLimit = "" | "within" | "exceeded" | "unknown";
+
 /**
  * 사용자가 입력한 사건. 날짜 = **새 상태의 첫날**(규칙 §83의5①9호 «날부터»).
  * `propertyTaxTypeBefore` = «Before 사슬» — **그 사건이 닫는 구간**(직전 사건 또는 소유 첫날부터 이 사건 전날까지)의 재산세 구분. 꼬리(양도일 현재) 구분은 사건이 아니라 기존 입력이 말한다.
- *   · `building_removed` : 철거 직전 «건축물 있던 구간»의 구분 · `tax_type_changed` : 구분이 바뀌기 직전 «건축물 있던 구간»의 구분 — 둘 다 `""` = 모름(종합합산 + 확인 필요).
- *   · `building_built`   : 뜻 없음 — 신축 앞은 나대지(재산세 구분 «종합합산» 고정 · V-6 닫힘). 운반 여부는 단일 술어 `eventCarriesTaxTypeBefore`.
+ *   · `building_removed` : 철거 직전 «건축물 있던 구간»의 구분 · `tax_type_changed` : 구분이 바뀌기 직전 구간의 구분 — 건축물 있는 구간이면 `""` = 모름(종합합산 + 확인 필요).
+ *   · `building_built`   : 신축 직전 «나대지 구간»의 구분(E3-1b). `""`·미전송·`comprehensive` = 선언 없음(종합합산 · 고지 없음 — 기존 이력과 바이트 동일).
+ *
+ * **E3-1b — 나대지 구간을 닫는 사건**(신축 행 · 직전 건축물이 없는 `tax_type_changed` 행; 판정은 `eventClosesBareInterval`)만 아래 두 칸을 읽는다. 건축물 있는 구간을 닫는 행에서는 무시한다.
+ *   · `propertyTaxBasisBefore` : 그 구분의 근거(V1-A `PropertyTaxBasis` 열거 — `resolvePropertyTaxBasis`를 구간마다 호출). 비종합합산 선언에 근거가 없거나 모름·호환 불가·`demolished`이면 종합합산으로 접고 고지한다.
+ *   · `areaWithinLimitBefore`  : 근거가 `vacant_state`일 때만 — `within`만 인정, `exceeded`·`unknown`·`""`는 그 구간을 종합합산으로 접고 고지한다(부분 면적 자동 안분 없음).
  */
 export interface StateEvent {
   kind: StateEventKind;
   date: Date;
   propertyTaxTypeBefore?: PropertyTaxType | "";
+  propertyTaxBasisBefore?: PropertyTaxBasis | "";
+  areaWithinLimitBefore?: AreaWithinLimit;
 }
+
+/** 나대지 구간 선언의 해석 결과 — `accepted` = 선언한 구분을 근거와 함께 받아들임 · `unconfirmed` = 종합합산으로 접음. */
+export type BareBasisOutcome = "accepted" | "unconfirmed";
+
+/** 나대지 선언을 종합합산으로 접은 사유 — V1-A 사유 + `demolished`(나대지 구간은 받지 않는다 — 철거 후 한시는 유예 9호) + 공지상태 면적한도(일부 초과·모름). */
+export type BareFoldReason = UnconfirmedReason | "demolished_unsupported" | "area_exceeded" | "area_unknown";
 
 /**
  * 일 단위 상태 구간 `[start, end)`. `deriveOtherLandStateIntervals`가 만든 배열은 소유기간을 빈틈·겹침 없이 덮고
@@ -334,6 +350,17 @@ export interface LandStateInterval {
   end: Date;
   hasBuilding: boolean;
   propertyTaxType: PropertyTaxType | "unknown";
+  /**
+   * E3-1b — 나대지 구간(`hasBuilding=false`)을 닫는 사건에 **비종합합산 선언이 있을 때만** 채운다(없으면 키 자체가 없어 종전 구간과 같다).
+   * `accepted`이면 `propertyTaxType` = 선언한 구분(사업용 술어가 읽는다) · `unconfirmed`이면 `propertyTaxType` = `comprehensive`로 접혔다.
+   */
+  basisOutcome?: BareBasisOutcome;
+  /** 사용자가 고른 근거(접힌 구간도 — 있으면). */
+  basis?: PropertyTaxBasis;
+  /** 사용자가 선언한 구분(접히기 전). */
+  declaredPropertyTaxType?: PropertyTaxType;
+  /** `unconfirmed`일 때 접힌 사유. */
+  foldReason?: BareFoldReason;
 }
 
 /**
@@ -354,6 +381,11 @@ export interface StateHistoryIntervalEcho {
   propertyTaxType: PropertyTaxType | "unknown";
   business: boolean;
   businessDays: number;
+  /** E3-1b — 나대지 구간 선언이 있을 때만(`LandStateInterval`의 같은 이름 필드). 없으면 키 없음 = 종전 echo와 같다. */
+  basisOutcome?: BareBasisOutcome;
+  basis?: PropertyTaxBasis;
+  declaredPropertyTaxType?: PropertyTaxType;
+  foldReason?: BareFoldReason;
 }
 
 /**

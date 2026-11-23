@@ -6,6 +6,7 @@
  * 타입만 있던 엔진 union을 값으로 내려 Zod가 같은 목록을 쓰게 한다. 새 호·분류가 union에 생기면 아래 가드가
  * 컴파일 오류가 되어 이 목록이 따라간다.
  */
+import type { AreaWithinLimit } from "./land-usage.types";
 import type { PropertyTaxType } from "./land-usage.types";
 import type { StateHistoryMode } from "./land-usage.types";
 import { OTHER_LAND_HO_IDS } from "./other-land-ho-meta";
@@ -36,3 +37,9 @@ const stateHistoryModeCovered: Exclude<StateHistoryMode, (typeof NBL_STATE_HISTO
   ? true
   : false = true;
 void stateHistoryModeCovered;
+
+/** NBL-STATE-HISTORY-E3-1b — 나대지 구간 선언의 공지상태 면적한도 이내 여부 3지선다(⑫ Zod enum의 단일 소스 · `""` = 미선택은 Zod에서 `.or(z.literal(""))`). */
+export const NBL_AREA_WITHIN_LIMIT_VALUES = ["within", "exceeded", "unknown"] as const satisfies readonly Exclude<AreaWithinLimit, "">[];
+
+const areaWithinLimitCovered: Exclude<AreaWithinLimit, "" | (typeof NBL_AREA_WITHIN_LIMIT_VALUES)[number]> extends never ? true : false = true;
+void areaWithinLimitCovered;

@@ -55,9 +55,9 @@ describe("④ 전송 4분기 — stateHistoryWireFields · buildNonBusinessLandR
       { kind: "building_removed", date: "2021-01-01", propertyTaxTypeBefore: "separate" },
     ]);
   });
-  it("신축 행에 남은 stale 철거 직전 구분은 와이어에서 \"\"로 정규화", () => {
-    const stale = { kind: "building_built" as const, date: "2016-01-01", propertyTaxTypeBefore: "separate" as const };
-    expect(stateHistoryWireFields(asset({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [stale] })).nblOtherStateEvents[0].propertyTaxTypeBefore).toBe("");
+  it("신축 행의 직전 구분은 와이어에 실린다(E3-1b 의도된 반전 — 신축 앞 나대지 선언)", () => {
+    const b = { kind: "building_built" as const, date: "2016-01-01", propertyTaxTypeBefore: "separate" as const };
+    expect(stateHistoryWireFields(asset({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [b] })).nblOtherStateEvents[0].propertyTaxTypeBefore).toBe("separate");
   });
   it("파생 nblOtherHasBuilding 덮어쓰기 — 저장된 stale 토글값을 이긴다 (스프레드 뒤 순서)", () => {
     expect(wire(asset({ nblOtherHasBuilding: true, nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [removed("2021-01-01")] })).nblOtherHasBuilding).toBe(false);

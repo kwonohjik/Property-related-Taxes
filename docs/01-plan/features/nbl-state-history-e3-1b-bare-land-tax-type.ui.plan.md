@@ -432,3 +432,72 @@ V-1 일 단위(과세기준일 접기 ⛔) · Q-15 (가′) · «모름» = 혜�
 - **공통 — 모두 추천안 승인**: 엔진 Q-1 (a) / UI UQ-1 (a-2) — 나대지 구간을 닫는 사건 행(신축 행 · 나대지 위 `tax_type_changed` 행)에 «재산세 구분(`propertyTaxTypeBefore`) + 근거(`propertyTaxBasisBefore` — V1-A 근거 열거·해석기 `resolvePropertyTaxBasis` 재사용, 근거 없는 비종합합산은 종합합산으로 접고 고지)» · 엔진 Q-3 나대지 근거 = 공지상태 별도합산(`vacant_state`)·분리과세(`separate_taxation`)·비과세(`statutory_exempt`) 3종 + 모름(`demolished` 제외 — 유예 입력이 덮음, UI UQ-3 (가)) · 엔진 Q-2 / UI ⑤ 의견 = **E3-⑤(철거 후 한시 지위)와 묶지 않음** · 엔진 Q-5 / UI UQ-2 (가) 신축 행 `""` = 선언 없음(기존 이력 바이트 동일), tax 행 `""` = 모름 · 엔진 Q-6 E3-① «건축물 없는 구간 변경 차단» 규칙 **삭제**(의도된 반전) · 엔진 Q-8 호 번호 받지 않음 · 엔진 Q-7 / UI UQ-6 (가) 고지는 새 상수만.
 - **면적한도(엔진 Q-4 · UI UQ-5) = 3지선다(전체 한도 이내 / 일부 초과 / 모름) + «일부 초과»와 «모름»은 그 구간을 종합합산으로 보고 확인 필요 고지** — 엔진 원안(일부 초과 = 이력 미적용)은 «일부 초과»가 «모름»보다 유리해지는 역전(이내 198,210,000 / 일부 초과 198,210,000 / 모름 253,960,000)이 실측돼 기각. UI 원안(묻지 않고 이내 전제)은 «모름 = 혜택 불성립» 원칙과 충돌해 기각. 대가: 실제로 일부만 초과하면 한도 이내 면적도 비사업용 쪽으로 보수 처리(고지로 알림). 꼬리(양도일 현재) 부분 면적 경로의 «이력 미적용 + 고지»(통합 Q-8)는 그대로.
 - PR 순서(메인 세션 결정): E3b-0(테스트만) → E3b-1(엔진·⑫ 신규 칸 2개 + route 관통 anchor·⑭·고지) → UI → E2E. UI 원안의 «신축 행 먼저 / 차단 삭제 나중» 2단계는 엔진이 한 PR로 판정까지 열므로 채택하지 않는다.
+
+## 구현 기록 — UI (①②③④⑤⑦⑧ · 2026-11-23)
+
+> 브랜치 `feat/nbl-e3-1b-bare-land` · 엔진 커밋 E3b-0·E3b-1 위에 UI 1커밋(한 PR). 위 «결정 기록»과 엔진 계획서 «구현 기록»이 이 문서 본문(§2.3 4지선다 · §5.1 톤 · §13 2단계 PR)보다 우선한다.
+
+### 본문과 달라진 것
+
+| 본문 | 구현 |
+|---|---|
+| §2.3 구분 변경 행도 4지선다 | **신축 행 = 4지선다(모름 없음 · `""` = 선언 없음 → «종합합산» 표시)** · **나대지 위 구분 변경 행 = 5지선다(`""` = 모름 → 종합합산 + 확인 필요 — 엔진 결정 «tax 행 `""` = 모름»)**. 구분 변경 행의 «모름» 고지는 종전 상수(`…TAX_CHANGE_UNKNOWN_NOTICE`)를 그대로 쓴다 |
+| §2.3 근거 hint «면허·등록·허가» | 뺐다(UV-5 — 호별 요건이 달라 단정 금지). «재산세 과세내역(고지서)에서 확인해 고르세요 · 철거 후 한시 별도합산·건축 중 기간은 근거로 받지 않고 「부득이한 사유 유예기간」으로 입력» |
+| §5.1 근거 라디오 tone(UV-6) | 행 카드와 같은 **amber**(V1-A 꼬리 칸은 sky 유지). `PropertyTaxBasisRadio`가 tone을 prop으로 받는다 |
+| §5.2-1 `eventCarriesTaxTypeBefore` 의미 확장 | 확장하지 않았다(엔진 구현 기록과 같음). 갈래는 `eventClosesBareInterval`이 정하고, 철거·건축물 위 구분 변경(`carriesBefore && !closesBare`)은 종전 카드 그대로 |
+| 면적한도 «묻지 않고 이내 전제»(UI 원안) | **3지선다**(전체 이내 / 일부 초과 / 모름) — 근거가 공지상태일 때만. 미선택·일부 초과·모름 = 접힘 + 면적한도 고지(결정 기록) |
+| 고지 «한정 고지 변형 대체»(§5.2-8) | 하지 않았다 — 엔진이 **새 상수 3종을 추가만** 한다(기존 문구 byte-identical). 카드는 엔진 `resolveBareDeclaration` 결과로 접힘·수용을 가르고 같은 상수를 보인다 |
+| §13 «2단계 PR» | 채택하지 않았다(결정 기록) — 한 PR |
+| `tailHasBuilding` | `StateEventSequenceOptions`에서 **제거**(⑧·⑫′·⑤ 미리보기 호출부 3곳 + 단언). 차단 규칙이 삭제돼 결과에 영향이 없는 인자였다. `eventClosesBareInterval`의 인자는 남는다(건축물 사건 0건일 때 초기 상태) |
+
+### 변경 파일
+
+| 지점 | 파일 |
+|---|---|
+| ① 타입 | `lib/stores/calc-wizard-asset-nbl-other.ts` — `NblOtherStateEventInput`에 optional `propertyTaxBasisBefore`·`areaWithinLimitBefore`(키 부재 = 종전 행과 byte-identical) |
+| ② initial | 변경 0 — 행은 `addEvent`가 `{kind, date, propertyTaxTypeBefore:""}`로 만든다(선언 키 없음) |
+| ③ normalize | `lib/stores/calc-wizard-asset-migrate-nbl.ts` — 신축 행 직전 구분 보존 · 선언 칸은 허용값 안 + 종류가 나대지를 닫을 수 있을 때만(`eventClosesBareInterval([{kind}],0,false)`) · 키를 새로 만들지 않는다 · 건축물 토글은 보지 않는다(숨은 값 보존) |
+| ④ API 변환 | `lib/calc/nbl-other-state-history-scope.ts` — **`stateEventWireRow(events,i,tailHasBuilding)`**(전송형 단일 함수) + `stateHistoryWireFields`가 사용. 나대지를 닫는 행에서만 선언 칸 · 근거는 `eventBasisOptions`에 있을 때만 · 면적한도는 근거 `vacant_state`일 때만 · 값이 있을 때만 키 |
+| ⑤ 입력 | `components/calc/transfer/nbl/OtherLandBareIntervalFields.tsx`(신규 161줄 — 구분 → 근거 → 면적한도 + 고지) · `PropertyTaxBasisRadio.tsx`(신규 39줄 — V1-A 꼬리 칸과 공용) · `OtherLandStateHistorySection.tsx`(339→355: 갈래 분기 · 종류 전환 리셋 · 첫 행 hint · 미리보기 문구) · `OtherLandPropertyTaxBasisField.tsx`(라디오를 공용 컴포넌트로) · `lib/calc/nbl-other-state-history-preview.ts`(④ 전송형을 그대로 읽는다 + 행 echo) |
+| ⑥ 사이드바 | 영향 없음 확인 — `git grep -n "nbl\|NonBusiness" lib/stores/calc-wizard-store.ts lib/stores/transfer-per-asset-summary-helpers.ts components/calc/shared/WizardSidebar.tsx` 0건 |
+| ⑦ 결과 | `components/calc/NblStateHistoryPeriodTable.tsx` — 구간표 «재산세 구분» 열이 근거 해석을 보인다 · 문구는 leaf `bareIntervalTaxTypeText`(`other-land-state-history.ts`에 추가 — 입력 미리보기와 단일 소스) |
+| ⑧ validation | 새 규칙 0(근거 미선택·모름은 막지 않는다 — V1-A와 같음) · `validateNblStateHistory`에서 `tailHasBuilding` 제거 |
+| ⑫ | `lib/api/transfer-tax-schema-nbl-refines.ts`에서 `tailHasBuilding` 제거(Zod 신규 칸 2개는 엔진 커밋) |
+
+### 3중 패턴 (정책 3 — `propertyTaxBasisBefore`·`areaWithinLimitBefore`)
+
+| 층 | 값 `""`·미선택의 뜻 |
+|---|---|
+| ⑤ 표시 | 라디오 무선택 + amber 접힘 고지(엔진 `resolveBareDeclaration` 결과 · 선택지에 없는 stale 값도 «미선택») |
+| ④ 전송 | 키 생략(= 엔진 «미선택») — 같은 `stateEventWireRow`를 ⑤ 미리보기도 읽는다 |
+| ⑧ | 규칙 없음 |
+| ⑫ | enum + `""` 허용 |
+| 엔진 | 근거 `unselected` · 한도 `area_unknown` → 종합합산 + 확인 필요 |
+
+신축 행 구분 `""`: ⑤ «종합합산» 표시 = ④ `""` 전송 = ⑫ enum 허용 = 엔진 «선언 없음 · 고지 없음». `useEffect → store` 미러링 0 · 자동 안분 fallback 0(한도는 전체 구간 접힘만 — 부분 면적 안분 없음).
+
+### 테스트
+
+- 신규: `__tests__/lib/calc/nbl-state-history-e3-1b-section-render.test.tsx`(17) · `…e3-1b-client.anchor.test.ts`(60 — **E3B_ROWS 전 행 ④ 전송 = 표의 raw 판정 · ⑤ 미리보기 = 판정 구간** + 전송형 격자) · `__tests__/lib/stores/nbl-state-history-e3-1b-migrate.anchor.test.ts`(5) · `__tests__/components/nbl-state-history-e3-1b-result-card.anchor.test.tsx`(7) · E2E `e2e/transfer-nbl-other-state-history-e3-1b.spec.ts`(7).
+- 반전(단언은 지우지 않고 새 기대값으로): e3-1-client 2 · wire.anchor 1 · migrate.anchor 1 · e3-1-section-render 2 · section-render 1 · e3-1-leaf(`tailHasBuilding` 인자 제거) · 가드 2(`leaf-unreachable` WIRE-1·6 허용 목록 · `e3-1-wire`: `tailHasBuilding` 3중 패턴 단언 → «나대지 갈래 단일 술어 5곳» + 신규 고지 상수 3종 단일 소스).
+- E2E 엔진 쪽 2곳(`validation-field-jump-cases-nbl.ts` 1행 · `e3-1.spec.ts` 1건) 실행 확인 · 기존 `transfer-nbl-other-state-history*.spec.ts` 22건 + `transfer-validation-field-jump -g "nbl:"` 통과.
+- 브라우저(Playwright · 입력 → 계산 → 결과): R1 산출세액 **198,210,000**(사업용) vs 대조군(선언 없음) **253,960,000**(비사업용) = −55,750,000 · R7 198,210,000 · 면적한도 일부 초과·모름 = 비사업용 · 라이트/다크 대비 4.5 · 375px 사건 영역·카드 안.
+
+### mutation (제품 코드 1줄 → 대응 anchor만 실패 → 원복 · 20건 전부 검출)
+
+| # | 변이 | 실패한 곳 |
+|---|---|---|
+| P-b13 | ④ 와이어 «나대지 갈래 무시(항상 전송)» | e3-1b-client · e3-1-client(건축물 구간 stale) · e3-1-wire 게이트 |
+| U2·U3 | ④ 근거 선택지 필터 제거 · 면적한도 게이트(근거=공지상태) 제거 | e3-1b-client(전송형 격자) |
+| U4·U5·U6 | ③ 선언 칸 버림 · 빈 값에도 키 생성 · 신축 행 직전 구분 다시 지움 | e3-1b-migrate · migrate.anchor · e3-1-client |
+| U7·U8·U11·U12·U13 | ⑤ 구분 변경 시 리셋 삭제 · 근거 선택 시 한도 리셋 삭제 · 종류 전환 키 리셋 삭제 · 신축 행 종합합산을 `comprehensive`로 저장 · 신축 행 표시 fallback «모름» | e3-1b-section-render |
+| U9·U10 | ⑤ 위젯 갈래를 «종류만»·«마지막 행 기준» replay로 | e3-1b-section-render · e3-1-section-render · section-render · e3-1-wire 게이트 |
+| U14·U15 | ⑤ 수용 고지 삭제 · 면적한도 접힘 고지를 근거 접힘 고지와 합침 | e3-1b-section-render |
+| U16·U17·U18 | ⑤ 미리보기 선언 칸 미전달 · 행 echo 미전달 · 문구 해석 건너뜀 | e3-1b-client(미리보기 격자) · e3-1b-section-render |
+| U19·U20 | ⑦ 결과 구간표 bare 문구 제거 · 근거 짧은 라벨 오귀속 | e3-1b-result-card · e3-1b-section-render |
+
+### 남은 확인 필요
+
+- **UV-2**: 사용자가 신축 앞 나대지의 «과세구분 vs 근거»를 구분해 알 수 있는가 — 수동·사용자 판단(hint는 고지서 확인으로만 안내).
+- **UV-7**: 꼬리(양도일 현재)에 `demolished` 부분 면적이 있어 엔진이 이력 전체를 미반영(`isPartialArea`)하는 경우 — 입력 칸이 판정에 안 쓰이는데 위젯이 그 사실을 행 안에서 알리지 않는다(결과 `warnings`의 기존 `PARTIAL_AREA` 고지만). 이 PR 이전부터 모든 행에 해당하는 한계라 건드리지 않았다.
+- 사용자 실제 고지서 문구와 «근거» 3종 라벨의 정합(법 인용 라벨은 엔진 `PROPERTY_TAX_BASIS_LABEL` 단일 소스 — 신규 인용 없음, manifest 등록 불필요).

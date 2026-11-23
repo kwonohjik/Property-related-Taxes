@@ -123,16 +123,24 @@ describe("E3-1a leaf — derive: Before 사슬 · 건축물 상태 replay", () =
     expect(out.map((i) => [i.hasBuilding, i.propertyTaxType])).toEqual([[true, "separate"], [true, "comprehensive"]]);
   });
 
-  it("Anchor 4(엔진 throw — 마지막 안전망): 건축물 없는 구간 위의 구분 변경은 오류 — 철거 뒤 · tax-only + 건축물 없음 · 신축 앞", () => {
+  it("Anchor 4(E3-1b 의도된 반전 — 차단 규칙 삭제): 건축물 없는 구간 위의 구분 변경은 더 이상 오류가 아니다 — 나대지 구간 선언이다(선언이 없으면 «모름» = 종합합산으로 접힘)", () => {
     const start = getOwnershipStart(dayDate("2014-01-01"));
     const end = dayDate(T);
     const tax = (date: string): StateEvent => ({ kind: "tax_type_changed", date: dayDate(date), propertyTaxTypeBefore: "separate" });
     const removed = (date: string): StateEvent => ({ kind: "building_removed", date: dayDate(date), propertyTaxTypeBefore: "separate" });
     const built = (date: string): StateEvent => ({ kind: "building_built", date: dayDate(date) });
-    expect(() => deriveOtherLandStateIntervals([removed("2020-01-01"), tax("2021-01-01")], start, end, { hasBuilding: false, propertyTaxType: "comprehensive" })).toThrow(TaxCalculationError);
-    expect(() => deriveOtherLandStateIntervals([tax("2021-01-01")], start, end, { hasBuilding: false, propertyTaxType: "comprehensive" })).toThrow(TaxCalculationError);
-    expect(() => deriveOtherLandStateIntervals([tax("2018-01-01"), built("2021-01-01")], start, end, { hasBuilding: true, propertyTaxType: "separate" })).toThrow(TaxCalculationError);
-    // 대조: 신축 뒤 · 철거 앞은 건축물이 있으므로 허용
+    const shape = (iv: ReturnType<typeof deriveOtherLandStateIntervals>) => iv.map((i) => [i.hasBuilding, i.propertyTaxType]);
+    // 철거 뒤 구분 변경: [건축물 별도합산 | 나대지 — 근거 없는 별도합산은 종합합산으로 접힘 | 꼬리]
+    expect(shape(deriveOtherLandStateIntervals([removed("2020-01-01"), tax("2021-01-01")], start, end, { hasBuilding: false, propertyTaxType: "comprehensive" }))).toEqual([
+      [true, "separate"], [false, "comprehensive"], [false, "comprehensive"],
+    ]);
+    // tax-only + 건축물 없음: [나대지 접힘 | 꼬리]
+    expect(shape(deriveOtherLandStateIntervals([tax("2021-01-01")], start, end, { hasBuilding: false, propertyTaxType: "comprehensive" }))).toEqual([[false, "comprehensive"], [false, "comprehensive"]]);
+    // 신축 앞 구분 변경(초기 없음): 나대지 구분 변경 → 신축 앞 나대지 → 건축물
+    expect(shape(deriveOtherLandStateIntervals([tax("2018-01-01"), built("2021-01-01")], start, end, { hasBuilding: true, propertyTaxType: "separate" }))).toEqual([
+      [false, "comprehensive"], [false, "comprehensive"], [true, "separate"],
+    ]);
+    // 대조: 신축 뒤 · 철거 앞은 건축물이 있으므로 종전 그대로
     expect(() => deriveOtherLandStateIntervals([built("2018-01-01"), tax("2020-01-01"), removed("2022-01-01")], start, end, { hasBuilding: false, propertyTaxType: "comprehensive" })).not.toThrow();
   });
 
@@ -192,29 +200,22 @@ describe("E3-1a leaf — 술어: 종류 판별 · Before 운반(단일 술어) �
 
 describe("E3-1a leaf — `stateEventSequenceIssue`: 순서·교대·초기 건축물 상태 (Anchor 4·5 leaf 측)", () => {
   const row = (kind: string, date: string) => ({ kind, date });
-  const issue = (events: Array<{ kind: string; date: string }>, tailHasBuilding?: boolean, floorDate?: string) =>
-    stateEventSequenceIssue(events, { transferDate: T, tailHasBuilding, floorDate });
+  const issue = (events: Array<{ kind: string; date: string }>, floorDate?: string) => stateEventSequenceIssue(events, { transferDate: T, floorDate });
 
-  it("tax-only: 초기 건축물 상태는 `tailHasBuilding` — 있음이면 통과, 없음(또는 생략)이면 첫 행 `kind` 차단 + 전용 문구", () => {
+  it("tax-only(E3-1b 의도된 반전): 초기 건축물 상태가 «없음»(토글 off · 생략)이어도 차단하지 않는다 — 나대지 구간 선언이다 · `tailHasBuilding` 인자는 UI 정리 PR에서 제거됐다", () => {
     const ev = [row("tax_type_changed", "2022-06-01")];
-    expect(issue(ev, true)).toBeNull();
-    const blocked = issue(ev, false);
-    expect(blocked).toMatchObject({ index: 0, field: "kind" });
-    expect(blocked?.message).toContain("재산세 과세 구분 변경 사건 1번째 행");
-    expect(blocked?.message).toContain("이 날짜 직전에는 건축물이 없습니다");
-    expect(issue(ev)).toEqual(blocked); // 생략 = 없음(안전 쪽)
+    expect(issue(ev)).toBeNull();
   });
 
-  it("건축물 사건이 하나라도 있으면 `tailHasBuilding`은 무시된다 — 초기 상태는 첫 건축물 사건이 정한다", () => {
-    // 첫 건축물 사건이 철거 → 초기 «있음»: 토글이 false여도 앞의 구분 변경이 허용된다(T7)
-    expect(issue([row("tax_type_changed", "2019-01-01"), row("building_removed", "2021-01-01")], false)).toBeNull();
-    // 첫 건축물 사건이 신축 → 초기 «없음»: 토글이 true여도 앞의 구분 변경은 차단된다
-    expect(issue([row("tax_type_changed", "2019-01-01"), row("building_built", "2021-01-01")], true)).toMatchObject({ index: 0, field: "kind" });
+  it("건축물 사건이 있을 때도 구분 변경 위치와 무관하게 순서 규칙만 본다(E3-1b 의도된 반전) — 철거 앞 구분 변경 · 신축 앞 구분 변경 모두 통과, 건축물 교대 위반은 여전히 차단", () => {
+    expect(issue([row("tax_type_changed", "2019-01-01"), row("building_removed", "2021-01-01")])).toBeNull();
+    expect(issue([row("tax_type_changed", "2019-01-01"), row("building_built", "2021-01-01")])).toBeNull();
+    expect(issue([row("building_built", "2019-01-01"), row("building_built", "2021-01-01")])).toMatchObject({ index: 1, field: "kind" });
   });
 
-  it("신축 뒤 구분 변경 허용 · 철거 뒤 구분 변경 차단(나대지) · 철거 → 신축 → 구분 변경 허용", () => {
+  it("신축 뒤 · 철거 뒤(나대지 위) · 철거 → 신축 → 구분 변경 모두 통과(E3-1b 의도된 반전 — 나대지 위 구분 변경은 선언이다)", () => {
     expect(issue([row("building_built", "2019-01-01"), row("tax_type_changed", "2021-01-01")])).toBeNull();
-    expect(issue([row("building_removed", "2019-01-01"), row("tax_type_changed", "2021-01-01")])).toMatchObject({ index: 1, field: "kind" });
+    expect(issue([row("building_removed", "2019-01-01"), row("tax_type_changed", "2021-01-01")])).toBeNull();
     expect(issue([row("building_removed", "2019-01-01"), row("building_built", "2020-01-01"), row("tax_type_changed", "2021-01-01")])).toBeNull();
   });
 
@@ -229,17 +230,17 @@ describe("E3-1a leaf — `stateEventSequenceIssue`: 순서·교대·초기 건�
 
   it("같은 날은 종류와 무관한 전 사건 기준 — 건축물 + 구분 변경 · 구분 변경 + 건축물 · 구분 변경끼리 모두 차단 (P-E3-11)", () => {
     expect(issue([row("building_built", "2019-01-01"), row("tax_type_changed", "2019-01-01")])).toMatchObject({ index: 1, field: "date" });
-    expect(issue([row("tax_type_changed", "2019-01-01"), row("building_removed", "2019-01-01")], true)).toMatchObject({ index: 1, field: "date" });
-    expect(issue([row("tax_type_changed", "2019-01-01"), row("tax_type_changed", "2019-01-01")], true)).toMatchObject({ index: 1, field: "date" });
+    expect(issue([row("tax_type_changed", "2019-01-01"), row("building_removed", "2019-01-01")])).toMatchObject({ index: 1, field: "date" });
+    expect(issue([row("tax_type_changed", "2019-01-01"), row("tax_type_changed", "2019-01-01")])).toMatchObject({ index: 1, field: "date" });
   });
 
   it("역순 · 하한일 · 양도일은 구분 변경 행에도 같은 규칙 — 문구 접두는 종류별(구분 변경 행 «재산세 과세 구분 변경 사건 N번째 행», 건축물 행은 종전 그대로)", () => {
     const rev = issue([row("building_built", "2020-01-01"), row("tax_type_changed", "2019-01-01")]);
     expect(rev).toMatchObject({ index: 1, field: "date" });
     expect(rev?.message.startsWith("재산세 과세 구분 변경 사건 2번째 행 — ")).toBe(true);
-    const floor = issue([row("tax_type_changed", "2014-01-01")], true, "2014-01-01");
+    const floor = issue([row("tax_type_changed", "2014-01-01")], "2014-01-01");
     expect(floor?.message.startsWith("재산세 과세 구분 변경 사건 1번째 행 — ")).toBe(true);
-    const after = issue([row("tax_type_changed", T)], true);
+    const after = issue([row("tax_type_changed", T)]);
     expect(after?.message.startsWith("재산세 과세 구분 변경 사건 1번째 행 — ")).toBe(true);
     // 건축물 행 접두는 바이트 동일
     expect(issue([row("building_built", T)])?.message.startsWith("건축물 사건 1번째 행 — 사건일(2024-01-01)이 양도일(2024-01-01)")).toBe(true);
@@ -254,7 +255,7 @@ describe("E3-1a leaf — `stateEventSequenceIssue`: 순서·교대·초기 건�
   });
 
   it("구분 변경 행의 Before가 같은 구분(= 바로 뒤 구간 구분)이어도 차단하지 않는다 — 무해한 분할(Q-6) · derive는 구간만 둘로 가른다", () => {
-    expect(issue([row("tax_type_changed", "2022-06-01")], true)).toBeNull();
+    expect(issue([row("tax_type_changed", "2022-06-01")])).toBeNull();
     const ev: StateEvent[] = [{ kind: "tax_type_changed", date: dayDate("2022-06-01"), propertyTaxTypeBefore: "separate" }];
     const out = deriveOtherLandStateIntervals(ev, getOwnershipStart(dayDate("2014-01-01")), dayDate(T), { hasBuilding: true, propertyTaxType: "separate" });
     expect(out.map((i) => i.propertyTaxType)).toEqual(["separate", "separate"]);

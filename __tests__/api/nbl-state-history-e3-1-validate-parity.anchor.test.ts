@@ -1,5 +1,6 @@
 /**
  * NBL-STATE-HISTORY-E3-① (E3-1a) — ⑧ ↔ ⑫ parity 격자 (Anchor 5): 건축물 사건 × 재산세 과세 구분 변경 × 순서·같은 날·초기 건축물 상태(`tailHasBuilding`) × 하한 유무.
+ * E3-1b: «건축물 없는 구간의 구분 변경 차단»(V-6 닫힘) 4행은 의도된 반전 — 이제 둘 다 통과한다(나대지 구간 선언). 순서·교대·같은 날·하한 규칙은 불변.
  * 계획서: docs/01-plan/features/nbl-state-history-e3-1-tax-type-change.engine.plan.md §3.4 · §7.2 Anchor 5 · `feedback_fe8_vs_12_parity_grid`
  *
  * 경로: 폼 → ⑧ `collectStepIssues`(전 단계) → ④ `callTransferTaxAPI` 본문 → 실제 route POST(⑫⑭).
@@ -77,7 +78,6 @@ describe("⑧ ↔ ⑫ parity 격자 — 재산세 과세 구분 변경 사건 (A
     nblOtherBuildingFloorArea: hasBuilding ? "250" : "",
     ...extra,
   });
-  const NO_BUILDING = "이 날짜 직전에는 건축물이 없습니다";
   const rows: Row[] = [
     // ── 정상(둘 다 통과) ──
     { id: "정상 — tax-only + 건축물 있음 토글(M12)", over: changed([tax("2022-06-01")]), field8: null, blocked12: false },
@@ -87,11 +87,11 @@ describe("⑧ ↔ ⑫ parity 격자 — 재산세 과세 구분 변경 사건 (A
     { id: "정상 — 신축 → 구분 변경 → 철거 → 신축 → 구분 변경", over: changed([built("2015-01-01"), tax("2016-01-01"), removed("2018-01-01"), built("2020-01-01"), tax("2022-01-01", "comprehensive")], true, { nblOtherPropertyTaxType: "separate" }), field8: null, blocked12: false },
     { id: "정상 — 변경 직전 구분 «모름»(\"\")", over: changed([tax("2022-06-01", "")]), field8: null, blocked12: false },
     { id: "정상 — 변경 전후 같은 구분(Before = 꼬리 종합합산)은 차단하지 않는다(Q-6)", over: changed([tax("2022-06-01", "comprehensive")]), field8: null, blocked12: false },
-    // ── V-6 닫힘: 건축물 없는 구간의 구분 변경 ──
-    { id: "차단 — tax-only + 건축물 없음 토글", over: changed([tax("2022-06-01")], false), field8: "nblOtherStateEvents.0.kind", blocked12: true, text: NO_BUILDING },
-    { id: "차단 — 철거 뒤 구분 변경(나대지 위)", over: changed([removed("2019-01-01"), tax("2021-01-01")], false), field8: "nblOtherStateEvents.1.kind", blocked12: true, text: NO_BUILDING },
-    { id: "차단 — 신축 앞 구분 변경(첫 건축물 사건이 신축 → 초기 없음) · 토글 true여도", over: changed([tax("2019-01-01"), built("2021-01-01")]), field8: "nblOtherStateEvents.0.kind", blocked12: true, text: NO_BUILDING },
-    { id: "차단 — 철거 → 신축 → 철거 → 구분 변경(마지막 철거 뒤)", over: changed([removed("2015-01-01"), built("2016-01-01"), removed("2018-01-01"), tax("2020-01-01")], false), field8: "nblOtherStateEvents.3.kind", blocked12: true, text: NO_BUILDING },
+    // ── E3-1b 의도된 반전: 건축물 없는 구간의 구분 변경 = 나대지 선언(차단 규칙 삭제) — ⑧·⑫ 둘 다 통과 ──
+    { id: "정상(E3-1b 반전) — tax-only + 건축물 없음 토글", over: changed([tax("2022-06-01")], false), field8: null, blocked12: false },
+    { id: "정상(E3-1b 반전) — 철거 뒤 구분 변경(나대지 위)", over: changed([removed("2019-01-01"), tax("2021-01-01")], false), field8: null, blocked12: false },
+    { id: "정상(E3-1b 반전) — 신축 앞 구분 변경(첫 건축물 사건이 신축 → 초기 없음) · 토글 true여도", over: changed([tax("2019-01-01"), built("2021-01-01")]), field8: null, blocked12: false },
+    { id: "정상(E3-1b 반전) — 철거 → 신축 → 철거 → 구분 변경(마지막 철거 뒤)", over: changed([removed("2015-01-01"), built("2016-01-01"), removed("2018-01-01"), tax("2020-01-01")], false), field8: null, blocked12: false },
     // ── 교대 · 같은 날 · 순서 ──
     { id: "차단 — 신축 → 구분 변경 → 신축(같은 종류 연속은 직전 «건축물» 사건과 비교)", over: changed([built("2017-01-01"), tax("2018-01-01"), built("2019-01-01")]), field8: "nblOtherStateEvents.2.kind", blocked12: true, text: "앞 사건이 이미 「건축물 있음」" },
     { id: "차단 — 건축물 + 구분 변경 같은 날(신축 당일 변경)", over: changed([built("2019-01-01"), tax("2019-01-01")]), field8: "nblOtherStateEvents.1.date", blocked12: true, text: "같은 날" },

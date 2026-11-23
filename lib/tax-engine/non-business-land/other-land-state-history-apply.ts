@@ -19,6 +19,9 @@ import { differenceInDays } from "../utc-date";
 import { NBL } from "../legal-codes";
 import { NBL_REVENUE_BUSINESS_START_APPLIED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_APPLIED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_ACCEPTED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_AREA_LIMIT_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_BASIS_UNCONFIRMED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE } from "../nbl-confirm-notices";
@@ -132,7 +135,11 @@ export function applyStateHistory(
   const intervalEcho: StateHistoryIntervalEcho[] = intervals.map((iv) => {
     const days = differenceInDays(iv.end, iv.start);
     const businessDays = sumDaysInWindow(merged, iv.start, iv.end);
-    return { start: iv.start, end: iv.end, days, hasBuilding: iv.hasBuilding, propertyTaxType: iv.propertyTaxType, business: days > 0 && businessDays === days, businessDays };
+    // E3-1b — 나대지 구간 선언의 근거 해석(echo). 선언이 없는 구간은 키가 없어 종전 echo와 바이트 동일하다.
+    const bare = iv.basisOutcome
+      ? { basisOutcome: iv.basisOutcome, ...(iv.basis ? { basis: iv.basis } : {}), declaredPropertyTaxType: iv.declaredPropertyTaxType, ...(iv.foldReason ? { foldReason: iv.foldReason } : {}) }
+      : {};
+    return { start: iv.start, end: iv.end, days, hasBuilding: iv.hasBuilding, propertyTaxType: iv.propertyTaxType, business: days > 0 && businessDays === days, businessDays, ...bare };
   });
 
   const hasTaxChange = history.events.some((e) => e.kind === "tax_type_changed");
@@ -153,6 +160,11 @@ export function applyStateHistory(
   const unknownClosers = intervals.filter((iv) => iv.propertyTaxType === "unknown").map((iv) => history.events.find((e) => e.date.getTime() === iv.end.getTime())?.kind);
   if (unknownClosers.some((k) => k !== "tax_type_changed")) warnings.push(NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE);
   if (unknownClosers.some((k) => k === "tax_type_changed")) warnings.push(NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE);
+  // E3-1b — 나대지 구간 선언의 해석 결과 고지(소유기간에 남은 구간만 — 클립으로 사라진 구간은 고지하지 않는다). 새 상수만 추가하고 위 고지는 바이트 동일.
+  const bareFolds = intervals.filter((iv) => iv.basisOutcome === "unconfirmed");
+  if (bareFolds.some((iv) => iv.foldReason !== "area_exceeded" && iv.foldReason !== "area_unknown")) warnings.push(NBL_STATE_HISTORY_BARE_BASIS_UNCONFIRMED_NOTICE);
+  if (bareFolds.some((iv) => iv.foldReason === "area_exceeded" || iv.foldReason === "area_unknown")) warnings.push(NBL_STATE_HISTORY_BARE_AREA_LIMIT_NOTICE);
+  if (intervals.some((iv) => iv.basisOutcome === "accepted")) warnings.push(NBL_STATE_HISTORY_BARE_ACCEPTED_NOTICE);
 
   return {
     applied: true,
