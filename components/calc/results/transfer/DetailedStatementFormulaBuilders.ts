@@ -46,8 +46,8 @@ export {
   buildResidualFormula,
   buildGbTransferFormula,
   buildGbAcquisitionFormula,
-  buildGbExpenseFormula,
 } from "./DetailedStatementGbFormulas";
+export { buildGbExpenseFormula } from "./DetailedStatementGbExpenseFormulas";
 // ── 취득가액·필요경비 산식 — `DetailedStatementAcqExpenseFormulas.ts`로 분리 (800줄 정책) · 같은 이유로 재-export ───
 export { buildAcquisitionPriceFormula, buildNecessaryExpenseFormula } from "./DetailedStatementAcqExpenseFormulas";
 import { fmt } from "./DetailedStatementGbFormulas";

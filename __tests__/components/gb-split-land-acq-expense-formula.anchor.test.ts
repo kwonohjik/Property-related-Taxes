@@ -21,7 +21,7 @@ vi.mock("@/lib/db/tax-rates", async (importOriginal) => {
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { buildGbAcquisitionFormula } from "@/components/calc/results/transfer/DetailedStatementGbFormulas";
-import { buildGbExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementGbFormulas";
+import { buildGbExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementGbExpenseFormulas";
 import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { asset } from "./_helpers/gb-bundled-blocks-fixtures";
@@ -206,5 +206,60 @@ describe("후보 ⑤ 리뷰 — §97②2호 단서(swap)로 집계 값이 카드
         expect(f).not.toContain("- 사업용분");
       }
     }
+  });
+});
+
+/**
+ * 후보 ⑤ 형제(2026-11-23) — 사례 35 일괄 실가 **필요경비**도 토지 두 장이면 토지 전체 식 + 몫 꼬리.
+ *
+ * 종전: 신규 두 칸(양도비·자본적지출) 입력은 echo 산식이 토지 몫 ≠ 토지 전체라 포기하고 legacy 산식으로 떨어져
+ * 「0 × 1,130,370,000 / (1,130,370,000+259,072,400) = 3,174,798」(총액 0 · 우변 카드 몫)이었다. legacy 칸 입력은 좌변이 토지 전체
+ * 24,406,271을 만드는데 우변에 카드 몫 9,524,398을 적었다. 엔진은 양도비를 양도시 기준시가, 자본적지출을 취득시 기준시가로 나눠
+ * 토지 전체를 낸 뒤 인정면적 비율로 가른다.
+ */
+describe("후보 ⑤ 형제 — 사례 35 일괄 실가 필요경비(토지 두 장)는 토지 전체 식 + 몫 꼬리", () => {
+  const TX = 10_000_001n;
+  const CAPEX = 20_000_003n;
+  const txLand = fl(TX, LAND_STD, LAND_STD + B_STD); // 8,135,422 — 양도비는 양도시 기준시가 비율
+  const capexLand = fl(CAPEX, ACQ_LAND_STD, ACQ_LAND_STD + ACQ_B_STD); // 11,549,297 — 자본적지출은 취득시 기준시가 비율
+  const txHead = `${n(TX)} × ${n(LAND_STD)} / (${n(LAND_STD)}+${n(B_STD)}) = ${n(txLand)}`;
+  const capexHead = `${n(CAPEX)} × ${n(ACQ_LAND_STD)} / (${n(ACQ_LAND_STD)}+${n(ACQ_B_STD)}) = ${n(capexLand)}`;
+
+  it("양도비만 — 양도비 × 양도시 토지 / (토지+건물) = 토지 전체, 카드는 그 몫", async () => {
+    const { by, exp } = await formulas(ACT, { transferExpense: String(TX) });
+    expect(exp("land_business")).toBe(txHead + tailBiz(txLand));
+    expect(exp("land_nbl")).toBe(txHead + tailNbl(txLand));
+    expect(by.land_business.necessaryExpense).toBe(Number(biz(txLand)));
+    expect(by.land_nbl.necessaryExpense).toBe(Number(txLand - biz(txLand)));
+    expect(firstLineHolds(exp("land_business"))).toBe(true);
+    // 건물 잔액식(종전부터 맞음) — 회귀 짝
+    expect(exp("building")).toBe(`${n(TX)} - 토지 ${n(txLand)} = ${n(TX - txLand)} (잔액 보정)`);
+  });
+
+  it("자본적지출만 — 분모는 취득시 기준시가(종전 산식은 양도시를 적었다)", async () => {
+    const { by, exp } = await formulas(ACT, { capitalExpenditure: String(CAPEX) });
+    expect(exp("land_business")).toBe(capexHead + tailBiz(capexLand));
+    expect(exp("land_nbl")).toBe(capexHead + tailNbl(capexLand));
+    expect(by.land_nbl.necessaryExpense).toBe(Number(capexLand - biz(capexLand)));
+    expect(firstLineHolds(exp("land_nbl"))).toBe(true);
+  });
+
+  it("둘 다 — 양도비·자본적지출 두 줄 + 합계(토지 전체) + 몫 꼬리", async () => {
+    const { by, exp } = await formulas(ACT, { transferExpense: String(TX), capitalExpenditure: String(CAPEX) });
+    const whole = txLand + capexLand; // 19,684,719
+    const body = `양도비 ${txHead}${IND}자본적지출 ${capexHead}${IND}합계 = ${n(whole)}`;
+    expect(exp("land_business")).toBe(body + tailBiz(whole));
+    expect(exp("land_nbl")).toBe(body + tailNbl(whole));
+    expect(by.land_business.necessaryExpense).toBe(Number(biz(whole)));
+  });
+
+  it("legacy 일괄 필요경비 칸 — 좌변이 만드는 토지 전체를 우변에 적고 카드 몫은 꼬리로", async () => {
+    const LEGACY = 30_000_007n;
+    const { by, exp } = await formulas(ACT, { directExpenses: String(LEGACY) });
+    const whole = fl(LEGACY, LAND_STD, LAND_STD + B_STD); // 24,406,271
+    const head = `${n(LEGACY)} × ${n(LAND_STD)} / (${n(LAND_STD)}+${n(B_STD)}) = ${n(whole)}`;
+    expect(exp("land_business")).toBe(head + tailBiz(whole));
+    expect(exp("land_nbl")).toBe(head + tailNbl(whole));
+    expect(by.land_business.necessaryExpense).toBe(Number(biz(whole)));
   });
 });

@@ -23,7 +23,7 @@ import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { allIssues, captureBody, newForm } from "../calc/_one-house-pr3a-calc-route";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { gbExtensionLegacyExpenseUnused } from "@/lib/calc/gb-extension-legacy-expense";
-import { buildGbExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementGbFormulas";
+import { buildGbExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementGbExpenseFormulas";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 
 beforeEach(() => {
