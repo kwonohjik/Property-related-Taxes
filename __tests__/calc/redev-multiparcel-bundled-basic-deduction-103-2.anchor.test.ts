@@ -171,3 +171,29 @@ describe("다필지 일괄 — §90① B·E 버킷을 실어 일반 경로(필�
     expect(mp.totalTax).toBe(212_535_629);
   });
 });
+
+describe("다필지 엔진 — skipBasicDeduction이면 「기본공제」 단계 없음 (결과뷰 리뷰 후속 4번 · 형제 경로 정합)", () => {
+  it("MP-5 skip: 기본공제 0·단계 없음 / 일반 호출: 2,500,000·단계 있음", () => {
+    const input = baseTransferInput({
+      propertyType: "land",
+      transferPrice: 100_000_000,
+      transferDate: new Date("2023-01-01"),
+      acquisitionDate: new Date("2010-01-01"),
+      isOneHousehold: false,
+      householdHousingCount: 0,
+      parcels: [
+        { id: "p1", acquisitionDate: new Date("2010-01-01"), acquisitionMethod: "actual", acquisitionArea: 60, transferArea: 60, acquisitionPrice: 30_000_000, expenses: 0, isUnregistered: false },
+        { id: "p2", acquisitionDate: new Date("2012-01-01"), acquisitionMethod: "actual", acquisitionArea: 40, transferArea: 40, acquisitionPrice: 20_000_000, expenses: 0, isUnregistered: false },
+      ],
+    } as Partial<TransferTaxInput>);
+    const rates = makeMockRates();
+    const skip = calculateTransferTax({ ...input, skipBasicDeduction: true }, rates);
+    expect(skip.steps.some((s) => s.label === "양도소득금액 합계"), "다필지 분기를 탔어야 한다").toBe(true);
+    expect(skip.basicDeduction).toBe(0);
+    expect(skip.steps.some((s) => s.label === "기본공제")).toBe(false);
+    const normal = calculateTransferTax(input, rates);
+    expect(normal.basicDeduction).toBe(2_500_000);
+    expect(normal.steps.some((s) => s.label === "기본공제")).toBe(true);
+  });
+});
+

@@ -135,7 +135,10 @@ export function handleMultiParcelBranch(
     ? 0
     : calcBasicDeduction(mpTaxableGain, mpLtd, input.annualBasicDeductionUsed ?? 0, input.isUnregistered, parsedRates.basicDeductionRules);
   const mpTaxBase = Math.max(0, mpTransferIncome - mpBasicDeduction);
-  steps.push({ label: "기본공제", formula: `${mpBasicDeduction.toLocaleString()}`, amount: mpBasicDeduction, legalBasis: TRANSFER.BASIC_DEDUCTION });
+  // 집계가 skipBasicDeduction으로 부르면 단계를 넣지 않는다 — 일반(`transfer-tax-income-steps.ts`)·재개발 경로와 같다(결과뷰 리뷰 후속 4번).
+  if (!input.skipBasicDeduction) {
+    steps.push({ label: "기본공제", formula: `${mpBasicDeduction.toLocaleString()}`, amount: mpBasicDeduction, legalBasis: TRANSFER.BASIC_DEDUCTION });
+  }
   steps.push({ label: "과세표준", formula: `${mpTransferIncome.toLocaleString()} - ${mpBasicDeduction.toLocaleString()}`, amount: mpTaxBase, legalBasis: TRANSFER.TAX_BASE_CALC });
 
   const mpTaxResult = calcTax(mpTaxBase, parsedRates, effectiveInput, multiHouseSurchargeResult);
