@@ -170,6 +170,33 @@ export function surchargeClauseBeatenByShortTerm(r: {
 }
 
 /**
+ * 신고서 ③ 세율구분 코드가 읽는 세율 echo 묶음 — 엔진이 적용한 호(`rateClause`)·§98 특례 표지·비사업용 단기 표지·중과 후보 단기 호.
+ * 일반 경로(`transfer-tax-normal-return.ts`)와 같은 키 규약이다(값이 있을 때만 싣는다 · `rateClause`는 그대로). 세액 무영향.
+ *
+ * 재개발·다필지 분기는 `calcTax` 결과를 받으면서 `appliedRate`만 실어 신고서 ③이 「-」로 비었다(2026-11-23 실측 — 다필지 40%·70%·50% ·
+ * 재개발 35%·70% 모두 `rateClause` undefined).
+ */
+export function filingRateEcho(t: {
+  rateClause?: RateClause;
+  candidateClauses?: readonly RateClause[];
+  specialRateBasis?: SpecialRateBasis;
+  nonBusinessLandShortTerm?: boolean;
+}): {
+  rateClause?: RateClause;
+  specialRateBasis?: SpecialRateBasis;
+  nonBusinessLandShortTerm?: true;
+  surchargeShortTermClause?: SurchargeRateClause;
+} {
+  const st = surchargeClauseBeatenByShortTerm(t);
+  return {
+    rateClause: t.rateClause,
+    ...(t.specialRateBasis ? { specialRateBasis: t.specialRateBasis } : {}),
+    ...(t.nonBusinessLandShortTerm ? { nonBusinessLandShortTerm: true as const } : {}),
+    ...(st ? { surchargeShortTermClause: st } : {}),
+  };
+}
+
+/**
  * 다주택 중과 판정에서 주택 수에 조합원입주권·분양권이 산입된 세대인가 — §104⑦2·4호(«주택과 조합원입주권 또는 분양권») 축.
  *
  * ⚠️ **세액 축이다.** 다건 §104⑤2호 버킷 식별자(`transfer-tax-aggregate-group-tax.ts` `bucketIdOf`의 `right:`)가 이 술어로 ⑦1호와 2호·3호와 4호를 가른다 —
