@@ -35,6 +35,7 @@ import { revenueStartDateAfterTransfer } from "@/lib/tax-engine/non-business-lan
 import { REVENUE_START_DATE_AFTER_TRANSFER_MESSAGE } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
 import { hoRequiredInputIssue } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
 import { wholesaleItemIssue } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
+import { revenueHistoryInputIssue } from "@/lib/tax-engine/non-business-land/revenue-history";
 
 interface DatedRow {
   startDate?: string;
@@ -82,6 +83,9 @@ export interface NblRawRefineInput {
   nblOtherPrivateInvestCompletionDate?: string;
   nblRevenueWholesaleItem?: string;
   nblRevenueWholesaleInMarket?: boolean;
+  nblRevenuePeriodOn?: boolean;
+  nblRevenueBusinessEndDate?: string;
+  nblRevenueYearRows?: { year: string; revenue?: string; landValue?: string }[];
 }
 
 export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.RefinementCtx): void {
@@ -168,6 +172,13 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
     revenueStartDateAfterTransfer(raw.nblRevenueCurrentBusinessStartDate, raw.transferDate)
   )
     issue(["nblRevenueCurrentBusinessStartDate"], REVENUE_START_DATE_AFTER_TRANSFER_MESSAGE);
+
+  // NBL-STATE-HISTORY-E3-② — 업종 영위 기간(폐업일·연도 행): 「영위 기간」 토글이 켜졌을 때만(⑧ 거울 — 같은 leaf · 같은 문구). 개시일 규칙은 위 DM-01 블록이 맡는다.
+  // **하한(개시일·폐업일이 소유 시작 전) 규칙은 ⑫에 없다** — 컴패니언 스키마가 지분 raw마다 이 refine을 돌려 늦게 취득한 지분이 400이 되기 때문이다(엔진은 소유기간으로 자른다). 비어 있는 금액·누락 연도는 «모름»이라 막지 않는다.
+  if (raw.nblLandType === "other_land" && bt && bt !== "none" && raw.nblRevenuePeriodOn) {
+    const rh = revenueHistoryInputIssue({ startDate: raw.nblRevenueCurrentBusinessStartDate, endDate: raw.nblRevenueBusinessEndDate, transferDate: raw.transferDate, rows: raw.nblRevenueYearRows });
+    if (rh) issue(rh.index === undefined ? [rh.field] : [rh.field, rh.index, rh.part!], rh.message);
+  }
 
   // NBL2611-V9-DM09 — 6호 휴양시설 2·3호는 «상한 이내 실제 면적» — 상한만 있고 실제 면적이 없으면 400 (⑧ 휴양시설 블록과 같은 술어·같은 문구)
   if (raw.nblLandType === "other_land" && raw.nblOtherRelatedBusinessType === "resort") {

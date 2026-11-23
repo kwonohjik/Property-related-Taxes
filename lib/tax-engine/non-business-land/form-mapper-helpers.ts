@@ -27,6 +27,7 @@ import { getZoneAreaMultiplier } from "../local-tax-zone-multiplier";
 import { propertyTaxBasisOptions, requiresDemolishedFloorArea, type PropertyTaxBasis } from "./property-tax-basis";
 import type { FactoryEntityType } from "../factory-employee-sports-standard";
 import { consumesStateHistory } from "./land-category";
+import { consumesRevenueHistory } from "./land-category";
 import { effectiveOtherHasBuilding } from "./other-land-state-history";
 import { eventCarriesTaxTypeBefore } from "./other-land-state-history";
 import { eventClosesBareInterval } from "./other-land-state-history";
@@ -34,6 +35,8 @@ import { isEventKind } from "./other-land-state-history";
 import type { LandStateHistoryInput } from "./land-usage.types";
 import type { StateEvent } from "./land-usage.types";
 import type { StateHistoryMode } from "./land-usage.types";
+import type { RevenueHistoryInput } from "./revenue-test.types";
+import type { RevenueYearRow } from "./revenue-test.types";
 
 // ============================================================
 // Raw 입력 타입 (store 필드 그대로)
@@ -531,5 +534,27 @@ export function buildRevenueTest(
     otherLandValue:     commonOn ? parseNumber(asString(a.nblRevenueOtherLandValue)) : undefined,
     priorCommonRevenue: commonOn ? parseNumber(asString(a.nblRevenuePriorCommonRevenue)) : undefined,
     priorOtherLandValue: commonOn ? parseNumber(asString(a.nblRevenuePriorOtherLandValue)) : undefined,
+  };
+}
+
+/**
+ * NBL-STATE-HISTORY-E3-② — 기타토지 업종 영위 기간 · 과세기간별 수입금액(⑭). **「영위 기간」 토글이 켜졌고 업종이 선택됐을 때만** 만든다 — 그 밖에는 `undefined`(= 키 없음 — 현행과 바이트 동일).
+ * 개시일은 기존 `nblRevenueCurrentBusinessStartDate`(단일 소스 — `buildRevenueTest`가 연환산에도 읽는 같은 칸)를 옮기고, 폐업일은 `nblRevenueBusinessEndDate`다(비면 양도일 현재도 영위).
+ * 연도 행은 변환만 한다 — 연도를 4자리로 읽을 수 없는 행은 ⑧·⑫가 먼저 막으므로 건너뛰고, 금액이 비면 `undefined`(= 모름 — 엔진이 그 연도를 불통과 + 확인 필요로 본다). 판정·영위일수 파생은 엔진 leaf(`revenue-history.ts`).
+ */
+export function buildRevenueHistory(a: Record<string, unknown>, landType: LandType, parseNumber: ParseNumber, parseDate: ParseDate): RevenueHistoryInput | undefined {
+  if (!consumesRevenueHistory(landType) || !asBool(a.nblRevenuePeriodOn)) return undefined;
+  const bt = asString(a.nblRevenueBusinessType);
+  if (!bt || bt === "none") return undefined;
+  type RawRow = { year?: string; revenue?: string; landValue?: string };
+  const rows = asArray<RawRow>(a.nblRevenueYearRows).flatMap((row): RevenueYearRow[] => {
+    const year = asString(row.year).trim();
+    if (!/^\d{4}$/.test(year)) return [];
+    return [{ taxYear: Number(year), revenue: parseNumber(asString(row.revenue)), landValue: parseNumber(asString(row.landValue)) }];
+  });
+  return {
+    businessStartDate: parseDate(asString(a.nblRevenueCurrentBusinessStartDate)),
+    businessEndDate: parseDate(asString(a.nblRevenueBusinessEndDate)),
+    rows,
   };
 }

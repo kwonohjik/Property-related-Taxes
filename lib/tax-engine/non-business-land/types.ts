@@ -213,9 +213,11 @@ import type {
 } from "./land-usage.types";
 import type { RevenueTestInput } from "./revenue-test.types";
 import type { RevenueTestResult } from "./revenue-test.types";
+import type { RevenueHistoryInput } from "./revenue-test.types";
+import type { RevenueHistoryEcho } from "./revenue-test.types";
 
 // 수입금액 비율 테스트 타입(§168의11②)은 revenue-test.types.ts로 분리 — 기존 import 경로 호환을 위해 re-export
-export type { RevenueTestInput, RevenueTestResult };
+export type { RevenueTestInput, RevenueTestResult, RevenueHistoryInput, RevenueHistoryEcho };
 
 export type {
   PastureUsage,
@@ -336,6 +338,8 @@ export interface NonBusinessLandInput {
 
   // 수입금액
   revenueTest?: RevenueTestInput;
+  /** 기타토지 업종 영위 기간 · 과세기간별 수입금액(NBL-STATE-HISTORY-E3-②) — 있을 때만(UI 토글 ON) 과세기간별 판정을 쓴다. 미전송 = 현행. */
+  revenueHistory?: RevenueHistoryInput;
 
   // v2 신규 — 소유자 주거 이력
   /**
@@ -409,6 +413,8 @@ export interface PeriodEvaluation {
   graceJudged?: { gracePeriodDays: number; totalOwnershipDays: number; meets: boolean };
   /** `state_history`일 때만 — 일 단위 사건 구간표와 영 §168의6 가·나·다목 수치(표시 전용). */
   stateHistory?: StateHistoryEcho;
+  /** E3-② — 업종 영위 기간(`revenueHistory`)으로 과세기간별 판정을 했을 때만. 연도별 판정표·사업용 구간(표시 전용). OFF에서는 키 자체가 없다. */
+  revenueHistory?: RevenueHistoryEcho;
 }
 
 /** 판정 엔진 반환 액션 (v2 신규 — 별장 REDIRECT 경로 지원) */

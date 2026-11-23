@@ -3,7 +3,7 @@
  *
  *   Anchor 1  일 단위 정답표: 계획서 §5 행(M9′·M9-orig·M10′·M11′·C4·V7·B/A/L 임계쌍·C9~C12)을 `meetsPeriodCriteria`에 사업용 구간(`biz`)을 직접 넣어 일수·판정 고정.
  *   Anchor 2  하위호환 골든 + 현행 열: ① 같은 입력을 **영위 기간 OFF(키 없음)**로 돌린 현행 엔진 값(= 이 표가 왜 필요한가) ② OFF 판정 결과 객체 전체 스냅샷(E3c-1 이후에도 바이트 동일 — echo 키 부재 R-3).
- *   Anchor 4~7  E3c-1이 활성화한다(자리만 `todo`): 연도 판정 일반화 parity · ⑧↔⑫ parity 격자 · route 관통 · Q-15 교차.
+ *   Anchor 4~7  E3c-1이 활성화했다(위치만 고정): 연도 판정 일반화 parity · ⑧↔⑫ parity 격자 · route 관통 · Q-15 교차.
  *
  * 계획서(정본): docs/01-plan/features/nbl-state-history-e3-2-business-period.engine.plan.md §5 · §7.2 · «결정 기록 (2026-11-23 사용자)»
  * 표: `_helpers/nbl-state-history-e3-2-table.ts` — E3c-1의 leaf·엔진·route anchor가 같은 표를 쓴다.
@@ -123,12 +123,9 @@ describe("E3c-0 Anchor 2 ② — 하위호환 골든: OFF 입력 판정 결과 �
   });
 });
 
-describe("E3c-0 — Anchor 4~7: E3c-1이 활성화한다 (자리)", () => {
-  it.todo("Anchor 4 연도 판정 일반화 parity — `computeRevenueTest`를 연도 y 입력으로 부르는 래퍼가 T 입력에서 현행 결과와 모든 필드 동일 + 3% 경계쌍·연환산 경계쌍·윤년쌍 (revenue-history leaf)");
-  it.todo("Anchor 5 ⑧↔⑫ parity 격자 — 영위 기간 칸(폐업일·연도 행) 격자에서 leaf 결과(문구 포함)가 ⑧·⑫ 호출에서 같다");
-  it.todo("Anchor 6 route 관통 — raw(`nblRevenuePeriodOn`·`nblRevenueBusinessEndDate`·`nblRevenueYearRows`) → ⑫ → ⑭ → 엔진: M9p·M11p·C4b·C10b·C11 판정·세액 — ⑫ strip 가드");
-  it.todo("Anchor 7 Q-15 교차 — 건축물 이력 × 업종 영위 기간 합집합이 중복 계상 없이 같은 일수(C11 + 겹치는 행) · `daMokAndNaMok` 호 probe에 영위 구간이 섞이지 않음");
-  it("자리 표시 — ON 행 수(E3c-1이 활성화할 대상)", () => {
+describe("E3c-0 — Anchor 4~7: E3c-1이 활성화했다 (위치 표시)", () => {
+  it("Anchor 4 연도 판정 parity · Anchor 5 ⑧↔⑫ issue leaf 격자 → `nbl-state-history-e3-2-leaf.test.ts` · Anchor 6 route 관통 → `__tests__/api/nbl-state-history-e3-2-route.anchor.test.ts` · Anchor 7 Q-15 교차 → `nbl-state-history-e3-2.anchor.test.ts`", () => {
+    // 이 테스트는 위치만 고정한다 — 실제 단언은 위 파일들에 있다(같은 표 `_helpers/nbl-state-history-e3-2-table.ts`).
     expect(E3C_ON_ROWS.map((r) => r.id)).toEqual(["M9p", "M9-orig", "M10p", "M11p", "M11p-10ho", "C4a", "C4b", "V7b", "V7c", "V7d", "B-3.0M", "B-2.999M", "A-2515069", "A-2515068", "L-1000000", "L-999999", "C10a", "C10b", "C10c", "C11", "C12b"]);
   });
 });

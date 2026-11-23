@@ -109,17 +109,19 @@ interface InputConsumption {
   metropolitanArea: boolean;
   /** 기타토지 소유기간 중 상태 이력(건축물 신축·멸실 사건)을 판정에 쓰는가 — NBL-STATE-HISTORY. E1에서는 소비처가 없다(E2가 판정에 연결). */
   stateHistory: boolean;
+  /** 기타토지 업종 영위 기간·과세기간별 수입금액(수입금액비율 경로)을 판정에 쓰는가 — NBL-STATE-HISTORY-E3-②. 수입금액비율은 기타토지만 쓴다. */
+  revenueHistory: boolean;
 }
 
 const INPUT_CONSUMPTION = {
-  farmland:      { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false, stateHistory: false },
-  forest:        { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false, stateHistory: false },
-  pasture:       { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false, stateHistory: false },
-  housing:       { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: false, metropolitanArea: true,  stateHistory: false },
-  building_site: { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: false, metropolitanArea: false, stateHistory: false },
-  villa:         { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: true,  metropolitanArea: true,  stateHistory: false },
-  other_land:    { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false, stateHistory: true  },
-  unknown:       { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: false, metropolitanArea: false, stateHistory: false },
+  farmland:      { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false, stateHistory: false, revenueHistory: false },
+  forest:        { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false, stateHistory: false, revenueHistory: false },
+  pasture:       { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false, stateHistory: false, revenueHistory: false },
+  housing:       { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: false, metropolitanArea: true,  stateHistory: false, revenueHistory: false },
+  building_site: { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: false, metropolitanArea: false, stateHistory: false, revenueHistory: false },
+  villa:         { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: true,  metropolitanArea: true,  stateHistory: false, revenueHistory: false },
+  other_land:    { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false, stateHistory: true,  revenueHistory: true  },
+  unknown:       { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: false, metropolitanArea: false, stateHistory: false, revenueHistory: false },
 } as const satisfies Record<LandCategoryGroup, InputConsumption>;
 
 function consumption(landType: LandType | "" | undefined): InputConsumption {
@@ -140,6 +142,11 @@ export function consumesGracePeriods(landType: LandType | "" | undefined): boole
 /** 기타토지 소유기간 중 상태 이력(사건 입력)을 판정에 쓰는 지목 — 기타토지만(통합 Q-1 (가)). ④⑤⑧ 같은 술어. */
 export function consumesStateHistory(landType: LandType | "" | undefined): boolean {
   return consumption(landType).stateHistory;
+}
+
+/** 기타토지 업종 영위 기간·과세기간별 수입금액(E3-②)을 판정에 쓰는 지목 — 기타토지만(수입금액비율 경로). ④⑤⑧⑭ 같은 술어. */
+export function consumesRevenueHistory(landType: LandType | "" | undefined): boolean {
+  return consumption(landType).revenueHistory;
 }
 
 /** 수도권 여부(영 §168의12 배율)를 판정에 쓰는 지목 — 주택부수토지, 그리고 재분류되는 별장. */

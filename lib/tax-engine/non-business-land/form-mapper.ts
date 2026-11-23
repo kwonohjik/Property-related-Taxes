@@ -43,6 +43,7 @@ import {
   type ResidenceHistoryInput,
   type GracePeriodInput,
 } from "./form-mapper-helpers";
+import { buildRevenueHistory } from "./form-mapper-helpers";
 
 // ============================================================
 // 컨텍스트 타입
@@ -171,6 +172,8 @@ export function mapAssetToNblInput(
 
   // NBL-STATE-HISTORY-E2 — 기타토지 소유기간 중 건축물 신축·멸실 이력. `buildOtherLand`가 `changed`일 때 건축물 유무를 사건에서 파생한다.
   const landStateHistory = buildLandStateHistory(asset, landType, parseDate);
+  // NBL-STATE-HISTORY-E3-② — 업종 영위 기간(개시·폐업) · 과세기간별 수입금액. 토글 OFF·업종 없음이면 `undefined`(키 없음).
+  const revenueHistory = buildRevenueHistory(asset, landType, parseNumber, parseDate);
 
   return {
     landType, landArea, zoneType, acquisitionDate, transferDate,
@@ -193,6 +196,7 @@ export function mapAssetToNblInput(
     otherLand:               buildOtherLand(asset, landType, parseNumber, parseDate, zoneType, landStateHistory),
     ...(landStateHistory ? { landStateHistory } : {}),
     revenueTest:             buildRevenueTest(asset, landType, parseNumber, parseDate, transferDate, acquisitionDate),
+    ...(revenueHistory ? { revenueHistory } : {}),
     unconditionalExemption:  buildUnconditionalExemption(asset, parseDate),
     urbanIncorporationDate,
     landDivision,

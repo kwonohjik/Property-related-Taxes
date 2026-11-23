@@ -18,14 +18,12 @@ import type {
   NonBusinessLandInput,
   NonBusinessLandJudgmentRules,
   PropertyTaxType,
-  RevenueTestResult,
 } from "./types";
 import { getPeriodJudgmentDate, meetsPeriodCriteria } from "./period-criteria";
 import { getOwnershipStart } from "./utils/period-math";
 import { isAreaAtMost, isAreaOver, subtractAreas } from "../area-limit";
 import { computeAreaProportioning } from "./utils/area-proportioning";
 import { computeContiguousParcelNblAttribution } from "./utils/contiguous-parcel-proportioning";
-import { computeRevenueTest, REVENUE_BUSINESS_TYPE_LABEL } from "./revenue-test";
 import { judgeFactoryLandExcess } from "./factory-land-standard-area";
 import { judgeAppurtenantLandExcess } from "../appurtenant-land-excess";
 import { NBL_STATE_AT_TRANSFER_APPLIED_NOTICE } from "../nbl-confirm-notices";
@@ -35,10 +33,8 @@ import {
   resolveAreaLegalBasis,
   resolveMixedUseProportioning,
 } from "./other-land-area-limit";
-import { applyGraceToNonBusinessRemainder, judgeRevenueBusinessStart, pickWiderExclusion } from "./other-land-merge";
+import { applyGraceToNonBusinessRemainder, pickWiderExclusion } from "./other-land-merge";
 import { judgeHoRequirements } from "./other-land-ho-requirements";
-import { wholesaleItemIssue } from "./revenue-wholesale-item";
-import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
 import {
   bareLandStepDetail,
   buildPropertyTaxBasisEcho,
@@ -53,6 +49,10 @@ import type { OtherLandOwnTrace } from "./other-land-helpers";
 import { buildPass } from "./other-land-helpers";
 import { isBareLand } from "./other-land-helpers";
 import { markOwn } from "./other-land-helpers";
+import { finishRevenueHistory } from "./other-land-revenue-history";
+import { judgeRevenueStep } from "./other-land-revenue-history";
+import { markRevenueDecided } from "./other-land-revenue-history";
+import { prepareRevenueHistory } from "./other-land-revenue-history";
 
 export { isBareLand };
 
@@ -63,9 +63,12 @@ export { isBareLand };
  * 예외 ② 소유기간 중 건축물 신축·멸실 사건(`landStateHistory.mode === "changed"`)을 입력하면 일 단위 구간으로 판정한다(NBL-STATE-HISTORY-E2, `other-land-state-history-apply.ts`).
  */
 export function judgeOtherLand(
-  input: NonBusinessLandInput,
+  rawInput: NonBusinessLandInput,
   rules: NonBusinessLandJudgmentRules,
 ): CategoryJudgeResult {
+  // NBL-STATE-HISTORY-E3-② — 영위 기간(`revenueHistory`) 입력 정리·고지. OFF는 입력을 그대로 돌려주고 끝의 `finishRevenueHistory`도 결과를 그대로 돌려준다(바이트 동일).
+  const pre = prepareRevenueHistory(rawInput);
+  const input = pre.input;
   const trace: OtherLandOwnTrace = {};
   const core = judgeOtherLandCore(input, rules, trace);
   if (!input.otherLand) return { ...core, periodEvaluation: { basis: "not_judged" } };
@@ -76,15 +79,20 @@ export function judgeOtherLand(
     const t: OtherLandOwnTrace = {};
     return { trace: t, isBusiness: judgeOtherLandCore(i, rules, t).isBusiness };
   });
-  if (history.applied) return { ...history.result, ...basisPart };
+  if (history.applied) return finishRevenueHistory({ ...history.result, ...basisPart }, trace, pre);
   // NBL2611-V2-C1 — 비사업용으로 끝난 잔여분(전량·부분)은 «빈 사업기간 + 유예기간»으로 기간기준을 다시 본다(영 §168의14①). 유예 입력이 없으면 그대로다.
-  const { result, graceJudged } = applyGraceToNonBusinessRemainder(core, input, rules);
-  return {
-    ...result,
-    periodEvaluation: graceJudged ? { basis: "state_at_transfer", graceJudged } : { basis: "state_at_transfer" },
-    ...basisPart,
-    warnings: [...(result.warnings ?? []), NBL_STATE_AT_TRANSFER_APPLIED_NOTICE, ...history.notices],
-  };
+  // E3-② — 영위 기간 사업용 구간 ∪ 유예로 이미 기간기준을 판정한 결과(`decided`)는 다시 보지 않는다(구간을 버리고 유예 단독으로 덮어쓰지 않게).
+  const { result, graceJudged } = trace.revenueHistory?.decided ? { result: core, graceJudged: undefined } : applyGraceToNonBusinessRemainder(core, input, rules);
+  return finishRevenueHistory(
+    {
+      ...result,
+      periodEvaluation: graceJudged ? { basis: "state_at_transfer", graceJudged } : { basis: "state_at_transfer" },
+      ...basisPart,
+      warnings: [...(result.warnings ?? []), NBL_STATE_AT_TRANSFER_APPLIED_NOTICE, ...history.notices],
+    },
+    trace,
+    pre,
+  );
 }
 
 function judgeOtherLandCore(
@@ -256,54 +264,10 @@ function judgeOtherLandCore(
     ? factoryTaxTypeOverride !== undefined
     : effectiveTaxType !== "comprehensive" && buildingExcess === undefined;
 
-  // ── §168의11② 수입금액비율 (2호다목·10·11다·12호 특정 업종) ──────────
-  let revenueTestDetail: RevenueTestResult | undefined;
-  let revenueStartFailedReason: string | undefined; // NBL2611-D1 — 수입금액비율은 충족했으나 당해 사업개시일 이후 기간기준 미충족
-  if (input.revenueTest && input.revenueTest.businessType !== "none") {
-    revenueTestDetail = computeRevenueTest(input.revenueTest);
-    // NBL2611-V7-S · Q-6 (다) — 12호 도소매업은 규칙 §83조의4⑭ 열거 품목만(농·수·축산물은 시장·유사 장소 한정). 품목 미선택은 차단, 시장 요건 불충족은 불인정.
-    const wholesale = wholesaleItemIssue(input.revenueTest);
-    if (wholesale?.kind === "missing") throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, wholesale.message);
-    steps.push({
-      id: "other_revenue_test",
-      label: "§168의11② 수입금액비율",
-      status: revenueTestDetail.pass ? "PASS" : "FAIL",
-      detail: revenueTestDetail.detail,
-      legalBasis: NBL.REVENUE_TEST,
-    });
-    if (wholesale?.kind === "not_in_market") {
-      steps.push({
-        id: "other_revenue_wholesale_item",
-        label: "§168의11①12호 도소매업 품목 (규칙 §83조의4⑭)",
-        status: "FAIL",
-        detail: wholesale.message,
-        legalBasis: NBL.OTHER_LAND_WHOLESALE_ITEMS,
-      });
-    }
-    if (revenueTestDetail.pass && wholesale === undefined) {
-      appliedLaws.push(NBL.REVENUE_TEST);
-      // NBL2611-D1 (DM-01 · Q-4 (나)) — 당해 사업개시일이 있고 직전 비율②가 미통과면 사업 구간을 [개시일, 양도일]로 본다. 기간기준을 못 채우면 다른 목(나목 등)을 이어서 본다.
-      const startJudged = judgeRevenueBusinessStart(input, revenueTestDetail, rules);
-      if (startJudged) steps.push(startJudged.step);
-      if (!startJudged?.applied) {
-        markOwn(trace, fullPeriod); // 수입금액비율 = 다목(영 §168의11②) — 이력과 독립한 축이라 전 기간을 사업용으로 센다(Q-15 (가′))
-        const r = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
-        return buildPass(`수입금액비율 충족 (${REVENUE_BUSINESS_TYPE_LABEL[revenueTestDetail.businessType]})`, steps, appliedLaws, warnings, {
-          r, totalOwnershipDays, revenueTestDetail,
-        });
-      }
-      revenueTestDetail = startJudged.applied.revenue;
-      warnings.push(startJudged.applied.notice);
-      // NBL-STATE-HISTORY-E2 · Q-15 (가′) — 자체 사업기간 [개시일, 양도일)을 이력 판정에 넘긴다(충족해 여기서 끝나면 이 구간이 결론의 근거다).
-      markOwn(trace, startJudged.applied.periods);
-      if (startJudged.applied.r.meets) {
-        return buildPass(`수입금액비율 충족 (${REVENUE_BUSINESS_TYPE_LABEL[revenueTestDetail.businessType]}) + 당해 사업개시일 이후 기간기준 충족`, steps, appliedLaws, warnings, {
-          r: startJudged.applied.r, totalOwnershipDays, revenueTestDetail,
-        });
-      }
-      revenueStartFailedReason = `수입금액비율은 충족하나 당해 사업개시일 이후 기간으로는 기간기준 미충족 — ${startJudged.applied.r.detail}`;
-    }
-  }
+  // ── §168의11② 수입금액비율 (2호다목·10·11다·12호 특정 업종) — 단계는 `other-land-revenue-history.ts`(OFF = 종전 블록 이동 · ON = 과세기간별 영위 기간 E3-②) ──────────
+  const revenue = judgeRevenueStep({ input, rules, steps, appliedLaws, warnings, trace, fullPeriod, pjDate, totalOwnershipDays });
+  if (revenue.result) return revenue.result;
+  const { revenueTestDetail, revenueStartFailedReason } = revenue;
 
   // NBL2611-V2-PR04 인계 — 비종합합산 선언이 기간기준 미충족(소유일수 0 등)으로 비사업용이 될 때 끝의 사유가 「종합합산」으로 오표기되던 것을 바로잡는다(판정 불변).
   let periodFailedReason: string | undefined;
@@ -689,7 +653,8 @@ function judgeOtherLandCore(
     detail: "거주·사업과 직접 관련 플래그 미설정",
     legalBasis: NBL.OTHER_LAND_BUSINESS,
   });
-  const dummyR = meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+  const dummyR = revenue.failedR ?? meetsPeriodCriteria(fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+  if (revenue.failedR) markRevenueDecided(trace); // E3-② — 영위 기간 사업용 구간 판정이 이 결과의 기간 수치다
   const failedReason = periodFailedReason ?? revenueStartFailedReason;
   return buildFail(
     failedReason ? `${failedReason} → 비사업용` : "종합합산 + 거주·사업관련 미해당 → 비사업용",
