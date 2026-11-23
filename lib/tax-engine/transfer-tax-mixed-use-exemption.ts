@@ -56,6 +56,7 @@ import type { HouseCountExclusionDetail } from "./transfer-reductions/unsold-98-
 import { resolveArticle89Clause2, type Article89Clause2Result } from "./transfer-tax-89-2-exclusion";
 import { article89ExceptionApplied } from "./transfer-tax-89-2-consequences";
 import { mixedUseUnmetNotices } from "./transfer-tax-mixed-use-unmet-notices";
+import { mergeRentalCarveoutNotice } from "./one-house/merge-rental-carveout";
 import { mixedUseRequirementReviewNotice } from "./transfer-tax-mixed-use-unmet-notices";
 import { mixedUseResidenceYearsLabel } from "./transfer-tax-mixed-use-unmet-notices";
 import { decisiveProvisoException } from "./one-house/decisive-proviso";
@@ -116,6 +117,8 @@ export function judgeMixedUseOneHouseExemption(
   exemptBasis: string | undefined;
   /** §89② 예외(영 §156의2·§156의3)로 받은 비과세의 표시 줄 — 단건·판정 메뉴와 같은 leaf. 비과세(`isOneHouseExempt`)일 때만. */
   article89ExceptionApplied: { label: string; legalBasis: string[] } | undefined;
+  /** 0061 합가 상대 쪽 임대 적용 고지 — 판정 뒤 실제 근거로 고른 문형(D-72). 비과세(`isOneHouseExempt`)일 때만(단건과 같다). */
+  mergeRentalNotice: string | undefined;
   /** 주택보다 나중에 취득한 부수토지가 보유요건(영 §154①) 미만 — 그 토지분은 비과세에서 뺀다(분리취득 G-3과 같은 술어). */
   laterLandExemptExcluded: boolean;
   /** 영 §167의10①15호 ① 요소 — §155①④⑤ 의제 또는 §155②③ 상속주택 경로. */
@@ -660,6 +663,11 @@ export function judgeMixedUseOneHouseExemption(
     exemptBasis,
     // 겸용 근거 문구에는 §156의2⑤ 같은 §89② 예외 조문이 들어가지 않는다 — 중복 제거 목록은 비운다.
     article89ExceptionApplied: article89ExceptionApplied(article89Clause2, isOneHouseExempt, []),
+    // 단건 `oneHouseJudgmentWarnings`와 같은 leaf·같은 입력(적용 특례 id) — 합가 의제로 열렸으면 「§155④를 적용했습니다」, 아니면 「합가 의제 없이」(D-72).
+    mergeRentalNotice:
+      rentalResidence?.mergeCarved && isOneHouseExempt && asset.rentalResidenceInput
+        ? mergeRentalCarveoutNotice(asset.rentalResidenceInput, deemedAppliedIds(deemedOneHouseBy155))
+        : undefined,
     laterLandExemptExcluded,
     // E-14d — §155②③(상속주택 + 일반주택)은 주택 수가 1로 줄어 §155①④⑤ 의제 분기에 걸리지 않는다
     //   ⇒ 단건(`resolveSurchargeDeemedOneHouse`)과 같은 술어로 경로를 연다.

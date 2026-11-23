@@ -64,8 +64,6 @@ import { reductionAssetKindFromWire } from "@/lib/tax-engine/transfer-reductions
 import { resolveRateBasisAcquisitionDate } from "@/lib/tax-engine/transfer-rate-holding-basis";
 import { resolveBaseHoldingStartDate } from "@/lib/tax-engine/transfer-tax-exemption-holding";
 import { giftHouseholdHoldingStart } from "@/lib/tax-engine/one-house/gift-household-basis";
-import { resolveMixedUseRentalResidence } from "@/lib/tax-engine/transfer-tax-mixed-use-rental-residence";
-import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import type { TransferTaxInput } from "@/lib/tax-engine/types/transfer.types";
 
 /** 상가분이 주택에서 갈라진 카드(land·building)에서 그 종류에 허용되지 않는 감면을 뺀다. 주택 카드·모르는 종류는 그대로. */
@@ -104,10 +102,13 @@ export function buildMixedUsePartCards(
   onBgDetail?: (breakdown: MixedUseBurdenedGiftBreakdown) => void,
   /** 배율 초과분 수용 의제·유예 고지(NBL2611-C5) — 서브엔진 `warnings`는 버려지므로 호출부가 결과 `warnings`에 싣는다. 초과분이 없으면 부르지 않는다. */
   onNblDeemNotices?: (notices: string[]) => void,
+  /** §155⑳·0061 고지(`rentalResidenceNotices`) — 판정 뒤 문형이다(D-72). 서브엔진 `warnings`는 버려지므로 호출부가 결과 `warnings`에 싣는다. */
+  onRentalNotices?: (notices: string[]) => void,
 ): TransferTaxItemInput[] {
   const r = calcMixedUseTransferTax(partTransferPrice, transferDate, mixedAsset, rates);
   if (r.burdenedGift) onBgDetail?.(r.burdenedGift);
   if (r.nonBusinessLandPart) onNblDeemNotices?.(mixedNblDeemNotices(mixedAsset, transferDate));
+  if (r.rentalResidenceNotices) onRentalNotices?.(r.rentalResidenceNotices);
   /**
    * 2022.1.1. 전 양도는 엔진이 전부 0인 거부 결과를 낸다. 단건은 그 결과를 그대로 보여 주지만 여기서는 0인 파트 카드가 합산에 섞여
    * 겸용 주택이 **조용히 빠졌다**(실측 2026-10-18). ⑧이 먼저 막고, API 직접 호출은 여기서 400으로 막는다(주 자산·컴패니언 공통 지점).
@@ -589,7 +590,6 @@ export function buildMixedUseCompanionItems(
     // NBL2611-C5 — 배율 초과분 수용 의제·유예 사실도 그 자산의 item 값이다(주 자산 묶음은 primary item = `...engineInput`).
     appurtenantExcessFacts: companionEngine.appurtenantExcessFacts,
   });
-  asset.rentalResidence?.onNotices(resolveMixedUseRentalResidence(mixedAsset, parseRatesFromMap(ctx.mixedUseCtx.rates))?.notices ?? []);
   return buildMixedUsePartCards(
     companionEngine,
     mixedAsset,
@@ -601,5 +601,6 @@ export function buildMixedUseCompanionItems(
     asset.onMixedBgDetail ? (b) => asset.onMixedBgDetail!(asset.assetId, b) : undefined,
     // 묶음에는 겸용이 둘 이상일 수 있어 어느 자산의 고지인지 `[자산명]` 접두로 밝힌다(0061 고지와 같은 규약).
     asset.onNblNotices ? (n) => asset.onNblNotices!(n.map((t) => (asset.assetLabel ? `[${asset.assetLabel}] ${t}` : t))) : undefined,
+    asset.rentalResidence?.onNotices,
   );
 }
