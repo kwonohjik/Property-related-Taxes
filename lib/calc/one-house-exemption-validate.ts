@@ -43,7 +43,7 @@ import {
   judgmentTemporaryTwoHouseVisible,
 } from "./one-house-judgment-section-scope";
 import { judgmentDerivedNewHouse, judgmentTempTwoHouseVerdict } from "./one-house-judgment-temp-two-house";
-import { judgmentContestedNewHouse } from "./one-house-judgment-new-house";
+import { judgmentContestedNewHouseRowIds } from "./one-house-judgment-new-house";
 import { sellingHouseOriginIssue } from "./selling-house-origin-scope";
 import { effectiveProvisoReason } from "./transfer-tax-api-helpers";
 import { collectExemptionProvisoErrors } from "./exemption-proviso-validate";
@@ -224,7 +224,8 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
   const derivedNewHouse = judgmentDerivedNewHouse(form);
   const newHouseRowId = derivedNewHouse?.newHouseRowId;
   // D-79 안 A — 양론 반대 입장 짝의 신규 주택 행도 경위를 받는다. 엔진 입장에 짝이 없으면 위 행이 비어 반대 입장이 「경위 모름」으로 과세에 머문다.
-  const contestedNewHouseRowId = judgmentContestedNewHouse(form)?.newHouseRowId;
+  //   C1 반대 입장 짝(D-79 C1 변형)도 같다 — 엔진 입장 짝의 행과 같은 행은 위에서 이미 묻는다.
+  const contestedNewHouseRowIds = judgmentContestedNewHouseRowIds(form);
   // 결정 #43-3 — 신규 주택 취득일을 직접 선언한 경로(명부 행 없음)의 경위 답이 앞뒤가 맞지 않으면 막는다. 미답은 막지 않는다(not_collected).
   //   게이트는 ⑤ 마운트(`Step2`: 섹션 노출 + `source === "declared"`)와 같다.
   if (derivedNewHouse?.source === "declared" && judgmentTemporaryTwoHouseVisible(form)) {
@@ -252,8 +253,10 @@ export function validateStep2(form: OneHouseJudgmentFormData): Errors {
     for (const issue of saleIsHousing ? houseRowFactIssues(h, newHouseRowId) : [newHouseOriginIssue(h, newHouseRowId)].filter((x) => x !== null)) {
       errors.push(err(`houses.${i}.${issue.field}`, `보유 주택 ${i + 1}: ${issue.message}`));
     }
-    const contestedOriginIssue = contestedNewHouseRowId !== newHouseRowId ? newHouseOriginIssue(h, contestedNewHouseRowId, true) : null;
-    if (contestedOriginIssue) errors.push(err(`houses.${i}.${contestedOriginIssue.field}`, `보유 주택 ${i + 1}: ${contestedOriginIssue.message}`));
+    for (const contestedRowId of contestedNewHouseRowIds) {
+      const contestedOriginIssue = newHouseOriginIssue(h, contestedRowId, true);
+      if (contestedOriginIssue) errors.push(err(`houses.${i}.${contestedOriginIssue.field}`, `보유 주택 ${i + 1}: ${contestedOriginIssue.message}`));
+    }
     // §167의10①3호·7호 기산 상태 — 명부 행 ④ 칸이 이 화면에도 열리고 ⑫가 같은 조건으로 400을 낸다(계산기 ⑧과 같은 leaf).
     const statusIssue = twoHouseExclusionStatusIssue(h);
     if (statusIssue) {

@@ -268,7 +268,7 @@ export function detectContestedIssues(
       .map((h) => h.id);
     if (gifted.length > 0) {
       out.push({
-        id: "155-2-inherited-house-gifted-within-household",
+        id: C1_ID,
         houseIds: gifted,
         otherPositionInput: withRows(input, gifted, (h) => ({
           ...h,
@@ -284,6 +284,14 @@ export function detectContestedIssues(
           inheritedGiftedToHouseholdMember: undefined,
         })),
       });
+      /**
+       * D-79 C1 변형 — 판정 메뉴 ④가 반대 입장(A) 기준으로 다시 도출한 §155① 짝(`contestedGiftedInheritedTemporaryTwoHouse`). A는 증여한 행을 일반 주택으로
+       * 보므로 별도세대에게서 나중에 상속받은 그 행이 신규 주택일 수 있다(서면4팀-3513). 받지 않은 입력(직접 API·중과 메뉴)은 종전 동작이다.
+       */
+      if (input.contestedGiftedInheritedTemporaryTwoHouse !== undefined) {
+        const d = out[out.length - 1];
+        d.otherPositionInput = { ...d.otherPositionInput, temporaryTwoHouse: input.contestedGiftedInheritedTemporaryTwoHouse ?? undefined };
+      }
     }
 
     // C2 — 엔진(A)은 소수지분에도 동일세대 게이트. 반대(B)는 그 행의 게이트를 열어(동일세대 아님과 같은 입력) 판정.
@@ -358,6 +366,26 @@ export function detectContestedIssues(
   }
 
   return out;
+}
+
+const C1_ID = "155-2-inherited-house-gifted-within-household" satisfies OneHouseContestedIssueId;
+
+/**
+ * C1 반대 입장(A)의 §155① 신규 주택 후보에서 뺄 상속 관련 명부 행 — 그 입장 입력의 상속주택 제외 행 ∪ 증여한 행 중 §155② 단서 세대 게이트를
+ * 통과하지 못한 행(동일세대·세대 모름 상속). 판정 메뉴 ④가 엔진 입장 후보 제외에서 상속주택 제외 몫을 이 값으로 바꿔 짝을 다시 도출한다(D-79 C1 변형).
+ * 동일세대 상속은 새로운 주택의 취득이 아니다(사전-2023-법규재산-0464) — 반대 입장 입력은 그 행의 상속 사실을 지우므로 엔진 가드(`judgeNewHouseOrigin`)가
+ * 볼 수 없어, 신규 주택 후보로 되돌리지 않는 것으로 같은 결론을 낸다. 쟁점이 없으면 undefined.
+ */
+export function contestedGiftedPositionExcludedRowIds(
+  input: TransferTaxInput,
+  opts: { inheritedExclusion?: InheritedHouseExclusionResult; specialActHouseIds?: ReadonlySet<string> } = {},
+): string[] | undefined {
+  const d = detectContestedIssues(input, { inheritedExclusion: opts.inheritedExclusion }).find((x) => x.id === C1_ID);
+  if (!d) return undefined;
+  const other = { ...d.otherPositionInput, inheritedHouseExclusionDetail: undefined };
+  const ids = new Set(resolveInheritedHouseExclusionFromInput(other, opts.specialActHouseIds).excludedHouses.map((e) => e.houseId));
+  for (const h of input.houses ?? []) if (d.houseIds.includes(h.id) && !passesHouseholdGate(h)) ids.add(h.id);
+  return [...ids];
 }
 
 /** §155① 짝을 반대 입장 기준으로 다시 도출하는 쟁점 — 반대 입장이 주택 수에서 빼는 행이 달라지는 것(D-79). */

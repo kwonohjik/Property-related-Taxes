@@ -106,6 +106,7 @@ export const MULTI_IGNORED_KEYS: Record<string, string> = {
   residenceIntervals: "판정 메뉴 전용(기한 말일 현재 거주 · I-07)",
   // 2026-11 리뷰 D-79 안 A — 판정 메뉴 양론 반대 입장 §155① 짝. 엔진은 양론 재판정 입력에만 쓰고 세액 경로는 보지 않는다.
   contestedTemporaryTwoHouse: "판정 메뉴 전용(양론 반대 입장 §155① 짝 · D-79)",
+  contestedGiftedInheritedTemporaryTwoHouse: "판정 메뉴 전용(양론 C1 반대 입장 §155① 짝 · D-79)",
   // 일괄양도 안분 입력 — 단건 route는 `companions.length > 0`일 때만 읽는다. 컴패니언은 위에서 거부한다.
   totalSalePrice: "일괄양도 분기 전용(route.ts bundledOk)",
   bundledSaleMode: "일괄양도 분기 전용",

@@ -41,6 +41,7 @@ import { buildPresaleRightsPayload } from "./presale-rights-payload";
 import { buildHouseholdSpecialPayload, buildParentalCareMergeFact } from "./transfer-tax-api-body-blocks";
 import { temporaryTwoHousePayloadOf } from "./transfer-tax-api-body-blocks";
 import { judgmentContestedNewHouse } from "./one-house-judgment-new-house";
+import { judgmentContestedGiftedNewHouse } from "./one-house-judgment-new-house";
 import { toRentalHousingExceptionApi } from "./transfer-tax-api-rental-housing";
 import { buildNonResidentPayload } from "./one-house-non-resident";
 import { buildDemolishedPayload } from "./one-house-demolished";
@@ -429,10 +430,16 @@ function withoutOneHouseRowFacts(payload: object, omit: boolean): object {
  * D-79 안 A — 본문 `contestedTemporaryTwoHouse`. 모양은 엔진 입장 `temporaryTwoHouse`와 같은 빌더(`temporaryTwoHousePayloadOf`)다.
  * 엔진은 양론 반대 입장 재판정 입력에만 이 값을 쓴다(`detectContestedIssues`) — 판정 결론·계산기 세액은 보지 않는다.
  */
-function judgmentContestedTemporaryTwoHousePayload(form: OneHouseJudgmentFormData): { contestedTemporaryTwoHouse?: object | null } {
+function judgmentContestedTemporaryTwoHousePayload(
+  form: OneHouseJudgmentFormData,
+): { contestedTemporaryTwoHouse?: object | null; contestedGiftedInheritedTemporaryTwoHouse?: object | null } {
   const pair = judgmentContestedNewHouse(form);
-  if (pair === undefined) return {};
-  return { contestedTemporaryTwoHouse: pair === null ? null : temporaryTwoHousePayloadOf(form, pair) };
+  const out: { contestedTemporaryTwoHouse?: object | null; contestedGiftedInheritedTemporaryTwoHouse?: object | null } =
+    pair === undefined ? {} : { contestedTemporaryTwoHouse: pair === null ? null : temporaryTwoHousePayloadOf(form, pair) };
+  // D-79 C1 변형 — 양론 C1 반대 입장 짝. 같은 빌더 · 같은 null 규약.
+  const gifted = judgmentContestedGiftedNewHouse(form);
+  if (gifted !== undefined) out.contestedGiftedInheritedTemporaryTwoHouse = gifted === null ? null : temporaryTwoHousePayloadOf(form, gifted);
+  return out;
 }
 
 /**

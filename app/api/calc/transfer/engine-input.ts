@@ -147,6 +147,13 @@ export function buildTransferEngineInput(
         : data.contestedTemporaryTwoHouse
           ? toEngineTemporaryTwoHouse(data.contestedTemporaryTwoHouse, "contestedTemporaryTwoHouse")
           : undefined,
+    // ⑭ 판정 메뉴 전용(D-79 C1 변형) — 양론 C1 반대 입장 §155① 짝. 위와 같은 변환.
+    contestedGiftedInheritedTemporaryTwoHouse:
+      data.contestedGiftedInheritedTemporaryTwoHouse === null
+        ? null
+        : data.contestedGiftedInheritedTemporaryTwoHouse
+          ? toEngineTemporaryTwoHouse(data.contestedGiftedInheritedTemporaryTwoHouse, "contestedGiftedInheritedTemporaryTwoHouse")
+          : undefined,
     // ⑭ §155⑧ — resolvedDate는 string이라 Date 변환 필수. 해소일 ↔ 「양도일 현재 미해소」 택일(⑫ 검증, #31) — 미해소 선택도 전달한다.
     unavoidableOutsideCapitalHouse: data.unavoidableOutsideCapitalHouse
       ? {
