@@ -33,6 +33,7 @@ import {
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { nblAcquisitionDateOf } from "@/lib/calc/nbl-unconditional-exemption-status";
 import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-scope";
+import { nblOtherBuildingToggleHidden } from "@/lib/calc/nbl-other-state-history-scope";
 import { nblOtherStateEventsInUse } from "@/lib/calc/nbl-other-state-history-scope";
 import { nblOtherStateHistoryApplies } from "@/lib/calc/nbl-other-state-history-scope";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
@@ -96,6 +97,8 @@ export function OtherLandDetailSection({
   const hasBuilding = effectiveOtherHasBuildingOf(asset);
   // 이력(`changed`)이 판정에 쓰이면 「건축물 있음」 토글은 숨기고(사건이 정한다 — 같은 사실을 두 곳에서 받지 않는다) 「재산세 과세 분류」 라벨에 «양도일 현재»를 붙인다.
   const stateEventsInUse = nblOtherStateEventsInUse(asset);
+  // E3-① — 토글은 건축물 사건(신축·멸실)이 1건 이상일 때만 숨긴다. 재산세 과세 구분 변경만 입력한 이력은 건축물 유무를 이 토글이 받는다(숨기면 입력처가 없다).
+  const buildingToggleHidden = nblOtherBuildingToggleHidden(asset);
   const buildingVal = parseFloat(asset.nblOtherBuildingValue || "0") || 0;
   const landVal = parseFloat(asset.nblOtherLandValue || "0") || 0;
   const isLikelyBareground = landVal > 0 && buildingVal < landVal * 0.02;
@@ -150,7 +153,7 @@ export function OtherLandDetailSection({
       {/* NBL-STATE-HISTORY-U1 — 소유기간 중 건축물 유무 이력(질문 → 사건 행 → 미리보기). 건축물 관련 모든 칸을 지배하는 모드 선택이라 맨 위(영향받는 칸 직전)에 둔다. */}
       {nblOtherStateHistoryApplies(asset) && <OtherLandStateHistorySection asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />}
 
-      {!stateEventsInUse && (
+      {!buildingToggleHidden && (
         <ToggleCard
           data-testid="nbl-other-has-building-toggle"
           tone="amber"

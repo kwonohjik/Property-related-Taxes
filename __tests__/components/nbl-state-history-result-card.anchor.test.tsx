@@ -14,7 +14,10 @@ import { DEFAULT_NON_BUSINESS_LAND_RULES as R } from "@/lib/tax-engine/non-busin
 import type { NonBusinessLandJudgment } from "@/lib/tax-engine/non-business-land/types";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import { E2_ROWS, e2RowRaw, type E2Row } from "@/__tests__/tax-engine/_helpers/nbl-state-history-e2-table";
+import { E3_ROWS, e3RowRaw } from "@/__tests__/tax-engine/_helpers/nbl-state-history-e3-1-table";
 import { NBL_STATE_HISTORY_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 
 afterEach(cleanup);
 
@@ -182,5 +185,44 @@ describe("소유기간 0일(M16 — 축 B 지분이 양도 전날 취득) — U3
     expect(r.queryByTestId("nbl-state-history-zero-days")).toBeNull();
     expect(text(crit(r, "da")!)).toContain("→ 충족");
     expect(text(r.getByTestId("nbl-state-history-criteria-verdict"))).toContain("모두 충족해 비사업용");
+  });
+});
+
+describe("E3-① 재산세 과세 구분 변경 — 건축물 «있음» 두 구간이 재산세 구분만 달라도 표에서 읽힌다 (UV-8 · 열 추가 없음)", () => {
+  const e3 = (id: string) => judgeRaw(e3RowRaw(E3_ROWS.find((r) => r.id === id)!));
+
+  it("T1(M12: 별도합산 → 종합합산 2022-06-01): 제목에 «재산세 구분 이력» · 두 행 모두 건축물 «있음» · 재산세 구분 열이 별도합산 / 종합합산으로 갈린다 · 사업용 3,072일 + 비사업용 579일", () => {
+    const j = e3("T1");
+    expect(j.isNonBusinessLand).toBe(false);
+    const r = mount(j);
+    expect(text(r.getByTestId("nbl-state-history-period"))).toContain("기간 분석 — 소유기간 중 건축물 유무·재산세 구분 이력 반영");
+    const rows = r.getAllByTestId(/^nbl-state-history-interval-\d+$/);
+    expect(rows).toHaveLength(2);
+    expect(text(rows[0])).toContain("2014-01-02 ~ 2022-05-31");
+    expect(text(rows[0])).toContain("3,072일");
+    expect(text(rows[0])).toContain("있음");
+    expect(text(rows[0])).toContain("별도합산");
+    expect(text(rows[0])).toContain("사업용");
+    expect(text(rows[1])).toContain("2022-06-01 ~ 2023-12-31");
+    expect(text(rows[1])).toContain("579일");
+    expect(text(rows[1])).toContain("있음");
+    expect(text(rows[1])).toContain("종합합산");
+    expect(text(rows[1])).toContain("비사업용");
+    expect(text(r.getByTestId("nbl-state-history-total-row"))).toContain("3,651일");
+  });
+
+  it("T1 고지: 구분 변경 사건이 있으면 변형 고지(TAX_CHANGE_APPLIED)가 한 번 · 종전 한정 고지는 함께 뜨지 않는다(대체)", () => {
+    const r = mount(e3("T1"));
+    const t = r.container.textContent ?? "";
+    expect(t.split(NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE).length - 1).toBe(1);
+    expect(t).not.toContain(NBL_STATE_HISTORY_APPLIED_NOTICE);
+  });
+
+  it("T15(변경 직전 «모름»): 첫 행 «종합합산(모름 — 확인 필요)» · 비사업용 · 모름 고지가 결과 경고에 있다", () => {
+    const j = e3("T15");
+    expect(j.isNonBusinessLand).toBe(true);
+    const r = mount(j);
+    expect(text(r.getByTestId("nbl-state-history-interval-0"))).toContain("종합합산(모름 — 확인 필요)");
+    expect(r.container.textContent).toContain(NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE);
   });
 });

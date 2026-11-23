@@ -1,4 +1,5 @@
 import { NBL_STATE_HISTORY_MODE_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
+import { eventCarriesTaxTypeBefore } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { isEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 
@@ -46,6 +47,6 @@ function migrateNblStateHistory(a: Record<string, unknown>): void {
     const r = row && typeof row === "object" ? (row as Record<string, unknown>) : {};
     const kind = typeof r.kind === "string" && isEventKind(r.kind) ? r.kind : "";
     const before = typeof r.propertyTaxTypeBefore === "string" && Object.hasOwn(PROPERTY_TAX_TYPE_LABEL, r.propertyTaxTypeBefore) ? r.propertyTaxTypeBefore : "";
-    return { kind, date: typeof r.date === "string" ? r.date : "", propertyTaxTypeBefore: kind === "building_removed" ? before : "" };
+    return { kind, date: typeof r.date === "string" ? r.date : "", propertyTaxTypeBefore: eventCarriesTaxTypeBefore(kind) ? before : "" };
   });
 }

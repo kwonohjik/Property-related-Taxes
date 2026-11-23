@@ -28,6 +28,7 @@ import { propertyTaxBasisOptions, requiresDemolishedFloorArea, type PropertyTaxB
 import type { FactoryEntityType } from "../factory-employee-sports-standard";
 import { consumesStateHistory } from "./land-category";
 import { effectiveOtherHasBuilding } from "./other-land-state-history";
+import { eventCarriesTaxTypeBefore } from "./other-land-state-history";
 import { isEventKind } from "./other-land-state-history";
 import type { LandStateHistoryInput } from "./land-usage.types";
 import type { StateEvent } from "./land-usage.types";
@@ -299,7 +300,7 @@ function buildNblParcels(
 }
 
 /**
- * NBL-STATE-HISTORY-E2 — 기타토지 소유기간 중 건축물 신축·멸실 이력(⑭). 그 이력을 쓰는 지목(`consumesStateHistory`)이 아니거나 질문 답이 `""`·미전송이면 undefined(= 미전송 — 현행).
+ * NBL-STATE-HISTORY-E2 — 기타토지 소유기간 중 건축물 신축·멸실(+ E3-① 재산세 과세 구분 변경) 이력(⑭). 그 이력을 쓰는 지목(`consumesStateHistory`)이 아니거나 질문 답이 `""`·미전송이면 undefined(= 미전송 — 현행).
  * `changed`가 아니면 사건은 싣지 않는다(`unchanged`·`unknown`은 모드만 운반 — 고지용). 종류·날짜를 읽을 수 없는 행은 ⑧·⑫가 먼저 막으므로 여기서는 건너뛴다(다른 raw 배열 행과 같은 규약).
  */
 export function buildLandStateHistory(a: Record<string, unknown>, landType: LandType, parseDate: ParseDate): LandStateHistoryInput | undefined {
@@ -312,7 +313,8 @@ export function buildLandStateHistory(a: Record<string, unknown>, landType: Land
     const date = parseDate(asString(row.date));
     if (!isEventKind(kind) || !date) return [];
     const before = asString(row.propertyTaxTypeBefore);
-    return [{ kind, date, ...(kind === "building_removed" ? { propertyTaxTypeBefore: before as StateEvent["propertyTaxTypeBefore"] } : {}) }];
+    // Before 운반은 단일 술어(`eventCarriesTaxTypeBefore`) — 철거·재산세 과세 구분 변경은 싣고, 신축은 뜻이 없어 싣지 않는다(V-6 닫힘).
+    return [{ kind, date, ...(eventCarriesTaxTypeBefore(kind) ? { propertyTaxTypeBefore: before as StateEvent["propertyTaxTypeBefore"] } : {}) }];
   });
   return { mode: "changed", events };
 }

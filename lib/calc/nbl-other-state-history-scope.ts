@@ -14,7 +14,10 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { NblOtherStateEventInput } from "@/lib/stores/calc-wizard-asset-nbl-other";
 import { consumesStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
 import type { StateHistoryMode } from "@/lib/tax-engine/non-business-land/land-usage.types";
-import { effectiveOtherHasBuilding, isEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { effectiveOtherHasBuilding } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { eventCarriesTaxTypeBefore } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { isBuildingEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { isEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 
 /**
  * 「건축물 유무 이력」 질문이 이 자산에 적용되는가 — 지목(소비표) · 정밀판정 ON · 연접 다필지 꺼짐.
@@ -33,6 +36,15 @@ function eventKindsComplete(events: ReadonlyArray<Pick<NblOtherStateEventInput, 
 /** 이 자산에서 사건 목록이 판정에 쓰이는 상태인가 — 질문이 적용되고 답이 `changed`다. */
 export function nblOtherStateEventsInUse(asset: AssetForm): boolean {
   return nblOtherStateHistoryApplies(asset) && asset.nblOtherStateHistoryMode === "changed";
+}
+
+/**
+ * 「건축물 있음」 토글을 숨기는가 — 사건 목록이 판정에 쓰이고 **건축물 사건(신축·멸실)이 1건 이상**일 때만이다(E3-① · 사용자 결정 2026-11-23).
+ * 건축물 사건이 0건이면(재산세 과세 구분 변경만 입력했거나 아직 행이 없음) 양도일 현재 건축물 유무를 받을 곳이 이 토글뿐이라 그대로 보인다 —
+ * 숨기면 엔진이 «건축물 없음»으로 읽어 건물 있는 토지의 이력이 틀어지거나 ⑧이 영구 차단하는 막다른 길이 된다.
+ */
+export function nblOtherBuildingToggleHidden(asset: AssetForm): boolean {
+  return nblOtherStateEventsInUse(asset) && (asset.nblOtherStateEvents ?? []).some((e) => isBuildingEventKind(e.kind));
 }
 
 /**
@@ -56,11 +68,11 @@ export function stateHistoryWireFields(asset: AssetForm): {
   if (mode !== "changed") return { nblOtherStateHistoryMode: mode, nblOtherStateEvents: [] };
   return {
     nblOtherStateHistoryMode: "changed",
-    // 신축 행의 철거 직전 재산세 구분은 뜻이 없다 — 와이어에는 `""`로 정규화한다(onChange가 이미 리셋하지만 복원 값 방어).
+    // 신축 행의 «직전 재산세 구분»은 뜻이 없다 — 와이어에는 `""`로 정규화한다(onChange가 이미 리셋하지만 복원 값 방어). 운반 여부는 leaf 단일 술어(철거·구분 변경 = 운반).
     nblOtherStateEvents: (asset.nblOtherStateEvents ?? []).map((e) => ({
       kind: e.kind,
       date: e.date,
-      propertyTaxTypeBefore: e.kind === "building_removed" ? e.propertyTaxTypeBefore : "",
+      propertyTaxTypeBefore: eventCarriesTaxTypeBefore(e.kind) ? e.propertyTaxTypeBefore : "",
     })),
   };
 }

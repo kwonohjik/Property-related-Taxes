@@ -35,8 +35,8 @@ export interface NblFactorySegmentFormItem {
 }
 
 /**
- * NBL-STATE-HISTORY-U0 — 기타토지 소유기간 중 건축물 신축·멸실 사건 1건(폼 — 전부 string). 엔진 `StateEvent`(Date)와 별개.
- * `kind ""` = 아직 종류를 고르지 않은 행(⑧ 차단). `propertyTaxTypeBefore`는 **철거 행에서만** 뜻이 있고 `""` = 모름(종합합산 + 확인 필요).
+ * NBL-STATE-HISTORY-U0 — 기타토지 소유기간 중 사건 1건(폼 — 전부 string): 건축물 신축·멸실 또는 재산세 과세 구분 변경(E3-①). 엔진 `StateEvent`(Date)와 별개.
+ * `kind ""` = 아직 종류를 고르지 않은 행(⑧ 차단). `propertyTaxTypeBefore`는 **철거·재산세 과세 구분 변경 행에서만** 뜻이 있고(운반 여부 = leaf `eventCarriesTaxTypeBefore`) `""` = 모름(종합합산 + 확인 필요).
  */
 export interface NblOtherStateEventInput {
   kind: "" | StateEventKind;

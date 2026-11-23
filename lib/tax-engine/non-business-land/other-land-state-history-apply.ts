@@ -23,6 +23,8 @@ import { NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE } from "../nbl-confirm-notices
 import { NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_REVENUE_START_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_UNKNOWN_NOTICE } from "../nbl-confirm-notices";
 import { TaxCalculationError } from "../tax-errors";
 import { TaxErrorCode } from "../tax-errors";
@@ -133,19 +135,24 @@ export function applyStateHistory(
     return { start: iv.start, end: iv.end, days, hasBuilding: iv.hasBuilding, propertyTaxType: iv.propertyTaxType, business: days > 0 && businessDays === days, businessDays };
   });
 
+  const hasTaxChange = history.events.some((e) => e.kind === "tax_type_changed");
   const step: JudgmentStep = {
     id: "other_state_history",
     label: "Step 4-1 소유기간 중 건축물 이력(일 단위 구간) 기간기준 (영 §168의6)",
     status: r.meets ? "PASS" : "FAIL",
     detail:
-      `건축물 사건 ${history.events.length}건으로 소유기간 ${r.totalOwnershipDays}일을 ${intervals.length}개 구간으로 나눠 판정 — ` +
+      `${hasTaxChange ? "건축물·재산세 구분 사건" : "건축물 사건"} ${history.events.length}건으로 소유기간 ${r.totalOwnershipDays}일을 ${intervals.length}개 구간으로 나눠 판정 — ` +
       `사업용 ${r.effectiveBusinessDays}일(유예 가산 ${r.gracePeriodDays}일 포함) — ${r.detail}`,
     legalBasis: NBL.CRITERIA,
   };
   const flipped = r.meets !== core.isBusiness;
   const warnings = (core.warnings ?? []).map((w) => (w === NBL_REVENUE_BUSINESS_START_APPLIED_NOTICE ? NBL_STATE_HISTORY_REVENUE_START_NOTICE : w));
-  warnings.push(NBL_STATE_HISTORY_APPLIED_NOTICE);
-  if (intervals.some((iv) => iv.propertyTaxType === "unknown")) warnings.push(NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE);
+  // 재산세 과세 구분 변경 사건이 있을 때만 한정 고지를 변형 고지로 **대체**한다(E3-① — 기존 고지 문구는 바이트 동일, 건축물 사건만 있는 이력은 종전과 같다).
+  warnings.push(hasTaxChange ? NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE : NBL_STATE_HISTORY_APPLIED_NOTICE);
+  // 「모름」 구간(종합합산으로 접힘)은 그 구간을 닫은 사건 종류별로 고지한다 — 구간의 끝 날짜 = 닫은 사건일(날짜는 엄격 증가라 유일).
+  const unknownClosers = intervals.filter((iv) => iv.propertyTaxType === "unknown").map((iv) => history.events.find((e) => e.date.getTime() === iv.end.getTime())?.kind);
+  if (unknownClosers.some((k) => k !== "tax_type_changed")) warnings.push(NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE);
+  if (unknownClosers.some((k) => k === "tax_type_changed")) warnings.push(NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE);
 
   return {
     applied: true,
