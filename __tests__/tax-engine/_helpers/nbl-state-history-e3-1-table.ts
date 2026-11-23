@@ -81,7 +81,7 @@ export const E3_ROWS: readonly E3Row[] = [
     biz: [["2019-01-01", "2022-06-01"]], expect: { nonBusiness: false, eff: 1247, total: 3651, tax: E3_B, bucket: 1 } },
   { id: "T9c", scenario: "V-6 닫힘: 신축 2023-06-01 · 앞 나대지는 종합합산으로 접힌다 · 꼬리 별도합산 (= E2 M6)", events: [["building_built", "2023-06-01"]], tail: "separate",
     biz: [["2023-06-01", T]], expect: { nonBusiness: true, eff: 214, total: 3651, tax: E3_N, bucket: 1 } },
-  { id: "T9o", scenario: "V-6 닫힘 가드: 신축 행에 «앞 나대지 = 별도합산» Before를 실어 보내도 뜻이 없다(⑭가 운반하지 않고 derive도 종합합산 고정) — T9c와 같은 결과",
+  { id: "T9o", scenario: "V-6 가드(E3-1b 갱신): 신축 행에 «앞 나대지 = 별도합산» Before만 실어 보내면(근거 없음) 근거 없는 별도합산은 인정하지 않아 종합합산으로 접힌다 — T9c와 같은 판정(⑭는 E3-1b부터 운반, 경고만 새 고지가 붙는다)",
     events: [["building_built", "2023-06-01", "separate"]], tail: "separate",
     biz: [["2023-06-01", T]], expect: { nonBusiness: true, eff: 214, total: 3651, tax: E3_N, bucket: 1 } },
   { id: "T10", scenario: "단기 보유: 취득 2022-07-01(소유 548일 · 3호) · 별도 → 종합 2023-10-01 — 현행 비사업용 326,760,000", acq: "2022-07-01", events: [tax("2023-10-01", "separate")], tail: "comprehensive",

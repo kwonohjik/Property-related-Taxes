@@ -399,3 +399,31 @@ interface LandStateInterval { …; basisOutcome?: "accepted" | "unconfirmed" | "
 - **공통 — 모두 추천안 승인**: 엔진 Q-1 (a) / UI UQ-1 (a-2) — 나대지 구간을 닫는 사건 행(신축 행 · 나대지 위 `tax_type_changed` 행)에 «재산세 구분(`propertyTaxTypeBefore`) + 근거(`propertyTaxBasisBefore` — V1-A 근거 열거·해석기 `resolvePropertyTaxBasis` 재사용, 근거 없는 비종합합산은 종합합산으로 접고 고지)» · 엔진 Q-3 나대지 근거 = 공지상태 별도합산(`vacant_state`)·분리과세(`separate_taxation`)·비과세(`statutory_exempt`) 3종 + 모름(`demolished` 제외 — 유예 입력이 덮음, UI UQ-3 (가)) · 엔진 Q-2 / UI ⑤ 의견 = **E3-⑤(철거 후 한시 지위)와 묶지 않음** · 엔진 Q-5 / UI UQ-2 (가) 신축 행 `""` = 선언 없음(기존 이력 바이트 동일), tax 행 `""` = 모름 · 엔진 Q-6 E3-① «건축물 없는 구간 변경 차단» 규칙 **삭제**(의도된 반전) · 엔진 Q-8 호 번호 받지 않음 · 엔진 Q-7 / UI UQ-6 (가) 고지는 새 상수만.
 - **면적한도(엔진 Q-4 · UI UQ-5) = 3지선다(전체 한도 이내 / 일부 초과 / 모름) + «일부 초과»와 «모름»은 그 구간을 종합합산으로 보고 확인 필요 고지** — 엔진 원안(일부 초과 = 이력 미적용)은 «일부 초과»가 «모름»보다 유리해지는 역전(이내 198,210,000 / 일부 초과 198,210,000 / 모름 253,960,000)이 실측돼 기각. UI 원안(묻지 않고 이내 전제)은 «모름 = 혜택 불성립» 원칙과 충돌해 기각. 대가: 실제로 일부만 초과하면 한도 이내 면적도 비사업용 쪽으로 보수 처리(고지로 알림). 꼬리(양도일 현재) 부분 면적 경로의 «이력 미적용 + 고지»(통합 Q-8)는 그대로.
 - PR 순서(메인 세션 결정): E3b-0(테스트만) → E3b-1(엔진·⑫ 신규 칸 2개 + route 관통 anchor·⑭·고지) → UI → E2E. UI 원안의 «신축 행 먼저 / 차단 삭제 나중» 2단계는 엔진이 한 PR로 판정까지 열므로 채택하지 않는다.
+
+## 구현 기록 — E3b-0 · E3b-1 (엔진 측 · 2026-11-23)
+
+> 브랜치 `feat/nbl-e3-1b-bare-land` · base a833c09f7 · push·PR 없음(UI PR이 이어받아 한 PR). 위 «결정 기록»이 이 문서 본문(§4.6 «일부 초과 = 이력 미적용» · §4.8 3번째 고지 · §5 R3 기대값)보다 우선한다.
+
+### 결정 반영으로 본문과 달라진 것
+
+| 본문 | 구현 |
+|---|---|
+| §4.6·R3: «일부 초과» = 이력 미적용 + 고지 | **`exceeded`·`unknown`·`""` = 그 구간 전체를 종합합산으로 접음** + `NBL_STATE_HISTORY_BARE_AREA_LIMIT_NOTICE`. R3 기대 = R2e(모름)와 같은 N(이내만 B). 이력 미적용 분기는 없다. 꼬리 부분 면적(`isPartialArea`)의 «이력 미적용 + 고지»는 불변 |
+| §4.8 고지 3종 이름·내용 | `…BARE_BASIS_UNCONFIRMED_NOTICE` · `…BARE_ACCEPTED_NOTICE` · `…BARE_AREA_LIMIT_NOTICE`(구 `…PARTIAL_AREA`). **정적 상수** — 구간 접두 없이 «건축물이 없던 기간(나대지)»로 통일, 근거 라벨은 구간표가 보인다. 면적한도로 접힌 구간에는 수용 고지를 내지 않는다(모순 방지). 기존 문구 바이트 불변 |
+| §6 ⑫′ «`:72` 사건 타입 확대» | **하지 않음** — refine이 새 칸을 읽지 않는다(`stateEventSequenceIssue`는 `kind`·`date`만 본다). 차단 규칙 삭제로 ⑫′ 동작이 바뀐다 |
+| §6 leaf «`eventCarriesTaxTypeBefore` 의미 확장(all valid kinds)» | **확장하지 않음** — 의미를 바꾸면 ④ 와이어·③ 복원·⑤ 미리보기(UI 소관)의 «신축 행 Before = `""` 정규화»와 테스트 5곳이 함께 뒤집힌다. 대신 신규 술어 `eventClosesBareInterval`을 추가했고 ⑭는 `eventCarriesTaxTypeBefore(kind) || (closesBare && before)` + `closesBare`일 때만 근거·한도를 싣는다. UI PR이 ④·③·⑤를 새 술어로 교체한다 |
+| `tailHasBuilding` 옵션 | `StateEventSequenceOptions.tailHasBuilding`은 차단 규칙 삭제로 **결과에 영향이 없는 인자**가 됐다. 호출부(⑧·⑫′·⑤ 미리보기)와 wire 가드 테스트가 아직 넘기므로 인터페이스에 남겼다 — UI PR이 호출부와 함께 제거 |
+| 근거 `demolished` | 나대지 구간에서 받지 않는다 — `foldReason: "demolished_unsupported"`로 접고 400이 아니다(R-8) |
+
+### 신규·변경 심볼
+
+- `other-land-state-history.ts`: `eventClosesBareInterval(events, index, tailHasBuilding)` · `eventBasisOptions(declared)`(= V1-A 선택지 − `demolished`) · `resolveBareDeclaration(ev)` · `isStateIntervalBusiness(interval)`에 `basisOutcome === "accepted"` 항 · 차단 규칙·throw 삭제.
+- `land-usage.types.ts`: `AreaWithinLimit` · `BareBasisOutcome` · `BareFoldReason` · `StateEvent.{propertyTaxBasisBefore, areaWithinLimitBefore}` · `LandStateInterval`·`StateHistoryIntervalEcho`에 optional `basisOutcome`·`basis`·`declaredPropertyTaxType`·`foldReason`(선언 없는 구간은 키 없음 = 종전 echo와 바이트 동일).
+- `nbl-enum-values.ts`: `NBL_AREA_WITHIN_LIMIT_VALUES` · ⑫ `nblStateEventRawSchema` 신규 칸 2개 · ⑭ `buildLandStateHistory` 운반 조건.
+- `nbl-validation-messages.ts`: `stateEventTaxChangeWithoutBuildingMessage` 삭제(호출처 소멸).
+
+### 실측 (오라클 대비) · 기존 테스트 반전 · mutation
+
+- 케이스 표 R1~R19(+변형 28행) + 바꾸지 않는 R12a~c·R13: leaf·엔진·route(단건·다건·축 B 지분) **오라클과 전 행 일치**, 차이는 R3(결정 반영) 하나뿐. R18(양도차손) 실측 = 사업용 3,072/3,651 · 산출세액 0.
+- 반전 테스트(단언은 지우지 않고 새 기대값으로 바꿨다): e3-1-leaf 4건(Anchor 4 throw · tax-only 차단 · tailHasBuilding 무시 · 신축 뒤/철거 뒤 허용) · e3-1.anchor 2건(토글 false 엔진 throw → 접힘 · T9o Before 운반) · e3-1-client 3건(미리보기 tax-only off · 패리티 M12 off · 철거 뒤 구분 변경) · e3-1-section-render 1건(미리보기 없음 안내) · e3-1-validate-parity 4행 · e3-1-route 2건 · notices 1건(10→13종) · E2E 2곳(`validation-field-jump-cases-nbl.ts` 1행 «같은 날»로 대체 · `transfer-nbl-other-state-history-e3-1.spec.ts` 1건 — **미실행**).
+- mutation: P-b1~P-b12·P-b14(변형 포함 18건) + 신규 anchor(N1·N2·N3·N6~N10 8건) 26건 전부 대응 anchor가 실패(P-b13 ④ 와이어는 UI PR 소관).

@@ -122,8 +122,11 @@ describe("⑤ 미리보기 — M12(건물 불변 · 별도합산 → 종합합�
     expect(p.totalDays).toBe(3651);
     expect(p.hasBuildingAtTransfer).toBe(true);
   });
-  it("tax-only 이력의 미리보기는 `tailHasBuilding`(= 입력 토글)을 ⑧·⑫와 같이 넘겨야 그려진다 — 토글 off면 null(건축물 없는 구간의 구분 변경)", () => {
-    expect(m12({ nblOtherHasBuilding: false })).toBeNull();
+  it("tax-only 이력의 미리보기 — E3-1b 의도된 반전: 토글 off(건축물 없는 구간의 구분 변경)여도 그려진다 · 나대지 선언이므로 변경 전 구간은 근거 없는 별도합산 → 종합합산(접힘)", () => {
+    const p = m12({ nblOtherHasBuilding: false })!;
+    expect(p).not.toBeNull();
+    expect(p.rows.map((r) => [r.hasBuilding, r.propertyTaxType, r.isTail])).toEqual([[false, "comprehensive", false], [false, "comprehensive", true]]);
+    expect(p.hasBuildingAtTransfer).toBe(false);
   });
   it("«모름»(직전 구분 \"\")이면 변경 전 구간은 종합합산(모름) · 요건 미충족 — 직전 구분이 미리보기까지 운반된다(별도합산 → 모름으로 접히지 않는다)", () => {
     expect(m12({ nblOtherStateEvents: [tax("2022-06-01", "")] })!.rows[0]).toMatchObject({ propertyTaxType: "unknown", meetsBuildingRequirement: false });
@@ -167,17 +170,15 @@ describe("⑧ — tailHasBuilding 3중 패턴(⑤ 미리보기 ↔ ⑧): 같은 
     expect(issue(a)).toBeNull();
     expect(preview(a)).not.toBeNull();
   });
-  it("M12 + 토글 off → ⑧ 차단(앵커 `nblOtherStateEvents.0.kind`) + 미리보기 null — «건축물 있음」을 켜거나 건축물 사건 순서를 확인", () => {
+  it("M12 + 토글 off → E3-1b 의도된 반전: ⑧ 통과 + 미리보기 있음(건축물 없는 구간의 구분 변경 차단 규칙 삭제 — 나대지 선언이다)", () => {
     const a = asset({ nblOtherHasBuilding: false, nblOtherStateEvents: [tax("2022-06-01")] });
-    const m = issue(a)!;
-    expect(m.message).toContain("재산세 과세 구분 변경 사건 1번째 행 — 이 날짜 직전에는 건축물이 없습니다");
-    expect(m.field).toBe("nblOtherStateEvents.0.kind");
-    expect(preview(a)).toBeNull();
+    expect(issue(a)).toBeNull();
+    expect(preview(a)).not.toBeNull();
   });
-  it("철거 뒤 구분 변경(나대지 위) → ⑧ 차단 + 미리보기 null(토글과 무관)", () => {
+  it("철거 뒤 구분 변경(나대지 위) → E3-1b 의도된 반전: ⑧ 통과 + 미리보기 있음(토글과 무관) · 3구간(건축물 | 나대지 접힘 | 꼬리)", () => {
     const a = asset({ nblOtherHasBuilding: true, nblOtherStateEvents: [removed("2019-01-01"), tax("2021-01-01")] });
-    expect(issue(a)!.field).toBe("nblOtherStateEvents.1.kind");
-    expect(preview(a)).toBeNull();
+    expect(issue(a)).toBeNull();
+    expect(preview(a)!.rows.map((r) => [r.hasBuilding, r.propertyTaxType])).toEqual([[true, "separate"], [false, "comprehensive"], [false, "comprehensive"]]);
   });
   it("재산세 변경 + 철거 같은 날 → ⑧ 차단(날짜 칸) + 미리보기 null", () => {
     const a = asset({ nblOtherStateEvents: [tax("2021-01-01"), removed("2021-01-01", "comprehensive")] });

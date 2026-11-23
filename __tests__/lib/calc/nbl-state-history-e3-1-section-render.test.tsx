@@ -198,10 +198,10 @@ describe("«변경 후» 줄 · 비차단 «같은 구분» 안내 (UQ-3 (가))"
     expect(text("nbl-other-state-event-0-after")).toContain("종합합산(선언 없음 — 확인 필요)");
     expect(screen.queryByTestId("nbl-other-state-event-0-same-notice")).toBeNull();
   });
-  it("미리보기를 그릴 수 없으면(건축물 없는 구간의 구분 변경 = ⑧ 차단) «변경 후» 줄을 그리지 않는다 — 구간을 지어내지 않는다", () => {
+  it("E3-1b 의도된 반전: 건축물 없는 구간의 구분 변경도 미리보기가 그려진다(⑧ 차단 규칙 삭제 — 나대지 선언) — «변경 후» 줄이 있고 «미리보기 없음» 안내는 없다", () => {
     mount(asset({ nblOtherHasBuilding: false, nblOtherStateEvents: [tax("2022-06-01", "separate")] }));
-    expect(screen.queryByTestId("nbl-other-state-event-0-after")).toBeNull();
-    expect(screen.getByTestId("nbl-state-history-preview-empty")).toBeTruthy();
+    expect(screen.queryByTestId("nbl-other-state-event-0-after")).not.toBeNull();
+    expect(screen.queryByTestId("nbl-state-history-preview-empty")).toBeNull();
   });
 });
 

@@ -29,6 +29,7 @@ import type { FactoryEntityType } from "../factory-employee-sports-standard";
 import { consumesStateHistory } from "./land-category";
 import { effectiveOtherHasBuilding } from "./other-land-state-history";
 import { eventCarriesTaxTypeBefore } from "./other-land-state-history";
+import { eventClosesBareInterval } from "./other-land-state-history";
 import { isEventKind } from "./other-land-state-history";
 import type { LandStateHistoryInput } from "./land-usage.types";
 import type { StateEvent } from "./land-usage.types";
@@ -308,13 +309,28 @@ export function buildLandStateHistory(a: Record<string, unknown>, landType: Land
   const mode = asString(a.nblOtherStateHistoryMode);
   if (mode !== "changed" && mode !== "unchanged" && mode !== "unknown") return undefined;
   if (mode !== "changed") return { mode: mode as StateHistoryMode, events: [] };
-  const events = asArray<{ kind?: string; date?: string; propertyTaxTypeBefore?: string }>(a.nblOtherStateEvents).flatMap((row): StateEvent[] => {
+  type RawEvent = { kind?: string; date?: string; propertyTaxTypeBefore?: string; propertyTaxBasisBefore?: string; areaWithinLimitBefore?: string };
+  const rows = asArray<RawEvent>(a.nblOtherStateEvents).flatMap((row) => {
     const kind = asString(row.kind);
     const date = parseDate(asString(row.date));
-    if (!isEventKind(kind) || !date) return [];
+    return isEventKind(kind) && date ? [{ kind, date, row }] : [];
+  });
+  // E3-1b — 나대지 구간을 닫는 행인지는 사건 순서 replay(초기 건축물 상태 = 입력 토글)로 정한다(leaf 단일 술어 `eventClosesBareInterval`).
+  const tailHasBuilding = asBool(a.nblOtherHasBuilding);
+  const events = rows.map(({ kind, date, row }, i): StateEvent => {
     const before = asString(row.propertyTaxTypeBefore);
-    // Before 운반은 단일 술어(`eventCarriesTaxTypeBefore`) — 철거·재산세 과세 구분 변경은 싣고, 신축은 뜻이 없어 싣지 않는다(V-6 닫힘).
-    return [{ kind, date, ...(eventCarriesTaxTypeBefore(kind) ? { propertyTaxTypeBefore: before as StateEvent["propertyTaxTypeBefore"] } : {}) }];
+    const closesBare = eventClosesBareInterval(rows, i, tailHasBuilding);
+    const basis = asString(row.propertyTaxBasisBefore);
+    const limit = asString(row.areaWithinLimitBefore);
+    return {
+      kind,
+      date,
+      // Before 운반: 철거·구분 변경은 `""`(모름)도 뜻이 있어 항상 싣는다 · 신축 행은 `""` = 선언 없음이라 값이 있을 때만(키 없음 = 종전 입력과 바이트 동일 — V-6).
+      ...(eventCarriesTaxTypeBefore(kind) || (closesBare && before) ? { propertyTaxTypeBefore: before as StateEvent["propertyTaxTypeBefore"] } : {}),
+      // 근거·면적한도는 **나대지 구간을 닫는 행에서만** 싣는다 — 건축물 구간을 닫는 행의 숨은 stale 값은 싣지 않는다(§7.4 규약).
+      ...(closesBare && basis ? { propertyTaxBasisBefore: basis as StateEvent["propertyTaxBasisBefore"] } : {}),
+      ...(closesBare && limit ? { areaWithinLimitBefore: limit as StateEvent["areaWithinLimitBefore"] } : {}),
+    };
   });
   return { mode: "changed", events };
 }

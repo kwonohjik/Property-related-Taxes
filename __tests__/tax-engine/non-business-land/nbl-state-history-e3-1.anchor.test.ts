@@ -113,11 +113,12 @@ describe("E3-1a Anchor 3 — tax-only 이력(건축물 사건 0건): 양도일 �
     expect(judge(input).periodEvaluation?.stateHistory?.intervals.every((i) => i.hasBuilding)).toBe(true);
   });
 
-  it("토글 false여도 ⑭는 raw를 그대로 쓴다 — 건축물 없음 + 구분 변경은 ⑧·⑫가 먼저 막고(Anchor 4·5), 매퍼·엔진은 입력을 조용히 고치지 않고 오류를 던진다", () => {
+  it("토글 false여도 ⑭는 raw를 그대로 쓴다 — E3-1b 의도된 반전: 건축물 없음 + 구분 변경은 나대지 선언이라 엔진이 던지지 않는다(근거 없는 별도합산은 종합합산으로 접혀 N)", () => {
     const raw = { ...e3RowRaw(row("T1")), nblOtherHasBuilding: false, nblOtherBuildingFloorArea: "" };
     const input = fromRaw(raw);
     expect(input.otherLand?.hasBuilding).toBe(false);
-    expect(() => judge(input)).toThrow();
+    const j = judge(input);
+    expect([j.isNonBusinessLand, j.effectiveBusinessDays]).toEqual([true, 0]);
   });
 
   it("건축물 사건이 있으면 구분 변경이 마지막이어도 건축물 사건이 이긴다(V-19 — raw와 모순돼도): 신축 → 구분 변경, 토글 false → hasBuilding = true", () => {
@@ -129,13 +130,17 @@ describe("E3-1a Anchor 3 — tax-only 이력(건축물 사건 0건): 양도일 �
 });
 
 describe("E3-1a ⑭ 매퍼 — Before 운반(단일 술어) · 날짜 변환", () => {
-  it("구분 변경 사건의 propertyTaxTypeBefore가 엔진 input까지 운반된다(P-E3-6) · 신축 행의 Before는 싣지 않는다 · 철거는 종전대로", () => {
+  it("구분 변경 사건의 propertyTaxTypeBefore가 엔진 input까지 운반된다(P-E3-6) · 신축 행의 Before는 E3-1b부터 나대지 구간 선언이라 값이 있으면 싣는다(`\"\"`는 키 없음 = 종전 바이트) · 철거는 종전대로", () => {
     const input = fromRaw(e3RowRaw(row("T7")));
     const [tax, removed] = input.landStateHistory!.events;
     expect([tax.kind, tax.date.toISOString(), tax.propertyTaxTypeBefore]).toEqual(["tax_type_changed", "2019-01-01T00:00:00.000Z", "separate"]);
     expect([removed.kind, removed.propertyTaxTypeBefore]).toEqual(["building_removed", "comprehensive"]);
+    // E3-1b 의도된 반전: T9o(신축 행에 stray «별도합산» Before)는 이제 나대지 구간 선언으로 운반된다(근거가 없어 엔진이 종합합산으로 접는다 — 판정은 T9c와 같다)
     const built = fromRaw(e3RowRaw(row("T9o"))).landStateHistory!.events[0];
-    expect([built.kind, "propertyTaxTypeBefore" in built]).toEqual(["building_built", false]);
+    expect([built.kind, built.propertyTaxTypeBefore]).toEqual(["building_built", "separate"]);
+    // 신축 행 `""`(선언 없음)은 키가 없다 — 기존 이력과 바이트 동일
+    const none = fromRaw(e3RowRaw(row("T9c"))).landStateHistory!.events[0];
+    expect("propertyTaxTypeBefore" in none).toBe(false);
   });
 
   it("종류가 허용값 밖이면 행을 건너뛴다(⑧·⑫가 먼저 막는 불량 행 — 다른 raw 배열 규약) · 신규 종류는 건너뛰지 않는다(P-E3-8)", () => {

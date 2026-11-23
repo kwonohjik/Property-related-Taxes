@@ -22,10 +22,13 @@ const CONFIRM_REQUIRED = [
   "NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE",
   "NBL_STATE_HISTORY_REVENUE_START_NOTICE",
   "NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE", // E3-① — 재산세 과세 구분 변경 사건이 있을 때 APPLIED를 대체
+  "NBL_STATE_HISTORY_BARE_BASIS_UNCONFIRMED_NOTICE", // E3-1b — 나대지 구간 근거를 확인하지 못해 종합합산으로 접음
+  "NBL_STATE_HISTORY_BARE_ACCEPTED_NOTICE", // E3-1b — 나대지 구간 근거를 선언으로 받아들임(요건·호별 한도 미판정)
+  "NBL_STATE_HISTORY_BARE_AREA_LIMIT_NOTICE", // E3-1b — 공지상태 면적한도 일부 초과·모름 → 그 구간 종합합산
 ];
 
 describe("NBL-STATE-HISTORY-E1 — 이력 고지 상수", () => {
-  it("10종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다(E3-①이 2종 추가 — 기존 8종 문구는 바이트 동일)", () => {
+  it("13종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다(E3-①이 2종 · E3-1b가 3종 추가 — 기존 8종 문구는 바이트 동일)", () => {
     expect(STATE_HISTORY_NOTICES.map(([k]) => k).sort()).toEqual(
       [
         ...CONFIRM_REQUIRED,

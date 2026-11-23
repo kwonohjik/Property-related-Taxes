@@ -99,11 +99,11 @@ export const E3B_ROWS: readonly E3bRow[] = [
   { id: "R2d", scenario: "R1에서 근거 `demolished`(직접 API 전용 — 나대지 구간은 받지 않는다 · 철거 후 한시는 유예기간 9호로) — 접힘 + 고지(400 아님)", events: [built("2023-06-01", "separate", "demolished")], tail: TAIL_BLD,
     biz: [["2023-06-01", T]], expect: { nonBusiness: true, eff: 214, total: 3651, tax: E3B_N, bucket: 1 }, notices: ["unconfirmed"] },
   { id: "R3", scenario: "R1에서 공지상태 면적한도 «일부 초과» — **그 구간을 종합합산으로 접고 확인 필요**(결정 2026-11-23 · 이력 미적용이 아니다) — «모름»(R2e)보다 유리해지지 않는다", events: [built("2023-06-01", "separate", "vacant_state", "exceeded")], tail: TAIL_BLD,
-    biz: [["2023-06-01", T]], expect: { nonBusiness: true, eff: 214, total: 3651, tax: E3B_N, bucket: 1 }, notices: ["accepted", "area"] },
+    biz: [["2023-06-01", T]], expect: { nonBusiness: true, eff: 214, total: 3651, tax: E3B_N, bucket: 1 }, notices: ["area"] },
   { id: "R2e", scenario: "R1에서 면적한도 «모름» — «일부 초과»와 같다(종합합산으로 접음)", events: [built("2023-06-01", "separate", "vacant_state", "unknown")], tail: TAIL_BLD,
-    biz: [["2023-06-01", T]], expect: { nonBusiness: true, eff: 214, total: 3651, tax: E3B_N, bucket: 1 }, notices: ["accepted", "area"] },
+    biz: [["2023-06-01", T]], expect: { nonBusiness: true, eff: 214, total: 3651, tax: E3B_N, bucket: 1 }, notices: ["area"] },
   { id: "R2f", scenario: "R1에서 면적한도 미선택(`\"\"`) — «모름»과 같다", events: [built("2023-06-01", "separate", "vacant_state", "")], tail: TAIL_BLD,
-    biz: [["2023-06-01", T]], expect: { nonBusiness: true, eff: 214, total: 3651, tax: E3B_N, bucket: 1 }, notices: ["accepted", "area"] },
+    biz: [["2023-06-01", T]], expect: { nonBusiness: true, eff: 214, total: 3651, tax: E3B_N, bucket: 1 }, notices: ["area"] },
   { id: "R1e", scenario: "면적한도는 `vacant_state`만 묻는다 — 분리과세 근거에 «일부 초과»를 실어 보내도 읽지 않는다(stale 값)", events: [built("2023-06-01", "special_sum", "separate_taxation", "exceeded")], tail: TAIL_BLD,
     biz: [[OS, T]], expect: { nonBusiness: false, eff: 3651, total: 3651, tax: E3B_B, bucket: 1 }, notices: ["accepted"] },
   { id: "R4", scenario: "나대지 계속 · 종합합산 → 공지상태 별도합산 2022-06-01(꼬리 공지상태) — 앞 3,072일 종합합산 나대지 = 비사업용(꼬리 579일뿐)", events: [tax("2022-06-01", "comprehensive")], tail: TAIL_BARE_VS,
@@ -157,3 +157,34 @@ export const E3B_UNCHANGED_ROWS: readonly E3bRow[] = [
 
 export const E3B_ACQ_DEFAULT = A;
 export const E3B_TRANSFER_DEFAULT = T;
+
+/**
+ * 행 → raw 와이어 칸(`nonBusinessLandRaw`). 양도일 현재 건축물 유무는 **마지막 건축물 사건**이 정하고(신축이면 있음 · 철거이면 없음), 건축물 사건이 없으면 `tail.hasBuilding`(입력 토글)이다 —
+ * 숨은 토글(`nblOtherHasBuilding`)은 그 값과 같게 둔다. 선언 3칸은 행 스펙에 값이 있을 때만 싣는다(미전송과 `""`을 구별해 호환 이력을 시료로 둔다).
+ */
+export function e3bRowRaw(row: E3bRow): Record<string, unknown> {
+  const buildingEvents = row.events.filter(([k]) => k !== "tax_type_changed");
+  const lastBuilding = buildingEvents[buildingEvents.length - 1];
+  const tailHasBuilding = lastBuilding ? lastBuilding[0] === "building_built" : row.tail.hasBuilding;
+  return {
+    nblUseDetailedJudgment: true,
+    nblLandType: "other_land",
+    nblZoneType: "general_residential",
+    acquisitionArea: "1000",
+    acquisitionDate: row.acq ?? A,
+    transferDate: row.transfer ?? T,
+    nblOtherPropertyTaxType: row.tail.type,
+    ...(row.tail.basis ? { nblOtherPropertyTaxBasis: row.tail.basis } : {}),
+    nblOtherHasBuilding: tailHasBuilding,
+    nblOtherBuildingFloorArea: tailHasBuilding ? "250" : "",
+    nblOtherStateHistoryMode: "changed",
+    nblOtherStateEvents: row.events.map(([kind, date, before, basis, limit]) => ({
+      kind,
+      date,
+      ...(before !== undefined ? { propertyTaxTypeBefore: before } : {}),
+      ...(basis !== undefined ? { propertyTaxBasisBefore: basis } : {}),
+      ...(limit !== undefined ? { areaWithinLimitBefore: limit } : {}),
+    })),
+    nblGracePeriods: (row.grace ?? []).map((g) => ({ ...g })),
+  };
+}

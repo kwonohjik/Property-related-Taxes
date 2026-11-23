@@ -66,14 +66,6 @@ export function stateEventSameKindMessage(index: number, prevStateLabel: string,
   return `${eventRowPrefix(index)} — 앞 사건이 이미 「${prevStateLabel}」입니다. 사이에 「${missingKindLabel}」 사건이 빠졌습니까? (신축과 멸실은 번갈아 입력합니다)`;
 }
 
-/**
- * 건축물 없는 구간의 재산세 과세 구분 변경(E3-① · V-6 닫힘) — 재산세 과세 구분 변경 사건 직전 상태가 «건축물 없음»(나대지)이다.
- * 나대지 구간은 종합합산으로 보므로 구분 변경을 말할 칸이 없다(공지상태 별도합산 등 근거 입력은 후속 E3-1b).
- */
-export function stateEventTaxChangeWithoutBuildingMessage(index: number): string {
-  return `${eventRowPrefix(index, "tax_type_changed")} — 이 날짜 직전에는 건축물이 없습니다. 건축물이 없는 기간은 종합합산으로 보므로 재산세 과세 구분 변경 사건을 입력할 수 없습니다. 건축물 사건의 순서(또는 「건축물 있음」 선택)를 확인하세요.`;
-}
-
 /** 하한일(⑧만 — 이월과세는 증여자 취득일 · 일반은 취득일 · 축 B 번들은 가장 이른 취득일) 당일 또는 그 이전. */
 export function stateEventAtOrBeforeFloorMessage(index: number, date: string, floorDate: string, kind?: string): string {
   return `${eventRowPrefix(index, kind)} — 사건일(${date})이 소유 시작 전입니다. 취득일(${floorDate}) 당일 또는 그 이전의 사건은 소유기간에 속하지 않아 판정에 쓰이지 않습니다. 취득일 다음 날부터 입력하세요.`;

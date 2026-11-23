@@ -116,7 +116,7 @@ describe("E3-1a route 관통 — 엔진 계획서 §5 21행(단건): 입력 → 
   });
 });
 
-describe("E3-1a ⑫ — 직접 API 계약: 신규 종류는 400이 아니고(P-E3-8), 건축물 없는 구간 위의 변경·같은 날은 400(⑧과 같은 문구)", () => {
+describe("E3-1a ⑫ — 직접 API 계약: 신규 종류는 400이 아니고(P-E3-8), 같은 날은 400(⑧과 같은 문구) · 건축물 없는 구간 위의 변경은 E3-1b부터 통과", () => {
   const T1 = row("T1");
   const tax = (date: string, before = "separate") => ({ kind: "tax_type_changed", date, propertyTaxTypeBefore: before });
   const removed = (date: string, before = "separate") => ({ kind: "building_removed", date, propertyTaxTypeBefore: before });
@@ -128,21 +128,20 @@ describe("E3-1a ⑫ — 직접 API 계약: 신규 종류는 400이 아니고(P-E
     expect(r.nbl?.periodEvaluation?.basis).toBe("state_history");
   });
 
-  it("건축물 없음 토글 + 구분 변경만(tax-only) → 400 + 전용 문구 (V-6 닫힘 — ⑧ 거울) · 토글 켜면 200", async () => {
+  it("E3-1b 의도된 반전: 건축물 없음 토글 + 구분 변경만(tax-only)도 200 — 나대지 구간 선언이다(V-6 «닫힘» 규칙 삭제) · 근거 없는 별도합산은 종합합산으로 접힌다(첫 구간 종합합산)", async () => {
     const off = await run(formOf(T1), [tax("2022-06-01")], (raw) => { raw.nblOtherHasBuilding = false; });
-    expect(off.status).toBe(400);
-    expect(errorText(off)).toContain("이 날짜 직전에는 건축물이 없습니다");
-    expect(errorText(off)).toContain("재산세 과세 구분 변경 사건 1번째 행");
+    expect(off.status, errorText(off).slice(0, 300)).toBe(200);
+    const iv = off.nbl?.periodEvaluation?.stateHistory?.intervals as Loose[];
+    expect(iv.map((i) => [i.hasBuilding, i.propertyTaxType])).toEqual([[false, "comprehensive"], [false, "comprehensive"]]);
     const on = await run(formOf(T1), [tax("2022-06-01")], (raw) => { raw.nblOtherHasBuilding = true; });
     expect(on.status, errorText(on).slice(0, 300)).toBe(200);
   });
 
-  it("철거 뒤 구분 변경(나대지 위) → 400 · 신축 앞 구분 변경(첫 건축물 사건이 신축 = 초기 없음) → 400 · 신축 뒤 구분 변경 → 200", async () => {
+  it("E3-1b 의도된 반전: 철거 뒤 구분 변경(나대지 위) · 신축 앞 구분 변경(첫 건축물 사건이 신축 = 초기 없음) · 신축 뒤 구분 변경 모두 200", async () => {
     const afterRemoved = await run(formOf(T1), [removed("2019-01-01"), tax("2021-01-01")]);
-    expect(afterRemoved.status).toBe(400);
-    expect(errorText(afterRemoved)).toContain("재산세 과세 구분 변경 사건 2번째 행");
+    expect(afterRemoved.status, errorText(afterRemoved).slice(0, 300)).toBe(200);
     const beforeBuilt = await run(formOf(T1), [tax("2019-01-01"), built("2021-01-01")], (raw) => { raw.nblOtherHasBuilding = true; });
-    expect(beforeBuilt.status).toBe(400);
+    expect(beforeBuilt.status, errorText(beforeBuilt).slice(0, 300)).toBe(200);
     const afterBuilt = await run(formOf(T1), [built("2019-01-01"), tax("2021-01-01")]);
     expect(afterBuilt.status, errorText(afterBuilt).slice(0, 300)).toBe(200);
   });

@@ -3,7 +3,7 @@
  *
  *   Anchor 1  일 단위 정답표: 계획서 §5 R1~R18(+ 근거·면적한도 변형)을 `meetsPeriodCriteria`에 «이전 구간 ∪ 꼬리» 구간(`biz`)을 직접 넣어 일수·판정 고정.
  *             임계선 쌍 3개(R5/R6 나목 730/729 · R8/R9 다목 2,191/2,190 · R15/R16 윤일 창 731/730)는 E2·E3-① 표(M8a/b · Z-1460/1461 · M8c · T3a/b · T4a/b · T12a/b)와 **일수·판정이 같다**.
- *   Anchor 2  하위호환 게이트 근거 — ① «이 입력이 지금 왜 틀린가»(현행 엔진 실측: 이력 없음/신축 앞 종합합산 고정) ② 신축 행 stray Before의 **현행 경고 바이트**(V-1 fixture) ③ 바꾸지 않는 행 R12·R13(철거 후 한시·건축 중은 유예가 이미 덮음).
+ *   Anchor 2  하위호환 게이트 근거 — ① «이 입력이 지금 왜 틀린가»(현행 엔진 실측: 이력 없음/신축 앞 종합합산 고정) ② 신축 행 stray Before의 경고 바이트(V-1 fixture — E3b-0 실측 후 E3b-1에서 «구간 판정 불변 · separate(근거 없음)만 새 고지»로 갱신) ③ 바꾸지 않는 행 R12·R13(철거 후 한시·건축 중은 유예가 이미 덮음).
  *   Anchor 3  해석기 재사용 전제: `resolvePropertyTaxBasis({hasBuilding:false})` 조합이 어디로 가는지 고정 — E3b-1이 **같은 함수**를 구간마다 부른다(함수가 바뀌면 둘이 함께 깨진다).
  *
  * 계획서(정본): docs/01-plan/features/nbl-state-history-e3-1b-bare-land-tax-type.engine.plan.md §5 · §7.2 · «결정 기록 (2026-11-23 사용자)»
@@ -22,6 +22,7 @@ import type { NonBusinessLandInput } from "@/lib/tax-engine/non-business-land/ty
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { propertyTaxBasisOptions, resolvePropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { NBL_STATE_HISTORY_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_BASIS_UNCONFIRMED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 
 const rowOf = (id: string) => [...E3B_ROWS, ...E3B_UNCHANGED_ROWS].find((r) => r.id === id)!;
 const evalRow = (id: string) => {
@@ -136,26 +137,33 @@ describe("E3b-0 Anchor 2 ① — 현행 엔진 실측: 이 표가 왜 필요한�
   });
 });
 
-describe("E3b-0 Anchor 2 ② — V-1 fixture: 신축 행에 stray 재산세 구분 Before를 실은 직접 API 데이터의 **현행** 판정·경고 바이트", () => {
+describe("E3b-0 Anchor 2 ② — V-1 fixture: 신축 행에 stray 재산세 구분 Before를 실은 직접 API 데이터의 판정·경고 바이트 (E3b-0 실측 → E3b-1 결과 기록)", () => {
   const stray = (before: string) => fromRaw({ ...e2Base([["building_built", "2023-06-01"]]), nblOtherStateEvents: [{ kind: "building_built", date: "2023-06-01", propertyTaxTypeBefore: before }] });
+  const m6 = () => judge(fromRaw(e2RowRaw(E2_ROWS.find((r) => r.id === "M6")!)));
 
-  it("⑭가 신축 행의 Before를 운반하지 않아(V-6 닫힘) `\"\"`·comprehensive·separate가 모두 같은 입력으로 엔진에 닿는다", () => {
-    for (const before of ["", "comprehensive", "separate"]) {
-      const ev = stray(before).landStateHistory!.events[0];
-      expect([ev.kind, "propertyTaxTypeBefore" in ev], before).toEqual(["building_built", false]);
-    }
+  it("E3b-0 실측(E3b-1 전): ⑭가 신축 행의 Before를 운반하지 않아(V-6 닫힘) `\"\"`·comprehensive·separate가 모두 같은 입력으로 엔진에 닿았다 — E3b-1 이후: `\"\"`는 키 없음(바이트 동일), 값이 있으면 나대지 선언으로 운반", () => {
+    const keys = (before: string) => Object.keys(stray(before).landStateHistory!.events[0]).sort();
+    expect(keys("")).toEqual(["date", "kind"]);
+    expect(keys("comprehensive")).toEqual(["date", "kind", "propertyTaxTypeBefore"]);
+    expect(keys("separate")).toEqual(["date", "kind", "propertyTaxTypeBefore"]);
   });
 
-  it("판정·구간·경고 바이트가 세 fixture에서 같다 — E2 M6(신축 직후 양도)과 같은 값 · 종전 한정 고지(APPLIED) 1회 · 새 고지 없음", () => {
-    const m6 = judge(fromRaw(e2RowRaw(E2_ROWS.find((r) => r.id === "M6")!)));
-    expect([m6.isNonBusinessLand, m6.effectiveBusinessDays]).toEqual([true, 214]);
-    for (const before of ["", "comprehensive", "separate"]) {
+  it("V-1 결과: 판정·구간은 세 fixture 모두 E2 M6과 같다(근거 없는 별도합산은 종합합산으로 접힌다) · `\"\"`·comprehensive는 경고·echo까지 바이트 동일 · separate(근거 없음)만 새 «근거 미확인» 고지가 추가된다", () => {
+    const base = m6();
+    expect([base.isNonBusinessLand, base.effectiveBusinessDays]).toEqual([true, 214]);
+    for (const before of ["", "comprehensive"]) {
       const j = judge(stray(before));
-      expect([j.isNonBusinessLand, j.effectiveBusinessDays, j.totalOwnershipDays], before).toEqual([m6.isNonBusinessLand, m6.effectiveBusinessDays, m6.totalOwnershipDays]);
-      expect(j.warnings, before).toEqual(m6.warnings);
-      expect(JSON.stringify(j.periodEvaluation), before).toBe(JSON.stringify(m6.periodEvaluation));
+      expect(j.warnings, before).toEqual(base.warnings);
+      expect(JSON.stringify(j.periodEvaluation), before).toBe(JSON.stringify(base.periodEvaluation));
       expect(j.warnings.filter((w) => w === NBL_STATE_HISTORY_APPLIED_NOTICE), before).toHaveLength(1);
     }
+    const sep = judge(stray("separate"));
+    expect([sep.isNonBusinessLand, sep.effectiveBusinessDays, sep.totalOwnershipDays]).toEqual([base.isNonBusinessLand, base.effectiveBusinessDays, base.totalOwnershipDays]);
+    expect(sep.warnings).toEqual([...base.warnings, NBL_STATE_HISTORY_BARE_BASIS_UNCONFIRMED_NOTICE]);
+    // 구간 형태는 같고 echo에 접힘 사유만 더해진다
+    const iv = sep.periodEvaluation!.stateHistory!.intervals;
+    expect(iv.map((i) => [i.hasBuilding, i.propertyTaxType, i.days, i.businessDays])).toEqual(base.periodEvaluation!.stateHistory!.intervals.map((i) => [i.hasBuilding, i.propertyTaxType, i.days, i.businessDays]));
+    expect(iv[0]).toMatchObject({ basisOutcome: "unconfirmed", declaredPropertyTaxType: "separate", foldReason: "unselected" });
   });
 });
 
