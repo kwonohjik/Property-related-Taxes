@@ -21,14 +21,16 @@ const CONFIRM_REQUIRED = [
   "NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE",
   "NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE",
   "NBL_STATE_HISTORY_REVENUE_START_NOTICE",
+  "NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE", // E3-① — 재산세 과세 구분 변경 사건이 있을 때 APPLIED를 대체
 ];
 
 describe("NBL-STATE-HISTORY-E1 — 이력 고지 상수", () => {
-  it("8종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다", () => {
+  it("10종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다(E3-①이 2종 추가 — 기존 8종 문구는 바이트 동일)", () => {
     expect(STATE_HISTORY_NOTICES.map(([k]) => k).sort()).toEqual(
       [
         ...CONFIRM_REQUIRED,
         "NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE",
+        "NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE",
         "NBL_STATE_HISTORY_GRACE_ROW_NOTICE",
       ].sort(),
     );

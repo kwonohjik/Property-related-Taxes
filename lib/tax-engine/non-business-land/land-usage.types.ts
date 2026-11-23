@@ -304,15 +304,20 @@ export interface FarmlandDeemingInput {
 // E1: leaf·타입만(판정 미연결). **E2: `NonBusinessLandInput.landStateHistory` · echo(`periodEvaluation.stateHistory`)로 판정에 연결**했다.
 // ============================================================
 
-/** 사건 종류 — v1은 건축물 신축·멸실만(통합 Q-4). */
-export type StateEventKind = "building_built" | "building_removed";
+/**
+ * 사건 종류 — 건축물 신축·멸실(통합 Q-4) + **재산세 과세 구분 변경**(E3-①: 건축물 유무는 그대로인데 구분만 바뀐 사건).
+ * 건축물 사건(신축·멸실)만 건축물 상태를 바꾼다 — 구분 변경은 건축물 있는 구간을 둘로 가를 뿐이다(`isBuildingEventKind`).
+ */
+export type StateEventKind = "building_built" | "building_removed" | "tax_type_changed";
 
 /** 질문 답 — `""` = 미선택(⑧만 차단 · ⑫·엔진은 현행). */
 export type StateHistoryMode = "" | "unchanged" | "changed" | "unknown";
 
 /**
  * 사용자가 입력한 사건. 날짜 = **새 상태의 첫날**(규칙 §83의5①9호 «날부터»).
- * `propertyTaxTypeBefore`는 `building_removed` 행에서만 뜻이 있다 — 철거 직전 «건축물 있던 구간»의 재산세 구분. `""` = 모름(종합합산 + 확인 필요).
+ * `propertyTaxTypeBefore` = «Before 사슬» — **그 사건이 닫는 구간**(직전 사건 또는 소유 첫날부터 이 사건 전날까지)의 재산세 구분. 꼬리(양도일 현재) 구분은 사건이 아니라 기존 입력이 말한다.
+ *   · `building_removed` : 철거 직전 «건축물 있던 구간»의 구분 · `tax_type_changed` : 구분이 바뀌기 직전 «건축물 있던 구간»의 구분 — 둘 다 `""` = 모름(종합합산 + 확인 필요).
+ *   · `building_built`   : 뜻 없음 — 신축 앞은 나대지(재산세 구분 «종합합산» 고정 · V-6 닫힘). 운반 여부는 단일 술어 `eventCarriesTaxTypeBefore`.
  */
 export interface StateEvent {
   kind: StateEventKind;
