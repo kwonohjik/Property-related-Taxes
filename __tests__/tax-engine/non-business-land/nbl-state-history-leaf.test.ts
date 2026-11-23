@@ -15,6 +15,7 @@ import { DAY_ROWS } from "@/__tests__/tax-engine/_helpers/nbl-state-history-day-
 import { dayDate } from "@/__tests__/tax-engine/_helpers/nbl-state-history-day-table";
 import { evalDayRow } from "@/__tests__/tax-engine/_helpers/nbl-state-history-day-table";
 import { type DayRow } from "@/__tests__/tax-engine/_helpers/nbl-state-history-day-table";
+import { consumesHousingStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
 import { consumesStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
 import { deriveOtherLandStateIntervals } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { hasBuildingAtTransfer } from "@/lib/tax-engine/non-business-land/other-land-state-history";
@@ -505,10 +506,14 @@ describe("NBL-STATE-HISTORY-E1 — stateHistoryBusinessIntervals · Q-15 (가′
 // 7. 소비표 — 상태 이력 열
 // ─────────────────────────────────────────────────────────────
 describe("NBL-STATE-HISTORY-E1 — INPUT_CONSUMPTION.stateHistory (`consumesStateHistory`)", () => {
-  it.each(["other_land", "vacant_lot", "miscellaneous"] as const)("기타토지 계열 %s → true", (t) => {
+  it.each(["other_land", "vacant_lot", "miscellaneous", "housing_site"] as const)("기타토지 계열·주택부수토지(E3-③) %s → true", (t) => {
     expect(consumesStateHistory(t)).toBe(true);
   });
-  it.each(["farmland", "paddy", "field", "orchard", "forest", "pasture", "building_site", "housing_site", "villa_land", "other", "", undefined] as const)("그 밖의 지목 %s → false", (t) => {
+  it.each(["farmland", "paddy", "field", "orchard", "forest", "pasture", "building_site", "villa_land", "other", "", undefined] as const)("그 밖의 지목 %s → false (별장은 REDIRECT에 이력이 닿지 않게 false — T-2)", (t) => {
     expect(consumesStateHistory(t)).toBe(false);
+  });
+  it("`consumesHousingStateHistory`(E3-③) — 주택부수토지만 true(기타토지·별장·건물부수 false)", () => {
+    expect(consumesHousingStateHistory("housing_site")).toBe(true);
+    for (const t of ["other_land", "vacant_lot", "miscellaneous", "villa_land", "building_site", "farmland", "forest", "pasture", "other", "", undefined] as const) expect(consumesHousingStateHistory(t), String(t)).toBe(false);
   });
 });

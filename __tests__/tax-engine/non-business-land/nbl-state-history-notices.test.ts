@@ -25,16 +25,23 @@ const CONFIRM_REQUIRED = [
   "NBL_STATE_HISTORY_BARE_BASIS_UNCONFIRMED_NOTICE", // E3-1b — 나대지 구간 근거를 확인하지 못해 종합합산으로 접음
   "NBL_STATE_HISTORY_BARE_ACCEPTED_NOTICE", // E3-1b — 나대지 구간 근거를 선언으로 받아들임(요건·호별 한도 미판정)
   "NBL_STATE_HISTORY_BARE_AREA_LIMIT_NOTICE", // E3-1b — 공지상태 면적한도 일부 초과·모름 → 그 구간 종합합산
+  "NBL_STATE_HISTORY_DAYWISE_NO_RULING_NOTICE", // E3-③ Q-2 — 일 단위 합산을 직접 다룬 해석례 없음
+  "NBL_STATE_HISTORY_HOUSING_APPLIED_NOTICE", // E3-③ A — 주택 이력 적용 한정 고지(이력 없음 고지를 대체)
+  "NBL_STATE_HISTORY_HOUSE_BEFORE_NOTICE", // E3-③ — 철거 전 주택 구간은 입력 정착면적·취득 면적·양도일 배율로 판정
+  "NBL_STATE_HISTORY_HOUSE_WITHIN_UNCONFIRMED_NOTICE", // E3-③ — 정착면적 확인 불가·정착 > 토지 → 그 구간 접힘
+  "NBL_STATE_HISTORY_HOUSE_EXCEEDED_NOTICE", // E3-③ Q-5 (나) — 배율 초과 → 그 구간 전체 비사업용
+  "NBL_STATE_HISTORY_HOUSE_EXCEEDED_GRACE_NOTICE", // E3-③ Q-8 (가) — 초과 구간 뒤 9호 유예 유지
 ];
 
 describe("NBL-STATE-HISTORY-E1 — 이력 고지 상수", () => {
-  it("13종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다(E3-①이 2종 · E3-1b가 3종 추가 — 기존 8종 문구는 바이트 동일)", () => {
+  it("20종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다(E3-①이 2종 · E3-1b가 3종 · E3-③ A가 7종 추가 — 기존 8종 문구는 바이트 동일)", () => {
     expect(STATE_HISTORY_NOTICES.map(([k]) => k).sort()).toEqual(
       [
         ...CONFIRM_REQUIRED,
         "NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE",
         "NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE",
         "NBL_STATE_HISTORY_GRACE_ROW_NOTICE",
+        "NBL_STATE_HISTORY_HOUSING_NON_HOUSE_BUILDING_NOTICE", // E3-③ R-6 — 입력 안내(질문 hint와 같은 상수) — «확인 필요»로 끝나지 않는다
       ].sort(),
     );
     const texts = STATE_HISTORY_NOTICES.map(([, v]) => v);

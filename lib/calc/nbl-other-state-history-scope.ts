@@ -12,6 +12,7 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { NblOtherStateEventInput } from "@/lib/stores/calc-wizard-asset-nbl-other";
+import { consumesHousingStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
 import { consumesStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
 import type { StateHistoryMode } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import { effectiveOtherHasBuilding } from "@/lib/tax-engine/non-business-land/other-land-state-history";
@@ -23,11 +24,12 @@ import { isEventKind } from "@/lib/tax-engine/non-business-land/other-land-state
 
 /**
  * 「건축물 유무 이력」 질문이 이 자산에 적용되는가 — 지목(소비표) · 정밀판정 ON · 연접 다필지 꺼짐.
+ * **기타토지 전용**이다(E3-③ A-1): 소비표 `stateHistory` 열이 주택부수토지에도 열려 있어(엔진이 주택 이력을 읽는다) 주택은 이 술어에서 **명시적으로 뺀다** — 주택 카드의 질문은 UI 후속 PR이 따로 받는다.
  * 의제(§168의14③ 무조건 사업용) 성립은 ⑧ `validateNblDetailedJudgment`가 앞에서 `return`하고 ⑫가 앞에서 `return`하므로 여기서 다시 보지 않는다.
  * 연접 다필지는 필지별 `hasBuilding`이 이미 있어 v1에서 배타다(통합 Q-13).
  */
 export function nblOtherStateHistoryApplies(asset: Pick<AssetForm, "nblLandType" | "nblUseDetailedJudgment" | "nblOtherUseParcels">): boolean {
-  return !!asset.nblUseDetailedJudgment && consumesStateHistory(asset.nblLandType) && !asset.nblOtherUseParcels;
+  return !!asset.nblUseDetailedJudgment && consumesStateHistory(asset.nblLandType) && !consumesHousingStateHistory(asset.nblLandType) && !asset.nblOtherUseParcels;
 }
 
 /** 사건 행의 종류가 모두 선택됐는가(0건은 아님). 파생 `hasBuilding`은 이때만 사건이 정한다 — 미완성 행이 있으면 저장 토글값을 읽는다. */

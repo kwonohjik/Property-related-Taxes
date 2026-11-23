@@ -52,6 +52,10 @@ function usersOf(symbolPattern: string, definedIn: string[]): string[] {
 }
 
 const APPLY = "lib/tax-engine/non-business-land/other-land-state-history-apply.ts";
+// E3-③ A — 주택부수토지 판정: `judgeHousingLand`(양도일 현재 상태 · 초과 분기 PARTIAL 고지) → `applyHousingStateHistory`(이내 분기 후처리 — 같은 leaf를 쓴다) · 배율 helper `housing-limit.ts`(단일 소스).
+const HOUSING_LAND = "lib/tax-engine/non-business-land/housing-land.ts";
+const HOUSING_APPLY = "lib/tax-engine/non-business-land/housing-state-history.ts";
+const HOUSING_LIMIT = "lib/tax-engine/non-business-land/housing-limit.ts";
 const MAPPER = "lib/tax-engine/non-business-land/form-mapper-helpers.ts";
 const REFINES = "lib/api/transfer-tax-schema-nbl-refines.ts";
 const SCHEMA = "lib/api/transfer-tax-schema-nbl.ts";
@@ -79,7 +83,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
   it("WIRE-1: `other-land-state-history`를 import하는 프로덕션 파일 = 판정(apply) · ⑭ 매퍼 · ⑫ refine(E2) + UI(술어 · 미리보기 · ⑧ · ③ 복원 정규화 · ⑤ 위젯 · E3-1b 나대지 구간 선언 카드 · ⑦ 결과 구간표)", () => {
     const re = /^\s*import[\s\S]*?from\s+["'][^"']*other-land-state-history["']/m;
     const importers = FILES.filter((f) => re.test(f.src)).map((f) => f.path).sort();
-    expect(importers, NEXT_PR_HINT).toEqual([APPLY, REFINES, MAPPER, SCOPE, PREVIEW, VALIDATE, MIGRATE, SECTION, BARE_FIELDS, PERIOD_TABLE].sort());
+    expect(importers, NEXT_PR_HINT).toEqual([APPLY, HOUSING_APPLY, REFINES, MAPPER, SCOPE, PREVIEW, VALIDATE, MIGRATE, SECTION, BARE_FIELDS, PERIOD_TABLE].sort());
   });
 
   it("WIRE-2: 판정은 구간 변환(derive)과 구간 산식(stateHistoryBusinessIntervals)을 쓰고, ⑫ refine은 공용 issue leaf를, ⑭ 매퍼·⑫는 `effectiveOtherHasBuilding`을 쓴다 — 3중 패턴", () => {
@@ -99,11 +103,31 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
 
   it("WIRE-4: 판정이 쓰는 고지 상수 = apply + 입력 화면(위젯 · 당해 사업개시일 칸 안내) · UI 전용 상수(unchanged·유예 안내)는 위젯만 쓴다", () => {
     const used = usersOf("NBL_STATE_HISTORY_(?:APPLIED|UNKNOWN|PARTIAL_AREA|DEEMED_TRANSFER|REMOVED_TAX_TYPE_UNKNOWN|REVENUE_START)_NOTICE", [NOTICES]).sort();
-    expect(used, NEXT_PR_HINT).toEqual([APPLY, DETAIL, SECTION].sort());
+    // E3-③ — `PARTIAL_AREA`는 `judgeHousingLand`의 배율 초과 분기(이력 미반영 고지) · `UNKNOWN`은 `applyHousingStateHistory`(이내 분기)가 싣는다.
+    expect(used, NEXT_PR_HINT).toEqual([APPLY, DETAIL, SECTION, HOUSING_LAND, HOUSING_APPLY].sort());
     const uiOnly = usersOf("NBL_STATE_HISTORY_(?:UNCHANGED|GRACE_ROW)_NOTICE", [NOTICES]);
     expect(uiOnly, NEXT_PR_HINT).toEqual([SECTION]);
     const messages = usersOf("STATE_EVENTS_REQUIRED_MESSAGE|stateEvent[A-Za-z]+Message", [MESSAGES, LEAF]).sort();
-    expect(messages, NEXT_PR_HINT).toEqual([APPLY]);
+    expect(messages, NEXT_PR_HINT).toEqual([APPLY, HOUSING_APPLY].sort());
+  });
+
+  it("WIRE-4b (E3-③ A): 주택부수토지 이력 고지 상수(DAYWISE·HOUSING_APPLIED·HOUSE_*·NON_HOUSE_BUILDING)는 `applyHousingStateHistory`만 싣는다 — UI 후속 PR이 입력 화면 사용처를 더하면 이 목록을 갱신한다", () => {
+    const used = usersOf("NBL_STATE_HISTORY_(?:DAYWISE_NO_RULING|HOUSING_APPLIED|HOUSE_BEFORE|HOUSE_WITHIN_UNCONFIRMED|HOUSE_EXCEEDED|HOUSE_EXCEEDED_GRACE|HOUSING_NON_HOUSE_BUILDING)_NOTICE", [NOTICES]).sort();
+    expect(used, NEXT_PR_HINT).toEqual([HOUSING_APPLY]);
+  });
+
+  it("WIRE-3b (E3-③ A): 주택 소비 술어 `consumesHousingStateHistory` = 사건 주체 leaf(`stateEventSubjectOf` — ⑧·⑫ 문구 변형) · ⑭ 매퍼(tailHasBuilding=true · 정착면적 운반) · UI 기타토지 전용 술어(주택 제외)", () => {
+    const users = usersOf("consumesHousingStateHistory", [CATEGORY]).sort();
+    expect(users, NEXT_PR_HINT).toEqual([LEAF, MAPPER, SCOPE].sort());
+  });
+
+  it("WIRE-10 (E3-③ Q-11 (나)): 폐기된 3지선다 칸 `houseWithinLimitBefore`는 프로덕션 어디에도 없다 — A·B 모두 `houseFootprintBefore`(㎡)로 통일(Y-32)", () => {
+    expect(usersOf("houseWithinLimitBefore", []), "폐기된 칸 잔재").toEqual([]);
+  });
+
+  it("WIRE-9 (E3-③ A): 배율 helper `housing-limit.ts`는 `judgeHousingLand`(양도일 현재)와 과거 주택 구간(leaf)이 같이 쓴다 — 단일 소스(D-12). `getHousingMultiplier`를 직접 부르는 주택 판정이 더 생기면 배율이 갈라진다", () => {
+    const users = usersOf("judgeHousingLimit|resolveHouseInterval", [HOUSING_LIMIT]).sort();
+    expect(users, NEXT_PR_HINT).toEqual([HOUSING_LAND, LEAF].sort());
   });
 
   it("WIRE-5: ⑫ Zod가 두 칸(`nblOtherStateHistoryMode`·`nblOtherStateEvents`)을 가진다 — 빠지면 침묵 strip · ⑭ 매퍼·⑫ refine이 둘 다 읽는다", () => {
@@ -142,6 +166,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
 
   it("WIRE-7: 엔진 입력 `landStateHistory`는 types · 매퍼 · 판정(apply)만 읽는다", () => {
     const users = usersOf("landStateHistory", []).sort();
-    expect(users).toEqual(["lib/tax-engine/non-business-land/form-mapper.ts", "lib/tax-engine/non-business-land/other-land-state-history-apply.ts", "lib/tax-engine/non-business-land/types.ts"].sort());
+    // E3-③ — 주택부수토지: `judgeHousingLand`(초과 분기 고지) · `applyHousingStateHistory`(이내 분기 후처리)도 읽는다.
+    expect(users).toEqual(["lib/tax-engine/non-business-land/form-mapper.ts", HOUSING_LAND, HOUSING_APPLY, "lib/tax-engine/non-business-land/other-land-state-history-apply.ts", "lib/tax-engine/non-business-land/types.ts"].sort());
   });
 });

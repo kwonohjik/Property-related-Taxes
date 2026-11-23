@@ -3,10 +3,10 @@
  *
  *   Anchor 1  일 단위 정답표: 계획서 §6.1 A 행을 `meetsPeriodCriteria`에 사업용 구간(`biz`)을 직접 넣어 일수·판정 고정 + 기타토지 E2 신축 행과 «같은 일수» parity +
  *             §6.2 배율 판정 경계(`getHousingMultiplier` → `areaTimes` → `judgeAreaLimit` 직접 호출) + B 행의 «위장 실측» 연결(E2 표).
- *   현행 열  같은 입력을 현행 엔진에 넣은 값 — 이력 칸을 읽지 않으므로 전부 `not_judged` 사업용(이 표가 왜 필요한가).
+ *   현행 열  같은 입력을 **이력 칸 없이**(= 현행 엔진이 이력을 읽지 않던 때와 같은 입력) 넣은 값 — 전부 `not_judged` 사업용(이 표가 왜 필요한가). E3d-1 이후에도 «이력을 쓰지 않는 입력»의 값이다.
  *   Anchor 2  하위호환 골든: 주택부수토지 행 × 모드 4종 — `judgeNonBusinessLand` 결과 객체 전체 + 세액(E3d-1 이후 `unknown`만 고지 한 줄이 늘고 나머지는 바이트 동일).
  *   Anchor 3  Q-3a (나) 보존: 초과분 + 이력 `changed`는 판정·세액·echo가 현행과 같다(E3d-1은 `PARTIAL_AREA` 고지만 더한다).
- *   Anchor 4  T-1(뒤집힘 + `areaProportioning` 유지) — skip, E3d-1이 활성화한다.
+ *   Anchor 4  T-1(뒤집힘 + `areaProportioning` 유지) — E3d-0에서는 skip, **E3d-1이 활성화했다**(`nbl-state-history-e3-3.anchor.test.ts`에 같은 단언 + 변형).
  *   Anchor 12 `judgeHousingLand` 결과 객체(steps·warnings·echo) 격자 스냅샷 — `housing-limit.ts` 추출 전후 바이트 동일.
  *
  * 계획서(정본): docs/01-plan/features/nbl-state-history-e3-3-house-appurtenant.engine.plan.md §2.1 · §6 · §7.2
@@ -110,20 +110,16 @@ describe("E3d-0 Anchor 1 — §6.1 A 행: 판정 · 일수 (일 단위 정답표
   });
 });
 
-describe("E3d-0 현행 열 — 같은 입력을 현행 엔진에 넣은 값: 이력 칸(`changed` + 사건)을 읽지 않으므로 전부 `not_judged` 사업용 (이 표가 왜 필요한가)", () => {
+describe("E3d-0 현행 열 — 같은 입력을 **이력 칸 없이** 넣은 값: 현행 엔진은 이력을 읽지 않으므로 전부 `not_judged` 사업용 (이 표가 왜 필요한가)", () => {
   it.each(E3D_A_ROWS.map((r) => [r.id, r.scenario, r] as const))("%s — %s", (_id, _s, r) => {
-    const withHistory = fromRaw(e3dARowRaw(r));
     const withoutHistory = fromRaw(e3dARowRaw(r, { history: false }));
-    // 주택부수토지는 이력 칸을 소비하지 않는다 — 엔진 입력에 `landStateHistory`가 실리지 않는다(`consumesStateHistory` = false).
-    expect(Object.keys(withHistory), r.id).not.toContain("landStateHistory");
-    const j = judge(withHistory);
+    expect(Object.keys(withoutHistory), r.id).not.toContain("landStateHistory");
+    const j = judge(withoutHistory);
     expect(j.isNonBusinessLand).toBe(r.current.nonBusiness);
     expect(j.periodEvaluation?.basis).toBe("not_judged");
     expect(j.warnings).toContain(NBL_STATE_AT_TRANSFER_APPLIED_NOTICE);
-    // 이력을 넣든 빼든 결과 객체 전체가 같다
-    expect(judge(withHistory)).toEqual(judge(withoutHistory));
     const tax = e3dTradeTax(r, false);
-    if (tax !== undefined) expect(taxOf(withHistory), r.id).toBe(tax);
+    if (tax !== undefined) expect(taxOf(withoutHistory), r.id).toBe(tax);
   });
 
   it("기대와 현행이 반대인 행(과소 해소 대상) vs 일치하는 행 — 표의 존재 이유", () => {
@@ -136,7 +132,7 @@ describe("E3d-0 현행 열 — 같은 입력을 현행 엔진에 넣은 값: 이
   it("세액 변동(과소 해소): 2014 취득 거래 N − B = 55,750,000", () => {
     const r = row("M15");
     expect(e3dTradeTax(r, true)! - e3dTradeTax(r, false)!).toBe(E3D_SWING_2014);
-    expect(taxOf(fromRaw(e3dARowRaw(r)))).toBe(198_210_000);
+    expect(taxOf(fromRaw(e3dARowRaw(r, { history: false })))).toBe(198_210_000);
   });
 });
 
@@ -219,11 +215,13 @@ describe("E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × �
   });
 
   const unknown = Object.entries(HOUSING_GRID).map(([name, input]) => [name, input, MODES[3][1]] as const);
-  it.each(unknown)("%s × unknown — (현행) 이력 칸을 읽지 않는다: 미전송과 같다. E3d-1 이후에는 배율 **이내** 행만 `UNKNOWN` 고지 한 줄이 늘고 나머지는 같다", (_n, input, extra) => {
+  it.each(unknown)("%s × unknown — 배율 **이내**(전량 사업용 core)에서만 `UNKNOWN` 고지 한 줄이 늘고 나머지(판정·steps·echo·세액)는 미전송과 같다 · 정착면적 0·초과·별장 REDIRECT 등 이내 분기 밖은 전부 같다", (name, input, extra) => {
+    const base = snapshotOf(input);
     const got = snapshotOf({ ...input, ...extra } as Housing);
-    // 현행에서는 고지가 한 줄도 늘지 않는다 — E3d-1이 이 단언을 «이내 행만 +1»로 바꾼다.
-    expect(got.judgment.warnings.filter((w) => w === NBL_STATE_HISTORY_UNKNOWN_NOTICE)).toHaveLength(0);
-    expect(got).toEqual(snapshotOf(input));
+    // E3d-1 — 이내 분기 후처리(`applyHousingStateHistory`)는 `unknown`일 때 고지 1줄만 더한다. 이내 분기를 타는 행 = 안분 echo가 있고 비율 0이며 core 사업용인 행(재분류된 별장 H16 포함 — 별장은 이력 칸을 싣지 않지만 엔진 입력에 직접 넣으면 같은 후처리를 탄다).
+    const isWithin = base.judgment.periodEvaluation?.basis === "not_judged" && base.judgment.areaProportioning?.nonBusinessRatio === 0 && !base.judgment.isNonBusinessLand;
+    expect(got.judgment.warnings.filter((w) => w === NBL_STATE_HISTORY_UNKNOWN_NOTICE), name).toHaveLength(isWithin ? 1 : 0);
+    expect({ ...got, judgment: { ...got.judgment, warnings: got.judgment.warnings.filter((w) => w !== NBL_STATE_HISTORY_UNKNOWN_NOTICE) } }, name).toEqual(base);
   });
 
   it("E0 격자의 타 지목(주택부수토지 초과 G19 · 농지 G20)도 모드와 무관하다 — 기존 compat anchor와 같은 값을 여기서도 확인", () => {
@@ -271,9 +269,12 @@ describe("E3d-0 Anchor 3 — Q-3a (나) 보존: 양도일 현재 배율 초과 +
 });
 
 describe("E3d-0 Anchor 4 — T-1: 이내 core를 비사업용으로 뒤집으며 `areaProportioning`(비율 0)을 유지하면 판정은 비사업용인데 세액은 사업용 (E3d-1이 활성화)", () => {
-  it.skip("M15(E3d-1 이후): 판정 비사업용 · `nonBusinessAreaRatio === 1` · 세액 N 253,960,000 — 뒤집을 때 `areaProportioning = undefined`", () => {
-    // E3d-1에서 skip을 풀고 단언한다: judge(M15).isNonBusinessLand === true · areaProportioning === undefined · taxOf === 253_960_000.
-    expect(judge(fromRaw(e3dARowRaw(row("M15")))).isNonBusinessLand).toBe(true);
+  it("M15(E3d-1 활성): 판정 비사업용 · `areaProportioning` 없음 · `nonBusinessAreaRatio === 1` · 세액 N 253,960,000 — 뒤집을 때 `areaProportioning = undefined`", () => {
+    const j = judge(fromRaw(e3dARowRaw(row("M15"))));
+    expect(j.isNonBusinessLand).toBe(true);
+    expect(j.areaProportioning).toBeUndefined();
+    expect(j.surcharge.nonBusinessAreaRatio).toBe(1);
+    expect(taxOf(fromRaw(e3dARowRaw(row("M15"))))).toBe(253_960_000);
   });
 });
 

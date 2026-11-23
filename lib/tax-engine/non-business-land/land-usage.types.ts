@@ -333,6 +333,31 @@ export interface StateEvent {
   propertyTaxTypeBefore?: PropertyTaxType | "";
   propertyTaxBasisBefore?: PropertyTaxBasis | "";
   areaWithinLimitBefore?: AreaWithinLimit;
+  /**
+   * E3-③(주택부수토지) — **주택 구간을 닫는 철거 행**(`eventClosesHouseInterval`)의 철거 직전 주택 정착면적(㎡). ⑭가 raw 문자열을 수치로 바꿔 싣는다 —
+   * 빈칸·비수치는 키 없음(`undefined`), 0·음수는 그대로 싣는다(엔진 `resolveHouseInterval`이 양수가 아니면 «모름»으로 접는다). 주택 구간의 재산세 구분(`propertyTaxTypeBefore`)은 읽지 않는다(조심 2018서0295).
+   */
+  houseFootprintBefore?: number;
+}
+
+/** E3-③ — 상태 구간의 건축물 종류. `house` = 주택(법 §104의3①5호 주택부속토지 — 재산세 토지 구분이 아니라 정착면적 × 배율로 이내 여부를 가린다). 없음 = 종전 건축물 구간. */
+export type StateBuildingKind = "house";
+
+/**
+ * E3-③ — 과거 주택 구간의 배율 이내 판정 결과. `within` = 정착면적 × 배율(양도일 시행 영 §168의12) 허용 면적 이내(사업용) · `exceeded` = 초과(그 구간 전체 비사업용으로 접음 — Q-5 (나)) ·
+ * `unconfirmed` = 정착면적 빈칸·비양수·비수치 또는 정착면적 > 토지 면적(접음 — 「모름」 = 혜택 불성립). `exceeded`가 `unconfirmed`보다 유리해지는 역전은 없다.
+ */
+export type HouseOutcome = "within" | "exceeded" | "unconfirmed";
+
+/** E3-③ — 과거 주택 구간의 배율 판정 근거(echo) — 결과 구간표가 «정착면적 × 배율 = 허용 면적 vs 토지 면적»을 그대로 보여 준다. */
+export interface HouseCheck {
+  footprint: number;
+  multiplier: number;
+  multiplierDetail: string;
+  allowedArea: number;
+  landArea: number;
+  /** 초과 면적(㎡) — 이내이면 0. */
+  excessArea: number;
 }
 
 /** 나대지 구간 선언의 해석 결과 — `accepted` = 선언한 구분을 근거와 함께 받아들임 · `unconfirmed` = 종합합산으로 접음. */
@@ -361,6 +386,12 @@ export interface LandStateInterval {
   declaredPropertyTaxType?: PropertyTaxType;
   /** `unconfirmed`일 때 접힌 사유. */
   foldReason?: BareFoldReason;
+  /** E3-③ — 주택 구간(주택부수토지 카드의 모든 건축물 구간)일 때만. 있으면 `propertyTaxType`은 판정에 쓰지 않는다(`"unknown"` 고정 — 조심 2018서0295). */
+  buildingKind?: StateBuildingKind;
+  /** E3-③ — 과거 주택 구간의 배율 이내 판정(꼬리는 core가 판정하므로 없다). */
+  houseOutcome?: HouseOutcome;
+  /** E3-③ — `houseOutcome`이 `within`·`exceeded`일 때만(계산한 근거). */
+  houseCheck?: HouseCheck;
 }
 
 /**
@@ -386,6 +417,10 @@ export interface StateHistoryIntervalEcho {
   basis?: PropertyTaxBasis;
   declaredPropertyTaxType?: PropertyTaxType;
   foldReason?: BareFoldReason;
+  /** E3-③ — 주택 구간일 때만(`LandStateInterval`의 같은 이름 필드). 없으면 키 없음 = 종전 echo와 같다. */
+  buildingKind?: StateBuildingKind;
+  houseOutcome?: HouseOutcome;
+  houseCheck?: HouseCheck;
 }
 
 /**

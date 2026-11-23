@@ -11,7 +11,7 @@
  * 종전에는 `landType === "building_site"`를 이 모듈이 받아 주택 배율을 적용했다(A-BS-1, 2026-08-05 정정).
  */
 
-import { areaRatio4, areaTimes, judgeAreaLimit } from "../area-limit";
+import { areaRatio4 } from "../area-limit";
 import { differenceInDays } from "../utc-date";
 import { NBL } from "../legal-codes";
 import type {
@@ -21,9 +21,10 @@ import type {
   NonBusinessLandInput,
   NonBusinessLandJudgmentRules,
 } from "./types";
-import { getHousingMultiplier } from "./urban-area";
+import { HOUSING_METRO_DEFAULTED_WARNING, judgeHousingLimit } from "./housing-limit";
+import { applyHousingStateHistory } from "./housing-state-history";
 import { getOwnershipStart } from "./utils/period-math";
-import { NBL_STATE_AT_TRANSFER_APPLIED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_AT_TRANSFER_APPLIED_NOTICE, NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE } from "../nbl-confirm-notices";
 import { expropriationZoneBaseDateNotice } from "../appurtenant-land-rate";
 import { applyGraceToNonBusinessRemainder } from "./other-land-merge";
 
@@ -31,6 +32,7 @@ import { applyGraceToNonBusinessRemainder } from "./other-land-merge";
  * NBL2611-V10-P — 주택부수토지는 영 §168의12 배율 × 면적으로 판정한다. 배율 초과 상태는 양도일 현재 상태를 소유기간 전체에 적용하며(V2-C2),
  * 영 §168의6 기간기준은 **유예기간(영 §168의14①)만** 초과분에 반영한다(NBL2611-D1 · 리뷰 Q-3a (나) — 2026-07-31 방침(초과분 기간요건 일률)을 좁힘).
  * 유예 입력이 없거나 초과분이 없으면 기간기준을 판정하지 않은 것(`not_judged`)이다. 사용기간 입력·양도일 의제(§168의14②)는 이 지목에서 받지 않는다.
+ * E3-③ — **배율 이내 분기**만 소유기간 중 신축·철거 이력(`landStateHistory.mode === "changed"`)을 일 단위로 판정한다(`housing-state-history.ts`). 배율 초과 분기는 그대로이고 이력은 반영하지 않는다(Q-3a (나) — 고지만).
  */
 const HOUSING_PERIOD_EVALUATION = { basis: "not_judged", legalBasis: [NBL.HOUSING_MULTIPLIER] } as const;
 
@@ -80,25 +82,15 @@ export function judgeHousingLand(
     if (zoneNotice) warnings.push(zoneNotice);
   }
 
-  // isMetropolitanArea 미지정 시 수도권으로 보수적 처리 (납세자에게 불리한 쪽 적용)
-  let isMetropolitan: boolean;
-  if (input.isMetropolitanArea === undefined) {
-    warnings.push(
-      "수도권 여부(isMetropolitanArea) 미제공 — 보수적 기본값(수도권)으로 배율 산정. 수도권 여부를 명시하면 정확한 배율이 적용됩니다.",
-    );
-    isMetropolitan = true;
-  } else {
-    isMetropolitan = input.isMetropolitanArea;
-  }
-  // 영 §168의12 배율 경과조치(2022.1.1., 부칙 §39) — 양도일 기준.
-  const { multiplier, detail: multiplierDetail } = getHousingMultiplier(
-    input.zoneType,
-    isMetropolitan,
-    input.transferDate,
-  );
-  // NBL2611-V9-I — 한도·초과 면적은 정수 정확 비교(`area-limit.ts` 단일 소스).
-  const allowedArea = areaTimes(footprint, multiplier);
-  const limit = judgeAreaLimit(input.landArea, allowedArea);
+  // 배율·한도 계산은 `housing-limit.ts` 단일 소스(E3-③ D-12 — 과거 주택 구간 판정과 공유). isMetropolitanArea 미지정 시 수도권으로 보수적 처리 (납세자에게 불리한 쪽 적용).
+  const { multiplier, multiplierDetail, allowedArea, limit, metroDefaulted } = judgeHousingLimit({
+    zoneType: input.zoneType,
+    isMetropolitanArea: input.isMetropolitanArea,
+    transferDate: input.transferDate,
+    footprint,
+    landArea: input.landArea,
+  });
+  if (metroDefaulted) warnings.push(HOUSING_METRO_DEFAULTED_WARNING);
 
   steps.push({
     id: "housing_multiplier",
@@ -124,20 +116,25 @@ export function judgeHousingLand(
       detail: `${input.landArea}㎡ ≤ ${allowedArea}㎡ → 전체 사업용`,
       legalBasis: NBL.HOUSING_MULTIPLIER,
     });
-    return {
-      isBusiness: true,
-      reason: "주택 부수 토지 배율 이내 → 사업용",
-      steps,
-      appliedLaws,
-      areaProportioning: area,
-      totalOwnershipDays,
-      effectiveBusinessDays: totalOwnershipDays,
-      gracePeriodDays: 0,
-      businessUseRatio: 1,
-      criteria: { rule2of3Years: true, rule5Years: false, rule80Percent: false },
-      periodEvaluation: HOUSING_PERIOD_EVALUATION,
-      warnings,
-    };
+    // E3-③ — 양도일 현재 배율 이내(전량 사업용)일 때만 소유기간 중 신축·철거 이력(`changed`)을 일 단위로 판정한다. 이력이 없으면 core 그대로(바이트 동일).
+    return applyHousingStateHistory(
+      {
+        isBusiness: true,
+        reason: "주택 부수 토지 배율 이내 → 사업용",
+        steps,
+        appliedLaws,
+        areaProportioning: area,
+        totalOwnershipDays,
+        effectiveBusinessDays: totalOwnershipDays,
+        gracePeriodDays: 0,
+        businessUseRatio: 1,
+        criteria: { rule2of3Years: true, rule5Years: false, rule80Percent: false },
+        periodEvaluation: HOUSING_PERIOD_EVALUATION,
+        warnings,
+      },
+      input,
+      rules,
+    );
   }
 
   const nonBusinessArea = limit.excess;
@@ -172,13 +169,16 @@ export function judgeHousingLand(
   };
   // NBL2611-D1 (V2-C1 · Q-3a (나)) — 초과분은 «빈 사업기간 + 유예기간»으로 기간기준을 본다(영 §168의14①). 충족하면 초과분이 사업용이 되어 전량 사업용이다.
   const { result, graceJudged } = applyGraceToNonBusinessRemainder(excessResult, input, rules, "housing");
-  if (!graceJudged) return excessResult;
-  return {
+  // E3-③ Q-3a (나) 경계 — 양도일 현재 배율 초과(부분 면적)는 판정·세액·echo를 바꾸지 않는다. 이력 `changed`이면 «이력 미반영» 고지만 더한다.
+  const partialNotice = (r: CategoryJudgeResult): CategoryJudgeResult =>
+    input.landStateHistory?.mode === "changed" ? { ...r, warnings: [...(r.warnings ?? []), NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE] } : r;
+  if (!graceJudged) return partialNotice(excessResult);
+  return partialNotice({
     ...result,
     // 유예로 사업용이 돼도 배율·면적 정보는 남긴다(사업용 면적 = 전체, 초과 0).
     areaProportioning: result.isBusiness
       ? { ...area, businessArea: input.landArea, nonBusinessArea: 0, nonBusinessRatio: 0, legalBasis: [NBL.HOUSING_MULTIPLIER, NBL.UNAVOIDABLE_PERIOD] }
       : result.areaProportioning,
     periodEvaluation: { basis: "state_at_transfer", legalBasis: [NBL.HOUSING_MULTIPLIER], graceJudged },
-  };
+  });
 }

@@ -108,7 +108,8 @@ describe("E3-① 고지 2종 배선 — 엔진 apply(결과 경고)와 입력 �
   it("E3-1b 나대지 구간 고지 3종(`…BARE_BASIS_UNCONFIRMED` · `…BARE_ACCEPTED` · `…BARE_AREA_LIMIT`)도 엔진 apply(결과 경고)와 입력 카드가 같은 상수를 읽는다 — 위젯이 문구를 따로 쓰지 않는다", () => {
     for (const name of ["BARE_BASIS_UNCONFIRMED", "BARE_ACCEPTED", "BARE_AREA_LIMIT"]) {
       const users = FILES.filter((f) => f.path !== NOTICES && new RegExp(`\\bNBL_STATE_HISTORY_${name}_NOTICE\\b`).test(f.src)).map((f) => f.path).sort();
-      expect(users, name).toEqual([APPLY, BARE_FIELDS].sort());
+      // E3-③ D-4 — 나대지 선언 고지 조립은 `state-history-echo.ts`(`bareDeclarationNotices`)로 이동해 기타토지 apply와 주택부수토지 apply가 같이 쓴다.
+      expect(users, name).toEqual(["lib/tax-engine/non-business-land/state-history-echo.ts", BARE_FIELDS].sort());
     }
   });
 });
