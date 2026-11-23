@@ -159,3 +159,28 @@ describe("이력 없음 — 기존 카드 그대로", () => {
     expect(r.queryByTestId("nbl-state-history-period")).toBeNull();
   });
 });
+
+describe("소유기간 0일(M16 — 축 B 지분이 양도 전날 취득) — U3 probe 실측", () => {
+  // 엔진은 0일 보유를 기간기준 비교 없이 비사업용으로 처리한다(`period-criteria.ts` 0일 가드 — 수치 echo 없음).
+  // 종전 카드는 기준 행 «나목 0일 중 0일 — 100분의 40(0일) 초과 → 미충족»을 그리면서 판정 문구는 «모두 충족해 비사업용»이라 서로 어긋났다.
+  it("M16: 비사업용인데 기준 행(미충족)을 그리지 않고, 엔진 처리(비교 없이 비사업용)를 밝힌다 — 행·«모두 충족» 문구와 모순 없음", () => {
+    const j = judgeRow("M16");
+    expect(j.isNonBusinessLand).toBe(true);
+    expect(j.periodEvaluation?.stateHistory?.intervals).toEqual([]);
+    const r = mount(j);
+    expect(text(r.getByTestId("nbl-state-history-zero-days"))).toContain("소유기간이 0일");
+    expect(text(r.getByTestId("nbl-state-history-zero-days"))).toContain("기간기준(가·나·다목) 비교 없이 비사업용");
+    for (const k of ["ga", "na", "da"]) expect(crit(r, k)).toBeNull();
+    expect(r.queryByTestId("nbl-state-history-criteria-verdict")).toBeNull();
+    expect(text(r.getByTestId("nbl-state-history-total-row"))).toContain("0일");
+  });
+
+  it("M16c-bare(소유 1일): 0일 분기가 아니다 — 기준 행·판정 문구 그대로(꼬리 나대지 1일 > 0일 → 나목 충족 → 비사업용)", () => {
+    const j = judgeRaw({ ...e2RowRaw(row("M16c-bare")) });
+    expect(j.periodEvaluation?.stateHistory?.criteria.limitDa).toBe(0);
+    const r = mount(j);
+    expect(r.queryByTestId("nbl-state-history-zero-days")).toBeNull();
+    expect(text(crit(r, "da")!)).toContain("→ 충족");
+    expect(text(r.getByTestId("nbl-state-history-criteria-verdict"))).toContain("모두 충족해 비사업용");
+  });
+});
