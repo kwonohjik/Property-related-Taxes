@@ -23,12 +23,15 @@ import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
+import { nblRevenuePeriodInUse } from "@/lib/calc/nbl-revenue-period-scope";
 
 beforeEach(() => {
   vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 });
 
 const LV = "100000000";
+/** 양도일 의제(최초 경매기일 2023-01-01) — 엔진 `revenueHistoryScope`가 `deemed`가 된다. */
+const DEEMED = { nblDeemedTransferReason: "auction", nblDeemedTransferDate: "2023-01-01" } as const;
 
 /** 잡종지 1,000㎡ · 취득 2014-01-01 · 양도 2024-06-30 · 주차장운영업 · 영위 기간 ON(개시 2022-12-01 계속) — ⑧을 통과하는 기본 폼(M9′). */
 function formOf(over: Partial<AssetForm> = {}): TransferFormData {
@@ -83,6 +86,9 @@ describe("⑧ ↔ ⑫ parity 격자", () => {
     { id: "하한: 폐업일 = 취득일(영위일 없음)", over: { nblRevenueCurrentBusinessStartDate: "", nblRevenueBusinessEndDate: "2014-01-01" }, field8: "nblRevenueBusinessEndDate", blocked12: false },
     { id: "하한: 폐업일 < 취득일", over: { nblRevenueCurrentBusinessStartDate: "", nblRevenueBusinessEndDate: "2013-06-01" }, field8: "nblRevenueBusinessEndDate", blocked12: false },
     { id: "양도연도에 영위(폐업 T 안) + 당해 수입 빔 — 읽는 칸이라 필수", over: { nblRevenueCurrentBusinessStartDate: "", nblRevenueBusinessEndDate: "2024-03-01", nblRevenueCurrentRevenue: "", nblRevenueYearRows: [] }, field8: "nblRevenueCurrentRevenue", blocked12: false },
+    // ── 양도일 의제(§168의14②): 엔진은 영위 기간을 읽지 않고 현행(OFF) 경로를 탄다 → ⑧도 OFF와 같은 필수 규칙(침묵 불리 적용 방지 — 수입 0으로 판정) ──
+    { id: "의제 사유 + 토글 ON + 폐업 T−2 이전 + 당해 수입 빔 — 엔진이 OFF 경로라 당해 수입금액 필수(영위 기간이 쓰이면 건너뛰는 규칙과 다름)", over: { ...DEEMED, nblRevenueCurrentBusinessStartDate: "", nblRevenueBusinessEndDate: "2021-06-01", nblRevenueCurrentRevenue: "", nblRevenueCurrentLandValue: "", nblRevenueYearRows: [] }, field8: "nblRevenueCurrentRevenue", blocked12: false },
+    { id: "의제 사유 + 토글 ON + 폐업 T−2 이전 + 당해 입력 → 통과(엔진 OFF 경로가 읽는다)", over: { ...DEEMED, nblRevenueCurrentBusinessStartDate: "", nblRevenueBusinessEndDate: "2021-06-01", nblRevenueYearRows: [] }, field8: null, blocked12: false },
     // ── 정상(막지 않는다) ──
     { id: "개시일 = 취득일", over: { nblRevenueCurrentBusinessStartDate: "2014-01-01", nblRevenueYearRows: [] }, field8: null, blocked12: false },
     { id: "행 누락(모름 — 차단 없음)", over: { nblRevenueYearRows: [] }, field8: null, blocked12: false },
@@ -135,5 +141,36 @@ describe("⑧ 문구·순서·필드 점프 키", () => {
     const i = issue8(formOf({ nblRevenuePeriodOn: false, nblRevenueCurrentRevenue: "" }))!;
     expect(i.field).toBe("nblRevenueCurrentRevenue");
     expect(i.message).toBe("자산: 수입금액비율 업종 선택 시 당해 과세기간 수입금액을 입력하세요.");
+  });
+});
+
+describe("⑧ ↔ 엔진 술어 parity — 영위 기간이 실제로 쓰이는가(`revenueHistoryScope`)", () => {
+  it.each([
+    ["토글 ON · 의제 없음", {}, true],
+    ["토글 ON · 의제 사유 선택", { ...DEEMED }, false],
+    ["토글 OFF · 의제 없음", { nblRevenuePeriodOn: false }, false],
+    ["토글 ON · 의제 사유 «none»", { nblDeemedTransferReason: "none" }, true],
+  ] as const)("%s → 엔진 echo %s ⇔ UI 술어(`nblRevenuePeriodInUse`)", async (_n, over, inUse) => {
+    const f = formOf(over as Partial<AssetForm>);
+    const r = await postTransfer(await captureBody(f));
+    expect(r.status).toBe(200);
+    const echo = !!r.result?.nonBusinessLandJudgmentDetail?.periodEvaluation?.revenueHistory;
+    expect(echo, "엔진이 영위 기간 경로를 탔는가").toBe(inUse);
+    expect(nblRevenuePeriodInUse(f.assets[0] as AssetForm)).toBe(inUse);
+  });
+
+  it("실측(probe): 의제 + ON + 폐업 + 당해 수입 빔 — 필수 규칙이 없으면 ⑧을 통과해 엔진이 수입 0으로 비사업용(253,960,000) 판정 · 당해를 입력하면 사업용(198,210,000)", async () => {
+    const base = { ...DEEMED, nblRevenueCurrentBusinessStartDate: "", nblRevenueBusinessEndDate: "2021-06-01", nblRevenueYearRows: [] };
+    const blank = formOf({ ...base, nblRevenueCurrentRevenue: "", nblRevenueCurrentLandValue: "", nblRevenuePriorRevenue: "", nblRevenuePriorLandValue: "" });
+    expect(issue8(blank)?.field).toBe("nblRevenueCurrentRevenue"); // ⑧이 막는다 — 막지 않으면 아래 수치로 계산됐다
+    const rb = await postTransfer(await captureBody(blank));
+    expect(rb.result?.nonBusinessLandJudgmentDetail?.isNonBusinessLand).toBe(true);
+    expect(rb.result?.nonBusinessLandJudgmentDetail?.revenueTestDetail?.ratioCurrent).toBe(0);
+    expect(rb.result?.calculatedTax).toBe(253_960_000);
+    const filled = formOf({ ...base, nblRevenuePriorRevenue: "", nblRevenuePriorLandValue: "" });
+    expect(issue8(filled)).toBeUndefined();
+    const rf = await postTransfer(await captureBody(filled));
+    expect(rf.result?.nonBusinessLandJudgmentDetail?.isNonBusinessLand).toBe(false);
+    expect(rf.result?.calculatedTax).toBe(198_210_000);
   });
 });

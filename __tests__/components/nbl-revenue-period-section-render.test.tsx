@@ -8,6 +8,7 @@ import { render, screen, fireEvent, cleanup, within } from "@testing-library/rea
 import { OtherLandDetailSection } from "@/components/calc/transfer/nbl/OtherLandDetailSection";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
+import { NBL_REVENUE_HISTORY_DEEMED_TRANSFER_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_REVENUE_HISTORY_CLOSURE_GRACE_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_REVENUE_HISTORY_PAST_YEARS_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_REVENUE_HISTORY_ROW_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
@@ -197,5 +198,28 @@ describe("당해 연환산 미리보기 — ON이면 영위 기간(폐업일 전
     mount(asset({ ...base, nblRevenuePeriodOn: true, nblRevenueBusinessEndDate: "2021-06-01" }));
     expect(preview()).toContain("연환산금액이표시됩니다");
     expect(preview()).not.toContain("연간환산수입금액");
+  });
+});
+
+describe("양도일 의제 — 영위 기간은 판정에 쓰이지 않는다(엔진 `revenueHistoryScope` = deemed)", () => {
+  const deemed = (over: Partial<AssetForm> = {}) => asset({ nblRevenuePeriodOn: true, nblDeemedTransferReason: "auction", nblDeemedTransferDate: "2023-01-01", nblRevenueBusinessEndDate: "2021-06-01", ...over });
+  it("안내 상수를 그대로 보이고 판정 미리보기·③ 블록·유예 안내는 보이지 않는다", () => {
+    mount(deemed());
+    expect(screen.getByTestId("nbl-revenue-period-deemed-notice").textContent).toBe(NBL_REVENUE_HISTORY_DEEMED_TRANSFER_NOTICE);
+    expect(screen.queryByTestId("nbl-revenue-period-operating")).toBeNull();
+    expect(screen.queryByTestId("nbl-revenue-period-current-year")).toBeNull();
+    expect(screen.queryByTestId("nbl-revenue-period-closure-grace-notice")).toBeNull();
+    expect(screen.queryByTestId("nbl-revenue-period-row-2014-judgment")?.textContent ?? "").toBe("");
+  });
+  it("개시일 칸·직전 영위일수 칸은 현행(OFF) 배치 — 개시일 FieldCard 한 인스턴스(기존 라벨) · 폐업일 칸은 ⑧·⑫ 검증 대상이라 남는다", () => {
+    mount(deemed());
+    expect(document.querySelectorAll('[data-field="nblRevenueCurrentBusinessStartDate"]')).toHaveLength(1);
+    expect(body()).toContain("당해 사업개시일");
+    expect(body()).toContain("직전 과세기간 영위일수");
+    expect(document.querySelectorAll('[data-field="nblRevenueBusinessEndDate"]')).toHaveLength(1);
+  });
+  it("의제가 아니면 안내가 없다", () => {
+    mount(asset({ nblRevenuePeriodOn: true }));
+    expect(screen.queryByTestId("nbl-revenue-period-deemed-notice")).toBeNull();
   });
 });

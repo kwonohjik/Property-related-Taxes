@@ -19,12 +19,14 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DateInput } from "@/components/ui/date-input";
 import { buildRevenuePeriodPreview } from "@/lib/calc/nbl-revenue-period-preview";
+import { nblRevenuePeriodInUse } from "@/lib/calc/nbl-revenue-period-scope";
 import { revenuePeriodRowOf } from "@/lib/calc/nbl-revenue-period-scope";
 import { revenuePeriodRowYears } from "@/lib/calc/nbl-revenue-period-scope";
 import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-asset-basics";
 import { lookupLandPrice } from "@/lib/calc/nbl-land-zone";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { NblRevenueYearRowInput } from "@/lib/stores/calc-wizard-asset-nbl-other";
+import { NBL_REVENUE_HISTORY_DEEMED_TRANSFER_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_REVENUE_HISTORY_CLOSURE_GRACE_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_REVENUE_HISTORY_PAST_YEARS_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_REVENUE_HISTORY_ROW_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
@@ -64,7 +66,10 @@ function judgmentText(j: RevenueYearJudgment | undefined): string {
 export function RevenuePeriodSection({ asset, onAssetChange, transferDate }: RevenuePeriodSectionProps) {
   const on = asset.nblRevenuePeriodOn === true;
   const rows = asset.nblRevenueYearRows ?? [];
-  const preview = useMemo(() => buildRevenuePeriodPreview(asset, transferDate), [asset, transferDate]);
+  // 양도일 의제 사유가 선택돼 있으면 엔진은 영위 기간을 읽지 않고 현행(OFF) 경로를 탄다 — 판정 미리보기·개시일 칸 이동을 하지 않고 고지만 한다(입력 칸은 ⑧·⑫가 검증하므로 남긴다).
+  const inUse = nblRevenuePeriodInUse(asset);
+  const deemed = on && !inUse;
+  const preview = useMemo(() => (inUse ? buildRevenuePeriodPreview(asset, transferDate) : null), [asset, inUse, transferDate]);
   const rowYears = useMemo(() => revenuePeriodRowYears(asset, transferDate), [asset, transferDate]);
   const [fetching, setFetching] = useState(false);
   const [fetchInfo, setFetchInfo] = useState<string | null>(null);
@@ -132,14 +137,22 @@ export function RevenuePeriodSection({ asset, onAssetChange, transferDate }: Rev
       onCheckedChange={(c) => onAssetChange({ nblRevenuePeriodOn: c })}
     >
       <div className="space-y-3" data-testid="nbl-revenue-period">
+        {deemed && (
+          <ToneCard tone="amber">
+            <p className="text-caption leading-snug" data-testid="nbl-revenue-period-deemed-notice">{NBL_REVENUE_HISTORY_DEEMED_TRANSFER_NOTICE}</p>
+          </ToneCard>
+        )}
         <ToneCard tone="amber" sectionNum={1} title="업종 영위 기간" bodyClassName="space-y-2">
-          <FieldCard field="nblRevenueCurrentBusinessStartDate" label="사업 개시일" hint={START_HINT}>
-            <DateInput
-              value={asset.nblRevenueCurrentBusinessStartDate}
-              onChange={(v) => onAssetChange({ nblRevenueCurrentBusinessStartDate: v })}
-              data-testid="nbl-revenue-period-start"
-            />
-          </FieldCard>
+          {/* 의제로 영위 기간이 쓰이지 않으면 개시일 칸은 현행 위치(당해 연환산 카드)에 있다 — 같은 키 한 인스턴스. */}
+          {inUse && (
+            <FieldCard field="nblRevenueCurrentBusinessStartDate" label="사업 개시일" hint={START_HINT}>
+              <DateInput
+                value={asset.nblRevenueCurrentBusinessStartDate}
+                onChange={(v) => onAssetChange({ nblRevenueCurrentBusinessStartDate: v })}
+                data-testid="nbl-revenue-period-start"
+              />
+            </FieldCard>
+          )}
           <FieldCard field="nblRevenueBusinessEndDate" label="폐업일 (영업을 하지 않게 된 첫날)" hint={END_HINT}>
             <DateInput
               value={asset.nblRevenueBusinessEndDate ?? ""}
@@ -152,7 +165,7 @@ export function RevenuePeriodSection({ asset, onAssetChange, transferDate }: Rev
               소유기간 중 영위 기간: {iso(preview.operatingInterval.start)} ~ {iso(addDays(preview.operatingInterval.end, -1))} ({preview.operatingDays.toLocaleString()}일)
             </p>
           )}
-          {asset.nblRevenueBusinessEndDate && !hasClosureGraceRow && (
+          {inUse && asset.nblRevenueBusinessEndDate && !hasClosureGraceRow && (
             <ToneCard tone="amber">
               <p className="text-caption leading-snug" data-testid="nbl-revenue-period-closure-grace-notice">{NBL_REVENUE_HISTORY_CLOSURE_GRACE_NOTICE}</p>
             </ToneCard>
@@ -214,9 +227,11 @@ export function RevenuePeriodSection({ asset, onAssetChange, transferDate }: Rev
                     <p className="text-caption leading-snug" data-testid="nbl-revenue-period-unknown-notice">{NBL_REVENUE_HISTORY_ROW_UNKNOWN_NOTICE}</p>
                   </ToneCard>
                 )}
-                <ToneCard tone="amber">
-                  <p className="text-caption leading-snug" data-testid="nbl-revenue-period-past-years-notice">{NBL_REVENUE_HISTORY_PAST_YEARS_NOTICE}</p>
-                </ToneCard>
+                {inUse && (
+                  <ToneCard tone="amber">
+                    <p className="text-caption leading-snug" data-testid="nbl-revenue-period-past-years-notice">{NBL_REVENUE_HISTORY_PAST_YEARS_NOTICE}</p>
+                  </ToneCard>
+                )}
               </>
             )}
           </div>

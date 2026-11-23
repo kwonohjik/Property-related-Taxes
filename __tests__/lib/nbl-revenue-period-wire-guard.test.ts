@@ -58,7 +58,6 @@ describe("E3-② 영위 기간 칸 배선 — 허용 목록", () => {
         "lib/calc/nbl-revenue-period-preview.ts", // ⑤ 미리보기(와이어 레코드로 ⑭ 빌더 호출)
         VALIDATE, // ⑧
         "components/calc/transfer/nbl/RevenuePeriodSection.tsx", // ⑤ 위젯
-        "components/calc/transfer/nbl/OtherLandDetailSection.tsx", // ⑤ 마운트(`nblRevenuePeriodOn()` 술어로 개시일 칸 이동·직전 영위일수 숨김)
         "lib/tax-engine/non-business-land/revenue-history.ts", // ⑧⑫ 공용 issue leaf(결함 칸 이름)
         SCHEMA, // ⑫ Zod
         REFINES, // ⑫ refine
@@ -89,7 +88,7 @@ describe("E3-② 영위 기간 칸 배선 — 허용 목록", () => {
   it("WIRE-5: ⑧ 수입금액 필수 규칙의 «읽는 해» 게이트와 ⑤ 위젯 안내가 같은 술어(`revenuePeriodReadsYear` · `revenuePeriodRowYears`)를 쓴다", () => {
     expect(src("lib/calc/transfer-tax-validate-nbl.ts")).toMatch(/\brevenuePeriodReadsYear\(/);
     expect(src("components/calc/transfer/nbl/RevenuePeriodSection.tsx")).toMatch(/\brevenuePeriodRowYears\(/);
-    expect(src("components/calc/transfer/nbl/OtherLandDetailSection.tsx")).toMatch(/\bnblRevenuePeriodOn\(/);
+    expect(src("components/calc/transfer/nbl/OtherLandDetailSection.tsx")).toMatch(/\bnblRevenuePeriodInUse\(/);
   });
 
   it("WIRE-6: 위젯·결과 카드가 고지 상수를 엔진 단일 소스에서 읽는다(문구 재정의 없음)", () => {

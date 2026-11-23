@@ -5,7 +5,8 @@
  * 표: `_helpers/nbl-state-history-e3-2-table.ts` — 엔진 단위(`nbl-state-history-e3-2.anchor.test.ts`)와 같은 표.
  *
  * mutation 대응: X-13(⑫ Zod에서 새 칸 누락 = strip) = 표 전 행 + «⑫ 칸 도달» 가드 · X-14(⑭가 연도 행 연도를 파싱하지 않음) = 같은 가드 · 개시일 단일 소스.
- * ⚠️ 입력 경로: **직접 API raw**다. ④ 와이어(UI PR)는 아직 새 칸을 싣지 않는다 — 폼으로 body를 만든 뒤 영위 기간 칸만 표의 raw로 덮어쓴다(E3-① route anchor와 같은 방식).
+ * ⚠️ 입력 경로: **직접 API raw**다 — 폼으로 body를 만든 뒤 영위 기간 칸만 표의 raw로 덮어써 ⑫⑭ 엔진 계약을 고정한다(E3-① route anchor와 같은 방식). ④ 와이어(UI)는 이제 새 칸 3개를 싣는다 —
+ * 폼 상태 → ④ → ⑧ → ⑫ → 엔진 관통은 `__tests__/api/nbl-revenue-period-client.anchor.test.ts`(같은 케이스 표)가 맡고, 이 파일의 덮어쓰기는 ④ 누락을 가리지 않도록 축 B 케이스에서 ④가 실은 값을 먼저 단언한다.
  */
 import { describe } from "vitest";
 import { it } from "vitest";
@@ -228,9 +229,16 @@ describe("E3c-1 route 관통 — 축 B 지분(컴패니언 raw)", () => {
       Object.assign({ ...makeDefaultAsset(2) }, base, { acquisitionDate: "2020-01-01", ownershipNumerator: "50", ownershipDenominator: "100" }) as AssetForm,
     ];
     const body = await captureBody(f);
-    const onKeys = { nblRevenuePeriodOn: true, nblRevenueBusinessEndDate: "2021-06-01", nblRevenueYearRows: e3cRowRaw(r, true).nblRevenueYearRows };
-    Object.assign(body.nonBusinessLandRaw as Loose, onKeys);
-    for (const c of (body.companionAssets as Loose[]) ?? []) if (c.nonBusinessLandRaw) Object.assign(c.nonBusinessLandRaw, onKeys);
+    // ④ 와이어가 이미 새 칸 3개를 본체·컴패니언 raw에 싣는다(첫 카드의 영위 기간 = 땅 사실) — 이 케이스는 **덮어쓰지 않고 ④가 만든 body 그대로** 보낸다(덮어쓰기가 ④ 누락을 가리던 구멍 방지).
+    // 컴패니언 raw는 지분 카드의 취득일(2020-01-01)로 만들어지므로 ④는 그 지분이 소유하기 전 연도 행(2014~2019)을 싣지 않는다(엔진도 읽지 않는 행 — 3중 술어 `revenuePeriodRowYears`).
+    const allRows = e3cRowRaw(r, true).nblRevenueYearRows as Array<{ year: string }>;
+    const [primaryRaw, shareRaw] = [body.nonBusinessLandRaw as Loose, (body.companionAssets as Loose[])[0].nonBusinessLandRaw as Loose];
+    for (const raw of [primaryRaw, shareRaw]) {
+      expect(raw.nblRevenuePeriodOn).toBe(true);
+      expect(raw.nblRevenueBusinessEndDate).toBe("2021-06-01");
+    }
+    expect(primaryRaw.nblRevenueYearRows).toEqual(allRows);
+    expect(shareRaw.nblRevenueYearRows).toEqual(allRows.filter((x) => Number(x.year) >= 2020));
     const res = await postTransfer(body);
     expect(res.status, JSON.stringify(res.json).slice(0, 500)).toBe(200);
     const details = (res.json.data.aggregated.properties as Loose[]).map((p) => p.nonBusinessLandJudgmentDetail);

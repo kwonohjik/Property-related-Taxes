@@ -18,6 +18,11 @@ import { consumesRevenueHistory } from "@/lib/tax-engine/non-business-land/land-
 import { deriveOperatingRange } from "@/lib/tax-engine/non-business-land/revenue-history";
 import { operatingDaysInYear } from "@/lib/tax-engine/non-business-land/revenue-history";
 import type { OperatingRange } from "@/lib/tax-engine/non-business-land/revenue-history";
+import { revenueHistoryScope } from "@/lib/tax-engine/non-business-land/other-land-revenue-history";
+import type { RevenueHistoryScope } from "@/lib/tax-engine/non-business-land/other-land-revenue-history";
+import type { DeemedTransferReason } from "@/lib/tax-engine/non-business-land/types";
+import type { RevenueTestInput } from "@/lib/tax-engine/non-business-land/revenue-test.types";
+import { hasDeemedTransferReason, isDeemedTransferApplicable } from "./nbl-deemed-transfer-scope";
 import { nblAcquisitionDateOf } from "./nbl-unconditional-exemption-status";
 
 /**
@@ -31,6 +36,27 @@ export function nblRevenuePeriodApplies(asset: Pick<AssetForm, "nblUseDetailedJu
 /** 토글이 적용되고 켜져 있다 — 이 값이 거짓이면 현행(OFF)과 같다. ④ 전송 · ⑤ 렌더 · ⑧ 검증이 같이 읽는다. */
 export function nblRevenuePeriodOn(asset: AssetForm): boolean {
   return nblRevenuePeriodApplies(asset) && asset.nblRevenuePeriodOn === true;
+}
+
+/**
+ * 엔진이 영위 기간을 **실제로 쓰는가** — 엔진 술어 `revenueHistoryScope`를 그대로 부른다(단일 소스): `off` 토글 꺼짐·업종 없음 · `deemed` 양도일 의제 사유 선택 → 영위 기간을 읽지 않고
+ * 현행(OFF) 경로를 탄다(고지 `NBL_REVENUE_HISTORY_DEEMED_TRANSFER_NOTICE`) · `on` 과세기간별 판정.
+ * 의제 사유는 ④·⑭ 매퍼와 같은 조건(의제 적용 지목 ∧ 사유 선택)일 때만 엔진에 닿는다. 「화면에서는 영위 기간이 쓰인다고 안내하는데 엔진은 OFF 경로」인 어긋남을 막는다 —
+ * 의제 + 영위 기간 ON에서 ⑧이 당해 수입금액 필수 규칙을 건너뛰면 엔진은 수입 0으로 판정한다(침묵 불리 적용).
+ */
+export function revenuePeriodScope(asset: AssetForm): RevenueHistoryScope {
+  if (!nblRevenuePeriodOn(asset)) return "off";
+  const deemed = isDeemedTransferApplicable(asset.nblLandType) && hasDeemedTransferReason(asset) ? asset.nblDeemedTransferReason : "none";
+  return revenueHistoryScope({
+    revenueHistory: { rows: [] },
+    revenueTest: { businessType: asset.nblRevenueBusinessType } as RevenueTestInput,
+    deemedTransferReason: deemed as DeemedTransferReason,
+  });
+}
+
+/** 영위 기간이 판정에 쓰인다(= `revenuePeriodScope === "on"`). 의제로 쓰이지 않는 경우는 ⑤ 칸 배치·⑧ 필수 규칙이 모두 OFF와 같다. */
+export function nblRevenuePeriodInUse(asset: AssetForm): boolean {
+  return revenuePeriodScope(asset) === "on";
 }
 
 /**
@@ -55,10 +81,10 @@ function transferYearOf(transferDate: string | undefined): number | undefined {
 
 /**
  * 엔진이 그 해의 기존 칸(`current`=양도연도 T · `prior`=T−1)을 **읽는가** — 영위일이 있는 해만 읽는다(`evaluateRevenueHistory`의 `yearCell`).
- * 토글이 꺼졌거나 영위 범위를 알 수 없으면 **읽는다**(= 현행 요구 유지 — 칸을 숨기거나 규칙을 건너뛰지 않는다).
+ * 토글이 꺼졌거나 양도일 의제로 영위 기간이 쓰이지 않거나 영위 범위를 알 수 없으면 **읽는다**(= 현행 요구 유지 — 칸을 숨기거나 규칙을 건너뛰지 않는다).
  */
 export function revenuePeriodReadsYear(asset: AssetForm, transferDate: string | undefined, which: "current" | "prior"): boolean {
-  if (!nblRevenuePeriodOn(asset)) return true;
+  if (!nblRevenuePeriodInUse(asset)) return true;
   const range = revenuePeriodRange(asset, transferDate);
   const t = transferYearOf(transferDate);
   if (!range || t === undefined) return true;

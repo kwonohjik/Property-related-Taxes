@@ -37,7 +37,7 @@ import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-
 import { nblOtherBuildingToggleHidden } from "@/lib/calc/nbl-other-state-history-scope";
 import { nblOtherStateEventsInUse } from "@/lib/calc/nbl-other-state-history-scope";
 import { nblOtherStateHistoryApplies } from "@/lib/calc/nbl-other-state-history-scope";
-import { nblRevenuePeriodOn } from "@/lib/calc/nbl-revenue-period-scope";
+import { nblRevenuePeriodInUse } from "@/lib/calc/nbl-revenue-period-scope";
 import { revenuePeriodRange } from "@/lib/calc/nbl-revenue-period-scope";
 import { operatingDaysInYear } from "@/lib/tax-engine/non-business-land/revenue-history";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
@@ -109,7 +109,7 @@ export function OtherLandDetailSection({
   // §168의11③3호 당해 연환산 preview — 엔진 헬퍼 단일 진실 (재구현 금지)
   const nblAcq = nblAcquisitionDateOf(asset); // 이월과세는 증여자 취득일 — 판정(④)과 같은 값
   // E3-② 「영위 기간」 — 켜지면 개시일 칸은 위 영위 기간 블록으로 옮겨 가고(같은 키 한 인스턴스), 당해 영위일수는 영위 기간(개시·폐업)에서 계산한 값이다.
-  const periodOn = nblRevenuePeriodOn(asset);
+  const periodOn = nblRevenuePeriodInUse(asset); // 양도일 의제로 영위 기간이 쓰이지 않으면 현행(OFF) 배치 — 엔진도 OFF 경로를 탄다
   // 영위 기간 ON — 엔진 leaf(`operatingDaysInYear`)와 같은 양도연도 영위일수(폐업일 전날까지). 0이면 이 해는 판정에 쓰지 않는다.
   const periodCurrentDays = periodOn && transferDate ? operatingDaysInYear(revenuePeriodRange(asset, transferDate), Number.parseInt(transferDate.slice(0, 4), 10)) : undefined;
   const revenuePreview = useMemo(() => {
