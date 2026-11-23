@@ -71,6 +71,7 @@ import type {
 } from "./types/transfer.types";
 import type { ParsedRates } from "./transfer-tax-helpers";
 import { ruralSurtaxDeductionBasis } from "./rural-surtax-basis";
+import { filingRateEcho } from "./transfer-tax-rate-clause";
 
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -668,8 +669,7 @@ export function calculateRedevelopmentTax(
     basicDeduction,
     taxBase,
     appliedRate: taxResult.appliedRate,
-    ...(taxResult.specialRateBasis ? { specialRateBasis: taxResult.specialRateBasis } : {}),
-    ...(taxResult.nonBusinessLandShortTerm ? { nonBusinessLandShortTerm: true } : {}),
+    ...filingRateEcho(taxResult), // 신고서 ③ — 호·§98 특례·비사업용 단기·중과 후보 단기 호(일반 경로와 같은 규약)
     progressiveDeduction: taxResult.progressiveDeduction,
     calculatedTax: taxResult.calculatedTax,
     isSurchargeSuspended: taxResult.surchargeSuspended,

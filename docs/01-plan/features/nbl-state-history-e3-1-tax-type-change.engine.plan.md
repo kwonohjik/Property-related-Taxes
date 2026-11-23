@@ -366,3 +366,92 @@ for ev of events:
 - **변경일 = 사유 발생일(일 단위)** — 기존 결정 V-1(일 단위)을 따른다. 엔진 Q-3 (나) «다음 과세기준일»은 과세기준일 접기와 같은 구조라 선택지에서 제외(재제안 금지 사항).
 - **V-6(신축 앞 나대지 구간의 비종합합산 주장) = 이번 E3-①에서는 닫음(⑧·⑫ 차단 + 고지), 별도 후속 E3-1b로 연다** — E3-1b는 구간별 «근거»(공지상태 등 영 §101③ 호별)·면적한도 입력을 갖춘 모델로 따로 계획한다(실측 효과: 신축 2023-06-01 시료 열림 198,210,000 / 닫힘 253,960,000).
 - 착수 순서: E3-0(테스트만 — Anchor 3 `?? raw` 무방비 포함) → E3-1a(엔진·⑫′ refine·⑭·고지 2종) → U4(UI) → E2E. 침묵 소실 grep 게이트(`kind === "building_removed"` 4곳 → 단일 술어 `eventCarriesTaxTypeBefore`)는 E3-1a·U4 공통 완료 조건.
+
+## 구현 기록 (2026-11-23 · E3-0 + E3-1a — 엔진 측 · 커밋만, push·PR 없음 — U4가 같은 브랜치에서 이어 한 PR)
+
+브랜치 `feat/nbl-e3-1-tax-type-change` · base origin/master 00e5b80b8. 검증 표기는 위와 같다(실측 = 이 세션에서 실행).
+
+### 커밋
+
+| 커밋 | 내용 |
+|---|---|
+| E3-0 `53907a041` | 테스트만. 공용 표 `_helpers/nbl-state-history-e3-1-table.ts`(§5 21행 + 참고 3행) · Anchor 1(`meetsPeriodCriteria`에 구간 직접 입력) · Anchor 3(`?? raw`). 제품 코드 0 |
+| E3-1a `6e16baf59` | 엔진 leaf · 메시지 · 고지 2종 · ⑫′ · ⑧ 인자 · ⑭ · 테스트 5파일 |
+
+### 변경 요약
+
+- `land-usage.types.ts`: `StateEventKind` += `tax_type_changed`.
+- `other-land-state-history.ts`(268 → 327줄): `STATE_EVENT_KIND_LABEL`(+ «재산세 과세 구분 변경») · `BuildingEventKind`·`isBuildingEventKind` · 단일 술어 `eventCarriesTaxTypeBefore(kind)`(= 허용 종류 ∧ 신축 아님) · `StateEventSequenceOptions.tailHasBuilding?` · `stateEventSequenceIssue`(같은 종류 연속 = 직전 «건축물» 사건과만 · 건축물 없는 구간의 구분 변경 차단 · 초기 상태 = 첫 건축물 사건 또는 `tailHasBuilding`) · `hasBuildingAtTransfer`(마지막 건축물 사건 · 0건 undefined) · `deriveOtherLandStateIntervals`(건축물 상태 replay + Before 사슬 · 신축 행 Before 무시). `STATE_AFTER_EVENT_LABEL`은 `Record<BuildingEventKind,…>`.
+- `nbl-validation-messages.ts`: 행 접두 종류별(`eventRowPrefix` — 건축물 행 바이트 동일) · 신규 `stateEventTaxChangeWithoutBuildingMessage`. 기존 함수는 끝에 선택 인자 `kind?`만 추가.
+- `nbl-confirm-notices.ts`: `NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE`(구분 변경 사건이 있을 때 `…APPLIED_NOTICE`를 **대체**) · `NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE`. 인용은 기존 `NBL.BUILDING_SITE_MULTIPLIER`·`NBL.OTHER_LAND_FOOTPRINT_CARVEOUT`·`NBL.MAIN`·`NBL.CRITERIA`뿐 → **manifest·verify:legal 변경 없음**.
+- `other-land-state-history-apply.ts`: 고지 분기(+ 모름 구간은 그 구간을 닫은 사건 종류별로 고지 — 구간 끝 날짜 = 닫은 사건일). 판정 산식 무변경.
+- ⑫′ `transfer-tax-schema-nbl-refines.ts`: `tailHasBuilding: !!raw.nblOtherHasBuilding` · ⑧ `transfer-tax-validate-nbl-state-history.ts`: `tailHasBuilding: asset.nblOtherHasBuilding`(같은 값 — 3중 패턴) · ⑭ `form-mapper-helpers.ts`: Before 운반을 단일 술어로.
+- ⑫ Zod · ⑬ 무변경(계획대로). ⑨⑩⑪ 해당 없음.
+
+### 케이스 매트릭스 실측 (계획 대비)
+
+**21행 전부 계획서 수치와 일치.** 표를 계획서 값으로 먼저 쓰고 구현 후 돌렸다 — 차이 0건(일수·판정·버킷은 E0 단계에서 `meetsPeriodCriteria`로, 판정·일수·세액은 엔진 단위·route 관통에서 확인).
+T1 3,072/3,651 B 198,210,000 · T1b 3,073 · T2 214 N 253,960,000 · T3a 730 B / T3b 729 N · T4a 2,191 B / T4b 2,190 N · T5 2,737 B · T6 2,556 B · T7 1,825 N · T8 1,247 B · T9c·T9o 214 N · T10 456/548 279,000,000 · T11 881/1,460 233,490,000 · T11b 0/486 · T12a 731 / T12b 730 (3,711일) · T13 1/1 348,750,000 · T14 3,072 세액 0 · T15 579 N. 임계선 쌍 3개(T3·T4·T12)는 E2 표(M8a/b · Z-1460/1461 · M8c)와 일수·판정이 같다.
+참고: 21행 = 계획서 23행(T7'·T7'' 제외) — T9o는 «신축 행에 Before를 실어 보내도 무시(V-6 닫힘 가드)» 형태로 실행하고, «V-6을 열었다면» 수치(3,651/3,651)는 참고 행(`E3_REFERENCE_ROWS`)으로 E0 Anchor 1에만 둔다.
+
+### mutation 실측 (제품 코드 1줄 무력화 → 해당 파일 vitest `nbl-state-history` 22파일 → 원복 → `git status` 클린)
+
+기준선: E3-0 시점 17파일 712건 → E3-1a 시점 22파일 853건 + 2 todo(전부 green). 아래 «실패»는 실패한 테스트 수.
+
+| P | 무력화 | 실패 | 잡은 anchor |
+|---|---|---|---|
+| M4(계획 §7.1) | `?? raw` → `?? false` | 종전 **0** → **2** | Anchor 3(leaf 직접 · ⑭ 매퍼) |
+| P-E3-1 | derive가 구분 변경을 무시 | 71 | T1·T1b·T2·T3a/b·T4a/b·T5·T6·T7·T8·T10·T11·T12a/b·T14·T15 (leaf·엔진·route) — T9c·T9o·T11b·T13은 구분 변경이 결과를 못 바꾸는 행이라 정상적으로 안 잡힌다 |
+| P-E3-2 | Before를 After 의미로 한 칸 밀기 | 69 | 위와 같은 행(T1·T2·T7 포함) |
+| P-E3-3 | `hasBuildingAtTransfer`가 구분 변경도 «마지막 사건»으로 | 68 | Anchor 3(leaf) + T1·T2·T5·T6·T10·T11·T11b·T13·T14·T15 + ⑧↔⑫ parity 7행 |
+| P-E3-4 | 교대 검사를 «앞 사건(종류 불문)» 기준으로 | 3 | leaf 1 · route 1 · parity «신축 → 구분 변경 → 신축» 1 |
+| P-E3-5 | 건축물 없는 구간 위 구분 변경 차단 삭제(sequence) | 9 | leaf 3 · route 2 · parity 4(철거 뒤·신축 앞·tax-only 토글 off·철거→신축→철거 뒤) |
+| P-E3-5b | 같은 차단 삭제(derive 안전망) | 2 | leaf 1 · 엔진 1 |
+| P-E3-6 | ⑭ Before 운반을 철거만으로 | 35 | 엔진 19 · route 15 · wire 게이트 1 (T1·T1b·T4a/b·T5·T6·T7·T8·T10·T11·T14) |
+| P-E3-7 | ⑫ refine에 하한 규칙 추가 | 11 | route 2(T11b) · parity 2(하한 행) · 기존 E2 route 4 · U1 parity 2 · leaf-unreachable WIRE-8 1 |
+| P-E3-8 | `isEventKind`에서 새 종류 제외 | 94 | 전 층 |
+| P-E3-9 | 모름(`""`) → 별도합산으로 접음 | 10 | **T15만**(leaf 2 · 엔진 6 · route 2) |
+| P-E3-10a | 새 고지 미탑재 | 20 | 엔진 1 · route 19 |
+| P-E3-10b | 새 고지를 기존과 동시 탑재 | 20 | 엔진 1 · route 19 |
+| P-E3-10c | 모름 고지 종류 뒤바꿈 | 1 | 엔진 고지 anchor |
+| P-E3-10d | 구분 변경 모름 고지 삭제 | 3 | 엔진 2 · route 1 |
+| P-E3-11 | 같은 날 구분 변경 허용 | 4 | leaf 1 · parity 3 |
+| P-E3-12 | UI 4곳 중 ④ 와이어만 술어로(U4식 부분 교체) | 3 | E3 wire 게이트 1 · 기존 wire anchor 1 · E2 route 1 (UI 쪽 anchor는 U4 소관 — 이 PR의 grep 게이트가 «목록 갱신» 신호로 대신 막는다) |
+| N-1 | ⑧이 `tailHasBuilding`을 안 넘김 | 6 | parity 5 · wire 1 |
+| N-2 | ⑫가 `tailHasBuilding`을 안 넘김 | 35 | route 27 · parity 7 · wire 1 |
+| N-3 | sequence의 초기 상태가 첫 건축물 사건을 무시 | 13 | leaf 4 · 엔진 4 · route 2 · parity 3 |
+| N-4 | 행 접두를 종류별로 안 가름 | 8 | leaf 3 · route 2 · parity 3 |
+| N-5 | `eventCarriesTaxTypeBefore`가 신축에도 true | 3 | leaf · 엔진(T9o) · E2 |
+| N-6 | derive의 초기 상태가 tail만 | 9 | leaf 3 · 엔진 4 · route 1 · parity 1 |
+| N-7 | 차단 필드 `kind` → `date` | 7 | leaf 3 · parity 4 |
+| N-8 | `hasBuildingAtTransfer`가 첫 건축물 사건 | 6 | 기존 E2·leaf 5 + E3 leaf 1 |
+| N-9 | 신축 앞 나대지 구분을 Before로(V-6 열림 역버그) | 1 | **leaf 1건뿐** — ⑭가 신축 Before를 안 싣는 한 엔진·route로는 도달 불가라 단위 한 겹만 잡는다(이중 방어의 안쪽) |
+| N-10 | 클립 제거(0일 구간 push) | 6 | 기존 E2·leaf 4 + E3 leaf·엔진 각 1 |
+
+전부 ≥ 1건이 잡았고 원복 후 `git status` 클린을 매번 확인했다(스크립트가 해시 검증).
+
+### 계획서 대비 편차·결정 (사용자 확인 필요 아님 — 근거 명시)
+
+1. **UI R-8(`stateEventKindRequiredMessage` 괄호 3종 나열) 미적용.** 기존 E2 route anchor(`nbl-state-history-e2-route.anchor.test.ts:214`)가 «종류(건축물 신축 / 건축물 멸실·철거·붕괴)를 선택하세요» 전문을 `toContain`으로 고정하고, 결정 기록이 «건축물 행 byte-identical»이다. 미선택 행은 종류를 몰라 건축물 접두를 쓰므로 문구가 두 종류만 나열한다(라디오는 3종을 보여 준다). 바꾸려면 그 단언 1줄을 U4가 함께 갱신한다.
+2. **UI R-5(기존 고지 덧붙이기)와 엔진 Q-4(대체)의 차이:** 결정 기록(엔진 Q-4·UI R-5 (가) «새 고지는 구분 변경 사건이 있을 때만 · 기존 고지 문구 불변»)대로 **대체**다. `NBL_STATE_HISTORY_UNCHANGED_NOTICE`는 건드리지 않았다 — `unchanged`의 의미가 «재산세 구분도 불변»으로 넓어지는 문구는 UI 질문 문구 확장(UQ-2)과 함께 U4가 다룬다(엔진 판정은 byte-identical).
+3. **`tailHasBuilding`은 선택 옵션**(생략 = 건축물 없음 = 안전 쪽 차단). 필수로 하면 기존 leaf 테스트 호출부가 컴파일 오류가 나 «기존 테스트 diff 0»이 깨진다. 대신 ⑧·⑫가 같은 값을 넘기는지를 정적 게이트(`nbl-state-history-e3-1-wire.test.ts`)와 ⑧↔⑫ parity 격자 «정상 tax-only 행»이 고정한다.
+4. **기존 테스트 1건 갱신:** `nbl-state-history-notices.test.ts`는 `NBL_STATE_HISTORY_*` 상수를 «8종»으로 열거하는 게이트라 새 상수 2종을 열거에 추가했다(문구 단언 불변). 그 밖의 기존 테스트 diff 0.
+5. **⑧ 한 줄 수정은 엔진 PR에 포함**(`lib/calc/transfer-tax-validate-nbl-state-history.ts`) — 빠지면 ⑧이 정상 tax-only 이력을 영구 차단하는 막다른 길이라 parity 격자가 성립하지 않는다.
+6. 판정 step `detail` 문구는 구분 변경 사건이 있을 때만 «건축물·재산세 구분 사건 N건»으로 바뀐다(없으면 바이트 동일).
+7. 계획서 §9 오기 정정 없음. `kind === "building_removed"` 잔존 UI 리터럴은 계획서가 센 3곳이 아니라 **4곳**이다 — `OtherLandStateHistorySection.tsx:149`(직전 구분 칸 노출 술어, UI 계획서 S4)가 더 있다.
+
+### U4가 이어받을 것
+
+- 교체해야 할 UI 리터럴(`kind === "building_removed"` → `eventCarriesTaxTypeBefore(kind)`): `lib/calc/nbl-other-state-history-preview.ts:57` · `lib/calc/nbl-other-state-history-scope.ts:63` · `lib/stores/calc-wizard-asset-migrate-nbl.ts:49` · `components/calc/transfer/nbl/OtherLandStateHistorySection.tsx:149`. 교체 후 `__tests__/lib/nbl-state-history-e3-1-wire.test.ts`의 `UI_PENDING_REMOVED_LITERAL`을 `[]`로 비운다(삭제 금지 — 영구 0건 게이트가 된다).
+- ⑤ 미리보기(`nbl-other-state-history-preview.ts:52`)의 `stateEventSequenceIssue` 호출에 `tailHasBuilding: asset.nblOtherHasBuilding` 추가(지금은 생략 = 건축물 없음이라 tax-only 이력의 미리보기가 null).
+- 새 export: leaf `eventCarriesTaxTypeBefore(kind)` · `isBuildingEventKind(kind)` · 타입 `BuildingEventKind` · `STATE_EVENT_KIND_LABEL.tax_type_changed`(«재산세 과세 구분 변경») · `StateEventSequenceOptions.tailHasBuilding`.
+- ⑧이 부르는 시그니처: `stateEventSequenceIssue(events, { transferDate, floorDate?, tailHasBuilding })` — 반환 `{ index, field: "events"|"kind"|"date", message }`. 건축물 없는 구간의 구분 변경은 `field: "kind"`(앵커 `nblOtherStateEvents.${i}.kind` — 기존 앵커 재사용).
+- 문구·고지 상수: `stateEventTaxChangeWithoutBuildingMessage(index)`(메시지 모듈 · leaf가 이미 사용) · `NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE`(행 아래 «모름» 안내용 — 철거 행의 `…REMOVED_TAX_TYPE_UNKNOWN_NOTICE`와 같은 자리) · `NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE`(결과 경고 — 엔진이 싣는다).
+- 위젯 쪽 `addEvent`·`lastKind`·`dateHint`·토글 노출(S1~S5·S13)은 UI 계획서 §4.2·§5 그대로. 엔진은 `hasBuildingAtTransfer`/`effectiveOtherHasBuilding`이 건축물 사건 0건이면 raw 토글을 쓰도록 바뀌었으므로 토글은 «건축물 사건 ≥ 1건일 때만 숨김».
+- `it.todo` 2건(wire 게이트): U4 완료 조건 — grep 0건 · 미리보기 `tailHasBuilding`. route anchor는 폼 경로가 아니라 **직접 API raw**(④ 와이어 정규화가 아직 tax 행의 Before를 `""`로 지우므로 body 캡처 뒤 이력 칸을 덮어쓴다) — 폼 경로 행은 U4의 E2E가 확장한다.
+
+### 남은 확인 필요
+
+- 엔진 계획서의 V-2(변경일 단위의 직접 해석례 미확보)·V-3(법 §104의3①4호가목 «면제»의 감면 포함 여부)·V-5(구분 변경 구간의 배율·2% 재판정 불가 — 고지로 알림)·V-7(0817은 법인세법 사안 — 준용 근거)은 그대로다. 새 고지 문구는 «변경일은 입력한 날로 세었다 · 배율·2% 요건·면적 변동 미반영 · 확인 필요»까지만 말한다.
+- 브라우저 수동 확인·E2E는 UI(U4) 이후 — 이 PR(엔진 측)은 화면 경로가 없다.
+- `npm run verify:legal`은 새 조문 인용이 없어 실행하지 않았다(기존 `NBL.*` 상수만 재사용).

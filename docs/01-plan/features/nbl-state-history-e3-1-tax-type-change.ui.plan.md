@@ -1,6 +1,6 @@
 # 기타토지 상태 이력 E3-① 「재산세 구분 변경 사건」 — 화면·클라이언트(①~⑧) 계획서
 
-> 상태: **Plan v1 (2026-11-23 · 미구현 · 사용자 결정 UQ-1~UQ-5 대기)** · 코드 변경 없음(문서만)
+> 상태: **Plan v1 → U4 구현 완료(2026-11-23 · 아래 «구현 기록 (U4)»)** · 사용자 결정 UQ-1~UQ-5 전건 추천안 승인(결정 기록)
 > 범위: 통합 계획서 §4 E3 후속 목록 ① — **건축물 유무는 그대로인데 재산세 구분(종합합산·별도합산·분리과세·비과세·면제)만 바뀐 소유기간**(엔진 계획서 §6 M12: 별도합산 → 종합합산 2022-06-01, 현행 비사업용 253,960,000 → 사업용(사업 3,072 · 비사업 579) 기대 — `nbl-other-land-state-history.engine.plan.md:406`).
 > **범위 밖(재제안 금지·별도 결정)**: 업종 개시·폐업(M9~M11) · 주택부수토지(Q-1) · 13호 × 이력 · **철거 후 재산세 한시 지위(지방세법 시행령 §103의2 — E3-⑤)** · 과세기준일(6.1.) 단위 «접기»(V-1 일 단위 확정 — `nbl-other-land-state-history.plan.md:5`).
 > 정본: `nbl-other-land-state-history.plan.md`(통합) · `…ui.plan.md`(U1~U3 구현 기록 §19~§21) · `…engine.plan.md`. 엔진 쪽은 같은 시각 별도 문서(`nbl-state-history-e3-1-tax-type-change.engine.plan.md`)가 쓴다 — **어긋나면 메인 세션이 합친다**(이 문서는 엔진 모델명·필드명을 «제안»으로만 쓴다 · UV-3).
@@ -348,3 +348,74 @@ V-1 일 단위(과세기준일 접기 ⛔) · Q-15 (가′) · «모름» = 혜�
 - **변경일 = 사유 발생일(일 단위)** — 기존 결정 V-1(일 단위)을 따른다. 엔진 Q-3 (나) «다음 과세기준일»은 과세기준일 접기와 같은 구조라 선택지에서 제외(재제안 금지 사항).
 - **V-6(신축 앞 나대지 구간의 비종합합산 주장) = 이번 E3-①에서는 닫음(⑧·⑫ 차단 + 고지), 별도 후속 E3-1b로 연다** — E3-1b는 구간별 «근거»(공지상태 등 영 §101③ 호별)·면적한도 입력을 갖춘 모델로 따로 계획한다(실측 효과: 신축 2023-06-01 시료 열림 198,210,000 / 닫힘 253,960,000).
 - 착수 순서: E3-0(테스트만 — Anchor 3 `?? raw` 무방비 포함) → E3-1a(엔진·⑫′ refine·⑭·고지 2종) → U4(UI) → E2E. 침묵 소실 grep 게이트(`kind === "building_removed"` 4곳 → 단일 술어 `eventCarriesTaxTypeBefore`)는 E3-1a·U4 공통 완료 조건.
+
+## 구현 기록 (U4 · 2026-11-23)
+
+> 브랜치 `feat/nbl-e3-1-tax-type-change` — 엔진 E3-0·E3-1a 위. 아래 수치는 전부 이 세션 실측(tsc · vitest · Playwright · mutation).
+
+### 변경 파일
+
+| 지점 | 파일 | 내용 |
+|---|---|---|
+| ① 타입 | `lib/stores/calc-wizard-asset-nbl-other.ts` | 코드 변경 0 — `kind`가 엔진 `StateEventKind`를 따라 자동 확장(주석만 갱신) |
+| ② initial | — | 변경 0(새 필드 없음) |
+| ③ normalize | `lib/stores/calc-wizard-asset-migrate-nbl.ts` | Before 보존 조건 `=== "building_removed"` → `eventCarriesTaxTypeBefore(kind)` |
+| ④ 와이어 | `lib/calc/nbl-other-state-history-scope.ts` | 같은 술어 + 신규 `nblOtherBuildingToggleHidden(asset)`(= `changed` ∧ 건축물 사건 ≥ 1건) |
+| ⑤ 미리보기 | `lib/calc/nbl-other-state-history-preview.ts` | 술어 + `stateEventSequenceIssue(…, { tailHasBuilding: asset.nblOtherHasBuilding })` |
+| ⑤ 위젯 | `components/calc/transfer/nbl/OtherLandStateHistorySection.tsx`(286 → 339줄) | 종류 3번째 라디오(testid `…-kind-taxchange`) · 행 카드 제목 종류별 · «직전 재산세 구분» 칸 노출 = 술어 · 라벨/hint 종류별 · 모름 안내 = 엔진 상수 종류별 · «변경 후» 줄 · 비차단 «같은 구분» 안내 · `addEvent`(직전 «건축물» 사건의 반대) · 「양도일 현재 건축물」 줄(마지막 «건축물» 사건 · 0건이면 줄 없음) · 질문·옵션·섹션 문구 확장(UQ-2 가) · 한정 고지 = 구분 변경 사건이 있으면 `…TAX_CHANGE_APPLIED_NOTICE`(결과 경고와 같은 문구) |
+| ⑤ 위젯(토글) | `components/calc/transfer/nbl/OtherLandDetailSection.tsx` | 「건축물 있음」 토글 숨김 조건 `nblOtherStateEventsInUse` → `nblOtherBuildingToggleHidden`(S13) |
+| ⑦ 결과 카드 | `components/calc/NblStateHistoryPeriodTable.tsx` | 제목 «…건축물 유무·재산세 구분 이력 반영»(1줄). 구간표 열·구조 변경 0 |
+| ⑧ | (엔진 PR이 `tailHasBuilding`을 이미 전달) | 위젯 호출부 인자 없음. 필드 점프 신규 키 0(`nblOtherStateEvents.${i}.kind` 재사용) |
+| 테스트 | `__tests__/lib/calc/nbl-state-history-e3-1-section-render.test.tsx`(26) · `…-client.anchor.test.ts`(19) · `__tests__/components/nbl-state-history-result-card.anchor.test.tsx`(+3) · `__tests__/lib/nbl-state-history-e3-1-wire.test.ts`(갱신) · `e2e/_helpers/validation-field-jump-cases-nbl.ts`(+2) · `e2e/transfer-nbl-other-state-history-e3-1.spec.ts`(7건) | |
+
+### 결정·편차
+
+1. **«양도일 현재 건축물» 줄 / 토글**: 건축물 사건 0건이면 줄 없이 토글, 1건 이상이면 토글 숨김 + 줄(마지막 «건축물» 사건 기준). 종류 미선택 행은 건축물 사건이 아니므로 토글이 남는다.
+2. **R-8(종류 필수 문구 괄호 3종 나열) 미적용** — 엔진 보고와 같은 판단. `nbl-state-history-e2-route.anchor.test.ts:214`가 «종류(건축물 신축 / 건축물 멸실·철거·붕괴)를 선택하세요» 전문을 고정하고 결정 기록이 «건축물 행 byte-identical»이다. 미선택 행의 이동 대상(종류 라디오)은 3종을 모두 보여 준다.
+3. **한정 고지(위젯)**: 엔진이 구분 변경 사건이 있으면 종전 `NBL_STATE_HISTORY_APPLIED_NOTICE`를 `…TAX_CHANGE_APPLIED_NOTICE`로 대체하므로 입력 화면도 같은 문구를 쓴다(안 그러면 입력 화면은 «철거 직전 재산세 구분만», 결과는 «구분 변경»을 말해 서로 어긋난다). 게이트 허용 목록: `TAX_CHANGE_APPLIED`·`TAX_CHANGE_UNKNOWN` 사용처 = 엔진 apply + 이 위젯.
+4. **«같은 구분» 안내 비교식**: `ev.propertyTaxTypeBefore === afterRow.propertyTaxType` 한 줄이면 충분하다(직전 «모름» `""`·변경 후 «모름» `"unknown"`은 어떤 실제 구분과도 같지 않다). 초안의 중복 가드 두 개는 mutation(N-3)이 «동치 변이»임을 드러내 삭제했다.
+5. **«변경 후» 줄**: 꼬리(양도일 현재)는 «(양도일 현재 선언 기준)»으로 한정 표기(UV-4). 미리보기 구간이 없으면(⑧ 차단·미완성·의제 사유) 줄을 그리지 않는다. 표시 전용(`useMemo` 없이 `preview` 재사용) — 저장·전송·검증 없음.
+6. 위젯에 `useEffect`를 새로 넣지 않았다(쓰기는 onChange 핸들러만). `Record<StateEventKind, …>`로 사건일 hint 표를 만들어 종류 추가 시 컴파일 오류로 알린다(`=== "building_removed"` 리터럴은 모두 제거 — 영구 0건 게이트).
+
+### 실측
+
+- `npx tsc --noEmit` 0건 · `npx vitest run __tests__/tax-engine/non-business-land/ __tests__/calc/ __tests__/lib/ __tests__/api/ __tests__/components/` 2,820파일 34,849 passed / 305 todo(기존 todo) — U4 변경 후 **기존 단언 반전 0건**(UV-1 해소: 반전은 `e3-1-wire` 게이트의 «UI 허용 목록 비우기» 1파일뿐, 의도된 갱신).
+- E2E: 신규 `transfer-nbl-other-state-history-e3-1.spec.ts` 7건 통과(M12 사업용 198,210,000 · 대조군 «바뀐 적 없음» 253,960,000 → 55,750,000 차이 · 건축물 없는 구간 차단/점프/토글 · 같은 날 차단 · 모름 · 같은 구분 안내 + 375px · 축 B · 라이트/다크 대비 + 결과 카드 375px). 회귀: `transfer-nbl-other-state-history*.spec.ts`(3파일) + `transfer-validation-field-jump -g "nbl:"` 88 passed / 1 skipped(기존 skip). 점프 신규 케이스 2건 통과.
+- UV-6: 고지 덧붙이기가 아니라 엔진 «대체»라 `result.spec.ts:67`·`u3.spec.ts:202`는 건축물 사건만 있는 이력이라 영향 없음 — 통과.
+- 사건 입력 영역은 375px 안에 들어간다(종류 3종 라디오 카드 폭 확인). **기존 현상**: 이력 행이 0건이어도 이 단계 페이지의 `scrollWidth`가 471px(§168의14③ 의제 사유 토글 행이 넘침 — 이 PR 무관, 미수정).
+
+### mutation 실측 (제품 코드 1줄 → 관련 13개 vitest 파일 → 원복 · 모두 ≥ 1건 실패)
+
+| 변이 | 실패 | 잡은 파일 |
+|---|---|---|
+| S9 ⑤ 미리보기 Before 운반을 리터럴로 | 7 | e3-1-wire 게이트 2 · client anchor 4 · section-render 1 |
+| S10 ④ 와이어 | 5 | wire 게이트 2 · client anchor 3 |
+| S11 ③ 복원 | 3 | wire 게이트 2 · client anchor 1 |
+| S4 ⑤ 위젯 직전 구분 칸 | 6 | wire 게이트 2 · section-render 4 |
+| S7 `hasBuildingAtTransfer` 마지막 원소 | 77 | leaf 6 · 엔진 anchor 28 · result-card 3 · client 5 · section 1 |
+| S1 `addEvent` 재산세 행 비건너뜀 | 3 | section-render |
+| S2·S5 `lastBuildingKind` 마지막 행 | 1 | section-render |
+| S13a 토글 숨김 술어 = `changed` 전체 | 4 | client 1 · section 3 |
+| S13b 컴포넌트 조건 되돌림 | 3 | section-render |
+| #8′ 투명성 제거 | 3(1파일) | e3-1 leaf |
+| #9 제거 | 16 | leaf 3 · client 3 · section 4 외 |
+| N-1 미리보기 `tailHasBuilding` 미전달 | 9 | wire 게이트 1 · client 4 · section 4 |
+| N-2 모름 안내 종류 뒤바꿈 | 1 | section-render |
+| N-3b «같은 구분» 판정 반전 | 3 | section-render |
+| N-4 사건일 hint 중립화 | 1 | section-render |
+| N-5 종류 라디오 3번째 제거 | 2 | section-render |
+| N-6 ⑦ 제목 되돌림 | 1 | result-card |
+| N-7 질문 라벨 되돌림 | 1 | section-render |
+| N-8 직전 구분 라벨 종류 구분 제거 | 1 | section-render |
+| N-9 첫 행 hint 안내 삭제 | 1 | section-render |
+| N-10 «선언 기준» 표기 삭제 | 2 | section-render |
+| N-11 종류 전환 시 리셋 삭제 | 2 | 기존 section-render 1 · 신규 1 |
+| N-12 행 카드 제목 고정 | 1 | section-render(초판 «라벨 ≥ 2곳» 단언은 변이를 못 잡아 `<p>` 제목 직접 단언으로 교체) |
+| N-13 위젯 한정 고지 종전 문구 고정 | 1 | section-render |
+
+### 남은 확인 필요
+
+- UV-2: 재산세 고지서가 연 단위라 «적용 시작 첫날»을 사용자가 아는가 — 사건일 hint는 «정확한 날을 모르면 확인 필요»로 안내만(법령·해석례 판정 아님).
+- UV-7: `unchanged` 저장값을 다시 열 때 확장된 질문 문구의 오해 가능성 — 엔진 고지 `NBL_STATE_HISTORY_UNCHANGED_NOTICE`는 바이트 동일(재산세 분류를 양도일 현재 값으로 전 기간 적용한다고 이미 말함). 위젯 옵션 설명에 «재산세 과세 구분도 같았습니다»를 명시했다. 사용자 판단 필요.
+- UV-8: «건축물 있음» 두 구간이 재산세 구분 열만 달라 보이는 표를 스크린샷(`e2e/_artifacts/e3-1-card-*.png`)으로 확인 — 열 추가 없이 읽히는지는 사용자 판단 필요.
+- 브라우저 수동 확인은 Playwright(헤드리스 chromium)로 수행했고 사람 눈 확인은 하지 않았다.

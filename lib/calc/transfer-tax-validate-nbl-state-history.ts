@@ -50,7 +50,11 @@ export function validateNblStateHistory(asset: AssetForm, label: string, ctx: St
   if (!mode) return fieldError("nblOtherStateHistoryMode", `${prefix}${STATE_HISTORY_MODE_REQUIRED_MESSAGE}`);
   if (mode !== "changed") return null;
 
-  const issue = stateEventSequenceIssue(asset.nblOtherStateEvents ?? [], { transferDate: ctx.transferDate ?? "", floorDate: ctx.floorDate });
+  const issue = stateEventSequenceIssue(asset.nblOtherStateEvents ?? [], {
+    transferDate: ctx.transferDate ?? "",
+    floorDate: ctx.floorDate,
+    tailHasBuilding: asset.nblOtherHasBuilding, // E3-① — 건축물 사건 0건일 때만 초기 건축물 상태(⑫ refine이 같은 값을 넘긴다)
+  });
   if (!issue) return null;
   const message = `${prefix}${issue.message}`;
   if (issue.field === "events" || issue.index === null) return fieldError("nblOtherStateEvents", message);

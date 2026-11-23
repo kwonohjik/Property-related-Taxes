@@ -36,7 +36,7 @@ const other = (patch: Record<string, unknown> = {}) =>
   nbl({ nblLandType: "other_land", nblOtherPropertyTaxType: "separate", nblOtherStateHistoryMode: "unchanged", ...patch });
 
 /** 건축물 이력 사건 행 */
-const ev = (kind: "" | "building_built" | "building_removed", date: string) => ({ kind, date, propertyTaxTypeBefore: "" });
+const ev = (kind: "" | "building_built" | "building_removed" | "tax_type_changed", date: string) => ({ kind, date, propertyTaxTypeBefore: "" });
 
 /** 기타토지 + 수입금액비율 업종 선택 */
 const revenue = (patch: Record<string, unknown> = {}) =>
@@ -81,6 +81,10 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "nbl: 건축물 사건일 소유 시작 전", field: "nblOtherStateEvents.0.date", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 1번째 행 — 사건일\(2010-01-01\)이 소유 시작 전입니다/, form: other({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("building_removed", "2010-01-01")] }) },
   { name: "nbl: 건축물 사건일 양도일 이후", field: "nblOtherStateEvents.0.date", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 1번째 행 — 사건일\(2099-01-01\)이 양도일\(.+\) 당일 또는 그 이후입니다/, form: other({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("building_removed", "2099-01-01")] }) },
   { name: "nbl: 건축물 사건 같은 종류 연속", field: "nblOtherStateEvents.1.kind", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 2번째 행 — 앞 사건이 이미 「건축물 있음」입니다/, form: other({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("building_built", "2018-01-01"), ev("building_built", "2019-01-01")] }) },
+
+  // E3-① 재산세 과세 구분 변경 사건 — 접두는 종류별(건축물 행 접두는 불변). 건축물 없는 구간의 변경은 «kind» 칸으로 점프한다(앵커 재사용).
+  { name: "nbl: 재산세 구분 변경 사건 건축물 없는 구간", field: "nblOtherStateEvents.0.kind", step: 0, assetIndex: A, message: /^자산: 기타토지 — 재산세 과세 구분 변경 사건 1번째 행 — 이 날짜 직전에는 건축물이 없습니다/, form: other({ nblOtherHasBuilding: false, nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("tax_type_changed", "2020-01-01")] }) },
+  { name: "nbl: 재산세 구분 변경 사건일 빈 칸", field: "nblOtherStateEvents.0.date", step: 0, assetIndex: A, message: /^자산: 기타토지 — 재산세 과세 구분 변경 사건 1번째 행 — 날짜를 입력하세요/, form: other({ nblOtherHasBuilding: true, nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("tax_type_changed", "")] }) },
 
   // 수입금액비율(§168의11②)
   { name: "nbl: 수입금액", field: "nblRevenueCurrentRevenue", step: 0, assetIndex: A, message: /^자산: 수입금액비율 업종 선택 시 당해 과세기간 수입금액/, form: revenue({ nblRevenueCurrentRevenue: "" }) },
