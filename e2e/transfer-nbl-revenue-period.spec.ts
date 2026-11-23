@@ -14,6 +14,7 @@
  *  6) 축 B(지분 2장): 첫 카드의 영위 기간이 companion body에도 실리고 두 지분 모두 같은 판정.
  *  7) 연도별 토지가액 자동조회: 명시 클릭 · 빈 칸만 채움 · 실패 연도는 빈 칸 + 연도 표시(vWorld mock).
  *  8) ⑧ 차단: 폐업일 ≥ 양도일 — 오류 목록 + 계산 차단.
+ *  8′) 양도일 의제(경매) + ON: 엔진은 영위 기간을 읽지 않는다(`revenueHistoryScope` = deemed) — 안내 · 현행 칸 배치 · 당해 수입금액 빔이면 ⑧ 차단(요청 없음) → 입력 후 사업용 · 표 없음.
  *  9) 시각: 라이트/다크 글자 대비 4.5 · 375px 입력 영역·결과 카드 가로 스크롤 없음.
  *
  * 폼은 sessionStorage로 시드한다. 외부 API는 7)만 mock(`/api/address/standard-price`).
@@ -27,6 +28,7 @@ import { createDefaultTransferFormData } from "../lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "../lib/stores/calc-wizard-asset-factory";
 import { NBL_REVENUE_HISTORY_GRACE10_PREMISE_NOTICE } from "../lib/tax-engine/nbl-confirm-notices";
 import { NBL_REVENUE_HISTORY_ROW_UNKNOWN_NOTICE } from "../lib/tax-engine/nbl-confirm-notices";
+import { NBL_REVENUE_HISTORY_DEEMED_TRANSFER_NOTICE } from "../lib/tax-engine/nbl-confirm-notices";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Resp = { status: number; req: Record<string, any>; json: Record<string, any> };
@@ -304,6 +306,58 @@ test.describe("기타토지 업종 영위 기간(E3-②) — 입력 → 계산 �
     await expect(page.getByTestId("nbl-revenue-period-row-2016-landvalue")).toHaveValue("");
     await expect(page.getByTestId("nbl-revenue-period-fetch-error")).toContainText("2016년");
     expect(asked, "12월 31일 기준시가 = 그 해 공시 · 값이 있는 2015는 조회하지 않는다").toEqual(["2014", "2016", "2017", "2018", "2019", "2020", "2021", "2022"]);
+  });
+
+  test("양도일 의제(경매) + 영위 기간 ON + 폐업 2021-06-01: 영위 기간은 판정에 쓰지 않음 안내 · 현행 칸 배치 · 당해 수입금액 빔 → ⑧ 차단(요청 없음) → 화면에서 입력 → 사업용 · 과세기간 표 없음", async ({ page }) => {
+    test.setTimeout(180_000);
+    // 엔진 `revenueHistoryScope` = deemed → 영위 기간을 읽지 않고 현행(OFF) 경로 — 당해 칸이 비면 엔진은 수입 0으로 판정했다(vitest 실측 253,960,000 · ce2f4dc 이전 ⑧ 통과)
+    await seed(page, [
+      landAsset({
+        nblDeemedTransferReason: "auction", nblDeemedTransferDate: "2023-01-01",
+        nblRevenuePeriodOn: true, nblRevenueBusinessEndDate: "2021-06-01", nblRevenueYearRows: [],
+        nblRevenueCurrentRevenue: "", nblRevenueCurrentLandValue: "", nblRevenuePriorRevenue: "", nblRevenuePriorLandValue: "",
+      }),
+    ]);
+    await gotoHolding(page);
+    await expect(toggleSwitch(page)).toBeChecked();
+    await expect(page.getByTestId("nbl-revenue-period-deemed-notice")).toHaveText(NBL_REVENUE_HISTORY_DEEMED_TRANSFER_NOTICE);
+    // 영위 기간 판정 미리보기·연도 판정·유예 안내 없음 — 칸 배치는 현행(OFF)과 같다
+    for (const id of ["nbl-revenue-period-operating", "nbl-revenue-period-current-year", "nbl-revenue-period-prior-year", "nbl-revenue-period-closure-grace-notice"]) {
+      await expect(page.getByTestId(id), id).toHaveCount(0);
+    }
+    await expect(page.getByText("당해 사업개시일")).toBeVisible();
+    await expect(page.locator('[data-field="nblRevenueCurrentRevenue"]')).toHaveCount(1);
+
+    // ⑧ 차단 — 계산 요청이 나가지 않는다
+    const posts: string[] = [];
+    page.on("request", (q) => { if (q.url().includes("/api/calc/transfer") && q.method() === "POST") posts.push(q.url()); });
+    await toLastStep(page);
+    await page.getByRole("button", { name: "세금 계산하기" }).click();
+    await expect(page.getByText("수입금액비율 업종 선택 시 당해 과세기간 수입금액을 입력하세요.", { exact: false }).first()).toBeVisible({ timeout: 15_000 });
+    expect(posts, "⑧이 막으면 계산 요청이 없다").toEqual([]);
+
+    // 화면에서 당해 칸 입력 → 계산
+    await gotoHolding(page);
+    const cur = page.locator('[data-field="nblRevenueCurrentRevenue"] input');
+    await cur.fill("2600000");
+    await cur.press("Tab");
+    await expect(cur).toHaveValue("2,600,000");
+    const curLv = page.locator('[data-field="nblRevenueCurrentLandValue"] input');
+    await curLv.fill(LV);
+    await curLv.press("Tab");
+    await expect(curLv).toHaveValue("100,000,000");
+    const r = await calc(page);
+    expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);
+    const raw = r.req.nonBusinessLandRaw;
+    expect(raw?.nblDeemedTransferReason).toBe("auction");
+    expect(raw?.nblRevenueCurrentRevenue).toBe("2600000");
+    const detail = r.json.data?.result?.nonBusinessLandJudgmentDetail;
+    expect(detail?.isNonBusinessLand, "엔진이 당해 칸을 읽어 사업용").toBe(false);
+    expect(detail?.periodEvaluation?.revenueHistory, "의제면 영위 기간 echo 없음").toBeUndefined();
+    await expect(banner.business(page)).toBeVisible();
+    await expect(page.getByTestId("nbl-revenue-period-result")).toHaveCount(0);
+    await expect(page.getByText(NBL_REVENUE_HISTORY_DEEMED_TRANSFER_NOTICE).first(), "결과 화면에도 의제 고지").toBeVisible();
+    console.log("[의제] 산출세액", taxOf(r));
   });
 
   test("⑧ 차단: 폐업일이 양도일 이후면 오류 목록에 문구가 뜨고 계산이 막힌다", async ({ page }) => {
