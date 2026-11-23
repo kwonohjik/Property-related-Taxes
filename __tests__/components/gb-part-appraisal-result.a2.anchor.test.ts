@@ -10,7 +10,8 @@
  */
 import { describe, it, expect } from "vitest";
 import { buildGeneralBuildingAssetCards } from "@/lib/tax-engine/general-building-valuation";
-import { buildGbAcquisitionFormula, buildGbExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementGbFormulas";
+import { buildGbAcquisitionFormula } from "@/components/calc/results/transfer/DetailedStatementGbFormulas";
+import { buildGbExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementGbExpenseFormulas";
 import type { PerPropertyBreakdown } from "@/lib/tax-engine/types/transfer-aggregate.types";
 
 const BASE = {

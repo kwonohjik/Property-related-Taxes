@@ -26,7 +26,7 @@ import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { allIssues, captureBody, newForm } from "../calc/_one-house-pr3a-calc-route";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { calculateGeneralBuildingActualTransfer } from "@/app/api/calc/transfer/general-building-route-helper";
-import { buildGbExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementGbFormulas";
+import { buildGbExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementGbExpenseFormulas";
 import { directExpenseRaw } from "@/lib/stores/transfer-per-asset-direct";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 

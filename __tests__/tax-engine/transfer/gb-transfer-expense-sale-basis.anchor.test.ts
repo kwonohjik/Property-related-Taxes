@@ -31,7 +31,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { buildGeneralBuildingValuation } from "@/lib/calc/transfer-tax-api-gb";
 import { dispatchGeneralBuilding } from "@/app/api/calc/transfer/general-building-route-helper";
 import { buildActualGeneralBuildingCards } from "@/app/api/calc/transfer/general-building-route-actual";
-import { buildGbExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementGbFormulas";
+import { buildGbExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementGbExpenseFormulas";
 import { cForm, bodyOf, routeOf, issuesOf } from "@/__tests__/calc/_helpers/split-carryover-c-form";
 import { resolveGeneralBuildingSwap } from "@/lib/tax-engine/general-building-swap";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
