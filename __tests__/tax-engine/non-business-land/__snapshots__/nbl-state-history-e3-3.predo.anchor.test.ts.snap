@@ -1,0 +1,2392 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H01 이내(500㎡ · 정착 100 · 5배) — 결과 객체 전체 + 세액 스냅샷 > H01 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 5,
+      "businessArea": 500,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+      "nonBusinessArea": 0,
+      "nonBusinessRatio": 0,
+      "totalArea": 500,
+    },
+    "businessUseDays": 3651,
+    "businessUseRatio": 1,
+    "criteria": {
+      "rule2of3Years": true,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 3651,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": false,
+    "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "500㎡ ≤ 500㎡ → 전체 사업용",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 3651,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    ],
+  },
+  "tax": 198210000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H02 초과(1,000㎡ → 허용 500 · 초과 500) — 결과 객체 전체 + 세액 스냅샷 > H02 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 5,
+      "businessArea": 500,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+      "nonBusinessArea": 500,
+      "nonBusinessRatio": 0.5,
+      "totalArea": 1000,
+    },
+    "businessUseDays": 3651,
+    "businessUseRatio": 0.5,
+    "criteria": {
+      "rule2of3Years": false,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 3651,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": true,
+    "judgmentReason": "배율(5배) 초과 — 초과분 500㎡ 비사업용",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "1000㎡ > 500㎡ → 초과분 500㎡ 비사업용 (50%)",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "FAIL",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0.1,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0.5,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 3651,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    ],
+  },
+  "tax": 199720000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H03 정착면적 0 → 전량 비사업용 — 결과 객체 전체 + 세액 스냅샷 > H03 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+    ],
+    "businessUseDays": 0,
+    "businessUseRatio": 0,
+    "criteria": {
+      "rule2of3Years": false,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 0,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": true,
+    "judgmentReason": "정착면적 미입력",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "정착면적 미입력",
+        "id": "housing_footprint",
+        "label": "주택 정착면적",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "FAIL",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0.1,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 1,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 3651,
+    "warnings": [],
+  },
+  "tax": 253960000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H04 이내 + 유예(2014-01-02~2024-01-01) — 결과 객체 전체 + 세액 스냅샷 > H04 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 5,
+      "businessArea": 500,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+      "nonBusinessArea": 0,
+      "nonBusinessRatio": 0,
+      "totalArea": 500,
+    },
+    "businessUseDays": 3651,
+    "businessUseRatio": 1,
+    "criteria": {
+      "rule2of3Years": true,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 3651,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": false,
+    "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "500㎡ ≤ 500㎡ → 전체 사업용",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 3651,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    ],
+  },
+  "tax": 198210000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H05 초과 + 전 기간 유예(D1) — 결과 객체 전체 + 세액 스냅샷 > H05 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+      "소득세법 시행령 §168조의14 ① (소득세법 시행규칙 §83의5①)",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 5,
+      "businessArea": 1000,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+        "소득세법 시행령 §168조의14 ① (소득세법 시행규칙 §83의5①)",
+      ],
+      "nonBusinessArea": 0,
+      "nonBusinessRatio": 0,
+      "totalArea": 1000,
+    },
+    "businessUseDays": 3651,
+    "businessUseRatio": 1,
+    "criteria": {
+      "rule2of3Years": true,
+      "rule5Years": true,
+      "rule80Percent": true,
+    },
+    "effectiveBusinessDays": 3651,
+    "gracePeriodDays": 3651,
+    "isNonBusinessLand": false,
+    "judgmentReason": "유예기간(소득세법 시행령 §168조의14 ① (소득세법 시행규칙 §83의5①)) 3651일을 사업용으로 보아 기간기준 충족 — 비사업용 잔여분 없음",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "1000㎡ > 500㎡ → 초과분 500㎡ 비사업용 (50%)",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "FAIL",
+      },
+      {
+        "detail": "유예기간 3651일을 사업용으로 보아 기간기준 충족 → 비사업용 잔여분 없음 — 사업용 — 1호(소유 5년 이상): 직전5년 비사업 0일(가 미충족), 직전3년 비사업 0일(나 미충족), 전체 비사업 0일(다 미충족) → 가·나·다 중 일부 미충족(사업용)",
+        "id": "housing_grace_period",
+        "label": "Step 4 유예기간(영 §168의14①) 기간기준",
+        "legalBasis": "소득세법 시행령 §168조의14 ① (소득세법 시행규칙 §83의5①)",
+        "status": "PASS",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "state_at_transfer",
+      "graceJudged": {
+        "gracePeriodDays": 3651,
+        "meets": true,
+        "totalOwnershipDays": 3651,
+      },
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 3651,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    ],
+  },
+  "tax": 198210000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H06 초과 + 유예 일부(2014~2022) — 결과 객체 전체 + 세액 스냅샷 > H06 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+      "소득세법 시행령 §168조의14 ① (소득세법 시행규칙 §83의5①)",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 5,
+      "businessArea": 1000,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+        "소득세법 시행령 §168조의14 ① (소득세법 시행규칙 §83의5①)",
+      ],
+      "nonBusinessArea": 0,
+      "nonBusinessRatio": 0,
+      "totalArea": 1000,
+    },
+    "businessUseDays": 2921,
+    "businessUseRatio": 0.8000547795124623,
+    "criteria": {
+      "rule2of3Years": false,
+      "rule5Years": true,
+      "rule80Percent": true,
+    },
+    "effectiveBusinessDays": 2921,
+    "gracePeriodDays": 2921,
+    "isNonBusinessLand": false,
+    "judgmentReason": "유예기간(소득세법 시행령 §168조의14 ① (소득세법 시행규칙 §83의5①)) 2921일을 사업용으로 보아 기간기준 충족 — 비사업용 잔여분 없음",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "1000㎡ > 500㎡ → 초과분 500㎡ 비사업용 (50%)",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "FAIL",
+      },
+      {
+        "detail": "유예기간 2921일을 사업용으로 보아 기간기준 충족 → 비사업용 잔여분 없음 — 사업용 — 1호(소유 5년 이상): 직전5년 비사업 730일(가 미충족), 직전3년 비사업 730일(나 충족), 전체 비사업 730일(다 미충족) → 가·나·다 중 일부 미충족(사업용)",
+        "id": "housing_grace_period",
+        "label": "Step 4 유예기간(영 §168의14①) 기간기준",
+        "legalBasis": "소득세법 시행령 §168조의14 ① (소득세법 시행규칙 §83의5①)",
+        "status": "PASS",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "state_at_transfer",
+      "graceJudged": {
+        "gracePeriodDays": 2921,
+        "meets": true,
+        "totalOwnershipDays": 3651,
+      },
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 3651,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    ],
+  },
+  "tax": 198210000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H07 수도권 미입력(보수적 3배 + 경고) 이내 — 결과 객체 전체 + 세액 스냅샷 > H07 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 3,
+      "businessArea": 300,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+      "nonBusinessArea": 0,
+      "nonBusinessRatio": 0,
+      "totalArea": 300,
+    },
+    "businessUseDays": 3651,
+    "businessUseRatio": 1,
+    "criteria": {
+      "rule2of3Years": true,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 3651,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": false,
+    "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "수도권 주·상·공 3배 → 허용면적 300㎡ (정착면적 100㎡ × 3배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "300㎡ ≤ 300㎡ → 전체 사업용",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 3651,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+      "수도권 여부(isMetropolitanArea) 미제공 — 보수적 기본값(수도권)으로 배율 산정. 수도권 여부를 명시하면 정확한 배율이 적용됩니다.",
+    ],
+  },
+  "tax": 198210000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H08 수도권 3배(주·상·공)에서 초과(400 > 300) — 결과 객체 전체 + 세액 스냅샷 > H08 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 3,
+      "businessArea": 300,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+      "nonBusinessArea": 100,
+      "nonBusinessRatio": 0.25,
+      "totalArea": 400,
+    },
+    "businessUseDays": 3651,
+    "businessUseRatio": 0.75,
+    "criteria": {
+      "rule2of3Years": false,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 3651,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": true,
+    "judgmentReason": "배율(3배) 초과 — 초과분 100㎡ 비사업용",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "수도권 주·상·공 3배 → 허용면적 300㎡ (정착면적 100㎡ × 3배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "400㎡ > 300㎡ → 초과분 100㎡ 비사업용 (25%)",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "FAIL",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0.1,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0.25,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 3651,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    ],
+  },
+  "tax": 198210000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H09 양도 2021-12-31 수도권 5배(종전) 이내 — 결과 객체 전체 + 세액 스냅샷 > H09 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 5,
+      "businessArea": 500,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+      "nonBusinessArea": 0,
+      "nonBusinessRatio": 0,
+      "totalArea": 500,
+    },
+    "businessUseDays": 2920,
+    "businessUseRatio": 1,
+    "criteria": {
+      "rule2of3Years": true,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 2920,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": false,
+    "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "도시지역 內 5배 (2022.1.1. 전 양도 — 종전 규정) → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "500㎡ ≤ 500㎡ → 전체 사업용",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 2920,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    ],
+  },
+  "tax": 209970000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H10 녹지 수도권 5배 이내 — 결과 객체 전체 + 세액 스냅샷 > H10 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 5,
+      "businessArea": 500,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+      "nonBusinessArea": 0,
+      "nonBusinessRatio": 0,
+      "totalArea": 500,
+    },
+    "businessUseDays": 3651,
+    "businessUseRatio": 1,
+    "criteria": {
+      "rule2of3Years": true,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 3651,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": false,
+    "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "수도권 녹지 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "500㎡ ≤ 500㎡ → 전체 사업용",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 3651,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    ],
+  },
+  "tax": 198210000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H11 도시지역 밖(관리) 10배 이내 — 결과 객체 전체 + 세액 스냅샷 > H11 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 10,
+      "businessArea": 1000,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+      "nonBusinessArea": 0,
+      "nonBusinessRatio": 0,
+      "totalArea": 1000,
+    },
+    "businessUseDays": 3651,
+    "businessUseRatio": 1,
+    "criteria": {
+      "rule2of3Years": true,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 3651,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": false,
+    "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "도시지역 外 10배 → 허용면적 1000㎡ (정착면적 100㎡ × 10배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "1000㎡ ≤ 1000㎡ → 전체 사업용",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 3651,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    ],
+  },
+  "tax": 198210000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H12 축 B 지분2(취득 2020-01-01 · 소유 1,460일) — 결과 객체 전체 + 세액 스냅샷 > H12 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 5,
+      "businessArea": 500,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+      "nonBusinessArea": 0,
+      "nonBusinessRatio": 0,
+      "totalArea": 500,
+    },
+    "businessUseDays": 1460,
+    "businessUseRatio": 1,
+    "criteria": {
+      "rule2of3Years": true,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 1460,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": false,
+    "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "500㎡ ≤ 500㎡ → 전체 사업용",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 1460,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    ],
+  },
+  "tax": 233490000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H13 축 B 지분3(취득 2021-06-01 · 소유 943일) — 결과 객체 전체 + 세액 스냅샷 > H13 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 5,
+      "businessArea": 500,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+      "nonBusinessArea": 0,
+      "nonBusinessRatio": 0,
+      "totalArea": 500,
+    },
+    "businessUseDays": 943,
+    "businessUseRatio": 1,
+    "criteria": {
+      "rule2of3Years": true,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 943,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": false,
+    "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "500㎡ ≤ 500㎡ → 전체 사업용",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 943,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    ],
+  },
+  "tax": 257010000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H14 이월과세 시나리오 B(취득일 = 수증일 2023-12-01) — 결과 객체 전체 + 세액 스냅샷 > H14 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 5,
+      "businessArea": 500,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+      "nonBusinessArea": 0,
+      "nonBusinessRatio": 0,
+      "totalArea": 500,
+    },
+    "businessUseDays": 30,
+    "businessUseRatio": 1,
+    "criteria": {
+      "rule2of3Years": true,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 30,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": false,
+    "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "500㎡ ≤ 500㎡ → 전체 사업용",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 30,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    ],
+  },
+  "tax": 348750000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H15 소유 0일(취득 2023-12-31 · 양도 2024-01-01) — 결과 객체 전체 + 세액 스냅샷 > H15 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의12",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 5,
+      "businessArea": 500,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+      "nonBusinessArea": 0,
+      "nonBusinessRatio": 0,
+      "totalArea": 500,
+    },
+    "businessUseDays": 0,
+    "businessUseRatio": 1,
+    "criteria": {
+      "rule2of3Years": true,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 0,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": false,
+    "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 주택 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "500㎡ ≤ 500㎡ → 전체 사업용",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 0,
+    "warnings": [
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    ],
+  },
+  "tax": 348750000,
+}
+`;
+
+exports[`E3d-0 Anchor 2 — 하위호환 골든: 주택부수토지 격자 × 모드 4종 > H16 별장 REDIRECT → 주택부수토지 재분류 — 결과 객체 전체 + 세액 스냅샷 > H16 1`] = `
+{
+  "judgment": {
+    "appliedLawArticles": [
+      "소득세법 §104조의3",
+      "소득세법 시행령 §168조의6",
+      "소득세법 시행령 §168조의7",
+      "소득세법 시행령 §168조의13",
+      "소득세법 시행령 §168조의12",
+    ],
+    "areaProportioning": {
+      "buildingMultiplier": 5,
+      "businessArea": 500,
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+      "nonBusinessArea": 0,
+      "nonBusinessRatio": 0,
+      "totalArea": 500,
+    },
+    "businessUseDays": 3651,
+    "businessUseRatio": 1,
+    "criteria": {
+      "rule2of3Years": true,
+      "rule5Years": false,
+      "rule80Percent": false,
+    },
+    "effectiveBusinessDays": 3651,
+    "gracePeriodDays": 0,
+    "isNonBusinessLand": false,
+    "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+    "judgmentSteps": [
+      {
+        "detail": "사실상 지목: 별장 부수 토지",
+        "id": "land_category",
+        "label": "Step 1 사실상 지목 판정",
+        "legalBasis": "소득세법 시행령 §168조의7",
+        "status": "PASS",
+      },
+      {
+        "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+        "id": "unconditional_exemption",
+        "label": "Step 2 무조건 사업용 의제",
+        "legalBasis": "소득세법 시행령 §168조의14 ③",
+        "status": "NOT_APPLICABLE",
+      },
+      {
+        "detail": "별장 비사용기간이 기간기준 충족 — 사업용 — 1호(소유 5년 이상): 직전5년 비사업 0일(가 미충족), 직전3년 비사업 0일(나 미충족), 전체 비사업 0일(다 미충족) → 가·나·다 중 일부 미충족(사업용). 별장이 아니므로 주택부수토지로 재분류해 판정합니다.",
+        "id": "villa_non_use_period",
+        "label": "Step 3-1 별장 비사용기간 기간기준",
+        "legalBasis": "소득세법 시행령 §168조의6",
+        "status": "PASS",
+      },
+      {
+        "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+        "id": "housing_multiplier",
+        "label": "§168-12 배율 결정",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+      {
+        "detail": "500㎡ ≤ 500㎡ → 전체 사업용",
+        "id": "housing_area_check",
+        "label": "면적 검증",
+        "legalBasis": "소득세법 시행령 §168조의12",
+        "status": "PASS",
+      },
+    ],
+    "needsRedirect": false,
+    "periodEvaluation": {
+      "basis": "not_judged",
+      "legalBasis": [
+        "소득세법 시행령 §168조의12",
+      ],
+    },
+    "surcharge": {
+      "additionalRate": 0,
+      "basicDeductionApplied": true,
+      "longTermDeductionExcluded": false,
+      "nonBusinessAreaRatio": 0,
+      "surchargeType": "non_business_land",
+    },
+    "totalOwnershipDays": 3651,
+    "warnings": [
+      "입력한 토지 면적 전체를 별장의 부속토지로 보아 판정했습니다. 소득세법 §104조의3 ① 6호 후단은 별장에 부속된 토지의 경계가 명확하지 아니한 경우 그 건축물 바닥면적의 10배에 해당하는 토지를 부속토지로 본다고 정하는데, 이 경계 판정(바닥면적 10배 한도)은 하지 않았습니다 — 확인 필요.",
+      "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+      "별장 비사용기간이 기간기준을 충족해 별장이 아니므로 주택부수토지로 재분류해 판정했습니다 — 인정면적은 주택 정착면적 × 용도지역별 배율(영 §168의12)입니다.",
+    ],
+  },
+  "tax": 198210000,
+}
+`;
+
+exports[`E3d-0 Anchor 12 — \`judgeHousingLand\` 결과 객체(steps·warnings·echo) 격자 스냅샷 (\`housing-limit.ts\` 추출 전후 바이트 동일) > 관리(도시 밖) 10배 — 판정 결과 객체 전체 > 관리(도시 밖) 10배 1`] = `
+{
+  "appliedLawArticles": [
+    "소득세법 §104조의3",
+    "소득세법 시행령 §168조의6",
+    "소득세법 시행령 §168조의7",
+    "소득세법 시행령 §168조의12",
+  ],
+  "areaProportioning": {
+    "buildingMultiplier": 10,
+    "businessArea": 1000,
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+    "nonBusinessArea": 0,
+    "nonBusinessRatio": 0,
+    "totalArea": 1000,
+  },
+  "businessUseDays": 3651,
+  "businessUseRatio": 1,
+  "criteria": {
+    "rule2of3Years": true,
+    "rule5Years": false,
+    "rule80Percent": false,
+  },
+  "effectiveBusinessDays": 3651,
+  "gracePeriodDays": 0,
+  "isNonBusinessLand": false,
+  "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+  "judgmentSteps": [
+    {
+      "detail": "사실상 지목: 주택 부수 토지",
+      "id": "land_category",
+      "label": "Step 1 사실상 지목 판정",
+      "legalBasis": "소득세법 시행령 §168조의7",
+      "status": "PASS",
+    },
+    {
+      "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+      "id": "unconditional_exemption",
+      "label": "Step 2 무조건 사업용 의제",
+      "legalBasis": "소득세법 시행령 §168조의14 ③",
+      "status": "NOT_APPLICABLE",
+    },
+    {
+      "detail": "도시지역 外 10배 → 허용면적 1000㎡ (정착면적 100㎡ × 10배)",
+      "id": "housing_multiplier",
+      "label": "§168-12 배율 결정",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+    {
+      "detail": "1000㎡ ≤ 1000㎡ → 전체 사업용",
+      "id": "housing_area_check",
+      "label": "면적 검증",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+  ],
+  "needsRedirect": false,
+  "periodEvaluation": {
+    "basis": "not_judged",
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+  },
+  "surcharge": {
+    "additionalRate": 0,
+    "basicDeductionApplied": true,
+    "longTermDeductionExcluded": false,
+    "nonBusinessAreaRatio": 0,
+    "surchargeType": "non_business_land",
+  },
+  "totalOwnershipDays": 3651,
+  "warnings": [
+    "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+  ],
+}
+`;
+
+exports[`E3d-0 Anchor 12 — \`judgeHousingLand\` 결과 객체(steps·warnings·echo) 격자 스냅샷 (\`housing-limit.ts\` 추출 전후 바이트 동일) > 녹지 수도권 — 판정 결과 객체 전체 > 녹지 수도권 1`] = `
+{
+  "appliedLawArticles": [
+    "소득세법 §104조의3",
+    "소득세법 시행령 §168조의6",
+    "소득세법 시행령 §168조의7",
+    "소득세법 시행령 §168조의12",
+  ],
+  "areaProportioning": {
+    "buildingMultiplier": 5,
+    "businessArea": 1000,
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+    "nonBusinessArea": 0,
+    "nonBusinessRatio": 0,
+    "totalArea": 1000,
+  },
+  "businessUseDays": 3651,
+  "businessUseRatio": 1,
+  "criteria": {
+    "rule2of3Years": true,
+    "rule5Years": false,
+    "rule80Percent": false,
+  },
+  "effectiveBusinessDays": 3651,
+  "gracePeriodDays": 0,
+  "isNonBusinessLand": false,
+  "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+  "judgmentSteps": [
+    {
+      "detail": "사실상 지목: 주택 부수 토지",
+      "id": "land_category",
+      "label": "Step 1 사실상 지목 판정",
+      "legalBasis": "소득세법 시행령 §168조의7",
+      "status": "PASS",
+    },
+    {
+      "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+      "id": "unconditional_exemption",
+      "label": "Step 2 무조건 사업용 의제",
+      "legalBasis": "소득세법 시행령 §168조의14 ③",
+      "status": "NOT_APPLICABLE",
+    },
+    {
+      "detail": "수도권 녹지 5배 → 허용면적 1000㎡ (정착면적 200㎡ × 5배)",
+      "id": "housing_multiplier",
+      "label": "§168-12 배율 결정",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+    {
+      "detail": "1000㎡ ≤ 1000㎡ → 전체 사업용",
+      "id": "housing_area_check",
+      "label": "면적 검증",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+  ],
+  "needsRedirect": false,
+  "periodEvaluation": {
+    "basis": "not_judged",
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+  },
+  "surcharge": {
+    "additionalRate": 0,
+    "basicDeductionApplied": true,
+    "longTermDeductionExcluded": false,
+    "nonBusinessAreaRatio": 0,
+    "surchargeType": "non_business_land",
+  },
+  "totalOwnershipDays": 3651,
+  "warnings": [
+    "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+  ],
+}
+`;
+
+exports[`E3d-0 Anchor 12 — \`judgeHousingLand\` 결과 객체(steps·warnings·echo) 격자 스냅샷 (\`housing-limit.ts\` 추출 전후 바이트 동일) > 미지정 10배 — 판정 결과 객체 전체 > 미지정 10배 1`] = `
+{
+  "appliedLawArticles": [
+    "소득세법 §104조의3",
+    "소득세법 시행령 §168조의6",
+    "소득세법 시행령 §168조의7",
+    "소득세법 시행령 §168조의12",
+  ],
+  "areaProportioning": {
+    "buildingMultiplier": 10,
+    "businessArea": 1000,
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+    "nonBusinessArea": 0,
+    "nonBusinessRatio": 0,
+    "totalArea": 1000,
+  },
+  "businessUseDays": 3651,
+  "businessUseRatio": 1,
+  "criteria": {
+    "rule2of3Years": true,
+    "rule5Years": false,
+    "rule80Percent": false,
+  },
+  "effectiveBusinessDays": 3651,
+  "gracePeriodDays": 0,
+  "isNonBusinessLand": false,
+  "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+  "judgmentSteps": [
+    {
+      "detail": "사실상 지목: 주택 부수 토지",
+      "id": "land_category",
+      "label": "Step 1 사실상 지목 판정",
+      "legalBasis": "소득세법 시행령 §168조의7",
+      "status": "PASS",
+    },
+    {
+      "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+      "id": "unconditional_exemption",
+      "label": "Step 2 무조건 사업용 의제",
+      "legalBasis": "소득세법 시행령 §168조의14 ③",
+      "status": "NOT_APPLICABLE",
+    },
+    {
+      "detail": "도시지역 外 10배 → 허용면적 1000㎡ (정착면적 100㎡ × 10배)",
+      "id": "housing_multiplier",
+      "label": "§168-12 배율 결정",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+    {
+      "detail": "1000㎡ ≤ 1000㎡ → 전체 사업용",
+      "id": "housing_area_check",
+      "label": "면적 검증",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+  ],
+  "needsRedirect": false,
+  "periodEvaluation": {
+    "basis": "not_judged",
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+  },
+  "surcharge": {
+    "additionalRate": 0,
+    "basicDeductionApplied": true,
+    "longTermDeductionExcluded": false,
+    "nonBusinessAreaRatio": 0,
+    "surchargeType": "non_business_land",
+  },
+  "totalOwnershipDays": 3651,
+  "warnings": [
+    "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+  ],
+}
+`;
+
+exports[`E3d-0 Anchor 12 — \`judgeHousingLand\` 결과 객체(steps·warnings·echo) 격자 스냅샷 (\`housing-limit.ts\` 추출 전후 바이트 동일) > 수도권 3배 이내(333.34) — 판정 결과 객체 전체 > 수도권 3배 이내(333.34) 1`] = `
+{
+  "appliedLawArticles": [
+    "소득세법 §104조의3",
+    "소득세법 시행령 §168조의6",
+    "소득세법 시행령 §168조의7",
+    "소득세법 시행령 §168조의12",
+  ],
+  "areaProportioning": {
+    "buildingMultiplier": 3,
+    "businessArea": 1000,
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+    "nonBusinessArea": 0,
+    "nonBusinessRatio": 0,
+    "totalArea": 1000,
+  },
+  "businessUseDays": 3651,
+  "businessUseRatio": 1,
+  "criteria": {
+    "rule2of3Years": true,
+    "rule5Years": false,
+    "rule80Percent": false,
+  },
+  "effectiveBusinessDays": 3651,
+  "gracePeriodDays": 0,
+  "isNonBusinessLand": false,
+  "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+  "judgmentSteps": [
+    {
+      "detail": "사실상 지목: 주택 부수 토지",
+      "id": "land_category",
+      "label": "Step 1 사실상 지목 판정",
+      "legalBasis": "소득세법 시행령 §168조의7",
+      "status": "PASS",
+    },
+    {
+      "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+      "id": "unconditional_exemption",
+      "label": "Step 2 무조건 사업용 의제",
+      "legalBasis": "소득세법 시행령 §168조의14 ③",
+      "status": "NOT_APPLICABLE",
+    },
+    {
+      "detail": "수도권 주·상·공 3배 → 허용면적 1000.02㎡ (정착면적 333.34㎡ × 3배)",
+      "id": "housing_multiplier",
+      "label": "§168-12 배율 결정",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+    {
+      "detail": "1000㎡ ≤ 1000.02㎡ → 전체 사업용",
+      "id": "housing_area_check",
+      "label": "면적 검증",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+  ],
+  "needsRedirect": false,
+  "periodEvaluation": {
+    "basis": "not_judged",
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+  },
+  "surcharge": {
+    "additionalRate": 0,
+    "basicDeductionApplied": true,
+    "longTermDeductionExcluded": false,
+    "nonBusinessAreaRatio": 0,
+    "surchargeType": "non_business_land",
+  },
+  "totalOwnershipDays": 3651,
+  "warnings": [
+    "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+  ],
+}
+`;
+
+exports[`E3d-0 Anchor 12 — \`judgeHousingLand\` 결과 객체(steps·warnings·echo) 격자 스냅샷 (\`housing-limit.ts\` 추출 전후 바이트 동일) > 수도권 3배 초과(333.33) — 판정 결과 객체 전체 > 수도권 3배 초과(333.33) 1`] = `
+{
+  "appliedLawArticles": [
+    "소득세법 §104조의3",
+    "소득세법 시행령 §168조의6",
+    "소득세법 시행령 §168조의7",
+    "소득세법 시행령 §168조의12",
+  ],
+  "areaProportioning": {
+    "buildingMultiplier": 3,
+    "businessArea": 999.99,
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+    "nonBusinessArea": 0.01,
+    "nonBusinessRatio": 0,
+    "totalArea": 1000,
+  },
+  "businessUseDays": 3651,
+  "businessUseRatio": 1,
+  "criteria": {
+    "rule2of3Years": false,
+    "rule5Years": false,
+    "rule80Percent": false,
+  },
+  "effectiveBusinessDays": 3651,
+  "gracePeriodDays": 0,
+  "isNonBusinessLand": false,
+  "judgmentReason": "배율(3배) 초과 — 초과분 0.01㎡ 비사업용 — 초과 면적 0.01㎡는 전체 1000㎡의 0.005% 미만이라 비사업용 비율이 소수 4자리 반올림으로 0 — 사업용으로 봅니다(비사업용인데 비율 0인 모순 방지).",
+  "judgmentSteps": [
+    {
+      "detail": "사실상 지목: 주택 부수 토지",
+      "id": "land_category",
+      "label": "Step 1 사실상 지목 판정",
+      "legalBasis": "소득세법 시행령 §168조의7",
+      "status": "PASS",
+    },
+    {
+      "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+      "id": "unconditional_exemption",
+      "label": "Step 2 무조건 사업용 의제",
+      "legalBasis": "소득세법 시행령 §168조의14 ③",
+      "status": "NOT_APPLICABLE",
+    },
+    {
+      "detail": "수도권 주·상·공 3배 → 허용면적 999.99㎡ (정착면적 333.33㎡ × 3배)",
+      "id": "housing_multiplier",
+      "label": "§168-12 배율 결정",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+    {
+      "detail": "1000㎡ > 999.99㎡ → 초과분 0.01㎡ 비사업용 (0%)",
+      "id": "housing_area_check",
+      "label": "면적 검증",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "FAIL",
+    },
+    {
+      "detail": "초과 면적 0.01㎡는 전체 1000㎡의 0.005% 미만이라 비사업용 비율이 소수 4자리 반올림으로 0 — 사업용으로 봅니다(비사업용인데 비율 0인 모순 방지).",
+      "id": "negligible_excess_as_business",
+      "label": "초과 면적 극소(비율 4자리 반올림 0) → 사업용",
+      "legalBasis": "소득세법 §104조의3",
+      "status": "PASS",
+    },
+  ],
+  "needsRedirect": false,
+  "periodEvaluation": {
+    "basis": "not_judged",
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+  },
+  "surcharge": {
+    "additionalRate": 0,
+    "basicDeductionApplied": true,
+    "longTermDeductionExcluded": false,
+    "nonBusinessAreaRatio": 0,
+    "surchargeType": "non_business_land",
+  },
+  "totalOwnershipDays": 3651,
+  "warnings": [
+    "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+  ],
+}
+`;
+
+exports[`E3d-0 Anchor 12 — \`judgeHousingLand\` 결과 객체(steps·warnings·echo) 격자 스냅샷 (\`housing-limit.ts\` 추출 전후 바이트 동일) > 수도권 미제공(보수 기본값 경고) — 판정 결과 객체 전체 > 수도권 미제공(보수 기본값 경고) 1`] = `
+{
+  "appliedLawArticles": [
+    "소득세법 §104조의3",
+    "소득세법 시행령 §168조의6",
+    "소득세법 시행령 §168조의7",
+    "소득세법 시행령 §168조의12",
+  ],
+  "areaProportioning": {
+    "buildingMultiplier": 3,
+    "businessArea": 300,
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+    "nonBusinessArea": 200,
+    "nonBusinessRatio": 0.4,
+    "totalArea": 500,
+  },
+  "businessUseDays": 3651,
+  "businessUseRatio": 0.6,
+  "criteria": {
+    "rule2of3Years": false,
+    "rule5Years": false,
+    "rule80Percent": false,
+  },
+  "effectiveBusinessDays": 3651,
+  "gracePeriodDays": 0,
+  "isNonBusinessLand": true,
+  "judgmentReason": "배율(3배) 초과 — 초과분 200㎡ 비사업용",
+  "judgmentSteps": [
+    {
+      "detail": "사실상 지목: 주택 부수 토지",
+      "id": "land_category",
+      "label": "Step 1 사실상 지목 판정",
+      "legalBasis": "소득세법 시행령 §168조의7",
+      "status": "PASS",
+    },
+    {
+      "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+      "id": "unconditional_exemption",
+      "label": "Step 2 무조건 사업용 의제",
+      "legalBasis": "소득세법 시행령 §168조의14 ③",
+      "status": "NOT_APPLICABLE",
+    },
+    {
+      "detail": "수도권 주·상·공 3배 → 허용면적 300㎡ (정착면적 100㎡ × 3배)",
+      "id": "housing_multiplier",
+      "label": "§168-12 배율 결정",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+    {
+      "detail": "500㎡ > 300㎡ → 초과분 200㎡ 비사업용 (40%)",
+      "id": "housing_area_check",
+      "label": "면적 검증",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "FAIL",
+    },
+  ],
+  "needsRedirect": false,
+  "periodEvaluation": {
+    "basis": "not_judged",
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+  },
+  "surcharge": {
+    "additionalRate": 0.1,
+    "basicDeductionApplied": true,
+    "longTermDeductionExcluded": false,
+    "nonBusinessAreaRatio": 0.4,
+    "surchargeType": "non_business_land",
+  },
+  "totalOwnershipDays": 3651,
+  "warnings": [
+    "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+    "수도권 여부(isMetropolitanArea) 미제공 — 보수적 기본값(수도권)으로 배율 산정. 수도권 여부를 명시하면 정확한 배율이 적용됩니다.",
+  ],
+}
+`;
+
+exports[`E3d-0 Anchor 12 — \`judgeHousingLand\` 결과 객체(steps·warnings·echo) 격자 스냅샷 (\`housing-limit.ts\` 추출 전후 바이트 동일) > 수용 양도 이내 — 판정 결과 객체 전체 > 수용 양도 이내 1`] = `
+{
+  "appliedLawArticles": [
+    "소득세법 §104조의3",
+    "소득세법 시행령 §168조의6",
+    "소득세법 시행령 §168조의7",
+    "소득세법 시행령 §168조의12",
+  ],
+  "areaProportioning": {
+    "buildingMultiplier": 5,
+    "businessArea": 500,
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+    "nonBusinessArea": 0,
+    "nonBusinessRatio": 0,
+    "totalArea": 500,
+  },
+  "businessUseDays": 3651,
+  "businessUseRatio": 1,
+  "criteria": {
+    "rule2of3Years": true,
+    "rule5Years": false,
+    "rule80Percent": false,
+  },
+  "effectiveBusinessDays": 3651,
+  "gracePeriodDays": 0,
+  "isNonBusinessLand": false,
+  "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+  "judgmentSteps": [
+    {
+      "detail": "사실상 지목: 주택 부수 토지",
+      "id": "land_category",
+      "label": "Step 1 사실상 지목 판정",
+      "legalBasis": "소득세법 시행령 §168조의7",
+      "status": "PASS",
+    },
+    {
+      "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+      "id": "unconditional_exemption",
+      "label": "Step 2 무조건 사업용 의제",
+      "legalBasis": "소득세법 시행령 §168조의14 ③",
+      "status": "NOT_APPLICABLE",
+    },
+    {
+      "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+      "id": "housing_multiplier",
+      "label": "§168-12 배율 결정",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+    {
+      "detail": "500㎡ ≤ 500㎡ → 전체 사업용",
+      "id": "housing_area_check",
+      "label": "면적 검증",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+  ],
+  "needsRedirect": false,
+  "periodEvaluation": {
+    "basis": "not_judged",
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+  },
+  "surcharge": {
+    "additionalRate": 0,
+    "basicDeductionApplied": true,
+    "longTermDeductionExcluded": false,
+    "nonBusinessAreaRatio": 0,
+    "surchargeType": "non_business_land",
+  },
+  "totalOwnershipDays": 3651,
+  "warnings": [
+    "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+  ],
+}
+`;
+
+exports[`E3d-0 Anchor 12 — \`judgeHousingLand\` 결과 객체(steps·warnings·echo) 격자 스냅샷 (\`housing-limit.ts\` 추출 전후 바이트 동일) > 양도 2021-12-31(종전 5배) — 판정 결과 객체 전체 > 양도 2021-12-31(종전 5배) 1`] = `
+{
+  "appliedLawArticles": [
+    "소득세법 §104조의3",
+    "소득세법 시행령 §168조의6",
+    "소득세법 시행령 §168조의7",
+    "소득세법 시행령 §168조의12",
+  ],
+  "areaProportioning": {
+    "buildingMultiplier": 5,
+    "businessArea": 1000,
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+    "nonBusinessArea": 0,
+    "nonBusinessRatio": 0,
+    "totalArea": 1000,
+  },
+  "businessUseDays": 2920,
+  "businessUseRatio": 1,
+  "criteria": {
+    "rule2of3Years": true,
+    "rule5Years": false,
+    "rule80Percent": false,
+  },
+  "effectiveBusinessDays": 2920,
+  "gracePeriodDays": 0,
+  "isNonBusinessLand": false,
+  "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+  "judgmentSteps": [
+    {
+      "detail": "사실상 지목: 주택 부수 토지",
+      "id": "land_category",
+      "label": "Step 1 사실상 지목 판정",
+      "legalBasis": "소득세법 시행령 §168조의7",
+      "status": "PASS",
+    },
+    {
+      "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+      "id": "unconditional_exemption",
+      "label": "Step 2 무조건 사업용 의제",
+      "legalBasis": "소득세법 시행령 §168조의14 ③",
+      "status": "NOT_APPLICABLE",
+    },
+    {
+      "detail": "도시지역 內 5배 (2022.1.1. 전 양도 — 종전 규정) → 허용면적 1000㎡ (정착면적 200㎡ × 5배)",
+      "id": "housing_multiplier",
+      "label": "§168-12 배율 결정",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+    {
+      "detail": "1000㎡ ≤ 1000㎡ → 전체 사업용",
+      "id": "housing_area_check",
+      "label": "면적 검증",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+  ],
+  "needsRedirect": false,
+  "periodEvaluation": {
+    "basis": "not_judged",
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+  },
+  "surcharge": {
+    "additionalRate": 0,
+    "basicDeductionApplied": true,
+    "longTermDeductionExcluded": false,
+    "nonBusinessAreaRatio": 0,
+    "surchargeType": "non_business_land",
+  },
+  "totalOwnershipDays": 2920,
+  "warnings": [
+    "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+  ],
+}
+`;
+
+exports[`E3d-0 Anchor 12 — \`judgeHousingLand\` 결과 객체(steps·warnings·echo) 격자 스냅샷 (\`housing-limit.ts\` 추출 전후 바이트 동일) > 양도 2022-01-01(3배) — 판정 결과 객체 전체 > 양도 2022-01-01(3배) 1`] = `
+{
+  "appliedLawArticles": [
+    "소득세법 §104조의3",
+    "소득세법 시행령 §168조의6",
+    "소득세법 시행령 §168조의7",
+    "소득세법 시행령 §168조의12",
+  ],
+  "areaProportioning": {
+    "buildingMultiplier": 3,
+    "businessArea": 600,
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+    "nonBusinessArea": 400,
+    "nonBusinessRatio": 0.4,
+    "totalArea": 1000,
+  },
+  "businessUseDays": 2921,
+  "businessUseRatio": 0.6,
+  "criteria": {
+    "rule2of3Years": false,
+    "rule5Years": false,
+    "rule80Percent": false,
+  },
+  "effectiveBusinessDays": 2921,
+  "gracePeriodDays": 0,
+  "isNonBusinessLand": true,
+  "judgmentReason": "배율(3배) 초과 — 초과분 400㎡ 비사업용",
+  "judgmentSteps": [
+    {
+      "detail": "사실상 지목: 주택 부수 토지",
+      "id": "land_category",
+      "label": "Step 1 사실상 지목 판정",
+      "legalBasis": "소득세법 시행령 §168조의7",
+      "status": "PASS",
+    },
+    {
+      "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+      "id": "unconditional_exemption",
+      "label": "Step 2 무조건 사업용 의제",
+      "legalBasis": "소득세법 시행령 §168조의14 ③",
+      "status": "NOT_APPLICABLE",
+    },
+    {
+      "detail": "수도권 주·상·공 3배 → 허용면적 600㎡ (정착면적 200㎡ × 3배)",
+      "id": "housing_multiplier",
+      "label": "§168-12 배율 결정",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+    {
+      "detail": "1000㎡ > 600㎡ → 초과분 400㎡ 비사업용 (40%)",
+      "id": "housing_area_check",
+      "label": "면적 검증",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "FAIL",
+    },
+  ],
+  "needsRedirect": false,
+  "periodEvaluation": {
+    "basis": "not_judged",
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+  },
+  "surcharge": {
+    "additionalRate": 0.1,
+    "basicDeductionApplied": true,
+    "longTermDeductionExcluded": false,
+    "nonBusinessAreaRatio": 0.4,
+    "surchargeType": "non_business_land",
+  },
+  "totalOwnershipDays": 2921,
+  "warnings": [
+    "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+  ],
+}
+`;
+
+exports[`E3d-0 Anchor 12 — \`judgeHousingLand\` 결과 객체(steps·warnings·echo) 격자 스냅샷 (\`housing-limit.ts\` 추출 전후 바이트 동일) > 이내 — 판정 결과 객체 전체 > 이내 1`] = `
+{
+  "appliedLawArticles": [
+    "소득세법 §104조의3",
+    "소득세법 시행령 §168조의6",
+    "소득세법 시행령 §168조의7",
+    "소득세법 시행령 §168조의12",
+  ],
+  "areaProportioning": {
+    "buildingMultiplier": 5,
+    "businessArea": 500,
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+    "nonBusinessArea": 0,
+    "nonBusinessRatio": 0,
+    "totalArea": 500,
+  },
+  "businessUseDays": 3651,
+  "businessUseRatio": 1,
+  "criteria": {
+    "rule2of3Years": true,
+    "rule5Years": false,
+    "rule80Percent": false,
+  },
+  "effectiveBusinessDays": 3651,
+  "gracePeriodDays": 0,
+  "isNonBusinessLand": false,
+  "judgmentReason": "주택 부수 토지 배율 이내 → 사업용",
+  "judgmentSteps": [
+    {
+      "detail": "사실상 지목: 주택 부수 토지",
+      "id": "land_category",
+      "label": "Step 1 사실상 지목 판정",
+      "legalBasis": "소득세법 시행령 §168조의7",
+      "status": "PASS",
+    },
+    {
+      "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+      "id": "unconditional_exemption",
+      "label": "Step 2 무조건 사업용 의제",
+      "legalBasis": "소득세법 시행령 §168조의14 ③",
+      "status": "NOT_APPLICABLE",
+    },
+    {
+      "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+      "id": "housing_multiplier",
+      "label": "§168-12 배율 결정",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+    {
+      "detail": "500㎡ ≤ 500㎡ → 전체 사업용",
+      "id": "housing_area_check",
+      "label": "면적 검증",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+  ],
+  "needsRedirect": false,
+  "periodEvaluation": {
+    "basis": "not_judged",
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+  },
+  "surcharge": {
+    "additionalRate": 0,
+    "basicDeductionApplied": true,
+    "longTermDeductionExcluded": false,
+    "nonBusinessAreaRatio": 0,
+    "surchargeType": "non_business_land",
+  },
+  "totalOwnershipDays": 3651,
+  "warnings": [
+    "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+  ],
+}
+`;
+
+exports[`E3d-0 Anchor 12 — \`judgeHousingLand\` 결과 객체(steps·warnings·echo) 격자 스냅샷 (\`housing-limit.ts\` 추출 전후 바이트 동일) > 정착면적 0 — 판정 결과 객체 전체 > 정착면적 0 1`] = `
+{
+  "appliedLawArticles": [
+    "소득세법 §104조의3",
+    "소득세법 시행령 §168조의6",
+    "소득세법 시행령 §168조의7",
+    "소득세법 시행령 §168조의12",
+  ],
+  "businessUseDays": 0,
+  "businessUseRatio": 0,
+  "criteria": {
+    "rule2of3Years": false,
+    "rule5Years": false,
+    "rule80Percent": false,
+  },
+  "effectiveBusinessDays": 0,
+  "gracePeriodDays": 0,
+  "isNonBusinessLand": true,
+  "judgmentReason": "정착면적 미입력",
+  "judgmentSteps": [
+    {
+      "detail": "사실상 지목: 주택 부수 토지",
+      "id": "land_category",
+      "label": "Step 1 사실상 지목 판정",
+      "legalBasis": "소득세법 시행령 §168조의7",
+      "status": "PASS",
+    },
+    {
+      "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+      "id": "unconditional_exemption",
+      "label": "Step 2 무조건 사업용 의제",
+      "legalBasis": "소득세법 시행령 §168조의14 ③",
+      "status": "NOT_APPLICABLE",
+    },
+    {
+      "detail": "정착면적 미입력",
+      "id": "housing_footprint",
+      "label": "주택 정착면적",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "FAIL",
+    },
+  ],
+  "needsRedirect": false,
+  "periodEvaluation": {
+    "basis": "not_judged",
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+  },
+  "surcharge": {
+    "additionalRate": 0.1,
+    "basicDeductionApplied": true,
+    "longTermDeductionExcluded": false,
+    "nonBusinessAreaRatio": 1,
+    "surchargeType": "non_business_land",
+  },
+  "totalOwnershipDays": 3651,
+  "warnings": [],
+}
+`;
+
+exports[`E3d-0 Anchor 12 — \`judgeHousingLand\` 결과 객체(steps·warnings·echo) 격자 스냅샷 (\`housing-limit.ts\` 추출 전후 바이트 동일) > 초과 + 유예 — 판정 결과 객체 전체 > 초과 + 유예 1`] = `
+{
+  "appliedLawArticles": [
+    "소득세법 §104조의3",
+    "소득세법 시행령 §168조의6",
+    "소득세법 시행령 §168조의7",
+    "소득세법 시행령 §168조의12",
+    "소득세법 시행령 §168조의14 ① (소득세법 시행규칙 §83의5①)",
+  ],
+  "areaProportioning": {
+    "buildingMultiplier": 5,
+    "businessArea": 1000,
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+      "소득세법 시행령 §168조의14 ① (소득세법 시행규칙 §83의5①)",
+    ],
+    "nonBusinessArea": 0,
+    "nonBusinessRatio": 0,
+    "totalArea": 1000,
+  },
+  "businessUseDays": 3651,
+  "businessUseRatio": 1,
+  "criteria": {
+    "rule2of3Years": true,
+    "rule5Years": true,
+    "rule80Percent": true,
+  },
+  "effectiveBusinessDays": 3651,
+  "gracePeriodDays": 3651,
+  "isNonBusinessLand": false,
+  "judgmentReason": "유예기간(소득세법 시행령 §168조의14 ① (소득세법 시행규칙 §83의5①)) 3651일을 사업용으로 보아 기간기준 충족 — 비사업용 잔여분 없음",
+  "judgmentSteps": [
+    {
+      "detail": "사실상 지목: 주택 부수 토지",
+      "id": "land_category",
+      "label": "Step 1 사실상 지목 판정",
+      "legalBasis": "소득세법 시행령 §168조의7",
+      "status": "PASS",
+    },
+    {
+      "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+      "id": "unconditional_exemption",
+      "label": "Step 2 무조건 사업용 의제",
+      "legalBasis": "소득세법 시행령 §168조의14 ③",
+      "status": "NOT_APPLICABLE",
+    },
+    {
+      "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+      "id": "housing_multiplier",
+      "label": "§168-12 배율 결정",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+    {
+      "detail": "1000㎡ > 500㎡ → 초과분 500㎡ 비사업용 (50%)",
+      "id": "housing_area_check",
+      "label": "면적 검증",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "FAIL",
+    },
+    {
+      "detail": "유예기간 3651일을 사업용으로 보아 기간기준 충족 → 비사업용 잔여분 없음 — 사업용 — 1호(소유 5년 이상): 직전5년 비사업 0일(가 미충족), 직전3년 비사업 0일(나 미충족), 전체 비사업 0일(다 미충족) → 가·나·다 중 일부 미충족(사업용)",
+      "id": "housing_grace_period",
+      "label": "Step 4 유예기간(영 §168의14①) 기간기준",
+      "legalBasis": "소득세법 시행령 §168조의14 ① (소득세법 시행규칙 §83의5①)",
+      "status": "PASS",
+    },
+  ],
+  "needsRedirect": false,
+  "periodEvaluation": {
+    "basis": "state_at_transfer",
+    "graceJudged": {
+      "gracePeriodDays": 3651,
+      "meets": true,
+      "totalOwnershipDays": 3651,
+    },
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+  },
+  "surcharge": {
+    "additionalRate": 0,
+    "basicDeductionApplied": true,
+    "longTermDeductionExcluded": false,
+    "nonBusinessAreaRatio": 0,
+    "surchargeType": "non_business_land",
+  },
+  "totalOwnershipDays": 3651,
+  "warnings": [
+    "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+  ],
+}
+`;
+
+exports[`E3d-0 Anchor 12 — \`judgeHousingLand\` 결과 객체(steps·warnings·echo) 격자 스냅샷 (\`housing-limit.ts\` 추출 전후 바이트 동일) > 초과 — 판정 결과 객체 전체 > 초과 1`] = `
+{
+  "appliedLawArticles": [
+    "소득세법 §104조의3",
+    "소득세법 시행령 §168조의6",
+    "소득세법 시행령 §168조의7",
+    "소득세법 시행령 §168조의12",
+  ],
+  "areaProportioning": {
+    "buildingMultiplier": 5,
+    "businessArea": 500,
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+    "nonBusinessArea": 500,
+    "nonBusinessRatio": 0.5,
+    "totalArea": 1000,
+  },
+  "businessUseDays": 3651,
+  "businessUseRatio": 0.5,
+  "criteria": {
+    "rule2of3Years": false,
+    "rule5Years": false,
+    "rule80Percent": false,
+  },
+  "effectiveBusinessDays": 3651,
+  "gracePeriodDays": 0,
+  "isNonBusinessLand": true,
+  "judgmentReason": "배율(5배) 초과 — 초과분 500㎡ 비사업용",
+  "judgmentSteps": [
+    {
+      "detail": "사실상 지목: 주택 부수 토지",
+      "id": "land_category",
+      "label": "Step 1 사실상 지목 판정",
+      "legalBasis": "소득세법 시행령 §168조의7",
+      "status": "PASS",
+    },
+    {
+      "detail": "해당 사유 없음 — 개별 지목별 판정 진행",
+      "id": "unconditional_exemption",
+      "label": "Step 2 무조건 사업용 의제",
+      "legalBasis": "소득세법 시행령 §168조의14 ③",
+      "status": "NOT_APPLICABLE",
+    },
+    {
+      "detail": "수도권 밖 도시 5배 → 허용면적 500㎡ (정착면적 100㎡ × 5배)",
+      "id": "housing_multiplier",
+      "label": "§168-12 배율 결정",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "PASS",
+    },
+    {
+      "detail": "1000㎡ > 500㎡ → 초과분 500㎡ 비사업용 (50%)",
+      "id": "housing_area_check",
+      "label": "면적 검증",
+      "legalBasis": "소득세법 시행령 §168조의12",
+      "status": "FAIL",
+    },
+  ],
+  "needsRedirect": false,
+  "periodEvaluation": {
+    "basis": "not_judged",
+    "legalBasis": [
+      "소득세법 시행령 §168조의12",
+    ],
+  },
+  "surcharge": {
+    "additionalRate": 0.1,
+    "basicDeductionApplied": true,
+    "longTermDeductionExcluded": false,
+    "nonBusinessAreaRatio": 0.5,
+    "surchargeType": "non_business_land",
+  },
+  "totalOwnershipDays": 3651,
+  "warnings": [
+    "비사업용 토지 여부를 양도일 현재의 상태로 판정해 소유기간 전체에 적용했습니다. 소유기간 중 건물의 철거·신축·증축이나 용도 변경으로 상태가 달랐다면 결과가 달라질 수 있습니다 — 확인 필요 (소득세법 §104조의3 ① 각 호 외의 부분 · 소득세법 시행령 §168조의6).",
+  ],
+}
+`;
