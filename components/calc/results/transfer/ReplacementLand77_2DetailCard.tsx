@@ -14,6 +14,8 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { RATED_REDUCIBLE_INCOME_LABEL } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { ELIGIBLE_INCOME_VS_FORM_NOTE } from "@/components/calc/results/transfer/reduction-eligible-income";
+import { AGGREGATE_RATED_REDUCIBLE_INCOME_LABEL } from "@/components/calc/results/transfer/reduction-eligible-income";
+import { AGGREGATE_BASIC_DEDUCTION_NOTE } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { ReductionStatutoryCapRow } from "@/components/calc/results/transfer/ReductionStatutoryCapRow";
 import { ReductionDetailWarnings } from "@/components/calc/results/transfer/ReductionDetailWarnings";
 
@@ -64,16 +66,16 @@ export function ReplacementLand77_2DetailCard({
         <p>{(d.replacementRatio * 100).toFixed(2)}%</p>
       </div>
       <div className="space-y-0.5">
-        <p className="text-muted-foreground">② 대토보상분 소득 (기본공제 배정 후)</p>
+        <p className="text-muted-foreground">② 대토보상분 소득 ({aggregatedContext ? "기본공제 전" : "기본공제 배정 후"})</p>
         <p>{formatKRW(d.replacementTaxableIncome)}</p>
       </div>
       <div className="space-y-0.5">
-        <p className="text-muted-foreground">③ {RATED_REDUCIBLE_INCOME_LABEL} = 대토보상분 소득 × {(d.reductionRate * 100).toFixed(0)}%</p>
+        <p className="text-muted-foreground">③ {aggregatedContext ? AGGREGATE_RATED_REDUCIBLE_INCOME_LABEL : RATED_REDUCIBLE_INCOME_LABEL} = 대토보상분 소득 × {(d.reductionRate * 100).toFixed(0)}%</p>
         <p className="font-medium">
           {formatKRW(d.replacementTaxableIncome)} × {(d.reductionRate * 100).toFixed(0)}%
           {" = "}{formatKRW(d.reducibleIncome)}
         </p>
-        <p className="text-muted-foreground">{ELIGIBLE_INCOME_VS_FORM_NOTE}</p>
+        <p className="text-muted-foreground">{aggregatedContext ? AGGREGATE_BASIC_DEDUCTION_NOTE : ELIGIBLE_INCOME_VS_FORM_NOTE}</p>
       </div>
       {excludedByOverlap ? (
         <p className="text-muted-foreground border-t border-primary/20 pt-1.5">

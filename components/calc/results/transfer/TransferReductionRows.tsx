@@ -15,6 +15,8 @@ import { ReductionDetailWarnings } from "@/components/calc/results/transfer/Redu
 import { ReductionStatutoryCapRow } from "@/components/calc/results/transfer/ReductionStatutoryCapRow";
 import { RATED_REDUCIBLE_INCOME_LABEL } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { ELIGIBLE_INCOME_VS_FORM_NOTE } from "@/components/calc/results/transfer/reduction-eligible-income";
+import { AGGREGATE_RATED_REDUCIBLE_INCOME_LABEL } from "@/components/calc/results/transfer/reduction-eligible-income";
+import { AGGREGATE_BASIC_DEDUCTION_NOTE } from "@/components/calc/results/transfer/reduction-eligible-income";
 import { AggregateAppliedNote } from "@/components/calc/results/transfer/IncomeDeductionDetailCard";
 import { AggregateRuralSurtaxNote } from "@/components/calc/results/transfer/IncomeDeductionDetailCard";
 
@@ -185,6 +187,8 @@ export function PublicExpropriationDetailCard({
     );
   }
   const bd = d.breakdown;
+  // 집계 카드는 기본공제 전이다(`AGGREGATE_BASIC_DEDUCTION_NOTE`). 값이 실제로 0일 때만 그렇게 적는다.
+  const preBasic = aggregatedContext && bd.basicDeductionOnCash === 0 && bd.basicDeductionOnBond === 0;
   return (
     <div className="mx-2 my-2 rounded-md border border-dashed border-primary/30 bg-primary/5 px-3 py-2 text-xs space-y-1.5">
       <div className="flex flex-wrap items-center gap-1.5">
@@ -224,20 +228,22 @@ export function PublicExpropriationDetailCard({
         </div>
       )}
       <div className="space-y-0.5">
-        <p className="text-muted-foreground">④ 자산별 감면금액 = (보상분 소득 − 기본공제) × 감면율</p>
+        <p className="text-muted-foreground">
+          {preBasic ? "④ 자산별 감면금액 = 보상분 소득 × 감면율 (기본공제 전)" : "④ 자산별 감면금액 = (보상분 소득 − 기본공제) × 감면율"}
+        </p>
         <p>
-          현금 = ({formatKRW(bd.cashIncome)} − {formatKRW(bd.basicDeductionOnCash)}) × {(bd.cashRate * 100).toFixed(0)}%
+          현금 = {preBasic ? formatKRW(bd.cashIncome) : <>({formatKRW(bd.cashIncome)} − {formatKRW(bd.basicDeductionOnCash)})</>} × {(bd.cashRate * 100).toFixed(0)}%
           {" = "}{formatKRW(bd.cashReduction)}
         </p>
         <p>
-          채권 = ({formatKRW(bd.bondIncome)} − {formatKRW(bd.basicDeductionOnBond)}) × {(bd.bondRate * 100).toFixed(0)}%
+          채권 = {preBasic ? formatKRW(bd.bondIncome) : <>({formatKRW(bd.bondIncome)} − {formatKRW(bd.basicDeductionOnBond)})</>} × {(bd.bondRate * 100).toFixed(0)}%
           {" = "}{formatKRW(bd.bondReduction)}
         </p>
         <p className="font-medium">
-          {RATED_REDUCIBLE_INCOME_LABEL} = 현금 {formatKRW(bd.cashReduction)} + 채권 {formatKRW(bd.bondReduction)}
+          {preBasic ? AGGREGATE_RATED_REDUCIBLE_INCOME_LABEL : RATED_REDUCIBLE_INCOME_LABEL} = 현금 {formatKRW(bd.cashReduction)} + 채권 {formatKRW(bd.bondReduction)}
           {" = "}{formatKRW(bd.reducibleIncome)}
         </p>
-        <p className="text-muted-foreground">{ELIGIBLE_INCOME_VS_FORM_NOTE}</p>
+        <p className="text-muted-foreground">{preBasic ? AGGREGATE_BASIC_DEDUCTION_NOTE : ELIGIBLE_INCOME_VS_FORM_NOTE}</p>
       </div>
       {excludedByOverlap ? (
         <p className="text-muted-foreground border-t border-primary/20 pt-1.5">

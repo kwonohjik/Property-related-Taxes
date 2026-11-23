@@ -34,6 +34,16 @@ export const RATED_REDUCIBLE_INCOME_LABEL = "감면대상소득 (기본공제 �
 export const ELIGIBLE_INCOME_VS_FORM_NOTE =
   "※ 신고서 ⑲ 「세액감면대상금액」은 기본공제·감면율을 반영하기 前 금액(「소득세법」 §90①의 B)이라 위 값과 다릅니다.";
 
+/**
+ * 다건·일괄 화면의 §77·§77의2·§77의3 카드용 — 집계는 자산별 엔진을 `skipBasicDeduction: true`로 부르므로
+ * 카드의 중간값은 **기본공제 전**이다. 기본공제(§90①의 C)는 「감면세액 합산 재계산」이 §103②대로 신고 단위에서
+ * 한 번 뺀다. 종전 카드는 「기본공제 차감」·「기본공제 배정 후」라 적고 0을 빼 두 카드가 어긋났다
+ * (토지 6억 §77 현금: 카드 28,800,000 ↔ 합산 재계산 28,550,000 — 2026-11-23 실측).
+ */
+export const AGGREGATE_RATED_REDUCIBLE_INCOME_LABEL = "감면대상소득 (기본공제 전·감면율 반영)";
+export const AGGREGATE_BASIC_DEDUCTION_NOTE =
+  "※ 여러 건 계산에서는 기본공제(「소득세법」 §90①의 C)를 자산별로 빼지 않고 「감면세액 합산 재계산」에서 한 번에 뺍니다. 신고서 ⑲ 「세액감면대상금액」은 감면율을 반영하기 前 금액(같은 조의 B)입니다.";
+
 export function reductionEligibleIncome(
   reductionTypeApplied: string | undefined,
   fullTransferIncome: number,
