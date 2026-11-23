@@ -24,6 +24,8 @@
  */
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
+import { checkExemption } from "@/lib/tax-engine/transfer-tax-exemption";
+import { parseRatesFromMap } from "@/lib/tax-engine/transfer-tax-helpers";
 import {
   makeMockRates,
   makeMockRatesWithHouseEngine,
@@ -267,19 +269,22 @@ describe("⭐ §89② — 판정 불가면 켜지 않는다 (법 근거 없는 �
   });
 
   // E011 — 2주택(특수주택 선언 없음)은 배제 확정이라 이 갈래를 3주택으로 옮겼다(`article-89-2-two-house-axis` U-1).
-  it("세대 주택 3채 이상 → §156의2⑦·⑩·⑪ 축 미구현", () => {
-    const r = run(
-      houseInput({
-        householdHousingCount: 3,
-        transferDate: new Date("2019-06-01"),
-        presaleRights: [right()],
-        temporaryTwoHouse: {
-          previousAcquisitionDate: new Date("2015-06-01"),
-          newAcquisitionDate: new Date("2017-06-01"),
-        },
-      }),
-    );
-    expect((r.warnings ?? []).join("\n")).toContain("§156의2 ⑦·⑩·⑪");
+  it("세대 주택 3채 이상 → §156의2⑦·⑩·⑪ 축 미구현 — 배제를 켜지 않고 판정 보류(그 조문을 지목)", () => {
+    // 2026-11 리뷰 I-26(사용자 결정 2026-11-23) — 판정 보류 고지는 본체가 비과세로 설 때만 낸다. 이 시료는 3주택이라 본체가 과세여서
+    //   계산기 경고(종전 단언)에는 더 이상 나오지 않는다 — 「판정 불가면 켜지 않는다」는 판정 상태와 지목 조문으로 본다.
+    const input = houseInput({
+      householdHousingCount: 3,
+      transferDate: new Date("2019-06-01"),
+      presaleRights: [right()],
+      temporaryTwoHouse: {
+        previousAcquisitionDate: new Date("2015-06-01"),
+        newAcquisitionDate: new Date("2017-06-01"),
+      },
+    });
+    const clause2 = checkExemption(input as never, parseRatesFromMap(mockRates).oneHouseSpecialRules).article89Clause2;
+    expect(clause2?.status).toBe("undetermined");
+    expect(clause2?.openArticles?.join("\n")).toContain("§156의2 ⑦·⑩·⑪");
+    expect((run(input).warnings ?? []).join("\n")).not.toContain("§156의2 ⑦·⑩·⑪");
   });
 
   /**

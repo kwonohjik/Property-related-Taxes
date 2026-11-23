@@ -38,7 +38,6 @@ import { resolve1562Clause3Years } from "../data/article-156-2-completion-era";
 import type { OneHouseSpecialRulesData } from "../schemas/rate-table.schema";
 import type { Article89Clause2Result } from "../transfer-tax-89-2-exclusion";
 import { designatedDistrictUndeclared, type DistrictDeclarationRelevance } from "./designated-district-undeclared";
-import { isOriginalMemberOpenArticle } from "./original-member-right";
 import {
   evaluateTemporaryTwoHouseTiming,
   meetsOneHouseHoldingResidence,
@@ -622,9 +621,10 @@ export function collectUndetermined(
   const undetermined: OneHouseUndetermined[] = [];
 
   // §89② — 입력 경로가 없는 예외 항. 기존 `openArticles: string[]`를 구조화 형태로 옮긴다.
-  for (const article of article89Clause2.openArticles ?? []) {
-    // 원조합원 입주권의 2주택 축 준용 보류는 비과세가 선 사안에서만 결론을 가른다(#32-4) — 어차피 과세면 그 조문을 확인해도 달라지는 것이 없다.
-    if (isOriginalMemberOpenArticle(article) && !settled) continue;
+  // 판정 보류는 §89② 배제를 적용하지 않고 본체 판정을 그대로 두는 상태라, 그 조문의 성립 여부가 결론을 가르는 것은 본체가 비과세로 선
+  // 사안(배제하면 과세)뿐이다. 본체가 과세면(보유 미달 · 3주택 등) 확인해도 결론이 같다 — 원조합원 갈래(#32-4)만 걸던 게이트를
+  // 모든 항으로 넓혔다(2026-11 리뷰 I-26 · 사용자 결정 2026-11-23).
+  for (const article of settled ? (article89Clause2.openArticles ?? []) : []) {
     undetermined.push({
       id: `89-2-open:${article}`,
       reason: `${article}에 해당하는지를 판정하지 않았습니다 — 해당 조문을 직접 확인하세요.`,

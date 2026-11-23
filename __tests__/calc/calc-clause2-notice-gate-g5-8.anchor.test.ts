@@ -105,10 +105,12 @@ describe("G5-8 게이트 leaf", () => {
     expect(surchargeDeclarationMatters(new Date("2023-02-27"), true)).toBe(true);
     expect(surchargeDeclarationMatters(new Date("2023-02-28"), true)).toBe(false);
   });
-  it("판정 보류(undetermined)·사후관리 고지는 게이트와 무관하다", () => {
-    const und = article89Clause2Notices({ status: "undetermined", openArticles: ["소득세법 시행령 §156의2 ⑥·⑦"] } as never, false, new Date("2024-06-01"), {
-      coreWouldPass: false, surchargeDeclarationMatters: false,
-    });
-    expect(und).toHaveLength(1);
+  it("판정 보류(undetermined)는 비과세가 섰거나(settled) 중과 배제를 가를 때만 낸다(2026-11 리뷰 I-26 — 종전: 게이트 없음)", () => {
+    const clause2 = { status: "undetermined", openArticles: ["소득세법 시행령 §156의2 ⑥·⑦"] } as never;
+    const gate = { coreWouldPass: false, surchargeDeclarationMatters: false };
+    const t = new Date("2024-06-01");
+    expect(article89Clause2Notices(clause2, false, t, gate)).toEqual([]);
+    expect(article89Clause2Notices(clause2, true, t, gate)).toHaveLength(1);
+    expect(article89Clause2Notices(clause2, false, t, { ...gate, surchargeDeclarationMatters: true })).toHaveLength(1);
   });
 });

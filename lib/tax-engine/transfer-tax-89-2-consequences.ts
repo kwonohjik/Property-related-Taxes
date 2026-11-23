@@ -11,7 +11,6 @@ import type { Article89Clause2Input, Article89Clause2Result } from "./transfer-t
 import type { TransferTaxInput } from "./types/transfer.types";
 import type { DeemedOneHouseBasis } from "./types/multi-house-surcharge.types";
 import { TRANSFER } from "./legal-codes";
-import { isOriginalMemberOpenArticle } from "./one-house/original-member-right";
 import { resolve1562Clause3Years, resolve1562DeadlineYears } from "./data/article-156-2-completion-era";
 import { isOldSurchargeClauseEra } from "./data/surcharge-old-clauses-era";
 import { ARTICLE_89_2_GENERAL_EXCLUSION_LABEL } from "./transfer-tax-89-2-right-timing-core";
@@ -159,10 +158,9 @@ export function article89Clause2Notices(
     for (const note of clause2.readingNotes ?? []) notices.push(note);
   }
 
-  // 원조합원 입주권의 2주택 축 준용 보류는 비과세 또는 중과 배제를 바꿀 때만(#32-4) — 어차피 과세·중과면 그 조문을 확인해도 결론이 같다.
-  const openArticles = (clause2?.openArticles ?? []).filter(
-    (a) => !isOriginalMemberOpenArticle(a) || settled || gate.surchargeDeclarationMatters,
-  );
+  // 판정 보류 조문은 비과세 또는 중과 배제를 바꿀 때만(#32-4 원조합원 갈래 → 2026-11 리뷰 I-26에서 모든 항) — 어차피 과세·중과면
+  // 그 조문을 확인해도 결론이 같다. 판정 메뉴(`pending.ts collectUndetermined`)와 같은 `settled` 게이트이고, 계산기는 중과 배제 축을 더 본다.
+  const openArticles = settled || gate.surchargeDeclarationMatters ? (clause2?.openArticles ?? []) : [];
   if (clause2?.status === "undetermined" && openArticles.length > 0) {
     notices.push(
       "세대가 주택과 조합원입주권·분양권을 함께 보유한 상태에서 그 주택을 양도했습니다. " +
