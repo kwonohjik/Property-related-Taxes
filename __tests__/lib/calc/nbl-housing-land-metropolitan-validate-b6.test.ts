@@ -22,6 +22,8 @@ function nblAsset(overrides: Partial<AssetForm> = {}): AssetForm {
     // 이 파일의 축은 **수도권 여부**뿐이므로, 다른 축의 필수 입력은 채워 두어 축을 격리한다.
     nblHousingFootprint: "100",
     nblUrbanIncorporationDate: "2010-01-01",
+    // E3-③ A(2026-11-24) — 주택부수토지에도 «소유기간 중 주택 신축·멸실 이력» 질문이 필수가 됐다(⑧ H1). 이 파일의 축은 수도권 여부뿐이라 «바뀐 적 없음»으로 격리한다.
+    nblOtherStateHistoryMode: "unchanged",
     ...overrides,
   } as AssetForm;
 }

@@ -301,7 +301,7 @@ export interface NonBusinessLandInput {
   villa?: VillaUsage;
   // 기타토지
   otherLand?: OtherLandUsage;
-  /** 기타토지 소유기간 중 건축물 신축·멸실 이력(NBL-STATE-HISTORY) — `mode === "changed"`일 때만 판정에 쓴다. 미전송·`""`·`unchanged`는 현행. */
+  /** 기타토지·주택부수토지(E3-③) 소유기간 중 건축물 신축·멸실 이력(NBL-STATE-HISTORY) — `mode === "changed"`일 때만 판정에 쓴다. 미전송·`""`·`unchanged`는 현행. */
   landStateHistory?: LandStateHistoryInput;
 
   // 무조건 의제

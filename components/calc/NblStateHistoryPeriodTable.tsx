@@ -9,6 +9,7 @@
  */
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { toDate } from "@/lib/api/date-coerce";
+import { houseIntervalText } from "@/lib/calc/nbl-house-interval-text";
 import { NBL } from "@/lib/tax-engine/legal-codes";
 import type { StateHistoryEcho } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { StateHistoryIntervalEcho } from "@/lib/tax-engine/non-business-land/land-usage.types";
@@ -36,8 +37,15 @@ const BUCKET_LABEL = {
 
 const iso = (d: Date): string => d.toISOString().slice(0, 10);
 
+/**
+ * E3-③ A — 주택 구간(구간 echo `buildingKind = "house"` — 주택부수토지 카드의 모든 건축물 구간·꼬리). 키가 없는 기타토지 구간은 종전과 바이트 동일하다.
+ * 과거 주택 구간은 엔진이 낸 근거(`houseCheck` — 정착면적 × 배율 = 허용 면적 · 토지 면적)를 그대로 보이고(재계산 금지), 꼬리(양도일 현재 주택)는 근거 echo가 없어 아래 판정이 말한다.
+ */
+const isHouse = (iv: StateHistoryIntervalEcho): boolean => iv.buildingKind === "house";
+
 /** 재산세 구분 라벨 — 「모름」(`unknown`)은 종합합산으로 보되 확인 필요임을 밝힌다. 나대지 구간의 비종합합산 선언(E3-1b)은 받아들임·접힘 + 근거를 보인다(입력 미리보기와 같은 leaf 문구). */
-function taxTypeText(iv: StateHistoryIntervalEcho): string {
+function taxTypeText(iv: StateHistoryIntervalEcho, isTail: boolean): string {
+  if (isHouse(iv)) return isTail ? "양도일 현재 주택 — 정착면적·배율 판정은 아래 판정 근거" : (houseIntervalText(iv) ?? "주택");
   const bare = bareIntervalTaxTypeText(iv);
   if (bare) return bare;
   return iv.propertyTaxType === "unknown" ? `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(모름 — 확인 필요)` : PROPERTY_TAX_TYPE_LABEL[iv.propertyTaxType];
@@ -100,18 +108,20 @@ export function NblStateHistoryPeriodTable({ stateHistory, totalOwnershipDays, e
   const { intervals, criteria } = stateHistory;
   const rows = criterionRows(stateHistory, totalOwnershipDays);
   const businessOnlyDays = effectiveBusinessDays - gracePeriodDays;
+  // 주택부수토지 카드의 구간표(모든 구간이 주택 변형 — A) · 열 라벨·제목만 바뀐다.
+  const house = intervals.some(isHouse);
 
   return (
     <div className="px-4 py-3 border-b border-border" data-testid="nbl-state-history-period">
-      <ToneCard tone="sky" title="기간 분석 — 소유기간 중 건축물 유무·재산세 구분 이력 반영">
+      <ToneCard tone="sky" title={house ? "기간 분석 — 소유기간 중 주택 신축·멸실 이력 반영" : "기간 분석 — 소유기간 중 건축물 유무·재산세 구분 이력 반영"}>
         <div className="overflow-x-auto print:overflow-visible">
           <table className="w-full min-w-[34rem] text-xs" data-testid="nbl-state-history-intervals">
             <thead>
               <tr className="text-left text-muted-foreground">
                 <th className="py-1 pr-2 font-medium">구간(시작일 포함 ~ 종료일 전날)</th>
                 <th className="py-1 pr-2 text-right font-medium">일수</th>
-                <th className="py-1 pr-2 font-medium">건축물</th>
-                <th className="py-1 pr-2 font-medium">재산세 구분</th>
+                <th className="py-1 pr-2 font-medium">{house ? "주택" : "건축물"}</th>
+                <th className="py-1 pr-2 font-medium">{house ? "재산세 구분 · 배율 판정" : "재산세 구분"}</th>
                 <th className="py-1 pr-2 text-right font-medium">사업용 일수</th>
                 <th className="py-1 font-medium">사업용 여부</th>
               </tr>
@@ -125,8 +135,8 @@ export function NblStateHistoryPeriodTable({ stateHistory, totalOwnershipDays, e
                       {iso(start)} ~ {iso(addDays(start, iv.days - 1))}
                     </td>
                     <td className="py-1 pr-2 text-right font-mono tabular-nums">{iv.days.toLocaleString()}일</td>
-                    <td className="py-1 pr-2">{iv.hasBuilding ? "있음" : "없음"}</td>
-                    <td className="py-1 pr-2">{taxTypeText(iv)}</td>
+                    <td className="py-1 pr-2">{iv.hasBuilding ? "있음" : house ? "없음(나대지)" : "없음"}</td>
+                    <td className="py-1 pr-2">{taxTypeText(iv, i === intervals.length - 1)}</td>
                     <td className="py-1 pr-2 text-right font-mono tabular-nums">{iv.businessDays.toLocaleString()}일</td>
                     <td className="py-1 whitespace-nowrap">{businessText(iv)}</td>
                   </tr>

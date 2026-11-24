@@ -18,6 +18,8 @@
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { TaxCalculationError } from "../tax-errors";
 import { TaxErrorCode } from "../tax-errors";
+import { houseLastEventRemovedMessage } from "./nbl-validation-messages";
+import { houseTaxTypeChangedMessage } from "./nbl-validation-messages";
 import { stateEventAtOrAfterTransferMessage } from "./nbl-validation-messages";
 import { stateEventAtOrBeforeFloorMessage } from "./nbl-validation-messages";
 import { stateEventDateEmptyMessage } from "./nbl-validation-messages";
@@ -26,7 +28,9 @@ import { stateEventKindRequiredMessage } from "./nbl-validation-messages";
 import { stateEventReversedMessage } from "./nbl-validation-messages";
 import { stateEventSameDayMessage } from "./nbl-validation-messages";
 import { stateEventSameKindMessage } from "./nbl-validation-messages";
-import { STATE_EVENTS_REQUIRED_MESSAGE } from "./nbl-validation-messages";
+import { stateEventsRequiredMessage } from "./nbl-validation-messages";
+import { resolveHouseInterval } from "./housing-limit";
+import { consumesHousingStateHistory } from "./land-category";
 import { propertyTaxBasisOptions } from "./property-tax-basis";
 import { resolvePropertyTaxBasis } from "./property-tax-basis";
 import { PROPERTY_TAX_TYPE_LABEL } from "./property-tax-type-label";
@@ -35,7 +39,11 @@ import type { BareFoldReason } from "./land-usage.types";
 import type { LandStateInterval } from "./land-usage.types";
 import type { PropertyTaxType } from "./land-usage.types";
 import type { StateEvent } from "./land-usage.types";
+import type { StateBuildingKind } from "./land-usage.types";
 import type { StateEventKind } from "./land-usage.types";
+import type { StateEventSubject } from "./nbl-validation-messages";
+import type { HouseIntervalCtx } from "./housing-limit";
+import type { LandType } from "./types";
 import type { PropertyTaxBasis } from "./property-tax-basis";
 import type { DateInterval } from "./types";
 
@@ -56,6 +64,23 @@ const STATE_AFTER_EVENT_LABEL = {
   building_built: "건축물 있음",
   building_removed: "건축물 없음",
 } as const satisfies Record<BuildingEventKind, string>;
+
+/** E3-③ — 주택부수토지 카드의 사건 종류 라벨(주택 신축 / 주택 멸실·철거·붕괴 — R-3). 재산세 과세 구분 변경은 주택 카드가 받지 않는다(D-2). */
+export const STATE_EVENT_KIND_LABEL_HOUSE = {
+  building_built: "주택 신축",
+  building_removed: "주택 멸실·철거·붕괴",
+  tax_type_changed: STATE_EVENT_KIND_LABEL.tax_type_changed,
+} as const satisfies Record<StateEventKind, string>;
+
+const STATE_AFTER_EVENT_LABEL_HOUSE = {
+  building_built: "주택 있음",
+  building_removed: "주택 없음",
+} as const satisfies Record<BuildingEventKind, string>;
+
+/** 지목 → 사건 주체 — 주택부수토지 카드는 `house`(검증 문구 «주택 사건 N번째 행»), 그 밖은 `building`. ⑧·⑫가 **같은 함수**를 쓴다(UI R-3). */
+export function stateEventSubjectOf(landType: LandType | "" | undefined): StateEventSubject {
+  return consumesHousingStateHistory(landType) ? "house" : "building";
+}
 
 /** 상태 구간의 재산세 구분 라벨 — `PROPERTY_TAX_TYPE_LABEL` 단일 소스 + 「모름」(철거 사건의 `""`). */
 export const STATE_PROPERTY_TAX_TYPE_LABEL = {
@@ -127,10 +152,10 @@ export interface StateEventRowLike {
  * 사건 한 행의 결함(종류 미선택·허용값 밖 · 날짜 빈 칸·해석 불가). 이상 없으면 null. 날짜는 `YYYY-MM-DD`(ISO)를 전제한다.
  * `propertyTaxTypeBefore`는 규칙이 없다 — 선택 칸이고 `""` = 모름이다(⑫ enum이 허용값 밖만 막는다).
  */
-export function stateEventRowIssue(row: StateEventRowLike, index: number): StateEventIssue | null {
-  if (!isEventKind(row.kind)) return { index, field: "kind", message: stateEventKindRequiredMessage(index) };
-  if (!row.date) return { index, field: "date", message: stateEventDateEmptyMessage(index, row.kind) };
-  if (!toOptionalDate(row.date)) return { index, field: "date", message: stateEventDateInvalidMessage(index, row.date, row.kind) };
+export function stateEventRowIssue(row: StateEventRowLike, index: number, subject: StateEventSubject = "building"): StateEventIssue | null {
+  if (!isEventKind(row.kind)) return { index, field: "kind", message: stateEventKindRequiredMessage(index, subject) };
+  if (!row.date) return { index, field: "date", message: stateEventDateEmptyMessage(index, row.kind, subject) };
+  if (!toOptionalDate(row.date)) return { index, field: "date", message: stateEventDateInvalidMessage(index, row.date, row.kind, subject) };
   return null;
 }
 
@@ -142,6 +167,11 @@ export interface StateEventSequenceOptions {
    * 사건일 ≤ 하한일(당일 포함)이면 소유 시작 전이라 차단한다. ⑫는 넘기지 않는다 — 지분별 raw가 다른 취득일을 가져 늦은 지분이 400이 되는 것을 막는다.
    */
   floorDate?: string;
+  /**
+   * E3-③ — 사건 주체(기본 `building` = 종전과 바이트 동일). `house`이면 문구가 «주택 사건»으로 바뀌고 **주택 구조 규칙**(`housingStateEventIssue` — D-1 마지막 건축물 사건 = 신축 · D-2 구분 변경 금지)이
+   * 순서 검증 뒤에 같은 호출 안에서 함께 적용된다 — ⑧·⑫가 한 호출로 같은 결과를 받는다(Anchor 5).
+   */
+  subject?: StateEventSubject;
 }
 
 /** 소유 첫날의 건축물 상태 — 첫 건축물 사건이 신축이면 «없음»·멸실이면 «있음», 건축물 사건이 하나도 없으면 `fallback`(입력 토글). */
@@ -161,32 +191,59 @@ function initialHasBuilding(events: ReadonlyArray<{ kind: string }>, fallback: b
  *   · (E3-1b 삭제 — `tailHasBuilding` 인자도 함께 제거) 건축물 없는 구간의 재산세 과세 구분 변경 차단 — 이제 나대지 구간을 닫는 구분 변경은 «나대지 선언»을 말하는 정상 입력이다(근거 미선택·모름은 막지 않고 접은 뒤 고지한다).
  */
 export function stateEventSequenceIssue(events: ReadonlyArray<StateEventRowLike>, opts: StateEventSequenceOptions): StateEventIssue | null {
-  if (events.length === 0) return { index: null, field: "events", message: STATE_EVENTS_REQUIRED_MESSAGE };
+  const subject = opts.subject ?? "building";
+  const afterLabel = subject === "house" ? STATE_AFTER_EVENT_LABEL_HOUSE : STATE_AFTER_EVENT_LABEL;
+  const kindLabel = subject === "house" ? STATE_EVENT_KIND_LABEL_HOUSE : STATE_EVENT_KIND_LABEL;
+  if (events.length === 0) return { index: null, field: "events", message: stateEventsRequiredMessage(subject) };
   const transfer = toOptionalDate(opts.transferDate);
   const floor = opts.floorDate ? toOptionalDate(opts.floorDate) : undefined;
   let prevBuildingKind: BuildingEventKind | null = null;
   for (let i = 0; i < events.length; i++) {
     const row = events[i];
-    const rowIssue = stateEventRowIssue(row, i);
+    const rowIssue = stateEventRowIssue(row, i, subject);
     if (rowIssue) return rowIssue;
     const t = toOptionalDate(row.date)!.getTime(); // 행 검증 통과 → 해석 가능
     if (i > 0) {
       const prev = events[i - 1];
       const prevT = toOptionalDate(prev.date)!.getTime(); // 앞 행도 이미 통과했다
       // 역순·같은 날은 종류와 무관한 «앞 사건» 기준이다 — 건축물 사건과 구분 변경이 같은 날이면 같은 구간을 두 사건이 닫는다.
-      if (t < prevT) return { index: i, field: "date", message: stateEventReversedMessage(i, row.date, prev.date, row.kind) };
-      if (t === prevT) return { index: i, field: "date", message: stateEventSameDayMessage(i, row.date, row.kind) };
+      if (t < prevT) return { index: i, field: "date", message: stateEventReversedMessage(i, row.date, prev.date, row.kind, subject) };
+      if (t === prevT) return { index: i, field: "date", message: stateEventSameDayMessage(i, row.date, row.kind, subject) };
     }
-    if (floor && t <= floor.getTime()) return { index: i, field: "date", message: stateEventAtOrBeforeFloorMessage(i, row.date, opts.floorDate!, row.kind) };
-    if (transfer && t >= transfer.getTime()) return { index: i, field: "date", message: stateEventAtOrAfterTransferMessage(i, row.date, opts.transferDate, row.kind) };
+    if (floor && t <= floor.getTime()) return { index: i, field: "date", message: stateEventAtOrBeforeFloorMessage(i, row.date, opts.floorDate!, row.kind, subject) };
+    if (transfer && t >= transfer.getTime()) return { index: i, field: "date", message: stateEventAtOrAfterTransferMessage(i, row.date, opts.transferDate, row.kind, subject) };
     if (!isBuildingEventKind(row.kind)) continue;
     if (prevBuildingKind === row.kind) {
       const missingKind: BuildingEventKind = row.kind === "building_built" ? "building_removed" : "building_built";
-      return { index: i, field: "kind", message: stateEventSameKindMessage(i, STATE_AFTER_EVENT_LABEL[row.kind], STATE_EVENT_KIND_LABEL[missingKind]) };
+      return { index: i, field: "kind", message: stateEventSameKindMessage(i, afterLabel[row.kind], kindLabel[missingKind], subject) };
     }
     prevBuildingKind = row.kind;
   }
+  return subject === "house" ? housingStateEventIssue(events) : null;
+}
+
+/**
+ * E3-③ 주택부수토지 카드의 **구조 규칙**(⑧·⑫ 공용 — 행·순서 검증을 통과한 `changed` 사건에만 부른다):
+ *   · D-2 `tax_type_changed` 금지 — 주택 구간에는 토지 재산세 구분이 없다(지방세법 §106②). 나대지 구간의 구분은 신축 행의 나대지 선언(E3-1b)으로 말한다.
+ *   · D-1 마지막 건축물 사건 = 신축 — 양도일 현재 주택이 있는 토지가 주택부수토지 카드다(철거로 끝나면 나대지 → 기타토지 카드).
+ * 건축물 사건이 하나도 없는 입력은 D-2가 먼저 막는다(구분 변경만 있는 입력) · 0건은 `stateEventSequenceIssue`가 막는다.
+ */
+export function housingStateEventIssue(events: ReadonlyArray<StateEventRowLike>): StateEventIssue | null {
+  const taxIdx = events.findIndex((e) => e.kind === "tax_type_changed");
+  if (taxIdx >= 0) return { index: taxIdx, field: "kind", message: houseTaxTypeChangedMessage(taxIdx) };
+  for (let i = events.length - 1; i >= 0; i--) {
+    if (!isBuildingEventKind(events[i].kind)) continue;
+    return events[i].kind === "building_removed" ? { index: i, field: "kind", message: houseLastEventRemovedMessage(i) } : null;
+  }
   return null;
+}
+
+/**
+ * `index`번째 사건이 **주택 구간(건축물 있는 구간)을 닫는가** — 주택부수토지 카드(`tailKind === "house"`)에서는 철거 행 전부다(모든 건축물 구간이 주택).
+ * 철거 행의 «철거 직전 정착면적»(`houseFootprintBefore`)을 **읽고 · 싣고 · 보이는** 곳(⑭ · ④ 와이어 · ⑤ 미리보기 · ⑤ 입력 카드 · ⑧)이 모두 이 술어 하나를 쓴다(숨은 stale 값을 싣지 않기 위해).
+ */
+export function eventClosesHouseInterval(events: ReadonlyArray<{ kind: string }>, index: number, tailKind: StateBuildingKind | undefined): boolean {
+  return tailKind === "house" && events[index]?.kind === "building_removed";
 }
 
 // ── 사건 → 일 단위 구간 ───────────────────────────────────────
@@ -211,6 +268,13 @@ export function effectiveOtherHasBuilding(raw: boolean, mode: string | undefined
 }
 
 export interface StateTail {
+  /**
+   * E3-③ — `house`이면 주택부수토지 카드: 모든 건축물 구간이 주택 구간이고(`buildingKind = "house"` · 재산세 구분을 읽지 않는다 — 조심 2018서0295), 철거 행의 정착면적(`houseFootprintBefore`)으로
+   * 과거 주택 구간의 배율 이내 여부를 가린다(`houseCtx` 필수). 양도일 현재 상태는 «주택 있음»이라 `hasBuilding`은 쓰이지 않는다(⑭는 `true`로 넘긴다 — T-4). 없으면 종전(기타토지)과 바이트 동일.
+   */
+  buildingKind?: StateBuildingKind;
+  /** `buildingKind = "house"`일 때 필수 — 배율·토지 면적·양도일(⑤·⑧·apply가 같은 값을 넘긴다). */
+  houseCtx?: HouseIntervalCtx;
   /** **건축물 사건이 없을 때만** 쓴다 — 건축물 사건이 있으면 마지막 건축물 사건 종류가 정한다(raw 토글과 모순돼도 사건이 이긴다 · V-19). 이 값이 초기 건축물 상태도 된다. */
   hasBuilding: boolean;
   /** 양도일 현재 재산세 구분(현행 입력 그대로 — 꼬리 구간은 core가 판정한다). */
@@ -301,6 +365,14 @@ export function deriveOtherLandStateIntervals(
 ): LandStateInterval[] {
   if (endDate.getTime() <= ownershipStart.getTime()) return [];
 
+  // E3-③ — 주택부수토지 카드: 양도일 현재 «주택 있음»(마지막 건축물 사건 = 신축 · D-1)이고 재산세 구분 변경은 없다(D-2). ⑧·⑫가 먼저 막는다 — 직접 호출의 마지막 안전망(침묵 보정 금지).
+  const houseCtx = tail.buildingKind === "house" ? tail.houseCtx : undefined;
+  if (tail.buildingKind === "house") {
+    if (!houseCtx) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, "주택 구간 판정에는 배율·토지 면적·양도일(houseCtx)이 필요합니다.");
+    const structural = housingStateEventIssue(events.map((e) => ({ kind: e.kind, date: "" })));
+    if (structural) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, structural.message, { index: structural.index });
+  }
+
   const segments: Segment[] = [];
   let hasBuilding = initialHasBuilding(events, tail.hasBuilding);
   let prevBuildingKind: BuildingEventKind | null = null;
@@ -329,11 +401,18 @@ export function deriveOtherLandStateIntervals(
     segments.push(
       ev.kind === "building_built"
         ? { end: ev.date, hasBuilding: false, ...resolveBareDeclaration(ev) }
-        : { end: ev.date, hasBuilding: true, propertyTaxType: ev.propertyTaxTypeBefore ? ev.propertyTaxTypeBefore : "unknown" },
+        : houseCtx
+          ? // 주택 구간 — 재산세 구분은 읽지 않는다(`"unknown"` 고정 · 조심 2018서0295). 배율 이내 여부는 철거 직전 정착면적이 정한다(`resolveHouseInterval`).
+            { end: ev.date, hasBuilding: true, propertyTaxType: "unknown", buildingKind: "house", ...resolveHouseInterval(ev.houseFootprintBefore, houseCtx) }
+          : { end: ev.date, hasBuilding: true, propertyTaxType: ev.propertyTaxTypeBefore ? ev.propertyTaxTypeBefore : "unknown" },
     );
     hasBuilding = ev.kind === "building_built";
   }
-  segments.push({ end: null, hasBuilding: hasBuildingAtTransfer(events) ?? tail.hasBuilding, propertyTaxType: tail.propertyTaxType });
+  segments.push(
+    houseCtx
+      ? { end: null, hasBuilding: true, propertyTaxType: tail.propertyTaxType, buildingKind: "house" } // 꼬리 = 양도일 현재 주택 — core(`judgeHousingLand` 이내 분기)가 판정한다
+      : { end: null, hasBuilding: hasBuildingAtTransfer(events) ?? tail.hasBuilding, propertyTaxType: tail.propertyTaxType },
+  );
 
   const intervals: LandStateInterval[] = [];
   let cursor = ownershipStart;
@@ -363,7 +442,9 @@ const BUSINESS_PROPERTY_TAX_TYPES: ReadonlySet<PropertyTaxType | "unknown"> = ne
  * 건축물 구간의 배율·2% 요건은 구간별로 재판정하지 않는다(건축물 바닥면적·시가표준액 이력이 없다 — 엔진 V-5, 고지 대상).
  * 꼬리는 core가 판정하므로 이 함수를 쓰지 않는다(`stateHistoryBusinessIntervals`).
  */
-export function isStateIntervalBusiness(interval: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome">): boolean {
+export function isStateIntervalBusiness(interval: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome" | "buildingKind" | "houseOutcome">): boolean {
+  // E3-③ — 주택 구간은 재산세 구분을 보지 않고(조심 2018서0295) 정착면적 × 배율 이내(`within`)일 때만 사업용이다. 초과·모름은 같은 접힘(Q-5 (나) — «초과»가 «모름»보다 유리하지 않다).
+  if (interval.buildingKind === "house") return interval.houseOutcome === "within";
   return (interval.hasBuilding || interval.basisOutcome === "accepted") && BUSINESS_PROPERTY_TAX_TYPES.has(interval.propertyTaxType);
 }
 

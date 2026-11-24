@@ -98,7 +98,8 @@ export function consumesPeriodJudgmentDate(landType: LandType | "" | undefined):
  *     부르지 않는다. 주택부수토지는 2026-07-31 사용자 방침(«초과분 기간요건 일률»)을 Q-3a (나)로 «유예만 반영»으로 좁혔을 뿐 의제(§168의14②)는
  *     범위 밖이고, building_site는 현행 구현이 배율 판정만 한다(둘 다 법령 구조가 아니다 — NBL2611-V2-C2).
  *   · 수도권 `isMetropolitanArea` — housing-land.ts만. 별장은 REDIRECT 재분류 뒤 주택부수토지 판정에서 소비한다.
- *   · 상태 이력 `stateHistory` — other_land만(NBL-STATE-HISTORY · 통합 Q-1 (가)). E1에서는 판정이 읽지 않는다 — E2가 `judgeOtherLand`에 연결한다.
+ *   · 상태 이력 `stateHistory` — other_land(NBL-STATE-HISTORY · 통합 Q-1 (가) — E2가 `judgeOtherLand`에 연결) **+ housing(E3-③ — `applyHousingStateHistory`가 `judgeHousingLand` 이내 분기에 연결)**.
+ *     housing 열이 true여도 별장(`villa`)은 false라 별장 REDIRECT(`engine.ts`가 `judgeHousingLand`로 재분류)에는 이력이 도달하지 않는다(T-2). 기타토지 전용 UI 술어는 `consumesHousingStateHistory`로 주택을 제외한다.
  *
  * `satisfies Record<LandCategoryGroup, …>`가 새 그룹 추가 시 이 표 누락을 컴파일 오류로 만든다.
  */
@@ -117,7 +118,7 @@ const INPUT_CONSUMPTION = {
   farmland:      { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false, stateHistory: false, revenueHistory: false },
   forest:        { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false, stateHistory: false, revenueHistory: false },
   pasture:       { urbanIncorporationDate: true,  gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false, stateHistory: false, revenueHistory: false },
-  housing:       { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: false, metropolitanArea: true,  stateHistory: false, revenueHistory: false },
+  housing:       { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: false, metropolitanArea: true,  stateHistory: true,  revenueHistory: false },
   building_site: { urbanIncorporationDate: false, gracePeriods: false, deemedTransfer: false, metropolitanArea: false, stateHistory: false, revenueHistory: false },
   villa:         { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: true,  metropolitanArea: true,  stateHistory: false, revenueHistory: false },
   other_land:    { urbanIncorporationDate: false, gracePeriods: true,  deemedTransfer: true,  metropolitanArea: false, stateHistory: true,  revenueHistory: true  },
@@ -139,9 +140,17 @@ export function consumesGracePeriods(landType: LandType | "" | undefined): boole
   return consumption(landType).gracePeriods;
 }
 
-/** 기타토지 소유기간 중 상태 이력(사건 입력)을 판정에 쓰는 지목 — 기타토지만(통합 Q-1 (가)). ④⑤⑧ 같은 술어. */
+/** 소유기간 중 상태 이력(사건 입력)을 판정에 쓰는 지목 — 기타토지(통합 Q-1 (가)) + 주택부수토지(E3-③). ⑭ 매퍼·⑫ refine이 읽는다. UI의 «기타토지 전용» 술어는 `consumesHousingStateHistory`를 빼서 쓴다. */
 export function consumesStateHistory(landType: LandType | "" | undefined): boolean {
   return consumption(landType).stateHistory;
+}
+
+/**
+ * 주택부수토지 소유기간 중 상태 이력(E3-③ A) — 소비표 `housing.stateHistory`. 별장(`villa_land`)은 별도 그룹이라 false다(별장 REDIRECT에 이력이 닿지 않는다 — T-2).
+ * ⑭ `tailHasBuilding = true`(T-4) · ⑫′ 주택 구조 규칙(D-1·D-2) · ⑧ 정착면적 규칙 · 검증 문구 «주택» 변형(`stateEventSubjectOf`)이 같은 술어를 읽는다.
+ */
+export function consumesHousingStateHistory(landType: LandType | "" | undefined): boolean {
+  return !!landType && getLandCategoryGroup(landType) === "housing" && consumption(landType).stateHistory;
 }
 
 /** 기타토지 업종 영위 기간·과세기간별 수입금액(E3-②)을 판정에 쓰는 지목 — 기타토지만(수입금액비율 경로). ④⑤⑧⑭ 같은 술어. */

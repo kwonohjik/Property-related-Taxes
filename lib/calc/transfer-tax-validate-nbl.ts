@@ -23,6 +23,8 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
 import { resolveNblUrbanIncorporationDate } from "./non-business-land-request";
 import { validateNblOtherLand } from "./transfer-tax-validate-nbl-other";
+import { validateNblStateHistory } from "./transfer-tax-validate-nbl-state-history";
+import { nblHousingStateHistoryApplies } from "./nbl-other-state-history-scope";
 import { validateNblRevenuePeriod } from "./transfer-tax-validate-nbl-revenue-period";
 import { revenuePeriodReadsYear } from "./nbl-revenue-period-scope";
 import { parseTaxPeriodYears } from "@/lib/tax-engine/non-business-land/disqualified-tax-periods";
@@ -213,6 +215,13 @@ export function validateNblDetailedJudgment(
     return fieldError("nblHousingFootprint", asset.nblLandType === "villa_land"
       ? `${label}: 별장 부속토지 — 주택 정착면적(㎡)을 입력하세요. 별장 요건에 해당하지 않으면 주택부수토지로 재분류되며, 정착면적이 없으면 인정면적이 0이 되어 전량 비사업용으로 판정됩니다.`
       : `${label}: 주택부수토지 — 주택 정착면적(㎡)을 입력하세요. 미입력 시 인정면적이 0이 되어 전량 비사업용으로 판정됩니다.`);
+  }
+
+  // NBL-STATE-HISTORY-E3-③ A — 주택부수토지 소유기간 중 주택 신축·멸실 이력(질문 · 사건 행 · 철거 행 정착면적). 화면 순서 = 정착면적·배율 안내 뒤 · 유예 앞이라 **정착면적 필수 규칙 바로 뒤**에 둔다(V-10 — 정착면적 0 + `changed`는
+  // 위 규칙이 먼저 막는다). 게이트·규칙은 ⑤ 렌더·④ 전송과 같은 술어(`nblStateHistoryApplies`)·⑫와 같은 leaf다. 기타토지는 아래 `validateNblOtherLand`가 같은 함수를 부른다.
+  if (nblHousingStateHistoryApplies(asset)) {
+    const houseHistoryErr = validateNblStateHistory(asset, label, { transferDate: formTransferDate, floorDate: stateHistory?.floorDate, skip: stateHistory?.skip });
+    if (houseHistoryErr) return houseHistoryErr;
   }
 
   // 법 §104의3①1호나목·3호가목 지역 열거 — 시(市)·특별자치시는 읍·면 여부가 판정을 가른다.

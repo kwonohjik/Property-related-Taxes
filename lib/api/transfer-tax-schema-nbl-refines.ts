@@ -24,6 +24,7 @@ import { consumesPeriodJudgmentDate } from "@/lib/tax-engine/non-business-land/l
 import { consumesStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
 import { effectiveOtherHasBuilding } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { stateEventSequenceIssue } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { stateEventSubjectOf } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import {
   LAND_TYPE_REQUIRED_MESSAGE,
   PRIOR_REVENUE_LAND_VALUE_REQUIRED_MESSAGE,
@@ -107,7 +108,8 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
   // 컴패니언 스키마가 지분 raw마다 이 refine을 돌려 늦게 취득한 지분이 400이 되기 때문이다(엔진은 지분 소유기간으로 클립). `""`·`unchanged`·`unknown`은 막지 않는다(현행).
   if (consumesStateHistory(landType) && raw.nblOtherStateHistoryMode === "changed") {
     // E3-1b — 「건축물 없는 구간 위 구분 변경」 차단 규칙이 삭제돼 초기 건축물 상태(`tailHasBuilding`)를 넘기지 않는다(순서 검증은 `kind`·`date`만 본다).
-    const stateIssue = stateEventSequenceIssue(raw.nblOtherStateEvents ?? [], { transferDate: raw.transferDate ?? "" });
+    // E3-③ — 주택부수토지 카드는 `subject: "house"`(문구 «주택 사건» + 구조 규칙 D-1·D-2)로 같은 leaf를 부른다. 정착면적 규칙(Q-10 (가))은 ⑧만 가진다 — 직접 API는 400 없이 엔진이 접는다(UI 통과 ↔ API 400 모순 방지).
+    const stateIssue = stateEventSequenceIssue(raw.nblOtherStateEvents ?? [], { transferDate: raw.transferDate ?? "", subject: stateEventSubjectOf(landType) });
     if (stateIssue) issue(stateIssue.index === null ? ["nblOtherStateEvents"] : ["nblOtherStateEvents", stateIssue.index, stateIssue.field], stateIssue.message);
   }
 

@@ -15,13 +15,9 @@
  * core가 자체 사업기간으로 판정한 경로(DM-01 · 3호 · 다목 호 인정 · 수입금액비율)는 `trace`로 받고, core가 **첫 PASS에서 끝나 평가하지 못한 다목·나목**은 `daMokAndNaMok`가 core를
  * 입력만 바꿔 다시 돌려 보충한다 — 법 §104의3①4호 가·나·다목은 병렬 제외 사유라 어느 경로에서 먼저 끝났는지로 날짜 집합이 달라지면 안 된다(법에 없는 불리 적용).
  */
-import { differenceInDays } from "../utc-date";
 import { NBL } from "../legal-codes";
 import { NBL_REVENUE_BUSINESS_START_APPLIED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_APPLIED_NOTICE } from "../nbl-confirm-notices";
-import { NBL_STATE_HISTORY_BARE_ACCEPTED_NOTICE } from "../nbl-confirm-notices";
-import { NBL_STATE_HISTORY_BARE_AREA_LIMIT_NOTICE } from "../nbl-confirm-notices";
-import { NBL_STATE_HISTORY_BARE_BASIS_UNCONFIRMED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE } from "../nbl-confirm-notices";
@@ -32,18 +28,16 @@ import { NBL_STATE_HISTORY_UNKNOWN_NOTICE } from "../nbl-confirm-notices";
 import { TaxCalculationError } from "../tax-errors";
 import { TaxErrorCode } from "../tax-errors";
 import { STATE_EVENTS_REQUIRED_MESSAGE } from "./nbl-validation-messages";
+import { bareDeclarationNotices } from "./state-history-echo";
+import { criteriaEcho } from "./state-history-echo";
+import { intervalEcho } from "./state-history-echo";
 import { deriveOtherLandStateIntervals } from "./other-land-state-history";
 import { stateHistoryBusinessIntervals } from "./other-land-state-history";
 import { getPeriodJudgmentDate } from "./period-criteria";
 import { meetsPeriodCriteria } from "./period-criteria";
 import { getOwnershipStart } from "./utils/period-math";
-import { mergeOverlappingPeriods } from "./utils/period-math";
-import { sumDaysInWindow } from "./utils/period-math";
 import type { DateInterval } from "./types";
-import type { PeriodCriteriaResult } from "./period-criteria";
 import type { OtherLandOwnTrace } from "./other-land-helpers";
-import type { StateHistoryCriteriaEcho } from "./land-usage.types";
-import type { StateHistoryIntervalEcho } from "./land-usage.types";
 import type { CategoryJudgeResult } from "./types";
 import type { JudgmentStep } from "./types";
 import type { NonBusinessLandInput } from "./types";
@@ -59,20 +53,6 @@ export type StateHistoryOutcome =
 function isPartialArea(core: CategoryJudgeResult): boolean {
   const ratio = core.areaProportioning?.nonBusinessRatio;
   return ratio !== undefined && ratio > 0 && ratio < 1;
-}
-
-function criteriaEcho(r: PeriodCriteriaResult): StateHistoryCriteriaEcho {
-  return {
-    ownershipBucket: r.ownershipBucket ?? 3,
-    window5Days: r.window5Days ?? 0,
-    nonBizInWindow5: r.nonBizInWindow5 ?? 0,
-    window3Days: r.window3Days ?? 0,
-    nonBizInWindow3: r.nonBizInWindow3 ?? 0,
-    nonBizTotal: r.nonBizTotal ?? 0,
-    limitGa: r.limitGa ?? null,
-    limitNa: r.limitNa ?? null,
-    limitDa: r.limitDa ?? 0,
-  };
 }
 
 /** core(`judgeOtherLandCore`)를 입력만 바꿔 한 번 더 돌리는 함수 — 자체 구간 기록(`trace`)과 전량 사업용 여부를 돌려준다. `other-land.ts`가 넘긴다(순환 import 방지). */
@@ -131,16 +111,7 @@ export function applyStateHistory(
   const businessIntervals = stateHistoryBusinessIntervals(intervals, { isBusiness: core.isBusiness, ownBusinessPeriods });
   const r = meetsPeriodCriteria(businessIntervals, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
 
-  const merged = mergeOverlappingPeriods(businessIntervals);
-  const intervalEcho: StateHistoryIntervalEcho[] = intervals.map((iv) => {
-    const days = differenceInDays(iv.end, iv.start);
-    const businessDays = sumDaysInWindow(merged, iv.start, iv.end);
-    // E3-1b — 나대지 구간 선언의 근거 해석(echo). 선언이 없는 구간은 키가 없어 종전 echo와 바이트 동일하다.
-    const bare = iv.basisOutcome
-      ? { basisOutcome: iv.basisOutcome, ...(iv.basis ? { basis: iv.basis } : {}), declaredPropertyTaxType: iv.declaredPropertyTaxType, ...(iv.foldReason ? { foldReason: iv.foldReason } : {}) }
-      : {};
-    return { start: iv.start, end: iv.end, days, hasBuilding: iv.hasBuilding, propertyTaxType: iv.propertyTaxType, business: days > 0 && businessDays === days, businessDays, ...bare };
-  });
+  const echo = intervalEcho(intervals, businessIntervals);
 
   const hasTaxChange = history.events.some((e) => e.kind === "tax_type_changed");
   const step: JudgmentStep = {
@@ -160,11 +131,8 @@ export function applyStateHistory(
   const unknownClosers = intervals.filter((iv) => iv.propertyTaxType === "unknown").map((iv) => history.events.find((e) => e.date.getTime() === iv.end.getTime())?.kind);
   if (unknownClosers.some((k) => k !== "tax_type_changed")) warnings.push(NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE);
   if (unknownClosers.some((k) => k === "tax_type_changed")) warnings.push(NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE);
-  // E3-1b — 나대지 구간 선언의 해석 결과 고지(소유기간에 남은 구간만 — 클립으로 사라진 구간은 고지하지 않는다). 새 상수만 추가하고 위 고지는 바이트 동일.
-  const bareFolds = intervals.filter((iv) => iv.basisOutcome === "unconfirmed");
-  if (bareFolds.some((iv) => iv.foldReason !== "area_exceeded" && iv.foldReason !== "area_unknown")) warnings.push(NBL_STATE_HISTORY_BARE_BASIS_UNCONFIRMED_NOTICE);
-  if (bareFolds.some((iv) => iv.foldReason === "area_exceeded" || iv.foldReason === "area_unknown")) warnings.push(NBL_STATE_HISTORY_BARE_AREA_LIMIT_NOTICE);
-  if (intervals.some((iv) => iv.basisOutcome === "accepted")) warnings.push(NBL_STATE_HISTORY_BARE_ACCEPTED_NOTICE);
+  // E3-1b — 나대지 구간 선언의 해석 결과 고지(소유기간에 남은 구간만). 새 상수만 추가하고 위 고지는 바이트 동일.
+  warnings.push(...bareDeclarationNotices(intervals));
 
   return {
     applied: true,
@@ -185,7 +153,7 @@ export function applyStateHistory(
       businessUseRatio: r.ratio,
       criteria: r.criteria,
       businessPeriodsUsed: businessIntervals,
-      periodEvaluation: { basis: "state_history", stateHistory: { intervals: intervalEcho, criteria: criteriaEcho(r) } },
+      periodEvaluation: { basis: "state_history", stateHistory: { intervals: echo, criteria: criteriaEcho(r) } },
       warnings,
     },
   };

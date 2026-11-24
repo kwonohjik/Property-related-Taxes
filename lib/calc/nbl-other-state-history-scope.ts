@@ -12,8 +12,12 @@
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { NblOtherStateEventInput } from "@/lib/stores/calc-wizard-asset-nbl-other";
+import { consumesHousingStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
 import { consumesStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
-import type { StateHistoryMode } from "@/lib/tax-engine/non-business-land/land-usage.types";
+import type { StateBuildingKind, StateHistoryMode } from "@/lib/tax-engine/non-business-land/land-usage.types";
+import type { HouseFootprintIssue } from "@/lib/tax-engine/non-business-land/housing-limit";
+import { houseFootprintIssue } from "@/lib/tax-engine/non-business-land/housing-limit";
+import { eventClosesHouseInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { effectiveOtherHasBuilding } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventBasisOptions } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventCarriesTaxTypeBefore } from "@/lib/tax-engine/non-business-land/other-land-state-history";
@@ -23,11 +27,42 @@ import { isEventKind } from "@/lib/tax-engine/non-business-land/other-land-state
 
 /**
  * 「건축물 유무 이력」 질문이 이 자산에 적용되는가 — 지목(소비표) · 정밀판정 ON · 연접 다필지 꺼짐.
+ * **기타토지 전용**이다(E3-③ A-1): 소비표 `stateHistory` 열이 주택부수토지에도 열려 있어(엔진이 주택 이력을 읽는다) 주택은 이 술어에서 **명시적으로 뺀다** — 주택 카드의 질문은 `nblHousingStateHistoryApplies`가 따로 받고, ④⑤⑧은 둘을 합친 `nblStateHistoryApplies`를 읽는다.
  * 의제(§168의14③ 무조건 사업용) 성립은 ⑧ `validateNblDetailedJudgment`가 앞에서 `return`하고 ⑫가 앞에서 `return`하므로 여기서 다시 보지 않는다.
  * 연접 다필지는 필지별 `hasBuilding`이 이미 있어 v1에서 배타다(통합 Q-13).
  */
 export function nblOtherStateHistoryApplies(asset: Pick<AssetForm, "nblLandType" | "nblUseDetailedJudgment" | "nblOtherUseParcels">): boolean {
-  return !!asset.nblUseDetailedJudgment && consumesStateHistory(asset.nblLandType) && !asset.nblOtherUseParcels;
+  return !!asset.nblUseDetailedJudgment && consumesStateHistory(asset.nblLandType) && !consumesHousingStateHistory(asset.nblLandType) && !asset.nblOtherUseParcels;
+}
+
+/**
+ * E3-③ A — 주택부수토지 카드의 「주택 신축·멸실 이력」 질문이 이 자산에 적용되는가 — 지목(소비표 `consumesHousingStateHistory`) · 정밀판정 ON.
+ * **기타토지 전용 칸(`nblOtherUseParcels` · `nblOtherHasBuilding`)을 읽지 않는다**(계획서 §1.3 D5 — stale 연접 다필지가 주택 질문의 존재 여부를 바꾸면 안 된다).
+ * 무조건 의제(`nblExempt`)·양도일 의제 사유도 읽지 않는다 — ⑧이 앞에서 return하고 주택은 의제 비적용 지목이다(§1.3 의제 교차).
+ * 배율 이내 여부도 게이트가 아니다 — 엔진 안의 런타임 분기이고 ⑫′도 배율을 모른다(UQ-7 (다)): 게이트가 갈라지면 ⑧↔⑫가 어긋난다.
+ */
+export function nblHousingStateHistoryApplies(asset: Pick<AssetForm, "nblLandType" | "nblUseDetailedJudgment">): boolean {
+  return !!asset.nblUseDetailedJudgment && consumesHousingStateHistory(asset.nblLandType);
+}
+
+/**
+ * ④ 전송 · ⑤ 렌더 · ⑧ 검증이 **같이 읽는 지목 축 단일 술어**(E3-③) — 기타토지 질문 ∨ 주택부수토지 질문.
+ * 각 호출처가 자체 지목 조건(`=== "housing_site"` 등)을 쓰지 않는다 — 소비표 술어(`consumes*`)를 직접 부르는 두 술어만 합친다(E3-② «⑧이 엔진 술어를 안 불러» 결함 방지).
+ */
+export function nblStateHistoryApplies(asset: Pick<AssetForm, "nblLandType" | "nblUseDetailedJudgment" | "nblOtherUseParcels">): boolean {
+  return nblOtherStateHistoryApplies(asset) || nblHousingStateHistoryApplies(asset);
+}
+
+/** 이 자산에서 «이력 질문이 적용되고 답이 `changed`»인가 — 기타토지·주택 공용(사건 목록이 판정에 쓰이는 상태). 기타토지 토글 파생은 `nblOtherStateEventsInUse`가 따로 읽는다. */
+export function nblStateEventsInUse(asset: AssetForm): boolean {
+  return nblStateHistoryApplies(asset) && asset.nblOtherStateHistoryMode === "changed";
+}
+
+/** 주택부수토지 카드 사건 행의 «철거 직전 정착면적» 입력 결함 — ⑧ H9 · ⑤ 칸 오류 표시가 **같은 함수**(엔진 leaf `houseFootprintIssue` 직접 호출 · 자체 비교 금지). 주택 구간을 닫는 철거 행이 아니면 null. */
+export function housePriorFootprintIssueOf(asset: AssetForm, i: number): HouseFootprintIssue | null {
+  const events = asset.nblOtherStateEvents ?? [];
+  if (!nblHousingStateHistoryApplies(asset) || !eventClosesHouseInterval(events, i, "house")) return null;
+  return houseFootprintIssue(events[i].houseFootprintBefore, i, asset.acquisitionArea);
 }
 
 /** 사건 행의 종류가 모두 선택됐는가(0건은 아님). 파생 `hasBuilding`은 이때만 사건이 정한다 — 미완성 행이 있으면 저장 토글값을 읽는다. */
@@ -69,18 +104,22 @@ export function effectiveOtherHasBuildingOf(asset: AssetForm): boolean {
  *  · 면적한도: 근거가 `vacant_state`일 때만.
  * `tailHasBuilding`은 건축물 사건이 0건일 때만 초기 건축물 상태로 쓰인다 — ⑧·⑫·⑭와 같은 값(입력 토글 저장값).
  */
-export function stateEventWireRow(events: ReadonlyArray<NblOtherStateEventInput>, i: number, tailHasBuilding: boolean): NblOtherStateEventInput {
+export function stateEventWireRow(events: ReadonlyArray<NblOtherStateEventInput>, i: number, tailHasBuilding: boolean, tailKind?: StateBuildingKind): NblOtherStateEventInput {
   const e = events[i];
   const closesBare = eventClosesBareInterval(events, i, tailHasBuilding);
-  const before = eventCarriesTaxTypeBefore(e.kind) || closesBare ? (e.propertyTaxTypeBefore ?? "") : "";
+  // E3-③ — 주택 구간을 닫는 철거 행(주택부수토지 카드의 모든 철거 행)은 재산세 구분을 싣지 않고(숨은 stale 별도합산 등 — 엔진이 읽지 않는다 · 조심 2018서0295) 정착면적만 싣는다.
+  const closesHouse = eventClosesHouseInterval(events, i, tailKind);
+  const before = !closesHouse && (eventCarriesTaxTypeBefore(e.kind) || closesBare) ? (e.propertyTaxTypeBefore ?? "") : "";
   const basis = closesBare && before ? (eventBasisOptions(before).find((b) => b === e.propertyTaxBasisBefore) ?? "") : "";
   const limit = basis === "vacant_state" ? (e.areaWithinLimitBefore ?? "") : "";
+  const footprint = closesHouse ? (e.houseFootprintBefore ?? "").trim() : "";
   return {
     kind: e.kind,
     date: e.date,
     propertyTaxTypeBefore: before,
     ...(basis ? { propertyTaxBasisBefore: basis } : {}),
     ...(limit ? { areaWithinLimitBefore: limit } : {}),
+    ...(footprint ? { houseFootprintBefore: footprint } : {}),
   };
 }
 
@@ -89,12 +128,14 @@ export function stateHistoryWireFields(asset: AssetForm): {
   nblOtherStateHistoryMode: StateHistoryMode;
   nblOtherStateEvents: NblOtherStateEventInput[];
 } {
-  if (!nblOtherStateHistoryApplies(asset)) return { nblOtherStateHistoryMode: "", nblOtherStateEvents: [] };
+  if (!nblStateHistoryApplies(asset)) return { nblOtherStateHistoryMode: "", nblOtherStateEvents: [] };
   const mode = asset.nblOtherStateHistoryMode;
   if (mode !== "changed") return { nblOtherStateHistoryMode: mode, nblOtherStateEvents: [] };
   const events = asset.nblOtherStateEvents ?? [];
+  // E3-③ — 주택부수토지 카드는 «건축물 있음» 토글이 없다: 양도일 현재 주택이 전제라 `true` · 주택 꼬리로 읽는다(⑭ `tailHasBuilding = true`와 같은 값).
+  const house = nblHousingStateHistoryApplies(asset);
   return {
     nblOtherStateHistoryMode: "changed",
-    nblOtherStateEvents: events.map((_, i) => stateEventWireRow(events, i, asset.nblOtherHasBuilding)),
+    nblOtherStateEvents: events.map((_, i) => stateEventWireRow(events, i, house || asset.nblOtherHasBuilding, house ? "house" : undefined)),
   };
 }

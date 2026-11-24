@@ -684,3 +684,22 @@ E3-②에서 ⑧이 엔진 술어(`revenueHistoryScope`)를 직접 부르지 않
 | ⑭ | V-19 축 B 지분 토지 면적 «확인 필요» | UV-14 · X26 · EB9 | 일치(둘 다 미확인) |
 | ⑮ | Q-12 (가) 종류 `""` 우회 현행 유지 + `BUILDING_KIND_HINT_NOTICE` | §4.4 hint · EB5 · B7 | 일치 |
 | ⑯ | 현행 M15 198,210,000 `not_judged`(500㎡·정착 100㎡·→2024-01-01) | §1.3 probe A(1,000㎡·정착 400㎡·→2024-06-30)도 198,210,000 · B probe BP1 N 253,960,000(엔진 B0·B1 현행 일치) | 일치(시료 다름) |
+
+---
+
+## 18. UI-A 구현 기록 (2026-11-24 — UI-A-1/2/3 · B 경로는 범위 밖)
+
+계획서 §5·§6·§7·§11을 그대로 구현했다. 계획과 달라진 점·덧붙인 점만 적는다.
+
+| # | 구현에서 확정한 것 |
+|---|---|
+| 1 | 디스패처 `nblStateHistoryApplies` = `nblOtherStateHistoryApplies ∨ nblHousingStateHistoryApplies`(`lib/calc/nbl-other-state-history-scope.ts`). 사건 사용 중 판정은 `nblStateEventsInUse`(기타토지 토글 파생용 `nblOtherStateEventsInUse`는 기타토지 전용으로 그대로). ④ `stateHistoryWireFields`·⑧ `validateNblStateHistory`·⑤ 주택 카드 마운트가 디스패처를 읽는다 |
+| 2 | ⑧ 철거 행 정착면적(H9) = 엔진 leaf `houseFootprintIssue`를 `housePriorFootprintIssueOf(asset, i)`가 부르고(⑧ 규칙 · ⑤ 칸 오류 표시 공용), 주택 구간 판정은 엔진 `eventClosesHouseInterval`. **⑤ 칸 오류는 빈칸을 띄우지 않는다**(입력 전 소음 방지 — 빈칸은 ⑧이 막는다) |
+| 3 | 주택 카드 ⑧ 호출 위치는 `validateNblDetailedJudgment` 안, 정착면적 필수 규칙 **바로 뒤**(V-10). 기타토지는 기존 `validateNblOtherLand` 호출 그대로 — 같은 함수 `validateNblStateHistory`가 접두(«주택 부수토지 —»/«기타토지 —»)와 사건 주체(`stateEventSubjectOf`)만 지목으로 가른다 |
+| 4 | 양도일 현재 배율 초과 안내(UQ-7 (다))는 `housingAreaLimitState`(표시 전용 — 엔진 `judgeHousingLimit` 직접 호출). **수도권 미선택이면 수도권·비수도권 두 결과가 같을 때만 확정**하고 갈리면 안내를 띄우지 않는다. 문구는 새로 짓지 않고 엔진 `NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE`를 읽는다 |
+| 5 | 주택 `unchanged`에는 새 고지가 없다 — 엔진 A-10(바이트 동일)이고 기타토지 `UNCHANGED` 문구는 «업종·호별 용도·재산세 분류»를 말해 주택에 맞지 않는다 |
+| 6 | 기타토지에서 입력하다 지목을 바꾼 stale `tax_type_changed` 행은 화면에 남고(종류 «선택 안 됨») 구분·선언 카드를 그리지 않으며, 엔진 `houseTaxTypeChangedMessage`를 그 행 안에 보인다. ⑧ H4가 막고 행 삭제로 통과(E6) |
+| 7 | 철거 행 허용 면적 미리보기와 결과 구간표가 **같은 문구 함수**(`lib/calc/nbl-house-interval-text.ts` — 엔진 echo `houseCheck`만 읽고 재계산하지 않는다)를 쓴다. 미리보기는 정착면적이 ⑧ 결함이면 표 자체를 그리지 않는다(판정과 어긋난 표 금지) |
+| 8 | 정적 게이트 갱신: `nbl-state-history-leaf-unreachable.test.ts` WIRE-4b(고지 상수 사용처 + 위젯) · WIRE-9(배율 leaf 사용처 + ⑤ 미리보기) · `nbl-state-history-e3-1-wire.test.ts`(초기 건축물 상태 인자 = 기타토지 토글 · 주택 `true`). 신규 `nbl-housing-state-history-wire-guard.test.ts`가 ④⑤⑧ 자체 지목 조건 금지·침묵 소실 grep을 고정 |
+| 9 | 반전 보정: `nbl-housing-land-metropolitan-validate-b6.test.ts` 픽스처에 질문 «바뀐 적 없음» 추가(UV-1 실측 — 1파일 4건) · 엔진 route anchor T-4의 `nblOtherHasBuilding` 단언을 «토글 stale» → «④가 true로 고정»으로 정정 |
+| 10 | 미해결(엔진 소관): ⑧ H1 문구는 엔진 상수 `STATE_HISTORY_MODE_REQUIRED_MESSAGE`가 «건축물»이라 주택 카드에서도 «이 토지 위 건축물이…»로 나온다(접두 «주택 부수토지 —»는 붙는다). 주택 변형 문구가 필요하면 엔진 `subject` 인자 확장 요청 |

@@ -26,11 +26,13 @@ import { resolveDeemedRentRate } from "../data/nbl-deemed-rent-rate";
 import { getZoneAreaMultiplier } from "../local-tax-zone-multiplier";
 import { propertyTaxBasisOptions, requiresDemolishedFloorArea, type PropertyTaxBasis } from "./property-tax-basis";
 import type { FactoryEntityType } from "../factory-employee-sports-standard";
+import { consumesHousingStateHistory } from "./land-category";
 import { consumesStateHistory } from "./land-category";
 import { consumesRevenueHistory } from "./land-category";
 import { effectiveOtherHasBuilding } from "./other-land-state-history";
 import { eventCarriesTaxTypeBefore } from "./other-land-state-history";
 import { eventClosesBareInterval } from "./other-land-state-history";
+import { eventClosesHouseInterval } from "./other-land-state-history";
 import { isEventKind } from "./other-land-state-history";
 import type { LandStateHistoryInput } from "./land-usage.types";
 import type { StateEvent } from "./land-usage.types";
@@ -307,29 +309,35 @@ function buildNblParcels(
  * NBL-STATE-HISTORY-E2 — 기타토지 소유기간 중 건축물 신축·멸실(+ E3-① 재산세 과세 구분 변경) 이력(⑭). 그 이력을 쓰는 지목(`consumesStateHistory`)이 아니거나 질문 답이 `""`·미전송이면 undefined(= 미전송 — 현행).
  * `changed`가 아니면 사건은 싣지 않는다(`unchanged`·`unknown`은 모드만 운반 — 고지용). 종류·날짜를 읽을 수 없는 행은 ⑧·⑫가 먼저 막으므로 여기서는 건너뛴다(다른 raw 배열 행과 같은 규약).
  */
-export function buildLandStateHistory(a: Record<string, unknown>, landType: LandType, parseDate: ParseDate): LandStateHistoryInput | undefined {
+export function buildLandStateHistory(a: Record<string, unknown>, landType: LandType, parseDate: ParseDate, parseNumber: ParseNumber): LandStateHistoryInput | undefined {
   if (!consumesStateHistory(landType)) return undefined;
   const mode = asString(a.nblOtherStateHistoryMode);
   if (mode !== "changed" && mode !== "unchanged" && mode !== "unknown") return undefined;
   if (mode !== "changed") return { mode: mode as StateHistoryMode, events: [] };
-  type RawEvent = { kind?: string; date?: string; propertyTaxTypeBefore?: string; propertyTaxBasisBefore?: string; areaWithinLimitBefore?: string };
+  type RawEvent = { kind?: string; date?: string; propertyTaxTypeBefore?: string; propertyTaxBasisBefore?: string; areaWithinLimitBefore?: string; houseFootprintBefore?: string };
   const rows = asArray<RawEvent>(a.nblOtherStateEvents).flatMap((row) => {
     const kind = asString(row.kind);
     const date = parseDate(asString(row.date));
     return isEventKind(kind) && date ? [{ kind, date, row }] : [];
   });
   // E3-1b — 나대지 구간을 닫는 행인지는 사건 순서 replay(초기 건축물 상태 = 입력 토글)로 정한다(leaf 단일 술어 `eventClosesBareInterval`).
-  const tailHasBuilding = asBool(a.nblOtherHasBuilding);
+  // E3-③ — 주택부수토지 카드는 «건축물 있음» 토글이 없다: 양도일 현재 주택이 전제라 `true`로 고정한다(T-4 — 토글 값으로 읽으면 철거 먼저 입력 시 초기 주택 구간 판정이 틀린다).
+  const tailKind = consumesHousingStateHistory(landType) ? ("house" as const) : undefined;
+  const tailHasBuilding = asBool(a.nblOtherHasBuilding) || tailKind === "house";
   const events = rows.map(({ kind, date, row }, i): StateEvent => {
     const before = asString(row.propertyTaxTypeBefore);
     const closesBare = eventClosesBareInterval(rows, i, tailHasBuilding);
+    const closesHouse = eventClosesHouseInterval(rows, i, tailKind);
     const basis = asString(row.propertyTaxBasisBefore);
     const limit = asString(row.areaWithinLimitBefore);
+    const footprint = closesHouse ? parseNumber(asString(row.houseFootprintBefore)) : undefined;
     return {
       kind,
       date,
       // Before 운반: 철거·구분 변경은 `""`(모름)도 뜻이 있어 항상 싣는다 · 신축 행은 `""` = 선언 없음이라 값이 있을 때만(키 없음 = 종전 입력과 바이트 동일 — V-6).
-      ...(eventCarriesTaxTypeBefore(kind) || (closesBare && before) ? { propertyTaxTypeBefore: before as StateEvent["propertyTaxTypeBefore"] } : {}),
+      // 주택 구간을 닫는 철거 행은 재산세 구분을 싣지 않는다(숨은 stale 별도합산 등 — 엔진이 읽지 않는다 · 조심 2018서0295) — 대신 정착면적(수치 — 빈칸·비수치는 키 없음)만 싣는다.
+      ...(!closesHouse && (eventCarriesTaxTypeBefore(kind) || (closesBare && before)) ? { propertyTaxTypeBefore: before as StateEvent["propertyTaxTypeBefore"] } : {}),
+      ...(footprint !== undefined ? { houseFootprintBefore: footprint } : {}),
       // 근거·면적한도는 **나대지 구간을 닫는 행에서만** 싣는다 — 건축물 구간을 닫는 행의 숨은 stale 값은 싣지 않는다(§7.4 규약).
       ...(closesBare && basis ? { propertyTaxBasisBefore: basis as StateEvent["propertyTaxBasisBefore"] } : {}),
       ...(closesBare && limit ? { areaWithinLimitBefore: limit as StateEvent["areaWithinLimitBefore"] } : {}),

@@ -61,6 +61,8 @@ const nblStateEventRawSchema = z.object({
   // E3-1b — 나대지 구간을 닫는 행(신축 · 나대지 위 구분 변경)의 근거·공지상태 면적한도. 빠지면 중첩 칸이 **침묵 strip**돼 선언이 엔진에 닿지 않는다(TS 미감지 — route 관통 anchor가 고정).
   propertyTaxBasisBefore: z.enum(PROPERTY_TAX_BASIS_VALUES).or(z.literal("")).optional(),
   areaWithinLimitBefore: z.enum(NBL_AREA_WITHIN_LIMIT_VALUES).or(z.literal("")).optional(),
+  // E3-③ — 주택 구간을 닫는 철거 행의 «철거 직전 주택 정착면적(㎡)» — 숫자 문자열(빈칸·비수치·0·음수는 ⑧이 막고, 직접 API는 400 없이 엔진이 «모름»으로 접는다 — Q-10 (가) · D-16). 빠지면 중첩 칸이 **침묵 strip**돼 철거 전 주택 구간이 전부 접힌다(TS 미감지 — route 관통 anchor가 고정).
+  houseFootprintBefore: z.string().optional(),
 });
 
 /**

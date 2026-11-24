@@ -1,6 +1,7 @@
 import { NBL_STATE_HISTORY_MODE_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
 import { eventCarriesTaxTypeBefore } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventClosesBareInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { eventClosesHouseInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { isEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { NBL_AREA_WITHIN_LIMIT_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
 import { PROPERTY_TAX_BASIS_VALUES } from "@/lib/tax-engine/non-business-land/property-tax-basis";
@@ -58,12 +59,16 @@ function migrateNblStateHistory(a: Record<string, unknown>): void {
     const mayCloseBare = eventClosesBareInterval([{ kind }], 0, false);
     const basis = typeof r.propertyTaxBasisBefore === "string" && (PROPERTY_TAX_BASIS_VALUES as readonly string[]).includes(r.propertyTaxBasisBefore) ? r.propertyTaxBasisBefore : "";
     const limit = typeof r.areaWithinLimitBefore === "string" && (NBL_AREA_WITHIN_LIMIT_VALUES as readonly string[]).includes(r.areaWithinLimitBefore) ? r.areaWithinLimitBefore : "";
+    // E3-③ A — 철거 행의 «철거 직전 주택 정착면적»: **문자열일 때만** 보존하고 키가 없던 행에는 만들지 않는다(구 스냅샷 byte-identical). 주택 구간을 닫는 행인지(주택 카드)는 지목에 달려 있어
+    // 여기서 보지 않는다 — 숨은 값은 보존하고 ④가 `eventClosesHouseInterval`이 참인 행에서만 보낸다(지목을 되돌리면 복원).
+    const footprint = eventClosesHouseInterval([{ kind }], 0, "house") && typeof r.houseFootprintBefore === "string" ? r.houseFootprintBefore : "";
     return {
       kind,
       date: typeof r.date === "string" ? r.date : "",
       propertyTaxTypeBefore: eventCarriesTaxTypeBefore(kind) || mayCloseBare ? before : "",
       ...(mayCloseBare && basis ? { propertyTaxBasisBefore: basis } : {}),
       ...(mayCloseBare && limit ? { areaWithinLimitBefore: limit } : {}),
+      ...(footprint ? { houseFootprintBefore: footprint } : {}),
     };
   });
 }
