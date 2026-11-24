@@ -90,6 +90,8 @@ const VALIDATE_OTHER = "lib/calc/transfer-tax-validate-nbl-other.ts";
 // E3-⑤ E3f-2 U-3 — 나대지 구간 근거 «철거ㆍ멸실» 사실 칸 ⑤: 술어 래퍼(엔진 `eventOffersDemolished`·`demolishedRequiredFacts`를 부른다 — UI 자체 판정 없음) · 위젯 블록(`data-field` 앵커).
 const ROW_SCOPE = "lib/calc/nbl-demolished-row-scope.ts";
 const ROW_FACTS_FIELD = "components/calc/transfer/nbl/OtherLandDemolishedFactsField.tsx";
+// E3-⑤ E3f-3 U-4 — 빈집 부속토지 국가 등 공용·공공용 사용 예외(영 §103의2 2호 단서) 하위 4칸 위젯(엔진 `demolishedPublicUseAsked`로 노출 · `data-field` 앵커).
+const ROW_PUBLIC_USE_FIELD = "components/calc/transfer/nbl/OtherLandDemolishedPublicUseField.tsx";
 
 const NEXT_PR_HINT = "새 사용처가 생겼다면 UI 배선(U1·U2)일 것이다 — 이 허용 목록을 그 파일로 갱신한다(삭제 금지). 계획서 plan.md §4 U1·U2.";
 
@@ -218,7 +220,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
     expect(src(SCHEMA)).toMatch(/propertyTaxTypeBefore:\s*z\.enum\(NBL_PROPERTY_TAX_TYPE_VALUES\)\.or\(z\.literal\(""\)\)/);
   });
 
-  it("WIRE-6: 이력 칸 이름을 읽는 UI(store·components·lib/calc) 파일 = ①②③ 상태·복원 · ④ 전송 · ⑤ 위젯 · ⑧ 검증·술어·미리보기 — 정확히 이 열아홉 곳", () => {
+  it("WIRE-6: 이력 칸 이름을 읽는 UI(store·components·lib/calc) 파일 = ①②③ 상태·복원 · ④ 전송 · ⑤ 위젯 · ⑧ 검증·술어·미리보기 — 정확히 이 스무 곳", () => {
     const uiUsers = FILES.filter(
       (f) => /^(components|lib\/(stores|calc))\//.test(f.path) && /nblOtherStateEvents|nblOtherStateHistoryMode/.test(f.src),
     ).map((f) => f.path).sort();
@@ -230,7 +232,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
       "lib/calc/non-business-land-request.ts", // ④ 전송(파생 nblOtherHasBuilding 덮어쓰기 포함)
       TAIL_SCOPE, // E3f-1b U-2 — 꼬리 근거 «철거ㆍ멸실» 술어 래퍼: 와이어 사건(`stateHistoryWireFields`)을 leaf 사실로 넘긴다(④⑤⑧ 공용)
       SCOPE, READ, PREVIEW, VALIDATE, // ④⑤⑧ 공용 술어 · «엔진이 이력을 읽는가» 래퍼(E3-③ 후속) · 미리보기 · ⑧ 규칙
-      SECTION, BARE_FIELDS, KIND_FIELD, DETAIL, ROW_SCOPE, ROW_FACTS_FIELD, // ⑤ 위젯(E3f-2 U-3 — 사실 칸 술어 래퍼 · 사실 칸 블록 `data-field` 앵커) · 나대지 구간 선언 카드(E3-1b — `data-field` 앵커) · 철거 행 종류 카드(E3-③ B) · 마운트
+      SECTION, BARE_FIELDS, KIND_FIELD, DETAIL, ROW_SCOPE, ROW_FACTS_FIELD, ROW_PUBLIC_USE_FIELD, // ⑤ 위젯(E3f-2 U-3 — 사실 칸 술어 래퍼 · 사실 칸 블록 `data-field` 앵커) · 나대지 구간 선언 카드(E3-1b — `data-field` 앵커) · 철거 행 종류 카드(E3-③ B) · 마운트
       VL_SCOPE, VL_NOTICE, VL_PREVIEW, // E3-④ — 13호 술어 래퍼(`nblOtherStateEventsInUse`를 인자로 공급) · 입력 안내 갈래 · 행 아래 미리보기
     ].sort();
     expect(uiUsers, NEXT_PR_HINT).toEqual(expected);
