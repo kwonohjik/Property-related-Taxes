@@ -215,6 +215,7 @@ a·b가 떨어짐         → 주 창 `temporaryStatusWindow` = a · 둘째 창 
 - **표현** — `LandStateInterval`에 **선택 필드 1개**(`temporaryStatusPublicUseWindow?: DateInterval`)를 더했다(`temporaryStatusWindow`는 주 창으로 그대로 — 기존 소비처(`isStateIntervalBusiness`·라벨 «창이 있는가»·UI 창 표시)가 바뀌지 않고, 사업용 구간(`stateHistoryBusinessIntervals`)·echo·⑤ 미리보기·⑦ 구간표만 둘째 창을 더한다). 배열(`temporaryStatusWindows`)로 바꾸면 모든 소비처 · 직접 API 호환 · 기존 anchor가 동시에 흔들려 택하지 않았다. 둘째 창은 항상 주 창 **뒤**다(둘 다 `max(철거일, 구간 시작)`에서 시작하고 b에는 개시일 하한이 더 붙는다).
 - `temporaryStatusPublicUse`는 `byClaim`이 비어 있지 않을 때 참(단서 창이 실제로 쓰였다). `temporaryStatusMonths`는 **주 창**을 정한 기간이다(떨어진 경우 a의 6 — b는 3년 만료일이 정한다).
 - **독립 오라클**: `evalDayRow`에 `[건물 구간, a, b]`를 직접 넣은 값 = 엔진(격자 1,872셀 중 접히지 않은 전 셀 · 판정·유효 일수 불일치 0). 초판은 같은 격자에서 판정 247셀·일수 1,104셀이 달랐다.
+- **라벨·수락 고지(Low-A·B)** — 제한 없는 창과 단서 창이 함께 성립한 구간(맞닿아 합쳤든 떨어졌든)은 `temporaryStatusPublicUseMixed`를 싣는다. 라벨은 «한시 기간 + 한시 기간 중 공용 사용 기간», ⑤ 창 줄은 «· 한시 기간 + 국가 등 공용 사용 기간»(떨어진 경우는 둘째 창 줄을 따로), 수락 고지는 «단서에 기댄 부분은 입력한 사용 기간으로 한정 · 단서 시행 전 과세기준일 몫은 단서와 무관하게 인정»을 말하는 변형 상수 `NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE`를 쓴다. **단서에만 기댄 구간**의 라벨·문구·기존 E2E 기대값은 바이트 동일하다.
 - **Medium-1** — 4칸을 모두 답했는데 `byClaim`이 비어(공용 사용 기간 안에 단서가 필요한 과세기준일이 없음) 단서가 결과에 영향이 없고 `own`만으로 성립한 구간: 새 고지 `NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE`(확인 필요)를 경고·⑤ 미리보기에 싣는다(`temporaryStatusPublicUseUnused`). **접힘이면**(`byClaim`에만 기댔고 과세기준일이 없음) 종전 `demolished_public_use_no_base_date` 고지만 나가고 이 고지는 나가지 않는다(배타).
 
 ### 3.4 «모름»·미충족

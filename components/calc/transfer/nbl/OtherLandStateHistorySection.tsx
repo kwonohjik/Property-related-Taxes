@@ -160,7 +160,7 @@ function closedRowOf(preview: StateHistoryPreview | null, date: string): StateHi
   return k > 0 ? preview?.rows[k - 1] : undefined;
 }
 
-function rowTaxTypeText(row: Pick<StateHistoryPreviewRow, "hasBuilding" | "propertyTaxType" | "isTail" | "basisOutcome" | "basis" | "foldReason" | "buildingKind" | "houseOutcome" | "houseCheck" | "temporaryStatusWindow" | "temporaryStatusPublicUse" | "temporaryStatusPublicUseWindow">): string {
+function rowTaxTypeText(row: Pick<StateHistoryPreviewRow, "hasBuilding" | "propertyTaxType" | "isTail" | "basisOutcome" | "basis" | "foldReason" | "buildingKind" | "houseOutcome" | "houseCheck" | "temporaryStatusWindow" | "temporaryStatusPublicUse" | "temporaryStatusPublicUseWindow" | "temporaryStatusPublicUseMixed">): string {
   // E3-③ A — 주택 구간은 재산세 구분이 아니라 정착면적 × 배율 판정(leaf echo)을 그대로 보인다. 꼬리(양도일 현재 주택)는 위 «주택 정착면적» 칸이 말한다 — 결과 계산 후 확정.
   if (row.buildingKind === "house") return row.isTail ? "양도일 현재 정착면적 · 배율(위 칸 기준)" : (houseIntervalText(row) ?? "주택");
   if (row.isTail) return "양도일 현재 선언 기준";

@@ -23,6 +23,7 @@ import type { NblOtherStateEventInput } from "@/lib/stores/calc-wizard-asset-nbl
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_ACCEPTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_HOUSE_AREA_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_VACANT_HOUSE_UNCONFIRMED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import type { DemolishedFact } from "@/lib/tax-engine/non-business-land/land-usage.types";
@@ -165,7 +166,7 @@ export function OtherLandDemolishedFactsField({ index: i, idKey, event: ev, view
         {showOutcome && win && closedRow && (
           <div className="space-y-1.5" data-testid={`nbl-other-state-event-${i}-demolished-outcome`}>
             <p className="text-xs font-medium" data-testid={`nbl-other-state-event-${i}-demolished-window`}>
-              한시 지위 인정 기간: {win.start} ~ {win.lastDay}({win.days.toLocaleString()}일{closedRow.temporaryStatusMonths ? ` · 한시 기간 ${MONTHS_TEXT[closedRow.temporaryStatusMonths]}` : ""}{closedRow.temporaryStatusPublicUse && !closedRow.temporaryStatusPublicUseWindow ? " · 국가 등 공용 사용 기간만" : ""})
+              한시 지위 인정 기간: {win.start} ~ {win.lastDay}({win.days.toLocaleString()}일{closedRow.temporaryStatusMonths ? ` · 한시 기간 ${MONTHS_TEXT[closedRow.temporaryStatusMonths]}` : ""}{closedRow.temporaryStatusPublicUse && !closedRow.temporaryStatusPublicUseMixed ? " · 국가 등 공용 사용 기간만" : ""}{closedRow.temporaryStatusPublicUseMixed && !closedRow.temporaryStatusPublicUseWindow ? " · 한시 기간 + 국가 등 공용 사용 기간" : ""})
             </p>
             {closedRow.temporaryStatusPublicUseWindow && (
               <p className="text-xs font-medium" data-testid={`nbl-other-state-event-${i}-demolished-publicuse-window`}>
@@ -182,7 +183,7 @@ export function OtherLandDemolishedFactsField({ index: i, idKey, event: ev, view
             )}
             {closedRow.temporaryStatusPublicUse && (
               <ToneCard tone="amber">
-                <p className="text-caption leading-snug" data-testid={`nbl-other-state-event-${i}-demolished-publicuse-accepted-notice`}>{NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE}</p>
+                <p className="text-caption leading-snug" data-testid={`nbl-other-state-event-${i}-demolished-publicuse-accepted-notice`}>{closedRow.temporaryStatusPublicUseMixed ? NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE : NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE}</p>
               </ToneCard>
             )}
             {closedRow.vacantHouseExtensionUnconfirmed && (

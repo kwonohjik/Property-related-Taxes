@@ -18,6 +18,7 @@ import { periodEndFromMonths } from "@/lib/tax-engine/civil-period";
 import { demolishedStatusWindow } from "@/lib/tax-engine/non-business-land/demolished-temp-status";
 import { judgeNonBusinessLand } from "@/lib/tax-engine/non-business-land/engine";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_NO_BASE_DATE_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { bareIntervalTaxTypeText } from "@/lib/tax-engine/non-business-land/other-land-state-history";
@@ -189,8 +190,10 @@ describe("E3f-3 High-1 B — 엔진 raw → 판정·세액: 개시일 경계 표
     expect(o.apart).toBe(apart);
     expect(j.effectiveBusinessDays).toBe(o.effectiveBusinessDays);
     expect(!j.isNonBusinessLand).toBe(o.meets);
-    // 단서가 쓰였으므로 단서 적용 고지가 있다 · 미사용 고지는 없다
-    expect(j.warnings).toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE);
+    // 단서가 쓰였고 제한 없는 창과 함께 성립했으므로(합쳤든 떨어졌든) 혼합 변형 수락 고지가 있다 — 단서만 기댄 구간 문구는 없다 · 미사용 고지는 없다
+    expect(iv.temporaryStatusPublicUseMixed).toBe(true);
+    expect(j.warnings).toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE);
+    expect(j.warnings).not.toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE);
     expect(j.warnings).not.toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE);
   });
 
@@ -210,9 +213,33 @@ describe("E3f-3 High-1 B — 엔진 raw → 판정·세액: 개시일 경계 표
     expect(j.warnings).not.toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_NO_BASE_DATE_NOTICE);
   });
 
-  it("라벨: 떨어진 두 창은 «한시 기간 + 한시 기간 중 공용 사용 기간» · 합쳐지면 종전 «한시 기간 중 공용 사용 기간만»", () => {
-    expect(bareIntervalTaxTypeText(bareOf(row(S, PU("2024-04-01", "2025-03-31"))))).toBe("별도합산(나대지 — 철거·멸실 근거 · 한시 기간 + 한시 기간 중 공용 사용 기간)");
-    expect(bareIntervalTaxTypeText(bareOf(row(S, PU("2023-09-02", "2025-03-31"))))).toBe("별도합산(나대지 — 철거·멸실 근거 · 한시 기간 중 공용 사용 기간만)");
+  it("라벨: 혼합(맞닿아 합쳤든 떨어졌든)은 «한시 기간 + 한시 기간 중 공용 사용 기간» · 단서만 기댄 구간은 «한시 기간 중 공용 사용 기간만»(바이트 동일)", () => {
+    const MIXED = "별도합산(나대지 — 철거·멸실 근거 · 한시 기간 + 한시 기간 중 공용 사용 기간)";
+    expect(bareIntervalTaxTypeText(bareOf(row(S, PU("2024-04-01", "2025-03-31"))))).toBe(MIXED); // 떨어짐
+    expect(bareIntervalTaxTypeText(bareOf(row(S, PU("2023-09-02", "2025-03-31"))))).toBe(MIXED); // 맞닿음
+    expect(bareIntervalTaxTypeText(bareOf(row(S, PU("2023-08-01", "2024-07-01"))))).toBe(MIXED); // 겹침
+    // 단서에만 기댄 구간(철거 2023-06-02 — 제한 없는 과세기준일 없음)
+    const CLAIM_ONLY: Sample = { ...S, rem: "2023-06-02" };
+    const only = bareOf(row(CLAIM_ONLY, PU("2024-04-01", "2025-03-31")));
+    expect(only.temporaryStatusPublicUse).toBe(true);
+    expect(only.temporaryStatusPublicUseMixed).toBeUndefined();
+    expect(bareIntervalTaxTypeText(only)).toBe("별도합산(나대지 — 철거·멸실 근거 · 한시 기간 중 공용 사용 기간만)");
+    // 미사용(제한 없는 창만) = 종전 «한시 기간만»
+    expect(bareIntervalTaxTypeText(bareOf(row(S, PU("2024-06-02", "2025-03-31"))))).toBe("별도합산(나대지 — 철거·멸실 근거 · 한시 기간만)");
+  });
+
+  it("수락 고지(Low-B): 혼합 = 혼합 변형(한정은 단서에 기댄 부분에만) · 단서만 = 종전 문구 바이트 동일 · 미사용 = 둘 다 없음", () => {
+    const only = judge(row({ ...S, rem: "2023-06-02" }, PU("2024-04-01", "2025-03-31"))).warnings;
+    expect(only).toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE);
+    expect(only).not.toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE);
+    const unused = judge(row(S, PU("2024-06-02", "2025-03-31"))).warnings;
+    expect(unused).not.toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE);
+    expect(unused).not.toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE);
+    // 문구: 혼합 변형은 한정이 «단서에 기댄 부분»에만 걸린다고 말하고, 단서만 기댄 문구(「입력한 사용 기간으로 한정해 적용했고」)와 다르다
+    expect(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE).toContain("단서에 기댄 부분은 입력한 사용 기간으로 한정해 적용");
+    expect(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE).toContain("단서와 무관하게 인정");
+    expect(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE.endsWith("확인 필요.")).toBe(true);
+    expect(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE).not.toContain("단서와 무관하게");
   });
 
   it("echo: 두 창이 떨어지면 `temporaryStatusPublicUseWindow`가 echo에 실리고 구간표 businessDays = 두 창 합집합(오라클)", () => {
@@ -321,6 +348,6 @@ describe("E3f-3 Medium-1 — 단서 4칸을 다 답했는데 결과에 영향이
   it("단서가 쓰인 구간(공용 사용이 과세기준일을 덮음)은 미사용 고지 없음", () => {
     const j = judge(row({ ...S, close: "2025-01-01", tr: "2027-02-01" }, PU("2024-04-01", "2025-03-31")));
     expect(j.warnings).not.toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE);
-    expect(j.warnings).toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE);
+    expect(j.warnings).toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE); // 제한 없는 창(2023-06-01)도 성립하는 혼합 구간
   });
 });

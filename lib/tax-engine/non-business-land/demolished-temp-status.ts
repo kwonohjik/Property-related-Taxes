@@ -259,9 +259,10 @@ export type DemolishedStatusWindow =
    * 한시가 성립한다 — `window`는 구간 안으로 자른 일 단위 창 · `months`는 창을 정한 한시 기간 · `vacantHouseExtensionUnconfirmed` = 주택인데 빈집정비 «예»가 아니라 3년 연장을 반영하지 않았다 ·
    * `publicUse` = 영 §103의2 2호 단서(국가 등 공용 사용 기간)로 받은 창이 결과에 쓰였다(E3f-3) ·
    * `publicUseWindow` = 제한 없는 창(`window`)과 단서 창이 **떨어져 있어** 합치지 못한 때의 단서 창(두 창의 합집합이 사업용 — 맞닿거나 겹치면 `window` 하나로 합쳐 없다. 이때 `months`는 `window`를 정한 기간) ·
+   * `publicUseMixed` = 제한 없는 창(단서 시행 전 과세기준일 몫)과 단서 창이 **함께** 성립했다(맞닿아 합쳤든 떨어졌든) — 인정 기간이 «공용 사용 기간만»이 아님을 라벨·고지가 말하는 근거 ·
    * `publicUseUnused` = 단서를 «주장»(4칸 모두 답함)했으나 공용 사용 기간 안에 단서가 필요한 과세기준일이 하나도 없어 결과에 아무 영향도 주지 못했다(고지 — 접힘 사유 `demolished_public_use_no_base_date`와 겹치지 않는다: 접히면 이 값은 없다).
    */
-  | { kind: "holds"; window: DateInterval; publicUseWindow?: DateInterval; months: 6 | 12 | 36; vacantHouseExtensionUnconfirmed: boolean; publicUse: boolean; publicUseUnused: boolean }
+  | { kind: "holds"; window: DateInterval; publicUseWindow?: DateInterval; months: 6 | 12 | 36; vacantHouseExtensionUnconfirmed: boolean; publicUse: boolean; publicUseMixed: boolean; publicUseUnused: boolean }
   /** 접는다(종합합산 + 확인 필요). */
   | { kind: "fold"; reason: DemolishedFoldReason };
 
@@ -337,6 +338,7 @@ export function demolishedStatusWindow(i: {
   let window: DateInterval;
   let publicUseWindow: DateInterval | undefined;
   let publicUse = false;
+  let publicUseMixed = false;
   let used = holding; // 창 길이(`months`)를 정한 과세기준일
   if (byClaim.length === 0) {
     window = windowFor(own, false);
@@ -349,6 +351,7 @@ export function demolishedStatusWindow(i: {
     const a = windowFor(own, false);
     const b = windowFor(byClaim, true);
     publicUse = true;
+    publicUseMixed = true;
     if (b.start.getTime() <= a.end.getTime() && a.start.getTime() <= b.end.getTime()) {
       window = { start: a.start.getTime() < b.start.getTime() ? a.start : b.start, end: a.end.getTime() > b.end.getTime() ? a.end : b.end };
     } else {
@@ -365,5 +368,5 @@ export function demolishedStatusWindow(i: {
   if (window.end.getTime() <= window.start.getTime()) return { kind: "fold", reason: "demolished_never_period" };
   // 3년 연장을 묻는 구간(주택 + 후보 ≥ 2024.6.1.)에서 빈집정비 «예»가 아니면 일반 W만 반영했다는 고지를 단다.
   const extensionAsked = i.kind === "house" && inBase.some((s) => demolishedVacantHouseClauseApplies(s) && holdsAt(i.removedOn, s, demolishedStatusPeriodMonths(s, true)));
-  return { kind: "holds", window, ...(publicUseWindow ? { publicUseWindow } : {}), months, vacantHouseExtensionUnconfirmed: extensionAsked && !vacantYes, publicUse, publicUseUnused };
+  return { kind: "holds", window, ...(publicUseWindow ? { publicUseWindow } : {}), months, vacantHouseExtensionUnconfirmed: extensionAsked && !vacantYes, publicUse, publicUseMixed, publicUseUnused };
 }

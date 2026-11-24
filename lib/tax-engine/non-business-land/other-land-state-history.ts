@@ -391,7 +391,7 @@ interface Segment extends Omit<LandStateInterval, "start" | "end"> {
 /** 나대지 구간 선언의 해석 — 구간의 `propertyTaxType`과 (비종합합산 선언이 있을 때만) 근거 echo 필드. */
 type BareDeclaration = Pick<
   LandStateInterval,
-  "propertyTaxType" | "basisOutcome" | "basis" | "declaredPropertyTaxType" | "foldReason" | "temporaryStatusWindow" | "temporaryStatusMonths" | "temporaryStatusRemovedKind" | "temporaryStatusPublicUse" | "temporaryStatusPublicUseWindow" | "temporaryStatusPublicUseUnused" | "vacantHouseExtensionUnconfirmed"
+  "propertyTaxType" | "basisOutcome" | "basis" | "declaredPropertyTaxType" | "foldReason" | "temporaryStatusWindow" | "temporaryStatusMonths" | "temporaryStatusRemovedKind" | "temporaryStatusPublicUse" | "temporaryStatusPublicUseWindow" | "temporaryStatusPublicUseMixed" | "temporaryStatusPublicUseUnused" | "vacantHouseExtensionUnconfirmed"
 >;
 
 /**
@@ -466,6 +466,7 @@ export function resolveBareDeclaration(
       temporaryStatusRemovedKind: ctx.removedKind,
       ...(win.publicUse ? { temporaryStatusPublicUse: true as const } : {}),
       ...(win.publicUseWindow ? { temporaryStatusPublicUseWindow: win.publicUseWindow } : {}),
+      ...(win.publicUseMixed ? { temporaryStatusPublicUseMixed: true as const } : {}),
       ...(win.publicUseUnused ? { temporaryStatusPublicUseUnused: true as const } : {}),
       ...(win.vacantHouseExtensionUnconfirmed ? { vacantHouseExtensionUnconfirmed: true as const } : {}),
     };
@@ -511,12 +512,12 @@ export const BARE_FOLD_REASON_TEXT = {
  */
 export function bareIntervalTaxTypeText(
   // `temporaryStatusWindow`는 있는지만 본다 — 엔진 구간(`DateInterval`)·결과 echo·⑤ 미리보기 행(ISO 문자열 창)이 같이 부른다.
-  iv: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome" | "basis" | "foldReason"> & { temporaryStatusWindow?: object; temporaryStatusPublicUse?: boolean; temporaryStatusPublicUseWindow?: object },
+  iv: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome" | "basis" | "foldReason"> & { temporaryStatusWindow?: object; temporaryStatusPublicUse?: boolean; temporaryStatusPublicUseMixed?: boolean },
 ): string | undefined {
   if (iv.hasBuilding || !iv.basisOutcome) return undefined;
   // E3f-2 — 근거 «철거ㆍ멸실»을 받아들인 구간은 구간 전체가 아니라 한시 창만 별도합산으로 센다(창 날짜는 echo `temporaryStatusWindow`가 말한다).
   if (iv.basisOutcome === "accepted" && iv.temporaryStatusWindow) {
-    return `${PROPERTY_TAX_TYPE_LABEL[iv.propertyTaxType as PropertyTaxType]}(나대지 — ${BARE_BASIS_SHORT_LABEL.demolished} · ${iv.temporaryStatusPublicUseWindow ? "한시 기간 + 한시 기간 중 공용 사용 기간" : iv.temporaryStatusPublicUse ? "한시 기간 중 공용 사용 기간만" : "한시 기간만"})`;
+    return `${PROPERTY_TAX_TYPE_LABEL[iv.propertyTaxType as PropertyTaxType]}(나대지 — ${BARE_BASIS_SHORT_LABEL.demolished} · ${iv.temporaryStatusPublicUseMixed ? "한시 기간 + 한시 기간 중 공용 사용 기간" : iv.temporaryStatusPublicUse ? "한시 기간 중 공용 사용 기간만" : "한시 기간만"})`;
   }
   if (iv.basisOutcome === "accepted") {
     return `${PROPERTY_TAX_TYPE_LABEL[iv.propertyTaxType as PropertyTaxType]}(나대지 — ${BARE_BASIS_SHORT_LABEL[iv.basis ?? "unknown"]})`;

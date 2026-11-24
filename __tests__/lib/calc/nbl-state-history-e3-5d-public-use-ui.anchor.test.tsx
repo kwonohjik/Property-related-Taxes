@@ -23,6 +23,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { NblOtherStateEventInput } from "@/lib/stores/calc-wizard-asset-nbl-other";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { judgeNonBusinessLand } from "@/lib/tax-engine/non-business-land/engine";
 import { BARE_DEMOLISHED_FOLD_NOTICE } from "@/lib/tax-engine/non-business-land/state-history-echo";
@@ -512,16 +513,28 @@ describe("E3f-3 High-1·Medium-1 F — 두 창이 떨어지면 둘 다 보이고
     expect(text("nbl-other-state-event-2-demolished-window")).toContain("한시 지위 인정 기간: 2023-03-01 ~ 2023-09-01");
     expect(text("nbl-other-state-event-2-demolished-window")).not.toContain("국가 등 공용 사용 기간만");
     expect(text("nbl-other-state-event-2-demolished-publicuse-window")).toContain("공용 사용 단서 인정 기간: 2024-04-01 ~ 2024-12-01(245일 · 국가 등 공용 사용 기간만)");
-    expect(text("nbl-other-state-event-2-demolished-publicuse-accepted-notice")).toBe(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE);
+    expect(text("nbl-other-state-event-2-demolished-publicuse-accepted-notice")).toBe(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE);
     expect(id("nbl-other-state-event-2-demolished-publicuse-unused-notice")).toBeNull();
     const rowText = screen.getByTestId("nbl-state-history-preview-row-2").textContent!;
     expect(rowText).toContain("한시 기간 + 한시 기간 중 공용 사용 기간) · 인정 2023-03-01 ~ 2023-09-01(185일) + 공용 사용 단서 2024-04-01 ~ 2024-12-01(245일)");
   });
 
-  it("맞닿으면 하나의 창(종전 표시 그대로) — 둘째 창 줄 없음", () => {
+  it("맞닿으면 하나의 창 — 둘째 창 줄 없음 · «공용 사용 기간만»이 아니라 «한시 기간 + 국가 등 공용 사용 기간»(Low-A) · 혼합 변형 수락 고지(Low-B) · 라벨도 혼합", () => {
     mount(OLD("2025-01-01", { ...FULLCHAIN, demolishedPublicUseFromBefore: "2023-09-02", demolishedPublicUseToBefore: "2024-12-01" }), "2026-12-01");
     expect(id("nbl-other-state-event-2-demolished-publicuse-window")).toBeNull();
+    const w = text("nbl-other-state-event-2-demolished-window");
+    expect(w).toContain("한시 기간 + 국가 등 공용 사용 기간");
+    expect(w).not.toContain("공용 사용 기간만");
+    expect(text("nbl-other-state-event-2-demolished-publicuse-accepted-notice")).toBe(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE);
+    expect(screen.getByTestId("nbl-state-history-preview-row-2").textContent).toContain("한시 기간 + 한시 기간 중 공용 사용 기간)");
+  });
+
+  it("단서에만 기댄 구간은 종전 그대로(문구 «국가 등 공용 사용 기간만» · 수락 고지 종전 상수 · 라벨 «공용 사용 기간만») — 혼합 아님", () => {
+    const only = other({ nblOtherStateEvents: [built("2016-01-01"), houseRemoved("2023-06-02"), closing("building_built", "2025-01-01", { ...PRE, ...FULLCHAIN, demolishedPublicUseFromBefore: "2024-04-01", demolishedPublicUseToBefore: "2024-12-01" })] });
+    mount(only, "2026-12-01");
     expect(text("nbl-other-state-event-2-demolished-window")).toContain("국가 등 공용 사용 기간만");
+    expect(text("nbl-other-state-event-2-demolished-publicuse-accepted-notice")).toBe(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE);
+    expect(screen.getByTestId("nbl-state-history-preview-row-2").textContent).toContain("한시 기간 중 공용 사용 기간만)");
   });
 
   it("단서를 4칸 모두 답했는데 공용 사용 기간 안에 과세기준일이 없으면(제한 없는 창만 성립) 미사용 고지 — 접힘 고지는 없다", () => {
