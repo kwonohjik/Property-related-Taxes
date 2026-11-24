@@ -33,9 +33,9 @@ const VERDICT_BADGE: Record<NblVerdict["tone"], string> = {
   violet: "border-violet-300 bg-violet-50 text-violet-800 dark:border-violet-700 dark:bg-violet-950/30 dark:text-violet-300",
 };
 
-/** 계산기에서 §66 자경 편입 부분감면을 켜면 비워 둔 도시편입일이 그 감면의 편입일로 채워질 수 있다(엔진 V-10 · `non-business-land-request.ts` fallback). */
+/** 계산기에서 자경농지 편입 부분감면(조특법 §69① 단서 · 조특령 §66⑦)을 켜면 비워 둔 도시편입일이 그 감면의 편입일로 채워질 수 있다(엔진 V-10 · `non-business-land-request.ts` fallback). */
 const SELF_FARMING_INCORPORATION_NOTE =
-  "계산기에서 자경 농지 감면의 편입 부분감면(조세특례제한법 §66)을 켜면, 여기서 비워 둔 도시편입일이 그 감면의 편입일로 채워져 판정에 쓰일 수 있습니다 — 계산기에서 판정을 다시 확인하세요.";
+  "계산기에서 자경 농지 감면의 편입 부분감면(조세특례제한법 §69① 단서)을 켜면, 여기서 비워 둔 도시편입일이 그 감면의 편입일로 채워져 판정에 쓰일 수 있습니다 — 계산기에서 판정을 다시 확인하세요.";
 
 const SHARE_NOTE =
   "지분율과 「나머지 지분은 타인 소유」 선언은 그대로 넘어갑니다. 계산기에서 양도가액·취득가액은 물건 전체(100%) 기준으로 입력하세요 — 시스템이 지분율을 적용합니다.";
