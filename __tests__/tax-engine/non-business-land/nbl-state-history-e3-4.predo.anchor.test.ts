@@ -84,41 +84,40 @@ describe("E3e-0 Anchor 1 — 일 단위 정답표(오라클): 판정 · 일수",
 });
 
 describe("E3e-0 현행 열 — 같은 입력을 **세대 주택 소유 칸 없이** 현행 엔진에 넣은 값(이 표가 왜 필요한가)", () => {
-  it.each(E3E_ALL_ROWS.map((r) => [r.id, r.scenario, r] as const))("%s — %s", (_id, _s, r) => {
+  it("표 무결성: `changes` = 현행(`current`)과 신규 오라클(`expect`)이 판정 또는 일수에서 다르다", () => {
+    for (const r of E3E_ALL_ROWS) {
+      const differs = r.expect.nonBusiness !== r.current.nonBusiness || r.expect.eff !== r.current.eff;
+      expect(r.changes, `${r.id} changes`).toBe(differs);
+    }
+  });
+
+  // 현행 값은 E3e-0(c4a5774f7) 시점 실측이다. 신규 모델이 값을 바꾸는 행(`changes`)의 엔진 값은 `nbl-state-history-e3-4.anchor.test.ts`가 신규 `expect`로 고정한다 —
+  // 이 파일은 «바꾸지 않는 행이 현행 그대로인가»(회귀 가드)만 계속 지킨다.
+  const unchanged = E3E_ALL_ROWS.filter((r) => !r.changes);
+  it.each(unchanged.map((r) => [r.id, r.scenario, r] as const))("%s — %s (모델이 바꾸지 않는 행: 현행 = 신규)", (_id, _s, r) => {
     const input = fromRaw(e3eRowRaw(r, { houseRows: false }));
     const j = judge(input);
     expect(j.isNonBusinessLand, `${r.id} 판정`).toBe(r.current.nonBusiness);
     expect(j.effectiveBusinessDays, `${r.id} 일수`).toBe(r.current.eff);
     expect(j.periodEvaluation?.basis, `${r.id} basis`).toBe(r.current.basis);
-    // 세액: 전량 판정이라 B 또는 N(부분 면적 H5·C5는 별도 — 안분 세액이라 제외)
     if (!j.areaProportioning || j.areaProportioning.nonBusinessRatio === 0 || j.areaProportioning.nonBusinessRatio === 1) {
       expect(taxOf(input), `${r.id} 세액`).toBe(e3eTax(r.current.nonBusiness));
     }
   });
 
-  it("행을 **입력해도** 현행 엔진은 읽지 않는다 — W 행은 13호 선택 시 전부 B(칸이 없다)", () => {
-    for (const r of E3E_HOUSE_ROWS.filter((x) => x.houseRows && x.houseRows.length > 0 && !x.tailBuilding)) {
-      const j = judge(fromRaw(e3eRowRaw(r, { houseRows: true })));
-      expect(j.isNonBusinessLand, r.id).toBe(false);
-      expect(j.effectiveBusinessDays, r.id).toBe(3651);
-    }
-  });
-
-  it("현행 값과 신규 오라클이 다른 행(스윙 대상)의 목록 — 표의 존재 이유", () => {
+  it("현행과 신규 오라클이 다른 행(스윙 대상)의 목록 — 표의 존재 이유", () => {
     const swing = E3E_ALL_ROWS.filter((r) => r.changes).map((r) => r.id);
-    expect(swing).toEqual(["H2", "H3", "H3a", "H4", "X1", "X3", "W2", "W3", "W5b", "W6", "W7", "C3", "C4"]);
+    expect(swing).toEqual(["H2", "H3", "H3a", "H3b", "H4", "X1", "X3", "W1", "W2", "W3", "W4a", "W4b", "W5", "W5b", "W6", "W7", "C3", "C4"]);
     // 판정(사업용↔비사업용)까지 뒤집히는 행
     const flipped = E3E_ALL_ROWS.filter((r) => r.changes && r.expect.nonBusiness !== r.current.nonBusiness).map((r) => r.id);
     expect(flipped).toEqual(["H2", "H3", "H3a", "H4", "W2", "W3", "W5b", "W6", "W7", "C3"]);
   });
 
-  it("세액 스윙: 현행 N → 신규 B(H2) = −55,750,000 · 현행 B → 신규 N(W2·13호를 고른 뒤 주택 취득 2020-01-01) = +55,750,000", () => {
-    const h2 = fromRaw(e3eRowRaw(row("H2")));
-    expect(taxOf(h2)).toBe(E3E_N);
-    expect(e3eTax(row("H2").expect.nonBusiness)).toBe(E3E_B);
-    const w2 = fromRaw(e3eRowRaw(row("W2")));
-    expect(taxOf(w2)).toBe(E3E_B);
-    expect(e3eTax(row("W2").expect.nonBusiness)).toBe(E3E_N);
+  it("세액 스윙: 현행 N → 신규 B(H2) = −55,750,000 · 현행 B → 신규 N(W2 · 13호를 고른 뒤 주택 취득 2020-01-01) = +55,750,000 — 값은 전량 판정이라 B 또는 N", () => {
+    expect(e3eTax(row("H2").current.nonBusiness) - e3eTax(row("H2").expect.nonBusiness)).toBe(E3E_SWING);
+    expect(e3eTax(row("W2").expect.nonBusiness) - e3eTax(row("W2").current.nonBusiness)).toBe(E3E_SWING);
+    expect(e3eTax(true)).toBe(E3E_N);
+    expect(e3eTax(false)).toBe(E3E_B);
   });
 
   it("기존 e2 anchor가 고정한 13호 «꼬리만 사업용(214/3,651 비사업용)»은 H1 — 신규 모델에서도 불변(건물 구간은 나지가 아니다)", () => {

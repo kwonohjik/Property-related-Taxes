@@ -60,7 +60,7 @@ export interface E3eRow {
   expect: { nonBusiness: boolean; eff: number; total: number };
   /** 현행 엔진 실측 — 칸이 없어 같은 값이면 `same: true`. */
   current: { nonBusiness: boolean; eff: number; basis: string };
-  /** 신규 모델이 현행과 판정·수치를 바꾸는 행(스윙). */
+  /** 신규 모델이 현행과 판정 **또는 일수**를 바꾸는 행(= `expect`와 `current`가 다르다 — 표 무결성 테스트가 지킨다). 판정까지 뒤집히는 행은 `expect.nonBusiness !== current.nonBusiness`. */
   changes: boolean;
   /** 신규 판정이 이력·행을 읽는가(= 이력 `state_history` 또는 행을 읽는 core 경로) — 안 읽는 행(부분 면적 등)은 false. */
   reads: boolean;
@@ -84,7 +84,7 @@ export const E3E_BARE_ROWS: readonly E3eRow[] = [
   { id: "H3a", scenario: "신축 2020-01-02 — 40% 경계(비사업 1,460 ≤ 1,460.4 → 사업용)", events: [built("2020-01-02")], tailTax: "comprehensive", biz: [[OS, "2020-01-02"]],
     expect: { nonBusiness: false, eff: 2191, total: 3651 }, current: { nonBusiness: true, eff: 0, basis: "state_history" }, changes: true, reads: true },
   { id: "H3b", scenario: "신축 2020-01-01 — 40% 경계 쌍(비사업 1,461 > 1,460.4 → 비사업용)", events: [built("2020-01-01")], tailTax: "comprehensive", biz: [[OS, "2020-01-01"]],
-    expect: { nonBusiness: true, eff: 2190, total: 3651 }, current: { nonBusiness: true, eff: 0, basis: "state_history" }, changes: false, reads: true },
+    expect: { nonBusiness: true, eff: 2190, total: 3651 }, current: { nonBusiness: true, eff: 0, basis: "state_history" }, changes: true, reads: true },
   { id: "H4", scenario: "신축 2020-01-01 · 철거 2023-06-01(종합) · 꼬리 나지 — 나지 2구간 합집합(2,190 + 214)", events: [built("2020-01-01"), rm("2023-06-01")], biz: [[OS, "2020-01-01"], ["2023-06-01", T24]],
     expect: { nonBusiness: false, eff: 2404, total: 3651 }, current: { nonBusiness: true, eff: 214, basis: "state_history" }, changes: true, reads: true },
   { id: "H5", scenario: "철거 2023-06-01 · 꼬리 나지 · 900㎡ — 부분 면적(core)이라 이력 미적용(`isPartialArea`)", area: "900", events: [rm("2023-06-01")], biz: [],
@@ -105,17 +105,17 @@ export const E3E_HOUSE_ROWS: readonly E3eRow[] = [
   { id: "W0", scenario: "행 없음 — 현행 자기선언(전 기간 무주택) 유지", mode: "", events: [], biz: [[OS, T24]],
     expect: { nonBusiness: false, eff: 3651, total: 3651 }, current: { nonBusiness: false, eff: 3651, basis: "state_at_transfer" }, changes: false, reads: false },
   { id: "W1", scenario: "주택 취득 2020-01-02(이후 계속) — 무주택 2,191일(비사업 1,460 ≤ 1,460.4)", mode: "", events: [], houseRows: [["2020-01-02"]], biz: [[OS, "2020-01-02"]],
-    expect: { nonBusiness: false, eff: 2191, total: 3651 }, current: { nonBusiness: false, eff: 3651, basis: "state_at_transfer" }, changes: false, reads: true },
+    expect: { nonBusiness: false, eff: 2191, total: 3651 }, current: { nonBusiness: false, eff: 3651, basis: "state_at_transfer" }, changes: true, reads: true },
   { id: "W2", scenario: "주택 취득 2020-01-01 — 무주택 2,190일(비사업 1,461 > 1,460.4)", mode: "", events: [], houseRows: [["2020-01-01"]], biz: [[OS, "2020-01-01"]],
     expect: { nonBusiness: true, eff: 2190, total: 3651 }, current: { nonBusiness: false, eff: 3651, basis: "state_at_transfer" }, changes: true, reads: true },
   { id: "W3", scenario: "주택 취득 2019-01-01 — 무주택 1,825일", mode: "", events: [], houseRows: [["2019-01-01"]], biz: [[OS, "2019-01-01"]],
     expect: { nonBusiness: true, eff: 1825, total: 3651 }, current: { nonBusiness: false, eff: 3651, basis: "state_at_transfer" }, changes: true, reads: true },
   { id: "W4a", scenario: "주택 취득 2021-01-01 — 무주택 2,556일", mode: "", events: [], houseRows: [["2021-01-01"]], biz: [[OS, "2021-01-01"]],
-    expect: { nonBusiness: false, eff: 2556, total: 3651 }, current: { nonBusiness: false, eff: 3651, basis: "state_at_transfer" }, changes: false, reads: true },
+    expect: { nonBusiness: false, eff: 2556, total: 3651 }, current: { nonBusiness: false, eff: 3651, basis: "state_at_transfer" }, changes: true, reads: true },
   { id: "W4b", scenario: "주택 취득 2022-01-01 — 무주택 2,921일", mode: "", events: [], houseRows: [["2022-01-01"]], biz: [[OS, "2022-01-01"]],
-    expect: { nonBusiness: false, eff: 2921, total: 3651 }, current: { nonBusiness: false, eff: 3651, basis: "state_at_transfer" }, changes: false, reads: true },
+    expect: { nonBusiness: false, eff: 2921, total: 3651 }, current: { nonBusiness: false, eff: 3651, basis: "state_at_transfer" }, changes: true, reads: true },
   { id: "W5", scenario: "4팀-978형: 주택 소유 2018-01-01~2021-01-01(처분 후 무주택 복귀) — 소유 구간만 제외", mode: "", events: [], houseRows: [["2018-01-01", "2021-01-01"]], biz: [[OS, "2018-01-01"], ["2021-01-01", T24]],
-    expect: { nonBusiness: false, eff: 2555, total: 3651 }, current: { nonBusiness: false, eff: 3651, basis: "state_at_transfer" }, changes: false, reads: true },
+    expect: { nonBusiness: false, eff: 2555, total: 3651 }, current: { nonBusiness: false, eff: 3651, basis: "state_at_transfer" }, changes: true, reads: true },
   { id: "W5b", scenario: "W5 종료일 = 양도일 명시(빈칸과 같다 — D-7)", mode: "", events: [], houseRows: [["2020-01-01", T24]], biz: [[OS, "2020-01-01"]],
     expect: { nonBusiness: true, eff: 2190, total: 3651 }, current: { nonBusiness: false, eff: 3651, basis: "state_at_transfer" }, changes: true, reads: true },
   { id: "W6", scenario: "이력 `unchanged` + 행(W2와 같은 행) — Q-3 (가): 이력 모드와 무관하게 행을 읽는다", mode: "unchanged", events: [], houseRows: [["2020-01-01"]], biz: [[OS, "2020-01-01"]],

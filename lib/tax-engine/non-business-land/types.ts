@@ -210,6 +210,7 @@ import type {
   FarmlandDeemingInput,
   LandStateHistoryInput,
   StateHistoryEcho,
+  VacantLotEcho,
 } from "./land-usage.types";
 import type { RevenueTestInput } from "./revenue-test.types";
 import type { RevenueTestResult } from "./revenue-test.types";
@@ -415,6 +416,8 @@ export interface PeriodEvaluation {
   stateHistory?: StateHistoryEcho;
   /** E3-② — 업종 영위 기간(`revenueHistory`)으로 과세기간별 판정을 했을 때만. 연도별 판정표·사업용 구간(표시 전용). OFF에서는 키 자체가 없다. */
   revenueHistory?: RevenueHistoryEcho;
+  /** E3-④ — 13호(무주택 1세대 1필지 나지)가 사업용 구간을 정했을 때만. 이력 OFF에서도 세대 주택 소유 기간 행을 읽으면 실린다(표시 전용). 없으면 키 자체가 없다. */
+  vacantLot?: VacantLotEcho;
 }
 
 /** 판정 엔진 반환 액션 (v2 신규 — 별장 REDIRECT 경로 지원) */
