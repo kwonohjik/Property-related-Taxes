@@ -57,6 +57,10 @@ const RESET_DEMOLISHED_FACTS = {
   demolishedOtherUseBefore: undefined,
   demolishedVacantHouseBefore: undefined,
   demolishedFloorAreaBefore: undefined,
+  demolishedPublicUseBefore: undefined,
+  demolishedPublicUsePaidBefore: undefined,
+  demolishedPublicUseFromBefore: undefined,
+  demolishedPublicUseToBefore: undefined,
 } as const;
 
 const LIMIT_OPTIONS = (i: number): RadioCardOption<Exclude<AreaWithinLimit, "">>[] => [

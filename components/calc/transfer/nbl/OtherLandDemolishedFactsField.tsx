@@ -4,7 +4,7 @@
  * 나대지 구간 근거 «철거ㆍ멸실» 사실 칸 블록 — NBL-STATE-HISTORY-E3-⑤ E3f-2 (U-3 · 계획서 `…e3-5-demolition-temp-status.ui.plan.md` §4.3 · §4.4).
  *
  * `OtherLandBareIntervalFields`가 근거 «철거ㆍ멸실»을 고른 행(철거 행 뒤 나대지 구간을 닫는 행)에서만 그린다. 화면 순서 = 계산 순서:
- *   ① 철거일·구간(읽기 전용) → ② 허가·사용승인 → ③ 철거 후 건축 외 용도 → ④a 빈집정비(주택 철거 행) / ④b 종전 바닥면적(비주택 철거 행) → 인정 창·접힘 미리보기.
+ *   ① 철거일·구간(읽기 전용) → ② 허가·사용승인 → ③ 철거 후 건축 외 용도 → ④a 빈집정비(주택 철거 행) → (E3f-3 · U-4) 국가 등 공용·공공용 사용 예외 하위 4칸(`OtherLandDemolishedPublicUseField`) / ④b 종전 바닥면적(비주택 철거 행) → 인정 창·접힘 미리보기.
  * 어느 칸이 보이는가는 엔진 `demolishedRequiredFacts`(= ④ 전송 = ⑧ 차단 = ⑫′ 400 — 노출 ≡ 필수)를 `nbl-demolished-row-scope.ts`가 한 곳에서 부른 값이다. UI는 날짜·시행본을 비교하지 않는다.
  * 선택지 값 `""`은 «미선택»이다 — 가정값 없음(노출된 칸의 미선택은 ⑧이 막는다 · 명시 «모름»은 혜택 불성립 + 확인 필요).
  * 미리보기(인정 창·접힘 사유)는 엔진 구간 해석(`buildStateHistoryPreview`가 낸 행)을 읽을 뿐이다 — 판정·계산 0 · 저장·전송 없음. 사실 칸이 모두 답해진 뒤에만 보인다.
@@ -15,12 +15,16 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { OtherLandDemolishedPublicUseField } from "@/components/calc/transfer/nbl/OtherLandDemolishedPublicUseField";
 import type { DemolishedRowView } from "@/lib/calc/nbl-demolished-row-scope";
 import { demolishedRowUnansweredField } from "@/lib/calc/nbl-demolished-row-scope";
 import type { StateHistoryPreviewRow } from "@/lib/calc/nbl-other-state-history-preview";
 import type { NblOtherStateEventInput } from "@/lib/stores/calc-wizard-asset-nbl-other";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_ACCEPTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_HOUSE_AREA_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_VACANT_HOUSE_UNCONFIRMED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import type { DemolishedFact } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import { BARE_DEMOLISHED_FOLD_NOTICE } from "@/lib/tax-engine/non-business-land/state-history-echo";
@@ -97,7 +101,7 @@ export function OtherLandDemolishedFactsField({ index: i, idKey, event: ev, view
           <FieldCard
             label="철거 후 그 토지를 건축을 위한 용도 외의 다른 용도로 사용했습니까?"
             required
-            hint="철거한 뒤 그 토지를 건축을 위한 용도 외의 다른 용도로 사용했으면 그 부분은 한시 별도합산에서 제외됩니다(그 용도가 무엇인지는 묻지 않습니다). 모름은 인정하지 않고 확인 필요로 표시합니다."
+            hint={`철거한 뒤 그 토지를 건축을 위한 용도 외의 다른 용도로 사용했으면 그 부분은 한시 별도합산에서 제외됩니다(그 용도가 무엇인지는 묻지 않습니다). 모름은 인정하지 않고 확인 필요로 표시합니다.${need.vacantHouse ? " 빈집정비사업으로 철거한 빈집이면 아래 빈집정비 칸에서 «예»를 고르면 국가 등 공공용 사용 예외를 추가로 묻습니다." : ""}`}
           >
             <RadioCardGroup
               name={`nblOtherStateDemolishedOtherUse-${idKey}-${i}`}
@@ -128,6 +132,8 @@ export function OtherLandDemolishedFactsField({ index: i, idKey, event: ev, view
             />
           </FieldCard>
         )}
+
+        <OtherLandDemolishedPublicUseField index={i} idKey={idKey} event={ev} view={view} patchEvent={patchEvent} />
 
         {need.floorArea && (
           <FieldCard
@@ -160,11 +166,26 @@ export function OtherLandDemolishedFactsField({ index: i, idKey, event: ev, view
         {showOutcome && win && closedRow && (
           <div className="space-y-1.5" data-testid={`nbl-other-state-event-${i}-demolished-outcome`}>
             <p className="text-xs font-medium" data-testid={`nbl-other-state-event-${i}-demolished-window`}>
-              한시 지위 인정 기간: {win.start} ~ {win.lastDay}({win.days.toLocaleString()}일{closedRow.temporaryStatusMonths ? ` · 한시 기간 ${MONTHS_TEXT[closedRow.temporaryStatusMonths]}` : ""})
+              한시 지위 인정 기간: {win.start} ~ {win.lastDay}({win.days.toLocaleString()}일{closedRow.temporaryStatusMonths ? ` · 한시 기간 ${MONTHS_TEXT[closedRow.temporaryStatusMonths]}` : ""}{closedRow.temporaryStatusPublicUse && !closedRow.temporaryStatusPublicUseMixed ? " · 국가 등 공용 사용 기간만" : ""}{closedRow.temporaryStatusPublicUseMixed && !closedRow.temporaryStatusPublicUseWindow ? " · 한시 기간 + 국가 등 공용 사용 기간" : ""})
             </p>
+            {closedRow.temporaryStatusPublicUseWindow && (
+              <p className="text-xs font-medium" data-testid={`nbl-other-state-event-${i}-demolished-publicuse-window`}>
+                공용 사용 단서 인정 기간: {closedRow.temporaryStatusPublicUseWindow.start} ~ {closedRow.temporaryStatusPublicUseWindow.lastDay}({closedRow.temporaryStatusPublicUseWindow.days.toLocaleString()}일 · 국가 등 공용 사용 기간만) — 위 기간과 합쳐 인정합니다
+              </p>
+            )}
             <ToneCard tone="amber">
               <p className="text-caption leading-snug" data-testid={`nbl-other-state-event-${i}-demolished-accepted-notice`}>{NBL_STATE_HISTORY_BARE_DEMOLISHED_ACCEPTED_NOTICE}</p>
             </ToneCard>
+            {closedRow.temporaryStatusPublicUseUnused && (
+              <ToneCard tone="amber">
+                <p className="text-caption leading-snug" data-testid={`nbl-other-state-event-${i}-demolished-publicuse-unused-notice`}>{NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE}</p>
+              </ToneCard>
+            )}
+            {closedRow.temporaryStatusPublicUse && (
+              <ToneCard tone="amber">
+                <p className="text-caption leading-snug" data-testid={`nbl-other-state-event-${i}-demolished-publicuse-accepted-notice`}>{closedRow.temporaryStatusPublicUseMixed ? NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE : NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE}</p>
+              </ToneCard>
+            )}
             {closedRow.vacantHouseExtensionUnconfirmed && (
               <ToneCard tone="amber">
                 <p className="text-caption leading-snug" data-testid={`nbl-other-state-event-${i}-demolished-vacant-notice`}>{NBL_STATE_HISTORY_BARE_DEMOLISHED_VACANT_HOUSE_UNCONFIRMED_NOTICE}</p>

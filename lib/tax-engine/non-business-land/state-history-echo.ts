@@ -10,6 +10,10 @@ import { NBL_STATE_HISTORY_BARE_DEMOLISHED_AREA_MISSING_NOTICE } from "../nbl-co
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_NEVER_PERIOD_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_OTHER_USE_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PERMIT_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_NO_BASE_DATE_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_HOUSE_AREA_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_VACANT_HOUSE_UNCONFIRMED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_AREA_LIMIT_NOTICE } from "../nbl-confirm-notices";
@@ -54,6 +58,10 @@ export function intervalEcho(intervals: ReadonlyArray<LandStateInterval>, busine
           ...(iv.temporaryStatusWindow ? { temporaryStatusWindow: iv.temporaryStatusWindow } : {}),
           ...(iv.temporaryStatusMonths ? { temporaryStatusMonths: iv.temporaryStatusMonths } : {}),
           ...(iv.temporaryStatusRemovedKind ? { temporaryStatusRemovedKind: iv.temporaryStatusRemovedKind } : {}),
+          ...(iv.temporaryStatusPublicUse ? { temporaryStatusPublicUse: iv.temporaryStatusPublicUse } : {}),
+          ...(iv.temporaryStatusPublicUseWindow ? { temporaryStatusPublicUseWindow: iv.temporaryStatusPublicUseWindow } : {}),
+          ...(iv.temporaryStatusPublicUseMixed ? { temporaryStatusPublicUseMixed: iv.temporaryStatusPublicUseMixed } : {}),
+          ...(iv.temporaryStatusPublicUseUnused ? { temporaryStatusPublicUseUnused: iv.temporaryStatusPublicUseUnused } : {}),
           ...(iv.vacantHouseExtensionUnconfirmed ? { vacantHouseExtensionUnconfirmed: iv.vacantHouseExtensionUnconfirmed } : {}),
         }
       : {};
@@ -68,6 +76,7 @@ export const BARE_DEMOLISHED_FOLD_NOTICE = {
   demolished_never_period: NBL_STATE_HISTORY_BARE_DEMOLISHED_NEVER_PERIOD_NOTICE,
   demolished_permit: NBL_STATE_HISTORY_BARE_DEMOLISHED_PERMIT_NOTICE,
   demolished_other_use: NBL_STATE_HISTORY_BARE_DEMOLISHED_OTHER_USE_NOTICE,
+  demolished_public_use_no_base_date: NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_NO_BASE_DATE_NOTICE,
   demolished_area_missing: NBL_STATE_HISTORY_BARE_DEMOLISHED_AREA_MISSING_NOTICE,
   demolished_area_exceeded: NBL_STATE_HISTORY_BARE_DEMOLISHED_AREA_EXCEEDED_NOTICE,
 } as const satisfies Record<DemolishedFoldReason, string>;
@@ -87,6 +96,10 @@ export function bareDeclarationNotices(intervals: ReadonlyArray<LandStateInterva
   for (const reason of windowReasons) notices.push(BARE_DEMOLISHED_FOLD_NOTICE[reason]);
   if (intervals.some((iv) => iv.basisOutcome === "accepted" && !iv.temporaryStatusWindow)) notices.push(NBL_STATE_HISTORY_BARE_ACCEPTED_NOTICE);
   if (intervals.some((iv) => iv.temporaryStatusWindow)) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_ACCEPTED_NOTICE);
+  // 단서에만 기댄 구간(창 = 공용 사용 기간으로 한정)과 제한 없는 창 + 단서 창 합집합 구간(한정은 단서 창에만)은 문구가 다르다.
+  if (intervals.some((iv) => iv.temporaryStatusPublicUse && !iv.temporaryStatusPublicUseMixed)) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE);
+  if (intervals.some((iv) => iv.temporaryStatusPublicUseMixed)) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_MIXED_ACCEPTED_NOTICE);
+  if (intervals.some((iv) => iv.temporaryStatusPublicUseUnused)) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE);
   if (intervals.some((iv) => iv.vacantHouseExtensionUnconfirmed)) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_VACANT_HOUSE_UNCONFIRMED_NOTICE);
   if (intervals.some((iv) => iv.temporaryStatusWindow && iv.temporaryStatusRemovedKind === "house")) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_HOUSE_AREA_NOTICE);
   return notices;

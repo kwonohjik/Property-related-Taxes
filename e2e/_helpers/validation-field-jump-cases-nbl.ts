@@ -74,6 +74,9 @@ const BARE_DEMOLISHED_ROW = (o: { removedOn: string; closeOn: string; house?: bo
   ],
 });
 
+/** E3f-3 — 건축 외 용도 «예» ∧ 빈집정비 «예»(단서 하위 칸이 열리는 시료) + 하위 칸 일부. */
+const PUBLIC_USE_FACTS = (rest: Record<string, unknown>) => ({ demolishedPermitBefore: "yes", demolishedOtherUseBefore: "yes", demolishedVacantHouseBefore: "yes", ...rest });
+
 /** 기타토지 + 수입금액비율 업종 선택 */
 const revenue = (patch: Record<string, unknown> = {}) =>
   other({ nblRevenueBusinessType: "parking_operation", nblRevenueCurrentRevenue: "10000000", nblRevenueCurrentLandValue: "100000000", ...patch });
@@ -207,6 +210,11 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "nbl: 철거·멸실 구간 근거 건축 외 용도 미선택", field: "nblOtherStateEvents.2.demolishedOtherUseBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 나대지 구간 근거 «철거ㆍ멸실» — 3번째 사건 행: 철거 후 건축을 위한 용도 외의 다른 용도/, form: () => ({ ...other(BARE_DEMOLISHED_ROW({ removedOn: "2024-01-15", closeOn: "2024-06-02", facts: { demolishedPermitBefore: "yes" } }))(), ...AFTER_2024_06 }) },
   { name: "nbl: 철거·멸실 구간 근거 철거 전 바닥면적 빈칸", field: "nblOtherStateEvents.2.demolishedFloorAreaBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 나대지 구간 근거 «철거ㆍ멸실» — 3번째 사건 행: 철거 전 건축물의 바닥면적/, form: () => ({ ...other(BARE_DEMOLISHED_ROW({ removedOn: "2024-01-15", closeOn: "2024-06-02", facts: { demolishedPermitBefore: "yes", demolishedOtherUseBefore: "no" } }))(), ...AFTER_2024_06 }) },
   { name: "nbl: 철거·멸실 구간 근거 빈집정비 미선택(주택 철거 행)", field: "nblOtherStateEvents.2.demolishedVacantHouseBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 나대지 구간 근거 «철거ㆍ멸실» — 3번째 사건 행: 철거한 주택이 빈집정비사업/, form: () => ({ ...other(BARE_DEMOLISHED_ROW({ removedOn: "2024-01-15", closeOn: "2024-06-02", house: true, facts: { demolishedPermitBefore: "yes", demolishedOtherUseBefore: "no" } }))(), ...AFTER_2024_06 }) },
+  // E3f-3 — 영 §103의2 2호 단서 하위 4칸(건축 외 용도 «예» ∧ 빈집정비 «예» → 공용 사용 → 유료 → 개시일 → 종료일). 앞 칸 «예»가 뒤 칸을 연다 — 점프 필드는 화면에 열린 칸이다.
+  { name: "nbl: 철거·멸실 구간 근거 공용 사용 미선택(단서)", field: "nblOtherStateEvents.2.demolishedPublicUseBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 나대지 구간 근거 «철거ㆍ멸실» — 3번째 사건 행: 철거 후 그 부속토지를 국가·지방자치단체·지방자치단체조합이 1년 이상 공용·공공용/, form: () => ({ ...other(BARE_DEMOLISHED_ROW({ removedOn: "2024-01-15", closeOn: "2024-06-02", house: true, facts: PUBLIC_USE_FACTS({}) }))(), ...AFTER_2024_06 }) },
+  { name: "nbl: 철거·멸실 구간 근거 유료(재산세 부과) 미선택(단서)", field: "nblOtherStateEvents.2.demolishedPublicUsePaidBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 나대지 구간 근거 «철거ㆍ멸실» — 3번째 사건 행: 그 공용·공공용 사용이 유료이거나/, form: () => ({ ...other(BARE_DEMOLISHED_ROW({ removedOn: "2024-01-15", closeOn: "2024-06-02", house: true, facts: PUBLIC_USE_FACTS({ demolishedPublicUseBefore: "yes" }) }))(), ...AFTER_2024_06 }) },
+  { name: "nbl: 철거·멸실 구간 근거 공용 사용 개시일 빈칸(단서)", field: "nblOtherStateEvents.2.demolishedPublicUseFromBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 나대지 구간 근거 «철거ㆍ멸실» — 3번째 사건 행: 국가 등의 공용·공공용 사용 개시일을 입력하세요/, form: () => ({ ...other(BARE_DEMOLISHED_ROW({ removedOn: "2024-01-15", closeOn: "2024-06-02", house: true, facts: PUBLIC_USE_FACTS({ demolishedPublicUseBefore: "yes", demolishedPublicUsePaidBefore: "yes" }) }))(), ...AFTER_2024_06 }) },
+  { name: "nbl: 철거·멸실 구간 근거 공용 사용 종료일 빈칸(단서 — 구간 끝으로 읽지 않는다)", field: "nblOtherStateEvents.2.demolishedPublicUseToBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 나대지 구간 근거 «철거ㆍ멸실» — 3번째 사건 행: 국가 등의 공용·공공용 사용 종료일을 입력하세요/, form: () => ({ ...other(BARE_DEMOLISHED_ROW({ removedOn: "2024-01-15", closeOn: "2024-06-02", house: true, facts: PUBLIC_USE_FACTS({ demolishedPublicUseBefore: "yes", demolishedPublicUsePaidBefore: "yes", demolishedPublicUseFromBefore: "2024-04-01" }) }))(), ...AFTER_2024_06 }) },
   { name: "nbl: 건축물 바닥면적", field: "nblOtherBuildingFloorArea", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 바닥면적/, form: other({ nblOtherHasBuilding: true, nblOtherBuildingFloorArea: "" }) },
   { name: "nbl: 부설주차장 기준면적", field: "nblOtherStandardAreaLimit", step: 0, assetIndex: A, message: /^자산: 선택한 호의 기준면적/, form: other({ nblOtherRelatedBusinessType: "parking_attached" }) },
   { name: "nbl: 휴양시설", field: "nblOtherResortOutdoorArea", step: 0, assetIndex: A, message: /^자산: 휴양시설 — 옥외방목장/, form: other({ nblOtherRelatedBusinessType: "resort" }) },

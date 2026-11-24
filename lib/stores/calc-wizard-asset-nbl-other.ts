@@ -79,6 +79,15 @@ export interface NblOtherStateEventInput {
   demolishedVacantHouseBefore?: DemolishedFact;
   demolishedFloorAreaBefore?: string;
   /**
+   * E3-⑤ E3f-3 — 영 §103의2 2호 **단서**(빈집정비 철거 빈집 부속토지의 국가·지방자치단체·지방자치단체조합 1년 이상 공용·공공용 사용 — 법 §109② 단서로 재산세 부과) 하위 칸 4개. 어느 칸이 보이는지는 엔진
+   * `demolishedPublicUseAsked`가 정한다(건축 외 용도 «예» ∧ 빈집정비 «예» → 공용 사용 «예» → 유료 «예» → 개시일·종료일 — ⑤ 표시 = ⑧ = ⑫′ = ④ = ⑭ 같은 술어). 3지선다 `""`·부재 = 미선택, 날짜는 ISO 문자열(빈칸 = 미입력 — 구간 끝으로 읽지 않는다).
+   * 키 부재 = 종전 행과 byte-identical(③ 복원도 키를 새로 만들지 않는다).
+   */
+  demolishedPublicUseBefore?: DemolishedFact;
+  demolishedPublicUsePaidBefore?: DemolishedFact;
+  demolishedPublicUseFromBefore?: string;
+  demolishedPublicUseToBefore?: string;
+  /**
    * E3-③ B — **기타토지 카드**의 철거 행이 받는 «철거된 건축물 종류». `"house"` = 주택(그러면 `houseFootprintBefore`가 주택 구간 판정에 쓰이고 «철거 직전 재산세 구분»은 읽지 않는다) ·
    * `""`·키 부재 = 그 밖의 건축물(화면 «그 밖의 건축물» — 종전 철거 행과 byte-identical). 철거 행에서만 의미 — 다른 종류 행의 stale 값은 ④가 보내지 않는다. 주택부수토지 카드는 이 칸이 없다(모든 철거 행이 주택).
    */

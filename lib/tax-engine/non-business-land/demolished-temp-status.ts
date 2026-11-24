@@ -210,18 +210,59 @@ export function demolishedRequiredFacts(i: {
   };
 }
 
+/**
+ * E3f-3 — 영 §103의2 2호 **단서**(빈집정비 철거 빈집 부속토지의 국가 등 공용·공공용 사용)를 묻는 하위 칸이 열리는가 — ⑤ 표시 · ⑧ 차단 · ⑫′ 400 · ④ 운반 · ⑭ 읽기가 모두 이 함수 하나를 부른다(노출 ≡ 필수).
+ * `need`는 구조 술어(`demolishedRequiredFacts` — 후보 과세기준일 시행본 · 주택 철거 행), `ev`는 와이어(문자열) 사건 행이다. 답 의존 사슬: 건축 외 용도 «예» ∧ 빈집정비 «예» → 공용 사용(`publicUse`) →
+ * «예»이면 유료 여부(`paid`) → «예»이면 개시일·종료일(`dates`). 상위 답이 «아니오»·«모름»·미선택이면 하위 칸은 열리지 않는다(요구 0 · 운반 0 · 읽기 0).
+ */
+export interface DemolishedPublicUseAsked {
+  /** 공용·공공용 1년 이상 사용 3지선다 칸. */
+  publicUse: boolean;
+  /** 유료·유상이전 약정(재산세 부과) 3지선다 칸. */
+  paid: boolean;
+  /** 사용 개시일·종료일 칸. */
+  dates: boolean;
+}
+
+export function demolishedPublicUseAsked(
+  need: Pick<DemolishedRequiredFacts, "otherUse" | "vacantHouse">,
+  ev: { demolishedOtherUseBefore?: string; demolishedVacantHouseBefore?: string; demolishedPublicUseBefore?: string; demolishedPublicUsePaidBefore?: string },
+): DemolishedPublicUseAsked {
+  const publicUse = need.otherUse && need.vacantHouse && ev.demolishedOtherUseBefore === "yes" && ev.demolishedVacantHouseBefore === "yes";
+  const paid = publicUse && ev.demolishedPublicUseBefore === "yes";
+  const dates = paid && ev.demolishedPublicUsePaidBefore === "yes";
+  return { publicUse, paid, dates };
+}
+
 export interface DemolishedStatusFacts {
   permit?: DemolishedFact;
   otherUse?: DemolishedFact;
   vacantHouse?: DemolishedFact;
   floorArea?: number;
+  /** E3f-3 — 영 §103의2 2호 단서: 국가 등 1년 이상 공용·공공용 사용(계약서 입증 포함) · 유료·유상이전 약정 선사용(재산세 부과 — 법 §109② 단서) · 사용 개시일·종료일(양 끝 포함). */
+  publicUse?: DemolishedFact;
+  publicPaid?: DemolishedFact;
+  publicUseFrom?: Date;
+  publicUseTo?: Date;
 }
 
-export type DemolishedFoldReason = "demolished_never_period" | "demolished_permit" | "demolished_other_use" | "demolished_area_missing" | "demolished_area_exceeded";
+export type DemolishedFoldReason =
+  | "demolished_never_period"
+  | "demolished_permit"
+  | "demolished_other_use"
+  | "demolished_public_use_no_base_date"
+  | "demolished_area_missing"
+  | "demolished_area_exceeded";
 
 export type DemolishedStatusWindow =
-  /** 한시가 성립한다 — `window`는 구간 안으로 자른 일 단위 창 · `months`는 창을 정한 한시 기간 · `vacantHouseExtensionUnconfirmed` = 주택인데 빈집정비 «예»가 아니라 3년 연장을 반영하지 않았다. */
-  | { kind: "holds"; window: DateInterval; months: 6 | 12 | 36; vacantHouseExtensionUnconfirmed: boolean }
+  /**
+   * 한시가 성립한다 — `window`는 구간 안으로 자른 일 단위 창 · `months`는 창을 정한 한시 기간 · `vacantHouseExtensionUnconfirmed` = 주택인데 빈집정비 «예»가 아니라 3년 연장을 반영하지 않았다 ·
+   * `publicUse` = 영 §103의2 2호 단서(국가 등 공용 사용 기간)로 받은 창이 결과에 쓰였다(E3f-3) ·
+   * `publicUseWindow` = 제한 없는 창(`window`)과 단서 창이 **떨어져 있어** 합치지 못한 때의 단서 창(두 창의 합집합이 사업용 — 맞닿거나 겹치면 `window` 하나로 합쳐 없다. 이때 `months`는 `window`를 정한 기간) ·
+   * `publicUseMixed` = 제한 없는 창(단서 시행 전 과세기준일 몫)과 단서 창이 **함께** 성립했다(맞닿아 합쳤든 떨어졌든) — 인정 기간이 «공용 사용 기간만»이 아님을 라벨·고지가 말하는 근거 ·
+   * `publicUseUnused` = 단서를 «주장»(4칸 모두 답함)했으나 공용 사용 기간 안에 단서가 필요한 과세기준일이 하나도 없어 결과에 아무 영향도 주지 못했다(고지 — 접힘 사유 `demolished_public_use_no_base_date`와 겹치지 않는다: 접히면 이 값은 없다).
+   */
+  | { kind: "holds"; window: DateInterval; publicUseWindow?: DateInterval; months: 6 | 12 | 36; vacantHouseExtensionUnconfirmed: boolean; publicUse: boolean; publicUseMixed: boolean; publicUseUnused: boolean }
   /** 접는다(종합합산 + 확인 필요). */
   | { kind: "fold"; reason: DemolishedFoldReason };
 
@@ -261,24 +302,71 @@ export function demolishedStatusWindow(i: {
 
   const needsArea = i.kind === "building" && inPeriod.some(demolishedAreaClauseApplies);
   const area = needsArea ? areaVerdict(i.facts.floorArea, i.landArea, i.zoneType) : "within";
+  // E3f-3 — 영 §103의2 2호 단서: 빈집정비 «예» ∧ 건축 외 용도 «예» ∧ 공용 사용 «예» ∧ 유료(재산세 부과) «예» ∧ 개시일 ≤ 종료일일 때만 «주장». 하나라도 «아니오»·«모름»·빈칸이면 주장 아님(혜택 불성립).
+  const { publicUseFrom: from, publicUseTo: to } = i.facts;
+  const claimed =
+    vacantYes && i.facts.otherUse === "yes" && i.facts.publicUse === "yes" && i.facts.publicPaid === "yes" && !!from && !!to && isValid(from) && isValid(to) && !isBefore(to, from);
+  const inPublicUse = (s: Date) => claimed && !isBefore(s, from!) && !isBefore(to!, s);
   const permitOk = (s: Date) => !demolishedPermitClauseApplies(s) || i.facts.permit === "yes";
-  const otherUseOk = (s: Date) => !demolishedOtherUseClauseApplies(s) || i.facts.otherUse === "no";
+  const otherUseOk = (s: Date) => !demolishedOtherUseClauseApplies(s) || i.facts.otherUse === "no" || inPublicUse(s);
+  // 단서에 기대어 성립하는 과세기준일(건축 외 용도 제한 시행본 ∧ 건축 외 용도 «아니오» 아님) — 그 날은 공용 사용 기간 안일 때만 성립한다.
+  const relyOnClaim = (s: Date) => demolishedOtherUseClauseApplies(s) && i.facts.otherUse !== "no";
   const areaOk = (s: Date) => i.kind !== "building" || !demolishedAreaClauseApplies(s) || area === "within";
   const holding = inPeriod.filter((s) => permitOk(s) && otherUseOk(s) && areaOk(s));
   if (holding.length === 0) {
     if (inPeriod.some((s) => !permitOk(s))) return { kind: "fold", reason: "demolished_permit" };
-    if (inPeriod.some((s) => !otherUseOk(s))) return { kind: "fold", reason: "demolished_other_use" };
+    if (inPeriod.some((s) => !otherUseOk(s))) return { kind: "fold", reason: claimed ? "demolished_public_use_no_base_date" : "demolished_other_use" };
     return { kind: "fold", reason: area === "exceeded" ? "demolished_area_exceeded" : "demolished_area_missing" };
   }
 
-  const months = Math.max(...holding.map(monthsAt)) as 6 | 12 | 36;
-  const lastDay = periodEndFromMonths(i.removedOn, months);
-  const startRaw = i.removedOn.getTime() > i.intervalStart.getTime() ? i.removedOn : i.intervalStart;
-  const endRaw = addDays(lastDay, 1);
-  const window: DateInterval = { start: startRaw, end: endRaw.getTime() < i.end.getTime() ? endRaw : i.end };
+  // 창 = [철거일, 만료일 + 1일) ∩ 구간 — 단서에 기댄 과세기준일만 있으면 추가로 공용 사용 기간 [개시일, 종료일 + 1일)과 교집합한다(현행 문언 «그 공용 또는 공공용으로 사용하는 기간 동안의»).
+  const windowFor = (dates: Date[], publicOnly: boolean): DateInterval => {
+    const lastDay = periodEndFromMonths(i.removedOn, Math.max(...dates.map(monthsAt)));
+    const startRaw = i.removedOn.getTime() > i.intervalStart.getTime() ? i.removedOn : i.intervalStart;
+    const endRaw = addDays(lastDay, 1);
+    let start = startRaw;
+    let end = endRaw.getTime() < i.end.getTime() ? endRaw : i.end;
+    if (publicOnly) {
+      if (from!.getTime() > start.getTime()) start = from!;
+      const toExcl = addDays(to!, 1);
+      if (toExcl.getTime() < end.getTime()) end = toExcl;
+    }
+    return { start, end };
+  };
+  const own = holding.filter((s) => !relyOnClaim(s));
+  const byClaim = holding.filter(relyOnClaim);
+  let window: DateInterval;
+  let publicUseWindow: DateInterval | undefined;
+  let publicUse = false;
+  let publicUseMixed = false;
+  let used = holding; // 창 길이(`months`)를 정한 과세기준일
+  if (byClaim.length === 0) {
+    window = windowFor(own, false);
+  } else if (own.length === 0) {
+    window = windowFor(byClaim, true);
+    publicUse = true;
+  } else {
+    // 단서 시행(2024.6.1.) 전 과세기준일(제한 없음)과 단서에 기댄 과세기준일이 함께 성립 — 각 창은 자기 게이트(`own` · `byClaim`)를 각자 충족한 합집합이다.
+    // 맞닿거나 겹치면 하나로 합치고, 떨어져 있으면 두 창을 따로 둔다(떨어진 사이는 메우지 않는다 — 합집합이라 종전 판정도 줄지 않는다).
+    const a = windowFor(own, false);
+    const b = windowFor(byClaim, true);
+    publicUse = true;
+    publicUseMixed = true;
+    if (b.start.getTime() <= a.end.getTime() && a.start.getTime() <= b.end.getTime()) {
+      window = { start: a.start.getTime() < b.start.getTime() ? a.start : b.start, end: a.end.getTime() > b.end.getTime() ? a.end : b.end };
+    } else {
+      // `b`는 항상 `a` 뒤다(둘 다 `max(철거일, 구간 시작)`에서 시작하고 `b`는 거기에 개시일 하한이 더 붙는다).
+      window = a;
+      publicUseWindow = b;
+      used = own;
+    }
+  }
+  // 주장했으나 단서에 기댄 과세기준일이 하나도 성립하지 않았다 — 결과에 영향이 없었음을 고지한다.
+  const publicUseUnused = claimed && byClaim.length === 0;
+  const months = Math.max(...used.map(monthsAt)) as 6 | 12 | 36;
   // 구간 안에 한시 안의 과세기준일 `s`가 있으므로(`inPeriod`) `구간 시작 ≤ s ≤ 만료일` — 자른 창은 비지 않는다(방어: 비면 불성립).
   if (window.end.getTime() <= window.start.getTime()) return { kind: "fold", reason: "demolished_never_period" };
   // 3년 연장을 묻는 구간(주택 + 후보 ≥ 2024.6.1.)에서 빈집정비 «예»가 아니면 일반 W만 반영했다는 고지를 단다.
   const extensionAsked = i.kind === "house" && inBase.some((s) => demolishedVacantHouseClauseApplies(s) && holdsAt(i.removedOn, s, demolishedStatusPeriodMonths(s, true)));
-  return { kind: "holds", window, months, vacantHouseExtensionUnconfirmed: extensionAsked && !vacantYes };
+  return { kind: "holds", window, ...(publicUseWindow ? { publicUseWindow } : {}), months, vacantHouseExtensionUnconfirmed: extensionAsked && !vacantYes, publicUse, publicUseMixed, publicUseUnused };
 }

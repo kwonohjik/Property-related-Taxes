@@ -134,6 +134,14 @@ function demolishedRowFactError(asset: AssetForm, prefix: string, transferDate: 
       return fieldError(`nblOtherStateEvents.${issue.index}.demolishedOtherUseBefore`, message);
     case "demolishedVacantHouseBefore":
       return fieldError(`nblOtherStateEvents.${issue.index}.demolishedVacantHouseBefore`, message);
+    case "demolishedPublicUseBefore":
+      return fieldError(`nblOtherStateEvents.${issue.index}.demolishedPublicUseBefore`, message);
+    case "demolishedPublicUsePaidBefore":
+      return fieldError(`nblOtherStateEvents.${issue.index}.demolishedPublicUsePaidBefore`, message);
+    case "demolishedPublicUseFromBefore":
+      return fieldError(`nblOtherStateEvents.${issue.index}.demolishedPublicUseFromBefore`, message);
+    case "demolishedPublicUseToBefore":
+      return fieldError(`nblOtherStateEvents.${issue.index}.demolishedPublicUseToBefore`, message);
     case "demolishedFloorAreaBefore":
       return fieldError(`nblOtherStateEvents.${issue.index}.demolishedFloorAreaBefore`, message);
   }

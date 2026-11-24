@@ -69,6 +69,12 @@ const nblStateEventRawSchema = z.object({
   demolishedOtherUseBefore: z.enum(NBL_DEMOLISHED_FACT_VALUES).or(z.literal("")).optional(),
   demolishedVacantHouseBefore: z.enum(NBL_DEMOLISHED_FACT_VALUES).or(z.literal("")).optional(),
   demolishedFloorAreaBefore: z.string().optional(),
+  // E3-⑤ E3f-3 — 영 §103의2 2호 단서 하위 칸 4개(공용 사용·유료 3지선다 + 개시·종료일 문자열 — 행 날짜와 같은 규약). 건축 외 용도 «예» ∧ 빈집정비 «예»일 때만 열린다(`demolishedPublicUseAsked` — ⑫′가 같은 술어로 필수 검사).
+  // 빠지면 중첩 칸이 **침묵 strip**돼 단서 주장이 엔진에 닿지 않고 종전 «건축 외 용도 예 접힘»으로 돌아간다(TS 미감지 — route 관통 anchor가 고정).
+  demolishedPublicUseBefore: z.enum(NBL_DEMOLISHED_FACT_VALUES).or(z.literal("")).optional(),
+  demolishedPublicUsePaidBefore: z.enum(NBL_DEMOLISHED_FACT_VALUES).or(z.literal("")).optional(),
+  demolishedPublicUseFromBefore: z.string().optional(),
+  demolishedPublicUseToBefore: z.string().optional(),
   // E3-③ — 주택 구간을 닫는 철거 행의 «철거 직전 주택 정착면적(㎡)» — 숫자 문자열(빈칸·비수치·0·음수는 ⑧이 막고, 직접 API는 400 없이 엔진이 «모름»으로 접는다 — Q-10 (가) · D-16). 빠지면 중첩 칸이 **침묵 strip**돼 철거 전 주택 구간이 전부 접힌다(TS 미감지 — route 관통 anchor가 고정).
   houseFootprintBefore: z.string().optional(),
   // E3-③ B — 기타토지 철거 행의 «철거된 건축물 종류»(`"house"` = 주택 · `""`·미전송 = 주택 아닌 건축물 — 종전 철거 행과 바이트 동일). 빠지면 중첩 칸이 **침묵 strip**돼 주택 구간이 종전 «재산세 구분 사슬»로 읽힌다(TS 미감지 — route 관통 anchor가 고정).

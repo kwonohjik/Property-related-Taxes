@@ -21,6 +21,7 @@ import type {
   RevenueTestInput,
   DateInterval,
 } from "./types";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { NblRevenueBusinessType } from "../legal-codes";
 import { deriveCurrentBusinessDays } from "./revenue-test";
 import { resolveDeemedRentRate } from "../data/nbl-deemed-rent-rate";
@@ -320,7 +321,7 @@ export function buildLandStateHistory(a: Record<string, unknown>, landType: Land
   const mode = asString(a.nblOtherStateHistoryMode);
   if (mode !== "changed" && mode !== "unchanged" && mode !== "unknown") return undefined;
   if (mode !== "changed") return { mode: mode as StateHistoryMode, events: [] };
-  type RawEvent = { kind?: string; date?: string; propertyTaxTypeBefore?: string; propertyTaxBasisBefore?: string; areaWithinLimitBefore?: string; houseFootprintBefore?: string; buildingKindBefore?: string; demolishedPermitBefore?: string; demolishedOtherUseBefore?: string; demolishedVacantHouseBefore?: string; demolishedFloorAreaBefore?: string };
+  type RawEvent = { kind?: string; date?: string; propertyTaxTypeBefore?: string; propertyTaxBasisBefore?: string; areaWithinLimitBefore?: string; houseFootprintBefore?: string; buildingKindBefore?: string; demolishedPermitBefore?: string; demolishedOtherUseBefore?: string; demolishedVacantHouseBefore?: string; demolishedFloorAreaBefore?: string; demolishedPublicUseBefore?: string; demolishedPublicUsePaidBefore?: string; demolishedPublicUseFromBefore?: string; demolishedPublicUseToBefore?: string };
   const rows = asArray<RawEvent>(a.nblOtherStateEvents).flatMap((row) => {
     const kind = asString(row.kind);
     const date = parseDate(asString(row.date));
@@ -361,9 +362,28 @@ export function buildLandStateHistory(a: Record<string, unknown>, landType: Land
 
 /** E3f-2 ⑭ — 와이어 사실 칸 → 엔진 `StateEvent` 사실 칸. 3지선다는 허용값만(밖 = 미선택 `""` 키 없음), 바닥면적은 수치일 때만. 키가 없으면 «미선택·미입력»이다(엔진이 모름처럼 접는다). */
 function demolishedFactFields(
-  row: { demolishedPermitBefore?: string; demolishedOtherUseBefore?: string; demolishedVacantHouseBefore?: string; demolishedFloorAreaBefore?: string },
+  row: {
+    demolishedPermitBefore?: string;
+    demolishedOtherUseBefore?: string;
+    demolishedVacantHouseBefore?: string;
+    demolishedFloorAreaBefore?: string;
+    demolishedPublicUseBefore?: string;
+    demolishedPublicUsePaidBefore?: string;
+    demolishedPublicUseFromBefore?: string;
+    demolishedPublicUseToBefore?: string;
+  },
   parseNumber: ParseNumber,
-): Pick<StateEvent, "demolishedPermitBefore" | "demolishedOtherUseBefore" | "demolishedVacantHouseBefore" | "demolishedFloorAreaBefore"> {
+): Pick<
+  StateEvent,
+  | "demolishedPermitBefore"
+  | "demolishedOtherUseBefore"
+  | "demolishedVacantHouseBefore"
+  | "demolishedFloorAreaBefore"
+  | "demolishedPublicUseBefore"
+  | "demolishedPublicUsePaidBefore"
+  | "demolishedPublicUseFromBefore"
+  | "demolishedPublicUseToBefore"
+> {
   const fact = (v: unknown): DemolishedFact => {
     const s = asString(v);
     return (NBL_DEMOLISHED_FACT_VALUES as readonly string[]).includes(s) ? (s as DemolishedFact) : "";
@@ -372,11 +392,20 @@ function demolishedFactFields(
   const otherUse = fact(row.demolishedOtherUseBefore);
   const vacantHouse = fact(row.demolishedVacantHouseBefore);
   const floorArea = parseNumber(asString(row.demolishedFloorAreaBefore));
+  // E3f-3 — 영 §103의2 2호 단서 하위 칸. 엔진이 건축 외 용도 «예» ∧ 빈집정비 «예»일 때만 읽는다(stray 무시). 날짜는 JSON 경유 문자열이라 `toOptionalDate`로 Date 변환한다(`Date < string` 침묵 false 방지).
+  const publicUse = fact(row.demolishedPublicUseBefore);
+  const publicPaid = fact(row.demolishedPublicUsePaidBefore);
+  const publicFrom = toOptionalDate(row.demolishedPublicUseFromBefore);
+  const publicTo = toOptionalDate(row.demolishedPublicUseToBefore);
   return {
     ...(permit ? { demolishedPermitBefore: permit } : {}),
     ...(otherUse ? { demolishedOtherUseBefore: otherUse } : {}),
     ...(vacantHouse ? { demolishedVacantHouseBefore: vacantHouse } : {}),
     ...(floorArea !== undefined ? { demolishedFloorAreaBefore: floorArea } : {}),
+    ...(publicUse ? { demolishedPublicUseBefore: publicUse } : {}),
+    ...(publicPaid ? { demolishedPublicUsePaidBefore: publicPaid } : {}),
+    ...(publicFrom ? { demolishedPublicUseFromBefore: publicFrom } : {}),
+    ...(publicTo ? { demolishedPublicUseToBefore: publicTo } : {}),
   };
 }
 

@@ -79,6 +79,11 @@ function migrateNblStateHistory(a: Record<string, unknown>): void {
     const otherUse = mayCloseBare ? fact(r.demolishedOtherUseBefore) : "";
     const vacantHouse = mayCloseBare ? fact(r.demolishedVacantHouseBefore) : "";
     const floorArea = mayCloseBare && typeof r.demolishedFloorAreaBefore === "string" ? r.demolishedFloorAreaBefore : "";
+    // E3f-3 — 영 §103의2 2호 단서 하위 칸(3지선다 2칸 + 날짜 문자열 2칸): 같은 규약 — 허용값·문자열일 때만, 키가 없던 행에는 만들지 않는다(byte-identical).
+    const publicUse = mayCloseBare ? fact(r.demolishedPublicUseBefore) : "";
+    const publicPaid = mayCloseBare ? fact(r.demolishedPublicUsePaidBefore) : "";
+    const publicFrom = mayCloseBare && typeof r.demolishedPublicUseFromBefore === "string" ? r.demolishedPublicUseFromBefore : "";
+    const publicTo = mayCloseBare && typeof r.demolishedPublicUseToBefore === "string" ? r.demolishedPublicUseToBefore : "";
     return {
       kind,
       date: typeof r.date === "string" ? r.date : "",
@@ -91,6 +96,10 @@ function migrateNblStateHistory(a: Record<string, unknown>): void {
       ...(otherUse ? { demolishedOtherUseBefore: otherUse as DemolishedFact } : {}),
       ...(vacantHouse ? { demolishedVacantHouseBefore: vacantHouse as DemolishedFact } : {}),
       ...(floorArea ? { demolishedFloorAreaBefore: floorArea } : {}),
+      ...(publicUse ? { demolishedPublicUseBefore: publicUse as DemolishedFact } : {}),
+      ...(publicPaid ? { demolishedPublicUsePaidBefore: publicPaid as DemolishedFact } : {}),
+      ...(publicFrom ? { demolishedPublicUseFromBefore: publicFrom } : {}),
+      ...(publicTo ? { demolishedPublicUseToBefore: publicTo } : {}),
     };
   });
 }
