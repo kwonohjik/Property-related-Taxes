@@ -378,6 +378,8 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblOtherHasBuilding: false,
     nblOtherStateHistoryMode: "",
     nblOtherStateEvents: [],
+    nblOtherHouseholdHouseStatus: "",
+    nblOtherHouseholdHousePeriods: [],
     nblOtherBuildingFloorArea: "",
     nblOtherMixedUseMode: "",
     nblOtherMixedUseSpecificFloorArea: "",

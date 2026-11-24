@@ -4,10 +4,12 @@
  * 기타토지 §168의11① 호 선택 블록 — `OtherLandDetailSection.tsx`에서 분리 (NBL2611-V7-S · R18).
  * 호 목록·라벨·설명·근거 모달은 엔진 `other-land-ho-meta.ts` 표 하나에서 만든다(UI 옵션·UI 근거를 따로 두지 않는다).
  */
+import { useMemo } from "react";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { OtherLandSportsSection } from "./OtherLandSportsSection";
+import { OtherLandHouseholdHousePeriods } from "./OtherLandHouseholdHousePeriods";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
@@ -16,6 +18,9 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-scope";
+import { vacantLotHistoryNoticeOf } from "@/lib/calc/nbl-vacant-lot-history-notice";
+import { NBL_STATE_HISTORY_VACANT_LOT_AREA_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_VACANT_LOT_BARE_ONLY_INPUT_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { judgeHoRequirements } from "@/lib/tax-engine/non-business-land/other-land-ho-requirements";
 import { OTHER_LAND_HO_IDS, OTHER_LAND_HO_META, type OtherLandHoMeta } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
 import type { NblRelatedBusinessType, ZoneType } from "@/lib/tax-engine/non-business-land/types";
@@ -23,6 +28,8 @@ import type { NblRelatedBusinessType, ZoneType } from "@/lib/tax-engine/non-busi
 export interface OtherLandHoSectionProps {
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
+  /** form-level 양도일 — E3-④ 13호 이력 안내(엔진이 이력을 읽는가)·«세대 주택 소유 기간» 미리보기가 쓴다. 없으면 현행. */
+  transferDate?: string;
 }
 
 // §168의11① 호별 분기 옵션 — 호 메타 표에서 만든다(조문 순서). 수입금액비율(2호다·10·11다·12호)은 `OtherLandDetailSection`의 별도 섹션.
@@ -48,8 +55,10 @@ const RESERVE_FAC_OPTIONS = [
   { value: "basic", label: "기초훈련장" },
 ] as const;
 
-export function OtherLandHoSection({ asset, onAssetChange }: OtherLandHoSectionProps) {
+export function OtherLandHoSection({ asset, onAssetChange, transferDate }: OtherLandHoSectionProps) {
   const relatedType = asset.nblOtherRelatedBusinessType;
+  // E3-④ C-1·C-2 — 13호 + 이력 `changed`에서 엔진이 이력을 읽을 때의 안내 갈래(표시 전용 — 엔진 core를 돌리므로 memo).
+  const vacantNotice = useMemo(() => vacantLotHistoryNoticeOf(asset, transferDate), [asset, transferDate]);
   const meta: OtherLandHoMeta | undefined = relatedType ? OTHER_LAND_HO_META[relatedType] : undefined;
   const areaBasis = meta?.law;
   const reserveSizeLabel: string = RESERVE_SIZE_LABEL[asset.nblOtherReserveUnitSize] ?? "선택 안 함 (직접입력)";
@@ -92,6 +101,10 @@ export function OtherLandHoSection({ asset, onAssetChange }: OtherLandHoSectionP
         {hoFail && (
           <ToneCard tone="amber" title="이 호는 인정되지 않습니다">
             <p data-testid="nbl-other-ho-fail-notice" className="text-xs text-amber-800 dark:text-amber-200 leading-snug">{hoFail.detail}</p>
+            {/* E3-④ C-2 — 660㎡ 초과 + 이력: 엔진은 면적 × 이력을 함께 판정하지 않고 13호 구간을 인정하지 않는다(D-2). 문구는 엔진 상수. */}
+            {relatedType === "vacant_lot_1household" && vacantNotice === "area_over" && (
+              <p data-testid="nbl-other-ho13-area-notice" className="text-xs text-amber-800 dark:text-amber-200 leading-snug">{NBL_STATE_HISTORY_VACANT_LOT_AREA_NOTICE}</p>
+            )}
           </ToneCard>
         )}
 
@@ -233,9 +246,19 @@ export function OtherLandHoSection({ asset, onAssetChange }: OtherLandHoSectionP
         )}
 
         {relatedType === "vacant_lot_1household" && (
-          <div className="rounded-md bg-sky-100/60 border border-sky-200 dark:bg-sky-950/40 dark:border-sky-800 px-3 py-2 text-xs text-sky-700 dark:text-sky-300">
-            무주택1세대 1필지 나지는 660㎡ 이내까지 사업용으로 보며, 초과분은 비사업용입니다 (별도 면적 입력 불필요).
-          </div>
+          <>
+            <div className="rounded-md bg-sky-100/60 border border-sky-200 dark:bg-sky-950/40 dark:border-sky-800 px-3 py-2 text-xs text-sky-700 dark:text-sky-300">
+              무주택1세대 1필지 나지는 660㎡ 이내까지 사업용으로 보며, 초과분은 비사업용입니다 (별도 면적 입력 불필요).
+            </div>
+            {/* E3-④ UI-M — 「세대 주택 소유 기간」 질문·행(엔진 술어 `vacantLotHousePeriodsRead`가 참일 때만 그린다 — 요건 입력 = 계산 순서이므로 이력 섹션이 아니라 호 선택 직후) */}
+            <OtherLandHouseholdHousePeriods asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />
+            {/* E3-④ C-1 — 13호는 소유기간 중 건축물이 없던 구간에 적용한다(이력 `changed` + 660㎡ 이내). 문구는 엔진 입력용 상수(결과 시제와 분리). */}
+            {vacantNotice === "bare_only" && (
+              <ToneCard tone="amber">
+                <p data-testid="nbl-other-ho13-scope-notice" className="text-xs text-amber-800 dark:text-amber-200 leading-snug">{NBL_VACANT_LOT_BARE_ONLY_INPUT_NOTICE}</p>
+              </ToneCard>
+            )}
+          </>
         )}
       </div>
     </>

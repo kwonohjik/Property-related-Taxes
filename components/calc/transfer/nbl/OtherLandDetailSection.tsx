@@ -242,7 +242,7 @@ export function OtherLandDetailSection({
       )}
 
       {/* §168의11① 호별 면적기준 정밀판정 — 호 목록은 엔진 호 메타 표가 단일 소스(NBL2611-V7-S) */}
-      <OtherLandHoSection asset={asset} onAssetChange={onAssetChange} />
+      <OtherLandHoSection asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />
 
       {/* §168의11⑤ 연접 다필지 취득시기순 안분 */}
       <OtherLandParcelSection asset={asset} onAssetChange={onAssetChange} />

@@ -24,6 +24,7 @@ import { housePriorNeedsMetropolitanOf } from "./nbl-other-state-history-scope";
 import { nblHousingStateHistoryApplies } from "./nbl-other-state-history-scope";
 import { nblOtherStateEventsInUse } from "./nbl-other-state-history-scope";
 import { stateHistoryWireFields } from "./nbl-other-state-history-scope";
+import { householdHouseWireFields } from "./nbl-vacant-lot-household-scope";
 import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
 import { getLandCategoryGroup } from "@/lib/tax-engine/non-business-land/land-category";
 import { consumesMetropolitanArea } from "@/lib/tax-engine/non-business-land/land-category";
@@ -158,7 +159,8 @@ export function buildNonBusinessLandRaw(
   }
   const nblFields = Object.fromEntries(
     // `nblOtherLegacyRelatedReselect`는 화면 고지 표지(표시 전용)라 보내지 않는다 — 서버가 읽을 곳이 없다.
-    Object.entries(asset).filter(([k]) => k.startsWith("nbl") && k !== "nblOtherLegacyRelatedReselect"),
+    // E3-④ `nblOtherHouseholdHouseStatus`(13호 «세대 주택 소유 여부» 질문 답)도 UI 전용이다 — 서버·엔진은 행 없음 = 현행(Q-4 (가))이라 읽을 곳이 없다.
+    Object.entries(asset).filter(([k]) => k.startsWith("nbl") && k !== "nblOtherLegacyRelatedReselect" && k !== "nblOtherHouseholdHouseStatus"),
   );
   // NBL2611-B1 — 지목별 입력 소비: 그 지목이 판정에 쓰지 않는 칸의 값은 store에 남아 있어도(이력 복원 보존) 보내지 않는다.
   // ⑤ 렌더·⑧ 검증·서버 매퍼가 같은 엔진 술어(`consumes*`)를 쓴다 — useEffect로 store를 지우지 않는다.
@@ -178,6 +180,11 @@ export function buildNonBusinessLandRaw(
      */
     ...stateHistoryWireFields(asset),
     ...(nblOtherStateEventsInUse(asset) ? { nblOtherHasBuilding: effectiveOtherHasBuildingOf(asset) } : {}),
+    /**
+     * NBL-STATE-HISTORY-E3-④ — 13호 «세대 주택 소유 기간» 행. **⑤ 렌더·⑧ 검증과 같은 술어**(`vacantLotHousePeriodsReadOf` — 엔진 술어 `vacantLotHousePeriodsRead`)가 거짓이거나 질문이 `owned`가 아니면 `[]`로 덮어 쓴다 —
+     * `nbl*` prefix-pick은 저장된 stale 행을 그대로 싣고, 숨은 행이 닿으면 ⑧은 건너뛰는데 ⑫′가 구조 결함으로 400을 만드는 막다른 길이 된다. 종료일 비움은 키 생략(= 양도일까지).
+     */
+    ...householdHouseWireFields(asset),
     /** E3-③ A — 주택부수토지 카드는 «건축물 있음» 토글이 없다: 질문이 적용되면 양도일 현재 주택을 `true`로 고정해 싣는다(⑭ `tailHasBuilding = true` · 화면 «주택: 있음(지목에서 정함)»과 같은 값 — 기타토지 stale 토글이 새지 않는다). */
     ...(nblHousingStateHistoryApplies(asset) ? { nblOtherHasBuilding: true } : {}),
     /**

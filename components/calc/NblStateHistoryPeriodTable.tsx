@@ -13,6 +13,7 @@ import { houseIntervalText } from "@/lib/calc/nbl-house-interval-text";
 import { NBL } from "@/lib/tax-engine/legal-codes";
 import type { StateHistoryEcho } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { StateHistoryIntervalEcho } from "@/lib/tax-engine/non-business-land/land-usage.types";
+import { OTHER_LAND_HO_META } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
 import { bareIntervalTaxTypeText } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 import { addDays } from "@/lib/tax-engine/utc-date";
@@ -138,7 +139,13 @@ export function NblStateHistoryPeriodTable({ stateHistory, totalOwnershipDays, e
                     </td>
                     <td className="py-1 pr-2 text-right font-mono tabular-nums">{iv.days.toLocaleString()}일</td>
                     <td className="py-1 pr-2">{iv.hasBuilding ? (mixedHouse && isHouse(iv) ? "있음(주택)" : "있음") : house ? "없음(나대지)" : "없음"}</td>
-                    <td className="py-1 pr-2">{taxTypeText(iv, i === intervals.length - 1)}</td>
+                    <td className="py-1 pr-2">
+                      {taxTypeText(iv, i === intervals.length - 1)}
+                      {/* E3-④ C-3 — 이 구간 중 13호(무주택 1세대 1필지 나지)로 사업용이 된 일수(엔진 echo `vacantLotDays` — 재계산 없음). 키가 없는 구간은 종전과 바이트 동일. 라벨은 호 메타 표 단일 소스. */}
+                      {iv.vacantLotDays !== undefined && (
+                        <span data-testid={`nbl-state-history-interval-${i}-vacant-lot`}> · {OTHER_LAND_HO_META.vacant_lot_1household.option.label} 인정 {iv.vacantLotDays.toLocaleString()}일</span>
+                      )}
+                    </td>
                     <td className="py-1 pr-2 text-right font-mono tabular-nums">{iv.businessDays.toLocaleString()}일</td>
                     <td className="py-1 whitespace-nowrap">{businessText(iv)}</td>
                   </tr>

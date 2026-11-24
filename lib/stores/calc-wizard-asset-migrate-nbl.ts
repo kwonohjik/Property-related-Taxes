@@ -22,6 +22,7 @@ import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/prop
 export function migrateNblB1Fields(a: Record<string, unknown>): void {
   migrateNblStateHistory(a);
   migrateNblRevenuePeriod(a);
+  migrateNblHouseholdHouse(a);
   // NBL2611-V1-A (Q-1) — 구 이력에는 «재산세 분류 근거» 칸이 없다 → 미선택. 건축물 없는 토지의 비종합합산 선언은 종전에도 종합합산이었고(PR#291 override)
   // 이제 «근거 미선택 → 종합합산 + 확인 필요»로 읽혀 세액은 그대로다. 사용자가 근거를 고르면 그 근거로 판정한다.
   if (a.nblOtherPropertyTaxBasis === undefined) a.nblOtherPropertyTaxBasis = "";
@@ -101,4 +102,26 @@ function migrateNblRevenuePeriod(a: Record<string, unknown>): void {
     byYear.set(r.year, { year: r.year, revenue: typeof r.revenue === "string" ? r.revenue : "", landValue: typeof r.landValue === "string" ? r.landValue : "" });
   }
   a.nblRevenueYearRows = [...byYear.values()];
+}
+
+/**
+ * NBL-STATE-HISTORY-E3-④ — 13호 「세대 주택 소유 기간」(`nblOtherHouseholdHouseStatus`·`nblOtherHouseholdHousePeriods`) 복원 정규화.
+ *
+ * 구 저장값에는 두 칸이 없다 → 질문 **미선택(`""`)** · 빈 행. **`""`을 `none`(무주택 선언)으로 채우지 않는다**(UQ-8 (가) — 사용자 대신 «무주택 선언»을 하는 침묵 가정 · 자동 fallback 금지) —
+ * 13호 + 엔진이 행을 읽는 상태이면 ⑧이 질문을 요구해 막고 안내한다. 이미 값이 있으면 **형만** 방어한다:
+ *  · 상태가 허용값 밖이면 `""`. 행 배열이 아니면 `[]`. 행은 객체일 때만 남기고(비객체 제거) `startDate`·`endDate`가 문자열이 아니면 `""`.
+ *  · **날짜 문자열의 형식은 지우지 않는다** — 잘못된 값은 ⑧(HH-3)이 막아야 침묵 소실이 없다.
+ */
+function migrateNblHouseholdHouse(a: Record<string, unknown>): void {
+  if (a.nblOtherHouseholdHouseStatus !== "none" && a.nblOtherHouseholdHouseStatus !== "owned") a.nblOtherHouseholdHouseStatus = "";
+  if (!Array.isArray(a.nblOtherHouseholdHousePeriods)) {
+    a.nblOtherHouseholdHousePeriods = [];
+    return;
+  }
+  a.nblOtherHouseholdHousePeriods = (a.nblOtherHouseholdHousePeriods as unknown[])
+    .filter((row) => row && typeof row === "object")
+    .map((row) => {
+      const r = row as Record<string, unknown>;
+      return { startDate: typeof r.startDate === "string" ? r.startDate : "", endDate: typeof r.endDate === "string" ? r.endDate : "" };
+    });
 }

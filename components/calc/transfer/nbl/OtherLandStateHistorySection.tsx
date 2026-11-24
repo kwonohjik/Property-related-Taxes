@@ -61,6 +61,11 @@ import { NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE } from "@/lib/tax-engine/nb
 import { NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_UNCHANGED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_VACANT_LOT_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_VACANT_LOT_TAX_CHANGE_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { VACANT_LOT_HO } from "@/lib/tax-engine/non-business-land/other-land-vacant-lot-history";
+import { vacantLotWithinAreaLimit } from "@/lib/tax-engine/non-business-land/other-land-vacant-lot-history";
+import { parseDecimal } from "@/lib/calc/number-parse";
 import type { PropertyTaxType } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { StateEventKind } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import { bareIntervalTaxTypeText } from "@/lib/tax-engine/non-business-land/other-land-state-history";
@@ -175,6 +180,8 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
   const otherIgnored = useMemo(() => !house && mode === "changed" && housePriorHistoryIgnoredOf(asset, transferDate), [asset, house, mode, transferDate]);
   // A — 양도일 현재 배율 초과면 엔진이 이력을 읽지 않는다: 미리보기·정착면적 필수 표시를 하지 않는다(⑧ H9와 같은 판정 — `housingAreaLimitState`). B도 엔진이 읽지 않으면 같은 표시를 한다(칸 값은 보존).
   const historyIgnored = (house && areaLimit === "exceeded") || otherIgnored;
+  // E3-④ Q-5 (가) — 13호가 건축물 없는 구간에 구간별로 적용되는 상태(660㎡ 이내 · 엔진이 이력을 읽음): «호별 용도는 소유기간 전체에 적용» 한정 고지가 13호와 모순이라 엔진이 싣는 13호 변형으로 보인다(`applyStateHistory`와 같은 조건).
+  const vacantLotApplied = !house && asset.nblOtherRelatedBusinessType === VACANT_LOT_HO && !otherIgnored && vacantLotWithinAreaLimit(parseDecimal(asset.acquisitionArea));
   // 수도권 칸은 철거된 주택 구간의 배율 전용이다 — 엔진이 그 구간을 읽지 않으면 쓰이지 않으므로 보이지 않는다(저장값은 지우지 않는다).
   const needsMetro = housePriorNeedsMetropolitanOf(asset, transferDate) && !otherIgnored;
 
@@ -519,7 +526,17 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                 </>
               )}
               {/* 결과 경고와 같은 문구 — 엔진은 구분 변경 사건이 1건 이상이면 종전 한정 고지를 변형 고지로 «대체»한다(`applyStateHistory`). */}
-              {!house && <p data-testid="nbl-state-history-applied-notice">{hasTaxChange ? NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE : NBL_STATE_HISTORY_APPLIED_NOTICE}</p>}
+              {!house && (
+                <p data-testid="nbl-state-history-applied-notice">
+                  {vacantLotApplied
+                    ? hasTaxChange
+                      ? NBL_STATE_HISTORY_VACANT_LOT_TAX_CHANGE_APPLIED_NOTICE
+                      : NBL_STATE_HISTORY_VACANT_LOT_APPLIED_NOTICE
+                    : hasTaxChange
+                      ? NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE
+                      : NBL_STATE_HISTORY_APPLIED_NOTICE}
+                </p>
+              )}
               <p data-testid="nbl-state-history-grace-row-notice">{NBL_STATE_HISTORY_GRACE_ROW_NOTICE}</p>
             </div>
           </ToneCard>

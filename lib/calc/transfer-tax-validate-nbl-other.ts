@@ -14,6 +14,7 @@ import { hoRequiredInputIssue } from "@/lib/tax-engine/non-business-land/other-l
 import { demolishedBasisIssue, type PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { effectiveOtherHasBuildingOf } from "./nbl-other-state-history-scope";
 import { validateNblStateHistory } from "./transfer-tax-validate-nbl-state-history";
+import { validateNblVacantLotHousehold } from "./transfer-tax-validate-nbl-vacant-lot";
 import type { StateHistoryValidateCtx } from "./transfer-tax-validate-nbl-state-history";
 import { fieldError, type IssueField } from "./transfer-tax-validate-field";
 
@@ -77,6 +78,9 @@ export function validateNblOtherLand(asset: AssetForm, label: string, stateHisto
   // NBL2611-V7-S — 단순 필수 입력(2호 가·나목 면적 · 3호 조성 완료일 · 4호 수용정원 · 7호 최대면적)은 호 메타 표 하나에서 읽는다(⑫ refine과 같은 표·같은 문구).
   const hoIssue = hoRequiredInputIssue(bt, (f) => (asset as unknown as Record<string, string | undefined>)[f], parseDecimal);
   if (hoIssue) return fieldError(hoIssue.field as IssueField, `${label}: ${hoIssue.message}`);
+  // NBL-STATE-HISTORY-E3-④ — 13호 «세대 주택 소유 기간» 질문·행(HH-1~3). 게이트는 ⑤·④와 같은 술어(엔진 `vacantLotHousePeriodsRead` — 엔진이 행을 읽을 때만 요구한다). 화면 순서: 이력 → 호 → 행.
+  const vacantLotErr = validateNblVacantLotHousehold(asset, label, { transferDate: stateHistory?.transferDate, skip: stateHistory?.skip });
+  if (vacantLotErr) return vacantLotErr;
   // F2 Phase B(B-3) — resort: 6호 휴양 3요소 중 하나 또는 기준면적 직접입력
   if (bt === "resort") {
     const has3Element =
