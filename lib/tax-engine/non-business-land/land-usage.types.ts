@@ -338,6 +338,12 @@ export interface StateEvent {
    * 빈칸·비수치는 키 없음(`undefined`), 0·음수는 그대로 싣는다(엔진 `resolveHouseInterval`이 양수가 아니면 «모름»으로 접는다). 주택 구간의 재산세 구분(`propertyTaxTypeBefore`)은 읽지 않는다(조심 2018서0295).
    */
   houseFootprintBefore?: number;
+  /**
+   * E3-③ B(기타토지 카드) — **철거 행 전용**: 이 철거 행이 닫는 건축물 구간이 `house`(주택)인가. 있으면 그 구간은 재산세 구분이 아니라 `houseFootprintBefore` × 배율(양도일 시행 영 §168의12)로
+   * 이내 여부를 가린다(`resolveHouseInterval`). 없음 = 주택 아닌 건축물(종전 — `propertyTaxTypeBefore` 사슬, 종전 철거 행과 바이트 동일). ⑭는 `eventClosesHouseInterval`이 참인 행에서만 싣는다 —
+   * 주택부수토지 카드(A)는 모든 철거 행이 주택이라 이 칸을 싣지 않는다.
+   */
+  buildingKindBefore?: StateBuildingKind;
 }
 
 /** E3-③ — 상태 구간의 건축물 종류. `house` = 주택(법 §104의3①5호 주택부속토지 — 재산세 토지 구분이 아니라 정착면적 × 배율로 이내 여부를 가린다). 없음 = 종전 건축물 구간. */

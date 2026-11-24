@@ -11,6 +11,7 @@
 import { areaTimes, isAreaOver, judgeAreaLimit } from "../area-limit";
 import type { AreaLimitJudgment } from "../area-limit";
 import { houseFootprintBlankMessage, houseFootprintExceedsLandMessage, houseFootprintNotNumberMessage, houseFootprintNotPositiveMessage } from "./nbl-validation-messages";
+import type { StateEventSubject } from "./nbl-validation-messages";
 import { getHousingMultiplier } from "./urban-area";
 import type { HouseCheck, HouseOutcome } from "./land-usage.types";
 import type { ZoneType } from "./types";
@@ -101,16 +102,17 @@ const NUMERIC = /^[+-]?(\d+(\.\d*)?|\.\d+)$/;
  *
  * @param index 사건 행 번호(0부터) — 문구는 1부터 적는다.
  * @param landArea 토지 면적(㎡) — 문자열(폼 값)·수치. 비어 있거나 읽을 수 없으면 «정착면적 > 토지 면적» 규칙은 건너뛴다(앞 단계 면적 검증 몫).
+ * @param subject 문구의 사건 주체 — 기본 `house`(주택부수토지 카드 «주택 사건 N번째 행» — 종전과 바이트 동일). 기타토지 카드의 철거 행(B)은 `building`을 넘겨 행 제목(«건축물 사건 N번째 행»)과 같은 말을 쓴다(D-9).
  */
-export function houseFootprintIssue(footprint: string | undefined, index: number, landArea: string | number | undefined): HouseFootprintIssue | null {
+export function houseFootprintIssue(footprint: string | undefined, index: number, landArea: string | number | undefined, subject: StateEventSubject = "house"): HouseFootprintIssue | null {
   const text = (footprint ?? "").trim();
-  if (text === "") return { kind: "blank", message: houseFootprintBlankMessage(index) };
+  if (text === "") return { kind: "blank", message: houseFootprintBlankMessage(index, subject) };
   const compact = text.replace(/,/g, "");
-  if (!NUMERIC.test(compact)) return { kind: "not_number", message: houseFootprintNotNumberMessage(index, text) };
+  if (!NUMERIC.test(compact)) return { kind: "not_number", message: houseFootprintNotNumberMessage(index, text, subject) };
   const value = parseFloat(compact);
-  if (!Number.isFinite(value)) return { kind: "not_number", message: houseFootprintNotNumberMessage(index, text) };
-  if (value <= 0) return { kind: "not_positive", message: houseFootprintNotPositiveMessage(index, text) };
+  if (!Number.isFinite(value)) return { kind: "not_number", message: houseFootprintNotNumberMessage(index, text, subject) };
+  if (value <= 0) return { kind: "not_positive", message: houseFootprintNotPositiveMessage(index, text, subject) };
   const land = typeof landArea === "number" ? landArea : parseFloat(String(landArea ?? "").replace(/,/g, ""));
-  if (Number.isFinite(land) && land > 0 && isAreaOver(value, land)) return { kind: "exceeds_land", message: houseFootprintExceedsLandMessage(index, text, String(landArea).trim()) };
+  if (Number.isFinite(land) && land > 0 && isAreaOver(value, land)) return { kind: "exceeds_land", message: houseFootprintExceedsLandMessage(index, text, String(landArea).trim(), subject) };
   return null;
 }

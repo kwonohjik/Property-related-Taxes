@@ -57,6 +57,9 @@ const HOUSING_LAND = "lib/tax-engine/non-business-land/housing-land.ts";
 const HOUSING_APPLY = "lib/tax-engine/non-business-land/housing-state-history.ts";
 const HOUSING_LIMIT = "lib/tax-engine/non-business-land/housing-limit.ts";
 const MAPPER = "lib/tax-engine/non-business-land/form-mapper-helpers.ts";
+// E3-③ B — 기타토지 철거 행 «주택» 입력의 적용 범위 술어(수도권 칸 조건부 개방 · 양도일 의제 scope) leaf — ⑭ 상위 매퍼(`form-mapper.ts`)·판정(apply)이 읽는다. UI-B가 ④⑧⑤ 사용처를 더한다.
+const HOUSE_PRIOR_SCOPE = "lib/tax-engine/non-business-land/house-prior-scope.ts";
+const FORM_MAPPER = "lib/tax-engine/non-business-land/form-mapper.ts";
 const REFINES = "lib/api/transfer-tax-schema-nbl-refines.ts";
 const SCHEMA = "lib/api/transfer-tax-schema-nbl.ts";
 // U0·U1(UI) 배선 — ④ 전송·⑤ 렌더·⑧ 검증이 같은 술어·같은 leaf를 쓴다.
@@ -83,7 +86,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
   it("WIRE-1: `other-land-state-history`를 import하는 프로덕션 파일 = 판정(apply) · ⑭ 매퍼 · ⑫ refine(E2) + UI(술어 · 미리보기 · ⑧ · ③ 복원 정규화 · ⑤ 위젯 · E3-1b 나대지 구간 선언 카드 · ⑦ 결과 구간표)", () => {
     const re = /^\s*import[\s\S]*?from\s+["'][^"']*other-land-state-history["']/m;
     const importers = FILES.filter((f) => re.test(f.src)).map((f) => f.path).sort();
-    expect(importers, NEXT_PR_HINT).toEqual([APPLY, HOUSING_APPLY, REFINES, MAPPER, SCOPE, PREVIEW, VALIDATE, MIGRATE, SECTION, BARE_FIELDS, PERIOD_TABLE].sort());
+    expect(importers, NEXT_PR_HINT).toEqual([APPLY, HOUSING_APPLY, HOUSE_PRIOR_SCOPE, REFINES, MAPPER, SCOPE, PREVIEW, VALIDATE, MIGRATE, SECTION, BARE_FIELDS, PERIOD_TABLE].sort());
   });
 
   it("WIRE-2: 판정은 구간 변환(derive)과 구간 산식(stateHistoryBusinessIntervals)을 쓰고, ⑫ refine은 공용 issue leaf를, ⑭ 매퍼·⑫는 `effectiveOtherHasBuilding`을 쓴다 — 3중 패턴", () => {
@@ -98,7 +101,8 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
 
   it("WIRE-3: 소비표 술어 `consumesStateHistory`는 ⑭ 매퍼·⑫ refine과 UI 공용 술어(`nblOtherStateHistoryApplies` — ④⑤⑧이 이 한 곳을 읽는다)가 쓴다", () => {
     const users = usersOf("consumesStateHistory", [CATEGORY]).sort();
-    expect(users, NEXT_PR_HINT).toEqual([REFINES, MAPPER, SCOPE].sort());
+    // E3-③ B — `house-prior-scope.ts`(수도권 조건부 술어: 기타토지 ∧ 주택 아님을 이 술어로 가른다)도 읽는다.
+    expect(users, NEXT_PR_HINT).toEqual([REFINES, MAPPER, SCOPE, HOUSE_PRIOR_SCOPE].sort());
   });
 
   it("WIRE-4: 판정이 쓰는 고지 상수 = apply + 입력 화면(위젯 · 당해 사업개시일 칸 안내) · UI 전용 상수(unchanged·유예 안내)는 위젯만 쓴다", () => {
@@ -111,16 +115,26 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
     expect(messages, NEXT_PR_HINT).toEqual([APPLY, HOUSING_APPLY].sort());
   });
 
-  it("WIRE-4b (E3-③ A): 주택부수토지 이력 고지 상수(DAYWISE·HOUSING_APPLIED·HOUSE_*·NON_HOUSE_BUILDING)는 `applyHousingStateHistory`(결과 고지)와 입력 위젯(UI-A — 같은 상수를 읽는다)만 쓴다. `WITHIN_UNCONFIRMED`는 위젯이 쓰지 않는다(UI는 ⑧이 차단 — 직접 API 접힘 고지)", () => {
+  it("WIRE-4b (E3-③ A·B): 주택 이력 고지 상수(DAYWISE·HOUSING_APPLIED·HOUSE_*·NON_HOUSE_BUILDING)는 `applyHousingStateHistory`(A 결과 고지) · `applyStateHistory`(B 결과 고지 — 주택 구간이 있을 때만)와 입력 위젯(UI — 같은 상수를 읽는다)만 쓴다. `WITHIN_UNCONFIRMED`는 위젯이 쓰지 않는다(UI는 ⑧이 차단 — 직접 API 접힘 고지)", () => {
     const used = usersOf("NBL_STATE_HISTORY_(?:DAYWISE_NO_RULING|HOUSING_APPLIED|HOUSE_BEFORE|HOUSE_WITHIN_UNCONFIRMED|HOUSE_EXCEEDED|HOUSE_EXCEEDED_GRACE|HOUSING_NON_HOUSE_BUILDING)_NOTICE", [NOTICES]).sort();
-    expect(used, NEXT_PR_HINT).toEqual([HOUSING_APPLY, SECTION].sort());
+    expect(used, NEXT_PR_HINT).toEqual([APPLY, HOUSING_APPLY, SECTION].sort());
+    // B 결과 고지는 A 고지 중 «주택 아닌 건축물 안내·HOUSING_APPLIED(A 한정 고지)»를 쓰지 않는다 — 기타토지는 종전 APPLIED 고지를 대체하지 않는다(Anchor 9 바이트 동일).
+    const apply = FILES.find((f) => f.path === APPLY)!.src;
+    expect(apply).not.toMatch(/NBL_STATE_HISTORY_HOUSING_APPLIED_NOTICE|NBL_STATE_HISTORY_HOUSING_NON_HOUSE_BUILDING_NOTICE/);
     const widget = FILES.find((f) => f.path === SECTION)!.src;
     expect(widget, "위젯은 ⑧이 막는 직접 API 접힘 고지를 쓰지 않는다").not.toMatch(/NBL_STATE_HISTORY_HOUSE_WITHIN_UNCONFIRMED_NOTICE/);
   });
 
   it("WIRE-3b (E3-③ A): 주택 소비 술어 `consumesHousingStateHistory` = 사건 주체 leaf(`stateEventSubjectOf` — ⑧·⑫ 문구 변형) · ⑭ 매퍼(tailHasBuilding=true · 정착면적 운반) · UI 기타토지 전용 술어(주택 제외)", () => {
     const users = usersOf("consumesHousingStateHistory", [CATEGORY]).sort();
-    expect(users, NEXT_PR_HINT).toEqual([LEAF, MAPPER, SCOPE].sort());
+    expect(users, NEXT_PR_HINT).toEqual([LEAF, MAPPER, SCOPE, HOUSE_PRIOR_SCOPE].sort());
+  });
+
+  it("WIRE-11 (E3-③ B): B 적용 범위 술어는 단일 소스 — `housePriorNeedsMetropolitan`은 ⑭ 상위 매퍼(수도권 게이트)가, `stateHistoryDeemedBlocks`는 판정(apply)이 읽는다(UI-B가 ④⑧⑤ 사용처를 더하며 이 목록을 갱신한다)", () => {
+    expect(usersOf("housePriorNeedsMetropolitan", [HOUSE_PRIOR_SCOPE]).sort(), NEXT_PR_HINT).toEqual([FORM_MAPPER]);
+    expect(usersOf("stateHistoryDeemedBlocks", [HOUSE_PRIOR_SCOPE]).sort(), NEXT_PR_HINT).toEqual([APPLY]);
+    // ④ 와이어 게이트(`non-business-land-request.ts`)는 UI-B 몫이다 — 아직 술어를 모른다(T-7 침묵 위험: UI-B가 `housePriorNeedsMetropolitan`을 읽게 한 뒤 이 단언을 갱신한다).
+    expect(usersOf("consumesMetropolitanArea", [CATEGORY]).sort()).toContain("lib/calc/non-business-land-request.ts");
   });
 
   it("WIRE-10 (E3-③ Q-11 (나)): 폐기된 3지선다 칸 `houseWithinLimitBefore`는 프로덕션 어디에도 없다 — A·B 모두 `houseFootprintBefore`(㎡)로 통일(Y-32)", () => {

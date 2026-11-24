@@ -18,15 +18,24 @@
 import { NBL } from "../legal-codes";
 import { NBL_REVENUE_BUSINESS_START_APPLIED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_APPLIED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_DAYWISE_NO_RULING_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_HOUSE_BEFORE_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_HOUSE_EXCEEDED_GRACE_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_HOUSE_EXCEEDED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_HOUSE_WITHIN_UNCONFIRMED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_REVENUE_START_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_UNKNOWN_NOTICE } from "../nbl-confirm-notices";
+import { expropriationZoneBaseDateNotice } from "../appurtenant-land-rate";
 import { TaxCalculationError } from "../tax-errors";
 import { TaxErrorCode } from "../tax-errors";
+import { HOUSING_METRO_DEFAULTED_WARNING } from "./housing-limit";
+import { metropolitanChangesHousingMultiplier } from "./house-prior-scope";
+import { stateHistoryDeemedBlocks } from "./house-prior-scope";
 import { STATE_EVENTS_REQUIRED_MESSAGE } from "./nbl-validation-messages";
 import { bareDeclarationNotices } from "./state-history-echo";
 import { criteriaEcho } from "./state-history-echo";
@@ -37,6 +46,7 @@ import { getPeriodJudgmentDate } from "./period-criteria";
 import { meetsPeriodCriteria } from "./period-criteria";
 import { getOwnershipStart } from "./utils/period-math";
 import type { DateInterval } from "./types";
+import type { LandStateInterval } from "./land-usage.types";
 import type { OtherLandOwnTrace } from "./other-land-helpers";
 import type { CategoryJudgeResult } from "./types";
 import type { JudgmentStep } from "./types";
@@ -77,6 +87,31 @@ function daMokAndNaMok(input: NonBusinessLandInput, core: CategoryJudgeResult, t
   return { own, naMokTail: probe({ ...input, revenueTest: undefined, otherLand: noDaMok }).isBusiness };
 }
 
+/**
+ * B 주택 구간 고지(소유기간에 남은 구간만 — 클립으로 사라진 구간은 고지하지 않는다). 순서: 일 단위 합산(Q-2) → 근거·한계 → 수도권 기본값 → 수용 용도지역 → 초과(Q-5 (나)) → 모름 → 초과 뒤 9호 유예(Q-8 (가)).
+ * 수도권 기본값 경고·수용 용도지역 고지는 `judgeHousingLand`가 싣는 문구 그대로다(helper 단일 소스) — 주택 구간을 실제로 계산한(`within`·`exceeded`) 경우에만.
+ */
+function houseIntervalNotices(intervals: ReadonlyArray<LandStateInterval>, input: NonBusinessLandInput): string[] {
+  const houses = intervals.filter((iv) => iv.buildingKind === "house");
+  if (houses.length === 0) return [];
+  const notices: string[] = [NBL_STATE_HISTORY_DAYWISE_NO_RULING_NOTICE, NBL_STATE_HISTORY_HOUSE_BEFORE_NOTICE];
+  const calculated = houses.some((iv) => iv.houseOutcome === "within" || iv.houseOutcome === "exceeded");
+  // 수도권 미제공 보수 기본값 경고 — 수도권 여부가 그 양도일의 배율을 가를 때만(아니면 값이 없어도 판정이 같다 — 사용자에게 묻지 않은 칸을 경고하지 않는다).
+  if (calculated && input.isMetropolitanArea === undefined && metropolitanChangesHousingMultiplier(input.zoneType, input.transferDate)) notices.push(HOUSING_METRO_DEFAULTED_WARNING);
+  // 영 §168의12 후단 — 수용 양도의 배율 용도지역은 사업인정 고시일 전날 현재 용도지역(주택부수토지 카드와 같은 조건·같은 고지). 카드의 `nblZoneType`은 현재 값이라 고지만 한다.
+  const expr = input.unconditionalExemption;
+  const acquiredAfterNotice = expr?.publicNoticeDate !== undefined && input.acquisitionDate >= expr.publicNoticeDate;
+  if (calculated && expr?.isPublicExpropriation && !acquiredAfterNotice) {
+    const zoneNotice = expropriationZoneBaseDateNotice({ transferCause: "public_expropriation", transferDate: input.transferDate });
+    if (zoneNotice) notices.push(zoneNotice);
+  }
+  const exceeded = houses.some((iv) => iv.houseOutcome === "exceeded");
+  if (exceeded) notices.push(NBL_STATE_HISTORY_HOUSE_EXCEEDED_NOTICE);
+  if (houses.some((iv) => iv.houseOutcome === "unconfirmed")) notices.push(NBL_STATE_HISTORY_HOUSE_WITHIN_UNCONFIRMED_NOTICE);
+  if (exceeded && input.gracePeriods.some((g) => g.reasonCode === "demolition")) notices.push(NBL_STATE_HISTORY_HOUSE_EXCEEDED_GRACE_NOTICE);
+  return notices;
+}
+
 export function applyStateHistory(
   core: CategoryJudgeResult,
   input: NonBusinessLandInput,
@@ -90,7 +125,7 @@ export function applyStateHistory(
 
   // changed — 이력을 쓸 수 없는 경우는 이유를 알린다(통합 Q-8·Q-9). 둘 다 해당하면 둘 다 알린다.
   const notices: string[] = [];
-  if (input.deemedTransferReason && input.deemedTransferReason !== "none") notices.push(NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE);
+  if (stateHistoryDeemedBlocks({ landType: input.landType, deemedReason: input.deemedTransferReason })) notices.push(NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE);
   if (isPartialArea(core)) notices.push(NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE);
   if (notices.length > 0) return { applied: false, notices };
 
@@ -102,6 +137,8 @@ export function applyStateHistory(
   const intervals = deriveOtherLandStateIntervals(history.events, getOwnershipStart(input.acquisitionDate), pjDate, {
     hasBuilding: o.hasBuilding,
     propertyTaxType: o.propertyTaxType,
+    // E3-③ B — «철거된 건축물 = 주택» 행의 배율 이내 판정 근거(카드의 토지 면적 · 용도지역 · 수도권 + 양도일). 주택 행이 없으면 leaf가 읽지 않는다(종전과 바이트 동일).
+    houseCtx: { zoneType: input.zoneType, isMetropolitanArea: input.isMetropolitanArea, landArea: input.landArea, transferDate: pjDate },
   });
 
   // 다목 자체 구간(경로 순서 무관) + 나목 꼬리 인정 — `daMokAndNaMok`. 자체 구간이 있으면 나목이 인정하는 꼬리도 사업용 구간에 더한다(법에 없는 «자체 사업기간이 있으면 양도일 현재 상태를 버린다» 제한 금지).
@@ -128,11 +165,14 @@ export function applyStateHistory(
   // 재산세 과세 구분 변경 사건이 있을 때만 한정 고지를 변형 고지로 **대체**한다(E3-① — 기존 고지 문구는 바이트 동일, 건축물 사건만 있는 이력은 종전과 같다).
   warnings.push(hasTaxChange ? NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE : NBL_STATE_HISTORY_APPLIED_NOTICE);
   // 「모름」 구간(종합합산으로 접힘)은 그 구간을 닫은 사건 종류별로 고지한다 — 구간의 끝 날짜 = 닫은 사건일(날짜는 엄격 증가라 유일).
-  const unknownClosers = intervals.filter((iv) => iv.propertyTaxType === "unknown").map((iv) => history.events.find((e) => e.date.getTime() === iv.end.getTime())?.kind);
+  // E3-③ T-6 — 주택 구간은 `propertyTaxType = "unknown"` 고정이지만 «재산세 구분 모름»이 아니다(구분을 읽지 않는다) — 제외한다.
+  const unknownClosers = intervals.filter((iv) => iv.propertyTaxType === "unknown" && iv.buildingKind !== "house").map((iv) => history.events.find((e) => e.date.getTime() === iv.end.getTime())?.kind);
   if (unknownClosers.some((k) => k !== "tax_type_changed")) warnings.push(NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE);
   if (unknownClosers.some((k) => k === "tax_type_changed")) warnings.push(NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE);
   // E3-1b — 나대지 구간 선언의 해석 결과 고지(소유기간에 남은 구간만). 새 상수만 추가하고 위 고지는 바이트 동일.
   warnings.push(...bareDeclarationNotices(intervals));
+  // E3-③ B — «철거된 건축물 = 주택» 구간이 소유기간에 남아 있을 때만(없으면 위 고지와 바이트 동일). A(`applyHousingStateHistory`)와 같은 문구·같은 순서.
+  warnings.push(...houseIntervalNotices(intervals, input));
 
   return {
     applied: true,
