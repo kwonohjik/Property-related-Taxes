@@ -703,3 +703,23 @@ E3-②에서 ⑧이 엔진 술어(`revenueHistoryScope`)를 직접 부르지 않
 | 8 | 정적 게이트 갱신: `nbl-state-history-leaf-unreachable.test.ts` WIRE-4b(고지 상수 사용처 + 위젯) · WIRE-9(배율 leaf 사용처 + ⑤ 미리보기) · `nbl-state-history-e3-1-wire.test.ts`(초기 건축물 상태 인자 = 기타토지 토글 · 주택 `true`). 신규 `nbl-housing-state-history-wire-guard.test.ts`가 ④⑤⑧ 자체 지목 조건 금지·침묵 소실 grep을 고정 |
 | 9 | 반전 보정: `nbl-housing-land-metropolitan-validate-b6.test.ts` 픽스처에 질문 «바뀐 적 없음» 추가(UV-1 실측 — 1파일 4건) · 엔진 route anchor T-4의 `nblOtherHasBuilding` 단언을 «토글 stale» → «④가 true로 고정»으로 정정 |
 | 10 | 미해결(엔진 소관): ⑧ H1 문구는 엔진 상수 `STATE_HISTORY_MODE_REQUIRED_MESSAGE`가 «건축물»이라 주택 카드에서도 «이 토지 위 건축물이…»로 나온다(접두 «주택 부수토지 —»는 붙는다). 주택 변형 문구가 필요하면 엔진 `subject` 인자 확장 요청 |
+
+---
+
+## 19. UI-B 구현 기록 (2026-11-24 — UI-B-1/2/3 + A 후속 Low 4건)
+
+계획서 §4.4·§5·§6·§7·§11.2 EB1~EB10을 그대로 구현했다. 계획과 달라진 점·덧붙인 점만 적는다.
+
+| # | 구현에서 확정한 것 |
+|---|---|
+| 1 | ④ 수도권 전송 게이트 = `consumesMetropolitanArea(landType) ∨ housePriorNeedsMetropolitanOf(asset)`(`non-business-land-request.ts`). `housePriorNeedsMetropolitanOf`(`nbl-other-state-history-scope.ts`)는 엔진 술어 `housePriorNeedsMetropolitan`을 **와이어 사건**(`stateHistoryWireFields(asset).nblOtherStateEvents`)으로 직접 호출한다. ⑤ 수도권 칸 노출 · ⑤ 미리보기 판정 맥락(`houseIntervalCtxOf`의 수도권 값 게이트) · ⑧ H10이 이 래퍼 한 곳을 읽는다(정적 게이트 WIRE-11) |
+| 2 | 양도일 의제 건너뜀(UQ-12 (가)) = 엔진 술어 `stateHistoryDeemedBlocks`의 UI 래퍼 `stateHistoryDeemedBlocksOf`(scope). `housePriorFootprintIssueOf`(⑧ H9 · ⑤ 칸 오류 · ⑤ 미리보기 공용)가 의제면 null이고 ⑧ H10도 건너뛴다. **구조 규칙(D-8 — 주택 구간 안 구분 변경)은 의제여도 건너뛰지 않는다**(⑫도 막는다) |
+| 3 | 행 구조 규칙은 ⑧이 **와이어 사건**으로 ⑫와 같은 leaf(`stateEventSequenceIssue`)를 부른다. 신축·구분 변경 행의 stale `buildingKindBefore`는 ④가 보내지 않으므로 ⑧도 읽지 않는다 — 읽으면 칸이 없는 «고칠 수 없는 차단»이 된다(P13: ⑧ 통과 · ⑫ 200 · 직접 API 400은 엔진 route anchor B10). D-8 ②(주택 구간 안 구분 변경)는 철거 행이 종류를 가지므로 ⑧도 잡는다(P14·EB6) |
+| 4 | 엔진 leaf에 `eventCarriesBuildingKind(kind)`(철거 행만 «철거된 건축물 종류»를 받는다) 추가 — `eventClosesHouseInterval` · ③ 복원 정규화 · ⑤ 종류 카드 노출이 같은 술어(E3-① 「`kind === "building_removed"` 리터럴 영구 0건」 게이트 준수) |
+| 5 | ⑤ 위젯: 종류 카드는 새 파일 `OtherLandBuildingKindField.tsx`(≈ 60줄)로 분리 · `OtherLandStateHistorySection.tsx` 475 → ≈ 520줄. 종류 «그 밖»은 키를 **지운 행**을 쓴다(종전 행과 같은 모양) · 저장 정착면적은 지우지 않는다. Q-12 hint(`BUILDING_KIND_HINT_NOTICE`)는 길이(≈ 190자)가 hint 정책을 넘어 FieldCard hint가 아니라 카드 안 `ToneCard` 본문으로 둔다(UV-17) |
+| 6 | ⑦ 결과 구간표: A/B를 **꼬리 구간 echo**로 가른다(엔진이 꼬리에 `buildingKind = house`를 싣는 곳은 주택부수토지 카드뿐) — 표 전체 변형 = A · B는 표 제목·열은 종전 그대로이고 주택 구간 행만 «있음(주택)» + 근거 열 `houseCheck`. 입력 미리보기 표도 같은 규칙 |
+| 7 | **Low 1** 입력 화면 «양도일 현재 배율 초과» 안내는 모드 `changed`일 때만(엔진 `judgeHousingLand`는 `changed`에서만 고지) · 엔진에 주택 변형 상수 `NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE`(현재형 · «주택 이력») 추가 — 결과 고지와 입력 안내가 같은 상수. 기존 `NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE`(기타토지·공장·호별 경로)는 바이트 동일 |
+| 8 | **Low 2** 배율 초과 + `unknown`: **UI 쪽을 엔진에 맞췄다**(엔진은 초과 분기를 «한 줄도 바꾸지 않는다 — E0 compat G19 골든 »고지도 없음«과 Q-3a (나)» 와 짝이라 엔진을 바꾸면 골든 8건이 뒤집힌다). 입력 화면은 이 조합에서 `UNKNOWN` 고지와 구간 미리보기를 그리지 않는다 |
+| 9 | **Low 3** ⑧ H9(A)는 엔진 단일 술어 `housingStateHistoryIsRead(limit)`(`housing-limit.ts` 신설 — `judgeHousingLand`가 같은 함수로 이력 후처리 진입을 정한다)를 `housingAreaLimitState`가 부르고, ⑧이 그 결과가 «초과»이면 정착면적을 요구하지 않는다. ⑤ 정착면적 칸의 «필수» 표시·미리보기도 같은 판정 |
+| 10 | **Low 4** 엔진 `stateHistoryModeRequiredMessage(subject)` — 기본·`building` = 종전 상수 바이트 동일 · `house` = «이 토지 위 주택이 새로 지어지거나 없어진 적이 있는지…» |
+| 11 | 한계(미해결): B에서 **부분 면적 경로**(`isPartialArea` — 기타토지 호별·공장·연접 등으로 엔진이 이력을 접는 경우)와 «주택 구간 정착면적 요구»가 겹치면 ⑧은 정착면적을 요구하지만 엔진은 PARTIAL 고지로 이력을 읽지 않는다(Low 3의 B 판). 엔진 `isPartialArea`는 판정 결과(`core`)를 보는 런타임 분기라 ⑧이 계산할 수 없다 — 엔진에 scope 술어가 생기면 같은 방식으로 게이트한다 |
