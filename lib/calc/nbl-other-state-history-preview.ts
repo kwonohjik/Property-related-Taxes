@@ -10,6 +10,7 @@
  */
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { differenceInDays } from "@/lib/tax-engine/utc-date";
+import { addDays } from "@/lib/tax-engine/utc-date";
 import type { HouseCheck, HouseOutcome, LandStateInterval, StateBuildingKind, StateEvent } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { HouseIntervalCtx } from "@/lib/tax-engine/non-business-land/housing-limit";
 import { housingStateHistoryIsRead, judgeHousingLimit, resolveHouseInterval } from "@/lib/tax-engine/non-business-land/housing-limit";
@@ -184,7 +185,7 @@ export function buildStateHistoryPreview(asset: AssetForm, transferDate: string 
         ? {
             temporaryStatusWindow: {
               start: iso(iv.temporaryStatusWindow.start),
-              lastDay: iso(new Date(iv.temporaryStatusWindow.end.getTime() - 86_400_000)),
+              lastDay: iso(addDays(iv.temporaryStatusWindow.end, -1)),
               days: differenceInDays(iv.temporaryStatusWindow.end, iv.temporaryStatusWindow.start),
             },
             ...(iv.temporaryStatusMonths ? { temporaryStatusMonths: iv.temporaryStatusMonths } : {}),
