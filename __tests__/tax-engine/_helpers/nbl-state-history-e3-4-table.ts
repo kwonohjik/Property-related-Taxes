@@ -98,6 +98,8 @@ export const E3E_BARE_ROWS: readonly E3eRow[] = [
   { id: "X3", scenario: "신축 2019-01-01 · 철거 2021-01-01(종합) · 꼬리 나지 + 9호 유예(철거 2021-01-01 · 2년) — 유예는 꼬리와 겹쳐 합집합 불변", events: [built("2019-01-01"), rm("2021-01-01")],
     grace: [{ reasonCode: "demolition", anchorDate: "2021-01-01" }], biz: [[OS, "2019-01-01"], ["2021-01-01", T24]], graceIntervals: [["2021-01-01", "2023-01-01"]],
     expect: { nonBusiness: false, eff: 2920, total: 3651 }, current: { nonBusiness: false, eff: 1095, basis: "state_history" }, changes: true, reads: true },
+  { id: "X4", scenario: "H1(철거 2023-06-01 · 꼬리 나지) + 세대 주택 소유 2020-01-01~ — 꼬리 나지도 주택 소유 기간이라 13호로 세지 않는다(core 13호 PASS는 전 기간 무주택 가정 — D-4)", events: [rm("2023-06-01")], houseRows: [["2020-01-01"]], biz: [],
+    expect: { nonBusiness: true, eff: 0, total: 3651 }, current: { nonBusiness: true, eff: 214, basis: "state_history" }, changes: true, reads: true },
 ];
 
 /** 엔진 계획서 §6.2 무주택 축 — 이력 OFF(질문 미선택·`""`) · 나지 전 기간 · 행 입력. 현행은 13호 선택 시 칸이 없어 전부 B(S0). */

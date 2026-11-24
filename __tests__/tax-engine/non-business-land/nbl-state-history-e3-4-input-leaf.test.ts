@@ -64,3 +64,29 @@ describe("행 수 상한 단일 소스(R-7)", () => {
     expect(nblHouseholdHousePeriodsCapMessage()).toContain(`${NBL_HOUSEHOLD_HOUSE_PERIODS_MAX}건`);
   });
 });
+
+describe("고지 상수 — Q-5 변형 · R-4 입력 시제", async () => {
+  const n = await import("@/lib/tax-engine/nbl-confirm-notices");
+  it("13호 변형(APPLIED·TAX_CHANGE)은 «호별 용도는 … 전체에 적용» 모순 문구를 담지 않고 구간별 적용 + 해석례 미확인(확인 필요)을 담는다", () => {
+    for (const t of [n.NBL_STATE_HISTORY_VACANT_LOT_APPLIED_NOTICE, n.NBL_STATE_HISTORY_VACANT_LOT_TAX_CHANGE_APPLIED_NOTICE]) {
+      expect(t).not.toContain("호별 용도");
+      expect(t).toContain("건축물이 없던 구간에만 적용");
+      expect(t).toContain("확인 필요");
+    }
+    // 기존 상수는 바이트 불변 — 13호가 아니면 이 문구가 그대로 실린다
+    expect(n.NBL_STATE_HISTORY_APPLIED_NOTICE).toContain("호별 용도");
+    expect(n.NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE).toContain("호별 용도");
+  });
+  it("입력 화면용 2종(R-4)은 결과 시제(«적용했»·«판정하지 않았»)가 아닌 현재 시제 안내다", () => {
+    for (const t of [n.NBL_VACANT_LOT_BARE_ONLY_INPUT_NOTICE, n.NBL_VACANT_LOT_HOUSE_PERIODS_INPUT_NOTICE]) {
+      expect(t).not.toMatch(/적용했|판정하지 않았|제외했/);
+    }
+    expect(n.NBL_VACANT_LOT_BARE_ONLY_INPUT_NOTICE).toContain("건축물이 없던 구간에 적용합니다");
+    expect(n.NBL_VACANT_LOT_HOUSE_PERIODS_INPUT_NOTICE).toContain("양도일까지");
+  });
+  it("행을 읽은 결과 고지(HOUSE_PERIODS)는 세대 구성 변동 미판정 · 규칙 ⑰·⑱ 미판정을 밝히고 «확인 필요»로 끝난다", () => {
+    expect(n.NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE).toContain("세대 구성 변동");
+    expect(n.NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE.endsWith("확인 필요.")).toBe(true);
+    expect(n.NBL_STATE_AT_TRANSFER_VACANT_LOT_HOUSE_PERIODS_APPLIED_NOTICE).toContain("확인 필요");
+  });
+});

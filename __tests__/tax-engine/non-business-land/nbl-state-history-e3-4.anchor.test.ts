@@ -266,8 +266,47 @@ describe("E3e-2 세대 주택 소유 기간 — 행을 읽는 경로 · 읽지 �
 });
 
 describe("표 규모", () => {
-  it("나지 축 13 + 무주택 축 11 + UI 시료 13 = 37", () => {
-    expect(E3E_ALL_ROWS.length).toBe(37);
-    expect([E3E_BARE_ROWS.length, E3E_HOUSE_ROWS.length, E3E_UI_ROWS.length]).toEqual([13, 11, 13]);
+  it("나지 축 14 + 무주택 축 11 + UI 시료 13 = 38", () => {
+    expect(E3E_ALL_ROWS.length).toBe(38);
+    expect([E3E_BARE_ROWS.length, E3E_HOUSE_ROWS.length, E3E_UI_ROWS.length]).toEqual([14, 11, 13]);
+  });
+});
+
+describe("E3e-2 유예 합집합 — 기간기준 미충족 결과의 기간 수치는 «무주택 기간 ∪ 유예»의 실제 값이다(유예 단독 재판정이 덮지 않는다 · P-14)", () => {
+  it("W3(무주택 1,825일 · 비사업용) + 사용금지 유예 100일: 비사업용 유지 · 사업용 일수 = 무주택 ∪ 유예(1,925) — 유예 100일로 덮이지 않는다", () => {
+    const raw = { ...e3eRowRaw(row("W3")), nblGracePeriods: [{ reasonCode: "use_prohibited", anchorDate: "2019-01-01", endDate: "2019-04-11" }] };
+    const j = judge(fromRaw(raw));
+    expect(j.isNonBusinessLand).toBe(true);
+    expect(j.gracePeriodDays).toBe(100);
+    expect(j.effectiveBusinessDays).toBe(1925);
+    expect(j.periodEvaluation?.basis).toBe("usage_periods");
+    expect(j.periodEvaluation?.graceJudged).toBeUndefined();
+  });
+});
+
+describe("T-1·T-2 방어선 — 이력 경로는 13호를 끈 core로 다목·나목을 보충한다(13호 PASS가 `trace.own`·`daMokAndNaMok`을 거치지 않는다)", () => {
+  it("markOwn은 13호 호 인자에서 기록하지 않는다(건물 구간까지 사업용이 되는 변경의 차단선 — M1)", async () => {
+    const { markOwn } = await import("@/lib/tax-engine/non-business-land/other-land-helpers");
+    const t13: { own?: { start: Date; end: Date }[] } = {};
+    markOwn(t13, [{ start: new Date("2014-01-02T00:00:00Z"), end: new Date("2024-01-01T00:00:00Z") }], "vacant_lot_1household");
+    expect(t13.own).toBeUndefined();
+    const t11: { own?: { start: Date; end: Date }[] } = {};
+    markOwn(t11, [{ start: new Date("2014-01-02T00:00:00Z"), end: new Date("2024-01-01T00:00:00Z") }], "fish_farm_licensed");
+    expect(t11.own).toHaveLength(1);
+  });
+
+  it("`applyStateHistory`가 다시 돌리는 core(probe)에는 13호가 한 번도 넘어가지 않는다 — 전부 «호 없음»(D-4 · M2 가드는 관측 불가한 방어선)", async () => {
+    const { applyStateHistory } = await import("@/lib/tax-engine/non-business-land/other-land-state-history-apply");
+    const input = fromRaw(e3eRowRaw(row("H2")));
+    const seen: Array<string | undefined> = [];
+    const probe = (i: NonBusinessLandInput) => {
+      seen.push(i.otherLand?.relatedBusinessType);
+      return { trace: {}, isBusiness: false };
+    };
+    const core = judgeNonBusinessLand(input, R); // 형식상 core 결과 — 필드만 쓴다
+    void core;
+    applyStateHistory({ isBusiness: true, reason: "", steps: [], appliedLaws: [], totalOwnershipDays: 3651, effectiveBusinessDays: 3651, gracePeriodDays: 0, businessUseRatio: 1, criteria: { rule2of3Years: false, rule5Years: false, rule80Percent: false }, warnings: [] }, input, R, {}, probe);
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((h) => h !== "vacant_lot_1household")).toBe(true);
   });
 });

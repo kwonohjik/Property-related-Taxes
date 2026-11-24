@@ -59,7 +59,7 @@ const taxOf = (input: NonBusinessLandInput) =>
 describe("E3e-0 Anchor 1 — 일 단위 정답표(오라클): 판정 · 일수", () => {
   it("표 규모·id 중복 없음 · 핵심 행 포함", () => {
     expect(new Set(E3E_ALL_ROWS.map((r) => r.id)).size).toBe(E3E_ALL_ROWS.length);
-    for (const id of ["H0", "H1", "H1c", "H2", "H3", "H3a", "H3b", "H4", "H5", "H6", "X1", "X2", "X3", "W0", "W1", "W2", "W3", "W4a", "W4b", "W5", "W6", "W7", "W8", "N0", "N1", "N1b", "C1", "C1p", "C2", "C3", "C3p", "C4", "C5", "C6", "D1", "D2"])
+    for (const id of ["H0", "H1", "H1c", "H2", "H3", "H3a", "H3b", "H4", "H5", "H6", "X1", "X2", "X3", "X4", "W0", "W1", "W2", "W3", "W4a", "W4b", "W5", "W6", "W7", "W8", "N0", "N1", "N1b", "C1", "C1p", "C2", "C3", "C3p", "C4", "C5", "C6", "D1", "D2"])
       expect(E3E_ALL_ROWS.map((r) => r.id), id).toContain(id);
   });
 
@@ -107,7 +107,7 @@ describe("E3e-0 현행 열 — 같은 입력을 **세대 주택 소유 칸 없�
 
   it("현행과 신규 오라클이 다른 행(스윙 대상)의 목록 — 표의 존재 이유", () => {
     const swing = E3E_ALL_ROWS.filter((r) => r.changes).map((r) => r.id);
-    expect(swing).toEqual(["H2", "H3", "H3a", "H3b", "H4", "X1", "X3", "W1", "W2", "W3", "W4a", "W4b", "W5", "W5b", "W6", "W7", "C3", "C4"]);
+    expect(swing).toEqual(["H2", "H3", "H3a", "H3b", "H4", "X1", "X3", "X4", "W1", "W2", "W3", "W4a", "W4b", "W5", "W5b", "W6", "W7", "C3", "C4"]);
     // 판정(사업용↔비사업용)까지 뒤집히는 행
     const flipped = E3E_ALL_ROWS.filter((r) => r.changes && r.expect.nonBusiness !== r.current.nonBusiness).map((r) => r.id);
     expect(flipped).toEqual(["H2", "H3", "H3a", "H4", "W2", "W3", "W5b", "W6", "W7", "C3"]);
@@ -170,8 +170,8 @@ describe("E3e-0 Anchor 2 — 하위호환 골든: 13호 × 이력 `\"\"`·`uncha
 });
 
 describe("E3e-0 표 분류 — 행 수", () => {
-  it("나지 축 13 + 무주택 축 11 + UI 시료 13", () => {
-    expect([E3E_BARE_ROWS.length, E3E_HOUSE_ROWS.length, E3E_UI_ROWS.length]).toEqual([13, 11, 13]);
+  it("나지 축 14 + 무주택 축 11 + UI 시료 13", () => {
+    expect([E3E_BARE_ROWS.length, E3E_HOUSE_ROWS.length, E3E_UI_ROWS.length]).toEqual([14, 11, 13]);
     void OS;
   });
 });
