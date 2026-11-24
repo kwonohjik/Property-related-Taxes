@@ -140,6 +140,27 @@ export async function resumeCalculationRecord(
     return null;
   }
 
+  if (record.taxType === "non_business_land_judgment") {
+    /**
+     * 비사업용 토지 판정 — 폼만 복원한다. `result`는 되살리지 않는다(1주택 판정과 같은 이유 — 법령·세율 기준일에 의존하는 판정을 「지금 다시 판정한 값」으로
+     * 읽게 하지 않는다). ④에서 재판정한다. 정규화는 store의 rehydrate와 **같은 leaf**다.
+     */
+    const [{ useNblJudgmentStore }, { normalizeNblJudgmentForm }] = await Promise.all([
+      import("@/lib/stores/nbl-judgment-store"),
+      import("@/lib/stores/nbl-judgment-form.types"),
+    ]);
+    useNblJudgmentStore.setState({
+      currentStep: 0,
+      formData: normalizeNblJudgmentForm(record.inputData),
+      result: null,
+      resultClientId: null,
+      error: null,
+      isLoading: false,
+    });
+    router.push(route);
+    return null;
+  }
+
   if (record.taxType === "gift_deemed") {
     /**
      * 증여이익 계산기 — 폼만 넘긴다(계산기가 마운트 때 1회 소비). 결과는 되살리지 않는다 —
