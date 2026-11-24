@@ -112,6 +112,11 @@ export interface NblOtherFormSlice {
   nblOtherPropertyTaxBasis: "" | PropertyTaxBasis;
   /** NBL2611-V1-A — 근거가 «철거ㆍ멸실»일 때 철거 전 건축물 바닥면적(㎡). 영 §103의2 1호 */
   nblOtherDemolishedFloorArea: string;
+  /**
+   * E3-⑤ E3f-1b — 근거가 «철거ㆍ멸실»일 때 철거ㆍ멸실일(YYYY-MM-DD · 사실상 철거ㆍ멸실일 — 알 수 없으면 공부상). **이력 철거 행이 날짜를 대지 않을 때만** 칸이 보이고 ⑧·⑫가 요구한다(엔진 `demolishedOnRequired`).
+   * 취득 전 철거도 입력한다. `""` = 미입력(가정값 없음 — ⑧이 막는다). 숨은 칸의 값은 지우지 않고 ④가 싣지 않는다(이력 복원값 보존).
+   */
+  nblOtherDemolishedOn: string;
   nblOtherBuildingValue: string;
   nblOtherLandValue: string;
   nblOtherIsRelatedToResidence: boolean;

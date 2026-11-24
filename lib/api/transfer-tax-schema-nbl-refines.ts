@@ -17,12 +17,12 @@ import { nblBusinessUsePeriodsApply, nblResidenceHistoryApplies } from "@/lib/ca
 import { parseAmount, parseDecimal } from "@/lib/calc/number-parse";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { resortAreaIssue } from "@/lib/tax-engine/non-business-land/resort-area-issue";
-import { demolishedBasisIssue, type PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
+import { demolishedInputIssue } from "@/lib/tax-engine/non-business-land/demolished-input-issue";
+import type { PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { graceRowIssue, type GraceRowLike } from "@/lib/tax-engine/non-business-land/grace-row-issue";
 import { deemedTransferDateIssue, deemedTransferDateIssueMessage } from "@/lib/tax-engine/non-business-land/deemed-transfer-date-range";
 import { consumesPeriodJudgmentDate } from "@/lib/tax-engine/non-business-land/land-category";
 import { consumesStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
-import { effectiveOtherHasBuilding } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { stateEventSequenceIssue } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import type { StateEventRowLike } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { stateEventSubjectOf } from "@/lib/tax-engine/non-business-land/other-land-state-history";
@@ -71,6 +71,7 @@ export interface NblRawRefineInput {
   nblOtherPropertyTaxType?: string;
   nblOtherPropertyTaxBasis?: string;
   nblOtherDemolishedFloorArea?: string;
+  nblOtherDemolishedOn?: string;
   nblOtherHasBuilding?: boolean;
   nblOtherStateHistoryMode?: string;
   /** ⑫ 사건 행 — 공용 issue leaf(`stateEventSequenceIssue`)가 읽는 칸 전부(`StateEventRowLike` — `buildingKindBefore` 포함 · 단일 소스). 칸이 늘면 leaf 타입을 따른다(E3-③ 후속 L3: 종전에는 `kind`·`date`만 선언돼 읽는 칸이 타입에 없었다 — 런타임 무변경). */
@@ -111,11 +112,13 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
 
   // NBL-STATE-HISTORY-E2 — 소유기간 중 건축물 사건: `changed`일 때만 행·순서·0건을 검사한다(⑧ 거울 — 같은 leaf · 같은 문구). **하한(소유 시작 전 사건) 규칙은 ⑫에 없다** —
   // 컴패니언 스키마가 지분 raw마다 이 refine을 돌려 늦게 취득한 지분이 400이 되기 때문이다(엔진은 지분 소유기간으로 클립). `""`·`unchanged`·`unknown`은 막지 않는다(현행).
+  let stateRowIssued = false;
   if (consumesStateHistory(landType) && raw.nblOtherStateHistoryMode === "changed") {
     // E3-1b — 「건축물 없는 구간 위 구분 변경」 차단 규칙이 삭제돼 초기 건축물 상태(`tailHasBuilding`)를 넘기지 않는다(순서 검증은 `kind`·`date`만 본다).
     // E3-③ — 주택부수토지 카드는 `subject: "house"`(문구 «주택 사건» + 구조 규칙 D-1·D-2)로 같은 leaf를 부른다. 정착면적 규칙(Q-10 (가))은 ⑧만 가진다 — 직접 API는 400 없이 엔진이 접는다(UI 통과 ↔ API 400 모순 방지).
     const stateIssue = stateEventSequenceIssue(raw.nblOtherStateEvents ?? [], { transferDate: raw.transferDate ?? "", subject: stateEventSubjectOf(landType) });
     if (stateIssue) issue(stateIssue.index === null ? ["nblOtherStateEvents"] : ["nblOtherStateEvents", stateIssue.index, stateIssue.field], stateIssue.message);
+    stateRowIssued = !!stateIssue;
   }
 
   // NBL-STATE-HISTORY-E3-④ — 13호 세대 주택 소유 기간 행: 13호일 때만 **구조**(빈·해석 불가·역순·같은 날·양도일 이후 시작)를 검사한다(⑧ HH-3 거울 — 같은 leaf `householdHousePeriodIssue` · 같은 문구).
@@ -223,17 +226,23 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
   }
 
   // NBL2611-V1-A (Q-1) — 철거ㆍ멸실 근거는 면적 범위를 계산할 사실(철거 전 바닥면적 · 배율표에 있는 용도지역)이 있어야 한다 (⑧ `validateNblOtherLand`와 같은 술어·같은 문구).
-  // 근거 미선택은 막지 않는다 — 엔진이 종합합산 + 확인 필요로 접는다.
+  // E3-⑤ E3f-1b (Q-5 (가)) — 철거ㆍ멸실일도 필수다: 이력의 철거 행이 날짜를 대지 않을 때만(⑤가 새 칸을 그리는 조건과 같다 — `demolishedOnRequired`) 새 칸이 필요하고, 비었거나 양도일 이후면 400.
+  // 근거 미선택은 막지 않는다 — 엔진이 종합합산 + 확인 필요로 접는다. 철거 행 자체의 결함은 위 사건 행 검증이 먼저 말하므로 철거ㆍ멸실일 안내를 중복하지 않는다(K-16d).
   if (raw.nblLandType === "other_land") {
-    const demolished = demolishedBasisIssue({
-      declared: (raw.nblOtherPropertyTaxType || "comprehensive") as Parameters<typeof demolishedBasisIssue>[0]["declared"],
-      // NBL-STATE-HISTORY-E2 — `changed`이면 사건에서 파생한 양도일 현재 유무(⑭ 매퍼와 같은 함수 — 3중 패턴).
-      hasBuilding: effectiveOtherHasBuilding(!!raw.nblOtherHasBuilding, raw.nblOtherStateHistoryMode, raw.nblOtherStateEvents ?? []),
+    const demolished = demolishedInputIssue({
+      declared: (raw.nblOtherPropertyTaxType || "comprehensive") as Parameters<typeof demolishedInputIssue>[0]["declared"],
+      // NBL-STATE-HISTORY-E2 — `changed`이면 사건에서 파생한 양도일 현재 유무(⑭ 매퍼와 같은 함수 — 3중 패턴). 모드·사건은 와이어 값 그대로(④가 `changed`가 아니면 `""`·`[]`를 보낸다).
+      mode: raw.nblOtherStateHistoryMode,
+      events: raw.nblOtherStateEvents ?? [],
+      rawHasBuilding: !!raw.nblOtherHasBuilding,
       basis: (raw.nblOtherPropertyTaxBasis || undefined) as PropertyTaxBasis | undefined,
+      demolishedOn: raw.nblOtherDemolishedOn,
+      transferDate: raw.transferDate,
       floorArea: parseDecimal(raw.nblOtherDemolishedFloorArea),
       zoneType: raw.nblZoneType ?? "",
       zoneMapped: !!getZoneAreaMultiplier(raw.nblZoneType ?? ""),
     });
-    if (demolished) issue([demolished.part === "floorArea" ? "nblOtherDemolishedFloorArea" : "nblZoneType"], demolished.message);
+    if (demolished && !(demolished.part === "demolishedOn" && stateRowIssued))
+      issue([demolished.part === "demolishedOn" ? "nblOtherDemolishedOn" : demolished.part === "floorArea" ? "nblOtherDemolishedFloorArea" : "nblZoneType"], demolished.message);
   }
 }

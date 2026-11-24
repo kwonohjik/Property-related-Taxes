@@ -10,6 +10,7 @@
  *   · 가목(§109·관계 법률)·분리과세(영 §102): 전량 사업용
  *   · 공지상태 별도합산(영 §101③): 전량 사업용 + 호별 면적 한도 확인 필요
  *   · 철거·멸실(영 §103의2): 종전 바닥면적 × 영 §101② 적용배율 이내만 사업용 + 한시 지위 확인 필요
+ *     (E3f-1b: 철거ㆍ멸실일 필수 — 엔진 직접 호출 시 `demolishedOn`이 없으면 종합합산으로 접는다 · 면적 범위는 2024.6.1.~ 시행본만 — 이 파일의 시료는 양도 2024-06-01이라 적용)
  *   · 2% 강등·배율 게이트는 건축물 부속토지 근거(별도합산 + 건축물 있음)에만
  */
 import { describe, it, expect } from "vitest";
@@ -65,13 +66,13 @@ describe("V1-A 근거 있음 — 건축물 없는 토지의 비종합합산 선�
   });
 
   it("철거·멸실 별도합산 — 종전 바닥면적 125㎡ × 일반주거 4배 = 500㎡ ≥ 토지 500㎡ → 전량 사업용 + 한시 지위 확인 필요", () => {
-    const j = judgeNonBusinessLand(other({ propertyTaxType: "separate", propertyTaxBasis: "demolished", demolishedFloorArea: 125 }), R);
+    const j = judgeNonBusinessLand(other({ propertyTaxType: "separate", propertyTaxBasis: "demolished", demolishedFloorArea: 125, demolishedOn: d("2024-03-01") }), R);
     expect(j.isNonBusinessLand).toBe(false);
     expect(j.warnings.some((w) => w.includes("§103의2") && w.includes("확인 필요"))).toBe(true);
   });
 
   it("철거·멸실 별도합산 — 종전 바닥면적 100㎡ × 4배 = 400㎡ → 초과 100㎡(0.2) 비사업용 면적 안분", () => {
-    const j = judgeNonBusinessLand(other({ propertyTaxType: "separate", propertyTaxBasis: "demolished", demolishedFloorArea: 100 }), R);
+    const j = judgeNonBusinessLand(other({ propertyTaxType: "separate", propertyTaxBasis: "demolished", demolishedFloorArea: 100, demolishedOn: d("2024-03-01") }), R);
     expect(j.isNonBusinessLand).toBe(true);
     expect(ratioOf(j)).toBe(0.2);
     expect(j.areaProportioning?.nonBusinessArea).toBe(100);

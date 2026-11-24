@@ -17,7 +17,8 @@
  *     영 §168의13 3호 문언(「가목1)부터 4)까지」)은 그대로라 목 재편 시점을 거쳐 가리키는 지역이 바뀐다 — 사용자가 입력하는 「제외지역 해당」 선언이라 세액은 바꾸지 않고 고지만 한다(`VILLA_REGION_LIST_EVOLVED_NOTICE`).
  *   · 2008.1.1.~2009.3.15. 양도분(2008.10.7. 「10년」·2008.12.31. 소급 부칙)은 범위 밖(양도 2009.3.15. 이전 = 범위 밖)이라 모델링하지 않았다.
  */
-import { addYears, isValid, parseISO } from "../utc-date";
+import { isWithinPeriod } from "../civil-period";
+import { addYears, isBefore, isValid, parseISO } from "../utc-date";
 import { NBL } from "../legal-codes/transfer-nbl";
 
 // UTC 자정 달력일 상수 — 입력 Date도 같은 규약(utc-date). Invalid Date(미입력)는 비교가 모두 false라 «가장 최근 시행본»으로 접힌다(조기 확정 방지 규약과 동일).
@@ -115,11 +116,46 @@ export function hasDemolishedStatusEraDate(transferDate: Date | undefined): tran
 }
 
 /**
- * «빈집 3년 셀» — 철거ㆍ멸실일 `removedOn`이 (2021.6.1., 2022.6.1.]이고 양도일이 [2024.6.1., 2025.3.21.)인가.
- * 과세기준일 2024.6.1. 현재 빈집정비 3년 한시는 `removedOn + 3년 > 2024.6.1.`이면 성립 가능하고, 그날을 건축물 멸실 유예 9호(양도 2025.3.21. 전 2년 — `demolitionGraceYears`)
+ * «빈집 3년 셀» — 철거ㆍ멸실일 `removedOn`이 [2021.6.1., 2022.6.1.]이고 양도일이 [2024.6.1., 2025.3.21.)인가.
+ * 과세기준일 2024.6.1. 현재 빈집정비 3년 한시는 «철거ㆍ멸실된 날부터 3년이 지나지 아니한» 기간 안(만료일 당일까지 — 민법 §157·§160, `isWithinPeriod`: 철거 2021.6.1. → 만료일 2024.6.1. → 안)이면 성립 가능하고, 그날을 건축물 멸실 유예 9호(양도 2025.3.21. 전 2년 — `demolitionGraceYears`)
  * `[removedOn, removedOn + 2년)`이 덮지 못하는 것은 `removedOn + 2년 ≤ 2024.6.1.`일 때다. 이 셀의 판정 뒤집힘은 격자로 실측했다(E3f-0 Anchor 3 — 판정 뒤집힘 356행이 전부 이 셀 안).
  * 날짜 중 하나가 Invalid Date면 false.
  */
 export function isVacantHouseThreeYearCell(removedOn: Date, transferDate: Date): boolean {
-  return removedOn > addYears(FROM_2024_06_01, -3) && removedOn <= addYears(FROM_2024_06_01, -2) && transferDate >= FROM_2024_06_01 && transferDate < FROM_2025_03_21;
+  return isWithinPeriod(removedOn, 3, FROM_2024_06_01) && removedOn <= addYears(FROM_2024_06_01, -2) && transferDate >= FROM_2024_06_01 && transferDate < FROM_2025_03_21;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E3f-1b — 꼬리 근거 «철거ㆍ멸실»의 «확실히 지남» 충분조건 · 면적 범위 문언 시행본 (계획서 §5.3 · Q-6 (가) · 사용자 결정 2026-11-24)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 양도일 이전(당일 포함) **마지막 과세기준일(매년 6.1.)** — 한시 지위는 과세기준일 현재로 정해지므로(법문 «과세기준일 현재») 꼬리 근거는 이 날의 지위를 본다.
+ * 양도일이 Invalid Date면 `undefined`.
+ */
+export function lastPropertyTaxBaseDateOnOrBefore(transferDate: Date): Date | undefined {
+  if (!isValid(transferDate)) return undefined;
+  const y = transferDate.getUTCFullYear();
+  const thisYear = parseISO(`${String(y).padStart(4, "0")}-06-01`);
+  return isBefore(transferDate, thisYear) ? parseISO(`${String(y - 1).padStart(4, "0")}-06-01`) : thisYear;
+}
+
+/**
+ * 과세기준일 `s` 시행본에서 한시 기간이 **가장 길 수 있는** 개월 수 — 꼬리 근거는 빈집정비 여부를 따로 받지 않아 보수적으로 잡는다(Q-6 (가)).
+ * `0` = 그 과세기준일에는 한시 규정이 없다(2016.6.1. 전 — 시행령 §103의2 시행 전) · `6` = 2016.6.1.~2024.5.31. 시행본 · `36` = 2024.6.1.~ 시행본(빈집정비사업 철거 빈집 3년 — 일반 6개월·2026.6.1.~ 1년보다 길다).
+ */
+export function demolishedStatusMaxMonths(s: Date): 0 | 6 | 36 {
+  if (isBefore(s, FROM_2016_06_01)) return 0;
+  return isBefore(s, FROM_2024_06_01) ? 6 : 36;
+}
+
+/**
+ * 영 §103의2 1호 후단 «철거ㆍ멸실되기 전 건축물의 바닥면적에 제101조제2항에 따른 용도지역별 적용배율을 곱하여 산정한 면적 범위의 토지» 문언이 **그 과세기준일 시행본에 있는가**.
+ * 2024.5.28. 시행본(호 구분)에서 처음 생겼고 첫 과세기준일은 2024.6.1.이다(사용자 결정 2026-11-24 — 그 전 시행본에는 면적 제한이 없다 · 부속토지 범위 자체는 «확인 필요»).
+ * 꼬리 근거는 양도일 이전 마지막 과세기준일의 시행본으로 본다(= 양도일 ≥ 2024.6.1.). 양도일이 없거나 해석 불가면 현행(= 문언 있음)으로 접는다 — 입력 누락이 면적 제한을 푸는 방향으로 작동하지 않게.
+ */
+export function demolishedAreaClauseApplies(transferDate: Date | undefined): boolean {
+  if (!hasDemolishedStatusEraDate(transferDate)) return true;
+  const s = lastPropertyTaxBaseDateOnOrBefore(transferDate);
+  return s !== undefined && !isBefore(s, FROM_2024_06_01);
 }

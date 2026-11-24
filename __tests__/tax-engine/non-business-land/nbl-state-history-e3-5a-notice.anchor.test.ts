@@ -2,8 +2,8 @@
  * NBL-STATE-HISTORY-E3-⑤ E3f-1a — 철거 후 재산세 한시 지위 **고지 연혁화 · 빈집 셀 고지 · 상수 항 번호 정정** anchor. 입력 0 · 판정·세액 불변.
  *
  *   A  연혁 경계 쌍(계획서 K-19~K-22): 양도일 2016-05-31/06-01 · 2019-05-31/06-01 · 2024-05-31/06-01 · 2026-05-31/06-01에서 문구가 갈린다 — 시행본 본문은 KoreanLaw 실독(MST 178638 · 206456 · 257499 · 262781 · 282549 · 290815).
- *   B  양도일 ≥ 2026-06-01 문구는 종전과 같은 문장(상수 항 번호 정정만 다르다) · 양도일 미입력(`undefined` · Invalid Date) = 연혁 한 줄 변형(K-30 · D-5).
- *   C  빈집 셀 고지(K-23): 철거일 (2021-06-01, 2022-06-01] × 양도일 [2024-06-01, 2025-03-21) 4축 경계 쌍 · 주택 철거 사건 또는 9호 기산일 · 꼬리 근거 «철거ㆍ멸실»을 선언한 입력은 제외.
+ *   B  양도일 ≥ 2026-06-01 문구는 종전과 같은 문장(상수 항 번호 정정만 다르다 — **E3f-1b가 끝 문장만 반전**: «철거일은 판정하지 않았습니다» → «한시 기간이 확실히 지났는지만 판정했고…») · 양도일 미입력(`undefined` · Invalid Date) = 연혁 한 줄 변형(K-30 · D-5).
+ *   C  빈집 셀 고지(K-23): 철거일 [2021-06-01, 2022-06-01] × 양도일 [2024-06-01, 2025-03-21) 4축 경계 쌍 · 주택 철거 사건 또는 9호 기산일 · 꼬리 근거 «철거ㆍ멸실»을 선언한 입력은 제외.
  *   D  판정·세액 불변: 셀 고지가 붙는 입력도 판정·일수·세액이 고지를 뺀 것과 같다(E3f-0 표의 `current` 열 전수는 predo anchor가 계속 고정한다).
  *
  * 계획서(정본): docs/01-plan/features/nbl-state-history-e3-5-demolition-temp-status.engine.plan.md v4 §1.2 · §1.3 · §5.8 · §7.3
@@ -39,7 +39,7 @@ const taxOf = (input: NonBusinessLandInput) =>
     makeMockRates(),
   ).calculatedTax;
 
-/** 종전(E3f-1a 전) `NBL_PTAX_DEMOLISHED_STATUS_NOTICE` 원문 — 항 번호 정정(«§103의2 ① 1호» → «§103의2 1호»)만 다르다. */
+/** 종전(E3f-1a 전) `NBL_PTAX_DEMOLISHED_STATUS_NOTICE` 원문 — 항 번호 정정(«§103의2 ① 1호» → «§103의2 1호»)과 E3f-1b의 끝 문장(철거일 한도 판정)이 다르다. */
 const OLD_NOTICE =
   "지방세법 §106 ① 2호 다목 + 지방세법 시행령 §103의2 ① 1호은 철거ㆍ멸실된 날부터 1년이 지나지 않은 건축물(빈집정비사업 등으로 철거된 빈집은 3년)의 부속토지이고, 건축 용도 외의 다른 용도로 쓰는 부분과 " +
   "허가·사용승인을 받지 않은 건축물의 부속토지는 제외됩니다. 철거일(한시 지위)과 이 요건들은 판정하지 않았습니다 — 확인 필요.";
@@ -72,10 +72,12 @@ describe("E3f-1a A — 연혁 경계 쌍 (양도일 ≥ 6.1. 경계 상수)", ()
     const OTHER_USE = "건축 용도 외의 다른 용도로 쓰는 부분";
     expect(notice("2024-05-31")).not.toContain(VACANT);
     expect(notice("2024-05-31")).not.toContain(OTHER_USE);
-    expect(notice("2024-05-31")).toContain("바닥면적에 용도지역별 적용배율을 곱한 면적 범위 문언이 없으나");
+    // E3f-1b 연혁 정정 — 면적 범위 문언이 없는 시행본(2024.6.1. 전)은 이 계산기도 그 범위를 적용하지 않는다(사용자 결정 2026-11-24).
+    expect(notice("2024-05-31")).toContain("바닥면적에 용도지역별 적용배율을 곱한 면적 범위 문언이 없어 이 계산기는 그 범위를 적용하지 않고 부속토지 전체를 별도합산 범위로 보았습니다");
+    expect(notice("2024-05-31")).not.toContain("계산기는 그 범위를 적용했습니다");
     expect(notice("2024-06-01")).toContain(VACANT);
     expect(notice("2024-06-01")).toContain(OTHER_USE);
-    expect(notice("2024-06-01")).not.toContain("면적 범위 문언이 없으나");
+    expect(notice("2024-06-01")).not.toContain("면적 범위 문언이 없어");
     expect(notice("2024-06-01")).toContain("6개월이 지나지 않은");
   });
 
@@ -90,11 +92,11 @@ describe("E3f-1a A — 연혁 경계 쌍 (양도일 ≥ 6.1. 경계 상수)", ()
     for (const t of ["2016-06-01", "2019-06-01", "2024-06-01", "2026-05-31"]) expect(notice(t), t).toContain("과세기준일마다 그날의 시행본으로 정해지는데 양도일 기준 시행본으로 안내했고");
   });
 
-  it("모든 변형이 «확인 필요»로 끝나고 한시 지위(철거일)를 판정하지 않았음을 밝힌다 · 전 시행본이 서로 다른 문구", () => {
+  it("모든 변형이 «확인 필요»로 끝나고 한시 지위를 판정하지 않았음을 밝힌다(E3f-1b: 철거ㆍ멸실일은 «확실히 지났는지»만 판정) · 전 시행본이 서로 다른 문구", () => {
     const dates = ["2016-05-31", "2016-06-01", "2019-06-01", "2024-06-01", "2026-06-01"];
     for (const t of dates) {
       expect(notice(t), t).toMatch(/확인 필요\.$/);
-      expect(notice(t), t).toContain("철거일(한시 지위)");
+      expect(notice(t), t).toContain(t === "2016-05-31" ? "철거일(한시 지위)과 요건은 판정하지 않았습니다" : "철거ㆍ멸실일은 한시 기간이 양도일 직전 과세기준일까지 확실히 지났는지만 판정했고");
     }
     expect(new Set(dates.map(notice)).size).toBe(dates.length);
   });
@@ -111,9 +113,13 @@ describe("E3f-1a A — 연혁 경계 쌍 (양도일 ≥ 6.1. 경계 상수)", ()
   });
 });
 
-describe("E3f-1a B — 현행 시행본 바이트 동일 · 양도일 미입력 변형", () => {
-  it("양도일 ≥ 2026-06-01 문구 = 종전 문구(항 번호 정정만 다름) — 경계 이후 어느 날이든 같다", () => {
-    const expected = OLD_NOTICE.replace("§103의2 ① 1호", "§103의2 1호");
+describe("E3f-1a B — 현행 시행본 문구 · 양도일 미입력 변형", () => {
+  it("양도일 ≥ 2026-06-01 문구 = 종전 문구(항 번호 정정 + E3f-1b 끝 문장만 다름) — 경계 이후 어느 날이든 같다", () => {
+    const expected = OLD_NOTICE.replace("§103의2 ① 1호", "§103의2 1호").replace(
+      "철거일(한시 지위)과 이 요건들은 판정하지 않았습니다 — 확인 필요.",
+      "철거ㆍ멸실일은 한시 기간이 양도일 직전 과세기준일까지 확실히 지났는지만 판정했고(지났으면 이 근거를 인정하지 않고 종합합산으로 보았습니다) 한시 지위 자체와 이 요건들은 판정하지 않았습니다 — 확인 필요.",
+    );
+    expect(expected).not.toBe(OLD_NOTICE);
     for (const t of ["2026-06-01", "2026-12-31", "2030-01-01"]) expect(notice(t), t).toBe(expected);
     expect(NBL.PTAX_BASIS_DEMOLISHED).toBe("지방세법 §106 ① 2호 다목 + 지방세법 시행령 §103의2 1호");
   });
@@ -131,22 +137,24 @@ describe("E3f-1a B — 현행 시행본 바이트 동일 · 양도일 미입력 
 });
 
 describe("E3f-1a B′ — 엔진 배선: 꼬리 근거 «철거ㆍ멸실» 고지가 실제 양도일 시행본으로 나온다", () => {
-  const tailNotices = (transfer: string) => judge(fromRaw(e35Tail("2018-03-01", transfer, undefined))).warnings.filter((w) => w.includes("철거일(한시 지위)"));
+  // 한시 안(양도 직전 과세기준일에 한시 기간이 안 지남)인 철거일을 쓴다 — E3f-1b: 지났으면 근거가 접혀 이 고지가 아니라 «기간 경과» 고지가 나온다.
+  const tailNotices = (removedOn: string, transfer: string) => judge(fromRaw(e35Tail(removedOn, transfer, undefined))).warnings.filter((w) => w.includes("철거ㆍ멸실일은 한시 기간이"));
 
   it("양도 2018-12-01 → 6개월 시행본 문구 1건 · 양도 2026-06-01 → 1년 문구 1건 — 종전의 «1년 고정»(F-1)이 사라졌다", () => {
-    expect(tailNotices("2018-12-01")).toEqual([notice("2018-12-01")]);
-    expect(tailNotices("2018-12-01")[0]).toContain("6개월이 지나지 않은");
-    expect(tailNotices("2026-06-01")).toEqual([notice("2026-06-01")]);
-    expect(tailNotices("2026-06-01")[0]).toContain("1년이 지나지 않은");
+    expect(tailNotices("2018-03-01", "2018-12-01")).toEqual([notice("2018-12-01")]);
+    expect(tailNotices("2018-03-01", "2018-12-01")[0]).toContain("6개월이 지나지 않은");
+    expect(tailNotices("2026-03-01", "2026-06-01")).toEqual([notice("2026-06-01")]);
+    expect(tailNotices("2026-03-01", "2026-06-01")[0]).toContain("1년이 지나지 않은");
   });
 
-  it("고지 외 판정·일수·세액은 양도일 시행본과 무관 — 같은 입력의 era만 바꾼 비교가 아니라 «고지를 뺀 결과» = 현행(E3f-0 표 current 열이 전수 고정)", () => {
+  it("고지 외 판정·일수는 E3f-0 표가 전수 고정한다 — 철거 4년 전(2020-01-01) 꼬리 근거는 한시 기간이 확실히 지나 접힌다(E3f-1b): 비사업용 365 · 접힘 고지는 «기간 경과» 한 줄, 시행본 고지는 없다", () => {
     const j = judge(fromRaw(e35Tail("2020-01-01", "2024-01-01", "2019-01-01")));
-    expect([j.isNonBusinessLand, j.effectiveBusinessDays]).toEqual([false, 1826]);
+    expect([j.isNonBusinessLand, j.effectiveBusinessDays]).toEqual([true, 365]);
+    expect(j.warnings.some((w) => w.includes("철거ㆍ멸실일은 한시 기간이"))).toBe(false);
   });
 
   it("법 인용 상수(appliedLawArticles · warnings)도 정정된 «§103의2 1호» — 항(①) 인용이 남지 않는다", () => {
-    const j = judge(fromRaw(e35Tail("2018-03-01", "2024-01-01", undefined)));
+    const j = judge(fromRaw(e35Tail("2023-12-01", "2024-01-01", undefined))); // 한시 안 — 근거가 인정돼 조문·고지가 실린다
     expect(j.appliedLawArticles).toContain(NBL.PTAX_BASIS_DEMOLISHED);
     const blob = JSON.stringify([j.appliedLawArticles, j.warnings, j.judgmentReason]);
     expect(blob).not.toContain("§103의2 ①");
@@ -157,8 +165,8 @@ describe("E3f-1a B′ — 엔진 배선: 꼬리 근거 «철거ㆍ멸실» 고�
 describe("E3f-1a C — 빈집 3년 셀 고지 (K-23 4축 경계 쌍)", () => {
   const cell = (r: string, t: string) => isVacantHouseThreeYearCell(d(r), d(t));
 
-  it("철거일 축: 2021-06-01 ✗ · 2021-06-02 ✓ · 2022-06-01 ✓ · 2022-06-02 ✗ (양도 2024-09-01)", () => {
-    expect(["2021-06-01", "2021-06-02", "2022-06-01", "2022-06-02"].map((r) => cell(r, "2024-09-01"))).toEqual([false, true, true, false]);
+  it("철거일 축: 2021-05-31 ✗ · 2021-06-01 ✓ · 2021-06-02 ✓ · 2022-06-01 ✓ · 2022-06-02 ✗ (양도 2024-09-01) — 아래쪽 경계는 3년 만료일 당일 포함(2026-11-24 정정: 철거 2021-06-01 → 만료일 2024-06-01 = 과세기준일 → 한시 안)", () => {
+    expect(["2021-05-31", "2021-06-01", "2021-06-02", "2022-06-01", "2022-06-02"].map((r) => cell(r, "2024-09-01"))).toEqual([false, true, true, true, false]);
   });
 
   it("양도일 축: 2024-05-31 ✗ · 2024-06-01 ✓ · 2025-03-20 ✓ · 2025-03-21 ✗ (철거 2021-12-01)", () => {
@@ -184,9 +192,10 @@ describe("E3f-1a C — 빈집 3년 셀 고지 (K-23 4축 경계 쌍)", () => {
     });
   const has = (raw: Record<string, unknown>) => judge(fromRaw(raw)).warnings.includes(NBL_PTAX_DEMOLISHED_VACANT_HOUSE_3Y_NOTICE);
 
-  it("9호 기산일 경로 — 철거 2021-06-02 · 양도 2024-09-01(K-7 시료 + 9호): 고지 1건 · 철거 2021-06-01·2022-06-02 또는 양도 2024-05-31·2025-03-21이면 없다", () => {
+  it("9호 기산일 경로 — 철거 2021-06-02 · 양도 2024-09-01(K-7 시료 + 9호): 고지 1건 · 철거 2021-05-31·2022-06-02 또는 양도 2024-05-31·2025-03-21이면 없다(철거 2021-06-01은 3년 만료일 당일이라 있다)", () => {
     expect(judge(fromRaw(e35VacantCell(nineRow("2021-06-02")))).warnings.filter((w) => w === NBL_PTAX_DEMOLISHED_VACANT_HOUSE_3Y_NOTICE)).toHaveLength(1);
-    expect(has(cellRaw("2021-06-01", "2024-09-01"))).toBe(false);
+    expect(has(cellRaw("2021-05-31", "2024-09-01"))).toBe(false);
+    expect(has(cellRaw("2021-06-01", "2024-09-01"))).toBe(true);
     expect(has(cellRaw("2022-06-01", "2024-09-01"))).toBe(true);
     expect(has(cellRaw("2022-06-02", "2024-09-01"))).toBe(false);
     expect(has(cellRaw("2021-12-01", "2024-05-31"))).toBe(false);
@@ -206,7 +215,8 @@ describe("E3f-1a C — 빈집 3년 셀 고지 (K-23 4축 경계 쌍)", () => {
       });
     expect(has(withHouse("house"))).toBe(true);
     expect(has(withHouse(""))).toBe(false);
-    expect(has(withHouse("house", "2021-06-01"))).toBe(false);
+    expect(has(withHouse("house", "2021-05-31"))).toBe(false);
+    expect(has(withHouse("house", "2021-06-01"))).toBe(true);
   });
 
   it("이력 질문이 «변경 없음/미선택»이면 사건을 읽지 않는다(stale 사건 무시) — 9호 행만 본다", () => {
@@ -252,7 +262,7 @@ describe("E3f-1a D — 판정·세액 불변: 셀 고지는 고지 한 줄만 �
   });
 
   it("세액: 기본 취득·양도일 시료 — 고지가 있어도 B/N 세액 그대로(전량 사업용 198,210,000 · 전량 비사업용 253,960,000)", () => {
-    const n = fromRaw(e35Tail("2018-01-01", "2024-01-01", undefined)); // 꼬리 근거 — 현행 B(E3f-1b 전)
+    const n = fromRaw(e35Tail("2023-12-01", "2024-01-01", undefined)); // 꼬리 근거 · 한시 안 → B
     expect(taxOf(n)).toBe(E35_B);
     const folded = fromRaw(e35Base({
       nblOtherPropertyTaxType: "comprehensive", nblOtherHasBuilding: false, nblOtherStateHistoryMode: "changed",

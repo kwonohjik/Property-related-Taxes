@@ -11,8 +11,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { resortAreaIssue } from "@/lib/tax-engine/non-business-land/resort-area-issue";
 import { hoRequiredInputIssue } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
-import { demolishedBasisIssue, type PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { effectiveOtherHasBuildingOf } from "./nbl-other-state-history-scope";
+import { demolishedTailInputIssueOf } from "./nbl-demolished-tail-scope";
 import { validateNblStateHistory } from "./transfer-tax-validate-nbl-state-history";
 import { validateNblVacantLotHousehold } from "./transfer-tax-validate-nbl-vacant-lot";
 import type { StateHistoryValidateCtx } from "./transfer-tax-validate-nbl-state-history";
@@ -44,19 +44,16 @@ export function validateNblOtherLand(asset: AssetForm, label: string, stateHisto
 
   /**
    * NBL2611-V1-A (Q-1) — 재산세 분류 «근거»는 **미선택을 막지 않는다**(엔진이 종합합산 + 확인 필요로 접는다 — 리뷰 Q-1 (나) 기각).
-   * 다만 «철거ㆍ멸실» 근거를 골랐다면 그 면적 범위를 계산할 사실(철거 전 바닥면적·배율표에 있는 용도지역)이 필요하다 — 자동 안분 fallback 금지.
-   * 같은 술어를 ⑫(`refineNonBusinessLandRaw`)가 쓴다.
+   * 다만 «철거ㆍ멸실» 근거를 골랐다면 한시 지위·면적 범위를 계산할 사실이 필요하다 — 자동 안분 fallback 금지. 순서(= 화면 순서): 철거ㆍ멸실일 → 종전 바닥면적 → 배율표에 있는 용도지역.
+   * E3-⑤ E3f-1b — 철거ㆍ멸실일은 **이력 철거 행이 날짜를 대지 않을 때만** 요구하고, 종전 바닥면적·용도지역은 **엔진이 읽는 시행본**(양도일 직전 과세기준일 ≥ 2024.6.1.)에서만 요구한다
+   * (종전에는 모든 양도일에 바닥면적을 요구해 «엔진이 읽지 않는 칸을 요구하는» 막다른 길이었다). 같은 함수(`demolishedInputIssue`)를 ⑫(`refineNonBusinessLandRaw`)가 쓴다 — 호출 순서: `validateNblStateHistory`(위) → 이 검사.
    */
-  const demolished = demolishedBasisIssue({
-    declared: asset.nblOtherPropertyTaxType as Parameters<typeof demolishedBasisIssue>[0]["declared"],
-    hasBuilding: effectiveOtherHasBuildingOf(asset),
-    basis: (asset.nblOtherPropertyTaxBasis || undefined) as PropertyTaxBasis | undefined,
-    floorArea: parseDecimal(asset.nblOtherDemolishedFloorArea),
-    zoneType: asset.nblZoneType,
-    zoneMapped: !!getZoneAreaMultiplier(asset.nblZoneType),
-  });
-  if (demolished)
-    return fieldError(demolished.part === "floorArea" ? "nblOtherDemolishedFloorArea" : "nblZoneType", `${label}: 기타토지 — ${demolished.message}`);
+  const demolished = demolishedTailInputIssueOf(asset, stateHistory?.transferDate);
+  if (demolished) {
+    const msg = `${label}: 기타토지 — ${demolished.message}`;
+    if (demolished.part === "demolishedOn") return fieldError("nblOtherDemolishedOn", msg);
+    return fieldError(demolished.part === "floorArea" ? "nblOtherDemolishedFloorArea" : "nblZoneType", msg);
+  }
 
   /**
    * §101①2호 건물 부수토지 — **건축물이 있으면 바닥면적 필수** (R06).

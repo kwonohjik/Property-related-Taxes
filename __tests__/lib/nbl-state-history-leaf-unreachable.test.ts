@@ -80,6 +80,12 @@ const VL_SCOPE = "lib/calc/nbl-vacant-lot-household-scope.ts";
 const VL_NOTICE = "lib/calc/nbl-vacant-lot-history-notice.ts";
 const VL_PREVIEW = "lib/calc/nbl-vacant-lot-household-preview.ts";
 const OTHER_LAND = "lib/tax-engine/non-business-land/other-land.ts";
+// E3-⑤ E3f-1b — 꼬리 근거 «철거ㆍ멸실»의 철거ㆍ멸실일 요구·출처 술어 leaf. ⑫′(`demolishedInputIssue`)·⑭(`demolishedOnForEngine`)이 읽고, U-2가 ⑧·④(`demolishedOnWireValue`)를 더한다.
+const DEMOLISHED_ISSUE = "lib/tax-engine/non-business-land/demolished-input-issue.ts";
+// E3-⑤ E3f-1b U-2 — ④⑤⑧ 공용 술어 래퍼(AssetForm → leaf 사실) · ⑤ 위젯 블록 · ⑧ 호출처. 엔진 leaf를 부르는 UI 쪽 사용처는 이 셋뿐이다.
+const TAIL_SCOPE = "lib/calc/nbl-demolished-tail-scope.ts";
+const TAIL_FIELDS = "components/calc/transfer/nbl/OtherLandDemolishedTailFields.tsx";
+const VALIDATE_OTHER = "lib/calc/transfer-tax-validate-nbl-other.ts";
 
 const NEXT_PR_HINT = "새 사용처가 생겼다면 UI 배선(U1·U2)일 것이다 — 이 허용 목록을 그 파일로 갱신한다(삭제 금지). 계획서 plan.md §4 U1·U2.";
 
@@ -95,7 +101,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
   it("WIRE-1: `other-land-state-history`를 import하는 프로덕션 파일 = 판정(apply) · ⑭ 매퍼 · ⑫ refine(E2) + UI(술어 · 미리보기 · ⑧ · ③ 복원 정규화 · ⑤ 위젯 · E3-1b 나대지 구간 선언 카드 · ⑦ 결과 구간표)", () => {
     const re = /^\s*import[\s\S]*?from\s+["'][^"']*other-land-state-history["']/m;
     const importers = FILES.filter((f) => re.test(f.src)).map((f) => f.path).sort();
-    expect(importers, NEXT_PR_HINT).toEqual([APPLY, HOUSING_APPLY, HOUSE_PRIOR_SCOPE, REFINES, MAPPER, SCOPE, READ, PREVIEW, VALIDATE, MIGRATE, SECTION, BARE_FIELDS, PERIOD_TABLE].sort());
+    expect(importers, NEXT_PR_HINT).toEqual([APPLY, HOUSING_APPLY, HOUSE_PRIOR_SCOPE, REFINES, MAPPER, SCOPE, READ, PREVIEW, VALIDATE, MIGRATE, SECTION, BARE_FIELDS, PERIOD_TABLE, DEMOLISHED_ISSUE].sort());
   });
 
   it("WIRE-2: 판정은 구간 변환(derive)과 구간 산식(stateHistoryBusinessIntervals)을 쓰고, ⑫ refine은 공용 issue leaf를, ⑭ 매퍼·⑫는 `effectiveOtherHasBuilding`을 쓴다 — 3중 패턴", () => {
@@ -103,7 +109,9 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
     expect(src(APPLY)).toMatch(/\bderiveOtherLandStateIntervals\(/);
     expect(src(APPLY)).toMatch(/\bstateHistoryBusinessIntervals\(/);
     expect(src(REFINES)).toMatch(/\bstateEventSequenceIssue\(/);
-    expect(src(REFINES)).toMatch(/\beffectiveOtherHasBuilding\(/);
+    // E3f-1b — ⑫의 «양도일 현재 건축물 유무 파생»은 철거ㆍ멸실일 술어 leaf(`demolishedInputIssue`)가 같은 함수로 읽는다(⑭는 직접 · 같은 leaf를 `demolishedOnForEngine`으로도 쓴다).
+    expect(src(REFINES)).toMatch(/\bdemolishedInputIssue\(/);
+    expect(src(DEMOLISHED_ISSUE)).toMatch(/\beffectiveOtherHasBuilding\(/);
     expect(src(MAPPER)).toMatch(/\beffectiveOtherHasBuilding\(/);
     expect(src(MAPPER)).toMatch(/\bisEventKind\(/);
   });
@@ -156,6 +164,27 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
     expect(FILES.find((f) => f.path === REQUEST)!.src).toMatch(/metro:\s*consumesMetropolitanArea\(asset\.nblLandType\)\s*\|\|\s*housePriorNeedsMetropolitanOf\(asset,\s*transferDate\)/);
   });
 
+  it("WIRE-14 (E3-⑤ E3f-1b · U-2): 꼬리 철거ㆍ멸실일 술어는 단일 소스 — ⑫′는 `demolishedInputIssue`, ⑭는 `demolishedOnForEngine`, ④⑤⑧은 래퍼 `nbl-demolished-tail-scope`를 거쳐 같은 leaf를 읽는다(자체 replay·날짜 비교 금지)", () => {
+    // 엔진 leaf 소비처 — ⑫′·⑭(엔진)와 UI 래퍼 한 곳. ⑧(VALIDATE_OTHER)은 래퍼의 `demolishedTailInputIssueOf`를 부르지 leaf를 직접 부르지 않는다.
+    expect(usersOf("demolishedInputIssue", [DEMOLISHED_ISSUE]).sort(), NEXT_PR_HINT).toEqual([REFINES, TAIL_SCOPE].sort());
+    expect(usersOf("demolishedOnWireValue|demolishedFloorAreaWireValue", [DEMOLISHED_ISSUE]).sort(), NEXT_PR_HINT).toEqual([TAIL_SCOPE]);
+    expect(usersOf("demolishedOnForEngine", [DEMOLISHED_ISSUE]).sort(), NEXT_PR_HINT).toEqual([MAPPER, TAIL_FIELDS].sort());
+    expect(usersOf("demolishedOnRequired", [DEMOLISHED_ISSUE]).sort(), NEXT_PR_HINT).toEqual([TAIL_SCOPE]);
+    // ⑭ 매퍼는 같은 조건을 `requiresDemolishedFloorArea ∧ demolishedAreaClauseApplies`로 직접 읽는다(엔진 소관 — leaf 거울과 같은 두 술어의 합).
+    expect(usersOf("demolishedFloorAreaRequired", [DEMOLISHED_ISSUE]).sort(), NEXT_PR_HINT).toEqual([TAIL_SCOPE]);
+    expect(usersOf("tailRemovalDateOf", [LEAF]).sort(), NEXT_PR_HINT).toEqual([DEMOLISHED_ISSUE]);
+    expect(usersOf("isTailDemolishedClearlyExpired", ["lib/tax-engine/non-business-land/demolished-temp-status.ts"]).sort(), NEXT_PR_HINT).toEqual(["lib/tax-engine/non-business-land/property-tax-basis.ts", TAIL_FIELDS].sort());
+    // UI 래퍼 소비처 — ④ 전송 · ⑤ 위젯 · ⑧ 검증이 각각 한 곳. 래퍼를 거치지 않는 제4의 호출처가 생기면 ⑤⑧⑫가 어긋난다.
+    expect(usersOf("demolishedTailWireFields", [TAIL_SCOPE]), NEXT_PR_HINT).toEqual(["lib/calc/non-business-land-request.ts"]);
+    expect(usersOf("demolishedTailInputIssueOf", [TAIL_SCOPE]), NEXT_PR_HINT).toEqual([VALIDATE_OTHER]);
+    expect(usersOf("demolishedOnFieldNeededOf|demolishedFloorAreaNeededOf|demolishedTailFactsOf", [TAIL_SCOPE]), NEXT_PR_HINT).toEqual([TAIL_FIELDS]);
+    // ⑧은 순서 `validateNblStateHistory` → `demolishedTailInputIssueOf`(사건 행 결함이 철거ㆍ멸실일 안내보다 먼저 — ⑫′의 `stateRowIssued` 억제와 같은 방향)
+    const v8 = FILES.find((f) => f.path === VALIDATE_OTHER)!.src;
+    expect(v8.indexOf("validateNblStateHistory(")).toBeGreaterThan(-1);
+    expect(v8.indexOf("validateNblStateHistory(")).toBeLessThan(v8.indexOf("demolishedTailInputIssueOf("));
+  });
+
+
   it("WIRE-12 (E3-③ UI Low 3): 엔진이 이력을 읽는 조건 `housingStateHistoryIsRead`는 판정(`judgeHousingLand`)과 UI 안내·⑧ H9 게이트(`housingAreaLimitState`)가 같은 함수로 읽는다", () => {
     expect(usersOf("housingStateHistoryIsRead", [HOUSING_LIMIT]).sort(), NEXT_PR_HINT).toEqual([HOUSING_LAND, PREVIEW].sort());
     expect(FILES.find((f) => f.path === VALIDATE)!.src, "⑧은 `housingAreaLimitState`로 게이트한다(자체 배율 계산 금지)").toMatch(/housingAreaLimitState\(/);
@@ -195,6 +224,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
       "lib/stores/calc-wizard-asset-factory.ts", // ② factory
       MIGRATE, // ③ 복원 정규화
       "lib/calc/non-business-land-request.ts", // ④ 전송(파생 nblOtherHasBuilding 덮어쓰기 포함)
+      TAIL_SCOPE, // E3f-1b U-2 — 꼬리 근거 «철거ㆍ멸실» 술어 래퍼: 와이어 사건(`stateHistoryWireFields`)을 leaf 사실로 넘긴다(④⑤⑧ 공용)
       SCOPE, READ, PREVIEW, VALIDATE, // ④⑤⑧ 공용 술어 · «엔진이 이력을 읽는가» 래퍼(E3-③ 후속) · 미리보기 · ⑧ 규칙
       SECTION, BARE_FIELDS, KIND_FIELD, DETAIL, // ⑤ 위젯 · 나대지 구간 선언 카드(E3-1b — `data-field` 앵커) · 철거 행 종류 카드(E3-③ B) · 마운트
       VL_SCOPE, VL_NOTICE, VL_PREVIEW, // E3-④ — 13호 술어 래퍼(`nblOtherStateEventsInUse`를 인자로 공급) · 입력 안내 갈래 · 행 아래 미리보기

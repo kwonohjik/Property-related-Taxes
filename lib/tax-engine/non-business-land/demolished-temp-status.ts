@@ -2,7 +2,7 @@
  * 철거ㆍ멸실 후 재산세 한시 지위(지방세법 시행령 §103의2) — 고지 leaf (NBL-STATE-HISTORY-E3-⑤ · E3f-1a). 순수 함수 — DB·`new Date(x)` 없음.
  *
  * 계획서(정본): docs/01-plan/features/nbl-state-history-e3-5-demolition-temp-status.engine.plan.md v4 §1.2~§1.3 · §5.1 · §5.8 · §6.2 D-5 · §7.3 (K-19~K-23 · K-30)
- * 이 파일은 E3f-1b가 한시 창·꼬리 한도 함수(`demolishedStatusWindow` 등)를 더하는 자리다. E3f-1a는 **고지만** 소유한다(입력 0 · 판정·세액 불변).
+ * E3f-1a는 **고지**(입력 0 · 판정·세액 불변), E3f-1b는 **꼬리 한도**(`isTailDemolishedClearlyExpired` — 철거ㆍ멸실일 입력이 있을 때만 읽는다)를 소유한다. E3f-2가 한시 창·구간 선언 함수(`demolishedStatusWindow` 등)를 더하는 자리다.
  *
  * ## 고지 연혁화(Q-2 (가) · F-1)
  * 종전 `NBL_PTAX_DEMOLISHED_STATUS_NOTICE`는 «1년»(2026.6.1.~ 시행본)을 양도일과 무관하게 고정해 그 전 양도에도 «1년»이라 말했다.
@@ -12,15 +12,29 @@
  * 한시 지위는 과세기준일마다 그날 시행본으로 정해지므로 «양도일 시행본» 안내는 근사다 — 그래서 2026.6.1. 전 변형에는 그 한계를 밝힌다(판정에는 쓰지 않는다).
  */
 import { NBL } from "../legal-codes";
-import { demolishedStatusEra, hasDemolishedStatusEraDate, isVacantHouseThreeYearCell } from "../data/nbl-historical-values-era";
+import { demolishedStatusEra, demolishedStatusMaxMonths, hasDemolishedStatusEraDate, isVacantHouseThreeYearCell, lastPropertyTaxBaseDateOnOrBefore } from "../data/nbl-historical-values-era";
 import type { DemolishedStatusEra } from "../data/nbl-historical-values-era";
+import { isWithinPeriodMonths } from "../civil-period";
+import { isValid } from "../utc-date";
 import type { NonBusinessLandInput } from "./types";
 
 const EPILOGUE_ERA_NOTE = "한시 지위는 과세기준일마다 그날의 시행본으로 정해지는데 양도일 기준 시행본으로 안내했고, ";
 
-/** 철거 전 바닥면적 × 영 §101② 적용배율 범위 문언은 2024.5.28. 시행본(1호 후단)부터다 — 그 전 시행본 안내에 덧붙인다(이 계산기는 모든 양도일에 그 범위를 적용한다). */
+/**
+ * 철거 전 바닥면적 × 영 §101② 적용배율 범위 문언은 2024.5.28. 시행본(1호 후단)부터다(첫 과세기준일 2024.6.1.) — 그 전 시행본 안내에 덧붙인다.
+ * 이 계산기는 그 전 과세기준일 시행본에는 면적 제한이 없다고 보고 부속토지 전체를 별도합산 범위로 계산한다(사용자 결정 2026-11-24 · `demolishedAreaClauseApplies`) — 부속토지 범위 자체는 확인 필요.
+ */
 const NO_AREA_CLAUSE_NOTE =
-  "이 시행본 본문에는 철거 전 바닥면적에 용도지역별 적용배율을 곱한 면적 범위 문언이 없으나 이 계산기는 그 범위를 적용했습니다. ";
+  "이 시행본 본문에는 철거 전 바닥면적에 용도지역별 적용배율을 곱한 면적 범위 문언이 없어 이 계산기는 그 범위를 적용하지 않고 부속토지 전체를 별도합산 범위로 보았습니다(어디까지가 철거된 건축물의 부속토지인지는 판정하지 않았습니다). ";
+
+/**
+ * 꼬리 근거(E3f-1b)가 철거ㆍ멸실일을 읽는 범위 — 양도일 직전 마지막 과세기준일까지 한시 기간이 **확실히** 지났는지(충분조건)만이다. 지났으면 근거를 접는다(`isTailDemolishedClearlyExpired`).
+ * 한시 지위(과세기준일 현재 성립 여부)와 요건(허가·건축 외 용도·빈집정비 여부)은 판정하지 않는다.
+ */
+const TAIL_LIMIT_JUDGED_NOTE =
+  "철거ㆍ멸실일은 한시 기간이 양도일 직전 과세기준일까지 확실히 지났는지만 판정했고(지났으면 이 근거를 인정하지 않고 종합합산으로 보았습니다) ";
+const TAIL_STATUS_NOT_JUDGED = `${TAIL_LIMIT_JUDGED_NOTE}한시 지위 자체는 판정하지 않았습니다 — 확인 필요.`;
+const TAIL_STATUS_AND_REQUIREMENTS_NOT_JUDGED = `${TAIL_LIMIT_JUDGED_NOTE}한시 지위 자체와 이 요건들은 판정하지 않았습니다 — 확인 필요.`;
 
 /** 양도일 미입력(⑤ 미리보기) — 단일 시행본을 단정하지 않는다(계획서 D-5 · K-30). */
 export const NBL_PTAX_DEMOLISHED_STATUS_ERA_UNKNOWN_NOTICE =
@@ -33,16 +47,16 @@ const NOTICE_BY_ERA = {
     `양도일이 그 전이면 이 근거를 적용할 과세기준일이 없습니다 — 이 계산기는 선택하신 근거를 그대로 받아들여 판정했고, 철거일(한시 지위)과 요건은 판정하지 않았습니다 — 확인 필요.`,
   six_month:
     `${NBL.PTAX_BASIS_DEMOLISHED_BODY}은 과세기준일 현재 철거ㆍ멸실된 날부터 6개월이 지나지 않은 건축물 또는 주택의 부속토지입니다(이 시행본에는 허가·사용승인 요건·빈집정비사업 3년 연장·건축 용도 외 사용 제외가 없습니다). ` +
-    `${NO_AREA_CLAUSE_NOTE}${EPILOGUE_ERA_NOTE}철거일(한시 지위)은 판정하지 않았습니다 — 확인 필요.`,
+    `${NO_AREA_CLAUSE_NOTE}${EPILOGUE_ERA_NOTE}${TAIL_STATUS_NOT_JUDGED}`,
   permit:
     `${NBL.PTAX_BASIS_DEMOLISHED_BODY}은 과세기준일 현재 철거ㆍ멸실된 날부터 6개월이 지나지 않은 건축물 또는 주택의 부속토지이고, 허가·사용승인을 받지 않은 건축물 또는 주택의 부속토지는 제외됩니다(2019.6.1. 과세기준일부터 — 이 시행본에는 빈집정비사업 3년 연장·건축 용도 외 사용 제외가 없습니다). ` +
-    `${NO_AREA_CLAUSE_NOTE}${EPILOGUE_ERA_NOTE}철거일(한시 지위)과 이 요건들은 판정하지 않았습니다 — 확인 필요.`,
+    `${NO_AREA_CLAUSE_NOTE}${EPILOGUE_ERA_NOTE}${TAIL_STATUS_AND_REQUIREMENTS_NOT_JUDGED}`,
   vacant_house:
     `${NBL.PTAX_BASIS_DEMOLISHED}은 철거ㆍ멸실된 날부터 6개월이 지나지 않은 건축물(빈집정비사업 등으로 철거된 빈집은 3년)의 부속토지이고, 건축 용도 외의 다른 용도로 쓰는 부분과 ` +
-    `허가·사용승인을 받지 않은 건축물의 부속토지는 제외됩니다. ${EPILOGUE_ERA_NOTE}철거일(한시 지위)과 이 요건들은 판정하지 않았습니다 — 확인 필요.`,
+    `허가·사용승인을 받지 않은 건축물의 부속토지는 제외됩니다. ${EPILOGUE_ERA_NOTE}${TAIL_STATUS_AND_REQUIREMENTS_NOT_JUDGED}`,
   one_year:
     `${NBL.PTAX_BASIS_DEMOLISHED}은 철거ㆍ멸실된 날부터 1년이 지나지 않은 건축물(빈집정비사업 등으로 철거된 빈집은 3년)의 부속토지이고, 건축 용도 외의 다른 용도로 쓰는 부분과 ` +
-    `허가·사용승인을 받지 않은 건축물의 부속토지는 제외됩니다. 철거일(한시 지위)과 이 요건들은 판정하지 않았습니다 — 확인 필요.`,
+    `허가·사용승인을 받지 않은 건축물의 부속토지는 제외됩니다. ${TAIL_STATUS_AND_REQUIREMENTS_NOT_JUDGED}`,
 } as const satisfies Record<DemolishedStatusEra, string>;
 
 /**
@@ -54,7 +68,7 @@ export function demolishedStatusNotice(transferDate: Date | undefined): string {
 }
 
 /**
- * 빈집 3년 셀 고지 — 근거 «철거ㆍ멸실»을 선언하지 **않은** 입력용(입력 칸 없이 발동). 철거ㆍ멸실일이 (2021.6.1., 2022.6.1.]이고 양도일이 [2024.6.1., 2025.3.21.)이면
+ * 빈집 3년 셀 고지 — 근거 «철거ㆍ멸실»을 선언하지 **않은** 입력용(입력 칸 없이 발동). 철거ㆍ멸실일이 [2021.6.1., 2022.6.1.]이고 양도일이 [2024.6.1., 2025.3.21.)이면
  * 과세기준일 2024.6.1. 현재 빈집정비 3년 한시가 성립할 수 있으나 건축물 멸실 유예 9호(2년)가 그날을 덮지 못한다(판정 뒤집힘 셀 — 계획서 §3.3 · K-23).
  * 이 계산기는 한시 지위를 판정하지 않는다(E3f-2 이후 문구는 «나대지 구간 근거 «철거ㆍ멸실»에서 빈집정비를 선택하면 반영»으로 바뀐다). 세액 불변 — 고지만.
  */
@@ -76,3 +90,33 @@ export function demolishedVacantHouseCellNotices(i: { transferDate: Date; remove
 export function demolitionGraceAnchorDates(input: Pick<NonBusinessLandInput, "gracePeriods">): Date[] {
   return input.gracePeriods.filter((g) => g.reasonCode === "demolition").map((g) => g.startDate);
 }
+
+/**
+ * 꼬리 근거 «철거ㆍ멸실»의 «확실히 지남» **충분조건**(E3f-1b · 계획서 §5.3 · Q-6 (가)) — 양도일 이전(당일 포함) 마지막 과세기준일 `s`에 대해
+ *   `s`가 «철거ㆍ멸실된 날부터 W_max(s)개월이 지나지 아니한» 기간(만료일 당일까지)의 **뒤**다(W_max = 2016.6.1. 전 시행본 없음 · 2024.6.1. 전 6개월 · 그 이후 3년 — 빈집정비 여부를 받지 않아 긴 기간으로 본다).
+ * 참이면 철거ㆍ멸실일부터 `s`까지 한시 기간이 이미 끝났다 — 꼬리 전체를 별도합산 사업용으로 세는 것은 법 근거가 없으므로 근거를 접는다(종합합산 + 확인 필요).
+ *
+ * **기간 계산**: 지방세기본법 §23 → 「민법」 §157(초일불산입 — 기산일은 철거ㆍ멸실일 다음날) · §160②(만료 월의 기산일 응당일 전날 만료) · §160③(해당일 없으면 그 달 말일 만료).
+ * 만료일 **당일까지는 한시 안**이다 — `isWithinPeriodMonths`(`civil-period.ts`). 철거일이 월 말일이면 `addMonths`가 아니라 만료 월의 말일이 만료일이다(4.30. 철거 + 6개월 = 10.31.).
+ *
+ * **접으면 안 되는 경우**(법 근거 없는 불리 금지): 철거 후 첫 과세기준일이 아직 안 왔으면(`s < 철거일` — 그 과세기준일의 지위는 건축물 부속토지) · 한시 안(충분조건 미충족) · 시행 전(2016.6.1. 전) · 날짜 해석 불가 → 거짓.
+ * 경계 쌍(K-11a/b · 2026-11-24 정정): 철거 2022-12-01 → 기산일 12-02 → 6개월 만료일 2023-06-01(그날 끝까지 기간 안) → 과세기준일 2023-06-01 현재는 «6개월이 지나지 아니한» = **한시 안** · 철거 2022-11-30 → 만료일 2023-05-31 → 지남.
+ * (정정 전에는 `s ≥ 철거일 + 6개월`로 만료일 당일을 «지남»으로 읽어 하루 불리했다.)
+ */
+export function isTailDemolishedClearlyExpired(removedOn: Date, transferDate: Date): boolean {
+  if (!isValid(removedOn) || !isValid(transferDate)) return false;
+  const s = lastPropertyTaxBaseDateOnOrBefore(transferDate);
+  if (!s) return false;
+  // `s ≥ 철거일 + W`(W > 0)이면 `s ≥ 철거일`이 따라온다 — 철거 후 첫 과세기준일이 아직 안 온 경우(K-13)는 따로 가르지 않아도 거짓이다.
+  const months = demolishedStatusMaxMonths(s);
+  return months > 0 && !isWithinPeriodMonths(removedOn, months, s);
+}
+
+/** 꼬리 근거 «철거ㆍ멸실» — 철거일부터 한시 기간이 확실히 지나 근거를 접은 고지. 입력 화면의 시점 안내(⑤)와 결과 고지가 같은 문구를 읽는다(단일 소스). */
+export const NBL_PTAX_DEMOLISHED_PERIOD_ELAPSED_NOTICE =
+  `철거ㆍ멸실일부터 한시 별도합산 기간(${NBL.PTAX_BASIS_DEMOLISHED_BODY} — 시행본에 따라 6개월, 2024.6.1.~ 빈집정비사업으로 철거된 빈집은 3년이며 이 계산기는 어느 쪽인지 묻지 않고 긴 기간으로 보았습니다)이 양도일 직전 과세기준일까지 확실히 지나 ` +
+  `이 근거는 인정하지 않고 종합합산으로 판정했습니다. 그 기간의 별도합산 인정은 「부득이한 사유 유예기간」의 「건축물 멸실·철거·붕괴」(9호)를 입력했으면 그대로 반영됩니다 — 확인 필요.`;
+
+/** 꼬리 근거 «철거ㆍ멸실» — 철거ㆍ멸실일 없이 엔진을 직접 호출한 경우의 안전망 고지(화면·API 경로는 ⑧·⑫가 먼저 막아 도달하지 않는다). */
+export const NBL_PTAX_DEMOLISHED_DATE_MISSING_NOTICE =
+  `근거 «철거ㆍ멸실»의 철거ㆍ멸실일이 없어 한시 별도합산 기간(${NBL.PTAX_BASIS_DEMOLISHED_BODY})이 지났는지 확인할 수 없으므로 이 근거는 인정하지 않고 종합합산으로 판정했습니다 — 확인 필요.`;

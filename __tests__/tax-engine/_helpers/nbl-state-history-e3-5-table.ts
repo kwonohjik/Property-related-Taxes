@@ -7,7 +7,8 @@
  *
  * 두 열
  *   · **오라클 열**(`biz` · `expect`) — 제안 모델(E3f-1b·E3f-2 적용 후)의 기대. `evalDayRow`(= `meetsPeriodCriteria`)에 사업용 구간을 직접 넣은 값이다. 구현 후 측정값이 다르면 표를 맞추지 말고 원인을 먼저 본다.
- *   · **현행 열**(`raw` · `current`) — E3f-0 시점의 master 엔진(raw → ⑭ 매퍼 → 판정 → 세액) 실측. `flipsIn`이 있으면 그 PR에서 이 값이 오라클 열로 **뒤집힌다**(의도된 반전 — 그 PR이 `current`를 오라클로 갱신하고 `flipsIn`을 지운다).
+ *   · **현행 열**(`raw` · `current`) — 엔진(raw → ⑭ 매퍼 → 판정 → 세액) 실측. `flipsIn`이 있으면 그 PR에서 이 값이 오라클 열로 **뒤집힌다**(의도된 반전 — 그 PR이 `current`를 오라클로 갱신하고 `flipsIn`을 지운다).
+ *     **E3f-1b가 K-11a · K-12 · K-12a · D-1 · D-1a를 뒤집었다**(꼬리 근거 «철거ㆍ멸실»이 철거일을 읽어 한시 기간이 확실히 지나면 접는다 — `current` = 오라클, `flipsIn` 삭제). E3f-2 행(K-1 · K-2b · K-5 · K-7 · K-7a)은 그대로다.
  *
  * 공통: 기타토지(잡종지) 1,000㎡ · 일반주거(배율 4) · 양도가 10억 · 취득가 3억 · `makeMockRates` · 기본 취득 2014-01-01 → 양도 2024-01-01(소유 3,651일). 건물은 별도합산(사업용).
  * 세액 두 값: 전량 사업용 B = 198,210,000 · 전량 비사업용 N = 253,960,000 (차 55,750,000) — 취득·양도일이 기본값인 행만 단언한다.
@@ -74,7 +75,7 @@ export const e35BareDecl = (removedOn: string, over: Record<string, unknown> = {
 
 /**
  * 꼬리 근거 행(E3f-1b 대상) — 건물(별도합산) `bldStart`~철거 `removedOn`, 꼬리 = 나대지 + 별도합산 + 근거 «철거ㆍ멸실»(종전 바닥면적 400㎡ × 4배 = 1,600㎡ ≥ 토지 1,000㎡).
- * 현행은 철거일을 읽지 않는다(`other-land.ts` 꼬리 `demolished`는 «근거 유지» · 철거일 칸 없음) — 꼬리 전체를 사업용으로 센다.
+ * E3f-1b 전 현행은 철거일을 읽지 않아 꼬리 전체를 사업용으로 셌다. 지금은 철거 행(이력 마지막 건축물 사건 = 철거)의 날짜를 출처 ①로 읽는다 — 이력 없이 새 칸(`nblOtherDemolishedOn`)을 쓰는 입력은 `over`로 준다.
  */
 export const e35Tail = (removedOn: string, transfer: string, bldStart: string | undefined, over: Record<string, unknown> = {}): Record<string, unknown> =>
   e35Base({
@@ -118,7 +119,7 @@ export const E35_ROWS: readonly E35Row[] = [
     raw: e35BareDecl("2022-12-15"), current: { nonBusiness: true, eff: 592, total: 3651, tax: E35_N }, flipsIn: "E3f-2",
   },
   {
-    id: "K-2a", scenario: "K-1에서 철거 2022-12-01 — 철거일 + 6개월 = 2023-06-01 = 과세기준일(「6개월이 지나지 않은」이 아님) → 게이트 실패 → 접음",
+    id: "K-2a", scenario: "K-1에서 철거 2022-12-01 — 철거일 + 6개월 = 2023-06-01 = 과세기준일(「6개월이 지나지 않은」이 아님) → 게이트 실패 → 접음 [⚠️ 2026-11-24 경계 정정: 민법 §157·§160상 2023-06-01은 만료일 당일 = 기간 안 → 게이트 통과가 맞다. 이 E3f-2 오라클 쌍(K-2a/K-2b)은 정정 전 경계 — E3f-2 PR이 게이트·창 경계를 다시 도출한다(계획서 §10 정정 단락)]",
     biz: [["2021-06-02", "2022-12-01"], ["2023-12-01", T]],
     expect: { nonBusiness: true, eff: 578, total: 3651 },
     raw: e35BareDecl("2022-12-01"), current: { nonBusiness: true, eff: 578, total: 3651, tax: E35_N },
@@ -171,30 +172,37 @@ export const E35_ROWS: readonly E35Row[] = [
   },
   // ── §7.2 꼬리 근거 (E3f-1b) ──
   {
-    id: "K-11a", scenario: "꼬리 근거 · 철거 2022-12-01 · 양도 2024-05-31(직전 과세기준일 2023-06-01 ≥ 철거일 + 6개월) → 확실히 지남 → 접음(종합합산 + 확인 필요)",
+    id: "K-11a", scenario: "꼬리 근거 · 철거 2022-11-30 · 양도 2024-05-31(6개월 만료일 2023-05-31 < 직전 과세기준일 2023-06-01 — 민법 §157·§160) → 확실히 지남 → 접음(종합합산 + 확인 필요). 2026-11-24 정정 — 종전 시료 철거 2022-12-01은 K-11c",
     transfer: "2024-05-31",
-    biz: [["2021-06-02", "2022-12-01"]],
-    expect: { nonBusiness: true, eff: 547, total: 3802 },
-    raw: e35Tail("2022-12-01", "2024-05-31", "2021-06-02"), current: { nonBusiness: false, eff: 1094, total: 3802 }, flipsIn: "E3f-1b",
+    biz: [["2021-06-02", "2022-11-30"]],
+    expect: { nonBusiness: true, eff: 546, total: 3802 },
+    raw: e35Tail("2022-11-30", "2024-05-31", "2021-06-02"), current: { nonBusiness: true, eff: 546, total: 3802 },
   },
   {
-    id: "K-11b", scenario: "철거 2022-12-02 · 양도 2024-05-31 — 직전 과세기준일 < 철거일 + 6개월 → 접지 않음 → 꼬리 전체 사업용(경계 쌍 — 날짜 하나 차이로 갈린다)",
+    id: "K-11b", scenario: "철거 2022-12-02 · 양도 2024-05-31 — 6개월 만료일 2023-06-02 ≥ 직전 과세기준일 → 접지 않음 → 꼬리 전체 사업용",
     transfer: "2024-05-31",
     biz: [["2021-06-02", "2024-05-31"]],
     expect: { nonBusiness: false, eff: 1094, total: 3802 },
     raw: e35Tail("2022-12-02", "2024-05-31", "2021-06-02"), current: { nonBusiness: false, eff: 1094, total: 3802 },
   },
   {
+    id: "K-11c", scenario: "철거 2022-12-01 · 양도 2024-05-31 — 기산일 12-02 → 6개월 만료일 2023-06-01 = 과세기준일: 만료일 당일까지 기간 안(「6개월이 지나지 아니한」) → 접지 않음 → 꼬리 전체 사업용(2026-11-24 경계 정정 — 정정 전 K-11a: 접음 · 비사업용 547 · 세액 253,960,000 → 정정 후 사업용 1,094 · 198,210,000)",
+    transfer: "2024-05-31",
+    biz: [["2021-06-02", "2024-05-31"]],
+    expect: { nonBusiness: false, eff: 1094, total: 3802 },
+    raw: e35Tail("2022-12-01", "2024-05-31", "2021-06-02"), current: { nonBusiness: false, eff: 1094, total: 3802 },
+  },
+  {
     id: "K-12", scenario: "v1 D4 시료(건물 2019-01-01~철거 2020-01-01 · 양도 2024-01-01) 접음 + 9호 없음 → 비사업용 365",
     biz: [["2019-01-01", "2020-01-01"]],
     expect: { nonBusiness: true, eff: 365, total: 3651 },
-    raw: e35Tail("2020-01-01", T, "2019-01-01"), current: { nonBusiness: false, eff: 1826, total: 3651, tax: E35_B }, flipsIn: "E3f-1b",
+    raw: e35Tail("2020-01-01", T, "2019-01-01"), current: { nonBusiness: true, eff: 365, total: 3651, tax: E35_N },
   },
   {
-    id: "K-12a", scenario: "K-12 + 9호 2년 — 접음 + 9호 = 사업용 1,096(현행은 철거 후 4년 전체를 사업용으로 세어 1,826) · 판정·세액 불변(B)",
+    id: "K-12a", scenario: "K-12 + 9호 2년 — 접음 + 9호 = 사업용 1,096(E3f-1b 전 현행은 철거 후 4년 전체를 사업용으로 세어 1,826) · 판정·세액 불변(B)",
     biz: [["2019-01-01", "2020-01-01"]], grace: [["2020-01-01", "2022-01-01"]],
     expect: { nonBusiness: false, eff: 1096, total: 3651 },
-    raw: e35Tail("2020-01-01", T, "2019-01-01", NINE("2020-01-01")), current: { nonBusiness: false, eff: 1826, total: 3651, tax: E35_B }, flipsIn: "E3f-1b",
+    raw: e35Tail("2020-01-01", T, "2019-01-01", NINE("2020-01-01")), current: { nonBusiness: false, eff: 1096, total: 3651, tax: E35_B },
   },
   {
     id: "K-13", scenario: "철거 2023-07-01 · 양도 2023-12-01(철거 후 과세기준일 없음 — 직전 과세기준일 지위는 건축물 부속토지) → 접지 않음 — 현행과 같다",
@@ -212,16 +220,16 @@ export const E35_ROWS: readonly E35Row[] = [
   },
   // ── 현행 결함 고정 — 철거 6년 뒤에도 꼬리 근거가 전량 사업용 ──
   {
-    id: "D-1", scenario: "건물 취득~철거 2018-01-01(6년 전) · 꼬리 근거 «철거ㆍ멸실» · 9호 없음 — 현행은 철거 후 6년 전체를 사업용으로 세어 B, 한시(철거 후 6개월·1년)가 지났으니 접으면 N",
+    id: "D-1", scenario: "건물 취득~철거 2018-01-01(6년 전) · 꼬리 근거 «철거ㆍ멸실» · 9호 없음 — E3f-1b 전 현행은 철거 후 6년 전체를 사업용으로 세어 B(198,210,000), 한시(철거 후 6개월·1년)가 지났으니 접어 N(253,960,000)",
     biz: [[OS, "2018-01-01"]],
     expect: { nonBusiness: true, eff: 1460, total: 3651 },
-    raw: e35Tail("2018-01-01", T, undefined), current: { nonBusiness: false, eff: 3651, total: 3651, tax: E35_B }, flipsIn: "E3f-1b",
+    raw: e35Tail("2018-01-01", T, undefined), current: { nonBusiness: true, eff: 1460, total: 3651, tax: E35_N },
   },
   {
-    id: "D-1a", scenario: "D-1 + 9호 2년 — 9호는 철거 후 2년만 덮는다 → 접으면 N(현행 B). 9호 입력자도 6년 뒤 꼬리는 사업용이 아니다",
+    id: "D-1a", scenario: "D-1 + 9호 2년 — 9호는 철거 후 2년만 덮는다 → 접어 N(E3f-1b 전 현행 B). 9호 입력자도 6년 뒤 꼬리는 사업용이 아니다",
     biz: [[OS, "2018-01-01"]], grace: [["2018-01-01", "2020-01-01"]],
     expect: { nonBusiness: true, eff: 2190, total: 3651 },
-    raw: e35Tail("2018-01-01", T, undefined, NINE("2018-01-01")), current: { nonBusiness: false, eff: 3651, total: 3651, tax: E35_B }, flipsIn: "E3f-1b",
+    raw: e35Tail("2018-01-01", T, undefined, NINE("2018-01-01")), current: { nonBusiness: true, eff: 2190, total: 3651, tax: E35_N },
   },
   {
     id: "D-2", scenario: "철거 2018-01-01 · 근거 없음(종합합산 꼬리) + 9호 2년만 — 현행도 N(253,960,000). 같은 입력에 근거를 선언하면 B로 바뀌는 비일관이 D-1의 정체",
@@ -232,5 +240,44 @@ export const E35_ROWS: readonly E35Row[] = [
       nblOtherStateEvents: [{ kind: "building_removed", date: "2018-01-01", propertyTaxTypeBefore: "separate" }], ...NINE("2018-01-01"),
     }),
     current: { nonBusiness: true, eff: 2190, total: 3651, tax: E35_N },
+  },
+];
+
+/**
+ * E3f-1b 연혁 정정 — 철거 전 바닥면적 × 영 §101② 배율 **면적 범위 문언은 2024.6.1. 과세기준일 시행본부터**(사용자 결정 2026-11-24 · `demolishedAreaClauseApplies`).
+ * 양도일 직전 마지막 과세기준일이 그 전이면 면적 제한 없이 부속토지 전체를 별도합산 범위로 본다. `before` = E3f-1b 전(모든 양도일에 배율 적용 · `OLD_AREA=1` probe 실측) · `after` = 지금.
+ * 공통: 취득 2014-01-01 · 건물 2021-06-02~철거 · 꼬리 근거 «철거ㆍ멸실»(별도합산 + 나대지) · 잡종지 1,000㎡ · 일반주거(배율 4). 세액은 양도가 10억 · 취득가 3억 `makeMockRates`(취득 2014-01-01 → 양도 2024-01-01 기본 시료만 B/N 대조).
+ * **세액이 줄어드는 방향만** 바뀐다(면적 제한이 풀리거나 그대로). 모름·미입력 방향 변화는 없다(`transferDate` 미입력 = 제한 적용 — 입력 누락이 제한을 풀지 않는다).
+ */
+export interface E35AreaRow {
+  id: string;
+  scenario: string;
+  raw: Record<string, unknown>;
+  /** 비사업용 판정 · 비사업용 면적 비율 · 산출세액(`calculatedTax`) */
+  before: { nonBusiness: boolean; ratio: number; tax: number };
+  after: { nonBusiness: boolean; ratio: number; tax: number };
+}
+
+const AREA_TAX_PARTIAL_60 = 205_990_000; // 비사업용 면적 60%(바닥면적 100㎡ × 4 = 400㎡ < 1,000㎡) — E35_B보다 7,780,000 많다
+export const E35_AREA_ROWS: readonly E35AreaRow[] = [
+  {
+    id: "K-31a", scenario: "바닥면적 100㎡(허용 400㎡) · 철거 2023-12-01 · 양도 2024-01-01 — 직전 과세기준일 2023-06-01은 면적 범위 문언이 없는 시행본 → 부속토지 1,000㎡ 전체 별도합산 범위",
+    raw: e35Tail("2023-12-01", T, "2021-06-02", { nblOtherDemolishedFloorArea: "100" }),
+    before: { nonBusiness: true, ratio: 0.6, tax: AREA_TAX_PARTIAL_60 }, after: { nonBusiness: false, ratio: 0, tax: E35_B },
+  },
+  {
+    id: "K-31b", scenario: "K-31a와 같은 면적 · 철거 2024-03-01 · 양도 2024-05-31(경계 하루 전) — 직전 과세기준일 2023-06-01 → 면적 제한 없음",
+    raw: e35Tail("2024-03-01", "2024-05-31", "2021-06-02", { nblOtherDemolishedFloorArea: "100" }),
+    before: { nonBusiness: true, ratio: 0.6, tax: AREA_TAX_PARTIAL_60 }, after: { nonBusiness: false, ratio: 0, tax: E35_B },
+  },
+  {
+    id: "K-31c", scenario: "K-31b에서 양도 2024-06-01(경계 당일) — 직전 과세기준일 2024-06-01은 면적 범위 문언이 있는 시행본 → 종전과 같다(허용 400㎡ · 비사업용 60%)",
+    raw: e35Tail("2024-03-01", "2024-06-01", "2021-06-02", { nblOtherDemolishedFloorArea: "100" }),
+    before: { nonBusiness: true, ratio: 0.6, tax: AREA_TAX_PARTIAL_60 }, after: { nonBusiness: true, ratio: 0.6, tax: AREA_TAX_PARTIAL_60 },
+  },
+  {
+    id: "K-31d", scenario: "바닥면적 200㎡(허용 800㎡ · 비사업용 20%) · 양도 2024-01-01 — 판정은 비사업용 → 사업용으로 뒤집히나 세액은 같다 — 결함이 아니다: 한 필지 일부 비사업용은 §104⑤ 비교과세(max(1호 합산 누진, 2호 호별 합))라 비율이 낮으면(이 시료 ≤ 0.4) 1호가 이긴다(`e3-5b-tail` G가 산식으로 고정)",
+    raw: e35Tail("2023-12-01", T, "2021-06-02", { nblOtherDemolishedFloorArea: "200" }),
+    before: { nonBusiness: true, ratio: 0.2, tax: E35_B }, after: { nonBusiness: false, ratio: 0, tax: E35_B },
   },
 ];

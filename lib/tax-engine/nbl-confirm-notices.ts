@@ -139,11 +139,12 @@ export const NBL_STATE_HISTORY_BARE_DEMOLISHED_TAIL_ONLY_NOTE =
   `양도일 현재 칸의 근거 「철거ㆍ멸실」과 달리 이 나대지 구간에서는 아직 받지 않습니다 — 「부득이한 사유 유예기간」의 「건축물 멸실·철거·붕괴」(9호)로 입력하세요.`;
 
 /**
- * E3-⑤ E3f-1a N-1 — 양도일 현재 칸의 근거 「철거ㆍ멸실」 시행본 고지(`demolishedStatusNotice`) 뒤에 붙는 입력 방향(E3f-1b가 한도를 열면 «지나면 인정하지 않고 접습니다»로 교체).
- * 입력 화면 전용 — 엔진 `warnings`에는 싣지 않는다.
+ * E3-⑤ E3f-1a N-1 → **E3f-1b 교체** — 양도일 현재 칸의 근거 「철거ㆍ멸실」 시행본 고지(`demolishedStatusNotice`) 뒤에 붙는 입력 방향. E3f-1b부터 엔진이 철거ㆍ멸실일을 읽어
+ * 한시 기간이 양도일 직전 과세기준일까지 확실히 지났으면 이 근거를 접는다(`isTailDemolishedClearlyExpired` — 종합합산 + 확인 필요).
+ * 입력 화면 전용 — 엔진 `warnings`에는 싣지 않는다(접힘 고지는 `NBL_PTAX_DEMOLISHED_PERIOD_ELAPSED_NOTICE`).
  */
 export const NBL_PTAX_DEMOLISHED_STATUS_GRACE_DIRECTION_NOTE =
-  `이 기간이 지났다면 이 근거 대신 「부득이한 사유 유예기간」의 「건축물 멸실·철거·붕괴」(9호)로 입력하세요.`;
+  `철거ㆍ멸실일부터 한시 기간이 확실히 지났으면 이 근거는 인정하지 않고 종합합산으로 판정합니다 — 그 기간의 별도합산 인정은 「부득이한 사유 유예기간」의 「건축물 멸실·철거·붕괴」(9호)로 입력하세요.`;
 
 /**
  * NBL-STATE-HISTORY-E3-③ (주택부수토지 소유기간 중 신축·철거 이력) 고지 — 단일 소스(입력 화면·결과 카드·엔진 `warnings`가 같은 문구를 읽는다).

@@ -6,7 +6,7 @@ import { nblExclusionBannerText } from "@/components/calc/results/transfer/nbl-s
 import { nblLthdBannerPhrase } from "@/components/calc/results/transfer/nbl-surcharge-exclusion-label";
 import { resolvePeriodEvaluation } from "@/lib/tax-engine/non-business-land/period-evaluation";
 import { NBL } from "@/lib/tax-engine/legal-codes";
-import { PROPERTY_TAX_BASIS_LABEL, PROPERTY_TAX_BASIS_LEGAL } from "@/lib/tax-engine/non-business-land/property-tax-basis";
+import { PROPERTY_TAX_BASIS_LABEL, PROPERTY_TAX_BASIS_LEGAL, UNCONFIRMED_REASON_TEXT } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { propertyTaxTypeLabel } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 import { NblStateHistoryPeriodTable } from "@/components/calc/NblStateHistoryPeriodTable";
 import { NblRevenuePeriodTable } from "@/components/calc/NblRevenuePeriodTable";
@@ -228,7 +228,10 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
           </div>
           {judgment.propertyTaxBasis.outcome === "unconfirmed" && (
             <p className="text-caption text-amber-700 dark:text-amber-300 leading-snug mt-1.5" data-testid="nbl-property-tax-basis-unconfirmed-echo">
-              건축물이 없는 토지의 비종합합산 선언은 근거가 확인돼야 인정됩니다. 근거를 확인하지 못해 종합합산으로 판정했습니다 — 확인 필요.
+              {judgment.propertyTaxBasis.unconfirmedReason === "demolished_period_elapsed" || judgment.propertyTaxBasis.unconfirmedReason === "demolished_date_missing"
+                ? /* E3-⑤ E3f-1b — 근거는 골랐지만 철거ㆍ멸실일이 한시 기간을 못 채우는(또는 없는) 경우 — «근거를 확인하지 못해»가 아니라 그 사실을 말한다(문구는 엔진 사유 표). */
+                  `근거 «철거ㆍ멸실» — ${UNCONFIRMED_REASON_TEXT[judgment.propertyTaxBasis.unconfirmedReason]} 이 근거를 인정하지 않고 종합합산으로 판정했습니다 — 확인 필요.`
+                : "건축물이 없는 토지의 비종합합산 선언은 근거가 확인돼야 인정됩니다. 근거를 확인하지 못해 종합합산으로 판정했습니다 — 확인 필요."}
             </p>
           )}
         </div>

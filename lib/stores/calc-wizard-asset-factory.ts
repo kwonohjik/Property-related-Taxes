@@ -371,6 +371,7 @@ export function makeDefaultAsset(index: number = 1): AssetForm {
     nblOtherPropertyTaxType: "",
     nblOtherPropertyTaxBasis: "",
     nblOtherDemolishedFloorArea: "",
+    nblOtherDemolishedOn: "",
     nblOtherBuildingValue: "",
     nblOtherLandValue: "",
     nblOtherIsRelatedToResidence: false,
