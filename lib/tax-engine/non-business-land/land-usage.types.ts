@@ -358,6 +358,14 @@ export interface StateEvent {
   demolishedVacantHouseBefore?: DemolishedFact;
   demolishedFloorAreaBefore?: number;
   /**
+   * E3-⑤ E3f-3 — 영 §103의2 2호 **단서**(빈집정비 철거 빈집 부속토지 중 국가·지방자치단체·지방자치단체조합이 1년 이상 공용·공공용으로 사용하고 법 §109② 단서로 재산세가 부과되는 것은 그 사용 기간 동안 포함) 사실 칸 4개.
+   * 건축 외 용도 «예» ∧ 빈집정비 «예»일 때만 읽는다(`demolishedPublicUseAsked` — 나머지는 stray). 3지선다 `""`·`unknown`·`no`는 단서 불성립(건축 외 용도 «예» 접힘 그대로), 날짜는 양 끝 포함.
+   */
+  demolishedPublicUseBefore?: DemolishedFact;
+  demolishedPublicUsePaidBefore?: DemolishedFact;
+  demolishedPublicUseFromBefore?: Date;
+  demolishedPublicUseToBefore?: Date;
+  /**
    * E3-③(주택부수토지) — **주택 구간을 닫는 철거 행**(`eventClosesHouseInterval`)의 철거 직전 주택 정착면적(㎡). ⑭가 raw 문자열을 수치로 바꿔 싣는다 —
    * 빈칸·비수치는 키 없음(`undefined`), 0·음수는 그대로 싣는다(엔진 `resolveHouseInterval`이 양수가 아니면 «모름»으로 접는다). 주택 구간의 재산세 구분(`propertyTaxTypeBefore`)은 읽지 않는다(조심 2018서0295).
    */
@@ -405,6 +413,8 @@ export type BareFoldReason =
   | "demolished_permit"
   /** E3f-2 — 철거 후 건축 용도 외로 사용한(또는 모르는) 부속토지는 제외(2024.6.1.~). */
   | "demolished_other_use"
+  /** E3f-3 — 영 §103의2 2호 단서(국가 등 공용·공공용 사용)를 주장했지만 입력한 공용 사용 기간 안에 한시 기간 중 과세기준일이 없다. */
+  | "demolished_public_use_no_base_date"
   /** E3f-2 — 종전 바닥면적 × 용도지역별 적용배율 면적 범위를 토지 면적이 넘는다(자동 안분 없음 — 구간 전체 접힘, Q-9). */
   | "demolished_area_exceeded";
 
@@ -437,6 +447,8 @@ export interface LandStateInterval {
   temporaryStatusMonths?: 6 | 12 | 36;
   /** E3f-2 — 철거된 건축물 종류(`house` = 주택 — 면적 한도 칸이 없다 · 고지). `temporaryStatusWindow`와 함께만 있다. */
   temporaryStatusRemovedKind?: "house" | "building";
+  /** E3f-3 — 창을 영 §103의2 2호 단서(국가 등 공용·공공용 사용 기간)로 받았다(창은 공용 사용 기간으로 한정). `temporaryStatusWindow`와 함께만 있다. */
+  temporaryStatusPublicUse?: true;
   /** E3f-2 — 주택 철거 행인데 빈집정비 «예»가 아니어서 3년 연장을 반영하지 않았다(일반 W만 적용 — 고지). `temporaryStatusWindow`와 함께만 있다. */
   vacantHouseExtensionUnconfirmed?: true;
   /** E3-③ — 주택 구간(주택부수토지 카드의 모든 건축물 구간)일 때만. 있으면 `propertyTaxType`은 판정에 쓰지 않는다(`"unknown"` 고정 — 조심 2018서0295). */
@@ -474,6 +486,7 @@ export interface StateHistoryIntervalEcho {
   temporaryStatusWindow?: DateInterval;
   temporaryStatusMonths?: 6 | 12 | 36;
   temporaryStatusRemovedKind?: "house" | "building";
+  temporaryStatusPublicUse?: true;
   vacantHouseExtensionUnconfirmed?: true;
   /** E3-③ — 주택 구간일 때만(`LandStateInterval`의 같은 이름 필드). 없으면 키 없음 = 종전 echo와 같다. */
   buildingKind?: StateBuildingKind;

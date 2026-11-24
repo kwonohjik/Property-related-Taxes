@@ -134,6 +134,10 @@ export const NBL = {
   PTAX_BASIS_DEMOLISHED_BODY:     "지방세법 §106 ① 2호 다목 + 지방세법 시행령 §103의2",
   /** 영 §103의2 2호(빈집정비사업 등으로 철거된 빈집 — 철거일부터 3년 · 2024.6.1.~) */
   PTAX_BASIS_DEMOLISHED_VACANT_HOUSE: "지방세법 §106 ① 2호 다목 + 지방세법 시행령 §103의2 2호",
+  /** 영 §103의2 2호 단서 — 빈집정비 철거 빈집 부속토지 중 국가·지방자치단체·지방자치단체조합이 1년 이상 공용·공공용으로 사용하고 법 §109② 단서로 재산세가 부과되는 것은 그 사용 기간 동안 포함(E3f-3). 검증: manifest `LOCAL_DECREE.DEMOLISHED_BUILDING_LAND` · `PROPERTY.NON_TAXABLE`. */
+  PTAX_BASIS_DEMOLISHED_VACANT_HOUSE_PUBLIC_USE: "지방세법 §106 ① 2호 다목 + 지방세법 시행령 §103의2 2호 단서 + 지방세법 §109 ②",
+  /** 법 §109② — 국가 등이 1년 이상 공용·공공용으로 사용하는 재산은 재산세 비과세(단서: 유료 사용·유상이전 약정 선사용은 부과). 무상 공용 사용 = 비과세는 §103의2 2호 단서가 아니라 「비과세·면제 토지」 근거의 문제(E3f-3 Q-5). */
+  PTAX_NON_TAXABLE_PUBLIC_USE: "지방세법 §109 ②",
   /** 영 §105 — 주택 부속토지의 범위(경계가 명백하지 아니한 경우 바닥면적의 10배). 철거한 주택 구간의 한시 창이 면적 한도를 적용하지 않는 이유를 밝히는 고지가 읽는다(E3f-2). 검증: manifest `LOCAL_DECREE.HOUSE_APPURTENANT_LAND`. */
   PTAX_BASIS_DEMOLISHED_HOUSE_SITE: "지방세법 시행령 §105",
   // §168의11① 호별 면적기준 (갭 3a) — 초과분 비사업용 면적 안분

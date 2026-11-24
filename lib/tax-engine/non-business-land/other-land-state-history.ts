@@ -178,6 +178,11 @@ export interface StateEventRowLike {
   demolishedOtherUseBefore?: string;
   demolishedVacantHouseBefore?: string;
   demolishedFloorAreaBefore?: string;
+  /** E3f-3 — 영 §103의2 2호 단서 하위 칸(`demolishedRowFactIssue`가 읽는다). */
+  demolishedPublicUseBefore?: string;
+  demolishedPublicUsePaidBefore?: string;
+  demolishedPublicUseFromBefore?: string;
+  demolishedPublicUseToBefore?: string;
 }
 
 /**
@@ -386,7 +391,7 @@ interface Segment extends Omit<LandStateInterval, "start" | "end"> {
 /** 나대지 구간 선언의 해석 — 구간의 `propertyTaxType`과 (비종합합산 선언이 있을 때만) 근거 echo 필드. */
 type BareDeclaration = Pick<
   LandStateInterval,
-  "propertyTaxType" | "basisOutcome" | "basis" | "declaredPropertyTaxType" | "foldReason" | "temporaryStatusWindow" | "temporaryStatusMonths" | "temporaryStatusRemovedKind" | "vacantHouseExtensionUnconfirmed"
+  "propertyTaxType" | "basisOutcome" | "basis" | "declaredPropertyTaxType" | "foldReason" | "temporaryStatusWindow" | "temporaryStatusMonths" | "temporaryStatusRemovedKind" | "temporaryStatusPublicUse" | "vacantHouseExtensionUnconfirmed"
 >;
 
 /**
@@ -418,6 +423,7 @@ export function resolveBareDeclaration(
   ev: Pick<
     StateEvent,
     "kind" | "propertyTaxTypeBefore" | "propertyTaxBasisBefore" | "areaWithinLimitBefore" | "demolishedPermitBefore" | "demolishedOtherUseBefore" | "demolishedVacantHouseBefore" | "demolishedFloorAreaBefore"
+    | "demolishedPublicUseBefore" | "demolishedPublicUsePaidBefore" | "demolishedPublicUseFromBefore" | "demolishedPublicUseToBefore"
   >,
   ctx?: BareDeclarationCtx,
 ): BareDeclaration {
@@ -437,7 +443,16 @@ export function resolveBareDeclaration(
       intervalStart: ctx.intervalStart,
       end: ctx.intervalEnd,
       kind: ctx.removedKind,
-      facts: { permit: ev.demolishedPermitBefore, otherUse: ev.demolishedOtherUseBefore, vacantHouse: ev.demolishedVacantHouseBefore, floorArea: ev.demolishedFloorAreaBefore },
+      facts: {
+        permit: ev.demolishedPermitBefore,
+        otherUse: ev.demolishedOtherUseBefore,
+        vacantHouse: ev.demolishedVacantHouseBefore,
+        floorArea: ev.demolishedFloorAreaBefore,
+        publicUse: ev.demolishedPublicUseBefore,
+        publicPaid: ev.demolishedPublicUsePaidBefore,
+        publicUseFrom: ev.demolishedPublicUseFromBefore,
+        publicUseTo: ev.demolishedPublicUseToBefore,
+      },
       landArea: ctx.landArea,
       zoneType: ctx.zoneType,
     });
@@ -449,6 +464,7 @@ export function resolveBareDeclaration(
       temporaryStatusWindow: win.window,
       temporaryStatusMonths: win.months,
       temporaryStatusRemovedKind: ctx.removedKind,
+      ...(win.publicUse ? { temporaryStatusPublicUse: true as const } : {}),
       ...(win.vacantHouseExtensionUnconfirmed ? { vacantHouseExtensionUnconfirmed: true as const } : {}),
     };
   }
@@ -481,6 +497,7 @@ export const BARE_FOLD_REASON_TEXT = {
   demolished_never_period: "철거 후 한시 기간 안에 과세기준일 없음",
   demolished_permit: "허가·사용승인 미확인",
   demolished_other_use: "건축 외 용도 사용 또는 미확인",
+  demolished_public_use_no_base_date: "공용 사용 기간 안에 과세기준일 없음",
   demolished_area_exceeded: "철거 전 바닥면적 배율 범위 초과",
   area_exceeded: "면적한도 일부 초과",
   area_unknown: "면적한도 모름",
@@ -492,11 +509,13 @@ export const BARE_FOLD_REASON_TEXT = {
  */
 export function bareIntervalTaxTypeText(
   // `temporaryStatusWindow`는 있는지만 본다 — 엔진 구간(`DateInterval`)·결과 echo·⑤ 미리보기 행(ISO 문자열 창)이 같이 부른다.
-  iv: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome" | "basis" | "foldReason"> & { temporaryStatusWindow?: object },
+  iv: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome" | "basis" | "foldReason"> & { temporaryStatusWindow?: object; temporaryStatusPublicUse?: boolean },
 ): string | undefined {
   if (iv.hasBuilding || !iv.basisOutcome) return undefined;
   // E3f-2 — 근거 «철거ㆍ멸실»을 받아들인 구간은 구간 전체가 아니라 한시 창만 별도합산으로 센다(창 날짜는 echo `temporaryStatusWindow`가 말한다).
-  if (iv.basisOutcome === "accepted" && iv.temporaryStatusWindow) return `${PROPERTY_TAX_TYPE_LABEL[iv.propertyTaxType as PropertyTaxType]}(나대지 — ${BARE_BASIS_SHORT_LABEL.demolished} · 한시 기간만)`;
+  if (iv.basisOutcome === "accepted" && iv.temporaryStatusWindow) {
+    return `${PROPERTY_TAX_TYPE_LABEL[iv.propertyTaxType as PropertyTaxType]}(나대지 — ${BARE_BASIS_SHORT_LABEL.demolished} · ${iv.temporaryStatusPublicUse ? "한시 기간 중 공용 사용 기간만" : "한시 기간만"})`;
+  }
   if (iv.basisOutcome === "accepted") {
     return `${PROPERTY_TAX_TYPE_LABEL[iv.propertyTaxType as PropertyTaxType]}(나대지 — ${BARE_BASIS_SHORT_LABEL[iv.basis ?? "unknown"]})`;
   }

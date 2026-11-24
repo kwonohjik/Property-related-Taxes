@@ -219,7 +219,15 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
   {
     id: "PROPERTY.NON_TAXABLE",
     citation: "지방세법 §109",
-    keywords: ["재산세를 부과하지 아니한다", "국가", "지방자치단체", "공용 또는 공공용"],
+    keywords: [
+      "재산세를 부과하지 아니한다",
+      "국가",
+      "지방자치단체",
+      "공용 또는 공공용",
+      // E3-⑤ E3f-3 — §109② 단서(`PTAX_NON_TAXABLE_PUBLIC_USE`): 유료 사용·유상이전 약정 선사용은 재산세 부과 → 영 §103의2 2호 단서의 «부과대상».
+      "유료로 사용하는 경우",
+      "소유권의 유상이전을 약정한 경우로서 그 재산을 취득하기 전에 미리 사용하는 경우",
+    ],
     keywordMode: "ALL",
   },
   {

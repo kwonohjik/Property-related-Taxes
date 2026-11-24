@@ -10,6 +10,8 @@ import { NBL_STATE_HISTORY_BARE_DEMOLISHED_AREA_MISSING_NOTICE } from "../nbl-co
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_NEVER_PERIOD_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_OTHER_USE_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PERMIT_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_NO_BASE_DATE_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_HOUSE_AREA_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_VACANT_HOUSE_UNCONFIRMED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_AREA_LIMIT_NOTICE } from "../nbl-confirm-notices";
@@ -54,6 +56,7 @@ export function intervalEcho(intervals: ReadonlyArray<LandStateInterval>, busine
           ...(iv.temporaryStatusWindow ? { temporaryStatusWindow: iv.temporaryStatusWindow } : {}),
           ...(iv.temporaryStatusMonths ? { temporaryStatusMonths: iv.temporaryStatusMonths } : {}),
           ...(iv.temporaryStatusRemovedKind ? { temporaryStatusRemovedKind: iv.temporaryStatusRemovedKind } : {}),
+          ...(iv.temporaryStatusPublicUse ? { temporaryStatusPublicUse: iv.temporaryStatusPublicUse } : {}),
           ...(iv.vacantHouseExtensionUnconfirmed ? { vacantHouseExtensionUnconfirmed: iv.vacantHouseExtensionUnconfirmed } : {}),
         }
       : {};
@@ -68,6 +71,7 @@ export const BARE_DEMOLISHED_FOLD_NOTICE = {
   demolished_never_period: NBL_STATE_HISTORY_BARE_DEMOLISHED_NEVER_PERIOD_NOTICE,
   demolished_permit: NBL_STATE_HISTORY_BARE_DEMOLISHED_PERMIT_NOTICE,
   demolished_other_use: NBL_STATE_HISTORY_BARE_DEMOLISHED_OTHER_USE_NOTICE,
+  demolished_public_use_no_base_date: NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_NO_BASE_DATE_NOTICE,
   demolished_area_missing: NBL_STATE_HISTORY_BARE_DEMOLISHED_AREA_MISSING_NOTICE,
   demolished_area_exceeded: NBL_STATE_HISTORY_BARE_DEMOLISHED_AREA_EXCEEDED_NOTICE,
 } as const satisfies Record<DemolishedFoldReason, string>;
@@ -87,6 +91,7 @@ export function bareDeclarationNotices(intervals: ReadonlyArray<LandStateInterva
   for (const reason of windowReasons) notices.push(BARE_DEMOLISHED_FOLD_NOTICE[reason]);
   if (intervals.some((iv) => iv.basisOutcome === "accepted" && !iv.temporaryStatusWindow)) notices.push(NBL_STATE_HISTORY_BARE_ACCEPTED_NOTICE);
   if (intervals.some((iv) => iv.temporaryStatusWindow)) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_ACCEPTED_NOTICE);
+  if (intervals.some((iv) => iv.temporaryStatusPublicUse)) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE);
   if (intervals.some((iv) => iv.vacantHouseExtensionUnconfirmed)) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_VACANT_HOUSE_UNCONFIRMED_NOTICE);
   if (intervals.some((iv) => iv.temporaryStatusWindow && iv.temporaryStatusRemovedKind === "house")) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_HOUSE_AREA_NOTICE);
   return notices;

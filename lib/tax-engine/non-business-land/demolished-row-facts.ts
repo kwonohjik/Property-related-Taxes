@@ -11,6 +11,7 @@
  */
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { getZoneAreaMultiplier } from "../local-tax-zone-multiplier";
+import { demolishedPublicUseAsked } from "./demolished-temp-status";
 import { demolishedRequiredFacts } from "./demolished-temp-status";
 import { demolishedRemovedKindOf } from "./other-land-state-history";
 import { eventOffersDemolished } from "./other-land-state-history";
@@ -29,9 +30,22 @@ export interface DemolishedFactRowLike {
   demolishedOtherUseBefore?: string;
   demolishedVacantHouseBefore?: string;
   demolishedFloorAreaBefore?: string;
+  /** E3f-3 — 영 §103의2 2호 단서 하위 칸(건축 외 용도 «예» ∧ 빈집정비 «예»일 때만 열린다 — `demolishedPublicUseAsked`). */
+  demolishedPublicUseBefore?: string;
+  demolishedPublicUsePaidBefore?: string;
+  demolishedPublicUseFromBefore?: string;
+  demolishedPublicUseToBefore?: string;
 }
 
-export type DemolishedRowFactField = "demolishedPermitBefore" | "demolishedOtherUseBefore" | "demolishedVacantHouseBefore" | "demolishedFloorAreaBefore";
+export type DemolishedRowFactField =
+  | "demolishedPermitBefore"
+  | "demolishedOtherUseBefore"
+  | "demolishedVacantHouseBefore"
+  | "demolishedPublicUseBefore"
+  | "demolishedPublicUsePaidBefore"
+  | "demolishedPublicUseFromBefore"
+  | "demolishedPublicUseToBefore"
+  | "demolishedFloorAreaBefore";
 
 export interface DemolishedRowFactIssue {
   /** 사건 행 번호(0부터). */
@@ -58,6 +72,30 @@ export function demolishedFloorAreaRequiredMessage(index: number): string {
   return `${PREFIX} — ${index + 1}번째 사건 행: 철거 전 건축물의 바닥면적(㎡)을 입력하세요. 한시 별도합산의 부속토지는 철거 전 건축물의 바닥면적에 용도지역별 적용배율을 곱한 면적 범위라 판정에 필요합니다.`;
 }
 
+export function demolishedPublicUseRequiredMessage(index: number): string {
+  return `${PREFIX} — ${index + 1}번째 사건 행: 철거 후 그 부속토지를 국가·지방자치단체·지방자치단체조합이 1년 이상 공용·공공용으로 사용했는지(1년 이상 사용할 것이 계약서 등으로 입증되는 경우 포함) 선택하세요. 건축 외 용도 사용 「예」·빈집정비 「예」인 구간의 한시 별도합산 판정에 필요합니다(그 구간 토지 전부가 아니면 「아니오」, 모르면 「모름」).`;
+}
+
+export function demolishedPublicUsePaidRequiredMessage(index: number): string {
+  return `${PREFIX} — ${index + 1}번째 사건 행: 그 공용·공공용 사용이 유료이거나 소유권 유상이전 약정 후 취득 전에 미리 사용한 것이라 재산세가 부과되는지 선택하세요(지방세법 §109② 단서). 무상 사용이면 재산세 비과세라 「아니오」입니다(모르면 「모름」).`;
+}
+
+export function demolishedPublicUseFromRequiredMessage(index: number): string {
+  return `${PREFIX} — ${index + 1}번째 사건 행: 국가 등의 공용·공공용 사용 개시일을 입력하세요(그날 포함).`;
+}
+
+export function demolishedPublicUseToRequiredMessage(index: number): string {
+  return `${PREFIX} — ${index + 1}번째 사건 행: 국가 등의 공용·공공용 사용 종료일을 입력하세요(그날 포함 · 지금도 사용 중이면 그 이후 날짜를 입력하면 구간 안으로 잘립니다. 빈칸을 구간 끝까지로 보지 않습니다).`;
+}
+
+function demolishedPublicUseDateInvalidMessage(index: number, label: string, value: string): string {
+  return `${PREFIX} — ${index + 1}번째 사건 행: 공용·공공용 사용 ${label}(${value})을 날짜로 읽을 수 없습니다. YYYY-MM-DD 형식으로 입력하세요.`;
+}
+
+function demolishedPublicUseDateReversedMessage(index: number, from: string, to: string): string {
+  return `${PREFIX} — ${index + 1}번째 사건 행: 공용·공공용 사용 종료일(${to})이 개시일(${from})보다 앞입니다. 개시일 ≤ 종료일이어야 합니다.`;
+}
+
 /** 바닥면적 칸 — 빈칸·비수치·0·음수 모두 «입력 없음»으로 같은 문구(⑭ `parseNumber`와 같은 읽기: 콤마 제거 후 `parseFloat`). */
 function floorAreaMissing(value: string | undefined): boolean {
   const n = parseFloat((value ?? "").replace(/,/g, ""));
@@ -70,25 +108,74 @@ const MESSAGE_OF = {
   demolishedPermitBefore: demolishedPermitRequiredMessage,
   demolishedOtherUseBefore: demolishedOtherUseRequiredMessage,
   demolishedVacantHouseBefore: demolishedVacantHouseRequiredMessage,
+  demolishedPublicUseBefore: demolishedPublicUseRequiredMessage,
+  demolishedPublicUsePaidBefore: demolishedPublicUsePaidRequiredMessage,
+  demolishedPublicUseFromBefore: demolishedPublicUseFromRequiredMessage,
+  demolishedPublicUseToBefore: demolishedPublicUseToRequiredMessage,
   demolishedFloorAreaBefore: demolishedFloorAreaRequiredMessage,
 } as const satisfies Record<DemolishedRowFactField, (index: number) => string>;
 
+/** 공용 사용 개시일·종료일 결함 — 빈칸 · 해석 불가 · 개시일 > 종료일(종료일 칸으로 점프). 둘 다 정상이면 `null`. */
+function publicUseDateDefect(ev: Pick<DemolishedFactRowLike, "demolishedPublicUseFromBefore" | "demolishedPublicUseToBefore">): { field: "demolishedPublicUseFromBefore" | "demolishedPublicUseToBefore"; kind: "blank" | "invalid" | "reversed" } | null {
+  const fromRaw = (ev.demolishedPublicUseFromBefore ?? "").trim();
+  const toRaw = (ev.demolishedPublicUseToBefore ?? "").trim();
+  if (!fromRaw) return { field: "demolishedPublicUseFromBefore", kind: "blank" };
+  const from = toOptionalDate(fromRaw);
+  if (!from) return { field: "demolishedPublicUseFromBefore", kind: "invalid" };
+  if (!toRaw) return { field: "demolishedPublicUseToBefore", kind: "blank" };
+  const to = toOptionalDate(toRaw);
+  if (!to) return { field: "demolishedPublicUseToBefore", kind: "invalid" };
+  if (to.getTime() < from.getTime()) return { field: "demolishedPublicUseToBefore", kind: "reversed" };
+  return null;
+}
+
 /**
- * 요구된 칸 중 **비어 있는 첫 칸**(허가 → 건축 외 용도 → 빈집정비 → 바닥면적 — 3지선다 = 미선택 `""` · 바닥면적 = 빈칸·비수치·비양수). ⑧·⑫′(`demolishedRowFactIssue`)와 ⑤ 미리보기(사실 칸이 모두 답해졌는가)가 같은 함수다.
+ * 요구된 칸 중 **비어 있는(또는 날짜가 결함인) 첫 칸**(허가 → 건축 외 용도 → 빈집정비 → 공용 사용 → 유료 → 개시일 → 종료일 → 바닥면적 — 3지선다 = 미선택 `""` · 바닥면적 = 빈칸·비수치·비양수 · 공용 사용 날짜 = 빈칸·해석 불가·개시일 > 종료일).
+ * ⑧·⑫′(`demolishedRowFactIssue`)와 ⑤ 미리보기(사실 칸이 모두 답해졌는가)가 같은 함수다. 공용 사용 하위 칸은 `demolishedPublicUseAsked`(답 의존 사슬 — E3f-3)가 연다.
  */
 export function firstBlankDemolishedFact(
-  ev: Pick<DemolishedFactRowLike, "demolishedPermitBefore" | "demolishedOtherUseBefore" | "demolishedVacantHouseBefore" | "demolishedFloorAreaBefore">,
+  ev: Pick<
+    DemolishedFactRowLike,
+    | "demolishedPermitBefore"
+    | "demolishedOtherUseBefore"
+    | "demolishedVacantHouseBefore"
+    | "demolishedFloorAreaBefore"
+    | "demolishedPublicUseBefore"
+    | "demolishedPublicUsePaidBefore"
+    | "demolishedPublicUseFromBefore"
+    | "demolishedPublicUseToBefore"
+  >,
   required: { permit: boolean; otherUse: boolean; vacantHouse: boolean; floorArea: boolean },
 ): DemolishedRowFactField | null {
   if (required.permit && blank(ev.demolishedPermitBefore)) return "demolishedPermitBefore";
   if (required.otherUse && blank(ev.demolishedOtherUseBefore)) return "demolishedOtherUseBefore";
   if (required.vacantHouse && blank(ev.demolishedVacantHouseBefore)) return "demolishedVacantHouseBefore";
+  const asked = demolishedPublicUseAsked(required, ev);
+  if (asked.publicUse && blank(ev.demolishedPublicUseBefore)) return "demolishedPublicUseBefore";
+  if (asked.paid && blank(ev.demolishedPublicUsePaidBefore)) return "demolishedPublicUsePaidBefore";
+  if (asked.dates) {
+    const defect = publicUseDateDefect(ev);
+    if (defect) return defect.field;
+  }
   if (required.floorArea && floorAreaMissing(ev.demolishedFloorAreaBefore)) return "demolishedFloorAreaBefore";
   return null;
 }
 
+/** 필드별 메시지 — 공용 사용 날짜는 빈칸 · 해석 불가 · 역순을 가른다(점프 필드는 `firstBlankDemolishedFact`와 같다). */
+function messageOf(field: DemolishedRowFactField, index: number, ev: DemolishedFactRowLike): string {
+  if (field === "demolishedPublicUseFromBefore" || field === "demolishedPublicUseToBefore") {
+    const defect = publicUseDateDefect(ev);
+    if (defect?.kind === "invalid") {
+      const isFrom = field === "demolishedPublicUseFromBefore";
+      return demolishedPublicUseDateInvalidMessage(index, isFrom ? "개시일" : "종료일", (isFrom ? ev.demolishedPublicUseFromBefore : ev.demolishedPublicUseToBefore) ?? "");
+    }
+    if (defect?.kind === "reversed") return demolishedPublicUseDateReversedMessage(index, ev.demolishedPublicUseFromBefore ?? "", ev.demolishedPublicUseToBefore ?? "");
+  }
+  return MESSAGE_OF[field](index);
+}
+
 /**
- * 와이어 사건 행 중 **근거 «철거ㆍ멸실»의 사실 칸이 요구되는데 비어 있는 첫 칸** — 행 순서(화면 순서) · 한 행 안에서는 허가 → 건축 외 용도 → 빈집정비 → 바닥면적(→ 용도지역 배율표 밖).
+ * 와이어 사건 행 중 **근거 «철거ㆍ멸실»의 사실 칸이 요구되는데 비어 있는 첫 칸** — 행 순서(화면 순서) · 한 행 안에서는 허가 → 건축 외 용도 → 빈집정비 → 공용 사용 → 유료 → 개시일 → 종료일 → 바닥면적(→ 용도지역 배율표 밖).
  *
  * @param events 와이어 사건(`stateHistoryWireFields`가 싣는 형태 — ④가 요구 칸만 싣는다). ⑫′는 raw 사건 그대로. 사건 순서·날짜는 호출 전 `stateEventSequenceIssue`가 통과한 것을 전제하되, 읽을 수 없는 날짜는 요구 집합을 비운다.
  * @param fallbackHasBuilding 건축물 사건이 0건일 때만 쓰이는 초기 건축물 상태(`eventClosesBareInterval` 인자 — ⑭와 같은 값).
@@ -115,7 +202,7 @@ export function demolishedRowFactIssue(i: {
     historyRead ??= i.historyRead();
     if (!historyRead) return null; // 엔진이 이력을 읽지 않으면 어떤 칸도 요구하지 않는다 — 어느 행이든 같다.
     const blankField = firstBlankDemolishedFact(ev, required);
-    if (blankField) return { index: idx, field: blankField, message: MESSAGE_OF[blankField](idx) };
+    if (blankField) return { index: idx, field: blankField, message: messageOf(blankField, idx, ev) };
     if (required.floorArea && !getZoneAreaMultiplier(i.zoneType)) return { index: idx, field: "demolishedFloorAreaBefore", message: demolishedZoneUnmappedMessage(i.zoneType) };
   }
   return null;

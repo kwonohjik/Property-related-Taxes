@@ -23,6 +23,7 @@ import { stateHistoryDeemedBlocks } from "@/lib/tax-engine/non-business-land/hou
 import { eventClosesHouseInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { effectiveOtherHasBuilding } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { demolishedRemovedKindOf } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { demolishedPublicUseAsked } from "@/lib/tax-engine/non-business-land/demolished-temp-status";
 import { demolishedRequiredFacts } from "@/lib/tax-engine/non-business-land/demolished-temp-status";
 import { eventBasisOptions } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventOffersDemolished } from "@/lib/tax-engine/non-business-land/other-land-state-history";
@@ -160,16 +161,34 @@ function demolishedWireFacts(
   i: number,
   e: NblOtherStateEventInput,
   tailKind: StateBuildingKind | undefined,
-): Pick<NblOtherStateEventInput, "demolishedPermitBefore" | "demolishedOtherUseBefore" | "demolishedVacantHouseBefore" | "demolishedFloorAreaBefore"> {
+): Pick<
+  NblOtherStateEventInput,
+  | "demolishedPermitBefore"
+  | "demolishedOtherUseBefore"
+  | "demolishedVacantHouseBefore"
+  | "demolishedFloorAreaBefore"
+  | "demolishedPublicUseBefore"
+  | "demolishedPublicUsePaidBefore"
+  | "demolishedPublicUseFromBefore"
+  | "demolishedPublicUseToBefore"
+> {
   const kind = demolishedRemovedKindOf(events, i, tailKind);
   if (!kind) return {};
   const need = demolishedRequiredFacts({ removedOn: toOptionalDate(removalDateFor(events, i)), intervalStart: toOptionalDate(events[i - 1]?.date), end: toOptionalDate(e.date), kind, historyRead: true });
   const area = (e.demolishedFloorAreaBefore ?? "").trim();
+  // E3f-3 — 영 §103의2 2호 단서 하위 칸: 답 의존 사슬(`demolishedPublicUseAsked`)이 연 칸만 싣는다(숨은 stale 비전송). 날짜는 문자열 그대로(⑭가 `toOptionalDate`로 읽는다).
+  const asked = demolishedPublicUseAsked(need, e);
+  const from = (e.demolishedPublicUseFromBefore ?? "").trim();
+  const to = (e.demolishedPublicUseToBefore ?? "").trim();
   return {
     ...(need.permit && e.demolishedPermitBefore ? { demolishedPermitBefore: e.demolishedPermitBefore } : {}),
     ...(need.otherUse && e.demolishedOtherUseBefore ? { demolishedOtherUseBefore: e.demolishedOtherUseBefore } : {}),
     ...(need.vacantHouse && e.demolishedVacantHouseBefore ? { demolishedVacantHouseBefore: e.demolishedVacantHouseBefore } : {}),
     ...(need.floorArea && area ? { demolishedFloorAreaBefore: area } : {}),
+    ...(asked.publicUse && e.demolishedPublicUseBefore ? { demolishedPublicUseBefore: e.demolishedPublicUseBefore } : {}),
+    ...(asked.paid && e.demolishedPublicUsePaidBefore ? { demolishedPublicUsePaidBefore: e.demolishedPublicUsePaidBefore } : {}),
+    ...(asked.dates && from ? { demolishedPublicUseFromBefore: from } : {}),
+    ...(asked.dates && to ? { demolishedPublicUseToBefore: to } : {}),
   };
 }
 
