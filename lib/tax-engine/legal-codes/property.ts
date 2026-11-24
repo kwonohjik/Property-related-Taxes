@@ -408,8 +408,8 @@ export const PROPERTY_SEPARATE_CONST = {
   TAX_CAP_RATE: 1.50,
 
   // ── 철거 유예기간 ──
-  /** 건축물 철거·멸실 후 별도합산 유지 유예기간 (1년 — 지방세법 시행령 §103의2 1호) */
-  DEMOLISHED_GRACE_MONTHS: 12,
+  // 지방세법 시행령 §103의2 1호 기간은 과세기준일 시행본별이라(2016.6.1.~ 6개월 · 2026.6.1.~ 1년) 단일 상수를 두지 않는다 —
+  // `demolishedStatusPeriodMonths`(`data/nbl-historical-values-era.ts`)가 단일 소스.
 
   // ── 과세표준 절사 ──
   /** 과세표준 절사 단위 (천원) */
