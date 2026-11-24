@@ -53,6 +53,7 @@ describe("[SM-1] 사이드바 요약 — 입력으로 알 수 있는 항목만",
 
   it("부득이한 사유 건수 · 도시편입일(유효 형식만) · 양도일 의제", () => {
     const f = form({
+      nblLandType: "farmland",
       nblGracePeriods: [{ reasonCode: "use_prohibited", anchorDate: "2022-01-01", endDate: "2022-12-31", secondaryDate: "", description: "" }] as never,
       nblUrbanIncorporationDate: "2022-06-01",
       nblDeemedTransferReason: "auction",
@@ -65,6 +66,40 @@ describe("[SM-1] 사이드바 요약 — 입력으로 알 수 있는 항목만",
     const broken = form({ nblUrbanIncorporationDate: "20230214", nblDeemedTransferReason: "auction", nblDeemedTransferDate: "" });
     expect(labels(broken)).not.toContain("도시편입일");
     expect(labels(broken)).not.toContain("양도일 의제");
+  });
+
+  it("지목이 읽지 않는 stale 값은 숨긴다 — ④와 같은 consumes* 술어(동기화 점검 Low-2)", () => {
+    const facts = {
+      nblGracePeriods: [{ reasonCode: "use_prohibited", anchorDate: "2022-01-01", endDate: "2022-12-31", secondaryDate: "", description: "" }] as never,
+      nblUrbanIncorporationDate: "2020-01-01",
+      nblDeemedTransferReason: "auction",
+      nblDeemedTransferDate: "2023-12-01",
+    } as const;
+    // 주택부수토지는 도시편입일·양도일 의제를 읽지 않는다(`land-category.ts` INPUT_CONSUMPTION) — 농지에서 넣고 지목을 바꾼 경우
+    const housing = form({ ...facts, nblLandType: "housing_site" });
+    expect(labels(housing)).not.toContain("도시편입일");
+    expect(labels(housing)).not.toContain("양도일 의제");
+    // 짝: 농지는 셋 다 읽는다
+    const farm = form({ ...facts, nblLandType: "farmland" });
+    expect(labels(farm)).toEqual(expect.arrayContaining(["부득이한 사유", "도시편입일", "양도일 의제"]));
+  });
+
+  it("무조건 사업용 의제가 성립하면 유예·편입일·양도일 의제 줄을 보이지 않는다", () => {
+    const exempt = form(
+      {
+        acquisitionCause: "inheritance",
+        acquisitionDate: "2005-03-01",
+        decedentAcquisitionDate: "1990-01-01",
+        nblLandType: "farmland",
+        nblZoneType: "agriculture_forest",
+        nblGracePeriods: [{ reasonCode: "use_prohibited", anchorDate: "2006-01-01", endDate: "2006-12-31", secondaryDate: "", description: "" }] as never,
+        nblUrbanIncorporationDate: "2006-06-01",
+      },
+      { transferDate: "2009-06-01" },
+    );
+    expect(labels(exempt)).toContain("무조건 사업용 의제");
+    expect(labels(exempt)).not.toContain("부득이한 사유");
+    expect(labels(exempt)).not.toContain("도시편입일");
   });
 });
 

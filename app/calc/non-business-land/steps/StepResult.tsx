@@ -56,7 +56,24 @@ export function StepResult({
     );
   }
 
-  if (!result) return <p className="py-12 text-center text-sm text-muted-foreground">판정을 준비하고 있습니다…</p>;
+  // 응답이 버려진 경우(판정 중 의뢰인 변경 등 — `handleJudge`의 `isCurrent()` 거짓)에도 여기서 멈추지 않게 재시도 수단을 둔다(동기화 점검 Low-3).
+  if (!result) {
+    return (
+      <div className="space-y-3 py-12 text-center" data-testid="nbl-judgment-result-pending">
+        <p className="text-sm text-muted-foreground">판정을 준비하고 있습니다…</p>
+        <button
+          type="button"
+          className="text-sm font-medium text-primary hover:underline"
+          onClick={() => {
+            triggered.current = true;
+            onJudge();
+          }}
+        >
+          다시 판정하기
+        </button>
+      </div>
+    );
+  }
 
   return <NblJudgmentResultView result={result} form={form} onCalculateTax={onCalculateTax} remainingInputs={remainingInputs} />;
 }

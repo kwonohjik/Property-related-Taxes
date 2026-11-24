@@ -9,6 +9,9 @@ import type { NblJudgmentFormData } from "@/lib/stores/nbl-judgment-form.types";
 import { evaluateUnconditionalExemption, nblAcquisitionDateOf } from "./nbl-unconditional-exemption-status";
 import { nblLandTypeLabel, nblZoneTypeLabel } from "./nbl-judgment-labels";
 import { getOwnershipRatio } from "./transfer-tax-api-asset-basics";
+import { consumesGracePeriods } from "@/lib/tax-engine/non-business-land/land-category";
+import { consumesPeriodJudgmentDate } from "@/lib/tax-engine/non-business-land/land-category";
+import { consumesUrbanIncorporationDate } from "@/lib/tax-engine/non-business-land/land-category";
 
 export interface NblJudgmentSummaryItem {
   label: string;
@@ -51,15 +54,18 @@ export function computeNblJudgmentSummary(form: NblJudgmentFormData): NblJudgmen
   push("용도지역", nblZoneTypeLabel(a.nblZoneType));
 
   // 무조건 사업용 의제 — 선언이 아니라 엔진 실제 판정. 양도일이 없으면 판정할 수 없으니 묻지 않는다.
-  if (form.transferDate && evaluateUnconditionalExemption(a, form.transferDate).isExempt) {
+  const exempt = !!form.transferDate && evaluateUnconditionalExemption(a, form.transferDate).isExempt;
+  if (exempt) {
     push("무조건 사업용 의제", "성립 (엔진 판정)");
+    return items; // 의제가 성립하면 유예·편입일·양도일 의제는 판정에 쓰이지 않는다(inputEffects `overridden_by_unconditional`)
   }
+  // 아래 셋은 ④(`buildNonBusinessLandRaw`)·서버가 쓰는 같은 `consumes*` 술어로 거른다 — 지목이 읽지 않는 stale 값을 보이지 않는다.
   const graces = a.nblGracePeriods?.length ?? 0;
-  if (graces > 0) push("부득이한 사유", `${graces}건`);
-  if (a.nblUrbanIncorporationDate && /^\d{4}-\d{2}-\d{2}$/.test(a.nblUrbanIncorporationDate)) {
+  if (graces > 0 && consumesGracePeriods(a.nblLandType)) push("부득이한 사유", `${graces}건`);
+  if (consumesUrbanIncorporationDate(a.nblLandType) && a.nblUrbanIncorporationDate && /^\d{4}-\d{2}-\d{2}$/.test(a.nblUrbanIncorporationDate)) {
     push("도시편입일", ymd(a.nblUrbanIncorporationDate));
   }
-  if (a.nblDeemedTransferReason && a.nblDeemedTransferReason !== "none" && a.nblDeemedTransferDate) {
+  if (consumesPeriodJudgmentDate(a.nblLandType) && a.nblDeemedTransferReason && a.nblDeemedTransferReason !== "none" && a.nblDeemedTransferDate) {
     push("양도일 의제", ymd(a.nblDeemedTransferDate));
   }
   return items;
