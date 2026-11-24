@@ -74,3 +74,35 @@ describe("⑦ 구간표 «재산세 구분» 접미 — echo `vacantLotDays`", (
     expect(mount(judgeRow("H0")).queryByTestId("nbl-state-history-intervals")).toBeNull();
   });
 });
+
+describe("L-1 — 660㎡ 초과 + 꼬리 나지 + 행 + 유예: 기간 분석 수치(유예 재판정 기준)와 13호 구간이 달라 보이는 이유를 밝힌다(세액·판정 불변)", () => {
+  const raw = (over: Record<string, unknown>) => ({
+    nblUseDetailedJudgment: true, nblLandType: "other_land", nblZoneType: "general_residential",
+    acquisitionArea: "900", acquisitionDate: "2014-01-01", transferDate: "2024-01-01",
+    nblOtherRelatedBusinessType: "vacant_lot_1household", nblOtherPropertyTaxType: "comprehensive",
+    nblOtherHasBuilding: false, nblOtherStateHistoryMode: "unchanged", nblOtherStateEvents: [],
+    nblGracePeriods: [{ reasonCode: "demolition", anchorDate: "2021-01-01" }],
+    ...over,
+  });
+  const judge = (r: Record<string, unknown>) => judgeNonBusinessLand(buildNblEngineInput(r as never)!, R);
+
+  it("재현: 900㎡ + 행 2023-01-01~ + 유예 → 구간 3,286일 · 기간 분석 730일(유예 재판정) · 유예 재판정 문구가 블록에 나온다", () => {
+    const j = judge(raw({ nblOtherHouseholdHousePeriods: [{ startDate: "2023-01-01" }] }));
+    expect(j.periodEvaluation?.vacantLot?.intervals.map((i) => i.days)).toEqual([3286]);
+    expect(j.effectiveBusinessDays).toBe(730);
+    const r = mount(j);
+    expect(text(r.getByTestId("nbl-vacant-lot-period-summary"))).toContain("3,286일");
+    const g = text(r.getByTestId("nbl-vacant-lot-period-grace-judged"));
+    expect(g).toContain("유예기간 730일(소유기간 3,651일 중)");
+    expect(g).toContain("기간 분석»의 사업용 일수·비율은 이 재판정 기준");
+  });
+  it("세액 불변: 같은 입력에서 행 유무와 무관하게 판정·사업용 일수·면적 안분이 같다(행은 13호 echo만 더한다)", () => {
+    const a = judge(raw({ nblOtherHouseholdHousePeriods: [{ startDate: "2023-01-01" }] }));
+    const b = judge(raw({}));
+    expect([a.isNonBusinessLand, a.effectiveBusinessDays, a.areaProportioning?.nonBusinessRatio]).toEqual([b.isNonBusinessLand, b.effectiveBusinessDays, b.areaProportioning?.nonBusinessRatio]);
+  });
+  it("유예가 없거나 600㎡(유예 재판정 없음)면 문구가 없다", () => {
+    const r = mount(judge(raw({ acquisitionArea: "600", nblGracePeriods: [], nblOtherHouseholdHousePeriods: [{ startDate: "2023-01-01" }] })));
+    expect(r.queryByTestId("nbl-vacant-lot-period-grace-judged")).toBeNull();
+  });
+});

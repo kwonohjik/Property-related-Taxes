@@ -9,17 +9,23 @@
  */
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { toDate } from "@/lib/api/date-coerce";
+import { NBL } from "@/lib/tax-engine/legal-codes";
 import { OTHER_LAND_HO_META } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
 import type { VacantLotEcho } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import { addDays } from "@/lib/tax-engine/utc-date";
 
 interface Props {
   vacantLot: VacantLotEcho;
+  /**
+   * 엔진이 «빈 사업기간 + 유예기간»으로 비사업용 잔여분(660㎡ 초과분 · 13호로 인정되지 않은 부분)을 다시 판정했을 때의 echo(`periodEvaluation.graceJudged`). 있으면 위 «기간 분석»의 사업용 일수·비율이 그 재판정 기준이다 —
+   * 13호로 센 기간(아래 구간)과 숫자가 다른 이유를 밝힌다(L-1). 세액·판정은 엔진 결과 그대로다(표시만).
+   */
+  graceJudged?: { gracePeriodDays: number; totalOwnershipDays: number; meets: boolean };
 }
 
 const iso = (d: Date): string => d.toISOString().slice(0, 10);
 
-export function NblVacantLotPeriodNote({ vacantLot }: Props) {
+export function NblVacantLotPeriodNote({ vacantLot, graceJudged }: Props) {
   const { scope, intervals, houseOwnedDays } = vacantLot;
   const businessDays = intervals.reduce((s, iv) => s + iv.days, 0);
   const label = OTHER_LAND_HO_META.vacant_lot_1household.option.label;
@@ -46,6 +52,12 @@ export function NblVacantLotPeriodNote({ vacantLot }: Props) {
               );
             })}
           </ul>
+        )}
+        {graceJudged && (
+          <p className="text-caption text-muted-foreground leading-snug" data-testid="nbl-vacant-lot-period-grace-judged">
+            13호로 인정되지 않아 비사업용으로 남은 부분(660㎡ 초과분 · 세대 주택 소유 기간)은 {NBL.UNAVOIDABLE_PERIOD}의 유예기간 {graceJudged.gracePeriodDays.toLocaleString()}일(소유기간 {graceJudged.totalOwnershipDays.toLocaleString()}일 중)을 사업용으로 보아 {NBL.CRITERIA}의 기간기준을 다시 판정했습니다 —{" "}
+            {graceJudged.meets ? "충족합니다." : "충족하지 않습니다."} 위 «기간 분석»의 사업용 일수·비율은 이 재판정 기준이라 13호로 센 기간과 다릅니다.
+          </p>
         )}
       </ToneCard>
     </div>

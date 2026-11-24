@@ -20,7 +20,7 @@ import { housePriorHistoryIgnoredOf } from "./nbl-other-state-history-read";
 import { nblOtherStateEventsInUse } from "./nbl-other-state-history-scope";
 import { stateHistoryDeemedBlocksOf } from "./nbl-other-state-history-scope";
 import { nblAcquisitionDateOf } from "./nbl-unconditional-exemption-status";
-import { vacantLotHousePeriodsReadOf } from "./nbl-vacant-lot-household-scope";
+import { vacantLotHousePeriodsReadOf } from "./nbl-vacant-lot-household-read";
 
 export interface VacantLotHouseholdPreview {
   /** `bare_intervals` = 이력 경로(건축물 없는 구간 ∩ 무주택 기간) · `whole_period` = 이력을 쓰지 않는 경로(소유기간 ∖ 주택 소유 기간) — 엔진 echo `vacantLot.scope`와 같은 값. */
@@ -36,7 +36,7 @@ export interface VacantLotHouseholdPreview {
 const sumDays = (periods: ReadonlyArray<DateInterval>): number => periods.reduce((s, p) => s + differenceInDays(p.end, p.start), 0);
 
 export function buildVacantLotHouseholdPreview(asset: AssetForm, transferDate: string | undefined): VacantLotHouseholdPreview | null {
-  if (asset.nblOtherHouseholdHouseStatus !== "owned" || !vacantLotHousePeriodsReadOf(asset)) return null;
+  if (asset.nblOtherHouseholdHouseStatus !== "owned" || !vacantLotHousePeriodsReadOf(asset, transferDate)) return null;
   const acq = toOptionalDate(nblAcquisitionDateOf(asset));
   const transfer = toOptionalDate(transferDate);
   const rows = asset.nblOtherHouseholdHousePeriods ?? [];

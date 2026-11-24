@@ -14,6 +14,7 @@ import { addYears } from "../utc-date";
 import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
 import { isUrbanResidentialCommercialIndustrial } from "./urban-area";
 import { OTHER_LAND_HO_META } from "./other-land-ho-meta";
+import { NBL_VACANT_LOT_SELF_DECLARED_WITH_HOUSE_PERIODS_NOTICE } from "../nbl-confirm-notices";
 import { householdFreePeriods } from "./other-land-vacant-lot-history";
 import type { DateInterval, JudgmentStep, NblRelatedBusinessType, ZoneType } from "./types";
 import type { OtherLandUsage } from "./land-usage.types";
@@ -99,7 +100,8 @@ export function judgeHoRequirements(
   }
   // E3-④ Q-2 (다)·Q-3 (가) — 이력과 무관하게 13호는 세대 주택 소유 기간 행을 읽는다. 행이 없으면 아무것도 하지 않는다(Q-4 (가) — 바이트 동일).
   if (relatedType === "vacant_lot_1household" && ownership && o.householdHousePeriods && o.householdHousePeriods.length > 0) {
-    return { notice, householdFreePeriods: householdFreePeriods(ownership, o.householdHousePeriods) };
+    // L-2 — 행을 읽어 판정했으니 «무주택 1세대 요건 판정하지 않음» 자기 선언 고지를 «입력한 기간만 반영» 변형으로 대체한다(`NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE`와 병존 모순 방지).
+    return { notice: NBL_VACANT_LOT_SELF_DECLARED_WITH_HOUSE_PERIODS_NOTICE, householdFreePeriods: householdFreePeriods(ownership, o.householdHousePeriods) };
   }
   return { notice };
 }

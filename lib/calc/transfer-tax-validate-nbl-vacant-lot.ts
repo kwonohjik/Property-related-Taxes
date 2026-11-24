@@ -7,14 +7,14 @@
  *   HH-3 행 결함·상한              — **⑫′와 같은 leaf**(`householdHousePeriodIssue`)·같은 상한 상수(`NBL_HOUSEHOLD_HOUSE_PERIODS_MAX`)
  *   HH-0 술어 거짓                 — 요구하지 않는다(엔진이 읽지 않는 칸 — 요구하면 막다른 길).
  *
- * 게이트는 ⑤ 렌더·④ 전송과 같은 술어(`vacantLotHousePeriodsReadOf` — 엔진 술어 `vacantLotHousePeriodsRead`). 필드 키는 리터럴 접두 형태로 둔다 — 정적 게이트
+ * 게이트는 ⑤ 렌더·④ 전송과 같은 술어(`vacantLotHousePeriodsReadOf` — 엔진 순수 술어 필요조건 ∧ 엔진 core 실측 `otherLandReadsHouseholdHousePeriods` · M-1). 필드 키는 리터럴 접두 형태로 둔다 — 정적 게이트
  * (`transfer-validation-field-anchor-coverage`)가 `${…}`를 `*`로 정규화해 읽는다.
  */
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { NBL_HOUSEHOLD_HOUSE_PERIODS_MAX } from "@/lib/calc/nbl-household-house-periods-cap";
 import { nblHouseholdHousePeriodsCapMessage } from "@/lib/calc/nbl-household-house-periods-cap";
 import { householdHousePeriodIssue } from "@/lib/tax-engine/non-business-land/household-house-period-issue";
-import { vacantLotHousePeriodsReadOf } from "./nbl-vacant-lot-household-scope";
+import { vacantLotHousePeriodsReadOf } from "./nbl-vacant-lot-household-read";
 import { fieldError } from "./transfer-tax-validate-field";
 
 export interface VacantLotHouseholdValidateCtx {
@@ -26,7 +26,7 @@ export interface VacantLotHouseholdValidateCtx {
 
 /** 질문·행 검증. 첫 오류 메시지 또는 null. */
 export function validateNblVacantLotHousehold(asset: AssetForm, label: string, ctx: VacantLotHouseholdValidateCtx = {}): string | null {
-  if (ctx.skip || !vacantLotHousePeriodsReadOf(asset)) return null;
+  if (ctx.skip || !vacantLotHousePeriodsReadOf(asset, ctx.transferDate)) return null;
   const prefix = `${label}: 기타토지 무주택1세대 1필지 나지(13호) — `;
   const status = asset.nblOtherHouseholdHouseStatus;
   if (!status) return fieldError("nblOtherHouseholdHouseStatus", `${prefix}이 토지를 소유한 기간 중 세대가 주택을 소유한 적이 있는지 선택하세요. 주택을 소유한 기간은 13호로 인정하지 않습니다.`);

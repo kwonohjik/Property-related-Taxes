@@ -13,6 +13,7 @@
  *  E5  S4 행 입력(W2): ⑧ 차단 3종(HH-1 질문 · HH-2 0행 · HH-3 시작일 빈칸) → 입력 → 미리보기 → body에 행 도달(종료일 비움 = 키 생략) → B → N
  *  E6  인쇄: «전체 선택» → print 미디어에서 13호 적용 기간 블록이 보이고 잘리지 않는다
  *  E7  이력 OFF + 행(W2): «양도일 현재 상태를 소유기간 전체에 적용» 거짓 안내가 없고 13호 적용 기간 블록 + 이력 OFF 변형 고지가 보인다
+ *  E9  M-1: 엔진이 행을 읽지 않는 경로(건물 배율 초과 부분 면적 · 나지 + 확인된 비종합합산 근거)는 위젯·질문 요구가 없고 질문 미응답으로도 계산되며 body 행은 []
  *  E8  시각: 라이트/다크 글자 대비 4.5 · 375px 입력 영역·결과 블록 가로 스크롤 없음
  *
  * 폼은 sessionStorage로 시드한다. 외부 API 의존 없음 — mock 불필요.
@@ -259,6 +260,33 @@ test.describe("13호(무주택 1세대 1필지 나지) × 소유기간 중 이�
     expect(warnings(r)).toContain(NBL_STATE_AT_TRANSFER_VACANT_LOT_HOUSE_PERIODS_APPLIED_NOTICE);
     expect(warnings(r)).toContain(NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE);
     await expect(page.getByText(NBL_STATE_AT_TRANSFER_VACANT_LOT_HOUSE_PERIODS_APPLIED_NOTICE).first()).toBeVisible();
+  });
+});
+
+test.describe("13호 — 엔진이 행을 읽지 않는 경로(M-1)", () => {
+  test("E9 건물 배율 초과(부분 면적 — 이력 접힘) · 나지 + 별도합산 공지상태 근거(나목이 먼저 통과): 위젯 없음 · 질문 미응답으로 계산 가능 · body 행 [] · 판정은 행 유무와 무관", async ({ page }) => {
+    test.setTimeout(240_000);
+    // ① 꼬리 건물 + 이력 changed + 660㎡ 이내인데 바닥 50㎡(배율 초과 — core 부분 면적): 이력 전체가 접혀 13호 leaf·행이 판정에 닿지 않는다
+    await seed(page, [landAsset({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [BUILT("2020-06-01")], ...TAIL_BUILDING, nblOtherBuildingFloorArea: "50" })]);
+    await gotoHolding(page);
+    await expect(widget(page), "순수 술어는 참이지만 엔진은 읽지 않는다 → 위젯 없음").toHaveCount(0);
+    const a = await calc(page);
+    expect(a.status, JSON.stringify(a.json).slice(0, 300)).toBe(200);
+    expect(a.req.nonBusinessLandRaw?.nblOtherHouseholdHousePeriods).toEqual([]);
+    expect(nblOf(a)?.periodEvaluation?.vacantLot, "13호 echo 없음").toBeUndefined();
+    // ② 꼬리 나지 + 별도합산 + 공지상태 근거: 나목 Step 3-1이 13호보다 먼저 사업용으로 통과
+    await seed(page, [landAsset({ nblOtherPropertyTaxType: "separate", nblOtherPropertyTaxBasis: "vacant_state" })]);
+    await gotoHolding(page);
+    await expect(widget(page)).toHaveCount(0);
+    const b = await calc(page);
+    expect(b.status, JSON.stringify(b.json).slice(0, 300)).toBe(200);
+    expect(b.req.nonBusinessLandRaw?.nblOtherHouseholdHousePeriods).toEqual([]);
+    expect(nblOf(b)?.isNonBusinessLand).toBe(false);
+    // 대조 — 종합합산(나목 미해당)이면 같은 입력에서 위젯이 보이고 질문 미응답은 ⑧이 막는다
+    await seed(page, [landAsset()]);
+    await gotoHolding(page);
+    await expect(widget(page)).toBeVisible();
+    expect(await calcBlocked(page), "읽는 경로 — 질문 미응답 차단").toBe(true);
   });
 });
 

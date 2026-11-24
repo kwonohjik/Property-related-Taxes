@@ -23,7 +23,7 @@ import { allIssues, captureBody, postTransfer } from "../calc/_helpers/redev-one
 import { E3E_ALL_ROWS, e3eRowRaw, e3eTax, type E3eRow } from "../tax-engine/_helpers/nbl-state-history-e3-4-table";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
-import { vacantLotHousePeriodsReadOf } from "@/lib/calc/nbl-vacant-lot-household-scope";
+import { vacantLotHousePeriodsReadOf } from "@/lib/calc/nbl-vacant-lot-household-read";
 import { NBL_STATE_AT_TRANSFER_VACANT_LOT_HOUSE_PERIODS_APPLIED_NOTICE, NBL_STATE_HISTORY_VACANT_LOT_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 
@@ -76,7 +76,7 @@ describe("E3e UI route 관통 — 표 전 행: 폼 → ⑧ → ④ → ⑫⑭ �
     // ⑧ — 질문에 답했고 행이 정상이므로 이슈 0건(술어가 거짓인 행도 요구·차단 없음)
     expect(res.issues, `${r.id} ⑧ 이슈`).toEqual([]);
     // ④ — 술어 참이면 표의 행, 아니면 [] (질문 상태는 서버로 가지 않는다)
-    const read = vacantLotHousePeriodsReadOf(res.form.assets[0]);
+    const read = vacantLotHousePeriodsReadOf(res.form.assets[0], res.form.transferDate);
     const expectedRows = read && r.houseRows ? r.houseRows.map(([startDate, endDate]) => ({ startDate, ...(endDate ? { endDate } : {}) })) : [];
     expect(res.raw.nblOtherHouseholdHousePeriods, `${r.id} ④ 행`).toEqual(expectedRows);
     expect(res.raw).not.toHaveProperty("nblOtherHouseholdHouseStatus");

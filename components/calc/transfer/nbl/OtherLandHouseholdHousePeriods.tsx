@@ -4,7 +4,7 @@
  * 13호(무주택 1세대 1필지 나지) 「세대 주택 소유 기간」 질문 + 행 입력 — NBL-STATE-HISTORY-E3-④ UI-M.
  * 계획서: docs/01-plan/features/nbl-state-history-e3-4-ho13-bare-land.ui.plan.md §4.2 (UQ-2 (가) 2지선다 필수 · UQ-4 (가) 13호 블록 안 · UQ-5 (가) ToneCard 행 + 종료일 비움 = 양도일까지)
  *
- * 노출 조건은 엔진 술어 `vacantLotHousePeriodsRead`를 부르는 단일 래퍼(`vacantLotHousePeriodsReadOf`)다 — ④ 전송·⑧ 요구와 같은 함수(자체 조건 금지).
+ * 노출 조건은 «엔진이 행을 실제로 읽는가» 단일 래퍼(`vacantLotHousePeriodsReadOf` — 엔진 순수 술어 필요조건 ∧ 엔진 core 실측 · M-1)다 — ④ 전송·⑧ 요구와 같은 함수(자체 조건 금지).
  * 질문 `""` = 선택 안 됨(표시 fallback·가정값 없음 — ⑧ HH-1이 막는다). 종료일 빈칸 = «양도일까지 계속 소유»(hint · 행 요약 · ④ 키 생략 · ⑧·⑫ 허용 · ⑭ 양도일 — 같은 뜻).
  * 모든 쓰기는 onChange 핸들러다(`useEffect → store` 미러링 없음). 안내 문구는 엔진 상수(`nbl-confirm-notices`)가 단일 소스다.
  */
@@ -18,7 +18,7 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { NBL_HOUSEHOLD_HOUSE_PERIODS_MAX } from "@/lib/calc/nbl-household-house-periods-cap";
 import { nblHouseholdHousePeriodsCapMessage } from "@/lib/calc/nbl-household-house-periods-cap";
 import { buildVacantLotHouseholdPreview } from "@/lib/calc/nbl-vacant-lot-household-preview";
-import { vacantLotHousePeriodsReadOf } from "@/lib/calc/nbl-vacant-lot-household-scope";
+import { vacantLotHousePeriodsReadOf } from "@/lib/calc/nbl-vacant-lot-household-read";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { NblHouseholdHousePeriodInput } from "@/lib/stores/calc-wizard-asset-nbl-other";
 import type { NblHouseholdHouseStatus } from "@/lib/stores/calc-wizard-asset-nbl-other";
@@ -53,7 +53,8 @@ export function OtherLandHouseholdHousePeriods({ asset, onAssetChange, transferD
   const rows = asset.nblOtherHouseholdHousePeriods ?? [];
   const status = asset.nblOtherHouseholdHouseStatus;
   const idKey = asset.assetId ?? "primary";
-  const read = vacantLotHousePeriodsReadOf(asset);
+  // 엔진 core를 돌리는 술어라 memo — 필요조건 ∧ 엔진 실측(M-1)
+  const read = useMemo(() => vacantLotHousePeriodsReadOf(asset, transferDate), [asset, transferDate]);
   const preview = useMemo(() => buildVacantLotHouseholdPreview(asset, transferDate), [asset, transferDate]);
   if (!read) return null;
 

@@ -34,6 +34,7 @@ import {
   NBL_STATE_HISTORY_VACANT_LOT_TAX_CHANGE_APPLIED_NOTICE,
   NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE,
   NBL_VACANT_LOT_SELF_DECLARED_NOTICE,
+  NBL_VACANT_LOT_SELF_DECLARED_WITH_HOUSE_PERIODS_NOTICE,
 } from "@/lib/tax-engine/nbl-confirm-notices";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 
@@ -223,12 +224,24 @@ describe("E3e-2 세대 주택 소유 기간 — 행을 읽는 경로 · 읽지 �
     }
   });
 
-  it("W 행 고지: `NBL_STATE_AT_TRANSFER_APPLIED_NOTICE`를 변형으로 대체 · 자기 선언 고지는 기존 그대로 + 보강 고지", () => {
+  it("W 행 고지(L-2): `NBL_STATE_AT_TRANSFER_APPLIED_NOTICE`를 변형으로 대체 · 행을 읽으면 자기 선언 고지는 «입력한 기간만 반영» 변형으로 대체(기존 «무주택 요건 판정하지 않음»과 병존 금지) + 보강 고지", () => {
     const warnings = judge(fromRaw(e3eRowRaw(row("W2")))).warnings;
     expect(warnings).toContain(NBL_STATE_AT_TRANSFER_VACANT_LOT_HOUSE_PERIODS_APPLIED_NOTICE);
     expect(warnings).not.toContain(NBL_STATE_AT_TRANSFER_APPLIED_NOTICE);
-    expect(warnings.filter((x) => x === NBL_VACANT_LOT_SELF_DECLARED_NOTICE)).toHaveLength(1);
+    expect(warnings).not.toContain(NBL_VACANT_LOT_SELF_DECLARED_NOTICE);
+    expect(warnings.filter((x) => x === NBL_VACANT_LOT_SELF_DECLARED_WITH_HOUSE_PERIODS_NOTICE)).toHaveLength(1);
     expect(warnings.filter((x) => x === NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE)).toHaveLength(1);
+    // 행 없는 13호(W0 이력 OFF)는 기존 자기 선언 고지 그대로(바이트 불변) · 변형은 없다
+    const w0 = judge(fromRaw(e3eRowRaw(row("W0")))).warnings;
+    expect(w0.filter((x) => x === NBL_VACANT_LOT_SELF_DECLARED_NOTICE)).toHaveLength(1);
+    expect(w0).not.toContain(NBL_VACANT_LOT_SELF_DECLARED_WITH_HOUSE_PERIODS_NOTICE);
+    // 이력 경로(X1 — 꼬리 건물 H2에 행): 같은 규칙 — 변형 1건 · 기존 0건
+    const x1 = judge(fromRaw(e3eRowRaw({ ...row("H2"), houseRows: [["2023-01-01"]] } as never))).warnings;
+    expect(x1.filter((x) => x === NBL_VACANT_LOT_SELF_DECLARED_WITH_HOUSE_PERIODS_NOTICE)).toHaveLength(1);
+    expect(x1).not.toContain(NBL_VACANT_LOT_SELF_DECLARED_NOTICE);
+    // 이력 경로 + 행 없음(H2): 기존 고지 1건
+    const h2 = judge(fromRaw(e3eRowRaw(row("H2")))).warnings;
+    expect(h2.filter((x) => x === NBL_VACANT_LOT_SELF_DECLARED_NOTICE)).toHaveLength(1);
   });
 
   it("W8: 꼬리 건물 + 이력 OFF — 호 요건 실패(건축물 있음)라 행을 읽지 않는다(echo 없음 · 13호 불인정 판정 그대로)", () => {

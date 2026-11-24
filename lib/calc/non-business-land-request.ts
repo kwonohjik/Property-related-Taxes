@@ -25,6 +25,8 @@ import { nblHousingStateHistoryApplies } from "./nbl-other-state-history-scope";
 import { nblOtherStateEventsInUse } from "./nbl-other-state-history-scope";
 import { stateHistoryWireFields } from "./nbl-other-state-history-scope";
 import { householdHouseWireFields } from "./nbl-vacant-lot-household-scope";
+import { otherLandReadsHouseholdHousePeriods } from "@/lib/tax-engine/non-business-land/other-land-vacant-lot-read";
+import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-land/types";
 import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
 import { getLandCategoryGroup } from "@/lib/tax-engine/non-business-land/land-category";
 import { consumesMetropolitanArea } from "@/lib/tax-engine/non-business-land/land-category";
@@ -147,6 +149,34 @@ export function buildNonBusinessLandRaw(
   asset: AssetForm,
   transferDate: string,
 ): Record<string, unknown> | undefined {
+  const base = buildNonBusinessLandRawBase(asset, transferDate);
+  if (!base) return base;
+  /**
+   * NBL-STATE-HISTORY-E3-④ — 13호 «세대 주택 소유 기간» 행. **⑤ 렌더·⑧ 검증과 같은 술어**(`vacantLotHousePeriodsReadOf` = 필요조건 + 엔진 core 실측 — M-1)가 거짓이거나 질문이 `owned`가 아니면 `[]`로 덮어 쓴다 —
+   * `nbl*` prefix-pick은 저장된 stale 행을 그대로 싣고, 숨은 행이 닿으면 ⑧은 건너뛰는데 ⑫′가 구조 결함으로 400을 만드는 막다른 길이 된다. 종료일 비움은 키 생략(= 양도일까지).
+   * 엔진 실측은 행을 뺀 같은 base raw로 돈다(탐침 행이 입력 행을 덮어쓴다).
+   */
+  return { ...base, ...householdHouseWireFields(asset, () => engineReadsHouseholdHousePeriods(base)) };
+}
+
+/**
+ * 엔진이 이 raw(13호 · 행 제외)의 「세대 주택 소유 기간」 행을 **실제로 읽는가** — raw → ⑭ 매퍼 → 엔진 core 실측(`otherLandReadsHouseholdHousePeriods`). ④ 조립 · ⑤⑧ 래퍼가 같은 함수를 쓴다.
+ * 엔진 입력을 만들 수 없으면(날짜 누락·해석 불가) «읽는다»(= 입력 요구 · 종전 동작)로 접는다 — 다른 ⑧ 규칙이 먼저 막는 입력이다. 기본 판정 규칙으로 돈다(서버는 DB 규칙을 덮어쓰지만 읽음 여부는 경로가 정한다).
+ */
+export function engineReadsHouseholdHousePeriods(raw: Record<string, unknown>): boolean {
+  try {
+    const input = buildNblEngineInput(raw as Parameters<typeof buildNblEngineInput>[0]);
+    return input ? otherLandReadsHouseholdHousePeriods(input, DEFAULT_NON_BUSINESS_LAND_RULES) : true;
+  } catch {
+    return true;
+  }
+}
+
+/** ④ base raw — 세대 주택 소유 기간 행을 제외한 전부(`buildNonBusinessLandRaw`가 행을 덧붙인다). */
+function buildNonBusinessLandRawBase(
+  asset: AssetForm,
+  transferDate: string,
+): Record<string, unknown> | undefined {
   const isExempt = evaluateUnconditionalExemption(asset, transferDate).isExempt;
   if (
     asset.assetKind !== "land" ||
@@ -180,11 +210,6 @@ export function buildNonBusinessLandRaw(
      */
     ...stateHistoryWireFields(asset),
     ...(nblOtherStateEventsInUse(asset) ? { nblOtherHasBuilding: effectiveOtherHasBuildingOf(asset) } : {}),
-    /**
-     * NBL-STATE-HISTORY-E3-④ — 13호 «세대 주택 소유 기간» 행. **⑤ 렌더·⑧ 검증과 같은 술어**(`vacantLotHousePeriodsReadOf` — 엔진 술어 `vacantLotHousePeriodsRead`)가 거짓이거나 질문이 `owned`가 아니면 `[]`로 덮어 쓴다 —
-     * `nbl*` prefix-pick은 저장된 stale 행을 그대로 싣고, 숨은 행이 닿으면 ⑧은 건너뛰는데 ⑫′가 구조 결함으로 400을 만드는 막다른 길이 된다. 종료일 비움은 키 생략(= 양도일까지).
-     */
-    ...householdHouseWireFields(asset),
     /** E3-③ A — 주택부수토지 카드는 «건축물 있음» 토글이 없다: 질문이 적용되면 양도일 현재 주택을 `true`로 고정해 싣는다(⑭ `tailHasBuilding = true` · 화면 «주택: 있음(지목에서 정함)»과 같은 값 — 기타토지 stale 토글이 새지 않는다). */
     ...(nblHousingStateHistoryApplies(asset) ? { nblOtherHasBuilding: true } : {}),
     /**

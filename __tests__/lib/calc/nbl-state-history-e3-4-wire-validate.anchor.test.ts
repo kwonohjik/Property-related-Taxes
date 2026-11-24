@@ -7,7 +7,8 @@
  */
 import { describe, it, expect } from "vitest";
 import { buildNonBusinessLandRaw, buildNblEngineInput, buildFractionalShareNblRecord } from "@/lib/calc/non-business-land-request";
-import { householdHouseWireFields, vacantLotHousePeriodsReadOf } from "@/lib/calc/nbl-vacant-lot-household-scope";
+import { householdHouseWireFields } from "@/lib/calc/nbl-vacant-lot-household-scope";
+import { vacantLotHousePeriodsReadOf as readOf } from "@/lib/calc/nbl-vacant-lot-household-read";
 import { validateNblVacantLotHousehold } from "@/lib/calc/transfer-tax-validate-nbl-vacant-lot";
 import { validateNblStateHistory } from "@/lib/calc/transfer-tax-validate-nbl-state-history";
 import { housePriorHistoryIgnoredOf } from "@/lib/calc/nbl-other-state-history-read";
@@ -22,6 +23,8 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 
 const TRANSFER = "2024-01-01";
 const HO13 = "vacant_lot_1household" as const;
+/** 단일 래퍼 — 필요조건 ∧ 엔진 core 실측(M-1). */
+const readOf2 = (a: AssetForm) => readOf(a, TRANSFER);
 
 const asset = (over: Partial<AssetForm> = {}): AssetForm =>
   ({
@@ -73,7 +76,7 @@ describe("④ 전송 — 행은 술어 참 ∧ 질문 «있습니다»일 때만
     expect(wire(asset({ ...owned, nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [built("2020-06-01")] })).nblOtherHouseholdHousePeriods).toHaveLength(2);
   });
   it("householdHouseWireFields — 결함 행(빈 시작일)도 그대로 싣는다(⑧이 먼저 막는 몫 · ④가 고치지 않는다)", () => {
-    expect(householdHouseWireFields(asset({ ...owned, nblOtherHouseholdHousePeriods: [rowOf("")] })).nblOtherHouseholdHousePeriods).toEqual([{ startDate: "" }]);
+    expect(householdHouseWireFields(asset({ ...owned, nblOtherHouseholdHousePeriods: [rowOf("")] }), () => true).nblOtherHouseholdHousePeriods).toEqual([{ startDate: "" }]);
   });
 });
 
@@ -164,19 +167,19 @@ function pointAsset(p: Point, status: "none" | "owned"): AssetForm {
 }
 const sigOf = (a: AssetForm) => {
   const j = judgeNonBusinessLand(buildNblEngineInput(wire(a) as never)!, DEFAULT_NON_BUSINESS_LAND_RULES);
-  return JSON.stringify({ nb: j.isNonBusinessLand, eff: j.effectiveBusinessDays, ratio: j.areaProportioning?.nonBusinessRatio ?? null, steps: j.judgmentSteps.map((s) => `${s.id}:${s.status}`), echo: j.periodEvaluation?.vacantLot !== undefined });
+  return JSON.stringify({ nb: j.isNonBusinessLand, eff: j.effectiveBusinessDays, ratio: j.areaProportioning?.nonBusinessRatio ?? null, steps: j.judgmentSteps.map((s) => `${s.id}:${s.status}`) });
 };
 
 describe("parity 격자 96점 — 술어(④ 전송 · ⑧ 요구) ⟺ 행이 엔진 판정을 바꾼다 · ⑧ 통과 ⇒ ⑫ 400 없음 · ⑧ 차단 ⇒ 엔진이 읽는다", () => {
   it("격자 규모 96 · 술어 참 점이 존재한다(공허 검증 방지)", () => {
     expect(GRID.length).toBe(96);
-    const reading = GRID.filter((p) => vacantLotHousePeriodsReadOf(pointAsset(p, "owned")));
+    const reading = GRID.filter((p) => readOf2(pointAsset(p, "owned")));
     expect(reading.length).toBeGreaterThanOrEqual(10);
     expect(reading.every((p) => p.ho === HO13)).toBe(true);
   });
 
   it.each(GRID.map((p) => [`${p.ho} · 꼬리 ${p.tail} · 이력 "${p.mode}" · 의제 ${p.deemed ? "경매" : "없음"} · ${p.area}㎡`, p] as const))("%s", (_n, p) => {
-    const read = vacantLotHousePeriodsReadOf(pointAsset(p, "owned"));
+    const read = readOf2(pointAsset(p, "owned"));
     // ① 술어 ⟺ 행이 엔진 판정을 바꾼다 (같은 폼의 «있습니다 + 행» vs «없습니다»)
     const changed = sigOf(pointAsset(p, "owned")) !== sigOf(pointAsset(p, "none"));
     expect(changed, `술어 ${read} ↔ 행이 판정을 ${changed ? "바꿈" : "안 바꿈"}`).toBe(read);
@@ -210,7 +213,7 @@ describe("parity 격자 96점 — 술어(④ 전송 · ⑧ 요구) ⟺ 행이 �
     };
     const owned = asset({ ...parcels, nblOtherHouseholdHouseStatus: "owned", nblOtherHouseholdHousePeriods: [rowOf("2020-01-01")] });
     const none = asset({ ...parcels, nblOtherHouseholdHouseStatus: "none" });
-    expect(vacantLotHousePeriodsReadOf(owned)).toBe(true);
+    expect(readOf2(owned)).toBe(true);
     expect(sigOf(owned)).not.toBe(sigOf(none));
     expect(issueOf({ ...owned, nblOtherHouseholdHouseStatus: "" })?.field).toBe("nblOtherHouseholdHouseStatus");
     expect(wire(owned).nblOtherHouseholdHousePeriods).toEqual([{ startDate: "2020-01-01" }]);
@@ -220,7 +223,7 @@ describe("parity 격자 96점 — 술어(④ 전송 · ⑧ 요구) ⟺ 행이 �
     const primary = asset({ ownershipNumerator: "50", ownershipDenominator: "100", nblOtherHouseholdHouseStatus: "owned", nblOtherHouseholdHousePeriods: [rowOf("2020-01-01", "2021-06-01")] });
     const share = { ...makeDefaultAsset(2), acquisitionDate: "2016-01-01", acquisitionCause: "purchase" as const, ownershipNumerator: "50", ownershipDenominator: "100" } as AssetForm;
     const rec = buildFractionalShareNblRecord(share, primary);
-    expect(vacantLotHousePeriodsReadOf(rec)).toBe(true);
+    expect(readOf2(rec)).toBe(true);
     expect(wire(rec).nblOtherHouseholdHousePeriods).toEqual([{ startDate: "2020-01-01", endDate: "2021-06-01" }]);
     expect(issueOf({ ...primary, nblOtherHouseholdHouseStatus: "" }, { skip: true })).toBeNull();
     expect(issueOf({ ...primary, nblOtherHouseholdHouseStatus: "" })?.field).toBe("nblOtherHouseholdHouseStatus");
@@ -251,5 +254,50 @@ describe("C-4 술어 확장(13호 선택 시 «이력을 읽지 않는가»를 �
   it("확장은 표시 술어만 바꾼다 — 13호 + 800㎡ + changed는 «읽지 않음», 호 «해당 없음» + 주택 철거 행 없음은 종전대로 «해당 없음»", () => {
     expect(housePriorHistoryIgnoredOf(asset({ acquisitionArea: "800", ...changed, nblOtherStateEvents: [removed("2023-06-01")] }), TRANSFER)).toBe(true);
     expect(housePriorHistoryIgnoredOf(asset({ nblOtherRelatedBusinessType: "none", acquisitionArea: "800", ...changed, nblOtherStateEvents: [removed("2023-06-01")] }), TRANSFER)).toBe(false);
+  });
+});
+
+// ─── M-1 축 확장 격자: 재산세 구분·근거 · 건물 바닥면적(배율) · 건물가액(2%) · 수입금액비율 업종 ─────────────────────────────
+// 순수 입력 술어(`vacantLotHousePeriodsRead` — 호 · 꼬리 건물 · 이력 · 의제 · 면적)는 «읽을 수 있는 필요조건»일 뿐이다 — core가 나목(Step 3-1)·수입금액비율·부분 면적에서 13호보다 먼저 끝내면 엔진은 행을 읽지 않는다.
+// UI 술어는 엔진 core 실측(`otherLandReadsHouseholdHousePeriods`)이어야 한다: 술어 ⟺ «행 투입 시 판정이 바뀐다».
+interface Axis { name: string; tail: "bare" | "building"; over: Partial<AssetForm> }
+const AXES: Axis[] = [
+  { name: "나지 · 종합합산(기본)", tail: "bare", over: {} },
+  { name: "나지 · 별도합산 + 공지상태 근거(나목 Step 3-1이 먼저 통과)", tail: "bare", over: { nblOtherPropertyTaxType: "separate", nblOtherPropertyTaxBasis: "vacant_state" } },
+  { name: "나지 · 분리과세 + 분리과세대상 근거", tail: "bare", over: { nblOtherPropertyTaxType: "special_sum", nblOtherPropertyTaxBasis: "separate_taxation" } },
+  { name: "나지 · 비과세·면제 + 법정 비과세 근거", tail: "bare", over: { nblOtherPropertyTaxType: "exempt", nblOtherPropertyTaxBasis: "statutory_exempt" } },
+  { name: "나지 · 별도합산 선언 + 근거 미선택(종합합산으로 접힘)", tail: "bare", over: { nblOtherPropertyTaxType: "separate", nblOtherPropertyTaxBasis: "" } },
+  { name: "건물 · 별도합산 + 바닥 250㎡(배율 이내)", tail: "building", over: { nblOtherPropertyTaxType: "separate", nblOtherBuildingFloorArea: "250" } },
+  { name: "건물 · 별도합산 + 바닥 50㎡(배율 초과 — core 부분 면적)", tail: "building", over: { nblOtherPropertyTaxType: "separate", nblOtherBuildingFloorArea: "50" } },
+  { name: "건물 · 종합합산 + 바닥 100㎡ + 건물가액 2% 미달(core 부분 면적)", tail: "building", over: { nblOtherPropertyTaxType: "comprehensive", nblOtherBuildingFloorArea: "100", nblOtherBuildingValue: "1000000", nblOtherLandValue: "1000000000" } },
+  { name: "건물 · 종합합산 + 바닥 250㎡ (정상)", tail: "building", over: { nblOtherPropertyTaxType: "comprehensive", nblOtherBuildingFloorArea: "250" } },
+  { name: "나지 · 수입금액비율 업종(주차장운영업) 동시 선택", tail: "bare", over: { nblRevenueBusinessType: "parking_operation", nblRevenueCurrentRevenue: "10000000", nblRevenueCurrentLandValue: "100000000" } },
+  { name: "건물 · 별도합산 바닥 250㎡ + 수입금액비율 업종", tail: "building", over: { nblOtherPropertyTaxType: "separate", nblOtherBuildingFloorArea: "250", nblRevenueBusinessType: "parking_operation", nblRevenueCurrentRevenue: "10000000", nblRevenueCurrentLandValue: "100000000" } },
+];
+const axisAsset = (a: Axis, mode: "unchanged" | "changed", status: "none" | "owned"): AssetForm =>
+  asset({
+    nblOtherHasBuilding: a.tail === "building",
+    nblOtherStateHistoryMode: mode,
+    nblOtherStateEvents: mode === "changed" ? [a.tail === "building" ? built("2020-06-01") : removed("2023-06-01")] : [],
+    ...a.over,
+    nblOtherHouseholdHouseStatus: status,
+    nblOtherHouseholdHousePeriods: [rowOf("2014-01-02")],
+  });
+const AXIS_POINTS = AXES.flatMap((a) => (["unchanged", "changed"] as const).map((mode) => [`${a.name} · 이력 ${mode}`, a, mode] as const));
+
+describe("M-1 parity 축 확장 격자 — 술어(엔진 core 실측) ⟺ 행 투입 시 판정이 바뀐다 · ⑧ 요구·④ 전송이 같다", () => {
+  it(`격자 규모 ${AXIS_POINTS.length} · 읽는 점과 안 읽는 점이 모두 있다(공허 검증 방지)`, () => {
+    const reads = AXIS_POINTS.filter(([, a, m]) => readOf2(axisAsset(a, m, "owned")));
+    expect(reads.length).toBeGreaterThan(2);
+    expect(reads.length).toBeLessThan(AXIS_POINTS.length - 5);
+  });
+  it.each(AXIS_POINTS)("%s", (_n, a, mode) => {
+    const read = readOf2(axisAsset(a, mode, "owned"));
+    const changed = sigOf(axisAsset(a, mode, "owned")) !== sigOf(axisAsset(a, mode, "none"));
+    expect(changed, `술어 ${read} ↔ 행이 판정을 ${changed ? "바꿈" : "안 바꿈"}`).toBe(read);
+    // ⑧ 질문 요구 ⟺ 술어
+    expect(issueOf({ ...axisAsset(a, mode, "none"), nblOtherHouseholdHouseStatus: "" })?.field === "nblOtherHouseholdHouseStatus").toBe(read);
+    // ④ 행 전송 ⟺ 술어
+    expect((wire(axisAsset(a, mode, "owned")).nblOtherHouseholdHousePeriods as unknown[]).length).toBe(read ? 1 : 0);
   });
 });
