@@ -35,7 +35,7 @@ import {
   NBL_STATE_HISTORY_HOUSE_EXCEEDED_GRACE_NOTICE,
   NBL_STATE_HISTORY_HOUSE_EXCEEDED_NOTICE,
   NBL_STATE_HISTORY_HOUSING_APPLIED_NOTICE,
-  NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE,
+  NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE,
   NBL_STATE_HISTORY_UNKNOWN_NOTICE,
 } from "../lib/tax-engine/nbl-confirm-notices";
 
@@ -220,7 +220,7 @@ test.describe("주택부수토지 소유기간 중 주택 신축·멸실 이력(
     await seed(page, [houseAsset()]);
     await gotoHolding(page);
     expect(await calcBlocked(page), "질문 미선택은 계산 요청이 나가지 않는다(미입력 ≠ 미해당)").toBe(true);
-    await expect(errorText(page, /주택 부수토지 — 소유기간 중 이 토지 위 건축물이 새로 생기거나 없어진 적이 있는지 선택하세요/)).toBeVisible({ timeout: 15_000 });
+    await expect(errorText(page, /주택 부수토지 — 소유기간 중 이 토지 위 주택이 새로 지어지거나 없어진 적이 있는지 선택하세요/)).toBeVisible({ timeout: 15_000 });
     await gotoHolding(page);
     await chooseMode(page, "unchanged");
     const r = await calc(page);
@@ -242,20 +242,54 @@ test.describe("주택부수토지 소유기간 중 주택 신축·멸실 이력(
     expect(nblOf(r)?.periodEvaluation?.basis).toBe("not_judged");
   });
 
-  test("E5 양도일 현재 배율 초과(정착 40㎡ → 허용 200㎡ < 500㎡): 질문은 그대로 필수 · 안내 1줄 · 사건은 body에 닿되 이력 미반영(구간표 없음) + 엔진 PARTIAL 고지", async ({ page }) => {
+  test("E5 양도일 현재 배율 초과(정착 40㎡ → 허용 200㎡ < 500㎡): 질문은 그대로 필수 · 안내는 «바뀐 적 있음»일 때만(Low 1) · 사건은 body에 닿되 이력 미반영(구간표 없음) + 엔진 PARTIAL(주택 변형) 고지", async ({ page }) => {
     test.setTimeout(150_000);
     await seed(page, [houseAsset({ nblHousingFootprint: "40" })]);
     await gotoHolding(page);
-    await expect(page.getByTestId("nbl-housing-area-exceeded-notice")).toHaveText(NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE);
     await expect(page.getByTestId("nbl-other-state-mode")).toBeVisible();
+    // Low 1 — 엔진은 `changed`일 때만 이 고지를 싣는다: 미선택·«바뀐 적 없음»에서는 안내가 없다
+    await expect(page.getByTestId("nbl-housing-area-exceeded-notice")).toHaveCount(0);
+    await chooseMode(page, "unchanged");
+    await expect(page.getByTestId("nbl-housing-area-exceeded-notice")).toHaveCount(0);
+    // Low 2 — 초과 + «모름»: 엔진 결과에 UNKNOWN 고지가 없으므로 입력 화면도 보이지 않는다
+    await chooseMode(page, "unknown");
+    await expect(page.getByTestId("nbl-state-history-unknown-notice")).toHaveCount(0);
     await chooseMode(page, "changed");
+    await expect(page.getByTestId("nbl-housing-area-exceeded-notice")).toHaveText(NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE);
     await addEvent(page, "built", "2023-06-01");
+    // 구간 미리보기도 엔진이 이력을 읽지 않으므로 그리지 않는다
+    await expect(page.getByTestId("nbl-state-history-preview")).toHaveCount(0);
     const r = await calc(page);
     expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);
     expect(r.req.nonBusinessLandRaw?.nblOtherStateEvents).toHaveLength(1);
     await expect(page.getByTestId("nbl-state-history-period")).toHaveCount(0);
     expect(nblOf(r)?.periodEvaluation?.basis).toBe("not_judged");
-    await expect(page.getByText(NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE).first()).toBeVisible();
+    expect(((nblOf(r)?.warnings as string[] | undefined) ?? []).filter((w) => w === NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE)).toHaveLength(1);
+    await expect(page.getByText(NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE).first()).toBeVisible();
+  });
+
+  test("E5b Low 3: 양도일 현재 배율 초과 + 철거 행 정착면적 빈칸 — 엔진이 이력을 읽지 않으므로 ⑧이 막지 않는다(계산 가능) · 같은 입력의 이내(정착 100)에서는 정착면적을 요구한다", async ({ page }) => {
+    test.setTimeout(200_000);
+    await seed(page, [houseAsset({ nblHousingFootprint: "100" })]);
+    await gotoHolding(page);
+    await chooseMode(page, "changed");
+    const i = await addEvent(page, "removed", "2016-01-01");
+    await addEvent(page, "built", "2023-01-01");
+    await expect(page.locator(`[data-field="nblOtherStateEvents.${i}.houseFootprintBefore"] .text-destructive`).first(), "이내: 필수 표시").toBeVisible();
+    expect(await calcBlocked(page), "이내 + 정착면적 빈칸 = 차단").toBe(true);
+    await expect(errorText(page, /철거 직전 주택 정착면적\(㎡\)을 입력하세요/)).toBeVisible({ timeout: 15_000 });
+
+    await seed(page, [houseAsset({ nblHousingFootprint: "40" })]);
+    await gotoHolding(page);
+    await chooseMode(page, "changed");
+    await addEvent(page, "removed", "2016-01-01");
+    await addEvent(page, "built", "2023-01-01");
+    await expect(page.getByTestId("nbl-housing-area-exceeded-notice")).toBeVisible();
+    await expect(page.locator('[data-field="nblOtherStateEvents.0.houseFootprintBefore"] .text-destructive')).toHaveCount(0);
+    const r = await calc(page);
+    expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);
+    expect(nblOf(r)?.periodEvaluation?.basis).toBe("not_judged");
+    await expect(page.getByText(NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE).first()).toBeVisible();
   });
 
   test("E6 기타토지 stale → 주택 카드: `tax_type_changed` 행 + 연접 다필지 ON — 질문 노출 · 행 보임 · ⑧ H4 차단 · 행 삭제 후 통과", async ({ page }) => {

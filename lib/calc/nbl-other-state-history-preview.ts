@@ -12,8 +12,9 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { differenceInDays } from "@/lib/tax-engine/utc-date";
 import type { HouseCheck, HouseOutcome, LandStateInterval, StateBuildingKind, StateEvent } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { HouseIntervalCtx } from "@/lib/tax-engine/non-business-land/housing-limit";
-import { judgeHousingLimit, resolveHouseInterval } from "@/lib/tax-engine/non-business-land/housing-limit";
+import { housingStateHistoryIsRead, judgeHousingLimit, resolveHouseInterval } from "@/lib/tax-engine/non-business-land/housing-limit";
 import type { ZoneType } from "@/lib/tax-engine/non-business-land/types";
+import { consumesMetropolitanArea } from "@/lib/tax-engine/non-business-land/land-category";
 import { eventClosesHouseInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { stateEventSubjectOf } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { deriveOtherLandStateIntervals } from "@/lib/tax-engine/non-business-land/other-land-state-history";
@@ -24,7 +25,9 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { nblAcquisitionDateOf } from "./nbl-unconditional-exemption-status";
 import { housePriorFootprintIssueOf } from "./nbl-other-state-history-scope";
 import { nblHousingStateHistoryApplies } from "./nbl-other-state-history-scope";
+import { housePriorNeedsMetropolitanOf } from "./nbl-other-state-history-scope";
 import { nblStateEventsInUse } from "./nbl-other-state-history-scope";
+import { nblStateHistoryApplies } from "./nbl-other-state-history-scope";
 import { stateEventWireRow } from "./nbl-other-state-history-scope";
 
 export interface StateHistoryPreviewRow {
@@ -69,7 +72,8 @@ export function housingAreaLimitState(asset: AssetForm, transferDate: string | u
   const footprint = parseFloat((asset.nblHousingFootprint ?? "").replace(/,/g, ""));
   const ctx = houseIntervalCtxOf(asset, transfer);
   if (!(footprint > 0) || !(ctx.landArea > 0)) return "unknown";
-  const judge = (isMetropolitanArea: boolean | undefined) => judgeHousingLimit({ zoneType: ctx.zoneType, isMetropolitanArea, transferDate: transfer, footprint, landArea: ctx.landArea }).limit.within;
+  // 엔진이 이력을 읽는 조건과 같은 술어(`housingStateHistoryIsRead` — 양도일 현재 배율 이내)를 직접 부른다(UI Low 3 — ⑧ H9·⑤ 안내·`judgeHousingLand`가 한 함수).
+  const judge = (isMetropolitanArea: boolean | undefined) => housingStateHistoryIsRead(judgeHousingLimit({ zoneType: ctx.zoneType, isMetropolitanArea, transferDate: transfer, footprint, landArea: ctx.landArea }).limit);
   if (ctx.isMetropolitanArea !== undefined) return judge(ctx.isMetropolitanArea) ? "within" : "exceeded";
   const [a, b] = [judge(true), judge(false)];
   return a === b ? (a ? "within" : "exceeded") : "unknown";
@@ -81,7 +85,8 @@ export function housingAreaLimitState(asset: AssetForm, transferDate: string | u
  * 호출자(⑤ 미리보기·철거 행 허용 면적 미리보기)가 같은 값을 쓴다 — 표시 전용(판정 아님).
  */
 export function houseIntervalCtxOf(asset: AssetForm, transferDate: Date): HouseIntervalCtx {
-  const metro = asset.nblIsMetropolitanArea;
+  // 수도권 값은 ④가 서버로 보내는 조건(소비표 지목 ∨ B 술어)일 때만 읽는다 — 아니면 서버(⑭)가 미제공(`undefined`)으로 읽는다. 같은 게이트를 쓰지 않으면 미리보기가 판정과 어긋난다.
+  const metro = consumesMetropolitanArea(asset.nblLandType) || housePriorNeedsMetropolitanOf(asset) ? asset.nblIsMetropolitanArea : "";
   const area = parseFloat((asset.acquisitionArea ?? "").replace(/,/g, ""));
   return {
     zoneType: (asset.nblZoneType || "undesignated") as ZoneType,
@@ -100,10 +105,11 @@ export interface HouseFootprintPreview {
 /** 철거 행 «철거 직전 주택 정착면적» 칸 아래 허용 면적 미리보기(표시 전용) — 입력이 ⑧ 결함이면(빈칸·비수치·0·음수·정착>토지) 또는 양도일을 못 읽으면 null. 엔진 leaf `resolveHouseInterval` 직접 호출. */
 export function buildHouseFootprintPreview(asset: AssetForm, i: number, transferDate: string | undefined): HouseFootprintPreview | null {
   const transfer = toOptionalDate(transferDate);
-  if (!transfer || !nblHousingStateHistoryApplies(asset)) return null;
+  if (!transfer || !nblStateHistoryApplies(asset)) return null;
   const events = asset.nblOtherStateEvents ?? [];
-  const w = stateEventWireRow(events, i, true, "house");
-  if (!eventClosesHouseInterval(events, i, "house") || !w.houseFootprintBefore || housePriorFootprintIssueOf(asset, i)) return null;
+  const tailKind = nblHousingStateHistoryApplies(asset) ? ("house" as const) : undefined;
+  const w = stateEventWireRow(events, i, tailKind === "house" || asset.nblOtherHasBuilding, tailKind);
+  if (!eventClosesHouseInterval(events, i, tailKind) || !w.houseFootprintBefore || housePriorFootprintIssueOf(asset, i)) return null;
   const r = resolveHouseInterval(parseFloat(w.houseFootprintBefore.replace(/,/g, "")), houseIntervalCtxOf(asset, transfer));
   return { outcome: r.houseOutcome, ...(r.houseCheck ? { check: r.houseCheck } : {}) };
 }
@@ -118,7 +124,8 @@ export function buildStateHistoryPreview(asset: AssetForm, transferDate: string 
   // E3-③ — 주택 카드: 사건 주체 `house`(D-1·D-2 구조 규칙 포함 — `deriveOtherLandStateIntervals`가 어기면 던지므로 ⑧과 같은 leaf를 먼저 통과해야 한다) · 철거 행 정착면적 ⑧ 결함이 있으면 그린 표가 판정과 어긋나므로 그리지 않는다.
   const house = nblHousingStateHistoryApplies(asset);
   if (stateEventSequenceIssue(rows, { transferDate, floorDate, subject: stateEventSubjectOf(asset.nblLandType) })) return null;
-  if (house && rows.some((_, i) => housePriorFootprintIssueOf(asset, i))) return null;
+  // B(기타토지) 주택 철거 행도 같다 — 정착면적 ⑧ 결함이 있으면 판정과 어긋난 표를 그리지 않는다.
+  if (rows.some((_, i) => housePriorFootprintIssueOf(asset, i))) return null;
 
   // E3-1b — 전송형(`stateEventWireRow`)을 그대로 쓴다: ④ 와이어·⑭ 매퍼와 같은 «나대지 구간을 닫는 행만 선언 칸을 싣는다» 규칙이라 미리보기 = 계산에 쓰인 구간이다.
   const events: StateEvent[] = rows.map((_, i) => {
@@ -130,6 +137,7 @@ export function buildStateHistoryPreview(asset: AssetForm, transferDate: string 
       propertyTaxBasisBefore: w.propertyTaxBasisBefore,
       areaWithinLimitBefore: w.areaWithinLimitBefore,
       ...(w.houseFootprintBefore ? { houseFootprintBefore: parseFloat(w.houseFootprintBefore.replace(/,/g, "")) } : {}),
+      ...(w.buildingKindBefore ? { buildingKindBefore: w.buildingKindBefore } : {}),
     };
   });
   const intervals = deriveOtherLandStateIntervals(
@@ -138,7 +146,12 @@ export function buildStateHistoryPreview(asset: AssetForm, transferDate: string 
     transfer,
     house
       ? { hasBuilding: true, propertyTaxType: "unknown", buildingKind: "house", houseCtx: houseIntervalCtxOf(asset, transfer) }
-      : { hasBuilding: asset.nblOtherHasBuilding, propertyTaxType: (asset.nblOtherPropertyTaxType || "comprehensive") as LandStateInterval["propertyTaxType"] },
+      : {
+          hasBuilding: asset.nblOtherHasBuilding,
+          propertyTaxType: (asset.nblOtherPropertyTaxType || "comprehensive") as LandStateInterval["propertyTaxType"],
+          // E3-③ B — «철거된 건축물 = 주택» 행이 있으면 판정 맥락(배율·토지 면적·수도권 — apply와 같은 값)이 필수다(없으면 leaf가 던진다). 주택 행이 없으면 leaf가 읽지 않는다(종전과 바이트 동일).
+          houseCtx: houseIntervalCtxOf(asset, transfer),
+        },
   );
   if (intervals.length === 0) return null;
 

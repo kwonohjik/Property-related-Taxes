@@ -13,6 +13,10 @@
  * «철거 직전 주택 정착면적(㎡)» 숫자 입력 + 허용 면적 미리보기 · 양도일 현재 주택은 지목이 정해 «건축물 있음» 토글이 없다). 지목 축 게이트·정착면적 규칙은 ④⑧과 **같은 술어·leaf**를 읽는다
  * (`nblStateHistoryApplies` · `housePriorFootprintIssueOf` · 엔진 `eventClosesHouseInterval`) — 이 파일이 자체 지목 조건을 쓰지 않는다. 기본 `other`는 종전과 바이트 동일.
  *
+ * E3-③ B — 기타토지(`variant="other"`) 카드의 **철거 행**은 «철거된 건축물 종류»(주택 / 그 밖)를 더 받는다(`OtherLandBuildingKindField`). 「주택」이면 A와 같은 «철거 직전 주택 정착면적» 칸(+ 허용 면적 미리보기)을 보이고
+ * «철거 직전 재산세 구분»은 숨긴다(엔진이 주택 구간의 재산세 구분을 읽지 않는다). 수도권 여부 칸은 엔진 술어 `housePriorNeedsMetropolitan`(`housePriorNeedsMetropolitanOf` — 와이어 사건 인자)이 참일 때만 사건 목록 아래에 보인다.
+ * 「그 밖」이면 종전 카드 그대로(바이트 동일 — Q-12 (가)).
+ *
  * 3중 패턴: `propertyTaxTypeBefore` `""` = 모름 — 화면은 «모름» 선택 상태로 보이고(`|| "unknown"`) 저장값은 `""`로 쓴다(④ 전송 · ⑫ enum · 엔진 모두 `""` = 종합합산 + 확인 필요).
  * 모드·종류 전환 시 파생 값 쓰기는 **onChange 핸들러**에서만 한다(`useEffect → store` 미러링 금지).
  */
@@ -32,6 +36,7 @@ import type { StateHistoryPreviewRow } from "@/lib/calc/nbl-other-state-history-
 import { houseCheckText, houseIntervalText } from "@/lib/calc/nbl-house-interval-text";
 import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-scope";
 import { housePriorFootprintIssueOf } from "@/lib/calc/nbl-other-state-history-scope";
+import { housePriorNeedsMetropolitanOf } from "@/lib/calc/nbl-other-state-history-scope";
 import { nblOtherStateEventsInUse } from "@/lib/calc/nbl-other-state-history-scope";
 import { stateEventWireRow } from "@/lib/calc/nbl-other-state-history-scope";
 import { FOOTPRINT_DEFINITION } from "@/lib/calc/footprint-definition-copy";
@@ -48,7 +53,7 @@ import { NBL_STATE_HISTORY_HOUSE_EXCEEDED_GRACE_NOTICE } from "@/lib/tax-engine/
 import { NBL_STATE_HISTORY_HOUSE_EXCEEDED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_HOUSING_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_HOUSING_NON_HOUSE_BUILDING_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
-import { NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
@@ -57,6 +62,7 @@ import { NBL_STATE_HISTORY_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-n
 import type { PropertyTaxType } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { StateEventKind } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import { bareIntervalTaxTypeText } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { eventCarriesBuildingKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventCarriesTaxTypeBefore } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventClosesBareInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventClosesHouseInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
@@ -68,6 +74,8 @@ import { STATE_EVENT_KIND_LABEL } from "@/lib/tax-engine/non-business-land/other
 import { STATE_EVENT_KIND_LABEL_HOUSE } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 import { OtherLandBareIntervalFields, ptaxOptions } from "./OtherLandBareIntervalFields";
+import { OtherLandBuildingKindField } from "./OtherLandBuildingKindField";
+import { MetropolitanAreaField } from "./shared/MetropolitanAreaField";
 
 export interface OtherLandStateHistorySectionProps {
   asset: AssetForm;
@@ -161,6 +169,9 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
   const areaLimit = house ? housingAreaLimitState(asset, transferDate) : "unknown";
   const tailHasBuilding = house || asset.nblOtherHasBuilding;
   const tailKind = house ? ("house" as const) : undefined;
+  // A — 양도일 현재 배율 초과면 엔진이 이력을 읽지 않는다: 미리보기·정착면적 필수 표시를 하지 않는다(⑧ H9와 같은 판정 — `housingAreaLimitState`).
+  const historyIgnored = house && areaLimit === "exceeded";
+  const needsMetro = housePriorNeedsMetropolitanOf(asset);
 
   function changeMode(v: Mode) {
     // `changed → 그 밖`으로 바꿀 때는 숨었던 「건축물 있음」 토글에 마지막 파생값을 한 번 써 준다(이벤트 시점 쓰기 — `useEffect` 미러링 아님).
@@ -186,7 +197,10 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
   const hasTaxChange = events.some((e) => e.kind === "tax_type_changed");
   const lastBuilding = eventsComplete ? hasBuildingAtTransfer(events) : undefined;
   // Q-8 (가) — 초과 구간 뒤에 철거 후 9호 유예 행이 있으면 엔진이 싣는 고지(`applyHousingStateHistory`와 같은 조건 — 표시 전용).
-  const exceededWithGrace = house && !!preview?.rows.some((r) => r.houseOutcome === "exceeded") && (asset.nblGracePeriods ?? []).some((g) => g.reasonCode === "demolition");
+  // A·B 공통 — 주택 구간(A: 모든 철거 행 · B: «주택» 철거 행)이 있을 때만(엔진 `houseIntervalNotices`·`applyHousingStateHistory`와 같은 조건).
+  const previewHasHouse = !house && !!preview?.rows.some((r) => r.buildingKind === "house");
+  const hasHouseRow = events.some((_, i) => eventClosesHouseInterval(events, i, tailKind));
+  const exceededWithGrace = hasHouseRow && !!preview?.rows.some((r) => r.houseOutcome === "exceeded") && (asset.nblGracePeriods ?? []).some((g) => g.reasonCode === "demolition");
   const lastBuildingKind = [...events].reverse().find((e) => isBuildingEventKind(e.kind))?.kind;
 
   return (
@@ -213,10 +227,11 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
         />
       </FieldCard>
 
-      {/* 양도일 현재 배율을 초과하면 엔진은 이력을 판정에 반영하지 않는다(Q-3a (나) — 초과분은 유예만 반영). 질문·검증은 그대로 두고 사실만 알린다 — 엔진 고지와 같은 상수. */}
-      {house && areaLimit === "exceeded" && (
+      {/* 양도일 현재 배율을 초과하면 엔진은 이력을 판정에 반영하지 않는다(Q-3a (나) — 초과분은 유예만 반영). 질문은 그대로 두되 «모드가 바뀐 적 있음»일 때만 알린다 — 엔진은 `changed`에서만 이 고지를 싣는다
+          (`judgeHousingLand` — UI Low 1: 입력 화면 = 결과 고지). 철거 행 정착면적은 이때 ⑧이 요구하지 않는다(UI Low 3 — 엔진이 읽지 않는 칸). 문구는 엔진의 주택 변형 상수. */}
+      {house && mode === "changed" && areaLimit === "exceeded" && (
         <ToneCard tone="amber">
-          <p className="text-caption leading-snug" data-testid="nbl-housing-area-exceeded-notice">{NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE}</p>
+          <p className="text-caption leading-snug" data-testid="nbl-housing-area-exceeded-notice">{NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE}</p>
         </ToneCard>
       )}
 
@@ -226,7 +241,8 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
           <p className="text-caption leading-snug" data-testid="nbl-state-history-unchanged-notice">{NBL_STATE_HISTORY_UNCHANGED_NOTICE}</p>
         </ToneCard>
       )}
-      {mode === "unknown" && (
+      {/* 주택 카드 + 양도일 현재 배율 초과: 엔진은 이력을 읽지 않고 `unknown` 고지도 싣지 않는다(결과 = 현행 그대로 — UI Low 2: 입력 화면 = 결과). */}
+      {mode === "unknown" && !historyIgnored && (
         <ToneCard tone="amber">
           <p className="text-caption leading-snug" data-testid="nbl-state-history-unknown-notice">{NBL_STATE_HISTORY_UNKNOWN_NOTICE}</p>
         </ToneCard>
@@ -244,13 +260,16 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
             // 나대지 구간을 닫는 행(신축 · 건축물 없는 구간의 구분 변경)은 «나대지 선언» 카드, 건축물 있는 구간을 닫는 행(철거 · 건축물 위 구분 변경)은 종전 «직전 구분» 카드다 — 둘 다 leaf 술어가 정한다.
             const closesBare = eventClosesBareInterval(events, i, tailHasBuilding);
             // E3-③ A — 주택 구간을 닫는 철거 행(leaf 술어)은 «직전 재산세 구분» 대신 «철거 직전 주택 정착면적» 카드다(⑭·④·⑧과 같은 술어).
-            const closesHouse = house && eventClosesHouseInterval(events, i, tailKind);
+            // B(기타토지)는 «철거된 건축물 종류: 주택»으로 고른 철거 행이다(엔진 술어가 종류 칸을 읽는다).
+            const closesHouse = eventClosesHouseInterval(events, i, tailKind);
             const carriesBefore = eventCarriesTaxTypeBefore(ev.kind) && !closesBare && !closesHouse;
             const taxChange = ev.kind === "tax_type_changed";
             // 주택 카드가 받지 않는 종류(기타토지에서 입력하다 지목을 바꾼 stale 행) — 화면에 보이고 ⑧이 막는다(H4). 이 행의 구분·선언 카드는 그리지 않는다.
             const houseTaxChangeRow = house && taxChange;
-            const footprintIssue = closesHouse ? housePriorFootprintIssueOf(asset, i) : null;
-            const footprintPreview = closesHouse ? buildHouseFootprintPreview(asset, i, transferDate) : null;
+            const footprintIssue = closesHouse && !historyIgnored ? housePriorFootprintIssueOf(asset, i) : null;
+            const footprintPreview = closesHouse && !historyIgnored ? buildHouseFootprintPreview(asset, i, transferDate) : null;
+            // B — 기타토지 카드의 철거 행에서만 «철거된 건축물 종류»를 받는다(주택 카드는 모든 철거 행이 주택).
+            const showKindField = !house && eventCarriesBuildingKind(ev.kind);
             // 「변경 후」 = 이 사건일에 시작하는 미리보기 구간(표시 전용 — 저장·전송·검증 없음). 미리보기 불가·클립(사건일 ≤ 소유 첫날)이면 줄을 그리지 않는다.
             const afterRow = taxChange && !deemedBlocks ? preview?.rows.find((r) => r.start === ev.date) : undefined;
             return (
@@ -302,6 +321,15 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                   />
                 </FieldCard>
 
+                {showKindField && (
+                  <OtherLandBuildingKindField
+                    index={i}
+                    idKey={idKey}
+                    event={ev}
+                    onRowChange={(row) => onAssetChange({ nblOtherStateEvents: events.map((e, idx) => (idx === i ? row : e)) })}
+                  />
+                )}
+
                 {closesBare && !houseTaxChangeRow && (
                   <OtherLandBareIntervalFields
                     index={i}
@@ -318,7 +346,7 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                     field={`nblOtherStateEvents.${i}.houseFootprintBefore`}
                     label="철거 직전 주택 정착면적"
                     unit="㎡"
-                    required
+                    required={!historyIgnored}
                     hint={FOOTPRINT_HINT_HOUSE}
                     warning={footprintIssue && footprintIssue.kind !== "blank" ? <span data-testid={`nbl-other-state-event-${i}-footprint-error`}>{footprintIssue.message}</span> : undefined}
                   >
@@ -403,6 +431,14 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
             + 사건 추가
           </button>
 
+          {/* E3-③ B — 철거된 주택 구간의 배율(주·상·공 수도권 3배 / 수도권 밖 5배)이 수도권 여부로 갈릴 때만(엔진 술어 `housePriorNeedsMetropolitan` — ④ 전송·⑧ H10과 같은 함수). 카드 단위 1개. */}
+          {needsMetro && (
+            <div className="space-y-1" data-testid="nbl-house-prior-metro">
+              <MetropolitanAreaField asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />
+              <p className="text-xs text-muted-foreground px-1" data-testid="nbl-house-prior-metro-hint">철거 전 주택 구간의 배율 판정(도시지역 주·상·공 3배 / 5배)에 쓰입니다.</p>
+            </div>
+          )}
+
           {/* 양도일 현재 건축물 — 건축물 사건이 1건 이상이면 「건축물 있음」 토글을 이 줄이 대신한다(같은 사실을 두 곳에서 받지 않는다). 건축물 사건이 0건이면 줄 없이 토글이 보인다. */}
           {house ? (
             // 주택부수토지 카드 — 양도일 현재 주택은 입력이 아니라 지목이 정한다(④ `nblOtherHasBuilding = true` 고정 · ⑭ `tailHasBuilding = true`와 같은 값). 읽기 전용 한 줄.
@@ -415,7 +451,7 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
             </p>
           )}
 
-          {!deemedBlocks &&
+          {!deemedBlocks && !historyIgnored &&
             (preview ? (
               <ToneCard tone="sky" title="이 이력으로 나뉜 소유기간">
                 <div className="overflow-x-auto">
@@ -425,7 +461,7 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                         <th className="py-1 pr-2 font-medium">구간(시작일 포함 ~ 종료일 전날)</th>
                         <th className="py-1 pr-2 text-right font-medium">일수</th>
                         <th className="py-1 pr-2 font-medium">{house ? "주택" : "건축물"}</th>
-                        <th className="py-1 pr-2 font-medium">{house ? "재산세 구분 · 배율 판정" : "재산세 구분"}</th>
+                        <th className="py-1 pr-2 font-medium">{house || previewHasHouse ? "재산세 구분 · 배율 판정" : "재산세 구분"}</th>
                         <th className="py-1 font-medium">사업용 토지 요건</th>
                       </tr>
                     </thead>
@@ -434,7 +470,7 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                         <tr key={i} data-testid={`nbl-state-history-preview-row-${i}`} className="border-t border-sky-200/60 dark:border-sky-800/60 align-top">
                           <td className="py-1 pr-2 font-mono tabular-nums">{r.start} ~ {r.lastDay}</td>
                           <td className="py-1 pr-2 text-right font-mono tabular-nums">{r.days.toLocaleString()}일</td>
-                          <td className="py-1 pr-2">{r.hasBuilding ? "있음" : house ? "없음(나대지)" : "없음"}</td>
+                          <td className="py-1 pr-2">{r.hasBuilding ? (!house && r.buildingKind === "house" ? "있음(주택)" : "있음") : house ? "없음(나대지)" : "없음"}</td>
                           <td className="py-1 pr-2">{rowTaxTypeText(r)}</td>
                           <td className="py-1">{r.meetsBuildingRequirement === null ? "결과 계산 후 확정" : r.meetsBuildingRequirement ? "충족" : "미충족"}</td>
                         </tr>
@@ -443,7 +479,7 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                   </table>
                 </div>
                 <p className="text-caption text-muted-foreground leading-snug" data-testid="nbl-state-history-preview-total">
-                  합계 {preview.totalDays.toLocaleString()}일 = 소유기간. «사업용 토지 요건»은 {house ? "주택 유무(나대지 구간은 재산세 구분 선언)와 철거 전 배율 이내 여부" : "건축물과 재산세 구분"}만 본 것이며, 소유기간 전체의 비사업용 여부는 계산 결과에서 확정합니다.
+                  합계 {preview.totalDays.toLocaleString()}일 = 소유기간. «사업용 토지 요건»은 {house ? "주택 유무(나대지 구간은 재산세 구분 선언)와 철거 전 배율 이내 여부" : previewHasHouse ? "건축물과 재산세 구분(철거된 주택 구간은 배율 이내 여부)" : "건축물과 재산세 구분"}만 본 것이며, 소유기간 전체의 비사업용 여부는 계산 결과에서 확정합니다.
                 </p>
               </ToneCard>
             ) : (
@@ -459,7 +495,15 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                   {/* 주택 변형 — 엔진이 이력 적용 결과에 싣는 고지와 같은 상수(`applyHousingStateHistory` — 이력 없음 고지를 한정 고지로 대체 · 일 단위 합산 · 철거 전 구간 근거). */}
                   <p data-testid="nbl-state-history-applied-notice">{NBL_STATE_HISTORY_HOUSING_APPLIED_NOTICE}</p>
                   <p data-testid="nbl-state-history-daywise-notice">{NBL_STATE_HISTORY_DAYWISE_NO_RULING_NOTICE}</p>
-                  {events.some((_, i) => eventClosesHouseInterval(events, i, tailKind)) && <p data-testid="nbl-state-history-house-before-notice">{NBL_STATE_HISTORY_HOUSE_BEFORE_NOTICE}</p>}
+                  {hasHouseRow && <p data-testid="nbl-state-history-house-before-notice">{NBL_STATE_HISTORY_HOUSE_BEFORE_NOTICE}</p>}
+                  {exceededWithGrace && <p data-testid="nbl-state-history-house-exceeded-grace-notice">{NBL_STATE_HISTORY_HOUSE_EXCEEDED_GRACE_NOTICE}</p>}
+                </>
+              )}
+              {/* E3-③ B — 기타토지 카드에 «주택» 철거 행이 있으면 엔진이 싣는 주택 구간 고지(`houseIntervalNotices` — 일 단위 합산 → 근거 → 초과 뒤 9호 유예). 종전 구분 변경·한정 고지는 아래 그대로. */}
+              {!house && hasHouseRow && (
+                <>
+                  <p data-testid="nbl-state-history-daywise-notice">{NBL_STATE_HISTORY_DAYWISE_NO_RULING_NOTICE}</p>
+                  <p data-testid="nbl-state-history-house-before-notice">{NBL_STATE_HISTORY_HOUSE_BEFORE_NOTICE}</p>
                   {exceededWithGrace && <p data-testid="nbl-state-history-house-exceeded-grace-notice">{NBL_STATE_HISTORY_HOUSE_EXCEEDED_GRACE_NOTICE}</p>}
                 </>
               )}

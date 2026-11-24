@@ -17,6 +17,8 @@ import { consumesStateHistory } from "@/lib/tax-engine/non-business-land/land-ca
 import type { StateBuildingKind, StateHistoryMode } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { HouseFootprintIssue } from "@/lib/tax-engine/non-business-land/housing-limit";
 import { houseFootprintIssue } from "@/lib/tax-engine/non-business-land/housing-limit";
+import { housePriorNeedsMetropolitan } from "@/lib/tax-engine/non-business-land/house-prior-scope";
+import { stateHistoryDeemedBlocks } from "@/lib/tax-engine/non-business-land/house-prior-scope";
 import { eventClosesHouseInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { effectiveOtherHasBuilding } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventBasisOptions } from "@/lib/tax-engine/non-business-land/other-land-state-history";
@@ -58,11 +60,25 @@ export function nblStateEventsInUse(asset: AssetForm): boolean {
   return nblStateHistoryApplies(asset) && asset.nblOtherStateHistoryMode === "changed";
 }
 
-/** 주택부수토지 카드 사건 행의 «철거 직전 정착면적» 입력 결함 — ⑧ H9 · ⑤ 칸 오류 표시가 **같은 함수**(엔진 leaf `houseFootprintIssue` 직접 호출 · 자체 비교 금지). 주택 구간을 닫는 철거 행이 아니면 null. */
+/**
+ * 양도일 의제(영 §168의14②) 사유가 선택돼 **엔진이 상태 이력을 읽지 않는가** — 엔진 술어 `stateHistoryDeemedBlocks`를 직접 호출한다(UQ-12 (가) — 자체 지목·사유 조건 금지).
+ * ⑧은 이때 B 새 규칙(철거 행 정착면적 · 수도권)을 건너뛴다 — 엔진이 읽지 않는 칸을 요구하면 막다른 길이다. ④·⑭가 보내는 `nblDeemedTransferReason`과 같은 값(`consumesPeriodJudgmentDate`로 게이트)을 읽는다.
+ */
+export function stateHistoryDeemedBlocksOf(asset: Pick<AssetForm, "nblLandType" | "nblDeemedTransferReason">): boolean {
+  return stateHistoryDeemedBlocks({ landType: asset.nblLandType, deemedReason: asset.nblDeemedTransferReason });
+}
+
+/**
+ * 철거 행의 «철거 직전 정착면적» 입력 결함 — ⑧ H9 · ⑤ 칸 오류 표시가 **같은 함수**(엔진 leaf `houseFootprintIssue` 직접 호출 · 자체 비교 금지).
+ * 주택 구간을 닫는 철거 행이 아니면 null: A(주택부수토지) = 모든 철거 행 · **B(기타토지) = «철거된 건축물 종류: 주택» 행**(엔진 `eventClosesHouseInterval`). 문구의 사건 주체는 A `house` · B `building`(행 제목과 같은 말).
+ * 양도일 의제 사유가 선택됐으면 null(UQ-12 (가) — 엔진이 이력을 읽지 않는다). A의 «양도일 현재 배율 초과 → 엔진이 이력을 읽지 않음» 게이트는 양도일·배율 계산이 필요해 ⑧이 이 함수 앞에서 건다(`housingAreaLimitState`).
+ */
 export function housePriorFootprintIssueOf(asset: AssetForm, i: number): HouseFootprintIssue | null {
   const events = asset.nblOtherStateEvents ?? [];
-  if (!nblHousingStateHistoryApplies(asset) || !eventClosesHouseInterval(events, i, "house")) return null;
-  return houseFootprintIssue(events[i].houseFootprintBefore, i, asset.acquisitionArea);
+  const house = nblHousingStateHistoryApplies(asset);
+  if (!house && !nblOtherStateHistoryApplies(asset)) return null;
+  if (stateHistoryDeemedBlocksOf(asset) || !eventClosesHouseInterval(events, i, house ? "house" : undefined)) return null;
+  return houseFootprintIssue(events[i].houseFootprintBefore, i, asset.acquisitionArea, house ? "house" : "building");
 }
 
 /** 사건 행의 종류가 모두 선택됐는가(0건은 아님). 파생 `hasBuilding`은 이때만 사건이 정한다 — 미완성 행이 있으면 저장 토글값을 읽는다. */
@@ -120,6 +136,8 @@ export function stateEventWireRow(events: ReadonlyArray<NblOtherStateEventInput>
     ...(basis ? { propertyTaxBasisBefore: basis } : {}),
     ...(limit ? { areaWithinLimitBefore: limit } : {}),
     ...(footprint ? { houseFootprintBefore: footprint } : {}),
+    // E3-③ B — 기타토지 철거 행의 «철거된 건축물 = 주택»은 주택 구간을 닫는 행에서만 싣는다(주택부수토지 카드는 모든 철거 행이 주택이라 종류 칸이 없다 — A와 바이트 동일 · «그 밖»·다른 종류 행의 stale 값은 싣지 않는다).
+    ...(closesHouse && tailKind !== "house" ? { buildingKindBefore: "house" as const } : {}),
   };
 }
 
@@ -138,4 +156,13 @@ export function stateHistoryWireFields(asset: AssetForm): {
     nblOtherStateHistoryMode: "changed",
     nblOtherStateEvents: events.map((_, i) => stateEventWireRow(events, i, house || asset.nblOtherHasBuilding, house ? "house" : undefined)),
   };
+}
+
+/**
+ * E3-③ B — 기타토지 철거 행 «주택» 입력이 **수도권 칸을 읽게 하는가**. ④ 수도권 전송 게이트 · ⑤ 수도권 칸 노출 · ⑧ H10 · ⑤ 미리보기 판정 맥락이 **같은 함수**다(T-7 — 하나라도 자체 조건을 쓰면
+ * 값이 서버에 안 닿아 보수적 3배로 계산된다). 엔진 술어 `housePriorNeedsMetropolitan`을 직접 부르고, 사건은 **와이어 사건**(`stateHistoryWireFields` 결과 — 모드·적용 술어·종류 칸이 이미 반영)을 넘긴다 —
+ * 폼 저장 사건을 넘기면 `unchanged`·`unknown` 뒤에 남은 stale 주택 철거 행이 «화면에 없는 칸 요구» 막다른 길을 만든다(X27 · P16).
+ */
+export function housePriorNeedsMetropolitanOf(asset: AssetForm): boolean {
+  return housePriorNeedsMetropolitan(asset.nblLandType, asset.nblZoneType, stateHistoryWireFields(asset).nblOtherStateEvents);
 }

@@ -8,6 +8,7 @@
  */
 import type { AreaWithinLimit } from "./land-usage.types";
 import type { PropertyTaxType } from "./land-usage.types";
+import type { StateBuildingKind } from "./land-usage.types";
 import type { StateHistoryMode } from "./land-usage.types";
 import { OTHER_LAND_HO_IDS } from "./other-land-ho-meta";
 
@@ -43,3 +44,9 @@ export const NBL_AREA_WITHIN_LIMIT_VALUES = ["within", "exceeded", "unknown"] as
 
 const areaWithinLimitCovered: Exclude<AreaWithinLimit, "" | (typeof NBL_AREA_WITHIN_LIMIT_VALUES)[number]> extends never ? true : false = true;
 void areaWithinLimitCovered;
+
+/** NBL-STATE-HISTORY-E3-③ B — 기타토지 철거 행의 «철거된 건축물 종류»(⑫ Zod enum의 단일 소스 · `""` = 주택 아닌 건축물은 Zod에서 `.or(z.literal(""))`). */
+export const NBL_STATE_BUILDING_KIND_VALUES = ["house"] as const satisfies readonly StateBuildingKind[];
+
+const stateBuildingKindCovered: Exclude<StateBuildingKind, (typeof NBL_STATE_BUILDING_KIND_VALUES)[number]> extends never ? true : false = true;
+void stateBuildingKindCovered;

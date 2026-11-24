@@ -20,7 +20,7 @@ import {
   NBL_STATE_HISTORY_HOUSE_WITHIN_UNCONFIRMED_NOTICE,
   NBL_STATE_HISTORY_HOUSING_APPLIED_NOTICE,
   NBL_STATE_HISTORY_HOUSING_NON_HOUSE_BUILDING_NOTICE,
-  NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE,
+  NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE,
   NBL_STATE_HISTORY_UNKNOWN_NOTICE,
 } from "@/lib/tax-engine/nbl-confirm-notices";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
@@ -103,13 +103,13 @@ describe("E3d-1 Anchor 4 — T-1: 이내 core를 비사업용으로 뒤집을 �
 
 describe("E3d-1 Q-3a (나) 보존 · Anchor 3 — 양도일 현재 배율 초과 + 이력 `changed`: 판정·세액·echo는 현행 그대로, `PARTIAL_AREA` 고지만 추가 (S1·S2·S3)", () => {
   const rawExcess = (extra: Record<string, unknown> = {}) => ({ ...e3dARowRaw(row("M15")), acquisitionArea: "1000", ...extra });
-  const withoutPartial = (j: ReturnType<typeof judge>) => ({ ...j, warnings: j.warnings.filter((w) => w !== NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE) });
+  const withoutPartial = (j: ReturnType<typeof judge>) => ({ ...j, warnings: j.warnings.filter((w) => w !== NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE) });
 
   it("S1: 초과 + 신축 앞 나대지 — 비율 0.5 · 세액 199,720,000 · 이력 미반영(`not_judged`) + PARTIAL 고지 1줄", () => {
     const withHistory = judge(fromRaw(rawExcess()));
     const without = judge(fromRaw({ ...rawExcess(), nblOtherStateHistoryMode: "", nblOtherStateEvents: [] }));
-    expect(withHistory.warnings.filter((w) => w === NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE)).toHaveLength(1);
-    expect(without.warnings).not.toContain(NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE);
+    expect(withHistory.warnings.filter((w) => w === NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE)).toHaveLength(1);
+    expect(without.warnings).not.toContain(NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE);
     expect(withoutPartial(withHistory)).toEqual(without);
     expect(withHistory.periodEvaluation?.basis).toBe("not_judged");
     expect(withHistory.areaProportioning?.nonBusinessRatio).toBe(0.5);
@@ -121,7 +121,7 @@ describe("E3d-1 Q-3a (나) 보존 · Anchor 3 — 양도일 현재 배율 초과
     const withHistory = judge(fromRaw(raw));
     const without = judge(fromRaw({ ...raw, nblOtherStateHistoryMode: "", nblOtherStateEvents: [] }));
     expect(withHistory.isNonBusinessLand).toBe(false);
-    expect(withHistory.warnings).toContain(NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE);
+    expect(withHistory.warnings).toContain(NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE);
     expect(withoutPartial(withHistory)).toEqual(without);
     expect(withHistory.periodEvaluation?.basis).toBe("state_at_transfer");
   });
@@ -138,7 +138,7 @@ describe("E3d-1 Q-3a (나) 보존 · Anchor 3 — 양도일 현재 배율 초과
   it("초과 + `unknown`/`unchanged`/`\"\"`: 고지도 없다(이내 분기만 `unknown` 한 줄 — E0 compat G19 보존)", () => {
     for (const mode of ["unknown", "unchanged", ""]) {
       const j = judge(fromRaw(rawExcess({ nblOtherStateHistoryMode: mode, nblOtherStateEvents: [] })));
-      expect(j.warnings, mode).not.toContain(NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE);
+      expect(j.warnings, mode).not.toContain(NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE);
       expect(j.warnings, mode).not.toContain(NBL_STATE_HISTORY_UNKNOWN_NOTICE);
     }
   });

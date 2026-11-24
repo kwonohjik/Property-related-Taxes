@@ -21,10 +21,10 @@ import type {
   NonBusinessLandInput,
   NonBusinessLandJudgmentRules,
 } from "./types";
-import { HOUSING_METRO_DEFAULTED_WARNING, judgeHousingLimit } from "./housing-limit";
+import { HOUSING_METRO_DEFAULTED_WARNING, housingStateHistoryIsRead, judgeHousingLimit } from "./housing-limit";
 import { applyHousingStateHistory } from "./housing-state-history";
 import { getOwnershipStart } from "./utils/period-math";
-import { NBL_STATE_AT_TRANSFER_APPLIED_NOTICE, NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_AT_TRANSFER_APPLIED_NOTICE, NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE } from "../nbl-confirm-notices";
 import { expropriationZoneBaseDateNotice } from "../appurtenant-land-rate";
 import { applyGraceToNonBusinessRemainder } from "./other-land-merge";
 
@@ -100,7 +100,7 @@ export function judgeHousingLand(
     legalBasis: NBL.HOUSING_MULTIPLIER,
   });
 
-  if (limit.within) {
+  if (housingStateHistoryIsRead(limit)) {
     const area: AreaProportioning = {
       totalArea: input.landArea,
       businessArea: input.landArea,
@@ -169,9 +169,10 @@ export function judgeHousingLand(
   };
   // NBL2611-D1 (V2-C1 · Q-3a (나)) — 초과분은 «빈 사업기간 + 유예기간»으로 기간기준을 본다(영 §168의14①). 충족하면 초과분이 사업용이 되어 전량 사업용이다.
   const { result, graceJudged } = applyGraceToNonBusinessRemainder(excessResult, input, rules, "housing");
-  // E3-③ Q-3a (나) 경계 — 양도일 현재 배율 초과(부분 면적)는 판정·세액·echo를 바꾸지 않는다. 이력 `changed`이면 «이력 미반영» 고지만 더한다.
+  // E3-③ Q-3a (나) 경계 — 양도일 현재 배율 초과(부분 면적)는 판정·세액·echo를 바꾸지 않는다. 이력 `changed`이면 «이력 미반영» 고지(주택 변형 문구 — UI Low 1)만 더한다. `unknown`·`unchanged`·`""`는 고지도 없다(E0 compat G19 보존 —
+  // 입력 화면은 이 분기에서 `unknown` 고지를 보이지 않는다: UI Low 2는 입력 화면을 결과에 맞춘다).
   const partialNotice = (r: CategoryJudgeResult): CategoryJudgeResult =>
-    input.landStateHistory?.mode === "changed" ? { ...r, warnings: [...(r.warnings ?? []), NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE] } : r;
+    input.landStateHistory?.mode === "changed" ? { ...r, warnings: [...(r.warnings ?? []), NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE] } : r;
   if (!graceJudged) return partialNotice(excessResult);
   return partialNotice({
     ...result,

@@ -22,6 +22,7 @@ import { isFarmlandType } from "./types";
 import { consumesMetropolitanArea } from "./land-category";
 import { consumesPeriodJudgmentDate } from "./land-category";
 import { consumesUrbanIncorporationDate } from "./land-category";
+import { housePriorNeedsMetropolitan } from "./house-prior-scope";
 import { parseTaxPeriodYears } from "./disqualified-tax-periods";
 import { lookupSigungu } from "@/lib/korean-law/sigungu-codes";
 import { resolveAdjacentUnitCodes } from "@/lib/geo/sigungu-unit";
@@ -152,7 +153,10 @@ export function mapAssetToNblInput(
   const urbanIncorporationDate = consumesUrbanIncorporationDate(landType)
     ? parseDate(asString(asset.nblUrbanIncorporationDate))
     : undefined;
-  const metroRaw = consumesMetropolitanArea(landType) ? asString(asset.nblIsMetropolitanArea) : "";
+  // E3-③ B — 기타토지는 소비표 열(`metropolitanArea`)을 열지 않고(D-13), 「철거된 건축물 = 주택」 행이 있고 수도권이 배율을 가르는 용도지역일 때만 수도권 값을 싣는다(T-7 — 술어 단일 소스).
+  // 사건은 `changed`일 때만 판정에 쓰인다(`buildLandStateHistory`와 같은 규약 — `unchanged`·`unknown` 뒤의 stale 행은 읽지 않는다).
+  const priorEvents = asString(asset.nblOtherStateHistoryMode) === "changed" ? asArray<{ kind?: string; buildingKindBefore?: string }>(asset.nblOtherStateEvents).map((e) => ({ kind: asString(e.kind), buildingKindBefore: asString(e.buildingKindBefore) })) : [];
+  const metroRaw = consumesMetropolitanArea(landType) || housePriorNeedsMetropolitan(landType, zoneType, priorEvents) ? asString(asset.nblIsMetropolitanArea) : "";
   const isMetropolitanArea: boolean | undefined =
     metroRaw === "yes" ? true : metroRaw === "no" ? false : undefined;
 

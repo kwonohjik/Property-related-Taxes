@@ -21,7 +21,7 @@ import {
   NBL_STATE_HISTORY_HOUSE_EXCEEDED_NOTICE,
   NBL_STATE_HISTORY_HOUSING_APPLIED_NOTICE,
   NBL_STATE_HISTORY_HOUSING_NON_HOUSE_BUILDING_NOTICE,
-  NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE,
+  NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE,
   NBL_STATE_HISTORY_UNKNOWN_NOTICE,
 } from "@/lib/tax-engine/nbl-confirm-notices";
 
@@ -257,23 +257,53 @@ describe("미리보기 구간표 · 고지", () => {
   });
 });
 
-describe("UQ-7 (다) — 양도일 현재 배율 초과: 질문·검증은 그대로, 안내 1줄만(엔진 PARTIAL 고지 상수)", () => {
-  it("정착 40㎡(허용 200㎡ < 토지 500㎡) → 안내 · 질문은 그대로 보인다", () => {
-    mount(asset({ nblHousingFootprint: "40", nblOtherStateHistoryMode: "" }));
-    expect(text("nbl-housing-area-exceeded-notice")).toBe(NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE);
+describe("UQ-7 (다) — 양도일 현재 배율 초과: 질문은 그대로, 이력이 «바뀐 적 있음»일 때만 안내 1줄(엔진 `changed` 고지와 같은 주택 변형 상수 — UI Low 1)", () => {
+  it("정착 40㎡(허용 200㎡ < 토지 500㎡) + `changed` → 안내 · 질문은 그대로 보인다", () => {
+    mount(asset({ nblHousingFootprint: "40", nblOtherStateHistoryMode: "changed" }));
+    expect(text("nbl-housing-area-exceeded-notice")).toBe(NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE);
     expect(id("nbl-other-state-mode")).not.toBeNull();
   });
 
+  it("Low 1: 초과여도 질문이 «미선택»·«바뀐 적 없음»이면 안내가 없다(엔진은 `changed`일 때만 고지) · 문구는 «주택»·현재형(건축물·과거형 아님)", () => {
+    for (const mode of ["", "unchanged"] as const) {
+      mount(asset({ nblHousingFootprint: "40", nblOtherStateHistoryMode: mode }));
+      expect(id("nbl-housing-area-exceeded-notice"), JSON.stringify(mode)).toBeNull();
+      cleanup();
+    }
+    expect(NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE).toContain("주택 이력");
+    expect(NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE).not.toContain("건축물");
+    expect(NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE).not.toContain("반영하지 않았습니다");
+  });
+
+  it("Low 2: 초과 + `unknown` → 엔진은 이 분기에서 UNKNOWN 고지를 싣지 않는다(결과 = 현행 그대로) — 입력 화면도 보이지 않는다 · 이내 + `unknown`은 보인다", () => {
+    mount(asset({ nblHousingFootprint: "40", nblOtherStateHistoryMode: "unknown" }));
+    expect(id("nbl-state-history-unknown-notice")).toBeNull();
+    cleanup();
+    mount(asset({ nblOtherStateHistoryMode: "unknown" }));
+    expect(text("nbl-state-history-unknown-notice")).toBe(NBL_STATE_HISTORY_UNKNOWN_NOTICE);
+  });
+
+  it("Low 3: 초과 + `changed`면 엔진이 이력을 읽지 않으므로 철거 행 정착면적은 «필수» 표시가 없고 구간 미리보기도 그리지 않는다 · 이내면 필수 표시와 미리보기", () => {
+    const events = [removed("2016-01-01", ""), built("2023-01-01")];
+    mount(asset({ nblHousingFootprint: "40", nblOtherStateEvents: events }));
+    expect(document.querySelector('[data-field="nblOtherStateEvents.0.houseFootprintBefore"] .text-destructive')).toBeNull();
+    expect(id("nbl-state-history-preview")).toBeNull();
+    expect(id("nbl-state-history-preview-empty")).toBeNull();
+    cleanup();
+    mount(asset({ nblOtherStateEvents: events }));
+    expect(document.querySelector('[data-field="nblOtherStateEvents.0.houseFootprintBefore"] .text-destructive')).not.toBeNull();
+  });
+
   it("이내(정착 100 → 허용 500 ≥ 500) · 입력 미완(정착면적 빈칸)이면 안내 없음", () => {
-    mount(asset({ nblOtherStateHistoryMode: "" }));
+    mount(asset({ nblOtherStateHistoryMode: "changed" }));
     expect(id("nbl-housing-area-exceeded-notice")).toBeNull();
     cleanup();
-    mount(asset({ nblHousingFootprint: "", nblOtherStateHistoryMode: "" }));
+    mount(asset({ nblHousingFootprint: "", nblOtherStateHistoryMode: "changed" }));
     expect(id("nbl-housing-area-exceeded-notice")).toBeNull();
   });
 
   it("수도권 미선택 + 주·상·공: 수도권(3배)이면 초과 · 밖(5배)이면 이내 — 결과가 갈리므로 안내를 띄우지 않는다(깜빡임 방지)", () => {
-    mount(asset({ nblIsMetropolitanArea: "", nblHousingFootprint: "200", nblOtherStateHistoryMode: "" }));
+    mount(asset({ nblIsMetropolitanArea: "", nblHousingFootprint: "200", nblOtherStateHistoryMode: "changed" }));
     expect(id("nbl-housing-area-exceeded-notice")).toBeNull();
   });
 });

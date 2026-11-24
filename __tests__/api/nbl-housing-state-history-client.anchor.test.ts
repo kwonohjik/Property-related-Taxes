@@ -32,7 +32,7 @@ import {
   NBL_STATE_HISTORY_DAYWISE_NO_RULING_NOTICE,
   NBL_STATE_HISTORY_HOUSE_EXCEEDED_NOTICE,
   NBL_STATE_HISTORY_HOUSING_APPLIED_NOTICE,
-  NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE,
+  NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE,
   NBL_STATE_HISTORY_UNKNOWN_NOTICE,
 } from "@/lib/tax-engine/nbl-confirm-notices";
 
@@ -155,7 +155,7 @@ describe("UI-A 관통 — 입력에서 엔진까지 닿는다는 가드(TS 미�
     expect(res.issues).toEqual([]);
     expect(res.raw?.nblOtherStateHistoryMode, "④는 배율로 게이트하지 않는다 — 사건이 그대로 닿는다").toBe("changed");
     expect(res.nbl?.periodEvaluation?.basis).toBe("not_judged");
-    expect(res.nbl?.warnings).toContain(NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE);
+    expect(res.nbl?.warnings).toContain(NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE);
   });
 
   it("X6 stale 연접 다필지(기타토지 칸) ON — 주택은 이 칸을 읽지 않는다: 이력이 그대로 닿는다(D5가 막던 «비워 보냄»이 아니다)", async () => {

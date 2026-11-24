@@ -95,6 +95,13 @@ export function stateEventAtOrAfterTransferMessage(index: number, date: string, 
 export const STATE_HISTORY_MODE_REQUIRED_MESSAGE =
   "소유기간 중 이 토지 위 건축물이 새로 생기거나 없어진 적이 있는지 선택하세요. 모르면 「모름」을 고르세요. (미선택은 「바뀐 적 없음」으로 보지 않습니다)";
 
+/** E3-③ UI-B Low 4 — 주택부수토지 카드의 질문 미선택 문구(기본 `building`은 위 상수와 바이트 동일). 질문 자체가 «주택이 새로 지어지거나 없어진 적»이라 같은 말을 쓴다. */
+export function stateHistoryModeRequiredMessage(subject: StateEventSubject = "building"): string {
+  return subject === "house"
+    ? "소유기간 중 이 토지 위 주택이 새로 지어지거나 없어진 적이 있는지 선택하세요. 모르면 「모름」을 고르세요. (미선택은 「바뀐 적 없음」으로 보지 않습니다)"
+    : STATE_HISTORY_MODE_REQUIRED_MESSAGE;
+}
+
 /**
  * NBL-STATE-HISTORY-E3-② — 업종 영위 기간(폐업일·연도 행) 검증 문구. ⑧·⑫ 공용 leaf(`revenue-history.ts`의 `revenueHistoryInputIssue`)가 쓴다.
  * 행 번호(`index`)는 0부터이고 문구에는 1부터 적는다. 비어 있는 금액·누락 연도는 막지 않는다 — «모름»은 그 연도 불통과 + 확인 필요다(차단 없음).
@@ -151,20 +158,37 @@ export function houseTaxTypeChangedMessage(index: number): string {
   return `${eventRowPrefix(index, "tax_type_changed", "house")} — 주택부수토지 카드는 「재산세 과세 구분 변경」 사건을 받지 않습니다. 주택 구간에는 토지 재산세 과세 구분(별도합산·분리과세 등)이 없습니다. 주택 신축 앞 나대지의 구분은 「주택 신축」 행의 나대지 구간 선언으로 입력하세요.`;
 }
 
-const FOOTPRINT_ROW = (index: number) => eventRowPrefix(index, "building_removed", "house");
+/** 정착면적 행 접두 — 기본 `house`(주택부수토지 카드 «주택 사건 N번째 행»). 기타토지 카드의 철거 행(B)은 `building`을 넘겨 «건축물 사건 N번째 행»을 쓴다(D-9 — 행 제목과 같은 말). */
+const FOOTPRINT_ROW = (index: number, subject: StateEventSubject) => eventRowPrefix(index, "building_removed", subject);
 
-export function houseFootprintBlankMessage(index: number): string {
-  return `${FOOTPRINT_ROW(index)} — 철거 직전 주택 정착면적(㎡)을 입력하세요. 모르면 소유기간 중 주택 이력 질문에서 「모름」을 선택하세요. (정착면적 없이는 철거 전 주택 구간이 배율 이내인지 알 수 없어 판정에서 제외됩니다)`;
+export function houseFootprintBlankMessage(index: number, subject: StateEventSubject = "house"): string {
+  return `${FOOTPRINT_ROW(index, subject)} — 철거 직전 주택 정착면적(㎡)을 입력하세요. 모르면 소유기간 중 ${subject === "house" ? "주택" : "건축물"} 이력 질문에서 「모름」을 선택하세요. (정착면적 없이는 철거 전 주택 구간이 배율 이내인지 알 수 없어 판정에서 제외됩니다)`;
 }
 
-export function houseFootprintNotNumberMessage(index: number, value: string): string {
-  return `${FOOTPRINT_ROW(index)} — 철거 직전 주택 정착면적(${value})을 숫자(㎡)로 읽을 수 없습니다.`;
+export function houseFootprintNotNumberMessage(index: number, value: string, subject: StateEventSubject = "house"): string {
+  return `${FOOTPRINT_ROW(index, subject)} — 철거 직전 주택 정착면적(${value})을 숫자(㎡)로 읽을 수 없습니다.`;
 }
 
-export function houseFootprintNotPositiveMessage(index: number, value: string): string {
-  return `${FOOTPRINT_ROW(index)} — 철거 직전 주택 정착면적(${value}㎡)은 0보다 커야 합니다.`;
+export function houseFootprintNotPositiveMessage(index: number, value: string, subject: StateEventSubject = "house"): string {
+  return `${FOOTPRINT_ROW(index, subject)} — 철거 직전 주택 정착면적(${value}㎡)은 0보다 커야 합니다.`;
 }
 
-export function houseFootprintExceedsLandMessage(index: number, value: string, landArea: string): string {
-  return `${FOOTPRINT_ROW(index)} — 철거 직전 주택 정착면적(${value}㎡)이 토지 면적(${landArea}㎡)보다 큽니다. 정착면적은 토지 면적을 넘을 수 없습니다. (철거 당시 대지가 지금보다 컸다면 소유기간 중 주택 이력 질문에서 「모름」을 선택하세요)`;
+export function houseFootprintExceedsLandMessage(index: number, value: string, landArea: string, subject: StateEventSubject = "house"): string {
+  return `${FOOTPRINT_ROW(index, subject)} — 철거 직전 주택 정착면적(${value}㎡)이 토지 면적(${landArea}㎡)보다 큽니다. 정착면적은 토지 면적을 넘을 수 없습니다. (철거 당시 대지가 지금보다 컸다면 소유기간 중 ${subject === "house" ? "주택" : "건축물"} 이력 질문에서 「모름」을 선택하세요)`;
+}
+
+/**
+ * NBL-STATE-HISTORY-E3-③ B — 기타토지 철거 행의 «철거된 건축물 종류 = 주택» 구조 규칙(D-8) 검증 문구. ⑧·⑫ 공용 leaf(`houseKindEventIssue`)가 쓴다.
+ * 기타토지 카드의 행이라 «건축물 사건 N번째 행» 접두를 쓴다(D-9). 새 조문 인용 없음.
+ */
+
+/** D-8 ① — 건축물 종류(주택)는 멸실·철거·붕괴 행에서만 받는다. */
+export function houseKindOnlyOnRemovedMessage(index: number, kind?: string): string {
+  return `${eventRowPrefix(index, kind)} — 「철거된 건축물 종류: 주택」은 「건축물 멸실·철거·붕괴」 행에서만 입력합니다. 신축·재산세 과세 구분 변경 행에서는 건축물 종류를 선택할 수 없습니다.`;
+}
+
+/** D-8 ② — 주택 구간 안에 재산세 과세 구분 변경이 있다: 이미 구분이 바뀐 건축물은 주택이 아니다(주택에는 토지 재산세 과세 구분이 없다). */
+export function houseKindTaxChangeInsideMessage(index: number, taxIndex: number): string {
+  return `${eventRowPrefix(index, "building_removed")} — 철거된 건축물을 「주택」으로 선택했지만 그 건축물이 있던 동안 ${taxIndex + 1}번째 행에 「재산세 과세 구분 변경」 사건이 있습니다. ` +
+    `주택에는 토지 재산세 과세 구분(별도합산·분리과세 등)이 없어 구분이 바뀐 건축물 구간은 「주택」으로 입력할 수 없습니다. 주택이 아닌 건축물이면 건축물 종류를 비우거나, 주택이면 구분 변경 사건을 삭제하세요.`;
 }

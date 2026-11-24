@@ -2,6 +2,7 @@ import { z } from "zod";
 import { NBL_PROPERTY_TAX_TYPE_VALUES, NBL_RELATED_BUSINESS_TYPE_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
 import { NBL_STATE_HISTORY_MODE_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
 import { NBL_AREA_WITHIN_LIMIT_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
+import { NBL_STATE_BUILDING_KIND_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
 import { WHOLESALE_ITEM_VALUES } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import { PROPERTY_TAX_BASIS_VALUES } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { refineNonBusinessLandRaw } from "./transfer-tax-schema-nbl-refines";
@@ -63,6 +64,8 @@ const nblStateEventRawSchema = z.object({
   areaWithinLimitBefore: z.enum(NBL_AREA_WITHIN_LIMIT_VALUES).or(z.literal("")).optional(),
   // E3-③ — 주택 구간을 닫는 철거 행의 «철거 직전 주택 정착면적(㎡)» — 숫자 문자열(빈칸·비수치·0·음수는 ⑧이 막고, 직접 API는 400 없이 엔진이 «모름»으로 접는다 — Q-10 (가) · D-16). 빠지면 중첩 칸이 **침묵 strip**돼 철거 전 주택 구간이 전부 접힌다(TS 미감지 — route 관통 anchor가 고정).
   houseFootprintBefore: z.string().optional(),
+  // E3-③ B — 기타토지 철거 행의 «철거된 건축물 종류»(`"house"` = 주택 · `""`·미전송 = 주택 아닌 건축물 — 종전 철거 행과 바이트 동일). 빠지면 중첩 칸이 **침묵 strip**돼 주택 구간이 종전 «재산세 구분 사슬»로 읽힌다(TS 미감지 — route 관통 anchor가 고정).
+  buildingKindBefore: z.enum(NBL_STATE_BUILDING_KIND_VALUES).or(z.literal("")).optional(),
 });
 
 /**

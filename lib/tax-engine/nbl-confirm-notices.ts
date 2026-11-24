@@ -56,6 +56,13 @@ export const NBL_STATE_HISTORY_UNKNOWN_NOTICE =
 export const NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE =
   `이 토지는 면적의 일부만 비사업용으로 판정되는 경로라 입력한 건축물 이력(기간별 구간)을 판정에 반영하지 않았습니다. 면적과 기간을 함께 따지는 판정은 지원하지 않습니다 — 확인 필요.`;
 
+/**
+ * E3-③ UI-B Low 1 — 주택부수토지 카드 변형: **양도일 현재** 배율(정착면적 × 배율)을 넘는 면적이 있어 이력을 판정에 반영하지 않는다(Q-3a (나) — 초과분은 유예만 반영). 위 일반 문구는 «건축물 이력»을 말해
+ * 주택 카드에 어색해 변형을 둔다. 입력 화면(⑤)과 결과 경고(`judgeHousingLand`)가 같은 상수를 읽는다.
+ */
+export const NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE =
+  `양도일 현재 주택 정착면적에 배율을 적용한 허용 면적을 이 토지 면적이 넘어 면적의 일부만 비사업용으로 판정되는 경로라, 입력한 주택 이력(기간별 구간)은 판정에 반영되지 않습니다. 면적과 기간을 함께 따지는 판정은 지원하지 않습니다 — 확인 필요.`;
+
 /** 양도일 의제 사유(영 §168조의14 ②)가 선택돼 있으면 이력을 적용하지 않는다(통합 Q-9 (가)). */
 export const NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE =
   `${NBL.TRANSFER_DATE_PRESUMED}의 양도일 의제 사유를 선택해, 입력한 건축물 이력은 판정에 쓰지 않았습니다. 의제일 이후의 사건과 양도일 현재 상태가 어긋날 수 있기 때문입니다 — 확인 필요.`;
@@ -303,3 +310,11 @@ export const NBL_EXPROPRIATION_NOTICE_DATE_MISSING_NOTICE =
 export const NBL_EXPROPRIATION_CARRYOVER_BASIS_NOTICE =
   `배율 초과분의 ${NBL.UNCONDITIONAL_PUBLIC} 판정에서 이월과세(소득세법 §97의2) 토지는 수증일을 취득일로 보았습니다. ` +
   `이월과세가 적용되면 증여한 배우자 또는 직계존비속이 해당 자산을 취득한 날이 기준이라(같은 호 나목 괄호) 의제 여부가 달라질 수 있습니다 — 확인 필요.`;
+
+/**
+ * E3-③ B · Q-12 (가) — 기타토지 철거 행의 «철거된 건축물 종류» 안내(**입력 hint 전용**). 주택에는 재산세 **토지** 구분(별도합산·분리과세·비과세)이 없다 — 철거된 건축물이 주택이었다면
+ * 「주택」을 고르고 정착면적을 입력하게 한다. 종류 `""`(주택 아닌 건축물) 경로는 종전 그대로(현행 유지)라 **엔진 `warnings`에는 싣지 않는다** — 종전 철거 행과 결과 바이트 동일(Anchor 9)을 지키기 위해서다.
+ */
+export const NBL_STATE_HISTORY_BUILDING_KIND_HINT_NOTICE =
+  `주택에는 재산세 토지 구분(별도합산·분리과세·비과세)이 없습니다. 철거된 건축물이 주택이었다면 「주택」을 고르고 철거 직전 정착면적을 입력하세요 — ` +
+  `주택을 별도합산 등으로 입력하면 사실과 다른 판정이 됩니다 — 확인 필요.`;

@@ -18,6 +18,8 @@
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { TaxCalculationError } from "../tax-errors";
 import { TaxErrorCode } from "../tax-errors";
+import { houseKindOnlyOnRemovedMessage } from "./nbl-validation-messages";
+import { houseKindTaxChangeInsideMessage } from "./nbl-validation-messages";
 import { houseLastEventRemovedMessage } from "./nbl-validation-messages";
 import { houseTaxTypeChangedMessage } from "./nbl-validation-messages";
 import { stateEventAtOrAfterTransferMessage } from "./nbl-validation-messages";
@@ -100,6 +102,14 @@ export function isBuildingEventKind(kind: string): kind is BuildingEventKind {
 }
 
 /**
+ * E3-③ B — 이 종류의 사건 행이 «철거된 건축물 종류»(`buildingKindBefore`)를 받는가 — **철거 행뿐**이다(신축·재산세 과세 구분 변경 행에는 철거된 건축물이 없다).
+ * `eventClosesHouseInterval`(주택 구간 판정) · ③ 복원 정규화 · ⑤ 종류 카드 노출이 **같은 술어**를 읽는다(`kind === "building_removed"` 리터럴 분기 금지 — E3-① 게이트).
+ */
+export function eventCarriesBuildingKind(kind: string): boolean {
+  return kind === "building_removed";
+}
+
+/**
  * 이 종류의 사건이 `propertyTaxTypeBefore`(그 사건이 닫는 구간의 재산세 구분)를 **건축물 있는 구간에서** 운반하는가 — 철거·재산세 과세 구분 변경(E3-①).
  * ④ 와이어 정규화 · ③ 복원 정규화 · ⑤ 미리보기가 읽는다. **E3-1b**: 신축 행도 나대지 구간을 닫으므로 Before를 운반할 수 있다 — 그 판정은 종류만으로 못 하고
  * 사건 순서 replay가 필요해 `eventClosesBareInterval`이 맡는다(⑭는 둘을 함께 읽는다). 이 술어의 의미는 E3-①과 같다(UI가 두 술어로 교체한다).
@@ -139,13 +149,16 @@ export function eventBasisOptions(declared: PropertyTaxType): readonly PropertyT
 /** 결함 칸: `events` = 사건 컨테이너(0건) · `kind`·`date` = `nblOtherStateEvents.{index}.{field}`. */
 export interface StateEventIssue {
   index: number | null;
-  field: "events" | "kind" | "date";
+  /** `buildingKindBefore` = E3-③ B 철거 행의 «철거된 건축물 종류»(D-8 구조 규칙의 결함 칸). */
+  field: "events" | "kind" | "date" | "buildingKindBefore";
   message: string;
 }
 
 export interface StateEventRowLike {
   kind: string;
   date: string;
+  /** E3-③ B — 철거 행의 «철거된 건축물 종류»(`"house"` · `""`·미전송 = 주택 아님). 구조 규칙(D-8 `houseKindEventIssue`)만 읽는다. */
+  buildingKindBefore?: string;
 }
 
 /**
@@ -219,7 +232,7 @@ export function stateEventSequenceIssue(events: ReadonlyArray<StateEventRowLike>
     }
     prevBuildingKind = row.kind;
   }
-  return subject === "house" ? housingStateEventIssue(events) : null;
+  return subject === "house" ? housingStateEventIssue(events) : houseKindEventIssue(events);
 }
 
 /**
@@ -239,11 +252,32 @@ export function housingStateEventIssue(events: ReadonlyArray<StateEventRowLike>)
 }
 
 /**
- * `index`번째 사건이 **주택 구간(건축물 있는 구간)을 닫는가** — 주택부수토지 카드(`tailKind === "house"`)에서는 철거 행 전부다(모든 건축물 구간이 주택).
- * 철거 행의 «철거 직전 정착면적»(`houseFootprintBefore`)을 **읽고 · 싣고 · 보이는** 곳(⑭ · ④ 와이어 · ⑤ 미리보기 · ⑤ 입력 카드 · ⑧)이 모두 이 술어 하나를 쓴다(숨은 stale 값을 싣지 않기 위해).
+ * E3-③ B 기타토지 철거 행의 «철거된 건축물 종류 = 주택» **구조 규칙 D-8**(⑧·⑫ 공용 — 행·순서 검증을 통과한 `changed` 사건에만 부른다. `stateEventSequenceIssue`가 `subject: "building"`일 때 같은 호출 안에서 적용):
+ *   ① `buildingKindBefore = house`는 `building_removed` 행에서만 — 신축·구분 변경 행에서는 차단.
+ *   ② 주택 구간 안에 `tax_type_changed`가 없다 — 그 철거 행이 닫는 건축물 구간(직전 건축물 사건 또는 소유 첫날 이후)에 구분 변경이 있으면 차단(이미 구분이 바뀐 건축물은 «주택 아닌 건축물»이다 — 주택에는 토지 재산세 구분이 없다).
+ * 정착면적·수도권 규칙은 여기 없다 — ⑧만 가진다(직접 API는 400 없이 엔진이 접는다 — D-16).
  */
-export function eventClosesHouseInterval(events: ReadonlyArray<{ kind: string }>, index: number, tailKind: StateBuildingKind | undefined): boolean {
-  return tailKind === "house" && events[index]?.kind === "building_removed";
+export function houseKindEventIssue(events: ReadonlyArray<StateEventRowLike>): StateEventIssue | null {
+  for (let i = 0; i < events.length; i++) {
+    const e = events[i];
+    if (e.buildingKindBefore !== "house") continue;
+    if (e.kind !== "building_removed") return { index: i, field: "buildingKindBefore", message: houseKindOnlyOnRemovedMessage(i, e.kind) };
+    for (let j = i - 1; j >= 0 && !isBuildingEventKind(events[j].kind); j--) {
+      if (events[j].kind === "tax_type_changed") return { index: i, field: "buildingKindBefore", message: houseKindTaxChangeInsideMessage(i, j) };
+    }
+  }
+  return null;
+}
+
+/**
+ * `index`번째 사건이 **주택 구간(건축물 있는 구간)을 닫는가** — ① 주택부수토지 카드(`tailKind === "house"`)에서는 철거 행 전부다(모든 건축물 구간이 주택). ② 기타토지 카드(B)에서는 «철거된 건축물 종류 = 주택»
+ * (`buildingKindBefore === "house"`)을 고른 철거 행이다. 철거 행의 «철거 직전 정착면적»(`houseFootprintBefore`)을 **읽고 · 싣고 · 보이는** 곳(⑭ · ④ 와이어 · ⑤ 미리보기 · ⑤ 입력 카드 · ⑧)이 모두 이 술어 하나를 쓴다
+ * (숨은 stale 값을 싣지 않기 위해 — 주택 구간을 닫는 철거 행은 `propertyTaxTypeBefore`도 싣지 않는다 · T-5). 사건 목록은 **와이어 사건**(`buildingKindBefore` 포함)이어야 한다.
+ */
+export function eventClosesHouseInterval(events: ReadonlyArray<{ kind: string; buildingKindBefore?: string }>, index: number, tailKind: StateBuildingKind | undefined): boolean {
+  const ev = events[index];
+  if (!ev || !eventCarriesBuildingKind(ev.kind)) return false;
+  return tailKind === "house" || ev.buildingKindBefore === "house";
 }
 
 // ── 사건 → 일 단위 구간 ───────────────────────────────────────
@@ -273,7 +307,7 @@ export interface StateTail {
    * 과거 주택 구간의 배율 이내 여부를 가린다(`houseCtx` 필수). 양도일 현재 상태는 «주택 있음»이라 `hasBuilding`은 쓰이지 않는다(⑭는 `true`로 넘긴다 — T-4). 없으면 종전(기타토지)과 바이트 동일.
    */
   buildingKind?: StateBuildingKind;
-  /** `buildingKind = "house"`일 때 필수 — 배율·토지 면적·양도일(⑤·⑧·apply가 같은 값을 넘긴다). */
+  /** `buildingKind = "house"`(A)일 때 필수 · 기타토지 카드(B)는 «철거된 건축물 종류 = 주택» 행이 있을 때 필수 — 배율·토지 면적·양도일(⑤·⑧·apply가 같은 값을 넘긴다). 주택 행이 없으면 읽지 않는다. */
   houseCtx?: HouseIntervalCtx;
   /** **건축물 사건이 없을 때만** 쓴다 — 건축물 사건이 있으면 마지막 건축물 사건 종류가 정한다(raw 토글과 모순돼도 사건이 이긴다 · V-19). 이 값이 초기 건축물 상태도 된다. */
   hasBuilding: boolean;
@@ -365,11 +399,16 @@ export function deriveOtherLandStateIntervals(
 ): LandStateInterval[] {
   if (endDate.getTime() <= ownershipStart.getTime()) return [];
 
-  // E3-③ — 주택부수토지 카드: 양도일 현재 «주택 있음»(마지막 건축물 사건 = 신축 · D-1)이고 재산세 구분 변경은 없다(D-2). ⑧·⑫가 먼저 막는다 — 직접 호출의 마지막 안전망(침묵 보정 금지).
-  const houseCtx = tail.buildingKind === "house" ? tail.houseCtx : undefined;
-  if (tail.buildingKind === "house") {
+  // E3-③ A — 주택부수토지 카드: 양도일 현재 «주택 있음»(마지막 건축물 사건 = 신축 · D-1)이고 재산세 구분 변경은 없다(D-2). ⑧·⑫가 먼저 막는다 — 직접 호출의 마지막 안전망(침묵 보정 금지).
+  const houseCard = tail.buildingKind === "house";
+  const houseCtx = tail.houseCtx;
+  if (houseCard) {
     if (!houseCtx) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, "주택 구간 판정에는 배율·토지 면적·양도일(houseCtx)이 필요합니다.");
     const structural = housingStateEventIssue(events.map((e) => ({ kind: e.kind, date: "" })));
+    if (structural) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, structural.message, { index: structural.index });
+  } else if (events.some((e) => e.buildingKindBefore)) {
+    // E3-③ B — 기타토지 철거 행의 종류 칸(D-8). 같은 마지막 안전망.
+    const structural = houseKindEventIssue(events.map((e) => ({ kind: e.kind, date: "", buildingKindBefore: e.buildingKindBefore })));
     if (structural) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, structural.message, { index: structural.index });
   }
 
@@ -398,18 +437,20 @@ export function deriveOtherLandStateIntervals(
       continue;
     }
     prevBuildingKind = ev.kind;
+    const closesHouse = eventClosesHouseInterval(events, i, tail.buildingKind);
+    if (closesHouse && !houseCtx) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, "주택 구간 판정에는 배율·토지 면적·양도일(houseCtx)이 필요합니다.", { index: i });
     segments.push(
       ev.kind === "building_built"
         ? { end: ev.date, hasBuilding: false, ...resolveBareDeclaration(ev) }
-        : houseCtx
+        : closesHouse
           ? // 주택 구간 — 재산세 구분은 읽지 않는다(`"unknown"` 고정 · 조심 2018서0295). 배율 이내 여부는 철거 직전 정착면적이 정한다(`resolveHouseInterval`).
-            { end: ev.date, hasBuilding: true, propertyTaxType: "unknown", buildingKind: "house", ...resolveHouseInterval(ev.houseFootprintBefore, houseCtx) }
+            { end: ev.date, hasBuilding: true, propertyTaxType: "unknown", buildingKind: "house", ...resolveHouseInterval(ev.houseFootprintBefore, houseCtx!) }
           : { end: ev.date, hasBuilding: true, propertyTaxType: ev.propertyTaxTypeBefore ? ev.propertyTaxTypeBefore : "unknown" },
     );
     hasBuilding = ev.kind === "building_built";
   }
   segments.push(
-    houseCtx
+    houseCard
       ? { end: null, hasBuilding: true, propertyTaxType: tail.propertyTaxType, buildingKind: "house" } // 꼬리 = 양도일 현재 주택 — core(`judgeHousingLand` 이내 분기)가 판정한다
       : { end: null, hasBuilding: hasBuildingAtTransfer(events) ?? tail.hasBuilding, propertyTaxType: tail.propertyTaxType },
   );

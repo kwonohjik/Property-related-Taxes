@@ -41,7 +41,7 @@ import {
   NBL_STATE_HISTORY_HOUSE_EXCEEDED_NOTICE,
   NBL_STATE_HISTORY_HOUSE_WITHIN_UNCONFIRMED_NOTICE,
   NBL_STATE_HISTORY_HOUSING_APPLIED_NOTICE,
-  NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE,
+  NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE,
   NBL_STATE_HISTORY_UNKNOWN_NOTICE,
 } from "@/lib/tax-engine/nbl-confirm-notices";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
@@ -149,7 +149,7 @@ describe("E3d-1 Q-3a (나) 경계(S1~S3) · 모드 — route", () => {
     expect(res.nbl?.periodEvaluation?.basis).toBe("not_judged");
     expect(res.nbl?.areaProportioning?.nonBusinessRatio).toBe(0.5);
     expect(res.result?.calculatedTax).toBe(199_720_000);
-    expect(res.nbl?.warnings).toContain(NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE);
+    expect(res.nbl?.warnings).toContain(NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE);
   });
 
   it("`unknown`: 현행 판정(198,210,000) + UNKNOWN 고지 1줄 · `unchanged`·`\"\"`: 현행(고지 없음)", async () => {
