@@ -38,10 +38,6 @@ import {
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 
 const R = DEFAULT_NON_BUSINESS_LAND_RULES;
-/** E3e-2(⑭ 세대 주택 소유 기간 배선)가 들어가기 전에는 행 입력 행(W·X1)을 건너뛴다 — E3e-2 커밋이 `true`로 바꾼다. */
-const HOUSE_WIRED = false;
-const rows = (list: readonly E3eRow[]) => list.filter((r) => HOUSE_WIRED || (r.houseRows?.length ?? 0) === 0);
-const describeHouse = HOUSE_WIRED ? describe : describe.skip;
 const row = (id: string) => E3E_ALL_ROWS.find((r) => r.id === id)!;
 const fromRaw = (raw: Record<string, unknown>) => buildNblEngineInput(raw as never)!;
 const judge = (input: NonBusinessLandInput) => judgeNonBusinessLand(input, R);
@@ -65,7 +61,7 @@ const hasEcho = (r: E3eRow): boolean => {
 };
 
 describe("E3e-1·2 케이스 표 전 행 — raw → ⑭ → 엔진 → 세액 (오라클 표와 같은 값)", () => {
-  it.each(rows(E3E_ALL_ROWS).map((r) => [r.id, r.scenario, r] as const))("%s — %s", (_id, _s, r: E3eRow) => {
+  it.each(E3E_ALL_ROWS.map((r) => [r.id, r.scenario, r] as const))("%s — %s", (_id, _s, r: E3eRow) => {
     const input = fromRaw(e3eRowRaw(r));
     const j = judge(input);
     expect(j.isNonBusinessLand, `${r.id} 판정`).toBe(r.expect.nonBusiness);
@@ -88,7 +84,7 @@ describe("E3e-1·2 케이스 표 전 행 — raw → ⑭ → 엔진 → 세액 (
 });
 
 describe("E3e-1 echo — `periodEvaluation.vacantLot`(R-3 최상위) · 구간 `vacantLotDays`(R-2)", () => {
-  it.each(rows(E3E_ALL_ROWS).map((r) => [r.id, r] as const))("%s — echo 유무가 §4.5 규칙과 같다(13호 + 구간 경로 ≤660㎡ 또는 행을 읽은 core 경로)", (_id, r) => {
+  it.each(E3E_ALL_ROWS.map((r) => [r.id, r] as const))("%s — echo 유무가 §4.5 규칙과 같다(13호 + 구간 경로 ≤660㎡ 또는 행을 읽은 core 경로)", (_id, r) => {
     const j = judge(fromRaw(e3eRowRaw(r)));
     const echo = j.periodEvaluation?.vacantLot;
     expect(echo !== undefined, `${r.id} echo`).toBe(hasEcho(r));
@@ -205,7 +201,7 @@ describe("E3e-1 불변 경계 — H1 회귀 가드(T-1·P-8) · 일수 중복 �
   });
 });
 
-describeHouse("E3e-2 세대 주택 소유 기간 — 행을 읽는 경로 · 읽지 않는 경로", () => {
+describe("E3e-2 세대 주택 소유 기간 — 행을 읽는 경로 · 읽지 않는 경로", () => {
   it("W 행: 이력 OFF·`unchanged`·`unknown` 모두 같은 행을 읽는다(Q-3 (가) — 이력과 무관) · basis `usage_periods` + echo `whole_period`", () => {
     for (const id of ["W1", "W2", "W6", "W7"]) {
       const j = judge(fromRaw(e3eRowRaw(row(id))));
@@ -270,8 +266,8 @@ describeHouse("E3e-2 세대 주택 소유 기간 — 행을 읽는 경로 · 읽
 });
 
 describe("표 규모", () => {
-  it("나지 축 13 + 무주택 축 11 + UI 시료 13 = 37 · E3e-1은 행 입력이 없는 행만 돈다", () => {
-    expect(rows(E3E_ALL_ROWS).length).toBe(HOUSE_WIRED ? 37 : 37 - 11);
+  it("나지 축 13 + 무주택 축 11 + UI 시료 13 = 37", () => {
+    expect(E3E_ALL_ROWS.length).toBe(37);
     expect([E3E_BARE_ROWS.length, E3E_HOUSE_ROWS.length, E3E_UI_ROWS.length]).toEqual([13, 11, 13]);
   });
 });

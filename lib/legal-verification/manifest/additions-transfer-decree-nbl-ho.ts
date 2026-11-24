@@ -35,4 +35,22 @@ export const TRANSFER_DECREE_NBL_HO_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  {
+    // 13호(무주택 1세대 1필지 나지) 본문 — E3-④ 고지·호 메타가 그대로 옮긴 요건(KoreanLaw 현행 본문 영 MST 290841, 2026-11-24 조회)
+    id: "TRANSFER_DECREE.NBL_OTHER_LAND_HO13",
+    citation: "소득세법 시행령 §168의11",
+    keywords: ["주택을 소유하지 아니하는 1세대가 소유하는 1필지의 나지", "660제곱미터 이내에 한한다"],
+    keywordMode: "ALL",
+  },
+  {
+    // 규칙 ⑯(주택 신축 가능 기준) · ⑰(나지 2필지 이상의 선택·순위) · ⑱(제외신청서 제출) — E3-④ 고지가 그대로 인용(KoreanLaw 현행 본문 규칙 MST 286379, 2026-11-24 조회)
+    id: "TRANSFER_RULE.NBL_OTHER_LAND_HO13_RULE",
+    citation: "소득세법 시행규칙 §83의4",
+    keywords: [
+      "법령의 규정에 따라 주택의 신축이 금지 또는 제한되는 지역에 소재하지 아니하고",
+      "나지가 2필지 이상인 경우에는 당해 세대의 구성원이 제16항의 규정에 따른 토지를 선택할 수 있다",
+      "무주택세대 소유 나지의 비사업용토지 제외신청서",
+    ],
+    keywordMode: "ALL",
+  },
 ];

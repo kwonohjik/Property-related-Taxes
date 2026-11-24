@@ -11,6 +11,7 @@ import type {
 } from "./types";
 import type { PeriodCriteriaResult } from "./period-criteria";
 import type { RevenueHistoryEcho } from "./revenue-test.types";
+import type { VacantLotEcho } from "./land-usage.types";
 
 /**
  * 나대지 간주 (소득세법 §104의3①4호나목 — 재산세 별도합산 제외 → 비사업용).
@@ -53,6 +54,11 @@ export interface OtherLandOwnTrace {
    * `decided`는 이 경로의 사업용 구간 판정이 **결과의 기간 수치 그 자체**일 때 참이다(다른 목이 끝낸 결과의 표시값과 구별 — basis `usage_periods`·유예 잔여분 재판정 생략).
    */
   revenueHistory?: { echo: RevenueHistoryEcho; decided: boolean };
+  /**
+   * E3-④ — core가 13호(무주택 1세대 1필지 나지)의 **세대 주택 소유 기간 행을 읽었을 때만**(행이 없거나 13호를 인정하지 않았으면 없다 — Q-4 (가) 바이트 동일). 이 값은 `own`에 넣지 않는다(T-1 — 13호는 건축물 의존이라 이력과 독립한 다목 축이 아니다).
+   * `echo`는 `periodEvaluation.vacantLot`(이력 OFF 경로 = `whole_period`)으로 나가고, `decided`는 기간기준 미충족으로 끝난 경우다 — 그 `r`이 이미 유예와 합집합이라 «빈 사업기간 + 유예» 재판정이 기간 수치를 덮지 않게 한다.
+   */
+  vacantLot?: { echo: VacantLotEcho; decided: boolean };
 }
 
 /**

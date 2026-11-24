@@ -5,6 +5,7 @@ import { NBL_AREA_WITHIN_LIMIT_VALUES } from "@/lib/tax-engine/non-business-land
 import { NBL_STATE_BUILDING_KIND_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
 import { WHOLESALE_ITEM_VALUES } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import { PROPERTY_TAX_BASIS_VALUES } from "@/lib/tax-engine/non-business-land/property-tax-basis";
+import { NBL_HOUSEHOLD_HOUSE_PERIODS_MAX, nblHouseholdHousePeriodsCapMessage } from "@/lib/calc/nbl-household-house-periods-cap";
 import { refineNonBusinessLandRaw } from "./transfer-tax-schema-nbl-refines";
 
 // ─── NBL 정밀판정 raw 페이로드 (⑫) — store nbl* 평면 1:1 ──────────
@@ -66,6 +67,15 @@ const nblStateEventRawSchema = z.object({
   houseFootprintBefore: z.string().optional(),
   // E3-③ B — 기타토지 철거 행의 «철거된 건축물 종류»(`"house"` = 주택 · `""`·미전송 = 주택 아닌 건축물 — 종전 철거 행과 바이트 동일). 빠지면 중첩 칸이 **침묵 strip**돼 주택 구간이 종전 «재산세 구분 사슬»로 읽힌다(TS 미감지 — route 관통 anchor가 고정).
   buildingKindBefore: z.enum(NBL_STATE_BUILDING_KIND_VALUES).or(z.literal("")).optional(),
+});
+
+/**
+ * NBL-STATE-HISTORY-E3-④ — 13호(무주택 1세대 1필지 나지)의 세대 주택 소유 기간 raw 행. 날짜는 `z.string()` — 구조 검증(⑧ HH-3과 같은 leaf `householdHousePeriodIssue`)은 ⑫′ refine이 13호일 때만 한다
+ * (13호가 아닌 자산에 남은 stale 행이 400을 만들지 않게). 종료일 빈칸 = 양도일까지. 빠지면 칸이 **침묵 strip**돼 엔진에 닿지 않는다(TS 미감지 — route 관통 anchor가 고정).
+ */
+const nblHouseholdHousePeriodRawSchema = z.object({
+  startDate: z.string(),
+  endDate: z.string().optional(),
 });
 
 /**
@@ -198,6 +208,8 @@ export const nonBusinessLandRawBaseSchema = z.object({
   // NBL-STATE-HISTORY-E2 — 소유기간 중 건축물 신축·멸실 이력. 누락 시 침묵 strip → 엔진에 이력이 도달하지 않는다(⑫⑬⑭ TS 미감지). `""`·미전송 = 현행(⑧만 질문 필수 — 통합 Q-5).
   nblOtherStateHistoryMode: z.enum(NBL_STATE_HISTORY_MODE_VALUES).optional(),
   nblOtherStateEvents: z.array(nblStateEventRawSchema).optional(),
+  // NBL-STATE-HISTORY-E3-④ — 13호 세대 주택 소유 기간. 누락 시 침묵 strip → 엔진에 행이 도달하지 않는다(⑫⑬⑭ TS 미감지). 없음·빈 배열 = 현행(Q-4 (가)). 상한 = 단일 소스(⑤·⑧·⑫).
+  nblOtherHouseholdHousePeriods: z.array(nblHouseholdHousePeriodRawSchema).max(NBL_HOUSEHOLD_HOUSE_PERIODS_MAX, nblHouseholdHousePeriodsCapMessage()).optional(),
   nblOtherBuildingFloorArea: z.string().optional(),
   // §168의11⑥ 복합용도 건축물 부속토지 안분 (B)
   nblOtherMixedUseMode: z.string().optional(),

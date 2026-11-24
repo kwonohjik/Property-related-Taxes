@@ -14,6 +14,7 @@ import { addYears } from "../utc-date";
 import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
 import { isUrbanResidentialCommercialIndustrial } from "./urban-area";
 import { OTHER_LAND_HO_META } from "./other-land-ho-meta";
+import { householdFreePeriods } from "./other-land-vacant-lot-history";
 import type { DateInterval, JudgmentStep, NblRelatedBusinessType, ZoneType } from "./types";
 import type { OtherLandUsage } from "./land-usage.types";
 
@@ -26,6 +27,11 @@ export interface HoRequirementResult {
   failNotice?: string;
   /** 호가 사업용으로 인정되는 기간 — 없으면 소유기간 전체(`fullPeriod`). 3호만 있다. */
   businessPeriods?: DateInterval[];
+  /**
+   * E3-④ — 13호가 사업용으로 인정되는 **무주택 기간**(소유기간 ∖ 세대 주택 소유 기간). 행을 입력한 13호에만 있다(없음 = 소유기간 전체 — 현행 Q-4 (가)).
+   * `businessPeriods`와 **다른 필드**다 — `other-land.ts`가 `businessPeriods`를 `ho` 인자 없이 `markOwn`하므로 13호가 거기에 담기면 `markOwn`의 13호 가드를 우회해 건물 구간까지 사업용이 된다(T-1).
+   */
+  householdFreePeriods?: DateInterval[];
 }
 
 /** 14호 — 위임 규칙 항이 없어 인정하지 않는다는 사실과 «확인 필요». 14호를 인정한 상급심·국세청 해석을 확보하지 못했다. */
@@ -35,8 +41,10 @@ export const NBL_ETC14_NOT_RECOGNIZED_NOTICE =
 
 export function judgeHoRequirements(
   relatedType: NblRelatedBusinessType | undefined,
-  o: Pick<OtherLandUsage, "hasBuilding" | "privateInvestmentCompletionDate">,
+  o: Pick<OtherLandUsage, "hasBuilding" | "privateInvestmentCompletionDate" | "householdHousePeriods">,
   zoneType: ZoneType,
+  /** 소유기간(`[취득일 다음날, 기간판정일)`) — 13호가 세대 주택 소유 기간 행을 읽을 때만 쓴다. */
+  ownership?: DateInterval,
 ): HoRequirementResult {
   if (relatedType === undefined || relatedType === "none") return {};
   const notice = OTHER_LAND_HO_META[relatedType].selfDeclaredNotice;
@@ -88,6 +96,10 @@ export function judgeHoRequirements(
         legalBasis: NBL.OTHER_LAND_HO_VACANT_LOT,
       },
     };
+  }
+  // E3-④ Q-2 (다)·Q-3 (가) — 이력과 무관하게 13호는 세대 주택 소유 기간 행을 읽는다. 행이 없으면 아무것도 하지 않는다(Q-4 (가) — 바이트 동일).
+  if (relatedType === "vacant_lot_1household" && ownership && o.householdHousePeriods && o.householdHousePeriods.length > 0) {
+    return { notice, householdFreePeriods: householdFreePeriods(ownership, o.householdHousePeriods) };
   }
   return { notice };
 }

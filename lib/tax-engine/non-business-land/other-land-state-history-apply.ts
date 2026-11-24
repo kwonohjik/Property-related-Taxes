@@ -195,7 +195,7 @@ export function applyStateHistory(
   else warnings.push(hasTaxChange ? NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE : NBL_STATE_HISTORY_APPLIED_NOTICE);
   // T-4 — 꼬리가 건축물이면 core가 13호를 인정하지 않아 자기 선언 고지가 안 실린다 → 구간별로 13호를 적용했으면 함께 싣는다(없을 때만).
   if (vacantEligible && !warnings.includes(NBL_VACANT_LOT_SELF_DECLARED_NOTICE)) warnings.push(NBL_VACANT_LOT_SELF_DECLARED_NOTICE);
-  if (vacantEligible && (o.householdHousePeriods?.length ?? 0) > 0) warnings.push(NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE);
+  if (vacantEligible && (o.householdHousePeriods?.length ?? 0) > 0 && !warnings.includes(NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE)) warnings.push(NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE);
   // D-2 — 660㎡ 초과 × 이력은 판정하지 않는다(13호 기여 0 + 고지 · 자동 안분 없음).
   if (ho13 && !vacantEligible) warnings.push(NBL_STATE_HISTORY_VACANT_LOT_AREA_NOTICE);
   // 「모름」 구간(종합합산으로 접힘)은 그 구간을 닫은 사건 종류별로 고지한다 — 구간의 끝 날짜 = 닫은 사건일(날짜는 엄격 증가라 유일).
