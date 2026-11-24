@@ -11,6 +11,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { PropertyTaxBasisRadio } from "./PropertyTaxBasisRadio";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-scope";
 import {
@@ -18,15 +19,26 @@ import {
   requiresDemolishedFloorArea,
   type PropertyTaxBasis,
 } from "@/lib/tax-engine/non-business-land/property-tax-basis";
+import { NBL_PTAX_DEMOLISHED_STATUS_GRACE_DIRECTION_NOTE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { demolishedStatusNotice } from "@/lib/tax-engine/non-business-land/demolished-temp-status";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 import type { PropertyTaxType } from "@/lib/tax-engine/non-business-land/types";
 
 interface Props {
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
+  /** form-level 양도일(ISO) — 근거 «철거ㆍ멸실» 한시 지위 고지가 양도일 시행본으로 문구를 고른다(미입력이면 시행본 연혁 안내). */
+  transferDate?: string;
 }
 
-export function OtherLandPropertyTaxBasisField({ asset, onAssetChange }: Props) {
+/** 이 자산의 양도일 현재(꼬리) 근거 선택지에 «철거ㆍ멸실»이 있는가 — 이 칸이 보이는 조건과 같은 엔진 술어(나대지 구간 hint의 «꼬리 칸과 달리» 보충이 읽는다). */
+export function tailOffersDemolishedBasis(asset: AssetForm): boolean {
+  const declared = asset.nblOtherPropertyTaxType;
+  if (!declared) return false;
+  return propertyTaxBasisOptions(declared as PropertyTaxType, effectiveOtherHasBuildingOf(asset)).includes("demolished");
+}
+
+export function OtherLandPropertyTaxBasisField({ asset, onAssetChange, transferDate }: Props) {
   const declared = asset.nblOtherPropertyTaxType;
   if (!declared) return null;
   const declaredType = declared as PropertyTaxType;
@@ -70,7 +82,13 @@ export function OtherLandPropertyTaxBasisField({ asset, onAssetChange }: Props) 
           field="nblOtherDemolishedFloorArea"
           label="철거ㆍ멸실 전 건축물 바닥면적"
           unit="㎡"
-          hint="철거ㆍ멸실되기 전 건축물의 바닥면적(건축물 외의 시설은 수평투영면적)입니다. 이 면적에 용도지역별 적용배율을 곱한 범위가 별도합산(사업용)으로 남고 초과분은 종합합산(비사업용)입니다. 철거일(1년·빈집 3년 한시 지위)은 판정하지 않습니다 — 확인 필요."
+          hint={
+            <>
+              철거ㆍ멸실되기 전 건축물의 바닥면적(건축물 외의 시설은 수평투영면적)입니다. 이 면적에 용도지역별 적용배율을 곱한 범위가 별도합산(사업용)으로 남고 초과분은 종합합산(비사업용)입니다.{" "}
+              <span data-testid="nbl-other-tax-basis-demolished-notice">{demolishedStatusNotice(toOptionalDate(transferDate))}</span>{" "}
+              <span data-testid="nbl-other-tax-basis-demolished-direction">{NBL_PTAX_DEMOLISHED_STATUS_GRACE_DIRECTION_NOTE}</span>
+            </>
+          }
         >
           <DecimalInput
             value={asset.nblOtherDemolishedFloorArea}

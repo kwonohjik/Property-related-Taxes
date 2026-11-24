@@ -189,7 +189,7 @@ export interface OtherLandUsage {
    * 미선택·「모름」·분류와 맞지 않는 값이면 엔진이 종합합산 + 확인 필요로 접는다(`property-tax-basis.ts`).
    */
   propertyTaxBasis?: PropertyTaxBasis;
-  /** NBL2611-V1-A — 근거가 «철거ㆍ멸실»일 때 철거 전 건축물의 바닥면적(㎡). 영 §103의2①1호 — 이 면적 × 영 §101② 적용배율이 별도합산 범위다. */
+  /** NBL2611-V1-A — 근거가 «철거ㆍ멸실»일 때 철거 전 건축물의 바닥면적(㎡). 영 §103의2 1호 — 이 면적 × 영 §101② 적용배율이 별도합산 범위다. */
   demolishedFloorArea?: number;
   hasBuilding: boolean;
   /**

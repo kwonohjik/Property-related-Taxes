@@ -206,8 +206,10 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
       "1년이 지나지 않은 건축물 또는 주택의 부속토지",
       "용도지역별 적용배율",
       "빈집정비사업",
-      // NBL2611-V1-A — 철거ㆍ멸실 근거의 한시 지위 고지(`NBL_PTAX_DEMOLISHED_STATUS_NOTICE`)가 기댄 빈집 3년 문언.
+      // NBL2611-V1-A · E3-⑤ E3f-1a — 철거ㆍ멸실 근거의 한시 지위 고지(`demolishedStatusNotice` 현행 시행본 문구 · 빈집 셀 고지)가 기댄 빈집 3년·건축 용도 외 사용 제외·허가 요건 문언.
       "3년이 지나지 않은 빈집의 부속토지",
+      "건축물 또는 주택의 건축을 위한 용도 외의 다른 용도로 사용하는 부속토지는 제외한다",
+      "허가 등을 받지 않은 건축물 또는 주택",
     ],
     keywordMode: "ALL",
   },

@@ -30,6 +30,7 @@
  */
 import { NBL } from "../legal-codes";
 import { judgeAppurtenantLandExcess } from "../appurtenant-land-excess";
+import { demolishedStatusNotice } from "./demolished-temp-status";
 import type { JudgmentStep, OtherLandUsage, PropertyTaxType } from "./types";
 
 export const PROPERTY_TAX_BASIS_VALUES = [
@@ -209,11 +210,6 @@ export const NBL_PTAX_VACANT_STATE_LIMIT_NOTICE =
   `${NBL.BUILDING_SITE_SEPARATE_AGG_LIST}의 각 호는 면적 한도(최저보유차고면적기준의 1.5배 이내, 물품 등의 보관·관리에 사용된 최대면적의 1.2배 이내, 부설주차장 설치기준면적 이내 등)가 있는데 ` +
   `어느 호에 해당하는지와 그 한도는 판정하지 않고 토지 전체를 사업용으로 보았습니다 — 확인 필요.`;
 
-/** 철거ㆍ멸실 별도합산(영 §103의2) — 한시 지위·허가 요건을 판정하지 않았다는 고지. */
-export const NBL_PTAX_DEMOLISHED_STATUS_NOTICE =
-  `${NBL.PTAX_BASIS_DEMOLISHED}은 철거ㆍ멸실된 날부터 1년이 지나지 않은 건축물(빈집정비사업 등으로 철거된 빈집은 3년)의 부속토지이고, 건축 용도 외의 다른 용도로 쓰는 부분과 ` +
-  `허가·사용승인을 받지 않은 건축물의 부속토지는 제외됩니다. 철거일(한시 지위)과 이 요건들은 판정하지 않았습니다 — 확인 필요.`;
-
 // ─────────────────────────────────────────────────────────────
 // 엔진 보조 — `other-land.ts`가 부른다(그 파일의 800줄 정책으로 분리)
 // ─────────────────────────────────────────────────────────────
@@ -235,24 +231,28 @@ export function bareLandStepDetail(p: {
     : `건축물 없는 토지(나대지) → 종합합산 취급`;
 }
 
-/** 근거 확인 시 판정에 남기는 고지(선언 존중 사실 · 호별 한도·한시 지위 미판정) + 근거 미확인 고지. */
+/**
+ * 근거 확인 시 판정에 남기는 고지(선언 존중 사실 · 호별 한도·한시 지위 미판정) + 근거 미확인 고지.
+ * `transferDate` = 실제 양도일 — «철거ㆍ멸실» 한시 지위 고지가 양도일 시행본 연혁으로 문구를 고른다(`demolishedStatusNotice`).
+ */
 export function propertyTaxBasisWarnings(
   res: PropertyTaxBasisResolution,
   keptBasis: Exclude<PropertyTaxBasis, "unknown"> | undefined,
   declaredLabel: string,
+  transferDate: Date | undefined,
 ): string[] {
   const out: string[] = [];
   if (keptBasis) {
     out.push(propertyTaxBasisAcceptedNotice(keptBasis));
     if (keptBasis === "vacant_state") out.push(NBL_PTAX_VACANT_STATE_LIMIT_NOTICE);
-    if (keptBasis === "demolished") out.push(NBL_PTAX_DEMOLISHED_STATUS_NOTICE);
+    if (keptBasis === "demolished") out.push(demolishedStatusNotice(transferDate));
   }
   if (res.kind === "unconfirmed") out.push(propertyTaxBasisUnconfirmedNotice(declaredLabel, res.reason));
   return out;
 }
 
 /**
- * 철거ㆍ멸실 근거 — 종전 건축물 바닥면적 × 영 §101② 적용배율 범위만 별도합산(영 §103의2①1호 후단). 건물 부수토지 배율(Step 0.6)과 같은 표·같은 헬퍼, 근거 조문·문구만 다르다.
+ * 철거ㆍ멸실 근거 — 종전 건축물 바닥면적 × 영 §101② 적용배율 범위만 별도합산(영 §103의2 1호 후단). 건물 부수토지 배율(Step 0.6)과 같은 표·같은 헬퍼, 근거 조문·문구만 다르다.
  * 배율표에 없는 용도지역이면 `judgeAppurtenantLandExcess`가 던진다 — ⑧·⑫가 먼저 막는다(`demolishedBasisIssue`).
  */
 export function judgeDemolishedSite(landArea: number, zoneType: string, floorArea: number) {

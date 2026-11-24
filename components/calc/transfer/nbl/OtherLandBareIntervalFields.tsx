@@ -18,6 +18,7 @@ import type { NblOtherStateEventInput } from "@/lib/stores/calc-wizard-asset-nbl
 import { NBL_STATE_HISTORY_BARE_ACCEPTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_AREA_LIMIT_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_BASIS_UNCONFIRMED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_TAIL_ONLY_NOTE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import type { AreaWithinLimit } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { PropertyTaxType } from "@/lib/tax-engine/non-business-land/land-usage.types";
@@ -55,9 +56,11 @@ interface Props {
   /** ④ 전송형 행 — 근거·면적한도 중 «실제로 보내지는 값»(선택지에 없는 stale 값은 비워져 있다). 접힘·고지 판정은 이 행으로 한다. */
   wire: NblOtherStateEventInput;
   patchEvent: (patch: Partial<NblOtherStateEventInput>) => void;
+  /** 양도일 현재(꼬리) 칸이 근거 «철거ㆍ멸실»을 선택지로 주는가(`tailOffersDemolishedBasis`) — 그때만 «꼬리 칸과 달리 이 구간은 아직 받지 않는다» 보충을 hint에 붙인다(E3f-2 전 임시). */
+  tailOffersDemolished?: boolean;
 }
 
-export function OtherLandBareIntervalFields({ index: i, idKey, taxChange, event: ev, wire, patchEvent }: Props) {
+export function OtherLandBareIntervalFields({ index: i, idKey, taxChange, event: ev, wire, patchEvent, tailOffersDemolished = false }: Props) {
   const before = wire.propertyTaxTypeBefore;
   const basisOptions = before ? eventBasisOptions(before) : [];
   const decl = resolveBareDeclaration({
@@ -110,7 +113,7 @@ export function OtherLandBareIntervalFields({ index: i, idKey, taxChange, event:
       {basisOptions.length > 0 && before && (
         <FieldCard
           label="그 구분의 근거"
-          hint={`건축물이 없던 기간에 「${PROPERTY_TAX_TYPE_LABEL[before]}」이 부과된 근거입니다. 재산세 과세내역(고지서)에서 확인해 고르세요 — 모르면 「모름」을 고르면 됩니다. 철거 후 한시 별도합산·건축 중 기간은 근거로 받지 않고 「부득이한 사유 유예기간」으로 입력합니다.`}
+          hint={`건축물이 없던 기간에 「${PROPERTY_TAX_TYPE_LABEL[before]}」이 부과된 근거입니다. 재산세 과세내역(고지서)에서 확인해 고르세요 — 모르면 「모름」을 고르면 됩니다. 철거 후 한시 별도합산·건축 중 기간은 근거로 받지 않고 「부득이한 사유 유예기간」으로 입력합니다.${tailOffersDemolished ? ` ${NBL_STATE_HISTORY_BARE_DEMOLISHED_TAIL_ONLY_NOTE}` : ""}`}
         >
           <PropertyTaxBasisRadio
             name={`nblOtherStateBasis-${idKey}-${i}`}

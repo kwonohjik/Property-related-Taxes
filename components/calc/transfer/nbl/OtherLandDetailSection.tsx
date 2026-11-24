@@ -202,7 +202,7 @@ export function OtherLandDetailSection({
       </FieldCard>
 
       {/* NBL2611-V1-A (Q-1) — 재산세 분류 «근거». 선택지·표시 조건은 엔진 술어(`property-tax-basis.ts`)가 정한다. */}
-      <OtherLandPropertyTaxBasisField asset={asset} onAssetChange={onAssetChange} />
+      <OtherLandPropertyTaxBasisField asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />
 
       {hasBuilding && (
         <>
