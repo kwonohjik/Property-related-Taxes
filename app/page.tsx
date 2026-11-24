@@ -87,6 +87,14 @@ const MENU = [
     tone: "rose",
   },
   {
+    // 판정 전용 메뉴 — 세액이 아니라 토지의 사업용·비사업용 여부를 답한다. 다주택 중과 판정 바로 뒤(15번째 · lg 4열 4행 그대로).
+    href: "/calc/non-business-land?new=1",
+    title: "비사업용 토지 판정",
+    subtitle: "토지의 사업용·비사업용 여부 판정",
+    icon: "🌾",
+    tone: "amber",
+  },
+  {
     href: "/calc/transfer-tax/multi?new=1",
     title: "양도소득세 (다건)",
     subtitle: "복수 양도 연간 합산·차손 통산",

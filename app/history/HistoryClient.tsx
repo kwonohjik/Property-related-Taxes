@@ -18,6 +18,7 @@ import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/type
 import { TAX_TYPE_ROUTES } from "@/lib/storage/tax-type-routes";
 import { TAX_LABEL } from "@/lib/storage/title-generator";
 import { oneHouseVerdictLabel } from "@/lib/calc/one-house-judgment-verdict";
+import { nblVerdictLabel } from "@/lib/calc/nbl-judgment-verdict";
 import { inheritedRightHistoryNotice } from "@/lib/calc/history-inherited-right-notice";
 import { HistoryDetailDrawer } from "@/components/history/HistoryDetailDrawer";
 import { HistoryBackupActions } from "@/components/history/HistoryBackupActions";
@@ -39,6 +40,7 @@ export const FILTER_OPTIONS: { label: string; value: LocalTaxType | "all" }[] = 
   { label: "전체", value: "all" },
   { label: "양도소득세", value: "transfer" },
   { label: "1세대1주택 판정", value: "one_house_exemption" },
+  { label: "비사업용 토지 판정", value: "non_business_land_judgment" },
   { label: "주식 양도세", value: "stock_transfer" },
   { label: "주식 평가", value: "stock_valuation" },
   { label: "취득세", value: "acquisition" },
@@ -94,7 +96,7 @@ function extractCardSummary(
     const dateLabel = fmt(inputData.transferDate as string | undefined, "양도일");
     return { address, dateLabel };
   }
-  if (taxType === "one_house_exemption") {
+  if (taxType === "one_house_exemption" || taxType === "non_business_land_judgment") {
     // 판정 메뉴 폼은 양도세 폼의 슈퍼셋 — 같은 자리에서 읽는다. 날짜만 「예정」으로 갈라 적는다.
     const assets = inputData.assets as Array<Record<string, unknown>> | undefined;
     const first = Array.isArray(assets) && assets.length > 0 ? assets[0] : null;
@@ -544,6 +546,8 @@ export function HistoryClient() {
                   {record.taxType === "one_house_exemption" ? (
                     /* 판정 메뉴는 **세액이 없다** — 그 자리에 판정 결론을 띄운다(술어는 공용 leaf). */
                     <>판정: <span className="font-semibold text-foreground">{oneHouseVerdictLabel(record.resultData)}</span></>
+                  ) : record.taxType === "non_business_land_judgment" ? (
+                    <>판정: <span className="font-semibold text-foreground">{nblVerdictLabel(record.resultData)}</span></>
                   ) : record.taxType === "stock_valuation" ? (
                     <>평가액: <span className="font-semibold text-foreground">{extractStockValuationTotal(record.resultData)}</span></>
                   ) : record.taxType === "gift_deemed" ? (

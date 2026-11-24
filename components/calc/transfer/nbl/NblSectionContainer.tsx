@@ -70,12 +70,20 @@ export function NblSectionContainer({
   asset,
   onAssetChange,
   transferDate,
+  part,
 }: {
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
   /** form-level 양도일 — GracePeriodSection 5호 미리보기에 전달 */
   transferDate?: string;
+  /**
+   * 판정 메뉴 전용 분할 — 미지정(계산기 두 호출처)이면 전체(DOM 불변).
+   * `"judge"` = 의제·지목·세부 / `"grace"` = 도시편입일·부득이한 사유·양도일 의제. 지정하면 머리·「접기」·접힘 분기를 건너뛴다(항상 펼침).
+   */
+  part?: "judge" | "grace";
 }) {
+  const showJudge = part === undefined || part === "judge";
+  const showGrace = part === undefined || part === "grace";
   // 무조건 사업용 의제 — 엔진 실제 판정(날짜/지역/지목 조건) 기준. 토글 ON 여부만 보지 않는다.
   const exemptionStatus = useMemo(
     () => evaluateUnconditionalExemption(asset, transferDate ?? ""),
@@ -102,7 +110,7 @@ export function NblSectionContainer({
   const acqSigungu5 = nblLandSigunguCodeOf({ ...asset, nblLandSigunguCode: "" });
   const acqSigunguName = extractSidoSigunguName(asset.addressJibun || asset.addressRoad) || undefined;
 
-  if (!asset.nblUseDetailedJudgment) {
+  if (!asset.nblUseDetailedJudgment && part === undefined) {
     return (
       <div className="space-y-2">
         <button
@@ -121,6 +129,7 @@ export function NblSectionContainer({
 
   return (
     <div className="space-y-4">
+      {part === undefined && (
       <div className="flex items-center justify-between">
         <SectionHeader title="비사업용 토지 정밀 판정" description="지목별 상세 정보를 입력하면 엔진이 자동 판정합니다." />
         <button
@@ -131,7 +140,10 @@ export function NblSectionContainer({
           접기
         </button>
       </div>
+      )}
 
+      {showJudge && (
+      <>
       {/* 이월과세 — 소유기간 기산일 = 증여자 취득일 (비사업용 토지 판정 전반에 걸리므로 맨 위) */}
       <CarryoverOwnershipPeriodNotice asset={asset} />
 
@@ -141,6 +153,8 @@ export function NblSectionContainer({
         onAssetChange={onAssetChange}
         status={exemptionStatus}
       />
+      </>
+      )}
 
       {/* 2. 공통 — 지목·용도지역 (실제 의제 성립 시에만 비활성) */}
       <div
@@ -152,6 +166,8 @@ export function NblSectionContainer({
         aria-hidden={exemptionStatus.isExempt ? true : undefined}
         className={exemptionStatus.isExempt ? "opacity-50 pointer-events-none" : undefined}
       >
+        {showJudge && (
+        <>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <FieldCard field="nblLandType" label="토지 지목">
             <Select
@@ -271,6 +287,11 @@ export function NblSectionContainer({
             {asset.nblLandType === "other_land"   && <OtherLandDetailSection asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />}
           </div>
         )}
+        </>
+        )}
+
+        {showGrace && (
+        <>
 
         {/* 5. 도시편입일 — 편입유예를 판정에 쓰는 지목(농지·임야·목장)에만. 별장·주택부수·기타토지는 어느 judge도 읽지 않는다
             (NBL2611-V10-PU10·V8-VL08). 숨긴 칸의 값은 store에 남기고(이력 복원 보존) ④가 보내지 않는다. 같은 `consumesUrbanIncorporationDate`를
@@ -302,6 +323,8 @@ export function NblSectionContainer({
           <div className="mt-3">
             <DeemedTransferSection asset={asset} onAssetChange={onAssetChange} />
           </div>
+        )}
+        </>
         )}
       </div>
     </div>

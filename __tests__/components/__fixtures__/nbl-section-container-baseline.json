@@ -1,0 +1,42 @@
+{
+ "collapsed": {
+  "length": 381,
+  "sha256": "ee95b2d8960d4a64e6e3291c6c54e492154fd63aa0d117dcfcec2eb802f846a7"
+ },
+ "noLandType": {
+  "length": 25190,
+  "sha256": "18c1803a898a875f6128a348ab3d1420bef58d32fbbe857862873c9199fe2dc2"
+ },
+ "farmland": {
+  "length": 60829,
+  "sha256": "49d42248eafd6f421b66b62725dd003c3a1a8035e8036012bd66f2e597b009ae"
+ },
+ "forest": {
+  "length": 45719,
+  "sha256": "d7d27c3fbbbbee0656393f0afa3d360425cae9c12682b6ff87900bbcdac8975b"
+ },
+ "pasture": {
+  "length": 52499,
+  "sha256": "851277004eaaeac286939c36e824180d15ef3b3fe0bb0136b10442967f4d70fc"
+ },
+ "housing_site": {
+  "length": 34490,
+  "sha256": "d091f5c258de64208668801bef88a1c7382b211e26a24ca1be85475bad7288d7"
+ },
+ "villa_land": {
+  "length": 44880,
+  "sha256": "f63e87728d18f3c054477febd0224d6de1ec4d55ad7d353e3b43778817a7abf1"
+ },
+ "other_land": {
+  "length": 70081,
+  "sha256": "3d73f6e01779f250237328f5406d8bd12ee10a8a7f3e7a63b2a62a0f7653cf97"
+ },
+ "exemptInheritance": {
+  "length": 62021,
+  "sha256": "2c51c3399b3abb725a5c1504ed5dfa9635e4c03e3980f5f7dd4d0d9234cf8977"
+ },
+ "noTransferDate": {
+  "length": 60829,
+  "sha256": "49d42248eafd6f421b66b62725dd003c3a1a8035e8036012bd66f2e597b009ae"
+ }
+}

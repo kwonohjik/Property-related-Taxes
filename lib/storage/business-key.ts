@@ -92,6 +92,14 @@ export function extractBusinessKey(
       const date = extractTransferDate(inputData);
       return `addr:${addr}|${date ?? ""}`;
     }
+    case "non_business_land_judgment": {
+      // 1주택 판정과 같은 폼 모양 — 주소·양도일 추출기가 그대로 돈다. 후보 조회가 세목별로 갈려 `addr:` 접두어가 겹치지 않는다.
+      const addr = extractAddress(inputData);
+      if (!addr) return null;
+      // 양도 «예정»일이 바뀌면 판정이 달라진다 — 같은 물건이라도 별개 record다.
+      const date = extractTransferDate(inputData);
+      return `addr:${addr}|${date ?? ""}`;
+    }
     case "stock_valuation": {
       const sec = extractStockValuationName(inputData);
       if (!sec) return null;
