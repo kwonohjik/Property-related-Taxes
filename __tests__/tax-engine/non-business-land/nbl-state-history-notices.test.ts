@@ -32,10 +32,11 @@ const CONFIRM_REQUIRED = [
   "NBL_STATE_HISTORY_HOUSE_EXCEEDED_NOTICE", // E3-③ Q-5 (나) — 배율 초과 → 그 구간 전체 비사업용
   "NBL_STATE_HISTORY_HOUSE_EXCEEDED_GRACE_NOTICE", // E3-③ Q-8 (가) — 초과 구간 뒤 9호 유예 유지
   "NBL_STATE_HISTORY_BUILDING_KIND_HINT_NOTICE", // E3-③ B Q-12 (가) — 철거 행 종류 칸 입력 hint(엔진 warnings에는 싣지 않는다)
+  "NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE", // E3-③ UI Low 1 — 주택 카드 변형: 양도일 현재 배율 초과 → 이력 미반영(`PARTIAL_AREA`의 주택 문구)
 ];
 
 describe("NBL-STATE-HISTORY-E1 — 이력 고지 상수", () => {
-  it("21종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다(E3-①이 2종 · E3-1b가 3종 · E3-③ A가 7종 · B가 1종 추가 — 기존 8종 문구는 바이트 동일)", () => {
+  it("22종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다(E3-①이 2종 · E3-1b가 3종 · E3-③ A가 7종 · B가 1종 · UI Low가 1종 추가 — 기존 8종 문구는 바이트 동일)", () => {
     expect(STATE_HISTORY_NOTICES.map(([k]) => k).sort()).toEqual(
       [
         ...CONFIRM_REQUIRED,

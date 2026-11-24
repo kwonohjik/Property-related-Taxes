@@ -38,13 +38,17 @@ const other = (patch: Record<string, unknown> = {}) =>
 /** 건축물 이력 사건 행 */
 const ev = (kind: "" | "building_built" | "building_removed" | "tax_type_changed", date: string) => ({ kind, date, propertyTaxTypeBefore: "" });
 
-/** 주택부수토지 — 수도권·정착면적을 채우고 «소유기간 중 주택 신축·멸실 이력» 질문에 «바뀐 적 없음»을 답한 상태(E3-③ A: 질문 미선택은 ⑧ H1이 정착면적 규칙 **뒤**에서 막는다) */
+/** 주택부수토지 — **양도일 현재 배율 이내**(정착 200㎡ × 수도권 밖 5배 = 허용 1,000㎡ ≥ 토지 1,000㎡ — 엔진이 이력을 읽는다. 배율 초과면 ⑧ H9가 건너뛴다 — UI Low 3). 수도권·정착면적을 채우고 «소유기간 중 주택 신축·멸실 이력» 질문에 «바뀐 적 없음»을 답한 상태(E3-③ A: 질문 미선택은 ⑧ H1이 정착면적 규칙 **뒤**에서 막는다) */
 const house = (patch: Record<string, unknown> = {}) =>
-  nbl({ nblLandType: "housing_site", nblZoneType: "general_residential", nblIsMetropolitanArea: "no", nblHousingFootprint: "100", nblOtherStateHistoryMode: "unchanged", ...patch });
+  nbl({ nblLandType: "housing_site", nblZoneType: "general_residential", nblIsMetropolitanArea: "no", nblHousingFootprint: "200", nblOtherStateHistoryMode: "unchanged", ...patch });
 
 /** 주택 이력 사건 행 — 철거 행은 «철거 직전 주택 정착면적»을 `houseFootprintBefore`에 둔다(`footprint` 생략 = 키 없음) */
 const hev = (kind: "" | "building_built" | "building_removed" | "tax_type_changed", date: string, footprint?: string) =>
   ({ kind, date, propertyTaxTypeBefore: "", ...(footprint === undefined ? {} : { houseFootprintBefore: footprint }) });
+
+/** 기타토지 철거 행 — «철거된 건축물 종류 = 주택» + 철거 직전 정착면적(`footprint` 생략 = 키 없음) */
+const bev = (date: string, footprint?: string) =>
+  ({ kind: "building_removed" as const, date, propertyTaxTypeBefore: "", buildingKindBefore: "house" as const, ...(footprint === undefined ? {} : { houseFootprintBefore: footprint }) });
 
 /** 기타토지 + 수입금액비율 업종 선택 */
 const revenue = (patch: Record<string, unknown> = {}) =>
@@ -98,7 +102,7 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "nbl: 재산세 구분 변경 사건일 빈 칸", field: "nblOtherStateEvents.0.date", step: 0, assetIndex: A, message: /^자산: 기타토지 — 재산세 과세 구분 변경 사건 1번째 행 — 날짜를 입력하세요/, form: other({ nblOtherHasBuilding: true, nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("tax_type_changed", "")] }) },
 
   // 주택부수토지 소유기간 중 주택 신축·멸실 이력(E3-③ A) — 질문(H1) · 행 종류(H3·H4·H5) · 철거 행 정착면적(H9, 행 키가 동적이라 이 케이스가 유일한 안전망).
-  { name: "nbl: 주택 이력 질문 미선택", field: "nblOtherStateHistoryMode", step: 0, assetIndex: A, message: /^자산: 주택 부수토지 — 소유기간 중 이 토지 위 건축물이 새로 생기거나 없어진 적이 있는지 선택하세요/, form: house({ nblOtherStateHistoryMode: "" }) },
+  { name: "nbl: 주택 이력 질문 미선택", field: "nblOtherStateHistoryMode", step: 0, assetIndex: A, message: /^자산: 주택 부수토지 — 소유기간 중 이 토지 위 주택이 새로 지어지거나 없어진 적이 있는지 선택하세요/, form: house({ nblOtherStateHistoryMode: "" }) },
   { name: "nbl: 주택 이력 사건 0행", field: "nblOtherStateEvents", step: 0, assetIndex: A, message: /^자산: 주택 부수토지 — 소유기간 중 주택이 새로 생기거나 없어진 적이 있다고 답했으나 사건이 없습니다/, form: house({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [] }) },
   { name: "nbl: 주택 사건 종류 미선택", field: "nblOtherStateEvents.0.kind", step: 0, assetIndex: A, message: /^자산: 주택 부수토지 — 주택 사건 1번째 행 — 종류/, form: house({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [hev("", "2020-01-01")] }) },
   { name: "nbl: 주택 사건 재산세 구분 변경 금지", field: "nblOtherStateEvents.0.kind", step: 0, assetIndex: A, message: /^자산: 주택 부수토지 — 재산세 과세 구분 변경 사건 1번째 행 — 주택부수토지 카드는/, form: house({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [hev("tax_type_changed", "2019-01-01"), hev("building_built", "2020-01-01")] }) },
@@ -106,6 +110,12 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "nbl: 주택 철거 행 정착면적 빈칸", field: "nblOtherStateEvents.0.houseFootprintBefore", step: 0, assetIndex: A, message: /^자산: 주택 부수토지 — 주택 사건 1번째 행 — 철거 직전 주택 정착면적\(㎡\)을 입력하세요/, form: house({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [hev("building_removed", "2018-01-01", ""), hev("building_built", "2020-01-01")] }) },
   { name: "nbl: 주택 철거 행 정착면적 0", field: "nblOtherStateEvents.0.houseFootprintBefore", step: 0, assetIndex: A, message: /^자산: 주택 부수토지 — 주택 사건 1번째 행 — 철거 직전 주택 정착면적\(0㎡\)은 0보다 커야 합니다/, form: house({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [hev("building_removed", "2018-01-01", "0"), hev("building_built", "2020-01-01")] }) },
   { name: "nbl: 주택 철거 행 정착면적 > 토지 면적", field: "nblOtherStateEvents.1.houseFootprintBefore", step: 0, assetIndex: A, message: /^자산: 주택 부수토지 — 주택 사건 2번째 행 — 철거 직전 주택 정착면적\(2000㎡\)이 토지 면적\(1000㎡\)보다 큽니다/, form: house({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [hev("building_built", "2016-01-01"), hev("building_removed", "2018-01-01", "2000"), hev("building_built", "2020-01-01")] }) },
+
+  // 기타토지 철거 행 «철거된 건축물 = 주택»(E3-③ B) — 정착면적(H9, 사건 주체 «건축물») · 수도권(H10) · 구조(H11).
+  { name: "nbl: 기타토지 주택 철거 행 정착면적 빈칸", field: "nblOtherStateEvents.0.houseFootprintBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 1번째 행 — 철거 직전 주택 정착면적\(㎡\)을 입력하세요/, form: other({ nblZoneType: "general_residential", nblIsMetropolitanArea: "no", nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [bev("2018-01-01", "")] }) },
+  { name: "nbl: 기타토지 주택 철거 행 정착면적 > 토지 면적", field: "nblOtherStateEvents.0.houseFootprintBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 1번째 행 — 철거 직전 주택 정착면적\(2000㎡\)이 토지 면적\(1000㎡\)보다 큽니다/, form: other({ nblZoneType: "general_residential", nblIsMetropolitanArea: "no", nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [bev("2018-01-01", "2000")] }) },
+  { name: "nbl: 기타토지 주택 철거 — 수도권 여부", field: "nblIsMetropolitanArea", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거된 건축물을 「주택」으로 선택했습니다/, form: other({ nblZoneType: "general_residential", nblIsMetropolitanArea: "", nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [bev("2018-01-01", "200")] }) },
+  { name: "nbl: 기타토지 주택 구간 안 재산세 구분 변경", field: "nblOtherStateEvents.1.kind", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 2번째 행 — 철거된 건축물을 「주택」으로 선택했지만/, form: other({ nblZoneType: "general_residential", nblIsMetropolitanArea: "no", nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("tax_type_changed", "2017-01-01"), bev("2018-01-01", "200")] }) },
 
   // 수입금액비율(§168의11②)
   { name: "nbl: 수입금액", field: "nblRevenueCurrentRevenue", step: 0, assetIndex: A, message: /^자산: 수입금액비율 업종 선택 시 당해 과세기간 수입금액/, form: revenue({ nblRevenueCurrentRevenue: "" }) },

@@ -33,7 +33,7 @@ import { meetsPeriodCriteria } from "@/lib/tax-engine/non-business-land/period-c
 import { getHousingMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-land/types";
 import type { GracePeriod, NonBusinessLandInput, ZoneType } from "@/lib/tax-engine/non-business-land/types";
-import { NBL_STATE_AT_TRANSFER_APPLIED_NOTICE, NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE, NBL_STATE_HISTORY_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_AT_TRANSFER_APPLIED_NOTICE, NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE, NBL_STATE_HISTORY_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 
 const R = DEFAULT_NON_BUSINESS_LAND_RULES;
@@ -238,7 +238,7 @@ describe("E3d-0 Anchor 3 — Q-3a (나) 보존: 양도일 현재 배율 초과 +
     ...extra,
   });
   /** `PARTIAL_AREA` 고지만 뺀 판정 — E3d-1이 `changed`일 때 이 한 줄을 더한다. */
-  const stripPartial = (j: ReturnType<typeof judge>) => ({ ...j, warnings: j.warnings.filter((w) => w !== NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE) });
+  const stripPartial = (j: ReturnType<typeof judge>) => ({ ...j, warnings: j.warnings.filter((w) => w !== NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE) });
 
   it("S1: 초과 + 신축 앞 나대지 — 현행과 같은 판정(비율 0.5)·세액 199,720,000", () => {
     const withHistory = fromRaw(rawExcess());
