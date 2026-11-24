@@ -36,6 +36,9 @@ import { effectiveOtherHasBuilding } from "./other-land-state-history";
 import { eventCarriesTaxTypeBefore } from "./other-land-state-history";
 import { eventClosesBareInterval } from "./other-land-state-history";
 import { eventClosesHouseInterval } from "./other-land-state-history";
+import { eventOffersDemolished } from "./other-land-state-history";
+import { NBL_DEMOLISHED_FACT_VALUES } from "./nbl-enum-values";
+import type { DemolishedFact } from "./land-usage.types";
 import { isEventKind } from "./other-land-state-history";
 import type { LandStateHistoryInput } from "./land-usage.types";
 import type { StateEvent } from "./land-usage.types";
@@ -317,7 +320,7 @@ export function buildLandStateHistory(a: Record<string, unknown>, landType: Land
   const mode = asString(a.nblOtherStateHistoryMode);
   if (mode !== "changed" && mode !== "unchanged" && mode !== "unknown") return undefined;
   if (mode !== "changed") return { mode: mode as StateHistoryMode, events: [] };
-  type RawEvent = { kind?: string; date?: string; propertyTaxTypeBefore?: string; propertyTaxBasisBefore?: string; areaWithinLimitBefore?: string; houseFootprintBefore?: string; buildingKindBefore?: string };
+  type RawEvent = { kind?: string; date?: string; propertyTaxTypeBefore?: string; propertyTaxBasisBefore?: string; areaWithinLimitBefore?: string; houseFootprintBefore?: string; buildingKindBefore?: string; demolishedPermitBefore?: string; demolishedOtherUseBefore?: string; demolishedVacantHouseBefore?: string; demolishedFloorAreaBefore?: string };
   const rows = asArray<RawEvent>(a.nblOtherStateEvents).flatMap((row) => {
     const kind = asString(row.kind);
     const date = parseDate(asString(row.date));
@@ -336,6 +339,8 @@ export function buildLandStateHistory(a: Record<string, unknown>, landType: Land
     const basis = asString(row.propertyTaxBasisBefore);
     const limit = asString(row.areaWithinLimitBefore);
     const footprint = closesHouse ? parseNumber(asString(row.houseFootprintBefore)) : undefined;
+    // E3-⑤ E3f-2 — 근거 «철거ㆍ멸실»을 고른 **철거 행 뒤 나대지 구간**에서만 사실 칸 4개를 싣는다(`eventOffersDemolished` — ④ 와이어와 같은 술어). 엔진은 `demolishedRequiredFacts`가 요구하는 칸만 읽는다(나머지는 stray).
+    const demolishedFacts = closesBare && basis === "demolished" && eventOffersDemolished(rows, i, tailHasBuilding) ? demolishedFactFields(row, parseNumber) : {};
     return {
       kind,
       date,
@@ -348,9 +353,31 @@ export function buildLandStateHistory(a: Record<string, unknown>, landType: Land
       // 근거·면적한도는 **나대지 구간을 닫는 행에서만** 싣는다 — 건축물 구간을 닫는 행의 숨은 stale 값은 싣지 않는다(§7.4 규약).
       ...(closesBare && basis ? { propertyTaxBasisBefore: basis as StateEvent["propertyTaxBasisBefore"] } : {}),
       ...(closesBare && limit ? { areaWithinLimitBefore: limit as StateEvent["areaWithinLimitBefore"] } : {}),
+      ...demolishedFacts,
     };
   });
   return { mode: "changed", events };
+}
+
+/** E3f-2 ⑭ — 와이어 사실 칸 → 엔진 `StateEvent` 사실 칸. 3지선다는 허용값만(밖 = 미선택 `""` 키 없음), 바닥면적은 수치일 때만. 키가 없으면 «미선택·미입력»이다(엔진이 모름처럼 접는다). */
+function demolishedFactFields(
+  row: { demolishedPermitBefore?: string; demolishedOtherUseBefore?: string; demolishedVacantHouseBefore?: string; demolishedFloorAreaBefore?: string },
+  parseNumber: ParseNumber,
+): Pick<StateEvent, "demolishedPermitBefore" | "demolishedOtherUseBefore" | "demolishedVacantHouseBefore" | "demolishedFloorAreaBefore"> {
+  const fact = (v: unknown): DemolishedFact => {
+    const s = asString(v);
+    return (NBL_DEMOLISHED_FACT_VALUES as readonly string[]).includes(s) ? (s as DemolishedFact) : "";
+  };
+  const permit = fact(row.demolishedPermitBefore);
+  const otherUse = fact(row.demolishedOtherUseBefore);
+  const vacantHouse = fact(row.demolishedVacantHouseBefore);
+  const floorArea = parseNumber(asString(row.demolishedFloorAreaBefore));
+  return {
+    ...(permit ? { demolishedPermitBefore: permit } : {}),
+    ...(otherUse ? { demolishedOtherUseBefore: otherUse } : {}),
+    ...(vacantHouse ? { demolishedVacantHouseBefore: vacantHouse } : {}),
+    ...(floorArea !== undefined ? { demolishedFloorAreaBefore: floorArea } : {}),
+  };
 }
 
 /**

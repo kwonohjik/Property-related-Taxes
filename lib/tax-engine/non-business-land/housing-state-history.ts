@@ -31,10 +31,27 @@ import { bareDeclarationNotices } from "./state-history-echo";
 import { criteriaEcho } from "./state-history-echo";
 import { intervalEcho } from "./state-history-echo";
 import { getOwnershipStart } from "./utils/period-math";
+import { housingStateHistoryIsRead } from "./housing-limit";
+import { judgeHousingLimit } from "./housing-limit";
 import type { CategoryJudgeResult } from "./types";
 import type { JudgmentStep } from "./types";
 import type { NonBusinessLandInput } from "./types";
 import type { NonBusinessLandJudgmentRules } from "./types";
+
+/**
+ * E3-⑤ E3f-2 (계획서 §6.2 D-2 · V-26) — **엔진이 주택부수토지 카드의 소유기간 중 주택 이력을 읽는가**: 모드 `changed` ∧ 사건 ≥ 1 ∧ 정착면적이 양수이고 양도일 현재 배율 **이내**
+ * (`housingStateHistoryIsRead` — 배율 초과 분기는 이력을 한 줄도 읽지 않는다 · Q-3a (나)). `judgeHousingLand`의 진입 조건 그대로 — 주택 카드의 ⑧·⑫′가 사실 칸 4개의 «읽을 때만 필수» 게이트를 같은 판정으로 건다.
+ * 주택부수토지는 양도일 의제 비적용 지목이라 의제 사유 조건이 없다.
+ */
+export function housingLandStateHistoryIsRead(input: NonBusinessLandInput): boolean {
+  const history = input.landStateHistory;
+  if (!history || history.mode !== "changed" || history.events.length === 0) return false;
+  const footprint = input.housingFootprint ?? 0;
+  if (!(footprint > 0)) return false;
+  return housingStateHistoryIsRead(
+    judgeHousingLimit({ zoneType: input.zoneType, isMetropolitanArea: input.isMetropolitanArea, transferDate: input.transferDate, footprint, landArea: input.landArea }).limit,
+  );
+}
 
 /**
  * `judgeHousingLand`의 **배율 이내 분기 반환 직전**에 부른다. `core`는 전량 사업용(`isBusiness: true`)이고 `input.landStateHistory`가 없으면 그대로 돌려준다.

@@ -7,6 +7,7 @@
 import type { NblRelatedBusinessType } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { PropertyTaxType } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { AreaWithinLimit } from "@/lib/tax-engine/non-business-land/land-usage.types";
+import type { DemolishedFact } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { StateBuildingKind } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { StateEventKind } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { StateHistoryMode } from "@/lib/tax-engine/non-business-land/land-usage.types";
@@ -69,6 +70,14 @@ export interface NblOtherStateEventInput {
    * optional — 키 부재 = 종전 행과 byte-identical(③ 복원도 키를 새로 만들지 않는다). 철거 행이 아닌 행·기타토지 행의 stale 값은 ④가 보내지 않는다.
    */
   houseFootprintBefore?: string;
+  /**
+   * E3-⑤ E3f-2 — **나대지 구간 근거 «철거ㆍ멸실»**(철거 행 뒤 나대지 구간을 닫는 행 — 엔진 `eventOffersDemolished`)의 사실 칸 4개. 3지선다 `yes`·`no`·`unknown` · `""`·부재 = 미선택(노출된 칸이면 ⑧ 차단 + ⑫ 400 — Q-11 (나)),
+   * 바닥면적은 숫자 문자열(비주택 철거 행 · 2024.6.1.~ 시행본). 어느 칸이 보이는지는 엔진 `demolishedRequiredFacts`가 정한다(⑤ 표시 = ⑧ = ⑫′ = ④ 같은 술어). 키 부재 = 종전 행과 byte-identical(③ 복원도 키를 새로 만들지 않는다).
+   */
+  demolishedPermitBefore?: DemolishedFact;
+  demolishedOtherUseBefore?: DemolishedFact;
+  demolishedVacantHouseBefore?: DemolishedFact;
+  demolishedFloorAreaBefore?: string;
   /**
    * E3-③ B — **기타토지 카드**의 철거 행이 받는 «철거된 건축물 종류». `"house"` = 주택(그러면 `houseFootprintBefore`가 주택 구간 판정에 쓰이고 «철거 직전 재산세 구분»은 읽지 않는다) ·
    * `""`·키 부재 = 그 밖의 건축물(화면 «그 밖의 건축물» — 종전 철거 행과 byte-identical). 철거 행에서만 의미 — 다른 종류 행의 stale 값은 ④가 보내지 않는다. 주택부수토지 카드는 이 칸이 없다(모든 철거 행이 주택).

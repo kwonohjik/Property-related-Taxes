@@ -15,6 +15,9 @@
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-land/types";
 import { otherLandAreaIsPartial } from "@/lib/tax-engine/non-business-land/other-land";
+import { otherLandStateHistoryIsRead } from "@/lib/tax-engine/non-business-land/other-land";
+import { housingLandStateHistoryIsRead } from "@/lib/tax-engine/non-business-land/housing-state-history";
+import { consumesHousingStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
 import { eventClosesHouseInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { VACANT_LOT_HO } from "@/lib/tax-engine/non-business-land/other-land-vacant-lot-history";
 import { buildNblEngineInput } from "./non-business-land-request";
@@ -47,5 +50,23 @@ function otherAreaIsPartialOf(asset: AssetForm, transferDate: string | undefined
     return !!input && otherLandAreaIsPartial(input, DEFAULT_NON_BUSINESS_LAND_RULES);
   } catch {
     return false;
+  }
+}
+
+/**
+ * E3-⑤ E3f-2 (계획서 §6.2 D-2) — **엔진이 이 raw의 소유기간 중 상태 이력(건축물·주택 사건)을 읽는가**. ⑧(`buildNonBusinessLandRaw(asset)`로 raw를 만든 뒤)과 ⑫′(`refineNonBusinessLandRaw` — raw 그대로)가
+ * **같은 함수**를 불러, 나대지 구간 근거 «철거ㆍ멸실»의 사실 칸 4개(허가·건축 외 용도·빈집정비·바닥면적)를 «엔진이 읽을 때만» 요구한다(UQ-8 (가)). raw → ⑭ 매퍼 → 엔진 술어:
+ *   · 기타토지 카드 — `otherLandStateHistoryIsRead`(모드 `changed` ∧ 사건 ≥ 1 ∧ 양도일 의제 아님 ∧ core 면적 전량(`isPartialArea` 아님)).
+ *   · 주택부수토지 카드 — `housingLandStateHistoryIsRead`(모드 `changed` ∧ 사건 ≥ 1 ∧ 양도일 현재 배율 이내 — V-26).
+ * 이 함수는 사실 칸을 읽지 않는다(사실 칸은 `applyStateHistory` 안에서만 쓰인다) — ④ 조립·⑧·⑫′ 사이에 순환이 없다. 엔진 입력을 만들 수 없으면(날짜 누락·해석 불가) «읽는다»(= 입력 요구)로 접는다 — 다른 ⑧ 규칙이 먼저 막는 입력이다.
+ * 한계(V-27): 기본 판정 규칙(`DEFAULT_NON_BUSINESS_LAND_RULES`)으로 돈다 — `housePriorHistoryIgnoredOf`와 같다. 꼬리 철거일은 이 게이트와 무관하다(core가 이력 적용과 별개로 읽는다 — V-29).
+ */
+export function nblStateHistoryIsRead(raw: Record<string, unknown>): boolean {
+  try {
+    const input = buildNblEngineInput(raw as Parameters<typeof buildNblEngineInput>[0]);
+    if (!input) return true;
+    return consumesHousingStateHistory(input.landType) ? housingLandStateHistoryIsRead(input) : otherLandStateHistoryIsRead(input, DEFAULT_NON_BUSINESS_LAND_RULES);
+  } catch {
+    return true;
   }
 }

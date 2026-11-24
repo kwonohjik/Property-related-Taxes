@@ -2,7 +2,7 @@
  * 철거ㆍ멸실 후 재산세 한시 지위(지방세법 시행령 §103의2) — 고지 leaf (NBL-STATE-HISTORY-E3-⑤ · E3f-1a). 순수 함수 — DB·`new Date(x)` 없음.
  *
  * 계획서(정본): docs/01-plan/features/nbl-state-history-e3-5-demolition-temp-status.engine.plan.md v4 §1.2~§1.3 · §5.1 · §5.8 · §6.2 D-5 · §7.3 (K-19~K-23 · K-30)
- * E3f-1a는 **고지**(입력 0 · 판정·세액 불변), E3f-1b는 **꼬리 한도**(`isTailDemolishedClearlyExpired` — 철거ㆍ멸실일 입력이 있을 때만 읽는다)를 소유한다. E3f-2가 한시 창·구간 선언 함수(`demolishedStatusWindow` 등)를 더하는 자리다.
+ * E3f-1a는 **고지**(입력 0 · 판정·세액 불변), E3f-1b는 **꼬리 한도**(`isTailDemolishedClearlyExpired` — 철거ㆍ멸실일 입력이 있을 때만 읽는다), **E3f-2는 나대지 구간 선언의 한시 창**(`demolishedRequiredFacts` · `demolishedStatusWindow`)을 소유한다.
  *
  * ## 고지 연혁화(Q-2 (가) · F-1)
  * 종전 `NBL_PTAX_DEMOLISHED_STATUS_NOTICE`는 «1년»(2026.6.1.~ 시행본)을 양도일과 무관하게 고정해 그 전 양도에도 «1년»이라 말했다.
@@ -12,11 +12,18 @@
  * 한시 지위는 과세기준일마다 그날 시행본으로 정해지므로 «양도일 시행본» 안내는 근사다 — 그래서 2026.6.1. 전 변형에는 그 한계를 밝힌다(판정에는 쓰지 않는다).
  */
 import { NBL } from "../legal-codes";
+import { demolishedAreaClauseApplies } from "../data/nbl-historical-values-era";
+import { demolishedOtherUseClauseApplies } from "../data/nbl-historical-values-era";
+import { demolishedPermitClauseApplies } from "../data/nbl-historical-values-era";
 import { demolishedStatusEra, demolishedStatusMaxMonths, hasDemolishedStatusEraDate, isVacantHouseThreeYearCell, lastPropertyTaxBaseDateOnOrBefore } from "../data/nbl-historical-values-era";
+import { demolishedStatusPeriodMonths } from "../data/nbl-historical-values-era";
+import { demolishedVacantHouseClauseApplies } from "../data/nbl-historical-values-era";
 import type { DemolishedStatusEra } from "../data/nbl-historical-values-era";
-import { isWithinPeriodMonths } from "../civil-period";
-import { isValid } from "../utc-date";
-import type { NonBusinessLandInput } from "./types";
+import { isWithinPeriodMonths, periodEndFromMonths } from "../civil-period";
+import { judgeAppurtenantLandExcess } from "../appurtenant-land-excess";
+import { addDays, isBefore, isValid, parseISO } from "../utc-date";
+import type { DemolishedFact } from "./land-usage.types";
+import type { DateInterval, NonBusinessLandInput } from "./types";
 
 const EPILOGUE_ERA_NOTE = "한시 지위는 과세기준일마다 그날의 시행본으로 정해지는데 양도일 기준 시행본으로 안내했고, ";
 
@@ -120,3 +127,158 @@ export const NBL_PTAX_DEMOLISHED_PERIOD_ELAPSED_NOTICE =
 /** 꼬리 근거 «철거ㆍ멸실» — 철거ㆍ멸실일 없이 엔진을 직접 호출한 경우의 안전망 고지(화면·API 경로는 ⑧·⑫가 먼저 막아 도달하지 않는다). */
 export const NBL_PTAX_DEMOLISHED_DATE_MISSING_NOTICE =
   `근거 «철거ㆍ멸실»의 철거ㆍ멸실일이 없어 한시 별도합산 기간(${NBL.PTAX_BASIS_DEMOLISHED_BODY})이 지났는지 확인할 수 없으므로 이 근거는 인정하지 않고 종합합산으로 판정했습니다 — 확인 필요.`;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E3f-2 — 나대지 구간 근거 «철거ㆍ멸실»의 한시 창 (계획서 §4 · §5.1 · §5.4 · §7.5)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// ## 일 단위 창 (재도출 — #3641 «끝» 경계 정정 반영)
+// 철거일 `r`, 한시 기간 `W`개월: 「지방세기본법」 §23 → 「민법」 §157(초일불산입 — 기산일 = `r` 다음날) · §160②③(만료일) → 한시 기간은 `r` 다음날부터 `periodEndFromMonths(r, W)` **당일까지**다.
+// 계획서 v4의 `[r, r+W)`(과세기준일이 만료일과 같으면 «지남»)는 하루 불리했다(§7.5).
+//   · **게이트(Q-4)**: 과세기준일 `s`(6.1.) 중 `max(r, 구간 시작) ≤ s < 구간 끝`이고 `s`가 «`r`부터 `W(s)`개월이 지나지 아니한» 기간(만료일 당일까지) 안인 것이 **하나도 없으면** 한시는 성립하지 않는다.
+//     구간 안에 과세기준일이 있어야 하는 이유: 재산세 구분은 과세기준일마다 정해지므로 선언한 구분(별도합산 + 근거 «철거ㆍ멸실»)은 **그 구간 안의 과세기준일**에서만 지위를 갖는다 — 철거 → 구분 변경 → 구분 변경으로 나대지 구간을 쪼갠 사용자는
+//     과세기준일이 없는 조각에는 창을 받지 못한다(조각을 어떻게 나누느냐로 인정 일수가 늘지 않는 보수 쪽 · 계획서 §4의 «r ≤ s ≤ 구간 끝»에서 «구간 시작»을 더한 해석 — 확인 필요).
+//   · **창** = `[r, 만료일 + 1일)` — 철거일 **당일부터** 만료일 당일까지(일 단위 · 닫는 사건일·구간 시작으로 자른다). 철거일 당일은 이력 구간 관례(`[사건일, 다음 사건일)`)로 나대지 구간의 첫날이고,
+//     그날은 철거 전 건축물 부속토지이거나 철거된 날 기준 한시 안(과세기준일이 철거일이면 «6개월이 지나지 아니한» — 꼬리 한도 `isTailDemolishedClearlyExpired`와 같은 읽기)이라 어느 쪽이든 별도합산 기간이다 —
+//     창이 `r + 1`일에서 시작하면 건축물 구간(`[…, r)`)과 창 사이에 하루가 비고, `r`에서 시작하면 겹치지 않고 비지 않는다. 길이 = W개월 + 1일(철거일 당일 포함).
+//   · 창은 **과세기준일 `s`가 지위를 갖는 날을 며칠에 배정하는가**의 근사다 — 법문에 일 배정은 없고 이 창은 «철거일부터 만료일까지 전부» 인정하는 상한 쪽이다(계획서 V-14 — 고지로 밝힘).
+//   · 「민법」 §161(공휴일 연장)은 적용하지 않는다(요건 기간이지 행위 기한이 아니다 — #3641과 같은 결정 · 확인 필요).
+
+/** 철거된 건축물 종류 — `house`(주택 — 빈집정비 3년 대상 · 면적 한도 칸 없음) · `building`(비주택 건축물 — 종전 바닥면적 × 영 §101② 배율). */
+export type DemolishedRemovedKind = "house" | "building";
+
+/** 이 구간에서 어떤 사실 칸이 필요한가 — ⑤ 표시 = ⑧ 요구 = ⑫′ 400 = ④ 운반 = ⑭ 읽기의 **단일 술어**(노출 ≡ 필수 — 화면에 없는 칸 400 금지). */
+export interface DemolishedRequiredFacts {
+  /** 허가·사용승인 3지선다 — 후보 과세기준일 ≥ 2019.6.1. */
+  permit: boolean;
+  /** 철거 후 건축 외 용도 사용 여부 3지선다 — 후보 ≥ 2024.6.1. */
+  otherUse: boolean;
+  /** 빈집정비사업 철거 빈집 3지선다 — **주택 철거 행** ∧ 후보 ≥ 2024.6.1. */
+  vacantHouse: boolean;
+  /** 종전 바닥면적(㎡) — **비주택 건축물 철거 행** ∧ 후보 ≥ 2024.6.1.(면적 범위 문언이 있는 시행본). */
+  floorArea: boolean;
+}
+
+const NONE_REQUIRED: DemolishedRequiredFacts = { permit: false, otherUse: false, vacantHouse: false, floorArea: false };
+
+/** 과세기준일(매년 6.1.) 중 `from ≤ s < toExclusive`. */
+function propertyTaxBaseDatesIn(from: Date, toExclusive: Date): Date[] {
+  const out: Date[] = [];
+  for (let y = from.getUTCFullYear(); y <= toExclusive.getUTCFullYear(); y++) {
+    const s = parseISO(`${String(y).padStart(4, "0")}-06-01`);
+    if (!isBefore(s, from) && isBefore(s, toExclusive)) out.push(s);
+  }
+  return out;
+}
+
+/** 과세기준일 `s`가 «철거일부터 `months`개월이 지나지 아니한» 기간 안(만료일 당일까지)에 있는가 — `s ≥ r`은 호출자가 이미 보장한다. */
+function holdsAt(removedOn: Date, s: Date, months: number): boolean {
+  return months > 0 && isWithinPeriodMonths(removedOn, months, s);
+}
+
+/** 과세기준일 `s`의 범위 시작 — 철거일과 구간 시작 중 늦은 날(구간 시작을 모르면 철거일). */
+const gateFrom = (removedOn: Date, intervalStart: Date | undefined): Date => (intervalStart && intervalStart.getTime() > removedOn.getTime() ? intervalStart : removedOn);
+
+/**
+ * **후보 과세기준일** — 사실 칸이 필요한지 정하는 보수적 집합: 빈집정비 «예»일 가능성(주택 행의 3년)을 열어 둔 최대 W로 `max(r, 구간 시작) ≤ s < end` 안에서 한시 안인 과세기준일.
+ * 사용자 답에 따라 실제 성립 집합은 이 부분집합이다(`demolishedStatusWindow`).
+ */
+function candidateBaseDates(removedOn: Date, intervalStart: Date | undefined, end: Date, kind: DemolishedRemovedKind): Date[] {
+  return propertyTaxBaseDatesIn(gateFrom(removedOn, intervalStart), end).filter((s) => holdsAt(removedOn, s, demolishedStatusPeriodMonths(s, kind === "house")));
+}
+
+/**
+ * 이 구간에 «어떤 사실 칸이 필요한가». `historyRead`가 거짓(엔진이 이력을 읽지 않음 — 양도일 의제 ∨ core 부분 면적, UQ-8 (가))이거나 날짜를 못 쓰면 **빈 집합**(4칸 모두 요구·표시하지 않는다).
+ * 후보 과세기준일이 하나도 없으면(한시 불성립 — 접힘 `demolished_never_period`) 사실을 물을 이유가 없어 빈 집합이다.
+ */
+export function demolishedRequiredFacts(i: {
+  removedOn: Date | undefined;
+  /** 선언한 나대지 구간의 시작(앞 사건일 — 철거 → 구분 변경 → … 이면 둘째 이후 조각은 철거일보다 늦다). 모르면 철거일. */
+  intervalStart?: Date | undefined;
+  end: Date | undefined;
+  kind: DemolishedRemovedKind;
+  historyRead: boolean;
+}): DemolishedRequiredFacts {
+  if (!i.historyRead || !i.removedOn || !i.end || !isValid(i.removedOn) || !isValid(i.end)) return NONE_REQUIRED;
+  const candidates = candidateBaseDates(i.removedOn, i.intervalStart && isValid(i.intervalStart) ? i.intervalStart : undefined, i.end, i.kind);
+  if (candidates.length === 0) return NONE_REQUIRED;
+  return {
+    permit: candidates.some(demolishedPermitClauseApplies),
+    otherUse: candidates.some(demolishedOtherUseClauseApplies),
+    vacantHouse: i.kind === "house" && candidates.some(demolishedVacantHouseClauseApplies),
+    floorArea: i.kind === "building" && candidates.some(demolishedAreaClauseApplies),
+  };
+}
+
+export interface DemolishedStatusFacts {
+  permit?: DemolishedFact;
+  otherUse?: DemolishedFact;
+  vacantHouse?: DemolishedFact;
+  floorArea?: number;
+}
+
+export type DemolishedFoldReason = "demolished_never_period" | "demolished_permit" | "demolished_other_use" | "demolished_area_missing" | "demolished_area_exceeded";
+
+export type DemolishedStatusWindow =
+  /** 한시가 성립한다 — `window`는 구간 안으로 자른 일 단위 창 · `months`는 창을 정한 한시 기간 · `vacantHouseExtensionUnconfirmed` = 주택인데 빈집정비 «예»가 아니라 3년 연장을 반영하지 않았다. */
+  | { kind: "holds"; window: DateInterval; months: 6 | 12 | 36; vacantHouseExtensionUnconfirmed: boolean }
+  /** 접는다(종합합산 + 확인 필요). */
+  | { kind: "fold"; reason: DemolishedFoldReason };
+
+/** 종전 바닥면적 × 영 §101② 용도지역별 배율 범위가 토지 면적 이상인가. 바닥면적이 없거나 배율표 밖 용도지역이면 `missing`(⑧·⑫가 먼저 막는다 — 직접 호출 안전망). */
+function areaVerdict(floorArea: number | undefined, landArea: number, zoneType: string): "within" | "exceeded" | "missing" {
+  if (floorArea === undefined || !Number.isFinite(floorArea) || !(floorArea > 0) || !Number.isFinite(landArea)) return "missing";
+  try {
+    return judgeAppurtenantLandExcess({ landArea, buildingFootprintArea: floorArea, zoneType, context: "기타토지(철거·멸실 나대지 구간)" }).isWithinLimit ? "within" : "exceeded";
+  } catch {
+    return "missing";
+  }
+}
+
+/**
+ * 나대지 구간 근거 «철거ㆍ멸실»의 한시 창을 정한다(순수). `removedOn` = 철거 행 날짜 · `intervalStart`·`end` = 선언한 나대지 구간 `[start, end)`(닫는 사건일이 끝).
+ *
+ * 과세기준일 `s`가 **성립**하려면: `r ≤ s < end` ∧ `s`가 W(s) 안(만료일 당일까지 — 주택 행은 빈집정비 «예»일 때 W(s) = 36) ∧ 그 시행본이 요구하는 사실을 충족
+ * (허가 `yes`(s ≥ 2019.6.1.) · 건축 외 용도 `no`(s ≥ 2024.6.1.) · 비주택 건축물은 종전 바닥면적 × 배율 ≥ 토지 면적(s ≥ 2024.6.1.)). «모름»·`""` = 충족하지 못함(혜택 불성립 + 확인 필요).
+ * 성립하는 과세기준일이 하나도 없으면 접는다 — 사유 우선순위: 기간(never) → 허가 → 건축 외 용도 → 면적. 성립 과세기준일의 **최대 W**가 창 길이를 정하고(`[r, 만료일 + 1일)`),
+ * 창은 구간 `[intervalStart, end)` 안으로 자른다(게이트가 «구간 안의 과세기준일»이라 구간이 만료일 뒤에 시작하면 `demolished_never_period`).
+ * 면적이 부분(허용 < 토지)이면 그 시행본의 과세기준일은 성립하지 않는다 — 자동 안분 없음(Q-9: 「초과」가 「모름」보다 유리하지 않다).
+ */
+export function demolishedStatusWindow(i: {
+  removedOn: Date;
+  intervalStart: Date;
+  end: Date;
+  kind: DemolishedRemovedKind;
+  facts: DemolishedStatusFacts;
+  landArea: number;
+  zoneType: string;
+}): DemolishedStatusWindow {
+  const vacantYes = i.kind === "house" && i.facts.vacantHouse === "yes";
+  const inBase = propertyTaxBaseDatesIn(gateFrom(i.removedOn, i.intervalStart), i.end);
+  const monthsAt = (s: Date) => demolishedStatusPeriodMonths(s, vacantYes);
+  const inPeriod = inBase.filter((s) => holdsAt(i.removedOn, s, monthsAt(s)));
+  if (inPeriod.length === 0) return { kind: "fold", reason: "demolished_never_period" };
+
+  const needsArea = i.kind === "building" && inPeriod.some(demolishedAreaClauseApplies);
+  const area = needsArea ? areaVerdict(i.facts.floorArea, i.landArea, i.zoneType) : "within";
+  const permitOk = (s: Date) => !demolishedPermitClauseApplies(s) || i.facts.permit === "yes";
+  const otherUseOk = (s: Date) => !demolishedOtherUseClauseApplies(s) || i.facts.otherUse === "no";
+  const areaOk = (s: Date) => i.kind !== "building" || !demolishedAreaClauseApplies(s) || area === "within";
+  const holding = inPeriod.filter((s) => permitOk(s) && otherUseOk(s) && areaOk(s));
+  if (holding.length === 0) {
+    if (inPeriod.some((s) => !permitOk(s))) return { kind: "fold", reason: "demolished_permit" };
+    if (inPeriod.some((s) => !otherUseOk(s))) return { kind: "fold", reason: "demolished_other_use" };
+    return { kind: "fold", reason: area === "exceeded" ? "demolished_area_exceeded" : "demolished_area_missing" };
+  }
+
+  const months = Math.max(...holding.map(monthsAt)) as 6 | 12 | 36;
+  const lastDay = periodEndFromMonths(i.removedOn, months);
+  const startRaw = i.removedOn.getTime() > i.intervalStart.getTime() ? i.removedOn : i.intervalStart;
+  const endRaw = addDays(lastDay, 1);
+  const window: DateInterval = { start: startRaw, end: endRaw.getTime() < i.end.getTime() ? endRaw : i.end };
+  // 구간 안에 한시 안의 과세기준일 `s`가 있으므로(`inPeriod`) `구간 시작 ≤ s ≤ 만료일` — 자른 창은 비지 않는다(방어: 비면 불성립).
+  if (window.end.getTime() <= window.start.getTime()) return { kind: "fold", reason: "demolished_never_period" };
+  // 3년 연장을 묻는 구간(주택 + 후보 ≥ 2024.6.1.)에서 빈집정비 «예»가 아니면 일반 W만 반영했다는 고지를 단다.
+  const extensionAsked = i.kind === "house" && inBase.some((s) => demolishedVacantHouseClauseApplies(s) && holdsAt(i.removedOn, s, demolishedStatusPeriodMonths(s, true)));
+  return { kind: "holds", window, months, vacantHouseExtensionUnconfirmed: extensionAsked && !vacantYes };
+}

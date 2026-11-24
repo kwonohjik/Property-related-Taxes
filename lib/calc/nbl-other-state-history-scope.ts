@@ -22,7 +22,11 @@ import { housePriorNeedsMetropolitan } from "@/lib/tax-engine/non-business-land/
 import { stateHistoryDeemedBlocks } from "@/lib/tax-engine/non-business-land/house-prior-scope";
 import { eventClosesHouseInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { effectiveOtherHasBuilding } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { demolishedRemovedKindOf } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { demolishedRequiredFacts } from "@/lib/tax-engine/non-business-land/demolished-temp-status";
 import { eventBasisOptions } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { eventOffersDemolished } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { removalDateFor } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventCarriesTaxTypeBefore } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventClosesBareInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { isBuildingEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
@@ -117,8 +121,10 @@ export function effectiveOtherHasBuildingOf(asset: AssetForm): boolean {
  *
  * 나대지 구간을 닫는 행(leaf `eventClosesBareInterval` — 신축 행 · 직전 건축물이 없는 구분 변경 행)에서만 선언 칸 2개를 싣는다. 건축물 있는 구간을 닫는 행(멸실 · 건축물 위 구분 변경)의
  * 숨은 stale 값은 싣지 않는다. 키는 값이 있을 때만 만든다 — 신축 행의 `""`·미선택은 키 없음 = 종전 와이어와 byte-identical.
- *  · 근거: 선언이 비종합합산이고 그 선언의 나대지 선택지(`eventBasisOptions` — `demolished` 제외 · 「모름」 포함)에 있을 때만(구분을 바꿔 맞지 않게 된 값은 «미선택»으로 보이고 보내지 않는다).
+ *  · 근거: 선언이 비종합합산이고 그 선언의 나대지 선택지(`eventBasisOptions` — `demolished`는 철거 행 뒤 나대지 구간(`eventOffersDemolished`)일 때만 · 「모름」 포함)에 있을 때만(구분을 바꿔 맞지 않게 된 값은 «미선택»으로 보이고 보내지 않는다).
  *  · 면적한도: 근거가 `vacant_state`일 때만.
+ *  · E3f-2 사실 칸 4개: 근거가 `demolished`이고 **`demolishedRequiredFacts`가 요구하는 칸만**(⑤ 표시 · ⑧ · ⑫′와 같은 술어 — 숨은 stale 값은 싣지 않는다). 이 술어는 «엔진이 이력을 읽는가»(`historyRead`)를 보지 않는다 —
+ *    그 판정이 raw를 요구해 ④ 조립과 순환하기 때문이다(`nblStateHistoryIsRead(raw)`는 ⑧·⑫′가 요구 여부에 덧붙인다). 읽지 않을 때 실린 값은 엔진이 읽지 않는다.
  * `tailHasBuilding`은 건축물 사건이 0건일 때만 초기 건축물 상태로 쓰인다 — ⑧·⑫·⑭와 같은 값(입력 토글 저장값).
  */
 export function stateEventWireRow(events: ReadonlyArray<NblOtherStateEventInput>, i: number, tailHasBuilding: boolean, tailKind?: StateBuildingKind): NblOtherStateEventInput {
@@ -127,8 +133,10 @@ export function stateEventWireRow(events: ReadonlyArray<NblOtherStateEventInput>
   // E3-③ — 주택 구간을 닫는 철거 행(주택부수토지 카드의 모든 철거 행)은 재산세 구분을 싣지 않고(숨은 stale 별도합산 등 — 엔진이 읽지 않는다 · 조심 2018서0295) 정착면적만 싣는다.
   const closesHouse = eventClosesHouseInterval(events, i, tailKind);
   const before = !closesHouse && (eventCarriesTaxTypeBefore(e.kind) || closesBare) ? (e.propertyTaxTypeBefore ?? "") : "";
-  const basis = closesBare && before ? (eventBasisOptions(before).find((b) => b === e.propertyTaxBasisBefore) ?? "") : "";
+  const offersDemolished = eventOffersDemolished(events, i, tailHasBuilding);
+  const basis = closesBare && before ? (eventBasisOptions(before, offersDemolished).find((b) => b === e.propertyTaxBasisBefore) ?? "") : "";
   const limit = basis === "vacant_state" ? (e.areaWithinLimitBefore ?? "") : "";
+  const facts = basis === "demolished" ? demolishedWireFacts(events, i, e, tailKind) : {};
   const footprint = closesHouse ? (e.houseFootprintBefore ?? "").trim() : "";
   return {
     kind: e.kind,
@@ -137,8 +145,31 @@ export function stateEventWireRow(events: ReadonlyArray<NblOtherStateEventInput>
     ...(basis ? { propertyTaxBasisBefore: basis } : {}),
     ...(limit ? { areaWithinLimitBefore: limit } : {}),
     ...(footprint ? { houseFootprintBefore: footprint } : {}),
+    ...facts,
     // E3-③ B — 기타토지 철거 행의 «철거된 건축물 = 주택»은 주택 구간을 닫는 행에서만 싣는다(주택부수토지 카드는 모든 철거 행이 주택이라 종류 칸이 없다 — A와 바이트 동일 · «그 밖»·다른 종류 행의 stale 값은 싣지 않는다).
     ...(closesHouse && tailKind !== "house" ? { buildingKindBefore: "house" as const } : {}),
+  };
+}
+
+/**
+ * E3f-2 ④ — 근거 «철거ㆍ멸실» 나대지 구간 행의 사실 칸: **요구되는 칸만**(`demolishedRequiredFacts`) 싣고 값이 비면 키를 만들지 않는다(빈 필수 칸은 키 없음 → ⑧·⑫′가 빈칸으로 읽는다).
+ * 철거일·구간 끝 날짜를 읽을 수 없으면 요구 집합이 비어 아무것도 싣지 않는다(행 결함이 먼저 막는다).
+ */
+function demolishedWireFacts(
+  events: ReadonlyArray<NblOtherStateEventInput>,
+  i: number,
+  e: NblOtherStateEventInput,
+  tailKind: StateBuildingKind | undefined,
+): Pick<NblOtherStateEventInput, "demolishedPermitBefore" | "demolishedOtherUseBefore" | "demolishedVacantHouseBefore" | "demolishedFloorAreaBefore"> {
+  const kind = demolishedRemovedKindOf(events, i, tailKind);
+  if (!kind) return {};
+  const need = demolishedRequiredFacts({ removedOn: toOptionalDate(removalDateFor(events, i)), intervalStart: toOptionalDate(events[i - 1]?.date), end: toOptionalDate(e.date), kind, historyRead: true });
+  const area = (e.demolishedFloorAreaBefore ?? "").trim();
+  return {
+    ...(need.permit && e.demolishedPermitBefore ? { demolishedPermitBefore: e.demolishedPermitBefore } : {}),
+    ...(need.otherUse && e.demolishedOtherUseBefore ? { demolishedOtherUseBefore: e.demolishedOtherUseBefore } : {}),
+    ...(need.vacantHouse && e.demolishedVacantHouseBefore ? { demolishedVacantHouseBefore: e.demolishedVacantHouseBefore } : {}),
+    ...(need.floorArea && area ? { demolishedFloorAreaBefore: area } : {}),
   };
 }
 

@@ -159,3 +159,33 @@ export function demolishedAreaClauseApplies(transferDate: Date | undefined): boo
   const s = lastPropertyTaxBaseDateOnOrBefore(transferDate);
   return s !== undefined && !isBefore(s, FROM_2024_06_01);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E3f-2 — 나대지 구간 근거 «철거ㆍ멸실»: 과세기준일 `s`별 시행본 요건 (계획서 §1.3 · §5.1 · 사용자 결정 2026-11-24)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 과세기준일 `s` 시행본이 정한 한시 기간의 개월 수 — **양도일·철거일 시행본이 아니라 «과세기준일 시행본»**이다(법문 «과세기준일 현재» + 영 부칙 «납세의무가 성립하는 분부터» — 계획서 §1.3).
+ * `0` = 그 과세기준일에는 한시 규정이 없다(2016.6.1. 전) · `6` = 2016.6.1.~2026.5.31. · `12` = 2026.6.1.~(1호 6개월 → 1년) ·
+ * `36` = 2024.6.1.~ **빈집정비사업 등으로 철거된 빈집(주택)**(2호). `vacantHouse`는 «빈집정비 = 예인 주택 철거 행»일 때만 참이다 — 일반 주택·건축물은 일반 W다.
+ */
+export function demolishedStatusPeriodMonths(s: Date, vacantHouse: boolean): 0 | 6 | 12 | 36 {
+  if (isBefore(s, FROM_2016_06_01)) return 0;
+  if (vacantHouse && !isBefore(s, FROM_2024_06_01)) return 36;
+  return isBefore(s, FROM_2026_06_01) ? 6 : 12;
+}
+
+/** 허가·사용승인을 받지 않은 건축물·주택의 부속토지 제외 문언(2019.6.1. 과세기준일부터)이 그 과세기준일 시행본에 있는가. */
+export function demolishedPermitClauseApplies(s: Date): boolean {
+  return !isBefore(s, FROM_2019_06_01);
+}
+
+/** 철거 후 건축 용도 외로 사용하는 부속토지 제외 문언(2024.6.1. 과세기준일부터 — 1호·2호 단서)이 그 과세기준일 시행본에 있는가. */
+export function demolishedOtherUseClauseApplies(s: Date): boolean {
+  return !isBefore(s, FROM_2024_06_01);
+}
+
+/** 빈집정비사업 철거 빈집 3년(2호 — 2024.6.1. 과세기준일부터)이 그 과세기준일 시행본에 있는가. */
+export function demolishedVacantHouseClauseApplies(s: Date): boolean {
+  return !isBefore(s, FROM_2024_06_01);
+}

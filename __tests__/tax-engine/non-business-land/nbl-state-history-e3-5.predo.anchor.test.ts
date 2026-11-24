@@ -6,7 +6,7 @@
  *   Anchor 2  현행 엔진 실측: 같은 행을 raw → ⑭ → 판정 → 세액으로 돌린 값(`current`)을 고정하고, 오라클과 다른 행(`flipsIn`)을 PR별로 못 박는다.
  *             **E3f-1b가 반전했다** — 종전 «현행 결함 고정»(꼬리 근거 «철거ㆍ멸실»이 철거일을 읽지 않아 철거 6년 뒤에도 사업용 B 198,210,000)은 이제 «철거일을 읽는다»(6년 뒤 N 253,960,000 · 6일 뒤 B)로 바뀌었다.
  *   Anchor 3  6개월·1년 한시는 9호에 포함된다(격자 — 판정·일수 뒤집힘 0) · 빈집 3년만 9호가 덮지 못하는 셀이 있다.
- *   Anchor 4  나대지 구간 선언의 근거 `demolished` 현행 접힘(`demolished_unsupported`) · 선택지 제외 — **E3f-2가 반전하는 단언**(V-7 예고). 고지 «1년» 고정(F-1)·항 번호 단언은 **E3f-1a가 반전했다**(아래 «반전 완료»).
+ *   Anchor 4  나대지 구간 선언의 근거 `demolished` — **E3f-2가 반전했다**: 철거 행 뒤 나대지 구간은 한시 창을 받고(아래 «반전 완료 · 형제 보존»), 철거 행 앞·없는 구간·근거 접힘은 종전 그대로다(V-7). 고지 «1년» 고정(F-1)·항 번호 단언은 **E3f-1a가 반전했다**.
  *
  * 계획서(정본): docs/01-plan/features/nbl-state-history-e3-5-demolition-temp-status.engine.plan.md v4 §3 · §7 · §8 «E3f-0»
  * 표: `_helpers/nbl-state-history-e3-5-table.ts` — E3f-1a·1b·2의 anchor가 같은 표를 쓴다.
@@ -15,7 +15,7 @@
  * 바꾸지 않는다. 아래 «PR별 뒤집힘 id 목록» 단언이 그 PR의 변경 범위를 고정한다.
  */
 import { describe, it, expect } from "vitest";
-import { E35_ROWS, E35_B, E35_N, E35_SWING, e35Base, e35Tail } from "@/__tests__/tax-engine/_helpers/nbl-state-history-e3-5-table";
+import { E35_ROWS, E35_B, E35_N, E35_SWING, e35BareDecl, e35Base, e35Tail } from "@/__tests__/tax-engine/_helpers/nbl-state-history-e3-5-table";
 import { evalDayRow } from "@/__tests__/tax-engine/_helpers/nbl-state-history-day-table";
 import { baseTransferInput, makeMockRates } from "@/__tests__/tax-engine/_helpers/mock-rates";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
@@ -56,20 +56,24 @@ describe("E3f-0 Anchor 1 — 오라클 표: 판정 · 일수 (제안 모델 적�
     expect(res.totalOwnershipDays).toBe(r.expect.total);
   });
 
-  it("계획서 수치 대조: K-1 774(창 182일 — 계획서 «183일»은 오기, 774 = 592 + 182) · 창 없음 592 비사업용", () => {
-    expect(oracle(row("K-1")).effectiveBusinessDays).toBe(774);
+  it("계획서 수치 대조: K-1 — 계획서 v4 774(창 [r, r+6개월) 182일 = 592 + 182) → E3f-2 재도출 775(창 [r, 만료일 + 1일) 183일 = 592 + 183) · 창 없음 592 비사업용", () => {
+    expect(oracle(row("K-1")).effectiveBusinessDays).toBe(775);
     const noWindow = evalDayRow({ acq: "2014-01-01", transfer: "2024-01-01", biz: [["2021-06-02", "2022-12-15"], ["2023-12-01", "2024-01-01"]] });
     expect([noWindow.meets, noWindow.effectiveBusinessDays]).toEqual([false, 592]);
-    expect(774 - 592).toBe(182);
+    expect(775 - 592).toBe(183);
+    // 계획서 v4 창(철거일 + 6개월 직전까지 182일)은 774 — 만료일 당일(2023-06-15)을 «지남»으로 읽은 하루 불리(§7.5)
+    const v4 = evalDayRow({ acq: "2014-01-01", transfer: "2024-01-01", biz: [["2021-06-02", "2022-12-15"], ["2022-12-15", "2023-06-15"], ["2023-12-01", "2024-01-01"]] });
+    expect(v4.effectiveBusinessDays).toBe(774);
   });
 
-  // ⚠️ 2026-11-24: 이 쌍(K-2a/K-2b)의 게이트 경계는 정정 전이다 — 민법 §157·§160상 철거 2022-12-01은 과세기준일 2023-06-01 현재 «6개월이 지나지 아니한» 한시 안이라 게이트를 통과한다(경계 쌍은 2022-11-30/12-01).
-  // E3f-2는 게이트·창 경계(창의 일 단위 구간 포함)를 이 정정대로 다시 도출한다 — 아래 단언은 `evalDayRow` 직접 구간의 산수 고정일 뿐 엔진 게이트를 읽지 않는다.
-  it("Q-4 게이트 효과(K-2a/K-2b 쌍 — 정정 전 경계, E3f-2가 재도출): 철거 2022-12-01은 게이트 실패(578 비사업용) — 게이트 없이 창을 주면 760 사업용(법 근거 없는 최대 6개월 유리 인정) · 철거 2022-12-02는 통과 761", () => {
-    const gateOff = evalDayRow({ acq: "2014-01-01", transfer: "2024-01-01", biz: [["2021-06-02", "2022-12-01"], ["2022-12-01", "2023-06-01"], ["2023-12-01", "2024-01-01"]] });
+  // E3f-2가 재도출한 게이트: 철거 2022-12-01은 기산일 12-02 → 6개월 만료일 2023-06-01 = 과세기준일 → «6개월이 지나지 아니한» 한시 안 → 통과(계획서 v4는 «지남»으로 접고 578 비사업용).
+  // 경계 쌍은 2022-11-30(K-2c — 만료일 2023-05-31 → 불성립) / 2022-12-01(K-2a — 통과). 엔진 게이트·창 경계는 e3-5c-bare-window anchor가 고정한다.
+  it("Q-4 게이트 효과(민법 만료일 재도출): 철거 2022-11-30은 게이트 실패(577 비사업용) · 2022-12-01은 통과(761) · 2022-12-02 통과(762) — 게이트가 없으면 11-30도 창을 받아 760대 사업용이 된다(법 근거 없는 최대 6개월 유리 인정)", () => {
+    const gateOff = evalDayRow({ acq: "2014-01-01", transfer: "2024-01-01", biz: [["2021-06-02", "2022-11-30"], ["2022-11-30", "2023-06-01"], ["2023-12-01", "2024-01-01"]] });
     expect([gateOff.meets, gateOff.effectiveBusinessDays]).toEqual([true, 760]);
-    expect([oracle(row("K-2a")).meets, oracle(row("K-2a")).effectiveBusinessDays]).toEqual([false, 578]);
-    expect([oracle(row("K-2b")).meets, oracle(row("K-2b")).effectiveBusinessDays]).toEqual([true, 761]);
+    expect([oracle(row("K-2c")).meets, oracle(row("K-2c")).effectiveBusinessDays]).toEqual([false, 577]);
+    expect([oracle(row("K-2a")).meets, oracle(row("K-2a")).effectiveBusinessDays]).toEqual([true, 761]);
+    expect([oracle(row("K-2b")).meets, oracle(row("K-2b")).effectiveBusinessDays]).toEqual([true, 762]);
   });
 
   it("K-3: 6개월 안에 과세기준일이 없는 철거(2022-07-01) — 창을 줘도 609일 비사업용(판정 같음·일수만 다름) · 접으면 425", () => {
@@ -78,10 +82,10 @@ describe("E3f-0 Anchor 1 — 오라클 표: 판정 · 일수 (제안 모델 적�
     expect([oracle(row("K-3")).meets, oracle(row("K-3")).effectiveBusinessDays]).toEqual([false, 425]);
   });
 
-  it("K-7 빈집 셀: 3년 창이면 사업용 1,462/2,283 · 9호 단독 비사업용 1,096/2,283 — 판정이 뒤집히는 유일한 셀", () => {
+  it("K-7 빈집 셀: 3년 창이면 사업용 1,463/2,283(계획서 v4 1,462 — 창 [r, 만료일 + 1일) 재도출) · 9호 단독 비사업용 1,096/2,283 — 판정이 뒤집히는 유일한 셀", () => {
     const nine = evalDayRow({ acq: "2018-06-01", transfer: "2024-09-01", biz: [["2020-06-01", "2021-06-02"]], grace: [["2021-06-02", "2023-06-02"]] });
     expect([nine.meets, nine.effectiveBusinessDays, nine.totalOwnershipDays]).toEqual([false, 1096, 2283]);
-    expect([oracle(row("K-7")).meets, oracle(row("K-7")).effectiveBusinessDays]).toEqual([true, 1462]);
+    expect([oracle(row("K-7")).meets, oracle(row("K-7")).effectiveBusinessDays]).toEqual([true, 1463]);
   });
 
   it("K-8: 창 ∪ 9호 = 9호 단독과 같다(이중 계산 없음 — 합집합 943) · K-12a: 접음 + 9호 = 1,096", () => {
@@ -111,20 +115,26 @@ describe("E3f-0 Anchor 2 — 현행 엔진 실측 (`current` 열) · 뒤집힘 i
   /** E3f-1b가 뒤집은 행의 **반전 전 현행**(비사업용 여부 · 유효 일수). 반전 후 `current` = 오라클이고 `flipsIn`은 지웠다 — 이 표가 그 범위(판정 4건 + 일수 1건)를 고정한다. */
   const BEFORE_E3F_1B = { "K-11a": [false, 1094], "K-12": [false, 1826], "K-12a": [false, 1826], "D-1": [false, 3651], "D-1a": [false, 3651] } as const;
 
-  it("flipsIn 행 = 현행 열 ≠ 오라클 열(판정 또는 일수)이고 그 밖의 행은 현행 = 오라클 — PR별 뒤집힘 id 목록 고정 (E3f-1b 행은 반전 완료 → 현행 = 오라클)", () => {
+  it("현행 열 = 오라클 열 — E3f-1b·E3f-2 반전 완료로 `flipsIn` 행이 없다(PR별 뒤집힘 id 목록은 아래 «반전 전 현행» 표가 고정)", () => {
     const differs = (r: (typeof E35_ROWS)[number]) => r.current.nonBusiness !== r.expect.nonBusiness || r.current.eff !== r.expect.eff;
     for (const r of E35_ROWS) expect(differs(r), `${r.id} flipsIn=${r.flipsIn ?? "-"}`).toBe(r.flipsIn !== undefined);
-    expect(E35_ROWS.filter((r) => r.flipsIn === "E3f-1b").map((r) => r.id)).toEqual([]);
-    for (const id of ["K-11a", "K-12", "K-12a", "D-1", "D-1a"]) expect(row(id).flipsIn, id).toBeUndefined();
-    expect(E35_ROWS.filter((r) => r.flipsIn === "E3f-2").map((r) => r.id)).toEqual(["K-1", "K-2b", "K-5", "K-7", "K-7a"]);
+    expect(E35_ROWS.filter((r) => r.flipsIn !== undefined).map((r) => r.id)).toEqual([]);
+    for (const id of ["K-11a", "K-12", "K-12a", "D-1", "D-1a", "K-1", "K-2a", "K-2b", "K-5", "K-7", "K-7a"]) expect(row(id).flipsIn, id).toBeUndefined();
   });
 
-  it("판정이 뒤집히는 행(비사업용 ↔ 사업용): E3f-1b가 뒤집은 판정 = K-11a·K-12·D-1·D-1a(사업용 → 비사업용 · 일수만 바뀌는 K-12a 제외) · E3f-2 = K-1·K-2b·K-7·K-7a(비사업용 → 사업용 · K-5는 일수만)", () => {
+  /** E3f-2가 뒤집은 행의 **반전 전 현행**(비사업용 여부 · 유효 일수) — 나대지 구간의 근거 `demolished`를 `demolished_unsupported`로 접던 때의 실측(2026-11-24). */
+  const BEFORE_E3F_2 = { "K-1": [true, 592], "K-2a": [true, 578], "K-2b": [true, 579], "K-5": [false, 3011], "K-7": [true, 366], "K-7a": [true, 1096] } as const;
+
+  it("판정이 뒤집히는 행(반전 전 → 후): E3f-1b = K-11a·K-12·D-1·D-1a(사업용 → 비사업용 · K-12a는 일수만) · E3f-2 = K-1·K-2a·K-2b·K-7·K-7a(비사업용 → 사업용 · K-5는 일수만) — K-2c·K-3·K-8은 종전과 같다", () => {
     const ids = Object.keys(BEFORE_E3F_1B) as Array<keyof typeof BEFORE_E3F_1B>;
     expect(ids.filter((id) => BEFORE_E3F_1B[id][0] !== row(id).expect.nonBusiness)).toEqual(["K-11a", "K-12", "D-1", "D-1a"]);
     expect(ids.filter((id) => BEFORE_E3F_1B[id][0] === row(id).expect.nonBusiness && BEFORE_E3F_1B[id][1] !== row(id).expect.eff)).toEqual(["K-12a"]);
-    const flipped = (pr: string) => E35_ROWS.filter((r) => r.flipsIn === pr && r.current.nonBusiness !== r.expect.nonBusiness).map((r) => r.id);
-    expect(flipped("E3f-2")).toEqual(["K-1", "K-2b", "K-7", "K-7a"]);
+    const ids2 = Object.keys(BEFORE_E3F_2) as Array<keyof typeof BEFORE_E3F_2>;
+    expect(ids2.filter((id) => BEFORE_E3F_2[id][0] !== row(id).expect.nonBusiness)).toEqual(["K-1", "K-2a", "K-2b", "K-7", "K-7a"]);
+    expect(ids2.filter((id) => BEFORE_E3F_2[id][0] === row(id).expect.nonBusiness && BEFORE_E3F_2[id][1] !== row(id).expect.eff)).toEqual(["K-5"]);
+    // 같은 값인 형제 행 — 접힘(K-2c·K-3)과 합집합(K-8)은 반전하지 않는다(공유 단언 반전이 형제 안전망을 지우지 않게)
+    for (const id of ["K-2c", "K-3", "K-8"] as const) expect([row(id).current.nonBusiness, row(id).current.eff]).toEqual([row(id).expect.nonBusiness, row(id).expect.eff]);
+    expect([row("K-3").current.eff, row("K-2c").current.eff]).toEqual([425, 577]);
   });
 
   it("K-12a(접음 + 9호): 세액 불변 — E3f-1b 전에도 B(1,826일) · 접은 뒤에도 B(1,096일) — 일수만 줄고 판정·세액은 같다(9호 입력자 세액 불변)", () => {
@@ -254,23 +264,39 @@ describe("E3f-0 Anchor 3 — 6개월·1년 한시는 9호에 포함된다(격자
   });
 });
 
-describe("E3f-0 Anchor 4 — 반전 예고 단언 (이 단언을 E3f-1a·E3f-2가 의도적으로 반전한다)", () => {
-  it("[E3f-2 반전] 나대지 구간 선언의 근거 선택지에서 `demolished`는 제외 — V1-A 선택지에는 있다(별도합산 + 건축물 없음)", () => {
+describe("E3f-0 Anchor 4 — [E3f-2 반전 완료 · 형제 보존] 나대지 구간 선언의 근거 `demolished`", () => {
+  it("선택지: V1-A에는 있고(별도합산 + 건축물 없음) `eventBasisOptions`는 **철거 행 뒤 구간(offersDemolished)에서만** 포함한다 — 인자 없음 = 종전 제외(형제 단언 보존)", () => {
     expect(propertyTaxBasisOptions("separate", false)).toEqual(["vacant_state", "demolished", "unknown"]);
+    // [보존] 철거 행 앞·없는 구간의 선택지는 종전과 같다
     expect(eventBasisOptions("separate")).toEqual(["vacant_state", "unknown"]);
+    expect(eventBasisOptions("separate", false)).toEqual(["vacant_state", "unknown"]);
+    // [반전] 철거 행 뒤 나대지 구간
+    expect(eventBasisOptions("separate", true)).toEqual(["vacant_state", "demolished", "unknown"]);
   });
 
-  it("[E3f-2 반전] 나대지 구간의 근거 `demolished`는 종합합산으로 접힌다(`demolished_unsupported`) — 창을 만들지 않는다", () => {
+  it("[반전] 철거 행 뒤 나대지 구간의 근거 `demolished` + 사실 칸은 한시 창을 받는다(K-1 — accepted · 창 183일 · 사업용 구간) — 더는 `demolished_unsupported`가 아니다", () => {
     const j = judge(fromRaw(row("K-1").raw));
     const iv = j.periodEvaluation?.stateHistory?.intervals ?? [];
+    const accepted = iv.filter((x) => x.basis === "demolished");
+    expect(accepted).toHaveLength(1);
+    expect([accepted[0].basisOutcome, accepted[0].foldReason, accepted[0].businessDays]).toEqual(["accepted", undefined, 183]);
+    expect(iv.filter((x) => "temporaryStatusWindow" in x)).toHaveLength(1);
+  });
+
+  it("[보존] 철거 행이 **없는** 구간(신축 앞 나대지)의 근거 `demolished`는 종전처럼 종합합산으로 접힌다(`demolished_unsupported`) — 창을 만들지 않는다", () => {
+    const raw = e35Base({
+      nblOtherPropertyTaxType: "separate", nblOtherHasBuilding: true, nblOtherBuildingFloorArea: "250", nblOtherStateHistoryMode: "changed",
+      nblOtherStateEvents: [{ kind: "building_built", date: "2021-06-02", propertyTaxTypeBefore: "separate", propertyTaxBasisBefore: "demolished" }],
+    });
+    const iv = judge(fromRaw(raw)).periodEvaluation?.stateHistory?.intervals ?? [];
     const folded = iv.filter((x) => x.basis === "demolished");
     expect(folded).toHaveLength(1);
     expect([folded[0].basisOutcome, folded[0].foldReason, folded[0].business]).toEqual(["unconfirmed", "demolished_unsupported", false]);
     expect(iv.some((x) => "temporaryStatusWindow" in x)).toBe(false);
   });
 
-  it("[E3f-2 반전] 같은 입력에서 근거를 빼도(종합합산 선언 없음) 판정·일수·세액이 같다 — `demolished`가 접힌 구간은 근거 없는 구간과 구별되지 않는다", () => {
-    const withBasis = fromRaw(row("K-1").raw);
+  it("[보존] 사실 칸이 «모름»이라 접힌 구간(허가 모름 → `demolished_permit`)은 근거 없는 구간과 판정·일수·세액이 같다 — 접힌 구간은 근거 없는 구간과 구별되지 않는다", () => {
+    const folded = fromRaw(e35BareDecl("2022-12-15", {}, "2021-06-02", "2023-12-01", { demolishedPermitBefore: "unknown", demolishedOtherUseBefore: "no", demolishedFloorAreaBefore: "250" }));
     const noBasis = fromRaw(e35Base({
       nblOtherPropertyTaxType: "separate", nblOtherHasBuilding: true, nblOtherBuildingFloorArea: "250", nblOtherStateHistoryMode: "changed",
       nblOtherStateEvents: [
@@ -279,7 +305,11 @@ describe("E3f-0 Anchor 4 — 반전 예고 단언 (이 단언을 E3f-1a·E3f-2�
         { kind: "building_built", date: "2023-12-01", propertyTaxTypeBefore: "separate" },
       ],
     }));
-    expect([judge(withBasis).isNonBusinessLand, judge(withBasis).effectiveBusinessDays, taxOf(withBasis)]).toEqual([judge(noBasis).isNonBusinessLand, judge(noBasis).effectiveBusinessDays, taxOf(noBasis)]);
+    expect([judge(folded).isNonBusinessLand, judge(folded).effectiveBusinessDays, taxOf(folded)]).toEqual([judge(noBasis).isNonBusinessLand, judge(noBasis).effectiveBusinessDays, taxOf(noBasis)]);
+    // [반전] 사실 칸을 확인해 «예»로 답하면 같은 시료가 사업용으로 뒤집힌다
+    const accepted = fromRaw(row("K-1").raw);
+    expect([judge(accepted).isNonBusinessLand, taxOf(accepted)]).toEqual([false, E35_B]);
+    expect([judge(folded).isNonBusinessLand, taxOf(folded)]).toEqual([true, E35_N]);
   });
 
   it("[E3f-1a 반전 완료] 꼬리 근거 고지는 양도일 시행본 연혁 — 양도 2018-12-01(6개월 시행본)에는 «6개월», «1년»이 아니다(F-1 해소 · 상세는 e3-5a-notice anchor)", () => {

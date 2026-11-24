@@ -328,6 +328,12 @@ export type StateHistoryMode = "" | "unchanged" | "changed" | "unknown";
 export type AreaWithinLimit = "" | "within" | "exceeded" | "unknown";
 
 /**
+ * E3-⑤ E3f-2 — 나대지 구간 근거 «철거ㆍ멸실»의 사실 3지선다(허가·사용승인 / 건축 외 용도 / 빈집정비) 값. `""` = 미선택(⑧ 차단 + ⑫ 400 — Q-11 (나), 엔진 직접 호출은 «모름»처럼 접는다).
+ * 뜻은 칸마다 다르다 — 허가: `yes` = 받음 · 건축 외 용도: `yes` = 건축 외 용도로 사용함(= 혜택 불성립) · 빈집정비: `yes` = 빈집정비사업 등으로 철거한 빈집.
+ */
+export type DemolishedFact = "" | "yes" | "no" | "unknown";
+
+/**
  * 사용자가 입력한 사건. 날짜 = **새 상태의 첫날**(규칙 §83의5①9호 «날부터»).
  * `propertyTaxTypeBefore` = «Before 사슬» — **그 사건이 닫는 구간**(직전 사건 또는 소유 첫날부터 이 사건 전날까지)의 재산세 구분. 꼬리(양도일 현재) 구분은 사건이 아니라 기존 입력이 말한다.
  *   · `building_removed` : 철거 직전 «건축물 있던 구간»의 구분 · `tax_type_changed` : 구분이 바뀌기 직전 구간의 구분 — 건축물 있는 구간이면 `""` = 모름(종합합산 + 확인 필요).
@@ -343,6 +349,14 @@ export interface StateEvent {
   propertyTaxTypeBefore?: PropertyTaxType | "";
   propertyTaxBasisBefore?: PropertyTaxBasis | "";
   areaWithinLimitBefore?: AreaWithinLimit;
+  /**
+   * E3-⑤ E3f-2 — **근거 «철거ㆍ멸실»을 고른 나대지 구간 선언**(`eventOffersDemolished`)의 사실 칸 4개. 엔진은 `demolishedRequiredFacts`가 요구하는 칸만 읽고(나머지는 stray — 무시) 그 구간의 한시 창을 정한다
+   * (`demolishedStatusWindow`). 3지선다 `""`·`unknown`은 «모름»(혜택 불성립 — 빈집정비만 일반 W 적용 + 고지). 바닥면적은 비주택 철거 행 + 면적 범위 문언이 있는 시행본(2024.6.1.~)에서만 읽는다.
+   */
+  demolishedPermitBefore?: DemolishedFact;
+  demolishedOtherUseBefore?: DemolishedFact;
+  demolishedVacantHouseBefore?: DemolishedFact;
+  demolishedFloorAreaBefore?: number;
   /**
    * E3-③(주택부수토지) — **주택 구간을 닫는 철거 행**(`eventClosesHouseInterval`)의 철거 직전 주택 정착면적(㎡). ⑭가 raw 문자열을 수치로 바꿔 싣는다 —
    * 빈칸·비수치는 키 없음(`undefined`), 0·음수는 그대로 싣는다(엔진 `resolveHouseInterval`이 양수가 아니면 «모름»으로 접는다). 주택 구간의 재산세 구분(`propertyTaxTypeBefore`)은 읽지 않는다(조심 2018서0295).
@@ -380,7 +394,19 @@ export interface HouseCheck {
 export type BareBasisOutcome = "accepted" | "unconfirmed";
 
 /** 나대지 선언을 종합합산으로 접은 사유 — V1-A 사유 + `demolished`(나대지 구간은 받지 않는다 — 철거 후 한시는 유예 9호) + 공지상태 면적한도(일부 초과·모름). */
-export type BareFoldReason = UnconfirmedReason | "demolished_unsupported" | "area_exceeded" | "area_unknown";
+export type BareFoldReason =
+  | UnconfirmedReason
+  | "demolished_unsupported"
+  | "area_exceeded"
+  | "area_unknown"
+  /** E3f-2 — 나대지 구간 근거 «철거ㆍ멸실»: 창 안에 과세기준일이 없다(한시 지위가 성립하지 않는다 — Q-4). */
+  | "demolished_never_period"
+  /** E3f-2 — 허가·사용승인을 받지 않은(또는 모르는) 건축물·주택의 부속토지는 한시 별도합산에서 제외(2019.6.1.~). */
+  | "demolished_permit"
+  /** E3f-2 — 철거 후 건축 용도 외로 사용한(또는 모르는) 부속토지는 제외(2024.6.1.~). */
+  | "demolished_other_use"
+  /** E3f-2 — 종전 바닥면적 × 용도지역별 적용배율 면적 범위를 토지 면적이 넘는다(자동 안분 없음 — 구간 전체 접힘, Q-9). */
+  | "demolished_area_exceeded";
 
 /**
  * 일 단위 상태 구간 `[start, end)`. `deriveOtherLandStateIntervals`가 만든 배열은 소유기간을 빈틈·겹침 없이 덮고
@@ -402,6 +428,17 @@ export interface LandStateInterval {
   declaredPropertyTaxType?: PropertyTaxType;
   /** `unconfirmed`일 때 접힌 사유. */
   foldReason?: BareFoldReason;
+  /**
+   * E3-⑤ E3f-2 — 근거 «철거ㆍ멸실»을 받아들인 나대지 구간의 **한시 창**(`[start, end)` — 구간 안으로 자른 일 단위 창: 철거일 당일부터 한시 기간 만료일 당일까지, 민법 §157·§160).
+   * 있으면 이 구간은 **구간 전체가 사업용이 아니라 창만** 사업용 구간에 더해진다(`stateHistoryBusinessIntervals`) — `isStateIntervalBusiness`는 거짓이다. 키가 없으면 종전 구간과 같다.
+   */
+  temporaryStatusWindow?: DateInterval;
+  /** E3f-2 — 창을 정한 한시 기간(개월: 6 · 12(2026.6.1.~) · 36(빈집정비 3년)). `temporaryStatusWindow`와 함께만 있다. */
+  temporaryStatusMonths?: 6 | 12 | 36;
+  /** E3f-2 — 철거된 건축물 종류(`house` = 주택 — 면적 한도 칸이 없다 · 고지). `temporaryStatusWindow`와 함께만 있다. */
+  temporaryStatusRemovedKind?: "house" | "building";
+  /** E3f-2 — 주택 철거 행인데 빈집정비 «예»가 아니어서 3년 연장을 반영하지 않았다(일반 W만 적용 — 고지). `temporaryStatusWindow`와 함께만 있다. */
+  vacantHouseExtensionUnconfirmed?: true;
   /** E3-③ — 주택 구간(주택부수토지 카드의 모든 건축물 구간)일 때만. 있으면 `propertyTaxType`은 판정에 쓰지 않는다(`"unknown"` 고정 — 조심 2018서0295). */
   buildingKind?: StateBuildingKind;
   /** E3-③ — 과거 주택 구간의 배율 이내 판정(꼬리는 core가 판정하므로 없다). */
@@ -433,6 +470,11 @@ export interface StateHistoryIntervalEcho {
   basis?: PropertyTaxBasis;
   declaredPropertyTaxType?: PropertyTaxType;
   foldReason?: BareFoldReason;
+  /** E3f-2 — 근거 «철거ㆍ멸실» 한시 창(`LandStateInterval`의 같은 이름 필드). 없으면 키 없음 = 종전 echo와 같다. */
+  temporaryStatusWindow?: DateInterval;
+  temporaryStatusMonths?: 6 | 12 | 36;
+  temporaryStatusRemovedKind?: "house" | "building";
+  vacantHouseExtensionUnconfirmed?: true;
   /** E3-③ — 주택 구간일 때만(`LandStateInterval`의 같은 이름 필드). 없으면 키 없음 = 종전 echo와 같다. */
   buildingKind?: StateBuildingKind;
   houseOutcome?: HouseOutcome;
