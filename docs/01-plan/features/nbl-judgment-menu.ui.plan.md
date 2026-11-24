@@ -21,7 +21,7 @@
 ### Q-1 (c) 설계 골자 — Do에서 확정·실측
 - **엔진/API**: 시나리오 B 입력은 기존 단일 소스 `buildNblEngineInputGiftBasis(raw, giftRegistryDate)`(`lib/calc/non-business-land-request.ts:101`)를 그대로 쓴다 — 계산기 ⑭도 같은 함수를 부른다(`app/api/calc/transfer/engine-input.ts:278`). 요청에 증여 등기접수일(`carryoverGiftRegistryDate`)을 더하고, 이월과세이면 응답에 `judgmentIfCarryoverExcluded`(B)를 함께 싣는다. A = 원 raw(증여자 취득일 기산), B = 수증일 기산.
 - **parity**: A는 계산기 시나리오 A의 `nonBusinessLandJudgmentDetail`, B는 시나리오 B의 그것과 각각 일치해야 한다(앵커 추가).
-- **어느 쪽이 적용되는가는 메뉴가 단정하지 않는다**: §97의2②(1호 수용 2년 이전 증여·2호 1세대1주택·3호 세액 비교)와 ③ 기간 경과로 갈리므로, 결과 화면은 A·B를 나란히 보이고 「적용 여부는 양도세 계산기에서 세액 비교로 정해집니다」를 고지한다.
+- **어느 쪽이 적용되는가는 메뉴가 단정하지 않는다**: §97의2②(1호 수용 2년 이전 증여·2호 1세대1주택·3호 세액 비교)와 ①의 10년 기간(③ 등기부 소유기간으로 셈)으로 갈리므로, 결과 화면은 A·B를 나란히 보이고 「적용 여부는 양도세 계산기에서 세액 비교로 정해집니다」를 고지한다.
 - **UI ①**: 취득원인에 「이월과세(배우자·직계존비속 증여)」 추가 — 증여자 취득일(`carryover.donorAcquisitionDate`)·증여 등기접수일(`carryover.giftRegistryDate`) 칸. 계산기의 기존 칸·⑧ 규칙(`lib/calc/transfer-tax-api-carryover.ts:99` 등)을 재사용하고 새 규칙을 만들지 않는다.
 - **넘기기**: 이월과세 칸도 그대로 계산기 폼에 쓴다(계산기가 A/B 세액 비교로 확정).
 

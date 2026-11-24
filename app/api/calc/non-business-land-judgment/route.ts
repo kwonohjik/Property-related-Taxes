@@ -11,7 +11,7 @@
  *
  * ## 이월과세(`carryover_gift`) — A·B 둘 다 판정한다 (Q-1 (c))
  * A = 원 raw(증여자 취득일 기산) · B = `buildNblEngineInputGiftBasis`(수증일 기산 — 계산기 `engine-input.ts`가 같은 함수를 부른다).
- * 어느 쪽이 적용되는지는 §97의2②(수용 2년 이전 증여·1세대1주택·세액 비교)·③이 정하므로 이 route는 단정하지 않는다 — 응답도 A/B 중 어느 것이 적용되는지 말하지 않는다.
+ * 어느 쪽이 적용되는지는 §97의2①의 10년 기간(③ 등기부 소유기간으로 셈)과 ②(수용 2년 이전 증여·1세대1주택·세액 비교) 배제가 정하므로 이 route는 단정하지 않는다 — 응답도 A/B 중 어느 것이 적용되는지 말하지 않는다.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
