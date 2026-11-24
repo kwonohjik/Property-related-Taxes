@@ -11,7 +11,7 @@
 import { describe, it, expect } from "vitest";
 import { E3D_B_ROWS, E3D_B_WITHIN_E2_IDS, e3dBRowRaw, type E3dBRow } from "@/__tests__/tax-engine/_helpers/nbl-state-history-e3-3b-table";
 import { E2_ROWS, e2RowRaw } from "@/__tests__/tax-engine/_helpers/nbl-state-history-e2-table";
-import { E3D_HOUSE_LIMIT_ROWS } from "@/__tests__/tax-engine/_helpers/nbl-state-history-e3-3-table";
+import { E3D_A_ROWS, E3D_HOUSE_LIMIT_ROWS, e3dARowRaw } from "@/__tests__/tax-engine/_helpers/nbl-state-history-e3-3-table";
 import { tax } from "@/__tests__/tax-engine/_helpers/nbl-state-history-grid";
 import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import { judgeNonBusinessLand } from "@/lib/tax-engine/non-business-land/engine";
@@ -179,6 +179,20 @@ describe("E3d-2 Anchor 9 — B 하위호환: 종류 칸이 없거나 `\"\"`인 �
     expect(a.warnings).not.toContain(NBL_STATE_HISTORY_DAYWISE_NO_RULING_NOTICE);
     expect(a.warnings).not.toContain(NBL_STATE_HISTORY_HOUSE_BEFORE_NOTICE);
     expect(a.periodEvaluation?.stateHistory?.intervals.some((i) => i.buildingKind !== undefined || i.houseOutcome !== undefined || i.houseCheck !== undefined)).toBe(false);
+  });
+
+  it("A 경로 바이트 동일: 주택부수토지 카드의 엔진 입력 사건에는 종류 칸이 새지 않는다(A는 모든 철거 행이 주택이라 칸이 없다) — 철거 행은 정착면적만, 재산세 구분은 싣지 않는다", () => {
+    for (const r of E3D_A_ROWS) {
+      for (const [i, e] of fromRaw(e3dARowRaw(r)).landStateHistory!.events.entries()) {
+        expect(e, `${r.id} 사건 ${i}`).not.toHaveProperty("buildingKindBefore");
+        expect(e, `${r.id} 사건 ${i}`).not.toHaveProperty("propertyTaxTypeBefore");
+      }
+    }
+    // 와이어에 stale 종류 칸이 와도(직접 API) A 판정은 같다
+    const raw = e3dARowRaw(E3D_A_ROWS.find((r) => r.id === "H3c")!) as Record<string, unknown> & { nblOtherStateEvents: Array<Record<string, unknown>> };
+    const withKind = { ...raw, nblOtherStateEvents: raw.nblOtherStateEvents.map((e) => (e.kind === "building_removed" ? { ...e, buildingKindBefore: "house" } : e)) };
+    expect(judge(fromRaw(withKind))).toEqual(judge(fromRaw(raw)));
+    expect(fromRaw(withKind).landStateHistory).toEqual(fromRaw(raw).landStateHistory);
   });
 
   it("B8: 주택 아닌 건축물 + 철거 직전 별도합산(종류 칸 없음) — B 198,210,000(위장 값 그대로)", () => {
