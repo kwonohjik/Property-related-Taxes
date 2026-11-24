@@ -193,8 +193,8 @@ describe("UI-B 관통 — 입력에서 엔진까지 닿는다는 가드(TS 미�
     // ⑯ 술어는 **와이어 사건**을 읽는다 — 폼 저장 사건(stale 주택 행)을 읽으면 `unchanged`인데도 수도권 값이 서버로 닿는다
     const staleMetro = await run(formOf(row("B-M1"), { nblOtherStateHistoryMode: "unchanged", nblIsMetropolitanArea: "yes" }));
     expect(staleMetro.raw?.nblIsMetropolitanArea, "stale 주택 행 + unchanged: 수도권 미전송").toBe("");
-    expect(housePriorNeedsMetropolitanOf(formOf(row("B-M1"), { nblOtherStateHistoryMode: "unchanged" }).assets[0])).toBe(false);
-    expect(housePriorNeedsMetropolitanOf(formOf(row("B-M1")).assets[0])).toBe(true);
+    expect(housePriorNeedsMetropolitanOf(formOf(row("B-M1"), { nblOtherStateHistoryMode: "unchanged" }).assets[0], "2024-01-01")).toBe(false);
+    expect(housePriorNeedsMetropolitanOf(formOf(row("B-M1")).assets[0], "2024-01-01")).toBe(true);
   });
 
   it("X29 연접 다필지 ON(기타토지 칸) — 질문·행이 화면에 없으므로 이력·수도권 모두 전송하지 않고 ⑧도 요구하지 않는다", async () => {

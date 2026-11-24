@@ -17,8 +17,8 @@ import type { ZoneType } from "./types";
  * 이 용도지역에서 **수도권 여부가 배율을 가르는가** — 영 §168의12 배율표(`getHousingMultiplier`)의 두 호출(수도권 · 수도권 밖)이 다른 값을 내는가로 **표에서 파생**한다(V-22 — 향후 개정에도 표와 자동 일치).
  * 현행(2022.1.1. 이후 양도) 표에서는 도시지역 주·상·공(수도권 3배 · 수도권 밖 5배)뿐이다. 녹지·그 밖의 도시·도시지역 밖은 수도권 안팎이 같다.
  *
- * `transferDate`를 생략하면 현행 표(경과조치 시행일 이후)로 본다 — 칸을 여는 술어(`housePriorNeedsMetropolitan`)는 양도일 입력 순서와 무관하게 용도지역만으로 정한다.
- * 판정 쪽(수도권 미제공 보수 기본값 경고)은 실제 양도일을 넘긴다 — 2022.1.1. 전 양도는 수도권 여부가 배율을 가르지 않아 경고가 소음이다.
+ * `transferDate`를 생략하면 현행 표(경과조치 시행일 이후)로 본다 — 양도일을 모르면 칸을 열어 묻는 쪽이다. 칸을 여는 술어(`housePriorNeedsMetropolitan`)와 판정 쪽(수도권 미제공 보수 기본값 경고)은
+ * 모두 실제 양도일을 넘긴다 — 2022.1.1. 전 양도는 수도권 여부가 배율을 가르지 않아 칸도 경고도 소음이다(E3-③ 후속 L1).
  */
 export function metropolitanChangesHousingMultiplier(zoneType: ZoneType | string | undefined, transferDate: Date = HOUSING_MULTIPLIER_SPLIT_EFFECTIVE_DATE): boolean {
   const zone = (zoneType ?? "") as ZoneType;
@@ -26,7 +26,10 @@ export function metropolitanChangesHousingMultiplier(zoneType: ZoneType | string
 }
 
 /**
- * B 수도권 칸을 읽는가 — 「기타토지 ∧ 주택으로 고른 철거 행이 있음 ∧ 수도권이 배율을 가르는 용도지역」.
+ * B 수도권 칸을 읽는가 — 「기타토지 ∧ 주택으로 고른 철거 행이 있음 ∧ 수도권이 배율을 가르는 **용도지역·양도일**」.
+ *
+ * `transferDate`(E3-③ 후속 L1) — 철거 전 주택 구간의 배율은 **양도일 기준 표**로 정한다(`getHousingMultiplier`). 2022.1.1. 전 양도(종전 영 §168의12)는 도시지역 일률 5배라 수도권이 배율을 가르지 않으므로
+ * 칸을 열지 않는다. 생략(양도일 미입력·해석 불가)하면 현행 표로 본다 — 칸을 열어 묻는 쪽(보수)이다. ④ 전송·⑤ 칸·⑧ H10·⑭ 매퍼·엔진이 **같은 양도일**을 넘긴다.
  *
  * `events`는 **와이어 사건**이다(`buildingKindBefore` 포함 · R-11) — 폼 저장 사건을 그대로 넘기지 않는다(`unchanged`·`unknown` 뒤에 남은 stale 행이 막다른 길을 만든다). ④는 `stateHistoryWireFields` 결과를,
  * ⑭는 `changed`일 때의 raw 사건(아니면 `[]`)을 넘긴다. 주택부수토지·별장은 소비표(`consumesMetropolitanArea`)가 이미 연다 — 이 술어는 **기타토지만** 본다.
@@ -35,10 +38,11 @@ export function housePriorNeedsMetropolitan(
   landType: LandType | "" | undefined,
   zoneType: ZoneType | string | undefined,
   events: ReadonlyArray<{ kind: string; buildingKindBefore?: string }> | undefined,
+  transferDate?: Date,
 ): boolean {
   if (!consumesStateHistory(landType) || consumesHousingStateHistory(landType)) return false;
   if (!(events ?? []).some((_, i) => eventClosesHouseInterval(events!, i, undefined))) return false;
-  return metropolitanChangesHousingMultiplier(zoneType);
+  return metropolitanChangesHousingMultiplier(zoneType, transferDate);
 }
 
 /**

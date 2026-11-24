@@ -722,4 +722,20 @@ E3-②에서 ⑧이 엔진 술어(`revenueHistoryScope`)를 직접 부르지 않
 | 8 | **Low 2** 배율 초과 + `unknown`: **UI 쪽을 엔진에 맞췄다**(엔진은 초과 분기를 «한 줄도 바꾸지 않는다 — E0 compat G19 골든 »고지도 없음«과 Q-3a (나)» 와 짝이라 엔진을 바꾸면 골든 8건이 뒤집힌다). 입력 화면은 이 조합에서 `UNKNOWN` 고지와 구간 미리보기를 그리지 않는다 |
 | 9 | **Low 3** ⑧ H9(A)는 엔진 단일 술어 `housingStateHistoryIsRead(limit)`(`housing-limit.ts` 신설 — `judgeHousingLand`가 같은 함수로 이력 후처리 진입을 정한다)를 `housingAreaLimitState`가 부르고, ⑧이 그 결과가 «초과»이면 정착면적을 요구하지 않는다. ⑤ 정착면적 칸의 «필수» 표시·미리보기도 같은 판정 |
 | 10 | **Low 4** 엔진 `stateHistoryModeRequiredMessage(subject)` — 기본·`building` = 종전 상수 바이트 동일 · `house` = «이 토지 위 주택이 새로 지어지거나 없어진 적이 있는지…» |
-| 11 | 한계(미해결): B에서 **부분 면적 경로**(`isPartialArea` — 기타토지 호별·공장·연접 등으로 엔진이 이력을 접는 경우)와 «주택 구간 정착면적 요구»가 겹치면 ⑧은 정착면적을 요구하지만 엔진은 PARTIAL 고지로 이력을 읽지 않는다(Low 3의 B 판). 엔진 `isPartialArea`는 판정 결과(`core`)를 보는 런타임 분기라 ⑧이 계산할 수 없다 — 엔진에 scope 술어가 생기면 같은 방식으로 게이트한다 |
+| 11 | ~~한계(미해결)~~ **→ §20 #1로 해소(2026-11-24)**. 당시 기록: B에서 **부분 면적 경로**(`isPartialArea` — 기타토지 호별·공장·연접 등으로 엔진이 이력을 접는 경우)와 «주택 구간 정착면적 요구»가 겹치면 ⑧은 정착면적을 요구하지만 엔진은 PARTIAL 고지로 이력을 읽지 않는다(Low 3의 B 판). 엔진 `isPartialArea`는 판정 결과(`core`)를 보는 런타임 분기라 ⑧이 계산할 수 없다 — 엔진에 scope 술어가 생기면 같은 방식으로 게이트한다 |
+
+---
+
+## 20. E3-③ 후속 정리 기록 (2026-11-24 — #1 부분 면적 · L1 · L2 · L3, 세액 불변)
+
+원칙: **⑧은 엔진이 실제로 읽는 칸만 요구한다** — ⑤ 필수 표시·칸 노출·고지도 같은 판정으로 맞춘다. 네 건 모두 입력 요구·표시·타입 문제이고 세액·판정은 바뀌지 않는다(엔진 anchor 전건 통과).
+
+| # | 내용 |
+|---|---|
+| 1 | **#1 (§19 #11 해소) 판정 가능 여부 실측**: `isPartialArea`는 core 결과(`areaProportioning.nonBusinessRatio`)다. core가 면적을 일부만 비사업용으로 접는 경로는 7곳이다 — 건물 배율 초과(§101①2호)·철거 부속토지 배율·공장 기준면적 초과·2% 바닥면적(나목)·호별 기준면적 초과·복합용도(⑥)·연접 다필지(⑤; ⑤ 질문 자체가 연접 다필지 ON이면 숨는다) — 각각이 선행 단계(수입금액비율 통과 · 호 요건 · 기간기준)와 얽혀 «입력 몇 칸»으로 근사할 수 없다(근사하면 호 인정 PASS인데 요구하는 쪽·요구하지 않는 쪽 양방향으로 어긋난다). **그러나 입력은 전부 ④ raw(폼 칸)에 있다** — `buildNonBusinessLandRaw` → `buildNblEngineInput`(⑭ 매퍼) → 엔진 core. 실측 probe: 일반주거 1,000㎡ + 별도합산 선언 + 건물 바닥 100㎡ + 주택 철거 행 정착면적 빈칸 → 엔진 `nonBusinessRatio 0.6` + `PARTIAL_AREA` 고지 + 이력 미적용인데 ⑧은 `houseFootprintBefore` 요구(재현). → **판정 가능**: 엔진에 `otherLandAreaIsPartial(rawInput, rules)`(= `applyStateHistory`가 쓰는 `isPartialArea`를 같은 core 결과에 적용 — `isPartialArea` export) · UI 래퍼 `housePriorHistoryIgnoredOf`(`lib/calc/nbl-other-state-history-read.ts` — 의제 `stateHistoryDeemedBlocksOf` ∨ 부분 면적)가 ⑧ H9·H10 · ⑤ 필수 표시·수도권 칸·부분 면적 고지를 같은 함수로 게이트한다(자체 근사 0). 주택 구간을 닫는 와이어 철거 행이 없으면 거짓(요구할 칸이 없다 — 기타토지 기존 입력 변화 0) |
+| 2 | 한계(추정 아님 — 확인된 사실만): ① 기본 규칙(`DEFAULT_NON_BUSINESS_LAND_RULES`)으로 돈다 — 서버는 DB 규칙을 기본값 위에 덮어쓴다. 면적 안분은 규칙과 무관하고 기간기준 임계만 규칙을 읽어(3호·수입금액비율 경로) DB 규칙이 기본값과 다르면 그 경로에서만 갈릴 수 있다(확인 필요). ② 축 B(공유 지분 번들)는 이 카드(첫 카드)의 raw로만 판정한다 — 지분별 raw는 취득일·지분율만 다르고 면적 안분은 같으나, 취득일에 의존하는 기간 경로에서 지분 간 갈릴 수 있다(확인 필요 — 갈려도 읽는 지분의 빈 정착면적은 엔진이 «확인 필요»로 접고 막다른 길이 되지 않는다). ③ 엔진을 돌릴 수 없는 입력(양도일·취득일 누락 등)은 «읽는다»(= 종전 요구)로 접는다 — 다른 ⑧ 규칙이 먼저 막는 입력이다 |
+| 3 | **L1**: 엔진 술어 `housePriorNeedsMetropolitan(landType, zoneType, events, transferDate?)` — 양도일을 넘겨 `getHousingMultiplier`의 그 양도일 표에서 수도권이 배율을 가르는지로 정한다(2022.1.1. 전은 종전 영 §168의12 도시지역 일률 5배라 거짓). ⑭ 매퍼(`form-mapper.ts`) · ④(`non-business-land-request.ts` — 양도일 인자) · ⑤ · ⑧ H10 · ⑤ 미리보기가 같은 양도일을 넘긴다(`housePriorNeedsMetropolitanOf(asset, transferDate)`). 양도일 미입력·해석 불가는 현행 표로 본다(칸을 열어 묻는 쪽 — 종전 동작). 엔진 수도권 미제공 경고(`metropolitanChangesHousingMultiplier(zone, input.transferDate)`)는 이미 날짜 게이트가 있어 같은 표를 읽는다. **관찰(범위 밖 — 이번에 바꾸지 않음)**: A(주택부수토지)의 수도권 필수 규칙(`transfer-tax-validate-nbl.ts` ~:201)은 양도일과 무관하게 «수도권 여부 선택»을 요구한다(2022.1.1. 전 양도도 요구) |
+| 4 | **L2**: 양도일 의제 사유 선택 시 ⑧은 H9·H10을 건너뛰는데 ⑤는 «필수» 표시·수도권 칸을 유지했다 → 같은 래퍼로 정착면적 «필수» 해제 · 수도권 칸 숨김(저장값 보존 — ④ 전송은 종전과 같다) · 의제 안내 하나만(PARTIAL 고지 중복 없음). 정착면적 칸 자체는 남는다(A의 «양도일 현재 배율 초과» 처리와 같은 패턴 — 칸·값 보존, 필수·미리보기만 해제) |
+| 5 | **L3**: ⑫ refine 입력 타입 `NblRawRefineInput.nblOtherStateEvents`를 공용 leaf 타입 `StateEventRowLike`(`kind`·`date`·`buildingKindBefore`)로 — 칸이 늘면 leaf 타입을 따른다(런타임 무변경 · `expectTypeOf` + 소스 grep 가드) |
+| 6 | 정적 게이트 갱신(느슨화 아님): `nbl-state-history-leaf-unreachable.test.ts` WIRE-1(읽음 래퍼가 leaf를 import) · WIRE-6(열세 곳) · WIRE-11(`housePriorHistoryIgnoredOf` 사용처 ⑧·⑤ · `otherLandAreaIsPartial` = 래퍼 한 곳 · `isPartialArea` = other-land 한 곳) · `nbl-house-prior-wire-guard.test.ts`(양도일 인자 · ⑧ 게이트 · ⑤ 게이트 · L3) |
+

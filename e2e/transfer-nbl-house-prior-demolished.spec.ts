@@ -16,6 +16,8 @@
  *  EB8  9호 유예 + 초과 구간 → `HOUSE_EXCEEDED_GRACE` 고지(입력·결과) · 겸용주택 안내 문구
  *  EB9  축 B(50/50 지분 2장) × B: 첫 카드의 이력·정착면적·수도권이 companion body에도 실린다
  *  EB10 의제 사유 선택 + 주택 철거 행: 기존 의제 안내 · ⑧이 정착면적·수도권을 요구하지 않는다 · 이력 미적용
+ *  EB11 후속 L1: 양도 2021-12-31(종전 영 §168의12 — 수도권이 배율을 가르지 않음) + 주·상·공 + 주택 철거 행 → 수도권 칸 없음 · ⑧ H10 없음 · 요청의 수도권은 비워 보낸다 · 양도 2022-01-01은 칸 노출(경계)
+ *  EB12 후속 #1: 면적 일부만 비사업용(건물 배율 초과)이면 엔진이 철거 행 이력을 읽지 않는다 → 정착면적 «필수» 해제 · 수도권 칸 숨김 · PARTIAL 고지 · ⑧이 요구하지 않는다 · 엔진은 이력 미적용 · 같은 입력의 배율 이내 대조는 «필수»·칸 노출
  *  E12  시각: 라이트/다크 글자 대비 4.5 · 375px 입력 영역·결과 카드 가로 스크롤 없음
  *
  * 폼은 sessionStorage로 시드한다. 외부 API 의존 없음 — mock 불필요.
@@ -34,6 +36,7 @@ import {
   NBL_STATE_HISTORY_HOUSE_BEFORE_NOTICE,
   NBL_STATE_HISTORY_HOUSE_EXCEEDED_GRACE_NOTICE,
   NBL_STATE_HISTORY_HOUSE_EXCEEDED_NOTICE,
+  NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE,
 } from "../lib/tax-engine/nbl-confirm-notices";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -82,6 +85,8 @@ async function pick(radio: Locator) {
   await expect(radio).toBeChecked();
 }
 
+/** 철거 행 정착면적 카드의 «필수»(*) 표시. */
+const requiredMark = (page: Page, i: number) => page.locator(`[data-field="nblOtherStateEvents.${i}.houseFootprintBefore"] label .text-destructive`);
 const chooseMode = (page: Page, mode: "unchanged" | "changed" | "unknown") => pick(page.getByTestId(`nbl-other-state-mode-${mode}`));
 const metroField = (page: Page) => page.locator('[data-field="nblIsMetropolitanArea"]');
 /** 수도권 칸의 «수도권»·«비수도권»·«미확인» 라디오(라벨 텍스트 정확 일치). */
@@ -423,11 +428,72 @@ test.describe("기타토지 주택 철거 후 나대지 양도(E3-③ B) — 입
     await gotoHolding(page);
     await expect(page.getByTestId("nbl-state-history-deemed-notice")).toHaveText(NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE);
     await expect(page.getByTestId("nbl-state-history-preview")).toHaveCount(0);
+    // 후속 L2 — ⑧이 건너뛰는 칸을 ⑤도 «필수»로 표시하지 않고(칸·값은 남는다) 수도권 칸도 열지 않는다
+    await expect(page.getByTestId("nbl-other-state-event-0-footprint")).toBeVisible();
+    await expect(requiredMark(page, 0), "의제: 정착면적 «필수» 표시 없음").toHaveCount(0);
+    await expect(metroField(page), "의제: 수도권 칸 없음").toHaveCount(0);
     const r = await calc(page);
     expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);
     expect(nblOf(r)?.periodEvaluation?.basis).not.toBe("state_history");
     expect((nblOf(r)?.warnings as string[] | undefined) ?? []).toContain(NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE);
     await expect(page.getByText(NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE).first()).toBeVisible();
+  });
+
+  test("EB11 후속 L1: 양도 2021-12-31(종전 규정 — 도시지역 일률 5배) + 주·상·공 + 주택 철거 행 → 수도권 칸 없음 · ⑧ H10 없음 · 요청 수도권 비움 · 양도 2022-01-01(경계)은 칸 노출 + H10 차단", async ({ page }) => {
+    test.setTimeout(240_000);
+    await seed(page, [landAsset({ nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [HOUSE_ROW("200")] })]);
+    await page.evaluate(() => {
+      const raw = JSON.parse(sessionStorage.getItem("transfer-tax-wizard")!);
+      raw.state.formData.transferDate = "2021-12-31";
+      sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(raw));
+    });
+    await page.reload();
+    await waitHydrated(page);
+    await gotoHolding(page);
+    await expect(metroField(page), "종전 규정 양도: 수도권 칸 없음").toHaveCount(0);
+    const r = await calc(page);
+    expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);
+    expect(r.req.nonBusinessLandRaw?.nblIsMetropolitanArea ?? "", "종전 규정: 수도권 값을 보내지 않는다").toBe("");
+    expect(nblOf(r)?.periodEvaluation?.basis).toBe("state_history");
+    expect(houseInterval(r)?.houseCheck).toMatchObject({ multiplier: 5 });
+    // 경계 — 2022-01-01은 현행 표(수도권 3배 / 밖 5배)라 칸이 열리고 미선택이면 ⑧ H10이 막는다
+    await page.evaluate(() => {
+      const raw = JSON.parse(sessionStorage.getItem("transfer-tax-wizard")!);
+      raw.state.formData.transferDate = "2022-01-01";
+      sessionStorage.setItem("transfer-tax-wizard", JSON.stringify(raw));
+    });
+    await page.reload();
+    await waitHydrated(page);
+    await gotoHolding(page);
+    await expect(metroField(page), "2022-01-01: 수도권 칸 노출").toHaveCount(1);
+    expect(await calcBlocked(page), "수도권 미선택: 계산 요청이 나가지 않는다").toBe(true);
+  });
+
+  test("EB12 후속 #1: 건물 배율 초과(면적 일부만 비사업용) — 엔진이 철거 행 이력을 읽지 않는다 → 정착면적 «필수» 해제 · 수도권 칸 숨김 · PARTIAL 고지 · ⑧ 통과 · 이력 미적용 · 같은 입력의 배율 이내 대조는 «필수»·칸 노출", async ({ page }) => {
+    test.setTimeout(240_000);
+    const BUILT_TAIL = { kind: "building_built", date: "2022-06-01", propertyTaxTypeBefore: "" };
+    const partial = (floor: string) => landAsset({
+      nblOtherHasBuilding: true, nblOtherPropertyTaxType: "separate", nblOtherBuildingFloorArea: floor, nblOtherBuildingValue: "100000000", nblOtherLandValue: "200000000",
+      nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [HOUSE_ROW("", { date: "2016-01-01" }), BUILT_TAIL],
+    });
+    // 일반주거 4배: 바닥 100㎡ → 허용 400㎡ < 1,000㎡(부분 면적) · 바닥 400㎡ → 허용 1,600㎡(전량 사업용 — 엔진이 이력을 읽는다)
+    await seed(page, [partial("100")]);
+    await gotoHolding(page);
+    await expect(page.getByTestId("nbl-other-state-event-0-footprint")).toBeVisible();
+    await expect(requiredMark(page, 0), "부분 면적: 정착면적 «필수» 표시 없음").toHaveCount(0);
+    await expect(metroField(page), "부분 면적: 수도권 칸 없음").toHaveCount(0);
+    await expect(page.getByTestId("nbl-other-partial-area-notice")).toHaveText(NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE);
+    const r = await calc(page);
+    expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);
+    expect(nblOf(r)?.periodEvaluation?.basis, "엔진은 이력을 읽지 않는다").toBe("state_at_transfer");
+    expect((nblOf(r)?.warnings as string[] | undefined) ?? []).toContain(NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE);
+    // 대조 — 배율 이내면 같은 칸이 «필수»이고 수도권 칸이 열리며 빈 정착면적은 ⑧이 막는다
+    await seed(page, [partial("400")]);
+    await gotoHolding(page);
+    await expect(requiredMark(page, 0), "배율 이내: 정착면적 «필수»").toHaveCount(1);
+    await expect(metroField(page), "배율 이내: 수도권 칸 노출").toHaveCount(1);
+    await expect(page.getByTestId("nbl-other-partial-area-notice")).toHaveCount(0);
+    expect(await calcBlocked(page), "정착면적 빈칸: 계산 요청이 나가지 않는다").toBe(true);
   });
 });
 

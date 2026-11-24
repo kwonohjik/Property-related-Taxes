@@ -24,6 +24,7 @@ import { consumesPeriodJudgmentDate } from "@/lib/tax-engine/non-business-land/l
 import { consumesStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
 import { effectiveOtherHasBuilding } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { stateEventSequenceIssue } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import type { StateEventRowLike } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { stateEventSubjectOf } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import {
   LAND_TYPE_REQUIRED_MESSAGE,
@@ -71,7 +72,8 @@ export interface NblRawRefineInput {
   nblOtherDemolishedFloorArea?: string;
   nblOtherHasBuilding?: boolean;
   nblOtherStateHistoryMode?: string;
-  nblOtherStateEvents?: { kind: string; date: string }[];
+  /** ⑫ 사건 행 — 공용 issue leaf(`stateEventSequenceIssue`)가 읽는 칸 전부(`StateEventRowLike` — `buildingKindBefore` 포함 · 단일 소스). 칸이 늘면 leaf 타입을 따른다(E3-③ 후속 L3: 종전에는 `kind`·`date`만 선언돼 읽는 칸이 타입에 없었다 — 런타임 무변경). */
+  nblOtherStateEvents?: StateEventRowLike[];
   nblOtherRelatedBusinessType?: string;
   nblOtherResortParkingStdArea?: string;
   nblOtherResortParkingActualArea?: string;

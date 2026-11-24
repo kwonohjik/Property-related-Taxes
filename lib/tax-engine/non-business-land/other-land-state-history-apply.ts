@@ -59,8 +59,11 @@ export type StateHistoryOutcome =
   /** 이력을 쓰지 않았다 — core 결과를 그대로 쓰고 `notices`(없을 수 있다)만 기존 고지 뒤에 더한다. */
   | { applied: false; notices: string[] };
 
-/** core가 면적 일부만 비사업용으로 판정했는가(0 < 비사업용 비율 < 1). 0 또는 1이면 «전량»이다. */
-function isPartialArea(core: CategoryJudgeResult): boolean {
+/**
+ * core가 면적 일부만 비사업용으로 판정했는가(0 < 비사업용 비율 < 1). 0 또는 1이면 «전량»이다.
+ * 이 술어가 참이면 `applyStateHistory`는 이력을 읽지 않는다 — ⑧ H9·H10(철거 행 정착면적·수도권)·⑤ 필수 표시는 같은 판정(`otherLandAreaIsPartial` — core를 그대로 돌린다)으로 게이트한다(E3-③ 후속 #1).
+ */
+export function isPartialArea(core: CategoryJudgeResult): boolean {
   const ratio = core.areaProportioning?.nonBusinessRatio;
   return ratio !== undefined && ratio > 0 && ratio < 1;
 }

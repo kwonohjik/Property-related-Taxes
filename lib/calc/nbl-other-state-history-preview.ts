@@ -86,7 +86,7 @@ export function housingAreaLimitState(asset: AssetForm, transferDate: string | u
  */
 export function houseIntervalCtxOf(asset: AssetForm, transferDate: Date): HouseIntervalCtx {
   // 수도권 값은 ④가 서버로 보내는 조건(소비표 지목 ∨ B 술어)일 때만 읽는다 — 아니면 서버(⑭)가 미제공(`undefined`)으로 읽는다. 같은 게이트를 쓰지 않으면 미리보기가 판정과 어긋난다.
-  const metro = consumesMetropolitanArea(asset.nblLandType) || housePriorNeedsMetropolitanOf(asset) ? asset.nblIsMetropolitanArea : "";
+  const metro = consumesMetropolitanArea(asset.nblLandType) || housePriorNeedsMetropolitanOf(asset, transferDate) ? asset.nblIsMetropolitanArea : "";
   const area = parseFloat((asset.acquisitionArea ?? "").replace(/,/g, ""));
   return {
     zoneType: (asset.nblZoneType || "undesignated") as ZoneType,

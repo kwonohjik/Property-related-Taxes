@@ -73,6 +73,9 @@ const KIND_FIELD = "components/calc/transfer/nbl/OtherLandBuildingKindField.tsx"
 const BARE_FIELDS = "components/calc/transfer/nbl/OtherLandBareIntervalFields.tsx"; // E3-1b ⑤ 나대지 구간 선언 카드(근거 선택지·접힘 해석을 leaf에서 읽는다)
 const PERIOD_TABLE = "components/calc/NblStateHistoryPeriodTable.tsx"; // E3-1b ⑦ 결과 구간표(나대지 구간 선언 문구 `bareIntervalTaxTypeText` — 입력 미리보기와 같은 leaf 함수)
 const DETAIL = "components/calc/transfer/nbl/OtherLandDetailSection.tsx";
+// E3-③ 후속 #1 — «엔진이 철거 행 이력을 읽는가»(의제 ∨ 부분 면적) UI 래퍼: ⑧ H9·H10 · ⑤ 필수·수도권 칸이 이 한 함수를 읽는다. 엔진 `otherLandAreaIsPartial`을 돌린다(자체 근사 금지).
+const READ = "lib/calc/nbl-other-state-history-read.ts";
+const OTHER_LAND = "lib/tax-engine/non-business-land/other-land.ts";
 
 const NEXT_PR_HINT = "새 사용처가 생겼다면 UI 배선(U1·U2)일 것이다 — 이 허용 목록을 그 파일로 갱신한다(삭제 금지). 계획서 plan.md §4 U1·U2.";
 
@@ -88,7 +91,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
   it("WIRE-1: `other-land-state-history`를 import하는 프로덕션 파일 = 판정(apply) · ⑭ 매퍼 · ⑫ refine(E2) + UI(술어 · 미리보기 · ⑧ · ③ 복원 정규화 · ⑤ 위젯 · E3-1b 나대지 구간 선언 카드 · ⑦ 결과 구간표)", () => {
     const re = /^\s*import[\s\S]*?from\s+["'][^"']*other-land-state-history["']/m;
     const importers = FILES.filter((f) => re.test(f.src)).map((f) => f.path).sort();
-    expect(importers, NEXT_PR_HINT).toEqual([APPLY, HOUSING_APPLY, HOUSE_PRIOR_SCOPE, REFINES, MAPPER, SCOPE, PREVIEW, VALIDATE, MIGRATE, SECTION, BARE_FIELDS, PERIOD_TABLE].sort());
+    expect(importers, NEXT_PR_HINT).toEqual([APPLY, HOUSING_APPLY, HOUSE_PRIOR_SCOPE, REFINES, MAPPER, SCOPE, READ, PREVIEW, VALIDATE, MIGRATE, SECTION, BARE_FIELDS, PERIOD_TABLE].sort());
   });
 
   it("WIRE-2: 판정은 구간 변환(derive)과 구간 산식(stateHistoryBusinessIntervals)을 쓰고, ⑫ refine은 공용 issue leaf를, ⑭ 매퍼·⑫는 `effectiveOtherHasBuilding`을 쓴다 — 3중 패턴", () => {
@@ -137,9 +140,14 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
     expect(usersOf("stateHistoryDeemedBlocks", [HOUSE_PRIOR_SCOPE]).sort(), NEXT_PR_HINT).toEqual([APPLY, SCOPE].sort());
     // UI 호출처는 래퍼 한 곳(scope)을 거쳐 읽는다 — ④ 전송 게이트·⑤ 수도권 칸·⑤ 미리보기 맥락·⑧ H10이 **같은 함수**(`housePriorNeedsMetropolitanOf`).
     expect(usersOf("housePriorNeedsMetropolitanOf", [SCOPE]).sort(), NEXT_PR_HINT).toEqual([REQUEST, PREVIEW, SECTION, VALIDATE].sort());
-    expect(usersOf("stateHistoryDeemedBlocksOf", [SCOPE]).sort(), NEXT_PR_HINT).toEqual([VALIDATE]);
+    // E3-③ 후속 #1 — 의제 사유는 «엔진이 철거 행 이력을 읽는가» 래퍼(`housePriorHistoryIgnoredOf`)가 부분 면적과 함께 한 함수로 읽는다(⑧ H9·H10·⑤가 자체 의제 조건을 쓰지 않는다).
+    expect(usersOf("stateHistoryDeemedBlocksOf", [SCOPE]).sort(), NEXT_PR_HINT).toEqual([READ]);
+    expect(usersOf("housePriorHistoryIgnoredOf", [READ]).sort(), NEXT_PR_HINT).toEqual([VALIDATE, SECTION].sort());
+    // 부분 면적 판정은 엔진 core를 그대로 돌린다 — `otherLandAreaIsPartial`(other-land.ts)이 `applyStateHistory`가 쓰는 `isPartialArea`를 같은 core 결과에 적용한다(UI 자체 근사 금지).
+    expect(usersOf("otherLandAreaIsPartial", [OTHER_LAND]), NEXT_PR_HINT).toEqual([READ]);
+    expect(usersOf("isPartialArea", [APPLY]).sort(), NEXT_PR_HINT).toEqual([OTHER_LAND]);
     // ④ 와이어 게이트(`non-business-land-request.ts`)는 소비표 지목 ∨ B 술어(안 열면 BP1 — 수도권이 서버에 안 닿아 보수적 3배로 읽힌다).
-    expect(FILES.find((f) => f.path === REQUEST)!.src).toMatch(/metro:\s*consumesMetropolitanArea\(asset\.nblLandType\)\s*\|\|\s*housePriorNeedsMetropolitanOf\(asset\)/);
+    expect(FILES.find((f) => f.path === REQUEST)!.src).toMatch(/metro:\s*consumesMetropolitanArea\(asset\.nblLandType\)\s*\|\|\s*housePriorNeedsMetropolitanOf\(asset,\s*transferDate\)/);
   });
 
   it("WIRE-12 (E3-③ UI Low 3): 엔진이 이력을 읽는 조건 `housingStateHistoryIsRead`는 판정(`judgeHousingLand`)과 UI 안내·⑧ H9 게이트(`housingAreaLimitState`)가 같은 함수로 읽는다", () => {
@@ -171,7 +179,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
     expect(src(SCHEMA)).toMatch(/propertyTaxTypeBefore:\s*z\.enum\(NBL_PROPERTY_TAX_TYPE_VALUES\)\.or\(z\.literal\(""\)\)/);
   });
 
-  it("WIRE-6: 이력 칸 이름을 읽는 UI(store·components·lib/calc) 파일 = ①②③ 상태·복원 · ④ 전송 · ⑤ 위젯 · ⑧ 검증·술어·미리보기 — 정확히 이 열두 곳", () => {
+  it("WIRE-6: 이력 칸 이름을 읽는 UI(store·components·lib/calc) 파일 = ①②③ 상태·복원 · ④ 전송 · ⑤ 위젯 · ⑧ 검증·술어·미리보기 — 정확히 이 열세 곳", () => {
     const uiUsers = FILES.filter(
       (f) => /^(components|lib\/(stores|calc))\//.test(f.path) && /nblOtherStateEvents|nblOtherStateHistoryMode/.test(f.src),
     ).map((f) => f.path).sort();
@@ -181,7 +189,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
       "lib/stores/calc-wizard-asset-factory.ts", // ② factory
       MIGRATE, // ③ 복원 정규화
       "lib/calc/non-business-land-request.ts", // ④ 전송(파생 nblOtherHasBuilding 덮어쓰기 포함)
-      SCOPE, PREVIEW, VALIDATE, // ④⑤⑧ 공용 술어 · 미리보기 · ⑧ 규칙
+      SCOPE, READ, PREVIEW, VALIDATE, // ④⑤⑧ 공용 술어 · «엔진이 이력을 읽는가» 래퍼(E3-③ 후속) · 미리보기 · ⑧ 규칙
       SECTION, BARE_FIELDS, KIND_FIELD, DETAIL, // ⑤ 위젯 · 나대지 구간 선언 카드(E3-1b — `data-field` 앵커) · 철거 행 종류 카드(E3-③ B) · 마운트
     ].sort();
     expect(uiUsers, NEXT_PR_HINT).toEqual(expected);
