@@ -4,14 +4,13 @@
  * 기타토지 «재산세 분류 근거» 입력 — NBL2611-V1-A (R19 · Q-1 (가)).
  *
  * 재산세 분류(종합합산·별도합산·분리과세·비과세) 칸 아래에서, 건축물 없는 토지의 비종합합산 선언을 뒷받침하는 **사실·출처**를 묻는다(리뷰 §7.4 — 결론 대신 사실).
- * 선택지·표시 여부·철거 바닥면적 칸은 엔진의 술어(`property-tax-basis.ts`)를 그대로 쓴다 — 화면·⑧·⑫·매퍼·엔진이 같은 조건이다.
+ * 선택지·표시 여부·철거 블록(철거ㆍ멸실일·바닥면적)은 엔진의 술어(`property-tax-basis.ts`·`demolished-input-issue.ts`)를 그대로 쓴다 — 화면·⑧·⑫·매퍼·엔진이 같은 조건이다.
  * 숨겨진 칸의 값은 store에서 지우지 않는다(이력 복원값 보존). 매퍼가 보내지 않을 뿐이다.
  */
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { PropertyTaxBasisRadio } from "./PropertyTaxBasisRadio";
-import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { OtherLandDemolishedTailFields } from "./OtherLandDemolishedTailFields";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-scope";
 import {
@@ -19,15 +18,13 @@ import {
   requiresDemolishedFloorArea,
   type PropertyTaxBasis,
 } from "@/lib/tax-engine/non-business-land/property-tax-basis";
-import { NBL_PTAX_DEMOLISHED_STATUS_GRACE_DIRECTION_NOTE } from "@/lib/tax-engine/nbl-confirm-notices";
-import { demolishedStatusNotice } from "@/lib/tax-engine/non-business-land/demolished-temp-status";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 import type { PropertyTaxType } from "@/lib/tax-engine/non-business-land/types";
 
 interface Props {
   asset: AssetForm;
   onAssetChange: (patch: Partial<AssetForm>) => void;
-  /** form-level 양도일(ISO) — 근거 «철거ㆍ멸실» 한시 지위 고지가 양도일 시행본으로 문구를 고른다(미입력이면 시행본 연혁 안내). */
+  /** form-level 양도일(ISO) — 근거 «철거ㆍ멸실» 블록(한시 기간 안내·바닥면적 칸 노출·한도 경과 안내)이 읽는다(미입력이면 시행본 연혁 안내). */
   transferDate?: string;
 }
 
@@ -77,24 +74,9 @@ export function OtherLandPropertyTaxBasisField({ asset, onAssetChange, transferD
         </ToneCard>
       )}
 
+      {/* E3-⑤ E3f-1b — 근거 «철거ㆍ멸실»: 한시 기간 안내 → 철거ㆍ멸실일 → 종전 바닥면적(양도일 시행본에 따라). 칸 노출 술어는 엔진 leaf를 부르는 `nbl-demolished-tail-scope.ts` 한 곳이다. */}
       {requiresDemolishedFloorArea(declaredType, hasBuilding, value || undefined) && (
-        <FieldCard
-          field="nblOtherDemolishedFloorArea"
-          label="철거ㆍ멸실 전 건축물 바닥면적"
-          unit="㎡"
-          hint={
-            <>
-              철거ㆍ멸실되기 전 건축물의 바닥면적(건축물 외의 시설은 수평투영면적)입니다. 이 면적에 용도지역별 적용배율을 곱한 범위가 별도합산(사업용)으로 남고 초과분은 종합합산(비사업용)입니다.{" "}
-              <span data-testid="nbl-other-tax-basis-demolished-notice">{demolishedStatusNotice(toOptionalDate(transferDate))}</span>{" "}
-              <span data-testid="nbl-other-tax-basis-demolished-direction">{NBL_PTAX_DEMOLISHED_STATUS_GRACE_DIRECTION_NOTE}</span>
-            </>
-          }
-        >
-          <DecimalInput
-            value={asset.nblOtherDemolishedFloorArea}
-            onChange={(v) => onAssetChange({ nblOtherDemolishedFloorArea: v })}
-          />
-        </FieldCard>
+        <OtherLandDemolishedTailFields asset={asset} onAssetChange={onAssetChange} transferDate={transferDate} />
       )}
     </div>
   );

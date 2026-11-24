@@ -203,7 +203,7 @@ export function buildPropertyTaxBasisEcho(o: BasisFacts, res: PropertyTaxBasisRe
 // 확인 필요 고지 — 판정하지 않은 사실을 밝힌다(2026-10-04 「모름 = 혜택 불성립 + 확인 필요」)
 // ─────────────────────────────────────────────────────────────
 
-const UNCONFIRMED_REASON_TEXT: Record<UnconfirmedReason, string> = {
+export const UNCONFIRMED_REASON_TEXT: Record<UnconfirmedReason, string> = {
   unselected: "근거를 선택하지 않아",
   unknown: "근거를 「모름」으로 선택해",
   incompatible: "선택한 근거가 이 재산세 분류와 맞지 않아",

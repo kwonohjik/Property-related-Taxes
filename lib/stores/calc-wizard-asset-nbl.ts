@@ -174,6 +174,7 @@ export const NBL_DEFAULTS = {
   nblOtherPropertyTaxType: "",
   nblOtherPropertyTaxBasis: "",
   nblOtherDemolishedFloorArea: "",
+  nblOtherDemolishedOn: "",
   nblOtherBuildingValue: "",
   nblOtherLandValue: "",
   nblOtherIsRelatedToResidence: false,

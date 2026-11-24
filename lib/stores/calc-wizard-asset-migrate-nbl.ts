@@ -27,6 +27,8 @@ export function migrateNblB1Fields(a: Record<string, unknown>): void {
   // 이제 «근거 미선택 → 종합합산 + 확인 필요»로 읽혀 세액은 그대로다. 사용자가 근거를 고르면 그 근거로 판정한다.
   if (a.nblOtherPropertyTaxBasis === undefined) a.nblOtherPropertyTaxBasis = "";
   if (a.nblOtherDemolishedFloorArea === undefined) a.nblOtherDemolishedFloorArea = "";
+  // E3-⑤ E3f-1b — 철거ㆍ멸실일 칸: 구 이력에는 없다 → 빈 값. 날짜를 추정해 채우지 않는다(자동 fallback 금지) — 근거 «철거ㆍ멸실» 구 세션은 ⑧이 칸을 요구·안내한다.
+  if (a.nblOtherDemolishedOn === undefined) a.nblOtherDemolishedOn = "";
   if (a.nblVillaNoUseConfirmed === undefined) a.nblVillaNoUseConfirmed = false;
   if (a.nblOtherLegacyRelatedReselect === undefined) a.nblOtherLegacyRelatedReselect = false;
   if (a.nblOtherIsRelatedToResidence === true) {

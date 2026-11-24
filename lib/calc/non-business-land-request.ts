@@ -25,6 +25,7 @@ import { nblHousingStateHistoryApplies } from "./nbl-other-state-history-scope";
 import { nblOtherStateEventsInUse } from "./nbl-other-state-history-scope";
 import { stateHistoryWireFields } from "./nbl-other-state-history-scope";
 import { householdHouseWireFields } from "./nbl-vacant-lot-household-scope";
+import { demolishedTailWireFields } from "./nbl-demolished-tail-scope";
 import { otherLandReadsHouseholdHousePeriods } from "@/lib/tax-engine/non-business-land/other-land-vacant-lot-read";
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-land/types";
 import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
@@ -156,7 +157,15 @@ export function buildNonBusinessLandRaw(
    * `nbl*` prefix-pick은 저장된 stale 행을 그대로 싣고, 숨은 행이 닿으면 ⑧은 건너뛰는데 ⑫′가 구조 결함으로 400을 만드는 막다른 길이 된다. 종료일 비움은 키 생략(= 양도일까지).
    * 엔진 실측은 행을 뺀 같은 base raw로 돈다(탐침 행이 입력 행을 덮어쓴다).
    */
-  return { ...base, ...householdHouseWireFields(asset, () => engineReadsHouseholdHousePeriods(base)) };
+  return {
+    ...base,
+    ...householdHouseWireFields(asset, () => engineReadsHouseholdHousePeriods(base)),
+    /**
+     * NBL-STATE-HISTORY-E3-⑤ E3f-1b — 꼬리 근거 «철거ㆍ멸실»의 철거ㆍ멸실일·종전 바닥면적. **⑤ 렌더·⑧ 검증·⑫′와 같은 엔진 술어**(`demolishedOnRequired`·`demolishedFloorAreaRequired`)가 거짓이면 `""`로 덮어 쓴다 —
+     * `nbl*` prefix-pick은 저장된 stale 값(철거 행이 날짜를 대는데 남은 새 칸 값 · 종전 시행본으로 바뀐 뒤 남은 바닥면적)을 그대로 싣고, 숨은 값이 닿으면 ⑧은 건너뛰는데 ⑫′가 400을 만드는 막다른 길이 된다.
+     */
+    ...demolishedTailWireFields(asset, transferDate),
+  };
 }
 
 /**

@@ -39,6 +39,9 @@ const other = (patch: Record<string, unknown> = {}) =>
 const ho13 = (patch: Record<string, unknown> = {}) =>
   other({ nblOtherRelatedBusinessType: "vacant_lot_1household", nblOtherPropertyTaxType: "comprehensive", nblOtherHasBuilding: false, ...patch });
 
+/** 양도일 2024-06-03 — 철거 후 한시 근거의 «면적 범위 문언» 시행본(양도일 직전 과세기준일 ≥ 2024.6.1.). 종전 바닥면적·용도지역 요구가 이때부터다(E3-⑤ E3f-1b) */
+const AFTER_2024_06 = { transferDate: "2024-06-03", filingDate: "2024-08-31" } as const;
+
 /** 건축물 이력 사건 행 */
 const ev = (kind: "" | "building_built" | "building_removed" | "tax_type_changed", date: string) => ({ kind, date, propertyTaxTypeBefore: "" });
 
@@ -176,9 +179,11 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
 
   // ── transfer-tax-validate-nbl-other.ts (기타토지 §168의11) ─────────────────
   { name: "nbl: 재산세 과세 분류", field: "nblOtherPropertyTaxType", step: 0, assetIndex: A, message: /^자산: 기타토지 — 재산세 과세 분류/, form: other({ nblOtherPropertyTaxType: "" }) },
-  // NBL2611-V1-A (Q-1) — 철거ㆍ멸실 근거: 종전 바닥면적 · 배율표에 있는 용도지역(근거 미선택은 막지 않는다)
-  { name: "nbl: 철거·멸실 종전 바닥면적", field: "nblOtherDemolishedFloorArea", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거ㆍ멸실 근거 — 철거 전 건축물의 바닥면적/, form: other({ nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedFloorArea: "" }) },
-  { name: "nbl: 철거·멸실 용도지역", field: "nblZoneType", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거ㆍ멸실 근거 — 용도지역/, form: other({ nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedFloorArea: "100", nblZoneType: "residential" }) },
+  // NBL2611-V1-A (Q-1) — 철거ㆍ멸실 근거: 철거ㆍ멸실일 → 종전 바닥면적 → 용도지역(근거 미선택은 막지 않는다).
+  // E3-⑤ E3f-1b — 철거ㆍ멸실일은 이력 철거 행이 날짜를 대지 않을 때만 요구하고(이 시료는 이력 «바뀐 적 없음»), 종전 바닥면적·용도지역은 양도일 직전 과세기준일 ≥ 2024.6.1. 시행본에서만 요구한다 → 양도일 2024-06-03.
+  { name: "nbl: 철거·멸실 철거ㆍ멸실일", field: "nblOtherDemolishedOn", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거ㆍ멸실 근거 — 철거ㆍ멸실일을 입력하세요/, form: () => ({ ...other({ nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedOn: "" })(), ...AFTER_2024_06 }) },
+  { name: "nbl: 철거·멸실 종전 바닥면적", field: "nblOtherDemolishedFloorArea", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거ㆍ멸실 근거 — 철거 전 건축물의 바닥면적/, form: () => ({ ...other({ nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedOn: "2024-03-01", nblOtherDemolishedFloorArea: "" })(), ...AFTER_2024_06 }) },
+  { name: "nbl: 철거·멸실 용도지역", field: "nblZoneType", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거ㆍ멸실 근거 — 용도지역/, form: () => ({ ...other({ nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedOn: "2024-03-01", nblOtherDemolishedFloorArea: "100", nblZoneType: "residential" })(), ...AFTER_2024_06 }) },
   { name: "nbl: 건축물 바닥면적", field: "nblOtherBuildingFloorArea", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 바닥면적/, form: other({ nblOtherHasBuilding: true, nblOtherBuildingFloorArea: "" }) },
   { name: "nbl: 부설주차장 기준면적", field: "nblOtherStandardAreaLimit", step: 0, assetIndex: A, message: /^자산: 선택한 호의 기준면적/, form: other({ nblOtherRelatedBusinessType: "parking_attached" }) },
   { name: "nbl: 휴양시설", field: "nblOtherResortOutdoorArea", step: 0, assetIndex: A, message: /^자산: 휴양시설 — 옥외방목장/, form: other({ nblOtherRelatedBusinessType: "resort" }) },
