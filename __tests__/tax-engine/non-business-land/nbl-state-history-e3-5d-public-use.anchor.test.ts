@@ -205,12 +205,14 @@ describe("E3f-3 B — `demolishedStatusWindow`: 창 ∩ 공용 사용 기간 · 
     const overlap = mixed("2023-08-01", "2024-07-01");
     expect(overlap).toMatchObject({ kind: "holds", publicUse: true, months: 36 });
     expect(span(overlap)).toEqual(["2023-03-01", "2024-07-02", 489]);
-    // 떨어져 있다 → 제한 없는 창만(공용 사용 인정 없음 = 종전과 같다)
+    // 떨어져 있다 → 두 창의 합집합(각 창 자기 게이트) — 제한 없는 창(주 창) + 단서 창(`publicUseWindow`). 떨어진 사이는 메우지 않는다(정정 — 종전은 단서 창을 버렸다. 상세: mixed-window anchor)
     const apart = mixed("2024-04-01", "2024-07-01");
-    expect(apart).toMatchObject({ kind: "holds", publicUse: false, months: 6 });
+    expect(apart).toMatchObject({ kind: "holds", publicUse: true, publicUseUnused: false, months: 6 });
     expect(span(apart)).toEqual(["2023-03-01", "2023-09-02", 185]);
-    // 공용 사용이 2024-06-01을 덮지 못하면(제한 없는 쪽만 성립) → 종전과 같은 창
+    expect(apart.kind === "holds" && apart.publicUseWindow && [iso(apart.publicUseWindow.start), iso(apart.publicUseWindow.end)]).toEqual(["2024-04-01", "2024-07-02"]);
+    // 공용 사용이 2024-06-01을 덮지 못하면(제한 없는 쪽만 성립) → 종전과 같은 창 + 단서 미사용 고지 플래그
     expect(span(mixed("2024-07-01", "2024-12-31"))).toEqual(["2023-03-01", "2023-09-02", 185]);
+    expect(mixed("2024-07-01", "2024-12-31")).toMatchObject({ kind: "holds", publicUse: false, publicUseUnused: true });
   });
 });
 

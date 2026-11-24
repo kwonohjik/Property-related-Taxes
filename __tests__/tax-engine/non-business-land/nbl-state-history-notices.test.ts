@@ -48,10 +48,11 @@ const CONFIRM_REQUIRED = [
   // E3-⑤ E3f-3 — 영 §103의2 2호 단서(국가 등 공용·공공용 사용): 받아들임 · 공용 사용 기간 안에 과세기준일 없음 접힘
   "NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE",
   "NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_NO_BASE_DATE_NOTICE",
+  "NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE", // E3f-3 Medium-1 — 단서를 주장했으나 공용 사용 기간 안에 과세기준일이 없어 반영되지 않음(접히지 않은 구간)
 ];
 
 describe("NBL-STATE-HISTORY-E1 — 이력 고지 상수", () => {
-  it("36종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다(E3-①이 2종 · E3-1b가 3종 · E3-③ A가 7종 · B가 1종 · UI Low가 1종 · E3-④가 3종 · E3-⑤ E3f-1a가 2종 · E3f-2가 8종 · E3f-3이 2종 추가 · U-3이 E3f-1a N-3 임시 보충 1종 폐기 — 기존 8종 문구는 바이트 동일)", () => {
+  it("37종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다(E3-①이 2종 · E3-1b가 3종 · E3-③ A가 7종 · B가 1종 · UI Low가 1종 · E3-④가 3종 · E3-⑤ E3f-1a가 2종 · E3f-2가 8종 · E3f-3이 3종 추가 · U-3이 E3f-1a N-3 임시 보충 1종 폐기 — 기존 8종 문구는 바이트 동일)", () => {
     expect(STATE_HISTORY_NOTICES.map(([k]) => k).sort()).toEqual(
       [
         ...CONFIRM_REQUIRED,

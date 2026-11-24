@@ -160,7 +160,7 @@ function closedRowOf(preview: StateHistoryPreview | null, date: string): StateHi
   return k > 0 ? preview?.rows[k - 1] : undefined;
 }
 
-function rowTaxTypeText(row: Pick<StateHistoryPreviewRow, "hasBuilding" | "propertyTaxType" | "isTail" | "basisOutcome" | "basis" | "foldReason" | "buildingKind" | "houseOutcome" | "houseCheck" | "temporaryStatusWindow" | "temporaryStatusPublicUse">): string {
+function rowTaxTypeText(row: Pick<StateHistoryPreviewRow, "hasBuilding" | "propertyTaxType" | "isTail" | "basisOutcome" | "basis" | "foldReason" | "buildingKind" | "houseOutcome" | "houseCheck" | "temporaryStatusWindow" | "temporaryStatusPublicUse" | "temporaryStatusPublicUseWindow">): string {
   // E3-③ A — 주택 구간은 재산세 구분이 아니라 정착면적 × 배율 판정(leaf echo)을 그대로 보인다. 꼬리(양도일 현재 주택)는 위 «주택 정착면적» 칸이 말한다 — 결과 계산 후 확정.
   if (row.buildingKind === "house") return row.isTail ? "양도일 현재 정착면적 · 배율(위 칸 기준)" : (houseIntervalText(row) ?? "주택");
   if (row.isTail) return "양도일 현재 선언 기준";
@@ -168,7 +168,9 @@ function rowTaxTypeText(row: Pick<StateHistoryPreviewRow, "hasBuilding" | "prope
     // E3-1b — 비종합합산 선언이 있는 나대지 구간은 근거 해석(받아들임·접힘)을 보이고, 선언이 없으면 종전 문구 그대로(주장 없음 = 종합합산).
     const bare = bareIntervalTaxTypeText(row);
     // E3f-2 — 근거 «철거ㆍ멸실»을 받아들인 구간은 구간 전체가 아니라 한시 지위 인정 창만 별도합산이다(창은 엔진 구간 해석이 낸 echo).
-    if (bare) return row.temporaryStatusWindow ? `${bare} · 인정 ${row.temporaryStatusWindow.start} ~ ${row.temporaryStatusWindow.lastDay}(${row.temporaryStatusWindow.days.toLocaleString()}일)` : bare;
+    // E3f-3 — 제한 없는 창과 공용 사용 단서 창이 떨어져 있으면 두 창의 합집합이므로 둘째 창도 보인다.
+    const extra = row.temporaryStatusPublicUseWindow ? ` + 공용 사용 단서 ${row.temporaryStatusPublicUseWindow.start} ~ ${row.temporaryStatusPublicUseWindow.lastDay}(${row.temporaryStatusPublicUseWindow.days.toLocaleString()}일)` : "";
+    if (bare) return row.temporaryStatusWindow ? `${bare} · 인정 ${row.temporaryStatusWindow.start} ~ ${row.temporaryStatusWindow.lastDay}(${row.temporaryStatusWindow.days.toLocaleString()}일)${extra}` : bare;
     return row.propertyTaxType === "unknown" ? `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(나대지 — 선언 없음 · 확인 필요)` : `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(나대지 — 고정)`;
   }
   if (row.propertyTaxType === "unknown") return `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(선언 없음 — 확인 필요)`;

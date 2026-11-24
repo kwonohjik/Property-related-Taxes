@@ -23,6 +23,7 @@ import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import type { NblOtherStateEventInput } from "@/lib/stores/calc-wizard-asset-nbl-other";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { judgeNonBusinessLand } from "@/lib/tax-engine/non-business-land/engine";
 import { BARE_DEMOLISHED_FOLD_NOTICE } from "@/lib/tax-engine/non-business-land/state-history-echo";
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-land/types";
@@ -492,5 +493,57 @@ describe("E3f-3 U-4 E — ⑦ 결과 구간표: 엔진 echo 라벨 «한시 기�
     renderTable(h);
     const idx = h.intervals.findIndex((iv) => iv.temporaryStatusWindow);
     expect(screen.getByTestId(`nbl-state-history-interval-${idx}`).textContent).toContain("별도합산(나대지 — 철거·멸실 근거 · 한시 기간만)");
+  });
+});
+
+// ── F. High-1 + Medium-1 — 떨어진 두 창 · 단서 미사용 고지(엔진 echo 그대로 표시) ──────────────────────────
+
+describe("E3f-3 High-1·Medium-1 F — 두 창이 떨어지면 둘 다 보이고, 단서가 영향이 없으면 고지를 보인다", () => {
+  /** 철거 2023-03-01(2023-06-01 = 제한 없는 시행본 과세기준일) → 닫는 행 `closeOn` · 양도 `tr`. */
+  const OLD = (closeOn: string, facts: Partial<Ev>) => other({ nblOtherStateEvents: [built("2016-01-01"), houseRemoved("2023-03-01"), closing("building_built", closeOn, { ...PRE, ...facts })] });
+  const echoOf = (a: AssetForm, transferDate: string) => {
+    const raw = buildNonBusinessLandRaw(a, transferDate)!;
+    return judgeNonBusinessLand(buildNblEngineInput(raw as never)!, DEFAULT_NON_BUSINESS_LAND_RULES).periodEvaluation!.stateHistory!;
+  };
+  const APART = () => OLD("2025-01-01", { ...FULLCHAIN, demolishedPublicUseFromBefore: "2024-04-01", demolishedPublicUseToBefore: "2024-12-01" });
+
+  it("⑤ 미리보기: 제한 없는 창 + 공용 사용 단서 창이 각각 보이고 라벨은 «한시 기간 + 한시 기간 중 공용 사용 기간»", () => {
+    mount(APART(), "2026-12-01");
+    expect(text("nbl-other-state-event-2-demolished-window")).toContain("한시 지위 인정 기간: 2023-03-01 ~ 2023-09-01");
+    expect(text("nbl-other-state-event-2-demolished-window")).not.toContain("국가 등 공용 사용 기간만");
+    expect(text("nbl-other-state-event-2-demolished-publicuse-window")).toContain("공용 사용 단서 인정 기간: 2024-04-01 ~ 2024-12-01(245일 · 국가 등 공용 사용 기간만)");
+    expect(text("nbl-other-state-event-2-demolished-publicuse-accepted-notice")).toBe(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE);
+    expect(id("nbl-other-state-event-2-demolished-publicuse-unused-notice")).toBeNull();
+    const rowText = screen.getByTestId("nbl-state-history-preview-row-2").textContent!;
+    expect(rowText).toContain("한시 기간 + 한시 기간 중 공용 사용 기간) · 인정 2023-03-01 ~ 2023-09-01(185일) + 공용 사용 단서 2024-04-01 ~ 2024-12-01(245일)");
+  });
+
+  it("맞닿으면 하나의 창(종전 표시 그대로) — 둘째 창 줄 없음", () => {
+    mount(OLD("2025-01-01", { ...FULLCHAIN, demolishedPublicUseFromBefore: "2023-09-02", demolishedPublicUseToBefore: "2024-12-01" }), "2026-12-01");
+    expect(id("nbl-other-state-event-2-demolished-publicuse-window")).toBeNull();
+    expect(text("nbl-other-state-event-2-demolished-window")).toContain("국가 등 공용 사용 기간만");
+  });
+
+  it("단서를 4칸 모두 답했는데 공용 사용 기간 안에 과세기준일이 없으면(제한 없는 창만 성립) 미사용 고지 — 접힘 고지는 없다", () => {
+    mount(OLD("2024-09-01", { ...FULLCHAIN, demolishedPublicUseFromBefore: "2025-01-01", demolishedPublicUseToBefore: "2026-12-01" }), "2024-12-01");
+    expect(text("nbl-other-state-event-2-demolished-publicuse-unused-notice")).toBe(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE);
+    expect(id("nbl-other-state-event-2-demolished-fold-notice")).toBeNull();
+    expect(id("nbl-other-state-event-2-demolished-publicuse-accepted-notice")).toBeNull();
+    expect(id("nbl-other-state-event-2-demolished-publicuse-window")).toBeNull();
+  });
+
+  it("⑦ 결과 구간표: 두 창이 한 줄에 보인다(엔진 echo) · 미사용 구간은 종전 라벨", () => {
+    const h = echoOf(APART(), "2026-12-01");
+    const { unmount } = render(<NblStateHistoryPeriodTable stateHistory={h} totalOwnershipDays={4718} effectiveBusinessDays={3000} gracePeriodDays={0} isNonBusiness={false} />);
+    const idx = h.intervals.findIndex((iv) => iv.temporaryStatusWindow);
+    const row = screen.getByTestId(`nbl-state-history-interval-${idx}`).textContent!;
+    expect(row).toContain("별도합산(나대지 — 철거·멸실 근거 · 한시 기간 + 한시 기간 중 공용 사용 기간)");
+    expect(row).toContain("한시 지위 인정 2023-03-01 ~ 2023-09-01(185일 · 한시 기간 6개월) + 공용 사용 단서 인정 2024-04-01 ~ 2024-12-01(245일 · 국가 등 공용 사용 기간만)");
+    unmount();
+    const unused = echoOf(OLD("2024-09-01", { ...FULLCHAIN, demolishedPublicUseFromBefore: "2025-01-01", demolishedPublicUseToBefore: "2026-12-01" }), "2024-12-01");
+    expect(unused.intervals.some((iv) => iv.temporaryStatusPublicUseUnused)).toBe(true);
+    render(<NblStateHistoryPeriodTable stateHistory={unused} totalOwnershipDays={3500} effectiveBusinessDays={3000} gracePeriodDays={0} isNonBusiness={false} />);
+    expect(document.body.textContent).toContain("한시 기간만");
+    expect(document.body.textContent).not.toContain("공용 사용 단서 인정");
   });
 });

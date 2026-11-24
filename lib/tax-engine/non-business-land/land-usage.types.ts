@@ -449,6 +449,13 @@ export interface LandStateInterval {
   temporaryStatusRemovedKind?: "house" | "building";
   /** E3f-3 — 창을 영 §103의2 2호 단서(국가 등 공용·공공용 사용 기간)로 받았다(창은 공용 사용 기간으로 한정). `temporaryStatusWindow`와 함께만 있다. */
   temporaryStatusPublicUse?: true;
+  /**
+   * E3f-3 — 제한 없는 한시 창(`temporaryStatusWindow`)과 영 §103의2 2호 단서 창이 **떨어져 있어** 합치지 못한 때의 단서 창(`[start, end)`). 두 창의 합집합이 사업용 구간이다(`stateHistoryBusinessIntervals`).
+   * 맞닿거나 겹치면 `temporaryStatusWindow` 하나로 합쳐 이 키가 없다. `temporaryStatusPublicUse`와 함께만 있다.
+   */
+  temporaryStatusPublicUseWindow?: DateInterval;
+  /** E3f-3 — 단서를 주장(4칸 모두 «예»·날짜)했으나 공용 사용 기간 안에 단서가 필요한 과세기준일이 없어 결과에 영향이 없었다(고지). `temporaryStatusWindow`와 함께만 있다 — 접힌 구간에는 없다. */
+  temporaryStatusPublicUseUnused?: true;
   /** E3f-2 — 주택 철거 행인데 빈집정비 «예»가 아니어서 3년 연장을 반영하지 않았다(일반 W만 적용 — 고지). `temporaryStatusWindow`와 함께만 있다. */
   vacantHouseExtensionUnconfirmed?: true;
   /** E3-③ — 주택 구간(주택부수토지 카드의 모든 건축물 구간)일 때만. 있으면 `propertyTaxType`은 판정에 쓰지 않는다(`"unknown"` 고정 — 조심 2018서0295). */
@@ -487,6 +494,8 @@ export interface StateHistoryIntervalEcho {
   temporaryStatusMonths?: 6 | 12 | 36;
   temporaryStatusRemovedKind?: "house" | "building";
   temporaryStatusPublicUse?: true;
+  temporaryStatusPublicUseWindow?: DateInterval;
+  temporaryStatusPublicUseUnused?: true;
   vacantHouseExtensionUnconfirmed?: true;
   /** E3-③ — 주택 구간일 때만(`LandStateInterval`의 같은 이름 필드). 없으면 키 없음 = 종전 echo와 같다. */
   buildingKind?: StateBuildingKind;

@@ -255,8 +255,13 @@ export type DemolishedFoldReason =
   | "demolished_area_exceeded";
 
 export type DemolishedStatusWindow =
-  /** 한시가 성립한다 — `window`는 구간 안으로 자른 일 단위 창 · `months`는 창을 정한 한시 기간 · `vacantHouseExtensionUnconfirmed` = 주택인데 빈집정비 «예»가 아니라 3년 연장을 반영하지 않았다 · `publicUse` = 영 §103의2 2호 단서(국가 등 공용 사용 기간)로 창을 받았다(E3f-3). */
-  | { kind: "holds"; window: DateInterval; months: 6 | 12 | 36; vacantHouseExtensionUnconfirmed: boolean; publicUse: boolean }
+  /**
+   * 한시가 성립한다 — `window`는 구간 안으로 자른 일 단위 창 · `months`는 창을 정한 한시 기간 · `vacantHouseExtensionUnconfirmed` = 주택인데 빈집정비 «예»가 아니라 3년 연장을 반영하지 않았다 ·
+   * `publicUse` = 영 §103의2 2호 단서(국가 등 공용 사용 기간)로 받은 창이 결과에 쓰였다(E3f-3) ·
+   * `publicUseWindow` = 제한 없는 창(`window`)과 단서 창이 **떨어져 있어** 합치지 못한 때의 단서 창(두 창의 합집합이 사업용 — 맞닿거나 겹치면 `window` 하나로 합쳐 없다. 이때 `months`는 `window`를 정한 기간) ·
+   * `publicUseUnused` = 단서를 «주장»(4칸 모두 답함)했으나 공용 사용 기간 안에 단서가 필요한 과세기준일이 하나도 없어 결과에 아무 영향도 주지 못했다(고지 — 접힘 사유 `demolished_public_use_no_base_date`와 겹치지 않는다: 접히면 이 값은 없다).
+   */
+  | { kind: "holds"; window: DateInterval; publicUseWindow?: DateInterval; months: 6 | 12 | 36; vacantHouseExtensionUnconfirmed: boolean; publicUse: boolean; publicUseUnused: boolean }
   /** 접는다(종합합산 + 확인 필요). */
   | { kind: "fold"; reason: DemolishedFoldReason };
 
@@ -330,6 +335,7 @@ export function demolishedStatusWindow(i: {
   const own = holding.filter((s) => !relyOnClaim(s));
   const byClaim = holding.filter(relyOnClaim);
   let window: DateInterval;
+  let publicUseWindow: DateInterval | undefined;
   let publicUse = false;
   let used = holding; // 창 길이(`months`)를 정한 과세기준일
   if (byClaim.length === 0) {
@@ -338,21 +344,26 @@ export function demolishedStatusWindow(i: {
     window = windowFor(byClaim, true);
     publicUse = true;
   } else {
-    // 단서 시행(2024.6.1.) 전 과세기준일(제한 없음)과 단서에 기댄 과세기준일이 함께 성립 — 두 창이 맞닿거나 겹칠 때만 합치고, 떨어져 있으면 제한 없는 쪽만 인정한다(떨어진 사이를 메우지 않는다 · 종전 판정을 줄이지 않는다).
+    // 단서 시행(2024.6.1.) 전 과세기준일(제한 없음)과 단서에 기댄 과세기준일이 함께 성립 — 각 창은 자기 게이트(`own` · `byClaim`)를 각자 충족한 합집합이다.
+    // 맞닿거나 겹치면 하나로 합치고, 떨어져 있으면 두 창을 따로 둔다(떨어진 사이는 메우지 않는다 — 합집합이라 종전 판정도 줄지 않는다).
     const a = windowFor(own, false);
     const b = windowFor(byClaim, true);
+    publicUse = true;
     if (b.start.getTime() <= a.end.getTime() && a.start.getTime() <= b.end.getTime()) {
       window = { start: a.start.getTime() < b.start.getTime() ? a.start : b.start, end: a.end.getTime() > b.end.getTime() ? a.end : b.end };
-      publicUse = true;
     } else {
+      // `b`는 항상 `a` 뒤다(둘 다 `max(철거일, 구간 시작)`에서 시작하고 `b`는 거기에 개시일 하한이 더 붙는다).
       window = a;
+      publicUseWindow = b;
       used = own;
     }
   }
+  // 주장했으나 단서에 기댄 과세기준일이 하나도 성립하지 않았다 — 결과에 영향이 없었음을 고지한다.
+  const publicUseUnused = claimed && byClaim.length === 0;
   const months = Math.max(...used.map(monthsAt)) as 6 | 12 | 36;
   // 구간 안에 한시 안의 과세기준일 `s`가 있으므로(`inPeriod`) `구간 시작 ≤ s ≤ 만료일` — 자른 창은 비지 않는다(방어: 비면 불성립).
   if (window.end.getTime() <= window.start.getTime()) return { kind: "fold", reason: "demolished_never_period" };
   // 3년 연장을 묻는 구간(주택 + 후보 ≥ 2024.6.1.)에서 빈집정비 «예»가 아니면 일반 W만 반영했다는 고지를 단다.
   const extensionAsked = i.kind === "house" && inBase.some((s) => demolishedVacantHouseClauseApplies(s) && holdsAt(i.removedOn, s, demolishedStatusPeriodMonths(s, true)));
-  return { kind: "holds", window, months, vacantHouseExtensionUnconfirmed: extensionAsked && !vacantYes, publicUse };
+  return { kind: "holds", window, ...(publicUseWindow ? { publicUseWindow } : {}), months, vacantHouseExtensionUnconfirmed: extensionAsked && !vacantYes, publicUse, publicUseUnused };
 }

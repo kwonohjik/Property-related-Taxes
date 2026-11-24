@@ -197,6 +197,26 @@ otherUseOk(s)  = !clause(s) ∨ otherUse === "no" ∨ (claimed ∧ inPublicUse(s
 - **접힘 사유**: 기존 우선순위(never → permit → other_use → area)에 **하나만 추가** — `claimed`인데 `holding`이 비면(공용 사용 기간 안에 후보 과세기준일이 없음) `demolished_public_use_no_base_date`, `claimed`가 아니면 종전대로 `demolished_other_use`(= 건축 외 용도 «예» 또는 «모름» 또는 단서 요건 미충족). 사유 문구는 구분해 고지한다(§3.6).
 - **창의 의미**: 기존 «철거일부터 만료일까지 전부»는 과세기준일 지위의 일 배정 **상한 근사**(E3f-2 V-14)다. 단서 경로는 **공용 사용 기간으로만 줄여** 인정한다 — 공용 사용 **밖**의 철거 후 기간은 건축 외 용도 사용 여부를 나눠 묻지 않아(사용자 답이 «예» 하나) 인정하지 않는다(보수 쪽 · V-8). 이 한계를 고지한다.
 
+#### 3.3.1 정정 2026-11-25 — 혼합 창 = **합집합(각 창 자기 게이트)** (sync-checker High-1) · 단서 미사용 고지 (Medium-1)
+
+구현 PR(초판)은 «단서 시행(2024.6.1.) 전 과세기준일로 성립하는 제한 없는 창(`own`)»과 «단서에 기댄 창(`byClaim` = 3년 창 ∩ [개시일, 종료일 + 1일))»이 **맞닿거나 겹칠 때만** 합치고, 떨어져 있으면 단서 창을 버렸다(`window = a`). 이는 이 계획서에 없는 이탈이었고(근거 «종전 판정을 줄이지 않는다»는 합집합으로도 충족), 사용자가 4칸을 모두 «예»로 답해 단서가 성립하는데도 결과가 «단서 아니오»와 같아지는 **침묵 오류**였다(시료: 취득 2019-03-01 · 주택 철거 2023-03-01 · 구간 끝 2025-01-01 · 양도 2027-02-01 · 개시 2024-04-01 → 비사업용 1,615일 275,800,000 vs 합집합 사업용 1,890일 215,850,000).
+
+**정정 모델** — 성립 과세기준일 `holding`을 둘로 나눠 **각 부분집합이 자기 게이트를 각자 충족**하면 자기 창을 만들고, 사업용 구간은 **합집합**이다(떨어진 사이는 메우지 않는다):
+
+```
+own     = holding ∖ relyOnClaim   // 단서 시행 전 과세기준일(제한 없음) — 게이트: 구간 안 ∧ W 안 ∧ permitOk ∧ areaOk
+byClaim = holding ∩ relyOnClaim   // 건축 외 용도 «예»에 기댄 과세기준일 — 게이트: 위 + inPublicUse(s)(공용 사용 기간 안)
+창 a = windowFor(own, 제한 없음)        // [max(r, 구간 시작), min(최대 W 만료일 + 1일, 구간 끝))
+창 b = windowFor(byClaim, 공용 사용 한정)   // 창 a ∩ [개시일, 종료일 + 1일) 적용
+a·b가 맞닿거나 겹침  → 하나의 창 [min 시작, max 끝)  (종전 결과·echo 바이트 동일 — 개시 2023-09-02 → 2,102일 215,850,000)
+a·b가 떨어짐         → 주 창 `temporaryStatusWindow` = a · 둘째 창 `temporaryStatusPublicUseWindow` = b (사업용 = a ∪ b)
+```
+
+- **표현** — `LandStateInterval`에 **선택 필드 1개**(`temporaryStatusPublicUseWindow?: DateInterval`)를 더했다(`temporaryStatusWindow`는 주 창으로 그대로 — 기존 소비처(`isStateIntervalBusiness`·라벨 «창이 있는가»·UI 창 표시)가 바뀌지 않고, 사업용 구간(`stateHistoryBusinessIntervals`)·echo·⑤ 미리보기·⑦ 구간표만 둘째 창을 더한다). 배열(`temporaryStatusWindows`)로 바꾸면 모든 소비처 · 직접 API 호환 · 기존 anchor가 동시에 흔들려 택하지 않았다. 둘째 창은 항상 주 창 **뒤**다(둘 다 `max(철거일, 구간 시작)`에서 시작하고 b에는 개시일 하한이 더 붙는다).
+- `temporaryStatusPublicUse`는 `byClaim`이 비어 있지 않을 때 참(단서 창이 실제로 쓰였다). `temporaryStatusMonths`는 **주 창**을 정한 기간이다(떨어진 경우 a의 6 — b는 3년 만료일이 정한다).
+- **독립 오라클**: `evalDayRow`에 `[건물 구간, a, b]`를 직접 넣은 값 = 엔진(격자 1,872셀 중 접히지 않은 전 셀 · 판정·유효 일수 불일치 0). 초판은 같은 격자에서 판정 247셀·일수 1,104셀이 달랐다.
+- **Medium-1** — 4칸을 모두 답했는데 `byClaim`이 비어(공용 사용 기간 안에 단서가 필요한 과세기준일이 없음) 단서가 결과에 영향이 없고 `own`만으로 성립한 구간: 새 고지 `NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE`(확인 필요)를 경고·⑤ 미리보기에 싣는다(`temporaryStatusPublicUseUnused`). **접힘이면**(`byClaim`에만 기댔고 과세기준일이 없음) 종전 `demolished_public_use_no_base_date` 고지만 나가고 이 고지는 나가지 않는다(배타).
+
 ### 3.4 «모름»·미충족
 
 | 사실 | 결과 |
@@ -348,7 +368,7 @@ A. leaf `demolishedPublicUseAsked` 진리표(4답 조합) · B. leaf `demolished
 
 ### 6.3 mutation 후보
 
-M-P1 단서 경로에서 `∩ [from, to + 1일)` 제거(창 전체 인정) → **P-1(1,005 vs 699)·P-2(1,005 vs 245) 실패** · M-P2 `inPublicUse(s)` 게이트 제거 → **P-4·P-5c·P-9가 접힘 → 성립으로 반전** · M-P3 종료일 `≤` → `<`(또는 `to + 1일` 제거) → **P-5a 실패** · M-P4 개시일 `≥` → `>` → **P-5b 실패** · M-P5 `claimed`에서 `vacantYes` 제거(1호에도 단서 적용) → **R-1·R-2 실패** · M-P6 `publicPaid` 요구 제거(②«아니오»·«모름»도 단서 인정) → **R-3 실패** · M-P7 `demolishedPublicUseAsked`에서 `ev.otherUse === "yes"` 항 제거 → **격자·R-6 실패**(화면에 없는 칸 400) · M-P8 ⑫′만 자체 근사(⑧과 다른 술어) → **격자 실패** · M-P9 ④ stale 덮어쓰기(게이트) 제거 → **R-6·gates anchor 실패** · M-P10 3지선다 `""`를 «모름»으로 통과(Q-11 (나) 반전) → **R-4 실패** · M-P11 `historyRead` 게이트를 새 칸에서만 제거 → **R-5 실패** · M-P12 접힘 사유 우선순위 `public_use_no_base_date` ↔ `other_use` 반전 → **P-4·R-3 실패** · M-P13 만료일을 `addMonths`로 대체(월 말일 철거일) → **P-7 변형(철거일 월 말일) 실패**(E3f-2 §7.5 승계) · M-P14 ⑭ 날짜를 문자열 그대로 비교(`Date < string` 침묵 false) → **P-5a/b 실패** · M-P15 ③ migrate가 새 칸 키를 항상 생성 → **R-8 실패**(byte-identical).
+M-P1 단서 경로에서 `∩ [from, to + 1일)` 제거(창 전체 인정) → **P-1(1,005 vs 699)·P-2(1,005 vs 245) 실패** · M-P2 `inPublicUse(s)` 게이트 제거 → **P-4·P-5c·P-9가 접힘 → 성립으로 반전** · M-P3 종료일 `≤` → `<`(또는 `to + 1일` 제거) → **P-5a 실패** · M-P4 개시일 `≥` → `>` → **P-5b 실패** · M-P5 `claimed`에서 `vacantYes` 제거(1호에도 단서 적용) → **R-1·R-2 실패** · M-P6 `publicPaid` 요구 제거(②«아니오»·«모름»도 단서 인정) → **R-3 실패** · M-P7 `demolishedPublicUseAsked`에서 `ev.otherUse === "yes"` 항 제거 → **격자·R-6 실패**(화면에 없는 칸 400) · M-P8 ⑫′만 자체 근사(⑧과 다른 술어) → **격자 실패** · M-P9 ④ stale 덮어쓰기(게이트) 제거 → **R-6·gates anchor 실패** · M-P10 3지선다 `""`를 «모름»으로 통과(Q-11 (나) 반전) → **R-4 실패** · M-P11 `historyRead` 게이트를 새 칸에서만 제거 → **R-5 실패** · M-P12 접힘 사유 우선순위 `public_use_no_base_date` ↔ `other_use` 반전 → **P-4·R-3 실패** · M-P13 만료일을 `addMonths`로 대체(월 말일 철거일) → **P-7 변형(철거일 월 말일) 실패**(E3f-2 §7.5 승계) · M-P14 ⑭ 날짜를 문자열 그대로 비교(`Date < string` 침묵 false) → **P-5a/b 실패** · M-P15 ③ migrate가 새 칸 키를 항상 생성 → **R-8 실패**(byte-identical). · **M-H1(§3.3.1 정정)** 떨어진 창에서 단서 창을 버림(단일 창 회귀) → **mixed-window anchor A·B·C 실패** · M-H2 단서 창 게이트(`inPublicUse`) 제거 → **개시 2024-06-02·격자 실패** · M-H3 미사용 고지 조건 제거 → **D·UI F 실패** · M-H4 사업용 구간에서 둘째 창 누락 → **B·격자 실패** · M-H5 echo 둘째 창 누락 → **B 실패**.
 
 ---
 

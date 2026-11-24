@@ -12,6 +12,7 @@ import { NBL_STATE_HISTORY_BARE_DEMOLISHED_OTHER_USE_NOTICE } from "../nbl-confi
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PERMIT_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_NO_BASE_DATE_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_HOUSE_AREA_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_DEMOLISHED_VACANT_HOUSE_UNCONFIRMED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_AREA_LIMIT_NOTICE } from "../nbl-confirm-notices";
@@ -57,6 +58,8 @@ export function intervalEcho(intervals: ReadonlyArray<LandStateInterval>, busine
           ...(iv.temporaryStatusMonths ? { temporaryStatusMonths: iv.temporaryStatusMonths } : {}),
           ...(iv.temporaryStatusRemovedKind ? { temporaryStatusRemovedKind: iv.temporaryStatusRemovedKind } : {}),
           ...(iv.temporaryStatusPublicUse ? { temporaryStatusPublicUse: iv.temporaryStatusPublicUse } : {}),
+          ...(iv.temporaryStatusPublicUseWindow ? { temporaryStatusPublicUseWindow: iv.temporaryStatusPublicUseWindow } : {}),
+          ...(iv.temporaryStatusPublicUseUnused ? { temporaryStatusPublicUseUnused: iv.temporaryStatusPublicUseUnused } : {}),
           ...(iv.vacantHouseExtensionUnconfirmed ? { vacantHouseExtensionUnconfirmed: iv.vacantHouseExtensionUnconfirmed } : {}),
         }
       : {};
@@ -92,6 +95,7 @@ export function bareDeclarationNotices(intervals: ReadonlyArray<LandStateInterva
   if (intervals.some((iv) => iv.basisOutcome === "accepted" && !iv.temporaryStatusWindow)) notices.push(NBL_STATE_HISTORY_BARE_ACCEPTED_NOTICE);
   if (intervals.some((iv) => iv.temporaryStatusWindow)) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_ACCEPTED_NOTICE);
   if (intervals.some((iv) => iv.temporaryStatusPublicUse)) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_ACCEPTED_NOTICE);
+  if (intervals.some((iv) => iv.temporaryStatusPublicUseUnused)) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_PUBLIC_USE_UNUSED_NOTICE);
   if (intervals.some((iv) => iv.vacantHouseExtensionUnconfirmed)) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_VACANT_HOUSE_UNCONFIRMED_NOTICE);
   if (intervals.some((iv) => iv.temporaryStatusWindow && iv.temporaryStatusRemovedKind === "house")) notices.push(NBL_STATE_HISTORY_BARE_DEMOLISHED_HOUSE_AREA_NOTICE);
   return notices;

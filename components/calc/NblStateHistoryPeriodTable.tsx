@@ -51,7 +51,13 @@ function temporaryStatusText(iv: StateHistoryIntervalEcho): string | null {
   const start = toDate(w.start, "temporaryStatusWindow.start");
   const end = toDate(w.end, "temporaryStatusWindow.end");
   const months = iv.temporaryStatusMonths ? ` · 한시 기간 ${TEMPORARY_STATUS_MONTHS_TEXT[iv.temporaryStatusMonths]}` : "";
-  return `한시 지위 인정 ${iso(start)} ~ ${iso(addDays(end, -1))}(${differenceInDays(end, start).toLocaleString()}일${months})`;
+  const base = `한시 지위 인정 ${iso(start)} ~ ${iso(addDays(end, -1))}(${differenceInDays(end, start).toLocaleString()}일${months})`;
+  // E3f-3 — 제한 없는 창과 공용 사용 단서 창이 떨어져 있으면 둘째 창도 보인다(두 창의 합집합이 사업용).
+  const pu = iv.temporaryStatusPublicUseWindow;
+  if (!pu) return base;
+  const puStart = toDate(pu.start, "temporaryStatusPublicUseWindow.start");
+  const puEnd = toDate(pu.end, "temporaryStatusPublicUseWindow.end");
+  return `${base} + 공용 사용 단서 인정 ${iso(puStart)} ~ ${iso(addDays(puEnd, -1))}(${differenceInDays(puEnd, puStart).toLocaleString()}일 · 국가 등 공용 사용 기간만)`;
 }
 
 /**

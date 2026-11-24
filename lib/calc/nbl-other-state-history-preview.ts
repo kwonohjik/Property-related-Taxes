@@ -56,6 +56,10 @@ export interface StateHistoryPreviewRow {
   vacantHouseExtensionUnconfirmed?: LandStateInterval["vacantHouseExtensionUnconfirmed"];
   /** E3f-3 — 창을 영 §103의2 2호 단서(국가 등 공용 사용 기간)로 받았다(라벨 «한시 기간 중 공용 사용 기간만»). 없으면 키 없음. */
   temporaryStatusPublicUse?: LandStateInterval["temporaryStatusPublicUse"];
+  /** E3f-3 — 제한 없는 창(`temporaryStatusWindow`)과 단서 창이 떨어져 있을 때의 단서 창(ISO · 합집합이 사업용). 합쳐졌으면 키 없음. */
+  temporaryStatusPublicUseWindow?: { start: string; lastDay: string; days: number };
+  /** E3f-3 — 단서를 주장했으나 결과에 영향이 없었다(공용 사용 기간 안에 단서가 필요한 과세기준일 없음 — 고지). 없으면 키 없음. */
+  temporaryStatusPublicUseUnused?: LandStateInterval["temporaryStatusPublicUseUnused"];
   /** 마지막 구간(양도일 현재 — 현행 입력이 그대로 판정) */
   isTail: boolean;
   /** 이전 구간의 건축물·재산세 구분 기준 사업용 토지 요건 충족 여부. 마지막 구간은 `null`(계산 결과에서 확정). */
@@ -197,6 +201,16 @@ export function buildStateHistoryPreview(asset: AssetForm, transferDate: string 
             },
             ...(iv.temporaryStatusMonths ? { temporaryStatusMonths: iv.temporaryStatusMonths } : {}),
             ...(iv.temporaryStatusPublicUse ? { temporaryStatusPublicUse: iv.temporaryStatusPublicUse } : {}),
+            ...(iv.temporaryStatusPublicUseWindow
+              ? {
+                  temporaryStatusPublicUseWindow: {
+                    start: iso(iv.temporaryStatusPublicUseWindow.start),
+                    lastDay: iso(addDays(iv.temporaryStatusPublicUseWindow.end, -1)),
+                    days: differenceInDays(iv.temporaryStatusPublicUseWindow.end, iv.temporaryStatusPublicUseWindow.start),
+                  },
+                }
+              : {}),
+            ...(iv.temporaryStatusPublicUseUnused ? { temporaryStatusPublicUseUnused: iv.temporaryStatusPublicUseUnused } : {}),
             ...(iv.vacantHouseExtensionUnconfirmed ? { vacantHouseExtensionUnconfirmed: iv.vacantHouseExtensionUnconfirmed } : {}),
           }
         : {}),
