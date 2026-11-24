@@ -10,6 +10,7 @@
  *
  * 이 파일은 서버 모듈(`non-business-land-request.ts`)도 import하므로 React 컴포넌트를 import하지 않는다.
  */
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import type { NblOtherStateEventInput } from "@/lib/stores/calc-wizard-asset-nbl-other";
 import { consumesHousingStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
@@ -162,7 +163,10 @@ export function stateHistoryWireFields(asset: AssetForm): {
  * E3-③ B — 기타토지 철거 행 «주택» 입력이 **수도권 칸을 읽게 하는가**. ④ 수도권 전송 게이트 · ⑤ 수도권 칸 노출 · ⑧ H10 · ⑤ 미리보기 판정 맥락이 **같은 함수**다(T-7 — 하나라도 자체 조건을 쓰면
  * 값이 서버에 안 닿아 보수적 3배로 계산된다). 엔진 술어 `housePriorNeedsMetropolitan`을 직접 부르고, 사건은 **와이어 사건**(`stateHistoryWireFields` 결과 — 모드·적용 술어·종류 칸이 이미 반영)을 넘긴다 —
  * 폼 저장 사건을 넘기면 `unchanged`·`unknown` 뒤에 남은 stale 주택 철거 행이 «화면에 없는 칸 요구» 막다른 길을 만든다(X27 · P16).
+ *
+ * `transferDate`(L1) — 양도일(`YYYY-MM-DD`). 철거 전 주택 구간의 배율은 양도일 기준 표라 2022.1.1. 전 양도(종전 영 §168의12 — 도시지역 일률 5배)는 수도권이 배율을 가르지 않는다 → 거짓.
+ * 없거나 해석 불가면 현행 표로 본다(칸을 열어 묻는 쪽). ④(`buildNonBusinessLandRaw`) · ⑤ · ⑧ H10 · ⑤ 미리보기는 모두 같은 양도일을 넘기고, ⑭ 매퍼·엔진은 같은 술어에 `Date`를 넘긴다.
  */
-export function housePriorNeedsMetropolitanOf(asset: AssetForm): boolean {
-  return housePriorNeedsMetropolitan(asset.nblLandType, asset.nblZoneType, stateHistoryWireFields(asset).nblOtherStateEvents);
+export function housePriorNeedsMetropolitanOf(asset: AssetForm, transferDate: string | Date | undefined): boolean {
+  return housePriorNeedsMetropolitan(asset.nblLandType, asset.nblZoneType, stateHistoryWireFields(asset).nblOtherStateEvents, toOptionalDate(transferDate));
 }

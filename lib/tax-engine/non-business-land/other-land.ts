@@ -44,6 +44,7 @@ import {
   resolvePropertyTaxBasis,
 } from "./property-tax-basis";
 import { applyStateHistory } from "./other-land-state-history-apply";
+import { isPartialArea } from "./other-land-state-history-apply";
 import { buildFail } from "./other-land-helpers";
 import type { OtherLandOwnTrace } from "./other-land-helpers";
 import { buildPass } from "./other-land-helpers";
@@ -93,6 +94,17 @@ export function judgeOtherLand(
     trace,
     pre,
   );
+}
+
+/**
+ * 이 입력에서 core(`judgeOtherLandCore`)가 **면적 일부만 비사업용**으로 판정하는가 — `applyStateHistory`가 이력을 접는 조건(`isPartialArea`)을 그 입력 그대로 한 번 돌려 얻는다(E3-③ 후속 #1).
+ * 판정 후처리(이력·유예)는 하지 않는다 — 면적 안분은 core가 정하고 후처리가 바꾸지 못한다. UI(⑧ H9·H10 · ⑤ 필수 표시)가 «엔진이 철거 행 입력을 읽는가»를 같은 판정으로 게이트한다(자체 근사 금지).
+ * `rules`는 기간기준 임계만 쓰고 면적 안분은 규칙과 무관하다(3호·수입금액비율 경로의 기간기준만 규칙을 읽는다 — 호출자가 기본 규칙을 넘기면 DB 규칙과 그 경로에서만 갈릴 수 있다).
+ */
+export function otherLandAreaIsPartial(rawInput: NonBusinessLandInput, rules: NonBusinessLandJudgmentRules): boolean {
+  const input = prepareRevenueHistory(rawInput).input;
+  if (!input.otherLand) return false;
+  return isPartialArea(judgeOtherLandCore(input, rules, {}));
 }
 
 function judgeOtherLandCore(

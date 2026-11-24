@@ -165,7 +165,7 @@ export function buildNonBusinessLandRaw(
   const consumes = {
     incorporation: consumesUrbanIncorporationDate(asset.nblLandType),
     // E3-③ B — 기타토지는 소비표 열을 열지 않고(D-13) «철거된 건축물 = 주택» 행이 있고 수도권이 배율을 가르는 용도지역일 때만 보낸다(엔진 술어 단일 소스 — 안 열면 서버가 수도권 미제공으로 읽어 보수적 3배 · 초과 접힘).
-    metro: consumesMetropolitanArea(asset.nblLandType) || housePriorNeedsMetropolitanOf(asset),
+    metro: consumesMetropolitanArea(asset.nblLandType) || housePriorNeedsMetropolitanOf(asset, transferDate),
     deemed: consumesPeriodJudgmentDate(asset.nblLandType),
   };
   return {

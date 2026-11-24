@@ -32,6 +32,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { buildHouseFootprintPreview } from "@/lib/calc/nbl-other-state-history-preview";
 import { buildStateHistoryPreview } from "@/lib/calc/nbl-other-state-history-preview";
 import { housingAreaLimitState } from "@/lib/calc/nbl-other-state-history-preview";
+import { housePriorHistoryIgnoredOf } from "@/lib/calc/nbl-other-state-history-read";
 import type { StateHistoryPreviewRow } from "@/lib/calc/nbl-other-state-history-preview";
 import { houseCheckText, houseIntervalText } from "@/lib/calc/nbl-house-interval-text";
 import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-scope";
@@ -54,6 +55,7 @@ import { NBL_STATE_HISTORY_HOUSE_EXCEEDED_NOTICE } from "@/lib/tax-engine/nbl-co
 import { NBL_STATE_HISTORY_HOUSING_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_HOUSING_NON_HOUSE_BUILDING_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_REMOVED_TAX_TYPE_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
@@ -169,9 +171,12 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
   const areaLimit = house ? housingAreaLimitState(asset, transferDate) : "unknown";
   const tailHasBuilding = house || asset.nblOtherHasBuilding;
   const tailKind = house ? ("house" as const) : undefined;
-  // A — 양도일 현재 배율 초과면 엔진이 이력을 읽지 않는다: 미리보기·정착면적 필수 표시를 하지 않는다(⑧ H9와 같은 판정 — `housingAreaLimitState`).
-  const historyIgnored = house && areaLimit === "exceeded";
-  const needsMetro = housePriorNeedsMetropolitanOf(asset);
+  // B — 엔진이 «철거된 건축물 = 주택» 행 입력을 읽지 않는 경우(양도일 의제 사유 ∨ core가 면적 일부만 비사업용): ⑧ H9·H10과 같은 함수(`housePriorHistoryIgnoredOf` — 엔진 `isPartialArea`·`stateHistoryDeemedBlocks`를 돌린다).
+  const otherIgnored = useMemo(() => !house && mode === "changed" && housePriorHistoryIgnoredOf(asset, transferDate), [asset, house, mode, transferDate]);
+  // A — 양도일 현재 배율 초과면 엔진이 이력을 읽지 않는다: 미리보기·정착면적 필수 표시를 하지 않는다(⑧ H9와 같은 판정 — `housingAreaLimitState`). B도 엔진이 읽지 않으면 같은 표시를 한다(칸 값은 보존).
+  const historyIgnored = (house && areaLimit === "exceeded") || otherIgnored;
+  // 수도권 칸은 철거된 주택 구간의 배율 전용이다 — 엔진이 그 구간을 읽지 않으면 쓰이지 않으므로 보이지 않는다(저장값은 지우지 않는다).
+  const needsMetro = housePriorNeedsMetropolitanOf(asset, transferDate) && !otherIgnored;
 
   function changeMode(v: Mode) {
     // `changed → 그 밖`으로 바꿀 때는 숨었던 「건축물 있음」 토글에 마지막 파생값을 한 번 써 준다(이벤트 시점 쓰기 — `useEffect` 미러링 아님).
@@ -242,6 +247,12 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
         </ToneCard>
       )}
       {/* 주택 카드 + 양도일 현재 배율 초과: 엔진은 이력을 읽지 않고 `unknown` 고지도 싣지 않는다(결과 = 현행 그대로 — UI Low 2: 입력 화면 = 결과). */}
+      {/* B — 면적 일부만 비사업용이라 엔진이 철거 행 이력을 읽지 않는다(의제 사유는 아래 의제 안내가 따로 있다). 문구는 엔진 `PARTIAL_AREA` 상수(결과 고지와 같다). */}
+      {otherIgnored && mode === "changed" && !deemedBlocks && (
+        <ToneCard tone="amber">
+          <p className="text-caption leading-snug" data-testid="nbl-other-partial-area-notice">{NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE}</p>
+        </ToneCard>
+      )}
       {mode === "unknown" && !historyIgnored && (
         <ToneCard tone="amber">
           <p className="text-caption leading-snug" data-testid="nbl-state-history-unknown-notice">{NBL_STATE_HISTORY_UNKNOWN_NOTICE}</p>

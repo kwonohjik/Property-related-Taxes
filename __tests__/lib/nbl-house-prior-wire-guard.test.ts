@@ -8,9 +8,11 @@
  * mutation 대응: ⑫ 행 스키마에서 `buildingKindBefore` 삭제 → FIELD · ⑯ `housePriorNeedsMetropolitanOf`가 폼 저장 events를 읽음 → SINGLE ·
  *   ⑰ ④ `metro` 게이트에서 술어 제거 → SINGLE(request) · ⑱ ⑧ H10 제거 → SINGLE(validate) · ⑲ ⑧ H10이 술어 없이 항상 요구 → SINGLE.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, expectTypeOf } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { NblRawRefineInput } from "@/lib/api/transfer-tax-schema-nbl-refines";
+import type { StateEventRowLike } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 
 const ROOT = join(__dirname, "..", "..");
 const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
@@ -23,6 +25,8 @@ const REQUEST = "lib/calc/non-business-land-request.ts"; // ④ 전송
 const PREVIEW = "lib/calc/nbl-other-state-history-preview.ts"; // ⑤ 미리보기 맥락
 const VALIDATE_SH = "lib/calc/transfer-tax-validate-nbl-state-history.ts"; // ⑧
 const SECTION = "components/calc/transfer/nbl/OtherLandStateHistorySection.tsx"; // ⑤
+const READ = "lib/calc/nbl-other-state-history-read.ts"; // ⑤⑧ «엔진이 철거 행 이력을 읽는가»
+const REFINES = "lib/api/transfer-tax-schema-nbl-refines.ts"; // ⑫ refine 입력 타입
 const KIND_FIELD = "components/calc/transfer/nbl/OtherLandBuildingKindField.tsx"; // ⑤ 종류 카드
 const SCHEMA = "lib/api/transfer-tax-schema-nbl.ts"; // ⑫
 const MAPPER = "lib/tax-engine/non-business-land/form-mapper-helpers.ts"; // ⑭
@@ -66,25 +70,25 @@ describe("SINGLE — 수도권 칸은 엔진 술어(와이어 사건 인자)를 
   });
 
   it("④ 전송: `metro` 게이트 = 소비표 지목 ∨ B 술어 — 한쪽만 읽으면 수도권 값이 비워져 서버가 보수적 3배로 읽는다(BP1)", () => {
-    expect(src(REQUEST)).toMatch(/metro:\s*consumesMetropolitanArea\(asset\.nblLandType\)\s*\|\|\s*housePriorNeedsMetropolitanOf\(asset\)/);
+    expect(src(REQUEST)).toMatch(/metro:\s*consumesMetropolitanArea\(asset\.nblLandType\)\s*\|\|\s*housePriorNeedsMetropolitanOf\(asset,\s*transferDate\)/);
     expect(src(REQUEST)).toMatch(/nblIsMetropolitanArea:\s*consumes\.metro\s*\?/);
   });
 
   it("⑭ 서버 매퍼도 같은 엔진 술어로 수도권을 읽는다(전송 ≡ 매퍼)", () => {
-    expect(src(FORM_MAPPER)).toMatch(/housePriorNeedsMetropolitan\(landType,\s*zoneType,\s*priorEvents\)/);
+    expect(src(FORM_MAPPER)).toMatch(/housePriorNeedsMetropolitan\(landType,\s*zoneType,\s*priorEvents,\s*transferDate\)/);
   });
 
   it("⑤ 위젯은 술어로만 수도권 칸을 노출한다(자체 용도지역 조건 금지)", () => {
     const s = src(SECTION);
-    expect(s).toMatch(/housePriorNeedsMetropolitanOf\(asset\)/);
+    expect(s).toMatch(/housePriorNeedsMetropolitanOf\(asset,\s*transferDate\)/);
     expect(s).toMatch(/needsMetro\s*&&/);
     expect(s).not.toMatch(/isUrbanResidentialCommercialIndustrial\(|metropolitanChangesHousingMultiplier\(/);
   });
 
-  it("⑧ H10은 술어가 참일 때만 요구하고 의제 사유(엔진 `stateHistoryDeemedBlocks` 래퍼)가 있으면 건너뛴다 · 필드 앵커 `nblIsMetropolitanArea`", () => {
+  it("⑧ H10은 술어가 참일 때만 요구하고 엔진이 이력을 읽지 않으면(의제 사유 ∨ 부분 면적 — `housePriorHistoryIgnoredOf`) 건너뛴다 · 필드 앵커 `nblIsMetropolitanArea`", () => {
     const s = src(VALIDATE_SH);
     const fn = s.match(/function housePriorMetropolitanError[\s\S]*?\n}\n/)![0];
-    expect(fn).toMatch(/!housePriorNeedsMetropolitanOf\(asset\)\s*\|\|\s*stateHistoryDeemedBlocksOf\(asset\)/);
+    expect(fn).toMatch(/!housePriorNeedsMetropolitanOf\(asset,\s*transferDate\)\s*\|\|\s*housePriorHistoryIgnoredOf\(asset,\s*transferDate\)/);
     expect(fn).toMatch(/fieldError\("nblIsMetropolitanArea"/);
     expect(s).not.toMatch(/isUrbanResidentialCommercialIndustrial\(/);
   });
@@ -111,5 +115,35 @@ describe("⑦ 결과 구간표 — 주택 구간 행만 변형(echo `buildingKin
     const s = src(TABLE);
     expect(s).toMatch(/const house\s*=\s*intervals\.length\s*>\s*0\s*&&\s*isHouse\(intervals\[intervals\.length\s*-\s*1\]\)/);
     expect(s).toMatch(/const mixedHouse\s*=\s*!house\s*&&\s*intervals\.some\(isHouse\)/);
+  });
+});
+
+describe("E3-③ 후속 — «엔진이 읽는 칸만 요구한다»(#1·L2) 게이트는 한 래퍼 · 엔진 판정을 돌린다 · ⑫ refine 입력 타입 정합(L3)", () => {
+  it("읽음 래퍼는 엔진 부분 면적 판정(`otherLandAreaIsPartial`)·의제 술어 래퍼를 부르고 ④ raw → ⑭ 매퍼 경로를 쓴다(자체 면적·호 근사 금지)", () => {
+    const s = src(READ);
+    expect(s).toMatch(/otherLandAreaIsPartial\(/);
+    expect(s).toMatch(/stateHistoryDeemedBlocksOf\(asset\)/);
+    expect(s).toMatch(/buildNonBusinessLandRaw\(/);
+    expect(s).toMatch(/buildNblEngineInput\(/);
+    expect(s).not.toMatch(/buildingFloorArea|nblOtherMinGarageArea|nblOtherStandardAreaLimit|getZoneAreaMultiplier|isAreaOver\(/);
+  });
+
+  it("⑤ 필수 표시·수도권 칸·부분 면적 고지가 같은 래퍼(`housePriorHistoryIgnoredOf`)로 정해진다(자체 의제 조건 금지)", () => {
+    const s = src(SECTION);
+    expect(s).toMatch(/housePriorHistoryIgnoredOf\(asset,\s*transferDate\)/);
+    expect(s).toMatch(/historyIgnored\s*=\s*\(house\s*&&\s*areaLimit\s*===\s*["']exceeded["']\)\s*\|\|\s*otherIgnored/);
+    expect(s).toMatch(/needsMetro\s*=\s*housePriorNeedsMetropolitanOf\(asset,\s*transferDate\)\s*&&\s*!otherIgnored/);
+    expect(s).toMatch(/required=\{!historyIgnored\}/);
+  });
+
+  it("⑧ H9(B)도 같은 래퍼로 건너뛴다", () => {
+    expect(src(VALIDATE_SH)).toMatch(/if\s*\(housePriorHistoryIgnoredOf\(asset,\s*transferDate\)\)\s*return null/);
+  });
+
+  it("L3 ⑫ refine 입력 타입의 사건 행 = 공용 leaf 타입 — `buildingKindBefore`를 포함한다", () => {
+    expect(src(REFINES)).toMatch(/nblOtherStateEvents\?:\s*StateEventRowLike\[\]/);
+    type Row = NonNullable<NblRawRefineInput["nblOtherStateEvents"]>[number];
+    expectTypeOf<Row>().toEqualTypeOf<StateEventRowLike>();
+    expectTypeOf<Row>().toHaveProperty("buildingKindBefore");
   });
 });
