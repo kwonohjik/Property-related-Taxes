@@ -134,6 +134,8 @@ export const NBL = {
   PTAX_BASIS_DEMOLISHED_BODY:     "지방세법 §106 ① 2호 다목 + 지방세법 시행령 §103의2",
   /** 영 §103의2 2호(빈집정비사업 등으로 철거된 빈집 — 철거일부터 3년 · 2024.6.1.~) */
   PTAX_BASIS_DEMOLISHED_VACANT_HOUSE: "지방세법 §106 ① 2호 다목 + 지방세법 시행령 §103의2 2호",
+  /** 영 §105 — 주택 부속토지의 범위(경계가 명백하지 아니한 경우 바닥면적의 10배). 철거한 주택 구간의 한시 창이 면적 한도를 적용하지 않는 이유를 밝히는 고지가 읽는다(E3f-2). 검증: manifest `LOCAL_DECREE.HOUSE_APPURTENANT_LAND`. */
+  PTAX_BASIS_DEMOLISHED_HOUSE_SITE: "지방세법 시행령 §105",
   // §168의11① 호별 면적기준 (갭 3a) — 초과분 비사업용 면적 안분
   OTHER_LAND_AREA_SPORTS:         "소득세법 시행령 §168조의11 ① 1호 + 소득세법 시행규칙 §83조의4 ①③④",
   OTHER_LAND_AREA_PARKING:        "소득세법 시행령 §168조의11 ① 2호 가목",

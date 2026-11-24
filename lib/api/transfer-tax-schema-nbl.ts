@@ -2,6 +2,7 @@ import { z } from "zod";
 import { NBL_PROPERTY_TAX_TYPE_VALUES, NBL_RELATED_BUSINESS_TYPE_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
 import { NBL_STATE_HISTORY_MODE_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
 import { NBL_AREA_WITHIN_LIMIT_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
+import { NBL_DEMOLISHED_FACT_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
 import { NBL_STATE_BUILDING_KIND_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
 import { WHOLESALE_ITEM_VALUES } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import { PROPERTY_TAX_BASIS_VALUES } from "@/lib/tax-engine/non-business-land/property-tax-basis";
@@ -63,6 +64,11 @@ const nblStateEventRawSchema = z.object({
   // E3-1b — 나대지 구간을 닫는 행(신축 · 나대지 위 구분 변경)의 근거·공지상태 면적한도. 빠지면 중첩 칸이 **침묵 strip**돼 선언이 엔진에 닿지 않는다(TS 미감지 — route 관통 anchor가 고정).
   propertyTaxBasisBefore: z.enum(PROPERTY_TAX_BASIS_VALUES).or(z.literal("")).optional(),
   areaWithinLimitBefore: z.enum(NBL_AREA_WITHIN_LIMIT_VALUES).or(z.literal("")).optional(),
+  // E3-⑤ E3f-2 — 나대지 구간 근거 «철거ㆍ멸실»의 사실 칸 4개(철거 행 뒤 나대지 구간 — 허가·건축 외 용도·빈집정비 3지선다 + 종전 바닥면적 문자열). 빠지면 중첩 칸이 **침묵 strip**돼 한시 창이 «모름»으로 접힌다(TS 미감지 — route 관통 anchor가 고정).
+  demolishedPermitBefore: z.enum(NBL_DEMOLISHED_FACT_VALUES).or(z.literal("")).optional(),
+  demolishedOtherUseBefore: z.enum(NBL_DEMOLISHED_FACT_VALUES).or(z.literal("")).optional(),
+  demolishedVacantHouseBefore: z.enum(NBL_DEMOLISHED_FACT_VALUES).or(z.literal("")).optional(),
+  demolishedFloorAreaBefore: z.string().optional(),
   // E3-③ — 주택 구간을 닫는 철거 행의 «철거 직전 주택 정착면적(㎡)» — 숫자 문자열(빈칸·비수치·0·음수는 ⑧이 막고, 직접 API는 400 없이 엔진이 «모름»으로 접는다 — Q-10 (가) · D-16). 빠지면 중첩 칸이 **침묵 strip**돼 철거 전 주택 구간이 전부 접힌다(TS 미감지 — route 관통 anchor가 고정).
   houseFootprintBefore: z.string().optional(),
   // E3-③ B — 기타토지 철거 행의 «철거된 건축물 종류»(`"house"` = 주택 · `""`·미전송 = 주택 아닌 건축물 — 종전 철거 행과 바이트 동일). 빠지면 중첩 칸이 **침묵 strip**돼 주택 구간이 종전 «재산세 구분 사슬»로 읽힌다(TS 미감지 — route 관통 anchor가 고정).

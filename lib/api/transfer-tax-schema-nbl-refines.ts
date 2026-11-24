@@ -18,6 +18,9 @@ import { parseAmount, parseDecimal } from "@/lib/calc/number-parse";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import { resortAreaIssue } from "@/lib/tax-engine/non-business-land/resort-area-issue";
 import { demolishedInputIssue } from "@/lib/tax-engine/non-business-land/demolished-input-issue";
+import { demolishedRowFactIssue } from "@/lib/tax-engine/non-business-land/demolished-row-facts";
+import { nblStateHistoryIsRead } from "@/lib/calc/nbl-other-state-history-read";
+import { consumesHousingStateHistory } from "@/lib/tax-engine/non-business-land/land-category";
 import type { PropertyTaxBasis } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { graceRowIssue, type GraceRowLike } from "@/lib/tax-engine/non-business-land/grace-row-issue";
 import { deemedTransferDateIssue, deemedTransferDateIssueMessage } from "@/lib/tax-engine/non-business-land/deemed-transfer-date-range";
@@ -119,6 +122,20 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
     const stateIssue = stateEventSequenceIssue(raw.nblOtherStateEvents ?? [], { transferDate: raw.transferDate ?? "", subject: stateEventSubjectOf(landType) });
     if (stateIssue) issue(stateIssue.index === null ? ["nblOtherStateEvents"] : ["nblOtherStateEvents", stateIssue.index, stateIssue.field], stateIssue.message);
     stateRowIssued = !!stateIssue;
+    // E3-⑤ E3f-2 — 나대지 구간 근거 «철거ㆍ멸실»의 사실 칸 4개(⑧ `demolishedRowFactError`의 거울 — 같은 leaf `demolishedRowFactIssue` · 같은 `nblStateHistoryIsRead` · 같은 문구).
+    // 요구 칸 = 엔진 `demolishedRequiredFacts` ∧ 엔진이 이력을 읽을 때만(UQ-8 (가)). 사건 행 결함이 있으면 날짜를 못 읽어 요구 집합이 비므로 중복 안내하지 않는다. ④가 요구 칸만 싣는다(직접 호출자의 stale 값은 읽지 않는다).
+    if (!stateIssue) {
+      const house = consumesHousingStateHistory(landType);
+      const events = raw.nblOtherStateEvents ?? [];
+      const factIssue = demolishedRowFactIssue({
+        events,
+        fallbackHasBuilding: house || !!raw.nblOtherHasBuilding,
+        tailKind: house ? "house" : undefined,
+        historyRead: () => nblStateHistoryIsRead(raw as unknown as Record<string, unknown>),
+        zoneType: raw.nblZoneType ?? "",
+      });
+      if (factIssue) issue(["nblOtherStateEvents", factIssue.index, factIssue.field], factIssue.message);
+    }
   }
 
   // NBL-STATE-HISTORY-E3-④ — 13호 세대 주택 소유 기간 행: 13호일 때만 **구조**(빈·해석 불가·역순·같은 날·양도일 이후 시작)를 검사한다(⑧ HH-3 거울 — 같은 leaf `householdHousePeriodIssue` · 같은 문구).

@@ -10,6 +10,7 @@
  */
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { differenceInDays } from "@/lib/tax-engine/utc-date";
+import { addDays } from "@/lib/tax-engine/utc-date";
 import type { HouseCheck, HouseOutcome, LandStateInterval, StateBuildingKind, StateEvent } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { HouseIntervalCtx } from "@/lib/tax-engine/non-business-land/housing-limit";
 import { housingStateHistoryIsRead, judgeHousingLimit, resolveHouseInterval } from "@/lib/tax-engine/non-business-land/housing-limit";
@@ -46,6 +47,13 @@ export interface StateHistoryPreviewRow {
   buildingKind?: StateBuildingKind;
   houseOutcome?: HouseOutcome;
   houseCheck?: HouseCheck;
+  /**
+   * E3f-2 — 근거 «철거ㆍ멸실»을 받아들인 나대지 구간의 한시 창(구간 안으로 자른 일 단위 — 시작일·마지막 날 ISO · 철거일 당일부터 만료일 당일까지). 없으면 키 없음. 이 구간은 `meetsBuildingRequirement`가 거짓이고 창만 사업용이다.
+   * `foldReason`에 새 접힘 사유(`demolished_*`)가 실릴 수 있다. 표시 전용(판정은 엔진 leaf).
+   */
+  temporaryStatusWindow?: { start: string; lastDay: string; days: number };
+  temporaryStatusMonths?: LandStateInterval["temporaryStatusMonths"];
+  vacantHouseExtensionUnconfirmed?: LandStateInterval["vacantHouseExtensionUnconfirmed"];
   /** 마지막 구간(양도일 현재 — 현행 입력이 그대로 판정) */
   isTail: boolean;
   /** 이전 구간의 건축물·재산세 구분 기준 사업용 토지 요건 충족 여부. 마지막 구간은 `null`(계산 결과에서 확정). */
@@ -140,6 +148,11 @@ export function buildStateHistoryPreview(asset: AssetForm, transferDate: string 
       areaWithinLimitBefore: w.areaWithinLimitBefore,
       ...(w.houseFootprintBefore ? { houseFootprintBefore: parseFloat(w.houseFootprintBefore.replace(/,/g, "")) } : {}),
       ...(w.buildingKindBefore ? { buildingKindBefore: w.buildingKindBefore } : {}),
+      // E3f-2 — 근거 «철거ㆍ멸실»의 사실 칸(④ 와이어가 요구 칸만 싣는다 — ⑭ 매퍼와 같은 읽기). 키가 없으면 «미선택»이다.
+      ...(w.demolishedPermitBefore ? { demolishedPermitBefore: w.demolishedPermitBefore } : {}),
+      ...(w.demolishedOtherUseBefore ? { demolishedOtherUseBefore: w.demolishedOtherUseBefore } : {}),
+      ...(w.demolishedVacantHouseBefore ? { demolishedVacantHouseBefore: w.demolishedVacantHouseBefore } : {}),
+      ...(Number.isFinite(parseFloat((w.demolishedFloorAreaBefore ?? "").replace(/,/g, ""))) ? { demolishedFloorAreaBefore: parseFloat((w.demolishedFloorAreaBefore ?? "").replace(/,/g, "")) } : {}),
     };
   });
   const intervals = deriveOtherLandStateIntervals(
@@ -168,6 +181,17 @@ export function buildStateHistoryPreview(asset: AssetForm, transferDate: string 
       hasBuilding: iv.hasBuilding,
       propertyTaxType: iv.propertyTaxType,
       ...(iv.basisOutcome ? { basisOutcome: iv.basisOutcome, ...(iv.basis ? { basis: iv.basis } : {}), ...(iv.foldReason ? { foldReason: iv.foldReason } : {}) } : {}),
+      ...(iv.temporaryStatusWindow
+        ? {
+            temporaryStatusWindow: {
+              start: iso(iv.temporaryStatusWindow.start),
+              lastDay: iso(addDays(iv.temporaryStatusWindow.end, -1)),
+              days: differenceInDays(iv.temporaryStatusWindow.end, iv.temporaryStatusWindow.start),
+            },
+            ...(iv.temporaryStatusMonths ? { temporaryStatusMonths: iv.temporaryStatusMonths } : {}),
+            ...(iv.vacantHouseExtensionUnconfirmed ? { vacantHouseExtensionUnconfirmed: iv.vacantHouseExtensionUnconfirmed } : {}),
+          }
+        : {}),
       ...(iv.buildingKind ? { buildingKind: iv.buildingKind, ...(iv.houseOutcome ? { houseOutcome: iv.houseOutcome } : {}), ...(iv.houseCheck ? { houseCheck: iv.houseCheck } : {}) } : {}),
       isTail,
       meetsBuildingRequirement: isTail ? null : isStateIntervalBusiness(iv),

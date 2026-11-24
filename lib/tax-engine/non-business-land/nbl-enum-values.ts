@@ -7,6 +7,7 @@
  * 컴파일 오류가 되어 이 목록이 따라간다.
  */
 import type { AreaWithinLimit } from "./land-usage.types";
+import type { DemolishedFact } from "./land-usage.types";
 import type { PropertyTaxType } from "./land-usage.types";
 import type { StateBuildingKind } from "./land-usage.types";
 import type { StateHistoryMode } from "./land-usage.types";
@@ -50,3 +51,9 @@ export const NBL_STATE_BUILDING_KIND_VALUES = ["house"] as const satisfies reado
 
 const stateBuildingKindCovered: Exclude<StateBuildingKind, (typeof NBL_STATE_BUILDING_KIND_VALUES)[number]> extends never ? true : false = true;
 void stateBuildingKindCovered;
+
+/** NBL-STATE-HISTORY-E3-⑤ E3f-2 — 나대지 구간 근거 «철거ㆍ멸실»의 사실 3지선다(허가·사용승인 / 건축 외 용도 / 빈집정비) 값(⑫ Zod enum의 단일 소스 · `""` = 미선택은 Zod에서 `.or(z.literal(""))`). */
+export const NBL_DEMOLISHED_FACT_VALUES = ["yes", "no", "unknown"] as const satisfies readonly Exclude<DemolishedFact, "">[];
+
+const demolishedFactCovered: Exclude<DemolishedFact, "" | (typeof NBL_DEMOLISHED_FACT_VALUES)[number]> extends never ? true : false = true;
+void demolishedFactCovered;

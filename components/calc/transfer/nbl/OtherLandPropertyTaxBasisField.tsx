@@ -28,13 +28,6 @@ interface Props {
   transferDate?: string;
 }
 
-/** 이 자산의 양도일 현재(꼬리) 근거 선택지에 «철거ㆍ멸실»이 있는가 — 이 칸이 보이는 조건과 같은 엔진 술어(나대지 구간 hint의 «꼬리 칸과 달리» 보충이 읽는다). */
-export function tailOffersDemolishedBasis(asset: AssetForm): boolean {
-  const declared = asset.nblOtherPropertyTaxType;
-  if (!declared) return false;
-  return propertyTaxBasisOptions(declared as PropertyTaxType, effectiveOtherHasBuildingOf(asset)).includes("demolished");
-}
-
 export function OtherLandPropertyTaxBasisField({ asset, onAssetChange, transferDate }: Props) {
   const declared = asset.nblOtherPropertyTaxType;
   if (!declared) return null;

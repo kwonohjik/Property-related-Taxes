@@ -18,10 +18,13 @@
  */
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
 import { stateHistoryModeRequiredMessage } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
+import { demolishedRowFactIssue } from "@/lib/tax-engine/non-business-land/demolished-row-facts";
 import { stateEventSequenceIssue } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { stateEventSubjectOf } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { housingAreaLimitState } from "./nbl-other-state-history-preview";
 import { housePriorHistoryIgnoredOf } from "./nbl-other-state-history-read";
+import { nblStateHistoryIsRead } from "./nbl-other-state-history-read";
+import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { housePriorFootprintIssueOf } from "./nbl-other-state-history-scope";
 import { housePriorNeedsMetropolitanOf } from "./nbl-other-state-history-scope";
 import { nblHousingStateHistoryApplies } from "./nbl-other-state-history-scope";
@@ -70,7 +73,7 @@ export function validateNblStateHistory(asset: AssetForm, label: string, ctx: St
     floorDate: ctx.floorDate,
     subject: stateEventSubjectOf(asset.nblLandType),
   });
-  if (!issue) return housePriorFootprintError(asset, prefix, ctx.transferDate) ?? housePriorMetropolitanError(asset, prefix, ctx.transferDate);
+  if (!issue) return housePriorFootprintError(asset, prefix, ctx.transferDate) ?? housePriorMetropolitanError(asset, prefix, ctx.transferDate) ?? demolishedRowFactError(asset, prefix, ctx.transferDate);
   const message = `${prefix}${issue.message}`;
   if (issue.field === "events" || issue.index === null) return fieldError("nblOtherStateEvents", message);
   // E3-③ B D-8 구조 오류(`houseKindEventIssue`)는 «철거된 건축물 종류» 칸이 아니라 행의 사건 종류 칸으로 보낸다 — 종류 칸 앵커는 없다(plan §7 «buildingKindBefore는 앵커 불요»).
@@ -104,4 +107,34 @@ function housePriorMetropolitanError(asset: AssetForm, prefix: string, transferD
   if (!housePriorNeedsMetropolitanOf(asset, transferDate) || housePriorHistoryIgnoredOf(asset, transferDate)) return null;
   if (asset.nblIsMetropolitanArea && asset.nblIsMetropolitanArea !== "unknown") return null;
   return fieldError("nblIsMetropolitanArea", `${prefix}철거된 건축물을 「주택」으로 선택했습니다 — 철거 전 주택 구간의 배율은 수도권 여부에 따라 달라집니다(도시지역 주·상·공: 수도권 3배 / 수도권 밖 5배). 수도권 여부를 선택하세요.`);
+}
+
+/**
+ * E3-⑤ E3f-2 #D — 나대지 구간 근거 «철거ㆍ멸실»의 사실 칸 4개(허가·사용승인 / 건축 외 용도 / 빈집정비 / 종전 바닥면적). 요구 칸 = 엔진 `demolishedRequiredFacts` ∧ **엔진이 이력을 읽을 때만**(UQ-8 (가) —
+ * `nblStateHistoryIsRead(raw)`: 양도일 의제 ∨ core 부분 면적이면 4칸 모두 요구하지 않는다). 빈칸(정량 = 빈칸·비양수·비수치 / 3지선다 = 미선택 `""`)은 차단하고 명시 «모름»은 막지 않는다(Q-5 (가) · Q-11 (나)).
+ * ⑫′(`refineNonBusinessLandRaw`)가 **같은 leaf `demolishedRowFactIssue`**·같은 `nblStateHistoryIsRead`·같은 문구를 쓴다(⑧↔⑫ 거울). 사건은 ④ 와이어 사건(요구 칸만 실린다).
+ */
+function demolishedRowFactError(asset: AssetForm, prefix: string, transferDate: string | undefined): string | null {
+  const house = nblHousingStateHistoryApplies(asset);
+  const issue = demolishedRowFactIssue({
+    events: stateHistoryWireFields(asset).nblOtherStateEvents,
+    // `stateHistoryWireFields`·⑭와 같은 초기 건축물 상태(건축물 사건 0건일 때만 쓰인다).
+    fallbackHasBuilding: house || asset.nblOtherHasBuilding,
+    tailKind: house ? "house" : undefined,
+    historyRead: () => nblStateHistoryIsRead(buildNonBusinessLandRaw(asset, transferDate ?? "") ?? {}),
+    zoneType: asset.nblZoneType,
+  });
+  if (!issue) return null;
+  const message = `${prefix}${issue.message}`;
+  // 필드 키는 리터럴 접두 형태로 둔다 — 정적 게이트(`transfer-validation-field-anchor-coverage`)가 `${…}`를 `*`로 정규화해 읽는다(동적 접미는 게이트를 비운다).
+  switch (issue.field) {
+    case "demolishedPermitBefore":
+      return fieldError(`nblOtherStateEvents.${issue.index}.demolishedPermitBefore`, message);
+    case "demolishedOtherUseBefore":
+      return fieldError(`nblOtherStateEvents.${issue.index}.demolishedOtherUseBefore`, message);
+    case "demolishedVacantHouseBefore":
+      return fieldError(`nblOtherStateEvents.${issue.index}.demolishedVacantHouseBefore`, message);
+    case "demolishedFloorAreaBefore":
+      return fieldError(`nblOtherStateEvents.${issue.index}.demolishedFloorAreaBefore`, message);
+  }
 }

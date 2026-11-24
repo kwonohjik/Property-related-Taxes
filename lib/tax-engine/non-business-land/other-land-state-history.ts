@@ -33,10 +33,13 @@ import { stateEventSameKindMessage } from "./nbl-validation-messages";
 import { stateEventsRequiredMessage } from "./nbl-validation-messages";
 import { resolveHouseInterval } from "./housing-limit";
 import { consumesHousingStateHistory } from "./land-category";
+import { demolishedStatusWindow } from "./demolished-temp-status";
+import { isUsableBasis } from "./property-tax-basis";
 import { propertyTaxBasisOptions } from "./property-tax-basis";
 import { resolvePropertyTaxBasis } from "./property-tax-basis";
 import { PROPERTY_TAX_TYPE_LABEL } from "./property-tax-type-label";
 import { getOverlappingPeriods } from "./utils/period-math";
+import type { DemolishedRemovedKind } from "./demolished-temp-status";
 import type { BareFoldReason } from "./land-usage.types";
 import type { LandStateInterval } from "./land-usage.types";
 import type { PropertyTaxType } from "./land-usage.types";
@@ -137,11 +140,20 @@ export function eventClosesBareInterval(events: ReadonlyArray<{ kind: string }>,
 }
 
 /**
- * 나대지 구간 선언에서 고를 수 있는 근거 선택지(「모름」 포함) — V1-A 선택지(`propertyTaxBasisOptions(declared, false)`)에서 **`demolished` 제외**(철거 후 한시 지위는 파생 경계가 필요한
- * E3 ⑤ 축이고, 유예기간 9호가 이미 덮는다 — 결정 2026-11-23). 빈 배열 = 근거를 묻지 않는다(종합합산).
+ * E3-⑤ E3f-2 — `index`번째 사건이 **근거 «철거ㆍ멸실»을 고를 수 있는 나대지 구간을 닫는가** = 나대지 구간을 닫고(`eventClosesBareInterval`) ∧ 그 구간 **앞의 마지막 건축물 사건이 철거 행**이다
+ * (사이에 신축이 없다 — 철거 → 구분 변경 → 구분 변경 …의 나대지 구간마다 같은 철거일). 취득 전 철거로 첫 구간이 나대지인 경우는 철거일 출처가 없어 아니다(계획서 V-15 — 9호 유예로 입력).
+ * ⑤ 선택지 · ④ 와이어 · ⑭ 매퍼 · ⑧ · ⑫′ · 엔진이 **같은 술어**를 쓴다(`removalRowIndexFor`).
  */
-export function eventBasisOptions(declared: PropertyTaxType): readonly PropertyTaxBasis[] {
-  return propertyTaxBasisOptions(declared, false).filter((b) => b !== "demolished");
+export function eventOffersDemolished(events: ReadonlyArray<{ kind: string }>, index: number, tailHasBuilding: boolean): boolean {
+  return eventClosesBareInterval(events, index, tailHasBuilding) && removalRowIndexFor(events, index) >= 0;
+}
+
+/**
+ * 나대지 구간 선언에서 고를 수 있는 근거 선택지(「모름」 포함) — V1-A 선택지(`propertyTaxBasisOptions(declared, false)`)에서 **`demolished`는 `offersDemolished`일 때만**
+ * (철거 행 뒤의 나대지 구간 — `eventOffersDemolished`. 그 밖의 구간은 종전대로 제외 — 철거일 출처가 없다). 빈 배열 = 근거를 묻지 않는다(종합합산).
+ */
+export function eventBasisOptions(declared: PropertyTaxType, offersDemolished = false): readonly PropertyTaxBasis[] {
+  return propertyTaxBasisOptions(declared, false).filter((b) => b !== "demolished" || offersDemolished);
 }
 
 // ── 사건 행·순서 검증 (⑧·⑫ 공용) ─────────────────────────────
@@ -159,6 +171,13 @@ export interface StateEventRowLike {
   date: string;
   /** E3-③ B — 철거 행의 «철거된 건축물 종류»(`"house"` · `""`·미전송 = 주택 아님). 구조 규칙(D-8 `houseKindEventIssue`)만 읽는다. */
   buildingKindBefore?: string;
+  /** E3-⑤ E3f-2 — 나대지 구간 근거 «철거ㆍ멸실»의 와이어 칸(`demolishedRowFactIssue`가 읽는다). 순서·행 검증은 읽지 않는다. */
+  propertyTaxTypeBefore?: string;
+  propertyTaxBasisBefore?: string;
+  demolishedPermitBefore?: string;
+  demolishedOtherUseBefore?: string;
+  demolishedVacantHouseBefore?: string;
+  demolishedFloorAreaBefore?: string;
 }
 
 /**
@@ -294,16 +313,39 @@ export function hasBuildingAtTransfer(events: ReadonlyArray<{ kind: string }>): 
 }
 
 /**
- * E3-⑤ D-3 — `index`번째 사건 **앞**의 마지막 «건축물 사건»이 **철거 행**이면 그 행의 날짜(사이에 신축이 없을 때). 없으면 `undefined`(앞 건축물 사건이 신축이거나 하나도 없다 = 취득 전 철거 포함).
- * 나대지 구간 선언(E3f-2)의 철거일 출처·꼬리 철거일(`tailRemovalDateOf`)이 **같은 replay** 하나를 쓴다 — ⑤ 미리보기·⑧·⑫′·④·⑭가 자체 replay를 하지 않는다(`eventClosesBareInterval` 선례).
+ * E3-⑤ D-3 — `index`번째 사건 **앞**의 마지막 «건축물 사건»이 **철거 행**이면 그 행의 인덱스(사이에 신축이 없을 때). 없으면 `-1`(앞 건축물 사건이 신축이거나 하나도 없다 = 취득 전 철거 포함).
+ * `removalDateFor`·`eventOffersDemolished`·철거된 건축물 종류(`demolishedRemovedKindOf`)가 **같은 replay** 하나를 쓴다 — 자체 replay 금지(`eventClosesBareInterval` 선례).
+ */
+export function removalRowIndexFor(events: ReadonlyArray<{ kind: string }>, index: number): number {
+  for (let i = Math.min(index, events.length) - 1; i >= 0; i--) {
+    if (!isBuildingEventKind(events[i].kind)) continue;
+    return events[i].kind === "building_removed" ? i : -1;
+  }
+  return -1;
+}
+
+/**
+ * E3-⑤ D-3 — `index`번째 사건 **앞**의 마지막 «건축물 사건»이 **철거 행**이면 그 행의 날짜(사이에 신축이 없을 때). 없으면 `undefined`.
+ * 나대지 구간 선언(E3f-2)의 철거일 출처·꼬리 철거일(`tailRemovalDateOf`)이 **같은 replay** 하나를 쓴다 — ⑤ 미리보기·⑧·⑫′·④·⑭가 자체 replay를 하지 않는다.
  * 날짜는 칸 그대로 돌려준다(빈 문자열이어도) — 유효성은 호출자가 본다(`toOptionalDate`).
  */
 export function removalDateFor<E extends { kind: string; date: unknown }>(events: ReadonlyArray<E>, index: number): E["date"] | undefined {
-  for (let i = Math.min(index, events.length) - 1; i >= 0; i--) {
-    if (!isBuildingEventKind(events[i].kind)) continue;
-    return events[i].kind === "building_removed" ? events[i].date : undefined;
-  }
-  return undefined;
+  const at = removalRowIndexFor(events, index);
+  return at >= 0 ? events[at].date : undefined;
+}
+
+/**
+ * E3-⑤ E3f-2 — 이 나대지 구간 앞 **철거 행이 철거한 건축물 종류**: 주택(`house` — 주택부수토지 카드의 모든 철거 행 · 기타토지 카드의 «철거된 건축물 = 주택» 행) 또는 비주택 `building`.
+ * 철거 행이 없으면 `undefined`. 한시 창(빈집정비 3년 · 면적 한도 칸)은 이 종류가 가른다(`demolishedRequiredFacts`).
+ */
+export function demolishedRemovedKindOf(
+  events: ReadonlyArray<{ kind: string; buildingKindBefore?: string }>,
+  index: number,
+  tailKind: StateBuildingKind | undefined,
+): DemolishedRemovedKind | undefined {
+  const at = removalRowIndexFor(events, index);
+  if (at < 0) return undefined;
+  return eventClosesHouseInterval(events, at, tailKind) ? "house" : "building";
 }
 
 /**
@@ -342,24 +384,74 @@ interface Segment extends Omit<LandStateInterval, "start" | "end"> {
 }
 
 /** 나대지 구간 선언의 해석 — 구간의 `propertyTaxType`과 (비종합합산 선언이 있을 때만) 근거 echo 필드. */
-type BareDeclaration = Pick<LandStateInterval, "propertyTaxType" | "basisOutcome" | "basis" | "declaredPropertyTaxType" | "foldReason">;
+type BareDeclaration = Pick<
+  LandStateInterval,
+  "propertyTaxType" | "basisOutcome" | "basis" | "declaredPropertyTaxType" | "foldReason" | "temporaryStatusWindow" | "temporaryStatusMonths" | "temporaryStatusRemovedKind" | "vacantHouseExtensionUnconfirmed"
+>;
+
+/**
+ * E3-⑤ E3f-2 — 근거 «철거ㆍ멸실»을 해석하는 데 필요한 구간 맥락(`deriveOtherLandStateIntervals`가 구간마다 만든다). 없으면 `demolished`는 종전처럼 `demolished_unsupported`로 접힌다
+ * (철거 행 앞·없는 구간 — 직접 API 호환, 계획서 V-7).
+ */
+export interface BareDeclarationCtx {
+  /** 이 나대지 구간 앞 철거 행의 날짜(`eventOffersDemolished` 참일 때만 값이 있다). */
+  removedOn: Date | undefined;
+  removedKind: DemolishedRemovedKind;
+  /** 선언한 나대지 구간의 시작(앞 사건일 또는 소유 첫날 — 소유 시작 전 클립 반영) · 끝 = 닫는 사건일. */
+  intervalStart: Date;
+  intervalEnd: Date;
+  /** 종전 바닥면적 × 영 §101② 배율 판정에 쓰는 카드의 토지 면적·용도지역(비주택 철거 행 + 2024.6.1.~ 시행본). */
+  landArea: number;
+  zoneType: string;
+}
 
 /**
  * **나대지 구간을 닫는 사건**(`eventClosesBareInterval`)의 선언 3칸을 해석한다 — 구간마다 V1-A 해석기 `resolvePropertyTaxBasis`(hasBuilding=false)를 그대로 호출한다.
  *   · 구분 없음(`""`·미전송): 신축 행 = 선언 없음 → 종합합산(고지 없음 · 종전과 바이트 동일) · 구분 변경 행 = **모름** → `"unknown"`(종합합산 + 확인 필요 — E3-① 같은 정책).
  *   · `comprehensive`: 종합합산(근거를 묻지 않는다).
- *   · 비종합합산 + 근거: `accepted`이면 선언한 구분 그대로 · `unconfirmed`(미선택·모름·호환 불가·`demolished`)이면 종합합산으로 접는다.
- *     `demolished`는 나대지 구간 근거로 받지 않는다(철거 후 한시 = E3 ⑤ · 유예 9호가 덮음) — 바닥면적을 넘기지 않으므로 V1-A도 접지만 사유를 `demolished_unsupported`로 구별한다.
+ *   · 비종합합산 + 근거: `accepted`이면 선언한 구분 그대로 · `unconfirmed`(미선택·모름·호환 불가)이면 종합합산으로 접는다.
+ *     **E3f-2** — `demolished`는 **철거 행 뒤 나대지 구간**(`ctx.removedOn`이 있을 때 — `eventOffersDemolished`)에서만 받는다: 한시 창(`demolishedStatusWindow`)이 성립하면 `accepted` + `temporaryStatusWindow`(구간 전체가 아니라 창만 사업용),
+ *     성립하지 못하면 사유(`demolished_never_period` · `demolished_permit` · …)와 함께 종합합산으로 접는다. 그 밖(맥락 없음 · 철거일 출처 없음 — 직접 API)은 종전처럼 `demolished_unsupported`로 접는다(V-7).
  *   · 근거 `vacant_state`는 면적한도: `within`만 인정 — `exceeded`·`unknown`·`""`는 그 구간 **전체**를 종합합산으로 접는다(부분 면적 자동 안분 없음 · 「일부 초과」가 「모름」보다 유리하지 않다).
  */
-export function resolveBareDeclaration(ev: Pick<StateEvent, "kind" | "propertyTaxTypeBefore" | "propertyTaxBasisBefore" | "areaWithinLimitBefore">): BareDeclaration {
+export function resolveBareDeclaration(
+  ev: Pick<
+    StateEvent,
+    "kind" | "propertyTaxTypeBefore" | "propertyTaxBasisBefore" | "areaWithinLimitBefore" | "demolishedPermitBefore" | "demolishedOtherUseBefore" | "demolishedVacantHouseBefore" | "demolishedFloorAreaBefore"
+  >,
+  ctx?: BareDeclarationCtx,
+): BareDeclaration {
   const declared = ev.propertyTaxTypeBefore;
   if (!declared) return { propertyTaxType: ev.kind === "building_built" ? "comprehensive" : "unknown" };
   if (declared === "comprehensive") return { propertyTaxType: "comprehensive" };
   const basis = ev.propertyTaxBasisBefore || undefined;
   const echo = { ...(basis ? { basis } : {}), declaredPropertyTaxType: declared };
   const fold = (foldReason: BareFoldReason): BareDeclaration => ({ propertyTaxType: "comprehensive", basisOutcome: "unconfirmed", ...echo, foldReason });
-  if (basis === "demolished") return fold("demolished_unsupported");
+  if (basis === "demolished") {
+    // 철거 행 뒤 나대지 구간이 아니면(맥락 없음 · 철거일 출처 없음) 종전과 같다 — 근거로 받지 않는다(직접 API 호환 · V-7).
+    if (!ctx?.removedOn) return fold("demolished_unsupported");
+    // 선언 구분과 호환되지 않는 근거(별도합산 아님)는 V1-A와 같은 술어로 접는다(`resolvePropertyTaxBasis`는 바닥면적·철거일을 꼬리 기준으로 읽어 여기서 쓰지 않는다).
+    if (!isUsableBasis(declared, false, basis)) return fold("incompatible");
+    const win = demolishedStatusWindow({
+      removedOn: ctx.removedOn,
+      intervalStart: ctx.intervalStart,
+      end: ctx.intervalEnd,
+      kind: ctx.removedKind,
+      facts: { permit: ev.demolishedPermitBefore, otherUse: ev.demolishedOtherUseBefore, vacantHouse: ev.demolishedVacantHouseBefore, floorArea: ev.demolishedFloorAreaBefore },
+      landArea: ctx.landArea,
+      zoneType: ctx.zoneType,
+    });
+    if (win.kind === "fold") return fold(win.reason);
+    return {
+      propertyTaxType: declared,
+      basisOutcome: "accepted",
+      ...echo,
+      temporaryStatusWindow: win.window,
+      temporaryStatusMonths: win.months,
+      temporaryStatusRemovedKind: ctx.removedKind,
+      ...(win.vacantHouseExtensionUnconfirmed ? { vacantHouseExtensionUnconfirmed: true as const } : {}),
+    };
+  }
   const res = resolvePropertyTaxBasis({ propertyTaxType: declared, hasBuilding: false, propertyTaxBasis: basis });
   if (res.kind !== "accepted") return fold(res.kind === "unconfirmed" ? res.reason : "incompatible");
   if (res.basis === "vacant_state" && ev.areaWithinLimitBefore !== "within") return fold(ev.areaWithinLimitBefore === "exceeded" ? "area_exceeded" : "area_unknown");
@@ -385,6 +477,11 @@ export const BARE_FOLD_REASON_TEXT = {
   demolished_date_missing: "철거ㆍ멸실일 미입력",
   demolished_period_elapsed: "철거 후 한시 기간 경과",
   demolished_unsupported: "철거 후 한시 지위 — 유예기간으로 입력",
+  // E3f-2 — 나대지 구간 근거 «철거ㆍ멸실»의 접힘 사유(한시 창 판정)
+  demolished_never_period: "철거 후 한시 기간 안에 과세기준일 없음",
+  demolished_permit: "허가·사용승인 미확인",
+  demolished_other_use: "건축 외 용도 사용 또는 미확인",
+  demolished_area_exceeded: "철거 전 바닥면적 배율 범위 초과",
   area_exceeded: "면적한도 일부 초과",
   area_unknown: "면적한도 모름",
 } as const satisfies Record<BareFoldReason, string>;
@@ -393,8 +490,13 @@ export const BARE_FOLD_REASON_TEXT = {
  * 나대지 구간(`hasBuilding=false`) 중 **비종합합산 선언이 있는 구간**의 «재산세 구분» 표 문구 — 선언이 없으면 `undefined`(호출자가 종전 문구를 쓴다).
  * 받아들인 구간 = 「별도합산(나대지 — 공지상태 근거)」 · 접힌 구간 = 「종합합산(나대지 — {사유} · 확인 필요)」. ⑤ 미리보기 · ⑦ 결과 구간표가 같은 함수를 쓴다.
  */
-export function bareIntervalTaxTypeText(iv: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome" | "basis" | "foldReason">): string | undefined {
+export function bareIntervalTaxTypeText(
+  // `temporaryStatusWindow`는 있는지만 본다 — 엔진 구간(`DateInterval`)·결과 echo·⑤ 미리보기 행(ISO 문자열 창)이 같이 부른다.
+  iv: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome" | "basis" | "foldReason"> & { temporaryStatusWindow?: object },
+): string | undefined {
   if (iv.hasBuilding || !iv.basisOutcome) return undefined;
+  // E3f-2 — 근거 «철거ㆍ멸실»을 받아들인 구간은 구간 전체가 아니라 한시 창만 별도합산으로 센다(창 날짜는 echo `temporaryStatusWindow`가 말한다).
+  if (iv.basisOutcome === "accepted" && iv.temporaryStatusWindow) return `${PROPERTY_TAX_TYPE_LABEL[iv.propertyTaxType as PropertyTaxType]}(나대지 — ${BARE_BASIS_SHORT_LABEL.demolished} · 한시 기간만)`;
   if (iv.basisOutcome === "accepted") {
     return `${PROPERTY_TAX_TYPE_LABEL[iv.propertyTaxType as PropertyTaxType]}(나대지 — ${BARE_BASIS_SHORT_LABEL[iv.basis ?? "unknown"]})`;
   }
@@ -439,6 +541,15 @@ export function deriveOtherLandStateIntervals(
   const segments: Segment[] = [];
   let hasBuilding = initialHasBuilding(events, tail.hasBuilding);
   let prevBuildingKind: BuildingEventKind | null = null;
+  // E3f-2 — 나대지 구간 선언(근거 «철거ㆍ멸실»)의 한시 창 맥락: 철거 행 날짜 · 철거된 건축물 종류 · 구간 `[시작, 끝)`(소유 시작 전은 클립) · 카드의 토지 면적·용도지역(`houseCtx`가 같은 값을 싣는다).
+  const bareCtxOf = (i: number): BareDeclarationCtx => ({
+    removedOn: removalDateFor(events, i),
+    removedKind: demolishedRemovedKindOf(events, i, tail.buildingKind) ?? "building",
+    intervalStart: i > 0 && events[i - 1].date.getTime() > ownershipStart.getTime() ? events[i - 1].date : ownershipStart,
+    intervalEnd: events[i].date,
+    landArea: houseCtx?.landArea ?? Number.NaN,
+    zoneType: houseCtx?.zoneType ?? "",
+  });
   for (let i = 0; i < events.length; i++) {
     const ev = events[i];
     const prev = i > 0 ? events[i - 1] : undefined;
@@ -456,7 +567,7 @@ export function deriveOtherLandStateIntervals(
       segments.push(
         hasBuilding
           ? { end: ev.date, hasBuilding, propertyTaxType: ev.propertyTaxTypeBefore ? ev.propertyTaxTypeBefore : "unknown" }
-          : { end: ev.date, hasBuilding: false, ...resolveBareDeclaration(ev) },
+          : { end: ev.date, hasBuilding: false, ...resolveBareDeclaration(ev, bareCtxOf(i)) },
       );
       continue;
     }
@@ -465,7 +576,7 @@ export function deriveOtherLandStateIntervals(
     if (closesHouse && !houseCtx) throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, "주택 구간 판정에는 배율·토지 면적·양도일(houseCtx)이 필요합니다.", { index: i });
     segments.push(
       ev.kind === "building_built"
-        ? { end: ev.date, hasBuilding: false, ...resolveBareDeclaration(ev) }
+        ? { end: ev.date, hasBuilding: false, ...resolveBareDeclaration(ev, bareCtxOf(i)) }
         : closesHouse
           ? // 주택 구간 — 재산세 구분은 읽지 않는다(`"unknown"` 고정 · 조심 2018서0295). 배율 이내 여부는 철거 직전 정착면적이 정한다(`resolveHouseInterval`).
             { end: ev.date, hasBuilding: true, propertyTaxType: "unknown", buildingKind: "house", ...resolveHouseInterval(ev.houseFootprintBefore, houseCtx!) }
@@ -507,7 +618,9 @@ const BUSINESS_PROPERTY_TAX_TYPES: ReadonlySet<PropertyTaxType | "unknown"> = ne
  * 건축물 구간의 배율·2% 요건은 구간별로 재판정하지 않는다(건축물 바닥면적·시가표준액 이력이 없다 — 엔진 V-5, 고지 대상).
  * 꼬리는 core가 판정하므로 이 함수를 쓰지 않는다(`stateHistoryBusinessIntervals`).
  */
-export function isStateIntervalBusiness(interval: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome" | "buildingKind" | "houseOutcome">): boolean {
+export function isStateIntervalBusiness(interval: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome" | "buildingKind" | "houseOutcome" | "temporaryStatusWindow">): boolean {
+  // E3f-2 — 근거 «철거ㆍ멸실»을 받아들인 나대지 구간은 구간 **전체**가 사업용이 아니다: 한시 창(`temporaryStatusWindow`)만 사업용 구간에 더해진다(`stateHistoryBusinessIntervals`).
+  if (interval.temporaryStatusWindow) return false;
   // E3-③ — 주택 구간은 재산세 구분을 보지 않고(조심 2018서0295) 정착면적 × 배율 이내(`within`)일 때만 사업용이다. 초과·모름은 같은 접힘(Q-5 (나) — «초과»가 «모름»보다 유리하지 않다).
   if (interval.buildingKind === "house") return interval.houseOutcome === "within";
   return (interval.hasBuilding || interval.basisOutcome === "accepted") && BUSINESS_PROPERTY_TAX_TYPES.has(interval.propertyTaxType);
@@ -538,10 +651,12 @@ export interface StateHistoryCoreResult {
 export function stateHistoryBusinessIntervals(intervals: ReadonlyArray<LandStateInterval>, core: StateHistoryCoreResult): DateInterval[] {
   if (intervals.length === 0) return [];
   const tail = intervals[intervals.length - 1];
-  const past: DateInterval[] = intervals
-    .slice(0, -1)
-    .filter(isStateIntervalBusiness)
-    .map(({ start, end }) => ({ start, end }));
+  const pastIntervals = intervals.slice(0, -1);
+  // E3f-2 — 근거 «철거ㆍ멸실»의 한시 창은 구간 안에서 사업용 구간으로 더한다(구간 전체는 `isStateIntervalBusiness`가 아니다). 겹침은 `meetsPeriodCriteria`가 합집합한다.
+  const past: DateInterval[] = [
+    ...pastIntervals.filter(isStateIntervalBusiness).map(({ start, end }) => ({ start, end })),
+    ...pastIntervals.flatMap((iv) => (iv.temporaryStatusWindow ? [{ start: iv.temporaryStatusWindow.start, end: iv.temporaryStatusWindow.end }] : [])),
+  ];
   if (core.ownBusinessPeriods) {
     return [...past, ...getOverlappingPeriods([{ start: intervals[0].start, end: tail.end }], core.ownBusinessPeriods)];
   }

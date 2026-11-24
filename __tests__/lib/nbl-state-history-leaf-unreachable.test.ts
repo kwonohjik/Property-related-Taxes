@@ -82,10 +82,14 @@ const VL_PREVIEW = "lib/calc/nbl-vacant-lot-household-preview.ts";
 const OTHER_LAND = "lib/tax-engine/non-business-land/other-land.ts";
 // E3-⑤ E3f-1b — 꼬리 근거 «철거ㆍ멸실»의 철거ㆍ멸실일 요구·출처 술어 leaf. ⑫′(`demolishedInputIssue`)·⑭(`demolishedOnForEngine`)이 읽고, U-2가 ⑧·④(`demolishedOnWireValue`)를 더한다.
 const DEMOLISHED_ISSUE = "lib/tax-engine/non-business-land/demolished-input-issue.ts";
+const DEMOLISHED_ROW_FACTS = "lib/tax-engine/non-business-land/demolished-row-facts.ts"; // E3f-2 ⑧·⑫′ 공용 사실 칸 결함 leaf(철거 행 술어 `eventOffersDemolished`·`removalDateFor`를 leaf에서 읽는다)
 // E3-⑤ E3f-1b U-2 — ④⑤⑧ 공용 술어 래퍼(AssetForm → leaf 사실) · ⑤ 위젯 블록 · ⑧ 호출처. 엔진 leaf를 부르는 UI 쪽 사용처는 이 셋뿐이다.
 const TAIL_SCOPE = "lib/calc/nbl-demolished-tail-scope.ts";
 const TAIL_FIELDS = "components/calc/transfer/nbl/OtherLandDemolishedTailFields.tsx";
 const VALIDATE_OTHER = "lib/calc/transfer-tax-validate-nbl-other.ts";
+// E3-⑤ E3f-2 U-3 — 나대지 구간 근거 «철거ㆍ멸실» 사실 칸 ⑤: 술어 래퍼(엔진 `eventOffersDemolished`·`demolishedRequiredFacts`를 부른다 — UI 자체 판정 없음) · 위젯 블록(`data-field` 앵커).
+const ROW_SCOPE = "lib/calc/nbl-demolished-row-scope.ts";
+const ROW_FACTS_FIELD = "components/calc/transfer/nbl/OtherLandDemolishedFactsField.tsx";
 
 const NEXT_PR_HINT = "새 사용처가 생겼다면 UI 배선(U1·U2)일 것이다 — 이 허용 목록을 그 파일로 갱신한다(삭제 금지). 계획서 plan.md §4 U1·U2.";
 
@@ -101,7 +105,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
   it("WIRE-1: `other-land-state-history`를 import하는 프로덕션 파일 = 판정(apply) · ⑭ 매퍼 · ⑫ refine(E2) + UI(술어 · 미리보기 · ⑧ · ③ 복원 정규화 · ⑤ 위젯 · E3-1b 나대지 구간 선언 카드 · ⑦ 결과 구간표)", () => {
     const re = /^\s*import[\s\S]*?from\s+["'][^"']*other-land-state-history["']/m;
     const importers = FILES.filter((f) => re.test(f.src)).map((f) => f.path).sort();
-    expect(importers, NEXT_PR_HINT).toEqual([APPLY, HOUSING_APPLY, HOUSE_PRIOR_SCOPE, REFINES, MAPPER, SCOPE, READ, PREVIEW, VALIDATE, MIGRATE, SECTION, BARE_FIELDS, PERIOD_TABLE, DEMOLISHED_ISSUE].sort());
+    expect(importers, NEXT_PR_HINT).toEqual([APPLY, HOUSING_APPLY, HOUSE_PRIOR_SCOPE, REFINES, MAPPER, SCOPE, READ, PREVIEW, VALIDATE, MIGRATE, SECTION, BARE_FIELDS, PERIOD_TABLE, DEMOLISHED_ISSUE, DEMOLISHED_ROW_FACTS, ROW_SCOPE].sort());
   });
 
   it("WIRE-2: 판정은 구간 변환(derive)과 구간 산식(stateHistoryBusinessIntervals)을 쓰고, ⑫ refine은 공용 issue leaf를, ⑭ 매퍼·⑫는 `effectiveOtherHasBuilding`을 쓴다 — 3중 패턴", () => {
@@ -144,7 +148,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
 
   it("WIRE-3b (E3-③ A): 주택 소비 술어 `consumesHousingStateHistory` = 사건 주체 leaf(`stateEventSubjectOf` — ⑧·⑫ 문구 변형) · ⑭ 매퍼(tailHasBuilding=true · 정착면적 운반) · UI 기타토지 전용 술어(주택 제외)", () => {
     const users = usersOf("consumesHousingStateHistory", [CATEGORY]).sort();
-    expect(users, NEXT_PR_HINT).toEqual([LEAF, MAPPER, SCOPE, HOUSE_PRIOR_SCOPE].sort());
+    expect(users, NEXT_PR_HINT).toEqual([LEAF, MAPPER, SCOPE, HOUSE_PRIOR_SCOPE, REFINES, READ].sort()); // E3f-2: ⑫′(tailKind house)·`nblStateHistoryIsRead`(주택/기타토지 분기)도 소비표 술어로 가른다
   });
 
   it("WIRE-11 (E3-③ B): B 적용 범위 술어는 단일 소스 — `housePriorNeedsMetropolitan`은 ⑭ 상위 매퍼(수도권 게이트)와 UI ④⑤⑧의 한 함수(`housePriorNeedsMetropolitanOf`)가, `stateHistoryDeemedBlocks`는 판정(apply)과 UI의 한 함수(`stateHistoryDeemedBlocksOf` — ⑧ 의제 건너뜀)가 읽는다", () => {
@@ -186,7 +190,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
 
 
   it("WIRE-12 (E3-③ UI Low 3): 엔진이 이력을 읽는 조건 `housingStateHistoryIsRead`는 판정(`judgeHousingLand`)과 UI 안내·⑧ H9 게이트(`housingAreaLimitState`)가 같은 함수로 읽는다", () => {
-    expect(usersOf("housingStateHistoryIsRead", [HOUSING_LIMIT]).sort(), NEXT_PR_HINT).toEqual([HOUSING_LAND, PREVIEW].sort());
+    expect(usersOf("housingStateHistoryIsRead", [HOUSING_LIMIT]).sort(), NEXT_PR_HINT).toEqual([HOUSING_LAND, PREVIEW, HOUSING_APPLY].sort()); // E3f-2: `housingLandStateHistoryIsRead`(⑧·⑫′ 공용 «읽는가» — 주택 카드)도 같은 함수로 읽는다
     expect(FILES.find((f) => f.path === VALIDATE)!.src, "⑧은 `housingAreaLimitState`로 게이트한다(자체 배율 계산 금지)").toMatch(/housingAreaLimitState\(/);
   });
 
@@ -201,7 +205,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
   it("WIRE-9 (E3-③ A): 배율 helper `housing-limit.ts`는 `judgeHousingLand`(양도일 현재)와 과거 주택 구간(leaf)이 같이 쓴다 — 단일 소스(D-12). `getHousingMultiplier`를 직접 부르는 주택 판정이 더 생기면 배율이 갈라진다", () => {
     const users = usersOf("judgeHousingLimit|resolveHouseInterval", [HOUSING_LIMIT]).sort();
     // UI-A — ⑤ 미리보기(철거 행 허용 면적·양도일 현재 배율 초과 안내)도 **같은 leaf를 직접 부른다**(표시 전용 — 배율표·비교를 UI가 따로 쓰지 않는다).
-    expect(users, NEXT_PR_HINT).toEqual([HOUSING_LAND, LEAF, PREVIEW].sort());
+    expect(users, NEXT_PR_HINT).toEqual([HOUSING_LAND, LEAF, PREVIEW, HOUSING_APPLY].sort());
   });
 
   it("WIRE-5: ⑫ Zod가 두 칸(`nblOtherStateHistoryMode`·`nblOtherStateEvents`)을 가진다 — 빠지면 침묵 strip · ⑭ 매퍼·⑫ refine이 둘 다 읽는다", () => {
@@ -214,7 +218,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
     expect(src(SCHEMA)).toMatch(/propertyTaxTypeBefore:\s*z\.enum\(NBL_PROPERTY_TAX_TYPE_VALUES\)\.or\(z\.literal\(""\)\)/);
   });
 
-  it("WIRE-6: 이력 칸 이름을 읽는 UI(store·components·lib/calc) 파일 = ①②③ 상태·복원 · ④ 전송 · ⑤ 위젯 · ⑧ 검증·술어·미리보기 — 정확히 이 열여섯 곳", () => {
+  it("WIRE-6: 이력 칸 이름을 읽는 UI(store·components·lib/calc) 파일 = ①②③ 상태·복원 · ④ 전송 · ⑤ 위젯 · ⑧ 검증·술어·미리보기 — 정확히 이 열아홉 곳", () => {
     const uiUsers = FILES.filter(
       (f) => /^(components|lib\/(stores|calc))\//.test(f.path) && /nblOtherStateEvents|nblOtherStateHistoryMode/.test(f.src),
     ).map((f) => f.path).sort();
@@ -226,7 +230,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
       "lib/calc/non-business-land-request.ts", // ④ 전송(파생 nblOtherHasBuilding 덮어쓰기 포함)
       TAIL_SCOPE, // E3f-1b U-2 — 꼬리 근거 «철거ㆍ멸실» 술어 래퍼: 와이어 사건(`stateHistoryWireFields`)을 leaf 사실로 넘긴다(④⑤⑧ 공용)
       SCOPE, READ, PREVIEW, VALIDATE, // ④⑤⑧ 공용 술어 · «엔진이 이력을 읽는가» 래퍼(E3-③ 후속) · 미리보기 · ⑧ 규칙
-      SECTION, BARE_FIELDS, KIND_FIELD, DETAIL, // ⑤ 위젯 · 나대지 구간 선언 카드(E3-1b — `data-field` 앵커) · 철거 행 종류 카드(E3-③ B) · 마운트
+      SECTION, BARE_FIELDS, KIND_FIELD, DETAIL, ROW_SCOPE, ROW_FACTS_FIELD, // ⑤ 위젯(E3f-2 U-3 — 사실 칸 술어 래퍼 · 사실 칸 블록 `data-field` 앵커) · 나대지 구간 선언 카드(E3-1b — `data-field` 앵커) · 철거 행 종류 카드(E3-③ B) · 마운트
       VL_SCOPE, VL_NOTICE, VL_PREVIEW, // E3-④ — 13호 술어 래퍼(`nblOtherStateEventsInUse`를 인자로 공급) · 입력 안내 갈래 · 행 아래 미리보기
     ].sort();
     expect(uiUsers, NEXT_PR_HINT).toEqual(expected);

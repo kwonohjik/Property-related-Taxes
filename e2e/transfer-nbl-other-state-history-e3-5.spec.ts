@@ -14,6 +14,14 @@
  *  E5-4  한도 경과 — 철거 2018-01-01 · 양도 2024-01-01(S18 시료): 입력 시점 amber 안내 + 결과 비사업용 253,960,000(종합합산 접힘 · 사유 문구 · 이전 198,210,000) · 한시 안(철거 2023-12-26)은 안내 없이 사업용 198,210,000 · 9호 유예를 더해도 접힘 전후 세액 불변(K-12 — 9호 2년은 6년 경과분을 덮지 못한다)
  *  E5-5  양도일 2024-06-01 전/후 바닥면적 칸 — 2024-05-31 양도는 칸이 숨고 ⑧이 요구하지 않으며 body는 바닥면적을 비워 보낸다 · 2024-06-01 양도는 칸이 보이고 비면 ⑧이 막는다
  *
+ * 검증(E3f-2 U-3 — 나대지 구간 근거 «철거ㆍ멸실» 사실 칸 · 인정 창·접힘 표시):
+ *  E5-6   성립(B): K-1 시료(건물 2021-06-02~철거 2022-12-15 · 신축 2023-12-01) — 구분 별도합산 → 근거 «철거ㆍ멸실» → 허가 «예» → 인정 창 미리보기 → 계산 · 요청 body 사실 칸 도달 · 사업용 198,210,000 · 결과 구간표 창 · 철거 2022-12-01(K-2a)도 성립 · 철거 2022-11-30(K-2c)은 입력할 칸 없이 접힘 N 253,960,000
+ *  E5-7   사실 «아니오»·«모름» 접힘(N): 같은 입력 + 허가 «아니오» → 접힘 사유 고지 · 비사업용 253,960,000 · 결과 구간표 사유
+ *  E5-8   ⑧ 차단 + 필드 점프: 사실 칸 미선택·빈칸 → 계산 요청이 나가지 않고 오류 항목 클릭이 그 칸으로 점프(허가 → 건축 외 용도 → 바닥면적 순) · 다 채우면 계산
+ *  E5-9   주택부수토지 카드(Q-12): 주택 철거 → 신축 닫는 행 근거 «철거ㆍ멸실» + 사실 3칸(바닥면적 칸 없음) → 계산 · body 도달
+ *  E5-10  빈집정비 «모름»(Q-8 (나)): 주택 철거 행 + 일반 한시 기간 창 + 3년 연장 불인정 고지(접히지 않는다) · «예»는 3년 창
+ *  E5-V3  시각: 사실 칸 블록 라이트/다크 대비 · 375px 안쪽 가로 넘침 없음
+ *
  * 폼은 sessionStorage로 시드한다. 외부 API 의존 없음 — mock 불필요.
  *
  * 실행: E2E_PORT=<포트> npx playwright test e2e/transfer-nbl-other-state-history-e3-5.spec.ts
@@ -369,5 +377,313 @@ test.describe("E3-⑤ E3f-1b U-2 — 시각(라이트·다크·375px)", () => {
     await block.screenshot({ path: "e2e/_artifacts/e3-5b-block-light.png" });
     await expectDarkContrast(page, block);
     await block.screenshot({ path: "e2e/_artifacts/e3-5b-block-dark.png" });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// E3f-2 U-3 — 나대지 구간 근거 «철거ㆍ멸실» 사실 칸(⑤) · 인정 창·접힘 표시(⑤ 미리보기·⑦)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** 닫는 행의 구분·근거·사실 칸만 비운 건물 → 철거 → 신축 시료(엔진 K-1 계열). 닫는 행(i=2)은 화면에서 입력한다. */
+const barePage = (removedOn: string, over: Record<string, unknown> = {}) => ({
+  nblOtherStateHistoryMode: "changed",
+  nblOtherHasBuilding: true,
+  nblOtherBuildingFloorArea: "250",
+  nblOtherPropertyTaxType: "separate",
+  nblOtherStateEvents: [
+    { kind: "building_built", date: "2021-06-02", propertyTaxTypeBefore: "" },
+    { kind: "building_removed", date: removedOn, propertyTaxTypeBefore: "separate" },
+    { kind: "building_built", date: "2023-12-01", propertyTaxTypeBefore: "" },
+  ],
+  ...over,
+});
+const FORM_2024 = { transferDate: "2024-01-01", filingDate: "2024-03-31" };
+const factsOf = (i: number, key: string) => page_testid(i, `demolished-${key}`);
+const page_testid = (i: number, tail: string) => `nbl-other-state-event-${i}-${tail}`;
+const win = (page: Page, i = 2) => page.getByTestId(page_testid(i, "demolished-window"));
+const foldNotice = (page: Page, i = 2) => page.getByTestId(page_testid(i, "demolished-fold-notice"));
+const anchorOf = (page: Page, i: number, field: string) => page.locator(`[data-field="nblOtherStateEvents.${i}.${field}"]`);
+
+/** 닫는 행의 재산세 구분 «별도합산» → 근거 «철거ㆍ멸실»을 화면에서 고른다. */
+async function declareDemolished(page: Page, i: number) {
+  await pick(page.getByTestId(page_testid(i, "ptax-separate")));
+  await pick(page.getByTestId(page_testid(i, "basis-demolished")));
+}
+
+test.describe("E3-⑤ E3f-2 U-3 — 근거 «철거ㆍ멸실» 사실 칸 · 인정 창 (E5-6 · E5-7)", () => {
+  test("E5-6: K-1 성립(B) — 근거 선택 → 허가 «예» → 인정 창 미리보기 → 계산(body 도달 · 사업용 198,210,000 · 결과 구간표 창) · 철거 2022-12-01(K-2a)도 성립 · 2022-11-30(K-2c)은 칸 없이 접힘(N)", async ({ page }) => {
+    test.setTimeout(300_000);
+    await seed(page, [landAsset(barePage("2022-12-15"))], FORM_2024);
+    await gotoHolding(page);
+    // 닫는 행을 고르기 전에는 사실 칸 블록이 없다 · 근거를 고르기 전에는 선택지만 있다
+    await expect(page.getByTestId(page_testid(2, "demolished"))).toHaveCount(0);
+    await pick(page.getByTestId(page_testid(2, "ptax-separate")));
+    await expect(page.getByTestId(page_testid(2, "basis-demolished")), "철거 행 뒤 나대지 구간 → 근거 «철거ㆍ멸실» 선택지").toBeVisible();
+    await expect(page.getByTestId(page_testid(0, "basis-demolished")), "철거 행 앞 구간(첫 구간)에는 없다").toHaveCount(0);
+    await pick(page.getByTestId(page_testid(2, "basis-demolished")));
+
+    // K-1(후보 과세기준일 2023-06-01만): 허가 칸만 — 건축 외 용도·빈집정비·바닥면적 칸 없음
+    await expect(anchorOf(page, 2, "demolishedPermitBefore")).toBeVisible();
+    await expect(anchorOf(page, 2, "demolishedOtherUseBefore")).toHaveCount(0);
+    await expect(anchorOf(page, 2, "demolishedFloorAreaBefore")).toHaveCount(0);
+    await expect(anchorOf(page, 2, "demolishedVacantHouseBefore")).toHaveCount(0);
+    await expect(page.getByTestId(page_testid(2, "demolished-removed-on"))).toContainText("철거일: 2022-12-15");
+    await expect(win(page), "미답 상태에서는 결과 미리보기를 보이지 않는다").toHaveCount(0);
+    await expect(foldNotice(page)).toHaveCount(0);
+
+    await pick(page.getByTestId(factsOf(2, "permit-yes")));
+    await expect(win(page)).toHaveText("한시 지위 인정 기간: 2022-12-15 ~ 2023-06-15(183일 · 한시 기간 6개월)");
+    await expect(page.getByTestId(page_testid(2, "demolished-accepted-notice"))).toBeVisible();
+    await expect(page.getByTestId("nbl-state-history-preview-row-2")).toContainText("인정 2022-12-15 ~ 2023-06-15(183일)");
+    await expect(page.getByTestId("nbl-state-history-preview-row-2")).toContainText("한시 지위 창만 충족");
+
+    const ok = await calc(page);
+    expect(ok.status, JSON.stringify(ok.json).slice(0, 300)).toBe(200);
+    expect(ok.req.nonBusinessLandRaw?.nblOtherStateEvents?.[2], "④⑫⑬⑭ — 근거·사실 칸이 엔진까지 도달(침묵 strip 방지)").toEqual({
+      kind: "building_built", date: "2023-12-01", propertyTaxTypeBefore: "separate", propertyTaxBasisBefore: "demolished", demolishedPermitBefore: "yes",
+    });
+    await expect(banner.business(page)).toBeVisible();
+    console.log("[E5-6 K-1 성립] 산출세액", taxOf(ok));
+    expect(taxOf(ok)).toBe(198_210_000);
+    const row = page.getByTestId("nbl-state-history-interval-2");
+    await expect(row).toContainText("2022-12-15 ~ 2023-11-30");
+    await expect(row).toContainText("별도합산(나대지 — 철거·멸실 근거 · 한시 기간만)");
+    await expect(row).toContainText("한시 지위 인정 2022-12-15 ~ 2023-06-15(183일 · 한시 기간 6개월)");
+    await expect(row).toContainText("일부 사업용");
+    await expect(page.getByText(/철거ㆍ멸실일 당일부터 한시 별도합산 기간 만료일 당일까지/).first()).toBeVisible();
+
+    // K-2a — 철거 2022-12-01: 6개월 만료일 2023-06-01 = 과세기준일(만료일 당일까지 기간 안) → 성립 · 같은 세액
+    await seed(page, [landAsset(barePage("2022-12-01", { nblOtherStateEvents: barePage("2022-12-01").nblOtherStateEvents.map((e: any, i: number) => (i === 2 ? { ...e, propertyTaxTypeBefore: "separate", propertyTaxBasisBefore: "demolished", demolishedPermitBefore: "yes" } : e)) }))], FORM_2024);
+    await gotoHolding(page);
+    await expect(win(page)).toHaveText("한시 지위 인정 기간: 2022-12-01 ~ 2023-06-01(183일 · 한시 기간 6개월)");
+    const k2a = await calc(page);
+    expect(k2a.status, JSON.stringify(k2a.json).slice(0, 300)).toBe(200);
+    console.log("[E5-6 K-2a 성립] 산출세액", taxOf(k2a));
+    expect(taxOf(k2a)).toBe(198_210_000);
+
+    // K-2c — 철거 2022-11-30: 만료일 2023-05-31 < 과세기준일 → 한시 불성립 — 입력할 사실 칸이 없고 엔진 접힘 사유 · 비사업용
+    await seed(page, [landAsset(barePage("2022-11-30", { nblOtherStateEvents: barePage("2022-11-30").nblOtherStateEvents.map((e: any, i: number) => (i === 2 ? { ...e, propertyTaxTypeBefore: "separate", propertyTaxBasisBefore: "demolished" } : e)) }))], FORM_2024);
+    await gotoHolding(page);
+    await expect(anchorOf(page, 2, "demolishedPermitBefore")).toHaveCount(0);
+    await expect(page.getByTestId(page_testid(2, "demolished-no-facts"))).toBeVisible();
+    await expect(foldNotice(page)).toContainText("한시 기간");
+    const k2c = await calc(page);
+    expect(k2c.status, JSON.stringify(k2c.json).slice(0, 300)).toBe(200);
+    expect(k2c.req.nonBusinessLandRaw?.nblOtherStateEvents?.[2]).toEqual({ kind: "building_built", date: "2023-12-01", propertyTaxTypeBefore: "separate", propertyTaxBasisBefore: "demolished" });
+    await expect(banner.nonBusiness(page)).toBeVisible();
+    console.log("[E5-6 K-2c 불성립] 산출세액", taxOf(k2c));
+    expect(taxOf(k2c)).toBe(253_960_000);
+  });
+
+  test("E5-7: 같은 입력에서 사실 «아니오» → 접힘 `demolished_permit` 고지(인정 창 없음) · 비사업용 253,960,000 · «모름»도 같은 접힘 · 구분을 바꾸면 사실 칸이 리셋된다", async ({ page }) => {
+    test.setTimeout(240_000);
+    await seed(page, [landAsset(barePage("2022-12-15"))], FORM_2024);
+    await gotoHolding(page);
+    await declareDemolished(page, 2);
+    await pick(page.getByTestId(factsOf(2, "permit-no")));
+    await expect(foldNotice(page)).toBeVisible();
+    await expect(foldNotice(page)).toContainText("허가");
+    await expect(win(page)).toHaveCount(0);
+    await expect(page.getByTestId("nbl-state-history-preview-row-2")).toContainText("종합합산(나대지 — 허가·사용승인 미확인");
+    await pick(page.getByTestId(factsOf(2, "permit-unknown")));
+    await expect(foldNotice(page), "«모름»도 혜택 불성립 + 확인 필요 — 같은 접힘").toContainText("허가");
+    await pick(page.getByTestId(factsOf(2, "permit-no")));
+    const fold = await calc(page);
+    expect(fold.status, JSON.stringify(fold.json).slice(0, 300)).toBe(200);
+    expect(fold.req.nonBusinessLandRaw?.nblOtherStateEvents?.[2]?.demolishedPermitBefore).toBe("no");
+    await expect(banner.nonBusiness(page)).toBeVisible();
+    console.log("[E5-7 허가 아니오 접힘] 산출세액", taxOf(fold));
+    expect(taxOf(fold)).toBe(253_960_000);
+    await expect(page.getByTestId("nbl-state-history-interval-2")).toContainText("종합합산(나대지 — 허가·사용승인 미확인");
+    await expect(page.getByTestId("nbl-state-history-interval-2")).not.toContainText("한시 지위 인정");
+    await expect(page.getByText(/허가·사용승인을 받지 않은|허가·사용승인/).first()).toBeVisible();
+
+    // 구분을 «종합합산»으로 바꾸면 근거·사실 칸이 함께 리셋된다(되돌려도 이전 «아니오»가 남지 않는다 — 가정값 없음)
+    await seed(page, [landAsset(barePage("2022-12-15"))], FORM_2024);
+    await gotoHolding(page);
+    await declareDemolished(page, 2);
+    await pick(page.getByTestId(factsOf(2, "permit-yes")));
+    await pick(page.getByTestId(page_testid(2, "ptax-comprehensive")));
+    await expect(page.getByTestId(page_testid(2, "demolished"))).toHaveCount(0);
+    await declareDemolished(page, 2);
+    await expect(page.getByTestId(factsOf(2, "permit-yes")), "리셋 — 이전 답이 남지 않는다").not.toBeChecked();
+    await expect(win(page)).toHaveCount(0);
+  });
+});
+
+test.describe("E3-⑤ E3f-2 U-3 — ⑧ 차단 + 필드 점프 (E5-8)", () => {
+  /** 2024.6.1.~ 시행본 시료 — 철거 2024-01-15 · 신축 2024-09-01(양도 2024-12-01): 비주택 건축물이면 허가 · 건축 외 용도 · 바닥면적 3칸. */
+  const FULL = (over: Record<string, unknown> = {}) => ({
+    nblOtherStateHistoryMode: "changed",
+    nblOtherHasBuilding: true,
+    nblOtherBuildingFloorArea: "250",
+    nblOtherPropertyTaxType: "separate",
+    nblOtherStateEvents: [
+      { kind: "building_built", date: "2016-01-01", propertyTaxTypeBefore: "" },
+      { kind: "building_removed", date: "2024-01-15", propertyTaxTypeBefore: "separate" },
+      { kind: "building_built", date: "2024-09-01", propertyTaxTypeBefore: "" },
+    ],
+    ...over,
+  });
+  const FORM_FULL = { transferDate: "2024-12-01", filingDate: "2025-02-28" };
+
+  test("E5-8: 사실 칸 미선택·빈칸 → 계산 요청이 나가지 않고 오류 항목이 그 칸으로 점프(허가 → 건축 외 용도 → 바닥면적) · 다 채우면 계산 · 인정 창 미리보기", async ({ page }) => {
+    test.setTimeout(300_000);
+    await seed(page, [landAsset(FULL())], FORM_FULL);
+    await gotoHolding(page);
+    await declareDemolished(page, 2);
+    // 시행본별 요구: 허가 · 건축 외 용도 · 바닥면적 3칸(빈집정비 칸 없음 — 비주택) — 화면 순서 = 계산 순서
+    await expect(anchorOf(page, 2, "demolishedPermitBefore")).toBeVisible();
+    await expect(anchorOf(page, 2, "demolishedOtherUseBefore")).toBeVisible();
+    await expect(anchorOf(page, 2, "demolishedFloorAreaBefore")).toBeVisible();
+    await expect(anchorOf(page, 2, "demolishedVacantHouseBefore")).toHaveCount(0);
+    const order = await page.evaluate(() => {
+      const q = (f: string) => document.querySelector(`[data-field="nblOtherStateEvents.2.${f}"]`)!;
+      return [q("demolishedPermitBefore").compareDocumentPosition(q("demolishedOtherUseBefore")), q("demolishedOtherUseBefore").compareDocumentPosition(q("demolishedFloorAreaBefore"))].map((x) => !!(x & Node.DOCUMENT_POSITION_FOLLOWING));
+    });
+    expect(order, "허가 → 건축 외 용도 → 바닥면적 순").toEqual([true, true]);
+    await expect(page.locator('[data-slot="field-card"]').filter({ has: anchorOf(page, 2, "demolishedPermitBefore") }).first(), "필수 표시").toContainText("*");
+
+    const issues = page.getByTestId("validation-issues");
+    expect(await calcBlocked(page), "허가 미선택").toBe(true);
+    await issues.getByRole("button", { name: /허가·사용승인\(임시사용승인 포함\)을 받은 것인지 선택하세요/ }).click();
+    await expect(anchorOf(page, 2, "demolishedPermitBefore").locator("input").first()).toBeFocused();
+    await expect(anchorOf(page, 2, "demolishedPermitBefore")).toBeInViewport();
+    await pick(page.getByTestId(factsOf(2, "permit-yes")));
+
+    expect(await calcBlocked(page), "건축 외 용도 미선택").toBe(true);
+    await issues.getByRole("button", { name: /건축을 위한 용도 외의 다른 용도로 사용한 적이 있는지 선택하세요/ }).click();
+    await expect(anchorOf(page, 2, "demolishedOtherUseBefore").locator("input").first()).toBeFocused();
+    await pick(page.getByTestId(factsOf(2, "otheruse-no")));
+
+    expect(await calcBlocked(page), "바닥면적 빈칸").toBe(true);
+    await issues.getByRole("button", { name: /철거 전 건축물의 바닥면적\(㎡\)을 입력하세요/ }).click();
+    await expect(anchorOf(page, 2, "demolishedFloorAreaBefore").locator("input")).toBeFocused();
+    await expect(win(page), "바닥면적을 채우기 전에는 미리보기가 없다").toHaveCount(0);
+    await anchorOf(page, 2, "demolishedFloorAreaBefore").locator("input").fill("250");
+    await page.keyboard.press("Tab");
+    await expect(anchorOf(page, 2, "demolishedFloorAreaBefore").locator("input")).toHaveValue("250");
+    await expect(win(page)).toHaveText("한시 지위 인정 기간: 2024-01-15 ~ 2024-07-15(183일 · 한시 기간 6개월)");
+
+    // 바닥면적이 배율 범위 미달(100㎡ × 4 = 400㎡ < 1,000㎡) → 접힘 `demolished_area_exceeded`(구간 전체 — 안분 없음) · 입력 시점 고지 → 다시 250㎡
+    await anchorOf(page, 2, "demolishedFloorAreaBefore").locator("input").fill("100");
+    await page.keyboard.press("Tab");
+    await expect(foldNotice(page)).toBeVisible();
+    await expect(win(page)).toHaveCount(0);
+    await anchorOf(page, 2, "demolishedFloorAreaBefore").locator("input").fill("250");
+    await page.keyboard.press("Tab");
+    await expect(win(page)).toBeVisible();
+
+    const r = await calc(page);
+    expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);
+    expect(r.req.nonBusinessLandRaw?.nblOtherStateEvents?.[2]).toEqual({
+      kind: "building_built", date: "2024-09-01", propertyTaxTypeBefore: "separate", propertyTaxBasisBefore: "demolished",
+      demolishedPermitBefore: "yes", demolishedOtherUseBefore: "no", demolishedFloorAreaBefore: "250",
+    });
+    console.log("[E5-8 2024 시행본 전 칸] 산출세액", taxOf(r));
+    await expect(banner.business(page)).toBeVisible();
+
+  });
+});
+
+test.describe("E3-⑤ E3f-2 U-3 — 주택부수토지 카드(Q-12) · 빈집정비 (E5-9 · E5-10)", () => {
+  const FORM_FULL = { transferDate: "2024-12-01", filingDate: "2025-02-28" };
+  const housingAsset = (over: Record<string, unknown> = {}) => landAsset({
+    nblLandType: "housing_site", nblZoneType: "general_residential", nblIsMetropolitanArea: "no", nblHousingFootprint: "250",
+    nblOtherStateHistoryMode: "changed",
+    nblOtherStateEvents: [
+      { kind: "building_removed", date: "2024-01-15", propertyTaxTypeBefore: "", houseFootprintBefore: "250" },
+      { kind: "building_built", date: "2024-09-01", propertyTaxTypeBefore: "" },
+    ],
+    ...over,
+  });
+
+  test("E5-9: 주택부수토지 카드 — 근거 «철거ㆍ멸실» + 사실 3칸(허가 · 건축 외 용도 · 빈집정비 — 바닥면적 칸 없음) → 빈집정비 «예» 3년 창 → 계산 · body 도달", async ({ page }) => {
+    test.setTimeout(240_000);
+    await seed(page, [housingAsset()], FORM_FULL);
+    await gotoHolding(page);
+    await declareDemolished(page, 1);
+    await expect(anchorOf(page, 1, "demolishedPermitBefore")).toBeVisible();
+    await expect(anchorOf(page, 1, "demolishedOtherUseBefore")).toBeVisible();
+    await expect(anchorOf(page, 1, "demolishedVacantHouseBefore")).toBeVisible();
+    await expect(anchorOf(page, 1, "demolishedFloorAreaBefore"), "주택부수토지 카드는 바닥면적 칸이 없다(X-10)").toHaveCount(0);
+    await expect(page.getByTestId(page_testid(1, "demolished-house-area-notice"))).toBeVisible();
+    expect(await calcBlocked(page), "사실 칸 미선택 ⑧ 차단").toBe(true);
+    await pick(page.getByTestId(factsOf(1, "permit-yes")));
+    await pick(page.getByTestId(factsOf(1, "otheruse-no")));
+    await pick(page.getByTestId(factsOf(1, "vacanthouse-yes")));
+    await expect(win(page, 1)).toContainText("한시 지위 인정 기간: 2024-01-15 ~ 2024-08-31");
+    await expect(win(page, 1)).toContainText("한시 기간 3년");
+    const r = await calc(page);
+    expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(200);
+    expect(r.req.nonBusinessLandRaw?.nblOtherStateEvents?.[1]).toEqual({
+      kind: "building_built", date: "2024-09-01", propertyTaxTypeBefore: "separate", propertyTaxBasisBefore: "demolished",
+      demolishedPermitBefore: "yes", demolishedOtherUseBefore: "no", demolishedVacantHouseBefore: "yes",
+    });
+    console.log("[E5-9 주택부수토지 카드] 산출세액", taxOf(r));
+    await expect(page.getByTestId("nbl-state-history-interval-1")).toContainText("한시 지위 인정 2024-01-15 ~ 2024-08-31");
+  });
+
+  test("E5-10: 기타토지 카드의 «주택» 철거 행 + 빈집정비 «모름» — 접히지 않는다(일반 한시 기간 6개월 창 + 3년 연장 불인정 고지) · «예»는 3년 창 · 결과 경고에 같은 고지", async ({ page }) => {
+    test.setTimeout(300_000);
+    const base = (vacant?: string) => ({
+      nblOtherStateHistoryMode: "changed", nblOtherHasBuilding: true, nblOtherBuildingFloorArea: "250", nblOtherPropertyTaxType: "separate", nblZoneType: "general_residential", nblIsMetropolitanArea: "no",
+      nblOtherStateEvents: [
+        { kind: "building_built", date: "2016-01-01", propertyTaxTypeBefore: "" },
+        { kind: "building_removed", date: "2024-01-15", propertyTaxTypeBefore: "", buildingKindBefore: "house", houseFootprintBefore: "400" },
+        { kind: "building_built", date: "2024-09-01", propertyTaxTypeBefore: "separate", propertyTaxBasisBefore: "demolished", demolishedPermitBefore: "yes", demolishedOtherUseBefore: "no", ...(vacant ? { demolishedVacantHouseBefore: vacant } : {}) },
+      ],
+    });
+    await seed(page, [landAsset(base())], FORM_FULL);
+    await gotoHolding(page);
+    await expect(anchorOf(page, 2, "demolishedVacantHouseBefore"), "주택 철거 행 — 빈집정비 칸").toBeVisible();
+    await expect(anchorOf(page, 2, "demolishedFloorAreaBefore")).toHaveCount(0);
+    expect(await calcBlocked(page), "빈집정비 미선택 ⑧ 차단").toBe(true);
+    await pick(page.getByTestId(factsOf(2, "vacanthouse-unknown")));
+    await expect(win(page)).toHaveText("한시 지위 인정 기간: 2024-01-15 ~ 2024-07-15(183일 · 한시 기간 6개월)");
+    await expect(page.getByTestId(page_testid(2, "demolished-vacant-notice"))).toBeVisible();
+    await expect(page.getByTestId(page_testid(2, "demolished-vacant-notice"))).toContainText("빈집정비사업 여부를 「예」로 확인하지 않아");
+    await expect(foldNotice(page), "접히지 않는다").toHaveCount(0);
+    const unknown = await calc(page);
+    expect(unknown.status, JSON.stringify(unknown.json).slice(0, 300)).toBe(200);
+    console.log("[E5-10 빈집 모름 일반 기간] 산출세액", taxOf(unknown));
+    await expect(page.getByText(/빈집정비사업 여부를 「예」로 확인하지 않아/).first()).toBeVisible();
+    await expect(page.getByTestId("nbl-state-history-interval-2")).toContainText("한시 지위 인정 2024-01-15 ~ 2024-07-15(183일 · 한시 기간 6개월)");
+
+    await seed(page, [landAsset(base("yes"))], FORM_FULL);
+    await gotoHolding(page);
+    await expect(win(page)).toContainText("한시 기간 3년");
+    await expect(page.getByTestId(page_testid(2, "demolished-vacant-notice"))).toHaveCount(0);
+    const yes = await calc(page);
+    expect(yes.status, JSON.stringify(yes.json).slice(0, 300)).toBe(200);
+    console.log("[E5-10 빈집 예 3년] 산출세액", taxOf(yes));
+    await expect(page.getByText(/빈집정비사업 여부를 「예」로 확인하지 않아/)).toHaveCount(0);
+  });
+});
+
+test.describe("E3-⑤ E3f-2 U-3 — 시각(라이트·다크·375px)", () => {
+  test("E5-V3: 사실 칸 블록 + 인정 창 미리보기 — 라이트/다크 글자 대비 4.5 이상 · 375px 안쪽 가로 넘침 없음", async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width: 375, height: 900 });
+    const events = barePage("2022-12-15").nblOtherStateEvents.map((e: any, i: number) => (i === 2 ? { ...e, propertyTaxTypeBefore: "separate", propertyTaxBasisBefore: "demolished", demolishedPermitBefore: "yes" } : e));
+    await seed(page, [landAsset(barePage("2022-12-15", { nblOtherStateEvents: events }))], FORM_2024);
+    await gotoHolding(page);
+    const block = page.getByTestId(page_testid(2, "demolished"));
+    await expect(block).toBeVisible();
+    await expect(win(page)).toBeVisible();
+    for (const [name, loc] of [["블록", block], ["허가 칸", anchorOf(page, 2, "demolishedPermitBefore")], ["인정 창", win(page)]] as const) {
+      const b = await loc.boundingBox();
+      expect(b && b.x >= 0 && b.x + b.width <= 375 + 0.5, `${name}이 375px 안`).toBe(true);
+    }
+    const over = await block.evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(over, "블록 안쪽 가로 넘침").toBeLessThanOrEqual(1);
+    const overSection = await page.getByTestId("nbl-other-state-history").first().evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(overSection, "이력 섹션 안쪽 가로 넘침").toBeLessThanOrEqual(1);
+    await block.screenshot({ path: "e2e/_artifacts/e3-5c-block-375.png" });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expectLightContrast(page, block);
+    await block.screenshot({ path: "e2e/_artifacts/e3-5c-block-light.png" });
+    await expectDarkContrast(page, block);
+    await block.screenshot({ path: "e2e/_artifacts/e3-5c-block-dark.png" });
   });
 });

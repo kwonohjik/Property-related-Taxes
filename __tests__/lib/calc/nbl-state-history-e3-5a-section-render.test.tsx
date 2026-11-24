@@ -5,7 +5,7 @@
  *
  *   N-1  꼬리 근거 «철거ㆍ멸실» 안내 = 엔진 `demolishedStatusNotice(양도일)`(양도일 시행본 연혁) — 경계 쌍 4개 · 양도일 미입력 = 연혁 한 줄 변형
  *   N-2  철거 행 + 9호 유예 행 부재 + (이 지목이 유예를 읽음 ∧ 의제 아님 ∧ 엔진이 이력을 읽음) 조건부 안내 — 저장값 존재 여부만 본다(기산일 일치는 판정하지 않는다)
- *   N-3  나대지 구간 근거 hint 보충 — 꼬리 칸이 근거 «철거ㆍ멸실»을 선택지로 줄 때만
+ *   N-3  (E3f-1a 임시 보충 문장 — U-3가 폐기: 나대지 구간 근거는 철거 행 뒤 구간에서 «철거ㆍ멸실»을 받는다)
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
@@ -17,7 +17,6 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import type { NblOtherStateEventInput } from "@/lib/stores/calc-wizard-asset-nbl-other";
 import {
   NBL_PTAX_DEMOLISHED_STATUS_GRACE_DIRECTION_NOTE,
-  NBL_STATE_HISTORY_BARE_DEMOLISHED_TAIL_ONLY_NOTE,
   NBL_STATE_HISTORY_DEMOLITION_GRACE_NUDGE_NOTICE,
   NBL_STATE_HISTORY_GRACE_ROW_NOTICE,
 } from "@/lib/tax-engine/nbl-confirm-notices";
@@ -228,25 +227,26 @@ describe("N-2 — 철거 행 + 9호 유예 부재 조건부 안내 (X-1~X-6)", (
   });
 });
 
-describe("N-3 — 나대지 구간 근거 hint 보충 (꼬리 칸이 근거 «철거ㆍ멸실»을 줄 때만)", () => {
+describe("N-3(E3f-1a 임시 문구) — U-3가 폐기: 나대지 구간 근거는 철거 행 뒤 구간에서 «철거ㆍ멸실»을 받는다 · 철거 행 앞 구간은 종전 안내", () => {
   const withBareRow = (over: Partial<AssetForm> = {}) =>
     other({ nblOtherPropertyTaxType: "separate", nblOtherStateEvents: [built("2018-01-01", { propertyTaxTypeBefore: "separate" }), removed("2022-01-01")], nblOtherHasBuilding: false, ...over });
+  const OLD_SENTENCE = "철거 후 한시 별도합산·건축 중 기간은 근거로 받지 않고 「부득이한 사유 유예기간」으로 입력합니다.";
 
-  it("꼬리가 별도합산 + 건축물 없음(양도일 현재 철거 뒤) → 보충 문장이 보인다 · 구간 근거 hint의 종전 문장은 그대로", () => {
+  it("철거 행 앞 구간(첫 구간이 나대지 — 철거일 출처 없음): 근거 선택지에 «철거ㆍ멸실»이 없고 종전 hint 문장 그대로 · 폐기된 «아직 받지 않습니다» 보충은 어느 구간에도 없다", () => {
     mountOther(withBareRow());
     expect(id("nbl-other-state-event-0-basis-vacant_state")).not.toBeNull();
+    expect(id("nbl-other-state-event-0-basis-demolished")).toBeNull();
     const body = document.body.textContent ?? "";
-    expect(body).toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_TAIL_ONLY_NOTE);
-    expect(body).toContain("철거 후 한시 별도합산·건축 중 기간은 근거로 받지 않고 「부득이한 사유 유예기간」으로 입력합니다.");
+    expect(body).toContain(OLD_SENTENCE);
+    expect(body).not.toContain("아직 받지 않습니다");
   });
 
-  it("꼬리 칸이 근거 «철거ㆍ멸실»을 주지 않으면(종합합산 · 건축물 있음) 보충이 없다 — 모순이 없는 화면에 모순 문구를 만들지 않는다", () => {
-    mountOther(withBareRow({ nblOtherPropertyTaxType: "comprehensive" }));
-    expect(document.body.textContent).not.toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_TAIL_ONLY_NOTE);
-    cleanup();
-    mountOther(withBareRow({ nblOtherStateEvents: [built("2018-01-01", { propertyTaxTypeBefore: "separate" })] })); // 양도일 현재 건축물 있음
-    expect(id("nbl-other-state-event-0-basis-vacant_state")).not.toBeNull();
-    expect(document.body.textContent).not.toContain(NBL_STATE_HISTORY_BARE_DEMOLISHED_TAIL_ONLY_NOTE);
+  it("철거 행 뒤 구간(신축 행이 닫는 나대지 구간): 근거 선택지에 «철거ㆍ멸실»이 열리고 hint는 «근거를 고르고 사실 칸을 답하세요»", () => {
+    mountOther(withBareRow({ nblOtherHasBuilding: true, nblOtherStateEvents: [built("2012-06-01"), removed("2018-01-01"), built("2019-01-01", { propertyTaxTypeBefore: "separate" })] }));
+    expect(id("nbl-other-state-event-2-basis-demolished")).not.toBeNull();
+    const body = document.body.textContent ?? "";
+    expect(body).toContain("철거 후 한시 별도합산은 근거 「철거ㆍ멸실」을 고르고 아래 사실 칸을 답하세요.");
+    expect(body).not.toContain("아직 받지 않습니다");
   });
 });
 

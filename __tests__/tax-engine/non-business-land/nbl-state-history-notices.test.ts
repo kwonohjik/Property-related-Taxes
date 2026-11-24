@@ -36,10 +36,19 @@ const CONFIRM_REQUIRED = [
   "NBL_STATE_HISTORY_VACANT_LOT_APPLIED_NOTICE", // E3-④ Q-5 (가) — 13호 변형: `APPLIED`를 대체(호별 용도 전체 적용 문구가 13호와 모순)
   "NBL_STATE_HISTORY_VACANT_LOT_TAX_CHANGE_APPLIED_NOTICE", // E3-④ — 13호 변형의 재산세 구분 변경 이력 짝
   "NBL_STATE_HISTORY_VACANT_LOT_AREA_NOTICE", // E3-④ D-2 — 660㎡ 초과 × 이력은 13호 구간을 인정하지 않음
+  // E3-⑤ E3f-2 — 나대지 구간 근거 «철거ㆍ멸실»(한시 창): 받아들임 · 주택 빈집정비 미확인(일반 W만) · 주택 면적 한도 없음 · 접힘 사유 5종
+  "NBL_STATE_HISTORY_BARE_DEMOLISHED_ACCEPTED_NOTICE",
+  "NBL_STATE_HISTORY_BARE_DEMOLISHED_VACANT_HOUSE_UNCONFIRMED_NOTICE",
+  "NBL_STATE_HISTORY_BARE_DEMOLISHED_HOUSE_AREA_NOTICE",
+  "NBL_STATE_HISTORY_BARE_DEMOLISHED_NEVER_PERIOD_NOTICE",
+  "NBL_STATE_HISTORY_BARE_DEMOLISHED_PERMIT_NOTICE",
+  "NBL_STATE_HISTORY_BARE_DEMOLISHED_OTHER_USE_NOTICE",
+  "NBL_STATE_HISTORY_BARE_DEMOLISHED_AREA_MISSING_NOTICE",
+  "NBL_STATE_HISTORY_BARE_DEMOLISHED_AREA_EXCEEDED_NOTICE",
 ];
 
 describe("NBL-STATE-HISTORY-E1 — 이력 고지 상수", () => {
-  it("27종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다(E3-①이 2종 · E3-1b가 3종 · E3-③ A가 7종 · B가 1종 · UI Low가 1종 · E3-④가 3종 · E3-⑤ E3f-1a가 2종 추가 — 기존 8종 문구는 바이트 동일)", () => {
+  it("34종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다(E3-①이 2종 · E3-1b가 3종 · E3-③ A가 7종 · B가 1종 · UI Low가 1종 · E3-④가 3종 · E3-⑤ E3f-1a가 2종 · E3f-2가 8종 추가 · U-3이 E3f-1a N-3 임시 보충 1종 폐기 — 기존 8종 문구는 바이트 동일)", () => {
     expect(STATE_HISTORY_NOTICES.map(([k]) => k).sort()).toEqual(
       [
         ...CONFIRM_REQUIRED,
@@ -48,7 +57,6 @@ describe("NBL-STATE-HISTORY-E1 — 이력 고지 상수", () => {
         "NBL_STATE_HISTORY_GRACE_ROW_NOTICE",
         "NBL_STATE_HISTORY_HOUSING_NON_HOUSE_BUILDING_NOTICE", // E3-③ R-6 — 입력 안내(질문 hint와 같은 상수) — «확인 필요»로 끝나지 않는다
         "NBL_STATE_HISTORY_DEMOLITION_GRACE_NUDGE_NOTICE", // E3-⑤ E3f-1a N-2 — 철거 행 + 9호 부재 입력 안내(입력 화면 전용)
-        "NBL_STATE_HISTORY_BARE_DEMOLISHED_TAIL_ONLY_NOTE", // E3-⑤ E3f-1a N-3 — 나대지 구간 hint 보충(E3f-2 전 임시 · 입력 화면 전용)
       ].sort(),
     );
     const texts = STATE_HISTORY_NOTICES.map(([, v]) => v);

@@ -138,6 +138,16 @@ export function stateHistoryHouseRemovalDates(input: Pick<NonBusinessLandInput, 
   return history.events.filter((e) => eventCarriesBuildingKind(e.kind) && e.buildingKindBefore === "house").map((e) => e.date);
 }
 
+/**
+ * E3-⑤ E3f-2 (계획서 §6.2 D-2) — `applyStateHistory`가 이력을 **읽기 위한 입력만으로 정해지는 조건**: 모드 `changed` ∧ 사건 ≥ 1 ∧ 양도일 의제 사유로 접히지 않는다. 나머지 조건(core가 면적 일부만 비사업용이 아니다)은 core를 돌려야 알 수 있어
+ * `otherLandStateHistoryIsRead`(`other-land.ts`)가 `isPartialArea`를 덧붙인다. `applyStateHistory`가 이 함수로 같은 조건을 읽는다 — «엔진이 읽는가» 판정(⑧·⑫′)과 판정 본체의 조건이 한 곳이다(WIRE-7: `landStateHistory`는 이 파일이 읽는다).
+ */
+export function stateHistoryReadPrecondition(input: Pick<NonBusinessLandInput, "landStateHistory" | "landType" | "deemedTransferReason">): boolean {
+  const history = input.landStateHistory;
+  if (!history || history.mode !== "changed" || history.events.length === 0) return false;
+  return !stateHistoryDeemedBlocks({ landType: input.landType, deemedReason: input.deemedTransferReason });
+}
+
 export function applyStateHistory(
   core: CategoryJudgeResult,
   input: NonBusinessLandInput,

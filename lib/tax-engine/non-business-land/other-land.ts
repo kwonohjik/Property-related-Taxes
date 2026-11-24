@@ -50,6 +50,7 @@ import {
 import { demolishedVacantHouseCellNotices } from "./demolished-temp-status";
 import { demolitionGraceAnchorDates } from "./demolished-temp-status";
 import { applyStateHistory } from "./other-land-state-history-apply";
+import { stateHistoryReadPrecondition } from "./other-land-state-history-apply";
 import { stateHistoryHouseRemovalDates } from "./other-land-state-history-apply";
 import { isPartialArea } from "./other-land-state-history-apply";
 import { buildFail } from "./other-land-helpers";
@@ -120,6 +121,16 @@ export function otherLandAreaIsPartial(rawInput: NonBusinessLandInput, rules: No
   const input = prepareRevenueHistory(rawInput).input;
   if (!input.otherLand) return false;
   return isPartialArea(judgeOtherLandCore(input, rules, {}));
+}
+
+/**
+ * E3-⑤ E3f-2 (계획서 §6.2 D-2) — **엔진이 이 입력의 소유기간 중 건축물 이력(`landStateHistory`)을 읽는가**: 모드 `changed` ∧ 사건 ≥ 1 ∧ 양도일 의제 사유로 접히지 않고(`stateHistoryDeemedBlocks`) ∧
+ * core가 면적 일부만 비사업용으로 판정하지 않는다(`isPartialArea`). `applyStateHistory`의 진입 조건 그대로다 — ⑧(`validateNblStateHistory`)·⑫′(`refineNonBusinessLandRaw`)가 사실 칸 4개의
+ * «엔진이 읽을 때만 필수» 게이트(UQ-8 (가))를 **같은 판정**으로 건다(자체 근사 금지). 이 함수는 사실 칸을 읽지 않는다 — 사실 칸은 `applyStateHistory` 안에서만 쓰여 순환이 없다.
+ * `rules` 한계는 `otherLandAreaIsPartial`과 같다(기본 규칙으로 도는 호출자는 DB 규칙과 3호·수입금액비율 경로에서만 갈릴 수 있다 — 계획서 V-27).
+ */
+export function otherLandStateHistoryIsRead(rawInput: NonBusinessLandInput, rules: NonBusinessLandJudgmentRules): boolean {
+  return stateHistoryReadPrecondition(rawInput) && !otherLandAreaIsPartial(rawInput, rules);
 }
 
 function judgeOtherLandCore(

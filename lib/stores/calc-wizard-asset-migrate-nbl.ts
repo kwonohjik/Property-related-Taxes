@@ -5,6 +5,8 @@ import { eventClosesBareInterval } from "@/lib/tax-engine/non-business-land/othe
 import { eventClosesHouseInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { isEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { NBL_AREA_WITHIN_LIMIT_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
+import { NBL_DEMOLISHED_FACT_VALUES } from "@/lib/tax-engine/non-business-land/nbl-enum-values";
+import type { DemolishedFact } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import { PROPERTY_TAX_BASIS_VALUES } from "@/lib/tax-engine/non-business-land/property-tax-basis";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 
@@ -70,6 +72,13 @@ function migrateNblStateHistory(a: Record<string, unknown>): void {
     // E3-③ B — 기타토지 철거 행의 «철거된 건축물 종류»: `"house"`만 허용하고 철거 행에서만 보존한다. 키가 없던 행·`""`·허용값 밖은 키를 만들지 않는다(구 스냅샷 byte-identical = 주택 아닌 건축물).
     // 종류 칸이 의미를 갖는 지목(기타토지 — 주택 카드는 칸이 없다)은 여기서 보지 않는다 — 숨은 값은 보존하고 ④가 `eventClosesHouseInterval`이 참인 행에서만 보낸다.
     const buildingKind = eventCarriesBuildingKind(kind) && r.buildingKindBefore === "house" ? ("house" as const) : undefined;
+    // E3-⑤ E3f-2 — 나대지 구간 근거 «철거ㆍ멸실»의 사실 3지선다 + 바닥면적: **허용값 안이고 나대지를 닫을 수 있는 행일 때만** 남기고, 키가 없던 행에는 키를 만들지 않는다(구 스냅샷 byte-identical).
+    // 행이 지금 철거 행 뒤인지·근거가 `demolished`인지·어느 칸이 요구되는지는 여기서 보지 않는다 — 숨은 값은 보존하고 ④가 `demolishedRequiredFacts`가 요구하는 칸만 보낸다(되돌리면 복원).
+    const fact = (v: unknown) => (typeof v === "string" && (NBL_DEMOLISHED_FACT_VALUES as readonly string[]).includes(v) ? v : "");
+    const permit = mayCloseBare ? fact(r.demolishedPermitBefore) : "";
+    const otherUse = mayCloseBare ? fact(r.demolishedOtherUseBefore) : "";
+    const vacantHouse = mayCloseBare ? fact(r.demolishedVacantHouseBefore) : "";
+    const floorArea = mayCloseBare && typeof r.demolishedFloorAreaBefore === "string" ? r.demolishedFloorAreaBefore : "";
     return {
       kind,
       date: typeof r.date === "string" ? r.date : "",
@@ -78,6 +87,10 @@ function migrateNblStateHistory(a: Record<string, unknown>): void {
       ...(mayCloseBare && limit ? { areaWithinLimitBefore: limit } : {}),
       ...(footprint ? { houseFootprintBefore: footprint } : {}),
       ...(buildingKind ? { buildingKindBefore: buildingKind } : {}),
+      ...(permit ? { demolishedPermitBefore: permit as DemolishedFact } : {}),
+      ...(otherUse ? { demolishedOtherUseBefore: otherUse as DemolishedFact } : {}),
+      ...(vacantHouse ? { demolishedVacantHouseBefore: vacantHouse as DemolishedFact } : {}),
+      ...(floorArea ? { demolishedFloorAreaBefore: floorArea } : {}),
     };
   });
 }
