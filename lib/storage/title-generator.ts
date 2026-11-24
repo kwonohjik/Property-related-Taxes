@@ -18,6 +18,7 @@ export const TAX_LABEL: Record<LocalTaxType, string> = {
   stock_valuation: "주식 평가",
   one_house_exemption: "1세대1주택 판정",
   gift_deemed: "증여이익",
+  non_business_land_judgment: "비사업용 토지 판정",
 };
 
 export function formatDate(dateStr: string | undefined | null): string | null {
@@ -198,6 +199,14 @@ export function generateTitle(
    * 문구만 「양도예정」으로 갈라 적는다 — 확정 양도와 섞이면 이력에서 구별되지 않는다.
    */
   if (taxType === "one_house_exemption") {
+    const date = extractTransferDate(inputData);
+    if (address && date) return `${label} — ${address} (양도예정 ${date})`;
+    if (address) return `${label} — ${address}`;
+    if (date) return `${label} — 양도예정 ${date}`;
+  }
+
+  /** 비사업용 토지 판정 — 1주택 판정과 같은 폼 모양(`assets[0]` + `transferDate`)이라 같은 추출기가 돈다. 양도일은 예정일이라 「양도예정」. */
+  if (taxType === "non_business_land_judgment") {
     const date = extractTransferDate(inputData);
     if (address && date) return `${label} — ${address} (양도예정 ${date})`;
     if (address) return `${label} — ${address}`;

@@ -24,6 +24,8 @@ export const LOCAL_TAX_TYPES = [
    * 종전에는 등록되지 않아 입력·산출근거가 어느 계층에도 남지 않았다(이관된 증여세 record에는 금액 1개).
    */
   "gift_deemed",
+  /** 비사업용 토지 **판정**(세액 없음) — `/calc/non-business-land` (판정 메뉴 · 계획서 nbl-judgment-menu.ui.plan.md §8) */
+  "non_business_land_judgment",
 ] as const;
 
 export type LocalTaxType = (typeof LOCAL_TAX_TYPES)[number];

@@ -12,6 +12,7 @@ import { canAggregateFromHistory } from "@/lib/calc/transfer-aggregate-entry";
 import { canStockAggregateFromHistory } from "@/lib/calc/stock-aggregate-entry";
 import { resumeCalculationRecord } from "@/lib/calc/history-resume-entry";
 import { oneHouseVerdictLabel } from "@/lib/calc/one-house-judgment-verdict";
+import { nblVerdictLabel } from "@/lib/calc/nbl-judgment-verdict";
 import { inheritedRightHistoryNotice } from "@/lib/calc/history-inherited-right-notice";
 import { HistoryAggregateSelectModal } from "@/components/calc/transfer/HistoryAggregateSelectModal";
 import { StockHistoryAggregateModal } from "@/components/calc/stock-transfer/StockHistoryAggregateModal";
@@ -111,6 +112,23 @@ export function extractResultSummaryItems(
     if (applied > 0) items.push({ label: "적용 특례", value: `${applied}건` });
     const pending = judgment.pending?.length ?? 0;
     if (pending > 0) items.push({ label: "남은 조건", value: `${pending}건` });
+    return items;
+  }
+
+  /** 비사업용 토지 판정 — 세액이 없다. 1주택 판정과 같은 이유로 공통 분기보다 먼저 가른다. */
+  if (taxType === "non_business_land_judgment") {
+    const judgment = resultData?.judgment as
+      | { totalOwnershipDays?: number; areaProportioning?: { nonBusinessRatio?: number } }
+      | undefined;
+    if (!judgment) return items;
+    items.push({ label: "판정", value: nblVerdictLabel(resultData) });
+    if (typeof judgment.totalOwnershipDays === "number" && judgment.totalOwnershipDays > 0) {
+      items.push({ label: "소유기간", value: `${judgment.totalOwnershipDays.toLocaleString()}일` });
+    }
+    const ratio = judgment.areaProportioning?.nonBusinessRatio;
+    if (typeof ratio === "number" && ratio > 0 && ratio < 1) {
+      items.push({ label: "비사업용 면적 비율", value: `${(ratio * 100).toFixed(1)}%` });
+    }
     return items;
   }
 
@@ -259,7 +277,7 @@ export function HistoryDetailDrawer({
           {/* 납부세액 — 판정 메뉴는 세액이 없으므로 그 자리에 판정 결론을 띄운다 */}
           <div className="rounded-lg bg-muted/40 px-4 py-3">
             <p className="text-xs text-muted-foreground mb-0.5">
-              {record.taxType === "one_house_exemption"
+              {record.taxType === "one_house_exemption" || record.taxType === "non_business_land_judgment"
                 ? "판정"
                 : record.taxType === "gift_deemed"
                   ? "증여이익"
@@ -268,9 +286,11 @@ export function HistoryDetailDrawer({
             <p className="text-xl font-bold" data-testid="drawer-headline-value">
               {record.taxType === "one_house_exemption"
                 ? oneHouseVerdictLabel(record.resultData)
-                : record.taxType === "gift_deemed"
-                  ? deemedGiftHeadline(record.resultData)
-                  : extractTotalTax(record.resultData)}
+                : record.taxType === "non_business_land_judgment"
+                  ? nblVerdictLabel(record.resultData)
+                  : record.taxType === "gift_deemed"
+                    ? deemedGiftHeadline(record.resultData)
+                    : extractTotalTax(record.resultData)}
             </p>
           </div>
 

@@ -59,6 +59,7 @@ describe("LocalTaxType 등록 커버리지", () => {
     expect(TAX_TYPE_ROUTES.stock_transfer).toBe("/calc/stock-transfer-tax");
     expect(TAX_TYPE_ROUTES.stock_valuation).toBe("/tools/stock-valuation");
     expect(TAX_TYPE_ROUTES.one_house_exemption).toBe("/calc/one-house-exemption");
+    expect(TAX_TYPE_ROUTES.non_business_land_judgment).toBe("/calc/non-business-land");
   });
 
   it("[R-5] 이력 필터가 전 세목을 노출한다 (빠지면 그 세목 이력을 걸러 볼 수 없다)", () => {
