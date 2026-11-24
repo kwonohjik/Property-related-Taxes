@@ -8,6 +8,7 @@
  * 패턴은 `OneHouseJudgmentCalculator`(판정 메뉴 정본). 다른 점: 세액을 계산하지 않고, store가 독립이며, 입력 위젯은 계산기 Step4 「판정 도움」을 그대로 쓴다.
  */
 import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { ResetButton } from "@/components/calc/shared/ResetButton";
@@ -23,6 +24,8 @@ import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { useResetOnNewParam } from "@/lib/hooks/use-reset-on-new-param";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { callNblJudgmentAPI } from "@/lib/calc/non-business-land-judgment-api";
+import { openTransferWithNblFacts } from "@/lib/calc/nbl-judgment-handoff";
+import { nblHandoffRemainingInputs } from "@/lib/calc/nbl-judgment-handoff-remaining";
 import { NBL_JUDGMENT_RESULT_STEP, NBL_JUDGMENT_STEPS } from "@/lib/calc/nbl-judgment-steps";
 import { validateAllSteps } from "@/lib/calc/non-business-land-judgment-validate";
 import { validateStepByIndex } from "@/lib/calc/non-business-land-judgment-validate";
@@ -47,6 +50,7 @@ export default function NblJudgmentCalculator() {
   const reset = useNblJudgmentStore((s) => s.reset);
 
   const activeClientId = useProfessionalStore((s) => s.activeClientId);
+  const router = useRouter();
 
   /**
    * 🔴 다른 의뢰인이 만든 판정 결과는 쓰지 않는다 — 결과는 판정을 요청한 시점의 의뢰인(`resultClientId`)과 묶여 있고, 지금 의뢰인과 다르면 표시·자동저장에 쓰지 않는다.
@@ -152,6 +156,14 @@ export default function NblJudgmentCalculator() {
     reset();
   }, [reset]);
 
+  /**
+   * 「양도세 계산하기」 — 넘기는 것은 **폼(사실)** 이지 `result`가 아니다(계산기가 같은 엔진으로 다시 판정한다). 진입은 단일 헬퍼를 거친다 —
+   * 여기서 store를 직접 쓰고 `router.push`하면 이력 카드·드로어가 두 번 갈라졌던 전례를 되풀이한다.
+   */
+  const handleCalculateTax = useCallback(() => {
+    void openTransferWithNblFacts(formData, router);
+  }, [formData, router]);
+
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-8">
@@ -207,7 +219,15 @@ export default function NblJudgmentCalculator() {
             {currentStep === 1 && <StepJudge form={formData} onAssetChange={updateAsset} />}
             {currentStep === 2 && <StepGrace form={formData} onAssetChange={updateAsset} />}
             {currentStep === NBL_JUDGMENT_RESULT_STEP && (
-              <StepResult result={result} form={formData} error={error} isLoading={isLoading} onJudge={handleJudge} />
+              <StepResult
+                result={result}
+                form={formData}
+                error={error}
+                isLoading={isLoading}
+                onJudge={handleJudge}
+                onCalculateTax={handleCalculateTax}
+                remainingInputs={nblHandoffRemainingInputs(formData)}
+              />
             )}
 
             <div className="mt-8 flex items-center justify-between border-t pt-6">

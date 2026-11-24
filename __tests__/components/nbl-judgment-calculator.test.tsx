@@ -175,6 +175,22 @@ describe("[CA-3] ④ 판정 결과", () => {
     expect(useNblJudgmentStore.getState().result).toBeNull();
   });
 
+  it("「양도세 계산하기」 → 사실만 계산기 store에 쓰고 /calc/transfer-tax로 이동 · 남은 입력 목록이 보인다", async () => {
+    stubJudgeFetch();
+    fillValid();
+    act(() => useNblJudgmentStore.getState().setStep(2));
+    render(<NblJudgmentCalculator />);
+    fireEvent.click(screen.getByTestId("nbl-judgment-judge-cta"));
+    await waitFor(() => expect(screen.getByTestId("nbl-judgment-to-calculator")).toBeTruthy());
+    expect(screen.getByTestId("nbl-judgment-to-calculator-remaining").textContent).toContain("총 양도가액 · 취득가액");
+    fireEvent.click(screen.getByTestId("nbl-judgment-to-calculator"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/calc/transfer-tax"));
+    const { useCalcWizardStore } = await import("@/lib/stores/calc-wizard-store");
+    const calc = useCalcWizardStore.getState().formData;
+    expect(calc.transferDate).toBe("2024-06-01");
+    expect(calc.assets[0]).toMatchObject({ assetKind: "land", isNonBusinessLand: true, nblUseDetailedJudgment: true, addressJibun: "서울 강남구 테스트동 1" });
+  });
+
   it("판정 API 오류 → 오류 + 「다시 판정하기」 · 재시도 성공", async () => {
     const judgment = jsonRound(judgeFromAsset(CARD_CASES.nonBusinessVacant.over));
     let n = 0;
