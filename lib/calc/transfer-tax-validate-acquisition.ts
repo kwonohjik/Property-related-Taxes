@@ -135,7 +135,7 @@ function validateParcelMode(primary: AssetForm, formTransferDate?: string): stri
  *    통과하고 서버가 400을 냈다 — 계획서 redev-successor-inherit-valuation-required.plan.md · inherit-decedent-date-early-return.plan.md.
  *    각 분기의 고유 검사(전용 문구 포함 — 일반건물 토지 상속 §95④ 등)가 먼저다.
  */
-function inheritedDecedentDateError(asset: AssetForm, label: string): string | null {
+export function inheritedDecedentDateError(asset: AssetForm, label: string): string | null {
   if (asset.acquisitionCause !== "inheritance" || asset.decedentAcquisitionDate) return null;
   return fieldError("decedentAcquisitionDate", `${label}: 피상속인 취득일을 입력하세요.`);
 }
