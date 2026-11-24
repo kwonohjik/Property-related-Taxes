@@ -47,7 +47,10 @@ import {
   propertyTaxBasisWarnings,
   resolvePropertyTaxBasis,
 } from "./property-tax-basis";
+import { demolishedVacantHouseCellNotices } from "./demolished-temp-status";
+import { demolitionGraceAnchorDates } from "./demolished-temp-status";
 import { applyStateHistory } from "./other-land-state-history-apply";
+import { stateHistoryHouseRemovalDates } from "./other-land-state-history-apply";
 import { isPartialArea } from "./other-land-state-history-apply";
 import { buildFail } from "./other-land-helpers";
 import type { OtherLandOwnTrace } from "./other-land-helpers";
@@ -171,7 +174,9 @@ function judgeOtherLandCore(
   const effectiveLabel = propertyTaxTypeLabel(effectiveTaxType);
   appliedLaws.push(NBL.OTHER_LAND_PROPERTY_TAX_EXCLUSION);
   if (keptBasis) appliedLaws.push(PROPERTY_TAX_BASIS_LEGAL[keptBasis]);
-  warnings.push(...propertyTaxBasisWarnings(basisRes, keptBasis, declaredLabel));
+  warnings.push(...propertyTaxBasisWarnings(basisRes, keptBasis, declaredLabel, input.transferDate));
+  // E3-⑤ E3f-1a — 빈집 3년 셀 고지(근거 «철거ㆍ멸실»을 선언하지 않은 입력용 · 입력 0 · 판정·세액 불변).
+  warnings.push(...demolishedVacantHouseCellNotices({ transferDate: input.transferDate, removedOn: [...stateHistoryHouseRemovalDates(input), ...demolitionGraceAnchorDates(input)] }, keptBasis === "demolished"));
   steps.push({
     id: "other_bare_land",
     label: "Step 0 나대지 간주 검증 (2% 기준)",
@@ -356,7 +361,7 @@ function judgeOtherLandCore(
         status: "FAIL",
         detail:
           `허용 ${buildingExcess.allowedLandArea}㎡ 초과분 ${areaProportioning.nonBusinessArea}㎡ 비사업용 ` +
-          `(${excessIsDemolished ? "영 §103의2①1호 → §101② 배율" : "§101①2호 배율"} ${buildingExcess.multiplier}배)`,
+          `(${excessIsDemolished ? "영 §103의2 1호 → §101② 배율" : "§101①2호 배율"} ${buildingExcess.multiplier}배)`,
         legalBasis: excessLegal,
       });
       return {

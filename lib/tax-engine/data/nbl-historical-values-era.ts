@@ -17,7 +17,7 @@
  *     영 §168의13 3호 문언(「가목1)부터 4)까지」)은 그대로라 목 재편 시점을 거쳐 가리키는 지역이 바뀐다 — 사용자가 입력하는 「제외지역 해당」 선언이라 세액은 바꾸지 않고 고지만 한다(`VILLA_REGION_LIST_EVOLVED_NOTICE`).
  *   · 2008.1.1.~2009.3.15. 양도분(2008.10.7. 「10년」·2008.12.31. 소급 부칙)은 범위 밖(양도 2009.3.15. 이전 = 범위 밖)이라 모델링하지 않았다.
  */
-import { parseISO } from "../utc-date";
+import { addYears, isValid, parseISO } from "../utc-date";
 import { NBL } from "../legal-codes/transfer-nbl";
 
 // UTC 자정 달력일 상수 — 입력 Date도 같은 규약(utc-date). Invalid Date(미입력)는 비교가 모두 false라 «가장 최근 시행본»으로 접힌다(조기 확정 방지 규약과 동일).
@@ -25,6 +25,11 @@ const FROM_2014_02_21 = parseISO("2014-02-21");
 const FROM_2021_05_04 = parseISO("2021-05-04");
 const FROM_2025_03_21 = parseISO("2025-03-21");
 const FROM_2015_02_03 = parseISO("2015-02-03");
+// 지방세법 시행령 §103의2 «철거ㆍ멸실된 건축물 또는 주택의 범위» — **적용 시작 과세기준일**(부칙 «납세의무가 성립하는 분부터» — 과세기준일 6.1.).
+const FROM_2016_06_01 = parseISO("2016-06-01");
+const FROM_2019_06_01 = parseISO("2019-06-01");
+const FROM_2024_06_01 = parseISO("2024-06-01");
+const FROM_2026_06_01 = parseISO("2026-06-01");
 
 export type PublicNoticeLookbackEra = "five_year_pre_2014" | "two_year" | "five_year_2021";
 
@@ -75,3 +80,46 @@ export function villaRuralValueLimitHint(transferDate: Date | undefined): string
 export const VILLA_REGION_LIST_EVOLVED_NOTICE =
   "「조세특례제한법」 §99의4①1호가목의 제외지역 열거(영 §168의13 3호가 가리킨다)는 시행본마다 달라졌습니다(2016.1.1. 시행본은 수도권·도시지역 및 허가구역·지정지역·그 밖 4개 목, " +
   "2023.12.21. 시행본은 수도권·도시지역·조정대상지역·허가구역·그 밖 5개 목). 입력하신 「제외지역 해당 여부」가 양도일 시행본 기준인지 확인이 필요합니다.";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 지방세법 시행령 §103의2 — 철거ㆍ멸실 후 재산세 한시 지위(별도합산) 시행본 연혁 (NBL-STATE-HISTORY-E3-⑤ E3f-1a · 계획서 §1.2~§1.3 · KoreanLaw 시행본·부칙 원문 실독 2026-11-24)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 시행본 연혁 — 한시 지위는 **과세기준일마다 그날의 시행본**으로 정해진다(법문 «과세기준일 현재» + 영 부칙 «납세의무가 성립하는 분부터»).
+ *
+ * | era | 적용 시작 과세기준일 | 시행본 본문 |
+ * |---|---|---|
+ * | `not_yet` | — (2016.6.1. 전) | 2016.1.1. 시행본(제26836호)의 §103의2는 «이 영 시행 이후 최초로 납세의무가 성립하는 분부터»(부칙 제2조) — 첫 과세기준일 2016.6.1. |
+ * | `six_month` | 2016.6.1. | «6개월이 지나지 아니한 건축물 또는 주택의 부속토지» |
+ * | `permit` | 2019.6.1. | + «허가 등을 받지 않은 …·사용승인(임시사용승인 포함)을 받지 않은» 건축물·주택 제외(제29437호 제2조) |
+ * | `vacant_house` | 2024.6.1. | + 빈집정비사업 등 철거 빈집 **3년**(제34080호 제6조) · 2024.5.28. 호 구분(1호 6개월 + **건축 용도 외 사용 제외 + 종전 바닥면적 × §101② 배율** · 2호 빈집 3년 — 제34528호 제4조) |
+ * | `one_year` | 2026.6.1. | 1호 6개월 → **1년**(제36043호 제13조) |
+ *
+ * ⚠️ 이 era는 **고지 문구 선택**용이다 — 양도일 ≥ 경계 비교. 판정(창·게이트)에는 쓰지 않는다(E3f-1b·2가 과세기준일별 W를 따로 계산한다 — 양도일·철거일 시행본으로 W를 정하면 틀린다: 계획서 §1.3).
+ * 양도일 Invalid Date는 비교가 모두 false라 «가장 최근 시행본»(`one_year`)으로 접힌다 — 호출자(`demolishedStatusNotice`)가 미입력은 이 함수 앞에서 거른다.
+ */
+export type DemolishedStatusEra = "not_yet" | "six_month" | "permit" | "vacant_house" | "one_year";
+
+export function demolishedStatusEra(transferDate: Date): DemolishedStatusEra {
+  if (transferDate < FROM_2016_06_01) return "not_yet";
+  if (transferDate < FROM_2019_06_01) return "six_month";
+  if (transferDate < FROM_2024_06_01) return "permit";
+  if (transferDate < FROM_2026_06_01) return "vacant_house";
+  return "one_year";
+}
+
+/** 양도일이 입력됐는가 — 미입력(undefined)·Invalid Date는 연혁을 단정하지 않는다. */
+export function hasDemolishedStatusEraDate(transferDate: Date | undefined): transferDate is Date {
+  return transferDate !== undefined && isValid(transferDate);
+}
+
+/**
+ * «빈집 3년 셀» — 철거ㆍ멸실일 `removedOn`이 (2021.6.1., 2022.6.1.]이고 양도일이 [2024.6.1., 2025.3.21.)인가.
+ * 과세기준일 2024.6.1. 현재 빈집정비 3년 한시는 `removedOn + 3년 > 2024.6.1.`이면 성립 가능하고, 그날을 건축물 멸실 유예 9호(양도 2025.3.21. 전 2년 — `demolitionGraceYears`)
+ * `[removedOn, removedOn + 2년)`이 덮지 못하는 것은 `removedOn + 2년 ≤ 2024.6.1.`일 때다. 이 셀의 판정 뒤집힘은 격자로 실측했다(E3f-0 Anchor 3 — 판정 뒤집힘 356행이 전부 이 셀 안).
+ * 날짜 중 하나가 Invalid Date면 false.
+ */
+export function isVacantHouseThreeYearCell(removedOn: Date, transferDate: Date): boolean {
+  return removedOn > addYears(FROM_2024_06_01, -3) && removedOn <= addYears(FROM_2024_06_01, -2) && transferDate >= FROM_2024_06_01 && transferDate < FROM_2025_03_21;
+}

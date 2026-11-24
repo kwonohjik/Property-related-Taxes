@@ -51,6 +51,7 @@ import { VACANT_LOT_HO } from "./other-land-vacant-lot-history";
 import { vacantLotBusinessIntervals } from "./other-land-vacant-lot-history";
 import { vacantLotWithinAreaLimit } from "./other-land-vacant-lot-history";
 import { deriveOtherLandStateIntervals } from "./other-land-state-history";
+import { eventCarriesBuildingKind } from "./other-land-state-history";
 import { stateHistoryBusinessIntervals } from "./other-land-state-history";
 import { getPeriodJudgmentDate } from "./period-criteria";
 import { meetsPeriodCriteria } from "./period-criteria";
@@ -125,6 +126,16 @@ function houseIntervalNotices(intervals: ReadonlyArray<LandStateInterval>, input
   if (houses.some((iv) => iv.houseOutcome === "unconfirmed")) notices.push(NBL_STATE_HISTORY_HOUSE_WITHIN_UNCONFIRMED_NOTICE);
   if (exceeded && input.gracePeriods.some((g) => g.reasonCode === "demolition")) notices.push(NBL_STATE_HISTORY_HOUSE_EXCEEDED_GRACE_NOTICE);
   return notices;
+}
+
+/**
+ * E3-⑤ E3f-1a — 상태 이력(`changed`)의 **주택** 철거 행 날짜(빈집 셀 고지의 후보 — 빈집은 주택). 모드가 `changed`가 아니면 사건을 읽지 않는다(stale 사건 무시).
+ * `landStateHistory`의 판정 쪽 reader는 이 파일뿐이라(WIRE-7) 고지 leaf(`demolished-temp-status.ts`)는 이 함수의 결과만 받는다. 철거 행 판별은 술어(`eventCarriesBuildingKind`) — 종류 리터럴 분기 금지(E3-① 게이트).
+ */
+export function stateHistoryHouseRemovalDates(input: Pick<NonBusinessLandInput, "landStateHistory">): Date[] {
+  const history = input.landStateHistory;
+  if (history?.mode !== "changed") return [];
+  return history.events.filter((e) => eventCarriesBuildingKind(e.kind) && e.buildingKindBefore === "house").map((e) => e.date);
 }
 
 export function applyStateHistory(

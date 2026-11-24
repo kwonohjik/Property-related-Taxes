@@ -110,7 +110,7 @@ export interface NblOtherFormSlice {
   nblOtherPropertyTaxType: "" | "exempt" | "comprehensive" | "separate" | "special_sum";
   /** NBL2611-V1-A (Q-1) — 재산세 분류 «근거»(건축물 없는 토지의 비종합합산 선언을 존중하는 사실). ""=미선택(엔진이 종합합산 + 확인 필요로 접는다 — ⑧ 차단 아님). 선언·건축물 유무에 맞지 않는 stale 값은 화면이 숨기고 매퍼가 보내지 않는다. */
   nblOtherPropertyTaxBasis: "" | PropertyTaxBasis;
-  /** NBL2611-V1-A — 근거가 «철거ㆍ멸실»일 때 철거 전 건축물 바닥면적(㎡). 영 §103의2①1호 */
+  /** NBL2611-V1-A — 근거가 «철거ㆍ멸실»일 때 철거 전 건축물 바닥면적(㎡). 영 §103의2 1호 */
   nblOtherDemolishedFloorArea: string;
   nblOtherBuildingValue: string;
   nblOtherLandValue: string;

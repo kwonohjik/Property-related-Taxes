@@ -6,7 +6,7 @@
  *   Anchor 2  현행 엔진 실측: 같은 행을 raw → ⑭ → 판정 → 세액으로 돌린 값(`current`)을 고정하고, 오라클과 다른 행(`flipsIn`)을 PR별로 못 박는다.
  *             현행 결함 고정 — 꼬리 근거 «철거ㆍ멸실»이 철거일을 읽지 않아 철거 6년 뒤에도 사업용(B 198,210,000) · 9호 유예만이면 N 253,960,000.
  *   Anchor 3  6개월·1년 한시는 9호에 포함된다(격자 — 판정·일수 뒤집힘 0) · 빈집 3년만 9호가 덮지 못하는 셀이 있다.
- *   Anchor 4  나대지 구간 선언의 근거 `demolished` 현행 접힘(`demolished_unsupported`) · 선택지 제외 — **E3f-2가 반전하는 단언**(V-7 예고) · 고지 문구가 양도일과 무관하게 «1년» 고정(F-1) — **E3f-1a가 반전**.
+ *   Anchor 4  나대지 구간 선언의 근거 `demolished` 현행 접힘(`demolished_unsupported`) · 선택지 제외 — **E3f-2가 반전하는 단언**(V-7 예고). 고지 «1년» 고정(F-1)·항 번호 단언은 **E3f-1a가 반전했다**(아래 «반전 완료»).
  *
  * 계획서(정본): docs/01-plan/features/nbl-state-history-e3-5-demolition-temp-status.engine.plan.md v4 §3 · §7 · §8 «E3f-0»
  * 표: `_helpers/nbl-state-history-e3-5-table.ts` — E3f-1a·1b·2의 anchor가 같은 표를 쓴다.
@@ -269,16 +269,18 @@ describe("E3f-0 Anchor 4 — 반전 예고 단언 (이 단언을 E3f-1a·E3f-2�
     expect([judge(withBasis).isNonBusinessLand, judge(withBasis).effectiveBusinessDays, taxOf(withBasis)]).toEqual([judge(noBasis).isNonBusinessLand, judge(noBasis).effectiveBusinessDays, taxOf(noBasis)]);
   });
 
-  it("[E3f-1a 반전] 꼬리 근거 고지가 양도일과 무관하게 «1년»(2026.6.1.~ 시행본) 고정 — 양도 2018-12-01(6개월 시행본)에도 «1년이 지나지 않은»(F-1)", () => {
+  it("[E3f-1a 반전 완료] 꼬리 근거 고지는 양도일 시행본 연혁 — 양도 2018-12-01(6개월 시행본)에는 «6개월», «1년»이 아니다(F-1 해소 · 상세는 e3-5a-notice anchor)", () => {
     const input = fromRaw(e35Tail("2018-03-01", "2018-12-01", undefined, { acquisitionDate: "2014-01-01" }));
     const notice = judge(input).warnings.find((w) => w.includes("철거ㆍ멸실된 날부터"));
     expect(notice).toBeDefined();
-    expect(notice).toContain("1년이 지나지 않은");
-    expect(notice).not.toContain("6개월");
+    expect(notice).toContain("6개월이 지나지 않은");
+    expect(notice).not.toContain("1년이 지나지 않은");
   });
 
-  it("[E3f-1a 반전] 상수 인용 «시행령 §103의2 ① 1호»(조문에 항이 없다) — 고지 본문에 그대로 나온다", () => {
+  it("[E3f-1a 반전 완료] 상수 인용 «시행령 §103의2 1호» — 조문에 항(①)이 없다", () => {
     const input = fromRaw(e35Tail("2018-03-01", "2018-12-01", undefined));
-    expect(judge(input).warnings.some((w) => w.includes("§103의2 ① 1호"))).toBe(true);
+    const warnings = judge(input).warnings;
+    expect(warnings.some((w) => w.includes("§103의2 ① 1호"))).toBe(false);
+    expect(warnings.some((w) => w.includes("§103의2"))).toBe(true);
   });
 });
