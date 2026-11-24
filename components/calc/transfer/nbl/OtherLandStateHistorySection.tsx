@@ -48,6 +48,7 @@ import type { NblOtherStateEventInput } from "@/lib/stores/calc-wizard-asset-nbl
 import { NBL_STATE_HISTORY_APPLIED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_DAYWISE_NO_RULING_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
+import { NBL_STATE_HISTORY_DEMOLITION_GRACE_NUDGE_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_GRACE_ROW_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_HOUSE_BEFORE_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_HOUSE_EXCEEDED_GRACE_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
@@ -74,6 +75,7 @@ import { eventCarriesTaxTypeBefore } from "@/lib/tax-engine/non-business-land/ot
 import { eventClosesBareInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventClosesHouseInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { houseTaxTypeChangedMessage } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
+import { consumesGracePeriods } from "@/lib/tax-engine/non-business-land/land-category";
 import { hasBuildingAtTransfer } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { isBuildingEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { isEventKind } from "@/lib/tax-engine/non-business-land/other-land-state-history";
@@ -82,6 +84,7 @@ import { STATE_EVENT_KIND_LABEL_HOUSE } from "@/lib/tax-engine/non-business-land
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 import { OtherLandBareIntervalFields, ptaxOptions } from "./OtherLandBareIntervalFields";
 import { OtherLandBuildingKindField } from "./OtherLandBuildingKindField";
+import { tailOffersDemolishedBasis } from "./OtherLandPropertyTaxBasisField";
 import { MetropolitanAreaField } from "./shared/MetropolitanAreaField";
 
 export interface OtherLandStateHistorySectionProps {
@@ -214,6 +217,11 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
   const hasHouseRow = events.some((_, i) => eventClosesHouseInterval(events, i, tailKind));
   const exceededWithGrace = hasHouseRow && !!preview?.rows.some((r) => r.houseOutcome === "exceeded") && (asset.nblGracePeriods ?? []).some((g) => g.reasonCode === "demolition");
   const lastBuildingKind = [...events].reverse().find((e) => isBuildingEventKind(e.kind))?.kind;
+  // E3-⑤ N-2 — 철거 행에 9호 유예 행이 없을 때의 조건부 입력 안내. 저장값 존재 여부만 본다(기산일 일치는 판정하지 않는다 · 유예 자동 생성 없음). 게이트 = 이 지목이 유예를 읽음(`GracePeriodSection`과 같은 술어) ∧ 의제 아님 ∧ 엔진이 이력을 읽음.
+  const noDemolitionGrace = !(asset.nblGracePeriods ?? []).some((g) => g.reasonCode === "demolition");
+  const graceNudgeApplies = noDemolitionGrace && !!asset.nblLandType && consumesGracePeriods(asset.nblLandType) && !deemedBlocks && !historyIgnored;
+  // E3-⑤ N-3 — 나대지 구간 근거 hint 보충은 양도일 현재 칸이 근거 «철거ㆍ멸실»을 줄 때만(기타토지 카드 — 주택 카드는 꼬리 근거 칸이 없다).
+  const tailOffersDemolished = !house && tailOffersDemolishedBasis(asset);
 
   return (
     <div className="space-y-3" data-testid="nbl-other-state-history">
@@ -356,6 +364,7 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                     event={ev}
                     wire={stateEventWireRow(events, i, tailHasBuilding, tailKind)}
                     patchEvent={(patch) => patchEvent(i, patch)}
+                    tailOffersDemolished={tailOffersDemolished}
                   />
                 )}
 
@@ -419,6 +428,12 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                       )}
                     </div>
                   </FieldCard>
+                )}
+
+                {graceNudgeApplies && eventCarriesBuildingKind(ev.kind) && (
+                  <ToneCard tone="amber">
+                    <p className="text-caption leading-snug" data-testid={`nbl-other-state-event-${i}-grace-nudge`}>{NBL_STATE_HISTORY_DEMOLITION_GRACE_NUDGE_NOTICE}</p>
+                  </ToneCard>
                 )}
 
                 {afterRow && !house && (
