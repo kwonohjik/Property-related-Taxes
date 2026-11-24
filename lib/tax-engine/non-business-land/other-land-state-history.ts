@@ -102,6 +102,14 @@ export function isBuildingEventKind(kind: string): kind is BuildingEventKind {
 }
 
 /**
+ * E3-③ B — 이 종류의 사건 행이 «철거된 건축물 종류»(`buildingKindBefore`)를 받는가 — **철거 행뿐**이다(신축·재산세 과세 구분 변경 행에는 철거된 건축물이 없다).
+ * `eventClosesHouseInterval`(주택 구간 판정) · ③ 복원 정규화 · ⑤ 종류 카드 노출이 **같은 술어**를 읽는다(`kind === "building_removed"` 리터럴 분기 금지 — E3-① 게이트).
+ */
+export function eventCarriesBuildingKind(kind: string): boolean {
+  return kind === "building_removed";
+}
+
+/**
  * 이 종류의 사건이 `propertyTaxTypeBefore`(그 사건이 닫는 구간의 재산세 구분)를 **건축물 있는 구간에서** 운반하는가 — 철거·재산세 과세 구분 변경(E3-①).
  * ④ 와이어 정규화 · ③ 복원 정규화 · ⑤ 미리보기가 읽는다. **E3-1b**: 신축 행도 나대지 구간을 닫으므로 Before를 운반할 수 있다 — 그 판정은 종류만으로 못 하고
  * 사건 순서 replay가 필요해 `eventClosesBareInterval`이 맡는다(⑭는 둘을 함께 읽는다). 이 술어의 의미는 E3-①과 같다(UI가 두 술어로 교체한다).
@@ -268,7 +276,7 @@ export function houseKindEventIssue(events: ReadonlyArray<StateEventRowLike>): S
  */
 export function eventClosesHouseInterval(events: ReadonlyArray<{ kind: string; buildingKindBefore?: string }>, index: number, tailKind: StateBuildingKind | undefined): boolean {
   const ev = events[index];
-  if (ev?.kind !== "building_removed") return false;
+  if (!ev || !eventCarriesBuildingKind(ev.kind)) return false;
   return tailKind === "house" || ev.buildingKindBefore === "house";
 }
 

@@ -20,6 +20,7 @@ import { buildUncondSourceRecord, nblAcquisitionDateOf } from "@/lib/calc/nbl-un
 import { nblLandSigunguCodeOf } from "./nbl-land-sigungu";
 import { effectiveOtherHasBuildingOf } from "./nbl-other-state-history-scope";
 import { revenuePeriodWireFields } from "./nbl-revenue-period-scope";
+import { housePriorNeedsMetropolitanOf } from "./nbl-other-state-history-scope";
 import { nblHousingStateHistoryApplies } from "./nbl-other-state-history-scope";
 import { nblOtherStateEventsInUse } from "./nbl-other-state-history-scope";
 import { stateHistoryWireFields } from "./nbl-other-state-history-scope";
@@ -163,7 +164,8 @@ export function buildNonBusinessLandRaw(
   // ⑤ 렌더·⑧ 검증·서버 매퍼가 같은 엔진 술어(`consumes*`)를 쓴다 — useEffect로 store를 지우지 않는다.
   const consumes = {
     incorporation: consumesUrbanIncorporationDate(asset.nblLandType),
-    metro: consumesMetropolitanArea(asset.nblLandType),
+    // E3-③ B — 기타토지는 소비표 열을 열지 않고(D-13) «철거된 건축물 = 주택» 행이 있고 수도권이 배율을 가르는 용도지역일 때만 보낸다(엔진 술어 단일 소스 — 안 열면 서버가 수도권 미제공으로 읽어 보수적 3배 · 초과 접힘).
+    metro: consumesMetropolitanArea(asset.nblLandType) || housePriorNeedsMetropolitanOf(asset),
     deemed: consumesPeriodJudgmentDate(asset.nblLandType),
   };
   return {

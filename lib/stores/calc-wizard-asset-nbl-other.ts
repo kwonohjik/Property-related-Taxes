@@ -7,6 +7,7 @@
 import type { NblRelatedBusinessType } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { PropertyTaxType } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { AreaWithinLimit } from "@/lib/tax-engine/non-business-land/land-usage.types";
+import type { StateBuildingKind } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { StateEventKind } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { StateHistoryMode } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { WholesaleItem } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
@@ -56,6 +57,11 @@ export interface NblOtherStateEventInput {
    * optional — 키 부재 = 종전 행과 byte-identical(③ 복원도 키를 새로 만들지 않는다). 철거 행이 아닌 행·기타토지 행의 stale 값은 ④가 보내지 않는다.
    */
   houseFootprintBefore?: string;
+  /**
+   * E3-③ B — **기타토지 카드**의 철거 행이 받는 «철거된 건축물 종류». `"house"` = 주택(그러면 `houseFootprintBefore`가 주택 구간 판정에 쓰이고 «철거 직전 재산세 구분»은 읽지 않는다) ·
+   * `""`·키 부재 = 그 밖의 건축물(화면 «그 밖의 건축물» — 종전 철거 행과 byte-identical). 철거 행에서만 의미 — 다른 종류 행의 stale 값은 ④가 보내지 않는다. 주택부수토지 카드는 이 칸이 없다(모든 철거 행이 주택).
+   */
+  buildingKindBefore?: "" | StateBuildingKind;
 }
 
 export interface NblOtherFormSlice {

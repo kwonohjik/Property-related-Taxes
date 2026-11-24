@@ -56,6 +56,13 @@ export const NBL_STATE_HISTORY_UNKNOWN_NOTICE =
 export const NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE =
   `이 토지는 면적의 일부만 비사업용으로 판정되는 경로라 입력한 건축물 이력(기간별 구간)을 판정에 반영하지 않았습니다. 면적과 기간을 함께 따지는 판정은 지원하지 않습니다 — 확인 필요.`;
 
+/**
+ * E3-③ UI-B Low 1 — 주택부수토지 카드 변형: **양도일 현재** 배율(정착면적 × 배율)을 넘는 면적이 있어 이력을 판정에 반영하지 않는다(Q-3a (나) — 초과분은 유예만 반영). 위 일반 문구는 «건축물 이력»을 말해
+ * 주택 카드에 어색해 변형을 둔다. 입력 화면(⑤)과 결과 경고(`judgeHousingLand`)가 같은 상수를 읽는다.
+ */
+export const NBL_STATE_HISTORY_HOUSING_PARTIAL_AREA_NOTICE =
+  `양도일 현재 주택 정착면적에 배율을 적용한 허용 면적을 이 토지 면적이 넘어 면적의 일부만 비사업용으로 판정되는 경로라, 입력한 주택 이력(기간별 구간)은 판정에 반영되지 않습니다. 면적과 기간을 함께 따지는 판정은 지원하지 않습니다 — 확인 필요.`;
+
 /** 양도일 의제 사유(영 §168조의14 ②)가 선택돼 있으면 이력을 적용하지 않는다(통합 Q-9 (가)). */
 export const NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE =
   `${NBL.TRANSFER_DATE_PRESUMED}의 양도일 의제 사유를 선택해, 입력한 건축물 이력은 판정에 쓰지 않았습니다. 의제일 이후의 사건과 양도일 현재 상태가 어긋날 수 있기 때문입니다 — 확인 필요.`;

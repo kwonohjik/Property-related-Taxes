@@ -53,6 +53,14 @@ export function judgeHousingLimit(input: HousingLimitInput): HousingLimitJudgmen
   return { multiplier, multiplierDetail, allowedArea, limit, metroDefaulted };
 }
 
+/**
+ * **엔진이 소유기간 중 주택 이력을 읽는가** — 양도일 현재 배율 이내(`limit.within`)일 때만 `applyHousingStateHistory`가 돈다. 배율 초과(부분 면적) 분기는 이력을 한 줄도 읽지 않는다(Q-3a (나)).
+ * `judgeHousingLand`(판정)와 ⑧ H9(철거 행 정착면적 요구 — «엔진이 읽지 않는 칸은 요구하지 않는다»)·⑤ 안내가 **같은 함수**를 부른다(UI Low 3 — 단일 소스).
+ */
+export function housingStateHistoryIsRead(limit: AreaLimitJudgment): boolean {
+  return limit.within;
+}
+
 /** 과거 주택 구간 판정에 필요한 카드 단위 사실 — 호출자(apply · ⑤ 미리보기 · ⑧)가 **같은 값**을 넘긴다(3중 패턴). */
 export interface HouseIntervalCtx {
   zoneType: ZoneType;

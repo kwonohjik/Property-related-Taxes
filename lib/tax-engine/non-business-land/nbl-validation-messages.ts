@@ -95,6 +95,13 @@ export function stateEventAtOrAfterTransferMessage(index: number, date: string, 
 export const STATE_HISTORY_MODE_REQUIRED_MESSAGE =
   "소유기간 중 이 토지 위 건축물이 새로 생기거나 없어진 적이 있는지 선택하세요. 모르면 「모름」을 고르세요. (미선택은 「바뀐 적 없음」으로 보지 않습니다)";
 
+/** E3-③ UI-B Low 4 — 주택부수토지 카드의 질문 미선택 문구(기본 `building`은 위 상수와 바이트 동일). 질문 자체가 «주택이 새로 지어지거나 없어진 적»이라 같은 말을 쓴다. */
+export function stateHistoryModeRequiredMessage(subject: StateEventSubject = "building"): string {
+  return subject === "house"
+    ? "소유기간 중 이 토지 위 주택이 새로 지어지거나 없어진 적이 있는지 선택하세요. 모르면 「모름」을 고르세요. (미선택은 「바뀐 적 없음」으로 보지 않습니다)"
+    : STATE_HISTORY_MODE_REQUIRED_MESSAGE;
+}
+
 /**
  * NBL-STATE-HISTORY-E3-② — 업종 영위 기간(폐업일·연도 행) 검증 문구. ⑧·⑫ 공용 leaf(`revenue-history.ts`의 `revenueHistoryInputIssue`)가 쓴다.
  * 행 번호(`index`)는 0부터이고 문구에는 1부터 적는다. 비어 있는 금액·누락 연도는 막지 않는다 — «모름»은 그 연도 불통과 + 확인 필요다(차단 없음).

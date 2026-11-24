@@ -17,12 +17,16 @@
  * 필드 키는 리터럴 접두 형태로 둔다 — 정적 게이트(`transfer-validation-field-anchor-coverage`)가 `${…}`를 `*`로 정규화해 읽는다.
  */
 import type { AssetForm, TransferFormData } from "@/lib/stores/calc-wizard-store";
-import { STATE_HISTORY_MODE_REQUIRED_MESSAGE } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
+import { stateHistoryModeRequiredMessage } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
 import { stateEventSequenceIssue } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { stateEventSubjectOf } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { housingAreaLimitState } from "./nbl-other-state-history-preview";
 import { housePriorFootprintIssueOf } from "./nbl-other-state-history-scope";
+import { housePriorNeedsMetropolitanOf } from "./nbl-other-state-history-scope";
 import { nblHousingStateHistoryApplies } from "./nbl-other-state-history-scope";
 import { nblStateHistoryApplies } from "./nbl-other-state-history-scope";
+import { stateHistoryWireFields } from "./nbl-other-state-history-scope";
+import { stateHistoryDeemedBlocksOf } from "./nbl-other-state-history-scope";
 import { nblAcquisitionDateOf } from "./nbl-unconditional-exemption-status";
 import { isFullFractionalBundle } from "./transfer-tax-api-asset-basics";
 import { fieldError } from "./transfer-tax-validate-field";
@@ -55,27 +59,47 @@ export function validateNblStateHistory(asset: AssetForm, label: string, ctx: St
   if (ctx.skip || !nblStateHistoryApplies(asset)) return null;
   const prefix = `${label}: ${nblHousingStateHistoryApplies(asset) ? "주택 부수토지" : "기타토지"} — `;
   const mode = asset.nblOtherStateHistoryMode;
-  if (!mode) return fieldError("nblOtherStateHistoryMode", `${prefix}${STATE_HISTORY_MODE_REQUIRED_MESSAGE}`);
+  // 질문 미선택 문구는 사건 주체로 가른다(주택 카드 «주택이 새로 지어지거나…» · 기타토지 종전 «건축물이…» — 기본값 바이트 동일).
+  if (!mode) return fieldError("nblOtherStateHistoryMode", `${prefix}${stateHistoryModeRequiredMessage(stateEventSubjectOf(asset.nblLandType))}`);
   if (mode !== "changed") return null;
 
-  const issue = stateEventSequenceIssue(asset.nblOtherStateEvents ?? [], {
+  // ⑫가 받는 **와이어 사건**(④ `stateHistoryWireFields`)으로 같은 leaf를 부른다 — 화면에 보이지 않는 stale 종류 칸(신축·구분 변경 행의 `buildingKindBefore`)은 ④가 보내지 않으므로 ⑧도 읽지 않는다
+  // (읽으면 «고칠 칸이 없는 차단» 막다른 길). 구분 변경이 주택 구간 안에 있는 구조 오류(D-8 ②)는 철거 행이 종류를 가지므로 여전히 잡힌다.
+  const issue = stateEventSequenceIssue(stateHistoryWireFields(asset).nblOtherStateEvents, {
     transferDate: ctx.transferDate ?? "",
     floorDate: ctx.floorDate,
     subject: stateEventSubjectOf(asset.nblLandType),
   });
-  if (!issue) return housePriorFootprintError(asset, prefix);
+  if (!issue) return housePriorFootprintError(asset, prefix, ctx.transferDate) ?? housePriorMetropolitanError(asset, prefix);
   const message = `${prefix}${issue.message}`;
   if (issue.field === "events" || issue.index === null) return fieldError("nblOtherStateEvents", message);
-  if (issue.field === "kind") return fieldError(`nblOtherStateEvents.${issue.index}.kind`, message);
+  // E3-③ B D-8 구조 오류(`houseKindEventIssue`)는 «철거된 건축물 종류» 칸이 아니라 행의 사건 종류 칸으로 보낸다 — 종류 칸 앵커는 없다(plan §7 «buildingKindBefore는 앵커 불요»).
+  if (issue.field === "kind" || issue.field === "buildingKindBefore") return fieldError(`nblOtherStateEvents.${issue.index}.kind`, message);
   return fieldError(`nblOtherStateEvents.${issue.index}.date`, message);
 }
 
-/** E3-③ A #H9 — 주택 구간을 닫는 철거 행의 정착면적. 행 순서(화면 순서)대로 첫 결함. 주택 카드가 아니면 `housePriorFootprintIssueOf`가 null이다. */
-function housePriorFootprintError(asset: AssetForm, prefix: string): string | null {
+/**
+ * E3-③ #H9 — 주택 구간을 닫는 철거 행의 정착면적(A: 모든 철거 행 · B: «철거된 건축물 종류: 주택» 행). 행 순서(화면 순서)대로 첫 결함. 엔진이 읽지 않는 칸은 요구하지 않는다:
+ *  · A — **양도일 현재 배율 초과**면 엔진이 이력을 읽지 않는다(`housingStateHistoryIsRead` 거짓 — 고지만) → 건너뜀(UI Low 3). 배율을 못 읽는 입력(`"unknown"`)은 앞선 규칙(수도권·정착면적 필수)이 먼저 막으므로 여기서 요구한다.
+ *  · B — 양도일 의제 사유가 선택되면 엔진이 이력을 읽지 않는다(UQ-12 (가)) → `housePriorFootprintIssueOf`가 null.
+ */
+function housePriorFootprintError(asset: AssetForm, prefix: string, transferDate: string | undefined): string | null {
+  if (nblHousingStateHistoryApplies(asset) && housingAreaLimitState(asset, transferDate) === "exceeded") return null;
   const events = asset.nblOtherStateEvents ?? [];
   for (let i = 0; i < events.length; i++) {
     const issue = housePriorFootprintIssueOf(asset, i);
     if (issue) return fieldError(`nblOtherStateEvents.${i}.houseFootprintBefore`, `${prefix}${issue.message}`);
   }
   return null;
+}
+
+/**
+ * E3-③ B #H10 — 철거된 주택 구간의 배율(주·상·공 수도권 3배 / 수도권 밖 5배)은 수도권 여부가 가른다. 술어(`housePriorNeedsMetropolitanOf` — 엔진 술어 · 와이어 사건 인자)가 참인데 미선택·«미확인»이면 차단한다
+ * (미제공이면 엔진이 보수적 3배로 읽어 5배인 토지의 그 구간이 «초과»로 접힌다 — 법 근거 없는 불리 적용). 술어가 거짓이면 요구하지 않는다(기타토지 기존 입력 변화 0).
+ * 의제 사유가 선택되면 엔진이 이력을 읽지 않으므로 건너뛴다(UQ-12 (가)). 주택부수토지 카드의 수도권 필수는 기존 규칙(`validateNblDetailedJudgment`)이 맡는다 — 이 술어는 기타토지만 참이다.
+ */
+function housePriorMetropolitanError(asset: AssetForm, prefix: string): string | null {
+  if (!housePriorNeedsMetropolitanOf(asset) || stateHistoryDeemedBlocksOf(asset)) return null;
+  if (asset.nblIsMetropolitanArea && asset.nblIsMetropolitanArea !== "unknown") return null;
+  return fieldError("nblIsMetropolitanArea", `${prefix}철거된 건축물을 「주택」으로 선택했습니다 — 철거 전 주택 구간의 배율은 수도권 여부에 따라 달라집니다(도시지역 주·상·공: 수도권 3배 / 수도권 밖 5배). 수도권 여부를 선택하세요.`);
 }

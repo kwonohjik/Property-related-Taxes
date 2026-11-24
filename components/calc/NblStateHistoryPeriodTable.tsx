@@ -108,8 +108,10 @@ export function NblStateHistoryPeriodTable({ stateHistory, totalOwnershipDays, e
   const { intervals, criteria } = stateHistory;
   const rows = criterionRows(stateHistory, totalOwnershipDays);
   const businessOnlyDays = effectiveBusinessDays - gracePeriodDays;
-  // 주택부수토지 카드의 구간표(모든 구간이 주택 변형 — A) · 열 라벨·제목만 바뀐다.
-  const house = intervals.some(isHouse);
+  // A — 주택부수토지 카드의 구간표: 꼬리(양도일 현재)가 주택이다(엔진이 꼬리에 `buildingKind = house`를 싣는 것은 이 카드뿐) → 표 전체가 주택 변형(열 라벨·제목).
+  const house = intervals.length > 0 && isHouse(intervals[intervals.length - 1]);
+  // B — 기타토지 카드의 구간표: 표는 종전(건축물·재산세 구분) 그대로이고 **주택 구간 행만** 변형한다(«있음(주택)» · 근거 열은 정착면적 × 배율 판정). 주택 구간이 없으면 종전과 바이트 동일.
+  const mixedHouse = !house && intervals.some(isHouse);
 
   return (
     <div className="px-4 py-3 border-b border-border" data-testid="nbl-state-history-period">
@@ -121,7 +123,7 @@ export function NblStateHistoryPeriodTable({ stateHistory, totalOwnershipDays, e
                 <th className="py-1 pr-2 font-medium">구간(시작일 포함 ~ 종료일 전날)</th>
                 <th className="py-1 pr-2 text-right font-medium">일수</th>
                 <th className="py-1 pr-2 font-medium">{house ? "주택" : "건축물"}</th>
-                <th className="py-1 pr-2 font-medium">{house ? "재산세 구분 · 배율 판정" : "재산세 구분"}</th>
+                <th className="py-1 pr-2 font-medium">{house || mixedHouse ? "재산세 구분 · 배율 판정" : "재산세 구분"}</th>
                 <th className="py-1 pr-2 text-right font-medium">사업용 일수</th>
                 <th className="py-1 font-medium">사업용 여부</th>
               </tr>
@@ -135,7 +137,7 @@ export function NblStateHistoryPeriodTable({ stateHistory, totalOwnershipDays, e
                       {iso(start)} ~ {iso(addDays(start, iv.days - 1))}
                     </td>
                     <td className="py-1 pr-2 text-right font-mono tabular-nums">{iv.days.toLocaleString()}일</td>
-                    <td className="py-1 pr-2">{iv.hasBuilding ? "있음" : house ? "없음(나대지)" : "없음"}</td>
+                    <td className="py-1 pr-2">{iv.hasBuilding ? (mixedHouse && isHouse(iv) ? "있음(주택)" : "있음") : house ? "없음(나대지)" : "없음"}</td>
                     <td className="py-1 pr-2">{taxTypeText(iv, i === intervals.length - 1)}</td>
                     <td className="py-1 pr-2 text-right font-mono tabular-nums">{iv.businessDays.toLocaleString()}일</td>
                     <td className="py-1 whitespace-nowrap">{businessText(iv)}</td>
