@@ -73,32 +73,11 @@ function anchorKeys(): Set<string> {
   return keys;
 }
 
-/**
- * 엔진 PR(E3f-2)이 ⑧을 먼저 배선하고 **화면 앵커는 같은 브랜치의 UI PR(U-3)이 더하는** 칸 — 나대지 구간 근거 «철거ㆍ멸실»의 사실 칸 4개.
- * 근거 선택지가 UI에 아직 열리지 않아(`eventBasisOptions(before)`가 `demolished`를 주지 않는다) ⑧이 이 칸을 가리키는 입력은 화면에서 만들 수 없다 — 막다른 길이 아니다.
- * U-3이 앵커를 더하면 아래 «만료» 단언이 실패해 이 목록을 지우게 한다(삭제 금지가 아니라 **지우는 것이 정상**).
- */
-const PENDING_UI_ANCHORS = new Set([
-  "nblOtherStateEvents.*.demolishedPermitBefore",
-  "nblOtherStateEvents.*.demolishedOtherUseBefore",
-  "nblOtherStateEvents.*.demolishedVacantHouseBefore",
-  "nblOtherStateEvents.*.demolishedFloorAreaBefore",
-]);
-
 describe("검증 field ↔ 화면 data-field 앵커", () => {
   it("검증이 가리키는 입력칸은 모두 화면에 앵커가 있다", () => {
     const anchors = anchorKeys();
-    const missing = [...validatorKeys()].filter((k) => !anchors.has(k) && !PENDING_UI_ANCHORS.has(k)).sort();
+    const missing = [...validatorKeys()].filter((k) => !anchors.has(k)).sort();
     expect(missing, `앵커 없는 field — 화면에 data-field/FieldCard field를 추가할 것`).toEqual([]);
-  });
-
-  it("대기 목록(PENDING_UI_ANCHORS)은 앵커가 아직 없는 키만 담는다 — 앵커가 생기면 목록에서 지운다", () => {
-    const anchors = anchorKeys();
-    const validators = validatorKeys();
-    for (const k of PENDING_UI_ANCHORS) {
-      expect(validators.has(k), `${k}: ⑧이 더는 이 칸을 가리키지 않는다 — 목록에서 지운다`).toBe(true);
-      expect(anchors.has(k), `${k}: 화면 앵커가 생겼다 — 이 대기 목록에서 지운다`).toBe(false);
-    }
   });
 
   it("스캐너가 실제로 키를 읽는다 (공백 통과 방지)", () => {

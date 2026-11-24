@@ -50,7 +50,7 @@ export interface StateHistoryPreviewRow {
    * E3f-2 — 근거 «철거ㆍ멸실»을 받아들인 나대지 구간의 한시 창(구간 안으로 자른 일 단위 — 시작일·마지막 날 ISO · 철거일 당일부터 만료일 당일까지). 없으면 키 없음. 이 구간은 `meetsBuildingRequirement`가 거짓이고 창만 사업용이다.
    * `foldReason`에 새 접힘 사유(`demolished_*`)가 실릴 수 있다. 표시 전용(판정은 엔진 leaf).
    */
-  temporaryStatusWindow?: { start: string; lastDay: string };
+  temporaryStatusWindow?: { start: string; lastDay: string; days: number };
   temporaryStatusMonths?: LandStateInterval["temporaryStatusMonths"];
   vacantHouseExtensionUnconfirmed?: LandStateInterval["vacantHouseExtensionUnconfirmed"];
   /** 마지막 구간(양도일 현재 — 현행 입력이 그대로 판정) */
@@ -182,7 +182,11 @@ export function buildStateHistoryPreview(asset: AssetForm, transferDate: string 
       ...(iv.basisOutcome ? { basisOutcome: iv.basisOutcome, ...(iv.basis ? { basis: iv.basis } : {}), ...(iv.foldReason ? { foldReason: iv.foldReason } : {}) } : {}),
       ...(iv.temporaryStatusWindow
         ? {
-            temporaryStatusWindow: { start: iso(iv.temporaryStatusWindow.start), lastDay: iso(new Date(iv.temporaryStatusWindow.end.getTime() - 86_400_000)) },
+            temporaryStatusWindow: {
+              start: iso(iv.temporaryStatusWindow.start),
+              lastDay: iso(new Date(iv.temporaryStatusWindow.end.getTime() - 86_400_000)),
+              days: differenceInDays(iv.temporaryStatusWindow.end, iv.temporaryStatusWindow.start),
+            },
             ...(iv.temporaryStatusMonths ? { temporaryStatusMonths: iv.temporaryStatusMonths } : {}),
             ...(iv.vacantHouseExtensionUnconfirmed ? { vacantHouseExtensionUnconfirmed: iv.vacantHouseExtensionUnconfirmed } : {}),
           }

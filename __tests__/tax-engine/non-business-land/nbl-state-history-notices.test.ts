@@ -48,7 +48,7 @@ const CONFIRM_REQUIRED = [
 ];
 
 describe("NBL-STATE-HISTORY-E1 — 이력 고지 상수", () => {
-  it("35종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다(E3-①이 2종 · E3-1b가 3종 · E3-③ A가 7종 · B가 1종 · UI Low가 1종 · E3-④가 3종 · E3-⑤ E3f-1a가 2종 · E3f-2가 8종 추가 — 기존 8종 문구는 바이트 동일)", () => {
+  it("34종이 있고 서로 다르며 기존 이력 없음 고지와도 다르다(E3-①이 2종 · E3-1b가 3종 · E3-③ A가 7종 · B가 1종 · UI Low가 1종 · E3-④가 3종 · E3-⑤ E3f-1a가 2종 · E3f-2가 8종 추가 · U-3이 E3f-1a N-3 임시 보충 1종 폐기 — 기존 8종 문구는 바이트 동일)", () => {
     expect(STATE_HISTORY_NOTICES.map(([k]) => k).sort()).toEqual(
       [
         ...CONFIRM_REQUIRED,
@@ -57,7 +57,6 @@ describe("NBL-STATE-HISTORY-E1 — 이력 고지 상수", () => {
         "NBL_STATE_HISTORY_GRACE_ROW_NOTICE",
         "NBL_STATE_HISTORY_HOUSING_NON_HOUSE_BUILDING_NOTICE", // E3-③ R-6 — 입력 안내(질문 hint와 같은 상수) — «확인 필요»로 끝나지 않는다
         "NBL_STATE_HISTORY_DEMOLITION_GRACE_NUDGE_NOTICE", // E3-⑤ E3f-1a N-2 — 철거 행 + 9호 부재 입력 안내(입력 화면 전용)
-        "NBL_STATE_HISTORY_BARE_DEMOLISHED_TAIL_ONLY_NOTE", // E3-⑤ E3f-1a N-3 — 나대지 구간 hint 보충(E3f-2 전 임시 · 입력 화면 전용 — U-3가 폐기)
       ].sort(),
     );
     const texts = STATE_HISTORY_NOTICES.map(([, v]) => v);

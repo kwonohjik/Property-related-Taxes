@@ -177,13 +177,6 @@ export const NBL_STATE_HISTORY_DEMOLITION_GRACE_NUDGE_NOTICE =
   `유예 사유에 해당하면 이 철거일을 기산일로 입력하세요(양도일 현재 칸의 근거 「철거ㆍ멸실」과 함께 입력해도 겹치는 날은 한 번만 셉니다).`;
 
 /**
- * E3-⑤ E3f-1a N-3 — 나대지 구간 근거 hint 보충(E3f-2 전 임시 — 그 PR이 폐기). 양도일 현재(꼬리) 칸은 근거 「철거ㆍ멸실」을 받는데 이 나대지 구간 칸은 아직 받지 않는다는 차이를 밝혀
- * 두 칸 안내의 모순을 푼다. 꼬리 칸이 그 근거를 선택지로 줄 때만 보인다(입력 화면 전용 — 엔진 `warnings` 불변).
- */
-export const NBL_STATE_HISTORY_BARE_DEMOLISHED_TAIL_ONLY_NOTE =
-  `양도일 현재 칸의 근거 「철거ㆍ멸실」과 달리 이 나대지 구간에서는 아직 받지 않습니다 — 「부득이한 사유 유예기간」의 「건축물 멸실·철거·붕괴」(9호)로 입력하세요.`;
-
-/**
  * E3-⑤ E3f-1a N-1 → **E3f-1b 교체** — 양도일 현재 칸의 근거 「철거ㆍ멸실」 시행본 고지(`demolishedStatusNotice`) 뒤에 붙는 입력 방향. E3f-1b부터 엔진이 철거ㆍ멸실일을 읽어
  * 한시 기간이 양도일 직전 과세기준일까지 확실히 지났으면 이 근거를 접는다(`isTailDemolishedClearlyExpired` — 종합합산 + 확인 필요).
  * 입력 화면 전용 — 엔진 `warnings`에는 싣지 않는다(접힘 고지는 `NBL_PTAX_DEMOLISHED_PERIOD_ELAPSED_NOTICE`).

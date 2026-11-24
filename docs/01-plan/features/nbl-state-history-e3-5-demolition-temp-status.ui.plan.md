@@ -184,6 +184,15 @@
 - 닫는 행의 «구분»을 바꾸면 근거·면적한도와 함께 **사실 4칸도 리셋**(onChange 핸들러에서 행을 다시 만든다 — 현행 `:90-97` 패턴 확장). 근거만 바뀌면 사실 칸은 지우지 않고(④가 보내지 않는다 — 이력 복원 보존) 숨는다.
 - ToneCard(톤 하드코딩 금지 — `tones.ts` 소스). 1블록이라 번호 배지는 쓰지 않는다.
 
+- **U-3 구현 정정(2026-11-24 — 계획서와 다르게 한 점)**:
+  ① **노출 술어 = 사건 행 와이어**: 사실 칸 블록은 `demolishedRowViewOf(asset, i)`(`lib/calc/nbl-demolished-row-scope.ts`)가 «④ 와이어 근거가 `demolished`인 행»에서만 뷰를 만들고(와이어는 `eventOffersDemolished`일 때만 그 근거를 싣는다), 요구 칸은 엔진 `demolishedRequiredFacts`가 정한다. «엔진이 이력을 읽는가»는 `nblStateHistoryIsRead(buildNonBusinessLandRaw(asset))`를 **근거 «철거ㆍ멸실»을 고른 행이 있을 때만** 한 번 돌린다(⑧·⑫′와 같은 함수). 읽지 않으면 4칸 모두 그리지 않고, 기존 `partial-area-notice`는 이때 **철거 행이 주택이 아니어도** 보인다(칸이 사라진 이유 — 종전 게이트는 주택 철거 행·13호만 안내했다). 주택 카드는 위 배율 초과 안내가 말한다.
+  ② **빈칸 판정 = 엔진 `firstBlankDemolishedFact`**(⑧·⑫′ `demolishedRowFactIssue`에서 꺼낸 함수) — ⑤가 «사실 칸이 모두 답해졌는가»(미리보기 노출)를 같은 함수로 본다.
+  ③ **인정 창·접힘은 엔진 구간 해석을 읽는다**: ⑤는 `buildStateHistoryPreview`가 낸 «이 행이 닫은 구간» 행(`foldReason`·`temporaryStatusWindow {start,lastDay,days}`·`vacantHouseExtensionUnconfirmed`)을 그대로 보인다 — 인라인 `resolveBareDeclaration`(ctx 없음 → `demolished_unsupported`)은 근거 «철거ㆍ멸실»에 쓰지 않는다. 접힘 문구 = 엔진 `BARE_DEMOLISHED_FOLD_NOTICE`, 인정 고지 = `NBL_STATE_HISTORY_BARE_DEMOLISHED_ACCEPTED_NOTICE`, 빈집 «아니오·모름» = `…_VACANT_HOUSE_UNCONFIRMED_NOTICE`(접힘 아님). 미답 상태에서는 결과 미리보기를 보이지 않는다(UQ-10 — 선언 전부터 불이익처럼 읽히지 않게).
+  ④ **E3f-1a N-3 임시 보충 문장(`NBL_STATE_HISTORY_BARE_DEMOLISHED_TAIL_ONLY_NOTE`)과 `tailOffersDemolishedBasis`는 폐기**했다. 근거 hint는 철거 행 뒤 구간 = «근거 「철거ㆍ멸실」을 고르고 아래 사실 칸을 답하세요», 철거 행 앞 구간(취득 전 철거로 첫 구간이 나대지) = 종전 문장(9호 유예로 입력 — UQ-9)이다.
+  ⑤ **구분 변경 시 사실 칸 4개 리셋** — 부모 `patchEvent`가 값이 `undefined`인 키를 키째 지운다(종전 행과 byte-identical). 근거만 바꾸면 보존한다.
+  ⑥ **⑦ 결과 구간표**: 구간 행에 «한시 지위 인정 시작 ~ 끝(N일 · 한시 기간)»(엔진 echo `temporaryStatusWindow`·`temporaryStatusMonths`). 계획서 §8의 «사실 칸 요약(예/아니오/모름 한 줄)»은 **하지 않았다** — 사실 값은 echo에 없고(엔진 결과 타입 미확장) 입력 화면이 말한다. ⑤ 미리보기 표는 창 구간의 «사업용 토지 요건» 열을 «미충족»이 아니라 «한시 지위 창만 충족»으로 보인다(`isStateIntervalBusiness`는 창 구간에서 거짓 — echo로 말한다).
+  ⑦ `PENDING_UI_ANCHORS` 대기 목록은 앵커(`data-field`)가 생겨 지웠다. ⑧ 점프 키 4개의 E2E 안전망은 `e2e/_helpers/validation-field-jump-cases-nbl.ts`(키가 행 번호로 동적)에 더했다.
+
 ### 4.4 접힘·인정 표시(엔진 사유 표를 그대로 읽는다)
 
 | 상태 | 표시 위치 | 문구 |

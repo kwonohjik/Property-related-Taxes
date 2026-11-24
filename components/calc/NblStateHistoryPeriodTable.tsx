@@ -16,7 +16,7 @@ import type { StateHistoryIntervalEcho } from "@/lib/tax-engine/non-business-lan
 import { OTHER_LAND_HO_META } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
 import { bareIntervalTaxTypeText } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
-import { addDays } from "@/lib/tax-engine/utc-date";
+import { addDays, differenceInDays } from "@/lib/tax-engine/utc-date";
 
 interface Props {
   stateHistory: StateHistoryEcho;
@@ -37,6 +37,22 @@ const BUCKET_LABEL = {
 } as const;
 
 const iso = (d: Date): string => d.toISOString().slice(0, 10);
+
+/** E3f-2 — 근거 «철거ㆍ멸실» 한시 기간(개월) → 법문 표현. 12 = 2026.6.1.~ 시행본 «1년». */
+const TEMPORARY_STATUS_MONTHS_TEXT = { 6: "6개월", 12: "1년", 36: "3년" } as const;
+
+/**
+ * E3f-2 — 근거 «철거ㆍ멸실»을 받아들인 나대지 구간의 한시 지위 인정 창(엔진 echo `temporaryStatusWindow` · 창은 구간 안으로 자른 일 단위 — 철거일 당일부터 한시 기간 만료일 당일까지).
+ * 카드는 창·한시 기간을 계산하지 않고 echo를 그대로 보인다(일수만 echo 날짜의 차). 접힌 구간은 창이 없다 — 사유는 «재산세 구분» 열의 `bareIntervalTaxTypeText`가 말한다.
+ */
+function temporaryStatusText(iv: StateHistoryIntervalEcho): string | null {
+  const w = iv.temporaryStatusWindow;
+  if (!w) return null;
+  const start = toDate(w.start, "temporaryStatusWindow.start");
+  const end = toDate(w.end, "temporaryStatusWindow.end");
+  const months = iv.temporaryStatusMonths ? ` · 한시 기간 ${TEMPORARY_STATUS_MONTHS_TEXT[iv.temporaryStatusMonths]}` : "";
+  return `한시 지위 인정 ${iso(start)} ~ ${iso(addDays(end, -1))}(${differenceInDays(end, start).toLocaleString()}일${months})`;
+}
 
 /**
  * E3-③ A — 주택 구간(구간 echo `buildingKind = "house"` — 주택부수토지 카드의 모든 건축물 구간·꼬리). 키가 없는 기타토지 구간은 종전과 바이트 동일하다.
@@ -141,6 +157,7 @@ export function NblStateHistoryPeriodTable({ stateHistory, totalOwnershipDays, e
                     <td className="py-1 pr-2">{iv.hasBuilding ? (mixedHouse && isHouse(iv) ? "있음(주택)" : "있음") : house ? "없음(나대지)" : "없음"}</td>
                     <td className="py-1 pr-2">
                       {taxTypeText(iv, i === intervals.length - 1)}
+                      {temporaryStatusText(iv) && <span data-testid={`nbl-state-history-interval-${i}-temporary-status`}> · {temporaryStatusText(iv)}</span>}
                       {/* E3-④ C-3 — 이 구간 중 13호(무주택 1세대 1필지 나지)로 사업용이 된 일수(엔진 echo `vacantLotDays` — 재계산 없음). 키가 없는 구간은 종전과 바이트 동일. 라벨은 호 메타 표 단일 소스. */}
                       {iv.vacantLotDays !== undefined && (
                         <span data-testid={`nbl-state-history-interval-${i}-vacant-lot`}> · {OTHER_LAND_HO_META.vacant_lot_1household.option.label} 인정 {iv.vacantLotDays.toLocaleString()}일</span>

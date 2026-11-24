@@ -33,7 +33,10 @@ import { buildHouseFootprintPreview } from "@/lib/calc/nbl-other-state-history-p
 import { buildStateHistoryPreview } from "@/lib/calc/nbl-other-state-history-preview";
 import { housingAreaLimitState } from "@/lib/calc/nbl-other-state-history-preview";
 import { housePriorHistoryIgnoredOf } from "@/lib/calc/nbl-other-state-history-read";
-import type { StateHistoryPreviewRow } from "@/lib/calc/nbl-other-state-history-preview";
+import { nblStateHistoryIsRead } from "@/lib/calc/nbl-other-state-history-read";
+import { demolishedRowViewOf } from "@/lib/calc/nbl-demolished-row-scope";
+import { buildNonBusinessLandRaw } from "@/lib/calc/non-business-land-request";
+import type { StateHistoryPreview, StateHistoryPreviewRow } from "@/lib/calc/nbl-other-state-history-preview";
 import { houseCheckText, houseIntervalText } from "@/lib/calc/nbl-house-interval-text";
 import { effectiveOtherHasBuildingOf } from "@/lib/calc/nbl-other-state-history-scope";
 import { housePriorFootprintIssueOf } from "@/lib/calc/nbl-other-state-history-scope";
@@ -74,6 +77,7 @@ import { eventCarriesBuildingKind } from "@/lib/tax-engine/non-business-land/oth
 import { eventCarriesTaxTypeBefore } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventClosesBareInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { eventClosesHouseInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { eventOffersDemolished } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { houseTaxTypeChangedMessage } from "@/lib/tax-engine/non-business-land/nbl-validation-messages";
 import { consumesGracePeriods } from "@/lib/tax-engine/non-business-land/land-category";
 import { hasBuildingAtTransfer } from "@/lib/tax-engine/non-business-land/other-land-state-history";
@@ -84,7 +88,6 @@ import { STATE_EVENT_KIND_LABEL_HOUSE } from "@/lib/tax-engine/non-business-land
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 import { OtherLandBareIntervalFields, ptaxOptions } from "./OtherLandBareIntervalFields";
 import { OtherLandBuildingKindField } from "./OtherLandBuildingKindField";
-import { tailOffersDemolishedBasis } from "./OtherLandPropertyTaxBasisField";
 import { MetropolitanAreaField } from "./shared/MetropolitanAreaField";
 
 export interface OtherLandStateHistorySectionProps {
@@ -151,14 +154,21 @@ function afterTaxTypeText(row: { propertyTaxType: PropertyTaxType | "unknown"; i
   return row.propertyTaxType === "unknown" ? `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(선언 없음 — 확인 필요)` : `${PROPERTY_TAX_TYPE_LABEL[row.propertyTaxType]}(선언)`;
 }
 
-function rowTaxTypeText(row: Pick<StateHistoryPreviewRow, "hasBuilding" | "propertyTaxType" | "isTail" | "basisOutcome" | "basis" | "foldReason" | "buildingKind" | "houseOutcome" | "houseCheck">): string {
+/** 이 행(사건일 `date`)이 닫은 구간의 미리보기 행 — 다음 구간이 그 사건일에 시작한다(표시 전용). 첫 구간이거나 미리보기를 못 그리면 없다. */
+function closedRowOf(preview: StateHistoryPreview | null, date: string): StateHistoryPreviewRow | undefined {
+  const k = preview?.rows.findIndex((r) => r.start === date) ?? -1;
+  return k > 0 ? preview?.rows[k - 1] : undefined;
+}
+
+function rowTaxTypeText(row: Pick<StateHistoryPreviewRow, "hasBuilding" | "propertyTaxType" | "isTail" | "basisOutcome" | "basis" | "foldReason" | "buildingKind" | "houseOutcome" | "houseCheck" | "temporaryStatusWindow">): string {
   // E3-③ A — 주택 구간은 재산세 구분이 아니라 정착면적 × 배율 판정(leaf echo)을 그대로 보인다. 꼬리(양도일 현재 주택)는 위 «주택 정착면적» 칸이 말한다 — 결과 계산 후 확정.
   if (row.buildingKind === "house") return row.isTail ? "양도일 현재 정착면적 · 배율(위 칸 기준)" : (houseIntervalText(row) ?? "주택");
   if (row.isTail) return "양도일 현재 선언 기준";
   if (!row.hasBuilding) {
     // E3-1b — 비종합합산 선언이 있는 나대지 구간은 근거 해석(받아들임·접힘)을 보이고, 선언이 없으면 종전 문구 그대로(주장 없음 = 종합합산).
     const bare = bareIntervalTaxTypeText(row);
-    if (bare) return bare;
+    // E3f-2 — 근거 «철거ㆍ멸실»을 받아들인 구간은 구간 전체가 아니라 한시 지위 인정 창만 별도합산이다(창은 엔진 구간 해석이 낸 echo).
+    if (bare) return row.temporaryStatusWindow ? `${bare} · 인정 ${row.temporaryStatusWindow.start} ~ ${row.temporaryStatusWindow.lastDay}(${row.temporaryStatusWindow.days.toLocaleString()}일)` : bare;
     return row.propertyTaxType === "unknown" ? `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(나대지 — 선언 없음 · 확인 필요)` : `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(나대지 — 고정)`;
   }
   if (row.propertyTaxType === "unknown") return `${PROPERTY_TAX_TYPE_LABEL.comprehensive}(선언 없음 — 확인 필요)`;
@@ -193,7 +203,10 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
     onAssetChange(inUse && v !== "changed" ? { nblOtherStateHistoryMode: v, nblOtherHasBuilding: effectiveOtherHasBuildingOf(asset) } : { nblOtherStateHistoryMode: v });
   }
   function patchEvent(i: number, patch: Partial<NblOtherStateEventInput>) {
-    onAssetChange({ nblOtherStateEvents: events.map((e, idx) => (idx === i ? { ...e, ...patch } : e)) });
+    // `undefined` 값은 키째 지운다(E3f-2 — 구분을 바꿀 때 사실 칸 4개를 리셋해도 종전 행과 byte-identical).
+    const merged: Record<string, unknown> = { ...events[i], ...patch };
+    for (const [k, v] of Object.entries(patch)) if (v === undefined) delete merged[k];
+    onAssetChange({ nblOtherStateEvents: events.map((e, idx) => (idx === i ? (merged as unknown as NblOtherStateEventInput) : e)) });
   }
   function addEvent() {
     // 새 행의 기본 종류는 직전 «건축물 사건»의 반대(신축과 멸실은 번갈아 온다 — 재산세 과세 구분 변경 행은 건너뛴다). 첫 행·직전 행이 미선택·건축물 사건이 없으면 사용자가 고른다. 날짜는 비워 둔다(자동 채움 금지).
@@ -220,8 +233,14 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
   // E3-⑤ N-2 — 철거 행에 9호 유예 행이 없을 때의 조건부 입력 안내. 저장값 존재 여부만 본다(기산일 일치는 판정하지 않는다 · 유예 자동 생성 없음). 게이트 = 이 지목이 유예를 읽음(`GracePeriodSection`과 같은 술어) ∧ 의제 아님 ∧ 엔진이 이력을 읽음.
   const noDemolitionGrace = !(asset.nblGracePeriods ?? []).some((g) => g.reasonCode === "demolition");
   const graceNudgeApplies = noDemolitionGrace && !!asset.nblLandType && consumesGracePeriods(asset.nblLandType) && !deemedBlocks && !historyIgnored;
-  // E3-⑤ N-3 — 나대지 구간 근거 hint 보충은 양도일 현재 칸이 근거 «철거ㆍ멸실»을 줄 때만(기타토지 카드 — 주택 카드는 꼬리 근거 칸이 없다).
-  const tailOffersDemolished = !house && tailOffersDemolishedBasis(asset);
+  // E3f-2 — 근거 «철거ㆍ멸실» 사실 칸 뷰(엔진 술어 — ④ 전송·⑧·⑫′와 같은 술어)와 «엔진이 이력을 읽는가»(`nblStateHistoryIsRead` — ⑧·⑫′와 같은 함수 · 엔진을 돌리므로 근거 «철거ㆍ멸실»을 고른 행이 있을 때만 계산).
+  // 읽지 않으면(양도일 의제 ∨ core 부분 면적) 사실 칸 4개를 모두 그리지 않는다(UQ-8 (가)) — 값은 보존하고 위 의제·부분 면적 안내가 말한다.
+  const demolishedViews = useMemo(() => (mode === "changed" ? (asset.nblOtherStateEvents ?? []).map((_, i) => demolishedRowViewOf(asset, i)) : []), [asset, mode]);
+  const historyRead = useMemo(
+    () => (demolishedViews.some((v) => v) ? nblStateHistoryIsRead(buildNonBusinessLandRaw(asset, transferDate ?? "") ?? {}) : true),
+    [asset, demolishedViews, transferDate],
+  );
+  const demolishedFactsHidden = !historyRead && demolishedViews.some((v) => v);
 
   return (
     <div className="space-y-3" data-testid="nbl-other-state-history">
@@ -263,7 +282,8 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
       )}
       {/* 주택 카드 + 양도일 현재 배율 초과: 엔진은 이력을 읽지 않고 `unknown` 고지도 싣지 않는다(결과 = 현행 그대로 — UI Low 2: 입력 화면 = 결과). */}
       {/* B — 면적 일부만 비사업용이라 엔진이 철거 행 이력을 읽지 않는다(의제 사유는 아래 의제 안내가 따로 있다). 문구는 엔진 `PARTIAL_AREA` 상수(결과 고지와 같다). */}
-      {otherIgnored && mode === "changed" && !deemedBlocks && (
+      {/* E3f-2 — 근거 «철거ㆍ멸실» 사실 칸이 «엔진이 이력을 읽지 않아» 숨었을 때도 같은 안내가 말한다(칸이 사라진 이유 — 주택 카드는 위 배율 초과 안내). 의제 사유면 아래 의제 안내가 말한다. */}
+      {(otherIgnored || (!house && demolishedFactsHidden)) && mode === "changed" && !deemedBlocks && (
         <ToneCard tone="amber">
           <p className="text-caption leading-snug" data-testid="nbl-other-partial-area-notice">{NBL_STATE_HISTORY_PARTIAL_AREA_NOTICE}</p>
         </ToneCard>
@@ -364,7 +384,9 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                     event={ev}
                     wire={stateEventWireRow(events, i, tailHasBuilding, tailKind)}
                     patchEvent={(patch) => patchEvent(i, patch)}
-                    tailOffersDemolished={tailOffersDemolished}
+                    offersDemolished={eventOffersDemolished(events, i, tailHasBuilding)}
+                    demolishedView={historyRead ? (demolishedViews[i] ?? undefined) : undefined}
+                    closedRow={closedRowOf(preview, ev.date)}
                   />
                 )}
 
@@ -505,7 +527,7 @@ export function OtherLandStateHistorySection({ asset, onAssetChange, transferDat
                           <td className="py-1 pr-2 text-right font-mono tabular-nums">{r.days.toLocaleString()}일</td>
                           <td className="py-1 pr-2">{r.hasBuilding ? (!house && r.buildingKind === "house" ? "있음(주택)" : "있음") : house ? "없음(나대지)" : "없음"}</td>
                           <td className="py-1 pr-2">{rowTaxTypeText(r)}</td>
-                          <td className="py-1">{r.meetsBuildingRequirement === null ? "결과 계산 후 확정" : r.meetsBuildingRequirement ? "충족" : "미충족"}</td>
+                          <td className="py-1">{r.meetsBuildingRequirement === null ? "결과 계산 후 확정" : r.temporaryStatusWindow ? "한시 지위 창만 충족" : r.meetsBuildingRequirement ? "충족" : "미충족"}</td>
                         </tr>
                       ))}
                     </tbody>

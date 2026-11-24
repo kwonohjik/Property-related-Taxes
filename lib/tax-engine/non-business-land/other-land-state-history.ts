@@ -490,7 +490,10 @@ export const BARE_FOLD_REASON_TEXT = {
  * 나대지 구간(`hasBuilding=false`) 중 **비종합합산 선언이 있는 구간**의 «재산세 구분» 표 문구 — 선언이 없으면 `undefined`(호출자가 종전 문구를 쓴다).
  * 받아들인 구간 = 「별도합산(나대지 — 공지상태 근거)」 · 접힌 구간 = 「종합합산(나대지 — {사유} · 확인 필요)」. ⑤ 미리보기 · ⑦ 결과 구간표가 같은 함수를 쓴다.
  */
-export function bareIntervalTaxTypeText(iv: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome" | "basis" | "foldReason" | "temporaryStatusWindow">): string | undefined {
+export function bareIntervalTaxTypeText(
+  // `temporaryStatusWindow`는 있는지만 본다 — 엔진 구간(`DateInterval`)·결과 echo·⑤ 미리보기 행(ISO 문자열 창)이 같이 부른다.
+  iv: Pick<LandStateInterval, "hasBuilding" | "propertyTaxType" | "basisOutcome" | "basis" | "foldReason"> & { temporaryStatusWindow?: object },
+): string | undefined {
   if (iv.hasBuilding || !iv.basisOutcome) return undefined;
   // E3f-2 — 근거 «철거ㆍ멸실»을 받아들인 구간은 구간 전체가 아니라 한시 창만 별도합산으로 센다(창 날짜는 echo `temporaryStatusWindow`가 말한다).
   if (iv.basisOutcome === "accepted" && iv.temporaryStatusWindow) return `${PROPERTY_TAX_TYPE_LABEL[iv.propertyTaxType as PropertyTaxType]}(나대지 — ${BARE_BASIS_SHORT_LABEL.demolished} · 한시 기간만)`;

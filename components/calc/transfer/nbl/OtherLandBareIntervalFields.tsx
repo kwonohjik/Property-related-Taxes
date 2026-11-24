@@ -8,17 +8,19 @@
  *
  * 판정은 하지 않는다 — 근거 선택지(`eventBasisOptions`)·접힘 여부(`resolveBareDeclaration`)·고지 문구는 엔진 leaf·상수를 읽는다(⑤ = ④ 전송형 = ⑭ 매퍼 = 엔진).
  * 표시 fallback: 신축 행 구분 `""` = 「종합합산」이 선택된 것으로 보인다(선언 없음 · 고지 없음) · 구분 변경 행 `""` = 「모름」(종합합산 + 확인 필요).
- * 구분을 바꾸면 근거·면적한도를 함께 리셋한다 — **onChange 핸들러에서만**(`useEffect → store` 미러링 금지).
+ * 구분을 바꾸면 근거·면적한도·(E3f-2) «철거ㆍ멸실» 사실 칸 4개를 함께 리셋한다 — **onChange 핸들러에서만**(`useEffect → store` 미러링 금지).
+ * E3f-2 — 철거 행 뒤 나대지 구간(`offersDemolished`)은 근거 «철거ㆍ멸실»을 받고 `OtherLandDemolishedFactsField`가 사실 칸을 그린다(U-3).
  */
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import type { DemolishedRowView } from "@/lib/calc/nbl-demolished-row-scope";
+import type { StateHistoryPreviewRow } from "@/lib/calc/nbl-other-state-history-preview";
 import type { NblOtherStateEventInput } from "@/lib/stores/calc-wizard-asset-nbl-other";
 import { NBL_STATE_HISTORY_BARE_ACCEPTED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_AREA_LIMIT_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_BARE_BASIS_UNCONFIRMED_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
-import { NBL_STATE_HISTORY_BARE_DEMOLISHED_TAIL_ONLY_NOTE } from "@/lib/tax-engine/nbl-confirm-notices";
 import { NBL_STATE_HISTORY_TAX_CHANGE_UNKNOWN_NOTICE } from "@/lib/tax-engine/nbl-confirm-notices";
 import type { AreaWithinLimit } from "@/lib/tax-engine/non-business-land/land-usage.types";
 import type { PropertyTaxType } from "@/lib/tax-engine/non-business-land/land-usage.types";
@@ -26,6 +28,7 @@ import { eventBasisOptions } from "@/lib/tax-engine/non-business-land/other-land
 import { resolveBareDeclaration } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { STATE_PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/other-land-state-history";
 import { PROPERTY_TAX_TYPE_LABEL } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
+import { OtherLandDemolishedFactsField } from "./OtherLandDemolishedFactsField";
 import { PropertyTaxBasisRadio } from "./PropertyTaxBasisRadio";
 
 /** «직전 재산세 구분» 선택지 — 라벨은 `PROPERTY_TAX_TYPE_LABEL` 단일 소스(enum 이름과 라벨이 직관과 다르다: separate=별도합산 · special_sum=분리과세). 순서: 비과세·면제 / 분리과세 / 별도합산 / 종합합산 (/ 모름). */
@@ -39,6 +42,22 @@ export function ptaxOptions(i: number, withUnknown: boolean): RadioCardOption<Pt
     ...(withUnknown ? [{ value: "unknown" as PtaxChoice, label: STATE_PROPERTY_TAX_TYPE_LABEL.unknown, testId: `nbl-other-state-event-${i}-ptax-unknown` }] : []),
   ];
 }
+
+/**
+ * 근거 hint의 «철거 후 한시» 문장 — 철거 행 뒤 나대지 구간은 근거 «철거ㆍ멸실»을 받고(아래 사실 칸), 그 밖(취득 전 철거로 첫 구간이 나대지 등 — 철거일 출처가 없다)은 종전대로 근거로 받지 않고 9호 유예기간으로 입력한다(UQ-9).
+ * 건축 중 기간은 어느 쪽이든 근거로 받지 않는다(유예 5호).
+ */
+const DEMOLISHED_BASIS_HINT = {
+  offered: "철거 후 한시 별도합산은 근거 「철거ㆍ멸실」을 고르고 아래 사실 칸을 답하세요. 건축 중 기간은 근거로 받지 않고 「부득이한 사유 유예기간」으로 입력합니다.",
+  notOffered: "철거 후 한시 별도합산·건축 중 기간은 근거로 받지 않고 「부득이한 사유 유예기간」으로 입력합니다.",
+} as const;
+
+const RESET_DEMOLISHED_FACTS = {
+  demolishedPermitBefore: undefined,
+  demolishedOtherUseBefore: undefined,
+  demolishedVacantHouseBefore: undefined,
+  demolishedFloorAreaBefore: undefined,
+} as const;
 
 const LIMIT_OPTIONS = (i: number): RadioCardOption<Exclude<AreaWithinLimit, "">>[] => [
   { value: "within", label: "토지 전체가 호별 면적한도 이내입니다", testId: `nbl-other-state-event-${i}-limit-within` },
@@ -56,13 +75,20 @@ interface Props {
   /** ④ 전송형 행 — 근거·면적한도 중 «실제로 보내지는 값»(선택지에 없는 stale 값은 비워져 있다). 접힘·고지 판정은 이 행으로 한다. */
   wire: NblOtherStateEventInput;
   patchEvent: (patch: Partial<NblOtherStateEventInput>) => void;
-  /** 양도일 현재(꼬리) 칸이 근거 «철거ㆍ멸실»을 선택지로 주는가(`tailOffersDemolishedBasis`) — 그때만 «꼬리 칸과 달리 이 구간은 아직 받지 않는다» 보충을 hint에 붙인다(E3f-2 전 임시). */
-  tailOffersDemolished?: boolean;
+  /**
+   * 이 행이 **철거 행 뒤 나대지 구간을 닫는가**(엔진 `eventOffersDemolished`) — 근거 선택지에 «철거ㆍ멸실»을 여는 술어. 호출자가 엔진 술어로 정한다(자체 판정 금지).
+   * 철거 행 앞 구간(취득 전 철거로 첫 구간이 나대지)은 철거일 출처가 없어 거짓 — 9호 유예기간 안내가 남는다(UQ-9).
+   */
+  offersDemolished: boolean;
+  /** 근거 «철거ㆍ멸실»의 사실 칸 뷰(`demolishedRowViewOf`) — 근거가 «철거ㆍ멸실»이고 **엔진이 이력을 읽을 때만** 호출자가 넘긴다(UQ-8 (가) — 읽지 않으면 4칸 모두 그리지 않는다). */
+  demolishedView?: DemolishedRowView;
+  /** 이 행이 닫은 구간의 미리보기 행(표시 전용 — 인정 창·접힘 사유는 엔진 구간 해석을 읽는다). */
+  closedRow?: StateHistoryPreviewRow;
 }
 
-export function OtherLandBareIntervalFields({ index: i, idKey, taxChange, event: ev, wire, patchEvent, tailOffersDemolished = false }: Props) {
+export function OtherLandBareIntervalFields({ index: i, idKey, taxChange, event: ev, wire, patchEvent, offersDemolished, demolishedView, closedRow }: Props) {
   const before = wire.propertyTaxTypeBefore;
-  const basisOptions = before ? eventBasisOptions(before) : [];
+  const basisOptions = before ? eventBasisOptions(before, offersDemolished) : [];
   const decl = resolveBareDeclaration({
     kind: taxChange ? "tax_type_changed" : "building_built",
     propertyTaxTypeBefore: before,
@@ -70,6 +96,7 @@ export function OtherLandBareIntervalFields({ index: i, idKey, taxChange, event:
     areaWithinLimitBefore: wire.areaWithinLimitBefore,
   });
   const showLimit = wire.propertyTaxBasisBefore === "vacant_state";
+  const demolished = wire.propertyTaxBasisBefore === "demolished";
   const areaFold = decl.foldReason === "area_exceeded" || decl.foldReason === "area_unknown";
 
   return (
@@ -96,6 +123,8 @@ export function OtherLandBareIntervalFields({ index: i, idKey, taxChange, event:
                 // 구분이 바뀌면 근거·면적한도는 다른 구분의 값이라 리셋한다(이벤트 시점 쓰기).
                 propertyTaxBasisBefore: "",
                 areaWithinLimitBefore: "",
+                // E3f-2 — 사실 칸 4개도 같이 리셋한다(키를 지운다 — 부모 `patchEvent`가 `undefined` 값을 키째 제거해 종전 행과 byte-identical). 근거만 바뀔 때는 지우지 않는다(숨은 값 보존).
+                ...RESET_DEMOLISHED_FACTS,
               })
             }
             data-field={`nblOtherStateEvents.${i}.propertyTaxTypeBefore`}
@@ -113,7 +142,7 @@ export function OtherLandBareIntervalFields({ index: i, idKey, taxChange, event:
       {basisOptions.length > 0 && before && (
         <FieldCard
           label="그 구분의 근거"
-          hint={`건축물이 없던 기간에 「${PROPERTY_TAX_TYPE_LABEL[before]}」이 부과된 근거입니다. 재산세 과세내역(고지서)에서 확인해 고르세요 — 모르면 「모름」을 고르면 됩니다. 철거 후 한시 별도합산·건축 중 기간은 근거로 받지 않고 「부득이한 사유 유예기간」으로 입력합니다.${tailOffersDemolished ? ` ${NBL_STATE_HISTORY_BARE_DEMOLISHED_TAIL_ONLY_NOTE}` : ""}`}
+          hint={`건축물이 없던 기간에 「${PROPERTY_TAX_TYPE_LABEL[before]}」이 부과된 근거입니다. 재산세 과세내역(고지서)에서 확인해 고르세요 — 모르면 「모름」을 고르면 됩니다. ${DEMOLISHED_BASIS_HINT[offersDemolished ? "offered" : "notOffered"]}`}
         >
           <PropertyTaxBasisRadio
             name={`nblOtherStateBasis-${idKey}-${i}`}
@@ -144,15 +173,18 @@ export function OtherLandBareIntervalFields({ index: i, idKey, taxChange, event:
         </FieldCard>
       )}
 
-      {/* 접힘·수용 고지 — 엔진 해석(`resolveBareDeclaration`)이 정하고 문구는 결과 경고와 같은 상수다. */}
-      {decl.basisOutcome === "unconfirmed" && (
+      {/* E3f-2 — 근거 «철거ㆍ멸실»: 사실 칸 + 인정 창·접힘 미리보기. 엔진이 이력을 읽지 않으면(`demolishedView` 없음) 4칸 모두 그리지 않고 부모의 의제·부분 면적 안내가 말한다. */}
+      {demolishedView && <OtherLandDemolishedFactsField index={i} idKey={idKey} event={ev} view={demolishedView} closedRow={closedRow} patchEvent={patchEvent} />}
+
+      {/* 접힘·수용 고지 — 엔진 해석(`resolveBareDeclaration`)이 정하고 문구는 결과 경고와 같은 상수다. 근거 «철거ㆍ멸실»은 맥락(철거일·구간)이 필요해 위 블록이 구간 해석(미리보기 행)을 읽는다. */}
+      {!demolished && decl.basisOutcome === "unconfirmed" && (
         <ToneCard tone="amber">
           <p className="text-caption leading-snug" data-testid={`nbl-other-state-event-${i}-${areaFold ? "bare-area-notice" : "bare-unconfirmed-notice"}`}>
             {areaFold ? NBL_STATE_HISTORY_BARE_AREA_LIMIT_NOTICE : NBL_STATE_HISTORY_BARE_BASIS_UNCONFIRMED_NOTICE}
           </p>
         </ToneCard>
       )}
-      {decl.basisOutcome === "accepted" && (
+      {!demolished && decl.basisOutcome === "accepted" && (
         <ToneCard tone="amber">
           <p className="text-caption leading-snug" data-testid={`nbl-other-state-event-${i}-bare-accepted-notice`}>
             {NBL_STATE_HISTORY_BARE_ACCEPTED_NOTICE}

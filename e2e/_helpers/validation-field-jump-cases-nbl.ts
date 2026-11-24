@@ -57,6 +57,23 @@ const hev = (kind: "" | "building_built" | "building_removed" | "tax_type_change
 const bev = (date: string, footprint?: string) =>
   ({ kind: "building_removed" as const, date, propertyTaxTypeBefore: "", buildingKindBefore: "house" as const, ...(footprint === undefined ? {} : { houseFootprintBefore: footprint }) });
 
+/**
+ * 나대지 구간 근거 «철거ㆍ멸실» 시료(E3-⑤ E3f-2) — 건물(2016-01-01) → 철거 `removedOn`(별도합산 · `house`면 주택 + 정착면적 400㎡) → 신축 `closeOn`(닫는 행: 별도합산 + 근거 «철거ㆍ멸실» + `facts`).
+ * 양도일 현재 건축물(바닥면적 250㎡ × 일반주거 4배 = 1,000㎡ = 토지 면적 → 이내 — 엔진이 이력을 읽는다) + 별도합산. 수도권 밖 일반주거.
+ */
+const BARE_DEMOLISHED_ROW = (o: { removedOn: string; closeOn: string; house?: boolean; facts?: Record<string, unknown> }) => ({
+  nblZoneType: "general_residential",
+  nblIsMetropolitanArea: "no",
+  nblOtherHasBuilding: true,
+  nblOtherBuildingFloorArea: "250",
+  nblOtherStateHistoryMode: "changed",
+  nblOtherStateEvents: [
+    { kind: "building_built", date: "2016-01-01", propertyTaxTypeBefore: "" },
+    { kind: "building_removed", date: o.removedOn, propertyTaxTypeBefore: o.house ? "" : "separate", ...(o.house ? { buildingKindBefore: "house", houseFootprintBefore: "400" } : {}) },
+    { kind: "building_built", date: o.closeOn, propertyTaxTypeBefore: "separate", propertyTaxBasisBefore: "demolished", ...(o.facts ?? {}) },
+  ],
+});
+
 /** 기타토지 + 수입금액비율 업종 선택 */
 const revenue = (patch: Record<string, unknown> = {}) =>
   other({ nblRevenueBusinessType: "parking_operation", nblRevenueCurrentRevenue: "10000000", nblRevenueCurrentLandValue: "100000000", ...patch });
@@ -184,6 +201,12 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "nbl: 철거·멸실 철거ㆍ멸실일", field: "nblOtherDemolishedOn", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거ㆍ멸실 근거 — 철거ㆍ멸실일을 입력하세요/, form: () => ({ ...other({ nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedOn: "" })(), ...AFTER_2024_06 }) },
   { name: "nbl: 철거·멸실 종전 바닥면적", field: "nblOtherDemolishedFloorArea", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거ㆍ멸실 근거 — 철거 전 건축물의 바닥면적/, form: () => ({ ...other({ nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedOn: "2024-03-01", nblOtherDemolishedFloorArea: "" })(), ...AFTER_2024_06 }) },
   { name: "nbl: 철거·멸실 용도지역", field: "nblZoneType", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거ㆍ멸실 근거 — 용도지역/, form: () => ({ ...other({ nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedOn: "2024-03-01", nblOtherDemolishedFloorArea: "100", nblZoneType: "residential" })(), ...AFTER_2024_06 }) },
+  // E3-⑤ E3f-2 U-3 — 나대지 구간 근거 «철거ㆍ멸실»(철거 행 뒤 나대지 구간을 닫는 행)의 사실 칸 4개: 요구되는 칸이 «엔진이 이력을 읽을 때» 비어 있으면 ⑧이 그 칸으로 점프시킨다(키가 행 번호로 동적이라 이 케이스가 유일한 안전망).
+  // 시행본별 요구: 후보 과세기준일 ≥ 2019.6.1. 허가 · ≥ 2024.6.1. 건축 외 용도·(비주택)바닥면적·(주택)빈집정비. 아래 철거 2022-12-15 · 신축 2023-12-01은 허가 칸만, 철거 2024-01-15 · 신축 2024-06-02(양도 2024-06-03)는 4.6.1.~ 시행본이다.
+  { name: "nbl: 철거·멸실 구간 근거 허가·사용승인 미선택", field: "nblOtherStateEvents.2.demolishedPermitBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 나대지 구간 근거 «철거ㆍ멸실» — 3번째 사건 행: 철거한 건축물·주택이 허가·사용승인/, form: () => other(BARE_DEMOLISHED_ROW({ removedOn: "2022-12-15", closeOn: "2023-12-01" }))() },
+  { name: "nbl: 철거·멸실 구간 근거 건축 외 용도 미선택", field: "nblOtherStateEvents.2.demolishedOtherUseBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 나대지 구간 근거 «철거ㆍ멸실» — 3번째 사건 행: 철거 후 건축을 위한 용도 외의 다른 용도/, form: () => ({ ...other(BARE_DEMOLISHED_ROW({ removedOn: "2024-01-15", closeOn: "2024-06-02", facts: { demolishedPermitBefore: "yes" } }))(), ...AFTER_2024_06 }) },
+  { name: "nbl: 철거·멸실 구간 근거 철거 전 바닥면적 빈칸", field: "nblOtherStateEvents.2.demolishedFloorAreaBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 나대지 구간 근거 «철거ㆍ멸실» — 3번째 사건 행: 철거 전 건축물의 바닥면적/, form: () => ({ ...other(BARE_DEMOLISHED_ROW({ removedOn: "2024-01-15", closeOn: "2024-06-02", facts: { demolishedPermitBefore: "yes", demolishedOtherUseBefore: "no" } }))(), ...AFTER_2024_06 }) },
+  { name: "nbl: 철거·멸실 구간 근거 빈집정비 미선택(주택 철거 행)", field: "nblOtherStateEvents.2.demolishedVacantHouseBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 나대지 구간 근거 «철거ㆍ멸실» — 3번째 사건 행: 철거한 주택이 빈집정비사업/, form: () => ({ ...other(BARE_DEMOLISHED_ROW({ removedOn: "2024-01-15", closeOn: "2024-06-02", house: true, facts: { demolishedPermitBefore: "yes", demolishedOtherUseBefore: "no" } }))(), ...AFTER_2024_06 }) },
   { name: "nbl: 건축물 바닥면적", field: "nblOtherBuildingFloorArea", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 바닥면적/, form: other({ nblOtherHasBuilding: true, nblOtherBuildingFloorArea: "" }) },
   { name: "nbl: 부설주차장 기준면적", field: "nblOtherStandardAreaLimit", step: 0, assetIndex: A, message: /^자산: 선택한 호의 기준면적/, form: other({ nblOtherRelatedBusinessType: "parking_attached" }) },
   { name: "nbl: 휴양시설", field: "nblOtherResortOutdoorArea", step: 0, assetIndex: A, message: /^자산: 휴양시설 — 옥외방목장/, form: other({ nblOtherRelatedBusinessType: "resort" }) },

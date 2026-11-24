@@ -141,7 +141,7 @@ test.describe("기타토지 나대지 구간 재산세 구분(E3-1b) — 입력 
     await expect(page.getByTestId("nbl-state-history-preview-row-0")).toContainText("종합합산(나대지 — 고정)");
 
     await declare(page, i, "separate");
-    await expect(page.getByTestId(`nbl-other-state-event-${i}-basis-demolished`), "철거ㆍ멸실 근거는 나대지 구간에서 받지 않는다").toHaveCount(0);
+    await expect(page.getByTestId(`nbl-other-state-event-${i}-basis-demolished`), "철거 행 앞 구간(첫 구간이 나대지 — 철거일 출처 없음)에서는 철거ㆍ멸실 근거를 받지 않는다(E3f-2: 철거 행 뒤 구간만 연다)").toHaveCount(0);
     await expect(bareNotice(page, i, "unconfirmed")).toBeVisible();
     await pick(page.getByTestId(`nbl-other-state-event-${i}-basis-vacant_state`));
     await expect(bareNotice(page, i, "unconfirmed")).toHaveCount(0);

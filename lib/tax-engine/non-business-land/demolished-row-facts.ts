@@ -66,6 +66,27 @@ function floorAreaMissing(value: string | undefined): boolean {
 
 const blank = (v: string | undefined): boolean => (v ?? "").trim() === "";
 
+const MESSAGE_OF = {
+  demolishedPermitBefore: demolishedPermitRequiredMessage,
+  demolishedOtherUseBefore: demolishedOtherUseRequiredMessage,
+  demolishedVacantHouseBefore: demolishedVacantHouseRequiredMessage,
+  demolishedFloorAreaBefore: demolishedFloorAreaRequiredMessage,
+} as const satisfies Record<DemolishedRowFactField, (index: number) => string>;
+
+/**
+ * 요구된 칸 중 **비어 있는 첫 칸**(허가 → 건축 외 용도 → 빈집정비 → 바닥면적 — 3지선다 = 미선택 `""` · 바닥면적 = 빈칸·비수치·비양수). ⑧·⑫′(`demolishedRowFactIssue`)와 ⑤ 미리보기(사실 칸이 모두 답해졌는가)가 같은 함수다.
+ */
+export function firstBlankDemolishedFact(
+  ev: Pick<DemolishedFactRowLike, "demolishedPermitBefore" | "demolishedOtherUseBefore" | "demolishedVacantHouseBefore" | "demolishedFloorAreaBefore">,
+  required: { permit: boolean; otherUse: boolean; vacantHouse: boolean; floorArea: boolean },
+): DemolishedRowFactField | null {
+  if (required.permit && blank(ev.demolishedPermitBefore)) return "demolishedPermitBefore";
+  if (required.otherUse && blank(ev.demolishedOtherUseBefore)) return "demolishedOtherUseBefore";
+  if (required.vacantHouse && blank(ev.demolishedVacantHouseBefore)) return "demolishedVacantHouseBefore";
+  if (required.floorArea && floorAreaMissing(ev.demolishedFloorAreaBefore)) return "demolishedFloorAreaBefore";
+  return null;
+}
+
 /**
  * 와이어 사건 행 중 **근거 «철거ㆍ멸실»의 사실 칸이 요구되는데 비어 있는 첫 칸** — 행 순서(화면 순서) · 한 행 안에서는 허가 → 건축 외 용도 → 빈집정비 → 바닥면적(→ 용도지역 배율표 밖).
  *
@@ -93,13 +114,9 @@ export function demolishedRowFactIssue(i: {
     if (!required.permit && !required.otherUse && !required.vacantHouse && !required.floorArea) continue;
     historyRead ??= i.historyRead();
     if (!historyRead) return null; // 엔진이 이력을 읽지 않으면 어떤 칸도 요구하지 않는다 — 어느 행이든 같다.
-    if (required.permit && blank(ev.demolishedPermitBefore)) return { index: idx, field: "demolishedPermitBefore", message: demolishedPermitRequiredMessage(idx) };
-    if (required.otherUse && blank(ev.demolishedOtherUseBefore)) return { index: idx, field: "demolishedOtherUseBefore", message: demolishedOtherUseRequiredMessage(idx) };
-    if (required.vacantHouse && blank(ev.demolishedVacantHouseBefore)) return { index: idx, field: "demolishedVacantHouseBefore", message: demolishedVacantHouseRequiredMessage(idx) };
-    if (required.floorArea) {
-      if (floorAreaMissing(ev.demolishedFloorAreaBefore)) return { index: idx, field: "demolishedFloorAreaBefore", message: demolishedFloorAreaRequiredMessage(idx) };
-      if (!getZoneAreaMultiplier(i.zoneType)) return { index: idx, field: "demolishedFloorAreaBefore", message: demolishedZoneUnmappedMessage(i.zoneType) };
-    }
+    const blankField = firstBlankDemolishedFact(ev, required);
+    if (blankField) return { index: idx, field: blankField, message: MESSAGE_OF[blankField](idx) };
+    if (required.floorArea && !getZoneAreaMultiplier(i.zoneType)) return { index: idx, field: "demolishedFloorAreaBefore", message: demolishedZoneUnmappedMessage(i.zoneType) };
   }
   return null;
 }
