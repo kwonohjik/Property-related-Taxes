@@ -17,6 +17,7 @@
  *     영 §168의13 3호 문언(「가목1)부터 4)까지」)은 그대로라 목 재편 시점을 거쳐 가리키는 지역이 바뀐다 — 사용자가 입력하는 「제외지역 해당」 선언이라 세액은 바꾸지 않고 고지만 한다(`VILLA_REGION_LIST_EVOLVED_NOTICE`).
  *   · 2008.1.1.~2009.3.15. 양도분(2008.10.7. 「10년」·2008.12.31. 소급 부칙)은 범위 밖(양도 2009.3.15. 이전 = 범위 밖)이라 모델링하지 않았다.
  */
+import { isWithinPeriod } from "../civil-period";
 import { addYears, isBefore, isValid, parseISO } from "../utc-date";
 import { NBL } from "../legal-codes/transfer-nbl";
 
@@ -115,13 +116,13 @@ export function hasDemolishedStatusEraDate(transferDate: Date | undefined): tran
 }
 
 /**
- * «빈집 3년 셀» — 철거ㆍ멸실일 `removedOn`이 (2021.6.1., 2022.6.1.]이고 양도일이 [2024.6.1., 2025.3.21.)인가.
- * 과세기준일 2024.6.1. 현재 빈집정비 3년 한시는 `removedOn + 3년 > 2024.6.1.`이면 성립 가능하고, 그날을 건축물 멸실 유예 9호(양도 2025.3.21. 전 2년 — `demolitionGraceYears`)
+ * «빈집 3년 셀» — 철거ㆍ멸실일 `removedOn`이 [2021.6.1., 2022.6.1.]이고 양도일이 [2024.6.1., 2025.3.21.)인가.
+ * 과세기준일 2024.6.1. 현재 빈집정비 3년 한시는 «철거ㆍ멸실된 날부터 3년이 지나지 아니한» 기간 안(만료일 당일까지 — 민법 §157·§160, `isWithinPeriod`: 철거 2021.6.1. → 만료일 2024.6.1. → 안)이면 성립 가능하고, 그날을 건축물 멸실 유예 9호(양도 2025.3.21. 전 2년 — `demolitionGraceYears`)
  * `[removedOn, removedOn + 2년)`이 덮지 못하는 것은 `removedOn + 2년 ≤ 2024.6.1.`일 때다. 이 셀의 판정 뒤집힘은 격자로 실측했다(E3f-0 Anchor 3 — 판정 뒤집힘 356행이 전부 이 셀 안).
  * 날짜 중 하나가 Invalid Date면 false.
  */
 export function isVacantHouseThreeYearCell(removedOn: Date, transferDate: Date): boolean {
-  return removedOn > addYears(FROM_2024_06_01, -3) && removedOn <= addYears(FROM_2024_06_01, -2) && transferDate >= FROM_2024_06_01 && transferDate < FROM_2025_03_21;
+  return isWithinPeriod(removedOn, 3, FROM_2024_06_01) && removedOn <= addYears(FROM_2024_06_01, -2) && transferDate >= FROM_2024_06_01 && transferDate < FROM_2025_03_21;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

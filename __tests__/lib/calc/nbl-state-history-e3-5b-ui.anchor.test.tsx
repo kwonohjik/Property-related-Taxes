@@ -235,7 +235,11 @@ describe("E3f-1b U-2 B — ⑤ 칸 노출(T1~T9)", () => {
     tail(asset({ ...DEMO, nblOtherDemolishedOn: "2018-01-01" }), "2024-01-01");
     expect(expiredNotice()!.textContent).toBe(NBL_PTAX_DEMOLISHED_PERIOD_ELAPSED_NOTICE);
     cleanup();
-    for (const [on, transfer] of [["2023-12-26", "2024-01-01"], ["", "2024-01-01"], ["abc", "2024-01-01"], ["2018-01-01", ""], ["2018-01-01", undefined]] as const) {
+    // 경계(2026-11-24 정정 — 민법 §157·§160): 철거 2022-12-01의 6개월 만료일 2023-06-01 = 직전 과세기준일(양도 2024-05-31) → 한시 안 → 안내 없음 · 철거 2022-11-30 → 만료일 2023-05-31 → 안내
+    tail(asset({ ...DEMO, nblOtherDemolishedOn: "2022-11-30" }), "2024-05-31");
+    expect(expiredNotice()!.textContent).toBe(NBL_PTAX_DEMOLISHED_PERIOD_ELAPSED_NOTICE);
+    cleanup();
+    for (const [on, transfer] of [["2022-12-01", "2024-05-31"], ["2023-12-26", "2024-01-01"], ["", "2024-01-01"], ["abc", "2024-01-01"], ["2018-01-01", ""], ["2018-01-01", undefined]] as const) {
       tail(asset({ ...DEMO, nblOtherDemolishedOn: on }), transfer);
       expect(expiredNotice(), `${on}/${transfer}`).toBeNull();
       cleanup();

@@ -26,6 +26,7 @@ import { propertyTaxBasisOptions } from "@/lib/tax-engine/non-business-land/prop
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-land/types";
 import type { NonBusinessLandInput } from "@/lib/tax-engine/non-business-land/types";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import { isWithinPeriodMonths, periodEndFromMonths } from "@/lib/tax-engine/civil-period";
 import { addDays, addMonths, addYears, format, isBefore, parseISO } from "@/lib/tax-engine/utc-date";
 
 const R = DEFAULT_NON_BUSINESS_LAND_RULES;
@@ -62,7 +63,9 @@ describe("E3f-0 Anchor 1 — 오라클 표: 판정 · 일수 (제안 모델 적�
     expect(774 - 592).toBe(182);
   });
 
-  it("Q-4 게이트 효과(K-2a/K-2b 쌍): 철거 2022-12-01은 게이트 실패(578 비사업용) — 게이트 없이 창을 주면 760 사업용(법 근거 없는 최대 6개월 유리 인정) · 철거 2022-12-02는 통과 761", () => {
+  // ⚠️ 2026-11-24: 이 쌍(K-2a/K-2b)의 게이트 경계는 정정 전이다 — 민법 §157·§160상 철거 2022-12-01은 과세기준일 2023-06-01 현재 «6개월이 지나지 아니한» 한시 안이라 게이트를 통과한다(경계 쌍은 2022-11-30/12-01).
+  // E3f-2는 게이트·창 경계(창의 일 단위 구간 포함)를 이 정정대로 다시 도출한다 — 아래 단언은 `evalDayRow` 직접 구간의 산수 고정일 뿐 엔진 게이트를 읽지 않는다.
+  it("Q-4 게이트 효과(K-2a/K-2b 쌍 — 정정 전 경계, E3f-2가 재도출): 철거 2022-12-01은 게이트 실패(578 비사업용) — 게이트 없이 창을 주면 760 사업용(법 근거 없는 최대 6개월 유리 인정) · 철거 2022-12-02는 통과 761", () => {
     const gateOff = evalDayRow({ acq: "2014-01-01", transfer: "2024-01-01", biz: [["2021-06-02", "2022-12-01"], ["2022-12-01", "2023-06-01"], ["2023-12-01", "2024-01-01"]] });
     expect([gateOff.meets, gateOff.effectiveBusinessDays]).toEqual([true, 760]);
     expect([oracle(row("K-2a")).meets, oracle(row("K-2a")).effectiveBusinessDays]).toEqual([false, 578]);
@@ -154,10 +157,12 @@ describe("E3f-0 Anchor 2 ② — [E3f-1b 반전 완료] 꼬리 근거 «철거�
     expect(taxOf(both)).toBe(E35_N);
   });
 
-  it("경계 쌍 K-11a/K-11b: 철거일이 하루(2022-12-01 vs 12-02) 달라 K-11a만 비사업용 547로 접힌다 — K-11b는 사업용 1,094 그대로(접지 않는 정합 시료)", () => {
-    expect(row("K-11a").current).toMatchObject({ nonBusiness: true, eff: 547 });
+  it("경계 쌍 K-11a/K-11c (2026-11-24 정정 — 민법 §157·§160): 철거일이 하루(2022-11-30 vs 12-01) 달라 K-11a만 비사업용 546으로 접힌다 — K-11c(만료일 2023-06-01 당일 = 한시 안)·K-11b(12-02)는 사업용 1,094 그대로(접지 않는 정합 시료). 정정 전에는 12-01이 K-11a(547로 접힘)였다", () => {
+    expect(row("K-11a").current).toMatchObject({ nonBusiness: true, eff: 546 });
+    expect(row("K-11c").current).toMatchObject({ nonBusiness: false, eff: 1094 });
     expect(row("K-11b").current).toMatchObject({ nonBusiness: false, eff: 1094 });
     expect(oracle(row("K-11a")).meets).toBe(false);
+    expect(oracle(row("K-11c")).meets).toBe(true);
     expect(oracle(row("K-11b")).meets).toBe(true);
   });
 
@@ -176,14 +181,14 @@ describe("E3f-0 Anchor 3 — 6개월·1년 한시는 9호에 포함된다(격자
   const FROM = { y2016: d("2016-06-01"), y2024: d("2024-06-01"), y2026: d("2026-06-01") };
   /** 과세기준일 s 시행본의 W(개월): 2016.6.1. 전 0 · 6 · 빈집정비 2024.6.1.~ 36 · 2026.6.1.~ 12. 계획서 §1.3 표 — 테스트용 오라클이며 제품 코드가 아니다. */
   const widthOf = (s: Date, vacantHouse: boolean): number => (isBefore(s, FROM.y2016) ? 0 : vacantHouse && !isBefore(s, FROM.y2024) ? 36 : !isBefore(s, FROM.y2026) ? 12 : 6);
-  /** W* = 성립 요건(`r ≤ s ≤ T` ∧ `s < r + W(s)`)을 채우는 과세기준일들의 W 중 최대 — 하나도 없으면 undefined(한시 불성립). */
+  /** W* = 성립 요건(`r ≤ s ≤ T` ∧ `s`가 «철거일부터 W(s)개월이 지나지 아니한» 기간 안 — 만료일 당일까지, 민법 §157·§160 · 2026-11-24 정정)을 채우는 과세기준일들의 W 중 최대 — 하나도 없으면 undefined(한시 불성립). */
   function wStar(r: Date, T: Date, vacantHouse: boolean): number | undefined {
     let best: number | undefined;
     for (let y = r.getUTCFullYear(); y <= T.getUTCFullYear(); y++) {
       const s = s1(y);
       if (isBefore(s, r) || isBefore(T, s)) continue;
       const w = widthOf(s, vacantHouse);
-      if (w > 0 && isBefore(s, addMonths(r, w))) best = Math.max(best ?? 0, w);
+      if (w > 0 && isWithinPeriodMonths(r, w, s)) best = Math.max(best ?? 0, w);
     }
     return best;
   }
@@ -206,7 +211,8 @@ describe("E3f-0 Anchor 3 — 6개월·1년 한시는 9호에 포함된다(격자
             const w = wStar(r, T, vacantHouse);
             if (w === undefined) continue;
             const grace: [string, string][] = [[f(r), f(addYears(r, demolitionGraceYears(T)))]];
-            const winEnd = isBefore(addMonths(r, w), T) ? addMonths(r, w) : T;
+            const periodEnd = addDays(periodEndFromMonths(r, w), 1); // 만료일 다음 날 = 반열린 창의 끝
+            const winEnd = isBefore(periodEnd, T) ? periodEnd : T;
             const base = { acq: f(acq), transfer: f(T), grace };
             const nine = evalDayRow({ ...base, biz: [[f(bs), f(r)]] });
             const union = evalDayRow({ ...base, biz: [[f(bs), f(r)], [f(r), f(winEnd)]] });
@@ -217,7 +223,7 @@ describe("E3f-0 Anchor 3 — 6개월·1년 한시는 9호에 포함된다(격자
     }
     return rows;
   }
-  const inCell = (x: { r: string; T: string }) => x.r > "2021-06-01" && x.r <= "2022-06-01" && x.T >= "2024-06-01" && x.T <= "2025-03-20";
+  const inCell = (x: { r: string; T: string }) => x.r >= "2021-06-01" && x.r <= "2022-06-01" && x.T >= "2024-06-01" && x.T <= "2025-03-20";
 
   it("일반 한시(6개월 · 2026.6.1.~ 1년 · 빈집정비 아님): 9호 단독 vs 9호 ∪ 창 — 판정·유효 일수 뒤집힘 0 (계획서 §3.2 대수 증명의 격자 확인)", () => {
     const rows = grid(false);
@@ -226,7 +232,7 @@ describe("E3f-0 Anchor 3 — 6개월·1년 한시는 9호에 포함된다(격자
     expect(flips.slice(0, 3)).toEqual([]);
   });
 
-  it("빈집 3년(2024.6.1.~): 판정이 뒤집히는 행이 있고 **전부 셀 안**(철거 (2021-06-01, 2022-06-01] × 양도 [2024-06-01, 2025-03-20]) — 일수만 달라지는 행은 셀 밖에도 있다", () => {
+  it("빈집 3년(2024.6.1.~): 판정이 뒤집히는 행이 있고 **전부 셀 안**(철거 [2021-06-01, 2022-06-01] × 양도 [2024-06-01, 2025-03-20]) — 일수만 달라지는 행은 셀 밖에도 있다", () => {
     const rows = grid(true);
     const verdictFlips = rows.filter((x) => x.nine.meets !== x.union.meets);
     expect(verdictFlips.length).toBeGreaterThan(0);
@@ -237,14 +243,14 @@ describe("E3f-0 Anchor 3 — 6개월·1년 한시는 9호에 포함된다(격자
     expect(rows.filter((x) => x.nine.eff !== x.union.eff && !inCell(x)).length).toBeGreaterThan(0);
   });
 
-  it("셀 경계(계획서 K-23): 9호가 2년인 시기에 과세기준일 2024-06-01 현재 3년 한시는 성립하나 9호 [r, r+2년)이 그날을 덮지 못하는 철거일은 (2021-06-01, 2022-06-01] — 경계 쌍 2021-06-01/02 · 2022-06-01/02", () => {
+  it("셀 경계(계획서 K-23): 9호가 2년인 시기에 과세기준일 2024-06-01 현재 3년 한시는 성립하나 9호 [r, r+2년)이 그날을 덮지 못하는 철거일은 [2021-06-01, 2022-06-01] — 경계 쌍 2021-05-31/06-01 · 2022-06-01/02(위 경계는 3년 만료일 당일 포함 — 2026-11-24 정정 · 아래 경계는 9호 반열린 구간 관례 그대로 — 9호 2년 끝날 포함 여부는 확인 필요)", () => {
     const covered = (r: string, s = "2024-06-01") => {
       const end = addYears(d(r), 2);
       return !isBefore(d(s), d(r)) && isBefore(d(s), end);
     };
-    const threeYearHolds = (r: string) => isBefore(d("2024-06-01"), addMonths(d(r), 36));
+    const threeYearHolds = (r: string) => isWithinPeriodMonths(d(r), 36, d("2024-06-01"));
     const inCell = (r: string) => threeYearHolds(r) && !covered(r);
-    expect(["2021-06-01", "2021-06-02", "2022-06-01", "2022-06-02"].map(inCell)).toEqual([false, true, true, false]);
+    expect(["2021-05-31", "2021-06-01", "2022-06-01", "2022-06-02"].map(inCell)).toEqual([false, true, true, false]);
   });
 });
 

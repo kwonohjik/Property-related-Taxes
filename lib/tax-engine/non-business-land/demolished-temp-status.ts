@@ -14,7 +14,8 @@
 import { NBL } from "../legal-codes";
 import { demolishedStatusEra, demolishedStatusMaxMonths, hasDemolishedStatusEraDate, isVacantHouseThreeYearCell, lastPropertyTaxBaseDateOnOrBefore } from "../data/nbl-historical-values-era";
 import type { DemolishedStatusEra } from "../data/nbl-historical-values-era";
-import { addMonths, isBefore, isValid } from "../utc-date";
+import { isWithinPeriodMonths } from "../civil-period";
+import { isValid } from "../utc-date";
 import type { NonBusinessLandInput } from "./types";
 
 const EPILOGUE_ERA_NOTE = "한시 지위는 과세기준일마다 그날의 시행본으로 정해지는데 양도일 기준 시행본으로 안내했고, ";
@@ -67,7 +68,7 @@ export function demolishedStatusNotice(transferDate: Date | undefined): string {
 }
 
 /**
- * 빈집 3년 셀 고지 — 근거 «철거ㆍ멸실»을 선언하지 **않은** 입력용(입력 칸 없이 발동). 철거ㆍ멸실일이 (2021.6.1., 2022.6.1.]이고 양도일이 [2024.6.1., 2025.3.21.)이면
+ * 빈집 3년 셀 고지 — 근거 «철거ㆍ멸실»을 선언하지 **않은** 입력용(입력 칸 없이 발동). 철거ㆍ멸실일이 [2021.6.1., 2022.6.1.]이고 양도일이 [2024.6.1., 2025.3.21.)이면
  * 과세기준일 2024.6.1. 현재 빈집정비 3년 한시가 성립할 수 있으나 건축물 멸실 유예 9호(2년)가 그날을 덮지 못한다(판정 뒤집힘 셀 — 계획서 §3.3 · K-23).
  * 이 계산기는 한시 지위를 판정하지 않는다(E3f-2 이후 문구는 «나대지 구간 근거 «철거ㆍ멸실»에서 빈집정비를 선택하면 반영»으로 바뀐다). 세액 불변 — 고지만.
  */
@@ -92,11 +93,15 @@ export function demolitionGraceAnchorDates(input: Pick<NonBusinessLandInput, "gr
 
 /**
  * 꼬리 근거 «철거ㆍ멸실»의 «확실히 지남» **충분조건**(E3f-1b · 계획서 §5.3 · Q-6 (가)) — 양도일 이전(당일 포함) 마지막 과세기준일 `s`에 대해
- *   `s ≥ 철거ㆍ멸실일` ∧ `s ≥ 철거ㆍ멸실일 + W_max(s)`(W_max = 2016.6.1. 전 시행본 없음 · 2024.6.1. 전 6개월 · 그 이후 3년 — 빈집정비 여부를 받지 않아 긴 기간으로 본다).
+ *   `s`가 «철거ㆍ멸실된 날부터 W_max(s)개월이 지나지 아니한» 기간(만료일 당일까지)의 **뒤**다(W_max = 2016.6.1. 전 시행본 없음 · 2024.6.1. 전 6개월 · 그 이후 3년 — 빈집정비 여부를 받지 않아 긴 기간으로 본다).
  * 참이면 철거ㆍ멸실일부터 `s`까지 한시 기간이 이미 끝났다 — 꼬리 전체를 별도합산 사업용으로 세는 것은 법 근거가 없으므로 근거를 접는다(종합합산 + 확인 필요).
  *
+ * **기간 계산**: 지방세기본법 §23 → 「민법」 §157(초일불산입 — 기산일은 철거ㆍ멸실일 다음날) · §160②(만료 월의 기산일 응당일 전날 만료) · §160③(해당일 없으면 그 달 말일 만료).
+ * 만료일 **당일까지는 한시 안**이다 — `isWithinPeriodMonths`(`civil-period.ts`). 철거일이 월 말일이면 `addMonths`가 아니라 만료 월의 말일이 만료일이다(4.30. 철거 + 6개월 = 10.31.).
+ *
  * **접으면 안 되는 경우**(법 근거 없는 불리 금지): 철거 후 첫 과세기준일이 아직 안 왔으면(`s < 철거일` — 그 과세기준일의 지위는 건축물 부속토지) · 한시 안(충분조건 미충족) · 시행 전(2016.6.1. 전) · 날짜 해석 불가 → 거짓.
- * 경계 쌍(K-11a/b): 철거 2022-12-01은 철거일 + 6개월 = 2023-06-01 = 과세기준일(«6개월이 지나지 않은»이 아님) → 지남 · 12-02는 한시 안.
+ * 경계 쌍(K-11a/b · 2026-11-24 정정): 철거 2022-12-01 → 기산일 12-02 → 6개월 만료일 2023-06-01(그날 끝까지 기간 안) → 과세기준일 2023-06-01 현재는 «6개월이 지나지 아니한» = **한시 안** · 철거 2022-11-30 → 만료일 2023-05-31 → 지남.
+ * (정정 전에는 `s ≥ 철거일 + 6개월`로 만료일 당일을 «지남»으로 읽어 하루 불리했다.)
  */
 export function isTailDemolishedClearlyExpired(removedOn: Date, transferDate: Date): boolean {
   if (!isValid(removedOn) || !isValid(transferDate)) return false;
@@ -104,7 +109,7 @@ export function isTailDemolishedClearlyExpired(removedOn: Date, transferDate: Da
   if (!s) return false;
   // `s ≥ 철거일 + W`(W > 0)이면 `s ≥ 철거일`이 따라온다 — 철거 후 첫 과세기준일이 아직 안 온 경우(K-13)는 따로 가르지 않아도 거짓이다.
   const months = demolishedStatusMaxMonths(s);
-  return months > 0 && !isBefore(s, addMonths(removedOn, months));
+  return months > 0 && !isWithinPeriodMonths(removedOn, months, s);
 }
 
 /** 꼬리 근거 «철거ㆍ멸실» — 철거일부터 한시 기간이 확실히 지나 근거를 접은 고지. 입력 화면의 시점 안내(⑤)와 결과 고지가 같은 문구를 읽는다(단일 소스). */

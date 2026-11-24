@@ -85,6 +85,15 @@ export function periodEndFrom(event: Date, years: number): Date {
   return civilPeriodEnd(new Date(dayKey(event) + DAY_MS), years * 12);
 }
 
+/**
+ * 「`event`한 날부터 `months`개월」의 만료일(초일불산입) — `periodEndFrom`의 개월 판.
+ * 기산일 = 사건일 다음날(§157) → 만료 월의 응당일 전날(§160②) · 해당일 없으면 그 달 말일(§160③).
+ * `event`가 그 달 말일이면 만료일도 만료 월의 말일이다 — `addMonths(event, months)`와 다르다(4.30 + 6개월 = 10.31 · `addMonths` = 10.30).
+ */
+export function periodEndFromMonths(event: Date, months: number): Date {
+  return civilPeriodEnd(new Date(dayKey(event) + DAY_MS), months);
+}
+
 /** 「`event`한 날부터 `years`년 이상이 지난 후」를 충족하는 **최초의 날**(= 만료일 다음날) */
 export function firstDayAfterPeriod(event: Date, years: number): Date {
   return new Date(dayKey(periodEndFrom(event, years)) + DAY_MS);
@@ -98,6 +107,11 @@ export function isAfterPeriod(event: Date, years: number, target: Date): boolean
 /** B 유형 — `target`이 「`event`한 날부터 `years`년 이내」인가 */
 export function isWithinPeriod(event: Date, years: number, target: Date): boolean {
   return dayKey(target) <= dayKey(periodEndFrom(event, years));
+}
+
+/** 「`event`한 날부터 `months`개월이 지나지 아니한」 — `target`이 만료일 **당일까지**인가(민법 §161 연장 없음 — 요건 기간이지 행위 기한이 아니다) */
+export function isWithinPeriodMonths(event: Date, months: number, target: Date): boolean {
+  return dayKey(target) <= dayKey(periodEndFromMonths(event, months));
 }
 
 /** `target`이 기한 말일 `end` **당일까지**인가 — 기한이 연수가 아니라 날짜로 정해질 때(§155①2호 단서) */

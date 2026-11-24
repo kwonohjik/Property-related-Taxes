@@ -8,7 +8,7 @@
  * 칸이 보이는 조건은 전부 엔진 술어를 `nbl-demolished-tail-scope.ts`가 한 곳에서 부른 값이다 — ⑤ 노출 = ⑧ 차단 = ⑫′ 400 = ④ 전송 = ⑭ 읽기(UI 자체 날짜·시행본 비교 금지):
  *  · 철거ㆍ멸실일 새 칸: 이력의 마지막 철거 행이 날짜를 대지 않을 때만(`demolishedOnRequired`). 대면 읽기 전용 한 줄(출처 표시) — 새 칸의 숨은 값은 지우지 않고 ④가 싣지 않는다.
  *  · 종전 바닥면적: 양도일 직전 과세기준일 ≥ 2024.6.1. 시행본만(`demolishedFloorAreaRequired` — 그 전 시행본은 면적 범위 문언이 없어 엔진이 읽지 않는다).
- *  · 한도 경과 안내: 엔진 `isTailDemolishedClearlyExpired`(철거일 + 최대 한시 기간 ≤ 양도일 직전 과세기준일) — UI는 계산하지 않는다. 철거일·양도일 해석 불가는 안내 없음.
+ *  · 한도 경과 안내: 엔진 `isTailDemolishedClearlyExpired`(양도일 직전 과세기준일이 철거일부터 최대 한시 기간의 만료일 — 민법 §157·§160 — 뒤) — UI는 계산하지 않는다. 철거일·양도일 해석 불가는 안내 없음.
  * 파생은 전부 렌더 계산이다(`useEffect → store` 미러링 없음).
  */
 import { DateInput } from "@/components/ui/date-input";

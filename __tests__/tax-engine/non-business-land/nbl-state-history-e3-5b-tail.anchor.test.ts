@@ -2,9 +2,9 @@
  * NBL-STATE-HISTORY-E3-⑤ E3f-1b — 꼬리(양도일 현재) 근거 «철거ㆍ멸실» **철거일 한도** + **면적 범위 문언 연혁 정정** anchor (엔진 · ⑭ 매퍼).
  *
  *   A  연혁 leaf 경계: 마지막 과세기준일 · W_max · 면적 문언 시행본(2024.6.1.) — 하루 전/당일 쌍.
- *   B  `isTailDemolishedClearlyExpired` 충분조건 — 계획서 K-11a/b · K-13 · K-14 경계 쌍 · 시행 전(2016.6.1. 전) · Invalid Date.
+ *   B  `isTailDemolishedClearlyExpired` 충분조건 — 계획서 K-11a/b/c · K-13 · K-14 경계 쌍(만료일 당일 = 한시 안 · 다음 날 = 지남 — 6개월·3년 시행본 · 1년 시행본은 `isWithinPeriodMonths` 직접) · 시행 전(2016.6.1. 전) · Invalid Date.
  *   C  `resolvePropertyTaxBasis` — 사유 순서(바닥면적 → 철거일 없음 → 기간 경과) · 양도일 생략 = 한도 안 봄(나대지 구간 선언 호출처).
- *   D  raw → ⑭ → 판정 → 세액: E3f-0 표 행(K-11a/b · K-12 · K-12a · K-13 · K-14 · D-1 · D-1a)을 직접 대조하고, 출처 ①(철거 행)·② 새 칸(K-15)·K-17(철거 행 우선)·K-18(근거가 «철거ㆍ멸실»이 아니면 바이트 동일).
+ *   D  raw → ⑭ → 판정 → 세액: E3f-0 표 행(K-11a/b/c · K-12 · K-12a · K-13 · K-14 · D-1 · D-1a)을 직접 대조하고, 출처 ①(철거 행)·② 새 칸(K-15)·K-17(철거 행 우선)·K-18(근거가 «철거ㆍ멸실»이 아니면 바이트 동일).
  *   E  고지: 접힘 사유별 문구(기간 경과 · 철거일 없음) 1건 · 시행본 고지는 접히면 나오지 않는다 · 엔진 echo.
  *   F  면적 범위 문언 연혁(사용자 결정 2026-11-24 — 2024.6.1. 전 시행본에는 면적 제한 없음): E3f-1b 전 → 후 표(`E35_AREA_ROWS`) · 줄어드는 방향만 바뀐다 · 경계 쌍 2024-05-31/06-01.
  *
@@ -33,7 +33,8 @@ import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
 import { applyRate } from "@/lib/tax-engine/tax-utils";
 import { calculateProgressiveTax } from "@/lib/tax-engine/tax-utils";
 import { partialNblIncome } from "@/lib/tax-engine/transfer-tax-split-part-seeds";
-import { format, parseISO } from "@/lib/tax-engine/utc-date";
+import { isWithinPeriodMonths, periodEndFromMonths } from "@/lib/tax-engine/civil-period";
+import { addDays, addMonths, format, isBefore, parseISO } from "@/lib/tax-engine/utc-date";
 
 const R = DEFAULT_NON_BUSINESS_LAND_RULES;
 const d = parseISO;
@@ -69,33 +70,107 @@ describe("E3f-1b A — 연혁 leaf 경계 (하루 전/당일 쌍)", () => {
 });
 
 describe("E3f-1b B — `isTailDemolishedClearlyExpired` 충분조건 (경계 쌍)", () => {
-  it("K-11a/K-11b: 철거 2022-12-01(철거일 + 6개월 = 과세기준일 2023-06-01 — «6개월이 지나지 않은»이 아님) → 지남 · 12-02 → 한시 안 (양도 2024-05-31)", () => {
-    expect([expired("2022-12-01", "2024-05-31"), expired("2022-12-02", "2024-05-31")]).toEqual([true, false]);
+  it("K-11a/K-11c (2026-11-24 경계 정정 — 민법 §157·§160): 철거 2022-11-30(만료일 2023-05-31) → 지남 · 철거 2022-12-01(기산일 12-02 → 만료일 2023-06-01 = 과세기준일: 당일까지 기간 안) → 한시 안 · 12-02 → 한시 안 (양도 2024-05-31)", () => {
+    expect([expired("2022-11-30", "2024-05-31"), expired("2022-12-01", "2024-05-31"), expired("2022-12-02", "2024-05-31")]).toEqual([true, false, false]);
   });
 
   it("K-13: 철거 후 첫 과세기준일이 아직 안 왔다(철거 2023-07-01 · 양도 2023-12-01 — 직전 과세기준일 2023-06-01 < 철거일) → 접지 않는다", () => {
     expect(expired("2023-07-01", "2023-12-01")).toBe(false);
-    expect(expired("2023-06-01", "2023-12-01")).toBe(false); // 철거일 = 과세기준일: s ≥ r 이지만 r + 6개월 > s
+    expect(expired("2023-06-01", "2023-12-01")).toBe(false); // 철거일 = 과세기준일: s ≥ r 이지만 만료일(2023-12-01) ≥ s
   });
 
-  it("K-14: 2024.6.1.~ 시행본은 W_max = 3년(빈집 가능성) — 철거 2022-12-01 · 양도 2024-06-01 → 접지 않는다 · 경계 철거 2021-06-01(+3년 = 2024-06-01 → 지남) / 2021-06-02(안)", () => {
+  it("K-14: 2024.6.1.~ 시행본은 W_max = 3년(빈집 가능성) — 철거 2022-12-01 · 양도 2024-06-01 → 접지 않는다 · 경계 철거 2021-05-31(만료일 2024-05-31 → 지남) / 2021-06-01(만료일 2024-06-01 당일 → 안) / 2021-06-02(안)", () => {
     expect(expired("2022-12-01", "2024-06-01")).toBe(false);
-    expect([expired("2021-06-01", "2024-06-01"), expired("2021-06-02", "2024-06-01")]).toEqual([true, false]);
+    expect([expired("2021-05-31", "2024-06-01"), expired("2021-06-01", "2024-06-01"), expired("2021-06-02", "2024-06-01")]).toEqual([true, false, false]);
   });
 
-  it("양도일이 과세기준일 당일이어도 그날이 마지막 과세기준일(포함) · 하루 전이면 전년 — 철거 2022-12-01은 양도 2023-06-01(6개월 시행본)에서 지남, 2023-05-31에서는 직전 과세기준일 2022-06-01 < 철거일이라 안 지남", () => {
-    expect([expired("2022-12-01", "2023-06-01"), expired("2022-12-01", "2023-05-31")]).toEqual([true, false]);
+  it("양도일이 과세기준일 당일이어도 그날이 마지막 과세기준일(포함) · 하루 전이면 전년 — 철거 2022-11-30은 양도 2023-06-01(6개월 시행본)에서 지남 · 철거 2022-12-01은 같은 양도일에서 만료일 당일이라 안(정정 전은 지남), 2023-05-31에서는 직전 과세기준일 2022-06-01 < 철거일이라 안 지남", () => {
+    expect([expired("2022-11-30", "2023-06-01"), expired("2022-12-01", "2023-06-01"), expired("2022-12-01", "2023-05-31")]).toEqual([true, false, false]);
   });
 
-  it("시행 전(과세기준일 2016.6.1. 전)은 한시 규정이 없어 판정하지 않는다(고지 `not_yet`과 같다) — 양도 2016-05-31 · 철거 아무리 오래전이어도 접지 않는다 · 2016-06-01 당일은 6개월 시행본 적용", () => {
+  it("시행 전(과세기준일 2016.6.1. 전)은 한시 규정이 없어 판정하지 않는다(고지 `not_yet`과 같다) — 양도 2016-05-31 · 철거 아무리 오래전이어도 접지 않는다 · 2016-06-01 당일은 6개월 시행본 적용(철거 2015-11-30 → 만료일 2016-05-31 지남 · 12-01 → 만료일 2016-06-01 당일 안)", () => {
     expect(expired("2000-01-01", "2016-05-31")).toBe(false);
-    expect([expired("2015-12-01", "2016-06-01"), expired("2015-12-02", "2016-06-01")]).toEqual([true, false]);
+    expect([expired("2015-11-30", "2016-06-01"), expired("2015-12-01", "2016-06-01"), expired("2015-12-02", "2016-06-01")]).toEqual([true, false, false]);
   });
 
   it("D-1: 철거 6년 전 → 지남 · 철거 6일 전 → 안 / Invalid Date 어느 쪽이든 접지 않는다(입력 누락이 불리하게 작동하지 않는다)", () => {
     expect([expired("2018-01-01", "2024-01-01"), expired("2023-12-26", "2024-01-01")]).toEqual([true, false]);
     expect(isTailDemolishedClearlyExpired(d("not-a-date"), d("2024-01-01"))).toBe(false);
     expect(isTailDemolishedClearlyExpired(d("2018-01-01"), d("not-a-date"))).toBe(false);
+  });
+});
+
+describe("E3f-1b B′ — 한시 기간 «끝» 경계 정정 (2026-11-24 · 지방세기본법 §23 → 민법 §157·§160): 만료일 당일 = 한시 안 · 다음 날 = 지남", () => {
+  const ymd = (x: Date) => format(x, "yyyy-MM-dd");
+  const end = (r: string, months: number) => ymd(periodEndFromMonths(d(r), months));
+
+  it("만료일(기산일 = 철거일 다음날 → 만료 월의 응당일 전날): 12-01 +6개월 = 2023-06-01 · +1년(12개월) 2025-06-01 → 2026-06-01 · +3년 2021-06-01 → 2024-06-01", () => {
+    expect([end("2022-12-01", 6), end("2025-06-01", 12), end("2021-06-01", 36)]).toEqual(["2023-06-01", "2026-06-01", "2024-06-01"]);
+  });
+
+  it("월 말일·없는 날: 8-31 +6개월 = 2월 말일(2023-02-28 · 윤년 2024-02-29) · 8-30 +6개월도 2월 말일(§160③) · 철거일이 말일이면 만료일도 만료 월의 말일 — `addMonths`와 다르다(4-30 +6개월 = 10-31 · addMonths 10-30)", () => {
+    expect([end("2022-08-31", 6), end("2023-08-31", 6), end("2022-08-30", 6), end("2022-04-30", 6), end("2020-02-29", 6)]).toEqual(["2023-02-28", "2024-02-29", "2023-02-28", "2022-10-31", "2020-08-31"]);
+    expect(ymd(addMonths(d("2022-04-30"), 6))).toBe("2022-10-30");
+  });
+
+  it("6개월·1년·3년 시행본별 «만료일 당일 안 · 다음 날 지남» 쌍 — `isWithinPeriodMonths`(1년 시행본 2026.6.1.~은 꼬리 한도가 W_max=3년으로 보수적이라 소비처 없음 → 직접)", () => {
+    // 6개월: 철거 2022-12-01 → 2023-06-01 안 · 2023-06-02 지남
+    expect([isWithinPeriodMonths(d("2022-12-01"), 6, d("2023-06-01")), isWithinPeriodMonths(d("2022-12-01"), 6, d("2023-06-02"))]).toEqual([true, false]);
+    // 1년: 철거 2025-06-01 → 2026-06-01 안 · 2026-06-02 지남
+    expect([isWithinPeriodMonths(d("2025-06-01"), 12, d("2026-06-01")), isWithinPeriodMonths(d("2025-06-01"), 12, d("2026-06-02"))]).toEqual([true, false]);
+    // 3년: 철거 2021-06-01 → 2024-06-01 안 · 2024-06-02 지남
+    expect([isWithinPeriodMonths(d("2021-06-01"), 36, d("2024-06-01")), isWithinPeriodMonths(d("2021-06-01"), 36, d("2024-06-02"))]).toEqual([true, false]);
+  });
+
+  it("`isTailDemolishedClearlyExpired` 3년 시행본(과세기준일 2025-06-01): 철거 2022-05-31 → 지남 · 2022-06-01(만료일 2025-06-01 당일) → 한시 안", () => {
+    expect([expired("2022-05-31", "2025-06-01"), expired("2022-06-01", "2025-06-01")]).toEqual([true, false]);
+  });
+
+  it("과세기준일(매년 6.1.)과 비교하는 한 `addMonths(철거일, W)` 형태와 같다 — 철거일 2015~2026 전 일자 × W 6·36(말일 철거일의 만료일 차이가 6.1.에는 닿지 않는다) · 이 동치는 6.1. 비교에만 성립한다(위 4-30 사례)", () => {
+    let checked = 0;
+    for (let day = d("2015-01-01"); !isBefore(d("2026-12-31"), day); day = addDays(day, 1)) {
+      for (const w of [6, 36]) {
+        for (let y = 2016; y <= 2030; y++) {
+          const s = d(`${y}-06-01`);
+          expect(!isWithinPeriodMonths(day, w, s), `${ymd(day)} +${w}m @ ${y}-06-01`).toBe(isBefore(addMonths(day, w), s));
+          checked++;
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(100_000);
+  });
+
+  /** 뒤집힌 케이스 — 양도가 10억 · 취득가 3억 · 취득 2014-01-01 · `makeMockRates`. `before` = 정정 전 코드 실측(2026-11-24 · `git stash` 대조). 일수는 유효 사업용 일수. */
+  const FLIPPED = [
+    { id: "K-11c", removed: "2022-12-01", transfer: "2024-05-31", bld: "2021-06-02", before: { nb: true, eff: 547, tax: 253_960_000 }, after: { nb: false, eff: 1094, tax: 198_210_000 } },
+    { id: "K-14a(3년)", removed: "2021-06-01", transfer: "2024-06-01", bld: "2019-01-01", before: { nb: true, eff: 882, tax: 253_960_000 }, after: { nb: false, eff: 1978, tax: 198_210_000 } },
+    { id: "3년 시행본 2025", removed: "2022-06-01", transfer: "2025-06-01", bld: "2019-01-01", before: { nb: true, eff: 1247, tax: 246_680_000 }, after: { nb: false, eff: 2343, tax: 192_330_000 } },
+    { id: "양도=과세기준일", removed: "2022-12-01", transfer: "2023-06-01", bld: "2021-06-02", before: { nb: true, eff: 547, tax: 261_240_000 }, after: { nb: true, eff: 729, tax: 261_240_000 } },
+  ] as const;
+  /** 하루 이른 철거일(만료일 하루 전 → 지남) — 정정 전후 같다. */
+  const UNCHANGED = [
+    { id: "K-11a", removed: "2022-11-30", transfer: "2024-05-31", bld: "2021-06-02", out: { nb: true, eff: 546, tax: 253_960_000 } },
+    { id: "K-14a 전날", removed: "2021-05-31", transfer: "2024-06-01", bld: "2019-01-01", out: { nb: true, eff: 881, tax: 253_960_000 } },
+    { id: "3년 시행본 2025 전날", removed: "2022-05-31", transfer: "2025-06-01", bld: "2019-01-01", out: { nb: true, eff: 1246, tax: 246_680_000 } },
+    { id: "양도=과세기준일 전날", removed: "2022-11-30", transfer: "2023-06-01", bld: "2021-06-02", out: { nb: true, eff: 546, tax: 261_240_000 } },
+  ] as const;
+  const measure = (c: { removed: string; transfer: string; bld: string }) => {
+    const input = fromRaw(e35Tail(c.removed, c.transfer, c.bld));
+    const j = judge(input);
+    return { nb: j.isNonBusinessLand, eff: j.effectiveBusinessDays, tax: taxOf(input) };
+  };
+
+  it.each(FLIPPED.map((c) => [c.id, c] as const))("뒤집힌 케이스 %s — 정정 후 값(정정 전 값은 before 상수에 기록)", (_id, c) => {
+    expect(measure(c)).toEqual(c.after);
+    expect(c.before).not.toEqual(c.after);
+  });
+
+  it.each(UNCHANGED.map((c) => [c.id, c] as const))("경계 반대편 %s — 정정 전후 같다(지남)", (_id, c) => {
+    expect(measure(c)).toEqual(c.out);
+  });
+
+  it("뒤집힘 방향은 한 가지 — 한시 안으로 읽혀 세액이 줄거나(비사업용 → 사업용) 일수만 늘어난다. 정정 전 대비 세액 증가 케이스 없음", () => {
+    for (const c of FLIPPED) expect(c.after.tax, c.id).toBeLessThanOrEqual(c.before.tax);
   });
 });
 
@@ -115,7 +190,8 @@ describe("E3f-1b C — `resolvePropertyTaxBasis` 해석 순서", () => {
     const T = d("2024-05-31");
     expect(resolvePropertyTaxBasis(facts({ demolishedFloorArea: undefined, demolishedOn: d("2024-03-01") }), T)).toEqual({ kind: "demolished" });
     expect(resolvePropertyTaxBasis(facts({ demolishedFloorArea: undefined }), T)).toEqual({ kind: "unconfirmed", reason: "demolished_date_missing" });
-    expect(resolvePropertyTaxBasis(facts({ demolishedFloorArea: undefined, demolishedOn: d("2022-12-01") }), T)).toEqual({ kind: "unconfirmed", reason: "demolished_period_elapsed" });
+    expect(resolvePropertyTaxBasis(facts({ demolishedFloorArea: undefined, demolishedOn: d("2022-11-30") }), T)).toEqual({ kind: "unconfirmed", reason: "demolished_period_elapsed" });
+    expect(resolvePropertyTaxBasis(facts({ demolishedFloorArea: undefined, demolishedOn: d("2022-12-01") }), T)).toEqual({ kind: "demolished" }); // 만료일 2023-06-01 당일 = 한시 안
     // 양도일을 안 넘기면 면적 문언이 있는 것으로 본다(보수)
     expect(resolvePropertyTaxBasis(facts({ demolishedFloorArea: undefined }))).toEqual({ kind: "unconfirmed", reason: "demolished_area_missing" });
   });
@@ -134,7 +210,7 @@ describe("E3f-1b C — `resolvePropertyTaxBasis` 해석 순서", () => {
 });
 
 describe("E3f-1b D — raw → ⑭ → 판정 → 세액 (E3f-0 표 · 출처 ① ②)", () => {
-  it.each(["K-11a", "K-11b", "K-12", "K-12a", "K-13", "K-14", "D-1", "D-1a"].map((id) => [id, row(id)] as const))("%s — 철거 행 날짜가 출처 ① (새 칸 없음)", (_id, r) => {
+  it.each(["K-11a", "K-11b", "K-11c", "K-12", "K-12a", "K-13", "K-14", "D-1", "D-1a"].map((id) => [id, row(id)] as const))("%s — 철거 행 날짜가 출처 ① (새 칸 없음)", (_id, r) => {
     const input = fromRaw(r.raw);
     const j = judge(input);
     expect([j.isNonBusinessLand, j.effectiveBusinessDays, j.totalOwnershipDays]).toEqual([r.expect.nonBusiness, r.expect.eff, r.expect.total]);
