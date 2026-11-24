@@ -291,6 +291,8 @@ describe("E2 ⑫⑭ — hasBuilding 파생: `changed`이면 숨은 토글이 사
       raw.nblOtherPropertyTaxType = "separate";
       raw.nblOtherPropertyTaxBasis = "demolished";
       raw.nblOtherDemolishedFloorArea = "";
+      // E3f-1b — 종전 바닥면적은 면적 범위 문언이 있는 시행본(양도일 직전 과세기준일 ≥ 2024.6.1.)에서만 요구한다 — 이 시료의 양도일(2024-01-01)을 그 시행본으로 옮긴다.
+      raw.transferDate = "2024-06-03";
     });
     expect(r.status, JSON.stringify(r.json).slice(0, 300)).toBe(400);
   });

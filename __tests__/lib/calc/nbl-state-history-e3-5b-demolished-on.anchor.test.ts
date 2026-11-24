@@ -16,6 +16,8 @@ import { buildNblEngineInput } from "@/lib/calc/non-business-land-request";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
 import {
   DEMOLISHED_ON_REQUIRED_MESSAGE,
+  demolishedFloorAreaRequired,
+  demolishedFloorAreaWireValue,
   demolishedInputIssue,
   demolishedOnForEngine,
   demolishedOnInvalidMessage,
@@ -290,9 +292,10 @@ describe("E3f-1b B — K-16 계열 명명 시나리오 (문구 · 필드 점프 
 });
 
 describe("E3f-1b C — 철거ㆍ멸실일 → 바닥면적 → 용도지역 순서 (종전 `demolishedBasisIssue`는 그대로)", () => {
+  // 바닥면적·용도지역은 엔진이 면적 범위 문언을 읽는 시행본(양도일 직전 과세기준일 ≥ 2024.6.1.)에서만 요구된다 — 이 describe는 순서를 보므로 그 시행본 양도일을 쓴다(연혁 게이트는 D).
   const facts = (over: Record<string, unknown>) => ({
     declared: "separate" as const, mode: "" as string | undefined, events: [] as { kind: string; date: unknown }[], rawHasBuilding: false, basis: "demolished" as PropertyTaxBasis | undefined,
-    demolishedOn: "2022-12-01" as string | undefined, transferDate: TRANSFER as string | undefined, floorArea: 400 as number | undefined, zoneType: "general_residential", zoneMapped: true, ...over,
+    demolishedOn: "2022-12-01" as string | undefined, transferDate: "2024-06-03" as string | undefined, floorArea: 400 as number | undefined, zoneType: "general_residential", zoneMapped: true, ...over,
   });
 
   it("철거일 빈칸 + 바닥면적 빈칸 → 철거일이 먼저 · 철거일 해결 후 바닥면적 · 그다음 용도지역", () => {
@@ -308,10 +311,55 @@ describe("E3f-1b C — 철거ㆍ멸실일 → 바닥면적 → 용도지역 순�
     expect(demolishedInputIssue(facts({ demolishedOn: "2030-01-01", transferDate: "" }))).toBeNull();
     expect(demolishedInputIssue(facts({ demolishedOn: "2030-01-01", transferDate: undefined }))).toBeNull();
     expect(demolishedInputIssue(facts({ demolishedOn: "2030-01-01", transferDate: "xx" }))).toBeNull();
+    // 양도일 미입력·해석 불가면 바닥면적은 요구한다(현행 — 입력 누락이 요구를 푸는 방향으로 작동하지 않는다)
+    for (const t of ["", undefined, "xx"]) expect(demolishedInputIssue(facts({ transferDate: t, floorArea: undefined }))?.part, String(t)).toBe("floorArea");
     expect(demolishedInputIssue(facts({ demolishedOn: "2030-01-01" }))?.part).toBe("demolishedOn");
   });
 
   it("공백만 있는 값은 빈칸이다(trim)", () => {
     expect(demolishedInputIssue(facts({ demolishedOn: "   " }))?.message).toBe(DEMOLISHED_ON_REQUIRED_MESSAGE);
+  });
+});
+
+describe("E3f-1b D — 종전 바닥면적·용도지역은 «엔진이 읽을 때만» 요구한다 (면적 범위 문언 시행본 게이트 — 양도일 직전 과세기준일 ≥ 2024.6.1.)", () => {
+  const facts = { declared: "separate" as const, mode: "", events: [] as { kind: string; date: unknown }[], rawHasBuilding: false, basis: "demolished" as PropertyTaxBasis | undefined };
+  const issue = (transferDate: string | undefined, over: Record<string, unknown> = {}) =>
+    demolishedInputIssue({ ...facts, demolishedOn: "2010-01-01", transferDate, floorArea: undefined, zoneType: "residential", zoneMapped: false, ...over })?.part ?? null;
+
+  it("경계 쌍: 양도 2024-05-31(직전 과세기준일 2023-06-01) → 바닥면적·용도지역 불요 · 2024-06-01 → 바닥면적 요구 · 철거ㆍ멸실일은 두 시행본 모두 요구", () => {
+    expect([issue("2024-05-31"), issue("2024-06-01"), issue("2016-05-31"), issue("2026-06-01")]).toEqual([null, "floorArea", null, "floorArea"]);
+    expect(issue("2024-05-31", { demolishedOn: "" })).toBe("demolishedOn");
+    expect(issue("2024-06-01", { floorArea: 100 })).toBe("zone"); // 바닥면적 입력 + 세분 전 용도지역 → 용도지역
+  });
+
+  it("양도일 미입력·빈 값·해석 불가는 요구한다(현행 보수) · 술어 `demolishedFloorAreaRequired`가 이를 한 곳에서 정한다(⑤·⑧·⑫′·④ 공유)", () => {
+    for (const t of [undefined, "", "xx"]) expect(demolishedFloorAreaRequired({ ...facts, transferDate: t }), String(t)).toBe(true);
+    expect([demolishedFloorAreaRequired({ ...facts, transferDate: "2024-05-31" }), demolishedFloorAreaRequired({ ...facts, transferDate: parseISO("2024-06-01") })]).toEqual([false, true]);
+    // 근거가 «철거ㆍ멸실»이 아니면 어느 시행본에서도 불요
+    expect(demolishedFloorAreaRequired({ ...facts, basis: "vacant_state", transferDate: "2024-06-01" })).toBe(false);
+  });
+
+  it("④ 와이어 `demolishedFloorAreaWireValue`: 읽지 않으면 `\"\"`(stale 비전송) · 읽으면 저장값", () => {
+    expect(demolishedFloorAreaWireValue({ ...facts, transferDate: "2024-05-31", floorArea: "100" })).toBe("");
+    expect(demolishedFloorAreaWireValue({ ...facts, transferDate: "2024-06-01", floorArea: "100" })).toBe("100");
+    expect(demolishedFloorAreaWireValue({ ...facts, transferDate: "2024-06-01", floorArea: undefined })).toBe("");
+  });
+
+  it("⑫′ ≡ ⑧ 조합 ≡ 게이트 격자: 양도일 5종 × 바닥면적(빈칸·입력) × 용도지역(미등재·등재) — 바닥면적·용도지역 이슈는 읽는 시행본에서만, 같은 문구", () => {
+    const bad: string[] = [];
+    for (const t of ["2016-05-31", "2023-12-31", "2024-05-31", "2024-06-01", "2026-06-01"]) {
+      for (const fa of ["", "400"]) {
+        for (const zone of ["residential", "general_residential"]) {
+          const raw = { ...rawOf({ mode: "", last: "none", toggle: false, basis: "demolished", rowDate: "valid", on: "before" }), transferDate: t, nblOtherDemolishedFloorArea: fa, nblZoneType: zone } as NblRawRefineInput;
+          const twelve = refine(raw).filter((i) => i.path[0] === "nblOtherDemolishedFloorArea" || i.path[0] === "nblZoneType");
+          const eight = composeEight(raw);
+          const reads = t >= "2024-06-01";
+          const want = reads && (fa === "" || zone === "residential");
+          if (!!eight !== want || twelve.length !== (want ? 1 : 0)) bad.push(`${t} ${fa} ${zone} ⑧=${eight?.kind} ⑫=${twelve.length}`);
+          else if (eight && eight.message !== twelve[0].message) bad.push(`문구 ${t} ${fa} ${zone}`);
+        }
+      }
+    }
+    expect(bad).toEqual([]);
   });
 });

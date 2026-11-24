@@ -109,7 +109,7 @@ export type PropertyTaxBasisResolution =
   /** 근거가 확인된 선언 — 선언한 분류를 유지한다. `statutory_exempt`·`separate_taxation`·`vacant_state`. */
   | { kind: "accepted"; basis: Exclude<PropertyTaxBasis, "unknown" | "demolished"> }
   /** 철거·멸실 — 종전 바닥면적(㎡) × 영 §101② 적용배율 이내만 별도합산(사업용). */
-  | { kind: "demolished"; floorArea: number }
+  | { kind: "demolished"; floorArea?: number }
   /** 건축물 없는 토지의 비종합합산 선언에 쓸 수 있는 근거가 없다 → 종합합산 + 확인 필요. */
   | { kind: "unconfirmed"; reason: UnconfirmedReason };
 
@@ -133,12 +133,13 @@ export function resolvePropertyTaxBasis(o: BasisFacts, transferDate?: Date): Pro
   if (!isUsableBasis(declared, false, basis)) return { kind: "unconfirmed", reason: "incompatible" };
   if (basis === "demolished") {
     const area = o.demolishedFloorArea;
-    if (!(area !== undefined && area > 0)) return { kind: "unconfirmed", reason: "demolished_area_missing" };
+    // 종전 바닥면적은 면적 범위 문언이 있는 시행본(2024.6.1.~ — `demolishedAreaClauseApplies`)에서만 읽는다. 그 전 시행본은 면적 제한이 없어 칸을 요구하지 않는다(⑧·⑫′와 같은 술어).
+    if (demolishedAreaClauseApplies(transferDate) && !(area !== undefined && area > 0)) return { kind: "unconfirmed", reason: "demolished_area_missing" };
     if (transferDate) {
       if (!o.demolishedOn) return { kind: "unconfirmed", reason: "demolished_date_missing" };
       if (isTailDemolishedClearlyExpired(o.demolishedOn, transferDate)) return { kind: "unconfirmed", reason: "demolished_period_elapsed" };
     }
-    return { kind: "demolished", floorArea: area };
+    return { kind: "demolished", ...(area !== undefined ? { floorArea: area } : {}) };
   }
   return { kind: "accepted", basis: basis as "statutory_exempt" | "separate_taxation" | "vacant_state" };
 }
@@ -279,27 +280,31 @@ export function propertyTaxBasisWarnings(
 
 /**
  * 철거ㆍ멸실 근거 — 종전 건축물 바닥면적 × 영 §101② 적용배율 범위만 별도합산(영 §103의2 1호 후단). 건물 부수토지 배율(Step 0.6)과 같은 표·같은 헬퍼, 근거 조문·문구만 다르다.
- * 배율표에 없는 용도지역이면 `judgeAppurtenantLandExcess`가 던진다 — ⑧·⑫가 먼저 막는다(`demolishedBasisIssue`).
+ * 배율표에 없는 용도지역이면 `judgeAppurtenantLandExcess`가 던진다 — ⑧·⑫가 먼저 막는다(`demolishedInputIssue`).
  *
  * **면적 범위 문언은 2024.6.1. 과세기준일 시행본부터다**(`demolishedAreaClauseApplies` — 사용자 결정 2026-11-24): 양도일 직전 마지막 과세기준일이 그 전이면 면적 제한 없이 부속토지 전체를 별도합산 범위로 본다
- * (`areaLimitApplied=false` — 호출자가 `excess`를 비사업용 면적으로 쓰지 않는다). 부속토지의 범위 자체(어디까지가 철거된 건축물의 부속토지인지)는 판정하지 않으므로 «확인 필요» 고지를 단다.
- * 바닥면적·배율은 그 경우에도 읽는다(단계 설명에 이 시행본 이후의 허용 범위를 참고로 싣는다 — 세액 불변).
+ * (`areaLimitApplied=false` — `excess` 없음). 이때 바닥면적·용도지역은 **읽지 않는다**(⑧·⑫′도 요구하지 않는다 — «엔진이 읽는 칸만 요구»). 부속토지의 범위 자체(어디까지가 철거된 건축물의 부속토지인지)는 판정하지 않으므로 «확인 필요»를 단다.
  */
-export function judgeDemolishedSite(landArea: number, zoneType: string, floorArea: number, transferDate?: Date) {
+export function judgeDemolishedSite(landArea: number, zoneType: string, floorArea: number | undefined, transferDate?: Date) {
+  if (!demolishedAreaClauseApplies(transferDate) || floorArea === undefined) {
+    const step: JudgmentStep = {
+      id: "other_demolished_multiplier",
+      label: "Step 0.6 철거·멸실 부속토지 영 §103의2 배율",
+      status: "PASS",
+      detail: `이 양도일 직전 과세기준일의 시행본(2024.6.1. 전)에는 철거 전 바닥면적 × 용도지역별 적용배율 면적 범위 문언이 없어 면적 제한을 적용하지 않고 부속토지 ${landArea}㎡ 전체를 별도합산 범위로 봄 — 부속토지의 범위는 확인 필요`,
+      legalBasis: NBL.PTAX_BASIS_DEMOLISHED,
+    };
+    return { excess: undefined, step, areaLimitApplied: false as const };
+  }
   const b = judgeAppurtenantLandExcess({ landArea, buildingFootprintArea: floorArea, zoneType, context: "기타토지(철거·멸실 부속토지)" });
-  const areaLimitApplied = demolishedAreaClauseApplies(transferDate);
-  const detail = !areaLimitApplied
-    ? `이 양도일 직전 과세기준일의 시행본(2024.6.1. 전)에는 철거 전 바닥면적 × 용도지역별 적용배율 면적 범위 문언이 없어 면적 제한을 적용하지 않고 부속토지 ${landArea}㎡ 전체를 별도합산 범위로 봄` +
-      `(참고: 종전 바닥면적 ${floorArea}㎡ · ${b.multiplierDetail} → 2024.6.1. 이후 시행본의 허용 범위 ${b.allowedLandArea}㎡${b.isWithinLimit ? "" : ` — 초과분 ${b.nonBusinessArea}㎡`}) — 부속토지의 범위는 확인 필요`
-    : b.isWithinLimit
-      ? `종전 바닥면적 ${floorArea}㎡ · ${b.multiplierDetail} → 허용 ${b.allowedLandArea}㎡ ≥ 부속토지 ${landArea}㎡ → 별도합산 유지`
-      : `종전 바닥면적 ${floorArea}㎡ · ${b.multiplierDetail} → 허용 ${b.allowedLandArea}㎡ 초과분 ${b.nonBusinessArea}㎡는 별도합산 제외`;
   const step: JudgmentStep = {
     id: "other_demolished_multiplier",
     label: "Step 0.6 철거·멸실 부속토지 영 §103의2 배율",
-    status: !areaLimitApplied || b.isWithinLimit ? "PASS" : "FAIL",
-    detail,
+    status: b.isWithinLimit ? "PASS" : "FAIL",
+    detail: b.isWithinLimit
+      ? `종전 바닥면적 ${floorArea}㎡ · ${b.multiplierDetail} → 허용 ${b.allowedLandArea}㎡ ≥ 부속토지 ${landArea}㎡ → 별도합산 유지`
+      : `종전 바닥면적 ${floorArea}㎡ · ${b.multiplierDetail} → 허용 ${b.allowedLandArea}㎡ 초과분 ${b.nonBusinessArea}㎡는 별도합산 제외`,
     legalBasis: NBL.PTAX_BASIS_DEMOLISHED,
   };
-  return { excess: b, step, areaLimitApplied };
+  return { excess: b, step, areaLimitApplied: true as const };
 }

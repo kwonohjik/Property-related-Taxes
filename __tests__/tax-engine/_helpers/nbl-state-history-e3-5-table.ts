@@ -269,7 +269,7 @@ export const E35_AREA_ROWS: readonly E35AreaRow[] = [
     before: { nonBusiness: true, ratio: 0.6, tax: AREA_TAX_PARTIAL_60 }, after: { nonBusiness: true, ratio: 0.6, tax: AREA_TAX_PARTIAL_60 },
   },
   {
-    id: "K-31d", scenario: "바닥면적 200㎡(허용 800㎡ · 비사업용 20%) · 양도 2024-01-01 — 판정은 비사업용 → 사업용으로 뒤집히나 이 모의 요율·시료에서 측정한 세액은 같다(비율 40% 이하에서 같았다 — 원인은 이 PR 범위 밖이라 조사하지 않았다)",
+    id: "K-31d", scenario: "바닥면적 200㎡(허용 800㎡ · 비사업용 20%) · 양도 2024-01-01 — 판정은 비사업용 → 사업용으로 뒤집히나 세액은 같다 — 결함이 아니다: 한 필지 일부 비사업용은 §104⑤ 비교과세(max(1호 합산 누진, 2호 호별 합))라 비율이 낮으면(이 시료 ≤ 0.4) 1호가 이긴다(`e3-5b-tail` G가 산식으로 고정)",
     raw: e35Tail("2023-12-01", T, "2021-06-02", { nblOtherDemolishedFloorArea: "200" }),
     before: { nonBusiness: true, ratio: 0.2, tax: E35_B }, after: { nonBusiness: false, ratio: 0, tax: E35_B },
   },

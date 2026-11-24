@@ -8,6 +8,9 @@
  *   · `demolishedInputIssue` — 첫 결함 하나(철거ㆍ멸실일 → 바닥면적 → 용도지역 — 화면 순서 «근거 → 철거일 → 바닥면적»). 종전 `demolishedBasisIssue`(바닥면적·용도지역)를 안에서 부른다.
  *   · `demolishedOnWireValue` — ④가 와이어에 싣는 값(술어가 거짓이면 `""`로 덮어쓴다 — stale 비전송 · D-4).
  *   · `demolishedOnForEngine` — ⑭가 `otherLand.demolishedOn`에 싣는 값(술어가 거짓이면 stray를 읽지 않는다 · 철거 행 날짜가 새 칸보다 우선 — K-17).
+ *   · `demolishedFloorAreaRequired` — 종전 바닥면적(과 용도지역)을 **엔진이 읽는가**: 근거 «철거ㆍ멸실» ∧ 양도일 직전 과세기준일 ≥ 2024.6.1.(면적 범위 문언이 있는 시행본 — `demolishedAreaClauseApplies`).
+ *     그 전 시행본은 면적 제한이 없어 칸을 요구·표시·전송하지 않는다(«⑧은 엔진이 실제로 읽는 칸만 요구» — E3-⑤ UQ-8 (가)). **양도일 미입력·해석 불가는 요구**(현행 — 입력 누락이 요구를 푸는 방향으로 작동하지 않는다).
+ *   · `demolishedFloorAreaWireValue` — ④가 싣는 바닥면적(술어가 거짓이면 `""`).
  *
  * 입력 규약(⑧·⑫·⑭ 공통): `mode`·`events`는 **와이어 값**이다 — ④가 싣는 `nblOtherStateHistoryMode`·`nblOtherStateEvents`(이력 질문이 적용되지 않거나 `changed`가 아니면 `""`·`[]`). ⑧은 `stateHistoryWireFields(asset)`를 넘긴다.
  * `rawHasBuilding`은 «건축물 있음» 토글 저장값 — 양도일 현재 유무는 `effectiveOtherHasBuilding`이 파생한다(`changed`이면 마지막 건축물 사건이 이긴다).
@@ -17,6 +20,7 @@
  */
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { NBL } from "../legal-codes";
+import { demolishedAreaClauseApplies } from "../data/nbl-historical-values-era";
 import { effectiveOtherHasBuilding, tailRemovalDateOf } from "./other-land-state-history";
 import { demolishedBasisIssue, requiresDemolishedFloorArea } from "./property-tax-basis";
 import type { DemolishedBasisIssuePart, PropertyTaxBasis } from "./property-tax-basis";
@@ -72,6 +76,18 @@ export function demolishedOnRequired(i: DemolishedOnFacts): boolean {
   return tailBasisIsDemolished(i) && demolishedOnRowDate(i) === undefined;
 }
 
+/**
+ * 종전 바닥면적·용도지역 칸을 엔진이 읽는가 — ⑤ 표시 · ⑧ · ⑫′ · ④ · ⑭가 **같은 술어**. `transferDate`는 ISO 문자열 또는 `Date`(해석 불가·빈 값 = 미입력 → 요구).
+ */
+export function demolishedFloorAreaRequired(i: DemolishedOnFacts & { transferDate: string | Date | undefined }): boolean {
+  return tailBasisIsDemolished(i) && demolishedAreaClauseApplies(toOptionalDate(i.transferDate));
+}
+
+/** ④ 와이어 값 — 엔진이 읽지 않으면 `""`로 덮어쓴다(stale 비전송). */
+export function demolishedFloorAreaWireValue(i: DemolishedOnFacts & { transferDate: string | Date | undefined; floorArea: string | undefined }): string {
+  return demolishedFloorAreaRequired(i) ? (i.floorArea ?? "") : "";
+}
+
 export interface DemolishedInputFacts extends DemolishedOnFacts {
   /** 새 칸 `nblOtherDemolishedOn` 저장값(와이어 문자열). */
   demolishedOn: string | undefined;
@@ -96,12 +112,13 @@ function demolishedOnIssue(i: DemolishedInputFacts): string | null {
 
 /**
  * 꼬리 근거 «철거ㆍ멸실» 입력의 **첫 결함 하나** — ⑧(`validateNblOtherLand`)과 ⑫′(`refineNonBusinessLandRaw`)가 같은 함수·같은 문구를 쓴다.
- * 순서: 철거ㆍ멸실일(새 칸 요구 시) → 종전 바닥면적 → 용도지역(= `demolishedBasisIssue`). 근거가 «철거ㆍ멸실»이 아니면 null.
+ * 순서: 철거ㆍ멸실일(새 칸 요구 시) → 종전 바닥면적 → 용도지역(= `demolishedBasisIssue` — 엔진이 면적 범위를 읽는 시행본일 때만, `demolishedFloorAreaRequired`). 근거가 «철거ㆍ멸실»이 아니면 null.
  */
 export function demolishedInputIssue(i: DemolishedInputFacts): { part: DemolishedInputIssuePart; message: string } | null {
   if (!tailBasisIsDemolished(i)) return null;
   const onMessage = demolishedOnIssue(i);
   if (onMessage) return { part: "demolishedOn", message: onMessage };
+  if (!demolishedFloorAreaRequired(i)) return null;
   return demolishedBasisIssue({
     declared: i.declared,
     hasBuilding: effectiveOtherHasBuilding(i.rawHasBuilding, i.mode, i.events),

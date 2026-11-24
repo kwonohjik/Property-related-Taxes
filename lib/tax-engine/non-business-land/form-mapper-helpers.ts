@@ -24,6 +24,7 @@ import type {
 import type { NblRevenueBusinessType } from "../legal-codes";
 import { deriveCurrentBusinessDays } from "./revenue-test";
 import { resolveDeemedRentRate } from "../data/nbl-deemed-rent-rate";
+import { demolishedAreaClauseApplies } from "../data/nbl-historical-values-era";
 import { getZoneAreaMultiplier } from "../local-tax-zone-multiplier";
 import { demolishedOnForEngine } from "./demolished-input-issue";
 import { propertyTaxBasisOptions, requiresDemolishedFloorArea, type PropertyTaxBasis } from "./property-tax-basis";
@@ -394,7 +395,8 @@ export function buildOtherLand(
   return {
     propertyTaxType,
     propertyTaxBasis,
-    demolishedFloorArea:            requiresDemolishedFloorArea(propertyTaxType, hasBuilding, propertyTaxBasis)
+    // 종전 바닥면적은 면적 범위 문언이 있는 시행본(양도일 직전 과세기준일 ≥ 2024.6.1.)에서만 읽는다 — ⑧·⑫′·⑤와 같은 술어(`demolishedFloorAreaRequired`). 양도일 미입력은 읽는다(현행).
+    demolishedFloorArea:            requiresDemolishedFloorArea(propertyTaxType, hasBuilding, propertyTaxBasis) && demolishedAreaClauseApplies(transferDate)
       ? parseNumber(asString(a.nblOtherDemolishedFloorArea))
       : undefined,
     ...(demolishedOn ? { demolishedOn } : {}),

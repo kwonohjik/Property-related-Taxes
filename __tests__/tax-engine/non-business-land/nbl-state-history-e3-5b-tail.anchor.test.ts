@@ -30,6 +30,9 @@ import { propertyTaxBasisUnconfirmedNotice, resolvePropertyTaxBasis } from "@/li
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-land/types";
 import type { NonBusinessLandInput } from "@/lib/tax-engine/non-business-land/types";
 import { calculateTransferTax } from "@/lib/tax-engine/transfer-tax";
+import { applyRate } from "@/lib/tax-engine/tax-utils";
+import { calculateProgressiveTax } from "@/lib/tax-engine/tax-utils";
+import { partialNblIncome } from "@/lib/tax-engine/transfer-tax-split-part-seeds";
 import { format, parseISO } from "@/lib/tax-engine/utc-date";
 
 const R = DEFAULT_NON_BUSINESS_LAND_RULES;
@@ -99,13 +102,22 @@ describe("E3f-1b B — `isTailDemolishedClearlyExpired` 충분조건 (경계 쌍
 describe("E3f-1b C — `resolvePropertyTaxBasis` 해석 순서", () => {
   const facts = (over: Record<string, unknown> = {}) => ({ propertyTaxType: "separate" as const, hasBuilding: false, propertyTaxBasis: "demolished" as const, demolishedFloorArea: 400, ...over });
 
-  it("바닥면적 없음이 먼저 → 철거일 없음 → 기간 경과 → 인정", () => {
-    const T = d("2024-01-01");
+  it("바닥면적 없음이 먼저(면적 범위 문언이 있는 시행본 — 양도일 직전 과세기준일 ≥ 2024.6.1.) → 철거일 없음 → 기간 경과 → 인정", () => {
+    const T = d("2024-06-03");
     expect(resolvePropertyTaxBasis(facts({ demolishedFloorArea: undefined }), T)).toEqual({ kind: "unconfirmed", reason: "demolished_area_missing" });
     expect(resolvePropertyTaxBasis(facts({ demolishedFloorArea: undefined, demolishedOn: d("2018-01-01") }), T)).toEqual({ kind: "unconfirmed", reason: "demolished_area_missing" });
     expect(resolvePropertyTaxBasis(facts(), T)).toEqual({ kind: "unconfirmed", reason: "demolished_date_missing" });
     expect(resolvePropertyTaxBasis(facts({ demolishedOn: d("2018-01-01") }), T)).toEqual({ kind: "unconfirmed", reason: "demolished_period_elapsed" });
     expect(resolvePropertyTaxBasis(facts({ demolishedOn: d("2023-12-26") }), T)).toEqual({ kind: "demolished", floorArea: 400 });
+  });
+
+  it("면적 범위 문언이 없는 시행본(양도 2024-05-31)은 바닥면적 없이도 인정한다(바닥면적을 읽지 않는다 — 있어도 결과에 싣지 않는 것이 아니라 값만 전달) · 철거일·기간 경과 판정은 그대로", () => {
+    const T = d("2024-05-31");
+    expect(resolvePropertyTaxBasis(facts({ demolishedFloorArea: undefined, demolishedOn: d("2024-03-01") }), T)).toEqual({ kind: "demolished" });
+    expect(resolvePropertyTaxBasis(facts({ demolishedFloorArea: undefined }), T)).toEqual({ kind: "unconfirmed", reason: "demolished_date_missing" });
+    expect(resolvePropertyTaxBasis(facts({ demolishedFloorArea: undefined, demolishedOn: d("2022-12-01") }), T)).toEqual({ kind: "unconfirmed", reason: "demolished_period_elapsed" });
+    // 양도일을 안 넘기면 면적 문언이 있는 것으로 본다(보수)
+    expect(resolvePropertyTaxBasis(facts({ demolishedFloorArea: undefined }))).toEqual({ kind: "unconfirmed", reason: "demolished_area_missing" });
   });
 
   it("양도일을 안 넘기면 한도를 보지 않는다(나대지 구간 선언 호출처 — 그곳은 `demolished`를 먼저 접는다) · 철거일 없어도 인정(종전과 같다)", () => {
@@ -241,18 +253,68 @@ describe("E3f-1b F — 면적 범위 문언 연혁 정정 (2024.6.1. 전 시행�
     }
   });
 
-  it("Step 0.6 단계 문구: 2024.6.1. 전 시행본은 «면적 제한을 적용하지 않고 … 확인 필요»(참고로 이후 시행본 허용 범위 · 초과분) · 이후 시행본은 종전 문구", () => {
-    const stepOf = (t: string) => judge(fromRaw(e35Tail("2024-03-01", t, "2021-06-02", { nblOtherDemolishedFloorArea: "100" }))).judgmentSteps.find((s) => s.id === "other_demolished_multiplier")!;
+  it("Step 0.6 단계 문구: 2024.6.1. 전 시행본은 «면적 제한을 적용하지 않고 … 확인 필요»(바닥면적·용도지역을 읽지 않으므로 «참고» 수치 없음) · 이후 시행본은 종전 문구", () => {
+    const stepOf = (t: string, over: Record<string, unknown> = {}) => judge(fromRaw(e35Tail("2024-03-01", t, "2021-06-02", { nblOtherDemolishedFloorArea: "100", ...over }))).judgmentSteps.find((s) => s.id === "other_demolished_multiplier")!;
     const before = stepOf("2024-05-31");
     expect(before.status).toBe("PASS");
-    for (const need of ["면적 제한을 적용하지 않고 부속토지 1000㎡ 전체를 별도합산 범위로 봄", "허용 범위 400㎡", "초과분 600㎡", "확인 필요"]) expect(before.detail, need).toContain(need);
+    for (const need of ["면적 제한을 적용하지 않고 부속토지 1000㎡ 전체를 별도합산 범위로 봄", "확인 필요"]) expect(before.detail, need).toContain(need);
+    expect(before.detail).not.toMatch(/허용|초과분|참고|종전 바닥면적/);
     const after = stepOf("2024-06-01");
     expect(after.status).toBe("FAIL");
     expect(after.detail).toContain("허용 400㎡ 초과분 600㎡는 별도합산 제외");
   });
 
+  it("바닥면적·용도지역을 읽지 않는 시행본 — 바닥면적 빈칸 · 세분 전 용도지역에서도 엔진이 던지지 않고 사업용(K-31) · 읽는 시행본(양도 2024-06-01)에서는 같은 입력이 접힘(`demolished_area_missing`)", () => {
+    const blank = { nblOtherDemolishedFloorArea: "", nblZoneType: "residential" };
+    const j = judge(fromRaw(e35Tail("2024-03-01", "2024-05-31", "2021-06-02", blank)));
+    expect([j.isNonBusinessLand, j.surcharge.nonBusinessAreaRatio, echoOf(j)?.outcome]).toEqual([false, 0, "accepted"]);
+    // ⑭는 읽지 않는 시행본의 stale 바닥면적을 엔진 입력에 싣지 않는다
+    expect(fromRaw(e35Tail("2024-03-01", "2024-05-31", "2021-06-02", { nblOtherDemolishedFloorArea: "100" })).otherLand?.demolishedFloorArea).toBeUndefined();
+    expect(fromRaw(e35Tail("2024-03-01", "2024-06-01", "2021-06-02", { nblOtherDemolishedFloorArea: "100" })).otherLand?.demolishedFloorArea).toBe(100);
+    const reads = judge(fromRaw(e35Tail("2024-03-01", "2024-06-01", "2021-06-02", { nblOtherDemolishedFloorArea: "" })));
+    expect(echoOf(reads)).toMatchObject({ outcome: "unconfirmed", unconfirmedReason: "demolished_area_missing" });
+  });
+
   it("고지(`demolishedStatusNotice`): 2024.6.1. 전 시행본 고지는 «그 범위를 적용하지 않고 부속토지 전체를 별도합산 범위로 보았습니다» · 2024.6.1.~ 시행본에는 그 문장이 없다", () => {
     for (const t of ["2016-06-01", "2019-06-01", "2024-05-31"]) expect(demolishedStatusNotice(d(t)), t).toContain("그 범위를 적용하지 않고 부속토지 전체를 별도합산 범위로 보았습니다");
     for (const t of ["2024-06-01", "2026-06-01"]) expect(demolishedStatusNotice(d(t)), t).not.toContain("면적 범위 문언이 없어");
+  });
+});
+
+describe("E3f-1b G — K-31d 원인: 비사업용 비율이 낮으면 §104⑤ 비교과세에서 «1호 합산 누진»이 이겨 세액이 전량 사업용과 같다 (결함 아님)", () => {
+  /**
+   * 한 필지의 일부만 비사업용이면 산출세액 = **max(1호: 과세표준 합계에 §55① 누진만 · 2호: 비사업용 파트(누진 + 10%p) + 나머지 파트(누진) 호별 합)**
+   * (`transfer-tax-split-rate.ts computePartialNblTax` — 「소득세법」 §104⑤ 본문 후단, 한 필지를 각각 별개 자산으로). 비율이 낮으면 소득을 두 파트로 쪼개 낮은 구간을 두 번 쓰는 이익이
+   * 10%p 가산분보다 커서 2호 < 1호 → 1호(= 전량 사업용 세액)가 이긴다. 이 시료(과세표준 5.575억 · 42% 구간)에서 교차점은 비율 0.4~0.6 사이다.
+   * 면적 안분 비율이 세액에 반영되지 않는 게 아니라 **비교과세가 큰 쪽을 고른 결과**다 — 시료를 바꿔(양도차익↓) 확인해도 같은 구조.
+   */
+  const brackets = (makeMockRates().get("transfer:progressive_rate:_default") as unknown as { rateTable: { brackets: { max?: number; rate: number; deduction: number }[] } }).rateTable.brackets;
+  const SURCHARGE = 0.1; // mock `surcharge` non_business_land.additionalRate
+  const run = (floorArea: string) => {
+    // 양도 2024-06-03(직전 과세기준일 2024-06-01 — 면적 범위 문언 있음) · 철거 2024-03-01 — 바닥면적 × 4배가 안분 비율을 정한다.
+    const input = fromRaw(e35Tail("2024-03-01", "2024-06-03", "2021-06-02", { nblOtherDemolishedFloorArea: floorArea }));
+    const j = judge(input);
+    const r = calculateTransferTax(
+      baseTransferInput({ propertyType: "land", transferPrice: 1_000_000_000, acquisitionPrice: 300_000_000, acquisitionDate: input.acquisitionDate, transferDate: input.transferDate, isOneHousehold: false, nonBusinessLandDetails: input }),
+      makeMockRates(),
+    );
+    const ratio = j.surcharge.nonBusinessAreaRatio;
+    const income = r.taxBase + r.basicDeduction;
+    const nblIncome = partialNblIncome(income, ratio, undefined);
+    const nblBase = nblIncome - Math.min(r.basicDeduction, nblIncome); // 기본공제는 세율 높은 파트(비사업용 파트: 누진 + 10%p)부터
+    const clause1 = calculateProgressiveTax(r.taxBase, brackets);
+    const clause2 = calculateProgressiveTax(nblBase, brackets) + applyRate(nblBase, SURCHARGE) + calculateProgressiveTax(r.taxBase - nblBase, brackets);
+    return { ratio, tax: r.calculatedTax, clause1, clause2 };
+  };
+
+  it("비율 0.1·0.2·0.4: 1호(합산 누진 = 전량 사업용 세액 198,210,000)가 2호 호별 합보다 커 1호가 이긴다 · 비율 0.6: 2호가 이긴다(205,990,000)", () => {
+    const rows = ["225", "200", "150", "100"].map(run);
+    expect(rows.map((x) => x.ratio)).toEqual([0.1, 0.2, 0.4, 0.6]);
+    for (const x of rows) expect(x.tax, `비율 ${x.ratio}`).toBe(Math.max(x.clause1, x.clause2));
+    expect(rows.slice(0, 3).map((x) => [x.tax === x.clause1, x.clause2 < x.clause1])).toEqual([[true, true], [true, true], [true, true]]);
+    expect(rows.slice(0, 3).map((x) => x.tax)).toEqual([E35_B, E35_B, E35_B]);
+    expect([rows[3].tax === rows[3].clause2, rows[3].clause2 > rows[3].clause1, rows[3].tax]).toEqual([true, true, 205_990_000]);
+    // 비율 0.2의 2호는 187.1백만 안팎으로 1호보다 11백만원 작다 — 비사업용 파트에 10%p가 «붙지 않은» 것이 아니라 합산 비교에서 졌다
+    expect(rows[1].clause1 - rows[1].clause2).toBeGreaterThan(10_000_000);
   });
 });
