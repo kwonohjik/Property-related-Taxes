@@ -240,7 +240,7 @@ describe("E3f-0 Anchor 3 — 6개월·1년 한시는 9호에 포함된다(격자
     expect(rows.length).toBeGreaterThan(50_000);
     const flips = rows.filter((x) => x.nine.meets !== x.union.meets || x.nine.eff !== x.union.eff);
     expect(flips.slice(0, 3)).toEqual([]);
-  });
+  }, 60_000); // 5만 행 격자 — CI 러너에서 5초 기본 제한을 넘는다(#3642 test 2/4 타임아웃 5.4초)
 
   it("빈집 3년(2024.6.1.~): 판정이 뒤집히는 행이 있고 **전부 셀 안**(철거 [2021-06-01, 2022-06-01] × 양도 [2024-06-01, 2025-03-20]) — 일수만 달라지는 행은 셀 밖에도 있다", () => {
     const rows = grid(true);
@@ -251,7 +251,7 @@ describe("E3f-0 Anchor 3 — 6개월·1년 한시는 9호에 포함된다(격자
       expect(inCell(x), `${x.r} → ${x.T} (${x.shape})`).toBe(true);
     }
     expect(rows.filter((x) => x.nine.eff !== x.union.eff && !inCell(x)).length).toBeGreaterThan(0);
-  });
+  }, 60_000);
 
   it("셀 경계(계획서 K-23): 9호가 2년인 시기에 과세기준일 2024-06-01 현재 3년 한시는 성립하나 9호 [r, r+2년)이 그날을 덮지 못하는 철거일은 [2021-06-01, 2022-06-01] — 경계 쌍 2021-05-31/06-01 · 2022-06-01/02(위 경계는 3년 만료일 당일 포함 — 2026-11-24 정정 · 아래 경계는 9호 반열린 구간 관례 그대로 — 9호 2년 끝날 포함 여부는 확인 필요)", () => {
     const covered = (r: string, s = "2024-06-01") => {
