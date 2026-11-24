@@ -4,7 +4,7 @@
  * 지방세법 §106①2호  — 별도합산과세대상 (영업용 건축물 부속토지)
  * 지방세법 시행령 §101 — 기준면적 산정 (바닥면적 × 용도지역 배율)
  *   ⚠️ 공장입지기준면적(별표6)은 §102①1호 **분리과세** 소관 — 여기서 쓰지 않는다(2026-08-05 정정)
- * 지방세법 시행령 §103의2 1호 — 철거·멸실 후 1년 이내 별도합산 유지 특례
+ * 지방세법 시행령 §103의2 1호 — 철거·멸실 후 일정 기간 별도합산 유지 특례 (과세기준일 시행본별: 2016.6.1.~ 6개월 · 2026.6.1.~ 1년)
  * 지방세법 §111①1호 나목 — 별도합산 누진세율 0.2%~0.4%
  * 지방세법 §113         — 인별 전국 합산
  * 지방세법 §122         — 세부담 상한 150%
@@ -12,7 +12,7 @@
  * 판정 4단계 우선순위:
  *   1. 분리과세 제외 여부 (이미 상위에서 처리, 여기서는 수신 데이터가 분리과세 비해당이어야 함)
  *   2. 건축물 존재 여부 (없으면 → 종합합산)
- *   3. 철거·멸실 후 1년 이내 특례 확인
+ *   3. 철거·멸실 후 유예기간 이내 특례 확인 (기간은 과세기준일 시행본 — `demolishedStatusPeriodMonths`)
  *   4. 기준면적 내/초과 면적 분리
  *
  * 핵심 원칙:
@@ -27,8 +27,11 @@ import { applyFairMarketRatio } from "./tax-utils";
 import { PROPERTY_SEPARATE, PROPERTY_SEPARATE_CONST } from "./legal-codes";
 import { getZoneAreaMultiplier } from "./local-tax-zone-multiplier";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
+import { demolishedStatusPeriodMonths } from "./data/nbl-historical-values-era";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
+import { isWithinPeriodMonths } from "./civil-period";
+import { parseISO } from "./utc-date";
 
 // ============================================================
 // 타입 정의
@@ -171,8 +174,8 @@ export interface SeparateAggregateResult {
  *
  * 판정 4단계:
  * 1. 건축물 없음 → 종합합산 (별도합산 불가)
- * 2. 철거 후 과세기준일까지 경과월 계산 → 1년 이내: 별도합산 유지 (§103의2 1호 특례)
- * 3. 철거 후 1년 초과 → 나대지 처리 → 종합합산
+ * 2. 철거 후 과세기준일까지 경과월 계산 → 유예기간(과세기준일 시행본 6개월·1년) 이내: 별도합산 유지 (§103의2 1호 특례)
+ * 3. 철거 후 유예기간 초과 → 나대지 처리 → 종합합산
  * 4. 기준면적 계산 → 이내: 별도합산 / 초과: split
  */
 export function isSeparateAggregateLand(
@@ -204,7 +207,9 @@ export function isSeparateAggregateLand(
 
   // ── 2~3단계: 철거 특례 판정 ──
   if (land.demolished === true) {
-    const graceMonths = PROPERTY_SEPARATE_CONST.DEMOLISHED_GRACE_MONTHS;
+    // §103의2는 «과세기준일 현재» 시행본으로 기간이 정해진다(2016.6.1.~ 6개월 · 2026.6.1.~ 1년 · 그 전 과세기준일은 규정 없음).
+    const baseDateObj = parseISO(taxBaseDate);
+    const graceMonths = demolishedStatusPeriodMonths(baseDateObj, false);
     // 표시용: 완성된 월 수 (floor)
     const elapsedMonths = calcElapsedMonths(land.demolishedDate ?? "", taxBaseDate);
 
@@ -226,13 +231,26 @@ export function isSeparateAggregateLand(
       };
     }
 
-    // H-05: 일(day) 수준 정밀 판정 — 철거일 + 유예기간(1년) 경계를 날짜 직접 비교
-    // (완성 월 수만으로는 1년+1일 케이스가 초과 판정 안 되는 버그 수정)
-    const demolishDateObj = new Date(land.demolishedDate ?? "");
-    const gracePeriodEnd = new Date(demolishDateObj);
-    gracePeriodEnd.setUTCMonth(gracePeriodEnd.getUTCMonth() + graceMonths);
-    const baseDateObj = new Date(taxBaseDate);
-    const isGraceExceeded = !isNaN(gracePeriodEnd.getTime()) && baseDateObj > gracePeriodEnd;
+    if (graceMonths === 0) {
+      // 2016.6.1. 전 과세기준일 — 영 §103의2(2016.1.1. 시행본, 첫 납세의무 성립 2016.6.1.)가 없어 철거된 건축물의 부속토지에 별도합산 특례가 없다 → 건축물 없는 토지로 종합합산
+      return {
+        landId: land.id,
+        isSeparateAggregate: false,
+        recognizedArea: 0,
+        excessArea: land.landArea,
+        baseArea: 0,
+        multiplier: 0,
+        demolishedGraceApplied: false,
+        legalBasis: PROPERTY_SEPARATE.SUBJECT,
+        warnings: [
+          `과세기준일 ${taxBaseDate}에는 철거ㆍ멸실 건축물 부속토지 특례(${PROPERTY_SEPARATE.DEMOLISHED_GRACE})가 시행되기 전(첫 적용 과세기준일 2016.6.1.)이라 건축물이 없는 토지로 보아 종합합산으로 처리합니다 — 확인 필요.`,
+        ],
+      };
+    }
+
+    // 「철거ㆍ멸실된 날부터 N개월이 지나지 않은」 — 민법 §157·§160 만료일 당일까지(월말 오버플로 없음, 2.29. → 2.28.)
+    const demolishDateObj = parseISO(land.demolishedDate ?? "");
+    const isGraceExceeded = !isWithinPeriodMonths(demolishDateObj, graceMonths, baseDateObj);
 
     if (isGraceExceeded) {
       // 유예기간 초과 → 나대지 → 종합합산
@@ -648,8 +666,8 @@ function deriveDefaultTaxBaseDate(land: SeparateAggregateLandItem): string {
  * @returns 경과 개월 수 (음수이면 파싱 오류)
  */
 export function calcElapsedMonths(fromDateStr: string, toDateStr: string): number {
-  const from = new Date(fromDateStr);
-  const to = new Date(toDateStr);
+  const from = parseISO(fromDateStr);
+  const to = parseISO(toDateStr);
 
   if (isNaN(from.getTime()) || isNaN(to.getTime())) return -1;
   if (from > to) return 0; // 철거일이 과세기준일 이후 → 0개월
