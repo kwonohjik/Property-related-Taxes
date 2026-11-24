@@ -115,6 +115,20 @@ describe("A-4 — 입력 결함: 메뉴 400 ⇔ 계산기 400 (NBL 경로 결함
     expect(fieldKeys(menu.json)).toContain("nonBusinessLandRaw.nblUseDetailedJudgment");
   });
 
+  /**
+   * V-4 실측(계획서 §3.2 마지막 줄) — raw 면적이 0·음수·비수치·빈 값이어도 **계산기 route는 400 없이 200**이다(엔진이 면적 0으로 읽어 비사업용으로 접는다).
+   * 메뉴 route도 같다 — 면적은 ⑧(`validateNblDetailedJudgment`)만 막는다. 이 anchor는 그 «현행»을 못박아 두 route가 갈라지면(한쪽만 400) 알린다.
+   */
+  it.each(["0", "-5", "abc", ""])("V-4 — 면적 %j: 두 route 모두 400 없이 같은 판정(⑧만 막는다)", async (area) => {
+    const body = await captureBody(landForm());
+    (body.nonBusinessLandRaw as Loose).acquisitionArea = area;
+    const calc = await postTransfer(body);
+    const menu = await postMenu({ nonBusinessLandRaw: body.nonBusinessLandRaw });
+    expect(calc.status).toBe(200);
+    expect(menu.status).toBe(200);
+    expect(menu.data?.judgment.isNonBusinessLand).toBe(calc.result?.nonBusinessLandJudgmentDetail?.isNonBusinessLand);
+  });
+
   it("본문이 raw를 안 싣거나 JSON이 깨지면 400 — 500이 아니다", async () => {
     expect((await postMenu({})).status).toBe(400);
     expect((await postMenu({ nonBusinessLandRaw: null })).status).toBe(400);
