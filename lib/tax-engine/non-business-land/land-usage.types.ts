@@ -6,7 +6,7 @@
  * 소비처는 계속 `from "./types"` 를 쓴다.
  */
 
-import type { BusinessUsePeriod, ZoneType } from "./types";
+import type { BusinessUsePeriod, DateInterval, ZoneType } from "./types";
 import type { SPORTS_OUTDOOR_STD, SPORTS_INDOOR_STD, RESERVE_FORCES_STD } from "./data/area-standards";
 import type { EmployeeSportsFacilityUsage } from "../factory-employee-sports-standard";
 import type { PropertyTaxBasis } from "./property-tax-basis";
@@ -270,6 +270,11 @@ export interface OtherLandUsage {
   sportsExtraEvents?: Array<keyof typeof SPORTS_OUTDOOR_STD>;
   /** 별표3·4·5 비고1·3 — 실내 종목 체육시설 건축물 바닥면적(㎡). 부속토지 = min(바닥, 표값) × zoneType 배율(§101②). 미입력 시 표값 fallback. F2 Phase B(B-2 실내 부속토지). */
   indoorFloorArea?: number;
+  /**
+   * E3-④ Q-2 (다) — 13호(무주택 1세대 1필지 나지)의 **세대 주택 소유 기간**. 반열린 `[시작, 종료)` — 시작 = 주택을 소유하게 된 첫날 · 종료 = 소유하지 않게 된 첫날(⑭가 빈 종료일을 양도일로 채운다 · D-7).
+   * 13호가 읽는다(없음·빈 배열 = 현행 «소유기간 전체 무주택» 자기선언 — Q-4 (가)). 겹침은 엔진이 병합한다. 13호가 아니거나 13호를 인정하지 않는 경로는 읽지 않는다(`vacantLotHousePeriodsRead`).
+   */
+  householdHousePeriods?: DateInterval[];
 }
 
 export interface ForestUsageDetail {
@@ -427,6 +432,8 @@ export interface StateHistoryIntervalEcho {
   buildingKind?: StateBuildingKind;
   houseOutcome?: HouseOutcome;
   houseCheck?: HouseCheck;
+  /** E3-④ R-2 — 이 구간 ∩ 13호(무주택 나지) 사업용 구간 일수. 13호 구간이 없으면 키 없음 = 종전 echo와 같다. */
+  vacantLotDays?: number;
 }
 
 /**
@@ -449,4 +456,18 @@ export interface StateHistoryCriteriaEcho {
 export interface StateHistoryEcho {
   intervals: StateHistoryIntervalEcho[];
   criteria: StateHistoryCriteriaEcho;
+}
+
+/**
+ * [echo] E3-④ R-3 — 13호(무주택 1세대 1필지 나지)가 사업용 구간을 정했을 때만(13호가 아니거나 이 경로가 13호를 읽지 않았으면 키 자체가 없다 = 종전과 바이트 동일).
+ * 위치는 `periodEvaluation.vacantLot`(최상위) — 이력 OFF에서도 세대 주택 소유 기간 행을 읽으므로 `stateHistory` 안이 아니다.
+ *   · `whole_period`  : 이력을 쓰지 않는 경로(꼬리 나지) — 구간 = 소유기간 ∖ 세대 주택 소유 기간
+ *   · `bare_intervals`: 이력 경로 — 구간 = 건축물 없는 구간 ∩ (소유기간 ∖ 세대 주택 소유 기간)
+ */
+export interface VacantLotEcho {
+  scope: "whole_period" | "bare_intervals";
+  /** 13호로 사업용에 센 구간(병합 후 · 반열린). */
+  intervals: { start: Date; end: Date; days: number }[];
+  /** 세대 주택 소유 기간 ∩ 소유기간 일수(행이 없으면 0). */
+  houseOwnedDays: number;
 }

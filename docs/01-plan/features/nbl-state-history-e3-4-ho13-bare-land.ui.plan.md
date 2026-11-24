@@ -424,3 +424,42 @@ UI-C는 ⑤⑦ + 술어 가드뿐이라 ①②③④⑫⑬⑭ 변경 0.
 ## 부록. 요약 — 엔진 계획서와 어긋나는 점
 
 없음(결정 충돌 0). **엔진에 새로 요청하는 것 = R-1·R-3(필수) · R-2·R-4·R-5·R-7·R-8(권장) · R-6(조건부).**
+
+---
+
+## 18. 구현 기록 (UI-C + UI-M — 2026-11-24 · 브랜치 `feat/nbl-e3-4-ho13-history`)
+
+계획서 v2와 **달라진 점·구현 시 결정**(코드가 정본). UI-C와 UI-M은 한 릴리스(이 PR)로 끝냈다 — 엔진 §7.4 «E3e-1만 머지된 상태는 사용자 노출 금지» 충족.
+
+| # | 계획서 | 구현 | 이유 |
+|---|---|---|---|
+| 1 | R-1 술어를 ④⑤⑧이 직접 호출 | 래퍼 1개 `vacantLotHousePeriodsReadOf(asset)`(`lib/calc/nbl-vacant-lot-household-scope.ts`)가 엔진 술어 `vacantLotHousePeriodsRead`에 폼 값(호 · `effectiveOtherHasBuildingOf` · `nblOtherStateEventsInUse` · `stateHistoryDeemedBlocksOf` · `acquisitionArea`)만 공급 — ④ `householdHouseWireFields` · ⑤ 위젯 · ⑧ `validateNblVacantLotHousehold`가 이 래퍼만 부른다 | 3곳 자체 조건 금지. 래퍼 앞단에 `nblUseDetailedJudgment ∧ other_land` 게이트(④·⑧이 이미 그 앞에서 걸러지는 조건) |
+| 2 | 질문 상태 «UI 폼 전용» | `nblOtherHouseholdHouseStatus`는 ④의 `nbl*` prefix-pick **제외 목록**(`nblOtherLegacyRelatedReselect` 선례)에 추가 — 서버·엔진은 행 없음 = 현행(Q-4 (가)) | prefix-pick이 `nbl*` 전부를 싣는다(UM-12 mutation이 지킨다) |
+| 3 | C-1·C-2 문구 | C-1(`nbl-other-ho13-scope-notice`) = 엔진 `NBL_VACANT_LOT_BARE_ONLY_INPUT_NOTICE` — 660㎡ 이내 · 이력 `changed` · 엔진이 이력을 읽을 때(꼬리 나지·건물 공통). C-2(`nbl-other-ho13-area-notice`) = 660㎡ 초과 + 꼬리 건물일 때만 hoFail 카드 안에 엔진 `NBL_STATE_HISTORY_VACANT_LOT_AREA_NOTICE`. «꼬리 건물 + 660㎡ 이내» 전용 문구는 엔진에 없어(UQ-3: 문구 단일 소스) 새로 짓지 않고 C-1 한 카드가 말한다 | 판정은 `vacantLotHistoryNoticeOf`(`nbl-vacant-lot-history-notice.ts`) — «엔진이 이력을 읽는가»는 `housePriorHistoryIgnoredOf`(엔진 core 부분 면적·의제) 한 함수 |
+| 4 | C-4 술어 확장(13호 OR) | `housePriorHistoryIgnoredOf`에 «호 = 13호이면 주택 철거 행이 없어도 묻는다» 추가. **⑤ 안내 표시만 바뀐다** — 주택 철거 행이 없으면 H9·H10 순회 행이 0건이라 ⑧ 결과가 변하지 않는다(UM-3 mutation: 확장이 번지면 H9를 건너뛰는 케이스에서 실패) | UQ-7 (나) |
+| 5 | M-4 고지 정합(결과 시제) | **입력 화면의 적용 고지도** 13호(660㎡ 이내 · 엔진이 이력을 읽음)이면 엔진 변형 상수(`…VACANT_LOT_APPLIED` / `…VACANT_LOT_TAX_CHANGE_APPLIED`)로 보인다(`nbl-state-history-applied-notice`) | 입력 화면 = 결과 고지 원칙(`applyStateHistory`와 같은 조건) |
+| 6 | 미리보기 «엔진 leaf 직접 호출» | `buildVacantLotHouseholdPreview` — 이력 경로 = `vacantLotBusinessIntervals`(구간 원본을 얻으려 `StateHistoryPreview.intervals`를 additive로 노출) · 이력 OFF 경로 = `householdFreePeriods`(core와 같은 함수). 경로 선택·소유기간 끝(의제일)은 엔진과 같은 술어. 사건 미완성이면 «예상»을 다른 경로 값으로 대체하지 않고 그리지 않는다 | 계획서 §4.2 |
+| 7 | 결과 보조 블록 `NblVacantLotPeriodNote` | `components/calc/NblVacantLotPeriodNote.tsx`(≈55줄 · `ToneCard tone="sky"`) — echo `periodEvaluation.vacantLot`만 읽고(재계산 없음) **이력 경로·이력 OFF 경로 모두** `NonBusinessLandResultCard`에서 `state_at_transfer` 블록 앞에 1회. 이력 OFF + 행이면 엔진이 basis를 `usage_periods`로 돌려 «양도일 현재 상태를 소유기간 전체에 적용» 안내가 나오지 않는다(V-10 — E7 · UM-9) | |
+| 8 | 결과 표 접미 | `NblStateHistoryPeriodTable`의 «재산세 구분» 칸에 `vacantLotDays`가 있을 때만 « · 무주택1세대 1필지 나지 (13호) 인정 N일»(라벨 = 호 메타 표 `option.label`) | UQ-6 (가) |
+| 9 | UV-5 X12 «확인 필요» | **실측**: 연접 다필지 + 13호 + 꼬리 나지는 엔진이 행을 읽는다(행이 판정을 바꾼다 — 비사업용 2,190일 vs 현행 3,651일) → 술어 참과 일치(anchor 고정) | probe |
+| 10 | UV-3 X15 축 B | 지분 레코드(`buildFractionalShareNblRecord`)는 `...primary`라 행·술어가 첫 카드 기준으로 ④ 와이어에 그대로 실린다 · ⑧은 둘째 이후 카드 skip(질문이 첫 카드에만) — anchor 고정. 지분 카드 면적 vs 번들 면적의 법적 기준은 엔진 V-7 — 미해소 | |
+| 11 | ⑥ 사이드바 변경 없음 | `git grep -i "nbl\|NonBusiness"`가 사이드바 합계 3파일에서 타입 import 2줄뿐 — 변경 없음 확인 | UV-9 |
+
+**14지점**: ① `calc-wizard-asset-nbl-other.ts`(타입 `NblHouseholdHousePeriodInput`·`NblHouseholdHouseStatus` + 2필드) · ② `calc-wizard-asset-factory.ts`·`calc-wizard-asset-nbl.ts` · ③ `calc-wizard-asset-migrate-nbl.ts` `migrateNblHouseholdHouse`(구 저장 13호는 질문 `""` 유지 — `none` 채움 금지 · UM-11) · ④ `non-business-land-request.ts` + `nbl-vacant-lot-household-scope.ts` · ⑤ `OtherLandHouseholdHousePeriods.tsx`(신규) · `OtherLandHoSection.tsx` · `OtherLandStateHistorySection.tsx` · ⑥ 변경 없음 · ⑦ `NblVacantLotPeriodNote.tsx`(신규) · `NblStateHistoryPeriodTable.tsx` · `NonBusinessLandResultCard.tsx` · ⑧ `transfer-tax-validate-nbl-vacant-lot.ts`(신규) · ⑨⑩⑪ 해당 없음 · ⑫ `transfer-tax-schema-nbl.ts`·`-refines.ts`(엔진 PR) · ⑬ ④ raw 통째 운반(단건·다건·bundled 3경로가 `buildNonBusinessLandRaw` 공용) · ⑭ `form-mapper-helpers.ts` `buildHouseholdHousePeriods`(엔진 PR).
+
+**검증**: 신규 vitest 4파일(render 26 · wire·validate·parity 격자 122 · result-card 9 · UI route 관통 44) · `nbl-state-history-leaf-unreachable` 배선 허용 목록 갱신 2건(WIRE-6·WIRE-11 — 새 사용처 3파일 추가) · mutation 12건 전부 kill(UM-1~9 + 추가 UM-10 위젯 게이트 · UM-11 ③ `none` 채움 · UM-12 질문 상태 와이어 누수) · E2E `e2e/transfer-nbl-vacant-lot-history.spec.ts` 8건(E1~E8) + 기존 NBL 이력 spec(-g 필터) 66 + 필드 점프 `-g "nbl:"` 95 통과.
+
+### 18.1 M-1 · L-1 · L-2 후속 (ui-engine-sync-checker 실측 — 머지 전 수정)
+
+**M-1 (Medium)**: 순수 술어 `vacantLotHousePeriodsRead`(호 · 꼬리 건물 · 이력 · 의제 · 면적)가 참이어도 엔진이 행을 판정에 쓰지 않는 경로가 있었다 — ① 꼬리 건물 + 이력 `changed` + 660㎡ 이내인데 core가 부분 면적(건물 배율 초과 · 건물가액 2% 미달)이라 이력 전체가 접힘 ② 꼬리 나지 + 확인된 비종합합산 근거(별도합산·분리과세·비과세 — 나목 Step 3-1이 13호보다 먼저 통과) ③ 수입금액비율 업종 동시 선택(실측 확인). 그 결과 ⑧ HH-1이 엔진이 안 쓰는 질문을 요구했고(«없음» 거짓 선언 유도) 미리보기가 틀린 일수를 보였다(세액 영향 없음).
+
+- **술어 정의**: 엔진에 `otherLandReadsHouseholdHousePeriods(input, rules)`(`lib/tax-engine/non-business-land/other-land-vacant-lot-read.ts`)를 export — 엔진 `judgeOtherLand`를 그대로 **두 번** 돌려(행 없음 vs 소유기간 전체를 덮는 탐침 행) 판정(사업용 여부 · 사업용 일수 · 비율 · 면적 안분 · 단계)이 다르면 «행이 판정에 닿는다». 13호 기여는 행이 많을수록 줄기만 하므로(합집합 항) 전부 덮는 탐침 행과 같으면 어떤 행도 판정을 바꾸지 못한다. 근사·재구현 없음(E3-③ `otherLandAreaIsPartial` 선례와 같은 «엔진 core 실측»).
+- **UI 단일 래퍼**: `vacantLotHousePeriodsReadOf(asset, transferDate)`(`nbl-vacant-lot-household-read.ts`) = 필요조건(`vacantLotHousePeriodsPrecondition` — 엔진 순수 술어에 폼 값 공급) ∧ 엔진 실측(`engineReadsHouseholdHousePeriods(raw)` — ④ base raw → ⑭ 매퍼 → 위 함수). 엔진을 돌릴 수 없는 입력(날짜 누락)은 «읽는다»로 접는다(다른 ⑧ 규칙이 먼저 막는다).
+- **사용처(전부 이 하나)**: ④ `buildNonBusinessLandRaw`(base raw + 행 와이어 — 같은 실측을 base raw로) · ⑤ `OtherLandHouseholdHousePeriods`(노출 — memo) · 미리보기 `buildVacantLotHouseholdPreview` · ⑧ `validateNblVacantLotHousehold` HH-1~3. `scope.ts`는 request를 import하지 않는다(순환 방지) — 실측을 호출자가 넘긴다(`householdHouseWireFields(asset, engineReads)`).
+- **parity 격자**: 기본 96점(호 × 꼬리 × 이력 × 의제 × 면적) 유지 + **확장 축 22점**(재산세 구분·근거 4 · 건물 바닥면적 배율 3 · 건물가액 2% 1 · 수입금액비율 업종 2 · 기본 1 · 근거 없는 별도합산 1 — 각 이력 unchanged/changed) — «술어 ⟺ 행 투입 시 판정 변화 ⟺ ⑧ 질문 요구 ⟺ ④ 행 전송». 엔진 단위 격자(`nbl-state-history-e3-4-read-measure.anchor.test.ts` 115점)는 기본 96점에서 «실측 = 순수 술어», 확장 축에서 «실측 ⊂ 순수 술어 ∧ 실측 ⟺ 판정 변화»를 고정한다(순수 술어는 참인데 실측이 거짓인 점이 실제로 있다).
+- **«읽지만 영향 없음»도 거짓으로 둔다**: 꼬리 나지 + `changed` + 확인된 비종합합산 근거는 엔진이 13호 leaf를 돌리지만 13호를 끈 core가 이미 전 구간을 사업용으로 봐 어떤 행도 판정을 못 바꾼다 → 질문을 요구하지 않는다(요구해도 답이 판정에 닿지 않는다).
+- E2E E9 회귀 1건(건물 배율 초과 · 나지 + 공지상태 근거: 위젯 없음 · 질문 미응답으로 계산 · body 행 []).
+
+**L-1**: 13호 + 660㎡ 초과 + 꼬리 나지 + 행 + 유예 입력에서 엔진은 면적 초과분(13호로 인정되지 않은 비사업용 잔여분)을 «빈 사업기간 + 유예»로 다시 판정한다(행 유무와 무관한 종전 동작 — 세액·판정 불변을 anchor로 고정). «기간 분석»은 그 재판정 기준(유예 730일)이고 13호 구간은 3,286일이라 어긋나 보였다 → 엔진이 맞아 **표시 정합**: `NblVacantLotPeriodNote`가 `graceJudged` echo가 있을 때 «기간 분석 수치는 이 재판정 기준이라 13호로 센 기간과 다릅니다» 문구를 보인다.
+
+**L-2**: 행을 읽은 13호 결과에 `NBL_VACANT_LOT_SELF_DECLARED_NOTICE`(«주택을 소유하지 아니하는 1세대일 것 … 판정하지 않았습니다»)와 `NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE`(«입력한 기간만 제외»)가 병존했다 → 엔진 상수 `NBL_VACANT_LOT_SELF_DECLARED_WITH_HOUSE_PERIODS_NOTICE`(무주택 요건 = «입력한 기간만 반영») 신설, 행을 읽었으면(core 13호 PASS · 이력 경로 `rowsRead`) 기존 고지를 이 변형으로 **대체**한다. 행을 읽지 않은 13호 경로의 기존 상수·문구는 바이트 불변.

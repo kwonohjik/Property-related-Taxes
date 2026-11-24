@@ -6,6 +6,8 @@
 import type { WholesaleItem } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import type { AssetReductionForm, SpecialHouseExclusionFormItem } from "./calc-wizard-asset-reduction";
 import type { NblOtherStateEventInput } from "./calc-wizard-asset-nbl-other";
+import type { NblHouseholdHousePeriodInput } from "./calc-wizard-asset-nbl-other";
+import type { NblHouseholdHouseStatus } from "./calc-wizard-asset-nbl-other";
 import type { NblRevenueYearRowInput } from "./calc-wizard-asset-nbl-other";
 import type { StateHistoryMode } from "@/lib/tax-engine/non-business-land/land-usage.types";
 
@@ -179,6 +181,8 @@ export const NBL_DEFAULTS = {
   nblOtherHasBuilding: false,
   nblOtherStateHistoryMode: "" as StateHistoryMode,
   nblOtherStateEvents: [] as NblOtherStateEventInput[],
+  nblOtherHouseholdHouseStatus: "" as NblHouseholdHouseStatus,
+  nblOtherHouseholdHousePeriods: [] as NblHouseholdHousePeriodInput[],
   nblOtherBuildingFloorArea: "",
   // §168의11① 호별 면적기준 (갭 3a)
   nblOtherRelatedBusinessType: "",

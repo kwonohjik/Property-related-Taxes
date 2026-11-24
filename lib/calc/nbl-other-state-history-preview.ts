@@ -54,6 +54,8 @@ export interface StateHistoryPreviewRow {
 
 export interface StateHistoryPreview {
   rows: StateHistoryPreviewRow[];
+  /** E3-④ — 엔진 leaf가 만든 구간 원본(Date). 13호 «세대 주택 소유 기간» 미리보기(`buildVacantLotHouseholdPreview`)가 엔진 leaf `vacantLotBusinessIntervals`에 그대로 넘긴다. 행은 이 구간의 문자열 표현이다. */
+  intervals: LandStateInterval[];
   totalDays: number;
   /** 양도일 현재 건축물 유무 = 마지막 «건축물 사건» 종류(건축물 사건이 없으면 입력 토글) */
   hasBuildingAtTransfer: boolean;
@@ -173,6 +175,7 @@ export function buildStateHistoryPreview(asset: AssetForm, transferDate: string 
   });
   return {
     rows: out,
+    intervals,
     totalDays: out.reduce((s, r) => s + r.days, 0),
     hasBuildingAtTransfer: intervals[intervals.length - 1].hasBuilding,
   };

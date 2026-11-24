@@ -19,6 +19,7 @@ import type {
   NblParcel,
   LandType,
   RevenueTestInput,
+  DateInterval,
 } from "./types";
 import type { NblRevenueBusinessType } from "../legal-codes";
 import { deriveCurrentBusinessDays } from "./revenue-test";
@@ -350,6 +351,21 @@ export function buildLandStateHistory(a: Record<string, unknown>, landType: Land
   return { mode: "changed", events };
 }
 
+/**
+ * E3-④ ⑭ — 13호(무주택 1세대 1필지 나지)의 세대 주택 소유 기간 raw 행 → 엔진 `DateInterval[]`. 13호가 아니거나 행이 없으면 `undefined`(= 키 없음 · 현행 Q-4 (가) — 숨은 stale 행은 싣지 않는다).
+ * 종료일이 빈칸이면 양도일까지(D-7). 시작일을 읽을 수 없는 행은 건너뛴다(⑧·⑫가 먼저 막는다 — 다른 raw 배열 행과 같은 규약).
+ */
+export function buildHouseholdHousePeriods(a: Record<string, unknown>, relatedBusinessType: string | undefined, transferDate: Date, parseDate: ParseDate): DateInterval[] | undefined {
+  if (relatedBusinessType !== "vacant_lot_1household") return undefined;
+  const rows = asArray<{ startDate?: string; endDate?: string }>(a.nblOtherHouseholdHousePeriods).flatMap((row): DateInterval[] => {
+    const start = parseDate(asString(row.startDate));
+    if (!start) return [];
+    const endRaw = asString(row.endDate);
+    return [{ start, end: endRaw ? (parseDate(endRaw) ?? transferDate) : transferDate }];
+  });
+  return rows.length > 0 ? rows : undefined;
+}
+
 export function buildOtherLand(
   a: Record<string, unknown>,
   landType: LandType,
@@ -357,6 +373,7 @@ export function buildOtherLand(
   parseDate: ParseDate,
   zoneType?: ZoneType,
   stateHistory?: LandStateHistoryInput,
+  transferDate?: Date,
 ): OtherLandUsage | undefined {
   if (landType !== "other_land" && landType !== "vacant_lot" && landType !== "miscellaneous") return undefined;
   const relatedBusinessType = asString(a.nblOtherRelatedBusinessType) || undefined;
@@ -366,6 +383,7 @@ export function buildOtherLand(
   // NBL2611-V1-A — 재산세 분류 근거: 이 선언 + 건축물 유무에서 화면이 보여 주는 선택지일 때만 보낸다(숨겨진 stale 값은 전송하지 않는다 — §7.4).
   const rawBasis = asString(a.nblOtherPropertyTaxBasis) as PropertyTaxBasis;
   const propertyTaxBasis = propertyTaxBasisOptions(propertyTaxType, hasBuilding).includes(rawBasis) ? rawBasis : undefined;
+  const householdHousePeriods = transferDate ? buildHouseholdHousePeriods(a, relatedBusinessType, transferDate, parseDate) : undefined;
   return {
     propertyTaxType,
     propertyTaxBasis,
@@ -427,6 +445,8 @@ export function buildOtherLand(
     parcels:                        buildNblParcels(a, parseDate, parseNumber),
     // 공장용 건축물 부속토지 기준면적 (§102①1호 별표6 / §101①1호)
     factory:                        buildFactory(a, parseNumber, zoneType),
+    // E3-④ ⑭ — 13호 세대 주택 소유 기간(행 없음·13호 아님 = 키 없음 → 현행과 바이트 동일)
+    ...(householdHousePeriods ? { householdHousePeriods } : {}),
   };
 }
 

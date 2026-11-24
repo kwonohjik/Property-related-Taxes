@@ -16,6 +16,7 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 import { DEFAULT_NON_BUSINESS_LAND_RULES } from "@/lib/tax-engine/non-business-land/types";
 import { otherLandAreaIsPartial } from "@/lib/tax-engine/non-business-land/other-land";
 import { eventClosesHouseInterval } from "@/lib/tax-engine/non-business-land/other-land-state-history";
+import { VACANT_LOT_HO } from "@/lib/tax-engine/non-business-land/other-land-vacant-lot-history";
 import { buildNblEngineInput } from "./non-business-land-request";
 import { buildNonBusinessLandRaw } from "./non-business-land-request";
 import { nblHousingStateHistoryApplies } from "./nbl-other-state-history-scope";
@@ -24,13 +25,16 @@ import { stateHistoryDeemedBlocksOf } from "./nbl-other-state-history-scope";
 import { stateHistoryWireFields } from "./nbl-other-state-history-scope";
 
 /**
- * 기타토지 카드의 «철거된 건축물 = 주택» 행 입력을 엔진이 **읽지 않는가**(= H9·H10을 요구하지 않고 필수 표시를 하지 않는다).
+ * 기타토지 카드의 이력 입력을 엔진이 **읽지 않는가**(= H9·H10을 요구하지 않고 필수 표시를 하지 않고, 부분 면적 안내를 보인다).
  * 기타토지 질문이 적용되지 않거나(주택 카드는 `housingAreaLimitState`가 따로 정한다) 주택 구간을 닫는 와이어 철거 행이 없으면 거짓(요구할 칸 자체가 없다 — 기타토지 기존 입력 변화 0).
+ *
+ * E3-④ C-4 (UQ-7 (나)) — **13호(무주택 1세대 1필지 나지) 선택 시**에는 주택 철거 행이 없어도 «읽지 않는가»를 묻는다: 13호는 한도가 660㎡로 고정이라 부분 면적 경로(이력 미적용)가 가장 쉽게 열리는데
+ * 입력 화면이 그 사실을 말하지 않았다(M-5). 이 확장은 **⑤ 안내 표시만** 바꾼다 — 주택 철거 행이 없으면 H9·H10이 요구할 칸이 없어 ⑧ 결과는 변하지 않는다(그 순회가 행 0건이다).
  */
 export function housePriorHistoryIgnoredOf(asset: AssetForm, transferDate: string | undefined): boolean {
   if (nblHousingStateHistoryApplies(asset) || !nblOtherStateHistoryApplies(asset)) return false;
   const wire = stateHistoryWireFields(asset).nblOtherStateEvents;
-  if (!wire.some((_, i) => eventClosesHouseInterval(wire, i, undefined))) return false;
+  if (asset.nblOtherRelatedBusinessType !== VACANT_LOT_HO && !wire.some((_, i) => eventClosesHouseInterval(wire, i, undefined))) return false;
   if (stateHistoryDeemedBlocksOf(asset)) return true;
   return otherAreaIsPartialOf(asset, transferDate);
 }

@@ -37,6 +37,18 @@ export interface NblFactorySegmentFormItem {
 }
 
 /**
+ * NBL-STATE-HISTORY-E3-④ — 13호(무주택 1세대 1필지 나지)의 「세대 주택 소유 기간」 행 1건(폼 — 전부 string). 엔진 `DateInterval`(Date)과 별개.
+ * `startDate` = 주택을 소유하게 된 첫날(필수) · `endDate` = 소유하지 않게 된 첫날(반열린). **`""` = 비움 = 양도일까지 계속 소유**(화면 hint·행 요약 · ④ 키 생략 · ⑧·⑫ 허용 · ⑭ 양도일 — 같은 뜻).
+ */
+export interface NblHouseholdHousePeriodInput {
+  startDate: string;
+  endDate: string;
+}
+
+/** E3-④ 질문 «소유기간 중 세대가 주택을 소유한 적 있나요?» 답 — `""` = 아직 답하지 않음(가정값 없음 · ⑧만 차단). UI 전용(서버로 보내지 않는다). */
+export type NblHouseholdHouseStatus = "" | "none" | "owned";
+
+/**
  * NBL-STATE-HISTORY-U0 — 기타토지 소유기간 중 사건 1건(폼 — 전부 string): 건축물 신축·멸실 또는 재산세 과세 구분 변경(E3-①). 엔진 `StateEvent`(Date)와 별개.
  * `kind ""` = 아직 종류를 고르지 않은 행(⑧ 차단). `propertyTaxTypeBefore`는 그 사건이 닫는 구간의 재산세 구분이다 —
  * 철거·건축물 있는 구간 위 구분 변경 행은 `""` = 모름(종합합산 + 확인 필요) · **신축 행·나대지 위 구분 변경 행**(E3-1b — 나대지 구간을 닫는 행, 판정 = leaf `eventClosesBareInterval`)은 나대지 선언이다.
@@ -114,6 +126,13 @@ export interface NblOtherFormSlice {
   nblOtherStateHistoryMode: StateHistoryMode;
   /** NBL-STATE-HISTORY-U0 — 사건 행(날짜순). `changed`일 때만 판정에 쓴다. 자산마다 새 배열 인스턴스. */
   nblOtherStateEvents: NblOtherStateEventInput[];
+  /**
+   * E3-④ — 13호 질문 «소유기간 중 세대가 주택을 소유한 적 있나요?» 답. `""` = 미선택(⑧이 술어 `vacantLotHousePeriodsReadOf`가 참일 때만 요구) · `none` = 소유기간 내내 무주택 · `owned` = 아래 행을 입력.
+   * **UI 전용** — ④가 보내지 않는다(서버·엔진은 행 없음 = 현행 자기선언 — Q-4 (가)).
+   */
+  nblOtherHouseholdHouseStatus: NblHouseholdHouseStatus;
+  /** E3-④ — 13호 세대 주택 소유 기간 행(`owned`일 때만 ④가 싣는다). 자산마다 새 배열 인스턴스. */
+  nblOtherHouseholdHousePeriods: NblHouseholdHousePeriodInput[];
   /** §101①2호나목 — 건축물 바닥면적(㎡). 2% 미달 시 이 면적만 별도합산(사업용) 유지·잔여 부속토지는 종합합산(비사업용) */
   nblOtherBuildingFloorArea: string;
   // §168의11⑥ 복합용도 건축물 부속토지 안분 (B) — ""=미적용·single_building=⑥1호(연면적비)·multiple_buildings=⑥2호(바닥면적비)

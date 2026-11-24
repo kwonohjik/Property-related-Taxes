@@ -35,6 +35,10 @@ const urbanFarm = (patch: Record<string, unknown> = {}) =>
 const other = (patch: Record<string, unknown> = {}) =>
   nbl({ nblLandType: "other_land", nblOtherPropertyTaxType: "separate", nblOtherStateHistoryMode: "unchanged", ...patch });
 
+/** 기타토지 13호(무주택 1세대 1필지 나지) — 꼬리 나지(건축물 없음)라 엔진이 세대 주택 소유 기간 행을 읽는다(E3-④). 질문은 `patch`로 답한다(기본 미선택). */
+const ho13 = (patch: Record<string, unknown> = {}) =>
+  other({ nblOtherRelatedBusinessType: "vacant_lot_1household", nblOtherPropertyTaxType: "comprehensive", nblOtherHasBuilding: false, ...patch });
+
 /** 건축물 이력 사건 행 */
 const ev = (kind: "" | "building_built" | "building_removed" | "tax_type_changed", date: string) => ({ kind, date, propertyTaxTypeBefore: "" });
 
@@ -116,6 +120,12 @@ export const NBL_FIELD_JUMP_CASES: FieldJumpCase[] = [
   { name: "nbl: 기타토지 주택 철거 행 정착면적 > 토지 면적", field: "nblOtherStateEvents.0.houseFootprintBefore", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 1번째 행 — 철거 직전 주택 정착면적\(2000㎡\)이 토지 면적\(1000㎡\)보다 큽니다/, form: other({ nblZoneType: "general_residential", nblIsMetropolitanArea: "no", nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [bev("2018-01-01", "2000")] }) },
   { name: "nbl: 기타토지 주택 철거 — 수도권 여부", field: "nblIsMetropolitanArea", step: 0, assetIndex: A, message: /^자산: 기타토지 — 철거된 건축물을 「주택」으로 선택했습니다/, form: other({ nblZoneType: "general_residential", nblIsMetropolitanArea: "", nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [bev("2018-01-01", "200")] }) },
   { name: "nbl: 기타토지 주택 구간 안 재산세 구분 변경", field: "nblOtherStateEvents.1.kind", step: 0, assetIndex: A, message: /^자산: 기타토지 — 건축물 사건 2번째 행 — 철거된 건축물을 「주택」으로 선택했지만/, form: other({ nblZoneType: "general_residential", nblIsMetropolitanArea: "no", nblOtherStateHistoryMode: "changed", nblOtherStateEvents: [ev("tax_type_changed", "2017-01-01"), bev("2018-01-01", "200")] }) },
+
+  // 13호(무주택 1세대 1필지 나지) × 세대 주택 소유 기간(E3-④) — 질문(HH-1) · «있습니다» 행 0건(HH-2) · 행 결함(HH-3, 행 키가 동적이라 이 케이스가 유일한 안전망). 꼬리 나지라 엔진이 행을 읽는 상태다.
+  { name: "nbl: 13호 세대 주택 소유 질문 미선택", field: "nblOtherHouseholdHouseStatus", step: 0, assetIndex: A, message: /^자산: 기타토지 무주택1세대 1필지 나지\(13호\) — 이 토지를 소유한 기간 중 세대가 주택을 소유한 적이 있는지 선택하세요/, form: ho13() },
+  { name: "nbl: 13호 세대 주택 소유 «있습니다» 행 0건", field: "nblOtherHouseholdHousePeriods", step: 0, assetIndex: A, message: /^자산: 기타토지 무주택1세대 1필지 나지\(13호\) — 세대가 주택을 소유한 적이 «있습니다»를 선택했습니다/, form: ho13({ nblOtherHouseholdHouseStatus: "owned" }) },
+  { name: "nbl: 13호 세대 주택 소유 시작일 빈 칸", field: "nblOtherHouseholdHousePeriods.0.startDate", step: 0, assetIndex: A, message: /^자산: 기타토지 무주택1세대 1필지 나지\(13호\) — 세대 주택 소유 기간 1번째 행 — 주택을 소유하게 된 첫날/, form: ho13({ nblOtherHouseholdHouseStatus: "owned", nblOtherHouseholdHousePeriods: [{ startDate: "", endDate: "" }] }) },
+  { name: "nbl: 13호 세대 주택 소유 종료일 역순", field: "nblOtherHouseholdHousePeriods.1.endDate", step: 0, assetIndex: A, message: /^자산: 기타토지 무주택1세대 1필지 나지\(13호\) — 세대 주택 소유 기간 2번째 행 — 종료일\(2019-01-01\)이 시작일\(2020-01-01\)보다 빠릅니다/, form: ho13({ nblOtherHouseholdHouseStatus: "owned", nblOtherHouseholdHousePeriods: [{ startDate: "2016-01-01", endDate: "2017-01-01" }, { startDate: "2020-01-01", endDate: "2019-01-01" }] }) },
 
   // 수입금액비율(§168의11②)
   { name: "nbl: 수입금액", field: "nblRevenueCurrentRevenue", step: 0, assetIndex: A, message: /^자산: 수입금액비율 업종 선택 시 당해 과세기간 수입금액/, form: revenue({ nblRevenueCurrentRevenue: "" }) },

@@ -18,6 +18,12 @@
 import { NBL } from "../legal-codes";
 import { NBL_REVENUE_BUSINESS_START_APPLIED_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_APPLIED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_VACANT_LOT_AREA_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_VACANT_LOT_APPLIED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_HISTORY_VACANT_LOT_TAX_CHANGE_APPLIED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE } from "../nbl-confirm-notices";
+import { NBL_VACANT_LOT_SELF_DECLARED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_VACANT_LOT_SELF_DECLARED_WITH_HOUSE_PERIODS_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_DAYWISE_NO_RULING_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_DEEMED_TRANSFER_NOTICE } from "../nbl-confirm-notices";
 import { NBL_STATE_HISTORY_HOUSE_BEFORE_NOTICE } from "../nbl-confirm-notices";
@@ -40,10 +46,16 @@ import { STATE_EVENTS_REQUIRED_MESSAGE } from "./nbl-validation-messages";
 import { bareDeclarationNotices } from "./state-history-echo";
 import { criteriaEcho } from "./state-history-echo";
 import { intervalEcho } from "./state-history-echo";
+import { buildVacantLotEcho } from "./other-land-vacant-lot-history";
+import { VACANT_LOT_HO } from "./other-land-vacant-lot-history";
+import { vacantLotBusinessIntervals } from "./other-land-vacant-lot-history";
+import { vacantLotWithinAreaLimit } from "./other-land-vacant-lot-history";
 import { deriveOtherLandStateIntervals } from "./other-land-state-history";
 import { stateHistoryBusinessIntervals } from "./other-land-state-history";
 import { getPeriodJudgmentDate } from "./period-criteria";
 import { meetsPeriodCriteria } from "./period-criteria";
+import { differenceInDays } from "../utc-date";
+import { getOverlappingPeriods } from "./utils/period-math";
 import { getOwnershipStart } from "./utils/period-math";
 import type { DateInterval } from "./types";
 import type { LandStateInterval } from "./land-usage.types";
@@ -75,7 +87,7 @@ export type CoreProbe = (input: NonBusinessLandInput) => { trace: OtherLandOwnTr
  * 경로 순서와 무관한 **다목 자체 구간 · 나목 꼬리 인정**(Q-15 (가′) 보강). core는 수입금액비율 → 나목(Step 3-1) → 호 인정 순으로 첫 PASS에서 끝나 뒤 경로를 평가하지 않는다.
  * 법 §104의3①4호 가·나·다목은 병렬 제외 사유라 어느 경로에서 먼저 끝났는지로 다목 날짜를 셀지가 달라지면 안 된다 → 이력이 적용될 때만 core를 다시 돌려 보충한다(이력 없는 경로는 손대지 않는다).
  *   · 다목 호 인정 구간: 나목·수입금액비율을 끈 입력(재산세 종합합산 선언 · 근거·공장·수입금액 제거)으로 돌려 호 인정·복합용도·연접·레거시 PASS의 구간(3호는 `[완료일, +2년)`)을 얻는다.
- *     13호(나지)는 제외한다 — «나지»는 건축물이 있던 구간과 충돌하고 날짜별 적용 범위를 확인하지 못했다(확인 필요). 호 요건 실패(5호 용도지역 등)·부분 면적은 기록되지 않는다.
+ *     13호(나지)는 제외한다 — «나지»는 건축물이 있던 구간과 충돌한다. 13호는 `other-land-vacant-lot-history.ts` leaf가 **건축물 없는 구간**에 따로 더한다(E3-④ — 호출부가 13호를 끈 core로 이 함수를 부른다). 호 요건 실패(5호 용도지역 등)·부분 면적은 기록되지 않는다.
  *   · 나목 꼬리 인정: 다목을 끈 입력(호 none · 복합용도·연접 제거 · 수입금액 제거)이 전량 사업용이면 양도일 현재 상태(꼬리)는 나목으로도 사업용이다.
  */
 function daMokAndNaMok(input: NonBusinessLandInput, core: CategoryJudgeResult, trace: OtherLandOwnTrace, probe: CoreProbe): { own?: DateInterval[]; naMokTail: boolean } {
@@ -146,12 +158,25 @@ export function applyStateHistory(
 
   // 다목 자체 구간(경로 순서 무관) + 나목 꼬리 인정 — `daMokAndNaMok`. 자체 구간이 있으면 나목이 인정하는 꼬리도 사업용 구간에 더한다(법에 없는 «자체 사업기간이 있으면 양도일 현재 상태를 버린다» 제한 금지).
   const tail = intervals[intervals.length - 1];
-  const da = daMokAndNaMok(input, core, trace, probe);
+  // E3-④ D-4 — 13호(나지): core의 13호 PASS는 «소유기간 전체가 나지·무주택» 가정이라 이력 경로에서는 믿지 않는다. 꼬리·다목·나목 보충은 **13호를 끈 core**로 보고, 13호 기여는 leaf가 구간별로 더한다(합집합 항 — D-3).
+  const ho13 = o.relatedBusinessType === VACANT_LOT_HO;
+  const off = ho13 ? probe({ ...input, otherLand: { ...o, relatedBusinessType: "none" } }) : undefined;
+  const coreIsBusiness = off ? off.isBusiness : core.isBusiness;
+  const da = off
+    ? daMokAndNaMok({ ...input, otherLand: { ...o, relatedBusinessType: "none" } }, { ...core, isBusiness: off.isBusiness }, off.trace, probe)
+    : daMokAndNaMok(input, core, trace, probe);
   const ownBusinessPeriods = da.own && da.naMokTail && tail ? [...da.own, { start: tail.start, end: tail.end }] : da.own;
-  const businessIntervals = stateHistoryBusinessIntervals(intervals, { isBusiness: core.isBusiness, ownBusinessPeriods });
+  const vacantEligible = ho13 && vacantLotWithinAreaLimit(input.landArea);
+  const vacant = vacantEligible ? vacantLotBusinessIntervals(intervals, { landArea: input.landArea, houseOwned: o.householdHousePeriods }) : [];
+  const businessIntervals = [...stateHistoryBusinessIntervals(intervals, { isBusiness: coreIsBusiness, ownBusinessPeriods }), ...vacant];
   const r = meetsPeriodCriteria(businessIntervals, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
 
-  const echo = intervalEcho(intervals, businessIntervals);
+  // E3-④ R-2 — 구간별 13호 일수(`vacantLotDays` — 없으면 키 부재 = 종전 echo와 바이트 동일). 13호 구간이 없는 구간에는 키를 만들지 않는다.
+  const echo = intervalEcho(intervals, businessIntervals).map((row) => {
+    const days = vacantEligible ? getOverlappingPeriods([{ start: row.start, end: row.end }], vacant).reduce((sum, p) => sum + differenceInDays(p.end, p.start), 0) : 0;
+    return days > 0 ? { ...row, vacantLotDays: days } : row;
+  });
+  const vacantEcho = vacantEligible ? buildVacantLotEcho("bare_intervals", vacant, { start: intervals[0].start, end: tail.end }, o.householdHousePeriods) : undefined;
 
   const hasTaxChange = history.events.some((e) => e.kind === "tax_type_changed");
   const step: JudgmentStep = {
@@ -166,7 +191,21 @@ export function applyStateHistory(
   const flipped = r.meets !== core.isBusiness;
   const warnings = (core.warnings ?? []).map((w) => (w === NBL_REVENUE_BUSINESS_START_APPLIED_NOTICE ? NBL_STATE_HISTORY_REVENUE_START_NOTICE : w));
   // 재산세 과세 구분 변경 사건이 있을 때만 한정 고지를 변형 고지로 **대체**한다(E3-① — 기존 고지 문구는 바이트 동일, 건축물 사건만 있는 이력은 종전과 같다).
-  warnings.push(hasTaxChange ? NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE : NBL_STATE_HISTORY_APPLIED_NOTICE);
+  // E3-④ Q-5 (가) — 13호가 구간별로 적용된 결과(≤660㎡)는 «호별 용도는 소유기간 전체에 적용» 문구가 모순이라 13호 변형으로 대체한다(기존 상수는 13호가 아니면 바이트 동일).
+  if (vacantEligible) warnings.push(hasTaxChange ? NBL_STATE_HISTORY_VACANT_LOT_TAX_CHANGE_APPLIED_NOTICE : NBL_STATE_HISTORY_VACANT_LOT_APPLIED_NOTICE);
+  else warnings.push(hasTaxChange ? NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE : NBL_STATE_HISTORY_APPLIED_NOTICE);
+  // T-4 — 꼬리가 건축물이면 core가 13호를 인정하지 않아 자기 선언 고지가 안 실린다 → 구간별로 13호를 적용했으면 함께 싣는다(없을 때만).
+  // L-2 — 행을 읽었으면 자기 선언 고지는 «입력한 기간만 반영» 변형이다(core 13호 PASS가 이미 변형을 실었으면 그대로 · 아니면 여기서 변형을 싣는다). 행이 없으면 기존 고지(바이트 불변).
+  const rowsRead = vacantEligible && (o.householdHousePeriods?.length ?? 0) > 0;
+  const selfDeclared = rowsRead ? NBL_VACANT_LOT_SELF_DECLARED_WITH_HOUSE_PERIODS_NOTICE : NBL_VACANT_LOT_SELF_DECLARED_NOTICE;
+  if (rowsRead) {
+    const at = warnings.indexOf(NBL_VACANT_LOT_SELF_DECLARED_NOTICE);
+    if (at >= 0) warnings.splice(at, 1);
+  }
+  if (vacantEligible && !warnings.includes(selfDeclared)) warnings.push(selfDeclared);
+  if (rowsRead && !warnings.includes(NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE)) warnings.push(NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE);
+  // D-2 — 660㎡ 초과 × 이력은 판정하지 않는다(13호 기여 0 + 고지 · 자동 안분 없음).
+  if (ho13 && !vacantEligible) warnings.push(NBL_STATE_HISTORY_VACANT_LOT_AREA_NOTICE);
   // 「모름」 구간(종합합산으로 접힘)은 그 구간을 닫은 사건 종류별로 고지한다 — 구간의 끝 날짜 = 닫은 사건일(날짜는 엄격 증가라 유일).
   // E3-③ T-6 — 주택 구간은 `propertyTaxType = "unknown"` 고정이지만 «재산세 구분 모름»이 아니다(구분을 읽지 않는다) — 제외한다.
   const unknownClosers = intervals.filter((iv) => iv.propertyTaxType === "unknown" && iv.buildingKind !== "house").map((iv) => history.events.find((e) => e.date.getTime() === iv.end.getTime())?.kind);
@@ -196,7 +235,7 @@ export function applyStateHistory(
       businessUseRatio: r.ratio,
       criteria: r.criteria,
       businessPeriodsUsed: businessIntervals,
-      periodEvaluation: { basis: "state_history", stateHistory: { intervals: echo, criteria: criteriaEcho(r) } },
+      periodEvaluation: { basis: "state_history", stateHistory: { intervals: echo, criteria: criteriaEcho(r) }, ...(vacantEcho ? { vacantLot: vacantEcho } : {}) },
       warnings,
     },
   };

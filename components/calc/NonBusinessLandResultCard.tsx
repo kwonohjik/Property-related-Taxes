@@ -10,6 +10,7 @@ import { PROPERTY_TAX_BASIS_LABEL, PROPERTY_TAX_BASIS_LEGAL } from "@/lib/tax-en
 import { propertyTaxTypeLabel } from "@/lib/tax-engine/non-business-land/property-tax-type-label";
 import { NblStateHistoryPeriodTable } from "@/components/calc/NblStateHistoryPeriodTable";
 import { NblRevenuePeriodTable } from "@/components/calc/NblRevenuePeriodTable";
+import { NblVacantLotPeriodNote } from "@/components/calc/NblVacantLotPeriodNote";
 
 interface Props {
   judgment: NonBusinessLandJudgment;
@@ -263,6 +264,8 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
           isNonBusiness={isNonBusiness}
         />
       )}
+      {/* NBL-STATE-HISTORY-E3-④ — 13호(무주택 1세대 1필지 나지)가 사업용 구간을 정했을 때만(엔진 echo `periodEvaluation.vacantLot`). 이력 경로·이력 OFF 경로 모두 — 키 부재 = 블록 없음. */}
+      {periodEval.vacantLot && <NblVacantLotPeriodNote vacantLot={periodEval.vacantLot} graceJudged={periodEval.graceJudged} />}
       {periodEval.basis === "state_at_transfer" && (
         <div className="px-4 py-2 border-b border-border" data-testid="nbl-period-state-at-transfer-notice">
           <p className="text-caption text-muted-foreground leading-snug">

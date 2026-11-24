@@ -75,6 +75,10 @@ const PERIOD_TABLE = "components/calc/NblStateHistoryPeriodTable.tsx"; // E3-1b 
 const DETAIL = "components/calc/transfer/nbl/OtherLandDetailSection.tsx";
 // E3-③ 후속 #1 — «엔진이 철거 행 이력을 읽는가»(의제 ∨ 부분 면적) UI 래퍼: ⑧ H9·H10 · ⑤ 필수·수도권 칸이 이 한 함수를 읽는다. 엔진 `otherLandAreaIsPartial`을 돌린다(자체 근사 금지).
 const READ = "lib/calc/nbl-other-state-history-read.ts";
+// E3-④ — 13호 «세대 주택 소유 기간»: 술어 래퍼(④⑤⑧ 단일 소스) · 입력 안내 갈래 · 미리보기. 엔진 술어 `vacantLotHousePeriodsRead`·leaf를 부른다.
+const VL_SCOPE = "lib/calc/nbl-vacant-lot-household-scope.ts";
+const VL_NOTICE = "lib/calc/nbl-vacant-lot-history-notice.ts";
+const VL_PREVIEW = "lib/calc/nbl-vacant-lot-household-preview.ts";
 const OTHER_LAND = "lib/tax-engine/non-business-land/other-land.ts";
 
 const NEXT_PR_HINT = "새 사용처가 생겼다면 UI 배선(U1·U2)일 것이다 — 이 허용 목록을 그 파일로 갱신한다(삭제 금지). 계획서 plan.md §4 U1·U2.";
@@ -141,8 +145,10 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
     // UI 호출처는 래퍼 한 곳(scope)을 거쳐 읽는다 — ④ 전송 게이트·⑤ 수도권 칸·⑤ 미리보기 맥락·⑧ H10이 **같은 함수**(`housePriorNeedsMetropolitanOf`).
     expect(usersOf("housePriorNeedsMetropolitanOf", [SCOPE]).sort(), NEXT_PR_HINT).toEqual([REQUEST, PREVIEW, SECTION, VALIDATE].sort());
     // E3-③ 후속 #1 — 의제 사유는 «엔진이 철거 행 이력을 읽는가» 래퍼(`housePriorHistoryIgnoredOf`)가 부분 면적과 함께 한 함수로 읽는다(⑧ H9·H10·⑤가 자체 의제 조건을 쓰지 않는다).
-    expect(usersOf("stateHistoryDeemedBlocksOf", [SCOPE]).sort(), NEXT_PR_HINT).toEqual([READ]);
-    expect(usersOf("housePriorHistoryIgnoredOf", [READ]).sort(), NEXT_PR_HINT).toEqual([VALIDATE, SECTION].sort());
+    // E3-④ — 13호 술어 래퍼(`vacantLotHousePeriodsReadOf`의 인자 «양도일 의제»)와 13호 미리보기(의제일 = 소유기간 끝)도 같은 한 함수를 읽는다.
+    expect(usersOf("stateHistoryDeemedBlocksOf", [SCOPE]).sort(), NEXT_PR_HINT).toEqual([READ, VL_SCOPE, VL_PREVIEW].sort());
+    // E3-④ — 13호 입력 안내(C-1·C-2)·미리보기도 «엔진이 이력을 읽는가»를 같은 래퍼로 묻는다(자체 부분 면적·의제 조건 금지).
+    expect(usersOf("housePriorHistoryIgnoredOf", [READ]).sort(), NEXT_PR_HINT).toEqual([VALIDATE, SECTION, VL_NOTICE, VL_PREVIEW].sort());
     // 부분 면적 판정은 엔진 core를 그대로 돌린다 — `otherLandAreaIsPartial`(other-land.ts)이 `applyStateHistory`가 쓰는 `isPartialArea`를 같은 core 결과에 적용한다(UI 자체 근사 금지).
     expect(usersOf("otherLandAreaIsPartial", [OTHER_LAND]), NEXT_PR_HINT).toEqual([READ]);
     expect(usersOf("isPartialArea", [APPLY]).sort(), NEXT_PR_HINT).toEqual([OTHER_LAND]);
@@ -179,7 +185,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
     expect(src(SCHEMA)).toMatch(/propertyTaxTypeBefore:\s*z\.enum\(NBL_PROPERTY_TAX_TYPE_VALUES\)\.or\(z\.literal\(""\)\)/);
   });
 
-  it("WIRE-6: 이력 칸 이름을 읽는 UI(store·components·lib/calc) 파일 = ①②③ 상태·복원 · ④ 전송 · ⑤ 위젯 · ⑧ 검증·술어·미리보기 — 정확히 이 열세 곳", () => {
+  it("WIRE-6: 이력 칸 이름을 읽는 UI(store·components·lib/calc) 파일 = ①②③ 상태·복원 · ④ 전송 · ⑤ 위젯 · ⑧ 검증·술어·미리보기 — 정확히 이 열여섯 곳", () => {
     const uiUsers = FILES.filter(
       (f) => /^(components|lib\/(stores|calc))\//.test(f.path) && /nblOtherStateEvents|nblOtherStateHistoryMode/.test(f.src),
     ).map((f) => f.path).sort();
@@ -191,6 +197,7 @@ describe("배선 확인 — 상태 이력 leaf는 판정(apply)·⑫ refine·⑭
       "lib/calc/non-business-land-request.ts", // ④ 전송(파생 nblOtherHasBuilding 덮어쓰기 포함)
       SCOPE, READ, PREVIEW, VALIDATE, // ④⑤⑧ 공용 술어 · «엔진이 이력을 읽는가» 래퍼(E3-③ 후속) · 미리보기 · ⑧ 규칙
       SECTION, BARE_FIELDS, KIND_FIELD, DETAIL, // ⑤ 위젯 · 나대지 구간 선언 카드(E3-1b — `data-field` 앵커) · 철거 행 종류 카드(E3-③ B) · 마운트
+      VL_SCOPE, VL_NOTICE, VL_PREVIEW, // E3-④ — 13호 술어 래퍼(`nblOtherStateEventsInUse`를 인자로 공급) · 입력 안내 갈래 · 행 아래 미리보기
     ].sort();
     expect(uiUsers, NEXT_PR_HINT).toEqual(expected);
   });

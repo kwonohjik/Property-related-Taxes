@@ -38,6 +38,7 @@ import { REVENUE_START_DATE_AFTER_TRANSFER_MESSAGE } from "@/lib/tax-engine/non-
 import { hoRequiredInputIssue } from "@/lib/tax-engine/non-business-land/other-land-ho-meta";
 import { wholesaleItemIssue } from "@/lib/tax-engine/non-business-land/revenue-wholesale-item";
 import { revenueHistoryInputIssue } from "@/lib/tax-engine/non-business-land/revenue-history";
+import { householdHousePeriodIssue, type HouseholdHousePeriodRowLike } from "@/lib/tax-engine/non-business-land/household-house-period-issue";
 
 interface DatedRow {
   startDate?: string;
@@ -74,6 +75,8 @@ export interface NblRawRefineInput {
   nblOtherStateHistoryMode?: string;
   /** ⑫ 사건 행 — 공용 issue leaf(`stateEventSequenceIssue`)가 읽는 칸 전부(`StateEventRowLike` — `buildingKindBefore` 포함 · 단일 소스). 칸이 늘면 leaf 타입을 따른다(E3-③ 후속 L3: 종전에는 `kind`·`date`만 선언돼 읽는 칸이 타입에 없었다 — 런타임 무변경). */
   nblOtherStateEvents?: StateEventRowLike[];
+  /** E3-④ ⑫′ 행 — 공용 leaf `householdHousePeriodIssue`가 읽는 칸(`HouseholdHousePeriodRowLike` · 단일 소스). */
+  nblOtherHouseholdHousePeriods?: HouseholdHousePeriodRowLike[];
   nblOtherRelatedBusinessType?: string;
   nblOtherResortParkingStdArea?: string;
   nblOtherResortParkingActualArea?: string;
@@ -113,6 +116,14 @@ export function refineNonBusinessLandRaw(raw: NblRawRefineInput, ctx: z.Refineme
     // E3-③ — 주택부수토지 카드는 `subject: "house"`(문구 «주택 사건» + 구조 규칙 D-1·D-2)로 같은 leaf를 부른다. 정착면적 규칙(Q-10 (가))은 ⑧만 가진다 — 직접 API는 400 없이 엔진이 접는다(UI 통과 ↔ API 400 모순 방지).
     const stateIssue = stateEventSequenceIssue(raw.nblOtherStateEvents ?? [], { transferDate: raw.transferDate ?? "", subject: stateEventSubjectOf(landType) });
     if (stateIssue) issue(stateIssue.index === null ? ["nblOtherStateEvents"] : ["nblOtherStateEvents", stateIssue.index, stateIssue.field], stateIssue.message);
+  }
+
+  // NBL-STATE-HISTORY-E3-④ — 13호 세대 주택 소유 기간 행: 13호일 때만 **구조**(빈·해석 불가·역순·같은 날·양도일 이후 시작)를 검사한다(⑧ HH-3 거울 — 같은 leaf `householdHousePeriodIssue` · 같은 문구).
+  // ⑧만 가진 규칙(질문 «세대 주택 소유 여부» 미선택 · «있음»인데 행 0건)은 ⑫에 없다 — 직접 API·엔진은 행 없음 = 현행(Q-4 (가)). R-1 술어(읽는 조건)는 ⑫가 재현하지 않는다(토지 면적이 지분 환산·꼬리 건물 파생이라 raw로 닫히지 않는다) —
+  // ④가 술어 거짓이면 `[]`를 보내므로 화면 경로는 400이 없고, 13호이면서 읽지 않는 상태의 직접 API stale 행은 구조 결함만 400이다(엔진은 그 행을 읽지 않는다).
+  if (raw.nblLandType === "other_land" && raw.nblOtherRelatedBusinessType === "vacant_lot_1household" && (raw.nblOtherHouseholdHousePeriods?.length ?? 0) > 0) {
+    const hh = householdHousePeriodIssue(raw.nblOtherHouseholdHousePeriods!, { transferDate: raw.transferDate });
+    if (hh) issue(["nblOtherHouseholdHousePeriods", hh.index, hh.field], hh.message);
   }
 
   // NBL2611-V8-VL02 — 기간 행: 빈·해석 불가·역순·같은 날 (⑧ rowArrays와 같은 4종·같은 적용 지목)

@@ -451,3 +451,15 @@ W1~W4의 «현행»은 입력 칸이 없어서 사용자가 13호를 고르면 W
 - **주장↔근거**: §1.1 법 본문은 KoreanLaw MCP 직접 열람(영 MST 290841·72432·75526 · 규칙 286379·73719·72767) · §1.2 해석례 8건 본문 열람(taxlaw 원문) · §2.2 수치는 probe 출력 그대로 · §6 «신규»는 전부 오라클 표기.
 - **약점**: ① 신규 열은 미구현이라 구현 PR의 재측정이 필요하다(측정값이 다르면 표를 맞추지 말고 원인을 먼저). ② «나지 구간별» 적용은 V-1 — Q-1 승인이 곧 «직접 해석례 없음을 알고 간다»는 결정. ③ 조심 2019서2590 상충 신호(V-2)는 해소가 아니라 «쟁점이 다름»으로만 기록했다.
 - **착수 순서**: Q-1 결정 → E3e-0 → E3e-1. Q-2~4 결정 → E3e-2. UI 문서는 이 문서의 `householdHousePeriods`·echo(`vacantLot`)·고지 상수명을 읽는다.
+
+## 11. 구현 기록 (E3e-0·1·2 — 2026-11-24 · 브랜치 `feat/nbl-e3-4-ho13-history`)
+
+계획서 v2와 **달라진 점·구현 시 결정**(코드가 정본):
+
+- **R-7 상한 값 근거**: `NBL_HOUSEHOLD_HOUSE_PERIODS_MAX = 10`(`lib/calc/nbl-household-house-periods-cap.ts`). 행 1건 = 세대가 주택을 «소유한 기간 1회»(취득 → 처분)이고 엔진이 겹침을 병합·일 단위로 세므로 개수는 판정 정확도와 무관 — 상한은 비정상 입력 방지용. 같은 «1회 사건 = 1행» 배열의 선례 상한(`GB_SHARES_MAX`·`COMPANION_ASSETS_MAX` = 10 — `asset-card-count-cap.ts`)에 맞췄고, 이어지는 기간은 하나로 합쳐 입력할 수 있다. ⑤·⑧·⑫가 같은 상수·같은 문구 함수(`nblHouseholdHousePeriodsCapMessage`)를 쓴다.
+- **echo 유무 규칙(§4.5 정리)**: `periodEvaluation.vacantLot`은 «행을 읽었을 때만»이 아니라 **13호가 사업용 구간을 정한 경로**에 실린다 — ① 이력 경로(`state_history`) 13호 ∧ ≤660㎡(행 없어도 · `scope: bare_intervals`) ② 이력을 쓰지 않는 경로에서 core가 행을 읽은 경우(`whole_period` · basis `usage_periods`). 13호 + 이력 `changed` + 660㎡ 초과(꼬리 건물)·13호가 아닌 호·행 없는 이력 OFF는 키 자체가 없다. 구간별 `vacantLotDays`는 13호 구간과 겹치는 행에만(0이면 키 부재).
+- **TAX_CHANGE 변형 추가**: 계획서의 고지 2종 외에 `NBL_STATE_HISTORY_VACANT_LOT_TAX_CHANGE_APPLIED_NOTICE`를 더했다 — `NBL_STATE_HISTORY_TAX_CHANGE_APPLIED_NOTICE`도 «호별 용도 … 전체에 적용»이라 13호 + 재산세 구분 변경 이력에서 같은 모순이 남는다.
+- **⑫′ 게이트**: ⑫ refine은 R-1 술어 전체를 재현하지 않고 «13호 ∧ 기타토지 ∧ 행 있음»일 때 **구조**(시작일 형식·종료일 형식·종료일 > 시작일·양도일 이후 시작 차단)만 검사한다. 토지 면적이 raw로 닫히지 않아 술어를 재현하면 ⑧↔⑫가 어긋날 수 있다 — 화면 경로는 ④가 술어 거짓이면 `[]`를 보내 400이 없다. ⑧만 가진 규칙: 질문 «세대 주택 소유 여부» 미선택(HH-1) · «있음»인데 행 0건(HH-2). 겹침 규칙·소유기간 앞뒤 하한은 없다(엔진이 병합·클립).
+- **D-4 구현**: `applyStateHistory`가 13호이면 `probe`로 호를 끈(`none`) core를 한 번 더 돌려 꼬리·다목·나목 보충(`daMokAndNaMok`)에 쓴다 — 이 경로에는 13호가 한 번도 넘어가지 않는다. 그래서 `markOwn` 13호 가드(M1)·`hasDaMokHo` 13호 제외(M2)는 **관측 불가한 방어선**이 됐다(M1은 단위 anchor로 고정, M2는 실측 0건 — 아래 mutation).
+- **core 무주택 기간**: `judgeHoRequirements`가 13호 + 행일 때 `householdFreePeriods`(= 소유기간 ∖ 행 — **`businessPeriods`가 아닌 별도 필드**, T-1)를 돌려주고 `other-land.ts`가 `meetsPeriodCriteria`에 쓴다. 기간기준 미충족으로 끝나면 `trace.vacantLot.decided`로 «빈 사업기간 + 유예» 재판정이 기간 수치를 덮지 않게 한다(E3-② `revenueHistory.decided`와 같은 규칙).
+- **verify:legal**: 13호 본문(영 §168의11①13호)·규칙 §83조의4 ⑯⑰⑱ verbatim 키워드를 `additions-transfer-decree-nbl-ho.ts`에 등록했고 본문은 KoreanLaw MCP(영 MST 290841 · 규칙 MST 286379, 2026-11-24)에서 확인했다. 이 환경에서는 법제처(law.go.kr)에 접속이 안 돼(curl 000) `npm run verify:legal -- --id NBL` **전 19건이 «법령 검색 실패»**였다 — 신규·기존 구분 없이 접속 실패라 통과 확인은 접속 가능한 환경에서 필요.

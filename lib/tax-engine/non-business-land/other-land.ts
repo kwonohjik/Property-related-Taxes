@@ -17,6 +17,7 @@ import type {
   JudgmentStep,
   NonBusinessLandInput,
   NonBusinessLandJudgmentRules,
+  PeriodEvaluation,
   PropertyTaxType,
 } from "./types";
 import { getPeriodJudgmentDate, meetsPeriodCriteria } from "./period-criteria";
@@ -27,6 +28,9 @@ import { computeContiguousParcelNblAttribution } from "./utils/contiguous-parcel
 import { judgeFactoryLandExcess } from "./factory-land-standard-area";
 import { judgeAppurtenantLandExcess } from "../appurtenant-land-excess";
 import { NBL_STATE_AT_TRANSFER_APPLIED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_STATE_AT_TRANSFER_VACANT_LOT_HOUSE_PERIODS_APPLIED_NOTICE } from "../nbl-confirm-notices";
+import { NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE } from "../nbl-confirm-notices";
+import { buildVacantLotEcho } from "./other-land-vacant-lot-history";
 import { propertyTaxTypeLabel } from "./property-tax-type-label";
 import {
   resolveAreaLimit,
@@ -83,13 +87,21 @@ export function judgeOtherLand(
   if (history.applied) return finishRevenueHistory({ ...history.result, ...basisPart }, trace, pre);
   // NBL2611-V2-C1 — 비사업용으로 끝난 잔여분(전량·부분)은 «빈 사업기간 + 유예기간»으로 기간기준을 다시 본다(영 §168의14①). 유예 입력이 없으면 그대로다.
   // E3-② — 영위 기간 사업용 구간 ∪ 유예로 이미 기간기준을 판정한 결과(`decided`)는 다시 보지 않는다(구간을 버리고 유예 단독으로 덮어쓰지 않게).
-  const { result, graceJudged } = trace.revenueHistory?.decided ? { result: core, graceJudged: undefined } : applyGraceToNonBusinessRemainder(core, input, rules);
+  // E3-④ — 13호가 세대 주택 소유 기간 행으로 기간기준 미충족을 낸 결과(`decided`)도 같다(그 `r`이 이미 유예와 합집합이다).
+  const { result, graceJudged } = trace.revenueHistory?.decided || trace.vacantLot?.decided ? { result: core, graceJudged: undefined } : applyGraceToNonBusinessRemainder(core, input, rules);
+  // E3-④ R-3·Q-5 — 이력을 쓰지 않는 경로에서 행을 읽었으면 «양도일 현재 상태를 소유기간 전체에 적용» 안내가 거짓이라 basis를 `usage_periods`로 · 고지를 변형으로 바꾼다(행이 없으면 종전과 바이트 동일).
+  const vacant = trace.vacantLot;
+  const periodEvaluation: PeriodEvaluation = vacant
+    ? { basis: "usage_periods", ...(graceJudged ? { graceJudged } : {}), vacantLot: vacant.echo }
+    : graceJudged
+      ? { basis: "state_at_transfer", graceJudged }
+      : { basis: "state_at_transfer" };
   return finishRevenueHistory(
     {
       ...result,
-      periodEvaluation: graceJudged ? { basis: "state_at_transfer", graceJudged } : { basis: "state_at_transfer" },
+      periodEvaluation,
       ...basisPart,
-      warnings: [...(result.warnings ?? []), NBL_STATE_AT_TRANSFER_APPLIED_NOTICE, ...history.notices],
+      warnings: [...(result.warnings ?? []), vacant ? NBL_STATE_AT_TRANSFER_VACANT_LOT_HOUSE_PERIODS_APPLIED_NOTICE : NBL_STATE_AT_TRANSFER_APPLIED_NOTICE, ...history.notices],
     },
     trace,
     pre,
@@ -476,7 +488,7 @@ function judgeOtherLandCore(
   // relatedBusinessType(호) 우선, 미설정 시 legacy isRelatedToResidenceOrBusiness fallback.
   const relatedType = o.relatedBusinessType;
   // NBL2611-V7-DM02·V9-DM11 — 호의 면적 외 요건(5호 나목 용도지역 · 13호 나지)을 입력으로 판정할 수 있는 만큼 판정한다. 불충족이면 호를 인정하지 않는다.
-  const hoReq = judgeHoRequirements(relatedType, o, input.zoneType);
+  const hoReq = judgeHoRequirements(relatedType, o, input.zoneType, { start: ownershipStart, end: pjDate });
   if (hoReq.failStep) steps.push(hoReq.failStep);
   // NBL2611-V7-S · Q-5 (나) — 14호처럼 호를 인정하지 않는 사유가 «확인 필요»를 동반하면 판정 경로와 무관하게 결과에 남긴다.
   if (hoReq.failNotice) warnings.push(hoReq.failNotice);
@@ -491,8 +503,14 @@ function judgeOtherLandCore(
 
   if (isRelated) {
     // NBL2611-V7-S — 3호는 «조성 완료일부터 2년» 구간만 사업용 기간이다(`hoReq.businessPeriods`). 그 밖의 호는 소유기간 전체.
-    const r = meetsPeriodCriteria(hoReq.businessPeriods ?? fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
+    // E3-④ — 13호는 세대 주택 소유 기간 행을 읽는다(`householdFreePeriods` = 소유기간 ∖ 행 · 이력과 무관 — Q-3 (가)). `markOwn`에는 넣지 않는다(T-1).
+    const householdFree = hoReq.householdFreePeriods;
+    const r = meetsPeriodCriteria(hoReq.businessPeriods ?? householdFree ?? fullPeriod, input.acquisitionDate, pjDate, "other_land", rules, input.gracePeriods);
     if (hoReq.businessPeriods) markOwn(trace, hoReq.businessPeriods); // Q-15 (가′) — 3호 [조성 완료일, +2년)
+    if (householdFree) {
+      trace.vacantLot = { echo: buildVacantLotEcho("whole_period", householdFree, { start: ownershipStart, end: pjDate }, o.householdHousePeriods), decided: !r.meets };
+      if (!warnings.includes(NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE)) warnings.push(NBL_VACANT_LOT_HOUSE_PERIODS_NOTICE);
+    }
     const legalBasis = resolveAreaLegalBasis(relatedType);
     // Q-6 (다) — 호로 판정에 쓰는 경우(⑥ 복합용도 안분이 호별 기준면적을 대체하지 않을 때)에만 자기 선언 요건을 고지한다.
     if (isRecognizedHo && mixedUse === undefined && hoReq.notice) warnings.push(hoReq.notice);
