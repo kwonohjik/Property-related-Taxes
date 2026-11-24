@@ -18,6 +18,11 @@ interface Props {
   nblSurchargeExcluded?: boolean;
   /** 배제 사유 — 취득일 기준 부칙 §9270호 §14① 또는 양도일 기준 유예(§104⑥). 없으면 위기취득(이력 호환). */
   nblSurchargeExcludedBy?: NblSurchargeExclusionReason;
+  /**
+   * 판정 메뉴 전용 — 사업용·비사업용 여부만 말한다. 세율·중과·장기보유특별공제를 단정하는 문장 2곳(배너·면적 안분 안내)만 바꾼다.
+   * 미지정(계산기)이면 현행 문구 그대로. 판정 메뉴는 중과 배제·유예 결과(`nblSurchargeExcluded`)를 갖지 못하므로 세율 문장이 틀릴 수 있다.
+   */
+  judgmentOnly?: boolean;
 }
 
 const DEEMED_REASON_LABEL: Record<DeemedTransferReason, string> = {
@@ -61,7 +66,7 @@ function residenceMatchLabel(m: {
   }
 }
 
-export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblSurchargeExcludedBy }: Props) {
+export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblSurchargeExcludedBy, judgmentOnly }: Props) {
   const isNonBusiness = judgment.isNonBusinessLand;
   const exemption = judgment.unconditionalExemption;
   const area = judgment.areaProportioning;
@@ -85,7 +90,9 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
           <span className="text-lg mt-0.5">{isNonBusiness ? "⚠️" : "✅"}</span>
           <div>
             <p className={`text-sm font-bold ${isNonBusiness ? "text-red-700 dark:text-red-400" : "text-emerald-700 dark:text-emerald-400"}`}>
-              {isNonBusiness
+              {judgmentOnly
+                ? isNonBusiness ? "비사업용 토지에 해당합니다." : "사업용 토지에 해당합니다."
+                : isNonBusiness
                 ? nblSurchargeExcluded
                   ? nblExclusionBannerText(nblSurchargeExcludedBy, lthdExcluded, judgment.surcharge?.nonBusinessAreaRatio)
                   : `비사업용 토지 — 기본세율 +10%p 중과 (${nblLthdBannerPhrase(lthdExcluded, judgment.surcharge?.nonBusinessAreaRatio)}).`
@@ -345,7 +352,9 @@ export function NonBusinessLandResultCard({ judgment, nblSurchargeExcluded, nblS
           )}
           {!nblSurchargeExcluded && (
             <p className="text-caption text-muted-foreground mt-2 leading-snug">
-              비사업용 면적분(전체의 {(area.nonBusinessRatio * 100).toFixed(1)}%)에만 중과세(+10%p)가 적용됩니다 — 중과분은 비사업용 면적비율로 안분 계산됩니다.{" "}
+              {judgmentOnly
+                ? `비사업용 면적분(전체의 ${(area.nonBusinessRatio * 100).toFixed(1)}%)이 비사업용으로 판정됩니다.`
+                : `비사업용 면적분(전체의 ${(area.nonBusinessRatio * 100).toFixed(1)}%)에만 중과세(+10%p)가 적용됩니다 — 중과분은 비사업용 면적비율로 안분 계산됩니다.`}{" "}
               {area.legalBasis && area.legalBasis.length > 0
                 ? `(면적 안분 근거: ${area.legalBasis.join(" · ")}.)`
                 : /* 근거 echo가 없는 이력 복원 결과 — 일반 안내 */

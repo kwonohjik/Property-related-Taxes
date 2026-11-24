@@ -1,0 +1,26 @@
+{
+ "nonBusinessVacant": {
+  "length": 5509,
+  "sha256": "7c7f1b77e0219842301da6bef4eff50456d463c26c93eb00ce3508387351e5cc"
+ },
+ "businessFarmSelf": {
+  "length": 4986,
+  "sha256": "a45251e7b6f2eb2c61b6185b905c0036bbc4cd3cc964d9968a66267b0d414fb9"
+ },
+ "unconditionalExempt": {
+  "length": 3077,
+  "sha256": "40e0a3b9c4dbb062855ea5efc34743d963ac280f4951c1c0beb9a60272a0695f"
+ },
+ "housingArea": {
+  "length": 5565,
+  "sha256": "26ba80be6d26603235a10d8d2e4109720019545331dd4b555b4fa9969802e745"
+ },
+ "deemedAndGrace": {
+  "length": 7073,
+  "sha256": "4e2249ffe7646b1678be24a0c2a0fbcc02cb17d641105ab34836409756960d74"
+ },
+ "farmGrace": {
+  "length": 4675,
+  "sha256": "e679c76a559168ba78b25c3d945d2decd056c7a2679ff0ebc8c32aa0e4835369"
+ }
+}

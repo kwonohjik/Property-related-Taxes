@@ -145,7 +145,7 @@ export function UnconditionalExemptionSection({
             data-testid="nbl-expr-notice-date"
           />
           <p className="mt-1 text-micro text-muted-foreground">
-            ①양도정보(공익수용)의 사업인정고시일에서 자동 반영 · 다르면 직접 수정
+            양도 정보에서 공익수용을 입력한 경우 그 사업인정고시일이 자동 반영 · 다르면 직접 수정
           </p>
         </div>
         <ExemptionStatusBadge status={status.perToggle.publicExpropriation} />
