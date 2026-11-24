@@ -25,6 +25,7 @@ import type { NblRevenueBusinessType } from "../legal-codes";
 import { deriveCurrentBusinessDays } from "./revenue-test";
 import { resolveDeemedRentRate } from "../data/nbl-deemed-rent-rate";
 import { getZoneAreaMultiplier } from "../local-tax-zone-multiplier";
+import { demolishedOnForEngine } from "./demolished-input-issue";
 import { propertyTaxBasisOptions, requiresDemolishedFloorArea, type PropertyTaxBasis } from "./property-tax-basis";
 import type { FactoryEntityType } from "../factory-employee-sports-standard";
 import { consumesHousingStateHistory } from "./land-category";
@@ -384,12 +385,19 @@ export function buildOtherLand(
   const rawBasis = asString(a.nblOtherPropertyTaxBasis) as PropertyTaxBasis;
   const propertyTaxBasis = propertyTaxBasisOptions(propertyTaxType, hasBuilding).includes(rawBasis) ? rawBasis : undefined;
   const householdHousePeriods = transferDate ? buildHouseholdHousePeriods(a, relatedBusinessType, transferDate, parseDate) : undefined;
+  // E3-⑤ E3f-1b — 꼬리 근거 «철거ㆍ멸실»의 철거ㆍ멸실일: ① 이력 마지막 철거 행 날짜가 새 칸보다 우선 ② 없을 때만 새 칸 `nblOtherDemolishedOn`. 근거가 «철거ㆍ멸실»이 아니면 읽지 않는다(키 없음 = 종전과 바이트 동일).
+  // ⑧·⑫′·④와 같은 술어(`demolished-input-issue.ts`) — 와이어 사건·모드를 그대로 넘긴다(`buildLandStateHistory`가 `changed`가 아니면 사건을 싣지 않는다).
+  const demolishedOn = demolishedOnForEngine(
+    { declared: propertyTaxType, mode: stateHistory?.mode, events: stateHistory?.events ?? [], rawHasBuilding: asBool(a.nblOtherHasBuilding), basis: propertyTaxBasis },
+    parseDate(asString(a.nblOtherDemolishedOn)),
+  );
   return {
     propertyTaxType,
     propertyTaxBasis,
     demolishedFloorArea:            requiresDemolishedFloorArea(propertyTaxType, hasBuilding, propertyTaxBasis)
       ? parseNumber(asString(a.nblOtherDemolishedFloorArea))
       : undefined,
+    ...(demolishedOn ? { demolishedOn } : {}),
     hasBuilding,
     buildingFloorArea:              parseNumber(asString(a.nblOtherBuildingFloorArea)),
     /**

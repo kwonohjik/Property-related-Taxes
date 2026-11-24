@@ -294,6 +294,27 @@ export function hasBuildingAtTransfer(events: ReadonlyArray<{ kind: string }>): 
 }
 
 /**
+ * E3-⑤ D-3 — `index`번째 사건 **앞**의 마지막 «건축물 사건»이 **철거 행**이면 그 행의 날짜(사이에 신축이 없을 때). 없으면 `undefined`(앞 건축물 사건이 신축이거나 하나도 없다 = 취득 전 철거 포함).
+ * 나대지 구간 선언(E3f-2)의 철거일 출처·꼬리 철거일(`tailRemovalDateOf`)이 **같은 replay** 하나를 쓴다 — ⑤ 미리보기·⑧·⑫′·④·⑭가 자체 replay를 하지 않는다(`eventClosesBareInterval` 선례).
+ * 날짜는 칸 그대로 돌려준다(빈 문자열이어도) — 유효성은 호출자가 본다(`toOptionalDate`).
+ */
+export function removalDateFor<E extends { kind: string; date: unknown }>(events: ReadonlyArray<E>, index: number): E["date"] | undefined {
+  for (let i = Math.min(index, events.length) - 1; i >= 0; i--) {
+    if (!isBuildingEventKind(events[i].kind)) continue;
+    return events[i].kind === "building_removed" ? events[i].date : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * E3-⑤ D-3 — 꼬리(양도일 현재) 근거 «철거ㆍ멸실»의 철거일 출처 ① — **꼬리에 건축물이 없고**(`tailHasBuilding` 거짓) 마지막 건축물 사건이 철거 행일 때 그 행의 날짜. 아니면 `undefined`.
+ * `tailHasBuilding`은 `effectiveOtherHasBuilding`으로 파생한 값(마지막 건축물 사건 = 신축이면 참 → 철거 행이 마지막일 수 없다)이라 건축물 사건이 있으면 사건이 정한다.
+ */
+export function tailRemovalDateOf<E extends { kind: string; date: unknown }>(events: ReadonlyArray<E>, tailHasBuilding: boolean): E["date"] | undefined {
+  return tailHasBuilding ? undefined : removalDateFor(events, events.length);
+}
+
+/**
  * 양도일 현재 「건축물 있음」 — `changed`이면 **사건에서 파생**한 값이 이긴다(직접 API가 숨은 토글을 모순되게 보내도 사건이 이긴다 · 엔진 V-19 · P-15).
  * 아니면 입력 토글 그대로다. ⑫ refine · ⑭ 매퍼가 같은 함수를 쓴다(⑤⑧ 술어는 U0가 같은 함수를 재사용).
  */
@@ -360,6 +381,9 @@ export const BARE_FOLD_REASON_TEXT = {
   unknown: "근거 모름",
   incompatible: "구분과 맞지 않는 근거",
   demolished_area_missing: "근거 미확인",
+  // E3f-1b — 꼬리 근거 «철거ㆍ멸실»의 접힘 사유(나대지 구간 선언은 이 해석기를 철거ㆍ멸실일 없이 부르므로 도달하지 않는다 — Record 완결성용 문구)
+  demolished_date_missing: "철거ㆍ멸실일 미입력",
+  demolished_period_elapsed: "철거 후 한시 기간 경과",
   demolished_unsupported: "철거 후 한시 지위 — 유예기간으로 입력",
   area_exceeded: "면적한도 일부 초과",
   area_unknown: "면적한도 모름",

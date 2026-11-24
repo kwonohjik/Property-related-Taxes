@@ -191,6 +191,11 @@ export interface OtherLandUsage {
   propertyTaxBasis?: PropertyTaxBasis;
   /** NBL2611-V1-A — 근거가 «철거ㆍ멸실»일 때 철거 전 건축물의 바닥면적(㎡). 영 §103의2 1호 — 이 면적 × 영 §101② 적용배율이 별도합산 범위다. */
   demolishedFloorArea?: number;
+  /**
+   * E3f-1b — 근거가 «철거ㆍ멸실»일 때 사실상 철거ㆍ멸실일(알 수 없으면 공부상). 출처 ① 상태 이력의 마지막 철거 행 ② 새 칸 `nblOtherDemolishedOn` — ⑭ 매퍼가 정한다(`demolishedOnSourceDate`).
+   * 엔진은 양도일 직전 마지막 과세기준일까지 한시 기간이 확실히 지났는지만 본다(`isTailDemolishedClearlyExpired`). 없으면 근거를 접는다(`demolished_date_missing` — 직접 호출 안전망).
+   */
+  demolishedOn?: Date;
   hasBuilding: boolean;
   /**
    * 공장용 건축물 부속토지 기준면적 판정(§102①1호 별표6 / §101①1호 배율).

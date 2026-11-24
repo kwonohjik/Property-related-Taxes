@@ -47,11 +47,15 @@ describe("⑧ validateNblOtherLand — 근거", () => {
   });
 });
 
+// E3f-1b — 철거ㆍ멸실일은 이 근거의 필수 칸이다(이력 철거 행이 날짜를 대지 않을 때) — ⑫′는 바닥면적·용도지역보다 **먼저** 철거일을 본다. 이 describe는 바닥면적·용도지역 거울을 검증하므로 철거일을 채워 둔다
+// (철거일 규칙·⑧↔⑫ 격자는 `nbl-state-history-e3-5b-demolished-on.anchor.test.ts`).
+const ON = { nblOtherDemolishedOn: "2022-01-01", transferDate: "2024-06-03" } as const;
+
 describe("⑫ refine — ⑧과 같은 술어·같은 문구", () => {
   it.each([
-    ["철거·멸실 + 바닥면적 없음", { nblOtherPropertyTaxBasis: "demolished" }, 1],
-    ["철거·멸실 + 바닥면적 + 세분 전 용도지역", { nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedFloorArea: "100", nblZoneType: "residential" }, 1],
-    ["철거·멸실 + 바닥면적 + 정상", { nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedFloorArea: "100" }, 0],
+    ["철거·멸실 + 바닥면적 없음", { ...ON, nblOtherPropertyTaxBasis: "demolished" }, 1],
+    ["철거·멸실 + 바닥면적 + 세분 전 용도지역", { ...ON, nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedFloorArea: "100", nblZoneType: "residential" }, 1],
+    ["철거·멸실 + 바닥면적 + 정상", { ...ON, nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedFloorArea: "100" }, 0],
     ["근거 미선택", {}, 0],
     ["건축물 있음(숨은 stale)", { nblOtherHasBuilding: true, nblOtherPropertyTaxBasis: "demolished" }, 0],
     ["종합합산 선언(숨은 stale)", { nblOtherPropertyTaxType: "comprehensive", nblOtherPropertyTaxBasis: "demolished" }, 0],
@@ -62,7 +66,7 @@ describe("⑫ refine — ⑧과 같은 술어·같은 문구", () => {
 
   it("⑧·⑫ 문구가 같다", () => {
     const m8 = validateNblOtherLand(asset({ nblOtherPropertyTaxBasis: "demolished" }), "자산")!;
-    const m12 = refineMessages({ nblOtherPropertyTaxBasis: "demolished" }).find((m) => m.includes("철거ㆍ멸실 근거"))!;
+    const m12 = refineMessages({ ...ON, nblOtherPropertyTaxBasis: "demolished" }).find((m) => m.includes("철거ㆍ멸실 근거"))!;
     expect(m8.endsWith(m12)).toBe(true);
   });
 });

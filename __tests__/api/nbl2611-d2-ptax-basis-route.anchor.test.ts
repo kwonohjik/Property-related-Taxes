@@ -116,10 +116,13 @@ describe("NBL2611-V1-A · 재산세 분류 근거 — 14지점 end-to-end", () =
   });
 
   it("D4 철거·멸실 + 종전 바닥면적 15㎡ × 일반주거 4배 = 60㎡ → 초과 240㎡(0.8) 비사업용 안분", async () => {
-    const own = { ...NO_BUILDING_SEPARATE, nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedFloorArea: "15" } as Partial<AssetForm>;
+    // E3f-1b — 철거ㆍ멸실일 필수(이력 없음 → 새 칸 `nblOtherDemolishedOn`) · 한시 안(양도 2024-06-03 직전 과세기준일 2024-06-01 — 철거 2024-03-01) → 근거 인정.
+    // 새 칸은 store 타입(①)이 U-2에서 생기므로 키를 직접 얹는다 — ④ `nbl*` prefix-pick이 그대로 싣는다.
+    const own = { ...NO_BUILDING_SEPARATE, nblOtherPropertyTaxBasis: "demolished", nblOtherDemolishedFloorArea: "15", nblOtherDemolishedOn: "2024-03-01" } as unknown as Partial<AssetForm>;
     const on = await run({ ...ON, ...own });
     expect(on.status, JSON.stringify(on.json).slice(0, 300)).toBe(200);
     expect(on.issues).toEqual([]);
+    expect(on.raw?.nblOtherDemolishedOn).toBe("2024-03-01"); // ④⑬ 전송 → ⑫ 통과(침묵 strip 아님)
     expect(on.nbl?.isNonBusinessLand).toBe(true);
     expect(on.nbl?.areaProportioning?.nonBusinessRatio).toBe(0.8);
   });

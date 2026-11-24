@@ -81,7 +81,7 @@ export function judgeOtherLand(
   const core = judgeOtherLandCore(input, rules, trace);
   if (!input.otherLand) return { ...core, periodEvaluation: { basis: "not_judged" } };
   // NBL2611-V1-A — 재산세 분류 근거 모델이 개입했을 때만 echo(표시 전용).
-  const basisEcho = buildPropertyTaxBasisEcho(input.otherLand, resolvePropertyTaxBasis(input.otherLand));
+  const basisEcho = buildPropertyTaxBasisEcho(input.otherLand, resolvePropertyTaxBasis(input.otherLand, input.transferDate));
   const basisPart = basisEcho ? { propertyTaxBasis: basisEcho } : {};
   const history = applyStateHistory(core, input, rules, trace, (i) => {
     const t: OtherLandOwnTrace = {};
@@ -162,7 +162,7 @@ function judgeOtherLandCore(
   // Step 0: 나대지 간주
   // NBL2611-V1-A (Q-1 (가)) — 재산세 분류 «근거»가 확인된 선언은 나대지 간주(PR#291 override)·2% 강등을 적용하지 않는다.
   // 근거 없는 선언(미선택·모름·호환 불가)은 건축물 없는 토지에서 종합합산으로 접는다 — 역버그 방지는 엔진 규칙으로 남는다.
-  const basisRes = resolvePropertyTaxBasis(o);
+  const basisRes = resolvePropertyTaxBasis(o, input.transferDate);
   const basisKept = basisRes.kind === "accepted" || basisRes.kind === "demolished";
   const bareLand = basisKept ? false : isBareLand(input);
   const effectiveTaxType: PropertyTaxType = bareLand ? "comprehensive" : o.propertyTaxType;
@@ -274,13 +274,13 @@ function judgeOtherLandCore(
     if (!b.isWithinLimit) buildingExcess = b;
   }
 
-  // ── Step 0.6′ (NBL2611-V1-A): 철거ㆍ멸실 근거 — 종전 바닥면적 × 영 §101② 배율 범위만 별도합산. 한시 지위(1년·빈집 3년)는 판정하지 않는다(고지). 공장 입력은 공장 경로가 먼저다.
+  // ── Step 0.6′ (NBL2611-V1-A): 철거ㆍ멸실 근거 — 종전 바닥면적 × 영 §101② 배율 범위만 별도합산(면적 범위 문언이 있는 2024.6.1.~ 시행본만 — E3f-1b 연혁 정정). 한시 지위는 판정하지 않는다(고지 — 꼬리 한도 «확실히 지남»만 `resolvePropertyTaxBasis`가 접는다). 공장 입력은 공장 경로가 먼저다.
   const excessIsDemolished = basisRes.kind === "demolished" && !factoryInput;
   if (excessIsDemolished && basisRes.kind === "demolished") {
-    const d = judgeDemolishedSite(input.landArea, input.zoneType, basisRes.floorArea);
+    const d = judgeDemolishedSite(input.landArea, input.zoneType, basisRes.floorArea, input.transferDate);
     appliedLaws.push(NBL.PTAX_BASIS_DEMOLISHED);
     steps.push(d.step);
-    if (!d.excess.isWithinLimit) buildingExcess = d.excess;
+    if (d.areaLimitApplied && !d.excess.isWithinLimit) buildingExcess = d.excess;
   }
   const excessLabel = excessIsDemolished ? "철거·멸실 부속토지" : "건물 부수토지";
   const excessLegal = excessIsDemolished ? NBL.PTAX_BASIS_DEMOLISHED : NBL.BUILDING_SITE_MULTIPLIER;

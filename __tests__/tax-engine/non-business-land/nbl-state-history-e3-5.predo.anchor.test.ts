@@ -4,7 +4,7 @@
  *   Anchor 1  오라클 표: 계획서 §7 행의 사업용 구간(`biz`)을 `meetsPeriodCriteria`에 직접 넣어 일수·판정 고정(제안 모델 적용 후의 기대).
  *             계획서 수치(774 · 592 · 578 · 760/761 · 425/609 · 1,462/1,096 · 943 · 547 · 1,094 · 365/1,096)와 전부 대조한다.
  *   Anchor 2  현행 엔진 실측: 같은 행을 raw → ⑭ → 판정 → 세액으로 돌린 값(`current`)을 고정하고, 오라클과 다른 행(`flipsIn`)을 PR별로 못 박는다.
- *             현행 결함 고정 — 꼬리 근거 «철거ㆍ멸실»이 철거일을 읽지 않아 철거 6년 뒤에도 사업용(B 198,210,000) · 9호 유예만이면 N 253,960,000.
+ *             **E3f-1b가 반전했다** — 종전 «현행 결함 고정»(꼬리 근거 «철거ㆍ멸실»이 철거일을 읽지 않아 철거 6년 뒤에도 사업용 B 198,210,000)은 이제 «철거일을 읽는다»(6년 뒤 N 253,960,000 · 6일 뒤 B)로 바뀌었다.
  *   Anchor 3  6개월·1년 한시는 9호에 포함된다(격자 — 판정·일수 뒤집힘 0) · 빈집 3년만 9호가 덮지 못하는 셀이 있다.
  *   Anchor 4  나대지 구간 선언의 근거 `demolished` 현행 접힘(`demolished_unsupported`) · 선택지 제외 — **E3f-2가 반전하는 단언**(V-7 예고). 고지 «1년» 고정(F-1)·항 번호 단언은 **E3f-1a가 반전했다**(아래 «반전 완료»).
  *
@@ -105,58 +105,65 @@ describe("E3f-0 Anchor 2 — 현행 엔진 실측 (`current` 열) · 뒤집힘 i
     }
   });
 
-  it("flipsIn 행 = 현행 열 ≠ 오라클 열(판정 또는 일수)이고 그 밖의 행은 현행 = 오라클 — PR별 뒤집힘 id 목록 고정", () => {
+  /** E3f-1b가 뒤집은 행의 **반전 전 현행**(비사업용 여부 · 유효 일수). 반전 후 `current` = 오라클이고 `flipsIn`은 지웠다 — 이 표가 그 범위(판정 4건 + 일수 1건)를 고정한다. */
+  const BEFORE_E3F_1B = { "K-11a": [false, 1094], "K-12": [false, 1826], "K-12a": [false, 1826], "D-1": [false, 3651], "D-1a": [false, 3651] } as const;
+
+  it("flipsIn 행 = 현행 열 ≠ 오라클 열(판정 또는 일수)이고 그 밖의 행은 현행 = 오라클 — PR별 뒤집힘 id 목록 고정 (E3f-1b 행은 반전 완료 → 현행 = 오라클)", () => {
     const differs = (r: (typeof E35_ROWS)[number]) => r.current.nonBusiness !== r.expect.nonBusiness || r.current.eff !== r.expect.eff;
     for (const r of E35_ROWS) expect(differs(r), `${r.id} flipsIn=${r.flipsIn ?? "-"}`).toBe(r.flipsIn !== undefined);
-    expect(E35_ROWS.filter((r) => r.flipsIn === "E3f-1b").map((r) => r.id)).toEqual(["K-11a", "K-12", "K-12a", "D-1", "D-1a"]);
+    expect(E35_ROWS.filter((r) => r.flipsIn === "E3f-1b").map((r) => r.id)).toEqual([]);
+    for (const id of ["K-11a", "K-12", "K-12a", "D-1", "D-1a"]) expect(row(id).flipsIn, id).toBeUndefined();
     expect(E35_ROWS.filter((r) => r.flipsIn === "E3f-2").map((r) => r.id)).toEqual(["K-1", "K-2b", "K-5", "K-7", "K-7a"]);
   });
 
-  it("판정이 뒤집히는 행(비사업용 ↔ 사업용): E3f-1b = K-11a·K-12·D-1·D-1a(꼬리 접힘 — 일수만 바뀌는 K-12a 제외) · E3f-2 = K-1·K-2b·K-7·K-7a(K-5는 일수만)", () => {
+  it("판정이 뒤집히는 행(비사업용 ↔ 사업용): E3f-1b가 뒤집은 판정 = K-11a·K-12·D-1·D-1a(사업용 → 비사업용 · 일수만 바뀌는 K-12a 제외) · E3f-2 = K-1·K-2b·K-7·K-7a(비사업용 → 사업용 · K-5는 일수만)", () => {
+    const ids = Object.keys(BEFORE_E3F_1B) as Array<keyof typeof BEFORE_E3F_1B>;
+    expect(ids.filter((id) => BEFORE_E3F_1B[id][0] !== row(id).expect.nonBusiness)).toEqual(["K-11a", "K-12", "D-1", "D-1a"]);
+    expect(ids.filter((id) => BEFORE_E3F_1B[id][0] === row(id).expect.nonBusiness && BEFORE_E3F_1B[id][1] !== row(id).expect.eff)).toEqual(["K-12a"]);
     const flipped = (pr: string) => E35_ROWS.filter((r) => r.flipsIn === pr && r.current.nonBusiness !== r.expect.nonBusiness).map((r) => r.id);
-    expect(flipped("E3f-1b")).toEqual(["K-11a", "K-12", "D-1", "D-1a"]);
     expect(flipped("E3f-2")).toEqual(["K-1", "K-2b", "K-7", "K-7a"]);
   });
 
-  it("K-12a(접음 + 9호): 세액 불변 — 현행도 B(1,826일) · 접으면 B(1,096일) — 일수만 줄고 판정·세액은 같다(9호 입력자 세액 불변)", () => {
-    expect([row("K-12a").current.tax, oracle(row("K-12a")).meets]).toEqual([E35_B, true]);
+  it("K-12a(접음 + 9호): 세액 불변 — E3f-1b 전에도 B(1,826일) · 접은 뒤에도 B(1,096일) — 일수만 줄고 판정·세액은 같다(9호 입력자 세액 불변)", () => {
+    expect([row("K-12a").current.tax, oracle(row("K-12a")).meets, row("K-12a").current.eff]).toEqual([E35_B, true, 1096]);
   });
 });
 
-describe("E3f-0 Anchor 2 ② — 현행 결함 고정: 꼬리 근거 «철거ㆍ멸실»은 철거일을 읽지 않는다", () => {
+describe("E3f-0 Anchor 2 ② — [E3f-1b 반전 완료] 꼬리 근거 «철거ㆍ멸실»은 철거일을 읽는다", () => {
   const demolishedTail = (removedOn: string, extra: Record<string, unknown> = {}) => fromRaw(e35Tail(removedOn, "2024-01-01", undefined, extra));
 
-  it("철거 6년 전(2018-01-01) · 꼬리 근거 → 사업용 3,651/3,651 · B 198,210,000 — 철거 6일 전(2023-12-26)과 판정·일수·세액이 같다(철거일 무관)", () => {
+  it("철거 6년 전(2018-01-01) · 꼬리 근거 → 한시 기간이 확실히 지나 접힘: 비사업용 1,460/3,651 · N 253,960,000 — 철거 6일 전(2023-12-26)은 한시 안이라 사업용 3,651 · B 198,210,000", () => {
     const sixYears = demolishedTail("2018-01-01");
     const sixDays = demolishedTail("2023-12-26");
-    for (const input of [sixYears, sixDays]) {
-      expect([judge(input).isNonBusinessLand, judge(input).effectiveBusinessDays, judge(input).totalOwnershipDays]).toEqual([false, 3651, 3651]);
-      expect(taxOf(input)).toBe(E35_B);
-    }
+    expect([judge(sixYears).isNonBusinessLand, judge(sixYears).effectiveBusinessDays, judge(sixYears).totalOwnershipDays]).toEqual([true, 1460, 3651]);
+    expect(taxOf(sixYears)).toBe(E35_N);
+    expect([judge(sixDays).isNonBusinessLand, judge(sixDays).effectiveBusinessDays, judge(sixDays).totalOwnershipDays]).toEqual([false, 3651, 3651]);
+    expect(taxOf(sixDays)).toBe(E35_B);
   });
 
-  it("같은 철거 6년 전 입력에서 근거를 빼고 9호 2년만 입력하면 N 253,960,000(비사업용 2,190) — 근거 선언 한 칸이 55,750,000을 가른다", () => {
+  it("철거 6년 전 입력에서 근거를 빼고 9호 2년만 입력해도 N 253,960,000(비사업용 2,190) — 근거를 선언해도 9호만 입력한 것과 세액이 같다(종전: 근거 한 칸이 55,750,000을 갈랐다)", () => {
     const nineOnly = fromRaw(row("D-2").raw);
     expect([judge(nineOnly).isNonBusinessLand, judge(nineOnly).effectiveBusinessDays, judge(nineOnly).gracePeriodDays]).toEqual([true, 2190, 730]);
     expect(taxOf(nineOnly)).toBe(E35_N);
-    expect(taxOf(demolishedTail("2018-01-01")) - taxOf(nineOnly)).toBe(-E35_SWING);
+    expect(taxOf(demolishedTail("2018-01-01"))).toBe(taxOf(nineOnly));
   });
 
-  it("근거 + 9호도 B — 9호 2년은 철거 후 2년만 덮는데 근거가 6년 전체를 덮는다(현행 과다 인정)", () => {
+  it("근거 + 9호도 N — 9호 2년은 철거 후 2년만 덮고 근거는 접혀 6년 전체를 덮지 못한다(종전 과다 인정 해소)", () => {
     const both = demolishedTail("2018-01-01", { nblGracePeriods: [{ reasonCode: "demolition", anchorDate: "2018-01-01" }] });
-    expect(judge(both).isNonBusinessLand).toBe(false);
-    expect(taxOf(both)).toBe(E35_B);
+    expect(judge(both).isNonBusinessLand).toBe(true);
+    expect(taxOf(both)).toBe(E35_N);
   });
 
-  it("경계 쌍 K-11a/K-11b: 현행은 철거일이 하루 달라도(2022-12-01 vs 12-02) 둘 다 사업용 1,094 — E3f-1b 후에는 K-11a만 비사업용 547로 접힌다", () => {
-    for (const id of ["K-11a", "K-11b"]) expect(row(id).current).toMatchObject({ nonBusiness: false, eff: 1094 });
+  it("경계 쌍 K-11a/K-11b: 철거일이 하루(2022-12-01 vs 12-02) 달라 K-11a만 비사업용 547로 접힌다 — K-11b는 사업용 1,094 그대로(접지 않는 정합 시료)", () => {
+    expect(row("K-11a").current).toMatchObject({ nonBusiness: true, eff: 547 });
+    expect(row("K-11b").current).toMatchObject({ nonBusiness: false, eff: 1094 });
     expect(oracle(row("K-11a")).meets).toBe(false);
     expect(oracle(row("K-11b")).meets).toBe(true);
   });
 
-  it("꼬리 철거일 입력 칸이 없다 — raw의 `nblOtherDemolishedOn`은 어디에도 읽히지 않는다(E3f-1b가 신설) → 값을 줘도 판정·세액 바이트 동일", () => {
+  it("새 칸 `nblOtherDemolishedOn`은 철거 행이 날짜를 대면 읽히지 않는다(K-17 — 철거 행 우선) → stray 값을 줘도 판정·세액·엔진 입력 바이트 동일", () => {
     const plain = demolishedTail("2018-01-01");
-    const withStray = demolishedTail("2018-01-01", { nblOtherDemolishedOn: "2018-01-01" });
+    const withStray = demolishedTail("2018-01-01", { nblOtherDemolishedOn: "2023-12-26" });
     expect(judge(withStray)).toEqual(judge(plain));
     expect(withStray.otherLand).toEqual(plain.otherLand);
   });

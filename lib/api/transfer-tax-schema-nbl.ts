@@ -201,6 +201,8 @@ export const nonBusinessLandRawBaseSchema = z.object({
   // NBL2611-V1-A (Q-1) — 재산세 분류 «근거». 미선택("")을 막지 않는다(엔진이 종합합산 + 확인 필요로 접는다). 철거ㆍ멸실 근거의 바닥면적은 ⑫ refine이 요구한다.
   nblOtherPropertyTaxBasis: z.enum(PROPERTY_TAX_BASIS_VALUES).or(z.literal("")).optional(),
   nblOtherDemolishedFloorArea: z.string().optional(),
+  /** NBL-STATE-HISTORY-E3-⑤ E3f-1b — 꼬리 근거 «철거ㆍ멸실»의 철거ㆍ멸실일(이력 철거 행이 날짜를 대지 않을 때만 쓰인다 — ⑫′·⑭가 같은 술어로 읽는다). 침묵 strip 금지: route 관통 anchor가 고정한다. */
+  nblOtherDemolishedOn: z.string().optional(),
   nblOtherBuildingValue: z.string().optional(),
   nblOtherLandValue: z.string().optional(),
   nblOtherIsRelatedToResidence: z.boolean().optional(),
