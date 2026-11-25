@@ -511,7 +511,7 @@ export function PropertyTaxResultView({ result }: Props) {
           <TaxRow
             label={
               landSplit
-                ? "분류별 합산 과세 이 필지 몫의 합계 (위 «토지 과세 구분별 세액»)"
+                ? "분류별 합산 과세 — 같은 관할구역 합산 세액 중 이 필지 몫의 합계"
                 : appliedRate === 0
                 ? "누진세율 (구간별)"
                 : `적용 세율 (${formatRate(appliedRate)})`
@@ -530,7 +530,7 @@ export function PropertyTaxResultView({ result }: Props) {
                   note={
                     recomputeDetail.appliedRate != null
                       ? `직전 과세표준 ${formatKRW(recomputeDetail.priorTaxBase)} × ${formatRate(recomputeDetail.appliedRate)}`
-                      : landSplit?.cap?.basisTaxSeparate !== undefined
+                      : landSplit?.separate && landSplit?.comprehensive
                       ? `직전 과세표준 ${formatKRW(recomputeDetail.priorTaxBase)}을 분류별 가액 비율로 나눠 별도합산분·종합합산분 직전연도 누진세율로 각각 재산정`
                       : `직전 과세표준 ${formatKRW(recomputeDetail.priorTaxBase)} × 직전연도 누진세율`
                   }

@@ -35,7 +35,7 @@ export function Step3({ form, onChange }: Props) {
             />
             <p className="text-xs text-muted-foreground">
               전년도 7·9월 고지서의 &ldquo;재산세&rdquo; 금액을 합산해 입력하세요.
-              공시가격 구간에 따라 105/110/130% 상한이 자동 적용됩니다. 미입력 시 상한 없이 산출세액을 적용합니다.
+              공시가격 구간에 따라 105/110/130% 상한이 자동 적용됩니다. 토글을 켜면 직전 본세(도시지역이면 직전 도시지역분도)를 입력해야 하며, 토글을 끄면 상한 없이 산출세액을 적용합니다.
             </p>
             <LawArticleModal legalBasis="지방세법 §122" label="부칙 §15·§122" />
           </div>

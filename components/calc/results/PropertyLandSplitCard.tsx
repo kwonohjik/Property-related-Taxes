@@ -108,6 +108,8 @@ export function PropertyLandSplitCard({ result }: { result: PropertyTaxResult })
   const compLabel = isDirect ? "종합합산분 (과세 유형을 종합합산으로 선택)" : "종합합산 이관분";
   const reasons = (comprehensive?.transferReasons ?? []).filter((r) => r !== "direct_type");
   const notices = result.warnings.filter((w) => LAND_SPLIT_CARD_NOTICES.includes(w));
+  const bothClasses = Boolean(separate && comprehensive);
+  const ownSum = (separate?.ownValue ?? 0) + (comprehensive?.ownValue ?? 0);
   const capAmount = cap ? Math.floor(cap.basisTax * cap.capRate) : undefined;
 
   return (
@@ -118,10 +120,15 @@ export function PropertyLandSplitCard({ result }: { result: PropertyTaxResult })
         bodyClassName="space-y-3"
       >
         <p className="text-xs text-muted-foreground">
-          종합합산·별도합산 토지는 같은 관할구역의 토지 가액을 합한 과세표준에 세율을 한 번 적용하므로, 위 «과세표준» 하나에 세율을 곱한 값과
+          종합합산·별도합산 토지는 같은 관할구역의 토지 가액을 합한 과세표준에 세율을 한 번 적용하므로, 이 필지 하나의 과세표준에 세율을 곱한 값과
           산출세액이 다릅니다. 이 필지의 세액은 분류별 합산 세액 중 이 필지 몫이며, 이 몫의 합계가 산출세액입니다.
         </p>
 
+        {ownSum !== result.publishedPrice && (
+          <p data-testid="land-split-own-value-note" className="text-xs text-muted-foreground">
+            이 필지 공시가액은 입력한 공시가격을 면적으로 나눈 ㎡당 단가(원 미만 절사)에 면적을 곱해 분류별로 나눈 값이라, 입력한 공시가격과 원 단위로 다를 수 있습니다.
+          </p>
+        )}
         {separate && (
           <ClassFormula testId="land-split-separate" title="별도합산과세대상분" c={separate} fairMarketRatio={fmr} />
         )}
@@ -151,14 +158,21 @@ export function PropertyLandSplitCard({ result }: { result: PropertyTaxResult })
         {cap && capAmount !== undefined && (
           <div data-testid="land-split-cap" className="rounded-md border bg-white/60 dark:bg-white/5 px-3 divide-y">
             <p className="py-1.5 text-xs font-semibold">세부담상한 (지방세법 §122 · 시행령 §118)</p>
-            {cap.basisTaxSeparate !== undefined && cap.basisTaxComprehensive !== undefined ? (
+            {bothClasses && cap.basisTaxSeparate !== undefined && cap.basisTaxComprehensive !== undefined ? (
               <>
                 <Line label="직전연도 별도합산분 세액상당액 (분류별 직전 세율로 재산정)" amount={won(cap.basisTaxSeparate)} />
                 <Line label="+ 직전연도 종합합산분 세액상당액 (분류별 직전 세율로 재산정)" amount={won(cap.basisTaxComprehensive)} />
                 <Line label="= 직전연도 세액상당액" amount={won(cap.basisTax)} />
               </>
             ) : (
-              <Line label="직전연도 부과세액 (직접 입력)" amount={won(cap.basisTax)} />
+              <Line
+                label={
+                  result.taxCapMode === "recompute"
+                    ? "직전연도 세액상당액 (직전 과세표준 × 직전연도 누진세율)"
+                    : "직전연도 부과세액 (직접 입력)"
+                }
+                amount={won(cap.basisTax)}
+              />
             )}
             <Line label={`직전연도 세액상당액 × 상한율(${pct(cap.capRate)}) = 상한액`} amount={won(capAmount)} />
             <Line

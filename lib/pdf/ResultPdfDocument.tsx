@@ -223,7 +223,7 @@ function PropertyLandSplitPdf({ r }: { r: R }) {
       ))}
       <View style={s.table}>
         {num(split.taxBeforeCap) !== undefined && (
-          <View style={s.rowLast}><Text style={s.lbl}>이 필지 합계 (세부담상한 적용 전)</Text><Text style={s.val}>{fmt(split.taxBeforeCap)}</Text></View>
+          <View style={s.rowLast}><Text style={s.lbl}>{isRecord(split.cap) ? "이 필지 합계 (세부담상한 적용 전)" : "이 필지 합계 (= 산출세액)"}</Text><Text style={s.val}>{fmt(split.taxBeforeCap)}</Text></View>
         )}
       </View>
     </>

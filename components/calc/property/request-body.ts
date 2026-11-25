@@ -42,6 +42,15 @@ function buildSeparateAggregateItem(form: FormState) {
 }
 
 /**
+ * 소유 형태 라디오의 «유효한 값». `house_split`(주택 건물·부속토지 분리 §107①2호)은 주택에만 있는 선택지다 —
+ * 다른 물건으로 바꾼 뒤 남은 값(stale)은 없는 것으로 본다. 그대로 보내면 `housingBuildingValue`가 주택 전용이라 ⑫가 400이 되고,
+ * ⑧은 화면에 없는 칸(건물·토지 소유자·시가표준액)을 요구한다. ④·⑧이 같은 함수를 쓴다(`isOneHousehold`와 같은 패턴 — 미러링·초기화 없음).
+ */
+export function effectiveOwnershipType(form: FormState): FormState["ownershipType"] {
+  return form.ownershipType === "house_split" && form.objectType !== "housing" ? undefined : form.ownershipType;
+}
+
+/**
  * recompute(§118 본문 — 직전 과세표준 재산정) 선택지를 여는 대상: 건축물·선박·항공기·토지(종합합산·별도합산).
  * Step 3 위젯·④ 변환·⑧(`validateStep(3)`)이 같은 술어를 쓴다(UI 통과↔변환 누락 모순 방지).
  * 별도합산은 엔진이 분류별(별도합산분·종합합산 이관분) 직전 세율로 재산정한다(`property-land-split-tax.ts`).
@@ -188,9 +197,10 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
 
   // ── 납세의무자(§107) — ownershipType 입력 시에만 전송 ──
   // 미입력(undefined / "sole") → taxpayerInfo 미포함 → 엔진 납세의무자 판정 생략
-  if (form.ownershipType && form.ownershipType !== "sole") {
+  const ownershipType = effectiveOwnershipType(form);
+  if (ownershipType && ownershipType !== "sole") {
     // ── §107①2호: 건물·부속토지 소유자 분리 (house_split 전용 분기) ──
-    if (form.ownershipType === "house_split") {
+    if (ownershipType === "house_split") {
       const buildingOwner = form.buildingOwner.trim();
       const landOwner = form.landOwner.trim();
       if (buildingOwner || landOwner) {
@@ -212,19 +222,19 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
     if (registeredOwner) {
       const info: Record<string, unknown> = { registeredOwner };
 
-      if (form.ownershipType === "co" && form.coOwners && form.coOwners.length > 0) {
+      if (ownershipType === "co" && form.coOwners && form.coOwners.length > 0) {
         info.coOwnershipShares = form.coOwners
           .filter((c) => c.id.trim() && !isNaN(parseFloat(c.ratio)) && parseFloat(c.ratio) > 0)
           .map((c) => ({ ownerId: c.id.trim(), shareRatio: parseFloat(c.ratio) }));
       }
 
-      if (form.ownershipType === "trust") {
+      if (ownershipType === "trust") {
         info.isTrust = true;
         const settlor = form.settlor.trim();
         if (settlor) info.settlor = settlor;
       }
 
-      if (form.ownershipType === "inherit") {
+      if (ownershipType === "inherit") {
         info.isInheritanceUnregistered = true;
         // 행 기반 → {name, shareRatio?, birthDate?}[] (빈 필드 생략). 엔진 selectMainHeir가 §53 판정.
         const heirs = form.heirs
@@ -242,35 +252,35 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
       }
 
       // ── 기타 6종 §107 ──
-      if (form.ownershipType === "clan") {
+      if (ownershipType === "clan") {
         // 종중재산 미신고 §107②3호 — 공부상 소유자가 납세의무자 (isClanProperty=true)
         info.isClanProperty = true;
       }
 
-      if (form.ownershipType === "installment") {
+      if (ownershipType === "installment") {
         // 연부 매수계약자 §107②4호
         const buyer = form.installmentBuyer.trim();
         if (buyer) info.installmentBuyer = buyer;
       }
 
-      if (form.ownershipType === "project") {
+      if (ownershipType === "project") {
         // 환지 체비지·보류지 사업시행자 §107②6호
         const operator = form.projectOperator.trim();
         if (operator) info.projectOperator = operator;
       }
 
-      if (form.ownershipType === "import") {
+      if (ownershipType === "import") {
         // 외국인 항공기·선박 수입자 §107②7호
         const imp = form.importer.trim();
         if (imp) info.importer = imp;
       }
 
-      if (form.ownershipType === "bankruptcy") {
+      if (ownershipType === "bankruptcy") {
         // 파산재단 §107②8호 — 공부상 소유자가 납세의무자 (isBankruptcyEstate=true)
         info.isBankruptcyEstate = true;
       }
 
-      if (form.ownershipType === "unclear") {
+      if (ownershipType === "unclear") {
         // 소유권 귀속 불명 시 사용자 §107③
         const unclear = form.unclearUser.trim();
         if (unclear) info.ownershipUnclearUser = unclear;

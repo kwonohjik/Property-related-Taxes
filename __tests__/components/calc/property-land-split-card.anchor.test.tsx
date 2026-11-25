@@ -129,8 +129,38 @@ describe("세부담상한 — 별도합산 recompute 개방(M1)", () => {
     expect(cap).toContain("500,000");
     expect(cap).toContain("750,000");
     expect(text("land-split-cap-result")).toContain("750,000");
-    // recomputeDetail 행(산출세액 섹션)은 두 분류 합산 기준과 맞는 문구 — «직전 과세표준 × 누진세율» 단일 표현이 아니다
-    expect(screen.getByText(/분류별 가액 비율로 나눠/)).toBeTruthy();
+    // 단일 분류(S-1은 종합합산분만) — 종전 문구 그대로, 별도합산 행·문구 없음 (sync-checker M-2)
+    expect(screen.getByText("(직전 과세표준 150,000,000 × 직전연도 누진세율)")).toBeTruthy();
+    expect(screen.queryByText(/분류별 가액 비율로 나눠/)).toBeNull();
+    expect(screen.getByTestId("land-split-cap").textContent).not.toContain("별도합산분");
+  });
+
+  it("M-2: 직접 종합합산 + recompute — 종전 문구 «직전 과세표준 × 직전연도 누진세율» · 카드에 별도합산 행 없음", () => {
+    const r = run({
+      ...INITIAL_FORM,
+      objectType: "land",
+      landTaxType: "comprehensive_aggregate",
+      publishedPrice: "300,000,000",
+      otherComprehensiveValue: "0",
+      taxCapMode: "recompute",
+      previousYearTaxBase: "100,000,000",
+    });
+    render(<PropertyTaxResultView result={r} />);
+    expect(screen.getByText("(직전 과세표준 100,000,000 × 직전연도 누진세율)")).toBeTruthy();
+    const cap = screen.getByTestId("land-split-cap").textContent ?? "";
+    expect(cap).not.toContain("별도합산");
+    expect(cap).toContain("직전연도 세액상당액 (직전 과세표준 × 직전연도 누진세율)");
+    expect(cap).not.toContain("직접 입력");
+  });
+
+  it("M-2: 두 분류가 모두 있을 때만 분류별 문구·행 (S-4 + recompute)", () => {
+    const r = run({ ...S4, taxCapMode: "recompute", previousYearTaxBase: "100,000,000" });
+    expect(r.landSplit?.separate && r.landSplit?.comprehensive).toBeTruthy();
+    render(<PropertyTaxResultView result={r} />);
+    expect(screen.getByText(/분류별 가액 비율로 나눠 별도합산분·종합합산분/)).toBeTruthy();
+    const cap = screen.getByTestId("land-split-cap").textContent ?? "";
+    expect(cap).toContain("직전연도 별도합산분 세액상당액");
+    expect(cap).toContain("직전연도 종합합산분 세액상당액");
   });
 
   it("S-8: 별도합산 전량 인정 + recompute — 직전 별도합산분 재산정 200,000 → 상한 300,000 → 총 360,000", () => {
@@ -194,7 +224,9 @@ describe("표시 규칙", () => {
 
   it("합계 행의 «산출세액» 행이 합산 과세 합계임을 밝힌다 (과세표준 × 세율 ≠ 산출세액 오해 차단)", () => {
     render(<PropertyTaxResultView result={run(S4)} />);
-    expect(screen.getByText(/분류별 합산 과세 이 필지 몫의 합계/)).toBeTruthy();
+    // 섹션 독립적 문구 — land-split 섹션을 인쇄에서 빼도 가리킬 대상이 사라지지 않는다 (sync-checker L-2)
+    expect(screen.getByText(/분류별 합산 과세 — 같은 관할구역 합산 세액 중 이 필지 몫의 합계/)).toBeTruthy();
+    expect(screen.queryByText(/위 «토지 과세 구분별 세액»/)).toBeNull();
     expect(n(2_490_000)).toBe("2,490,000");
   });
 
@@ -233,5 +265,31 @@ describe("Step 3 위젯 — 별도합산에도 재산정 선택지(M1)", () => {
   it("분리과세: 재산정 선택지 없음(대상 아님)", () => {
     render(<Step3 form={{ ...INITIAL_FORM, objectType: "land", landTaxType: "separated" }} onChange={vi.fn()} />);
     expect(screen.queryByRole("radio", { name: /재산정/ })).toBeNull();
+  });
+});
+
+describe("공시가액 환산 안내(L-1)", () => {
+  it("공시가격을 면적으로 나눈 단가가 원 단위로 안 떨어지면 카드에 안내 한 줄", () => {
+    // 1,000,000,001 ÷ 1000㎡ → 단가 floor → 합산 공시가액이 입력 공시가격과 다르다
+    const r = run({ ...S4, publishedPrice: "1,000,000,001" });
+    expect((r.landSplit?.separate?.ownValue ?? 0) + (r.landSplit?.comprehensive?.ownValue ?? 0)).not.toBe(1_000_000_001);
+    render(<PropertyTaxResultView result={r} />);
+    expect(screen.getByTestId("land-split-own-value-note")).toBeTruthy();
+  });
+
+  it("원 단위로 떨어지면 안내 없음", () => {
+    render(<PropertyTaxResultView result={run(S4)} />);
+    expect(screen.queryByTestId("land-split-own-value-note")).toBeNull();
+  });
+});
+
+describe("주택 부칙 §15 안내 문구 ↔ ⑧ 정합 (M-1)", () => {
+  const housing = { ...INITIAL_FORM, objectType: "housing" as const, publishedPrice: "300,000,000", housingTaxCapEnabled: true };
+
+  it("토글 ON + 본세 빈칸은 ⑧이 막고, Step3 안내는 «토글을 켜면 … 입력해야 합니다»", () => {
+    expect(firstInvalidStep(housing)?.message).toContain("직전연도 재산세 본세를 입력하세요");
+    render(<Step3 form={housing} onChange={vi.fn()} />);
+    expect(screen.getByText(/토글을 켜면 직전 본세\(도시지역이면 직전 도시지역분도\)를 입력해야 하며/)).toBeTruthy();
+    expect(screen.queryByText(/미입력 시 상한 없이/)).toBeNull();
   });
 });

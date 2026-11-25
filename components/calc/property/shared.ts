@@ -8,7 +8,7 @@ import {
   needsPriorUrbanTax,
 } from "@/lib/calc/property-required-inputs";
 import { firstLandSplitIssue } from "@/lib/calc/property-land-split-inputs";
-import { buildPropertyTaxRequestBody, isRecomputeTarget, landSplitRequired } from "./request-body";
+import { buildPropertyTaxRequestBody, effectiveOwnershipType, isRecomputeTarget, landSplitRequired } from "./request-body";
 // 800줄 분리: 폼 → API 본문 변환을 request-body.ts로 이동 — 외부(테스트·API 호출) import 하위호환 re-export
 export { buildPropertyTaxRequestBody, landSplitRequired } from "./request-body";
 
@@ -342,13 +342,14 @@ export function validateStep(step: number, form: FormState): string | null {
     )
       return "주택 건축물 부분 시가표준액을 올바른 금액으로 입력하세요.";
 
+    const ownershipType = effectiveOwnershipType(form);
     // ── 소유 형태(§107) 일관성 검증 — ownershipType 입력 시에만 (미입력=납세의무자 판정 생략, 차단 아님) ──
-    if (form.ownershipType && form.ownershipType !== "sole") {
+    if (ownershipType && ownershipType !== "sole") {
       // 공부상 소유자는 필수 (house_split 제외 — 건물주·토지주가 대체)
-      if (form.ownershipType !== "house_split" && !form.registeredOwner.trim())
+      if (ownershipType !== "house_split" && !form.registeredOwner.trim())
         return "소유 형태를 입력할 때는 공부상 소유자 성명을 입력하세요.";
 
-      if (form.ownershipType === "co") {
+      if (ownershipType === "co") {
         // 공유: coOwners 배열 ON이면 최소 1명, 지분합 ≤ 1
         if (form.coOwners !== undefined) {
           if (form.coOwners.length === 0)
@@ -366,12 +367,12 @@ export function validateStep(step: number, form: FormState): string | null {
         }
       }
 
-      if (form.ownershipType === "trust") {
+      if (ownershipType === "trust") {
         // 신탁: 위탁자 입력 권장 (경고만, 차단 아님 — API에서 경고 포함)
         // UI 통과↔validate 차단 모순 금지 → 차단하지 않음
       }
 
-      if (form.ownershipType === "inherit") {
+      if (ownershipType === "inherit") {
         // 상속 미등기: 상속인 미입력 시 경고만 (API에서 경고 포함, 차단 아님).
         // 지분은 전원 입력 시에만 합계 검증 — 일부/전부 미입력은 주된 상속자 fallback 대상(§3.4).
         const named = form.heirs.filter((h) => h.name.trim());
@@ -389,7 +390,7 @@ export function validateStep(step: number, form: FormState): string | null {
       // ── §107①2호: 건물·부속토지 소유자 분리 — 시가표준액 안분 필수 차단 ──
       // 기타 6종 fallback과 달리, house_split 안분 비율은 두 시가표준액이 없으면 계산 불가.
       // ⑫(`lib/validators/property-input.ts`)와 같은 술어 — `lib/calc/property-required-inputs.ts`.
-      if (form.ownershipType === "house_split") {
+      if (ownershipType === "house_split") {
         const [first] = missingHouseSplitInputs({
           buildingOwner: form.buildingOwner,
           landOwner: form.landOwner,
