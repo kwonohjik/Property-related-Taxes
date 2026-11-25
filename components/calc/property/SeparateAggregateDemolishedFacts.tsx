@@ -27,6 +27,7 @@ import type { PropertyDemolishedAskField } from "@/lib/tax-engine/property-separ
 import { PrevAnswerMark } from "./SeparateAggregateSequenceNotes";
 import { SettledNotice } from "./SeparateAggregateSequenceNotes";
 import { demolishedFormValues } from "./request-body";
+import { DEMOLISHED_DATE_NOTICE } from "./separate-sequence";
 import { demolishedSettledOf } from "./separate-sequence";
 import type { SequenceField } from "./separate-sequence";
 import type { FormState } from "./shared";
@@ -250,7 +251,7 @@ export function SeparateAggregateDemolishedFacts({ form, prev, onConfirm, onChan
 
         {(!form.saDemolishedDate || (chain.next === "demolishedKind" && !kindChosen)) && (
           <p className="text-caption leading-snug" data-testid="pt-demolished-dates-notice">
-            철거일을 입력하면 이어서 필요한 칸이 표시됩니다.
+            {DEMOLISHED_DATE_NOTICE}
           </p>
         )}
 

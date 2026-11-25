@@ -42,12 +42,24 @@ describe("Step 3 합산 칸 노출", () => {
     const year = new Date().getFullYear();
     render(
       <Step3
-        form={land({ ...SEP, saLandArea: "300", saDemolished: true, saDemolishedDate: `${year - 2}-01-01` })}
+        form={land({ ...SEP, saLandArea: "300", saDemolished: true, saDemolishedDate: `${year - 2}-01-01`, saDemolishedKind: "building" })}
         onChange={vi.fn()}
       />,
     );
     expect(has("other-comprehensive-value")).toBe(true);
     expect(has("other-separate-aggregate-value")).toBe(false);
+  });
+
+  it("별도합산 상세(Step 2)를 비운 채 Step 3 — 합산 칸 두 개 대신 «앞 단계 입력을 먼저 마치세요» 안내 (L-1) · Step 2를 채우면 칸이 돌아온다", () => {
+    // 면적·허가만 있고 용도지역·바닥면적이 비어 엔진이 분류를 읽지 못하는 폼 — 종전엔 합산 칸 두 개가 대체 요구로 보였다
+    const { rerender } = render(<Step3 form={land({ landTaxType: "separate_aggregate", saLandArea: "300", saBuildingPermit: "yes" })} onChange={vi.fn()} />);
+    expect(has("land-split-inputs-pending")).toBe(true);
+    expect(screen.getByTestId("land-split-inputs-pending").textContent).toContain("앞 단계");
+    expect(has("other-separate-aggregate-value")).toBe(false);
+    expect(has("other-comprehensive-value")).toBe(false);
+    rerender(<Step3 form={land({ ...SEP, saLandArea: "300" })} onChange={vi.fn()} />);
+    expect(has("land-split-inputs-pending")).toBe(false);
+    expect(has("other-separate-aggregate-value")).toBe(true);
   });
 
   it("분리과세·주택 — 칸 없음", () => {

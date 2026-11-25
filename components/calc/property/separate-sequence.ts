@@ -29,19 +29,30 @@ export interface Settled {
   reason: SettledReason;
   /** 사유 1줄 — 엔진 `resolved.notice`(철거) 또는 엔진 고지 상수(비철거)를 그대로 */
   notice: string;
-  /** 확정시킨 답(`at` 칸의 값) — «모름»이면 안내 문장이 달라진다. 날짜만으로 확정이면 `""` */
+  /** 확정시킨 답(`at` 칸의 값) — «모름»이면 안내 문장이 달라진다. 철거일만으로 확정이거나 종류 답으로 확정이면 `""` */
   answer: PropertyRequirementFact;
+  /** 철거일(과세기준일)만으로 확정 — 사용자가 고른 «답»이 없어 안내 문장이 «이 답으로»·«답을 바꾸면»이 아니라 철거일을 가리킨다(엔진 `resolved.at === "date"`) */
+  dateOnly: boolean;
 }
 
-/** 확정 안내 1문장(계획서 §2.5-1) — 모든 확정에 공통 */
+/** 확정 안내 1문장(계획서 §2.5-1) — 답으로 확정된 경우. 날짜만으로 확정이면 `SETTLED_LEAD_BY_DATE` */
 export const SETTLED_LEAD = "이 답으로 별도합산 불성립(종합합산 이관)이 확정되어 나머지 칸은 묻지 않습니다.";
+export const SETTLED_LEAD_BY_DATE = "철거일(과세기준일)로 결과가 정해져 별도합산 불성립(종합합산 이관)이 확정되어 나머지 칸은 묻지 않습니다.";
 
-/** 확정 안내 마지막 문장(계획서 §2.5-3) — «모름»은 인정하지 않아 확정되는 것임을 알린다 */
-export function settledTail(answer: PropertyRequirementFact): string {
-  return answer === "unknown"
+export function settledLeadOf(settled: Pick<Settled, "dateOnly">): string {
+  return settled.dateOnly ? SETTLED_LEAD_BY_DATE : SETTLED_LEAD;
+}
+
+/** 확정 안내 마지막 문장(계획서 §2.5-3) — «모름»은 인정하지 않아 확정되는 것임을 알린다. 날짜만으로 확정이면 바꿀 것은 철거일이다 */
+export function settledTail(settled: Pick<Settled, "answer" | "dateOnly">): string {
+  if (settled.dateOnly) return "철거일을 바꾸면 이어서 다시 묻습니다.";
+  return settled.answer === "unknown"
     ? "«모름»은 요건 충족을 인정하지 않아 확정됩니다 — 확인되면 답을 바꾸세요. 답을 바꾸면 이어서 다시 묻습니다."
     : "답을 바꾸면 이어서 다시 묻습니다.";
 }
+
+/** 철거 ON인데 철거일이 없을 때의 안내 — 화면(`pt-demolished-dates-notice`)과 낭독 한 줄(`role="status"`)이 같은 문구를 쓴다 */
+export const DEMOLISHED_DATE_NOTICE = "철거일을 입력하면 이어서 필요한 칸이 표시됩니다.";
 
 /** 철거 사슬이 접힘으로 확정했으면 그 사유·문장·확정시킨 답 — 아니면 null(성립 `holds`·미확정 포함) */
 export function demolishedSettledOf(form: FormState): Settled | null {
@@ -55,7 +66,7 @@ export function demolishedSettledOf(form: FormState): Settled | null {
     demolishedPublicUse: values.publicUse,
     demolishedPublicUsePaid: values.publicUsePaid,
   };
-  return { reason: resolved.foldReason, notice: resolved.notice, answer: answers[resolved.at] ?? "" };
+  return { reason: resolved.foldReason, notice: resolved.notice, answer: answers[resolved.at] ?? "", dateOnly: resolved.at === "date" };
 }
 
 /** 비철거 허가 «아니오»·«모름»으로 확정됐으면 사유(엔진 고지 상수) — 아니면 null */
@@ -65,6 +76,7 @@ export function buildingSettledOf(form: FormState): Settled | null {
     reason: "building_permit",
     notice: form.saBuildingPermit === "no" ? PROPERTY_BUILDING_PERMIT_NO_NOTICE : PROPERTY_BUILDING_PERMIT_UNKNOWN_NOTICE,
     answer: form.saBuildingPermit,
+    dateOnly: false,
   };
 }
 
@@ -78,6 +90,7 @@ const BUILDING_AREA_NAME = "건물 바닥면적·용도지역";
 export function sequenceStatusText(form: FormState): string {
   if (form.saDemolished) {
     const chain = demolishedChainOf(demolishedFormValues(form));
+    if (!form.saDemolishedDate) return DEMOLISHED_DATE_NOTICE;
     if (chain.next) return `다음 질문: ${PROPERTY_ASK_FIELD_NAME[chain.next]}`;
     return chain.resolved?.kind === "fold" ? SETTLED_STATUS : "";
   }

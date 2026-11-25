@@ -36,10 +36,17 @@ describe("«입력이 필요했던 칸» — 읽은 칸이 없을 때 사유별 
     expect(required(v)).toBe("이 과세기준일 시행본에는 확인할 요건 칸이 없음");
   });
 
-  it("철거일 불명(직접 호출) → 칸을 읽지 못함 · 판정 사유 라벨에서 «종류»가 빠진다", () => {
-    const v = judge({ s: "2026-06-01" });
-    expect(v.foldReason).toBe("input");
-    expect(required(v)).toBe("철거일 등을 확인할 수 없어 요건 칸을 읽지 못함");
+  it("직접 호출에서 입력 부족(철거일 없음 · 철거일이 과세기준일 뒤 · 종류만 미입력) → 같은 사유 문구 — 철거일만 탓하지 않는다(L-4)", () => {
+    const text = "철거일·철거된 것의 종류·과세기준일 중 확인할 수 없는 것이 있거나 철거일이 과세기준일 뒤여서 요건 칸을 읽지 못함";
+    const noDate = judge({ s: "2026-06-01" });
+    expect(noDate.foldReason).toBe("input");
+    expect(required(noDate)).toBe(text);
+    expect(required(judge({ s: "2026-06-01", r: "2026-12-31" }))).toBe(text);
+    // 날짜는 유효하고 한시 기간 안인데 종류만 비었다 — 종전 문구 «철거일 등을 확인할 수 없어»는 사실과 달랐다
+    const noKind = judge({ s: "2026-06-01", r: "2026-01-01", kind: "" as never });
+    expect(noKind.foldReason).toBe("input");
+    expect(required(noKind)).toBe(text);
+    expect(required(noKind)).not.toBe("철거일 등을 확인할 수 없어 요건 칸을 읽지 못함");
     expect(PROPERTY_DEMOLISHED_FOLD_REASON_LABEL.input).toContain("철거일·과세기준일");
   });
 
