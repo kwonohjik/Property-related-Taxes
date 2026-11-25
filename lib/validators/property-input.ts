@@ -11,6 +11,11 @@ import {
   missingHouseSplitInputs,
   needsPriorUrbanTax,
 } from "@/lib/calc/property-required-inputs";
+import {
+  PROPERTY_LAND_SPLIT_INPUT_MESSAGE,
+  missingLandSplitInputs,
+  propertyLandSplitRequiredFor,
+} from "@/lib/tax-engine/property-land-split-tax";
 
 /**
  * 용도지역 코드 — 「지방세법 시행령」 제101조 제2항 [표] 구분.
@@ -148,6 +153,22 @@ export const propertyTaxInputSchema = z
           })
           .optional(),
       })
+      .optional(),
+
+    /**
+     * 같은 지방자치단체 관할구역에서 이 필지 외에 소유한 **별도합산**·**종합합산**과세대상 토지 공시가액 합계(원, 0 = 없음).
+     * 지방세법 §113①1호·2호 합산 단위. 이 필지가 그 분류의 면적을 가질 때만 필수(`propertyLandSplitRequiredFor` — ⑧과 같은 술어).
+     * ⚠️ Zod는 선언 없는 키를 조용히 제거한다 — 빠지면 합산이 사라져 이 필지 단독 세액이 된다(침묵 stripping).
+     */
+    otherSeparateAggregateValue: z
+      .number()
+      .int({ message: "같은 관할구역 별도합산 토지 공시가액은 원 단위 정수여야 합니다." })
+      .nonnegative({ message: "같은 관할구역 별도합산 토지 공시가액은 0원 이상이어야 합니다." })
+      .optional(),
+    otherComprehensiveValue: z
+      .number()
+      .int({ message: "같은 관할구역 종합합산 토지 공시가액은 원 단위 정수여야 합니다." })
+      .nonnegative({ message: "같은 관할구역 종합합산 토지 공시가액은 0원 이상이어야 합니다." })
       .optional(),
 
     /**
@@ -419,6 +440,22 @@ export const propertyTaxInputSchema = z
           code: z.ZodIssueCode.custom,
           path: ["separateAggregateItem", "demolishedDate"],
           message: "건축물 철거(demolished=true) 시 철거일(demolishedDate)이 필요합니다.",
+        });
+      }
+    }
+    // 같은 관할구역 합산 입력(§113①) — 이 필지가 그 분류의 면적을 가질 때 필수. 0은 «없음» 입력이고 빈칸만 막는다(자동 0 금지).
+    // ⑧(`components/calc/property/shared.ts` step 3)과 같은 술어 — `propertyLandSplitRequiredFor`.
+    if (data.objectType === "land") {
+      const required = propertyLandSplitRequiredFor({
+        landTaxType: data.landTaxType,
+        separateAggregateItem: data.separateAggregateItem,
+        targetDate: data.targetDate,
+      });
+      for (const key of missingLandSplitInputs(required, data)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [key],
+          message: PROPERTY_LAND_SPLIT_INPUT_MESSAGE[key],
         });
       }
     }

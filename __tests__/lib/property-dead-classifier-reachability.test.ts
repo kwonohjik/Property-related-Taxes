@@ -119,9 +119,12 @@ describe("도달 불가 — 플래그 기반 분류기는 프로덕션에서 호
 
   it("DEAD-4: 반면 `calculateComprehensiveAggregateTax`(세율)는 살아 있다 — 구분이 실재한다", () => {
     // 이 단언이 없으면 DEAD-3이 "이름을 잘못 써서 통과"하는 것과 구별되지 않는다.
+    // PSA-E4: 사용자 계산이 이 세율 함수를 타는 경로는 `property-tax.ts` → `property-tax-land-split.ts` → 분류별 합산 leaf다
+    //   (종전엔 `property-tax.ts`가 직접 import). 살아 있는 호출처가 leaf로 옮겨갔을 뿐이다.
     expect(importersOfSymbol("calculateComprehensiveAggregateTax")).toContain(
-      "lib/tax-engine/property-tax.ts",
+      "lib/tax-engine/property-land-split-tax.ts",
     );
+    expect(importersOf("property-tax-land-split")).toContain("lib/tax-engine/property-tax.ts");
   });
 });
 

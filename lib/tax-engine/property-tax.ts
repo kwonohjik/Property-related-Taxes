@@ -20,19 +20,13 @@
 
 import { applyRate, applyFairMarketRatio } from "./tax-utils";
 import { calcSurtax, calcInstallment } from "./property-tax-surtax";
-import { PROPERTY, PROPERTY_CONST, PROPERTY_CAL, COMPREHENSIVE_LAND } from "./legal-codes";
+import { PROPERTY, PROPERTY_CONST, COMPREHENSIVE_LAND } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
-import {
-  calculateSeparateAggregateTax,
-} from "./separate-aggregate-land";
 import {
   calculateSeparateTax,
   isExcludedFromComprehensiveTax,
 } from "./separate-taxation";
-import {
-  calculateComprehensiveAggregateTax,
-  applyBurdenCap,
-} from "./property-tax-comprehensive-aggregate";
+import { calculateLandSplitPropertyTax } from "./property-tax-land-split";
 import { resolveTaxpayer, buildTaxpayerOutcome, selectTaxpayerOutcome } from "./property-taxpayer";
 import type {
   PropertyTaxInput,
@@ -438,70 +432,12 @@ export function calculatePropertyTax(
     }
 
     case "land": {
-      // ── P4 연결: 별도합산과세대상 (지방세법 §106①2호) ──
-      if (input.landTaxType === "separate_aggregate") {
-        if (!input.separateAggregateItem) {
-          throw new TaxCalculationError(
-            TaxErrorCode.INVALID_INPUT,
-            "별도합산(separate_aggregate) 계산 시 separateAggregateItem이 필요합니다.",
-          );
-        }
-        // 단일 필지 → calculateSeparateAggregateTax로 위임
-        const sepResult = calculateSeparateAggregateTax({
-          taxpayerId: "single",
-          targetYear: new Date(targetDate).getUTCFullYear(),
-          landList: [{ ...input.separateAggregateItem, taxBaseDate: targetDate }],
-          previousYearTax: input.previousYearTax,
+      // ── P3·P4 연결: 별도합산(§106①2호)·종합합산(§106①1호) — 분류별 합산 과세(PSA-E4: 이관분 세액 포함) ──
+      if (input.landTaxType === "separate_aggregate" || input.landTaxType === "comprehensive_aggregate") {
+        return calculateLandSplitPropertyTax({
+          input, targetDate, taxYear, fairMarketRatio, legalBasis, warnings,
+          taxpayerResult, coShares,
         });
-
-        warnings.push(...sepResult.warnings);
-        legalBasis.push(...sepResult.legalBasis);
-
-        // 초과분이 있으면 종합합산 이관 경고
-        if (sepResult.totalExcessOfficialValue > 0) {
-          warnings.push(
-            `기준면적 초과분 공시지가 ${sepResult.totalExcessOfficialValue.toLocaleString()}원은 ` +
-            "종합합산과세대상으로 이관됩니다. 인별 합산 계산 시 별도 처리가 필요합니다.",
-          );
-        }
-
-        calculatedTax = sepResult.grossTax;
-        appliedRate = 0; // 누진세율이므로 단일 세율 없음
-        const determinedTaxSep = sepResult.taxAfterCap;
-        const capRateSep = sepResult.appliedCapRate ?? 1;
-
-        // 부가세
-        const surtaxSep = calcSurtax(
-          determinedTaxSep,
-          sepResult.taxBase,
-          input.publishedPrice,
-          input.objectType,
-          input.isUrbanArea ?? false,
-        );
-        legalBasis.push(...surtaxSep.legalBasis);
-        const installmentSep = calcInstallment(determinedTaxSep, input.objectType);
-        const totalPayableSep = determinedTaxSep + surtaxSep.totalSurtax;
-
-        return {
-          publishedPrice: input.publishedPrice,
-          fairMarketRatio: sepResult.fairMarketValueRatio,
-          taxBase: sepResult.taxBase,
-          appliedRate,
-          calculatedTax,
-          calculatedTaxBeforeCap: sepResult.grossTax,
-          taxCapRate: capRateSep,
-          determinedTax: determinedTaxSep,
-          surtax: surtaxSep.surtax,
-          totalSurtax: surtaxSep.totalSurtax,
-          totalPayable: totalPayableSep,
-          installment: installmentSep,
-          oneHouseSpecialApplied: false,
-          legalBasis: [...new Set(legalBasis)],
-          warnings,
-          targetDate,
-          ...buildCapEcho(input, input.previousYearTax, taxYear - 1),
-          ...buildTaxpayerOutcome(taxpayerResult, coShares, determinedTaxSep, totalPayableSep),
-        };
       }
 
       // ── P5 연결: 분리과세대상 (지방세법 §106①3호) ──
@@ -576,62 +512,6 @@ export function calculatePropertyTax(
           targetDate,
           ...buildCapEcho(input, input.previousYearTax, taxYear - 1),
           ...buildTaxpayerOutcome(taxpayerResult, coShares, capResult.determinedTax, totalPayableSep),
-        };
-      }
-
-      // ── P3 연결: 종합합산과세대상 (지방세법 §106①1호) ──
-      if (input.landTaxType === "comprehensive_aggregate") {
-        // 공시지가 × 70% → 천원 절사 (§110, §113 인별 전국합산 단일 필지 기준)
-        const {
-          taxBase: comprehensiveTaxBase,
-          fairMarketRatio,
-          legalBasis: taxBaseLegal,
-        } = calcTaxBase(input.publishedPrice, "land", rates);
-        legalBasis.push(taxBaseLegal);
-        const grossTaxComp = calculateComprehensiveAggregateTax(comprehensiveTaxBase);
-        const basisComp = resolveBasisTax(input, taxYear - 1);
-        const { taxAfterCap: determinedTaxComp, appliedCapRate: capRateComp } = applyBurdenCap(
-          grossTaxComp,
-          basisComp,
-        );
-
-        legalBasis.push(PROPERTY_CAL.RATE_COMPREHENSIVE);
-        if (capRateComp !== undefined) {
-          warnings.push(
-            `세부담상한(150%) 적용: 산출세액 ${grossTaxComp.toLocaleString()} → ${determinedTaxComp.toLocaleString()}`,
-          );
-        }
-
-        const surtaxComp = calcSurtax(
-          determinedTaxComp,
-          comprehensiveTaxBase,
-          input.publishedPrice,
-          input.objectType,
-          input.isUrbanArea ?? false,
-        );
-        legalBasis.push(...surtaxComp.legalBasis);
-        const installmentComp = calcInstallment(determinedTaxComp, input.objectType);
-        const totalPayableComp = determinedTaxComp + surtaxComp.totalSurtax;
-
-        return {
-          publishedPrice: input.publishedPrice,
-          fairMarketRatio,
-          taxBase: comprehensiveTaxBase,
-          appliedRate: 0, // 누진세율이므로 단일 세율 없음
-          calculatedTax: grossTaxComp,
-          calculatedTaxBeforeCap: grossTaxComp,
-          taxCapRate: capRateComp ?? 1,
-          determinedTax: determinedTaxComp,
-          surtax: surtaxComp.surtax,
-          totalSurtax: surtaxComp.totalSurtax,
-          totalPayable: totalPayableComp,
-          installment: installmentComp,
-          oneHouseSpecialApplied: false,
-          legalBasis: [...new Set(legalBasis)],
-          warnings,
-          targetDate,
-          ...buildCapEcho(input, basisComp, taxYear - 1),
-          ...buildTaxpayerOutcome(taxpayerResult, coShares, determinedTaxComp, totalPayableComp),
         };
       }
 

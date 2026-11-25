@@ -4,6 +4,7 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { LandSplitInputs } from "./LandSplitInputs";
 import type { FormState } from "./shared";
 
 interface Props {
@@ -67,6 +68,7 @@ export function Step3({ form, onChange }: Props) {
 
   return (
     <div className="space-y-4">
+      {form.objectType === "land" && <LandSplitInputs form={form} onChange={onChange} />}
       <h2 className="text-lg font-semibold">전년도 세액 (선택)</h2>
 
       {isRecomputeTarget && (

@@ -59,6 +59,8 @@ const LAND = {
   publishedPrice: 1_000_000_000,
   landTaxType: "separate_aggregate",
   targetDate: "2025-06-01",
+  // PSA-E4 — 같은 관할구역 합산 칸: 0 = 없음을 명시(별도합산분이 있어 요구됨)
+  otherSeparateAggregateValue: 0,
 };
 
 describe("SA-UI — 공장용지 체크 시 ④가 바닥면적을 싣는다", () => {
@@ -70,11 +72,13 @@ describe("SA-UI — 공장용지 체크 시 ④가 바닥면적을 싣는다", (
     saZoningDistrict: "industrial",
     saLandArea: "1000",
     saBuildingFloorArea: "300",
+    otherSeparateAggregateValue: "0",
   };
 
   it("⑧ 통과 + body에 바닥면적 + 공장용지·일반 고지액이 같다(기준면적 = 바닥면적 × 배율)", async () => {
     const factory = { ...form, saIsFactory: true };
     expect(validateStep(2, factory)).toBeNull();
+    expect(validateStep(3, factory)).toBeNull();
     const body = buildPropertyTaxRequestBody(factory);
     expect(body.separateAggregateItem).toMatchObject({ isFactory: true, buildingFloorArea: 300 });
 

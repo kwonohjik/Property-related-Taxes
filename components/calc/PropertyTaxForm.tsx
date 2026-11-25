@@ -134,6 +134,9 @@ export function PropertyTaxForm() {
     }
 
     if (step === 3) {
+      // 토지: 같은 관할구역 합산 칸(빈칸 차단) — 계산 직전 ⑧. 다른 세목·물건의 step 3 규칙은 이 PR에서 새로 실행하지 않는다.
+      const err = form.objectType === "land" ? validateStep(3, form) : null;
+      if (err) { setError(err); return; }
       await runCalculation();
       return;
     }
