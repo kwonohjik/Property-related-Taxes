@@ -7,7 +7,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { PROPERTY_SEPARATE } from "@/lib/tax-engine/legal-codes";
-import { demolishedNeedOf, demolishedPeriodTextOf } from "@/lib/calc/property-separate-requirements";
+import { demolishedChainOf, demolishedPeriodTextOf } from "@/lib/calc/property-separate-requirements";
 import { SeparateAggregateBuildingPermit } from "./SeparateAggregateBuildingPermit";
 import { SeparateAggregateDemolishedFacts } from "./SeparateAggregateDemolishedFacts";
 import { demolishedFormValues } from "./request-body";
@@ -19,9 +19,9 @@ interface Props {
 }
 
 export function Step2SeparateAggregate({ form, onChange }: Props) {
-  // 철거 필지는 «건물 바닥면적» 칸이 철거 전 바닥면적이다 — 엔진이 읽을 때(건축물 ∧ 문언 시행본)만 필수(요구 술어는 ⑧·⑫·④와 같은 함수).
+  // 철거 필지는 «건물 바닥면적» 칸이 철거 전 바닥면적이다 — 엔진 사슬이 그 칸을 읽을 때(건축물 ∧ 문언 시행본 ∧ 앞 요건 통과)만 필수(사슬은 ⑧·⑫·④와 같은 걷기 하나).
   const demolished = form.saDemolished;
-  const needFloor = demolished && demolishedNeedOf(demolishedFormValues(form)).floorArea;
+  const needFloor = demolished && demolishedChainOf(demolishedFormValues(form)).asked.buildingFloorArea;
   const period = demolishedPeriodTextOf();
   return (
     <div className="space-y-5">

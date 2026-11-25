@@ -10,10 +10,10 @@ import { expect } from "vitest";
 import { judgePropertyDemolishedLand } from "../../lib/tax-engine/property-separate-requirements";
 import { propertyBuildingPermitRequired } from "../../lib/tax-engine/property-separate-requirements";
 import { propertyDemolishedFactIssue } from "../../lib/tax-engine/property-separate-requirements";
-import { propertyDemolishedPublicUseAsked } from "../../lib/tax-engine/property-separate-requirements";
-import { propertyDemolishedRequired } from "../../lib/tax-engine/property-separate-requirements";
+import { propertyDemolishedChain } from "../../lib/tax-engine/property-separate-requirements";
 import { resolvePropertyTaxBaseDate } from "../../lib/tax-engine/property-separate-requirements";
 import { PROPERTY_DEMOLISHED_ISSUE_MESSAGE } from "../../lib/tax-engine/property-separate-requirements";
+import type { PropertyDemolishedAskField } from "../../lib/tax-engine/property-separate-requirements";
 import type { PropertyDemolishedFacts } from "../../lib/tax-engine/property-separate-requirements";
 import type { PropertyDemolishedJudgeInput } from "../../lib/tax-engine/property-separate-requirements";
 import type { PropertyDemolishedKind } from "../../lib/tax-engine/property-separate-requirements";
@@ -138,35 +138,39 @@ describe("PSA-E1 K-15~K-26 — 주택 · 빈집 · 단서 · 면적", () => {
   });
 });
 
-describe("PSA-E1 요구 술어 · 하위 칸 사슬 · 입구 결함", () => {
-  const need = (kind: PropertyDemolishedKind | "", s: string, r: string) => propertyDemolishedRequired({ taxBaseDate: d(s), removedOn: d(r), kind });
-  it("요구 칸 집합 — 시행본별(건축물·주택)", () => {
-    expect(need("building", "2026-06-01", "2026-01-01")).toEqual({ permit: true, otherUse: true, vacantHouse: false, floorArea: true });
-    expect(need("house", "2026-06-01", "2026-01-01")).toEqual({ permit: true, otherUse: true, vacantHouse: true, floorArea: false });
-    expect(need("building", "2023-06-01", "2023-03-01")).toEqual({ permit: true, otherUse: false, vacantHouse: false, floorArea: false });
-    expect(need("house", "2023-06-01", "2023-03-01")).toEqual({ permit: true, otherUse: false, vacantHouse: false, floorArea: false });
-    expect(need("building", "2018-06-01", "2018-03-01")).toEqual({ permit: false, otherUse: false, vacantHouse: false, floorArea: false });
-    expect(need("building", "2024-06-01", "2024-03-01")).toEqual({ permit: true, otherUse: true, vacantHouse: false, floorArea: true });
+describe("PSA-E1 읽는 칸(사슬) · 하위 칸 사슬 · 입구 결함 — PSA-S1이 요구 술어 2개를 사슬 걷기로 대체", () => {
+  /** 이 답으로 엔진이 읽는 칸 — 사슬(`propertyDemolishedChain().order`)이 ⑤·⑧·④·⑫의 단일 소스다. */
+  const read = (kind: PropertyDemolishedKind | "", s: string, r: string, facts: PropertyDemolishedFacts = { permit: "yes", otherUse: "no", vacantHouse: "yes" }): PropertyDemolishedAskField[] =>
+    propertyDemolishedChain({ taxBaseDate: d(s), removedOn: d(r), kind, facts }).order;
+  it("읽는 칸 집합 — 시행본별(건축물·주택) · 모든 요건을 «통과» 답으로 걸었을 때", () => {
+    expect(read("building", "2026-06-01", "2026-01-01")).toEqual(["demolishedKind", "demolishedPermit", "demolishedOtherUse", "buildingFloorArea"]);
+    expect(read("house", "2026-06-01", "2026-01-01")).toEqual(["demolishedKind", "demolishedPermit", "demolishedOtherUse"]); // 주택 — 바닥면적 비요구 · 빈집정비는 건축 외 «예» 뒤 단서 하위일 때만
+    expect(read("building", "2023-06-01", "2023-03-01")).toEqual(["demolishedKind", "demolishedPermit"]);
+    expect(read("house", "2023-06-01", "2023-03-01")).toEqual(["demolishedKind", "demolishedPermit"]);
+    expect(read("building", "2018-06-01", "2018-03-01")).toEqual(["demolishedKind"]);
+    expect(read("building", "2024-06-01", "2024-03-01")).toEqual(["demolishedKind", "demolishedPermit", "demolishedOtherUse", "buildingFloorArea"]);
   });
-  it("한시 기간 밖·철거일 없음·종류 없음·철거일 > 과세기준일 → 전부 비요구", () => {
-    const none = { permit: false, otherUse: false, vacantHouse: false, floorArea: false };
-    expect(need("building", "2026-06-01", "2025-05-31")).toEqual(none);
-    expect(need("house", "2026-06-01", "2023-05-31")).toEqual(none); // 빈집 3년 만료 다음 날
-    expect(need("house", "2026-06-01", "2023-06-01").vacantHouse).toBe(true); // 3년 만료일 당일 — 빈집 칸 열림
-    expect(need("", "2026-06-01", "2026-01-01")).toEqual(none);
-    expect(need("building", "2026-06-01", "2026-06-02")).toEqual(none);
-    expect(need("building", "2016-05-31", "2016-03-01")).toEqual(none);
-    expect(propertyDemolishedRequired({ taxBaseDate: d("2026-06-01"), removedOn: undefined, kind: "house" })).toEqual(none);
-    expect(propertyDemolishedRequired({ taxBaseDate: d("2026-06-01"), removedOn: d("not-a-date"), kind: "house" })).toEqual(none);
+  it("한시 기간 밖·철거일 없음·종류 없음·철거일 > 과세기준일 → 앞 답이 확정하면 뒤 칸을 읽지 않는다", () => {
+    expect(read("building", "2026-06-01", "2025-05-31")).toEqual(["demolishedKind"]); // 일반 기간(1년) 밖 — 건축물은 종류만 읽고 period
+    expect(read("house", "2026-06-01", "2023-05-31")).toEqual([]); // 빈집 3년 만료 다음 날 — 날짜만으로 확정(종류도 안 물음)
+    expect(read("house", "2026-06-01", "2023-06-01", {})).toEqual(["demolishedKind", "demolishedVacantHouse"]); // 3년 만료일 당일 — 빈집정비 관문 열림(미답이라 거기서 멈춘다)
+    expect(read("house", "2026-06-01", "2023-06-01", { vacantHouse: "yes" })).toEqual(["demolishedKind", "demolishedVacantHouse", "demolishedPermit"]); // «예» → 허가로 이어진다
+    expect(read("", "2026-06-01", "2026-01-01")).toEqual(["demolishedKind"]); // 종류 미답 — 거기서 멈춘다
+    expect(read("building", "2026-06-01", "2026-06-02")).toEqual([]);
+    expect(read("building", "2016-05-31", "2016-03-01")).toEqual([]);
+    expect(propertyDemolishedChain({ taxBaseDate: d("2026-06-01"), removedOn: undefined, kind: "house", facts: {} }).order).toEqual([]);
+    expect(propertyDemolishedChain({ taxBaseDate: d("2026-06-01"), removedOn: d("not-a-date"), kind: "house", facts: {} }).order).toEqual([]);
   });
   it("공용 사용 사슬 — 건축 외 yes ∧ 빈집 yes일 때만 공용 칸, 공용 yes일 때만 유료 칸 (날짜 칸 없음)", () => {
-    const n = { otherUse: true, vacantHouse: true };
-    expect(propertyDemolishedPublicUseAsked(n, { otherUse: "yes", vacantHouse: "yes" })).toEqual({ publicUse: true, paid: false });
-    expect(propertyDemolishedPublicUseAsked(n, { otherUse: "yes", vacantHouse: "yes", publicUse: "yes" })).toEqual({ publicUse: true, paid: true });
-    expect(propertyDemolishedPublicUseAsked(n, { otherUse: "yes", vacantHouse: "yes", publicUse: "no" })).toEqual({ publicUse: true, paid: false });
-    expect(propertyDemolishedPublicUseAsked(n, { otherUse: "yes", vacantHouse: "no", publicUse: "yes" })).toEqual({ publicUse: false, paid: false });
-    expect(propertyDemolishedPublicUseAsked(n, { otherUse: "no", vacantHouse: "yes", publicUse: "yes" })).toEqual({ publicUse: false, paid: false });
-    expect(propertyDemolishedPublicUseAsked({ otherUse: false, vacantHouse: true }, { otherUse: "yes", vacantHouse: "yes" })).toEqual({ publicUse: false, paid: false });
+    const chain = (facts: PropertyDemolishedFacts) => propertyDemolishedChain({ taxBaseDate: d("2026-06-01"), removedOn: d("2025-12-01"), kind: "house", facts });
+    const base = { permit: "yes", otherUse: "yes" } as const;
+    expect(chain({ ...base, vacantHouse: "yes" }).next).toBe("demolishedPublicUse");
+    expect(chain({ ...base, vacantHouse: "yes", publicUse: "yes" }).next).toBe("demolishedPublicUsePaid");
+    expect(chain({ ...base, vacantHouse: "yes", publicUse: "no" }).asked.demolishedPublicUsePaid).toBe(false);
+    expect(chain({ ...base, vacantHouse: "no", publicUse: "yes" }).asked.demolishedPublicUse).toBe(false);
+    expect(chain({ permit: "yes", otherUse: "no", vacantHouse: "yes", publicUse: "yes" }).asked.demolishedPublicUse).toBe(false);
+    // 건축물은 단서가 없다 — 건축 외 «예»에서 접힌다
+    expect(propertyDemolishedChain({ taxBaseDate: d("2026-06-01"), removedOn: d("2025-12-01"), kind: "building", facts: { ...base, vacantHouse: "yes", publicUse: "yes" } }).asked.demolishedPublicUse).toBe(false);
   });
 
   const issue = (o: Partial<Parameters<typeof propertyDemolishedFactIssue>[0]> = {}) =>
@@ -181,8 +185,8 @@ describe("PSA-E1 요구 술어 · 하위 칸 사슬 · 입구 결함", () => {
     expect(issue({ facts: { permit: "unknown", otherUse: "yes" } })).toBeNull();
     expect(issue({ facts: { permit: "no", otherUse: "unknown" } })).toBeNull();
   });
-  it("첫 결함 순서 — 허가 → 건축 외 용도 → 빈집정비 → 공용 → 유료 → 바닥면적 → 용도지역", () => {
-    const h = (facts: PropertyDemolishedFacts) => propertyDemolishedFactIssue({ taxBaseDate: d("2026-06-01"), removedOn: d("2024-06-15"), kind: "house", facts });
+  it("첫 결함 순서 — 허가 → 건축 외 용도 → 빈집정비(단서 하위) → 공용 → 유료 → 용도지역 → 바닥면적", () => {
+    const h = (facts: PropertyDemolishedFacts) => propertyDemolishedFactIssue({ taxBaseDate: d("2026-06-01"), removedOn: d("2026-01-01"), kind: "house", facts });
     expect(h({})?.field).toBe("demolishedPermit");
     expect(h({ permit: "yes" })?.field).toBe("demolishedOtherUse");
     expect(h({ permit: "yes", otherUse: "yes" })?.field).toBe("demolishedVacantHouse");
@@ -190,11 +194,19 @@ describe("PSA-E1 요구 술어 · 하위 칸 사슬 · 입구 결함", () => {
     expect(h({ permit: "yes", otherUse: "yes", vacantHouse: "yes", publicUse: "yes" })?.field).toBe("demolishedPublicUsePaid");
     expect(h({ permit: "yes", otherUse: "yes", vacantHouse: "yes", publicUse: "yes", publicUsePaid: "yes" })).toBeNull();
     expect(h({ permit: "yes", otherUse: "yes", vacantHouse: "no" })).toBeNull(); // 사슬 불성립 — 공용 칸 비요구
+    expect(h({ permit: "yes", otherUse: "no" })).toBeNull(); // 건축 외 «아니오» — 빈집정비도 안 묻는다(주택·일반 기간 안)
+    // 빈집정비 관문(철거일이 일반 기간 밖·빈집 기간 안) — 허가보다 먼저
+    const gate = (facts: PropertyDemolishedFacts) => propertyDemolishedFactIssue({ taxBaseDate: d("2026-06-01"), removedOn: d("2024-06-15"), kind: "house", facts });
+    expect(gate({})?.field).toBe("demolishedVacantHouse");
+    expect(gate({ vacantHouse: "no" })).toBeNull(); // 접힘 확정 — 허가·건축 외를 묻지 않는다
+    expect(gate({ vacantHouse: "yes" })?.field).toBe("demolishedPermit");
+    expect(gate({ vacantHouse: "yes", permit: "yes" })?.field).toBe("demolishedOtherUse");
     expect(issue({ buildingFloorArea: undefined })?.field).toBe("buildingFloorArea");
     expect(issue({ buildingFloorArea: 0 })?.field).toBe("buildingFloorArea");
     expect(issue({ buildingFloorArea: Number.NaN })?.field).toBe("buildingFloorArea");
     expect(issue({ zoningDistrict: undefined })?.field).toBe("zoningDistrict");
     expect(issue({ zoningDistrict: "residential" })?.field).toBe("zoningDistrict"); // 세분 전 주거지역은 배율 결정 불가
+    expect(issue({ buildingFloorArea: undefined, zoningDistrict: undefined })?.field).toBe("zoningDistrict"); // 둘 다 비면 용도지역 먼저(비철거 ⑧·⑫와 같은 순서 — SV-8)
   });
   it("K-15·K-25 주택·문언 전 시행본은 바닥면적·용도지역 비요구 — ⑧ 통과·⑫ 200 막다른 길 없음(M12)", () => {
     expect(propertyDemolishedFactIssue({ taxBaseDate: d("2026-06-01"), removedOn: d("2026-01-01"), kind: "house", facts: { ...OK, vacantHouse: "no" } })).toBeNull();
@@ -246,7 +258,7 @@ describe("PSA-E1 과세기준일 해석 · 연혁 술어", () => {
   });
 });
 
-describe("PSA-E1 ⑧↔⑫ 패리티 격자 — 요구 ≡ 차단 ≡ 읽기 (종류 × 과세기준일 × 철거일 경계 × 사실 칸 전수)", () => {
+describe("PSA-E1·S1 ⑧↔⑫ 패리티 격자 — 읽는 칸(사슬) ≡ 차단 ≡ 읽기 (종류 × 과세기준일 × 철거일 경계 × 사실 칸 전수)", () => {
   const FACT: Array<"" | "yes" | "no" | "unknown"> = ["", "yes", "no", "unknown"];
   const SS = ["2016-05-31", "2016-06-01", "2018-06-01", "2019-06-01", "2023-06-01", "2024-06-01", "2026-06-01"];
   const KINDS: Array<PropertyDemolishedKind | ""> = ["", "house", "building"];
@@ -265,48 +277,58 @@ describe("PSA-E1 ⑧↔⑫ 패리티 격자 — 요구 ≡ 차단 ≡ 읽기 (�
   }
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-  it("전수 불변식 — 시간 제한 30초", { timeout: 30_000 }, () => {
+  it("전수 불변식 — 시간 제한 60초", { timeout: 60_000 }, () => {
     let cells = 0;
+    const FIELD_OF: Record<string, keyof PropertyDemolishedFacts> = {
+      demolishedPermit: "permit", demolishedOtherUse: "otherUse", demolishedVacantHouse: "vacantHouse", demolishedPublicUse: "publicUse", demolishedPublicUsePaid: "publicUsePaid",
+    };
     for (const sRaw of SS) {
       const s = d(sRaw);
       for (const r of removals(s)) {
         for (const kind of KINDS) {
-          const need = propertyDemolishedRequired({ taxBaseDate: s, removedOn: r, kind });
           for (const permit of FACT) for (const otherUse of FACT) for (const vacantHouse of FACT) for (const publicUse of FACT) for (const publicUsePaid of FACT) {
             const facts: PropertyDemolishedFacts = { permit, otherUse, vacantHouse, publicUse, publicUsePaid };
-            const asked = propertyDemolishedPublicUseAsked(need, facts);
             const input = { taxBaseDate: s, removedOn: r, kind, facts, buildingFloorArea: 100, zoningDistrict: "commercial" };
+            const chain = propertyDemolishedChain(input);
             const iss = propertyDemolishedFactIssue(input);
             const v = judgePropertyDemolishedLand({ ...input, landArea: 400 });
             cells++;
 
             // (1) 입구가 통과시킨 입력을 판정이 «결함 입력»으로 접지 않는다
             if (iss === null) expect(["input", "area_input"]).not.toContain(v.foldReason);
-            // (2) 입구 통과 ⇒ 요구된 칸은 전부 선택됨 · 결함이 칸이면 그 칸은 요구되고 비어 있다
-            const blankReq = (need.permit && permit === "") || (need.otherUse && otherUse === "") || (need.vacantHouse && vacantHouse === "") || (asked.publicUse && publicUse === "") || (asked.paid && publicUsePaid === "");
-            if (iss === null) expect(blankReq).toBe(false);
-            else if (iss.field === "demolishedPermit") expect(need.permit && permit === "").toBe(true);
-            else if (iss.field === "demolishedOtherUse") expect(need.otherUse && otherUse === "").toBe(true);
-            else if (iss.field === "demolishedVacantHouse") expect(need.vacantHouse && vacantHouse === "").toBe(true);
-            else if (iss.field === "demolishedPublicUse") expect(asked.publicUse && publicUse === "").toBe(true);
-            else if (iss.field === "demolishedPublicUsePaid") expect(asked.paid && publicUsePaid === "").toBe(true);
-            else expect(["demolishedKind", "demolishedDate"]).toContain(iss.field);
-            // (3) kind·철거일 결함이 있으면 요구 칸은 전부 비요구
-            if (kind === "" || utcLater(r, s)) expect(need).toEqual({ permit: false, otherUse: false, vacantHouse: false, floorArea: false });
+            // (2) 입구 통과 ⇔ 사슬에 미답 칸이 없다 · 결함이 칸이면 그 칸은 사슬이 읽었고 비어 있다(첫 미답 칸 = next)
+            if (iss === null) expect(chain.next).toBeNull();
+            else if (FIELD_OF[iss.field]) {
+              expect(chain.next).toBe(iss.field);
+              expect(chain.asked[iss.field as keyof typeof chain.asked]).toBe(true);
+              expect(facts[FIELD_OF[iss.field]] === "" || facts[FIELD_OF[iss.field]] === undefined).toBe(true);
+            } else expect(["demolishedKind", "demolishedDate"]).toContain(iss.field);
+            // (3) kind·철거일 결함이 있으면 날짜 결함은 읽는 칸 0, 종류 결함은 종류만 읽는다
+            if (utcLater(r, s)) expect(chain.order).toEqual([]);
+            else if (kind === "" && chain.order.length > 0) expect(chain.order).toEqual(["demolishedKind"]);
             // (4) 판정 완결 — 인정 + 이관 = 부속토지 전체
             expect(v.recognizedArea + v.excessArea).toBe(400);
-            // (5) stale 무해 — 요구되지 않은 칸은 값이 무엇이든 판정이 같다
+            // (5) stale 무해 — 읽히지 않은 칸은 값이 무엇이든 판정이 같다
             const stale: PropertyDemolishedFacts = {
-              permit: need.permit ? permit : "no",
-              otherUse: need.otherUse ? otherUse : "yes",
-              vacantHouse: need.vacantHouse ? vacantHouse : "yes",
-              publicUse: asked.publicUse ? publicUse : "yes",
-              publicUsePaid: asked.paid ? publicUsePaid : "yes",
+              permit: chain.asked.demolishedPermit ? permit : "no",
+              otherUse: chain.asked.demolishedOtherUse ? otherUse : "yes",
+              vacantHouse: chain.asked.demolishedVacantHouse ? vacantHouse : "yes",
+              publicUse: chain.asked.demolishedPublicUse ? publicUse : "yes",
+              publicUsePaid: chain.asked.demolishedPublicUsePaid ? publicUsePaid : "yes",
             };
-            if (iss === null && !same(stale, facts)) {
+            if (!same(stale, facts)) {
               const v2 = judgePropertyDemolishedLand({ ...input, facts: stale, landArea: 400 });
-              expect({ k: v2.kind, f: v2.foldReason, a: v2.recognizedArea, n: v2.notices }).toEqual({ k: v.kind, f: v.foldReason, a: v.recognizedArea, n: v.notices });
+              expect(v2).toEqual(v);
             }
+            // (6) 판정 `required` echo = 사슬이 읽은 칸
+            expect(v.required).toEqual({
+              permit: chain.asked.demolishedPermit,
+              otherUse: chain.asked.demolishedOtherUse,
+              vacantHouse: chain.asked.demolishedVacantHouse,
+              floorArea: chain.asked.buildingFloorArea,
+              publicUse: chain.asked.demolishedPublicUse,
+              publicUsePaid: chain.asked.demolishedPublicUsePaid,
+            });
           }
         }
       }

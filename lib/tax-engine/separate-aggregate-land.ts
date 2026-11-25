@@ -87,7 +87,7 @@ export interface SeparateAggregateLandItem {
   demolishedDate?: string;
   /**
    * 철거 요건 입력(PSA-E2 · 영 §103의2) — 철거된 것의 종류와 사실 칸 5종. `demolished`일 때 `demolishedKind`는 필수(없으면 종합합산 + 확인 필요).
-   * 사실 칸은 `propertyDemolishedRequired`가 연 칸만 읽는다(요구되지 않은 칸의 stale 값은 판정을 바꾸지 못한다).
+   * 사실 칸은 사슬 걷기(`propertyDemolishedChain`)가 읽는 칸만 읽는다(앞 답이 접힘을 확정한 뒤 칸 등 읽히지 않은 칸의 stale 값은 판정을 바꾸지 못한다).
    */
   demolishedKind?: PropertyDemolishedKind;
   demolishedPermit?: PropertyRequirementFact;

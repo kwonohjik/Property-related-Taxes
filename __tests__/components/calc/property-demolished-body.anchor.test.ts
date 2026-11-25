@@ -48,9 +48,30 @@ describe("PSA-E2 ④⑧ — 철거 요건 칸", () => {
     const f = form({ saDemolished: true, saDemolishedDate: "2026-01-01", saDemolishedKind: "house", saDemolishedPermit: "yes", saDemolishedOtherUse: "no", saDemolishedVacantHouse: "no" });
     expect(validateStep(2, { ...f, saZoningDistrict: "", saBuildingFloorArea: "" })).toBeNull();
     const i = item(f);
-    expect(i).toMatchObject({ demolishedKind: "house", demolishedVacantHouse: "no" });
-    expect("buildingFloorArea" in i).toBe(false);
-    expect("zoningDistrict" in i).toBe(false);
+    expect(i).toMatchObject({ demolishedKind: "house", demolishedPermit: "yes", demolishedOtherUse: "no" });
+    // PSA-S1 — 건축 외 용도 «아니오»면 빈집정비 단서(2호)를 읽지 않는다 → 폼에 남은 «아니오»도 싣지 않는다
+    for (const k of ["demolishedVacantHouse", "buildingFloorArea", "zoningDistrict"]) expect(k in i, k).toBe(false);
+  });
+
+  it("주택 · 건축 외 용도 «예» → 빈집정비(단서 하위)를 싣는다 · 허가 «아니오»면 건축 외·빈집정비 stale 값은 싣지 않는다(PSA-S1)", () => {
+    const yes = form({ saDemolished: true, saDemolishedDate: "2026-01-01", saDemolishedKind: "house", saDemolishedPermit: "yes", saDemolishedOtherUse: "yes", saDemolishedVacantHouse: "no" });
+    expect(validateStep(2, yes)).toBeNull();
+    expect(item(yes)).toMatchObject({ demolishedOtherUse: "yes", demolishedVacantHouse: "no" });
+    const permitNo = { ...yes, saDemolishedPermit: "no" as const };
+    expect(validateStep(2, { ...permitNo, saDemolishedOtherUse: "" as const, saDemolishedVacantHouse: "" as const })).toBeNull();
+    const i = item(permitNo);
+    expect(i).toMatchObject({ demolishedPermit: "no" });
+    for (const k of ["demolishedOtherUse", "demolishedVacantHouse"]) expect(k in i, k).toBe(false);
+  });
+
+  it("종류 불요 — 철거일이 가장 긴 한시 기간(빈집 3년) 밖이면 종류를 묻지도 싣지도 않는다(PSA-S1) · ⑧은 종류 미선택을 막지 않는다", () => {
+    const f = form({ saDemolished: true, saDemolishedDate: "2023-05-31", saDemolishedKind: "", saZoningDistrict: "", saBuildingFloorArea: "" });
+    expect(validateStep(2, f)).toBeNull();
+    const i = item(f);
+    expect(i).toMatchObject({ demolished: true, demolishedDate: "2023-05-31" });
+    for (const k of ["demolishedKind", "demolishedPermit", "demolishedVacantHouse", "buildingFloorArea", "zoningDistrict"]) expect(k in i, k).toBe(false);
+    // 종류가 폼에 남아 있어도(숨은 값) 싣지 않는다
+    expect("demolishedKind" in item({ ...f, saDemolishedKind: "building" })).toBe(false);
   });
 
   it("공용·유료 사슬 — 건축 외 yes ∧ 빈집정비 yes일 때 공용 칸, 공용 yes일 때 유료 칸이 실린다", () => {
@@ -75,8 +96,10 @@ describe("PSA-E2 ④⑧ — 철거 요건 칸", () => {
     expect(validateStep(2, base)).toContain("주택인지 주택이 아닌 건축물인지");
     const k = { ...base, saDemolishedKind: "building" as const };
     expect(validateStep(2, k)).toContain("허가·사용승인");
-    expect(validateStep(2, { ...k, saDemolishedPermit: "unknown" as const })).toContain("건축을 위한 용도 외");
-    expect(validateStep(2, { ...k, saDemolishedPermit: "unknown" as const, saDemolishedOtherUse: "unknown" as const })).toBeNull();
+    // PSA-S1 — 허가 «모름»은 접힘 확정이라 뒤 칸(건축 외 용도)을 묻지 않는다 · «예»여야 건축 외 용도로 이어진다
+    expect(validateStep(2, { ...k, saDemolishedPermit: "unknown" as const })).toBeNull();
+    expect(validateStep(2, { ...k, saDemolishedPermit: "yes" as const })).toContain("건축을 위한 용도 외");
+    expect(validateStep(2, { ...k, saDemolishedPermit: "yes" as const, saDemolishedOtherUse: "unknown" as const })).toBeNull();
   });
 
   it("철거 OFF — 철거 칸 비전송(stale 무해) · 용도지역·바닥면적은 항상 필수(종전 규칙)", () => {

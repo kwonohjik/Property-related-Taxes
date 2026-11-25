@@ -87,7 +87,9 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
     await calc(page);
     await expect(totalPayable(page)).toHaveText(exact("768,000"));
     await expect(page.getByTestId("land-split-demolished-area")).toContainText("부속토지 전체를 별도합산 범위로 봄");
-    expect(item(box)).toMatchObject({ demolishedKind: "house", demolishedVacantHouse: "no" });
+    expect(item(box)).toMatchObject({ demolishedKind: "house", demolishedPermit: "yes", demolishedOtherUse: "no" });
+    // PSA-S1 — 건축 외 용도 «아니오»면 빈집정비 단서를 읽지 않아 body에 싣지 않는다
+    expect(item(box)).not.toHaveProperty("demolishedVacantHouse");
     expect(item(box)).not.toHaveProperty("buildingFloorArea");
     expect(item(box)).not.toHaveProperty("zoningDistrict");
   });
@@ -128,14 +130,17 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
     await page.getByRole("radio", { name: HOUSE.zoning }).check();
     await page.getByPlaceholder("면적 입력 (소수점 가능)").first().fill(HOUSE.area);
     await page.getByRole("switch", { name: /건축물 철거 완료/ }).click();
-    // 노출 사슬: 공용 사용 칸은 «건축 외 용도 예 ∧ 빈집정비 예»일 때만, 유료 칸은 공용 «예»일 때만
-    await page.getByTestId("pt-sa-demolished-kind-house").check();
-    await expect(page.getByTestId("pt-sa-demolished-publicuse-yes")).toHaveCount(0);
+    // 노출 사슬(PSA-S1 엄격 순차): 철거일 → 종류 → 빈집정비(관문 — 일반 기간 1년 밖·빈집 3년 안 주택) → 허가 → 건축 외 용도 → 공용 사용(건축 외 «예» ∧ 빈집정비 «예») → 유료(공용 «예»)
     await fillDemolishedDate(page, `${YEAR - 2}-06-15`);
-    await page.getByTestId("pt-sa-demolished-permit-yes").check();
-    await page.getByTestId("pt-sa-demolished-otheruse-yes").check();
-    await expect(page.getByTestId("pt-sa-demolished-publicuse-yes")).toHaveCount(0);
+    await expect(page.getByTestId("pt-sa-demolished-kind-house")).toBeVisible();
+    await expect(page.getByTestId("pt-sa-demolished-permit-yes")).toHaveCount(0);
+    await page.getByTestId("pt-sa-demolished-kind-house").check();
+    await expect(page.getByTestId("pt-sa-demolished-vacanthouse-yes")).toBeVisible();
+    await expect(page.getByTestId("pt-sa-demolished-permit-yes")).toHaveCount(0); // 관문 답 전에는 허가를 묻지 않는다
     await page.getByTestId("pt-sa-demolished-vacanthouse-yes").check();
+    await page.getByTestId("pt-sa-demolished-permit-yes").check();
+    await expect(page.getByTestId("pt-sa-demolished-publicuse-yes")).toHaveCount(0);
+    await page.getByTestId("pt-sa-demolished-otheruse-yes").check();
     await expect(page.getByTestId("pt-sa-demolished-publicuse-yes")).toBeVisible();
     await expect(page.getByTestId("pt-sa-demolished-publicusepaid-yes")).toHaveCount(0);
     await page.getByTestId("pt-sa-demolished-publicuse-yes").check();
@@ -204,7 +209,9 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
 
   test("철거일이 과세기준일(올해 6.1.) 뒤 → 모순 안내 + 차단", async ({ page }) => {
     await toDetail(page, "300000000");
-    await fillSeparateDetail(page, { ...BUILDING, next: false, demolished: { date: `${YEAR}-12-31`, kind: "building" } });
+    // 날짜 결함이라 사슬이 칸을 읽지 않는다(PSA-S1) — 종류 라디오는 그려지지 않고 고칠 칸은 철거일이다
+    await fillSeparateDetail(page, { ...BUILDING, next: false, demolished: { date: `${YEAR}-12-31` } });
+    await expect(page.getByTestId("pt-sa-demolished-kind-building")).toHaveCount(0);
     await expect(page.getByTestId("pt-sa-demolished-contradiction")).toContainText("철거일은 과세기준일 이전이어야 합니다");
     await page.getByRole("button", { name: /^다음$/ }).click();
     await expect(page.getByText("철거일은 과세기준일 이전이어야 합니다").first()).toBeVisible();

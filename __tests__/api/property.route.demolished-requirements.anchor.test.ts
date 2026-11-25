@@ -158,7 +158,14 @@ describe("⑩ — 요구된 칸이 비면 400(⑧과 같은 문구) · 요구되
   });
 
   it("빈집정비 칸(주택·2024.6.1.~) 비면 400 · 공용 사슬: 건축 외 yes ∧ 빈집 yes일 때만 공용 칸 요구, 공용 yes일 때만 유료 칸 요구", async () => {
-    expect(itemErrors((await post(land({ ...HOUSE, demolishedVacantHouse: "" }))).json)).toEqual([M.demolishedVacantHouse]);
+    // PSA-S1 — 빈집정비는 일반 기간 안 주택에서 건축 외 «예» 뒤 단서 하위 칸(건축 외 «아니오»면 요구 0 · 현행은 400)
+    expect((await post(land({ ...HOUSE, demolishedVacantHouse: "" }))).status).toBe(200);
+    expect(itemErrors((await post(land({ ...HOUSE, demolishedOtherUse: "yes", demolishedVacantHouse: "" }))).json)).toEqual([M.demolishedVacantHouse]);
+    // 일반 기간 밖·빈집 3년 안 주택은 빈집정비가 관문 — 비면 400, «아니오»면 접힘이 확정돼 허가·건축 외 용도를 요구하지 않는다(현행은 허가 400)
+    const gate = { ...HOUSE, demolishedDate: "2024-06-15", demolishedPermit: "", demolishedOtherUse: "", demolishedVacantHouse: "" };
+    expect(itemErrors((await post(land(gate))).json)).toEqual([M.demolishedVacantHouse]);
+    expect((await post(land({ ...gate, demolishedVacantHouse: "no" }))).status).toBe(200);
+    expect(itemErrors((await post(land({ ...gate, demolishedVacantHouse: "yes" }))).json)).toEqual([M.demolishedPermit]);
     const chain = { ...HOUSE, demolishedDate: "2024-06-15", demolishedVacantHouse: "yes", demolishedOtherUse: "yes" };
     expect(itemErrors((await post(land(chain))).json)).toEqual([M.demolishedPublicUse]);
     expect(itemErrors((await post(land({ ...chain, demolishedPublicUse: "yes" }))).json)).toEqual([M.demolishedPublicUsePaid]);
