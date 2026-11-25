@@ -157,7 +157,12 @@ export function demolishedStatusMaxMonths(s: Date): 0 | 6 | 36 {
 export function demolishedAreaClauseApplies(transferDate: Date | undefined): boolean {
   if (!hasDemolishedStatusEraDate(transferDate)) return true;
   const s = lastPropertyTaxBaseDateOnOrBefore(transferDate);
-  return s !== undefined && !isBefore(s, FROM_2024_06_01);
+  return s !== undefined && demolishedAreaClauseAppliesOn(s);
+}
+
+/** 과세기준일 `s` 자체의 시행본에 면적 범위 문언(영 §103의2 1호 후단)이 있는가 — 재산세 한 점 판정용(`demolishedAreaClauseApplies`의 양도일 → 과세기준일 변환 뒤 판정이 이 함수다). */
+export function demolishedAreaClauseAppliesOn(s: Date): boolean {
+  return !isBefore(s, FROM_2024_06_01);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

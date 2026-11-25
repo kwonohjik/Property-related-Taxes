@@ -184,6 +184,8 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
       "최저보유차고면적기준의 1.5배에 해당하는 면적 이내의 토지",
       // NBL2611-B2 — ① 단서(`NBL.BUILDING_SITE_SEPARATE_AGG_PROVISO`): 재산세 분류 칸 혼재 고지서 안내가 기댄다.
       "사용승인(임시사용승인을 포함한다)을 받지 아니하고 사용 중인 건축물의 부속토지는 제외한다",
+      // PSA-E1 — 허가 요건 절(`PROPERTY_SEPARATE.BUILDING_PERMIT_101`): 사용승인 절과 짝인 앞 절.
+      "허가 등을 받아야 할 건축물로서 허가 등을 받지 아니한 건축물",
     ],
     keywordMode: "ALL",
   },
@@ -214,6 +216,10 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
       "국가, 지방자치단체 또는 지방자치단체조합이 1년 이상 공용 또는 공공용으로 사용",
       "그 공용 또는 공공용으로 사용하는 기간 동안의 그 부속토지는 포함한다",
       "법 제109조제2항 단서에 따른 재산세의 부과대상이 되는 부속토지",
+      // PSA-E1 — 재산세 별도합산 철거 요건 leaf(`property-separate-requirements.ts`)가 기댄 본문 후단(사용승인)·1호 후단(면적 범위)·2호(빈집 철거일) 문언.
+      "사용승인을 받아야 하는 건축물 또는 주택으로서 사용승인(임시사용승인을 포함한다)을 받지 않은 건축물 또는 주택의 부속토지는 제외한다",
+      "철거ㆍ멸실되기 전 건축물의 바닥면적",
+      "빈집이 사실상 철거된 날",
     ],
     keywordMode: "ALL",
   },
