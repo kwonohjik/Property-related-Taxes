@@ -185,9 +185,52 @@ function InheritanceGiftSection({
   );
 }
 
+function isRecord(v: unknown): v is R {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
 function PropertySection({ r, selectedSectionIds }: { r: R; selectedSectionIds?: string[] }) {
-  // computed-tax 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 null (단일 계산표, 검토 U1)
-  if (selectedSectionIds !== undefined && !selectedSectionIds.includes("computed-tax")) return null;
+  // computed-tax 대표 노드 — 선택 필터(POST) 적용 시 미포함이면 계산표 생략 (검토 U1)
+  const showCalc = selectedSectionIds === undefined || selectedSectionIds.includes("computed-tax");
+  const showSplit = selectedSectionIds === undefined || selectedSectionIds.includes("land-split");
+  if (!showCalc && !(showSplit && isRecord(r.landSplit))) return null;
+  return (
+    <>
+      {showSplit && <PropertyLandSplitPdf r={r} />}
+      {showCalc && <PropertyCalcPdf r={r} />}
+    </>
+  );
+}
+
+/** 토지 과세 구분별 세액(landSplit echo) — 분류별 합산 산식 요약표. 없으면 렌더하지 않는다. */
+function PropertyLandSplitPdf({ r }: { r: R }) {
+  const split = r.landSplit;
+  if (!isRecord(split)) return null;
+  const rows: { key: string; label: string; c: R }[] = [];
+  if (isRecord(split.separate)) rows.push({ key: "sep", label: "별도합산분", c: split.separate });
+  if (isRecord(split.comprehensive)) rows.push({ key: "comp", label: "종합합산분", c: split.comprehensive });
+  return (
+    <>
+      <Text style={s.sectionTitle}>토지 과세 구분별 세액 ({str(split.jurisdictionBasis) ?? "같은 지방자치단체 관할구역 합산"})</Text>
+      {rows.map(({ key, label, c }) => (
+        <View key={key} style={s.table}>
+          <View style={s.row}><Text style={s.lbl}>{label} 이 필지 공시가액</Text><Text style={s.val}>{fmt(c.ownValue)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>{label} 같은 관할구역 다른 토지 공시가액 합계</Text><Text style={s.val}>{fmt(c.otherValue)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>{label} 합산 과세표준</Text><Text style={s.val}>{fmt(c.combinedTaxBase)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>{label} 합산 산출세액</Text><Text style={s.val}>{fmt(c.combinedGrossTax)}</Text></View>
+          <View style={s.rowBg}><Text style={s.lbl}>{label} 이 필지 몫</Text><Text style={s.valAccent}>{fmt(c.share)}</Text></View>
+        </View>
+      ))}
+      <View style={s.table}>
+        {num(split.taxBeforeCap) !== undefined && (
+          <View style={s.rowLast}><Text style={s.lbl}>{isRecord(split.cap) ? "이 필지 합계 (세부담상한 적용 전)" : "이 필지 합계 (= 산출세액)"}</Text><Text style={s.val}>{fmt(split.taxBeforeCap)}</Text></View>
+        )}
+      </View>
+    </>
+  );
+}
+
+function PropertyCalcPdf({ r }: { r: R }) {
   return (
     <>
       <Text style={s.sectionTitle}>계산 내역</Text>

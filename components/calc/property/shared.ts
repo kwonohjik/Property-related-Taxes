@@ -8,7 +8,7 @@ import {
   needsPriorUrbanTax,
 } from "@/lib/calc/property-required-inputs";
 import { firstLandSplitIssue } from "@/lib/calc/property-land-split-inputs";
-import { buildPropertyTaxRequestBody, landSplitRequired } from "./request-body";
+import { buildPropertyTaxRequestBody, effectiveOwnershipType, isRecomputeTarget, landSplitRequired } from "./request-body";
 // 800줄 분리: 폼 → API 본문 변환을 request-body.ts로 이동 — 외부(테스트·API 호출) import 하위호환 re-export
 export { buildPropertyTaxRequestBody, landSplitRequired } from "./request-body";
 
@@ -342,13 +342,14 @@ export function validateStep(step: number, form: FormState): string | null {
     )
       return "주택 건축물 부분 시가표준액을 올바른 금액으로 입력하세요.";
 
+    const ownershipType = effectiveOwnershipType(form);
     // ── 소유 형태(§107) 일관성 검증 — ownershipType 입력 시에만 (미입력=납세의무자 판정 생략, 차단 아님) ──
-    if (form.ownershipType && form.ownershipType !== "sole") {
+    if (ownershipType && ownershipType !== "sole") {
       // 공부상 소유자는 필수 (house_split 제외 — 건물주·토지주가 대체)
-      if (form.ownershipType !== "house_split" && !form.registeredOwner.trim())
+      if (ownershipType !== "house_split" && !form.registeredOwner.trim())
         return "소유 형태를 입력할 때는 공부상 소유자 성명을 입력하세요.";
 
-      if (form.ownershipType === "co") {
+      if (ownershipType === "co") {
         // 공유: coOwners 배열 ON이면 최소 1명, 지분합 ≤ 1
         if (form.coOwners !== undefined) {
           if (form.coOwners.length === 0)
@@ -366,12 +367,12 @@ export function validateStep(step: number, form: FormState): string | null {
         }
       }
 
-      if (form.ownershipType === "trust") {
+      if (ownershipType === "trust") {
         // 신탁: 위탁자 입력 권장 (경고만, 차단 아님 — API에서 경고 포함)
         // UI 통과↔validate 차단 모순 금지 → 차단하지 않음
       }
 
-      if (form.ownershipType === "inherit") {
+      if (ownershipType === "inherit") {
         // 상속 미등기: 상속인 미입력 시 경고만 (API에서 경고 포함, 차단 아님).
         // 지분은 전원 입력 시에만 합계 검증 — 일부/전부 미입력은 주된 상속자 fallback 대상(§3.4).
         const named = form.heirs.filter((h) => h.name.trim());
@@ -389,7 +390,7 @@ export function validateStep(step: number, form: FormState): string | null {
       // ── §107①2호: 건물·부속토지 소유자 분리 — 시가표준액 안분 필수 차단 ──
       // 기타 6종 fallback과 달리, house_split 안분 비율은 두 시가표준액이 없으면 계산 불가.
       // ⑫(`lib/validators/property-input.ts`)와 같은 술어 — `lib/calc/property-required-inputs.ts`.
-      if (form.ownershipType === "house_split") {
+      if (ownershipType === "house_split") {
         const [first] = missingHouseSplitInputs({
           buildingOwner: form.buildingOwner,
           landOwner: form.landOwner,
@@ -482,7 +483,7 @@ export function validateStep(step: number, form: FormState): string | null {
     if (issue) return issue;
   }
   // Step3: recompute 모드 직전 과세표준 — 입력 시 형식만 검증, 미입력은 통과(상한 미적용 경고는 엔진)
-  if (step === 3 && form.objectType !== "housing" && form.taxCapMode === "recompute") {
+  if (step === 3 && isRecomputeTarget(form) && form.taxCapMode === "recompute") {
     if (form.previousYearTaxBase && parseAmount(form.previousYearTaxBase) === null)
       return "직전연도 과세표준을 올바른 금액으로 입력하세요.";
   }
@@ -497,6 +498,22 @@ export function validateStep(step: number, form: FormState): string | null {
       const prevUrban = parseAmount(form.housingPreviousUrbanTax);
       if (prevUrban === null || prevUrban <= 0) return PRIOR_URBAN_TAX_MISSING_MESSAGE;
     }
+  }
+  return null;
+}
+
+/**
+ * 계산 직전 재검증 — 마법사가 거치는 단계(0 → 토지 1·2 → 3)를 순서대로 다시 검사해 첫 실패 단계를 돌려준다.
+ * StepIndicator로 단계를 건너뛰어 step 3에 도착해도 서버 400(「입력값이 올바르지 않습니다.」)이 아니라 그 단계의 구체 문구로 막는다.
+ * 대상은 «이 물건 유형이 실제로 거치는 단계»뿐이다 — 토지가 아닌데 남은 `landTaxType` 잔재(stale)로 토지 단계를 막지 않는다.
+ */
+export function firstInvalidStep(form: FormState): { step: number; message: string } | null {
+  const isLand = form.objectType === "land";
+  const needsDetail = isLand && (form.landTaxType === "separate_aggregate" || form.landTaxType === "separated");
+  const steps = [0, ...(isLand ? [1] : []), ...(needsDetail ? [2] : []), 3];
+  for (const step of steps) {
+    const message = validateStep(step, form);
+    if (message) return { step, message };
   }
   return null;
 }

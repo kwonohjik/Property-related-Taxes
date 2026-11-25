@@ -26,6 +26,7 @@ import { formatIsoStamp } from "@/lib/utils/file-download";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
+import { PropertyLandSplitCard, LAND_SPLIT_CARD_NOTICES } from "@/components/calc/results/PropertyLandSplitCard";
 import {
   PROPERTY_PRINT_SECTIONS,
   type PropertyPrintSectionId,
@@ -345,13 +346,17 @@ export function PropertyTaxResultView({ result }: Props) {
     totalPayable,
     installment,
     oneHouseSpecialApplied,
-    warnings,
+    warnings: allWarnings,
     legalBasis,
+    landSplit,
     taxCapMode,
     taxCapBasisTax,
     recomputeDetail,
     housingTransitionalCap,
   } = result;
+
+  // 토지 합산 과세 고지는 «토지 과세 구분별 세액» 카드가 보여 준다 — 경고 목록에서는 중복을 뺀다
+  const warnings = landSplit ? allWarnings.filter((w) => !LAND_SPLIT_CARD_NOTICES.includes(w)) : allWarnings;
 
   const taxpayer = result.taxpayer;
   const coOwnershipDistribution = result.coOwnershipDistribution;
@@ -387,6 +392,7 @@ export function PropertyTaxResultView({ result }: Props) {
   const availablePrintIds = useMemo<Set<PropertyPrintSectionId>>(() => {
     const s = new Set<PropertyPrintSectionId>();
     s.add("tax-base");
+    if (landSplit) s.add("land-split");
     s.add("computed-tax");
     s.add("surtax");
     s.add("total-payable");
@@ -396,7 +402,7 @@ export function PropertyTaxResultView({ result }: Props) {
     if (taxpayer) s.add("taxpayer");
     if (coOwnershipDistribution) s.add("co-ownership");
     return s;
-  }, [installment, warnings, legalBasis, taxpayer, coOwnershipDistribution]);
+  }, [installment, warnings, legalBasis, taxpayer, coOwnershipDistribution, landSplit]);
 
   return (
     <div className="space-y-6">
@@ -483,6 +489,13 @@ export function PropertyTaxResultView({ result }: Props) {
       </section>
       </PrintSection>
 
+      {/* ─── 토지 과세 구분별 세액 (별도합산·종합합산 합산 과세) ─── */}
+      {landSplit && (
+        <PrintSection id="land-split" selectedIds={selectedPrintIds}>
+          <PropertyLandSplitCard result={result} />
+        </PrintSection>
+      )}
+
       {/* ─── 산출세액 ─── */}
       <PrintSection id="computed-tax" selectedIds={selectedPrintIds}>
       <section className="space-y-1">
@@ -497,7 +510,9 @@ export function PropertyTaxResultView({ result }: Props) {
         <div className="rounded-md border divide-y">
           <TaxRow
             label={
-              appliedRate === 0
+              landSplit
+                ? "분류별 합산 과세 — 같은 관할구역 합산 세액 중 이 필지 몫의 합계"
+                : appliedRate === 0
                 ? "누진세율 (구간별)"
                 : `적용 세율 (${formatRate(appliedRate)})`
             }
@@ -515,6 +530,8 @@ export function PropertyTaxResultView({ result }: Props) {
                   note={
                     recomputeDetail.appliedRate != null
                       ? `직전 과세표준 ${formatKRW(recomputeDetail.priorTaxBase)} × ${formatRate(recomputeDetail.appliedRate)}`
+                      : landSplit?.separate && landSplit?.comprehensive
+                      ? `직전 과세표준 ${formatKRW(recomputeDetail.priorTaxBase)}을 분류별 가액 비율로 나눠 별도합산분·종합합산분 직전연도 누진세율로 각각 재산정`
                       : `직전 과세표준 ${formatKRW(recomputeDetail.priorTaxBase)} × 직전연도 누진세율`
                   }
                 />

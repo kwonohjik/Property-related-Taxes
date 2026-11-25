@@ -5,6 +5,9 @@
 
 ## 2026-11-25
 
+- **재산세 PSA-U2 — 계산 직전 재검증 · 결과 «토지 과세 구분별 세액» 카드 · 별도합산 recompute 개방** (PSA-E4 후속 · UI 계획서 §14).
+  `firstInvalidStep`이 거치는 단계(0 → 토지 1·2 → 3)를 계산 직전에 재검증(⑧↔⑫ 격자 428셀), `PropertyLandSplitCard`가 `landSplit` echo를 분류별 4단계 산식·3분할·세부담상한으로 표시(인쇄 id `land-split`·PDF 포함), 별도합산에도 «직전 과세표준 재산정» 선택. E2E `e2e/property-land-split.spec.ts` 8건.
+
 - **재산세 PSA-E4 — 종합합산 이관분 세액 · 같은 관할구역 합산 입력 · 필지 합계 세부담상한** (계획서 `docs/01-plan/features/property-separate-demolished-requirements.engine.plan.md` §13).
   종전 «별도합산 이관분(철거 기간 경과·면적 초과·건축물 없음)은 0원 + 경고»를 분류별 합산 과세(`lib/tax-engine/property-land-split-tax.ts`)로 해소:
   합산 가액 → 합산 과세표준 → 합산 세율(1회) → 이 필지 몫 → 합계 세부담상한 → 부가세. 합산 단위는 법 §113① «해당 지방자치단체 관할구역»(인별 전국 아님).

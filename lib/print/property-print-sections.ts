@@ -7,7 +7,7 @@
  * 화면 표시 불변 원칙: 선택은 "인쇄 대상"만 제어. 미선택이어도 화면엔 그대로 보이고
  * 인쇄(print)에서만 print:hidden으로 제거 → 기존 화면 동작 회귀 0.
  *
- * pdf 채널 = computed-tax(계산표 대표) 1종.
+ * pdf 채널 = computed-tax(계산표 대표) + land-split(토지 분류별 세액표).
  *   PropertySection(ResultPdfDocument)은 단일 계산표 → 분리 경계 없음(검토 U1). 별지 없음.
  */
 
@@ -25,9 +25,10 @@ import {
 
 export type { PrintChannel, GroupCheckState };
 
-/** 선택 가능 leaf 9종 (오타 방지·exact 매칭) */
+/** 선택 가능 leaf 10종 (오타 방지·exact 매칭) */
 export type PropertyPrintSectionId =
   | "tax-base"
+  | "land-split"
   | "computed-tax"
   | "surtax"
   | "total-payable"
@@ -51,6 +52,8 @@ export const PROPERTY_PRINT_SECTIONS: PropertyPrintSectionGroup[] = [
     label: "세액 계산",
     children: [
       { id: "tax-base", label: "과세표준", channel: SCREEN },
+      // 토지(별도합산·종합합산) 분류별 합산 과세 — echo `landSplit`이 있을 때만 결과뷰에 렌더
+      { id: "land-split", label: "토지 과세 구분별 세액", channel: SCREEN_PDF },
       // 서버 PDF: ResultPdfDocument 재산세 계산표(PropertySection)로 표현 가능 → pdf 채널
       { id: "computed-tax", label: "산출세액", channel: SCREEN_PDF },
       { id: "surtax", label: "부가세", channel: SCREEN },

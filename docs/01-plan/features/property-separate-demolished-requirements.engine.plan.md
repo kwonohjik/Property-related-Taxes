@@ -402,6 +402,7 @@ M1 허가 게이트 제거(K-2 깨짐) · M2 `permit` 경계 2019.6.1. → 2019.
 
 - 구현: `lib/tax-engine/property-land-split-tax.ts`(순수 leaf) · `property-tax-land-split.ts`(결과 조립 — property-tax.ts 774 → 654줄) · Zod ⑫ 최상위 2칸 · ④ `components/calc/property/request-body.ts`(shared.ts 800줄 분리) · 최소 UI `LandSplitInputs.tsx`(Step 3).
 - **계획서와 다른 점**: (1) 별도합산 경로는 `calculateSeparateAggregateTax` 대신 `isSeparateAggregateLand`·`splitByBaseArea`를 직접 호출한다(그 함수의 세부담상한·지자체 안분·«전년도 미입력» 고지가 단일 필지 합계 상한과 겹침 — 다필지 함수는 무변경). (2) 요구 술어 입력은 값이 아니라 **분류 면적**(`recognizedArea`·`excessArea`)이다(⑧ 미리보기와 같은 판정). (3) 이관 사유 echo는 `no_building`·`demolished_period`·`area_excess`·`direct_type` 4종(철거 요건 사유는 E2가 추가). (4) 엔진 직접 호출에서 요구 칸이 `undefined`면 이 필지 단독 계산 + 고지(입구 차단은 Zod·⑧). (5) 별도합산 선택의 Step 3 recompute 선택지는 열지 않았다(U2 — `recompute-e2e-anchor`가 «별도합산 비대상»을 고정).
+  - **PSA-U2(2026-11-25)로 개방**: `Step3.tsx`·`request-body.ts`·`validateStep(3)`이 같은 술어 `isRecomputeTarget`(별도합산 포함)을 쓴다. 고지 `PROPERTY_LAND_SPLIT_DIRECT_CAP_NOTICE`에 «직전 과세표준으로 재산정하는 방식을 쓰면 상한을 적용할 수 있습니다» 복원(화면에 그 선택지가 있다). 결과 `recomputeDetail` 행 문구는 별도합산·이관분이 둘로 갈릴 때 «분류별 가액 비율로 나눠 분류별 직전연도 누진세율로 재산정»으로 표시(sync-checker L5).
 - 열린 것: 분리과세(`separated`) 면적 초과분의 종합합산 이관도 세액이 없다(`separate-taxation.ts` — 경고만). 별도 후속.
 
 ### 8.2 검증 명령
