@@ -8,16 +8,17 @@
  */
 import { Button } from "@/components/ui/button";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
-import { SETTLED_LEAD, settledTail } from "./separate-sequence";
+import { settledLeadOf } from "./separate-sequence";
+import { settledTail } from "./separate-sequence";
 import type { SequenceField, Settled } from "./separate-sequence";
 
 export function SettledNotice({ settled }: { settled: Settled }) {
   return (
     <ToneCard tone="slate" title="이 답으로 종합합산 이관이 확정되었습니다" bodyClassName="space-y-1">
       <div data-testid="pt-sa-seq-settled" data-reason={settled.reason} className="space-y-1 text-caption leading-snug">
-        <p>{SETTLED_LEAD}</p>
+        <p>{settledLeadOf(settled)}</p>
         <p>{settled.notice}</p>
-        <p>{settledTail(settled.answer)}</p>
+        <p>{settledTail(settled)}</p>
       </div>
     </ToneCard>
   );

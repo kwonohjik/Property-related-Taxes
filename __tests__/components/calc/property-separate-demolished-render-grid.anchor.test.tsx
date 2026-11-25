@@ -20,7 +20,10 @@ import { INITIAL_FORM, buildPropertyTaxRequestBody, validateStep, type FormState
 import { demolishedFormValues } from "@/components/calc/property/request-body";
 import { demolishedChainOf } from "@/lib/calc/property-separate-requirements";
 import { PROPERTY_ASK_FIELD_NAME } from "@/lib/calc/property-demolished-verdict-text";
-import { SETTLED_LEAD } from "@/components/calc/property/separate-sequence";
+import { DEMOLISHED_DATE_NOTICE } from "@/components/calc/property/separate-sequence";
+import { settledLeadOf } from "@/components/calc/property/separate-sequence";
+import { settledTail } from "@/components/calc/property/separate-sequence";
+import { demolishedSettledOf } from "@/components/calc/property/separate-sequence";
 import { propertyTaxInputSchema } from "@/lib/validators/property-input";
 import { PROPERTY_DEMOLISHED_ISSUE_MESSAGE as M } from "@/lib/tax-engine/property-separate-requirements";
 import { addMonthsUtc } from "@/lib/tax-engine/civil-period";
@@ -142,12 +145,15 @@ function visit(form: FormState, ui: ReturnType<typeof render>, el: HTMLElement, 
   if ((settledEl !== null) !== (fold !== null)) return fail(`확정 안내 노출(${settledEl !== null}) ≠ chain.resolved 접힘(${fold !== null})`);
   if (fold && settledEl) {
     if (settledEl.getAttribute("data-reason") !== fold.foldReason) return fail(`확정 안내 사유 ${settledEl.getAttribute("data-reason")} ≠ ${fold.foldReason}`);
-    if (!settledEl.textContent?.includes(fold.notice) || !settledEl.textContent.includes(SETTLED_LEAD)) return fail("확정 안내 본문이 엔진 notice·고정 문장을 담지 않음");
+    // 날짜만으로 확정(at: date)이면 «철거일로 정해져…»·«철거일을 바꾸면…», 답으로 확정이면 «이 답으로…»·«답을 바꾸면…»(L-2)
+    const settled = demolishedSettledOf(form);
+    if (!settled || settled.dateOnly !== (fold.at === "date")) return fail("확정 안내 dateOnly ≠ 엔진 resolved.at === date");
+    if (!settledEl.textContent?.includes(fold.notice) || !settledEl.textContent.includes(settledLeadOf(settled)) || !settledEl.textContent.includes(settledTail(settled))) return fail("확정 안내 본문이 엔진 notice·고정 문장을 담지 않음");
     stats.settledShown++;
   }
   // N6 — 낭독 한 줄
   const statusText = el.querySelector('[data-testid="pt-sa-seq-status"]')?.textContent ?? null;
-  const wantStatus = chain.next ? `다음 질문: ${PROPERTY_ASK_FIELD_NAME[chain.next]}` : fold ? "별도합산 불성립이 확정되어 나머지 칸은 묻지 않습니다" : "";
+  const wantStatus = chain.next ? `다음 질문: ${PROPERTY_ASK_FIELD_NAME[chain.next]}` : fold ? "별도합산 불성립이 확정되어 나머지 칸은 묻지 않습니다" : form.saDemolishedDate === "" ? DEMOLISHED_DATE_NOTICE : "";
   if (statusText !== wantStatus) return fail(`낭독 한 줄 «${statusText}» ≠ «${wantStatus}»`);
   const statusEl = el.querySelector('[data-testid="pt-sa-seq-status"]');
   if (statusEl?.getAttribute("role") !== "status" || statusEl.getAttribute("aria-live") !== "polite") return fail("낭독 한 줄에 role=status · aria-live=polite 없음");

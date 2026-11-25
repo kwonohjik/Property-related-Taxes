@@ -109,6 +109,27 @@ describe("확정 안내 문장 — 사유는 엔진 notice 그대로 · «모름
     expect(text).toContain("이 답으로 별도합산 불성립(종합합산 이관)이 확정되어 나머지 칸은 묻지 않습니다.");
   });
 
+  it("철거일만으로 확정(답 없음) → «철거일(과세기준일)로 결과가 정해져…» · «철거일을 바꾸면…» — «이 답으로»·«답을 바꾸면»을 쓰지 않는다 (L-2)", () => {
+    // 2026 과세기준일 · 철거일 3년 초과 = 종류를 묻지 않고 확정(at: date)
+    const form = demolished({ saDemolishedDate: "2022-01-01", saDemolishedKind: "", saDemolishedPermit: "", saDemolishedOtherUse: "" });
+    render(<Step2SeparateAggregate form={form} onChange={() => {}} />);
+    const text = screen.getByTestId("pt-sa-seq-settled").textContent ?? "";
+    expect(text).toContain("철거일(과세기준일)로 결과가 정해져 별도합산 불성립(종합합산 이관)이 확정되어 나머지 칸은 묻지 않습니다.");
+    expect(text).toContain("철거일을 바꾸면 이어서 다시 묻습니다.");
+    expect(text).not.toContain("이 답으로");
+    expect(text).not.toContain("답을 바꾸면");
+    expect(has("pt-sa-demolished-kind-house")).toBe(false);
+  });
+
+  it("종류 답으로 확정(건축물 · 일반 1년 밖) → 답 문장 그대로(날짜 문장 아님)", () => {
+    const form = demolished({ saDemolishedDate: "2025-05-01", saDemolishedKind: "building", saDemolishedPermit: "", saDemolishedOtherUse: "" });
+    render(<Step2SeparateAggregate form={form} onChange={() => {}} />);
+    const text = screen.getByTestId("pt-sa-seq-settled").textContent ?? "";
+    expect(text).toContain("이 답으로 별도합산 불성립(종합합산 이관)이 확정되어 나머지 칸은 묻지 않습니다.");
+    expect(text).toContain("답을 바꾸면 이어서 다시 묻습니다.");
+    expect(text).not.toContain("철거일을 바꾸면");
+  });
+
   it("비철거 허가 «아니오» → 엔진 고지 상수 그대로 + 면적 블록 없음", () => {
     render(<Step2SeparateAggregate form={demolished({ saDemolished: false, saBuildingPermit: "no" })} onChange={() => {}} />);
     expect(screen.getByTestId("pt-sa-seq-settled").textContent).toContain(PROPERTY_BUILDING_PERMIT_NO_NOTICE);
@@ -128,6 +149,15 @@ describe("낭독 한 줄(role=status) — 항상 마운트 · 다음 질문과 �
     fireEvent.click(screen.getByTestId("pt-sa-permit-no"));
     expect(status()).toBe("별도합산 불성립이 확정되어 나머지 칸은 묻지 않습니다");
     expect(screen.getByTestId("pt-sa-seq-status")).toBe(el); // 같은 노드 — 언마운트 없이 내용만 바뀐다
+  });
+
+  it("철거 ON · 철거일 없음 → 화면 안내와 같은 문구를 낭독한다(빈 문자열 아님) · 철거일이 생기면 다음 질문으로 (L-3)", () => {
+    const base = demolished({ saDemolishedDate: "", saDemolishedKind: "", saDemolishedPermit: "", saDemolishedOtherUse: "" });
+    const { rerender } = render(<Step2SeparateAggregate form={base} onChange={() => {}} />);
+    expect(status()).toBe("철거일을 입력하면 이어서 필요한 칸이 표시됩니다.");
+    expect(screen.getByTestId("pt-demolished-dates-notice").textContent).toBe(status());
+    rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedDate: "2026-01-01" }} onChange={() => {}} />);
+    expect(status()).toBe("다음 질문: 철거된 것의 종류");
   });
 
   it("철거 사슬: 종류 미선택 → «철거된 것의 종류» · 허가 미답 → «허가·사용승인»", () => {

@@ -5,6 +5,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { landSplitRequired, type FormState } from "./shared";
+import { validateStep } from "./shared";
 
 interface Props {
   form: FormState;
@@ -18,6 +19,18 @@ interface Props {
 export function LandSplitInputs({ form, onChange }: Props) {
   const required = landSplitRequired(form);
   if (!required.otherSeparate && !required.otherComprehensive) return null;
+
+  // StepIndicator로 Step 2를 건너뛰면 별도합산 상세가 비어 엔진이 분류를 읽지 못한다 — 그때 합산 칸 집합은 «두 칸 모두»라는 대체 값일 뿐 실제 요구가 아니다.
+  // 계산은 Step 2에서 막히므로(`firstInvalidStep`) 칸을 보이지 않고 앞 단계를 먼저 마치라고 알린다(자동 안분·가정 없음).
+  if (form.landTaxType === "separate_aggregate" && validateStep(2, form) !== null) {
+    return (
+      <ToneCard tone="amber" title="같은 지방자치단체 관할구역의 다른 토지 (합산)">
+        <p className="text-sm text-muted-foreground" data-testid="land-split-inputs-pending">
+          앞 단계(별도합산과세 상세 정보) 입력을 먼저 마치세요. 어떤 합산 칸이 필요한지는 그 입력으로 정해집니다.
+        </p>
+      </ToneCard>
+    );
+  }
 
   return (
     <ToneCard tone="sky" title="같은 지방자치단체 관할구역의 다른 토지 (합산)" bodyClassName="space-y-3">
