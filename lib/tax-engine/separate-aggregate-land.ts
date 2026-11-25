@@ -144,7 +144,7 @@ export interface LandSeparateCheckResult {
 /** `judgePropertyDemolishedLand` 결과 중 화면·이관 사유 매핑이 읽는 부분 */
 export type LandDemolishedVerdictEcho = Pick<
   PropertyDemolishedVerdict,
-  "kind" | "foldReason" | "periodMonths" | "areaClauseApplied" | "vacantHouseExtensionUnconfirmed" | "required"
+  "kind" | "foldReason" | "periodMonths" | "periodAllKinds" | "areaClauseApplied" | "vacantHouseExtensionUnconfirmed" | "required"
 >;
 
 /** 지자체별 안분 결과 */
@@ -262,6 +262,7 @@ export function isSeparateAggregateLand(
       kind: verdict.kind,
       foldReason: verdict.foldReason,
       periodMonths: verdict.periodMonths,
+      ...(verdict.periodAllKinds ? { periodAllKinds: verdict.periodAllKinds } : {}),
       areaClauseApplied: verdict.areaClauseApplied,
       vacantHouseExtensionUnconfirmed: verdict.vacantHouseExtensionUnconfirmed,
       required: verdict.required,

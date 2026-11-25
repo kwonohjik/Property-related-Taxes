@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { judgePropertyDemolishedLand, propertyDemolishedChain, propertyDemolishedFactIssue, PROPERTY_DEMOLISHED_ISSUE_MESSAGE } from "../../../lib/tax-engine/property-separate-requirements";
 import type { PropertyDemolishedAskField, PropertyDemolishedFacts, PropertyDemolishedKind } from "../../../lib/tax-engine/property-separate-requirements";
+import { propertyDemolishedVerdictLines } from "../../../lib/calc/property-demolished-verdict-text";
 import { parseISO } from "../../../lib/tax-engine/utc-date";
 
 const d = parseISO;
@@ -145,6 +146,28 @@ describe("PSA-S1 SK — 읽는 칸(order) · next · resolved · 빈집정비 �
     const n = at("2015-06-01", "2015-01-01");
     expect(n.foldReason).toBe("not_yet");
     expect(n.periodMonths).toBe(0);
+  });
+
+  it("카드·PDF 한시 기간 줄 — 날짜 확정 접힘은 일반·빈집 두 기간 병기(빈집 3년만 보이지 않는다) · 그 밖은 기존 문장", () => {
+    const at = (s: string, r: string, kind?: PropertyDemolishedKind) => judgePropertyDemolishedLand({ taxBaseDate: d(s), removedOn: d(r), kind, facts: {}, landArea: 400 });
+    const period = (v: ReturnType<typeof at>) => propertyDemolishedVerdictLines({ ...v }).find((l) => l.key === "period")!.text;
+    // 과세기준일 2026-06-01 · 철거 2021-01-01 · 종류 없음 — 종류·빈집정비를 묻지 않았다
+    const a = at("2026-06-01", "2021-01-01");
+    expect(a.periodAllKinds).toEqual({ general: 12, vacantHouse: 36 });
+    expect(period(a)).toBe("철거ㆍ멸실일부터 일반 한시 기간(1년)과 빈집정비사업 철거 빈집 한시 기간(3년) 모두 경과(과세기준일 시행본)");
+    expect(period(a)).not.toContain("3년(빈집정비사업 철거 빈집)");
+    expect(period(at("2024-06-01", "2021-05-31"))).toContain("일반 한시 기간(6개월)과 빈집정비사업 철거 빈집 한시 기간(3년) 모두 경과");
+    // 일반·빈집 기간이 같은 시행본(2024.6.1. 전)은 병기 값이 없고 기존 문장 그대로
+    const old = at("2023-06-01", "2022-11-30");
+    expect(old.periodAllKinds).toBeUndefined();
+    expect(period(old)).toBe("철거ㆍ멸실일부터 6개월(과세기준일 시행본)");
+    // 종류·빈집정비를 물은 접힘은 병기하지 않는다 — 빈집정비 «예» 3년 안 성립 / 건축물 1년 밖 접힘
+    expect(at("2026-06-01", "2023-06-01", "house").periodAllKinds).toBeUndefined();
+    const b = at("2026-06-01", "2025-05-31", "building");
+    expect(b.periodAllKinds).toBeUndefined();
+    expect(period(b)).toBe("철거ㆍ멸실일부터 1년(과세기준일 시행본)");
+    // 고지와 같은 사실을 말한다(둘 다 1년·3년)
+    expect(a.notices[0]).toContain("일반 한시 기간(1년)과 빈집정비사업 철거 빈집 한시 기간(3년)이 모두 지나");
   });
 
   it("T4 stale 무해 — 읽히지 않은 빈집정비 «예»는 36을 만들지 못한다(현행은 36)", () => {

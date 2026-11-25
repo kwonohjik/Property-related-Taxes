@@ -418,6 +418,14 @@ describe("결과 카드 — 철거 특례 판정 블록 + 엔진 세액", () => 
     expect(document.body.textContent).toContain(PROPERTY_DEMOLISHED_PUBLIC_USE_UNPAID_NOTICE);
   });
 
+  it("날짜 확정 접힘(철거 2021-01-01 · 종류 없음) → 1,380,000대 이관 카드의 «한시 기간»은 일반·빈집 두 기간 병기(빈집 3년만 보이지 않음)", () => {
+    const r = run(demolishedForm({ saDemolishedDate: "2021-01-01", saDemolishedKind: "", ...N, otherSeparateAggregateValue: "" }));
+    render(<PropertyTaxResultView result={r} />);
+    expect(text("land-split-demolished-period")).toContain("일반 한시 기간(1년)과 빈집정비사업 철거 빈집 한시 기간(3년) 모두 경과");
+    expect(text("land-split-demolished-period")).not.toContain("3년(빈집정비사업 철거 빈집)");
+    expect(text("land-split-demolished-outcome")).toContain("한시 기간이 지남");
+  });
+
   it("철거가 아닌 필지 → 철거 판정 블록 없음(기존 카드 문구 그대로)", () => {
     const r = run(demolishedForm({ saDemolished: false, otherSeparateAggregateValue: "0" }));
     render(<PropertyTaxResultView result={r} />);

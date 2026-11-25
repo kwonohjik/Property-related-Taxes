@@ -17,6 +17,7 @@ export const PROPERTY_DEMOLISHED_FOLD_REASON_LABEL = {
 } as const satisfies Record<PropertyDemolishedFoldReason, string>;
 
 const MONTHS_TEXT: Record<number, string> = { 6: "6개월", 12: "1년", 36: "3년(빈집정비사업 철거 빈집)" };
+const ALL_KINDS_TEXT: Record<number, string> = { 6: "6개월", 12: "1년", 36: "3년" };
 
 export interface PropertyDemolishedVerdictLine {
   key: "period" | "outcome" | "area" | "required" | "vacant";
@@ -42,7 +43,12 @@ export function propertyDemolishedVerdictLines(v: LandDemolishedVerdictEcho): Pr
     {
       key: "period",
       label: "한시 기간",
-      text: v.periodMonths > 0 ? `철거ㆍ멸실일부터 ${MONTHS_TEXT[v.periodMonths]}(과세기준일 시행본)` : "과세기준일 시행본에 한시 기간 규정이 없거나 판정할 수 없음",
+      text: v.periodAllKinds
+        ? // 날짜만으로 접혀 철거된 것의 종류·빈집정비 여부를 묻지 않았다 — 고지(`propertyDemolishedPeriodAllKindsNotice`)와 같이 두 기간이 모두 지났다고 말한다
+          `철거ㆍ멸실일부터 일반 한시 기간(${ALL_KINDS_TEXT[v.periodAllKinds.general]})과 빈집정비사업 철거 빈집 한시 기간(${ALL_KINDS_TEXT[v.periodAllKinds.vacantHouse]}) 모두 경과(과세기준일 시행본)`
+        : v.periodMonths > 0
+          ? `철거ㆍ멸실일부터 ${MONTHS_TEXT[v.periodMonths]}(과세기준일 시행본)`
+          : "과세기준일 시행본에 한시 기간 규정이 없거나 판정할 수 없음",
     },
     {
       key: "outcome",

@@ -167,6 +167,11 @@ const ASK_FIELDS: readonly PropertyDemolishedAskField[] = [
 ];
 
 export type PropertyDemolishedPeriodMonths = 0 | 6 | 12 | 36;
+/** 날짜 확정 기간 접힘의 병기 기간 — 일반 한시 기간 · 빈집정비사업 철거 빈집 한시 기간(개월). */
+export interface PropertyDemolishedAllKindsPeriods {
+  general: 6 | 12;
+  vacantHouse: 6 | 12 | 36;
+}
 
 /** 사슬 입구 — `propertyDemolishedFactIssue`의 입력과 같다. `facts`는 필수(생략하면 «전부 미답»이 되므로 타입으로 막는다). */
 export type PropertyDemolishedChainInput = PropertyDemolishedFactInput;
@@ -192,6 +197,8 @@ type FoldOutcome = {
   notices: string[];
   legalBasis?: string;
   extensionUnconfirmed?: boolean;
+  /** 날짜만으로 접혀(종류·빈집정비 미질문) 일반 기간과 빈집 기간이 모두 지난 경우 — 두 기간을 같이 말한다(일반·빈집 기간이 같은 시행본은 없음). */
+  allKinds?: PropertyDemolishedAllKindsPeriods;
 };
 type WalkOutcome =
   | { type: "input" }
@@ -210,7 +217,7 @@ const foldOf = (
   at: FoldOutcome["at"],
   months: PropertyDemolishedPeriodMonths,
   notices: string[],
-  extra: { legalBasis?: string; extensionUnconfirmed?: boolean } = {},
+  extra: { legalBasis?: string; extensionUnconfirmed?: boolean; allKinds?: PropertyDemolishedAllKindsPeriods } = {},
 ): FoldOutcome => ({ type: "fold", reason, at, months, notices, ...extra });
 
 const PERIOD_LABEL: Record<6 | 12 | 36, string> = { 6: "6개월", 12: "1년", 36: "3년" };
@@ -244,7 +251,10 @@ function walkDemolishedChain(i: PropertyDemolishedFactInput): Walk {
   const longest = demolishedStatusPeriodMonths(s, true);
   if (longest === 0) return stop(null, foldOf("not_yet", "date", 0, [propertyDemolishedNotYetNotice(s)]));
   const general = demolishedStatusPeriodMonths(s, false) as 6 | 12;
-  if (!isWithinPeriodMonths(r, longest, s)) return stop(null, foldOf("period", "date", longest, [propertyDemolishedPeriodAllKindsNotice(general, longest)]));
+  if (!isWithinPeriodMonths(r, longest, s)) {
+    const allKinds = general === longest ? undefined : { general, vacantHouse: longest };
+    return stop(null, foldOf("period", "date", longest, [propertyDemolishedPeriodAllKindsNotice(general, longest)], { allKinds }));
+  }
 
   // 2. 종류
   order.push("demolishedKind");
@@ -462,6 +472,8 @@ export interface PropertyDemolishedVerdict {
   areaClauseApplied: boolean;
   /** 빈집정비 3년 연장 여부가 확인되지 않아(모름·미선택) 일반 기간만 반영한 결과가 달라질 수 있는가. */
   vacantHouseExtensionUnconfirmed: boolean;
+  /** 날짜만으로 접힌 기간 접힘(종류·빈집정비를 묻지 않음) — 일반·빈집 두 기간이 모두 지났음을 말하는 병기 값. 그 밖에는 없다. */
+  periodAllKinds?: PropertyDemolishedAllKindsPeriods;
   /** 이 판정이 읽은 칸 집합(사슬 echo — 화면이 «왜 이 칸이 필요했나»를 같은 값으로 말한다). 읽지 않은 칸은 false. */
   required: PropertyDemolishedRequired & { publicUse: boolean; publicUsePaid: boolean };
   notices: string[];
@@ -512,6 +524,7 @@ export function judgePropertyDemolishedLand(i: PropertyDemolishedJudgeInput): Pr
       recognizedArea: 0,
       excessArea: round2(landArea),
       vacantHouseExtensionUnconfirmed: o.extensionUnconfirmed ?? false,
+      ...(o.allKinds ? { periodAllKinds: o.allKinds } : {}),
       required,
       notices: o.notices,
       legalBasis: o.legalBasis ? [o.legalBasis] : base.legalBasis,
