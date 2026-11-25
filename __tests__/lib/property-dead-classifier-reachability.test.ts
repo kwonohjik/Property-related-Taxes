@@ -130,7 +130,9 @@ describe("도달 불가 — 플래그 기반 분류기는 프로덕션에서 호
 
 describe("살아 있는 경로는 하나다 — 정정이 들어간 곳", () => {
   it("DEAD-5: API가 타는 분리과세는 `separate-taxation.ts`다", () => {
-    expect(importersOf("separate-taxation")).toContain("lib/tax-engine/property-tax.ts");
+    // PSE-E2a — 분리과세 분기를 `property-tax-separated.ts`로 분리했다(property-tax.ts → property-tax-separated.ts → separate-taxation.ts)
+    expect(importersOf("separate-taxation")).toContain("lib/tax-engine/property-tax-separated.ts");
+    expect(importersOf("property-tax-separated")).toContain("lib/tax-engine/property-tax.ts");
   });
 
   it("DEAD-6: 그 살아 있는 경로에는 면적 한도가 실제로 들어 있다", () => {
