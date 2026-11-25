@@ -8,7 +8,7 @@
  *
  * | 모듈 | 진입점 | 프로덕션 호출처 |
  * |---|---|---|
- * | `separate-taxation.ts` | `calculateSeparateTax` | ✅ **살아 있음** — `property-tax.ts` (API 경로) |
+ * | `separate-taxation.ts`(+`-classify.ts`) | `calculateSeparateTax` | ✅ **살아 있음** — `property-tax.ts` (API 경로) |
  * | `property-land-classification.ts` | `classifyLand` | ❌ `property-object.ts`만 (그 자신도 죽음) |
  * | `property-object.ts` | `determinePropertyTaxObject` | ❌ **0건** |
  * | `property-tax-comprehensive-aggregate.ts` | `calculateComprehensiveAggregate` | ❌ 테스트만 |
@@ -28,7 +28,7 @@
  *    한정하고, 그 밖의 시지역 공장용지는 §101①1호 **본문** → 별도합산이다. 두 조문은 배타 분기다.
  *
  * ⇒ 다필지 재산세 UI를 만들며 이 분류기를 배선하려는 사람은 **먼저 그 둘을 넘겨야 한다**.
- *   이 테스트가 깨지면 그 신호다. 정정 참조: `separate-taxation.ts` `classifyStandard`.
+ *   이 테스트가 깨지면 그 신호다. 정정 참조: `separate-taxation-classify.ts` `classifyStandard`.
  *
  * ## 왜 정적 분석인가
  *
@@ -88,7 +88,7 @@ const DEAD_CLUSTER = [
 
 const WIRE_UP_WARNING =
   "배선하려면 먼저 두 결함을 넘겨야 한다: (1) §102①1호 공장입지기준면적 한도 없음 " +
-  "(2) §101①1호↔§102①1호 소재지 배타 분기 미적용. 정정 참조: separate-taxation.ts classifyStandard";
+  "(2) §101①1호↔§102①1호 소재지 배타 분기 미적용. 정정 참조: separate-taxation-classify.ts classifyStandard";
 
 describe("도달 불가 — 플래그 기반 분류기는 프로덕션에서 호출되지 않는다", () => {
   it("DEAD-1: `property-land-classification`을 import하는 프로덕션 파일은 죽은 클러스터뿐이다", () => {
@@ -136,7 +136,10 @@ describe("살아 있는 경로는 하나다 — 정정이 들어간 곳", () => 
   it("DEAD-6: 그 살아 있는 경로에는 면적 한도가 실제로 들어 있다", () => {
     // 죽은 쪽을 배선할 사람이 "어디를 베껴야 하는가"의 좌표. 이 심볼이 사라지면
     // 위 주석의 「정정 참조」가 stale이 되므로 함께 깨뜨린다.
-    const live = FILES.find((f) => f.path === "lib/tax-engine/separate-taxation.ts")!;
+    // 800줄 분리 후 leaf 판정(`judgeFactoryAreaLimit`·`classifyStandard`)은 `separate-taxation-classify.ts`에 있다(진입점 `separate-taxation.ts`가 그것을 부른다)
+    const live = FILES.find((f) => f.path === "lib/tax-engine/separate-taxation-classify.ts")!;
+    const entry = FILES.find((f) => f.path === "lib/tax-engine/separate-taxation.ts")!;
+    expect(entry.src).toContain("classifyStandard");
     expect(live.src).toContain("judgeFactoryAreaLimit");
     expect(live.src).toContain("computeFactoryStandardArea");
   });
