@@ -80,7 +80,7 @@ export function Step2Separated({ form, onChange }: Props) {
         >
           <p className="text-xs text-sky-800 dark:text-sky-200">
             §102①3호는 <b>가축별 기준면적으로 계산한 토지면적의 범위</b>만 분리과세로 정합니다.
-            초과분은 종합합산과세대상으로 이관됩니다.
+            초과분은 종합합산과세대상으로 이관됩니다. 초과분이 있으면 다음 단계에서 같은 관할구역의 다른 종합합산과세대상 토지 공시가액을 입력합니다.
           </p>
 
           <ToggleCard
@@ -212,7 +212,8 @@ export function Step2Separated({ form, onChange }: Props) {
             >
               <p className="text-xs text-sky-800 dark:text-sky-200">
                 §102①1호는 <b>공장입지기준면적 범위의 토지</b>만 분리과세로 정합니다. 초과분은
-                종합합산과세대상으로 이관됩니다.
+                종합합산과세대상으로 이관됩니다. 초과분이 있으면 다음 단계에서 같은 관할구역의 다른
+                종합합산과세대상 토지 공시가액을 입력합니다.
               </p>
 
               <ToggleCard

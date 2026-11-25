@@ -80,9 +80,9 @@ export function effectiveOwnershipType(form: FormState): FormState["ownershipTyp
 }
 
 /**
- * recompute(§118 본문 — 직전 과세표준 재산정) 선택지를 여는 대상: 건축물·선박·항공기·토지(종합합산·별도합산).
+ * recompute(§118 본문 — 직전 과세표준 재산정) 선택지를 여는 대상: 건축물·선박·항공기·토지(종합합산·별도합산·종합합산 이관분이 있는 분리과세).
  * Step 3 위젯·④ 변환·⑧(`validateStep(3)`)이 같은 술어를 쓴다(UI 통과↔변환 누락 모순 방지).
- * 별도합산은 엔진이 분류별(별도합산분·종합합산 이관분) 직전 세율로 재산정한다(`property-land-split-tax.ts`).
+ * 별도합산·분리과세 이관은 엔진이 분류별(별도합산분 또는 분리과세분 · 종합합산 이관분) 직전 세율로 재산정한다(`property-land-split-tax.ts`).
  */
 export function isRecomputeTarget(form: FormState): boolean {
   return (
@@ -90,7 +90,10 @@ export function isRecomputeTarget(form: FormState): boolean {
     form.objectType === "vessel" ||
     form.objectType === "aircraft" ||
     (form.objectType === "land" &&
-      (form.landTaxType === "comprehensive_aggregate" || form.landTaxType === "separate_aggregate"))
+      (form.landTaxType === "comprehensive_aggregate" ||
+        form.landTaxType === "separate_aggregate" ||
+        // 분리과세는 면적 한도 초과(공장·목장)로 종합합산 이관분이 생길 때만 — 요구 술어 파생이라 ⑧·④·위젯이 같이 따라온다
+        (form.landTaxType === "separated" && landSplitRequired(form).otherComprehensive)))
   );
 }
 
