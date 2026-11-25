@@ -418,6 +418,12 @@ M1 허가 게이트 제거(K-2 깨짐) · M2 `permit` 경계 2019.6.1. → 2019.
 - **계획서와 다른 점**: (1) 접힘 위치 — 계획서는 접힘 전 읽기 칸 최소화를 말했지만 용도지역·바닥면적은 비철거에서 종전부터 항상 요구하는 칸이라(`separate-aggregate-input` · Zod superRefine) **`calculateBaseArea` 뒤**에서 접어 «엔진이 읽는 칸 = 요구 칸» 일치를 유지했다(접혀도 용도지역 오류는 종전처럼 던진다). (2) 엔진 직접 호출에서 `buildingPermit`이 `undefined`·`""`이면 `yes`가 아니므로 접는다(E-9와 같은 읽기 — 구 입력은 2011.6.1.~ 과세기준일에 종합합산으로 간다). (3) 철거 필지는 `buildingPermit`을 읽지도 요구하지도 않는다(철거 허가 칸 `demolishedPermit`이 같은 요건을 맡는다) — 직접 API가 보내면 무시(바이트 동일 anchor).
 - **분리과세 공장용지 단서와의 관계**: `separate-taxation.ts` `factoryIsUnpermitted`(§102①1호 단서 — 분리과세 제외)는 이 PR이 건드리지 않았다. 분리과세로 입력하면 종전처럼 `isApplicable=false` → `property-tax.ts`가 422(«종합합산 또는 별도합산 과세 유형으로 재입력»)를 던진다. §101① 단서가 별도합산에서도 같은 건축물을 제외하므로 **재입력 후 최종 과세는 종합합산**이다(별도합산 + 허가 «아니오»로 입력하면 이 PR의 접힘이 같은 결과를 낸다). 422 문구의 «별도합산» 안내는 부정확해졌지만 세액 영향 없음 — 문구 정정은 별도 판단(확인 필요).
 
+### 8.1e PSA-E3 UI 구현 기록 (2026-11-25 — 화면 칸)
+
+- 구현: `components/calc/property/SeparateAggregateBuildingPermit.tsx`(신규 — `RadioCardGroup` 예/아니오/모름 · 기본값 없음 · `data-field="buildingPermit"` 점프 앵커 · 뜻은 `CollapsibleHintCard`(접혀도 인쇄에 남음)) · `Step2SeparateAggregate.tsx`(바닥면적 칸 뒤·철거 토글 앞 — ⑧ 순서 용도지역 → 바닥면적 → 허가와 같게). 노출 = `!saDemolished ∧ buildingPermitNeedOf()`(어댑터 단일 술어 — UI는 날짜를 비교하지 않는다). 결과 카드는 `PropertyLandSplitCard`가 이관 사유 라벨·고지를 이미 그대로 그려 코드 변경 없음(E2E·카드 anchor로 확인).
+- **계획서와 다른 점**: (1) 선택지 설명(`description`)은 inline 라디오가 렌더하지 않아 칸 아래 `hint` 한 줄(150자 미만 — `hint-length-policy`) + 접힘 카드로 나눴다. (2) 라벨은 엔진 문구 상수가 아니라 화면용 질문 문장이다 — 뜻(§101① 단서 verbatim)은 접힘 카드에 그대로 두고 근거 조문은 `PROPERTY_SEPARATE.BUILDING_PERMIT_101` 상수를 쓴다. 차단 문구는 엔진 `PROPERTY_BUILDING_PERMIT_ISSUE_MESSAGE`(⑧·⑫ 공통) 그대로.
+- 검증: 렌더 격자 `__tests__/components/calc/property-building-permit-render-grid.anchor.test.tsx`(연도 4 × 철거 2 × 공장 2 × 답 4 = 64셀 — 화면 ≡ ⑧ ≡ ④ ≡ ⑫) · E2E `e2e/property-separate-building-permit.spec.ts`(K-27~K-29 · 공장용지 · 미선택 차단·점프 · 철거 ON 숨김 · 375px).
+
 ### 8.2 검증 명령
 
 `npx vitest run __tests__/tax-engine/property/ __tests__/tax-engine/separate-aggregate-* __tests__/api/property.route.* __tests__/components/calc/property-*` · `npx tsc --noEmit` · `npm run verify:legal` · 구현 PR은 push 전 `npm run test:property`.

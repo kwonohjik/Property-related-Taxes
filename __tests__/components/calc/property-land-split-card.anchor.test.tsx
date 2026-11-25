@@ -66,6 +66,22 @@ describe("카드 — 3분할 행 값 = 엔진 값", () => {
     expect(text("land-split-reasons")).toContain("철거");
   });
 
+  it("PSA-E3 K-27~K-29: 비철거 허가 «예» 516,000 · «아니오»·«모름» 전량 이관 960,000 + 이관 사유(영 §101① 단서) + 확인 필요 고지", () => {
+    const form = base({ publishedPrice: "300,000,000", saZoningDistrict: "commercial", saLandArea: "300", otherSeparateAggregateValue: "0", otherComprehensiveValue: "0" });
+    const yes = run({ ...form, saBuildingPermit: "yes" });
+    expect(yes.totalPayable).toBe(516_000);
+    expect(yes.landSplit?.comprehensive?.transferReasons ?? []).not.toContain("building_permit");
+    for (const answer of ["no", "unknown"] as const) {
+      const r = run({ ...form, saBuildingPermit: answer, otherSeparateAggregateValue: "" });
+      expect(r.totalPayable).toBe(960_000);
+      expect(r.landSplit?.comprehensive?.transferReasons).toEqual(["building_permit"]);
+      const { unmount } = render(<PropertyTaxResultView result={r} />);
+      expect(text("land-split-reasons")).toContain("허가·사용승인을 받지 않았거나 확인되지 않은 건축물의 부속토지(영 §101① 단서)");
+      expect(screen.getAllByText(answer === "no" ? /사용승인\(임시사용승인 포함\)을 받지 않고 사용 중인 건축물의 부속토지는/ : /여부가 확인되지 않아\(모름·미선택\)/).length).toBeGreaterThan(0);
+      unmount();
+    }
+  });
+
   it("S-4: 별도합산분 640,000 · 이관분 1,850,000 · 합계 2,490,000(= 산출세액) · 총 2,988,000", () => {
     const r = run(S4);
     expect([r.landSplit?.separate?.share, r.landSplit?.comprehensive?.share, r.determinedTax, r.totalPayable]).toEqual([
