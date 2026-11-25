@@ -13,11 +13,12 @@ import {
 } from "@/lib/calc/property-land-split-inputs";
 import type { FormState } from "./shared";
 
-/** 이 폼이 연 합산 칸 — 별도합산 필지는 ④와 같은 객체로 분류 면적을 미리 판정한다. */
+/** 이 폼이 연 합산 칸 — 별도합산 필지·분리과세(공장·목장) 필지는 ④와 같은 객체로 분류 면적을 미리 판정한다. */
 export function landSplitRequired(form: FormState) {
   return landSplitRequiredFromForm({
     landTaxType: form.landTaxType,
     separateAggregateItem: form.landTaxType === "separate_aggregate" ? buildSeparateAggregateItem(form) : undefined,
+    separateTaxationItem: form.landTaxType === "separated" ? buildSeparateTaxationItem(form) : undefined,
   });
 }
 
@@ -79,9 +80,9 @@ export function effectiveOwnershipType(form: FormState): FormState["ownershipTyp
 }
 
 /**
- * recompute(§118 본문 — 직전 과세표준 재산정) 선택지를 여는 대상: 건축물·선박·항공기·토지(종합합산·별도합산).
+ * recompute(§118 본문 — 직전 과세표준 재산정) 선택지를 여는 대상: 건축물·선박·항공기·토지(종합합산·별도합산·종합합산 이관분이 있는 분리과세).
  * Step 3 위젯·④ 변환·⑧(`validateStep(3)`)이 같은 술어를 쓴다(UI 통과↔변환 누락 모순 방지).
- * 별도합산은 엔진이 분류별(별도합산분·종합합산 이관분) 직전 세율로 재산정한다(`property-land-split-tax.ts`).
+ * 별도합산·분리과세 이관은 엔진이 분류별(별도합산분 또는 분리과세분 · 종합합산 이관분) 직전 세율로 재산정한다(`property-land-split-tax.ts`).
  */
 export function isRecomputeTarget(form: FormState): boolean {
   return (
@@ -89,8 +90,65 @@ export function isRecomputeTarget(form: FormState): boolean {
     form.objectType === "vessel" ||
     form.objectType === "aircraft" ||
     (form.objectType === "land" &&
-      (form.landTaxType === "comprehensive_aggregate" || form.landTaxType === "separate_aggregate"))
+      (form.landTaxType === "comprehensive_aggregate" ||
+        form.landTaxType === "separate_aggregate" ||
+        // 분리과세는 면적 한도 초과(공장·목장)로 종합합산 이관분이 생길 때만 — 요구 술어 파생이라 ⑧·④·위젯이 같이 따라온다
+        (form.landTaxType === "separated" && landSplitRequired(form).otherComprehensive)))
   );
+}
+
+/** 분리과세 — 와이어 `separateTaxationItem`. ⑧의 합산 칸 요구 판정(미리보기: 공장·목장 면적 한도 초과)도 같은 객체를 쓴다(④와 ⑧이 어긋나지 않게). */
+export function buildSeparateTaxationItem(form: FormState): Record<string, unknown> {
+  const st: Record<string, unknown> = {};
+  switch (form.stSeparatedType) {
+    case "farmland":      st.isFarmland = true; break;
+    case "livestock":
+      st.isLivestockFarm = true;
+      // §102①3호 면적 한도 — 미입력은 엔진이 던진다(추정 금지). validate가 먼저 막는다.
+      st.pastureTotalLandArea = parseDecimal(form.stPastureTotalLandArea) ?? undefined;
+      st.pastureLivestockType = form.stPastureLivestockType || undefined;
+      st.pastureLivestockCount = parseDecimal(form.stPastureLivestockCount) ?? undefined;
+      st.pastureHasFacility = form.stPastureHasFacility;
+      st.pastureHasGrassland = form.stPastureHasGrassland;
+      st.pastureHasFodder = form.stPastureHasFodder;
+      st.pastureIsUrbanArea = form.stPastureIsUrbanArea;
+      st.pastureOwnedBefore1990 = form.stPastureOwnedBefore1990;
+      break;
+    case "forest":        st.isProtectedForest = true; break;
+    case "factory": {
+      st.isFactoryLand = true;
+      if (form.stFactoryLocation) st.factoryLocation = form.stFactoryLocation;
+      // §102①1호 면적 한도 — 미입력은 엔진이 던진다(추정 금지). validate가 먼저 막는다.
+      st.factoryTotalLandArea = parseDecimal(form.stFactoryTotalLandArea) ?? undefined;
+      st.factoryFloorArea = parseDecimal(form.stFactoryFloorArea) ?? undefined;
+      st.factoryAreaRatePercent = parseDecimal(form.stFactoryAreaRatePercent) ?? undefined;
+      st.factoryIsRestrictedZone = form.stFactoryIsRestrictedZone;
+      st.factoryAdditionalRecognizedArea =
+        parseDecimal(form.stFactoryAdditionalRecognizedArea) ?? undefined;
+      // 별표6 3호바 — 표(비고 2-나·다·라)와 10% 상한은 엔진이 산출한다 (E4-06).
+      st.factoryEmployeeSportsFacility = {
+        employeeCount: parseDecimal(form.stFactorySportsEmployeeCount) ?? undefined,
+        entityType:
+          form.stFactorySportsEntityType === "corporation" ||
+          form.stFactorySportsEntityType === "individual"
+            ? form.stFactorySportsEntityType
+            : undefined,
+        playgroundArea: parseDecimal(form.stFactorySportsPlaygroundArea) ?? undefined,
+        tennisCourtArea: parseDecimal(form.stFactorySportsCourtArea) ?? undefined,
+        indoorFloorArea: parseDecimal(form.stFactorySportsIndoorFloorArea) ?? undefined,
+        indoorZoneMultiplier: form.stFactorySportsZoningDistrict
+          ? getZoneAreaMultiplier(form.stFactorySportsZoningDistrict)?.multiplier
+          : undefined,
+      };
+      st.factoryIsUnpermitted = form.stFactoryIsUnpermitted;
+      break;
+    }
+    case "saltfield":     st.isSaltField = true; break;
+    case "terminal":      st.isTerminalOrParking = true; break;
+    case "golf_member":   st.isGolfCourse = true; st.golfCourseType = "member"; break;
+    case "entertainment": st.isHighClassEntertainment = true; break;
+  }
+  return st;
 }
 
 /** 폼 상태 → API 요청 본문 변환 (순수 함수 — 테스트 anchor 대상) */
@@ -151,56 +209,7 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
     }
 
     if (form.landTaxType === "separated") {
-      const st: Record<string, unknown> = {};
-      switch (form.stSeparatedType) {
-        case "farmland":      st.isFarmland = true; break;
-        case "livestock":
-          st.isLivestockFarm = true;
-          // §102①3호 면적 한도 — 미입력은 엔진이 던진다(추정 금지). validate가 먼저 막는다.
-          st.pastureTotalLandArea = parseDecimal(form.stPastureTotalLandArea) ?? undefined;
-          st.pastureLivestockType = form.stPastureLivestockType || undefined;
-          st.pastureLivestockCount = parseDecimal(form.stPastureLivestockCount) ?? undefined;
-          st.pastureHasFacility = form.stPastureHasFacility;
-          st.pastureHasGrassland = form.stPastureHasGrassland;
-          st.pastureHasFodder = form.stPastureHasFodder;
-          st.pastureIsUrbanArea = form.stPastureIsUrbanArea;
-          st.pastureOwnedBefore1990 = form.stPastureOwnedBefore1990;
-          break;
-        case "forest":        st.isProtectedForest = true; break;
-        case "factory": {
-          st.isFactoryLand = true;
-          if (form.stFactoryLocation) st.factoryLocation = form.stFactoryLocation;
-          // §102①1호 면적 한도 — 미입력은 엔진이 던진다(추정 금지). validate가 먼저 막는다.
-          st.factoryTotalLandArea = parseDecimal(form.stFactoryTotalLandArea) ?? undefined;
-          st.factoryFloorArea = parseDecimal(form.stFactoryFloorArea) ?? undefined;
-          st.factoryAreaRatePercent = parseDecimal(form.stFactoryAreaRatePercent) ?? undefined;
-          st.factoryIsRestrictedZone = form.stFactoryIsRestrictedZone;
-          st.factoryAdditionalRecognizedArea =
-            parseDecimal(form.stFactoryAdditionalRecognizedArea) ?? undefined;
-          // 별표6 3호바 — 표(비고 2-나·다·라)와 10% 상한은 엔진이 산출한다 (E4-06).
-          st.factoryEmployeeSportsFacility = {
-            employeeCount: parseDecimal(form.stFactorySportsEmployeeCount) ?? undefined,
-            entityType:
-              form.stFactorySportsEntityType === "corporation" ||
-              form.stFactorySportsEntityType === "individual"
-                ? form.stFactorySportsEntityType
-                : undefined,
-            playgroundArea: parseDecimal(form.stFactorySportsPlaygroundArea) ?? undefined,
-            tennisCourtArea: parseDecimal(form.stFactorySportsCourtArea) ?? undefined,
-            indoorFloorArea: parseDecimal(form.stFactorySportsIndoorFloorArea) ?? undefined,
-            indoorZoneMultiplier: form.stFactorySportsZoningDistrict
-              ? getZoneAreaMultiplier(form.stFactorySportsZoningDistrict)?.multiplier
-              : undefined,
-          };
-          st.factoryIsUnpermitted = form.stFactoryIsUnpermitted;
-          break;
-        }
-        case "saltfield":     st.isSaltField = true; break;
-        case "terminal":      st.isTerminalOrParking = true; break;
-        case "golf_member":   st.isGolfCourse = true; st.golfCourseType = "member"; break;
-        case "entertainment": st.isHighClassEntertainment = true; break;
-      }
-      body.separateTaxationItem = st;
+      body.separateTaxationItem = buildSeparateTaxationItem(form);
     }
   }
 

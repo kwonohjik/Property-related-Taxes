@@ -13,11 +13,11 @@
  * 한도를 넘는 부분은 종합합산 누진세율(0.2~0.5%) 대상인데 분리과세 0.2%를 받고 있었다 —
  * **납세자에게 유리한 방향**의 오류다.
  *
- * ## 초과분은 세액에 반영하지 않는다 (별도합산 경로와 같은 취급)
+ * ## 이 판정(`calculateSeparateTax`)의 세액은 인정분만이다
  *
- * 종합합산은 **인별 전국 합산**이라 단일 필지 계산기가 세율을 정할 수 없다. 별도합산
- * (`totalExcessOfficialValue`)과 동일하게 **경고로 이관 안내**만 하고, 분리과세 세액은
- * 인정분 시가표준액에만 매긴다.
+ * 분리과세 세액은 인정분 시가표준액에만 매긴다. 초과분은 종합합산으로 이관되어 — 합산 단위가 «같은 지방자치단체 관할구역»
+ * (지방세법 §113①1호 · 「인별 전국」은 종부세 개념)이므로 — `calculatePropertyTax`가 `property-tax-separated.ts`에서
+ * 종합합산 클래스로 따로 매긴다(PSE · `separated-excess-transfer.anchor.test.ts`). 이 파일은 판정·인정분 세액만 고정한다.
  *
  * ## 픽스처 산수
  *
@@ -171,6 +171,7 @@ describe("⑫ Zod — 공장 면적 필드가 strip되지 않는다", () => {
       objectType: "land",
       publishedPrice: 100_000_000,
       landTaxType: "separated",
+      otherComprehensiveValue: 0, // PSE-E3 — 한도 초과(15,000㎡)라 종합합산 합산 칸이 필수다(0 = 없음)
       separateTaxationItem: {
         isFactoryLand: true,
         factoryLocation: "industrial_zone",
@@ -335,6 +336,7 @@ describe("§102①3호 — 목장용지 가축별 기준면적", () => {
       objectType: "land",
       publishedPrice: 100_000_000,
       landTaxType: "separated",
+      otherComprehensiveValue: 0, // PSE-E3 — 한도 초과라 종합합산 합산 칸이 필수다(0 = 없음)
       separateTaxationItem: {
         isLivestockFarm: true,
         pastureTotalLandArea: 40000,

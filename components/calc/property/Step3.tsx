@@ -60,7 +60,7 @@ export function Step3({ form, onChange }: Props) {
     );
   }
 
-  // recompute(§118 본문) 대상: 건축물·선박·항공기·종합합산·별도합산 토지 (④·⑧과 같은 술어)
+  // recompute(§118 본문) 대상: 건축물·선박·항공기·종합합산·별도합산 토지·종합합산 이관분이 있는 분리과세 (④·⑧과 같은 술어)
   const recomputeTarget = isRecomputeTarget(form);
 
   return (
@@ -91,12 +91,17 @@ export function Step3({ form, onChange }: Props) {
         />
       )}
 
-      {form.objectType === "land" && form.landTaxType === "separate_aggregate" && form.taxCapMode === "direct" && landSplitRequired(form).otherComprehensive && (
-        <p className="text-xs text-muted-foreground">
-          종합합산으로 넘어간 부분(면적 초과·철거 기간 경과·건축물 없음)이 있으면 직접 입력한 직전연도 세액은
-          세부담상한에 쓰지 않습니다. 상한을 적용하려면 「직전연도 과세표준으로 재산정」을 선택하세요.
-        </p>
-      )}
+      {form.objectType === "land" &&
+        (form.landTaxType === "separate_aggregate" || form.landTaxType === "separated") &&
+        form.taxCapMode === "direct" &&
+        landSplitRequired(form).otherComprehensive && (
+          <p className="text-xs text-muted-foreground" data-testid="land-split-direct-cap-note">
+            {form.landTaxType === "separated"
+              ? "기준면적을 넘어 종합합산으로 넘어간 부분이 있으면"
+              : "종합합산으로 넘어간 부분(면적 초과·철거 기간 경과·건축물 없음)이 있으면"}{" "}
+            직접 입력한 직전연도 세액은 세부담상한에 쓰지 않습니다. 상한을 적용하려면 「직전연도 과세표준으로 재산정」을 선택하세요.
+          </p>
+        )}
 
       {recomputeTarget && form.taxCapMode === "recompute" ? (
         <div className="space-y-1">

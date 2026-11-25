@@ -20,6 +20,7 @@ import type {
   PropertyHeir,
 } from "./property-object.types";
 import type { LandDemolishedVerdictEcho } from "../separate-aggregate-land";
+import type { SeparateTaxationCategory } from "../separate-taxation-classify";
 import type { PropertyDemolishedKind } from "../property-separate-requirements";
 import type { PropertyRequirementFact } from "../property-separate-requirements";
 
@@ -409,7 +410,10 @@ export interface PropertyHouseSplitDistribution {
   buildingRatio: number;
 }
 
-/** 종합합산 이관 사유 — 별도합산 선택 필지의 이관분(PSA-E4 · 철거 요건 사유 `permit`·`other_use`·`public_use_unpaid`는 PSA-E2). */
+/**
+ * 종합합산 이관 사유 — 별도합산 선택 필지의 이관분(PSA-E4 · 철거 요건 사유 `permit`·`other_use`·`public_use_unpaid`는 PSA-E2).
+ * `factory_area_excess`·`pasture_area_excess`는 **분리과세** 선택 필지의 면적 한도 초과분(PSE — 영 §102①1호·3호). `area_excess`(바닥면적 × 배율 초과)와 의미가 달라 재사용하지 않는다.
+ */
 export type PropertyLandSplitTransferReason =
   | "no_building"
   | "demolished_period"
@@ -418,6 +422,8 @@ export type PropertyLandSplitTransferReason =
   | "public_use_unpaid"
   | "building_permit"
   | "area_excess"
+  | "factory_area_excess"
+  | "pasture_area_excess"
   | "direct_type";
 
 /** 토지 한 분류(별도합산 또는 종합합산)의 합산 과세 내역 — 이 필지 몫 + 같은 관할구역 합산 echo. */
@@ -442,12 +448,45 @@ export interface PropertyLandSplitClass {
   ownTaxBase: number;
 }
 
+/** 분리과세 필지의 면적 한도 echo — 결과 카드가 «왜 갈렸나»를 판정과 같은 값으로 말한다. */
+export interface PropertyLandSplitAreaLimit {
+  kind: "factory" | "pasture";
+  /** 부속토지(목장용지) 전체 면적 ㎡ */
+  totalArea: number;
+  /** 공장입지기준면적(별표6) 또는 가축별 기준면적(영 §102①3호 [표]) ㎡ */
+  standardArea: number;
+  /** 분리과세 인정면적 = min(전체, 기준) ㎡ */
+  recognizedArea: number;
+  /** 종합합산 이관 면적 ㎡ */
+  excessArea: number;
+}
+
+/** 분리과세분(한도 안) 세액 echo — 종전 `calculateSeparateTax` 값 그대로. */
+export interface PropertyLandSplitSeparated {
+  category: SeparateTaxationCategory;
+  /** 0.0007(저율·목장) | 0.002(일반·공장) */
+  appliedRate: number;
+  /** 인정분 시가표준액 */
+  ownValue: number;
+  /** 인정분 과세표준 = ownValue × 공정시장가액비율(70%) */
+  ownTaxBase: number;
+  /** 인정분 산출세액 = ownTaxBase × appliedRate */
+  tax: number;
+  areaLimit: PropertyLandSplitAreaLimit;
+}
+
 /**
  * 토지(별도합산·종합합산) 분류별 합산 과세 결과 — echo. 합계·판정은 최상위 필드가 유지한다.
  * 별도합산 선택 필지의 별도합산 인정분(`separate`)·종합합산 이관분(`comprehensive`), 직접 종합합산 선택은 `comprehensive`만.
  */
 export interface PropertyLandSplitResult {
+  /** 별도합산 선택 필지의 별도합산 인정분(합산 과세) — 분리과세분은 `separated`(이름 혼동 주의) */
   separate?: PropertyLandSplitClass;
+  /**
+   * 분리과세 선택 필지의 한도 안(인정분) — 단일세율·합산 없음(법 §113①3호). 공장용지·목장용지가 면적 한도를 넘을 때만 있다(PSE).
+   * 넘는 부분은 `comprehensive`(종합합산 이관분)가 싣는다.
+   */
+  separated?: PropertyLandSplitSeparated;
   comprehensive?: PropertyLandSplitClass & { transferReasons: PropertyLandSplitTransferReason[] };
   /** 세부담상한 전 이 필지 합계(별도합산분 몫 + 종합합산분 몫) */
   taxBeforeCap: number;
@@ -456,7 +495,10 @@ export interface PropertyLandSplitResult {
     applied: boolean;
     capRate: number;
     basisTax: number;
+    /** 별도합산분 직전 재산정액(별도합산 선택 전용) */
     basisTaxSeparate?: number;
+    /** 분리과세분 직전 재산정액(분리과세 선택 + recompute 전용 — `basisTaxSeparate`와 다른 키) */
+    basisTaxSeparated?: number;
     basisTaxComprehensive?: number;
   };
   /** 합산 단위 라벨 — 「지방세법」 §113① «해당 지방자치단체 관할구역» */

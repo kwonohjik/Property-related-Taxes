@@ -174,9 +174,8 @@ export interface SeparateTaxationResult {
    *   `factoryAreaCheck` — 공장용지 (§102①1호 · 시행규칙 §50 [별표6])
    *   `pastureAreaCheck` — 목장용지 (§102①3호 [표] 가축별 기준면적)
    *
-   * 초과분은 분리과세에서 빠져 **종합합산**으로 이관된다. 다만 이 분리과세 경로는 그 초과분에
-   * 종합합산 세액을 매기지 않는다(합산 단위는 «같은 지방자치단체 관할구역» — 지방세법 §113①1호) — `excessAssessedValue`를 경고로 안내만 한다.
-   * 별도합산 경로의 이관분은 PSA-E4부터 세액에 반영된다(`property-land-split-tax.ts`) — 이 경로는 아직 미반영(별도 후속).
+   * 초과분은 분리과세에서 빠져 **종합합산**으로 이관된다(법 §106①1호). 이 판정 결과의 `taxBase`·`calculatedTax`는 인정분만이고,
+   * 이관분 세액은 `property-tax-separated.ts`가 `calculateLandClassTax`(PSA-E4 leaf)로 매긴다 — 합산 단위는 «같은 지방자치단체 관할구역»(지방세법 §113①1호)이라 합산 칸 입력이 필요하다(PSE).
    */
   pastureAreaCheck?: SeparateTaxationResult["factoryAreaCheck"];
 
@@ -217,8 +216,8 @@ type ClassifyPartial = {
 /**
  * 면적 한도 초과분을 시가표준액으로 안분한다 — 공장용지·목장용지 공통.
  *
- * 초과분은 분리과세에서 빠져 **종합합산**으로 이관되는데, 종합합산은 «같은 지방자치단체 관할구역» 합산(지방세법 §113①1호)이라
- * 이 경로는 아직 세액에 반영하지 않고 **경고로 안내**만 한다(별도합산 경로의 이관분은 PSA-E4부터 세액에 반영 — 이 경로는 별도 후속). 분리과세 과세표준은 인정분에만 매긴다.
+ * 초과분은 분리과세에서 빠져 **종합합산**으로 이관된다. 분리과세 과세표준은 인정분에만 매기고, 이관분 세액은 호출자(`property-tax-separated.ts`)가
+ * 종합합산 클래스로 따로 매긴다(합산 단위 «같은 지방자치단체 관할구역» — 지방세법 §113①1호).
  *
  * 금액은 원 미만 절사(세법 floor)하고 **잔액은 초과분이 흡수**해 합을 보존한다.
  */
@@ -345,7 +344,7 @@ export function classifyLowRate(
         `${areaCheck.includedLabels.join("·")} 반영), ` +
         `${areaCheck.excessArea.toFixed(2)}㎡(시가표준액 ` +
         `${areaCheck.excessAssessedValue.toLocaleString()}원)는 기준면적 초과로 ` +
-        "종합합산과세대상으로 이관됩니다. 인별 합산 계산 시 별도 처리가 필요합니다.",
+        "종합합산과세대상으로 이관되어 같은 지방자치단체 관할구역의 종합합산 토지와 합산 과세합니다(「지방세법」 제113조 제1항 제1호).",
       );
     }
 
@@ -406,10 +405,10 @@ export function classifyLowRate(
  * 없으면 그 범위를 알 수 없고, 모른 채 전량 분리과세(0.2%)를 주면 **납세자에게 유리한 방향**의
  * 추정이 된다(종합합산 누진세율보다 낮다). 근거 없는 유리 적용도 금지다 ⇒ **던진다**.
  *
- * ## 초과분은 세액에 반영하지 않는다
+ * ## 초과분은 이 판정이 아니라 호출자가 종합합산으로 과세한다
  *
- * 초과분은 종합합산으로 이관되는데, 종합합산은 «같은 지방자치단체 관할구역» 합산(지방세법 §113①1호)이라
- * 이 경로는 아직 세액에 반영하지 않고 **경고로 안내**만 한다(별도합산 경로의 이관분은 PSA-E4부터 세액에 반영 — 이 경로는 별도 후속).
+ * 초과분은 종합합산으로 이관된다 — 합산 단위가 «같은 지방자치단체 관할구역»(지방세법 §113①1호)이라 이 leaf 판정은 가액만 가르고,
+ * 세액은 `property-tax-separated.ts`가 종합합산 클래스(`calculateLandClassTax`)로 매긴다(PSE).
  */
 function judgeFactoryAreaLimit(input: SeparateTaxationInput) {
   const totalArea = input.factoryTotalLandArea ?? 0;
@@ -500,7 +499,7 @@ export function classifyStandard(
         `분리과세(공장입지기준면적 ${areaCheck.standardArea.toFixed(2)}㎡ 이내), ` +
         `${areaCheck.excessArea.toFixed(2)}㎡(시가표준액 ` +
         `${areaCheck.excessAssessedValue.toLocaleString()}원)는 기준면적 초과로 ` +
-        "종합합산과세대상으로 이관됩니다. 인별 합산 계산 시 별도 처리가 필요합니다.",
+        "종합합산과세대상으로 이관되어 같은 지방자치단체 관할구역의 종합합산 토지와 합산 과세합니다(「지방세법」 제113조 제1항 제1호).",
       );
     }
 

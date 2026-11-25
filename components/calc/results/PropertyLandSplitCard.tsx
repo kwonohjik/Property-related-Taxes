@@ -6,6 +6,9 @@
  * 별도합산 선택 필지는 별도합산분과 종합합산 이관분으로 갈라지고, 각 분류는 «같은 지방자치단체 관할구역» 토지를 합산한
  * 과세표준에 세율을 한 번 적용한 뒤 이 필지 몫만 낸다(「지방세법」 §113①). 그래서 과세표준 섹션의 «이 필지 과세표준 × 세율»은
  * 산출세액과 같지 않다 — 이 카드가 분류별 4단계 산식을 풀어 보여 준다.
+ *
+ * 분리과세 선택 필지가 공장용지·목장용지 면적 한도를 넘으면(PSE) 한도 안은 합산 없이 단일세율(§113①3호 — `separated`),
+ * 넘는 부분은 종합합산 이관분(`comprehensive`)으로 갈라진다. 값은 전부 엔진 echo — 이 카드는 곱셈·비교를 하지 않는다.
  */
 import type { ReactNode } from "react";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
@@ -17,9 +20,10 @@ import {
   PROPERTY_LAND_SPLIT_DIRECT_CAP_NOTICE,
   PROPERTY_LAND_SPLIT_NO_OTHER_NOTICE,
   PROPERTY_LAND_SPLIT_RECOMPUTE_NOTICE,
+  PROPERTY_LAND_SPLIT_SEPARATED_NOTICE,
   PROPERTY_LAND_SPLIT_TRANSFER_REASON_LABEL,
 } from "@/lib/tax-engine/property-land-split-tax";
-import type { PropertyLandSplitClass, PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
+import type { PropertyLandSplitClass, PropertyLandSplitSeparated, PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
 
 /** 이 카드가 직접 보여 주는 엔진 고지 — 결과 화면의 «경고» 목록에서는 중복을 피해 뺀다. */
 export const LAND_SPLIT_CARD_NOTICES: readonly string[] = [
@@ -27,12 +31,17 @@ export const LAND_SPLIT_CARD_NOTICES: readonly string[] = [
   PROPERTY_LAND_SPLIT_COMBINED_NOTICE,
   PROPERTY_LAND_SPLIT_DIRECT_CAP_NOTICE,
   PROPERTY_LAND_SPLIT_RECOMPUTE_NOTICE,
+  PROPERTY_LAND_SPLIT_SEPARATED_NOTICE,
 ];
 
 const AMT = "text-right font-mono tabular-nums whitespace-nowrap";
 
 function won(n: number): string {
   return n.toLocaleString("ko-KR");
+}
+
+function area(n: number): string {
+  return `${n.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}㎡`;
 }
 
 function pct(rate: number): string {
@@ -101,17 +110,58 @@ function ClassFormula({
   );
 }
 
+/** 분리과세분(한도 안) — 합산 없이 이 필지 인정 공시가액 × 공정시장가액비율 × 단일세율(「지방세법」 §113①3호). */
+function SeparatedBlock({ sd, fairMarketRatio }: { sd: PropertyLandSplitSeparated; fairMarketRatio: number }) {
+  const a = sd.areaLimit;
+  const factory = a.kind === "factory";
+  const ratio = a.totalArea > 0 ? a.recognizedArea / a.totalArea : 0;
+  return (
+    <div data-testid="land-split-separated-section" className="rounded-md border bg-white/60 dark:bg-white/5 px-3 divide-y">
+      <p className="py-1.5 text-xs font-semibold">
+        분리과세분 ({factory ? "공장용지 — 공장입지기준면적 이내" : "목장용지 — 가축별 기준면적 이내"})
+      </p>
+      <div data-testid="land-split-separated-area-limit" className="divide-y">
+        <Line label={factory ? "공장 부속토지 면적" : "목장용지 면적"} amount={area(a.totalArea)} />
+        <Line label={factory ? "공장입지기준면적" : "가축별 기준면적"} amount={area(a.standardArea)} />
+        <Line
+          label={
+            <>
+              분리과세 인정 면적 = 부속토지 면적과 기준면적 중 작은 면적
+              <span className="whitespace-nowrap"> (= 부속토지의 {pct(ratio)})</span>
+            </>
+          }
+          amount={area(a.recognizedArea)}
+        />
+        <Line label="종합합산으로 넘어가는 초과 면적 = 부속토지 면적 − 인정 면적" amount={area(a.excessArea)} />
+      </div>
+      <Line label="이 필지 분리과세 인정 공시가액" amount={won(sd.ownValue)} />
+      <Line label={`인정 공시가액 × 공정시장가액비율(${pct(fairMarketRatio)}) = 과세표준 (천원 미만 절사)`} amount={won(sd.ownTaxBase)} />
+      <Line
+        testId="land-split-row-separated-formula"
+        label={`과세표준 × 분리과세 세율(${pct(sd.appliedRate)}) = 분리과세분 세액 (다른 토지와 합산하지 않음)`}
+        amount={won(sd.tax)}
+        strong
+      />
+    </div>
+  );
+}
+
 export function PropertyLandSplitCard({ result }: { result: PropertyTaxResult }) {
   const split = result.landSplit;
   if (!split) return null;
-  const { separate, comprehensive, cap } = split;
+  const { separate, separated, comprehensive, cap } = split;
   const fmr = result.fairMarketRatio;
   const isDirect = comprehensive?.transferReasons.includes("direct_type") ?? false;
-  const compLabel = isDirect ? "종합합산분 (과세 유형을 종합합산으로 선택)" : "종합합산 이관분";
+  const compLabel = isDirect
+    ? "종합합산분 (과세 유형을 종합합산으로 선택)"
+    : separated
+    ? "종합합산 이관분 (분리과세 기준면적 초과)"
+    : "종합합산 이관분";
   const reasons = (comprehensive?.transferReasons ?? []).filter((r) => r !== "direct_type");
   const notices = result.warnings.filter((w) => LAND_SPLIT_CARD_NOTICES.includes(w));
-  const bothClasses = Boolean(separate && comprehensive);
-  const ownSum = (separate?.ownValue ?? 0) + (comprehensive?.ownValue ?? 0);
+  const bothClasses = Boolean((separate || separated) && comprehensive);
+  const priorSeparate = separated ? cap?.basisTaxSeparated : cap?.basisTaxSeparate;
+  const ownSum = (separate?.ownValue ?? 0) + (separated?.ownValue ?? 0) + (comprehensive?.ownValue ?? 0);
   const capAmount = cap ? Math.floor(cap.basisTax * cap.capRate) : undefined;
 
   return (
@@ -121,10 +171,18 @@ export function PropertyLandSplitCard({ result }: { result: PropertyTaxResult })
         title={`토지 과세 구분별 세액 — ${split.jurisdictionBasis} (지방세법 §113①)`}
         bodyClassName="space-y-3"
       >
-        <p className="text-xs text-muted-foreground">
-          종합합산·별도합산 토지는 같은 관할구역의 토지 가액을 합한 과세표준에 세율을 한 번 적용하므로, 이 필지 하나의 과세표준에 세율을 곱한 값과
-          산출세액이 다릅니다. 이 필지의 세액은 분류별 합산 세액 중 이 필지 몫이며, 이 몫의 합계가 산출세액입니다.
-        </p>
+        {separated ? (
+          <p data-testid="land-split-separated-intro" className="text-xs text-muted-foreground">
+            분리과세로 인정되는 부분은 합산하지 않고 그 토지의 과세표준에 단일세율을 적용합니다(「지방세법」 §113①3호). 기준면적을 넘는 부분은
+            종합합산과세대상이라 같은 관할구역의 다른 종합합산 토지와 합산한 과세표준에 누진세율을 한 번 적용하고, 이 필지의 몫만 냅니다.
+            분리과세분 세액과 종합합산 이관분 이 필지 몫의 합계가 산출세액입니다.
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            종합합산·별도합산 토지는 같은 관할구역의 토지 가액을 합한 과세표준에 세율을 한 번 적용하므로, 이 필지 하나의 과세표준에 세율을 곱한 값과
+            산출세액이 다릅니다. 이 필지의 세액은 분류별 합산 세액 중 이 필지 몫이며, 이 몫의 합계가 산출세액입니다.
+          </p>
+        )}
 
         {ownSum !== result.publishedPrice && (
           <p data-testid="land-split-own-value-note" className="text-xs text-muted-foreground">
@@ -143,6 +201,7 @@ export function PropertyLandSplitCard({ result }: { result: PropertyTaxResult })
             ))}
           </div>
         )}
+        {separated && <SeparatedBlock sd={separated} fairMarketRatio={fmr} />}
         {separate && (
           <ClassFormula testId="land-split-separate" title="별도합산과세대상분" c={separate} fairMarketRatio={fmr} />
         )}
@@ -158,6 +217,7 @@ export function PropertyLandSplitCard({ result }: { result: PropertyTaxResult })
 
         <div className="rounded-md border bg-white/60 dark:bg-white/5 px-3 divide-y">
           {separate && <Line testId="land-split-row-separate" label="별도합산분 이 필지 몫" amount={won(separate.share)} />}
+          {separated && <Line testId="land-split-row-separated" label="분리과세분 세액 (합산하지 않음)" amount={won(separated.tax)} />}
           {comprehensive && (
             <Line testId="land-split-row-comprehensive" label={`${compLabel} 이 필지 몫`} amount={won(comprehensive.share)} />
           )}
@@ -172,9 +232,12 @@ export function PropertyLandSplitCard({ result }: { result: PropertyTaxResult })
         {cap && capAmount !== undefined && (
           <div data-testid="land-split-cap" className="rounded-md border bg-white/60 dark:bg-white/5 px-3 divide-y">
             <p className="py-1.5 text-xs font-semibold">세부담상한 (지방세법 §122 · 시행령 §118)</p>
-            {bothClasses && cap.basisTaxSeparate !== undefined && cap.basisTaxComprehensive !== undefined ? (
+            {bothClasses && priorSeparate !== undefined && cap.basisTaxComprehensive !== undefined ? (
               <>
-                <Line label="직전연도 별도합산분 세액상당액 (분류별 직전 세율로 재산정)" amount={won(cap.basisTaxSeparate)} />
+                <Line
+                  label={`직전연도 ${separated ? "분리과세분" : "별도합산분"} 세액상당액 (분류별 직전 세율로 재산정)`}
+                  amount={won(priorSeparate)}
+                />
                 <Line label="+ 직전연도 종합합산분 세액상당액 (분류별 직전 세율로 재산정)" amount={won(cap.basisTaxComprehensive)} />
                 <Line label="= 직전연도 세액상당액" amount={won(cap.basisTax)} />
               </>

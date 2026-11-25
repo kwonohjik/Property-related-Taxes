@@ -11,7 +11,9 @@ import {
 } from "@/lib/tax-engine/property-land-split-tax";
 import type { PropertyLandSplitInputKey, PropertyLandSplitRequired } from "@/lib/tax-engine/property-land-split-tax";
 import type { SeparateAggregateLandItem } from "@/lib/tax-engine/separate-aggregate-land";
-import type { LandTaxType } from "@/lib/tax-engine/types/property.types";
+import { separatedAreaExcessOf } from "@/lib/tax-engine/separate-taxation";
+import type { SeparateTaxationInput } from "@/lib/tax-engine/separate-taxation";
+import type { LandTaxType, PropertyLandSplitAreaLimit } from "@/lib/tax-engine/types/property.types";
 
 export interface LandSplitFormValues {
   otherSeparateAggregateValue?: string;
@@ -23,14 +25,16 @@ function parseOptionalAmount(v: string | undefined): number | null {
   return v == null || v.trim() === "" ? null : parseAmount(v);
 }
 
-/** 이 폼이 연 합산 칸 — 별도합산은 필지 판정(분류 면적) 미리보기로, 직접 종합합산은 종합합산 칸 항상. */
+/** 이 폼이 연 합산 칸 — 별도합산은 필지 판정(분류 면적) 미리보기로, 분리과세는 면적 한도 초과(공장·목장)로, 직접 종합합산은 종합합산 칸 항상. */
 export function landSplitRequiredFromForm(p: {
   landTaxType: LandTaxType | "" | undefined;
   separateAggregateItem: unknown;
+  separateTaxationItem?: unknown;
 }): PropertyLandSplitRequired {
   return propertyLandSplitRequiredFor({
     landTaxType: p.landTaxType === "" ? undefined : p.landTaxType,
     separateAggregateItem: p.separateAggregateItem as SeparateAggregateLandItem | undefined,
+    separateTaxationItem: p.separateTaxationItem as Omit<SeparateTaxationInput, "assessedValue"> | undefined,
   });
 }
 
@@ -54,4 +58,9 @@ export function landSplitBodyFields(
   if (required.otherSeparate && sep !== null) out.otherSeparateAggregateValue = sep;
   if (required.otherComprehensive && comp !== null) out.otherComprehensiveValue = comp;
   return out;
+}
+
+/** Step 3 «왜 이 칸이 나왔나» 요약 줄 — 분리과세 면적 한도 echo(엔진 `separatedAreaExcessOf` 그대로, 화면은 계산하지 않는다). 한도가 없는 유형·판정 불가면 null. */
+export function separatedExcessEchoFromForm(separateTaxationItem: unknown): PropertyLandSplitAreaLimit | null {
+  return separatedAreaExcessOf(separateTaxationItem as Omit<SeparateTaxationInput, "assessedValue"> | undefined);
 }

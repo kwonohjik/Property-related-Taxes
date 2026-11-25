@@ -19,6 +19,7 @@
  * 엔진 직접 호출에서 요구 칸이 `undefined`이면 **이 필지 단독**으로 계산하고 고지한다(입구 차단은 Zod·⑧ 몫 — 자동 0 기본값은 입구에 두지 않는다).
  */
 import { PROPERTY_CAL, PROPERTY_LAND_SPLIT, PROPERTY_CONST } from "./legal-codes";
+import { PROPERTY } from "./legal-codes";
 import { calculateProration } from "./tax-utils";
 import { applyFairMarketRatio } from "./tax-utils";
 import { applyRate } from "./tax-utils";
@@ -27,15 +28,18 @@ import { calculateComprehensiveAggregateTax } from "./property-tax-comprehensive
 import { getPropertyRateSet } from "./data/property-rate-history";
 import { resolvePropertyTaxBaseDate } from "./property-separate-requirements";
 import { isSeparateAggregateLand } from "./separate-aggregate-land";
+import { separatedAreaExcessOf } from "./separate-taxation";
 import { format } from "./utc-date";
 import { isValid } from "./utc-date";
 import type { LandProgressiveRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
 import type { SeparateAggregateLandItem } from "./separate-aggregate-land";
+import type { SeparateTaxationInput } from "./separate-taxation";
 import type {
   LandTaxType,
   PropertyLandSplitClass,
   PropertyLandSplitResult,
+  PropertyLandSplitSeparated,
   PropertyLandSplitTransferReason,
 } from "./types/property.types";
 
@@ -56,6 +60,7 @@ const NONE_REQUIRED: PropertyLandSplitRequired = { otherSeparate: false, otherCo
  * 분류 면적으로 요구 칸을 정한다.
  * - 직접 «종합합산» 선택(Q-16): 종합합산 칸 항상.
  * - 별도합산 선택: 별도합산 인정 면적 > 0이면 별도합산 칸, 종합합산 이관 면적 > 0이면 종합합산 칸(Q-13).
+ * - 분리과세 선택(PSE): 공장용지·목장용지의 면적 한도 초과 면적 > 0이면 종합합산 칸만(분리과세분은 합산하지 않는다 — 법 §113①3호). 별도합산 칸은 없다.
  */
 export function propertyLandSplitRequired(i: {
   landTaxType?: LandTaxType;
@@ -66,6 +71,7 @@ export function propertyLandSplitRequired(i: {
   if (i.landTaxType === "separate_aggregate") {
     return { otherSeparate: (i.recognizedArea ?? 0) > 0, otherComprehensive: (i.excessArea ?? 0) > 0 };
   }
+  if (i.landTaxType === "separated") return { otherSeparate: false, otherComprehensive: (i.excessArea ?? 0) > 0 };
   return NONE_REQUIRED;
 }
 
@@ -84,8 +90,17 @@ export function landSplitTaxBaseDate(targetDate?: string): string {
 export function propertyLandSplitRequiredFor(i: {
   landTaxType?: LandTaxType;
   separateAggregateItem?: SeparateAggregateLandItem;
+  /** 분리과세 선택 시 판정 입력(공장용지·목장용지 면적 한도) — 엔진과 같은 `separatedAreaExcessOf` 경로 */
+  separateTaxationItem?: Omit<SeparateTaxationInput, "assessedValue">;
   targetDate?: string;
 }): PropertyLandSplitRequired {
+  // 분리과세: 한도 판정이 던지거나 한도가 없는 유형이면 `null`(요구 없음) — 던지는 입력은 ⑧·⑫·엔진이 같은 판정에서 따로 막는다(침묵 0원 경로 없음)
+  if (i.landTaxType === "separated") {
+    return propertyLandSplitRequired({
+      landTaxType: i.landTaxType,
+      excessArea: separatedAreaExcessOf(i.separateTaxationItem)?.excessArea ?? 0,
+    });
+  }
   if (i.landTaxType !== "separate_aggregate") return propertyLandSplitRequired({ landTaxType: i.landTaxType });
   if (!i.separateAggregateItem) return NONE_REQUIRED;
   try {
@@ -134,6 +149,8 @@ export const PROPERTY_LAND_SPLIT_COMBINED_NOTICE =
   "같은 지방자치단체 관할구역의 다른 토지를 합산해 과세표준·세율을 정했고, 이 필지의 세액은 합산 세액을 공시가액 비율로 나눈 값입니다(필지별 안분의 법령 근거는 확인 필요).";
 export const PROPERTY_LAND_SPLIT_DIRECT_CAP_NOTICE =
   "종합합산으로 넘어간 부분이 있어 과세대상 구분이 직전 연도와 달라질 수 있는데, 직전 연도에 실제 부과된 세액은 그 구분의 기준이 아닐 수 있어 세부담상한(150%)을 적용하지 않았습니다(「지방세법 시행령」 제118조 제1항 제1호 다목) — 직전 과세표준으로 재산정하는 방식을 쓰면 상한을 적용할 수 있습니다 — 확인 필요.";
+export const PROPERTY_LAND_SPLIT_SEPARATED_NOTICE =
+  "공장입지기준면적(또는 가축별 기준면적)을 넘는 부분은 분리과세 대상이 아니어서 종합합산과세대상으로 보고 같은 지방자치단체 관할구역 토지와 합산해 과세했습니다(「지방세법」 제106조 제1항 제1호). 다만 이 부분이 별도합산과세대상(「지방세법 시행령」 제101조 제1항 제2호)에 해당하는지는 계산기가 판정하지 않습니다 — 확인 필요.";
 export const PROPERTY_LAND_SPLIT_RECOMPUTE_NOTICE =
   "세부담상한의 직전 연도 세액상당액은 직전 과세표준을 분류별 가액 비율로 나눠 분류별 직전 세율로 이 필지만 재산정한 값입니다(같은 관할구역 타 토지의 합산 효과는 넣지 않음 — 「지방세법 시행령」 제118조 제1항 제1호 다목, 기준 단위는 확인 필요).";
 
@@ -146,6 +163,8 @@ export const PROPERTY_LAND_SPLIT_TRANSFER_REASON_LABEL: Record<PropertyLandSplit
   public_use_unpaid: "국가 등이 무상으로 공용·공공용 사용하는 부속토지(비과세 가능성 — 계산기는 비과세를 판정하지 않음)",
   building_permit: "허가·사용승인을 받지 않았거나 확인되지 않은 건축물의 부속토지(영 §101① 단서)",
   area_excess: "기준면적(바닥면적 × 용도지역 배율)을 초과한 토지",
+  factory_area_excess: "공장입지기준면적(「지방세법 시행규칙」 제50조 [별표 6])을 초과한 공장 부속토지",
+  pasture_area_excess: "가축별 기준면적(「지방세법 시행령」 제102조제1항제3호 [표])을 초과한 목장용지",
   direct_type: "과세 유형을 종합합산으로 직접 선택한 토지",
 };
 
@@ -206,6 +225,8 @@ export interface LandSplitCapOutcome {
   /** 직전 세액상당액(기준) — 상한을 계산하지 않았으면 undefined */
   basisTax?: number;
   basisTaxSeparate?: number;
+  /** 분리과세분 직전 재산정액(분리과세 선택 + recompute) */
+  basisTaxSeparated?: number;
   basisTaxComprehensive?: number;
   notices: string[];
   taxAfterCap: number;
@@ -218,7 +239,7 @@ export interface LandSplitCapOutcome {
  */
 function applyLandSplitCap(
   total: number,
-  parts: { separate: PropertyLandSplitClass; comprehensive: PropertyLandSplitClass },
+  parts: { separate: PropertyLandSplitClass; comprehensive: PropertyLandSplitClass; separated?: PropertyLandSplitSeparated },
   cap: LandSplitCapInput | undefined,
   transferredFromSeparate: boolean,
   hasOther: boolean,
@@ -227,19 +248,27 @@ function applyLandSplitCap(
   if (!cap) return base;
   let basisTax: number | undefined;
   let basisSep: number | undefined;
+  let basisSepd: number | undefined;
   let basisComp: number | undefined;
   if (cap.mode === "recompute") {
     if (!(cap.previousYearTaxBase > 0)) return base;
     const rs = getPropertyRateSet(cap.priorYear);
     const sepOwn = parts.separate.ownValue;
-    const sumOwn = sepOwn + parts.comprehensive.ownValue;
+    const sepdOwn = parts.separated?.ownValue ?? 0;
+    const sumOwn = sepOwn + sepdOwn + parts.comprehensive.ownValue;
     const priorSep = sumOwn > 0 ? calculateProration(cap.previousYearTaxBase, sepOwn, sumOwn) : 0;
-    const priorComp = cap.previousYearTaxBase - priorSep;
-    basisSep = applyLandBrackets(priorSep, rs.landSeparateAggregate).tax;
+    const priorSepd = sumOwn > 0 && sepdOwn > 0 ? calculateProration(cap.previousYearTaxBase, sepdOwn, sumOwn) : 0;
+    const priorComp = cap.previousYearTaxBase - priorSep - priorSepd;
+    // 분리과세분(PSE)이 있으면 별도합산분은 없다 — 분리과세 선택 경로는 별도합산분을 만들지 않는다(`basisTaxSeparate` echo 없음)
+    basisSep = parts.separated ? undefined : applyLandBrackets(priorSep, rs.landSeparateAggregate).tax;
+    if (parts.separated) {
+      const rate = parts.separated.category === "low_rate" ? rs.landSeparatedLow : rs.landSeparatedGeneral;
+      basisSepd = applyRate(priorSepd, rate);
+    }
     basisComp = applyLandBrackets(priorComp, rs.landComprehensive).tax;
-    basisTax = basisSep + basisComp;
+    basisTax = (basisSep ?? 0) + (basisSepd ?? 0) + basisComp;
     // 분류가 둘이거나 타 토지 합산이 있을 때만 — 단일 분류·단독 계산은 종전 종합합산 recompute와 같아 추가 고지가 없다
-    if ((sepOwn > 0 && parts.comprehensive.ownValue > 0) || hasOther) {
+    if (((sepOwn > 0 || sepdOwn > 0) && parts.comprehensive.ownValue > 0) || hasOther) {
       base.notices.push(PROPERTY_LAND_SPLIT_RECOMPUTE_NOTICE);
     }
   } else {
@@ -256,6 +285,7 @@ function applyLandSplitCap(
     capRate: appliedCapRate ?? 1,
     basisTax,
     basisTaxSeparate: basisSep,
+    basisTaxSeparated: basisSepd,
     basisTaxComprehensive: basisComp,
     notices: base.notices,
     taxAfterCap,
@@ -280,9 +310,17 @@ export interface LandClassTaxInput {
   /** 요구 술어 결과 — 요구됐는데 값이 없으면 단독 계산 고지를 낸다 */
   required: PropertyLandSplitRequired;
   cap?: LandSplitCapInput;
-  /** 별도합산 선택에서 종합합산 이관분이 생겼는가(direct 상한 미적용 판단) */
+  /**
+   * 종합합산 이관분이 생겼는가(direct 상한 미적용 판단) — 별도합산 선택의 면적 초과·철거 접힘, **분리과세 선택의 공장·목장 면적 한도 초과**(PSE) 모두.
+   * 이관분이 있으면 과세대상 구분이 직전 연도와 달라질 수 있다(영 §118①1호 가목 단서·다목).
+   */
   transferredFromSeparate: boolean;
   transferReasons: PropertyLandSplitTransferReason[];
+  /**
+   * 분리과세 선택 필지의 한도 안(인정분) — 호출자가 `calculateSeparateTax`로 이미 구한 값이다(단일세율·합산 없음 — 법 §113①3호).
+   * leaf는 세율을 다시 계산하지 않고 합계·세부담상한·echo에만 합친다. 이 값이 있으면 `comprehensiveOwnValue`는 한도 초과분 가액이다.
+   */
+  separatedOwn?: PropertyLandSplitSeparated;
 }
 
 export interface LandClassTaxResult {
@@ -321,10 +359,12 @@ export function calculateLandClassTax(i: LandClassTaxInput): LandClassTaxResult 
     );
   }
 
-  const taxBeforeCap = (hasSep ? separate.share : 0) + (hasComp ? comprehensive.share : 0);
+  const sepOwn = i.separatedOwn;
+  if (sepOwn) warnings.push(PROPERTY_LAND_SPLIT_SEPARATED_NOTICE);
+  const taxBeforeCap = (hasSep ? separate.share : 0) + (hasComp ? comprehensive.share : 0) + (sepOwn?.tax ?? 0);
   const cap = applyLandSplitCap(
     taxBeforeCap,
-    { separate, comprehensive },
+    { separate, comprehensive, separated: sepOwn },
     i.cap,
     i.transferredFromSeparate && hasComp,
     hasOther,
@@ -338,17 +378,19 @@ export function calculateLandClassTax(i: LandClassTaxInput): LandClassTaxResult 
 
   const legalBasis: string[] = [];
   if (hasSep) legalBasis.push(PROPERTY_LAND_SPLIT.AGGREGATION_SEPARATE);
+  if (sepOwn) legalBasis.push(PROPERTY_LAND_SPLIT.SEPARATED_EXCESS_TO_COMPREHENSIVE, PROPERTY.SEPARATE.TAX_BASE);
   if (hasComp) legalBasis.push(PROPERTY_LAND_SPLIT.AGGREGATION_COMPREHENSIVE, PROPERTY_CAL.RATE_COMPREHENSIVE);
-  if (cap.basisTaxSeparate !== undefined) legalBasis.push(PROPERTY_LAND_SPLIT.CAP_BASIS);
+  if (cap.basisTaxSeparate !== undefined || cap.basisTaxSeparated !== undefined) legalBasis.push(PROPERTY_LAND_SPLIT.CAP_BASIS);
   if (cap.applied) legalBasis.push(PROPERTY_CAL.BURDEN_CAP);
 
   return {
     taxBeforeCap,
     determinedTax: cap.taxAfterCap,
-    ownTaxBase: (hasSep ? separate.ownTaxBase : 0) + (hasComp ? comprehensive.ownTaxBase : 0),
+    ownTaxBase: (hasSep ? separate.ownTaxBase : 0) + (hasComp ? comprehensive.ownTaxBase : 0) + (sepOwn?.ownTaxBase ?? 0),
     cap,
     landSplit: {
       ...(hasSep && { separate }),
+      ...(sepOwn && { separated: sepOwn }),
       ...(hasComp && { comprehensive: { ...comprehensive, transferReasons: i.transferReasons } }),
       taxBeforeCap,
       ...(cap.basisTax !== undefined && {
@@ -357,6 +399,7 @@ export function calculateLandClassTax(i: LandClassTaxInput): LandClassTaxResult 
           capRate: PROPERTY_CONST.TAX_CAP_RATE_LAND,
           basisTax: cap.basisTax,
           ...(cap.basisTaxSeparate !== undefined && { basisTaxSeparate: cap.basisTaxSeparate }),
+          ...(cap.basisTaxSeparated !== undefined && { basisTaxSeparated: cap.basisTaxSeparated }),
           ...(cap.basisTaxComprehensive !== undefined && { basisTaxComprehensive: cap.basisTaxComprehensive }),
         },
       }),
