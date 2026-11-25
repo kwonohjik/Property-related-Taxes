@@ -19,6 +19,7 @@ import type {
   PropertyDemolishedRequired,
   PropertyRequirementFact,
 } from "@/lib/tax-engine/property-separate-requirements";
+import { demolishedStatusPeriodMonths } from "@/lib/tax-engine/data/nbl-historical-values-era";
 import { isValid } from "@/lib/tax-engine/utc-date";
 import { parseISO } from "@/lib/tax-engine/utc-date";
 
@@ -92,5 +93,21 @@ export function demolishedWireFields(
     ...(need.floorArea
       ? { ...(v.buildingFloorArea ? { buildingFloorArea: v.buildingFloorArea } : {}), ...(v.zoningDistrict ? { zoningDistrict: v.zoningDistrict } : {}) }
       : {}),
+  };
+}
+
+/** 한시 기간 개월 → 법문 표현. 12 = 2026.6.1.~ 시행본 «1년». */
+const MONTHS_TEXT: Record<6 | 12 | 36, string> = { 6: "6개월", 12: "1년", 36: "3년" };
+
+/**
+ * 화면 안내문용 — 과세기준일 시행본의 한시 기간 표기(날짜·시행본을 화면이 비교하지 않고 엔진 연혁 함수를 그대로 읽는다 · 표기 전용).
+ * `general` = 일반 주택·건축물, `vacantHouse` = 빈집정비사업 철거 빈집(일반보다 길 때만). 한시 규정이 없는 과세기준일(2016.6.1. 전)은 둘 다 null.
+ */
+export function demolishedPeriodTextOf(taxBaseDate: Date = resolvePropertyTaxBaseDate()): { general: string | null; vacantHouse: string | null } {
+  const general = demolishedStatusPeriodMonths(taxBaseDate, false);
+  const vacant = demolishedStatusPeriodMonths(taxBaseDate, true);
+  return {
+    general: general === 0 ? null : MONTHS_TEXT[general],
+    vacantHouse: vacant === 0 || vacant === general ? null : MONTHS_TEXT[vacant],
   };
 }

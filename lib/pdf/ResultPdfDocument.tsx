@@ -9,6 +9,8 @@ import {
   Text,
 } from "@react-pdf/renderer";
 import { type R, C, s, fmt, fmtRate, num, str, bool } from "./ResultPdfPrimitives";
+import { propertyDemolishedVerdictLines } from "@/lib/calc/property-demolished-verdict-text";
+import type { LandDemolishedVerdictEcho } from "@/lib/tax-engine/separate-aggregate-land";
 import { InheritanceHeirAllocationSection } from "@/lib/pdf/sections/inheritance-heir-allocation-section";
 import { InheritanceSelectedBesshiPages } from "@/lib/pdf/inheritance-besshi-pages";
 import { GiftSelectedBesshiPages } from "@/lib/pdf/gift-besshi-pages";
@@ -212,6 +214,13 @@ function PropertyLandSplitPdf({ r }: { r: R }) {
   return (
     <>
       <Text style={s.sectionTitle}>토지 과세 구분별 세액 ({str(split.jurisdictionBasis) ?? "같은 지방자치단체 관할구역 합산"})</Text>
+      {isRecord(split.demolishedVerdict) && (
+        <View style={s.table}>
+          {propertyDemolishedVerdictLines(split.demolishedVerdict as unknown as LandDemolishedVerdictEcho).map((l, i, all) => (
+            <View key={l.key} style={i === all.length - 1 ? s.rowLast : s.row}><Text style={s.lbl}>철거ㆍ멸실 특례 — {l.label}: {l.text}</Text></View>
+          ))}
+        </View>
+      )}
       {rows.map(({ key, label, c }) => (
         <View key={key} style={s.table}>
           <View style={s.row}><Text style={s.lbl}>{label} 이 필지 공시가액</Text><Text style={s.val}>{fmt(c.ownValue)}</Text></View>

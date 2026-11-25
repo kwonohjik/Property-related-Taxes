@@ -48,7 +48,7 @@ function buildSeparateAggregateItem(form: FormState) {
 }
 
 /** 폼 상태 → 철거 요건 어댑터 입력(`lib/calc/property-separate-requirements.ts`) */
-function demolishedFormValues(form: FormState) {
+export function demolishedFormValues(form: FormState) {
   return {
     date: form.saDemolishedDate,
     kind: form.saDemolishedKind,
