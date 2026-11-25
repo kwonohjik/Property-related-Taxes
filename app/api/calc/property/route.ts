@@ -14,6 +14,7 @@ import { finiteJson } from "@/lib/api/non-finite-guard";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { propertyTaxInputSchema } from "@/lib/validators/property-input";
 import { calculatePropertyTax } from "@/lib/tax-engine/property-tax";
+import { resolvePropertyTaxBaseDate } from "@/lib/tax-engine/property-separate-requirements";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import type { PropertyTaxInput } from "@/lib/tax-engine/types/property.types";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
     try {
       // 미입력 시 과세기준일 6월 1일(지방세법 §114) — 세율 조회 기준일 일관화
       const taxBaseDate =
-        toOptionalDate(input.targetDate) ?? new Date(`${new Date().getFullYear()}-06-01`);
+        toOptionalDate(input.targetDate) ?? resolvePropertyTaxBaseDate();
       rates = await preloadTaxRates(["property"], taxBaseDate);
     } catch (err) {
       // DB 연결 실패 시 엔진 내부 상수로 계산 진행

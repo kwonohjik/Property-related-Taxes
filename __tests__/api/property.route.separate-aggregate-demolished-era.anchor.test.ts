@@ -38,6 +38,10 @@ const ITEM = {
   zoningDistrict: "industrial",
   buildingFloorArea: 300,
   demolished: true,
+  // PSA-E2 — 철거 요건 칸: 건축물 · 허가·사용승인 받음 · 건축 외 용도 아님(과세기준일 2025.6.1.·2026.6.1. 시행본이 기간 안에서 요구하는 칸 전부)
+  demolishedKind: "building",
+  demolishedPermit: "yes",
+  demolishedOtherUse: "no",
 };
 // PSA-E4 — 같은 관할구역 합산 칸(요구되는 칸만 읽힌다): 0 = 없음을 명시
 const LAND = {

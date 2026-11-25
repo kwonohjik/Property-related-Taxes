@@ -54,6 +54,12 @@ import type {
 import { PROPERTY_SEPARATE, PROPERTY_SEPARATE_CONST } from "../../lib/tax-engine/legal-codes";
 import { separateAggregateLandSchema } from "../../lib/validators/separate-aggregate-input";
 
+/**
+ * PSA-E2 — 철거 요건 칸(영 §103의2): 철거된 것 = 건축물 · 허가·사용승인 받음 · 건축 외 용도 아님.
+ * 과세기준일 2024.6.1.~ 시행본이 요구하는 칸을 전부 명시한다(픽스처 기본값이 요건 게이트를 가리지 않도록 철거 테스트마다 spread).
+ */
+const DEMOLISHED_OK = { demolishedKind: "building", demolishedPermit: "yes", demolishedOtherUse: "no" } as const;
+
 // ── 공통 픽스처 팩토리 ──
 function makeLand(
   overrides: Partial<SeparateAggregateLandItem> = {},
@@ -272,6 +278,7 @@ describe("P4-10: 철거 후 유예기간(6개월·1년 시행본) 경계값 (§1
     // 철거일: 2025-01-01 → 과세기준일 2025-06-01까지 5개월
     const land = makeLand({
       demolished: true,
+      ...DEMOLISHED_OK,
       demolishedDate: "2025-01-01",
       taxBaseDate: TAX_BASE_DATE,
       buildingFloorArea: 100,
@@ -286,6 +293,7 @@ describe("P4-10: 철거 후 유예기간(6개월·1년 시행본) 경계값 (§1
     // 철거일: 2024-12-01 → 과세기준일 2025-06-01까지 6개월 (경계)
     const land = makeLand({
       demolished: true,
+      ...DEMOLISHED_OK,
       demolishedDate: "2024-12-01",
       taxBaseDate: TAX_BASE_DATE,
       buildingFloorArea: 100,
@@ -302,6 +310,7 @@ describe("P4-10: 철거 후 유예기간(6개월·1년 시행본) 경계값 (§1
     // 철거일: 2024-05-01 → 과세기준일 2025-06-01까지 13개월
     const land = makeLand({
       demolished: true,
+      ...DEMOLISHED_OK,
       demolishedDate: "2024-05-01",
       taxBaseDate: TAX_BASE_DATE,
       buildingFloorArea: 100,
@@ -320,6 +329,7 @@ describe("P4-10: 철거 후 유예기간(6개월·1년 시행본) 경계값 (§1
     // 철거일: 2024-10-01 → 과세기준일 2025-06-01까지 8개월 → 6개월 초과
     const land = makeLand({
       demolished: true,
+      ...DEMOLISHED_OK,
       demolishedDate: "2024-10-01",
       taxBaseDate: TAX_BASE_DATE,
       buildingFloorArea: 100,
@@ -331,7 +341,7 @@ describe("P4-10: 철거 후 유예기간(6개월·1년 시행본) 경계값 (§1
 
     // 철거일 2025-10-01 → 과세기준일 2026-06-01까지 8개월 → 1년 이내 → 별도합산 유지
     const y2026 = isSeparateAggregateLand(
-      makeLand({ demolished: true, demolishedDate: "2025-10-01", taxBaseDate: "2026-06-01", buildingFloorArea: 100 }),
+      makeLand({ demolished: true, ...DEMOLISHED_OK, demolishedDate: "2025-10-01", taxBaseDate: "2026-06-01", buildingFloorArea: 100 }),
     );
     expect(y2026.demolishedGraceApplied).toBe(true);
     expect(y2026.isSeparateAggregate).toBe(true);
@@ -459,6 +469,7 @@ describe("P4-14: 통합 — legalBasis에 법령 상수 포함 검증", () => {
   it("TC-25: 철거 후 유예기간 초과 → 종합합산, legalBasis에 §103의2 포함", () => {
     const land = makeLand({
       demolished: true,
+      ...DEMOLISHED_OK,
       demolishedDate: "2024-05-01",
       taxBaseDate: "2025-06-01",
       buildingFloorArea: 100,

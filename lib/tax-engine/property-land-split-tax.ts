@@ -25,7 +25,10 @@ import { applyRate } from "./tax-utils";
 import { applyBurdenCap } from "./property-tax-comprehensive-aggregate";
 import { calculateComprehensiveAggregateTax } from "./property-tax-comprehensive-aggregate";
 import { getPropertyRateSet } from "./data/property-rate-history";
+import { resolvePropertyTaxBaseDate } from "./property-separate-requirements";
 import { isSeparateAggregateLand } from "./separate-aggregate-land";
+import { format } from "./utc-date";
+import { isValid } from "./utc-date";
 import type { LandProgressiveRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
 import type { SeparateAggregateLandItem } from "./separate-aggregate-land";
@@ -66,9 +69,11 @@ export function propertyLandSplitRequired(i: {
   return NONE_REQUIRED;
 }
 
-/** 과세기준일 기본값 — 엔진(`calculatePropertyTax`)·Zod·⑧이 같은 식을 쓴다(미입력 시 올해 6.1.). */
+/** 과세기준일 — 엔진(`calculatePropertyTax`)·Zod·⑧이 같은 식을 쓴다: `targetDate`의 UTC 연도 6.1.(미입력 시 올해 6.1.) — 지방세법 §114. */
 export function landSplitTaxBaseDate(targetDate?: string): string {
-  return targetDate ?? `${new Date().getFullYear()}-06-01`;
+  const s = resolvePropertyTaxBaseDate(targetDate);
+  // 읽을 수 없는 날짜(2026-02-30 등)는 그대로 돌려준다 — 철거 판정이 «날짜 확인 불가»로 접고, 이 함수가 던져 500이 되지 않게 한다
+  return isValid(s) ? format(s, "yyyy-MM-dd") : (targetDate ?? "");
 }
 
 /**
@@ -135,6 +140,9 @@ export const PROPERTY_LAND_SPLIT_RECOMPUTE_NOTICE =
 export const PROPERTY_LAND_SPLIT_TRANSFER_REASON_LABEL: Record<PropertyLandSplitTransferReason, string> = {
   no_building: "건축물이 없는 토지",
   demolished_period: "철거ㆍ멸실 특례 기간이 지났거나 특례를 적용할 수 없는 토지",
+  permit: "허가·사용승인을 받지 않았거나 확인되지 않은 철거ㆍ멸실 건축물·주택의 부속토지",
+  other_use: "철거 후 건축을 위한 용도 외로 사용하는(또는 확인되지 않은) 부속토지",
+  public_use_unpaid: "국가 등이 무상으로 공용·공공용 사용하는 부속토지(비과세 가능성 — 계산기는 비과세를 판정하지 않음)",
   area_excess: "기준면적(바닥면적 × 용도지역 배율)을 초과한 토지",
   direct_type: "과세 유형을 종합합산으로 직접 선택한 토지",
 };

@@ -1,7 +1,7 @@
 /**
  * 재산세 토지 — 별도합산·종합합산 분류별 합산 과세(PSA-E4) E2E (재산세 토지 E2E 첫 spec)
  *
- * 1. S-1 철거 1년 초과 상업 300㎡ 전량 이관 → 총 납부세액 960,000 · 카드 «종합합산 이관분 800,000»
+ * 1. S-1 철거 1년 초과(PSA-U1: 철거된 것의 종류 «건축물» 선택 — 기간 밖이라 그 밖의 사실 칸은 묻지 않는다) 상업 300㎡ 전량 이관 → 총 납부세액 960,000 · 카드 «종합합산 이관분 800,000»
  * 2. S-5 공업 1,000㎡·바닥 100 + 타 종합합산 2억 → 3,063,000 · 요청 body에 합산 칸 도달
  * 3. S-7 별도합산 + 직전 과세표준 재산정 → 900,000 (상한 750,000) · body에 recompute 칸 도달
  * 4. 합산 칸 빈칸 → 화면 차단(서버 호출 0)
@@ -11,81 +11,26 @@
  * 세액 오라클: docs/01-plan/features/property-separate-demolished-requirements.engine.plan.md §13.4.
  * 실행: E2E_PORT=3161 npx playwright test e2e/property-land-split.spec.ts
  */
-import { test, expect, type Page, type Request } from "@playwright/test";
-
-const YEAR = new Date().getFullYear();
-
-function amountInput(page: Page, labelText: string | RegExp) {
-  return page.locator("div").filter({ hasText: labelText }).locator('input[inputmode="numeric"]').last();
-}
-
-/** CurrencyInput은 Tab blur로 확정한다 — 값 커밋 후 단언. */
-async function fillAmount(page: Page, locator: ReturnType<typeof amountInput>, value: string) {
-  await locator.fill(value);
-  await locator.press("Tab");
-}
-
-async function startLand(page: Page, priceWon: string) {
-  await page.goto("/calc/property-tax");
-  await page.getByRole("radio", { name: "토지" }).check();
-  await fillAmount(page, amountInput(page, /^공시가격/), priceWon);
-  await page.getByRole("button", { name: /^다음$/ }).click();
-}
-
-async function pickLandType(page: Page, name: RegExp) {
-  await page.getByRole("radio", { name }).check();
-  await page.getByRole("button", { name: /^다음$/ }).click();
-}
-
-async function fillSeparateDetail(
-  page: Page,
-  o: { zoning: RegExp; area: string; floor: string; demolishedYearsAgo?: number },
-) {
-  await page.getByRole("radio", { name: o.zoning }).check();
-  await page.getByPlaceholder("면적 입력 (소수점 가능)").first().fill(o.area);
-  await page.getByPlaceholder("면적 입력 (소수점 가능)").nth(1).fill(o.floor);
-  if (o.demolishedYearsAgo !== undefined) {
-    await page.getByRole("switch", { name: /건축물 철거 완료/ }).click();
-    // 「일」은 substring 매칭이라 라디오 라벨까지 잡힌다 — exact (e2e/CLAUDE.md §1)
-    const year = String(YEAR - o.demolishedYearsAgo);
-    await page.getByLabel("연도", { exact: true }).fill(year);
-    await page.getByLabel("월", { exact: true }).fill("1");
-    await page.getByLabel("일", { exact: true }).fill("1");
-    await expect(page.getByLabel("연도", { exact: true })).toHaveValue(year);
-  }
-  await page.getByRole("button", { name: /^다음$/ }).click();
-}
-
-function captureBody(page: Page): { bodies: Record<string, unknown>[] } {
-  const box = { bodies: [] as Record<string, unknown>[] };
-  page.on("request", (req: Request) => {
-    if (req.url().includes("/api/calc/property") && req.method() === "POST") {
-      box.bodies.push(req.postDataJSON() as Record<string, unknown>);
-    }
-  });
-  return box;
-}
-
-async function calc(page: Page) {
-  const resp = page.waitForResponse(
-    (r) => r.url().includes("/api/calc/property") && r.request().method() === "POST",
-    { timeout: 30_000 },
-  );
-  await page.getByRole("button", { name: /재산세 계산하기/ }).click();
-  expect((await resp).ok()).toBe(true);
-  await expect(page.getByTestId("property-land-split-card")).toBeVisible({ timeout: 30_000 });
-}
-
-const totalPayable = (page: Page) => page.locator('[data-print-id="total-payable"]');
-/** 부분 일치(1,960,000 ⊃ 960,000) 오탐을 막는 경계 매칭 */
-const exact = (n: string) => new RegExp(`(^|[^\\d,])${n}($|[^\\d,])`);
+import { test, expect } from "@playwright/test";
+import {
+  YEAR,
+  amountInput,
+  calc,
+  captureBody,
+  exact,
+  fillAmount,
+  fillSeparateDetail,
+  pickLandType,
+  startLand,
+  totalPayable,
+} from "./_helpers/property-land";
 
 test.describe("재산세 토지 — 분류별 합산 과세(PSA-E4)", () => {
   test("1: S-1 철거 1년 초과 상업 300㎡ 전량 이관 → 총 960,000", async ({ page }) => {
     const box = captureBody(page);
     await startLand(page, "300000000");
     await pickLandType(page, /별도합산과세대상/);
-    await fillSeparateDetail(page, { zoning: /상업지역/, area: "300", floor: "100", demolishedYearsAgo: 2 });
+    await fillSeparateDetail(page, { zoning: /상업지역/, area: "300", floor: "100", demolished: { date: `${YEAR - 2}-01-01`, kind: "building" } });
     // 전량 이관 → 종합합산 칸만 노출
     await expect(page.getByTestId("other-comprehensive-value")).toBeVisible();
     await expect(page.getByTestId("other-separate-aggregate-value")).toHaveCount(0);
@@ -118,7 +63,7 @@ test.describe("재산세 토지 — 분류별 합산 과세(PSA-E4)", () => {
     const box = captureBody(page);
     await startLand(page, "300000000");
     await pickLandType(page, /별도합산과세대상/);
-    await fillSeparateDetail(page, { zoning: /상업지역/, area: "300", floor: "100", demolishedYearsAgo: 2 });
+    await fillSeparateDetail(page, { zoning: /상업지역/, area: "300", floor: "100", demolished: { date: `${YEAR - 2}-01-01`, kind: "building" } });
     await fillAmount(page, page.getByTestId("other-comprehensive-value"), "0");
     // 별도합산에도 재산정 선택지가 열려 있고, 직접 입력 선택 시 상한 미적용 안내가 보인다
     await expect(page.getByText(/세부담상한에 쓰지 않습니다/)).toBeVisible();

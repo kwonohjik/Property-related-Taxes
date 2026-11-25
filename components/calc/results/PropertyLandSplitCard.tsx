@@ -10,6 +10,8 @@
 import type { ReactNode } from "react";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { PROPERTY_SEPARATE } from "@/lib/tax-engine/legal-codes";
+import { propertyDemolishedVerdictLines } from "@/lib/calc/property-demolished-verdict-text";
 import {
   PROPERTY_LAND_SPLIT_COMBINED_NOTICE,
   PROPERTY_LAND_SPLIT_DIRECT_CAP_NOTICE,
@@ -128,6 +130,17 @@ export function PropertyLandSplitCard({ result }: { result: PropertyTaxResult })
           <p data-testid="land-split-own-value-note" className="text-xs text-muted-foreground">
             이 필지 공시가액은 입력한 공시가격을 면적으로 나눈 ㎡당 단가(원 미만 절사)에 면적을 곱해 분류별로 나눈 값이라, 입력한 공시가격과 원 단위로 다를 수 있습니다.
           </p>
+        )}
+        {split.demolishedVerdict && (
+          <div data-testid="land-split-demolished-verdict" className="rounded-md border bg-white/60 dark:bg-white/5 px-3 divide-y">
+            <p className="py-1.5 text-xs font-semibold">철거ㆍ멸실 특례 판정 ({PROPERTY_SEPARATE.DEMOLISHED_GRACE})</p>
+            {propertyDemolishedVerdictLines(split.demolishedVerdict).map((l) => (
+              <div key={l.key} data-testid={`land-split-demolished-${l.key}`} className="flex items-start justify-between gap-3 py-1.5 text-sm">
+                <span className="shrink-0 text-xs text-muted-foreground">{l.label}</span>
+                <span className="min-w-0 text-right">{l.text}</span>
+              </div>
+            ))}
+          </div>
         )}
         {separate && (
           <ClassFormula testId="land-split-separate" title="별도합산과세대상분" c={separate} fairMarketRatio={fmr} />

@@ -16,6 +16,11 @@ import {
   missingLandSplitInputs,
   propertyLandSplitRequiredFor,
 } from "@/lib/tax-engine/property-land-split-tax";
+import {
+  propertyDemolishedFactIssue,
+  resolvePropertyTaxBaseDate,
+} from "@/lib/tax-engine/property-separate-requirements";
+import { parseISO } from "@/lib/tax-engine/utc-date";
 
 /**
  * 용도지역 코드 — 「지방세법 시행령」 제101조 제2항 [표] 구분.
@@ -33,6 +38,12 @@ const zoningDistrictSchema = z.enum([
   "agricultural",
   "nature_preserve",
 ]);
+
+/**
+ * 철거 요건 사실 칸 3지선다(영 §103의2) — `""` = 미선택. 요구된 칸이 비어 있으면 superRefine이 400으로 막고(⑧과 같은 `propertyDemolishedFactIssue`),
+ * 요구되지 않은 칸에 들어온 값은 400이 아니라 무시한다(엔진이 안 읽음). 3지선다 밖의 값은 400.
+ */
+const demolishedFactSchema = z.enum(["", "yes", "no", "unknown"]);
 
 export const propertyTaxInputSchema = z
   .object({
@@ -141,7 +152,8 @@ export const propertyTaxInputSchema = z
         officialLandPrice: z
           .number()
           .nonnegative({ message: "개별공시지가는 0 이상이어야 합니다." }),
-        zoningDistrict: zoningDistrictSchema,
+        // 배율을 읽을 때만 필수 — 비철거는 아래 superRefine이, 철거는 `propertyDemolishedFactIssue`가 요구한다(주택·2024.6.1. 전 철거는 요구 0)
+        zoningDistrict: zoningDistrictSchema.optional(),
         buildingFloorArea: z.number().positive().optional(),
         isFactory: z.boolean().optional(),
         factoryStandardArea: z.number().positive().optional(),
@@ -152,6 +164,16 @@ export const propertyTaxInputSchema = z
             message: "철거일은 YYYY-MM-DD 형식이어야 합니다.",
           })
           .optional(),
+        /**
+         * 철거 요건 입력 6칸(PSA-E2 · 영 §103의2). ⚠️ Zod는 선언 없는 키를 조용히 제거한다 — 빠지면 엔진이 항상 «허가·종류 없음»으로 접는다(침묵 stripping).
+         * 요구 칸 집합·첫 결함 문구는 `propertyDemolishedFactIssue`(⑧과 같은 함수)가 정한다.
+         */
+        demolishedKind: z.enum(["house", "building"]).optional(),
+        demolishedPermit: demolishedFactSchema.optional(),
+        demolishedOtherUse: demolishedFactSchema.optional(),
+        demolishedVacantHouse: demolishedFactSchema.optional(),
+        demolishedPublicUse: demolishedFactSchema.optional(),
+        demolishedPublicUsePaid: demolishedFactSchema.optional(),
       })
       .optional(),
 
@@ -428,19 +450,45 @@ export const propertyTaxInputSchema = z
     // 기준면적은 공장용지도 바닥면적 × 배율이다(「지방세법 시행령」 §101①1호 — `separate-aggregate-input.ts`와 같은 규칙).
     const sa = data.separateAggregateItem;
     if (data.landTaxType === "separate_aggregate" && sa) {
-      if (!sa.buildingFloorArea) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["separateAggregateItem", "buildingFloorArea"],
-          message: "별도합산 토지는 건축물 바닥면적(㎡)이 필요합니다(「지방세법 시행령」 §101①1호).",
+      if (sa.demolished === true) {
+        // 철거 — 종류·사실 칸·철거일·바닥면적·용도지역은 «엔진이 읽는 칸만» 요구한다(영 §103의2 · PSA-E2). 과세기준일은 ⑧·엔진과 같은 `resolvePropertyTaxBaseDate`.
+        const issue = propertyDemolishedFactIssue({
+          taxBaseDate: resolvePropertyTaxBaseDate(data.targetDate),
+          removedOn: sa.demolishedDate ? parseISO(sa.demolishedDate) : undefined,
+          kind: sa.demolishedKind,
+          isFactory: sa.isFactory,
+          facts: {
+            permit: sa.demolishedPermit,
+            otherUse: sa.demolishedOtherUse,
+            vacantHouse: sa.demolishedVacantHouse,
+            publicUse: sa.demolishedPublicUse,
+            publicUsePaid: sa.demolishedPublicUsePaid,
+          },
+          buildingFloorArea: sa.buildingFloorArea,
+          zoningDistrict: sa.zoningDistrict,
         });
-      }
-      if (sa.demolished === true && !sa.demolishedDate) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["separateAggregateItem", "demolishedDate"],
-          message: "건축물 철거(demolished=true) 시 철거일(demolishedDate)이 필요합니다.",
-        });
+        if (issue) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["separateAggregateItem", issue.field],
+            message: issue.message,
+          });
+        }
+      } else {
+        if (!sa.zoningDistrict) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["separateAggregateItem", "zoningDistrict"],
+            message: "용도지역을 선택하세요.",
+          });
+        }
+        if (!sa.buildingFloorArea) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["separateAggregateItem", "buildingFloorArea"],
+            message: "별도합산 토지는 건축물 바닥면적(㎡)이 필요합니다(「지방세법 시행령」 §101①1호).",
+          });
+        }
       }
     }
     // 같은 관할구역 합산 입력(§113①) — 이 필지가 그 분류의 면적을 가질 때 필수. 0은 «없음» 입력이고 빈칸만 막는다(자동 0 금지).

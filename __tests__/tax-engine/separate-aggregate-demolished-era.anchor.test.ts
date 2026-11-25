@@ -26,6 +26,10 @@ function land(demolishedDate: string, taxBaseDate: string): SeparateAggregateLan
     zoningDistrict: "commercial",
     buildingFloorArea: 100, // 상업 3배 → 기준면적 300㎡ = 토지 전체
     demolished: true,
+    // PSA-E2 — 철거 요건 칸을 명시(과세기준일 시행본이 요구하는 칸 전부 — 허가 받음 · 건축 외 용도 아님 · 건축물)
+    demolishedKind: "building",
+    demolishedPermit: "yes",
+    demolishedOtherUse: "no",
     demolishedDate,
     taxBaseDate,
   };

@@ -27,10 +27,14 @@ import { applyFairMarketRatio } from "./tax-utils";
 import { PROPERTY_SEPARATE, PROPERTY_SEPARATE_CONST } from "./legal-codes";
 import { getZoneAreaMultiplier } from "./local-tax-zone-multiplier";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
-import { demolishedStatusPeriodMonths } from "./data/nbl-historical-values-era";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
-import { isWithinPeriodMonths } from "./civil-period";
+import { judgePropertyDemolishedLand } from "./property-separate-requirements";
+import { resolvePropertyTaxBaseDate } from "./property-separate-requirements";
+import type { PropertyDemolishedKind } from "./property-separate-requirements";
+import type { PropertyDemolishedVerdict } from "./property-separate-requirements";
+import type { PropertyRequirementFact } from "./property-separate-requirements";
+import { format } from "./utc-date";
 import { parseISO } from "./utc-date";
 
 // ============================================================
@@ -65,8 +69,8 @@ export interface SeparateAggregateLandItem {
   landArea: number;
   /** 개별공시지가 (원/㎡) */
   officialLandPrice: number;
-  /** 용도지역 */
-  zoningDistrict: ZoningDistrict;
+  /** 용도지역 — 배율을 읽을 때만 필수(비철거 · 철거 건축물 ∧ 2024.6.1.~ — PSA-E2 Q-8). 읽는데 없으면 입구(⑧·⑫)가 막고 엔진은 던진다 */
+  zoningDistrict?: ZoningDistrict;
   /** 건축물 바닥면적 (㎡) — 기준면적 계산 기초 */
   buildingFloorArea?: number;
   /** 공장용지 여부 */
@@ -77,6 +81,16 @@ export interface SeparateAggregateLandItem {
   demolished?: boolean;
   /** 철거일 (YYYY-MM-DD) */
   demolishedDate?: string;
+  /**
+   * 철거 요건 입력(PSA-E2 · 영 §103의2) — 철거된 것의 종류와 사실 칸 5종. `demolished`일 때 `demolishedKind`는 필수(없으면 종합합산 + 확인 필요).
+   * 사실 칸은 `propertyDemolishedRequired`가 연 칸만 읽는다(요구되지 않은 칸의 stale 값은 판정을 바꾸지 못한다).
+   */
+  demolishedKind?: PropertyDemolishedKind;
+  demolishedPermit?: PropertyRequirementFact;
+  demolishedOtherUse?: PropertyRequirementFact;
+  demolishedVacantHouse?: PropertyRequirementFact;
+  demolishedPublicUse?: PropertyRequirementFact;
+  demolishedPublicUsePaid?: PropertyRequirementFact;
   /** 과세기준일 (YYYY-MM-DD, 기본: 당해년도 6월 1일) */
   taxBaseDate?: string;
 }
@@ -112,7 +126,15 @@ export interface LandSeparateCheckResult {
   legalBasis: string;
   /** 경고 메시지 */
   warnings: string[];
+  /** 철거 특례 판정 echo(PSA-E2) — 철거 필지에서만. 접힘 사유·적용 기간·읽은 칸 집합(UI 결과 표시용 — 판정 불변) */
+  demolishedVerdict?: LandDemolishedVerdictEcho;
 }
+
+/** `judgePropertyDemolishedLand` 결과 중 화면·이관 사유 매핑이 읽는 부분 */
+export type LandDemolishedVerdictEcho = Pick<
+  PropertyDemolishedVerdict,
+  "kind" | "foldReason" | "periodMonths" | "areaClauseApplied" | "vacantHouseExtensionUnconfirmed" | "required"
+>;
 
 /** 지자체별 안분 결과 */
 export interface JurisdictionSeparateAllocation {
@@ -182,7 +204,7 @@ export function isSeparateAggregateLand(
   land: SeparateAggregateLandItem,
 ): LandSeparateCheckResult {
   const warnings: string[] = [];
-  const taxBaseDate = land.taxBaseDate ?? deriveDefaultTaxBaseDate(land);
+  const taxBaseDate = land.taxBaseDate ?? deriveDefaultTaxBaseDate();
 
   // ── 1단계: 건축물 존재 여부 ──
   // 공장입지기준면적(§102①1호 분리과세 한도)은 「건축물이 있다」는 근거가 될 수 없다 —
@@ -205,74 +227,77 @@ export function isSeparateAggregateLand(
     };
   }
 
-  // ── 2~3단계: 철거 특례 판정 ──
+  // ── 2~3단계: 철거 특례 판정 — 과세기준일 한 점(영 §103의2 · PSA-E2) ──
+  // 기간(과세기준일 시행본 6개월·1년·빈집 3년)·허가·사용승인·건축 외 용도·2호 단서·면적 범위는 판정 leaf가 단일 소스다 —
+  // 요구 술어가 연 칸만 읽고, 접힘이면 부속토지 전체를 종합합산으로 이관한다.
   if (land.demolished === true) {
-    // §103의2는 «과세기준일 현재» 시행본으로 기간이 정해진다(2016.6.1.~ 6개월 · 2026.6.1.~ 1년 · 그 전 과세기준일은 규정 없음).
-    const baseDateObj = parseISO(taxBaseDate);
-    const graceMonths = demolishedStatusPeriodMonths(baseDateObj, false);
-    // 표시용: 완성된 월 수 (floor)
+    const verdict = judgePropertyDemolishedLand({
+      // 과세기준일은 호출자가 정한 그대로 읽는다 — 6.1.로 맞추는 일은 오케스트레이터(`calculateLandSplitPropertyTax`·Zod·⑧이 `resolvePropertyTaxBaseDate`)가 한다
+      taxBaseDate: parseISO(taxBaseDate),
+      removedOn: land.demolishedDate ? parseISO(land.demolishedDate) : undefined,
+      kind: land.demolishedKind,
+      facts: {
+        permit: land.demolishedPermit,
+        otherUse: land.demolishedOtherUse,
+        vacantHouse: land.demolishedVacantHouse,
+        publicUse: land.demolishedPublicUse,
+        publicUsePaid: land.demolishedPublicUsePaid,
+      },
+      landArea: land.landArea,
+      buildingFloorArea: land.buildingFloorArea,
+      zoningDistrict: land.zoningDistrict,
+    });
+    const echo: LandDemolishedVerdictEcho = {
+      kind: verdict.kind,
+      foldReason: verdict.foldReason,
+      periodMonths: verdict.periodMonths,
+      areaClauseApplied: verdict.areaClauseApplied,
+      vacantHouseExtensionUnconfirmed: verdict.vacantHouseExtensionUnconfirmed,
+      required: verdict.required,
+    };
+
+    if (verdict.kind === "fold") {
+      return {
+        landId: land.id,
+        isSeparateAggregate: false,
+        recognizedArea: 0,
+        excessArea: land.landArea,
+        baseArea: 0,
+        multiplier: 0,
+        demolishedGraceApplied: false,
+        // 한시 규정이 없거나(2016.6.1. 전) 판정할 수 없으면 «건축물 없는 토지»와 같은 근거(§106①2호), 그 밖의 접힘은 접힌 요건의 조문
+        legalBasis:
+          verdict.foldReason === "not_yet" || verdict.foldReason === "input"
+            ? PROPERTY_SEPARATE.SUBJECT
+            : verdict.legalBasis[0] ?? PROPERTY_SEPARATE.DEMOLISHED_GRACE,
+        warnings: verdict.notices,
+        demolishedVerdict: echo,
+      };
+    }
+
+    // 별도합산 유지 — 면적 범위 문언(건축물 ∧ 2024.6.1.~)이면 철거 전 바닥면적 × 배율 범위만, 그 밖(주택·문언 전 시행본)은 부속토지 전체
     const elapsedMonths = calcElapsedMonths(land.demolishedDate ?? "", taxBaseDate);
-
-    if (elapsedMonths < 0) {
-      // demolishedDate 미입력 또는 파싱 오류 → 보수적으로 종합합산
+    const graceWarning = `철거ㆍ멸실 후 ${elapsedMonths}개월 경과 — 유예기간(${verdict.periodMonths}개월) 이내이므로 별도합산 특례가 적용됩니다.`;
+    const area = verdict.areaClauseApplied ? calculateBaseArea(land) : undefined;
+    if (verdict.excessArea > 0) {
       warnings.push(
-        "철거일(demolishedDate)을 확인할 수 없어 종합합산으로 처리합니다.",
+        `토지 ${land.landArea}㎡ 중 ${verdict.recognizedArea}㎡는 별도합산, ` +
+        `${verdict.excessArea}㎡는 기준면적 초과로 종합합산에 이관됩니다.`,
       );
-      return {
-        landId: land.id,
-        isSeparateAggregate: false,
-        recognizedArea: 0,
-        excessArea: land.landArea,
-        baseArea: 0,
-        multiplier: 0,
-        demolishedGraceApplied: false,
-        legalBasis: PROPERTY_SEPARATE.SUBJECT,
-        warnings,
-      };
     }
-
-    if (graceMonths === 0) {
-      // 2016.6.1. 전 과세기준일 — 영 §103의2(2016.1.1. 시행본, 첫 납세의무 성립 2016.6.1.)가 없어 철거된 건축물의 부속토지에 별도합산 특례가 없다 → 건축물 없는 토지로 종합합산
-      return {
-        landId: land.id,
-        isSeparateAggregate: false,
-        recognizedArea: 0,
-        excessArea: land.landArea,
-        baseArea: 0,
-        multiplier: 0,
-        demolishedGraceApplied: false,
-        legalBasis: PROPERTY_SEPARATE.SUBJECT,
-        warnings: [
-          `과세기준일 ${taxBaseDate}에는 철거ㆍ멸실 건축물 부속토지 특례(${PROPERTY_SEPARATE.DEMOLISHED_GRACE})가 시행되기 전(첫 적용 과세기준일 2016.6.1.)이라 건축물이 없는 토지로 보아 종합합산으로 처리합니다 — 확인 필요.`,
-        ],
-      };
-    }
-
-    // 「철거ㆍ멸실된 날부터 N개월이 지나지 않은」 — 민법 §157·§160 만료일 당일까지(월말 오버플로 없음, 2.29. → 2.28.)
-    const demolishDateObj = parseISO(land.demolishedDate ?? "");
-    const isGraceExceeded = !isWithinPeriodMonths(demolishDateObj, graceMonths, baseDateObj);
-
-    if (isGraceExceeded) {
-      // 유예기간 초과 → 나대지 → 종합합산
-      return {
-        landId: land.id,
-        isSeparateAggregate: false,
-        recognizedArea: 0,
-        excessArea: land.landArea,
-        baseArea: 0,
-        multiplier: 0,
-        demolishedGraceApplied: false,
-        legalBasis: PROPERTY_SEPARATE.DEMOLISHED_GRACE,
-        warnings: [
-          `건축물 철거 후 ${elapsedMonths}개월 경과 — 유예기간(${graceMonths}개월) 초과로 종합합산 처리됩니다.`,
-        ],
-      };
-    }
-
-    // 유예기간 이내 → 철거 전 기준면적 유지 (§103의2 1호)
-    warnings.push(
-      `건축물 철거 후 ${elapsedMonths}개월 경과 — 유예기간(${graceMonths}개월) 이내이므로 별도합산 특례가 적용됩니다.`,
-    );
+    return {
+      landId: land.id,
+      isSeparateAggregate: verdict.recognizedArea > 0,
+      recognizedArea: verdict.recognizedArea,
+      excessArea: verdict.excessArea,
+      // 면적 범위 문언이 없는 시행본(주택·2024.6.1. 전)은 적용한 기준면적이 없다 — 0
+      baseArea: area?.baseArea ?? 0,
+      multiplier: area?.multiplier ?? 0,
+      demolishedGraceApplied: true,
+      legalBasis: area?.legalBasis ?? PROPERTY_SEPARATE.DEMOLISHED_GRACE,
+      warnings: [graceWarning, ...verdict.notices, ...warnings],
+      demolishedVerdict: echo,
+    };
   }
 
   // ── 4단계: 기준면적 계산 및 면적 분리 ──
@@ -287,7 +312,7 @@ export function isSeparateAggregateLand(
       excessArea: land.landArea,
       baseArea: 0,
       multiplier,
-      demolishedGraceApplied: land.demolished === true,
+      demolishedGraceApplied: false, // 철거 필지는 위 철거 특례 분기에서 이미 반환했다
       legalBasis: areaLegal,
       warnings: [...warnings, "기준면적을 산정할 수 없어 종합합산으로 처리합니다."],
     };
@@ -310,7 +335,7 @@ export function isSeparateAggregateLand(
     excessArea,
     baseArea,
     multiplier,
-    demolishedGraceApplied: land.demolished === true,
+    demolishedGraceApplied: false, // 철거 필지는 위 철거 특례 분기에서 이미 반환했다
     legalBasis: areaLegal,
     warnings,
   };
@@ -368,8 +393,8 @@ export function calculateBaseArea(land: SeparateAggregateLandItem): BaseAreaResu
 }
 
 /** §101② 표에서 적용배율을 조회한다. 미등재 용도지역은 추정하지 않고 차단한다. */
-function resolveZoneMultiplier(zoningDistrict: string): number {
-  const resolved = getZoneAreaMultiplier(zoningDistrict);
+function resolveZoneMultiplier(zoningDistrict: string | undefined): number {
+  const resolved = getZoneAreaMultiplier(zoningDistrict ?? "");
   if (!resolved) {
     throw new TaxCalculationError(
       TaxErrorCode.INVALID_INPUT,
@@ -653,12 +678,10 @@ function allocateSeparateByJurisdiction(
 }
 
 /**
- * 과세기준일 기본값 도출 (당해 연도 6월 1일)
+ * 과세기준일 기본값 도출 — 당해 연도 6월 1일(UTC 연도 — 서버·브라우저 시간대에 흔들리지 않게 `resolvePropertyTaxBaseDate` 단일 소스, PSA-E2)
  */
-function deriveDefaultTaxBaseDate(land: SeparateAggregateLandItem): string {
-  // landArea를 이용해 연도 추정 — 실제론 input.targetYear 사용 권장
-  const year = new Date().getFullYear();
-  return `${year}-06-01`;
+function deriveDefaultTaxBaseDate(): string {
+  return format(resolvePropertyTaxBaseDate(), "yyyy-MM-dd");
 }
 
 /**

@@ -405,6 +405,12 @@ M1 허가 게이트 제거(K-2 깨짐) · M2 `permit` 경계 2019.6.1. → 2019.
   - **PSA-U2(2026-11-25)로 개방**: `Step3.tsx`·`request-body.ts`·`validateStep(3)`이 같은 술어 `isRecomputeTarget`(별도합산 포함)을 쓴다. 고지 `PROPERTY_LAND_SPLIT_DIRECT_CAP_NOTICE`에 «직전 과세표준으로 재산정하는 방식을 쓰면 상한을 적용할 수 있습니다» 복원(화면에 그 선택지가 있다). 결과 `recomputeDetail` 행 문구는 별도합산·이관분이 둘로 갈릴 때 «분류별 가액 비율로 나눠 분류별 직전연도 누진세율로 재산정»으로 표시(sync-checker L5).
 - 열린 것: 분리과세(`separated`) 면적 초과분의 종합합산 이관도 세액이 없다(`separate-taxation.ts` — 경고만). 별도 후속.
 
+### 8.1c PSA-E2 구현 기록 (2026-11-25 — 계획서와 다른 점)
+
+- 구현: `separate-aggregate-land.ts`(철거 특례를 `judgePropertyDemolishedLand`로 교체 — 기간·민법 만료일 중복 로직 제거 · `LandSeparateCheckResult.demolishedVerdict` echo) · `property-tax-land-split.ts`(이관 사유 `permit`·`other_use`·`public_use_unpaid` 추가 · `landSplit.demolishedVerdict` echo · 과세기준일 `landSplitTaxBaseDate`) · `property-input.ts`(⑫ 새 키 6칸 + ⑩ `propertyDemolishedFactIssue`) · `lib/calc/property-separate-requirements.ts`(④⑧ 어댑터) · `shared.ts`(①② `saDemolished*` 6칸 · ⑧) · `request-body.ts`(④) · `resolvePropertyTaxBaseDate`를 엔진·route·Zod·⑧ 단일 소스로.
+- **계획서와 다른 점**: (1) `zoningDistrict`를 엔진 타입·Zod에서 **optional**로 바꿨다(Q-8 — 주택·2024.6.1. 전 철거는 요구 0). 비철거는 Zod `superRefine`이 종전 규칙(용도지역·바닥면적 항상 필수)을 유지한다. (2) 사실 칸 enum은 `""`를 허용한다 — 요구된 칸이 `""`이면 `propertyDemolishedFactIssue`가 400, 요구되지 않은 칸의 `""`는 «무시»(계획서 K-23 «요구되지 않은 칸이 들어오면 400이 아니라 무시»와 일치시키기 위해 enum 자체는 막지 않는다 · 3지선다 밖의 값은 400). (3) 과세기준일 6.1. 맞춤은 `isSeparateAggregateLand`가 아니라 **오케스트레이터**(`calculateLandSplitPropertyTax`·Zod·⑧)가 한다 — `isSeparateAggregateLand`는 호출자가 준 `taxBaseDate`를 그대로 읽는다(연혁 anchor가 2026.5.31. 같은 날짜로 직접 호출). (4) `calculateBaseArea`는 비철거 필지 전용으로 남고, 철거 필지의 면적 분할은 leaf가 한다(`baseArea`·`multiplier` echo만 면적 문언 시행본에서 `calculateBaseArea`로 채운다 — 그 밖은 0). (5) 엔진 직접 호출에서 `demolishedKind`가 없으면 leaf의 `input` 접힘(종합합산 + «철거된 것의 종류를 확인할 수 없어» 고지) — 이관 사유는 `demolished_period`로 묶는다. (6) `lib/validators/separate-aggregate-input.ts`(엔진 직접 경로 · 테스트 전용 · 라우트 미경유)는 건드리지 않았다.
+- **바뀐 기존 기대값**: `__tests__/api/property.route.separate-aggregate-required.anchor.test.ts` SA-2(철거일 없음 400 문구 «철거일» → 엔진 문구 «철거ㆍ멸실일») · 철거 ON 픽스처 전부에 종류·허가·건축 외 용도 칸 추가(§8.1) · `separate-aggregate-land.test.ts` 철거 6곳에 `DEMOLISHED_OK` spread.
+
 ### 8.2 검증 명령
 
 `npx vitest run __tests__/tax-engine/property/ __tests__/tax-engine/separate-aggregate-* __tests__/api/property.route.* __tests__/components/calc/property-*` · `npx tsc --noEmit` · `npm run verify:legal` · 구현 PR은 push 전 `npm run test:property`.

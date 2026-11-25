@@ -6,6 +6,10 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
+import { PROPERTY_SEPARATE } from "@/lib/tax-engine/legal-codes";
+import { demolishedNeedOf, demolishedPeriodTextOf } from "@/lib/calc/property-separate-requirements";
+import { SeparateAggregateDemolishedFacts } from "./SeparateAggregateDemolishedFacts";
+import { demolishedFormValues } from "./request-body";
 import { ZONING_DISTRICT_LABELS, type FormState } from "./shared";
 
 interface Props {
@@ -14,6 +18,10 @@ interface Props {
 }
 
 export function Step2SeparateAggregate({ form, onChange }: Props) {
+  // 철거 필지는 «건물 바닥면적» 칸이 철거 전 바닥면적이다 — 엔진이 읽을 때(건축물 ∧ 문언 시행본)만 필수(요구 술어는 ⑧·⑫·④와 같은 함수).
+  const demolished = form.saDemolished;
+  const needFloor = demolished && demolishedNeedOf(demolishedFormValues(form)).floorArea;
+  const period = demolishedPeriodTextOf();
   return (
     <div className="space-y-5">
       <h2 className="text-lg font-semibold">별도합산과세 상세 정보</h2>
@@ -61,7 +69,10 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
 
       {/* 건물 바닥면적 — 공장·비공장 공통 (§101①1호·2호 모두 바닥면적 × 배율) */}
       <div className="space-y-1">
-        <label className="text-sm font-medium">건물 바닥면적 (㎡)</label>
+        <label className="text-sm font-medium">
+          {demolished ? "철거 전 건축물 바닥면적 (㎡)" : "건물 바닥면적 (㎡)"}
+          {needFloor && <span className="text-destructive"> *</span>}
+        </label>
         <DecimalInput
           value={form.saBuildingFloorArea}
           onChange={(v) => onChange({ saBuildingFloorArea: v })}
@@ -69,7 +80,9 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
           unit="㎡"
         />
         <p className="text-xs text-muted-foreground">
-          기준면적 = 건물 바닥면적 × 용도지역 배율 (공장용지도 동일 — §101①1호)
+          {demolished
+            ? "철거ㆍ멸실되기 전 건축물의 바닥면적(건축물 외의 시설은 수평투영면적)입니다. 철거된 건축물의 부속토지 범위는 이 면적 × 용도지역 배율이며, 철거된 것이 주택이거나 그 과세기준일 시행본에 이 범위 문언이 없으면 입력하지 않아도 됩니다."
+            : "기준면적 = 건물 바닥면적 × 용도지역 배율 (공장용지도 동일 — §101①1호)"}
         </p>
         <LawArticleModal legalBasis="지방세법 시행령 §101" label="§101②" />
       </div>
@@ -82,23 +95,28 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
       <ToggleCard
         tone="sky"
         title="건축물 철거 완료"
-        description="철거·멸실 후 1년 이내 별도합산 유지 특례"
+        description={`철거·멸실 후 한시 별도합산 특례 — 허가·용도·빈집 요건 확인(${PROPERTY_SEPARATE.DEMOLISHED_GRACE})`}
         checked={form.saDemolished}
         onCheckedChange={(v) => onChange({ saDemolished: v })}
       />
 
       {form.saDemolished && (
-        <div className="space-y-1">
-          <label className="text-sm font-medium">철거일</label>
-          <DateInput
-            value={form.saDemolishedDate}
-            onChange={(v) => onChange({ saDemolishedDate: v })}
-          />
-          <p className="text-xs text-muted-foreground">
-            철거·멸실일부터 1년 이내이면 별도합산 유지 특례 적용
-          </p>
-          <LawArticleModal legalBasis="지방세법 시행령 §103의2" label="§103의2 1호" />
-        </div>
+        <>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">철거일</label>
+            <DateInput
+              value={form.saDemolishedDate}
+              onChange={(v) => onChange({ saDemolishedDate: v })}
+            />
+            <p className="text-xs text-muted-foreground">
+              {period.general
+                ? `철거·멸실일부터 과세기준일 시행본의 한시 기간(${period.general}${period.vacantHouse ? ` · 빈집정비사업 철거 빈집 ${period.vacantHouse}` : ""}) 이내이고 아래 요건을 충족하면 별도합산 유지 특례가 적용됩니다.`
+                : "과세기준일 시행본에는 철거·멸실 특례의 한시 기간 규정이 없습니다."}
+            </p>
+            <LawArticleModal legalBasis="지방세법 시행령 §103의2" label="§103의2 1호" />
+          </div>
+          <SeparateAggregateDemolishedFacts form={form} onChange={onChange} />
+        </>
       )}
     </div>
   );

@@ -35,8 +35,13 @@ function separate(over: Record<string, unknown> = {}, item: Record<string, unkno
   } as Input);
 }
 
+/**
+ * PSA-E2 — 철거 요건 칸: 철거된 것 = 건축물 · 허가·사용승인 받음 · 건축 외 용도 아님(과세기준일 2026.6.1. 시행본이 기간 안일 때 요구하는 칸 전부).
+ * 철거 1년 초과는 기간 접힘이 먼저라 사실 칸을 읽지 않지만 종류(`demolishedKind`)는 항상 요구된다.
+ */
+const DEMOLISHED_OK = { demolishedKind: "building" as const, demolishedPermit: "yes" as const, demolishedOtherUse: "no" as const };
 /** 철거 1년 초과(2025-05-31 → 2026-06-01) — 전량 종합합산 이관 */
-const PERIOD_OVER = { demolished: true, demolishedDate: "2025-05-31" };
+const PERIOD_OVER = { demolished: true, demolishedDate: "2025-05-31", demolishedKind: "building" as const };
 /** 공업 4배·바닥 100 → 별도합산 400㎡ + 이관 600㎡ (S-4) */
 const S4 = { landArea: 1000, zoningDistrict: "industrial" as const };
 
@@ -116,7 +121,7 @@ describe("PSA-E4 — 이관분 세액 (§13.4 오라클)", () => {
   });
 
   it("UI C1 — 철거 2026-03-01 상업 1,000㎡(바닥 100 → 한도 300): 별도합산 430,000 + 이관 700㎡ 2,200,000 = 2,630,000 / 3,156,000", () => {
-    const r = separate({ publishedPrice: 1_000_000_000 }, { landArea: 1000, demolished: true, demolishedDate: "2026-03-01" });
+    const r = separate({ publishedPrice: 1_000_000_000 }, { landArea: 1000, demolished: true, demolishedDate: "2026-03-01", ...DEMOLISHED_OK });
     expect(r.landSplit?.separate?.share).toBe(430_000);
     expect(r.landSplit?.comprehensive?.share).toBe(2_200_000);
     expect(r.determinedTax).toBe(2_630_000);
@@ -130,7 +135,7 @@ describe("PSA-E4 — 이관분 세액 (§13.4 오라클)", () => {
   });
 
   it("UI C5 — 철거 2025-06-01(1년 만료일 당일): 별도합산 유지 → 이관분 면적 초과분만 종합합산", () => {
-    const r = separate({ publishedPrice: 1_000_000_000 }, { landArea: 1000, demolished: true, demolishedDate: "2025-06-01" });
+    const r = separate({ publishedPrice: 1_000_000_000 }, { landArea: 1000, demolished: true, demolishedDate: "2025-06-01", ...DEMOLISHED_OK });
     expect(r.landSplit?.separate?.share).toBe(430_000);
     expect(r.totalPayable).toBe(3_156_000);
   });
