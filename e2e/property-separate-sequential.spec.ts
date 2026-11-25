@@ -32,6 +32,7 @@ import {
 
 const BUILDING = { zoning: /상업지역/, floor: "100" } as const;
 const DATES_NOTICE = "철거일을 입력하면 이어서 필요한 칸이 표시됩니다.";
+const KIND_NOTICE = "철거된 것의 종류를 고르면 이어서 필요한 칸이 표시됩니다.";
 const SETTLED_STATUS = "별도합산 불성립이 확정되어 나머지 칸은 묻지 않습니다";
 
 const t = (page: Page, id: string) => page.getByTestId(id);
@@ -65,6 +66,8 @@ test.describe("재산세 별도합산 순차 노출 (PSA-SX)", () => {
     await expect(t(page, "pt-sa-demolished-kind-building")).toHaveCount(0);
     await fillDemolishedDate(page, `${YEAR}-01-01`);
     await expect(status(page)).toHaveText("다음 질문: 철거된 것의 종류");
+    await expect(t(page, "pt-demolished-dates-notice")).toHaveCount(0);
+    await expect(t(page, "pt-demolished-kind-notice")).toHaveText(KIND_NOTICE);
     await expect(t(page, "pt-sa-demolished-kind-building")).toBeVisible();
     await expect(t(page, "pt-sa-demolished-permit-yes")).toHaveCount(0);
     await t(page, "pt-sa-demolished-kind-building").check();

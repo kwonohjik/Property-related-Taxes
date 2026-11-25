@@ -64,12 +64,13 @@ describe("위젯 노출 — 엔진 사슬(chain.order)을 그대로 따른다 ·
     expect(group("saDemolishedPermit")).toHaveLength(0);
   });
 
-  it("철거일 있음(날짜가 아직 확정이 아님) · 종류 미선택 → 종류 라디오(기본값 없음) + 안내, 사실 칸 0(⑧도 종류부터 요구)", () => {
+  it("철거일 있음(날짜가 아직 확정이 아님) · 종류 미선택 → 종류 라디오(기본값 없음) + 종류 안내(날짜 안내 아님), 사실 칸 0(⑧도 종류부터 요구)", () => {
     view(demolishedForm({ saDemolishedDate: "2026-01-01" }));
     expect(has("pt-sa-demolished-kind-house")).toBe(true);
     expect(has("pt-sa-demolished-kind-building")).toBe(true);
     expect(document.querySelectorAll('input[name="saDemolishedKind"]:checked')).toHaveLength(0);
-    expect(has("pt-demolished-dates-notice")).toBe(true);
+    expect(has("pt-demolished-dates-notice")).toBe(false);
+    expect(screen.getByTestId("pt-demolished-kind-notice").textContent).toBe("철거된 것의 종류를 고르면 이어서 필요한 칸이 표시됩니다.");
     expect(group("saDemolishedPermit")).toHaveLength(0);
   });
 

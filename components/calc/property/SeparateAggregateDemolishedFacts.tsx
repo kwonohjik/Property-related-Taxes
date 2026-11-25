@@ -28,6 +28,7 @@ import { PrevAnswerMark } from "./SeparateAggregateSequenceNotes";
 import { SettledNotice } from "./SeparateAggregateSequenceNotes";
 import { demolishedFormValues } from "./request-body";
 import { DEMOLISHED_DATE_NOTICE } from "./separate-sequence";
+import { DEMOLISHED_KIND_NOTICE } from "./separate-sequence";
 import { demolishedSettledOf } from "./separate-sequence";
 import type { SequenceField } from "./separate-sequence";
 import type { FormState } from "./shared";
@@ -249,11 +250,15 @@ export function SeparateAggregateDemolishedFacts({ form, prev, onConfirm, onChan
           </p>
         )}
 
-        {(!form.saDemolishedDate || (chain.next === "demolishedKind" && !kindChosen)) && (
+        {!form.saDemolishedDate ? (
           <p className="text-caption leading-snug" data-testid="pt-demolished-dates-notice">
             {DEMOLISHED_DATE_NOTICE}
           </p>
-        )}
+        ) : chain.next === "demolishedKind" && !kindChosen ? (
+          <p className="text-caption leading-snug" data-testid="pt-demolished-kind-notice">
+            {DEMOLISHED_KIND_NOTICE}
+          </p>
+        ) : null}
 
         {noFactsNotice && (
           <p className="text-caption leading-snug" data-testid="pt-sa-demolished-no-facts">
