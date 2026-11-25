@@ -62,7 +62,7 @@ export function propertyDemolishedVerdictLines(v: LandDemolishedVerdictEcho): Pr
         : "그 과세기준일 시행본에 바닥면적 × 배율 범위 문언이 없거나 주택이라 부속토지 전체를 별도합산 범위로 봄 — 범위 확인 필요",
     });
   }
-  lines.push({ key: "required", label: "판정에 읽은 칸", text: requiredText(v.required) });
+  lines.push({ key: "required", label: "입력이 필요했던 칸", text: requiredText(v.required) });
   if (v.vacantHouseExtensionUnconfirmed) {
     lines.push({
       key: "vacant",
