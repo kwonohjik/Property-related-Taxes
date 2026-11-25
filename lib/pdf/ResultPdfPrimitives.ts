@@ -129,6 +129,18 @@ export function fmtRate(v: unknown): string {
   return "-";
 }
 
+/** 세율 — 유효 자리까지(0.07% · 0.15% · 0.25%를 «0.1%»·«0.2%»·«0.3%»로 반올림하지 않는다). 재산세처럼 소수 둘째 자리 세율에 쓴다 */
+export function fmtRatePrecise(v: unknown): string {
+  if (typeof v === "number") return `${(v * 100).toFixed(4).replace(/\.?0+$/, "")}%`;
+  return "-";
+}
+
+/** 면적(㎡) — 소수 둘째 자리까지 */
+export function fmtArea(v: unknown): string {
+  if (typeof v === "number") return `${v.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}㎡`;
+  return "-";
+}
+
 export function num(v: unknown): number | undefined {
   return typeof v === "number" ? v : undefined;
 }

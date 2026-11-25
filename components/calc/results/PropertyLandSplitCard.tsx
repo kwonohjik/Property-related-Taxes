@@ -135,7 +135,7 @@ function SeparatedBlock({ sd, fairMarketRatio }: { sd: PropertyLandSplitSeparate
         <Line label="종합합산으로 넘어가는 초과 면적 = 부속토지 면적 − 인정 면적" amount={area(a.excessArea)} />
       </div>
       <Line label="이 필지 분리과세 인정 공시가액" amount={won(sd.ownValue)} />
-      <Line label={`인정 공시가액 × 공정시장가액비율(${pct(fairMarketRatio)}) = 과세표준`} amount={won(sd.ownTaxBase)} />
+      <Line label={`인정 공시가액 × 공정시장가액비율(${pct(fairMarketRatio)}) = 과세표준 (천원 미만 절사)`} amount={won(sd.ownTaxBase)} />
       <Line
         testId="land-split-row-separated-formula"
         label={`과세표준 × 분리과세 세율(${pct(sd.appliedRate)}) = 분리과세분 세액 (다른 토지와 합산하지 않음)`}

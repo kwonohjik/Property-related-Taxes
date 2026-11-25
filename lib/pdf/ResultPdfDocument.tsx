@@ -9,6 +9,8 @@ import {
   Text,
 } from "@react-pdf/renderer";
 import { type R, C, s, fmt, fmtRate, num, str, bool } from "./ResultPdfPrimitives";
+import { fmtArea } from "./ResultPdfPrimitives";
+import { fmtRatePrecise } from "./ResultPdfPrimitives";
 import { propertyDemolishedVerdictLines } from "@/lib/calc/property-demolished-verdict-text";
 import type { LandDemolishedVerdictEcho } from "@/lib/tax-engine/separate-aggregate-land";
 import { InheritanceHeirAllocationSection } from "@/lib/pdf/sections/inheritance-heir-allocation-section";
@@ -210,7 +212,9 @@ function PropertyLandSplitPdf({ r }: { r: R }) {
   if (!isRecord(split)) return null;
   const rows: { key: string; label: string; c: R }[] = [];
   if (isRecord(split.separate)) rows.push({ key: "sep", label: "별도합산분", c: split.separate });
-  if (isRecord(split.comprehensive)) rows.push({ key: "comp", label: "종합합산분", c: split.comprehensive });
+  if (isRecord(split.comprehensive)) rows.push({ key: "comp", label: isRecord(split.separated) ? "종합합산 이관분" : "종합합산분", c: split.comprehensive });
+  const limit = isRecord(split.separated) && isRecord(split.separated.areaLimit) ? split.separated.areaLimit : null;
+  const factory = limit?.kind === "factory";
   return (
     <>
       <Text style={s.sectionTitle}>토지 과세 구분별 세액 ({str(split.jurisdictionBasis) ?? "같은 지방자치단체 관할구역 합산"})</Text>
@@ -223,9 +227,17 @@ function PropertyLandSplitPdf({ r }: { r: R }) {
       )}
       {isRecord(split.separated) && (
         <View style={s.table}>
+          {limit && (
+            <>
+              <View style={s.row}><Text style={s.lbl}>{factory ? "공장 부속토지 면적" : "목장용지 면적"}</Text><Text style={s.val}>{fmtArea(limit.totalArea)}</Text></View>
+              <View style={s.row}><Text style={s.lbl}>{factory ? "공장입지기준면적" : "가축별 기준면적"}</Text><Text style={s.val}>{fmtArea(limit.standardArea)}</Text></View>
+              <View style={s.row}><Text style={s.lbl}>분리과세 인정 면적</Text><Text style={s.val}>{fmtArea(limit.recognizedArea)}</Text></View>
+              <View style={s.row}><Text style={s.lbl}>종합합산으로 넘어가는 초과 면적</Text><Text style={s.val}>{fmtArea(limit.excessArea)}</Text></View>
+            </>
+          )}
           <View style={s.row}><Text style={s.lbl}>분리과세분 이 필지 분리과세 인정 공시가액</Text><Text style={s.val}>{fmt(split.separated.ownValue)}</Text></View>
-          <View style={s.row}><Text style={s.lbl}>분리과세분 과세표준</Text><Text style={s.val}>{fmt(split.separated.ownTaxBase)}</Text></View>
-          <View style={s.row}><Text style={s.lbl}>분리과세분 세율</Text><Text style={s.val}>{fmtRate(split.separated.appliedRate)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>분리과세분 과세표준 (천원 미만 절사)</Text><Text style={s.val}>{fmt(split.separated.ownTaxBase)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>분리과세분 세율</Text><Text style={s.val}>{fmtRatePrecise(split.separated.appliedRate)}</Text></View>
           <View style={s.rowBg}><Text style={s.lbl}>분리과세분 세액 (합산하지 않음)</Text><Text style={s.valAccent}>{fmt(split.separated.tax)}</Text></View>
         </View>
       )}
@@ -262,7 +274,7 @@ function PropertyCalcPdf({ r }: { r: R }) {
           <View style={s.rowBg}><Text style={s.lbl}>과세표준</Text><Text style={s.valAccent}>{fmt(r.taxBase)}</Text></View>
         )}
         {num(r.appliedRate) !== undefined && (
-          <View style={s.row}><Text style={s.lbl}>적용 세율</Text><Text style={s.val}>{num(r.appliedRate) === 0 ? (isRecord(r.landSplit) && isRecord(r.landSplit.separated) ? "분류별 (위 표)" : "누진세율 (구간별)") : fmtRate(r.appliedRate)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>적용 세율</Text><Text style={s.val}>{num(r.appliedRate) === 0 ? (isRecord(r.landSplit) && isRecord(r.landSplit.separated) ? "분류별 (위 표)" : "누진세율 (구간별)") : fmtRatePrecise(r.appliedRate)}</Text></View>
         )}
         {num(r.calculatedTax) !== undefined && (
           <View style={s.row}><Text style={s.lbl}>산출세액</Text><Text style={s.val}>{fmt(r.calculatedTax)}</Text></View>
@@ -524,3 +536,4 @@ export function ResultPdfDocument({
     </Document>
   );
 }
+
