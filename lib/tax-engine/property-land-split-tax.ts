@@ -27,11 +27,13 @@ import { calculateComprehensiveAggregateTax } from "./property-tax-comprehensive
 import { getPropertyRateSet } from "./data/property-rate-history";
 import { resolvePropertyTaxBaseDate } from "./property-separate-requirements";
 import { isSeparateAggregateLand } from "./separate-aggregate-land";
+import { separatedAreaExcessOf } from "./separate-taxation";
 import { format } from "./utc-date";
 import { isValid } from "./utc-date";
 import type { LandProgressiveRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
 import type { SeparateAggregateLandItem } from "./separate-aggregate-land";
+import type { SeparateTaxationInput } from "./separate-taxation";
 import type {
   LandTaxType,
   PropertyLandSplitClass,
@@ -56,6 +58,7 @@ const NONE_REQUIRED: PropertyLandSplitRequired = { otherSeparate: false, otherCo
  * 분류 면적으로 요구 칸을 정한다.
  * - 직접 «종합합산» 선택(Q-16): 종합합산 칸 항상.
  * - 별도합산 선택: 별도합산 인정 면적 > 0이면 별도합산 칸, 종합합산 이관 면적 > 0이면 종합합산 칸(Q-13).
+ * - 분리과세 선택(PSE): 공장용지·목장용지의 면적 한도 초과 면적 > 0이면 종합합산 칸만(분리과세분은 합산하지 않는다 — 법 §113①3호). 별도합산 칸은 없다.
  */
 export function propertyLandSplitRequired(i: {
   landTaxType?: LandTaxType;
@@ -66,6 +69,7 @@ export function propertyLandSplitRequired(i: {
   if (i.landTaxType === "separate_aggregate") {
     return { otherSeparate: (i.recognizedArea ?? 0) > 0, otherComprehensive: (i.excessArea ?? 0) > 0 };
   }
+  if (i.landTaxType === "separated") return { otherSeparate: false, otherComprehensive: (i.excessArea ?? 0) > 0 };
   return NONE_REQUIRED;
 }
 
@@ -84,8 +88,17 @@ export function landSplitTaxBaseDate(targetDate?: string): string {
 export function propertyLandSplitRequiredFor(i: {
   landTaxType?: LandTaxType;
   separateAggregateItem?: SeparateAggregateLandItem;
+  /** 분리과세 선택 시 판정 입력(공장용지·목장용지 면적 한도) — 엔진과 같은 `separatedAreaExcessOf` 경로 */
+  separateTaxationItem?: Omit<SeparateTaxationInput, "assessedValue">;
   targetDate?: string;
 }): PropertyLandSplitRequired {
+  // 분리과세: 한도 판정이 던지거나 한도가 없는 유형이면 `null`(요구 없음) — 던지는 입력은 ⑧·⑫·엔진이 같은 판정에서 따로 막는다(침묵 0원 경로 없음)
+  if (i.landTaxType === "separated") {
+    return propertyLandSplitRequired({
+      landTaxType: i.landTaxType,
+      excessArea: separatedAreaExcessOf(i.separateTaxationItem)?.excessArea ?? 0,
+    });
+  }
   if (i.landTaxType !== "separate_aggregate") return propertyLandSplitRequired({ landTaxType: i.landTaxType });
   if (!i.separateAggregateItem) return NONE_REQUIRED;
   try {
@@ -134,6 +147,8 @@ export const PROPERTY_LAND_SPLIT_COMBINED_NOTICE =
   "같은 지방자치단체 관할구역의 다른 토지를 합산해 과세표준·세율을 정했고, 이 필지의 세액은 합산 세액을 공시가액 비율로 나눈 값입니다(필지별 안분의 법령 근거는 확인 필요).";
 export const PROPERTY_LAND_SPLIT_DIRECT_CAP_NOTICE =
   "종합합산으로 넘어간 부분이 있어 과세대상 구분이 직전 연도와 달라질 수 있는데, 직전 연도에 실제 부과된 세액은 그 구분의 기준이 아닐 수 있어 세부담상한(150%)을 적용하지 않았습니다(「지방세법 시행령」 제118조 제1항 제1호 다목) — 직전 과세표준으로 재산정하는 방식을 쓰면 상한을 적용할 수 있습니다 — 확인 필요.";
+export const PROPERTY_LAND_SPLIT_SEPARATED_NOTICE =
+  "공장입지기준면적(또는 가축별 기준면적)을 넘는 부분은 분리과세 대상이 아니어서 종합합산과세대상으로 보고 같은 지방자치단체 관할구역 토지와 합산해 과세했습니다(「지방세법」 제106조 제1항 제1호). 다만 이 부분이 별도합산과세대상(「지방세법 시행령」 제101조 제1항 제2호)에 해당하는지는 계산기가 판정하지 않습니다 — 확인 필요.";
 export const PROPERTY_LAND_SPLIT_RECOMPUTE_NOTICE =
   "세부담상한의 직전 연도 세액상당액은 직전 과세표준을 분류별 가액 비율로 나눠 분류별 직전 세율로 이 필지만 재산정한 값입니다(같은 관할구역 타 토지의 합산 효과는 넣지 않음 — 「지방세법 시행령」 제118조 제1항 제1호 다목, 기준 단위는 확인 필요).";
 
@@ -146,6 +161,8 @@ export const PROPERTY_LAND_SPLIT_TRANSFER_REASON_LABEL: Record<PropertyLandSplit
   public_use_unpaid: "국가 등이 무상으로 공용·공공용 사용하는 부속토지(비과세 가능성 — 계산기는 비과세를 판정하지 않음)",
   building_permit: "허가·사용승인을 받지 않았거나 확인되지 않은 건축물의 부속토지(영 §101① 단서)",
   area_excess: "기준면적(바닥면적 × 용도지역 배율)을 초과한 토지",
+  factory_area_excess: "공장입지기준면적(「지방세법 시행규칙」 제50조 [별표 6])을 초과한 공장 부속토지",
+  pasture_area_excess: "가축별 기준면적(「지방세법 시행령」 제102조제1항제3호 [표])을 초과한 목장용지",
   direct_type: "과세 유형을 종합합산으로 직접 선택한 토지",
 };
 

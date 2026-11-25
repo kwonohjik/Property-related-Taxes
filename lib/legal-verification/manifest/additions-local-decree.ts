@@ -197,6 +197,9 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
       "공장입지기준면적",
       "전ㆍ답ㆍ과수원",
       "목장용지",
+      // PSE-E1 — 면적 한도(`PROPERTY.SEPARATE.STANDARD_FACTORY`·`LOW_RATE_LIVESTOCK`): 한도 안만 분리과세, 밖은 종합합산 이관.
+      "공장입지기준면적 범위의 토지",
+      "계산한 토지면적의 범위에서 소유하는 토지",
     ],
     keywordMode: "ALL",
   },

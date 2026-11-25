@@ -206,6 +206,8 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
       // NBL2611-V1-A — 기타토지 «재산세 분류 근거» 선택지(`NBL.PTAX_BASIS_VACANT_STATE`·`NBL.PTAX_BASIS_DEMOLISHED`)가 기댄 법 §106①2호 나목·다목 문언.
       "업무 또는 경제활동에 활용되는 토지로서 대통령령으로 정하는 토지",
       "철거ㆍ멸실된 건축물 또는 주택의 부속토지로서 대통령령으로 정하는 부속토지",
+      // PSE-E1 — 분리과세 면적 한도 초과분의 종합합산 귀속(`PROPERTY_LAND_SPLIT.SEPARATED_EXCESS_TO_COMPREHENSIVE`) 문언.
+      "별도합산과세대상 또는 분리과세대상이 되는 토지를 제외한 토지",
     ],
     keywordMode: "ALL",
   },

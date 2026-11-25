@@ -20,6 +20,7 @@ import { getCurrentPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
 import { classifyHeavy, classifyLowRate, classifyStandard } from "./separate-taxation-classify";
 import type { SeparateTaxationInput, SeparateTaxationResult } from "./separate-taxation-classify";
+import type { PropertyLandSplitAreaLimit } from "./types/property.types";
 
 // 타입은 종전 import 경로(`./separate-taxation`) 그대로 쓸 수 있게 재수출한다(leaf 판정은 `separate-taxation-classify.ts`)
 export type {
@@ -187,4 +188,39 @@ export function calculateSeparateTax(
     classification.pastureAreaCheck?.recognizedAssessedValue ??
     input.assessedValue;
   return calculateSeparateTaxationTax(classification, base);
+}
+
+// ============================================================
+// PSE — 면적 한도 echo (요구 술어·화면 미리보기 공용)
+// ============================================================
+
+/**
+ * 공장용지·목장용지 면적 한도 판정 echo — 한도 안과 한도 밖(종합합산 이관) 면적.
+ *
+ * **엔진과 같은 코드 경로**(`classifySeparateTaxation`의 `factoryAreaCheck`·`pastureAreaCheck`)를 읽으므로 합산 칸 요구 술어와 엔진 판정이 어긋나지 않는다.
+ * 한도가 없는 유형(농지·임야·염전·터미널·골프장·고급오락장)·분리과세 비해당(도시지역 공장·허가 미이행·인정면적 0 등)·판정이 던지는 입력(면적 미입력 등)은 `null`
+ * — 던지는 입력은 엔진도 같은 판정에서 던져 400이 되므로 침묵 0원 경로가 없다.
+ * 초과 면적이 0이어도 한도 안이면 값을 돌려준다(`excessArea: 0`) — 호출자는 `excessArea > 0`으로 이관 여부를 본다.
+ */
+export function separatedAreaExcessOf(
+  item: Omit<SeparateTaxationInput, "assessedValue"> | undefined,
+): PropertyLandSplitAreaLimit | null {
+  if (!item) return null;
+  try {
+    const c = classifySeparateTaxation({ assessedValue: 0, ...item });
+    if (!c.isApplicable) return null;
+    const factory = c.factoryAreaCheck;
+    const pasture = c.pastureAreaCheck;
+    const check = factory ?? pasture;
+    if (!check) return null;
+    return {
+      kind: factory ? "factory" : "pasture",
+      totalArea: (factory ? item.factoryTotalLandArea : item.pastureTotalLandArea) ?? 0,
+      standardArea: check.standardArea,
+      recognizedArea: check.recognizedArea,
+      excessArea: check.excessArea,
+    };
+  } catch {
+    return null;
+  }
 }
