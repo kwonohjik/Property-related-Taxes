@@ -20,7 +20,7 @@
 
 import { applyRate, applyFairMarketRatio } from "./tax-utils";
 import { calcSurtax, calcInstallment } from "./property-tax-surtax";
-import { PROPERTY, PROPERTY_CONST, COMPREHENSIVE_LAND } from "./legal-codes";
+import { PROPERTY, PROPERTY_CONST, PROPERTY_SEPARATE, COMPREHENSIVE_LAND } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import {
   calculateSeparateTax,
@@ -458,10 +458,20 @@ export function calculatePropertyTax(
         legalBasis.push(PROPERTY.SEPARATE.EXCLUDE_COMPREHENSIVE);
 
         if (!sepResult.isApplicable) {
+          // 허가·사용승인 미이행 공장용 건축물(§102①1호 단서) — 별도합산도 §101① 단서로 같은 건축물을
+          // 제외하므로 재입력 후 최종 과세는 종합합산이다(별도합산 안내 금지).
+          const factoryUnpermitted =
+            input.separateTaxationItem?.isFactoryLand === true &&
+            input.separateTaxationItem.factoryIsUnpermitted === true;
           throw new TaxCalculationError(
             TaxErrorCode.INVALID_INPUT,
-            "분리과세 대상 요건을 충족하지 않습니다. " +
-            "종합합산 또는 별도합산 과세 유형으로 재입력하세요.",
+            factoryUnpermitted
+              ? "분리과세 대상 요건을 충족하지 않습니다 — 허가 또는 사용승인을 받지 않은 공장용 건축물의 " +
+                `부속토지입니다(${PROPERTY.SEPARATE.STANDARD_FACTORY} 단서). 별도합산으로 입력해도 ` +
+                `${PROPERTY_SEPARATE.BUILDING_PERMIT_101}에 따라 같은 건축물의 부속토지가 제외되므로 ` +
+                "종합합산 과세 유형으로 재입력하세요."
+              : "분리과세 대상 요건을 충족하지 않습니다. " +
+                "종합합산 또는 별도합산 과세 유형으로 재입력하세요.",
           );
         }
 
