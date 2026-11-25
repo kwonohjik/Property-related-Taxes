@@ -102,8 +102,9 @@ export function Step2SeparateAggregate({ form, onChange: onFormChange }: Props) 
       {demolished && (
         <>
           <div className="space-y-1">
-            <label className="text-sm font-medium">철거일</label>
+            <label id="pt-sa-demolished-date-label" className="text-sm font-medium">철거일</label>
             <DateInput
+              aria-labelledby="pt-sa-demolished-date-label"
               value={form.saDemolishedDate}
               onChange={(v) => onChange({ saDemolishedDate: v })}
             />

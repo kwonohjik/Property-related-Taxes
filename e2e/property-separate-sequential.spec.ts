@@ -64,6 +64,8 @@ test.describe("재산세 별도합산 순차 노출 (PSA-SX)", () => {
     await expect(status(page)).toHaveText(DATES_NOTICE);
     await expect(t(page, "pt-demolished-dates-notice")).toHaveText(DATES_NOTICE);
     await expect(t(page, "pt-sa-demolished-kind-building")).toHaveCount(0);
+    // 철거일 세 칸이 «철거일» 그룹으로 낭독된다(접근성 트리 점검 — 종전엔 «연도·월·일»뿐)
+    await expect(page.getByRole("group", { name: "철거일" }).getByRole("textbox", { name: "연도" })).toBeVisible();
     await fillDemolishedDate(page, `${YEAR}-01-01`);
     await expect(status(page)).toHaveText("다음 질문: 철거된 것의 종류");
     await expect(t(page, "pt-demolished-dates-notice")).toHaveCount(0);
