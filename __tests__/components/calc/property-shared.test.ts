@@ -29,6 +29,7 @@ describe("별도합산 면적 소수점 (R1 회귀)", () => {
         saZoningDistrict: "commercial",
         saLandArea: "333.06",
         saBuildingFloorArea: "100.5",
+        saBuildingPermit: "yes", // PSA-S2 — 바닥면적·용도지역은 허가 «예»일 때만 싣는다(허가 «아니오»·«모름»·미선택이면 결과가 확정이라 미전송)
       }),
     );
     const item = body.separateAggregateItem as Record<string, unknown>;

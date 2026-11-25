@@ -5,7 +5,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
-import { buildingPermitWireFields } from "@/lib/calc/property-separate-requirements";
+import { buildingWireFields } from "@/lib/calc/property-separate-requirements";
 import { demolishedWireFields } from "@/lib/calc/property-separate-requirements";
 import {
   landSplitBodyFields,
@@ -41,11 +41,14 @@ function buildSeparateAggregateItem(form: FormState) {
           ...demolishedWireFields(demolishedFormValues(form)),
         }
       : {
-          zoningDistrict: form.saZoningDistrict,
-          buildingFloorArea: parseDecimal(form.saBuildingFloorArea) || undefined,
           ...(form.saIsFactory ? { isFactory: true } : {}),
-          // 영 §101① 단서(PSA-E3) — 과세기준일 시행본이 요건을 둘 때만 싣는다(철거 경로는 위 분기의 `demolishedPermit`이 맡는다)
-          ...buildingPermitWireFields(form.saBuildingPermit),
+          // 비철거 — 허가(영 §101① 단서 · PSA-E3)는 시행본이 요건을 둘 때만, 용도지역·바닥면적은 사슬이 읽을 때(허가 «예» 또는 허가 칸 없는 시행본)만 싣는다(PSA-S2 · 숨은 stale 값 미전송).
+          // 철거 경로는 위 분기의 `demolishedPermit`이 허가를 맡는다.
+          ...buildingWireFields({
+            permit: form.saBuildingPermit,
+            zoningDistrict: form.saZoningDistrict,
+            buildingFloorArea: parseDecimal(form.saBuildingFloorArea) || undefined,
+          }),
         }),
   };
 }

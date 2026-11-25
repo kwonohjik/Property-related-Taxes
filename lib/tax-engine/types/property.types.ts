@@ -215,7 +215,7 @@ export interface PropertyTaxInput {
     officialLandPrice: number;
     /**
      * 용도지역 — 「지방세법 시행령」 §101② 적용배율 결정. `ZoningDistrict`와 동일 집합.
-     * 배율을 읽을 때만 필수(비철거 · 철거 건축물 ∧ 2024.6.1.~ ∧ 앞 요건 통과 — `propertyDemolishedChain().asked.buildingFloorArea`) — 주택·그 전 시행본·앞 답이 접힘을 확정한 철거는 요구 0(PSA-E2 Q-8 · PSA-S1).
+     * 배율을 읽을 때만 필수(비철거 — 허가 «예» 또는 허가 칸이 없는 시행본(`propertyBuildingChain().areaInputs`, PSA-S2) · 철거 건축물 ∧ 2024.6.1.~ ∧ 앞 요건 통과 — `propertyDemolishedChain().asked.buildingFloorArea`) — 주택·그 전 시행본·앞 답이 접힘을 확정한 철거는 요구 0(PSA-E2 Q-8 · PSA-S1).
      */
     zoningDistrict?:
       | "exclusive_residential"
@@ -243,7 +243,7 @@ export interface PropertyTaxInput {
     demolishedPublicUsePaid?: PropertyRequirementFact;
     /**
      * 본 경로(비철거) 건축물의 허가·사용승인 요건(PSA-E3 · 영 §101① 단서 — 과세기준일 2011.6.1.~) — `propertyBuildingPermitRequired(s)`일 때만 읽는다.
-     * `yes` = 단서에 걸리지 않음 · `no` = 허가 등 미취득 또는 사용승인 없이 사용 중 · `unknown` = 모름. `yes`가 아니면 별도합산에서 접어 종합합산으로 이관한다.
+     * `yes` = 단서에 걸리지 않음 · `no` = 허가 등 미취득 또는 사용승인 없이 사용 중 · `unknown` = 모름. `yes`가 아니면 별도합산에서 접어 종합합산으로 이관한다 — 이 접힘은 용도지역·바닥면적 읽기보다 앞이라 그 칸이 비어 있어도 같다(PSA-S2).
      */
     buildingPermit?: PropertyRequirementFact;
   };

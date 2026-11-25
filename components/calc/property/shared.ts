@@ -9,7 +9,7 @@ import {
   needsPriorUrbanTax,
 } from "@/lib/calc/property-required-inputs";
 import { firstLandSplitIssue } from "@/lib/calc/property-land-split-inputs";
-import { buildingPermitIssueOf } from "@/lib/calc/property-separate-requirements";
+import { buildingFactIssueOf } from "@/lib/calc/property-separate-requirements";
 import { demolishedFactIssueOf } from "@/lib/calc/property-separate-requirements";
 import { buildPropertyTaxRequestBody, effectiveOwnershipType, isRecomputeTarget, landSplitRequired } from "./request-body";
 // 800줄 분리: 폼 → API 본문 변환을 request-body.ts로 이동 — 외부(테스트·API 호출) import 하위호환 re-export
@@ -450,16 +450,17 @@ export function validateStep(step: number, form: FormState): string | null {
         });
         if (issue) return issue.message;
       } else {
-        if (!form.saZoningDistrict) return "용도지역을 선택하세요.";
         const landArea = parseDecimal(form.saLandArea);
         if (!landArea || landArea <= 0) return "토지 면적(㎡)을 입력하세요.";
-        // 공장용지도 별도합산 기준면적은 §101①1호 본칙(바닥면적 × 배율)이다 —
-        // 공장입지기준면적(§102①1호 분리과세 한도)으로 대체할 수 없다(2026-08-05 정정).
-        const bfa = parseDecimal(form.saBuildingFloorArea);
-        if (!bfa || bfa <= 0) return "건물 바닥면적(㎡)을 입력하세요.";
-        // 영 §101① 단서(PSA-E3) — ⑫와 같은 `propertyBuildingPermitFactIssue`(용도지역 → 바닥면적 → 허가 순서도 ⑫와 같다)
-        const permitIssue = buildingPermitIssueOf(form.saBuildingPermit);
-        if (permitIssue) return permitIssue.message;
+        // 비철거 — 허가 → 용도지역 → 바닥면적, «엔진 사슬이 읽는 칸만» 요구한다(PSA-S2). 허가 «아니오»·«모름»이면 결과가 확정이라 용도지역·바닥면적은 묻지 않는다.
+        // ⑫(Zod `superRefine`)와 같은 `propertyBuildingFactIssue`라 같은 필드·같은 문구·같은 순서다.
+        // 공장용지도 별도합산 기준면적은 §101①1호 본칙(바닥면적 × 배율)이다 — 공장입지기준면적(§102①1호 분리과세 한도)으로 대체할 수 없다(2026-08-05 정정).
+        const buildingIssue = buildingFactIssueOf({
+          permit: form.saBuildingPermit,
+          zoningDistrict: form.saZoningDistrict,
+          buildingFloorArea: parseDecimal(form.saBuildingFloorArea) || undefined,
+        });
+        if (buildingIssue) return buildingIssue.message;
       }
     }
     if (form.landTaxType === "separated") {

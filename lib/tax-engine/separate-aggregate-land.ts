@@ -11,9 +11,10 @@
  *
  * 판정 4단계 우선순위:
  *   1. 분리과세 제외 여부 (이미 상위에서 처리, 여기서는 수신 데이터가 분리과세 비해당이어야 함)
- *   2. 건축물 존재 여부 (없으면 → 종합합산)
- *   3. 철거·멸실 후 유예기간 이내 특례 확인 (기간은 과세기준일 시행본 — `demolishedStatusPeriodMonths`)
- *   4. 비철거: 허가·사용승인 단서(영 §101① 단서 · 과세기준일 2011.6.1.~, 공장용·영업용 공통) — `buildingPermit`이 yes가 아니면 전량 종합합산
+ *   2. 비철거: 허가·사용승인 단서(영 §101① 단서 · 과세기준일 2011.6.1.~, 공장용·영업용 공통) — `buildingPermit`이 yes가 아니면 전량 종합합산.
+ *      결과를 확정하는 접힘이라 건축물 존재·용도지역·바닥면적보다 **먼저** 읽는다(PSA-S2 — 뒤 칸이 없어도 같은 접힘·고지)
+ *   3. 건축물 존재 여부 (없으면 → 종합합산)
+ *   4. 철거·멸실 후 유예기간 이내 특례 확인 (기간은 과세기준일 시행본 — `demolishedStatusPeriodMonths`)
  *   5. 기준면적 내/초과 면적 분리
  *
  * 핵심 원칙:
@@ -205,7 +206,7 @@ export interface SeparateAggregateResult {
 /**
  * 단일 필지 별도합산 판정 (지방세법 §106①2호, 시행령 §101)
  *
- * 판정 4단계:
+ * 판정 4단계 (비철거 본 경로는 그 앞에 «0. 허가·사용승인 — 영 §101① 단서, 아니면 즉시 종합합산 이관»을 읽는다):
  * 1. 건축물 없음 → 종합합산 (별도합산 불가)
  * 2. 철거 후 과세기준일까지 경과월 계산 → 유예기간(과세기준일 시행본 6개월·1년) 이내: 별도합산 유지 (§103의2 1호 특례)
  * 3. 철거 후 유예기간 초과 → 나대지 처리 → 종합합산
@@ -216,6 +217,25 @@ export function isSeparateAggregateLand(
 ): LandSeparateCheckResult {
   const warnings: string[] = [];
   const taxBaseDate = land.taxBaseDate ?? deriveDefaultTaxBaseDate();
+
+  // ── 0단계: 허가·사용승인(비철거 본 경로 — 영 §101① 단서 · PSA-S2) ──
+  // 허가 등을 받지 않은 건축물 · 사용승인 없이 사용 중인 건축물의 부속토지는 공장용·영업용 모두 별도합산 제외다. `yes`가 아니면(미선택 포함) 접는다.
+  // 이 접힘은 결과를 확정하므로 «건축물 존재·용도지역·바닥면적»보다 **앞**에서 읽는다 — 뒤 칸을 읽지 않으니 그 칸이 비어 있어도(요구되지 않아 보내지 않은 칸) 접힘 판정·고지·합산 칸 요구가 같다.
+  // 철거 경로는 영 §103의2 본문 후단이 같은 요건을 `demolishedPermit`으로 맡는다(아래 철거 분기).
+  if (land.demolished !== true && !propertyBuildingPermitHolds({ taxBaseDate: parseISO(taxBaseDate), permit: land.buildingPermit })) {
+    return {
+      landId: land.id,
+      isSeparateAggregate: false,
+      recognizedArea: 0,
+      excessArea: land.landArea,
+      baseArea: 0,
+      multiplier: 0,
+      demolishedGraceApplied: false,
+      legalBasis: PROPERTY_SEPARATE.BUILDING_PERMIT_101,
+      warnings: [land.buildingPermit === "no" ? PROPERTY_BUILDING_PERMIT_NO_NOTICE : PROPERTY_BUILDING_PERMIT_UNKNOWN_NOTICE],
+      buildingPermitFolded: true,
+    };
+  }
 
   // ── 1단계: 건축물 존재 여부 ──
   // 공장입지기준면적(§102①1호 분리과세 한도)은 「건축물이 있다」는 근거가 될 수 없다 —
@@ -327,23 +347,6 @@ export function isSeparateAggregateLand(
       demolishedGraceApplied: false, // 철거 필지는 위 철거 특례 분기에서 이미 반환했다
       legalBasis: areaLegal,
       warnings: [...warnings, "기준면적을 산정할 수 없어 종합합산으로 처리합니다."],
-    };
-  }
-
-  // 영 §101① 단서(PSA-E3) — 허가 등을 받지 않은 건축물 · 사용승인 없이 사용 중인 건축물의 부속토지는 공장용·영업용 모두 별도합산 제외.
-  // 용도지역·바닥면적은 위에서 이미 읽었다(요구 술어가 항상 요구하는 칸 — 접힘이 읽는 칸을 줄이지 않는다). `yes`가 아니면(미선택 포함) 접는다.
-  if (!propertyBuildingPermitHolds({ taxBaseDate: parseISO(taxBaseDate), permit: land.buildingPermit })) {
-    return {
-      landId: land.id,
-      isSeparateAggregate: false,
-      recognizedArea: 0,
-      excessArea: land.landArea,
-      baseArea: 0,
-      multiplier,
-      demolishedGraceApplied: false,
-      legalBasis: PROPERTY_SEPARATE.BUILDING_PERMIT_101,
-      warnings: [...warnings, land.buildingPermit === "no" ? PROPERTY_BUILDING_PERMIT_NO_NOTICE : PROPERTY_BUILDING_PERMIT_UNKNOWN_NOTICE],
-      buildingPermitFolded: true,
     };
   }
 

@@ -1,7 +1,8 @@
 /**
  * PSA-E3 — 본 경로(비철거) 허가·사용승인 칸 ⑧(`validateStep(2)`) ↔ ⑫(Zod `superRefine`) 패리티 격자 (계획서 §7.3 K-27~K-29 · §7.4 정신).
  *
- * 격자: 과세기준일 연도 {2009 · 2010 · 2011 · 2016 · 2026} × 허가 칸 {"" · yes · no · unknown} × 철거 {OFF · ON} × 공장용지 {아니오 · 예} × 용도지역·바닥면적 {둘 다 있음 · 둘 다 없음}.
+ * 격자: 과세기준일 연도 {2009 · 2010 · 2011 · 2016 · 2026} × 허가 칸 {"" · yes · no · unknown} × 철거 {OFF · ON} × 공장용지 {아니오 · 예} × 용도지역·바닥면적 {둘 다 있음 · 둘 다 없음 · 용도지역만 · 바닥면적만}.
+ * PSA-S2 — 사슬 순서(허가 → 용도지역 → 바닥면적): 허가 «아니오»·«모름»이면 용도지역·바닥면적이 없거나 한쪽만 있어도(바닥면적만 = N3 함정) 세 입구 모두 통과하고 엔진이 던지지 않는다.
  * 각 셀에서 세 입구를 짝지어 «차단 여부 + 첫 문구»를 대조한다 — 「UI 통과 ↔ 400」·「UI 차단 ↔ 200」 막다른 길 0건.
  *   ⑧  : 폼 → `validateStep(2, form)`
  *   ⑫A : 폼 → ④ `buildPropertyTaxRequestBody`(요구될 때만 싣는다) → Zod
@@ -25,8 +26,13 @@ interface Cell {
   permit: Fact;
   demolished: boolean;
   factory: boolean;
-  withArea: boolean;
+  /** 용도지역·바닥면적 입력 상태 */
+  area: Area;
 }
+type Area = "both" | "none" | "zone" | "floor";
+const AREAS: Area[] = ["both", "none", "zone", "floor"];
+const hasZone = (a: Area) => a === "both" || a === "zone";
+const hasFloor = (a: Area) => a === "both" || a === "floor";
 
 function formOf(c: Cell): FormState {
   return {
@@ -35,8 +41,8 @@ function formOf(c: Cell): FormState {
     landTaxType: "separate_aggregate",
     publishedPrice: "300,000,000",
     saLandArea: "300",
-    saZoningDistrict: c.withArea ? "commercial" : "",
-    saBuildingFloorArea: c.withArea ? "100" : "",
+    saZoningDistrict: hasZone(c.area) ? "commercial" : "",
+    saBuildingFloorArea: hasFloor(c.area) ? "100" : "",
     saIsFactory: c.factory,
     saBuildingPermit: c.permit,
     // 철거 ON — 철거 칸은 모두 유효하게 채운다(이 격자의 관심사는 본 경로 허가 칸이 철거 경로에서 읽히지 않는 것)
@@ -62,7 +68,8 @@ function rawBodyOf(c: Cell): Record<string, unknown> {
       jurisdictionCode: "000000",
       landArea: 300,
       officialLandPrice: 1_000_000,
-      ...(c.withArea ? { zoningDistrict: "commercial", buildingFloorArea: 100 } : {}),
+      ...(hasZone(c.area) ? { zoningDistrict: "commercial" } : {}),
+      ...(hasFloor(c.area) ? { buildingFloorArea: 100 } : {}),
       ...(c.factory ? { isFactory: true } : {}),
       buildingPermit: c.permit,
       ...(c.demolished
@@ -87,7 +94,7 @@ function* cells(): Generator<Cell> {
     for (const permit of FACTS)
       for (const demolished of [false, true])
         for (const factory of [false, true])
-          for (const withArea of [true, false]) yield { year, permit, demolished, factory, withArea };
+          for (const area of AREAS) yield { year, permit, demolished, factory, area };
 }
 
 describe("PSA-E3 ⑧↔⑫ 본 경로 허가 칸 패리티 격자 — 요구 ≡ 차단 ≡ 400 (같은 문구)", () => {
@@ -106,6 +113,7 @@ describe("PSA-E3 ⑧↔⑫ 본 경로 허가 칸 패리티 격자 — 요구 ≡
       let blocked = 0;
       let passed = 0;
       let permitBlocked = 0;
+      let foldPassed = 0;
       for (const c of cells()) {
         if (c.year !== year) continue;
         total++;
@@ -116,14 +124,37 @@ describe("PSA-E3 ⑧↔⑫ 본 경로 허가 칸 패리티 격자 — 요구 ≡
         if (ui === null) passed++;
         else blocked++;
         if (ui === PROPERTY_BUILDING_PERMIT_ISSUE_MESSAGE) permitBlocked++;
-        // 허가 칸 문구 규칙 — 요구(2011.6.1.~ ∧ 철거 OFF) ∧ 미선택일 때만, 그리고 용도지역·바닥면적이 있어야 그 문구가 첫 결함이 된다
-        const expectPermit = year >= 2011 && !c.demolished && c.permit === "" && c.withArea;
+        // 허가 칸 문구 규칙 — 요구(2011.6.1.~ ∧ 철거 OFF) ∧ 미선택일 때만, 허가가 사슬의 첫 칸이라 용도지역·바닥면적 상태와 무관하게 첫 결함이다
+        const expectPermit = year >= 2011 && !c.demolished && c.permit === "";
         if ((ui === PROPERTY_BUILDING_PERMIT_ISSUE_MESSAGE) !== expectPermit) mismatches.push(`허가 문구 규칙 위반 ${JSON.stringify(c)} ⑧=${ui}`);
+        // 사슬 — 비철거 ∧ 허가 요건 시행본 ∧ 허가 «아니오»·«모름»은 용도지역·바닥면적을 요구하지 않는다(요구 칸 = 엔진이 읽는 칸)
+        if (!c.demolished && year >= 2011 && (c.permit === "no" || c.permit === "unknown")) {
+          if (ui !== null || viaBody !== null || viaRaw !== null) mismatches.push(`허가 «${c.permit}» 확정인데 면적을 요구 ${JSON.stringify(c)} ⑧=${ui} ⑫A=${viaBody} ⑫B=${viaRaw}`);
+          if (zodItemIssues(rawBodyOf(c)).length > 0) mismatches.push(`⑫B 400 ${JSON.stringify(c)}`);
+          foldPassed++;
+        }
         if (ui !== viaBody || ui !== viaRaw) mismatches.push(`${JSON.stringify(c)} ⑧=${ui} ⑫A=${viaBody} ⑫B=${viaRaw}`);
         // ④는 요구될 때만 싣는다
         const item = buildPropertyTaxRequestBody(form).separateAggregateItem as Record<string, unknown>;
         const wired = "buildingPermit" in item;
         if (wired !== (year >= 2011 && !c.demolished)) mismatches.push(`④ 전송 규칙 위반 ${JSON.stringify(c)} wired=${wired}`);
+        // ④ 비철거 용도지역·바닥면적 — 사슬이 읽을 때(허가 칸 없는 시행본 또는 허가 «예»)만 싣는다(숨은 stale 값 미전송)
+        if (!c.demolished) {
+          const areaWired = "zoningDistrict" in item || "buildingFloorArea" in item;
+          const expectAreaWired = year < 2011 || c.permit === "yes";
+          if (areaWired !== expectAreaWired) mismatches.push(`④ 면적 전송 규칙 위반 ${JSON.stringify(c)} areaWired=${areaWired}`);
+        }
+        // 직접 API(⑫B)도 같다 — Zod 통과 본문은 엔진이 던지지 않는다(N3: 허가 «아니오» + 바닥면적만이 throw → 합산 칸 요구 침묵 소실이던 입력)
+        if (viaRaw === null) {
+          const rawParsed = propertyTaxInputSchema.safeParse(rawBodyOf(c));
+          if (rawParsed.success) {
+            try {
+              calculatePropertyTax(rawParsed.data as PropertyTaxInput);
+            } catch (e) {
+              mismatches.push(`⑫B 통과 ↔ 엔진 던짐 ${JSON.stringify(c)} ${(e as Error).message}`);
+            }
+          }
+        }
         // 통과 셀은 ⑫ 전체 통과 + 엔진이 던지지 않는다(UI 통과 ↔ 200)
         if (ui === null) {
           const parsed = propertyTaxInputSchema.safeParse(buildPropertyTaxRequestBody(form));
@@ -139,10 +170,11 @@ describe("PSA-E3 ⑧↔⑫ 본 경로 허가 칸 패리티 격자 — 요구 ≡
       }
       expect(mismatches, mismatches.slice(0, 5).join("\n")).toEqual([]);
       // 비공허 — 두 방향을 모두 지나고, 허가 문구로 막히는 셀이 요구 시행본에만 있다
-      expect(total).toBe(32);
+      expect(total).toBe(64);
       expect(passed).toBeGreaterThan(0);
       expect(blocked).toBeGreaterThan(0);
       expect(permitBlocked > 0).toBe(year >= 2011);
+      expect(foldPassed > 0).toBe(year >= 2011);
     });
   }
 });

@@ -8,14 +8,16 @@
  * 순수 함수 — React 미사용. 폼 문자열을 엔진 입력으로 바꾸는 일만 한다(`useEffect → store` 미러링 없음).
  */
 import {
-  propertyBuildingPermitFactIssue,
+  propertyBuildingChain,
+  propertyBuildingFactIssue,
   propertyBuildingPermitRequired,
   propertyDemolishedChain,
   propertyDemolishedFactIssue,
   resolvePropertyTaxBaseDate,
 } from "@/lib/tax-engine/property-separate-requirements";
 import type {
-  PropertyBuildingPermitFactIssue,
+  PropertyBuildingChain,
+  PropertyBuildingFactIssue,
   PropertyDemolishedChain,
   PropertyDemolishedFactIssue,
   PropertyDemolishedKind,
@@ -125,18 +127,44 @@ export function buildingPermitNeedOf(taxBaseDate: Date = resolvePropertyTaxBaseD
   return propertyBuildingPermitRequired(taxBaseDate);
 }
 
-/** ⑧ — 본 경로 허가 칸의 결함(없으면 null). ⑫와 같은 `propertyBuildingPermitFactIssue` — 같은 필드·같은 문구 */
-export function buildingPermitIssueOf(
+/**
+ * 본 경로(비철거) 사슬 — 허가 칸을 묻는가(`permit`) · 용도지역·바닥면적을 묻는가(`areaInputs` — 허가 «예»일 때만) · 허가 «아니오»·«모름»으로 확정됐는가(`resolvedFold`).
+ * ⑤ 노출 · ④ 전송 · ⑧ 차단 · ⑫ 400이 같은 엔진 `propertyBuildingChain` 하나를 읽는다. UI는 날짜·시행본·답을 비교하지 않는다.
+ */
+export function buildingChainOf(
   permit: PropertyRequirementFact,
   taxBaseDate: Date = resolvePropertyTaxBaseDate(),
-): PropertyBuildingPermitFactIssue | null {
-  return propertyBuildingPermitFactIssue({ taxBaseDate, permit });
+): PropertyBuildingChain {
+  return propertyBuildingChain({ taxBaseDate, permit });
 }
 
-/** ④ — 요구될 때만 싣는다(요구되지 않은 칸의 stale 값 미전송). 3지선다 그대로 보낸다(`""`도 — ⑫가 «값 없음»으로 400을 낸다) */
-export function buildingPermitWireFields(
+/** 용도지역·바닥면적 블록을 묻는가 — 비철거 사슬의 `areaInputs`. */
+export function buildingAreaInputsNeedOf(
   permit: PropertyRequirementFact,
   taxBaseDate: Date = resolvePropertyTaxBaseDate(),
-): { buildingPermit?: PropertyRequirementFact } {
-  return buildingPermitNeedOf(taxBaseDate) ? { buildingPermit: permit } : {};
+): boolean {
+  return buildingChainOf(permit, taxBaseDate).areaInputs;
+}
+
+/** ⑧ — 본 경로(비철거) 첫 결함(허가 → 용도지역 → 바닥면적, 없으면 null). ⑫와 같은 `propertyBuildingFactIssue` — 같은 필드·같은 문구·같은 순서 */
+export function buildingFactIssueOf(
+  v: { permit: PropertyRequirementFact; zoningDistrict: string; buildingFloorArea: number | undefined },
+  taxBaseDate: Date = resolvePropertyTaxBaseDate(),
+): PropertyBuildingFactIssue | null {
+  return propertyBuildingFactIssue({ taxBaseDate, permit: v.permit, zoningDistrict: v.zoningDistrict, buildingFloorArea: v.buildingFloorArea });
+}
+
+/**
+ * ④ — 본 경로(비철거) 칸. 허가 칸은 시행본이 요건을 둘 때만, 용도지역·바닥면적은 사슬이 읽을 때(`areaInputs`)만 싣는다(숨은 stale 값 미전송).
+ * 허가 3지선다는 그대로 보낸다(`""`도 — ⑫가 «값 없음»으로 400을 낸다). 빈 용도지역·면적은 키를 빼 ⑫가 «값 없음»으로 막는다.
+ */
+export function buildingWireFields(
+  v: { permit: PropertyRequirementFact; zoningDistrict: string; buildingFloorArea: number | undefined },
+  taxBaseDate: Date = resolvePropertyTaxBaseDate(),
+): { buildingPermit?: PropertyRequirementFact; zoningDistrict?: string; buildingFloorArea?: number } {
+  const chain = buildingChainOf(v.permit, taxBaseDate);
+  return {
+    ...(chain.permit ? { buildingPermit: v.permit } : {}),
+    ...(chain.areaInputs ? { zoningDistrict: v.zoningDistrict, buildingFloorArea: v.buildingFloorArea } : {}),
+  };
 }
