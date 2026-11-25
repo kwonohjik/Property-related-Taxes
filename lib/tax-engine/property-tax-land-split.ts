@@ -33,7 +33,7 @@ export interface LandSplitBranchContext {
   coShares: CoOwnershipShare[] | undefined;
 }
 
-function resolveCap(input: PropertyTaxInput, priorYear: number): LandSplitCapInput {
+export function resolveCap(input: PropertyTaxInput, priorYear: number): LandSplitCapInput {
   return input.taxCapMode === "recompute" && input.previousYearTaxBase != null
     ? { mode: "recompute", previousYearTaxBase: input.previousYearTaxBase, priorYear }
     : { mode: "direct", previousYearTax: input.previousYearTax };

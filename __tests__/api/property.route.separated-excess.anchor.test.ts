@@ -83,6 +83,22 @@ describe("⑫ — 분리과세 한도 초과 > 0이면 종합합산 칸 필수(K
   });
 });
 
+describe("PSE-E4 — recompute 입력이 엔진에 도달한다(침묵 strip 가드)", () => {
+  it("공장 F-3 · 직전 과세표준 5억 → 분류별 직전 재산정 1,050,000 → 상한 1,575,000 / 총 1,890,000", async () => {
+    const r = await post({ ...F_OVER, otherComprehensiveValue: 0, taxCapMode: "recompute", previousYearTaxBase: 500_000_000 });
+    expect(r.status).toBe(200);
+    expect(r.json.data.determinedTax).toBe(1_575_000);
+    expect(r.json.data.totalPayable).toBe(1_890_000);
+    expect(r.json.data.landSplit.cap.basisTaxSeparated).toBe(800_000);
+  });
+
+  it("direct 직전 세액 → 이관분이 있으면 상한 미적용(고지) — 2,480,000 그대로", async () => {
+    const r = await post({ ...F_OVER, otherComprehensiveValue: 0, previousYearTax: 1_500_000 });
+    expect(r.status).toBe(200);
+    expect(r.json.data.determinedTax).toBe(2_480_000);
+  });
+});
+
 describe("⑫ — 초과 0·한도 없는 유형·판정 불가는 요구하지 않는다(K-1·K-11·K-12·K-15)", () => {
   it("K-1 한도 이내 · 빈칸 → 200 · landSplit 없음 · 1,344,000 / stale 값(7.77억)이 있어도 같다", async () => {
     const clean = await post(F_WITHIN);

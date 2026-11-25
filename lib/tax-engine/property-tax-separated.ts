@@ -14,6 +14,7 @@ import { areaLimitEchoOf } from "./separate-taxation";
 import { calculateLandClassTax } from "./property-land-split-tax";
 import { propertyLandSplitRequired } from "./property-land-split-tax";
 import { NO_PREVIOUS_TAX_NOTICE } from "./property-tax-land-split";
+import { resolveCap } from "./property-tax-land-split";
 import { getPropertyRateSet } from "./data/property-rate-history";
 import { applyTaxCap } from "./property-tax-housing-cap";
 import { calcSurtax, calcInstallment } from "./property-tax-surtax";
@@ -68,6 +69,7 @@ export function calculateSeparatedPropertyTax(ctx: LandSplitBranchContext): Prop
   const areaLimit = areaLimitEchoOf(sepResult, input.separateTaxationItem);
   if (limit && areaLimit && limit.excessArea > 0 && sepResult.category && sepResult.appliedRate !== undefined) {
     // ── 한도 초과 > 0: 분리과세분 + 종합합산 이관분 ──
+    const cap = resolveCap(input, taxYear - 1);
     const r = calculateLandClassTax({
       taxYear,
       fairMarketRatio: ctx.fairMarketRatio,
@@ -75,8 +77,9 @@ export function calculateSeparatedPropertyTax(ctx: LandSplitBranchContext): Prop
       comprehensiveOwnValue: limit.excessAssessedValue,
       otherComprehensiveValue: input.otherComprehensiveValue,
       required: propertyLandSplitRequired({ landTaxType: "separated", excessArea: limit.excessArea }),
-      // 직전 구분을 알 수 없으므로 direct 직전 세액에는 상한을 적용하지 않고 고지한다(영 §118①1호 가목 단서·다목)
-      cap: { mode: "direct", previousYearTax: input.previousYearTax },
+      // direct: 직전 구분을 알 수 없으므로 직전 세액에는 상한을 적용하지 않고 고지한다(영 §118①1호 가목 단서·다목).
+      // recompute: 직전 과세표준을 분류별 가액 비율로 나눠 분류별 직전 연도 세율로 재산정(다목 — 해당 연도 구분을 직전 연도에도 적용)
+      cap,
       transferredFromSeparate: true,
       transferReasons: [areaLimit.kind === "factory" ? "factory_area_excess" : "pasture_area_excess"],
       separatedOwn: {
@@ -115,7 +118,7 @@ export function calculateSeparatedPropertyTax(ctx: LandSplitBranchContext): Prop
       warnings,
       targetDate,
       landSplit: r.landSplit,
-      ...buildCapEcho(input, r.cap.basisTax ?? input.previousYearTax, taxYear - 1),
+      ...buildCapEcho(input, r.cap.basisTax ?? (cap.mode === "recompute" ? 0 : input.previousYearTax), taxYear - 1),
       ...buildTaxpayerOutcome(taxpayerResult, coShares, r.determinedTax, totalPayableEx),
     };
   }

@@ -207,3 +207,64 @@ describe("PSE-E2 이관분 경로 — 결과 echo·합계·정합 (K-2·K-8·K-1
     expect(() => F({ separateTaxationItem: { ...F_ITEM, factoryIsUnpermitted: true } } as Partial<PropertyTaxInput>)).toThrow();
   });
 });
+
+describe("PSE-E4 recompute 세부담상한 — 분류별 직전 연도 세율 재산정 (K-14 · F-3 · M-12)", () => {
+  /**
+   * 손계산 오라클 — F-1(분리과세분 가액 12억 · 이관분 3억 · 합계 15억) · 직전 과세표준 5억 · 직전 연도 2025.
+   *  분류별 직전 과표 = 5억 × 12/15 = 4억(분리과세분) · 5억 × 3/15 = 1억(이관분)
+   *  분리과세분 직전 세액 = 4억 × 0.2% = 800,000
+   *  이관분 직전 세액 = 1억(구간2 상한 이하) × 0.3% − 누진공제 50,000 = 250,000
+   *  직전 세액상당액 = 1,050,000 → 상한 150% = 1,575,000 < 당해 합계 2,480,000 → 징수 본세 1,575,000
+   */
+  const recompute = (over: Partial<PropertyTaxInput> = {}) =>
+    F({ otherComprehensiveValue: 0, taxCapMode: "recompute", previousYearTaxBase: 500_000_000, ...over });
+
+  it("K-14 F-3 — 직전 세액상당액 1,050,000 → 상한 1,575,000 적용 · 교육세 315,000 · 총 1,890,000", () => {
+    const r = recompute();
+    expect(r.calculatedTaxBeforeCap).toBe(2_480_000);
+    expect(r.determinedTax).toBe(1_575_000);
+    expect(r.taxCapRate).toBe(1.5);
+    expect(r.surtax.localEducationTax).toBe(315_000);
+    expect(r.totalPayable).toBe(1_890_000);
+    expect(r.landSplit!.cap).toEqual({
+      applied: true, capRate: 1.5, basisTax: 1_050_000, basisTaxSeparated: 800_000, basisTaxComprehensive: 250_000,
+    });
+    expect(r.landSplit!.cap).not.toHaveProperty("basisTaxSeparate"); // 별도합산분 직전액 키는 별도합산 전용
+    expect(r.taxCapMode).toBe("recompute");
+    expect(r.taxCapBasisTax).toBe(1_050_000);
+    expect(r.warnings.some((w) => w.includes("직전 과세표준을 분류별 가액 비율로 나눠"))).toBe(true);
+    expect(r.warnings).not.toContain(PROPERTY_LAND_SPLIT_DIRECT_CAP_NOTICE);
+  });
+
+  it("상한이 합계에 걸린다 — 이관분에만 걸었다면 1,680,000 + 250,000 = 1,930,000 (M-12)", () => {
+    expect(recompute().determinedTax).not.toBe(1_930_000);
+    expect(recompute().landSplit!.taxBeforeCap).toBe(2_480_000);
+  });
+
+  it("직전 세액상당액이 크면 상한 미적용 — 직전 과표 15억 → 3,150,000 × 150% ≥ 2,480,000", () => {
+    // 분리과세분 직전 12억 × 0.2% = 2,400,000 · 이관분 직전 3억(구간3) × 0.5% − 누진공제 250,000 = 1,250,000 → 합 3,650,000
+    const r = recompute({ previousYearTaxBase: 1_500_000_000 });
+    expect(r.landSplit!.cap).toMatchObject({ applied: false, basisTaxSeparated: 2_400_000, basisTaxComprehensive: 1_250_000, basisTax: 3_650_000 });
+    expect(r.determinedTax).toBe(2_480_000);
+  });
+
+  it("목장 recompute — 분리과세분은 저율(0.07%) 직전 세율로 재산정", () => {
+    // P-1: 분리과세분 31,250,000 · 이관분 68,750,000 · 직전 과표 50,000,000 → 분리과세분 직전 과표 15,625,000(×0.07% = 10,937) · 이관분 34,375,000(×0.2% = 68,750)
+    const r = P({ otherComprehensiveValue: 0, taxCapMode: "recompute", previousYearTaxBase: 50_000_000 });
+    expect(r.landSplit!.cap).toMatchObject({ basisTaxSeparated: 10_937, basisTaxComprehensive: 68_750, basisTax: 79_687 });
+    // 상한 = floor(79,687 × 1.5) = 119,530 > 당해 111,562 → 미적용
+    expect(r.landSplit!.cap!.applied).toBe(false);
+    expect(r.determinedTax).toBe(111_562);
+  });
+
+  it("직전 과세표준 0 → 재산정 불가라 상한 미적용(고지는 direct 직전 세액 미입력과 같다)", () => {
+    expect(F({ otherComprehensiveValue: 0, taxCapMode: "recompute", previousYearTaxBase: 0 }).determinedTax).toBe(2_480_000);
+  });
+
+  it("초과 0 + recompute 입력 — 종전 분리과세 경로(직전 세액 direct만) 그대로: 골든과 동일", () => {
+    const base = ZERO_EXCESS_CASES["F-0 공장 8,000㎡(이내)"];
+    const withRecompute = calculatePropertyTax({ ...base, taxCapMode: "recompute", previousYearTaxBase: 100_000_000 } as PropertyTaxInput);
+    expect(withRecompute.landSplit).toBeUndefined();
+    expect(withRecompute.determinedTax).toBe(1_120_000);
+  });
+});

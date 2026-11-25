@@ -225,6 +225,8 @@ export interface LandSplitCapOutcome {
   /** 직전 세액상당액(기준) — 상한을 계산하지 않았으면 undefined */
   basisTax?: number;
   basisTaxSeparate?: number;
+  /** 분리과세분 직전 재산정액(분리과세 선택 + recompute) */
+  basisTaxSeparated?: number;
   basisTaxComprehensive?: number;
   notices: string[];
   taxAfterCap: number;
@@ -237,7 +239,7 @@ export interface LandSplitCapOutcome {
  */
 function applyLandSplitCap(
   total: number,
-  parts: { separate: PropertyLandSplitClass; comprehensive: PropertyLandSplitClass },
+  parts: { separate: PropertyLandSplitClass; comprehensive: PropertyLandSplitClass; separated?: PropertyLandSplitSeparated },
   cap: LandSplitCapInput | undefined,
   transferredFromSeparate: boolean,
   hasOther: boolean,
@@ -246,19 +248,27 @@ function applyLandSplitCap(
   if (!cap) return base;
   let basisTax: number | undefined;
   let basisSep: number | undefined;
+  let basisSepd: number | undefined;
   let basisComp: number | undefined;
   if (cap.mode === "recompute") {
     if (!(cap.previousYearTaxBase > 0)) return base;
     const rs = getPropertyRateSet(cap.priorYear);
     const sepOwn = parts.separate.ownValue;
-    const sumOwn = sepOwn + parts.comprehensive.ownValue;
+    const sepdOwn = parts.separated?.ownValue ?? 0;
+    const sumOwn = sepOwn + sepdOwn + parts.comprehensive.ownValue;
     const priorSep = sumOwn > 0 ? calculateProration(cap.previousYearTaxBase, sepOwn, sumOwn) : 0;
-    const priorComp = cap.previousYearTaxBase - priorSep;
-    basisSep = applyLandBrackets(priorSep, rs.landSeparateAggregate).tax;
+    const priorSepd = sumOwn > 0 && sepdOwn > 0 ? calculateProration(cap.previousYearTaxBase, sepdOwn, sumOwn) : 0;
+    const priorComp = cap.previousYearTaxBase - priorSep - priorSepd;
+    // 분리과세분(PSE)이 있으면 별도합산분은 없다 — 분리과세 선택 경로는 별도합산분을 만들지 않는다(`basisTaxSeparate` echo 없음)
+    basisSep = parts.separated ? undefined : applyLandBrackets(priorSep, rs.landSeparateAggregate).tax;
+    if (parts.separated) {
+      const rate = parts.separated.category === "low_rate" ? rs.landSeparatedLow : rs.landSeparatedGeneral;
+      basisSepd = applyRate(priorSepd, rate);
+    }
     basisComp = applyLandBrackets(priorComp, rs.landComprehensive).tax;
-    basisTax = basisSep + basisComp;
+    basisTax = (basisSep ?? 0) + (basisSepd ?? 0) + basisComp;
     // 분류가 둘이거나 타 토지 합산이 있을 때만 — 단일 분류·단독 계산은 종전 종합합산 recompute와 같아 추가 고지가 없다
-    if ((sepOwn > 0 && parts.comprehensive.ownValue > 0) || hasOther) {
+    if (((sepOwn > 0 || sepdOwn > 0) && parts.comprehensive.ownValue > 0) || hasOther) {
       base.notices.push(PROPERTY_LAND_SPLIT_RECOMPUTE_NOTICE);
     }
   } else {
@@ -275,6 +285,7 @@ function applyLandSplitCap(
     capRate: appliedCapRate ?? 1,
     basisTax,
     basisTaxSeparate: basisSep,
+    basisTaxSeparated: basisSepd,
     basisTaxComprehensive: basisComp,
     notices: base.notices,
     taxAfterCap,
@@ -353,7 +364,7 @@ export function calculateLandClassTax(i: LandClassTaxInput): LandClassTaxResult 
   const taxBeforeCap = (hasSep ? separate.share : 0) + (hasComp ? comprehensive.share : 0) + (sepOwn?.tax ?? 0);
   const cap = applyLandSplitCap(
     taxBeforeCap,
-    { separate, comprehensive },
+    { separate, comprehensive, separated: sepOwn },
     i.cap,
     i.transferredFromSeparate && hasComp,
     hasOther,
@@ -369,7 +380,7 @@ export function calculateLandClassTax(i: LandClassTaxInput): LandClassTaxResult 
   if (hasSep) legalBasis.push(PROPERTY_LAND_SPLIT.AGGREGATION_SEPARATE);
   if (sepOwn) legalBasis.push(PROPERTY_LAND_SPLIT.SEPARATED_EXCESS_TO_COMPREHENSIVE, PROPERTY.SEPARATE.TAX_BASE);
   if (hasComp) legalBasis.push(PROPERTY_LAND_SPLIT.AGGREGATION_COMPREHENSIVE, PROPERTY_CAL.RATE_COMPREHENSIVE);
-  if (cap.basisTaxSeparate !== undefined) legalBasis.push(PROPERTY_LAND_SPLIT.CAP_BASIS);
+  if (cap.basisTaxSeparate !== undefined || cap.basisTaxSeparated !== undefined) legalBasis.push(PROPERTY_LAND_SPLIT.CAP_BASIS);
   if (cap.applied) legalBasis.push(PROPERTY_CAL.BURDEN_CAP);
 
   return {
@@ -388,6 +399,7 @@ export function calculateLandClassTax(i: LandClassTaxInput): LandClassTaxResult 
           capRate: PROPERTY_CONST.TAX_CAP_RATE_LAND,
           basisTax: cap.basisTax,
           ...(cap.basisTaxSeparate !== undefined && { basisTaxSeparate: cap.basisTaxSeparate }),
+          ...(cap.basisTaxSeparated !== undefined && { basisTaxSeparated: cap.basisTaxSeparated }),
           ...(cap.basisTaxComprehensive !== undefined && { basisTaxComprehensive: cap.basisTaxComprehensive }),
         },
       }),
