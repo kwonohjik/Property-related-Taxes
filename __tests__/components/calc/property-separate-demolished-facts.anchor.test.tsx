@@ -45,52 +45,78 @@ const has = (id: string) => screen.queryByTestId(id) !== null;
 const group = (name: string) => document.querySelectorAll(`input[type="radio"][name="${name}"]`);
 const floorLabel = () => screen.getByText(/바닥면적 \(㎡\)/);
 
-describe("위젯 노출 — 엔진 요구 술어를 그대로 따른다", () => {
+describe("위젯 노출 — 엔진 사슬(chain.order)을 그대로 따른다 · 엄격 순차(답한 칸 + 첫 미답 칸)", () => {
   it("철거 OFF → 블록 없음 · 라벨은 «건물 바닥면적»", () => {
     view(demolishedForm({ saDemolished: false }));
     expect(has("pt-sa-demolished-facts")).toBe(false);
     expect(floorLabel().textContent).toBe("건물 바닥면적 (㎡)");
   });
 
-  it("철거 ON · 철거일 없음 → 종류 라디오 + 안내 한 줄 · 사실 칸 0", () => {
+  it("철거 ON · 철거일 없음 → 안내 한 줄만 — 종류 라디오도 사실 칸도 없다(PSA-S1: 종류는 사슬이 읽을 때만)", () => {
     view(demolishedForm());
+    expect(has("pt-demolished-dates-notice")).toBe(true);
+    expect(has("pt-sa-demolished-kind-house")).toBe(false);
+    expect(has("pt-sa-demolished-kind-building")).toBe(false);
+    expect(group("saDemolishedPermit")).toHaveLength(0);
+  });
+
+  it("철거일 있음(날짜가 아직 확정이 아님) · 종류 미선택 → 종류 라디오(기본값 없음) + 안내, 사실 칸 0(⑧도 종류부터 요구)", () => {
+    view(demolishedForm({ saDemolishedDate: "2026-01-01" }));
     expect(has("pt-sa-demolished-kind-house")).toBe(true);
     expect(has("pt-sa-demolished-kind-building")).toBe(true);
-    expect(has("pt-demolished-dates-notice")).toBe(true);
-    expect(group("saDemolishedPermit")).toHaveLength(0);
-    // 종류 기본값 없음 — 아무 것도 선택돼 있지 않다
     expect(document.querySelectorAll('input[name="saDemolishedKind"]:checked')).toHaveLength(0);
-  });
-
-  it("철거일 있음 · 종류 미선택 → 사실 칸 0 + 안내(⑧도 종류부터 요구)", () => {
-    view(demolishedForm({ saDemolishedDate: "2026-01-01" }));
     expect(has("pt-demolished-dates-notice")).toBe(true);
     expect(group("saDemolishedPermit")).toHaveLength(0);
   });
 
-  it("건축물 · 철거 2026-01-01 → 허가 + 건축 외 용도(빈집정비 없음) · 바닥면적 필수 표시", () => {
-    view(demolishedForm({ saDemolishedKind: "building", saDemolishedDate: "2026-01-01" }));
+  it("건축물 · 철거 2026-01-01 → 허가만(건축 외 용도는 허가 «예» 뒤) · 바닥면적 필수 표시는 사슬이 그 칸을 읽을 때만", () => {
+    const base = demolishedForm({ saDemolishedKind: "building", saDemolishedDate: "2026-01-01" });
+    const { rerender } = view(base);
     expect(group("saDemolishedPermit")).toHaveLength(3);
-    expect(group("saDemolishedOtherUse")).toHaveLength(3);
+    expect(group("saDemolishedOtherUse")).toHaveLength(0);
     expect(group("saDemolishedVacantHouse")).toHaveLength(0);
     expect(has("pt-demolished-dates-notice")).toBe(false);
+    expect(floorLabel().textContent).toBe("철거 전 건축물 바닥면적 (㎡)");
+    rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedPermit: "yes" }} onChange={noop} />);
+    expect(group("saDemolishedOtherUse")).toHaveLength(3);
+    expect(floorLabel().textContent).toBe("철거 전 건축물 바닥면적 (㎡)");
+    rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedPermit: "yes", saDemolishedOtherUse: "no" }} onChange={noop} />);
     expect(floorLabel().textContent).toBe("철거 전 건축물 바닥면적 (㎡) *");
-  });
-
-  it("주택 · 철거 2026-01-01 → 빈집정비 노출 · 바닥면적은 필수 아님(표시 *없음)", () => {
-    view(demolishedForm({ saDemolishedKind: "house", saDemolishedDate: "2026-01-01" }));
-    expect(group("saDemolishedVacantHouse")).toHaveLength(3);
+    // 건축 외 «예» → 접힘 확정 — 뒤 칸 없음 · 바닥면적 필수 아님
+    rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedPermit: "yes", saDemolishedOtherUse: "yes" }} onChange={noop} />);
+    expect(group("saDemolishedVacantHouse")).toHaveLength(0);
     expect(floorLabel().textContent).toBe("철거 전 건축물 바닥면적 (㎡)");
   });
 
-  it("라디오 순서 = 계산 순서: 허가 → 건축 외 용도 → 빈집정비 (DOM 순)", () => {
-    view(demolishedForm({ saDemolishedKind: "house", saDemolishedDate: "2026-01-01" }));
-    const names = [...document.querySelectorAll('input[type="radio"]')].map((i) => (i as HTMLInputElement).name);
-    const order = names.filter((n, i) => names.indexOf(n) === i);
-    expect(order.filter((n) => n.startsWith("saDemolished"))).toEqual(["saDemolishedKind", "saDemolishedPermit", "saDemolishedOtherUse", "saDemolishedVacantHouse"]);
+  it("주택 · 철거 2026-01-01(일반 기간 안) → 허가 먼저 · 빈집정비는 건축 외 «예» 뒤(단서 하위) · 바닥면적은 필수 아님", () => {
+    const base = demolishedForm({ saDemolishedKind: "house", saDemolishedDate: "2026-01-01" });
+    const { rerender } = view(base);
+    expect(group("saDemolishedPermit")).toHaveLength(3);
+    expect(group("saDemolishedVacantHouse")).toHaveLength(0);
+    rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedPermit: "yes", saDemolishedOtherUse: "no" }} onChange={noop} />);
+    expect(group("saDemolishedVacantHouse")).toHaveLength(0); // 건축 외 «아니오» — 빈집정비를 묻지 않는다
+    expect(floorLabel().textContent).toBe("철거 전 건축물 바닥면적 (㎡)");
+    rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedPermit: "yes", saDemolishedOtherUse: "yes" }} onChange={noop} />);
+    expect(group("saDemolishedVacantHouse")).toHaveLength(3);
+    // 허가 «아니오» → 접힘 확정 · 건축 외 용도·빈집정비 칸 없음
+    rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedPermit: "no", saDemolishedOtherUse: "yes" }} onChange={noop} />);
+    expect(group("saDemolishedOtherUse")).toHaveLength(0);
+    expect(group("saDemolishedVacantHouse")).toHaveLength(0);
   });
 
-  it("철거 2025-05-31(1년 경과) → 요건 칸 0 + «1년 이상 지나 종합합산» 안내(⑧도 요구 0)", () => {
+  it("라디오 순서 = 계산 순서: (단서 자리) 종류 → 허가 → 건축 외 용도 → 빈집정비 · (관문 자리) 종류 → 빈집정비 → 허가 → 건축 외 용도 (DOM 순)", () => {
+    const orderOf = () => {
+      const names = [...document.querySelectorAll('input[type="radio"]')].map((i) => (i as HTMLInputElement).name);
+      return names.filter((n, i) => names.indexOf(n) === i).filter((n) => n.startsWith("saDemolished"));
+    };
+    view(demolishedForm({ saDemolishedKind: "house", saDemolishedDate: "2026-01-01", saDemolishedPermit: "yes", saDemolishedOtherUse: "yes" }));
+    expect(orderOf()).toEqual(["saDemolishedKind", "saDemolishedPermit", "saDemolishedOtherUse", "saDemolishedVacantHouse"]);
+    cleanup();
+    view(demolishedForm({ saDemolishedKind: "house", saDemolishedDate: "2024-06-15", saDemolishedVacantHouse: "yes", saDemolishedPermit: "yes" }));
+    expect(orderOf()).toEqual(["saDemolishedKind", "saDemolishedVacantHouse", "saDemolishedPermit", "saDemolishedOtherUse"]);
+  });
+
+  it("철거 2025-05-31(일반 1년 경과) · 건축물 → 요건 칸 0 + «지나 종합합산» 안내(사슬이 낸 문장 — ⑧도 요구 0)", () => {
     const f = demolishedForm({ saDemolishedKind: "building", saDemolishedDate: "2025-05-31" });
     view(f);
     expect(group("saDemolishedPermit")).toHaveLength(0);
@@ -98,42 +124,72 @@ describe("위젯 노출 — 엔진 요구 술어를 그대로 따른다", () => 
     expect(firstInvalidStep({ ...f, otherSeparateAggregateValue: "0", otherComprehensiveValue: "0" })).toBeNull();
   });
 
-  it("주택 · 철거 2024-06-15 → 3년 안이라 허가·건축 외·빈집정비 칸 · 빈집정비 «예» ∧ 건축 외 «예»이면 공용 사용 → «예»이면 유료", () => {
-    const base = demolishedForm({ saDemolishedKind: "house", saDemolishedDate: "2024-06-15", saDemolishedPermit: "yes" });
+  it("철거 2023-05-31(빈집 3년도 지남) → 종류 라디오도 사실 칸도 없이 일반·빈집 기간 병기 안내 · ⑧은 종류 없이 통과", () => {
+    const f = demolishedForm({ saDemolishedDate: "2023-05-31" });
+    view(f);
+    expect(has("pt-sa-demolished-kind-house")).toBe(false);
+    expect(group("saDemolishedPermit")).toHaveLength(0);
+    expect(screen.getByTestId("pt-sa-demolished-no-facts").textContent).toContain("일반 한시 기간(1년)과 빈집정비사업 철거 빈집 한시 기간(3년)이 모두 지나");
+    expect(has("pt-demolished-dates-notice")).toBe(false);
+    expect(firstInvalidStep({ ...f, otherSeparateAggregateValue: "0", otherComprehensiveValue: "0" })).toBeNull();
+  });
+
+  it("주택 · 철거 2024-06-15(일반 1년 밖·빈집 3년 안) → 빈집정비가 관문 · «아니오»면 허가·건축 외 칸 없이 확정 · «예»부터 허가 → 건축 외 → 공용 → 유료", () => {
+    const base = demolishedForm({ saDemolishedKind: "house", saDemolishedDate: "2024-06-15" });
     const { rerender } = view(base);
     expect(group("saDemolishedVacantHouse")).toHaveLength(3);
-    expect(has("pt-sa-demolished-publicuse")).toBe(false);
+    expect(group("saDemolishedPermit")).toHaveLength(0);
 
-    const half = { ...base, saDemolishedOtherUse: "yes" as const, saDemolishedVacantHouse: "no" as const };
-    rerender(<Step2SeparateAggregate form={half} onChange={noop} />);
-    expect(has("pt-sa-demolished-publicuse")).toBe(false);
+    rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedVacantHouse: "no", saDemolishedPermit: "yes" }} onChange={noop} />);
+    expect(group("saDemolishedVacantHouse")).toHaveLength(3);
+    expect(group("saDemolishedPermit")).toHaveLength(0); // 관문 «아니오» — 접힘 확정, 저장된 허가 답은 화면에 새지 않는다
 
-    const open = { ...half, saDemolishedVacantHouse: "yes" as const };
+    const open = { ...base, saDemolishedVacantHouse: "yes" as const };
     rerender(<Step2SeparateAggregate form={open} onChange={noop} />);
+    expect(group("saDemolishedPermit")).toHaveLength(3);
+    expect(group("saDemolishedOtherUse")).toHaveLength(0);
+
+    const chain = { ...open, saDemolishedPermit: "yes" as const, saDemolishedOtherUse: "yes" as const };
+    rerender(<Step2SeparateAggregate form={chain} onChange={noop} />);
+    expect(group("saDemolishedVacantHouse")).toHaveLength(3); // 같은 칸 — 두 번 그려지지 않는다
     expect(group("saDemolishedPublicUse")).toHaveLength(3);
     expect(group("saDemolishedPublicUsePaid")).toHaveLength(0);
 
-    rerender(<Step2SeparateAggregate form={{ ...open, saDemolishedPublicUse: "yes" }} onChange={noop} />);
+    rerender(<Step2SeparateAggregate form={{ ...chain, saDemolishedPublicUse: "yes" }} onChange={noop} />);
     expect(group("saDemolishedPublicUsePaid")).toHaveLength(3);
 
     // 위 답이 바뀌어 사슬이 끊기면 하위 칸은 사라진다(저장값은 그대로 — 아래 «숨은 값 보존»)
-    rerender(<Step2SeparateAggregate form={{ ...open, saDemolishedPublicUse: "yes", saDemolishedOtherUse: "no" }} onChange={noop} />);
+    rerender(<Step2SeparateAggregate form={{ ...chain, saDemolishedPublicUse: "yes", saDemolishedOtherUse: "no" }} onChange={noop} />);
     expect(group("saDemolishedPublicUse")).toHaveLength(0);
     expect(group("saDemolishedPublicUsePaid")).toHaveLength(0);
   });
 
-  it("철거일이 과세기준일(올해 6.1.) 뒤 → 모순 안내 · 요건 칸 0 · ⑧이 같은 문구로 차단", () => {
+  it("주택 · 철거 2026-01-01 · 건축 외 «예» · 빈집정비 «예» → 공용 사용 → «예»이면 유료(단서 자리 — 일반 기간 안)", () => {
+    const base = demolishedForm({ saDemolishedKind: "house", saDemolishedDate: "2026-01-01", saDemolishedPermit: "yes", saDemolishedOtherUse: "yes" });
+    const { rerender } = view(base);
+    expect(has("pt-sa-demolished-publicuse")).toBe(false);
+    rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedVacantHouse: "no" }} onChange={noop} />);
+    expect(has("pt-sa-demolished-publicuse")).toBe(false);
+    rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedVacantHouse: "yes" }} onChange={noop} />);
+    expect(group("saDemolishedPublicUse")).toHaveLength(3);
+  });
+
+  it("철거일이 과세기준일(올해 6.1.) 뒤 → 모순 안내 · 칸 0 · ⑧이 같은 문구로 차단(고칠 칸은 철거일)", () => {
     const f = demolishedForm({ saDemolishedKind: "building", saDemolishedDate: "2026-06-02" });
     view(f);
     expect(screen.getByTestId("pt-sa-demolished-contradiction").textContent).toBe(PROPERTY_DEMOLISHED_ISSUE_MESSAGE.demolishedAfterBaseDate);
     expect(group("saDemolishedPermit")).toHaveLength(0);
+    expect(has("pt-sa-demolished-kind-house")).toBe(false);
     expect(firstInvalidStep(f)?.message).toBe(PROPERTY_DEMOLISHED_ISSUE_MESSAGE.demolishedAfterBaseDate);
   });
 
-  it("공장용지 ∧ 종류 «주택» → 모순 안내 + ⑧ 차단(자동으로 건축물을 채우지 않는다)", () => {
+  it("공장용지 ∧ 종류 «주택» → 모순 안내 + ⑧ 차단(자동으로 건축물을 채우지 않는다) · 고칠 칸인 종류 라디오는 화면에 남는다", () => {
     const f = demolishedForm({ saIsFactory: true, saDemolishedKind: "house", saDemolishedDate: "2026-01-01" });
     view(f);
     expect(screen.getByTestId("pt-sa-demolished-contradiction").textContent).toBe(PROPERTY_DEMOLISHED_ISSUE_MESSAGE.demolishedFactoryHouse);
+    expect(has("pt-sa-demolished-kind-building")).toBe(true);
+    expect((screen.getByTestId("pt-sa-demolished-kind-house") as HTMLInputElement).checked).toBe(true);
+    expect(group("saDemolishedPermit")).toHaveLength(0);
     expect(f.saDemolishedKind).toBe("house");
     expect(firstInvalidStep(f)?.step).toBe(2);
   });
@@ -142,15 +198,15 @@ describe("위젯 노출 — 엔진 요구 술어를 그대로 따른다", () => 
 describe("쓰기 — onChange 패치만(미러링·자동 채움 없음)", () => {
   it("종류·허가·건축 외 용도·빈집정비 클릭 → 해당 칸만 패치", () => {
     const onChange = vi.fn();
-    view(demolishedForm({ saDemolishedKind: "house", saDemolishedDate: "2026-01-01" }), onChange);
+    view(demolishedForm({ saDemolishedKind: "house", saDemolishedDate: "2026-01-01", saDemolishedPermit: "yes", saDemolishedOtherUse: "yes" }), onChange);
     fireEvent.click(screen.getByTestId("pt-sa-demolished-kind-building"));
     fireEvent.click(screen.getByTestId("pt-sa-demolished-permit-unknown"));
-    fireEvent.click(screen.getByTestId("pt-sa-demolished-otheruse-yes"));
+    fireEvent.click(screen.getByTestId("pt-sa-demolished-otheruse-no"));
     fireEvent.click(screen.getByTestId("pt-sa-demolished-vacanthouse-no"));
     expect(onChange.mock.calls.map((c) => c[0])).toEqual([
       { saDemolishedKind: "building" },
       { saDemolishedPermit: "unknown" },
-      { saDemolishedOtherUse: "yes" },
+      { saDemolishedOtherUse: "no" },
       { saDemolishedVacantHouse: "no" },
     ]);
   });
@@ -164,17 +220,21 @@ describe("숨은 값 보존 · ④ 미전송", () => {
       saDemolishedKind: "house",
       saDemolishedDate: "2026-01-01",
       saDemolishedPermit: "yes",
-      saDemolishedOtherUse: "no",
+      saDemolishedOtherUse: "yes",
       saDemolishedVacantHouse: "yes",
+      saDemolishedPublicUse: "no",
       saBuildingFloorArea: "",
     });
-    expect(sa(house)).toMatchObject({ demolishedKind: "house", demolishedPermit: "yes", demolishedOtherUse: "no", demolishedVacantHouse: "yes" });
+    expect(sa(house)).toMatchObject({ demolishedKind: "house", demolishedPermit: "yes", demolishedOtherUse: "yes", demolishedVacantHouse: "yes" });
     expect(sa(house)).not.toHaveProperty("buildingFloorArea");
 
     const building = { ...house, saDemolishedKind: "building" as const, saBuildingFloorArea: "100" };
     expect(building.saDemolishedVacantHouse).toBe("yes"); // 지워지지 않았다
-    expect(sa(building)).not.toHaveProperty("demolishedVacantHouse");
-    expect(sa(building)).toMatchObject({ demolishedKind: "building", buildingFloorArea: 100 });
+    expect(sa(building)).not.toHaveProperty("demolishedVacantHouse"); // 건축물은 건축 외 «예»에서 접힘 — 빈집정비 단서 없음
+    expect(sa(building)).not.toHaveProperty("buildingFloorArea"); // 접힘 확정 — 바닥면적을 읽지 않는다
+    expect(sa(building)).toMatchObject({ demolishedKind: "building" });
+    const buildingOk = { ...building, saDemolishedOtherUse: "no" as const };
+    expect(sa(buildingOk)).toMatchObject({ demolishedKind: "building", buildingFloorArea: 100, zoningDistrict: "commercial" });
 
     view(house);
     expect((screen.getByTestId("pt-sa-demolished-vacanthouse-yes") as HTMLInputElement).checked).toBe(true);
@@ -201,8 +261,9 @@ describe("숨은 값 보존 · ④ 미전송", () => {
   it("요구되지 않은 칸은 실리지 않는다 — 요구됐는데 미선택인 칸은 `\"\"`(⑧이 보내기 전에 막고 ⑫가 400)", () => {
     const f = demolishedForm({ saDemolishedKind: "building", saDemolishedDate: "2026-01-01" });
     const item = sa(f);
-    for (const k of ["demolishedVacantHouse", "demolishedPublicUse", "demolishedPublicUsePaid"]) expect(item, k).not.toHaveProperty(k);
-    expect(item).toMatchObject({ demolishedPermit: "", demolishedOtherUse: "" });
+    // 사슬은 첫 미답 칸(허가)에서 멈춘다 — 그 뒤 칸은 읽지도 싣지도 않는다
+    for (const k of ["demolishedOtherUse", "demolishedVacantHouse", "demolishedPublicUse", "demolishedPublicUsePaid", "buildingFloorArea"]) expect(item, k).not.toHaveProperty(k);
+    expect(item).toMatchObject({ demolishedPermit: "" });
     expect(propertyTaxInputSchema.safeParse(buildPropertyTaxRequestBody(f)).success).toBe(false);
     expect(firstInvalidStep(f)?.step).toBe(2);
   });
@@ -355,6 +416,14 @@ describe("결과 카드 — 철거 특례 판정 블록 + 엔진 세액", () => 
     expect(text("land-split-demolished-outcome")).toContain("무상 공용·공공용 사용");
     expect(text("land-split-reasons")).toContain("비과세 가능성");
     expect(document.body.textContent).toContain(PROPERTY_DEMOLISHED_PUBLIC_USE_UNPAID_NOTICE);
+  });
+
+  it("날짜 확정 접힘(철거 2021-01-01 · 종류 없음) → 1,380,000대 이관 카드의 «한시 기간»은 일반·빈집 두 기간 병기(빈집 3년만 보이지 않음)", () => {
+    const r = run(demolishedForm({ saDemolishedDate: "2021-01-01", saDemolishedKind: "", ...N, otherSeparateAggregateValue: "" }));
+    render(<PropertyTaxResultView result={r} />);
+    expect(text("land-split-demolished-period")).toContain("일반 한시 기간(1년)과 빈집정비사업 철거 빈집 한시 기간(3년) 모두 경과");
+    expect(text("land-split-demolished-period")).not.toContain("3년(빈집정비사업 철거 빈집)");
+    expect(text("land-split-demolished-outcome")).toContain("한시 기간이 지남");
   });
 
   it("철거가 아닌 필지 → 철거 판정 블록 없음(기존 카드 문구 그대로)", () => {

@@ -215,7 +215,7 @@ export interface PropertyTaxInput {
     officialLandPrice: number;
     /**
      * 용도지역 — 「지방세법 시행령」 §101② 적용배율 결정. `ZoningDistrict`와 동일 집합.
-     * 배율을 읽을 때만 필수(비철거 · 철거 건축물 ∧ 2024.6.1.~ — `propertyDemolishedRequired().floorArea`) — 주택·그 전 시행본 철거는 요구 0(PSA-E2 Q-8).
+     * 배율을 읽을 때만 필수(비철거 · 철거 건축물 ∧ 2024.6.1.~ ∧ 앞 요건 통과 — `propertyDemolishedChain().asked.buildingFloorArea`) — 주택·그 전 시행본·앞 답이 접힘을 확정한 철거는 요구 0(PSA-E2 Q-8 · PSA-S1).
      */
     zoningDistrict?:
       | "exclusive_residential"
@@ -233,9 +233,9 @@ export interface PropertyTaxInput {
     factoryStandardArea?: number;
     demolished?: boolean;
     demolishedDate?: string;
-    /** 철거된 것의 종류(PSA-E2) — `demolished`일 때 필수(⑧·⑫가 막는다). 빈집 3년은 주택, 바닥면적 × 배율 범위는 건축물에만 */
+    /** 철거된 것의 종류(PSA-E2) — 사슬이 읽을 때(철거일이 가장 긴 한시 기간 안일 때)만 필수(⑧·⑫가 막는다). 빈집 3년은 주택, 바닥면적 × 배율 범위는 건축물에만 */
     demolishedKind?: PropertyDemolishedKind;
-    /** 철거 사실 칸 5종 — 요구 술어(`propertyDemolishedRequired`)가 연 칸만 엔진이 읽는다(그 밖의 값은 무시) */
+    /** 철거 사실 칸 5종 — 사슬 걷기(`propertyDemolishedChain`)가 읽는 칸만 엔진이 읽는다(앞 답이 접힘을 확정한 뒤 칸 등 그 밖의 값은 무시) */
     demolishedPermit?: PropertyRequirementFact;
     demolishedOtherUse?: PropertyRequirementFact;
     demolishedVacantHouse?: PropertyRequirementFact;

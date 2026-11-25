@@ -10,16 +10,15 @@
 import {
   propertyBuildingPermitFactIssue,
   propertyBuildingPermitRequired,
+  propertyDemolishedChain,
   propertyDemolishedFactIssue,
-  propertyDemolishedPublicUseAsked,
-  propertyDemolishedRequired,
   resolvePropertyTaxBaseDate,
 } from "@/lib/tax-engine/property-separate-requirements";
 import type {
   PropertyBuildingPermitFactIssue,
+  PropertyDemolishedChain,
   PropertyDemolishedFactIssue,
   PropertyDemolishedKind,
-  PropertyDemolishedRequired,
   PropertyRequirementFact,
 } from "@/lib/tax-engine/property-separate-requirements";
 import { demolishedStatusPeriodMonths } from "@/lib/tax-engine/data/nbl-historical-values-era";
@@ -49,22 +48,9 @@ function removedOnOf(date: string): Date | undefined {
   return isValid(d) ? d : undefined;
 }
 
-/** 이 폼이 연 사실 칸 — 엔진 요구 술어 그대로(`taxBaseDate` 기본 = 올해 6.1.). 철거일·종류를 읽을 수 없으면 전부 false */
-export function demolishedNeedOf(
-  v: Pick<PropertyDemolishedFormValues, "date" | "kind" | "otherUse" | "vacantHouse" | "publicUse">,
-  taxBaseDate: Date = resolvePropertyTaxBaseDate(),
-): PropertyDemolishedRequired & { publicUse: boolean; publicUsePaid: boolean } {
-  const need = propertyDemolishedRequired({ taxBaseDate, removedOn: removedOnOf(v.date), kind: v.kind });
-  const asked = propertyDemolishedPublicUseAsked(need, v);
-  return { ...need, publicUse: asked.publicUse, publicUsePaid: asked.paid };
-}
-
-/** ⑧ — 철거 요건의 첫 결함(없으면 null). ⑫와 같은 `propertyDemolishedFactIssue` — 같은 필드·같은 문구 */
-export function demolishedFactIssueOf(
-  v: PropertyDemolishedFormValues,
-  taxBaseDate: Date = resolvePropertyTaxBaseDate(),
-): PropertyDemolishedFactIssue | null {
-  return propertyDemolishedFactIssue({
+/** 폼 값 → 엔진 사슬 입력 — 철거 칸 5종 + 면적 쌍을 그대로 옮긴다(해석 없음) */
+function chainInputOf(v: PropertyDemolishedFormValues, taxBaseDate: Date) {
+  return {
     taxBaseDate,
     removedOn: removedOnOf(v.date),
     kind: v.kind,
@@ -72,28 +58,44 @@ export function demolishedFactIssueOf(
     facts: { permit: v.permit, otherUse: v.otherUse, vacantHouse: v.vacantHouse, publicUse: v.publicUse, publicUsePaid: v.publicUsePaid },
     buildingFloorArea: v.buildingFloorArea,
     zoningDistrict: v.zoningDistrict,
-  });
+  };
 }
 
 /**
- * ④ — `separateAggregateItem`에 싣는 철거 칸. **요구된 칸만** 싣는다(숨은 stale 값 미전송):
- * 종류는 고른 경우에, 사실 칸은 그 술어가 열린 경우에, 바닥면적·용도지역은 «건축물 ∧ 2024.6.1.~»에만.
+ * 이 폼의 철거 요건 사슬 — 지금 읽는 칸(`order`·`asked`)·다음에 물을 칸(`next`)·확정 여부(`resolved`)·빈집정비 자리(`vacantHousePosition`).
+ * ⑤ 노출 · ④ 전송 · ⑧ 차단 · ⑫ 400이 같은 엔진 걷기 하나를 읽는다(`taxBaseDate` 기본 = 올해 6.1.). UI는 날짜·시행본·답을 비교하지 않는다.
+ */
+export function demolishedChainOf(v: PropertyDemolishedFormValues, taxBaseDate: Date = resolvePropertyTaxBaseDate()): PropertyDemolishedChain {
+  return propertyDemolishedChain(chainInputOf(v, taxBaseDate));
+}
+
+/** ⑧ — 철거 요건의 첫 결함(없으면 null). ⑫와 같은 `propertyDemolishedFactIssue` — 같은 필드·같은 문구 */
+export function demolishedFactIssueOf(
+  v: PropertyDemolishedFormValues,
+  taxBaseDate: Date = resolvePropertyTaxBaseDate(),
+): PropertyDemolishedFactIssue | null {
+  return propertyDemolishedFactIssue(chainInputOf(v, taxBaseDate));
+}
+
+/**
+ * ④ — `separateAggregateItem`에 싣는 철거 칸. **사슬이 읽은 칸(`chain.asked`)만** 싣는다(숨은 stale 값 미전송 — 종류도 읽힌 경우에만):
+ * 철거일은 항상, 종류·사실 칸·바닥면적·용도지역은 앞 답이 접힘을 확정하기 전까지 읽힌 칸만.
  */
 export function demolishedWireFields(
   v: PropertyDemolishedFormValues,
   taxBaseDate: Date = resolvePropertyTaxBaseDate(),
 ): Record<string, unknown> {
-  const need = demolishedNeedOf(v, taxBaseDate);
+  const { asked } = demolishedChainOf(v, taxBaseDate);
   return {
     demolished: true,
     ...(v.date ? { demolishedDate: v.date } : {}),
-    ...(v.kind ? { demolishedKind: v.kind } : {}),
-    ...(need.permit ? { demolishedPermit: v.permit } : {}),
-    ...(need.otherUse ? { demolishedOtherUse: v.otherUse } : {}),
-    ...(need.vacantHouse ? { demolishedVacantHouse: v.vacantHouse } : {}),
-    ...(need.publicUse ? { demolishedPublicUse: v.publicUse } : {}),
-    ...(need.publicUsePaid ? { demolishedPublicUsePaid: v.publicUsePaid } : {}),
-    ...(need.floorArea
+    ...(asked.demolishedKind && v.kind ? { demolishedKind: v.kind } : {}),
+    ...(asked.demolishedPermit ? { demolishedPermit: v.permit } : {}),
+    ...(asked.demolishedOtherUse ? { demolishedOtherUse: v.otherUse } : {}),
+    ...(asked.demolishedVacantHouse ? { demolishedVacantHouse: v.vacantHouse } : {}),
+    ...(asked.demolishedPublicUse ? { demolishedPublicUse: v.publicUse } : {}),
+    ...(asked.demolishedPublicUsePaid ? { demolishedPublicUsePaid: v.publicUsePaid } : {}),
+    ...(asked.buildingFloorArea
       ? { ...(v.buildingFloorArea ? { buildingFloorArea: v.buildingFloorArea } : {}), ...(v.zoningDistrict ? { zoningDistrict: v.zoningDistrict } : {}) }
       : {}),
   };

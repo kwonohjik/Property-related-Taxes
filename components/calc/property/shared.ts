@@ -179,9 +179,9 @@ export interface FormState {
   saFactoryStandardArea: string;
   saDemolished: boolean;
   saDemolishedDate: string;
-  /** 철거된 것의 종류(PSA-E2) — 철거일 입력 후 항상 요구. 미선택 `""` = ⑧ 차단 + ⑫ 400 (3지선다 기본값 없음) */
+  /** 철거된 것의 종류(PSA-E2) — 사슬이 읽을 때(철거일이 가장 긴 한시 기간 안일 때)만 요구. 읽는데 미선택 `""` = ⑧ 차단 + ⑫ 400 (3지선다 기본값 없음) */
   saDemolishedKind: "house" | "building" | "";
-  /** 철거 요건 사실 칸 5종(영 §103의2) — 엔진 요구 술어(`propertyDemolishedRequired`)가 연 칸만 쓴다. 미선택 `""` = ⑧ 차단 + ⑫ 400, 「모름」 = 혜택 불성립 + 확인 필요 */
+  /** 철거 요건 사실 칸 5종(영 §103의2) — 엔진 사슬(`propertyDemolishedChain`)이 읽은 칸만 쓴다(앞 답이 접힘을 확정하면 뒤 칸은 읽지 않는다 — PSA-S1). 미선택 `""` = ⑧ 차단 + ⑫ 400, 「모름」 = 혜택 불성립 + 확인 필요 */
   saDemolishedPermit: PropertyRequirementFact;
   saDemolishedOtherUse: PropertyRequirementFact;
   saDemolishedVacantHouse: PropertyRequirementFact;

@@ -50,20 +50,27 @@ export interface DemolishedFill {
   paid?: Answer;
 }
 
-/** 철거 토글 → 철거일 → (종류·사실 칸) — 사실 칸은 화면에 그려진 순서대로 채운다(노출 ≡ 요구). */
+/**
+ * 철거 토글 → 철거일 → (종류·사실 칸). 사실 칸은 **엄격 순차 노출**(PSA-S1)이라 앞 답에 따라 그려지는 칸·자리가 달라진다 —
+ * 헬퍼는 사슬을 판단하지 않고, 정해진 시도 순서대로 «그려져 있으면 누르고 없으면 건너뛴다».
+ * 시도 순서: 빈집정비(관문 자리 — 철거일이 일반 한시 기간 밖·빈집 기간 안인 주택) → 허가 → 건축 외 용도 → 빈집정비(단서 하위 자리) → 공용 → 유료.
+ */
 export async function fillDemolished(page: Page, d: DemolishedFill) {
   await page.getByRole("switch", { name: /건축물 철거 완료/ }).click();
   await fillDemolishedDate(page, d.date);
   if (d.kind) await page.getByTestId(`pt-sa-demolished-kind-${d.kind}`).check();
-  const facts: [string, Answer | undefined][] = [
+  const attempts: [string, Answer | undefined][] = [
+    ["vacanthouse", d.vacantHouse],
     ["permit", d.permit],
     ["otheruse", d.otherUse],
     ["vacanthouse", d.vacantHouse],
     ["publicuse", d.publicUse],
     ["publicusepaid", d.paid],
   ];
-  for (const [key, answer] of facts) {
-    if (answer) await page.getByTestId(`pt-sa-demolished-${key}-${answer}`).check();
+  for (const [key, answer] of attempts) {
+    if (!answer) continue;
+    const radio = page.getByTestId(`pt-sa-demolished-${key}-${answer}`);
+    if ((await radio.count()) > 0) await radio.check();
   }
 }
 
