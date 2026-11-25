@@ -15,7 +15,7 @@ const land = (over: Partial<FormState>): FormState => ({
   publishedPrice: "300,000,000",
   ...over,
 });
-const SEP = { landTaxType: "separate_aggregate" as const, saZoningDistrict: "commercial", saBuildingFloorArea: "100" };
+const SEP = { landTaxType: "separate_aggregate" as const, saZoningDistrict: "commercial", saBuildingFloorArea: "100", saBuildingPermit: "yes" as const };
 
 const has = (id: string) => screen.queryByTestId(id) !== null;
 

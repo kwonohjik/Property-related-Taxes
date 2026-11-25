@@ -1,6 +1,6 @@
 /**
  * 재산세 별도합산 — 철거ㆍ멸실 부속토지 요건 판정 leaf (PSA-E1 · 계획서 docs/01-plan/features/property-separate-demolished-requirements.engine.plan.md v3 §5).
- * 순수 함수 — DB·`new Date(x)`·로컬 달력 함수 없음. **엔진(`isSeparateAggregateLand`·`property-tax.ts`)에는 아직 연결하지 않는다**(PSA-E4·E2).
+ * 순수 함수 — DB·`new Date(x)`·로컬 달력 함수 없음. 엔진 연결은 `isSeparateAggregateLand`(PSA-E2 철거 · PSA-E3 본 경로 허가).
  *
  * ## 판정 모델 — 과세기준일 한 점
  * 영 §103의2는 «과세기준일 현재»로 정해지고 재산세 납세의무는 과세기준일(6.1.)에 성립하므로(지방세기본법 §34①8호), 판정은 **그 과세기준일 `s`의 시행본 하나**로 한다.
@@ -67,9 +67,24 @@ export function resolvePropertyTaxBaseDate(targetDate?: string | Date, now: Date
   return new Date(Date.UTC(base.getUTCFullYear(), 5, 1));
 }
 
-/** 영 §101① 단서의 허가·사용승인 요건이 그 과세기준일 시행본에 있는가(비철거 본 경로 — Q-2 · PSA-E3가 연결). */
+/**
+ * 영 §101① 단서의 허가·사용승인 요건이 그 과세기준일 시행본에 있는가(비철거 본 경로 — Q-2 · PSA-E3).
+ * 단서는 §101① 본문의 «다음 각 호» 앞에 있어 1호(공장용 건축물)·2호(그 밖의 건축물) **둘 다**에 걸린다 — 공장용지(`isFactory`)도 같다.
+ * 철거 경로(`demolished`)는 영 §103의2 본문 후단이 같은 요건을 맡으므로(`demolishedPermit`) 이 칸을 묻지 않는다.
+ */
 export function propertyBuildingPermitRequired(s: Date): boolean {
   return isValid(s) && !isBefore(s, FROM_2011_06_01);
+}
+
+/**
+ * 본 경로 허가·사용승인 칸 값의 의미(영 §101① 단서 — 법문의 «사용 중인»을 칸 뜻에 그대로 담는다):
+ * - `yes`     = 단서에 걸리지 않는다 — 허가 등을 받았거나 받을 필요가 없고, 사용승인(임시사용승인 포함)도 받았거나 받을 필요가 없거나 **사용 중이 아니다**.
+ * - `no`      = 허가 등을 받아야 하는데 받지 않았거나(사용 여부 무관), 사용승인을 받아야 하는데 받지 않고 **사용 중**이다.
+ * - `unknown` = 모름(혜택 불성립 + 확인 필요).
+ * 법문: «허가 등을 받지 아니한 건축물 또는 사용승인을 받아야 할 건축물로서 사용승인…을 받지 아니하고 사용 중인 건축물» — «사용 중인»은 사용승인 쪽에만 걸린다.
+ */
+export function propertyBuildingPermitHolds(i: { taxBaseDate: Date; permit: PropertyRequirementFact | undefined }): boolean {
+  return !propertyBuildingPermitRequired(i.taxBaseDate) || i.permit === "yes";
 }
 
 /**
@@ -181,6 +196,26 @@ export function propertyDemolishedFactIssue(i: PropertyDemolishedFactInput): Pro
   return null;
 }
 
+export const PROPERTY_BUILDING_PERMIT_ISSUE_MESSAGE =
+  "이 건축물이 허가·사용승인을 받은 것인지 선택하세요 — 「예」: 허가 등을 받았거나 받을 필요가 없고, 사용승인(임시사용승인 포함)도 받았거나 받을 필요가 없거나 사용 중이 아님 · 「아니오」: 허가 등을 받아야 하는데 받지 않았거나, 사용승인을 받아야 하는데 받지 않고 사용 중임. 허가·사용승인 없이 사용 중인 건축물의 부속토지는 별도합산에서 제외되어 판정에 필요합니다(모르면 「모름」).";
+
+export interface PropertyBuildingPermitFactIssue {
+  field: "buildingPermit";
+  message: string;
+}
+
+/**
+ * 본 경로(비철거) 허가·사용승인 칸의 결함 — ⑧·⑫ 공유. 그 과세기준일 시행본이 요건을 두는데 칸이 비어 있을 때만(`""`·미입력) 막는다.
+ * 명시 «아니오»·«모름»은 막지 않는다(엔진이 접고 고지) — 철거 칸과 같은 규칙.
+ */
+export function propertyBuildingPermitFactIssue(i: {
+  taxBaseDate: Date;
+  permit: PropertyRequirementFact | undefined;
+}): PropertyBuildingPermitFactIssue | null {
+  if (!propertyBuildingPermitRequired(i.taxBaseDate)) return null;
+  return blank(i.permit) ? { field: "buildingPermit", message: PROPERTY_BUILDING_PERMIT_ISSUE_MESSAGE } : null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 고지 문구 (접힘 사유별 — «확인 필요» 병기)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -199,6 +234,12 @@ export const PROPERTY_DEMOLISHED_PERMIT_NO_NOTICE =
 
 export const PROPERTY_DEMOLISHED_PERMIT_UNKNOWN_NOTICE =
   `허가·사용승인(임시사용승인 포함)을 받았는지 확인되지 않아(모름·미선택) ${PROPERTY_SEPARATE.DEMOLISHED_PERMIT}의 요건 충족을 인정하지 않고 종합합산으로 이관했습니다 — 확인 필요.`;
+
+export const PROPERTY_BUILDING_PERMIT_NO_NOTICE =
+  `허가 등을 받아야 하는데 받지 않았거나 사용승인(임시사용승인 포함)을 받지 않고 사용 중인 건축물의 부속토지는 ${PROPERTY_SEPARATE.BUILDING_PERMIT_101}에 따라 별도합산에서 제외되어 종합합산으로 이관했습니다 — 확인 필요.`;
+
+export const PROPERTY_BUILDING_PERMIT_UNKNOWN_NOTICE =
+  `허가·사용승인(임시사용승인 포함) 여부가 확인되지 않아(모름·미선택) ${PROPERTY_SEPARATE.BUILDING_PERMIT_101}의 요건 충족을 인정하지 않고 종합합산으로 이관했습니다 — 확인 필요.`;
 
 export const PROPERTY_DEMOLISHED_OTHER_USE_NOTICE =
   `철거 후 건축을 위한 용도 외의 다른 용도로 사용하는(또는 사용 여부를 확인할 수 없는) 부속토지는 ${PROPERTY_SEPARATE.DEMOLISHED_OTHER_USE} 괄호·${PROPERTY_SEPARATE.DEMOLISHED_VACANT_HOUSE} 단서에 따라 별도합산에서 제외되어 종합합산으로 이관했습니다 — 확인 필요.`;

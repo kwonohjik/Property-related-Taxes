@@ -45,6 +45,7 @@ const S4_ITEM = {
   officialLandPrice: 1_000_000,
   zoningDistrict: "industrial",
   buildingFloorArea: 100,
+  buildingPermit: "yes", // PSA-E3 — 영 §101① 단서
 };
 const S4 = { objectType: "land", landTaxType: "separate_aggregate", publishedPrice: 1_000_000_000, targetDate: "2026-06-01", separateAggregateItem: S4_ITEM };
 const detailsOf = (json: { error?: { details?: Record<string, string[]> } }) => json.error?.details ?? {};
@@ -127,6 +128,7 @@ describe("④ 변환 — 요구된 칸만 싣는다", () => {
     saZoningDistrict: "commercial",
     saLandArea: "300",
     saBuildingFloorArea: "100",
+    saBuildingPermit: "yes", // PSA-E3 — 영 §101① 단서
     ...over,
   });
 
@@ -154,8 +156,8 @@ describe("⑧↔⑫ parity 격자 — 합산 칸 요구 판정이 같다(UI 통�
   const year = new Date().getFullYear();
   const SCENARIOS: Array<{ name: string; form: Partial<FormState> }> = [
     { name: "직접 종합합산", form: { landTaxType: "comprehensive_aggregate", publishedPrice: "300,000,000" } },
-    { name: "전량 별도합산", form: { saZoningDistrict: "commercial", saLandArea: "300", saBuildingFloorArea: "100", publishedPrice: "300,000,000" } },
-    { name: "별도합산 + 면적 초과 이관", form: { saZoningDistrict: "industrial", saLandArea: "1000", saBuildingFloorArea: "100", publishedPrice: "1,000,000,000" } },
+    { name: "전량 별도합산", form: { saZoningDistrict: "commercial", saLandArea: "300", saBuildingFloorArea: "100", saBuildingPermit: "yes", publishedPrice: "300,000,000" } },
+    { name: "별도합산 + 면적 초과 이관", form: { saZoningDistrict: "industrial", saLandArea: "1000", saBuildingFloorArea: "100", saBuildingPermit: "yes", publishedPrice: "1,000,000,000" } },
     {
       name: "철거 1년 초과 전량 이관",
       form: { saZoningDistrict: "commercial", saLandArea: "300", saBuildingFloorArea: "100", publishedPrice: "300,000,000", saDemolished: true, saDemolishedDate: `${year - 2}-01-01`, saDemolishedKind: "building" },

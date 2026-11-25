@@ -23,6 +23,7 @@ const base = (over: Partial<FormState>): FormState => ({
   objectType: "land",
   landTaxType: "separate_aggregate",
   saBuildingFloorArea: "100",
+  saBuildingPermit: "yes", // PSA-E3 — 영 §101① 단서
   ...over,
 });
 /** S-1: 철거 1년 초과 · 상업 300㎡ 전량 이관 */

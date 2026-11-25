@@ -143,6 +143,7 @@ export const PROPERTY_LAND_SPLIT_TRANSFER_REASON_LABEL: Record<PropertyLandSplit
   permit: "허가·사용승인을 받지 않았거나 확인되지 않은 철거ㆍ멸실 건축물·주택의 부속토지",
   other_use: "철거 후 건축을 위한 용도 외로 사용하는(또는 확인되지 않은) 부속토지",
   public_use_unpaid: "국가 등이 무상으로 공용·공공용 사용하는 부속토지(비과세 가능성 — 계산기는 비과세를 판정하지 않음)",
+  building_permit: "허가·사용승인을 받지 않았거나 확인되지 않은 건축물의 부속토지(영 §101① 단서)",
   area_excess: "기준면적(바닥면적 × 용도지역 배율)을 초과한 토지",
   direct_type: "과세 유형을 종합합산으로 직접 선택한 토지",
 };

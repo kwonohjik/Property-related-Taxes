@@ -45,6 +45,7 @@ describe("별도합산 면적 소수점 (R1 회귀)", () => {
       saZoningDistrict: "commercial",
       saLandArea: "333.06",
       saBuildingFloorArea: "100.5",
+      saBuildingPermit: "yes", // PSA-E3 — 영 §101① 단서
     });
     expect(validateStep(2, form)).toBeNull();
   });

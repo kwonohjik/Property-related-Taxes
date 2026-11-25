@@ -13,6 +13,7 @@ const form = (over: Partial<FormState>): FormState => ({
   saLandArea: "300",
   saZoningDistrict: "commercial",
   saBuildingFloorArea: "100",
+  saBuildingPermit: "yes", // PSA-E3 — 철거 OFF 사례가 허가 칸에 막히지 않게(철거 ON은 읽지 않음)
   otherSeparateAggregateValue: "0",
   otherComprehensiveValue: "0",
   ...over,

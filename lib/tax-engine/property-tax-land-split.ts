@@ -50,6 +50,7 @@ function transferReasonsOf(
 ): PropertyLandSplitTransferReason[] {
   if (check.excessArea <= 0) return [];
   if (check.isSeparateAggregate) return ["area_excess"];
+  if (check.buildingPermitFolded) return ["building_permit"];
   const foldReason = check.demolishedVerdict?.foldReason;
   if (foldReason === "permit" || foldReason === "other_use" || foldReason === "public_use_unpaid") return [foldReason];
   return [item.demolished === true ? "demolished_period" : "no_building"];

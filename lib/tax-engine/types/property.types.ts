@@ -241,6 +241,11 @@ export interface PropertyTaxInput {
     demolishedVacantHouse?: PropertyRequirementFact;
     demolishedPublicUse?: PropertyRequirementFact;
     demolishedPublicUsePaid?: PropertyRequirementFact;
+    /**
+     * 본 경로(비철거) 건축물의 허가·사용승인 요건(PSA-E3 · 영 §101① 단서 — 과세기준일 2011.6.1.~) — `propertyBuildingPermitRequired(s)`일 때만 읽는다.
+     * `yes` = 단서에 걸리지 않음 · `no` = 허가 등 미취득 또는 사용승인 없이 사용 중 · `unknown` = 모름. `yes`가 아니면 별도합산에서 접어 종합합산으로 이관한다.
+     */
+    buildingPermit?: PropertyRequirementFact;
   };
 
   /**
@@ -411,6 +416,7 @@ export type PropertyLandSplitTransferReason =
   | "permit"
   | "other_use"
   | "public_use_unpaid"
+  | "building_permit"
   | "area_excess"
   | "direct_type";
 

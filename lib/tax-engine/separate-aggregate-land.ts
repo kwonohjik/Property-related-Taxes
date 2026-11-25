@@ -2,7 +2,7 @@
  * 재산세 별도합산과세대상 판정 및 계산 엔진 (P4-04~07, P4-13)
  *
  * 지방세법 §106①2호  — 별도합산과세대상 (영업용 건축물 부속토지)
- * 지방세법 시행령 §101 — 기준면적 산정 (바닥면적 × 용도지역 배율)
+ * 지방세법 시행령 §101 — 기준면적 산정 (바닥면적 × 용도지역 배율) · §101① 단서 허가·사용승인 요건(PSA-E3)
  *   ⚠️ 공장입지기준면적(별표6)은 §102①1호 **분리과세** 소관 — 여기서 쓰지 않는다(2026-08-05 정정)
  * 지방세법 시행령 §103의2 1호 — 철거·멸실 후 일정 기간 별도합산 유지 특례 (과세기준일 시행본별: 2016.6.1.~ 6개월 · 2026.6.1.~ 1년)
  * 지방세법 §111①1호 나목 — 별도합산 누진세율 0.2%~0.4%
@@ -13,7 +13,8 @@
  *   1. 분리과세 제외 여부 (이미 상위에서 처리, 여기서는 수신 데이터가 분리과세 비해당이어야 함)
  *   2. 건축물 존재 여부 (없으면 → 종합합산)
  *   3. 철거·멸실 후 유예기간 이내 특례 확인 (기간은 과세기준일 시행본 — `demolishedStatusPeriodMonths`)
- *   4. 기준면적 내/초과 면적 분리
+ *   4. 비철거: 허가·사용승인 단서(영 §101① 단서 · 과세기준일 2011.6.1.~, 공장용·영업용 공통) — `buildingPermit`이 yes가 아니면 전량 종합합산
+ *   5. 기준면적 내/초과 면적 분리
  *
  * 핵심 원칙:
  *   - 합산: 동일 납세자 별도합산 토지 공시지가 합산(이 다필지 함수는 전국 합산 후 지자체 안분 — 법문의 관할구역 단위 부합성 미판정, V-16)
@@ -30,6 +31,9 @@ import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
 import { judgePropertyDemolishedLand } from "./property-separate-requirements";
+import { propertyBuildingPermitHolds } from "./property-separate-requirements";
+import { PROPERTY_BUILDING_PERMIT_NO_NOTICE } from "./property-separate-requirements";
+import { PROPERTY_BUILDING_PERMIT_UNKNOWN_NOTICE } from "./property-separate-requirements";
 import { resolvePropertyTaxBaseDate } from "./property-separate-requirements";
 import type { PropertyDemolishedKind } from "./property-separate-requirements";
 import type { PropertyDemolishedVerdict } from "./property-separate-requirements";
@@ -91,6 +95,11 @@ export interface SeparateAggregateLandItem {
   demolishedVacantHouse?: PropertyRequirementFact;
   demolishedPublicUse?: PropertyRequirementFact;
   demolishedPublicUsePaid?: PropertyRequirementFact;
+  /**
+   * 본 경로(비철거) 건축물의 허가·사용승인 요건(PSA-E3 · 영 §101① 단서 — 공장용·영업용 건축물 공통). 과세기준일 2011.6.1.~에서 `yes`가 아니면
+   * 별도합산 불성립 → 종합합산 이관(미선택·모름 포함 — 엔진 직접 호출은 던지지 않고 접는다. 입구 차단은 ⑧·⑫). 철거 필지는 `demolishedPermit`이 맡아 읽지 않는다.
+   */
+  buildingPermit?: PropertyRequirementFact;
   /** 과세기준일 (YYYY-MM-DD, 기본: 당해년도 6월 1일) */
   taxBaseDate?: string;
 }
@@ -126,6 +135,8 @@ export interface LandSeparateCheckResult {
   legalBasis: string;
   /** 경고 메시지 */
   warnings: string[];
+  /** 본 경로 허가·사용승인 요건에 걸려 종합합산으로 접었는가(PSA-E3 · 영 §101① 단서) — 비철거 필지에서만 true */
+  buildingPermitFolded?: boolean;
   /** 철거 특례 판정 echo(PSA-E2) — 철거 필지에서만. 접힘 사유·적용 기간·읽은 칸 집합(UI 결과 표시용 — 판정 불변) */
   demolishedVerdict?: LandDemolishedVerdictEcho;
 }
@@ -315,6 +326,23 @@ export function isSeparateAggregateLand(
       demolishedGraceApplied: false, // 철거 필지는 위 철거 특례 분기에서 이미 반환했다
       legalBasis: areaLegal,
       warnings: [...warnings, "기준면적을 산정할 수 없어 종합합산으로 처리합니다."],
+    };
+  }
+
+  // 영 §101① 단서(PSA-E3) — 허가 등을 받지 않은 건축물 · 사용승인 없이 사용 중인 건축물의 부속토지는 공장용·영업용 모두 별도합산 제외.
+  // 용도지역·바닥면적은 위에서 이미 읽었다(요구 술어가 항상 요구하는 칸 — 접힘이 읽는 칸을 줄이지 않는다). `yes`가 아니면(미선택 포함) 접는다.
+  if (!propertyBuildingPermitHolds({ taxBaseDate: parseISO(taxBaseDate), permit: land.buildingPermit })) {
+    return {
+      landId: land.id,
+      isSeparateAggregate: false,
+      recognizedArea: 0,
+      excessArea: land.landArea,
+      baseArea: 0,
+      multiplier,
+      demolishedGraceApplied: false,
+      legalBasis: PROPERTY_SEPARATE.BUILDING_PERMIT_101,
+      warnings: [...warnings, land.buildingPermit === "no" ? PROPERTY_BUILDING_PERMIT_NO_NOTICE : PROPERTY_BUILDING_PERMIT_UNKNOWN_NOTICE],
+      buildingPermitFolded: true,
     };
   }
 
