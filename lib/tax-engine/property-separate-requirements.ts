@@ -201,7 +201,7 @@ type FoldOutcome = {
   allKinds?: PropertyDemolishedAllKindsPeriods;
 };
 type WalkOutcome =
-  | { type: "input" }
+  | { type: "input"; at: PropertyDemolishedInputAt }
   | FoldOutcome
   | { type: "holds"; months: PropertyDemolishedPeriodMonths; notices: string[]; area?: { multiplier: number; floor: number } };
 
@@ -245,7 +245,7 @@ function walkDemolishedChain(i: PropertyDemolishedFactInput): Walk {
   };
 
   // 0. 날짜 결함(철거일·과세기준일을 읽을 수 없거나 철거일이 과세기준일 뒤) — 칸을 읽지 않는다. 고칠 칸은 철거일(⑧이 문구).
-  if (!r || !isValid(r) || !isValid(s) || utcDayDiff(r, s) > 0) return stop(null, { type: "input" });
+  if (!r || !isValid(r) || !isValid(s) || utcDayDiff(r, s) > 0) return stop(null, { type: "input", at: "date" });
 
   // 1. 날짜 확정 — 종류를 읽지 않는다.
   const longest = demolishedStatusPeriodMonths(s, true);
@@ -258,7 +258,7 @@ function walkDemolishedChain(i: PropertyDemolishedFactInput): Walk {
 
   // 2. 종류
   order.push("demolishedKind");
-  if (!isKind(kind)) return stop("demolishedKind", { type: "input" });
+  if (!isKind(kind)) return stop("demolishedKind", { type: "input", at: "demolishedKind" });
   const house = kind === "house";
   let months: PropertyDemolishedPeriodMonths = general;
 
@@ -507,9 +507,14 @@ export const PROPERTY_DEMOLISHED_INPUT_NOTICE =
 
 export type PropertyDemolishedFoldReason = "not_yet" | "period" | "permit" | "other_use" | "public_use_unpaid" | "area_input" | "input";
 
+/** `foldReason: "input"`이 어디서 멈췄나 — `date`: 철거일·과세기준일을 읽을 수 없거나 철거일이 과세기준일 뒤 · `demolishedKind`: 날짜는 한시 기간 안인데 철거된 것의 종류가 없음 */
+export type PropertyDemolishedInputAt = "date" | "demolishedKind";
+
 export interface PropertyDemolishedVerdict {
   kind: "holds" | "fold";
   foldReason?: PropertyDemolishedFoldReason;
+  /** `foldReason: "input"`일 때만 — 결함 위치(날짜 결함 vs 종류 미선택). 고지 문장은 둘을 함께 말하므로 이 값으로 가른다. 그 밖에는 없다. */
+  inputAt?: PropertyDemolishedInputAt;
   /** 적용한 한시 기간(개월) — 0 = 규정 없음(2016.6.1. 전) 또는 판정 불가. 날짜만으로 접힌 경우는 가장 긴 가능 기간(2024.6.1.~ 36). */
   periodMonths: PropertyDemolishedPeriodMonths;
   /** 별도합산 인정 면적(㎡) — 접힘이면 0. */
@@ -561,7 +566,7 @@ export function judgePropertyDemolishedLand(i: PropertyDemolishedJudgeInput): Pr
   const base = { areaClauseApplied: false, vacantHouseExtensionUnconfirmed: false, legalBasis: [PROPERTY_SEPARATE.DEMOLISHED_GRACE] };
   const o = w.outcome;
   if (o.type === "input") {
-    return { ...base, kind: "fold", foldReason: "input", periodMonths: 0, recognizedArea: 0, excessArea: round2(landArea), required, notices: [PROPERTY_DEMOLISHED_INPUT_NOTICE] };
+    return { ...base, kind: "fold", foldReason: "input", inputAt: o.at, periodMonths: 0, recognizedArea: 0, excessArea: round2(landArea), required, notices: [PROPERTY_DEMOLISHED_INPUT_NOTICE] };
   }
   if (o.type === "fold") {
     return {

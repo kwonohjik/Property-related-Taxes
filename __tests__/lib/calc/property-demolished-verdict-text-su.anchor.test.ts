@@ -36,18 +36,36 @@ describe("«입력이 필요했던 칸» — 읽은 칸이 없을 때 사유별 
     expect(required(v)).toBe("이 과세기준일 시행본에는 확인할 요건 칸이 없음");
   });
 
-  it("직접 호출에서 입력 부족(철거일 없음 · 철거일이 과세기준일 뒤 · 종류만 미입력) → 같은 사유 문구 — 철거일만 탓하지 않는다(L-4)", () => {
-    const text = "철거일·철거된 것의 종류·과세기준일 중 확인할 수 없는 것이 있거나 철거일이 과세기준일 뒤여서 요건 칸을 읽지 못함";
-    const noDate = judge({ s: "2026-06-01" });
-    expect(noDate.foldReason).toBe("input");
-    expect(required(noDate)).toBe(text);
-    expect(required(judge({ s: "2026-06-01", r: "2026-12-31" }))).toBe(text);
-    // 날짜는 유효하고 한시 기간 안인데 종류만 비었다 — 종전 문구 «철거일 등을 확인할 수 없어»는 사실과 달랐다
+  it("직접 호출에서 입력 부족 — 엔진 echo `inputAt`이 날짜 결함과 종류 미선택을 가른다(L-4 후속)", () => {
+    const dateText = "철거일 또는 과세기준일을 확인할 수 없거나 철거일이 과세기준일 뒤여서 요건 칸을 읽지 못함";
+    const kindText = `${PROPERTY_ASK_FIELD_NAME.demolishedKind}(주택·건축물)가 입력되지 않아 요건 칸을 읽지 못함`;
+    // 날짜 결함 — 철거일 없음 · 철거일이 과세기준일 뒤 · 읽을 수 없는 날짜
+    for (const v of [judge({ s: "2026-06-01" }), judge({ s: "2026-06-01", r: "2026-12-31" }), judge({ s: "2026-06-01", r: "2026-02-30" })]) {
+      expect(v.foldReason).toBe("input");
+      expect(v.inputAt).toBe("date");
+      expect(required(v)).toBe(dateText);
+    }
+    // 날짜 결함이 종류 미선택보다 먼저(사슬 0단계) — 둘 다 비면 date
+    expect(judge({ s: "2026-06-01", kind: "" as never }).inputAt).toBe("date");
+    // 날짜는 유효하고 한시 기간 안인데 종류만 비었다 — 철거일을 탓하지 않는다
     const noKind = judge({ s: "2026-06-01", r: "2026-01-01", kind: "" as never });
     expect(noKind.foldReason).toBe("input");
-    expect(required(noKind)).toBe(text);
-    expect(required(noKind)).not.toBe("철거일 등을 확인할 수 없어 요건 칸을 읽지 못함");
+    expect(noKind.inputAt).toBe("demolishedKind");
+    expect(required(noKind)).toBe(kindText);
+    expect(required(noKind)).not.toContain("철거일");
     expect(PROPERTY_DEMOLISHED_FOLD_REASON_LABEL.input).toContain("철거일·과세기준일");
+  });
+
+  it("`inputAt`은 입력 부족 접힘에만 붙는다 — 다른 접힘·성립에는 키 없음", () => {
+    expect("inputAt" in judge({ s: "2026-06-01", r: "2023-05-31" })).toBe(false); // 날짜만으로 기간 접힘
+    expect("inputAt" in judge({ s: "2026-06-01", r: "2026-01-01", facts: { permit: "no" } })).toBe(false); // 허가 접힘
+    expect("inputAt" in judge({ s: "2017-06-01", r: "2017-01-01", kind: "house" })).toBe(false); // 성립
+  });
+
+  it("옛 저장 결과(echo에 `inputAt` 없음) → 두 사유를 함께 말하는 종전 문구 — 어느 한쪽으로 단정하지 않는다", () => {
+    const legacy = { ...judge({ s: "2026-06-01" }) };
+    delete (legacy as { inputAt?: unknown }).inputAt;
+    expect(required(legacy)).toBe("철거일·철거된 것의 종류·과세기준일 중 확인할 수 없는 것이 있거나 철거일이 과세기준일 뒤여서 요건 칸을 읽지 못함");
   });
 
   it("읽은 칸이 있으면 짧은 이름을 · 로 이은 종전 표기 그대로(결과 카드·낭독 한 줄이 같은 이름 맵)", () => {

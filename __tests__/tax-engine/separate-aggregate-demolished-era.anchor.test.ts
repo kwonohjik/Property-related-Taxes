@@ -99,3 +99,14 @@ describe("재산세 실측 — 별도합산 ↔ 종합합산 이관", () => {
     expect(outside.totalExcessOfficialValue).toBe(300_000_000);
   });
 });
+
+describe("결과 echo `demolishedVerdict.inputAt` — 입력 부족 접힘의 결함 위치(직접 호출 전용)", () => {
+  it("철거일이 과세기준일 뒤 → date · 종류만 미입력 → demolishedKind · 정상 접힘·성립에는 키 없음", () => {
+    expect(isSeparateAggregateLand(land("2026-12-31", "2026-06-01")).demolishedVerdict?.inputAt).toBe("date");
+    const noKind = isSeparateAggregateLand({ ...land("2026-01-01", "2026-06-01"), demolishedKind: "" as never });
+    expect(noKind.isSeparateAggregate).toBe(false);
+    expect(noKind.demolishedVerdict?.foldReason).toBe("input");
+    expect(noKind.demolishedVerdict?.inputAt).toBe("demolishedKind");
+    expect("inputAt" in (isSeparateAggregateLand(land("2026-01-01", "2026-06-01")).demolishedVerdict ?? {})).toBe(false);
+  });
+});
