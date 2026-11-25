@@ -1,0 +1,460 @@
+{
+  "F-0 공장 8,000㎡(이내)": {
+    "publishedPrice": 800000000,
+    "fairMarketRatio": 0.7,
+    "taxBase": 560000000,
+    "appliedRate": 0.002,
+    "calculatedTax": 1120000,
+    "calculatedTaxBeforeCap": 1120000,
+    "taxCapRate": 1,
+    "determinedTax": 1120000,
+    "surtax": {
+      "localEducationTax": 224000,
+      "urbanAreaTax": 0,
+      "regionalResourceTax": 0
+    },
+    "totalSurtax": 224000,
+    "totalPayable": 1344000,
+    "installment": {
+      "eligible": false,
+      "firstPayment": 1120000,
+      "secondPayment": 0
+    },
+    "oneHouseSpecialApplied": false,
+    "legalBasis": [
+      "지방세법 §110",
+      "지방세법 §114",
+      "지방세법 §110②",
+      "지방세법 시행령 §102①1호",
+      "지방세법 §106①3호",
+      "지방세법 §122",
+      "지방세법 §151"
+    ],
+    "warnings": [
+      "전년도 납부세액 미입력으로 세부담상한(지방세법 §122)을 적용하지 않습니다. 정확한 계산을 위해 전년도 재산세 납부액을 입력하세요.",
+      "분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (종합부동산세법 §11)."
+    ],
+    "targetDate": "2026-06-01",
+    "taxCapMode": "direct"
+  },
+  "F-0 + stale otherComprehensiveValue": {
+    "publishedPrice": 800000000,
+    "fairMarketRatio": 0.7,
+    "taxBase": 560000000,
+    "appliedRate": 0.002,
+    "calculatedTax": 1120000,
+    "calculatedTaxBeforeCap": 1120000,
+    "taxCapRate": 1,
+    "determinedTax": 1120000,
+    "surtax": {
+      "localEducationTax": 224000,
+      "urbanAreaTax": 0,
+      "regionalResourceTax": 0
+    },
+    "totalSurtax": 224000,
+    "totalPayable": 1344000,
+    "installment": {
+      "eligible": false,
+      "firstPayment": 1120000,
+      "secondPayment": 0
+    },
+    "oneHouseSpecialApplied": false,
+    "legalBasis": [
+      "지방세법 §110",
+      "지방세법 §114",
+      "지방세법 §110②",
+      "지방세법 시행령 §102①1호",
+      "지방세법 §106①3호",
+      "지방세법 §122",
+      "지방세법 §151"
+    ],
+    "warnings": [
+      "전년도 납부세액 미입력으로 세부담상한(지방세법 §122)을 적용하지 않습니다. 정확한 계산을 위해 전년도 재산세 납부액을 입력하세요.",
+      "분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (종합부동산세법 §11)."
+    ],
+    "targetDate": "2026-06-01",
+    "taxCapMode": "direct"
+  },
+  "F-0 + 도시지역": {
+    "publishedPrice": 800000000,
+    "fairMarketRatio": 0.7,
+    "taxBase": 560000000,
+    "appliedRate": 0.002,
+    "calculatedTax": 1120000,
+    "calculatedTaxBeforeCap": 1120000,
+    "taxCapRate": 1,
+    "determinedTax": 1120000,
+    "surtax": {
+      "localEducationTax": 224000,
+      "urbanAreaTax": 784000,
+      "regionalResourceTax": 0
+    },
+    "totalSurtax": 1008000,
+    "totalPayable": 2128000,
+    "installment": {
+      "eligible": false,
+      "firstPayment": 1120000,
+      "secondPayment": 0
+    },
+    "oneHouseSpecialApplied": false,
+    "legalBasis": [
+      "지방세법 §110",
+      "지방세법 §114",
+      "지방세법 §110②",
+      "지방세법 시행령 §102①1호",
+      "지방세법 §106①3호",
+      "지방세법 §122",
+      "지방세법 §151",
+      "지방세법 §112"
+    ],
+    "warnings": [
+      "전년도 납부세액 미입력으로 세부담상한(지방세법 §122)을 적용하지 않습니다. 정확한 계산을 위해 전년도 재산세 납부액을 입력하세요.",
+      "분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (종합부동산세법 §11)."
+    ],
+    "targetDate": "2026-06-01",
+    "taxCapMode": "direct"
+  },
+  "F-0 + 직전 세액 direct 상한": {
+    "publishedPrice": 800000000,
+    "fairMarketRatio": 0.7,
+    "taxBase": 560000000,
+    "appliedRate": 0.002,
+    "calculatedTax": 1120000,
+    "calculatedTaxBeforeCap": 1120000,
+    "taxCapRate": 1.5,
+    "determinedTax": 750000,
+    "surtax": {
+      "localEducationTax": 150000,
+      "urbanAreaTax": 0,
+      "regionalResourceTax": 0
+    },
+    "totalSurtax": 150000,
+    "totalPayable": 900000,
+    "installment": {
+      "eligible": false,
+      "firstPayment": 750000,
+      "secondPayment": 0
+    },
+    "oneHouseSpecialApplied": false,
+    "legalBasis": [
+      "지방세법 §110",
+      "지방세법 §114",
+      "지방세법 §110②",
+      "지방세법 시행령 §102①1호",
+      "지방세법 §106①3호",
+      "지방세법 §122",
+      "지방세법 §151"
+    ],
+    "warnings": [
+      "분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (종합부동산세법 §11)."
+    ],
+    "targetDate": "2026-06-01",
+    "taxCapMode": "direct",
+    "taxCapBasisTax": 500000
+  },
+  "F-0 정확히 기준면적(12,000㎡)": {
+    "publishedPrice": 1200000000,
+    "fairMarketRatio": 0.7,
+    "taxBase": 840000000,
+    "appliedRate": 0.002,
+    "calculatedTax": 1680000,
+    "calculatedTaxBeforeCap": 1680000,
+    "taxCapRate": 1,
+    "determinedTax": 1680000,
+    "surtax": {
+      "localEducationTax": 336000,
+      "urbanAreaTax": 0,
+      "regionalResourceTax": 0
+    },
+    "totalSurtax": 336000,
+    "totalPayable": 2016000,
+    "installment": {
+      "eligible": false,
+      "firstPayment": 1680000,
+      "secondPayment": 0
+    },
+    "oneHouseSpecialApplied": false,
+    "legalBasis": [
+      "지방세법 §110",
+      "지방세법 §114",
+      "지방세법 §110②",
+      "지방세법 시행령 §102①1호",
+      "지방세법 §106①3호",
+      "지방세법 §122",
+      "지방세법 §151"
+    ],
+    "warnings": [
+      "전년도 납부세액 미입력으로 세부담상한(지방세법 §122)을 적용하지 않습니다. 정확한 계산을 위해 전년도 재산세 납부액을 입력하세요.",
+      "분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (종합부동산세법 §11)."
+    ],
+    "targetDate": "2026-06-01",
+    "taxCapMode": "direct"
+  },
+  "P-0 목장 600㎡(이내)": {
+    "publishedPrice": 30000000,
+    "fairMarketRatio": 0.7,
+    "taxBase": 21000000,
+    "appliedRate": 0.0007,
+    "calculatedTax": 14700,
+    "calculatedTaxBeforeCap": 14700,
+    "taxCapRate": 1,
+    "determinedTax": 14700,
+    "surtax": {
+      "localEducationTax": 2940,
+      "urbanAreaTax": 0,
+      "regionalResourceTax": 0
+    },
+    "totalSurtax": 2940,
+    "totalPayable": 17640,
+    "installment": {
+      "eligible": false,
+      "firstPayment": 14700,
+      "secondPayment": 0
+    },
+    "oneHouseSpecialApplied": false,
+    "legalBasis": [
+      "지방세법 §110",
+      "지방세법 §114",
+      "지방세법 §110②",
+      "지방세법 시행령 §102①3호",
+      "지방세법 §106①3호",
+      "지방세법 §122",
+      "지방세법 §151"
+    ],
+    "warnings": [
+      "전년도 납부세액 미입력으로 세부담상한(지방세법 §122)을 적용하지 않습니다. 정확한 계산을 위해 전년도 재산세 납부액을 입력하세요.",
+      "분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (종합부동산세법 §11)."
+    ],
+    "targetDate": "2026-06-01",
+    "taxCapMode": "direct"
+  },
+  "농지": {
+    "publishedPrice": 100000000,
+    "fairMarketRatio": 0.7,
+    "taxBase": 70000000,
+    "appliedRate": 0.0007,
+    "calculatedTax": 49000,
+    "calculatedTaxBeforeCap": 49000,
+    "taxCapRate": 1,
+    "determinedTax": 49000,
+    "surtax": {
+      "localEducationTax": 9800,
+      "urbanAreaTax": 0,
+      "regionalResourceTax": 0
+    },
+    "totalSurtax": 9800,
+    "totalPayable": 58800,
+    "installment": {
+      "eligible": false,
+      "firstPayment": 49000,
+      "secondPayment": 0
+    },
+    "oneHouseSpecialApplied": false,
+    "legalBasis": [
+      "지방세법 §110",
+      "지방세법 §114",
+      "지방세법 §110②",
+      "지방세법 §111①1호 다목(1), 시행령 §102①2호",
+      "지방세법 §106①3호",
+      "지방세법 §122",
+      "지방세법 §151"
+    ],
+    "warnings": [
+      "전년도 납부세액 미입력으로 세부담상한(지방세법 §122)을 적용하지 않습니다. 정확한 계산을 위해 전년도 재산세 납부액을 입력하세요.",
+      "분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (종합부동산세법 §11)."
+    ],
+    "targetDate": "2026-06-01",
+    "taxCapMode": "direct"
+  },
+  "보전산지": {
+    "publishedPrice": 100000000,
+    "fairMarketRatio": 0.7,
+    "taxBase": 70000000,
+    "appliedRate": 0.0007,
+    "calculatedTax": 49000,
+    "calculatedTaxBeforeCap": 49000,
+    "taxCapRate": 1,
+    "determinedTax": 49000,
+    "surtax": {
+      "localEducationTax": 9800,
+      "urbanAreaTax": 0,
+      "regionalResourceTax": 0
+    },
+    "totalSurtax": 9800,
+    "totalPayable": 58800,
+    "installment": {
+      "eligible": false,
+      "firstPayment": 49000,
+      "secondPayment": 0
+    },
+    "oneHouseSpecialApplied": false,
+    "legalBasis": [
+      "지방세법 §110",
+      "지방세법 §114",
+      "지방세법 §110②",
+      "지방세법 시행령 §102②1호",
+      "지방세법 §106①3호",
+      "지방세법 §122",
+      "지방세법 §151"
+    ],
+    "warnings": [
+      "전년도 납부세액 미입력으로 세부담상한(지방세법 §122)을 적용하지 않습니다. 정확한 계산을 위해 전년도 재산세 납부액을 입력하세요.",
+      "분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (종합부동산세법 §11)."
+    ],
+    "targetDate": "2026-06-01",
+    "taxCapMode": "direct"
+  },
+  "염전": {
+    "publishedPrice": 100000000,
+    "fairMarketRatio": 0.7,
+    "taxBase": 70000000,
+    "appliedRate": 0.002,
+    "calculatedTax": 140000,
+    "calculatedTaxBeforeCap": 140000,
+    "taxCapRate": 1,
+    "determinedTax": 140000,
+    "surtax": {
+      "localEducationTax": 28000,
+      "urbanAreaTax": 0,
+      "regionalResourceTax": 0
+    },
+    "totalSurtax": 28000,
+    "totalPayable": 168000,
+    "installment": {
+      "eligible": false,
+      "firstPayment": 140000,
+      "secondPayment": 0
+    },
+    "oneHouseSpecialApplied": false,
+    "legalBasis": [
+      "지방세법 §110",
+      "지방세법 §114",
+      "지방세법 §110②",
+      "지방세법 시행령 §102⑥1호",
+      "지방세법 §106①3호",
+      "지방세법 §122",
+      "지방세법 §151"
+    ],
+    "warnings": [
+      "전년도 납부세액 미입력으로 세부담상한(지방세법 §122)을 적용하지 않습니다. 정확한 계산을 위해 전년도 재산세 납부액을 입력하세요.",
+      "분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (종합부동산세법 §11)."
+    ],
+    "targetDate": "2026-06-01",
+    "taxCapMode": "direct"
+  },
+  "터미널": {
+    "publishedPrice": 100000000,
+    "fairMarketRatio": 0.7,
+    "taxBase": 70000000,
+    "appliedRate": 0.002,
+    "calculatedTax": 140000,
+    "calculatedTaxBeforeCap": 140000,
+    "taxCapRate": 1,
+    "determinedTax": 140000,
+    "surtax": {
+      "localEducationTax": 28000,
+      "urbanAreaTax": 0,
+      "regionalResourceTax": 0
+    },
+    "totalSurtax": 28000,
+    "totalPayable": 168000,
+    "installment": {
+      "eligible": false,
+      "firstPayment": 140000,
+      "secondPayment": 0
+    },
+    "oneHouseSpecialApplied": false,
+    "legalBasis": [
+      "지방세법 §110",
+      "지방세법 §114",
+      "지방세법 §110②",
+      "지방세법 시행령 §102⑥4호",
+      "지방세법 §106①3호",
+      "지방세법 §122",
+      "지방세법 §151"
+    ],
+    "warnings": [
+      "전년도 납부세액 미입력으로 세부담상한(지방세법 §122)을 적용하지 않습니다. 정확한 계산을 위해 전년도 재산세 납부액을 입력하세요.",
+      "분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (종합부동산세법 §11)."
+    ],
+    "targetDate": "2026-06-01",
+    "taxCapMode": "direct"
+  },
+  "회원제 골프장": {
+    "publishedPrice": 100000000,
+    "fairMarketRatio": 0.7,
+    "taxBase": 70000000,
+    "appliedRate": 0.04,
+    "calculatedTax": 2800000,
+    "calculatedTaxBeforeCap": 2800000,
+    "taxCapRate": 1,
+    "determinedTax": 2800000,
+    "surtax": {
+      "localEducationTax": 560000,
+      "urbanAreaTax": 0,
+      "regionalResourceTax": 0
+    },
+    "totalSurtax": 560000,
+    "totalPayable": 3360000,
+    "installment": {
+      "eligible": true,
+      "firstPayment": 1400000,
+      "secondPayment": 1400000
+    },
+    "oneHouseSpecialApplied": false,
+    "legalBasis": [
+      "지방세법 §110",
+      "지방세법 §114",
+      "지방세법 §110②",
+      "지방세법 §111①1호 다목(2)",
+      "지방세법 §106①3호",
+      "지방세법 §122",
+      "지방세법 §151"
+    ],
+    "warnings": [
+      "전년도 납부세액 미입력으로 세부담상한(지방세법 §122)을 적용하지 않습니다. 정확한 계산을 위해 전년도 재산세 납부액을 입력하세요.",
+      "분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (종합부동산세법 §11)."
+    ],
+    "targetDate": "2026-06-01",
+    "taxCapMode": "direct"
+  },
+  "고급오락장 + 도시지역": {
+    "publishedPrice": 100000000,
+    "fairMarketRatio": 0.7,
+    "taxBase": 70000000,
+    "appliedRate": 0.04,
+    "calculatedTax": 2800000,
+    "calculatedTaxBeforeCap": 2800000,
+    "taxCapRate": 1,
+    "determinedTax": 2800000,
+    "surtax": {
+      "localEducationTax": 560000,
+      "urbanAreaTax": 98000,
+      "regionalResourceTax": 0
+    },
+    "totalSurtax": 658000,
+    "totalPayable": 3458000,
+    "installment": {
+      "eligible": true,
+      "firstPayment": 1400000,
+      "secondPayment": 1400000
+    },
+    "oneHouseSpecialApplied": false,
+    "legalBasis": [
+      "지방세법 §110",
+      "지방세법 §114",
+      "지방세법 §110②",
+      "지방세법 §111①1호 다목(2), 시행령 §28",
+      "지방세법 §106①3호",
+      "지방세법 §122",
+      "지방세법 §151",
+      "지방세법 §112"
+    ],
+    "warnings": [
+      "전년도 납부세액 미입력으로 세부담상한(지방세법 §122)을 적용하지 않습니다. 정확한 계산을 위해 전년도 재산세 납부액을 입력하세요.",
+      "분리과세 대상 토지는 종합부동산세 과세 대상에서 제외됩니다 (종합부동산세법 §11)."
+    ],
+    "targetDate": "2026-06-01",
+    "taxCapMode": "direct"
+  }
+}
