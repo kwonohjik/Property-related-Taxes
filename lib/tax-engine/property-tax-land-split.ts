@@ -10,7 +10,9 @@ import { PROPERTY_SEPARATE } from "./legal-codes";
 import { calcSurtax, calcInstallment } from "./property-tax-surtax";
 import { buildCapEcho } from "./property-tax-cap-echo";
 import { buildTaxpayerOutcome } from "./property-taxpayer";
-import { calculateLandClassTax, propertyLandSplitRequired } from "./property-land-split-tax";
+import { calculateLandClassTax } from "./property-land-split-tax";
+import { landSplitTaxBaseDate } from "./property-land-split-tax";
+import { propertyLandSplitRequired } from "./property-land-split-tax";
 import { isSeparateAggregateLand, splitByBaseArea } from "./separate-aggregate-land";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import type { LandSplitCapInput } from "./property-land-split-tax";
@@ -37,13 +39,19 @@ function resolveCap(input: PropertyTaxInput, priorYear: number): LandSplitCapInp
     : { mode: "direct", previousYearTax: input.previousYearTax };
 }
 
-/** 이관 사유 — 별도합산 필지 판정 결과에서 분류 사유 1곳 매핑(E2가 철거 요건 사유를 추가) */
+/**
+ * 이관 사유 — 별도합산 필지 판정 결과에서 분류 사유 1곳 매핑.
+ * 철거 요건 접힘(영 §103의2)은 판정 leaf의 접힘 사유를 그대로 옮긴다 — 허가·사용승인 → `permit` · 건축 외 용도 → `other_use` · 무상 공용 → `public_use_unpaid` ·
+ * 기간 경과·시행 전·입력 불가 → `demolished_period`.
+ */
 function transferReasonsOf(
   item: NonNullable<PropertyTaxInput["separateAggregateItem"]>,
   check: ReturnType<typeof isSeparateAggregateLand>,
 ): PropertyLandSplitTransferReason[] {
   if (check.excessArea <= 0) return [];
   if (check.isSeparateAggregate) return ["area_excess"];
+  const foldReason = check.demolishedVerdict?.foldReason;
+  if (foldReason === "permit" || foldReason === "other_use" || foldReason === "public_use_unpaid") return [foldReason];
   return [item.demolished === true ? "demolished_period" : "no_building"];
 }
 
@@ -56,6 +64,7 @@ export function calculateLandSplitPropertyTax(ctx: LandSplitBranchContext): Prop
   let recognizedArea = 0;
   let excessArea = 0;
   let transferReasons: PropertyLandSplitTransferReason[] = ["direct_type"];
+  let demolishedVerdict: ReturnType<typeof isSeparateAggregateLand>["demolishedVerdict"];
 
   if (isSeparateType) {
     if (!input.separateAggregateItem) {
@@ -64,13 +73,15 @@ export function calculateLandSplitPropertyTax(ctx: LandSplitBranchContext): Prop
         "별도합산(separate_aggregate) 계산 시 separateAggregateItem이 필요합니다.",
       );
     }
-    const land = { ...input.separateAggregateItem, taxBaseDate: targetDate };
+    // 과세기준일은 6.1.(지방세법 §114) — ⑧·⑫와 같은 `landSplitTaxBaseDate`라 철거 요건 요구 칸과 판정이 같은 시행본을 본다
+    const land = { ...input.separateAggregateItem, taxBaseDate: landSplitTaxBaseDate(targetDate) };
     const check = isSeparateAggregateLand(land);
     const split = splitByBaseArea(land, check);
     separateOwnValue = split.separateOfficialValue;
     comprehensiveOwnValue = split.excessOfficialValue;
     recognizedArea = check.recognizedArea;
     excessArea = check.excessArea;
+    demolishedVerdict = check.demolishedVerdict;
     transferReasons = transferReasonsOf(land, check);
     warnings.push(...check.warnings);
     legalBasis.push(
@@ -127,7 +138,7 @@ export function calculateLandSplitPropertyTax(ctx: LandSplitBranchContext): Prop
     legalBasis: [...new Set(legalBasis)],
     warnings,
     targetDate,
-    landSplit: r.landSplit,
+    landSplit: demolishedVerdict ? { ...r.landSplit, demolishedVerdict } : r.landSplit,
     ...buildCapEcho(input, r.cap.basisTax ?? (cap.mode === "recompute" ? 0 : input.previousYearTax), taxYear - 1),
     ...buildTaxpayerOutcome(ctx.taxpayerResult, ctx.coShares, r.determinedTax, totalPayable),
   };

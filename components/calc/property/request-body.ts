@@ -5,6 +5,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
+import { demolishedWireFields } from "@/lib/calc/property-separate-requirements";
 import {
   landSplitBodyFields,
   landSplitRequiredFromForm,
@@ -30,14 +31,35 @@ function buildSeparateAggregateItem(form: FormState) {
     jurisdictionCode: "000000",
     landArea,
     officialLandPrice,
-    zoningDistrict: form.saZoningDistrict,
     // 공장용지도 기준면적은 바닥면적 × 배율(§101①1호)이라 바닥면적을 함께 싣는다 — ⑧(위)이 요구하는
     // 값이다. 종전엔 공장용지일 때 이 값을 빼서 엔진이 「건축물 없음」으로 종합합산 처리했다.
-    buildingFloorArea: parseDecimal(form.saBuildingFloorArea) || undefined,
-    ...(form.saIsFactory ? { isFactory: true } : {}),
     ...(form.saDemolished
-      ? { demolished: true, demolishedDate: form.saDemolishedDate || undefined }
-      : {}),
+      ? {
+          // 철거 — 요구된 칸만 싣는다(주택·2024.6.1. 전은 바닥면적·용도지역 요구 0 · 숨은 stale 값 미전송). ⑧·⑫와 같은 엔진 술어.
+          ...(form.saIsFactory ? { isFactory: true } : {}),
+          ...demolishedWireFields(demolishedFormValues(form)),
+        }
+      : {
+          zoningDistrict: form.saZoningDistrict,
+          buildingFloorArea: parseDecimal(form.saBuildingFloorArea) || undefined,
+          ...(form.saIsFactory ? { isFactory: true } : {}),
+        }),
+  };
+}
+
+/** 폼 상태 → 철거 요건 어댑터 입력(`lib/calc/property-separate-requirements.ts`) */
+function demolishedFormValues(form: FormState) {
+  return {
+    date: form.saDemolishedDate,
+    kind: form.saDemolishedKind,
+    permit: form.saDemolishedPermit,
+    otherUse: form.saDemolishedOtherUse,
+    vacantHouse: form.saDemolishedVacantHouse,
+    publicUse: form.saDemolishedPublicUse,
+    publicUsePaid: form.saDemolishedPublicUsePaid,
+    isFactory: form.saIsFactory,
+    buildingFloorArea: parseDecimal(form.saBuildingFloorArea) || undefined,
+    zoningDistrict: form.saZoningDistrict,
   };
 }
 

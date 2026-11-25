@@ -19,6 +19,9 @@ import type {
   CoOwnershipShare,
   PropertyHeir,
 } from "./property-object.types";
+import type { LandDemolishedVerdictEcho } from "../separate-aggregate-land";
+import type { PropertyDemolishedKind } from "../property-separate-requirements";
+import type { PropertyRequirementFact } from "../property-separate-requirements";
 
 // ============================================================
 // 1. 입력 타입 — PropertyTaxInput
@@ -210,8 +213,11 @@ export interface PropertyTaxInput {
     jurisdictionCode: string;
     landArea: number;
     officialLandPrice: number;
-    /** 용도지역 — 「지방세법 시행령」 §101② 적용배율 결정. `ZoningDistrict`와 동일 집합. */
-    zoningDistrict:
+    /**
+     * 용도지역 — 「지방세법 시행령」 §101② 적용배율 결정. `ZoningDistrict`와 동일 집합.
+     * 배율을 읽을 때만 필수(비철거 · 철거 건축물 ∧ 2024.6.1.~ — `propertyDemolishedRequired().floorArea`) — 주택·그 전 시행본 철거는 요구 0(PSA-E2 Q-8).
+     */
+    zoningDistrict?:
       | "exclusive_residential"
       | "semi_residential"
       | "commercial"
@@ -227,6 +233,14 @@ export interface PropertyTaxInput {
     factoryStandardArea?: number;
     demolished?: boolean;
     demolishedDate?: string;
+    /** 철거된 것의 종류(PSA-E2) — `demolished`일 때 필수(⑧·⑫가 막는다). 빈집 3년은 주택, 바닥면적 × 배율 범위는 건축물에만 */
+    demolishedKind?: PropertyDemolishedKind;
+    /** 철거 사실 칸 5종 — 요구 술어(`propertyDemolishedRequired`)가 연 칸만 엔진이 읽는다(그 밖의 값은 무시) */
+    demolishedPermit?: PropertyRequirementFact;
+    demolishedOtherUse?: PropertyRequirementFact;
+    demolishedVacantHouse?: PropertyRequirementFact;
+    demolishedPublicUse?: PropertyRequirementFact;
+    demolishedPublicUsePaid?: PropertyRequirementFact;
   };
 
   /**
@@ -390,10 +404,13 @@ export interface PropertyHouseSplitDistribution {
   buildingRatio: number;
 }
 
-/** 종합합산 이관 사유 — 별도합산 선택 필지의 이관분(PSA-E4). 철거 요건 사유(permit·other_use 등)는 PSA-E2가 추가한다. */
+/** 종합합산 이관 사유 — 별도합산 선택 필지의 이관분(PSA-E4 · 철거 요건 사유 `permit`·`other_use`·`public_use_unpaid`는 PSA-E2). */
 export type PropertyLandSplitTransferReason =
   | "no_building"
   | "demolished_period"
+  | "permit"
+  | "other_use"
+  | "public_use_unpaid"
   | "area_excess"
   | "direct_type";
 
@@ -438,6 +455,10 @@ export interface PropertyLandSplitResult {
   };
   /** 합산 단위 라벨 — 「지방세법」 §113① «해당 지방자치단체 관할구역» */
   jurisdictionBasis: string;
+  /**
+   * 철거ㆍ멸실 특례 판정 echo(PSA-E2 · 영 §103의2) — 철거 필지에서만. 접힘 사유·적용 기간·읽은 칸 집합(화면이 «왜 이 칸이 필요했나»를 같은 값으로 말한다). 판정·세액 불변.
+   */
+  demolishedVerdict?: LandDemolishedVerdictEcho;
 }
 
 /**

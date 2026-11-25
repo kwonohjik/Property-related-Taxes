@@ -32,6 +32,7 @@ const S1 = base({
   saLandArea: "300",
   saDemolished: true,
   saDemolishedDate: `${YEAR - 2}-01-01`,
+  saDemolishedKind: "building", // PSA-E2 — 철거 종류는 기간이 지나도 항상 요구(그 밖의 사실 칸은 기간 접힘이라 비요구)
   otherComprehensiveValue: "0",
 });
 /** S-4: 공업 1,000㎡ · 바닥 100 → 별도합산 400㎡ + 이관 600㎡ */

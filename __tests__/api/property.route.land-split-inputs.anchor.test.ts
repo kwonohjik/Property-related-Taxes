@@ -88,7 +88,7 @@ describe("⑫ — 새 키 선언(침묵 strip 가드)과 요구 술어", () => {
   });
 
   it("K-41 전량 이관(철거 1년 초과) — 타 별도합산 비요구", async () => {
-    const item = { ...S4_ITEM, landArea: 300, zoningDistrict: "commercial", demolished: true, demolishedDate: "2025-05-31" };
+    const item = { ...S4_ITEM, landArea: 300, zoningDistrict: "commercial", demolished: true, demolishedDate: "2025-05-31", demolishedKind: "building" };
     const r = await post({ ...S4, publishedPrice: 300_000_000, separateAggregateItem: item, otherComprehensiveValue: 0 });
     expect(r.status).toBe(200);
     expect(r.json.data.totalPayable).toBe(960_000);
@@ -158,11 +158,11 @@ describe("⑧↔⑫ parity 격자 — 합산 칸 요구 판정이 같다(UI 통�
     { name: "별도합산 + 면적 초과 이관", form: { saZoningDistrict: "industrial", saLandArea: "1000", saBuildingFloorArea: "100", publishedPrice: "1,000,000,000" } },
     {
       name: "철거 1년 초과 전량 이관",
-      form: { saZoningDistrict: "commercial", saLandArea: "300", saBuildingFloorArea: "100", publishedPrice: "300,000,000", saDemolished: true, saDemolishedDate: `${year - 2}-01-01` },
+      form: { saZoningDistrict: "commercial", saLandArea: "300", saBuildingFloorArea: "100", publishedPrice: "300,000,000", saDemolished: true, saDemolishedDate: `${year - 2}-01-01`, saDemolishedKind: "building" },
     },
     {
       name: "철거 유예 안(별도합산 유지) + 면적 초과",
-      form: { saZoningDistrict: "commercial", saLandArea: "1000", saBuildingFloorArea: "100", publishedPrice: "1,000,000,000", saDemolished: true, saDemolishedDate: `${year}-03-01` },
+      form: { saZoningDistrict: "commercial", saLandArea: "1000", saBuildingFloorArea: "100", publishedPrice: "1,000,000,000", saDemolished: true, saDemolishedDate: `${year}-03-01`, saDemolishedKind: "building", saDemolishedPermit: "yes", saDemolishedOtherUse: "no" },
     },
   ];
   const VALUES = ["", "0", "5,000,000"];

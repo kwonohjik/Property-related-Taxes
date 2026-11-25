@@ -54,6 +54,8 @@ const ITEM = {
   zoningDistrict: "industrial",
   buildingFloorArea: 300,
 };
+/** PSA-E2 — 철거 요건 칸(과세기준일 2025.6.1. 시행본이 기간 안에서 요구하는 칸 전부): 건축물 · 허가·사용승인 받음 · 건축 외 용도 아님 */
+const DEMOLISHED_OK = { demolishedKind: "building", demolishedPermit: "yes", demolishedOtherUse: "no" };
 const LAND = {
   objectType: "land",
   publishedPrice: 1_000_000_000,
@@ -101,7 +103,7 @@ describe("SA-1·2 — API 직접 호출 누락은 400", () => {
   it("🟢 대조군: 철거 + 철거일 있음 → 200 · 2,280,000", async () => {
     const r = await post({
       ...LAND,
-      separateAggregateItem: { ...ITEM, demolished: true, demolishedDate: "2025-03-01" },
+      separateAggregateItem: { ...ITEM, demolished: true, demolishedDate: "2025-03-01", ...DEMOLISHED_OK },
     });
     expect(r.status).toBe(200);
     expect(r.json.data.totalPayable).toBe(2_280_000);
@@ -123,7 +125,8 @@ describe("SA-1·2 — API 직접 호출 누락은 400", () => {
   it("SA-2 🔴 철거 + 철거일 없음 → 400 `separateAggregateItem.demolishedDate`", async () => {
     const r = await post({ ...LAND, separateAggregateItem: { ...ITEM, demolished: true } });
     expect(r.status).toBe(400);
-    expect(JSON.stringify(r.json)).toContain("철거일");
+    // PSA-E2 — 철거일 결함 문구는 ⑧과 같은 `propertyDemolishedFactIssue`(«철거ㆍ멸실일을 입력하세요»)
+    expect(JSON.stringify(r.json)).toContain("철거ㆍ멸실일");
   });
 });
 

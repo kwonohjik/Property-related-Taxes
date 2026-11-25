@@ -37,6 +37,8 @@ import { getCurrentPropertyRateSet } from "./data/property-rate-history";
 import { getPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
 import { resolveBasisTax } from "./property-tax-recompute";
+import { resolvePropertyTaxBaseDate } from "./property-separate-requirements";
+import { format } from "./utc-date";
 import { buildCapEcho } from "./property-tax-cap-echo";
 import {
   computeHousingTransitionalStep3,
@@ -367,8 +369,9 @@ export function calculatePropertyTax(
   const legalBasis: string[] = [PROPERTY.TAX_BASE, PROPERTY.TAX_BASE_DATE];
   // 미입력 시 과세기준일 6월 1일(지방세법 §114) — 현재 연도 기준.
   //   taxYear는 연도만 사용하므로 FMR 등 계산은 불변, 표시·기준일만 정확화.
+  //   올해 6.1.은 UTC 연도 기준 단일 소스(`resolvePropertyTaxBaseDate`) — 서버 시간대에 따라 연말·연초에 다른 해가 나오지 않게 한다.
   const targetDate =
-    input.targetDate ?? `${new Date().getFullYear()}-06-01`;
+    input.targetDate ?? format(resolvePropertyTaxBaseDate(), "yyyy-MM-dd");
   const taxYear = parseInt(targetDate.slice(0, 4), 10);
 
   // ── Step 0: 납세의무자 판정 (지방세법 §107) — taxpayerInfo 입력 시에만 (미입력 시 계산 100% 불변) ──

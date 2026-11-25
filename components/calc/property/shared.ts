@@ -1,6 +1,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import type { PropertyTaxResult } from "@/lib/tax-engine/types/property.types";
+import type { PropertyRequirementFact } from "@/lib/tax-engine/property-separate-requirements";
 import {
   HOUSE_SPLIT_MISSING_MESSAGE,
   PRIOR_URBAN_TAX_MISSING_MESSAGE,
@@ -8,6 +9,7 @@ import {
   needsPriorUrbanTax,
 } from "@/lib/calc/property-required-inputs";
 import { firstLandSplitIssue } from "@/lib/calc/property-land-split-inputs";
+import { demolishedFactIssueOf } from "@/lib/calc/property-separate-requirements";
 import { buildPropertyTaxRequestBody, effectiveOwnershipType, isRecomputeTarget, landSplitRequired } from "./request-body";
 // 800줄 분리: 폼 → API 본문 변환을 request-body.ts로 이동 — 외부(테스트·API 호출) import 하위호환 re-export
 export { buildPropertyTaxRequestBody, landSplitRequired } from "./request-body";
@@ -176,6 +178,14 @@ export interface FormState {
   saFactoryStandardArea: string;
   saDemolished: boolean;
   saDemolishedDate: string;
+  /** 철거된 것의 종류(PSA-E2) — 철거일 입력 후 항상 요구. 미선택 `""` = ⑧ 차단 + ⑫ 400 (3지선다 기본값 없음) */
+  saDemolishedKind: "house" | "building" | "";
+  /** 철거 요건 사실 칸 5종(영 §103의2) — 엔진 요구 술어(`propertyDemolishedRequired`)가 연 칸만 쓴다. 미선택 `""` = ⑧ 차단 + ⑫ 400, 「모름」 = 혜택 불성립 + 확인 필요 */
+  saDemolishedPermit: PropertyRequirementFact;
+  saDemolishedOtherUse: PropertyRequirementFact;
+  saDemolishedVacantHouse: PropertyRequirementFact;
+  saDemolishedPublicUse: PropertyRequirementFact;
+  saDemolishedPublicUsePaid: PropertyRequirementFact;
   /** 같은 지방자치단체 관할구역의 타 별도합산과세대상 토지 공시가액 합계(원) — 별도합산분이 있을 때만 요구. 빈칸 = 미입력(차단), 0 = 없음 (PSA-E4) */
   otherSeparateAggregateValue: string;
   /** 같은 관할구역 타 종합합산과세대상 토지 공시가액 합계(원) — 종합합산분(이관분·직접 선택)이 있을 때만 요구 */
@@ -277,6 +287,12 @@ export const INITIAL_FORM: FormState = {
   saFactoryStandardArea: "",
   saDemolished: false,
   saDemolishedDate: "",
+  saDemolishedKind: "",
+  saDemolishedPermit: "",
+  saDemolishedOtherUse: "",
+  saDemolishedVacantHouse: "",
+  saDemolishedPublicUse: "",
+  saDemolishedPublicUsePaid: "",
   otherSeparateAggregateValue: "",
   otherComprehensiveValue: "",
   stSeparatedType: "",
@@ -411,14 +427,33 @@ export function validateStep(step: number, form: FormState): string | null {
   }
   if (step === 2) {
     if (form.landTaxType === "separate_aggregate") {
-      if (!form.saZoningDistrict) return "용도지역을 선택하세요.";
-      const landArea = parseDecimal(form.saLandArea);
-      if (!landArea || landArea <= 0) return "토지 면적(㎡)을 입력하세요.";
-      // 공장용지도 별도합산 기준면적은 §101①1호 본칙(바닥면적 × 배율)이다 —
-      // 공장입지기준면적(§102①1호 분리과세 한도)으로 대체할 수 없다(2026-08-05 정정).
-      const bfa = parseDecimal(form.saBuildingFloorArea);
-      if (!bfa || bfa <= 0) return "건물 바닥면적(㎡)을 입력하세요.";
-      if (form.saDemolished && !form.saDemolishedDate) return "철거일을 입력하세요.";
+      if (form.saDemolished) {
+        // 철거 — 종류·사실 칸·철거일·바닥면적·용도지역은 «엔진이 읽는 칸만» 요구한다(영 §103의2 · PSA-E2). 주택·2024.6.1. 전 철거는 바닥면적·용도지역 요구 0.
+        // ⑫(Zod `superRefine`)와 같은 `propertyDemolishedFactIssue`라 같은 필드·같은 문구로 막는다.
+        const landArea = parseDecimal(form.saLandArea);
+        if (!landArea || landArea <= 0) return "토지 면적(㎡)을 입력하세요.";
+        const issue = demolishedFactIssueOf({
+          date: form.saDemolishedDate,
+          kind: form.saDemolishedKind,
+          permit: form.saDemolishedPermit,
+          otherUse: form.saDemolishedOtherUse,
+          vacantHouse: form.saDemolishedVacantHouse,
+          publicUse: form.saDemolishedPublicUse,
+          publicUsePaid: form.saDemolishedPublicUsePaid,
+          isFactory: form.saIsFactory,
+          buildingFloorArea: parseDecimal(form.saBuildingFloorArea) || undefined,
+          zoningDistrict: form.saZoningDistrict,
+        });
+        if (issue) return issue.message;
+      } else {
+        if (!form.saZoningDistrict) return "용도지역을 선택하세요.";
+        const landArea = parseDecimal(form.saLandArea);
+        if (!landArea || landArea <= 0) return "토지 면적(㎡)을 입력하세요.";
+        // 공장용지도 별도합산 기준면적은 §101①1호 본칙(바닥면적 × 배율)이다 —
+        // 공장입지기준면적(§102①1호 분리과세 한도)으로 대체할 수 없다(2026-08-05 정정).
+        const bfa = parseDecimal(form.saBuildingFloorArea);
+        if (!bfa || bfa <= 0) return "건물 바닥면적(㎡)을 입력하세요.";
+      }
     }
     if (form.landTaxType === "separated") {
       if (!form.stSeparatedType) return "분리과세 토지 유형을 선택하세요.";
