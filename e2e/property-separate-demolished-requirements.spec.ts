@@ -127,8 +127,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
   test("K-19 건축 외 «예» ∧ 빈집 «예» → 공용 사용 칸 → 유료 칸 · 유료 «예» → 768,000 · body에 공용·유료", async ({ page }) => {
     const box = captureBody(page);
     await toDetail(page, "400000000");
-    await page.getByRole("radio", { name: HOUSE.zoning }).check();
-    await page.getByPlaceholder("면적 입력 (소수점 가능)").first().fill(HOUSE.area);
+    await page.getByTestId("pt-sa-land-area").fill(HOUSE.area);
     await page.getByRole("switch", { name: /건축물 철거 완료/ }).click();
     // 노출 사슬(PSA-S1 엄격 순차): 철거일 → 종류 → 빈집정비(관문 — 일반 기간 1년 밖·빈집 3년 안 주택) → 허가 → 건축 외 용도 → 공용 사용(건축 외 «예» ∧ 빈집정비 «예») → 유료(공용 «예»)
     await fillDemolishedDate(page, `${YEAR - 2}-06-15`);

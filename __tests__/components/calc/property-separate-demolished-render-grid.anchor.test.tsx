@@ -5,7 +5,7 @@
  *   N1. 화면에 그려진 사실 칸 그룹(종류 포함) = 엔진 `chain.order`(바닥면적 쌍 제외) — 순서까지. 노출 = 답한 칸 + 첫 미답 칸(`chain.next`)뿐이고 그 뒤 칸은 DOM에 없다.
  *   N2. ⑧의 첫 결함 칸 = `chain.next`(용도지역·바닥면적은 한 쌍) — 막힌 칸이 곧 화면의 마지막 질문(막다른 길 0 · 요구 과소 0). `next`가 없으면 ⑧은 날짜·모순 결함이 아니면 통과한다.
  *   N3. ⑧ 통과이면 ④ 본문을 실제 Zod에 넣어 통과 — «⑧ 통과 ∧ ⑫ 400» = 0 · 본문의 사실 칸 키 집합 = `chain.asked` 중 값이 있는 칸(숨은 답은 폼에 남아도 본문에 없다).
- *   N4. 철거 전 바닥면적 칸 «필수 표시(*)» ⇔ `chain.asked.buildingFloorArea` ⇔ 비웠을 때 ⑧이 용도지역·바닥면적 문구로 막는다.
+ *   N4. 철거 전 바닥면적 칸 «필수 표시(*)» ⇔ 용도지역·바닥면적 블록(`SeparateAggregateAreaBasis`) 노출 ⇔ `chain.asked.buildingFloorArea` ⇔ 비웠을 때 ⑧이 용도지역·바닥면적 문구로 막는다(PSA-S2: 블록은 사슬 끝에서만).
  * 비공허: 셀 수·접힘 확정 사유별·성립(holds)·깊이 5(공용·유료까지)·빈집정비 관문·빈집정비 단서 자리 셀 하한을 단언한다.
  *
  * ⏱ 시간 제한: 연도별 `it` 하나당 180초(로컬 실측은 PR 본문에 기록). 느려지면 날짜·답 축을 줄이지 말고 연도별 분할을 유지한다.
@@ -125,6 +125,9 @@ function visit(form: FormState, ui: ReturnType<typeof render>, el: HTMLElement, 
   const label = [...el.querySelectorAll("label")].find((l) => l.textContent?.includes("바닥면적 (㎡)"));
   const star = label?.textContent?.includes("*") ?? false;
   if (star !== chain.asked.buildingFloorArea) return fail(`바닥면적 필수 표시(${star}) ≠ chain.asked.buildingFloorArea(${chain.asked.buildingFloorArea})`);
+  // PSA-S2 — 용도지역·바닥면적 블록은 사슬 끝에서만 그려진다(그려졌다 = 요구됐다)
+  const areaShown = el.querySelector('[data-testid="pt-sa-area-basis"]') !== null;
+  if (areaShown !== chain.asked.buildingFloorArea) return fail(`면적 블록 노출(${areaShown}) ≠ chain.asked.buildingFloorArea(${chain.asked.buildingFloorArea})`);
 
   const field = message === null ? null : (FIELD_BY_MESSAGE.get(message) ?? "?");
   if (field === "?") return fail(`⑧ 문구를 필드로 되짚을 수 없음: ${message}`);

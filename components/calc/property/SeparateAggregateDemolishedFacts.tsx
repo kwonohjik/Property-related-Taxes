@@ -3,10 +3,10 @@
 /**
  * 재산세 별도합산 — 철거ㆍ멸실 부속토지 «한시 특례 사실 확인» 블록 (PSA-U1 · 계획서 `property-separate-demolished-requirements.ui.plan.md` §4 · 엔진 §5.9).
  *
- * `Step2SeparateAggregate`가 철거 토글·철거일 바로 뒤에 그린다. **엄격 순차 노출(PSA-S1)**: 엔진 사슬 `chain.order`(= 답이 있는 칸 + 첫 미답 칸) 순서대로 그리고 그 뒤 칸은 그리지 않는다.
+ * `Step2SeparateAggregate`가 철거 토글·철거일 바로 뒤에 그린다(PSA-S2 재배치 — 토글이 토지 면적·공장용지 바로 뒤). **엄격 순차 노출(PSA-S1)**: 엔진 사슬 `chain.order`(= 답이 있는 칸 + 첫 미답 칸) 순서대로 그리고 그 뒤 칸은 그리지 않는다.
  *   종류(`order`에 있을 때만 — 날짜만으로 접힘이 확정되면 묻지 않는다) → [빈집정비 관문 — 주택 ∧ 철거일이 일반 한시 기간 밖·빈집 기간 안] → 허가·사용승인 → 철거 후 건축 외 용도
  *   → [빈집정비 단서 하위 — 건축 외 «예» ∧ 주택, 관문에서 이미 물었으면 생략] → 국가 등 공용·공공용 사용 → 유료.
- *   철거 전 바닥면적·용도지역은 아래 기존 칸을 재사용한다(엔진이 읽을 때만 필수 — `Step2SeparateAggregate`가 `chain.asked.buildingFloorArea`로 `*`를 표시).
+ *   철거 전 바닥면적·용도지역은 이 블록 밖 사슬 끝의 `SeparateAggregateAreaBasis`가 그린다(`Step2SeparateAggregate`가 `chain.asked.buildingFloorArea`일 때만 — PSA-S2).
  * 어느 칸이 보이는가는 엔진 사슬(`propertyDemolishedChain`)을 어댑터 `demolishedChainOf`가 한 곳에서 부른 값이다(= ④ 전송 = ⑧ 차단 = ⑫ 400 — 노출 ≡ 필수). UI는 날짜·시행본·답을 비교하지 않는다.
  * 선택지 값 `""`은 «미선택» — 가정값 없음(노출된 칸의 미선택은 ⑧이 막고, 명시 «모름»·«아니오»는 막지 않고 엔진이 혜택 불성립 + 확인 필요로 접는다).
  * `useEffect → store` 미러링 없음: 전부 렌더 파생이고 쓰기는 onChange뿐이다. 칸이 사라져도 저장값은 지우지 않는다(숨은 값 보존 — ④가 보내지 않고 ⑧이 묻지 않는다).
@@ -193,7 +193,7 @@ export function SeparateAggregateDemolishedFacts({ form, onChange }: Props) {
         </div>
       </ToneCard>
     ),
-    // 유료 칸은 공용 사용 카드 안에 그린다(위) · 면적 쌍은 Step2의 기존 칸을 재사용한다
+    // 유료 칸은 공용 사용 카드 안에 그린다(위) · 면적 쌍은 사슬 끝 `SeparateAggregateAreaBasis`가 그린다(Step2)
     demolishedPublicUsePaid: null,
     buildingFloorArea: null,
   };

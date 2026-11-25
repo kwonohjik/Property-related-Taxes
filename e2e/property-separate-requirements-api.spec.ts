@@ -127,6 +127,25 @@ test.describe("직접 API 400 — 철거·허가 요건 입구 (PSA-X)", () => {
     expect(itemErrors(blank.json)).toEqual([PROPERTY_BUILDING_PERMIT_ISSUE_MESSAGE]);
   });
 
+  test("PSA-S2 — 비철거 허가 «아니오»·«모름»은 용도지역·바닥면적 없이(또는 바닥면적만) 200 · 960,000 · 합산 칸 요구 유지(N2·N3)", async ({ request }) => {
+    const base = without(without(LIVE_BUILDING, "zoningDistrict"), "buildingFloorArea");
+    for (const buildingPermit of ["no", "unknown"] as const) {
+      for (const extra of [{}, { buildingFloorArea: 100 }, { zoningDistrict: "commercial" }]) {
+        const r = await post(request, land({ ...base, buildingPermit, ...extra }));
+        expect(r.status, JSON.stringify({ buildingPermit, extra, json: r.json })).toBe(200);
+        expect([r.json.data.determinedTax, r.json.data.totalPayable]).toEqual([800_000, 960_000]);
+      }
+    }
+    // N3 — 바닥면적만 있어도 합산 칸 요구가 침묵으로 사라지지 않는다(종전: 엔진 throw → «요구 없음»으로 삼켜져 200으로 통과)
+    const noCompr = without(land({ ...base, buildingPermit: "no", buildingFloorArea: 100 }), "otherComprehensiveValue");
+    const r = await post(request, noCompr);
+    expect(r.status).toBe(400);
+    expect(r.json.error.details.otherComprehensiveValue).toEqual([PROPERTY_LAND_SPLIT_INPUT_MESSAGE.otherComprehensiveValue]);
+    // 허가 «예»이면 용도지역·바닥면적이 필수 — 허가 다음 순서로 용도지역 → 바닥면적
+    const yes = await post(request, land(base));
+    expect(yes.status).toBe(400);
+  });
+
   test("합산 칸 — 이관분이 있는데 타 종합합산 칸 누락 → 400(자동 0 금지) · 별도합산분이 있는데 타 별도합산 칸 누락 → 400", async ({ request }) => {
     // 허가 «아니오» → 전량 종합합산 이관이라 타 종합합산 칸이 요구된다(타 별도합산은 비요구)
     const noCompr = without(land({ ...DEMOLISHED_BUILDING, demolishedPermit: "no" }), "otherComprehensiveValue");
