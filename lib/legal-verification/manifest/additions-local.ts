@@ -245,7 +245,14 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
   {
     id: "PROPERTY.RATE_APPLICATION",
     citation: "지방세법 §113",
-    keywords: ["종합합산과세대상", "별도합산과세대상", "분리과세대상", "가액을 모두 합한 금액을 과세표준"],
+    keywords: [
+      "종합합산과세대상",
+      "별도합산과세대상",
+      "분리과세대상",
+      "가액을 모두 합한 금액을 과세표준",
+      // PSA-E4 — 합산 단위(`PROPERTY_LAND_SPLIT.AGGREGATION_*`)가 기댄 §113①1호·2호 문언: 인별 전국이 아니라 해당 지방자치단체 관할구역.
+      "납세의무자가 소유하고 있는 해당 지방자치단체 관할구역에 있는",
+    ],
     keywordMode: "ALL",
   },
   {

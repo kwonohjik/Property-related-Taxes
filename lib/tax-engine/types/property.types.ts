@@ -230,6 +230,17 @@ export interface PropertyTaxInput {
   };
 
   /**
+   * 같은 지방자치단체 관할구역에서 이 필지 외에 소유한 **별도합산**과세대상 토지 공시가액 합계(원, 0 이상 정수 — 0 = 없음).
+   * 지방세법 §113①2호 합산 단위. 이 필지가 별도합산분을 가질 때만 읽는다(요구 술어 `propertyLandSplitRequired`).
+   */
+  otherSeparateAggregateValue?: number;
+  /**
+   * 같은 지방자치단체 관할구역에서 이 필지 외에 소유한 **종합합산**과세대상 토지 공시가액 합계(원, 0 이상 정수 — 0 = 없음).
+   * 지방세법 §113①1호 합산 단위. 이 필지가 종합합산분(이관분 또는 직접 선택)을 가질 때만 읽는다.
+   */
+  otherComprehensiveValue?: number;
+
+  /**
    * 납세의무자(지방세법 §107) 판정 입력 — 선택. 미입력 시 납세의무자 판정 생략(계산 100% 불변).
    * 특수 케이스(신탁·상속 미등기·공유·사실상소유자 불일치)에만 추가 필드 입력.
    */
@@ -379,6 +390,56 @@ export interface PropertyHouseSplitDistribution {
   buildingRatio: number;
 }
 
+/** 종합합산 이관 사유 — 별도합산 선택 필지의 이관분(PSA-E4). 철거 요건 사유(permit·other_use 등)는 PSA-E2가 추가한다. */
+export type PropertyLandSplitTransferReason =
+  | "no_building"
+  | "demolished_period"
+  | "area_excess"
+  | "direct_type";
+
+/** 토지 한 분류(별도합산 또는 종합합산)의 합산 과세 내역 — 이 필지 몫 + 같은 관할구역 합산 echo. */
+export interface PropertyLandSplitClass {
+  /** 이 필지의 이 분류 공시가액 */
+  ownValue: number;
+  /** 같은 관할구역 타 토지 공시가액 합계(입력) */
+  otherValue: number;
+  /** 합산 가액 = ownValue + otherValue */
+  combinedValue: number;
+  /** 합산 과세표준 = 합산 가액 × 공정시장가액비율 */
+  combinedTaxBase: number;
+  /** 합산 산출세액(누진세율 1회 적용) */
+  combinedGrossTax: number;
+  /** 이 필지 몫 = floor(합산 산출세액 × ownValue / combinedValue) */
+  share: number;
+  /** 합산 과세표준이 속한 구간의 세율 */
+  appliedRate: number;
+  /** 그 구간의 누진공제액 */
+  progressiveDeduction: number;
+  /** 이 필지 자기 과세표준 = ownValue × 공정시장가액비율 (도시지역분 기준) */
+  ownTaxBase: number;
+}
+
+/**
+ * 토지(별도합산·종합합산) 분류별 합산 과세 결과 — echo. 합계·판정은 최상위 필드가 유지한다.
+ * 별도합산 선택 필지의 별도합산 인정분(`separate`)·종합합산 이관분(`comprehensive`), 직접 종합합산 선택은 `comprehensive`만.
+ */
+export interface PropertyLandSplitResult {
+  separate?: PropertyLandSplitClass;
+  comprehensive?: PropertyLandSplitClass & { transferReasons: PropertyLandSplitTransferReason[] };
+  /** 세부담상한 전 이 필지 합계(별도합산분 몫 + 종합합산분 몫) */
+  taxBeforeCap: number;
+  /** 세부담상한 계산 내역 — 직전 기준을 구한 경우에만 */
+  cap?: {
+    applied: boolean;
+    capRate: number;
+    basisTax: number;
+    basisTaxSeparate?: number;
+    basisTaxComprehensive?: number;
+  };
+  /** 합산 단위 라벨 — 「지방세법」 §113① «해당 지방자치단체 관할구역» */
+  jurisdictionBasis: string;
+}
+
 /**
  * 재산세 메인 계산 결과
  *
@@ -491,6 +552,9 @@ export interface PropertyTaxResult {
   warnings: string[];
   /** 계산 기준일 */
   targetDate: string;
+
+  /** 토지(별도합산·종합합산 선택) 분류별 합산 과세 내역 — 해당 경로에서만 */
+  landSplit?: PropertyLandSplitResult;
 
   // ── 납세의무자 (지방세법 §107) — taxpayerInfo 입력 시에만 ──
   /** 납세의무자 판정 결과 */

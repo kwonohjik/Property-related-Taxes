@@ -3,6 +3,14 @@
 > CLAUDE.md에서 분리된 최근 완료 작업 이력. 시간순(최신→과거).
 > 안정적인 규칙·아키텍처는 `CLAUDE.md` / 메모리(MEMORY.md) 참조.
 
+## 2026-11-25
+
+- **재산세 PSA-E4 — 종합합산 이관분 세액 · 같은 관할구역 합산 입력 · 필지 합계 세부담상한** (계획서 `docs/01-plan/features/property-separate-demolished-requirements.engine.plan.md` §13).
+  종전 «별도합산 이관분(철거 기간 경과·면적 초과·건축물 없음)은 0원 + 경고»를 분류별 합산 과세(`lib/tax-engine/property-land-split-tax.ts`)로 해소:
+  합산 가액 → 합산 과세표준 → 합산 세율(1회) → 이 필지 몫 → 합계 세부담상한 → 부가세. 합산 단위는 법 §113① «해당 지방자치단체 관할구역»(인별 전국 아님).
+  입력 `otherSeparateAggregateValue`·`otherComprehensiveValue`(요구 술어 `propertyLandSplitRequiredFor`가 ⑧·⑫·엔진을 정함 — 빈칸 차단·0 = 없음).
+  화면: Step 3 합산 칸(최소 UI) + 계산 직전 토지 step 3 검증. 결과 3분할 카드·별도합산 recompute 선택·철거 요건 칸은 U2·E2.
+
 ## 2026-11-20
 
 - **비사업용 토지 리뷰 2026-11(농지·임야·목장 외 지목) 종결** — 51 클러스터(critical 9) · 16묶음 PR #3464~#3499 머지.

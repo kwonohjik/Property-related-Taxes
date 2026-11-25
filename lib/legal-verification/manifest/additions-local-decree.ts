@@ -224,6 +224,17 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // PSA-E4 — 토지 세부담상한의 직전 연도 세액상당액(`PROPERTY_LAND_SPLIT.CAP_BASIS`): 과세대상 구분 변경 시 해당 연도 구분을 직전 연도에도 적용(다목).
+    id: "LOCAL_DECREE.TAX_CAP_METHOD",
+    citation: "지방세법 시행령 §118",
+    keywords: [
+      "세 부담 상한의 계산방법",
+      "과세대상 구분의 변경이 있는 경우",
+      "해당 연도의 과세대상의 구분이 직전 연도 과세대상 토지에 적용되는 것으로 보아",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "LOCAL_DECREE.HOUSE_APPURTENANT_LAND",
     citation: "지방세법 시행령 §105",
     keywords: [

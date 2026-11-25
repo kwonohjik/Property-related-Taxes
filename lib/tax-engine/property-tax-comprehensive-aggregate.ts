@@ -3,7 +3,7 @@
  *
  * 지방세법 §106①1호 (종합합산과세대상)
  * 지방세법 §111①1호 가목 (세율: 0.2%~0.5%)
- * 지방세법 §113 (인별 전국 합산)
+ * 지방세법 §113 (합산 단위: 납세의무자 × 해당 지방자치단체 관할구역 — «인별 전국»은 종부세 개념)
  * 지방세법 §122 (세부담상한 150%)
  *
  * 판정 우선순위 (엄수):
@@ -12,7 +12,7 @@
  *   3. 나머지 → 종합합산 (기본값)
  *
  * 핵심 원칙:
- *   - 인별 전국 합산: 동일 납세자의 전국 종합합산 토지 공시지가 합산
+ *   - 합산: 동일 납세자의 같은 지방자치단체 관할구역 종합합산 토지 공시지가 합산(이 다필지 함수는 전국 합산 후 안분 — 법 부합성 미판정, V-16)
  *   - 누진세율 1회 적용 후 지자체별 안분 (세율 재적용 금지)
  *   - 세부담상한 → 안분 순서 준수
  */
@@ -323,8 +323,8 @@ export function isSeparateAggregate(
  *
  * # 🔴 이 모듈은 **부분적으로만 살아 있다** (2026-08-06 실측)
  *
- * `property-tax.ts`가 import하는 것은 `calculateComprehensiveAggregateTax`(세율 적용, 숫자
- * 인자)와 `applyBurdenCap` **둘뿐**이다. 이 분류 함수와 다필지 진입점
+ * 사용자 계산이 타는 것은 `calculateComprehensiveAggregateTax`(세율 적용, 숫자 인자)와
+ * `applyBurdenCap` **둘뿐**이다(PSA-E4부터 호출처는 `property-land-split-tax.ts`). 이 분류 함수와 다필지 진입점
  * `calculateComprehensiveAggregate`는 **테스트만** 부른다 — 사용자 계산에 도달하지 않는다.
  *
  * ⚠️ `calculateComprehensiveAggregate`(분류·죽음)와 `calculateComprehensiveAggregateTax`
@@ -382,7 +382,7 @@ export function classifyLandForComprehensive(
 // ============================================================
 
 /**
- * 종합합산 인별 전국 합산 과세표준 산정 (지방세법 §113)
+ * 종합합산 합산 과세표준 산정 (지방세법 §113 — 같은 지방자치단체 관할구역 단위가 법문, 이 다필지 함수는 전국 합산 — V-16)
  *
  * Step 1. 분류된 토지 중 종합합산 대상 필터링
  * Step 2. 공시지가 × 면적 합산 (BigInt overflow guard)
@@ -576,7 +576,7 @@ export function allocateByJurisdiction(
  * 처리 순서:
  *   1. 각 토지 3분류 판정 (classifyLandForComprehensive)
  *   2. 종합합산 해당 필지 추출
- *   3. 인별 전국 합산 과세표준 산정
+ *   3. 합산 과세표준 산정(전국 합산 — 관할구역 단위 부합성 미판정, V-16)
  *   4. 누진세율 적용 → 산출세액
  *   5. 세부담상한(150%) 적용
  *   6. 지자체별 안분

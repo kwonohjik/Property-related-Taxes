@@ -398,6 +398,12 @@ M1 허가 게이트 제거(K-2 깨짐) · M2 `permit` 경계 2019.6.1. → 2019.
 
 **PSA-E4가 바꾸는 «0원» 앵커**(값이 0 → 이관분 세액으로): `__tests__/api/property.route.separate-aggregate-demolished-era.anchor.test.ts:46-54`(철거 1년 초과 → 총액 0) · `__tests__/tax-engine/separate-aggregate-demolished-era.anchor.test.ts`(`outside.taxBase/grossTax = 0` — 이 파일은 `calculateSeparateAggregateTax` 직접 호출이라 별도합산 leaf 값은 **그대로 0**이고, 새 단언은 `property-land-split-tax` 쪽에 둔다) · `__tests__/api/property.route.separate-aggregate-required.anchor.test.ts`(고지액 0 비교 행) · `__tests__/components/calc/property-shared.test.ts`(결과 형태 단언 있으면). **구현 전 grep**: `totalPayable).toBe(0)`·`determinedTax).toBe(0)` 재산세 별도합산 테스트 전수.
 
+### 8.1b PSA-E4 구현 기록 (2026-11-25 — 계획서와 다른 점)
+
+- 구현: `lib/tax-engine/property-land-split-tax.ts`(순수 leaf) · `property-tax-land-split.ts`(결과 조립 — property-tax.ts 774 → 654줄) · Zod ⑫ 최상위 2칸 · ④ `components/calc/property/request-body.ts`(shared.ts 800줄 분리) · 최소 UI `LandSplitInputs.tsx`(Step 3).
+- **계획서와 다른 점**: (1) 별도합산 경로는 `calculateSeparateAggregateTax` 대신 `isSeparateAggregateLand`·`splitByBaseArea`를 직접 호출한다(그 함수의 세부담상한·지자체 안분·«전년도 미입력» 고지가 단일 필지 합계 상한과 겹침 — 다필지 함수는 무변경). (2) 요구 술어 입력은 값이 아니라 **분류 면적**(`recognizedArea`·`excessArea`)이다(⑧ 미리보기와 같은 판정). (3) 이관 사유 echo는 `no_building`·`demolished_period`·`area_excess`·`direct_type` 4종(철거 요건 사유는 E2가 추가). (4) 엔진 직접 호출에서 요구 칸이 `undefined`면 이 필지 단독 계산 + 고지(입구 차단은 Zod·⑧). (5) 별도합산 선택의 Step 3 recompute 선택지는 열지 않았다(U2 — `recompute-e2e-anchor`가 «별도합산 비대상»을 고정).
+- 열린 것: 분리과세(`separated`) 면적 초과분의 종합합산 이관도 세액이 없다(`separate-taxation.ts` — 경고만). 별도 후속.
+
 ### 8.2 검증 명령
 
 `npx vitest run __tests__/tax-engine/property/ __tests__/tax-engine/separate-aggregate-* __tests__/api/property.route.* __tests__/components/calc/property-*` · `npx tsc --noEmit` · `npm run verify:legal` · 구현 PR은 push 전 `npm run test:property`.

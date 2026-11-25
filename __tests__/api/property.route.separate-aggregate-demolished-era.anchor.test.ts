@@ -39,7 +39,14 @@ const ITEM = {
   buildingFloorArea: 300,
   demolished: true,
 };
-const LAND = { objectType: "land", publishedPrice: 1_000_000_000, landTaxType: "separate_aggregate" };
+// PSA-E4 — 같은 관할구역 합산 칸(요구되는 칸만 읽힌다): 0 = 없음을 명시
+const LAND = {
+  objectType: "land",
+  publishedPrice: 1_000_000_000,
+  landTaxType: "separate_aggregate",
+  otherSeparateAggregateValue: 0,
+  otherComprehensiveValue: 0,
+};
 
 describe("직접 API — 철거 유예기간 과세기준일 연혁", () => {
   it("targetDate 2025.6.1.: 철거 2024.12.1.(6개월 당일) → 별도합산 2,280,000", async () => {
@@ -48,10 +55,10 @@ describe("직접 API — 철거 유예기간 과세기준일 연혁", () => {
     expect(r.json.data.totalPayable).toBe(2_280_000);
   });
 
-  it("targetDate 2025.6.1.: 철거 2024.11.30.(6개월 초과) → 별도합산에서 빠짐(종합합산 이관 — 이 라우트의 별도합산 고지액 0)", async () => {
+  it("targetDate 2025.6.1.: 철거 2024.11.30.(6개월 초과) → 별도합산에서 빠져 종합합산 이관분 세액 3,900,000(PSA-E4 — 종전엔 0원 + 경고)", async () => {
     const r = await post({ ...LAND, targetDate: "2025-06-01", separateAggregateItem: { ...ITEM, demolishedDate: "2024-11-30" } });
     expect(r.status).toBe(200);
-    expect(r.json.data.totalPayable).toBe(0);
+    expect(r.json.data.totalPayable).toBe(3_900_000); // 종합합산 1,000,000,000 → 과표 700,000,000 → 3,250,000 + 지방교육세 650,000
   });
 
   it("targetDate 2026.6.1.: 철거 2025.6.1.(1년 당일) → 별도합산 / 2025.5.31. → 종합합산", async () => {
@@ -60,6 +67,6 @@ describe("직접 API — 철거 유예기간 과세기준일 연혁", () => {
     expect(a.status).toBe(200);
     expect(b.status).toBe(200);
     expect(a.json.data.totalPayable).toBe(2_280_000);
-    expect(b.json.data.totalPayable).toBe(0);
+    expect(b.json.data.totalPayable).toBe(3_900_000); // 종합합산 이관분(PSA-E4)
   });
 });
