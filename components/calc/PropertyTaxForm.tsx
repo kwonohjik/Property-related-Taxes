@@ -11,7 +11,7 @@ import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromSc
 import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
-import { INITIAL_FORM, validateStep, callPropertyTaxAPI, type FormState } from "./property/shared";
+import { INITIAL_FORM, validateStep, firstInvalidStep, callPropertyTaxAPI, type FormState } from "./property/shared";
 import { Step0 } from "./property/Step0";
 import { Step1 } from "./property/Step1";
 import { Step2SeparateAggregate } from "./property/Step2SeparateAggregate";
@@ -134,9 +134,14 @@ export function PropertyTaxForm() {
     }
 
     if (step === 3) {
-      // 토지: 같은 관할구역 합산 칸(빈칸 차단) — 계산 직전 ⑧. 다른 세목·물건의 step 3 규칙은 이 PR에서 새로 실행하지 않는다.
-      const err = form.objectType === "land" ? validateStep(3, form) : null;
-      if (err) { setError(err); return; }
+      // 계산 직전 재검증(UQ-6·UQ-12) — 거치는 단계 전체(0 → 토지 1·2 → 3)를 다시 검사한다. StepIndicator로
+      // 단계를 건너뛴 경로도 서버 400(일반 문구)이 아니라 그 단계의 구체 오류로 막고, 첫 실패 단계로 돌아간다.
+      const invalid = firstInvalidStep(form);
+      if (invalid) {
+        setError(invalid.message);
+        if (invalid.step !== 3) setStep(invalid.step);
+        return;
+      }
       await runCalculation();
       return;
     }

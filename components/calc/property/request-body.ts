@@ -41,12 +41,28 @@ function buildSeparateAggregateItem(form: FormState) {
   };
 }
 
+/**
+ * recompute(§118 본문 — 직전 과세표준 재산정) 선택지를 여는 대상: 건축물·선박·항공기·토지(종합합산·별도합산).
+ * Step 3 위젯·④ 변환·⑧(`validateStep(3)`)이 같은 술어를 쓴다(UI 통과↔변환 누락 모순 방지).
+ * 별도합산은 엔진이 분류별(별도합산분·종합합산 이관분) 직전 세율로 재산정한다(`property-land-split-tax.ts`).
+ */
+export function isRecomputeTarget(form: FormState): boolean {
+  return (
+    form.objectType === "building" ||
+    form.objectType === "vessel" ||
+    form.objectType === "aircraft" ||
+    (form.objectType === "land" &&
+      (form.landTaxType === "comprehensive_aggregate" || form.landTaxType === "separate_aggregate"))
+  );
+}
+
 /** 폼 상태 → API 요청 본문 변환 (순수 함수 — 테스트 anchor 대상) */
 export function buildPropertyTaxRequestBody(form: FormState): Record<string, unknown> {
   const body: Record<string, unknown> = {
     objectType: form.objectType,
     publishedPrice: parseAmount(form.publishedPrice) ?? 0,
-    isOneHousehold: form.isOneHousehold,
+    // 1세대1주택 토글은 주택 화면에만 있다 — 다른 물건으로 바꾼 뒤 남은 값(stale)을 보내면 ⑫가 400이 된다(막다른 길)
+    isOneHousehold: form.objectType === "housing" && form.isOneHousehold,
     isUrbanArea: form.isUrbanArea,
   };
 
@@ -156,13 +172,7 @@ export function buildPropertyTaxRequestBody(form: FormState): Record<string, unk
 
   // 주택은 세부담상한 미적용 (지방세법 §122 단서) — 전년도 세액 미전송 (엔진·UI 동기화)
   if (form.objectType !== "housing") {
-    // recompute(§118 본문) 대상: 건축물·선박·항공기·종합합산 토지
-    const isRecomputeTarget =
-      form.objectType === "building" ||
-      form.objectType === "vessel" ||
-      form.objectType === "aircraft" ||
-      (form.objectType === "land" && form.landTaxType === "comprehensive_aggregate");
-    if (form.taxCapMode === "recompute" && isRecomputeTarget) {
+    if (form.taxCapMode === "recompute" && isRecomputeTarget(form)) {
       const prevBase = parseAmount(form.previousYearTaxBase);
       if (prevBase !== null && prevBase > 0) {
         body.taxCapMode = "recompute";

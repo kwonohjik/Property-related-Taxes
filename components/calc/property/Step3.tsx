@@ -5,6 +5,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { LandSplitInputs } from "./LandSplitInputs";
+import { isRecomputeTarget, landSplitRequired } from "./request-body";
 import type { FormState } from "./shared";
 
 interface Props {
@@ -59,19 +60,15 @@ export function Step3({ form, onChange }: Props) {
     );
   }
 
-  // recompute(§118 본문) 대상: 건축물·선박·항공기·종합합산 토지
-  const isRecomputeTarget =
-    form.objectType === "building" ||
-    form.objectType === "vessel" ||
-    form.objectType === "aircraft" ||
-    (form.objectType === "land" && form.landTaxType === "comprehensive_aggregate");
+  // recompute(§118 본문) 대상: 건축물·선박·항공기·종합합산·별도합산 토지 (④·⑧과 같은 술어)
+  const recomputeTarget = isRecomputeTarget(form);
 
   return (
     <div className="space-y-4">
       {form.objectType === "land" && <LandSplitInputs form={form} onChange={onChange} />}
       <h2 className="text-lg font-semibold">전년도 세액 (선택)</h2>
 
-      {isRecomputeTarget && (
+      {recomputeTarget && (
         <RadioCardGroup<"direct" | "recompute">
           name="property-taxcap-mode"
           value={form.taxCapMode}
@@ -94,7 +91,14 @@ export function Step3({ form, onChange }: Props) {
         />
       )}
 
-      {isRecomputeTarget && form.taxCapMode === "recompute" ? (
+      {form.objectType === "land" && form.landTaxType === "separate_aggregate" && form.taxCapMode === "direct" && landSplitRequired(form).otherComprehensive && (
+        <p className="text-xs text-muted-foreground">
+          종합합산으로 넘어간 부분(면적 초과·철거 기간 경과·건축물 없음)이 있으면 직접 입력한 직전연도 세액은
+          세부담상한에 쓰지 않습니다. 상한을 적용하려면 「직전연도 과세표준으로 재산정」을 선택하세요.
+        </p>
+      )}
+
+      {recomputeTarget && form.taxCapMode === "recompute" ? (
         <div className="space-y-1">
           <label className="text-sm font-medium">직전연도 과세표준 (원)</label>
           <CurrencyInput

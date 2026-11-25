@@ -8,7 +8,7 @@ import {
   needsPriorUrbanTax,
 } from "@/lib/calc/property-required-inputs";
 import { firstLandSplitIssue } from "@/lib/calc/property-land-split-inputs";
-import { buildPropertyTaxRequestBody, landSplitRequired } from "./request-body";
+import { buildPropertyTaxRequestBody, isRecomputeTarget, landSplitRequired } from "./request-body";
 // 800줄 분리: 폼 → API 본문 변환을 request-body.ts로 이동 — 외부(테스트·API 호출) import 하위호환 re-export
 export { buildPropertyTaxRequestBody, landSplitRequired } from "./request-body";
 
@@ -482,7 +482,7 @@ export function validateStep(step: number, form: FormState): string | null {
     if (issue) return issue;
   }
   // Step3: recompute 모드 직전 과세표준 — 입력 시 형식만 검증, 미입력은 통과(상한 미적용 경고는 엔진)
-  if (step === 3 && form.objectType !== "housing" && form.taxCapMode === "recompute") {
+  if (step === 3 && isRecomputeTarget(form) && form.taxCapMode === "recompute") {
     if (form.previousYearTaxBase && parseAmount(form.previousYearTaxBase) === null)
       return "직전연도 과세표준을 올바른 금액으로 입력하세요.";
   }
@@ -497,6 +497,22 @@ export function validateStep(step: number, form: FormState): string | null {
       const prevUrban = parseAmount(form.housingPreviousUrbanTax);
       if (prevUrban === null || prevUrban <= 0) return PRIOR_URBAN_TAX_MISSING_MESSAGE;
     }
+  }
+  return null;
+}
+
+/**
+ * 계산 직전 재검증 — 마법사가 거치는 단계(0 → 토지 1·2 → 3)를 순서대로 다시 검사해 첫 실패 단계를 돌려준다.
+ * StepIndicator로 단계를 건너뛰어 step 3에 도착해도 서버 400(「입력값이 올바르지 않습니다.」)이 아니라 그 단계의 구체 문구로 막는다.
+ * 대상은 «이 물건 유형이 실제로 거치는 단계»뿐이다 — 토지가 아닌데 남은 `landTaxType` 잔재(stale)로 토지 단계를 막지 않는다.
+ */
+export function firstInvalidStep(form: FormState): { step: number; message: string } | null {
+  const isLand = form.objectType === "land";
+  const needsDetail = isLand && (form.landTaxType === "separate_aggregate" || form.landTaxType === "separated");
+  const steps = [0, ...(isLand ? [1] : []), ...(needsDetail ? [2] : []), 3];
+  for (const step of steps) {
+    const message = validateStep(step, form);
+    if (message) return { step, message };
   }
   return null;
 }

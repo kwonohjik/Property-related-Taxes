@@ -127,11 +127,12 @@ export const PROPERTY_LAND_SPLIT_NO_OTHER_NOTICE =
 export const PROPERTY_LAND_SPLIT_COMBINED_NOTICE =
   "같은 지방자치단체 관할구역의 다른 토지를 합산해 과세표준·세율을 정했고, 이 필지의 세액은 합산 세액을 공시가액 비율로 나눈 값입니다(필지별 안분의 법령 근거는 확인 필요).";
 export const PROPERTY_LAND_SPLIT_DIRECT_CAP_NOTICE =
-  "종합합산으로 넘어간 부분이 있어 과세대상 구분이 직전 연도와 달라질 수 있는데, 직전 연도에 실제 부과된 세액은 그 구분의 기준이 아닐 수 있어 세부담상한(150%)을 적용하지 않았습니다(「지방세법 시행령」 제118조 제1항 제1호 다목) — 확인 필요.";
+  "종합합산으로 넘어간 부분이 있어 과세대상 구분이 직전 연도와 달라질 수 있는데, 직전 연도에 실제 부과된 세액은 그 구분의 기준이 아닐 수 있어 세부담상한(150%)을 적용하지 않았습니다(「지방세법 시행령」 제118조 제1항 제1호 다목) — 직전 과세표준으로 재산정하는 방식을 쓰면 상한을 적용할 수 있습니다 — 확인 필요.";
 export const PROPERTY_LAND_SPLIT_RECOMPUTE_NOTICE =
   "세부담상한의 직전 연도 세액상당액은 직전 과세표준을 분류별 가액 비율로 나눠 분류별 직전 세율로 이 필지만 재산정한 값입니다(같은 관할구역 타 토지의 합산 효과는 넣지 않음 — 「지방세법 시행령」 제118조 제1항 제1호 다목, 기준 단위는 확인 필요).";
 
-const TRANSFER_REASON_NOTICE: Record<PropertyLandSplitTransferReason, string> = {
+/** 종합합산 이관 사유 → 문구 — 엔진 고지와 결과 카드가 같은 사전을 쓴다. */
+export const PROPERTY_LAND_SPLIT_TRANSFER_REASON_LABEL: Record<PropertyLandSplitTransferReason, string> = {
   no_building: "건축물이 없는 토지",
   demolished_period: "철거ㆍ멸실 특례 기간이 지났거나 특례를 적용할 수 없는 토지",
   area_excess: "기준면적(바닥면적 × 용도지역 배율)을 초과한 토지",
@@ -306,7 +307,7 @@ export function calculateLandClassTax(i: LandClassTaxInput): LandClassTaxResult 
   if (hasOther) warnings.push(PROPERTY_LAND_SPLIT_COMBINED_NOTICE);
   if (hasComp && i.transferReasons.length > 0 && i.transferredFromSeparate) {
     warnings.push(
-      `이 필지 중 종합합산으로 넘어간 부분(${i.transferReasons.map((r) => TRANSFER_REASON_NOTICE[r]).join(" · ")})은 종합합산 세율로 과세했습니다.`,
+      `이 필지 중 종합합산으로 넘어간 부분(${i.transferReasons.map((r) => PROPERTY_LAND_SPLIT_TRANSFER_REASON_LABEL[r]).join(" · ")})은 종합합산 세율로 과세했습니다.`,
     );
   }
 
