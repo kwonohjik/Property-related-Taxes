@@ -6,6 +6,9 @@
  *   N2. ⑧의 첫 결함 칸 = `chain.next`(용도지역·바닥면적은 한 쌍) — 막힌 칸이 곧 화면의 마지막 질문(막다른 길 0 · 요구 과소 0). `next`가 없으면 ⑧은 날짜·모순 결함이 아니면 통과한다.
  *   N3. ⑧ 통과이면 ④ 본문을 실제 Zod에 넣어 통과 — «⑧ 통과 ∧ ⑫ 400» = 0 · 본문의 사실 칸 키 집합 = `chain.asked` 중 값이 있는 칸(숨은 답은 폼에 남아도 본문에 없다).
  *   N4. 철거 전 바닥면적 칸 «필수 표시(*)» ⇔ 용도지역·바닥면적 블록(`SeparateAggregateAreaBasis`) 노출 ⇔ `chain.asked.buildingFloorArea` ⇔ 비웠을 때 ⑧이 용도지역·바닥면적 문구로 막는다(PSA-S2: 블록은 사슬 끝에서만).
+ *   N5(PSA-SU). 확정 안내 `pt-sa-seq-settled` 노출 ⇔ 엔진 `chain.resolved`가 접힘(fold) — `data-reason` = 엔진 사유 · 본문 = 엔진 `resolved.notice` 그대로. 성립(holds)·날짜 결함·모순은 확정 안내 없음.
+ *   N6(PSA-SU). 낭독 한 줄 `pt-sa-seq-status`(항상 마운트) = next가 있으면 «다음 질문: {칸 이름}» · 접힘 확정이면 확정 문구 · 그 밖은 빈 문자열.
+ *   N7(PSA-SU). «이전에 고른 답» 표식 `pt-sa-prev-answer-{field}` ⇔ 그려진 칸 ∧ 저장값 있음(이 격자는 클릭 없이 마운트만 하므로 확인 집합이 비어 있다) — 그려지지 않은 칸엔 없다.
  * 비공허: 셀 수·접힘 확정 사유별·성립(holds)·깊이 5(공용·유료까지)·빈집정비 관문·빈집정비 단서 자리 셀 하한을 단언한다.
  *
  * ⏱ 시간 제한: 연도별 `it` 하나당 180초(로컬 실측은 PR 본문에 기록). 느려지면 날짜·답 축을 줄이지 말고 연도별 분할을 유지한다.
@@ -16,6 +19,8 @@ import { Step2SeparateAggregate } from "@/components/calc/property/Step2Separate
 import { INITIAL_FORM, buildPropertyTaxRequestBody, validateStep, type FormState } from "@/components/calc/property/shared";
 import { demolishedFormValues } from "@/components/calc/property/request-body";
 import { demolishedChainOf } from "@/lib/calc/property-separate-requirements";
+import { PROPERTY_ASK_FIELD_NAME } from "@/lib/calc/property-demolished-verdict-text";
+import { SETTLED_LEAD } from "@/components/calc/property/separate-sequence";
 import { propertyTaxInputSchema } from "@/lib/validators/property-input";
 import { PROPERTY_DEMOLISHED_ISSUE_MESSAGE as M } from "@/lib/tax-engine/property-separate-requirements";
 import { addMonthsUtc } from "@/lib/tax-engine/civil-period";
@@ -103,6 +108,8 @@ interface Stats {
   depth5: number;
   gate: number;
   proviso: number;
+  settledShown: number;
+  marks: number;
   folds: Record<string, number>;
 }
 
@@ -128,6 +135,30 @@ function visit(form: FormState, ui: ReturnType<typeof render>, el: HTMLElement, 
   // PSA-S2 — 용도지역·바닥면적 블록은 사슬 끝에서만 그려진다(그려졌다 = 요구됐다)
   const areaShown = el.querySelector('[data-testid="pt-sa-area-basis"]') !== null;
   if (areaShown !== chain.asked.buildingFloorArea) return fail(`면적 블록 노출(${areaShown}) ≠ chain.asked.buildingFloorArea(${chain.asked.buildingFloorArea})`);
+
+  // N5 — 확정 안내 ⇔ 엔진 접힘 확정 · 사유·문장은 엔진 값 그대로
+  const settledEl = el.querySelector('[data-testid="pt-sa-seq-settled"]');
+  const fold = chain.resolved?.kind === "fold" ? chain.resolved : null;
+  if ((settledEl !== null) !== (fold !== null)) return fail(`확정 안내 노출(${settledEl !== null}) ≠ chain.resolved 접힘(${fold !== null})`);
+  if (fold && settledEl) {
+    if (settledEl.getAttribute("data-reason") !== fold.foldReason) return fail(`확정 안내 사유 ${settledEl.getAttribute("data-reason")} ≠ ${fold.foldReason}`);
+    if (!settledEl.textContent?.includes(fold.notice) || !settledEl.textContent.includes(SETTLED_LEAD)) return fail("확정 안내 본문이 엔진 notice·고정 문장을 담지 않음");
+    stats.settledShown++;
+  }
+  // N6 — 낭독 한 줄
+  const statusText = el.querySelector('[data-testid="pt-sa-seq-status"]')?.textContent ?? null;
+  const wantStatus = chain.next ? `다음 질문: ${PROPERTY_ASK_FIELD_NAME[chain.next]}` : fold ? "별도합산 불성립이 확정되어 나머지 칸은 묻지 않습니다" : "";
+  if (statusText !== wantStatus) return fail(`낭독 한 줄 «${statusText}» ≠ «${wantStatus}»`);
+  const statusEl = el.querySelector('[data-testid="pt-sa-seq-status"]');
+  if (statusEl?.getAttribute("role") !== "status" || statusEl.getAttribute("aria-live") !== "polite") return fail("낭독 한 줄에 role=status · aria-live=polite 없음");
+  // N7 — «이전에 고른 답» 표식 ⇔ 그려졌고 저장값이 있다
+  for (const f of ["demolishedKind", "demolishedVacantHouse", "demolishedPermit", "demolishedOtherUse", "demolishedPublicUse", "demolishedPublicUsePaid", "buildingFloorArea"] as const) {
+    const stored = f === "buildingFloorArea" ? form.saBuildingFloorArea !== "" || form.saZoningDistrict !== "" : (form[WIDGET[f].key] as string) !== "";
+    const wantMark = chain.order.includes(f) && stored;
+    const hasMark = el.querySelector(`[data-testid="pt-sa-prev-answer-${f}"]`) !== null;
+    if (hasMark !== wantMark) return fail(`이전에 고른 답 표식(${f}) ${hasMark} ≠ 그려짐∧저장값 ${wantMark}`);
+    if (hasMark) stats.marks++;
+  }
 
   const field = message === null ? null : (FIELD_BY_MESSAGE.get(message) ?? "?");
   if (field === "?") return fail(`⑧ 문구를 필드로 되짚을 수 없음: ${message}`);
@@ -201,7 +232,7 @@ describe("PSA-U1·S1 렌더 격자 — 화면 ≡ 사슬 ≡ ⑧ ≡ ⑫ (노출
       () => {
         vi.setSystemTime(new Date(`${year}-07-15T00:00:00Z`));
         const s = parseISO(`${year}-06-01`);
-        const stats: Stats = { roots: 0, nodes: 0, contradiction: 0, holds: 0, depth5: 0, gate: 0, proviso: 0, folds: {} };
+        const stats: Stats = { roots: 0, nodes: 0, contradiction: 0, holds: 0, depth5: 0, gate: 0, proviso: 0, settledShown: 0, marks: 0, folds: {} };
         const bad: string[] = [];
         const el = document.createElement("div");
         document.body.appendChild(el);
@@ -227,6 +258,8 @@ describe("PSA-U1·S1 렌더 격자 — 화면 ≡ 사슬 ≡ ⑧ ≡ ⑫ (노출
         // 비공허 — 격자가 접힘·성립·모순 차단·빈집정비 두 자리를 모두 지난다
         expect(stats.roots).toBeGreaterThan(250);
         expect(stats.nodes).toBeGreaterThanOrEqual(stats.roots);
+        expect(stats.settledShown).toBeGreaterThan(0);
+        if (year >= 2016) expect(stats.marks).toBeGreaterThan(0); // 2015: 날짜만으로 접혀 답 칸이 없다
         expect(stats.contradiction).toBeGreaterThan(0);
         if (year >= 2016) {
           expect(stats.holds).toBeGreaterThan(0);
@@ -243,7 +276,7 @@ describe("PSA-U1·S1 렌더 격자 — 화면 ≡ 사슬 ≡ ⑧ ≡ ⑫ (노출
           expect(stats.proviso).toBeGreaterThan(0);
         }
          
-        console.log(`[PSA-S1 렌더 격자 ${year}] roots=${stats.roots} nodes=${stats.nodes} holds=${stats.holds} contradiction=${stats.contradiction} depth5=${stats.depth5} gate=${stats.gate} proviso=${stats.proviso} folds=${JSON.stringify(stats.folds)}`);
+        console.log(`[PSA-S1 렌더 격자 ${year}] roots=${stats.roots} nodes=${stats.nodes} holds=${stats.holds} contradiction=${stats.contradiction} settled=${stats.settledShown} marks=${stats.marks} depth5=${stats.depth5} gate=${stats.gate} proviso=${stats.proviso} folds=${JSON.stringify(stats.folds)}`);
       },
       180_000,
     );

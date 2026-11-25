@@ -16,6 +16,10 @@ import type { RadioCardOption } from "@/components/calc/inputs/RadioCardGroup";
 import { CollapsibleHintCard } from "@/components/calc/shared/CollapsibleHintCard";
 import { buildingPermitNeedOf } from "@/lib/calc/property-separate-requirements";
 import { PROPERTY_SEPARATE } from "@/lib/tax-engine/legal-codes";
+import { PrevAnswerMark } from "./SeparateAggregateSequenceNotes";
+import { SettledNotice } from "./SeparateAggregateSequenceNotes";
+import { buildingSettledOf } from "./separate-sequence";
+import type { SequenceField } from "./separate-sequence";
 import type { FormState } from "./shared";
 
 type Answer = "yes" | "no" | "unknown";
@@ -26,22 +30,30 @@ const OPTIONS: RadioCardOption<Answer>[] = [
   { value: "unknown", label: "모름", testId: "pt-sa-permit-unknown" },
 ];
 
+const QUESTION = "이 건축물은 건축 관계 법령상 허가·사용승인을 받은 것입니까?";
+
 interface Props {
   form: FormState;
+  /** «이전에 고른 답» 표식을 붙일 칸(`Step2SeparateAggregate`가 파생) */
+  prev: ReadonlySet<SequenceField>;
+  onConfirm: (field: SequenceField) => void;
   onChange: (d: Partial<FormState>) => void;
 }
 
-export function SeparateAggregateBuildingPermit({ form, onChange }: Props) {
+export function SeparateAggregateBuildingPermit({ form, prev, onConfirm, onChange }: Props) {
   if (form.saDemolished || !buildingPermitNeedOf()) return null;
+  const settled = buildingSettledOf(form);
   return (
     <div className="space-y-2" data-testid="pt-sa-permit">
+      {prev.has("buildingPermit") && <PrevAnswerMark field="buildingPermit" onConfirm={onConfirm} />}
       <FieldCard
-        label="이 건축물은 건축 관계 법령상 허가·사용승인을 받은 것입니까?"
+        label={QUESTION}
         required
         hint="허가 등을 받았거나 받을 필요가 없고 사용승인도 문제가 없으면 «예», 받아야 하는데 받지 않았으면 «아니오»입니다. 모름은 인정하지 않고 확인 필요로 표시합니다."
       >
         <RadioCardGroup
           name="saBuildingPermit"
+          aria-label={QUESTION}
           tone="sky"
           layout="inline"
           options={OPTIONS}
@@ -62,6 +74,7 @@ export function SeparateAggregateBuildingPermit({ form, onChange }: Props) {
           <li>건축물대장·허가대장으로 확인하세요.</li>
         </ul>
       </CollapsibleHintCard>
+      {settled && <SettledNotice settled={settled} />}
     </div>
   );
 }

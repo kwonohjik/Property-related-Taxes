@@ -127,6 +127,12 @@ export interface RadioCardGroupProps<T extends string> {
   "data-testid"?: string;
   /** 검증 오류 → 입력칸 이동 앵커(`components/calc/transfer/validation-jump.ts`) */
   "data-field"?: string;
+  /**
+   * 그룹 이름(스크린리더). `aria-label`·`aria-labelledby` 중 하나라도 주면 그룹 루트가 `role="radiogroup"`이 된다 —
+   * 주지 않으면 종전 DOM 그대로다(251개 호출부 영향 0).
+   */
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 }
 
 export function RadioCardGroup<T extends string>({
@@ -141,6 +147,8 @@ export function RadioCardGroup<T extends string>({
   lawLinks,
   "data-testid": dataTestId,
   "data-field": dataField,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
 }: RadioCardGroupProps<T>) {
   const t = TONES[tone];
 
@@ -165,6 +173,9 @@ export function RadioCardGroup<T extends string>({
       data-layout={layout}
       data-testid={dataTestId}
       data-field={dataField}
+      role={ariaLabel || ariaLabelledBy ? "radiogroup" : undefined}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabelledBy}
       className={cn(
         layout === "inline"
           ? "flex flex-wrap gap-2"

@@ -24,7 +24,11 @@ import { PROPERTY_SEPARATE } from "@/lib/tax-engine/legal-codes";
 import { PROPERTY_DEMOLISHED_ISSUE_MESSAGE } from "@/lib/tax-engine/property-separate-requirements";
 import { resolvePropertyTaxBaseDate } from "@/lib/tax-engine/property-separate-requirements";
 import type { PropertyDemolishedAskField } from "@/lib/tax-engine/property-separate-requirements";
+import { PrevAnswerMark } from "./SeparateAggregateSequenceNotes";
+import { SettledNotice } from "./SeparateAggregateSequenceNotes";
 import { demolishedFormValues } from "./request-body";
+import { demolishedSettledOf } from "./separate-sequence";
+import type { SequenceField } from "./separate-sequence";
 import type { FormState } from "./shared";
 
 type Answer = "yes" | "no" | "unknown";
@@ -42,12 +46,25 @@ const KIND_OPTIONS: RadioCardOption<Kind>[] = [
   { value: "building", label: "주택이 아닌 건축물", testId: "pt-sa-demolished-kind-building" },
 ];
 
+/** 칸 질문 — `FieldCard` 라벨이자 라디오 그룹 이름(`aria-label`)이다 */
+const Q = {
+  kind: "철거된 것은 주택입니까, 주택이 아닌 건축물입니까?",
+  permit: "철거된 건축물(주택)이 건축 관계 법령상 허가·사용승인을 받은 것이었습니까?",
+  otherUse: "철거 후 그 토지를 건축을 위한 용도 외의 다른 용도로 사용했습니까?",
+  vacantHouse: "철거된 주택이 빈집정비사업 등으로 철거된 빈집이었습니까?",
+  publicUse: "과세기준일 현재 그 부속토지를 국가·지방자치단체·지방자치단체조합이 1년 이상 공용 또는 공공용으로 사용하고 있습니까?",
+  publicUsePaid: "그 사용이 유료이거나, 소유권 유상이전을 약정하고 취득 전에 미리 사용한 경우였습니까?",
+} as const;
+
 interface Props {
   form: FormState;
+  /** 철거 사슬 칸 중 «이전에 고른 답» 표식을 붙일 칸(`Step2SeparateAggregate`가 파생) */
+  prev: ReadonlySet<SequenceField>;
+  onConfirm: (field: SequenceField) => void;
   onChange: (d: Partial<FormState>) => void;
 }
 
-export function SeparateAggregateDemolishedFacts({ form, onChange }: Props) {
+export function SeparateAggregateDemolishedFacts({ form, prev, onConfirm, onChange }: Props) {
   const values = demolishedFormValues(form);
   const taxBaseDate = resolvePropertyTaxBaseDate();
   const chain = demolishedChainOf(values, taxBaseDate);
@@ -62,26 +79,26 @@ export function SeparateAggregateDemolishedFacts({ form, onChange }: Props) {
       ? issue.message
       : null;
 
-  // 사슬이 날짜만으로 확정한 접힘(종류를 묻지 않는 구간)이거나, 종류만 읽고 묻을 사실 칸이 없는 확정이면 «왜 더 묻지 않는지» 한 줄 — 문장은 엔진 사슬이 낸다(UI가 날짜를 비교하지 않는다).
+  // 접힘 확정이면 «왜 더 묻지 않는지» 안내 — 사유 문장은 엔진 사슬이 낸다(UI가 날짜를 비교하거나 법률 문장을 짓지 않는다). 날짜만으로 확정된 접힘(종류를 묻지 않는 구간)도 같은 안내다.
+  const settled = demolishedSettledOf(form);
+  // 성립(holds)인데 묻는 칸이 하나도 없는 시행본 — 접힘 확정 안내가 아니라 «확인할 요건 칸이 없다»는 한 줄
   const factCards = chain.order.filter((f) => f !== "demolishedKind" && f !== "buildingFloorArea");
-  let noFactsNotice: string | null = null;
-  if (chain.resolved && factCards.length === 0 && !contradiction) {
-    noFactsNotice =
-      chain.resolved.kind === "fold"
-        ? chain.resolved.notice
-        : "이 과세기준일 시행본에는 확인할 요건 칸이 없습니다 — 판정 사유는 계산 후 결과 화면에서 확인하세요.";
-  }
+  const noFactsNotice = chain.resolved?.kind === "holds" && factCards.length === 0 && !contradiction
+    ? "이 과세기준일 시행본에는 확인할 요건 칸이 없습니다 — 판정 사유는 계산 후 결과 화면에서 확인하세요."
+    : null;
+  const mark = (field: SequenceField) => (prev.has(field) ? <PrevAnswerMark field={field} onConfirm={onConfirm} /> : null);
 
   const cards: Record<PropertyDemolishedAskField, ReactNode> = {
     demolishedKind: (
       <FieldCard
         key="demolishedKind"
-        label="철거된 것은 주택입니까, 주택이 아닌 건축물입니까?"
+        label={Q.kind}
         required
         hint="빈집정비사업 3년은 주택(빈집)에만, 철거 전 바닥면적 × 용도지역 배율 범위는 건축물에만 적용되어 묻습니다. 위 «공장용지»를 켰다면 공장용 건축물이므로 «주택이 아닌 건축물»입니다."
       >
         <RadioCardGroup
           name="saDemolishedKind"
+          aria-label={Q.kind}
           tone="sky"
           layout="inline"
           options={KIND_OPTIONS}
@@ -95,12 +112,13 @@ export function SeparateAggregateDemolishedFacts({ form, onChange }: Props) {
     demolishedPermit: (
       <FieldCard
         key="demolishedPermit"
-        label="철거된 건축물(주택)이 건축 관계 법령상 허가·사용승인을 받은 것이었습니까?"
+        label={Q.permit}
         required
         hint="건축 관계 법령에 따라 허가 등을 받아야 하는데 받지 않았거나 사용승인(임시사용승인 포함)을 받아야 하는데 받지 않은 건축물 또는 주택의 부속토지는 한시 별도합산에서 제외됩니다. 건축물대장·허가대장으로 확인하세요 — 모름은 인정하지 않고 확인 필요로 표시합니다."
       >
         <RadioCardGroup
           name="saDemolishedPermit"
+          aria-label={Q.permit}
           tone="amber"
           layout="inline"
           options={answerOptions("permit", ["yes", "no", "unknown"])}
@@ -113,12 +131,13 @@ export function SeparateAggregateDemolishedFacts({ form, onChange }: Props) {
     demolishedOtherUse: (
       <FieldCard
         key="demolishedOtherUse"
-        label="철거 후 그 토지를 건축을 위한 용도 외의 다른 용도로 사용했습니까?"
+        label={Q.otherUse}
         required
         hint={`주차장·야적장·경작 등 건축을 위한 용도 외로 사용했으면 «예»이고 한시 별도합산에서 제외됩니다(그 용도가 무엇인지는 묻지 않습니다). 나대지로 둔 것은 건축 외 용도가 아닙니다. 일부만 그렇게 썼으면 그 부분만 제외되지만 이 계산기는 면적을 안분하지 않으므로 «예»로 답하고 전체를 종합합산으로 계산한 뒤 확인 필요로 표시합니다. 모름도 인정하지 않고 확인 필요로 표시합니다.${form.saDemolishedKind === "house" ? " «예»이면 철거된 것이 빈집정비사업 빈집인지 이어서 묻고, 빈집이면 국가 등 공용·공공용 사용 예외를 추가로 묻습니다." : ""}`}
       >
         <RadioCardGroup
           name="saDemolishedOtherUse"
+          aria-label={Q.otherUse}
           tone="amber"
           layout="inline"
           options={answerOptions("otheruse", ["no", "yes", "unknown"])}
@@ -131,12 +150,13 @@ export function SeparateAggregateDemolishedFacts({ form, onChange }: Props) {
     demolishedVacantHouse: (
       <FieldCard
         key="demolishedVacantHouse"
-        label="철거된 주택이 빈집정비사업 등으로 철거된 빈집이었습니까?"
+        label={Q.vacantHouse}
         required
         hint={`${chain.vacantHousePosition === "gate" ? `철거일이 일반 한시 기간(${period.general ?? "—"})을 넘고 빈집정비사업 철거 빈집 기간(${period.vacantHouse ?? "3년"}) 안이라, 이 답이 한시 기간 안인지를 정해 먼저 묻습니다. ` : ""}「빈집 및 소규모주택 정비에 관한 특례법」 빈집정비사업 또는 「농어촌정비법」 생활환경정비사업(빈집의 정비에 관한 사업만)으로 철거했으면 «예»입니다. «예»는 철거일부터 ${period.vacantHouse ?? "3년"}, «아니오»·«모름»은 일반 한시 기간(${period.general ?? "—"})만 인정하고 3년 연장은 확인 필요로 표시합니다(${PROPERTY_SEPARATE.DEMOLISHED_VACANT_HOUSE}).`}
       >
         <RadioCardGroup
           name="saDemolishedVacantHouse"
+          aria-label={Q.vacantHouse}
           tone="amber"
           layout="inline"
           options={answerOptions("vacanthouse", ["yes", "no", "unknown"])}
@@ -158,12 +178,13 @@ export function SeparateAggregateDemolishedFacts({ form, onChange }: Props) {
           </CollapsibleHintCard>
 
           <FieldCard
-            label={`${year}년 과세기준일 현재 그 부속토지를 국가·지방자치단체·지방자치단체조합이 1년 이상 공용 또는 공공용으로 사용하고 있습니까?`}
+            label={`${year}년 ${Q.publicUse}`}
             required
             hint="1년 이상 사용할 것이 계약서 등으로 입증되면 «예»입니다. 부속토지 전부를 사용한 경우만 «예»이고, «아니오»·«모름»은 인정하지 않고 확인 필요로 표시합니다."
           >
             <RadioCardGroup
               name="saDemolishedPublicUse"
+              aria-label={`${year}년 ${Q.publicUse}`}
               tone="violet"
               layout="inline"
               options={answerOptions("publicuse", ["yes", "no", "unknown"])}
@@ -174,21 +195,25 @@ export function SeparateAggregateDemolishedFacts({ form, onChange }: Props) {
           </FieldCard>
 
           {chain.asked.demolishedPublicUsePaid && (
-            <FieldCard
-              label="그 사용이 유료이거나, 소유권 유상이전을 약정하고 취득 전에 미리 사용한 경우였습니까?"
-              required
-              hint="무상 사용이면 재산세가 비과세될 수 있어 «아니오»입니다 — 이 계산기는 비과세를 판정하지 않아 종합합산으로 계산하고 확인 필요로 표시합니다. 재산세 과세내역(고지서)으로 확인하세요."
-            >
-              <RadioCardGroup
-                name="saDemolishedPublicUsePaid"
-                tone="violet"
-                layout="inline"
-                options={answerOptions("publicusepaid", ["yes", "no", "unknown"])}
-                value={form.saDemolishedPublicUsePaid}
-                onChange={(v) => onChange({ saDemolishedPublicUsePaid: v })}
-                data-field="demolishedPublicUsePaid"
-              />
-            </FieldCard>
+            <div className="space-y-1">
+              {mark("demolishedPublicUsePaid")}
+              <FieldCard
+                label={Q.publicUsePaid}
+                required
+                hint="무상 사용이면 재산세가 비과세될 수 있어 «아니오»입니다 — 이 계산기는 비과세를 판정하지 않아 종합합산으로 계산하고 확인 필요로 표시합니다. 재산세 과세내역(고지서)으로 확인하세요."
+              >
+                <RadioCardGroup
+                  name="saDemolishedPublicUsePaid"
+                  aria-label={Q.publicUsePaid}
+                  tone="violet"
+                  layout="inline"
+                  options={answerOptions("publicusepaid", ["yes", "no", "unknown"])}
+                  value={form.saDemolishedPublicUsePaid}
+                  onChange={(v) => onChange({ saDemolishedPublicUsePaid: v })}
+                  data-field="demolishedPublicUsePaid"
+                />
+              </FieldCard>
+            </div>
           )}
         </div>
       </ToneCard>
@@ -206,7 +231,16 @@ export function SeparateAggregateDemolishedFacts({ form, onChange }: Props) {
           {PROPERTY_SEPARATE.DEMOLISHED_GRACE}). 요건은 철거일·종류와 앞 답에 따라 필요한 것만 순서대로 묻습니다.
         </p>
 
-        {chain.order.map((field) => cards[field])}
+        {chain.order.map((field) =>
+          cards[field] ? (
+            <div key={field} className="space-y-1">
+              {mark(field)}
+              {cards[field]}
+            </div>
+          ) : null,
+        )}
+
+        {settled && !contradiction && <SettledNotice settled={settled} />}
 
         {contradiction && (
           <p className="text-xs font-medium text-destructive" role="alert" data-testid="pt-sa-demolished-contradiction">

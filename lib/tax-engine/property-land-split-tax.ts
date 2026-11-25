@@ -78,7 +78,8 @@ export function landSplitTaxBaseDate(targetDate?: string): string {
 
 /**
  * 입력(와이어·엔진 공통 형태)에서 요구 칸을 구한다 — 별도합산 필지는 `isSeparateAggregateLand`로 분류 면적을 미리 판정한다.
- * 필지 판정이 던지면(미등재 용도지역 등) 요구 없음으로 두고 입구의 다른 검증·엔진 오류에 맡긴다.
+ * 필지 판정이 던지면(미등재 용도지역 등 — 사슬이 읽는 칸이 틀린 입력이라 ⑧·⑫가 따로 막는다) **분류를 알 수 없으므로 두 합산 칸을 모두 요구**한다.
+ * 종전엔 «요구 없음»으로 삼켜 Step 3 합산 칸 요구가 조용히 사라졌다(N3). ⑧(Step 3 미리보기)과 Zod `superRefine`이 이 함수가 던지지 않고 요구 집합을 돌려준다고 전제하므로 catch는 유지한다.
  */
 export function propertyLandSplitRequiredFor(i: {
   landTaxType?: LandTaxType;
@@ -98,7 +99,7 @@ export function propertyLandSplitRequiredFor(i: {
       excessArea: check.excessArea,
     });
   } catch {
-    return NONE_REQUIRED;
+    return { otherSeparate: true, otherComprehensive: true };
   }
 }
 

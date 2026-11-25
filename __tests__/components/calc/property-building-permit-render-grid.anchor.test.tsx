@@ -9,6 +9,8 @@
  *   (d) 선택값이 라디오에 반영되고, 미선택이면 아무것도 눌려 있지 않다(기본값 없음)
  *   (e) PSA-S2 — 용도지역·바닥면적 블록(`pt-sa-area-basis`)은 사슬 끝에서만: 비철거는 «허가 칸 없는 시행본 또는 허가 예», 철거는 «2024.6.1.~ 건축물 ∧ 앞 요건 통과».
  *       블록이 그려졌는데 ⑧이 면적을 요구하지 않거나(과요구 아님 확인), ⑧이 면적을 요구하는데 블록이 없는(막다른 길) 셀 0 · ④ 면적 키 전송 ⇔ 블록 노출 ∧ 값 있음
+ *   (f) PSA-SU — 확정 안내 `pt-sa-seq-settled`(data-reason=building_permit · 본문 = 엔진 고지 상수 그대로) ⇔ 비철거 ∧ 허가 칸 노출 ∧ 답 «아니오»·«모름» · 낭독 한 줄 `pt-sa-seq-status`
+ *       (허가 미선택 «다음 질문: 허가·사용승인» · 면적 블록이 비었을 때 «다음 질문: 건물 바닥면적·용도지역» · 확정 «…확정되어…» · 그 밖 빈 문자열) · «이전에 고른 답» 표식 ⇔ 그려졌고 저장값이 있음(허가 칸 · 면적 쌍)
  * 공허 방지: 셀 수·노출 셀·숨김 셀·차단 셀·통과 셀 하한을 단언한다.
  */
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
@@ -17,6 +19,8 @@ import { Step2SeparateAggregate } from "@/components/calc/property/Step2Separate
 import { INITIAL_FORM, buildPropertyTaxRequestBody, validateStep, type FormState } from "@/components/calc/property/shared";
 import { propertyTaxInputSchema } from "@/lib/validators/property-input";
 import { PROPERTY_BUILDING_PERMIT_ISSUE_MESSAGE } from "@/lib/tax-engine/property-separate-requirements";
+import { PROPERTY_BUILDING_PERMIT_NO_NOTICE } from "@/lib/tax-engine/property-separate-requirements";
+import { PROPERTY_BUILDING_PERMIT_UNKNOWN_NOTICE } from "@/lib/tax-engine/property-separate-requirements";
 import { PROPERTY_SEPARATE } from "@/lib/tax-engine/legal-codes";
 
 type Answer = FormState["saBuildingPermit"];
@@ -59,7 +63,7 @@ describe("PSA-E3 렌더 격자 — 화면 ≡ ⑧ ≡ ④ ≡ ⑫", () => {
 
   it("연도 × 철거 × 공장 × 답 — 노출 · 막다른 길 0 · «⑧ 통과 ∧ ⑫ 400» 0 · ④ ⇔ 노출 · 선택 반영", () => {
     const bad: string[] = [];
-    const stats = { cells: 0, shown: 0, hidden: 0, blocked: 0, passed: 0, areaShown: 0 };
+    const stats = { cells: 0, shown: 0, hidden: 0, blocked: 0, passed: 0, areaShown: 0, settled: 0, marks: 0 };
     for (const year of YEARS) {
       vi.setSystemTime(new Date(`${year}-07-15T00:00:00Z`));
       for (const saDemolished of [false, true]) {
@@ -107,6 +111,35 @@ describe("PSA-E3 렌더 격자 — 화면 ≡ ⑧ ≡ ④ ≡ ⑫", () => {
               if (zod !== null) bad.push(`${tag} ⑧ 통과인데 ⑫ 400: ${zod}`);
             }
 
+            // (f) PSA-SU — 확정 안내 · 낭독 한 줄 · «이전에 고른 답» 표식
+            const settledEl = container.querySelector('[data-testid="pt-sa-seq-settled"]');
+            const expectSettled = shown && (answer === "no" || answer === "unknown");
+            // 철거 ON 셀의 확정 안내는 철거 사슬이 말한다(`pt-sa-seq-settled`의 사유는 철거 접힘 사유) — 이 격자는 본 경로 허가 확정만 단언한다
+            if (!saDemolished && (settledEl !== null) !== expectSettled) bad.push(`${tag} 확정 안내 노출 ${settledEl !== null} ≠ 기대 ${expectSettled}`);
+            if (settledEl && !saDemolished) {
+              stats.settled++;
+              const notice = answer === "no" ? PROPERTY_BUILDING_PERMIT_NO_NOTICE : PROPERTY_BUILDING_PERMIT_UNKNOWN_NOTICE;
+              if (settledEl.getAttribute("data-reason") !== "building_permit" || !settledEl.textContent?.includes(notice)) bad.push(`${tag} 확정 안내 사유·문장 불일치`);
+              if ((settledEl.textContent?.includes("«모름»은 요건 충족을 인정하지 않아 확정됩니다") ?? false) !== (answer === "unknown")) bad.push(`${tag} «모름» 문장 노출 규칙 위반`);
+            }
+            const statusText = container.querySelector('[data-testid="pt-sa-seq-status"]')?.textContent ?? null;
+            // 철거 ON 셀은 철거 사슬이 말한다(요건을 모두 채운 시료 — 다음 질문 없음 · 접힘 없음 · 2024.6.1.~ 면적 쌍도 채움 여부에 따라) — 본 경로 셀만 정확히 단언
+            if (!saDemolished) {
+              const wantStatus = expectSettled
+                ? "별도합산 불성립이 확정되어 나머지 칸은 묻지 않습니다"
+                : shown && answer === ""
+                  ? "다음 질문: 허가·사용승인"
+                  : areaShown && !withArea
+                    ? "다음 질문: 건물 바닥면적·용도지역"
+                    : "";
+              if (statusText !== wantStatus) bad.push(`${tag} 낭독 «${statusText}» ≠ «${wantStatus}»`);
+              const markPermit = container.querySelector('[data-testid="pt-sa-prev-answer-buildingPermit"]') !== null;
+              if (markPermit !== (shown && answer !== "")) bad.push(`${tag} 허가 표식 ${markPermit} ≠ 그려짐∧저장값 ${shown && answer !== ""}`);
+              const markArea = container.querySelector('[data-testid="pt-sa-prev-answer-buildingFloorArea"]') !== null;
+              if (markArea !== (areaShown && withArea)) bad.push(`${tag} 면적 표식 ${markArea} ≠ 그려짐∧저장값 ${areaShown && withArea}`);
+              if (markPermit || markArea) stats.marks++;
+            }
+
             // (d) 선택 반영 — 기본값 없음
             if (shown) {
               const checked = [...container.querySelectorAll('input[type="radio"][name="saBuildingPermit"]:checked')].map((i) => (i as HTMLInputElement).value);
@@ -125,6 +158,8 @@ describe("PSA-E3 렌더 격자 — 화면 ≡ ⑧ ≡ ④ ≡ ⑫", () => {
     expect(stats.hidden).toBeGreaterThan(20);
     expect(stats.blocked).toBeGreaterThan(5);
     expect(stats.passed).toBeGreaterThan(20);
+    expect(stats.settled).toBeGreaterThan(5);
+    expect(stats.marks).toBeGreaterThan(5);
   });
 });
 

@@ -40,7 +40,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
   test("K-1 건축물 · 요건 충족 → 516,000 · 판정 «별도합산 유지» · body에 종류·허가·건축 외만", async ({ page }) => {
     const box = captureBody(page);
     await toDetail(page, "300000000");
-    await fillSeparateDetail(page, { ...BUILDING, demolished: { date: `${YEAR}-01-01`, kind: "building", permit: "yes", otherUse: "no" } });
+    await fillSeparateDetail(page, { areaBasis: "required", ...BUILDING, demolished: { date: `${YEAR}-01-01`, kind: "building", permit: "yes", otherUse: "no" } });
     await fillSplitInputsZero(page);
     await calc(page);
     await expect(totalPayable(page)).toHaveText(exact("516,000"));
@@ -52,7 +52,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
 
   test("K-2 허가 «아니오» → 960,000 · 접힘 사유 허가 · 확인 필요 고지", async ({ page }) => {
     await toDetail(page, "300000000");
-    await fillSeparateDetail(page, { ...BUILDING, demolished: { date: `${YEAR}-01-01`, kind: "building", permit: "no", otherUse: "no" } });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...BUILDING, demolished: { date: `${YEAR}-01-01`, kind: "building", permit: "no", otherUse: "no" } });
     await fillSplitInputsZero(page);
     await calc(page);
     await expect(totalPayable(page)).toHaveText(exact("960,000"));
@@ -63,7 +63,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
 
   test("허가 «모름» → 960,000 + «확인되지 않아» 고지 · 건축 외 용도 «예» → 960,000", async ({ page }) => {
     await toDetail(page, "300000000");
-    await fillSeparateDetail(page, { ...BUILDING, demolished: { date: `${YEAR}-01-01`, kind: "building", permit: "unknown", otherUse: "no" } });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...BUILDING, demolished: { date: `${YEAR}-01-01`, kind: "building", permit: "unknown", otherUse: "no" } });
     await fillSplitInputsZero(page);
     await calc(page);
     await expect(totalPayable(page)).toHaveText(exact("960,000"));
@@ -72,7 +72,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
 
   test("건축 외 용도 «예» → 960,000 · 사유 건축 외 용도", async ({ page }) => {
     await toDetail(page, "300000000");
-    await fillSeparateDetail(page, { ...BUILDING, demolished: { date: `${YEAR}-01-01`, kind: "building", permit: "yes", otherUse: "yes" } });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...BUILDING, demolished: { date: `${YEAR}-01-01`, kind: "building", permit: "yes", otherUse: "yes" } });
     await fillSplitInputsZero(page);
     await calc(page);
     await expect(totalPayable(page)).toHaveText(exact("960,000"));
@@ -82,7 +82,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
   test("K-15 주택 400㎡ · 요건 충족 → 768,000 · 바닥면적 입력 없이 계산 · body에 바닥면적·용도지역 없음", async ({ page }) => {
     const box = captureBody(page);
     await toDetail(page, "400000000");
-    await fillSeparateDetail(page, { ...HOUSE, demolished: { date: `${YEAR}-01-01`, kind: "house", permit: "yes", otherUse: "no", vacantHouse: "no" } });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...HOUSE, demolished: { date: `${YEAR}-01-01`, kind: "house", permit: "yes", otherUse: "no", vacantHouse: "no" } });
     await fillSplitInputsZero(page);
     await calc(page);
     await expect(totalPayable(page)).toHaveText(exact("768,000"));
@@ -97,7 +97,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
   test("K-16 주택 · 2년 전 6.15. · 빈집정비 «예» → 768,000 (3년 안) · body에 빈집정비", async ({ page }) => {
     const box = captureBody(page);
     await toDetail(page, "400000000");
-    await fillSeparateDetail(page, { ...HOUSE, demolished: { date: `${YEAR - 2}-06-15`, kind: "house", permit: "yes", otherUse: "no", vacantHouse: "yes" } });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...HOUSE, demolished: { date: `${YEAR - 2}-06-15`, kind: "house", permit: "yes", otherUse: "no", vacantHouse: "yes" } });
     await fillSplitInputsZero(page);
     await calc(page);
     await expect(totalPayable(page)).toHaveText(exact("768,000"));
@@ -107,7 +107,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
 
   test("K-17 빈집정비 «아니오» → 1,380,000 · K-18 «모름» → 1,380,000 + 3년 연장 확인 필요", async ({ page }) => {
     await toDetail(page, "400000000");
-    await fillSeparateDetail(page, { ...HOUSE, demolished: { date: `${YEAR - 2}-06-15`, kind: "house", permit: "yes", otherUse: "no", vacantHouse: "no" } });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...HOUSE, demolished: { date: `${YEAR - 2}-06-15`, kind: "house", permit: "yes", otherUse: "no", vacantHouse: "no" } });
     await fillSplitInputsZero(page);
     await calc(page);
     await expect(totalPayable(page)).toHaveText(exact("1,380,000"));
@@ -117,7 +117,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
 
   test("K-18 빈집정비 «모름» → 1,380,000 · 3년 연장 미확인 줄", async ({ page }) => {
     await toDetail(page, "400000000");
-    await fillSeparateDetail(page, { ...HOUSE, demolished: { date: `${YEAR - 2}-06-15`, kind: "house", permit: "yes", otherUse: "no", vacantHouse: "unknown" } });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...HOUSE, demolished: { date: `${YEAR - 2}-06-15`, kind: "house", permit: "yes", otherUse: "no", vacantHouse: "unknown" } });
     await fillSplitInputsZero(page);
     await calc(page);
     await expect(totalPayable(page)).toHaveText(exact("1,380,000"));
@@ -159,6 +159,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
   test("K-20 유료 «아니오» → 1,380,000 · 무상 공용 사유 + 비과세 가능성 고지", async ({ page }) => {
     await toDetail(page, "400000000");
     await fillSeparateDetail(page, {
+      areaBasis: "absent",
       ...HOUSE,
       demolished: { date: `${YEAR - 2}-06-15`, kind: "house", permit: "yes", otherUse: "yes", vacantHouse: "yes", publicUse: "yes", paid: "no" },
     });
@@ -173,6 +174,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
     const box = captureBody(page);
     await toDetail(page, "400000000");
     await fillSeparateDetail(page, {
+      areaBasis: "absent",
       ...HOUSE,
       next: false,
       demolished: { date: `${YEAR - 2}-06-15`, kind: "house", permit: "yes", otherUse: "no", vacantHouse: "yes" },
@@ -180,7 +182,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
     // 건축물로 바꾸면 한시 기간(1년)이 지나 사실 칸이 모두 사라진다
     await page.getByTestId("pt-sa-demolished-kind-building").check();
     await expect(page.getByTestId("pt-sa-demolished-permit-yes")).toHaveCount(0);
-    await expect(page.getByTestId("pt-sa-demolished-no-facts")).toBeVisible();
+    await expect(page.getByTestId("pt-sa-seq-settled")).toHaveAttribute("data-reason", "period");
     await page.getByRole("button", { name: /^다음$/ }).click();
     await fillSplitInputsZero(page);
     await calc(page);
@@ -194,7 +196,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
   test("미선택 차단 + 점프 — 종류만 고르고 «다음» → 허가 문구 · StepIndicator로 step 3 → 계산 → 토지 상세로 복귀(서버 호출 0)", async ({ page }) => {
     const box = captureBody(page);
     await toDetail(page, "300000000");
-    await fillSeparateDetail(page, { ...BUILDING, next: false, demolished: { date: `${YEAR}-01-01`, kind: "building" } });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...BUILDING, next: false, demolished: { date: `${YEAR}-01-01`, kind: "building" } });
     await page.getByRole("button", { name: /^다음$/ }).click();
     await expect(page.getByText(/허가·사용승인\(임시사용승인 포함\)을 받은 것인지 선택하세요/)).toBeVisible();
     await expect(page.getByRole("heading", { name: "별도합산과세 상세 정보" })).toBeVisible();
@@ -209,7 +211,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
   test("철거일이 과세기준일(올해 6.1.) 뒤 → 모순 안내 + 차단", async ({ page }) => {
     await toDetail(page, "300000000");
     // 날짜 결함이라 사슬이 칸을 읽지 않는다(PSA-S1) — 종류 라디오는 그려지지 않고 고칠 칸은 철거일이다
-    await fillSeparateDetail(page, { ...BUILDING, next: false, demolished: { date: `${YEAR}-12-31` } });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...BUILDING, next: false, demolished: { date: `${YEAR}-12-31` } });
     await expect(page.getByTestId("pt-sa-demolished-kind-building")).toHaveCount(0);
     await expect(page.getByTestId("pt-sa-demolished-contradiction")).toContainText("철거일은 과세기준일 이전이어야 합니다");
     await page.getByRole("button", { name: /^다음$/ }).click();
@@ -221,6 +223,7 @@ test.describe("재산세 별도합산 철거 사실 칸 (PSA-U1)", () => {
     await page.setViewportSize({ width: 375, height: 800 });
     await toDetail(page, "400000000");
     await fillSeparateDetail(page, {
+      areaBasis: "absent",
       ...HOUSE,
       next: false,
       demolished: { date: `${YEAR - 2}-06-15`, kind: "house", permit: "yes", otherUse: "yes", vacantHouse: "yes", publicUse: "yes", paid: "yes" },

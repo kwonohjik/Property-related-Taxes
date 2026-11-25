@@ -156,7 +156,8 @@ export function buildingFactIssueOf(
 
 /**
  * ④ — 본 경로(비철거) 칸. 허가 칸은 시행본이 요건을 둘 때만, 용도지역·바닥면적은 사슬이 읽을 때(`areaInputs`)만 싣는다(숨은 stale 값 미전송).
- * 허가 3지선다는 그대로 보낸다(`""`도 — ⑫가 «값 없음»으로 400을 낸다). 빈 용도지역·면적은 키를 빼 ⑫가 «값 없음»으로 막는다.
+ * 허가 3지선다는 그대로 보낸다(`""`도 — ⑫가 «값 없음»으로 400을 낸다). `areaInputs`이면 용도지역은 **비어 있어도 `""`로 싣는다**(Zod enum이 막는다 — ⑧이 먼저 «용도지역을 선택하세요.»로 막으므로 화면에선 도달하지 않는다).
+ * 바닥면적은 값이 없으면 `undefined`라 JSON에서 키가 빠지고 ⑫가 «값 없음»으로 막는다. `areaInputs`가 아니면(허가 «아니오»·«모름») 둘 다 싣지 않는다.
  */
 export function buildingWireFields(
   v: { permit: PropertyRequirementFact; zoningDistrict: string; buildingFloorArea: number | undefined },

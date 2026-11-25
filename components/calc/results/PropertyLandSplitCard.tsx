@@ -91,7 +91,7 @@ function ClassFormula({
           <>
             합산 산출세액 ×
             <Frac top="이 필지 공시가액" bottom="합산 공시가액" />
-            (= {pct(ratio)}) = 이 필지 몫
+            <span className="whitespace-nowrap">(= {pct(ratio)})</span> = 이 필지 몫
           </>
         }
         amount={won(c.share)}
@@ -137,7 +137,8 @@ export function PropertyLandSplitCard({ result }: { result: PropertyTaxResult })
             {propertyDemolishedVerdictLines(split.demolishedVerdict).map((l) => (
               <div key={l.key} data-testid={`land-split-demolished-${l.key}`} className="flex items-start justify-between gap-3 py-1.5 text-sm">
                 <span className="shrink-0 text-xs text-muted-foreground">{l.label}</span>
-                <span className="min-w-0 text-right">{l.text}</span>
+                {/* 한글은 글자 단위로 끊기면 «이\n관»처럼 단어가 갈라진다 — 단어(공백) 단위로만 줄바꿈 */}
+                <span className="min-w-0 text-right break-keep">{l.text}</span>
               </div>
             ))}
           </div>

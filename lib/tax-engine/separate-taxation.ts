@@ -20,6 +20,7 @@ import type { EmployeeSportsFacilityUsage } from "./factory-employee-sports-stan
 import { computeLivestockStandardArea, includedFacilityLabels } from "./livestock-standard-area";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { PROPERTY } from "./legal-codes";
+import { PROPERTY_SEPARATE } from "./legal-codes";
 import { getCurrentPropertyRateSet } from "./data/property-rate-history";
 import type { PropertyRateSet } from "./data/property-rate-history";
 
@@ -477,6 +478,13 @@ function classifyStandard(
     // ⇒ 두 조문은 소재 지역으로 **배타 분기**한다. 시지역의 그 밖 공장용지가 분리과세로
     //   들어올 여지는 없다. 종전에는 경고만 띄우고 0.2% 분리과세를 그대로 줬다.
     if (input.factoryLocation === "urban") {
+      // 허가·사용승인 미이행(§102①1호 단서)이면 별도합산도 §101① 단서로 같은 건축물을 제외하므로 «별도합산으로 바꾸라»는 안내가 틀린다 — 종합합산 안내(세액 불변).
+      if (input.factoryIsUnpermitted) {
+        warnings.push(
+          `도시지역 내 그 밖의 지역(산업단지·공업지역 아님)의 공장용지는 분리과세 대상이 아니고, 허가 또는 사용승인을 받지 않은 공장용 건축물의 부속토지는 ${PROPERTY_SEPARATE.BUILDING_PERMIT_101}에 따라 별도합산에서도 제외됩니다. 종합합산과세대상으로 판정하세요.`,
+        );
+        return null;
+      }
       warnings.push(
         "도시지역 내 그 밖의 지역(산업단지·공업지역 아님)에 있는 공장용지는 분리과세 대상이 " +
         "아닙니다 — 「지방세법 시행령」 §101①1호에 따라 별도합산과세대상입니다. " +

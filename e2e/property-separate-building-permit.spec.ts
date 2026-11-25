@@ -37,7 +37,7 @@ test.describe("재산세 별도합산 건축물 허가·사용승인 칸 (PSA-E3
   test("K-27 허가 «예» → 516,000 · 이관 사유 없음 · body에 buildingPermit yes", async ({ page }) => {
     const box = captureBody(page);
     await toDetail(page);
-    await fillSeparateDetail(page, { ...BUILDING, permit: "yes" });
+    await fillSeparateDetail(page, { areaBasis: "required", ...BUILDING, permit: "yes" });
     await fillSplitInputsZero(page);
     await calc(page);
     await expect(totalPayable(page)).toHaveText(exact("516,000"));
@@ -49,7 +49,7 @@ test.describe("재산세 별도합산 건축물 허가·사용승인 칸 (PSA-E3
   test("K-28 허가 «아니오» → 960,000 · 이관 사유 · 확인 필요 고지", async ({ page }) => {
     const box = captureBody(page);
     await toDetail(page);
-    await fillSeparateDetail(page, { ...BUILDING, permit: "no" });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...BUILDING, permit: "no" });
     await fillSplitInputsZero(page);
     await calc(page);
     await expect(totalPayable(page)).toHaveText(exact("960,000"));
@@ -63,7 +63,7 @@ test.describe("재산세 별도합산 건축물 허가·사용승인 칸 (PSA-E3
 
   test("K-29 허가 «모름» → 960,000 · «확인되지 않아» 고지", async ({ page }) => {
     await toDetail(page);
-    await fillSeparateDetail(page, { ...BUILDING, permit: "unknown" });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...BUILDING, permit: "unknown" });
     await fillSplitInputsZero(page);
     await calc(page);
     await expect(totalPayable(page)).toHaveText(exact("960,000"));
@@ -75,7 +75,7 @@ test.describe("재산세 별도합산 건축물 허가·사용승인 칸 (PSA-E3
     const box = captureBody(page);
     await toDetail(page);
     await page.getByRole("switch", { name: /공장용지/ }).click();
-    await fillSeparateDetail(page, { ...BUILDING, permit: "no" });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...BUILDING, permit: "no" });
     await fillSplitInputsZero(page);
     await calc(page);
     await expect(totalPayable(page)).toHaveText(exact("960,000"));
@@ -86,7 +86,7 @@ test.describe("재산세 별도합산 건축물 허가·사용승인 칸 (PSA-E3
   test("미선택 차단 + 점프 — «다음» → 허가 문구 · StepIndicator로 step 3 → 계산 → 토지 상세로 복귀(서버 호출 0) · 점프 앵커 data-field", async ({ page }) => {
     const box = captureBody(page);
     await toDetail(page);
-    await fillSeparateDetail(page, { ...BUILDING, next: false });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...BUILDING, next: false });
     // 기본값 없음 — 어느 선택지도 눌려 있지 않다
     for (const a of ["yes", "no", "unknown"]) await expect(page.getByTestId(`pt-sa-permit-${a}`)).not.toBeChecked();
     await expect(page.locator('[data-field="buildingPermit"]')).toHaveCount(1);
@@ -108,25 +108,37 @@ test.describe("재산세 별도합산 건축물 허가·사용승인 칸 (PSA-E3
     const toggleY = (await page.getByRole("switch", { name: /건축물 철거 완료/ }).boundingBox())?.y ?? Number.NaN;
     expect(await yPos("pt-sa-permit")).toBeGreaterThan(toggleY);
     await expect(page.getByTestId("pt-sa-area-basis")).toHaveCount(0); // 미선택 — 아직 묻지 않는다
+    await expect(page.getByTestId("pt-sa-seq-status")).toHaveText("다음 질문: 허가·사용승인");
     await page.getByTestId("pt-sa-permit-no").check();
     await expect(page.getByTestId("pt-sa-area-basis")).toHaveCount(0);
+    // PSA-SU — 확정 안내(사유 = 엔진 고지) + 낭독 한 줄
+    await expect(page.getByTestId("pt-sa-seq-settled")).toHaveAttribute("data-reason", "building_permit");
+    await expect(page.getByTestId("pt-sa-seq-settled")).toContainText("나머지 칸은 묻지 않습니다");
+    await expect(page.getByTestId("pt-sa-seq-status")).toHaveText("별도합산 불성립이 확정되어 나머지 칸은 묻지 않습니다");
     await page.getByTestId("pt-sa-permit-unknown").check();
     await expect(page.getByTestId("pt-sa-area-basis")).toHaveCount(0);
+    await expect(page.getByTestId("pt-sa-seq-settled")).toContainText("«모름»은 요건 충족을 인정하지 않아 확정됩니다");
     await page.getByTestId("pt-sa-permit-yes").check();
+    await expect(page.getByTestId("pt-sa-seq-settled")).toHaveCount(0);
+    await expect(page.getByTestId("pt-sa-seq-status")).toHaveText("다음 질문: 건물 바닥면적·용도지역");
     await expect(page.getByTestId("pt-sa-area-basis")).toBeVisible();
     expect(await yPos("pt-sa-area-basis")).toBeGreaterThan(await yPos("pt-sa-permit"));
     // 값을 넣고 «아니오»로 바꾸면 칸이 사라지고, 다시 «예»로 돌리면 값이 그대로(숨은 값 보존)
-    await fillAreaBasis(page, { zoning: BUILDING.zoning, floor: BUILDING.floor });
+    await fillAreaBasis(page, { zoning: BUILDING.zoning, floor: BUILDING.floor, required: true });
     await page.getByTestId("pt-sa-permit-no").check();
     await expect(page.getByTestId("pt-sa-area-basis")).toHaveCount(0);
     await page.getByTestId("pt-sa-permit-yes").check();
     await expect(page.getByTestId("pt-sa-area-floor")).toHaveValue("100");
+    // PSA-SU — 숨었다 돌아온 면적 칸은 «이전에 고른 답» 표식 · 확인 버튼으로 사라진다
+    await expect(page.getByTestId("pt-sa-prev-answer-buildingFloorArea")).toBeVisible();
+    await page.getByTestId("pt-sa-prev-answer-buildingFloorArea").getByRole("button", { name: "이 답 그대로 확인" }).click();
+    await expect(page.getByTestId("pt-sa-prev-answer-buildingFloorArea")).toHaveCount(0);
   });
 
   test("PSA-S2 — 허가 «아니오»: 면적 칸 없이 «다음» 통과 → 합산 칸 요구 유지(종합합산) → 960,000", async ({ page }) => {
     const box = captureBody(page);
     await toDetail(page);
-    await fillSeparateDetail(page, { zoning: BUILDING.zoning, area: BUILDING.area, permit: "no" });
+    await fillSeparateDetail(page, { areaBasis: "absent", zoning: BUILDING.zoning, area: BUILDING.area, permit: "no" });
     await expect(page.getByTestId("other-comprehensive-value")).toBeVisible();
     await fillSplitInputsZero(page);
     await calc(page);
@@ -139,7 +151,7 @@ test.describe("재산세 별도합산 건축물 허가·사용승인 칸 (PSA-E3
   test("철거 ON → 허가 칸 숨김 + body에 buildingPermit 없음 · 철거 OFF → 칸 복귀 + 고른 답 보존", async ({ page }) => {
     const box = captureBody(page);
     await toDetail(page);
-    await fillSeparateDetail(page, { ...BUILDING, permit: "no", next: false });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...BUILDING, permit: "no", next: false });
     await expect(page.getByTestId("pt-sa-permit")).toBeVisible();
     await page.getByRole("switch", { name: /건축물 철거 완료/ }).click();
     await expect(page.getByTestId("pt-sa-permit")).toHaveCount(0);
@@ -157,7 +169,7 @@ test.describe("재산세 별도합산 건축물 허가·사용승인 칸 (PSA-E3
     await page.getByTestId("pt-sa-demolished-otheruse-no").check();
     // 철거 경로의 용도지역·바닥면적은 사슬 끝에서 처음 그려진다(허가 «아니오»였던 비철거 경로에서는 입력한 적이 없다)
     await expect(page.getByTestId("pt-sa-area-basis")).toBeVisible();
-    await fillAreaBasis(page, { zoning: BUILDING.zoning, floor: BUILDING.floor });
+    await fillAreaBasis(page, { zoning: BUILDING.zoning, floor: BUILDING.floor, required: true });
     await page.getByRole("button", { name: /^다음$/ }).click();
     await fillSplitInputsZero(page);
     await calc(page);
@@ -169,7 +181,7 @@ test.describe("재산세 별도합산 건축물 허가·사용승인 칸 (PSA-E3
   test("375px — 허가 칸(힌트 펼침) 가로 넘침 없음", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 800 });
     await toDetail(page);
-    await fillSeparateDetail(page, { ...BUILDING, permit: "no", next: false });
+    await fillSeparateDetail(page, { areaBasis: "absent", ...BUILDING, permit: "no", next: false });
     await page.getByTestId("pt-sa-permit").getByRole("button", { name: /펼치기/ }).click();
     await expect(page.getByText(/건축물대장·허가대장으로 확인하세요/)).toBeVisible();
     await expect(page.getByTestId("pt-sa-permit-yes")).toBeVisible();

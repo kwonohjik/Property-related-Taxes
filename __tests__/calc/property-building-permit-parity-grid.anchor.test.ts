@@ -85,7 +85,7 @@ function zodItemIssues(body: Record<string, unknown>): string[] {
   if (r.success) return [];
   return r.error.issues
     .filter((i) => i.path[0] === "separateAggregateItem")
-    // ④는 빈 용도지역을 `""`로 싣는다(종전 동작) — Zod enum이 «Invalid option»으로 막는다. 둘 다 차단이라 막다른 길은 아니고, 이 격자는 같은 «차단»으로 센다
+    // ④는 사슬이 용도지역을 읽을 때(`areaInputs`) 빈 용도지역도 `""`로 싣는다(`buildingWireFields`) — Zod enum이 «Invalid option»으로 막는다. ⑧은 «용도지역을 선택하세요.»로 먼저 막으므로 둘 다 차단이라 막다른 길은 아니고, 이 격자는 같은 «차단»으로 센다
     .map((i) => (i.path[1] === "zoningDistrict" && i.code === "invalid_value" ? "용도지역을 선택하세요." : i.message));
 }
 
