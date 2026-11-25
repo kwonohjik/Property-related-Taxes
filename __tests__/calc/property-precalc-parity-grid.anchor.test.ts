@@ -48,6 +48,22 @@ const OTHER_SEP: Axis = [
 ];
 const YEAR = new Date().getFullYear();
 
+/** 분리과세 유형 축 — 공장(이내·초과·면적 미입력·시지역; 허가 미이행은 «종합합산 재입력» 422가 이미 anchor — `property.route.separated-factory-unpermitted-422`)·목장(이내·초과·마릿수 미입력)·한도 없는 유형(농지·골프장) */
+const FACTORY_OK = { stSeparatedType: "factory", stFactoryLocation: "industrial_zone", stFactoryFloorArea: "1200", stFactoryAreaRatePercent: "12" };
+const PASTURE_OK = { stSeparatedType: "livestock", stPastureLivestockType: "hanwoo_breeding", stPastureLivestockCount: "50", stPastureHasFacility: true };
+const SEPARATED_LIMIT_TYPES: Axis = [
+  { ...FACTORY_OK, stFactoryTotalLandArea: "8000" },
+  { ...FACTORY_OK, stFactoryTotalLandArea: "12000" },
+  { ...FACTORY_OK, stFactoryTotalLandArea: "15000" },
+  { ...FACTORY_OK, stFactoryTotalLandArea: "" },
+  { ...FACTORY_OK, stFactoryTotalLandArea: "15000", stFactoryLocation: "urban" },
+  { ...PASTURE_OK, stPastureTotalLandArea: "600" },
+  { ...PASTURE_OK, stPastureTotalLandArea: "2000" },
+  { ...PASTURE_OK, stPastureTotalLandArea: "2000", stPastureLivestockCount: "" },
+  { stSeparatedType: "farmland", stFactoryTotalLandArea: "15000" },
+  { stSeparatedType: "golf_member", stPastureTotalLandArea: "2000" },
+];
+
 /** 소유 형태 축 — house_split은 주택 전용이라 다른 물건에서 남은 값(stale)이 ⑫ 400을 만들던 막다른 길(sync-checker M-3). */
 const OWNERSHIP: Axis = [
   { ownershipType: undefined },
@@ -149,6 +165,16 @@ const GRID: [string, Partial<FormState>[]][] = [
   ],
   ["토지-유형미선택", product({ objectType: "land", landTaxType: "" }, [PRICE])],
   [
+    // PSE-E3 — 분리과세 공장·목장 면적 한도: 초과 > 0이면 종합합산 칸 요구(⑧·⑫ 같은 술어), 초과 0·판정 불가는 요구 없음
+    "토지-분리과세-면적한도",
+    product({ objectType: "land", landTaxType: "separated" }, [
+      PRICE,
+      SEPARATED_LIMIT_TYPES,
+      [{ otherComprehensiveValue: "" }, { otherComprehensiveValue: "0" }, { otherComprehensiveValue: "100,000,000" }],
+      [{ taxCapMode: "direct" }, { taxCapMode: "recompute", previousYearTaxBase: "100,000,000" }],
+    ]),
+  ],
+  [
     "토지-분리과세",
     product({ objectType: "land", landTaxType: "separated" }, [
       PRICE,
@@ -163,12 +189,20 @@ const GRID: [string, Partial<FormState>[]][] = [
  *  - blank-price: 공시가격 빈칸은 ④가 0으로 보낸다 — 화면은 입력을 요구한다.
  *  - housing-cap-toggle: 부칙 제15조 토글 ON인데 직전 본세 빈칸 — 토글은 UI 전용 상태라 ⑫에는 «상한 없음» 입력으로 보인다.
  *  - separated-type: 분리과세 유형 라디오 미선택 — 유형은 와이어에 `separateTaxationItem`이 없는 것으로만 보인다.
+ *  - separated-limit-input: 분리과세 공장·목장 면적 한도 판정 입력 미충족(총면적·마릿수 미입력·시지역 공장) — ⑫는 선택 입력이라 통과시키고 엔진이 같은 판정에서 던진다(422 — 침묵 0원 아님). 아래 별도 테스트가 엔진 throw를 고정한다.
  *  - ownership-detail: 소유 형태 선택 + 공부상 소유자·공유자 목록 미입력 — ④가 taxpayerInfo를 보내지 않아 ⑫에는 «소유 형태 없음»으로 보인다.
  */
+function isSeparatedLimitInputGap(form: FormState): boolean {
+  if (form.stSeparatedType === "factory") return form.stFactoryLocation === "urban" || !form.stFactoryTotalLandArea;
+  if (form.stSeparatedType === "livestock") return !form.stPastureTotalLandArea || !form.stPastureLivestockCount;
+  return false;
+}
+
 function uiOnlyReason(form: FormState): string | null {
   if (!form.publishedPrice) return "blank-price";
   if (form.objectType === "housing" && form.housingTaxCapEnabled) return "housing-cap-toggle";
   if (form.objectType === "land" && form.landTaxType === "separated" && !form.stSeparatedType) return "separated-type";
+  if (form.objectType === "land" && form.landTaxType === "separated" && isSeparatedLimitInputGap(form)) return "separated-limit-input";
   // 소유 형태 선택 시 필수 보조 입력(공부상 소유자·공유자 등) — ④가 taxpayerInfo를 생략하는 입력은 ⑫에게 «소유 형태 없음»으로 보인다
   if (form.ownershipType && form.ownershipType !== "sole") return "ownership-detail";
   return null;
@@ -221,6 +255,52 @@ describe("⑧(firstInvalidStep) ↔ ⑫(Zod) 격자", () => {
       return !z.success && firstInvalidStep(form) === null;
     });
     expect(loose.map((c) => c.id)).toEqual([]);
+  });
+
+  describe("PSE-E3 — 분리과세 면적 한도 셀 (⑧ ≡ ⑫ ≡ 엔진 · M-8)", () => {
+    const sepCells = cells.filter((c) => c.id.startsWith("토지-분리과세-면적한도#"));
+    const priced = sepCells.filter(({ form }) => form.publishedPrice);
+
+    it("격자 규모 — 10 유형 × 가격 2 × 합산 칸 3 × 상한 2", () => {
+      expect(sepCells.length).toBe(120);
+    });
+
+    it("초과 > 0(공장 15,000㎡·목장 2,000㎡) — 합산 칸이 비면 ⑧ 차단(Step 3)·⑫ 400, 값(0 포함)이 있으면 둘 다 통과 · 엔진 200", () => {
+      const over = priced.filter(({ form }) => form.stFactoryTotalLandArea === "15000" && form.stFactoryLocation === "industrial_zone" && form.stSeparatedType === "factory"
+        || (form.stSeparatedType === "livestock" && form.stPastureTotalLandArea === "2000" && form.stPastureLivestockCount === "50"));
+      expect(over.length).toBe(12);
+      for (const { id, form } of over) {
+        const blank = form.otherComprehensiveValue === "";
+        const z = propertyTaxInputSchema.safeParse(buildPropertyTaxRequestBody(form));
+        expect(firstInvalidStep(form)?.step ?? null, id).toBe(blank ? 3 : null);
+        expect(z.success, id).toBe(!blank);
+        if (z.success) expect(() => calculatePropertyTax(z.data as PropertyTaxInput), id).not.toThrow();
+      }
+    });
+
+    it("초과 0(이내·정확히 기준)·한도 없는 유형 — 합산 칸이 비어도 통과, body에 otherComprehensiveValue를 싣지 않는다(stale 미전송)", () => {
+      const within = priced.filter(({ form }) =>
+        (form.stSeparatedType === "factory" && ["8000", "12000"].includes(form.stFactoryTotalLandArea))
+        || (form.stSeparatedType === "livestock" && form.stPastureTotalLandArea === "600")
+        || form.stSeparatedType === "farmland" || form.stSeparatedType === "golf_member");
+      expect(within.length).toBe(30);
+      for (const { id, form } of within) {
+        const body = buildPropertyTaxRequestBody(form);
+        expect(firstInvalidStep(form), id).toBeNull();
+        expect("otherComprehensiveValue" in body, id).toBe(false);
+        expect(propertyTaxInputSchema.safeParse(body).success, id).toBe(true);
+      }
+    });
+
+    it("판정 입력 미충족(총면적·마릿수 미입력·시지역 공장) — ⑧ 차단, 엔진도 던진다(침묵 0원 없음)", () => {
+      const gap = priced.filter(({ form }) => isSeparatedLimitInputGap(form));
+      expect(gap.length).toBe(18);
+      for (const { id, form } of gap) {
+        expect(firstInvalidStep(form), id).not.toBeNull();
+        const z = propertyTaxInputSchema.safeParse(buildPropertyTaxRequestBody(form));
+        if (z.success) expect(() => calculatePropertyTax(z.data as PropertyTaxInput), id).toThrow();
+      }
+    });
   });
 
   it("M-3: 주택 아닌 물건에 남은 house_split — ④는 주택 전용 키·taxpayerInfo를 보내지 않고 ⑧은 화면에 없는 칸을 요구하지 않는다", () => {

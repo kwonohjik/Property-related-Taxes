@@ -505,6 +505,8 @@ export const propertyTaxInputSchema = z
       const required = propertyLandSplitRequiredFor({
         landTaxType: data.landTaxType,
         separateAggregateItem: data.separateAggregateItem,
+        // PSE — 분리과세(공장·목장)는 면적 한도 초과가 있을 때만 종합합산 칸을 요구한다(⑧·엔진과 같은 술어)
+        separateTaxationItem: data.separateTaxationItem,
         targetDate: data.targetDate,
       });
       for (const key of missingLandSplitInputs(required, data)) {
