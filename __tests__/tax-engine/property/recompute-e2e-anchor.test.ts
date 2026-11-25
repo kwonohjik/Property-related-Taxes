@@ -3,7 +3,7 @@
  *
  * UI 폼(buildPropertyTaxRequestBody) → API body → 엔진(calculatePropertyTax) 전 경로 정합.
  * - 건축물 recompute: body 변환 + determinedTax 일치(P4 C-2와 동일 375,000)
- * - 별도합산 recompute: 비대상 → direct fallback(taxCapMode 미전송)
+ * - 별도합산 recompute: PSA-U2a(2026-11-25)로 recompute 대상 — taxCapMode·직전 과세표준 전송, 직전 세액 미전송
  * - 주택 recompute: 세부담상한 미전송(§122 단서)
  */
 
@@ -35,7 +35,7 @@ describe("P6: §118 recompute end-to-end (UI 변환 → 엔진)", () => {
     expect(r.determinedTax).toBe(375_000);
   });
 
-  it("별도합산 recompute form — 비대상 → direct fallback (taxCapMode 미전송)", () => {
+  it("별도합산 recompute form — PSA-U2a로 대상 개방 → taxCapMode·직전 과세표준 전송 · 직전 세액 미전송", () => {
     const form: FormState = {
       ...INITIAL_FORM,
       objectType: "land",
@@ -45,9 +45,9 @@ describe("P6: §118 recompute end-to-end (UI 변환 → 엔진)", () => {
       previousYearTax: "500000",
     };
     const body = buildPropertyTaxRequestBody(form);
-    expect(body.taxCapMode).toBeUndefined();
-    expect(body.previousYearTaxBase).toBeUndefined();
-    expect(body.previousYearTax).toBe(500_000);
+    expect(body.taxCapMode).toBe("recompute");
+    expect(body.previousYearTaxBase).toBe(100_000_000);
+    expect(body.previousYearTax).toBeUndefined();
   });
 
   it("주택 recompute form — 세부담상한 미전송 (§122 단서)", () => {
