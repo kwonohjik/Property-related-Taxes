@@ -25,6 +25,7 @@ import { filingNontaxableIncomeOf } from "@/components/calc/results/transfer/Det
 import { sumFilingStageGains } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
 import { aggregateNontaxableIncomeLabel } from "@/components/calc/results/transfer/DetailedStatementRhPartialFormulas";
 import { nontaxableIncomeLabel } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/display-labels";
+import type { NblCarryoverDeemedBeforeGift } from "@/lib/calc/nbl-carryover-deemed-before-gift";
 
 
 
@@ -64,7 +65,7 @@ export function PropertyCard({
   exemptionNote,
   saleSplitActual,
   phdApartment,
-  nblCarryoverDeemedNote,
+  nblCarryoverDeemed,
   houses,
 }: {
   breakdown: PerPropertyBreakdown;
@@ -77,8 +78,8 @@ export function PropertyCard({
   saleSplitActual?: boolean;
   /** PHD(§164⑦ 환산) 주택 종류가 공동주택인가 — 엔진 미전송(표시 축)이라 폼(`phdHousingType`)에서 읽어 내려온다. */
   phdApartment?: boolean;
-  /** 이월과세 토지 × 양도일 의제일 ≤ 증여 등기접수일 고지 — 폼 사실이라 호출부가 만든다(`nblCarryoverDeemedBeforeGiftNote`). */
-  nblCarryoverDeemedNote?: string;
+  /** 이월과세 토지 × 양도일 의제일 ≤ 증여 등기접수일 고지 — 폼 사실이라 호출부가 만든다(`nblCarryoverDeemedBeforeGift`). */
+  nblCarryoverDeemed?: NblCarryoverDeemedBeforeGift;
   /**
    * 명부 — 조특법 주택 수 제외 카드에 「보유 주택 N」을 붙인다(단건·다건과 같은 prop).
    * 일괄은 단건과 **같은 폼**이라 `formData.houses`이고, 엔진 detail의 행 id도 그 명부를 가리킨다.
@@ -185,7 +186,7 @@ export function PropertyCard({
         assetKind={assetKind}
         isExempt={breakdown.isExempt}
         {...(exemptionNote ? { exemptionNote } : {})}
-        nblCarryoverDeemedNote={nblCarryoverDeemedNote}
+        nblCarryoverDeemed={nblCarryoverDeemed}
         {...(saleSplitActual ? { saleSplitActual } : {})}
         phdApartment={phdApartment}
       />

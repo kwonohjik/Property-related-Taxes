@@ -48,7 +48,7 @@ import { reductionEligibleIncome } from "@/components/calc/results/transfer/redu
 import type { RentalHousingExceptionResult } from "@/lib/tax-engine/transfer-tax/rental-housing-exception/types";
 import { Article89ExceptionBasisLine } from "@/components/calc/results/shared/Article89ExceptionBasisLine";
 import { LandExclusionExemptBasisCard } from "@/components/calc/results/shared/LandExclusionExemptBasisCard";
-import { nblCarryoverDeemedBeforeGiftNote } from "@/lib/calc/nbl-carryover-deemed-before-gift";
+import { nblCarryoverDeemedBeforeGift } from "@/lib/calc/nbl-carryover-deemed-before-gift";
 
 
 /**
@@ -577,7 +577,7 @@ export function PropertyBreakdownAccordion({
               : {})}
             {...(isSaleSplitActual(property?.form?.assets?.[0]) ? { saleSplitActual: true } : {})}
             phdApartment={isPhdApartment(property?.form?.assets?.[0])}
-            nblCarryoverDeemedNote={nblCarryoverDeemedBeforeGiftNote(property?.form?.assets?.[0])}
+            nblCarryoverDeemed={nblCarryoverDeemedBeforeGift(property?.form?.assets?.[0])}
             {...(bgOwnedPartOfResult(breakdown) ? { bgOwnerSplit: true } : {})}
           />
           {/* 부담부증여 §159·증여세 명세 — 단건(`SingleDetailCards`)과 같은 카드. 연간 합산은 자산마다 다른 증여라 자산 행에 그린다(트랙 BG · Q-3 a).
