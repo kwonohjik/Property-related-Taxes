@@ -171,6 +171,7 @@ describe("⑫ Zod — 공장 면적 필드가 strip되지 않는다", () => {
       objectType: "land",
       publishedPrice: 100_000_000,
       landTaxType: "separated",
+      otherComprehensiveValue: 0, // PSE-E3 — 한도 초과(15,000㎡)라 종합합산 합산 칸이 필수다(0 = 없음)
       separateTaxationItem: {
         isFactoryLand: true,
         factoryLocation: "industrial_zone",
@@ -335,6 +336,7 @@ describe("§102①3호 — 목장용지 가축별 기준면적", () => {
       objectType: "land",
       publishedPrice: 100_000_000,
       landTaxType: "separated",
+      otherComprehensiveValue: 0, // PSE-E3 — 한도 초과라 종합합산 합산 칸이 필수다(0 = 없음)
       separateTaxationItem: {
         isLivestockFarm: true,
         pastureTotalLandArea: 40000,
