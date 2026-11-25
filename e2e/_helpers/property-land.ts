@@ -106,6 +106,36 @@ export async function fillSeparateDetail(
   if (o.next !== false) await page.getByRole("button", { name: /^다음$/ }).click();
 }
 
+/**
+ * 분리과세 공장용지(Step 2) — 유형·입지는 라디오 role + 라벨 정규식, 면적은 `pt-factory-*` testid. 사슬 판단은 호출부 몫(헬퍼는 채우기만).
+ * `next: false`면 다음 버튼을 누르지 않는다(Step 2 미완 상태로 StepIndicator를 쓰는 시나리오).
+ */
+export async function fillSeparatedFactory(
+  page: Page,
+  o: { location?: RegExp; total?: string; floor?: string; rate?: string; next?: boolean },
+) {
+  await page.getByRole("radio", { name: /^공장용지/ }).check();
+  if (o.location) await page.getByRole("radio", { name: o.location }).check();
+  if (o.total !== undefined) await page.getByTestId("pt-factory-total-area").fill(o.total);
+  if (o.floor !== undefined) await page.getByTestId("pt-factory-floor-area").fill(o.floor);
+  if (o.rate !== undefined) await page.getByTestId("pt-factory-rate").fill(o.rate);
+  if (o.next !== false) await page.getByRole("button", { name: /^다음$/ }).click();
+}
+
+/** 분리과세 축산용지(Step 2) — 축종은 shadcn Select(트리거 클릭 → 옵션 role), 시설은 칩 토글(switch). */
+export async function fillSeparatedPasture(
+  page: Page,
+  o: { total: string; livestock: RegExp; count: string; facility?: boolean; next?: boolean },
+) {
+  await page.getByRole("radio", { name: /^축산용지/ }).check();
+  await page.getByTestId("pt-pasture-total-area").fill(o.total);
+  await page.getByTestId("pt-pasture-livestock-type").click();
+  await page.getByRole("option", { name: o.livestock }).click();
+  if (o.facility) await page.getByRole("switch", { name: /부대시설/ }).click();
+  await page.getByTestId("pt-pasture-livestock-count").fill(o.count);
+  if (o.next !== false) await page.getByRole("button", { name: /^다음$/ }).click();
+}
+
 /** Step 3 합산 칸 — 그려진 칸만 «없음(0)»으로 채운다(요구 칸은 엔진 술어가 정한다). */
 export async function fillSplitInputsZero(page: Page) {
   for (const id of ["other-separate-aggregate-value", "other-comprehensive-value"]) {
