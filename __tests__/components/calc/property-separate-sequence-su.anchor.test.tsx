@@ -160,6 +160,9 @@ describe("낭독 한 줄(role=status) — 항상 마운트 · 다음 질문과 �
     expect(screen.getByTestId("pt-demolished-dates-notice").textContent).toBe(status());
     rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedDate: "2026-01-01" }} onChange={() => {}} />);
     expect(status()).toBe("다음 질문: 철거된 것의 종류");
+    // 화면 안내도 날짜가 아니라 종류를 가리킨다(낭독과 같은 칸)
+    expect(screen.queryByTestId("pt-demolished-dates-notice")).toBeNull();
+    expect(screen.getByTestId("pt-demolished-kind-notice").textContent).toBe("철거된 것의 종류를 고르면 이어서 필요한 칸이 표시됩니다.");
   });
 
   it("철거 사슬: 종류 미선택 → «철거된 것의 종류» · 허가 미답 → «허가·사용승인»", () => {

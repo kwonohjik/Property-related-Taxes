@@ -21,6 +21,7 @@ import { demolishedFormValues } from "@/components/calc/property/request-body";
 import { demolishedChainOf } from "@/lib/calc/property-separate-requirements";
 import { PROPERTY_ASK_FIELD_NAME } from "@/lib/calc/property-demolished-verdict-text";
 import { DEMOLISHED_DATE_NOTICE } from "@/components/calc/property/separate-sequence";
+import { DEMOLISHED_KIND_NOTICE } from "@/components/calc/property/separate-sequence";
 import { settledLeadOf } from "@/components/calc/property/separate-sequence";
 import { settledTail } from "@/components/calc/property/separate-sequence";
 import { demolishedSettledOf } from "@/components/calc/property/separate-sequence";
@@ -157,6 +158,14 @@ function visit(form: FormState, ui: ReturnType<typeof render>, el: HTMLElement, 
   if (statusText !== wantStatus) return fail(`낭독 한 줄 «${statusText}» ≠ «${wantStatus}»`);
   const statusEl = el.querySelector('[data-testid="pt-sa-seq-status"]');
   if (statusEl?.getAttribute("role") !== "status" || statusEl.getAttribute("aria-live") !== "polite") return fail("낭독 한 줄에 role=status · aria-live=polite 없음");
+  // N6b — 화면 안내 한 줄과 낭독이 같은 칸을 가리킨다: 철거일 없음 → 날짜 안내 · 철거일 있고 다음이 종류 → 종류 안내(날짜 안내 아님)
+  const dateNotice = el.querySelector('[data-testid="pt-demolished-dates-notice"]')?.textContent ?? null;
+  const kindNotice = el.querySelector('[data-testid="pt-demolished-kind-notice"]')?.textContent ?? null;
+  const wantDate = form.saDemolishedDate === "" ? DEMOLISHED_DATE_NOTICE : null;
+  // 종류를 골랐는데 다음이 다시 종류면(공장용지 × 주택 모순) 모순 안내(role=alert)가 그 칸을 가리키므로 종류 안내는 없다
+  const wantKind = form.saDemolishedDate !== "" && chain.next === "demolishedKind" && form.saDemolishedKind === "" ? DEMOLISHED_KIND_NOTICE : null;
+  if (chain.next === "demolishedKind" && form.saDemolishedKind !== "" && !el.querySelector('[data-testid="pt-sa-demolished-contradiction"]')) return fail("종류를 골랐는데 다음 칸이 종류인데 모순 안내 없음");
+  if (dateNotice !== wantDate || kindNotice !== wantKind) return fail(`화면 안내(날짜 «${dateNotice}» · 종류 «${kindNotice}») ≠ (날짜 «${wantDate}» · 종류 «${wantKind}»)`);
   // N7 — «이전에 고른 답» 표식 ⇔ 그려졌고 저장값이 있다
   for (const f of ["demolishedKind", "demolishedVacantHouse", "demolishedPermit", "demolishedOtherUse", "demolishedPublicUse", "demolishedPublicUsePaid", "buildingFloorArea"] as const) {
     const stored = f === "buildingFloorArea" ? form.saBuildingFloorArea !== "" || form.saZoningDistrict !== "" : (form[WIDGET[f].key] as string) !== "";

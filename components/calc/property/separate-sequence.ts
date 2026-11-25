@@ -54,6 +54,9 @@ export function settledTail(settled: Pick<Settled, "answer" | "dateOnly">): stri
 /** 철거 ON인데 철거일이 없을 때의 안내 — 화면(`pt-demolished-dates-notice`)과 낭독 한 줄(`role="status"`)이 같은 문구를 쓴다 */
 export const DEMOLISHED_DATE_NOTICE = "철거일을 입력하면 이어서 필요한 칸이 표시됩니다.";
 
+/** 철거일은 있고 사슬의 다음 칸이 종류일 때의 화면 안내(`pt-demolished-kind-notice`) — 낭독 한 줄(«다음 질문: 철거된 것의 종류»)과 같은 칸을 가리킨다 */
+export const DEMOLISHED_KIND_NOTICE = `${PROPERTY_ASK_FIELD_NAME.demolishedKind}를 고르면 이어서 필요한 칸이 표시됩니다.`;
+
 /** 철거 사슬이 접힘으로 확정했으면 그 사유·문장·확정시킨 답 — 아니면 null(성립 `holds`·미확정 포함) */
 export function demolishedSettledOf(form: FormState): Settled | null {
   const values = demolishedFormValues(form);
