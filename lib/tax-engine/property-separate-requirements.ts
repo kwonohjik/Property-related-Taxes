@@ -404,6 +404,54 @@ export function propertyBuildingPermitFactIssue(i: {
   return blank(i.permit) ? { field: "buildingPermit", message: PROPERTY_BUILDING_PERMIT_ISSUE_MESSAGE } : null;
 }
 
+/**
+ * 본 경로(비철거) 사슬 — 허가·사용승인 → (허가 «예» 또는 허가 칸이 없는 시행본일 때) 용도지역 → 바닥면적 (PSA-S2 · 계획서 §2.6).
+ * 허가 «아니오»·«모름»은 결과(전량 종합합산 이관)를 확정하므로 용도지역·바닥면적을 읽지 않는다(엔진 `isSeparateAggregateLand`도 같은 순서 — 허가를 먼저 읽는다).
+ * 허가 칸이 비어 있으면(미선택) 멈춘다 — 아직 용도지역·바닥면적을 묻지 않는다(엄격 순차).
+ * ⑤ 노출 · ④ 전송 · ⑧ 차단 · ⑫ 400이 이 값 하나를 읽는다. 철거 경로(`demolished`)는 이 사슬을 쓰지 않는다(`propertyDemolishedChain`).
+ */
+export interface PropertyBuildingChain {
+  /** 허가·사용승인 칸을 묻는가(= `propertyBuildingPermitRequired`) */
+  permit: boolean;
+  /** 용도지역·바닥면적을 묻는가 — 허가 칸이 없는 시행본이거나 허가 «예»일 때만 */
+  areaInputs: boolean;
+  /** 허가 «아니오»·«모름»으로 결과가 확정됐는가(전량 종합합산 이관) */
+  resolvedFold: boolean;
+}
+
+export function propertyBuildingChain(i: { taxBaseDate: Date; permit: PropertyRequirementFact | undefined }): PropertyBuildingChain {
+  if (!propertyBuildingPermitRequired(i.taxBaseDate)) return { permit: false, areaInputs: true, resolvedFold: false };
+  return { permit: true, areaInputs: i.permit === "yes", resolvedFold: i.permit === "no" || i.permit === "unknown" };
+}
+
+export const PROPERTY_BUILDING_AREA_ISSUE_MESSAGE = {
+  zoningDistrict: "용도지역을 선택하세요.",
+  buildingFloorArea: "건물 바닥면적(㎡)을 입력하세요.",
+} as const;
+
+export interface PropertyBuildingFactIssue {
+  field: "buildingPermit" | "zoningDistrict" | "buildingFloorArea";
+  message: string;
+}
+
+/**
+ * 본 경로(비철거) 첫 결함 1개 — ⑧·⑫ 공유. 순서 = 화면 순서 = 사슬 순서: 허가 → 용도지역 → 바닥면적.
+ * 사슬이 읽지 않는 칸(허가 «아니오»·«모름» 뒤 용도지역·바닥면적)은 막지 않는다. 용도지역은 비어 있을 때만 막는다(`zoningDistrictSchema`가 enum을 따로 거른다).
+ */
+export function propertyBuildingFactIssue(i: {
+  taxBaseDate: Date;
+  permit: PropertyRequirementFact | undefined;
+  zoningDistrict: string | undefined;
+  buildingFloorArea: number | undefined;
+}): PropertyBuildingFactIssue | null {
+  const permitIssue = propertyBuildingPermitFactIssue(i);
+  if (permitIssue) return permitIssue;
+  if (!propertyBuildingChain(i).areaInputs) return null;
+  if (!i.zoningDistrict) return { field: "zoningDistrict", message: PROPERTY_BUILDING_AREA_ISSUE_MESSAGE.zoningDistrict };
+  if (!i.buildingFloorArea || i.buildingFloorArea <= 0) return { field: "buildingFloorArea", message: PROPERTY_BUILDING_AREA_ISSUE_MESSAGE.buildingFloorArea };
+  return null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 고지 문구 (접힘 사유별 — «확인 필요» 병기)
 // ─────────────────────────────────────────────────────────────────────────────

@@ -221,11 +221,14 @@ describe("Q-8 — 바닥면적·용도지역은 «읽을 때만» 요구 (M12 �
     expect((await post(land({ ...rest, demolishedDate: "2025-05-31" }))).status).toBe(200);
   });
 
-  it("철거 OFF 건축물은 용도지역·바닥면적이 항상 필수(종전 규칙 유지)", async () => {
+  it("철거 OFF 건축물 — 사슬 순서 허가 → 용도지역 → 바닥면적(PSA-S2): 허가 «예»이면 용도지역·바닥면적이 필수 · 허가 «아니오»·«모름»이면 요구하지 않는다", async () => {
     const off = { id: "p1", jurisdictionCode: "000000", landArea: 300, officialLandPrice: 1_000_000 };
     const r = await post(land(off));
     expect(r.status).toBe(400);
-    expect(itemErrors(r.json)).toEqual(["용도지역을 선택하세요.", "별도합산 토지는 건축물 바닥면적(㎡)이 필요합니다(「지방세법 시행령」 §101①1호).", PROPERTY_BUILDING_PERMIT_ISSUE_MESSAGE]);
+    expect(itemErrors(r.json)).toEqual([PROPERTY_BUILDING_PERMIT_ISSUE_MESSAGE]); // 허가부터 — 사슬이 허가 «예» 전에는 면적 칸을 읽지 않는다
+    expect(itemErrors((await post(land({ ...off, buildingPermit: "yes" }))).json)).toEqual(["용도지역을 선택하세요."]);
+    expect(itemErrors((await post(land({ ...off, buildingPermit: "yes", zoningDistrict: "commercial" }))).json)).toEqual(["건물 바닥면적(㎡)을 입력하세요."]);
+    for (const buildingPermit of ["no", "unknown"] as const) expect((await post(land({ ...off, buildingPermit }))).status, buildingPermit).toBe(200);
   });
 });
 

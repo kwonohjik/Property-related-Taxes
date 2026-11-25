@@ -43,13 +43,17 @@ const noop = () => {};
 const view = (form: FormState, onChange: (d: Partial<FormState>) => void = noop) => render(<Step2SeparateAggregate form={form} onChange={onChange} />);
 const has = (id: string) => screen.queryByTestId(id) !== null;
 const group = (name: string) => document.querySelectorAll(`input[type="radio"][name="${name}"]`);
-const floorLabel = () => screen.getByText(/바닥면적 \(㎡\)/);
+/** 용도지역·바닥면적 블록(`SeparateAggregateAreaBasis`)은 사슬 끝에서만 그려진다(PSA-S2) — 없으면 null */
+const floorLabel = () => screen.queryByText(/바닥면적 \(㎡\)/)?.textContent ?? null;
 
 describe("위젯 노출 — 엔진 사슬(chain.order)을 그대로 따른다 · 엄격 순차(답한 칸 + 첫 미답 칸)", () => {
-  it("철거 OFF → 블록 없음 · 라벨은 «건물 바닥면적»", () => {
-    view(demolishedForm({ saDemolished: false }));
+  it("철거 OFF → 블록 없음 · 허가 «예»이면 용도지역·바닥면적 블록(라벨 «건물 바닥면적» · 필수 표시) · 허가 미선택이면 아직 안 그린다", () => {
+    const f = demolishedForm({ saDemolished: false });
+    const { rerender } = view(f);
     expect(has("pt-sa-demolished-facts")).toBe(false);
-    expect(floorLabel().textContent).toBe("건물 바닥면적 (㎡)");
+    expect(floorLabel()).toBe("건물 바닥면적 (㎡) *");
+    rerender(<Step2SeparateAggregate form={{ ...f, saBuildingPermit: "" }} onChange={noop} />);
+    expect(floorLabel()).toBeNull();
   });
 
   it("철거 ON · 철거일 없음 → 안내 한 줄만 — 종류 라디오도 사실 칸도 없다(PSA-S1: 종류는 사슬이 읽을 때만)", () => {
@@ -76,16 +80,16 @@ describe("위젯 노출 — 엔진 사슬(chain.order)을 그대로 따른다 ·
     expect(group("saDemolishedOtherUse")).toHaveLength(0);
     expect(group("saDemolishedVacantHouse")).toHaveLength(0);
     expect(has("pt-demolished-dates-notice")).toBe(false);
-    expect(floorLabel().textContent).toBe("철거 전 건축물 바닥면적 (㎡)");
+    expect(floorLabel()).toBeNull();
     rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedPermit: "yes" }} onChange={noop} />);
     expect(group("saDemolishedOtherUse")).toHaveLength(3);
-    expect(floorLabel().textContent).toBe("철거 전 건축물 바닥면적 (㎡)");
+    expect(floorLabel()).toBeNull();
     rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedPermit: "yes", saDemolishedOtherUse: "no" }} onChange={noop} />);
-    expect(floorLabel().textContent).toBe("철거 전 건축물 바닥면적 (㎡) *");
+    expect(floorLabel()).toBe("철거 전 건축물 바닥면적 (㎡) *");
     // 건축 외 «예» → 접힘 확정 — 뒤 칸 없음 · 바닥면적 필수 아님
     rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedPermit: "yes", saDemolishedOtherUse: "yes" }} onChange={noop} />);
     expect(group("saDemolishedVacantHouse")).toHaveLength(0);
-    expect(floorLabel().textContent).toBe("철거 전 건축물 바닥면적 (㎡)");
+    expect(floorLabel()).toBeNull();
   });
 
   it("주택 · 철거 2026-01-01(일반 기간 안) → 허가 먼저 · 빈집정비는 건축 외 «예» 뒤(단서 하위) · 바닥면적은 필수 아님", () => {
@@ -95,7 +99,7 @@ describe("위젯 노출 — 엔진 사슬(chain.order)을 그대로 따른다 ·
     expect(group("saDemolishedVacantHouse")).toHaveLength(0);
     rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedPermit: "yes", saDemolishedOtherUse: "no" }} onChange={noop} />);
     expect(group("saDemolishedVacantHouse")).toHaveLength(0); // 건축 외 «아니오» — 빈집정비를 묻지 않는다
-    expect(floorLabel().textContent).toBe("철거 전 건축물 바닥면적 (㎡)");
+    expect(floorLabel()).toBeNull(); // 주택은 면적 범위 문언이 없어 용도지역·바닥면적 블록 자체가 없다
     rerender(<Step2SeparateAggregate form={{ ...base, saDemolishedPermit: "yes", saDemolishedOtherUse: "yes" }} onChange={noop} />);
     expect(group("saDemolishedVacantHouse")).toHaveLength(3);
     // 허가 «아니오» → 접힘 확정 · 건축 외 용도·빈집정비 칸 없음

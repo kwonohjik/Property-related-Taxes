@@ -17,7 +17,7 @@ import {
   propertyLandSplitRequiredFor,
 } from "@/lib/tax-engine/property-land-split-tax";
 import {
-  propertyBuildingPermitFactIssue,
+  propertyBuildingFactIssue,
   propertyDemolishedFactIssue,
   resolvePropertyTaxBaseDate,
 } from "@/lib/tax-engine/property-separate-requirements";
@@ -177,7 +177,7 @@ export const propertyTaxInputSchema = z
         demolishedPublicUsePaid: demolishedFactSchema.optional(),
         /**
          * 본 경로(비철거) 허가·사용승인 칸(PSA-E3 · 영 §101① 단서). ⚠️ 선언이 빠지면 Zod가 조용히 제거해 엔진이 항상 «허가 없음»으로 접는다(침묵 stripping).
-         * 과세기준일 2011.6.1.~이고 철거가 아닐 때 비어 있으면 아래 superRefine이 400(`propertyBuildingPermitFactIssue` — ⑧과 같은 함수). 철거 필지가 보내면 무시.
+         * 과세기준일 2011.6.1.~이고 철거가 아닐 때 비어 있으면 아래 superRefine이 400(`propertyBuildingFactIssue` — ⑧과 같은 함수 · 허가 «예»일 때만 용도지역·바닥면적도 요구). 철거 필지가 보내면 무시.
          */
         buildingPermit: demolishedFactSchema.optional(),
       })
@@ -481,30 +481,19 @@ export const propertyTaxInputSchema = z
           });
         }
       } else {
-        if (!sa.zoningDistrict) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["separateAggregateItem", "zoningDistrict"],
-            message: "용도지역을 선택하세요.",
-          });
-        }
-        if (!sa.buildingFloorArea) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["separateAggregateItem", "buildingFloorArea"],
-            message: "별도합산 토지는 건축물 바닥면적(㎡)이 필요합니다(「지방세법 시행령」 §101①1호).",
-          });
-        }
-        // 영 §101① 단서(PSA-E3) — 허가·사용승인 칸. ⑧(`validateStep(2)`)과 같은 `propertyBuildingPermitFactIssue`·같은 순서(용도지역 → 바닥면적 → 허가).
-        const permitIssue = propertyBuildingPermitFactIssue({
+        // 본 경로(비철거) — 허가 → 용도지역 → 바닥면적, «엔진 사슬이 읽는 칸만» 요구한다(PSA-S2). 허가 «아니오»·«모름»이면 결과(전량 종합합산 이관)가 확정이라 용도지역·바닥면적을 요구하지 않는다.
+        // ⑧(`validateStep(2)`)과 같은 `propertyBuildingFactIssue`라 같은 필드·같은 문구·같은 순서다. 공장입지기준면적은 별도합산 기준면적이 아니다(§101①1호 — 바닥면적 × 배율).
+        const buildingIssue = propertyBuildingFactIssue({
           taxBaseDate: resolvePropertyTaxBaseDate(data.targetDate),
           permit: sa.buildingPermit,
+          zoningDistrict: sa.zoningDistrict,
+          buildingFloorArea: sa.buildingFloorArea,
         });
-        if (permitIssue) {
+        if (buildingIssue) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            path: ["separateAggregateItem", permitIssue.field],
-            message: permitIssue.message,
+            path: ["separateAggregateItem", buildingIssue.field],
+            message: buildingIssue.message,
           });
         }
       }

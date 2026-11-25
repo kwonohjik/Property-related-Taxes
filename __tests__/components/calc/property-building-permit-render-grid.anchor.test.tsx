@@ -7,6 +7,8 @@
  *   (b) ⑧이 허가 문구로 막으면 그 칸이 화면에 있다(막다른 길 0) · 칸이 없으면 ⑧은 허가 문구로 막지 않는다
  *   (c) ⑧ 통과 ⇒ ④ 본문을 실제 Zod에 넣어 통과(«⑧ 통과 ∧ ⑫ 400» = 0) · ④의 buildingPermit 전송 ⇔ 칸 노출
  *   (d) 선택값이 라디오에 반영되고, 미선택이면 아무것도 눌려 있지 않다(기본값 없음)
+ *   (e) PSA-S2 — 용도지역·바닥면적 블록(`pt-sa-area-basis`)은 사슬 끝에서만: 비철거는 «허가 칸 없는 시행본 또는 허가 예», 철거는 «2024.6.1.~ 건축물 ∧ 앞 요건 통과».
+ *       블록이 그려졌는데 ⑧이 면적을 요구하지 않거나(과요구 아님 확인), ⑧이 면적을 요구하는데 블록이 없는(막다른 길) 셀 0 · ④ 면적 키 전송 ⇔ 블록 노출 ∧ 값 있음
  * 공허 방지: 셀 수·노출 셀·숨김 셀·차단 셀·통과 셀 하한을 단언한다.
  */
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
@@ -57,14 +59,14 @@ describe("PSA-E3 렌더 격자 — 화면 ≡ ⑧ ≡ ④ ≡ ⑫", () => {
 
   it("연도 × 철거 × 공장 × 답 — 노출 · 막다른 길 0 · «⑧ 통과 ∧ ⑫ 400» 0 · ④ ⇔ 노출 · 선택 반영", () => {
     const bad: string[] = [];
-    const stats = { cells: 0, shown: 0, hidden: 0, blocked: 0, passed: 0 };
+    const stats = { cells: 0, shown: 0, hidden: 0, blocked: 0, passed: 0, areaShown: 0 };
     for (const year of YEARS) {
       vi.setSystemTime(new Date(`${year}-07-15T00:00:00Z`));
       for (const saDemolished of [false, true]) {
         for (const saIsFactory of [false, true]) {
-          for (const answer of ANSWERS) {
-            const f = base(year, { saDemolished, saIsFactory, saBuildingPermit: answer });
-            const tag = `${year}/demolished=${saDemolished}/factory=${saIsFactory}/permit=${answer || "-"}`;
+          for (const answer of ANSWERS) for (const withArea of [true, false]) {
+            const f = base(year, { saDemolished, saIsFactory, saBuildingPermit: answer, ...(withArea ? {} : { saZoningDistrict: "", saBuildingFloorArea: "" }) });
+            const tag = `${year}/demolished=${saDemolished}/factory=${saIsFactory}/permit=${answer || "-"}/area=${withArea}`;
             stats.cells++;
             const { container, unmount } = render(<Step2SeparateAggregate form={f} onChange={() => {}} />);
             const shown = groupLen(container) === 3;
@@ -81,11 +83,23 @@ describe("PSA-E3 렌더 격자 — 화면 ≡ ⑧ ≡ ④ ≡ ⑫", () => {
               if (answer !== "") bad.push(`${tag} 답이 있는데 ⑧이 허가로 막음`);
             }
             if (shown && answer === "" && !blocksOnPermit) bad.push(`${tag} 칸이 보이고 미선택인데 ⑧이 허가로 막지 않음`);
+
+            // (e) 용도지역·바닥면적 블록 — 사슬 끝에서만(오라클은 리터럴: 비철거 = 시행본에 허가 칸 없음(<2011) ∨ 허가 예 · 철거 = 면적 문언 시행본(2024.6.1.~) — 철거 셀은 건축물 · 철거 2026/…-01-01 · 허가 예 · 건축 외 아니오)
+            const areaShown = container.querySelector('[data-testid="pt-sa-area-basis"]') !== null;
+            const expectArea = saDemolished ? year >= 2024 : year < 2011 || answer === "yes";
+            if (areaShown !== expectArea) bad.push(`${tag} 면적 블록 노출 ${areaShown} ≠ 기대 ${expectArea}`);
+            if (areaShown) stats.areaShown++;
+            const needsAreaMessage = message === "용도지역을 선택하세요." || message === "건물 바닥면적(㎡)을 입력하세요." || (message?.includes("바닥면적") ?? false) || (message?.includes("용도지역") ?? false);
+            if (needsAreaMessage && !areaShown) bad.push(`${tag} ⑧이 면적 칸을 요구하는데 블록이 없음(막다른 길): ${message}`);
+            if (areaShown && !withArea && message === null) bad.push(`${tag} 면적 블록이 보이고 비었는데 ⑧이 막지 않음`);
             if (!shown && blocksOnPermit) bad.push(`${tag} 칸이 없는데 ⑧이 허가로 막음`);
 
             const body = buildPropertyTaxRequestBody(f);
             const wired = Object.prototype.hasOwnProperty.call(body.separateAggregateItem as object, "buildingPermit");
             if (wired !== shown) bad.push(`${tag} ④ 전송(${wired}) ≠ 칸 노출(${shown})`);
+            const bodyItem = body.separateAggregateItem as Record<string, unknown>;
+            const areaWired = Boolean(bodyItem.zoningDistrict) || bodyItem.buildingFloorArea !== undefined;
+            if (areaWired !== (areaShown && withArea)) bad.push(`${tag} ④ 면적 전송(${areaWired}) ≠ 블록 노출·값 있음(${areaShown && withArea})`);
 
             if (message === null) {
               stats.passed++;
@@ -105,7 +119,8 @@ describe("PSA-E3 렌더 격자 — 화면 ≡ ⑧ ≡ ④ ≡ ⑫", () => {
     }
     expect(bad, bad.slice(0, 8).join("\n")).toEqual([]);
     // 비공허 — 노출·숨김·차단·통과 갈래를 모두 지난다
-    expect(stats.cells).toBe(YEARS.length * 2 * 2 * ANSWERS.length);
+    expect(stats.cells).toBe(YEARS.length * 2 * 2 * ANSWERS.length * 2);
+    expect(stats.areaShown).toBeGreaterThan(20);
     expect(stats.shown).toBeGreaterThan(20);
     expect(stats.hidden).toBeGreaterThan(20);
     expect(stats.blocked).toBeGreaterThan(5);
@@ -132,14 +147,33 @@ describe("PSA-E3 위젯 — 쓰기·문구·숨은 값", () => {
     expect(onChange.mock.calls.map((c) => c[0])).toEqual([{ saBuildingPermit: "no" }, { saBuildingPermit: "unknown" }, { saBuildingPermit: "yes" }]);
   });
 
-  it("칸 순서 = ⑧ 순서: 용도지역 → (면적) → 바닥면적 → 허가, 철거 토글보다 앞 · 점프 앵커 data-field", () => {
-    const { container } = render(<Step2SeparateAggregate form={base(2026, {})} onChange={() => {}} />);
-    const names = [...container.querySelectorAll('input[type="radio"]')].map((i) => (i as HTMLInputElement).name);
-    expect(names.filter((n, i) => names.indexOf(n) === i)).toEqual(["saZoningDistrict", "saBuildingPermit"]);
+  it("칸 순서 = ⑧ 순서(PSA-S2): 토지 면적 → 공장용지 → 철거 토글 → 허가 → (허가 «예») 용도지역 → 바닥면적 · 점프 앵커 data-field", () => {
+    // 허가 미선택 — 허가까지만(면적 블록은 사슬 끝)
+    const blank = render(<Step2SeparateAggregate form={base(2026, {})} onChange={() => {}} />);
+    const names = (c: HTMLElement) => {
+      const all = [...c.querySelectorAll('input[type="radio"]')].map((i) => (i as HTMLInputElement).name);
+      return all.filter((n, i) => all.indexOf(n) === i);
+    };
+    expect(names(blank.container)).toEqual(["saBuildingPermit"]);
+    expect(blank.container.querySelectorAll('[data-field="buildingPermit"]')).toHaveLength(1);
+    blank.unmount();
+    // 허가 «아니오»·«모름» — 확정이라 면적 블록 없음
+    for (const p of ["no", "unknown"] as const) {
+      const r = render(<Step2SeparateAggregate form={base(2026, { saBuildingPermit: p })} onChange={() => {}} />);
+      expect(names(r.container)).toEqual(["saBuildingPermit"]);
+      expect(r.container.querySelector('[data-testid="pt-sa-area-basis"]')).toBeNull();
+      r.unmount();
+    }
+    // 허가 «예» — 허가 아래 용도지역 → 바닥면적, 철거 토글 뒤
+    const { container } = render(<Step2SeparateAggregate form={base(2026, { saBuildingPermit: "yes" })} onChange={() => {}} />);
+    expect(names(container)).toEqual(["saBuildingPermit", "saZoningDistrict"]);
     const html = container.innerHTML;
-    expect(html.indexOf("건물 바닥면적")).toBeLessThan(html.indexOf('data-testid="pt-sa-permit"'));
-    expect(html.indexOf('data-testid="pt-sa-permit"')).toBeLessThan(html.indexOf("건축물 철거 완료"));
-    expect(container.querySelectorAll('[data-field="buildingPermit"]')).toHaveLength(1);
+    const at = (needle: string) => html.indexOf(needle);
+    expect(at("토지 면적 (㎡)")).toBeLessThan(at("공장용지"));
+    expect(at("공장용지")).toBeLessThan(at("건축물 철거 완료"));
+    expect(at("건축물 철거 완료")).toBeLessThan(at('data-testid="pt-sa-permit"'));
+    expect(at('data-testid="pt-sa-permit"')).toBeLessThan(at('data-testid="pt-sa-area-basis"'));
+    expect(at('data-testid="pt-sa-area-zoning"')).toBeLessThan(at("건물 바닥면적 (㎡)"));
   });
 
   it("뜻 설명 — 영 §101① 단서 verbatim 반영(예=받았거나 받을 필요 없고 사용승인도 문제 없음 · 아니오=받아야 하는데 받지 않음 / 받지 않고 사용 중) + 근거 조문 · 접혀도 DOM·인쇄에 남음", () => {

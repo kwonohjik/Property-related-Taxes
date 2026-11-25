@@ -139,9 +139,19 @@ describe("PSA-E3 — K-27~K-29 · K-F 엔진 연결(판정 · 이관 사유 · �
     expect(no.landSplit?.comprehensive?.transferReasons).toEqual(["building_permit"]);
   });
 
-  it("건축물이 없는 토지(바닥면적 없음)는 허가 칸과 무관하게 no_building(종전 그대로) — 허가 칸이 사유를 덮어쓰지 않는다", () => {
-    const out = run({ id: "p1", jurisdictionCode: "000000", landArea: 300, officialLandPrice: PRICE, zoningDistrict: "commercial", buildingPermit: "no" });
+  it("허가 «예»(허가 요건을 통과)인데 바닥면적이 없으면 no_building(종전 그대로) — 건축물 존재 판정은 허가 통과 뒤에 읽는다", () => {
+    const out = run({ id: "p1", jurisdictionCode: "000000", landArea: 300, officialLandPrice: PRICE, zoningDistrict: "commercial", buildingPermit: "yes" });
     expect(out.landSplit?.comprehensive?.transferReasons).toEqual(["no_building"]);
+  });
+
+  it("PSA-S2 N2 — 허가 «아니오»·«모름»은 바닥면적·용도지역이 없어도 허가 사유로 접힌다(종전 no_building 오표기 정정 · 이관 면적·세액은 같다)", () => {
+    for (const buildingPermit of ["no", "unknown", ""] as const) {
+      for (const extra of [{ zoningDistrict: "commercial" }, {}, { buildingFloorArea: 100 }, { zoningDistrict: "commercial", buildingFloorArea: 100 }] as const) {
+        const out = run({ id: "p1", jurisdictionCode: "000000", landArea: 300, officialLandPrice: PRICE, buildingPermit, ...extra });
+        expect(out.landSplit?.comprehensive?.transferReasons, JSON.stringify({ buildingPermit, extra })).toEqual(["building_permit"]);
+        expect(out.determinedTax).toBe(comprehensiveTax(300 * PRICE));
+      }
+    }
   });
 
   it("철거 필지는 buildingPermit을 읽지 않는다 — 철거 경로 결과가 바이트 동일(요구·판정은 demolishedPermit이 맡는다)", () => {
