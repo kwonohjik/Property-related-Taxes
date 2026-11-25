@@ -19,6 +19,7 @@
  * 엔진 직접 호출에서 요구 칸이 `undefined`이면 **이 필지 단독**으로 계산하고 고지한다(입구 차단은 Zod·⑧ 몫 — 자동 0 기본값은 입구에 두지 않는다).
  */
 import { PROPERTY_CAL, PROPERTY_LAND_SPLIT, PROPERTY_CONST } from "./legal-codes";
+import { PROPERTY } from "./legal-codes";
 import { calculateProration } from "./tax-utils";
 import { applyFairMarketRatio } from "./tax-utils";
 import { applyRate } from "./tax-utils";
@@ -38,6 +39,7 @@ import type {
   LandTaxType,
   PropertyLandSplitClass,
   PropertyLandSplitResult,
+  PropertyLandSplitSeparated,
   PropertyLandSplitTransferReason,
 } from "./types/property.types";
 
@@ -297,9 +299,17 @@ export interface LandClassTaxInput {
   /** 요구 술어 결과 — 요구됐는데 값이 없으면 단독 계산 고지를 낸다 */
   required: PropertyLandSplitRequired;
   cap?: LandSplitCapInput;
-  /** 별도합산 선택에서 종합합산 이관분이 생겼는가(direct 상한 미적용 판단) */
+  /**
+   * 종합합산 이관분이 생겼는가(direct 상한 미적용 판단) — 별도합산 선택의 면적 초과·철거 접힘, **분리과세 선택의 공장·목장 면적 한도 초과**(PSE) 모두.
+   * 이관분이 있으면 과세대상 구분이 직전 연도와 달라질 수 있다(영 §118①1호 가목 단서·다목).
+   */
   transferredFromSeparate: boolean;
   transferReasons: PropertyLandSplitTransferReason[];
+  /**
+   * 분리과세 선택 필지의 한도 안(인정분) — 호출자가 `calculateSeparateTax`로 이미 구한 값이다(단일세율·합산 없음 — 법 §113①3호).
+   * leaf는 세율을 다시 계산하지 않고 합계·세부담상한·echo에만 합친다. 이 값이 있으면 `comprehensiveOwnValue`는 한도 초과분 가액이다.
+   */
+  separatedOwn?: PropertyLandSplitSeparated;
 }
 
 export interface LandClassTaxResult {
@@ -338,7 +348,9 @@ export function calculateLandClassTax(i: LandClassTaxInput): LandClassTaxResult 
     );
   }
 
-  const taxBeforeCap = (hasSep ? separate.share : 0) + (hasComp ? comprehensive.share : 0);
+  const sepOwn = i.separatedOwn;
+  if (sepOwn) warnings.push(PROPERTY_LAND_SPLIT_SEPARATED_NOTICE);
+  const taxBeforeCap = (hasSep ? separate.share : 0) + (hasComp ? comprehensive.share : 0) + (sepOwn?.tax ?? 0);
   const cap = applyLandSplitCap(
     taxBeforeCap,
     { separate, comprehensive },
@@ -355,6 +367,7 @@ export function calculateLandClassTax(i: LandClassTaxInput): LandClassTaxResult 
 
   const legalBasis: string[] = [];
   if (hasSep) legalBasis.push(PROPERTY_LAND_SPLIT.AGGREGATION_SEPARATE);
+  if (sepOwn) legalBasis.push(PROPERTY_LAND_SPLIT.SEPARATED_EXCESS_TO_COMPREHENSIVE, PROPERTY.SEPARATE.TAX_BASE);
   if (hasComp) legalBasis.push(PROPERTY_LAND_SPLIT.AGGREGATION_COMPREHENSIVE, PROPERTY_CAL.RATE_COMPREHENSIVE);
   if (cap.basisTaxSeparate !== undefined) legalBasis.push(PROPERTY_LAND_SPLIT.CAP_BASIS);
   if (cap.applied) legalBasis.push(PROPERTY_CAL.BURDEN_CAP);
@@ -362,10 +375,11 @@ export function calculateLandClassTax(i: LandClassTaxInput): LandClassTaxResult 
   return {
     taxBeforeCap,
     determinedTax: cap.taxAfterCap,
-    ownTaxBase: (hasSep ? separate.ownTaxBase : 0) + (hasComp ? comprehensive.ownTaxBase : 0),
+    ownTaxBase: (hasSep ? separate.ownTaxBase : 0) + (hasComp ? comprehensive.ownTaxBase : 0) + (sepOwn?.ownTaxBase ?? 0),
     cap,
     landSplit: {
       ...(hasSep && { separate }),
+      ...(sepOwn && { separated: sepOwn }),
       ...(hasComp && { comprehensive: { ...comprehensive, transferReasons: i.transferReasons } }),
       taxBeforeCap,
       ...(cap.basisTax !== undefined && {

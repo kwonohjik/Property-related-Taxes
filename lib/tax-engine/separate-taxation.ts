@@ -181,8 +181,8 @@ export function calculateSeparateTax(
   rateSet: PropertyRateSet = getCurrentPropertyRateSet(),
 ): SeparateTaxationResult {
   const classification = classifySeparateTaxation(input, rateSet);
-  // 공장용지 기준면적 초과분은 분리과세에서 빠지므로 **인정분 시가표준액만** 과세표준이 된다
-  // (「지방세법 시행령」 §102①1호 "…기준면적 범위의 토지"). 초과분은 종합합산 이관 — 경고로 안내.
+  // 공장용지·목장용지 기준면적 초과분은 분리과세에서 빠지므로 **인정분 시가표준액만** 과세표준이 된다
+  // (「지방세법 시행령」 §102①1호 "…기준면적 범위의 토지"). 초과분은 종합합산 이관 — 세액은 `property-tax-separated.ts`가 따로 매긴다.
   const base =
     classification.factoryAreaCheck?.recognizedAssessedValue ??
     classification.pastureAreaCheck?.recognizedAssessedValue ??
@@ -207,20 +207,26 @@ export function separatedAreaExcessOf(
 ): PropertyLandSplitAreaLimit | null {
   if (!item) return null;
   try {
-    const c = classifySeparateTaxation({ assessedValue: 0, ...item });
-    if (!c.isApplicable) return null;
-    const factory = c.factoryAreaCheck;
-    const pasture = c.pastureAreaCheck;
-    const check = factory ?? pasture;
-    if (!check) return null;
-    return {
-      kind: factory ? "factory" : "pasture",
-      totalArea: (factory ? item.factoryTotalLandArea : item.pastureTotalLandArea) ?? 0,
-      standardArea: check.standardArea,
-      recognizedArea: check.recognizedArea,
-      excessArea: check.excessArea,
-    };
+    return areaLimitEchoOf(classifySeparateTaxation({ assessedValue: 0, ...item }), item);
   } catch {
     return null;
   }
+}
+
+/** 이미 구한 판정 결과에서 한도 echo를 만든다 — `separatedAreaExcessOf`와 엔진 분기(`property-tax-separated.ts`)가 같은 식을 쓴다. */
+export function areaLimitEchoOf(
+  c: SeparateTaxationResult,
+  item: Omit<SeparateTaxationInput, "assessedValue"> | undefined,
+): PropertyLandSplitAreaLimit | null {
+  if (!c.isApplicable) return null;
+  const factory = c.factoryAreaCheck;
+  const check = factory ?? c.pastureAreaCheck;
+  if (!check) return null;
+  return {
+    kind: factory ? "factory" : "pasture",
+    totalArea: (factory ? item?.factoryTotalLandArea : item?.pastureTotalLandArea) ?? 0,
+    standardArea: check.standardArea,
+    recognizedArea: check.recognizedArea,
+    excessArea: check.excessArea,
+  };
 }

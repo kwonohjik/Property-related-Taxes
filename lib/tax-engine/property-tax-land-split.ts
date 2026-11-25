@@ -19,7 +19,7 @@ import type { LandSplitCapInput } from "./property-land-split-tax";
 import type { PropertyLandSplitTransferReason, PropertyTaxInput, PropertyTaxResult } from "./types/property.types";
 import type { CoOwnershipShare } from "./types/property-object.types";
 
-const NO_PREVIOUS_TAX_NOTICE = "전년도 세부담 상당세액이 입력되지 않아 세부담상한(150%)을 적용하지 않습니다.";
+export const NO_PREVIOUS_TAX_NOTICE = "전년도 세부담 상당세액이 입력되지 않아 세부담상한(150%)을 적용하지 않습니다.";
 
 export interface LandSplitBranchContext {
   input: PropertyTaxInput;
