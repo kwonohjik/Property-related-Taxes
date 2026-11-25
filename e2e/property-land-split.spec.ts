@@ -30,7 +30,7 @@ test.describe("재산세 토지 — 분류별 합산 과세(PSA-E4)", () => {
     const box = captureBody(page);
     await startLand(page, "300000000");
     await pickLandType(page, /별도합산과세대상/);
-    await fillSeparateDetail(page, { zoning: /상업지역/, area: "300", floor: "100", demolished: { date: `${YEAR - 2}-01-01`, kind: "building" } });
+    await fillSeparateDetail(page, { areaBasis: "absent", zoning: /상업지역/, area: "300", floor: "100", demolished: { date: `${YEAR - 2}-01-01`, kind: "building" } });
     // 전량 이관 → 종합합산 칸만 노출
     await expect(page.getByTestId("other-comprehensive-value")).toBeVisible();
     await expect(page.getByTestId("other-separate-aggregate-value")).toHaveCount(0);
@@ -48,7 +48,7 @@ test.describe("재산세 토지 — 분류별 합산 과세(PSA-E4)", () => {
     const box = captureBody(page);
     await startLand(page, "1000000000");
     await pickLandType(page, /별도합산과세대상/);
-    await fillSeparateDetail(page, { zoning: /공업지역/, area: "1000", floor: "100", permit: "yes" });
+    await fillSeparateDetail(page, { areaBasis: "required", zoning: /공업지역/, area: "1000", floor: "100", permit: "yes" });
     await fillAmount(page, page.getByTestId("other-separate-aggregate-value"), "0");
     await fillAmount(page, page.getByTestId("other-comprehensive-value"), "200000000");
     await calc(page);
@@ -63,7 +63,7 @@ test.describe("재산세 토지 — 분류별 합산 과세(PSA-E4)", () => {
     const box = captureBody(page);
     await startLand(page, "300000000");
     await pickLandType(page, /별도합산과세대상/);
-    await fillSeparateDetail(page, { zoning: /상업지역/, area: "300", floor: "100", demolished: { date: `${YEAR - 2}-01-01`, kind: "building" } });
+    await fillSeparateDetail(page, { areaBasis: "absent", zoning: /상업지역/, area: "300", floor: "100", demolished: { date: `${YEAR - 2}-01-01`, kind: "building" } });
     await fillAmount(page, page.getByTestId("other-comprehensive-value"), "0");
     // 별도합산에도 재산정 선택지가 열려 있고, 직접 입력 선택 시 상한 미적용 안내가 보인다
     await expect(page.getByText(/세부담상한에 쓰지 않습니다/)).toBeVisible();
@@ -80,7 +80,7 @@ test.describe("재산세 토지 — 분류별 합산 과세(PSA-E4)", () => {
     const box = captureBody(page);
     await startLand(page, "300000000");
     await pickLandType(page, /별도합산과세대상/);
-    await fillSeparateDetail(page, { zoning: /상업지역/, area: "300", floor: "100", permit: "yes" });
+    await fillSeparateDetail(page, { areaBasis: "required", zoning: /상업지역/, area: "300", floor: "100", permit: "yes" });
     await page.getByRole("button", { name: /재산세 계산하기/ }).click();
     await expect(page.getByText(/같은 지방자치단체 관할구역에서 이 토지 외에 소유한 별도합산과세대상/)).toBeVisible();
     expect(box.bodies).toHaveLength(0);
@@ -125,7 +125,7 @@ test.describe("재산세 토지 — 분류별 합산 과세(PSA-E4)", () => {
     await page.setViewportSize({ width: 375, height: 800 });
     await startLand(page, "1000000000");
     await pickLandType(page, /별도합산과세대상/);
-    await fillSeparateDetail(page, { zoning: /공업지역/, area: "1000", floor: "100", permit: "yes" });
+    await fillSeparateDetail(page, { areaBasis: "required", zoning: /공업지역/, area: "1000", floor: "100", permit: "yes" });
     const overflowStep3 = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     expect(overflowStep3).toBe(false);
     await fillAmount(page, page.getByTestId("other-separate-aggregate-value"), "0");

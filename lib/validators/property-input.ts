@@ -155,7 +155,8 @@ export const propertyTaxInputSchema = z
           .nonnegative({ message: "개별공시지가는 0 이상이어야 합니다." }),
         // 배율을 읽을 때만 필수 — 비철거는 아래 superRefine이, 철거는 `propertyDemolishedFactIssue`가 요구한다(주택·2024.6.1. 전 철거는 요구 0)
         zoningDistrict: zoningDistrictSchema.optional(),
-        buildingFloorArea: z.number().positive().optional(),
+        // 양수 여부는 아래 superRefine이 «읽을 때만» 요구한다(⑧과 같은 문구 1건) — `.positive()`를 여기 두면 Zod `Too small`과 그 문구가 겹쳐 나온다.
+        buildingFloorArea: z.number().optional(),
         isFactory: z.boolean().optional(),
         factoryStandardArea: z.number().positive().optional(),
         demolished: z.boolean().optional(),

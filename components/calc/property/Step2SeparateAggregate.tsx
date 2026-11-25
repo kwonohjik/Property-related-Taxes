@@ -3,9 +3,11 @@
 /**
  * 재산세 별도합산 상세 — Step 2 (PSA-S2 재배치 · 계획서 `property-separate-demolished-sequential.ui.plan.md` §2.4).
  * 계산 순서 = 표시 순서: 토지 면적 → 공장용지 → **건축물 철거 완료 토글**(영향 칸 직전) →
- *   [OFF: 허가·사용승인] / [ON: 철거일 → 철거 사실 사슬] → (확정 안내 자리 — PSA-SU) → **용도지역·건물 바닥면적은 사슬 끝에서만**(`SeparateAggregateAreaBasis`).
+ *   [OFF: 허가·사용승인] / [ON: 철거일 → 철거 사실 사슬] → 확정 안내(사슬이 접힘으로 끝났을 때 — 마지막 답 바로 아래) → **용도지역·건물 바닥면적은 사슬 끝에서만**(`SeparateAggregateAreaBasis`).
  * 어느 칸이 보이는가는 엔진 사슬(철거 `demolishedChainOf` · 비철거 `buildingChainOf`)이 한 곳에서 정한다 — UI는 날짜·시행본·답을 비교하지 않는다(= ④ 전송 = ⑧ 차단 = ⑫ 400).
+ * PSA-SU: 확정 안내(`pt-sa-seq-settled`) · «이전에 고른 답» 표식(확인 집합은 이 컴포넌트의 핸들러만 갱신) · 항상 마운트된 읽기 전용 낭독 한 줄(`role="status"`).
  */
+import { useState } from "react";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -18,6 +20,10 @@ import { SeparateAggregateAreaBasis } from "./SeparateAggregateAreaBasis";
 import { SeparateAggregateBuildingPermit } from "./SeparateAggregateBuildingPermit";
 import { SeparateAggregateDemolishedFacts } from "./SeparateAggregateDemolishedFacts";
 import { demolishedFormValues } from "./request-body";
+import { nextConfirmed } from "./separate-sequence";
+import { prevAnswerFieldsOf } from "./separate-sequence";
+import { sequenceStatusText } from "./separate-sequence";
+import type { SequenceField } from "./separate-sequence";
 import type { FormState } from "./shared";
 
 interface Props {
@@ -25,7 +31,15 @@ interface Props {
   onChange: (d: Partial<FormState>) => void;
 }
 
-export function Step2SeparateAggregate({ form, onChange }: Props) {
+export function Step2SeparateAggregate({ form, onChange: onFormChange }: Props) {
+  // 사용자가 이번에 답을 건드린(확인한) 칸. 핸들러에서만 갱신한다 — 숨은 칸은 다시 열리면 미확인(`nextConfirmed`). `useEffect → store` 없음.
+  const [confirmed, setConfirmed] = useState<ReadonlySet<SequenceField>>(() => new Set());
+  const onChange = (patch: Partial<FormState>) => {
+    setConfirmed(nextConfirmed(form, patch, confirmed));
+    onFormChange(patch);
+  };
+  const onConfirm = (field: SequenceField) => setConfirmed(new Set([...confirmed, field]));
+  const prev = prevAnswerFieldsOf(form, confirmed);
   const demolished = form.saDemolished;
   // 용도지역·건물 바닥면적 블록은 엔진 사슬이 그 칸을 읽을 때만 그린다 — 철거: 사슬 끝(건축물 ∧ 문언 시행본 ∧ 앞 요건 통과) · 비철거: 허가 «예» 또는 허가 칸 없는 시행본.
   const showAreaBasis = demolished
@@ -38,12 +52,17 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
       <p className="text-sm text-muted-foreground">
         아래 질문에 답하면 이어서 필요한 칸만 표시됩니다.
       </p>
+      {/* 다음 질문·확정 낭독 — 항상 마운트(내용만 바뀐다). 새 카드 전체를 live로 감싸지 않는다 */}
+      <div role="status" aria-live="polite" className="sr-only" data-testid="pt-sa-seq-status">
+        {sequenceStatusText(form)}
+      </div>
       <LawArticleModal legalBasis="지방세법 시행령 §101" label="시행령 §101" />
 
       {/* 토지 면적 */}
       <div className="space-y-1">
-        <label className="text-sm font-medium">토지 면적 (㎡)</label>
+        <label htmlFor="pt-sa-land-area-input" className="text-sm font-medium">토지 면적 (㎡)</label>
         <DecimalInput
+          id="pt-sa-land-area-input"
           value={form.saLandArea}
           onChange={(v) => onChange({ saLandArea: v })}
           placeholder="면적 입력 (소수점 가능)"
@@ -78,7 +97,7 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
       />
 
       {/* 영 §101① 단서 허가·사용승인 — 철거 OFF ∧ 어댑터 술어(과세기준일 2011.6.1.~)일 때만. 토글 바로 아래(⑧ 순서: 토지 면적 → 허가 → 용도지역 → 바닥면적) */}
-      <SeparateAggregateBuildingPermit form={form} onChange={onChange} />
+      <SeparateAggregateBuildingPermit form={form} prev={prev} onConfirm={onConfirm} onChange={onChange} />
 
       {demolished && (
         <>
@@ -95,14 +114,12 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
             </p>
             <LawArticleModal legalBasis="지방세법 시행령 §103의2" label="§103의2 1호" />
           </div>
-          <SeparateAggregateDemolishedFacts form={form} onChange={onChange} />
+          <SeparateAggregateDemolishedFacts form={form} prev={prev} onConfirm={onConfirm} onChange={onChange} />
         </>
       )}
 
-      {/* (확정 안내 자리 — 사슬이 접힘으로 끝났을 때의 안내는 PSA-SU) */}
-
       {/* 기준면적 판정 정보 — 사슬 끝에서만(요구될 때만 그려진다) */}
-      {showAreaBasis && <SeparateAggregateAreaBasis form={form} onChange={onChange} />}
+      {showAreaBasis && <SeparateAggregateAreaBasis form={form} prev={prev} onConfirm={onConfirm} onChange={onChange} />}
     </div>
   );
 }

@@ -76,27 +76,33 @@ export async function fillDemolished(page: Page, d: DemolishedFill) {
 
 /**
  * 용도지역·건물(철거 전) 바닥면적 블록 — **사슬 끝에서만 그려진다**(PSA-S2: 비철거는 허가 «예», 철거는 사슬 통과 뒤 건축물일 때).
- * 그려져 있을 때만 채운다(헬퍼는 사슬을 판단하지 않는다 — 블록이 없으면 건너뛴다). 위치(`.first()`/`.nth()`)가 아니라 testid로 가리킨다.
+ * 위치(`.first()`/`.nth()`)가 아니라 testid로 가리킨다. 헬퍼는 사슬을 판단하지 않으므로 **호출부가 «블록이 있어야 하는가»를 말한다** —
+ * `required: true`이면 블록이 없을 때 «조용히 건너뜀»이 아니라 실패한다(사슬이 접혀 블록이 사라지는 회귀를 헬퍼가 삼키지 않는다).
+ * `required`를 생략하면(블록이 없을 수도 있는 탐색용 호출) 없을 때 채우지 않고 돌아온다.
  */
-export async function fillAreaBasis(page: Page, o: { zoning?: RegExp; floor?: string }) {
-  if ((await page.getByTestId("pt-sa-area-basis").count()) === 0) return;
+export async function fillAreaBasis(page: Page, o: { zoning?: RegExp; floor?: string; required?: boolean }) {
+  const block = page.getByTestId("pt-sa-area-basis");
+  if (o.required) await expect(block, "용도지역·바닥면적 블록이 그려져 있어야 한다").toBeVisible();
+  else if ((await block.count()) === 0) return;
   if (o.zoning) await page.getByTestId("pt-sa-area-zoning").getByRole("radio", { name: o.zoning }).check();
   if (o.floor !== undefined) await page.getByTestId("pt-sa-area-floor").fill(o.floor);
 }
 
 /**
  * 별도합산 상세(Step 2) — 순서는 화면 순서(PSA-S2): 토지 면적 → (공장용지는 호출부) → 허가(비철거) 또는 철거 토글·사슬 → 사슬 끝의 용도지역·바닥면적.
- * 용도지역·바닥면적은 블록이 그려졌을 때만 채운다(허가 «아니오»·«모름» · 철거 접힘이면 블록 없음 — 호출부가 값을 줘도 건너뛴다).
+ * `areaBasis` — 호출부가 **면적 블록이 그려져야 하는지(`required`) 그려지지 않아야 하는지(`absent`)**를 명시한다(허가 «아니오»·«모름» · 철거 접힘 · 주택이면 블록 없음).
+ * 생략할 수 없다 — 사슬이 접혀 블록이 사라져도 입력을 조용히 건너뛰는 헬퍼가 회귀를 가리지 않도록.
  */
 export async function fillSeparateDetail(
   page: Page,
-  o: { zoning: RegExp; area: string; floor?: string; permit?: Answer; demolished?: DemolishedFill; next?: boolean },
+  o: { zoning: RegExp; area: string; floor?: string; areaBasis: "required" | "absent"; permit?: Answer; demolished?: DemolishedFill; next?: boolean },
 ) {
   await page.getByTestId("pt-sa-land-area").fill(o.area);
   // 비철거 건축물 허가·사용승인 칸(PSA-E3 · 영 §101① 단서) — 기본값이 없으므로 호출부가 답을 명시한다(미지정 = 미선택 그대로)
   if (o.permit) await page.getByTestId(`pt-sa-permit-${o.permit}`).check();
   if (o.demolished) await fillDemolished(page, o.demolished);
-  await fillAreaBasis(page, { zoning: o.zoning, floor: o.floor });
+  if (o.areaBasis === "required") await fillAreaBasis(page, { zoning: o.zoning, floor: o.floor, required: true });
+  else await expect(page.getByTestId("pt-sa-area-basis"), "용도지역·바닥면적 블록은 그려지지 않아야 한다").toHaveCount(0);
   if (o.next !== false) await page.getByRole("button", { name: /^다음$/ }).click();
 }
 

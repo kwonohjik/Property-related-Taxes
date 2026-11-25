@@ -124,7 +124,8 @@ describe("위젯 노출 — 엔진 사슬(chain.order)을 그대로 따른다 ·
     const f = demolishedForm({ saDemolishedKind: "building", saDemolishedDate: "2025-05-31" });
     view(f);
     expect(group("saDemolishedPermit")).toHaveLength(0);
-    expect(screen.getByTestId("pt-sa-demolished-no-facts").textContent).toContain("종합합산으로 처리합니다");
+    expect(screen.getByTestId("pt-sa-seq-settled").getAttribute("data-reason")).toBe("period");
+    expect(screen.getByTestId("pt-sa-seq-settled").textContent).toContain("종합합산으로 처리합니다");
     expect(firstInvalidStep({ ...f, otherSeparateAggregateValue: "0", otherComprehensiveValue: "0" })).toBeNull();
   });
 
@@ -133,7 +134,8 @@ describe("위젯 노출 — 엔진 사슬(chain.order)을 그대로 따른다 ·
     view(f);
     expect(has("pt-sa-demolished-kind-house")).toBe(false);
     expect(group("saDemolishedPermit")).toHaveLength(0);
-    expect(screen.getByTestId("pt-sa-demolished-no-facts").textContent).toContain("일반 한시 기간(1년)과 빈집정비사업 철거 빈집 한시 기간(3년)이 모두 지나");
+    expect(screen.getByTestId("pt-sa-seq-settled").getAttribute("data-reason")).toBe("period");
+    expect(screen.getByTestId("pt-sa-seq-settled").textContent).toContain("일반 한시 기간(1년)과 빈집정비사업 철거 빈집 한시 기간(3년)이 모두 지나");
     expect(has("pt-demolished-dates-notice")).toBe(false);
     expect(firstInvalidStep({ ...f, otherSeparateAggregateValue: "0", otherComprehensiveValue: "0" })).toBeNull();
   });

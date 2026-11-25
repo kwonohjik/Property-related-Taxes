@@ -24,6 +24,8 @@ export interface DecimalInputProps {
   className?: string;
   /** 천단위 콤마 표시 (주식수·금액 등). 저장값은 콤마 없음. */
   thousandSeparator?: boolean;
+  /** 내부 input의 id — 바깥 `<label htmlFor>`와 연결할 때 쓴다 */
+  id?: string;
   /** E2E·단위 테스트 셀렉터용 data-testid (내부 input에 전달) */
   "data-testid"?: string;
   /** 검증 오류 → 입력칸 이동 앵커(`data-field`) — 래퍼에 단다. 검증의 `ValidationIssue.field`와 같은 값 */
@@ -46,6 +48,7 @@ export function DecimalInput({
   unit,
   className,
   thousandSeparator = false,
+  id,
   "data-testid": dataTestId,
   "data-field": dataField,
 }: DecimalInputProps) {
@@ -70,6 +73,7 @@ export function DecimalInput({
     <div className={cn("relative", className)} data-field={dataField}>
       <input
         ref={inputRef}
+        id={id}
         type="text"
         inputMode="decimal"
         value={displayValue}

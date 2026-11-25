@@ -364,3 +364,13 @@ PR 표기·분할은 **엔진 문서 §6이 정본**이다(UI 문서의 이전 �
 - 현행 유지(기각) · 과세기준일 단위 접기 · 자동 안분 fallback(확정 = 법문 접힘이며 숨은 값 복원은 사용자 명시 답) · 미러링 · native 컨트롤 · placeholder 숫자 · 유리/불리 표현 — 이 문서는 모두 준수.
 - 선행 계획서 결정 중 유지: 모름 = 혜택 불성립 + 확인 필요 · 공용·유료 날짜 칸 없음 · 필드 점프 미신설 · 계산 직전 재검증(`firstInvalidStep`).
 - 자가 검토(1회): ① 주장 근거 — 칸 순서·줄은 이 세션 정독, 엔진 동작은 probe(`probe1.ts`·`probe2.ts`: N2/N3/A/B/F 실측), 격자 시간·SR 낭독·375px는 «미실측/미검증»으로 표시. ② 가장 큰 위험 둘: (a) **E-S2 없이 UI만 숨기면 N3 throw → Step 3 합산 칸 요구가 침묵으로 사라진다**(UI 선행 금지의 근거) (b) 철거 ⑧ 면적 순서(E-S6)·비철거 순서 변경이 ⑫ 문구 순서와 엇갈리는 모순 — G-B·parity 격자가 닫는다. ③ UQ-S1~S5 **전부 결정됨**(2026-11-25) — 미결 0건. Do는 엔진 문서 PSA-S1부터.
+
+---
+
+## 10. PSA-SU 구현 메모 (2026-11-25 — 계획서와 다른 점)
+
+- **확인 집합은 `useState`**(계획 §2.1-5는 `useRef`): 이미 선택된 라디오를 다시 눌러도 `onChange`가 나지 않아(같은 값) ref만 바꾸면 화면이 다시 그려지지 않는다. 갱신은 여전히 핸들러(`Step2SeparateAggregate.onChange`·`onConfirm`)에서만 — `useEffect → store` 없음. 순수 함수는 `components/calc/property/separate-sequence.ts`.
+- **표식에 «이 답 그대로 확인» 버튼 추가**: 같은 값 재클릭으로는 확인할 길이 없어서. 다른 값을 고르면 표식은 사라진다(계획 그대로).
+- 표식은 사실 칸 외에 비철거 허가 칸·용도지역+바닥면적 쌍(`buildingFloorArea`)에도 붙는다(숨었다 돌아오는 칸이므로 같은 규칙).
+- 확정 안내 3문장 중 사유는 엔진 `resolved.notice`(철거) · `PROPERTY_BUILDING_PERMIT_NO/UNKNOWN_NOTICE`(비철거) 그대로. 성립(holds)인데 요건 칸이 없는 시행본은 확정 안내가 아니라 `pt-sa-demolished-no-facts` 한 줄을 유지한다.
+- `RadioCardGroup`에 `aria-label`/`aria-labelledby`(주면 `role="radiogroup"`)·`DecimalInput`에 `id`를 추가 — 주지 않으면 종전 DOM 그대로.

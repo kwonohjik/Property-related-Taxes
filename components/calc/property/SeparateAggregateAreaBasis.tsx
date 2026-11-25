@@ -7,30 +7,41 @@
  * 그려졌다 = 요구됐다(⑧ 차단 · ⑫ 400 · ④ 전송과 같은 엔진 걷기 하나) — 그래서 `*` 필수 표시는 항상 켜진다.
  * 순서는 용도지역 → 바닥면적(⑧·⑫와 같은 순서). `useEffect → store` 미러링 없음 — 렌더 파생 + onChange뿐이다.
  */
+import { useId } from "react";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ReferenceSiteLinks } from "@/components/calc/inputs/ReferenceSiteLink";
 import { REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { PrevAnswerMark } from "./SeparateAggregateSequenceNotes";
+import type { SequenceField } from "./separate-sequence";
 import { ZONING_DISTRICT_LABELS } from "./shared";
 import type { FormState } from "./shared";
 
 interface Props {
   form: FormState;
+  /** «이전에 고른 답» 표식을 붙일 칸(`Step2SeparateAggregate`가 파생) — 용도지역·바닥면적은 한 쌍(`buildingFloorArea`) */
+  prev: ReadonlySet<SequenceField>;
+  onConfirm: (field: SequenceField) => void;
   onChange: (d: Partial<FormState>) => void;
 }
 
-export function SeparateAggregateAreaBasis({ form, onChange }: Props) {
+export function SeparateAggregateAreaBasis({ form, prev, onConfirm, onChange }: Props) {
   const demolished = form.saDemolished;
+  // 라벨 ↔ 입력 연결(스크린리더가 «이 칸이 무엇인지» 읽도록) — 용도지역은 라디오 그룹 이름, 바닥면적은 `<label htmlFor>`
+  const zoningLabelId = useId();
+  const floorId = useId();
   return (
     <div className="space-y-5" data-testid="pt-sa-area-basis">
+      {prev.has("buildingFloorArea") && <PrevAnswerMark field="buildingFloorArea" onConfirm={onConfirm} />}
       {/* 용도지역 */}
       <div className="space-y-2">
-        <label className="text-sm font-medium">
-          용도지역<span className="text-destructive"> *</span>
+        <label id={zoningLabelId} className="text-sm font-medium">
+          용도지역<span className="text-destructive" aria-hidden> *</span>
         </label>
         <RadioCardGroup
           name="saZoningDistrict"
+          aria-labelledby={zoningLabelId}
           tone="sky"
           layout="inline"
           options={ZONING_DISTRICT_LABELS.map(([value, label]) => ({ value, label }))}
@@ -43,11 +54,12 @@ export function SeparateAggregateAreaBasis({ form, onChange }: Props) {
 
       {/* 건물 바닥면적 — 공장·비공장 공통 (§101①1호·2호 모두 바닥면적 × 배율) */}
       <div className="space-y-1">
-        <label className="text-sm font-medium">
+        <label htmlFor={floorId} className="text-sm font-medium">
           {demolished ? "철거 전 건축물 바닥면적 (㎡)" : "건물 바닥면적 (㎡)"}
-          <span className="text-destructive"> *</span>
+          <span className="text-destructive" aria-hidden> *</span>
         </label>
         <DecimalInput
+          id={floorId}
           value={form.saBuildingFloorArea}
           onChange={(v) => onChange({ saBuildingFloorArea: v })}
           placeholder="면적 입력 (소수점 가능)"
