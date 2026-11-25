@@ -17,9 +17,10 @@ import {
   type PropertyPrintSectionId,
 } from "@/lib/print/property-print-sections";
 
-// 설계 §2.3 기준 leaf 9종 (납세의무자 §107 통합으로 taxpayer·co-ownership 추가)
+// 설계 §2.3 기준 leaf 10종 (납세의무자 §107 통합으로 taxpayer·co-ownership 추가 · PSA-E4 토지 분류별 세액 land-split)
 const ALL_LEAVES: PropertyPrintSectionId[] = [
   "tax-base",
+  "land-split",
   "computed-tax",
   "surtax",
   "total-payable",
@@ -30,7 +31,7 @@ const ALL_LEAVES: PropertyPrintSectionId[] = [
   "co-ownership",
 ];
 
-const PDF_LEAVES: PropertyPrintSectionId[] = ["computed-tax"];
+const PDF_LEAVES: PropertyPrintSectionId[] = ["computed-tax", "land-split"];
 
 describe("재산세 선택 출력 레지스트리 — Pre-Do anchor (PR-D)", () => {
   it("PD-prop-1: 선택 0건이면 모든 섹션이 print:hidden", () => {
@@ -49,7 +50,7 @@ describe("재산세 선택 출력 레지스트리 — Pre-Do anchor (PR-D)", () 
     }
   });
 
-  it("PD-prop-3: flattenPrintSectionIds는 9개 유니크 leaf, group: 접두 없음", () => {
+  it("PD-prop-3: flattenPrintSectionIds는 10개 유니크 leaf, group: 접두 없음", () => {
     const ids = flattenPrintSectionIds();
     expect(ids).toHaveLength(ALL_LEAVES.length);
     expect(new Set(ids).size).toBe(ids.length);
@@ -59,7 +60,7 @@ describe("재산세 선택 출력 레지스트리 — Pre-Do anchor (PR-D)", () 
     }
   });
 
-  it("PD-prop-4: pdfEligibleIds는 computed-tax 1종 (계산표 대표)", () => {
+  it("PD-prop-4: pdfEligibleIds는 computed-tax(계산표 대표) + land-split", () => {
     const ids = pdfEligibleIds();
     expect([...ids].sort()).toEqual([...PDF_LEAVES].sort());
   });
