@@ -221,6 +221,14 @@ function PropertyLandSplitPdf({ r }: { r: R }) {
           ))}
         </View>
       )}
+      {isRecord(split.separated) && (
+        <View style={s.table}>
+          <View style={s.row}><Text style={s.lbl}>분리과세분 이 필지 분리과세 인정 공시가액</Text><Text style={s.val}>{fmt(split.separated.ownValue)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>분리과세분 과세표준</Text><Text style={s.val}>{fmt(split.separated.ownTaxBase)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>분리과세분 세율</Text><Text style={s.val}>{fmtRate(split.separated.appliedRate)}</Text></View>
+          <View style={s.rowBg}><Text style={s.lbl}>분리과세분 세액 (합산하지 않음)</Text><Text style={s.valAccent}>{fmt(split.separated.tax)}</Text></View>
+        </View>
+      )}
       {rows.map(({ key, label, c }) => (
         <View key={key} style={s.table}>
           <View style={s.row}><Text style={s.lbl}>{label} 이 필지 공시가액</Text><Text style={s.val}>{fmt(c.ownValue)}</Text></View>
@@ -254,7 +262,7 @@ function PropertyCalcPdf({ r }: { r: R }) {
           <View style={s.rowBg}><Text style={s.lbl}>과세표준</Text><Text style={s.valAccent}>{fmt(r.taxBase)}</Text></View>
         )}
         {num(r.appliedRate) !== undefined && (
-          <View style={s.row}><Text style={s.lbl}>적용 세율</Text><Text style={s.val}>{num(r.appliedRate) === 0 ? "누진세율 (구간별)" : fmtRate(r.appliedRate)}</Text></View>
+          <View style={s.row}><Text style={s.lbl}>적용 세율</Text><Text style={s.val}>{num(r.appliedRate) === 0 ? (isRecord(r.landSplit) && isRecord(r.landSplit.separated) ? "분류별 (위 표)" : "누진세율 (구간별)") : fmtRate(r.appliedRate)}</Text></View>
         )}
         {num(r.calculatedTax) !== undefined && (
           <View style={s.row}><Text style={s.lbl}>산출세액</Text><Text style={s.val}>{fmt(r.calculatedTax)}</Text></View>

@@ -13,3 +13,24 @@ it("land-split · computed-tax · 전체 선택 모두 PDF 렌더 성공", async
     expect(buf.length).toBeGreaterThan(1000);
   }
 });
+
+it("분리과세 한도 초과(landSplit.separated) · land-split · computed-tax · 전체 선택 모두 PDF 렌더 성공 (PSE)", async () => {
+  const r = calculatePropertyTax({
+    objectType: "land",
+    landTaxType: "separated",
+    publishedPrice: 1_500_000_000,
+    otherComprehensiveValue: 0,
+    separateTaxationItem: {
+      isFactoryLand: true,
+      factoryLocation: "industrial_zone",
+      factoryTotalLandArea: 15000,
+      factoryFloorArea: 1200,
+      factoryAreaRatePercent: 12,
+    },
+  } as never);
+  expect(r.landSplit?.separated).toBeDefined();
+  for (const ids of [undefined, ["land-split"], ["computed-tax"]]) {
+    const buf = await renderToBuffer(<ResultPdfDocument taxType="property" taxTypeLabel="재산세" createdAt="2026-11-26" resultData={r as never} selectedSectionIds={ids} />);
+    expect(buf.length).toBeGreaterThan(1000);
+  }
+});
