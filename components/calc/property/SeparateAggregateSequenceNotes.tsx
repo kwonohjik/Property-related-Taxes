@@ -14,7 +14,7 @@ import type { SequenceField, Settled } from "./separate-sequence";
 
 export function SettledNotice({ settled }: { settled: Settled }) {
   return (
-    <ToneCard tone="slate" title="이 답으로 종합합산 이관이 확정되었습니다" bodyClassName="space-y-1">
+    <ToneCard tone="slate" title={settled.dateOnly ? "철거일로 종합합산 이관이 확정되었습니다" : "이 답으로 종합합산 이관이 확정되었습니다"} bodyClassName="space-y-1">
       <div data-testid="pt-sa-seq-settled" data-reason={settled.reason} className="space-y-1 text-caption leading-snug">
         <p>{settledLeadOf(settled)}</p>
         <p>{settled.notice}</p>

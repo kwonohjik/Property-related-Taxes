@@ -118,6 +118,8 @@ describe("확정 안내 문장 — 사유는 엔진 notice 그대로 · «모름
     expect(text).toContain("철거일을 바꾸면 이어서 다시 묻습니다.");
     expect(text).not.toContain("이 답으로");
     expect(text).not.toContain("답을 바꾸면");
+    expect(screen.getByText("철거일로 종합합산 이관이 확정되었습니다")).toBeTruthy(); // 카드 제목도 «이 답으로»가 아니다
+    expect(screen.queryByText("이 답으로 종합합산 이관이 확정되었습니다")).toBeNull();
     expect(has("pt-sa-demolished-kind-house")).toBe(false);
   });
 
