@@ -4,6 +4,7 @@
  * CB-1 술어 격자(단일 소스 `nblCarryoverDeemedBeforeGiftNote`)
  * CB-2 실측 전제 — 이 조건에서 메뉴 B 판정은 소유 0일 · A는 정상(입력을 막으면 A까지 막힌다 → 고지만)
  * CB-3 화면 — 판정 메뉴 B 카드 · 단건 계산기 · ValuationDetailCards(다건·일괄) 모두 같은 고지 · 판정값 불변
+ * CB-4 중복 정리 — 고지와 같은 사실을 말하는 엔진 주의사항 한 줄만 뺀다(사용자 요청 2026-11-25) · 다른 주의사항은 남긴다
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -24,6 +25,8 @@ import { captureBody, postTransfer } from "./_helpers/redev-one-house-route";
 import { CARRYOVER_BASE, landForm, postMenu, type Loose } from "./_helpers/nbl-judgment-menu";
 import { buildNblJudgmentApiBody } from "@/lib/calc/non-business-land-judgment-api";
 import { nblCarryoverDeemedBeforeGiftNote } from "@/lib/calc/nbl-carryover-deemed-before-gift";
+import { nblCarryoverDeemedBeforeGift } from "@/lib/calc/nbl-carryover-deemed-before-gift";
+import { withoutCarryoverDeemedDuplicate } from "@/lib/calc/nbl-carryover-deemed-before-gift";
 import { NblJudgmentResultView } from "@/components/calc/results/NblJudgmentResultView";
 import { TransferTaxResultView } from "@/components/calc/results/TransferTaxResultView";
 import { ValuationDetailCards } from "@/components/calc/results/transfer/ValuationDetailCards";
@@ -35,6 +38,8 @@ beforeEach(() => {
 afterEach(cleanup);
 
 const NOTE = '[data-testid="nbl-carryover-deemed-before-gift-note"]';
+/** 엔진 `deemedTransferDateIssueMessage("not_after_acquisition")` 문구의 꼬리 — 소스 `deemed-transfer-date-range.ts:40` */
+const ENGINE_DUP = "의제일을 확인하세요";
 
 /** 증여자 취득 2012-01-01 → 공매 최초 공매일 2015-01-01 → 증여 등기 2022-06-01 → 양도 2024-06-01 (동기화 점검 Low-1 재현) */
 const COB: Partial<AssetForm> = {
@@ -79,6 +84,8 @@ describe("CB-2 실측 전제 — B는 0일, A는 정상", () => {
     expect(B.totalOwnershipDays).toBe(0);
     expect(B.isNonBusinessLand).toBe(true);
     expect(A.totalOwnershipDays).toBeGreaterThan(0);
+    // 엔진은 그대로 경고를 싣는다 — 화면이 빼는 문구와 글자까지 같다(같은 함수)
+    expect(B.warnings).toContain(nblCarryoverDeemedBeforeGift(f.assets[0])!.duplicateWarning);
   });
 });
 
@@ -91,6 +98,7 @@ describe("CB-3 화면 — 같은 고지 · 판정값 불변", () => {
     expect(notes).toHaveLength(1);
     expect(container.querySelector('[data-testid="nbl-judgment-card-b"]')?.querySelector(NOTE)).not.toBeNull();
     expect(container.querySelector('[data-testid="nbl-judgment-card-a"]')?.querySelector(NOTE)).toBeNull();
+    expect(container.querySelector('[data-testid="nbl-judgment-card-b"]')?.textContent).not.toContain(ENGINE_DUP);
     unmount();
 
     const g = cobForm({ nblDeemedTransferDate: "2023-01-01" });
@@ -107,18 +115,69 @@ describe("CB-3 화면 — 같은 고지 · 판정값 불변", () => {
     expect(calc.result?.nonBusinessLandJudgmentDetail).toBeDefined();
     const { container } = render(<TransferTaxResultView result={calc.result} formData={f} onReset={() => {}} onBack={() => {}} />);
     expect(container.querySelector(NOTE)?.textContent).toContain("2015-01-01");
+    expect(container.textContent).not.toContain(ENGINE_DUP);
   });
 
   it("ValuationDetailCards(다건·일괄 공용): prop이 있고 이월과세 비교가 있으면 고지 · 비교가 없으면 숨김", async () => {
     const f = cobForm();
     const calc = await postTransfer(await captureBody(f));
-    const note = nblCarryoverDeemedBeforeGiftNote(f.assets[0]);
-    const on = render(<ValuationDetailCards result={calc.result} transferPrice={1_000_000_000} nblCarryoverDeemedNote={note} />);
+    const d = nblCarryoverDeemedBeforeGift(f.assets[0]);
+    const on = render(<ValuationDetailCards result={calc.result} transferPrice={1_000_000_000} nblCarryoverDeemed={d} />);
     expect(on.container.querySelector(NOTE)).not.toBeNull();
     on.unmount();
     const off = render(
-      <ValuationDetailCards result={{ ...calc.result, carryoverTaxationDetail: undefined }} transferPrice={1_000_000_000} nblCarryoverDeemedNote={note} />,
+      <ValuationDetailCards result={{ ...calc.result, carryoverTaxationDetail: undefined }} transferPrice={1_000_000_000} nblCarryoverDeemed={d} />,
     );
     expect(off.container.querySelector(NOTE)).toBeNull();
+  });
+});
+
+describe("CB-4 중복 정리 — 정확히 그 한 줄만", () => {
+  const d = nblCarryoverDeemedBeforeGift(cobForm().assets[0])!;
+  it("겹치는 문구만 빼고 나머지 주의사항·판정값은 그대로", () => {
+    const j = { isNonBusinessLand: true, totalOwnershipDays: 0, warnings: ["다른 주의사항", d.duplicateWarning] };
+    const out = withoutCarryoverDeemedDuplicate(j, d);
+    expect(out.warnings).toEqual(["다른 주의사항"]);
+    expect(out.isNonBusinessLand).toBe(true);
+    expect(j.warnings).toHaveLength(2); // 원본 불변
+  });
+  it("해당 없으면 같은 객체 · 고지 대상이 아니면(undefined) 빼지 않는다", () => {
+    const j = { warnings: ["다른 주의사항"] };
+    expect(withoutCarryoverDeemedDuplicate(j, d)).toBe(j);
+    const k = { warnings: [d.duplicateWarning] };
+    expect(withoutCarryoverDeemedDuplicate(k, undefined)).toBe(k);
+  });
+});
+
+describe("CB-5 계산기가 B를 채택하면(증여 후 10년 초과) 판정 카드에서 겹치는 엔진 문구가 빠진다", () => {
+  // 증여자 취득 2005-01-01 → 공매 최초 공매일 2012-01-01 → 증여 등기 2013-06-01 → 양도 2024-06-01(③ 기간 경과 → B 채택)
+  const bForm = () =>
+    cobForm({
+      nblDeemedTransferDate: "2012-01-01",
+      carryover: { ...(CARRYOVER_BASE.carryover as object), giftRegistryDate: "2013-06-01", donorAcquisitionDate: "2005-01-01" } as never,
+    });
+
+  it("전제 — B 채택 · 엔진 판정에 겹치는 문구가 실려 있다", async () => {
+    const f = bForm();
+    const calc = await postTransfer(await captureBody(f));
+    expect(calc.status).toBe(200);
+    expect(calc.result?.carryoverTaxationDetail?.adoptedScenario).toBe("B");
+    expect(calc.result?.nonBusinessLandJudgmentDetail?.warnings).toContain(nblCarryoverDeemedBeforeGift(f.assets[0])!.duplicateWarning);
+  });
+
+  it("단건 계산기: 고지는 보이고 엔진 문구는 빠진다", async () => {
+    const f = bForm();
+    const calc = await postTransfer(await captureBody(f));
+    const { container } = render(<TransferTaxResultView result={calc.result} formData={f} onReset={() => {}} onBack={() => {}} />);
+    expect(container.querySelector(NOTE)).not.toBeNull();
+    expect(container.textContent).not.toContain(ENGINE_DUP);
+  });
+
+  it("ValuationDetailCards(다건·일괄): 고지는 보이고 엔진 문구는 빠진다", async () => {
+    const f = bForm();
+    const calc = await postTransfer(await captureBody(f));
+    const { container } = render(<ValuationDetailCards result={calc.result} transferPrice={1_000_000_000} nblCarryoverDeemed={nblCarryoverDeemedBeforeGift(f.assets[0])} />);
+    expect(container.querySelector(NOTE)).not.toBeNull();
+    expect(container.textContent).not.toContain(ENGINE_DUP);
   });
 });

@@ -193,7 +193,7 @@ export function aggregateToFilingResult(a: AggregateTransferResult): TransferTax
 
 // ─── 카드·요약 서브 컴포넌트 — BundledAllocationSubCards.tsx로 분리 (800줄 정책) ───
 import { PropertyCard, AggregatedTaxSummary } from "./BundledAllocationSubCards";
-import { nblCarryoverDeemedBeforeGiftNote } from "@/lib/calc/nbl-carryover-deemed-before-gift";
+import { nblCarryoverDeemedBeforeGift } from "@/lib/calc/nbl-carryover-deemed-before-gift";
 import { sumAssetGains } from "./transfer/exempt-gross-gain";
 import { sumFilingStageGains } from "./transfer/DetailedStatementRhPartialFormulas";
 import { aggregateNontaxableIncomeLabel } from "./transfer/DetailedStatementRhPartialFormulas";
@@ -493,7 +493,7 @@ export function BundledAllocationCard({ apportionment, aggregated, ownershipMap,
               : {})}
             // PHD(§164⑦ 환산) 주택 종류(단독·다가구/공동주택)도 엔진 미전송(표시 축)이라 같은 경로로 읽는다 — 한도 초과 분리 카드 id(`__appurtenant`/`__excess`)까지 해석하는 단일 정의.
             phdApartment={isPhdApartment(assetOfProperty(p.propertyId, formData, undefined))}
-            nblCarryoverDeemedNote={nblCarryoverDeemedBeforeGiftNote(assetOfProperty(p.propertyId, formData, undefined))}
+            nblCarryoverDeemed={nblCarryoverDeemedBeforeGift(assetOfProperty(p.propertyId, formData, undefined))}
             // 일괄은 단건과 같은 폼 — 엔진 detail의 행 id(`houseId`)는 이 명부를 가리킨다(route 5-a 주 자산 = `...engineInput`).
             houses={formData.houses}
           />

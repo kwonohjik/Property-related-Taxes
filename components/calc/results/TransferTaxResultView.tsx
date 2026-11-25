@@ -18,7 +18,8 @@ import { LandExclusionExemptBasisCard } from "@/components/calc/results/shared/L
 import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
 import { NblCarryoverDeemedNoteCard } from "@/components/calc/results/transfer/NblCarryoverDeemedNoteCard";
-import { nblCarryoverDeemedBeforeGiftNote } from "@/lib/calc/nbl-carryover-deemed-before-gift";
+import { nblCarryoverDeemedBeforeGift } from "@/lib/calc/nbl-carryover-deemed-before-gift";
+import { withoutCarryoverDeemedDuplicate } from "@/lib/calc/nbl-carryover-deemed-before-gift";
 import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurchargeDetailCard";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
@@ -122,6 +123,8 @@ export function TransferTaxResultView({
   // asset prop 미전달 시 formData.assets[0] 자동 fallback
   // (호출부에서 asset 안 넘기는 경우 carryover 정보 표시 위해 필수)
   const resolvedAsset = asset ?? formData?.assets[0];
+  // 이월과세 시나리오 비교가 돈 경우만 — 의제일 ≤ 증여 등기접수일 고지 + 겹치는 엔진 주의사항 한 줄 제거(판정값 불변)
+  const carryoverDeemed = result.carryoverTaxationDetail ? nblCarryoverDeemedBeforeGift(resolvedAsset) : undefined;
 
   // receiveOnly(사례 46) — 신고단위 양도가액·양도일 보정.
   // 이월과세 비교 분기는 FilingFormTable에 redevSubject를 함께 넘겨 redev 공존을 상정하므로,
@@ -533,11 +536,11 @@ export function TransferTaxResultView({
         {result.nonBusinessLandJudgmentDetail && (
           <div>
             <p className="text-sm font-medium mb-2">비사업용토지 판정 결과</p>
-            <NonBusinessLandResultCard judgment={result.nonBusinessLandJudgmentDetail} nblSurchargeExcluded={result.nblSurchargeExcluded} nblSurchargeExcludedBy={result.nblSurchargeExcludedBy} />
+            <NonBusinessLandResultCard judgment={withoutCarryoverDeemedDuplicate(result.nonBusinessLandJudgmentDetail, carryoverDeemed)} nblSurchargeExcluded={result.nblSurchargeExcluded} nblSurchargeExcludedBy={result.nblSurchargeExcludedBy} />
             {/* 이월과세 시나리오 비교가 돈 경우만 — 의제일 ≤ 증여 등기접수일이면 B가 0일 소유로 판정·비교됐다(확인 필요 · Low-1) */}
             {result.carryoverTaxationDetail && (
               <div className="mt-2">
-                <NblCarryoverDeemedNoteCard note={nblCarryoverDeemedBeforeGiftNote(resolvedAsset)} />
+                <NblCarryoverDeemedNoteCard note={carryoverDeemed?.note} />
               </div>
             )}
           </div>

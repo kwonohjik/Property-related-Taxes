@@ -16,7 +16,8 @@ import { CtaButton } from "@/components/calc/shared/WizardNav";
 import { DisclaimerBanner, JUDGMENT_DISCLAIMER } from "@/components/calc/shared/DisclaimerBanner";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { NblCarryoverDeemedNoteCard } from "@/components/calc/results/transfer/NblCarryoverDeemedNoteCard";
-import { nblCarryoverDeemedBeforeGiftNote } from "@/lib/calc/nbl-carryover-deemed-before-gift";
+import { nblCarryoverDeemedBeforeGift } from "@/lib/calc/nbl-carryover-deemed-before-gift";
+import { withoutCarryoverDeemedDuplicate } from "@/lib/calc/nbl-carryover-deemed-before-gift";
 import { nblInputEffectLines } from "@/lib/calc/nbl-judgment-input-effects-text";
 import { nblVerdictOf, nblVerdictFromResult } from "@/lib/calc/nbl-judgment-verdict";
 import type { NblVerdict } from "@/lib/calc/nbl-judgment-verdict";
@@ -81,6 +82,7 @@ export function NblJudgmentResultView({
 }) {
   const asset = form.assets[0];
   const carryoverB = result.judgmentIfCarryoverExcluded;
+  const carryoverDeemed = nblCarryoverDeemedBeforeGift(asset);
   const verdict = nblVerdictFromResult(result as unknown as Record<string, unknown>);
   const premise = computeNblJudgmentSummary(form).filter((i) => PREMISE_LABELS.has(i.label));
   const fractional = asset ? getOwnershipRatio(asset) < 1 : false;
@@ -108,8 +110,9 @@ export function NblJudgmentResultView({
           <section className="space-y-2" data-testid="nbl-judgment-card-b">
             <h3 className="text-sm font-semibold">B. 이월과세가 적용되지 않는 경우 — 증여 등기접수일부터 소유기간</h3>
             <VerdictBadge verdict={verdictB} testId="nbl-judgment-verdict-b" />
-            <NblCarryoverDeemedNoteCard note={nblCarryoverDeemedBeforeGiftNote(asset)} />
-            <NonBusinessLandResultCard judgment={carryoverB} judgmentOnly />
+            <NblCarryoverDeemedNoteCard note={carryoverDeemed?.note} />
+            {/* 고지와 같은 사실을 말하는 엔진 주의사항 한 줄은 뺀다(중복 정리) */}
+            <NonBusinessLandResultCard judgment={withoutCarryoverDeemedDuplicate(carryoverB, carryoverDeemed)} judgmentOnly />
             <EffectsCard effects={result.inputEffectsIfCarryoverExcluded} testId="nbl-judgment-input-effects-b" />
           </section>
         </div>

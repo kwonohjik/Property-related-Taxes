@@ -25,6 +25,8 @@ import type { TransferValuationDetailSource } from "@/lib/tax-engine/types/trans
 import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurchargeDetailCard";
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
 import { NblCarryoverDeemedNoteCard } from "@/components/calc/results/transfer/NblCarryoverDeemedNoteCard";
+import { withoutCarryoverDeemedDuplicate } from "@/lib/calc/nbl-carryover-deemed-before-gift";
+import type { NblCarryoverDeemedBeforeGift } from "@/lib/calc/nbl-carryover-deemed-before-gift";
 import { ExpropriationValuationCard } from "@/components/calc/results/transfer/ExpropriationValuationCard";
 import { HousingExpropriationValuationCard } from "@/components/calc/results/transfer/HousingExpropriationValuationCard";
 import { SplitLandExpropriationValuationCard } from "@/components/calc/results/transfer/SplitLandExpropriationValuationCard";
@@ -72,8 +74,8 @@ interface Props {
   phdApartment?: boolean;
   /** 전액 비과세 자산 — 분리 카드의 장특 행 설명용(`SplitGainDetailSection`). */
   isExempt?: boolean;
-  /** 이월과세 토지 × 양도일 의제일 ≤ 증여 등기접수일 고지 — 엔진 미전송(폼 사실)이라 호출부가 `nblCarryoverDeemedBeforeGiftNote(asset)`로 만들어 내려준다. */
-  nblCarryoverDeemedNote?: string;
+  /** 이월과세 토지 × 양도일 의제일 ≤ 증여 등기접수일 고지(+ 겹치는 엔진 주의사항) — 엔진 미전송(폼 사실)이라 호출부가 `nblCarryoverDeemedBeforeGift(asset)`로 만들어 내려준다. */
+  nblCarryoverDeemed?: NblCarryoverDeemedBeforeGift;
 }
 
 export function ValuationDetailCards({
@@ -87,7 +89,7 @@ export function ValuationDetailCards({
   saleSplitActual,
   phdApartment,
   isExempt,
-  nblCarryoverDeemedNote,
+  nblCarryoverDeemed,
   bgOwnerSplit,
 }: Props) {
   const hasAny =
@@ -116,13 +118,13 @@ export function ValuationDetailCards({
       )}
       {result.nonBusinessLandJudgmentDetail && (
         <NonBusinessLandResultCard
-          judgment={result.nonBusinessLandJudgmentDetail}
+          judgment={withoutCarryoverDeemedDuplicate(result.nonBusinessLandJudgmentDetail, result.carryoverTaxationDetail ? nblCarryoverDeemed : undefined)}
           nblSurchargeExcluded={result.nblSurchargeExcluded}
           nblSurchargeExcludedBy={result.nblSurchargeExcludedBy}
         />
       )}
       {result.nonBusinessLandJudgmentDetail && result.carryoverTaxationDetail && (
-        <NblCarryoverDeemedNoteCard note={nblCarryoverDeemedNote} />
+        <NblCarryoverDeemedNoteCard note={nblCarryoverDeemed?.note} />
       )}
       {result.expropriationValuationDetail && (
         <ExpropriationValuationCard detail={result.expropriationValuationDetail} />
