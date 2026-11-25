@@ -17,6 +17,8 @@ import { Article89ExceptionBasisLine } from "@/components/calc/results/shared/Ar
 import { LandExclusionExemptBasisCard } from "@/components/calc/results/shared/LandExclusionExemptBasisCard";
 import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
 import { NonBusinessLandResultCard } from "@/components/calc/NonBusinessLandResultCard";
+import { NblCarryoverDeemedNoteCard } from "@/components/calc/results/transfer/NblCarryoverDeemedNoteCard";
+import { nblCarryoverDeemedBeforeGiftNote } from "@/lib/calc/nbl-carryover-deemed-before-gift";
 import { MultiHouseSurchargeDetailCard } from "@/components/calc/MultiHouseSurchargeDetailCard";
 import { FilingFormTable } from "@/components/calc/results/transfer/FilingFormTable";
 import { DetailedCalculationStatementCard } from "@/components/calc/results/transfer/DetailedCalculationStatementCard";
@@ -532,6 +534,12 @@ export function TransferTaxResultView({
           <div>
             <p className="text-sm font-medium mb-2">비사업용토지 판정 결과</p>
             <NonBusinessLandResultCard judgment={result.nonBusinessLandJudgmentDetail} nblSurchargeExcluded={result.nblSurchargeExcluded} nblSurchargeExcludedBy={result.nblSurchargeExcludedBy} />
+            {/* 이월과세 시나리오 비교가 돈 경우만 — 의제일 ≤ 증여 등기접수일이면 B가 0일 소유로 판정·비교됐다(확인 필요 · Low-1) */}
+            {result.carryoverTaxationDetail && (
+              <div className="mt-2">
+                <NblCarryoverDeemedNoteCard note={nblCarryoverDeemedBeforeGiftNote(resolvedAsset)} />
+              </div>
+            )}
           </div>
         )}
 
