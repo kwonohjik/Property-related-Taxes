@@ -197,7 +197,7 @@ export function propertyDemolishedFactIssue(i: PropertyDemolishedFactInput): Pro
 }
 
 export const PROPERTY_BUILDING_PERMIT_ISSUE_MESSAGE =
-  "이 건축물이 허가·사용승인을 받은 것인지 선택하세요 — 「예」: 허가 등을 받았거나 받을 필요가 없고, 사용승인(임시사용승인 포함)도 받았거나 받을 필요가 없거나 사용 중이 아님 · 「아니오」: 허가 등을 받아야 하는데 받지 않았거나, 사용승인을 받아야 하는데 받지 않고 사용 중임. 허가·사용승인 없이 사용 중인 건축물의 부속토지는 별도합산에서 제외되어 판정에 필요합니다(모르면 「모름」).";
+  "이 건축물이 허가·사용승인을 받은 것인지 선택하세요 — 「예」: 허가 등을 받았거나 받을 필요가 없고, 사용승인(임시사용승인 포함)도 받았거나 받을 필요가 없거나 사용 중이 아님 · 「아니오」: 허가 등을 받아야 하는데 받지 않았거나, 사용승인을 받아야 하는데 받지 않고 사용 중임. 허가 등을 받지 않은 건축물이나 사용승인 없이 사용 중인 건축물의 부속토지는 별도합산에서 제외되어 판정에 필요합니다(모르면 「모름」).";
 
 export interface PropertyBuildingPermitFactIssue {
   field: "buildingPermit";
