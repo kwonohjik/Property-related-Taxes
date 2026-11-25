@@ -8,6 +8,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { PROPERTY_SEPARATE } from "@/lib/tax-engine/legal-codes";
 import { demolishedNeedOf, demolishedPeriodTextOf } from "@/lib/calc/property-separate-requirements";
+import { SeparateAggregateBuildingPermit } from "./SeparateAggregateBuildingPermit";
 import { SeparateAggregateDemolishedFacts } from "./SeparateAggregateDemolishedFacts";
 import { demolishedFormValues } from "./request-body";
 import { ZONING_DISTRICT_LABELS, type FormState } from "./shared";
@@ -86,6 +87,9 @@ export function Step2SeparateAggregate({ form, onChange }: Props) {
         </p>
         <LawArticleModal legalBasis="지방세법 시행령 §101" label="§101②" />
       </div>
+
+      {/* 영 §101① 단서 허가·사용승인 — 철거 OFF ∧ 어댑터 술어(과세기준일 2011.6.1.~)일 때만(⑧ 순서: 용도지역 → 바닥면적 → 허가) */}
+      <SeparateAggregateBuildingPermit form={form} onChange={onChange} />
 
       {/* 공장입지기준면적 입력 칸은 제거했다(2026-08-05).
           그 면적은 「지방세법 시행령」 §102①1호(분리과세) 한도이고, §101①1호(별도합산)

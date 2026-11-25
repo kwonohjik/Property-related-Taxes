@@ -98,6 +98,7 @@ const GRID: [string, Partial<FormState>[]][] = [
       [
         PRICE,
         [{ saBuildingFloorArea: "100" }, { saBuildingFloorArea: "" }],
+        [{ saBuildingPermit: "" }, { saBuildingPermit: "yes" }, { saBuildingPermit: "no" }],
         OTHER_SEP,
         OTHER_VALUE,
         CAP_NONLAND,
@@ -113,6 +114,7 @@ const GRID: [string, Partial<FormState>[]][] = [
         saZoningDistrict: "industrial",
         saLandArea: "1000",
         saBuildingFloorArea: "100",
+        saBuildingPermit: "yes",
       },
       [PRICE, OTHER_SEP, OTHER_VALUE, CAP_NONLAND],
     ),
@@ -142,6 +144,7 @@ const GRID: [string, Partial<FormState>[]][] = [
       [{ saZoningDistrict: "" }, { saZoningDistrict: "commercial" }],
       [{ saLandArea: "" }, { saLandArea: "0" }, { saLandArea: "300" }],
       [{ saBuildingFloorArea: "" }, { saBuildingFloorArea: "100" }],
+      [{ saBuildingPermit: "" }, { saBuildingPermit: "yes" }, { saBuildingPermit: "unknown" }],
     ]),
   ],
   ["토지-유형미선택", product({ objectType: "land", landTaxType: "" }, [PRICE])],

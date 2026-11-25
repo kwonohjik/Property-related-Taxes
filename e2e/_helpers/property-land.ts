@@ -69,11 +69,13 @@ export async function fillDemolished(page: Page, d: DemolishedFill) {
 
 export async function fillSeparateDetail(
   page: Page,
-  o: { zoning: RegExp; area: string; floor?: string; demolished?: DemolishedFill; next?: boolean },
+  o: { zoning: RegExp; area: string; floor?: string; permit?: Answer; demolished?: DemolishedFill; next?: boolean },
 ) {
   await page.getByRole("radio", { name: o.zoning }).check();
   await page.getByPlaceholder("면적 입력 (소수점 가능)").first().fill(o.area);
   if (o.floor !== undefined) await page.getByPlaceholder("면적 입력 (소수점 가능)").nth(1).fill(o.floor);
+  // 비철거 건축물 허가·사용승인 칸(PSA-E3 · 영 §101① 단서) — 기본값이 없으므로 호출부가 답을 명시한다(미지정 = 미선택 그대로)
+  if (o.permit) await page.getByTestId(`pt-sa-permit-${o.permit}`).check();
   if (o.demolished) await fillDemolished(page, o.demolished);
   if (o.next !== false) await page.getByRole("button", { name: /^다음$/ }).click();
 }

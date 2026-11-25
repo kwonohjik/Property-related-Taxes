@@ -19,6 +19,7 @@ const ITEM = {
   officialLandPrice: 1_000_000,
   zoningDistrict: "commercial" as const,
   buildingFloorArea: 100,
+  buildingPermit: "yes" as const, // PSA-E3 — 영 §101① 단서(비철거 필지 허가·사용승인 «예»)
 };
 
 function separate(over: Record<string, unknown> = {}, item: Record<string, unknown> = {}, extra: Partial<Input> = {}) {

@@ -60,6 +60,7 @@ describe("rank2: 별도합산 용도지역별 적용배율 (시행령 §101②)"
     landArea: 700,
     officialLandPrice: 1_000_000,
     buildingFloorArea: 100,
+    buildingPermit: "yes", // PSA-E3 — 영 §101① 단서
     zoningDistrict,
   });
 

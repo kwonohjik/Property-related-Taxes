@@ -5,6 +5,7 @@
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { getZoneAreaMultiplier } from "@/lib/tax-engine/local-tax-zone-multiplier";
+import { buildingPermitWireFields } from "@/lib/calc/property-separate-requirements";
 import { demolishedWireFields } from "@/lib/calc/property-separate-requirements";
 import {
   landSplitBodyFields,
@@ -43,6 +44,8 @@ function buildSeparateAggregateItem(form: FormState) {
           zoningDistrict: form.saZoningDistrict,
           buildingFloorArea: parseDecimal(form.saBuildingFloorArea) || undefined,
           ...(form.saIsFactory ? { isFactory: true } : {}),
+          // 영 §101① 단서(PSA-E3) — 과세기준일 시행본이 요건을 둘 때만 싣는다(철거 경로는 위 분기의 `demolishedPermit`이 맡는다)
+          ...buildingPermitWireFields(form.saBuildingPermit),
         }),
   };
 }

@@ -71,6 +71,8 @@ function makeLand(
     officialLandPrice: 1_000_000, // 100만원/㎡
     zoningDistrict: "commercial",
     buildingFloorArea: 100,
+    // PSA-E3(영 §101① 단서) — 과세기준일 2011.6.1.~ 비철거 필지는 허가·사용승인 «예»가 있어야 별도합산. 접힘은 아래 PSA-E3 describe가 명시적으로 검증한다
+    buildingPermit: "yes",
     ...overrides,
   };
 }

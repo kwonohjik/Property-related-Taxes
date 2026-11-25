@@ -8,12 +8,15 @@
  * 순수 함수 — React 미사용. 폼 문자열을 엔진 입력으로 바꾸는 일만 한다(`useEffect → store` 미러링 없음).
  */
 import {
+  propertyBuildingPermitFactIssue,
+  propertyBuildingPermitRequired,
   propertyDemolishedFactIssue,
   propertyDemolishedPublicUseAsked,
   propertyDemolishedRequired,
   resolvePropertyTaxBaseDate,
 } from "@/lib/tax-engine/property-separate-requirements";
 import type {
+  PropertyBuildingPermitFactIssue,
   PropertyDemolishedFactIssue,
   PropertyDemolishedKind,
   PropertyDemolishedRequired,
@@ -110,4 +113,28 @@ export function demolishedPeriodTextOf(taxBaseDate: Date = resolvePropertyTaxBas
     general: general === 0 ? null : MONTHS_TEXT[general],
     vacantHouse: vacant === 0 || vacant === general ? null : MONTHS_TEXT[vacant],
   };
+}
+
+/**
+ * 본 경로(비철거) 건축물 허가·사용승인 칸 — 영 §101① 단서(PSA-E3). 칸을 여는 술어는 엔진 `propertyBuildingPermitRequired(s)` 하나다.
+ * ⑤ 노출 = ④ 전송 = ⑧ 차단 = ⑫ 400의 단일 소스이며, 철거 토글이 켜져 있으면 이 칸은 묻지 않는다(철거 경로는 `demolishedPermit`이 맡는다 — 호출자가 `saDemolished`로 게이트).
+ */
+export function buildingPermitNeedOf(taxBaseDate: Date = resolvePropertyTaxBaseDate()): boolean {
+  return propertyBuildingPermitRequired(taxBaseDate);
+}
+
+/** ⑧ — 본 경로 허가 칸의 결함(없으면 null). ⑫와 같은 `propertyBuildingPermitFactIssue` — 같은 필드·같은 문구 */
+export function buildingPermitIssueOf(
+  permit: PropertyRequirementFact,
+  taxBaseDate: Date = resolvePropertyTaxBaseDate(),
+): PropertyBuildingPermitFactIssue | null {
+  return propertyBuildingPermitFactIssue({ taxBaseDate, permit });
+}
+
+/** ④ — 요구될 때만 싣는다(요구되지 않은 칸의 stale 값 미전송). 3지선다 그대로 보낸다(`""`도 — ⑫가 «값 없음»으로 400을 낸다) */
+export function buildingPermitWireFields(
+  permit: PropertyRequirementFact,
+  taxBaseDate: Date = resolvePropertyTaxBaseDate(),
+): { buildingPermit?: PropertyRequirementFact } {
+  return buildingPermitNeedOf(taxBaseDate) ? { buildingPermit: permit } : {};
 }

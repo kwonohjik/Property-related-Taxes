@@ -19,6 +19,7 @@ vi.mock("@/lib/db/tax-rates", async (importOriginal) => {
 
 import { POST } from "@/app/api/calc/property/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
+import { PROPERTY_BUILDING_PERMIT_ISSUE_MESSAGE } from "@/lib/tax-engine/property-separate-requirements";
 import { PROPERTY_DEMOLISHED_ISSUE_MESSAGE } from "@/lib/tax-engine/property-separate-requirements";
 
 async function post(body: Record<string, unknown>) {
@@ -182,7 +183,7 @@ describe("⑩ — 요구된 칸이 비면 400(⑧과 같은 문구) · 요구되
   });
 
   it("철거 OFF — 철거 칸이 와도 무시(요구 0 · 판정 불변)", async () => {
-    const off = { ...BUILDING, demolished: false, demolishedDate: undefined, demolishedPermit: "no", demolishedKind: "house" };
+    const off = { ...BUILDING, demolished: false, demolishedDate: undefined, demolishedPermit: "no", demolishedKind: "house", buildingPermit: "yes" };
     const r = await post(land(off));
     expect(r.status).toBe(200);
     expect(r.json.data.determinedTax).toBe(430_000);
@@ -217,7 +218,7 @@ describe("Q-8 — 바닥면적·용도지역은 «읽을 때만» 요구 (M12 �
     const off = { id: "p1", jurisdictionCode: "000000", landArea: 300, officialLandPrice: 1_000_000 };
     const r = await post(land(off));
     expect(r.status).toBe(400);
-    expect(itemErrors(r.json)).toEqual(["용도지역을 선택하세요.", "별도합산 토지는 건축물 바닥면적(㎡)이 필요합니다(「지방세법 시행령」 §101①1호)."]);
+    expect(itemErrors(r.json)).toEqual(["용도지역을 선택하세요.", "별도합산 토지는 건축물 바닥면적(㎡)이 필요합니다(「지방세법 시행령」 §101①1호).", PROPERTY_BUILDING_PERMIT_ISSUE_MESSAGE]);
   });
 });
 

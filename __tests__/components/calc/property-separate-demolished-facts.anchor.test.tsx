@@ -34,6 +34,7 @@ const demolishedForm = (over: Partial<FormState> = {}): FormState => ({
   saLandArea: "300",
   saZoningDistrict: "commercial",
   saBuildingFloorArea: "100",
+  saBuildingPermit: "yes", // PSA-E3 — 철거 OFF 사례(결과 카드 «철거 판정 블록 없음»)가 허가 요건에 접히지 않게
   saDemolished: true,
   ...over,
 });

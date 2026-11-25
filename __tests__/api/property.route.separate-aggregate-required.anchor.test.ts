@@ -53,6 +53,7 @@ const ITEM = {
   officialLandPrice: 1_000_000,
   zoningDistrict: "industrial",
   buildingFloorArea: 300,
+  buildingPermit: "yes", // PSA-E3 — 영 §101① 단서
 };
 /** PSA-E2 — 철거 요건 칸(과세기준일 2025.6.1. 시행본이 기간 안에서 요구하는 칸 전부): 건축물 · 허가·사용승인 받음 · 건축 외 용도 아님 */
 const DEMOLISHED_OK = { demolishedKind: "building", demolishedPermit: "yes", demolishedOtherUse: "no" };
@@ -74,6 +75,7 @@ describe("SA-UI — 공장용지 체크 시 ④가 바닥면적을 싣는다", (
     saZoningDistrict: "industrial",
     saLandArea: "1000",
     saBuildingFloorArea: "300",
+    saBuildingPermit: "yes", // PSA-E3 — 영 §101① 단서
     otherSeparateAggregateValue: "0",
   };
 

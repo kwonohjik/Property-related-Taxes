@@ -199,7 +199,7 @@ describe("PSA-E2 — K-1~K-26 엔진 연결: 판정 · 이관 사유 · 본세 �
   it("결과 `landSplit.demolishedVerdict` echo — 철거 필지에서만(접힘 사유·기간·읽은 칸) · 철거 OFF 결과에는 키가 없다", () => {
     expect(run(building({ demolishedPermit: "no" })).landSplit?.demolishedVerdict).toMatchObject({ kind: "fold", foldReason: "permit", periodMonths: 12 });
     expect(run(house({ demolishedDate: "2024-06-15", demolishedVacantHouse: "yes" })).landSplit?.demolishedVerdict).toMatchObject({ kind: "holds", periodMonths: 36 });
-    const off = run({ id: "p1", jurisdictionCode: "000000", landArea: 300, officialLandPrice: PRICE, zoningDistrict: "commercial", buildingFloorArea: 100 });
+    const off = run({ id: "p1", jurisdictionCode: "000000", landArea: 300, officialLandPrice: PRICE, zoningDistrict: "commercial", buildingFloorArea: 100, buildingPermit: "yes" });
     expect("demolishedVerdict" in (off.landSplit ?? {})).toBe(false);
   });
 
@@ -227,7 +227,7 @@ describe("PSA-E2 — K-1~K-26 엔진 연결: 판정 · 이관 사유 · 본세 �
 });
 
 describe("PSA-E2 — 철거 OFF 입력은 철거 칸을 읽지 않는다(바이트 동일 가드)", () => {
-  const off: Item = { id: "p1", jurisdictionCode: "000000", landArea: 1000, officialLandPrice: PRICE, zoningDistrict: "industrial", buildingFloorArea: 100 };
+  const off: Item = { id: "p1", jurisdictionCode: "000000", landArea: 1000, officialLandPrice: PRICE, zoningDistrict: "industrial", buildingFloorArea: 100, buildingPermit: "yes" };
   it("철거 OFF에 stale 철거 칸(허가 no·종류 house)을 보내도 결과 불변 — 640,000 + 1,850,000", () => {
     const clean = run(off);
     const stale = run({ ...off, demolishedKind: "house", demolishedPermit: "no", demolishedOtherUse: "yes", demolishedVacantHouse: "yes" });
