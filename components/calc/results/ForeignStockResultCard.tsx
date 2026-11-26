@@ -28,6 +28,18 @@ function fmt(n: number): string {
   return n.toLocaleString("ko-KR");
 }
 
+/**
+ * 「USD 40,000 × 1,250 = 50,000,000」 — 외화 금액이 없으면(이 echo가 생기기 전 이력) 「—」.
+ * 외화는 센트·소수 단가가 있어 소수 4자리까지 보인다(1주당 외화 × 주식 수의 부동소수 잔여는 이 자리에서 사라진다).
+ */
+function fxFormula(foreign: number | undefined, currency: string | undefined, rate: number, krw: number): string {
+  const foreignText =
+    foreign === undefined
+      ? "—"
+      : `${currency && currency !== "OTHER" ? `${currency} ` : ""}${foreign.toLocaleString("ko-KR", { maximumFractionDigits: 4 })}`;
+  return `${foreignText} × ${fmt(rate)} = ${fmt(krw)}`;
+}
+
 function pct(r: number): string {
   return (r * 100).toFixed(1) + "%";
 }
@@ -147,14 +159,27 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
           /* single 모드 — 기존 단일 환율 표시 */
           <Row
             label="양도가액 (외화)"
-            value={`— × ${fmt(result.transferExchangeRate)} = ${fmt(result.transferPriceKrw)}`}
+            value={fxFormula(
+              result.transferPriceForeign,
+              result.transferCurrencyCode,
+              result.transferExchangeRate,
+              result.transferPriceKrw,
+            )}
             sub="양도가액(외화) × 양도일 기준환율"
           />
         )}
 
         <Row
           label={carryoverApplied ? "취득가액 (외화) — 증여자 취득 당시 승계 (이월과세)" : `취득가액 (외화)`}
-          value={`— × ${fmt(result.acquisitionExchangeRate)} = ${fmt(result.acquisitionPriceKrw)}`}
+          value={fxFormula(
+            result.acquisitionPriceForeign,
+            // 이월과세 적용(A)이면 외화 금액은 증여자 취득단가라 통화도 증여자 취득 통화다.
+            carryoverApplied
+              ? (result.carryoverDonorAcquisitionCurrencyCode ?? result.acquisitionCurrencyCode)
+              : result.acquisitionCurrencyCode,
+            result.acquisitionExchangeRate,
+            result.acquisitionPriceKrw,
+          )}
           sub={
             carryoverApplied
               ? "증여자 취득가액(외화) × 증여자 취득일 기준환율 (§97의2①1호 · 영 §178의5①)"

@@ -350,6 +350,16 @@ export type ForeignStockResult = {
   transferCostExchangeRateApplied: number;
   foreignTaxExchangeRate?: number;
   shareCount: number;
+  /**
+   * 환산 전 외화 금액 echo — 결과 화면 「외화 × 환율 = 원화」 검산 표시용 (산식 무영향).
+   * 양도가액은 단일 수령(single)일 때만 싣는다 — 분할 수령은 `transferReceiptDetail`이 회차별로 보여 준다.
+   * 이월과세 적용(A)이면 취득가액 외화는 증여자 취득단가 × 주식 수다.
+   * optional — 이 필드가 생기기 전에 저장된 이력에는 없다.
+   */
+  transferPriceForeign?: number;
+  acquisitionPriceForeign?: number;
+  transferCurrencyCode?: string;
+  acquisitionCurrencyCode?: string;
 
   // ── FS-09 §178의5② 장기할부 분할 수령 detail ──
   /**
