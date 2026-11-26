@@ -20,6 +20,25 @@
 import type { VerificationRule } from "../verifier-types";
 
 export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
+  // ── 가업상속공제적용률·대상 자산 §163의2③④ (개정 2026.2.27. · 부칙 대통령령 제36129호 §10 양도일 기준) — KoreanLaw MST 290841 실독(2026-11-26) ──
+  {
+    id: "TRANSFER_DECREE.FAMILY_BUSINESS_APPLIED_RATE",
+    citation: "소득세법 시행령 §163의2 ③",
+    keywords: [
+      "상속세 과세가액에서 공제한 금액(이하 이 호에서 \"가업상속공제금액\"이라 한다)을 같은 항 각 호 외의 부분 전단에 따른 가업상속 재산가액으로 나눈 비율",
+      "같은 법 시행령 제15조제5항제2호에 따른 사업무관자산을 제외한 자산가액이 차지하는 비율",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER_DECREE.FAMILY_BUSINESS_ASSET_SCOPE",
+    citation: "소득세법 시행령 §163의2 ④",
+    keywords: [
+      "법 제97조의2제4항의 적용 대상이 되는 가업상속공제가 적용된 자산",
+      "제15조제5항제2호에 따른 주식등",
+    ],
+    keywordMode: "ALL",
+  },
   // ── 비거주자 — 법 §121② 단서의 비거주자 범위(KoreanLaw 현행 본문 실측 2026-10-08) ──
   {
     id: "TRANSFER_DECREE.NON_RESIDENT_EXEMPTION_EXCLUSION",

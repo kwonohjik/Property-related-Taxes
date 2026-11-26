@@ -312,6 +312,8 @@ F1-11은 종목 단독 차이(89,875,000)와 125,000원 다르다 — 공제를 
 
 ## 8. 법령 상수·verify:legal
 
+> **PR-1a 실행 기록(2026-11-26)** — `legal-codes/stock-family-business.ts`(`STOCK_FAMILY_BUSINESS` 6개) · 매니페스트 5건(`TRANSFER.FAMILY_BUSINESS_IMPUTED_ACQUISITION` · `TRANSFER_DECREE.FAMILY_BUSINESS_APPLIED_RATE`·`_ASSET_SCOPE` · `INH_DECREE.FAMILY_BUSINESS_NON_BUSINESS_ASSETS`·`_CGT_EQUIVALENT`) · 수집기 등록. 새로 모수에 들어온 조문은 상증령 §15뿐(§97의2·§163의2는 조문 단위로 기등록). 키워드 9개는 KoreanLaw 원문(MST 280405·290841·290845)과 기계 대조 PASS — `npm run verify:legal` 실호출은 회선 차단(law.go.kr curl 000)으로 미실행, 확인 필요. 신규 타입(`types/stock-family-business.types.ts`)은 쓰는 곳이 생기는 PR-1b로 옮겼다(미사용 타입 선반영 안 함).
+
 - 신규 인용: 「소득세법 시행령」 §163의2③(구·신)·④, 「상속세 및 증여세법 시행령」 §15⑤2호·㉑ — 현재 `legal-codes/`·`manifest/`에 0건.
 - 상수는 문자열 리터럴 금지 규칙대로 `legal-codes/`에 두고 `lib/legal-verification/manifest/additions-{세목}.ts`에 등록, 키워드는 §2 본문 verbatim. 「(법률 제N호로 …)」 괄호는 쓰지 않는다. 등록 후 `npm run verify:legal`.
 
@@ -347,7 +349,7 @@ Q-1·4·5·6은 사용자가 직접 골랐고, 나머지는 추천안대로 반�
 | V-5 | 부동산 사이드바가 FB ON 자산 취득가액을 사전 표시하는지 |
 | V-6 | 신 ③2호 「총자산가액」과 상속세 입력 `corporateTotalAssets`(상증법 제4장 평가)가 같은 값인지 — 화면이 장부가를 받는지 |
 | V-7 | 피상속인이 의제취득일 전 취득한 경우 「피상속인 취득가액(§97①1호)」 — v1은 사용자 입력 책임 고지 |
-| V-8 | 국외주식 PR 머지 후 `stock-transfer-tax.ts`·`aggregate.ts` 줄 수·훅 위치 재측정 |
+| V-8 | ✅ 재측정(71893fcbb, 국외주식 #3673 머지 후): `stock-transfer-tax.ts` 775 · `stock-transfer-aggregate.ts` 748 · 훅 위치 = `calculateStockTransferTax`의 `resolveStockCarryover` 호출 앞. PR-1a 분리로 `stock-transfer-tax.ts` 649 |
 | V-9 | 구 주식 이력 복원 시 신규 필드 default(실행 확인) |
 | V-10 | 다종목에서 가업 종목이 마지막이 아니면 카드가 안 뜨는지(실행 확인) |
 | V-11 | 가업 lot이 일부만 양도될 때 피상속인 자본적지출(총액)의 배정 — 기존 lot 자본 조정 규칙(`lot-capital-adjustments.ts`)에 같은 축이 있는지. 없으면 사용자 결정으로 올린다(자동 안분 신설 금지) |
