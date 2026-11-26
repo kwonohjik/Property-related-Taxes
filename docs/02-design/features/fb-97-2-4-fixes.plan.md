@@ -214,6 +214,13 @@ type FamilyBusinessRateBasis =
 - 산정 불가 자산은 선택 불가 + 사유(「총자산·사업무관자산이 이력에 없습니다 — 직접 입력하세요」).
 - 부동산 섹션 hint(A-6)를 양도일 기준으로 나눈다: 2026.2.27. 이후 「법인가업은 이 화면의 대상 자산이 아닙니다 — 주식 양도 화면에서 입력하세요」 / 그 전 「구 소령 §163의2③ — 가업상속공제금액 ÷ 가업상속 재산가액」.
 
+### 6.3′ PR-2 실행 중 결정 (2026-11-26)
+- PR-2a·2b를 **한 PR**로 합쳤다(둘 다 작다).
+- `calcCorporateStockAdjustedValue`를 넓히지 않고 같은 내부 합계(`sumNonBusinessAssets`)를 쓰는 `calcCorporateBusinessAssets(totalAssets, nonBusinessAssets, deathDate)`를 새로 열었다 — 기존 함수는 주식가액 0이면 비율도 0으로 조기 반환해 적용률 용도로 쓸 수 없다.
+- 구 레코드(공제액·재산가액 정수 echo 없음)는 이력의 `appliedRate`(구 ③ 산식 그대로)를 계속 쓴다. 0으로 비우는 것은 직접입력·법인 총자산 미입력·사업무관 ≥ 총자산뿐이다.
+- 신 ③2호는 직접입력 모드여도 총자산이 있으면 산정한다(공제액·재산가액을 쓰지 않는다).
+- 부동산 화면의 대상 범위 문구에서 미확인 판례(V-1) 인용을 빼고 「해석 근거 확인 필요」로 바꿨다.
+
 ### 6.4 anchor
 | ID | 케이스 | 기대 |
 |---|---|---|
@@ -303,7 +310,33 @@ F1-11은 종목 단독 차이(89,875,000)와 125,000원 다르다 — 공제를 
 
 ---
 
+### 7.7 PR-1b′ lot 단위 설계 (2026-11-26 · Q-12 반영)
+
+| ID | 항목 | 결정 |
+|---|---|---|
+| L-a | 입력 | `AcquisitionLot.familyBusinessInheritance?: StockFamilyBusinessInput`(단건과 같은 타입). lot `acquisitionCause: "inheritance"` 필수 · 상속개시일 = lot `acquisitionDate` · 상속개시일 평가액 = lot `perShareAcquisitionPrice` · `decedentCapitalExpenditure` = **lot 전체 주식수** 총액(`donorCapitalExpenditure`와 같은 규약). 종목 축 `familyBusinessInheritance`와 동시 입력은 throw |
+| L-b | 게이트 | G-1 lot마다(lot `acquisitionDate` ≥ 2014-01-01) — 미충족 lot은 일반 상속 lot + 안내. 적용률 era는 **매도 lot의 양도일** 기준 — 가업 lot이 법정량 종류와 다른 era의 매도에 배정되면 throw(한 lot이 2026-02-27을 사이에 두고 나뉘어 팔린 경우 = 남은 한계, 문구로 안내) |
+| L-c | fifo·specific | sub-lot 취득원가 총액 `buyCost` = ⌊(피상속인 1주당 × m + capex(m)) × n/d⌋ + ⌊평가 1주당 × m × (d−n)/d⌋, capex(m) = ⌊capex × m / lot 주식수⌋(V-11 = `accrueLotCarryoverExpense` 선례) · `perLotGain = 양도 1주당 × m − buyCost` · `perShareBuyPrice = ⌊buyCost / m⌋`(표시용) · `totalAcquisitionPrice`는 `buyCost` 합 |
+| L-d | moving_avg (Q-12) | 가업 lot 1주당 정확 단가 N/D = [(피상속인 1주당 × S + capex) × n + 평가 1주당 × S × (d−n)] ÷ (d × S) 를 가격 트랙에 유리수로 넣는다. 평균 = ⌊Σ w·N/D ÷ Σw⌋(BigInt 통분) — 정수 단가 lot만 있으면 종전과 비트 동일. 「이동평균법은 가업상속 주식과 다른 주식의 단가를 평균한다 — 가업상속공제 주식의 구분 관리 여부 확인 필요」 고지 |
+| L-e | 자본조정 | 가업 lot의 피상속인 1주당 취득가액도 `donorAcquisitionPrice`와 같이 희석(총액 보존 · ⌊총액 ÷ 희석 후 주식수⌋) |
+| L-f | §18의2⑩ | 의제 = 입력 그대로 · 일반 = **모든 lot**의 `familyBusinessInheritance` 제거(Q-11과 같다 — 함께 되돌림). detail은 의제 실행의 `lotMatchingDetail` 가업 요약(배정 주식수 · Σ buyCost · Σ 피상속인분 · Σ 평가분 · Σ capex)으로 만든다. moving_avg는 요약 주식수를 FIFO 물량 트랙에서 잡는다(`accrue`와 같은 기준) |
+| L-g | anchor | F1-10 혼재(가업 lot + 일반 상속 lot + 매수 lot, 일부 양도) — 가업 lot 배정분만 의제 · F1-10b 가업 lot이 두 매도에 나뉨(capex 배정 합 = 총액 이하) · moving_avg 가업 lot · 자본조정 희석 · 정수 lot만이면 종전과 같은 값(회귀) · 단건 ≡ lot 1개 전량 양도 |
+
+> **PR-1b′ 실행 기록(2026-11-26)** — leaf `stock-family-business-lot.ts` · `MatchedSubLot.buyCost`(sub-lot 취득원가 총액 정본) · `LotMatchingDetail.familyBusinessSummary` · detail `lots[]`(가업 lot 2개 이상 배정 시)·`pooled`(moving_avg 참고값). anchor `fb-97-2-4-stock-lots.anchor.test.ts` 23건(손계산 첫 실행 일치) · 뮤테이션 10종 검출. 남은 한계: ① 종목 축 가업 입력 + split은 throw(「lot에 입력」) ② moving_avg는 풀 평균 1주당 floor 기존 규약 — 정수 아닌 의제 단가면 단건과 최대 (주식수−1)원 차이 ③ moving_avg 요약 금액은 FIFO 물량 기준 참고값 ④ 한 lot이 2026-02-27을 사이에 두고 나뉘어 팔리면 throw ⑤ 자본조정 희석 floor로 총액 감소(증여자 단가 선례와 같음). PR-1d 몫: `SplitAllocationPreviewCard.tsx:104`·`LotMatchingDetailCard`·별지 취득가액이 `buyCost ?? buyShares × perShareBuyPrice`를 써야 한다 · `lib/calc/stock-split-preview.ts`가 `allocateLots`를 직접 부르므로 ⑧이 먼저 막아야 한다.
+
+> **PR-1c 실행 기록(2026-11-26)** — 범위 조정: ⑨⑩⑫⑭ + route anchor만(⑧은 폼 필드가 필요해 PR-1d). 공용 술어 `stock-transfer/stock-family-business-input-check.ts`(`stockFamilyBusinessInputError`)를 엔진 throw와 ⑩ refine(`lib/api/stock-transfer-tax-refines-family-business.ts`)이 함께 부른다 — PR-1d ⑧도 ④ body → `buildEngineInput` → 같은 술어(선례 `stock-transfer-tax-validate-pre-deemed-lots.ts:27`). ⑫ `lib/api/stock-transfer-family-business-schema.ts`(단건·lot) · ⑭ 단건 명시 매핑(lot은 `acquisitionLots` 통째) · ⑪ 해당 없음. 매도 배정 뒤에야 드러나는 era 불일치는 엔진 `TaxCalculationError(INVALID_INPUT)` → route 422(종전 catch-all 500). route anchor 28건 · 뮤테이션(⑫ 단건/lot·⑭·⑩·422) 검출. PR-1d 확인 필요: `lib/calc/stock-split-preview.ts:66`이 `allocateLots`를 직접 불러 엔진 throw가 미리보기에서 날 수 있다.
+
+> **PR-1d 실행 기록(2026-11-26 · 단건 취득 · lot 칸은 PR-1d′)** — ①~⑧ + 결과 + E2E. 노출·전송·검증·미리보기 술어 새 leaf `lib/calc/stock-family-business.ts`(`allowsStockFamilyBusiness` = 국내 시장 ∧ 단건 취득원인 상속 ∧ 실가 ∧ 단건 취득)를 ④⑤⑥⑧이 공유. ① `calc-wizard-stock-form-types.ts` 7필드 · ② `calc-wizard-stock-form.ts` · ③ `calc-wizard-stock-normalize.ts`(boolField·strField) · ④ `stock-transfer-tax-api-family-business.ts`(`appendFamilyBusinessBody` — 술어 통과 ∧ 토글 ON일 때만, 양도일 era 쌍만 `fbRateBasis`) + `stock-transfer-tax-api.ts` 호출(단건·다종목 같은 빌더) · ⑤ `StockFamilyBusinessCard.tsx` + `Step2.tsx` 한 줄(막히면 disabled + 사유 · 이력 불러오기 `target:"stock"` — 1주당 평가액은 덮어쓰지 않고 참고값, 취득일이 다르면 미적용) · ⑥ `StockSidebar.tsx`(ON ∧ 완결이면 의제값, 미완결이면 행 생략) · ⑦ `FamilyBusinessImputedComparisonCard` 재사용(주식 상세면 1주당 × 주식수·법인 법정량·신고 단위 합계 안내) + `StockTransferTaxResultView.tsx`(다종목은 `aggregate.items` 순회 — V-10·Q-9 단건 표시 범위는 해소) + 별지 제84호 11행 라벨 · ⑧ `stock-transfer-tax-validate-family-business.ts`(필수 누락 → ④ body → `buildEngineInput` → 공용 술어) + `validate-step2` 호출. 의도적 비대칭: ⑧은 빈칸/0을 구분해 쌍 전체 필수(서버 ⑩은 구분 불가), ⑩이 통과시키는 것을 ⑧이 더 엄격히 막는 방향만 허용. anchor `__tests__/calc/stock-family-business-wiring.anchor.test.ts` · `__tests__/components/stock-family-business-card.anchor.test.tsx` · E2E `e2e/stock-fb-97-2-4.spec.ts`.
+
+> **PR-1d 14지점 점검(ui-engine-sync-checker, 2026-11-26)** — High 0 · ④⑤⑧⑩ 격자 7,560칸에서 「UI 통과 ↔ 서버 차단」 0건 · 사이드바 미리보기 = 엔진 216건 일치. 반영: M-1 다종목이면 가업 종목 수와 무관하게 「신고 단위 결정세액(비가업 종목 포함)」 고지 + 사후관리 추징 링크는 첫 카드에만 · L-1 상속개시일 2014.1.1. 전이면 사이드바 라벨에서 「의제」 제거. 남긴 Low: L-2 상속개시일 평가액 1주당 0이면 사이드바 행 생략(값 오류 아님) · L-3 이력 취득일 불일치는 후보 비선택이 아니라 선택 후 미적용 + 안내 · L-4 별지 제84호 11행 라벨은 대표(마지막) 종목의 환산·swap이 우선 · L-5 상장 소액 장내 비과세 + FB ON이면 ⑧이 입력을 요구하나 세액 0(카드 미표시).
+
+> **PR-1d′ 실행 기록(2026-11-26 · 취득 lot 카드)** — ① `AcquisitionLotForm` 단건과 같은 이름 7필드(optional — `donor*` 규약) · ② `createEmptyAcquisitionLot` · ③′ `normalizeAcquisitionLots`(구 이력 false·"") · ④ 매퍼를 `stock-transfer-tax-api-acquisition-lot.ts`로 옮겨 lots-only·split이 한 함수 · 술어 새 leaf `lib/calc/stock-family-business-lots.ts`(국내 ∧ lot 모드 ∧ 실가 ∧ lot 원인 상속 — 단건 술어와 배타라 종목 축·lot 축이 한 body에 실리지 않는다 · 시대 = 매도 lot 양도일, 2026-02-27을 사이에 두면 ⑧ 차단) · 단건 7필드 빌더·gap 검사를 `StockFbFields`(필드 모양) 기반으로 일반화해 lot이 같은 코드를 쓴다 · ⑤ `StockFamilyBusinessCard`를 `lot` props로 재사용(복제 없음 · 이력 불러오기·단건 미리보기는 lot에 없음 · 이동평균 고지) + `AcquisitionLotCard`(`fbForm`)·`SplitLotsBlock`·`AcquisitionLotsMatrix` · ⑥ 사이드바 라벨 · ⑦ `SplitAllocationPreviewCard`·`LotMatchingDetailCard`가 `buyCost ?? buyShares × perShareBuyPrice` · `FamilyBusinessImputedComparisonCard` detail `lots[]`·`pooled` · ⑧ `validateStockFamilyBusinessLots`(split=Step1·lots-only=Step2). 별지 제84호 취득가액은 엔진 `acquisitionPrice`(= `buyCost` 합)를 읽어 변경 없음. 미리보기 `previewSplitAllocation`은 기존 try/catch가 엔진 throw를 null로 돌린다(⑧이 먼저 막는다). anchor `stock-family-business-lots-wiring.anchor.test.ts`·`stock-family-business-lots-card.anchor.test.tsx` · E2E `e2e/stock-fb-97-2-4-lots.spec.ts`(F1-10 53,260,000). 발견: 단건 anchor D 격자가 refine 없는 `stockTransferInputSchema`를 써 ⑩ 단언이 공허했다 — `addStockRefines(...)`로 교체(통과 유지). 남은 한계: lot에 이력 불러오기 없음 · 단일→분할 전환이 단건 가업 입력을 첫 lot으로 옮기지 않음(자본적지출 기준이 달라 자동 이관 금지) · 매도일이 02-27을 사이에 두면 차단(배정 뒤 throw 대신 보수적).
+
+> **PR-1d′ 14지점 점검(ui-engine-sync-checker · lot 축, 2026-11-26)** — High 0 · buyCost 총액이 결과·미리보기·사이드바·별지 4곳 일치(946원 어긋나는 1주당 × 주식수 재계산 사례로 확인) · ⑧↔⑩ lots-only·split 모순 0 · 종목+lot 동시 탑재 경로 0 · 미리보기 크래시 경로 0. 반영: M-1 미완결 가업 lot이면 `previewSplitAllocation`이 null(빈칸이 0으로 읽혀 적용률 0%·100% 값이 뜨던 것) · M-2 가업 lot 2개 이상이면 결과 카드 상단 적용률·법정량 행을 숨기고 lot별 표로(첫 lot 적용률로 합계를 곱한 자기모순). 남긴 Low: L-1 매도일 2026-02-27 걸침 보수 차단(의도) · L-2 별지 제84호 11행 라벨이 lot 혼재·이동평균을 구분하지 않음(금액은 정확) · L-3 가업 lot 미완결 중 ① 환산 매도건 칸 일시 소실(⑧이 먼저 막음) · L-4 막다른 길 없음.
+
 ## 8. 법령 상수·verify:legal
+
+> **PR-1a 실행 기록(2026-11-26)** — `legal-codes/stock-family-business.ts`(`STOCK_FAMILY_BUSINESS` 6개) · 매니페스트 5건(`TRANSFER.FAMILY_BUSINESS_IMPUTED_ACQUISITION` · `TRANSFER_DECREE.FAMILY_BUSINESS_APPLIED_RATE`·`_ASSET_SCOPE` · `INH_DECREE.FAMILY_BUSINESS_NON_BUSINESS_ASSETS`·`_CGT_EQUIVALENT`) · 수집기 등록. 새로 모수에 들어온 조문은 상증령 §15뿐(§97의2·§163의2는 조문 단위로 기등록). 키워드 9개는 KoreanLaw 원문(MST 280405·290841·290845)과 기계 대조 PASS — `npm run verify:legal` 실호출은 회선 차단(law.go.kr curl 000)으로 미실행, 확인 필요. 신규 타입(`types/stock-family-business.types.ts`)은 쓰는 곳이 생기는 PR-1b로 옮겼다(미사용 타입 선반영 안 함).
 
 - 신규 인용: 「소득세법 시행령」 §163의2③(구·신)·④, 「상속세 및 증여세법 시행령」 §15⑤2호·㉑ — 현재 `legal-codes/`·`manifest/`에 0건.
 - 상수는 문자열 리터럴 금지 규칙대로 `legal-codes/`에 두고 `lib/legal-verification/manifest/additions-{세목}.ts`에 등록, 키워드는 §2 본문 verbatim. 「(법률 제N호로 …)」 괄호는 쓰지 않는다. 등록 후 `npm run verify:legal`.
@@ -326,6 +359,8 @@ Q-1·4·5·6은 사용자가 직접 골랐고, 나머지는 추천안대로 반�
 | Q-8 | 주식 이력 불러오기가 1주당 평가액 칸을 덮어쓰는가 | **덮어쓰지 않음** — 참고값만. 취득일이 비어 있으면 상속개시일로 채우고, 다르면 후보 비선택 |
 | Q-9 | 다종목 결과의 가업·이월과세 카드를 종목별로 모두 표시 | **국외주식 계획 Q-6과 통합해 한 PR에서** |
 | Q-10 | 주식 FB 잔존값(취득원인 변경 등) | **inert**(④ 미전송·⑧ 미검증) — 주식 폼 `donor*` 선례 |
+| Q-11 | 한 신고에 가업 주식 종목이 2건 이상일 때 §18의2⑩ 비교 | ✅ **신고 단위 총차이 1회**(사용자 선택 2026-11-26 · 추천안) — 가업 종목 전부를 함께 §97로 되돌린 합산 결정세액과 견준다. 종목별로 나누지 않고 가업 종목마다 같은 값 + `fbItemCount`. 리뷰 실측: 종목별 한계 기여 방식은 공제 합 98,875,000 > 의제 세액 94,375,000 |
+| Q-12 | 가업 lot이 있을 때 lot 배정 방식 | ✅ **이동평균법까지 지원**(사용자 선택 2026-11-26 · 추천은 fifo·specific만이었다) — 가업 lot 유리수 단가를 풀 평균에 넣고 구분 관리 「확인 필요」 고지 |
 
 ---
 
@@ -340,7 +375,7 @@ Q-1·4·5·6은 사용자가 직접 골랐고, 나머지는 추천안대로 반�
 | V-5 | 부동산 사이드바가 FB ON 자산 취득가액을 사전 표시하는지 |
 | V-6 | 신 ③2호 「총자산가액」과 상속세 입력 `corporateTotalAssets`(상증법 제4장 평가)가 같은 값인지 — 화면이 장부가를 받는지 |
 | V-7 | 피상속인이 의제취득일 전 취득한 경우 「피상속인 취득가액(§97①1호)」 — v1은 사용자 입력 책임 고지 |
-| V-8 | 국외주식 PR 머지 후 `stock-transfer-tax.ts`·`aggregate.ts` 줄 수·훅 위치 재측정 |
+| V-8 | ✅ 재측정(71893fcbb, 국외주식 #3673 머지 후): `stock-transfer-tax.ts` 775 · `stock-transfer-aggregate.ts` 748 · 훅 위치 = `calculateStockTransferTax`의 `resolveStockCarryover` 호출 앞. PR-1a 분리로 `stock-transfer-tax.ts` 649 |
 | V-9 | 구 주식 이력 복원 시 신규 필드 default(실행 확인) |
 | V-10 | 다종목에서 가업 종목이 마지막이 아니면 카드가 안 뜨는지(실행 확인) |
 | V-11 | 가업 lot이 일부만 양도될 때 피상속인 자본적지출(총액)의 배정 — 기존 lot 자본 조정 규칙(`lot-capital-adjustments.ts`)에 같은 축이 있는지. 없으면 사용자 결정으로 올린다(자동 안분 신설 금지) |
@@ -353,6 +388,8 @@ PR-3 14지점 점검(ui-engine-sync-checker) Low — 세액 영향 없음:
 기존 코드 지적(이번 범위 밖, 언급만): 부동산 ⑧은 피상속인 취득가 0을 허용(`transfer-tax-validate-asset.ts:475`)하나 미리보기는 `> 0`을 요구(`Section:147-150`).
 
 ---
+
+> **PR-1b 실행 기록(2026-11-26)** — `stock-transfer/stock-family-business.ts`(계획·단건·합산) · `types/stock-family-business.types.ts` · 결정세액 echo(`StockTransferResult.determinedTax` 종목 단독 · `StockTransferAggregateResult.totalDeterminedTax` 신고 단위). 엔진 진입 throw: 상속 외 원인 · 실가 외 모드 · lot(PR-1b′) · 피상속인 1주당 ≤ 0 · 법정량 오류(분모 0 — L-3) · **양도일과 법정량 종류 불일치**(주식은 법인가업 대상 자산이라 02-27 이후 ③2호만). anchor `fb-97-2-4-stock.anchor.test.ts` 18건 · 뮤테이션 6종 검출. acquisition-cost-review: 법령 체인 PASS · 하류 덮어쓰기 없음 · 발견 1(다종목 귀속) → Q-11로 해소. 남은 anchor: F1-16 기타자산(리뷰 probe 정상: 의제 140,000,000 · 세액 240,210,000 · 일반 93,110,000).
 
 ## 11. PR 분할·순서
 

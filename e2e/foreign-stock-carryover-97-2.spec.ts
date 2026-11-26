@@ -197,6 +197,10 @@ test.describe("국외주식 이월과세 §97의2① — 폼 → 세액 → 결�
     await expect(card).not.toContainText("세율 보유기간");
     // 취득가액 행이 증여자 취득 당시 승계로 바뀐다
     await expect(page.getByText("취득가액 (외화) — 증여자 취득 당시 승계 (이월과세)")).toBeVisible();
+    // 환율 환산 표가 외화 원금을 보인다(종전 「— × 1,250」) — 증여자 단가 400 × 100주
+    expect(json.result.acquisitionPriceForeign).toBe(40_000);
+    await expect(page.getByText("USD 200,000 × 1,500 = 300,000,000")).toBeVisible();
+    await expect(page.getByText("USD 40,000 × 1,250 = 50,000,000")).toBeVisible();
   });
 
   test("FC-3 [회귀]: 토글 OFF면 donor 값이 남아 있어도 body에 안 실리고 39,500,000이다", async ({ page }) => {

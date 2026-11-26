@@ -241,3 +241,55 @@ export function applyDeemedAcquisitionDate(
 } {
   return resolveStockDeemedDate(date, is94_4);
 }
+
+// ============================================================
+// 기신고분 합산·split 모드 판정 헬퍼 (오케스트레이터 `stock-transfer-tax.ts`에서 이동 · 800줄 정책)
+// ============================================================
+
+/**
+ * 영 §158②·§168② 기신고분 합산액을 입력에서 꺼낸다.
+ *
+ * - `applicable` 이 false 면 **undefined** — `①4다` 가 아닌데 합산하면 조문 근거가 없다.
+ * - 네 값이 전부 0이면 **undefined** — 결과 echo 가 「합산 없음」을 0원 행으로 만들지 않는다
+ *   (`clause168_2Credit` 와 같은 규약).
+ * - 음수·소수는 방어적으로 잘라낸다. 금액은 원(정수)이다.
+ *
+ * `sourceCount` 는 사용자가 모달에서 고른 건수다. 값이 없으면(수동 입력 경로) 0으로 둔다 —
+ * **0이어도 합산은 유효하다**. 건수는 표시 전용이지 합산 여부를 가르는 축이 아니다.
+ */
+export function buildPriorAggregation(
+  input: StockTransferInput,
+  applicable: boolean,
+): NonNullable<StockTransferResult["priorAggregation"]> | undefined {
+  if (!applicable) return undefined;
+  const clamp = (v: number | undefined) => Math.max(0, Math.floor(v ?? 0));
+  const transferPrice = clamp(input.priorTransferPrice);
+  const acquisitionPrice = clamp(input.priorAcquisitionPrice);
+  const expenses = clamp(input.priorExpenses);
+  const shareCount = clamp(input.priorShareCount);
+  if (transferPrice + acquisitionPrice + expenses + shareCount === 0) return undefined;
+  return {
+    transferPrice,
+    acquisitionPrice,
+    expenses,
+    shareCount,
+    sourceCount: clamp(input.priorAggregationSourceCount),
+  };
+}
+
+/** 분할 모드 판정에 읽는 필드만 — 엔진 input과 Zod 파싱 결과(⑩ refine)가 같은 함수를 쓰게 한다 */
+export type SplitModeFields = {
+  acquisitionLots?: readonly unknown[];
+  transferLots?: readonly unknown[];
+  costAllocationMethod?: unknown;
+};
+
+export function isSplitMode(input: SplitModeFields): boolean {
+  return !!(
+    input.acquisitionLots &&
+    input.acquisitionLots.length > 0 &&
+    input.transferLots &&
+    input.transferLots.length > 0 &&
+    input.costAllocationMethod
+  );
+}

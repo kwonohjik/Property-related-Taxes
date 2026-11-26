@@ -119,6 +119,7 @@ export function aggregateEachItem(
     ...penaltyEcho(unitPenalty),
     ...penaltyEraEcho(unitPenalty, inputs),
     electronicFilingCredit,
+    totalDeterminedTax: determinedTotal,
     ...(efScope.notice ? { electronicFilingCreditNotice: efScope.notice } : {}),
     ...(revisedNotice ? { revisedFilingNotice: revisedNotice } : {}),
     totalFinalTax,

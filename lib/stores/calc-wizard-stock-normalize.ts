@@ -210,6 +210,14 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     transferredAssetValue: strField("transferredAssetValue"),
     giftTaxableValue: strField("giftTaxableValue"),
     preMergerAcquisitionDate: strField("preMergerAcquisitionDate"),
+    // §97의2④ 가업상속 — 구 이력엔 없다(false·빈 문자열). `||` 기본값이 아니라 필드별 정규화 하나로 닫는다.
+    familyBusinessInheritance: boolField("familyBusinessInheritance", false),
+    fbDecedentPerSharePrice: strField("fbDecedentPerSharePrice"),
+    fbDecedentCapitalExpenditure: strField("fbDecedentCapitalExpenditure"),
+    fbDeductionAmount: strField("fbDeductionAmount"),
+    fbBusinessEstateValue: strField("fbBusinessEstateValue"),
+    fbCorpTotalAssets: strField("fbCorpTotalAssets"),
+    fbCorpNonBusinessAssets: strField("fbCorpNonBusinessAssets"),
     blockShareholderRealEstateRatio: strField("blockShareholderRealEstateRatio"),
     blockShareholderOwnershipRatio: strField("blockShareholderOwnershipRatio"),
     aggregationFirstTransferDate: strField("aggregationFirstTransferDate"),
@@ -679,6 +687,14 @@ function normalizeAcquisitionLots(raw: unknown): AcquisitionLotForm[] {
             : undefined,
         donorDeceased: typeof o.donorDeceased === "boolean" ? o.donorDeceased : undefined,
         preMergerAcquisitionDate: typeof o.preMergerAcquisitionDate === "string" ? o.preMergerAcquisitionDate : undefined,
+        // §97의2④ 가업상속 — 구 이력에는 없던 필드라 factory(`createEmptyAcquisitionLot`)와 같은 기본값으로 채운다
+        familyBusinessInheritance: o.familyBusinessInheritance === true,
+        fbDecedentPerSharePrice: typeof o.fbDecedentPerSharePrice === "string" ? o.fbDecedentPerSharePrice : "",
+        fbDecedentCapitalExpenditure: typeof o.fbDecedentCapitalExpenditure === "string" ? o.fbDecedentCapitalExpenditure : "",
+        fbDeductionAmount: typeof o.fbDeductionAmount === "string" ? o.fbDeductionAmount : "",
+        fbBusinessEstateValue: typeof o.fbBusinessEstateValue === "string" ? o.fbBusinessEstateValue : "",
+        fbCorpTotalAssets: typeof o.fbCorpTotalAssets === "string" ? o.fbCorpTotalAssets : "",
+        fbCorpNonBusinessAssets: typeof o.fbCorpNonBusinessAssets === "string" ? o.fbCorpNonBusinessAssets : "",
       };
     })
     .filter((l): l is AcquisitionLotForm => l !== null);

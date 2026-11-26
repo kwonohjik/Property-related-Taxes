@@ -36,6 +36,7 @@ import { isGiftLikeCause } from "@/lib/tax-engine/stock-transfer/gift-acquisitio
 import { resolveStockDeemedDateString } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import { isSection94_4Form } from "@/lib/calc/stock-transfer-section94-4-form";
 import { CarryoverDonorConversionSection } from "@/components/calc/stock-transfer/CarryoverDonorConversionSection";
+import { StockFamilyBusinessCard } from "@/components/calc/stock-transfer/StockFamilyBusinessCard";
 import { SplitAllocationPreviewCard } from "@/components/calc/stock-transfer/SplitAllocationPreviewCard";
 import { effectiveTransferActualInputMode } from "@/lib/calc/stock-transfer-input-mode";
 import { effectiveAcquisitionActualInputMode } from "@/lib/calc/stock-transfer-input-mode";
@@ -453,6 +454,7 @@ export function Step2({ form, onChange }: Step2Props) {
                       onChange({ specificMatchings: matchings })
                     }
                     transferShareCount={parseInt(form.shareCount || "0", 10)}
+                    form={form}
                   />
                   {/* lots-only — 매트릭스 아래: 취득일을 입력하는 동안 카드가 위에 생겨 입력 위치가 밀리지 않게 한다 */}
                   <PreDeemedLotsClause1Card form={form} onChange={onChange} />
@@ -460,6 +462,9 @@ export function Step2({ form, onChange }: Step2Props) {
               )}
             </div>
           )}
+
+          {/* §97의2④ 가업상속공제 주식 — 실가 단건 취득 블록 바로 아래(술어·잔존값 inert는 카드·④·⑧ 공유 leaf) */}
+          <StockFamilyBusinessCard form={form} onChange={onChange} />
 
           {/* 이월과세 증여자 기준 환산 — 수증자 실가(평가액)와 별개로 A의 분모만 받는다 (§97의2①1호 나목) */}
           {acquisitionMode === "actual" &&

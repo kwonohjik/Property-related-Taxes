@@ -63,7 +63,7 @@ export function SingleDetailCards({
     <>
       {/* ⑦ 가업상속공제 §97의2④ 의제·일반 비교 결과 카드 */}
       {result.familyBusinessDetail && (
-        <FamilyBusinessImputedComparisonCard detail={result.familyBusinessDetail} />
+        <FamilyBusinessImputedComparisonCard detail={result.familyBusinessDetail} fbLthdDetail={result.fbLthdDetail} longTermHoldingDeduction={result.longTermHoldingDeduction} />
       )}
 
       {/* §104⑤ 크로스 엔진 고지 — 비사업용 토지가 있을 때만(계획서 C-1 · R-5 좁은 노출).
@@ -91,7 +91,7 @@ export function SingleDetailCards({
                `incomeAfterOffset`을 넘겨 그 행이 나오므로 뷰마다 구성이 달랐다 (#017·#086). */
           taxableIncome={Math.max(0, result.taxableGain - result.longTermHoldingDeduction)}
           /* 장특공률 미전달 시 카드가 라벨에 변수명을 그대로 노출했다 (#017). */
-          lthdRate={result.longTermHoldingRate}
+          lthdRate={result.fbLthdDetail ? undefined : result.longTermHoldingRate}
           taxBase={result.taxBase ?? undefined}
           taxAmount={result.calculatedTax ?? undefined}
           localTax={result.localIncomeTax ?? undefined}

@@ -22,6 +22,7 @@ import { isLotsModeForm, isPreDeemedLotClause1On } from "@/lib/calc/stock-transf
 import type { ExitTaxResult } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
 import { sumBasicDeductionByGroup } from "@/lib/tax-engine/stock-transfer/stock-basic-deduction-total";
+import { isStockFbOn, isStockFbImputationEra, previewStockFbAcquisitionPrice } from "@/lib/calc/stock-family-business";
 
 interface StockSidebarProps {
   currentStep: number;
@@ -262,11 +263,15 @@ export function StockSidebar({
     } else {
       // 결과 없음 — 실가 취득가 직접 계산
       let acqPrice: number | null = null;
+      /** §97의2④ 가업상속 lot의 의제 취득원가가 합계에 들어갔는가 — 엔진 배정 요약이 있을 때만(상속개시일 2014.1.1. 전 lot은 특례 미적용이라 제외) */
+      let hasFbLotImputed = false;
       if (isLotsModeForm(formData)) {
         // 분할 양도 + lots-only(다건 취득) — 양도한 주식수만큼 **매칭된** 매수 건의 원가. 엔진 매칭과 같은 함수
         // (Step2 카드와 공용 · 의제취득일 전 매수 ②·① 반영). 종전 Σ(전 매수 lot)은 팔지 않은 잔량의 원가까지 더했고
         // lots-only 의 가중평균 근사는 ②·①을 반영하지 못해 결과(엔진)와 갈렸다.
-        acqPrice = previewSplitAllocation(formData)?.totalAcquisitionPrice ?? null;
+        const lotPreview = previewSplitAllocation(formData);
+        acqPrice = lotPreview?.totalAcquisitionPrice ?? null;
+        hasFbLotImputed = lotPreview?.familyBusinessSummary !== undefined;
       } else {
         // single 모드 — acquisitionActualInputMode 분기 (per_share / total)
         const acqInputMode = formData.acquisitionActualInputMode || "per_share"; // 3중 패턴 default
@@ -283,8 +288,15 @@ export function StockSidebar({
           acqPrice = perShareAcq > 0 && count > 0 ? perShareAcq * count : null;
         }
       }
-      if (acqPrice && acqPrice > 0) {
-        items.push({ label: "취득가액", value: acqPrice });
+      // §97의2④ 가업상속 ON — 상속평가 × 주식수를 그대로 보이면 강제 적용되는 의제 취득가액과 어긋난 「그럴듯한 오답」이다.
+      //   입력 완결이면 엔진 leaf 값, 미완결이면 행을 생략한다(일반 값으로 떨어뜨리지 않는다).
+      if (isStockFbOn(formData)) {
+        const fbAcq = previewStockFbAcquisitionPrice(formData);
+        // 상속개시일 2014.1.1. 전(G-1)이면 엔진도 특례를 적용하지 않으므로 「의제」라 부르지 않는다
+        const fbLabel = isStockFbImputationEra(formData) ? "취득가액 (§97의2④ 의제)" : "취득가액";
+        if (fbAcq !== null && fbAcq > 0) items.push({ label: fbLabel, value: fbAcq });
+      } else if (acqPrice && acqPrice > 0) {
+        items.push({ label: hasFbLotImputed ? "취득가액 (§97의2④ 의제 포함)" : "취득가액", value: acqPrice });
       }
 
       // 필요경비 (실가 모드만 — [B-2] 환산 모드 실비는 §97②2호 단서 비교 입력이라 차감 확정 전 → 결과 도착 후 표시)

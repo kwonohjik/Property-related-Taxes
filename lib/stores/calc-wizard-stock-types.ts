@@ -115,6 +115,25 @@ export interface AcquisitionLotForm {
   /** 이월과세 lot — 증여자 사망 (배우자=사별 / 직계존비속=양도 당시 사망) */
   donorDeceased?: boolean;
   preMergerAcquisitionDate?: string;           // 합병·분할 시 종전 주식 취득일 (§104②3)
+  /**
+   * 상속 lot — §97의2④ 가업상속공제 주식 (단건 `StockTransferFormData`와 **같은 이름 7필드**).
+   * 상속개시일 = 이 lot 취득일, 상속개시일 평가액 = 이 lot 1주당 단가. 취득원인이 상속이 아니거나 술어
+   * (`allowsStockFbLot`)를 통과하지 못하면 잔존값은 inert다(④ 미전송 · ⑧ 미검증 — 계획서 Q-10).
+   * optional인 이유: 다른 원인별 보조 필드(`donor*`)와 같은 규약이다. 기본값은 `lotFbFields`가 한 곳에서 준다.
+   */
+  familyBusinessInheritance?: boolean;
+  /** 피상속인의 1주당 취득가액 (원) */
+  fbDecedentPerSharePrice?: string;
+  /** 피상속인 자본적지출 — **이 lot 전체 주식수** 기준 총액(원). 엔진이 매도에 배정된 주식수 몫만 산입한다 */
+  fbDecedentCapitalExpenditure?: string;
+  /** 구 ③ 가업상속공제금액 (매도일 2026.2.26. 이전) */
+  fbDeductionAmount?: string;
+  /** 구 ③ 가업상속 재산가액 (매도일 2026.2.26. 이전) */
+  fbBusinessEstateValue?: string;
+  /** ③2호 법인 총자산가액 (매도일 2026.2.27. 이후) */
+  fbCorpTotalAssets?: string;
+  /** ③2호 사업무관자산가액 (매도일 2026.2.27. 이후) */
+  fbCorpNonBusinessAssets?: string;
 }
 
 export interface TransferLotForm {
@@ -150,5 +169,13 @@ export function createEmptyAcquisitionLot(): AcquisitionLotForm {
     shareCount: "",
     perShareAcquisitionPrice: "",
     acquisitionCause: "purchase",
+    // §97의2④ 가업상속 — 기본값은 `lotFbFields`(lib/calc/stock-family-business-lots.ts)와 같다
+    familyBusinessInheritance: false,
+    fbDecedentPerSharePrice: "",
+    fbDecedentCapitalExpenditure: "",
+    fbDeductionAmount: "",
+    fbBusinessEstateValue: "",
+    fbCorpTotalAssets: "",
+    fbCorpNonBusinessAssets: "",
   };
 }

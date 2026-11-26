@@ -12,6 +12,7 @@
 import { useMemo } from "react";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { previewSplitAllocation } from "@/lib/calc/stock-split-preview";
+import { FB_MOVING_AVG_NOTICE } from "@/lib/tax-engine/stock-transfer/stock-family-business-lot";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
 
 const METHOD_LABEL = { specific: "개별법", fifo: "선입선출법", moving_avg: "이동평균법" } as const;
@@ -89,7 +90,14 @@ export function SplitAllocationPreviewCard({
                 <td>{fmtDate(m.saleDate)}</td>
                 <td>{fmtDate(m.acquisitionDate)}</td>
                 <td className="text-right font-mono tabular-nums">{fmt(m.buyShares)}</td>
-                <td className="text-right font-mono tabular-nums">{fmt(m.perShareBuyPrice)}</td>
+                <td className="text-right font-mono tabular-nums">
+                  {fmt(m.perShareBuyPrice)}
+                  {m.buyCost !== undefined && (
+                    <span className="ml-1 text-micro text-emerald-700 dark:text-emerald-300" data-testid="split-preview-fb-tag">
+                      의제
+                    </span>
+                  )}
+                </td>
                 {showBasis && (
                   <td className="pl-2" data-testid="split-preview-basis">
                     {m.preDeemedSelected === "clause1"
@@ -101,11 +109,21 @@ export function SplitAllocationPreviewCard({
                         : "—"}
                   </td>
                 )}
-                <td className="text-right font-mono tabular-nums">{fmt(m.buyShares * m.perShareBuyPrice)}</td>
+                {/* §97의2④ 가업 lot은 취득원가 **총액**(`buyCost`)이 정본이다 — 1주당 값은 표시용 절사라 곱하면 항별 절사가 사라져 어긋난다 */}
+                <td className="text-right font-mono tabular-nums" data-testid="split-preview-row-cost">
+                  {fmt(m.buyCost ?? m.buyShares * m.perShareBuyPrice)}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+      )}
+      {!isTransfer && detail.familyBusinessSummary && (
+        <p className="text-xs text-emerald-800 dark:text-emerald-200" data-testid="split-preview-fb-summary">
+          §97의2④ 가업상속 의제 취득가액이 포함된 값입니다 — 가업 상속 매수 건 중 매도에 배정된 {fmt(detail.familyBusinessSummary.shares)}주 몫
+          {detail.familyBusinessSummary.pooled ? " (이동평균법은 가업 주식의 단가가 풀 평균에 섞여 있어 가업 몫만 따로 나눌 수 없습니다)" : ""}.
+          {detail.method === "moving_avg" && ` ${FB_MOVING_AVG_NOTICE}`}
+        </p>
       )}
       <p className="text-xs text-slate-600 dark:text-slate-400">
         {isTransfer

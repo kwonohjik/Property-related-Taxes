@@ -212,6 +212,9 @@ export function pushAssetAndCostRows(
         `11. 취득가액 (② — §97②2호 단서로 환산취득가액 ${swapExcludedAcquisitionPrice(result).toLocaleString()} 미차감)`
       : result.usedEstimatedAcquisition
       ? "11. 취득가액 (② = 환산취득가액)"
+      : (aggregate?.items ?? [result]).some((r) => r.familyBusinessDetail !== undefined)
+        ? // 가업상속공제 주식 — 소득세법 §97의2④ 의제 취득가액(피상속인 취득가액 × 적용률 + 상속개시일 평가액 × (1 − 적용률)). 다건이면 가업 종목이 하나라도 있으면 표기한다.
+          "11. 취득가액 (② = 의제 취득가액 · 소득세법 §97의2④)"
       : result.preDeemedAcquisitionDetail?.selected === "clause2"
         ? // 의제취득일 전 매수 — 실가 + 생산자물가상승분(영 §176의2④2호). 실가 방식이라 개산공제 행은 없다.
           "11. 취득가액 (② = 실가 + 생산자물가상승분 · 영 §176의2④2호)"

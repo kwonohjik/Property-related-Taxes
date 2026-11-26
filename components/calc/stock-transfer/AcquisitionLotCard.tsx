@@ -30,7 +30,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { AcquisitionLotForm } from "@/lib/stores/calc-wizard-stock-store";
+import type { AcquisitionLotForm, StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { StockFamilyBusinessCard } from "@/components/calc/stock-transfer/StockFamilyBusinessCard";
 import { BONUS_UNTAXED_BLOCK_MESSAGE } from "@/lib/calc/stock-acquisition-cause";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 
@@ -61,6 +62,11 @@ export interface AcquisitionLotCardProps {
   radioNamePrefix: string;
   /** 「1주당 단가」 뒤에 끼워 넣을 축 전용 칸 (다건 축의 개별법 배정 수량 등) */
   extraFields?: ReactNode;
+  /**
+   * §97의2④ 가업상속 칸(상속 lot)이 읽는 폼 전체 — 시장·취득방식·매도일·배정방법 맥락이다.
+   * 없으면 가업상속 칸을 그리지 않는다. 두 화면(분할 Step1 · 일자별 다건 Step2)이 같은 값을 넘긴다.
+   */
+  fbForm?: StockTransferFormData;
 }
 
 export function AcquisitionLotCard({
@@ -70,6 +76,7 @@ export function AcquisitionLotCard({
   onDelete,
   radioNamePrefix,
   extraFields,
+  fbForm,
 }: AcquisitionLotCardProps) {
   const isCarryover = lot.acquisitionCause === "carryover_gift";
   const cause = lot.acquisitionCause;
@@ -176,6 +183,13 @@ export function AcquisitionLotCard({
               onChange={(v) => onUpdate({ decedentAcquisitionDate: v })}
             />
           </FieldCard>
+        )}
+
+        {/* §97의2④ 가업상속공제 — 단건과 같은 카드(lot props). 시장·실가 술어는 카드·④·⑧이 공유한다 */}
+        {cause === "inheritance" && fbForm && (
+          <div className="md:col-span-2">
+            <StockFamilyBusinessCard form={fbForm} lot={lot} lotIndex={idx} onLotChange={onUpdate} />
+          </div>
         )}
 
         {isCarryover && (

@@ -14,6 +14,8 @@
  * 순수 함수 · DB 없음. ⑧(validate)·⑫(Zod)·엔진이 같은 술어를 쓴다(3중 일치).
  */
 
+import { isFamilyBusinessAssetScopeDecreeEra } from "./data/family-business-cgt-era";
+
 /** 가업상속공제적용률의 법정량 — 「소득세법 시행령」 §163의2③ 호별 */
 export type FamilyBusinessRateBasis =
   | {
@@ -99,4 +101,67 @@ export function familyBusinessRateBasisError(
       return "적용률이 입력한 금액으로 계산한 비율과 다릅니다. 적용률을 다시 입력하세요.";
   }
   return null;
+}
+
+// ─── 상속세 이력 → 적용률 법정량 (양도일로 신·구 선택 · 계획서 F-2) ─────────────────
+
+/** 이력에서 적용률을 산정할 수 없는 사유 — 1·0 등으로 채우지 않고 사용자 입력을 요구한다(자동 fallback 금지) */
+export type FamilyBusinessRateUnavailableReason =
+  /** 상속세 직접입력 모드 — 가업상속 재산가액을 모른다(엔진 `appliedRate`는 표시용 1) */
+  | "direct_input"
+  /** 공제액·재산가액 정수가 이력에 없다(구 레코드 등) */
+  | "deduction_missing"
+  /** 법인가업인데 총자산가액이 이력에 없다(총자산 직접입력 모드) */
+  | "corp_assets_missing"
+  /** 사업무관자산이 총자산가액 이상 — 적용률 0 */
+  | "no_business_assets";
+
+export type FamilyBusinessRateDerivation =
+  | { basis: FamilyBusinessRateBasis }
+  | { unavailable: FamilyBusinessRateUnavailableReason };
+
+/**
+ * 양도일 기준으로 「소득세법 시행령」 §163의2③의 신·구 산식을 골라 법정량을 만든다.
+ *
+ * | 조건 | 법정량 |
+ * |---|---|
+ * | 개인가업 자산 (양도일 무관) | 공제액 ÷ 가업상속 재산가액 — 구 ③ · 신 ③1호 |
+ * | 법인가업 주식 · 양도일 ≤ 2026-02-26 | 공제액 ÷ 가업상속 재산가액 — 구 ③ |
+ * | 법인가업 주식 · 양도일 ≥ 2026-02-27 | (총자산 − 사업무관자산) ÷ 총자산 — 신 ③2호(공제 한도와 무관) |
+ *
+ * 경계는 부칙(대통령령 제36129호) §10 「이 영 시행 이후 자산을 양도하는 경우부터」 — `isFamilyBusinessAssetScopeDecreeEra`.
+ * 상속세 엔진의 `appliedRate`(공제 ÷ 재산가액)는 구 ③과 같고 건드리지 않는다. 신·구는 양도일을 아는 쪽이 고른다.
+ */
+export function deriveFamilyBusinessRateBasis(args: {
+  transferDate: Date;
+  isCorporateStock: boolean;
+  deduction: unknown;
+  finalValue: unknown;
+  usedDirectInput: boolean;
+  /** 법인가업 주식일 때 `calcCorporateBusinessAssets` 결과(총자산 미입력이면 undefined) */
+  corporate?: { totalAssets: number; businessAssets: number };
+}): FamilyBusinessRateDerivation {
+  if (args.isCorporateStock && isFamilyBusinessAssetScopeDecreeEra(args.transferDate)) {
+    const c = args.corporate;
+    if (!c || !(c.totalAssets > 0)) return { unavailable: "corp_assets_missing" };
+    if (!(c.businessAssets > 0)) return { unavailable: "no_business_assets" };
+    return {
+      basis: {
+        kind: "corporate_business_assets",
+        totalAssets: c.totalAssets,
+        nonBusinessAssets: c.totalAssets - c.businessAssets,
+      },
+    };
+  }
+  if (args.usedDirectInput) return { unavailable: "direct_input" };
+  const { deduction, finalValue } = args;
+  if (
+    !isNonNegInt(deduction) ||
+    !isNonNegInt(finalValue) ||
+    finalValue === 0 ||
+    deduction > finalValue
+  ) {
+    return { unavailable: "deduction_missing" };
+  }
+  return { basis: { kind: "deduction_ratio", deductionAmount: deduction, businessEstateValue: finalValue } };
 }

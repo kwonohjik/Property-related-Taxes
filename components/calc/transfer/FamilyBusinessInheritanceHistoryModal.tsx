@@ -42,6 +42,12 @@ import {
   type FbLookupWarning,
   type FbLookupWarningReason,
 } from "@/lib/calc/family-business-inheritance-lookup";
+import type { FbLookupTarget } from "@/lib/calc/family-business-inheritance-lookup";
+import type { FamilyBusinessRateBasis } from "@/lib/tax-engine/family-business-applied-rate";
+import type { FamilyBusinessRateUnavailableReason } from "@/lib/tax-engine/family-business-applied-rate";
+import { basisToFraction } from "@/lib/tax-engine/family-business-applied-rate";
+import { isFamilyBusinessAssetScopeDecreeEra } from "@/lib/tax-engine/data/family-business-cgt-era";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 // ============================================================
 // 라벨 매핑
@@ -58,7 +64,28 @@ const FB_WARNING_REASON_LABELS: Record<FbLookupWarningReason, string> = {
   no_assets: "가업 분류 자산 0건",
   transfer_before_inheritance: "상속개시일이 양도일 이후",
   death_date_missing: "상속개시일 누락·형식 오류",
+  wrong_target_only: "이 화면의 대상 자산 없음",
 };
+
+/** 이력에서 적용률을 산정할 수 없는 사유 — 자산 행에 보이고, 선택 후 적용률은 직접 입력한다 */
+const RATE_UNAVAILABLE_LABEL: Record<FamilyBusinessRateUnavailableReason, string> = {
+  direct_input: "상속세를 직접입력 모드로 계산해 가업상속 재산가액이 없습니다 — 선택 후 적용률을 입력하세요",
+  deduction_missing: "공제액·가업상속 재산가액이 이력에 없습니다 — 선택 후 적용률을 입력하세요",
+  corp_assets_missing: "법인 총자산가액이 이력에 없습니다 — 선택 후 적용률을 입력하세요",
+  no_business_assets: "사업무관자산이 총자산가액 이상이라 적용률을 구할 수 없습니다",
+};
+
+/** 양도일이 소령 §163의2③ 개정(2026.2.27.) 이후인가 — 날짜가 비었거나 잘못되면 구 규정 라벨 */
+function isNewDecreeEra(transferDate: string): boolean {
+  const d = toOptionalDate(transferDate);
+  return !!d && isFamilyBusinessAssetScopeDecreeEra(d);
+}
+
+/** 자산 행의 적용률 표기 — 입력칸·결과 카드와 같은 분수 표기(넷째 자리 절사) */
+function assetRateText(basis: FamilyBusinessRateBasis): string {
+  const f = basisToFraction(basis);
+  return `${formatFractionPercent(f.numerator, f.denominator)}%`;
+}
 
 const CATEGORY_LABEL: Record<string, string> = {
   business_real_estate: "가업용 부동산",
@@ -80,6 +107,8 @@ export interface FamilyBusinessInheritanceHistoryModalProps {
   currentTransferDate: string;
   /** 선택 콜백 — 호출 후 모달 자동 닫힘 */
   onSelect: (prefill: FamilyBusinessInheritancePrefill) => void;
+  /** 이 모달을 쓰는 화면 — 법인가업 주식은 주식 양도 화면 대상(소령 §163의2④2호). 기본 부동산 */
+  target?: FbLookupTarget;
 }
 
 // ============================================================
@@ -89,9 +118,12 @@ export interface FamilyBusinessInheritanceHistoryModalProps {
 function CandidateCard({
   candidate,
   onSelectAsset,
+  transferDateForLabel,
 }: {
   candidate: FamilyBusinessInheritanceCandidate;
   onSelectAsset: (itemId: string) => void;
+  /** 산식 근거 라벨용 양도일 */
+  transferDateForLabel: string;
 }) {
   return (
     <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-4 space-y-3 dark:bg-emerald-950/40">
@@ -115,13 +147,6 @@ function CandidateCard({
         <span className="text-gray-600 dark:text-gray-400">가업상속공제 적용액</span>
         <span className="text-right font-medium">{formatKRW(candidate.deduction)}</span>
 
-        <span className="text-gray-600 dark:text-gray-400">가업상속공제적용률</span>
-        <span className="text-right font-semibold text-emerald-700 dark:text-emerald-300">
-          {/* F-3: 법정량이 있으면 입력칸·결과 카드와 같은 분수 표기(넷째 자리 절사) — 반올림하면 66.6667 vs 66.6666로 갈린다 */}
-          {candidate.rateBasis
-            ? formatFractionPercent(candidate.rateBasis.deductionAmount, candidate.rateBasis.businessEstateValue)
-            : (candidate.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}%
-        </span>
       </div>
 
       {/* 자산 라디오 */}
@@ -147,6 +172,23 @@ function CandidateCard({
                 {formatKRW(a.marketValue)}
               </span>
             </div>
+            {/* F-2: 적용률은 자산별 — 법인가업 주식은 양도일 2026.2.27. 이후 (총자산 − 사업무관자산) ÷ 총자산 */}
+            <div className="mt-1 text-micro text-gray-600 dark:text-gray-400" data-testid="fb-history-asset-rate">
+              {a.rateBasis ? (
+                <>
+                  가업상속공제적용률 {assetRateText(a.rateBasis)} ·{" "}
+                  {a.rateBasis.kind === "corporate_business_assets"
+                    ? "개정 소득세법 시행령 §163의2③2호 (총자산가액 기준)"
+                    : isNewDecreeEra(transferDateForLabel)
+                      ? "소득세법 시행령 §163의2③1호 (공제금액 기준)"
+                      : "구 소득세법 시행령 §163의2③ (공제금액 기준)"}
+                </>
+              ) : a.rateUnavailable ? (
+                RATE_UNAVAILABLE_LABEL[a.rateUnavailable]
+              ) : (
+                <>가업상속공제적용률 {(candidate.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}% (이력 값)</>
+              )}
+            </div>
           </button>
         ))}
       </div>
@@ -168,6 +210,7 @@ export function FamilyBusinessInheritanceHistoryModal({
   onOpenChange,
   currentTransferDate,
   onSelect,
+  target = "real_estate",
 }: FamilyBusinessInheritanceHistoryModalProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -191,6 +234,7 @@ export function FamilyBusinessInheritanceHistoryModal({
         const { candidates, warnings } = filterFamilyBusinessInheritanceCandidates(
           records,
           currentTransferDate,
+          target,
         );
         setCandidates(candidates);
         setWarnings(warnings);
@@ -205,7 +249,7 @@ export function FamilyBusinessInheritanceHistoryModal({
     return () => {
       alive = false;
     };
-  }, [open, currentTransferDate]);
+  }, [open, currentTransferDate, target]);
 
   const handleSelectAsset = (candidate: FamilyBusinessInheritanceCandidate, itemId: string) => {
     const prefill = candidateToPrefill(candidate, itemId);
@@ -272,6 +316,7 @@ export function FamilyBusinessInheritanceHistoryModal({
                 key={c.calculationId}
                 candidate={c}
                 onSelectAsset={(itemId) => handleSelectAsset(c, itemId)}
+                transferDateForLabel={currentTransferDate}
               />
             ))}
           </div>

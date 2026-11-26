@@ -54,7 +54,18 @@ import {
   type Clause1Acc,
   type PreDeemedLotClause1Ctx,
 } from "./stock-pre-deemed-lot-clause1";
-import { FRAC_ZERO, type Frac } from "./exact-fraction";
+import { FRAC_ZERO, fracAdd, fracMul, frac, type Frac } from "./exact-fraction";
+import {
+  FB_MOVING_AVG_NOTICE,
+  addFb,
+  assertFbEraForSale,
+  buildFbSummary,
+  fbLotUnitPrice,
+  fbSubLotCost,
+  isActiveFbLot,
+  newFbAcc,
+  type FbAcc,
+} from "./stock-family-business-lot";
 
 /**
  * §97의2①2호·3호 누적기 — 매칭 3종이 공유한다.
@@ -196,6 +207,8 @@ export function allocateLots(
   const warnings: string[] = [];
   const carryover: CarryoverExpenseAcc = { capex: 0, giftTax: 0 };
   const clause1Acc = preDeemedClause1 ? newClause1Acc(method === "moving_avg") : undefined;
+  /** §97의2④ 가업상속 lot 배정 요약 — 활성 가업 lot이 없으면 비어 있다 */
+  const fbAcc = newFbAcc(method === "moving_avg");
 
   // 분모 0 가드 (validate에서 차단되어야 하지만 방어 코드)
   const totalBuyShares = acquisitionLots.reduce((s, l) => s + l.shareCount, 0);
@@ -238,20 +251,21 @@ export function allocateLots(
         carryoverDonorCapex: 0, carryoverGiftTaxApportioned: 0, warnings,
       };
     }
-    matched = matchSpecific(remainingAcqLots, transferLots, specificMatchings, isMajorAndNonSME, isSME, warnings, carryover, preDeemedClause1, clause1Acc);
+    matched = matchSpecific(remainingAcqLots, transferLots, specificMatchings, isMajorAndNonSME, isSME, warnings, carryover, preDeemedClause1, clause1Acc, fbAcc);
   } else if (method === "moving_avg") {
     // [B-3] 진정 이동평균법 — 단가는 매도 시점 이동평균, 보유기간은 FIFO lot startDate
-    const r = matchMovingAvg(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings, carryover, preDeemedClause1, clause1Acc);
+    const r = matchMovingAvg(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings, carryover, preDeemedClause1, clause1Acc, fbAcc);
     matched = r.matched;
     weightedAvgPerShare = r.finalMovingAvgPrice;
   } else {
     // fifo — lot.acquisitionDate ASC + 매도일 ASC FIFO 매칭 (lot 단가)
-    matched = matchFifo(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings, carryover, preDeemedClause1, clause1Acc);
+    matched = matchFifo(remainingAcqLots, transferLots, isMajorAndNonSME, isSME, warnings, carryover, preDeemedClause1, clause1Acc, fbAcc);
   }
 
   // 합계 산출
   const totalTransferPrice = matched.reduce((s, m) => s + m.saleShares * m.perShareSalePrice, 0);
-  const totalAcquisitionPrice = matched.reduce((s, m) => s + m.buyShares * m.perShareBuyPrice, 0);
+  // 가업 lot sub-lot은 취득원가 **총액**(`buyCost`)이 정본이다 — 1주당으로 나누면 항별 절사가 사라진다.
+  const totalAcquisitionPrice = matched.reduce((s, m) => s + (m.buyCost ?? m.buyShares * m.perShareBuyPrice), 0);
   const totalGain = totalTransferPrice - totalAcquisitionPrice;
   const shortTermGain = matched.filter((m) => m.isShortTerm).reduce((s, m) => s + m.perLotGain, 0);
   const longTermGain = matched.filter((m) => !m.isShortTerm).reduce((s, m) => s + m.perLotGain, 0);
@@ -261,6 +275,9 @@ export function allocateLots(
     preDeemedClause1 && clause1Acc && remainingAcqLots.some((l) => l.preDeemedClause2PerShare !== undefined)
       ? buildClause1Summary(preDeemedClause1, clause1Acc, matched)
       : undefined;
+
+  const familyBusinessSummary = buildFbSummary(fbAcc);
+  if (familyBusinessSummary && method === "moving_avg") warnings.push(FB_MOVING_AVG_NOTICE);
 
   return {
     method,
@@ -274,6 +291,7 @@ export function allocateLots(
     carryoverDonorCapex: carryover.capex,
     carryoverGiftTaxApportioned: carryover.giftTax,
     ...(preDeemedClause1Summary ? { preDeemedClause1Summary } : {}),
+    ...(familyBusinessSummary ? { familyBusinessSummary } : {}),
     warnings,
   };
 }
@@ -292,6 +310,7 @@ function matchSpecific(
   carryover: CarryoverExpenseAcc,
   ctx: PreDeemedLotClause1Ctx | undefined,
   clause1Acc: Clause1Acc | undefined,
+  fbAcc: FbAcc,
 ): MatchedSubLot[] {
   const matched: MatchedSubLot[] = [];
   const acqById = new Map(acqLots.map((l) => [l.id ?? "", l]));
@@ -322,10 +341,14 @@ function matchSpecific(
     // §97의2①1호 — 이월과세 lot이면 증여자 취득단가로 승계한다(1년 요건은 **매도 시점** 기준).
     // 의제취득일 전 매수 lot 이면 max(① 의제일 현재, ② 실가+물가) (영 §176의2④ — 이월과세 seam 위)
     const sp = resolveSubLotBuyPrice(acq, trn, ctx);
-    const perShareBuyPrice = sp.perShare;
+    const fbc = fbSubLotCost(acq, m.shareCount, trn.transferDate); // §97의2④ 가업 lot — 총액 정본
+    if (fbc) addFb(fbAcc, acq, m.shareCount, fbc);
+    const perShareBuyPrice = fbc ? fbc.perShare : sp.perShare;
     addClause1(clause1Acc, sp, m.shareCount);
     accrue(carryover, acq, m.shareCount, trn.transferDate); // ①2호·①3호
-    const perLotGain = (trn.perShareTransferPrice - perShareBuyPrice) * m.shareCount;
+    const perLotGain = fbc
+      ? trn.perShareTransferPrice * m.shareCount - fbc.buyCost
+      : (trn.perShareTransferPrice - perShareBuyPrice) * m.shareCount;
     const { appliedRate, subLotTax } = applySubLotRate(perLotGain, isShortTerm, isMajorAndNonSME, isSME);
     matched.push({
       saleDate: trn.transferDate,
@@ -334,6 +357,7 @@ function matchSpecific(
       acquisitionDate: acq.startDate,
       buyShares: m.shareCount,
       perShareBuyPrice,
+      ...(fbc ? { buyCost: fbc.buyCost } : {}),
       holdingDays,
       isShortTerm,
       perLotGain,
@@ -402,6 +426,7 @@ function matchFifo(
   carryover: CarryoverExpenseAcc,
   ctx: PreDeemedLotClause1Ctx | undefined,
   clause1Acc: Clause1Acc | undefined,
+  fbAcc: FbAcc,
 ): MatchedSubLot[] {
   // lot.acquisitionDate ASC (실제 매수일 — §104② 기산일 아님)
   const sortedAcq = [...acqLots].sort(
@@ -433,10 +458,14 @@ function matchFifo(
       const isShortTerm = isHeldUnderOneYear(acq.startDate, trn.transferDate);
       // §97의2①1호 — 이월과세 lot 승계(1년 요건은 **매도 시점** 기준)
       const sp = resolveSubLotBuyPrice(acq, trn, ctx); // 의제 lot — max(①, ②)
-      const perShareBuyPrice = sp.perShare;
+      const fbc = fbSubLotCost(acq, matchedShares, trn.transferDate); // §97의2④ 가업 lot — 총액 정본
+      if (fbc) addFb(fbAcc, acq, matchedShares, fbc);
+      const perShareBuyPrice = fbc ? fbc.perShare : sp.perShare;
       addClause1(clause1Acc, sp, matchedShares);
       accrue(carryover, acq, matchedShares, trn.transferDate); // ①2호·①3호
-      const perLotGain = (trn.perShareTransferPrice - perShareBuyPrice) * matchedShares;
+      const perLotGain = fbc
+        ? trn.perShareTransferPrice * matchedShares - fbc.buyCost
+        : (trn.perShareTransferPrice - perShareBuyPrice) * matchedShares;
       const { appliedRate, subLotTax } = applySubLotRate(
         perLotGain,
         isShortTerm,
@@ -450,6 +479,7 @@ function matchFifo(
         acquisitionDate: acq.startDate,
         buyShares: matchedShares,
         perShareBuyPrice,
+        ...(fbc ? { buyCost: fbc.buyCost } : {}),
         holdingDays,
         isShortTerm,
         perLotGain,
@@ -489,6 +519,7 @@ function matchMovingAvg(
   carryover: CarryoverExpenseAcc,
   ctx: PreDeemedLotClause1Ctx | undefined,
   clause1Acc: Clause1Acc | undefined,
+  fbAcc: FbAcc,
 ): { matched: MatchedSubLot[]; finalMovingAvgPrice: number | undefined } {
   const sortedAcq = [...acqLots].sort(
     (a, b) => a.acquisitionDate.getTime() - b.acquisitionDate.getTime(),
@@ -541,12 +572,19 @@ function matchMovingAvg(
     // 의제 lot 은 매도 lot 별 max(①, ②) — ① 환산이 매도마다 달라 풀 평균도 매도마다 달라질 수 있다(고지는 엔진 경고)
     const subPrices = priceTrack.map((e) => ({ e, sp: resolveSubLotBuyPrice(e.lot, trn, ctx) }));
     const sumW = subPrices.reduce((s, x) => s + x.e.w, 0n);
-    const balanceCostW = subPrices.reduce((s, x) => s + x.e.w * BigInt(x.sp.perShare), 0n);
+    // §97의2④ 가업 lot은 정확 유리수 단가를 넣는다(Q-12) — 정수로 먼저 절사하면 평균이 1원 낮아진다.
+    // 가업 lot이 풀에 없으면(w = 0 포함) 종전 정수 합 그대로라 비트 동일하다.
+    const fbEntries = subPrices.filter((x) => x.e.w > 0n && isActiveFbLot(x.e.lot));
+    const fbPool = new Set(fbEntries.map((f) => f.e));
+    for (const x of fbEntries) assertFbEraForSale(x.e.lot, trn.transferDate); // 그 매도의 양도일로 법정량 시대 확인(L-b)
+    const balanceCostW = subPrices.reduce((s, x) => (fbPool.has(x.e) ? s : s + x.e.w * BigInt(x.sp.perShare)), 0n);
+    const fbCostFrac = fbEntries.reduce((s, x) => fracAdd(s, fracMul(frac(x.e.w), fbLotUnitPrice(x.e.lot))), FRAC_ZERO);
     const clause1W = subPrices.reduce((s, x) => (x.sp.selected === "clause1" ? s + x.e.w : s), 0n);
     // 약분하지 않는다 — Σw 는 매수 때만 정수배로 커져 누적 쪽이 곱셈만으로 통분한다(`fracAddLazy`)
     const clause1Fraction: Frac = balanceQty > 0 && sumW > 0n ? { n: clause1W, d: sumW } : FRAC_ZERO;
     const clause1Missing = ctx !== undefined && subPrices.some((x) => x.sp.selected === "clause2" && x.sp.clause1PerShare === undefined);
-    const movingAvgPrice = balanceQty > 0 && sumW > 0n ? Number(balanceCostW / sumW) : 0;
+    const poolCost = fracAdd(frac(balanceCostW), fbCostFrac); // Σ w·단가 — 가업 lot이 없으면 정수
+    const movingAvgPrice = balanceQty > 0 && sumW > 0n ? Number(poolCost.n / (poolCost.d * sumW)) : 0;
     lastMovingAvgPrice = movingAvgPrice;
 
     let remainingSaleShares = trn.shareCount;
@@ -573,6 +611,9 @@ function matchMovingAvg(
        * 단가 평균과는 무관하다. 보유기간(§104②)을 FIFO lot으로 잡는 것과 같은 기준이다.
        */
       accrue(carryover, acq, matchedShares, trn.transferDate);
+      // 가업 lot 배정 요약은 FIFO 물량 트랙 기준이다 — 「어느 lot 주식을 팔았나」의 문제(위 accrue와 같은 기준)
+      const fbc = fbSubLotCost(acq, matchedShares, trn.transferDate);
+      if (fbc) addFb(fbAcc, acq, matchedShares, fbc);
       const perLotGain = (trn.perShareTransferPrice - movingAvgPrice) * matchedShares;
       const { appliedRate, subLotTax } = applySubLotRate(perLotGain, isShortTerm, isMajorAndNonSME, isSME);
       matched.push({

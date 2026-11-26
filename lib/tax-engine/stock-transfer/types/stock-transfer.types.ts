@@ -12,6 +12,11 @@ import type { PostListingValuationResult } from "./post-listing-result.types";
 import type { Section165_4Model } from "../valuation-165-4-basis";
 import type { Cross1045Adjustment } from "../../comparative-104-5-cross";
 import type { FraudPortionSplit } from "../../transfer-tax-penalty";
+import type {
+  StockFamilyBusinessInput,
+  StockFamilyBusinessDetail,
+  StockFamilyBusinessLotSummary,
+} from "./stock-family-business.types";
 export type { PostListingValuationResult };
 
 // ============================================================
@@ -172,6 +177,12 @@ export type StockTransferInput = {
   acquisitionCause: "purchase" | "inheritance" | "gift" | "carryover_gift" | "merger_split";
   /** 상속: 피상속인 취득일 §104②1 */
   decedentAcquisitionDate?: Date;
+  /**
+   * 가업상속공제가 적용된 주식 — 소득세법 §97의2④ 의제 취득가액(계획서 fb-97-2-4-fixes §7).
+   * `acquisitionCause: "inheritance"` · `acquisitionMode: "actual"` 단건 취득에서만 쓴다(⑨⑩이 막는다 ·
+   * 엔진 직접 호출은 `stock-family-business.ts`가 throw).
+   */
+  familyBusinessInheritance?: StockFamilyBusinessInput;
   /** 이월과세(`carryover_gift`): 증여자 취득일 §104②2. 단순 증여(`gift`)에서는 기산에 쓰지 않는다. */
   donorAcquisitionDate?: Date;
   /** 합병·분할: 종전 주식 취득일 §104②3 */
@@ -808,6 +819,14 @@ export interface AcquisitionLot {
    * 의제취득일 전 «매수» lot 임을 뜻하며 ①(영 §176의2④1호) 비교 대상이다. 입력(Zod)이 아니다 — 밖에서 주입하지 않는다.
    */
   preDeemedClause2PerShare?: number;
+  /**
+   * §97의2④ 가업상속공제 자산 의제 취득가액 특례 — 이 lot이 상속 원인(`inheritance`)일 때만 받는다.
+   * 상속개시일 = 이 lot의 `acquisitionDate`, 상속개시일 현재 평가액 = 이 lot의 `perShareAcquisitionPrice`.
+   * `decedentCapitalExpenditure`는 이 lot **전체 주식수**의 총액이다(`donorCapitalExpenditure`와 같은 규약 —
+   * 매도된 몫만 `floor(총액 × 매칭주식수 ÷ lot 주식수)`로 산입한다).
+   * 계획서: docs/02-design/features/fb-97-2-4-fixes.plan.md §7.7
+   */
+  familyBusinessInheritance?: StockFamilyBusinessInput;
 }
 
 export interface TransferLot {
@@ -844,6 +863,12 @@ export interface MatchedSubLot {
   acquisitionDate: Date;
   buyShares: number;
   perShareBuyPrice: number;
+  /**
+   * §97의2④ 가업상속 lot의 sub-lot **취득원가 총액** — 있으면 `buyShares × perShareBuyPrice`가 아니라 이 값이 취득가액이다.
+   * 의제 취득가액은 항별 절사라 1주당으로 나누면 절사가 생기므로 총액을 따로 든다(`perShareBuyPrice`는 `floor(buyCost ÷ buyShares)` 표시용).
+   * moving_avg sub-lot에는 싣지 않는다(풀 평균 단가 × 주식수).
+   */
+  buyCost?: number;
   holdingDays: number;
   /** < 365일 */
   isShortTerm: boolean;
@@ -916,6 +941,8 @@ export interface LotMatchingDetail {
     /** moving_avg — 풀 평균 단가라 sub-lot 별 ①·② 선택 없이 풀 비율로 안분했다 */
     pooled: boolean;
   };
+  /** §97의2④ 가업상속 lot 배정 요약 — 활성 가업 lot이 하나라도 매도에 배정됐을 때만(`familyBusinessDetail`의 입력) */
+  familyBusinessSummary?: StockFamilyBusinessLotSummary;
   warnings: string[];
 }
 
@@ -1384,6 +1411,13 @@ export type StockTransferResult = {
    */
   fraudSplit?: FraudPortionSplit;
   electronicFilingCredit: number;
+  /**
+   * 결정세액 echo = 산출세액 − 세액공제(가산세 전) — `finalizeStockTax`가 계산한 값 그대로.
+   * 비과세 분기는 0. 가업상속 §18의2⑩ 비교(결정세액 기준 · 계획서 Q-6)가 읽는다.
+   * ⚠️ **종목 단독 값**이다 — 다종목 합산의 신고 단위 결정세액(3억 구간 합산·전자신고 1회 반영)은
+   *   `StockTransferAggregateResult.totalDeterminedTax`이고 Σ 종목 값과 다를 수 있다.
+   */
+  determinedTax?: number;
 
   // 최종
   finalTax: number;
@@ -1515,6 +1549,9 @@ export type StockTransferResult = {
    * ②3호가 견주는 대상이 「양도소득 결정세액」(§92 계산순서를 거친 과세기간 단위)이기
    * 때문이다 — 종목 세액을 표시하면 사용자가 「왜 이 차액으로 갈렸는지」를 검산할 수 없다.
    */
+  /** 소득세법 §97의2④ 가업상속공제 자산 — 의제 취득가액·§18의2⑩ 비교(`stock-family-business.ts`) */
+  familyBusinessDetail?: StockFamilyBusinessDetail;
+
   carryoverDetail?: {
     /** 채택 결과 — `"applied"` = ① 적용 / `"excluded"` = ②3호 등으로 배제 */
     outcome: "applied" | "excluded";

@@ -40,6 +40,8 @@ interface Props {
 
 export function LotMatchingDetailCard({ detail, swapRemovedAcquisition }: Props) {
   const [expanded, setExpanded] = useState(true);
+  // §97의2④ 가업 lot이 섞이면 sub-lot 취득원가 **총액**(`buyCost`)이 정본이다 — 1주당(표시용 절사) × 주식수와 다를 수 있어 열을 따로 보인다.
+  const showCostColumn = detail.matched.some((m) => m.buyCost !== undefined);
 
   return (
     <div className="rounded-lg border border-violet-200 bg-violet-50/40 p-4 my-4 dark:bg-violet-950/40">
@@ -77,6 +79,7 @@ export function LotMatchingDetailCard({ detail, swapRemovedAcquisition }: Props)
                 <th className="border border-violet-300 p-1.5 text-left">매도일</th>
                 <th className="border border-violet-300 p-1.5 text-right">매칭주식수</th>
                 <th className="border border-violet-300 p-1.5 text-right">매수단가</th>
+                {showCostColumn && <th className="border border-violet-300 p-1.5 text-right">취득원가</th>}
                 <th className="border border-violet-300 p-1.5 text-right">매도단가</th>
                 <th className="border border-violet-300 p-1.5 text-right">보유일수</th>
                 <th className="border border-violet-300 p-1.5 text-center">구분</th>
@@ -91,7 +94,17 @@ export function LotMatchingDetailCard({ detail, swapRemovedAcquisition }: Props)
                   <td className="border border-violet-200 p-1.5">{formatDate(sub.acquisitionDate)}</td>
                   <td className="border border-violet-200 p-1.5">{formatDate(sub.saleDate)}</td>
                   <td className="border border-violet-200 p-1.5 text-right">{sub.buyShares.toLocaleString()}</td>
-                  <td className="border border-violet-200 p-1.5 text-right">{sub.perShareBuyPrice.toLocaleString()}</td>
+                  <td className="border border-violet-200 p-1.5 text-right">
+                    {sub.perShareBuyPrice.toLocaleString()}
+                    {sub.buyCost !== undefined && (
+                      <span className="ml-1 text-emerald-700 dark:text-emerald-300" data-testid="lot-detail-fb-tag">의제</span>
+                    )}
+                  </td>
+                  {showCostColumn && (
+                    <td className="border border-violet-200 p-1.5 text-right" data-testid="lot-detail-row-cost">
+                      {(sub.buyCost ?? sub.buyShares * sub.perShareBuyPrice).toLocaleString()}
+                    </td>
+                  )}
                   <td className="border border-violet-200 p-1.5 text-right">{sub.perShareSalePrice.toLocaleString()}</td>
                   <td className="border border-violet-200 p-1.5 text-right">{sub.holdingDays}</td>
                   <td className="border border-violet-200 p-1.5 text-center">
@@ -117,7 +130,7 @@ export function LotMatchingDetailCard({ detail, swapRemovedAcquisition }: Props)
                 <td className="border border-violet-400 p-1.5 text-right">
                   {detail.matched.reduce((s, m) => s + m.buyShares, 0).toLocaleString()}
                 </td>
-                <td colSpan={2} className="border border-violet-400 p-1.5 text-right">
+                <td colSpan={showCostColumn ? 3 : 2} className="border border-violet-400 p-1.5 text-right">
                   {detail.totalTransferPrice.toLocaleString()} − {detail.totalAcquisitionPrice.toLocaleString()}
                 </td>
                 <td colSpan={2} className="border border-violet-400 p-1.5 text-center">단기 {detail.shortTermGain.toLocaleString()} · 장기 {detail.longTermGain.toLocaleString()}</td>
