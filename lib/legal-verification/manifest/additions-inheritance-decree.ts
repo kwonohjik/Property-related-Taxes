@@ -18,6 +18,24 @@
 import type { VerificationRule } from "../verifier-types";
 
 export const INHERITANCE_DECREE_ADDITIONS: VerificationRule[] = [
+  // ── 가업상속 재산가액(법인가업 사업무관자산)·§18의2⑩ 양도소득세 상당액 — KoreanLaw MST 290845 실독(2026-11-26) ──
+  {
+    id: "INH_DECREE.FAMILY_BUSINESS_NON_BUSINESS_ASSETS",
+    citation: "상증령 §15",
+    keywords: [
+      "\"가업상속 재산가액\"이란",
+      "\"사업무관자산\"이라 한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "INH_DECREE.FAMILY_BUSINESS_CGT_EQUIVALENT",
+    citation: "상증령 §15",
+    keywords: [
+      "「소득세법」 제97조의2제4항을 적용하여 계산한 양도소득세액에서 같은 법 제97조를 적용하여 계산한 양도소득세액을 뺀 금액",
+    ],
+    keywordMode: "ALL",
+  },
   // ══ 상속세 및 증여세법 시행령 ═══════════════════════════════════════
   // ── 비과세·공제·세액공제 ───────────────────────────────────────────
   {
