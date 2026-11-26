@@ -1,0 +1,78 @@
+/**
+ * 검증 매니페스트 추가분 — 국외자산 부동산 양도소득세(소득세법 §118의2~§118의8) 의존 문언
+ *
+ * 상수: `TRANSFER_FOREIGN_RE.*` (`legal-codes/transfer-foreign-realestate.ts`).
+ * 소득세법 §118의2~§118의8 7개 조문의 기본 행은 `additions-transfer.ts`(`TRANSFER.OVERSEAS_*`)에 이미 있다 —
+ * 여기는 **같은 조문이어도 이 기능이 기대는 항·문구**를 추가로 고정하는 행과, 미등록이던 조문(영 §178의2)이다.
+ * 키워드는 모두 KoreanLaw MCP 실독 본문(2026-11-27: 소득세법 MST 280405 · §118의8은 efYd=20260701 ·
+ * 소득세법 시행령 MST 290841 · 지방세법 MST 282559)에서 verbatim으로 뽑았다. 법령 상수에 법률번호 괄호는 쓰지 않는다.
+ * 영 §162①3호 장기할부 문언은 해석 충돌(계획서 엔진 V-10)이 풀리기 전이라 등록하지 않았다.
+ */
+
+import type { VerificationRule } from "../verifier-types";
+
+export const TRANSFER_FOREIGN_REALESTATE_ADDITIONS: VerificationRule[] = [
+  {
+    id: "TRANSFER_FOREIGN_RE.SCOPE_AND_FX_GAIN_PROVISO",
+    citation: "소득세법 §118의2",
+    keywords: [
+      "계속 5년 이상 국내에 주소 또는 거소를 둔 자만 해당한다",
+      "토지 또는 건물의 양도로 발생하는 소득",
+      "국외에서 외화를 차입하여 취득한 자산",
+      "환율변동으로 인하여 외화차입금으로부터 발생하는 환차익",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER_FOREIGN_RE.RATE_ADJUSTMENT_104_4",
+    citation: "소득세법 §118의5 ②",
+    keywords: ["세율의 조정에 관하여는 제104조제4항을 준용한다"],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER_FOREIGN_RE.BASIC_DEDUCTION_ORDER",
+    citation: "소득세법 §118의7 ②",
+    keywords: [
+      "감면소득금액 외의 양도소득금액에서 먼저 공제하고",
+      "해당 과세기간에 먼저 양도하는 자산의 양도소득금액에서부터 순서대로 공제한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    /** 준용 목록 전체 한 문장 — §102(통산)·§103(기본공제)·§104(세율)·§97①②(환산)가 목록에 없다는 계획의 전제를 동결한다. */
+    id: "TRANSFER_FOREIGN_RE.MUTATIS_LIST",
+    citation: "소득세법 §118의8",
+    keywords: [
+      "제89조, 제90조, 제92조, 제95조, 제97조제3항, 제98조, 제100조, 제101조, 제105조부터 제107조까지, 제110조부터 제112조까지, 제114조, 제114조의2 및 제115조부터 제118조까지를 준용한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER_FOREIGN_RE.DECREE_154_1_DOMESTIC_ONE_HOUSE",
+    citation: "소득세법 시행령 §154 ①",
+    keywords: [
+      "현재 국내에 1주택을 보유하고 있는 경우로서 해당 주택의 보유기간이 2년",
+      "양도일 현재 국내에 1주택을 보유하고 있는 경우로서",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER_FOREIGN_RE.DECREE_178_2_4_UNREGISTERED",
+    citation: "소득세법 시행령 §178의2 ④",
+    keywords: [
+      "법 제118조의2제5호에서",
+      "국외에 있는 자산으로서 법 제94조제1항제4호에 따른 기타자산",
+      "부동산에 관한 권리로서 미등기 양도자산",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER_FOREIGN_RE.LOCAL_103_3_3_RATE",
+    citation: "지방세법 §103의3 ③",
+    keywords: [
+      "「소득세법」 제118조의2제1호",
+      "제5호에 따른 자산의 양도소득에 대한 개인지방소득세의 표준세율은 제92조제1항에 따른 세율과 같다",
+    ],
+    keywordMode: "ALL",
+  },
+];
