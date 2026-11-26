@@ -277,7 +277,14 @@ export function buildPriorAggregation(
   };
 }
 
-export function isSplitMode(input: StockTransferInput): boolean {
+/** 분할 모드 판정에 읽는 필드만 — 엔진 input과 Zod 파싱 결과(⑩ refine)가 같은 함수를 쓰게 한다 */
+export type SplitModeFields = {
+  acquisitionLots?: readonly unknown[];
+  transferLots?: readonly unknown[];
+  costAllocationMethod?: unknown;
+};
+
+export function isSplitMode(input: SplitModeFields): boolean {
   return !!(
     input.acquisitionLots &&
     input.acquisitionLots.length > 0 &&

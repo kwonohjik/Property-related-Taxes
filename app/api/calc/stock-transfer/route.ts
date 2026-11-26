@@ -10,6 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import {
   calculateStockTransferTax,
   calculateStockTransferTaxAggregate,
@@ -107,6 +108,8 @@ export async function POST(req: NextRequest) {
     const result = calculateStockTransferTax(engineInput);
     return finiteJson({ result }, { status: 200 });
   } catch (err) {
+    // 엔진 입력 오류(예: 가업상속 lot이 법정량 종류와 다른 시대의 매도에 배정) — 422 · 문구 그대로
+    if (err instanceof TaxCalculationError) return NextResponse.json({ error: err.message }, { status: 422 });
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -147,6 +150,7 @@ async function handleAggregate(body: unknown): Promise<NextResponse> {
     });
     return finiteJson({ result, mode: "aggregate" }, { status: 200 });
   } catch (err) {
+    if (err instanceof TaxCalculationError) return NextResponse.json({ error: err.message }, { status: 422 });
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });
   }

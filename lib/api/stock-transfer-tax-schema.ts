@@ -10,6 +10,7 @@
 
 import { z } from "zod";
 import { foreignStockInputSchema } from "./stock-transfer-foreign-schema";
+import { stockFamilyBusinessInputSchema } from "./stock-transfer-family-business-schema";
 
 
 /**
@@ -171,6 +172,12 @@ export const acquisitionLotSchema = z.object({
   donorRelation: donorRelationSchema.optional(),
   donorDeceased: z.boolean().optional(),
   preMergerAcquisitionDate: z.union([z.string(), z.date()]).optional(),
+  /**
+   * 가업상속공제 §97의2④ — 상속 lot 단위 입력(상속개시일 = 이 lot 취득일 · 평가액 = `perShareAcquisitionPrice`).
+   * 정합(상속 원인·종목 축과 동시 입력 금지·분할 입력에서만)은 `addStockRefines`(⑩)가 본다.
+   * ⚠️ 여기에 없으면 Zod가 침묵 strip한다(⑫).
+   */
+  familyBusinessInheritance: stockFamilyBusinessInputSchema.optional(),
 });
 
 export const transferLotSchema = z.object({
@@ -270,6 +277,14 @@ export const stockTransferInputSchema = z.object({
   transferredAssetValue: z.number().int().nonnegative().optional(),
   /** 영 §163의2②3호 — 증여세 과세가액(안분 분모) */
   giftTaxableValue: z.number().int().nonnegative().optional(),
+
+  /**
+   * ⑫ 가업상속공제 §97의2④ 의제 취득가액 — **종목 축**(단건 취득). 상속개시일 = `acquisitionDate`,
+   * 상속개시일 현재 평가액 = 위 실가 취득가액 입력. 취득 lot 단위 입력은 `acquisitionLots[].familyBusinessInheritance`.
+   * 정합(상속 원인·실가 모드·양도일 시대와 법정량 종류)은 `addStockRefines`(⑩)가 같은 술어로 본다.
+   * ★★★ 침묵 stripping 차단: 이 정의가 없으면 body에 실어도 route에서 제거된다.
+   */
+  familyBusinessInheritance: stockFamilyBusinessInputSchema.optional(),
 
   // §94①4 다목 부가
   cumulativeTransferRatio: z.number().min(0).max(1).optional(),
