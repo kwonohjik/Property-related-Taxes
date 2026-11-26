@@ -7,6 +7,7 @@
 import { appurtenantExcessFactsSchema } from "./transfer-tax-schema-appurtenant-excess";
 import { preDeemedPurchaseSchema } from "./transfer-tax-schema-pre-deemed-purchase";
 import { z } from "zod";
+import { familyBusinessInheritanceSchema } from "./transfer-tax-schema-family-business";
 import { burdenedGiftInfoSchema } from "./transfer-tax-burdened-gift-schema";
 import { carryoverTaxationEngineShape } from "./transfer-tax-building-schemas";
 import { selfBuiltHousingShape } from "./transfer-tax-schema-self-built-housing";
@@ -224,6 +225,12 @@ export const companionAssetSchema = z.object({
    * 기준시가는 물건 전체 값을 유지하고 개산공제만 「지분 기준시가 × 3%」가 된다.
    */
   ownershipRatio: z.number().positive().max(1).optional(),
+  /**
+   * ⑫ 가업상속공제 §97의2④ — 둘째 이후 카드도 지원(transfer-fb-share 최종 결정 Q-5). 단건과 **같은 공유 스키마**.
+   * 금액은 물건 전체(100%) 기준이고 엔진 STEP 0.42가 이 카드의 `ownershipRatio`로 줄인다. 누락 시 침묵 strip(계획서 §12.1 실측).
+   * 겸용주택·일반건물 컴패니언은 `transfer-tax-schema.ts` 컴패니언 루프가 거부한다(⑧ `allowsFamilyBusinessInheritance`와 같은 범위).
+   */
+  familyBusinessInheritance: familyBusinessInheritanceSchema.optional(),
   /**
    * ⑫ 부담부증여(소령 §159) — 축 B(지분 분할 취득) 컴패니언. **누락 시 침묵 stripping**이라
    * 그 지분만 §159를 타지 않아 세액이 조용히 틀린다.
