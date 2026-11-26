@@ -687,6 +687,14 @@ function normalizeAcquisitionLots(raw: unknown): AcquisitionLotForm[] {
             : undefined,
         donorDeceased: typeof o.donorDeceased === "boolean" ? o.donorDeceased : undefined,
         preMergerAcquisitionDate: typeof o.preMergerAcquisitionDate === "string" ? o.preMergerAcquisitionDate : undefined,
+        // §97의2④ 가업상속 — 구 이력에는 없던 필드라 factory(`createEmptyAcquisitionLot`)와 같은 기본값으로 채운다
+        familyBusinessInheritance: o.familyBusinessInheritance === true,
+        fbDecedentPerSharePrice: typeof o.fbDecedentPerSharePrice === "string" ? o.fbDecedentPerSharePrice : "",
+        fbDecedentCapitalExpenditure: typeof o.fbDecedentCapitalExpenditure === "string" ? o.fbDecedentCapitalExpenditure : "",
+        fbDeductionAmount: typeof o.fbDeductionAmount === "string" ? o.fbDeductionAmount : "",
+        fbBusinessEstateValue: typeof o.fbBusinessEstateValue === "string" ? o.fbBusinessEstateValue : "",
+        fbCorpTotalAssets: typeof o.fbCorpTotalAssets === "string" ? o.fbCorpTotalAssets : "",
+        fbCorpNonBusinessAssets: typeof o.fbCorpNonBusinessAssets === "string" ? o.fbCorpNonBusinessAssets : "",
       };
     })
     .filter((l): l is AcquisitionLotForm => l !== null);

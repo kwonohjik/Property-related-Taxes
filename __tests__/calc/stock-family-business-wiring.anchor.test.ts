@@ -17,7 +17,13 @@ import { buildStockTransferApiBody, callStockTransferTaxAPI, callStockTransferTa
 import { createInitialStockFormData } from "@/lib/stores/calc-wizard-stock-store";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { normalizeStockFormData } from "@/lib/stores/calc-wizard-stock-normalize";
-import { stockTransferInputSchema } from "@/lib/api/stock-transfer-tax-schema";
+import { stockTransferInputSchema as baseSchema, addStockRefines } from "@/lib/api/stock-transfer-tax-schema";
+
+/**
+ * ⑩ 포함 스키마 — route가 쓰는 `addStockRefines(...)`. 맨 `stockTransferInputSchema`는 refine이 없어
+ * 가업상속 공용 술어(⑩)가 돌지 않는다 — 그 스키마로 단언하면 D 격자의 「Zod가 FB 사유로 막지 않는다」가 공허해진다(PR-1d′에서 발견).
+ */
+const stockTransferInputSchema = addStockRefines(baseSchema);
 import { coerceDates } from "@/lib/api/date-coerce";
 import { STOCK_DATE_FIELDS } from "@/lib/api/stock-transfer-date-fields";
 import { buildEngineInput } from "@/lib/api/stock-transfer-engine-input";

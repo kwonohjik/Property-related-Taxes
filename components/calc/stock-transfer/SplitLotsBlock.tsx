@@ -37,19 +37,9 @@ import {
   type SpecificMatchingForm,
 } from "@/lib/stores/calc-wizard-stock-store";
 
-type SplitFormSlice = Pick<
-  StockTransferFormData,
-  | "lotsMode"
-  | "costAllocationMethod"
-  | "acquisitionLots"
-  | "transferLots"
-  | "specificMatchings"
-  // 대주주 판정 기준일 제안 — 이미 채워져 있으면 덮어쓰지 않으려면 현재 값을 읽어야 한다
-  | "priorYearEndDate"
->;
-
 interface SplitLotsBlockProps {
-  form: SplitFormSlice;
+  /** 전체 폼 — 상속 lot의 §97의2④ 가업상속 칸이 시장·취득방식·매도일 맥락을 읽는다(분할 슬라이스만으로는 부족) */
+  form: StockTransferFormData;
   onChange: (patch: Partial<StockTransferFormData>) => void;
 }
 
@@ -191,6 +181,7 @@ export function SplitLotsBlock({ form, onChange }: SplitLotsBlockProps) {
               onUpdate={(patch) => updateAcquisitionLot(idx, patch)}
               onDelete={() => deleteAcquisitionLot(idx)}
               radioNamePrefix="lotDonorRelation"
+              fbForm={form}
             />
           ))
         )}

@@ -67,7 +67,7 @@ export function stockFbBlockedReason(form: StockFbForm): string | null {
   if ((form.acquisitionMode || "actual") !== "actual") {
     return "취득가액을 실지거래가액(상속개시일 현재 평가액)으로 입력한 경우에만 적용합니다 — 환산취득가·매매사례가액에서는 쓸 수 없습니다";
   }
-  return "취득 lot 단위(일자별 다건) 입력의 가업상속 칸은 이 화면에서 아직 지원하지 않습니다";
+  return "취득 lot 단위(일자별 다건) 입력에서는 가업상속 칸이 각 상속 lot 카드에 있습니다 — 해당 lot 카드에서 입력하세요";
 }
 
 /** 술어 통과 + 토글 ON — 「가업상속 입력이 실제로 쓰이는 상태」 */
@@ -83,6 +83,51 @@ export function stockFbRateEra(transferDate: string): FamilyBusinessRateBasis["k
 }
 
 /**
+ * 가업상속 입력 7필드 — 단건 폼(`StockTransferFormData`)과 취득 lot(`AcquisitionLotForm`)이 **같은 이름**이다.
+ * 빌더·gap 검사·카드가 이 모양 하나만 읽어 단건·lot이 같은 코드를 쓴다(복제 금지).
+ */
+export type StockFbFields = Pick<
+  StockFbForm,
+  | "familyBusinessInheritance"
+  | "fbDecedentPerSharePrice"
+  | "fbDecedentCapitalExpenditure"
+  | "fbDeductionAmount"
+  | "fbBusinessEstateValue"
+  | "fbCorpTotalAssets"
+  | "fbCorpNonBusinessAssets"
+>;
+
+/**
+ * 7필드 + 법정량 시대 → 엔진 입력(`StockFamilyBusinessInput`) — 단건·lot 공용.
+ * 시대가 null(양도일을 모름)이면 null.
+ */
+export function buildStockFbInputFromFields(
+  fields: StockFbFields,
+  era: FamilyBusinessRateBasis["kind"] | null,
+): StockFamilyBusinessInput | null {
+  if (!era) return null;
+  const fbRateBasis: FamilyBusinessRateBasis =
+    era === "corporate_business_assets"
+      ? {
+          kind: "corporate_business_assets",
+          totalAssets: parseIntOrZero(fields.fbCorpTotalAssets),
+          nonBusinessAssets: parseIntOrZero(fields.fbCorpNonBusinessAssets),
+        }
+      : {
+          kind: "deduction_ratio",
+          deductionAmount: parseIntOrZero(fields.fbDeductionAmount),
+          businessEstateValue: parseIntOrZero(fields.fbBusinessEstateValue),
+        };
+  const capex = parseIntOrUndef(fields.fbDecedentCapitalExpenditure);
+  return {
+    decedentAcquisitionPricePerShare: parseIntOrZero(fields.fbDecedentPerSharePrice),
+    // 0은 보내지 않는다 — 자본적지출 없음과 같다(형제 필드와 같은 규약)
+    ...(capex !== undefined && capex > 0 ? { decedentCapitalExpenditure: capex } : {}),
+    fbRateBasis,
+  };
+}
+
+/**
  * 폼 → 엔진 입력(`StockFamilyBusinessInput`). ④ body·⑥ 미리보기가 같은 함수를 쓴다.
  *
  * - 양도일 era의 쌍만 `fbRateBasis`로 싣는다(반대편 쌍의 잔존값은 버린다).
@@ -91,27 +136,7 @@ export function stockFbRateEra(transferDate: string): FamilyBusinessRateBasis["k
  * - 양도일을 모르면 null.
  */
 export function buildStockFamilyBusinessInput(form: StockFbForm): StockFamilyBusinessInput | null {
-  const era = stockFbRateEra(form.transferDate);
-  if (!era) return null;
-  const fbRateBasis: FamilyBusinessRateBasis =
-    era === "corporate_business_assets"
-      ? {
-          kind: "corporate_business_assets",
-          totalAssets: parseIntOrZero(form.fbCorpTotalAssets),
-          nonBusinessAssets: parseIntOrZero(form.fbCorpNonBusinessAssets),
-        }
-      : {
-          kind: "deduction_ratio",
-          deductionAmount: parseIntOrZero(form.fbDeductionAmount),
-          businessEstateValue: parseIntOrZero(form.fbBusinessEstateValue),
-        };
-  const capex = parseIntOrUndef(form.fbDecedentCapitalExpenditure);
-  return {
-    decedentAcquisitionPricePerShare: parseIntOrZero(form.fbDecedentPerSharePrice),
-    // 0은 보내지 않는다 — 자본적지출 없음과 같다(형제 필드와 같은 규약)
-    ...(capex !== undefined && capex > 0 ? { decedentCapitalExpenditure: capex } : {}),
-    fbRateBasis,
-  };
+  return buildStockFbInputFromFields(form, stockFbRateEra(form.transferDate));
 }
 
 /** ⑧ 필드 수준 누락 — 빈칸(미입력)과 0을 구분한다. 자동 채움·자동 0 금지. */
@@ -124,42 +149,42 @@ const isBlank = (s: string | undefined): boolean => !s || s.trim() === "";
 const intOf = (s: string): number => parseIntOrZero(s);
 
 /**
- * 폼 수준 필수 입력 누락 — 술어를 통과한 폼에서만 의미가 있다(호출부가 거른다).
+ * 필수 입력 누락 — 단건·lot 공용. 술어를 통과한 입력에서만 의미가 있다(호출부가 거른다).
  * 분자 > 분모 같은 값 관계 오류는 여기 두지 않는다 — 엔진·⑩과 **같은 공용 술어**(`stockFamilyBusinessInputError`)가 맡는다.
+ * `era` = 매도일(양도일)로 갈린 법정량 시대 — null이면 쌍 검사는 건너뛴다(양도일 오류가 먼저 사유를 알린다).
  */
-export function stockFbInputGaps(form: StockFbForm): StockFbGap[] {
+export function stockFbFieldGaps(fields: StockFbFields, era: FamilyBusinessRateBasis["kind"] | null): StockFbGap[] {
   const gaps: StockFbGap[] = [];
-  if (isBlank(form.fbDecedentPerSharePrice) || intOf(form.fbDecedentPerSharePrice) <= 0) {
+  if (isBlank(fields.fbDecedentPerSharePrice) || intOf(fields.fbDecedentPerSharePrice) <= 0) {
     gaps.push({
       field: "fbDecedentPerSharePrice",
       message: "피상속인의 1주당 취득가액을 입력하세요 (0보다 커야 합니다 — 소득세법 §97의2④1호)",
     });
   }
-  if (!isBlank(form.fbDecedentCapitalExpenditure) && parseIntOrUndef(form.fbDecedentCapitalExpenditure) === undefined) {
+  if (!isBlank(fields.fbDecedentCapitalExpenditure) && parseIntOrUndef(fields.fbDecedentCapitalExpenditure) === undefined) {
     gaps.push({ field: "fbDecedentCapitalExpenditure", message: "피상속인 자본적지출은 원 단위 숫자로 입력하세요 (없으면 비워두세요)" });
   }
-  const era = stockFbRateEra(form.transferDate);
   if (era === "deduction_ratio") {
-    if (isBlank(form.fbDeductionAmount)) {
+    if (isBlank(fields.fbDeductionAmount)) {
       gaps.push({
         field: "fbDeductionAmount",
         message: "가업상속공제금액을 입력하세요 (양도일이 2026.2.26. 이전이라 구 소득세법 시행령 §163의2③ — 공제받은 금액이 없으면 0)",
       });
     }
-    if (isBlank(form.fbBusinessEstateValue) || intOf(form.fbBusinessEstateValue) <= 0) {
+    if (isBlank(fields.fbBusinessEstateValue) || intOf(fields.fbBusinessEstateValue) <= 0) {
       gaps.push({
         field: "fbBusinessEstateValue",
         message: "가업상속 재산가액을 입력하세요 (0보다 커야 합니다 — 구 소득세법 시행령 §163의2③)",
       });
     }
   } else if (era === "corporate_business_assets") {
-    if (isBlank(form.fbCorpTotalAssets) || intOf(form.fbCorpTotalAssets) <= 0) {
+    if (isBlank(fields.fbCorpTotalAssets) || intOf(fields.fbCorpTotalAssets) <= 0) {
       gaps.push({
         field: "fbCorpTotalAssets",
         message: "법인 총자산가액을 입력하세요 (양도일이 2026.2.27. 이후라 소득세법 시행령 §163의2③2호 — 0보다 커야 합니다)",
       });
     }
-    if (isBlank(form.fbCorpNonBusinessAssets)) {
+    if (isBlank(fields.fbCorpNonBusinessAssets)) {
       gaps.push({
         field: "fbCorpNonBusinessAssets",
         message: "사업무관자산가액을 입력하세요 (소득세법 시행령 §163의2③2호 — 없으면 0)",
@@ -167,6 +192,11 @@ export function stockFbInputGaps(form: StockFbForm): StockFbGap[] {
     }
   }
   return gaps;
+}
+
+/** 단건 폼의 필수 입력 누락 — 양도일 era로 쌍을 가른다 */
+export function stockFbInputGaps(form: StockFbForm): StockFbGap[] {
+  return stockFbFieldGaps(form, stockFbRateEra(form.transferDate));
 }
 
 /**
