@@ -116,18 +116,19 @@ describe("교재 S1 — ⑧ → ④ → route → 엔진 → 응답", () => {
   });
 });
 
-describe("지분 모드 × 가업상속 — 가짜 차손 부분을 만들지 않는다 (PR #3678 리뷰 M-3)", () => {
+describe("지분 모드 × 가업상속 — 엔진이 가업상속 입력을 지분분으로 줄이고 부분별 장특을 만든다 (transfer-fb-share)", () => {
   /**
-   * 지분 1/2 — ④가 양도가액·양도비·취득가액을 지분분(9억 · 1,500만 · 7.5억)으로 줄이지만 가업상속 입력(피상속인 취득가 5억 · 평가액 15억)은
-   * 물건 전체 값 그대로라 의제 취득가액 8억이 지분분 양도가액과 한 스케일이 아니다. 슬라이스를 만들면 적용분 +269,500,000 · 비적용분 −184,500,000
-   * (거짓 차손) · 장특 75,460,000이 나왔다. 후퇴한 종전 비례 안분: G 85,000,000 × 70% × 28% + × 30% × 8% = 16,660,000 + 2,040,000 = 18,700,000.
-   * (⑧ validate는 단독 지분 자산을 막는다 — 이 anchor는 직접 API 호출·옛 이력이 닿는 route 방어선을 고정한다.)
+   * 반전(근거 남김): #3678 M-3은 가업상속 입력이 물건 전체 값이라 후퇴(장특 18,700,000)했다. transfer-fb-share 최종 결정 Q-2(엔진 STEP 0.42 스케일)·
+   * Q-4(가드 해제)로 지분 1/2이면 의제 400,000,000 · G 485,000,000 · 장특 124,460,000 + 3,240,000 = 127,700,000 (계획서 §3.4 손계산).
+   * ④는 줄이지 않는다 — body의 가업상속 입력은 폼 그대로(FS-6 이중 스케일 방지).
    */
-  it("④ body → route → 엔진: 장특 18,700,000 · fbLthdDetail 없음 · 차손 고지 없음", async () => {
+  it("④ body(FB 100% 그대로) → route → 엔진: 장특 127,700,000 · 산출세액 115,980,000 · 슬라이스 echo", async () => {
     const form = textbookForm();
     form.assets[0] = { ...form.assets[0], ownershipNumerator: "1", ownershipDenominator: "2" };
     const body = await captureBody(form);
     expect(body.ownershipRatio).toBe(0.5);
+    expect((body.familyBusinessInheritance as { decedentAcquisitionPrice: number }).decedentAcquisitionPrice).toBe(500_000_000);
+    expect((body.familyBusinessInheritance as { inheritanceMarketValue: number }).inheritanceMarketValue).toBe(1_500_000_000);
     const res = await POST(
       new NextRequest("http://localhost/api/calc/transfer", {
         method: "POST",
@@ -137,10 +138,20 @@ describe("지분 모드 × 가업상속 — 가짜 차손 부분을 만들지 �
     );
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(find(json, "transferGain")).toBe(85_000_000);
-    expect(find(json, "longTermHoldingDeduction")).toBe(18_700_000);
-    expect(find(json, "fbLthdDetail")).toBeUndefined();
+    expect(find(json, "transferGain")).toBe(485_000_000);
+    expect(find(json, "longTermHoldingDeduction")).toBe(127_700_000);
+    expect(find(json, "taxBase")).toBe(354_800_000);
+    expect(find(json, "calculatedTax")).toBe(115_980_000);
+    expect((find(json, "fbLthdDetail") as { basis: string }).basis).toBe("slice_gain");
+    const fbd = find(json, "familyBusinessDetail") as Record<string, unknown>;
+    expect(fbd.imputedAcquisitionPrice).toBe(400_000_000);
+    expect(fbd.creditAmount).toBe(95_440_000);
+    expect(fbd.ownershipRatio).toBe(0.5);
+    expect(fbd.wholeInput).toEqual({ decedentAcquisitionPrice: 500_000_000, inheritanceMarketValue: 1_500_000_000 });
+    expect(fbd.decedentAcquisitionPrice).toBe(250_000_000);
+    expect(fbd.inheritanceMarketValue).toBe(750_000_000);
     const warnings = (find(json, "warnings") as string[] | undefined) ?? [];
     expect(warnings.some((w) => w.includes("양도차손") && w.includes("확인 필요"))).toBe(false);
+    expect(warnings.some((w) => w.includes("양도 지분율을 곱해") && w.includes("확인이 필요"))).toBe(true);
   });
 });
