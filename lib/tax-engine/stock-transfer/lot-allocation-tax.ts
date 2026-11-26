@@ -81,21 +81,6 @@ export function resolveSplitRateResult(
   };
 }
 
-/**
- * 비대주주 단일세율 적용 대상 taxCategory (§104①11호 나목)
- * - listed_otc_non_major: 코스닥 외 비대주주 (K-OTC 등)
- * - listed_off_market_non_major: 상장 장외 비대주주
- * - unlisted_non_major: 비상장 비대주주
- *
- * 정상 경로 applyStockTaxRate(stock-transfer-rate-calc.ts:135-137)와 동일한 3개 범주.
- * exact 비교 — substring/.includes 금지 ([[feedback_enum_substring_match_forbidden]]).
- */
-const NON_MAJOR_SINGLE_RATE_CATEGORIES = new Set<StockTransferResult["taxCategory"]>([
-  "listed_otc_non_major",
-  "listed_off_market_non_major",
-  "unlisted_non_major",
-]);
-
 export function calcSplitModeTax(
   taxBase: number,
   lotDetail: LotMatchingDetail,

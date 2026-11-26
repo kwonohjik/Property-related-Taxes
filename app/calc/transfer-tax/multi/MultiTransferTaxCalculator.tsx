@@ -59,9 +59,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const STEPS: MultiStep[] = ["list", "edit", "settings", "result"];
-const STEP_LABELS = ["자산 목록", "자산 편집", "공통 설정", "계산 결과"];
-
 // ─── Step C: 공통 설정 ────────────────────────────────────────
 // AggregateSettingsPanel 재사용 (별도 파일)
 
@@ -77,7 +74,6 @@ export default function MultiTransferTaxCalculator() {
     addProperty,
     updateProperty,
     removeProperty,
-    duplicateProperty,
     setActiveProperty,
     setStep,
     setResult,
@@ -167,8 +163,6 @@ export default function MultiTransferTaxCalculator() {
     taxLawVersion: String(form.taxYear),
     clientId: activeClientId,
   });
-
-  const activeStepIndex = STEPS.indexOf(form.activeStep);
 
   // 자산 추가 및 편집 모드 진입
   /**
@@ -360,14 +354,6 @@ export default function MultiTransferTaxCalculator() {
     } finally {
       setIsCalculating(false);
     }
-  };
-
-  const goToStep = (step: MultiStep) => {
-    if (step === "edit" && form.activeStep !== "edit") {
-      // 목록에서 편집으로 가는 경우는 handleEditProperty 사용
-      return;
-    }
-    setStep(step);
   };
 
   return (

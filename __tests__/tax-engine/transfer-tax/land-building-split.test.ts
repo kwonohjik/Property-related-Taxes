@@ -263,8 +263,6 @@ describe("S4: 안분 fallback — landTransferPrice만 직접 입력", () => {
   const sqm = 1_000_000; // /㎡
   const area = 200;       // ㎡ → 토지기준시가 = 200,000,000
 
-  const landRatio = 200_000_000 / 400_000_000; // 0.5
-
   const input = baseTransferInput({
     propertyType: "housing",
     transferPrice: totalTransfer,

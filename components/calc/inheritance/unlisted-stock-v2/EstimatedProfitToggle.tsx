@@ -45,13 +45,6 @@ import {
 import { VALUATION } from "@/lib/tax-engine/legal-codes/inheritance-gift";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
-/** §17의3③ 기관 유형 라벨 (상증규 §17의3③) */
-const AGENCY_TYPE_LABEL: Record<AgencyType, string> = {
-  credit_rating: "신용평가전문기관",
-  accounting: "회계법인",
-  tax: "세무법인",
-};
-
 const AGENCY_TYPE_OPTIONS: { value: AgencyType; label: string; description: string }[] = [
   { value: "credit_rating", label: "신용평가전문기관", description: "자본시장법 §335의3 인가" },
   { value: "accounting", label: "회계법인", description: "공인회계사법에 따른 회계법인" },

@@ -56,7 +56,6 @@ function mk(assets: Partial<AssetForm>[], single = false): TransferFormData {
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const props = (r: Any): Any[] => r.json?.data?.aggregated?.properties ?? [];
 const gate = (r: { issues: { message: string }[] }) => r.issues.filter((i) => i.message.includes("서면-2023-법규재산-2731"));
 

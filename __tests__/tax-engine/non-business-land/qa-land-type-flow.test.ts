@@ -28,13 +28,6 @@ function farmlandBase(overrides: Partial<NonBusinessLandInput> = {}): NonBusines
   };
 }
 
-function makeBusinessPeriods(totalDays: number, transferDate: Date) {
-  const start = new Date("2010-01-02");
-  const end = new Date(start);
-  end.setDate(end.getDate() + totalDays);
-  return [{ startDate: start, endDate: end > transferDate ? transferDate : end }];
-}
-
 describe("농지 흐름도 (§168-8, PDF p.1698)", () => {
   /**
    * QA-010: 농지 도시지역 外 + 재촌자경 기간기준 충족 → 사업용

@@ -18,9 +18,6 @@ const mockRates = makeMockRates();
 
 describe("E-1: case A + 1990.8.30. 이전 토지 결합 — pre1990 → inheritedAcquisition 자동 주입", () => {
   it("pre1990LandResult.standardPriceAtAcquisition이 standardPriceAtDeemedDate로 자동 주입된다", () => {
-    // 1990.8.30. 이전 토지 환산 결과가 있고, inheritedAcquisition.standardPriceAtDeemedDate 미입력 시
-    // inheritance-acquisition-helpers.ts가 자동으로 pre1990 결과를 주입한다.
-    const ACQ_STD_PRICE_AT_1990 = 202_620_000; // 1,100,000 × 184.2
     const TRANSFER_STD_PRICE   = 1_243_350_000; // 6,750,000 × 184.2
 
     const input = baseTransferInput({

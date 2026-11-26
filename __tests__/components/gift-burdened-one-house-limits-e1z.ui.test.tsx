@@ -38,8 +38,6 @@ vi.mock("@/components/ui/address-search", () => ({
 
 afterEach(cleanup);
 
-const GANGNAM_PNU = "1168010100100120034";
-
 function item(bgt: Partial<BurdenedGiftTransferTaxInput> = {}, over: Partial<EstateItem> = {}): EstateItem {
   return {
     id: "apt-1",
@@ -78,7 +76,6 @@ function Harness({ start, giftDate }: { start: EstateItem; giftDate: string }) {
   );
 }
 const bgtOf = () => latest!.burdenedGiftTransferTax!;
-const has = (id: string) => screen.queryByTestId(id) !== null;
 function typeDate(container: HTMLElement, ymd: string) {
   const [y, m, d] = ymd.split("-");
   fireEvent.change(within(container).getByLabelText("연도"), { target: { value: y } });

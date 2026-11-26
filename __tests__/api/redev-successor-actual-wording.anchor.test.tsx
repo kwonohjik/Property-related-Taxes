@@ -45,15 +45,9 @@ const SUCC: Record<string, unknown> = {
 };
 const STD = { standardPriceAtAcq: "300,000,000" };
 const APPRAISAL = { isAppraisalAcquisition: true, ...STD }; // 감정가액은 같은 칸(fixedAcquisitionPrice 450,000,000)
-const SALES = { isSalesCaseAcquisition: true, similarSalesValue: "500,000,000", fixedAcquisitionPrice: "", ...STD };
-const CONVERTED = { useEstimatedAcquisition: true, fixedAcquisitionPrice: "", ...STD };
 const BG = {
   transferType: "burdened_gift", bgDonorRelation: "lineal_descendant", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "920,000,000",
   bgMortgageDebtAmount: "300,000,000", bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "450,000,000", fixedAcquisitionPrice: "",
-};
-const HOUSE = {
-  addressJibun: "제주특별자치도 강남구 테스트동 2-2", assetKind: "housing", actualSalePrice: "300,000,000", acquisitionCause: "purchase",
-  acquisitionDate: "2000-01-01", fixedAcquisitionPrice: "100,000,000", standardPriceAtTransfer: "200,000,000",
 };
 const HH = {
   transferDate: "2023-02-16", filingDate: "2023-04-30", totalTransferExpense: "0", householdHousingCount: "0", isOneHousehold: false,
@@ -62,11 +56,6 @@ const HH = {
 const single = (a: Record<string, unknown> = {}): TransferFormData =>
   Object.assign(createDefaultTransferFormData(), {
     ...HH, contractTotalPrice: "920000000", assets: [{ ...makeDefaultAsset(1), ...SUCC, ...a } as AssetForm],
-  }) as TransferFormData;
-const bundle = (a: Record<string, unknown> = {}): TransferFormData =>
-  Object.assign(createDefaultTransferFormData(), {
-    ...HH, contractTotalPrice: "1220000000",
-    assets: [{ ...makeDefaultAsset(1), ...HOUSE } as AssetForm, { ...makeDefaultAsset(2), ...SUCC, ...a } as AssetForm],
   }) as TransferFormData;
 
 async function run(f: TransferFormData, mutate?: (body: Loose) => void) {
@@ -88,7 +77,6 @@ async function run(f: TransferFormData, mutate?: (body: Loose) => void) {
     json: r.json as Loose,
   };
 }
-const has114_2Notice = (w: string[]) => w.some((s) => s.includes("제114조의2"));
 
 
 afterEach(cleanup);

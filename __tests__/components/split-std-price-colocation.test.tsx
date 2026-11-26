@@ -102,8 +102,6 @@ const buildingPartCard = () => screen.queryAllByTestId("split-building-std-trans
 const buildingStdInput = () => screen.queryAllByTestId("split-building-std-transfer");
 const landStdTotal = () => screen.queryAllByTestId("split-land-std-transfer");
 const landStdPerSqm = () => screen.queryAllByTestId("split-land-std-transfer-persqm");
-// 취득시·양도시가 한 카드에 오면 런처는 2시점 통합 모달 1개다("건물 기준시가 계산").
-const bothCalcButton = () => screen.queryAllByRole("button", { name: "건물 기준시가 계산" });
 const transferOnlyCalcButton = () => screen.queryAllByRole("button", { name: "양도시 건물 기준시가 계산" });
 
 const SPLIT_ACTUAL: Init = {

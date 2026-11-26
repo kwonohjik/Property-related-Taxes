@@ -13,10 +13,8 @@
  */
 
 import { test, expect, type Page } from "@playwright/test";
-import { setStockConversionModeByTitle, conversionToggleTitle } from "./_helpers/stock-conversion";
+import { setStockConversionModeByTitle } from "./_helpers/stock-conversion";
 import { fillTransferStdPrice } from "./_helpers/stock-conversion";
-
-const ACQ_HALT_TOGGLE_TITLE = conversionToggleTitle("halt_acquisition");
 
 async function gotoStockTransferTax(page: Page) {
   await page.goto("/calc/stock-transfer-tax");

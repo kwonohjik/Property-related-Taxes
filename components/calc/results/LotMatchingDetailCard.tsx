@@ -19,11 +19,6 @@ const METHOD_LABEL: Record<LotMatchingDetail["method"], string> = {
   moving_avg: "이동평균법",
 };
 
-const CAUSE_LABEL_FOR_DATE: Record<string, string> = {
-  // §104② lot별 기산일은 cause별로 달라지므로 표시 라벨만 분기
-  default: "§104② 기산일",
-};
-
 function formatDate(d: Date): string {
   const iso = new Date(d).toISOString();
   return iso.slice(0, 10);

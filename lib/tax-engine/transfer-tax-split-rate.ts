@@ -47,7 +47,6 @@ export { hasPartialNonBusinessLand };
 import { resolveClause5TaxDetailed, rentalLaterLandPartDetail } from "./transfer-tax-rental-housing-nbl-split";
 import { allocateBasicDeductionAcrossParts } from "./transfer-tax-aggregate-helpers";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
-import type { RateGroup } from "./types/transfer-aggregate.types";
 import type { SplitGainResult } from "./types/transfer-split-gain.types";
 import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { NblSurchargeExclusionReason } from "./types/transfer-result.types";
@@ -201,18 +200,6 @@ export interface SplitPartRateContext {
    */
   partBasicDeduction?: number[];
 }
-
-/**
- * `allocateBasicDeduction`에 넘길 세율군.
- *
- * 이 함수가 다루는 두 파트는 **같은 자산·같은 납세자**이므로 세율군 우선순위(다건 엔진이
- * 자산 간 순서를 정하려고 두는 장치)는 의미가 없다. 배분 이득은 **한계세율**이 결정하고
- * (기본공제 2,500,000 × 한계세율 = 절감액), 그 값은 `calcTax`가 낸 `appliedRate`가 정확히
- * 담고 있다. ⇒ 두 파트를 같은 군으로 두어 헬퍼가 `rate` 내림차순으로 결정하게 한다.
- * (보유월수를 여기서 다시 세면 `calcTax`의 §104② 기산 로직과 이중 진실이 된다.)
- */
-const PART_RATE_GROUP: RateGroup = "progressive";
-
 
 /**
  * 파트별 세율 적용 여부 판정 + §104⑤ 비교과세.

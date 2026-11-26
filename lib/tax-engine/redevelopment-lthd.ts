@@ -643,25 +643,6 @@ function computeAptLthd(args: {
 // ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * LTHD 율 산정 (표1·표2 분기).
- *
- * 소법 §95② 별표:
- * - 표1 (일반): 3년 미만 0% / 3년차 6% / 매년 2% 가산 / 15년+ 30% 캡
- * - 표2 (1세대1주택 + 거주 2년+): 보유 × 4% (40% 캡) + 거주 × 4% (40% 캡)
- *
- * @param years 보유 연수 (정수, 보유개월 / 12 floor)
- * @param isOneHouseSingle 1세대1주택 여부
- * @param residenceYears 거주 연수 (정수)
- */
-function computeLthdRate(
-  years: number,
-  isOneHouseSingle: boolean,
-  residenceYears: number,
-): number {
-  return computeLthdRateSplit(years, isOneHouseSingle, residenceYears).total;
-}
-
-/**
  * 재개발 경로의 §95② 단서(표2) 해당 여부 — 조특법 §97의4① 단서 판정용 (E-4).
  *
  * LTHD 산정이 실제로 쓰는 leaf를 그대로 쓴다(memory `feedback_shared_predicate_argument_parity`).

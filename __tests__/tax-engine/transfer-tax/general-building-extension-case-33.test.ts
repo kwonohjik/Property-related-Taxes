@@ -236,7 +236,6 @@ describe("사례 33: 차손 통산·과세표준·세액 (통산 후 — A-2 결
   );
   const properties = result.aggregated.properties;
   const lP = properties.find((p) => p.propertyId === "land");
-  const b1P = properties.find((p) => p.propertyId === "building1");
   const b2P = properties.find((p) => p.propertyId === "building2");
 
   it("T-18 — 흡수 합 = 26,527,095 (건물1 차손 절대값 정합성)", () => {

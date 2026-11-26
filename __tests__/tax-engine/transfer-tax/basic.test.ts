@@ -254,7 +254,6 @@ describe("T-11: 비사업용 토지 (누진세율 + 10%p)", () => {
     expect(result.surchargeType).toBe("non_business_land");
     expect(result.surchargeRate).toBe(0.10);
     // calculatedTax > 순수 누진세액
-    const pureTax = Math.floor(result.taxBase * 0.24) - 5_760_000; // taxBase ~97.5M → 24% 구간 근처
     expect(result.calculatedTax).toBeGreaterThan(0);
   });
 });

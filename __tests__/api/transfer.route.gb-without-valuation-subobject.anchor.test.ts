@@ -117,7 +117,7 @@ describe("RS-1 ⑧ 이 통과하는 일반건물은 항상 서브객체를 보�
 describe("RS-2 서브객체 없는 ⑧ 차단 셀 — 주 자산·컴패니언 모두 전부 400", () => {
   it("96셀 전부 400 (수정 전: 200 이 49셀 — 주 자산 22 · 컴패니언 27)", async () => {
     const tally: Record<string, number> = {};
-    for (const role of ROLES) for (const [cn, cp] of CAUSES) for (const sep of [false, true]) for (const [mn, mp] of MODES) for (const price of [true, false]) for (const std of [true, false]) {
+    for (const role of ROLES) for (const [cn, cp] of CAUSES) for (const sep of [false, true]) for (const [, mp] of MODES) for (const price of [true, false]) for (const std of [true, false]) {
       const over = cell(cp, mp, sep, std, price);
       const f = form(role, over, cn === "부담부증여");
       if (allIssues(f).length === 0) continue;

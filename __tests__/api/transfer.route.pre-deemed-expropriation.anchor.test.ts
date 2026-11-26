@@ -146,7 +146,6 @@ const D1 = {
   buildingStandardPriceAtTransfer: "300,000,000",
   transferCause: "public_expropriation",
 };
-const SPLIT_COMP = { splitLandCompensationTotal: "350,000,000", splitLandCompensationBasisTotal: "380,000,000" };
 const SPLIT_MSG = /토지분 보상액 총액/;
 const d1Form = (asset: Record<string, unknown>) => {
   const f = form(asset);

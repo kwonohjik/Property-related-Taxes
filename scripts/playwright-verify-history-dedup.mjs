@@ -101,7 +101,6 @@ async function listCalculations(page) {
     // ─── Step 0: 증여일·관계 입력 ──────────────────────────────────
     info("Step 0 — 증여일 2021-05-02, 관계 직계존속(성인)");
     // DateInput: 연/월/일 분리. label="증여일" 근처 input 3개
-    const dateInputs = page.locator('input[type="text"][maxlength="4"], input[type="text"][maxlength="2"]');
     // 첫 DateInput만 채움 (year/month/day)
     const yearInput = page.locator('input[placeholder="YYYY"]').first();
     if (await yearInput.count() > 0) {

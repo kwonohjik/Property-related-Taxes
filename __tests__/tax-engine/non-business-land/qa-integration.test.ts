@@ -31,13 +31,6 @@ function farmlandBase(overrides: Partial<NonBusinessLandInput> = {}): NonBusines
   };
 }
 
-function makeBusinessPeriods(totalDays: number, transferDate: Date) {
-  const start = new Date("2010-01-02");
-  const end = new Date(start);
-  end.setDate(end.getDate() + totalDays);
-  return [{ startDate: start, endDate: end > transferDate ? transferDate : end }];
-}
-
 describe("§168-14 ③ 무조건 사업용 의제", () => {
   /**
    * QA-070: §168-14 ③1의2호 — 도시지역(주·상·공) 內 제외 예외 작동 확인

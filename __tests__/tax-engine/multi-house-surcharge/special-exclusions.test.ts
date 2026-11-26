@@ -93,7 +93,6 @@ describe("MH-16: 장기임대 마목(E형) 요건 충족 → 2호 해당", () =>
   });
 
   it("마목(E) 임대기간 미달 (8년 미만) → 2호 불해당", () => {
-    const h1 = makeHouse("h1");
     const h2 = makeHouse("h2", {
       isLongTermRental: true,
       rentalType: "E",

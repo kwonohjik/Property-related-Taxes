@@ -201,7 +201,6 @@ export function AcquisitionTaxForm() {
     ? ["취득 정보", "간주취득 상세"]
     : STEPS;
 
-  const totalSteps = isDeemed ? 2 : STEPS.length;
   const isLastStep = isDeemed ? step === 1 : step === STEPS.length - 1;
 
   const handleNext = async () => {

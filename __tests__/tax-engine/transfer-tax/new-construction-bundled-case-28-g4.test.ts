@@ -55,7 +55,6 @@ const G4_STD_AT_TRANSFER = 111_564_000; // 540,000원/㎡ × 206.6㎡
 
 const G4_ESTIMATED_BASE = Math.floor(LAND_ALLOC_PRICE * G4_STD_AT_ACQ / G4_STD_AT_TRANSFER); // 155,994,680
 const G4_APPRAISAL_DED  = Math.floor(G4_STD_AT_ACQ * 0.03);                                  // 2,400,000
-const G4_ESTIMATED_SIDE = G4_ESTIMATED_BASE + G4_APPRAISAL_DED;                               // 158,394,680
 
 // 60,000,000 < 158,394,680 → swap 미발동 → 개산공제만 인정
 const G4_GAIN_ESTIMATED_NO_SWAP = LAND_ALLOC_PRICE - G4_ESTIMATED_BASE - G4_APPRAISAL_DED; // 59,147,701

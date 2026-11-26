@@ -78,7 +78,7 @@ const primary = (acqDate: string) => ({
   standardPriceAtTransferForApportion: 900_000_000,
 });
 
-const companion = (over: object = {}) => ({
+const companion = () => ({
   assetId: "c1",
   assetLabel: "부수토지",
   assetKind: "land" as const,

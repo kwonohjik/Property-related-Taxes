@@ -248,7 +248,7 @@ export function splitCompanionIntoTwo(
   split: CompanionSplitApplied,
   primaryCtx: NonNullable<TransferTaxItemInput["primaryContextForCompanionRate"]>,
 ): [TransferTaxItemInput, TransferTaxItemInput] | [TransferTaxItemInput] {
-  const { appurtenantRatio, excessRatio, limitArea } = split;
+  const { excessRatio, limitArea } = split;
 
   // 금액 안분 헬퍼 — floor 적용, 나머지는 appurtenant에 귀속
   function splitAmount(total: number): { appurtenant: number; excess: number } {

@@ -29,12 +29,9 @@ interface Step4Props {
 export function Step4({
   form,
   set,
-  isHousing,
   isCorporation,
-  isLand,
 }: Step4Props) {
   const isLuxury = form.isLuxuryProperty;
-  const hasCorpMetroContext = isCorporation;
   const hasSpecialRateContext = form.acquisitionCause !== "purchase" ||
     form.specialRateType !== "";
 

@@ -33,7 +33,6 @@ export function Step5({
   isHousing,
   isIndividual,
   isFarmland,
-  isGiftLike,
 }: Step5Props) {
   return (
     <div className="space-y-4">

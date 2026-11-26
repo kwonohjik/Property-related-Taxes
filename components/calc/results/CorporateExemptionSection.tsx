@@ -239,7 +239,7 @@ export function CorporateExemptionSection({
                 </tr>
               </thead>
               <tbody>
-                {renderShareholderRows(perCorporateBreakdown, heirById, heirs ?? [])}
+                {renderShareholderRows(perCorporateBreakdown, heirById)}
               </tbody>
             </table>
           </div>
@@ -258,7 +258,6 @@ export function CorporateExemptionSection({
 function renderShareholderRows(
   perCorporateBreakdown: PerCorporateExemptionDetail[],
   heirById: Map<string, Heir>,
-  allHeirs: Heir[],
 ) {
   const rows: React.ReactElement[] = [];
 

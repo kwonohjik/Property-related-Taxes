@@ -48,34 +48,9 @@ const form = (over: Partial<TransferFormData> = {}): TransferFormData => ({
 
 const shows = (re: RegExp | string) => screen.queryAllByText(re).length > 0;
 
-/**
- * 🔄 **§155⑧도 이 컴포넌트를 떠났다** — 명부 행으로 갔다(D-6 4 · P7-5).
- *    `HouseEntry.oneHouseUnavoidableOutsideCapital` · `HouseEntryUnavoidableOutsideCapitalBlock`.
- *    ⑥⑦과 달리 §155⑧은 `full` 가드 **밖**이라 두 화면 모두에 떴다 — 저장소가 달라
- *    값이 두 벌 존재하던 **유일한 이중 입력**이었고, 이관으로 해소됐다.
- */
-const UNAVOIDABLE_MOVED_TO_ROW = true;
 const MARRIAGE = /혼인합가일/;
 // 🔄 토글 제거(2026-09-22) — 축 제목으로 셀렉터를 옮겼다. 종전 「일시적 2주택 특례 해당」은 없다.
 const TEMP_TWO = /일시적 2주택 특례 \(§155①\)/;
-/**
- * 🔄 **§155⑥1호은 이 컴포넌트를 떠났다** — 명부 행으로 갔다(D-6 · P7-3).
- *    정본 `HouseEntry.oneHouseCulturalHeritage` · 입력 `HouseEntryOneHouseFactsSection`.
- *
- * ⚠️ CM-2에서 `shows(HERITAGE) === false`를 **지웠다**. 컴포넌트 어디에도 없으므로 그 단언은
- *    이제 **공허하게 통과**한다 — 남겨 두면 「calc 모드 게이트가 ⑥을 막고 있다」로 오독된다
- *    ([[feedback_mutation_zero_discrimination_is_not_proof]]).
- *    새 위치의 안전망은 `__tests__/calc/two-house-axis-path.anchor.test.tsx`가 진다.
- */
-const HERITAGE_MOVED_TO_ROW = true;
-/**
- * 🔄 **§155⑦도 이 컴포넌트를 떠났다** — 명부 행으로 갔다(D-6 3b · P7-4).
- *    정본 `HouseEntry.oneHouseRuralHouse`·`ruralHouseKind` · 입력 `HouseEntryRuralHouseBlock`.
- *    ⑥과 같은 이유로 CM-2의 `shows(RURAL) === false`도 **공허해져** 제거했다.
- *    새 위치의 안전망은 `one-house-row-facts.anchor.test.ts`(RU-1~9)와
- *    `e2e/transfer-house-row-one-house-facts.spec.ts`가 진다.
- */
-const RURAL_MOVED_TO_ROW = true;
 const REPLACEMENT = /대체주택 비과세 특례 해당/;
 
 /** 판정 메뉴가 넘기는 파생 props — 계산기는 `mode="calc"`라 이것을 만들지 않는다. */

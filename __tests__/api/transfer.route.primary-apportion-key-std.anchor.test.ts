@@ -37,19 +37,6 @@ const r993 = (tr = "") => ({
   isRedevelopedNewHouse993: false, previousHouseStdPrice993: "", exclusiveAreaSqm993: "84", region993: "outside_speculation",
   acquisitionType993: "from_builder", firstContract993: "yes" as const, hasOccupancyAtContract: false, isResident993: true, isHousingConstructionBusiness993: false,
 });
-/** 원조합원 입주권 부담부증여 — 일반 기준시가 칸이 화면에 0개(#2351 Playwright). */
-const right = (over: Record<string, unknown> = {}) =>
-  ({
-    ...makeDefaultAsset(2), assetId: "o", addressJibun: "서울 강남구 테스트동 9-9",
-    assetKind: "right_to_move_in", isSuccessorRightToMoveIn: false, redevSubject: "right",
-    acquisitionCause: "purchase", acquisitionDate: "2009-07-01", transferType: "burdened_gift",
-    bgValuationMode: "sangjeungbeop_standard", bgMortgageDebtAmount: "600,000,000", bgDonorRelation: "lineal_descendant",
-    bgRightMemberRightsValue: "1,200,000,000", bgRightPaidInstallments: "200,000,000", bgRightPremium: "100,000,000",
-    bgActualAcquisitionTotal: "300,000,000", redevApprovalLawBasis: "urban_renovation_art_74", redevApprovalDate: "2018-06-01",
-    redevOriginalAssetType: "housing", redevRightsValue: "900,000,000", redevSettlementDirection: "pay",
-    redevSettlementAmount: "200,000,000", redevPreApprovalExpenses: "0", useEstimatedAcquisition: false,
-    standardPriceAtAcq: "", standardPriceAtTransfer: "", ...over,
-  }) as AssetForm;
 const asset = (id: number, over: Record<string, unknown> = {}) =>
   ({
     ...makeDefaultAsset(id), assetId: `a${id}`, addressJibun: `서울 강남구 테스트동 ${id}-${id}`, assetKind: "housing",
@@ -60,14 +47,6 @@ const BASE = {
   transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", isOneHousehold: false, householdHousingCount: "2",
   householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true,
 };
-const single = (a: AssetForm, contractTotalPrice = "1500000000") =>
-  Object.assign(createDefaultTransferFormData(), BASE, { assets: [a], contractTotalPrice }) as TransferFormData;
-const bundle = (c: AssetForm, mode: "actual" | "apportioned") =>
-  Object.assign(createDefaultTransferFormData(), BASE, {
-    assets: [asset(1, { actualSalePrice: "600000000", standardPriceAtTransfer: "400000000" }), c],
-    contractTotalPrice: mode === "actual" ? String(600000000 + Number(c.actualSalePrice)) : "1300000000",
-    assetSplitMode: "companion", bundledSaleMode: mode,
-  }) as TransferFormData;
 
 
 const blocks = (r: Awaited<ReturnType<typeof runCalc>>) => r.issues.some((i) => i.field === STD_FIELD);

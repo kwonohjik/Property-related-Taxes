@@ -36,7 +36,6 @@ export function Step3({
   set,
   isHousing,
   isIndividual,
-  isCorporation,
   isGiftLike,
 }: Step3Props) {
   const houseCount = parseInt(form.houseCountAfter) || 1;

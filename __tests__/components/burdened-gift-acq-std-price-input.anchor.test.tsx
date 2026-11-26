@@ -21,8 +21,6 @@ import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 afterEach(cleanup);
 
-const TITLE = "취득시 기준시가";
-
 function renderSection(over: Partial<AssetForm>, onChange = () => {}) {
   const asset: AssetForm = {
     ...makeDefaultAsset(1),

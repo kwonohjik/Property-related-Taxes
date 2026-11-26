@@ -185,7 +185,6 @@ describe("E3f-0 Anchor 2 ② — [E3f-1b 반전 완료] 꼬리 근거 «철거�
 });
 
 describe("E3f-0 Anchor 3 — 6개월·1년 한시는 9호에 포함된다(격자) · 빈집 3년만 셀", () => {
-  const OS = "2014-01-02";
   const d = parseISO;
   const s1 = (y: number) => d(`${y}-06-01`);
   const FROM = { y2016: d("2016-06-01"), y2024: d("2024-06-01"), y2026: d("2026-06-01") };

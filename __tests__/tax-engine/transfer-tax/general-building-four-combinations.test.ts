@@ -604,7 +604,6 @@ describe("사례 33 호환성: acquisitionMode 미입력 시 estimated fallback"
     },
   };
 
-  const result33Like = calculateGeneralBuildingTransfer(CASE33_LIKE, 2023, 0, [], makeMockRates());
   const resultEE = calculateGeneralBuildingTransfer(COMBO_EE, 2023, 0, [], makeMockRates());
 
   it("COMPAT-01 — acquisitionMode 미입력 건물2 취득가 = 32,978,880 (사례 33과 동일)", () => {

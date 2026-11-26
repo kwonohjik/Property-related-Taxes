@@ -38,10 +38,8 @@ const LAND = { landAreaM2: "100", acquisitionArea: "100", transferArea: "100", l
 const COMMON = { addressJibun: "서울 강남구 테스트동 1-1", acquisitionCause: "purchase", transferType: "burdened_gift", bgDonorRelation: "lineal_descendant",
   bgLendingDepositTotal: "0", standardPriceAtTransfer: "800000000", standardPriceAtAcq: "400000000",
   bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1000000000", bgAcquisitionMethod: "actual" };
-const STD = { bgValuationMode: "sangjeungbeop_standard", bgMarketValueAtTransfer: "", bgAcquisitionMethod: "" };
 const debt = (d: number) => ({ bgMortgageDebtAmount: String(d), bgMortgageSetAmount: String(d) });
 const pct = (n: number, third = false) => ({ ownershipNumerator: String(n), ownershipDenominator: "100", ...(third ? { ownershipRemainderThirdParty: "yes" } : {}) });
-const K6 = { bgAcquisitionMethod: "salesCase", bgPresumedInputKind: "total", bgPresumedAcquisitionTotal: "300000000", bgPresumedAcquisitionLand: "300000000" };
 const OWN = { bgShareOwnAcquisition: true };
 
 /** 자산 1(주 자산) — 2015 취득 · 실지 2.5억. */
@@ -53,9 +51,6 @@ const primary = (k: Kind, ...over: Record<string, unknown>[]) =>
  */
 const share = (...over: Record<string, unknown>[]) =>
   Object.assign({ ...makeDefaultAsset(2) }, x({ assetId: "s", acquisitionCause: "purchase", acquisitionDate: "2018-01-01", standardPriceAtAcq: "400000000" }), ...over.map(x)) as AssetForm;
-/** 오라클용 축 A 단건 — 그 지분 재료로 넣은 같은 종류 단건(나머지 제3자). */
-const single = (k: Kind, id: string, acq: string, actual: string, ...over: Record<string, unknown>[]) =>
-  Object.assign({ ...makeDefaultAsset(1) }, x({ assetId: id, ...COMMON, assetKind: k, acquisitionDate: acq, ...(k === "land" ? LAND : {}), [FIELD[k]]: actual }), ...over.map(x)) as AssetForm;
 const form = (assets: AssetForm[], over: Record<string, unknown> = {}) =>
   rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
     transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "2", isOneHousehold: false,

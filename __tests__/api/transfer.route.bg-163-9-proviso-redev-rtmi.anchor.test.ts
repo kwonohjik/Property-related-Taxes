@@ -65,14 +65,6 @@ async function check(f: TransferFormData) {
   };
 }
 
-// ── 원조합원(종전 자산 상속) — `original-member-163-9` · `original-member-land-164-4` anchor와 같은 시료 ──
-const mkO = (assets: A[]) =>
-  rosterForDeclaredCount(rosterForDeclaredCount(Object.assign(createDefaultTransferFormData(), {
-    transferDate: "2026-02-16", filingDate: "2026-04-30", totalTransferExpense: "0", householdHousingCount: "1", isOneHousehold: false,
-    householdNoOtherHousesConfirmed: true, householdNoPresaleRightsConfirmed: true, contractTotalPrice: "1300000000", bundledSaleMode: "actual",
-    assets: assets.map((a, i) => ({ ...makeDefaultAsset(i + 1), ...a }) as AssetForm),
-  }))) as TransferFormData;
-const LAND: A = { addressJibun: "제주특별자치도 강남구 테스트동 1-1", assetKind: "land", landNature: "standalone", acquisitionCause: "purchase", acquisitionDate: "2015-01-01", fixedAcquisitionPrice: "100000000", actualSalePrice: "200,000,000", fixedSalePrice: "200,000,000" };
 const OM = (over: A): A => ({
   addressJibun: "제주특별자치도 강남구 테스트동 7-1", assetKind: "right_to_move_in", redevSubject: "right", redevApprovalLawBasis: "urban_renovation_art_74", redevOriginalAssetType: "housing",
   redevSettlementDirection: "pay", redevApprovalDate: "2015-03-01", redevRightsValue: "500000000", redevPreApprovalExpenses: "0", redevIsSuccessorMember: "no",
@@ -89,7 +81,6 @@ const IND: A = { inheritanceAssetKind: "house_individual", inhHouseValLandArea: 
 /** ② 토지 출자 §164④ — 3,000,000 × 200㎡ × 80,000 ÷ 100,000 = 480,000,000 */
 const LANDOM: A = { redevOriginalAssetType: "land", redevLandArea: "200" };
 const GRADE: A = { pre1990GradeMode: "value", pre1990Grade_current: "100000", pre1990Grade_prev: "100000", pre1990Grade_atAcq: "80000", pre1990PricePerSqm_1990: "3000000" };
-const pair = (o: A) => mkO([LAND, OM(o)]);
 
 
 const BG: A = { transferType: "burdened_gift", bgDonorRelation: "lineal_descendant", bgValuationMode: "sangjeungbeop_market", bgMarketValueAtTransfer: "1300000000",
