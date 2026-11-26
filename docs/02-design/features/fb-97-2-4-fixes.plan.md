@@ -150,12 +150,13 @@ type FamilyBusinessRateBasis =
 ### 5.1 엔진
 - `calcFamilyBusinessImputedAcquisitionPrice`: 분수 경로 = ⌊(피상속인 취득가 + 자본적지출) × n ÷ d⌋ + ⌊상속평가 × (d − n) ÷ d⌋. 분수 없음 = 현행 `round(rate × 1e6)` 경로 **비트 동일**(기존 anchor 0·0.5·0.8·1.0 불변).
 - §95④ 후단 `transfer-tax-lthd.ts:643`도 같은 분수로 바꾼다 — `fbLthdLatter`(`transfer.types.ts:775`)에 분수를 싣고 `applyFamilyBusinessCgtStep`(`transfer-tax-family-business.ts:307-315`)이 넘긴다. 표시용 `blendedRate`(`:653`)는 double 유지(세액 미사용).
-- 건드리는 줄의 `new Date(fb.inheritanceDate)`(`transfer-tax-family-business.ts:277`)는 `toDate`로 바꾼다(신규 코드 규칙).
+- `new Date(fb.inheritanceDate)`(G-1 게이트)는 **유지**했다(PR-3 실행 중 결정) — `toDate`는 잘못된 날짜 문자열에서 예외를 던져, 지금의 「특례 미적용 + 경고」 동작이 바뀐다. 범위 밖.
 
 ### 5.2 화면 (부동산 `FamilyBusinessInheritanceTransferSection`)
 - 적용률 칸 위 `RadioCardGroup` 「입력 방식」: **「가업상속공제금액 ÷ 가업상속 재산가액」(기본)** / 「% 직접 입력」(기존 `DecimalInput` — `fb-deduction-rate-decimal-input.test.tsx` 보존).
 - 분수 모드는 `CurrencyInput` 2칸 + 읽기전용 「= 33.3333% (분수로 계산 — 반올림 없음)」. 전환·입력은 onChange 핸들러에서 `fbRateBasis`와 표시용 `fbDeductionAppliedRate = 분자/분모`를 함께 쓴다(useEffect 미사용). 모드는 `fbRateBasis` 유무로 파생.
-- 적용률 FieldCard를 공용 `components/calc/shared/FamilyBusinessRateField.tsx`로 옮긴다(주식 재사용).
+- 적용률 FieldCard의 공용 컴포넌트 추출은 **PR-1d로 미뤘다**(PR-3 실행 중 결정) — 지금은 소비처가 부동산 하나뿐이다.
+- 이력 prefill도 PR-3에서 법정량을 싣는다 — 상속세 결과의 `deduction`·`finalValue` 정수(A-1). 직접입력 모드는 제외(F-2에서 처리).
 - 결과 카드 `FamilyBusinessImputedComparisonCard.tsx:87·123-124`의 `toFixed(2)%` 3곳을 분수 표기로. 적용률 행 문안: 「가업상속공제적용률 = 가업상속공제금액 {X} ÷ 가업상속 재산가액 {Y} = {Z}%」.
 
 ### 5.3 동기화 지점
@@ -343,6 +344,11 @@ Q-1·4·5·6은 사용자가 직접 골랐고, 나머지는 추천안대로 반�
 | V-9 | 구 주식 이력 복원 시 신규 필드 default(실행 확인) |
 | V-10 | 다종목에서 가업 종목이 마지막이 아니면 카드가 안 뜨는지(실행 확인) |
 | V-11 | 가업 lot이 일부만 양도될 때 피상속인 자본적지출(총액)의 배정 — 기존 lot 자본 조정 규칙(`lot-capital-adjustments.ts`)에 같은 축이 있는지. 없으면 사용자 결정으로 올린다(자동 안분 신설 금지) |
+
+PR-3 14지점 점검(ui-engine-sync-checker) Low — 세액 영향 없음:
+- L-1 이력 모달 적용률이 반올림 표기(66.6667) — PR-3에서 분수 표기로 맞춤.
+- L-2 §95④ 후단 산식 문구가 소수 첫째 자리 반올림·`blendedRate` double 가중(`transfer-tax-lthd.ts` 산식 문구) — 공제액은 분수로 계산되고 `longTermHoldingRate`는 문구에만 쓰인다(`transfer-tax-lthd-steps.ts`). 표기 한정 차이로 유지.
+- L-3 엔진 직접 호출 시 법정량 분모 0이면 의제 취득가액 0(가드 없음) — route는 ⑫가 막는다. PR-1b(주식 재사용)에서 엔진 진입 가드로 처리.
 
 기존 코드 지적(이번 범위 밖, 언급만): 부동산 ⑧은 피상속인 취득가 0을 허용(`transfer-tax-validate-asset.ts:475`)하나 미리보기는 `> 0`을 요구(`Section:147-150`).
 

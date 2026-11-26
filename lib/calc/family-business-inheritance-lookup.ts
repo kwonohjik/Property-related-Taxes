@@ -23,6 +23,7 @@
  * Design: docs/02-design/features/transfer-fb-cgt-credit-integration/engine.design.md K10
  */
 
+import type { FamilyBusinessRateBasis } from "@/lib/tax-engine/family-business-applied-rate";
 import type { CalculationRecord } from "@/lib/storage/types";
 
 // ============================================================
@@ -39,6 +40,11 @@ export interface FamilyBusinessInheritanceCandidate {
   deathDate: string;
   /** 가업상속공제 적용률 (0~1) — fbDeductionAppliedRate prefill */
   appliedRate: number;
+  /**
+   * 같은 적용률의 법정량(공제액 ÷ 가업상속 재산가액 — 상속세 결과의 정수 echo). F-3: 이것을 넘겨야
+   * 양도세 엔진이 소수 반올림 없이 곱한다. 직접입력 모드는 재산가액을 모르므로 없다.
+   */
+  rateBasis?: Extract<FamilyBusinessRateBasis, { kind: "deduction_ratio" }>;
   /** 가업상속공제 적용액 (원) — 정보용 표시 */
   deduction: number;
   /** 자동/직접입력 모드 표시용 */
@@ -97,6 +103,8 @@ export interface FamilyBusinessInheritancePrefill {
   inheritanceMarketValue: number;
   /** 0~1 */
   fbDeductionAppliedRate: number;
+  /** 적용률 법정량 — 있으면 `fbDeductionAppliedRate`는 그 비율의 표시값이다 */
+  fbRateBasis?: Extract<FamilyBusinessRateBasis, { kind: "deduction_ratio" }>;
   /** YYYY-MM-DD */
   inheritanceDate: string;
   /** Source 추적 */
@@ -230,11 +238,23 @@ export function filterFamilyBusinessInheritanceCandidates(
       typeof fbDetail.usedDirectInput === "boolean" ? fbDetail.usedDirectInput : false;
     const operatingYears =
       typeof fbDetail.operatingYears === "number" ? fbDetail.operatingYears : 0;
+    // F-3 — 상속세 엔진 적용률은 `deduction ÷ finalValue`(deductions/family-business.ts)다. 두 정수를 그대로 싣는다.
+    const finalValue = fbDetail.finalValue;
+    const rateBasis =
+      !usedDirectInput &&
+      Number.isInteger(deduction) &&
+      typeof finalValue === "number" &&
+      Number.isInteger(finalValue) &&
+      finalValue > 0 &&
+      deduction <= finalValue
+        ? { kind: "deduction_ratio" as const, deductionAmount: deduction, businessEstateValue: finalValue }
+        : undefined;
 
     candidates.push({
       calculationId: record.id,
       deathDate,
       appliedRate,
+      ...(rateBasis ? { rateBasis } : {}),
       deduction,
       usedDirectInput,
       operatingYears,
@@ -273,7 +293,11 @@ export function candidateToPrefill(
   return {
     decedentAcquisitionPrice: 0,
     inheritanceMarketValue: asset.marketValue,
-    fbDeductionAppliedRate: candidate.appliedRate,
+    // 법정량이 있으면 표시값도 그 비율로 맞춘다 — ⑧·⑫ 정합 술어(`familyBusinessRateBasisError`)가 둘을 대조한다.
+    fbDeductionAppliedRate: candidate.rateBasis
+      ? candidate.rateBasis.deductionAmount / candidate.rateBasis.businessEstateValue
+      : candidate.appliedRate,
+    ...(candidate.rateBasis ? { fbRateBasis: candidate.rateBasis } : {}),
     inheritanceDate: candidate.deathDate,
     sourceCalculationId: candidate.calculationId,
     sourceItemId: asset.itemId,

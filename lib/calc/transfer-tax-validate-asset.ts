@@ -52,6 +52,7 @@ import {
   isOwnershipRatioBlank,
 } from "./transfer-tax-api-asset-basics";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
+import { familyBusinessRateBasisError } from "@/lib/tax-engine/family-business-applied-rate";
 import { calcGiftHouseholdFactAsked } from "./gift-household-payload";
 import { giftHouseholdFactErrors } from "./gift-household-payload";
 
@@ -477,6 +478,9 @@ export function validateAssetEntry(
       return `${label}: 가업상속공제 — 상속개시일 현재 자산가액을 입력하세요.`;
     if (fb.fbDeductionAppliedRate == null || fb.fbDeductionAppliedRate < 0 || fb.fbDeductionAppliedRate > 1)
       return `${label}: 가업상속공제 — 적용률은 0~1 범위여야 합니다.`;
+    // F-3 법정량(공제금액 ÷ 가업상속 재산가액) — ⑫ superRefine과 같은 술어·같은 문구
+    const basisError = familyBusinessRateBasisError(fb.fbRateBasis, fb.fbDeductionAppliedRate);
+    if (basisError) return `${label}: 가업상속공제 — ${basisError}`;
     if (!fb.inheritanceDate)
       return `${label}: 가업상속공제 — 상속개시일을 입력하세요.`;
   }

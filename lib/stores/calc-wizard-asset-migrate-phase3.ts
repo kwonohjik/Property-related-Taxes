@@ -232,6 +232,22 @@ export function applyPhase3Normalize(a: Record<string, unknown>): void {
   if (a.bgCoDonorPresumedAcquisitionTotal === undefined) a.bgCoDonorPresumedAcquisitionTotal = "";
   // 가업상속공제 §97의2④ — 미사용이면 undefined 유지 (3중 패턴: factory=undefined)
   if (a.familyBusinessInheritance === null) a.familyBusinessInheritance = undefined;
+  // F-3 적용률 법정량 — 형태가 깨진 값(다른 kind·숫자 아님)은 버리고 「% 직접 입력」 모드로 복원한다.
+  // 값의 정합(분모 0 등)은 ⑧이 막는다 — 여기서 고쳐 쓰지 않는다.
+  {
+    const fb = a.familyBusinessInheritance as { fbRateBasis?: unknown } | undefined;
+    const basis = fb?.fbRateBasis as Record<string, unknown> | null | undefined;
+    if (
+      fb &&
+      basis !== undefined &&
+      (basis === null ||
+        basis.kind !== "deduction_ratio" ||
+        typeof basis.deductionAmount !== "number" ||
+        typeof basis.businessEstateValue !== "number")
+    ) {
+      fb.fbRateBasis = undefined;
+    }
+  }
   // ── 매매사례가액(추계) 신규 필드 fallback (소령 §176의2③1호, 2026-06-15) ──
   // isSalesCaseAcquisition: 3중 배타 모드 플래그 — 미입력 시 false(실거래가 모드)
   if (a.isSalesCaseAcquisition === undefined) a.isSalesCaseAcquisition = false;

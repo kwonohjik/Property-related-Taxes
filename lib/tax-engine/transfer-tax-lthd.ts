@@ -40,6 +40,7 @@ import {
 } from "./appurtenant-land-lthd-rate";
 import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
+import { resolveFamilyBusinessRateFraction } from "./family-business-applied-rate";
 import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
 import { appurtenantCardHouseHoldingMonths } from "./land-only-owner-household";
@@ -640,7 +641,8 @@ export function calcLongTermHoldingDeduction(
     const residencePart = rate - heirHoldRate; // 표2 거주분(표1이면 0)
 
     const positiveGain = Math.max(taxableGain, 0);
-    const decedentGain = applyRateFraction(positiveGain, Math.round(fbl.appliedRate * 1_000_000), 1_000_000);
+    const fbFrac = fbl.appliedRateFraction ?? resolveFamilyBusinessRateFraction(fbl.appliedRate);
+    const decedentGain = applyRateFraction(positiveGain, fbFrac.numerator, fbFrac.denominator);
     const heirGain = positiveGain - decedentGain; // 잔액 흡수 — Σ = positiveGain
 
     // F-1: `residencePart = rate − heirHoldRate`는 double 뺄셈이라 0.07999999999999999 같은 값이 나온다

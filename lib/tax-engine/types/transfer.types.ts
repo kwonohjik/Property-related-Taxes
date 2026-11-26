@@ -773,8 +773,13 @@ export interface TransferTaxInput {
    * 사전-2025-법규재산-0506 질의2). 사용자 입력 필드가 아니다.
    */
   fbLthdLatter?: {
-    /** 가업상속공제적용률 r (0~1) — 소령 §163의2③ */
+    /** 가업상속공제적용률 r (0~1) — 소령 §163의2③ (표시용 · 계산은 아래 분수) */
     appliedRate: number;
+    /**
+     * 같은 적용률의 정수 분수 — 양도차익 안분에 쓴다(계획서 F-3). 없으면 `appliedRate`를 소수 6자리
+     * basis로 바꾼다(종전과 비트 동일 · 직접 구성한 테스트 입력 호환).
+     */
+    appliedRateFraction?: { numerator: number; denominator: number };
     /** 피상속인 취득일 */
     decedentAcquisitionDate: Date;
   };

@@ -26,6 +26,9 @@ import Link from "next/link";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { FamilyBusinessCgtDetail } from "@/lib/tax-engine/transfer-tax-family-business";
+import { resolveFamilyBusinessRateFraction } from "@/lib/tax-engine/family-business-applied-rate";
+import { formatFractionPercent } from "@/lib/calc/format-fraction-percent";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: FamilyBusinessCgtDetail;
@@ -39,7 +42,7 @@ function Row({
   sub = false,
   highlight = false,
 }: {
-  label: string;
+  label: React.ReactNode;
   value: string;
   sub?: boolean;
   highlight?: boolean;
@@ -70,7 +73,13 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
     decedentAcquisitionPrice,
     inheritanceMarketValue,
     decedentCapitalExpenditure,
+    appliedRateBasis,
   } = detail;
+
+  // F-3: 엔진이 곱한 것과 같은 분수로 표시한다(법정량이 있으면 그것, 없으면 소수 6자리 basis).
+  const frac = resolveFamilyBusinessRateFraction(appliedRate, appliedRateBasis);
+  const ratePct = formatFractionPercent(frac.numerator, frac.denominator);
+  const restPct = formatFractionPercent(frac.denominator - frac.numerator, frac.denominator);
 
   // 의제 산식이 일반보다 유리한 경우 (차액 공제 불필요)
   const imputedIsFavorable = creditAmount === 0 && cgtUnderSection97_2_4 <= cgtUnderSection97;
@@ -84,7 +93,7 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
           가업상속공제 자산 양도세 특례 (소득세법 §97의2④)
         </p>
         <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
-          의제 취득가액 = 피상속인 원취득가액 × {(appliedRate * 100).toFixed(2)}% + 상속개시일 평가액 × {((1 - appliedRate) * 100).toFixed(2)}%
+          의제 취득가액 = 피상속인 원취득가액 × {ratePct}% + 상속개시일 평가액 × {restPct}%
         </p>
         <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
           <LawArticleModal legalBasis="소득세법 §97의2④" label="§97의2④ 가업상속 의제" />
@@ -117,11 +126,27 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
               value={formatKRW(inheritanceMarketValue)}
               sub
             />
+            {/* F-3: 적용률을 금액으로 입력했으면 그 법정량을 보인다(소령 §163의2③). */}
+            {appliedRateBasis?.kind === "deduction_ratio" && (
+              <Row
+                label={
+                  <span data-testid="fb-rate-basis-row">
+                    가업상속공제적용률 ={" "}
+                    <Frac
+                      top={`가업상속공제금액 ${formatKRW(appliedRateBasis.deductionAmount)}`}
+                      bottom={`가업상속 재산가액 ${formatKRW(appliedRateBasis.businessEstateValue)}`}
+                    />
+                  </span>
+                }
+                value={`${ratePct}%`}
+                sub
+              />
+            )}
             <Row
               label={
                 decedentCapitalExpenditure
-                  ? `의제 취득가액 ((원취득가 + 자본적지출) × ${(appliedRate * 100).toFixed(2)}% + 평가액 × ${((1 - appliedRate) * 100).toFixed(2)}%)`
-                  : `의제 취득가액 (원취득가 × ${(appliedRate * 100).toFixed(2)}% + 평가액 × ${((1 - appliedRate) * 100).toFixed(2)}%)`
+                  ? `의제 취득가액 ((원취득가 + 자본적지출) × ${ratePct}% + 평가액 × ${restPct}%)`
+                  : `의제 취득가액 (원취득가 × ${ratePct}% + 평가액 × ${restPct}%)`
               }
               value={formatKRW(imputedAcquisitionPrice)}
               highlight

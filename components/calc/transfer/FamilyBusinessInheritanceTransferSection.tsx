@@ -36,6 +36,10 @@ import type { FamilyBusinessInheritancePrefill } from "@/lib/calc/family-busines
 import { isFamilyBusinessAssetScopeDecreeEra, isFamilyBusinessCgtEra } from "@/lib/tax-engine/data/family-business-cgt-era";
 import { calcFamilyBusinessImputedAcquisitionPrice } from "@/lib/tax-engine/transfer-tax-family-business";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { formatFractionPercent } from "@/lib/calc/format-fraction-percent";
+import { resolveFamilyBusinessRateFraction } from "@/lib/tax-engine/family-business-applied-rate";
+import type { FamilyBusinessRateBasis } from "@/lib/tax-engine/family-business-applied-rate";
 
 // ── 타입 ──────────────────────────────────────────────────────
 
@@ -45,6 +49,16 @@ interface FamilyBusinessSlice {
   fbDeductionAppliedRate: number;  // 0~1
   inheritanceDate: string;
   decedentCapitalExpenditure?: number;
+  /** 적용률 법정량 — 있으면 「금액으로 입력」 모드 (F-3) */
+  fbRateBasis?: DeductionRatioBasis;
+}
+
+type DeductionRatioBasis = Extract<FamilyBusinessRateBasis, { kind: "deduction_ratio" }>;
+type RateInputMode = "amount" | "percent";
+
+/** 법정량 → 표시용 0~1 적용률 (분모 0이면 0 — ⑧이 「가업상속 재산가액을 입력하세요」로 막는다) */
+function rateOf(basis: DeductionRatioBasis): number {
+  return basis.businessEstateValue > 0 ? basis.deductionAmount / basis.businessEstateValue : 0;
 }
 
 interface Props {
@@ -73,6 +87,7 @@ function calcImputedPreview(fb: FamilyBusinessSlice): number {
     fb.inheritanceMarketValue,
     fb.fbDeductionAppliedRate,
     fb.decedentCapitalExpenditure ?? 0,
+    fb.fbRateBasis,
   );
 }
 
@@ -113,6 +128,8 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
         fbDeductionAppliedRate: prefill.fbDeductionAppliedRate,
         inheritanceDate: prefill.inheritanceDate,
         decedentCapitalExpenditure: fb?.decedentCapitalExpenditure,
+        // F-3: 이력의 공제액·가업상속 재산가액을 그대로 실어 반올림 없이 곱한다(없으면 % 모드)
+        fbRateBasis: prefill.fbRateBasis,
       },
     });
   }
@@ -128,6 +145,8 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
           fbDeductionAppliedRate: 0,
           inheritanceDate: asset.acquisitionDate || "",
           decedentCapitalExpenditure: undefined,
+          // 기본 입력 방식 = 금액(공제금액 ÷ 가업상속 재산가액) — 소수 반올림이 없는 쪽(F-3)
+          fbRateBasis: { kind: "deduction_ratio", deductionAmount: 0, businessEstateValue: 0 },
         },
       });
     } else {
@@ -142,12 +161,38 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
     onChange({ familyBusinessInheritance: { ...fb, ...patch } });
   }
 
+  /** 입력 방식 — 저장 필드 없이 `fbRateBasis` 유무에서 파생 */
+  const rateMode: RateInputMode = fb?.fbRateBasis ? "amount" : "percent";
+
+  /** 입력 방식 전환 — onChange에서 직접 쓴다(useEffect 미러링 금지). 금액 모드는 빈칸에서 시작한다. */
+  function handleRateModeChange(mode: RateInputMode) {
+    if (mode === rateMode) return;
+    setRateDraft(null);
+    patchFb(
+      mode === "amount"
+        ? { fbRateBasis: { kind: "deduction_ratio", deductionAmount: 0, businessEstateValue: 0 }, fbDeductionAppliedRate: 0 }
+        : { fbRateBasis: undefined },
+    );
+  }
+
+  /** 금액 모드 입력 — 법정량과 표시용 적용률을 같은 핸들러에서 함께 쓴다(⑧ 정합 술어가 둘을 대조) */
+  function patchBasis(patch: Partial<Omit<DeductionRatioBasis, "kind">>) {
+    if (!fb?.fbRateBasis) return;
+    const next: DeductionRatioBasis = { ...fb.fbRateBasis, ...patch };
+    patchFb({ fbRateBasis: next, fbDeductionAppliedRate: rateOf(next) });
+  }
+
   // 의제 취득가액 미리보기 (4필드 모두 입력 시)
   const canPreview =
     fb &&
     fb.decedentAcquisitionPrice > 0 &&
     fb.inheritanceMarketValue > 0 &&
-    fb.fbDeductionAppliedRate >= 0;
+    fb.fbDeductionAppliedRate >= 0 &&
+    (!fb.fbRateBasis ||
+      (fb.fbRateBasis.businessEstateValue > 0 &&
+        fb.fbRateBasis.deductionAmount <= fb.fbRateBasis.businessEstateValue));
+  /** 표시용 분수 — 엔진이 곱하는 값과 같다(법정량 또는 소수 6자리 basis) */
+  const rateFrac = fb ? resolveFamilyBusinessRateFraction(fb.fbDeductionAppliedRate, fb.fbRateBasis) : null;
   const previewValue = canPreview ? calcImputedPreview(fb!) : null;
   /**
    * G-1 시점 게이트 — 「소득세법」 부칙(법률 제12169호) §12. 기준일은 **상속개시일**이다.
@@ -234,7 +279,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
 
           {/* ③ 가업상속공제적용률 */}
           <FieldCard
-            label="가업상속공제적용률 (%)"
+            label="가업상속공제적용률"
             required
             hint={
               <>
@@ -260,6 +305,45 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
               · 포커스 아웃 — 클램프해 확정한다(`onBlur`는 버블링되므로 래퍼에서 받는다.
                 공용 컴포넌트에 prop을 새로 뚫지 않는다).
             */}
+            <RadioCardGroup<RateInputMode>
+              name={`fb-rate-mode-${asset.assetId}`}
+              tone="emerald"
+              layout="inline"
+              value={rateMode}
+              onChange={handleRateModeChange}
+              aria-label="가업상속공제적용률 입력 방식"
+              data-testid="fb-rate-mode"
+              options={[
+                {
+                  value: "amount",
+                  label: "금액으로 입력",
+                  description: <Frac top="가업상속공제금액" bottom="가업상속 재산가액" />,
+                  testId: "fb-rate-mode-amount",
+                },
+                { value: "percent", label: "% 직접 입력", testId: "fb-rate-mode-percent" },
+              ]}
+            />
+            {fb.fbRateBasis ? (
+              <div className="mt-2 space-y-2">
+                <CurrencyInput
+                  label="가업상속공제금액 (원)"
+                  hint="상속세 과세가액에서 공제한 가업상속공제액(상증법 §18의2①)"
+                  value={String(fb.fbRateBasis.deductionAmount || "")}
+                  onChange={(v) => patchBasis({ deductionAmount: parseInt(v.replace(/,/g, ""), 10) || 0 })}
+                />
+                <CurrencyInput
+                  label="가업상속 재산가액 (원)"
+                  hint="상증법 §18의2① 각 호 외의 부분 전단에 따른 가업상속 재산가액"
+                  value={String(fb.fbRateBasis.businessEstateValue || "")}
+                  onChange={(v) => patchBasis({ businessEstateValue: parseInt(v.replace(/,/g, ""), 10) || 0 })}
+                />
+                {rateFrac && fb.fbRateBasis.businessEstateValue > 0 && (
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300" data-testid="fb-rate-from-amount">
+                    가업상속공제적용률 = {formatFractionPercent(rateFrac.numerator, rateFrac.denominator)}% (금액 비율 그대로 계산 — 소수 반올림 없음)
+                  </p>
+                )}
+              </div>
+            ) : (
             <div
               onBlur={() => {
                 const n = parseRatePercentDraft(rateDraft);
@@ -283,6 +367,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
                 placeholder="적용률 (0~100)"
               />
             </div>
+            )}
           </FieldCard>
 
           {/* ④ 상속개시일 */}
@@ -354,9 +439,9 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
                 {fb!.decedentCapitalExpenditure
                   ? ` + 자본적지출 ${fb!.decedentCapitalExpenditure.toLocaleString()})`
                   : ""}
-                {" × "}{(fb!.fbDeductionAppliedRate * 100).toFixed(2)}%
+                {" × "}{formatFractionPercent(rateFrac!.numerator, rateFrac!.denominator)}%
                 {" + "}상속개시일 평가액 {fb!.inheritanceMarketValue.toLocaleString()}
-                {" × "}{((1 - fb!.fbDeductionAppliedRate) * 100).toFixed(2)}%
+                {" × "}{formatFractionPercent(rateFrac!.denominator - rateFrac!.numerator, rateFrac!.denominator)}%
                 {" = "}
                 <strong>{previewValue.toLocaleString()}</strong>
               </p>
