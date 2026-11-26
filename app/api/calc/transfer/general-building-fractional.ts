@@ -28,14 +28,12 @@ import { applyRatio } from "@/lib/tax-engine/tax-utils";
 import { calculateTransferTaxAggregateWithUnits } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { TransferTaxItemInput } from "@/lib/tax-engine/transfer-tax-aggregate";
 import type { AssetCardForAggregate } from "@/lib/tax-engine/general-building-valuation";
-import type { GeneralBuildingSwapDecision } from "@/lib/tax-engine/general-building-swap";
 import { gateShareEvents } from "@/lib/tax-engine/general-building-share-events";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import {
   buildProperties,
   buildApportionment,
-  SHARE_ID_SEPARATOR,
   type BundledLikeApportionmentResult,
   type GeneralBuildingRouteResult,
 } from "./general-building-route-cards";

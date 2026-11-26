@@ -12,7 +12,6 @@ import {
   calculateDelayedPaymentPenalty,
   calculateTransferTaxPenalty,
   type FilingPenaltyInput,
-  type DelayedPaymentInput,
 } from "@/lib/tax-engine/transfer-tax-penalty";
 
 // ============================================================

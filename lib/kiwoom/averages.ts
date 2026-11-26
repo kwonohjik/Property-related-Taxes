@@ -18,7 +18,6 @@
 import {
   buildOneMonthBeforeSlots,
   buildOneMonthAfterListingSlots,
-  buildTwoMonthSurroundingSlots,
   buildSurroundingSlotsFromAnchor,
   nonTradingLabel,
   isKrxTradingDay,

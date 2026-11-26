@@ -26,7 +26,7 @@ import {
   RURAL_SURTAX_FILING_7_1,
   TRANSFER,
 } from "./legal-codes";
-import { applyRate, applyRateFraction, truncateToWon } from "./tax-utils";
+import { applyRate, applyRateFraction } from "./tax-utils";
 import {
   calculateFilingPenalty,
   calculateDelayedPaymentPenalty,

@@ -39,7 +39,7 @@ import { buildFractionalShareNblRecord } from "./non-business-land-request";
 import { validateStep2Reductions } from "./transfer-tax-validate-reductions";
 import { collectStep1Issues } from "./transfer-tax-validate-step1";
 import { collectWithFields, type IssueField } from "./transfer-tax-validate-field";
-import { isMultiHouseSurchargeSuppressed, isFullFractionalBundle } from "./transfer-tax-api-helpers";
+import { isFullFractionalBundle } from "./transfer-tax-api-helpers";
 import { axisBEffectiveAsset } from "./axis-b-effective-asset";
 import { mixedUseShareIssue } from "./transfer-tax-validate-mixed-use-share";
 import { bgShareCauseMismatchMessage } from "./bg-share-own-acquisition";

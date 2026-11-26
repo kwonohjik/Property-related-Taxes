@@ -21,7 +21,6 @@ import { TRANSFER_REDUCTION_ARTICLE } from "@/lib/tax-engine/legal-codes/transfe
 import {
   holdingMonthsFromDates,
   splitLtDeduction,
-  getAcqDateForCard,
 } from "./FilingFormTableHelpers";
 import { buildLthFormula } from "./DetailedStatementFormulaBuilders";
 import { findStepByLabel, buildPerAssetWithFormula } from "./DetailedStatementHelpers";

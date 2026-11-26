@@ -27,7 +27,6 @@ import {
   PAPER_SPEC,
   fmtKRW,
   fmtPct,
-  DASH,
   besshiTestId,
 } from "./comprehensive-filing-constants";
 

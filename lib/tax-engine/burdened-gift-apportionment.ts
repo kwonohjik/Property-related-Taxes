@@ -20,13 +20,7 @@
  */
 
 import {
-  ANNUAL_RENT_CAPITALIZATION_RATE_AFTER_2009_04_23,
-} from "./legal-codes/burdened-gift";
-import {
   safeMultiplyThenDivide,
-  applyRate,
-  applyRatio,
-  computeEstimatedDeduction,
 } from "./tax-utils";
 import { buildBurdenedGiftGiftTax } from "./burdened-gift-gift-tax";
 import { resolveWholeBgAcquisition, type BgAcquisitionContext } from "./burdened-gift-acquisition";

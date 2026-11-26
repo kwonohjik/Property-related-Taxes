@@ -32,9 +32,6 @@ import { postTransfer } from "../calc/_helpers/redev-one-house-route";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
-import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
-import { buildRedevAcquisitionFormula } from "@/components/calc/results/transfer/DetailedStatementRedevelopmentBuilders";
-import { buildRedevExpenseFormula } from "@/components/calc/results/transfer/DetailedStatementRedevelopmentBuilders";
 
 vi.mocked(preloadTaxRates).mockResolvedValue(makeMockRates() as never);
 

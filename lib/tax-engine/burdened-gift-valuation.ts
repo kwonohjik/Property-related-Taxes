@@ -15,7 +15,6 @@ import {
 } from "./legal-codes/burdened-gift";
 import {
   safeMultiplyThenDivide,
-  applyRate,
   applyRatio,
   computeEstimatedDeduction,
 } from "./tax-utils";

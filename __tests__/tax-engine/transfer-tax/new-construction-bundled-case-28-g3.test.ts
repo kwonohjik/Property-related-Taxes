@@ -28,7 +28,6 @@ import { makeMockRates } from "../_helpers/mock-rates";
 import {
   BUILDING_ALLOC_PRICE,
   BUILDING_ACQ_PRICE,
-  BUILDING_FOOTPRINT,
   BUILDING_GAIN,
   TRANSFER_DATE,
   makeBuildingInput,

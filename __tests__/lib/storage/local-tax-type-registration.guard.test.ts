@@ -21,7 +21,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { LOCAL_TAX_TYPES, type LocalTaxType } from "@/lib/storage/types";
+import { LOCAL_TAX_TYPES } from "@/lib/storage/types";
 import { TAX_TYPE_ROUTES } from "@/lib/storage/tax-type-routes";
 import { TAX_LABEL, generateTitle } from "@/lib/storage/title-generator";
 import { extractBusinessKey } from "@/lib/storage/business-key";

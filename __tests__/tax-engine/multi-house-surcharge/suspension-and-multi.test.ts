@@ -7,21 +7,9 @@
 import { describe, it, expect } from "vitest";
 import {
   countEffectiveHouses,
-  isRegulatedAreaAtDate,
   determineMultiHouseSurcharge,
-  isLongTermRentalHousingExempt,
-  isSmallNewHouseSpecial,
-  isTaxIncentiveRentalHousingExempt,
-  classifyRegionCriteriaByCode,
-  classifyPopulationDeclineArea,
-  buildMultiHouseTaxSimulation,
-  type HouseInfo,
-  type PresaleRight,
-  type MultiHouseSurchargeInput,
   type HouseCountExclusionRules,
-  type RegulatedAreaHistory,
 } from "@/lib/tax-engine/multi-house-surcharge";
-import type { SurchargeSpecialRulesData } from "@/lib/tax-engine/schemas/rate-table.schema";
 import {
   defaultRules,
   mockRegulatedHistory,

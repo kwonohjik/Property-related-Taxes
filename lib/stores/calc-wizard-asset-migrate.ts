@@ -8,7 +8,7 @@
 import { round2 } from "@/lib/tax-engine/area-utils";
 import { migrateMixedUseFields } from "./calc-wizard-asset-mixed-use";
 import { migratePreDeemedPurchaseFields } from "./calc-wizard-asset-pre-deemed-purchase";
-import { normalizeRentalAndSplitFields, hasPositiveAmount } from "./calc-wizard-asset-migrate-rental-split";
+import { normalizeRentalAndSplitFields } from "./calc-wizard-asset-migrate-rental-split";
 import { migrateResidenceFields } from "./calc-wizard-asset-residence";
 import { migrateRentalHousingException } from "./calc-wizard-asset-migrate-rhe";
 import { migrateCarryoverFields } from "./calc-wizard-asset-carryover";

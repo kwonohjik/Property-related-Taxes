@@ -22,7 +22,6 @@ import { makeMockRates } from "../tax-engine/_helpers/mock-rates";
 import { allIssues } from "../calc/_helpers/redev-one-house-route";
 import { captureBody } from "../calc/_helpers/redev-one-house-route";
 import { postTransfer } from "../calc/_helpers/redev-one-house-route";
-import { needsClauseADeclaration } from "@/lib/calc/transfer-tax-validate-clause-a";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";

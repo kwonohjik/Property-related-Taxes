@@ -9,7 +9,6 @@
  * 이 모듈은 Pure Function — DB 호출 없음, 순수 계산만 수행.
  */
 
-import { addYears, differenceInYears } from "./utc-date";
 import { VALUATION } from "./legal-codes";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";
 import { safeMultiply } from "./tax-utils";
@@ -18,9 +17,6 @@ import type {
   PropertyValuationResult,
   ValuationMethod,
   CalculationStep,
-  SuperficiesStructureType,
-  IntangibleIpType,
-  IntangibleIncomeMode,
 } from "./types/inheritance-gift.types";
 import { evaluateUnlistedStockV2 } from "./property-valuation/unlisted-orchestrator";
 import {
@@ -30,14 +26,12 @@ import {
 import { evaluateConvertibleBond } from "./property-valuation-convertible-bond";
 import { evaluateTrustBenefit } from "./property-valuation-trust-benefit";
 import { evaluatePeriodicPayment } from "./property-valuation-periodic";
-import { computeCryptoUnitPrice } from "./property-valuation-crypto";
 
 export { evaluateReceivable, resolveReceivableRecoveryYears, evaluateConvertibleBond };
 export { evaluateTrustBenefit, evaluatePeriodicPayment };
 // listed_stock / V1 간편 비상장(unlistedStockData) 평가 단일 진실.
 // resolve-estate-item-value.ts는 property-valuation.ts를 import하지 않으므로 순환 없음(단방향).
 import {
-  computeStockValuation,
   computeSecuredClaim,
   resolveEstateItemValue,
   resolveUnlistedDisplayMode,
@@ -48,7 +42,6 @@ import {
 //   평가 로직은 무변경. 임대차·지상권·무체재산권 / 현금·금융·가상자산만 파일을 옮겼다.
 // ============================================================
 import {
-  convertLeaseToValue,
   LEASE_CONVERSION_RATE,
   evaluateSuperficies,
   evaluateIntangibleIp,

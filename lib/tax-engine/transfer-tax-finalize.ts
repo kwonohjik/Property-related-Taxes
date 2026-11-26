@@ -20,7 +20,7 @@ import { applyIncomeDeductionSurtax } from "./transfer-tax-income-deduction-deta
 import { mergeHybridTaxDetail } from "./transfer-tax-income-deduction-details";
 import type { IncomeDeductionDetails } from "./transfer-tax-income-deduction-details";
 import { TRANSFER } from "./legal-codes";
-import { calculateBuildingPenalty, calcTax, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
+import { calculateBuildingPenalty, calcReductions, resolveExtensionPenaltyBase } from "./transfer-tax-rate-calc";
 import { resolveSplitBuildingPenaltyAxis } from "./transfer-tax-building-penalty";
 import { resolveSelfBuiltHousingPenaltyAxis, selfBuiltHousingEchoOf } from "./transfer-tax-self-built-housing-penalty";
 import { resolveSplitAwareTax } from "./transfer-tax-split-rate";

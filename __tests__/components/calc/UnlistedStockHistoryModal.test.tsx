@@ -16,7 +16,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import { UnlistedStockHistoryModal } from "@/components/calc/inheritance/unlisted-stock-v2/UnlistedStockHistoryModal";
-import type { UnlistedStockCandidate } from "@/lib/calc/unlisted-stock-valuation-lookup";
 import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 afterEach(() => cleanup());

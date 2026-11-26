@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { fillDateAndVerify, nextSteps, calcAndWaitResult } from "./_helpers/tax-flow";
+import { fillDateAndVerify, calcAndWaitResult } from "./_helpers/tax-flow";
 
 /**
  * E2E: 증여세 대납(代納) gross-up (§36 채무면제이익)

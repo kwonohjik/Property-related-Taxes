@@ -15,9 +15,6 @@ import type {
   Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import {
-  EXAMPLE_HEIRS,
-  EXAMPLE_ESTATE_ITEMS,
-  EXAMPLE_PRIOR_GIFTS,
   EXAMPLE_INPUT,
   HEIR_ID,
 } from "./fixtures/comprehensive-case-pdf.fixture";

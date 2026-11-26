@@ -27,17 +27,11 @@ import {
   calcEstimatedAcquisitionTotal,
 } from "@/lib/tax-engine/commercial-building-valuation";
 import type { CommercialBuildingValuationInput } from "@/lib/tax-engine/commercial-building-valuation";
-import { makeMockRates, baseTransferInput } from "../_helpers/mock-rates";
+import { makeMockRates } from "../_helpers/mock-rates";
 import {
-  TRANSFER_DATE,
-  ACQUISITION_DATE,
   TRANSFER_PRICE,
-  EXCLUSIVE_AREA,
-  COMMON_AREA,
   FLOOR_AREA_TOTAL,
   LAND_AREA,
-  UNIT_PRICE_AT_TRANSFER,
-  UNIT_PRICE_AT_FIRST,
   BUILDING_STD_AT_ACQ,
   BUILDING_STD_AT_FIRST,
   LAND_PRICE_AT_ACQ,

@@ -37,7 +37,6 @@ import {
   calcGenerationSkipSurcharge,
   calcFuneralExpenseDeduction,
   aggregatePriorGiftsForInheritance,
-  DEFAULT_INHERITANCE_GIFT_BRACKETS,
 } from "@/lib/tax-engine/inheritance-gift-common";
 
 // ============================================================

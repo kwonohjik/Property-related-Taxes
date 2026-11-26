@@ -15,7 +15,7 @@
  * 정수 연산: INT() = Math.floor(). 중간 오버플로우는 safeMultiplyThenDivide() 방어.
  */
 
-import { applyRate, computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
+import { computeEstimatedDeduction, computeLumpSumDeductionBase, safeMultiplyThenDivide } from "./tax-utils";
 import { TRANSFER, estimatedDeductionRate } from "./legal-codes";
 import { ACQ_BASE_RATE_MAX_ACQ_YEAR } from "./data/building-standard-price";
 import { TaxCalculationError, TaxErrorCode } from "./tax-errors";

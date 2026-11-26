@@ -10,16 +10,9 @@
 
 import { describe, it, expect } from "vitest";
 import { calcInheritanceTax } from "@/lib/tax-engine/inheritance-tax";
-import { calcInheritanceDeductions } from "@/lib/tax-engine/deductions/inheritance-deductions";
 import {
   EXAMPLE_INPUT,
-  EXAMPLE_HEIRS,
   EXAMPLE_ESTATE_ITEMS,
-  EXAMPLE_DEBT_ITEMS,
-  EXAMPLE_PRIOR_GIFTS,
-  EXAMPLE_PRESUMED,
-  HEIR_ID,
-  DEATH_DATE,
 } from "./fixtures/comprehensive-case-pdf.fixture";
 import type {
   EstateItem,

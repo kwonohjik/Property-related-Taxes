@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 
 import { calcFarmingDeduction } from "@/lib/tax-engine/deductions/inheritance-deductions";
 import { resolveFarmingDeductionLimit } from "@/lib/tax-engine/data/farming-deduction-limit";
-import { suggestFarmingAssetValue, twoYearsBefore } from "@/lib/calc/inheritance-deduction-suggest";
+import { suggestFarmingAssetValue } from "@/lib/calc/inheritance-deduction-suggest";
 import type { FarmingInheritanceInput } from "@/lib/tax-engine/types/inheritance-farming.types";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 

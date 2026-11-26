@@ -16,7 +16,6 @@ import { useState } from "react";
 import { FileText } from "lucide-react";
 import type { ComprehensiveTaxResult } from "@/lib/tax-engine/types/comprehensive.types";
 import { expandToggleClass, expandToggleLabel } from "../shared/ExpandToggleButton";
-import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { FilingFormPersonalInfoPanel } from "./FilingFormPersonalInfoPanel";
 import { ComprehensiveFilingFormMain } from "./ComprehensiveFilingFormMain";
 import { ComprehensiveFilingFormBuppyo3 } from "./ComprehensiveFilingFormBuppyo3";

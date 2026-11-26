@@ -6,15 +6,9 @@
 
 import { describe, it, expect } from "vitest";
 import { judgeNonBusinessLand } from "@/lib/tax-engine/non-business-land/engine";
-import {
-  meetsPeriodCriteria,
-  getThresholdRatio,
-} from "@/lib/tax-engine/non-business-land/period-criteria";
-import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
 import { isBareLand } from "@/lib/tax-engine/non-business-land/other-land";
 import { getHousingMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
 import {
-  DEFAULT_NON_BUSINESS_LAND_RULES,
   type NonBusinessLandInput,
 } from "@/lib/tax-engine/non-business-land/types";
 

@@ -20,7 +20,6 @@ import { article89ExceptionApplied } from "./transfer-tax-89-2-consequences";
 import { meetsReplacementHouse } from "./one-house/replacement-house";
 import { buildEraNoticeRelevance } from "./one-house/era-notice-relevance";
 import { returnToFarmPostManagementNotice } from "./one-house/rural-return-to-farm-facts";
-import { calculateHoldingPeriod } from "./tax-utils";
 import { resolveHighValueHouseThreshold } from "./one-house/threshold";
 import { RENTAL_4HO_REASON, rental4hoLegalBasis } from "./one-house/rental-registration-4ho";
 import { TRANSFER, shortArticle } from "./legal-codes";
@@ -68,7 +67,6 @@ import {
   ruralTemporaryTwoHouseOverlapCountHolds,
   heritageTemporaryTwoHouseOverlapCountHolds,
   twoHouseSpecialCountHolds,
-  resolveExemptionHoldingStartDate,
   qualifiesLongTermMortgageResidenceExemption,
   qualifiesWinWinRental,
   RURAL_HOUSE_LABEL,

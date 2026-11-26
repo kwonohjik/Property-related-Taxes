@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import { calcAcquisitionTax } from "../../../lib/tax-engine/acquisition-tax";
-import { calcLocalEducationTax, calcTaxWithAdditional } from "../../../lib/tax-engine/acquisition-tax-rate";
+import { calcLocalEducationTax } from "../../../lib/tax-engine/acquisition-tax-rate";
 import type { AcquisitionTaxInput } from "../../../lib/tax-engine/types/acquisition.types";
 
 const BASE: Partial<AcquisitionTaxInput> = {

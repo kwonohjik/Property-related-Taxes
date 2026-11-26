@@ -48,7 +48,6 @@ import { computeRuralSurtaxDelayedPenalty, ruralSurtaxDelayedPenaltyStep } from 
 import {
   computeLocalIncomePenalty,
   localIncomePenaltySteps,
-  localIncomePenaltyTotalSuffix,
 } from "./transfer-tax-local-income-penalty";
 import { resolveRentalResidenceComposition } from "./transfer-tax-rental-residence-composition";
 import { highValueExcessRulingNoticeText, laterLandExemptNotice } from "./transfer-tax-appurtenant-land";

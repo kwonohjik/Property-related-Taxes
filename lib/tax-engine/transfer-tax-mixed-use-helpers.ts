@@ -32,11 +32,7 @@ import type {
   MixedUseApportionment,
   MixedUseHousingPart,
   MixedUseCommercialPart,
-  MixedUseNonBusinessLandPart,
-  MixedUseTotalTax,
 } from "./types/transfer-mixed-use.types";
-import type { TaxBracket } from "./types";
-import { calculateProgressiveTax } from "./tax-utils";
 import { computeDerivedAreas, round2 } from "./mixed-use-derived-areas";
 import { residualArea } from "./area-utils";
 import { multiplyByArea } from "./area-utils";

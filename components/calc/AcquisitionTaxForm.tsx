@@ -11,7 +11,7 @@
  * Step 5: 감면 확인 (생애최초·자경농지·농특세 분기) → 계산
  */
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 import { StepIndicator } from "@/components/calc/StepIndicator";
 import { AcquisitionTaxResultView } from "@/components/calc/results/AcquisitionTaxResultView";

@@ -12,7 +12,7 @@
  * J-5: 다운로드 버튼 활성 (사례 6 완성 입력)
  */
 
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import {
   UnlistedStockBesshiPdfDocument,

@@ -11,9 +11,6 @@
 import type { LotMatchingDetail, StockTransferResult } from "./types/stock-transfer.types";
 import {
   STOCK,
-  STOCK_SHORT_TERM_RATE,
-  STOCK_NON_MAJOR_SME_RATE,
-  STOCK_NON_MAJOR_NON_SME_RATE,
 } from "@/lib/tax-engine/legal-codes/stock";
 import { applyStockTaxRate, type RateCalcResult } from "./stock-transfer-rate-calc";
 import { settledGroupGains, type PreDeemedLotSettlement } from "./stock-pre-deemed-lot-clause1";

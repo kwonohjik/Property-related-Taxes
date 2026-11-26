@@ -21,7 +21,6 @@ import { TAX_CREDIT } from "../legal-codes";
 import { applyRate } from "../tax-utils";
 import type { TaxBracket } from "../types";
 import type { CalculationStep } from "../types/inheritance-gift.types";
-import { calculateProgressiveTax } from "../tax-utils";
 
 // ============================================================
 // 창업자금 특례 상수 (§30의5)

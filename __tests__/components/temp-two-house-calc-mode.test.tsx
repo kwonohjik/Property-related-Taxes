@@ -31,7 +31,6 @@ import { createDefaultTransferFormData, type TransferFormData } from "@/lib/stor
 import { provisoGate } from "@/lib/calc/transfer-tax-api-helpers";
 import { resolveTemporaryTwoHouse } from "@/lib/calc/household-house-count";
 import { judgeTempTwoHouseFromForm } from "@/lib/calc/transfer-temp-two-house-judge";
-import { judgeRuralHouseLocation } from "@/lib/geo/rural-house-location";
 
 vi.mock("@/components/ui/address-search", () => ({
   AddressSearch: () => null,
