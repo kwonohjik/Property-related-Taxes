@@ -299,13 +299,15 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     // §95④ 후단 슬라이스 — 보유분 = 부분별 보유분 공제액 합, 거주분 = 전체 과세 양도차익 × 표2 거주기간 공제율(엔진이 낸 값 그대로).
     //   총 공제액에 표2 비율(보유 ÷ 합)을 다시 곱하면 부분별 공제율을 무시한 금액이 나온다(종전 sub-step의 어긋남).
     const { decedentSlice: ds, heirSlice: hs } = fbLthdDetail;
-    const holdingAmt = ds.deduction + hs.deduction;
     const residenceAmt = fbLthdDetail.residenceDeduction;
+    // 양도차익 범위로 제한했으면(`cappedToGain`) 보유분 = 총 공제 − 거주분 — 합이 총 공제액과 같아야 한다.
+    const holdingAmt = fbLthdDetail.cappedToGain ? longTermHoldingDeduction - residenceAmt : ds.deduction + hs.deduction;
     steps.push({
       label: LTHD_HOLDING_STEP_LABEL,
       formula:
         `적용분 ${ds.taxableGain.toLocaleString()} × ${pctOf(ds.holdingRate)}% (피상속인 취득일부터 ${ds.holdingYears}년)` +
-        ` + 비적용분 ${hs.taxableGain.toLocaleString()} × ${pctOf(hs.holdingRate)}% (상속개시일부터 ${hs.holdingYears}년) = ${holdingAmt.toLocaleString()}`,
+        ` + 비적용분 ${hs.taxableGain.toLocaleString()} × ${pctOf(hs.holdingRate)}% (상속개시일부터 ${hs.holdingYears}년) = ${(ds.deduction + hs.deduction).toLocaleString()}` +
+        (fbLthdDetail.cappedToGain ? ` → 양도차익 범위로 제한 = ${holdingAmt.toLocaleString()}` : ""),
       amount: holdingAmt,
       legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
       sub: true,

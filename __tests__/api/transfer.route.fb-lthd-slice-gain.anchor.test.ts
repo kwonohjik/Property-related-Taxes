@@ -115,3 +115,32 @@ describe("교재 S1 — ⑧ → ④ → route → 엔진 → 응답", () => {
     expect((find(json, "familyBusinessDetail") as { creditAmount: number }).creditAmount).toBe(204_004_000);
   });
 });
+
+describe("지분 모드 × 가업상속 — 가짜 차손 부분을 만들지 않는다 (PR #3678 리뷰 M-3)", () => {
+  /**
+   * 지분 1/2 — ④가 양도가액·양도비·취득가액을 지분분(9억 · 1,500만 · 7.5억)으로 줄이지만 가업상속 입력(피상속인 취득가 5억 · 평가액 15억)은
+   * 물건 전체 값 그대로라 의제 취득가액 8억이 지분분 양도가액과 한 스케일이 아니다. 슬라이스를 만들면 적용분 +269,500,000 · 비적용분 −184,500,000
+   * (거짓 차손) · 장특 75,460,000이 나왔다. 후퇴한 종전 비례 안분: G 85,000,000 × 70% × 28% + × 30% × 8% = 16,660,000 + 2,040,000 = 18,700,000.
+   * (⑧ validate는 단독 지분 자산을 막는다 — 이 anchor는 직접 API 호출·옛 이력이 닿는 route 방어선을 고정한다.)
+   */
+  it("④ body → route → 엔진: 장특 18,700,000 · fbLthdDetail 없음 · 차손 고지 없음", async () => {
+    const form = textbookForm();
+    form.assets[0] = { ...form.assets[0], ownershipNumerator: "1", ownershipDenominator: "2" };
+    const body = await captureBody(form);
+    expect(body.ownershipRatio).toBe(0.5);
+    const res = await POST(
+      new NextRequest("http://localhost/api/calc/transfer", {
+        method: "POST",
+        body: JSON.stringify(body),
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(find(json, "transferGain")).toBe(85_000_000);
+    expect(find(json, "longTermHoldingDeduction")).toBe(18_700_000);
+    expect(find(json, "fbLthdDetail")).toBeUndefined();
+    const warnings = (find(json, "warnings") as string[] | undefined) ?? [];
+    expect(warnings.some((w) => w.includes("양도차손") && w.includes("확인 필요"))).toBe(false);
+  });
+});

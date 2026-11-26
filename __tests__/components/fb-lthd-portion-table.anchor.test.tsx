@@ -25,6 +25,8 @@ const S3: Sample = { ...S1, n: 1, d: 1 };
 const S4: Sample = { n: 1, d: 2, ad: 100_000_000, v: 2_000_000_000, p: 1_600_000_000, e: 0 };
 const S5: Sample = { n: 1, d: 2, ad: 300_000_000, v: 1_200_000_000, p: 2_000_000_000, e: 0, house: true };
 const S8: Sample = { ...S1, dep: 50_000_000 };
+/** 양도차익 상한 (PR #3678 리뷰 M-1) — 적용분 499,500,000 × 28% = 139,860,000이 양도차익 9,500,000을 넘는다 → 합계 9,500,000으로 제한 */
+const SCAP: Sample = { n: 1, d: 2, ad: 1_000_000, v: 1_980_000_000, p: 1_000_000_000, e: 0 };
 
 function run(s: Sample): TransferTaxResult {
   return calculateTransferTax(baseTransferInput({
@@ -161,6 +163,28 @@ describe("UA-2 분기 — r=1 · 차손 · 구 이력", () => {
     const d = { ...run(S1).fbLthdDetail!, basis: "proportional" as const };
     const { container } = render(<FamilyBusinessLthdPortionTable detail={d} totalDeduction={1} />);
     expect(container.innerHTML).toBe("");
+  });
+});
+
+describe("UA-2b 양도차익 상한 — 합계 행은 제한 후 금액, «양도차익 범위로 제한» 안내", () => {
+  it("SCAP: 부분 공제액은 제한 전 값 · 합계 = 엔진 값 9,500,000 · 안내 1줄 · 차손 안내도 함께", () => {
+    const r = run(SCAP);
+    expect(r.fbLthdDetail!.cappedToGain).toBe(true);
+    renderCard(r);
+    expect(cellText("fb-lthd-applied-deduction")).toBe("139,860,000");
+    expect(cellText("fb-lthd-gain-total")).toBe("9,500,000");
+    expect(cellText("fb-lthd-total")).toBe("9,500,000");
+    expect(cellText("fb-lthd-capped-note")).toContain("양도차익 범위로 제한");
+    expect(cellText("fb-lthd-capped-note")).toContain("확인 필요");
+    expect(screen.getByTestId("fb-lthd-loss-note")).toBeTruthy();
+  });
+
+  it("제한이 없는 사례(S1·S4)에는 안내가 없다", () => {
+    renderCard(run(S1));
+    expect(screen.queryByTestId("fb-lthd-capped-note")).toBeNull();
+    cleanup();
+    renderCard(run(S4));
+    expect(screen.queryByTestId("fb-lthd-capped-note")).toBeNull();
   });
 });
 

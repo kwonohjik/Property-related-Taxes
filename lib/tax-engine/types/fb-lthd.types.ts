@@ -35,6 +35,11 @@ export interface FbLthdSliceDetail {
    * 있으면 `warnings`에 고지(`FB_LTHD_LOSS_SLICE_NOTICE`)가 함께 실린다.
    */
   lossSlice?: "decedent" | "heir";
+  /**
+   * 부분별 공제액 합(거주분 포함)이 과세 양도차익을 넘어 **양도차익 범위로 제한**했다(사용자 결정 2026-11-26 — 해석례 미확보, 확인 필요).
+   * 있으면 `result.longTermHoldingDeduction`은 부분별 공제액의 합보다 작고 과세 양도차익과 같다. `warnings`에 고지가 함께 실린다.
+   */
+  cappedToGain?: true;
   /** 공제액 ÷ 과세 양도차익 — 표시 전용(세액 미사용 · 정수 분수로 되돌려 쓰지 않는다) */
   effectiveRate: number;
 }

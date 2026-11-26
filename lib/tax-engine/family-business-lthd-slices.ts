@@ -94,16 +94,39 @@ export function splitFbTaxableGains(
 }
 
 /**
+ * 슬라이스 전제 — `splitFbSliceGains`의 `X = G + tD + tH − dep`는 **계산에 실제로 쓰인 취득가액이 의제 취득가액 `tD + tH`**이고
+ * **양도가액이 물건 전체(100%) 값**이라는 전제 위에서만 `X = 양도가액 − 필요경비`다. 둘 중 하나라도 깨지면 가짜 차손 부분이 생긴다.
+ *   · 부담부증여(STEP 0.48)가 취득가액을 채무비율로 다시 정한다 → 취득가액 ≠ tD + tH
+ *   · 지분 양도는 양도가액만 지분분이고 가업상속 입력(피상속인 취득가액·평가액)은 물건 전체 값이다 → 양도가액 ≠ 전체
+ * 전제가 깨지면 부분별 양도차익을 만들지 않고 종전 비례 안분 경로로 후퇴한다(PR 전과 비트 동일, echo 없음).
+ */
+export interface FbSlicePremise {
+  /** 양도차익 계산에 실제로 쓰인 취득가액 — 환산·감정·매매사례 등 추계 모드이면 undefined (`transfer-tax.ts` STEP 2 직후 값) */
+  acquisitionUsed: number | undefined;
+  /** 지분 양도 사실 — 지분율 < 1 이거나 12억 안분 분모(총 물건가)가 양도가액과 다르면 양도가액은 물건 전체가 아니다 */
+  ownershipRatio?: number;
+  transferPrice: number;
+  totalPropertyTransferPrice?: number;
+}
+
+function fbSlicePremiseHolds(premise: FbSlicePremise, terms: FbImputedTerms): boolean {
+  if (premise.acquisitionUsed !== terms.decedentTerm + terms.heirTerm) return false;
+  if (premise.ownershipRatio !== undefined && premise.ownershipRatio < 1) return false;
+  return premise.totalPropertyTransferPrice === undefined || premise.totalPropertyTransferPrice === premise.transferPrice;
+}
+
+/**
  * STEP 4 호출부용 — 의제 재귀(`imputedTerms`가 실린 입력)에만 부분별 양도차익을 싣는다.
- * 그 밖의 입력(일반 §97 재귀 · 가업상속 아님)은 같은 객체를 돌려준다. 만들 수 없으면(G ≤ 0) 그대로 둔다.
+ * 그 밖의 입력(일반 §97 재귀 · 가업상속 아님)은 같은 객체를 돌려준다. 만들 수 없으면(G ≤ 0 · 전제 불성립) 그대로 둔다.
  */
 export function withFbSliceGains<T extends TransferTaxInput>(
   input: T,
   transferGain: number,
   depreciationAmount: number | undefined,
+  premise: FbSlicePremise,
 ): T {
   const latter = input.fbLthdLatter;
-  if (!latter?.imputedTerms) return input;
+  if (!latter?.imputedTerms || !fbSlicePremiseHolds(premise, latter.imputedTerms)) return input;
   const fraction = latter.appliedRateFraction ?? resolveFamilyBusinessRateFraction(latter.appliedRate);
   const sliceGains = splitFbSliceGains({
     transferGain,

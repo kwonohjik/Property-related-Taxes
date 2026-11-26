@@ -163,6 +163,14 @@ export function FamilyBusinessLthdPortionTable({ detail, totalDeduction }: Props
         </ToneCard>
       )}
 
+      {detail.cappedToGain && (
+        <ToneCard tone="amber" bodyClassName="space-y-1">
+          <p data-testid="fb-lthd-capped-note" className="text-xs text-amber-900 dark:text-amber-200">
+            부분별 공제액의 합이 과세 양도차익을 넘어 장기보유특별공제를 양도차익 범위로 제한했습니다(합계 행이 제한 후 금액). 이 처리는 해석례가 확인되지 않아 확인 필요입니다.
+          </p>
+        </ToneCard>
+      )}
+
       <p className="text-caption text-muted-foreground">
         부분별 양도차익에 그 부분의 보유기간 공제율을 곱한 합계입니다. 공제율을 하나로 합쳐 전체 양도차익에 곱하지 않습니다.
       </p>

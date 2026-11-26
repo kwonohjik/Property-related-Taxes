@@ -42,6 +42,13 @@ export const FB_LTHD_LOSS_SLICE_NOTICE =
   `(그래서 공제액이 자산 전체 양도차익에 대한 표 공제율 상한을 넘을 수 있습니다). ` +
   `${TRANSFER.CARRYOVER_FAMILY_BUSINESS}과 위 조문은 한 부분이 차손일 때의 처리를 정하지 않고 해석례도 확인되지 않아, 이 처리는 확인 필요합니다.`;
 
+/**
+ * 부분별 공제액 합이 과세 양도차익을 넘어 양도차익 범위로 제한했을 때의 «확인 필요» 고지 문장(사용자 결정 2026-11-26 M-1).
+ * Q-2 (a)가 차손 부분을 공제하지 않고 양수 부분에 자기 몫 전액을 곱하므로 합이 양도차익을 넘을 수 있다 — 그대로 두면 양도차익보다 큰 공제가 나온다.
+ */
+export const FB_LTHD_GAIN_CAP_SENTENCE =
+  "이 경우 부분별 장기보유특별공제의 합이 과세 양도차익을 넘어 공제액을 양도차익 범위로 제한했습니다(공제액이 양도차익을 넘지 않도록 한 처리 — 해석례가 확인되지 않아 확인 필요).";
+
 const pct = (v: number): string => `${+(v * 100).toFixed(1)}`;
 
 export function calcFbLatterLongTermHolding(a: {
@@ -83,7 +90,10 @@ export function calcFbLatterLongTermHolding(a: {
   const decedentDeduction = applyLthdRate(decedentBase, decedentHoldRate);
   const heirDeduction = applyLthdRate(heirBase, heirHoldRate);
   const residenceDeduction = applyLthdRate(positiveGain, residencePart);
-  const deduction = decedentDeduction + heirDeduction + residenceDeduction;
+  const uncappedDeduction = decedentDeduction + heirDeduction + residenceDeduction;
+  // M-1: 슬라이스 경로만 — 차손 부분을 0으로 두고 양수 부분에 전액을 곱하면 합이 양도차익을 넘을 수 있다. 과세 양도차익(12억 초과 안분 후)이 상한이다.
+  const cappedToGain = !!sliceGain && uncappedDeduction > positiveGain;
+  const deduction = cappedToGain ? positiveGain : uncappedDeduction;
 
   if (!sliceGain) {
     // 비례 안분(종전) — 공제율 = r × 적용분 율 + (1 − r) × 비적용분 율 + 거주분 (표시 전용). 산식 문구도 종전 그대로.
@@ -128,6 +138,7 @@ export function calcFbLatterLongTermHolding(a: {
     heirSlice: slice(sliceGain.heir, heirBase, holding, heirHoldRate, heirDeduction, sliceGain.heirNetShare, terms.heirTerm),
     residenceDeduction,
     ...(lossSlice ? { lossSlice } : {}),
+    ...(cappedToGain ? { cappedToGain: true as const } : {}),
     effectiveRate,
   };
 
@@ -141,7 +152,7 @@ export function calcFbLatterLongTermHolding(a: {
     part(`적용분(가업상속공제적용률 ${pct(fbl.appliedRate)}%)`, sliceGain.decedent, decedentBase, decedentHoldRate, "피상속인 취득일부터", holdingFromDecedent.years) +
     ` + ${part("비적용분", sliceGain.heir, heirBase, heirHoldRate, "상속개시일부터", holding.years)}` +
     (residencePart > 0 ? ` + 거주분 ${money(positiveGain)} × ${pct(residencePart)}% (거주 ${residenceYears}년)` : "") +
-    ` = ${money(deduction)}`;
+    (cappedToGain ? ` = ${money(uncappedDeduction)} → 과세 양도차익 ${money(positiveGain)}을 넘어 양도차익 범위로 제한 = ${money(deduction)}` : ` = ${money(deduction)}`);
 
   return { deduction, rate: effectiveRate, holdingPeriod, fbLthdFormula, fbLthdDetail };
 }
