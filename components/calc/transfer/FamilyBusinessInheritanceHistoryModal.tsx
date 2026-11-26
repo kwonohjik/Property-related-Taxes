@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { formatFractionPercent } from "@/lib/calc/format-fraction-percent";
 import { calculationRepository } from "@/lib/storage/calculation-repository";
 import {
@@ -109,6 +110,8 @@ export interface FamilyBusinessInheritanceHistoryModalProps {
   onSelect: (prefill: FamilyBusinessInheritancePrefill) => void;
   /** 이 모달을 쓰는 화면 — 법인가업 주식은 주식 양도 화면 대상(소령 §163의2④2호). 기본 부동산 */
   target?: FbLookupTarget;
+  /** 지분 모드일 때만 — 자산의 지분율 표시(예: 「50%」). 이력 값은 그대로 채우고 안내만 한다(UQ-4) */
+  shareRatioText?: string;
 }
 
 // ============================================================
@@ -211,6 +214,7 @@ export function FamilyBusinessInheritanceHistoryModal({
   currentTransferDate,
   onSelect,
   target = "real_estate",
+  shareRatioText,
 }: FamilyBusinessInheritanceHistoryModalProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -287,6 +291,16 @@ export function FamilyBusinessInheritanceHistoryModal({
             필터: 상속세 이력 + 가업상속공제 적용액 &gt; 0 + 적용률 &gt; 0 + 상속개시일 ≤ 양도일
           </div>
         </div>
+
+        {shareRatioText && (
+          <ToneCard tone="amber" bodyClassName="space-y-1">
+            <p className="text-xs" data-testid="fb-history-share-notice">
+              이 자산은 지분 {shareRatioText}입니다. 상속세 이력의 평가액은 <strong>피상속인이 소유한 재산 기준</strong>이며 지분율을 곱하지
+              않았습니다. 선택하면 물건 전체 기준 값으로 채워지고 시스템이 지분율을 곱합니다. 피상속인이 이 물건의 일부 지분만
+              소유했다면 물건 전체 금액으로 고쳐 입력하세요.
+            </p>
+          </ToneCard>
+        )}
 
         {/* 본문 */}
         {loading && (

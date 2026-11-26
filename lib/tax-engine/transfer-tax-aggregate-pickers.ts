@@ -48,6 +48,8 @@ export function pickValuationDetails(r: SingleResult): TransferValuationDetailSo
     preHousingDisclosureDetail: r.preHousingDisclosureDetail,
     rentalHousingExceptionDetail: r.rentalHousingExceptionDetail,
     familyBusinessDetail: r.familyBusinessDetail,
+    // §95④ 후단 부분별 장특 표 — 번들 자산 카드에도 보인다(transfer-fb-share 최종 결정 E-3)
+    fbLthdDetail: r.fbLthdDetail,
     carryoverTaxationDetail: r.carryoverTaxationDetail,
     splitDetail: r.splitDetail,
     pre1990LandValuationDetail: r.pre1990LandValuationDetail,

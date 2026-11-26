@@ -53,3 +53,18 @@ export function scaleFamilyBusinessInheritanceByShare(
 
 /** 지분 × 가업상속 «확인 필요» 고지(Q-6) — 지분 양도에 §97의2④를 지분 비율로 적용한 직접 해석례는 찾지 못했다(계획서 §1.4). */
 export const FB_SHARE_SCALE_NOTICE = `${TRANSFER.CARRYOVER_FAMILY_BUSINESS} 의제 취득가액 — 피상속인 취득가액·상속개시일 평가액·자본적지출(물건 전체 기준 입력)에 양도 지분율을 곱해 계산했습니다. 지분 양도에 이 특례를 적용한 해석례를 찾지 못했으므로 확인이 필요합니다.`;
+
+/**
+ * V8-3 / E-5 — 지분율을 곱한 상속개시일 평가액이 0원 이하인가(극소 지분·극소 평가액). 일반 §97 재귀의 취득가액이 0이 되어 양도차익이 폭증한다.
+ * 서버가 계산할 수 있는 사실이라 ⑧(화면)과 ⑫(직접 API)가 같은 술어로 막는다(⑧↔⑫ 대칭 · 최종 결정 E-5).
+ */
+export function familyBusinessShareMarketValueVanishes(
+  fb: Pick<FamilyBusinessInheritanceTransferInput, "inheritanceMarketValue">,
+  ownershipRatio: number | undefined,
+): boolean {
+  if (ownershipRatio === undefined || !(ownershipRatio < 1) || !(fb.inheritanceMarketValue > 0)) return false;
+  return applyRatio(fb.inheritanceMarketValue, ownershipRatio) <= 0;
+}
+
+export const FB_SHARE_MARKET_VALUE_ZERO_MESSAGE =
+  "가업상속공제 — 지분율을 곱한 상속개시일 평가액이 0원입니다. 금액(물건 전체 기준)과 지분율을 확인하세요.";

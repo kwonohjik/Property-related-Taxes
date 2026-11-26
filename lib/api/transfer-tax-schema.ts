@@ -9,6 +9,8 @@
 
 import { refineMixedSaleSplitSingleOnly } from "./transfer-tax-schema-mixed-use";
 import { z } from "zod";
+import { familyBusinessShareMarketValueVanishes } from "@/lib/tax-engine/family-business-share";
+import { FB_SHARE_MARKET_VALUE_ZERO_MESSAGE } from "@/lib/tax-engine/family-business-share";
 import { refineBgOwnerSplit } from "./transfer-tax-schema-bg-owner-split";
 import { refineBgGiftBuildingStd } from "./transfer-tax-schema-bg-gift-std";
 import { newConstructionLandOnlyIssue } from "./transfer-tax-schema-household-refines";
@@ -197,6 +199,13 @@ export const propertySchema = z
         message: `겸용주택 계약서 구분가액 합(${(mu.landTransferPrice + mu.buildingTransferPrice).toLocaleString()})이 양도가액(${data.transferPrice.toLocaleString()})과 같아야 합니다 (소득세법 §100②)`,
       });
     }
+    // E-5 지분 × 가업상속 — 지분율을 곱한 평가액 0원(⑧ V8-3과 같은 엔진 술어 · 주 자산·컴패니언 모두)
+    if (data.familyBusinessInheritance && familyBusinessShareMarketValueVanishes(data.familyBusinessInheritance, data.ownershipRatio))
+      ctx.addIssue({ code: "custom", path: ["familyBusinessInheritance", "inheritanceMarketValue"], message: FB_SHARE_MARKET_VALUE_ZERO_MESSAGE });
+    (data.companionAssets ?? []).forEach((c, i) => {
+      if (c.familyBusinessInheritance && familyBusinessShareMarketValueVanishes(c.familyBusinessInheritance, c.ownershipRatio))
+        ctx.addIssue({ code: "custom", path: ["companionAssets", i, "familyBusinessInheritance", "inheritanceMarketValue"], message: FB_SHARE_MARKET_VALUE_ZERO_MESSAGE });
+    });
     const companions = data.companionAssets ?? [];
     // 겸용 안분 기준·감가상각·건물 귀속 양도비는 단건 겸용 전용(Q-2) — 주 자산 겸용에 컴패니언이 붙으면 막는다.
     if (companions.length > 0) refineMixedSaleSplitSingleOnly(data.mixedUse ?? undefined, ctx, ["mixedUse"]);

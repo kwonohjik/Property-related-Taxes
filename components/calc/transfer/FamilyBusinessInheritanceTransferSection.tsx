@@ -41,6 +41,10 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { formatFractionPercent } from "@/lib/calc/format-fraction-percent";
 import { resolveFamilyBusinessRateFraction } from "@/lib/tax-engine/family-business-applied-rate";
 import type { FamilyBusinessRateBasis } from "@/lib/tax-engine/family-business-applied-rate";
+import { FamilyBusinessShareBasisBlock } from "./FamilyBusinessShareBasisBlock";
+import { familyBusinessSharePercentText, isFamilyBusinessShareMode } from "@/lib/calc/transfer-fb-share-basis";
+import { getOwnershipRatio } from "@/lib/calc/transfer-tax-api-asset-basics";
+import { scaleFamilyBusinessInheritanceByShare } from "@/lib/tax-engine/family-business-share";
 
 // ── 타입 ──────────────────────────────────────────────────────
 
@@ -139,6 +143,8 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
               ? { kind: "deduction_ratio", deductionAmount: 0, businessEstateValue: 0 }
               : undefined,
       },
+      // 지분 모드 — 평가액이 바뀌었으니 «물건 전체 기준» 확인을 다시 받는다(UQ-4)
+      fbShareBasisConfirmed: false,
     });
   }
 
@@ -156,10 +162,11 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
           // 기본 입력 방식 = 금액(공제금액 ÷ 가업상속 재산가액) — 소수 반올림이 없는 쪽(F-3)
           fbRateBasis: { kind: "deduction_ratio", deductionAmount: 0, businessEstateValue: 0 },
         },
+        fbShareBasisConfirmed: false,
       });
     } else {
       // OFF: 필드 제거 (의제 미사용 = 일반 §97 산식)
-      onChange({ familyBusinessInheritance: undefined });
+      onChange({ familyBusinessInheritance: undefined, fbShareBasisConfirmed: false });
     }
   }
 
@@ -205,7 +212,21 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
         fb.fbRateBasis.deductionAmount <= fb.fbRateBasis.businessEstateValue));
   /** 표시용 분수 — 엔진이 곱하는 값과 같다(법정량 또는 소수 6자리 basis) */
   const rateFrac = fb ? resolveFamilyBusinessRateFraction(fb.fbDeductionAppliedRate, fb.fbRateBasis) : null;
-  const previewValue = canPreview ? calcImputedPreview(fb!) : null;
+  /** 지분 모드 — 미리보기는 엔진과 같은 leaf로 줄인 지분분으로 계산한다(미리보기 = 엔진 = 결과 카드) */
+  const shareMode = isFamilyBusinessShareMode(asset);
+  const sharePct = shareMode ? familyBusinessSharePercentText(asset) : "";
+  const scaledFb = fb && shareMode ? scaleFamilyBusinessInheritanceByShare(fb, getOwnershipRatio(asset)).fb : undefined;
+  const previewFb: FamilyBusinessSlice | undefined =
+    fb && scaledFb
+      ? {
+          ...fb,
+          decedentAcquisitionPrice: scaledFb.decedentAcquisitionPrice,
+          inheritanceMarketValue: scaledFb.inheritanceMarketValue,
+          decedentCapitalExpenditure: scaledFb.decedentCapitalExpenditure,
+        }
+      : fb;
+  const wholeSuffix = shareMode ? " — 물건 전체 기준" : "";
+  const previewValue = canPreview ? calcImputedPreview(previewFb!) : null;
   /**
    * G-1 시점 게이트 — 「소득세법」 부칙(법률 제12169호) §12. 기준일은 **상속개시일**이다.
    *
@@ -269,11 +290,14 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
             onOpenChange={setLookupOpen}
             currentTransferDate={transferDate || asset.acquisitionDate || ""}
             onSelect={handlePrefillFromHistory}
+            shareRatioText={shareMode ? sharePct : undefined}
           />
+
+          {shareMode && <FamilyBusinessShareBasisBlock asset={asset} fb={fb} onChange={onChange} />}
 
           {/* ① 피상속인 원취득가액 */}
           <CurrencyInput
-            label="피상속인 원취득가액 (원)"
+            label={`피상속인 원취득가액 (원)${wholeSuffix}`}
             required
             hint="소법 §97의2④1호 — 피상속인의 취득가액(소법 §97①1호). 실지거래가액이 원칙이며, 확인할 수 없는 경우에 한정해 매매사례가액·감정가액·환산취득가액을 순차 적용합니다"
             value={String(fb.decedentAcquisitionPrice || "")}
@@ -282,7 +306,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
 
           {/* ② 상속개시일 현재 자산가액 */}
           <CurrencyInput
-            label="상속개시일 현재 자산가액 (원)"
+            label={`상속개시일 현재 자산가액 (원)${wholeSuffix}`}
             required
             hint="소법 §97의2④2호 — 상증법 §60·§63에 따라 평가한 가액 (보충적 평가액·기준시가 등)"
             value={String(fb.inheritanceMarketValue || "")}
@@ -348,7 +372,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
               <div className="mt-2 space-y-2">
                 <CurrencyInput
                   label="가업상속공제금액 (원)"
-                  hint="상속세 과세가액에서 공제한 가업상속공제액(상증법 §18의2①)"
+                  hint={`상속세 과세가액에서 공제한 가업상속공제액(상증법 §18의2①)${shareMode ? " — 상속인 단위 금액이라 지분율을 곱하지 않습니다" : ""}`}
                   value={String(fb.fbRateBasis.deductionAmount || "")}
                   onChange={(v) => patchBasis({ deductionAmount: parseInt(v.replace(/,/g, ""), 10) || 0 })}
                 />
@@ -405,7 +429,7 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
 
           {/* ⑤ 피상속인 자본적 지출액 (선택) */}
           <CurrencyInput
-            label="피상속인 자본적 지출액 (원) — 선택"
+            label={`피상속인 자본적 지출액 (원) — 선택${shareMode ? " · 물건 전체 기준" : ""}`}
             hint="피상속인이 보유 기간 중 지출한 인테리어·증축 등. 소법 §97의2④1호의 취득가액에 합산되어 가업상속공제적용률이 곱해집니다 — 없으면 비워두세요"
             value={String(fb.decedentCapitalExpenditure ?? "")}
             onChange={(v) => {
@@ -451,18 +475,18 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
           {/* 의제 취득가액 미리보기 */}
           {cgtEraOk && previewValue !== null && (
             <div className="rounded-md border border-emerald-200 bg-emerald-50/60 px-3 py-2 text-xs space-y-1 dark:bg-emerald-950/40">
-              <p className="font-semibold text-emerald-800 dark:text-emerald-200">의제 취득가액 미리보기 (소법 §97의2④)</p>
+              <p className="font-semibold text-emerald-800 dark:text-emerald-200">의제 취득가액 미리보기 (소법 §97의2④){shareMode ? ` — 내 지분 ${sharePct} 분` : ""}</p>
               <p className="text-emerald-700 dark:text-emerald-300">
                 {/* 🔴 자본적지출이 있으면 **괄호로 묶는다** (2026-09-07 대장 재대조).
                     엔진은 `(원취득가 + 자본적지출) × 적용률`인데 괄호가 없으면
                     「원취득가 + (자본적지출 × 적용률)」로 읽힌다 — 산식이 거짓이 된다. */}
-                피상속인 {fb!.decedentCapitalExpenditure ? "(" : ""}원취득가액{" "}
-                {fb!.decedentAcquisitionPrice.toLocaleString()}
-                {fb!.decedentCapitalExpenditure
-                  ? ` + 자본적지출 ${fb!.decedentCapitalExpenditure.toLocaleString()})`
+                피상속인 {previewFb!.decedentCapitalExpenditure ? "(" : ""}원취득가액{" "}
+                {previewFb!.decedentAcquisitionPrice.toLocaleString()}
+                {previewFb!.decedentCapitalExpenditure
+                  ? ` + 자본적지출 ${previewFb!.decedentCapitalExpenditure.toLocaleString()})`
                   : ""}
                 {" × "}{formatFractionPercent(rateFrac!.numerator, rateFrac!.denominator)}%
-                {" + "}상속개시일 평가액 {fb!.inheritanceMarketValue.toLocaleString()}
+                {" + "}상속개시일 평가액 {previewFb!.inheritanceMarketValue.toLocaleString()}
                 {" × "}{formatFractionPercent(rateFrac!.denominator - rateFrac!.numerator, rateFrac!.denominator)}%
                 {" = "}
                 <strong>{previewValue.toLocaleString()}</strong>

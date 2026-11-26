@@ -76,6 +76,8 @@ interface Props {
   isExempt?: boolean;
   /** 이월과세 토지 × 양도일 의제일 ≤ 증여 등기접수일 고지(+ 겹치는 엔진 주의사항) — 엔진 미전송(폼 사실)이라 호출부가 `nblCarryoverDeemedBeforeGift(asset)`로 만들어 내려준다. */
   nblCarryoverDeemed?: NblCarryoverDeemedBeforeGift;
+  /** 번들 자산 카드 — 가업상속 카드에 자산 라벨·«단독으로 본 공제액» 고지(transfer-fb-share Q-8) */
+  bundledItemLabel?: string;
 }
 
 export function ValuationDetailCards({
@@ -91,6 +93,7 @@ export function ValuationDetailCards({
   isExempt,
   nblCarryoverDeemed,
   bgOwnerSplit,
+  bundledItemLabel,
 }: Props) {
   const hasAny =
     !!result.commercialBuildingValuationDetail ||
@@ -158,7 +161,12 @@ export function ValuationDetailCards({
         <CarryoverComparisonCard detail={result.carryoverTaxationDetail} />
       )}
       {result.familyBusinessDetail && (
-        <FamilyBusinessImputedComparisonCard detail={result.familyBusinessDetail} />
+        <FamilyBusinessImputedComparisonCard
+          detail={result.familyBusinessDetail}
+          fbLthdDetail={result.fbLthdDetail}
+          longTermHoldingDeduction={longTermDeduction}
+          {...(bundledItemLabel !== undefined ? { itemLabel: bundledItemLabel, bundled: true } : {})}
+        />
       )}
       {result.preDeemedPurchaseDetail && <PreDeemedPurchaseResultCard detail={result.preDeemedPurchaseDetail} />}
       {result.pre1990LandValuationDetail && (

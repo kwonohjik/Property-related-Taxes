@@ -680,6 +680,12 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
      */
     fbRateBasis?: Extract<FamilyBusinessRateBasis, { kind: "deduction_ratio" }>;
   };
+  /**
+   * 지분 모드 × 가업상속공제 — «금액은 물건 전체(100%) 기준»을 확인했는가 (표시·검증 전용 · API로 보내지 않는다).
+   * 엔진이 세 금액에 지분율을 곱하므로, 지분분으로 넣은 값(예전 입력 포함)이 한 번 더 곱해지는 것을 막는 확인이다.
+   * FB 객체 밖에 둔다 — ④가 FB 객체를 통째로 싣기 때문(`ownershipRemainderThirdParty`와 같은 선례 · transfer-fb-share UQ-2).
+   */
+  fbShareBasisConfirmed: boolean;
 }
 
 /** 하위 호환 별칭 — 기존 코드에서 CompanionAssetForm을 참조하는 곳에 사용 */

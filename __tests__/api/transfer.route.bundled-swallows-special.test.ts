@@ -340,7 +340,8 @@ describe("함께양도가 특수 계산 경로를 삼킨다 (라우트 if-체인
     // 15종 — 2026-10-23 일체 주택 본인 신축 §114조의2 건물분 base echo(`selfBuiltHousingPenalty`, Q-12 PR-1).
     // 16종 — 2026-11-01 의제취득일 전 매수 영 §176조의2④ 비교 내역(`preDeemedPurchaseDetail`, realestate-pre-deemed-purchase PR-2).
     // 17종 — 2026-11-20 상가 부수토지 초과분 토지·건물 파트 echo(`commercialNblPart`, NBL2611-V5-BX01) — 다건 breakdown에 실려야 결과 카드가 뜬다.
-    ["평가·판정 17종", "TransferValuationDetailSource", "pickValuationDetails", 17],
+    // 18종 — 2026-11-26 §95④ 후단 부분별 장특 echo(`fbLthdDetail`, transfer-fb-share E-3) — 번들 가업상속 카드에 부분별 표.
+    ["평가·판정 18종", "TransferValuationDetailSource", "pickValuationDetails", 18],
   ])("%s — 계약 ↔ 주입 헬퍼 동기화", async (_label, typeName, fnName, minCount) => {
     const { readFileSync } = await import("node:fs");
     const typeSrc = readFileSync("lib/tax-engine/types/transfer-result.types.ts", "utf8");

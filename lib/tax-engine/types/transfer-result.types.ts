@@ -723,6 +723,7 @@ export type TransferValuationDetailSource = Pick<
   | "preHousingDisclosureDetail"
   | "rentalHousingExceptionDetail"
   | "familyBusinessDetail"
+  | "fbLthdDetail"
   | "carryoverTaxationDetail"
   | "splitDetail"
   | "preDeemedPurchaseDetail"
