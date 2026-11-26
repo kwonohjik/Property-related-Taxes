@@ -34,7 +34,7 @@ function renderSection(over: Partial<React.ComponentProps<typeof CarryoverGiftEx
       donorAcquisitionDate="2010-03-01"
       showHouseholdFact
       showSpouseOneHouseFact
-      giftRegistryDate="2025-06-01"
+      transferDate="2026-06-01"
       assetId="a1"
       onRelationChange={onRelationChange}
       {...over}

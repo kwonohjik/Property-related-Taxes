@@ -15,8 +15,8 @@ import { DateInput } from "@/components/ui/date-input";
 import { PriorHouseholdResidenceField } from "./PriorHouseholdResidenceField";
 import type { CarryoverTaxationForm } from "@/lib/stores/calc-wizard-asset-carryover";
 
-/** 직계존비속 「양도 당시 사망」 제외 신설 — 2025.1.1. 이후 증여받는 자산부터. */
-const LINEAL_DEATH_CUTOFF = "2025-01-01";
+/** 직계존비속 「양도 당시 사망」 제외 신설 — 2026.1.1. 이후 양도분부터(2025.12.23. 개정 부칙 제7조). 엔진 `LINEAL_DEATH_EXCLUSION_CUTOFF`와 같은 날. */
+const LINEAL_DEATH_CUTOFF = "2026-01-01";
 
 interface Props {
   exclusionDeclared: CarryoverTaxationForm["exclusionDeclared"];
@@ -43,8 +43,8 @@ interface Props {
    * 전송하지 않으므로(엔진 카드도 1세대1주택이 성립하지 않는다) 문항을 숨긴다.
    */
   showSpouseOneHouseFact: boolean;
-  /** 증여 등기접수일 — 직계존비속 게이트 안내용 (YYYY-MM-DD) */
-  giftRegistryDate: string;
+  /** 양도일 — 직계존비속 게이트 안내용 (YYYY-MM-DD · 기준일은 양도일이다) */
+  transferDate: string;
   /** 자산 id — 라디오 name 고유화(자산이 여럿이면 name이 겹쳐 하나만 선택된다) */
   assetId: string;
   onRelationChange: (patch: Partial<CarryoverTaxationForm>) => void;
@@ -64,7 +64,7 @@ export function CarryoverGiftExclusionSection({
   donorAcquisitionDate,
   showHouseholdFact,
   showSpouseOneHouseFact,
-  giftRegistryDate,
+  transferDate,
   assetId,
   onRelationChange,
   anchorPrefix = "carryover",
@@ -84,11 +84,11 @@ export function CarryoverGiftExclusionSection({
       ? "이혼으로 소멸한 경우는 해당하지 않습니다 — 그때는 이월과세가 적용됩니다."
       : "양도일 현재 증여자(직계존비속)가 사망한 경우입니다.";
 
-  /** 직계존비속 제외는 2025.1.1. 이후 증여분에만 적용된다 — 침묵하면 사용자가 혼란스럽다. */
+  /** 직계존비속 제외는 2026.1.1. 이후 양도분에만 적용된다 — 침묵하면 사용자가 혼란스럽다. */
   const linealBeforeCutoff =
     donorRelation === "lineal" &&
-    giftRegistryDate !== "" &&
-    giftRegistryDate < LINEAL_DEATH_CUTOFF;
+    transferDate !== "" &&
+    transferDate < LINEAL_DEATH_CUTOFF;
 
   return (
     <div className="space-y-3">
@@ -131,7 +131,7 @@ export function CarryoverGiftExclusionSection({
             donorRelation === ""
               ? undefined
               : linealBeforeCutoff
-                ? `${deathDescription} 다만 2025.1.1. 이후 증여받은 자산부터 적용되는 규정이라, 이 증여에는 이월과세가 그대로 적용됩니다.`
+                ? `${deathDescription} 다만 2026.1.1. 이후 양도하는 경우부터 적용되는 규정이라, 이 양도에는 이월과세가 그대로 적용됩니다.`
                 : deathDescription
           }
           // 「그 외」는 ① 요건 자체가 불충족이라 사망 여부를 물을 이유가 없다.

@@ -30,7 +30,7 @@ export function giftHandoffAsset(asset: AssetForm, transferDate: string): AssetF
       giftTaxAmount: 0,
       giftDateValuation: 0,
       donorRelation: relation,
-      // 결정 #38-6 — 증여자 사망은 이월과세 배제를 가를 수 있다(배우자 사별 · 직계존비속 2025.1.1. 이후 증여).
+      // 결정 #38-6 — 증여자 사망은 이월과세 배제를 가를 수 있다(배우자 사별 · 직계존비속 2026.1.1. 이후 양도).
       donorDeceased: asset.giftDonorDeceased || undefined,
     },
     transfer,

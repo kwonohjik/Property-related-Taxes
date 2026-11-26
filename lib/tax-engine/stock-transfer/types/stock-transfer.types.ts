@@ -187,12 +187,12 @@ export type StockTransferInput = {
 
   /**
    * §97의2① **관계 요건** — 증여자와의 관계. 무의존 leaf `carryover-donor-death.ts`가
-   * `donorDeceased`·증여일과 함께 판정한다(부동산과 **같은 leaf 재사용**).
+   * `donorDeceased`·양도일과 함께 판정한다(부동산과 **같은 leaf 재사용**).
    */
   donorRelation?: "spouse" | "lineal" | "other";
   /**
    * 증여자 사망 사실. 배우자 = 「사망으로 혼인관계가 소멸」 / 직계존비속 = 「양도 당시 사망」.
-   * 직계존비속 괄호는 2025.1.1. 이후 **증여분**부터다(부칙 제20615호 §8).
+   * 직계존비속 괄호는 2026.1.1. 이후 **양도분**부터다(2025.12.23. 개정 부칙 제7조 「양도하는 경우부터」).
    */
   donorDeceased?: boolean;
 

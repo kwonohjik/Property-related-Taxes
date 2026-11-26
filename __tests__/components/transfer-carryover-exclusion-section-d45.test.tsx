@@ -37,7 +37,7 @@ function renderSection(over: Partial<React.ComponentProps<typeof CarryoverGiftEx
       donorAcquisitionDate="2010-03-01"
       showHouseholdFact={false}
       showSpouseOneHouseFact
-      giftRegistryDate="2023-06-01"
+      transferDate="2030-05-31"
       assetId="a1"
       onRelationChange={onRelationChange}
       {...over}
@@ -47,6 +47,15 @@ function renderSection(over: Partial<React.ComponentProps<typeof CarryoverGiftEx
 }
 
 describe("D45 ⑤ CarryoverGiftExclusionSection", () => {
+  it("U-0 직계존비속 사망 안내의 기준일은 양도일 — 2026.1.1. 전 양도면 「그대로 적용」, 이후면 그 안내가 없다", () => {
+    const NOTICE = /2026\.1\.1\. 이후 양도하는 경우부터 적용되는 규정이라/;
+    renderSection({ donorRelation: "lineal", transferDate: "2025-12-31" });
+    expect(screen.getByText(NOTICE)).toBeTruthy();
+    cleanup();
+    renderSection({ donorRelation: "lineal", transferDate: "2026-01-01" });
+    expect(screen.queryByText(NOTICE)).toBeNull();
+  });
+
   it("U-1 ②2호 자기선언 토글이 없다 — 자동 판정 안내만 있다", () => {
     renderSection();
     expect(screen.queryByText(/② 2호 — 1세대1주택 비과세 해당/)).toBeNull();

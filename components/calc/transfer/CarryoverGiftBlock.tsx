@@ -610,7 +610,7 @@ export function CarryoverGiftBlock({ asset, transferDate, onChange, part = "land
           showHouseholdFact={carryoverHouseholdFactVisible(asset)}
           // C(통째 증여)도 P5부터 배우자 예외를 묻는다 — ④가 사건에 싣는다(P5-Q4).
           showSpouseOneHouseFact={asset.assetKind !== "general_building"}
-          giftRegistryDate={c.giftRegistryDate}
+          transferDate={transferDate}
           assetId={asset.assetId}
           onRelationChange={updateCarryover}
         />

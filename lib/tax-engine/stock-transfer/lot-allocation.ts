@@ -85,11 +85,12 @@ interface CarryoverExpenseAcc {
  * 귀결이 같으므로 세율 축에서는 무해하다(단건 경로 `calcHoldingPeriod`는 양도일을 알므로 판정한다).
  * 필요경비 축은 실제로 갈리므로 `resolveLotAcquisitionPrice`가 `saleDate`를 받아 판정한다.
  *
- * 🔑 **관계 요건(ⓔ)은 여기서 판정한다** — 양도일이 필요 없기 때문이다(기준일은 **증여일**).
+ * 🔑 **관계 요건(ⓔ)은 여기서 판정한다**. 직계존비속 사망 괄호의 기준일은 **양도일**이라(2025.12.23. 개정 부칙 제7조)
+ * `transferDate`를 받는다 — 분할 매도는 한 과세기간 안이므로(`stock-split-sale-period-gate`) 가장 이른 매도일로 충분하다.
  * 종전에는 연혁 게이트만 보고 배우자 사별·직계존비속 사망·관계 부적격을 흘려보내
  * **소급 기산이 그대로 적용**됐다(P-9 — 단건 경로에서 고친 P-6과 같은 결함).
  */
-export function resolveLotStartDate(lot: AcquisitionLot): Date {
+export function resolveLotStartDate(lot: AcquisitionLot, transferDate: Date): Date {
   switch (lot.acquisitionCause) {
     case "inheritance":
       return lot.decedentAcquisitionDate ?? lot.acquisitionDate;
@@ -99,7 +100,7 @@ export function resolveLotStartDate(lot: AcquisitionLot): Date {
       // §104②2 — 증여자 취득일. 게이트: 증여일 ≥ 2025-01-01 (부칙 법률 제20615호 §8) + 관계 요건.
       return lot.donorAcquisitionDate &&
         isStockCarryoverEra(lot.acquisitionDate) &&
-        !isCarryoverRelationExcluded(lot.donorRelation, lot.donorDeceased, lot.acquisitionDate)
+        !isCarryoverRelationExcluded(lot.donorRelation, lot.donorDeceased, transferDate)
         ? lot.donorAcquisitionDate
         : lot.acquisitionDate;
     case "gift":
@@ -213,11 +214,15 @@ export function allocateLots(
     };
   }
 
-  // 매수 lot에 §104② 기산일 + 잔여 수량 부착
+  // 매수 lot에 §104② 기산일 + 잔여 수량 부착 — 관계 요건 기준일 = 가장 이른 매도일(같은 과세기간)
+  const earliestSaleDate = transferLots.reduce(
+    (min, t) => (t.transferDate < min ? t.transferDate : min),
+    transferLots[0].transferDate,
+  );
   const remainingAcqLots: RemainingAcqLot[] = acquisitionLots.map((lot) => ({
     ...lot,
     remaining: lot.shareCount,
-    startDate: resolveLotStartDate(lot),
+    startDate: resolveLotStartDate(lot, earliestSaleDate),
   }));
 
   let matched: MatchedSubLot[] = [];

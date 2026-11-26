@@ -66,8 +66,8 @@ export function isStockCarryoverEligible(input: StockTransferInput): boolean {
   if (!input.donorAcquisitionDate) return false;
   if (!isStockCarryoverEra(input.acquisitionDate)) return false; // ⓒ
   if (!isWithinCarryoverPeriod(input.acquisitionDate, input.transferDate, "stock")) return false; // ⓓ
-  // ⓔ — 증여일(= 수증자 취득일)이 직계존비속 괄호의 기준일이다
-  if (isCarryoverRelationExcluded(input.donorRelation, input.donorDeceased, input.acquisitionDate)) {
+  // ⓔ — 직계존비속 「양도 당시 사망」 괄호의 기준일은 **양도일**이다(2025.12.23. 개정 부칙 제7조 「양도하는 경우부터」)
+  if (isCarryoverRelationExcluded(input.donorRelation, input.donorDeceased, input.transferDate)) {
     return false;
   }
   return true;
@@ -105,7 +105,7 @@ export function isLotCarryoverApplicable(lot: AcquisitionLot, saleDate: Date): b
   if (lot.acquisitionCause !== "carryover_gift") return false;
   if (!isStockCarryoverEra(lot.acquisitionDate)) return false;
   if (!isWithinCarryoverPeriod(lot.acquisitionDate, saleDate, "stock")) return false;
-  return !isCarryoverRelationExcluded(lot.donorRelation, lot.donorDeceased, lot.acquisitionDate);
+  return !isCarryoverRelationExcluded(lot.donorRelation, lot.donorDeceased, saleDate);
 }
 
 /**
@@ -160,7 +160,9 @@ export function hasCarryoverLot(input: StockTransferInput): boolean {
       l.acquisitionCause === "carryover_gift" &&
       l.donorAcquisitionDate !== undefined &&
       isStockCarryoverEra(l.acquisitionDate) &&
-      !isCarryoverRelationExcluded(l.donorRelation, l.donorDeceased, l.acquisitionDate),
+      // 관계 요건의 직계존비속 사망 기준일은 양도일이다. 분할 매도는 한 과세기간 안이라(`stock-split-sale-period-gate`)
+      // 대표 양도일(가장 이른 매도일)로 판정해도 2026.1.1. 경계를 넘나들지 않는다.
+      !isCarryoverRelationExcluded(l.donorRelation, l.donorDeceased, input.transferDate),
   );
   // 1년 요건(ⓓ)은 매도일을 알아야 하므로 여기서 보지 않는다 — 매칭 시점의
   // `isLotCarryoverApplicable`이 판정하며, 넘기지 못하면 A와 B가 같아져 동률로 수렴한다.
