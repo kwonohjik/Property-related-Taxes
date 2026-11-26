@@ -150,12 +150,13 @@ type FamilyBusinessRateBasis =
 ### 5.1 엔진
 - `calcFamilyBusinessImputedAcquisitionPrice`: 분수 경로 = ⌊(피상속인 취득가 + 자본적지출) × n ÷ d⌋ + ⌊상속평가 × (d − n) ÷ d⌋. 분수 없음 = 현행 `round(rate × 1e6)` 경로 **비트 동일**(기존 anchor 0·0.5·0.8·1.0 불변).
 - §95④ 후단 `transfer-tax-lthd.ts:643`도 같은 분수로 바꾼다 — `fbLthdLatter`(`transfer.types.ts:775`)에 분수를 싣고 `applyFamilyBusinessCgtStep`(`transfer-tax-family-business.ts:307-315`)이 넘긴다. 표시용 `blendedRate`(`:653`)는 double 유지(세액 미사용).
-- 건드리는 줄의 `new Date(fb.inheritanceDate)`(`transfer-tax-family-business.ts:277`)는 `toDate`로 바꾼다(신규 코드 규칙).
+- `new Date(fb.inheritanceDate)`(G-1 게이트)는 **유지**했다(PR-3 실행 중 결정) — `toDate`는 잘못된 날짜 문자열에서 예외를 던져, 지금의 「특례 미적용 + 경고」 동작이 바뀐다. 범위 밖.
 
 ### 5.2 화면 (부동산 `FamilyBusinessInheritanceTransferSection`)
 - 적용률 칸 위 `RadioCardGroup` 「입력 방식」: **「가업상속공제금액 ÷ 가업상속 재산가액」(기본)** / 「% 직접 입력」(기존 `DecimalInput` — `fb-deduction-rate-decimal-input.test.tsx` 보존).
 - 분수 모드는 `CurrencyInput` 2칸 + 읽기전용 「= 33.3333% (분수로 계산 — 반올림 없음)」. 전환·입력은 onChange 핸들러에서 `fbRateBasis`와 표시용 `fbDeductionAppliedRate = 분자/분모`를 함께 쓴다(useEffect 미사용). 모드는 `fbRateBasis` 유무로 파생.
-- 적용률 FieldCard를 공용 `components/calc/shared/FamilyBusinessRateField.tsx`로 옮긴다(주식 재사용).
+- 적용률 FieldCard의 공용 컴포넌트 추출은 **PR-1d로 미뤘다**(PR-3 실행 중 결정) — 지금은 소비처가 부동산 하나뿐이다.
+- 이력 prefill도 PR-3에서 법정량을 싣는다 — 상속세 결과의 `deduction`·`finalValue` 정수(A-1). 직접입력 모드는 제외(F-2에서 처리).
 - 결과 카드 `FamilyBusinessImputedComparisonCard.tsx:87·123-124`의 `toFixed(2)%` 3곳을 분수 표기로. 적용률 행 문안: 「가업상속공제적용률 = 가업상속공제금액 {X} ÷ 가업상속 재산가액 {Y} = {Z}%」.
 
 ### 5.3 동기화 지점
