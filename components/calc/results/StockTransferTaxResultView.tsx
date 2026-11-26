@@ -36,6 +36,7 @@ import {
 } from "@/lib/print/stock-transfer-print-sections";
 import { LotMatchingDetailCard } from "@/components/calc/results/LotMatchingDetailCard";
 import { StockCarryoverComparisonCard } from "@/components/calc/results/StockCarryoverComparisonCard";
+import { FamilyBusinessImputedComparisonCard } from "@/components/calc/results/transfer/FamilyBusinessImputedComparisonCard";
 import { MajorShareholderResultCard } from "@/components/calc/results/StockMajorShareholderResultCard";
 import { PreDeemedAcquisitionResultCard } from "@/components/calc/results/PreDeemedAcquisitionResultCard";
 import { PreDeemedLotsResultCard } from "@/components/calc/results/PreDeemedLotsResultCard";
@@ -225,6 +226,10 @@ export function StockTransferTaxResultView({
   const carryoverCardItems = (isMultiItem ? aggregate.items : [result])
     .map((item, index) => ({ item, index }))
     .filter(({ item }) => item.carryoverDetail !== undefined);
+  // §97의2④ 가업상속 비교 카드 대상 — 이월과세와 같은 규약(다건이면 가업 종목마다, 대표 `result`는 마지막 종목뿐이다)
+  const familyBusinessCardItems = (isMultiItem ? aggregate.items : [result])
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => item.familyBusinessDetail !== undefined);
 
   // 신고서 양식 헤더용 양도인·과세연도 메타 (디자인 §4.2)
   // — 국외주식 결과 화면과 **같은 훅**을 쓴다. 양도인 분기(전문가 모드 의뢰인 ↔ 내 프로필)를
@@ -612,6 +617,17 @@ export function StockTransferTaxResultView({
           variant={item.taxCategory === "foreign_stock" ? "foreign" : "domestic"}
           foreignCarryover={item.foreignDetail?.carryover}
           itemLabel={isMultiItem ? `종목 ${index + 1} (${taxCategoryLabel(item.taxCategory)})` : undefined}
+        />
+      ))}
+
+      {/* §97의2④ 가업상속공제 주식 — 의제 취득가액 · §18의2⑩ 비교(이 양도세에서 빼지 않는다) */}
+      {familyBusinessCardItems.map(({ item, index }, cardIndex) => (
+        <FamilyBusinessImputedComparisonCard
+          key={index}
+          detail={item.familyBusinessDetail!}
+          itemLabel={isMultiItem ? `종목 ${index + 1} (${taxCategoryLabel(item.taxCategory)})` : undefined}
+          filingItemCount={isMultiItem ? aggregate.items.length : undefined}
+          showPostMgmtLink={cardIndex === 0}
         />
       ))}
 

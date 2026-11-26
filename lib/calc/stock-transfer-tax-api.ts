@@ -54,6 +54,7 @@ import { toEngineAcquisitionCause } from "./stock-acquisition-cause";
 import { effectiveSingleAcquisitionCause } from "./stock-acquisition-cause";
 import { effectiveAcquisitionActualInputMode } from "./stock-transfer-input-mode";
 import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
+import { appendFamilyBusinessBody } from "./stock-transfer-tax-api-family-business";
 
 export { buildForeignStockApiBody, buildExitTaxApiBody };
 
@@ -382,6 +383,9 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
     if (acqMS !== undefined) body.acquisitionMarketSamplePrice = acqMS;
     if (form.acquisitionMarketSampleDate) body.acquisitionMarketSampleDate = form.acquisitionMarketSampleDate;
   }
+
+  // §97의2④ 가업상속공제 자산 의제 취득가액 — 술어 통과 시에만(잔존값 inert)
+  appendFamilyBusinessBody(body, form);
 
   // 의제취득일 전 매수 — 영 §176의2④ ② 입력 (Z-1)
   appendPreDeemedBody(body, form);

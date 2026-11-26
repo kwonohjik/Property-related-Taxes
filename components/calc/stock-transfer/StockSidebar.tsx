@@ -22,6 +22,7 @@ import { isLotsModeForm, isPreDeemedLotClause1On } from "@/lib/calc/stock-transf
 import type { ExitTaxResult } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
 import { sumBasicDeductionByGroup } from "@/lib/tax-engine/stock-transfer/stock-basic-deduction-total";
+import { isStockFbOn, isStockFbImputationEra, previewStockFbAcquisitionPrice } from "@/lib/calc/stock-family-business";
 
 interface StockSidebarProps {
   currentStep: number;
@@ -283,7 +284,14 @@ export function StockSidebar({
           acqPrice = perShareAcq > 0 && count > 0 ? perShareAcq * count : null;
         }
       }
-      if (acqPrice && acqPrice > 0) {
+      // §97의2④ 가업상속 ON — 상속평가 × 주식수를 그대로 보이면 강제 적용되는 의제 취득가액과 어긋난 「그럴듯한 오답」이다.
+      //   입력 완결이면 엔진 leaf 값, 미완결이면 행을 생략한다(일반 값으로 떨어뜨리지 않는다).
+      if (isStockFbOn(formData)) {
+        const fbAcq = previewStockFbAcquisitionPrice(formData);
+        // 상속개시일 2014.1.1. 전(G-1)이면 엔진도 특례를 적용하지 않으므로 「의제」라 부르지 않는다
+        const fbLabel = isStockFbImputationEra(formData) ? "취득가액 (§97의2④ 의제)" : "취득가액";
+        if (fbAcq !== null && fbAcq > 0) items.push({ label: fbLabel, value: fbAcq });
+      } else if (acqPrice && acqPrice > 0) {
         items.push({ label: "취득가액", value: acqPrice });
       }
 

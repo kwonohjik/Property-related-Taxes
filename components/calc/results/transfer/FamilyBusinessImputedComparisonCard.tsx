@@ -31,13 +31,24 @@ import { formatFractionPercent } from "@/lib/calc/format-fraction-percent";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { FamilyBusinessLthdPortionTable } from "@/components/calc/results/transfer/FamilyBusinessLthdPortionTable";
 import type { FbLthdSliceDetail } from "@/lib/tax-engine/types/fb-lthd.types";
+import type { StockFamilyBusinessDetail } from "@/lib/tax-engine/stock-transfer/types/stock-family-business.types";
 
 interface Props {
-  detail: FamilyBusinessCgtDetail;
+  /** 부동산 `FamilyBusinessCgtDetail` 또는 주식 `StockFamilyBusinessDetail`(1주당 × 주식수 행·신고 단위 합계 안내가 더해진다) */
+  detail: FamilyBusinessCgtDetail | StockFamilyBusinessDetail;
+  /** 다종목일 때 이 카드가 어느 종목의 것인지 — 부제로 붙는다 */
+  itemLabel?: string;
   /** §95④ 후단 부분별 장기보유특별공제 echo(`result.fbLthdDetail`) — 없으면(구 이력·주식) 표를 그리지 않는다 */
   fbLthdDetail?: FbLthdSliceDetail;
   /** `result.longTermHoldingDeduction` */
   longTermHoldingDeduction?: number;
+  /**
+   * 주식 다종목 신고의 전체 종목 수 — 2 이상이면 세 금액이 **신고 단위 합계**(비가업 종목 세액 포함)라는 고지를 띄운다.
+   * 단건이면 생략.
+   */
+  filingItemCount?: number;
+  /** 사후관리 추징 연동 링크 — 다종목에서 같은 공제액이 카드마다 실리므로 첫 카드에만 둔다(이중 입력 방지). 기본 true */
+  showPostMgmtLink?: boolean;
 }
 
 // ── 행 컴포넌트 ─────────────────────────────────────────────────
@@ -67,9 +78,21 @@ function Row({
   );
 }
 
+/** 주식 상세인가 — 주식만 `shareCount`(양도 주식수)를 싣는다 */
+function isStockDetail(d: FamilyBusinessCgtDetail | StockFamilyBusinessDetail): d is StockFamilyBusinessDetail {
+  return "shareCount" in d;
+}
+
 // ── 메인 컴포넌트 ───────────────────────────────────────────────
 
-export function FamilyBusinessImputedComparisonCard({ detail, fbLthdDetail, longTermHoldingDeduction }: Props) {
+export function FamilyBusinessImputedComparisonCard({
+  detail,
+  itemLabel,
+  fbLthdDetail,
+  longTermHoldingDeduction,
+  filingItemCount,
+  showPostMgmtLink = true,
+}: Props) {
   const {
     imputedAcquisitionPrice,
     cgtUnderSection97_2_4,
@@ -87,6 +110,11 @@ export function FamilyBusinessImputedComparisonCard({ detail, fbLthdDetail, long
   const ratePct = formatFractionPercent(frac.numerator, frac.denominator);
   const restPct = formatFractionPercent(frac.denominator - frac.numerator, frac.denominator);
 
+  const stock = isStockDetail(detail) ? detail : null;
+  // 다종목이면 세 금액은 신고 단위 결정세액(비가업 종목 포함)의 차이 1회분이다 — 종목 간에 더하지 않는다
+  const fbItemCount = stock?.fbItemCount ?? 1;
+  const filingCount = Math.max(filingItemCount ?? 1, fbItemCount);
+
   // 의제 산식이 일반보다 유리한 경우 (차액 공제 불필요)
   const imputedIsFavorable = creditAmount === 0 && cgtUnderSection97_2_4 <= cgtUnderSection97;
 
@@ -96,7 +124,8 @@ export function FamilyBusinessImputedComparisonCard({ detail, fbLthdDetail, long
       {/* 헤더 */}
       <div>
         <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
-          가업상속공제 자산 양도세 특례 (소득세법 §97의2④)
+          {stock ? "가업상속공제 주식 양도세 특례" : "가업상속공제 자산 양도세 특례"} (소득세법 §97의2④)
+          {itemLabel && <span className="ml-2 text-xs font-normal">{itemLabel}</span>}
         </p>
         <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
           의제 취득가액 = 피상속인 원취득가액 × {ratePct}% + 상속개시일 평가액 × {restPct}%
@@ -114,7 +143,11 @@ export function FamilyBusinessImputedComparisonCard({ detail, fbLthdDetail, long
 
             {/* 의제 취득가액 산출 */}
             <Row
-              label="피상속인 원취득가액"
+              label={
+                stock
+                  ? `피상속인 원취득가액 (1주당 ${formatKRW(stock.decedentAcquisitionPricePerShare)} × 주식수 ${formatKRW(stock.shareCount)})`
+                  : "피상속인 원취득가액"
+              }
               value={formatKRW(decedentAcquisitionPrice)}
               sub
             />
@@ -128,7 +161,7 @@ export function FamilyBusinessImputedComparisonCard({ detail, fbLthdDetail, long
               />
             )}
             <Row
-              label="상속개시일 자산 평가액"
+              label={stock ? "상속개시일 평가액 (취득가액 입력)" : "상속개시일 자산 평가액"}
               value={formatKRW(inheritanceMarketValue)}
               sub
             />
@@ -141,6 +174,22 @@ export function FamilyBusinessImputedComparisonCard({ detail, fbLthdDetail, long
                     <Frac
                       top={`가업상속공제금액 ${formatKRW(appliedRateBasis.deductionAmount)}`}
                       bottom={`가업상속 재산가액 ${formatKRW(appliedRateBasis.businessEstateValue)}`}
+                    />
+                  </span>
+                }
+                value={`${ratePct}%`}
+                sub
+              />
+            )}
+            {/* 신 ③2호(양도일 2026.2.27. 이후 법인가업) — 총자산가액 중 사업무관자산을 뺀 비율 */}
+            {appliedRateBasis?.kind === "corporate_business_assets" && (
+              <Row
+                label={
+                  <span data-testid="fb-rate-basis-row">
+                    가업상속공제적용률 ={" "}
+                    <Frac
+                      top={`법인 총자산가액 ${formatKRW(appliedRateBasis.totalAssets)} − 사업무관자산가액 ${formatKRW(appliedRateBasis.nonBusinessAssets)}`}
+                      bottom={`법인 총자산가액 ${formatKRW(appliedRateBasis.totalAssets)}`}
                     />
                   </span>
                 }
@@ -188,6 +237,13 @@ export function FamilyBusinessImputedComparisonCard({ detail, fbLthdDetail, long
         </table>
       </div>
 
+      {stock && filingCount >= 2 && (
+        <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="fb-item-count-note">
+          위 두 결정세액은 이 신고의 종목 {filingCount}건(가업상속 종목 {fbItemCount}건 포함)을 합산한 <strong>신고 단위 결정세액</strong>이고,
+          공제액은 가업상속 종목을 모두 상속개시일 평가액으로 되돌린 세액과의 차이 1회분입니다 — 종목마다 같은 값이 실리므로 종목끼리 더하지 마세요.
+        </p>
+      )}
+
       {fbLthdDetail && <FamilyBusinessLthdPortionTable detail={fbLthdDetail} totalDeduction={longTermHoldingDeduction ?? 0} />}
 
       {/* 적용 분기 안내 */}
@@ -224,7 +280,7 @@ export function FamilyBusinessImputedComparisonCard({ detail, fbLthdDetail, long
       )}
 
       {/* 사후관리 추징 연동 (§18의2⑩) — creditAmount를 시뮬레이터에 prefill (PR-5) */}
-      {creditAmount > 0 && (
+      {creditAmount > 0 && showPostMgmtLink && (
         <div className="rounded-md border border-emerald-300 bg-emerald-50/60 px-3 py-2 text-xs text-emerald-800 space-y-1 dark:text-emerald-200 dark:bg-emerald-950/40">
           <p className="font-semibold">가업상속 사후관리 추징과 연동 (§18의2⑩)</p>
           <p>
