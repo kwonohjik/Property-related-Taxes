@@ -22,6 +22,7 @@ import { BONUS_TAXED_PRE_DEEMED_FACE_VALUE_REQUIRED_MESSAGE } from "./stock-acqu
 import { isDonorConversionForm } from "./stock-transfer-tax-api-carryover";
 import { isPreDeemedPurchaseForm } from "./stock-transfer-section94-4-form";
 import { validatePreDeemedLotClause1 } from "./stock-transfer-tax-validate-pre-deemed-lots";
+import { validateStockFamilyBusiness } from "./stock-transfer-tax-validate-family-business";
 import { isBookLostAtAcquisitionForm } from "./stock-transfer-section94-4-form";
 import { isBeforePpiSeries, PRE_DEEMED_PPI_RATIO_REQUIRED_MESSAGE } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
 import { isPreDeemedLotBeforePpiSeries, PRE_DEEMED_LOT_BEFORE_PPI_MESSAGE } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
@@ -262,6 +263,8 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         errors.push({ field: "perShareAcquisitionPrice", message: "1주당 취득가액을 입력하세요", severity: "error" });
       }
     }
+    // §97의2④ 가업상속공제 자산 — 술어를 통과한 폼(국내·상속·실가·단건)만 검증한다(잔존값 inert)
+    errors.push(...validateStockFamilyBusiness(form));
   } else if (acquisitionMode === "estimated") {
     const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
     if (isListed) {

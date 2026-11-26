@@ -91,6 +91,13 @@ export function createInitialStockFormData(): StockTransferFormData {
     transferredAssetValue: "",
     giftTaxableValue: "",
     preMergerAcquisitionDate: "",
+    familyBusinessInheritance: false,
+    fbDecedentPerSharePrice: "",
+    fbDecedentCapitalExpenditure: "",
+    fbDeductionAmount: "",
+    fbBusinessEstateValue: "",
+    fbCorpTotalAssets: "",
+    fbCorpNonBusinessAssets: "",
 
     blockShareholderRealEstateRatio: "",
     blockShareholderOwnershipRatio: "",

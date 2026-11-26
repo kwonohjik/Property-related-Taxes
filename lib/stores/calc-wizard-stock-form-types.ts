@@ -138,6 +138,25 @@ export interface StockTransferFormData {
 
   preMergerAcquisitionDate: string;    // 합병·분할
 
+  // ── §97의2④ 가업상속공제 자산 의제 취득가액 (단건 취득 · 상속 원인 전용) ──
+  // 노출·전송·검증 술어 = `lib/calc/stock-family-business.ts` `allowsStockFamilyBusiness` (④·⑤·⑧ 공유).
+  // 상속개시일 = 위 `acquisitionDate`, 상속개시일 평가액 = 실가 취득가액 칸 — 같은 값을 두 번 받지 않는다.
+  // 술어를 통과하지 못하면 아래 값은 inert(④ 미전송·⑧ 미검증)다. 적용률은 % 직접 입력이 없고
+  // **양도일**로 법정량 쌍이 갈린다: 양도일 ≤ 2026-02-26 = 구 ③(공제금액·재산가액), ≥ 2026-02-27 = ③2호(총자산·사업무관).
+  familyBusinessInheritance: boolean;
+  /** 피상속인의 1주당 취득가액 (원 정수 문자열) — §97의2④1호 */
+  fbDecedentPerSharePrice: string;
+  /** 피상속인 자본적지출 총액 (선택 · 양도하는 주식분 총액) */
+  fbDecedentCapitalExpenditure: string;
+  /** 구 ③ — 가업상속공제금액 (양도일 ≤ 2026-02-26) */
+  fbDeductionAmount: string;
+  /** 구 ③ — 가업상속 재산가액 */
+  fbBusinessEstateValue: string;
+  /** ③2호 — 법인 총자산가액 (양도일 ≥ 2026-02-27) */
+  fbCorpTotalAssets: string;
+  /** ③2호 — 사업무관자산가액 */
+  fbCorpNonBusinessAssets: string;
+
   // ── §94①4 다목 누적 ──
   // ── §94①4 다목 요건 3종 + 합산창 (2026-09-13) ──────────────────
   // 전부 **% 문자열**이다(④ API 가 ×0.01 로 0~1 소수 변환). 단위 혼동 주의.
