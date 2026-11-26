@@ -31,6 +31,8 @@ import type { TaxRatesMap } from "@/lib/db/tax-rates";
 import type { TransferTaxAcquisitionOptions } from "./transfer-tax-acquisition-override";
 import { calcFamilyBusinessCgtCredit } from "./credits/family-business-cgt-credit";
 import { INH } from "./legal-codes";
+import { FB_SHARE_SCALE_NOTICE, scaleFamilyBusinessInheritanceByShare } from "./family-business-share";
+import type { FamilyBusinessWholeInput } from "./family-business-share";
 
 /** calculateTransferTax 함수 시그니처 (재귀 주입용 — 순환 import 차단) */
 type CalcFn = (
@@ -158,6 +160,12 @@ export interface FamilyBusinessCgtDetail {
    * 의제세액·일반세액·공제액 3행. UI 결과 카드 표시용.
    */
   creditBreakdown?: Array<{ label: string; amount: number; lawRef?: string }>;
+  /**
+   * 지분 양도(지분율 < 1)일 때만 — 위 `decedentAcquisitionPrice`·`inheritanceMarketValue`·`decedentCapitalExpenditure`는
+   * 이 지분율을 곱한 **지분분**(산식에 쓴 값)이고, `wholeInput`은 곱하기 전 물건 전체 입력이다.
+   */
+  ownershipRatio?: number;
+  wholeInput?: FamilyBusinessWholeInput;
 }
 
 // ─── 핵심 헬퍼 함수 ──────────────────────────────────────────
@@ -183,6 +191,7 @@ export function buildFamilyBusinessCgtDetail(
   imputedCgt: number,
   regularCgt: number,
   imputedAcquisitionPrice: number,
+  share?: { ownershipRatio?: number; whole?: FamilyBusinessWholeInput },
 ): FamilyBusinessCgtDetail {
   // §18의2⑩ single-source — credits/calcFamilyBusinessCgtCredit (산식·음수0 가드·breakdown 단일 진실).
   //   creditAmount = max(0, 의제 §97의2④ − 일반 §97). transfer·inheritance 도메인 동일 헬퍼 공유.
@@ -205,6 +214,9 @@ export function buildFamilyBusinessCgtDetail(
       ? { decedentCapitalExpenditure: fb.decedentCapitalExpenditure }
       : {}),
     creditBreakdown: cgtCredit.breakdown,
+    ...(share?.ownershipRatio !== undefined && share.whole
+      ? { ownershipRatio: share.ownershipRatio, wholeInput: share.whole }
+      : {}),
   };
 }
 
@@ -238,8 +250,11 @@ export function applyFamilyBusinessCgtStep(
   calcFn: CalcFn,
   warnings?: string[],
 ): TransferTaxResult | null {
-  const fb = rawInput.familyBusinessInheritance;
-  if (!fb) return null;
+  const rawFb = rawInput.familyBusinessInheritance;
+  if (!rawFb) return null;
+  // 지분 양도 — 물건 전체 기준 세 금액을 양도 지분분으로 줄인다(계획서 transfer-fb-share Q-2). 이후 두 재귀·echo 모두 줄인 값.
+  const share = scaleFamilyBusinessInheritanceByShare(rawFb, rawInput.ownershipRatio);
+  const fb = share.fb;
 
   // 0. G-1 시점 게이트 — 부칙 법률 제12169호 §12 "이 법 시행 후 **상속받아** 양도하는 분".
   //    기준일은 **상속개시일**이지 양도일이 아니다. 미충족 시 특례 전부 미적용(일반 §97 경로)
@@ -311,8 +326,16 @@ export function applyFamilyBusinessCgtStep(
     imputedResult.determinedTax,
     regularResult.determinedTax,
     imputedAcquisitionPrice,
+    share,
   );
 
   // 5. 의제 산식 결과에 familyBusinessDetail 첨부하여 반환
-  return { ...imputedResult, familyBusinessDetail: detail };
+  //    지분 고지는 반환 결과에 직접 싣는다 — 이 경로는 조기 반환이라 호출부 warnings 배열이 결과에 합쳐지지 않는다.
+  return {
+    ...imputedResult,
+    familyBusinessDetail: detail,
+    ...(share.ownershipRatio !== undefined
+      ? { warnings: [...(imputedResult.warnings ?? []), FB_SHARE_SCALE_NOTICE] }
+      : {}),
+  };
 }

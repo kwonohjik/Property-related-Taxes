@@ -97,7 +97,7 @@ export function splitFbTaxableGains(
  * 슬라이스 전제 — `splitFbSliceGains`의 `X = G + tD + tH − dep`는 **계산에 실제로 쓰인 취득가액이 의제 취득가액 `tD + tH`**이고
  * **양도가액이 물건 전체(100%) 값**이라는 전제 위에서만 `X = 양도가액 − 필요경비`다. 둘 중 하나라도 깨지면 가짜 차손 부분이 생긴다.
  *   · 부담부증여(STEP 0.48)가 취득가액을 채무비율로 다시 정한다 → 취득가액 ≠ tD + tH
- *   · 지분 양도는 양도가액만 지분분이고 가업상속 입력(피상속인 취득가액·평가액)은 물건 전체 값이다 → 양도가액 ≠ 전체
+ *   · 지분 양도는 STEP 0.42가 가업상속 입력도 지분분으로 줄이므로 전제가 성립한다(transfer-fb-share Q-4) — 지분이 아닌데 총 물건가 ≠ 양도가액이면 후퇴
  * 전제가 깨지면 부분별 양도차익을 만들지 않고 종전 비례 안분 경로로 후퇴한다(PR 전과 비트 동일, echo 없음).
  */
 export interface FbSlicePremise {
@@ -111,7 +111,10 @@ export interface FbSlicePremise {
 
 function fbSlicePremiseHolds(premise: FbSlicePremise, terms: FbImputedTerms): boolean {
   if (premise.acquisitionUsed !== terms.decedentTerm + terms.heirTerm) return false;
-  if (premise.ownershipRatio !== undefined && premise.ownershipRatio < 1) return false;
+  // 지분: STEP 0.42가 의제 두 항을 같은 ownershipRatio로 줄였고 양도가액·필요경비도 지분분이다 → X = 양도가액 − 필요경비가 성립한다
+  //   (계획서 transfer-fb-share Q-4 — #3678의 지분 후퇴 가드 해제).
+  if (premise.ownershipRatio !== undefined && premise.ownershipRatio < 1) return true;
+  // 지분이 아닌데 총 물건가 ≠ 양도가액이면 원인을 모른다 — 종전대로 후퇴
   return premise.totalPropertyTransferPrice === undefined || premise.totalPropertyTransferPrice === premise.transferPrice;
 }
 
