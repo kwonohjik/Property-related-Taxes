@@ -189,6 +189,7 @@ export function PropertyCard({
         nblCarryoverDeemed={nblCarryoverDeemed}
         {...(saleSplitActual ? { saleSplitActual } : {})}
         phdApartment={phdApartment}
+        bundledItemLabel={breakdown.propertyLabel}
       />
     </div>
   );

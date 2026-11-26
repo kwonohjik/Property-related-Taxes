@@ -232,6 +232,8 @@ export function applyPhase3Normalize(a: Record<string, unknown>): void {
   if (a.bgCoDonorPresumedAcquisitionTotal === undefined) a.bgCoDonorPresumedAcquisitionTotal = "";
   // 가업상속공제 §97의2④ — 미사용이면 undefined 유지 (3중 패턴: factory=undefined)
   if (a.familyBusinessInheritance === null) a.familyBusinessInheritance = undefined;
+  // 지분 × 가업상속 «물건 전체 기준» 확인 — 레거시 저장분은 false(지분 모드면 ⑧이 확인을 요구 · 이중 곱셈 차단)
+  if (typeof a.fbShareBasisConfirmed !== "boolean") a.fbShareBasisConfirmed = false;
   // F-3 적용률 법정량 — 형태가 깨진 값(다른 kind·숫자 아님)은 버리고 「% 직접 입력」 모드로 복원한다.
   // 값의 정합(분모 0 등)은 ⑧이 막는다 — 여기서 고쳐 쓰지 않는다.
   {

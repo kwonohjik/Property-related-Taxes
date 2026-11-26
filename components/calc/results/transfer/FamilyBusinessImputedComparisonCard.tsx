@@ -50,6 +50,14 @@ interface Props {
   filingItemCount?: number;
   /** 사후관리 추징 연동 링크 — 다종목에서 같은 공제액이 카드마다 실리므로 첫 카드에만 둔다(이중 입력 방지). 기본 true */
   showPostMgmtLink?: boolean;
+  /** 번들(축 B·함께 양도) 안의 자산 카드 — 공제액이 단독으로 본 값이라는 «확인 필요» 한 줄(최종 결정 Q-8) */
+  bundled?: boolean;
+}
+
+/** 지분 echo(부동산 · 지분율 < 1일 때만) — 엔진 `ownershipRatio`·`wholeInput` */
+function shareEcho(d: FamilyBusinessCgtDetail | StockFamilyBusinessDetail) {
+  if (!("wholeInput" in d) || d.ownershipRatio === undefined || !d.wholeInput) return null;
+  return { pct: `${parseFloat((d.ownershipRatio * 100).toFixed(4))}%`, whole: d.wholeInput };
 }
 
 // ── 행 컴포넌트 ─────────────────────────────────────────────────
@@ -153,6 +161,7 @@ export function FamilyBusinessImputedComparisonCard({
   longTermHoldingDeduction,
   filingItemCount,
   showPostMgmtLink = true,
+  bundled = false,
 }: Props) {
   const {
     imputedAcquisitionPrice,
@@ -172,6 +181,8 @@ export function FamilyBusinessImputedComparisonCard({
   const restPct = formatFractionPercent(frac.denominator - frac.numerator, frac.denominator);
 
   const stock = isStockDetail(detail) ? detail : null;
+  const share = shareEcho(detail);
+  const wholeOf = (v: number | undefined) => (share && v ? ` (물건 전체 ${formatKRW(v)} × 지분 ${share.pct})` : "");
   // 다종목이면 세 금액은 신고 단위 결정세액(비가업 종목 포함)의 차이 1회분이다 — 종목 간에 더하지 않는다
   const fbItemCount = stock?.fbItemCount ?? 1;
   const filingCount = Math.max(filingItemCount ?? 1, fbItemCount);
@@ -196,6 +207,11 @@ export function FamilyBusinessImputedComparisonCard({
             ? "의제 취득가액 = 가업 lot마다 (피상속인 원취득가액 × 적용률 + 상속개시일 평가액 × (1 − 적용률))의 합계 — 적용률은 lot별 표"
             : `의제 취득가액 = 피상속인 원취득가액 × ${ratePct}% + 상속개시일 평가액 × ${restPct}%`}
         </p>
+        {share && (
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200 mt-0.5" data-testid="fb-share-caption">
+            내 지분 {share.pct} 기준 — 물건 전체 금액에 지분율을 곱한 값입니다. 가업상속공제적용률은 곱하지 않았습니다.
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
           <LawArticleModal legalBasis="소득세법 §97의2④" label="§97의2④ 가업상속 의제" />
           <LawArticleModal legalBasis="상속세및증여세법 §18의2⑩" label="§18의2⑩ 양도소득세 상당액 공제" />
@@ -222,7 +238,7 @@ export function FamilyBusinessImputedComparisonCard({
                     ? // lot마다 1주당이 달라 평균 × 주식수가 합계와 어긋날 수 있다 — 합계와 배정 주식수만 보이고 lot별 값은 아래 표
                       `피상속인 원취득가액 (배정 주식수 ${formatKRW(stock.shareCount)} · lot별 1주당은 아래 표)`
                     : `피상속인 원취득가액 (1주당 ${formatKRW(stock.decedentAcquisitionPricePerShare)} × 주식수 ${formatKRW(stock.shareCount)})`
-                  : "피상속인 원취득가액"
+                  : `피상속인 원취득가액${wholeOf(share?.whole.decedentAcquisitionPrice)}`
               }
               value={formatKRW(decedentAcquisitionPrice)}
               sub
@@ -231,13 +247,13 @@ export function FamilyBusinessImputedComparisonCard({
                 종전에는 이 행이 없어 표 안의 세 숫자가 서로 맞지 않았다(실측 괴리 80,000,000원). */}
             {!!decedentCapitalExpenditure && (
               <Row
-                label="피상속인 자본적 지출액"
+                label={`피상속인 자본적 지출액${wholeOf(share?.whole.decedentCapitalExpenditure)}`}
                 value={formatKRW(decedentCapitalExpenditure)}
                 sub
               />
             )}
             <Row
-              label={stock ? "상속개시일 평가액 (취득가액 입력)" : "상속개시일 자산 평가액"}
+              label={stock ? "상속개시일 평가액 (취득가액 입력)" : `상속개시일 자산 평가액${wholeOf(share?.whole.inheritanceMarketValue)}`}
               value={formatKRW(inheritanceMarketValue)}
               sub
             />
@@ -310,6 +326,13 @@ export function FamilyBusinessImputedComparisonCard({
               value={formatKRW(creditAmount)}
               highlight
             />
+            {bundled && (
+              <tr>
+                <td colSpan={2} className="px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200" data-testid="fb-bundled-credit-note">
+                  이 공제액은 이 자산을 함께 계산한 신고 안에서 단독으로 본 두 세액의 차입니다. 합산 과세 기준 값과 다를 수 있습니다 — 확인 필요.
+                </td>
+              </tr>
+            )}
 
           </tbody>
         </table>
@@ -324,6 +347,9 @@ export function FamilyBusinessImputedComparisonCard({
         </p>
       )}
 
+      {fbLthdDetail && share && (
+        <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="fb-lthd-share-caption">아래 부분별 장기보유특별공제는 내 지분 {share.pct} 기준입니다.</p>
+      )}
       {fbLthdDetail && <FamilyBusinessLthdPortionTable detail={fbLthdDetail} totalDeduction={longTermHoldingDeduction ?? 0} />}
 
       {/* 적용 분기 안내 */}

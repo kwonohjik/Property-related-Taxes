@@ -29,7 +29,7 @@ describe("겸용주택 가업상속공제 토글", () => {
     const sw = screen.getAllByRole("switch")[0];
     expect(sw).not.toHaveAttribute("data-disabled");
     fireEvent.click(sw);
-    expect(onChange).toHaveBeenCalledWith({ familyBusinessInheritance: undefined });
+    expect(onChange).toHaveBeenCalledWith({ familyBusinessInheritance: undefined, fbShareBasisConfirmed: false });
   });
 
   it("값이 없으면 켤 수 없다(미지원 안내)", () => {

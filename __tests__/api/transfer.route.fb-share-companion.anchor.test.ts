@@ -47,7 +47,8 @@ const inheritCard = (id: string, fb: typeof FB | undefined = FB) =>
     acquisitionCause: "inheritance", acquisitionDate: "2022-04-10", inheritanceStartDate: "2022-04-10",
     fixedAcquisitionPrice: "1,500,000,000", inheritanceAssetKind: "land", publishedValueAtInheritance: "1,500,000,000",
     decedentAcquisitionDate: "2012-03-08", transferExpense: "30,000,000",
-    ...(fb ? { familyBusinessInheritance: fb } : {}),
+    // PR-3 ⑧ V8-1 — 지분 카드의 FB는 «물건 전체 기준» 확인이 있어야 계산한다
+    ...(fb ? { familyBusinessInheritance: fb, fbShareBasisConfirmed: true } : {}),
   }) as unknown as AssetForm;
 const purchaseCard = (id: string) =>
   Object.assign({ ...makeDefaultAsset(1) }, {
@@ -105,6 +106,9 @@ describe("FS-15 축 B — 둘째 카드 상속+FB 50% (종전 435,000,000 = FB �
     expect(d.wholeInput).toEqual({ decedentAcquisitionPrice: 500_000_000, inheritanceMarketValue: 1_500_000_000 });
     expect(a.properties[1].transferGain).toBe(485_000_000);
     expect(a.properties[1].longTermHoldingDeduction).toBe(127_700_000);
+    // PR-3 E-3 — 번들 breakdown에 부분별 장특 echo가 실린다(pickValuationDetails)
+    expect(a.properties[1].fbLthdDetail.basis).toBe("slice_gain");
+    expect(a.properties[0].fbLthdDetail).toBeUndefined();
   });
 });
 

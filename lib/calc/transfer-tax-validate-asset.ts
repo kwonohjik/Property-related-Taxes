@@ -53,6 +53,7 @@ import {
 } from "./transfer-tax-api-asset-basics";
 import { allowsFamilyBusinessInheritance } from "./transfer-fb-gate";
 import { familyBusinessRateBasisError } from "@/lib/tax-engine/family-business-applied-rate";
+import { familyBusinessShareError } from "./transfer-fb-share-basis";
 import { calcGiftHouseholdFactAsked } from "./gift-household-payload";
 import { giftHouseholdFactErrors } from "./gift-household-payload";
 
@@ -483,6 +484,9 @@ export function validateAssetEntry(
     if (basisError) return `${label}: 가업상속공제 — ${basisError}`;
     if (!fb.inheritanceDate)
       return `${label}: 가업상속공제 — 상속개시일을 입력하세요.`;
+    // 지분 모드(transfer-fb-share) — 금액은 물건 전체(100%) 기준이고 엔진이 지분율을 곱한다. 카드마다 자기 지분율로 판정한다.
+    const fbShareError = familyBusinessShareError(a, fb);
+    if (fbShareError) return `${label}: ${fbShareError}`;
   }
 
   // ⑧ 장기임대주택 거주주택 비과세 특례 검증 (소령 §155⑳) — 상생임대·조정 취득·§154① 단서·합가 문항은 ⑤ 카드와 같은 폼 사실(`calcRentalResidenceFacts`).
