@@ -39,6 +39,8 @@ interface AcquisitionLotsMatrixProps {
   onMatchingsChange: (matchings: SpecificMatchingForm[]) => void;
   /** 양도 주식수 (폼 전역) — 개별법 배정 합계 일치 검증 표시용 */
   transferShareCount: number;
+  /** 상속 lot의 §97의2④ 가업상속 칸이 읽는 폼 전체(시장·취득방식·양도일·배정방법 맥락) */
+  form: StockTransferFormData;
 }
 
 export function AcquisitionLotsMatrix({
@@ -49,6 +51,7 @@ export function AcquisitionLotsMatrix({
   specificMatchings,
   onMatchingsChange,
   transferShareCount,
+  form,
 }: AcquisitionLotsMatrixProps) {
   const summary = useMemo(() => {
     const totalAcq = lots.reduce((s, l) => s + parseInt(l.shareCount || "0", 10), 0);
@@ -166,6 +169,7 @@ export function AcquisitionLotsMatrix({
               onUpdate={(patch) => updateLot(idx, patch)}
               onDelete={() => deleteLot(idx)}
               radioNamePrefix="matrixDonorRelation"
+              fbForm={form}
               extraFields={
                 isSpecific ? (
                   <FieldCard

@@ -29,6 +29,7 @@ import {
   lotCauseMessage,
 } from "./stock-transfer-required-inputs";
 import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
+import { validateStockFamilyBusinessLots } from "./stock-transfer-tax-validate-family-business";
 import { judgeSplitSalePeriods, splitSalePeriodMessage, splitSalePeriodFacts } from "./stock-split-sale-period-gate";
 
 function parseF(s: string): number {
@@ -288,6 +289,8 @@ export function validateStep1Domestic(form: StockTransferFormData): StockValidat
         errors.push({ field: `transferLots[${i}].perShareTransferPrice`, message: `매도 lot #${i + 1}의 1주당 단가는 0보다 커야 합니다 (C-23)`, severity: "error" });
       }
     });
+    // §97의2④ 가업상속 lot — 술어를 통과한 상속 lot만(일자별 다건은 같은 검사를 Step2가 부른다)
+    errors.push(...validateStockFamilyBusinessLots(form));
     // 매도 건이 한 계산에 담길 수 없는 기간에 걸쳤는가 — 연도·대주주 기준 변경일은 이 칸에서 고친다
     //   (예정신고 기간은 신고 유형으로도 풀리므로 Step3 — ⑫와 같은 leaf)
     for (const v of judgeSplitSalePeriods(splitSalePeriodFacts(form))) {

@@ -12,7 +12,6 @@
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { buildStockAggregateFilingPayload } from "./stock-preliminary-paid";
-import type { AcquisitionLotForm } from "@/lib/stores/calc-wizard-stock-types";
 import { SYNTH_SINGLE_TRANSFER_ID } from "@/lib/stores/calc-wizard-stock-store";
 import { adaptFlatToApiBody } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
 import { resolveListingClosingAvg } from "@/lib/tax-engine/stock-transfer/post-listing-flat-adapter";
@@ -55,53 +54,13 @@ import { effectiveSingleAcquisitionCause } from "./stock-acquisition-cause";
 import { effectiveAcquisitionActualInputMode } from "./stock-transfer-input-mode";
 import { effectiveTransferDate } from "@/lib/calc/stock-effective-transfer-date";
 import { appendFamilyBusinessBody } from "./stock-transfer-tax-api-family-business";
+import { mapAcquisitionLotToBody } from "./stock-transfer-tax-api-acquisition-lot";
 
 export { buildForeignStockApiBody, buildExitTaxApiBody };
 
 // ============================================================
 // ④ API 변환 — 폼 → fetch body (⑬ body spread 포함)
 // ============================================================
-
-/**
- * 매수 lot 폼 → API body (⑬ body spread).
- *
- * 🔑 **lots-only 모드와 split 모드가 이 함수 하나를 쓴다.** 종전에는 두 곳에 복사돼 있었고
- * split 쪽에만 `donorAcquisitionDate` 매핑이 **빠져 있었다** — 그래서 split 모드에서는
- * §104②2호 통산도 §97의2① 승계도 **엔진에 도달하지 못했다**(계획서 P-7).
- * 분기를 늘릴 때 한쪽만 고치는 사고를 막으려면 여기 한 곳만 있어야 한다.
- */
-function mapAcquisitionLotToBody(lot: AcquisitionLotForm): Record<string, unknown> {
-  const o: Record<string, unknown> = {
-    id: lot.id,
-    acquisitionDate: lot.acquisitionDate,
-    shareCount: parseIntOrUndef(lot.shareCount) ?? 0,
-    perShareAcquisitionPrice: parseIntOrUndef(lot.perShareAcquisitionPrice) ?? 0,
-    // 유상증자·과세 무상주 → 「매매」(엔진 enum 불변 — `stock-acquisition-cause.ts`)
-    acquisitionCause: toEngineAcquisitionCause(lot.acquisitionCause),
-  };
-  if (lot.acquisitionCause === "inheritance" && lot.decedentAcquisitionDate) {
-    o.decedentAcquisitionDate = lot.decedentAcquisitionDate;
-  }
-  if (lot.acquisitionCause === "carryover_gift") {
-    // §104②2호 세율 기산 + §97의2①1호 취득가액 승계
-    if (lot.donorAcquisitionDate) o.donorAcquisitionDate = lot.donorAcquisitionDate;
-    const donorPrice = parseIntOrUndef(lot.donorAcquisitionPrice ?? "");
-    if (donorPrice !== undefined) o.donorAcquisitionPrice = donorPrice;
-    // §97의2①2호 증여자 자본적지출 · ①3호 증여세(산출세액 + 과세가액 = 안분 분모)
-    const donorCapex = parseIntOrUndef(lot.donorCapitalExpenditure ?? "");
-    if (donorCapex !== undefined) o.donorCapitalExpenditure = donorCapex;
-    const donorGiftTax = parseIntOrUndef(lot.donorGiftTaxAmount ?? "");
-    if (donorGiftTax !== undefined) o.donorGiftTaxAmount = donorGiftTax;
-    const donorGiftBase = parseIntOrUndef(lot.donorGiftTaxableValue ?? "");
-    if (donorGiftBase !== undefined) o.donorGiftTaxableValue = donorGiftBase;
-    if (lot.donorRelation) o.donorRelation = lot.donorRelation;
-    if (lot.donorDeceased) o.donorDeceased = true;
-  }
-  if (lot.acquisitionCause === "merger_split" && lot.preMergerAcquisitionDate) {
-    o.preMergerAcquisitionDate = lot.preMergerAcquisitionDate;
-  }
-  return o;
-}
 
 export function buildStockTransferApiBody(form: StockTransferFormData): Record<string, unknown> {
   // ── PR-4A 해외주식 분기 (④⑬) ──
@@ -263,7 +222,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
       // 엔진 변경 없음 — isSplitMode() 분기 그대로 사용
       // ─────────────────────────────────────────────────────────────
       body.costAllocationMethod = form.costAllocationMethod || "fifo";  // R-3 default
-      body.acquisitionLots = form.acquisitionLots.map(mapAcquisitionLotToBody);
+      body.acquisitionLots = form.acquisitionLots.map((lot) => mapAcquisitionLotToBody(lot, form));
       // 합성 transferLot — 폼 전역 단일 양도 정보로 1행 생성
       // ID prefix "__synth_single_transfer__" 로 사용자 입력 ID와 충돌 차단 (R-5)
       // total 모드 호환: transferActualInputMode === "total" 시 합계 → 1주당 단가 역산 (round)
@@ -604,7 +563,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   // ── 분할 매수·분할 양도 (Plan v2.2) ──⑪⑫⑬
   if (form.lotsMode === "split") {
     body.costAllocationMethod = form.costAllocationMethod || "fifo";
-    body.acquisitionLots = form.acquisitionLots.map(mapAcquisitionLotToBody);
+    body.acquisitionLots = form.acquisitionLots.map((lot) => mapAcquisitionLotToBody(lot, form));
     body.transferLots = form.transferLots.map((lot) => ({
       id: lot.id,
       transferDate: lot.transferDate,

@@ -454,6 +454,7 @@ export function Step2({ form, onChange }: Step2Props) {
                       onChange({ specificMatchings: matchings })
                     }
                     transferShareCount={parseInt(form.shareCount || "0", 10)}
+                    form={form}
                   />
                   {/* lots-only — 매트릭스 아래: 취득일을 입력하는 동안 카드가 위에 생겨 입력 위치가 밀리지 않게 한다 */}
                   <PreDeemedLotsClause1Card form={form} onChange={onChange} />

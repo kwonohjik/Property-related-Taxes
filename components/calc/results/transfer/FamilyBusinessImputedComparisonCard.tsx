@@ -32,6 +32,7 @@ import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { FamilyBusinessLthdPortionTable } from "@/components/calc/results/transfer/FamilyBusinessLthdPortionTable";
 import type { FbLthdSliceDetail } from "@/lib/tax-engine/types/fb-lthd.types";
 import type { StockFamilyBusinessDetail } from "@/lib/tax-engine/stock-transfer/types/stock-family-business.types";
+import { FB_MOVING_AVG_NOTICE } from "@/lib/tax-engine/stock-transfer/stock-family-business-lot";
 
 interface Props {
   /** 부동산 `FamilyBusinessCgtDetail` 또는 주식 `StockFamilyBusinessDetail`(1주당 × 주식수 행·신고 단위 합계 안내가 더해진다) */
@@ -83,6 +84,66 @@ function isStockDetail(d: FamilyBusinessCgtDetail | StockFamilyBusinessDetail): 
   return "shareCount" in d;
 }
 
+/** 적용률 법정량 한 줄 — lot별 표에서 쓴다 */
+function basisText(b: NonNullable<StockFamilyBusinessDetail["appliedRateBasis"]>): string {
+  return b.kind === "deduction_ratio"
+    ? `가업상속공제금액 ${formatKRW(b.deductionAmount)} / 가업상속 재산가액 ${formatKRW(b.businessEstateValue)}`
+    : `(법인 총자산가액 ${formatKRW(b.totalAssets)} − 사업무관자산가액 ${formatKRW(b.nonBusinessAssets)}) / 법인 총자산가액 ${formatKRW(b.totalAssets)}`;
+}
+
+/**
+ * 취득 lot 단위 입력에서 가업 lot이 둘 이상 매도에 배정됐을 때 — lot마다 법정량·피상속인 취득가액이 달라
+ * 위 표의 상단 값은 첫 lot 기준이다. 정확한 값은 여기(배정 주식수 기준 금액).
+ * 이동평균(`pooled`)이면 취득가액이 풀 평균 단가로 정해져 이 금액은 FIFO 물량 기준 **참고값**이다.
+ */
+function FamilyBusinessLotsTable({ detail }: { detail: StockFamilyBusinessDetail }) {
+  const lots = detail.lots;
+  if (!lots || lots.length < 2) return null;
+  return (
+    <div className="space-y-1.5" data-testid="fb-lots-table">
+      <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
+        가업상속 lot별 의제 취득원가 (매도에 배정된 주식수 기준)
+      </p>
+      <div className="overflow-x-auto rounded-md border border-border bg-background">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="border-b border-border text-muted-foreground">
+              <th className="px-2 py-1.5 text-left font-semibold">매수 건</th>
+              <th className="px-2 py-1.5 text-right font-semibold">배정 주식수</th>
+              <th className="px-2 py-1.5 text-left font-semibold">가업상속공제적용률</th>
+              <th className="px-2 py-1.5 text-right font-semibold">피상속인 1주당</th>
+              <th className="px-2 py-1.5 text-right font-semibold">피상속인 취득가액</th>
+              <th className="px-2 py-1.5 text-right font-semibold">자본적 지출액</th>
+              <th className="px-2 py-1.5 text-right font-semibold">상속개시일 평가액</th>
+              <th className="px-2 py-1.5 text-right font-semibold">의제 취득원가</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lots.map((l, i) => {
+              const f = resolveFamilyBusinessRateFraction(l.appliedRate, l.appliedRateBasis);
+              return (
+                <tr key={l.lotId ?? i} className="border-b border-border last:border-0" data-testid="fb-lots-row">
+                  <td className="px-2 py-1.5">가업상속 매수 건 {i + 1}</td>
+                  <td className="px-2 py-1.5 text-right font-mono tabular-nums">{formatKRW(l.shares)}</td>
+                  <td className="px-2 py-1.5">
+                    {formatFractionPercent(f.numerator, f.denominator)}%
+                    <span className="block text-micro text-muted-foreground">{basisText(l.appliedRateBasis)}</span>
+                  </td>
+                  <td className="px-2 py-1.5 text-right font-mono tabular-nums">{formatKRW(l.decedentAcquisitionPricePerShare)}</td>
+                  <td className="px-2 py-1.5 text-right font-mono tabular-nums">{formatKRW(l.decedentPart)}</td>
+                  <td className="px-2 py-1.5 text-right font-mono tabular-nums">{l.capex ? formatKRW(l.capex) : "-"}</td>
+                  <td className="px-2 py-1.5 text-right font-mono tabular-nums">{formatKRW(l.valuationPart)}</td>
+                  <td className="px-2 py-1.5 text-right font-mono tabular-nums font-semibold">{formatKRW(l.buyCost)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── 메인 컴포넌트 ───────────────────────────────────────────────
 
 export function FamilyBusinessImputedComparisonCard({
@@ -114,6 +175,9 @@ export function FamilyBusinessImputedComparisonCard({
   // 다종목이면 세 금액은 신고 단위 결정세액(비가업 종목 포함)의 차이 1회분이다 — 종목 간에 더하지 않는다
   const fbItemCount = stock?.fbItemCount ?? 1;
   const filingCount = Math.max(filingItemCount ?? 1, fbItemCount);
+  // 가업 lot이 2개 이상 배정되면 lot마다 적용률·피상속인 단가가 다를 수 있다 — 상단 적용률(첫 lot 값)로 쓰면
+  // 「합계 × 첫 lot 적용률」이 의제 취득가액과 맞지 않는다(14지점 점검 lot M-2). 적용률은 lot별 표에서만 보인다.
+  const multiLot = (stock?.lots?.length ?? 0) >= 2;
 
   // 의제 산식이 일반보다 유리한 경우 (차액 공제 불필요)
   const imputedIsFavorable = creditAmount === 0 && cgtUnderSection97_2_4 <= cgtUnderSection97;
@@ -128,13 +192,22 @@ export function FamilyBusinessImputedComparisonCard({
           {itemLabel && <span className="ml-2 text-xs font-normal">{itemLabel}</span>}
         </p>
         <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
-          의제 취득가액 = 피상속인 원취득가액 × {ratePct}% + 상속개시일 평가액 × {restPct}%
+          {multiLot
+            ? "의제 취득가액 = 가업 lot마다 (피상속인 원취득가액 × 적용률 + 상속개시일 평가액 × (1 − 적용률))의 합계 — 적용률은 lot별 표"
+            : `의제 취득가액 = 피상속인 원취득가액 × ${ratePct}% + 상속개시일 평가액 × ${restPct}%`}
         </p>
         <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
           <LawArticleModal legalBasis="소득세법 §97의2④" label="§97의2④ 가업상속 의제" />
           <LawArticleModal legalBasis="상속세및증여세법 §18의2⑩" label="§18의2⑩ 양도소득세 상당액 공제" />
         </div>
       </div>
+
+      {stock?.pooled && (
+        <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="fb-pooled-note">
+          이동평균법에서는 가업 주식 구분이 없어 아래 요약은 FIFO 물량 기준 참고값입니다 — 실제 취득가액은 가업 주식의 단가가 풀 평균에
+          섞인 값(로트별 매칭 상세의 매수단가 × 주식수)입니다. {FB_MOVING_AVG_NOTICE}
+        </p>
+      )}
 
       {/* 산식 표 */}
       <div className="rounded-md border border-border overflow-hidden bg-background">
@@ -145,7 +218,10 @@ export function FamilyBusinessImputedComparisonCard({
             <Row
               label={
                 stock
-                  ? `피상속인 원취득가액 (1주당 ${formatKRW(stock.decedentAcquisitionPricePerShare)} × 주식수 ${formatKRW(stock.shareCount)})`
+                  ? stock.lots && stock.lots.length >= 2
+                    ? // lot마다 1주당이 달라 평균 × 주식수가 합계와 어긋날 수 있다 — 합계와 배정 주식수만 보이고 lot별 값은 아래 표
+                      `피상속인 원취득가액 (배정 주식수 ${formatKRW(stock.shareCount)} · lot별 1주당은 아래 표)`
+                    : `피상속인 원취득가액 (1주당 ${formatKRW(stock.decedentAcquisitionPricePerShare)} × 주식수 ${formatKRW(stock.shareCount)})`
                   : "피상속인 원취득가액"
               }
               value={formatKRW(decedentAcquisitionPrice)}
@@ -166,7 +242,7 @@ export function FamilyBusinessImputedComparisonCard({
               sub
             />
             {/* F-3: 적용률을 금액으로 입력했으면 그 법정량을 보인다(소령 §163의2③). */}
-            {appliedRateBasis?.kind === "deduction_ratio" && (
+            {!multiLot && appliedRateBasis?.kind === "deduction_ratio" && (
               <Row
                 label={
                   <span data-testid="fb-rate-basis-row">
@@ -182,7 +258,7 @@ export function FamilyBusinessImputedComparisonCard({
               />
             )}
             {/* 신 ③2호(양도일 2026.2.27. 이후 법인가업) — 총자산가액 중 사업무관자산을 뺀 비율 */}
-            {appliedRateBasis?.kind === "corporate_business_assets" && (
+            {!multiLot && appliedRateBasis?.kind === "corporate_business_assets" && (
               <Row
                 label={
                   <span data-testid="fb-rate-basis-row">
@@ -199,9 +275,11 @@ export function FamilyBusinessImputedComparisonCard({
             )}
             <Row
               label={
-                decedentCapitalExpenditure
-                  ? `의제 취득가액 ((원취득가 + 자본적지출) × ${ratePct}% + 평가액 × ${restPct}%)`
-                  : `의제 취득가액 (원취득가 × ${ratePct}% + 평가액 × ${restPct}%)`
+                multiLot
+                  ? "의제 취득가액 (가업 lot별 합계 · lot별 적용률은 아래 표)"
+                  : decedentCapitalExpenditure
+                    ? `의제 취득가액 ((원취득가 + 자본적지출) × ${ratePct}% + 평가액 × ${restPct}%)`
+                    : `의제 취득가액 (원취득가 × ${ratePct}% + 평가액 × ${restPct}%)`
               }
               value={formatKRW(imputedAcquisitionPrice)}
               highlight
@@ -236,6 +314,8 @@ export function FamilyBusinessImputedComparisonCard({
           </tbody>
         </table>
       </div>
+
+      {stock?.lots && stock.lots.length >= 2 && <FamilyBusinessLotsTable detail={stock} />}
 
       {stock && filingCount >= 2 && (
         <p className="text-xs text-amber-800 dark:text-amber-200" data-testid="fb-item-count-note">

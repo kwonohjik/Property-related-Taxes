@@ -22,6 +22,7 @@ import { applyCapitalAdjustmentsToLots } from "@/lib/tax-engine/stock-transfer/l
 import { applyPreDeemedToLots } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
 import { buildPreDeemedLotClause1Context } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-lot-clause1";
 import { isLotsModeForm, isSection94_4Form } from "./stock-transfer-section94-4-form";
+import { isStockFbLotOn, stockFbLotInputGaps } from "./stock-family-business-lots";
 import type { LotMatchingDetail } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
 
@@ -59,6 +60,11 @@ export function previewSplitAllocation(form: StockTransferFormData): LotMatching
   // 분할 양도 + lots-only(다건 취득) 둘 다 같은 엔진 매칭을 쓴다 — 사이드바의 lots-only 가중평균 근사를 대체한다
   if (!isLotsModeForm(form)) return null;
   if (!(isSplitLotsMode(form) ? isSplitInputComplete(form) : isLotsOnlyInputComplete(form))) return null;
+  // §97의2④ 가업 lot 입력이 미완결이면 산출하지 않는다 — 빈칸이 0으로 읽혀 적용률 0%·100%의 「그럴듯한 오답」이
+  // 사이드바·미리보기에 뜬다(단건 `previewStockFbAcquisitionPrice`의 gap 가드와 같은 규약 · 14지점 점검 lot M-1).
+  if ((form.acquisitionLots ?? []).some((lot, i) => isStockFbLotOn(form, lot) && stockFbLotInputGaps(form, lot, i).length > 0)) {
+    return null;
+  }
 
   let detail: LotMatchingDetail;
   try {
@@ -83,7 +89,10 @@ export function previewSplitAllocation(form: StockTransferFormData): LotMatching
       preDeemed.applied ? clause1.ctx : undefined,
     );
   } catch {
-    // 보조 입력(상속 피상속인 취득일 등)의 날짜가 입력 도중이면 강제 변환이 실패한다
+    // 보조 입력(상속 피상속인 취득일 등)의 날짜가 입력 도중이면 강제 변환이 실패한다.
+    // §97의2④ 가업상속 lot도 같은 방어선이다 — 입력이 덜 찼거나 매도 배정 뒤에야 드러나는 법정량 시대 불일치는
+    // `allocateLots`가 `TaxCalculationError`로 던진다. ⑧(`validateStockFamilyBusinessLots`)이 먼저 막지만 이 미리보기는
+    // 입력 도중에 렌더마다 불리므로 throw를 화면 크래시로 내지 않고 「산출 대기」(null)로 돌린다.
     return null;
   }
 

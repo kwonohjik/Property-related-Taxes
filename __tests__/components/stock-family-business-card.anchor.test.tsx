@@ -77,9 +77,10 @@ describe("K-1 카드 노출·disabled", () => {
     expect(within(toggle).getByRole("switch").getAttribute("aria-checked")).toBe("false");
   });
 
-  it("K-1-5 일자별 다건(lots) 취득이면 disabled + lot 미지원 사유", () => {
+  it("K-1-5 일자별 다건(lots) 취득이면 disabled + 「각 상속 lot 카드에서 입력」 안내(PR-1d′ — 종목 축과 lot 축은 배타)", () => {
     render(<Harness initial={form({ acquisitionActualInputMode: "lots" })} />);
     expect(screen.getByTestId("stock-fb-toggle").textContent).toContain("취득 lot 단위");
+    expect(screen.getByTestId("stock-fb-toggle").textContent).toContain("각 상속 lot 카드");
     expect(screen.queryByTestId("stock-fb-body")).toBeNull();
   });
 
