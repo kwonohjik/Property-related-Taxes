@@ -39,29 +39,33 @@ describe("F-3 prefill 법정량", () => {
       [record({ deduction: 40_000_000_000, finalValue: 120_000_000_000, appliedRate: 40_000_000_000 / 120_000_000_000, usedDirectInput: false })],
       "2026-05-22",
     );
-    expect(candidates[0].rateBasis).toEqual({ kind: "deduction_ratio", deductionAmount: 40_000_000_000, businessEstateValue: 120_000_000_000 });
+    expect(candidates[0].familyBusinessAssets[0].rateBasis).toEqual({ kind: "deduction_ratio", deductionAmount: 40_000_000_000, businessEstateValue: 120_000_000_000 });
     const prefill = candidateToPrefill(candidates[0], "asset-1")!;
-    expect(prefill.fbRateBasis).toEqual(candidates[0].rateBasis);
+    expect(prefill.fbRateBasis).toEqual(candidates[0].familyBusinessAssets[0].rateBasis);
     expect(familyBusinessRateBasisError(prefill.fbRateBasis, prefill.fbDeductionAppliedRate)).toBeNull();
   });
 
-  it("직접입력 모드는 재산가액을 모른다 → 법정량 없음(종전 적용률 그대로)", () => {
+  it("F-2: 직접입력 모드는 재산가액을 모른다 → 법정량 없음 · 적용률을 1로 채우지 않는다(산정 불가 사유)", () => {
     const { candidates } = filterFamilyBusinessInheritanceCandidates(
       [record({ deduction: 30_000_000_000, finalValue: 30_000_000_000, appliedRate: 1, usedDirectInput: true })],
       "2026-05-22",
     );
-    expect(candidates[0].rateBasis).toBeUndefined();
+    expect(candidates[0].familyBusinessAssets[0].rateBasis).toBeUndefined();
+    expect(candidates[0].familyBusinessAssets[0].rateUnavailable).toBe("direct_input");
     const prefill = candidateToPrefill(candidates[0], "asset-1")!;
     expect(prefill.fbRateBasis).toBeUndefined();
-    expect(prefill.fbDeductionAppliedRate).toBe(1);
+    expect(prefill.rateUnavailable).toBe("direct_input");
+    expect(prefill.fbDeductionAppliedRate).toBe(0);
   });
 
-  it("구 레코드(finalValue 없음) → 법정량 없음", () => {
+  it("구 레코드(finalValue 없음) → 법정량 없음 · 이력의 적용률(구 ③ 산식) 그대로", () => {
     const { candidates } = filterFamilyBusinessInheritanceCandidates(
       [record({ deduction: 8_000_000_000, appliedRate: 1, usedDirectInput: false })],
       "2026-05-22",
     );
-    expect(candidates[0].rateBasis).toBeUndefined();
+    expect(candidates[0].familyBusinessAssets[0].rateBasis).toBeUndefined();
+    expect(candidates[0].familyBusinessAssets[0].rateUnavailable).toBeUndefined();
+    expect(candidateToPrefill(candidates[0], "asset-1")!.fbDeductionAppliedRate).toBe(1);
   });
 });
 

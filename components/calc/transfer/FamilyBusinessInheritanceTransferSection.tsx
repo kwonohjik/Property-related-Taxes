@@ -37,6 +37,7 @@ import { isFamilyBusinessAssetScopeDecreeEra, isFamilyBusinessCgtEra } from "@/l
 import { calcFamilyBusinessImputedAcquisitionPrice } from "@/lib/tax-engine/transfer-tax-family-business";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import { formatFractionPercent } from "@/lib/calc/format-fraction-percent";
 import { resolveFamilyBusinessRateFraction } from "@/lib/tax-engine/family-business-applied-rate";
 import type { FamilyBusinessRateBasis } from "@/lib/tax-engine/family-business-applied-rate";
@@ -128,8 +129,15 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
         fbDeductionAppliedRate: prefill.fbDeductionAppliedRate,
         inheritanceDate: prefill.inheritanceDate,
         decedentCapitalExpenditure: fb?.decedentCapitalExpenditure,
-        // F-3: 이력의 공제액·가업상속 재산가액을 그대로 실어 반올림 없이 곱한다(없으면 % 모드)
-        fbRateBasis: prefill.fbRateBasis,
+        // F-3: 이력의 공제액·가업상속 재산가액을 그대로 실어 반올림 없이 곱한다(없으면 % 모드).
+        // F-2: 이력에서 산정할 수 없으면(직접입력 모드 등) 빈 금액 입력으로 시작해 사용자 입력을 받는다 —
+        //      ⑧이 「가업상속 재산가액을 입력하세요」로 막는다. 부동산은 개인가업 법정량만 받는다(target 필터).
+        fbRateBasis:
+          prefill.fbRateBasis?.kind === "deduction_ratio"
+            ? prefill.fbRateBasis
+            : prefill.rateUnavailable
+              ? { kind: "deduction_ratio", deductionAmount: 0, businessEstateValue: 0 }
+              : undefined,
       },
     });
   }
@@ -160,6 +168,10 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
     if (!fb) return;
     onChange({ familyBusinessInheritance: { ...fb, ...patch } });
   }
+
+  /** 소령 §163의2③ 개정(양도일 2026.2.27.) 이후인가 — 적용률 hint 분기(날짜가 비었거나 잘못되면 구 규정) */
+  const hintDate = toOptionalDate(transferDate || asset.acquisitionDate);
+  const newDecreeEra = !!hintDate && isFamilyBusinessAssetScopeDecreeEra(hintDate);
 
   /** 입력 방식 — 저장 필드 없이 `fbRateBasis` 유무에서 파생 */
   const rateMode: RateInputMode = fb?.fbRateBasis ? "amount" : "percent";
@@ -282,10 +294,19 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
             label="가업상속공제적용률"
             required
             hint={
-              <>
-                소령 §163의2③ — 개인가업: <Frac top="공제금액" bottom="가업상속 재산가액" /> / 법인가업:{" "}
-                <Frac top="사업관련자산가액" bottom="총자산가액" />
-              </>
+              /* F-2(A-6): 종전 hint는 시기 구분 없이 「법인가업: 사업관련자산가액/총자산가액」이라 적어,
+                 양도일 2026.2.26. 이전(구 ③ — 법인도 공제금액 ÷ 재산가액)에는 틀린 설명이었다.
+                 부동산은 개인가업 사업용 자산만 대상이다(법인가업 대상은 주식등 — 소령 §163의2④2호). */
+              newDecreeEra ? (
+                <>
+                  소령 §163의2③1호 — <Frac top="가업상속공제금액" bottom="가업상속 재산가액" />. 법인가업의 주식은
+                  주식 양도 화면에서 입력하세요(소령 §163의2④2호).
+                </>
+              ) : (
+                <>
+                  구 소령 §163의2③ — <Frac top="가업상속공제금액" bottom="가업상속 재산가액" />
+                </>
+              )
             }
           >
             {/*
@@ -410,7 +431,8 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
               if (!basis) return "대상 자산은 가업상속공제를 실제로 받은 자산에 한정됩니다.";
               return isFamilyBusinessAssetScopeDecreeEra(new Date(basis))
                 ? "대상 자산은 개인가업의 사업용 자산 또는 법인가업의 주식등입니다 (소득세법 시행령 §163의2④)."
-                : "대상 자산은 가업상속공제를 실제로 받은 자산에 한정됩니다 (대법원 2026두30294 — 공제받은 주식과 받지 않은 주식을 구분·관리).";
+                : // 계획서 V-1: 종전 문구가 인용하던 판례는 판례 검색에서 확인되지 않아 근거로 쓰지 않는다.
+                  "대상 자산은 가업상속공제를 실제로 받은 자산에 한정됩니다 (소득세법 §97의2④ 「가업상속공제가 적용된 자산」 · 소득세법 시행령 §163의2④ 시행 전 양도분 — 대상 범위의 해석 근거 확인 필요).";
             })()}
             {" "}공제받지 않은 자산이 섞여 있으면 자산을 나누어 입력하세요.
           </p>

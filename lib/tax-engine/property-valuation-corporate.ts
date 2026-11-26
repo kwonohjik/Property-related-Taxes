@@ -98,6 +98,23 @@ function sumNonBusinessAssets(
 }
 
 /**
+ * 법인 총자산가액과 그중 사업무관자산을 뺀 자산가액(정수) — 「소득세법 시행령」 §163의2③2호 적용률의 분모·분자.
+ *
+ * 사업무관자산 합계는 `calcCorporateStockAdjustedValue`와 같은 `sumNonBusinessAssets`(상증령 §15⑤2호 가~마목 ·
+ * 과다현금 자동산정 · 시기별 제외 단서)를 쓴다. `ratio`(double)가 아니라 두 정수를 돌려준다 — 적용률을
+ * 분수 그대로 곱하기 위해서다(계획서 `fb-97-2-4-fixes.plan.md` F-2).
+ */
+export function calcCorporateBusinessAssets(
+  totalAssets: number,
+  nonBusinessAssets: CorporateNonBusinessAssets | undefined,
+  deathDate?: string,
+): { totalAssets: number; businessAssets: number } {
+  const total = Math.max(0, totalAssets);
+  const { sum } = sumNonBusinessAssets(nonBusinessAssets, deathDate);
+  return { totalAssets: total, businessAssets: Math.max(0, total - sum) };
+}
+
+/**
  * 법인 영농·가업상속 주식 사업무관자산 차감.
  *
  * @param stockValue        주식 평가가액 (한도 적용 전)
