@@ -30,6 +30,7 @@ export function applyExemptZeroing(
     underReportPenalty: 0,
     latePaymentPenalty: 0,
     electronicFilingCredit: 0,
+    determinedTax: 0,
     // 중간 산식값(transferPrice·acquisitionPrice·transferIncome·basicDeduction·
     // taxBase·calculatedTax·appliedRate·valuationDetail·postListingDetail 등)은
     // result에 그대로 보존되어 echo

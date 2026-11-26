@@ -48,6 +48,7 @@ import { buildExemptResult } from "./stock-transfer-exempt-result";
 import { applyExemptZeroing } from "./apply-exempt-zeroing";
 import { calcSecuritiesTransactionTax } from "./securities-transaction-tax";
 import { resolveStockCarryover } from "./stock-carryover";
+import { calculateStockFamilyBusiness } from "./stock-family-business";
 import { resolveAcquisitionBasis } from "./stock-acquisition-basis";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { stockLossOffsetNotice } from "./loss-offset-notice";
@@ -89,12 +90,16 @@ export function calculateStockTransferTax(
    * ⚠️ `carryover_gift`가 아니면 `resolveStockCarryover`가 입력을 **그대로** 돌려주므로
    *    기존 경로는 한 톨도 바뀌지 않는다.
    */
-  const [resolved] = resolveStockCarryover(
-    [input as StockTransferInput],
-    (list) => calculateStockTransferTaxInternal(list[0]).finalTax,
-    (i) => calculateStockTransferTaxInternal(i).transferIncome,
-  );
-  return calculateStockTransferTaxInternal(resolved);
+  const run = (single: StockTransferInput): StockTransferResult => {
+    const [resolved] = resolveStockCarryover(
+      [single],
+      (list) => calculateStockTransferTaxInternal(list[0]).finalTax,
+      (i) => calculateStockTransferTaxInternal(i).transferIncome,
+    );
+    return calculateStockTransferTaxInternal(resolved);
+  };
+  // §97의2④ 가업상속공제 자산 — 의제 취득가액은 이월과세 해소 **앞**에서 확정한다(본문 강제 · `stock-family-business.ts`).
+  return calculateStockFamilyBusiness(input as StockTransferInput, run) ?? run(input as StockTransferInput);
 }
 
 /**
@@ -604,6 +609,7 @@ export function calculateStockTransferTaxInternal(input: StockTransferInput): St
     penaltyBase: finalizeResult.penaltyBase,
     ...(finalizeResult.fraudSplit ? { fraudSplit: finalizeResult.fraudSplit } : {}),
     electronicFilingCredit: finalizeResult.electronicFilingCredit,
+    determinedTax: finalizeResult.determinedTax,
 
     finalTax: finalizeResult.finalTax,
     localIncomeTax: finalizeResult.localIncomeTax,

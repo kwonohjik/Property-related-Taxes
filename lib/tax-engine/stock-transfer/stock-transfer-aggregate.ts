@@ -34,6 +34,7 @@ import {
   type SecuritiesTransactionTaxTotal,
 } from "./securities-transaction-tax";
 import { resolveStockCarryover } from "./stock-carryover";
+import { resolveAggregateFamilyBusiness } from "./stock-family-business";
 import { resolveSplitRateResult } from "./lot-allocation-tax";
 import {
   BASIC_DEDUCTION_LIMIT,
@@ -173,6 +174,11 @@ export interface StockTransferAggregateResult {
   /** 합산 전자신고 공제 (전체 1회) */
   electronicFilingCredit: number;
   /** 합산 최종세액 */
+  /**
+   * 신고 단위 결정세액 echo = 산출세액 합계 − 외국납부세액공제 − 전자신고 세액공제(가산세 전).
+   * 가업상속 §18의2⑩ 비교(결정세액 기준 · 계획서 Q-6)가 읽는다.
+   */
+  totalDeterminedTax: number;
   totalFinalTax: number;
   /** 합산 지방소득세 */
   totalLocalIncomeTax: number;
@@ -244,18 +250,21 @@ export function calculateStockTransferTaxAggregate(
    *   「국외주식은 이월과세 대상이 아니다」라는 단정이 있었고 국내만 resolve에 넘겼다.
    *   배열 순서는 resolve가 유지한다 — §103②(양도일 순) 배분이 어긋나지 않는다.
    */
-  const resolved = resolveStockCarryover<AggregateStockItemInput>(
-    inputs,
-    // ⚠️ 이월과세 ②3호 비교용 재계산에는 정산을 넣지 않는다 — 비교 대상은 「결정세액」이고
-    //    §111③ 정산은 그 뒤 「납부할 세액」 축이다. 넣으면 비교 기준이 기납부액에 흔들린다.
-    (list) => aggregateCore(list, deductionMode).totalFinalTax,
-    (i) =>
-      isForeignStockItem(i)
-        ? calculateForeignStockTax(i).transferGain
-        : calculateStockTransferTaxInternal(i).transferIncome,
-  );
-
-  return aggregateCore(resolved, deductionMode, filing);
+  const run = (list: AggregateStockItemInput[]): StockTransferAggregateResult => {
+    const resolved = resolveStockCarryover<AggregateStockItemInput>(
+      list,
+      // ⚠️ 이월과세 ②3호 비교용 재계산에는 정산을 넣지 않는다 — 비교 대상은 「결정세액」이고
+      //    §111③ 정산은 그 뒤 「납부할 세액」 축이다. 넣으면 비교 기준이 기납부액에 흔들린다.
+      (l) => aggregateCore(l, deductionMode).totalFinalTax,
+      (i) =>
+        isForeignStockItem(i)
+          ? calculateForeignStockTax(i).transferGain
+          : calculateStockTransferTaxInternal(i).transferIncome,
+    );
+    return aggregateCore(resolved, deductionMode, filing);
+  };
+  // §97의2④ 가업상속공제 종목 — 의제 취득가액을 이월과세 해소 앞에서 확정하고 §18의2⑩은 신고 단위로 비교한다.
+  return resolveAggregateFamilyBusiness(inputs, run);
 }
 
 /**
@@ -477,6 +486,7 @@ function aggregateInOrder(
         underReportPenalty: newFinalize.underReportPenalty,
         latePaymentPenalty: newFinalize.latePaymentPenalty,
         electronicFilingCredit: newFinalize.electronicFilingCredit,
+        determinedTax: newFinalize.determinedTax,
         finalTax: newFinalize.finalTax,
         localIncomeTax: newFinalize.localIncomeTax,
         ...lossOffsetEcho(i),
@@ -726,6 +736,7 @@ function aggregateInOrder(
     ...penaltyEcho(unitPenalty),
     ...penaltyEraEcho(unitPenalty, inputs),
     electronicFilingCredit,
+    totalDeterminedTax: determinedTotal,
     ...(efScope.notice ? { electronicFilingCreditNotice: efScope.notice } : {}),
     ...revisedFilingEcho,
     totalFinalTax,

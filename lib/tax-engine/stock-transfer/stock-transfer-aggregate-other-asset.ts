@@ -100,6 +100,7 @@ export function processOtherAssetItem(
       underReportPenalty: finalize.underReportPenalty,
       latePaymentPenalty: finalize.latePaymentPenalty,
       electronicFilingCredit: finalize.electronicFilingCredit,
+      determinedTax: finalize.determinedTax,
       finalTax: finalize.finalTax,
       localIncomeTax: finalize.localIncomeTax,
       // §104⑤ 크로스 조정용 호별 echo — 위 🔴 참조.

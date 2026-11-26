@@ -41,6 +41,8 @@ export interface FinalizeStockResult {
   underReportPenalty: number;
   latePaymentPenalty: number;
   electronicFilingCredit: number;
+  /** 결정세액 = 산출세액 − 세액공제(가산세 전) */
+  determinedTax: number;
   finalTax: number;
   localIncomeTax: number;
   appliedRules: string[];
@@ -253,6 +255,7 @@ export function finalizeStockTax(
     underReportPenalty: filing.penalty,
     latePaymentPenalty,
     electronicFilingCredit,
+    determinedTax,
     finalTax,
     localIncomeTax,
     appliedRules,
