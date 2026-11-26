@@ -179,6 +179,25 @@ describe("FS-7 정확 규약 — applyRatio(BigInt), Math.floor(x × r) 아님",
   });
 });
 
+describe("FS-7b 절사 순서 — 항목별 applyRatio 선절사 후 §97의2④ 산식 (M-10: 단일 분수 ⌊A·r·n/d⌋와 1원 갈리는 시료)", () => {
+  /**
+   * 피상속인 취득가액 500,000,003 · 평가액 15억 · 지분 1/2 · 적용률 7/10 (손계산):
+   *   선절사(채택 Q-3): A' = ⌊500,000,003 × 1/2⌋ = 250,000,001 → tD = ⌊250,000,001 × 7/10⌋ = ⌊175,000,000.7⌋ = 175,000,000
+   *   단일 분수(기각):  tD = ⌊500,000,003 × 7/20⌋ = ⌊175,000,001.05⌋ = 175,000,001
+   *   tH = ⌊750,000,000 × 3/10⌋ = 225,000,000 (두 방식 같음) → 의제 취득가액 400,000,000 (단일 분수면 400,000,001)
+   * 선절사여야 «지분 r 카드 ≡ 입력을 applyRatio한 100% 단건»(FS-4)과 일반 §97 재귀의 지분 취득가액(applyRatio)이 같은 규약이 된다.
+   */
+  it("의제 취득가액 400,000,000 = 오라클(입력 250,000,001 단건)", () => {
+    const ad = 500_000_003;
+    const a = run({ p: applyRatio(P, 0.5), e: applyRatio(E, 0.5), acq: applyRatio(V, 0.5), ad, v: V, ownershipRatio: 0.5, totalPropertyTransferPrice: P });
+    const b = run({ p: applyRatio(P, 0.5), e: applyRatio(E, 0.5), acq: applyRatio(V, 0.5), ad: 250_000_001, v: 750_000_000 });
+    expect(a.familyBusinessDetail?.imputedAcquisitionPrice).toBe(400_000_000);
+    expect(a.familyBusinessDetail?.decedentAcquisitionPrice).toBe(250_000_001);
+    expect(b.familyBusinessDetail?.imputedAcquisitionPrice).toBe(400_000_000);
+    expect(a.transferGain).toBe(b.transferGain);
+  });
+});
+
 describe("FS-8 적용률은 상속인 단위 — 지분율을 곱하지 않는다", () => {
   for (const r of [0.5, 0.33]) {
     it(`r = ${r}`, () => {
