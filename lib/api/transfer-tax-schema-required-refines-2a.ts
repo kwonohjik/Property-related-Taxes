@@ -503,8 +503,8 @@ export function refineSplitAcquisitionInputs(
  * 토지 파트 취득원인 (D0 G-1~G-3 · D1 결합 제외·토지 취득일·§163⑨ 단서 1호). 엔진 `calcSplitGain`·
  * ⑧ `validateSplitDirectInputs`와 **같은 leaf**(`collectSplitPartCauseIssues`). 단건·다건 주 자산과
  * 컴패니언(`companionAssets[i]`, prefix)이 함께 쓴다. 컴패니언은 자산 종류를 `assetKind`로 보내므로 분리 대상
- * 여부를 호출부가 넘긴다. 컴패니언 스키마에는 `preHousingDisclosure`·`familyBusinessInheritance`가 없다 —
- * 그 사실은 생략된다(= 그 결합이 아니다).
+ * 여부를 호출부가 넘긴다. 컴패니언 스키마에는 `preHousingDisclosure`가 없다 — 그 사실은 생략된다(= 그 결합이 아니다).
+ * `familyBusinessInheritance`는 컴패니언도 받는다(transfer-fb-share Q-5) — 토지·건물 취득원인 분리와 FB 결합 거부가 컴패니언에도 걸린다.
  */
 export function refineSplitPartCause(
   d: Pick<

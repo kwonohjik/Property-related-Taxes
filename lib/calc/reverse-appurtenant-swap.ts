@@ -30,13 +30,12 @@ const DEFAULT_LABEL = /^자산 \d+$/;
 
 /**
  * 첫 자산 토지에 있으면 교환이 **침묵 소실·강등** 또는 다른 ⑧ 차단을 만드는 «첫 자산 전용» 입력 — 컴패니언 위치에서는
- * ④가 보내지 않거나(정밀판정·가업상속) ⑧이 막는다(다필지·매매사례가액). 실측: 계획서 §4-4 · `g1-reverse-appurtenant-swap.anchor.test.ts`.
+ * ④가 보내지 않거나(정밀판정) ⑧이 막는다(다필지·매매사례가액). 가업상속은 컴패니언 위치에서도 ④가 보낸다(transfer-fb-share Q-5) — 가드 대상 아님. 실측: 계획서 §4-4 · `g1-reverse-appurtenant-swap.anchor.test.ts`.
  */
 const FIRST_ASSET_ONLY_INPUTS: readonly { label: string; active: (a: AssetForm) => boolean }[] = [
   { label: "비사업용 토지 정밀판정", active: (a) => a.nblUseDetailedJudgment === true },
   { label: "다필지(환지·합병)", active: (a) => a.parcelMode === true },
   { label: "매매사례가액 추계", active: (a) => a.isSalesCaseAcquisition === true },
-  { label: "가업상속 취득가액", active: (a) => !!a.familyBusinessInheritance },
   /**
    * 토지등급 환산(1990.8.30. 이전 취득) — 컴패니언 payload는 `pre1990Land`를 §163⑨ 취득원인(상속·증여)일 때만 싣고(`transfer-tax-api-companion-payload.ts:421-425`),
    * 주 자산은 매매 취득이어도 싣고 환산 모드를 강제한다. 교환하면 환산+기준시가 없음은 API 400이고, 확정 취득가+`pre1990Enabled`는 취득가액이 환산액에서 입력값으로 바뀐다(리뷰 M2 실측).

@@ -378,6 +378,8 @@ export function buildCompanionEngineInputs(
     commercialAppurtenantLand: c.commercialAppurtenantLand,
     commercialBuildingValuation: c.commercialBuildingValuation,
     burdenedGiftInfo: c.burdenedGiftInfo,
+    // ⑭ 가업상속공제 §97의2④ — 물건 전체 값 그대로(엔진 STEP 0.42가 카드 ownershipRatio로 줄인다 · transfer-fb-share Q-5). inheritanceDate는 문자열(주 자산과 같은 경로).
+    familyBusinessInheritance: c.familyBusinessInheritance,
     transferType: c.transferType,
     // 공익수용 §164⑨ 1호 환산 min[] 특례 — 컴패니언 자산 지원(계획 Q5).
     // 엔진이 게이트 판정(적격 자산·환산·수용·2009.02.04·후보>0) — 여기선 원값만 전달.

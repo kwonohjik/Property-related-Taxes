@@ -22,6 +22,7 @@ import { buildCarryoverPayload } from "./transfer-tax-api-carryover";
 import { withDonorBuilt } from "./transfer-tax-api-donor-built";
 import { carryoverAcquisitionDateFallback } from "./transfer-tax-api-carryover";
 import { effectiveBuildingCauseMix } from "./transfer-land-part-cause";
+import { sendsFamilyBusinessInheritance } from "./transfer-fb-gate";
 import { hasPre1990LandEstimation } from "./transfer-pre1990-land-gate";
 import { sec164LandAreaField } from "./transfer-163-9-base-date";
 import { buildSplitPayload, makeRatioed } from "./transfer-tax-api-split";
@@ -379,6 +380,11 @@ export function buildAssetPayload(
         : undefined,
     // 개산공제 base 축소용 — 기준시가(위)는 물건 전체 raw, 지분 적용은 엔진이 개산공제에서만.
     ownershipRatio: fractional ? ratio : undefined,
+    // ⑬ 가업상속공제 §97의2④ — 단건 ④와 같은 술어(`sendsFamilyBusinessInheritance` — 상속·GB 아님·겸용 아님). 금액은 **100% 그대로**:
+    //   엔진 STEP 0.42가 위 `ownershipRatio`로 줄인다(여기서 줄이면 이중 축소 · transfer-fb-share Q-2·Q-5).
+    ...(asset.familyBusinessInheritance !== undefined && sendsFamilyBusinessInheritance(asset)
+      ? { familyBusinessInheritance: asset.familyBusinessInheritance }
+      : {}),
     // 감정가액 표시 — 취득가액은 위 `fixedAcquisitionPrice`(지분 스케일 완료)가 그대로 감정가액이다.
     acquisitionMethod: isAppraisalCompanion ? ("appraisal" as const) : undefined,
     /**

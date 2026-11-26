@@ -19,7 +19,7 @@ import { donorBuiltShape, refineDonorBuiltInCarryover } from "./transfer-tax-sch
 import { selfBuiltHousingShape } from "./transfer-tax-schema-self-built-housing";
 import { landRebuildShape } from "./transfer-tax-schema-land-rebuild";
 import { oneRightExemptionFactsSchema } from "./transfer-tax-schema-sub";
-import { familyBusinessRateBasisError } from "@/lib/tax-engine/family-business-applied-rate";
+import { familyBusinessInheritanceSchema } from "./transfer-tax-schema-family-business";
 import {
   temporaryTwoHouseSchema,
   unavoidableOutsideCapitalHouseSchema,
@@ -703,25 +703,7 @@ export const propertyBaseShape = {
    * familyBusinessInheritance 미제공 시 일반 §97 산식 그대로 적용.
    * ★★★ 침묵 stripping 차단: Zod 객체 정의 없으면 route handler에서 자동 제거됨.
    */
-  familyBusinessInheritance: z.object({
-    decedentAcquisitionPrice: z.number().int().nonnegative(),
-    inheritanceMarketValue: z.number().int().nonnegative(),
-    fbDeductionAppliedRate: z.number().min(0).max(1),
-    inheritanceDate: z.string().date(),
-    decedentCapitalExpenditure: z.number().int().nonnegative().optional(),
-    /**
-     * F-3 적용률 법정량(소령 §163의2③ — 공제금액 ÷ 가업상속 재산가액). 부동산은 `deduction_ratio`만 —
-     * 법인가업 대상 자산은 주식등이다(소령 §163의2④2호). 형식·정합은 ⑧과 같은 술어로 막는다.
-     */
-    fbRateBasis: z.object({
-      kind: z.literal("deduction_ratio"),
-      deductionAmount: z.number(),
-      businessEstateValue: z.number(),
-    }).optional(),
-  }).superRefine((fb, ctx) => {
-    const msg = familyBusinessRateBasisError(fb.fbRateBasis, fb.fbDeductionAppliedRate);
-    if (msg) ctx.addIssue({ code: "custom", path: ["fbRateBasis"], message: `가업상속공제 — ${msg}` });
-  }).optional(),
+  familyBusinessInheritance: familyBusinessInheritanceSchema.optional(),
   /**
    * ⑫ 재개발/재건축 입력 (시행령 §166 본문) — sibling 파일 분리(800줄 정책).
    * propertyType === "redevelopment_apt" 또는 "right_to_move_in" 시 제공.

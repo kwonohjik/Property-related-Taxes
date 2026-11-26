@@ -210,6 +210,9 @@ export const propertySchema = z
       refineReductionTrack127_7(c.reductions, c.acquisitionDate, data.transferDate, ctx, ["companionAssets", i, "reductions"]);
       refineReductionRequiredInputs(c.reductions, c.assetContractDate, ctx, ["companionAssets", i, "reductions"], c.redevelopment, c.acquisitionCause);
       refineCompanionGbUnregisteredAxis(c, ctx, ["companionAssets", i, "isUnregistered"]);
+      // 가업상속공제 §97의2④ — 겸용주택·일반건물 컴패니언은 범위 밖(⑧ `allowsFamilyBusinessInheritance`·`sendsFamilyBusinessInheritance`와 같은 범위 · 파트 카드로 펼쳐지면 카드마다 의제 취득가액이 덮인다)
+      if (c.familyBusinessInheritance && (c.assetKind === "mixed_use_house" || c.assetKind === "general_building"))
+        ctx.addIssue({ code: "custom", path: ["companionAssets", i, "familyBusinessInheritance"], message: "겸용주택·일반건물은 가업상속공제 의제취득가액(소득세법 §97조의2 ④)을 지원하지 않습니다" });
       // PD-1 — 의제 전 상속·증여 취득가액 원천(주 자산과 같은 규칙 · CP-3로 열린 운반 경로)
       refineCompanionPreDeemedAcquisitionSource(c, ctx, ["companionAssets", i]);
       // 상속 승계 입주권 — 상속개시일 평가액 필수(구 계약 fixedAcquisitionPrice는 승계취득가액 축)

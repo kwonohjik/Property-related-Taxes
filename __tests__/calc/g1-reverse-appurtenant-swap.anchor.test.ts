@@ -197,7 +197,6 @@ describe("가드 표(계획서 §5-1) — 전 분기", () => {
     ["nblUseDetailedJudgment", { nblUseDetailedJudgment: true }, "비사업용 토지 정밀판정"],
     ["parcelMode", { parcelMode: true }, "다필지"],
     ["isSalesCaseAcquisition", { isSalesCaseAcquisition: true }, "매매사례가액"],
-    ["familyBusinessInheritance", { familyBusinessInheritance: { decedentAcquisitionPrice: "1" } }, "가업상속"],
     ["pre1990Enabled(매매 · 1990.8.30. 이전)", PRE1990_PURCHASE, "토지등급 환산"],
   ])("첫 자산 토지의 «첫 자산 전용» 입력(%s)이 있으면 숨김 + 사유 한 줄(입력 이름 포함)", (_n, patch, label) => {
     const f = withPatch(form(L("l1"), HOUSE(0)) as F, patch);
@@ -205,6 +204,16 @@ describe("가드 표(계획서 §5-1) — 전 분기", () => {
     const reason = reverseAppurtenantSwapBlockReason(f);
     expect(reason).toContain(label);
     expect(reason).toContain("첫 자산에서만 반영");
+  });
+
+  /**
+   * 반전(근거 남김): 가업상속 취득가액은 종전 «첫 자산 전용»이었다 — 컴패니언 위치에서 ④가 FB를 보내지 않아 교환하면 침묵 소실됐다.
+   * transfer-fb-share 최종 결정 Q-5로 컴패니언 ④·⑫·⑭가 FB를 싣게 되어 교환해도 소실되지 않는다 → 가드 대상에서 뺐다.
+   */
+  it("가업상속 입력은 «첫 자산 전용»이 아니다 — 교환 버튼 유지 · 사유 없음 (transfer-fb-share Q-5 반전)", () => {
+    const f = withPatch(form(L("l1"), HOUSE(0)) as F, { familyBusinessInheritance: { decedentAcquisitionPrice: "1" } });
+    expect(reverseAppurtenantSwapPatch(f)).not.toBeNull();
+    expect(reverseAppurtenantSwapBlockReason(f) ?? "").not.toContain("가업상속");
   });
 
   it("전용 입력이 여럿이면 사유에 모두 나열한다", () => {
@@ -220,7 +229,6 @@ describe("가드 근거 실측 — 첫 자산 전용 입력은 컴패니언 위�
     ["nblUseDetailedJudgment", { isNonBusinessLand: true, nblUseDetailedJudgment: true }, "정밀판정"],
     ["parcelMode", { parcelMode: true }, "다필지"],
     ["isSalesCaseAcquisition", { isSalesCaseAcquisition: true, similarSalesValue: "100000000" }, "첫 번째 자산에서만"],
-    ["familyBusinessInheritance", { acquisitionCause: "inheritance", familyBusinessInheritance: { decedentAcquisitionPrice: "1" } }, "상속개시일 평가액"],
   ])("%s — 토지가 컴패니언일 때 ⑧ 차단(교환하면 새 ⑧ 오류)", (_n, patch, frag) => {
     const comp = form(HOUSE(0), { ...L("l1"), ...patch }) as F;
     expect(allIssues(comp).some((i) => i.message.includes(frag))).toBe(true);

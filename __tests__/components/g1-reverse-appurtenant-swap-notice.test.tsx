@@ -122,7 +122,6 @@ describe("노출 조건", () => {
     ["nblUseDetailedJudgment", { nblUseDetailedJudgment: true }, "비사업용 토지 정밀판정"],
     ["parcelMode", { parcelMode: true }, "다필지"],
     ["isSalesCaseAcquisition", { isSalesCaseAcquisition: true }, "매매사례가액"],
-    ["familyBusinessInheritance", { familyBusinessInheritance: { decedentAcquisitionPrice: "1" } }, "가업상속"],
     [
       "pre1990Enabled(매매 · 1990.8.30. 이전)",
       { acquisitionDate: "1985-03-01", pre1990Enabled: true, useEstimatedAcquisition: true, fixedAcquisitionPrice: "" },
