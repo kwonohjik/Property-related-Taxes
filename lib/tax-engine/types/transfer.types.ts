@@ -10,6 +10,7 @@
 
 import type { GiftHouseholdBasis } from "../one-house/gift-household-basis";
 import type { SurchargeApplication } from "../transfer-tax-surcharge-predicate";
+import type { FbImputedTerms, FbSliceGains } from "../family-business-lthd-slices";
 import type {
   HouseInfo,
   PresaleRight,
@@ -782,6 +783,13 @@ export interface TransferTaxInput {
     appliedRateFraction?: { numerator: number; denominator: number };
     /** 피상속인 취득일 */
     decedentAcquisitionDate: Date;
+    /**
+     * §97의2④ 의제 취득가액의 두 항(1호·2호) — **의제 재귀에만** 싣는다(일반 §97 재귀는 두 부분 base가 같아
+     * 현행 비례 안분이 맞다 — 계획서 Q-4). 있으면 STEP 4가 `sliceGains`(부분별 양도차익)를 만든다.
+     */
+    imputedTerms?: FbImputedTerms;
+    /** 부분별 양도차익 — STEP 4(`withFbSliceGains`)가 채운다. 있으면 LTHD가 부분마다 제 공제율을 곱한다. */
+    sliceGains?: FbSliceGains;
   };
   /**
    * §154⑧3호 — 상속주택 자체 양도 시 상속개시 당시 상속인·피상속인 동일세대 여부.

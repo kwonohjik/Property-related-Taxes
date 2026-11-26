@@ -93,6 +93,8 @@ export function calcLongTermHoldingDeductionByNblPart(
 
   return {
     ...biz,
+    // §95④ 후단 부분별 echo는 그 파트(그 밖의 파트) 것뿐이라 합계 공제액(`deduction`)과 맞지 않는다 — 파트 분할 경로에서는 싣지 않는다(표 미렌더 · 세액 불변).
+    fbLthdDetail: undefined,
     deduction,
     nblPartLthd: {
       nonBusinessGain,

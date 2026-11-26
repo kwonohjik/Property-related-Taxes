@@ -40,7 +40,7 @@ import {
 } from "./appurtenant-land-lthd-rate";
 import { isMultiHouseLthdExclusionEra } from "./data/lthd-multi-house-exclusion-era";
 import { resolveLTHDStartDate } from "./transfer-tax-lthd-start";
-import { resolveFamilyBusinessRateFraction } from "./family-business-applied-rate";
+import { calcFbLatterLongTermHolding } from "./transfer-tax-lthd-fb-latter";
 import { deriveSplitLthdEcho } from "./transfer-tax-split-display";
 import { meetsTable2ResidenceRequirement } from "./transfer-tax-exemption";
 import { appurtenantCardHouseHoldingMonths } from "./land-only-owner-household";
@@ -54,6 +54,7 @@ import type { Rental97Result } from "./transfer-reductions/types";
 import type { TransferTaxInput, SplitGainResult } from "./types/transfer.types";
 import type { SplitPartResult } from "./types/transfer-split-gain.types";
 import type { UsageConversionDetail } from "./types/transfer-result.types";
+import type { FbLthdSliceDetail } from "./types/fb-lthd.types";
 import { applyRental97Lthd } from "./transfer-tax-lthd-rental97";
 
 export interface LongTermHoldingResult {
@@ -71,6 +72,8 @@ export interface LongTermHoldingResult {
    * 세액에 영향 없음(공제액은 `deduction`이 정본).
    */
   fbLthdFormula?: string;
+  /** §95④ 후단 부분별 장특 echo(L-5 슬라이스 분기에서만 — 표시 전용). `fbLthdFormula`와 같이 실린다. */
+  fbLthdDetail?: FbLthdSliceDetail;
   /**
    * 부수토지 L-1b에서 **표1 축이 이긴** 경우(기본통칙 95-0…1의 max). **표시 전용** —
    * 세액에 영향 없다(`deduction`이 정본).
@@ -612,59 +615,19 @@ export function calcLongTermHoldingDeduction(
       }
     : {};
 
-  // L-5: 「소득세법」 §95④ **후단** — 가업상속공제가 적용된 **비율에 해당하는 자산**의 보유기간은
-  //      피상속인이 취득한 날부터 기산한다. (법률 제12169호, 2014.1.1 시행 — 연혁 대조 실측)
-  //
-  //   자산을 적용률 r로 관념 분할해 **각 부분을 제 기산일로** 본다(계획서 Q1 = 안 (a)):
-  //     공제율 = r × rate(피상속인 취득일 기산) + (1−r) × rate(상속개시일 기산)
-  //   「비율에 해당하는 자산」이라는 한정어를 살리는 독법이고, §97의2④이 취득가액을
-  //   `피상속인 취득가액 × r + 상속개시일 평가액 × (1−r)`로 이미 쪼갠 축과 일치한다.
-  //   (전부 상속개시일 기산으로 보면 후단이 사문화되므로 그 독법은 성립하지 않는다.)
-  //
-  //   ⚠️ **보유분만 가중한다.** 표2 거주분 공제율은 상속개시일 이후 상속인 실거주 기준을
-  //      유지한다 — 후단은 「보유기간」만 규정하고 거주기간 승계 명문이 없다(계획서 Q3,
-  //      사전-2025-법규재산-0506 질의2). `calcLongTermRate(y, 0, ...)`로 보유분만 뽑아
-  //      가중한 뒤 거주분을 그대로 더한다(표1이면 거주분 0이라 자동으로 표1 식이 된다).
-  //
-  //   정수 연산: 공제율을 가중하지 않고 **양도차익을 안분**해 각각 floor한다(§97의3과 동일 패턴).
-  //   양도차익 안분은 `Σ = 전체` 불변식이 성립하므로 잔액흡수가 정당하다.
-  const fbl = input.fbLthdLatter;
-  if (fbl) {
-    const holdingFromDecedent = calculateHoldingPeriod(
-      fbl.decedentAcquisitionDate,
-      input.transferDate,
-    );
-    const holdOnly = (years: number): number =>
-      calcLongTermRate(years, 0, useTable2, false, input.transferDate);
-    const decedentHoldRate = holdOnly(holdingFromDecedent.years);
-    const heirHoldRate = holdOnly(holding.years);
-    const residencePart = rate - heirHoldRate; // 표2 거주분(표1이면 0)
-
-    const positiveGain = Math.max(taxableGain, 0);
-    const fbFrac = fbl.appliedRateFraction ?? resolveFamilyBusinessRateFraction(fbl.appliedRate);
-    const decedentGain = applyRateFraction(positiveGain, fbFrac.numerator, fbFrac.denominator);
-    const heirGain = positiveGain - decedentGain; // 잔액 흡수 — Σ = positiveGain
-
-    // F-1: `residencePart = rate − heirHoldRate`는 double 뺄셈이라 0.07999999999999999 같은 값이 나온다
-    //   (표2 보유 4년 + 거주 2년 등 — 실측). 세 항 모두 정수 분수연산으로 적용한다.
-    const deduction =
-      applyLthdRate(decedentGain, decedentHoldRate) +
-      applyLthdRate(heirGain, heirHoldRate) +
-      applyLthdRate(positiveGain, residencePart);
-    const blendedRate =
-      fbl.appliedRate * decedentHoldRate + (1 - fbl.appliedRate) * heirHoldRate + residencePart;
-
-    // 산식 표시 — 한국어 풀어쓰기(변수 약어·floor() 금지). 공제율이 소수(25.6% 등)일 수 있어
-    // 반올림하지 않고 소수 첫째 자리까지 보여준다.
-    const pct = (v: number): string => `${+(v * 100).toFixed(1)}`;
-    const heirSharePct = pct(1 - fbl.appliedRate);
-    const fbLthdFormula =
-      `가업상속공제적용률 ${pct(fbl.appliedRate)}% 분은 피상속인 취득일부터 ${holdingFromDecedent.years}년 → ${pct(decedentHoldRate)}%` +
-      ` + 나머지 ${heirSharePct}% 분은 상속개시일부터 ${holding.years}년 → ${pct(heirHoldRate)}%` +
-      (residencePart > 0 ? ` + 거주분 ${pct(residencePart)}%` : "") +
-      ` = ${pct(blendedRate)}%`;
-
-    return { deduction, rate: blendedRate, holdingPeriod, fbLthdFormula };
+  // L-5: 「소득세법」 §95④ **후단** — 가업상속공제가 적용된 비율에 해당하는 자산의 보유기간은 피상속인 취득일부터 기산한다.
+  //   적용분·비적용분을 각 기산일로 보고 부분별로 공제한다. 의제 §97의2④ 재귀는 부분별 양도차익, 일반 §97 재귀는 비례 안분.
+  //   (연혁 법률 제12169호 2014.1.1. 시행 · 근거·산식·사용자 결정: `transfer-fb-lthd-portion-gain.engine.plan.md`)
+  if (input.fbLthdLatter) {
+    return calcFbLatterLongTermHolding({
+      input,
+      fbl: input.fbLthdLatter,
+      taxableGain,
+      holding,
+      rate,
+      residenceYears,
+      useTable2,
+    });
   }
 
   // L-2': 장기임대 §97의3 (장특 70% 대체 — 일반 공제액과 비교해 큰 쪽) / §97의4 (추가율 가산)

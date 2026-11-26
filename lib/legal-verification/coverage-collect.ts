@@ -28,6 +28,7 @@ import * as transferRedevelopment from "@/lib/tax-engine/legal-codes/transfer-re
 import * as transferRentalHousing from "@/lib/tax-engine/legal-codes/transfer-rental-housing";
 import * as transferNecessaryExpense from "@/lib/tax-engine/legal-codes/transfer-necessary-expense";
 import * as stockForeignCarryover from "@/lib/tax-engine/legal-codes/stock-foreign-carryover";
+import * as transferFbLthd from "@/lib/tax-engine/legal-codes/transfer-fb-lthd";
 import * as stockFamilyBusiness from "@/lib/tax-engine/legal-codes/stock-family-business";
 
 import { isLegalCitation } from "./coverage";
@@ -52,6 +53,7 @@ const MODULES: unknown[] = [
   transferRentalHousing,
   transferNecessaryExpense,
   stockForeignCarryover,
+  transferFbLthd,
   stockFamilyBusiness,
 ];
 

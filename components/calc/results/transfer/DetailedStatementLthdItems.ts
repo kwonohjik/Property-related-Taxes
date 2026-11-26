@@ -89,6 +89,8 @@ export function setLongTermDeductionItems(
       : lthStep?.formula ??
       (mu
         ? `주택분 ${mu.housingPart.longTermDeductionAmount.toLocaleString()} + 비주택분(상가) ${mu.commercialPart.longTermDeductionAmount.toLocaleString()}${mu.nonBusinessLandPart ? ` + 배율초과 부수토지(비사업용) ${mu.nonBusinessLandPart.longTermDeductionAmount.toLocaleString()}` : ""} = ${(mu.housingPart.longTermDeductionAmount + mu.commercialPart.longTermDeductionAmount + (mu.nonBusinessLandPart?.longTermDeductionAmount ?? 0)).toLocaleString()} (부분별 공제율 상이 — 아래 부분별 분리)`
+        : result.fbLthdDetail
+        ? "가업상속공제 적용분·비적용분 부분별 양도차익 × 부분별 공제율 (소득세법 §95④ 후단)"
         : `과세대상 양도차익 × ${(result.longTermHoldingRate * 100).toFixed(0)}% (보유 + 거주)`),
     legalBasis: lthStep?.legalBasis ?? "소득세법 §95②·표1·표2",
     perAsset: isAggregate

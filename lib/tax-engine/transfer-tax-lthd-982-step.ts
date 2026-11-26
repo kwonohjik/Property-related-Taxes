@@ -17,6 +17,7 @@ import { pushLongTermHoldingSteps } from "./transfer-tax-lthd-steps";
 import type { LthdExclusionReason } from "./legal-codes/transfer";
 import type { CalculationStep, TransferTaxInput } from "./types/transfer.types";
 import type { NblPartLthdDetail, UsageConversionDetail } from "./types/transfer-result.types";
+import type { FbLthdSliceDetail } from "./types/fb-lthd.types";
 import type { SplitGainResult, SplitPartResult } from "./types/transfer-split-gain.types";
 import type { Rental97Result } from "./transfer-reductions/types";
 import type { Unsold982LthdEcho } from "./transfer-reductions/unsold-hybrid-p4";
@@ -39,6 +40,8 @@ export interface Lthd982StepArgs {
   lthdExclusionReason: LthdExclusionReason | undefined;
   usageConversionDetail?: UsageConversionDetail;
   fbLthdFormula?: string;
+  /** §95④ 후단 부분별 장특 echo — 있으면 장특 step 산식·보유분/거주분 sub-step을 부분별 공제액으로 쓴다. */
+  fbLthdDetail?: FbLthdSliceDetail;
   appurtenantTable1Applied?: boolean;
   /** 겸용 파트 카드 주택 부수토지에 통칙 95-0…1을 적용해 공제율이 달라진 경우의 고지 입력(`calcLongTermHoldingDeduction` echo) */
   appurtenantLthdNotice?: Parameters<typeof appurtenantLandLthdNoticeText>[0];
@@ -138,6 +141,7 @@ export function applyLthd982AndPushSteps(a: Lthd982StepArgs): Lthd982StepResult 
     usageConversionDetail: a.usageConversionDetail,
     // §95④ 후단(가업상속) 적용 시 공제율 분해 문구로 대체한다.
     fbLthdFormula: a.fbLthdFormula,
+    fbLthdDetail: a.fbLthdDetail,
     appurtenantTable1Applied: a.appurtenantTable1Applied,
     transferDate: exemptionJudgeInput.transferDate,
     splitDetail: a.splitDetail,

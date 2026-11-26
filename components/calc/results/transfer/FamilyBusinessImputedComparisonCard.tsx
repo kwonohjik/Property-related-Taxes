@@ -29,9 +29,15 @@ import type { FamilyBusinessCgtDetail } from "@/lib/tax-engine/transfer-tax-fami
 import { resolveFamilyBusinessRateFraction } from "@/lib/tax-engine/family-business-applied-rate";
 import { formatFractionPercent } from "@/lib/calc/format-fraction-percent";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { FamilyBusinessLthdPortionTable } from "@/components/calc/results/transfer/FamilyBusinessLthdPortionTable";
+import type { FbLthdSliceDetail } from "@/lib/tax-engine/types/fb-lthd.types";
 
 interface Props {
   detail: FamilyBusinessCgtDetail;
+  /** §95④ 후단 부분별 장기보유특별공제 echo(`result.fbLthdDetail`) — 없으면(구 이력·주식) 표를 그리지 않는다 */
+  fbLthdDetail?: FbLthdSliceDetail;
+  /** `result.longTermHoldingDeduction` */
+  longTermHoldingDeduction?: number;
 }
 
 // ── 행 컴포넌트 ─────────────────────────────────────────────────
@@ -63,7 +69,7 @@ function Row({
 
 // ── 메인 컴포넌트 ───────────────────────────────────────────────
 
-export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
+export function FamilyBusinessImputedComparisonCard({ detail, fbLthdDetail, longTermHoldingDeduction }: Props) {
   const {
     imputedAcquisitionPrice,
     cgtUnderSection97_2_4,
@@ -181,6 +187,8 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
           </tbody>
         </table>
       </div>
+
+      {fbLthdDetail && <FamilyBusinessLthdPortionTable detail={fbLthdDetail} totalDeduction={longTermHoldingDeduction ?? 0} />}
 
       {/* 적용 분기 안내 */}
       {/*

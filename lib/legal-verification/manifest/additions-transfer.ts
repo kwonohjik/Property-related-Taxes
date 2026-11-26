@@ -36,6 +36,16 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  // ── 가업상속공제 자산 §95④ 후단 장특 (계획서 transfer-fb-lthd-portion-gain) — KoreanLaw 현행 MST 280405 실독(2026-11-26) ──
+  {
+    id: "TRANSFER_FB_LTHD.LATTER_HOLDING_START",
+    citation: "소득세법 §95 ④",
+    keywords: [
+      "같은 조 제4항제1호에 따른 가업상속공제가 적용된 비율에 해당하는 자산의 경우에는",
+      "피상속인이 해당 자산을 취득한 날부터 기산한다",
+    ],
+    keywordMode: "ALL",
+  },
   // ── 가업상속공제 자산 취득가액 특례 §97의2④ (계획서 fb-97-2-4-fixes §2.1) — KoreanLaw 현행 MST 280405 실독(2026-11-26) ──
   {
     id: "TRANSFER.FAMILY_BUSINESS_IMPUTED_ACQUISITION",

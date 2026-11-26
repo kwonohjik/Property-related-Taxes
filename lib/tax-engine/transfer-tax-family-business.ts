@@ -20,6 +20,7 @@
  */
 
 import { calcFamilyBusinessImputedAcquisitionPrice } from "./family-business-imputed-acquisition";
+import { calcFamilyBusinessImputedAcquisitionTerms } from "./family-business-imputed-acquisition";
 import {
   resolveFamilyBusinessRateFraction,
   type FamilyBusinessRateBasis,
@@ -257,37 +258,40 @@ export function applyFamilyBusinessCgtStep(
     return null;
   }
 
-  // 1. 의제 취득가액 산출 (소법 §97의2④)
-  const imputedAcquisitionPrice = calcFamilyBusinessImputedAcquisitionPrice(
+  // 1. 의제 취득가액 산출 (소법 §97의2④) — 두 항(1호·2호)을 따로 받아 합한다(§95④ 후단 부분별 양도차익이 두 항을 쓴다).
+  const imputedTerms = calcFamilyBusinessImputedAcquisitionTerms(
     fb.decedentAcquisitionPrice,
     fb.inheritanceMarketValue,
     fb.fbDeductionAppliedRate,
     fb.decedentCapitalExpenditure ?? 0,
     fb.fbRateBasis,
   );
+  const imputedAcquisitionPrice = imputedTerms.decedentTerm + imputedTerms.heirTerm;
 
   // 2. 재귀 호출용 입력 — familyBusinessInheritance 제거하여 무한루프 차단.
   //    §95④ 후단(LTHD 피상속인 기산)은 fb가 제거되므로 `fbLthdLatter`로 따로 실어 보낸다.
   //    ⚠️ **두 재귀(의제 §97의2④ · 일반 §97) 모두**에 실린다 — 상증령 §15㉑의 두 세액은
   //       다 "가업상속공제를 받고 양도하는 가업상속 재산"의 세액이고, 후단의 요건은
   //       "가업상속공제가 적용된 비율에 해당하는 자산"이지 §97의2④ 적용 여부가 아니다(계획서 Q2).
+  //    ⚠️ `imputedTerms`는 **의제 재귀에만** 싣는다 — 두 부분의 취득가액 base가 다른(피상속인 vs 평가액) 의제 재귀는
+  //       부분별 양도차익으로 LTHD를 나누고, 두 부분 base가 같은(전부 상속개시일 평가액 — 영 §163⑨) 일반 §97 재귀는
+  //       현행 비례 안분이 법리상 맞다(`transfer-fb-lthd-portion-gain.engine.plan.md` §3.3 · Q-4).
   const decedentAcqDate = processedInput.decedentAcquisitionDate;
-  const inputWithoutFb: TransferTaxInput = {
+  const fbLthdLatter: NonNullable<TransferTaxInput["fbLthdLatter"]> | undefined = decedentAcqDate
+    ? {
+        appliedRate: fb.fbDeductionAppliedRate,
+        // F-3: 양도차익 안분도 의제 취득가액과 같은 정수 분수로 한다(소수 6자리 반올림 금지).
+        appliedRateFraction: resolveFamilyBusinessRateFraction(fb.fbDeductionAppliedRate, fb.fbRateBasis),
+        decedentAcquisitionDate: decedentAcqDate,
+      }
+    : undefined;
+  const inputWithoutFb = (latter: typeof fbLthdLatter): TransferTaxInput => ({
     ...processedInput,
     familyBusinessInheritance: undefined,
-    ...(decedentAcqDate
-      ? {
-          fbLthdLatter: {
-            appliedRate: fb.fbDeductionAppliedRate,
-            // F-3: 양도차익 안분도 의제 취득가액과 같은 정수 분수로 한다(소수 6자리 반올림 금지).
-            appliedRateFraction: resolveFamilyBusinessRateFraction(fb.fbDeductionAppliedRate, fb.fbRateBasis),
-            decedentAcquisitionDate: decedentAcqDate,
-          },
-        }
-      : {}),
-  };
+    ...(latter ? { fbLthdLatter: latter } : {}),
+  });
   const imputedResult = calcFn(
-    inputWithoutFb,
+    inputWithoutFb(fbLthdLatter && { ...fbLthdLatter, imputedTerms }),
     rates,
     { acquisitionOverride: imputedAcquisitionPrice },
   );
@@ -296,7 +300,7 @@ export function applyFamilyBusinessCgtStep(
   //    소득세법 시행령 §163⑨: 상속받은 자산의 §97①1호 취득가액 = 상속개시일 현재 평가액.
   //    (피상속인 원취득가액은 §97의2④의 의제취득가 산식 구성요소일 뿐 §97 기준가액이 아니다.)
   const regularResult = calcFn(
-    inputWithoutFb,
+    inputWithoutFb(fbLthdLatter),
     rates,
     { acquisitionOverride: fb.inheritanceMarketValue },
   );
