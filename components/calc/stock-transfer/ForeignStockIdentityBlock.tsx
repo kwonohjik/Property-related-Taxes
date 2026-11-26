@@ -14,9 +14,13 @@ import { FOREIGN_STOCK_TRACK_START } from "@/lib/tax-engine/data/foreign-stock-t
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
+import { isForeignCarryoverForm } from "@/lib/calc/stock-foreign-carryover";
+import { ForeignCarryoverGateSection } from "./ForeignCarryoverBlocks";
 import { SectionBox, COUNTRY_OPTIONS, type ForeignStockSectionProps } from "./foreign-stock-shared";
 
 export function ForeignStockIdentityBlock({ form, onChange }: ForeignStockSectionProps) {
+  // §97의2① 이월과세 선언 — 취득일 칸이 「수증일」이 된다(raw acquisitionCause 술어 — ④⑧ 공유)
+  const isCarryover = isForeignCarryoverForm(form);
   return (
     <div className="space-y-5">
       {/* ── 섹션 1: 납세의무 요건 (§118의2) ── */}
@@ -55,7 +59,11 @@ export function ForeignStockIdentityBlock({ form, onChange }: ForeignStockSectio
       {/* ── 섹션 2: 기본 양도 정보 ── */}
       <SectionBox n={2} label="기본 양도 정보" tone="sky">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <FieldCard label="취득일" required>
+          <FieldCard
+            label={isCarryover ? "수증일" : "취득일"}
+            required
+            hint={isCarryover ? "증여받은 날 — 2025.1.1. 이후여야 §97의2①이 적용됩니다" : undefined}
+          >
             <DateInput
               value={form.acquisitionDate}
               onChange={(v) => onChange({ acquisitionDate: v })}
@@ -125,6 +133,9 @@ export function ForeignStockIdentityBlock({ form, onChange }: ForeignStockSectio
           />
         )}
       </SectionBox>
+
+      {/* ── 섹션 3: §97의2① 이월과세 게이트 (증여자 취득가액은 2단계, 자본적지출·증여세는 3단계) ── */}
+      <ForeignCarryoverGateSection form={form} onChange={onChange} />
     </div>
   );
 }

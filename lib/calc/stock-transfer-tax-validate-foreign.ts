@@ -19,6 +19,7 @@
 
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import type { StockValidationError } from "./stock-transfer-tax-validate";
+import { foreignCarryoverStepErrors } from "./stock-transfer-tax-validate-foreign-carryover";
 import {
   FOREIGN_STOCK_TRACK_START,
   isBeforeForeignStockTrack,
@@ -102,6 +103,9 @@ export function validateStep1Foreign(form: StockTransferFormData): StockValidati
       errors.push({ field: "shareCount", message: "양도 주식 수는 1 이상 정수여야 합니다", severity: "error" });
     }
   }
+
+  // §97의2① 이월과세 — 관계 · 증여자 취득일 · 수증일 순서 (서버 ⑫와 같은 leaf)
+  errors.push(...foreignCarryoverStepErrors(form, 1));
 
   return errors;
 }
@@ -273,6 +277,9 @@ export function validateStep2Foreign(form: StockTransferFormData): StockValidati
     }
   }
 
+  // §97의2① 이월과세 — 증여자 취득가액·환율 (서버 ⑫와 같은 leaf)
+  errors.push(...foreignCarryoverStepErrors(form, 2));
+
   return errors;
 }
 
@@ -354,6 +361,9 @@ export function validateStep3Foreign(form: StockTransferFormData): StockValidati
       }
     }
   }
+
+  // §97의2① 이월과세 — 자본적지출 지출일 환율 · 증여세 안분 (서버 ⑫와 같은 leaf)
+  errors.push(...foreignCarryoverStepErrors(form, 3));
 
   return errors;
 }

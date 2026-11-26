@@ -36,7 +36,9 @@ import fs from "node:fs";
 import path from "node:path";
 
 const FILES = {
-  AcquisitionInfoBlock: "components/calc/stock-transfer/AcquisitionInfoBlock.tsx",
+  // 2026-11: 국내 AcquisitionInfoBlock의 관계 라디오는 공용 leaf로 이동했다(국외 이월과세와 공유) —
+  //          스캔 대상은 그 leaf이고, 아래 DR-6이 AcquisitionInfoBlock이 leaf를 쓰는지 고정한다.
+  CarryoverGateFields: "components/calc/stock-transfer/CarryoverGateFields.tsx",
   AcquisitionLotCard: "components/calc/stock-transfer/AcquisitionLotCard.tsx",
 } as const;
 
@@ -105,6 +107,15 @@ describe("DR — 증여자와의 관계 라디오 (§97의2① 본문)", () => {
       expect(s).not.toMatch(/DonorRelation-\$\{idx\}/);
     }
   );
+
+  it("DR-6 AcquisitionInfoBlock은 관계 라디오를 복제하지 않고 공용 leaf를 쓴다", () => {
+    const s = fs.readFileSync(
+      path.join(process.cwd(), "components/calc/stock-transfer/AcquisitionInfoBlock.tsx"),
+      "utf-8",
+    );
+    expect(s).toContain("<CarryoverGateFields");
+    expect(s).not.toContain('name="donorRelation"');
+  });
 
   it("DR-4 inline은 description을 렌더하지 않는다 — 여기는 잃을 설명이 없음을 확인", () => {
     render(

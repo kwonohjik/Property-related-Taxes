@@ -16,6 +16,7 @@
  */
 
 import type { ForeignStockResult } from "@/lib/tax-engine/stock-transfer/types/foreign-stock.types";
+import { StockCarryoverComparisonCard } from "@/components/calc/results/StockCarryoverComparisonCard";
 
 interface ForeignStockResultCardProps {
   result: ForeignStockResult;
@@ -85,6 +86,11 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
   const hasForeignTaxExpense =
     result.foreignTaxExpenseApplied !== undefined && result.foreignTaxExpenseApplied > 0;
 
+  // §97의2① 이월과세 — 선언한 종목만 `carryoverOutcome`이 실린다. 적용(A)이면 echo된 취득 슬롯은 증여자 값이다.
+  const carryoverApplied = result.carryoverOutcome === "applied";
+  const carryoverDonorCapex = result.carryoverDonorCapexKrw ?? 0;
+  const carryoverGiftTax = result.carryoverGiftTaxIncluded ?? 0;
+
   return (
     <div className="space-y-4">
       {/* 헤더 */}
@@ -147,9 +153,13 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
         )}
 
         <Row
-          label={`취득가액 (외화)`}
+          label={carryoverApplied ? "취득가액 (외화) — 증여자 취득 당시 승계 (이월과세)" : `취득가액 (외화)`}
           value={`— × ${fmt(result.acquisitionExchangeRate)} = ${fmt(result.acquisitionPriceKrw)}`}
-          sub="취득가액(외화) × 취득일 기준환율"
+          sub={
+            carryoverApplied
+              ? "증여자 취득가액(외화) × 증여자 취득일 기준환율 (§97의2①1호 · 영 §178의5①)"
+              : "취득가액(외화) × 취득일 기준환율"
+          }
           indent
         />
         {result.foreignTaxPaidKrw !== undefined && result.foreignTaxPaidKrw > 0 && (
@@ -169,7 +179,11 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
         <Row label="양도가액 (원화 환산)" value={result.transferPriceKrw} />
         <Row label="취득가액 (원화 환산)" value={result.acquisitionPriceKrw} indent />
         <Row
-          label="필요경비 (자본적지출 + 양도비)"
+          label={
+            carryoverDonorCapex > 0 || carryoverGiftTax > 0
+              ? "필요경비 (자본적지출 + 양도비 + 증여자 자본적지출 + 증여세 상당액)"
+              : "필요경비 (자본적지출 + 양도비)"
+          }
           value={result.necessaryExpensesKrw}
           /**
            * 🔑 **어떤 환율로 환산됐는지 밝힌다.** 양도가액·취득가액·외국납부세액은 이미
@@ -186,6 +200,10 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
                   result.transferCostExchangeRateApplied,
                 )} (지출일 기준환율, 영 §178의5①)`,
             hasForeignTaxExpense ? "외국납부세액 필요경비 산입 포함" : null,
+            carryoverDonorCapex > 0
+              ? `증여자 자본적지출 ${fmt(carryoverDonorCapex)} (증여자 지출일 기준환율, §97의2①2호)`
+              : null,
+            carryoverGiftTax > 0 ? `증여세 상당액 ${fmt(carryoverGiftTax)} (§97의2①3호 · 영 §163의2②)` : null,
           ]
             .filter(Boolean)
             .join(" · ")}
@@ -305,6 +323,32 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
           highlight
         />
       </div>
+
+      {/*
+        §97의2① 이월과세 적용/미적용 비교 — 선언한 종목만.
+        엔진은 게이트에서 탈락한 선언 종목도 `outcome:"excluded"` + 두 세액 0으로 보낸다 —
+        비교 수행 여부는 `carryoverComparison` 유무로 가른다(0원 비교표 금지).
+      */}
+      {result.carryoverOutcome && (
+        <StockCarryoverComparisonCard
+          variant="foreign"
+          comparisonPerformed={result.carryoverComparison !== undefined}
+          detail={{
+            outcome: result.carryoverOutcome,
+            appliedTotalTax: result.carryoverComparison?.appliedTotalTax ?? 0,
+            excludedTotalTax: result.carryoverComparison?.excludedTotalTax ?? 0,
+            donorCapexIncluded: carryoverDonorCapex,
+            giftTaxIncluded: carryoverGiftTax,
+          }}
+          foreignCarryover={{
+            donorAcquisitionPriceKrw: result.carryoverDonorAcquisitionPriceKrw,
+            giftDateAcquisitionPriceKrw: result.carryoverGiftDateAcquisitionPriceKrw,
+            donorExchangeRate: result.carryoverDonorExchangeRate,
+            donorAcquisitionCurrencyCode: result.carryoverDonorAcquisitionCurrencyCode,
+            donorAcquisitionDate: result.carryoverDonorAcquisitionDate,
+          }}
+        />
+      )}
 
       {/* 경고 메시지 */}
       {result.warnings.length > 0 && (

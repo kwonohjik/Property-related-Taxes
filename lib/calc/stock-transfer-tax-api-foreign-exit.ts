@@ -16,6 +16,7 @@ import {
   parseFloatOrUndef,
   parseIntOrZero,
 } from "./stock-transfer-tax-api-parse";
+import { appendForeignCarryoverBody } from "./stock-transfer-tax-api-carryover";
 
 // ============================================================
 // ④⑬ PR-4A 해외주식 전용 API 변환 (buildForeignStockApiBody)
@@ -146,6 +147,9 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
     if (fxRate !== undefined) body.foreignTaxExchangeRate = fxRate;
   }
 
+  // §97의2① 이월과세 (④⑬) — 선언한 종목만. 국내 `appendCarryoverDonorBody`는 부르지 않는다.
+  appendForeignCarryoverBody(body, form);
+
   return body;
 }
 
@@ -155,7 +159,11 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
 //   perShareAcquisitionPriceForeign / capitalExpenditureForeign / transferCostForeign /
 //   foreignTaxPaidForeign / foreignTaxCurrencyCode / foreignTaxExchangeRate /
 //   hasForeignTax / foreignTaxMethod / fgCountryCode(→countryCode) /
-//   fsTransferReceiptMode(→transferReceiptMode) / fsTransferInstallmentReceipts(→transferInstallmentReceipts) [FS-09]
+//   fsTransferReceiptMode(→transferReceiptMode) / fsTransferInstallmentReceipts(→transferInstallmentReceipts) [FS-09] /
+//   acquisitionCause / donorRelation / donorDeceased / donorAcquisitionDate / donorAcquisitionMode(←donorAcquisitionModeFS) /
+//   donorPerShareAcquisitionPriceForeign / donorAcquisitionCurrencyCode / donorAcquisitionExchangeRate /
+//   donorCapitalExpenditureForeign / donorCapitalExpenditureExchangeRate / giftTaxAmount / transferredAssetValue /
+//   giftTaxableValue [§97의2① — appendForeignCarryoverBody]
 
 // ============================================================
 // ④⑬ PR-4B 국외전출세 전용 API 변환 (buildExitTaxApiBody)

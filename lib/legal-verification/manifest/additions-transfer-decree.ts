@@ -578,6 +578,17 @@ export const TRANSFER_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** 국외주식 이월과세 §97의2① — 국외자산 필요경비 틀(§118의4 위임). KoreanLaw 현행 MST 290841 실독(2026-11-26). */
+    id: "TRANSFER_DECREE.OVERSEAS_NECESSARY_EXPENSES",
+    citation: "소득세법 시행령 §178의4",
+    keywords: [
+      "취득에 소요된 실지거래가액을 산정하는 경우에는 제163조제1항 및 제2항의 규정을 준용한다",
+      "대통령령으로 정하는 자본적 지출액",
+      "대통령령으로 정하는 양도비",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER_DECREE.OVERSEAS_FX_CONVERSION",
     citation: "소득세법 시행령 §178의5",
     keywords: [
