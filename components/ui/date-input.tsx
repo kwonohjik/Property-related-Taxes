@@ -25,6 +25,11 @@ interface DateInputProps {
   "data-testid"?: string;
   /** 검증 오류 → 입력칸 이동 앵커 — FieldCard 밖에서 단독으로 쓰일 때 */
   "data-field"?: string;
+  /**
+   * 바깥 라벨 요소의 id — 주면 연·월·일 세 칸을 `role="group"`으로 묶고 그 라벨을 그룹 이름으로 쓴다.
+   * 화면 낭독기가 «연도·월·일»만이 아니라 «철거일, 그룹 — 연도» 처럼 어느 날짜인지 함께 읽는다. 없으면 종전 그대로(그룹 없음).
+   */
+  "aria-labelledby"?: string;
 }
 
 function parseDateStr(value: string): { year: string; month: string; day: string } {
@@ -77,7 +82,7 @@ function clampDay(day: string, year: string, month: string): string {
   return n > max ? String(max).padStart(2, "0") : day;
 }
 
-export function DateInput({ value, onChange, onBlur, className, disabled, "data-testid": dataTestid, "data-field": dataField }: DateInputProps) {
+export function DateInput({ value, onChange, onBlur, className, disabled, "data-testid": dataTestid, "data-field": dataField, "aria-labelledby": labelledBy }: DateInputProps) {
   const parsed = parseDateStr(value);
   const [year, setYear] = useState(parsed.year);
   const [month, setMonth] = useState(parsed.month);
@@ -159,6 +164,7 @@ export function DateInput({ value, onChange, onBlur, className, disabled, "data-
     <div
       data-testid={dataTestid}
       data-field={dataField}
+      {...(labelledBy ? { role: "group", "aria-labelledby": labelledBy } : {})}
       className={cn(
         "flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring",
         disabled && "opacity-50 cursor-not-allowed",
