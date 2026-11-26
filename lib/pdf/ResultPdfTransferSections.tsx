@@ -56,6 +56,7 @@ import {
   splitCarryoverVerdictText,
   splitCarryoverView,
 } from "@/lib/tax-engine/transfer-tax-split-carryover-display";
+import { lthdRateShownInPdf } from "./lthd-rate-label";
 
 // ─── 세금 유형별 상세 섹션 ────────────────────────────────────────
 
@@ -79,7 +80,8 @@ export function TransferSection({ r, selectedSectionIds, phdApartment, headRows,
   // 장특 «율» — 합산(어댑터가 `aggregateTaxableGain`을 실은 일괄·다건)은 율을 적지 않는다: 자산마다 법정 공제율이 달라
   // 공제액 ÷ 과세대상 합은 어느 자산의 율도 아닌 섞인 값이다(사용자 결정 2026-11-22). 율은 단건·구 이력에서만.
   const aggTaxable = num(r.aggregateTaxableGain);
-  const showLthRate = !(!isRH && aggTaxable !== undefined);
+  // 가업상속공제 자산 §95④ 후단은 부분별 율이라 하나의 «(%)»로 쓰지 않는다(`lthdRateShownInPdf`).
+  const showLthRate = lthdRateShownInPdf(r, !(!isRH && aggTaxable !== undefined));
   const reducibleIncome = (num(r.reducibleIncome) ?? 0) as number;
   // 함께 양도·다건 어댑터(`aggregateToFilingResult`)는 자산별 ⑲의 합을 따로 싣는다(US-67) — 있으면 그 값이 정본(화면 신고서 표 합계 열과 같은 함수).
   // §161 경로(`isRH`)의 ⑲는 비과세분 차감 전 `incomeAmount`가 아니라 과세대상 양도소득금액(엔진 `taxableGain`)이다 — 화면 신고서 ⑲와 같은 인자(소득세법 §90①의 B).

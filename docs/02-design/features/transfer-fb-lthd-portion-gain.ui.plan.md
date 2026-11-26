@@ -352,3 +352,15 @@ Pre-Do: 교재 사례를 `calculateTransferTax`로 실행해 **현행 red를 먼
 | Q-3 감가상각비(§97③) | **(1) 취득가액 두 항 비율로 안분** |
 | Q-4 일반 §97 재귀 | **(a) 현행 비례 안분 유지(비트 동일)** |
 | UQ-1~UQ-6 | **전부 ★A 추천안** — 실효율 숨김·부분별 공제율만 / 2열+합계 행 / 비교 카드 안 신규 컴포넌트 / PDF는 계산 단계 문구만 / 표2 sub-step(U-2) 동행 정정 / 명세서 보유기간 보조 1줄 |
+
+## Do 결과 정정 (2026-11-26 — 엔진 echo 확정 후 구현하며 계획서 §3·§5와 달라진 곳)
+
+| 계획서 | 구현 |
+|---|---|
+| echo = `familyBusinessDetail.lthdPortions`(가정) | 엔진은 **`result.fbLthdDetail`**(최상위)에 실었다. 비교 카드에 선택 prop `fbLthdDetail`·`longTermHoldingDeduction`을 더해 `SingleDetailCards`가 넘긴다(옛 이력은 prop이 없어 표 미렌더). |
+| 양도가액·필요경비 별도 행 | echo가 부분별 양도가액·필요경비를 따로 싣지 않는다(`netTransferShare` = (양도가액 − 필요경비) 몫) → **한 행** «양도가액 − 필요경비». 둘을 UI에서 다시 나누면 몫 절사가 어긋나므로 만들지 않는다. 감가상각비(§97③)가 있으면 «양도차익 = 몫 − (취득가액 항 − 감가상각비)» 항등식으로 그 차이만 행으로 보인다. |
+| 보유기간 기산일(YYYY.M.D.) | echo에 날짜가 없다 → «피상속인 취득일부터 / 상속개시일부터» 문구 + 연수. |
+| 합계 열 없음 · 합계 행 | 합계 = 양도차익 합계(G, 열 합) · (표2 거주기간 공제분) · 장기보유특별공제 합계(= `result.longTermHoldingDeduction` 그대로). 차손 부분이 있으면 양수 부분 `taxableGain`이 T보다 클 수 있어 «공제 기준액» 행은 12억 초과 안분 등으로 `taxableGain ≠ max(gain,0)`일 때만 그린다. |
+| `basis === "proportional"` | 엔진은 슬라이스를 못 만들 때(G ≤ 0 · X < 0 · 일반 §97) `fbLthdDetail`을 싣지 않는다 → 표 없음(구 문구). `basis !== "slice_gain"`이면 컴포넌트도 그리지 않는다. |
+| UQ-6 명세서 «보유기간» 보조 1줄 | 명세서 「일자·기간」 그룹은 화면에서 생략돼 있다(`DetailedStatementConfig` — 사용자 요청 2026-05-12) → 그 행은 렌더되지 않는다. **구현 안 함**(죽은 코드). 부분별 보유기간(«피상속인 취득일부터 14년 … 상속개시일부터 4년»)은 장특 행의 엔진 step 문구가 이미 싣는다. |
+| UQ-1 소비처 | `SingleDetailCards`(상업용 카드 `lthdRate`) · `DetailedStatementLthdItems` 폴백 · PDF 장특 라벨(`lib/pdf/lthd-rate-label.ts`) — `fbLthdDetail`이 있으면 하나의 % 를 쓰지 않는다. |
