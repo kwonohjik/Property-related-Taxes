@@ -95,6 +95,16 @@ const MENU = [
     tone: "amber",
   },
   {
+    // 판정 전용 메뉴 — 세액이 아니라 §101② 우회양도 부인 여부를 답한다. 비사업용 토지 판정 바로 뒤(16번째 · lg 4열 4행을 꽉 채운다).
+    // ⚠️ 부제는 CI(Linux) 글꼴에서도 한 줄이어야 한다 — 「… 양도 판정」은 두 줄로 접혀 그 행이 높아졌고, 이미 두 줄인
+    //    「증여로 보는 경우」가 다른 행으로 밀려 높은 행이 둘이 되며 home-menu-layout이 732.5px > 720으로 실패했다(PR #3684 CI 실측).
+    href: "/calc/gift-resale-101-2",
+    title: "증여 후 우회양도 판정",
+    subtitle: "특수관계인 증여 후 10년 내 양도",
+    icon: "🔁",
+    tone: "indigo",
+  },
+  {
     href: "/calc/transfer-tax/multi?new=1",
     title: "양도소득세 (다건)",
     subtitle: "복수 양도 연간 합산·차손 통산",

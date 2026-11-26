@@ -47,6 +47,7 @@ const ROUTES = [
   "app/api/calc/one-house-exemption/route.ts",
   "app/api/calc/non-business-land-judgment/route.ts",
   "app/api/calc/cross-104-5/route.ts",
+  "app/api/calc/gift-resale-101-2/route.ts",
   "app/api/calc/comprehensive-recapture/route.ts",
 ];
 

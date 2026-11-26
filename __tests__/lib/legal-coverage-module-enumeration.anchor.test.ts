@@ -62,8 +62,9 @@ describe("F-39 커버리지 수집 모듈 열거 — §1 (수정 전 실패)", (
     expect(guard).not.toContain("expect(MODULES).toHaveLength(8)");
   });
 
-  it("transfer 재수출 목록은 사실 고정 — nbl·house·new-housing-994-para5·one-house", () => {
+  it("transfer 재수출 목록은 사실 고정 — gift-resale-101·nbl·house·new-housing-994-para5·one-house", () => {
     expect(reExportedByTransfer()).toEqual([
+      "transfer-gift-resale-101",
       "transfer-house",
       "transfer-nbl",
       "transfer-new-housing-994-para5",
