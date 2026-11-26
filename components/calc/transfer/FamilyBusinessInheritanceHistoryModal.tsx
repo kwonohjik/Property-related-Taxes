@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
+import { formatFractionPercent } from "@/lib/calc/format-fraction-percent";
 import { calculationRepository } from "@/lib/storage/calculation-repository";
 import {
   filterFamilyBusinessInheritanceCandidates,
@@ -116,7 +117,10 @@ function CandidateCard({
 
         <span className="text-gray-600 dark:text-gray-400">가업상속공제적용률</span>
         <span className="text-right font-semibold text-emerald-700 dark:text-emerald-300">
-          {(candidate.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}%
+          {/* F-3: 법정량이 있으면 입력칸·결과 카드와 같은 분수 표기(넷째 자리 절사) — 반올림하면 66.6667 vs 66.6666로 갈린다 */}
+          {candidate.rateBasis
+            ? formatFractionPercent(candidate.rateBasis.deductionAmount, candidate.rateBasis.businessEstateValue)
+            : (candidate.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}%
         </span>
       </div>
 
