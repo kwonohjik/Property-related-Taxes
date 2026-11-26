@@ -146,6 +146,19 @@ export function applyCapitalAdjustmentsToLots(
           : 0
         : undefined;
 
+    /**
+     * §97의2④ 가업상속 lot의 **피상속인 1주당 취득가액**도 같은 희석을 받는다 — `donorAcquisitionPrice`와 같은 이유다
+     * (총액 보존 · ⌊총액 ÷ 희석 후 주식수⌋). 상속개시일 평가액은 lot 자신의 단가(`adjustedPerShareCost`)가 이미 희석되고,
+     * 자본적지출은 **총액** 필드라 건드리지 않는다. 계획서 §7.7 L-e.
+     */
+    const fbInput = lot.familyBusinessInheritance;
+    const adjustedFbDecedentPerShare =
+      fbInput !== undefined
+        ? shares > 0
+          ? Number((BigInt(lot.shareCount) * BigInt(fbInput.decedentAcquisitionPricePerShare)) / BigInt(shares))
+          : 0
+        : undefined;
+
     perLotApplied.push({
       lotId: lot.id,
       beforeShares: lot.shareCount,
@@ -168,6 +181,9 @@ export function applyCapitalAdjustmentsToLots(
       perShareAcquisitionPrice: adjustedPerShareCost,
       ...(adjustedDonorPerShareCost !== undefined
         ? { donorAcquisitionPrice: adjustedDonorPerShareCost }
+        : {}),
+      ...(fbInput !== undefined && adjustedFbDecedentPerShare !== undefined
+        ? { familyBusinessInheritance: { ...fbInput, decedentAcquisitionPricePerShare: adjustedFbDecedentPerShare } }
         : {}),
     };
   });

@@ -44,4 +44,47 @@ export interface StockFamilyBusinessDetail extends FamilyBusinessCgtDetail {
   appliedRateBasis: FamilyBusinessRateBasis;
   /** 이 신고의 가업 종목 수 — 2 이상이면 세 금액(`cgtUnderSection97_2_4`·`cgtUnderSection97`·`creditAmount`)은 그 종목들의 합계 1회분 */
   fbItemCount: number;
+  /**
+   * lot 단위 입력에서 가업 lot이 **둘 이상** 배정됐을 때만 — lot마다 법정량·피상속인 취득가액이 다를 수 있어
+   * 상단 `appliedRate`·`appliedRateBasis`는 첫 lot의 값이고 정확한 값은 여기 있다.
+   */
+  lots?: StockFamilyBusinessLotEcho[];
+  /** 이동평균이라 의제 취득가액이 풀 평균에 섞였다 — `imputedAcquisitionPrice`는 FIFO 물량 기준 참고값 */
+  pooled?: boolean;
+}
+
+/**
+ * lot 단위 배정 요약 1건 — 가업 lot 하나가 이 양도에 배정된 몫(계획서 §7.7 L-f).
+ * 금액은 전부 **배정 주식수 기준**이다(lot 전체가 아니다).
+ */
+export interface StockFamilyBusinessLotEcho {
+  lotId?: string;
+  /** 이 lot에서 매도에 배정된 주식수 */
+  shares: number;
+  appliedRate: number;
+  appliedRateBasis: FamilyBusinessRateBasis;
+  /** 피상속인 1주당 취득가액(자본조정 희석 뒤 값) */
+  decedentAcquisitionPricePerShare: number;
+  /** Σ 피상속인 1주당 × 배정 주식수 */
+  decedentPart: number;
+  /** Σ 상속개시일 평가 1주당 × 배정 주식수 */
+  valuationPart: number;
+  /** Σ ⌊자본적지출 총액 × 배정 주식수 ÷ lot 주식수⌋ */
+  capex: number;
+  /** Σ sub-lot 의제 취득원가(항별 절사). 이동평균(`pooled`)이면 FIFO 물량에 같은 산식을 댄 **참고값**이다 */
+  buyCost: number;
+}
+
+/**
+ * 가업 lot 배정 요약(`LotMatchingDetail.familyBusinessSummary`) — 결과 `familyBusinessDetail`의 입력.
+ * `pooled`(이동평균)이면 실제 취득가액은 풀 평균 단가 × 주식수이고, 여기 금액은 FIFO 물량 기준 참고값이다.
+ */
+export interface StockFamilyBusinessLotSummary {
+  pooled: boolean;
+  shares: number;
+  decedentPart: number;
+  valuationPart: number;
+  capex: number;
+  buyCost: number;
+  lots: StockFamilyBusinessLotEcho[];
 }

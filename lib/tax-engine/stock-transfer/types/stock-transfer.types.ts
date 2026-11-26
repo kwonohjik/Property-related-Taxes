@@ -12,7 +12,11 @@ import type { PostListingValuationResult } from "./post-listing-result.types";
 import type { Section165_4Model } from "../valuation-165-4-basis";
 import type { Cross1045Adjustment } from "../../comparative-104-5-cross";
 import type { FraudPortionSplit } from "../../transfer-tax-penalty";
-import type { StockFamilyBusinessInput, StockFamilyBusinessDetail } from "./stock-family-business.types";
+import type {
+  StockFamilyBusinessInput,
+  StockFamilyBusinessDetail,
+  StockFamilyBusinessLotSummary,
+} from "./stock-family-business.types";
 export type { PostListingValuationResult };
 
 // ============================================================
@@ -815,6 +819,14 @@ export interface AcquisitionLot {
    * 의제취득일 전 «매수» lot 임을 뜻하며 ①(영 §176의2④1호) 비교 대상이다. 입력(Zod)이 아니다 — 밖에서 주입하지 않는다.
    */
   preDeemedClause2PerShare?: number;
+  /**
+   * §97의2④ 가업상속공제 자산 의제 취득가액 특례 — 이 lot이 상속 원인(`inheritance`)일 때만 받는다.
+   * 상속개시일 = 이 lot의 `acquisitionDate`, 상속개시일 현재 평가액 = 이 lot의 `perShareAcquisitionPrice`.
+   * `decedentCapitalExpenditure`는 이 lot **전체 주식수**의 총액이다(`donorCapitalExpenditure`와 같은 규약 —
+   * 매도된 몫만 `floor(총액 × 매칭주식수 ÷ lot 주식수)`로 산입한다).
+   * 계획서: docs/02-design/features/fb-97-2-4-fixes.plan.md §7.7
+   */
+  familyBusinessInheritance?: StockFamilyBusinessInput;
 }
 
 export interface TransferLot {
@@ -851,6 +863,12 @@ export interface MatchedSubLot {
   acquisitionDate: Date;
   buyShares: number;
   perShareBuyPrice: number;
+  /**
+   * §97의2④ 가업상속 lot의 sub-lot **취득원가 총액** — 있으면 `buyShares × perShareBuyPrice`가 아니라 이 값이 취득가액이다.
+   * 의제 취득가액은 항별 절사라 1주당으로 나누면 절사가 생기므로 총액을 따로 든다(`perShareBuyPrice`는 `floor(buyCost ÷ buyShares)` 표시용).
+   * moving_avg sub-lot에는 싣지 않는다(풀 평균 단가 × 주식수).
+   */
+  buyCost?: number;
   holdingDays: number;
   /** < 365일 */
   isShortTerm: boolean;
@@ -923,6 +941,8 @@ export interface LotMatchingDetail {
     /** moving_avg — 풀 평균 단가라 sub-lot 별 ①·② 선택 없이 풀 비율로 안분했다 */
     pooled: boolean;
   };
+  /** §97의2④ 가업상속 lot 배정 요약 — 활성 가업 lot이 하나라도 매도에 배정됐을 때만(`familyBusinessDetail`의 입력) */
+  familyBusinessSummary?: StockFamilyBusinessLotSummary;
   warnings: string[];
 }
 
