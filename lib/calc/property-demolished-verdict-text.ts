@@ -56,8 +56,12 @@ function requiredText(v: LandDemolishedVerdictEcho): string {
   if (r.floorArea) names.push(PROPERTY_ASK_FIELD_NAME.buildingFloorArea);
   if (names.length > 0) return names.join(" · ");
   if (v.kind === "holds") return "이 과세기준일 시행본에는 확인할 요건 칸이 없음";
-  // 직접 호출에서만 나온다(화면은 ⑧이 막는다). echo에는 날짜 결함과 종류 미입력을 가르는 값이 없어 엔진 고지(`PROPERTY_DEMOLISHED_INPUT_NOTICE`)와 같은 사유를 모두 말한다 — 어느 한쪽으로 단정하지 않는다.
-  if (v.foldReason === "input") return "철거일·철거된 것의 종류·과세기준일 중 확인할 수 없는 것이 있거나 철거일이 과세기준일 뒤여서 요건 칸을 읽지 못함";
+  // 직접 호출에서만 나온다(화면은 ⑧이 막는다). 엔진 echo `inputAt`이 결함 위치를 가른다 — 값이 없는 옛 저장 결과는 두 사유를 함께 말한다(어느 한쪽으로 단정하지 않는다).
+  if (v.foldReason === "input") {
+    if (v.inputAt === "date") return "철거일 또는 과세기준일을 확인할 수 없거나 철거일이 과세기준일 뒤여서 요건 칸을 읽지 못함";
+    if (v.inputAt === "demolishedKind") return `${PROPERTY_ASK_FIELD_NAME.demolishedKind}(주택·건축물)가 입력되지 않아 요건 칸을 읽지 못함`;
+    return "철거일·철거된 것의 종류·과세기준일 중 확인할 수 없는 것이 있거나 철거일이 과세기준일 뒤여서 요건 칸을 읽지 못함";
+  }
   if (v.foldReason === "not_yet" || v.periodAllKinds) return "철거일(과세기준일)만으로 결과가 정해져 더 묻지 않음";
   return "앞의 답(또는 철거일)으로 결과가 정해져 더 묻지 않음";
 }
