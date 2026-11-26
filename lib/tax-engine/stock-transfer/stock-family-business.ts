@@ -14,24 +14,31 @@
  * - 적용률 법정량은 양도일로 갈린다(부칙 대통령령 제36129호 §10): 2026.2.26. 이전 구 ③(공제금액 ÷ 가업상속 재산가액),
  *   2026.2.27. 이후 ③2호(법인 총자산가액 중 사업무관자산 외 비율). 주식은 법인가업의 대상 자산(④2호)이라 신 ③1호는 오지 않는다.
  *
- * 이 PR은 단건 취득만 받는다. lot 단위는 PR-1b′.
+ * 단건 취득(종목 축 `familyBusinessInheritance`)과 취득 lot 단위(`AcquisitionLot.familyBusinessInheritance` — 계획서 §7.7)를 모두 받는다.
+ * lot 단위의 sub-lot 취득원가 계산은 `stock-family-business-lot.ts`, lot 배정은 `lot-allocation.ts`가 맡고,
+ * 여기서는 입력 불변식·G-1 게이트·「전부 되돌린」 일반 입력(`regularInput`)·§18의2⑩ 비교만 한다.
  */
 
 import type { StockTransferInput, StockTransferResult } from "./types/stock-transfer.types";
-import type { StockFamilyBusinessDetail } from "./types/stock-family-business.types";
+import type { StockFamilyBusinessDetail, StockFamilyBusinessLotSummary } from "./types/stock-family-business.types";
 import { isForeignStockItem, type AggregateStockItemInput } from "./foreign-stock-aggregate-adapter";
 import { actualAcquisitionTotal } from "./stock-actual-acquisition";
 import { isSplitMode } from "./stock-transfer-helpers";
 import { calcFamilyBusinessImputedAcquisitionPrice } from "../family-business-imputed-acquisition";
 import { basisToFraction, familyBusinessRateBasisError } from "../family-business-applied-rate";
-import { isFamilyBusinessCgtEra, isFamilyBusinessAssetScopeDecreeEra } from "../data/family-business-cgt-era";
+import { isFamilyBusinessCgtEra } from "../data/family-business-cgt-era";
 import { calcFamilyBusinessCgtCredit } from "../credits/family-business-cgt-credit";
 import { INH } from "../legal-codes";
 import { STOCK_FAMILY_BUSINESS } from "../legal-codes/stock-family-business";
+import { assertFbLotInput, fbBasisEraError, fbFail, isActiveFbLot } from "./stock-family-business-lot";
 
 /** G-1 탈락 안내 — 부동산(`transfer-tax-family-business.ts`)과 같은 문장 */
 export const STOCK_FB_PRE_2014_NOTICE =
   `가업상속공제 ${STOCK_FAMILY_BUSINESS.IMPUTED_ACQUISITION_PRICE} 의제 취득가액 특례 미적용 — 상속개시일이 2014.1.1. 전이라 「소득세법」 부칙(법률 제12169호) §12의 적용 대상이 아닙니다. 일반 §97 산식으로 계산되었습니다.`;
+
+/** lot 단위 입력인데 가업 lot이 이 양도에 한 주도 배정되지 않았을 때 — 특례가 걸릴 대상이 없다 */
+export const STOCK_FB_LOT_UNALLOCATED_NOTICE =
+  `가업상속공제 ${STOCK_FAMILY_BUSINESS.IMPUTED_ACQUISITION_PRICE} 의제 취득가액 특례 미적용 — 가업상속 lot이 이번 양도의 매도에 배정되지 않았습니다. 일반 §97 산식으로 계산되었습니다.`;
 
 type DetailBase = Omit<
   StockFamilyBusinessDetail,
@@ -40,7 +47,15 @@ type DetailBase = Omit<
 
 export type StockFamilyBusinessPlan =
   | { kind: "skipped"; input: StockTransferInput; warning: string }
-  | { kind: "apply"; imputedInput: StockTransferInput; regularInput: StockTransferInput; detailBase: DetailBase };
+  | {
+      kind: "apply";
+      imputedInput: StockTransferInput;
+      regularInput: StockTransferInput;
+      /** 단건은 계획 시점에 확정된다. lot 단위는 배정 뒤에야 정해져 undefined — 의제 실행 결과의 `familyBusinessSummary`로 만든다 */
+      detailBase?: DetailBase;
+      /** 의제 실행 결과에 덧붙일 안내(lot 단위 G-1 탈락 lot) */
+      warnings: string[];
+    };
 
 const isPosInt = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v > 0;
 const isNonNegInt = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0;
@@ -51,29 +66,70 @@ const isNonNegInt = (v: unknown): v is number => typeof v === "number" && Number
  */
 function assertStockFamilyBusinessInput(input: StockTransferInput): void {
   const fb = input.familyBusinessInheritance!;
-  const fail = (msg: string): never => {
-    throw new Error(`가업상속공제(${STOCK_FAMILY_BUSINESS.IMPUTED_ACQUISITION_PRICE}) — ${msg}`);
-  };
+  const fail = fbFail;
   if (input.acquisitionCause !== "inheritance") fail("취득원인이 상속인 주식에만 적용합니다.");
   if (input.acquisitionMode !== "actual") fail("취득가액을 실지거래가액(상속개시일 현재 평가액)으로 입력한 경우에만 적용합니다.");
-  if (isSplitMode(input)) fail("취득 lot 단위 입력은 아직 지원하지 않습니다.");
+  // 분할·다건 lot에서는 취득가액을 lot이 정한다 — 종목 축 입력은 읽히는 곳이 없어 조용히 버려지므로 막는다(자동 무시 금지).
+  if (isSplitMode(input)) fail("취득 lot 단위 입력에서는 가업상속 입력을 종목 축이 아니라 해당 상속 lot에 입력해야 합니다.");
   if (!isPosInt(fb.decedentAcquisitionPricePerShare)) fail("피상속인의 1주당 취득가액은 0보다 큰 원 단위 금액이어야 합니다.");
   if (fb.decedentCapitalExpenditure !== undefined && !isNonNegInt(fb.decedentCapitalExpenditure))
     fail("피상속인 자본적지출은 0 이상의 원 단위 금액이어야 합니다.");
   const basisError = familyBusinessRateBasisError(fb.fbRateBasis, undefined);
   if (basisError) fail(basisError);
-  const newDecree = isFamilyBusinessAssetScopeDecreeEra(input.transferDate);
-  if (newDecree !== (fb.fbRateBasis.kind === "corporate_business_assets")) {
-    fail(
-      newDecree
-        ? `양도일이 2026.2.27. 이후이면 적용률은 법인 총자산가액과 사업무관자산가액으로 계산합니다(${STOCK_FAMILY_BUSINESS.APPLIED_RATE_CORPORATE_ASSETS}).`
-        : "양도일이 2026.2.26. 이전이면 적용률은 가업상속공제금액과 가업상속 재산가액으로 계산합니다(구 소득세법 시행령 §163의2③).",
-    );
-  }
+  const eraError = fbBasisEraError(fb.fbRateBasis, input.transferDate);
+  if (eraError) fail(eraError);
+}
+
+/**
+ * lot 단위 계획(계획서 §7.7 L-a·L-b) — 가업 lot이 하나도 없으면 null.
+ * 의제 취득가는 lot 배정(`allocateLots`) 안에서 sub-lot마다 만들어지므로 여기서는 입력을 그대로 의제 실행에 싣고,
+ * 일반 실행은 **모든 lot**의 가업 입력을 지운다(Q-11 — 함께 되돌림). G-1 탈락 lot은 `isActiveFbLot`이 걸러 일반 상속 lot으로 남는다.
+ */
+function planStockFamilyBusinessLots(input: StockTransferInput): StockFamilyBusinessPlan | null {
+  const lots = input.acquisitionLots ?? [];
+  const fbLots = lots.filter((l) => l.familyBusinessInheritance !== undefined);
+  if (fbLots.length === 0) return null;
+  if (input.familyBusinessInheritance) fbFail("종목 축과 취득 lot에 가업상속 입력이 함께 있습니다 — 한 쪽만 입력해야 합니다.");
+  if (!isSplitMode(input)) fbFail("취득 lot 단위 가업상속 입력은 분할·다건 취득·양도 입력에서만 적용합니다.");
+  fbLots.forEach(assertFbLotInput);
+
+  const regularInput: StockTransferInput = {
+    ...input,
+    acquisitionLots: lots.map((l) => (l.familyBusinessInheritance ? { ...l, familyBusinessInheritance: undefined } : l)),
+  };
+  const inactive = fbLots.filter((l) => !isActiveFbLot(l));
+  if (inactive.length === fbLots.length) return { kind: "skipped", input: regularInput, warning: STOCK_FB_PRE_2014_NOTICE };
+  return { kind: "apply", imputedInput: input, regularInput, warnings: inactive.length > 0 ? [STOCK_FB_PRE_2014_NOTICE] : [] };
+}
+
+/** lot 배정 요약 → 결과 상세 기반. 상단 `appliedRate`·`appliedRateBasis`는 첫 가업 lot 값이고 둘 이상이면 `lots[]`에 모두 있다. */
+function lotDetailBase(s: StockFamilyBusinessLotSummary): DetailBase {
+  const first = s.lots[0];
+  return {
+    imputedAcquisitionPrice: s.buyCost,
+    appliedRate: first.appliedRate,
+    appliedRateBasis: first.appliedRateBasis,
+    decedentAcquisitionPrice: s.decedentPart,
+    decedentAcquisitionPricePerShare: Math.floor(s.decedentPart / s.shares),
+    shareCount: s.shares,
+    inheritanceMarketValue: s.valuationPart,
+    ...(s.capex ? { decedentCapitalExpenditure: s.capex } : {}),
+    ...(s.lots.length > 1 ? { lots: s.lots } : {}),
+    ...(s.pooled ? { pooled: true } : {}),
+  };
+}
+
+/** 의제 실행 결과에서 상세 기반을 얻는다 — lot 계획에서 가업 lot이 한 주도 배정되지 않았으면 undefined */
+function detailBaseOf(plan: Extract<StockFamilyBusinessPlan, { kind: "apply" }>, r: StockTransferResult): DetailBase | undefined {
+  if (plan.detailBase) return plan.detailBase;
+  const summary = r.lotMatchingDetail?.familyBusinessSummary;
+  return summary ? lotDetailBase(summary) : undefined;
 }
 
 /** 종목 1건의 §97의2④ 계획 — `familyBusinessInheritance`가 없으면 null(기존 경로 그대로). */
 export function planStockFamilyBusiness(input: StockTransferInput): StockFamilyBusinessPlan | null {
+  const lotPlan = planStockFamilyBusinessLots(input);
+  if (lotPlan) return lotPlan;
   const fb = input.familyBusinessInheritance;
   if (!fb) return null;
   assertStockFamilyBusinessInput(input);
@@ -100,6 +156,7 @@ export function planStockFamilyBusiness(input: StockTransferInput): StockFamilyB
     // 합계 모드로 주입한다 — 1주당으로 나누면 절사가 생긴다(`stock-actual-acquisition.ts` AT-1).
     imputedInput: { ...stripped, acquisitionActualInputMode: "total", acquisitionTotalPrice: imputedAcquisitionPrice },
     regularInput: stripped,
+    warnings: [],
     detailBase: {
       imputedAcquisitionPrice,
       appliedRate: numerator / denominator,
@@ -147,11 +204,14 @@ export function calculateStockFamilyBusiness(
     const r = run(plan.input);
     return { ...r, warnings: [...r.warnings, plan.warning] };
   }
-  const imputed = run(plan.imputedInput);
+  const imputedRaw = run(plan.imputedInput);
+  const imputed = plan.warnings.length > 0 ? { ...imputedRaw, warnings: [...imputedRaw.warnings, ...plan.warnings] } : imputedRaw;
+  const detailBase = detailBaseOf(plan, imputed);
+  if (!detailBase) return { ...imputed, warnings: [...imputed.warnings, STOCK_FB_LOT_UNALLOCATED_NOTICE] };
   const regular = run(plan.regularInput);
   return {
     ...imputed,
-    familyBusinessDetail: buildDetail(plan.detailBase, imputed.determinedTax ?? 0, regular.determinedTax ?? 0, 1),
+    familyBusinessDetail: buildDetail(detailBase, imputed.determinedTax ?? 0, regular.determinedTax ?? 0, 1),
   };
 }
 
@@ -174,7 +234,9 @@ export function resolveAggregateFamilyBusiness<
     return p.kind === "apply" ? p.imputedInput : p.input;
   });
   const result = run(base);
-  const fbItemCount = plans.filter((p) => p?.kind === "apply").length;
+  // lot 계획은 가업 lot이 매도에 배정된 종목만 센다(`detailBaseOf`) — 배정 없는 종목은 의제·일반이 같다
+  const detailBases = plans.map((p, i) => (p?.kind === "apply" ? detailBaseOf(p, result.items[i]) : undefined));
+  const fbItemCount = detailBases.filter((b) => b !== undefined).length;
   const regularTotal =
     fbItemCount > 0
       ? run(base.map((v, i) => {
@@ -186,9 +248,13 @@ export function resolveAggregateFamilyBusiness<
     const p = plans[i];
     if (!p) return r;
     if (p.kind === "skipped") return { ...r, warnings: [...r.warnings, p.warning] };
+    const detailBase = detailBases[i];
+    const warnings = [...r.warnings, ...p.warnings, ...(detailBase ? [] : [STOCK_FB_LOT_UNALLOCATED_NOTICE])];
+    if (!detailBase) return { ...r, warnings };
     return {
       ...r,
-      familyBusinessDetail: buildDetail(p.detailBase, result.totalDeterminedTax, regularTotal, fbItemCount),
+      warnings,
+      familyBusinessDetail: buildDetail(detailBase, result.totalDeterminedTax, regularTotal, fbItemCount),
     };
   });
   return { ...result, items };
