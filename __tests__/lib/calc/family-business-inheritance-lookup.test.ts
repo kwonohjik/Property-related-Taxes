@@ -91,7 +91,7 @@ function makeInheritanceRecord(
 // ============================================================
 
 describe("FB-K10-LOOKUP — 가업상속공제 양도세 prefill mediator", () => {
-  it("FB-K10-1: 정상 사례 → candidate 1건 + 가업자산 2건 추출", () => {
+  it("FB-K10-1: 정상 사례 → candidate 1건 · 부동산 화면은 사업용 자산만(법인 주식은 주식 화면 — F-2 소령 §163의2④2호)", () => {
     const { candidates, warnings } = filterFamilyBusinessInheritanceCandidates(
       [makeInheritanceRecord()],
       "2026-05-22",
@@ -104,10 +104,14 @@ describe("FB-K10-LOOKUP — 가업상속공제 양도세 prefill mediator", () =
     expect(c.deduction).toBe(8_000_000_000);
     expect(c.operatingYears).toBe(25);
     expect(c.usedDirectInput).toBe(false);
-    expect(c.familyBusinessAssets).toHaveLength(2);
+    expect(c.familyBusinessAssets).toHaveLength(1);
     expect(c.familyBusinessAssets[0].name).toBe("공장부지");
     expect(c.familyBusinessAssets[0].marketValue).toBe(5_000_000_000);
-    expect(c.familyBusinessAssets[1].category).toBe("corporate_stock");
+
+    // 같은 이력을 주식 화면에서 불러오면 법인 주식만 나온다(두 화면 합쳐 종전 2건 그대로).
+    const stock = filterFamilyBusinessInheritanceCandidates([makeInheritanceRecord()], "2026-05-22", "stock");
+    expect(stock.candidates[0].familyBusinessAssets).toHaveLength(1);
+    expect(stock.candidates[0].familyBusinessAssets[0].category).toBe("corporate_stock");
   });
 
   it("FB-K10-2: deduction=0 → no_family_business warning + candidate 0", () => {
@@ -159,14 +163,16 @@ describe("FB-K10-LOOKUP — 가업상속공제 양도세 prefill mediator", () =
       [makeInheritanceRecord()],
       "2026-05-22",
     );
-    const prefill = candidateToPrefill(candidates[0], "asset-fb-2");
+    const prefill = candidateToPrefill(candidates[0], "asset-fb-1");
     expect(prefill).not.toBeNull();
     expect(prefill!.decedentAcquisitionPrice).toBe(0); // 사용자 별도 입력 필요
-    expect(prefill!.inheritanceMarketValue).toBe(3_000_000_000);
-    expect(prefill!.fbDeductionAppliedRate).toBe(1.0);
+    expect(prefill!.inheritanceMarketValue).toBe(5_000_000_000);
+    expect(prefill!.fbDeductionAppliedRate).toBe(1.0); // 구 레코드(finalValue 없음) — 이력 적용률 그대로
     expect(prefill!.inheritanceDate).toBe("2024-03-15");
     expect(prefill!.sourceCalculationId).toBe("rec-1");
-    expect(prefill!.sourceItemId).toBe("asset-fb-2");
+    expect(prefill!.sourceItemId).toBe("asset-fb-1");
+    // 부동산 화면에는 법인 주식이 후보로 없다
+    expect(candidateToPrefill(candidates[0], "asset-fb-2")).toBeNull();
   });
 
   it("FB-K10-6b: candidateToPrefill — 존재하지 않는 itemId → null", () => {

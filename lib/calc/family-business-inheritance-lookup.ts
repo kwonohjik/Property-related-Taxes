@@ -24,6 +24,12 @@
  */
 
 import type { FamilyBusinessRateBasis } from "@/lib/tax-engine/family-business-applied-rate";
+import type { FamilyBusinessRateUnavailableReason } from "@/lib/tax-engine/family-business-applied-rate";
+import { deriveFamilyBusinessRateBasis } from "@/lib/tax-engine/family-business-applied-rate";
+import { basisToFraction } from "@/lib/tax-engine/family-business-applied-rate";
+import { calcCorporateBusinessAssets } from "@/lib/tax-engine/property-valuation-corporate";
+import { resolveEstateItemValue } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
+import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift-estate.types";
 import type { CalculationRecord } from "@/lib/storage/types";
 
 // ============================================================
@@ -38,13 +44,8 @@ export interface FamilyBusinessInheritanceCandidate {
   calculationId: string;
   /** 상속개시일 (ISO YYYY-MM-DD) — inheritanceDate prefill */
   deathDate: string;
-  /** 가업상속공제 적용률 (0~1) — fbDeductionAppliedRate prefill */
+  /** 상속세 엔진 적용률(공제 ÷ 재산가액, 0~1) — 정보용. prefill은 자산별 `rateBasis`를 쓴다 */
   appliedRate: number;
-  /**
-   * 같은 적용률의 법정량(공제액 ÷ 가업상속 재산가액 — 상속세 결과의 정수 echo). F-3: 이것을 넘겨야
-   * 양도세 엔진이 소수 반올림 없이 곱한다. 직접입력 모드는 재산가액을 모르므로 없다.
-   */
-  rateBasis?: Extract<FamilyBusinessRateBasis, { kind: "deduction_ratio" }>;
   /** 가업상속공제 적용액 (원) — 정보용 표시 */
   deduction: number;
   /** 자동/직접입력 모드 표시용 */
@@ -69,9 +70,19 @@ export interface FamilyBusinessAssetCandidate {
   name: string;
   /** EstateItem.familyBusinessCategory — 자동 분류 라벨 */
   category: string;
-  /** EstateItem.marketValue — inheritanceMarketValue prefill 값 */
+  /** 상속개시일 평가액 — inheritanceMarketValue prefill 값 (상속세 엔진과 같은 `resolveEstateItemValue`) */
   marketValue: number;
+  /**
+   * 이 자산의 적용률 법정량 — 양도일로 신·구 산식을 고른 결과(`deriveFamilyBusinessRateBasis`).
+   * 법인가업 주식은 양도일 2026.2.27. 이후 (총자산 − 사업무관자산) ÷ 총자산이라 자산마다 다르다.
+   */
+  rateBasis?: FamilyBusinessRateBasis;
+  /** 이력에서 적용률을 산정할 수 없는 사유 — 선택은 되지만 적용률은 사용자가 입력한다 */
+  rateUnavailable?: FamilyBusinessRateUnavailableReason;
 }
+
+/** 이력 불러오기를 쓰는 화면 — 법인가업의 대상 자산은 주식등이다(「소득세법 시행령」 §163의2④2호) */
+export type FbLookupTarget = "real_estate" | "stock";
 
 export type FbLookupWarningReason =
   | "result_missing"
@@ -79,7 +90,9 @@ export type FbLookupWarningReason =
   | "rate_zero"
   | "no_assets"
   | "transfer_before_inheritance"
-  | "death_date_missing";
+  | "death_date_missing"
+  /** 가업 자산은 있으나 모두 다른 화면의 대상(부동산 화면의 법인 주식 · 주식 화면의 사업용 자산) */
+  | "wrong_target_only";
 
 export interface FbLookupWarning {
   calculationId: string;
@@ -104,7 +117,9 @@ export interface FamilyBusinessInheritancePrefill {
   /** 0~1 */
   fbDeductionAppliedRate: number;
   /** 적용률 법정량 — 있으면 `fbDeductionAppliedRate`는 그 비율의 표시값이다 */
-  fbRateBasis?: Extract<FamilyBusinessRateBasis, { kind: "deduction_ratio" }>;
+  fbRateBasis?: FamilyBusinessRateBasis;
+  /** 적용률을 이력에서 산정할 수 없었다 — 화면은 빈 금액 입력으로 시작해 사용자 입력을 받는다 */
+  rateUnavailable?: FamilyBusinessRateUnavailableReason;
   /** YYYY-MM-DD */
   inheritanceDate: string;
   /** Source 추적 */
@@ -135,6 +150,7 @@ export interface FamilyBusinessInheritancePrefill {
 export function filterFamilyBusinessInheritanceCandidates(
   records: CalculationRecord[],
   currentTransferDate: string,
+  target: FbLookupTarget = "real_estate",
 ): FbLookupResult {
   const current = new Date(currentTransferDate);
   const candidates: FamilyBusinessInheritanceCandidate[] = [];
@@ -206,55 +222,87 @@ export function filterFamilyBusinessInheritanceCandidates(
       continue;
     }
 
-    // 가업 자산 추출
-    const estateItems = Array.isArray(input?.estateItems)
-      ? (input.estateItems as Array<Record<string, unknown>>)
-      : [];
+    const usedDirectInput =
+      typeof fbDetail.usedDirectInput === "boolean" ? fbDetail.usedDirectInput : false;
+    const operatingYears =
+      typeof fbDetail.operatingYears === "number" ? fbDetail.operatingYears : 0;
+
+    // 가업 자산 추출 — 이력 `inputData`는 상속세 **폼 상태**라 주식 카드는 `stockItems`에 있다
+    // (`InheritanceTaxForm` — 엔진 input은 두 배열을 합친다). 종전에는 `estateItems`만 읽어
+    // 법인가업 주식(주식 카드에서만 고를 수 있다)이 후보에 오지 않았다.
+    const items = [
+      ...(Array.isArray(input?.estateItems) ? (input.estateItems as Array<Record<string, unknown>>) : []),
+      ...(Array.isArray(input?.stockItems) ? (input.stockItems as Array<Record<string, unknown>>) : []),
+    ];
     const familyBusinessAssets: FamilyBusinessAssetCandidate[] = [];
-    estateItems.forEach((item, i) => {
+    let otherTargetCount = 0;
+    items.forEach((item, i) => {
       if (!item || typeof item !== "object") return;
       const cat = item.familyBusinessCategory;
       if (typeof cat !== "string" || cat.length === 0) return;
-      const marketValue = item.marketValue;
-      if (typeof marketValue !== "number" || marketValue <= 0) return;
+      // 상속개시일 평가액 — 상속세 엔진과 같은 해석(시가·감정가·매매사례·기준시가·비상장 평가).
+      // 종전에는 `marketValue`만 보아 감정가·기준시가·비상장 평가 자산이 조용히 빠졌다.
+      const marketValue = resolveEstateItemValue(item as unknown as EstateItem);
+      if (!(marketValue > 0)) return;
+      const isCorporateStock = cat === "corporate_stock";
+      if (isCorporateStock !== (target === "stock")) {
+        otherTargetCount += 1;
+        return;
+      }
+      const totalAssets = item.corporateTotalAssets;
+      const derived = deriveFamilyBusinessRateBasis({
+        transferDate: current,
+        isCorporateStock,
+        deduction,
+        finalValue: fbDetail.finalValue,
+        usedDirectInput,
+        corporate:
+          isCorporateStock && typeof totalAssets === "number" && totalAssets > 0
+            ? calcCorporateBusinessAssets(
+                totalAssets,
+                item.corporateNonBusinessAssets as Parameters<typeof calcCorporateBusinessAssets>[1],
+                deathDate,
+              )
+            : undefined,
+      });
       familyBusinessAssets.push({
         itemId: typeof item.id === "string" ? item.id : `idx-${i}`,
         name: typeof item.name === "string" ? item.name : `자산 ${i + 1}`,
         category: cat,
         marketValue,
+        // 구 레코드(공제액·재산가액 정수 echo 없음)는 이력의 `appliedRate`(구 ③ 산식 그대로)를 쓴다 — 사유를 싣지 않는다.
+        ...("basis" in derived
+          ? { rateBasis: derived.basis }
+          : derived.unavailable === "deduction_missing"
+            ? {}
+            : { rateUnavailable: derived.unavailable }),
       });
     });
 
     if (familyBusinessAssets.length === 0) {
-      warnings.push({
-        calculationId: record.id,
-        reason: "no_assets",
-        message: `${record.title}: 가업 분류 자산 0건 — 직접입력 모드 사례`,
-      });
+      warnings.push(
+        otherTargetCount > 0
+          ? {
+              calculationId: record.id,
+              reason: "wrong_target_only",
+              message:
+                target === "real_estate"
+                  ? `${record.title}: 가업 자산이 법인가업 주식뿐 — 주식 양도 화면에서 불러오세요`
+                  : `${record.title}: 가업 자산이 개인가업 사업용 자산뿐 — 부동산 양도 화면에서 불러오세요`,
+            }
+          : {
+              calculationId: record.id,
+              reason: "no_assets",
+              message: `${record.title}: 가업 분류 자산 0건 — 직접입력 모드 사례`,
+            },
+      );
       continue;
     }
-
-    const usedDirectInput =
-      typeof fbDetail.usedDirectInput === "boolean" ? fbDetail.usedDirectInput : false;
-    const operatingYears =
-      typeof fbDetail.operatingYears === "number" ? fbDetail.operatingYears : 0;
-    // F-3 — 상속세 엔진 적용률은 `deduction ÷ finalValue`(deductions/family-business.ts)다. 두 정수를 그대로 싣는다.
-    const finalValue = fbDetail.finalValue;
-    const rateBasis =
-      !usedDirectInput &&
-      Number.isInteger(deduction) &&
-      typeof finalValue === "number" &&
-      Number.isInteger(finalValue) &&
-      finalValue > 0 &&
-      deduction <= finalValue
-        ? { kind: "deduction_ratio" as const, deductionAmount: deduction, businessEstateValue: finalValue }
-        : undefined;
 
     candidates.push({
       calculationId: record.id,
       deathDate,
       appliedRate,
-      ...(rateBasis ? { rateBasis } : {}),
       deduction,
       usedDirectInput,
       operatingYears,
@@ -294,10 +342,17 @@ export function candidateToPrefill(
     decedentAcquisitionPrice: 0,
     inheritanceMarketValue: asset.marketValue,
     // 법정량이 있으면 표시값도 그 비율로 맞춘다 — ⑧·⑫ 정합 술어(`familyBusinessRateBasisError`)가 둘을 대조한다.
-    fbDeductionAppliedRate: candidate.rateBasis
-      ? candidate.rateBasis.deductionAmount / candidate.rateBasis.businessEstateValue
-      : candidate.appliedRate,
-    ...(candidate.rateBasis ? { fbRateBasis: candidate.rateBasis } : {}),
+    // 산정할 수 없으면 0으로 두고 사유를 넘긴다 — 1(직접입력 모드의 표시값) 등으로 채우지 않는다(자동 fallback 금지).
+    fbDeductionAppliedRate: asset.rateBasis
+      ? (() => {
+          const f = basisToFraction(asset.rateBasis);
+          return f.numerator / f.denominator;
+        })()
+      : asset.rateUnavailable
+        ? 0
+        : candidate.appliedRate,
+    ...(asset.rateBasis ? { fbRateBasis: asset.rateBasis } : {}),
+    ...(asset.rateUnavailable ? { rateUnavailable: asset.rateUnavailable } : {}),
     inheritanceDate: candidate.deathDate,
     sourceCalculationId: candidate.calculationId,
     sourceItemId: asset.itemId,
