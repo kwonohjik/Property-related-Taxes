@@ -190,9 +190,13 @@ describe("DR-4 핸드오프 — 같은 사실로 이월과세 폼에 넘긴다",
     const lineal = toTransferFormPatch(jForm({ giftDonorRelation: "lineal", giftDonorDeceased: true, giftSameHousehold: "" })).assets![0];
     expect(lineal.acquisitionCause).toBe("gift");
   });
-  it("[DR-4c] 부정 짝: 직계존비속 2025.1.1. 전 증여의 사망은 배제 대상이 아니라 이월과세로 넘어가고 사망·질문 숨김이 폼에 실린다", () => {
+  it("[DR-4c] 부정 짝: 직계존비속 사망이라도 2026.1.1. 전 양도는 배제 대상이 아니라 이월과세로 넘어가고 사망·질문 숨김이 폼에 실린다", () => {
+    // 직계존비속 「양도 당시 사망」 괄호는 2026.1.1. 이후 **양도분**부터다(2025.12.23. 개정 부칙 제7조).
     const a = toTransferFormPatch(
-      jForm({ giftDonorRelation: "lineal", acquisitionDate: "2024-06-01", giftDonorDeceased: true, giftSameHousehold: "yes", giftHouseholdHoldingStartDate: "2010-03-01" }),
+      jForm(
+        { giftDonorRelation: "lineal", acquisitionDate: "2024-06-01", giftDonorDeceased: true, giftSameHousehold: "yes", giftHouseholdHoldingStartDate: "2010-03-01" },
+        { transferDate: "2025-12-31" },
+      ),
     ).assets![0];
     expect(a.acquisitionCause).toBe("carryover_gift");
     expect(a.carryover?.donorDeceased).toBe(true);

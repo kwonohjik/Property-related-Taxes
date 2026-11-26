@@ -258,7 +258,7 @@ describe("lot-allocation Pre-Do anchor", () => {
         perShareAcquisitionPrice: 10_000,
         acquisitionCause: "purchase",
       };
-      expect(resolveLotStartDate(lot)).toEqual(new Date("2024-01-01"));
+      expect(resolveLotStartDate(lot, new Date("2025-06-01"))).toEqual(new Date("2024-01-01"));
     });
 
     it("inheritance → decedentAcquisitionDate", () => {
@@ -269,7 +269,7 @@ describe("lot-allocation Pre-Do anchor", () => {
         acquisitionCause: "inheritance",
         decedentAcquisitionDate: new Date("2020-05-10"),
       };
-      expect(resolveLotStartDate(lot)).toEqual(new Date("2020-05-10"));
+      expect(resolveLotStartDate(lot, new Date("2025-06-01"))).toEqual(new Date("2020-05-10"));
     });
 
     it("gift → lot.acquisitionDate (수증일, 주식은 §97의2 미적용)", () => {
@@ -279,7 +279,7 @@ describe("lot-allocation Pre-Do anchor", () => {
         perShareAcquisitionPrice: 10_000,
         acquisitionCause: "gift",
       };
-      expect(resolveLotStartDate(lot)).toEqual(new Date("2024-01-01"));
+      expect(resolveLotStartDate(lot, new Date("2025-06-01"))).toEqual(new Date("2024-01-01"));
     });
 
     it("merger_split → preMergerAcquisitionDate", () => {
@@ -290,7 +290,23 @@ describe("lot-allocation Pre-Do anchor", () => {
         acquisitionCause: "merger_split",
         preMergerAcquisitionDate: new Date("2018-06-20"),
       };
-      expect(resolveLotStartDate(lot)).toEqual(new Date("2018-06-20"));
+      expect(resolveLotStartDate(lot, new Date("2025-06-01"))).toEqual(new Date("2018-06-20"));
+    });
+
+    it("carryover_gift 직계존속 사망 — 기준일은 양도일(2026.1.1.~ 양도분만 배제 · 2025.12.23. 개정 부칙 제7조)", () => {
+      const lot: AcquisitionLot = {
+        acquisitionDate: new Date("2025-06-01"),
+        shareCount: 100,
+        perShareAcquisitionPrice: 10_000,
+        acquisitionCause: "carryover_gift",
+        donorAcquisitionDate: new Date("2015-03-01"),
+        donorRelation: "lineal",
+        donorDeceased: true,
+      };
+      // 2025년 양도 → 괄호 시행 전이라 승계(증여자 취득일 기산)
+      expect(resolveLotStartDate(lot, new Date("2025-12-01"))).toEqual(new Date("2015-03-01"));
+      // 2026년 양도 → 배제(수증일 기산)
+      expect(resolveLotStartDate(lot, new Date("2026-03-02"))).toEqual(new Date("2025-06-01"));
     });
   });
 

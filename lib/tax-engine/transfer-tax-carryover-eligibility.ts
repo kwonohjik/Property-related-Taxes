@@ -73,7 +73,7 @@ export function judgeCarryoverEligibility(
     // 적용기간은 판정 전 확정값이라 그대로 싣는다(dummy 금지 — 결과 카드가 「5년 룰」을 잘못 쓴다).
     return { isEligible: false, applicablePeriodYears, exclusionReason: "family_business" };
   }
-  if (isCarryoverRelationExcluded(ct.donorRelation, ct.donorDeceased, ct.giftRegistryDate)) {
+  if (isCarryoverRelationExcluded(ct.donorRelation, ct.donorDeceased, transferDate)) {
     return { isEligible: false, applicablePeriodYears, exclusionReason: "relation_invalid" };
   }
   if (transferDate > addYears(ct.giftRegistryDate, applicablePeriodYears)) {

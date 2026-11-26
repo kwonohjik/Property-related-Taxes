@@ -9,10 +9,10 @@
  *   ⓐ 증여일 ≥ 2025-01-01        — 부칙 제20615호 §8 「시행 이후 **증여받는 자산**부터」
  *   ⓑ 양도일 − 증여일 ≤ **1년**   — §97의2① 괄호(주식은 10년이 아니다)
  *   ⓒ 배우자: **사별이 아닐 것**   — ① 괄호 「사망으로 혼인관계가 소멸된 경우는 제외」
- *   ⓓ 직계존비속: **양도 당시 생존** — ① 괄호(2025.1.1. 이후 증여분)
+ *   ⓓ 직계존비속: **양도 당시 생존** — ① 괄호(2026.1.1. 이후 **양도분** — 2025.12.23. 개정 부칙 제7조)
  *
  * ⓒⓓ는 부동산이 쓰는 무의존 leaf `carryover-donor-death.ts`를 **재사용**한다
- * (인자가 사실만 받으므로 자산 종류와 무관하다 — 게이트 기준일은 **증여일**).
+ * (인자가 사실만 받으므로 자산 종류와 무관하다 — 직계존비속 사망 게이트 기준일은 **양도일**).
  *
  * ── 실행 상태 (Pre-Do 2026-08-11) ─────────────────────────────────────
  * 실패 **6건** — G-2 · G-3 · G-5 · G-5b · G-6 · G-7 / 통과 3건 — G-1 · G-4 · G-6b
@@ -85,16 +85,29 @@ describe("G. §97의2① 게이트 — 넘으면 취득가액·세율이 함께 
     expect(r.isShortTermHolding).toBe(false);
   });
 
-  it("G-6 직계존속 **양도 당시 사망** — ① 괄호로 미해당(승계 X · 수증일 기산)", () => {
+  it("G-6 직계존속 **양도 당시 사망** · 양도 2026-03-02 — ① 괄호로 미해당(승계 X · 수증일 기산)", () => {
+    const r = calculateStockTransferTax(
+      carryover({
+        donorRelation: "lineal",
+        donorDeceased: true,
+        transferDate: D("2026-03-02"), // 증여 2025-06-01 + 1년 이내 · 괄호 시행(2026.1.1.) 이후 양도
+        priorYearEndDate: D("2025-12-31"),
+      }),
+    );
+    expect(r.acquisitionPrice).toBe(GIFT_VALUATION_TOTAL);
+    expect(r.isShortTermHolding).toBe(true);
+  });
+
+  it("G-6c 직계존속 사망이라도 양도 2025-12-01(괄호 시행 전) → **승계** [양성 대조군 — 종전 「증여일 기준」은 배제했다]", () => {
     const r = calculateStockTransferTax(
       carryover({ donorRelation: "lineal", donorDeceased: true }),
     );
-    expect(r.acquisitionPrice).toBe(GIFT_VALUATION_TOTAL);
-    expect(r.isShortTermHolding).toBe(true); // ← 미구현이라 실패해야 한다
+    expect(r.acquisitionPrice).toBe(DONOR_BASIS_TOTAL);
+    expect(r.isShortTermHolding).toBe(false);
   });
 
-  it("G-6b 직계존속 사망 + 증여일이 **2025.1.1. 前** — 괄호 자체가 적용 안 됨", () => {
-    // 부칙 §8 때문에 ⓐ에서 이미 걸린다. 세율은 수증일 기산으로 같지만,
+  it("G-6b 직계존속 사망 + 증여일이 **2025.1.1. 前** — 주식 이월과세 대상 자체가 아님", () => {
+    // 주식 편입 부칙 §8(증여일 ≥ 2025.1.1.) 때문에 ⓐ에서 이미 걸린다. 세율은 수증일 기산으로 같지만,
     // **배제 사유가 다르다**는 것을 취득가액이 아니라 게이트로 구분할 수는 없으므로
     // 여기서는 「어느 쪽이든 미해당」만 고정한다(과잉 단언 금지).
     const r = calculateStockTransferTax(

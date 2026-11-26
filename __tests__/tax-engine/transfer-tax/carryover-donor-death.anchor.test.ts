@@ -19,11 +19,15 @@ const TRANSFER_DATE = new Date("2030-05-31");
 const DONOR_ACQ_DATE = new Date("2010-01-01");
 
 /** 증여자 취득가 3억 ↔ 증여 당시 평가 7억 — A(적용)가 B(미적용)보다 세액이 크게 만든다. */
-function makeInput(carryover: Partial<CarryoverTaxationInput>, giftDate: Date) {
+function makeInput(
+  carryover: Partial<CarryoverTaxationInput>,
+  giftDate: Date,
+  transferDate: Date = TRANSFER_DATE,
+) {
   return baseTransferInput({
     propertyType: "housing",
     transferPrice: 1_000_000_000,
-    transferDate: TRANSFER_DATE,
+    transferDate,
     acquisitionPrice: 700_000_000,
     acquisitionDate: DONOR_ACQ_DATE,
     expenses: 0,
@@ -105,11 +109,13 @@ describe("DD-A: 배우자 증여자", () => {
 });
 
 // ────────────────────────────────────────────────────────────
-// B: 직계존비속 — 「양도 당시 사망한 경우는 제외」 (2025.1.1. 이후 증여분)
+// B: 직계존비속 — 「양도 당시 사망한 경우는 제외」
+//    신설: 「소득세법」 2025.12.23. 개정(시행 2026.1.1.) · 부칙 제7조 「이 법 시행 이후 **자산을 양도하는 경우**부터」
+//    ⇒ 기준은 **양도일 ≥ 2026.1.1.**이다(증여일이 아니다). 2025.10.1. 시행본 §97의2①에는 이 괄호가 없다.
 // ────────────────────────────────────────────────────────────
 
-describe("DD-B: 직계존비속 증여자 — 시행일 게이트", () => {
-  it("DD-05: B2 사망 + 증여 2025.6.1.(게이트 이후) → 배제", () => {
+describe("DD-B: 직계존비속 증여자 — 시행일 게이트는 양도일", () => {
+  it("DD-05: 사망 + 증여 2025.6.1. · 양도 2030 → 배제", () => {
     const r = calculateTransferTax(
       makeInput({ donorRelation: "lineal", donorDeceased: true }, GIFT_2025),
       MOCK_RATES,
@@ -118,23 +124,47 @@ describe("DD-B: 직계존비속 증여자 — 시행일 게이트", () => {
     expect(r.carryoverTaxationDetail?.exclusionReason).toBe("relation_invalid");
   });
 
-  it("DD-06: B3 사망 + 증여 2024.6.1.(게이트 이전) → 종전 규정이라 **적용** [양성 대조군]", () => {
+  it("DD-06: 사망 + 증여 2024.6.1. · 양도 2030 → 양도일이 시행 이후라 **배제** (종전 「증여일 기준」은 적용으로 틀렸다)", () => {
     const r = calculateTransferTax(
       makeInput({ donorRelation: "lineal", donorDeceased: true }, GIFT_2024),
       MOCK_RATES,
     );
+    expect(r.carryoverTaxationDetail?.isEligible).toBe(false);
+    expect(r.carryoverTaxationDetail?.exclusionReason).toBe("relation_invalid");
+    expect(r.carryoverTaxationDetail?.adoptedScenario).toBe("B");
+  });
+
+  it("DD-06c: 사망 + 증여 2025.3.1. · 양도 2025.12.31. → 시행 전 양도라 **적용** [양성 대조군 — 종전 코드는 배제했다]", () => {
+    const r = calculateTransferTax(
+      makeInput({ donorRelation: "lineal", donorDeceased: true }, new Date("2025-03-01"), new Date("2025-12-31")),
+      MOCK_RATES,
+    );
     expect(r.carryoverTaxationDetail?.isEligible).toBe(true);
-    expect(r.carryoverTaxationDetail?.exclusionReason).toBeUndefined();
-    // 「적용됨」의 실질 신호 — 취득가액이 증여자 취득가(3억)로 치환된다
+    expect(r.carryoverTaxationDetail?.exclusionReason).not.toBe("relation_invalid");
+    // 「적용 대상」의 실질 신호 — 시나리오 A의 취득가액이 증여자 취득가(3억)로 치환된다
     expect(r.carryoverTaxationDetail?.scenarioA.acquisitionPrice).toBe(300_000_000);
   });
 
-  it("DD-06b: 경계일 — 증여 2025.1.1. 당일은 게이트 **이후**(배제)", () => {
-    const r = calculateTransferTax(
-      makeInput({ donorRelation: "lineal", donorDeceased: true }, new Date("2025-01-01")),
+  it("DD-06b: 경계일 — 양도 2026.1.1. 당일은 배제 · 하루 전(2025.12.31.)은 배제 아님", () => {
+    const gift = new Date("2025-03-01");
+    const onDay = calculateTransferTax(
+      makeInput({ donorRelation: "lineal", donorDeceased: true }, gift, new Date("2026-01-01")),
       MOCK_RATES,
     );
-    expect(r.carryoverTaxationDetail?.exclusionReason).toBe("relation_invalid");
+    expect(onDay.carryoverTaxationDetail?.exclusionReason).toBe("relation_invalid");
+    const dayBefore = calculateTransferTax(
+      makeInput({ donorRelation: "lineal", donorDeceased: true }, gift, new Date("2025-12-31")),
+      MOCK_RATES,
+    );
+    expect(dayBefore.carryoverTaxationDetail?.exclusionReason).not.toBe("relation_invalid");
+  });
+
+  it("DD-06d: 생존 직계존비속 · 양도 2030 → 적용 [양성 대조군]", () => {
+    const r = calculateTransferTax(
+      makeInput({ donorRelation: "lineal", donorDeceased: false }, GIFT_2024),
+      MOCK_RATES,
+    );
+    expect(r.carryoverTaxationDetail?.isEligible).toBe(true);
   });
 });
 

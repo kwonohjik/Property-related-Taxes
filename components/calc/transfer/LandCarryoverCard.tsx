@@ -122,7 +122,7 @@ export function LandCarryoverCard(props: {
           // P5 — B(건물)는 세대 사실을 묻는다(④가 사건에 싣는다 · 같은 술어). A(토지)는 묻지 않는다. 배우자 예외는 A·B 모두 묻지 않는다(P5-Q3·Q4).
           showHouseholdFact={isBuilding && carryoverHouseholdFactVisible(asset)}
           showSpouseOneHouseFact={false}
-          giftRegistryDate={c.giftRegistryDate}
+          transferDate={props.transferDate ?? ""}
           assetId={asset.assetId}
           onRelationChange={patch}
           anchorPrefix={isBuilding ? "carryover" : "landCarryover"}

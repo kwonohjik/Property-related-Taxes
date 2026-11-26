@@ -295,7 +295,7 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
             tone="amber"
             description={
               form.donorRelation === "lineal"
-                ? "직계존비속이 양도 당시 사망했다면 §97의2①이 적용되지 않습니다 (2025.1.1. 이후 증여분)"
+                ? "직계존비속이 양도 당시 사망했다면 §97의2①이 적용되지 않습니다 (2026.1.1. 이후 양도분)"
                 : "사별이면 §97의2① 미적용입니다. 이혼으로 혼인관계가 소멸한 경우는 그대로 적용됩니다"
             }
           />

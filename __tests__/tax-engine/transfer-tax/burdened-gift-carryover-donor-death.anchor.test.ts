@@ -50,7 +50,7 @@ function makeInfo(): BurdenedGiftInfo {
  *
  * ⚠️ **D-7a와 같은 날짜를 쓴다.** 증여일을 2025로 옮기면 수증자 보유기간이 1년 미만이 되어
  *    B가 단기세율로 치솟고, §97의2②3호 MAX가 B를 골라 **대조군이 「적용됐는지」를 못 본다**.
- *    직계존비속 괄호의 2025.1.1. 게이트는 BD-3에서 이 날짜만 덮어써서 확인한다.
+ *    직계존비속 괄호의 게이트는 **양도일** 2026.1.1.이다(2025.12.23. 개정 부칙 제7조) — BD-3·BD-4가 양도일로 확인한다.
  */
 type Carryover = NonNullable<TransferTaxInput["carryoverTaxation"]>;
 
@@ -66,11 +66,11 @@ function makeCarryover(over: Partial<Carryover> = {}): Carryover {
   };
 }
 
-function runBG(carryover: Carryover) {
+function runBG(carryover: Carryover, transferDate = new Date("2026-02-16")) {
   return calculateTransferTax(
     baseTransferInput({
       propertyType: "general_building",
-      transferDate: new Date("2026-02-16"),
+      transferDate,
       acquisitionDate: new Date("2023-06-01"),
       transferPrice: 0,
       acquisitionPrice: 0,
@@ -111,10 +111,9 @@ describe("O-3 — 부담부증여 × §97의2① 관계 요건 배제", () => {
     expect(d?.adoptedScenario).toBe("A");
   });
 
-  it("BD-3 직계존비속 사망 + 증여일 ≥ 2025.1.1. → **배제**", () => {
+  it("BD-3 직계존비속 사망 + 양도일 2026-02-16(≥ 2026.1.1.) → **배제** (증여일 2023이어도)", () => {
     const d = runBG(
       makeCarryover({
-        giftRegistryDate: new Date("2025-01-01"),
         donorRelation: "lineal",
         donorDeceased: true,
       }),
@@ -124,9 +123,10 @@ describe("O-3 — 부담부증여 × §97의2① 관계 요건 배제", () => {
     expect(d?.exclusionReason).toBe("relation_invalid");
   });
 
-  it("BD-4 🪤 직계존비속 사망이라도 증여일 < 2025.1.1.이면 **적용**된다 (종전 규정)", () => {
+  it("BD-4 🪤 직계존비속 사망이라도 양도일 < 2026.1.1.이면 **적용**된다 (괄호 시행 전 양도)", () => {
     const d = runBG(
       makeCarryover({ donorRelation: "lineal", donorDeceased: true }),
+      new Date("2025-12-31"),
     ).carryoverTaxationDetail;
 
     expect(d?.isEligible).toBe(true);

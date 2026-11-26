@@ -30,13 +30,12 @@
  * · 배우자 — 「양도 당시 혼인관계가 소멸된 경우를 포함하되, **사망으로** 혼인관계가 소멸된 경우는 제외」
  *   ⇒ 이혼 소멸은 이월과세 **적용**, 사별만 미적용
  * · 직계존비속 — 「**양도 당시 사망**한 경우는 제외」
- *   ⇒ 신설 법률 제20615호(2024.12.31.) 부칙 제8조 「이 법 시행 이후 **증여받는 자산**부터 적용」
+ *   ⇒ 신설 「소득세법」 2025.12.23. 개정(시행 2026.1.1.) 부칙 제7조 「이 법 시행 이후 **자산을 양도하는 경우**부터 적용」
  *
- * ⚠️ **연혁 게이트의 축은 「증여 등기접수일」이지 양도일이 아니다** — 부칙 제8조가 「증여받는
- *    자산」을 기준으로 삼기 때문이고, 구현도 그렇다(`carryover-donor-death.ts:53`
- *    `giftRegistryDate >= LINEAL_DEATH_EXCLUSION_CUTOFF`). F15-4가 그 축을 고정한다 —
- *    양도일이 2028-06-15(경계 **이후**)여도 증여일이 2024-12-31이면 배제가 발동하지 않는다.
- *    「양도 당시 사망」은 **묻는 사실**(donorDeceased의 의미)이지 시행시기 기준일이 아니다.
+ * ⚠️ **연혁 게이트의 축은 양도일이다**(`carryover-donor-death.ts` `transferDate >= LINEAL_DEATH_EXCLUSION_CUTOFF`).
+ *    종전에는 2024.12.31. 개정 부칙 제8조(「증여받는 자산부터」 — §94①3호 자산 편입의 적용례)로 잘못 귀속해
+ *    **증여일** ≥ 2025.1.1.로 걸었다. 2025.10.1. 시행본 §97의2①에는 직계존비속 괄호 자체가 없다(본문 실독).
+ *    F15-4가 「증여일이 경계 전이어도 양도가 2026년 이후면 배제」를, F15-5가 양도일 경계 쌍을 고정한다.
  *
  * ## 실측 (route POST 관측 — 산식 추론 아님)
  *
@@ -201,32 +200,33 @@ describe("F15 — ⑭가 §97의2① 관계요건 2필드를 엔진까지 나른
     expect(r.determinedTax).toBe(EXCLUDED_TAX); // 종전 183,510,000
   });
 
-  it("F15-4: 직계존비속 + 사망 + 증여등기 2024-12-31(경계 직전) → 배제 미발동", async () => {
-    // 🔑 양도일은 2028-06-15 — 경계(2025-01-01)를 한참 넘겼는데도 발동하지 않는다.
-    //    부칙 제8조의 축이 「증여받는 자산」, 즉 **증여 등기접수일**이기 때문이다.
+  it("F15-4: 직계존비속 + 사망 + 증여등기 2024-12-31 · 양도 2028-06-15 → 양도일 기준이라 **배제 발동**", async () => {
+    // 🔑 종전(증여일 기준)은 이 케이스를 「적용」(183,510,000)으로 계산했다 — 22,450,000 과대.
     const r = await run(
       { giftRegistryDate: GIFT_BEFORE_CUTOFF, donorRelation: "lineal", donorDeceased: true },
       { acquisitionDate: GIFT_BEFORE_CUTOFF },
     );
 
     expect(r.status).toBe(200);
-    expect(r.detail.isEligible).toBe(true);
-    expect(r.detail.exclusionReason).toBeUndefined();
-    expect(r.detail.adoptedScenario).toBe("A");
-    expect(r.determinedTax).toBe(APPLIED_TAX);
+    expect(r.detail.isEligible).toBe(false);
+    expect(r.detail.exclusionReason).toBe("relation_invalid");
+    expect(r.detail.adoptedScenario).toBe("B");
+    expect(r.determinedTax).toBe(EXCLUDED_TAX);
   });
 
-  it("F15-5: 경계 쌍 — 증여일 하루 차이로 세액이 갈린다", async () => {
-    // F15-3·F15-4를 **한 단언**으로 묶는다. 두 필드가 strip되면 둘이 같은 값이 되어
-    // 「경계가 존재한다」는 사실 자체가 사라진다(⇒ 이 케이스가 red).
-    const after = await run({ donorRelation: "lineal", donorDeceased: true });
-    const before = await run(
-      { giftRegistryDate: GIFT_BEFORE_CUTOFF, donorRelation: "lineal", donorDeceased: true },
-      { acquisitionDate: GIFT_BEFORE_CUTOFF },
-    );
+  it("F15-5: 경계 쌍 — 양도일 하루 차이(2025-12-31 / 2026-01-01)로 배제가 갈리고 세액이 갈린다", async () => {
+    // 두 필드가 ⑭에서 strip되면 둘 다 「적용」이 되어 경계 자체가 사라진다(⇒ 이 케이스가 red).
+    // 증여 2022-06-01: 수증자 보유 3년 이상이라 B가 단기세율로 튀지 않는다(배제 여부가 세액에 드러난다).
+    const gift = { giftRegistryDate: "2022-06-01", donorRelation: "lineal", donorDeceased: true };
+    const before = await run(gift, { acquisitionDate: "2022-06-01", transferDate: "2025-12-31" });
+    const onDay = await run(gift, { acquisitionDate: "2022-06-01", transferDate: "2026-01-01" });
 
-    expect(after.determinedTax).not.toBe(before.determinedTax);
-    expect(before.determinedTax - after.determinedTax).toBe(APPLIED_TAX - EXCLUDED_TAX);
+    expect(before.status).toBe(200);
+    expect(before.detail.exclusionReason).not.toBe("relation_invalid");
+    expect(before.detail.adoptedScenario).toBe("A");
+    expect(onDay.detail.exclusionReason).toBe("relation_invalid");
+    expect(onDay.detail.adoptedScenario).toBe("B");
+    expect(before.determinedTax).toBeGreaterThan(onDay.determinedTax);
   });
 
   it("F15-6: 관계가 「그 외」 → ① 본문 요건 불충족으로 미적용 (사망 무관)", async () => {
