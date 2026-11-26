@@ -310,6 +310,18 @@ F1-11은 종목 단독 차이(89,875,000)와 125,000원 다르다 — 공제를 
 
 ---
 
+### 7.7 PR-1b′ lot 단위 설계 (2026-11-26 · Q-12 반영)
+
+| ID | 항목 | 결정 |
+|---|---|---|
+| L-a | 입력 | `AcquisitionLot.familyBusinessInheritance?: StockFamilyBusinessInput`(단건과 같은 타입). lot `acquisitionCause: "inheritance"` 필수 · 상속개시일 = lot `acquisitionDate` · 상속개시일 평가액 = lot `perShareAcquisitionPrice` · `decedentCapitalExpenditure` = **lot 전체 주식수** 총액(`donorCapitalExpenditure`와 같은 규약). 종목 축 `familyBusinessInheritance`와 동시 입력은 throw |
+| L-b | 게이트 | G-1 lot마다(lot `acquisitionDate` ≥ 2014-01-01) — 미충족 lot은 일반 상속 lot + 안내. 적용률 era는 **매도 lot의 양도일** 기준 — 가업 lot이 법정량 종류와 다른 era의 매도에 배정되면 throw(한 lot이 2026-02-27을 사이에 두고 나뉘어 팔린 경우 = 남은 한계, 문구로 안내) |
+| L-c | fifo·specific | sub-lot 취득원가 총액 `buyCost` = ⌊(피상속인 1주당 × m + capex(m)) × n/d⌋ + ⌊평가 1주당 × m × (d−n)/d⌋, capex(m) = ⌊capex × m / lot 주식수⌋(V-11 = `accrueLotCarryoverExpense` 선례) · `perLotGain = 양도 1주당 × m − buyCost` · `perShareBuyPrice = ⌊buyCost / m⌋`(표시용) · `totalAcquisitionPrice`는 `buyCost` 합 |
+| L-d | moving_avg (Q-12) | 가업 lot 1주당 정확 단가 N/D = [(피상속인 1주당 × S + capex) × n + 평가 1주당 × S × (d−n)] ÷ (d × S) 를 가격 트랙에 유리수로 넣는다. 평균 = ⌊Σ w·N/D ÷ Σw⌋(BigInt 통분) — 정수 단가 lot만 있으면 종전과 비트 동일. 「이동평균법은 가업상속 주식과 다른 주식의 단가를 평균한다 — 가업상속공제 주식의 구분 관리 여부 확인 필요」 고지 |
+| L-e | 자본조정 | 가업 lot의 피상속인 1주당 취득가액도 `donorAcquisitionPrice`와 같이 희석(총액 보존 · ⌊총액 ÷ 희석 후 주식수⌋) |
+| L-f | §18의2⑩ | 의제 = 입력 그대로 · 일반 = **모든 lot**의 `familyBusinessInheritance` 제거(Q-11과 같다 — 함께 되돌림). detail은 의제 실행의 `lotMatchingDetail` 가업 요약(배정 주식수 · Σ buyCost · Σ 피상속인분 · Σ 평가분 · Σ capex)으로 만든다. moving_avg는 요약 주식수를 FIFO 물량 트랙에서 잡는다(`accrue`와 같은 기준) |
+| L-g | anchor | F1-10 혼재(가업 lot + 일반 상속 lot + 매수 lot, 일부 양도) — 가업 lot 배정분만 의제 · F1-10b 가업 lot이 두 매도에 나뉨(capex 배정 합 = 총액 이하) · moving_avg 가업 lot · 자본조정 희석 · 정수 lot만이면 종전과 같은 값(회귀) · 단건 ≡ lot 1개 전량 양도 |
+
 ## 8. 법령 상수·verify:legal
 
 > **PR-1a 실행 기록(2026-11-26)** — `legal-codes/stock-family-business.ts`(`STOCK_FAMILY_BUSINESS` 6개) · 매니페스트 5건(`TRANSFER.FAMILY_BUSINESS_IMPUTED_ACQUISITION` · `TRANSFER_DECREE.FAMILY_BUSINESS_APPLIED_RATE`·`_ASSET_SCOPE` · `INH_DECREE.FAMILY_BUSINESS_NON_BUSINESS_ASSETS`·`_CGT_EQUIVALENT`) · 수집기 등록. 새로 모수에 들어온 조문은 상증령 §15뿐(§97의2·§163의2는 조문 단위로 기등록). 키워드 9개는 KoreanLaw 원문(MST 280405·290841·290845)과 기계 대조 PASS — `npm run verify:legal` 실호출은 회선 차단(law.go.kr curl 000)으로 미실행, 확인 필요. 신규 타입(`types/stock-family-business.types.ts`)은 쓰는 곳이 생기는 PR-1b로 옮겼다(미사용 타입 선반영 안 함).
