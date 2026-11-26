@@ -169,6 +169,7 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
   //   "single" (또는 미설정) → §178의5① 단일 양도일 기준환율 적용 (기존 동작 유지)
   // ──────────────────────────────────────────────────────────
   let transferPriceKrw: number;
+  let transferPriceForeign: number | undefined;
   let transferReceiptDetail: InstallmentReceiptDetail | undefined;
 
   const receiptMode = input.transferReceiptMode ?? "single";
@@ -196,10 +197,12 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
       // 총액 직접 입력 → 환산
       const totalForeign = input.totalTransferPriceForeign ?? 0;
       transferPriceKrw = Math.floor(totalForeign * input.transferExchangeRate);
+      transferPriceForeign = totalForeign;
     } else {
       // 1주당 단가 × 주식수 → 환산
       const perShare = input.perShareTransferPriceForeign ?? 0;
       transferPriceKrw = Math.floor(perShare * input.shareCount * input.transferExchangeRate);
+      transferPriceForeign = perShare * input.shareCount;
     }
     appliedRules.push(STOCK_FOREIGN.SECTION_178_5_FX_RATE);
   }
@@ -477,6 +480,11 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
     acquisitionExchangeRate: input.acquisitionExchangeRate,
     foreignTaxExchangeRate: input.foreignTaxExchangeRate,
     shareCount: input.shareCount,
+    // 환산 전 외화 금액 echo (표시용). 두 취득 모드 모두 1주당 외화 × 주식 수다(STEP 3).
+    transferPriceForeign,
+    acquisitionPriceForeign: (input.perShareAcquisitionPriceForeign ?? 0) * input.shareCount,
+    transferCurrencyCode: input.transferCurrencyCode,
+    acquisitionCurrencyCode: input.acquisitionCurrencyCode,
 
     // §97의2① 이월과세 echo — 선언한 종목에서만 실린다
     ...(input.carryoverOutcome
