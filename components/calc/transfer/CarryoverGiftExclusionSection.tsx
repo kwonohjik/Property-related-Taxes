@@ -5,6 +5,7 @@
  * CarryoverGiftBlock에서 분리 — 800줄 정책 준수.
  */
 
+import Link from "next/link";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -97,6 +98,12 @@ export function CarryoverGiftExclusionSection({
           <p className="text-caption text-rose-700 dark:text-rose-300">
             이월과세는 <strong>배우자 또는 직계존비속</strong>으로부터 증여받은 경우에만
             적용됩니다. 취득 원인을 <strong>「증여」</strong>로 변경하세요.
+            <span className="mt-1 block">
+              특수관계인(배우자·직계존비속 외)에게 증여받아 10년 안에 양도했다면 →{" "}
+              <Link href="/calc/gift-resale-101-2" className="underline underline-offset-2" data-testid="gift-resale-link-carryover">
+                증여 후 우회양도 판정(§101②)
+              </Link>
+            </span>
           </p>
         )}
 

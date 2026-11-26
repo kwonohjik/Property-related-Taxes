@@ -13,6 +13,7 @@ import type { VerificationRule } from "./verifier-types";
 import { TRANSFER_ADDITIONS } from "./manifest/additions-transfer";
 import { TRANSFER_DECREE_ADDITIONS } from "./manifest/additions-transfer-decree";
 import { TRANSFER_DECREE_UNSOLD98_ADDITIONS } from "./manifest/additions-transfer-decree-unsold98";
+import { TRANSFER_GIFT_RESALE_101_ADDITIONS } from "./manifest/additions-transfer-gift-resale-101";
 import { TRANSFER_DECREE_SURCHARGE_ADDITIONS } from "./manifest/additions-transfer-decree-surcharge";
 import { TRANSFER_DECREE_NBL_HO_ADDITIONS } from "./manifest/additions-transfer-decree-nbl-ho";
 import { TRANSFER_NEW_HOUSING_ADDITIONS } from "./manifest/additions-transfer-new-housing";
@@ -331,6 +332,7 @@ export const VERIFICATION_MANIFEST: VerificationRule[] = [
   ...TRANSFER_DECREE_SURCHARGE_ADDITIONS,
   ...TRANSFER_DECREE_NBL_HO_ADDITIONS,
   ...TRANSFER_DECREE_UNSOLD98_ADDITIONS,
+  ...TRANSFER_GIFT_RESALE_101_ADDITIONS,
   ...TRANSFER_NEW_HOUSING_ADDITIONS,
   ...TRANSFER_NEW_HOUSING_994_5_ADDITIONS,
   ...INHERITANCE_ADDITIONS,

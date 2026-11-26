@@ -104,6 +104,8 @@ const MODULES: ReadonlyArray<{
       "LONG_HOLDING_TEMPORARY_EXCLUSION",
       // P0(2026-09-20) — 1세대 범위 인용을 중과 축·비과세 축이 함께 쓰는 단일 소스.
       "ONE_HOUSEHOLD_DEF_CITATION",
+      // transfer-gift-resale-101.ts (재수출 · 2026-11-26) — 소득세법 §101② 증여 후 우회양도 부인 판정.
+      "GIFT_RESALE_101",
     ],
   },
   {

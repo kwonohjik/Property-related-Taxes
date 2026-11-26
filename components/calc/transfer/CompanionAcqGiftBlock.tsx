@@ -14,6 +14,7 @@
  * 계획서: docs/02-design/features/transfer-104-2-2-gift-carryover-scope.plan.md §1 D-1·D-4
  */
 
+import Link from "next/link";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
@@ -97,6 +98,13 @@ export function CompanionAcqGiftBlock(props: BlockProps) {
           </p>
         </div>
       </div>
+
+      <p className="text-caption text-muted-foreground">
+        특수관계인(배우자·직계존비속 외)에게 증여받아 10년 안에 양도했다면 →{" "}
+        <Link href="/calc/gift-resale-101-2" className="underline underline-offset-2" data-testid="gift-resale-link-gift">
+          증여 후 우회양도 판정(§101②)
+        </Link>
+      </p>
 
       {!props.isBurdenedGift && props.mixedUseReportedElsewhere ? (
         <ToneCard

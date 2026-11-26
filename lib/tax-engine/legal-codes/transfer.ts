@@ -15,6 +15,7 @@ export * from "./transfer-nbl";
 export * from "./transfer-house";
 export * from "./transfer-new-housing-994-para5";
 export * from "./transfer-one-house";
+export * from "./transfer-gift-resale-101";
 import { ONE_HOUSEHOLD_DEF_CITATION } from "./transfer-house";
 
 // ============================================================

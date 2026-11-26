@@ -95,6 +95,14 @@ const MENU = [
     tone: "amber",
   },
   {
+    // 판정 전용 메뉴 — 세액이 아니라 §101② 우회양도 부인 여부를 답한다. 비사업용 토지 판정 바로 뒤(16번째 · lg 4열 4행을 꽉 채운다 — 높이 불변).
+    href: "/calc/gift-resale-101-2",
+    title: "증여 후 우회양도 판정",
+    subtitle: "특수관계인 증여 후 10년 내 양도 판정",
+    icon: "🔁",
+    tone: "indigo",
+  },
+  {
     href: "/calc/transfer-tax/multi?new=1",
     title: "양도소득세 (다건)",
     subtitle: "복수 양도 연간 합산·차손 통산",
