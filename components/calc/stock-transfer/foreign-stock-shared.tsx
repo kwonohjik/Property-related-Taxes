@@ -19,18 +19,6 @@ export { SectionBox } from "./stock-section-box";
 export type { StockStepBlockProps as ForeignStockSectionProps } from "./stock-section-box";
 
 
-// ── 지원 국가 목록 ──
-export const COUNTRY_OPTIONS = [
-  { value: "US", label: "미국 (USD)" },
-  { value: "JP", label: "일본 (JPY)" },
-  { value: "CN", label: "중국 (CNY)" },
-  { value: "HK", label: "홍콩 (HKD)" },
-  { value: "GB", label: "영국 (GBP)" },
-  { value: "DE", label: "독일 (EUR)" },
-  { value: "FR", label: "프랑스 (EUR)" },
-  { value: "OTHER", label: "기타" },
-];
-
 // ── 통화 목록 ──
 
 
@@ -60,24 +48,4 @@ export const FG_TRANSFER_MODE_OPTIONS = [
 export const FG_ACQ_MODE_OPTIONS = [
   { value: "actual", label: "실지거래가액", description: "실제 취득 외화 단가" },
   { value: "market_price", label: "시가 산정 (§178의3)", description: "양도·취득일 이전 1개월 평균가격" },
-];
-
-
-// ── 외국납부세액 처리 방법 (§118의6①) ──
-//
-// 🔑 **과세기간(신고) 단위 택일이다** — 종목마다 다르게 고를 수 없다.
-//    §118의6①이 「다음 각 호의 방법 중 **하나를 선택**하여 적용할 수 있다」이고,
-//    1호 산식의 A(국외 산출세액 합)·C(국외 양도소득금액 합)가 **과세기간 총량**이라
-//    종목마다 갈리면 C의 구성이 명문 없이 정해진다(계획서 §4.2 · 2026-09-01 확정).
-export const FOREIGN_TAX_METHOD_OPTIONS = [
-  {
-    value: "credit",
-    label: "세액공제 (§118의6①1호)",
-    description: "한도 = 국외 산출세액 합 × 해당 종목 양도소득금액 / 국외 양도소득금액 합",
-  },
-  {
-    value: "expense",
-    label: "필요경비 산입 (§118의6①2호)",
-    description: "양도차익 계산 시 필요경비로 처리",
-  },
 ];

@@ -20,11 +20,8 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { isForeignCarryoverForm } from "@/lib/calc/stock-foreign-carryover";
 import { ForeignCarryoverExpenseSection } from "./ForeignCarryoverBlocks";
-import {
-  SectionBox,
-  FOREIGN_TAX_METHOD_OPTIONS,
-  type ForeignStockSectionProps,
-} from "./foreign-stock-shared";
+import { FOREIGN_TAX_METHOD_OPTIONS } from "@/components/calc/foreign/foreign-options";
+import { SectionBox, type ForeignStockSectionProps } from "./foreign-stock-shared";
 
 export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSectionProps) {
   const foreignTaxMethod = form.foreignTaxMethod;                // factory: "credit"

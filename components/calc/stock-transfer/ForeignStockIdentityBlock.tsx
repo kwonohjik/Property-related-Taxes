@@ -16,7 +16,8 @@ import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInpu
 import { DateInput } from "@/components/ui/date-input";
 import { isForeignCarryoverForm } from "@/lib/calc/stock-foreign-carryover";
 import { ForeignCarryoverGateSection } from "./ForeignCarryoverBlocks";
-import { SectionBox, COUNTRY_OPTIONS, type ForeignStockSectionProps } from "./foreign-stock-shared";
+import { COUNTRY_OPTIONS } from "@/components/calc/foreign/foreign-options";
+import { SectionBox, type ForeignStockSectionProps } from "./foreign-stock-shared";
 
 export function ForeignStockIdentityBlock({ form, onChange }: ForeignStockSectionProps) {
   // §97의2① 이월과세 선언 — 취득일 칸이 「수증일」이 된다(raw acquisitionCause 술어 — ④⑧ 공유)
