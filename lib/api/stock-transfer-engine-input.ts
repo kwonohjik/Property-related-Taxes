@@ -70,6 +70,9 @@ export function buildEngineInput(coerced: Record<string, unknown>): StockTransfe
     giftTaxAmount: coerced.giftTaxAmount as number | undefined,
     transferredAssetValue: coerced.transferredAssetValue as number | undefined,
     giftTaxableValue: coerced.giftTaxableValue as number | undefined,
+    // ⑭ 가업상속공제 §97의2④ — 날짜 필드는 없다(상속개시일 = acquisitionDate). 빠지면 Zod 통과 후 엔진에 도달하지 않는다.
+    //    lot 축(`acquisitionLots[].familyBusinessInheritance`)은 아래 `acquisitionLots` 통째 전달로 도달한다.
+    familyBusinessInheritance: coerced.familyBusinessInheritance as StockTransferInput["familyBusinessInheritance"],
     cumulativeTransferRatio: coerced.cumulativeTransferRatio as number | undefined,
     blockShareholderRealEstateRatio: coerced.blockShareholderRealEstateRatio as number | undefined,
     blockShareholderOwnershipRatio: coerced.blockShareholderOwnershipRatio as number | undefined,

@@ -23,14 +23,14 @@ import type { StockTransferInput, StockTransferResult } from "./types/stock-tran
 import type { StockFamilyBusinessDetail, StockFamilyBusinessLotSummary } from "./types/stock-family-business.types";
 import { isForeignStockItem, type AggregateStockItemInput } from "./foreign-stock-aggregate-adapter";
 import { actualAcquisitionTotal } from "./stock-actual-acquisition";
-import { isSplitMode } from "./stock-transfer-helpers";
 import { calcFamilyBusinessImputedAcquisitionPrice } from "../family-business-imputed-acquisition";
-import { basisToFraction, familyBusinessRateBasisError } from "../family-business-applied-rate";
+import { basisToFraction } from "../family-business-applied-rate";
 import { isFamilyBusinessCgtEra } from "../data/family-business-cgt-era";
 import { calcFamilyBusinessCgtCredit } from "../credits/family-business-cgt-credit";
 import { INH } from "../legal-codes";
 import { STOCK_FAMILY_BUSINESS } from "../legal-codes/stock-family-business";
-import { assertFbLotInput, fbBasisEraError, fbFail, isActiveFbLot } from "./stock-family-business-lot";
+import { fbFail, isActiveFbLot } from "./stock-family-business-lot";
+import { stockFamilyBusinessInputError } from "./stock-family-business-input-check";
 
 /** G-1 탈락 안내 — 부동산(`transfer-tax-family-business.ts`)과 같은 문장 */
 export const STOCK_FB_PRE_2014_NOTICE =
@@ -57,27 +57,13 @@ export type StockFamilyBusinessPlan =
       warnings: string[];
     };
 
-const isPosInt = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v > 0;
-const isNonNegInt = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0;
-
 /**
  * 엔진 진입 불변식 — route는 ⑨⑩⑫가 먼저 막는다. 엔진 직접 호출에서 조용히 틀린 값을 내지 않도록 throw한다
- * (분모 0 가드 — 계획서 L-3).
+ * (분모 0 가드 — 계획서 L-3). 규칙은 ⑩ refine·⑧ validate와 **같은 술어**(`stock-family-business-input-check.ts`) 하나다.
  */
 function assertStockFamilyBusinessInput(input: StockTransferInput): void {
-  const fb = input.familyBusinessInheritance!;
-  const fail = fbFail;
-  if (input.acquisitionCause !== "inheritance") fail("취득원인이 상속인 주식에만 적용합니다.");
-  if (input.acquisitionMode !== "actual") fail("취득가액을 실지거래가액(상속개시일 현재 평가액)으로 입력한 경우에만 적용합니다.");
-  // 분할·다건 lot에서는 취득가액을 lot이 정한다 — 종목 축 입력은 읽히는 곳이 없어 조용히 버려지므로 막는다(자동 무시 금지).
-  if (isSplitMode(input)) fail("취득 lot 단위 입력에서는 가업상속 입력을 종목 축이 아니라 해당 상속 lot에 입력해야 합니다.");
-  if (!isPosInt(fb.decedentAcquisitionPricePerShare)) fail("피상속인의 1주당 취득가액은 0보다 큰 원 단위 금액이어야 합니다.");
-  if (fb.decedentCapitalExpenditure !== undefined && !isNonNegInt(fb.decedentCapitalExpenditure))
-    fail("피상속인 자본적지출은 0 이상의 원 단위 금액이어야 합니다.");
-  const basisError = familyBusinessRateBasisError(fb.fbRateBasis, undefined);
-  if (basisError) fail(basisError);
-  const eraError = fbBasisEraError(fb.fbRateBasis, input.transferDate);
-  if (eraError) fail(eraError);
+  const error = stockFamilyBusinessInputError(input);
+  if (error) fbFail(error);
 }
 
 /**
@@ -89,9 +75,7 @@ function planStockFamilyBusinessLots(input: StockTransferInput): StockFamilyBusi
   const lots = input.acquisitionLots ?? [];
   const fbLots = lots.filter((l) => l.familyBusinessInheritance !== undefined);
   if (fbLots.length === 0) return null;
-  if (input.familyBusinessInheritance) fbFail("종목 축과 취득 lot에 가업상속 입력이 함께 있습니다 — 한 쪽만 입력해야 합니다.");
-  if (!isSplitMode(input)) fbFail("취득 lot 단위 가업상속 입력은 분할·다건 취득·양도 입력에서만 적용합니다.");
-  fbLots.forEach(assertFbLotInput);
+  assertStockFamilyBusinessInput(input);
 
   const regularInput: StockTransferInput = {
     ...input,

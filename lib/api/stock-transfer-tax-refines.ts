@@ -14,6 +14,7 @@ import type { stockTransferInputSchema } from "./stock-transfer-tax-schema";
 import { toOptionalDate } from "./date-coerce";
 import { refinePreDeemedLotClause1 } from "./stock-transfer-tax-refines-lot-clause1";
 import { refineSingleModeRequiredInputs } from "./stock-transfer-tax-refines-single-mode";
+import { refineStockFamilyBusiness } from "./stock-transfer-tax-refines-family-business";
 import { isSection94_4Asset } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import { isPreDeemedLotBeforePpiSeries, PRE_DEEMED_LOT_BEFORE_PPI_MESSAGE } from "@/lib/tax-engine/stock-transfer/stock-pre-deemed-acquisition";
 import {
@@ -333,6 +334,9 @@ export function addStockRefines(
 
     // ── 단일 모드 필수 입력 (2026-09-30 Zod↔엔진 필수 점검) — `stock-transfer-tax-refines-single-mode.ts`로 분리
     refineSingleModeRequiredInputs(data, ctx);
+
+    // ── 가업상속공제 §97의2④ — 엔진 진입 throw·⑧과 같은 술어(`stock-family-business-input-check.ts`)
+    refineStockFamilyBusiness(data, ctx);
 
     // ── 2차(B13~B17) — 취득원인 보조 입력(소득세법 §104② · §97의2①). ⑧ step1과 공용 술어.
     // 비우면 상속·합병은 단기 세율로, 이월과세는 누락(날짜) 또는 배우자 취급(관계)으로, 증여세 안분은 0으로 갔다.

@@ -23,30 +23,23 @@ import type {
   StockFamilyBusinessLotEcho,
   StockFamilyBusinessLotSummary,
 } from "./types/stock-family-business.types";
-import { basisToFraction, familyBusinessRateBasisError, type FamilyBusinessRateBasis } from "../family-business-applied-rate";
-import { isFamilyBusinessCgtEra, isFamilyBusinessAssetScopeDecreeEra } from "../data/family-business-cgt-era";
+import { basisToFraction } from "../family-business-applied-rate";
+import { isFamilyBusinessCgtEra } from "../data/family-business-cgt-era";
 import { STOCK_FAMILY_BUSINESS } from "../legal-codes/stock-family-business";
+import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
 import { frac, type Frac } from "./exact-fraction";
-
-const isPosInt = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v > 0;
-const isNonNegInt = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v) && v >= 0;
-
-/** 엔진 진입 throw 공통 접두 — 단건과 같다 */
-export function fbFail(msg: string): never {
-  throw new Error(`가업상속공제(${STOCK_FAMILY_BUSINESS.IMPUTED_ACQUISITION_PRICE}) — ${msg}`);
-}
+import { fbBasisEraError, fbLotInputError } from "./stock-family-business-input-check";
 
 /**
- * 법정량 종류가 **양도일** 시대와 맞는지 — 어긋나면 문구, 맞으면 null.
- * 구 ③(공제금액 ÷ 가업상속 재산가액)은 2026.2.26.까지, 신 ③2호(법인 총자산가액)는 2026.2.27.부터다(부칙 대통령령 제36129호 §10).
- * 단건과 lot이 같은 함수를 쓴다.
+ * 엔진 진입 throw 공통 접두 — 단건과 같다.
+ * 입력 오류라 `TaxCalculationError(INVALID_INPUT)`로 던진다 — route가 500이 아니라 422로 돌려준다
+ * (매도 lot 배정 뒤에야 드러나는 era 불일치는 Zod가 정적으로 막을 수 없다).
  */
-export function fbBasisEraError(basis: FamilyBusinessRateBasis, transferDate: Date): string | null {
-  const newDecree = isFamilyBusinessAssetScopeDecreeEra(transferDate);
-  if (newDecree === (basis.kind === "corporate_business_assets")) return null;
-  return newDecree
-    ? `양도일이 2026.2.27. 이후이면 적용률은 법인 총자산가액과 사업무관자산가액으로 계산합니다(${STOCK_FAMILY_BUSINESS.APPLIED_RATE_CORPORATE_ASSETS}).`
-    : "양도일이 2026.2.26. 이전이면 적용률은 가업상속공제금액과 가업상속 재산가액으로 계산합니다(구 소득세법 시행령 §163의2③).";
+export function fbFail(msg: string): never {
+  throw new TaxCalculationError(
+    TaxErrorCode.INVALID_INPUT,
+    `가업상속공제(${STOCK_FAMILY_BUSINESS.IMPUTED_ACQUISITION_PRICE}) — ${msg}`,
+  );
 }
 
 /** G-1 — 상속개시일(lot 취득일)이 2014.1.1. 이후인 가업 lot만 특례가 걸린다(부칙 법률 제12169호 §12) */
@@ -59,17 +52,8 @@ export function isActiveFbLot(lot: AcquisitionLot): boolean {
  * lot이 `familyBusinessInheritance`를 갖지 않으면 아무것도 하지 않는다.
  */
 export function assertFbLotInput(lot: AcquisitionLot): void {
-  const fb = lot.familyBusinessInheritance;
-  if (!fb) return;
-  const tag = `매수 lot(${lot.id ?? "?"})`;
-  if (lot.acquisitionCause !== "inheritance") fbFail(`${tag} — 취득원인이 상속인 lot에만 적용합니다.`);
-  if (!isPosInt(lot.shareCount)) fbFail(`${tag} — 주식수는 0보다 큰 정수여야 합니다.`);
-  if (!isNonNegInt(lot.perShareAcquisitionPrice)) fbFail(`${tag} — 상속개시일 평가액(1주당)은 0 이상의 원 단위 금액이어야 합니다.`);
-  if (!isPosInt(fb.decedentAcquisitionPricePerShare)) fbFail(`${tag} — 피상속인의 1주당 취득가액은 0보다 큰 원 단위 금액이어야 합니다.`);
-  if (fb.decedentCapitalExpenditure !== undefined && !isNonNegInt(fb.decedentCapitalExpenditure))
-    fbFail(`${tag} — 피상속인 자본적지출은 0 이상의 원 단위 금액이어야 합니다.`);
-  const basisError = familyBusinessRateBasisError(fb.fbRateBasis, undefined);
-  if (basisError) fbFail(`${tag} — ${basisError}`);
+  const error = fbLotInputError(lot);
+  if (error) fbFail(error);
 }
 
 /** lot 1주당 정확 단가의 분자·분모 재료 — 정수 BigInt */
