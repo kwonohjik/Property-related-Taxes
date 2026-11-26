@@ -314,7 +314,12 @@ export function FamilyBusinessInheritanceTransferSection({ asset, onChange, tran
               aria-label="가업상속공제적용률 입력 방식"
               data-testid="fb-rate-mode"
               options={[
-                { value: "amount", label: "금액으로 입력 (공제금액 ÷ 가업상속 재산가액)", testId: "fb-rate-mode-amount" },
+                {
+                  value: "amount",
+                  label: "금액으로 입력",
+                  description: <Frac top="가업상속공제금액" bottom="가업상속 재산가액" />,
+                  testId: "fb-rate-mode-amount",
+                },
                 { value: "percent", label: "% 직접 입력", testId: "fb-rate-mode-percent" },
               ]}
             />

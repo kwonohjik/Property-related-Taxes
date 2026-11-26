@@ -28,6 +28,7 @@ import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { FamilyBusinessCgtDetail } from "@/lib/tax-engine/transfer-tax-family-business";
 import { resolveFamilyBusinessRateFraction } from "@/lib/tax-engine/family-business-applied-rate";
 import { formatFractionPercent } from "@/lib/calc/format-fraction-percent";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface Props {
   detail: FamilyBusinessCgtDetail;
@@ -41,7 +42,7 @@ function Row({
   sub = false,
   highlight = false,
 }: {
-  label: string;
+  label: React.ReactNode;
   value: string;
   sub?: boolean;
   highlight?: boolean;
@@ -128,7 +129,15 @@ export function FamilyBusinessImputedComparisonCard({ detail }: Props) {
             {/* F-3: 적용률을 금액으로 입력했으면 그 법정량을 보인다(소령 §163의2③). */}
             {appliedRateBasis?.kind === "deduction_ratio" && (
               <Row
-                label={`가업상속공제적용률 = 가업상속공제금액 ${formatKRW(appliedRateBasis.deductionAmount)} ÷ 가업상속 재산가액 ${formatKRW(appliedRateBasis.businessEstateValue)}`}
+                label={
+                  <span data-testid="fb-rate-basis-row">
+                    가업상속공제적용률 ={" "}
+                    <Frac
+                      top={`가업상속공제금액 ${formatKRW(appliedRateBasis.deductionAmount)}`}
+                      bottom={`가업상속 재산가액 ${formatKRW(appliedRateBasis.businessEstateValue)}`}
+                    />
+                  </span>
+                }
                 value={`${ratePct}%`}
                 sub
               />

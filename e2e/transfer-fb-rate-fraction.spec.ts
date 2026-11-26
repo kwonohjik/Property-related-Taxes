@@ -56,5 +56,7 @@ test("FB-F3-E1: 금액 입력 → body fbRateBasis → 결과 카드 33.3333% ·
   await expect(resultCard).toContainText("33.3333%");
   await expect(resultCard).toContainText("66.6666%");
   await expect(resultCard).toContainText("733,333,332");
-  await expect(resultCard).toContainText("가업상속공제적용률 = 가업상속공제금액 40,000,000,000 ÷ 가업상속 재산가액 120,000,000,000");
+  const basisRow = page.getByTestId("fb-rate-basis-row").first();
+  await expect(basisRow).toContainText("가업상속공제금액 40,000,000,000");
+  await expect(basisRow).toContainText("가업상속 재산가액 120,000,000,000");
 });
