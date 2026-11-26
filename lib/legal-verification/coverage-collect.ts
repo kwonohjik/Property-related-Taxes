@@ -28,6 +28,7 @@ import * as transferRedevelopment from "@/lib/tax-engine/legal-codes/transfer-re
 import * as transferRentalHousing from "@/lib/tax-engine/legal-codes/transfer-rental-housing";
 import * as transferNecessaryExpense from "@/lib/tax-engine/legal-codes/transfer-necessary-expense";
 import * as stockForeignCarryover from "@/lib/tax-engine/legal-codes/stock-foreign-carryover";
+import * as transferFbLthd from "@/lib/tax-engine/legal-codes/transfer-fb-lthd";
 
 import { isLegalCitation } from "./coverage";
 import { parseCitations, LAW_ALIAS } from "./citation-parser";
@@ -51,6 +52,7 @@ const MODULES: unknown[] = [
   transferRentalHousing,
   transferNecessaryExpense,
   stockForeignCarryover,
+  transferFbLthd,
 ];
 
 /** 객체/배열을 재귀 순회하며 모든 문자열 leaf를 수집한다. */

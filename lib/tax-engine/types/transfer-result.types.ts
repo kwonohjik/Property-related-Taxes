@@ -34,6 +34,8 @@ import type { SelfBuiltEchoEntry, SelfBuiltHousingPenaltyEcho } from "./transfer
 import type { TransferBurdenedGiftBreakdown } from "./transfer-burdened-gift.types";
 import type { CommercialBuildingValuationResult } from "./commercial-building.types";
 import type { CommercialNblPartEcho } from "./commercial-appurtenant.types";
+import type { FbLthdSliceDetail } from "./fb-lthd.types";
+export type { FbLthdSlice, FbLthdSliceDetail } from "./fb-lthd.types";
 import type { RedevelopmentResult } from "./transfer-redevelopment.types";
 import type { FamilyBusinessCgtDetail } from "../transfer-tax-family-business";
 import type { PreHousingDisclosureResult } from "./transfer-phd.types";
@@ -620,6 +622,12 @@ export interface TransferTaxResult {
    * 이때 `longTermHoldingDeduction`은 두 파트 공제액의 합이다.
    */
   nblPartLthd?: NblPartLthdDetail;
+  /**
+   * 가업상속공제 자산 §95④ 후단 장기보유특별공제의 **부분별 echo**(계획서 transfer-fb-lthd-portion-gain §5.3) — 의제 §97의2④
+   * 결과에서만 존재한다(`{...imputedResult, familyBusinessDetail}`로 그대로 반환되어 최상위에 실린다). 표시 전용 — 공제액은
+   * `longTermHoldingDeduction`이 정본이다. 이전 이력(IndexedDB `resultData`)에는 없으므로 optional로만 읽는다.
+   */
+  fbLthdDetail?: FbLthdSliceDetail;
   /**
    * 일반건물(토지+건물 일괄) 환산취득가 산정 상세 결과.
    * propertyType === "general_building" aggregate 경로에서만 포함.

@@ -42,6 +42,8 @@ import { applyLthd982AndPushSteps } from "./transfer-tax-lthd-982-step";
 
 import { calcTransferGain } from "./transfer-tax-helpers";
 import { calcLongTermHoldingDeductionByNblPart, withNblPartNetShare } from "./transfer-tax-lthd-nbl-part";
+import { withFbSliceGains } from "./family-business-lthd-slices";
+import { FB_LTHD_LOSS_SLICE_NOTICE } from "./transfer-tax-lthd-fb-latter";
 import { cbMixedSignLthdNotice } from "./nbl-confirm-notices";
 import { applyCommercialBuildingAndNblPart } from "./transfer-tax-commercial-nbl-part";
 import { oneHouseJudgmentWarnings } from "./transfer-tax-one-house-warnings";
@@ -548,10 +550,12 @@ function calculateTransferTaxCore(
    */
   const deemedOneHouseBy155 = exemptionResult.deemedOneHouseBy155 === true;
   // NBL2611-V5-G1 — 장특 판정 입력의 비사업용 사실은 STEP 0.35(상가 비사업용 파트) 이후 값이다(STEP 0.9 입력은 그 전 값). 부분 비사업용 자산은 파트별 장특.
-  const lthdInput = { ...exemptionJudgeInput, isNonBusinessLand: effectiveInput.isNonBusinessLand, nonBusinessLandAreaRatio: effectiveInput.nonBusinessLandAreaRatio, nonBusinessLandPartShare: effectiveInput.nonBusinessLandPartShare };
+  // §95④ 후단 — 의제 재귀(`imputedTerms`)에만 부분별 양도차익을 싣는다(`withFbSliceGains`). 그 밖의 입력은 같은 객체.
+  const lthdInput = withFbSliceGains({ ...exemptionJudgeInput, isNonBusinessLand: effectiveInput.isNonBusinessLand, nonBusinessLandAreaRatio: effectiveInput.nonBusinessLandAreaRatio, nonBusinessLandPartShare: effectiveInput.nonBusinessLandPartShare }, transferGain, depreciationAmount);
   // eslint-disable-next-line prefer-const -- deduction·rate는 STEP 4.05 §98의2 특칙에서 재할당
-  let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail, usageConversionDetail, exclusionReason: lthdExclusionReason, fbLthdFormula, appurtenantTable1Applied, appurtenantLthdNotice, landHoldingResidenceCap, nblPartLthd } =
+  let { deduction: longTermHoldingDeduction, rate: longTermHoldingRate, holdingPeriod, rental97LthdDetail, usageConversionDetail, exclusionReason: lthdExclusionReason, fbLthdFormula, fbLthdDetail, appurtenantTable1Applied, appurtenantLthdNotice, landHoldingResidenceCap, nblPartLthd } =
     calcLongTermHoldingDeductionByNblPart(taxableGain, lthdInput, isSurchargeCase, suspendedResult, splitDetail, deemedOneHouseBy155);
+  if (fbLthdDetail?.lossSlice) warnings.push(FB_LTHD_LOSS_SLICE_NOTICE);
   // §154⑧3호: 표2 "대상 판정"용 통산 거주연수 (동일세대 상속 통산 반영) — rate calc와 동일 exemptionJudgeInput.
   // 거주분 공제율 표시는 실거주(residenceYearsForStep) 유지 — 대상판정/공제율 분리 (rate↔display drift 방지).
   // STEP 4.05(§98의2 특칙 재할당) · 장특 step 생성 · OH-31 표2 연혁 미지원 고지 — transfer-tax-lthd-982-step.ts (800줄 정책 분리).
@@ -570,6 +574,7 @@ function calculateTransferTaxCore(
     lthdExclusionReason,
     usageConversionDetail,
     fbLthdFormula,
+    fbLthdDetail,
     appurtenantTable1Applied,
     appurtenantLthdNotice,
     landHoldingResidenceCap,
@@ -685,6 +690,7 @@ function calculateTransferTaxCore(
     usageConversionDetail,
     lthdExclusionReason,
     nblPartLthd,
+    fbLthdDetail,
     // 짝 부수토지 카드가 받는 표2 「1주택」 축 echo(S08-5 — `toHouseVerdict`) — L-3 게이트와 같은 술어.
     lthdTable2OneHouseAxis: resolveLthdTable2OneHouseAxis(exemptionJudgeInput, deemedOneHouseBy155),
     surchargeEcho: surchargeApplication,

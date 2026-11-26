@@ -47,8 +47,24 @@ import {
  * @param fbDeductionAppliedRate 가업상속공제적용률 (0~1) — 소령 §163의2③
  * @param decedentCapitalExpenditure 피상속인 자본적지출액 (원, 기본 0)
  * @param basis 가업상속공제적용률의 법정량 (있으면 우선)
- * @returns 의제 취득가액 (원)
+ * @returns 1호(피상속인 취득가액 × 적용률)·2호(상속개시일 평가액 × (1 − 적용률)) 두 항 — §95④ 후단 LTHD 부분별 양도차익이 쓴다
  */
+export function calcFamilyBusinessImputedAcquisitionTerms(
+  decedentAcquisitionPrice: number,
+  inheritanceMarketValue: number,
+  fbDeductionAppliedRate: number,
+  decedentCapitalExpenditure = 0,
+  basis?: FamilyBusinessRateBasis,
+): { decedentTerm: number; heirTerm: number } {
+  const { numerator, denominator } = resolveFamilyBusinessRateFraction(fbDeductionAppliedRate, basis);
+  const decedentBase = decedentAcquisitionPrice + decedentCapitalExpenditure;
+  return {
+    decedentTerm: applyRateFraction(decedentBase, numerator, denominator),
+    heirTerm: applyRateFraction(inheritanceMarketValue, denominator - numerator, denominator),
+  };
+}
+
+/** 의제 취득가액 = 두 항의 합 (종전과 비트 동일) */
 export function calcFamilyBusinessImputedAcquisitionPrice(
   decedentAcquisitionPrice: number,
   inheritanceMarketValue: number,
@@ -56,9 +72,12 @@ export function calcFamilyBusinessImputedAcquisitionPrice(
   decedentCapitalExpenditure = 0,
   basis?: FamilyBusinessRateBasis,
 ): number {
-  const { numerator, denominator } = resolveFamilyBusinessRateFraction(fbDeductionAppliedRate, basis);
-  const decedentBase = decedentAcquisitionPrice + decedentCapitalExpenditure;
-  const term1 = applyRateFraction(decedentBase, numerator, denominator);
-  const term2 = applyRateFraction(inheritanceMarketValue, denominator - numerator, denominator);
-  return term1 + term2;
+  const { decedentTerm, heirTerm } = calcFamilyBusinessImputedAcquisitionTerms(
+    decedentAcquisitionPrice,
+    inheritanceMarketValue,
+    fbDeductionAppliedRate,
+    decedentCapitalExpenditure,
+    basis,
+  );
+  return decedentTerm + heirTerm;
 }

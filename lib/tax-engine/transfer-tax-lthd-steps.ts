@@ -14,6 +14,7 @@
  */
 import type { CalculationStep } from "./types/transfer.types";
 import type { NblPartLthdDetail, UsageConversionDetail } from "./types/transfer-result.types";
+import type { FbLthdSliceDetail } from "./types/fb-lthd.types";
 import { TRANSFER, LTHD_EXCLUSION_LABEL } from "./legal-codes/transfer";
 import { TRANSFER_REDUCTION_ARTICLE } from "./legal-codes/transfer-house";
 import { applyRate } from "./tax-utils";
@@ -63,6 +64,8 @@ export interface LthdStepArgs {
    * 있으면 표1/표2 문구 대신 이것을 쓴다 — 두 기산일이 섞여 있어 단일 "보유 N년×2%" 표기가 성립하지 않는다.
    */
   fbLthdFormula?: string;
+  /** §95④ 후단 부분별 장특 echo(슬라이스 분기) — 있으면 장특 step 산식은 부분별 공제 문구 그대로, 보유분/거주분 sub-step은 부분별 공제액 합·거주분 공제액이다. */
+  fbLthdDetail?: FbLthdSliceDetail;
   /**
    * 부수토지 L-1b에서 표1 축이 이긴 경우(기본통칙 95-0…1 max) — 표2 형식 산식을 쓰면
    * 분해가 실제 공제율과 어긋나 자기모순이 된다. 켜지면 표1 형식으로 내려간다.
@@ -135,6 +138,7 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     lthdExclusionReason,
     usageConversionDetail: conv,
     fbLthdFormula,
+    fbLthdDetail,
     appurtenantTable1Applied,
     meetsTable2Residence,
     transferDate,
@@ -239,6 +243,8 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
       ? nblPartLthd.formula
       : splitFormula
       ? splitFormula
+      : fbLthdDetail
+      ? lthdFormulaRate // 부분별 공제 문구가 head(`양도차익 × N%`)를 대신한다 — 실효 공제율로 쓰면 부분별 합과 어긋난다
       : [
           rentalHead ?? `${taxableGain.toLocaleString()} × ${pctOf(longTermHoldingRate)}%`,
           formulaRateText,
@@ -286,6 +292,28 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
       label: LTHD_RESIDENCE_STEP_LABEL,
       formula: splitSub.residence.formula,
       amount: splitSub.residence.amount,
+      legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+      sub: true,
+    });
+  } else if (fbLthdDetail && isOneHouseSpecial && !lthd982Applied && longTermHoldingDeduction > 0) {
+    // §95④ 후단 슬라이스 — 보유분 = 부분별 보유분 공제액 합, 거주분 = 전체 과세 양도차익 × 표2 거주기간 공제율(엔진이 낸 값 그대로).
+    //   총 공제액에 표2 비율(보유 ÷ 합)을 다시 곱하면 부분별 공제율을 무시한 금액이 나온다(종전 sub-step의 어긋남).
+    const { decedentSlice: ds, heirSlice: hs } = fbLthdDetail;
+    const holdingAmt = ds.deduction + hs.deduction;
+    const residenceAmt = fbLthdDetail.residenceDeduction;
+    steps.push({
+      label: LTHD_HOLDING_STEP_LABEL,
+      formula:
+        `적용분 ${ds.taxableGain.toLocaleString()} × ${pctOf(ds.holdingRate)}% (피상속인 취득일부터 ${ds.holdingYears}년)` +
+        ` + 비적용분 ${hs.taxableGain.toLocaleString()} × ${pctOf(hs.holdingRate)}% (상속개시일부터 ${hs.holdingYears}년) = ${holdingAmt.toLocaleString()}`,
+      amount: holdingAmt,
+      legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
+      sub: true,
+    });
+    steps.push({
+      label: LTHD_RESIDENCE_STEP_LABEL,
+      formula: `${taxableGain.toLocaleString()} × ${residencePct}% = ${residenceAmt.toLocaleString()} (거주 ${residenceYearsForStep}년 × 4%, 40% 한도 — 상속개시일 이후 실거주 기준)`,
+      amount: residenceAmt,
       legalBasis: TRANSFER.LONG_TERM_DEDUCTION,
       sub: true,
     });
