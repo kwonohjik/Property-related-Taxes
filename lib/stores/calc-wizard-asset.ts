@@ -48,6 +48,7 @@ export type { RedevelopmentFormSlice } from "./calc-wizard-asset-redev";
 import type { InheritanceAcquisitionFormSlice } from "./calc-wizard-asset-inheritance-acq";
 export type { InheritanceAcquisitionFormSlice } from "./calc-wizard-asset-inheritance-acq";
 import type { NblOtherFormSlice } from "./calc-wizard-asset-nbl-other";
+import type { FamilyBusinessRateBasis } from "@/lib/tax-engine/family-business-applied-rate";
 export type { NblOtherFormSlice } from "./calc-wizard-asset-nbl-other";
 import type { GeneralBuildingFormSlice } from "./calc-wizard-asset-gb";
 export type { GeneralBuildingFormSlice } from "./calc-wizard-asset-gb";
@@ -673,6 +674,11 @@ export interface AssetForm extends BurdenedGiftFormSlice, RedevelopmentFormSlice
     inheritanceDate: string;
     /** 피상속인 자본적지출 — §97의2④1호 base에 가산(적용률이 곱해진다) */
     decedentCapitalExpenditure?: number;
+    /**
+     * 적용률 법정량(공제금액 ÷ 가업상속 재산가액 — 소령 §163의2③). 있으면 「금액으로 입력」 모드이고
+     * `fbDeductionAppliedRate`는 그 비율의 표시값이다. undefined = 「% 직접 입력」 모드(구 입력 포함).
+     */
+    fbRateBasis?: Extract<FamilyBusinessRateBasis, { kind: "deduction_ratio" }>;
   };
 }
 

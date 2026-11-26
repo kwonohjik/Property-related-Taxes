@@ -19,6 +19,7 @@ import { donorBuiltShape, refineDonorBuiltInCarryover } from "./transfer-tax-sch
 import { selfBuiltHousingShape } from "./transfer-tax-schema-self-built-housing";
 import { landRebuildShape } from "./transfer-tax-schema-land-rebuild";
 import { oneRightExemptionFactsSchema } from "./transfer-tax-schema-sub";
+import { familyBusinessRateBasisError } from "@/lib/tax-engine/family-business-applied-rate";
 import {
   temporaryTwoHouseSchema,
   unavoidableOutsideCapitalHouseSchema,
@@ -708,6 +709,18 @@ export const propertyBaseShape = {
     fbDeductionAppliedRate: z.number().min(0).max(1),
     inheritanceDate: z.string().date(),
     decedentCapitalExpenditure: z.number().int().nonnegative().optional(),
+    /**
+     * F-3 적용률 법정량(소령 §163의2③ — 공제금액 ÷ 가업상속 재산가액). 부동산은 `deduction_ratio`만 —
+     * 법인가업 대상 자산은 주식등이다(소령 §163의2④2호). 형식·정합은 ⑧과 같은 술어로 막는다.
+     */
+    fbRateBasis: z.object({
+      kind: z.literal("deduction_ratio"),
+      deductionAmount: z.number(),
+      businessEstateValue: z.number(),
+    }).optional(),
+  }).superRefine((fb, ctx) => {
+    const msg = familyBusinessRateBasisError(fb.fbRateBasis, fb.fbDeductionAppliedRate);
+    if (msg) ctx.addIssue({ code: "custom", path: ["fbRateBasis"], message: `가업상속공제 — ${msg}` });
   }).optional(),
   /**
    * ⑫ 재개발/재건축 입력 (시행령 §166 본문) — sibling 파일 분리(800줄 정책).

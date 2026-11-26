@@ -19,7 +19,11 @@
  * DB 직접 호출 없음 — 순수 함수
  */
 
-import { applyRateFraction } from "./tax-utils";
+import { calcFamilyBusinessImputedAcquisitionPrice } from "./family-business-imputed-acquisition";
+import {
+  resolveFamilyBusinessRateFraction,
+  type FamilyBusinessRateBasis,
+} from "./family-business-applied-rate";
 import { isFamilyBusinessCgtEra } from "./data/family-business-cgt-era";
 import type { TransferTaxInput, TransferTaxResult } from "./types/transfer.types";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
@@ -67,6 +71,15 @@ export interface FamilyBusinessInheritanceTransferInput {
    * 적용률 = 1이면 의제 취득가 = 피상속인 원취득가 (공제 100%)
    */
   fbDeductionAppliedRate: number;
+  /**
+   * 가업상속공제적용률의 **법정량** (선택 · 계획서 F-3).
+   *
+   * 있으면 엔진은 `fbDeductionAppliedRate` 대신 이 정수 분수로 곱한다(소수 반올림 없음).
+   * 부동산은 `deduction_ratio`(공제금액 ÷ 가업상속 재산가액)만 받는다 — 법인가업의 대상 자산은
+   * 주식등이다(소령 §163의2④2호). `fbDeductionAppliedRate`와 값이 다르면 ⑧·⑫가 막는다
+   * (`familyBusinessRateBasisError`).
+   */
+  fbRateBasis?: FamilyBusinessRateBasis;
   /**
    * 상속개시일 (YYYY-MM-DD 문자열 또는 ISO 8601)
    * 의제 취득가액 계산 근거 일자. 현재 엔진 분기 판정용 보관.
@@ -120,6 +133,8 @@ export interface FamilyBusinessCgtDetail {
    * 소령 §163의2③ 산출값 (UI 산식 표시용)
    */
   appliedRate: number;
+  /** 적용률 법정량 echo (입력에 있을 때만 · UI 산식 「공제금액 ÷ 재산가액」 표시용) */
+  appliedRateBasis?: FamilyBusinessRateBasis;
   /**
    * 피상속인 원취득가액 echo (UI 산식 표시용)
    */
@@ -146,55 +161,8 @@ export interface FamilyBusinessCgtDetail {
 
 // ─── 핵심 헬퍼 함수 ──────────────────────────────────────────
 
-/** 적용률 정수 basis — 소령 §163의2③ 산식은 나눗셈이라 소수 자릿수가 길 수 있다. */
-const RATE_SCALE = 1_000_000;
-
-/**
- * 소법 §97의2④ 의제 취득가액 산출
- *
- * 산식 (1호 + 2호):
- *   (피상속인 취득가액 + **피상속인 자본적지출**) × 적용률
- *   + 상속개시일 평가액 × (1 − 적용률)
- *
- * ## 피상속인 자본적지출을 1호 base에 넣는 이유 (계획서 Q7 = 안 B)
- *
- * 자본적지출은 취득가액에 속하는 개념이고(법인세법 시행령 §72), §97의2**①**1호가
- * "취득할 **당시의** §97①1호에 따른 금액"으로 시점을 못박은 것과 달리 **④1호에는 시점
- * 한정어가 없다**. ⇒ 1호 base에 가산해 **적용률이 곱해지도록** 한다.
- *
- * ⚠️ **해석례 미확보 상태의 채택이다.** 국세법령정보시스템 실측 0건이고, 안 C(§97①2호
- *    필요경비로 **전액** 산입 — 적용률이 곱해지지 않는다)를 배제할 결정적 근거는 없다.
- *    회신이 C를 지지하면 **이 가산을 여기서 빼고 필요경비 항으로 옮겨야 한다.**
- *    (anchor: `fb-lthd-95-4-latter.anchor.test.ts` M-4)
- *
- * ## 절사 — 잔액흡수가 아니라 문언대로
- *
- * 종전 구현은 2항을 `market − floor(market × r)`(잔액흡수)로 계산해 문언
- * `floor(market × (1−r))`보다 **1원 컸다**. 두 항의 base가 서로 달라 `Σ = 전체`
- * 불변식이 없으므로 잔액흡수를 쓸 자리가 아니다.
- *
- * `1 − rate`를 부동소수로 쓰면 안 된다(`1 − 0.8 = 0.19999999999999996` → 1원 과소).
- * 적용률을 **정수 basis로 정규화**한 뒤 `applyRateFraction`(BigInt overflow 가드)으로
- * 두 항을 각각 floor한다.
- *
- * @param decedentAcquisitionPrice 피상속인 원취득가액 (원) — §97①1호(실지거래가액. 확인 불가 시 매매사례·감정·환산 순차)
- * @param inheritanceMarketValue 상속개시일 현재 자산가액 (원)
- * @param fbDeductionAppliedRate 가업상속공제적용률 (0~1) — 소령 §163의2③
- * @param decedentCapitalExpenditure 피상속인 자본적지출액 (원, 기본 0)
- * @returns 의제 취득가액 (원)
- */
-export function calcFamilyBusinessImputedAcquisitionPrice(
-  decedentAcquisitionPrice: number,
-  inheritanceMarketValue: number,
-  fbDeductionAppliedRate: number,
-  decedentCapitalExpenditure = 0,
-): number {
-  const rateNumer = Math.round(fbDeductionAppliedRate * RATE_SCALE);
-  const decedentBase = decedentAcquisitionPrice + decedentCapitalExpenditure;
-  const term1 = applyRateFraction(decedentBase, rateNumer, RATE_SCALE);
-  const term2 = applyRateFraction(inheritanceMarketValue, RATE_SCALE - rateNumer, RATE_SCALE);
-  return term1 + term2;
-}
+/** 의제 취득가액 산식 — 부동산·주식 공용 leaf로 옮겼다(계획서 F-3). 기존 import 경로 유지용 재export. */
+export { calcFamilyBusinessImputedAcquisitionPrice };
 
 /**
  * 가업상속공제 자산 양도세 분기 처리
@@ -228,6 +196,7 @@ export function buildFamilyBusinessCgtDetail(
     cgtUnderSection97: regularCgt,
     creditAmount: cgtCredit.creditAmount,
     appliedRate: fb.fbDeductionAppliedRate,
+    ...(fb.fbRateBasis ? { appliedRateBasis: fb.fbRateBasis } : {}),
     decedentAcquisitionPrice: fb.decedentAcquisitionPrice,
     inheritanceMarketValue: fb.inheritanceMarketValue,
     // A22: 카드가 산식과 금액을 일치시키려면 base 구성요소가 전부 있어야 한다.
@@ -294,6 +263,7 @@ export function applyFamilyBusinessCgtStep(
     fb.inheritanceMarketValue,
     fb.fbDeductionAppliedRate,
     fb.decedentCapitalExpenditure ?? 0,
+    fb.fbRateBasis,
   );
 
   // 2. 재귀 호출용 입력 — familyBusinessInheritance 제거하여 무한루프 차단.
@@ -309,6 +279,8 @@ export function applyFamilyBusinessCgtStep(
       ? {
           fbLthdLatter: {
             appliedRate: fb.fbDeductionAppliedRate,
+            // F-3: 양도차익 안분도 의제 취득가액과 같은 정수 분수로 한다(소수 6자리 반올림 금지).
+            appliedRateFraction: resolveFamilyBusinessRateFraction(fb.fbDeductionAppliedRate, fb.fbRateBasis),
             decedentAcquisitionDate: decedentAcqDate,
           },
         }
