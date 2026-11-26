@@ -18,6 +18,8 @@ import { CURRENCY_OPTIONS } from "./currency-options";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
+import { isForeignCarryoverForm } from "@/lib/calc/stock-foreign-carryover";
+import { ForeignCarryoverExpenseSection } from "./ForeignCarryoverBlocks";
 import {
   SectionBox,
   FOREIGN_TAX_METHOD_OPTIONS,
@@ -105,6 +107,9 @@ export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSection
           </FieldCard>
         )}
       </SectionBox>
+
+      {/* §97의2① 이월과세 — 증여자 자본적지출·증여세 (1단계 게이트 토글이 ON일 때만) */}
+      {isForeignCarryoverForm(form) && <ForeignCarryoverExpenseSection form={form} onChange={onChange} />}
 
       {/* ── 섹션 6: 외국납부세액 (§118의6) ── */}
       <ToggleCard

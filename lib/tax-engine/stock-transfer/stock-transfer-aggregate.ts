@@ -237,36 +237,25 @@ export function calculateStockTransferTaxAggregate(
    *
    * ⚠️ `aggregateCore`는 이 resolve를 **다시 하지 않는다** — 순환을 만들지 않기 위해서다.
    *
-   * 🔑 **국외주식은 이월과세 대상이 아니다** — §97의2①은 배우자·직계존비속에게서 **증여받은**
-   *   자산의 취득가액을 증여자 기준으로 되돌리는 규정이고, `ForeignStockInput`에는 그 축
-   *   (`acquisitionCause`)이 아예 없다. 그래서 국내 종목만 뽑아 resolve하고 **원래 자리로
-   *   되돌려 놓는다** — 순서를 유지해야 §103②(양도일 순) 배분이 어긋나지 않는다.
-   *
-   * ⚠️ 다만 ②3호가 비교하는 「결정세액」은 **과세기간 전체**라, 비교용 합산에는 국외 종목도
-   *   **포함**해야 한다. 그래서 콜백 안에서 전체 배열을 재조립해 넘긴다.
+   * 🔑 **국내(가·나목)와 국외(다목)는 같은 후보 집합에서 함께 푼다.** 둘 다 §102①2호 통산·§103①2호
+   *   기본공제 250만원이 같은 그룹이라 한 종목의 A/B가 다른 쪽 세액까지 움직인다. 국외도 이월과세
+   *   대상이다 — §97의2①이 「제94조제1항제1호 및 제3호에 따른 자산」을 목 구분 없이 가리키고,
+   *   `ForeignStockInput.acquisitionCause`로 선언한다(`foreign-stock-carryover.ts`). 종전에는 이 자리에
+   *   「국외주식은 이월과세 대상이 아니다」라는 단정이 있었고 국내만 resolve에 넘겼다.
+   *   배열 순서는 resolve가 유지한다 — §103②(양도일 순) 배분이 어긋나지 않는다.
    */
-  const domesticIdx: number[] = [];
-  inputs.forEach((input, i) => {
-    if (!isForeignStockItem(input)) domesticIdx.push(i);
-  });
-
-  const mergeDomestic = (list: StockTransferInput[]): AggregateStockItemInput[] => {
-    const merged = [...inputs];
-    domesticIdx.forEach((globalIdx, localIdx) => {
-      merged[globalIdx] = list[localIdx];
-    });
-    return merged;
-  };
-
-  const resolvedDomestic = resolveStockCarryover(
-    domesticIdx.map((i) => inputs[i] as StockTransferInput),
+  const resolved = resolveStockCarryover<AggregateStockItemInput>(
+    inputs,
     // ⚠️ 이월과세 ②3호 비교용 재계산에는 정산을 넣지 않는다 — 비교 대상은 「결정세액」이고
     //    §111③ 정산은 그 뒤 「납부할 세액」 축이다. 넣으면 비교 기준이 기납부액에 흔들린다.
-    (list) => aggregateCore(mergeDomestic(list), deductionMode).totalFinalTax,
-    (i) => calculateStockTransferTaxInternal(i).transferIncome,
+    (list) => aggregateCore(list, deductionMode).totalFinalTax,
+    (i) =>
+      isForeignStockItem(i)
+        ? calculateForeignStockTax(i).transferGain
+        : calculateStockTransferTaxInternal(i).transferIncome,
   );
 
-  return aggregateCore(mergeDomestic(resolvedDomestic), deductionMode, filing);
+  return aggregateCore(resolved, deductionMode, filing);
 }
 
 /**

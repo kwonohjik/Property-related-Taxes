@@ -23,7 +23,7 @@
 import type { StockTransferInput, StockTransferResult, LotMatchingDetail } from "./types/stock-transfer.types";
 import type { ForeignStockInput, ForeignStockResult } from "./types/foreign-stock.types";
 import type { ExitTaxInput, ExitTaxResult } from "./types/exit-tax.types";
-import { calculateForeignStockTax } from "./foreign-stock";
+import { calculateForeignStockTaxResolved } from "./foreign-stock-resolved";
 import { calculateExitTax } from "./exit-tax";
 import { classifyStockTransfer } from "./stock-classification";
 import { isSection94_4Category } from "./stock-classification";
@@ -121,7 +121,7 @@ export function calculateStockTransferTax(
 ): StockTransferResult | ForeignStockResult | ExitTaxResult {
   // foreign_stock 분기 — PR-4A 독립 도메인
   if ((input as ForeignStockInput).marketType === "foreign_stock") {
-    return calculateForeignStockTax(input as ForeignStockInput);
+    return calculateForeignStockTaxResolved(input as ForeignStockInput);
   }
 
   // exit_tax 분기 — PR-4B 독립 도메인

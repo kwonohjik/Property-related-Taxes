@@ -519,6 +519,25 @@ export interface StockTransferFormData {
   /** §118의6 처리 방법: 세액공제 | 필요경비 산입 */
   foreignTaxMethod: "credit" | "expense";  // 3중 패턴 default: "credit"
 
+  // ── §97의2① 국외주식 이월과세 — 증여자 취득가액·자본적지출 (외화 + 환율) ──
+  // 활성 조건: marketType === "foreign_stock" && acquisitionCause === "carryover_gift"
+  //   (술어 = `isForeignCarryoverForm` — ④⑤⑧ 공유, raw acquisitionCause)
+  // 🔑 게이트·증여세 필드는 국내와 **같은 필드를 재사용**한다: acquisitionCause · donorAcquisitionDate ·
+  //    donorRelation · donorDeceased · giftTaxAmount · transferredAssetValue · giftTaxableValue.
+  //    단위가 갈리는 아래 6개(외화+환율)만 국외 전용이다 — 국내 `donorAcquisitionPrice`(원)를 외화로 재해석하지 않는다.
+  /** 증여자 취득가액 산정 방식: 실가 | 영 §178의3 시가 (국외는 환산·매매사례 없음) */
+  donorAcquisitionModeFS: "actual" | "market_price";  // 3중 패턴 default: "actual"
+  /** 증여자 1주당 외화 취득단가 — DecimalInput */
+  donorPerShareAcquisitionPriceForeign: string;
+  /** 증여자 취득 통화 (ISO 4217) — 표시용 echo (계산은 환율만 쓴다) */
+  donorAcquisitionCurrencyCode: string; // 3중 패턴 default: "USD"
+  /** 증여자 취득일 기준환율 (원/외화, 영 §178의5①) — 빈문자 → validate 차단 */
+  donorAcquisitionExchangeRate: string;
+  /** 증여자 자본적지출 총액 (외화 · 양도비 제외) — DecimalInput */
+  donorCapitalExpenditureForeign: string;
+  /** 증여자 자본적지출 **지출일** 기준환율 — 금액>0이면 필수(양도일 환율로 대신하지 않는다) */
+  donorCapitalExpenditureExchangeRate: string;
+
   // ── FS-09 §178의5② 장기할부 분할 수령 ──
   /**
    * 양도가액 수령 방식 (§178의5②)

@@ -275,6 +275,14 @@ export function createInitialStockFormData(): StockTransferFormData {
     foreignTaxExchangeRate: "",
     foreignTaxMethod: "credit",          // 3중 패턴 default
 
+    // ── §97의2① 국외주식 이월과세 — 증여자 취득가액·자본적지출 (외화) ──
+    donorAcquisitionModeFS: "actual",    // 3중 패턴 default
+    donorPerShareAcquisitionPriceForeign: "",
+    donorAcquisitionCurrencyCode: "USD", // 3중 패턴 default
+    donorAcquisitionExchangeRate: "",
+    donorCapitalExpenditureForeign: "",
+    donorCapitalExpenditureExchangeRate: "",
+
     // ── FS-09 §178의5② 장기할부 분할 수령 초기값 ──
     fsTransferReceiptMode: "single",     // 3중 패턴 default: 단일 수령
     fsTransferInstallmentReceipts: [],   // 3중 패턴 default: 빈 배열

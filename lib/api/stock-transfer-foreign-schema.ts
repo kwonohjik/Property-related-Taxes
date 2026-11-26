@@ -6,6 +6,7 @@
  * 기존 import 경로 호환을 위해 본체에서 **re-export** 한다.
  */
 import { z } from "zod";
+import { foreignCarryoverIssues } from "@/lib/calc/foreign-stock-carryover-required";
 import {
   FOREIGN_STOCK_TRACK_START,
   isBeforeForeignStockTrack,
@@ -26,6 +27,18 @@ export const foreignAcquisitionModeSchema = z.enum(["actual", "market_price"]);
 
 /** ⑨ Zod enum: 외국납부세액 처리 방법 (§118의6) */
 export const foreignTaxMethodSchema = z.enum(["credit", "expense"]);
+
+/**
+ * ⑨ Zod enum: 취득원인 — 국외는 §97의2① 이월과세 선언 여부만 가른다(상속·합병 값 없음).
+ * 미선언(undefined)은 `"purchase"`와 같다.
+ */
+export const foreignAcquisitionCauseSchema = z.enum(["purchase", "carryover_gift"]);
+
+/** ⑨ Zod enum: 증여자 취득가액 산정 — 국외는 환산·매매사례가 없어 실가/시가 두 가지뿐(영 §178의3·§178의4) */
+export const foreignDonorAcquisitionModeSchema = z.enum(["actual", "market_price"]);
+
+/** ⑨ Zod enum: 증여자와의 관계(§97의2① 본문) — 국내 `donorRelationSchema`와 같은 값(순환 import 회피로 여기 정의) */
+export const foreignDonorRelationSchema = z.enum(["spouse", "lineal", "other"]);
 
 /**
  * ⑨ Zod enum: §178의5② 수령 방식
@@ -105,6 +118,22 @@ export const foreignStockInputSchema = z.object({
   foreignTaxCurrencyCode: z.string().optional(),
   foreignTaxExchangeRate: z.number().positive().optional(),
   foreignTaxMethod: foreignTaxMethodSchema,
+
+  // ── §97의2① 이월과세 (⑫ — 미등록 키는 Zod가 조용히 strip한다. 엔진 내부 전용 `carryover*`는 일부러 넣지 않는다) ──
+  acquisitionCause: foreignAcquisitionCauseSchema.optional(),
+  donorRelation: foreignDonorRelationSchema.optional(),
+  donorDeceased: z.boolean().optional(),
+  donorAcquisitionDate: z.union([z.string(), z.date()]).optional(),
+  donorAcquisitionMode: foreignDonorAcquisitionModeSchema.optional(),
+  donorPerShareAcquisitionPriceForeign: z.number().min(0).optional(),
+  donorAcquisitionCurrencyCode: z.string().optional(),
+  // positive — 0이 통과하면 증여자 취득가액이 0원으로 죽는다
+  donorAcquisitionExchangeRate: z.number().positive().optional(),
+  donorCapitalExpenditureForeign: z.number().min(0).optional(),
+  donorCapitalExpenditureExchangeRate: z.number().positive().optional(),
+  giftTaxAmount: z.number().int().min(0).optional(),
+  transferredAssetValue: z.number().int().min(0).optional(),
+  giftTaxableValue: z.number().int().min(0).optional(),
 
   // ── 기타 ──
   isElectronicFiling: z.boolean(),
@@ -198,6 +227,12 @@ export const foreignStockInputSchema = z.object({
       path: ["paymentDeadline"],
       message: "납부지연가산세를 계산하려면 법정납부기한이 필요합니다 (국세기본법 §47의4①1호)",
     });
+  }
+
+  // ⑩ §97의2① 이월과세 필수 입력·날짜 순서 — ⑧과 **같은 술어**(`foreignCarryoverIssues`)를 쓴다.
+  //    비우면 증여자 취득가액이 0원이거나 수증자 환율로 환산돼 세액이 조용히 틀린다.
+  for (const issue of foreignCarryoverIssues(d)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [issue.field], message: issue.message });
   }
 
   // ⑫ §94①3호다목 트랙 개시일 이전 양도 차단 (계획서 §6.5)

@@ -13,6 +13,7 @@
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { parseIntOrUndef, parseFloatOrUndef } from "./stock-transfer-tax-api-parse";
 import { effectiveSingleAcquisitionCause } from "./stock-acquisition-cause";
+import { isForeignCarryoverForm } from "./stock-foreign-carryover";
 
 /**
  * 증여자 기준 **환산**인가 — 수증자 모드가 실가여도 엔진 A가 환산을 탄다. 분자는 증여자 취득 당시
@@ -81,4 +82,45 @@ export function appendDonorConversionDenominator(
   const dNA = parseFloatOrUndef(form.transferYearNetAssetPerShare);
   if (dNI !== undefined) body.transferYearNetIncomePerShare = dNI;
   if (dNA !== undefined) body.transferYearNetAssetPerShare = dNA;
+}
+
+/**
+ * 국외주식 §97의2① 이월과세 body — 증여자 취득가액(외화+환율)·자본적지출·증여세 (④⑬)
+ *
+ * `isForeignCarryoverForm`일 때만 싣는다 — 토글 OFF 뒤에 남은 값이 body에 새면 안 된다(값은 지우지 않는다).
+ * ⚠️ 국내 `appendCarryoverDonorBody`는 **호출하지 않는다** — 국내 원화 필드(`donorAcquisitionPrice` 등)를
+ *    국외 body에 섞으면 외화 단가로 재해석된다.
+ *
+ * 🔑 빈 칸은 **키 자체를 싣지 않는다** — 환율·단가를 0으로 보내면 엔진이 「입력 없음」과 「0」을 구분하지
+ *    못하고(`?? fallback`이 죽는다), ⑧·⑫가 막아야 할 미입력이 조용히 0원 취득가액이 된다.
+ *    자동 안분 fallback 금지 — 지출일 환율을 양도일 환율로 대신하지 않는다(계획서 Q-4).
+ *
+ * ⑧(`stock-transfer-tax-validate-foreign-carryover.ts`)이 **이 함수가 만든 body에서 사실을 읽어** 판정한다 —
+ * 두 지점이 같은 값을 본다는 것을 구조로 보장한다(3중 패턴).
+ */
+export function appendForeignCarryoverBody(body: Record<string, unknown>, form: StockTransferFormData): void {
+  if (!isForeignCarryoverForm(form)) return;
+  body.acquisitionCause = "carryover_gift";
+  if (form.donorAcquisitionDate) body.donorAcquisitionDate = form.donorAcquisitionDate;
+  if (form.donorRelation) body.donorRelation = form.donorRelation;
+  if (form.donorDeceased) body.donorDeceased = true;
+  body.donorAcquisitionMode = form.donorAcquisitionModeFS || "actual";            // 3중 패턴 default
+  body.donorAcquisitionCurrencyCode = form.donorAcquisitionCurrencyCode || "USD"; // 3중 패턴 default
+  const perShare = parseFloatOrUndef(form.donorPerShareAcquisitionPriceForeign);
+  if (perShare !== undefined) body.donorPerShareAcquisitionPriceForeign = perShare;
+  const rate = parseFloatOrUndef(form.donorAcquisitionExchangeRate);
+  if (rate !== undefined) body.donorAcquisitionExchangeRate = rate;
+  const capex = parseFloatOrUndef(form.donorCapitalExpenditureForeign);
+  if (capex !== undefined) body.donorCapitalExpenditureForeign = capex;
+  // 지출일 환율은 지출액이 있을 때만 의미가 있다 — 금액을 지운 뒤 남은 환율이 ⑫(positive)를 막지 않게 한다
+  if (capex !== undefined && capex > 0) {
+    const capexRate = parseFloatOrUndef(form.donorCapitalExpenditureExchangeRate);
+    if (capexRate !== undefined) body.donorCapitalExpenditureExchangeRate = capexRate;
+  }
+  const giftTax = parseIntOrUndef(form.giftTaxAmount);
+  if (giftTax !== undefined) body.giftTaxAmount = giftTax;
+  const transferredVal = parseIntOrUndef(form.transferredAssetValue);
+  if (transferredVal !== undefined) body.transferredAssetValue = transferredVal;
+  const taxableVal = parseIntOrUndef(form.giftTaxableValue);
+  if (taxableVal !== undefined) body.giftTaxableValue = taxableVal;
 }

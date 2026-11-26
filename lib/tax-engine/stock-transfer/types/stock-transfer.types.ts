@@ -1522,6 +1522,12 @@ export type StockTransferResult = {
     appliedTotalTax: number;
     /** ① 미적용 시 전체 결정세액 */
     excludedTotalTax: number;
+    /**
+     * ②3호 비교를 실제로 수행했는가 — 국외 어댑터만 싣는다(`carryoverComparison` 유무).
+     * 게이트 탈락 종목도 두 세액이 0으로 오고, 비교를 했는데 둘 다 0(양도차손 등)일 수도 있어 세액으로는 구분할 수 없다.
+     * 미전달(국내)이면 카드가 종전 판정(두 세액 중 하나라도 > 0)을 쓴다.
+     */
+    comparisonPerformed?: boolean;
     /** ①1호 — 승계 취득가액(1주당). split 모드는 lot마다 달라 undefined. */
     donorAcquisitionPricePerShare?: number;
     /** ①1호 증여자 취득가액 산정 방식 echo — 「적용」 열 값이 실가인지 매매사례가액인지 라벨용 */
@@ -1598,6 +1604,8 @@ export type StockTransferResult = {
      */
     unusedForeignTaxCreditLimit?: number;
     transferReceiptDetail?: import("./foreign-stock.types").InstallmentReceiptDetail;
+    /** §97의2① 이월과세 국외 전용 echo (원화 총액·환율·통화) — 공용 `carryoverDetail`은 1주당 값이라 따로 싣는다 */
+    carryover?: import("./foreign-stock.types").ForeignCarryoverDetail;
     /** §118의2 5년 요건 미충족 사유 */
     ineligibleReason?: string;
     /** 국외 엔진이 남긴 조문 근거 문자열 (상위 `appliedRules` union에 섞지 않는다) */

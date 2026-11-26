@@ -35,13 +35,14 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
-import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { resolveStockDeemedDateString } from "@/lib/tax-engine/stock-transfer/stock-deemed-acquisition-date";
 import { isSection94_4Form, type Section94_4FormFields } from "@/lib/calc/stock-transfer-section94-4-form";
 import { BONUS_UNTAXED_BLOCK_MESSAGE } from "@/lib/calc/stock-acquisition-cause";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { CarryoverGateFields } from "./CarryoverGateFields";
+import { CarryoverGiftTaxFields } from "./CarryoverGiftTaxFields";
 
 /** 영 §162⑥⑦ — 주식(3호) / 기타자산(4호) 의제취득일 표기 */
 const DEEMED_LABEL = {
@@ -139,7 +140,6 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
   };
 
   const handleDecedentDateChange = (v: string) => onChange({ decedentAcquisitionDate: v });
-  const handleDonorDateChange = (v: string) => onChange({ donorAcquisitionDate: v });
   const handlePreMergerDateChange = (v: string) => onChange({ preMergerAcquisitionDate: v });
 
   return (
@@ -242,61 +242,13 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
       {/* carryover_gift nested 카드 — §104②2호 */}
       {cause === "carryover_gift" && (
         <div className="ml-4 rounded-lg border border-amber-300 bg-amber-100/60 p-3 space-y-2 dark:bg-amber-900/40">
-          <FieldCard
-            label="증여자 취득일 (§104②2)"
-            required
-            hint="단기 30% 세율 적용 여부를 증여자 취득일 → 양도일로 계산합니다"
-          >
-            <DateInput
-              value={form.donorAcquisitionDate ?? ""}
-              onChange={handleDonorDateChange}
-            />
-            <DeemedDateNotice date={form.donorAcquisitionDate ?? ""} is94_4={is94_4} subject="입력하신 증여자 취득일" />
-          </FieldCard>
-          <p className="text-xs text-amber-800 dark:text-amber-200">
-            ⓘ 주식은 <strong>2024.12.31. 개정(법률 제20615호)</strong>으로 2025.1.1.부터
-            이월과세 대상이 되었습니다. <strong>증여일 기준</strong>이므로 2024.12.31. 이전에
-            증여받았다면 이 항목을 골라도 수증일 기산이 유지됩니다.
-            기간 요건은 부동산 10년이 아니라 <strong>1년</strong>입니다
-            (<LawArticleModal legalBasis="소득세법 §97의2" label="§97의2①" />).
-          </p>
-
-          {/* ── §97의2① 본문 괄호 — 관계 요건 ── */}
-          <FieldCard
-            label="증여자와의 관계 (§97의2① 본문)"
-            required
-            hint="배우자·직계존비속이 아니면 이월과세 대상이 아닙니다"
-          >
-            {/* 선택지가 3~7자이고 description이 없다 — 세로로 쌓을 이유가 없다.
-                anchor: donor-relation-radio-inline.anchor.test.tsx DR-1 */}
-            <RadioCardGroup
-              name="donorRelation"
-              value={form.donorRelation || ""}
-              onChange={(v) =>
-                onChange({ donorRelation: v as StockTransferFormData["donorRelation"] })
-              }
-              layout="inline"
-              options={[
-                { value: "spouse", label: "배우자" },
-                { value: "lineal", label: "직계존비속" },
-                { value: "other", label: "그 밖의 관계" },
-              ]}
-            />
-          </FieldCard>
-
-          <ToggleCard
-            title={
-              form.donorRelation === "lineal"
-                ? "증여자가 양도 당시 사망"
-                : "사망으로 혼인관계가 소멸"
-            }
-            checked={form.donorDeceased}
-            onCheckedChange={(v: boolean) => onChange({ donorDeceased: v })}
-            tone="amber"
-            description={
-              form.donorRelation === "lineal"
-                ? "직계존비속이 양도 당시 사망했다면 §97의2①이 적용되지 않습니다 (2026.1.1. 이후 양도분)"
-                : "사별이면 §97의2① 미적용입니다. 이혼으로 혼인관계가 소멸한 경우는 그대로 적용됩니다"
+          <CarryoverGateFields
+            form={form}
+            onChange={onChange}
+            dateLabel="증여자 취득일 (§104②2)"
+            dateHint="단기 30% 세율 적용 여부를 증여자 취득일 → 양도일로 계산합니다"
+            dateNotice={
+              <DeemedDateNotice date={form.donorAcquisitionDate ?? ""} is94_4={is94_4} subject="입력하신 증여자 취득일" />
             }
           />
 
@@ -398,45 +350,7 @@ export function AcquisitionInfoBlock({ form, onChange }: AcquisitionInfoBlockPro
             />
           </FieldCard>
 
-          {/* ── §97의2①3호 × 영 §163의2② — 증여세 상당액 안분 ── */}
-          <FieldCard
-            label="증여세 산출세액 (§97의2①3호)"
-            hint="아래 두 값으로 안분한 금액이 필요경비에 산입됩니다"
-          >
-            <CurrencyInput
-              label=""
-              hideLabel              value={form.giftTaxAmount}
-              onChange={(v) => onChange({ giftTaxAmount: v })}
-            />
-          </FieldCard>
-          <FieldCard
-            label="양도한 해당 자산가액 (영 §163의2②2호)"
-            hint="증여세가 과세된 과세가액 중 이번에 양도한 부분 — 안분 분자"
-          >
-            <CurrencyInput
-              label=""
-              hideLabel              value={form.transferredAssetValue}
-              onChange={(v) => onChange({ transferredAssetValue: v })}
-            />
-          </FieldCard>
-          <FieldCard
-            label="증여세 과세가액 (영 §163의2②3호)"
-            hint="「상속세 및 증여세법」 §47에 따른 과세가액 — 안분 분모"
-          >
-            <CurrencyInput
-              label=""
-              hideLabel              value={form.giftTaxableValue}
-              onChange={(v) => onChange({ giftTaxableValue: v })}
-            />
-          </FieldCard>
-          <p className="text-xs text-amber-800 dark:text-amber-200">
-            ⓘ 산입되는 증여세는 <strong>양도가액에서 취득가액·필요경비를 뺀 잔액</strong>을
-            한도로 합니다 (<LawArticleModal legalBasis="소득세법 시행령 §163의2" label="영 §163의2②" />).
-            <br />
-            ⓘ 이월과세를 적용한 결정세액이 적용하지 않은 것보다 <strong>적으면</strong> 적용하지
-            않습니다 (<LawArticleModal legalBasis="소득세법 §97의2" label="§97의2②3호" />) —
-            그때는 세율 보유기간도 수증일 기산으로 돌아갑니다.
-          </p>
+          <CarryoverGiftTaxFields form={form} onChange={onChange} showHoldingPeriodNote />
         </div>
       )}
 

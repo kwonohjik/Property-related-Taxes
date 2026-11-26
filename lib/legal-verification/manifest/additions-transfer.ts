@@ -17,6 +17,25 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  // ── 국외주식 이월과세 §97의2① (계획서 foreign-stock-carryover-97-2) — KoreanLaw 현행 MST 280405 실독(2026-11-26) ──
+  {
+    id: "TRANSFER.CARRYOVER_STOCK_3HO_ONE_YEAR",
+    citation: "소득세법 §97조의2 ①",
+    keywords: [
+      "10년(제94조제1항제3호에 따른 자산의 경우에는 1년) 이내",
+      "증여받은 제94조제1항제1호 및 제3호에 따른 자산",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    id: "TRANSFER.HOLDING_PERIOD_SPECIAL_NOT_12HO",
+    citation: "소득세법 §104 ②",
+    keywords: [
+      "제1항제2호ㆍ제3호 및 제11호가목의 보유기간은 해당 자산의 취득일부터 양도일까지로 한다",
+      "제97조의2제1항에 해당하는 자산은 증여자가 그 자산을 취득한 날",
+    ],
+    keywordMode: "ALL",
+  },
   // ── 소득세법 ──────────────────────────────────────────────────────
   {
     /** NBL2611-B2 — 법 §104의3①4호 가·나목(재산세 비과세·면제 / 별도합산·분리과세 제외, `NBL.OTHER_LAND_PROPERTY_TAX_EXCLUSION`)과 ①6호 후단(별장 부속토지 경계 불명확 시 바닥면적 10배, 고지 `NBL_VILLA_LAND_SCOPE_NOTICE`) · KoreanLaw 현행 MST 280405 실측(2026-11-20). */

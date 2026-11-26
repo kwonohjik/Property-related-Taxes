@@ -20,6 +20,7 @@ import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { StockFilingFormTable } from "@/components/calc/stock-transfer/StockFilingFormTable";
 import type { StockAggregateMeta } from "@/components/calc/stock-transfer/StockFilingFormTableHelpers";
+import { taxCategoryLabel } from "@/components/calc/stock-transfer/StockFilingFormLabels";
 import { StockTaxpayerHeaderCard } from "@/components/calc/stock-transfer/StockTaxpayerHeaderCard";
 import { KiwoomFetchSourceBadge } from "@/components/calc/KiwoomFetchSourceBadge";
 import { useState, useMemo } from "react";
@@ -218,6 +219,12 @@ export function StockTransferTaxResultView({
 }: StockTransferTaxResultViewProps) {
   const categoryLabel = TAX_CATEGORY_LABEL[result.taxCategory] ?? result.taxCategory;
   const categoryLegalBasis = CATEGORY_LAW_MAP[result.taxCategory] ?? "";
+
+  // §97의2① 비교 카드 대상 — 다건이면 이월과세 종목 전부, 단건이면 대표 결과 하나
+  const isMultiItem = aggregate !== undefined && aggregate.items.length > 1;
+  const carryoverCardItems = (isMultiItem ? aggregate.items : [result])
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => item.carryoverDetail !== undefined);
 
   // 신고서 양식 헤더용 양도인·과세연도 메타 (디자인 §4.2)
   // — 국외주식 결과 화면과 **같은 훅**을 쓴다. 양도인 분기(전문가 모드 의뢰인 ↔ 내 프로필)를
@@ -591,10 +598,22 @@ export function StockTransferTaxResultView({
         )}
       </div>
 
-      {/* §97의2① 이월과세 적용/미적용 비교 (carryover_gift 종목 또는 이월과세 lot 보유 시) */}
-      {result.carryoverDetail && (
-        <StockCarryoverComparisonCard detail={result.carryoverDetail} />
-      )}
+      {/*
+        §97의2① 이월과세 적용/미적용 비교 (carryover_gift 종목 또는 이월과세 lot 보유 시).
+        🔑 다건이면 **이월과세 종목마다 모두** 그린다(계획서 Q-8) — 대표 `result`는 마지막 종목이라
+        그 종목만 카드를 그리면 이월과세 종목이 마지막이 아닐 때 카드가 통째로 사라진다.
+        국외 종목은 variant="foreign"(「세율 보유기간」 문장 없음 · 원화 환산 취득가액 행).
+      */}
+      {carryoverCardItems.map(({ item, index }) => (
+        <StockCarryoverComparisonCard
+          key={index}
+          detail={item.carryoverDetail!}
+          comparisonPerformed={item.carryoverDetail!.comparisonPerformed}
+          variant={item.taxCategory === "foreign_stock" ? "foreign" : "domestic"}
+          foreignCarryover={item.foreignDetail?.carryover}
+          itemLabel={isMultiItem ? `종목 ${index + 1} (${taxCategoryLabel(item.taxCategory)})` : undefined}
+        />
+      ))}
 
       {/* 의제취득일 전 매수 — 영 §176의2④ 「많은 것」 비교 (Z-1) */}
       {result.preDeemedAcquisitionDetail && (

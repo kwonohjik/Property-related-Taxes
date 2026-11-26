@@ -14,6 +14,8 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { CURRENCY_OPTIONS } from "./currency-options";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
+import { isForeignCarryoverForm } from "@/lib/calc/stock-foreign-carryover";
+import { ForeignCarryoverDonorPriceSection } from "./ForeignCarryoverBlocks";
 import {
   InstallmentReceiptsMatrix,
   createEmptyInstallmentRow,
@@ -262,6 +264,9 @@ export function ForeignStockPriceBlock({ form, onChange }: ForeignStockSectionPr
           );
         })()}
       </SectionBox>
+
+      {/* ── 섹션 3: §97의2① 이월과세 — 증여자 취득가액 (1단계 게이트 토글이 ON일 때만) ── */}
+      {isForeignCarryoverForm(form) && <ForeignCarryoverDonorPriceSection form={form} onChange={onChange} />}
     </div>
   );
 }

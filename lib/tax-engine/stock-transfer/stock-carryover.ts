@@ -33,6 +33,10 @@ import { isStockCarryoverEra, isWithinCarryoverPeriod } from "../data/carryover-
 import { isBookLostAtAcquisition } from "./gift-acquisition-163-9";
 import { isGiftLikeEstimationBlocked } from "./gift-acquisition-163-9";
 import type { StockTransferInput, AcquisitionLot } from "./types/stock-transfer.types";
+import type { ForeignStockInput } from "./types/foreign-stock.types";
+import { isForeignStockItem, type AggregateStockItemInput } from "./foreign-stock-aggregate-adapter";
+import { isForeignCarryoverEligible, buildForeignScenarioA, buildForeignScenarioB } from "./foreign-stock-carryover";
+import { solveCarryoverCombination } from "./stock-carryover-solver";
 
 /**
  * carryover 대상 종목 수 상한 — 2ⁿ 조합을 전수 계산하므로 방어선이 필요하다.
@@ -456,15 +460,21 @@ export function buildStockScenarioA(
  * @param computeTotalTax 배열 전체의 **결정세액** 합계 (순환 방지를 위해 주입)
  * @param calcTransferIncome 단건 양도소득금액 (증여세 한도 계산용)
  */
-export function resolveStockCarryover(
-  inputs: StockTransferInput[],
-  computeTotalTax: (list: StockTransferInput[]) => number,
-  calcTransferIncome: (i: StockTransferInput) => number,
-): StockTransferInput[] {
+export function resolveStockCarryover<T extends AggregateStockItemInput>(
+  inputs: T[],
+  computeTotalTax: (list: T[]) => number,
+  calcTransferIncome: (i: T) => number,
+): T[] {
+  const isForeign = (v: T): v is T & ForeignStockInput => isForeignStockItem(v);
   const targets: number[] = [];
   for (let i = 0; i < inputs.length; i++) {
-    // split 종목은 종목 축 `acquisitionCause`가 아니라 **lot**에 이월과세가 실린다.
-    if (isStockCarryoverEligible(inputs[i]) || hasCarryoverLot(inputs[i])) targets.push(i);
+    const v = inputs[i];
+    // 국외주식(§94①3호다목)은 같은 §97의2①이지만 필요경비 틀이 §118의4라 게이트·시나리오를 따로 둔다.
+    // 국내 split 종목은 종목 축 `acquisitionCause`가 아니라 **lot**에 이월과세가 실린다.
+    const eligible = isForeign(v)
+      ? isForeignCarryoverEligible(v)
+      : isStockCarryoverEligible(v as StockTransferInput) || hasCarryoverLot(v as StockTransferInput);
+    if (eligible) targets.push(i);
   }
 
   /**
@@ -474,11 +484,12 @@ export function resolveStockCarryover(
    * ⓒ·ⓓ만 보고 **관계 요건(ⓔ)을 판정하지 않아**, 배우자 사별·직계존비속 사망·관계
    * 부적격인데도 증여자 취득일로 소급했다(과소과세).
    */
-  const base = inputs.map((v, i) =>
-    (v.acquisitionCause === "carryover_gift" || hasCarryoverLot(v)) && !targets.includes(i)
-      ? buildStockScenarioB(v)
-      : v,
-  );
+  const base = inputs.map((v, i) => {
+    if (targets.includes(i)) return v;
+    if (isForeign(v)) return v.acquisitionCause === "carryover_gift" ? (buildForeignScenarioB(v) as T) : v;
+    const d = v as StockTransferInput;
+    return d.acquisitionCause === "carryover_gift" || hasCarryoverLot(d) ? (buildStockScenarioB(d) as T) : v;
+  });
 
   if (targets.length === 0) return base;
   if (targets.length > MAX_CARRYOVER_ITEMS) {
@@ -489,74 +500,25 @@ export function resolveStockCarryover(
   }
 
   // 시나리오는 종목마다 한 번만 만든다(조합 수와 무관).
-  const scenarioA = new Map<number, StockTransferInput>();
-  const scenarioB = new Map<number, StockTransferInput>();
+  const scenarioA = new Map<number, T>();
+  const scenarioB = new Map<number, T>();
   for (const i of targets) {
-    scenarioA.set(i, buildStockScenarioA(inputs[i], calcTransferIncome));
-    scenarioB.set(i, buildStockScenarioB(inputs[i]));
-  }
-
-  const n = targets.length;
-  const size = 1 << n;
-  const materialize = (mask: number): StockTransferInput[] => {
-    const list = [...base];
-    targets.forEach((assetIdx, bit) => {
-      list[assetIdx] = (mask >> bit) & 1 ? scenarioA.get(assetIdx)! : scenarioB.get(assetIdx)!;
-    });
-    return list;
-  };
-
-  const tax: number[] = new Array(size);
-  for (let mask = 0; mask < size; mask++) tax[mask] = computeTotalTax(materialize(mask));
-
-  const popcount = (m: number) => {
-    let c = 0;
-    for (let b = 0; b < n; b++) if ((m >> b) & 1) c++;
-    return c;
-  };
-
-  // 자기 재생산 조합(고정점)을 찾는다.
-  let best = -1;
-  for (let mask = 0; mask < size; mask++) {
-    let consistent = true;
-    for (let bit = 0; bit < n; bit++) {
-      const on = mask | (1 << bit);
-      const off = mask & ~(1 << bit);
-      const shouldApply = tax[on] >= tax[off]; // 동률은 적용 유지
-      if (((mask >> bit) & 1) === 1 !== shouldApply) {
-        consistent = false;
-        break;
-      }
-    }
-    if (!consistent) continue;
-    if (best === -1 || popcount(mask) > popcount(best)) best = mask;
-  }
-
-  /**
-   * 고정점은 **반드시 존재한다** — 「전체 세액 최대 조합 중 적용 최다」가 항상 조건을
-   * 만족하기 때문이다(적용 자산은 토글해도 세액이 안 커지므로 `≥`, 미적용 자산은
-   * 엄격히 작아지므로 `<`). 아래는 부동소수·절사로 인한 이론 밖 상황 대비 방어선이다.
-   */
-  if (best === -1) {
-    const maxTax = Math.max(...tax);
-    for (let mask = 0; mask < size; mask++) {
-      if (tax[mask] !== maxTax) continue;
-      if (best === -1 || popcount(mask) > popcount(best)) best = mask;
+    const v = inputs[i];
+    if (isForeign(v)) {
+      scenarioA.set(i, buildForeignScenarioA(v, (x) => calcTransferIncome(x as unknown as T)) as T);
+      scenarioB.set(i, buildForeignScenarioB(v) as T);
+    } else {
+      scenarioA.set(i, buildStockScenarioA(v as StockTransferInput, (x) => calcTransferIncome(x as unknown as T)) as T);
+      scenarioB.set(i, buildStockScenarioB(v as StockTransferInput) as T);
     }
   }
 
-  /**
-   * ②3호가 실제로 견준 **두 세액**을 결과 계층에 남긴다 — 그 종목만 토글한 전체 결정세액이다.
-   * `best`는 고정점이므로 「채택된 쪽 = 이 두 값 중 큰 쪽(동률이면 적용)」이 성립한다.
-   */
-  const chosen = materialize(best);
-  targets.forEach((assetIdx, bit) => {
-    const on = best | (1 << bit);
-    const off = best & ~(1 << bit);
-    chosen[assetIdx] = {
-      ...chosen[assetIdx],
-      carryoverComparison: { appliedTotalTax: tax[on], excludedTotalTax: tax[off] },
-    };
+  return solveCarryoverCombination<T>({
+    targets,
+    base,
+    scenarioA,
+    scenarioB,
+    computeTotalTax,
+    attachComparison: (item, comparison) => ({ ...item, carryoverComparison: comparison }),
   });
-  return chosen;
 }

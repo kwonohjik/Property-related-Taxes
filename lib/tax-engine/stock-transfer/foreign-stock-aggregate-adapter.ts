@@ -181,6 +181,19 @@ export function toStockTransferResult(
     clause9TaxBase: 0,
     clause9Tax: 0,
 
+    // §97의2① 이월과세 — 공용 비교 카드(`carryoverDetail`)가 다건에서도 뜨도록 **명시 매핑**한다.
+    // (이 함수가 필드를 하나씩 나르므로 새 echo는 여기서 빠지면 침묵 누락이다.)
+    carryoverDetail: r.carryoverOutcome
+      ? {
+          outcome: r.carryoverOutcome,
+          appliedTotalTax: r.carryoverComparison?.appliedTotalTax ?? 0,
+          excludedTotalTax: r.carryoverComparison?.excludedTotalTax ?? 0,
+          comparisonPerformed: r.carryoverComparison !== undefined,
+          donorCapexIncluded: r.carryoverDonorCapexKrw ?? 0,
+          giftTaxIncluded: r.carryoverGiftTaxIncluded ?? 0,
+        }
+      : undefined,
+
     warnings: r.warnings,
     // 상위 `appliedRules`는 국내 분기 **태그 union**이라 조문 문자열을 섞지 않는다.
     // 국외 엔진이 만든 목록은 `foreignDetail.appliedRules`에 그대로 보존한다.
@@ -201,6 +214,15 @@ export function toStockTransferResult(
       foreignTaxExpenseApplied: r.foreignTaxExpenseApplied,
       transferReceiptDetail: r.transferReceiptDetail,
       ineligibleReason: r.ineligibleReason,
+      carryover: r.carryoverOutcome
+        ? {
+            donorAcquisitionPriceKrw: r.carryoverDonorAcquisitionPriceKrw,
+            giftDateAcquisitionPriceKrw: r.carryoverGiftDateAcquisitionPriceKrw,
+            donorExchangeRate: r.carryoverDonorExchangeRate,
+            donorAcquisitionCurrencyCode: r.carryoverDonorAcquisitionCurrencyCode,
+            donorAcquisitionDate: r.carryoverDonorAcquisitionDate,
+          }
+        : undefined,
     },
   };
 }

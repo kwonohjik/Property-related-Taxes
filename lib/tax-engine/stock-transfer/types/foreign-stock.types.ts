@@ -158,6 +158,56 @@ export type ForeignStockInput = {
    */
   foreignTaxMethod: "credit" | "expense";
 
+  // ── §97의2① 배우자·직계존비속 증여 이월과세 (소득세법 §97의2① · §94①3호 자산 1년) ──
+  //
+  // 🔑 이월과세의 효과는 **필요경비(취득가액·자본적지출·증여세 상당액)뿐**이다 — §104②는 12호(국외주식)를
+  //    열거하지 않아 세율·보유기간은 바꾸지 않는다(계획서 foreign-stock-carryover-97-2 §1.3).
+  // 🔑 필요경비 틀은 §97가 아니라 §118②→§118의4다 — 개산공제·환산·매매사례가 없다(실가 / 영 §178의3 시가).
+  // 🔑 증여자 취득가액의 원화 환산은 **증여자 취득일 기준환율**(영 §178의5① 「지출한 날」)이다 —
+  //    수증일 환율(`acquisitionExchangeRate`)이 아니다.
+  //
+  // ⚠️ 전부 optional — 미선언(`undefined`)은 `"purchase"`로 읽어 종전 동작이 한 톨도 바뀌지 않는다.
+  /** 취득원인 선언 — `"carryover_gift"`가 §97의2① 해당 선언이다. 국외에는 상속·합병 값이 없다. */
+  acquisitionCause?: "purchase" | "carryover_gift";
+  /** 증여자와의 관계 (§97의2① 본문) — 국내와 같은 enum */
+  donorRelation?: "spouse" | "lineal" | "other";
+  /** 관계별 사망 사실 (spouse=사망으로 혼인관계 소멸 / lineal=양도 당시 사망) */
+  donorDeceased?: boolean;
+  /** 증여자 취득일 — 환율 기준일의 근거·날짜 순서 검증·표시용 (계산에는 환율만 들어간다) */
+  donorAcquisitionDate?: Date;
+  /** 증여자 취득가액 산정 — `actual` 실지거래가액 / `market_price` 영 §178의3 시가 */
+  donorAcquisitionMode?: "actual" | "market_price";
+  /** 증여자 1주당 외화 취득단가 (§97의2①1호) */
+  donorPerShareAcquisitionPriceForeign?: number;
+  /** 증여자 취득 통화 — **표시용 echo**. 계산은 환율만 쓴다. */
+  donorAcquisitionCurrencyCode?: string;
+  /** 증여자 취득일 기준환율 (영 §178의5①) */
+  donorAcquisitionExchangeRate?: number;
+  /** 증여자 자본적지출 총액 (외화 — 양도비 제외, §97의2①2호) */
+  donorCapitalExpenditureForeign?: number;
+  /** 증여자 자본적지출 **지출일** 기준환율 — 지출액이 있으면 필수(양도일 환율로 대신하지 않는다) */
+  donorCapitalExpenditureExchangeRate?: number;
+  /** 증여세 산출세액 (원 — §97의2①3호 · 영 §163의2②) */
+  giftTaxAmount?: number;
+  /** 양도한 해당 자산가액 (증여세 안분 분자, 원) */
+  transferredAssetValue?: number;
+  /** 증여세 과세가액 (안분 분모, 원) */
+  giftTaxableValue?: number;
+
+  // ── 🔒 엔진 내부 전용 (`foreign-stock-carryover.ts`가 채운다 — Zod·UI에 노출하지 않는다) ──
+  /** §97의2① 채택 결과 마커 — `"applied"` 시나리오 A / `"excluded"` 시나리오 B */
+  carryoverOutcome?: "applied" | "excluded";
+  /** ②3호가 견준 **두 세액**(그 종목만 토글한 전체 결정세액) */
+  carryoverComparison?: { appliedTotalTax: number; excludedTotalTax: number };
+  /** ①2호 — 시나리오 A가 산입한 증여자 자본적지출 원화액 */
+  carryoverDonorCapexKrw?: number;
+  /** ①3호 — 시나리오 A가 산입한 증여세 상당액 (안분·한도 반영 후, 필요경비 확정 후 가산) */
+  carryoverGiftTaxExpense?: number;
+  /** A/B 표시용 — 증여자 취득 당시 취득가액 원화 (두 시나리오 모두 채운다) */
+  carryoverDonorAcquisitionKrw?: number;
+  /** A/B 표시용 — 수증일 기준 취득가액 원화 (두 시나리오 모두 채운다) */
+  carryoverGiftDateAcquisitionKrw?: number;
+
   // ── 기타 ──
   isElectronicFiling: boolean;
 
@@ -192,6 +242,23 @@ export type ForeignStockInput = {
   paymentDeadline?: Date;
   /** 실제 납부일 */
   actualPaymentDate?: Date;
+};
+
+/**
+ * §97의2① 이월과세 — 국외 전용 echo (원화 총액·환율·통화·증여자 취득일).
+ * 공용 `StockTransferResult.carryoverDetail`은 1주당 값을 담는데 국외는 단가가 외화라,
+ * 국외 값은 `foreignDetail.carryover`로 따로 싣는다(어댑터가 매핑).
+ */
+export type ForeignCarryoverDetail = {
+  /** 적용(A) 열 — 증여자 취득 당시 취득가액 (원화 환산) */
+  donorAcquisitionPriceKrw?: number;
+  /** 미적용(B) 열 — 수증일 기준 취득가액 (원화 환산) */
+  giftDateAcquisitionPriceKrw?: number;
+  /** 증여자 취득일 기준환율 (영 §178의5①) */
+  donorExchangeRate?: number;
+  /** 증여자 취득 통화 (표시용) */
+  donorAcquisitionCurrencyCode?: string;
+  donorAcquisitionDate?: Date;
 };
 
 // ============================================================
@@ -290,6 +357,26 @@ export type ForeignStockResult = {
    * single 모드에서는 undefined.
    */
   transferReceiptDetail?: InstallmentReceiptDetail;
+
+  // ── §97의2① 이월과세 echo — 선언한 종목에서만 채워진다 ──
+  /** `"applied"` = ① 적용 / `"excluded"` = ②3호 등으로 배제 */
+  carryoverOutcome?: "applied" | "excluded";
+  /** ②3호가 견준 두 세액 — 이 종목만 토글한 **전체 결정세액**(단건은 산출세액 − 외국납부세액공제) */
+  carryoverComparison?: { appliedTotalTax: number; excludedTotalTax: number };
+  /** 적용(A) 열 — 증여자 취득 당시 취득가액 (원화 환산) */
+  carryoverDonorAcquisitionPriceKrw?: number;
+  /** 미적용(B) 열 — 수증일 기준 취득가액 (원화 환산) */
+  carryoverGiftDateAcquisitionPriceKrw?: number;
+  /** ①2호 — 실제 산입된 증여자 자본적지출 (A 채택 시에만 > 0) */
+  carryoverDonorCapexKrw?: number;
+  /** ①3호 — 실제 산입된 증여세 상당액 (안분·한도 반영 후. A 채택 시에만 > 0) */
+  carryoverGiftTaxIncluded?: number;
+  /** 증여자 취득일 환율 echo (영 §178의5①) */
+  carryoverDonorExchangeRate?: number;
+  /** 증여자 취득 통화 echo (표시용) */
+  carryoverDonorAcquisitionCurrencyCode?: string;
+  /** 증여자 취득일 echo */
+  carryoverDonorAcquisitionDate?: Date;
 
   // ── 디버그·경고 ──
   warnings: string[];

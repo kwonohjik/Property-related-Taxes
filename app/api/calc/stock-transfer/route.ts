@@ -160,6 +160,9 @@ async function handleAggregate(body: unknown): Promise<NextResponse> {
 const FOREIGN_STOCK_DATE_FIELDS = [
   "transferDate",
   "acquisitionDate",
+  // §97의2① 이월과세 — 증여자 취득일. 누락하면 문자열이 엔진에 도달해 ⓒⓓ 비교가 **조용히 false**가 된다
+  //   (국외는 국내 `STOCK_DATE_FIELDS`가 아니라 이 목록을 쓴다)
+  "donorAcquisitionDate",
   // 가산세 §47조의4 — 경과일수 기산에 쓰인다
   "paymentDeadline",
   "actualPaymentDate",
@@ -265,6 +268,22 @@ function buildForeignEngineInput(rawInput: Record<string, unknown>): ForeignStoc
     foreignTaxCurrencyCode: coerced.foreignTaxCurrencyCode as string | undefined,
     foreignTaxExchangeRate: coerced.foreignTaxExchangeRate as number | undefined,
     foreignTaxMethod: coerced.foreignTaxMethod as ForeignStockInput["foreignTaxMethod"],
+
+    // ⑭ §97의2① 이월과세 — 필드를 하나씩 명시 매핑한다(빠지면 Zod를 통과해도 엔진에 도달하지 않는다).
+    //    엔진 내부 전용 `carryover*`는 Zod가 strip하므로 여기서도 만들지 않는다.
+    acquisitionCause: coerced.acquisitionCause as ForeignStockInput["acquisitionCause"],
+    donorRelation: coerced.donorRelation as ForeignStockInput["donorRelation"],
+    donorDeceased: coerced.donorDeceased as boolean | undefined,
+    donorAcquisitionDate: coerced.donorAcquisitionDate as Date | undefined,
+    donorAcquisitionMode: coerced.donorAcquisitionMode as ForeignStockInput["donorAcquisitionMode"],
+    donorPerShareAcquisitionPriceForeign: coerced.donorPerShareAcquisitionPriceForeign as number | undefined,
+    donorAcquisitionCurrencyCode: coerced.donorAcquisitionCurrencyCode as string | undefined,
+    donorAcquisitionExchangeRate: coerced.donorAcquisitionExchangeRate as number | undefined,
+    donorCapitalExpenditureForeign: coerced.donorCapitalExpenditureForeign as number | undefined,
+    donorCapitalExpenditureExchangeRate: coerced.donorCapitalExpenditureExchangeRate as number | undefined,
+    giftTaxAmount: coerced.giftTaxAmount as number | undefined,
+    transferredAssetValue: coerced.transferredAssetValue as number | undefined,
+    giftTaxableValue: coerced.giftTaxableValue as number | undefined,
 
     isElectronicFiling: coerced.isElectronicFiling as boolean,
   };

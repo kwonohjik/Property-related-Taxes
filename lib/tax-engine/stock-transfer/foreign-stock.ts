@@ -40,6 +40,7 @@ import type {
   InstallmentReceiptDetail,
 } from "./types/foreign-stock.types";
 import { applyRate } from "@/lib/tax-engine/tax-utils";
+import { STOCK_FOREIGN_CARRYOVER } from "@/lib/tax-engine/legal-codes/stock-foreign-carryover";
 import { computeForeignTaxCreditLimits } from "./foreign-tax-credit-limit";
 import {
   computeStockFilingPenalty,
@@ -262,7 +263,13 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
     appliedRules.push(STOCK_FOREIGN.SECTION_118_6_EXPENSE_METHOD);
   }
 
-  const necessaryExpensesKrw = capitalExpKrw + transferCostKrw + extraExpenseFromForeignTax;
+  // §97의2①2호·3호 — 이월과세 A에서만 값이 있다(`foreign-stock-carryover.ts`). 미선언 경로는 둘 다 0이라 불변이다.
+  //   · 증여자 자본적지출: 증여자 지출일 환율로 이미 환산된 원화액
+  //   · 증여세 상당액: 안분·한도 반영 후 필요경비 확정 뒤 가산
+  const carryoverDonorCapexKrw = input.carryoverDonorCapexKrw ?? 0;
+  const carryoverGiftTaxKrw = input.carryoverGiftTaxExpense ?? 0;
+  const necessaryExpensesKrw =
+    capitalExpKrw + transferCostKrw + extraExpenseFromForeignTax + carryoverDonorCapexKrw + carryoverGiftTaxKrw;
 
   // ──────────────────────────────────────────────────────────
   // STEP 6: 양도차익 — 장기보유특별공제 없음
@@ -404,6 +411,28 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
   });
   const latePaymentPenalty = computeStockLatePaymentPenalty(input);
 
+  // §97의2① 이월과세 — 채택 결과 고지 (선언한 종목에서만). 세율·보유기간은 바뀌지 않는다(§104②가 12호 미열거).
+  if (input.carryoverOutcome === "applied") {
+    appliedRules.push(
+      STOCK_FOREIGN_CARRYOVER.SCOPE_STOCK_3HO_ONE_YEAR,
+      STOCK_FOREIGN_CARRYOVER.HOLDING_PERIOD_NOT_12HO,
+      STOCK_FOREIGN_CARRYOVER.DECREE_178_4_NECESSARY,
+    );
+    warnings.push(
+      "§97의2① 이월과세 적용 — 취득가액을 증여자 취득 당시 금액(증여자 취득일 기준환율로 환산)으로 승계합니다. " +
+        "국외주식은 §104②가 12호를 열거하지 않아 세율·보유기간은 바뀌지 않습니다.",
+    );
+    if (carryoverGiftTaxKrw > 0) {
+      warnings.push(
+        "증여세 상당액의 한도(영 §163의2② 후단 「법 제97조제1항 및 제2항의 금액」)는 국외주식에서 §118의4 금액으로 읽어 적용했습니다(해석례 미확인).",
+      );
+    }
+  } else if (input.carryoverOutcome === "excluded") {
+    warnings.push(
+      "§97의2② — 이월과세를 적용하지 않습니다(적용 시 결정세액이 더 적거나 요건 미충족). 취득가액은 증여 당시 평가액입니다.",
+    );
+  }
+
   // ──────────────────────────────────────────────────────────
   // STEP 12: 최종 납부세액
   // ──────────────────────────────────────────────────────────
@@ -448,6 +477,21 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
     acquisitionExchangeRate: input.acquisitionExchangeRate,
     foreignTaxExchangeRate: input.foreignTaxExchangeRate,
     shareCount: input.shareCount,
+
+    // §97의2① 이월과세 echo — 선언한 종목에서만 실린다
+    ...(input.carryoverOutcome
+      ? {
+          carryoverOutcome: input.carryoverOutcome,
+          carryoverComparison: input.carryoverComparison,
+          carryoverDonorAcquisitionPriceKrw: input.carryoverDonorAcquisitionKrw,
+          carryoverGiftDateAcquisitionPriceKrw: input.carryoverGiftDateAcquisitionKrw,
+          carryoverDonorCapexKrw,
+          carryoverGiftTaxIncluded: carryoverGiftTaxKrw,
+          carryoverDonorExchangeRate: input.donorAcquisitionExchangeRate,
+          carryoverDonorAcquisitionCurrencyCode: input.donorAcquisitionCurrencyCode,
+          carryoverDonorAcquisitionDate: input.donorAcquisitionDate,
+        }
+      : {}),
 
     // FS-09 §178의5② 분할 수령 detail (installments 모드 시만 정의)
     transferReceiptDetail,

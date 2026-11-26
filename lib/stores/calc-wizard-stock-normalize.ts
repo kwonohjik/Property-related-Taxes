@@ -543,6 +543,17 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     foreignTaxExchangeRate: strField("foreignTaxExchangeRate"),
     foreignTaxMethod: enumField("foreignTaxMethod", ["credit", "expense"], defaults.foreignTaxMethod),
 
+    // ── §97의2① 국외주식 이월과세 (③ — 구형 저장본은 새 키가 없다 → 빈 값/기본값) ──
+    donorAcquisitionModeFS: enumField("donorAcquisitionModeFS", ["actual", "market_price"], defaults.donorAcquisitionModeFS),
+    donorPerShareAcquisitionPriceForeign: strField("donorPerShareAcquisitionPriceForeign"),
+    donorAcquisitionCurrencyCode: ((): string => {
+      const v = d.donorAcquisitionCurrencyCode;
+      return typeof v === "string" && v.length > 0 ? v : defaults.donorAcquisitionCurrencyCode;
+    })(),
+    donorAcquisitionExchangeRate: strField("donorAcquisitionExchangeRate"),
+    donorCapitalExpenditureForeign: strField("donorCapitalExpenditureForeign"),
+    donorCapitalExpenditureExchangeRate: strField("donorCapitalExpenditureExchangeRate"),
+
     // ── FS-09 §178의5② 장기할부 분할 수령 normalize (③ 동기화 지점) ──
     fsTransferReceiptMode: enumField(
       "fsTransferReceiptMode",
