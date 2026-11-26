@@ -214,6 +214,13 @@ type FamilyBusinessRateBasis =
 - 산정 불가 자산은 선택 불가 + 사유(「총자산·사업무관자산이 이력에 없습니다 — 직접 입력하세요」).
 - 부동산 섹션 hint(A-6)를 양도일 기준으로 나눈다: 2026.2.27. 이후 「법인가업은 이 화면의 대상 자산이 아닙니다 — 주식 양도 화면에서 입력하세요」 / 그 전 「구 소령 §163의2③ — 가업상속공제금액 ÷ 가업상속 재산가액」.
 
+### 6.3′ PR-2 실행 중 결정 (2026-11-26)
+- PR-2a·2b를 **한 PR**로 합쳤다(둘 다 작다).
+- `calcCorporateStockAdjustedValue`를 넓히지 않고 같은 내부 합계(`sumNonBusinessAssets`)를 쓰는 `calcCorporateBusinessAssets(totalAssets, nonBusinessAssets, deathDate)`를 새로 열었다 — 기존 함수는 주식가액 0이면 비율도 0으로 조기 반환해 적용률 용도로 쓸 수 없다.
+- 구 레코드(공제액·재산가액 정수 echo 없음)는 이력의 `appliedRate`(구 ③ 산식 그대로)를 계속 쓴다. 0으로 비우는 것은 직접입력·법인 총자산 미입력·사업무관 ≥ 총자산뿐이다.
+- 신 ③2호는 직접입력 모드여도 총자산이 있으면 산정한다(공제액·재산가액을 쓰지 않는다).
+- 부동산 화면의 대상 범위 문구에서 미확인 판례(V-1) 인용을 빼고 「해석 근거 확인 필요」로 바꿨다.
+
 ### 6.4 anchor
 | ID | 케이스 | 기대 |
 |---|---|---|
@@ -305,6 +312,8 @@ F1-11은 종목 단독 차이(89,875,000)와 125,000원 다르다 — 공제를 
 
 ## 8. 법령 상수·verify:legal
 
+> **PR-1a 실행 기록(2026-11-26)** — `legal-codes/stock-family-business.ts`(`STOCK_FAMILY_BUSINESS` 6개) · 매니페스트 5건(`TRANSFER.FAMILY_BUSINESS_IMPUTED_ACQUISITION` · `TRANSFER_DECREE.FAMILY_BUSINESS_APPLIED_RATE`·`_ASSET_SCOPE` · `INH_DECREE.FAMILY_BUSINESS_NON_BUSINESS_ASSETS`·`_CGT_EQUIVALENT`) · 수집기 등록. 새로 모수에 들어온 조문은 상증령 §15뿐(§97의2·§163의2는 조문 단위로 기등록). 키워드 9개는 KoreanLaw 원문(MST 280405·290841·290845)과 기계 대조 PASS — `npm run verify:legal` 실호출은 회선 차단(law.go.kr curl 000)으로 미실행, 확인 필요. 신규 타입(`types/stock-family-business.types.ts`)은 쓰는 곳이 생기는 PR-1b로 옮겼다(미사용 타입 선반영 안 함).
+
 - 신규 인용: 「소득세법 시행령」 §163의2③(구·신)·④, 「상속세 및 증여세법 시행령」 §15⑤2호·㉑ — 현재 `legal-codes/`·`manifest/`에 0건.
 - 상수는 문자열 리터럴 금지 규칙대로 `legal-codes/`에 두고 `lib/legal-verification/manifest/additions-{세목}.ts`에 등록, 키워드는 §2 본문 verbatim. 「(법률 제N호로 …)」 괄호는 쓰지 않는다. 등록 후 `npm run verify:legal`.
 
@@ -326,6 +335,7 @@ Q-1·4·5·6은 사용자가 직접 골랐고, 나머지는 추천안대로 반�
 | Q-8 | 주식 이력 불러오기가 1주당 평가액 칸을 덮어쓰는가 | **덮어쓰지 않음** — 참고값만. 취득일이 비어 있으면 상속개시일로 채우고, 다르면 후보 비선택 |
 | Q-9 | 다종목 결과의 가업·이월과세 카드를 종목별로 모두 표시 | **국외주식 계획 Q-6과 통합해 한 PR에서** |
 | Q-10 | 주식 FB 잔존값(취득원인 변경 등) | **inert**(④ 미전송·⑧ 미검증) — 주식 폼 `donor*` 선례 |
+| Q-11 | 한 신고에 가업 주식 종목이 2건 이상일 때 §18의2⑩ 비교 | ✅ **신고 단위 총차이 1회**(사용자 선택 2026-11-26 · 추천안) — 가업 종목 전부를 함께 §97로 되돌린 합산 결정세액과 견준다. 종목별로 나누지 않고 가업 종목마다 같은 값 + `fbItemCount`. 리뷰 실측: 종목별 한계 기여 방식은 공제 합 98,875,000 > 의제 세액 94,375,000 |
 
 ---
 
@@ -340,7 +350,7 @@ Q-1·4·5·6은 사용자가 직접 골랐고, 나머지는 추천안대로 반�
 | V-5 | 부동산 사이드바가 FB ON 자산 취득가액을 사전 표시하는지 |
 | V-6 | 신 ③2호 「총자산가액」과 상속세 입력 `corporateTotalAssets`(상증법 제4장 평가)가 같은 값인지 — 화면이 장부가를 받는지 |
 | V-7 | 피상속인이 의제취득일 전 취득한 경우 「피상속인 취득가액(§97①1호)」 — v1은 사용자 입력 책임 고지 |
-| V-8 | 국외주식 PR 머지 후 `stock-transfer-tax.ts`·`aggregate.ts` 줄 수·훅 위치 재측정 |
+| V-8 | ✅ 재측정(71893fcbb, 국외주식 #3673 머지 후): `stock-transfer-tax.ts` 775 · `stock-transfer-aggregate.ts` 748 · 훅 위치 = `calculateStockTransferTax`의 `resolveStockCarryover` 호출 앞. PR-1a 분리로 `stock-transfer-tax.ts` 649 |
 | V-9 | 구 주식 이력 복원 시 신규 필드 default(실행 확인) |
 | V-10 | 다종목에서 가업 종목이 마지막이 아니면 카드가 안 뜨는지(실행 확인) |
 | V-11 | 가업 lot이 일부만 양도될 때 피상속인 자본적지출(총액)의 배정 — 기존 lot 자본 조정 규칙(`lot-capital-adjustments.ts`)에 같은 축이 있는지. 없으면 사용자 결정으로 올린다(자동 안분 신설 금지) |
@@ -353,6 +363,8 @@ PR-3 14지점 점검(ui-engine-sync-checker) Low — 세액 영향 없음:
 기존 코드 지적(이번 범위 밖, 언급만): 부동산 ⑧은 피상속인 취득가 0을 허용(`transfer-tax-validate-asset.ts:475`)하나 미리보기는 `> 0`을 요구(`Section:147-150`).
 
 ---
+
+> **PR-1b 실행 기록(2026-11-26)** — `stock-transfer/stock-family-business.ts`(계획·단건·합산) · `types/stock-family-business.types.ts` · 결정세액 echo(`StockTransferResult.determinedTax` 종목 단독 · `StockTransferAggregateResult.totalDeterminedTax` 신고 단위). 엔진 진입 throw: 상속 외 원인 · 실가 외 모드 · lot(PR-1b′) · 피상속인 1주당 ≤ 0 · 법정량 오류(분모 0 — L-3) · **양도일과 법정량 종류 불일치**(주식은 법인가업 대상 자산이라 02-27 이후 ③2호만). anchor `fb-97-2-4-stock.anchor.test.ts` 18건 · 뮤테이션 6종 검출. acquisition-cost-review: 법령 체인 PASS · 하류 덮어쓰기 없음 · 발견 1(다종목 귀속) → Q-11로 해소. 남은 anchor: F1-16 기타자산(리뷰 probe 정상: 의제 140,000,000 · 세액 240,210,000 · 일반 93,110,000).
 
 ## 11. PR 분할·순서
 

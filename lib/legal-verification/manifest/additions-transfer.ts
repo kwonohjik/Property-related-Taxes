@@ -46,6 +46,16 @@ export const TRANSFER_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  // ── 가업상속공제 자산 취득가액 특례 §97의2④ (계획서 fb-97-2-4-fixes §2.1) — KoreanLaw 현행 MST 280405 실독(2026-11-26) ──
+  {
+    id: "TRANSFER.FAMILY_BUSINESS_IMPUTED_ACQUISITION",
+    citation: "소득세법 §97조의2 ④",
+    keywords: [
+      "가업상속공제적용률",
+      "상속개시일 현재 해당 자산가액",
+    ],
+    keywordMode: "ALL",
+  },
   // ── 소득세법 ──────────────────────────────────────────────────────
   {
     /** NBL2611-B2 — 법 §104의3①4호 가·나목(재산세 비과세·면제 / 별도합산·분리과세 제외, `NBL.OTHER_LAND_PROPERTY_TAX_EXCLUSION`)과 ①6호 후단(별장 부속토지 경계 불명확 시 바닥면적 10배, 고지 `NBL_VILLA_LAND_SCOPE_NOTICE`) · KoreanLaw 현행 MST 280405 실측(2026-11-20). */
