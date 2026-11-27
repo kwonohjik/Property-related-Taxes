@@ -125,7 +125,14 @@ export const COMMON_ADDITIONS: VerificationRule[] = [
   {
     id: "SURTAX.NON_TAXABLE",
     citation: "농어촌특별세법 §4",
-    keywords: ["농어촌특별세를 부과하지 아니한다", "농어업인", "취득세", "감면"],
+    keywords: [
+      "농어촌특별세를 부과하지 아니한다",
+      "농어업인",
+      "취득세",
+      "감면",
+      // 10호의4 — 지방세법 §15①1호~3호 취득세 비과세(acquisition-tax.ts 농특세 분기)
+      "「지방세법」 제15조제1항제1호부터 제3호까지의 규정에 따른 취득세",
+    ],
     keywordMode: "ALL",
   },
   {

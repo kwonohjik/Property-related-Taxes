@@ -118,6 +118,8 @@ export const ACQUISITION = {
   LOCAL_EDUCATION_TAX:  "지방세법 §151",
   /** 지방세법 §151①1나 — 주택 유상거래 지방교육세: 취득세 본세 × 50% × 20% */
   LOCAL_EDU_HOUSING_PURCHASE: "지방세법 §151①1나",
+  /** 농어촌특별세법 §4 10호의4 — 지방세법 §15①1호~3호(환매·상속 특례·적격합병) 취득세 농특세 비과세 */
+  RURAL_EXEMPT_SPECIAL_RATE_15_1_1_TO_3: "농어촌특별세법 §4 10호의4",
   /** 농어촌특별세법 §4②6호 — 국민주택규모(읍·면 지역 100㎡ 이하) 농특세 비과세 */
   RURAL_RURAL_REGION_EXEMPT: "농어촌특별세법 §4②6호",
 
