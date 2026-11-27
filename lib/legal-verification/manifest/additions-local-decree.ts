@@ -66,6 +66,9 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
       "중과세 대상으로 보지 않는다",
       "공공주택사업자",
       "노인복지주택",
+      // 17호 — 2026.1.1. 이후 비수도권 미분양 아파트(종료일은 사용자 결정 2027.12.31.이라 키워드에서 뺐다)
+      "분양되지 않은 아파트를 2026년 1월 1일부터",
+      "전용면적 85제곱미터 이하이고 취득당시가액이 6억원 이하일 것",
     ],
     keywordMode: "ALL",
   },
@@ -83,7 +86,14 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
   {
     id: "LOCAL_DECREE.HOUSE_COUNT_METHOD",
     citation: "지방세법 시행령 §28의4",
-    keywords: ["주택 수의 산정방법", "조합원입주권", "주택분양권", "오피스텔"],
+    keywords: [
+      "주택 수의 산정방법",
+      "조합원입주권",
+      "주택분양권",
+      "오피스텔",
+      // ⑥1호바목 — 보유 중인 §28의2 17호 주택 제외
+      "제28조의2제17호에 해당하는 주택",
+    ],
     keywordMode: "ALL",
   },
   // ── §28의4⑥ 호 번호 고정 (D-9) ──

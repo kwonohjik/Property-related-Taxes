@@ -9,7 +9,7 @@
  * 지방세법 시행령 §28의2 1호 — 시가표준액 한도 충족 시 중과 배제
  */
 
-import { ACQUISITION } from "../legal-codes";
+import { ACQUISITION, ACQUISITION_CONST } from "../legal-codes";
 import { getLowValueHouseLimit } from "./low-value-limit";
 
 // ============================================================
@@ -121,6 +121,60 @@ export function isExemptFromSurcharge_LowValue(
   if (isUrbanRegenerationArea) return false;
 
   return wholeStdValue <= getLowValueHouseLimit(isMetropolitanRegion, taxableHouseAcquisitionDate);
+}
+
+// ============================================================
+// §28의2 17호: 2026.1.1. 이후 비수도권 미분양 아파트
+// ============================================================
+
+const ONEROUS_CAUSES = ["purchase", "exchange", "auction", "in_kind_investment"];
+
+/**
+ * 지방세법 시행령 §28의2 17호 — 사업주체가 사용검사·사용승인 후 분양하지 못한 아파트를
+ * 2026.1.1.~2027.12.31.(종료일은 `ACQUISITION_CONST.UNSOLD_17HO_END` 주석 참조)에 최초로
+ * 유상승계취득하고, 수도권 외·전용 85㎡ 이하·취득당시가액 6억원 이하이면 「중과세 대상으로 보지 않는다」.
+ *
+ * 미분양·최초 유상승계 여부는 사용자 선언(`isUnsoldApt`)을 믿는다. 면적·수도권 여부를 모르면
+ * 적용하지 않고 경고만 남긴다(「모름」=혜택 불성립).
+ */
+export function assessUnsoldApt17hoExclusion(input: {
+  isUnsoldApt?: boolean;
+  acquisitionCause: string;
+  acquisitionDate: string;
+  areaSqm?: number;
+  acquisitionValue: number;
+  isMetropolitanRegion?: boolean;
+}): { excluded: boolean; warnings: string[] } {
+  const warnings: string[] = [];
+  if (!input.isUnsoldApt || !ONEROUS_CAUSES.includes(input.acquisitionCause)) {
+    return { excluded: false, warnings };
+  }
+  const d = input.acquisitionDate;
+  if (d < ACQUISITION_CONST.UNSOLD_17HO_START || d > ACQUISITION_CONST.UNSOLD_17HO_END) {
+    return { excluded: false, warnings };
+  }
+  const basis = ACQUISITION.SURCHARGE_EXCLUSION_UNSOLD_17HO;
+  if (input.isMetropolitanRegion !== false) {
+    warnings.push(
+      input.isMetropolitanRegion === undefined
+        ? `미분양 아파트 중과 배제(${basis}) — 수도권 여부를 알 수 없어 적용하지 않았습니다. 수도권 외 소재인지 확인하세요.`
+        : `미분양 아파트 중과 배제(${basis}) — 수도권 소재 주택은 적용되지 않습니다.`
+    );
+    return { excluded: false, warnings };
+  }
+  if (input.areaSqm === undefined) {
+    warnings.push(`미분양 아파트 중과 배제(${basis}) — 전용면적을 입력하지 않아 적용하지 않았습니다. 85㎡ 이하인지 확인하세요.`);
+    return { excluded: false, warnings };
+  }
+  if (input.areaSqm > ACQUISITION_CONST.HANSI_UNSOLD_MAX_AREA) {
+    warnings.push(`미분양 아파트 중과 배제(${basis}) — 전용면적 ${input.areaSqm}㎡가 85㎡를 넘어 적용되지 않습니다.`);
+    return { excluded: false, warnings };
+  }
+  if (input.acquisitionValue > ACQUISITION_CONST.HANSI_UNSOLD_PRICE_LIMIT) {
+    warnings.push(`미분양 아파트 중과 배제(${basis}) — 취득당시가액 ${input.acquisitionValue.toLocaleString()}원이 6억원을 넘어 적용되지 않습니다.`);
+    return { excluded: false, warnings };
+  }
+  return { excluded: true, warnings };
 }
 
 // ============================================================

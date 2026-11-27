@@ -328,6 +328,17 @@ export function getExclusionReasonsForHouse(
       });
       return excluded;
     }
+    // §28의4⑥1호바목 — §28의2 17호 주택(2026.1.1.~ 최초 유상승계취득 비수도권 미분양 아파트)
+    if (acqDate >= ACQUISITION_CONST.UNSOLD_17HO_START && acqDate <= ACQUISITION_CONST.UNSOLD_17HO_END) {
+      excluded.push({
+        assetId: house.id,
+        assetType: "house",
+        reason: "hansi_unsold_apt",
+        legalBasis: ACQUISITION.HOUSE_COUNT_UNSOLD_17HO,
+        description: `비수도권 미분양 아파트(§28의2 17호) — ${acqDate} 최초 유상승계취득 → 주택 수 제외`,
+      });
+      return excluded;
+    }
   }
 
   return excluded;

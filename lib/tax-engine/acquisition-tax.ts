@@ -331,6 +331,8 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     standardValue: input.standardValue,
     isMetropolitanRegion: input.isMetropolitanRegion,
     isUrbanRegenerationArea: input.isUrbanRegenerationArea,
+    isUnsoldApt17ho: input.isHansiBenefitUnsoldApt, // §28의2 17호 (2026.1.1.~)
+    areaSqm: input.areaSqm,
     // [P1-5] 일시적 2주택
     isTemporaryTwoHouse: input.isTemporaryTwoHouse,
     previousHouseRegion: input.previousHouseRegion,
