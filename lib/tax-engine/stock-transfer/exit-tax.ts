@@ -28,16 +28,21 @@ import type {
   ExitTaxResult,
   ExitTaxHoldingResult,
 } from "./types/exit-tax.types";
-import { applyExitTaxRate } from "./exit-tax-rate";
 import { calcAdjustmentDeduction } from "./exit-tax-credit";
 import { calcForeignTaxCredit } from "./exit-tax-credit";
 import { calcDomesticTaxCredit } from "./exit-tax-credit";
 import { STOCK_EXIT_TAX, STOCK_EXIT_TAX_CONSTS } from "@/lib/tax-engine/legal-codes/stock";
-
-/** 10원 미만 절사 (§47③ 준용 — 지방소득세) */
-function floorTen(n: number): number {
-  return Math.floor(n / 10) * 10;
-}
+import { STOCK_EXIT_TAX_2027 } from "@/lib/tax-engine/legal-codes/stock-exit-tax-2027";
+import { isExitTaxFrom2027 } from "@/lib/tax-engine/data/exit-tax-2027-era";
+import { applyRate } from "@/lib/tax-engine/tax-utils";
+import { calcBucketTax, calcLocalIncomeTaxTable, floorTen } from "./exit-tax-bucket";
+import {
+  assertForeignInputs,
+  assertSupportedByPr2,
+  buildAllExcludedResult,
+  classifyExitTaxHoldings,
+  type ExitTaxRegime,
+} from "./exit-tax-regime";
 
 // ============================================================
 // STEP 2: 종목별 출국일 시가 산정 (§178의9)
@@ -115,6 +120,9 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   const warnings: string[] = [];
   const appliedRules: string[] = [];
 
+  // 출국일 연혁 게이트 — 기준은 실제 양도일이 아니라 **출국일**이다(소득세법 부칙 제8조).
+  const regime: ExitTaxRegime = isExitTaxFrom2027(input.departureDate) ? "from2027" : "pre2027";
+
   // ──────────────────────────────────────────────────────────
   // STEP 1: §118의9 요건 확인
   //   ①1호: 출국일 전 10년 중 5년 이상 국내 주소·거소
@@ -125,11 +133,17 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   const majorShareholderEligible = input.isMajorShareholder;
 
   if (!residencyEligible || !majorShareholderEligible) {
+    // 2027.1.1. 이후 출국 + 국외 종목 입력: 대주주 판정에서 국외주식등이 빠진다는 사실을 덧붙인다(§118의9①2호 괄호).
+    const foreignNote =
+      regime === "from2027" && input.holdings.some((h) => h.marketType === "foreign_stock")
+        ? " — 국외주식 보유분은 대주주 판정에서 제외됨 (소득세법 §118의9①2호)"
+        : "";
     const reason = !residencyEligible
       ? `거주기간 ${input.yearsResidentLast10}년 — §118의9①1호 미충족 (출국일 전 10년 중 5년 이상 필요)`
-      : `대주주 요건 미충족 — §178의8 (직전 연도말 대주주 비해당)`;
+      : `대주주 요건 미충족 — §178의8 (직전 연도말 대주주 비해당)${foreignNote}`;
 
     return {
+      exitTaxRegime: regime,
       taxCategory: "not_liable",
       isLiable: false,
       ineligibleReason: reason,
@@ -160,16 +174,34 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   // ──────────────────────────────────────────────────────────
   // STEP 2~3: 종목별 출국일 시가 산정 + 양도차익 계산 (§178의9)
   // ──────────────────────────────────────────────────────────
-  const holdingDetails: ExitTaxHoldingResult[] = input.holdings.map((h) =>
+  assertForeignInputs(input, regime);
+  const computedDetails: ExitTaxHoldingResult[] = input.holdings.map((h) =>
     calcHoldingResult(h),
   );
   appliedRules.push(STOCK_EXIT_TAX.SECTION_178_9_DEPARTURE_VALUE);
 
+  // 범위·제외·세율 구분 분류 (§118의9①·시행령 §178의8②). 국내 종목만이면 전부 과세·1호라 종전과 같다.
+  const cls = classifyExitTaxHoldings(input, regime, computedDetails);
+  warnings.push(...cls.warnings);
+  const holdingDetails = cls.details;
+  // 조정공제·외국납부세액공제의 안분 인자(주식수)는 과세 종목만 쓴다 — 제외된 국외주식이 섞이면 조용히 틀린다.
+  const taxedHoldings = cls.taxedHoldings;
+
+  // 입력 종목이 있는데 전부 제외됐으면 납세의무가 없다.
+  if (input.holdings.length > 0 && taxedHoldings.length === 0) {
+    return buildAllExcludedResult(regime, cls, appliedRules);
+  }
+  assertSupportedByPr2(input, cls.buckets);
+  appliedRules.push(...cls.appliedRules);
+  const bucket = cls.buckets[0] ?? "clause1";
+  const isClause2 = bucket !== "clause1";
+
   // ──────────────────────────────────────────────────────────
   // STEP 4: 합산 과세표준 (§118의10④ 기본공제 250만원)
   // ──────────────────────────────────────────────────────────
-  const totalTransferGain = holdingDetails.reduce((sum, h) => sum + h.transferGain, 0);
-  const totalDepartureDayValue = holdingDetails.reduce((sum, h) => sum + h.departureDayValue, 0);
+  const taxedDetails = holdingDetails.filter((h) => h.scope !== "excluded");
+  const totalTransferGain = taxedDetails.reduce((sum, h) => sum + h.transferGain, 0);
+  const totalDepartureDayValue = taxedDetails.reduce((sum, h) => sum + h.departureDayValue, 0);
 
   // §118의10④ 기본공제 250만원 (§103①·§118의7과 별도 그룹)
   const basicDeduction =
@@ -193,7 +225,7 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
     tax: incomeTax,
     rate: appliedRate,
     progressiveDeduction,
-  } = applyExitTaxRate(taxBase);
+  } = calcBucketTax(bucket, taxBase);
   appliedRules.push(STOCK_EXIT_TAX.SECTION_118_11_TAX_RATE);
 
   // ──────────────────────────────────────────────────────────
@@ -247,7 +279,7 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
       incomeTax,
       totalDepartureDayValue,
       input.actualTransferPricePerShare!,
-      input.holdings,
+      taxedHoldings,
     );
     adjustmentDeduction = adj;
     if (adj > 0) {
@@ -308,7 +340,7 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
       const necessaryExpense = totalDepartureDayValue - totalTransferGain;
       const actualTransferValue = hasActualTransfer
         ? input.actualTransferPricePerShare! *
-          input.holdings.reduce((sum, h) => sum + h.shareCount, 0)
+          taxedHoldings.reduce((sum, h) => sum + h.shareCount, 0)
         : undefined;
 
       const { applied, ratioApplied } = calcForeignTaxCredit(
@@ -377,8 +409,19 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   // 납부유예 시 지방소득세는 실제 납부 시점에 별도 계산
   // 즉시 납부 케이스: (경정 후 세액 or 산출세액) × 10%
   const taxForLocal = finalTaxAfterAdjustment ?? incomeTax;
-  const localIncomeTax = floorTen(taxForLocal * 0.1);
+  // 2호(국외주식)는 지방세법 §103의3⑧ 표를 과세표준에 직독한 값이 주값이고 소득세 10%는 참고값이다(C-5, V-3).
+  // 1호는 종전 그대로 — 소득세 표의 정확히 10%와 같다.
+  const localIncomeTax = isClause2
+    ? calcLocalIncomeTaxTable(taxBase)
+    : floorTen(taxForLocal * 0.1);
+  const localIncomeTaxAlternative = isClause2 ? floorTen(applyRate(taxForLocal, 0.1)) : undefined;
   appliedRules.push(STOCK_EXIT_TAX.LOCAL_TAX_103_3);
+  if (isClause2) {
+    appliedRules.push(STOCK_EXIT_TAX_2027.LOCAL_103_3_8);
+    warnings.push(
+      `2호(국외주식) 지방소득세는 지방세법 §103의3⑧ 표를 과세표준에 직독한 ${localIncomeTax.toLocaleString()}원이 주값이고, 소득세 산출세액의 10%는 ${(localIncomeTaxAlternative ?? 0).toLocaleString()}원입니다 — 표가 호 구분 없는 단일표라 두 값이 다를 수 있어 확인 필요`,
+    );
+  }
 
   /**
    * 결정세액·총 납부세액 — §118의15④가 「산출세액에 **더한다**」고 한 가산세를 여기서 합류시킨다.
@@ -415,12 +458,29 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   }
 
   return {
+    exitTaxRegime: regime,
     taxCategory: "exit_tax",
     isLiable: true,
     residencyEligible,
     majorShareholderEligible,
 
     holdingDetails,
+    ...(taxedHoldings.length > 0
+      ? {
+          bucketDetails: [
+            {
+              bucket,
+              transferGain: totalTransferGain,
+              basicDeductionAllocated: basicDeduction,
+              taxBase,
+              appliedRate,
+              progressiveDeduction,
+              calculatedTax: incomeTax,
+            },
+          ],
+        }
+      : {}),
+    ...(cls.foreignExclusion ? { foreignExclusion: cls.foreignExclusion } : {}),
 
     totalTransferGain,
     basicDeduction,
@@ -430,6 +490,7 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
     appliedRate,
     progressiveDeduction,
     localIncomeTax,
+    ...(localIncomeTaxAlternative != null ? { localIncomeTaxAlternative } : {}),
 
     deferralYears,
     deferredTaxAmount,
