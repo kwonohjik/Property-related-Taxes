@@ -131,12 +131,20 @@ export function calcForeignTaxCredit(
   const numerator = numeratorBase - necessaryExpense;
   if (numerator <= 0) return { applied: 0, ratioApplied: true };
 
-  const apportioned = Number(
-    (BigInt(Math.trunc(foreignTaxPaid)) * BigInt(Math.trunc(numerator))) /
-      BigInt(Math.trunc(denominator)),
-  );
+  const apportioned = apportionForeignTax(foreignTaxPaid, numerator, denominator);
 
   return { applied: Math.min(apportioned, limit), ratioApplied: true };
+}
+
+/**
+ * §118의13① 안분식의 곱셈·나눗셈 — 외국납부세액 × 분자 ÷ 분모 (원 미만 절사).
+ * 곱셈이 2^53 을 넘을 수 있어 BigInt 로 계산한다. 분모는 0 초과여야 한다(호출부가 보장).
+ * 전역 경로(`calcForeignTaxCredit`)와 종목별 경로(`exit-tax-actual-transfer.ts`)가 같은 식을 쓰도록 한 곳에 둔다.
+ */
+export function apportionForeignTax(foreignTaxPaid: number, numerator: number, denominator: number): number {
+  return Number(
+    (BigInt(Math.trunc(foreignTaxPaid)) * BigInt(Math.trunc(numerator))) / BigInt(Math.trunc(denominator)),
+  );
 }
 
 /**

@@ -65,6 +65,17 @@ export const TRANSFER_EXIT_2027_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // PR-7a — §118의14① 비거주자 세액공제 대상 판정(종목 발행 법인). 현행(enforced) 조문이라 basis 없음.
+    id: "TRANSFER.EXIT_TAX_2027_NONRESIDENT_SOURCE_119_11",
+    citation: "소득세법 §119",
+    keywords: [
+      "국내원천 유가증권양도소득",
+      "내국법인이 발행한 주식 또는 출자지분과 그 밖의 유가증권",
+      "외국법인이 발행한 주식 또는 출자지분(증권시장에 상장된 것만 해당한다)",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     // 종전 문언은 「국내주식 등」이라 아래 키워드(「주식 등」 앞에 「국내」 없음)가 개정본만 구분한다.
     id: "LOCAL.EXIT_TAX_2027_VALUATION_GAIN_RATE",
     citation: "지방세법 §103의3 ⑧",

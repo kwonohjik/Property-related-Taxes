@@ -59,6 +59,23 @@ export const basicDeductionAllocationSchema = z.object({
 });
 
 /**
+ * ⑫ 종목별 실제 양도 (경정청구 §118의12~§118의14 · PR-7a) — 필수 조합(국내 원화/국외 외화+환율·외국납부세액 원화/외화)·주수 범위·
+ * 제외 종목·V-14 차단은 엔진(`exit-tax-actual-transfer.ts`)이 판정하고, 아래 최상위 refine이 엔진을 그대로 돌려 같은 사유·경로로 거부한다(⑧과 단일 소스).
+ */
+export const exitTaxHoldingActualTransferSchema = z.object({
+  shareCount: z.number().int().positive(),
+  transferDate: z.union([z.string(), z.date()]).optional(),   // ⑭ toOptionalDate
+  pricePerShare: z.number().min(0).optional(),
+  priceForeign: z.number().min(0).optional(),
+  exchangeRate: z.number().min(0).optional(),
+  foreignTaxPaid: z.number().min(0).optional(),
+  foreignTaxPaidForeign: z.number().min(0).optional(),
+  foreignTaxCurrencyCode: z.string().optional(),
+  foreignTaxExchangeRate: z.number().min(0).optional(),
+  domesticSourceTaxWithheld: z.number().min(0).optional(),
+});
+
+/**
  * ⑫ 국외전출세 보유 종목 Zod 정의
  *
  * 주의: holdings[] 배열 내 acquisitionDate는
@@ -90,6 +107,9 @@ export const exitTaxHoldingSchema = z.object({
   departureExchangeRate: z.number().min(0).optional(),
   perShareAcquisitionPriceForeign: z.number().min(0).optional(),
   acquisitionExchangeRate: z.number().min(0).optional(),
+
+  // ── 종목별 실제 양도 (경정청구 · PR-7a) — 있는 종목만 양도한 것 ──
+  actualTransfer: exitTaxHoldingActualTransferSchema.optional(),
 }).superRefine((h, ctx) => {
   // 모드별 필수 입력 검증 (자동 fallback 금지)
   if (h.departureDayValuationMode === "market_price" && h.departureDayMarketPrice == null) {

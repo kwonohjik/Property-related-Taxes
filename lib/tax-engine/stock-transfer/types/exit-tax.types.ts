@@ -91,6 +91,46 @@ export type ExitTaxHolding = {
   perShareAcquisitionPriceForeign?: number;
   /** 취득일 기준환율 (원/외화, 소수 4자리까지) */
   acquisitionExchangeRate?: number;
+
+  /**
+   * 종목별 실제 양도 (경정청구 §118의12~§118의14 · PR-7a). **있는 종목만** 양도한 것이다 — 없으면 양도하지 않은 주식이라
+   * 조정공제·외국납부세액공제에 넣지 않는다. 하나라도 있으면 «종목별 모드»이고, 그때 전역 `actualTransfer*`·`foreignTaxPaid*`·
+   * `domesticSourceTaxWithheld`는 동시에 쓸 수 없다(`INVALID_INPUT`). 2호(국외주식) 과세 종목이 있거나 구분이 둘 이상이면 종목별 모드만 쓸 수 있다.
+   */
+  actualTransfer?: ExitTaxHoldingActualTransfer;
+};
+
+/**
+ * 종목별 실제 양도 입력 (PR-7a).
+ *
+ * - 양도 주수 `shareCount`: 1 이상 보유 주수 이하의 정수. 출국일 양도가액·필요경비는 이 주수만큼만 센다.
+ * - 양도가: 국내 종목은 원화 `pricePerShare`, 국외주식(`foreign_stock`)은 외화 `priceForeign` + 실제 양도일 기준환율 `exchangeRate`
+ *   (둘 다 필수. 환산 기준일은 법령에 명시가 없어 결과가 «확인 필요»를 고지한다). 반대 쪽 필드가 오면 거부한다.
+ * - 외국납부세액(§118의13①「해당 자산의 양도소득에 대하여 외국정부에 납부한 세액」)은 종목별이다. 원화 또는 외화+환율 중 **한쪽만** 넣는다.
+ *   총액을 종목에 자동 안분하지 않는다.
+ * - `domesticSourceTaxWithheld`(§118의14① §156①7 원천징수액)는 §119 11호 가목(내국법인 발행) 종목에만 쓴다.
+ */
+export type ExitTaxHoldingActualTransfer = {
+  /** 실제 양도 주식 수 (1 ≤ 값 ≤ 보유 주식 수, 정수) */
+  shareCount: number;
+  /** 실제 양도일 — 계산에는 쓰지 않는다(출국일보다 앞이면 거부). 환산 기준환율의 기준일 */
+  transferDate?: Date;
+  /** 국내 종목 — 1주당 실제 양도가 (원화) */
+  pricePerShare?: number;
+  /** 국외주식 — 1주당 실제 양도가 (외화) */
+  priceForeign?: number;
+  /** 국외주식 — 실제 양도일 기준환율 (원/외화, 소수 4자리까지) */
+  exchangeRate?: number;
+  /** 외국납부세액 (원화) — 외화로 넣으려면 아래 `foreignTaxPaidForeign`을 쓴다(둘 다 넣으면 거부) */
+  foreignTaxPaid?: number;
+  /** 외국납부세액 (외화) — `foreignTaxExchangeRate`와 함께 */
+  foreignTaxPaidForeign?: number;
+  /** 외국납부세액 통화 코드 (표시용) */
+  foreignTaxCurrencyCode?: string;
+  /** 외국납부세액 납세일 기준환율 (원/외화) — 소령 §178의5 */
+  foreignTaxExchangeRate?: number;
+  /** §118의14① §156①7 원천징수액 (원화) */
+  domesticSourceTaxWithheld?: number;
 };
 
 /** 시행령 §178의8② 국외주식등 제외 사유 + 2026 이전 출국 미적용 */
@@ -307,6 +347,23 @@ export type ExitTaxHoldingResult = {
     /** 취득가액 총액(원화, 1회 절사) */
     acquisitionCostKrw: number;
   };
+  /** 종목별 실제 양도 echo (PR-7a) — `holdings[].actualTransfer`가 있고 과세 종목일 때만 */
+  actualTransfer?: {
+    /** 실제 양도 주수 */
+    soldShareCount: number;
+    /** 양도한 주수의 출국일 양도가액 (§118의10①) — 1주당 시가 × 양도 주수(외화 경로는 외화 단가 × 주수 × 환율을 1회 절사) */
+    departureValueSold: number;
+    /** 양도한 주수의 필요경비 (§118의10②) — 1주당 취득가액 × 양도 주수(외화 경로는 같은 방식으로 1회 절사) */
+    acquisitionCostSold: number;
+    /** 실제 양도가액 (원화) */
+    actualTransferValue: number;
+    /** 양도가액 하락분 = max(0, 출국일 양도가액 − 실제 양도가액) — 종목별 비교(종목 간 상계 없음) */
+    priceDrop: number;
+    /** 이 종목의 §118의13① 안분 후 외국납부세액 (한도 적용 전) — 납부세액 입력이 있을 때만 */
+    foreignTaxApportioned?: number;
+    /** 이 종목에 입력한 외국납부세액의 원화 환산액 */
+    foreignTaxPaidKrw?: number;
+  };
 };
 
 /** §118의11 세율 구분별 계산 분해 (구분이 둘 이상이면 canonical 순서 clause1 → clause2a → clause2b) */
@@ -320,6 +377,10 @@ export type ExitTaxBucketDetail = {
   appliedRate: number;
   progressiveDeduction: number;
   calculatedTax: number;
+  /** 이 구분의 §118의12 조정공제액 — 종목별 실제 양도가 있을 때만 (`구분 산출세액(TB) − 구분 산출세액(TB − 구분 하락분)`) */
+  adjustmentDeduction?: number;
+  /** 이 구분의 양도가액 하락분 합(종목별 하락분의 합) */
+  priceDrop?: number;
 };
 
 // ============================================================
