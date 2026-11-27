@@ -34,6 +34,12 @@ test.describe("양도세 regionCode — API body 전달 파이프라인", () => 
     expect(body.regionCode).toBe(GANGNAM);
   });
 
+  test("assets[0].regionCode가 비어 있으면 API body에 regionCode가 없다", async ({ page }) => {
+    await gotoTransferHoldingsStep(page, { houses: [], assetOver: { regionCode: "" } });
+    const body = await calculateAndCaptureBody(page);
+    expect(body).not.toHaveProperty("regionCode");
+  });
+
   test("AssetForm regionCode 초기값은 undefined (boolean fallback 유지)", async ({ page }) => {
     await page.goto("/calc/transfer-tax");
     await page.getByRole("heading", { name: "양도소득세 계산기" }).waitFor();
