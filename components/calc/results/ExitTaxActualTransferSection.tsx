@@ -61,7 +61,7 @@ export function ExitTaxActualTransferSection({ result }: { result: ExitTaxResult
             )}
             {a.foreignTaxApportioned !== undefined && (
               <AmountLine
-                label="외국납부세액 안분 = 외국납부세액 × (양도가액 − 필요경비) ÷ (실제 양도가액 − 필요경비) (§118의13①)"
+                label="외국납부세액 안분 = 외국납부세액 × (양도가액 − 필요경비)를 (실제 양도가액 − 필요경비)로 나눈 값 (§118의13①)"
                 value={a.foreignTaxApportioned}
               />
             )}

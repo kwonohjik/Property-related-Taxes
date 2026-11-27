@@ -85,7 +85,7 @@ describe("R-1 · R-2 종목별 실제 양도 근거", () => {
     const r = resultOf(exitForm({ etHoldings: [F1({ actualTransfer: a })] }));
     const out = html(<ExitTaxResultCard result={r} />);
     expect(out).toContain("입력한 외국납부세액 (원화 환산)");
-    expect(out).toContain("외국납부세액 안분 = 외국납부세액 × (양도가액 − 필요경비) ÷ (실제 양도가액 − 필요경비)");
+    expect(out).toContain("외국납부세액 안분 = 외국납부세액 × (양도가액 − 필요경비)를 (실제 양도가액 − 필요경비)로 나눈 값");
     expect(out).toContain("외국납부세액공제 (§118의13①) = 종목별 안분 외국납부세액의 합과 한도");
   });
 });
