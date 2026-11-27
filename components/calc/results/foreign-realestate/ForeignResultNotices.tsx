@@ -14,6 +14,7 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { TRANSFER_FOREIGN_RE as RE } from "@/lib/tax-engine/legal-codes/transfer-foreign-realestate";
 import { FOREIGN_DOMESTIC_SEPARATE_TEXT } from "@/lib/calc/transfer-foreign-messages";
 import { FOREIGN_UNSUPPORTED_RESULT_TEXT } from "@/lib/calc/transfer-foreign-messages";
+import { FOREIGN_TAX_FX_DATE_TEXT } from "@/lib/calc/transfer-foreign-messages";
 import type {
   ForeignRealEstateConfirmationCode,
   ForeignRealEstateNotLiableReason,
@@ -21,7 +22,6 @@ import type {
 } from "@/lib/tax-engine/foreign-realestate";
 
 export const CONFIRMATION_NOTICES = {
-  FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY: `외국납부세액 세액공제방법(${RE.SECTION_118_6_FOREIGN_TAX})에서 공제 대상 외국세를 원화로 바꾸는 기준일은 «양도가액 및 필요경비»의 환산을 정한 ${RE.DECREE_178_5_FX_BASE_RATE}와 달리 정한 조문을 찾지 못했습니다. 입력하신 납부일과 그날의 기준환율을 그대로 썼습니다 — 세무 전문가에게 확인하세요.`,
   UNSUPPORTED_SITUATIONS_NOT_EVALUATED: FOREIGN_UNSUPPORTED_RESULT_TEXT,
 } as const satisfies Record<ForeignRealEstateConfirmationCode, string>;
 
@@ -61,6 +61,13 @@ export function ForeignResultNotices({ result }: { result: ForeignRealEstateResu
         <div data-testid="foreign-domestic-separate">
           <ToneCard tone="sky" title="국내자산 양도와는 따로 계산">
             <p className="text-xs leading-relaxed">{FOREIGN_DOMESTIC_SEPARATE_TEXT}</p>
+          </ToneCard>
+        </div>
+      )}
+      {result.isLiable && result.foreignTaxMethod === "credit" && (
+        <div data-testid="foreign-ftc-fx-date">
+          <ToneCard tone="sky" title="외국납부세액 원화 환산 기준일">
+            <p className="text-xs leading-relaxed">{FOREIGN_TAX_FX_DATE_TEXT}</p>
           </ToneCard>
         </div>
       )}

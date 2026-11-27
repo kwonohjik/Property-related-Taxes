@@ -13,7 +13,6 @@ import { aAsset, bAsset, ftax, k1Input, ratesAt } from "./_fixtures";
 const rates = ratesAt("2026-07-10");
 
 const CODE_TOPIC = {
-  FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY: /환산 기준일|납부일/,
   UNSUPPORTED_SITUATIONS_NOT_EVALUATED: /상속|증여|환차익|장기할부|시가로/,
 } as const satisfies Record<ForeignRealEstateConfirmationCode, RegExp>;
 

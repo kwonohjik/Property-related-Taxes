@@ -96,13 +96,20 @@ describe("확인 필요 — 엔진이 돌려준 것은 하나도 버리지 않�
   it("외국납부세액 한도 초과: 두 코드 + 한도 초과 경고 문구(1건)가 모두 보이고, 미공제 잔액이 경고색으로 보인다", () => {
     const r = calc(k1Input({ foreignTax: { method: "credit", items: [ftax("a1", 200_000, "2026-08-01", 1_000)] } }), ratesAt("2026-07-10"));
     expect(r.confirmationNeeded).toEqual([
-      "FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY",
       "UNSUPPORTED_SITUATIONS_NOT_EVALUATED",
     ]);
     expect(r.warnings.length).toBe(1);
     render(<ForeignRealEstateResultCard result={r} />);
     for (const code of r.confirmationNeeded) expect(screen.getByTestId(`foreign-confirm-${code}`)).toBeTruthy();
     r.warnings.forEach((w, i) => expect(screen.getByTestId(`foreign-warning-${i}`).textContent).toContain(w));
+    // 환산 기준일은 «확인 필요»가 아닌 일반 안내 — 소득세법 시행규칙 §60②(납부한 때) + 미납분 과세기간 종료일
+    expect(screen.queryByTestId("foreign-confirm-FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY")).toBeNull();
+    const fx = text("foreign-ftc-fx-date");
+    expect(fx).not.toContain("확인 필요");
+    expect(fx).toContain(TRANSFER_FOREIGN_RE.RULE_60_2_FTC_FX_RATE);
+    expect(fx).toContain("납부한 날의 기준환율");
+    expect(fx).toContain("과세기간 종료일");
+    expect(fx).toContain("사전-2019-법령해석소득-0283");
     // FTC: 한도 = 산출세액 × 해당 자산 양도소득금액 ÷ 합계
     // 나눗셈은 분수로 그려진다(분자: 해당 자산 양도소득금액 · 분모: 합계) — 두 숫자가 모두 보인다
     const limitText = text("foreign-ftc-limit-a1");

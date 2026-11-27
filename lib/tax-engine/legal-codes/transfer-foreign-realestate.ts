@@ -61,4 +61,6 @@ export const TRANSFER_FOREIGN_RE = {
   LOCAL_BASIC_59_ROUNDING: "지방세기본법 §59",
   /** 국고금 관리법 §47① — 10원 미만의 끝수는 계산하지 않는다 */
   TREASURY_47_1_ROUND_10: "국고금 관리법 §47 ①",
+  /** 소득세법 시행규칙 §60② — 외국납부세액의 원화환산은 외국세액을 납부한 때의 기준환율 또는 재정환율 (같은 조 ①이 양도소득을 명시) */
+  RULE_60_2_FTC_FX_RATE: "소득세법 시행규칙 §60 ②",
 } as const;

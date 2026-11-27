@@ -94,7 +94,8 @@ describe("외국납부세액 — HTTP", () => {
     expect(status).toBe(200);
     expect(json.data.foreignTaxCreditApplied).toBe(40_000_000);
     expect(json.data.determinedTax).toBe(107_860_000);
-    expect(json.data.confirmationNeeded).toContain("FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY");
+    expect(json.data.confirmationNeeded).not.toContain("FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY");
+    expect(json.data.appliedRules).toContain("소득세법 시행규칙 §60 ②");
   });
 
   it("K-12 필요경비 산입방법: 같은 외국세 → 과세표준 394,500,000 · 산출세액 131,860,000", async () => {
