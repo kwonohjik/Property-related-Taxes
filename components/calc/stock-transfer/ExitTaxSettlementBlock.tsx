@@ -108,6 +108,8 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
           onChange({
             etDeferralRequested: v,
             etDeferralReason: v ? form.etDeferralReason : "none",
+            // OFF면 이자 일수·이율도 지운다 — 숨은 값이 body로 나가지 않게
+            ...(v ? {} : { etDeferralInterestDays: "", etDeferralInterestDailyRate: "" }),
           })
         }
         tone="sky"

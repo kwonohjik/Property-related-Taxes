@@ -353,11 +353,14 @@ function buildExitTaxApiBodyBase(form: StockTransferFormData): Record<string, un
 
     // ── 재전입 환급 §118의17①1호 ──
     reenteredWithin5Years: form.etReenteredWithin5Years,
-
-    // ── 납부유예 이자상당액 §118의16④·§178의12③ (빈값 undefined → 안내만) ──
-    deferralInterestDays: parseIntOrUndef(form.etDeferralInterestDays),
-    deferralInterestDailyRate: parseFloatOrUndef(form.etDeferralInterestDailyRate),
   };
+
+  // 납부유예 이자상당액 §118의16④·§178의12③ — 납부유예 신청이 켜져 있을 때만 (빈값 undefined → 안내만).
+  // 꺼진 폼에 남은 일수·이율을 body에 싣지 않는다(숨은 값 금지 — 외국납부세액 토글과 같은 원칙).
+  if (form.etDeferralRequested) {
+    body.deferralInterestDays = parseIntOrUndef(form.etDeferralInterestDays);
+    body.deferralInterestDailyRate = parseFloatOrUndef(form.etDeferralInterestDailyRate);
+  }
 
   // 경정청구용 실양도 — 입력값 있을 때만 포함 (자동 안분 fallback 금지)
   if (form.etActualTransferDate) {
