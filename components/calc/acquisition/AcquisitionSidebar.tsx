@@ -12,6 +12,7 @@ import { WizardSidebar } from "@/components/calc/shared/WizardSidebar";
 import type { WizardSidebarStep, WizardSidebarSummaryItem } from "@/components/calc/shared/WizardSidebar";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { linearInterpolationRate, getBasicRate } from "@/lib/tax-engine/acquisition-tax-rate";
+import { housingShareRateBasis } from "@/lib/tax-engine/acquisition-tax-rate";
 import { SURCHARGE_RATES } from "@/lib/tax-engine/acquisition-surcharge/multi-house";
 import { isCorporateHouseAcquirer } from "@/lib/tax-engine/acquisition-surcharge/multi-house";
 import { ACQUISITION_CONST } from "@/lib/tax-engine/legal-codes";
@@ -50,6 +51,16 @@ function estimateHousingRateLabel(
     acqValue > ACQUISITION_CONST.HOUSING_BRACKET_LOW &&
     acqValue < ACQUISITION_CONST.HOUSING_BRACKET_HIGH;
   return isInterpolated ? `${pct(rate)} (선형보간)` : pct(rate);
+}
+
+/** 주택 세율 판정 가액 — 지분 취득이면 전체가액(§11①8호 후단, 엔진 housingShareRateBasis 단일 진실) */
+function housingRateBasisOf(form: FormState, acqValue: number): number {
+  return housingShareRateBasis({
+    propertyType: form.propertyType as PropertyObjectType,
+    acquisitionCause: form.acquisitionCause as AcquisitionCause,
+    taxBase: acqValue,
+    acquisitionOwnershipShare: parseFloat(form.acquisitionOwnershipShare),
+  }) ?? acqValue;
 }
 
 /** 비주택 예상 세율 라벨 — 엔진 getBasicRate 단일 진실 */
@@ -229,7 +240,7 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
     if (form.propertyType === "housing" && acqValue) {
       const houseCount = parseInt(form.houseCountAfter) > 0 ? parseInt(form.houseCountAfter) : 1;
       estimatedBaseRate = estimateHousingRateLabel(
-        acqValue,
+        housingRateBasisOf(form, acqValue),
         houseCount,
         form.isRegulatedArea,
         isCorporateHouseAcquirer(form.acquiredBy),
@@ -269,7 +280,7 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
   let estimatedBaseRate: string | null = null;
   if (form.propertyType === "housing" && acqValue) {
     estimatedBaseRate = estimateHousingRateLabel(
-      acqValue,
+      housingRateBasisOf(form, acqValue),
       hcnt ?? 1,
       form.isRegulatedArea,
       isCorporateHouseAcquirer(form.acquiredBy),

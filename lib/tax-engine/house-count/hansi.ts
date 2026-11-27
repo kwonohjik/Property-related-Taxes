@@ -68,15 +68,16 @@ export function assessHansiBenefitForPendingAcquisition(
     ) {
       // 면적 요건: 다가구 건축물대장 구분 기재 여부 확인
       const maxArea = ACQUISITION_CONST.HANSI_NEW_BUILD_MAX_AREA;
+      // 면적 미입력 = 요건 확인 불가 → 적용하지 않는다(「모름」=혜택 불성립 · 교재 대조 T8)
       const areaOk = pending.areaSqm !== undefined
         ? (pending.type === "multi_household" && !pending.isMultiHouseholdWithUnitArea)
           // 다가구 + 호별 구분 없으면 전체 연면적 기준 (60㎡ 기준 미적용 → 보수적으로 제외 불가)
           ? false
           : (pending.areaSqm <= maxArea)
-        : true; // 면적 미입력 시 조건 충족으로 간주 (경고 추가)
+        : false;
 
       if (pending.areaSqm === undefined) {
-        warnings.push("한시 특례 신축 — 전용면적 미입력. 입력 시 60㎡ 이하 요건이 자동 검증됩니다.");
+        warnings.push("한시 특례 신축 — 전용면적 미입력. 60㎡ 이하 요건을 확인할 수 없어 주택 수 제외를 적용하지 않았습니다. 전용면적을 입력하세요.");
       }
 
       // 가격 요건
@@ -102,7 +103,7 @@ export function assessHansiBenefitForPendingAcquisition(
       }
 
       // 조건 미충족 시 경고
-      if (!areaOk) {
+      if (!areaOk && pending.areaSqm !== undefined) {
         warnings.push(`한시 특례 신축 — 전용면적(${pending.areaSqm}㎡)이 60㎡를 초과하여 카운트 제외 미적용.`);
       }
       if (!priceOk) {
@@ -125,8 +126,11 @@ export function assessHansiBenefitForPendingAcquisition(
         : ACQUISITION_CONST.HANSI_PRICE_LIMIT_NON_METRO;
       const areaOk = pending.areaSqm !== undefined
         ? pending.areaSqm <= ACQUISITION_CONST.HANSI_NEW_BUILD_MAX_AREA
-        : true;
+        : false; // 면적 미입력 = 요건 확인 불가 → 적용하지 않는다(T8)
       const priceOk = pending.acquisitionValue <= priceLimit;
+      if (pending.areaSqm === undefined) {
+        warnings.push("한시 특례 임대등록 — 전용면적 미입력. 60㎡ 이하 요건을 확인할 수 없어 주택 수 제외를 적용하지 않았습니다. 전용면적을 입력하세요.");
+      }
 
       if (areaOk && priceOk) {
         return {
@@ -157,7 +161,7 @@ export function assessHansiBenefitForPendingAcquisition(
       if (!pending.isMetropolitan) {
         const areaOk = pending.areaSqm !== undefined
           ? pending.areaSqm <= ACQUISITION_CONST.HANSI_UNSOLD_MAX_AREA
-          : true;
+          : false; // 면적 미입력 = 요건 확인 불가 → 적용하지 않는다(T8)
         const priceOk = pending.acquisitionValue <= ACQUISITION_CONST.HANSI_UNSOLD_PRICE_LIMIT;
 
         if (areaOk && priceOk) {
@@ -177,7 +181,11 @@ export function assessHansiBenefitForPendingAcquisition(
         }
 
         if (!areaOk) {
-          warnings.push(`한시 미분양 아파트 — 면적(${pending.areaSqm}㎡)이 85㎡를 초과 → 적용 불가.`);
+          warnings.push(
+            pending.areaSqm === undefined
+              ? "한시 미분양 아파트 — 전용면적 미입력. 85㎡ 이하 요건을 확인할 수 없어 주택 수 제외를 적용하지 않았습니다. 전용면적을 입력하세요."
+              : `한시 미분양 아파트 — 면적(${pending.areaSqm}㎡)이 85㎡를 초과 → 적용 불가.`
+          );
         }
         if (!priceOk) {
           warnings.push(`한시 미분양 아파트 — 취득가(${pending.acquisitionValue.toLocaleString()}가 6억원 초과 → 적용 불가.`);

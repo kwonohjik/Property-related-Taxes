@@ -46,6 +46,33 @@ export function linearInterpolationRate(acquisitionValue: number): number {
 }
 
 /**
+ * §11①8호 후단 — 지분으로 취득한 주택의 세율 판정용 「전체 주택의 취득당시가액」
+ *
+ * 법문: 취득 지분의 취득당시가액 × 전체 주택의 시가표준액 ÷ 취득 지분의 시가표준액.
+ * 취득 지분의 시가표준액을 전체 시가표준액 × 지분율로 보아(지분 비례) 취득 지분의 취득당시가액 ÷ 지분율로 구한다
+ * — 사용자 결정 2026-11-28(교재 대조 T6). 세율 판정에만 쓰고 과세표준은 지분 가액 그대로다(§11②).
+ *
+ * @returns 지분 취득(0 < share < 1)인 주택 유상거래면 전체가액, 아니면 undefined
+ */
+export function housingShareRateBasis(input: {
+  propertyType: PropertyObjectType;
+  acquisitionCause: AcquisitionCause;
+  taxBase: number;
+  acquisitionOwnershipShare?: number;
+}): number | undefined {
+  const share = input.acquisitionOwnershipShare;
+  if (input.propertyType !== "housing") return undefined;
+  if (!["purchase", "exchange", "auction", "in_kind_investment"].includes(input.acquisitionCause)) return undefined;
+  if (share === undefined || !(share > 0 && share < 1)) return undefined;
+  return Math.floor(input.taxBase / share);
+}
+
+/** `housingShareRateBasis` 적용 안내 — 지분 비례 가정과 법문 계산식을 함께 알린다 */
+export function housingShareRateBasisWarning(basis: number, share: number): string {
+  return `지분 취득 주택 — 세율은 전체 주택의 취득당시가액 ${basis.toLocaleString()}원(지분 가액 ÷ 지분율 ${share})으로 판정하고 과세표준은 지분 가액입니다. 취득 지분의 시가표준액이 지분율에 비례하지 않으면 「취득 지분 가액 × 전체 시가표준액 ÷ 취득 지분 시가표준액」으로 다시 확인하세요 (지방세법 §11①8호 후단).`;
+}
+
+/**
  * 선형보간 세율 구간에서의 취득세액
  *
  * [R3-10] §11①8나는 세율을 4자리로 확정(다섯째자리 반올림)한 뒤 과세표준에 곱한다.
@@ -53,18 +80,22 @@ export function linearInterpolationRate(acquisitionValue: number): number {
  *   최대 ~45,000원 어긋난다(반올림 방향에 따라 과대·과소). rateScaled(=round4×10000)로
  *   정수 계산해 부동소수 오차 없이 원 미만 절사.
  */
-export function calcLinearInterpolationTax(acquisitionValue: number): number {
-  if (acquisitionValue <= ACQUISITION_CONST.HOUSING_BRACKET_LOW) {
+export function calcLinearInterpolationTax(
+  acquisitionValue: number,
+  /** 세율 판정 기준 가액 — 지분 취득 주택의 전체가액(§11①8호 후단). 없으면 acquisitionValue */
+  rateBasisValue: number = acquisitionValue
+): number {
+  if (rateBasisValue <= ACQUISITION_CONST.HOUSING_BRACKET_LOW) {
     return Math.floor(acquisitionValue * 0.01);
   }
-  if (acquisitionValue >= ACQUISITION_CONST.HOUSING_BRACKET_HIGH) {
+  if (rateBasisValue >= ACQUISITION_CONST.HOUSING_BRACKET_HIGH) {
     return Math.floor(acquisitionValue * 0.03);
   }
-  const v = BigInt(acquisitionValue);
+  const basis = BigInt(rateBasisValue);
   // round4 세율 × 10000 (다섯째자리 반올림)
-  const rateScaled = (v * 2n - 900_000_000n) * 10_000n + 30_000_000_000n / 2n;
+  const rateScaled = (basis * 2n - 900_000_000n) * 10_000n + 30_000_000_000n / 2n;
   const rate4 = rateScaled / 30_000_000_000n;
-  const tax = (v * rate4) / 10_000n; // floor(과세표준 × round4세율)
+  const tax = (BigInt(acquisitionValue) * rate4) / 10_000n; // floor(과세표준 × round4세율)
   return Number(tax);
 }
 
@@ -189,6 +220,8 @@ interface RateDecisionInput {
   propertyType: PropertyObjectType;
   acquisitionCause: AcquisitionCause;
   acquisitionValue: number;   // 과세표준 (천원 미만 절사 완료)
+  /** 세율 판정 기준 가액 — 지분 취득 주택의 전체가액(§11①8호 후단). 없으면 acquisitionValue */
+  rateBasisValue?: number;
   isSurcharged?: boolean;
   surchargeRate?: number;
 }
@@ -217,7 +250,7 @@ export function decideTaxRate(input: RateDecisionInput): TaxRateDecision {
   const { rate, isLinearInterpolation, legalBasis } = getBasicRate(
     propertyType,
     acquisitionCause,
-    acquisitionValue
+    input.rateBasisValue ?? acquisitionValue
   );
 
   return {
