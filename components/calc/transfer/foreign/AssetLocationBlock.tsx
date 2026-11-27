@@ -9,6 +9,7 @@
  */
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { MULTI_FOREIGN_UNSUPPORTED_MESSAGE } from "@/lib/calc/transfer-foreign-messages";
 
 export const ASSET_LOCATION_OPTIONS = [
   { value: "domestic", label: "국내 부동산", description: "국내에 있는 주택·토지·건물 등 (소득세법 §94·§104)" },
@@ -17,7 +18,16 @@ export const ASSET_LOCATION_OPTIONS = [
 
 type AssetLocation = (typeof ASSET_LOCATION_OPTIONS)[number]["value"];
 
-export function AssetLocationBlock({ value, onChange }: { value: AssetLocation; onChange: (v: AssetLocation) => void }) {
+export function AssetLocationBlock({
+  value,
+  onChange,
+  embeddedInMulti = false,
+}: {
+  value: AssetLocation;
+  onChange: (v: AssetLocation) => void;
+  /** 연간 합산(`/multi`) 편집 화면 안이면 국외 선택 시 차단 안내를 이 자리에서 보인다(사용자 결정 D-M) */
+  embeddedInMulti?: boolean;
+}) {
   return (
     <div data-testid="asset-location-block" className="mb-4">
       <ToneCard tone="rose" title="자산 소재">
@@ -32,6 +42,13 @@ export function AssetLocationBlock({ value, onChange }: { value: AssetLocation; 
           data-field="assetLocation"
         />
       </ToneCard>
+      {embeddedInMulti && value === "foreign" && (
+        <div className="mt-2" data-testid="multi-foreign-notice">
+          <ToneCard tone="amber" title="연간 합산(다건) 안내">
+            <p className="text-xs leading-relaxed">{MULTI_FOREIGN_UNSUPPORTED_MESSAGE}</p>
+          </ToneCard>
+        </div>
+      )}
     </div>
   );
 }

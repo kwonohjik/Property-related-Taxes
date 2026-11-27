@@ -5,14 +5,13 @@
  *
  * 국외를 고르면 국내 자산 카드·판정 불러오기·함께 양도 토글은 마운트하지 않는다(`Step1Entry`). 국외 자산은 최대 `FOREIGN_RE_MAX_ASSETS`건
  * (사용자 결정 C-1 — 처음부터 여러 건)이고 거주 연수는 폼 전역 정수 1칸이다(C-2). 미등기 칸은 없다(C-3) — 안내 카드만.
- * 이 단계에서는 세액을 계산하지 않는다 — 계산 연결은 U2(`FOREIGN_CALC_PENDING_MESSAGE`).
+ * 계산은 마지막 「세금 계산하기」에서 한다(U2 — `callForeignRealEstateAPI`) — 이 단계는 입력만 받는다.
  */
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Button } from "@/components/ui/button";
 import { FOREIGN_RE_MAX_ASSETS } from "@/lib/api/transfer-foreign-schema";
-import { FOREIGN_CALC_PENDING_MESSAGE } from "@/lib/calc/transfer-foreign-pending";
 import { isForeignResidenceBoundaryAmbiguous, isForeignResidenceUnderMin } from "@/lib/calc/transfer-foreign-scope";
 import { makeDefaultForeignAsset, type ForeignAssetForm } from "@/lib/stores/calc-wizard-form-foreign";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
@@ -101,12 +100,6 @@ export function ForeignRealEstateStep({ form, onChange, assetErrors }: Props) {
       </div>
 
       <ForeignTaxSection form={form} onChange={onChange} />
-
-      <div data-testid="foreign-calc-pending-notice">
-        <ToneCard tone="slate">
-          <p className="text-xs leading-relaxed text-muted-foreground">{FOREIGN_CALC_PENDING_MESSAGE}</p>
-        </ToneCard>
-      </div>
     </div>
   );
 }

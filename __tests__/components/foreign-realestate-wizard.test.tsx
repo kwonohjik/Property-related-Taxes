@@ -4,7 +4,7 @@
  *
  * - 「자산 소재」 라디오(폼 전역)로 국외를 고르면 국내 자산 카드·판정 불러오기·함께 양도 토글이 **마운트되지 않는다**(값은 남는다).
  * - 국외 단계는 1개 — 스테퍼·제목·`totalSteps`가 같은 배열을 쓴다(`STEPS_SINGLE` 직접 사용 회귀 가드).
- * - 「세금 계산하기」는 ⑧ 검증까지만 하고 **국내 계산 API로 가지 않는다**(U2 전).
+ * - 「세금 계산하기」는 ⑧ 검증을 먼저 하고, 통과하면 **국외 전용 API**(`/api/calc/transfer/foreign`)만 부른다(국내 계산 API로 가지 않는다).
  */
 import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor, within } from "@testing-library/react";
@@ -23,7 +23,6 @@ import TransferTaxCalculator from "@/app/calc/transfer-tax/TransferTaxCalculator
 import { foreignWizardMeta, STEPS_FOREIGN } from "@/app/calc/transfer-tax/transfer-foreign-wizard-meta";
 import { STEPS_SINGLE } from "@/app/calc/transfer-tax/transfer-calculator-meta";
 import { useCalcWizardStore } from "@/lib/stores/calc-wizard-store";
-import { FOREIGN_CALC_PENDING_MESSAGE } from "@/lib/calc/transfer-foreign-pending";
 import { FX_RATE_HINT } from "@/components/calc/transfer/foreign/foreign-ui-shared";
 import { checkedRadioValue, radioValues } from "./_helpers/radio-values";
 import { foreignForm, k1Asset } from "../calc/_foreign-form-fixture";
@@ -104,7 +103,7 @@ describe("FRE-3 단계 라벨 — 국외 1개 · 국내 4개", () => {
   });
 });
 
-describe("계산 버튼 — U2 전에는 국내 계산 경로로 가지 않는다", () => {
+describe("계산 버튼 — 국외 전용 API로만 간다", () => {
   it("입력이 비어 있으면 ⑧ 오류 목록을 보이고 fetch하지 않는다", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     seed({ foreignResidenceYears: "" });
@@ -112,17 +111,6 @@ describe("계산 버튼 — U2 전에는 국내 계산 경로로 가지 않는�
     fireEvent.click(screen.getByRole("button", { name: "세금 계산하기" }));
     await waitFor(() => expect(screen.queryAllByText(/국내 거주 연수를 입력하세요/).length).toBeGreaterThan(0));
     expect(fetchSpy).not.toHaveBeenCalled();
-    fetchSpy.mockRestore();
-  });
-
-  it("⑧을 통과한 교재 사례도 «계산 연결 전» 안내만 보이고 fetch하지 않으며 결과 화면으로 가지 않는다", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    seed();
-    render(<TransferTaxCalculator />);
-    fireEvent.click(screen.getByRole("button", { name: "세금 계산하기" }));
-    await waitFor(() => expect(screen.queryAllByText(FOREIGN_CALC_PENDING_MESSAGE).length).toBeGreaterThan(1));
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(useCalcWizardStore.getState().result).toBeNull();
     fetchSpy.mockRestore();
   });
 

@@ -22,7 +22,7 @@ import { MULTI_NEW_HOUSING_PRE_2016_UNSUPPORTED_MESSAGE } from "./multi-transfer
 import { isMultiSupportedNewHousingReduction } from "./multi-transfer-support-messages";
 import { multiRosterBlockMessage } from "./multi-roster-parity";
 import { isForeignRealEstateForm } from "./transfer-foreign-scope";
-import { MULTI_FOREIGN_PENDING_MESSAGE } from "./transfer-foreign-pending";
+import { MULTI_FOREIGN_UNSUPPORTED_MESSAGE } from "./transfer-foreign-messages";
 import { foreignCompletionPercent } from "./transfer-tax-validate-foreign";
 
 /**
@@ -127,8 +127,8 @@ export function calcPropertyCompletion(form: PropertyItem["form"]): number {
  * @returns 차단 사유 문자열, 지원 모드면 null
  */
 export function validateMultiSupportedMode(form: PropertyItem["form"]): string | null {
-  // 국외자산 부동산 건 — 입력은 받지만(사용자 결정 C-1) 국내 합산 엔진으로는 계산할 수 없다. 국외 계산 연결(U2) 전까지 합산을 막는다.
-  if (isForeignRealEstateForm(form)) return MULTI_FOREIGN_PENDING_MESSAGE;
+  // 국외자산 부동산 건 — 국내 합산 엔진으로는 계산할 수 없다. 국외 자산 여러 개는 한 건의 계산 안(`foreignAssets[]`)에서 받는다(사용자 결정 D-M).
+  if (isForeignRealEstateForm(form)) return MULTI_FOREIGN_UNSUPPORTED_MESSAGE;
   const a = form.assets?.[0];
   if (!a) return null;
 

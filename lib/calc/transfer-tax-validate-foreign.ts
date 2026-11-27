@@ -184,14 +184,46 @@ export function collectForeignIssues(form: TransferFormData): ValidationIssue[] 
   const ctx = { addIssue: (i: { message?: string; path?: PropertyKey[] }) => server.push(i), path: [] } as unknown as z.RefinementCtx;
   for (const r of FOREIGN_RE_REFINES) r.run(body, ctx);
   for (const s of server) {
-    const loc = locate(s.path ?? [], taxItemOrigins);
-    const reason = reasonOf(s.message ?? "");
-    const prefix = loc.labelIndex !== undefined ? `${foreignAssetLabel(loc.labelIndex)} ` : "";
-    const message = loc.what ? `${prefix}${loc.what}: ${reason}` : `${prefix}${reason}`;
-    add(message, loc.field, loc.assetIndex);
+    const d = describeServerIssue(s.path ?? [], s.message ?? "", taxItemOrigins);
+    add(d.message, d.field, d.assetIndex);
   }
 
   return issues;
+}
+
+/** 서버 오류 1건(경로 + 메시지) → 화면 이슈(칸 이름을 붙인 메시지 + `data-field` 앵커 + 카드 인덱스) — ⑧과 ④의 400 응답 처리가 같은 함수를 쓴다 */
+function describeServerIssue(
+  path: readonly PropertyKey[],
+  rawMessage: string,
+  taxOrigins: readonly { assetIndex: number; rowIndex: number }[],
+): { message: string; field?: IssueField; assetIndex?: number } {
+  const loc = locate(path, taxOrigins);
+  const reason = reasonOf(rawMessage);
+  const prefix = loc.labelIndex !== undefined ? `${foreignAssetLabel(loc.labelIndex)} ` : "";
+  return { message: loc.what ? `${prefix}${loc.what}: ${reason}` : `${prefix}${reason}`, field: loc.field, assetIndex: loc.assetIndex };
+}
+
+/**
+ * ④ 400 응답의 `fieldErrors`(점 표기 키 `assets.0.transfer.exchangeRate` · `foreignTax.items.0.date`) → 입력칸으로 갈 수 있는 이슈 목록.
+ * ⑧이 서버 refine을 먼저 돌리므로 정상 흐름에서는 비어 있다 — 그래도 서버가 ⑧이 모르는 오류를 내면 사용자가 그 칸으로 이동할 수 있어야 한다.
+ */
+export function foreignFieldErrorsToIssues(
+  fieldErrors: Record<string, string[]>,
+  taxOrigins: readonly { assetIndex: number; rowIndex: number }[],
+): ValidationIssue[] {
+  const out: ValidationIssue[] = [];
+  const seen = new Set<string>();
+  for (const [key, messages] of Object.entries(fieldErrors)) {
+    const path = key === "_root" ? [] : key.split(".").map((p) => (/^\d+$/.test(p) ? Number(p) : p));
+    for (const m of messages) {
+      const d = describeServerIssue(path, m, taxOrigins);
+      const dedup = `${d.assetIndex ?? ""}|${d.field ?? d.message}`;
+      if (seen.has(dedup)) continue;
+      seen.add(dedup);
+      out.push({ step: 0, message: d.message, ...(d.assetIndex !== undefined ? { assetIndex: d.assetIndex } : {}), ...(d.field ? { field: d.field } : {}) });
+    }
+  }
+  return out;
 }
 
 /** 목록 완성도(0~100) — 다건 목록 배지용. 필수 입력 칸 중 채운 비율(건별 평균). */

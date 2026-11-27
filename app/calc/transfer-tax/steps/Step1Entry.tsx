@@ -18,7 +18,11 @@ export function Step1Entry(props: Step1Props) {
   const { form, onChange, assetErrors } = props;
   return (
     <>
-      <AssetLocationBlock value={form.assetLocation} onChange={(assetLocation) => onChange({ assetLocation })} />
+      <AssetLocationBlock
+        value={form.assetLocation}
+        onChange={(assetLocation) => onChange({ assetLocation })}
+        embeddedInMulti={props.embeddedInMulti === true}
+      />
       {isForeignRealEstateForm(form) ? (
         <ForeignRealEstateStep form={form} onChange={onChange} assetErrors={assetErrors} />
       ) : (

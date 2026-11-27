@@ -40,7 +40,11 @@ import { Step6 } from "./steps/Step6";
 import { CorrectionModeBanner } from "@/components/calc/transfer/CorrectionModeBanner";
 import type { TransferTaxCalculatorProps } from "./transfer-calculator-meta";
 import { foreignWizardMeta } from "./transfer-foreign-wizard-meta";
-import { FOREIGN_CALC_PENDING_MESSAGE } from "@/lib/calc/transfer-foreign-pending";
+import { callForeignRealEstateAPI, ForeignCalcError } from "@/lib/calc/transfer-foreign-call";
+import { FOREIGN_HISTORY_SAVE_DEFERRED_MESSAGE } from "@/lib/calc/transfer-foreign-messages";
+import { computeForeignRealEstateSummary } from "@/lib/stores/transfer-foreign-summary";
+import { ForeignRealEstateResultView } from "@/components/calc/results/foreign-realestate/ForeignRealEstateResultView";
+import { ForeignSidebarSummary } from "./ForeignSidebarSummary";
 import { patchInvalidatesDeterminedTax } from "./transfer-penalty-invalidation";
 import { TransferSidebarSummary } from "./TransferSidebarSummary";
 import { backupSingleToMulti, continueToMulti, runPenaltyCalc } from "./transfer-calc-actions";
@@ -82,6 +86,9 @@ export default function TransferTaxCalculator({
     for (const it of issues) if (it.assetIndex != null && m[it.assetIndex] == null) m[it.assetIndex] = it.message;
     return m;
   }, [issues]);
+  // ④ 국외 계산 400 응답의 `fieldErrors` → 입력칸 앵커 이슈. 입력이 바뀌면(updateFormAndInvalidate) 낡으므로 비운다.
+  const [serverIssues, setServerIssues] = useState<ValidationIssue[]>([]);
+  const panelIssues = useMemo(() => (serverIssues.length > 0 ? [...issues, ...serverIssues] : issues), [issues, serverIssues]);
   const [isLoading, setIsLoading] = useState(false);
   const [penaltyResult, setPenaltyResult] = useState<TransferTaxPenaltyResult | null>(null);
   const [isPenaltyLoading, setIsPenaltyLoading] = useState(false);
@@ -118,6 +125,12 @@ export default function TransferTaxCalculator({
     [formData.assets, formData.contractTotalPrice, formData.bundledSaleMode, formData.transferDate, result]
   );
 
+  // ⑥ 국외 사이드바 합계 — 계산 전 입력 환산 / 계산 후 엔진 값. useMemo 필수(새 객체 → 무한 루프 방지)
+  const foreignSummary = useMemo(
+    () => computeForeignRealEstateSummary({ foreignAssets: formData.foreignAssets }, result?.mode === "foreign" ? result.result : null),
+    [formData.foreignAssets, result],
+  );
+
   // ⛔ 로그인 상태 구독을 되살리지 말 것 (2026-09-05 · Q30) — 이 화면에서 로그인 여부로
   //    갈리는 동작이 **하나도 없다**. 유일한 소비처였던 결과 화면 로그인 안내 배너를 제거하면서
   //    함께 지웠다(이력은 로컬 IndexedDB, PDF는 클라이언트 생성 — 배너 문구가 사실과 달랐다).
@@ -133,7 +146,8 @@ export default function TransferTaxCalculator({
   const autoSave = useAutoSaveCalculation({
     taxType: "transfer",
     inputData: formData as unknown as Record<string, unknown>,
-    resultData: isResult ? (result as unknown as Record<string, unknown>) : null,
+    // 국외 결과는 이력 저장을 U3까지 보류한다(제목·중복 판정·복원 경로가 국외를 모른다 — `FOREIGN_HISTORY_SAVE_DEFERRED_MESSAGE`)
+    resultData: isResult && result?.mode !== "foreign" ? (result as unknown as Record<string, unknown>) : null,
     taxLawVersion: formData.transferDate || new Date().toISOString().split("T")[0],
     clientId: activeClientId,
   });
@@ -143,6 +157,10 @@ export default function TransferTaxCalculator({
   const recordCount = useRecordCount(result);
   const handleManualSave = async () => {
     setSaveMessage(null);
+    if (isForeign) {
+      setSaveMessage({ kind: "info", text: FOREIGN_HISTORY_SAVE_DEFERRED_MESSAGE });
+      return;
+    }
     try {
       const outcome = await runTransferManualSave({
         form: formData as unknown as Record<string, unknown>,
@@ -174,6 +192,7 @@ export default function TransferTaxCalculator({
       if (patchInvalidatesDeterminedTax(patch)) setCalcDeterminedTax(null);
       // 가산세 결과는 어느 쪽이 바뀌어도 낡는다 — 결정세액·가산세 입력 둘 다 반영하므로.
       setPenaltyResult(null);
+      setServerIssues([]);
       // 계산 결과도 낡는다 — 남겨 두면 사이드바가 옛 엔진 값을 보이고(첫 자산 삭제 시엔 지운 자산의 값이 새 첫 행에 붙는다 — 결과의
       // 첫 행은 assetId가 아니라 "primary"로 매칭), 「저장」이 고친 입력 + 옛 결과를 최종본으로 남긴다. 결과 화면은 「계산하기」로만
       // 열리고 매번 다시 계산하므로 잃는 값은 없다. 계획서 first-asset-removal-primary-reindex.plan.md §4-3(Q-3 B).
@@ -233,6 +252,7 @@ export default function TransferTaxCalculator({
   function clearError() {
     setError(null);
     setFailed(null);
+    setServerIssues([]);
   }
 
   // 스텝 이동 시 새 단계의 맨 위(①번 카드)가 기본으로 보이도록 최상단 스크롤.
@@ -280,11 +300,10 @@ export default function TransferTaxCalculator({
     // 최종 제출 가드 — 사용자가 자유 이동·필드 비우기 후 마지막 step에서 "계산하기" 시 우회 차단.
     // step 0 (자산·취득 정보)이 가장 critical — redev settlementSaleDate, useEstimated PHD 등 entry 검증.
     if (!passesAllSteps()) return;
-    // 국외 계산은 U2에서 연결한다 — 검증을 통과해도 국내 계산 경로로 보내지 않는다(`callTransferTaxAPI`도 같은 이유로 던진다)
-    if (isForeign) { setError(FOREIGN_CALC_PENDING_MESSAGE); return; }
     setIsLoading(true);
     try {
-      const res = await callTransferTaxAPI(formData);
+      // 국외는 전용 호출(④) — 국내 `callTransferTaxAPI`는 국외 폼이면 던진다(빈 국내 자산이 조용히 계산되는 것을 막는다)
+      const res = isForeign ? await callForeignRealEstateAPI(formData) : await callTransferTaxAPI(formData);
       setResult(res);
       setStep(totalSteps); // 결과 화면
 
@@ -296,13 +315,18 @@ export default function TransferTaxCalculator({
       //    두고(계산 전) 단건에서 「세금 계산하기」를 한 번 누르면 그 3건이 경고·확인 없이
       //    전부 사라졌다. 백업의 편의가 사용자 실입력보다 우선할 수는 없다.
       //    ⇒ **비어 있거나, 지금 이 세션이 만든 백업일 때만** 덮어쓴다.
-      if (!isEmbeddedInMulti && !multiHasUserWork()) {
+      if (!isEmbeddedInMulti && !isForeign && !multiHasUserWork()) {
         autoBackupPropertyIdRef.current = backupSingleToMulti(formData);
       }
 
       // 이력 저장은 로컬 IndexedDB(useAutoSaveCalculation)에서 처리 — 서버 저장 제거(로컬 일원화)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "계산 중 오류가 발생했습니다.");
+      // 서버 400이 가리킨 입력칸 — 목록에서 눌러 이동한다(첫 칸은 바로 이동)
+      if (e instanceof ForeignCalcError && e.issues.length > 0) {
+        setServerIssues(e.issues);
+        jumpToIssue(e.issues[0]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -404,8 +428,10 @@ export default function TransferTaxCalculator({
     onClick: () => { clearError(); setStep(i); scrollToTop(); },
   }));
 
-  // 국외 합계(⑥)는 U2 — 국내 요약(assets[0] 기반)을 국외 폼에 보이지 않는다
-  const sidebarSummaryContent = isForeign ? undefined : <TransferSidebarSummary summary={perAssetSummary} />;
+  // 국외는 전용 합계(⑥) — 국내 요약(assets[0] 기반)을 국외 폼에 보이지 않는다
+  const sidebarSummaryContent = isForeign
+    ? <ForeignSidebarSummary summary={foreignSummary} />
+    : <TransferSidebarSummary summary={perAssetSummary} />;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -450,7 +476,14 @@ export default function TransferTaxCalculator({
       />
 
       {isResult && result ? (
-        result.mode === "single" ? (
+        result.mode === "foreign" ? (
+          <ForeignRealEstateResultView
+            result={result.result}
+            onBack={() => { setStep(totalSteps - 1); clearError(); }}
+            onGoToFirst={() => { setStep(0); clearError(); }}
+            onReset={handleReset}
+          />
+        ) : result.mode === "single" ? (
           <>
             <TransferTaxResultView
               result={result.result}
@@ -613,7 +646,7 @@ export default function TransferTaxCalculator({
           {/* 에러 메시지 — 검증 오류 일괄 목록(issues) + API 오류(error). 하단 sticky(D-1) */}
           <ValidationIssuePanel
             key={failed?.seq ?? 0}
-            issues={issues}
+            issues={panelIssues}
             error={error}
             onIssueClick={(it) => jumpToIssue(it)}
             onRetry={isLastStep ? () => { clearError(); handleSubmit(); } : undefined}

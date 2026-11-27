@@ -428,12 +428,61 @@ mutation probe: 술어를 `!==`로 뒤집어 국내까지 삼킴 → FRE-4 실�
 
 1. 빈 칸·화면 필수(서버가 모르는 «입력 안 함») 2. **서버 ⑩ refine을 그대로 실행**(`FOREIGN_RE_REFINES` × `buildForeignRealEstateBody` — ④와 같은 빌더) 3. ⑨ 기본 모양(종류·통화 형식·건수 상한)은 `FOREIGN_RE_MAX_*` 상수로 같은 규칙. 서버 오류 `path` → 입력칸 `data-field` 매핑(`foreignAsset.*` = 카드 안 · `foreignTaxRow.{자산}.{행}.*` = 카드 밖 납부 행). 같은 칸은 1건만. `collectStepIssuesRaw`가 국외 폼이면 국내 검증을 통째로 우회. 격자: `__tests__/calc/transfer-foreign-validate.parity.test.ts`(refine 완전성 가드 포함).
 
-### 13.4 계산 연결 전 차단 (U2에서 걷는다)
+### 13.4 계산 연결 전 차단 (U2에서 걷었다 — §14)
 
-국외 폼은 「세금 계산하기」에서 ⑧까지만 하고 `FOREIGN_CALC_PENDING_MESSAGE`를 보인다. `callTransferTaxAPI`는 국외 폼이면 fetch 없이 던진다. 다건은 `validateMultiSupportedMode`가 국외 건을 `MULTI_FOREIGN_PENDING_MESSAGE`로 막는다(입력·목록 배지·완성도는 받는다). 사이드바 합계(⑥)는 국외에서 숨김.
+~~국외 폼은 「세금 계산하기」에서 ⑧까지만 하고 `FOREIGN_CALC_PENDING_MESSAGE`를 보인다.~~ U2가 ④를 연결해 걷었다(§14). `callTransferTaxAPI`는 국외 폼이면 fetch 없이 던지는 가드를 **유지**한다(`FOREIGN_DOMESTIC_PATH_GUARD_MESSAGE`). 다건은 `validateMultiSupportedMode`가 국외 건을 계속 막는다(문구는 §14.5).
 
 ### 13.5 U2·U3로 넘기는 것 / 확인 필요
 
 - 다건(`/multi`)에서 국외 건을 **어떻게 계산·합산하는가**는 미결 — 엔진 V-5(국내·국외 과세표준 합산 누진 여부, 예시 차이 30,630,000원)가 먼저다. 한 건이 국외 자산 N개를 품는 구조라 «국외 건 = 별도 국외 계산 1회»가 후보이나 확정 아님.
 - 수동 저장(`isTransferFormEmpty`)·이력 제목·dedup 키(`foreignAssets[0].address`)는 U3(V-7·V-8).
 - API `toOptionalDate`는 존재하지 않는 달력일(`2026-02-30`)을 3월 2일로 받는다(⑧도 같은 술어라 통과) — `DateInput`이 만들지 못한다고 가정한 상태, 확인 필요.
+
+---
+
+## 14. U2 확정 (2026-11-27 · 구현 PR `feat/foreign-re-ui-result`) — ④⑥⑦ + 인쇄 + 다건 차단 안내
+
+> 사용자 결정(재제안 금지): **C-1** 국외 자산 여러 개는 한 건의 계산 안(`foreignAssets[]` ≤ 20) · **D-M** 다건(연간 합산) 마법사는 국외 건을 계속 막고 «국외 자산은 한 건 계산 안에서 여러 개를 추가하세요» 안내 · 지방소득세 국외 10원 미만 절사·전부 차손 = 세액 0은 엔진에서 확정.
+
+### 14.1 ④⑬ 호출 — `lib/calc/transfer-foreign-call.ts`
+
+- `callForeignRealEstateAPI(form)` = 순수 빌더(`buildForeignRealEstateBody`, ⑧이 서버 refine을 돌리는 것과 같은 함수) → `POST /api/calc/transfer/foreign` → `{ mode: "foreign", result }`로 감싼다(API 응답에 mode 없음). 래핑 타입은 `lib/calc/transfer-foreign-result.ts`(`ForeignTransferResult`)이고 `TransferAPIResult` 유니온에 1줄로 합류한다 — `transfer-tax-api.ts`는 그 줄 + import만 늘었다.
+- `TransferTaxCalculator.handleSubmit`이 `isForeignRealEstateForm`으로 국외 호출/국내 호출을 가른다. 국내 `callTransferTaxAPI`의 국외 가드는 유지(빈 국내 자산이 조용히 계산되는 것을 막는다). 단건 자동 백업(`backupSingleToMulti`)은 국외에서 건너뛴다(다건이 국외 건을 막으므로).
+- ⑬ 가드: `__tests__/calc/transfer-foreign-body-zod-keys.test.ts` — 모든 선택 칸을 채운 폼으로 빌더 body 키 ↔ Zod 스키마 키 **양방향**(strip 방지 · 스키마에만 있는 키는 차단용 literal 2개뿐) + Zod 파싱 후 값 불변. 뮤테이션(빌더에 키 추가 · 필드 비우기)으로 양쪽이 실제로 빨개짐을 확인했다.
+- 오류: 400 `fieldErrors`(점 표기 `assets.0.transfer.exchangeRate` · `foreignTax.items.0.date` · `domesticResidenceYears`) → `foreignFieldErrorsToIssues`가 U1 `data-field` 앵커(`foreignAsset.transferRate` · `foreignTaxRow.{자산}.{행}.rate` · `foreignResidenceYears`)로 되돌린다(⑧의 `locate`를 공유 — `describeServerIssue`). 오류 패널에 항목으로 뜨고 첫 칸으로 바로 이동. `FOREIGN_LOSS_NETTING_UNRESOLVED`는 입력 결함이 아니라 미결 법리라 칸 이슈 없이 「확인 필요: …」 메시지로 보인다(⑧이 같은 refine으로 먼저 막으므로 정상 흐름에서는 서버까지 오지 않는다 — 직접 API 호출 방어).
+
+### 14.2 ⑦ 결과 카드 — `components/calc/results/foreign-realestate/`
+
+`ForeignRealEstateResultView`(출력 패널 + 카드 + 이동 버튼) → `ForeignRealEstateResultCard` → `ForeignAssetGainSection`(자산별) · `ForeignTaxCalcSection` · `ForeignResultNotices`.
+
+| 구역 | 표시 |
+|---|---|
+| 요약 | 총 납부세액(결정세액 + 지방소득세) · 세율 적용 시점(가장 늦은 양도일) |
+| 자산별 | 양도가액 · 취득가액 · 자본적지출 · 양도비 각 행 «외화 × 기준환율(일자) =» + 원화 / (필요경비 산입이면) 외국납부세액 행 / 양도차익 산식(0인 항 생략) / 장기보유특별공제 «적용 배제 — §118의8 단서» 1줄(0 행 없음) / 양도소득금액 / 2건 이상이면 기본공제 배분(§118의7②, 양도일 N번째)·몫의 과세표준 |
+| 세액 | 양도소득금액 합 → 기본공제 §118의7① → 과세표준 → 산출세액(과세표준 × 세율 − 누진공제) → (세액공제) 자산별 외국납부세액 환산 행 · 공제한도(산출세액 × 해당 자산 양도소득금액 ÷ 합계) · 공제액(min) · **공제받지 못한 외국납부세액**(amber) / 결정세액 → 지방소득세 산출세액(§92① 세율 = 1/10) · §97③ 공제 · 10원 미만 절사 → 총 납부세액 |
+| 납세의무 없음 | 거주 5년 미만: 세액 0 + amber 사유 카드(`NOT_LIABLE_REASON_TEXT`) · 세액 계산 섹션 없음 · 환산·양도차익은 참고로 표시 |
+| 확인 필요 | `confirmationNeeded` 코드는 `CONFIRMATION_NOTICES`(`satisfies Record<코드, 문구>` — 엔진이 코드를 늘리면 컴파일이 멈춘다) · `warnings`는 엔진 문구 그대로 · 모르는 코드는 코드 그대로. 전부 amber 「확인 필요」 ToneCard. 적용 법령(`appliedRules`)은 칩으로. |
+
+규약: 금액 칸 `font-mono tabular-nums whitespace-nowrap text-right`(`AmountRow`) · 법령 인용은 `TRANSFER_FOREIGN_RE` 상수만(코드에 «§» 리터럴 없음 — 소스 가드 테스트) · 접힘은 CSS-only `hidden print:block` + 토글 `print:hidden`(useEffect·isPrinting 없음).
+
+### 14.3 ⑥ 사이드바 — `lib/stores/transfer-foreign-summary.ts` + `app/calc/transfer-tax/ForeignSidebarSummary.tsx`
+
+순수 `computeForeignRealEstateSummary(form, result)` + 호출부 `useMemo`. 계산 전 = 자산별 양도가액·취득가액·필요경비(자본적지출 + 양도비)의 원화 환산 합(엔진 leaf `tryToKrw` — 인라인 floor 복제 없음, 환산 불가·미입력 칸은 0으로 두고 숨김). 계산 후 = 엔진 값(양도차익·양도소득금액·기본공제·과세표준·산출세액·외국납부세액공제·지방소득세·총 납부세액). 0·null은 줄을 만들지 않는다. 입력이 하나도 없으면 안내 1줄. 거주 5년 미만은 «납세의무 없음» 1줄. 입력을 고치면 `clearResult`로 결과가 사라져 계산 전 모드로 돌아간다.
+
+### 14.4 인쇄 — `lib/print/transfer-foreign-print-sections.ts`
+
+leaf 4개(`summary` · `asset-gain` · `tax-calc` · `notices`), **pdf 채널 0종**(`ResultPdfDocument`에 국외 부동산 섹션이 없다 — 거짓 선택 방지). `PrintSelectionPanel` + `PrintSection`을 국내와 같은 패턴으로 달고 선택 기본은 «전체 미선택». 거주 5년 미만이면 `tax-calc`는 가용 목록에서 빠진다. Playwright print 미디어로 «접힌 자산 본문이 인쇄에서 자동 펼침 · 패널 숨김 · 미선택 leaf 숨김» 확인.
+
+### 14.5 다건 차단 안내 (D-M)
+
+`MULTI_FOREIGN_UNSUPPORTED_MESSAGE` = 「국외 자산은 한 건 계산 안에서 여러 개를 추가하세요. 연간 합산(다건) 계산에는 국외 건을 넣을 수 없으니, 이 건은 단건 계산기에서 계산하세요.」 — `validateMultiSupportedMode`(합산 계산 검증) · 건 목록의 국외 건 옆 · 건 편집 화면에서 「국외 부동산」을 고르는 자리(`AssetLocationBlock embeddedInMulti`) 세 곳이 한 문구를 쓴다.
+
+### 14.6 결과 모드 경로·이력 (U3로 넘긴 것)
+
+- `TransferAPIResult`에 `mode: "foreign"`이 들어와도 `calc-wizard-store`·`transfer-per-asset-summary`·`classifyAmendableTransfer`·`classifyLoadableTransfer`·`extractGiftResaleDeterminedTax`·`extractRealEstateSide`·이력 목록 `extractTotalTax`는 터지지 않고 «해당 없음»으로 떨어진다(`__tests__/components/foreign-realestate-result-mode-paths.test.tsx`). 이력 목록 납부세액은 국외 `result.totalTax`를 읽는다.
+- **이력 저장은 U3까지 보류한다**: 자동 저장 `resultData`를 국외면 `null`로 넘기고(저장 안 함) 수동 「저장하기」는 `FOREIGN_HISTORY_SAVE_DEFERRED_MESSAGE` 토스트만 보인다. 이유 — 이력 제목(`generateTitle`은 `assets[0]` 국내 주소)·dedup 키(`extractBusinessKey` 주소 null)·상세 드로어·PDF(`TransferSection`)·복원(`resumeTransferRecord`)이 국외를 모른다. U3이 이 경로들을 국외에 맞춘 뒤 보류를 걷는다(V-7·V-8).
+
+### 14.7 확인 필요 (U2 시점)
+
+- 엔진 `warnings`의 지방소득세 문구와 `LOCAL_TAX_WEIGHTING_NOT_EVALUATED` 코드 문구가 같은 취지라 «확인 필요» 카드가 2장 겹친다 — 「하나도 버리지 않는다」를 우선했다. 엔진이 둘 중 하나로 합치면 카드도 따라 한 장이 된다.
+- PDF(서버·클라이언트) 국외 부동산 섹션·별지 서식은 없다(V-6) — 출력은 브라우저 인쇄(PDF 저장)뿐.
