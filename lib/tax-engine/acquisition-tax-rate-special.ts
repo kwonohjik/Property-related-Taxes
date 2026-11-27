@@ -268,9 +268,20 @@ export function resolveInheritanceSpecialRateGate(
     propertyType: string;
     isOneHouseHousehold?: boolean;
     isSelfCultivatedFarmlandInheritance?: boolean;
+    isLuxuryProperty?: boolean;
+    luxuryType?: string;
   }
 ): { eligible: boolean; warning?: string } {
   if (specialRateType !== "inheritance_one_house") return { eligible: true };
+  // 시행령 §29① — 「1개의 주택[… 제28조제4항에 따른 고급주택은 제외한다]」: 고급주택 상속은 가목 1가구 1주택이 아니다(교재 대조 T9).
+  //   별장(§13⑤1호)은 고급주택(§28④)이 아니므로 제외 대상이 아니다.
+  if (input.propertyType === "housing" && input.isLuxuryProperty === true && input.luxuryType !== "villa") {
+    return {
+      eligible: false,
+      warning:
+        `고급주택은 상속 1가구 1주택 세율특례(${ACQUISITION.SPECIAL_RATE_INHERITANCE_1HOUSE}가목) 대상이 아닙니다 — ${ACQUISITION.INHERITANCE_ONE_HOUSE_RANGE}이 1가구 1주택의 「1개의 주택」에서 고급주택을 제외합니다. 표준세율 2.8%에 고급주택 중과(§13⑤)를 적용합니다.`,
+    };
+  }
   const eligible =
     (input.propertyType === "housing" && input.isOneHouseHousehold === true) ||
     (input.propertyType === "land_farmland" && input.isSelfCultivatedFarmlandInheritance === true);
