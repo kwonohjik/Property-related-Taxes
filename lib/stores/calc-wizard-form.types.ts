@@ -16,6 +16,7 @@ import type {
 } from "./calc-wizard-asset";
 import type { TaxIncentiveRentalFacts } from "./calc-wizard-asset-nbl";
 import type { OneHouseJudgmentExtraFields } from "./one-house-extra-fields.types";
+import type { ForeignRealEstateFormSlice } from "./calc-wizard-form-foreign";
 
 /** §154⑤ 단서 처분 이력 1행(OH-22). 3-state 칸은 `""` = 미선택. */
 export interface FinalHouseDisposalRow {
@@ -37,7 +38,8 @@ export interface FirstAssetChangeNote {
   groups: FirstAssetFactGroupId[];
 }
 
-export interface TransferFormData {
+/** 국외자산 부동산 슬라이스(`calc-wizard-form-foreign.ts`)를 상속 — 국내 `assets[]`와 별개 폼 전역 필드 */
+export interface TransferFormData extends ForeignRealEstateFormSlice {
   // ── Step 1: 자산 목록 + 양도 기본 정보 ──
   /** 모든 양도 자산 (최소 1건). assets[0]이 대표 자산. */
   assets: AssetForm[];

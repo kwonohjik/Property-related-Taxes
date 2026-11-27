@@ -55,8 +55,10 @@ import type { TransferFormData } from "./calc-wizard-form.types";
 import { multiplyByArea } from "@/lib/tax-engine/area-utils";
 import { moveLinkedCountExclusionsToRows } from "@/lib/calc/house-count-exclusion-rows";
 import { clearInheritedStaleAcqInputs } from "./calc-wizard-asset-migrate";
+import { FOREIGN_RE_INITIAL, normalizeForeignRealEstate } from "./calc-wizard-form-foreign";
 
 const defaultFormData: TransferFormData = {
+  ...FOREIGN_RE_INITIAL,
   assets: [makeDefaultAsset(1)],
   contractTotalPrice: "",
   totalTransferExpense: "",
@@ -305,6 +307,9 @@ export function migratePersistedTransferForm(raw: unknown): TransferFormData {
 
   // gracePeriod 구 필드(isLandPermitArea) → 신규 isLandPermitTarget 의미 승계 이전
   formData = { ...formData, gracePeriod: migrateGracePeriod(formData.gracePeriod) };
+
+  // 국외자산 부동산 슬라이스 — 필드 없는 구 세션은 기본값, 깨진 배열·enum은 거른다(③)
+  formData = normalizeForeignRealEstate(formData);
 
   // 상속 자산에 매매에서 남은 산정 방식·파트 입력 — 폼 단위(축 B 지분 카드 판정이 폼을 본다)
   formData = clearInheritedStaleAcqInputs(formData);

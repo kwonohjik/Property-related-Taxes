@@ -21,6 +21,7 @@ import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { ASSET_KIND_LABELS } from "@/components/calc/transfer/asset-labels";
 import { areAllPropertiesReady } from "@/lib/calc/multi-transfer-tax-validate";
+import { isForeignRealEstateForm } from "@/lib/calc/transfer-foreign-scope";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import TransferTaxCalculator from "../TransferTaxCalculator";
 
@@ -73,6 +74,7 @@ export function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, 
                   <div className="flex items-center gap-2 mt-1">
                     <Badge variant="outline" className="text-xs">
                       {(() => {
+                        if (isForeignRealEstateForm(p.form)) return "국외 부동산";
                         const kind = p.form.assets[0]?.assetKind;
                         return kind ? (ASSET_KIND_LABELS[kind] ?? kind) : "";
                       })()}

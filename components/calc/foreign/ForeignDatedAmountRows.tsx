@@ -52,6 +52,21 @@ interface ForeignDatedAmountRowsProps {
   /** 변경 콜백 — onChange로 직접 store 갱신 (useEffect 금지) */
   onChange: (rows: ForeignDatedAmountRow[]) => void;
   labels: ForeignDatedAmountRowsLabels;
+  /**
+   * 원화 환산 미리보기 함수 — 지정하지 않으면 기존 `Math.floor(외화 × 환율)`(주식 수령 행 그대로).
+   * 부동산은 엔진 환산 leaf(`tryToKrw`)를 넘긴다 — 부동소수 1원 과소를 피하고 엔진과 같은 값을 보인다.
+   */
+  krwOf?: (amountForeign: number, exchangeRate: number) => number | null;
+  /**
+   * 검증 오류 → 입력칸 이동 앵커 접두 — 각 칸에 `data-field="{접두}.{행}.date|amount|rate"`를 단다.
+   * 지정하지 않으면 앵커 없음(기존 DOM 그대로).
+   */
+  fieldPrefix?: string;
+  /**
+   * 「양도일 환율과 같음」 보조 버튼 — 눌렀을 때 그 행의 기준환율에 `rate`를 **한 번 써 넣는다**(onClick 안 쓰기 — effect 미러링 아님,
+   * 이후 사용자가 고치면 그대로 둔다). `rate`가 비어 있으면 버튼을 숨긴다. 환율 fallback이 **아니다** — 빈 칸은 그대로 검증이 막는다.
+   */
+  rateShortcut?: { rate: string; label: string };
 }
 
 /** 빈 행 팩토리 */
@@ -72,6 +87,9 @@ export function ForeignDatedAmountRows({
   currencyCode,
   onChange,
   labels,
+  krwOf,
+  fieldPrefix,
+  rateShortcut,
 }: ForeignDatedAmountRowsProps) {
   const currency = currencyCode || "USD";
 
@@ -88,13 +106,22 @@ export function ForeignDatedAmountRows({
     onChange(rows.filter((_, i) => i !== idx));
   }
 
+  const rowKrw = (r: ForeignDatedAmountRow): number | null => {
+    if (!krwOf) return calcRowKrw(r);
+    const amount = parseDecimal(r.amountForeign);
+    const rate = parseDecimal(r.exchangeRate);
+    return amount <= 0 || rate <= 0 ? null : krwOf(amount, rate);
+  };
+  const anchor = (idx: number, cell: "date" | "amount" | "rate") =>
+    fieldPrefix ? { "data-field": `${fieldPrefix}.${idx}.${cell}` } : {};
+
   // 원화 합계 미리보기
   const totalKrw = rows.reduce((sum, r) => {
-    const v = calcRowKrw(r);
+    const v = rowKrw(r);
     return v !== null ? sum + v : sum;
   }, 0);
 
-  const hasAllKrw = rows.length >= 2 && rows.every((r) => calcRowKrw(r) !== null);
+  const hasAllKrw = rows.length >= 2 && rows.every((r) => rowKrw(r) !== null);
 
   return (
     <div className="space-y-3">
@@ -117,7 +144,7 @@ export function ForeignDatedAmountRows({
       {/* 행 목록 */}
       <div className="space-y-2">
         {rows.map((row, idx) => {
-          const krw = calcRowKrw(row);
+          const krw = rowKrw(row);
           return (
             <div
               key={idx}
@@ -132,6 +159,7 @@ export function ForeignDatedAmountRows({
               <DateInput
                 value={row.date}
                 onChange={(v) => updateRow(idx, { date: v })}
+                {...anchor(idx, "date")}
               />
 
               {/* 금액 (외화) */}
@@ -139,14 +167,27 @@ export function ForeignDatedAmountRows({
                 value={row.amountForeign}
                 onChange={(v) => updateRow(idx, { amountForeign: v })}
                 placeholder={`${labels.amountHeader} (${currency})`}
+                {...anchor(idx, "amount")}
               />
 
               {/* 기준환율 */}
-              <DecimalInput
-                value={row.exchangeRate}
-                onChange={(v) => updateRow(idx, { exchangeRate: v })}
-                placeholder="기준환율"
-              />
+              <div className="space-y-1">
+                <DecimalInput
+                  value={row.exchangeRate}
+                  onChange={(v) => updateRow(idx, { exchangeRate: v })}
+                  placeholder="기준환율"
+                  {...anchor(idx, "rate")}
+                />
+                {rateShortcut && rateShortcut.rate.trim() !== "" && row.exchangeRate !== rateShortcut.rate && (
+                  <button
+                    type="button"
+                    onClick={() => updateRow(idx, { exchangeRate: rateShortcut.rate })}
+                    className="text-micro text-fuchsia-700 hover:text-fuchsia-800 underline dark:text-fuchsia-300"
+                  >
+                    {rateShortcut.label}
+                  </button>
+                )}
+              </div>
 
               {/* 원화 환산 미리보기 + 삭제 */}
               <div className="w-20 flex flex-col items-end gap-1">

@@ -100,6 +100,8 @@ import { nblDesignatedAreaPayload } from "./nbl-designated-area";
 import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 import { bgIgnoresCommercialEstimated } from "./bg-asset-acq-mode-scope";
 import { assetContractDateForCause } from "@/lib/tax-engine/transfer-reductions/asset-contract-date";
+import { isForeignRealEstateForm } from "./transfer-foreign-scope";
+import { FOREIGN_CALC_PENDING_MESSAGE } from "./transfer-foreign-pending";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -116,6 +118,8 @@ export type TransferAPIResult = SingleTransferResult | BundledTransferResult | M
 /** 엔진이 이해하는 3종 assetKind (right_to_move_in / presale_right → housing) */
 
 export async function callTransferTaxAPI(formInput: TransferFormData): Promise<TransferAPIResult> {
+  // 국외 폼을 국내 경로로 보내면 빈 국내 자산이 조용히 계산된다 — U2가 국외 호출(④)을 연결할 때까지 던진다.
+  if (isForeignRealEstateForm(formInput)) throw new Error(FOREIGN_CALC_PENDING_MESSAGE);
   // 화면에 보이는 양도비만 싣는다 — 숨은 총 양도비·꺼진 자산 양도비를 비운다(O-9, ⑥과 같은 leaf).
   // 재개발 × 이월과세 — ⑤ 라디오 대신 이월과세 ② 토글이 산정 방식을 정한 사본(⑧·⑤와 같은 leaf · `redev-carryover-acq-mode.ts`) · 이월과세 승계 입주권은 숨은 승계 산정 방식 플래그를 끈다.
   const form = withHiddenSuccessorRightModeActual(withRedevCarryoverAcqMode(withInScopeTransferExpenses(formInput)));

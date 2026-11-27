@@ -47,6 +47,9 @@ const EXCLUDED: Record<string, readonly string[]> = {
     "pre1990Grade_atAcq", "pre1990GradeMode",
   ],
   "이미 처리(#2223 미등기) · 자산 객체로 이동(거주기간)": ["isUnregistered", "residencePeriodMonths"],
+  "국외자산 부동산 슬라이스(국내 자산 목록과 별개 — 첫 국내 자산이 바뀌어도 의미가 같다)": [
+    "assetLocation", "foreignResidenceYears", "foreignAssets", "foreignTaxEnabled", "foreignTaxMethod",
+  ],
   "UI 보조 플래그": ["isRegulatedAreaTouched", "wasRegulatedAtAcquisitionTouched", "ruralHouseLocationTouched"],
   "가산세·정정신고": [
     "enablePenalty", "filingType", "penaltyReason", "priorPaidTax", "originalFiledTax", "excessRefundAmount", "interestSurcharge",

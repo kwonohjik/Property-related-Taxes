@@ -21,6 +21,9 @@ import { MULTI_RATE_SPECIAL_REDUCTION_UNSUPPORTED_MESSAGE } from "./multi-transf
 import { MULTI_NEW_HOUSING_PRE_2016_UNSUPPORTED_MESSAGE } from "./multi-transfer-support-messages";
 import { isMultiSupportedNewHousingReduction } from "./multi-transfer-support-messages";
 import { multiRosterBlockMessage } from "./multi-roster-parity";
+import { isForeignRealEstateForm } from "./transfer-foreign-scope";
+import { MULTI_FOREIGN_PENDING_MESSAGE } from "./transfer-foreign-pending";
+import { foreignCompletionPercent } from "./transfer-tax-validate-foreign";
 
 /**
  * 다건 합산 엔진(`calculateTransferTaxAggregate`)이 미지원하는 감면 조문 집합 (2026-06-12 리뷰 H-1).
@@ -94,6 +97,7 @@ const MULTI_UNSUPPORTED_REDUCTION_TYPES: ReadonlySet<string> = new Set(ALL_INCOM
 
 /** 단건 자산의 필수 입력 완성도 검사 (0~100 정수) */
 export function calcPropertyCompletion(form: PropertyItem["form"]): number {
+  if (isForeignRealEstateForm(form)) return foreignCompletionPercent(form);
   const primary = form.assets?.[0];
   const checks = [
     !!primary?.assetKind,
@@ -123,6 +127,8 @@ export function calcPropertyCompletion(form: PropertyItem["form"]): number {
  * @returns 차단 사유 문자열, 지원 모드면 null
  */
 export function validateMultiSupportedMode(form: PropertyItem["form"]): string | null {
+  // 국외자산 부동산 건 — 입력은 받지만(사용자 결정 C-1) 국내 합산 엔진으로는 계산할 수 없다. 국외 계산 연결(U2) 전까지 합산을 막는다.
+  if (isForeignRealEstateForm(form)) return MULTI_FOREIGN_PENDING_MESSAGE;
   const a = form.assets?.[0];
   if (!a) return null;
 

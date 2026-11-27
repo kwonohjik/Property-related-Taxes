@@ -63,6 +63,8 @@ import { bgIgnoresAssetAppraisalSalesCase } from "./bg-asset-acq-mode-scope";
 import { withRedevCarryoverAcqMode } from "./redev-carryover-acq-mode";
 import { isCarryoverSuccessorRight } from "./transfer-successor-right";
 import { isDeemedValueSuccessorRight } from "./transfer-successor-right";
+import { isForeignRealEstateForm } from "./transfer-foreign-scope";
+import { collectForeignIssues } from "./transfer-tax-validate-foreign";
 
 /**
  * 검증 실패 정보 — 메시지 + 단계 + (자산 단위 오류 시) 자산 인덱스.
@@ -97,6 +99,9 @@ export function collectStepIssues(step: number, form: TransferFormData): Validat
 }
 
 function collectStepIssuesRaw(step: number, form: TransferFormData): ValidationIssue[] {
+  // 국외자산 부동산 — 국내 자산·보유 상황·감면·가산세 검증을 **통째로 우회**한다. 국외 폼은 1단계뿐이고, 국내 step 0 검증이
+  // `assets[0]`·`contractTotalPrice`를 요구해 UI는 통과인데 validate가 막는 모순이 된다(계획서 §7 · `transfer-tax-validate-foreign.ts`).
+  if (isForeignRealEstateForm(form)) return step === 0 ? collectForeignIssues(form) : [];
   const issues: ValidationIssue[] = [];
 
   // step 0: 자산 목록 (취득 정보 통합)
@@ -639,6 +644,7 @@ export function validateStepDetailed(step: number, form: TransferFormData): Vali
  */
 export function collectStepWarnings(step: number, form: TransferFormData): ValidationIssue[] {
   const warnings: ValidationIssue[] = [];
+  if (isForeignRealEstateForm(form)) return warnings; // 국외 폼은 양도일이 자산별이다 — 국내 양도일 경고 대상이 아니다
   if (step === 0) {
     if (form.transferDate && form.transferDate > todayLocalISO()) {
       warnings.push({
