@@ -6,6 +6,7 @@
  * 계획서 §5.3 ③. 양도가액·양도일은 수증자의 양도와 같고, 취득일·취득가액·필요경비와 세대 사실은 증여자 기준이다(R-10).
  */
 import Link from "next/link";
+import { GIFT_RESALE_DONOR_CALC_HREF } from "@/lib/calc/gift-resale-101-2-donor-basis";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -22,7 +23,8 @@ export function Clause2Card({ form, onPatch, issues, historySources, onPickHisto
       bodyClassName="space-y-3"
       titleExtra={
         <Link
-          href="/calc/transfer-tax?new=1"
+          href={GIFT_RESALE_DONOR_CALC_HREF}
+          data-testid="gr-donor-calc-link"
           className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
         >
           양도세 계산기로

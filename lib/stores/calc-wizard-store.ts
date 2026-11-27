@@ -200,6 +200,7 @@ const defaultFormData: TransferFormData = {
   claimReasonType: "ordinary",
   posteriorEventDate: "",
   originalPaymentDate: "",
+  giftResaleDonorBasis: false,
 };
 
 

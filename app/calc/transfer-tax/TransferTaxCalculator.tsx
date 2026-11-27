@@ -38,6 +38,8 @@ import { Step4 } from "./steps/Step4";
 import { Step5 } from "./steps/Step5";
 import { Step6 } from "./steps/Step6";
 import { CorrectionModeBanner } from "@/components/calc/transfer/CorrectionModeBanner";
+import { GiftResaleDonorBasisToggle } from "@/components/calc/transfer/GiftResaleDonorBasisToggle";
+import { isGiftResaleDonorBasisEntry } from "@/lib/calc/gift-resale-101-2-donor-basis";
 import type { TransferTaxCalculatorProps } from "./transfer-calculator-meta";
 import { foreignWizardMeta } from "./transfer-foreign-wizard-meta";
 import { callForeignRealEstateAPI, ForeignCalcError } from "@/lib/calc/transfer-foreign-call";
@@ -67,7 +69,12 @@ export default function TransferTaxCalculator({
   // 국내 4단계 / 국외 1단계 — 단계 배열·제목을 쓰는 곳은 전부 이 값 하나를 쓴다(단건/다건 공통, 가산세는 자산별 입력)
   const { isForeign, steps: STEPS, titles: STEP_TITLES } = foreignWizardMeta(formData);
   // 홈 카드(?new=1) 진입 = 새 계산 → 빈 폼으로 초기화 (작업 중 새로고침은 보존)
-  useResetOnNewParam(reset);
+  //   판정 화면 2호 카드에서 온 진입(`&basis=101-2-donor`)이면 초기화 직후 증여자 기준 표지를 켠다 — 이력 분리.
+  const resetOnNew = useCallback(() => {
+    reset();
+    if (isGiftResaleDonorBasisEntry(window.location.search)) updateFormData({ giftResaleDonorBasis: true });
+  }, [reset, updateFormData]);
+  useResetOnNewParam(resetOnNew);
   // API·계산 오류 (단건 메시지). 검증 오류는 issues 배열로 일괄 표시.
   const [error, setError] = useState<string | null>(null);
   // 검증에 실패한 단계 — 목록 자체는 저장하지 않고 formData에서 **파생**한다.
@@ -583,6 +590,14 @@ export default function TransferTaxCalculator({
 
               {/* 비차단 경고 배너 (미래 양도일 등) — 진행은 허용 */}
               <StepWarningBanner warnings={warnings} />
+
+              {/* 증여 후 우회양도 판정용 표지 — 이력 키만 가른다(세액 불변). 다건 키는 이 표지를 읽지 않아 숨김 */}
+              {currentStep === 0 && !isEmbeddedInMulti && (
+                <GiftResaleDonorBasisToggle
+                  checked={formData.giftResaleDonorBasis}
+                  onCheckedChange={(v) => updateFormData({ giftResaleDonorBasis: v })}
+                />
+              )}
 
               {/* 폼 내용 */}
               <div className="min-h-[280px]">

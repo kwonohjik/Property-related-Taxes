@@ -10,6 +10,7 @@
  *  - G-4 배우자·직계존비속 → 판정하지 않음(Q-1)
  *  - G-5 이력 불러오기 — 단건만 후보(일괄 제외) · 선택 시 칸·배지 · 칸 수정 시 그 칸 배지만 제거
  *  - G-6 홈 카드 → 판정 화면
+ *  - G-7 2호 «양도세 계산기로» → 계산기 «증여자 기준» 표지 켜짐(이력 분리 — `transfer-history-101-2-donor-key.plan.md`)
  *
  * ⚠️ 값이 든 금액 칸(`CurrencyInput`)에 `fill()`을 다시 하면 값이 이어 붙는다 — 공용 컴포넌트의
  *    RAF 전체 선택과 `fill()`의 경합(P3 실측: 36250000 → «362,500,005,000,000»). 덮어쓰기는
@@ -165,5 +166,21 @@ test.describe("§101② 증여 후 우회양도 판정", () => {
     await page.locator(`a[href="${PATH}"]`).click();
     await expect(page).toHaveURL(new RegExp(`${PATH}$`));
     await expect(page.getByRole("heading", { name: "증여 후 우회양도 판정" })).toBeVisible();
+  });
+
+  test("G-7 2호 링크 → 계산기 «증여자 기준» 표지 켜짐 · 일반 진입은 꺼짐", async ({ page }) => {
+    await gotoHydrated(page);
+    await page.getByTestId("gr-donor-calc-link").click();
+    await expect(page).toHaveURL(/\/calc\/transfer-tax$/);
+    const toggle = page.getByTestId("gift-resale-donor-basis-toggle");
+    await expect(toggle).toHaveAttribute("data-checked", "true");
+
+    // 끄기 — 사용자가 일반 계산으로 되돌릴 수 있다
+    await toggle.getByRole("switch").click();
+    await expect(toggle).not.toHaveAttribute("data-checked", "true");
+
+    // 홈 카드 진입(?new=1)은 표지 없이 시작한다
+    await page.goto("/calc/transfer-tax?new=1");
+    await expect(page.getByTestId("gift-resale-donor-basis-toggle")).not.toHaveAttribute("data-checked", "true");
   });
 });
