@@ -24,6 +24,7 @@ import {
   extractTransferDate,
   extractStockSecurityName,
   extractStockTransferDate,
+  extractExitTaxDepartureDate,
   extractStockValuationName,
 } from "./title-generator";
 import { extractForeignRepresentative } from "./foreign-history";
@@ -93,7 +94,11 @@ export function extractBusinessKey(
       // 다종목 합산은 **별개의 신고서**다. 표지가 없으면 대표 종목·양도일이 같은 단건 이력과
       // 키가 겹쳐 서로를 덮어썼다(계획서 §2 G-C). 부동산 다건 `|multi`(:51)와 같은 층위.
       const multiSuffix = inputData.__multiStock === true ? "|multi" : "";
-      return `sec:${sec}|${date ?? ""}${multiSuffix}`;
+      // 국외전출세는 기준일이 출국일이다(양도일 칸이 없다) — 같은 사례명·다른 출국일을 가른다.
+      // 출국일이 비면 접미 없이 종전 키 그대로(기존 저장 이력 호환 — v9 재계산이 나머지를 맞춘다).
+      const departure = extractExitTaxDepartureDate(inputData);
+      const exitSuffix = departure ? `|exit:${departure}` : "";
+      return `sec:${sec}|${date ?? ""}${exitSuffix}${multiSuffix}`;
     }
     case "one_house_exemption": {
       // 판정 메뉴 폼은 `TransferFormData` 슈퍼셋 — 주소·양도일 추출기가 그대로 돈다.

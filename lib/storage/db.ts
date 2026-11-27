@@ -187,6 +187,22 @@ class LocalTaxDB extends Dexie {
       .upgrade(async (tx) => {
         await migrateBusinessKeyRecompute(tx);
       });
+
+    // v9 — businessKey 재계산(국외전출세). 키가 출국일을 본다(`sec:{이름}|…|exit:{출국일}`) ⇒
+    //   기존 국외전출세 record(`sec:{이름}|`)가 새 키에 매칭되지 않아 다음 저장 때 이력 중복이 생긴다.
+    //   schema 변경 없음 — 데이터 정정만(v8과 같은 코어).
+    this.version(9)
+      .stores({
+        userProfile: "id, updatedAt",
+        calculations:
+          "id, userId, taxType, createdAt, [userId+createdAt], [userId+taxType+createdAt], [userId+linkedCalculationId], [userId+clientId+createdAt]",
+        clients: "id, userId, name, lastUsedAt, [userId+name], [userId+createdAt], [userId+lastUsedAt]",
+        reverseGeocodeCache: "id, expiresAt",
+        rtmsSalesCache: "id, expiresAt",
+      })
+      .upgrade(async (tx) => {
+        await migrateBusinessKeyRecompute(tx);
+      });
   }
 }
 
