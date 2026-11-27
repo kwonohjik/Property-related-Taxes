@@ -79,6 +79,14 @@ export function validateStep1ExitTax(form: StockTransferFormData): StockValidati
         message: "거주 연수는 0 이상이어야 합니다",
         severity: "error",
       });
+    } else if (!Number.isInteger(years)) {
+      // ⑫ Zod `.int()`와 같은 판정 — 임계가 «5년 이상»뿐이라 만 년 단위(절사) 정수면 충분하다 (4년 11개월 → 4)
+      errors.push({
+        field: "etYearsResidentLast10",
+        message:
+          "거주 연수는 정수(만 년)로 입력하세요. 개월 단위는 버리고 채운 연수만 적습니다 (예: 4년 11개월 → 4). §118의9①1호는 5년 이상인지만 가립니다.",
+        severity: "error",
+      });
     } else if (years < 5) {
       // 5년 미만 → 납세의무 없음 (엔진이 not_liable 처리, 경고만)
       errors.push({
