@@ -55,6 +55,17 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** acquisition.ts `INHERITANCE_ONE_HOUSE_RANGE` — 상속 1가구 1주택 범위·고급주택 제외(교재 대조 T9, MST 290815 실독 2026-11-28) */
+    id: "LOCAL_DECREE.INHERITANCE_ONE_HOUSE_RANGE",
+    citation: "지방세법 시행령 §29",
+    keywords: [
+      "1가구 1주택",
+      "제28조제4항에 따른 고급주택은 제외한다",
+      "지분이 가장 큰 상속인",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     /**
      * acquisition.ts `DEEMED_LAND_BASE_STANDARD` — 지목변경 과세표준의 **보충법** 계산방법.
      * 법 §10의6②이 「대통령령으로 정하는 방법」으로 위임한 곳이다.

@@ -305,7 +305,7 @@ export function Step4({
                 tone="violet"
                 size="sm"
                 title="1가구 1주택 충족"
-                description="상속인이 상속 개시일 현재 1가구 1주택자인 경우 (지법 §15①2호 가목)"
+                description="상속인이 상속 개시일 현재 1가구 1주택자인 경우 (지법 §15①2호 가목) — 고급주택은 제외 (시행령 §29①)"
                 checked={form.isOneHouseHousehold}
                 onCheckedChange={(v) => set("isOneHouseHousehold", v)}
               />
