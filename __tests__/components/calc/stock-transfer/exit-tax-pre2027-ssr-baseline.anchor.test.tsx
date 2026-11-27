@@ -217,6 +217,7 @@ describe("EXA-1 Step3 마크업 기준선 (2026 이전 출국)", () => {
         etDeferralRequested: true,
         etDeferralInterestDays: "365",
         etDeferralInterestDailyRate: "0.000022",
+        etHasForeignTax: true, // 켜짐 여부는 값과 별개 필드 — 값만 있으면 토글이 꺼진 상태
         etForeignTaxPaid: "30,000,000",
         etHasFiledHoldingsReport: false,
         etTotalFaceValue: "500,000,000",

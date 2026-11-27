@@ -503,6 +503,8 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     etDeferralReason: enumField("etDeferralReason", ["none", "study_abroad", "other_10yr"], defaults.etDeferralReason),
     etActualTransferDate: strField("etActualTransferDate"),
     etActualTransferPricePerShare: strField("etActualTransferPricePerShare"),
+    // 켜짐 여부 필드 도입 전 저장분 — 값이 있으면 켜져 있던 것으로 복원 (원화 또는 외화+환율)
+    etHasForeignTax: boolField("etHasForeignTax", !!strField("etForeignTaxPaid") || (!!strField("etForeignTaxPaidForeign") && !!strField("etForeignTaxExchangeRate"))),
     etForeignTaxPaid: strField("etForeignTaxPaid"),
     etForeignTaxPaidForeign: strField("etForeignTaxPaidForeign"),
     etForeignTaxCurrencyCode:
