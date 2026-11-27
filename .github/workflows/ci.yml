@@ -248,6 +248,12 @@ jobs:
       - name: Install deps (fresh)
         run: npm ci
 
+      - name: 깨진 Microsoft apt 저장소 제거
+        # ubuntu-latest(26.04) 이미지에 미리 등록된 packages.microsoft.com 저장소가 InRelease에
+        # 403을 돌려 아래 `--with-deps`의 apt-get update가 실패한다(2026-11-27 #3718·#3720 —
+        # 테스트 실행 전 설치 단계에서 샤드가 떨어짐). Playwright 의존성에는 이 저장소가 필요 없다.
+        run: sudo grep -rl "packages.microsoft.com" /etc/apt/sources.list.d/ 2>/dev/null | xargs -r sudo rm -f
+
       - name: Playwright 브라우저 설치
         run: npx playwright install --with-deps chromium
 
