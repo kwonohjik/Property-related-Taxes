@@ -75,21 +75,6 @@ async function addForeignF1(page: Page, idx: number) {
   await page.getByPlaceholder("출국일 기준환율").fill("1400");
 }
 
-const rowOf = (page: Page, label: string) =>
-  page.locator(`div.flex:has(> span:text-is("${label}"))`).first();
-
-/** 계산 요청 body를 모은다 */
-function captureBodies(page: Page): string[] {
-  const bodies: string[] = [];
-  page.on("request", (req) => {
-    if (req.method() === "POST" && req.url().includes("/api/calc/stock-transfer")) {
-      bodies.push(req.postData() ?? "");
-    }
-  });
-  return bodies;
-}
-
-
 const printId = (id: string) => `[data-print-id="${id}"]`;
 
 /** 소액 국외주식 F2 — 2,800,000 (5억 이하 → 영 §178의8②1호 제외) */
