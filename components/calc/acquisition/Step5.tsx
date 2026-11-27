@@ -188,7 +188,7 @@ export function Step5({
         <ToggleCard
           tone="violet"
           title="지분 취득 (공유지분)"
-          description="전체 소유권이 아닌 지분 취득 시 — 1세대 판정에 영향 (§28의4④)"
+          description="전체 소유권이 아닌 지분 취득 시 — 주택 매매 세율(1~3%)은 전체 주택 가액(지분 가액을 지분율로 나눈 값)으로 판정 (§11①8호 후단) · 1세대 판정에 영향 (§28의4④)"
           checked={parseFloat(form.acquisitionOwnershipShare) < 1}
           onCheckedChange={(v) => set("acquisitionOwnershipShare", v ? "0.5" : "1")}
         >

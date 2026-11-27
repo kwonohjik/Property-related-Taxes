@@ -40,6 +40,13 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** acquisition.ts `HOUSING_SHARE_RATE_BASIS` — 지분 취득 주택 세율 판정 전체가액 환산(교재 대조 T6, MST 282559 실독 2026-11-28) */
+    id: "ACQUISITION.HOUSING_SHARE_RATE_BASIS",
+    citation: "지방세법 §11①8호 후단",
+    keywords: ["지분으로 취득한 주택의 취득당시가액", "전체 주택의 취득당시가액", "취득 지분의"],
+    keywordMode: "ALL",
+  },
+  {
     id: "ACQUISITION.TAX_BASE_GRATUITOUS",
     citation: "지방세법 §10의2",
     keywords: ["무상취득", "시가인정액", "상속에 따른 무상취득", "시가불인정 감정기관"],

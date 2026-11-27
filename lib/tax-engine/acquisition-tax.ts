@@ -36,6 +36,8 @@ import { determineTaxBase } from "./acquisition-tax-base";
 import {
   decideTaxRate,
   calcLinearInterpolationTax,
+  housingShareRateBasis,
+  housingShareRateBasisWarning,
   calcTaxWithAdditional,
   buildLocalEducationTaxFormula,
   type AdditionalTaxResult,
@@ -196,10 +198,22 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
 
   // ── Step 5: 기본세율 결정 ──
   // P1-6 적용 시 effectiveInput.acquisitionCause = "gift"로 fallback되어 일반 무상취득 흐름.
+  // §11①8호 후단 — 지분 취득 주택은 전체 주택의 취득당시가액(지분 가액 ÷ 지분율)으로 세율 판정 (교재 대조 T6)
+  const shareRateBasis = housingShareRateBasis({
+    propertyType: effectiveInput.propertyType,
+    acquisitionCause: effectiveInput.acquisitionCause,
+    taxBase,
+    acquisitionOwnershipShare: input.acquisitionOwnershipShare,
+  });
+  if (shareRateBasis !== undefined) {
+    warnings.push(housingShareRateBasisWarning(shareRateBasis, input.acquisitionOwnershipShare ?? 1));
+    legalBasis.push(ACQUISITION.HOUSING_SHARE_RATE_BASIS);
+  }
   const rawBasicRateDecision = decideTaxRate({
     propertyType: effectiveInput.propertyType,
     acquisitionCause: effectiveInput.acquisitionCause,
     acquisitionValue: taxBase,
+    rateBasisValue: shareRateBasis,
   });
 
   // ── Step 5a: [P2-2] §13①② 법인·공장 중과 판정 ──
@@ -411,7 +425,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     !corpSurchargeResult.isSurcharged
   ) {
     // 선형보간 구간 세액 (BigInt 계산) — 세율특례·법인중과 미적용 시에만
-    acquisitionTax = calcLinearInterpolationTax(taxBase);
+    acquisitionTax = calcLinearInterpolationTax(taxBase, shareRateBasis);
   } else {
     // 일반 세액: 과세표준 × 세율 (원 미만 절사)
     acquisitionTax = Math.floor(taxBase * finalRate);
@@ -582,7 +596,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
       : specialRateResult.isApplied
         ? `§15 세율특례 ${(finalRate * 100).toFixed(4).replace(/\.?0+$/, "")}%`
         : basicRateDecision.rateType === "linear_interpolation"
-          ? `선형보간세율 ${(basicRateDecision.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}% (6~9억 구간, 지방세법 §11①8)`
+          ? `선형보간세율 ${(basicRateDecision.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}% (6~9억 구간${shareRateBasis !== undefined ? ` — 지분 취득: 전체 주택 ${shareRateBasis.toLocaleString()}원 기준` : ""}, 지방세법 §11①8)`
           : `${(finalRate * 100).toFixed(1)}%`;
   steps.push(
     {
