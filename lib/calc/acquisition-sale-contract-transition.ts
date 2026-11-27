@@ -32,3 +32,15 @@ export function isPre17473ContractDate(
   const d = effectiveSaleContractDate(form);
   return d !== "" && d <= ACQUISITION_CONST.SURCHARGE_17473_CONTRACT_CUTOFF;
 }
+
+/**
+ * 지방세법 시행령 §28의5① 2026.9.30. 개정(조정→조정 2년) — 대통령령 제36736호 부칙 제2조②
+ * 「2026년 8월 26일 이전」 매매계약(분양계약 포함)이면 계약금 증빙 칸을 연다(당일 포함).
+ * 2020.7.10. 이전 계약은 부칙 제6조 카드가 같은 증빙 칸을 이미 보여 주므로 제외한다(한 사실을 두 칸에 묻지 않음).
+ */
+export function isPre2026TempTwoHouseContractDate(
+  form: Pick<FormState, "propertyType" | "acquisitionCause" | "saleContractDate" | "isInstallmentAcquisition" | "installmentContractDate">
+): boolean {
+  const d = effectiveSaleContractDate(form);
+  return d !== "" && d <= ACQUISITION_CONST.TEMP_2HOUSE_2YEAR_CONTRACT_CUTOFF && !isPre17473ContractDate(form);
+}

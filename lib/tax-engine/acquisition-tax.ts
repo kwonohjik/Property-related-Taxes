@@ -41,6 +41,7 @@ import {
   type AdditionalTaxResult,
 } from "./acquisition-tax-rate";
 import { assessSurcharge, resolveFinalRate } from "./acquisition-tax-surcharge";
+import { isCorporateHouseAcquirer } from "./acquisition-tax-surcharge";
 import { computeBurdenedGiftResult } from "./acquisition-tax-burdened";
 import {
   applySpecialRate,
@@ -337,6 +338,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     isTemporaryTwoHouse: input.isTemporaryTwoHouse,
     previousHouseRegion: input.previousHouseRegion,
     newHouseRegion: input.newHouseRegion,
+    saleContractDate: input.saleContractDate, // §28의5① 2026 개정 부칙 제2조②
     // [P1-6] 부담부증여 배우자·직계존비속 배제 (지법 §7④)
     giftRelation: input.giftRelation,
     // [P1-6.5] §13의2④ 지정 전 매매계약 보호
@@ -687,7 +689,7 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
       if (corpSurchargeResult.isSurcharged) return "surcharge_corporate";
       if (surchargeDecision.isSurcharged) {
         if (input.isLuxuryProperty) return "surcharge_luxury";
-        if (input.acquiredBy === "corporation") return "surcharge_corporate";
+        if (isCorporateHouseAcquirer(input.acquiredBy)) return "surcharge_corporate";
         return "surcharge_regulated";
       }
       return basicRateDecision.rateType;

@@ -175,14 +175,24 @@ describe("determineTaxBase — 부담부증여", () => {
 // ============================================================
 
 describe("determineTaxBase — 특수관계인 거래", () => {
-  it("신고가가 시가의 70%~130% 이내: 신고가 사용", () => {
+  it("차액이 3억 미만이고 시가의 5% 미만: 신고가 사용 (시행령 §18의2)", () => {
     const result = determineTaxBase(base({
-      reportedPrice: 400_000_000,
-      marketValue: 500_000_000, // 70% = 350,000,000 / 130% = 650,000,000
+      reportedPrice: 480_000_000,
+      marketValue: 500_000_000, // 차액 2,000만 < 5% 2,500만 · < 3억
       isRelatedParty: true,
     }));
     expect(result.method).toBe("actual_price");
-    expect(result.taxBase).toBe(400_000_000);
+    expect(result.taxBase).toBe(480_000_000);
+  });
+
+  it("차액이 시가의 5% 이상(시가 70% 이상이어도): 시가인정액 사용 (시행령 §18의2 — 종전 70% 기준 결함)", () => {
+    const result = determineTaxBase(base({
+      reportedPrice: 400_000_000,
+      marketValue: 500_000_000, // 차액 1억 ≥ 5% 2,500만 (종전 70%~130% 기준으로는 정상 범위)
+      isRelatedParty: true,
+    }));
+    expect(result.method).toBe("recognized_market");
+    expect(result.taxBase).toBe(500_000_000);
   });
 
   it("신고가 < 시가의 70%: 시가인정액 사용", () => {

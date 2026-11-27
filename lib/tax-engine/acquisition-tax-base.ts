@@ -333,14 +333,20 @@ function calcRelatedPartyTaxBase(
     };
   }
 
-  // 정상가격 범위: 시가의 70%~130% (원 미만 버림으로 대칭 처리)
-  const lowerBound = Math.floor(marketBase * ACQUISITION_CONST.RELATED_PARTY_MIN_RATIO);
-  const upperBound = Math.floor(marketBase * ACQUISITION_CONST.RELATED_PARTY_MAX_RATIO);
+  // 부당행위계산(시행령 §18의2): 시가인정액보다 낮은 가격으로 취득했고
+  //   차액이 3억원 이상이거나 시가인정액의 100분의 5 이상인 경우에만 시가인정액으로 과세한다.
+  // [R3-07] 시가 이상 신고(과다신고)는 조세감소가 아니므로 §10의3① 사실상취득가격 그대로.
+  const gap = marketBase - input.reportedPrice;
+  const isUnfairLowPrice =
+    gap > 0 &&
+    (gap >= ACQUISITION_CONST.RELATED_PARTY_LOW_PRICE_GAP ||
+      gap * ACQUISITION_CONST.RELATED_PARTY_LOW_PRICE_RATIO_DIVISOR >= marketBase);
 
-  if (input.reportedPrice >= lowerBound && input.reportedPrice <= upperBound) {
-    // 정상 거래 → 신고가 사용
+  if (!isUnfairLowPrice) {
     warnings.push(
-      `특수관계인 거래 — 신고가(${input.reportedPrice.toLocaleString()}가 시가(${marketBase.toLocaleString()}의 70%~130% 이내(정상 범위). 신고가 사용.`
+      gap > 0
+        ? `특수관계인 거래 — 시가(${marketBase.toLocaleString()})와 신고가(${input.reportedPrice.toLocaleString()})의 차액 ${gap.toLocaleString()}원이 3억원 미만이고 시가의 5% 미만이라 부당행위계산 대상이 아닙니다. 신고가를 과세표준으로 사용합니다.`
+        : `특수관계인 거래 — 신고가(${input.reportedPrice.toLocaleString()})가 시가(${marketBase.toLocaleString()}) 이상이라 §10의3① 사실상취득가격을 과세표준으로 사용합니다.`
     );
     return {
       method: "actual_price",
@@ -351,32 +357,16 @@ function calcRelatedPartyTaxBase(
     };
   }
 
-  // [R3-07] 130% 초과 과다신고: §10의3②(부당행위계산)의 시가 상향은 조세부담을 부당히 감소시키는
-  //   저가취득에만 적용되는 재량이다. 과다신고는 조세감소가 아니므로 §10의3① 사실상취득가격이
-  //   그대로 과세표준. 상단 초과분을 시가로 하향시켜 실제 지급액보다 낮게 과세하던 결함 정정.
-  if (input.reportedPrice > upperBound) {
-    warnings.push(
-      `특수관계인 거래 — 신고가(${input.reportedPrice.toLocaleString()})가 시가의 130%를 초과(과다신고)하나, §10의3① 사실상취득가격을 과세표준으로 사용합니다.`
-    );
-    return {
-      method: "actual_price",
-      taxBase: input.reportedPrice,
-      rawTaxBase: input.reportedPrice,
-      warnings,
-      legalBasis: ACQUISITION.RELATED_PARTY,
-    };
-  }
-
-  // 저가취득(시가 70% 미만) → 시가인정액 사용 (§10의3② 부당행위계산)
+  // 저가취득 → 시가인정액 사용 (§10의3② 부당행위계산 · 시행령 §18의2)
   warnings.push(
-    `특수관계인 거래 — 신고가(${input.reportedPrice.toLocaleString()})가 시가의 70% 미만(저가취득). 시가인정액(${marketBase.toLocaleString()})을 과세표준으로 사용합니다.`
+    `특수관계인 거래 — 시가(${marketBase.toLocaleString()})와 신고가(${input.reportedPrice.toLocaleString()})의 차액 ${gap.toLocaleString()}원이 3억원 이상이거나 시가의 5% 이상이라 부당행위계산 대상입니다(저가취득). 시가인정액(${marketBase.toLocaleString()})을 과세표준으로 사용합니다.`
   );
   return {
     method: "recognized_market",
     taxBase: marketBase,
     rawTaxBase: marketBase,
     warnings,
-    legalBasis: ACQUISITION.RELATED_PARTY,
+    legalBasis: ACQUISITION.RELATED_PARTY_LOW_PRICE_TYPE,
   };
 }
 

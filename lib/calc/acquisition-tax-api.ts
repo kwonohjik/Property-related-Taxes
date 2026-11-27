@@ -13,6 +13,7 @@ import { isDeemedAcquisitionCause } from "@/components/calc/acquisition/shared";
 // 법률 제17473호 부칙 제6조 입력 게이트 leaf — ⑤와 같은 술어
 import { effectiveSaleContractDate } from "@/lib/calc/acquisition-sale-contract-transition";
 import { isPre17473ContractDate } from "@/lib/calc/acquisition-sale-contract-transition";
+import { isPre2026TempTwoHouseContractDate } from "@/lib/calc/acquisition-sale-contract-transition";
 // §28의4③ 동시 취득 순서 입력 게이트 leaf — ⑤와 같은 술어
 import { isSameDayOrderCandidate } from "@/lib/calc/acquisition-same-day-order";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
@@ -299,8 +300,8 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
     // 정비구역
     if (form.isUrbanRegenerationArea) body.isUrbanRegenerationArea = true;
 
-    // 일시적 2주택
-    if (form.isTemporaryTwoHouse) {
+    // 일시적 2주택 — 개인만(§28의5①은 §13의2①2호 1세대 2주택). 화면 카드도 개인에게만 보인다(Step3).
+    if (form.isTemporaryTwoHouse && form.acquiredBy === "individual") {
       body.isTemporaryTwoHouse = true;
       const pd = strOrUndef(form.previousHouseAcquisitionDate);
       if (pd) body.previousHouseAcquisitionDate = pd;
@@ -308,6 +309,13 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
       if (pr) body.previousHouseRegion = pr;
       const nr = strOrUndef(form.newHouseRegion);
       if (nr) body.newHouseRegion = nr;
+      // §28의5① 2026 개정 부칙 제2조② — ⑤가 조정→조정·2026.8.26. 이전 계약일에서만 증빙 칸을 보여 준다.
+      if (
+        pr === "regulated" && nr === "regulated" &&
+        isPre2026TempTwoHouseContractDate(form) && form.hasContractDepositProof
+      ) {
+        body.hasContractDepositProof = true;
+      }
     }
 
     // §13의2④ 지정 전 계약 보호

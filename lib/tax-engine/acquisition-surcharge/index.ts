@@ -29,6 +29,7 @@ import {
 import { describeLowValueHouseLimit } from "./low-value-limit";
 import {
   assessMultiHouseSurcharge,
+  isCorporateHouseAcquirer,
   assessGiftSurcharge,
   assessTemporaryTwoHouse,
 } from "./multi-house";
@@ -114,6 +115,8 @@ export interface SurchargeCheckInput {
   previousHouseRegion?: "regulated" | "non_regulated";
   /** 신규 주택 소재 지역 */
   newHouseRegion?: "regulated" | "non_regulated";
+  /** 매매계약일(분양계약 포함) — §28의5① 2026.9.30. 개정 부칙 제2조② 종전 계약 판정 */
+  saleContractDate?: string;
 
   // ── [P1-6] 부담부증여 관계 ──
   /** 부담부증여 시 증여자 관계 (배우자·직계존비속 간 → 전체 무상 처리) */
@@ -426,12 +429,15 @@ export function assessSurcharge(input: SurchargeCheckInput): ExtendedSurchargeDe
   }
 
   // ── 7단계: 일시적 2주택 배제 (P1-5) ──
+  // §28의5①은 법 §13의2①2호(1세대 2주택)의 일시적 2주택 — 법인(1호)에는 없다(교재 대조 T5).
   const tempTwoHouseResult = assessTemporaryTwoHouse({
     houseCount: input.houseCountAfter ?? 1,
-    isTemporaryTwoHouse: input.isTemporaryTwoHouse,
-    balanceDate: input.balanceDate,
+    isTemporaryTwoHouse: input.isTemporaryTwoHouse && !isCorporateHouseAcquirer(input.acquiredBy),
+    balanceDate: input.balanceDate ?? input.acquisitionDate,
     previousHouseRegion: input.previousHouseRegion,
     newHouseRegion: input.newHouseRegion,
+    saleContractDate: input.saleContractDate,
+    hasContractDepositProof: input.hasContractDepositProof,
   });
 
   if (tempTwoHouseResult.isExcluded) {
