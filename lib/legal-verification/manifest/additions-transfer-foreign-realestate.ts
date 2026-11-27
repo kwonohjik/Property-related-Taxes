@@ -24,6 +24,41 @@ export const TRANSFER_FOREIGN_REALESTATE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** PR-3: 한도 A × B / C의 A·B·C 정의와 두 방법의 선택 문언 — 한도 함수 재사용과 필요경비 산입 분기의 근거 */
+    id: "TRANSFER_FOREIGN_RE.FOREIGN_TAX_METHODS_AND_LIMIT",
+    citation: "소득세법 §118의6",
+    keywords: [
+      "다음 각 호의 방법 중 하나를 선택하여 적용할 수 있다",
+      "공제한도금액",
+      "제118조의5에 따라 계산한 해당 과세기간의 국외자산에 대한 양도소득",
+      "해당 국외자산 양도소득금액",
+      "해당 과세기간의 국외자산에 대한 양도소득금액",
+      "국외자산 양도소득세액을 해당 과세기간의 필요경비에 산입하는 방법",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    /** PR-3: 국외 부동산 외국납부세액 세액공제방법의 지방소득세 공제 — 소득세 공제금액의 100분의 10 */
+    id: "TRANSFER_FOREIGN_RE.LOCAL_SPECIAL_97_3_FOREIGN_TAX_CREDIT",
+    citation: "지방세특례제한법 §97 ③",
+    keywords: [
+      "국외자산의 양도소득에 대하여 해당 외국에서 과세를 하는 경우",
+      "제118조의6제1항제1호에 따라 납부세액을 공제한 경우",
+      "그 공제금액의 100분의 10에 상당하는 금액을 양도소득분 개인지방소득 산출세액에서 공제받을 수 있다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    /** PR-3: 지방소득세 외국납부세액 공제가 산출세액을 넘지 못하는 근거(양도소득 세액공제는 지방세특례제한법에 위임) */
+    id: "TRANSFER_FOREIGN_RE.LOCAL_103_4_CREDIT_CAP",
+    citation: "지방세법 §103의4",
+    keywords: [
+      "양도소득에 대한 개인지방소득세의 세액공제 및 세액감면에 관한 사항은",
+      "공제세액 또는 감면세액이 산출세액을 초과하는 경우에는 그 초과금액은 없는 것으로 한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER_FOREIGN_RE.RATE_ADJUSTMENT_104_4",
     citation: "소득세법 §118의5 ②",
     keywords: ["세율의 조정에 관하여는 제104조제4항을 준용한다"],

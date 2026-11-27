@@ -141,9 +141,9 @@ describe("입력 검증 — fallback 없이 던진다", () => {
     expect(() => calc(k1Input({ domesticResidenceYears: 5.5 }), rates)).toThrow(TaxCalculationError);
     expect(() => calc(k1Input({ domesticResidenceYears: -1 }), rates)).toThrow(TaxCalculationError);
   });
-  it("2건 이상은 PR-3 전까지 거부, 0건도 거부", () => {
-    expect(() => calc(k1Input({ assets: [k1Asset(), k1Asset({ id: "a2" })] }), rates)).toThrow(/단건/);
+  it("0건 거부 · 자산 id 중복 거부(외국납부세액이 id로 자산을 가리킨다)", () => {
     expect(() => calc(k1Input({ assets: [] }), rates)).toThrow(TaxCalculationError);
+    expect(() => calc(k1Input({ assets: [k1Asset(), k1Asset()] }), rates)).toThrow(/id가 겹칩니다/);
   });
   it("누진세율 구간이 역순이면 거부", () => {
     const reversed = { ...rates, brackets: [...rates.brackets].reverse() };
