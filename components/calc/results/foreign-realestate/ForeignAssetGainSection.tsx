@@ -86,8 +86,8 @@ export function ForeignAssetGainSection({
           적용 배제 — {TRANSFER_FOREIGN_RE.SECTION_118_8_MUTATIS_NO_LTHD} 단서
         </NoteRow>
         <AmountRow
-          label="양도소득금액"
-          formula={isLoss ? "양도차손이라 0으로 봅니다" : undefined}
+          label={liable ? "양도소득금액" : "양도소득금액 (참고)"}
+          formula={liable ? (isLoss ? "양도차손이라 0으로 봅니다" : undefined) : "납세의무가 없어 세액에 반영하지 않는 참고 값입니다"}
           amount={row.incomeAmount}
           strong
           testId={`foreign-gain-${index}-income`}

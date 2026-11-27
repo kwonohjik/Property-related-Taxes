@@ -5,11 +5,12 @@ import { parseDecimal } from "@/lib/calc/number-parse";
 import { tryToKrw } from "@/lib/tax-engine/foreign-realestate/fx";
 import { FOREIGN_TAX_METHOD_OPTIONS } from "@/components/calc/foreign/foreign-options";
 import { FOREIGN_RE_MAX_ROWS } from "@/lib/api/transfer-foreign-schema";
+import { TRANSFER_FOREIGN_RE as RE } from "@/lib/tax-engine/legal-codes/transfer-foreign-realestate";
+import { TRANSFER } from "@/lib/tax-engine/legal-codes";
 import type { ForeignAssetKindForm } from "@/lib/stores/calc-wizard-form-foreign";
 
 /** 환율 3종 함정(기준환율 ↔ 대고객 매입률·매도율) — 환율 칸 hint. 영 §178의5① */
-export const FX_RATE_HINT =
-  "외국환거래법에 따른 기준환율(기준환율이 없는 통화는 재정환율)입니다. 은행이 고객에게 사고파는 대고객 매입률·매도율이 아닙니다 — 시행령 §178의5①. 소수 4자리까지 입력할 수 있습니다.";
+export const FX_RATE_HINT = `외국환거래법에 따른 기준환율(기준환율이 없는 통화는 재정환율)입니다. 은행이 고객에게 사고파는 대고객 매입률·매도율이 아닙니다 — ${RE.DECREE_178_5_FX_BASE_RATE}. 소수 4자리까지 입력할 수 있습니다.`;
 
 export const FX_AMOUNT_HINT = "해당 통화 단위 그대로 입력하세요(센트·소수 4자리까지).";
 
@@ -25,12 +26,10 @@ export const FOREIGN_ASSET_KIND_OPTIONS: { value: ForeignAssetKindForm; label: s
 ];
 
 /** 5년 미만 경고 문구 — 비차단 */
-export const RESIDENCE_UNDER_MIN_NOTICE =
-  "거주 기간이 5년 미만입니다. 소득세법 §118의2에 따라 국외자산 양도소득세 납세의무가 없어 세액은 0으로 산출됩니다(입력은 계속할 수 있습니다).";
+export const RESIDENCE_UNDER_MIN_NOTICE = `거주 기간이 5년 미만입니다. ${RE.SECTION_118_2_SCOPE}에 따라 국외자산 양도소득세 납세의무가 없어 세액은 0으로 산출됩니다(입력은 계속할 수 있습니다).`;
 
 /** 미등기 안내 — 칸을 만들지 않는 이유(C-3). 엔진 V-3 확정 전이라 «확인 필요»를 함께 싣는다 */
-export const UNREGISTERED_NOTICE =
-  "국외자산은 미등기 여부를 입력하지 않습니다. 세율은 §118의5①에 따라 일반 양도소득 세율(§55①)이고 기본공제(§118의7① 연 250만원)에도 미등기 배제 단서가 없습니다. 확인 필요: 미등기 양도 시 영 §178의2④의 별도 취급 여부는 확정되지 않았습니다.";
+export const UNREGISTERED_NOTICE = `국외자산은 미등기 여부를 입력하지 않습니다. 세율은 ${RE.SECTION_118_5_RATE}에 따라 일반 양도소득 세율(${TRANSFER.PROGRESSIVE_RATE_TABLE})이고 기본공제(${RE.SECTION_118_7_BASIC_DEDUCTION} 연 250만원)에도 미등기 배제 단서가 없습니다. 확인 필요: 미등기 양도 시 ${RE.DECREE_178_2_4_UNREGISTERED}의 별도 취급 여부는 확정되지 않았습니다.`;
 
 /** 거주 연수가 5로 걸리는 다건 — C-2 한계 고지 */
 export const RESIDENCE_BOUNDARY_NOTICE =

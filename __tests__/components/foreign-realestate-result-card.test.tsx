@@ -95,7 +95,11 @@ describe("확인 필요 — 엔진이 돌려준 것은 하나도 버리지 않�
 
   it("외국납부세액 한도 초과: 두 코드 + 한도 초과 경고 문구(1건)가 모두 보이고, 미공제 잔액이 경고색으로 보인다", () => {
     const r = calc(k1Input({ foreignTax: { method: "credit", items: [ftax("a1", 200_000, "2026-08-01", 1_000)] } }), ratesAt("2026-07-10"));
-    expect(r.confirmationNeeded).toEqual(["LOCAL_TAX_WEIGHTING_NOT_EVALUATED", "FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY"]);
+    expect(r.confirmationNeeded).toEqual([
+      "LOCAL_TAX_WEIGHTING_NOT_EVALUATED",
+      "FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY",
+      "UNSUPPORTED_SITUATIONS_NOT_EVALUATED",
+    ]);
     expect(r.warnings.length).toBe(1);
     render(<ForeignRealEstateResultCard result={r} />);
     for (const code of r.confirmationNeeded) expect(screen.getByTestId(`foreign-confirm-${code}`)).toBeTruthy();
@@ -133,6 +137,30 @@ describe("확인 필요 — 엔진이 돌려준 것은 하나도 버리지 않�
     expect(screen.queryByTestId("foreign-ftc-a1")).toBeNull();
   });
 
+  it("U5: 국내자산과 각각 구분 계산(해석례 근거)은 «확인 필요»가 아닌 일반 안내 + 미지원 상황은 «확인 필요»로 보이고 근거 조문을 상수로 인용한다", () => {
+    render(<ForeignRealEstateResultCard result={k1()} />);
+    expect(screen.queryByTestId("foreign-confirm-DOMESTIC_TRANSFER_NOT_AGGREGATED")).toBeNull();
+    const domestic = text("foreign-domestic-separate");
+    expect(domestic).not.toContain("확인 필요");
+    expect(domestic).toContain("각각 구분하여 계산합니다");
+    expect(domestic).toContain("서면인터넷방문상담4팀-962");
+    expect(domestic).toContain("국심2005서3759");
+    expect(domestic).toContain(TRANSFER_FOREIGN_RE.SECTION_118_7_BASIC_DEDUCTION);
+    const scope = text("foreign-confirm-UNSUPPORTED_SITUATIONS_NOT_EVALUATED");
+    for (const phrase of ["상속·증여로 취득한 국외자산", "외화를 차입해 취득한 자산의 환차익", "장기할부조건", "시가로 계산하는 경우", "1세대1주택 비과세"]) {
+      expect(scope, phrase).toContain(phrase);
+    }
+    for (const cite of [
+      TRANSFER_FOREIGN_RE.DECREE_178_4_1_ACQUISITION_COST,
+      TRANSFER_FOREIGN_RE.SECTION_118_2_FX_GAIN_PROVISO,
+      TRANSFER_FOREIGN_RE.DECREE_178_5_2_INSTALLMENT,
+      TRANSFER_FOREIGN_RE.DECREE_178_3_MARKET_VALUE,
+      TRANSFER_FOREIGN_RE.DECREE_154_1_DOMESTIC_ONE_HOUSE,
+    ]) {
+      expect(scope, cite).toContain(cite);
+    }
+  });
+
   it("CONFIRMATION_NOTICES 키 = 엔진 confirmationNeeded 코드 전부(types.ts 소스 대조 — satisfies의 런타임 짝)", () => {
     const src = readFileSync(join(process.cwd(), "lib/tax-engine/foreign-realestate/types.ts"), "utf8");
     const block = src.slice(src.indexOf("export type ForeignRealEstateConfirmationCode"), src.indexOf("export type ForeignRealEstateNotLiableReason"));
@@ -158,6 +186,22 @@ describe("납세의무 없음 — 거주 5년 미만", () => {
     expect(text("foreign-result-total")).toBe("0");
     expect(screen.queryByTestId("foreign-tax-calc")).toBeNull();
     expect(text("foreign-gain-0-transfer")).toContain("990,000,000");
+  });
+
+  it("L2: 자산별 양도소득금액은 «참고» 값으로 표시하고 기본공제·과세표준 행은 없다", () => {
+    const r = calc(k1Input({ domesticResidenceYears: 3 }), ratesAt("2026-07-10"));
+    expect(r.rows[0].incomeAmount).toBeGreaterThan(0); // 엔진은 행 값을 그대로 돌려주지만 합계·세액은 0
+    expect(r.incomeAmountTotal).toBe(0);
+    render(<ForeignRealEstateResultCard result={r} />);
+    const row = text("foreign-gain-0-income");
+    expect(row).toContain("양도소득금액 (참고)");
+    expect(row).toContain("세액에 반영하지 않는 참고 값");
+    expect(screen.queryByTestId("foreign-gain-0-bd")).toBeNull();
+  });
+
+  it("L2: 납세의무가 있으면 «참고» 표기가 없다", () => {
+    render(<ForeignRealEstateResultCard result={k1()} />);
+    expect(text("foreign-gain-0-income")).not.toContain("참고");
   });
 
   it("출력 항목 선택 패널은 없는 «세액 계산» 서식을 고르게 두지 않는다", () => {
@@ -221,6 +265,22 @@ describe("소스 가드", () => {
 
   it("법령 인용은 TRANSFER_FOREIGN_RE 상수만 쓴다 — 코드에 «§» 리터럴이 없다", () => {
     for (const f of files) expect(code(f), f).not.toContain("§");
+  });
+
+  it("입력 화면(components/calc/transfer/foreign)과 ⑧ 검증 문구도 «§» 리터럴 없이 상수만 쓴다(L3)", () => {
+    const inputDir = join(process.cwd(), "components/calc/transfer/foreign");
+    const inputFiles = readdirSync(inputDir)
+      .filter((f) => /\.tsx?$/.test(f))
+      .map((f) => join(inputDir, f));
+    inputFiles.push(join(process.cwd(), "lib/calc/transfer-tax-validate-foreign.ts"), join(process.cwd(), "lib/calc/transfer-foreign-messages.ts"));
+    expect(inputFiles.length).toBeGreaterThan(5);
+    for (const f of inputFiles) {
+      const body = readFileSync(f, "utf8")
+        .split("\n")
+        .filter((l) => !/^\s*(\*|\/\*|\/\/)/.test(l))
+        .join("\n");
+      expect(body, f).not.toContain("§");
+    }
   });
 
   it("변수 약어·floor()·native 체크박스/라디오가 없다", () => {

@@ -21,6 +21,7 @@ import { fxFormula } from "@/components/calc/foreign/fx-formula";
 import { COUNTRY_OPTIONS } from "@/components/calc/foreign/foreign-options";
 import type { ForeignAssetForm, ForeignMoneyRowForm } from "@/lib/stores/calc-wizard-form-foreign";
 import { FOREIGN_RE_MAX_ROWS } from "@/lib/api/transfer-foreign-schema";
+import { TRANSFER_FOREIGN_RE as RE } from "@/lib/tax-engine/legal-codes/transfer-foreign-realestate";
 import { ForeignCurrencyField } from "./ForeignCurrencyField";
 import {
   FOREIGN_ASSET_KIND_OPTIONS,
@@ -123,12 +124,12 @@ export function ForeignAssetCard({ index, asset, count, onChange, onRemove, erro
       )}
 
       {/* ① 자산 */}
-      <ToneCard tone="rose" sectionNum={1} title="자산 (소득세법 §118의2)" bodyClassName="space-y-3">
+      <ToneCard tone="rose" sectionNum={1} title={`자산 (${RE.SECTION_118_2_SCOPE})`} bodyClassName="space-y-3">
         <FieldCard
           label="자산 종류"
           required
           field="foreignAsset.kind"
-          hint="부동산에 관한 권리(§118의2 2호)는 계산하지 않습니다 — 선택하면 입력 검증에서 안내합니다."
+          hint={`부동산에 관한 권리(${RE.SECTION_118_2_SCOPE} 2호)는 계산하지 않습니다 — 선택하면 입력 검증에서 안내합니다.`}
         >
           <RadioCardGroup
             name={`foreignKind-${index}`}
@@ -169,8 +170,8 @@ export function ForeignAssetCard({ index, asset, count, onChange, onRemove, erro
       </ToneCard>
 
       {/* ② 양도가액 */}
-      <ToneCard tone="emerald" sectionNum={2} title="양도가액 — 원화 환산 (시행령 §178의5)" bodyClassName="space-y-3">
-        <FieldCard label="통화" required field="foreignAsset.currency" hint="취득가액·필요경비·외국납부세액도 같은 통화로 입력합니다.">
+      <ToneCard tone="emerald" sectionNum={2} title={`양도가액 — 원화 환산 (${RE.DECREE_178_5_FX_BASE_RATE})`} bodyClassName="space-y-3">
+        <FieldCard label="통화" required field="foreignAsset.currency" hint="취득가액·필요경비·외국납부세액도 같은 통화로 입력합니다. 「기타」를 고르면 통화 코드를 영문 대문자 3자리로 입력하세요.">
           <ForeignCurrencyField value={asset.currency} onChange={(currency) => onChange({ currency })} />
         </FieldCard>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -204,11 +205,11 @@ export function ForeignAssetCard({ index, asset, count, onChange, onRemove, erro
       </ToneCard>
 
       {/* ④ 필요경비 */}
-      <ToneCard tone="slate" sectionNum={4} title="필요경비 (소득세법 §118의4)" bodyClassName="space-y-4">
+      <ToneCard tone="slate" sectionNum={4} title={`필요경비 (${RE.SECTION_118_4_NECESSARY_EXPENSES})`} bodyClassName="space-y-4">
         <ExpenseRows index={index} asset={asset} kind="capitalRows" onChange={(capitalRows) => onChange({ capitalRows })} />
         <ExpenseRows index={index} asset={asset} kind="costRows" onChange={(costRows) => onChange({ costRows })} />
         <p className="text-xs text-muted-foreground">
-          장기보유특별공제는 국외자산에 적용하지 않습니다(소득세법 §118의8 단서) — 보유·거주 기간 입력은 없습니다.
+          장기보유특별공제는 국외자산에 적용하지 않습니다({RE.SECTION_118_8_MUTATIS_NO_LTHD} 단서) — 보유·거주 기간 입력은 없습니다.
         </p>
       </ToneCard>
     </section>

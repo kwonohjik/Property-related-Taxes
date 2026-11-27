@@ -134,7 +134,12 @@ export type ForeignRealEstateConfirmationCode =
    * 외국납부세액 세액공제방법(§118의6①1호)의 원화 환산 기준일 — 영 §178의5①은 「양도가액 및 필요경비」의 환산만 정하고
    * 세액공제 대상 외국세의 환산일을 정한 조문을 찾지 못했다. 사용자가 입력한 납부일·환율을 그대로 쓴다.
    */
-  | "FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY";
+  | "FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY"
+  /**
+   * 지원하지 않는 상황(상속·증여 취득 · 외화차입 환차익 · 장기할부 · 시가 모드 · 국외 주택 비과세 등)을 계산하지 않았다 — 해당하면 결과를 그대로 쓸 수 없다
+   * (계획 Q-5·Q-6·Q-13·V-4·V-14). 엔진은 이 상황을 입력으로 받지 않으므로 «해당 여부»를 알 수 없어 납세의무가 있는 모든 결과에 싣는다.
+   */
+  | "UNSUPPORTED_SITUATIONS_NOT_EVALUATED";
 
 export type ForeignRealEstateNotLiableReason = "RESIDENCE_UNDER_5_YEARS";
 

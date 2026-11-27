@@ -59,6 +59,25 @@ export const TRANSFER_FOREIGN_REALESTATE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** U5: 입력·결과의 «미지원 상황» 고지가 인용하는 문언 — 실지거래가액 미확인 시 시가 */
+    id: "TRANSFER_FOREIGN_RE.TRANSFER_VALUE_MARKET_FALLBACK",
+    citation: "소득세법 §118의3 ①",
+    keywords: [
+      "양도 당시의 실지거래가액을 확인할 수 없는 경우에는 양도자산이 소재하는 국가의 양도 당시 현황을 반영한 시가에 따르되",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    /** U5: 장기할부 미지원 고지의 근거 문언(영 §162①3호 자체는 해석 충돌 V-10으로 미등록) */
+    id: "TRANSFER_FOREIGN_RE.DECREE_178_5_2_INSTALLMENT",
+    citation: "소득세법 시행령 §178의5 ②",
+    keywords: [
+      "제162조제1항제3호의 규정에 의한 장기할부조건의 경우에는",
+      "양도가액 또는 취득가액을 수령하거나 지출한 날로 본다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER_FOREIGN_RE.RATE_ADJUSTMENT_104_4",
     citation: "소득세법 §118의5 ②",
     keywords: ["세율의 조정에 관하여는 제104조제4항을 준용한다"],

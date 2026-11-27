@@ -173,7 +173,10 @@ describe("입력 규율 — fallback 없음 (K-13)", () => {
   it("외국세 항목이 비면 §118의6 미적용(방법 무관)", () => {
     const r = two({ method: "credit", items: [] });
     expect(r.foreignTaxMethod).toBeUndefined();
-    expect(r.confirmationNeeded).toEqual(["LOCAL_TAX_WEIGHTING_NOT_EVALUATED"]);
+    expect(r.confirmationNeeded).toEqual([
+      "LOCAL_TAX_WEIGHTING_NOT_EVALUATED",
+      "UNSUPPORTED_SITUATIONS_NOT_EVALUATED",
+    ]);
   });
 });
 
@@ -192,7 +195,10 @@ describe("확인 필요 · 근거 · 거주 5년 미만", () => {
   it("외국세 없으면 §118의6 근거·확인 필요 코드 없음", () => {
     const r = two();
     expect(r.appliedRules).not.toContain("소득세법 §118의6");
-    expect(r.confirmationNeeded).toEqual(["LOCAL_TAX_WEIGHTING_NOT_EVALUATED"]);
+    expect(r.confirmationNeeded).toEqual([
+      "LOCAL_TAX_WEIGHTING_NOT_EVALUATED",
+      "UNSUPPORTED_SITUATIONS_NOT_EVALUATED",
+    ]);
   });
   it("거주 5년 미만: 외국세 항목은 환산·검증하되 공제·산입은 하지 않는다(세액 0)", () => {
     const r = calc(k1Input({ domesticResidenceYears: 4, foreignTax: { method: "credit", items: [t("a1", 40_000_000)] } }), rates);
