@@ -378,7 +378,7 @@ export default function TransferTaxCalculator({
         if (hasError) return i < currentStep ? "attention" : "neutral";
         return i <= currentStep ? "complete" : "neutral";
       }),
-    [formData, currentStep],
+    [formData, currentStep, filingUnitCorrection],
   );
 
   // 비차단 경고 (미래 양도일 등) — handleNext/handleSubmit를 막지 않는 amber 배너. 차단 흐름과 독립.

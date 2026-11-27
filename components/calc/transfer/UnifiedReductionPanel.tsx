@@ -63,6 +63,9 @@ import {
 import { GroupCategorySection } from "./UnifiedReductionGroupSection";
 import { assetContractDateForCause } from "@/lib/tax-engine/transfer-reductions/asset-contract-date";
 
+/** 감면 미선택일 때의 빈 목록 — 렌더마다 새 배열이 생겨 useMemo가 매번 다시 도는 것을 막는다. */
+const NO_REDUCTIONS: NonNullable<AssetForm["reductions"]> = [];
+
 interface UnifiedReductionPanelProps {
   asset: AssetForm;
   /** 자산 위치(0 = 첫 자산, 생략 시 0) — 거주주택 특례(§155⑳) 선언이 엔진에 실리는지(첫 자산만) 판정한다. 프로덕션 호출처(Step5)는 항상 넘긴다 */
@@ -192,7 +195,7 @@ export function buildAssetPhdSnapshot(asset: AssetForm): ReductionPhdValue | und
 }
 
 export function UnifiedReductionPanel({ asset, assetIndex = 0, transferDate, onChange }: UnifiedReductionPanelProps) {
-  const reductions = asset.reductions ?? [];
+  const reductions = asset.reductions ?? NO_REDUCTIONS;
   /**
    * 🔴 갱신 함수는 **렌더 시점의 `reductions`가 아니라 이 ref**를 읽는다 (NH-28).
    *

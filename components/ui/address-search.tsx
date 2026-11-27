@@ -157,6 +157,8 @@ export function AddressSearch({ value, onChange, className, disabled, disableUni
   useEffect(() => {
     const external = value.road || value.jibun;
     if (!external && query) setQuery("");
+    // 외부 value가 바뀔 때만 — query를 넣으면 주소가 비어 있는 동안 입력할 때마다 검색어가 지워진다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value.road, value.jibun]);
 
   const search = useCallback(async (q: string) => {

@@ -319,7 +319,7 @@ export default function StockTransferTaxCalculator() {
     } finally {
       setLoading(false);
     }
-  }, [formData, savedItems, setLoading, setError, setResult, setAggregateResult]);
+  }, [formData, savedItems, setStep, setLoading, setError, setResult, setAggregateResult]);
 
   const handleReset = useCallback(() => {
     reset();

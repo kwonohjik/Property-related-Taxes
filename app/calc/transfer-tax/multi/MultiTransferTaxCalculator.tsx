@@ -164,6 +164,15 @@ export default function MultiTransferTaxCalculator() {
     clientId: activeClientId,
   });
 
+  const syncToWizardStore = useCallback(
+    (propertyForm: TransferFormData) => {
+      resetWizard();
+      updateFormData(propertyForm);
+      setWizardStep(0);
+    },
+    [resetWizard, updateFormData, setWizardStep],
+  );
+
   // 자산 추가 및 편집 모드 진입
   /**
    * ⚠️ 라벨·인덱스를 `useMultiTransferStore.getState()`로 바꾸려다 **되돌렸다**(2026-09-16).
@@ -185,16 +194,7 @@ export default function MultiTransferTaxCalculator() {
     setActiveProperty(newIndex);
     syncToWizardStore(newItem.form);
     setStep("edit");
-  }, [form.properties.length, addProperty, setActiveProperty, setStep]);
-
-  const syncToWizardStore = useCallback(
-    (propertyForm: TransferFormData) => {
-      resetWizard();
-      updateFormData(propertyForm);
-      setWizardStep(0);
-    },
-    [resetWizard, updateFormData, setWizardStep],
-  );
+  }, [form.properties.length, addProperty, setActiveProperty, syncToWizardStore, setStep]);
 
   const handleEditProperty = useCallback(
     (index: number) => {

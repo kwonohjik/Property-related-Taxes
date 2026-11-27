@@ -48,6 +48,8 @@ export function RedevelopmentValuationSection({ asset, onChange, isFractionalSpl
   const donorNote = donorAcqDateNote(asset, acqRefDate);
   // 취득당시 토지 ㎡당 단가 — 1990.8.30. 전 취득은 비워 두면 영 §164④ 파생값(④·⑧과 같은 함수 · 계획서 §18).
   const landAcqEffective = effectiveRedevLandPricePerSqmAtAcq(asset);
+  // §164⑦ 발동 여부 — 아래 미리보기는 환산 모드(acqMode === "estimated")에서만 이 값을 쓴다.
+  const provisionTriggered = isRedevPhdTriggered(asset, isFractionalSplit);
   // 환산취득가 미리보기 (useMemo) — PHD 패턴, 엔진 redevelopment-valuation.ts 와 동일 산식.
   const valuationPreview = useMemo(() => {
     // 환산 모드 — 부담부증여 K-5(완공 아파트)도 같다(`redevPreApprovalAcqMode`).
@@ -55,9 +57,6 @@ export function RedevelopmentValuationSection({ asset, onChange, isFractionalSpl
     const rights = parseAmount(asset.redevRightsValue);
     const D = parseAmount(asset.redevManagementDisposalHousingPrice);
     if (rights <= 0 || D <= 0) return null;
-
-    // 이 지점은 위 `useEstimatedAcquisition` 조기 반환 뒤라 환산 모드가 보장된다.
-    const provisionTriggered = isRedevPhdTriggered(asset, isFractionalSplit);
 
     const A = parseAmount(asset.redevFirstDisclosureHousingPrice);
     const area = parseDecimal(asset.redevLandArea);
@@ -105,7 +104,7 @@ export function RedevelopmentValuationSection({ asset, onChange, isFractionalSpl
     };
   }, [
     acqMode,
-    isFractionalSplit,
+    provisionTriggered,
     asset.redevRightsValue,
     asset.redevManagementDisposalHousingPrice,
     asset.redevAcquisitionHousingPrice,
@@ -115,8 +114,6 @@ export function RedevelopmentValuationSection({ asset, onChange, isFractionalSpl
     asset.redevBuildingStdPriceAtAcq,
     asset.redevLandPricePerSqmAtFirst,
     asset.redevBuildingStdPriceAtFirst,
-    acqRefDate,
-    asset.redevFirstDisclosureDate,
   ]);
 
   // ── 사례 37 — 토지 출자 §166③ 환산 미리보기 (land 분기) ──
