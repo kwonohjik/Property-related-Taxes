@@ -19,6 +19,7 @@ import { TRANSFER_DECREE_NBL_HO_ADDITIONS } from "./manifest/additions-transfer-
 import { TRANSFER_NEW_HOUSING_ADDITIONS } from "./manifest/additions-transfer-new-housing";
 import { TRANSFER_NEW_HOUSING_994_5_ADDITIONS } from "./manifest/additions-transfer-new-housing-994-5";
 import { TRANSFER_FOREIGN_REALESTATE_ADDITIONS } from "./manifest/additions-transfer-foreign-realestate";
+import { TRANSFER_EXIT_2027_ADDITIONS } from "./manifest/additions-transfer-exit-2027";
 import { INHERITANCE_ADDITIONS } from "./manifest/additions-inheritance";
 import { INHERITANCE_DECREE_ADDITIONS } from "./manifest/additions-inheritance-decree";
 import { LOCAL_ADDITIONS } from "./manifest/additions-local";
@@ -337,6 +338,7 @@ export const VERIFICATION_MANIFEST: VerificationRule[] = [
   ...TRANSFER_NEW_HOUSING_ADDITIONS,
   ...TRANSFER_NEW_HOUSING_994_5_ADDITIONS,
   ...TRANSFER_FOREIGN_REALESTATE_ADDITIONS,
+  ...TRANSFER_EXIT_2027_ADDITIONS,
   ...INHERITANCE_ADDITIONS,
   ...INHERITANCE_DECREE_ADDITIONS,
   ...LOCAL_ADDITIONS,
