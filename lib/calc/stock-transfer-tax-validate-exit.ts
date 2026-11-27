@@ -10,7 +10,12 @@
  *   - etIsMajorShareholder ?? false
  *   - etHasFiledHoldingsReport ?? false
  *   - holding.marketType || "kospi"
- *   - holding.departureDayValuationMode || "market_price"
+ *   - holding.departureDayValuationMode || "market_price" (국외주식 행은 "foreign_market_price")
+ *   - holding.isListedForeignCorp ?? true · countryCode || "US" · foreignCurrencyCode || "USD" (④와 동일 — 계산 무영향·표시용은 검증하지 않는다)
+ *   - etForeignWorkerStatus || "none"
+ *
+ * 2027.1.1. 이후 출국분: 입력 결함 판정은 **엔진**이 한다(`findExitTaxFormProblem` — ⑫ Zod와 같은 단일 소스).
+ *   이 파일은 «칸 단위 필수 입력»(빈 값·형식)만 직접 검사하고, 통과한 뒤 엔진 판정을 한 번 더 돌려 같은 사유로 막는다.
  *
  * 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback):
  *   시가 모드별 필수 입력 빈값 → 명확한 오류로 차단. 자동 채우기 금지.
@@ -18,8 +23,17 @@
  * 법령: 소득세법 §118의9~§118의16 (2026.4.21. 시행)
  */
 
-import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import type { ExitTaxHoldingForm, StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import type { StockValidationError } from "./stock-transfer-tax-validate";
+import { isExitTaxFrom2027 } from "@/lib/tax-engine/data/exit-tax-2027-era";
+import { isForeignValuationMode } from "@/lib/tax-engine/stock-transfer/exit-tax-fx";
+import { EXIT_TAX_MAJOR_SHAREHOLDER_FOREIGN_NOTE } from "./exit-tax-2027-copy";
+import {
+  exitTaxProblemField,
+  exitTaxProblemStep,
+  findExitTaxFormProblem,
+} from "./stock-transfer-exit-tax-input-problem";
+import { previewExitTaxBuckets } from "./stock-transfer-tax-api-foreign-exit";
 
 function isEmpty(s: string | undefined): boolean {
   return !s || s.trim() === "";
@@ -90,7 +104,9 @@ export function validateStep1ExitTax(form: StockTransferFormData): StockValidati
     errors.push({
       field: "etIsMajorShareholder",
       message:
-        "직전 연도말 기준 대주주에 해당하지 않으면 국외전출세 납세의무가 없습니다 (§118의9①2호 → §178의8 준용 §167의8). 대주주인 경우 체크하세요.",
+        "직전 연도말 기준 대주주에 해당하지 않으면 국외전출세 납세의무가 없습니다 (§118의9①2호 → §178의8 준용 §167의8). 대주주인 경우 체크하세요." +
+        // 2027.1.1. 이후 출국분 — UI 토글 설명과 같은 문구 상수(`exit-tax-2027-copy`)
+        (isExitTaxFrom2027(form.etDepartureDate) ? ` ${EXIT_TAX_MAJOR_SHAREHOLDER_FOREIGN_NOTE}.` : ""),
       severity: "warning",
     });
   }
@@ -103,6 +119,109 @@ export function validateStep1ExitTax(form: StockTransferFormData): StockValidati
    */
 
   return errors;
+}
+
+// ============================================================
+// 2027.1.1. 이후 출국분 — 국외주식 종목 · 외국인근로자 · 엔진 판정 (⑧)
+// ============================================================
+
+/**
+ * 국외주식 외화 경로 종목 1건의 칸 단위 검증. 환율·외화 단가 빈값은 **대체하지 않고 차단**한다(자동 환산·보간 없음).
+ * 환율 소수 자릿수·원화/외화 혼용 같은 «판정»은 엔진(`findExitTaxFormProblem`)이 한다 — 여기서 다시 구현하지 않는다.
+ * 시가 > 0 / 취득단가 ≥ 0 은 국내 원화 경로(위)와 같은 규칙이다(UI 쪽 입력 완결성 — 엔진은 0도 받는다).
+ */
+function validateForeignHoldingRow(
+  h: ExitTaxHoldingForm,
+  i: number,
+  prefix: string,
+  departureDate: string,
+): StockValidationError[] {
+  const errors: StockValidationError[] = [];
+  const at = (key: keyof ExitTaxHoldingForm) => `etHoldings[${i}].${key}`;
+  if (isEmpty(h.departureDayPriceForeign) || parseF(h.departureDayPriceForeign) <= 0) {
+    errors.push({
+      field: at("departureDayPriceForeign"),
+      message: `${prefix}: 출국일 시가(외화 1주당)를 입력하세요 — 자동 환산·안분 불가, 직접 입력 필수`,
+      severity: "error",
+    });
+  }
+  if (isEmpty(h.departureExchangeRate) || parseF(h.departureExchangeRate) <= 0) {
+    errors.push({
+      field: at("departureExchangeRate"),
+      message: `${prefix}: 출국일 기준환율(원/외화)을 입력하세요 — 대체 환율을 쓰지 않습니다`,
+      severity: "error",
+    });
+  }
+  if (isEmpty(h.perShareAcquisitionPriceForeign) || parseF(h.perShareAcquisitionPriceForeign) < 0) {
+    errors.push({
+      field: at("perShareAcquisitionPriceForeign"),
+      message: `${prefix}: 취득가액(외화 1주당)을 입력하세요`,
+      severity: "error",
+    });
+  }
+  if (isEmpty(h.acquisitionExchangeRate) || parseF(h.acquisitionExchangeRate) <= 0) {
+    errors.push({
+      field: at("acquisitionExchangeRate"),
+      message: `${prefix}: 취득일 기준환율(원/외화)을 입력하세요 — 대체 환율을 쓰지 않습니다`,
+      severity: "error",
+    });
+  }
+  // 취득일이 출국일보다 늦을 수 없다(두 날짜가 모두 있을 때만 — 빈 날짜는 각 칸 검증이 잡는다). ISO 문자열 비교는 `YYYY-MM-DD` 고정 형식이라 안전하다
+  if (!isEmpty(h.acquisitionDate) && !isEmpty(departureDate) && h.acquisitionDate > departureDate) {
+    errors.push({
+      field: at("acquisitionDate"),
+      message: `${prefix}: 취득일이 출국일보다 늦습니다`,
+      severity: "error",
+    });
+  }
+  return errors;
+}
+
+/**
+ * 외국인근로자(영 §178의8②2·3호) 칸 검증 — ④가 싣는 조건(출국일 2027.1.1. 이후 + 국외주식 종목 있음)과 **같은 조건**에서만 본다.
+ * 가족이면 가족 구분·근로 개시일 필수(선택을 대신하지 않는다), 근로 개시일은 출국일보다 늦을 수 없다.
+ */
+function validateForeignWorker(form: StockTransferFormData): StockValidationError[] {
+  const hasForeignRow = (form.etHoldings ?? []).some((h) => h.marketType === "foreign_stock");
+  if (!isExitTaxFrom2027(form.etDepartureDate) || !hasForeignRow) return [];
+  const status = form.etForeignWorkerStatus || "none"; // 3중 패턴 default
+  if (status !== "foreign_worker_family") return [];
+  const errors: StockValidationError[] = [];
+  if (!form.etForeignWorkerFamilyKind) {
+    errors.push({
+      field: "etForeignWorkerFamilyKind",
+      message: "외국인근로자의 배우자인지, 20세 이하 직계비속인지 선택하세요 (시행령 §178의8②3호)",
+      severity: "error",
+    });
+  }
+  if (isEmpty(form.etForeignWorkerStartDate)) {
+    errors.push({
+      field: "etForeignWorkerStartDate",
+      message: "외국인근로자가 국내에서 근로를 제공하기 시작한 날을 입력하세요 — 이 날 전에 취득한 종목만 제외됩니다 (시행령 §178의8②3호)",
+      severity: "error",
+    });
+  } else if (!isEmpty(form.etDepartureDate) && form.etForeignWorkerStartDate > form.etDepartureDate) {
+    errors.push({
+      field: "etForeignWorkerStartDate",
+      message: "근로 개시일이 출국일보다 늦습니다",
+      severity: "error",
+    });
+  }
+  return errors;
+}
+
+/** 엔진 입력 결함 판정(⑫와 단일 소스)을 이 «단계»의 검증 오류로 바꾼다 — 단계 분배는 `exitTaxProblemStep` */
+function engineProblemErrors(form: StockTransferFormData, step: 2 | 3): StockValidationError[] {
+  const problem = findExitTaxFormProblem(form);
+  if (!problem || exitTaxProblemStep(problem) !== step) return [];
+  const taxed = previewExitTaxBuckets(form) ?? [];
+  const allocFallback =
+    taxed[0] === "clause2a"
+      ? "etBasicDeductionAllocClause2a"
+      : taxed[0] === "clause2b"
+        ? "etBasicDeductionAllocClause2b"
+        : "etBasicDeductionAllocClause1";
+  return [{ field: exitTaxProblemField(problem, form, allocFallback), message: problem.message, severity: "error" }];
 }
 
 // ============================================================
@@ -131,6 +250,10 @@ export function validateStep2ExitTax(form: StockTransferFormData): StockValidati
 
   form.etHoldings.forEach((h, i) => {
     const prefix = `종목 ${i + 1}`;
+    const isForeignRow = h.marketType === "foreign_stock";
+    // 출국일 시가 — 모드별 필수 입력 (자동 안분 fallback 금지)
+    const mode = h.departureDayValuationMode || (isForeignRow ? "foreign_market_price" : "market_price"); // 3중 패턴 default
+    const foreignMode = isForeignValuationMode(mode);
 
     if (isEmpty(h.stockName)) {
       errors.push({ field: `etHoldings[${i}].stockName`, message: `${prefix}: 종목명을 입력하세요`, severity: "error" });
@@ -141,12 +264,16 @@ export function validateStep2ExitTax(form: StockTransferFormData): StockValidati
     if (isEmpty(h.acquisitionDate)) {
       errors.push({ field: `etHoldings[${i}].acquisitionDate`, message: `${prefix}: 취득일을 입력하세요`, severity: "error" });
     }
-    if (isEmpty(h.perShareAcquisitionPrice) || parseI(h.perShareAcquisitionPrice) < 0) {
+    // 원화 취득단가 — 외화 경로 종목은 이 칸이 없다(④가 0으로 보낸다)
+    if (!foreignMode && (isEmpty(h.perShareAcquisitionPrice) || parseI(h.perShareAcquisitionPrice) < 0)) {
       errors.push({ field: `etHoldings[${i}].perShareAcquisitionPrice`, message: `${prefix}: 1주당 취득가액을 입력하세요 (원)`, severity: "error" });
     }
 
-    // 출국일 시가 — 모드별 필수 입력 (자동 안분 fallback 금지)
-    const mode = h.departureDayValuationMode || "market_price"; // 3중 패턴 default
+    if (foreignMode) {
+      errors.push(...validateForeignHoldingRow(h, i, prefix, form.etDepartureDate));
+      return;
+    }
+
     if (mode === "market_price") {
       if (isEmpty(h.departureDayMarketPrice) || parseI(h.departureDayMarketPrice) <= 0) {
         errors.push({
@@ -181,6 +308,10 @@ export function validateStep2ExitTax(form: StockTransferFormData): StockValidati
       }
     }
   });
+
+  errors.push(...validateForeignWorker(form));
+  // 칸 단위 결함이 없으면 엔진 판정(⑫ Zod와 같은 단일 소스)을 한 번 더 돌린다 — 종목·외국인근로자 사유만 이 단계에서 막는다
+  if (!errors.some((e) => e.severity === "error")) errors.push(...engineProblemErrors(form, 2));
 
   return errors;
 }
@@ -305,6 +436,9 @@ export function validateStep3ExitTax(form: StockTransferFormData): StockValidati
       });
     }
   }
+
+  // 엔진 판정(⑫ Zod와 단일 소스) — 기본공제 배분·경정청구 범위 등 3단계 사유. 칸 단위 결함이 없을 때만 돌린다
+  if (!errors.some((e) => e.severity === "error")) errors.push(...engineProblemErrors(form, 3));
 
   return errors;
 }

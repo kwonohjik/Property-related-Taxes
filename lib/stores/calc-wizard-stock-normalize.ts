@@ -22,7 +22,7 @@ import {
   type SpecificMatchingForm,
   createInitialStockFormData,
 } from "./calc-wizard-stock-store";
-import { normalizeExitTaxHoldings } from "./calc-wizard-stock-normalize-exit";
+import { normalizeExitTaxFormExtras, normalizeExitTaxHoldings } from "./calc-wizard-stock-normalize-exit";
 
 // ============================================================
 // normalize — sessionStorage 마이그레이션 호환 (③ 동기화 지점)
@@ -517,6 +517,8 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     etReenteredWithin5Years: boolField("etReenteredWithin5Years", defaults.etReenteredWithin5Years),
     etDeferralInterestDays: strField("etDeferralInterestDays"),
     etDeferralInterestDailyRate: strField("etDeferralInterestDailyRate"),
+    // 2027.1.1. 이후 출국분 — 외국인근로자(영 §178의8②2·3호) · 기본공제 배분(§118의10④)
+    ...normalizeExitTaxFormExtras(d, defaults),
 
     // ── PR-4A 해외주식 전용 필드 (③ 동기화 지점 — sessionStorage 마이그레이션 호환) ──
     yearsResidentInKorea: strField("yearsResidentInKorea"),

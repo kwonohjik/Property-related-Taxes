@@ -13,12 +13,19 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { DateInput } from "@/components/ui/date-input";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { EXIT_TAX_MAJOR_SHAREHOLDER_FOREIGN_NOTE } from "@/lib/calc/exit-tax-2027-copy";
+import { isExitTaxFrom2027 } from "@/lib/tax-engine/data/exit-tax-2027-era";
 import { SectionBox, type StockStepBlockProps } from "./stock-section-box";
 
 export function ExitTaxIdentityBlock({ form, onChange }: StockStepBlockProps) {
   // 5년 미만 거주 경고 조건
   const residencyYears = parseDecimal(form.etYearsResidentLast10);
   const isResidencyShort = form.etYearsResidentLast10 !== "" && residencyYears < 5;
+  // 출국일에서 곧바로 파생 — store에 쓰지 않는다. 2027.1.1. 이후일 때만 안내 2곳이 마운트된다(그 전은 DOM 불변)
+  const era = isExitTaxFrom2027(form.etDepartureDate);
+  const majorDescription =
+    "§178의8 → §167의8 준용 — 출국일이 속하는 연도 직전 연도말 기준으로 대주주 요건에 해당하는 경우 과세됩니다. 자기 판정하여 입력하세요.";
 
   return (
     <div className="space-y-5">
@@ -69,13 +76,22 @@ export function ExitTaxIdentityBlock({ form, onChange }: StockStepBlockProps) {
             onChange={(v) => onChange({ etDepartureDate: v })}
           />
         </FieldCard>
+
+        {era && (
+          <ToneCard tone="sky" bodyClassName="space-y-1">
+            <p className="text-xs leading-relaxed text-sky-700 dark:text-sky-300" data-testid="exit-era-identity-note">
+              2027.1.1. 이후 출국분부터 국외주식등(§94①3호 다목)도 국외전출자 주식등에 포함되고, 세율은 §118의11 호별로 나뉩니다
+              (1호 국내 주식 · 2호 가목 중소기업 10% · 2호 나목 그 밖 20%). 적용 기준은 실제 양도일이 아니라 출국일입니다.
+            </p>
+          </ToneCard>
+        )}
       </SectionBox>
 
       {/* ── 섹션 3: 대주주 요건 (§178의8) ── */}
       <SectionBox n={3} label="대주주 요건 (§178의8 → §167의8 준용)" tone="violet">
         <ToggleCard
           title="직전 연도말 대주주 해당"
-          description="§178의8 → §167의8 준용 — 출국일이 속하는 연도 직전 연도말 기준으로 대주주 요건에 해당하는 경우 과세됩니다. 자기 판정하여 입력하세요."
+          description={era ? `${majorDescription} ${EXIT_TAX_MAJOR_SHAREHOLDER_FOREIGN_NOTE}.` : majorDescription}
           checked={form.etIsMajorShareholder}
           onCheckedChange={(v) => onChange({ etIsMajorShareholder: v })}
           tone="violet"

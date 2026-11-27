@@ -20,6 +20,12 @@ const ENUM_NON_DEFAULT: Record<string, string> = {
   marketType: "konex",
   departureDayValuationMode: "unlisted_std",
 };
+/** 2027.1.1. 이후 출국 · 국외주식 열거값 */
+const ENUM_NON_DEFAULT_2027: Record<string, string> = {
+  marketType: "foreign_stock",
+  departureDayValuationMode: "foreign_decree_178_3",
+};
+
 function filled(enums: Record<string, string>): ExitTaxHoldingForm {
   const base = createEmptyExitTaxHolding();
   const out: Record<string, unknown> = {};
@@ -42,6 +48,35 @@ describe("normalizeExitTaxHoldings 왕복", () => {
   it("R-2 기본값과 다른 유효값 왕복 — 국내 열거값", () => {
     const input = filled(ENUM_NON_DEFAULT);
     expect(normalizeExitTaxHoldings([input])).toEqual([input]);
+  });
+
+  it("R-2 기본값과 다른 유효값 왕복 — 2027 국외주식 열거값·외화 필드", () => {
+    const input = filled(ENUM_NON_DEFAULT_2027);
+    expect(normalizeExitTaxHoldings([input])).toEqual([input]);
+  });
+
+  it("R-4 시장과 어긋난 시가 모드는 그 시장의 기본 모드로 되돌린다 (깨진 세션 복구)", () => {
+    const base = createEmptyExitTaxHolding();
+    const [domesticWithForeignMode] = normalizeExitTaxHoldings([
+      { ...base, id: "a", marketType: "kosdaq", departureDayValuationMode: "foreign_market_price" },
+    ]);
+    expect(domesticWithForeignMode.departureDayValuationMode).toBe("market_price");
+    const [foreignWithDomesticMode] = normalizeExitTaxHoldings([
+      { ...base, id: "b", marketType: "foreign_stock", departureDayValuationMode: "unlisted_std" },
+    ]);
+    expect(foreignWithDomesticMode.departureDayValuationMode).toBe("foreign_market_price");
+  });
+
+  it("R-5 외화 필드 빈 기본값은 factory와 같다 — 국가 US · 통화 USD · 외국법인 true · 중소기업 false", () => {
+    const [n] = normalizeExitTaxHoldings([{ id: "old" }]);
+    expect(n.countryCode).toBe("US");
+    expect(n.foreignCurrencyCode).toBe("USD");
+    expect(n.isListedForeignCorp).toBe(true);
+    expect(n.isSmallMediumEnterprise).toBe(false);
+    // 빈 문자열이 저장돼 있었어도 기본값으로 복귀(3중 패턴 — `||` 표시 fallback과 같은 값)
+    const [m] = normalizeExitTaxHoldings([{ id: "old2", countryCode: "", foreignCurrencyCode: "" }]);
+    expect(m.countryCode).toBe("US");
+    expect(m.foreignCurrencyCode).toBe("USD");
   });
 
   it("R-3 키가 없던 구 세션 행은 팩토리 기본값으로 채운다", () => {

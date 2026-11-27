@@ -1,0 +1,390 @@
+<div class="space-y-5">
+<div class="rounded-lg border space-y-3 border-amber-200 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-900/15 p-4">
+<div class="flex items-center gap-2">
+<span class="flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none bg-amber-200 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">1</span>
+<p class="text-xs font-semibold text-amber-700 dark:text-amber-300">보유 종목 — 간주양도 대상 (§178의9)</p>
+</div>
+<p class="text-xs text-amber-700 leading-relaxed dark:text-amber-300">§118의9①: §94①3호 가·나목(상장·비상장 주식) <strong>및 §94①4호 다·라목(기타자산: 비상장 과점주주·부동산과다보유법인)</strong> 보유 종목별로 입력하세요. 기타자산 다·라목도 §94①4 주식이므로 ‘비상장’으로 입력하면 동일 흐름(출국일 시가 × 주수 − 취득가 + §118의11 세율)으로 계산됩니다. 각 종목의 출국일 시가(간주양도가액 = 시가 × 주수)가 양도차익 계산에 사용됩니다.<span data-testid="exit-era-holdings-note"> 출국일이 2027.1.1. 이후라 §94①3호 다목 국외주식등도 대상입니다 — 시장에서 <strong>«국외주식»</strong>을 고르고 외화 단가와 기준환율로 입력하세요.</span>
+</p>
+<div class="space-y-4">
+<div class="rounded-lg border p-3 space-y-3 border-amber-200 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-900/15">
+<div class="flex items-center gap-2">
+<span class="flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none bg-amber-200 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">1</span>
+<p class="text-xs font-semibold text-amber-700 dark:text-amber-300">F1 국외주식</p>
+<button type="button" class="ml-auto text-xs text-rose-700 hover:text-rose-800 font-medium px-2 py-0.5 rounded hover:bg-rose-50 transition-colors dark:text-rose-400">삭제</button>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">종목명 *</label>
+<input type="text" placeholder="종목명 입력" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value="F1 국외주식"/>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">종목코드·사업자등록번호</label>
+<input type="text" placeholder="신고서 ⑩ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value=""/>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">1주당 액면가 (원)</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_kaj9_" type="text" inputMode="numeric" placeholder="신고서 ⑫ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value=""/>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">보유 지분율 (%)</label>
+<input type="text" placeholder="신고서 ⑬ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value=""/>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">시장</label>
+<div class="grid grid-cols-5 gap-1">
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">코스피</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">코스닥</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">코넥스</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">비상장</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-400 bg-amber-100 text-amber-800">국외주식</button>
+</div>
+</div>
+<div class="space-y-3" data-testid="exit-foreign-holding-fields">
+<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+<div data-slot="field-card" class="rounded-lg border bg-card px-4 py-3 grid gap-1.5">
+<label class="flex items-start gap-1 text-sm font-medium pt-1">
+<span class="leading-tight">발행국가</span>
+</label>
+<div class="min-w-0 space-y-1.5">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<select class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+<option value="US" selected="">미국 (USD)</option>
+<option value="JP">일본 (JPY)</option>
+<option value="CN">중국 (CNY)</option>
+<option value="HK">홍콩 (HKD)</option>
+<option value="GB">영국 (GBP)</option>
+<option value="DE">독일 (EUR)</option>
+<option value="FR">프랑스 (EUR)</option>
+<option value="OTHER">기타</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<div data-slot="field-card" class="rounded-lg border bg-card px-4 py-3 grid gap-1.5">
+<label class="flex items-start gap-1 text-sm font-medium pt-1">
+<span class="leading-tight">통화</span>
+</label>
+<div class="min-w-0 space-y-1.5">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<select class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400">
+<option value="USD" selected="">USD — 미국 달러</option>
+<option value="JPY">JPY — 일본 엔</option>
+<option value="EUR">EUR — 유로</option>
+<option value="HKD">HKD — 홍콩 달러</option>
+<option value="CNY">CNY — 중국 위안</option>
+<option value="GBP">GBP — 영국 파운드</option>
+<option value="OTHER">기타 (직접 입력)</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div data-slot="toggle-card" data-variant="card" data-testid="exit-foreign-corp-toggle" data-checked="true" class="rounded-lg border transition-colors px-3 py-2 border-sky-300 bg-sky-50/70 ring-1 ring-sky-200/50 dark:border-sky-700/60 dark:bg-sky-950/30 dark:ring-sky-800/30">
+<label class="flex items-center justify-between gap-3 select-none cursor-pointer">
+<div class="min-w-0 flex-1">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-sm text-sky-900 dark:text-sky-200">
+<span>외국법인 발행 주식</span>
+</div>
+<div class="mt-0.5 text-xs leading-snug text-sky-700 dark:text-sky-400">ON = §157의3 1호(외국법인 발행 주식). OFF = §157의3 2호(내국법인 발행 주식, 해외 증권시장 상장). 둘 다 §94①3호 다목 국외주식등이지만 중소기업 10%(§118의11 2호 가목)는 내국법인(2호)만 해당됩니다.</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<span data-checked="" role="switch" tabindex="0" id="base-ui-_R_197ej9_" aria-checked="true" data-slot="switch" data-size="sm" aria-label="외국법인 발행 주식" class="peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50">
+<span data-checked="" data-slot="switch-thumb" class="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground">
+</span>
+</span>
+<input id="base-ui-_R_197ej9H1_" style="clip-path:inset(50%);overflow:hidden;white-space:nowrap;border:0;padding:0;width:1px;height:1px;margin:-1px;position:fixed;top:0;left:0" tabindex="-1" type="checkbox" aria-hidden="true" checked=""/>
+</div>
+</label>
+</div>
+<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+<div data-slot="field-card" data-field="etHoldings[0].shareCount" class="rounded-lg border bg-card px-4 py-3 grid gap-1.5">
+<label class="flex items-start gap-1 text-sm font-medium pt-1">
+<span class="text-destructive" aria-hidden="true">*</span>
+<span class="leading-tight">주식수</span>
+</label>
+<div class="min-w-0 space-y-1.5">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_5hbej9_" type="text" inputMode="numeric" placeholder="보유 주식수 (주)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="1,000"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div data-slot="field-card" data-field="etHoldings[0].acquisitionDate" class="rounded-lg border bg-card px-4 py-3 grid gap-1.5">
+<label class="flex items-start gap-1 text-sm font-medium pt-1">
+<span class="text-destructive" aria-hidden="true">*</span>
+<span class="leading-tight">취득일</span>
+</label>
+<div class="min-w-0 space-y-1.5">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<div class="flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring">
+<input type="text" inputMode="numeric" placeholder="YYYY" maxLength="4" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-12" aria-label="연도" value="2018"/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="MM" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="월" value="1"/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="DD" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="일" value="1"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div data-slot="field-card" data-field="etHoldings[0].perShareAcquisitionPriceForeign" class="rounded-lg border bg-card px-4 py-3 grid gap-1.5">
+<label class="flex items-start gap-1 text-sm font-medium pt-1">
+<span class="text-destructive" aria-hidden="true">*</span>
+<span class="leading-tight">취득가액 (외화 1주당)</span>
+</label>
+<div class="min-w-0 space-y-1.5">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<div class="relative">
+<input type="text" inputMode="decimal" placeholder="1주당 외화 취득가액" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="400"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div data-slot="field-card" data-field="etHoldings[0].acquisitionExchangeRate" class="rounded-lg border bg-card px-4 py-3 grid gap-1.5">
+<label class="flex items-start gap-1 text-sm font-medium pt-1">
+<span class="text-destructive" aria-hidden="true">*</span>
+<span class="leading-tight">취득일 기준환율 (원/외화)</span>
+</label>
+<div class="min-w-0 space-y-1.5">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<div class="relative">
+<input type="text" inputMode="decimal" placeholder="취득일 기준환율" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="1,200"/>
+</div>
+</div>
+</div>
+<p class="text-xs text-muted-foreground">외국환거래법에 따른 기준환율(없으면 재정환율)입니다 — 대고객 매입률·매도율이 아닙니다. 환산 기준일은 법령에 명시가 없어 확인 필요로 고지됩니다.</p>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">출국일 시가 산정 방법 (§178의9 · 영 §178의3)</label>
+<div data-slot="radio-card-group" data-layout="stack" class="space-y-2">
+<label data-checked="true" class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-f1" checked="" value="foreign_market_price"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>출국일 거래가액</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§178의9① — 출국일 당시 거래가액(외화 1주당)</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-f1" value="foreign_decree_178_3"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>시행령 §178의3 시가</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§178의9②3호 — 영 §178의3에 따라 산정한 시가(외화 1주당)를 직접 입력</p>
+</div>
+</label>
+</div>
+<p class="text-caption text-gray-600 dark:text-gray-400">비상장 국외주식의 보충적 평가(순손익·순자산)는 입력받지 않습니다 — 영 §178의3으로 산정한 시가를 외화 1주당으로 직접 입력하세요.</p>
+</div>
+<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+<div data-slot="field-card" data-field="etHoldings[0].departureDayPriceForeign" class="rounded-lg border bg-card px-4 py-3 grid gap-1.5">
+<label class="flex items-start gap-1 text-sm font-medium pt-1">
+<span class="text-destructive" aria-hidden="true">*</span>
+<span class="leading-tight">출국일 시가 (외화 1주당)</span>
+</label>
+<div class="min-w-0 space-y-1.5">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<div class="relative">
+<input type="text" inputMode="decimal" placeholder="출국일 1주당 외화 시가" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="1,000"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div data-slot="field-card" data-field="etHoldings[0].departureExchangeRate" class="rounded-lg border bg-card px-4 py-3 grid gap-1.5">
+<label class="flex items-start gap-1 text-sm font-medium pt-1">
+<span class="text-destructive" aria-hidden="true">*</span>
+<span class="leading-tight">출국일 기준환율 (원/외화)</span>
+</label>
+<div class="min-w-0 space-y-1.5">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<div class="relative">
+<input type="text" inputMode="decimal" placeholder="출국일 기준환율" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="1,400"/>
+</div>
+</div>
+</div>
+<p class="text-xs text-muted-foreground">외국환거래법에 따른 기준환율(없으면 재정환율)입니다 — 대고객 매입률·매도율이 아닙니다. 환산 기준일은 법령에 명시가 없어 확인 필요로 고지됩니다.</p>
+</div>
+</div>
+</div>
+<div class="rounded bg-amber-100/60 border border-amber-200 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-900/40" data-testid="exit-foreign-preview-chip">간주양도가액 참고 (원화 환산): 외화 시가 × 출국일 기준환율 × 주식수 = <span class="font-semibold">1,400,000,000</span>
+</div>
+</div>
+</div>
+<button type="button" class="w-full rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/30 py-3 text-sm font-medium text-amber-700 hover:bg-amber-50/60 transition-colors dark:text-amber-300 dark:bg-amber-950/40">+ 종목 추가</button>
+</div>
+</div>
+<div class="rounded-lg border space-y-3 border-violet-200 bg-violet-50/40 dark:border-violet-800 dark:bg-violet-900/15 p-4">
+<div class="flex items-center gap-2">
+<p class="text-xs font-semibold text-violet-700 dark:text-violet-300">국외주식등 제외 — 외국인근로자 (시행령 §178의8②)</p>
+</div>
+<p class="text-xs leading-relaxed text-violet-700 dark:text-violet-300">출국 당시 소유한 국외주식등의 양도가액 합계가 <strong>5억원 이하</strong>이면 국외전출자 주식등에서 제외됩니다(§178의8②1호) — 입력은 없고 판정은 계산 결과에 표시됩니다. 아래는 외국인근로자 제외(§178의8②2·3호)이며, 요건은 직접 판단해 선택합니다.</p>
+<div data-slot="radio-card-group" data-layout="stack" data-field="etForeignWorkerStatus" class="space-y-2">
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-violet-200/70 bg-violet-50/70 hover:border-violet-300 dark:border-violet-800/40 dark:bg-violet-950/20 has-[:checked]:border-violet-300 has-[:checked]:bg-violet-100/70 has-[:checked]:ring-1 has-[:checked]:ring-violet-200/50 dark:has-[:checked]:border-violet-700/60 dark:has-[:checked]:bg-violet-950/40 dark:has-[:checked]:ring-violet-800/30 has-[:checked]:text-violet-900 has-[:checked]:font-semibold dark:has-[:checked]:text-violet-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-violet-600" name="exit-foreign-worker-status" value="none"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>해당 없음</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">외국인근로자 제외를 적용하지 않습니다 (기본값)</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-violet-200/70 bg-violet-50/70 hover:border-violet-300 dark:border-violet-800/40 dark:bg-violet-950/20 has-[:checked]:border-violet-300 has-[:checked]:bg-violet-100/70 has-[:checked]:ring-1 has-[:checked]:ring-violet-200/50 dark:has-[:checked]:border-violet-700/60 dark:has-[:checked]:bg-violet-950/40 dark:has-[:checked]:ring-violet-800/30 has-[:checked]:text-violet-900 has-[:checked]:font-semibold dark:has-[:checked]:text-violet-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-violet-600" name="exit-foreign-worker-status" value="foreign_worker"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>외국인근로자 본인 (§178의8②2호)</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">외국인 임원·사용인이 소유한 국외주식등 — 아래 요건 4개를 모두 선택한 경우에만 제외됩니다</p>
+</div>
+</label>
+<label data-checked="true" class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-violet-200/70 bg-violet-50/70 hover:border-violet-300 dark:border-violet-800/40 dark:bg-violet-950/20 has-[:checked]:border-violet-300 has-[:checked]:bg-violet-100/70 has-[:checked]:ring-1 has-[:checked]:ring-violet-200/50 dark:has-[:checked]:border-violet-700/60 dark:has-[:checked]:bg-violet-950/40 dark:has-[:checked]:ring-violet-800/30 has-[:checked]:text-violet-900 has-[:checked]:font-semibold dark:has-[:checked]:text-violet-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-violet-600" name="exit-foreign-worker-status" checked="" value="foreign_worker_family"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>외국인근로자의 배우자·20세 이하 직계비속 (§178의8②3호)</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">근로자가 국내에서 근로를 제공하기 시작한 날 전에 취득한 국외주식등만 제외됩니다</p>
+</div>
+</label>
+</div>
+<div class="space-y-2" data-testid="exit-foreign-worker-checks">
+<p class="text-xs font-medium text-violet-900 dark:text-violet-200">요건 (4개 모두 해당해야 제외) — 하나라도 해당하지 않으면 과세 대상으로 계산합니다</p>
+<div data-slot="toggle-card" data-variant="card" class="rounded-lg border transition-colors px-3 py-2 border-violet-200/70 bg-violet-50/70 hover:border-violet-300 dark:border-violet-800/40 dark:bg-violet-950/20">
+<label class="flex items-center justify-between gap-3 select-none cursor-pointer">
+<div class="min-w-0 flex-1">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-sm">
+<span>외국인인 임원 또는 사용인</span>
+</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<span data-unchecked="" role="switch" tabindex="0" id="base-ui-_R_199q_" aria-checked="false" data-slot="switch" data-size="sm" aria-label="외국인인 임원 또는 사용인" class="peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50">
+<span data-unchecked="" data-slot="switch-thumb" class="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground">
+</span>
+</span>
+<input id="base-ui-_R_199qH1_" style="clip-path:inset(50%);overflow:hidden;white-space:nowrap;border:0;padding:0;width:1px;height:1px;margin:-1px;position:fixed;top:0;left:0" tabindex="-1" type="checkbox" aria-hidden="true"/>
+</div>
+</label>
+</div>
+<div data-slot="toggle-card" data-variant="card" class="rounded-lg border transition-colors px-3 py-2 border-violet-200/70 bg-violet-50/70 hover:border-violet-300 dark:border-violet-800/40 dark:bg-violet-950/20">
+<label class="flex items-center justify-between gap-3 select-none cursor-pointer">
+<div class="min-w-0 flex-1">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-sm">
+<span>일용근로자가 아님</span>
+</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<span data-unchecked="" role="switch" tabindex="0" id="base-ui-_R_19dq_" aria-checked="false" data-slot="switch" data-size="sm" aria-label="일용근로자가 아님" class="peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50">
+<span data-unchecked="" data-slot="switch-thumb" class="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground">
+</span>
+</span>
+<input id="base-ui-_R_19dqH1_" style="clip-path:inset(50%);overflow:hidden;white-space:nowrap;border:0;padding:0;width:1px;height:1px;margin:-1px;position:fixed;top:0;left:0" tabindex="-1" type="checkbox" aria-hidden="true"/>
+</div>
+</label>
+</div>
+<div data-slot="toggle-card" data-variant="card" class="rounded-lg border transition-colors px-3 py-2 border-violet-200/70 bg-violet-50/70 hover:border-violet-300 dark:border-violet-800/40 dark:bg-violet-950/20">
+<label class="flex items-center justify-between gap-3 select-none cursor-pointer">
+<div class="min-w-0 flex-1">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-sm">
+<span>출국일 10년 전부터 출국일까지 국내 거소·주소 기간의 100분의 80 이상 국내에서 근로를 제공</span>
+</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<span data-unchecked="" role="switch" tabindex="0" id="base-ui-_R_19hq_" aria-checked="false" data-slot="switch" data-size="sm" aria-label="출국일 10년 전부터 출국일까지 국내 거소·주소 기간의 100분의 80 이상 국내에서 근로를 제공" class="peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50">
+<span data-unchecked="" data-slot="switch-thumb" class="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground">
+</span>
+</span>
+<input id="base-ui-_R_19hqH1_" style="clip-path:inset(50%);overflow:hidden;white-space:nowrap;border:0;padding:0;width:1px;height:1px;margin:-1px;position:fixed;top:0;left:0" tabindex="-1" type="checkbox" aria-hidden="true"/>
+</div>
+</label>
+</div>
+<div data-slot="toggle-card" data-variant="card" class="rounded-lg border transition-colors px-3 py-2 border-violet-200/70 bg-violet-50/70 hover:border-violet-300 dark:border-violet-800/40 dark:bg-violet-950/20">
+<label class="flex items-center justify-between gap-3 select-none cursor-pointer">
+<div class="min-w-0 flex-1">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-sm">
+<span>국내에서 근로의 제공이 종료된 날부터 6개월 이내에 출국</span>
+</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<span data-unchecked="" role="switch" tabindex="0" id="base-ui-_R_19lq_" aria-checked="false" data-slot="switch" data-size="sm" aria-label="국내에서 근로의 제공이 종료된 날부터 6개월 이내에 출국" class="peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50">
+<span data-unchecked="" data-slot="switch-thumb" class="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground">
+</span>
+</span>
+<input id="base-ui-_R_19lqH1_" style="clip-path:inset(50%);overflow:hidden;white-space:nowrap;border:0;padding:0;width:1px;height:1px;margin:-1px;position:fixed;top:0;left:0" tabindex="-1" type="checkbox" aria-hidden="true"/>
+</div>
+</label>
+</div>
+</div>
+<div class="space-y-2" data-testid="exit-foreign-worker-family">
+<div data-slot="radio-card-group" data-layout="inline" data-field="etForeignWorkerFamilyKind" class="flex flex-wrap gap-2">
+<label data-checked="true" class="rounded-lg border transition-colors select-none inline-flex items-center gap-2 px-3 py-1.5 text-sm border-violet-200/70 bg-violet-50/70 hover:border-violet-300 dark:border-violet-800/40 dark:bg-violet-950/20 has-[:checked]:border-violet-300 has-[:checked]:bg-violet-100/70 has-[:checked]:ring-1 has-[:checked]:ring-violet-200/50 dark:has-[:checked]:border-violet-700/60 dark:has-[:checked]:bg-violet-950/40 dark:has-[:checked]:ring-violet-800/30 has-[:checked]:text-violet-900 has-[:checked]:font-semibold dark:has-[:checked]:text-violet-200 cursor-pointer">
+<input type="radio" class="h-4 w-4 shrink-0 accent-violet-600" name="exit-foreign-worker-family-kind" checked="" value="spouse"/>
+<span class="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+<span>외국인근로자의 배우자</span>
+</span>
+</label>
+<label class="rounded-lg border transition-colors select-none inline-flex items-center gap-2 px-3 py-1.5 text-sm border-violet-200/70 bg-violet-50/70 hover:border-violet-300 dark:border-violet-800/40 dark:bg-violet-950/20 has-[:checked]:border-violet-300 has-[:checked]:bg-violet-100/70 has-[:checked]:ring-1 has-[:checked]:ring-violet-200/50 dark:has-[:checked]:border-violet-700/60 dark:has-[:checked]:bg-violet-950/40 dark:has-[:checked]:ring-violet-800/30 has-[:checked]:text-violet-900 has-[:checked]:font-semibold dark:has-[:checked]:text-violet-200 cursor-pointer">
+<input type="radio" class="h-4 w-4 shrink-0 accent-violet-600" name="exit-foreign-worker-family-kind" value="child_20_or_under"/>
+<span class="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+<span>외국인근로자의 20세 이하 직계비속</span>
+</span>
+</label>
+</div>
+<div data-slot="field-card" data-field="etForeignWorkerStartDate" class="rounded-lg border bg-card px-4 py-3 grid gap-1.5">
+<label class="flex items-start gap-1 text-sm font-medium pt-1">
+<span class="text-destructive" aria-hidden="true">*</span>
+<span class="leading-tight">외국인근로자가 국내에서 근로를 제공하기 시작한 날</span>
+</label>
+<div class="min-w-0 space-y-1.5">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<div class="flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring">
+<input type="text" inputMode="numeric" placeholder="YYYY" maxLength="4" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-12" aria-label="연도" value=""/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="MM" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="월" value=""/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="DD" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="일" value=""/>
+</div>
+</div>
+</div>
+<p class="text-xs text-muted-foreground">종목 취득일이 이 날보다 앞서면 제외 대상입니다 (같은 날 취득은 제외되지 않습니다). 20세 이하 판정 시점은 법령에 명시가 없어 선택한 구분대로 처리하며 결과에서 확인 필요로 고지됩니다.</p>
+</div>
+</div>
+</div>
+</div>
+</div>

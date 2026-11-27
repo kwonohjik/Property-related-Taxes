@@ -32,6 +32,10 @@ import { isClause9Applicable } from "@/lib/calc/stock-other-asset-scope";
 import { ForeignStockExpenseBlock } from "@/components/calc/stock-transfer/ForeignStockExpenseBlock";
 import { ExitTaxSettlementBlock } from "@/components/calc/stock-transfer/ExitTaxSettlementBlock";
 import {
+  ExitTaxBasicDeductionAllocation,
+  ExitTaxBasicDeductionNote,
+} from "@/components/calc/stock-transfer/ExitTaxBasicDeductionAllocation";
+import {
   PenaltyDetailBlock,
   LatePaymentPenaltyBlock,
 } from "@/components/calc/stock-transfer/PenaltyDetailBlock";
@@ -308,20 +312,7 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
         <div className="space-y-3">
           <div className="rounded-lg border border-sky-200/60 bg-sky-50/60 px-4 py-3 text-sm text-sky-700 dark:text-sky-300 dark:bg-sky-950/40">
             {isExitTax ? (
-              <>
-                {/*
-                  🔴 국외전출세는 §103① 그룹이 **아니다** — 법 §118의10④가 「양도소득과세표준은
-                  제3항에 따른 양도소득금액에서 **연 250만원을 공제**한 금액으로 한다」고 따로 두고,
-                  같은 조 ⑤가 「…제92조제2항에 따른 양도소득과세표준과 **구분하여 계산**한다」고 못박는다.
-                  종전 문구(§103①2호 그룹)는 국내주식 양도분과 250만원을 나눠 쓴다는 **반대 사실**을 말했다.
-                */}
-                <p className="font-medium mb-1">국외전출세 기본공제 250만원 (§118의10④)</p>
-                <p className="text-xs">
-                  출국일 간주양도 소득금액에서 연 250만원을 공제합니다. 이 과세표준은 §92②의
-                  양도소득과세표준과 <strong>구분하여 계산</strong>하므로(§118의10⑤), 같은 해 주식
-                  양도분과 250만원을 나눠 쓰지 않습니다. 추가 입력이 없습니다.
-                </p>
-              </>
+              <ExitTaxBasicDeductionNote form={form} />
             ) : otherAssetGroup ? (
               <>
                 <p className="font-medium mb-1">부동산·기타자산 그룹 기본공제 250만원 (§103①1호)</p>
@@ -341,6 +332,9 @@ export function Step3({ form, onChange, savedItems = [] }: Step3Props) {
               </>
             )}
           </div>
+
+          {/* 과세 구분이 둘 이상일 때만 열리는 배분 입력(§118의10④ · 사용자 결정 C-1) — 아니면 null */}
+          {isExitTax && <ExitTaxBasicDeductionAllocation form={form} onChange={onChange} />}
 
           {/*
             🔒 §103①1호 그룹에서만 엔진이 소비한다 — 주식 그룹(2호)에서는 값을 넣어도

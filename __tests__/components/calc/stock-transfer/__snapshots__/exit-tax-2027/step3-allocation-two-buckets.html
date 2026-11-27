@@ -1,0 +1,215 @@
+<div class="space-y-8">
+<section>
+<h2 class="flex items-center gap-2 text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
+<span class="flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 text-white text-xs font-bold">1</span>정산·신고 항목 (§118의12~§118의17)</h2>
+<div class="space-y-5">
+<div class="rounded-lg border space-y-3 border-emerald-200 bg-emerald-50/40 dark:border-emerald-800 dark:bg-emerald-900/15 p-4">
+<div class="flex items-center gap-2">
+<p class="text-xs font-semibold text-emerald-700 dark:text-emerald-300">실양도 정보 — 경정청구용 (§118의12, 선택)</p>
+</div>
+<p class="text-xs text-emerald-700 leading-relaxed dark:text-emerald-300">납부유예 후 해외에서 실제로 양도한 경우, 실양도가액이 출국일 시가보다 낮으면 §118의12 조정공제를 통해 환급청구할 수 있습니다. 아직 실양도하지 않은 경우 비워두세요.</p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<div data-slot="field-card" class="rounded-lg border bg-card px-4 py-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start">
+<label class="flex items-start gap-1 text-sm font-medium pt-1 sm:pt-2 sm:min-w-[168px] sm:max-w-[240px]">
+<span class="leading-tight">실양도일</span>
+</label>
+<div class="min-w-0 space-y-1.5 sm:flex-[1_1_min-content]">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<div class="flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring">
+<input type="text" inputMode="numeric" placeholder="YYYY" maxLength="4" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-12" aria-label="연도" value=""/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="MM" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="월" value=""/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="DD" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="일" value=""/>
+</div>
+</div>
+</div>
+<p class="text-xs text-muted-foreground">해외에서 실제 주식을 양도한 날 (없으면 비워두세요)</p>
+</div>
+</div>
+<div data-slot="field-card" class="rounded-lg border bg-card px-4 py-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start">
+<label class="flex items-start gap-1 text-sm font-medium pt-1 sm:pt-2 sm:min-w-[168px] sm:max-w-[240px]">
+<span class="leading-tight">실양도 1주당 단가 (원화 환산)</span>
+</label>
+<div class="min-w-0 space-y-1.5 sm:flex-[1_1_min-content]">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_bahi_" type="text" inputMode="numeric" placeholder="없으면 비워두세요" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value=""/>
+</div>
+</div>
+</div>
+</div>
+<p class="text-xs text-muted-foreground">실제 양도한 1주당 원화 환산 단가. §118의12 조정공제 계산에 사용됩니다.</p>
+</div>
+</div>
+</div>
+</div>
+<div data-slot="toggle-card" data-variant="card" class="rounded-lg border transition-colors px-4 py-3 border-sky-200/70 bg-sky-50/70 hover:border-sky-300 dark:border-sky-800/40 dark:bg-sky-950/20">
+<label class="flex items-center justify-between gap-3 select-none cursor-pointer">
+<div class="min-w-0 flex-1">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-sm sm:text-base">
+<span>납부유예 신청 (§118의16)</span>
+</div>
+<div class="mt-0.5 text-xs leading-snug text-muted-foreground">§118의16 — 비거주자가 된 날로부터 5년(또는 10년) 범위에서 납부 유예 가능. 유예 신청 시 이자상당액 부담.</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<span class="text-xs text-sky-700 font-medium bg-sky-50 px-2 py-0.5 rounded">§118의16</span>
+<span data-unchecked="" role="switch" tabindex="0" id="base-ui-_R_aai_" aria-checked="false" data-slot="switch" data-size="default" aria-label="납부유예 신청 (§118의16)" class="peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50">
+<span data-unchecked="" data-slot="switch-thumb" class="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground">
+</span>
+</span>
+<input id="base-ui-_R_aaiH1_" style="clip-path:inset(50%);overflow:hidden;white-space:nowrap;border:0;padding:0;width:1px;height:1px;margin:-1px;position:fixed;top:0;left:0" tabindex="-1" type="checkbox" aria-hidden="true"/>
+</div>
+</label>
+</div>
+<div data-slot="toggle-card" data-variant="card" class="rounded-lg border transition-colors px-4 py-3 border-emerald-200/70 bg-emerald-50/70 hover:border-emerald-300 dark:border-emerald-800/40 dark:bg-emerald-950/20">
+<label class="flex items-center justify-between gap-3 select-none cursor-pointer">
+<div class="min-w-0 flex-1">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-sm sm:text-base">
+<span>5년 이내 재입국 거주자 (§118의17①1호)</span>
+</div>
+<div class="mt-0.5 text-xs leading-snug text-muted-foreground">출국일부터 5년 이내에 국외전출자 국내주식등을 양도하지 않고 국내에 다시 입국하여 거주자가 된 경우 — 납부세액 환급(납부 완료) 또는 납부유예 취소(유예 중) 예정액을 정보성으로 산출합니다. 실제 신청은 사유 발생일부터 1년 이내.</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<span class="text-xs text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded">§118의17</span>
+<span data-unchecked="" role="switch" tabindex="0" id="base-ui-_R_abi_" aria-checked="false" data-slot="switch" data-size="default" aria-label="5년 이내 재입국 거주자 (§118의17①1호)" class="peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50">
+<span data-unchecked="" data-slot="switch-thumb" class="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground">
+</span>
+</span>
+<input id="base-ui-_R_abiH1_" style="clip-path:inset(50%);overflow:hidden;white-space:nowrap;border:0;padding:0;width:1px;height:1px;margin:-1px;position:fixed;top:0;left:0" tabindex="-1" type="checkbox" aria-hidden="true"/>
+</div>
+</label>
+</div>
+<div data-slot="toggle-card" data-variant="card" class="rounded-lg border transition-colors px-4 py-3 border-violet-200/70 bg-violet-50/70 hover:border-violet-300 dark:border-violet-800/40 dark:bg-violet-950/20">
+<label class="flex items-center justify-between gap-3 select-none cursor-pointer">
+<div class="min-w-0 flex-1">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-sm sm:text-base">
+<span>외국납부세액 있음 (§118의13)</span>
+</div>
+<div class="mt-0.5 text-xs leading-snug text-muted-foreground">§118의13 — 납부유예 후 해외에서 실양도 시 외국에서 납부한 세액이 있는 경우. 배제 사유 없으면 산출세액에서 공제.</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<span class="text-xs text-violet-700 font-medium bg-violet-50 px-2 py-0.5 rounded">§118의13</span>
+<span data-unchecked="" role="switch" tabindex="0" id="base-ui-_R_aci_" aria-checked="false" data-slot="switch" data-size="default" aria-label="외국납부세액 있음 (§118의13)" class="peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50">
+<span data-unchecked="" data-slot="switch-thumb" class="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground">
+</span>
+</span>
+<input id="base-ui-_R_aciH1_" style="clip-path:inset(50%);overflow:hidden;white-space:nowrap;border:0;padding:0;width:1px;height:1px;margin:-1px;position:fixed;top:0;left:0" tabindex="-1" type="checkbox" aria-hidden="true"/>
+</div>
+</label>
+</div>
+<div class="rounded-lg border space-y-3 border-rose-200 bg-rose-50/40 dark:border-rose-800 dark:bg-rose-900/15 p-4">
+<div class="flex items-center gap-2">
+<p class="text-xs font-semibold text-rose-700 dark:text-rose-300">보유현황 신고 (§118의15)</p>
+</div>
+<div data-slot="toggle-card" data-variant="card" data-checked="true" class="rounded-lg border transition-colors px-4 py-3 border-rose-300 bg-rose-50/70 ring-1 ring-rose-200/50 dark:border-rose-700/60 dark:bg-rose-950/30 dark:ring-rose-800/30">
+<label class="flex items-center justify-between gap-3 select-none cursor-pointer">
+<div class="min-w-0 flex-1">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-sm sm:text-base text-rose-900 dark:text-rose-200">
+<span>출국일 전날까지 보유현황 신고 완료</span>
+</div>
+<div class="mt-0.5 text-xs leading-snug text-rose-700 dark:text-rose-400">§118의15 — 출국일 전날까지 보유 주식 현황을 신고한 경우 미신고 가산세를 면제받습니다.</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<span class="text-xs text-rose-700 font-medium bg-rose-50 px-2 py-0.5 rounded">§118의15</span>
+<span data-checked="" role="switch" tabindex="0" id="base-ui-_R_55li_" aria-checked="true" data-slot="switch" data-size="default" aria-label="출국일 전날까지 보유현황 신고 완료" class="peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50">
+<span data-checked="" data-slot="switch-thumb" class="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground">
+</span>
+</span>
+<input id="base-ui-_R_55liH1_" style="clip-path:inset(50%);overflow:hidden;white-space:nowrap;border:0;padding:0;width:1px;height:1px;margin:-1px;position:fixed;top:0;left:0" tabindex="-1" type="checkbox" aria-hidden="true" checked=""/>
+</div>
+</label>
+</div>
+</div>
+<div class="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-800/20 p-4 space-y-3">
+<p class="text-xs font-semibold text-slate-600 dark:text-slate-400">비거주자 세액공제 (§118의14, 선택)</p>
+<p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">납부유예 후 국내에서 비거주자로 실양도 시 §156①7에 따라 원천징수된 세액이 있는 경우 입력하세요.</p>
+<div data-slot="field-card" class="rounded-lg border bg-card px-4 py-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start">
+<label class="flex items-start gap-1 text-sm font-medium pt-1 sm:pt-2 sm:min-w-[168px] sm:max-w-[240px]">
+<span class="leading-tight">§156①7 국내원천 원천징수액 (원)</span>
+</label>
+<div class="min-w-0 space-y-1.5 sm:flex-[1_1_min-content]">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_mui_" type="text" inputMode="numeric" placeholder="없으면 비워두세요" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value=""/>
+</div>
+</div>
+</div>
+</div>
+<p class="text-xs text-muted-foreground">비거주자 신분으로 실양도 시 국내 원천징수된 세액. 없으면 비워두세요.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section>
+<h2 class="flex items-center gap-2 text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
+<span class="flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 text-white text-xs font-bold">2</span>기본공제 (§103①)</h2>
+<div class="space-y-3">
+<div class="rounded-lg border border-sky-200/60 bg-sky-50/60 px-4 py-3 text-sm text-sky-700 dark:text-sky-300 dark:bg-sky-950/40">
+<p class="font-medium mb-1">국외전출세 기본공제 250만원 (§118의10④)</p>
+<p class="text-xs">출국일 간주양도 소득금액에서 연 250만원을 공제합니다. 이 과세표준은 §92②의 양도소득과세표준과 <strong>구분하여 계산</strong>하므로(§118의10⑤), 같은 해 주식 양도분과 250만원을 나눠 쓰지 않습니다. 과세 구분이 둘 이상이라 아래에서 구분별 배분을 직접 입력합니다.</p>
+</div>
+<div class="rounded-lg border p-3 space-y-3 border-sky-200 bg-sky-50/40 dark:border-sky-800 dark:bg-sky-900/15">
+<div class="flex items-center gap-2">
+<p class="text-xs font-semibold text-sky-700 dark:text-sky-300">기본공제 250만원 구분별 배분 (§118의10④)</p>
+</div>
+<p class="text-xs leading-relaxed text-sky-700 dark:text-sky-300" data-testid="exit-alloc-notice">과세 대상이 세율 구분 둘 이상(<strong>2개</strong>)입니다. 소득세법 §118의10④는 양도소득금액에서 연 250만원을 공제한다고만 하고 <strong>구분별 배분 규정이 없어</strong> 자동으로 나누지 않습니다. 구분별 배분액을 직접 입력하세요 — 0이라도 입력해야 합니다. 합계는 연 250만원(합산 양도소득금액이 250만원보다 적으면 그 금액)이어야 하고, 각 구분의 배분액은 그 구분의 양도소득금액을 넘을 수 없습니다. 배분에 따라 산출세액이 달라지며 결과에 입력값 기준임이 표시됩니다.</p>
+<div data-slot="field-card" data-field="etBasicDeductionAllocClause1" class="rounded-lg border bg-card px-4 py-3 grid gap-1.5">
+<label class="flex items-start gap-1 text-sm font-medium pt-1">
+<span class="text-destructive" aria-hidden="true">*</span>
+<span class="leading-tight">§118의11 1호 — 국내 상장·비상장 주식 (3억 이하 20% · 초과 25%)</span>
+</label>
+<div class="min-w-0 space-y-1.5">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_b6ik_" type="text" inputMode="numeric" placeholder="배분액 (0이라도 입력)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value=""/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div data-slot="field-card" data-field="etBasicDeductionAllocClause2b" class="rounded-lg border bg-card px-4 py-3 grid gap-1.5">
+<label class="flex items-start gap-1 text-sm font-medium pt-1">
+<span class="text-destructive" aria-hidden="true">*</span>
+<span class="leading-tight">§118의11 2호 나목 — 국외주식 그 밖 (20%)</span>
+</label>
+<div class="min-w-0 space-y-1.5">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_baik_" type="text" inputMode="numeric" placeholder="배분액 (0이라도 입력)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value=""/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section>
+<h2 class="flex items-center gap-2 text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
+<span class="flex h-6 w-6 items-center justify-center rounded-full bg-violet-600 text-white text-xs font-bold">3</span>신고·납부 (소득세법 §118의15)</h2>
+<div class="rounded-lg border border-violet-200 bg-violet-50/60 px-4 py-3 text-sm text-violet-700 space-y-2 dark:text-violet-300 dark:bg-violet-950/40">
+<p class="font-medium">국외전출세는 신고 축이 다릅니다</p>
+<ul class="list-disc pl-4 space-y-1 text-xs leading-relaxed">
+<li>
+<strong>과세표준 신고기한</strong>: 출국일이 속하는 달의 말일부터 <strong>3개월</strong> 이내. 납세관리인을 신고한 경우에는 §110① 확정신고 기간 내입니다 (§118의15②).</li>
+<li>
+<strong>출국일 전날까지</strong> 납세관리인과 주식등 보유현황을 신고해야 합니다 (§118의15①).</li>
+<li>보유현황을 신고하지 않거나 누락하면 액면금액·출자가액의 <strong>2%</strong>를 산출세액에 더합니다 (§118의15④). 이 계산기는 이 금액을 반영합니다.</li>
+<li>국세기본법 §47의2~§47의4 신고불성실·납부지연 가산세는 이 화면에서 입력받지 않습니다.</li>
+</ul>
+</div>
+</section>
+</div>

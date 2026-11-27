@@ -16,8 +16,12 @@ export interface ExitTaxHoldingForm {
   id: string;
   /** 종목명 */
   stockName: string;
-  /** 시장 분류 (§178의9: 보유 종목은 국내 상장·비상장 주식) */
-  marketType: "kospi" | "kosdaq" | "konex" | "unlisted";
+  /**
+   * 시장 분류 (§178의9: 보유 종목은 국내 상장·비상장 주식).
+   * `"foreign_stock"`(§94①3다목 국외주식등)은 **출국일 2027.1.1. 이후**일 때만 입력 버튼이 열린다 —
+   * 출국일이 바뀌어 era 밖이 된 뒤에도 행은 지우지 않는다(입력한 종목이다). 엔진이 제외·고지한다.
+   */
+  marketType: "kospi" | "kosdaq" | "konex" | "unlisted" | "foreign_stock";
   /** 보유 주식수 (정수 문자열) */
   shareCount: string;
   /** 취득일 "YYYY-MM-DD" */
@@ -30,8 +34,16 @@ export interface ExitTaxHoldingForm {
    * "prior_year_std"  → §99①3 기준시가 (1개월 종가평균)
    * "unlisted_sample" → 전후 각 3개월 매매사례가액
    * "unlisted_std"    → §99①4 비상장 기준시가
+   * "foreign_market_price" → (국외주식) 출국일 외화 거래가액 1주당 × 출국일 기준환율
+   * "foreign_decree_178_3" → (국외주식) 시행령 §178의3 시가 1주당(외화, 직접 입력) × 출국일 기준환율
    */
-  departureDayValuationMode: "market_price" | "prior_year_std" | "unlisted_sample" | "unlisted_std";
+  departureDayValuationMode:
+    | "market_price"
+    | "prior_year_std"
+    | "unlisted_sample"
+    | "unlisted_std"
+    | "foreign_market_price"
+    | "foreign_decree_178_3";
   /** 출국일 거래가액 1주당 (market_price 모드) */
   departureDayMarketPrice: string;
   /** §99①3 1개월 종가평균 1주당 (prior_year_std 모드) */
@@ -40,6 +52,26 @@ export interface ExitTaxHoldingForm {
   unlistedSamplePrice: string;
   /** §99①4 비상장 기준시가 1주당 (unlisted_std 모드) */
   unlistedStdPricePerShare: string;
+
+  // ── 국외주식(`marketType === "foreign_stock"`) 전용 — 소득세법 §94①3다목 · 시행령 §157의3 ──
+  // 외화 금액은 **전용 필드**로만 받는다 — 원화 칸(위 `departureDayMarketPrice` 등)을 «국외면 외화로 읽기»로
+  // 재사용하지 않는다(시장 전환 시 stale 값이 다른 단위로 해석되는 것을 막는다, 계획 D-4).
+  /** §157의3 분류 — true(3중 패턴 default) = 1호 외국법인 발행 / false = 2호 내국법인 발행 해외상장. 해외주식 트랙과 같은 이름·의미 */
+  isListedForeignCorp: boolean;
+  /** 중소기업 여부 (§118의11 2호가목 10%) — `isListedForeignCorp`가 true면 무시(④가 false로 보낸다) */
+  isSmallMediumEnterprise: boolean;
+  /** ISO 2자리 국가코드 (표시용 — 계산 무영향). 3중 패턴 default "US" */
+  countryCode: string;
+  /** 통화 코드 (표시용 — 계산 무영향). 3중 패턴 default "USD" */
+  foreignCurrencyCode: string;
+  /** 출국일 시가 1주당 외화 금액 (외화 시가 모드) */
+  departureDayPriceForeign: string;
+  /** 출국일 기준환율 (원/외화, 소수 4자리까지) */
+  departureExchangeRate: string;
+  /** 취득가액 1주당 외화 금액 */
+  perShareAcquisitionPriceForeign: string;
+  /** 취득일 기준환율 (원/외화, 소수 4자리까지) */
+  acquisitionExchangeRate: string;
 
   // ── 보유현황 신고서(별지 제104호서식) 표시 전용 — **엔진 미전달** ──
   //
@@ -68,6 +100,14 @@ export function createEmptyExitTaxHolding(): ExitTaxHoldingForm {
     priorYearEndMonthAvg: "",
     unlistedSamplePrice: "",
     unlistedStdPricePerShare: "",
+    isListedForeignCorp: true,           // 3중 패턴 default: 외국법인 발행 (해외주식 트랙과 동일)
+    isSmallMediumEnterprise: false,
+    countryCode: "US",                   // 3중 패턴 default
+    foreignCurrencyCode: "USD",          // 3중 패턴 default
+    departureDayPriceForeign: "",
+    departureExchangeRate: "",
+    perShareAcquisitionPriceForeign: "",
+    acquisitionExchangeRate: "",
     stockCodeOrBizNumber: "",
     faceValuePerShare: "",
     ownershipRatio: "",

@@ -499,6 +499,35 @@ export interface StockTransferFormData {
   /** [B-1②a] 1일당 이자율 (소수, 국기령 §43의3② 연도별 변동 — 사용자 입력) */
   etDeferralInterestDailyRate: string;
 
+  // ── 2027.1.1. 이후 출국분 (소득세법 §118의9~§118의11 · 시행령 §178의8②) ──
+  // 아래 외국인근로자 5필드는 **출국일 2027.1.1. 이후 + 국외주식 종목이 있을 때만** ④가 싣는다(숨은 값 금지).
+  /**
+   * 외국인근로자 구분 (영 §178의8②2·3호). 3중 패턴 default "none".
+   * "foreign_worker"        → 본인 소유 국외주식 전부 제외 (요건 4개 모두 true)
+   * "foreign_worker_family" → 배우자·20세 이하 직계비속이 근로 개시일 **전에 취득**한 종목만 제외
+   */
+  etForeignWorkerStatus: "none" | "foreign_worker" | "foreign_worker_family";
+  /** 요건① 외국인인 임원 또는 사용인 (사용자 선언 — 엔진은 자동 판정하지 않는다) */
+  etForeignWorkerIsOfficerOrEmployee: boolean;
+  /** 요건② 일용근로자가 아님 */
+  etForeignWorkerIsNotDailyWorker: boolean;
+  /** 요건③ 출국일 10년 전부터 출국일까지 국내 거소·주소 기간의 100분의 80 이상 국내 근로 */
+  etForeignWorkerDomesticRatio80: boolean;
+  /** 요건④ 국내 근로 제공 종료일부터 6개월 이내 출국 */
+  etForeignWorkerDeparted6Months: boolean;
+  /** 가족 구분 — 미선택은 "" (fallback 없음 — status가 family인데 비어 있으면 ⑧이 막는다) */
+  etForeignWorkerFamilyKind: "" | "spouse" | "child_20_or_under";
+  /** 외국인근로자가 국내에서 근로를 제공하기 시작한 날 "YYYY-MM-DD" — family일 때만. 엔진이 `취득일 < 근로 개시일`로 판정 */
+  etForeignWorkerStartDate: string;
+
+  /**
+   * §118의10④ 기본공제 250만원의 세율 구분별 배분 (원) — **과세 구분이 둘 이상일 때만** 입력칸이 열리고 ④가 싣는다.
+   * 법령에 구분별 배분 규정이 없어 자동으로 나누지 않는다(사용자 결정 C-1). 비우면 ⑧이 막는다.
+   */
+  etBasicDeductionAllocClause1: string;
+  etBasicDeductionAllocClause2a: string;
+  etBasicDeductionAllocClause2b: string;
+
   // ── PR-4A 해외주식 전용 필드 (§94①3 다목 · §118② 준용 트랙) ──
   // 활성 조건: marketType === "foreign_stock"
   /** 국내 주소·거소 거주 연수 (만 년 수) — 5년 이상 시 납세의무 충족 (§118의2) */
