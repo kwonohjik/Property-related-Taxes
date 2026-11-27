@@ -13,6 +13,7 @@ import { ForeignStockResultCard } from "@/components/calc/results/ForeignStockRe
 import { ForeignStockFilingFormSection } from "@/components/calc/results/ForeignStockFilingFormSection";
 import { ExitTaxResultCard } from "@/components/calc/results/ExitTaxResultCard";
 import { ExitTaxHoldingReportSection } from "@/components/calc/results/ExitTaxHoldingReportSection";
+import { hasHoldingReportTargets } from "@/lib/calc/exit-tax-holding-report-targets";
 import { ExitTaxFilingFormSection } from "@/components/calc/results/ExitTaxFilingFormSection";
 import { PrintSelectionPanel } from "@/components/calc/results/PrintSelectionPanel";
 import { PrintSection } from "@/components/calc/results/shared/PrintSection";
@@ -90,9 +91,14 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
     // 가용 leaf 는 **그 화면에 실제로 렌더되는 것**만이다 — 데이터 없는 서식을 고르게 두면
     // 「선택했는데 아무것도 안 나오는」 거짓 선택이 된다(패널 설계 원칙).
     const ids: StockTransferPrintSectionId[] = ["filing-form", "calculation"];
-    if (form.marketType === "exit_tax") ids.push("exit-holding-report");
+    if (
+      form.marketType === "exit_tax" &&
+      hasHoldingReportTargets(form.etHoldings, (result as unknown as ExitTaxResult | null)?.holdingDetails)
+    ) {
+      ids.push("exit-holding-report");
+    }
     return new Set(ids);
-  }, [form.marketType]);
+  }, [form.marketType, form.etHoldings, result]);
 
   const printPanel = (
     <PrintSelectionPanel
@@ -194,6 +200,7 @@ export function Step4({ result, form, error, isLoading, onCalculate, aggregate }
                 <ExitTaxHoldingReportSection
                   holdings={form.etHoldings}
                   departureDate={form.etDepartureDate}
+                  holdingDetails={(result as unknown as ExitTaxResult).holdingDetails}
                 />
               </PrintSection>
             </>

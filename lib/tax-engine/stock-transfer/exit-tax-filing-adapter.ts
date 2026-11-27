@@ -120,6 +120,10 @@ export function toStockTransferResultFromExitTax(
       // §118의16④ 이자상당액 — 일수·1일당 이자율을 입력했을 때만 엔진이 산출한다.
       // 미산출이면 undefined 이고, 서식은 그 행 자체를 만들지 않는다(0 ≠ 부재).
       deferralInterest: r.deferralInterest,
+      // 2호(국외주식) 과세일 때만 — 서식 하단 지방소득세 주석이 이 값 유무로 갈린다. 1호만이면 undefined(종전 마크업).
+      ...(r.localIncomeTaxAlternative !== undefined
+        ? { localIncomeTaxAlternative: r.localIncomeTaxAlternative }
+        : {}),
     },
   };
 }

@@ -1676,6 +1676,12 @@ export type StockTransferResult = {
     deferralYears: number;
     /** §118의16④ 납부유예 기간에 대한 이자상당액. 일수·이자율 미입력 시 undefined */
     deferralInterest?: number;
+    /**
+     * 참고값 — 2호(국외주식) 과세 시에만. 소득세 산출세액의 10%(10원 미만 절사).
+     * 2호는 `localIncomeTax`가 지방세법 §103의3⑧ 표 직독 주값이라 서식 하단의 «산출세액 × 10%» 주석이 맞지 않는다 —
+     * 이 값이 있을 때만 서식이 주석을 바꾼다(1호만이면 없다 → 종전 마크업 그대로).
+     */
+    localIncomeTaxAlternative?: number;
   };
 };
 
