@@ -18,8 +18,8 @@
  *     납부일·환율을 항목마다 필수 입력으로 받고(양도일 환율 fallback 없음) 결과에 확인 필요 코드를 싣는다.
  */
 import { computeForeignTaxCreditLimits } from "../stock-transfer/foreign-tax-credit-limit";
-import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
 import { convertItem } from "./convert";
+import { assertForeignTaxAssetId, assertForeignTaxMethod } from "./input-asserts";
 import type {
   ForeignRealEstateAssetRow,
   ForeignRealEstateConvertedItem,
@@ -33,29 +33,17 @@ export interface PreparedForeignTax {
   byAsset: Map<string, ForeignRealEstateConvertedItem[]>;
 }
 
-const METHODS: readonly ForeignTaxMethod[] = ["credit", "expense"];
-
 /** 외국납부세액 입력을 환산·검증한다. 없거나 항목이 비면 undefined(§118의6 미적용). */
 export function prepareForeignTax(
   foreignTax: ForeignRealEstateForeignTaxInput | undefined,
   assetIds: readonly string[],
 ): PreparedForeignTax | undefined {
   if (!foreignTax || foreignTax.items.length === 0) return undefined;
-  if (!METHODS.includes(foreignTax.method)) {
-    throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, "foreignTax.method: credit 또는 expense여야 합니다", {
-      path: "foreignTax.method",
-      value: foreignTax.method,
-    });
-  }
+  assertForeignTaxMethod(foreignTax.method);
   const byAsset = new Map<string, ForeignRealEstateConvertedItem[]>();
   foreignTax.items.forEach((item, i) => {
     const path = `foreignTax.items[${i}]`;
-    if (!assetIds.includes(item.assetId)) {
-      throw new TaxCalculationError(TaxErrorCode.INVALID_INPUT, `${path}.assetId: 같은 계산의 자산 id가 아닙니다`, {
-        path: `${path}.assetId`,
-        value: item.assetId,
-      });
-    }
+    assertForeignTaxAssetId(item.assetId, assetIds, path);
     const list = byAsset.get(item.assetId) ?? [];
     list.push(convertItem(item, path));
     byAsset.set(item.assetId, list);
@@ -75,6 +63,14 @@ export function attachForeignTax(
     const items = prepared.byAsset.get(row.id) ?? [];
     return { ...row, foreignTax: { ...row.foreignTax, items, paidKrw: paidOf(items), unappliedKrw: paidOf(items) } };
   });
+}
+
+/** 필요경비 산입방법이면 외국납부세액을 양도차익에서 뺀 행으로 — 양도차손 혼재 검사(`assertNoLossNetting`)는 이 값 기준이다. */
+export function rowsAfterMethod(
+  rows: ForeignRealEstateAssetRow[],
+  prepared: PreparedForeignTax | undefined,
+): ForeignRealEstateAssetRow[] {
+  return prepared?.method === "expense" ? rows.map(withExpenseMethod) : rows;
 }
 
 /** 필요경비 산입방법(§118의6①2호): 외국납부세액을 그 자산의 양도차익에서 뺀다. 차손으로 넘어가면 `lossAmount`가 된다. */

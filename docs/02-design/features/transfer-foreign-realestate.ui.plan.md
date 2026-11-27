@@ -239,6 +239,24 @@
 - 반환 타입: `TransferAPIResult`(`:114`)에 `{ mode: "foreign"; result: ForeignRealEstateResult }` 추가(후보) — 이 유니온을 쓰는 분기(`TransferTaxCalculator.tsx:448·467`, `transfer-calc-actions.ts:121`)가 전부 영향받는다 → anchor로 전수 grep(§9 FRE-9).
 - ⑬ body spread: 새 필드는 `callTransferTaxAPI`가 **fetch body에 싣는 객체**에 있어야 한다(⑬ — TypeScript 미감지). 엔진 파트의 route/Zod(⑨⑩⑫⑭)와 필드명을 1:1로 맞춘다.
 
+**PR-4 확정 body 키 (엔진 계획 §4.2가 정본) — ④ 변환이 폼 필드를 이렇게 싣는다**
+
+| 폼 필드(후보, §4.2) | body 키 |
+|---|---|
+| `foreignYearsResidentInKorea` | `domesticResidenceYears` (정수 — ⑧이 정수 검사) |
+| `foreignAssetKind` | `assets[0].kind` (`"land"\|"building"` — `"right"`는 v1 body에 없다, ⑧ 차단) |
+| `transferDate` / `foreignAcquisitionDate` | `assets[0].transferDate` / `.acquisitionDate` |
+| `foreignCurrencyCode` + `foreignTransferPrice` + `foreignTransferRate` | `assets[0].transfer = { currency, amountForeign, exchangeRate, date: transferDate }` |
+| `foreignAcquisitionPrice` + `foreignAcquisitionRate` | `assets[0].acquisition = { …, date: foreignAcquisitionDate }` |
+| `foreignCapexRows[]` · `foreignTransferCostRows[]` (`{date, amountForeign, rate}`) | `assets[0].capitalExpenditures[]` · `.transferCosts[]` = `{ currency, amountForeign, exchangeRate: rate, date }` (**`rate` → `exchangeRate`**) |
+| `foreignTaxEnabled` OFF | `foreignTax` 키 생략 |
+| `foreignTaxEnabled` ON: `foreignTaxMethod` + `foreignTaxPaid` + `foreignTaxRate` + 납세일 | `foreignTax = { method, items: [{ assetId: assets[0].id, currency, amountForeign, exchangeRate, date: 납세일 }] }` — **납세일 칸이 폼에 필요하다**(주식 칸 구성에는 없음) |
+| 자산 id | `assets[0].id` — 단건이면 고정 문자열(예: 카드 키) 하나 |
+| (칸 없음) | `acquisitionCause`·`foreignBorrowAcquired`는 보내지 않는다(미입력 = 매매·차입 아님) |
+
+응답은 `200 { data: ForeignRealEstateResult }`(`mode` 없음) — ④가 `{ mode: "foreign", result: json.data }`로 감싼다. 400 `error.fieldErrors` 키는 `assets.0.transfer.exchangeRate`처럼 점 표기 배열 인덱스.
+카드·행 수 상한 상수 `FOREIGN_RE_MAX_ASSETS`(20)·`FOREIGN_RE_MAX_ROWS`(50)는 `lib/api/transfer-foreign-schema.ts` — ⑤⑧이 import한다(단일 소스).
+
 ### 6.3 ⑦ 결과 카드 — 산식 표기 (요구 3)
 
 신설 `components/calc/results/ForeignRealEstateResultCard.tsx`(주식 `ForeignStockResultCard.tsx`의 `Row`·`fxFormula`·`Divider` 구조 재사용) + 호출은 `TransferTaxCalculator.tsx:448` 앞에 `result.mode === "foreign"` 분기 추가.

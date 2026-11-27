@@ -50,3 +50,20 @@ export function toKrw(amountForeign: number, exchangeRate: number, path = "toKrw
   }
   return Number(krw);
 }
+
+/**
+ * `toKrw`와 같은 검증·환산을 하되 던지지 않고 오류를 돌려준다 — API Zod(⑩⑫)가 엔진과 **같은 함수**로 환율·외화액을 막는다.
+ * 오류 객체는 `toKrw`가 던질 것과 동일(코드·메시지·`details.path`)하다.
+ */
+export function tryToKrw(
+  amountForeign: number,
+  exchangeRate: number,
+  path = "toKrw",
+): { krw: number } | { error: TaxCalculationError } {
+  try {
+    return { krw: toKrw(amountForeign, exchangeRate, path) };
+  } catch (e) {
+    if (e instanceof TaxCalculationError) return { error: e };
+    throw e;
+  }
+}
