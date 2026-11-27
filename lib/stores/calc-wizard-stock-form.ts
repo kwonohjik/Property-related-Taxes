@@ -247,6 +247,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     etDeferralReason: "none",          // 3중 패턴 default
     etActualTransferDate: "",
     etActualTransferPricePerShare: "",
+    etHasForeignTax: false,
     etForeignTaxPaid: "",
     etForeignTaxPaidForeign: "",
     etForeignTaxCurrencyCode: "USD",     // 3중 패턴 default

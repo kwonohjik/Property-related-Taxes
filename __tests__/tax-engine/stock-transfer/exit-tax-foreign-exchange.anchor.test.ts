@@ -144,6 +144,7 @@ describe("EX-3 배선", () => {
           faceValuePerShare: "",
         },
       ],
+      etHasForeignTax: true, // 토글이 꺼져 있으면 외국납부세액 키를 body 에 보내지 않는다
       etForeignTaxPaidForeign: "1000",
       etForeignTaxCurrencyCode: "USD",
       etForeignTaxExchangeRate: "1350",

@@ -462,6 +462,12 @@ export interface StockTransferFormData {
   etActualTransferDate: string;
   /** 납부유예 후 실양도 1주당 단가 (원) */
   etActualTransferPricePerShare: string;
+  /**
+   * 「외국납부세액 있음 (§118의13)」 켜짐 여부 — 입력칸 값과 **별개로** 저장한다.
+   * 값(원화·외화·환율)이 비어 있어도 켜 둘 수 있어야 입력칸이 마운트된다.
+   * false 이면 아래 외국납부세액 필드 전부가 API body·validate 에서 무시된다.
+   */
+  etHasForeignTax: boolean;
   /** 외국납부세액 (원화 직접 입력, §118의13) */
   etForeignTaxPaid: string;
   /**

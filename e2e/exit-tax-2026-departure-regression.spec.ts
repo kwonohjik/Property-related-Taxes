@@ -15,12 +15,11 @@
  * → 양도차익 400,000,000 − 기본공제 2,500,000 = 과세표준 397,500,000 · 산출세액 84,375,000.
  * 실제 양도(2027.3.1., 450,000,000) → 조정공제 (500,000,000 − 450,000,000) × 25% = 12,500,000.
  *
- * ## 한계 (실측 2026-11-27)
+ * ## 외국납부세액 (X1-D)
  *
- * 교재의 외국납부세액 30,000,000(→ 납부 41,875,000)은 **화면으로 넣을 수 없다**. 3단계
- * 「외국납부세액 있음」 ToggleCard는 `checked = !!etForeignTaxPaid`인데 `onCheckedChange(true)`가
- * 아무것도 하지 않아, 켜도 입력칸(자식)이 마운트되지 않는다. 그래서 외국납부 경로는 엔진 anchor
- * (`exit-tax-textbook-departure-2026.anchor.test.ts`)가 맡고, 여기서는 **실양도 → 조정공제**까지 본다.
+ * 교재의 외국납부세액 30,000,000(→ 최종 41,875,000)도 화면으로 입력한다. 3단계 「외국납부세액 있음」
+ * ToggleCard의 켜짐 여부는 값과 별개 필드(`etHasForeignTax`)라 값이 비어 있어도 켜면 입력칸이 열린다.
+ * 켠 뒤 입력한 값이 요청 body(`foreignTaxPaid`)에 실리는지도 같이 본다.
  */
 
 import { test, expect, type Page } from "@playwright/test";
@@ -70,7 +69,12 @@ async function reachHoldingCard(page: Page, departure: [string, string, string])
  * 코스닥 A 1건을 채우고 3단계 → 결과.
  * `actual: true`면 3단계에서 실양도일(2027-03-01)·실양도 1주당 단가(45,000)를 넣는다.
  */
-async function reachResult(page: Page, departure: [string, string, string], actual = false) {
+async function reachResult(
+  page: Page,
+  departure: [string, string, string],
+  actual = false,
+  foreignTax?: string,
+) {
   await reachHoldingCard(page, departure);
   await page.getByPlaceholder("종목명 입력").first().fill("코스닥 A");
   await page.locator(MARKET_BUTTONS, { hasText: "코스닥" }).click();
@@ -87,6 +91,11 @@ async function reachResult(page: Page, departure: [string, string, string], actu
       .locator(`div:has(> label:has-text('실양도 1주당 단가')) input[type="text"]`)
       .first()
       .fill("45000");
+  }
+  if (foreignTax) {
+    await page.getByRole("switch", { name: /외국납부세액 있음/ }).click();
+    await expect(page.getByText("외국납부세액 (원화 환산)")).toBeVisible({ timeout: 10_000 });
+    await fillByLabel(page, "외국납부세액 (원화 환산)", foreignTax);
   }
   await page.getByRole("button", { name: "결과 보기" }).click();
   await expect(page.getByText("산출세액 계산 (§118의10~§118의11)")).toBeVisible({ timeout: 60_000 });
@@ -142,4 +151,25 @@ test("X1-C 2026-09-01: 실양도 450,000,000 → 조정공제 12,500,000 · 경�
   await expect(
     page.locator('div.flex:has(> span:text-matches("^경정 후 최종세액"))').first(),
   ).toContainText("71,875,000");
+});
+
+test("X1-D 2026-09-01: 외국납부세액 30,000,000 화면 입력 → 요청 body foreignTaxPaid · 최종세액 41,875,000", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  const bodies: string[] = [];
+  page.on("request", (req) => {
+    if (req.method() === "POST" && req.url().includes("/api/calc/stock-transfer")) {
+      bodies.push(req.postData() ?? "");
+    }
+  });
+  await reachResult(page, ["2026", "09", "01"], true, "30000000");
+
+  expect(bodies.length).toBeGreaterThan(0);
+  const body = JSON.parse(bodies[bodies.length - 1]);
+  expect(body.foreignTaxPaid).toBe(30_000_000);
+  // 84,375,000 − 조정공제 12,500,000 − 외국납부세액공제 30,000,000
+  await expect(
+    page.locator('div.flex:has(> span:text-matches("^경정 후 최종세액"))').first(),
+  ).toContainText("41,875,000");
 });

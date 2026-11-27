@@ -256,13 +256,27 @@ export function validateStep3ExitTax(form: StockTransferFormData): StockValidati
     void reason;
   }
 
-  // 외국납부세액 — 입력값 있으면 양식 검증 (§118의13)
-  if (!isEmpty(form.etForeignTaxPaid)) {
-    const v = parseF(form.etForeignTaxPaid);
-    if (v <= 0) {
+  // 외국납부세액 (§118의13) — 토글이 꺼져 있으면 검증하지 않는다(API 변환도 body 에서 제외).
+  // 켜져 있으면 «원화 > 0» 또는 «외화 > 0 이고 환율 > 0» 중 하나 필수.
+  if (form.etHasForeignTax) {
+    const hasKrw = !isEmpty(form.etForeignTaxPaid);
+    if (hasKrw && parseF(form.etForeignTaxPaid) <= 0) {
       errors.push({
         field: "etForeignTaxPaid",
         message: "외국납부세액은 0보다 커야 합니다 (§118의13)",
+        severity: "error",
+      });
+    }
+    const fxOk =
+      !isEmpty(form.etForeignTaxPaidForeign) &&
+      parseF(form.etForeignTaxPaidForeign) > 0 &&
+      !isEmpty(form.etForeignTaxExchangeRate) &&
+      parseF(form.etForeignTaxExchangeRate) > 0;
+    if (!hasKrw && !fxOk) {
+      errors.push({
+        field: "etForeignTaxPaid",
+        message:
+          "외국납부세액을 입력하세요 — 원화 환산액, 또는 외화 금액과 납세일 기준환율을 함께 입력해야 합니다 (§118의13)",
         severity: "error",
       });
     }

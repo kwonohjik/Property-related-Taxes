@@ -19,6 +19,7 @@ import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { SectionBox, type StockStepBlockProps } from "./stock-section-box";
+import { createInitialStockFormData } from "@/lib/stores/calc-wizard-stock-store";
 
 
 // ── 납부유예 사유 옵션 (§118의16) ──
@@ -170,9 +171,23 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
       <ToggleCard
         title="외국납부세액 있음 (§118의13)"
         description="§118의13 — 납부유예 후 해외에서 실양도 시 외국에서 납부한 세액이 있는 경우. 배제 사유 없으면 산출세액에서 공제."
-        checked={!!form.etForeignTaxPaid && form.etForeignTaxPaid !== ""}
+        checked={form.etHasForeignTax}
         onCheckedChange={(v) => {
-          if (!v) onChange({ etForeignTaxPaid: "", etForeignTaxExclusionReason: "none" });
+          // 켜짐 여부는 값과 별개로 저장 — 값이 비어 있어도 켜야 입력칸이 마운트된다.
+          // 끌 때는 숨은 값이 엔진에 도달하지 않도록 외국납부세액 필드를 전부 초기값으로.
+          if (v) {
+            onChange({ etHasForeignTax: true });
+            return;
+          }
+          const d = createInitialStockFormData();
+          onChange({
+            etHasForeignTax: false,
+            etForeignTaxPaid: d.etForeignTaxPaid,
+            etForeignTaxPaidForeign: d.etForeignTaxPaidForeign,
+            etForeignTaxCurrencyCode: d.etForeignTaxCurrencyCode,
+            etForeignTaxExchangeRate: d.etForeignTaxExchangeRate,
+            etForeignTaxExclusionReason: d.etForeignTaxExclusionReason,
+          });
         }}
         tone="violet"
         trailing={

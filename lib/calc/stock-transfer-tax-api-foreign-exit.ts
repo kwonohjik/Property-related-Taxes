@@ -174,12 +174,15 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
 //   etYearsResidentLast10 / etDepartureDate / etIsMajorShareholder /
 //   etHoldings[] / etDeferralRequested / etDeferralReason /
 //   etActualTransferDate / etActualTransferPricePerShare /
-//   etForeignTaxPaid / etForeignTaxExclusionReason /
+//   etHasForeignTax / etForeignTaxPaid / etForeignTaxExclusionReason /
 //   etDomesticSourceTaxWithheld / etHasFiledHoldingsReport / etTotalFaceValue
 // ============================================================
 export function buildExitTaxApiBody(form: StockTransferFormData): Record<string, unknown> {
   const deferralReason = form.etDeferralReason || "none";      // 3중 패턴 default
-  const exclusionReason = form.etForeignTaxExclusionReason || "none";  // 3중 패턴 default
+  // 외국납부세액 토글이 꺼져 있으면 숨은 값(원화·외화·환율·통화·배제 사유)은 엔진에 보내지 않는다.
+  // 배제 사유는 Zod 필수 키라 꺼짐이면 "none" 으로 고정한다.
+  const hasForeignTax = !!form.etHasForeignTax;
+  const exclusionReason = hasForeignTax ? form.etForeignTaxExclusionReason || "none" : "none";  // 3중 패턴 default
 
   // ⑬ holdings[] 배열 변환 — acquisitionDate 포함 전수 spread
   const holdings = (form.etHoldings || []).map((h) => {
@@ -253,22 +256,22 @@ export function buildExitTaxApiBody(form: StockTransferFormData): Record<string,
     if (v !== undefined) body.actualTransferPricePerShare = v;
   }
 
-  // 외국납부세액 — 입력값 있을 때만 포함
-  if (form.etForeignTaxPaid) {
+  // 외국납부세액 — 토글이 켜져 있고 입력값 있을 때만 포함
+  if (hasForeignTax && form.etForeignTaxPaid) {
     const v = parseIntOrUndef(form.etForeignTaxPaid);
     if (v !== undefined) body.foreignTaxPaid = v;
   }
   // 외화 + 기준환율(소령 §178의5) — 둘 다 있어야 엔진이 환산한다.
   // 한쪽만 보내면 엔진이 원화 입력값으로 되돌아가므로 여기서도 각각 그대로 전달한다.
-  if (form.etForeignTaxPaidForeign) {
+  if (hasForeignTax && form.etForeignTaxPaidForeign) {
     const v = parseFloatOrUndef(form.etForeignTaxPaidForeign);
     if (v !== undefined) body.foreignTaxPaidForeign = v;
   }
-  if (form.etForeignTaxExchangeRate) {
+  if (hasForeignTax && form.etForeignTaxExchangeRate) {
     const v = parseFloatOrUndef(form.etForeignTaxExchangeRate);
     if (v !== undefined) body.foreignTaxExchangeRate = v;
   }
-  if (form.etForeignTaxCurrencyCode) {
+  if (hasForeignTax && form.etForeignTaxCurrencyCode) {
     body.foreignTaxCurrencyCode = form.etForeignTaxCurrencyCode;
   }
 
