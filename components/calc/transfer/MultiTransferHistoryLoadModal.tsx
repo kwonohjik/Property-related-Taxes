@@ -95,7 +95,9 @@ export function MultiTransferHistoryLoadModal({
           (2026-08-05 실측: 그 판정으로 만든 헬퍼가 닫히는 모달의 항목을 눌러 detach). */}
       <DialogContent
         data-testid="multi-history-modal"
-        className="max-w-2xl max-h-[85vh] overflow-y-auto"
+        // 폭: 공용 기본값 `sm:max-w-sm`(24rem)은 `sm:` 접두로만 덮인다 — 접두 없는 `max-w-2xl`은 640px 이상에서
+        //   무시돼 긴 이력 제목이 잘렸다(2026-11-27, #3719와 같은 결함).
+        className="max-h-[85vh] overflow-y-auto sm:max-w-3xl"
       >
         <DialogHeader>
           <DialogTitle>📂 이력에서 불러오기</DialogTitle>
@@ -134,11 +136,11 @@ export function MultiTransferHistoryLoadModal({
                   className="flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors enabled:hover:border-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-start gap-2">
                       <Badge variant={kind === "multi" ? "default" : "outline"} className="text-xs">
                         {kind === "multi" ? "다건" : "단건"}
                       </Badge>
-                      <span className="truncate font-medium">{r.title}</span>
+                      <span className="min-w-0 font-medium break-words">{r.title}</span>
                       {already && (
                         <Badge variant="secondary" className="text-micro">불러옴</Badge>
                       )}

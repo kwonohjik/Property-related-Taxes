@@ -231,4 +231,19 @@ test.describe("다건 replace 편입분의 provenance", () => {
     // 편입된 단건도 같은 배지를 유지한다(자산 수준 축)
     await expect(page.getByTestId(`load-record-${SINGLE_ID}`)).toContainText("불러옴");
   });
+
+  test("RP-4: 모달 폭 — 긴 이력 제목이 잘리지 않고 가로 스크롤 없음", async ({ page }) => {
+    test.setTimeout(120_000);
+    // 공용 기본값 `sm:max-w-sm`(24rem)은 `sm:` 접두로만 덮인다 — 접두 없는 `max-w-2xl`이면 약 372px로 묶인다.
+    const longTitle = "양도소득세 — 경기도 수원시 권선구 금곡로212번길 25 (금곡동) (양도 2026-06-01) (E2E)";
+    await page.goto("/history");
+    await putCalculationRecord(page, { ...(await singleRecord(false)), title: longTitle });
+    await page.goto("/calc/transfer-tax/multi");
+    await openHistoryModal(page, page.getByTestId("multi-load-history-btn").first(), page.getByText(longTitle));
+    const modal = page.getByTestId("multi-history-modal");
+    expect((await modal.boundingBox())!.width).toBeGreaterThan(600);
+    expect(await modal.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
+    const clipped = await modal.getByText(longTitle).evaluate((el) => el.scrollWidth > el.clientWidth);
+    expect(clipped).toBe(false);
+  });
 });
