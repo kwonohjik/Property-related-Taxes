@@ -152,6 +152,19 @@ export function extractStockTransferDate(inputData: Record<string, unknown>): st
 }
 
 /**
+ * 국외전출세 — 대표 종목의 **출국일**. 국외전출세가 아니거나 출국일이 비면 null.
+ *
+ * 국외전출세 폼의 기준일은 `transferDate`(양도일)가 아니라 `etDepartureDate`다 — 양도일만 읽으면
+ * 같은 사례명·다른 출국일이 같은 businessKey가 되어 서로를 덮어쓴다(14지점 점검 F4).
+ * 키·제목이 모두 이 한 곳을 거친다.
+ */
+export function extractExitTaxDepartureDate(inputData: Record<string, unknown>): string | null {
+  const src = stockRepresentative(inputData);
+  if (src.marketType !== "exit_tax") return null;
+  return formatDate(src.etDepartureDate as string | undefined);
+}
+
+/**
  * 주식 평가 도구 — 대표 종목(평가대상회사)명 추출.
  * inputData.stockItems[0]에서 상장 companyName → 비상장 V2 corpName → name 순.
  */
@@ -249,6 +262,8 @@ export function generateTitle(
       securityName && itemCount !== null && itemCount > 1
         ? `${securityName} 외 ${itemCount - 1}건`
         : securityName;
+    const departure = extractExitTaxDepartureDate(inputData);
+    if (name && departure) return `${label2} — ${name} (출국 ${departure})`;
     if (name && date) return `${label2} — ${name} (양도 ${date})`;
     if (name) return `${label2} — ${name}`;
     if (date) return `${label2} — 양도 ${date}`;

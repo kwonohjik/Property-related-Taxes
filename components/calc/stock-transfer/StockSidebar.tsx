@@ -169,12 +169,13 @@ export function StockSidebar({
       // 결과 있으면 최종값 추가
       if (result) {
         const r = result as unknown as ExitTaxResult;
+        // 영 §178의8② 제외 종목의 간주양도가액 — 엔진 echo(`scope`)를 그대로 더한다.
+        // 전부 제외돼 납세의무가 없는 결과(`isLiable false`)도 echo를 싣는다 — 제외 사실이 바로 그 결과의 이유다.
+        const excludedValue = (r.holdingDetails ?? [])
+          .filter((d) => d.scope === "excluded")
+          .reduce((sum, d) => sum + d.departureDayValue, 0);
+        if (excludedValue > 0) items.push({ label: "제외된 국외주식등 간주양도가액", value: excludedValue });
         if (r.isLiable) {
-          // 영 §178의8② 제외 종목의 간주양도가액 — 엔진 echo(`scope`)를 그대로 더한다
-          const excludedValue = r.holdingDetails
-            .filter((d) => d.scope === "excluded")
-            .reduce((sum, d) => sum + d.departureDayValue, 0);
-          if (excludedValue > 0) items.push({ label: "제외된 국외주식등 간주양도가액", value: excludedValue });
           if (r.taxBase > 0) items.push({ label: "과세표준", value: r.taxBase, highlight: true });
           if (r.incomeTax > 0) items.push({ label: "산출세액", value: r.incomeTax, highlight: true });
           if (r.localIncomeTax > 0) items.push({ label: "지방소득세", value: r.localIncomeTax });

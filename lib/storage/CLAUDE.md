@@ -7,7 +7,7 @@ IndexedDB(Dexie.js) 기반 로컬 저장소. 향후 Supabase 도입 시 **데이
 ```
 constants.ts              # LOCAL_USER_ID 상수
 types.ts                  # UserProfile · CalculationRecord · LocalTaxType
-db.ts                     # Dexie v7 (userProfile·calculations·clients·캐시) + 복합 인덱스 4종
+db.ts                     # Dexie v9 (userProfile·calculations·clients·캐시) + 복합 인덱스 4종
 current-user.ts           # getCurrentUserId() — Supabase 교체 단일 지점
 user-repository.ts        # createUserRepository(uid) 클로저 패턴
 calculation-repository.ts # createCalculationRepository(uid)
