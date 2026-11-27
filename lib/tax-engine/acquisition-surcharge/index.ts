@@ -24,6 +24,7 @@ import {
   validateInputConsistency,
   isExemptFromSurcharge_LowValue,
   resolveRegulatedAreaStatus,
+  assessUnsoldApt17hoExclusion,
 } from "./exclusion";
 import { describeLowValueHouseLimit } from "./low-value-limit";
 import {
@@ -99,6 +100,10 @@ export interface SurchargeCheckInput {
   standardValue?: number;
   /** 수도권 여부 (1억/2억 한도 결정) */
   isMetropolitanRegion?: boolean;
+  /** §28의2 17호 — 취득 주택이 비수도권 미분양 아파트라는 선언 */
+  isUnsoldApt17ho?: boolean;
+  /** 취득 주택 전용면적 ㎡ (§28의2 17호 85㎡ 판정) */
+  areaSqm?: number;
   /** 정비구역(재개발·재건축·소규모정비) 소재 여부 */
   isUrbanRegenerationArea?: boolean;
 
@@ -265,6 +270,32 @@ export function assessSurcharge(input: SurchargeCheckInput): ExtendedSurchargeDe
           legalBasis: [ACQUISITION.SURCHARGE_EXCLUSION],
         };
       }
+    }
+  }
+
+  // ── 4.1단계: §28의2 17호 비수도권 미분양 아파트 중과 배제 (2026.1.1.~) ──
+  if (isHousing) {
+    const unsold = assessUnsoldApt17hoExclusion({
+      isUnsoldApt: input.isUnsoldApt17ho,
+      acquisitionCause: input.acquisitionCause,
+      acquisitionDate: input.acquisitionDate ?? input.balanceDate ?? new Date().toISOString().slice(0, 10),
+      areaSqm: input.areaSqm,
+      acquisitionValue: input.acquisitionValue,
+      isMetropolitanRegion: input.isMetropolitanRegion,
+    });
+    warnings.push(...unsold.warnings);
+    if (unsold.excluded) {
+      exceptions.push(
+        `비수도권 미분양 아파트(85㎡·6억원 이하) 최초 유상승계취득 — 중과 배제 (${ACQUISITION.SURCHARGE_EXCLUSION_UNSOLD_17HO})`
+      );
+      return {
+        isSurcharged: false,
+        appliedBranch: "basic",
+        exceptions,
+        warnings,
+        firstHomeReduction: calcFirstHomeReduction(input, undefined),
+        legalBasis: [ACQUISITION.SURCHARGE_EXCLUSION_UNSOLD_17HO],
+      };
     }
   }
 

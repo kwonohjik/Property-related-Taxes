@@ -185,8 +185,12 @@ export function assessHansiBenefitForPendingAcquisition(
       } else {
         warnings.push("한시 미분양 아파트 특례 — 수도권 주택은 적용 불가 (비수도권 한정).");
       }
-    } else {
-      warnings.push(`한시 미분양 아파트 — 취득일(${acquisitionDate})이 한시 기간(2024.1.10~2025.12.31) 외 → 적용 불가.`);
+    } else if (
+      acquisitionDate < ACQUISITION_CONST.UNSOLD_17HO_START ||
+      acquisitionDate > ACQUISITION_CONST.UNSOLD_17HO_END
+    ) {
+      // 2026.1.1.~ 취득분은 주택 수 제외가 아니라 §28의2 17호 중과 배제로 판정한다(acquisition-surcharge 4.1단계).
+      warnings.push(`미분양 아파트 — 취득일(${acquisitionDate})이 적용 기간(2024.1.10.~2027.12.31.) 밖 → 적용 불가.`);
     }
   }
 
