@@ -128,8 +128,6 @@ export interface ForeignRealEstateAssetRow {
 
 /** 세액이 아니라 사용자가 확인해야 할 미결 사항 코드(계획서 V-n) */
 export type ForeignRealEstateConfirmationCode =
-  /** 지방세법 §103의3⑨(제3항 세율의 §103의3⑤ 준용 가중) · ④(조례 가감)는 지정지역 등 자료가 없어 평가하지 않았다 */
-  | "LOCAL_TAX_WEIGHTING_NOT_EVALUATED"
   /**
    * 외국납부세액 세액공제방법(§118의6①1호)의 원화 환산 기준일 — 영 §178의5①은 「양도가액 및 필요경비」의 환산만 정하고
    * 세액공제 대상 외국세의 환산일을 정한 조문을 찾지 못했다. 사용자가 입력한 납부일·환율을 그대로 쓴다.

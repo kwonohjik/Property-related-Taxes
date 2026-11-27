@@ -556,3 +556,5 @@ C-2 한계(`RESIDENCE_BOUNDARY_NOTICE`)·C-3 미등기(`UNREGISTERED_NOTICE`)는
 - 납세의무 없음(거주 5년 미만): **신고서 표를 만들지 않는다**(신고 의무 없음 · 세액 계산 섹션과 같이 출력 선택에서도 뺀다).
 - 선택 출력 leaf `form-table`(그룹 「신고서식」) — **pdf 채널 1종**. 다른 leaf는 PDF 본문에 없어 screen만(거짓 선택 방지). `ResultPdfDocument` taxType `transfer_foreign` → `ResultPdfForeignSections.tsx`가 같은 행·열 값을 그린다(결과뷰가 `inputData.foreignFilingForm`으로 매핑 결과를 넘긴다).
 - 렌더 격자는 국내 `FilingFormTable`에서 떼어 낸 `FilingFormGrid`를 공용으로 쓴다(국내 마크업·클래스 불변).
+
+- **지방소득세 조례 가감·가중 완결(2026-11-28 사용자 결정 · 재제안 금지)**: 지방세법 §103의3④ 조례 가감은 «제1항에 따른 표준세율»만 대상(국외 세율은 ③) · ⑨ 가중은 ⑤ 준용 — ⑤3호 지정지역(국내 지역)은 국외 부동산 해당 없음, ⑤4호 «대통령령으로 정하는 부동산»은 위임 시행령 조문 미발견인 채 사용자가 완결 처리. 엔진 코드 `LOCAL_TAX_WEIGHTING_NOT_EVALUATED` 삭제 — 결과 «확인 필요» 카드 1장 줄어듦. 세액 불변. 국내 엔진도 조례 가감 미반영(결정세액 × 10%)이라 국내·국외 같은 취급.

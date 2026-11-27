@@ -119,14 +119,14 @@ export function calculateForeignRealEstateTransferTax(
   const localIncomeTaxBeforeRounding = localBefore - localCredit;
   const localIncomeTax = truncateLocalIncomeTax(localIncomeTaxBeforeRounding);
 
-  // 지방소득세 가중 미평가는 `confirmationNeeded: LOCAL_TAX_WEIGHTING_NOT_EVALUATED` 코드로만 알린다 — 같은 취지의 문구를 `warnings`에도 실으면 «확인 필요» 카드가 두 장 겹친다(U3)
+  // 지방세법 §103의3④(조례 가감 — «제1항에 따른 표준세율» 대상, 국외 세율은 ③)·⑨(⑤ 준용 가중)는 국외 부동산에 반영하지 않는다 — 사용자 결정 완결(2026-11-28 · 재제안 금지)
   const warnings: string[] = [];
   if (foreignTaxUnappliedKrw > 0 && prepared?.method === "credit") {
     warnings.push(
       "외국납부세액이 공제한도(소득세법 §118의6①1호)를 넘는 부분은 공제되지 않으며 같은 조에 이월 규정이 없어 다음 과세기간으로 넘기지 않았습니다.",
     );
   }
-  const confirmationNeeded: ForeignRealEstateConfirmationCode[] = ["LOCAL_TAX_WEIGHTING_NOT_EVALUATED"];
+  const confirmationNeeded: ForeignRealEstateConfirmationCode[] = [];
   if (prepared?.method === "credit") confirmationNeeded.push("FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY");
   confirmationNeeded.push("UNSUPPORTED_SITUATIONS_NOT_EVALUATED");
 
