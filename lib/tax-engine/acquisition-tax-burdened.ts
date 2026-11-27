@@ -13,6 +13,7 @@ import {
   assessGiftSurcharge,
   resolveRegulatedAreaStatus,
   assessTemporaryTwoHouse,
+  isCorporateHouseAcquirer,
   isExemptFromSurcharge_LowValueV2,
 } from "./acquisition-tax-surcharge";
 
@@ -63,7 +64,7 @@ export function computeBurdenedGiftResult(
       );
     const tempTwoHouseExcluded = assessTemporaryTwoHouse({
       houseCount: resolvedHouseCount,
-      isTemporaryTwoHouse: input.isTemporaryTwoHouse,
+      isTemporaryTwoHouse: input.isTemporaryTwoHouse && !isCorporateHouseAcquirer(input.acquiredBy),
       balanceDate: input.balancePaymentDate,
       previousHouseRegion: input.previousHouseRegion,
       newHouseRegion: input.newHouseRegion,

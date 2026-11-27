@@ -118,7 +118,7 @@ export function Step1({
       <ToggleCard
         tone="amber"
         title="특수관계인 간 거래"
-        description="시가 70%~130% 벗어나면 시가 기준 과세"
+        description="시가보다 3억원 이상 또는 시가의 5% 이상 낮게 사면 시가 기준 과세"
         checked={form.isRelatedParty}
         onCheckedChange={(v) => set("isRelatedParty", v)}
       >

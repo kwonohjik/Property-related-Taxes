@@ -42,6 +42,7 @@ export {
   getDisposalDeadlineYears,
   getDisposalDeadlineDate,
   assessTemporaryTwoHouse,
+  isCorporateHouseAcquirer,
   SURCHARGE_RATES,
 } from "./acquisition-surcharge/multi-house";
 

@@ -107,8 +107,9 @@ describe("determineAcquisitionTiming — 상속", () => {
       balancePaymentDate: "2024-06-01", // 사망일을 balancePaymentDate로 전달
     });
     expect(result.acquisitionDate).toBe("2024-06-01");
-    // 속한 달 말일(2024-06-30)부터 6개월 → 2024-12-30
-    expect(result.filingDeadline).toBe("2024-12-30");
+    // 속한 달 말일(2024-06-30)부터 6개월 — 민법 §157 초일 불산입(07-01 기산) → §160② 12월 말일 2024-12-31
+    //   (종전 기대값 2024-12-30은 말일에 6개월을 더한 오버플로 산식을 고정하던 값 — 교재 대조 T7)
+    expect(result.filingDeadline).toBe("2024-12-31");
   });
 
   it("상속_농지도 동일 규칙 적용 (말일부터 6개월)", () => {
@@ -128,12 +129,11 @@ describe("determineAcquisitionTiming — 상속", () => {
     const today = new Date().toISOString().slice(0, 10);
     expect(result.acquisitionDate).toBe(today);
     expect(result.warnings.some((w) => w.includes("미입력"))).toBe(true);
-    // §20①: 상속개시일 속한 달 말일부터 6개월 (엔진 addMonths(endOfMonth(today), 6)와 동일)
-    const eom = new Date(today);
-    eom.setMonth(eom.getMonth() + 1, 0); // 이번 달 말일
-    const deadline = new Date(eom.toISOString().slice(0, 10));
-    deadline.setMonth(deadline.getMonth() + 6);
-    expect(result.filingDeadline).toBe(deadline.toISOString().slice(0, 10));
+    // §20①: 상속개시일 속한 달 말일부터 6개월 = (이번 달 + 6)월의 말일
+    const y = Number(today.slice(0, 4));
+    const m = Number(today.slice(5, 7)) - 1;
+    const deadline = new Date(Date.UTC(y, m + 7, 0)).toISOString().slice(0, 10);
+    expect(result.filingDeadline).toBe(deadline);
   });
 });
 

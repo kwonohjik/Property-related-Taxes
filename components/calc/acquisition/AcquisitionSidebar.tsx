@@ -13,6 +13,7 @@ import type { WizardSidebarStep, WizardSidebarSummaryItem } from "@/components/c
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { linearInterpolationRate, getBasicRate } from "@/lib/tax-engine/acquisition-tax-rate";
 import { SURCHARGE_RATES } from "@/lib/tax-engine/acquisition-surcharge/multi-house";
+import { isCorporateHouseAcquirer } from "@/lib/tax-engine/acquisition-surcharge/multi-house";
 import { ACQUISITION_CONST } from "@/lib/tax-engine/legal-codes";
 import type { PropertyObjectType, AcquisitionCause } from "@/lib/tax-engine/types/acquisition.types";
 import type { FormState } from "./shared";
@@ -231,7 +232,7 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
         acqValue,
         houseCount,
         form.isRegulatedArea,
-        form.acquiredBy === "corporation",
+        isCorporateHouseAcquirer(form.acquiredBy),
       );
     } else {
       estimatedBaseRate = estimateNonHousingRateLabel(form, acqValue ?? 0);
@@ -271,7 +272,7 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
       acqValue,
       hcnt ?? 1,
       form.isRegulatedArea,
-      form.acquiredBy === "corporation",
+      isCorporateHouseAcquirer(form.acquiredBy),
     );
   } else {
     estimatedBaseRate = estimateNonHousingRateLabel(form, acqValue ?? 0);

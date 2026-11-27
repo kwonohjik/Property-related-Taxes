@@ -42,6 +42,20 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
   },
   {
     /**
+     * acquisition.ts `RELATED_PARTY_LOW_PRICE_TYPE` — 법 §10의3② 부당행위계산의 유형(교재 대조 T1).
+     * 키워드는 KoreanLaw 실측 본문(MST 290815, 시행 2026-10-01).
+     */
+    id: "LOCAL_DECREE.RELATED_PARTY_LOW_PRICE_TYPE",
+    citation: "지방세법 시행령 §18의2",
+    keywords: [
+      "부당행위계산",
+      "특수관계인으로부터 시가인정액",
+      "차액이 3억원 이상이거나 시가인정액의 100분의 5에 상당하는 금액 이상",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    /**
      * acquisition.ts `DEEMED_LAND_BASE_STANDARD` — 지목변경 과세표준의 **보충법** 계산방법.
      * 법 §10의6②이 「대통령령으로 정하는 방법」으로 위임한 곳이다.
      * 키워드는 KoreanLaw 실측 본문(MST 287223, 시행 2026-07-01).
@@ -165,6 +179,8 @@ export const LOCAL_DECREE_ADDITIONS: VerificationRule[] = [
       "종전 주택등",
       "일시적 2주택 기간",
       "이사ㆍ학업ㆍ취업ㆍ직장이전",
+      // 2026.9.30. 개정 — 조정→조정 2년 (교재 대조 T2)
+      "조정대상지역에 있는 경우에는 2년으로",
     ],
     keywordMode: "ALL",
   },

@@ -10,6 +10,10 @@
 
 import { ACQUISITION, ACQUISITION_CONST } from "./legal-codes";
 import type { AcquisitionCause, InstallmentPayment } from "./types/acquisition.types";
+import { parseISO } from "./utc-date";
+import { format } from "./utc-date";
+import { addMonths as utcAddMonths } from "./utc-date";
+import { endOfMonth as utcEndOfMonth } from "./utc-date";
 
 // ============================================================
 // 취득 시기 결과 타입
@@ -53,22 +57,15 @@ function addDays(dateStr: string, days: number): string {
 }
 
 /**
- * 날짜에 월수 더하기
+ * 「(취득일·상속개시일)이 속하는 달의 말일부터 N개월」 신고기한 (지방세법 §20①)
+ *
+ * 지방세기본법 §23 → 민법 §157 초일 불산입: 말일 다음 날(다음 달 1일)부터 기산하고,
+ * §160② 월의 처음부터 기산하면 역(曆)에 의해 N개월째 달의 말일에 끝난다.
+ * ⇒ (속한 달 + N)월의 말일. 예: 2026-03-15 상속 → 2026-09-30 (말일 03-31에 6개월을 더해 10-01로 넘기던 결함 정정).
  */
-function addMonths(dateStr: string, months: number): string {
-  const d = new Date(dateStr);
-  d.setUTCMonth(d.getUTCMonth() + months);
-  return d.toISOString().slice(0, 10);
-}
-
-/**
- * 해당 날짜가 속한 달의 말일 (YYYY-MM-DD)
- * 다음 달 0일 = 이번 달 말일
- */
-function endOfMonth(dateStr: string): string {
-  const d = new Date(dateStr);
-  d.setUTCMonth(d.getUTCMonth() + 1, 0);
-  return d.toISOString().slice(0, 10);
+function deadlineFromMonthEnd(dateStr: string, months: number): string {
+  const firstOfMonth = parseISO(`${dateStr.slice(0, 7)}-01`);
+  return format(utcEndOfMonth(utcAddMonths(firstOfMonth, months)), "yyyy-MM-dd");
 }
 
 /**
@@ -186,7 +183,7 @@ export function determineAcquisitionTiming(
       return {
         acquisitionDate: fallback,
         // 상속개시일이 속하는 달의 말일부터 6개월 (지방세법 §20①)
-        filingDeadline: addMonths(endOfMonth(fallback), ACQUISITION_CONST.INHERITANCE_FILING_MONTHS),
+        filingDeadline: deadlineFromMonthEnd(fallback, ACQUISITION_CONST.INHERITANCE_FILING_MONTHS),
         timingBasis: "상속개시일 (피상속인 사망일, 미입력 — 임시)",
         legalBasis: ACQUISITION.ACQUISITION_TIMING,
         warnings,
@@ -196,7 +193,7 @@ export function determineAcquisitionTiming(
     return {
       acquisitionDate: inheritanceDate,
       // 상속: 상속개시일이 속하는 달의 말일부터 6개월 이내 신고 (지방세법 §20①)
-      filingDeadline: addMonths(endOfMonth(inheritanceDate), ACQUISITION_CONST.INHERITANCE_FILING_MONTHS),
+      filingDeadline: deadlineFromMonthEnd(inheritanceDate, ACQUISITION_CONST.INHERITANCE_FILING_MONTHS),
       timingBasis: `상속개시일(${inheritanceDate}) — 피상속인 사망일`,
       legalBasis: ACQUISITION.ACQUISITION_TIMING,
       warnings,
@@ -213,7 +210,7 @@ export function determineAcquisitionTiming(
       return {
         acquisitionDate: fallback,
         // §20①: 무상취득(상속 제외)은 취득일 속한 달 말일부터 3개월
-        filingDeadline: addMonths(endOfMonth(fallback), ACQUISITION_CONST.GRATUITOUS_FILING_MONTHS),
+        filingDeadline: deadlineFromMonthEnd(fallback, ACQUISITION_CONST.GRATUITOUS_FILING_MONTHS),
         timingBasis: "증여계약일 (미입력 — 임시)",
         legalBasis: ACQUISITION.ACQUISITION_TIMING,
         warnings,
@@ -223,7 +220,7 @@ export function determineAcquisitionTiming(
     return {
       acquisitionDate: contractDate,
       // §20①: 무상취득·부담부증여(상속 제외)은 취득일이 속하는 달의 말일부터 3개월 이내 신고
-      filingDeadline: addMonths(endOfMonth(contractDate), ACQUISITION_CONST.GRATUITOUS_FILING_MONTHS),
+      filingDeadline: deadlineFromMonthEnd(contractDate, ACQUISITION_CONST.GRATUITOUS_FILING_MONTHS),
       timingBasis: `증여계약일(${contractDate})`,
       legalBasis: ACQUISITION.ACQUISITION_TIMING,
       warnings,

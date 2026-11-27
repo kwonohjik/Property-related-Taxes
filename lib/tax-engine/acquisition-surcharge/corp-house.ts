@@ -11,6 +11,7 @@
  */
 
 import { ACQUISITION } from "../legal-codes";
+import { isCorporateHouseAcquirer } from "./multi-house";
 
 // ============================================================
 // P1-6: 부담부증여 배우자·직계존비속 배제
@@ -94,7 +95,7 @@ export interface CorpHouseCheckResult {
  * (§13의2① 1호 — 법인의 주택 유상취득)
  */
 export function assessCorpHouseSurcharge(input: CorpHouseCheckInput): CorpHouseCheckResult {
-  if (input.acquiredBy !== "corporation") {
+  if (!isCorporateHouseAcquirer(input.acquiredBy)) {
     return {
       isCorpSurcharged: false,
       reason: "개인(individual) 취득 — 법인 중과 미적용",

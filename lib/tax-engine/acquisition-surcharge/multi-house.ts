@@ -53,6 +53,14 @@ export interface MultiHouseSurchargeResult {
 }
 
 /**
+ * §13의2①1호 「법인(… 개인이 아닌 자를 포함한다)」 — 법인 주택 12% 대상 취득자.
+ * 비영리법인도 개인이 아니므로 포함한다(교재 대조 T4). 국가·지자체는 §9① 비과세로 먼저 빠진다.
+ */
+export function isCorporateHouseAcquirer(acquiredBy: string | undefined): boolean {
+  return acquiredBy === "corporation" || acquiredBy === "nonprofit";
+}
+
+/**
  * [P1-2] 다주택 중과세율 판정
  *
  * [v4 D2] 법인 주택 12% — 주택 수 카운트 skip 최적화
@@ -93,8 +101,8 @@ export function assessMultiHouseSurcharge(input: {
     };
   }
 
-  // [v4 D2] 법인 주택: 주택 수 skip, 즉시 12%
-  if (acquiredBy === "corporation") {
+  // [v4 D2] 법인 주택: 주택 수 skip, 즉시 12% (비영리법인 포함 — §13의2①1호 「개인이 아닌 자」)
+  if (isCorporateHouseAcquirer(acquiredBy)) {
     return {
       isSurcharged: true,
       surchargeRate: SURCHARGE_RATES.CORP,
@@ -291,7 +299,8 @@ export function assessGiftSurcharge(input: {
  * [P1-5] 일시적 2주택 처분기한 계산
  *
  * 지방세법 시행령 §28의5① 변천:
- * - 2023.2.28~ 현행: 모든 경우 3년 단일
+ * - 2026.10.1.~ 현행: 조정+조정 2년 / 그 외 3년 (대통령령 제36736호 — 부칙 제2조②: 2026.8.26. 이전 매매계약+계약금 증빙이면 종전 3년)
+ * - 2023.2.28~2026.9.30.: 모든 경우 3년 단일
  * - 2022.5.10 ~ 2023.2.27: 조정+조정 2년 / 그 외 3년
  * - ~2022.5.9: 조정+조정 1년 / 그 외 3년
  *
@@ -300,12 +309,20 @@ export function assessGiftSurcharge(input: {
 export function getDisposalDeadlineYears(
   balanceDate: string | Date,
   prevRegion: "regulated" | "non_regulated",
-  newRegion: "regulated" | "non_regulated"
+  newRegion: "regulated" | "non_regulated",
+  /** 대통령령 제36736호 부칙 제2조② — 2026.8.26. 이전 매매계약 + 계약금 지급 증빙 */
+  isPre2026AmendmentContract = false
 ): number {
   const date = typeof balanceDate === "string" ? new Date(balanceDate) : balanceDate;
   const isAllRegulated = prevRegion === "regulated" && newRegion === "regulated";
+  const iso = typeof balanceDate === "string" ? balanceDate.slice(0, 10) : balanceDate.toISOString().slice(0, 10);
 
-  // 2023.2.28 ~ 현행: 모든 경우 3년 단일
+  // 2026.10.1. ~ 현행: 조정+조정 2년, 그 외 3년 (부칙 제2조② 종전 계약은 3년)
+  if (iso >= ACQUISITION_CONST.TEMP_2HOUSE_2YEAR_START) {
+    return isAllRegulated && !isPre2026AmendmentContract ? 2 : 3;
+  }
+
+  // 2023.2.28 ~ 2026.9.30.: 모든 경우 3년 단일
   if (date >= new Date("2023-02-28")) return 3;
 
   // 2022.5.10 ~ 2023.2.27: 조정+조정 2년, 그 외 3년 (윈도우 시작일 — SURCHARGE_EXCLUSION_WINDOW 공유)
@@ -326,9 +343,10 @@ export function getDisposalDeadlineYears(
 export function getDisposalDeadlineDate(
   balanceDate: string,
   prevRegion: "regulated" | "non_regulated",
-  newRegion: "regulated" | "non_regulated"
+  newRegion: "regulated" | "non_regulated",
+  isPre2026AmendmentContract = false
 ): string {
-  const years = getDisposalDeadlineYears(balanceDate, prevRegion, newRegion);
+  const years = getDisposalDeadlineYears(balanceDate, prevRegion, newRegion, isPre2026AmendmentContract);
   const date = new Date(balanceDate);
   date.setUTCFullYear(date.getUTCFullYear() + years);
   return date.toISOString().slice(0, 10);
@@ -353,6 +371,10 @@ export function assessTemporaryTwoHouse(input: {
   balanceDate?: string;
   previousHouseRegion?: "regulated" | "non_regulated";
   newHouseRegion?: "regulated" | "non_regulated";
+  /** 매매계약일(분양계약 포함) — 대통령령 제36736호 부칙 제2조② 판정 */
+  saleContractDate?: string;
+  /** 계약금 지급 증빙 보유 — 같은 부칙 제2조② */
+  hasContractDepositProof?: boolean;
 }): TemporaryTwoHouseResult {
   const { houseCount, isTemporaryTwoHouse, balanceDate } = input;
 
@@ -365,17 +387,35 @@ export function assessTemporaryTwoHouse(input: {
   const newRegion = input.newHouseRegion ?? "non_regulated";
   const date = balanceDate ?? new Date().toISOString().slice(0, 10);
 
-  const years = getDisposalDeadlineYears(date, prevRegion, newRegion);
-  const deadlineDate = getDisposalDeadlineDate(date, prevRegion, newRegion);
+  const cutoff = ACQUISITION_CONST.TEMP_2HOUSE_2YEAR_CONTRACT_CUTOFF;
+  const isPreAmendmentContract =
+    !!input.saleContractDate &&
+    input.saleContractDate <= cutoff &&
+    input.hasContractDepositProof === true;
+  const years = getDisposalDeadlineYears(date, prevRegion, newRegion, isPreAmendmentContract);
+  const deadlineDate = getDisposalDeadlineDate(date, prevRegion, newRegion, isPreAmendmentContract);
+  const isAmendmentEra = date.slice(0, 10) >= ACQUISITION_CONST.TEMP_2HOUSE_2YEAR_START;
+  const isAllRegulated = prevRegion === "regulated" && newRegion === "regulated";
+
+  const lines = [
+    `일시적 2주택 중과 배제 — 종전 주택을 ${deadlineDate}까지(${years}년 이내) 처분해야 합니다.`,
+    "처분기한 내 처분 시 기본세율 확정. 미처분 시 중과세율 차액(8%-기본세율)이 추징됩니다.",
+  ];
+  if (isAmendmentEra && isAllRegulated) {
+    lines.push(
+      isPreAmendmentContract
+        ? "2026.8.26. 이전 매매계약과 계약금 지급이 확인되어 종전 규정(3년)을 적용했습니다."
+        : "종전·신규 주택이 모두 조정대상지역이라 처분기한이 2년입니다. 2026.8.26. 이전에 매매계약(분양계약 포함)을 하고 계약금을 지급한 사실이 증빙되면 3년이 적용됩니다 — 매매계약일과 계약금 증빙을 입력하세요."
+    );
+  }
+  lines.push(
+    `법적 근거: ${ACQUISITION.TEMP_2HOUSE_EXCLUSION}${isAmendmentEra && isAllRegulated ? ` · ${ACQUISITION.TEMP_2HOUSE_2026_AMENDMENT_ADDENDA}` : ""}`
+  );
 
   return {
     isExcluded: true,
     disposalDeadlineYears: years,
     disposalDeadlineDate: deadlineDate,
-    warning: [
-      `일시적 2주택 중과 배제 — 종전 주택을 ${deadlineDate}까지(${years}년 이내) 처분해야 합니다.`,
-      "처분기한 내 처분 시 기본세율 확정. 미처분 시 중과세율 차액(8%-기본세율)이 추징됩니다.",
-      `법적 근거: ${ACQUISITION.TEMP_2HOUSE_EXCLUSION}`,
-    ].join(" "),
+    warning: lines.join(" "),
   };
 }

@@ -7,6 +7,9 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { isPre2026TempTwoHouseContractDate } from "@/lib/calc/acquisition-sale-contract-transition";
+import { isHousingSaleContractAcquisition } from "@/lib/calc/acquisition-sale-contract-transition";
+import { effectiveSaleContractDate } from "@/lib/calc/acquisition-sale-contract-transition";
 import {
   infoBannerCls,
   warnBannerCls,
@@ -127,6 +130,7 @@ export function Step3({
 - ~2022.5.9: 조정지역 다주택 중과 적용
 - 2022.5.10~: 일시적 2주택 처분기한 조정+조정 1년 → 2년
 - 2023.2.28~: 조정+조정 처분기한 3년 (완화)
+- 2026.10.1.~: 조정+조정 처분기한 2년 (2026.8.26. 이전 계약+계약금 증빙은 3년)
 - 2023.1.5~: 일부 지역 해제 (인천 연수·남동·서·미추홀·부평, 성남 일부 등)
 
 ## §13의2④ 지정 전 계약 보호
@@ -225,10 +229,15 @@ export function Step3({
           trailing={
             <TaxHelp
               title="일시적 2주택 처분기한 변천표 (시행령 §28의5①)"
-              summary="잔금일 시점에 따라 처분기한이 다릅니다. 2023.2.28 이후는 모두 3년."
-              details={`## 잔금일 시점별 처분기한
+              summary="신규 주택 취득일 시점에 따라 처분기한이 다릅니다. 2026.10.1. 이후 취득은 조정+조정 2년, 그 외 3년."
+              details={`## 신규 주택 취득일 시점별 처분기한
 
-## 2023.2.28 이후 잔금 (현행)
+## 2026.10.1. 이후 취득 (현행)
+- 종전+신규 **모두 조정지역**: 2년
+- 그 외 조합: 3년
+- 2026.8.26. 이전에 매매계약(분양계약 포함)을 하고 계약금을 지급한 사실이 증빙되면 3년 (대통령령 제36736호 부칙 제2조②)
+
+## 2023.2.28 ~ 2026.9.30. 취득
 - **모든 경우 3년** (지역 조합 관계없이)
 
 ## 2022.5.10 ~ 2023.2.27 잔금
@@ -286,9 +295,25 @@ export function Step3({
               />
             </div>
             <div className="rounded-md bg-rose-50/70 border border-rose-200 p-2 text-xs text-rose-700 dark:text-rose-300 dark:bg-rose-950/40">
-              처분기한: 2023.2.28 이후 잔금 기준 모두 3년<br />
-              (이전 잔금: 조정+조정 1~2년, 그 외 3년)
+              처분기한: 2026.10.1. 이후 취득은 조정+조정 2년, 그 외 3년<br />
+              (2023.2.28.~2026.9.30. 취득은 모두 3년 · 그 전: 조정+조정 1~2년)
             </div>
+            {form.previousHouseRegion === "regulated" && form.newHouseRegion === "regulated" && (
+              isPre2026TempTwoHouseContractDate(form) ? (
+                <ToggleCard
+                  tone="rose"
+                  size="sm"
+                  title="2026.8.26. 이전 계약 — 계약금 지급 증빙 보유"
+                  description="계좌이체 내역 등으로 계약금 지급 사실이 확인되면 처분기한 3년(종전 규정)을 적용합니다 (대통령령 제36736호 부칙 제2조②)"
+                  checked={form.hasContractDepositProof}
+                  onCheckedChange={(v) => set("hasContractDepositProof", v)}
+                />
+              ) : isHousingSaleContractAcquisition(form) && effectiveSaleContractDate(form) === "" ? (
+                <p className="text-xs text-muted-foreground">
+                  2026.8.26. 이전에 매매계약(분양계약 포함)을 했다면 앞 단계의 매매계약일을 입력하세요 — 계약금 증빙이 있으면 처분기한이 3년입니다.
+                </p>
+              ) : null
+            )}
           </div>
         </ToggleCard>
       )}
