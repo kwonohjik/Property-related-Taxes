@@ -18,6 +18,7 @@ import type {
   ExitTaxHoldingResult,
 } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 import { fmt, Row, Divider } from "./exit-tax-result-parts";
+import { ExitTaxActualTransferSection, hasActualTransferEcho } from "./ExitTaxActualTransferSection";
 import {
   ExitTaxBucketBreakdown,
   ExitTaxExclusionNotice,
@@ -171,6 +172,8 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
   const multiBucket = isMultiBucketResult(result);
   const hasLocalAlt = result.localIncomeTaxAlternative !== undefined;
   const hasExcluded = result.foreignExclusion?.applied === true;
+  // 종목별 실제 양도(PR-7b) 엔진 echo — 있을 때만 근거 섹션과 종목별 산식 라벨을 쓴다(전역 입력·옛 이력은 종전 라벨·마크업 그대로)
+  const hasLots = hasActualTransferEcho(result);
 
   return (
     <div className="space-y-4">
@@ -301,6 +304,14 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
           </>
         )}
 
+        {/* ── 종목별 실제 양도 근거 (PR-7b) — 엔진 echo ── */}
+        {hasLots && (
+          <>
+            <Divider />
+            <ExitTaxActualTransferSection result={result} />
+          </>
+        )}
+
         {/* ── 경정 후 조정 (실양도 완료 시) ── */}
         {(hasAdjDeduction || hasForeignCredit || hasDomesticCredit) && (
           <>
@@ -308,14 +319,22 @@ export function ExitTaxResultCard({ result }: ExitTaxResultCardProps) {
             <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 pt-1">경정청구 공제 (실양도 완료 시)</p>
             {hasAdjDeduction && (
               <Row
-                label="조정공제 (§118의12) = 출국일 시가 - 실양도가액 차이분"
+                label={
+                  hasLots
+                    ? "조정공제 (§118의12①) = 세율 구분별 조정공제의 합"
+                    : "조정공제 (§118의12) = 출국일 시가 - 실양도가액 차이분"
+                }
                 value={result.adjustmentDeduction!}
                 indent
               />
             )}
             {hasForeignCredit && (
               <Row
-                label="외국납부세액공제 (§118의13) = 외국납부세액과 한도 중 작은 금액"
+                label={
+                  hasLots
+                    ? "외국납부세액공제 (§118의13①) = 종목별 안분 외국납부세액의 합과 한도(산출세액 − 조정공제) 중 작은 금액"
+                    : "외국납부세액공제 (§118의13) = 외국납부세액과 한도 중 작은 금액"
+                }
                 value={result.foreignTaxCreditApplied!}
                 indent
               />

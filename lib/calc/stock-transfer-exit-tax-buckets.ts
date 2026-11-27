@@ -16,20 +16,27 @@ import { classifyExitTaxHoldings } from "@/lib/tax-engine/stock-transfer/exit-ta
 import { isExitTaxFrom2027 } from "@/lib/tax-engine/data/exit-tax-2027-era";
 import { buildExitTaxEngineInput } from "@/lib/api/stock-transfer-exit-tax-engine-input";
 
+/** 엔진 분류 helper의 입력 화면용 요약 — 과세 구분과 «과세» 종목 id (제외 종목은 빠진다) */
+export type ExitTaxClassificationPreview = {
+  buckets: ExitTaxRateBucket[];
+  taxedIds: ReadonlySet<string>;
+};
+
 /**
- * 과세 종목이 속한 세율 구분(canonical 순서 아님 — 중복 제거만). 입력이 덜 채워져 엔진이 환산·분류를 못 하면 `null`
- * (배분 칸은 닫히고 ④도 싣지 않는다 — 그 단계의 미비는 ⑧이 해당 필드를 가리킨다).
+ * 엔진 분류 결과(`classifyExitTaxHoldings`)를 그대로 읽는다. 입력이 덜 채워져 엔진이 환산·분류를 못 하면 `null`
+ * (배분 칸·종목별 실제 양도 칸은 닫히고 ④도 싣지 않는다 — 그 단계의 미비는 ⑧이 해당 필드를 가리킨다).
  *
- * @param body `buildExitTaxApiBodyCore` 결과(배분 제외) — ⑫ Zod가 받는 것과 같은 모양
+ * @param body `buildExitTaxApiBodyCore` 결과(배분·실제 양도 제외) — ⑫ Zod가 받는 것과 같은 모양
  */
-export function previewExitTaxBucketsFromBody(
+export function previewExitTaxClassificationFromBody(
   body: Record<string, unknown>,
-): ExitTaxRateBucket[] | null {
+): ExitTaxClassificationPreview | null {
   try {
     const input = buildExitTaxEngineInput(body);
     const regime = isExitTaxFrom2027(input.departureDate) ? "from2027" : "pre2027";
     const computed = input.holdings.map((h) => calcHoldingResult(h));
-    return classifyExitTaxHoldings(input, regime, computed).buckets;
+    const cls = classifyExitTaxHoldings(input, regime, computed);
+    return { buckets: cls.buckets, taxedIds: new Set(cls.taxedHoldings.map((h) => h.id)) };
   } catch {
     return null;
   }

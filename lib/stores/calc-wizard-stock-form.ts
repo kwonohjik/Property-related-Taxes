@@ -269,6 +269,7 @@ export function createInitialStockFormData(): StockTransferFormData {
     etBasicDeductionAllocClause1: "",
     etBasicDeductionAllocClause2a: "",
     etBasicDeductionAllocClause2b: "",
+    etActualTransferMode: "global",           // 3중 패턴 default
 
     // ── PR-4A 해외주식 전용 초기값 (② 동기화 지점) ──
     yearsResidentInKorea: "",

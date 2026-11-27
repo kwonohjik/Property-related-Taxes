@@ -69,6 +69,16 @@
 
 필드 정의(⑫ 정본): `holdings[].actualTransfer = { shareCount, transferDate?, pricePerShare? | priceForeign? + exchangeRate?, foreignTaxPaid? | foreignTaxPaidForeign? + foreignTaxExchangeRate? (+ foreignTaxCurrencyCode?), domesticSourceTaxWithheld? }`. `foreignTaxExclusionReason`(§118의13②)은 종전대로 최상위 하나다.
 
+### 2.3 PR-7b 결정 (2026-11-27) — 경정청구 화면(①~⑧)
+
+| # | 결정 | 구현 메모 |
+|---|---|---|
+| W-1 | **입력 방식 판정 = 엔진 분류 helper** | 출국일 2027.1.1. 이후이고 과세 구분에 2호가 있으면(구분 ≥2 포함) **종목별 입력만**(강제). 과세 구분이 1호뿐이면 «종목 공통(전역·현행)» ↔ «종목별»을 선택(`etActualTransferMode`, 기본 전역). 2026 이전 출국·판정 불가는 전역만 — 화면 DOM 불변(U0 기준선). `previewExitTaxActualMode` → `resolveExitTaxActualMode` |
+| W-2 | **1호 단일 구분에서 종목별 허용** | 허용한다(2027 이후만). 전역 단가 하나는 국내 종목이 여럿이거나 일부만 양도하면 부정확하기 때문이다. 기본값은 전역이라 기존 흐름은 그대로다 |
+| W-3 | **반대 방식 값은 지우지 않는다** | ④는 모드가 다른 값을 body에 싣지 않고(종목별 모드에서 전역 키 제거 · 전역 모드에서 종목별 입력 미전송), ⑧이 «방식 충돌»로 막고 화면이 «지우기» 버튼을 둔다(사용자가 직접). 제외 종목의 입력은 ④가 싣고 엔진이 거부한다 |
+| W-4 | **토글 OFF = 값 전부 초기화** | `actualTransfer: ExitTaxHoldingActualForm \| null`(null = 양도하지 않음). 외국납부세액 방식(원화↔외화) 전환은 안 쓰게 된 쪽을 비운다 |
+| W-5 | **결과** | 엔진 echo만 읽는다 — `holdingDetails[].actualTransfer` · `bucketDetails[].adjustmentDeduction·priceDrop`. 확인 필요 고지는 엔진 `warnings`(주의사항) |
+
 ## 3. 필드 이름 정합 (결정 불필요 — 이 표가 정본)
 
 ⑫(Zod) 정의서는 엔진 계획서 §3.1·§10이다. 화면 계획서 §10의 가칭은 아래로 바꿔 읽는다.

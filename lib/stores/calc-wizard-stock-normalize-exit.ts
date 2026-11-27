@@ -6,13 +6,50 @@
  * 그래서 키 보존은 `__tests__/lib/exit-tax-holding-normalize-roundtrip.anchor.test.ts` 왕복 테스트가 지킨다.
  */
 
-import type { ExitTaxHoldingForm } from "./calc-wizard-stock-types";
+import type { ExitTaxHoldingActualForm, ExitTaxHoldingForm } from "./calc-wizard-stock-types";
+import { createEmptyExitTaxActualTransfer } from "./calc-wizard-stock-types";
 import type { StockTransferFormData } from "./calc-wizard-stock-form";
 
 /** 국외주식 시장 값 — 시장↔시가 모드 정합 판정에 쓴다 */
 const FOREIGN_MARKET = "foreign_stock";
 const FOREIGN_MODES = ["foreign_market_price", "foreign_decree_178_3"] as const;
 const DOMESTIC_MODES = ["market_price", "prior_year_std", "unlisted_sample", "unlisted_std"] as const;
+
+// ============================================================
+// PR-7b 종목별 실제 양도 normalizer
+// ============================================================
+
+const FOREIGN_TAX_INPUTS = ["none", "krw", "foreign"] as const;
+
+/**
+ * 종목별 실제 양도 입력 normalize (③). `null`/비객체 = 양도하지 않음(토글 OFF).
+ * 객체면 필드 나열로 새로 만든다 — 빈 값은 factory(`createEmptyExitTaxActualTransfer`)와 **같은 기본값**이다(3중 패턴).
+ * 새 필드를 나열하지 않으면 새로고침마다 조용히 사라지므로 왕복 anchor가 지킨다.
+ */
+export function normalizeExitTaxActualTransfer(raw: unknown): ExitTaxHoldingActualForm | null {
+  if (!raw || typeof raw !== "object") return null;
+  const o = raw as Record<string, unknown>;
+  const d = createEmptyExitTaxActualTransfer();
+  const str = (k: keyof ExitTaxHoldingActualForm, def: string): string =>
+    typeof o[k] === "string" ? (o[k] as string) : def;
+  const input = o.foreignTaxInput;
+  return {
+    shareCount: str("shareCount", d.shareCount),
+    transferDate: str("transferDate", d.transferDate),
+    pricePerShare: str("pricePerShare", d.pricePerShare),
+    priceForeign: str("priceForeign", d.priceForeign),
+    exchangeRate: str("exchangeRate", d.exchangeRate),
+    foreignTaxInput:
+      typeof input === "string" && (FOREIGN_TAX_INPUTS as readonly string[]).includes(input)
+        ? (input as ExitTaxHoldingActualForm["foreignTaxInput"])
+        : d.foreignTaxInput,
+    foreignTaxPaid: str("foreignTaxPaid", d.foreignTaxPaid),
+    foreignTaxPaidForeign: str("foreignTaxPaidForeign", d.foreignTaxPaidForeign),
+    foreignTaxCurrencyCode: str("foreignTaxCurrencyCode", "") || d.foreignTaxCurrencyCode,
+    foreignTaxExchangeRate: str("foreignTaxExchangeRate", d.foreignTaxExchangeRate),
+    domesticSourceTaxWithheld: str("domesticSourceTaxWithheld", d.domesticSourceTaxWithheld),
+  };
+}
 
 // ============================================================
 // PR-4B 국외전출세 보유 종목 배열 normalizer
@@ -67,6 +104,8 @@ export function normalizeExitTaxHoldings(raw: unknown): ExitTaxHoldingForm[] {
         stockCodeOrBizNumber: typeof o.stockCodeOrBizNumber === "string" ? o.stockCodeOrBizNumber : "",
         faceValuePerShare: typeof o.faceValuePerShare === "string" ? o.faceValuePerShare : "",
         ownershipRatio: typeof o.ownershipRatio === "string" ? o.ownershipRatio : "",
+        // 종목별 실제 양도(PR-7b) — 구 세션에는 없던 필드라 null(양도하지 않음)로 채운다
+        actualTransfer: normalizeExitTaxActualTransfer(o.actualTransfer),
       };
     })
     .filter((l): l is ExitTaxHoldingForm => l !== null);
@@ -92,6 +131,7 @@ type ExitTaxFormExtras = Pick<
   | "etBasicDeductionAllocClause1"
   | "etBasicDeductionAllocClause2a"
   | "etBasicDeductionAllocClause2b"
+  | "etActualTransferMode"
 >;
 
 /**
@@ -142,5 +182,6 @@ export function normalizeExitTaxFormExtras(
     etBasicDeductionAllocClause1: str("etBasicDeductionAllocClause1"),
     etBasicDeductionAllocClause2a: str("etBasicDeductionAllocClause2a"),
     etBasicDeductionAllocClause2b: str("etBasicDeductionAllocClause2b"),
+    etActualTransferMode: d.etActualTransferMode === "per_holding" ? "per_holding" : defaults.etActualTransferMode,
   };
 }

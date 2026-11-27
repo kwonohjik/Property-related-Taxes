@@ -8,13 +8,27 @@
  *   H1 + F1 · 배분 (clause1 2,500,000 / clause2b 0) → 84,375,000 + 184,000,000 = 268,375,000
  */
 import {
+  createEmptyExitTaxActualTransfer,
   createEmptyExitTaxHolding,
   createInitialStockFormData,
 } from "@/lib/stores/calc-wizard-stock-store";
 import type {
+  ExitTaxHoldingActualForm,
   ExitTaxHoldingForm,
   StockTransferFormData,
 } from "@/lib/stores/calc-wizard-stock-store";
+
+/** 종목별 실제 양도 입력(PR-7b) — 기본은 비어 있는 입력(토글 ON 직후) */
+export const exitActual = (over: Partial<ExitTaxHoldingActualForm> = {}): ExitTaxHoldingActualForm => ({
+  ...createEmptyExitTaxActualTransfer(),
+  ...over,
+});
+
+/**
+ * F1(국외 1,000주) 전량 양도 — 외화 1,000 × 실제 양도일 기준환율 1,200 = 1,200,000,000
+ * 하락분 = 출국일 1,400,000,000 − 1,200,000,000 = 200,000,000 → 2호나목 20% → 조정공제 40,000,000 · 경정 후 183,500,000 − 40,000,000 = 143,500,000
+ */
+export const F1_SOLD = exitActual({ shareCount: "1,000", priceForeign: "1000", exchangeRate: "1200" });
 
 export function exitHolding(id: string, over: Partial<ExitTaxHoldingForm> = {}): ExitTaxHoldingForm {
   return { ...createEmptyExitTaxHolding(), id, ...over };

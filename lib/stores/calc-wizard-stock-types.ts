@@ -84,6 +84,61 @@ export interface ExitTaxHoldingForm {
   faceValuePerShare?: string;
   /** ⑬ 보유 지분율 (%) */
   ownershipRatio?: string;
+
+  // ── 종목별 실제 양도 (경정청구 §118의12~§118의14 · PR-7b) ──
+  /**
+   * 이 종목을 **실제 양도했는가**. `null` = 양도하지 않음(토글 OFF — 값이 없다). 객체 = 토글 ON.
+   * 토글을 끄면 객체 전체를 버린다(숨은 값 금지, #3707과 같은 원칙). 3중 패턴 default `null`.
+   * ④는 **종목별 입력 모드**일 때만 싣는다(`previewExitTaxActualMode`) — 모드가 다르면 보내지 않고 ⑧이 막는다.
+   */
+  actualTransfer: ExitTaxHoldingActualForm | null;
+}
+
+/**
+ * 종목별 실제 양도 입력 (PR-7b) — 필드명은 엔진 `ExitTaxHoldingActualTransfer`와 같다(검증 오류 경로 `holdings.<id>.actualTransfer.<key>` ↔ 입력칸 앵커).
+ * 양도가는 종목 종류로 갈린다: 국내 종목 = 원화 `pricePerShare`, 국외주식 = 외화 `priceForeign` + 실제 양도일 기준환율 `exchangeRate`.
+ * 반대 쪽 칸은 화면에 없고 ④가 싣지 않는다(시장을 바꿔도 이전 시장의 값이 엔진에 가지 않는다).
+ */
+export interface ExitTaxHoldingActualForm {
+  /** 실제 양도 주식 수 (1 이상, 보유 주식 수 이하의 정수) */
+  shareCount: string;
+  /** 실제 양도일 "YYYY-MM-DD" (선택 — 출국일 이전이면 엔진이 거부) */
+  transferDate: string;
+  /** 국내 종목 — 1주당 실제 양도가 (원) */
+  pricePerShare: string;
+  /** 국외주식 — 1주당 실제 양도가 (외화) */
+  priceForeign: string;
+  /** 국외주식 — 실제 양도일 기준환율 (원/외화) */
+  exchangeRate: string;
+  /**
+   * 이 종목의 외국납부세액 입력 방식 — 원화·외화+환율은 **한쪽만**(엔진이 동시 입력을 거부한다).
+   * "none" = 외국납부세액 없음 · "krw" = 원화 · "foreign" = 외화 + 납세일 기준환율. 3중 패턴 default "none".
+   */
+  foreignTaxInput: "none" | "krw" | "foreign";
+  foreignTaxPaid: string;
+  foreignTaxPaidForeign: string;
+  /** 외국납부세액 통화 (표시용). 3중 패턴 default "USD" */
+  foreignTaxCurrencyCode: string;
+  foreignTaxExchangeRate: string;
+  /** §118의14① 비거주자 원천징수액 (원) — 외국법인 발행 국외주식(2호)에는 입력칸이 없다(엔진이 거부) */
+  domesticSourceTaxWithheld: string;
+}
+
+/** 종목별 실제 양도 빈 입력(토글 ON 직후) */
+export function createEmptyExitTaxActualTransfer(): ExitTaxHoldingActualForm {
+  return {
+    shareCount: "",
+    transferDate: "",
+    pricePerShare: "",
+    priceForeign: "",
+    exchangeRate: "",
+    foreignTaxInput: "none",       // 3중 패턴 default
+    foreignTaxPaid: "",
+    foreignTaxPaidForeign: "",
+    foreignTaxCurrencyCode: "USD", // 3중 패턴 default
+    foreignTaxExchangeRate: "",
+    domesticSourceTaxWithheld: "",
+  };
 }
 
 /** 신규 국외전출세 보유 종목 빈 행 팩토리 */
@@ -111,6 +166,7 @@ export function createEmptyExitTaxHolding(): ExitTaxHoldingForm {
     stockCodeOrBizNumber: "",
     faceValuePerShare: "",
     ownershipRatio: "",
+    actualTransfer: null,                // 3중 패턴 default: 양도하지 않음
   };
 }
 

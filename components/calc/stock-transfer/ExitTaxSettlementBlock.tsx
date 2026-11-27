@@ -20,6 +20,9 @@ import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { SectionBox, type StockStepBlockProps } from "./stock-section-box";
 import { createInitialStockFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { previewExitTaxActualMode } from "@/lib/calc/stock-transfer-tax-api-foreign-exit";
+import { FOREIGN_TAX_EXCLUSION_OPTIONS } from "./exit-tax-foreign-tax-options";
+import { ExitTaxActualTransferBlock, exitTaxActualBlockVisible } from "./ExitTaxActualTransferBlock";
 
 
 // ── 납부유예 사유 옵션 (§118의16) ──
@@ -41,63 +44,64 @@ const DEFERRAL_REASON_OPTIONS = [
   },
 ];
 
-// ── 외국납부세액 배제 사유 옵션 (§118의13②) ──
-const FOREIGN_TAX_EXCLUSION_OPTIONS = [
-  {
-    value: "none",
-    label: "배제 사유 없음 (공제 적용)",
-    description: "§118의13① — 외국 납부 세액을 산출세액에서 공제",
-  },
-  {
-    value: "credit_allowed",
-    label: "외국정부가 산출세액에서 공제 허용 (1호)",
-    description: "§118의13②1호 — 외국정부가 거주자 시절 납세액에 대해 공제를 허용",
-  },
-  {
-    value: "step_up",
-    label: "외국정부가 취득가액을 출국일 시가로 조정 (2호)",
-    description: "§118의13②2호 — step-up basis 적용: 외국에서 출국일 시가를 취득가액으로 인정",
-  },
-];
-
 export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) {
   // 3중 패턴 default (factory default와 동일값)
   const deferralReason = form.etDeferralReason;         // factory: "none"
   const foreignTaxExclusionReason = form.etForeignTaxExclusionReason; // factory: "none"
+  // 경정청구 입력 방식 — 종목별이면 «종목 공통» 입력 3곳(실양도·외국납부세액·원천징수)은 그리지 않는다(종목별 블록이 대신한다)
+  const actualInfo = previewExitTaxActualMode(form);
+  const perHolding = actualInfo.mode === "per_holding";
+  const showActualBlock = exitTaxActualBlockVisible(form, actualInfo);
+
+  // 섹션 5: 실양도 정보 (경정청구 §118의12~§118의15⑤) — 종목 공통(전역) 입력
+  const globalActualSection = (
+    <SectionBox label="실양도 정보 — 경정청구용 (§118의12, 선택)" tone="emerald">
+      <p className="text-xs text-emerald-700 leading-relaxed dark:text-emerald-300">
+        납부유예 후 해외에서 실제로 양도한 경우, 실양도가액이 출국일 시가보다 낮으면
+        §118의12 조정공제를 통해 환급청구할 수 있습니다.
+        아직 실양도하지 않은 경우 비워두세요.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <FieldCard
+          label="실양도일"
+          hint="해외에서 실제 주식을 양도한 날 (없으면 비워두세요)"
+        >
+          <DateInput
+            value={form.etActualTransferDate}
+            onChange={(v) => onChange({ etActualTransferDate: v })}
+          />
+        </FieldCard>
+        <FieldCard
+          label="실양도 1주당 단가 (원화 환산)"
+          hint="실제 양도한 1주당 원화 환산 단가. §118의12 조정공제 계산에 사용됩니다."
+        >
+          <CurrencyInput
+            label=""
+            value={form.etActualTransferPricePerShare}
+            onChange={(v) => onChange({ etActualTransferPricePerShare: v })}
+            hideUnit
+            placeholder="없으면 비워두세요"
+          />
+        </FieldCard>
+      </div>
+    </SectionBox>
+  );
 
   return (
     <div className="space-y-5">
-      {/* ── 섹션 5: 실양도 정보 (경정청구 §118의12~§118의15⑤) ── */}
-      <SectionBox label="실양도 정보 — 경정청구용 (§118의12, 선택)" tone="emerald">
-        <p className="text-xs text-emerald-700 leading-relaxed dark:text-emerald-300">
-          납부유예 후 해외에서 실제로 양도한 경우, 실양도가액이 출국일 시가보다 낮으면
-          §118의12 조정공제를 통해 환급청구할 수 있습니다.
-          아직 실양도하지 않은 경우 비워두세요.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <FieldCard
-            label="실양도일"
-            hint="해외에서 실제 주식을 양도한 날 (없으면 비워두세요)"
-          >
-            <DateInput
-              value={form.etActualTransferDate}
-              onChange={(v) => onChange({ etActualTransferDate: v })}
-            />
-          </FieldCard>
-          <FieldCard
-            label="실양도 1주당 단가 (원화 환산)"
-            hint="실제 양도한 1주당 원화 환산 단가. §118의12 조정공제 계산에 사용됩니다."
-          >
-            <CurrencyInput
-              label=""
-              value={form.etActualTransferPricePerShare}
-              onChange={(v) => onChange({ etActualTransferPricePerShare: v })}
-              hideUnit
-              placeholder="없으면 비워두세요"
-            />
-          </FieldCard>
+      {/*
+        섹션 5 자리(첫 자식) — 종목별 실제 양도(PR-7b) 블록이 필요하면 그 블록을 앞세운 래퍼로, 아니면 종전 «실양도 정보» 상자 **그 자체**를 그린다.
+        ⚠️ 2026 이전·1호 단일 구분 전역 모드는 종전과 같은 요소를 같은 자리에 둬야 한다 — React `useId`는 형제 자리·개수로 정해져
+        (SSR 기준선 `exit-tax-pre2027-ssr-baseline`의 `id="_R_…_"`), 첫 자식으로 널 컴포넌트를 하나 끼워도 아래 입력 id가 전부 바뀐다.
+      */}
+      {showActualBlock ? (
+        <div className="space-y-5">
+          <ExitTaxActualTransferBlock form={form} onChange={onChange} />
+          {!perHolding && globalActualSection}
         </div>
-      </SectionBox>
+      ) : (
+        globalActualSection
+      )}
 
       {/* ── 섹션 6: 납부유예 (§118의16) ── */}
       <ToggleCard
@@ -170,6 +174,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
       />
 
       {/* ── 섹션 7: 외국납부세액 (§118의13) ── */}
+      {!perHolding && (
       <ToggleCard
         title="외국납부세액 있음 (§118의13)"
         description="§118의13 — 납부유예 후 해외에서 실양도 시 외국에서 납부한 세액이 있는 경우. 배제 사유 없으면 산출세액에서 공제."
@@ -271,6 +276,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
           </FieldCard>
         </div>
       </ToggleCard>
+      )}
 
       {/* ── 섹션 8: 보유현황 신고 (§118의15) ── */}
       <SectionBox label="보유현황 신고 (§118의15)" tone="rose">
@@ -310,6 +316,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
       </SectionBox>
 
       {/* ── 국내원천 원천징수 (§118의14, 선택) ── */}
+      {!perHolding && (
       <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50/40 dark:bg-slate-800/20 p-4 space-y-3">
         <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
           비거주자 세액공제 (§118의14, 선택)
@@ -330,6 +337,7 @@ export function ExitTaxSettlementBlock({ form, onChange }: StockStepBlockProps) 
           />
         </FieldCard>
       </div>
+      )}
     </div>
   );
 }
