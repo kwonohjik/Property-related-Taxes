@@ -164,6 +164,10 @@ vitest 4.1.12의 샤드 배정은 «파일 경로(루트 기준, 앞에 `/` 포�
 - **CI가 주는 고유 신호는 fresh `npm ci`**다 — 러너가 매번 깨끗한 환경이라 로컬 node_modules가 가리던 lockfile·의존성 문제가 드러난다. 그 신호가 유일하므로 CI는 **범위를 좁히지 않고 전체 테스트**를 돌린다(좁히면 pre-push의 재탕이 된다).
 - **Node 버전은 `setup-node`로 24에 고정**한다(로컬과 메이저 일치). 명시하지 않으면 러너 기본 Node가 더 낮아 로컬에서 통과한 코드가 CI에서만 깨질 수 있다.
 
+### 🔧 Playwright `--with-deps` 설치가 Microsoft apt 저장소 403으로 실패 (2026-11-27)
+
+ubuntu-latest(26.04) 러너 이미지에 등록된 `packages.microsoft.com/ubuntu/26.04/prod` 저장소가 `InRelease`에 403을 반환해 `npx playwright install --with-deps chromium`의 `apt-get update`가 `exited with code: 100`으로 실패했다. 테스트는 실행되지 않고 샤드만 떨어진다(#3718 E2E 2/12, #3720 E2E 9/12 — 재실행 시 통과). 설치 직전 단계에서 그 저장소를 가리키는 `sources.list.d` 파일을 지운다(`ci.yml`·`law-api-health.yml`). Playwright 의존성 패키지는 Ubuntu 기본 저장소에서 온다.
+
 ### E2E는 CI에만 있다 (2026-08-03 추가)
 
 **종전엔 E2E가 어느 자동 게이트에도 없었다** — pre-push도 CI도 vitest만 돌렸다. 그래서 PR#1008이 `gift-deemed-capital-increase.spec.ts`를 **조용히 무력화**시킨 것을 다음 작업에서야 발견했다(`toContainText("0")`이 substring이라 `"300,000,000"`도 통과 → 깨진 게 아니라 검증을 멈춘 것).
