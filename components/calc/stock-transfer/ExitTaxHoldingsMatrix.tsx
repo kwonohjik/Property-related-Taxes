@@ -23,12 +23,14 @@
  */
 
 import { useMemo } from "react";
-import { nanoid } from "nanoid";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { isExitTaxFrom2027 } from "@/lib/tax-engine/data/exit-tax-2027-era";
+import { ExitTaxForeignHoldingFields } from "./ExitTaxForeignHoldingFields";
 import type { ExitTaxHoldingForm } from "@/lib/stores/calc-wizard-stock-store";
+import { createEmptyExitTaxHolding } from "@/lib/stores/calc-wizard-stock-store";
 
 // ── 시장 옵션 ──
 const MARKET_OPTIONS: { value: ExitTaxHoldingForm["marketType"]; label: string }[] = [
@@ -37,6 +39,15 @@ const MARKET_OPTIONS: { value: ExitTaxHoldingForm["marketType"]; label: string }
   { value: "konex", label: "코넥스" },
   { value: "unlisted", label: "비상장" },
 ];
+
+/**
+ * 5번째 시장 — **출국일 2027.1.1. 이후**일 때만 버튼이 생긴다(2026 이전 출국은 위 4버튼 DOM 그대로).
+ * 소득세법 §118의9① 개정(2027.1.1.): §94①3호 다목 국외주식등이 대상에 추가된다.
+ */
+const FOREIGN_MARKET_OPTION: { value: ExitTaxHoldingForm["marketType"]; label: string } = {
+  value: "foreign_stock",
+  label: "국외주식",
+};
 
 // ── 시가 산정 모드 옵션 ──
 const VALUATION_MODE_OPTIONS: {
@@ -66,12 +77,33 @@ const VALUATION_MODE_OPTIONS: {
   },
 ];
 
+/**
+ * 시장 전환 patch — 시장과 시가 모드를 **한 번의 onChange**로 함께 바꾼다(useEffect 미러링 금지).
+ * 국외주식 ↔ 국내 시장을 오갈 때만 모드를 그 시장의 기본 모드로 되돌린다(국내 시장끼리는 종전대로 시장만 바꾼다).
+ * 입력한 값(원화·외화 칸)은 지우지 않는다 — ④가 시장·모드로 게이트해 싣는다.
+ */
+function marketSwitchPatch(
+  holding: ExitTaxHoldingForm,
+  next: ExitTaxHoldingForm["marketType"],
+): Partial<ExitTaxHoldingForm> {
+  const toForeign = next === "foreign_stock";
+  const wasForeign = holding.marketType === "foreign_stock";
+  if (toForeign && !wasForeign) return { marketType: next, departureDayValuationMode: "foreign_market_price" };
+  if (!toForeign && wasForeign) return { marketType: next, departureDayValuationMode: "market_price" };
+  return { marketType: next };
+}
+
 interface ExitTaxHoldingsMatrixProps {
   holdings: ExitTaxHoldingForm[];
   onChange: (holdings: ExitTaxHoldingForm[]) => void;
+  /** 출국일 "YYYY-MM-DD" — 2027.1.1. 이후일 때만 «국외주식» 시장이 열린다. 비어 있으면 현행 4시장 */
+  departureDate?: string;
 }
 
-export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMatrixProps) {
+export function ExitTaxHoldingsMatrix({ holdings, onChange, departureDate }: ExitTaxHoldingsMatrixProps) {
+  // 출국일에서 곧바로 파생 — store에 쓰지 않는다(useEffect 미러링 금지)
+  const era = isExitTaxFrom2027(departureDate);
+  const marketOptions = era ? [...MARKET_OPTIONS, FOREIGN_MARKET_OPTION] : MARKET_OPTIONS;
   // 총 간주양도가액 미리보기 (useMemo — store 미러링 금지)
   const totalDepartureDayValue = useMemo(() => {
     return holdings.reduce((sum, h) => {
@@ -87,24 +119,9 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
     }, 0);
   }, [holdings]);
 
-  // ── 행 추가 ──
+  // ── 행 추가 — 빈 행 정의는 `createEmptyExitTaxHolding()` 하나다(이중 정의 정리) ──
   function addHolding() {
-    onChange([
-      ...holdings,
-      {
-        id: nanoid(),
-        stockName: "",
-        marketType: "kospi",
-        shareCount: "",
-        acquisitionDate: "",
-        perShareAcquisitionPrice: "",
-        departureDayValuationMode: "market_price",
-        departureDayMarketPrice: "",
-        priorYearEndMonthAvg: "",
-        unlistedSamplePrice: "",
-        unlistedStdPricePerShare: "",
-      },
-    ]);
+    onChange([...holdings, createEmptyExitTaxHolding()]);
   }
 
   // ── 행 삭제 ──
@@ -120,7 +137,9 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
   return (
     <div className="space-y-4">
       {/* 보유 종목 행 목록 */}
-      {holdings.map((holding, idx) => (
+      {holdings.map((holding, idx) => {
+        const isForeign = holding.marketType === "foreign_stock";
+        return (
         <ToneCard
           key={holding.id}
           tone="amber"
@@ -194,12 +213,12 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
           {/* 시장 선택 */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-gray-700 dark:text-gray-300">시장</label>
-            <div className="grid grid-cols-4 gap-1">
-              {MARKET_OPTIONS.map((opt) => (
+            <div className={era ? "grid grid-cols-5 gap-1" : "grid grid-cols-4 gap-1"}>
+              {marketOptions.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
-                  onClick={() => updateHolding(holding.id, { marketType: opt.value })}
+                  onClick={() => updateHolding(holding.id, marketSwitchPatch(holding, opt.value))}
                   className={[
                     "rounded-md border px-2 py-1 text-xs font-medium transition-colors",
                     holding.marketType === opt.value
@@ -214,57 +233,61 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
           </div>
 
           {/* 주식수 + 취득일 + 취득단가 */}
+          {!isForeign && (
           <div className="grid grid-cols-3 gap-2">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">주식수 *</label>
-              <CurrencyInput
-                label=""
-                value={holding.shareCount}
-                onChange={(v) => updateHolding(holding.id, { shareCount: v })}
-                hideUnit
-                placeholder="보유 주식수 (주)"
-              />
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">주식수 *</label>
+                <CurrencyInput
+                  label=""
+                  value={holding.shareCount}
+                  onChange={(v) => updateHolding(holding.id, { shareCount: v })}
+                  hideUnit
+                  placeholder="보유 주식수 (주)"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">취득일 *</label>
+                <DateInput
+                  value={holding.acquisitionDate}
+                  onChange={(v) => updateHolding(holding.id, { acquisitionDate: v })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">취득단가 (원) *</label>
+                <CurrencyInput
+                  label=""
+                  value={holding.perShareAcquisitionPrice}
+                  onChange={(v) => updateHolding(holding.id, { perShareAcquisitionPrice: v })}
+                  hideUnit
+                  placeholder="1주당 취득가액"
+                />
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">취득일 *</label>
-              <DateInput
-                value={holding.acquisitionDate}
-                onChange={(v) => updateHolding(holding.id, { acquisitionDate: v })}
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">취득단가 (원) *</label>
-              <CurrencyInput
-                label=""
-                value={holding.perShareAcquisitionPrice}
-                onChange={(v) => updateHolding(holding.id, { perShareAcquisitionPrice: v })}
-                hideUnit
-                placeholder="1주당 취득가액"
-              />
-            </div>
-          </div>
+          )}
 
           {/* 출국일 시가 산정 모드 */}
+          {!isForeign && (
           <div className="space-y-2">
-            <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
-              출국일 시가 산정 방법 (§178의9)
-            </label>
-            <RadioCardGroup
-              name={`departureDayValuationMode-${holding.id}`}
-              value={holding.departureDayValuationMode}
-              onChange={(v) =>
-                updateHolding(holding.id, {
-                  departureDayValuationMode: v as ExitTaxHoldingForm["departureDayValuationMode"],
-                })
-              }
-              tone="amber"
-              layout="stack"
-              options={VALUATION_MODE_OPTIONS}
-            />
-          </div>
+              <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                출국일 시가 산정 방법 (§178의9)
+              </label>
+              <RadioCardGroup
+                name={`departureDayValuationMode-${holding.id}`}
+                value={holding.departureDayValuationMode}
+                onChange={(v) =>
+                  updateHolding(holding.id, {
+                    departureDayValuationMode: v as ExitTaxHoldingForm["departureDayValuationMode"],
+                  })
+                }
+                tone="amber"
+                layout="stack"
+                options={VALUATION_MODE_OPTIONS}
+              />
+            </div>
+          )}
 
           {/* 모드별 시가 입력 */}
-          {holding.departureDayValuationMode === "market_price" && (
+          {!isForeign && holding.departureDayValuationMode === "market_price" && (
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 출국일 거래가액 (1주당, 원) *
@@ -282,7 +305,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
             </div>
           )}
 
-          {holding.departureDayValuationMode === "prior_year_std" && (
+          {!isForeign && holding.departureDayValuationMode === "prior_year_std" && (
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 §99①3 기준시가 — 1개월 종가평균 (1주당, 원) *
@@ -300,7 +323,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
             </div>
           )}
 
-          {holding.departureDayValuationMode === "unlisted_sample" && (
+          {!isForeign && holding.departureDayValuationMode === "unlisted_sample" && (
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 매매사례가액 (1주당, 원) *
@@ -318,7 +341,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
             </div>
           )}
 
-          {holding.departureDayValuationMode === "unlisted_std" && (
+          {!isForeign && holding.departureDayValuationMode === "unlisted_std" && (
             <div className="space-y-1">
               <label className="text-xs font-medium text-gray-700 dark:text-gray-300">
                 §99①4 비상장 기준시가 (1주당, 원) *
@@ -338,6 +361,7 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
 
           {/* 종목별 간주양도가 미리보기 */}
           {(() => {
+            if (isForeign) return null;
             const shares = parseInt(holding.shareCount.replace(/,/g, ""), 10) || 0;
             const mode = holding.departureDayValuationMode || "market_price";
             let priceStr = "";
@@ -355,8 +379,21 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
               </div>
             );
           })()}
+          {/*
+            국외주식(§94①3호 다목) — 외화 전용 입력. **맨 뒤 형제**로 둔다: 위 국내 블록의 형제 순번을 그대로 두어야
+            React `useId`(트리 위치 기반)가 달라지지 않고, 2026 이전 출국 SSR 기준선이 바이트 동일하게 유지된다.
+          */}
+          {isForeign && (
+            <ExitTaxForeignHoldingFields
+              holding={holding}
+              index={idx}
+              era={era}
+              onChange={(patch) => updateHolding(holding.id, patch)}
+            />
+          )}
         </ToneCard>
-      ))}
+        );
+      })}
 
       {/* 종목 추가 버튼 */}
       <button

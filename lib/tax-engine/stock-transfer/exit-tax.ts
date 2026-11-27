@@ -93,7 +93,7 @@ function resolveDepartureDayValuePerShare(holding: ExitTaxHolding): number {
  * 1종목 결과 계산
  * holdingGain = (출국일 시가 × 주수) − (취득가액 × 주수)
  */
-function calcHoldingResult(holding: ExitTaxHolding): ExitTaxHoldingResult {
+export function calcHoldingResult(holding: ExitTaxHolding): ExitTaxHoldingResult {
   // 국외주식 외화 경로 — 외화 단가 × 주수 × 기준환율을 종목당 1회 절사(`exit-tax-fx.ts`). 원화 단가 경로는 아래 그대로.
   if (isForeignValuationMode(holding.departureDayValuationMode)) {
     const krw = resolveForeignHoldingKrw(holding);

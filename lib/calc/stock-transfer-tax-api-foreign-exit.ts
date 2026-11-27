@@ -10,7 +10,11 @@
  * 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback)
  */
 
-import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import type { ExitTaxHoldingForm, StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import { isExitTaxFrom2027 } from "@/lib/tax-engine/data/exit-tax-2027-era";
+import { isForeignValuationMode } from "@/lib/tax-engine/stock-transfer/exit-tax-fx";
+import type { ExitTaxRateBucket } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
+import { previewExitTaxBucketsFromBody } from "./stock-transfer-exit-tax-buckets";
 import {
   parseIntOrUndef,
   parseFloatOrUndef,
@@ -175,43 +179,151 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
 //   etHoldings[] / etDeferralRequested / etDeferralReason /
 //   etActualTransferDate / etActualTransferPricePerShare /
 //   etHasForeignTax / etForeignTaxPaid / etForeignTaxExclusionReason /
-//   etDomesticSourceTaxWithheld / etHasFiledHoldingsReport / etTotalFaceValue
+//   etDomesticSourceTaxWithheld / etHasFiledHoldingsReport / etTotalFaceValue /
+//   [2027.1.1. 이후 출국] holdings[].isListedForeignCorp / isSmallMediumEnterprise / countryCode /
+//   foreignCurrencyCode / departureDayPriceForeign / departureExchangeRate /
+//   perShareAcquisitionPriceForeign / acquisitionExchangeRate (국외주식 종목만) /
+//   etForeignWorkerStatus(→foreignWorkerStatus) / etForeignWorker{IsOfficerOrEmployee,IsNotDailyWorker,
+//   DomesticRatio80,Departed6Months}(→foreignWorkerChecks) / etForeignWorkerFamilyKind(→foreignWorkerFamilyKind) /
+//   etForeignWorkerStartDate(→foreignWorkerStartDate) / etBasicDeductionAllocClause1·2a·2b(→basicDeductionAllocation)
 // ============================================================
+
+/**
+ * 종목 1건 → body. **국외주식 행**(`marketType === "foreign_stock"`)과 **외화 시가 모드**만 외화 필드를 싣는다 —
+ * 국내 행에 외화 필드가 한 개라도 실리면 엔진이 거부한다(숨은 값 금지: 시장을 바꿔도 이전 시장의 값은 전송되지 않는다).
+ * 외화 모드는 원화 단가를 **0**으로 보낸다(엔진: 원화·외화 단가 혼용 거부) — 원화 칸에 남은 stale 값이 전송되지 않는다.
+ */
+export function buildExitTaxHoldingBody(h: ExitTaxHoldingForm): Record<string, unknown> {
+  const isForeignRow = h.marketType === "foreign_stock";
+  // 3중 패턴 default: 국외주식 행은 외화 거래가액, 그 밖은 원화 거래가액 (UI RadioCardGroup value 직접 · normalize · ⑧ 동일)
+  const mode = h.departureDayValuationMode || (isForeignRow ? "foreign_market_price" : "market_price");
+  const foreignMode = isForeignValuationMode(mode);
+
+  const holdingBody: Record<string, unknown> = {
+    id: h.id,
+    stockName: h.stockName,
+    marketType: h.marketType || "kospi",     // 3중 패턴 default
+    shareCount: parseIntOrUndef(h.shareCount) ?? 0,
+    acquisitionDate: h.acquisitionDate,      // ⑭ route에서 toDate() 변환 (holdings[] map)
+    perShareAcquisitionPrice: foreignMode ? 0 : (parseIntOrUndef(h.perShareAcquisitionPrice) ?? 0),
+    departureDayValuationMode: mode,
+  };
+
+  if (isForeignRow) {
+    // 국외주식 분류 — 외국법인 발행(true, default)이면 중소기업 가목이 불가하므로 false로 고정한다(stale 값 차단, 해외주식 트랙과 같은 게이트)
+    const isForeignCorp = h.isListedForeignCorp ?? true;
+    holdingBody.isListedForeignCorp = isForeignCorp;
+    holdingBody.isSmallMediumEnterprise = isForeignCorp ? false : h.isSmallMediumEnterprise === true;
+    holdingBody.countryCode = h.countryCode || "US";               // 3중 패턴 default
+    holdingBody.foreignCurrencyCode = h.foreignCurrencyCode || "USD"; // 3중 패턴 default
+  }
+
+  if (foreignMode) {
+    // 외화 경로 — 환율·외화 단가 빈값은 **키를 싣지 않는다**(대체 환율·이전 값 보간 없음 → Zod/엔진/⑧이 차단)
+    const priceF = parseFloatOrUndef(h.departureDayPriceForeign);
+    if (priceF !== undefined) holdingBody.departureDayPriceForeign = priceF;
+    const depRate = parseFloatOrUndef(h.departureExchangeRate);
+    if (depRate !== undefined) holdingBody.departureExchangeRate = depRate;
+    const acqF = parseFloatOrUndef(h.perShareAcquisitionPriceForeign);
+    if (acqF !== undefined) holdingBody.perShareAcquisitionPriceForeign = acqF;
+    const acqRate = parseFloatOrUndef(h.acquisitionExchangeRate);
+    if (acqRate !== undefined) holdingBody.acquisitionExchangeRate = acqRate;
+    return holdingBody;
+  }
+
+  // 모드별 시가 — 자동 안분 fallback 금지, 미입력 시 undefined
+  if (mode === "market_price") {
+    const v = parseIntOrUndef(h.departureDayMarketPrice);
+    if (v !== undefined) holdingBody.departureDayMarketPrice = v;
+  } else if (mode === "prior_year_std") {
+    const v = parseIntOrUndef(h.priorYearEndMonthAvg);
+    if (v !== undefined) holdingBody.priorYearEndMonthAvg = v;
+  } else if (mode === "unlisted_sample") {
+    const v = parseIntOrUndef(h.unlistedSamplePrice);
+    if (v !== undefined) holdingBody.unlistedSamplePrice = v;
+  } else if (mode === "unlisted_std") {
+    const v = parseIntOrUndef(h.unlistedStdPricePerShare);
+    if (v !== undefined) holdingBody.unlistedStdPricePerShare = v;
+  }
+  return holdingBody;
+}
+
+/**
+ * 외국인근로자(영 §178의8②2·3호) — **출국일 2027.1.1. 이후 + 국외주식 종목이 있을 때만** 싣는다.
+ * 그 밖에는 입력칸 자체가 없으므로(숨은 값) 보내지 않는다. 3중 패턴 default "none"은 «보내지 않음»이다.
+ * 요건 4개는 사용자 선언 4개를 **모두** 싣는다(키가 빠지면 Zod가 거부한다 — false로 채우지 않는다).
+ */
+function appendExitTaxWorkerBody(body: Record<string, unknown>, form: StockTransferFormData): void {
+  const hasForeignRow = (form.etHoldings || []).some((h) => h.marketType === "foreign_stock");
+  if (!isExitTaxFrom2027(form.etDepartureDate) || !hasForeignRow) return;
+  const status = form.etForeignWorkerStatus || "none";   // 3중 패턴 default
+  if (status === "none") return;
+  body.foreignWorkerStatus = status;
+  body.foreignWorkerChecks = {
+    isOfficerOrEmployee: !!form.etForeignWorkerIsOfficerOrEmployee,
+    isNotDailyWorker: !!form.etForeignWorkerIsNotDailyWorker,
+    domesticWorkRatioAtLeast80: !!form.etForeignWorkerDomesticRatio80,
+    departedWithin6MonthsOfWorkEnd: !!form.etForeignWorkerDeparted6Months,
+  };
+  if (status === "foreign_worker_family") {
+    // 가족 구분·근로 개시일은 비어 있으면 키를 싣지 않는다 → 엔진·⑧이 필수로 차단(선택을 대신하지 않는다)
+    if (form.etForeignWorkerFamilyKind) body.foreignWorkerFamilyKind = form.etForeignWorkerFamilyKind;
+    if (form.etForeignWorkerStartDate) body.foreignWorkerStartDate = form.etForeignWorkerStartDate;
+  }
+}
+
+const ALLOC_FIELD: Record<ExitTaxRateBucket, keyof StockTransferFormData> = {
+  clause1: "etBasicDeductionAllocClause1",
+  clause2a: "etBasicDeductionAllocClause2a",
+  clause2b: "etBasicDeductionAllocClause2b",
+};
+
+/**
+ * 기본공제 250만원 구분별 배분(§118의10④ · 결정 C-1) — **과세 구분이 둘 이상**일 때만, **과세 구분의 입력값만** 싣는다.
+ * 구분이 하나이면 법문 직접 적용이라 배분이 없고(엔진은 입력이 있으면 자동값과 같은지 검증하므로 stale 값이 오류가 된다),
+ * 과세 구분이 아닌 쪽 값도 보내지 않는다. 빈 칸은 0으로 채우지 않는다 → 엔진이 «0이라도 직접 입력»으로 차단.
+ */
+function appendExitTaxAllocationBody(
+  body: Record<string, unknown>,
+  form: StockTransferFormData,
+  buckets: ExitTaxRateBucket[] | null,
+): void {
+  if (!buckets || buckets.length < 2) return;
+  const alloc: Record<string, number> = {};
+  for (const b of buckets) {
+    const v = parseIntOrUndef(String(form[ALLOC_FIELD[b]] ?? ""));
+    if (v !== undefined) alloc[b] = v;
+  }
+  if (Object.keys(alloc).length > 0) body.basicDeductionAllocation = alloc;
+}
+
+/** 배분을 제외한 body — 배분 칸 노출·전송 게이트가 쓰는 과세 구분 미리보기의 입력이다 */
+export function buildExitTaxApiBodyCore(form: StockTransferFormData): Record<string, unknown> {
+  const body = buildExitTaxApiBodyBase(form);
+  appendExitTaxWorkerBody(body, form);
+  return body;
+}
+
+/** 입력 화면용 — 과세 세율 구분 미리보기 (엔진 분류 helper 호출). 배분 칸 노출·④ 전송 게이트의 단일 소스 */
+export function previewExitTaxBuckets(form: StockTransferFormData): ExitTaxRateBucket[] | null {
+  return previewExitTaxBucketsFromBody(buildExitTaxApiBodyCore(form));
+}
+
 export function buildExitTaxApiBody(form: StockTransferFormData): Record<string, unknown> {
+  const body = buildExitTaxApiBodyCore(form);
+  appendExitTaxAllocationBody(body, form, previewExitTaxBucketsFromBody(body));
+  return body;
+}
+
+function buildExitTaxApiBodyBase(form: StockTransferFormData): Record<string, unknown> {
   const deferralReason = form.etDeferralReason || "none";      // 3중 패턴 default
   // 외국납부세액 토글이 꺼져 있으면 숨은 값(원화·외화·환율·통화·배제 사유)은 엔진에 보내지 않는다.
   // 배제 사유는 Zod 필수 키라 꺼짐이면 "none" 으로 고정한다.
   const hasForeignTax = !!form.etHasForeignTax;
   const exclusionReason = hasForeignTax ? form.etForeignTaxExclusionReason || "none" : "none";  // 3중 패턴 default
 
-  // ⑬ holdings[] 배열 변환 — acquisitionDate 포함 전수 spread
-  const holdings = (form.etHoldings || []).map((h) => {
-    const holdingBody: Record<string, unknown> = {
-      id: h.id,
-      stockName: h.stockName,
-      marketType: h.marketType || "kospi",     // 3중 패턴 default
-      shareCount: parseIntOrUndef(h.shareCount) ?? 0,
-      acquisitionDate: h.acquisitionDate,      // ⑭ route에서 toDate() 변환 (holdings[] map)
-      perShareAcquisitionPrice: parseIntOrUndef(h.perShareAcquisitionPrice) ?? 0,
-      departureDayValuationMode: h.departureDayValuationMode || "market_price",  // 3중 패턴
-    };
-    // 모드별 시가 — 자동 안분 fallback 금지, 미입력 시 undefined
-    const mode = h.departureDayValuationMode || "market_price";
-    if (mode === "market_price") {
-      const v = parseIntOrUndef(h.departureDayMarketPrice);
-      if (v !== undefined) holdingBody.departureDayMarketPrice = v;
-    } else if (mode === "prior_year_std") {
-      const v = parseIntOrUndef(h.priorYearEndMonthAvg);
-      if (v !== undefined) holdingBody.priorYearEndMonthAvg = v;
-    } else if (mode === "unlisted_sample") {
-      const v = parseIntOrUndef(h.unlistedSamplePrice);
-      if (v !== undefined) holdingBody.unlistedSamplePrice = v;
-    } else if (mode === "unlisted_std") {
-      const v = parseIntOrUndef(h.unlistedStdPricePerShare);
-      if (v !== undefined) holdingBody.unlistedStdPricePerShare = v;
-    }
-    return holdingBody;
-  });
+  // ⑬ holdings[] 배열 변환 — acquisitionDate 포함 전수 spread (종목 1건 = `buildExitTaxHoldingBody`)
+  const holdings = (form.etHoldings || []).map(buildExitTaxHoldingBody);
 
   const body: Record<string, unknown> = {
     // 도메인 식별자

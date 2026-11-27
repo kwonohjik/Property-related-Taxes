@@ -259,6 +259,16 @@ export function createInitialStockFormData(): StockTransferFormData {
     etReenteredWithin5Years: false,
     etDeferralInterestDays: "",
     etDeferralInterestDailyRate: "",
+    etForeignWorkerStatus: "none",            // 3중 패턴 default
+    etForeignWorkerIsOfficerOrEmployee: false,
+    etForeignWorkerIsNotDailyWorker: false,
+    etForeignWorkerDomesticRatio80: false,
+    etForeignWorkerDeparted6Months: false,
+    etForeignWorkerFamilyKind: "",
+    etForeignWorkerStartDate: "",
+    etBasicDeductionAllocClause1: "",
+    etBasicDeductionAllocClause2a: "",
+    etBasicDeductionAllocClause2b: "",
 
     // ── PR-4A 해외주식 전용 초기값 (② 동기화 지점) ──
     yearsResidentInKorea: "",

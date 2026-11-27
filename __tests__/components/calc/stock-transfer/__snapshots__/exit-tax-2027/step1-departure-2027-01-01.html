@@ -1,0 +1,250 @@
+<div class="space-y-8">
+<section>
+<h2 class="flex items-center gap-2 text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
+<span class="flex h-6 w-6 items-center justify-center rounded-full bg-sky-700 text-white text-xs font-bold">1</span>기본 사항</h2>
+<div class="rounded-lg border border-sky-200 bg-sky-50/40 p-4 space-y-4 dark:bg-sky-950/40">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div data-slot="field-card" class="rounded-lg border bg-card px-4 py-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start">
+<label class="flex items-start gap-1 text-sm font-medium pt-1 sm:pt-2 sm:min-w-[168px] sm:max-w-[240px]">
+<span class="leading-tight">성명</span>
+</label>
+<div class="min-w-0 space-y-1.5 sm:flex-[1_1_min-content]">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<input type="text" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value=""/>
+</div>
+</div>
+</div>
+</div>
+<div data-slot="field-card" class="rounded-lg border bg-card px-4 py-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start">
+<label class="flex items-start gap-1 text-sm font-medium pt-1 sm:pt-2 sm:min-w-[168px] sm:max-w-[240px]">
+<span class="leading-tight">생년월일</span>
+</label>
+<div class="min-w-0 space-y-1.5 sm:flex-[1_1_min-content]">
+<div class="flex items-center gap-2">
+<div class="flex-1 min-w-0">
+<input type="text" placeholder="YYYY-MM-DD" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value=""/>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div data-slot="field-card" class="rounded-lg border bg-card px-4 py-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start">
+<label class="flex items-start gap-1 text-sm font-medium pt-1 sm:pt-2 sm:min-w-[168px] sm:max-w-[240px]">
+<span class="text-destructive" aria-hidden="true">*</span>
+<span class="leading-tight">종목명</span>
+</label>
+<div class="min-w-0 space-y-1.5 sm:flex-[1_1_min-content]">
+<div class="flex items-center gap-2 flex-wrap">
+<div class="flex-1 min-w-0 basis-[min-content]">
+<div class="relative" data-enter-nav="off">
+<input type="text" placeholder="종목명을 입력하세요" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" autoComplete="off" value="전출 케이스"/>
+</div>
+</div>
+<div class="shrink-0 max-w-full">
+</div>
+</div>
+<p class="text-xs text-muted-foreground">비상장 종목은 키움 마스터(상장 전종목)에 없어 자동완성이 표시되지 않습니다. 종목명을 직접 입력하세요.</p>
+</div>
+</div>
+<div data-slot="field-card" class="rounded-lg border bg-card px-4 py-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start">
+<label class="flex items-start gap-1 text-sm font-medium pt-1 sm:pt-2 sm:min-w-[168px] sm:max-w-[240px]">
+<span class="leading-tight">종목코드 (선택)</span>
+</label>
+<div class="min-w-0 space-y-1.5 sm:flex-[1_1_min-content]">
+<div class="flex items-center gap-2 flex-wrap">
+<div class="flex-1 min-w-0 basis-[min-content]">
+<input type="text" maxLength="6" inputMode="text" placeholder="6자리 숫자" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" value=""/>
+</div>
+<div class="shrink-0 max-w-full">
+<span class="inline-flex flex-wrap items-center gap-1">
+</span>
+</div>
+</div>
+<p class="text-xs text-muted-foreground">6자리 입력 후 포커스 이동 시 키움 자동조회로 종목명·시장구분·거래정지 자동 확인</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section>
+<h2 class="flex items-center gap-2 text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
+<span class="flex h-6 w-6 items-center justify-center rounded-full bg-sky-700 text-white text-xs font-bold">2</span>시장 유형</h2>
+<div class="rounded-lg border bg-card px-4 py-3 space-y-2">
+<div class="flex items-start justify-end">
+<span class="text-xs text-sky-700 font-medium bg-sky-50 px-2 py-0.5 rounded">§94①3·4</span>
+</div>
+<div data-slot="radio-card-group" data-layout="stack" class="grid grid-cols-1 sm:grid-cols-2 gap-2 space-y-0">
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-sky-200/70 bg-sky-50/70 hover:border-sky-300 dark:border-sky-800/40 dark:bg-sky-950/20 has-[:checked]:border-sky-300 has-[:checked]:bg-sky-100/70 has-[:checked]:ring-1 has-[:checked]:ring-sky-200/50 dark:has-[:checked]:border-sky-700/60 dark:has-[:checked]:bg-sky-950/40 dark:has-[:checked]:ring-sky-800/30 has-[:checked]:text-sky-900 has-[:checked]:font-semibold dark:has-[:checked]:text-sky-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-sky-600" name="marketType" value="kospi"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>코스피</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">유가증권시장 상장주식 (§94①3 가목)</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-sky-200/70 bg-sky-50/70 hover:border-sky-300 dark:border-sky-800/40 dark:bg-sky-950/20 has-[:checked]:border-sky-300 has-[:checked]:bg-sky-100/70 has-[:checked]:ring-1 has-[:checked]:ring-sky-200/50 dark:has-[:checked]:border-sky-700/60 dark:has-[:checked]:bg-sky-950/40 dark:has-[:checked]:ring-sky-800/30 has-[:checked]:text-sky-900 has-[:checked]:font-semibold dark:has-[:checked]:text-sky-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-sky-600" name="marketType" value="kosdaq"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>코스닥</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">코스닥시장 상장주식 (§94①3 가목)</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-sky-200/70 bg-sky-50/70 hover:border-sky-300 dark:border-sky-800/40 dark:bg-sky-950/20 has-[:checked]:border-sky-300 has-[:checked]:bg-sky-100/70 has-[:checked]:ring-1 has-[:checked]:ring-sky-200/50 dark:has-[:checked]:border-sky-700/60 dark:has-[:checked]:bg-sky-950/40 dark:has-[:checked]:ring-sky-800/30 has-[:checked]:text-sky-900 has-[:checked]:font-semibold dark:has-[:checked]:text-sky-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-sky-600" name="marketType" value="konex"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>코넥스</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">코넥스시장 상장주식 (§94①3 가목)</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-sky-200/70 bg-sky-50/70 hover:border-sky-300 dark:border-sky-800/40 dark:bg-sky-950/20 has-[:checked]:border-sky-300 has-[:checked]:bg-sky-100/70 has-[:checked]:ring-1 has-[:checked]:ring-sky-200/50 dark:has-[:checked]:border-sky-700/60 dark:has-[:checked]:bg-sky-950/40 dark:has-[:checked]:ring-sky-800/30 has-[:checked]:text-sky-900 has-[:checked]:font-semibold dark:has-[:checked]:text-sky-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-sky-600" name="marketType" value="unlisted"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>비상장</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">주권비상장법인 주식 (§94①3 나목)</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-sky-200/70 bg-sky-50/70 hover:border-sky-300 dark:border-sky-800/40 dark:bg-sky-950/20 has-[:checked]:border-sky-300 has-[:checked]:bg-sky-100/70 has-[:checked]:ring-1 has-[:checked]:ring-sky-200/50 dark:has-[:checked]:border-sky-700/60 dark:has-[:checked]:bg-sky-950/40 dark:has-[:checked]:ring-sky-800/30 has-[:checked]:text-sky-900 has-[:checked]:font-semibold dark:has-[:checked]:text-sky-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-sky-600" name="marketType" value="other_asset"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>기타자산</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">과점주주·부동산과다보유법인 (§94①4 다·라목)</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-sky-200/70 bg-sky-50/70 hover:border-sky-300 dark:border-sky-800/40 dark:bg-sky-950/20 has-[:checked]:border-sky-300 has-[:checked]:bg-sky-100/70 has-[:checked]:ring-1 has-[:checked]:ring-sky-200/50 dark:has-[:checked]:border-sky-700/60 dark:has-[:checked]:bg-sky-950/40 dark:has-[:checked]:ring-sky-800/30 has-[:checked]:text-sky-900 has-[:checked]:font-semibold dark:has-[:checked]:text-sky-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-sky-600" name="marketType" value="foreign_stock"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>해외주식</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">외국법인 발행 주식 (§94①3 다목 · 세율 §104①12호나목 20%)</p>
+</div>
+</label>
+<label data-checked="true" class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-sky-200/70 bg-sky-50/70 hover:border-sky-300 dark:border-sky-800/40 dark:bg-sky-950/20 has-[:checked]:border-sky-300 has-[:checked]:bg-sky-100/70 has-[:checked]:ring-1 has-[:checked]:ring-sky-200/50 dark:has-[:checked]:border-sky-700/60 dark:has-[:checked]:bg-sky-950/40 dark:has-[:checked]:ring-sky-800/30 has-[:checked]:text-sky-900 has-[:checked]:font-semibold dark:has-[:checked]:text-sky-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-sky-600" name="marketType" checked="" value="exit_tax"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>국외전출세 (§118의9)</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">거주자가 비거주자로 출국하는 경우 보유 주식 간주양도</p>
+</div>
+</label>
+</div>
+<p class="text-xs text-muted-foreground">양도 주식이 거래되는 시장을 선택하세요. 비상장·기타자산은 별도 과세 요건을 확인하세요.</p>
+</div>
+</section>
+<section>
+<h2 class="flex items-center gap-2 text-lg font-semibold text-slate-800 dark:text-slate-200 mb-4">
+<span class="flex h-6 w-6 items-center justify-center rounded-full bg-sky-700 text-white text-xs font-bold">3</span>국외전출세 입력 (§118의9)</h2>
+<div class="space-y-5">
+<div class="rounded-lg border space-y-3 border-rose-200 bg-rose-50/40 dark:border-rose-800 dark:bg-rose-900/15 p-4">
+<div class="flex items-center gap-2">
+<span class="flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none bg-rose-200 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300">1</span>
+<p class="text-xs font-semibold text-rose-700 dark:text-rose-300">거주자 요건 (§118의9①1호)</p>
+</div>
+<div data-slot="field-card" class="rounded-lg border bg-card px-4 py-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start">
+<label class="flex items-start gap-1 text-sm font-medium pt-1 sm:pt-2 sm:min-w-[168px] sm:max-w-[240px]">
+<span class="text-destructive" aria-hidden="true">*</span>
+<span class="leading-tight">출국일 전 10년 중 국내 거주 연수</span>
+</label>
+<div class="min-w-0 space-y-1.5 sm:flex-[1_1_min-content]">
+<div class="flex items-center gap-2 flex-wrap">
+<div class="flex-1 min-w-0 basis-[min-content]">
+<div class="flex items-center gap-2">
+<div class="relative w-40">
+<input type="text" inputMode="decimal" placeholder="국내 거주 연수 (만 년)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="10"/>
+</div>
+<span class="text-sm text-slate-600 dark:text-slate-400">년</span>
+</div>
+</div>
+<div class="shrink-0 max-w-full">
+<span class="text-xs text-rose-700 font-medium bg-rose-50 px-2 py-0.5 rounded">§118의9①1호</span>
+</div>
+</div>
+<p class="text-xs text-muted-foreground">출국일 전 10년 중 국내에 주소 또는 거소를 둔 기간의 합계 (만 년). 5년 이상이어야 과세됩니다.</p>
+</div>
+</div>
+</div>
+<div class="rounded-lg border space-y-3 border-sky-200 bg-sky-50/40 dark:border-sky-800 dark:bg-sky-900/15 p-4">
+<div class="flex items-center gap-2">
+<span class="flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none bg-sky-200 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300">2</span>
+<p class="text-xs font-semibold text-sky-700 dark:text-sky-300">출국일</p>
+</div>
+<div data-slot="field-card" class="rounded-lg border bg-card px-4 py-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start">
+<label class="flex items-start gap-1 text-sm font-medium pt-1 sm:pt-2 sm:min-w-[168px] sm:max-w-[240px]">
+<span class="text-destructive" aria-hidden="true">*</span>
+<span class="leading-tight">출국일</span>
+</label>
+<div class="min-w-0 space-y-1.5 sm:flex-[1_1_min-content]">
+<div class="flex items-center gap-2 flex-wrap">
+<div class="flex-1 min-w-0 basis-[min-content]">
+<div class="flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring">
+<input type="text" inputMode="numeric" placeholder="YYYY" maxLength="4" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-12" aria-label="연도" value="2027"/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="MM" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="월" value="1"/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="DD" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="일" value="1"/>
+</div>
+</div>
+<div class="shrink-0 max-w-full">
+<span class="text-xs text-sky-700 font-medium bg-sky-50 px-2 py-0.5 rounded">§118의9①</span>
+</div>
+</div>
+<p class="text-xs text-muted-foreground">비거주자가 된 날 (YYYY-MM-DD). 보유 주식의 간주양도 시점이 됩니다.</p>
+</div>
+</div>
+<div class="rounded-lg border p-3 space-y-1 border-sky-200 bg-sky-50/40 dark:border-sky-800 dark:bg-sky-900/15">
+<p class="text-xs leading-relaxed text-sky-700 dark:text-sky-300" data-testid="exit-era-identity-note">2027.1.1. 이후 출국분부터 국외주식등(§94①3호 다목)도 국외전출자 주식등에 포함되고, 세율은 §118의11 호별로 나뉩니다 (1호 국내 주식 · 2호 가목 중소기업 10% · 2호 나목 그 밖 20%). 적용 기준은 실제 양도일이 아니라 출국일입니다.</p>
+</div>
+</div>
+<div class="rounded-lg border space-y-3 border-violet-200 bg-violet-50/40 dark:border-violet-800 dark:bg-violet-900/15 p-4">
+<div class="flex items-center gap-2">
+<span class="flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none bg-violet-200 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300">3</span>
+<p class="text-xs font-semibold text-violet-700 dark:text-violet-300">대주주 요건 (§178의8 → §167의8 준용)</p>
+</div>
+<div data-slot="toggle-card" data-variant="card" data-checked="true" class="rounded-lg border transition-colors px-4 py-3 border-violet-300 bg-violet-50/70 ring-1 ring-violet-200/50 dark:border-violet-700/60 dark:bg-violet-950/30 dark:ring-violet-800/30">
+<label class="flex items-center justify-between gap-3 select-none cursor-pointer">
+<div class="min-w-0 flex-1">
+<div class="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-sm sm:text-base text-violet-900 dark:text-violet-200">
+<span>직전 연도말 대주주 해당</span>
+</div>
+<div class="mt-0.5 text-xs leading-snug text-violet-700 dark:text-violet-400">§178의8 → §167의8 준용 — 출국일이 속하는 연도 직전 연도말 기준으로 대주주 요건에 해당하는 경우 과세됩니다. 자기 판정하여 입력하세요. 직전 연도 종료일 현재 소유 주식등을 볼 때 국외주식등(§94①3호 다목)은 제외합니다(§118의9①2호).</div>
+</div>
+<div class="flex shrink-0 items-center gap-2">
+<span class="text-xs text-violet-700 font-medium bg-violet-50 px-2 py-0.5 rounded">§178의8</span>
+<span data-checked="" role="switch" tabindex="0" id="base-ui-_R_55nd_" aria-checked="true" data-slot="switch" data-size="default" aria-label="직전 연도말 대주주 해당" class="peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50">
+<span data-checked="" data-slot="switch-thumb" class="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground">
+</span>
+</span>
+<input id="base-ui-_R_55ndH1_" style="clip-path:inset(50%);overflow:hidden;white-space:nowrap;border:0;padding:0;width:1px;height:1px;margin:-1px;position:fixed;top:0;left:0" tabindex="-1" type="checkbox" aria-hidden="true" checked=""/>
+</div>
+</label>
+</div>
+</div>
+</div>
+</section>
+</div>
