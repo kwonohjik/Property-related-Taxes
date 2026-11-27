@@ -35,6 +35,8 @@ import { STOCK_EXIT_TAX, STOCK_EXIT_TAX_CONSTS } from "@/lib/tax-engine/legal-co
 import { STOCK_EXIT_TAX_2027 } from "@/lib/tax-engine/legal-codes/stock-exit-tax-2027";
 import { isExitTaxFrom2027 } from "@/lib/tax-engine/data/exit-tax-2027-era";
 import { applyRate } from "@/lib/tax-engine/tax-utils";
+import { isForeignValuationMode } from "./exit-tax-fx";
+import { resolveForeignHoldingKrw } from "./exit-tax-fx";
 import { calcBucketTax, calcLocalIncomeTaxTable, floorTen } from "./exit-tax-bucket";
 import {
   assertForeignInputs,
@@ -89,6 +91,20 @@ function resolveDepartureDayValuePerShare(holding: ExitTaxHolding): number {
  * holdingGain = (출국일 시가 × 주수) − (취득가액 × 주수)
  */
 function calcHoldingResult(holding: ExitTaxHolding): ExitTaxHoldingResult {
+  // 국외주식 외화 경로 — 외화 단가 × 주수 × 기준환율을 종목당 1회 절사(`exit-tax-fx.ts`). 원화 단가 경로는 아래 그대로.
+  if (isForeignValuationMode(holding.departureDayValuationMode)) {
+    const krw = resolveForeignHoldingKrw(holding);
+    return {
+      id: holding.id,
+      stockName: holding.stockName,
+      departureDayValue: krw.departureDayValue,
+      departureDayValuePerShare: krw.departureDayValuePerShare,
+      acquisitionCost: krw.acquisitionCost,
+      transferGain: krw.departureDayValue - krw.acquisitionCost,
+      valuationMode: holding.departureDayValuationMode,
+      fx: krw.fx,
+    };
+  }
   const pricePerShare = resolveDepartureDayValuePerShare(holding);
   const departureDayValue = pricePerShare * holding.shareCount;
   const acquisitionCost = holding.perShareAcquisitionPrice * holding.shareCount;

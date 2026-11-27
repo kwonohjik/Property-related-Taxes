@@ -41,7 +41,9 @@ export type ExitTaxHolding = {
    * "prior_year_std"  → §99①3 기준시가 (상장: 1개월 종가평균)
    * "unlisted_sample" → §178의9②2호가목 전후 각 3개월 매매사례가액
    * "unlisted_std"    → §99①4 비상장 기준시가 (매매사례 없음)
-   * "foreign_market_price" · "foreign_decree_178_3" → 국외주식 외화 시가(PR-3 예약, 아래 「PR-3 예약」). PR-2는 거부한다.
+   * "foreign_market_price" → 국외주식 출국일 외화 거래가액(1주당) × 출국일 기준환율 — 외화 경로
+   * "foreign_decree_178_3"  → 국외주식 시행령 §178의3 시가(외화 1주당, 직접 입력) × 출국일 기준환율 — 외화 경로
+   * 두 외화 모드는 `marketType: "foreign_stock"` 종목에서만 쓴다(아래 「외화 환산」).
    */
   departureDayValuationMode:
     | "market_price"
@@ -77,16 +79,17 @@ export type ExitTaxHolding = {
   /** 통화 코드 (표시용 — 계산 무영향) */
   foreignCurrencyCode?: string;
 
-  // ── PR-3 예약 — 외화 환산 (이 PR의 계산에 **쓰이지 않는다**) ──
-  // 국외 종목 금액은 PR-2에서 **원화 단가**(`perShareAcquisitionPrice`·`departureDayMarketPrice`)로만 받는다.
-  // 아래 필드가 하나라도 있으면 조용히 무시하지 않고 `INVALID_INPUT`으로 거부한다(엔진 `assertNoReservedFxFields`).
-  /** 1주당 외화 출국일 시가 (PR-3) */
+  // ── 외화 환산 (2027.1.1. 이후 출국 · 국외주식) ──
+  // 외화 시가 모드(`foreign_market_price` · `foreign_decree_178_3`)를 고르면 아래 4개가 **모두** 필요하고,
+  // 원화 단가(`departureDayMarketPrice`·`perShareAcquisitionPrice`)는 비워 둔다(섞으면 `INVALID_INPUT`).
+  // 환산: 종목당 총액에서 1회만 절사 — `exit-tax-fx.ts`의 `toKrwExact`.
+  /** 1주당 외화 출국일 시가 */
   departureDayPriceForeign?: number;
-  /** 출국일 기준환율 (원/외화, PR-3) */
+  /** 출국일 기준환율 (원/외화, 소수 4자리까지) */
   departureExchangeRate?: number;
-  /** 1주당 외화 취득가액 (PR-3) */
+  /** 1주당 외화 취득가액 */
   perShareAcquisitionPriceForeign?: number;
-  /** 취득일 기준환율 (원/외화, PR-3) */
+  /** 취득일 기준환율 (원/외화, 소수 4자리까지) */
   acquisitionExchangeRate?: number;
 };
 
@@ -262,6 +265,26 @@ export type ExitTaxHoldingResult = {
   excludedReason?: ExitTaxExcludedReason;
   /** scope = "taxed" 일 때의 §118의11 세율 구분 */
   rateBucket?: ExitTaxRateBucket;
+  /**
+   * 외화 경로(`foreign_*` 시가 모드) 종목의 환산 echo — 원화 단가 경로·국내 종목에는 없다.
+   * 환율 기준일(취득일·출국일)은 법령에 명시가 없어 입력값을 그대로 쓴 것이며 결과 warnings가 «확인 필요»를 고지한다.
+   */
+  fx?: {
+    /** 통화 코드 (입력했을 때만 · 표시용) */
+    currency?: string;
+    /** 1주당 외화 출국일 시가 */
+    departureForeign: number;
+    /** 출국일 기준환율 (원/외화) */
+    departureRate: number;
+    /** 출국일 시가 총액(원화, 외화 단가 × 주수 × 환율을 1회 절사) */
+    departureValueKrw: number;
+    /** 1주당 외화 취득가액 */
+    acquisitionForeign: number;
+    /** 취득일 기준환율 (원/외화) */
+    acquisitionRate: number;
+    /** 취득가액 총액(원화, 1회 절사) */
+    acquisitionCostKrw: number;
+  };
 };
 
 /** §118의11 세율 구분별 계산 분해 (PR-2는 구분이 하나일 때만 계산한다) */

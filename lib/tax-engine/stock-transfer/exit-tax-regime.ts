@@ -5,7 +5,7 @@
  * 기준일은 **출국일**이다(소득세법 부칙 제8조) — `isExitTaxFrom2027`이 판정한다. 이 파일은 그 결과(regime)를 받아
  * 종목을 「과세 / 제외」와 「세율 구분」으로 나눈다. 세액 계산은 `exit-tax.ts`·`exit-tax-bucket.ts`가 한다.
  *
- * PR-2 범위: 구분이 하나일 때까지만 계산한다. 구분 ≥2(국내 1호 + 국외 2호, 2호 가·나목 혼재)와
+ * 범위: 구분이 하나일 때까지만 계산한다(PR-2 이후 외화 환산 PR-3 포함). 구분 ≥2(국내 1호 + 국외 2호, 2호 가·나목 혼재)와
  * 2호 경정청구는 `assertSupportedByPr2`가 `INVALID_INPUT`으로 막는다(PR-4·PR-7).
  *
  * 계획서: docs/02-design/features/stock-transfer-exit-tax-2027.engine.plan.md §3.2~§3.5
@@ -21,6 +21,9 @@ import type {
 } from "./types/exit-tax.types";
 import { TaxCalculationError, TaxErrorCode } from "@/lib/tax-engine/tax-errors";
 import { isValid, startOfDay } from "@/lib/tax-engine/utc-date";
+import { hasForeignFxFields } from "./exit-tax-fx";
+import { isForeignValuationMode } from "./exit-tax-fx";
+import { FX_BASIS_NOTICE } from "./exit-tax-fx";
 import {
   STOCK_EXIT_TAX_2027,
   STOCK_EXIT_TAX_2027_CONSTS,
@@ -59,32 +62,39 @@ function allWorkerChecksTrue(input: ExitTaxInput): boolean {
 // ============================================================
 
 /**
- * 2027.1.1. 이후 출국 + 국외 종목일 때만 점검한다. (2026 이전 출국은 국외 종목을 계산에 쓰지 않는다.)
- * - PR-3 예약 외화 필드·외화 시가 모드가 있으면 거부(원화 단가 경로만 지원).
+ * 입력 방어. 외화 경로(`foreign_market_price`·`foreign_decree_178_3`)의 필드 완전성·원화 혼용은
+ * 환산 시점(`resolveForeignHoldingKrw`)이 종목별로 거부한다 — 여기서는 경로 선택의 모순만 막는다.
+ * - 국내 종목에 외화 시가 모드·외화 필드가 있으면 거부(어느 출국일이든 — 두면 시가 0으로 조용히 계산된다).
+ * - 2027.1.1. 이후 출국 + 국외 종목: 원화 거래가액(market_price)에 외화 필드가 섞이거나, 국내 비상장 평가 모드를 쓰면 거부.
+ *   (2026 이전 출국은 국외 종목을 계산에 쓰지 않아 원화 경로 점검을 하지 않는다. 외화 모드를 골랐다면 환산 echo를 위해 완전성만 본다.)
  * - 외국인근로자 구분이 none이 아닌데 요건 체크·가족 구분·근로 개시일이 빠졌으면 거부.
  */
 export function assertForeignInputs(input: ExitTaxInput, regime: ExitTaxRegime): void {
+  for (const h of input.holdings) {
+    if (!isForeign(h) && (isForeignValuationMode(h.departureDayValuationMode) || hasForeignFxFields(h))) {
+      throw invalid(
+        `「${h.stockName}」: 외화 시가 모드·외화 단가·환율은 국외주식(foreign_stock) 종목에서만 쓸 수 있습니다`,
+        `holdings.${h.id}`,
+      );
+    }
+  }
+
   if (regime !== "from2027") return;
   const foreignHoldings = input.holdings.filter(isForeign);
   if (foreignHoldings.length === 0) return;
 
   for (const h of foreignHoldings) {
-    const reserved =
-      h.departureDayPriceForeign != null ||
-      h.departureExchangeRate != null ||
-      h.perShareAcquisitionPriceForeign != null ||
-      h.acquisitionExchangeRate != null ||
-      h.departureDayValuationMode === "foreign_market_price" ||
-      h.departureDayValuationMode === "foreign_decree_178_3";
-    if (reserved) {
+    const mode = h.departureDayValuationMode;
+    if (isForeignValuationMode(mode)) continue;
+    if (mode === "market_price" && hasForeignFxFields(h)) {
       throw invalid(
-        `국외주식 「${h.stockName}」: 외화·환율 입력은 아직 지원하지 않습니다 — 원화 단가로 입력하세요`,
+        `국외주식 「${h.stockName}」: 원화 거래가액(market_price)에 외화 단가·환율이 섞였습니다 — 외화로 입력하려면 시가 모드를 외화(foreign_market_price·foreign_decree_178_3)로 고르세요`,
         `holdings.${h.id}`,
       );
     }
-    if (h.departureDayValuationMode !== "market_price") {
+    if (mode !== "market_price") {
       throw invalid(
-        `국외주식 「${h.stockName}」: 출국일 시가는 거래가액(market_price)만 지원합니다 (국내 비상장 평가 모드는 국외주식에 쓸 수 없음)`,
+        `국외주식 「${h.stockName}」: 출국일 시가는 원화 거래가액(market_price) 또는 외화(foreign_market_price·foreign_decree_178_3)만 지원합니다 (국내 비상장 평가 모드는 국외주식에 쓸 수 없음)`,
         `holdings.${h.id}.departureDayValuationMode`,
       );
     }
@@ -215,6 +225,11 @@ export function classifyExitTaxHoldings(
   }
 
   if (regime === "from2027") {
+    // 외화 환산 경로 — 환산 기준일은 법령에 명시가 없다(계획 V-2). §178의3 직접 입력 모드는 §178의9②3호 근거를 싣는다.
+    if (details.some((d) => d.fx != null)) warnings.push(FX_BASIS_NOTICE);
+    if (details.some((d) => d.valuationMode === "foreign_decree_178_3")) {
+      appliedRules.push(STOCK_EXIT_TAX_2027.DECREE_178_9_2_3_FOREIGN_VALUE);
+    }
     if (taxedHoldings.some(isForeign)) appliedRules.push(STOCK_EXIT_TAX_2027.SCOPE_118_9_FOREIGN);
     if (buckets.includes("clause2a")) appliedRules.push(STOCK_EXIT_TAX_2027.RATE_118_11_2_A_SME);
     if (buckets.includes("clause2b")) appliedRules.push(STOCK_EXIT_TAX_2027.RATE_118_11_2_B);
