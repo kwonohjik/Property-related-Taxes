@@ -69,7 +69,7 @@ export function housingShareRateBasis(input: {
 
 /** `housingShareRateBasis` 적용 안내 — 지분 비례 가정과 법문 계산식을 함께 알린다 */
 export function housingShareRateBasisWarning(basis: number, share: number): string {
-  return `지분 취득 주택 — 세율은 전체 주택의 취득당시가액 ${basis.toLocaleString()}원(지분 가액 ÷ 지분율 ${share})으로 판정하고 과세표준은 지분 가액입니다. 취득 지분의 시가표준액이 지분율에 비례하지 않으면 「취득 지분 가액 × 전체 시가표준액 ÷ 취득 지분 시가표준액」으로 다시 확인하세요 (지방세법 §11①8호 후단).`;
+  return `지분 취득 주택 — 세율은 전체 주택의 취득당시가액 ${basis.toLocaleString()}원(지분 가액을 지분율 ${share}로 나눈 값)으로 판정하고 과세표준은 지분 가액입니다. 취득 지분의 시가표준액이 지분율에 비례하지 않으면 「취득 지분 가액에 전체 시가표준액을 곱하고 취득 지분 시가표준액으로 나눈 값」으로 다시 확인하세요 (지방세법 §11①8호 후단).`;
 }
 
 /**
