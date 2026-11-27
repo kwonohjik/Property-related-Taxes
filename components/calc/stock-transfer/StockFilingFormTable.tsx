@@ -238,7 +238,14 @@ export function StockFilingFormTable({
           {/* 주석 */}
           <div className="px-4 py-2 bg-slate-50/50 dark:bg-slate-800/20 border-t border-slate-200 dark:border-slate-700 text-caption text-slate-600 dark:text-slate-400 space-y-0.5">
             <p>* 금액 단위: 원. 본세·가산세 10원 미만 절사 (국고금 관리법 §47①).</p>
-            <p>* 지방소득세: 산출세액 × 10%, 10원 미만 절사 (지방세법 §103의3).</p>
+            {result.exitDetail?.localIncomeTaxAlternative !== undefined ? (
+              <p data-testid="exit-local-tax-note">
+                * 지방소득세: 국외주식(§118의11 2호) 과세분은 지방세법 §103의3⑧ 표를 과세표준에 직독한 값({result.localIncomeTax.toLocaleString("ko-KR")}),
+                10원 미만 절사. 참고값 — 산출세액 × 10%는 {result.exitDetail.localIncomeTaxAlternative.toLocaleString("ko-KR")}이며, 표가 호 구분 없는 단일표라 두 값이 다를 수 있어 확인 필요.
+              </p>
+            ) : (
+              <p>* 지방소득세: 산출세액 × 10%, 10원 미만 절사 (지방세법 §103의3).</p>
+            )}
             <p>* 본 표는 참고용입니다. 실제 신고는 양도소득세 과세표준 신고서 (별지 제84호 서식)를 사용하세요.</p>
           </div>
         </div>

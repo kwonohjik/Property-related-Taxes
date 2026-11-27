@@ -86,9 +86,11 @@ for (const dir of SCAN_DIRS) {
  * 🔒 래칫 — **줄이기만 한다.**
  *   2026-09-08 foreground 15 · noDark 25 = 40 → 2026-10-19 noDark 제거 후 foreground 15
  *   → 2026-10-20 14 (CapitalAdjustmentsBlock 도움말 카드 — 서식이 아니라 안내 상자라 다크 배경으로 뒤집음)
+ *   → 2026-11-27 15 (`ExitTaxBucketFilingTable` — 국외전출세 별지 제84호서식(2027.1.1. 시행 개정) 세율구분별 열 재현.
+ *     공식 서식 replica라 `bg-white text-black print:*` 고정 — 제104호 `ExitTaxHoldingReportForm`과 같은 예외 사유(전경색 하드코딩))
  * 늘리려면 그 예외가 왜 필요한지 이 파일에 근거를 먼저 적을 것.
  */
-const EXEMPT_MAX = 14;
+const EXEMPT_MAX = 15;
 
 describe("다크모드 배경 정책 — bg-white에는 dark: 짝이 있다", () => {
   it("🔴 짝 없는 bg-white가 0건이다", () => {
