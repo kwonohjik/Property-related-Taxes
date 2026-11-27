@@ -180,15 +180,16 @@ describe("입력 규율 — fallback 없음 (K-13)", () => {
 });
 
 describe("확인 필요 · 근거 · 거주 5년 미만", () => {
-  it("세액공제방법은 외국세 환산일을 정한 조문을 못 찾아 확인 필요 코드를 싣는다", () => {
+  it("세액공제방법 환산일은 소득세법 시행규칙 §60②(납부한 때 기준환율) — 확인 필요 코드 없이 근거로 싣는다", () => {
     const r = two({ method: "credit", items: [t("a", 1_000_000)] });
-    expect(r.confirmationNeeded).toContain("FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY");
+    expect(r.confirmationNeeded as string[]).not.toContain("FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY");
+    expect(r.appliedRules).toContain("소득세법 시행규칙 §60 ②");
     expect(r.appliedRules).toContain("지방세특례제한법 §97 ③");
     expect(r.appliedRules).toContain("소득세법 시행령 §178의7");
   });
   it("필요경비 산입방법은 영 §178의5① 필요경비 지출일 환산이라 그 코드를 싣지 않는다", () => {
     const r = two({ method: "expense", items: [t("a", 1_000_000)] });
-    expect(r.confirmationNeeded).not.toContain("FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY");
+    expect(r.appliedRules).not.toContain("소득세법 시행규칙 §60 ②");
     expect(r.appliedRules).not.toContain("지방세특례제한법 §97 ③");
   });
   it("외국세 없으면 §118의6 근거·확인 필요 코드 없음", () => {

@@ -145,4 +145,11 @@ export const TRANSFER_FOREIGN_REALESTATE_ADDITIONS: VerificationRule[] = [
     keywords: ["거주자의 종합소득에 대한 개인지방소득세의 표준세율은 다음 표와 같다", "과세표준의 1천분의 6"],
     keywordMode: "ALL",
   },
+  {
+    /** 외국납부세액 세액공제의 원화 환산일 — 「납부한 때」 (KoreanLaw MCP 실독 2026-11-28 · MST 286379) */
+    id: "TRANSFER_FOREIGN_RE.RULE_60_2_FTC_FX_RATE",
+    citation: "소득세법 시행규칙 §60 ②",
+    keywords: ["외국납부세액의 원화환산은 외국세액을 납부한 때의", "기준환율 또는 재정환율에 의한다"],
+    keywordMode: "ALL",
+  },
 ];

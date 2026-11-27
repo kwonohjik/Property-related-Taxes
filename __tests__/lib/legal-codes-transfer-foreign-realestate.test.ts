@@ -37,6 +37,7 @@ const EXPECTED_KEYS: Record<keyof typeof TRANSFER_FOREIGN_RE, string> = {
   LOCAL_92_1_RATE_TABLE: "지방세법 제92조",
   LOCAL_BASIC_59_ROUNDING: "지방세기본법 제59조",
   TREASURY_47_1_ROUND_10: "국고금 관리법 제47조",
+  RULE_60_2_FTC_FX_RATE: "소득세법 시행규칙 제60조",
 };
 
 describe("TRANSFER_FOREIGN_RE 상수", () => {

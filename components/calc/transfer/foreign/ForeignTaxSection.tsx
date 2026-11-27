@@ -16,6 +16,7 @@ import type { ForeignMoneyRowForm } from "@/lib/stores/calc-wizard-form-foreign"
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import { FOREIGN_RE_MAX_ROWS } from "@/lib/api/transfer-foreign-schema";
 import { TRANSFER_FOREIGN_RE as RE } from "@/lib/tax-engine/legal-codes/transfer-foreign-realestate";
+import { FOREIGN_TAX_FX_DATE_TEXT } from "@/lib/calc/transfer-foreign-messages";
 import { FOREIGN_RE_TAX_METHOD_OPTIONS, ROW_EMPTY_HINT, krwOfExact, limitRows } from "./foreign-ui-shared";
 
 interface Props {
@@ -55,6 +56,9 @@ export function ForeignTaxSection({ form, onChange }: Props) {
           />
           <p className="text-xs text-muted-foreground">
             두 방법 중 하나를 신고 전체에 적용합니다(자산마다 다르게 고를 수 없습니다). 납부일의 기준환율을 행마다 입력하세요.
+          </p>
+          <p className="text-xs text-muted-foreground" data-testid="foreign-tax-fx-date-hint">
+            {FOREIGN_TAX_FX_DATE_TEXT}
           </p>
           {form.foreignAssets.map((a, i) => {
             const country = COUNTRY_OPTIONS.find((o) => o.value === a.countryCode)?.label.replace(/\s*\([A-Z]{3}\)$/, "");

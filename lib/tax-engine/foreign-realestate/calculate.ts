@@ -127,7 +127,6 @@ export function calculateForeignRealEstateTransferTax(
     );
   }
   const confirmationNeeded: ForeignRealEstateConfirmationCode[] = [];
-  if (prepared?.method === "credit") confirmationNeeded.push("FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY");
   confirmationNeeded.push("UNSUPPORTED_SITUATIONS_NOT_EVALUATED");
 
   return {
@@ -163,7 +162,11 @@ export function calculateForeignRealEstateTransferTax(
       ...(rows.length > 1 ? [TRANSFER_FOREIGN_RE.SECTION_118_7_DEDUCTION_ORDER] : []),
       TRANSFER_FOREIGN_RE.SECTION_118_5_RATE,
       ...(prepared
-        ? [TRANSFER_FOREIGN_RE.SECTION_118_6_FOREIGN_TAX, TRANSFER_FOREIGN_RE.DECREE_178_7_FOREIGN_TAX]
+        ? [
+            TRANSFER_FOREIGN_RE.SECTION_118_6_FOREIGN_TAX,
+            TRANSFER_FOREIGN_RE.DECREE_178_7_FOREIGN_TAX,
+            ...(prepared.method === "credit" ? [TRANSFER_FOREIGN_RE.RULE_60_2_FTC_FX_RATE] : []),
+          ]
         : []),
       TRANSFER_FOREIGN_RE.LOCAL_103_3_FOREIGN_TAX_BASE,
       TRANSFER_FOREIGN_RE.LOCAL_103_3_3_RATE,
