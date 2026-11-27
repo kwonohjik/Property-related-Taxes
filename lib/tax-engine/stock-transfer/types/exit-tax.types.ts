@@ -103,6 +103,22 @@ export type ExitTaxExcludedReason =
 /** §118의11 세율 구분 — 1호(3호 가·나목, 4호 다·라목) / 2호가목(중소기업) / 2호나목(그 밖) */
 export type ExitTaxRateBucket = "clause1" | "clause2a" | "clause2b";
 
+/**
+ * §118의10④ 기본공제 250만원의 세율 구분별 배분 — 과세 구분이 **둘 이상**일 때 사용자가 직접 입력한다.
+ *
+ * 소득세법 §118의10③④는 「양도소득금액에서 연 250만원을 공제」라고만 하고 구분별 배분 규정이 없다
+ * (§103①의 「소득별로 각각」과 다르다). 그래서 자동 안분 fallback 없이 입력값 기준으로 계산한다(사용자 결정 C-1).
+ * 과세 구분의 값은 **명시**해야 한다(0 포함). 과세 구분이 아닌 쪽은 비우거나 0이어야 한다.
+ */
+export type ExitTaxBasicDeductionAllocation = {
+  /** 1호(3호 가·나목, 4호 다·라목) */
+  clause1?: number;
+  /** 2호가목(국외주식 중 중소기업) */
+  clause2a?: number;
+  /** 2호나목(국외주식 그 밖) */
+  clause2b?: number;
+};
+
 /** 영 §178의8②2·3호 외국인근로자 요건 4개 (사용자 선언 — 엔진은 자동 판정하지 않는다) */
 export type ForeignWorkerChecks = {
   /** 외국인인 임원 또는 사용인 */
@@ -157,6 +173,12 @@ export type ExitTaxInput = {
    * 엔진이 `취득일 < 근로 개시일`로 종목별 판정한다(같은 날 취득은 「전」이 아니다).
    */
   foreignWorkerStartDate?: Date;
+
+  /**
+   * §118의10④ 기본공제 250만원 구분별 배분 — 과세 구분이 둘 이상이면 **필수**(합계 = 공제액, 각 값 ≤ 그 구분 양도소득금액).
+   * 구분이 하나이면 법문대로 자동이며, 입력이 있으면 그 값이 자동값과 같은지 검증한다(무시하지 않는다).
+   */
+  basicDeductionAllocation?: ExitTaxBasicDeductionAllocation;
 
   // ── 납부유예 §118의16 ──
   /** 납부유예 신청 여부 */
@@ -287,7 +309,7 @@ export type ExitTaxHoldingResult = {
   };
 };
 
-/** §118의11 세율 구분별 계산 분해 (PR-2는 구분이 하나일 때만 계산한다) */
+/** §118의11 세율 구분별 계산 분해 (구분이 둘 이상이면 canonical 순서 clause1 → clause2a → clause2b) */
 export type ExitTaxBucketDetail = {
   bucket: ExitTaxRateBucket;
   /** 구분 내 종목 양도차익 합산(구분 안 손실 통산) */
@@ -329,7 +351,7 @@ export type ExitTaxResult = {
   // ── 종목별 계산 결과 ──
   holdingDetails: ExitTaxHoldingResult[];
 
-  /** §118의11 세율 구분별 분해 — 과세 종목이 있을 때만(PR-2는 구분 하나) */
+  /** §118의11 세율 구분별 분해 — 과세 종목이 있을 때만 */
   bucketDetails?: ExitTaxBucketDetail[];
   /**
    * 국외주식등 제외 판정(영 §178의8②) echo — 국외 종목이 하나라도 있을 때만.
@@ -349,8 +371,13 @@ export type ExitTaxResult = {
   totalTransferGain: number;
   /** §118의10④ 기본공제 250만원 */
   basicDeduction: number;
-  /** 과세표준 = max(0, totalTransferGain − basicDeduction) */
+  /** 과세표준 = max(0, totalTransferGain − basicDeduction). 구분이 둘 이상이면 구분별 과세표준의 합 */
   taxBase: number;
+  /**
+   * 기본공제 배분 근거 — 과세 구분이 둘 이상일 때만 `"user_allocation"`(법령에 배분 규정이 없어 입력값 기준).
+   * 구분이 하나이면 법문 직접 적용이라 없다.
+   */
+  basicDeductionBasis?: "user_allocation";
 
   // ── §118의11 → §104①11가목2) 산출세액 ──
   /** 산출세액 (3억 이하 20% / 초과 25% 누진공제 15,000,000) */
@@ -364,14 +391,18 @@ export type ExitTaxResult = {
    *   (memory `feedback_aggregate_display_rederives_engine_value`).
    *
    * 과세표준 0이면 `applyExitTaxRate`가 rate 0을 돌려주므로 0이 실린다.
+   * 과세 구분이 둘 이상이면 단일 세율이 성립하지 않아 0이고, 구분별 값은 `bucketDetails`를 읽는다(PR-4).
    */
   appliedRate: number;
   /** 누진공제액 (3억 초과 구간 15,000,000 / 그 외 0) */
   progressiveDeduction: number;
-  /** 지방소득세 (10원 미만 절사). 2호(국외주식)는 지방세법 §103의3⑧ 표를 과세표준에 직독한 값이다. */
+  /**
+   * 지방소득세 (10원 미만 절사). 2호(국외주식)는 지방세법 §103의3⑧ 표를 과세표준에 직독한 값이다.
+   * 구분이 둘 이상이면 구분별로 계산해 더한다(1호 구분은 소득세 산출세액의 10%, 2호 구분은 표 직독).
+   */
   localIncomeTax: number;
   /**
-   * 참고값 — 2호(국외주식) 과세 시에만. 소득세 산출세액의 10%(10원 미만 절사).
+   * 참고값 — 2호(국외주식) 과세 시에만. 소득세 산출세액의 10%(10원 미만 절사. 구분이 둘 이상이면 구분별 절사의 합).
    * 지방세법 §103의3⑧은 호 구분 없는 단일표라 2호 세율(10%/20%)과 어긋날 수 있어(계획 V-3) 두 값을 병기한다 — 확인 필요.
    * 1호만이면 두 값이 같아 없다.
    */

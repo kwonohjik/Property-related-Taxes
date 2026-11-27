@@ -5,8 +5,9 @@
  * 기준일은 **출국일**이다(소득세법 부칙 제8조) — `isExitTaxFrom2027`이 판정한다. 이 파일은 그 결과(regime)를 받아
  * 종목을 「과세 / 제외」와 「세율 구분」으로 나눈다. 세액 계산은 `exit-tax.ts`·`exit-tax-bucket.ts`가 한다.
  *
- * 범위: 구분이 하나일 때까지만 계산한다(PR-2 이후 외화 환산 PR-3 포함). 구분 ≥2(국내 1호 + 국외 2호, 2호 가·나목 혼재)와
- * 2호 경정청구는 `assertSupportedByPr2`가 `INVALID_INPUT`으로 막는다(PR-4·PR-7).
+ * 범위: 2호(국외주식) 과세 종목이 있으면 경정청구(조정공제·외국납부·비거주자)는 `assertAdjustmentInputSupported`가
+ * `INVALID_INPUT`으로 막는다(PR-7 대기). 구분 ≥2(국내 1호 + 국외 2호, 2호 가·나목 혼재)의 기본공제 배분·손실 차단·구분별 세액은
+ * `exit-tax-multi-bucket.ts`가 맡는다(PR-4).
  *
  * 계획서: docs/02-design/features/stock-transfer-exit-tax-2027.engine.plan.md §3.2~§3.5
  */
@@ -249,35 +250,29 @@ export function classifyExitTaxHoldings(
 }
 
 // ============================================================
-// PR-2 범위 방어
+// 경정청구 범위 방어 (PR-7 대기)
 // ============================================================
 
 /**
- * 구분 ≥2 · 2호 경정청구를 막는다 (자동 안분·상계 fallback 금지).
- * - 2호(국외주식) 과세 종목이 있으면 조정공제·외국납부세액·비거주자 공제·실제 양도 입력을 거부한다(Q-8, PR-7).
- *   현행 조정공제는 「실제 양도 1주당 단가 하나를 전 종목에 곱한다」는 단순화라 통화·단가 수준이 다른 국외주식과 성립하지 않는다.
- * - 과세 구분이 둘 이상이면 기본공제 250만원 배분·구분 간 손실 상계 규정이 법령에 없어 거부한다(Q-4·Q-5, PR-4).
+ * 2호(국외주식) 과세 종목이 있으면 경정청구 입력을 거부한다 (자동 안분·상계 fallback 금지).
+ * 현행 조정공제는 「실제 양도 1주당 단가 하나를 전 종목에 곱한다」는 단순화(`calcAdjustmentDeduction`)라
+ *  - 통화·단가 수준이 다른 국외주식과 성립하지 않고(Q-8),
+ *  - 1호 + 2호 혼합에서 1호 종목만 실제 양도·경정청구가 있는 경우도 구분별 조정공제 분해가 없어 성립하지 않는다.
+ * 둘 다 PR-7에서 종목별 일반화와 함께 푼다. 2호가 전부 제외돼 과세 구분이 1호뿐이면 막지 않는다(K-18).
  */
-export function assertSupportedByPr2(input: ExitTaxInput, buckets: ExitTaxRateBucket[]): void {
+export function assertAdjustmentInputSupported(buckets: ExitTaxRateBucket[], input: ExitTaxInput): void {
   const hasClause2 = buckets.some((b) => b !== "clause1");
-  if (hasClause2) {
-    const adjustmentInput =
-      (input.actualTransferPricePerShare ?? 0) > 0 ||
-      input.actualTransferDate != null ||
-      (input.foreignTaxPaid ?? 0) > 0 ||
-      (input.foreignTaxPaidForeign ?? 0) > 0 ||
-      (input.domesticSourceTaxWithheld ?? 0) > 0;
-    if (adjustmentInput) {
-      throw invalid(
-        "국외주식(2호) 과세 종목이 있으면 경정청구 입력(실제 양도·외국납부세액·비거주자 원천징수)을 쓸 수 없습니다 — 아직 지원하지 않습니다",
-        "actualTransferPricePerShare",
-      );
-    }
-  }
-  if (buckets.length >= 2) {
+  if (!hasClause2) return;
+  const adjustmentInput =
+    (input.actualTransferPricePerShare ?? 0) > 0 ||
+    input.actualTransferDate != null ||
+    (input.foreignTaxPaid ?? 0) > 0 ||
+    (input.foreignTaxPaidForeign ?? 0) > 0 ||
+    (input.domesticSourceTaxWithheld ?? 0) > 0;
+  if (adjustmentInput) {
     throw invalid(
-      "과세 구분이 둘 이상입니다(국내 1호 + 국외 2호, 또는 2호 가목·나목 혼재) — 기본공제 250만원 배분·구분 간 손실 상계 규정이 법령에 없어 아직 지원하지 않습니다",
-      "holdings",
+      "국외주식(2호) 과세 종목이 있으면 경정청구 입력(실제 양도·외국납부세액·비거주자 원천징수)을 쓸 수 없습니다 — 아직 지원하지 않습니다",
+      "actualTransferPricePerShare",
     );
   }
 }
