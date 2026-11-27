@@ -10,6 +10,7 @@
  *  - G-4 배우자·직계존비속 → 판정하지 않음(Q-1)
  *  - G-5 이력 불러오기 — 단건만 후보(일괄 제외) · 선택 시 칸·배지 · 칸 수정 시 그 칸 배지만 제거
  *  - G-6 홈 카드 → 판정 화면
+ *  - G-8 이력 모달 폭 — 긴 이력 제목(주소·양도일)이 잘리지 않고 가로 스크롤이 없다
  *  - G-7 2호 «양도세 계산기로» → 계산기 «증여자 기준» 표지 켜짐(이력 분리 — `transfer-history-101-2-donor-key.plan.md`)
  *
  * ⚠️ 값이 든 금액 칸(`CurrencyInput`)에 `fill()`을 다시 하면 값이 이어 붙는다 — 공용 컴포넌트의
@@ -161,6 +162,29 @@ test.describe("§101② 증여 후 우회양도 판정", () => {
     await expect(page.getByTestId("gr-donor-history-badge")).toBeVisible();
   });
 
+  test("G-8 이력 모달 폭 — 긴 제목이 잘리지 않고 가로 스크롤 없음", async ({ page }) => {
+    await gotoHydrated(page);
+    const title = "양도소득세 (증여자 기준) — 경기도 수원시 권선구 금곡로212번길 25 (금곡동) (양도 2026.04.05)";
+    const at = "2026-11-27T01:00:00.000Z";
+    await putCalculationRecord(page, {
+      id: "gr-e2e-long", userId: "local-user", taxType: "transfer", title, inputData: {},
+      resultData: { mode: "single", result: { determinedTax: 13_704_000, penaltyTax: 0 } },
+      taxLawVersion: "2026-04-05", linkedCalculationId: null, clientId: null, createdAt: at, updatedAt: at,
+    });
+    await page.getByTestId("gr-donee-history-launch").click();
+    const modal = page.getByTestId("gr-history-modal");
+    const item = page.getByTestId("gr-history-item-gr-e2e-long");
+    await expect(item).toContainText(title);
+    await expect(item).toContainText("13,704,000");
+    // 기본 `sm:max-w-sm`(24rem=384px)에 묶이면 실패한다
+    expect((await modal.boundingBox())!.width).toBeGreaterThan(600);
+    const overflow = await modal.evaluate((el) => el.scrollWidth - el.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(0);
+    const titleClipped = await item.locator("span.font-medium").first().evaluate((el) => el.scrollWidth > el.clientWidth);
+    expect(titleClipped).toBe(false);
+    await modal.screenshot({ path: "e2e/_artifacts/gr-history-modal-g8.png" });
+  });
+
   test("G-6 홈 카드 → 판정 화면", async ({ page }) => {
     await page.goto("/");
     await page.locator(`a[href="${PATH}"]`).click();
@@ -171,7 +195,8 @@ test.describe("§101② 증여 후 우회양도 판정", () => {
   test("G-7 2호 링크 → 계산기 «증여자 기준» 표지 켜짐 · 일반 진입은 꺼짐", async ({ page }) => {
     await gotoHydrated(page);
     await page.getByTestId("gr-donor-calc-link").click();
-    await expect(page).toHaveURL(/\/calc\/transfer-tax$/);
+    // 계산기 첫 컴파일(dev·새 워크트리)이 5초를 넘는다 — 기본 대기로는 판정 화면에 머문 채 실패했다(2026-11-27)
+    await expect(page).toHaveURL(/\/calc\/transfer-tax$/, { timeout: 60_000 });
     const toggle = page.getByTestId("gift-resale-donor-basis-toggle");
     await expect(toggle).toHaveAttribute("data-checked", "true");
 

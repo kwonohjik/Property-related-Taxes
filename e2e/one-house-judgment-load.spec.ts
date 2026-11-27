@@ -106,6 +106,23 @@ test.describe("계산기 판정 불러오기", () => {
   });
 
   /** 🔑 판정 이력이 없으면 **판정 메뉴로 보낸다** — 빈 목록을 띄워 두지 않는다. */
+  /** 공용 `DialogContent` 기본 `sm:max-w-sm`(24rem)에 묶이면 긴 판정 제목이 잘린다(2026-11-27). */
+  test("[LD-3] 모달 폭 — 긴 판정 제목이 잘리지 않고 가로 스크롤 없음", async ({ page }) => {
+    await mockAddress(page);
+    await openCalculator(page);
+    const longTitle = "1세대1주택 판정 — 경기도 수원시 권선구 금곡로212번길 25 (금곡동) (양도예정 2026-06-01)";
+    await putCalculationRecord(page, { ...judgmentRecord(), title: longTitle });
+    await page.getByTestId("open-one-house-judgment-load").click();
+    const modal = page.getByTestId("one-house-judgment-load-modal");
+    const item = page.getByTestId("load-judgment-ohh-load-1");
+    await expect(item).toContainText(longTitle);
+    expect((await modal.boundingBox())!.width).toBeGreaterThan(600);
+    expect(await modal.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
+    const clipped = await item.getByText(longTitle).evaluate((el) => el.scrollWidth > el.clientWidth);
+    expect(clipped).toBe(false);
+    await modal.screenshot({ path: "e2e/_artifacts/one-house-judgment-load-ld3.png" });
+  });
+
   test("[LD-2] 판정 이력이 없으면 판정 메뉴로 안내한다", async ({ page }) => {
     await mockAddress(page);
     await openCalculator(page);

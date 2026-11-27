@@ -9,6 +9,9 @@
  *
  * 의뢰인 격리: 세무사 모드에서는 활성 의뢰인의 이력만 연다(`OneHouseJudgmentLoadModal`과 같은 규약).
  * setState는 Promise 콜백·cleanup에서만 부른다(effect 본문 동기 호출 금지).
+ *
+ * 폭: 공용 `DialogContent` 기본값 `sm:max-w-sm`(24rem)은 **`sm:` 접두로만** 덮인다 — 접두 없는 `max-w-*`는
+ * 640px 이상에서 무시돼 긴 이력 제목(주소·양도일)이 잘리고 가로 스크롤이 생겼다(2026-11-27). 제목은 줄바꿈한다.
  */
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -62,7 +65,7 @@ export function GiftResaleHistoryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent data-testid="gr-history-modal" className="max-h-[85vh] max-w-xl overflow-y-auto">
+      <DialogContent data-testid="gr-history-modal" className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="text-xs">
@@ -87,7 +90,7 @@ export function GiftResaleHistoryModal({
                   className="flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors hover:border-primary/50"
                 >
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium">{c.record.title}</span>
+                    <span className="block text-sm font-medium break-words">{c.record.title}</span>
                     <span className="mt-1 block text-xs text-muted-foreground">
                       계산일 <span className="font-mono tabular-nums">{kstDateOfIso(c.record.createdAt)}</span>
                     </span>
