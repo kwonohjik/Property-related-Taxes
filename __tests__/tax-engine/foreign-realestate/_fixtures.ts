@@ -5,6 +5,7 @@ import type {
   ForeignMoneyItem,
   ForeignRealEstateAssetInput,
   ForeignRealEstateInput,
+  ForeignTaxItemInput,
 } from "@/lib/tax-engine/foreign-realestate/types";
 
 export const d = (iso: string) => new Date(`${iso}T00:00:00Z`);
@@ -38,3 +39,34 @@ export function k1Asset(over: Partial<ForeignRealEstateAssetInput> = {}): Foreig
 export function k1Input(over: Partial<ForeignRealEstateInput> = {}): ForeignRealEstateInput {
   return { domesticResidenceYears: 5, assets: [k1Asset()], ...over };
 }
+
+/**
+ * PR-3 둘째 자산 B: 취득 2023-01-10 $200,000@1,300 = 260,000,000 · 양도 2026-03-05 $300,000@1,200 = 360,000,000 → 양도차익 100,000,000.
+ * `transferUsd`·`rate`를 바꿔 차익을 조절한다(양도가액 = transferUsd × rate).
+ */
+export function bAsset(
+  over: Partial<ForeignRealEstateAssetInput> = {},
+  transferUsd = 300_000,
+  rate = 1_200,
+): ForeignRealEstateAssetInput {
+  return {
+    id: "b",
+    kind: "building",
+    transferDate: d("2026-03-05"),
+    acquisitionDate: d("2023-01-10"),
+    transfer: usd(transferUsd, "2026-03-05", rate),
+    acquisition: usd(200_000, "2023-01-10", 1_300),
+    capitalExpenditures: [],
+    transferCosts: [],
+    ...over,
+  };
+}
+
+/** K-1 자산을 id "a"로 — 양도차익 437,000,000 (2026-07-10) */
+export const aAsset = (over: Partial<ForeignRealEstateAssetInput> = {}) => k1Asset({ id: "a", ...over });
+
+/** 외국납부세액 1건: 외화 USD × 환율(납부일 환율) */
+export const ftax = (assetId: string, amountUsd: number, date: string, exchangeRate: number): ForeignTaxItemInput => ({
+  assetId,
+  ...usd(amountUsd, date, exchangeRate),
+});

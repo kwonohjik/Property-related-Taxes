@@ -31,7 +31,10 @@ export function convertItem(item: ForeignMoneyItem, path: string): ForeignRealEs
 
 const sumKrw = (items: ForeignRealEstateConvertedItem[]) => items.reduce((s, i) => s + i.amountKrw, 0);
 
-/** 양도차익 = 양도가액 − 취득가액 − 자본적지출 − 양도비 (장기보유특별공제는 법 §118의8 단서로 0이라 행에서 고정). */
+/**
+ * 양도차익 = 양도가액 − 취득가액 − 자본적지출 − 양도비 (장기보유특별공제는 법 §118의8 단서로 0이라 행에서 고정).
+ * 외국납부세액 필요경비 산입(§118의6①2호)은 여기서 하지 않는다 — `foreign-tax.ts`의 `withExpenseMethod`.
+ */
 export function buildAssetRow(asset: ForeignRealEstateAssetInput, index: number): ForeignRealEstateAssetRow {
   const p = `assets[${index}]`;
   assertValidDate(asset.transferDate, `${p}.transferDate`);
@@ -63,5 +66,8 @@ export function buildAssetRow(asset: ForeignRealEstateAssetInput, index: number)
     lossAmount: capitalGain < 0 ? -capitalGain : 0,
     longTermDeduction: 0,
     incomeAmount: Math.max(0, capitalGain),
+    basicDeductionAllocated: 0,
+    taxBaseAllocated: Math.max(0, capitalGain),
+    foreignTax: { items: [], paidKrw: 0, expenseKrw: 0, limit: 0, applied: 0, unappliedKrw: 0 },
   };
 }

@@ -19,6 +19,8 @@ export function taxCalculationErrorResponse(err: TaxCalculationError): NextRespo
     message: err.message,
     ...(path ? { fieldErrors: { [path]: [err.message] } } : {}),
   };
-  if (err.code === TaxErrorCode.INVALID_INPUT) return NextResponse.json({ error }, { status: 400 });
+  if (err.code === TaxErrorCode.INVALID_INPUT || err.code === TaxErrorCode.FOREIGN_LOSS_NETTING_UNRESOLVED) {
+    return NextResponse.json({ error }, { status: 400 });
+  }
   return NextResponse.json({ error }, { status: 500 });
 }
