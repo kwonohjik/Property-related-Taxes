@@ -1,0 +1,518 @@
+<div class="space-y-5">
+<div class="rounded-lg border space-y-3 border-amber-200 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-900/15 p-4">
+<div class="flex items-center gap-2">
+<span class="flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none bg-amber-200 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">1</span>
+<p class="text-xs font-semibold text-amber-700 dark:text-amber-300">보유 종목 — 간주양도 대상 (§178의9)</p>
+</div>
+<p class="text-xs text-amber-700 leading-relaxed dark:text-amber-300">§118의9①: §94①3호 가·나목(상장·비상장 주식) <strong>및 §94①4호 다·라목(기타자산: 비상장 과점주주·부동산과다보유법인)</strong> 보유 종목별로 입력하세요. 기타자산 다·라목도 §94①4 주식이므로 ‘비상장’으로 입력하면 동일 흐름(출국일 시가 × 주수 − 취득가 + §118의11 세율)으로 계산됩니다. 각 종목의 출국일 시가(간주양도가액 = 시가 × 주수)가 양도차익 계산에 사용됩니다.</p>
+<div class="space-y-4">
+<div class="rounded-lg border p-3 space-y-3 border-amber-200 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-900/15">
+<div class="flex items-center gap-2">
+<span class="flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none bg-amber-200 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">1</span>
+<p class="text-xs font-semibold text-amber-700 dark:text-amber-300">코스닥 A</p>
+<button type="button" class="ml-auto text-xs text-rose-700 hover:text-rose-800 font-medium px-2 py-0.5 rounded hover:bg-rose-50 transition-colors dark:text-rose-400">삭제</button>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">종목명 *</label>
+<input type="text" placeholder="종목명 입력" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value="코스닥 A"/>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">종목코드·사업자등록번호</label>
+<input type="text" placeholder="신고서 ⑩ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value=""/>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">1주당 액면가 (원)</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_ka4q_" type="text" inputMode="numeric" placeholder="신고서 ⑫ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value=""/>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">보유 지분율 (%)</label>
+<input type="text" placeholder="신고서 ⑬ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value=""/>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">시장</label>
+<div class="grid grid-cols-4 gap-1">
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">코스피</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-400 bg-amber-100 text-amber-800">코스닥</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">코넥스</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">비상장</button>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">주식수 *</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_ii4q_" type="text" inputMode="numeric" placeholder="보유 주식수 (주)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="10,000"/>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">취득일 *</label>
+<div class="flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring">
+<input type="text" inputMode="numeric" placeholder="YYYY" maxLength="4" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-12" aria-label="연도" value="2015"/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="MM" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="월" value="1"/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="DD" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="일" value="1"/>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">취득단가 (원) *</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_mi4q_" type="text" inputMode="numeric" placeholder="1주당 취득가액" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="10,000"/>
+</div>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">출국일 시가 산정 방법 (§178의9)</label>
+<div data-slot="radio-card-group" data-layout="stack" class="space-y-2">
+<label data-checked="true" class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-kosdaq-market" checked="" value="market_price"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>출국일 거래가액</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§178의9① — 출국일에 실제 거래된 가액 직접 입력</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-kosdaq-market" value="prior_year_std"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>기준시가 (1개월 평균)</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§99①3 — 출국일 이전 1개월 종가 평균 (상장주식)</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-kosdaq-market" value="unlisted_sample"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>매매사례가액</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§178의9②2호 가목 — 출국일 전후 각 3개월 내 매매사례가액 (비상장)</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-kosdaq-market" value="unlisted_std"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>비상장 기준시가</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§99①4 — 매매사례 없는 비상장 주식 기준시가</p>
+</div>
+</label>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">출국일 거래가액 (1주당, 원) *</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_4q4q_" type="text" inputMode="numeric" placeholder="출국일 실제 거래가액 (주당)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="50,000"/>
+</div>
+</div>
+<p class="text-caption text-gray-600 dark:text-gray-400">§178의9① — 출국일에 실제 거래된 가액. 자동 조회 없음, 직접 입력 필수.</p>
+</div>
+<div class="rounded bg-amber-100/60 border border-amber-200 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">간주양도가액 참고: 10,000주 × 50,000 = <span class="font-semibold">500,000,000</span>
+</div>
+</div>
+<div class="rounded-lg border p-3 space-y-3 border-amber-200 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-900/15">
+<div class="flex items-center gap-2">
+<span class="flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none bg-amber-200 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">2</span>
+<p class="text-xs font-semibold text-amber-700 dark:text-amber-300">코스피 B</p>
+<button type="button" class="ml-auto text-xs text-rose-700 hover:text-rose-800 font-medium px-2 py-0.5 rounded hover:bg-rose-50 transition-colors dark:text-rose-400">삭제</button>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">종목명 *</label>
+<input type="text" placeholder="종목명 입력" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value="코스피 B"/>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">종목코드·사업자등록번호</label>
+<input type="text" placeholder="신고서 ⑩ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value="005930"/>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">1주당 액면가 (원)</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_ka8q_" type="text" inputMode="numeric" placeholder="신고서 ⑫ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="100"/>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">보유 지분율 (%)</label>
+<input type="text" placeholder="신고서 ⑬ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value="0.01"/>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">시장</label>
+<div class="grid grid-cols-4 gap-1">
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-400 bg-amber-100 text-amber-800">코스피</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">코스닥</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">코넥스</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">비상장</button>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">주식수 *</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_ii8q_" type="text" inputMode="numeric" placeholder="보유 주식수 (주)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="1,000"/>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">취득일 *</label>
+<div class="flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring">
+<input type="text" inputMode="numeric" placeholder="YYYY" maxLength="4" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-12" aria-label="연도" value="2018"/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="MM" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="월" value="3"/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="DD" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="일" value="2"/>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">취득단가 (원) *</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_mi8q_" type="text" inputMode="numeric" placeholder="1주당 취득가액" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="70,000"/>
+</div>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">출국일 시가 산정 방법 (§178의9)</label>
+<div data-slot="radio-card-group" data-layout="stack" class="space-y-2">
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-kospi-avg" value="market_price"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>출국일 거래가액</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§178의9① — 출국일에 실제 거래된 가액 직접 입력</p>
+</div>
+</label>
+<label data-checked="true" class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-kospi-avg" checked="" value="prior_year_std"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>기준시가 (1개월 평균)</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§99①3 — 출국일 이전 1개월 종가 평균 (상장주식)</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-kospi-avg" value="unlisted_sample"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>매매사례가액</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§178의9②2호 가목 — 출국일 전후 각 3개월 내 매매사례가액 (비상장)</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-kospi-avg" value="unlisted_std"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>비상장 기준시가</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§99①4 — 매매사례 없는 비상장 주식 기준시가</p>
+</div>
+</label>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">§99①3 기준시가 — 1개월 종가평균 (1주당, 원) *</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_4u8q_" type="text" inputMode="numeric" placeholder="출국일 이전 1개월 종가 평균" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="81,500"/>
+</div>
+</div>
+<p class="text-caption text-gray-600 dark:text-gray-400">출국일 이전 1개월간 종가 산술 평균. 상장주식에 적용.</p>
+</div>
+<div class="rounded bg-amber-100/60 border border-amber-200 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">간주양도가액 참고: 1,000주 × 81,500 = <span class="font-semibold">81,500,000</span>
+</div>
+</div>
+<div class="rounded-lg border p-3 space-y-3 border-amber-200 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-900/15">
+<div class="flex items-center gap-2">
+<span class="flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none bg-amber-200 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">3</span>
+<p class="text-xs font-semibold text-amber-700 dark:text-amber-300">비상장 C</p>
+<button type="button" class="ml-auto text-xs text-rose-700 hover:text-rose-800 font-medium px-2 py-0.5 rounded hover:bg-rose-50 transition-colors dark:text-rose-400">삭제</button>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">종목명 *</label>
+<input type="text" placeholder="종목명 입력" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value="비상장 C"/>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">종목코드·사업자등록번호</label>
+<input type="text" placeholder="신고서 ⑩ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value=""/>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">1주당 액면가 (원)</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_kacq_" type="text" inputMode="numeric" placeholder="신고서 ⑫ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value=""/>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">보유 지분율 (%)</label>
+<input type="text" placeholder="신고서 ⑬ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value=""/>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">시장</label>
+<div class="grid grid-cols-4 gap-1">
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">코스피</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">코스닥</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">코넥스</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-400 bg-amber-100 text-amber-800">비상장</button>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">주식수 *</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_iicq_" type="text" inputMode="numeric" placeholder="보유 주식수 (주)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="10,000"/>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">취득일 *</label>
+<div class="flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring">
+<input type="text" inputMode="numeric" placeholder="YYYY" maxLength="4" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-12" aria-label="연도" value="2016"/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="MM" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="월" value="7"/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="DD" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="일" value="15"/>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">취득단가 (원) *</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_micq_" type="text" inputMode="numeric" placeholder="1주당 취득가액" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="20,000"/>
+</div>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">출국일 시가 산정 방법 (§178의9)</label>
+<div data-slot="radio-card-group" data-layout="stack" class="space-y-2">
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-unlisted-sample" value="market_price"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>출국일 거래가액</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§178의9① — 출국일에 실제 거래된 가액 직접 입력</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-unlisted-sample" value="prior_year_std"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>기준시가 (1개월 평균)</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§99①3 — 출국일 이전 1개월 종가 평균 (상장주식)</p>
+</div>
+</label>
+<label data-checked="true" class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-unlisted-sample" checked="" value="unlisted_sample"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>매매사례가액</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§178의9②2호 가목 — 출국일 전후 각 3개월 내 매매사례가액 (비상장)</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-unlisted-sample" value="unlisted_std"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>비상장 기준시가</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§99①4 — 매매사례 없는 비상장 주식 기준시가</p>
+</div>
+</label>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">매매사례가액 (1주당, 원) *</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_52cq_" type="text" inputMode="numeric" placeholder="전후 각 3개월 매매사례가액" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="30,000"/>
+</div>
+</div>
+<p class="text-caption text-gray-600 dark:text-gray-400">§178의9②2호 가목 — 출국일 전후 각 3개월 이내 동일 주식 매매사례가액.</p>
+</div>
+<div class="rounded bg-amber-100/60 border border-amber-200 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">간주양도가액 참고: 10,000주 × 30,000 = <span class="font-semibold">300,000,000</span>
+</div>
+</div>
+<div class="rounded-lg border p-3 space-y-3 border-amber-200 bg-amber-50/40 dark:border-amber-800 dark:bg-amber-900/15">
+<div class="flex items-center gap-2">
+<span class="flex h-5 w-5 items-center justify-center rounded-full text-micro font-bold select-none bg-amber-200 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">4</span>
+<p class="text-xs font-semibold text-amber-700 dark:text-amber-300">코넥스 D</p>
+<button type="button" class="ml-auto text-xs text-rose-700 hover:text-rose-800 font-medium px-2 py-0.5 rounded hover:bg-rose-50 transition-colors dark:text-rose-400">삭제</button>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">종목명 *</label>
+<input type="text" placeholder="종목명 입력" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value="코넥스 D"/>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">종목코드·사업자등록번호</label>
+<input type="text" placeholder="신고서 ⑩ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value=""/>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">1주당 액면가 (원)</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_kagq_" type="text" inputMode="numeric" placeholder="신고서 ⑫ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value=""/>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">보유 지분율 (%)</label>
+<input type="text" placeholder="신고서 ⑬ (선택)" class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400" value=""/>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">시장</label>
+<div class="grid grid-cols-4 gap-1">
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">코스피</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">코스닥</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-400 bg-amber-100 text-amber-800">코넥스</button>
+<button type="button" class="rounded-md border px-2 py-1 text-xs font-medium transition-colors border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:bg-amber-950/40">비상장</button>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-2">
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">주식수 *</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_iigq_" type="text" inputMode="numeric" placeholder="보유 주식수 (주)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="500"/>
+</div>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">취득일 *</label>
+<div class="flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-ring">
+<input type="text" inputMode="numeric" placeholder="YYYY" maxLength="4" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-12" aria-label="연도" value="2019"/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="MM" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="월" value="11"/>
+<span class="text-muted-foreground select-none">-</span>
+<input type="text" inputMode="numeric" placeholder="DD" maxLength="2" class="border-0 bg-transparent text-sm text-center focus:outline-none focus:ring-0 tabular-nums w-8" aria-label="일" value="20"/>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">취득단가 (원) *</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_migq_" type="text" inputMode="numeric" placeholder="1주당 취득가액" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="12,000"/>
+</div>
+</div>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">출국일 시가 산정 방법 (§178의9)</label>
+<div data-slot="radio-card-group" data-layout="stack" class="space-y-2">
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-konex-std" value="market_price"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>출국일 거래가액</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§178의9① — 출국일에 실제 거래된 가액 직접 입력</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-konex-std" value="prior_year_std"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>기준시가 (1개월 평균)</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§99①3 — 출국일 이전 1개월 종가 평균 (상장주식)</p>
+</div>
+</label>
+<label class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-konex-std" value="unlisted_sample"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>매매사례가액</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§178의9②2호 가목 — 출국일 전후 각 3개월 내 매매사례가액 (비상장)</p>
+</div>
+</label>
+<label data-checked="true" class="rounded-lg border transition-colors select-none flex items-start gap-3 p-3 border-amber-200/70 bg-amber-50/70 hover:border-amber-300 dark:border-amber-800/40 dark:bg-amber-950/20 has-[:checked]:border-amber-300 has-[:checked]:bg-amber-100/70 has-[:checked]:ring-1 has-[:checked]:ring-amber-200/50 dark:has-[:checked]:border-amber-700/60 dark:has-[:checked]:bg-amber-950/40 dark:has-[:checked]:ring-amber-800/30 has-[:checked]:text-amber-900 has-[:checked]:font-semibold dark:has-[:checked]:text-amber-200 cursor-pointer">
+<input type="radio" class="mt-0.5 h-4 w-4 shrink-0 accent-amber-600" name="departureDayValuationMode-h-konex-std" checked="" value="unlisted_std"/>
+<div class="flex-1 min-w-0 space-y-0.5">
+<div class="flex items-center justify-between gap-2">
+<p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium leading-tight">
+<span>비상장 기준시가</span>
+</p>
+</div>
+<p class="text-xs text-muted-foreground leading-snug">§99①4 — 매매사례 없는 비상장 주식 기준시가</p>
+</div>
+</label>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-700 dark:text-gray-300">§99①4 비상장 기준시가 (1주당, 원) *</label>
+<div class="space-y-1.5">
+<div class="relative">
+<input id="_R_56gq_" type="text" inputMode="numeric" placeholder="비상장 기준시가 (매매사례 없는 경우)" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-right ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 pr-3" value="15,000"/>
+</div>
+</div>
+<p class="text-caption text-gray-600 dark:text-gray-400">§99①4 — 매매사례가액이 없는 비상장주식의 보충적 평가액.</p>
+</div>
+<div class="rounded bg-amber-100/60 border border-amber-200 px-3 py-1.5 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">간주양도가액 참고: 500주 × 15,000 = <span class="font-semibold">7,500,000</span>
+</div>
+</div>
+<button type="button" class="w-full rounded-lg border-2 border-dashed border-amber-300 bg-amber-50/30 py-3 text-sm font-medium text-amber-700 hover:bg-amber-50/60 transition-colors dark:text-amber-300 dark:bg-amber-950/40">+ 종목 추가</button>
+<div class="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40">
+<span class="font-semibold">보유 종목 합계 간주양도가액 (참고):</span> 889,000,000</div>
+</div>
+</div>
+</div>
