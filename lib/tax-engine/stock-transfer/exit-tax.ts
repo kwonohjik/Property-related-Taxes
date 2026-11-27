@@ -11,7 +11,7 @@
  *   STEP 4: 세율 구분별 과세표준 (기본공제 §118의10④ 250만원 — 구분이 둘 이상이면 사용자 배분 입력)
  *   STEP 5: §118의11 산출세액 (1호 20%/25% 누진 · 2호가목 10% · 2호나목 20%)
  *   STEP 6: 납부유예 §118의16 처리 (5년/10년)
- *   STEP 7: 경정청구 계산 (조정공제·외국납부세액공제·비거주자공제)
+ *   STEP 7: 경정청구 계산 (조정공제·외국납부세액공제·비거주자공제) — 전역 입력(종목 공통 단가) 또는 종목별 실제 양도(PR-7a)
  *   STEP 8: 보유현황 미신고 가산세 §118의15
  *   STEP 9: 지방소득세 (10원 미만 절사) + 결과 조립
  *
@@ -39,6 +39,9 @@ import { isForeignValuationMode } from "./exit-tax-fx";
 import { resolveForeignHoldingKrw } from "./exit-tax-fx";
 import { calcLocalIncomeTaxTable, floorTen } from "./exit-tax-bucket";
 import { calcBuckets } from "./exit-tax-multi-bucket";
+import { assertHoldingActualInputs } from "./exit-tax-actual-transfer";
+import { calcHoldingActualTransfers } from "./exit-tax-actual-transfer";
+import { hasHoldingActualTransfer } from "./exit-tax-actual-transfer";
 import { calcMultiBucketLocalTax } from "./exit-tax-multi-bucket";
 import { multiBucketNotices } from "./exit-tax-multi-bucket";
 import {
@@ -205,6 +208,9 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   const holdingDetails = cls.details;
   // 조정공제·외국납부세액공제의 안분 인자(주식수)는 과세 종목만 쓴다 — 제외된 국외주식이 섞이면 조용히 틀린다.
   const taxedHoldings = cls.taxedHoldings;
+
+  // 종목별 실제 양도(PR-7a) 입력 검증 — 제외된 종목에 입력이 오면 조용히 무시하지 않고 거부한다(전부 제외 조기 반환보다 먼저).
+  assertHoldingActualInputs(input, cls.details);
 
   // 입력 종목이 있는데 전부 제외됐으면 납세의무가 없다. 배분 입력이 있으면 무시하지 않고 검증한다(과세 구분이 없으니 전부 0이어야 한다).
   if (input.holdings.length > 0 && taxedHoldings.length === 0) {
@@ -380,6 +386,20 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
     }
   }
 
+  // 종목별 실제 양도(PR-7a) — 전역 입력과 동시에 올 수 없으므로(`assertHoldingActualInputs`) 위 전역 블록은 모두 건너뛴 상태다.
+  // 구분별 조정공제 · 종목별 외국납부세액 안분 · 총액 한도. 계산·고지는 `exit-tax-actual-transfer.ts`.
+  const perHolding = hasHoldingActualTransfer(input)
+    ? calcHoldingActualTransfers(input, holdingDetails, calc.details, incomeTax)
+    : undefined;
+  if (perHolding) {
+    adjustmentDeduction = perHolding.adjustmentDeduction;
+    foreignTaxCreditApplied = perHolding.foreignTaxCreditApplied;
+    domesticTaxCreditApplied = perHolding.domesticTaxCreditApplied;
+    warnings.push(...perHolding.warnings);
+    appliedRules.push(...perHolding.appliedRules);
+  }
+  const foreignTaxPaidKrwEcho = perHolding ? perHolding.foreignTaxPaidKrw : foreignTaxPaidKrw;
+
   // 경정 후 최종 세액
   if (
     adjustmentDeduction != null ||
@@ -485,10 +505,17 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
     residencyEligible,
     majorShareholderEligible,
 
-    holdingDetails,
+    holdingDetails: perHolding
+      ? holdingDetails.map((d) => {
+          const actualTransfer = perHolding.lotEchoes.get(d.id);
+          return actualTransfer ? { ...d, actualTransfer } : d;
+        })
+      : holdingDetails,
     ...(taxedHoldings.length > 0
       ? {
-          bucketDetails: calc.details,
+          bucketDetails: perHolding
+            ? calc.details.map((b) => ({ ...b, ...perHolding.bucketAdjustments.get(b.bucket) }))
+            : calc.details,
         }
       : {}),
     ...(cls.foreignExclusion ? { foreignExclusion: cls.foreignExclusion } : {}),
@@ -512,7 +539,7 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
     adjustmentDeduction,
     foreignTaxCreditApplied,
     // 공제에 실제로 쓰인 원화 금액 — 화면이 「외화 × 환율」 산식을 보일 수 있게 echo
-    ...(foreignTaxPaidKrw > 0 ? { foreignTaxPaidKrw } : {}),
+    ...(foreignTaxPaidKrwEcho > 0 ? { foreignTaxPaidKrw: foreignTaxPaidKrwEcho } : {}),
     domesticTaxCreditApplied,
     finalTaxAfterAdjustment,
 

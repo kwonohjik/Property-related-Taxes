@@ -16,6 +16,7 @@ import type { z } from "zod";
 import type {
   ExitTaxBasicDeductionAllocation,
   ExitTaxHolding,
+  ExitTaxHoldingActualTransfer,
   ExitTaxInput,
   ForeignWorkerChecks,
 } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
@@ -23,6 +24,7 @@ import {
   basicDeductionAllocationSchema,
   deferralReasonSchema,
   departureDayValuationModeSchema,
+  exitTaxHoldingActualTransferSchema,
   exitTaxHoldingSchema,
   exitTaxInputSchema,
   foreignTaxExclusionReasonSchema,
@@ -55,7 +57,21 @@ const ENGINE_HOLDING_KEYS = {
   departureExchangeRate: true,
   perShareAcquisitionPriceForeign: true,
   acquisitionExchangeRate: true,
+  actualTransfer: true,
 } satisfies Record<keyof ExitTaxHolding, true>;
+
+const ENGINE_ACTUAL_TRANSFER_KEYS = {
+  shareCount: true,
+  transferDate: true,
+  pricePerShare: true,
+  priceForeign: true,
+  exchangeRate: true,
+  foreignTaxPaid: true,
+  foreignTaxPaidForeign: true,
+  foreignTaxCurrencyCode: true,
+  foreignTaxExchangeRate: true,
+  domesticSourceTaxWithheld: true,
+} satisfies Record<keyof ExitTaxHoldingActualTransfer, true>;
 
 const ENGINE_INPUT_KEYS = {
   marketType: true,
@@ -106,6 +122,9 @@ describe("⑫ Zod 키 집합 = 엔진 타입 키 집합 (양방향)", () => {
   });
   it("최상위 — exitTaxInputSchema", () => {
     expect(sorted(exitTaxInputSchema.shape)).toEqual(sorted(ENGINE_INPUT_KEYS));
+  });
+  it("중첩 — 종목별 실제 양도 actualTransfer (PR-7a)", () => {
+    expect(sorted(exitTaxHoldingActualTransferSchema.shape)).toEqual(sorted(ENGINE_ACTUAL_TRANSFER_KEYS));
   });
   it("중첩 — foreignWorkerChecks · basicDeductionAllocation (상위 가드는 중첩 안을 못 본다)", () => {
     expect(sorted(foreignWorkerChecksSchema.shape)).toEqual(sorted(ENGINE_WORKER_CHECK_KEYS));
@@ -161,6 +180,18 @@ describe("⑭ 매핑 — 모든 키가 엔진 input에 도달한다", () => {
     departureExchangeRate: 8,
     perShareAcquisitionPriceForeign: 9,
     acquisitionExchangeRate: 10,
+    actualTransfer: {
+      shareCount: 1,
+      transferDate: "2027-03-01",
+      pricePerShare: 1,
+      priceForeign: 2,
+      exchangeRate: 3,
+      foreignTaxPaid: 4,
+      foreignTaxPaidForeign: 5,
+      foreignTaxCurrencyCode: "USD",
+      foreignTaxExchangeRate: 6,
+      domesticSourceTaxWithheld: 7,
+    },
   };
   const FULL_INPUT: Record<keyof ExitTaxInput, unknown> = {
     marketType: "exit_tax",
@@ -196,6 +227,15 @@ describe("⑭ 매핑 — 모든 키가 엔진 input에 도달한다", () => {
       expect(mapped[key], `holdings[].${key} 가 엔진 input에 도달하지 않음`).not.toBeUndefined();
     }
     expect(mapped.acquisitionDate).toBeInstanceOf(Date);
+  });
+
+  it("종목 안 actualTransfer — 모든 키가 도달하고 transferDate는 Date로 (⑭ PR-7a)", () => {
+    const mapped = mapExitTaxHolding(FULL_HOLDING) as { actualTransfer?: Record<string, unknown> };
+    expect(mapped.actualTransfer).toBeDefined();
+    for (const key of Object.keys(ENGINE_ACTUAL_TRANSFER_KEYS)) {
+      expect(mapped.actualTransfer?.[key], `holdings[].actualTransfer.${key} 가 엔진 input에 도달하지 않음`).not.toBeUndefined();
+    }
+    expect(mapped.actualTransfer?.transferDate).toBeInstanceOf(Date);
   });
 
   it("최상위 — 모든 키에 값이 실린다 (날짜 3개는 Date로)", () => {

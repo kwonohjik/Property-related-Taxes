@@ -11,11 +11,29 @@
  * (평면 `coerceDates`는 배열 안을 변환하지 못한다 — 디자인 R2-04). `new Date(x)` 직접 호출 금지.
  */
 
-import type { ExitTaxHolding, ExitTaxInput } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
+import type { ExitTaxHolding } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
+import type { ExitTaxHoldingActualTransfer } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
+import type { ExitTaxInput } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
 import { coerceDates, toDate, toOptionalDate } from "@/lib/api/date-coerce";
 
 /** ⑭ 평면 Date 필드 (`coerceDates` 적용 — 배열 안은 제외) */
 const EXIT_TAX_DATE_FIELDS = ["departureDate", "actualTransferDate", "foreignWorkerStartDate"] as const;
+
+/** 종목별 실제 양도 (PR-7a) — `transferDate`는 `toOptionalDate`로 변환한다 */
+export function mapExitTaxHoldingActualTransfer(a: Record<string, unknown>) {
+  return {
+    shareCount: a.shareCount as number,
+    transferDate: toOptionalDate(a.transferDate),
+    pricePerShare: a.pricePerShare as number | undefined,
+    priceForeign: a.priceForeign as number | undefined,
+    exchangeRate: a.exchangeRate as number | undefined,
+    foreignTaxPaid: a.foreignTaxPaid as number | undefined,
+    foreignTaxPaidForeign: a.foreignTaxPaidForeign as number | undefined,
+    foreignTaxCurrencyCode: a.foreignTaxCurrencyCode as string | undefined,
+    foreignTaxExchangeRate: a.foreignTaxExchangeRate as number | undefined,
+    domesticSourceTaxWithheld: a.domesticSourceTaxWithheld as number | undefined,
+  } satisfies ExitTaxHoldingActualTransfer;
+}
 
 /** 종목 1건 — `holdings[]` 안 Date(`acquisitionDate`)는 여기서 `toDate`로 변환한다 */
 export function mapExitTaxHolding(h: Record<string, unknown>) {
@@ -41,6 +59,12 @@ export function mapExitTaxHolding(h: Record<string, unknown>) {
     departureExchangeRate: h.departureExchangeRate as number | undefined,
     perShareAcquisitionPriceForeign: h.perShareAcquisitionPriceForeign as number | undefined,
     acquisitionExchangeRate: h.acquisitionExchangeRate as number | undefined,
+
+    // 종목별 실제 양도 (경정청구 · PR-7a) — 안쪽 Date(`transferDate`)도 여기서 변환한다
+    actualTransfer:
+      h.actualTransfer != null
+        ? mapExitTaxHoldingActualTransfer(h.actualTransfer as Record<string, unknown>)
+        : undefined,
   } satisfies ExitTaxHolding;
 }
 

@@ -5,8 +5,8 @@
  * 기준일은 **출국일**이다(소득세법 부칙 제8조) — `isExitTaxFrom2027`이 판정한다. 이 파일은 그 결과(regime)를 받아
  * 종목을 「과세 / 제외」와 「세율 구분」으로 나눈다. 세액 계산은 `exit-tax.ts`·`exit-tax-bucket.ts`가 한다.
  *
- * 범위: 2호(국외주식) 과세 종목이 있으면 경정청구(조정공제·외국납부·비거주자)는 `assertAdjustmentInputSupported`가
- * `INVALID_INPUT`으로 막는다(PR-7 대기). 구분 ≥2(국내 1호 + 국외 2호, 2호 가·나목 혼재)의 기본공제 배분·손실 차단·구분별 세액은
+ * 범위: 2호(국외주식) 과세 종목이 있으면 **전역** 경정청구 입력(조정공제·외국납부·비거주자)은 `assertAdjustmentInputSupported`가
+ * `INVALID_INPUT`으로 막고, 종목별 실제 양도(`holdings[].actualTransfer`, PR-7a — `exit-tax-actual-transfer.ts`)로 받는다. 구분 ≥2(국내 1호 + 국외 2호, 2호 가·나목 혼재)의 기본공제 배분·손실 차단·구분별 세액은
  * `exit-tax-multi-bucket.ts`가 맡는다(PR-4).
  *
  * 계획서: docs/02-design/features/stock-transfer-exit-tax-2027.engine.plan.md §3.2~§3.5
@@ -25,6 +25,8 @@ import { isValid, startOfDay } from "@/lib/tax-engine/utc-date";
 import { hasForeignFxFields } from "./exit-tax-fx";
 import { isForeignValuationMode } from "./exit-tax-fx";
 import { FX_BASIS_NOTICE } from "./exit-tax-fx";
+import { hasGlobalAdjustmentInput } from "./exit-tax-actual-transfer";
+import { hasHoldingActualTransfer } from "./exit-tax-actual-transfer";
 import {
   STOCK_EXIT_TAX_2027,
   STOCK_EXIT_TAX_2027_CONSTS,
@@ -250,28 +252,26 @@ export function classifyExitTaxHoldings(
 }
 
 // ============================================================
-// 경정청구 범위 방어 (PR-7 대기)
+// 경정청구 범위 방어 (전역 입력 경로)
 // ============================================================
 
 /**
- * 2호(국외주식) 과세 종목이 있으면 경정청구 입력을 거부한다 (자동 안분·상계 fallback 금지).
- * 현행 조정공제는 「실제 양도 1주당 단가 하나를 전 종목에 곱한다」는 단순화(`calcAdjustmentDeduction`)라
- *  - 통화·단가 수준이 다른 국외주식과 성립하지 않고(Q-8),
- *  - 1호 + 2호 혼합에서 1호 종목만 실제 양도·경정청구가 있는 경우도 구분별 조정공제 분해가 없어 성립하지 않는다.
- * 둘 다 PR-7에서 종목별 일반화와 함께 푼다. 2호가 전부 제외돼 과세 구분이 1호뿐이면 막지 않는다(K-18).
+ * 전역 경정청구 입력(`actualTransferPricePerShare`·`actualTransferDate`·`foreignTaxPaid*`·`domesticSourceTaxWithheld`)은
+ * 「실제 양도 1주당 단가 하나를 전 종목에 곱한다」는 단순화(`calcAdjustmentDeduction`)라 2026 출국 교재 사례 등 기존 결과를 지키려고 유지한다.
+ * 그 단순화는
+ *  - 통화·단가 수준이 다른 국외주식(2호)과 성립하지 않고(Q-8),
+ *  - 구분이 둘 이상이면 구분별 조정공제 분해가 없어 성립하지 않는다.
+ * 그래서 2호 과세 종목이 있거나 구분이 둘 이상이면 전역 입력을 막고 **종목별 실제 양도(`holdings[].actualTransfer`, PR-7a)**를 쓰게 한다.
+ * 종목별 입력이 있으면(종목별 모드) 여기서는 통과시킨다 — 전역 입력과의 동시 입력·종목별 입력 검증은 `assertHoldingActualInputs`가 한다.
+ * 2호가 전부 제외돼 과세 구분이 1호뿐이면 막지 않는다(K-18).
  */
 export function assertAdjustmentInputSupported(buckets: ExitTaxRateBucket[], input: ExitTaxInput): void {
+  if (hasHoldingActualTransfer(input)) return;
   const hasClause2 = buckets.some((b) => b !== "clause1");
   if (!hasClause2) return;
-  const adjustmentInput =
-    (input.actualTransferPricePerShare ?? 0) > 0 ||
-    input.actualTransferDate != null ||
-    (input.foreignTaxPaid ?? 0) > 0 ||
-    (input.foreignTaxPaidForeign ?? 0) > 0 ||
-    (input.domesticSourceTaxWithheld ?? 0) > 0;
-  if (adjustmentInput) {
+  if (hasGlobalAdjustmentInput(input)) {
     throw invalid(
-      "국외주식(2호) 과세 종목이 있으면 경정청구 입력(실제 양도·외국납부세액·비거주자 원천징수)을 쓸 수 없습니다 — 아직 지원하지 않습니다",
+      "국외주식(2호) 과세 종목이 있으면 전역 경정청구 입력(실제 양도 단가·외국납부세액·비거주자 원천징수)을 쓸 수 없습니다 — 종목별 실제 양도(holdings[].actualTransfer)로 입력하세요",
       "actualTransferPricePerShare",
     );
   }
