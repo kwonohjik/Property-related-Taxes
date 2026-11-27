@@ -123,7 +123,7 @@ describe("DE-4 ⑫ 직접 호출 — 컴패니언 부담부증여에 `inheritanc
   it("housing", async () => {
     const f = form([primary("housing", pct(60), debt(600_000_000)), share(pct(40), INH, OWN, { bgAcquisitionMethod: "actual", bgActualAcquisitionTotal: "200000000" })], AB);
     const body = (await captureBody(f)) as Loose;
-    const comps = (body.companionAssets as Loose[]).map((c) => { const { inheritanceValuation: _iv, ...rest } = c; return rest; }); // eslint-disable-line @typescript-eslint/no-unused-vars
+    const comps = (body.companionAssets as Loose[]).map((c) => { const { inheritanceValuation: _iv, ...rest } = c; return rest; });
     const res = await POST(new NextRequest("http://localhost/api/calc/transfer", {
       method: "POST", headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" }, body: JSON.stringify({ ...body, companionAssets: comps }),
     }));

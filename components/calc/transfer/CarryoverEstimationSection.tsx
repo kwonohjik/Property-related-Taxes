@@ -238,5 +238,4 @@ export function CarryoverEstimationSection({
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const _defaults = CARRYOVER_DEFAULTS;
