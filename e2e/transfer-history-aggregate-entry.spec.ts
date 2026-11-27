@@ -125,6 +125,17 @@ test.describe("이력 → 다건 합산 진입", () => {
     await expect(page.getByTestId("prior-paid-tax-auto-badge")).toBeVisible({ timeout: 15000 });
   });
 
+  test("[D7] 모달 폭 — 이력 목록이 24rem에 묶이지 않고 가로 스크롤 없음", async ({ page }) => {
+    // 공용 기본값 `sm:max-w-sm`(24rem)은 `sm:` 접두로만 덮인다 — 접두 없는 `max-w-2xl`이면 약 372px로 묶인다.
+    await page.getByTestId(`aggregate-${BASE.id}`).click();
+    const modal = page.getByTestId("history-aggregate-modal");
+    await expect(modal).toBeVisible({ timeout: 15000 });
+    expect((await modal.boundingBox())!.width).toBeGreaterThan(600);
+    expect(await modal.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
+    const label = page.getByTestId(`aggregate-record-${EARLIER.id}`).locator("span.font-medium").first();
+    expect(await label.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(false);
+  });
+
   test("[D3] 과세연도가 다른 이력은 사유와 함께 선택 불가", async ({ page }) => {
     await page.getByTestId(`aggregate-${BASE.id}`).click();
     await expect(page.getByTestId("history-aggregate-modal")).toBeVisible({ timeout: 15000 });

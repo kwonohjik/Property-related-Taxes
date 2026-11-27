@@ -307,7 +307,8 @@ export function PriorGiftHistoryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      {/* 폭: 공용 기본값 `sm:max-w-sm`(24rem)은 `sm:` 접두로만 덮인다(2026-11-27, #3719와 같은 결함). */}
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>📋 사전증여 이력 조회</DialogTitle>
           <DialogDescription className="text-xs">

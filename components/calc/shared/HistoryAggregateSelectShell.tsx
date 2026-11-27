@@ -151,7 +151,9 @@ export function HistoryAggregateSelectShell({
             닫히는 중인 모달의 잔상과 구분되지 않는다(MultiTransferHistoryLoadModal의 실측 교훈). */}
         <DialogContent
           data-testid="history-aggregate-modal"
-          className="max-w-2xl max-h-[85vh] overflow-y-auto"
+          // 폭: 공용 기본값 `sm:max-w-sm`(24rem)은 `sm:` 접두로만 덮인다 — 접두 없는 `max-w-2xl`은 640px 이상에서
+          //   무시돼 긴 이력 제목이 잘렸다(2026-11-27, #3719와 같은 결함).
+          className="max-h-[85vh] overflow-y-auto sm:max-w-3xl"
         >
           <DialogHeader>
             <DialogTitle>
@@ -187,8 +189,8 @@ export function HistoryAggregateSelectShell({
                       {checked ? "✓" : ""}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-2">
-                        <span className="truncate font-medium">{adapter.itemLabel(c.record)}</span>
+                      <span className="flex items-start gap-2">
+                        <span className="min-w-0 font-medium break-words">{adapter.itemLabel(c.record)}</span>
                         {c.isBase && (
                           <Badge variant="secondary" className="text-micro">
                             기준

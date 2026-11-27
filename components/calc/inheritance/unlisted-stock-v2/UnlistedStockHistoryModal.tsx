@@ -127,7 +127,8 @@ export function UnlistedStockHistoryModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="unlisted-stock-history-modal">
+      {/* 폭: 공용 기본값 `sm:max-w-sm`(24rem)은 `sm:` 접두로만 덮인다(2026-11-27, #3719와 같은 결함). */}
+      <DialogContent className="max-h-[80vh] overflow-y-auto sm:max-w-3xl" data-testid="unlisted-stock-history-modal">
         <DialogHeader>
           <DialogTitle>📂 비상장주식 평가 이력 조회</DialogTitle>
           <DialogDescription>
