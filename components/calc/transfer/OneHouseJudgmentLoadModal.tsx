@@ -105,7 +105,9 @@ export function OneHouseJudgmentLoadModal({
           판정하면 닫히는 중인 모달의 잔상과 구분되지 않는다(선례 모달 주석의 2026-08-05 실측). */}
       <DialogContent
         data-testid="one-house-judgment-load-modal"
-        className="max-w-2xl max-h-[85vh] overflow-y-auto"
+        // 폭: 공용 기본값 `sm:max-w-sm`(24rem)은 `sm:` 접두로만 덮인다 — 접두 없는 `max-w-2xl`은 640px 이상에서
+        //   무시돼 긴 판정 제목(주소·양도예정일)이 잘렸다(2026-11-27, 증여 후 우회양도 이력 모달과 같은 결함).
+        className="max-h-[85vh] overflow-y-auto sm:max-w-3xl"
       >
         <DialogHeader>
           <DialogTitle>판정 불러오기</DialogTitle>
@@ -143,14 +145,14 @@ export function OneHouseJudgmentLoadModal({
                 className="flex w-full items-center justify-between gap-3 rounded-lg border p-3 text-left transition-colors hover:border-primary/50"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2">
                     {/* 🔑 판정 결과를 **다시 유도하지 않는다** — 이력 목록·출처 한 줄과 같은 술어다. */}
                     {c.verdict && (
                       <Badge variant="outline" className={`text-xs ${VERDICT_CLASS[c.verdict.tone]}`}>
                         {c.verdict.label}
                       </Badge>
                     )}
-                    <span className="truncate font-medium">{c.title}</span>
+                    <span className="min-w-0 font-medium break-words">{c.title}</span>
                   </div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     저장{" "}
