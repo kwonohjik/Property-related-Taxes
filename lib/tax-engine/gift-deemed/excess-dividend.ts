@@ -388,7 +388,6 @@ function computeProgressiveTaxWithDeduction(
 }
 
 /** 신고기한구분 분기 — 영§31의2③1호 해당 여부 (현행 법령상 항상 false) */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function isFilingDeadlineExempt(_dividendDate: Date, _isDiligentFiler: boolean): boolean {
   // 현행 법령 해석: 일반 신고기한=5.31<6.1, 성실 신고기한=6.30<7.1
   // → 영③1호 "신고기한이 6.1/7.1 이후"에 해당하는 케이스가 사실상 없음

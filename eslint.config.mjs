@@ -5,6 +5,16 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // `_`로 시작하는 이름 = 「일부러 안 쓴다」 표시(rest 분리로 필드 빼기·자리 맞춤 인자 등).
+  // 경고 수준(warn)은 eslint-config-next 그대로 두고 무시 패턴만 더한다.
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { varsIgnorePattern: "^_", argsIgnorePattern: "^_" },
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

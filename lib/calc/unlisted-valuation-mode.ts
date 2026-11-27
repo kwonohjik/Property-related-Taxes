@@ -56,7 +56,6 @@ export function resolveActiveUnlistedValuation(item: EstateItem): EstateItem {
 
   if (mode === "simple") {
     // V2 strip — 새 객체 반환 (폼 state 원본은 변경하지 않음)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { unlistedStockValuationV2: _omit, ...rest } = item;
     return rest as EstateItem;
   }

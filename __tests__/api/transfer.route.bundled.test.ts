@@ -192,7 +192,6 @@ describe("POST /api/calc/transfer — 일괄양도(bundled) PDF p387~391", () =>
   });
 
   it("totalSalePrice 누락 시 400 에러 (일괄양도 필수 필드)", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { totalSalePrice: _omit, ...payloadWithoutTotal } = BASE_PAYLOAD;
 
     const res = await POST(makeRequest(payloadWithoutTotal));
@@ -279,7 +278,6 @@ describe("POST /api/calc/transfer — §166⑥ 본문 actual 모드", () => {
   });
 
   it("actual 모드인데 컴패니언 fixedSalePrice 누락 → 400", async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { fixedSalePrice: _omit, ...companionWithoutFixed } = actualPayload.companionAssets[0];
     const bad = {
       ...actualPayload,

@@ -69,7 +69,6 @@ const BUILDING_SITE_PERIOD_EVALUATION = { basis: "not_judged", legalBasis: [NBL.
 
 export function judgeBuildingSiteLand(
   input: NonBusinessLandInput,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _rules: NonBusinessLandJudgmentRules,
 ): CategoryJudgeResult {
   const steps: JudgmentStep[] = [];
