@@ -495,13 +495,23 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
       isRuralRegion: input.isRuralRegion,
       // [R3-01/R3-02] 부가세 산정 기준 표준세율(중과 전). 사치성=물건 표준율 기준·
       // §13의2=4% 기준 판정에 사용. 법인 §13② 비주택은 default(basicRate) — R3-05 별도.
-      basicRate: effectiveBasicRate,
+      // §15① 특례는 특례 전 §11·§12 세율 — §151①1호 본문의 기준이 §11·§12 세율이다.
+      basicRate: specialRateResult.isApplied ? specialRateResult.basicRate : effectiveBasicRate,
+      isSpecialRate: specialRateResult.isApplied,
     }
   );
 
   // [R3-09] 농특세법 §4 10호: 지특법 §6① 적용대상 농지·임야 취득세는 농특세 비과세.
   //   자경농지 감면 요건 충족 시 농특세를 0으로 처리(감면이 아니라 비과세 — totalTax에서 제외).
-  const ruralSpecialTax = selfCultivResult.isEligible ? 0 : additional.ruralSpecialTax;
+  // 농특세법 §4 10호의4: 지방세법 §15①1호~3호(환매·상속 특례·적격합병) 취득세는 농특세 비과세.
+  const isRuralExemptSpecialRate =
+    specialRateResult.isApplied &&
+    (specialRateType === "redemption" ||
+      specialRateType === "inheritance_one_house" ||
+      specialRateType === "corp_merger");
+  if (isRuralExemptSpecialRate) legalBasis.push(ACQUISITION.RURAL_EXEMPT_SPECIAL_RATE_15_1_1_TO_3);
+  const ruralSpecialTax =
+    selfCultivResult.isEligible || isRuralExemptSpecialRate ? 0 : additional.ruralSpecialTax;
 
   const totalTax = acquisitionTax + ruralSpecialTax + additional.localEducationTax;
 

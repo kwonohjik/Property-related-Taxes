@@ -280,7 +280,14 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
   {
     id: "PROPERTY.LOCAL_EDU_TAX",
     citation: "지방세법 §151",
-    keywords: ["재산세액", "100분의 20", "지방교육세", "납부하여야 할"],
+    keywords: [
+      "재산세액",
+      "100분의 20",
+      "지방교육세",
+      "납부하여야 할",
+      // 1항 1호 본문 — 취득분 지방교육세의 기준은 §11·§12 세율(§15① 특례세율 아님, acquisition-tax.ts)
+      "제11조제1항제1호부터 제7호까지와 제12조의 세율",
+    ],
     keywordMode: "ALL",
   },
 

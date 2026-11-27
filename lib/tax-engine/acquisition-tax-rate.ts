@@ -256,8 +256,11 @@ export interface AdditionalTaxInput {
    * - 농특세(§5①6호): "표준세율을 2%로 적용한 취득세액×10%" → 표준세율 성분만 2%로 치환.
    * - 지방교육세(§151①1 본문): (표준세율−2%)×20% [§11①8 주택 유상은 표준율 본세×50%×20%].
    * 미전달 시 appliedRate로 폴백(비중과에서는 동일).
+   * §15① 세율특례도 특례 전 §11·§12 세율을 넘긴다 — §151①1호 본문의 기준이 §11·§12 세율이다.
    */
   basicRate?: number;
+  /** §15① 세율특례 적용 여부 — 본세가 특례세율로 줄어 있어 표준세율 본세를 따로 산출한다 */
+  isSpecialRate?: boolean;
 }
 
 export interface AdditionalTaxResult {
@@ -422,7 +425,8 @@ export function calcLocalEducationTax(input: AdditionalTaxInput): number {
     // §151①1 본문 괄호: §11①8 표준세율(1~3%) 적용 취득세액 × 50% × 20%.
     // 사치성이면 표준본세 = taxBase×basicRate. 비중과면 acquisitionTax가 곧 표준본세
     // (6~9억 선형보간 BigInt 정밀도 보존).
-    const standardTax = isSurcharged ? Math.floor(taxBase * basicRate) : acquisitionTax;
+    // §15① 특례(환매 주택)도 본세가 표준세율 본세가 아니므로 표준세율로 다시 산출한다.
+    const standardTax = isSurcharged || input.isSpecialRate ? Math.floor(taxBase * basicRate) : acquisitionTax;
     return Math.floor(standardTax * 0.5 * ACQUISITION_CONST.EDU_RATE);
   }
 
@@ -490,6 +494,7 @@ export function calcTaxWithAdditional(
     surchargeType?: AdditionalTaxInput["surchargeType"];
     isRuralRegion?: boolean;
     basicRate?: number;
+    isSpecialRate?: boolean;
   }
 ): AdditionalTaxResult {
   const input: AdditionalTaxInput = {
@@ -503,6 +508,7 @@ export function calcTaxWithAdditional(
     surchargeType: options?.surchargeType,
     isRuralRegion: options?.isRuralRegion,
     basicRate: options?.basicRate,
+    isSpecialRate: options?.isSpecialRate,
   };
 
   const ruralSpecialTax = calcRuralSpecialTax(input);
