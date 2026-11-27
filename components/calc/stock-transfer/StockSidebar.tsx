@@ -20,6 +20,8 @@ import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { previewSplitAllocation } from "@/lib/calc/stock-split-preview";
 import { isLotsModeForm, isPreDeemedLotClause1On } from "@/lib/calc/stock-transfer-section94-4-form";
 import type { ExitTaxResult } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
+import { isExitTaxFrom2027 } from "@/lib/tax-engine/data/exit-tax-2027-era";
+import { foreignDepartureValueKrw } from "@/lib/calc/stock-transfer-exit-tax-fx-preview";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form";
 import { sumBasicDeductionByGroup } from "@/lib/tax-engine/stock-transfer/stock-basic-deduction-total";
 import { isStockFbOn, isStockFbImputationEra, previewStockFbAcquisitionPrice } from "@/lib/calc/stock-family-business";
@@ -143,6 +145,8 @@ export function StockSidebar({
     if (formData.marketType === "exit_tax") {
       // 보유 종목 합계 간주양도가액 (useMemo — store 미러링 금지)
       const totalDepartureDayValue = formData.etHoldings.reduce((sum, h) => {
+        // 국외주식(외화 경로)은 원화 칸이 없다 — 아래 «국외주식등» 줄이 따로 보인다(합산 단위가 다르다)
+        if (h.marketType === "foreign_stock") return sum;
         const shares = parseInt(h.shareCount.replace(/,/g, ""), 10) || 0;
         const mode = h.departureDayValuationMode || "market_price";
         let priceStr = "";
@@ -156,11 +160,21 @@ export function StockSidebar({
       if (totalDepartureDayValue > 0) {
         items.push({ label: "간주양도가액 합계", value: totalDepartureDayValue });
       }
+      // 2027.1.1. 이후 출국 · 국외주식 — 종목별 환산은 엔진 leaf(`toKrwExact`)가 한다(합계·5억 비교·제외 판정은 하지 않는다 — 엔진 몫)
+      if (isExitTaxFrom2027(formData.etDepartureDate)) {
+        const foreignTotal = formData.etHoldings.reduce((sum, h) => sum + (foreignDepartureValueKrw(h) ?? 0), 0);
+        if (foreignTotal > 0) items.push({ label: "국외주식등 간주양도가액 (환산 참고)", value: foreignTotal });
+      }
 
       // 결과 있으면 최종값 추가
       if (result) {
         const r = result as unknown as ExitTaxResult;
         if (r.isLiable) {
+          // 영 §178의8② 제외 종목의 간주양도가액 — 엔진 echo(`scope`)를 그대로 더한다
+          const excludedValue = r.holdingDetails
+            .filter((d) => d.scope === "excluded")
+            .reduce((sum, d) => sum + d.departureDayValue, 0);
+          if (excludedValue > 0) items.push({ label: "제외된 국외주식등 간주양도가액", value: excludedValue });
           if (r.taxBase > 0) items.push({ label: "과세표준", value: r.taxBase, highlight: true });
           if (r.incomeTax > 0) items.push({ label: "산출세액", value: r.incomeTax, highlight: true });
           if (r.localIncomeTax > 0) items.push({ label: "지방소득세", value: r.localIncomeTax });
