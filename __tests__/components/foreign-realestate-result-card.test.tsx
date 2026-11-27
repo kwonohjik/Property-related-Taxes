@@ -96,7 +96,6 @@ describe("확인 필요 — 엔진이 돌려준 것은 하나도 버리지 않�
   it("외국납부세액 한도 초과: 두 코드 + 한도 초과 경고 문구(1건)가 모두 보이고, 미공제 잔액이 경고색으로 보인다", () => {
     const r = calc(k1Input({ foreignTax: { method: "credit", items: [ftax("a1", 200_000, "2026-08-01", 1_000)] } }), ratesAt("2026-07-10"));
     expect(r.confirmationNeeded).toEqual([
-      "LOCAL_TAX_WEIGHTING_NOT_EVALUATED",
       "FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY",
       "UNSUPPORTED_SITUATIONS_NOT_EVALUATED",
     ]);

@@ -21,7 +21,6 @@ import type {
 } from "@/lib/tax-engine/foreign-realestate";
 
 export const CONFIRMATION_NOTICES = {
-  LOCAL_TAX_WEIGHTING_NOT_EVALUATED: `개인지방소득세는 표준세율(${RE.LOCAL_92_1_RATE_TABLE}) 기준으로 계산했습니다. 지방자치단체 조례에 따른 세율 가감과 지정지역 등에 대한 가중은 평가하지 않았으니 해당 여부를 확인하세요.`,
   FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY: `외국납부세액 세액공제방법(${RE.SECTION_118_6_FOREIGN_TAX})에서 공제 대상 외국세를 원화로 바꾸는 기준일은 «양도가액 및 필요경비»의 환산을 정한 ${RE.DECREE_178_5_FX_BASE_RATE}와 달리 정한 조문을 찾지 못했습니다. 입력하신 납부일과 그날의 기준환율을 그대로 썼습니다 — 세무 전문가에게 확인하세요.`,
   UNSUPPORTED_SITUATIONS_NOT_EVALUATED: FOREIGN_UNSUPPORTED_RESULT_TEXT,
 } as const satisfies Record<ForeignRealEstateConfirmationCode, string>;

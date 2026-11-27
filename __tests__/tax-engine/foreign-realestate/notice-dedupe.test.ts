@@ -13,7 +13,6 @@ import { aAsset, bAsset, ftax, k1Input, ratesAt } from "./_fixtures";
 const rates = ratesAt("2026-07-10");
 
 const CODE_TOPIC = {
-  LOCAL_TAX_WEIGHTING_NOT_EVALUATED: /지방소득세|조례|§103의3/,
   FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY: /환산 기준일|납부일/,
   UNSUPPORTED_SITUATIONS_NOT_EVALUATED: /상속|증여|환차익|장기할부|시가로/,
 } as const satisfies Record<ForeignRealEstateConfirmationCode, RegExp>;
@@ -43,9 +42,9 @@ describe("코드로 낸 취지를 warnings 문구로 다시 내지 않는다", (
     });
   }
 
-  it("지방소득세 가중 미평가는 코드 1개뿐 — warnings 문구는 없다", () => {
+  it("지방소득세 조례 가감·가중(§103의3④⑨)은 완결 — 코드도 warnings 문구도 없다", () => {
     const r = calc(k1Input(), rates);
-    expect(r.confirmationNeeded).toContain("LOCAL_TAX_WEIGHTING_NOT_EVALUATED");
+    expect(r.confirmationNeeded as string[]).not.toContain("LOCAL_TAX_WEIGHTING_NOT_EVALUATED");
     expect(r.warnings).toEqual([]);
   });
 
