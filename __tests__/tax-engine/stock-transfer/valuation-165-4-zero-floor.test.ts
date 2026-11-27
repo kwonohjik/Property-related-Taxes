@@ -64,7 +64,7 @@ describe("ZF: §165④ 평가액 0원 하한 (상증령 §55①·§56① 준용)
     expect(r.perShareAsset).toBe(0);
   });
 
-  it("ZF-3: 자본잠식 + 영업권 → 하한을 «먼저» 걸고 영업권을 가산한다 (서식 행 18→19→20)", () => {
+  it("ZF-3: 자본잠식 + 영업권 → 영업권을 «합산한 뒤» 하한 (상증령 §55③ · 사용자 결정 Q-1 2026-11-28)", () => {
     const r = calcNetAssetPerShare({
       assetTotalRow1: 1_000_000_000,
       assetAdd: [],
@@ -75,9 +75,27 @@ describe("ZF: §165④ 평가액 0원 하한 (상증령 §55①·§56① 준용)
       goodwillRow19: 300_000_000,
       shareCount: 100_000,
     }, new Date("2026-01-01"));
-    // max(0, −20억) + 3억 = 3억  ← 순서를 뒤집으면 max(0, −20억 + 3억) = 0이 되어 달라진다
-    expect(r.netAssetAmount).toBe(300_000_000);
-    expect(r.perShareAsset).toBe(3_000);
+    // max(0, −20억 + 3억) = 0  ← 종전(영업권 전 하한) max(0, −20억) + 3억 = 3억은 결손을 영업권으로 상계하지 않았다
+    expect(r.netAssetBeforeGoodwillRaw).toBe(-2_000_000_000); // 행 18 사실
+    expect(r.zeroFloorApplied).toBe(true);
+    expect(r.netAssetAmount).toBe(0);
+    expect(r.perShareAsset).toBe(0);
+  });
+
+  it("ZF-3b: 영업권이 결손보다 크면 차액만 남는다 — max(0, −2억 + 3억) = 1억", () => {
+    const r = calcNetAssetPerShare({
+      assetTotalRow1: 1_000_000_000,
+      assetAdd: [],
+      assetSub: [],
+      liabTotalRow8: 1_200_000_000,
+      liabAdd: [],
+      liabSub: [],
+      goodwillRow19: 300_000_000,
+      shareCount: 100_000,
+    }, new Date("2026-01-01"));
+    expect(r.zeroFloorApplied).toBe(false);
+    expect(r.netAssetAmount).toBe(100_000_000);
+    expect(r.perShareAsset).toBe(1_000);
   });
 
   it("ZF-4: 간이 direct — 사용자가 직접 넣은 음수도 0으로 본다 (서식 헬퍼를 안 거치는 경로)", () => {

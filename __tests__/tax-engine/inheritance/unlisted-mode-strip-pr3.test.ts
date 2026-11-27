@@ -18,6 +18,7 @@ import { describe, it, expect } from "vitest";
 import { resolveActiveUnlistedValuation } from "@/lib/calc/unlisted-valuation-mode";
 import type { EstateItem, UnlistedStockValuationInput } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { createDefaultUnlistedStockV2 } from "@/components/calc/inheritance/unlisted-stock-v2/UnlistedStockV2Card";
+import { unlistedStockItemSchema } from "@/lib/validators/estate-item-schema";
 
 // ────────────────────────────────────────────────────
 // 픽스처 헬퍼
@@ -90,23 +91,33 @@ describe("resolveActiveUnlistedValuation — PR-3 Pre-Do anchor", () => {
     expect(item.unlistedStockValuationV2).toBe(STUB_V2);
   });
 
-  it("C-3: formal 모드 + V2 있음 → V2 그대로 유지", () => {
+  it("C-3: formal 모드 + V2 있음 → V2 그대로 유지 · 숨은 V1 strip (U-01)", () => {
     const item = makeUnlistedItem({
       unlistedValuationMode: "formal",
       unlistedStockValuationV2: STUB_V2,
     });
     const result = resolveActiveUnlistedValuation(item);
     expect(result.unlistedStockValuationV2).toBe(STUB_V2); // 동일 참조
-    expect(result.unlistedStockData).toBeDefined(); // V1도 보존
+    // U-01: 정식평가 화면에 없는 V1(새 카드 기본 0주)이 ⑫ positive에 걸려 400을 내므로 엔진 전달 전 제거
+    expect(result.unlistedStockData).toBeUndefined();
+    // 원본 item(폼 state)의 V1은 간편 복귀용으로 보존
+    expect(item.unlistedStockData).toBeDefined();
   });
 
-  it("C-4: formal 모드 재진입 → V2 그대로 (item과 동일 참조)", () => {
+  it("C-4: formal 모드 + V1 기본값 0주 → strip 후 V2만 남는다 (U-01 회귀)", () => {
     const item = makeUnlistedItem({
       unlistedValuationMode: "formal",
       unlistedStockValuationV2: STUB_V2,
+      unlistedStockData: { ...makeUnlistedItem().unlistedStockData!, totalShares: 0, ownedShares: 0 },
     });
     const result = resolveActiveUnlistedValuation(item);
-    // formal 모드에서는 item을 그대로 반환 (동일 참조)
+    expect(result).not.toHaveProperty("unlistedStockData");
+    expect(result.unlistedStockValuationV2).toBe(STUB_V2);
+  });
+
+  it("C-8b: 구버전 mode 없음 + V1·V2 둘 다 → 그대로 (엔진 표시 모드가 V1을 쓰므로 V1 보존)", () => {
+    const item = makeUnlistedItem({ unlistedStockValuationV2: STUB_V2 });
+    const result = resolveActiveUnlistedValuation(item);
     expect(result).toBe(item);
   });
 
@@ -159,5 +170,29 @@ describe("resolveActiveUnlistedValuation — PR-3 Pre-Do anchor", () => {
     const result = resolveActiveUnlistedValuation(item);
     expect(result.unlistedStockValuationV2).toBeUndefined();
     expect(result.unlistedStockData).toBeDefined();
+  });
+});
+
+// U-01 회귀 — ⑫ Zod: 정식평가 카드의 숨은 V1 기본값(0주)이 계산 전체를 400으로 막던 경로
+
+describe("U-01 — 정식평가 + 숨은 V1 0주 → ⑫ 통과", () => {
+  const formItem = makeUnlistedItem({
+    unlistedValuationMode: "formal",
+    unlistedStockValuationV2: STUB_V2,
+    unlistedStockData: { ...makeUnlistedItem().unlistedStockData!, totalShares: 0, ownedShares: 0 },
+  });
+  const v1Issue = (item: EstateItem) => {
+    const r = unlistedStockItemSchema.safeParse(JSON.parse(JSON.stringify(item)));
+    return r.success ? [] : r.error.issues.filter((i) => i.path[0] === "unlistedStockData");
+  };
+
+  it("strip 전: unlistedStockData.totalShares·ownedShares positive 위반", () => {
+    expect(v1Issue(formItem).map((i) => i.path.join("."))).toEqual(
+      expect.arrayContaining(["unlistedStockData.totalShares", "unlistedStockData.ownedShares"]),
+    );
+  });
+
+  it("strip 후: unlistedStockData 경로 issue 0건", () => {
+    expect(v1Issue(resolveActiveUnlistedValuation(formItem))).toEqual([]);
   });
 });

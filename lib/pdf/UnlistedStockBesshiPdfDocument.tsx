@@ -218,7 +218,9 @@ function Page2NetAsset({
   // 화면·엔진(`net-asset-calc`)과 동일 부호 — ⑮(otherProvision)은 가산 (§17의2 3호 가)
   const assetSubtotal = sumNetAssetRows(BESSHI_P2_ASSET_ROWS, eff);
   const liabilitySubtotal = sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS, eff);
+  // 「다」는 사실값 — §55① 후단 0원 하한은 영업권 합산 뒤 「마」에 건다(§55③ · Q-1). 화면 Page2NetAssetTable과 같다.
   const preGoodwill = assetSubtotal - liabilitySubtotal;
+  const zeroFloored = preGoodwill + goodwillFinal < 0;
 
   return (
     <Page size="A4" style={s.page}>
@@ -254,7 +256,7 @@ function Page2NetAsset({
       {/* 다·라·마 */}
       <P2Row cellNum="다" label={BESSHI_P2_SECTION4.preGoodwillLabel} amount={preGoodwill} variant="top" />
       <P2Row cellNum="라" label={BESSHI_P2_SECTION4.goodwillLabel} amount={goodwillFinal} refText={BESSHI_P2_SECTION4.goodwillRef} />
-      <P2Row cellNum="마" label={BESSHI_P2_SECTION4.netAssetLabel} amount={netAssetTotal} variant="final" />
+      <P2Row cellNum="마" label={BESSHI_P2_SECTION4.netAssetLabel} amount={netAssetTotal} refText={zeroFloored ? BESSHI_P2_SECTION4.netAssetZeroFloorRef : undefined} variant="final" />
     </Page>
   );
 }

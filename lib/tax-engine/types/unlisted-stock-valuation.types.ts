@@ -296,7 +296,11 @@ export interface UnlistedGoodwillResult {
 /** 비상장주식 V2 평가 결과 (별지 부표3 1쪽 ③~⑨ 매핑) */
 export interface UnlistedStockValuationResult {
   // === 1쪽 3.1주당 가액의 평가 (③~⑨) ===
-  netAssetTotal: number;               // ③ 순자산가액 (영업권 포함 후)
+  netAssetTotal: number;               // ③ 순자산가액 (영업권 포함 후) = max(0, 다 + 라) — §55① 후단·§55③
+  /** 다. 영업권 포함 전 순자산가액 사실값(가 − 나, 음수 가능) — ③ 산출근거 표시용 echo */
+  netAssetBeforeGoodwillRaw?: number;
+  /** §55① 후단 — 영업권 합산 후 순자산가액이 0 이하라 0으로 처리했는지 (echo) */
+  netAssetZeroFloorApplied?: boolean;
   netAssetPerShare: number;            // ④ 1주당 순자산가액
   netIncomePerShare: number;           // ⑤ 1주당 최근 3년 순손익가치
   weightedAvgPerShare: number;         // ⑥-㉠ 가중평균 = (⑤×3 + ④×2)/5 (or 부동산 (⑤×2+④×3)/5)

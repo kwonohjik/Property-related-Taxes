@@ -485,6 +485,7 @@ export function calcPerShareNetIncomeValue(
  * = 총 순자산가치 ÷ 총 발행주식 수
  *
  * 시행령 §55① 후단: 순자산가액이 0원 이하인 경우 0원으로 한다.
+ * `netAssetValue`는 영업권을 합산한 «뒤»의 순자산가액이어야 한다(§55③ — Q-1).
  */
 export function calcPerShareNetAssetValue(
   netAssetValue: number,
@@ -569,7 +570,7 @@ export function calcUnlistedStockPerShareValue(
   perShareFinalValue: number;
   /** 영업권 평가 결과 (§59②) — 산출근거·§55③ 배제 사유 echo */
   goodwill: UnlistedGoodwillResult;
-  /** 영업권 포함 후 회사 전체 순자산가액 (㉰ = max(0,netAssetValue) + goodwillFinal) */
+  /** 영업권 포함 후 회사 전체 순자산가액 (㉰ = max(0, netAssetValue + goodwillFinal) — §55① 후단·§55③) */
   netAssetWithGoodwill: number;
 } {
   const capRate = data.capitalizationRate > 0
@@ -613,14 +614,15 @@ export function calcUnlistedStockPerShareValue(
   //   §55③ 배제(1·2·3호)는 calcGoodwill 내부에서 처리 → goodwillFinal 0
   const goodwillInput: GoodwillInput = {
     weightedAvg3y: resolveWeightedNetIncome3yForGoodwill(data),
-    selfCapital: Math.max(0, data.netAssetValue),
+    selfCapital: Math.max(0, data.netAssetValue), // 자기자본 0 가드 — 종전 값 유지(Q-1과 별개 논점)
     // rate 생략 → 상증규 §19① 법정 10% 기본값
     // intangibleDeduction 미전달 → V1 범위 제외(기본 0)
     netAssetOnlyReason: mapToNetAssetOnlyReason(data.assetValueOnlyReason),
     isContinuousLossLastThreeYears: deriveContinuousLoss(data),
   };
   const goodwill = calcGoodwill(goodwillInput);
-  const netAssetWithGoodwill = Math.max(0, data.netAssetValue) + goodwill.goodwillFinal;
+  // §55① 후단 0원 하한은 §55③에 따라 영업권 합산 «뒤»에 건다(Q-1)
+  const netAssetWithGoodwill = Math.max(0, data.netAssetValue + goodwill.goodwillFinal);
 
   const perShareAssetValue = calcPerShareNetAssetValue(
     netAssetWithGoodwill,
@@ -652,6 +654,8 @@ export function calcUnlistedStockPerShareValue(
         perShareFinalValue = perShareAssetValue;
         break;
       // 3호·5호: 가중평균 < 1주당 순자산가치인 경우만 순자산가치 적용
+      //   ⚠️ 단서는 평가기준일 2026.2.27. 이후만(U-03) — 간편평가는 세액 경로에 평가기준일이 없어(U-18)
+      //      연혁 게이트를 U-18과 함께 넣는다. V2는 unlisted-orchestrator가 이미 게이트한다.
       case "real_estate_80":  // §54④ 3호 (부동산 80%)
       case "stock_80":        // §54④ 5호 (주식 80%)
         perShareFinalValue =

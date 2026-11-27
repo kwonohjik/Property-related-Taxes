@@ -136,8 +136,9 @@ describe("비상장 간편평가(V1) 영업권 가산 — §55③·§59②", () 
     expect(r.perShareAssetValue).toBe(4_587);
   });
 
-  it("[V1-GW-10] 자본잠식 (순자산 음수 → 자기자본 0) → 영업권만 순자산", () => {
+  it("[V1-GW-10] 자본잠식 (순자산 음수 → 자기자본 0) → 순자산 = max(0, −5,000,000 + 영업권) (§55③ · Q-1)", () => {
     // selfCapital=0 → 마=0 → 초과이익=나=5,000,000 → 자=18,953,933
+    // §55① 후단 하한은 영업권 합산 «뒤» — 18,953,933 − 5,000,000 = 13,953,933 (종전 영업권 전 하한 18,953,933)
     const data: UnlistedStockData = {
       totalShares: 20_000, ownedShares: 10_000,
       netIncomeY1: 10_000_000, netIncomeY2: 10_000_000, netIncomeY3: 10_000_000,
@@ -145,7 +146,7 @@ describe("비상장 간편평가(V1) 영업권 가산 — §55③·§59②", () 
     };
     const r = calcUnlistedStockPerShareValue(data, false);
     expect(r.goodwill.goodwillFinal).toBe(18_953_933);
-    expect(r.netAssetWithGoodwill).toBe(18_953_933);
-    expect(r.perShareAssetValue).toBe(947);
+    expect(r.netAssetWithGoodwill).toBe(13_953_933);
+    expect(r.perShareAssetValue).toBe(697);
   });
 });

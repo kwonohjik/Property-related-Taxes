@@ -101,7 +101,10 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
           cellNum="③"
           label="순자산가액"
           value={`${fmt(result.netAssetTotal)}원`}
-          hint={`영업권 포함 전: ${fmt(result.goodwillCalculation.selfCapital)}원 + 영업권: ${fmt(result.goodwillCalculation.goodwillFinal)}원`}
+          hint={
+            `영업권 포함 전: ${fmt(result.netAssetBeforeGoodwillRaw ?? result.goodwillCalculation.selfCapital)}원 + 영업권: ${fmt(result.goodwillCalculation.goodwillFinal)}원` +
+            (result.netAssetZeroFloorApplied ? " — 합계가 0 이하라 0원 (§55① 후단)" : "")
+          }
           law="상증령 §55 ① + §59 ②"
         />
         {/* PR-G2: §59③ 영업권 가중평균 추정이익 준용 안내 (적용 + 영업권>0 시) */}

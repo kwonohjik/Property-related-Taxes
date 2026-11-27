@@ -295,7 +295,7 @@ describe("비상장주식 1주당 가중평균 — calcUnlistedStockPerShareValu
   // 정밀도·가드 (PR5-2)
   // ============================================================
 
-  it("[S27] §55① 후단 — 순자산가액 음수 → 자기자본 0 처리 (영업권만 가산)", () => {
+  it("[S27] §55① 후단 — 순자산가액 음수 → 자기자본 0 · 하한은 영업권 합산 후 (§55③ · Q-1)", () => {
     const data: UnlistedStockData = {
       ...baseData,
       netAssetValue: -1_000_000, // 음수 (자본잠식)
@@ -304,7 +304,9 @@ describe("비상장주식 1주당 가중평균 — calcUnlistedStockPerShareValu
     // §55① 후단: 자기자본(다)은 0으로 가드 → 마=0, 초과이익=나=100M → 영업권 379,078,676
     expect(r.goodwill.selfCapital).toBe(0);
     expect(r.goodwill.goodwillFinal).toBe(379_078_676);
-    expect(r.perShareAssetValue).toBe(3_790); // 영업권만 ÷ 100K
+    // 순자산 = max(0, −1,000,000 + 379,078,676) = 378,078,676 ÷ 100K = 3,780 (종전 영업권 전 하한 3,790)
+    expect(r.netAssetWithGoodwill).toBe(378_078_676);
+    expect(r.perShareAssetValue).toBe(3_780);
   });
 
   it("[E1-2] 이중 floor → 단일 floor 정밀도 — 1,234,567/1,000주/10% = 12,345", () => {

@@ -58,6 +58,7 @@ import type { PreIpoListingResult } from "./pre-ipo-listing-section-63-2";
 import { safeMultiply } from "@/lib/tax-engine/tax-utils";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { SECTION_53_8_2_FAIL_LABELS } from "@/lib/tax-engine/data/stock-premium-exclusion-labels";
+import { hasSection54_4Proviso } from "./section-54-4-proviso-era";
 
 /**
  * 비상장주식 V2 평가 진입점
@@ -210,7 +211,7 @@ export function evaluateUnlistedStockV2(
   const crossHoldingReflection = evaluateCrossHoldingReflection(
     {
       // P − d = (주식 제외 순자산) — base 순자산(주입 전) − Σ장부 → totalLiabilities는 0으로 합산 (이미 차감됨)
-      netAssetExStock: baseNetAsset.netAssetBeforeGoodwill - crossHoldingBook,
+      netAssetExStock: Math.max(0, baseNetAsset.netAssetBeforeGoodwill) - crossHoldingBook,
       totalLiabilities: 0,
       issuedShares: input.totalShares,
       netIncomePerShare,
@@ -258,13 +259,18 @@ export function evaluateUnlistedStockV2(
 
   const goodwill = calcGoodwill({
     weightedAvg3y: companyWeighted3y,
-    selfCapital: netAssetResult.netAssetBeforeGoodwill,
+    // 「자기자본」은 다(사실값)에 0 가드를 건 값 — 종전 값 유지(음수 자기자본 처리는 Q-1과 별개 논점)
+    selfCapital: Math.max(0, netAssetResult.netAssetBeforeGoodwill),
     rate: goodwillRate,
     netAssetOnlyReason: input.netAssetOnlyReason,
     isContinuousLossLastThreeYears: input.isContinuousLossLastThreeYears,
   });
 
-  const netAssetTotal = netAssetResult.netAssetBeforeGoodwill + goodwill.goodwillFinal; // ③
+  // ③ = max(0, 다 + 라) — 상증령 §55① 후단 0원 하한은 §55③에 따라 영업권을 합산한 «뒤»에 건다(Q-1).
+  //   §55③ 단서 1~3호는 calcGoodwill이 goodwillFinal 0 → max(0, 다).
+  const netAssetBeforeFloor = netAssetResult.netAssetBeforeGoodwill + goodwill.goodwillFinal;
+  const netAssetZeroFloorApplied = netAssetBeforeFloor < 0;
+  const netAssetTotal = Math.max(0, netAssetBeforeFloor); // ③
   let netAssetPerShare = calcNetAssetPerShare(netAssetTotal, effectiveTotalShares); // ④
 
   // STEP 7: ⑥-㉠·㉡·⑥ 1주당 평가액
@@ -330,6 +336,13 @@ export function evaluateUnlistedStockV2(
         finalPerShareValue = netAssetPerShare;
         weightedAvgPerShare = 0; // 미적용 표시
         appliedRules.push(`§54④ ${input.netAssetOnlyReason} — 순자산 단독 (무조건)`);
+      } else if (!hasSection54_4Proviso(toOptionalDate(input.evaluationDate))) {
+        // 3·5호 + 평가기준일 2026.2.27. 전: 단서 신설 전이라 무조건 순자산 단독 (부칙 <제36131호> 제11조 · U-03)
+        finalPerShareValue = netAssetPerShare;
+        weightedAvgPerShare = 0; // 미적용 표시
+        appliedRules.push(
+          `§54④ ${input.netAssetOnlyReason} — 순자산 단독 (평가기준일 2026.2.27. 전 · 단서 신설 전)`,
+        );
       } else {
         // 단서 사유 (3·5호): 가중평균 < 순자산일 때만
         if (weightedAvgPerShare < netAssetPerShare) {
@@ -441,8 +454,8 @@ export function evaluateUnlistedStockV2(
   if (estimatedProfitResult?.applied && goodwill.goodwillFinal > 0) {
     appliedRules.push("상증령 §59③ — 영업권 가중평균 순손익액도 추정이익 기준 적용");
   }
-  if (netAssetResult.zeroFloorApplied) {
-    warnings.push("순자산가액이 0 이하 — §55① 후단 0 처리");
+  if (netAssetZeroFloorApplied) {
+    warnings.push("영업권 포함 순자산가액이 0 이하 — §55① 후단 0 처리");
   }
   if (perShareNetIncomes.some((v) => v < 0)) {
     warnings.push("일부 사업연도 1주당 순손익액 음수 — §56① 가중평균 후 0 가드 적용");
@@ -476,6 +489,8 @@ export function evaluateUnlistedStockV2(
 
   return {
     netAssetTotal,
+    netAssetBeforeGoodwillRaw: netAssetResult.netAssetBeforeGoodwill,
+    netAssetZeroFloorApplied,
     netAssetPerShare,
     netIncomePerShare,
     weightedAvgPerShare,

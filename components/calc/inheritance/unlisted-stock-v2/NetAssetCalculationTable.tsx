@@ -171,7 +171,8 @@ export function NetAssetCalculationTable({
       (effectiveRaw.insuranceReservePolicy ?? 0) +
       (effectiveRaw.insuranceExtraordinaryReserve ?? 0) +
       (effectiveRaw.insuranceSurrenderReserve ?? 0);
-    const n = Math.max(0, a - l);
+    // 다 = 사실값(음수 가능) — §55① 후단 0원 하한은 영업권 합산 뒤 ③에서 건다(§55③ · Q-1)
+    const n = a - l;
     return { totalAssets: a, totalLiabilities: l, netAssetBeforeGoodwill: n };
   }, [effectiveRaw]);
 
@@ -330,7 +331,7 @@ export function NetAssetCalculationTable({
       <div className="rounded border-2 border-violet-400 bg-violet-100/80 p-3 flex justify-between items-center dark:bg-violet-900/40">
         <div>
           <p className="text-caption font-bold text-violet-900 dark:text-violet-200">다. 영업권 포함 전 순자산가액</p>
-          <p className="text-micro text-violet-700 dark:text-violet-300">= 자산총액 ⑧ − 부채총액 ⑲ {netAssetBeforeGoodwill === 0 && totalAssets - totalLiabilities < 0 && "(§55① 후단 — 0 이하 → 0)"}</p>
+          <p className="text-micro text-violet-700 dark:text-violet-300">= 자산총액 ⑧ − 부채총액 ⑲ {netAssetBeforeGoodwill < 0 && "(음수 — 영업권을 합산한 뒤 0 이하이면 0, §55①·③)"}</p>
         </div>
         <span className="font-mono tabular-nums text-sm font-bold text-violet-900 dark:text-violet-200">
           {netAssetBeforeGoodwill.toLocaleString()}원

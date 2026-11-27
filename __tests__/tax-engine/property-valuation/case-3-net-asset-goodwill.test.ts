@@ -64,7 +64,6 @@ describe("[U-12·U-13·U-15] 사례 6 — 종합평가 net-asset + goodwill", ()
 
     // 다. 영업권 포함 전 순자산가액 = 489,351,700
     expect(result.netAssetBeforeGoodwill).toBe(489_351_700);
-    expect(result.zeroFloorApplied).toBe(false);
   });
 
   it("[U-13] 영업권 = 0원 (초과이익 음수 → 0)", () => {
@@ -190,11 +189,11 @@ describe("[D-13] §55③ 영업권 자동 배제 4사유", () => {
 });
 
 // ============================================================
-// §55① 후단 — 순자산 0 이하 시 0 처리
+// §55① 후단 — 「다」는 사실값. 0원 하한은 영업권 합산 후 ③에서 (§55③ · Q-1 2026-11-28)
 // ============================================================
 
-describe("[U-8 회귀] §55① 후단 — 부채 > 자산 시 순자산 0", () => {
-  it("부채총액 > 자산총액 시 net-asset = 0", () => {
+describe("[U-8 회귀] §55① 후단 — 부채 > 자산이어도 「다」는 사실값(음수)", () => {
+  it("부채총액 > 자산총액 시 다 = 가 − 나 = −1억 (하한은 오케스트레이터 ③ — unlisted-zero-floor-after-goodwill.anchor)", () => {
     const negativeInput: UnlistedNetAssetCalculation = {
       bsTotalAssets: 100_000_000,
       assetValuationDelta: 0,
@@ -217,8 +216,7 @@ describe("[U-8 회귀] §55① 후단 — 부채 > 자산 시 순자산 0", () =
     const result = calcNetAssetTotal(negativeInput);
     expect(result.totalAssets).toBe(100_000_000);
     expect(result.totalLiabilities).toBe(200_000_000);
-    expect(result.netAssetBeforeGoodwill).toBe(0); // §55① 후단
-    expect(result.zeroFloorApplied).toBe(true);
+    expect(result.netAssetBeforeGoodwill).toBe(-100_000_000); // 사실값 — 하한은 영업권 합산 후
   });
 });
 

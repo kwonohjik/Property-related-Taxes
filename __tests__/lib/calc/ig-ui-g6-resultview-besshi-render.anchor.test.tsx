@@ -74,8 +74,9 @@ describe("IG-039 — 별지6호의2 상속인별 표: 모든 행이 19열로 맞
   });
 });
 
-describe("IG-062 — 별지 2쪽 「마 = 다 + 라」 항등식이 유지된다", () => {
-  // 자산 < 부채 → 「다」가 음수가 되던 구간 (엔진은 §55① 후단 0 하한 → 「마」는 0)
+describe("IG-062 → Q-1 — 별지 2쪽 「다」는 사실값, 0원 하한은 「마」(영업권 합산 후)", () => {
+  // 사용자 결정 Q-1(2026-11-28): 상증령 §55③ 「제1항을 적용할 때 … 영업권평가액은 … 자산가액에 이를 합산」
+  //   ⇒ 「다」(⑧ − ⑲)는 음수도 그대로, 「마」 = max(0, 다 + 라). 하한이 걸리면 「마」 참조열에 사유.
   const raw = {
     bsTotalAssets: 100_000_000,
     bsTotalLiabilities: 900_000_000,
@@ -86,15 +87,22 @@ describe("IG-062 — 별지 2쪽 「마 = 다 + 라」 항등식이 유지된다
     const tr = screen.getByTestId(`p2-${id}`) as HTMLTableRowElement;
     return Number((tr.cells[2].textContent ?? "").replace(/[^0-9-]/g, "") || "0");
   };
+  const readRef = (id: string) => (screen.getByTestId(`p2-${id}`) as HTMLTableRowElement).cells[3]?.textContent ?? "";
 
-  it("H-4 (양성): 자산 < 부채여도 「다」가 0 하한을 받아 마 = 다 + 라가 성립한다", () => {
-    render(<Page2NetAssetTable raw={raw} netAssetTotal={0} goodwillFinal={0} />);
-    const da = readAmount("다");
-    expect(da).toBe(0); // §55① 후단 0 하한 — 종전에는 −800,000,000이 찍혔다
-    expect(da + readAmount("라")).toBe(readAmount("마"));
+  it("H-4 (양성): 자산 < 부채 + 영업권 2억 → 다 −800,000,000 · 마 0 · 마 참조열에 §55① 후단", () => {
+    render(<Page2NetAssetTable raw={raw} netAssetTotal={0} goodwillFinal={200_000_000} />);
+    expect(readAmount("다")).toBe(-800_000_000);
+    expect(readAmount("마")).toBe(0);
+    expect(readRef("마")).toMatch(/§55① 후단/);
   });
 
-  it("H-5 (음성·대조군): 자산 > 부채면 「다」가 그대로 차액이다 (무조건 0이 아니다)", () => {
+  it("H-4b: 영업권이 결손보다 크면 마 = 다 + 라 (하한 미발동 · 참조열 비움)", () => {
+    render(<Page2NetAssetTable raw={raw} netAssetTotal={100_000_000} goodwillFinal={900_000_000} />);
+    expect(readAmount("다") + readAmount("라")).toBe(readAmount("마"));
+    expect(readRef("마")).toBe("");
+  });
+
+  it("H-5 (음성·대조군): 자산 > 부채면 「다」가 그대로 차액이다", () => {
     cleanup();
     render(
       <Page2NetAssetTable

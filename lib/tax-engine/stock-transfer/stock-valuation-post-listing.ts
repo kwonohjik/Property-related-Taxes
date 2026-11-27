@@ -232,8 +232,8 @@ export function calcNetIncomePerShare(
  * H-03 — 1주당 순자산가치 (상증령 §55 동치)
  * assetSubtotal = assetTotalRow1 + sum(assetAdd) − sum(assetSub)     ← 행 가
  * liabSubtotal  = liabTotalRow8 + sum(liabAdd) − sum(liabSub)        ← 행 나
- * beforeGoodwill = max(0, 가 − 나)                                    ← 행 18 (§55① 후단)
- * netAssetAmount = beforeGoodwill + goodwillRow19                     ← 행 20
+ * 행 18          = 가 − 나 (사실값)
+ * netAssetAmount = max(0, 행 18 + goodwillRow19)                     ← 행 20 (§55① 후단 · §55③ 합산 후)
  * perShareAsset  = floor(netAssetAmount / shareCount)
  *
  * 🔑 **0 하한은 「상속세 및 증여세법 시행령」 제55조 제1항 후단의 준용이다**
@@ -248,8 +248,10 @@ export function calcNetIncomePerShare(
  *      그런 호출부의 값은 결국 `calcSection165_4Value`를 거치며 거기서 게이팅된다.
  *    형제 경로: `property-valuation/net-asset-calc.ts:83`이 같은 하한을 같은 자리에 쓴다.
  *
- * ⚠️ **하한은 「영업권 포함 «전»」에 건다** — 서식 순서가 행 18(영업권 포함 전) → 행 19(영업권)
- *    → 행 20이다. 순서를 뒤집으면 **영업권이 있는 자본잠식 법인에서 결과가 달라진다**(anchor ZF-3).
+ * ⚠️ **하한은 영업권을 합산한 «뒤»(행 20)에 건다** — 「상속세 및 증여세법 시행령」 제55조 제3항
+ *    「제1항을 적용할 때 … 영업권평가액은 해당 법인의 자산가액에 이를 합산한다」이므로 제1항 후단의
+ *    「순자산가액」은 영업권을 포함한 값이다(사용자 결정 Q-1 2026-11-28 · anchor ZF-3).
+ *    엔진 경로(`calcSection165_4Value` 1주당 하한)와 같은 순서다.
  *
  * @returns `netAssetBeforeGoodwillRaw`는 하한 «전» 원값 — 서식 표시·안내 문구용(사실 보존).
  */
@@ -279,9 +281,9 @@ export function calcNetAssetPerShare(
   const netAssetBeforeGoodwillRaw = assetSubtotal - liabSubtotal; // 행 18 (사실)
   // 「상속세 및 증여세법 시행령」 제55조 제1항 후단 — 2009.2.4. 신설이라 연혁 게이팅한다
   const floorInForce = evaluationDate ? hasNetAssetZeroFloor(evaluationDate) : false;
-  const zeroFloorApplied = floorInForce && netAssetBeforeGoodwillRaw < 0;
-  const beforeGoodwill = zeroFloorApplied ? 0 : netAssetBeforeGoodwillRaw;
-  const netAssetAmount = beforeGoodwill + (year.goodwillRow19 || 0); // 행 20
+  const withGoodwill = netAssetBeforeGoodwillRaw + (year.goodwillRow19 || 0);
+  const zeroFloorApplied = floorInForce && withGoodwill < 0;
+  const netAssetAmount = zeroFloorApplied ? 0 : withGoodwill; // 행 20
   const shareCount = year.shareCount || 0;
   // 🔑 echo 2필드는 **모든 반환 경로에** 실린다 (shareCount 0 포함) — 소계를 보며 채우는 구간이다.
   const base = {
