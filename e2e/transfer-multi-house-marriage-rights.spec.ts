@@ -11,7 +11,7 @@
  * 실행: E2E_PORT=3104 npx playwright test e2e/transfer-multi-house-marriage-rights.spec.ts
  */
 
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { addHouseRow } from "./_helpers/add-house-row";
 import { gotoSpouseHoldingOpenForm } from "./_helpers/spouse-holding-seed";
 

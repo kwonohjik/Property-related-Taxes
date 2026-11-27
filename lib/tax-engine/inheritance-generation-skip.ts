@@ -60,7 +60,6 @@ export function computeGenerationSkipSurcharge(
     computedTax,
     taxBase,
     taxableEstateValue,
-    preGifts,
     cutoffFilteredGifts,
     valuatedAmountById,
   } = params;

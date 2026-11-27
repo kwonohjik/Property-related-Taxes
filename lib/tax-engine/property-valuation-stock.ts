@@ -26,7 +26,6 @@ import type {
   PropertyValuationResult,
   UnlistedStockData,
   UnlistedAssetValueOnlyReason,
-  ListedPremiumExclusionReason,
   ListedStockBesshiData,
 } from "./types/inheritance-gift.types";
 import { EMPTY_LISTED_STOCK_MONTH_GROUPS } from "./types/inheritance-gift.types";

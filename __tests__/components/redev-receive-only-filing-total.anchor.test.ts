@@ -28,7 +28,6 @@ const rates = makeMockRates();
 // ── C1 제보 케이스 ───────────────────────────────────────────────────────────
 const C1_SETTLEMENT = 114_000_000;   // 청산금 수령액 = 신고단위 양도가액 의제
 const C1_APPORTIONED_ACQ = 45_600_000; // 200,000,000 × 114/500
-const C1_GAIN = 68_400_000;
 const C1_TRANSFER_DATE = "2024-01-26"; // 소유권이전 고시일(2024-01-25) 익일
 const FORM_APT_PRICE = "525000000";    // 폼에 남은 신축APT 양도가 — 신고 대상 아님
 const FORM_STALE_DATE = "2026-03-02";  // 폼에 남은 양도일 — 신고 대상 아님

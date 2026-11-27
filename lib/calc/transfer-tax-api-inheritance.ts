@@ -178,7 +178,6 @@ export function buildCommercialInheritanceValuationPayload(
 ): { commercialInheritanceValuation?: unknown } {
   // 대상 판정(자산종류·§163⑨ 취득원인·최초고시 前)과 8필드 완성 여부는 **단일 소스**가 한다.
   if (!isFullyFilled(sec164CommercialStatus(primary))) return {};
-  const inheritanceDate = deriveSec163_9BaseDate(primary);
 
   const exclusiveArea = parseFloat(primary.cbExclusiveArea) || 0;
   const commonArea = parseFloat(primary.cbSharedArea) || 0;

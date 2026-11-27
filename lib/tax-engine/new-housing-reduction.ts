@@ -14,7 +14,7 @@
  * P0-2 원칙: 모든 세율×금액 곱셈은 Math.floor 적용.
  */
 
-import { addYears, differenceInDays, isWithinInterval } from "./utc-date";
+import { addYears, differenceInDays } from "./utc-date";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import type { NewHousingMatrixData } from "./schemas/rate-table.schema";
 
@@ -224,18 +224,6 @@ function checkAreaRequirement(
 // ============================================================
 // 취득가액별 감면율 결정 (§99②: 6억/9억 구간)
 // ============================================================
-
-/**
- * §99② 취득가액별 감면율 매트릭스
- * - 6억 이하: 100%
- * - 6억 초과 9억 이하: 80%
- * - 9억 초과: 60%
- */
-function getRateByAcquisitionPrice(acquisitionPrice: number): number {
-  if (acquisitionPrice <= 600_000_000) return 1.0;
-  if (acquisitionPrice <= 900_000_000) return 0.8;
-  return 0.6;
-}
 
 // ============================================================
 // 메인 함수: determineNewHousingReduction

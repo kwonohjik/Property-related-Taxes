@@ -17,7 +17,6 @@ import { calcStandardPrice, shouldUseStandardPrice } from "./acquisition-standar
 import type {
   AcquisitionTaxInput,
   TaxBaseResult,
-  TaxBaseMethod,
 } from "./types/acquisition.types";
 
 // 연부취득이 유효한 취득 원인 목록 (유상취득만 해당 — §6 제17호)

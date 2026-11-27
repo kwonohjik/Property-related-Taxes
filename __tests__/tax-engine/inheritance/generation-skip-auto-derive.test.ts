@@ -15,9 +15,6 @@ import type {
   Heir,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
 import {
-  EXAMPLE_HEIRS,
-  EXAMPLE_ESTATE_ITEMS,
-  EXAMPLE_PRIOR_GIFTS,
   EXAMPLE_INPUT,
   HEIR_ID,
 } from "./fixtures/comprehensive-case-pdf.fixture";
@@ -58,9 +55,6 @@ describe("§27 세대생략 할증 자동 도출", () => {
    *   합 ≠ (floor(ct × 2,600,000,000 / 8,000,000,000)) × 0.30 (글로벌 2배 배부 방지)
    */
   it("B: 복수 수유자(손자 40%·손녀 30%) per-heir 독립 계산 — 이중과세 방지", () => {
-    // computedTax는 taxBase에서 도출 — 단순 케이스로 직접 세율 산정
-    // 과세표준 = 10억 → computedTax = 10억×40% - 1.6억 = 2.4억 (§26 4구간)
-    const computedTaxFor10B = 10_000_000_000 * 0.4 - 160_000_000; // 3,840,000,000
 
     // 손자 수유자 (6세, 21억 유증)
     const grandson: Heir = {

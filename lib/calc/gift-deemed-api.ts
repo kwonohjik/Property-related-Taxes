@@ -1,7 +1,7 @@
 /**
  * 증여로 보는 경우 — 폼 → 엔진 입력 변환 + 증여세 마법사 prefill 어댑터 (④ 동기화).
  */
-import type { DeemedGiftInput, DeemedGiftAnyResult } from "@/lib/tax-engine/gift-deemed/types";
+import type { DeemedGiftInput } from "@/lib/tax-engine/gift-deemed/types";
 import type { ContributionParty } from "@/lib/tax-engine/gift-deemed/types";
 import type { GiftDonorRelation } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { parseAmount } from "@/lib/calc/number-parse";
@@ -16,11 +16,8 @@ import {
   PV_FACTOR_SCALE,
 } from "@/lib/tax-engine/gift-deemed/convertible-bond-helpers";
 import {
-  DEEMED_TYPE_META,
   type DeemedFormState,
 } from "@/components/calc/deemed-gift/shared";
-import type { FormState as GiftFormState } from "@/components/calc/gift-tax-form-shared";
-import { deriveDonorRelation } from "@/lib/calc/prior-gift-donee-derive";
 
 /** 폼 상태 → 와이어 입력 (단건 의제 + 증자 cap-table은 캐스트 — route가 Zod 재검증 후 dispatch) */
 import { buildPhase3DeemedInput } from "./gift-deemed-api-phase3";

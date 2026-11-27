@@ -16,7 +16,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import { UnlistedStockHistoryModal } from "@/components/calc/inheritance/unlisted-stock-v2/UnlistedStockHistoryModal";
-import type { UnlistedStockCandidate } from "@/lib/calc/unlisted-stock-valuation-lookup";
 import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 
 afterEach(() => cleanup());
@@ -24,35 +23,6 @@ afterEach(() => cleanup());
 // ============================================================
 // 사례 6 fixture
 // ============================================================
-
-const case6Input: UnlistedStockValuationInput = {
-  corpName: "㈜향기",
-  businessStartDate: new Date("2000-01-01"),
-  evaluationDate: new Date("2024-01-20"),
-  faceValuePerShare: 5_000,
-  totalShares: 50_000,
-  ownedShares: 26_000,
-  isRealEstateHeavy: false,
-  fiscalYears: [
-    { fiscalYearLabel: "2023", fiscalYearEndDate: new Date("2023-12-31"), taxableIncome: 76_842_660 },
-    { fiscalYearLabel: "2022", fiscalYearEndDate: new Date("2022-12-31"), taxableIncome: 62_416_500 },
-    { fiscalYearLabel: "2021", fiscalYearEndDate: new Date("2021-12-31"), taxableIncome: -5_311_910 },
-  ],
-  capitalChanges: [],
-  netAssetValueRaw: {
-    bsTotalAssets: 2_476_889_520, assetValuationDelta: 91_548_350,
-    corpTaxReservedAmount: 0, paidInCapitalIncrease: 0, otherEarnedRights: 0,
-    prepaidExpenses: 65_400_500, preGiftRetainedEarnings: 0,
-    bsTotalLiabilities: 1_833_780_000, corporateTaxPayable: 32_627_890,
-    farmingSurtax: 0, localIncomeTax: 3_262_780, dividendPayable: 0,
-    retirementProvision: 445_785_000, otherProvision: 0,
-    reserveExcluded: 0, allowanceExcluded: 301_770_000, deferredTaxAdjustment: 0,
-  },
-  isContinuousLossLastThreeYears: false,
-  capitalizationRate: 0.10,
-  isMaxShareholder: true,
-  companySize: "large",
-};
 
 // calculationRepository.list() 모킹 — IndexedDB 미사용
 // vi.hoisted로 case6Input 참조 가능 (hoisting issue 회피)

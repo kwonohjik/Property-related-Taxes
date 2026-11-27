@@ -95,7 +95,7 @@ export interface HousingFieldSetProps {
   transferDate?: string;
 }
 
-export function HousingFieldSet({ bgt, set, referenceDate, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, item, transferDate }: HousingFieldSetProps) {
+export function HousingFieldSet({ bgt, set, stdPriceLabel, stdPriceHint, transferStdPrice, onTransferStdPriceChange, transferStdPriceLabel, item, transferDate }: HousingFieldSetProps) {
   const householdCount = bgt.householdHousingCount ?? 1;
   // §155①2호 새 입력(A2b · E-1) — ⑧과 같은 게이트. 두 주택 조정 여부가 기한을 바꾸는 시기에만 연다.
   //   증여 주택 주소가 있으면 종전 주택 조정 여부는 주소로 자동 판정된다(④가 싣는 `regionCode`와 같은 값).

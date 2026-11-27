@@ -15,9 +15,7 @@ import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
  * 이쪽은 행값 계산, 저쪽은 enum·세율을 사람이 읽는 문자열로 옮기는 일만 한다.
  */
 import {
-  sectionLabel,
   rateGroupLabel,
-  acquisitionModeLabel,
   taxCategoryLabel,
   rateLabel,
   isForeignStockCategory,

@@ -80,7 +80,6 @@ function landExclusionEcho(
 
 export function buildNormalTransferTaxResult(args: NormalReturnArgs): TransferTaxResult {
   const {
-    input,
     effectiveInput,
     rawInput,
     steps,

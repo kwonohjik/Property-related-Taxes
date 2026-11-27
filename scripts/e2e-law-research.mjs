@@ -29,9 +29,6 @@ function fail(name, reason) {
   results.push({ name, status: "FAIL", detail: reason });
   console.log(`  ✗ ${name} — ${reason}`);
 }
-function info(msg) {
-  console.log(`  · ${msg}`);
-}
 
 async function waitFor(page, fn, timeoutMs = 10_000) {
   const t0 = Date.now();

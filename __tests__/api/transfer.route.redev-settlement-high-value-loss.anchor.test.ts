@@ -26,7 +26,6 @@ import { POST } from "@/app/api/calc/transfer/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { RATE_LIMIT_BYPASS_HEADER } from "@/lib/api/rate-limit";
 import { captureBody } from "../calc/_one-house-pr3a-calc-route";
-import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { createDefaultTransferFormData, type AssetForm, type TransferFormData } from "@/lib/stores/calc-wizard-store";
 
@@ -51,35 +50,19 @@ const redevFields = (sc: number, v: Variant): Record<string, unknown> => {
   if (v === "land") Object.assign(b, { redevOriginalAssetType: "land" });
   return b;
 };
-/** 시가 모드 K-5(환산취득가액) 칸 — 인가일 개별주택공시가격 · 취득당시 개별주택가격 (토지 출자는 §166③ 토지 칸). */
-const K5 = (sc: number) => ({ bgAcquisitionMethod: "converted", redevManagementDisposalHousingPrice: S(300_000_000, sc), redevAcquisitionHousingPrice: S(150_000_000, sc),
-  redevLandArea: "100", redevLandStdPriceAtAcq: S(150_000_000, sc), redevLandStdPriceAtApproval: S(300_000_000, sc) });
 const redev = (id: string, sc: number, v: Variant, ...over: Record<string, unknown>[]) =>
   Object.assign({ ...makeDefaultAsset(1) }, x({
     assetId: id, ...BASE, bgMarketValueAtTransfer: S(1_000_000_000, sc), standardPriceAtTransfer: S(800_000_000, sc), standardPriceAtAcq: S(400_000_000, sc), ...redevFields(sc, v),
   }), ...over.map(x)) as AssetForm;
 const form = (assets: AssetForm[], over: Record<string, unknown> = {}) =>
   Object.assign(createDefaultTransferFormData(), FORM, { transferDate: "2026-02-16", assets, contractTotalPrice: "" }, over) as TransferFormData;
-const debt = (d: string) => ({ bgMortgageDebtAmount: d, bgMortgageSetAmount: d });
-const HALF = { ownershipNumerator: "50", ownershipDenominator: "100", ownershipRemainderThirdParty: "yes" };
-const pct = (n: string) => ({ ownershipNumerator: n, ownershipDenominator: "100" });
-const set = (v: Variant, frac: number) => ({ redevSettlementAmount: S(Number(redevFields(1, v).redevSettlementAmount), frac) });
 
-const issues = (f: TransferFormData) => {
-  const out: { field?: string; message: string }[] = [];
-  for (let s = 0; s <= 5; s++) for (const i of collectStepIssues(s, f)) out.push({ field: i.field, message: i.message });
-  return out;
-};
 async function post(f: TransferFormData) {
   const body = await captureBody(f);
   const res = await POST(new NextRequest("http://localhost/api/calc/transfer", { method: "POST", headers: { "Content-Type": "application/json", [RATE_LIMIT_BYPASS_HEADER]: "1" }, body: JSON.stringify(body) }));
   return { status: res.status, j: (await res.json()) as any }; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 type Res = Awaited<ReturnType<typeof post>>;
-const gainOf = (r: Res) => (r.j.data?.aggregated?.totalTransferGain ?? r.j.data?.result?.transferGain) as number | undefined;
-const ok = (r: Res) => { expect(r.status, JSON.stringify(r.j).slice(0, 300)).toBe(200); return gainOf(r)!; };
-/** 오라클: 같은 시나리오 단건(물건 크기 sc). 채무·보증금·임대료는 입력 그대로. */
-const single = async (v: Variant, sc: number, ...over: Record<string, unknown>[]) => ok(await post(form([redev("z", sc, v, ...over)])));
 
 
 const rd = (r: Res) => r.j.data.result.redevelopmentDetail;

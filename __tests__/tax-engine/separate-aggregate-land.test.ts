@@ -43,7 +43,6 @@ import { describe, it, expect } from "vitest";
 import {
   isSeparateAggregateLand,
   calculateBaseArea,
-  splitByBaseArea,
   calculateSeparateAggregateTax,
   calcElapsedMonths,
 } from "../../lib/tax-engine/separate-aggregate-land";

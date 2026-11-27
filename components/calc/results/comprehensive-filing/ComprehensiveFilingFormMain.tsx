@@ -27,40 +27,12 @@ import {
   PAPER_SPEC,
   fmtKRW,
   fmtPct,
-  DASH,
   besshiTestId,
 } from "./comprehensive-filing-constants";
 
 // ============================================================
 // 내부 셀 컴포넌트
 // ============================================================
-
-function AmountCell({
-  amount,
-  testId,
-  empty,
-}: {
-  amount?: number;
-  testId?: string;
-  empty?: boolean;
-}) {
-  return (
-    <td
-      className={BESSHI_CELL_AMOUNT}
-      data-besshi-cell={testId}
-    >
-      {empty ? "" : amount != null ? fmtKRW(amount) : ""}
-    </td>
-  );
-}
-
-function RateCell({ rate, testId }: { rate?: number; testId?: string }) {
-  return (
-    <td className={BESSHI_CELL_RATE} data-besshi-cell={testId}>
-      {rate != null ? fmtPct(rate) : ""}
-    </td>
-  );
-}
 
 function BlankCell() {
   return <td className={BESSHI_CELL_AMOUNT}></td>;

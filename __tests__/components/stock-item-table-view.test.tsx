@@ -20,12 +20,7 @@ import { StockItemTableView } from "@/components/calc/inheritance/stock/StockIte
 import { computeStockValuation, shouldShowMajorShareholderChip } from "@/lib/calc/stock-valuation";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import { createDefaultUnlistedStockV2 } from "@/components/calc/inheritance/unlisted-stock-v2/UnlistedStockV2Card";
-import type { EstateItem, Heir } from "@/lib/tax-engine/types/inheritance-gift.types";
-
-const HEIRS: Heir[] = [
-  { id: "h-spouse", relation: "spouse", name: "한배우자" },
-  { id: "h-child", relation: "child", name: "김첫째" },
-];
+import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 
 function listed(overrides: Partial<EstateItem> = {}): EstateItem {
   return {

@@ -200,7 +200,6 @@ export function HousesListSection({
   // gracePeriod 노출 조건: 1세대 + 주택수 2채 이상 + (보유 주택 OR 분양권·입주권) 1건 이상.
   // 보유 항목 0건이면 엔진이 gracePeriod를 소비하지 않으므로(houses[] 경로 전용 — rate-calc:307·helpers:783)
   // 위젯·API 전송(housesPayload && gracePeriod)·엔진 사용을 일치시켜 침묵 무시(silent omission) 차단.
-  const householdCount = parseInt(form.householdHousingCount || "1", 10);
   // 술어는 ④ 전송·⑧ validate와 **같은 함수**다 (Q03 — `gracePeriodInScope`).
   // 종전에는 세 층이 각자 조건을 적어 갈라졌다. `hideGracePeriod`는 상위(Step4)가 한시배제 창
   // 분기에서 명시로 닫는 축이라 그대로 둔다 — 술어도 같은 창을 보므로 중복이지 모순이 아니다.

@@ -17,15 +17,11 @@
  * (메모리 `feedback_800line_split_export_preservation`).
  */
 
-import { toOptionalDate } from "@/lib/api/date-coerce";
-import { apportionGiftTax } from "@/lib/tax-engine/carryover-gift-tax-apportion";
 import { calculateTransferTaxAggregate } from "@/lib/tax-engine/transfer-tax-aggregate";
 import {
-  buildGeneralBuildingAssetCards,
   type GeneralBuildingInput,
 } from "@/lib/tax-engine/general-building-valuation";
 import type { TaxRatesMap } from "@/lib/db/tax-rates";
-import { resolveGeneralBuildingSwap } from "@/lib/tax-engine/general-building-swap";
 import type { BurdenedGiftInfo } from "@/lib/tax-engine/types/transfer-burdened-gift.types";
 import type { GbSwapComparison } from "@/lib/tax-engine/types/transfer-aggregate.types";
 import {

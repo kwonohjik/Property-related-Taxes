@@ -198,7 +198,7 @@ export function mergePersistedMulti(persisted: unknown, current: MultiTransferSt
 
 export const useMultiTransferStore = create<MultiTransferState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       form: defaultFormData,
       result: null,
       isCalculating: false,

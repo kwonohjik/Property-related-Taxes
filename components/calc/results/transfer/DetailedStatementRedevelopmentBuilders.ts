@@ -10,15 +10,11 @@
  * 800줄 정책: DetailedStatementHelpers.ts 진입은 `applyRedevelopmentOverrides()` 단일 호출.
  */
 
-import type { StatementItem, PerAssetValue } from "./DetailedStatementHelpers";
+import type { PerAssetValue } from "./DetailedStatementHelpers";
 import type { RedevelopmentResult } from "@/lib/tax-engine/types/transfer-redevelopment.types";
-import type { LthdExclusionReason } from "@/lib/tax-engine/legal-codes/transfer";
-import { LTHD_EXCLUSION_LABEL } from "@/lib/tax-engine/legal-codes/transfer";
 import { REDEVELOPMENT } from "@/lib/tax-engine/legal-codes/transfer-house";
 import { formatHighValueThresholdLabel } from "@/lib/tax-engine/one-house/threshold";
 import { calcLongTermRate } from "@/lib/tax-engine/transfer-tax-mixed-use-inheritance";
-import { redevBranchTotals } from "./redev-acquisition-inverse";
-import { redevFilingTotals } from "./redev-acquisition-inverse";
 import { rightTransferFormula } from "./DetailedStatementRedevRightFormulas";
 import { rightAcquisitionFormula } from "./DetailedStatementRedevRightFormulas";
 

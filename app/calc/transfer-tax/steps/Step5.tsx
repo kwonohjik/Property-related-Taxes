@@ -21,33 +21,6 @@ import { reductionNoticeDateOf } from "@/lib/calc/axis-b-reduction-notice-date";
 // Step 5 (→ Step 4): 감면·공제 (자산별 체크박스 복수 선택)
 // ============================================================
 
-// REDUCTION_LABELS — Phase 1·2 (2026-05-06):
-// - 기존 5개 항목 유지 (legacy long_term_rental/new_housing/unsold_housing은 마이그레이션 후 deprecated)
-// - Phase 2: §99의3 신축주택 과세특례 (new_99_3) 추가 — UI 펼침 패널은 묶음 B에서 본격 통합
-// 매핑 감사: docs/02-design/features/transfer-reduction-mapping-audit.md
-const REDUCTION_LABELS = {
-  self_farming: { label: "자경농지 감면", desc: "8년 이상 자경 (§69, 한도 1억)" },
-  public_expropriation: { label: "공익사업 수용 감면", desc: "현금 15%/채권 20~45% (§77, 2025+ · 연간 2억)" },
-  // new_99_3은 별도 펼침 패널(ReductionExpansion)에서 처리 — 옵션 Y 결정
-} as const;
-
-type ReductionUiType = keyof typeof REDUCTION_LABELS;
-
-function getDefaultReduction(type: ReductionUiType): AssetReductionForm {
-  switch (type) {
-    case "self_farming":
-      return { type: "self_farming", farmingYears: "0" };
-    case "public_expropriation":
-      return {
-        type: "public_expropriation",
-        expropriationCash: "0",
-        expropriationBond: "0",
-        expropriationBondHoldingYears: "none",
-        expropriationApprovalDate: "",
-      };
-  }
-}
-
 // 자산 1건의 감면 섹션
 function AssetReductionBlock({
   asset,
@@ -64,15 +37,6 @@ function AssetReductionBlock({
   onChange: (patch: Partial<AssetForm>) => void;
 }) {
   const reductions = asset.reductions ?? [];
-
-  function toggleReduction(type: ReductionUiType) {
-    const has = reductions.some((r) => r.type === type);
-    if (has) {
-      onChange({ reductions: reductions.filter((r) => r.type !== type) });
-    } else {
-      onChange({ reductions: [...reductions, getDefaultReduction(type)] });
-    }
-  }
 
   function updateReduction(type: AssetReductionForm["type"], patch: object) {
     onChange({

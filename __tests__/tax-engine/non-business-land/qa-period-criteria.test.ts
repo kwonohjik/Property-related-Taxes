@@ -5,41 +5,15 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { judgeNonBusinessLand } from "@/lib/tax-engine/non-business-land/engine";
 import {
   meetsPeriodCriteria,
   getThresholdRatio,
 } from "@/lib/tax-engine/non-business-land/period-criteria";
-import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
-import { isBareLand } from "@/lib/tax-engine/non-business-land/other-land";
-import { getHousingMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
 import {
   DEFAULT_NON_BUSINESS_LAND_RULES,
-  type NonBusinessLandInput,
 } from "@/lib/tax-engine/non-business-land/types";
 
 const d = (iso: string) => new Date(iso);
-
-function farmlandBase(overrides: Partial<NonBusinessLandInput> = {}): NonBusinessLandInput {
-  return {
-    landType: "farmland",
-    landArea: 1000,
-    zoneType: "agriculture_forest",
-    acquisitionDate: d("2010-01-01"),
-    transferDate: d("2020-01-01"),
-    farmingSelf: true,
-    businessUsePeriods: [],
-    gracePeriods: [],
-    ...overrides,
-  };
-}
-
-function makeBusinessPeriods(totalDays: number, transferDate: Date) {
-  const start = new Date("2010-01-02");
-  const end = new Date(start);
-  end.setDate(end.getDate() + totalDays);
-  return [{ startDate: start, endDate: end > transferDate ? transferDate : end }];
-}
 
 describe("§168-6 법령 정합성 — 기간기준 3기준 OR 경계값", () => {
   /**

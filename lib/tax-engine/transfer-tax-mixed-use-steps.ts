@@ -6,7 +6,6 @@
  * (메모리 `feedback_800line_split_export_preservation`).
  */
 
-import { calculateHoldingPeriod } from "./tax-utils";
 import {
   inheritedCapexUsesReportedRatio,
   mixedPartLthdRateText,

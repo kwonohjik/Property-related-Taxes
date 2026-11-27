@@ -22,7 +22,6 @@ import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { DisclaimerBanner } from "@/components/calc/shared/DisclaimerBanner";
 import { FilingPenaltyDetailCard } from "@/components/calc/results/shared/FilingPenaltyDetailCard";
 import { LatePaymentPenaltyDetailCard } from "@/components/calc/results/shared/LatePaymentPenaltyDetailCard";
-import { UNDER_REPORT_EXCLUSION_LABELS } from "@/lib/tax-engine/inheritance-gift-penalty";
 import { LoginPromptBanner } from "@/components/calc/shared/LoginPromptBanner";
 import { TaxCreditBreakdownCard } from "@/components/calc/TaxCreditBreakdownCard";
 import { GenerationSkipSurchargeBreakdownCard } from "@/components/calc/results/GenerationSkipSurchargeBreakdownCard";

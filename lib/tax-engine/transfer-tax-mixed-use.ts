@@ -40,7 +40,6 @@ import {
 } from "./mixed-use-burdened-gift";
 import { computeAmendment } from "./transfer-tax-amendment";
 import type { AmendmentInput } from "./types/transfer-amendment.types";
-import { MIXED_USE } from "./legal-codes/transfer";
 import { calculateHoldingPeriod } from "./tax-utils";
 import {
   assertMixedSeparateAcqSupported,
@@ -51,7 +50,6 @@ import type {
   MixedUseGainBreakdown,
   MixedUseApportionment,
   MixedUseStep,
-  MixedUseCalculationRoute,
 } from "./types/transfer-mixed-use.types";
 import {
   computeDerivedAreas,

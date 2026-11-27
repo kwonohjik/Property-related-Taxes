@@ -30,7 +30,6 @@ import {
 } from "./net-asset-only-basis";
 import {
   STOCK,
-  STOCK_LOSS_GAIN_DISCOUNT_RATE,
 } from "@/lib/tax-engine/legal-codes/stock";
 import { calcAccrualMonths, apply81_4Accrual } from "./apply-81-4-accrual";
 // §165④ 가중치·80% 하한 연혁은 §165⑤(취득후상장)·validate·UI 프리뷰와 **공용 정본**이다.

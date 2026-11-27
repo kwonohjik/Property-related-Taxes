@@ -396,7 +396,6 @@ export function Step2({
   set,
   isHousing,
   isCorporation,
-  isIndividual,
 }: Step2Props) {
   const [nextId, setNextId] = useState(() => Date.now());
 

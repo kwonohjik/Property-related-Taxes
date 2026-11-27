@@ -43,7 +43,6 @@ import {
   PHD_BLDG_LTHD,
   PHD_TOTAL_LTHD,
   PHD_INCOME,
-  PHD_BASIC_DED,
   PHD_TAX_BASE,
   PHD_CALCULATED_TAX,
 } from "./_helpers/pre-housing-disclosure-fixture";

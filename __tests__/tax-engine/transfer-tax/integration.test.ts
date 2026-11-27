@@ -6,9 +6,6 @@
 
 import { describe, it, expect } from "vitest";
 import { calculateTransferTax, type TransferTaxInput } from "@/lib/tax-engine/transfer-tax";
-import type { HouseInfo } from "@/lib/tax-engine/multi-house-surcharge";
-import type { NonBusinessLandInput } from "@/lib/tax-engine/non-business-land";
-import type { NewHousingReductionInput } from "@/lib/tax-engine/new-housing-reduction";
 import { makeMockRates, baseTransferInput as baseInput } from "../_helpers/mock-rates";
 
 const mockRates = makeMockRates();

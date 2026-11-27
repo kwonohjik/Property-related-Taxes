@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { renderFormula } from "@/components/calc/results/shared/FormulaParts";
 import { describe, it, expect } from "vitest";
 

@@ -8,7 +8,6 @@
 import { describe, it, expect } from "vitest";
 import {
   calculateTransferTaxAggregate,
-  classifyRateGroup,
   type AggregateTransferInput,
   type TransferTaxItemInput,
 } from "@/lib/tax-engine/transfer-tax-aggregate";

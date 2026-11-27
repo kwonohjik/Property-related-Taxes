@@ -95,7 +95,6 @@ export function LegalVerifyPanel() {
   }
 
   const allPass = data && !data.error && data.summary.fail === 0 && data.summary.error === 0;
-  const hasProblem = data && !data.error && (data.summary.fail > 0 || data.summary.error > 0);
 
   return (
     <div className="rounded-lg border bg-muted/30 p-4">

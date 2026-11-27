@@ -38,14 +38,6 @@ async function clickButtonContaining(page: Page, text: string) {
   await page.locator("button").filter({ hasText: text }).first().click();
 }
 
-/**
- * 테이블 행 클릭 → 모달 오픈 헬퍼.
- * role="button"인 tr 행을 testid로 찾아 클릭한다.
- */
-async function clickHeirTableRow(page: Page, testId: string) {
-  await page.getByTestId(testId).click();
-}
-
 test.describe("TV-4: heirs 0명 — 테이블 미표시, 추가 버튼만", () => {
   test("heirs 없을 때 테이블 role=group 미표시", async ({ page }) => {
     test.setTimeout(60_000);

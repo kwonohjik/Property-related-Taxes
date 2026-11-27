@@ -54,7 +54,6 @@ const rowMessage = (over: Partial<AssetForm>) => {
   const base = over.nblLandType ? LAND_BASE[over.nblLandType] ?? {} : {};
   return validateNblDetailedJudgment(landAsset({ ...base, ...over }), "토지", TRANSFER);
 };
-const ROW = /번째 행/;
 
 describe("N1 — 사업용 사용기간 빈 행은 농지에서만 막는다 (입력칸·엔진 소비가 농지뿐)", () => {
   it("🔑 농지 + 빈 행 → 막는다 (긍정 짝 — 게이트를 지운 게 아니다)", () => {

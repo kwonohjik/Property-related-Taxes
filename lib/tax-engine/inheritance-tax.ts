@@ -28,7 +28,7 @@ import type {
 import type {
 } from "./types/inheritance-deduction-detail.types";
 
-import { evaluateAllEstateItems, resolveValuationMethod } from "./property-valuation";
+import { resolveValuationMethod } from "./property-valuation";
 import {
 } from "./exemption-evaluator";
 import {
@@ -112,9 +112,7 @@ export function calcInheritanceTax(
     exemptionDetail,
     funeralDeduction,
     grossEstateValue,
-    nonFuneralDebts,
     presumedDetail,
-    presumedTotal,
     taxableEstateValue,
     valuationResults,
     priorGiftAggregated,

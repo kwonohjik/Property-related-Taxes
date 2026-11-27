@@ -7,23 +7,15 @@
 import { describe, it, expect } from "vitest";
 import {
   countEffectiveHouses,
-  isRegulatedAreaAtDate,
   determineMultiHouseSurcharge,
   isLongTermRentalHousingExempt,
   isSmallNewHouseSpecial,
   isTaxIncentiveRentalHousingExempt,
-  classifyRegionCriteriaByCode,
-  classifyPopulationDeclineArea,
-  buildMultiHouseTaxSimulation,
-  type HouseInfo,
-  type PresaleRight,
   type MultiHouseSurchargeInput,
   type HouseCountExclusionRules,
-  type RegulatedAreaHistory,
 } from "@/lib/tax-engine/multi-house-surcharge";
 import { isSurchargeExemptRental } from "@/lib/tax-engine/multi-house-surcharge-count";
 import { getGroupExcludeReason } from "@/lib/tax-engine/multi-house-surcharge-exclusion";
-import type { SurchargeSpecialRulesData } from "@/lib/tax-engine/schemas/rate-table.schema";
 import {
   defaultRules,
   mockRegulatedHistory,
@@ -101,7 +93,6 @@ describe("MH-16: 장기임대 마목(E형) 요건 충족 → 2호 해당", () =>
   });
 
   it("마목(E) 임대기간 미달 (8년 미만) → 2호 불해당", () => {
-    const h1 = makeHouse("h1");
     const h2 = makeHouse("h2", {
       isLongTermRental: true,
       rentalType: "E",

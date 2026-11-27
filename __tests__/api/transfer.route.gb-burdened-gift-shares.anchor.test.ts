@@ -36,7 +36,6 @@ import { POST } from "@/app/api/calc/transfer/route";
 import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { callTransferTaxAPI } from "@/lib/calc/transfer-tax-api";
 import { collectStepIssues } from "@/lib/calc/transfer-tax-validate";
-import { GB_BG_ACTUAL_PATH_REQUIRED_MESSAGE } from "@/lib/api/transfer-tax-schema-gb-bg-refines";
 import { makeDefaultAsset } from "@/lib/stores/calc-wizard-asset-factory";
 import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";

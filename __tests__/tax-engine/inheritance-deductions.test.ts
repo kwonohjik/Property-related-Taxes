@@ -12,16 +12,13 @@ import {
   calcSpouseDeduction,
   calcFinancialDeduction,
   calcCohabitationDeduction,
-  calcFarmingDeduction,
   applyDeductionLimit,
-  calcInheritanceDeductions,
 } from "@/lib/tax-engine/deductions/inheritance-deductions";
 import {
   calcRelationDeduction,
   calcMarriageBirthDeduction,
   aggregateGiftWithin10Years,
   isBelowMinTaxBase,
-  calcGiftDeductions,
 } from "@/lib/tax-engine/deductions/gift-deductions";
 import type {
   Heir,

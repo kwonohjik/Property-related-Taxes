@@ -10,7 +10,6 @@ import type { TransferTaxInput, CalculationStep } from "./types/transfer.types";
 import type { DeemedBusinessExcess, SplitGainResult, SplitNonBusinessLandPart } from "./types/transfer-split-gain.types";
 import type { MultiHouseSurchargeResult } from "./multi-house-surcharge";
 import { calcTax, computeBracketBreakdown } from "./transfer-tax-rate-calc";
-import type { RateGroup } from "./types/transfer-aggregate.types";
 import {
   resolveAppurtenantLandExcess,
   resolveLandStatutoryAcquisitionDate,
@@ -250,12 +249,6 @@ export function toNonBusinessLandPart(nbl: AppurtenantExcessSplit): SplitNonBusi
     ...(nbl.deemedBusiness ? { deemedBusiness: nbl.deemedBusiness } : {}),
   };
 }
-
-/**
- * 두 파트는 **같은 자산·같은 납세자**라 세율군 우선순위(다건 엔진이 자산 간 순서를 정하는 장치)가
- * 의미 없다 — split 정본(`PART_RATE_GROUP`)과 같이 한 군으로 두고 한계세율로만 결정하게 한다.
- */
-const PRHP_PART_RATE_GROUP: RateGroup = "progressive";
 
 /**
  * §104⑤ 비교과세 — 「주택분」과 「배율 초과 비사업용 토지분」 2파트.

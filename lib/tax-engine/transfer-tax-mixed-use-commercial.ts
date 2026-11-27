@@ -9,7 +9,7 @@
 import { buildingDirectShare, deductCommercialDepreciation, isConversionAcq, perPartEstimatedAcq } from "./mixed-use-sale-split";
 import type { MixedSalePart } from "./mixed-use-sale-split";
 import { estimatedDeductionRate } from "./legal-codes";
-import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod, applyRate, computeEstimatedDeduction } from "./tax-utils";
+import { calculateEstimatedAcquisitionPrice, calculateHoldingPeriod, computeEstimatedDeduction } from "./tax-utils";
 import { safeMultiplyThenDivide } from "./tax-utils";
 import {
   applyExprTotalDenominator,
@@ -18,7 +18,6 @@ import {
 import { buildCommercialGainSplitFromFourPart } from "./transfer-tax-mixed-use-fourpart";
 import {
   resolveCommercialInheritedAcq,
-  splitDeemedExpense,
   resolvePartNecessaryExpense,
   type InheritedAcquisitionDetail,
 } from "./transfer-tax-mixed-use-inheritance";

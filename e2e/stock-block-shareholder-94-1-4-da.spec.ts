@@ -123,11 +123,6 @@ async function fillGateFields(
   }
 }
 
-/** 단계 인디케이터로 직접 이동 — `handleNext` 검증을 태우지 않는다. */
-async function jumpToStep(page: Page, i: number) {
-  await page.getByTestId(`step-circle-${i}`).click();
-}
-
 async function fillStep2(page: Page, o: { transferTotal: string; perShareAcq: string }) {
   await expect(page.getByText("양도·취득가액").first()).toBeVisible({ timeout: 10_000 });
   await page.locator("div:has(> label:has-text('양도가액 합계')) input").first().fill(o.transferTotal);

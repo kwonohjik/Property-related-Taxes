@@ -56,12 +56,9 @@ const ACTUAL = (s: number): P => ({ ...BLD(s), landAcqMode: "actual", buildingAc
 /** 증축(3-way) — 증축분 자가증축 환산 + 건물 이월과세(환산). */
 const EXT3 = (s: number): P => ({ ...BLD(s), gbHasExtension: true, gbExtensionDate: "2025-01-01", gbExtensionArea: AREA(50, s), gbExtensionAcquisitionMode: "estimated",
   gbExtensionAcquisitionCause: "newConstruction", gbTransferExtensionBuildingStdPrice: S(40_000_000, s), gbAcquisitionExtensionBuildingStdPrice: S(30_000_000, s) });
-const LAND: P = { assetKind: "land", addressJibun: "강원 홍천군 테스트리 1", acquisitionArea: "300", transferArea: "300", acquisitionCause: "purchase", acquisitionDate: "2015-01-01",
-  fixedAcquisitionPrice: "100000000", standardPriceAtTransfer: "150000000", actualSalePrice: "300000000", landNature: "standalone" };
 
 const asset = (n: number, ...over: P[]) => Object.assign({ ...makeDefaultAsset(n) }, ...over) as AssetForm;
 const SH = (n: number, third = true) => ({ ownershipNumerator: String(n), ownershipDenominator: "100", ...(third ? { ownershipRemainderThirdParty: "yes" } : {}) }) as P;
-const COMPANION = { assetSplitMode: "companion", bundledSaleMode: "actual" } as Partial<TransferFormData>;
 function form(contract: number, assets: AssetForm[], extra: Partial<TransferFormData> = {}): TransferFormData {
   const f = newForm();
   f.transferDate = "2026-03-01";

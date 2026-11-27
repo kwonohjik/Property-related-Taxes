@@ -25,7 +25,6 @@ import { SplitGainDetailSection } from "@/components/calc/results/transfer/Split
 import { ValuationDetailCards } from "@/components/calc/results/transfer/ValuationDetailCards";
 import { createDefaultTransferFormData, makeDefaultAsset } from "@/lib/stores/calc-wizard-store";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-store";
-import type { TransferTaxResult } from "@/lib/tax-engine/types/transfer.types";
 import { baseTransferInput } from "../tax-engine/_helpers/mock-rates";
 import { COMBOS, SCN_H, SCN_N, SCN_X, ownedModel, model, rates, run, toInput, D, type Scn } from "../tax-engine/transfer/_helpers/split-acq-display-fixture";
 

@@ -6,15 +6,9 @@
 
 import { describe, it, expect } from "vitest";
 import { judgeNonBusinessLand } from "@/lib/tax-engine/non-business-land/engine";
-import {
-  meetsPeriodCriteria,
-  getThresholdRatio,
-} from "@/lib/tax-engine/non-business-land/period-criteria";
-import { checkUnconditionalExemption } from "@/lib/tax-engine/non-business-land/unconditional-exemption";
 import { isBareLand } from "@/lib/tax-engine/non-business-land/other-land";
 import { getHousingMultiplier } from "@/lib/tax-engine/non-business-land/urban-area";
 import {
-  DEFAULT_NON_BUSINESS_LAND_RULES,
   type NonBusinessLandInput,
 } from "@/lib/tax-engine/non-business-land/types";
 
@@ -32,13 +26,6 @@ function farmlandBase(overrides: Partial<NonBusinessLandInput> = {}): NonBusines
     gracePeriods: [],
     ...overrides,
   };
-}
-
-function makeBusinessPeriods(totalDays: number, transferDate: Date) {
-  const start = new Date("2010-01-02");
-  const end = new Date(start);
-  end.setDate(end.getDate() + totalDays);
-  return [{ startDate: start, endDate: end > transferDate ? transferDate : end }];
 }
 
 describe("농지 흐름도 (§168-8, PDF p.1698)", () => {

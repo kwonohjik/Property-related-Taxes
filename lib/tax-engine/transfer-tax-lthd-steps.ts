@@ -131,7 +131,6 @@ export function pushLongTermHoldingSteps(args: LthdStepArgs): void {
     longTermHoldingRate,
     longTermHoldingDeduction,
     residenceYearsForStep,
-    table2ResidenceYearsForStep,
     isOneHousehold,
     householdHousingCount,
     lthd982Applied,

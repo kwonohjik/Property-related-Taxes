@@ -42,7 +42,6 @@ const TRANSFER_LAND_PRICE_PER_SQM   = 10_830_000;  // 원/㎡
 const TRANSFER_BUILDING_STD_PRICE   = 20_627_816;  // 원 (총액, 잠금)
 const ACQUISITION_LAND_PRICE_PER_SQM = 2_800_000;  // 원/㎡
 const ACQUISITION_BUILDING_STD_PRICE = 28_144_700;  // 원 (총액)
-const ESTIMATED_DEDUCTION_RATE = 0.03;
 
 // ============================================================
 // 기대 anchor (transferBuildingStdPrice=20,627,816 입력 기준 엔진 실제 출력값)

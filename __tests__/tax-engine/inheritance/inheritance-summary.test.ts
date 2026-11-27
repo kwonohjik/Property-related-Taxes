@@ -14,8 +14,6 @@ import {
   EXAMPLE_INPUT,
   EXAMPLE_PRESUMED,
   EXAMPLE_DEBT_ITEMS,
-  EXAMPLE_HEIRS,
-  DEATH_DATE,
 } from "./fixtures/comprehensive-case-pdf.fixture";
 
 describe("computeInheritanceSummary — 종합사례 PDF 4필드", () => {

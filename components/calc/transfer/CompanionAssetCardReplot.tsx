@@ -1,5 +1,4 @@
 /** 환지처분(감환지·증환지) 입력 섹션 — CompanionAssetCard 800줄 정책 분리 */
-import { useState } from "react";
 import type { AssetForm } from "@/lib/stores/calc-wizard-store";
 import { DateInput } from "@/components/ui/date-input";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";

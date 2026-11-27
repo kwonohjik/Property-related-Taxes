@@ -98,7 +98,6 @@ export function buildActualGeneralBuildingCards(
    *    아래 `apportionExpenses()`가 그것을 적용한다.
    */
   const declaredExpenses = (capitalExpenditure ?? 0) + (transferExpense ?? 0);
-  const effectiveExpenses = declaredExpenses > 0 ? declaredExpenses : actualExpenses;
 
   /**
    * 파트별 카드 취득일 — 「분리 OFF면 두 날짜가 같다」 불변식의 방어적 표현(계획서 §3.2(1)).

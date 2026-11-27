@@ -23,7 +23,6 @@ import { preloadTaxRates } from "@/lib/db/tax-rates";
 import { runCalc, redevAptForm, postTransfer } from "./_helpers/redev-one-house-route";
 import { buildRedevelopmentPayload } from "@/lib/calc/transfer-tax-api-redev";
 import { validateRedevelopmentAsset } from "@/lib/calc/transfer-tax-validate-redev";
-import { collectWithFields } from "@/lib/calc/transfer-tax-validate-field";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 beforeEach(() => {

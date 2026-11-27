@@ -69,10 +69,6 @@ const ACQ = {
   c1On: { acquisitionCause: "inheritance", gbBuildingAcquisitionCause: "inheritance", hasSeperateLandAcquisitionDate: true, landAcquisitionDate: "1988-05-01", acquisitionDate: "1995-05-01", decedentAcquisitionDate: "1970-01-01", publishedValueAtInheritance: "300000000", gbBuildingInheritedValue: "200000000" },
 } satisfies Record<string, Partial<AssetForm>>;
 const CAPEX = { capitalExpenditure: "20000000" } as Partial<AssetForm>;
-const TX = { transferExpense: "10000000" } as Partial<AssetForm>;
-const PART = { landDirectExpenses: "30000000", buildingDirectExpenses: "20000000" } as Partial<AssetForm>;
-const BUNDLED = { gbBundledAcquisitionExpenses: "15000000" } as Partial<AssetForm>;
-const LEGACY = { directExpenses: "12000000" } as Partial<AssetForm>;
 
 const asset = (...over: Partial<AssetForm>[]) => Object.assign({ ...makeDefaultAsset(1) }, BASE, ...over) as AssetForm;
 function form(a: AssetForm): TransferFormData {

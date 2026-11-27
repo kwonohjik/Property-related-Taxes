@@ -15,7 +15,7 @@
  * 근거: 소령 §164⑦ · §176조의2④ · §163⑥ · 시행규칙 §80⑥
  */
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DecimalInput } from "@/components/calc/inputs/DecimalInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
@@ -23,13 +23,6 @@ import { StandardPriceInput } from "@/components/calc/inputs/StandardPriceInput"
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { Pre1990LandValuationInput } from "@/components/calc/inputs/Pre1990LandValuationInput";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
-import { landPriceYearOptions, recommendLandPriceYear } from "@/lib/utils/land-price-year";
 import { calculatePre1990LandValuation } from "@/lib/tax-engine/pre-1990-land-valuation";
 import type { LandGradeInput } from "@/lib/tax-engine/pre-1990-land-valuation";
 import {
@@ -43,121 +36,6 @@ import { landPriceYearOf } from "@/lib/calc/building-std-batch-apply";
 import type { AssetForm } from "@/lib/stores/calc-wizard-asset";
 
 // ─── 공시지가 조회 + 토지기준시가 서브 컴포넌트 ──────────────────────────
-
-interface LandPriceLookupProps {
-  label: string;
-  referenceDate: string;   // 시점 기준일 (연도 추천 + 조회 기준)
-  landPricePerSqm: string;
-  onLandPricePerSqmChange: (v: string) => void;
-  landArea: string;        // ㎡ — 토지기준시가 = 공시지가 × 면적
-  jibun?: string;
-}
-
-function LandPriceLookup({
-  label,
-  referenceDate,
-  landPricePerSqm,
-  onLandPricePerSqmChange,
-  landArea,
-  jibun,
-}: LandPriceLookupProps) {
-  const [selectedYear, setSelectedYear] = useState("");
-  const [isManual, setIsManual] = useState(false);
-  const [isLookingUp, setIsLookingUp] = useState(false);
-  const [lookupError, setLookupError] = useState<string | null>(null);
-
-  const options = referenceDate ? landPriceYearOptions(referenceDate) : [];
-  const recommendedYear = referenceDate ? String(recommendLandPriceYear(referenceDate)) : "";
-  const effectiveYear = selectedYear || recommendedYear;
-
-  function handleYearSelect(value: string | null) {
-    if (!value) return;
-    setSelectedYear(value);
-    setIsManual(value !== recommendedYear);
-  }
-
-  async function handleLookup() {
-    if (!jibun || !effectiveYear) return;
-    setIsLookingUp(true);
-    setLookupError(null);
-    try {
-      const params = new URLSearchParams({ jibun, propertyType: "land", year: effectiveYear });
-      const res = await fetch(`/api/address/standard-price?${params}`);
-      const json = await res.json();
-      if (!res.ok || json.error) { setLookupError(json.error?.message ?? "조회 실패"); return; }
-      if (json.price && json.price > 0) {
-        onLandPricePerSqmChange(String(json.price));
-        setLookupError(null);
-      } else {
-        setLookupError("해당 연도 공시지가 없음");
-      }
-    } catch { setLookupError("네트워크 오류"); }
-    finally { setIsLookingUp(false); }
-  }
-
-  const pricePerSqm = parseAmount(landPricePerSqm);
-  const area = parseFloat(landArea) || 0;
-  const landStdPrice = pricePerSqm > 0 && area > 0 ? multiplyByArea(pricePerSqm, area) : null;
-  const canLookup = !!jibun && !!effectiveYear;
-
-  return (
-    <div className="space-y-2">
-      {/* 공시지가 연도 선택 + 조회 버튼 */}
-      <div className="flex gap-2 items-center">
-        <div className="flex-1">
-          <Select value={effectiveYear} onValueChange={handleYearSelect} disabled={!referenceDate}>
-            <SelectTrigger className="h-9 w-full">
-              <span>
-                {effectiveYear
-                  ? `${effectiveYear}년${!isManual ? " (자동)" : ""}`
-                  : "기준일 미입력"}
-              </span>
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((opt) => (
-                <SelectItem key={opt.year} value={String(opt.year)}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <button
-          type="button"
-          onClick={handleLookup}
-          disabled={!canLookup || isLookingUp}
-          className="h-9 shrink-0 rounded-md border border-border bg-background px-3 text-xs font-medium hover:bg-muted/60 disabled:opacity-40 transition-colors"
-        >
-          {isLookingUp ? "조회 중…" : "공시지가 조회"}
-        </button>
-      </div>
-      {lookupError && <p className="text-xs text-destructive">{lookupError}</p>}
-      {!canLookup && (
-        <p className="text-caption text-muted-foreground">지번 주소 입력 후 조회 가능합니다</p>
-      )}
-
-      {/* 공시지가 + 토지기준시가 나란히 */}
-      <div className="grid grid-cols-2 gap-2">
-        <FieldCard label={label} unit="원/㎡">
-          <CurrencyInput
-            label=""
-            hideUnit
-            value={landPricePerSqm}
-            onChange={onLandPricePerSqmChange}
-            placeholder="원/㎡"
-          />
-        </FieldCard>
-        <FieldCard label="토지기준시가" unit="원" hint="공시지가 × 면적">
-          <div className="flex h-9 items-center rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums text-muted-foreground">
-            {landStdPrice !== null
-              ? landStdPrice.toLocaleString()
-              : <span className="text-muted-foreground">자동 계산</span>}
-          </div>
-        </FieldCard>
-      </div>
-    </div>
-  );
-}
 
 /** 개별주택가격 최초 공시일 */
 const HOUSE_FIRST_DISCLOSURE_DATE = "2005-04-30";

@@ -24,7 +24,7 @@ import type {
   Heir,
   PresumedInheritanceItem,
 } from "@/lib/tax-engine/types/inheritance-gift.types";
-import { EXAMPLE_INPUT, HEIR_ID } from "./fixtures/comprehensive-case-pdf.fixture";
+import { EXAMPLE_INPUT } from "./fixtures/comprehensive-case-pdf.fixture";
 
 // ─────────────────────────────────────────────────────────────────
 // L-1 전용 최소 입력 팩토리 (EXAMPLE_INPUT 오염 없음)

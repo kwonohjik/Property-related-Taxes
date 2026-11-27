@@ -126,13 +126,6 @@ export function validateStep3(form: StockTransferFormData): StockValidationError
 
   const errors: StockValidationError[] = [];
 
-  // 3중 패턴 fallback. 소령 §163⑥4 — expenseMode는 acquisitionMode에서 자동 도출.
-  const acquisitionMode = form.acquisitionMode || "actual";
-  // 장부분실 액면가(§99①4 후단)는 estimated 하위 토글(`acqFaceValueOnly`)이라 이미 포함된다.
-  const isEstimatedAcq =
-    acquisitionMode === "estimated" || acquisitionMode === "sale_case";
-  const expenseMode: "actual" | "estimated" = isEstimatedAcq ? "estimated" : "actual";
-
   // 분할 매도 건이 예정신고 기간(§105①)을 넘는가 — 신고 유형 칸에서 고친다(Step1 은 연도·대주주 축)
   if (form.lotsMode === "split") {
     for (const v of judgeSplitSalePeriods(splitSalePeriodFacts(form))) {

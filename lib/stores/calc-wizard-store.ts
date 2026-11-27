@@ -18,7 +18,6 @@ import {
   makeDefaultAsset,
   migrateAsset,
 } from "./calc-wizard-asset";
-import type { AssetForm, HouseEntry, PresaleRightEntry, PriorReductionUsageItem, SpecialHouseExclusionFormItem } from "./calc-wizard-asset";
 import { isSeparateAcquisition, separateAcqPartsSum } from "@/lib/calc/transfer-tax-split-acq-mode";
 import { isMixedUsePerPartAcq, mixedPartAcqSum } from "@/lib/calc/mixed-use-part-acq-split";
 

@@ -37,7 +37,6 @@ import { getDisposalDeadlineDate, getDisposalDeadlineYears } from "../acquisitio
 import type {
   HouseCountInput,
   HouseCountResult,
-  OwnedHouseInfo,
   ExcludedItem,
   HansiBenefitDetail,
 } from "./types";

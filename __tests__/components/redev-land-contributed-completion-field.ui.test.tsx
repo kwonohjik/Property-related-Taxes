@@ -104,7 +104,7 @@ describe("#12 ⑤ — 거주 분리 입력: 토지 출자는 종전주택 거주
     expect(has(container, "신축주택 거주기간")).toBe(true);
   });
   it("긍정 짝 — 주택 출자 원조합원은 종전주택 거주 칸이 그대로 있다(§154⑧1호 통산)", () => {
-    const { container } = render(
+    render(
       <RedevelopmentBlock asset={apt({ redevOriginalAssetType: "housing" })} onChange={() => {}} isOneHouseSingle={true} />,
     );
     expect(screen.getAllByText("입주일").length).toBe(2);

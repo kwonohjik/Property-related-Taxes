@@ -56,7 +56,7 @@ import { setIncomeAndBasicDeductionItems } from "./DetailedStatementIncomeItems"
 //    타입 재export 를 놓쳤다([[feedback_800line_split_playbook]] · 소비처 2곳이 tsc 로 잡았다).
 export type { PerAssetValue, StatementItem, GroupDef } from "./DetailedStatementConfig";
 export { STATEMENT_GROUPS } from "./DetailedStatementConfig";
-import type { PerAssetValue, StatementItem } from "./DetailedStatementConfig";
+import type { StatementItem } from "./DetailedStatementConfig";
 import { resolveReceiveOnlyDisplay } from "./receive-only-display";
 import { allPropertiesReceiveOnly } from "./receive-only-display";
 import { receiveOnlyTransferDateOf } from "./receive-only-display";

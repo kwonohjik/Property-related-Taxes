@@ -7,7 +7,7 @@
  */
 "use client";
 
-import type { AssetForm, AssetReductionForm } from "@/lib/stores/calc-wizard-store";
+import type { AssetReductionForm } from "@/lib/stores/calc-wizard-store";
 import type { RentalReductionFormVariant } from "@/lib/stores/calc-wizard-asset-reduction";
 import { DateInput } from "@/components/ui/date-input";
 import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
@@ -44,7 +44,6 @@ import {
   type TransferReductionId,
   type ReductionCategory,
   type ReductionAssetKind,
-  type PeriodCheckContext,
 } from "@/lib/tax-engine/transfer-reductions";
 import { assetKindGateReason } from "@/lib/tax-engine/transfer-reductions";
 import { unsold98AcquisitionCauseReason } from "@/lib/tax-engine/transfer-reductions/unsold-98-acquisition-cause";

@@ -44,7 +44,6 @@ const FARM = {
 const RURAL = { nblZoneType: "agriculture_forest" } as Partial<AssetForm>;
 const URBAN = { nblZoneType: "general_residential", addressJibun: "서울 강남구 테스트동 1", nblUrbanIncorporationDate: "2000-01-01" } as Partial<AssetForm>;
 const BUY = (d: string) => ({ acquisitionCause: "purchase", acquisitionDate: d }) as Partial<AssetForm>;
-const GIFT = (d: string) => ({ acquisitionCause: "gift", acquisitionDate: d, publishedValueAtGift: "400000000" }) as Partial<AssetForm>;
 const INH = (d: string) =>
   ({ acquisitionCause: "inheritance", acquisitionDate: d, decedentAcquisitionDate: "1990-01-01", publishedValueAtInheritance: "400000000" }) as Partial<AssetForm>;
 /** 「종중 소유」 선언 — 취득일은 자산 취득일이다 */

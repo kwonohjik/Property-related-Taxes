@@ -62,17 +62,12 @@ const C01_GIFT_DATE_VALUATION = 457_000_000;
 
 // Scenario A: 이월과세 적용 (증여자 취득일 기산, 환산취득가)
 const EXAMPLE_A_EST_ACQ = 356_171_284;      // 700M × 404M / 794M
-const EXAMPLE_A_DEDUCTION = 12_120_000;     // 404M × 3%
 const EXAMPLE_A_GIFT_TAX_EXPENSE = 10_000_000;
 const EXAMPLE_A_TRANSFER_GAIN = 321_708_716; // 700M - 356,171,284 - 12,120,000 - 10,000,000
-const EXAMPLE_A_LTHD = 96_512_614;          // 321,708,716 × 30% (16년 이상 → max 30%)
-const EXAMPLE_A_TAXABLE_INCOME = 225_196_102;
 const EXAMPLE_A_DETERMINED_TAX = 64_684_518; // 예제 값 (천원 미절사 방식)
 
 // Scenario B: 이월과세 미적용 (증여 등기일 기산, 실가)
 const EXAMPLE_B_TRANSFER_GAIN = 243_000_000; // 700M - 457M
-const EXAMPLE_B_LTHD = 19_440_000;           // 243M × 8% (4년 → 8%)
-const EXAMPLE_B_TAXABLE_INCOME = 223_560_000;
 const EXAMPLE_B_DETERMINED_TAX = 64_062_800;
 
 // 우리 엔진 anchor값 (예제와 완전 일치)

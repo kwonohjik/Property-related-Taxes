@@ -8,7 +8,6 @@
  * v2 필드를 확장 — Phase D-2에서 wrapper 전환 시 v1 파일이 이 파일을 재-export 한다.
  */
 
-import type { SPORTS_OUTDOOR_STD, SPORTS_INDOOR_STD, RESERVE_FORCES_STD } from "./data/area-standards";
 
 // ============================================================
 // 기본 원시 타입

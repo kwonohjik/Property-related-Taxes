@@ -115,25 +115,6 @@ async function run(f: TransferFormData) {
 }
 
 
-const PRESUMED = {
-  bgValuationMode: "sangjeungbeop_market",
-  bgMarketValueAtTransfer: "1000000000",
-  bgAcquisitionMethod: "appraisal",
-};
-
-const tranche = (id: number, numerator: string, acqDate: string, wholeValue: string, stdAcq: string) =>
-  asset(id, numerator, {
-    ...PRESUMED,
-    acquisitionDate: acqDate,
-    bgPresumedAcquisitionTotal: wholeValue,
-    standardPriceAtAcq: stdAcq,
-  });
-
-const bundle = () => [
-  tranche(1, "60", "2009-03-01", "400000000", "200000000"),
-  tranche(2, "40", "2012-03-01", "500000000", "300000000"),
-];
-
 
 const mixed = {
   assetKind: "housing",

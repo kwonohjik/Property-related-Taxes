@@ -63,7 +63,6 @@ const form = (assets: AssetForm[], over: Record<string, unknown> = {}) =>
   Object.assign(createDefaultTransferFormData(), FORM, { transferDate: "2026-02-16", assets, contractTotalPrice: "" }, over) as TransferFormData;
 const debt = (d: string) => ({ bgMortgageDebtAmount: d, bgMortgageSetAmount: d });
 const HALF = { ownershipNumerator: "50", ownershipDenominator: "100", ownershipRemainderThirdParty: "yes" };
-const pct = (n: string) => ({ ownershipNumerator: n, ownershipDenominator: "100" });
 const set = (v: Variant, frac: number) => ({ redevSettlementAmount: S(Number(redevFields(1, v).redevSettlementAmount), frac) });
 
 const issues = (f: TransferFormData) => {
@@ -77,10 +76,6 @@ async function post(f: TransferFormData) {
   return { status: res.status, j: (await res.json()) as any }; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 type Res = Awaited<ReturnType<typeof post>>;
-const gainOf = (r: Res) => (r.j.data?.aggregated?.totalTransferGain ?? r.j.data?.result?.transferGain) as number | undefined;
-const ok = (r: Res) => { expect(r.status, JSON.stringify(r.j).slice(0, 300)).toBe(200); return gainOf(r)!; };
-/** 오라클: 같은 시나리오 단건(물건 크기 sc). 채무·보증금·임대료는 입력 그대로. */
-const single = async (v: Variant, sc: number, ...over: Record<string, unknown>[]) => ok(await post(form([redev("z", sc, v, ...over)])));
 
 import { applyRental97LthdSpecial } from "@/lib/tax-engine/transfer-tax-redevelopment-lthd";
 import { existingBuildingLthdBases } from "@/lib/tax-engine/redevelopment-existing-netting";

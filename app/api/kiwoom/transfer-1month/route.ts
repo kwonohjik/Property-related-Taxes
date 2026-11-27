@@ -44,7 +44,7 @@ import {
   MARKET_REFERENCE_STOCK_CODE,
 } from "@/lib/kiwoom/market-calendar";
 import { handleKiwoomError } from "../search/route";
-import { KiwoomError, type KiwoomDailyQuote } from "@/lib/kiwoom/types";
+import { type KiwoomDailyQuote } from "@/lib/kiwoom/types";
 
 const RequestSchema = z.object({
   stockCode: z.string().regex(/^[0-9A-Z]{6}$/, "종목코드는 6자리 숫자 또는 대문자입니다 (KONEX 영문 포함)."),

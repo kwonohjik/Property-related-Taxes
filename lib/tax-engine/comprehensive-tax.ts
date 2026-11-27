@@ -24,7 +24,7 @@
  *   별도합산 토지    → comprehensive-separate-land.ts
  */
 
-import { applyRate, truncateToTenThousand } from "./tax-utils";
+import { truncateToTenThousand } from "./tax-utils";
 import { COMPREHENSIVE_CONST } from "./legal-codes";
 import {
   getComprehensiveParams,
@@ -45,23 +45,15 @@ import {
 } from "./comprehensive-land-adapter";
 import {
   applyAggregationExclusion,
-  validateRentalExclusion,
-  validateOtherExclusion,
 } from "./comprehensive-exclusion";
 import {
-  getSeniorRate,
-  getLongTermRate,
   applyOneHouseDeduction,
   applyTaxCap,
   calculatePropertyTaxCreditProration,
-  calculatePostManagementPenalty,
   applyEffectiveFactor,
   toAppurtenantFraction,
 } from "./comprehensive-tax-helpers";
 import {
-  calcAggregateLandTaxBase,
-  calcAggregateLandTaxAmount,
-  applyAggregateLandTaxCap,
   calculateAggregateLandTax,
 } from "./comprehensive-land-aggregate";
 import {
