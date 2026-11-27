@@ -268,7 +268,7 @@ const stepPct = (r: number) => `${(r * 100).toFixed(0)}%`;
 
 export function buildHousingStep(
   h: ReturnType<typeof buildHousingPart>,
-  a: MixedUseApportionment,
+  _a: MixedUseApportionment,
 ): MixedUseStep {
   // 토지·건물 공제율이 다르면 대표 율(건물 기준) 하나 대신 파트별 표·율을 적는다(상세명세서·결과 카드와 같은 판정).
   const rates = mixedPartLthdRates(h);
@@ -293,7 +293,7 @@ export function buildHousingStep(
 
 export function buildCommercialStep(
   c: ReturnType<typeof buildCommercialPart>,
-  a: MixedUseApportionment,
+  _a: MixedUseApportionment,
 ): MixedUseStep {
   // 취득시 상가부분 기준시가는 항상 사용자 직접 입력 (자동 안분 fallback 폐지)
   const acqStdLabel = "취득시 상가부분 기준시가 합계";

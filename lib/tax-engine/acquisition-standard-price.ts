@@ -203,7 +203,7 @@ export function shouldUseStandardPrice(
   acquisitionCause: string,
   reportedPrice: number,
   marketValue: number | undefined,
-  standardValue: number
+  _standardValue: number
 ): { useStandardPrice: boolean; reason: string } {
   // 상속에 따른 무상취득(§10의2②1호): 시가인정액 유무와 무관하게 **항상 시가표준액**.
   // (증여는 시가인정액 원칙이지만 상속은 시가표준액 강제 — 감정가로 과대과세 방지)
