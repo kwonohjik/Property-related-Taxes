@@ -33,12 +33,14 @@ import { useProfessionalStore } from "@/lib/stores/professional-store";
 import { NavButton, CtaButton, WizardBackNav } from "@/components/calc/shared/WizardNav";
 import { RestartFromScratchButton } from "@/components/calc/shared/RestartFromScratchButton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Step1 } from "./steps/Step1";
+import { Step1Entry } from "./steps/Step1Entry";
 import { Step4 } from "./steps/Step4";
 import { Step5 } from "./steps/Step5";
 import { Step6 } from "./steps/Step6";
 import { CorrectionModeBanner } from "@/components/calc/transfer/CorrectionModeBanner";
-import { STEPS_SINGLE, STEP_TITLES, type TransferTaxCalculatorProps } from "./transfer-calculator-meta";
+import type { TransferTaxCalculatorProps } from "./transfer-calculator-meta";
+import { foreignWizardMeta } from "./transfer-foreign-wizard-meta";
+import { FOREIGN_CALC_PENDING_MESSAGE } from "@/lib/calc/transfer-foreign-pending";
 import { patchInvalidatesDeterminedTax } from "./transfer-penalty-invalidation";
 import { TransferSidebarSummary } from "./TransferSidebarSummary";
 import { backupSingleToMulti, continueToMulti, runPenaltyCalc } from "./transfer-calc-actions";
@@ -57,10 +59,10 @@ export default function TransferTaxCalculator({
   const isEmbeddedInMulti = pathname?.includes("/multi") ?? false;
   // 다건 신고서 단위 수정신고·경정청구 — 상태가 자산 폼이 아니라 다건 폼에 있다
   const filingUnitCorrection = useMultiTransferStore((s) => filingUnitCorrectionOf(isEmbeddedInMulti, s.form));
-  // 단건/다건 모두 6단계 — 가산세는 자산별 입력
-  const STEPS = STEPS_SINGLE;
   const { currentStep, formData, result, setStep, updateFormData, setResult, clearResult, reset } =
     useCalcWizardStore();
+  // 국내 4단계 / 국외 1단계 — 단계 배열·제목을 쓰는 곳은 전부 이 값 하나를 쓴다(단건/다건 공통, 가산세는 자산별 입력)
+  const { isForeign, steps: STEPS, titles: STEP_TITLES } = foreignWizardMeta(formData);
   // 홈 카드(?new=1) 진입 = 새 계산 → 빈 폼으로 초기화 (작업 중 새로고침은 보존)
   useResetOnNewParam(reset);
   // API·계산 오류 (단건 메시지). 검증 오류는 issues 배열로 일괄 표시.
@@ -278,6 +280,8 @@ export default function TransferTaxCalculator({
     // 최종 제출 가드 — 사용자가 자유 이동·필드 비우기 후 마지막 step에서 "계산하기" 시 우회 차단.
     // step 0 (자산·취득 정보)이 가장 critical — redev settlementSaleDate, useEstimated PHD 등 entry 검증.
     if (!passesAllSteps()) return;
+    // 국외 계산은 U2에서 연결한다 — 검증을 통과해도 국내 계산 경로로 보내지 않는다(`callTransferTaxAPI`도 같은 이유로 던진다)
+    if (isForeign) { setError(FOREIGN_CALC_PENDING_MESSAGE); return; }
     setIsLoading(true);
     try {
       const res = await callTransferTaxAPI(formData);
@@ -352,7 +356,7 @@ export default function TransferTaxCalculator({
   }, [multiHasUserWork, performContinueToMulti]);
 
   const stepComponentsAll = [
-    <Step1
+    <Step1Entry
       key={0}
       form={formData}
       onChange={handleFormChange}
@@ -373,12 +377,12 @@ export default function TransferTaxCalculator({
   // (상속세 PR#139 패턴 — InheritanceTaxForm stepStatuses)
   const stepStatuses = useMemo<StepStatus[]>(
     () =>
-      STEPS_SINGLE.map((_, i) => {
+      STEPS.map((_, i) => {
         const hasError = collectWizardStepIssues(i, formData, filingUnitCorrection).length > 0;
         if (hasError) return i < currentStep ? "attention" : "neutral";
         return i <= currentStep ? "complete" : "neutral";
       }),
-    [formData, currentStep, filingUnitCorrection],
+    [formData, currentStep, filingUnitCorrection, STEPS],
   );
 
   // 비차단 경고 (미래 양도일 등) — handleNext/handleSubmit를 막지 않는 amber 배너. 차단 흐름과 독립.
@@ -387,7 +391,7 @@ export default function TransferTaxCalculator({
     [currentStep, formData],
   );
 
-  const sidebarSteps: WizardSidebarStep[] = STEPS_SINGLE.map((label, i) => ({
+  const sidebarSteps: WizardSidebarStep[] = STEPS.map((label, i) => ({
     label,
     status:
       i === currentStep
@@ -400,7 +404,8 @@ export default function TransferTaxCalculator({
     onClick: () => { clearError(); setStep(i); scrollToTop(); },
   }));
 
-  const sidebarSummaryContent = <TransferSidebarSummary summary={perAssetSummary} />;
+  // 국외 합계(⑥)는 U2 — 국내 요약(assets[0] 기반)을 국외 폼에 보이지 않는다
+  const sidebarSummaryContent = isForeign ? undefined : <TransferSidebarSummary summary={perAssetSummary} />;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -521,7 +526,7 @@ export default function TransferTaxCalculator({
           {/* 모바일: 상단 가로 진행 바 */}
           <div className="lg:hidden mb-6">
             <StepIndicator
-              steps={Array.from(STEPS_SINGLE)}
+              steps={Array.from(STEPS)}
               current={currentStep}
               stepStatus={stepStatuses}
               onStepClick={(i) => {
@@ -616,7 +621,7 @@ export default function TransferTaxCalculator({
 
           {/* 네비게이션 — 뒤로가기(항상) + 다음/계산 */}
           <div className="mt-6 space-y-2">
-            {isLastStep && formData.enablePenalty && !filingUnitCorrection && (
+            {isLastStep && formData.enablePenalty && !filingUnitCorrection && !isForeign && (
               <div className="flex justify-end">
                 <CtaButton
                   tone="outline"

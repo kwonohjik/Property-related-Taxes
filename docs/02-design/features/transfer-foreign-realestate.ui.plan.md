@@ -399,3 +399,41 @@ mutation probe: 술어를 `!==`로 뒤집어 국내까지 삼킴 → FRE-4 실�
 - [x] 공용 컴포넌트·톤·라벨 클래스·placeholder 규칙 준수(§4)
 - [x] file:line은 이 트리에서 읽은 값 — 읽지 못한 것은 V-n
 - [ ] 브라우저·테스트 미수행(계획 문서 — 코드 변경 0)
+
+---
+
+## 13. U1 확정 (2026-11-27 · 구현 PR `feat/foreign-re-ui-inputs`) — §3·§4·§6.1·§7을 이것이 덮는다
+
+> 사용자 결정 C-1(처음부터 여러 건)·C-2(거주 연수 정수 1칸)·C-3(미등기 칸 없음)·Q-9(양도일 ≥ 2020-01-01)과 PR-4 API 계약(`engine.plan.md` §4.2)을 반영한 **실제 구현 결정**이다. 위 본문의 단건 전제(`foreignTransferPrice` 등 평탄 필드 · UQ-3 다건 차단 · 폼 전역 `transferDate`·`filingDate` 재사용)는 폐기됐다.
+
+### 13.1 ①②③ 폼 슬라이스 — `lib/stores/calc-wizard-form-foreign.ts`
+
+| 필드 | 타입 | 비고 |
+|---|---|---|
+| `assetLocation` | `"domestic"\|"foreign"` | 기본 `"domestic"` · 폼 전역 · 라디오 `AssetLocationBlock`(단건·다건 임베드 모두 노출) |
+| `foreignResidenceYears` | string | C-2 — 폼 전역 정수 1칸. 빈 값 = 미입력(⑧ 차단 · 0년으로 읽지 않는다) |
+| `foreignAssets` | `ForeignAssetForm[]` | C-1 — 1..`FOREIGN_RE_MAX_ASSETS`(20). 자산별 `transferDate`·통화·양도/취득 외화액·**항목별 기준환율**·`capitalRows`·`costRows`·`taxRows` |
+| `foreignTaxEnabled` / `foreignTaxMethod` | boolean / `"credit"\|"expense"` | 신고 단위 택일(§118의6①). 기본 off · `credit` |
+
+- **양도일은 자산별**이다(API가 `assets[].transferDate` · 기본공제 §118의7② 순서) — 폼 전역 `transferDate`·`filingDate`는 국외에서 읽지 않는다. 신고일·가산세·수정신고는 v1 범위 밖(후속).
+- 기본값 3중 패턴: 종류 `land` · 처리 방법 `credit` — initial · normalize · ④ 빌더 · ⑧이 같은 상수(`FOREIGN_ASSET_KIND_DEFAULT`·`FOREIGN_TAX_METHOD_DEFAULT`). 환율·국가·소재지는 기본값 없음.
+- `createDefaultTransferFormData`는 **결정적**이어야 한다(국외 카드 id를 매번 새로 만들면 `swapSellingHouse` 등 «초기값 대비 변경» 비교가 오고지 — U1 중 실측). 카드 id는 화면 키일 뿐이며 엔진에는 「국외자산 N」 라벨을 id로 보낸다.
+- ③ `normalizeForeignRealEstate`는 `migratePersistedTransferForm`(sessionStorage·다건 자산 폼 공통 경로)에서 호출 — 비배열 rows·깨진 enum 보정, 카드 0건이면 빈 카드 1건. `migrateLegacyForm`은 변경 없음.
+
+### 13.2 ⑤ 화면
+
+`Step1Entry`(신설) = 「자산 소재」 라디오 + (`Step1` 그대로 | `ForeignRealEstateStep`). 국외면 판정 불러오기·함께 양도·자산 카드·조정지역을 **마운트하지 않는다**(값은 남는다 · D-4). 국외 1단계 = ① 납세의무(거주 연수 · 5년 미만 amber 경고 · C-2 5년 경계 «확인 필요» · 미등기 안내 sky) → ② 국외자산 카드 N장(각 ①자산 ②양도가액 ③취득가액 ④필요경비) → ③ 외국납부세액(신고 단위 토글·방법 라디오·자산별 납부 행). 자산 종류 3종은 UQ-12대로 노출하되 «권리»는 ⑧이 막는다(API enum에 없음). 통화는 목록 + 「기타」 3자리 직접 입력(⑨ `^[A-Z]{3}$`). 「양도일 환율과 같음」은 클릭 시 환율을 한 번 써 넣는 보조 버튼(fallback 아님). 단계 배열·제목은 `transfer-foreign-wizard-meta.ts`의 `foreignWizardMeta` 하나로 — `TransferTaxCalculator`는 `STEPS_SINGLE`을 직접 쓰지 않는다(가드 테스트).
+
+### 13.3 ⑧ 구조 — `lib/calc/transfer-tax-validate-foreign.ts`
+
+1. 빈 칸·화면 필수(서버가 모르는 «입력 안 함») 2. **서버 ⑩ refine을 그대로 실행**(`FOREIGN_RE_REFINES` × `buildForeignRealEstateBody` — ④와 같은 빌더) 3. ⑨ 기본 모양(종류·통화 형식·건수 상한)은 `FOREIGN_RE_MAX_*` 상수로 같은 규칙. 서버 오류 `path` → 입력칸 `data-field` 매핑(`foreignAsset.*` = 카드 안 · `foreignTaxRow.{자산}.{행}.*` = 카드 밖 납부 행). 같은 칸은 1건만. `collectStepIssuesRaw`가 국외 폼이면 국내 검증을 통째로 우회. 격자: `__tests__/calc/transfer-foreign-validate.parity.test.ts`(refine 완전성 가드 포함).
+
+### 13.4 계산 연결 전 차단 (U2에서 걷는다)
+
+국외 폼은 「세금 계산하기」에서 ⑧까지만 하고 `FOREIGN_CALC_PENDING_MESSAGE`를 보인다. `callTransferTaxAPI`는 국외 폼이면 fetch 없이 던진다. 다건은 `validateMultiSupportedMode`가 국외 건을 `MULTI_FOREIGN_PENDING_MESSAGE`로 막는다(입력·목록 배지·완성도는 받는다). 사이드바 합계(⑥)는 국외에서 숨김.
+
+### 13.5 U2·U3로 넘기는 것 / 확인 필요
+
+- 다건(`/multi`)에서 국외 건을 **어떻게 계산·합산하는가**는 미결 — 엔진 V-5(국내·국외 과세표준 합산 누진 여부, 예시 차이 30,630,000원)가 먼저다. 한 건이 국외 자산 N개를 품는 구조라 «국외 건 = 별도 국외 계산 1회»가 후보이나 확정 아님.
+- 수동 저장(`isTransferFormEmpty`)·이력 제목·dedup 키(`foreignAssets[0].address`)는 U3(V-7·V-8).
+- API `toOptionalDate`는 존재하지 않는 달력일(`2026-02-30`)을 3월 2일로 받는다(⑧도 같은 술어라 통과) — `DateInput`이 만들지 못한다고 가정한 상태, 확인 필요.
