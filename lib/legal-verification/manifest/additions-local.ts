@@ -23,7 +23,15 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
   {
     id: "ACQUISITION.TAXPAYER",
     citation: "지방세법 §7",
-    keywords: ["사실상 취득", "과점주주", "부담부", "지목을 사실상 변경"],
+    keywords: [
+      "사실상 취득",
+      "과점주주",
+      "부담부",
+      "지목을 사실상 변경",
+      // `ACQUISITION.BURDENED_GIFT_FAMILY`(§7⑫ 단서 → §7⑪) — 교재 대조 U7
+      "배우자 또는 직계존비속으로부터의 부동산등의 부담부 증여의 경우에는 제11항을 적용한다",
+      "배우자 또는 직계존비속의 부동산등을 취득하는 경우에는 증여로 취득한 것으로 본다",
+    ],
     keywordMode: "ALL",
   },
   // 간주취득(구 "지방세법 §7의2" 인용)은 현행 §7로 통합 → ACQUISITION.TAXPAYER(§7)가 검증 커버.

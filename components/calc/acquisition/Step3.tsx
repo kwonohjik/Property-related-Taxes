@@ -8,6 +8,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { isPre2026TempTwoHouseContractDate } from "@/lib/calc/acquisition-sale-contract-transition";
+import { resolveFormHouseCount } from "@/lib/calc/acquisition-tax-api";
 import { isHousingSaleContractAcquisition } from "@/lib/calc/acquisition-sale-contract-transition";
 import { effectiveSaleContractDate } from "@/lib/calc/acquisition-sale-contract-transition";
 import {
@@ -41,8 +42,13 @@ export function Step3({
   isIndividual,
   isGiftLike,
 }: Step3Props) {
-  const houseCount = parseInt(form.houseCountAfter) || 1;
+  // U4 — 보유 주택 목록을 입력했으면 엔진 자동 산정 값으로 카드를 연다(선택값만 보면 일시적 2주택·지정 전 계약 카드가 숨는다)
+  const houseCount = resolveFormHouseCount(form);
   const isMultiHouse = houseCount >= 2;
+  // 순수 무상취득(증여·기부) — §13의2① 다주택 중과·§28의2 1억 배제 대상이 아니다(부담부증여 유상분은 대상)
+  const isPureGift = isGiftLike && form.acquisitionCause !== "burdened_gift";
+  // 전체 주택 시가표준액 카드 펼침 — 화면 전용 상태(값이 있으면 자동으로 펼친다)
+  const [wholeStdOpen, setWholeStdOpen] = useState(false);
 
   // [Phase 6] 조정대상지역 자동 조회
   const [autoCheckLoading, setAutoCheckLoading] = useState(false);
@@ -119,9 +125,9 @@ export function Step3({
           <TaxHelp
             title="조정대상지역 — 지정 현황 및 변동 이력"
             summary="국토교통부가 고시한 조정대상지역 소재 주택 취득 시 2주택 8%, 3주택+ 12% 중과."
-            details={`## 현재 조정대상지역 (2025년 기준)
-**서울 전 지역** (25개 자치구)
-**경기**: 과천, 성남 분당·수정·중원, 하남, 광명
+            details={`## 지정 현황 확인
+조정대상지역은 국토교통부 고시로 수시 지정·해제됩니다. 화면에 고정 목록을 두지 않습니다 —
+위 「조정대상지역 자동 조회」 버튼이나 국토교통부 고시로 **취득일 현재** 지정 여부를 확인하세요.
 
 비조정지역으로 해제된 지역은 중과 미적용.
 취득 시점의 지정 여부로 판단 — 계약 후 해제되어도 잔금일 기준.
@@ -129,9 +135,9 @@ export function Step3({
 ## 시점별 중과 변동 이력
 - ~2022.5.9: 조정지역 다주택 중과 적용
 - 2022.5.10~: 일시적 2주택 처분기한 조정+조정 1년 → 2년
+- 2023.1.5~: 일부 지역 해제 (인천 연수·남동·서·미추홀·부평, 성남 일부 등)
 - 2023.2.28~: 조정+조정 처분기한 3년 (완화)
 - 2026.10.1.~: 조정+조정 처분기한 2년 (2026.8.26. 이전 계약+계약금 증빙은 3년)
-- 2023.1.5~: 일부 지역 해제 (인천 연수·남동·서·미추홀·부평, 성남 일부 등)
 
 ## §13의2④ 지정 전 계약 보호
 조정지역 지정고시일 **이전에** 매매계약 + 계약금 납부 증빙 보유 시 비조정지역 취득으로 간주.
@@ -167,14 +173,17 @@ export function Step3({
         </div>
       )}
 
-      {/* 시가표준액 1억/2억 이하 배제 */}
-      {isHousing && isMultiHouse && (
+      {/* 시가표준액 1억/2억 이하 배제 · 증여 3억 중과 판정 — 전체 주택 시가표준액 (U2: 증여에도 노출, 토글로 열 수 있게) */}
+      {isHousing && (isMultiHouse || isGiftLike) && (
         <ToggleCard
           tone="rose"
-          title="시가표준액 1억/2억 이하 중과 배제"
-          description="전체 주택 시가표준액이 수도권 1억 / 비수도권 2억 이하이면 다주택 중과 배제 (시행령 §28의2①1호 — 2025.1.2. 전 취득은 전국 1억)"
-          checked={!!form.wholeHouseStandardValue && parseFloat(form.wholeHouseStandardValue.replace(/,/g, "")) > 0}
+          title={isMultiHouse && !isPureGift ? "시가표준액 1억/2억 이하 중과 배제" : "지분·부속토지 증여 — 전체 주택 시가표준액"}
+          description={isMultiHouse && !isPureGift
+            ? "전체 주택 시가표준액이 수도권 1억 / 비수도권 2억 이하이면 다주택 중과 배제 (시행령 §28의2①1호 — 2025.1.2. 전 취득은 전국 1억)"
+            : "지분·부속토지만 증여받으면 조정대상지역 3억 이상 증여 중과(§13의2②)를 전체 주택의 시가표준액으로 판정합니다 (시행령 §28의6①)"}
+          checked={wholeStdOpen || (!!form.wholeHouseStandardValue && parseFloat(form.wholeHouseStandardValue.replace(/,/g, "")) > 0)}
           onCheckedChange={(v) => {
+            setWholeStdOpen(v);
             if (!v) set("wholeHouseStandardValue", "");
           }}
           trailing={
@@ -207,14 +216,16 @@ export function Step3({
             onChange={(v) => set("wholeHouseStandardValue", v)}
             placeholder="지분·부속토지 취득 시 전체 주택 기준"
           />
-          <ToggleCard
-            tone="rose"
-            size="sm"
-            title="정비구역 소재"
-            description="재개발·재건축·소규모정비 구역은 1억/2억 배제 불가"
-            checked={form.isUrbanRegenerationArea}
-            onCheckedChange={(v) => set("isUrbanRegenerationArea", v)}
-          />
+          {isMultiHouse && !isPureGift && (
+            <ToggleCard
+              tone="rose"
+              size="sm"
+              title="정비구역 소재"
+              description="재개발·재건축·소규모정비 구역은 1억/2억 배제 불가"
+              checked={form.isUrbanRegenerationArea}
+              onCheckedChange={(v) => set("isUrbanRegenerationArea", v)}
+            />
+          )}
         </ToggleCard>
       )}
 
@@ -319,7 +330,8 @@ export function Step3({
       )}
 
       {/* §13의2④ 지정 전 계약 보호 */}
-      {isHousing && isMultiHouse && form.isRegulatedArea && (
+      {/* U5 — 매매계약(분양계약 포함)만 대상. 증여·부담부증여·교환·경매에는 보이지 않는다 */}
+      {isHousing && isMultiHouse && form.isRegulatedArea && form.acquisitionCause === "purchase" && (
         <ToggleCard
           tone="rose"
           title="조정지역 지정 전 매매계약 체결"
@@ -356,6 +368,9 @@ export function Step3({
                 value={form.regulationDesignationDate}
                 onChange={(v) => set("regulationDesignationDate", v)}
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                앞 단계의 매매계약일과 함께 입력하면 계약일이 고시일 이전(당일 포함)인지 확인합니다 — 늦으면 적용하지 않습니다.
+              </p>
             </div>
             <ToggleCard
               tone="rose"
@@ -409,6 +424,11 @@ export function Step3({
           {/* 증여자 관계 */}
           <div>
             <p className="text-xs font-medium mb-1">수증자 관점 — 증여자의 신분</p>
+            {form.acquisitionCause === "burdened_gift" && (
+              <p className="text-xs text-muted-foreground mb-1">
+                부담부증여: 증여자가 배우자·직계존속·직계비속이면 인수한 채무 부분도 증여로 보아 전체를 무상취득으로 계산합니다 (지방세법 §7⑫ 단서·§7⑪). 계부모·의붓자녀는 해당하지 않습니다.
+              </p>
+            )}
             <RadioCardGroup
               tone="rose"
               layout="stack"
@@ -438,16 +458,6 @@ export function Step3({
         </ToneCard>
       )}
 
-      {/* 부담부증여 관계 */}
-      {form.acquisitionCause === "burdened_gift" && (
-        <ToggleCard
-          tone="rose"
-          title="부담부증여 — 배우자·직계존비속 관계"
-          description="배우자·직계존비속 간 부담부증여는 전체 무상취득으로 처리 (지방세법 §7⑫ 단서·§7⑪)"
-          checked={form.giftRelation === "spouse_or_lineal"}
-          onCheckedChange={(v) => set("giftRelation", v ? "spouse_or_lineal" : "other")}
-        />
-      )}
     </div>
   );
 }

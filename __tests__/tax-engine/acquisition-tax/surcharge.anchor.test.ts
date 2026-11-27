@@ -367,7 +367,7 @@ describe("[Anchor] 일시적 2주택 시점별 처분기한 — v3 §28의5 변�
 describe("[Anchor] 부담부증여 — P1-6 배우자·직계존비속 간 전체 무상 처리", () => {
   it("#14 부담부증여 (배우자 간): giftRelation=spouse_or_lineal → 취득원인 gift로 재정의", () => {
     // 설계서 anchor #14: 부담부증여(배우자) → 전체 무상 3.5%
-    // P1-6: 지법 §7④ — 배우자 간 부담부증여는 전체 증여로 봄
+    // P1-6: 지법 §7⑫ 단서 → §7⑪ — 배우자 간 부담부증여는 전체 증여로 봄
     // SurchargeCheckInput 레벨에서는 비조정 또는 시가표준액 3억 미만 시 gift로 처리되어도 중과 없음
     const result = assessSurcharge({
       propertyType: "housing",

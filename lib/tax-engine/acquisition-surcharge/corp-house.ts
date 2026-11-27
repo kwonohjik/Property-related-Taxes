@@ -1,12 +1,12 @@
 /**
  * 법인 주택 중과 및 부담부증여 관련 모듈
  *
- * [P1-6] 부담부증여 — 배우자·직계존비속 간 적용 배제 (지방세법 §7④)
+ * [P1-6] 부담부증여 — 배우자·직계존비속 간 적용 배제 (지방세법 §7⑫ 단서 → §7⑪)
  * [P2 확장 대비] 법인 12% 주택 중과 기본 구조
  *
- * 지방세법 §7④:
- * "다만, 배우자 또는 직계존비속으로부터의 부동산 등의 부담부증여의 경우에는
- * 증여로 본다."
+ * 지방세법 §7⑫ 단서:
+ * "다만, 배우자 또는 직계존비속으로부터의 부동산등의 부담부 증여의 경우에는
+ * 제11항을 적용한다." — §7⑪: 배우자·직계존비속의 부동산등 취득은 증여로 취득한 것으로 본다.
  * → 배우자·직계존비속 간 부담부증여는 전체를 무상취득으로 처리
  */
 
@@ -20,7 +20,7 @@ import { isCorporateHouseAcquirer } from "./multi-house";
 /**
  * [P1-6] 부담부증여 배우자·직계존비속 간 적용 배제 여부 판정
  *
- * 지방세법 §7④: 배우자 또는 직계존비속으로부터의 부담부증여 → 전체 증여로 봄.
+ * 지방세법 §7⑫ 단서 → §7⑪: 배우자 또는 직계존비속으로부터의 부담부증여 → 전체 증여로 봄.
  * 즉, 유상/무상 분리 계산 없이 전체 과세표준에 증여세율(3.5%) 적용.
  *
  * @param giftRelation "spouse_or_lineal"이면 배우자 또는 직계존비속
@@ -30,6 +30,25 @@ export function isBurdenedGiftExcluded(
   giftRelation: "spouse_or_lineal" | "other" | undefined
 ): boolean {
   return giftRelation === "spouse_or_lineal";
+}
+
+/**
+ * 부담부증여 증여자 관계 단일 소스 (교재 대조 U1)
+ *
+ * 지방세법 §7⑫ 단서 → §7⑪ 「배우자 또는 직계존비속」. 화면은 수증자 관점 증여자 신분(`giftorRelation`) 하나만 묻는다.
+ * 그 값이 있으면 그것으로 판정하고(배우자·직계존속·직계비속 → 해당, 계부모·의붓자녀는 인척이라 해당 없음),
+ * 없을 때만 직접 API의 `giftRelation`을 쓴다 — 같은 사실을 두 칸에서 따로 받아 세액이 갈리던 결함 정정.
+ */
+export function resolveBurdenedGiftRelation(input: {
+  giftRelation?: "spouse_or_lineal" | "other";
+  giftorRelation?: string;
+}): "spouse_or_lineal" | "other" | undefined {
+  if (input.giftorRelation) {
+    return ["spouse", "lineal_ascendant", "lineal_descendant"].includes(input.giftorRelation)
+      ? "spouse_or_lineal"
+      : "other";
+  }
+  return input.giftRelation;
 }
 
 /**
@@ -47,7 +66,7 @@ export function resolveEffectiveCause(
   giftRelation: "spouse_or_lineal" | "other" | undefined
 ): string {
   if (acquisitionCause === "burdened_gift" && isBurdenedGiftExcluded(giftRelation)) {
-    // 지방세법 §7④: 전체를 증여로 봄
+    // 지방세법 §7⑫ 단서 → §7⑪: 전체를 증여로 봄
     return "gift";
   }
   return acquisitionCause;
@@ -59,7 +78,7 @@ export function resolveEffectiveCause(
 export function getBurdenedGiftExclusionMessage(): string {
   return (
     "배우자 또는 직계존비속 간 부담부증여는 전체를 증여로 봅니다 " +
-    `(지방세법 §7④). 승계 채무를 포함한 전체 시가에 증여세율(3.5%)을 적용합니다.`
+    `(${ACQUISITION.BURDENED_GIFT_FAMILY} → §7⑪). 승계 채무를 포함한 전체 시가에 증여세율(3.5%)을 적용합니다.`
   );
 }
 

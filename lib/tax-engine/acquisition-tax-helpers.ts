@@ -128,7 +128,7 @@ export function runDeemedAcquisitionStep(
 
     // 간주취득 과세표준을 reportedPrice로 주입 (acquisition-tax-base.ts에서 사용)
     // ⚠️ 분리 전과 동일하게 `effectiveInput`이 아니라 **`input`** 에서 펼친다 —
-    //    간주취득은 부담부증여 cause 변환(§7④)과 겹치지 않으므로 원본 동작을 그대로 옮겼다.
+    //    간주취득은 부담부증여 cause 변환(§7⑫ 단서)과 겹치지 않으므로 원본 동작을 그대로 옮겼다.
     effectiveInput = { ...input, reportedPrice: deemedResult.deemedTaxBase };
   }
 

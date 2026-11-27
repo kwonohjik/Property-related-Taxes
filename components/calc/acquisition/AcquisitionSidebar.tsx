@@ -15,6 +15,7 @@ import { linearInterpolationRate, getBasicRate } from "@/lib/tax-engine/acquisit
 import { housingShareRateBasis } from "@/lib/tax-engine/acquisition-tax-rate";
 import { SURCHARGE_RATES } from "@/lib/tax-engine/acquisition-surcharge/multi-house";
 import { isCorporateHouseAcquirer } from "@/lib/tax-engine/acquisition-surcharge/multi-house";
+import { resolveFormHouseCount } from "@/lib/calc/acquisition-tax-api";
 import { ACQUISITION_CONST } from "@/lib/tax-engine/legal-codes";
 import type { PropertyObjectType, AcquisitionCause } from "@/lib/tax-engine/types/acquisition.types";
 import type { FormState } from "./shared";
@@ -238,7 +239,7 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
     // 예상 세율 (주택 유상거래 기준) — 엔진 단일 진실
     let estimatedBaseRate: string | null = null;
     if (form.propertyType === "housing" && acqValue) {
-      const houseCount = parseInt(form.houseCountAfter) > 0 ? parseInt(form.houseCountAfter) : 1;
+      const houseCount = resolveFormHouseCount(form); // U4 — 보유 주택 목록이 있으면 자동 산정 값
       estimatedBaseRate = estimateHousingRateLabel(
         housingRateBasisOf(form, acqValue),
         houseCount,
@@ -253,7 +254,7 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
       acquisitionValue: acqValue,
       standardValue: stdValue,
       houseCountAfter: form.propertyType === "housing"
-        ? (parseInt(form.houseCountAfter) > 0 ? parseInt(form.houseCountAfter) : null)
+        ? resolveFormHouseCount(form)
         : null,
       isRegulated: form.isRegulatedArea,
       isCorporation: form.acquiredBy === "corporation",
@@ -274,7 +275,7 @@ export function computeAcquisitionSummary(form: FormState): AcquisitionSummary {
 
   const acqValue = rawValue > 0 ? rawValue : null;
   const stdValue = parseAmount(form.standardValue) || null;
-  const hcnt = parseInt(form.houseCountAfter) > 0 ? parseInt(form.houseCountAfter) : null;
+  const hcnt = resolveFormHouseCount(form); // U4 — 보유 주택 목록이 있으면 자동 산정 값
 
   // 대략적인 세율 미리보기 (주택 유상거래 기준) — 엔진 단일 진실
   let estimatedBaseRate: string | null = null;

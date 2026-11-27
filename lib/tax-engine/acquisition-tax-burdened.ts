@@ -52,6 +52,7 @@ export function computeBurdenedGiftResult(
     const effectiveIsRegulatedArea = resolveRegulatedAreaStatus(input.isRegulatedArea, {
       contractDateBeforeRegulation: input.contractDateBeforeRegulation,
       hasContractDepositProof: input.hasContractDepositProof,
+      acquisitionCause: "burdened_gift", // §13의2④는 매매계약만 — 부담부증여 유상분에는 적용하지 않는다(U5)
     });
     const stdValue = input.wholeHouseStandardValue ?? 0;
     const lowValueExcluded =

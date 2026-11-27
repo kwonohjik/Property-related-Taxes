@@ -204,6 +204,54 @@ export function isPreRegulationContractProtected(
   return true;
 }
 
+export interface PreRegulationContractInput {
+  contractDateBeforeRegulation?: boolean;
+  hasContractDepositProof?: boolean;
+  /** 취득 원인 — §13의2④는 「주택에 대한 매매계약(공동주택 분양계약을 포함한다)」만 (U5) */
+  acquisitionCause?: string;
+  /** 매매계약일(분양계약일 포함) */
+  saleContractDate?: string;
+  /** 조정대상지역 지정고시일 */
+  regulationDesignationDate?: string;
+}
+
+/**
+ * §13의2④ 지정 전 계약 보호 판정 (교재 대조 U5)
+ *
+ * - 매매계약(분양계약 포함)만 대상 — 증여·부담부증여·교환·경매는 매매계약이 아니다.
+ * - 매매계약일과 지정고시일이 모두 있으면 「지정고시일 이전」(당일 포함)인지 날짜로 확인한다.
+ *   토글이 켜져 있어도 계약일이 고시일보다 늦으면 적용하지 않고 경고한다.
+ */
+export function assessPreRegulationContract(input: PreRegulationContractInput): {
+  isProtected: boolean;
+  warnings: string[];
+} {
+  const warnings: string[] = [];
+  if (!isPreRegulationContractProtected(input.contractDateBeforeRegulation, input.hasContractDepositProof)) {
+    return { isProtected: false, warnings };
+  }
+  if (input.acquisitionCause !== undefined && input.acquisitionCause !== "purchase") {
+    warnings.push(
+      `조정대상지역 지정 전 계약 보호(${ACQUISITION.PRE_REGULATION_CONTRACT})는 매매계약(공동주택 분양계약 포함)에만 적용됩니다 — 이 취득 원인에는 적용하지 않았습니다.`
+    );
+    return { isProtected: false, warnings };
+  }
+  const c = input.saleContractDate;
+  const d = input.regulationDesignationDate;
+  if (c && d && c > d) {
+    warnings.push(
+      `조정대상지역 지정 전 계약 보호(${ACQUISITION.PRE_REGULATION_CONTRACT}) — 매매계약일(${c})이 지정고시일(${d})보다 늦어 적용하지 않았습니다.`
+    );
+    return { isProtected: false, warnings };
+  }
+  if (!c || !d) {
+    warnings.push(
+      `조정대상지역 지정 전 계약 보호(${ACQUISITION.PRE_REGULATION_CONTRACT}) — 매매계약일·지정고시일이 모두 입력되지 않아 날짜 확인 없이 「지정 전 계약」 선택을 그대로 적용했습니다.`
+    );
+  }
+  return { isProtected: true, warnings };
+}
+
 /**
  * [P1-6.5] §13의2④ 보호 적용 시 isRegulatedArea 재정의
  *
@@ -214,15 +262,9 @@ export function isPreRegulationContractProtected(
  */
 export function resolveRegulatedAreaStatus(
   isRegulatedArea: boolean | undefined,
-  input: {
-    contractDateBeforeRegulation?: boolean;
-    hasContractDepositProof?: boolean;
-  }
+  input: PreRegulationContractInput
 ): boolean {
-  const isProtected = isPreRegulationContractProtected(
-    input.contractDateBeforeRegulation,
-    input.hasContractDepositProof
-  );
+  const isProtected = assessPreRegulationContract(input).isProtected;
 
   // 보호 적용 시 비조정지역 취득으로 간주
   if (isProtected && isRegulatedArea) {

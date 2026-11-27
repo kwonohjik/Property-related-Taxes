@@ -471,9 +471,10 @@ export function Step2({
 - **2024.1.10~2027.12.31 신축 60㎡·3억(수도권 6억) 이하** 소형주택 (한시)
 - 미분양 아파트 수도권 외 85㎡·6억 이하 (2024.1.10.~2027.12.31. 최초 유상승계취득)
 
-## 세대 기준
-배우자 + 미혼 30세 미만 자녀 + 부모가 **동일 1세대**.
-별도 세대 인정 4종은 다음 단계에서 확인하세요.`}
+## 세대 기준 (시행령 §28의3①)
+주민등록표에 함께 기재된 가족(동거인 제외)이 1세대입니다.
+배우자, 취득일 현재 미혼인 30세 미만 자녀, 그리고 **취득자가 미혼이고 30세 미만이면 부모**는 주소가 달라도 같은 1세대입니다.
+별도 세대 인정 4종은 아래 「세대 별도 인정」 안내를 확인하세요.`}
             legalBasis={["지방세법시행령 제28조의4", "지방세법시행령 제28조의2"]}
           />
         }
@@ -524,70 +525,21 @@ export function Step2({
         </button>
       </div>
 
-      {/* 세대 별도 인정 — violet */}
-      <ToggleCard
-        tone="violet"
-        title="세대 별도 인정"
-        description="동일 세대원도 별도 세대로 인정되는 경우 — 시행령 §28의3②"
-        checked={!!form.separateHouseholdReason}
-        onCheckedChange={(v) => set("separateHouseholdReason", v ? "under30_income" : "")}
-        trailing={
-          <TaxHelp
-            title="세대 별도 인정 4종 (시행령 §28의3②)"
-            summary="동일 세대원도 4가지 조건 중 하나를 충족하면 별도 세대로 인정됩니다."
-            details={`## 세대 별도 인정 4종 (시행령 §28의3②)
-
-## 1호 — 30세 미만 소득 충족 자녀
-- 연간 소득 ≥ 기준중위소득 40% (2025년 기준 약 92만 원/월)
-- 독립 생계 유지
-- **미성년자는 소득 충족 시에도 별도 세대 인정 불가** (강조)
-
-## 2호 — 65세 이상 직계존속 동거봉양 합가
-부모·조부모와 합가한 경우 별도 세대로 인정
-
-## 3호 — 90일 이상 출국
-해외 체류 90일 이상이면 별도 세대로 인정
-
-## 4호 — 취득 후 60일 이내 주소 분리
-취득 후 60일 이내에 주소를 다른 곳으로 이전하면 별도 세대
-
-## 실무 주의사항
-세대 별도 인정은 **납세자가 증빙을 갖춰야** 합니다.
-단순 주소지 차이만으로는 인정되지 않으며, 실제 독립 생계 여부가 중요합니다.`}
-            legalBasis="지방세법시행령 제28조의3 제2항"
-          />
-        }
-      >
-        <RadioCardGroup
-          tone="violet"
-          layout="stack"
-          name="separateHouseholdReason"
-          value={form.separateHouseholdReason}
-          onChange={(v) => set("separateHouseholdReason", v)}
-          options={[
-            {
-              value: "under30_income",
-              label: "30세 미만 소득 충족 자녀 (미성년 제외)",
-              description: "12개월 소득 ≥ 기준중위소득 40% + 독립 생계 (§28의3②1호)",
-            },
-            {
-              value: "over65_cohabitation",
-              label: "65세 이상 직계존속 동거봉양 합가 (§28의3②2호)",
-            },
-            {
-              value: "overseas_90days",
-              label: "90일 이상 출국 (§28의3②3호)",
-            },
-            {
-              value: "relocate_60days",
-              label: "취득 후 60일 이내 주소 분리 (§28의3②4호)",
-            },
-          ]}
-        />
-        <p className="text-xs text-muted-foreground mt-2">
-          미성년자는 소득 충족 시에도 별도 세대 인정 불가 (§28의3②1호 단서)
+      {/* 세대 별도 인정 — violet (U3: 종전 토글은 엔진이 쓰지 않아 계산에 반영되지 않았다 → 입력 방법 안내로 대체) */}
+      <ToneCard tone="violet" title="세대 별도 인정 (시행령 §28의3②)" bodyClassName="space-y-2">
+        <p className="text-xs text-muted-foreground">
+          같은 주민등록표에 있어도 아래에 해당하는 세대원은 별도 세대입니다. 그 세대원이 소유한 주택·입주권·분양권·오피스텔은 위 보유 주택 목록에 넣지 마세요.
         </p>
-      </ToggleCard>
+        <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+          <li>1호 — 부모와 주민등록표를 달리하는 30세 미만 자녀로서 취득일이 속하는 달의 직전 12개월 소득이 기준 중위소득(12개월 환산)의 40% 이상이고 독립 생계 유지 (미성년자 제외)</li>
+          <li>2호 — 65세 이상 직계존속을 동거봉양하려고 30세 이상·혼인한·1호 소득요건 충족 성년 직계비속이 합가</li>
+          <li>3호 — 취학·근무 등으로 세대 전원이 90일 이상 출국하고 출국 후 거주지를 다른 가족 주소로 신고</li>
+          <li>4호 — 별도 세대를 구성할 수 있는 사람이 취득일부터 60일 이내에 그 주택으로 주소를 옮겨 세대 분리</li>
+        </ul>
+        <p className="text-xs text-muted-foreground">
+          배우자와 미혼 30세 미만 자녀는 주소가 달라도 같은 세대입니다 (§28의3①).
+        </p>
+      </ToneCard>
 
       {/* 신탁재산 위탁자 주택 */}
       <ToggleCard

@@ -24,6 +24,7 @@ import {
   validateInputConsistency,
   isExemptFromSurcharge_LowValue,
   resolveRegulatedAreaStatus,
+  assessPreRegulationContract,
   assessUnsoldApt17hoExclusion,
 } from "./exclusion";
 import { describeLowValueHouseLimit } from "./low-value-limit";
@@ -125,6 +126,8 @@ export interface SurchargeCheckInput {
   // ── [P1-6.5] §13의2④ 지정 전 계약 보호 ──
   /** 계약일이 조정지역 지정고시일 이전인지 */
   contractDateBeforeRegulation?: boolean;
+  /** 조정대상지역 지정고시일 — §13의2④ 날짜 확인(U5) */
+  regulationDesignationDate?: string;
   /** 계약금 지급 증빙 보유 여부 */
   hasContractDepositProof?: boolean;
 
@@ -206,13 +209,15 @@ export function assessSurcharge(input: SurchargeCheckInput): ExtendedSurchargeDe
   warnings.push(...validation.warnings);
 
   // ── 2단계: §13의2④ 지정 전 계약 보호 → isRegulatedArea 재정의 (P1-6.5) ──
-  const effectiveIsRegulatedArea = resolveRegulatedAreaStatus(
-    input.isRegulatedArea,
-    {
-      contractDateBeforeRegulation: input.contractDateBeforeRegulation,
-      hasContractDepositProof: input.hasContractDepositProof,
-    }
-  );
+  const preRegulationInput = {
+    contractDateBeforeRegulation: input.contractDateBeforeRegulation,
+    hasContractDepositProof: input.hasContractDepositProof,
+    acquisitionCause: input.acquisitionCause,
+    saleContractDate: input.saleContractDate,
+    regulationDesignationDate: input.regulationDesignationDate,
+  };
+  const effectiveIsRegulatedArea = resolveRegulatedAreaStatus(input.isRegulatedArea, preRegulationInput);
+  if (input.isRegulatedArea) warnings.push(...assessPreRegulationContract(preRegulationInput).warnings);
   const preRegulationContractApplied =
     input.isRegulatedArea === true && effectiveIsRegulatedArea === false;
 
