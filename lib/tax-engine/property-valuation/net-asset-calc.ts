@@ -12,6 +12,10 @@
  *
  * §55③: 영업권 가산 + 단서 1·2·3호 자동 배제 (별도 모듈 goodwill.ts에서 처리)
  *
+ * 🔑 §55① 후단 0원 하한은 여기서 걸지 않는다 — §55③ 「제1항을 적용할 때 … 영업권평가액은 해당 법인의
+ *    자산가액에 이를 합산한다」이므로 하한은 **영업권을 합산한 뒤**의 순자산가액(③)에 건다
+ *    (사용자 결정 Q-1 2026-11-28 · 오케스트레이터 ③). 「다」는 사실(음수 가능) 그대로 돌려준다.
+ *
  * 별지 부표3 2~3쪽 산식:
  *   자산총액 가 = ① + ② + ③ + ④ + ⑤ − ⑥ − ⑦
  *   부채총액 나 = ⑨ + ⑩ + ⑪ + ⑫ + ⑬ + ⑭ + ⑮ − ⑯ − ⑰ − ⑱  (2025.07.10 양식 ⑲소계 −⑱)
@@ -27,10 +31,8 @@ export interface NetAssetCalcResult {
   totalAssets: number;
   /** 나. 부채총액 (별지 양식 ⑲ 소계) */
   totalLiabilities: number;
-  /** 다. 영업권 포함 전 순자산가액 (가 − 나) */
+  /** 다. 영업권 포함 전 순자산가액 (가 − 나) — 0원 하한 «전» 사실값(음수 가능) */
   netAssetBeforeGoodwill: number;
-  /** §55① 후단 — 0 이하 시 0 처리 발동 여부 */
-  zeroFloorApplied: boolean;
 }
 
 /**
@@ -78,15 +80,13 @@ export function calcNetAssetTotal(
     (input.insuranceExtraordinaryReserve ?? 0) +
     (input.insuranceSurrenderReserve ?? 0);
 
-  // 다. 영업권 포함 전 순자산가액
-  const raw = totalAssets - totalLiabilities;
-  const netAssetBeforeGoodwill = Math.max(0, raw); // §55① 후단
+  // 다. 영업권 포함 전 순자산가액 (사실값 — §55① 후단 하한은 영업권 합산 후 ③에서)
+  const netAssetBeforeGoodwill = totalAssets - totalLiabilities;
 
   return {
     totalAssets,
     totalLiabilities,
     netAssetBeforeGoodwill,
-    zeroFloorApplied: raw < 0,
   };
 }
 

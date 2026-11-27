@@ -38,11 +38,11 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
   // 화면·PDF·엔진(`net-asset-calc`) 동일 부호 — ⑮은 가산
   const assetSubtotal = sumNetAssetRows(BESSHI_P2_ASSET_ROWS, eff);
   const liabilitySubtotal = sumNetAssetRows(BESSHI_P2_LIABILITY_ROWS, eff);
-  // 「다」도 엔진과 동일하게 §55① 후단 0 하한을 적용한다 (IG-062).
-  // 엔진 `calcNetAssetTotal`은 같은 값에 `Math.max(0, raw)`를 걸어 `netAssetBeforeGoodwill`을
-  // 만들고, 「마」는 그 값 + 영업권이다. 하한을 빼먹으면 자산 < 부채인 법인에서
-  // 「다」에 음수·「마」에 0이 찍혀 서식 라벨의 항등식 «마 = 다 + 라»가 화면에서 깨진다.
-  const preGoodwill = Math.max(0, assetSubtotal - liabilitySubtotal);
+  // 「다」는 사실값(⑧ − ⑲, 음수 가능) — 엔진 `calcNetAssetTotal`·PDF와 같다.
+  // §55① 후단 0원 하한은 §55③에 따라 영업권을 합산한 뒤 「마」에 건다(Q-1 2026-11-28 · IG-062 대체).
+  // 하한이 걸리면 «마 = 다 + 라»가 깨지므로 「마」 참조열에 그 사유를 적는다.
+  const preGoodwill = assetSubtotal - liabilitySubtotal;
+  const zeroFloored = preGoodwill + goodwillFinal < 0;
 
   return (
     <section aria-label="제2쪽 4. 순자산가액">
@@ -92,7 +92,7 @@ export function Page2NetAssetTable({ raw, netAssetTotal, goodwillFinal }: Page2N
           {/* 다·라·마 */}
           <NetAssetTr cellNum="다" label={BESSHI_P2_SECTION4.preGoodwillLabel} amount={preGoodwill} testid="다" topBorder />
           <NetAssetTr cellNum="라" label={BESSHI_P2_SECTION4.goodwillLabel} amount={goodwillFinal} refText={BESSHI_P2_SECTION4.goodwillRef} testid="라" />
-          <NetAssetTr cellNum="마" label={BESSHI_P2_SECTION4.netAssetLabel} amount={netAssetTotal} testid="마" final />
+          <NetAssetTr cellNum="마" label={BESSHI_P2_SECTION4.netAssetLabel} amount={netAssetTotal} refText={zeroFloored ? BESSHI_P2_SECTION4.netAssetZeroFloorRef : undefined} testid="마" final />
         </tbody>
       </table>
     </section>

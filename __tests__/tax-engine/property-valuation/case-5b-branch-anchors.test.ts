@@ -167,6 +167,8 @@ describe("[D-9a·9b] §54④ 3호 부동산 80% — 단서 양방향", () => {
   it("D-9a: 가중평균 > 순자산 → 가중평균 적용 (영업권은 §55③ 1호로 0)", () => {
     const input = makeBasicInput({
       netAssetOnlyReason: "real_estate_80",
+      // §54④ 단서는 평가기준일 2026.2.27. 이후만(부칙 <제36131호> 제11조 · U-03) — 단서 분기를 재려면 그 뒤 날짜
+      evaluationDate: new Date("2026-06-01"),
       fiscalYears: [
         // 각 사업연도 taxableIncome으로 약 333.3M 순손익 만들기
         {
@@ -210,7 +212,8 @@ describe("[D-9a·9b] §54④ 3호 부동산 80% — 단서 양방향", () => {
    *   - 가중평균(20,000) < 순자산(50,000) → 단서 발동 → 50,000 적용
    */
   it("D-9b: 가중평균 < 순자산 → 순자산 적용 (단서 발동)", () => {
-    const input = makeBasicInput({ netAssetOnlyReason: "real_estate_80" });
+    // 단서 분기는 평가기준일 2026.2.27. 이후만(U-03)
+    const input = makeBasicInput({ netAssetOnlyReason: "real_estate_80", evaluationDate: new Date("2026-06-01") });
     const result = evaluateUnlistedStockV2(input);
 
     expect(result.netAssetPerShare).toBe(50_000);
@@ -218,7 +221,7 @@ describe("[D-9a·9b] §54④ 3호 부동산 80% — 단서 양방향", () => {
 
     // 단서 발동 → 순자산 적용
     expect(result.finalPerShareValue).toBe(50_000);
-    expect(result.appliedRules.some((r) => r.includes("real_estate_80") && r.includes("단서"))).toBe(
+    expect(result.appliedRules.some((r) => r.includes("real_estate_80") && r.includes("단서 발동"))).toBe(
       true,
     );
   });
@@ -232,6 +235,8 @@ describe("[D-10a·10b] §54④ 5호 주식 80% — 단서 양방향", () => {
   it("D-10a: 가중평균 > 순자산 → 가중평균 적용 (단서 미발동)", () => {
     const input = makeBasicInput({
       netAssetOnlyReason: "stock_holding_80",
+      // §54④ 단서는 평가기준일 2026.2.27. 이후만(부칙 <제36131호> 제11조 · U-03) — 단서 분기를 재려면 그 뒤 날짜
+      evaluationDate: new Date("2026-06-01"),
       fiscalYears: [
         {
           fiscalYearLabel: "2023",
@@ -258,13 +263,14 @@ describe("[D-10a·10b] §54④ 5호 주식 80% — 단서 양방향", () => {
   });
 
   it("D-10b: 가중평균 < 순자산 → 순자산 적용 (단서 발동)", () => {
-    const input = makeBasicInput({ netAssetOnlyReason: "stock_holding_80" });
+    // 단서 분기는 평가기준일 2026.2.27. 이후만(U-03)
+    const input = makeBasicInput({ netAssetOnlyReason: "stock_holding_80", evaluationDate: new Date("2026-06-01") });
     const result = evaluateUnlistedStockV2(input);
 
     expect(result.netAssetPerShare).toBe(50_000);
     expect(result.weightedAvgPerShare).toBeLessThan(result.netAssetPerShare);
     expect(result.finalPerShareValue).toBe(50_000);
-    expect(result.appliedRules.some((r) => r.includes("stock_holding_80") && r.includes("단서"))).toBe(
+    expect(result.appliedRules.some((r) => r.includes("stock_holding_80") && r.includes("단서 발동"))).toBe(
       true,
     );
   });

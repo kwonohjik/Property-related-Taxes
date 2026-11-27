@@ -189,6 +189,8 @@ export const BESSHI_P2_SECTION4 = {
   goodwillRef: "제5쪽 6. 영업권 「자」",
   /** 마 순자산가액 */
   netAssetLabel: "순자산가액 (다 + 라)",
+  /** 마 회색 참조 — 다 + 라가 0 이하일 때 (상증령 §55① 후단 · §55③ 영업권 합산 후 하한, Q-1) */
+  netAssetZeroFloorRef: "다 + 라가 0 이하 → 0 (§55① 후단)",
 } as const;
 
 /**

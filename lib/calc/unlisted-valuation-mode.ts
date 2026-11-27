@@ -14,7 +14,11 @@
  *   - category !== "unlisted_stock" → item 그대로 반환 (동일 참조)
  *   - mode "simple" (또는 fallback "simple") → unlistedStockValuationV2 키를 제거한 새 객체 반환
  *     (폼 state는 건드리지 않음 — 엔진 전달용 정제만)
- *   - mode "formal" (또는 fallback "formal") → item 그대로 반환 (동일 참조)
+ *   - mode "formal" **명시** + V2 존재 → unlistedStockData(V1) 키를 제거한 새 객체 반환 (U-01)
+ *     — 새 카드는 V1 기본값 {totalShares:0, ownedShares:0}을 갖고 정식평가 화면엔 그 칸이 없다.
+ *       남겨 두면 ⑫ unlistedStockDataSchema(positive)가 계산 전체를 400으로 막는다.
+ *   - 레거시 fallback "formal"(mode 미저장) → item 그대로 반환 (동일 참조). 엔진
+ *     resolveUnlistedDisplayMode는 mode 미저장 + V1 존재를 simple로 읽으므로 V1을 지우면 평가 경로가 바뀐다.
  *
  * 레거시 fallback (C-8/C-9):
  *   unlistedValuationMode === undefined 일 때
@@ -60,6 +64,12 @@ export function resolveActiveUnlistedValuation(item: EstateItem): EstateItem {
     return rest as EstateItem;
   }
 
-  // formal: 그대로 반환 (동일 참조)
+  // formal 명시: V1 strip — 폼 state(간편 복귀용 V1)는 건드리지 않는다 (U-01)
+  if (item.unlistedValuationMode === "formal" && item.unlistedStockValuationV2) {
+    const { unlistedStockData: _omitV1, ...rest } = item;
+    return rest as EstateItem;
+  }
+
+  // 레거시 fallback formal: 그대로 반환 (동일 참조)
   return item;
 }

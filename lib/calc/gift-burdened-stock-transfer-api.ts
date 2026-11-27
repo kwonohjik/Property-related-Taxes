@@ -13,6 +13,8 @@ import type { BurdenedGiftStockTransferTaxInput } from "@/lib/tax-engine/types/i
 import type { FormState } from "@/components/calc/gift-tax-form-shared";
 import { buildBurdenedUnlistedValuationFields } from "@/lib/calc/gift-burdened-stock-unlisted";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
+import { extractShares } from "@/lib/calc/stock-valuation-tool";
+import { resolveUnlistedDisplayMode } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // § 4. 주식 부담부증여 body 구성 (순수 함수)
@@ -100,14 +102,16 @@ export function buildGiftStockBurdenedTransferBody(
     throw new Error("주식 평가액이 0 — 증여재산가액을 입력하세요");
   }
 
-  // shareCount 결정: 상장 → listedStockShares, 비상장 → unlistedStockData.ownedShares
+  // shareCount 결정: 상장 → listedStockShares, 비상장 → 활성 평가 모드(정식 V2 / 간편 V1)의 주식수 (U-44)
+  //   평가액 C(computeEffectiveValuation)와 같은 모드에서 읽어야 B/C 안분·개산공제 base가 맞는다.
   const isListed = bgt.marketType !== "unlisted";
-  const shareCount = isListed
-    ? (item.listedStockShares ?? 1)
-    : (item.unlistedStockData?.ownedShares ?? 1);
-  const totalIssuedShares = isListed
-    ? shareCount
-    : (item.unlistedStockData?.totalShares ?? shareCount);
+  const isFormalV2 =
+    !isListed && resolveUnlistedDisplayMode(item) === "formal" && !!item.unlistedStockValuationV2;
+  const shareCount = isListed ? (item.listedStockShares ?? 1) : extractShares(item);
+  const unlistedTotalShares = isFormalV2
+    ? item.unlistedStockValuationV2?.totalShares
+    : item.unlistedStockData?.totalShares;
+  const totalIssuedShares = isListed ? shareCount : (unlistedTotalShares || shareCount);
 
   const acquisitionDateStr =
     bgt.acquisitionDate instanceof Date

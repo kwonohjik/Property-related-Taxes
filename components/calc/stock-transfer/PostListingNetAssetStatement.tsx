@@ -205,10 +205,10 @@ export function NetAssetStatementTable({ form, onChange, cols }: NetAssetStateme
             key={c.col}
             className="rounded border border-sky-300 bg-sky-50/70 px-3 py-2 text-xs text-sky-800 dark:text-sky-200 dark:bg-sky-950/40"
           >
-            <strong>{COL_LABEL[c.col]} 사업연도</strong> — 자본잠식. 영업권 포함 전 순자산가액이
-            0원 이하이므로 <strong>0원으로 보아</strong> 평가합니다. 영업권이 있으면 영업권만
-            가산됩니다. 「상속세 및 증여세법 시행령」 제55조 제1항 후단(「소득세법」 제99조
-            제1항 제4호 전단이 준용)
+            <strong>{COL_LABEL[c.col]} 사업연도</strong> — 자본잠식. 영업권을 합산한 순자산가액이
+            0원 이하이므로 <strong>0원으로 보아</strong> 평가합니다. 영업권은 자산가액에 합산한 뒤
+            0원 하한을 봅니다(같은 영 제55조 제3항). 「상속세 및 증여세법 시행령」 제55조 제1항
+            후단(「소득세법」 제99조 제1항 제4호 전단이 준용)
             <LawArticleModal
               legalBasis={STOCK.INH_DECREE_55_1_NET_ASSET_ZERO_FLOOR}
               label="상증령 §55①"

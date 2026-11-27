@@ -22,6 +22,7 @@ import type { BurdenedGiftStockTransferTaxInput } from "@/lib/tax-engine/types/i
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
 import { EstimatedUnlistedBlock } from "@/components/calc/stock-transfer/EstimatedUnlistedBlock";
 import { burdenedAcquisitionReason } from "@/lib/calc/gift-burdened-stock-unlisted";
+import { extractShares } from "@/lib/calc/stock-valuation-tool";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
@@ -138,7 +139,7 @@ interface Props {
 export function StockBurdenedUnlistedValuationBlock({ item, bgt, transferDate, onChange }: Props) {
   const form = toUnlistedBlockForm(bgt, {
     transferDate,
-    ownedShares: item.unlistedStockData?.ownedShares,
+    ownedShares: extractShares(item) || undefined, // U-44: 활성 평가 모드(정식 V2 / 간편 V1)의 보유주식수
     assumedDebt: item.assumedDebtForGift ?? 0,
   });
   return (
