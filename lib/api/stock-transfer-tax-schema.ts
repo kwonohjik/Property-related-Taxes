@@ -530,6 +530,10 @@ export {
   departureDayValuationModeSchema,
   deferralReasonSchema,
   foreignTaxExclusionReasonSchema,
+  foreignWorkerStatusSchema,
+  foreignWorkerFamilyKindSchema,
+  foreignWorkerChecksSchema,
+  basicDeductionAllocationSchema,
   exitTaxHoldingSchema,
   exitTaxInputSchema,
 } from "./stock-transfer-exit-tax-schema";

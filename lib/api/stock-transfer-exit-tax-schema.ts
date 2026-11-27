@@ -9,6 +9,9 @@
  */
 
 import { z } from "zod";
+import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
+import { findExitTaxInputProblem } from "@/lib/tax-engine/stock-transfer/exit-tax-input-check";
+import { buildExitTaxEngineInput } from "./stock-transfer-exit-tax-engine-input";
 
 // ============================================================
 // ⑫ PR-4B 국외전출세 Zod 입력 스키마 (14지점 ⑨⑫)
@@ -23,6 +26,9 @@ export const departureDayValuationModeSchema = z.enum([
   "prior_year_std",   // §99①3 기준시가
   "unlisted_sample",  // §178의9②2호가목 전후 각 3개월 매매사례가액
   "unlisted_std",     // §99①4 비상장 기준시가
+  // 2027.1.1. 이후 출국 · 국외주식(marketType "foreign_stock") 전용 외화 경로
+  "foreign_market_price",   // 출국일 외화 거래가액(1주당) × 출국일 기준환율
+  "foreign_decree_178_3",   // 시행령 §178의3 시가(외화 1주당, 직접 입력) × 출국일 기준환율
 ]);
 
 /** ⑨ Zod enum: 납부유예 사유 */
@@ -30,6 +36,27 @@ export const deferralReasonSchema = z.enum(["none", "study_abroad", "other_10yr"
 
 /** ⑨ Zod enum: §118의13② 외국납부세액공제 배제 사유 (3값) */
 export const foreignTaxExclusionReasonSchema = z.enum(["none", "credit_allowed", "step_up"]);
+
+/** ⑨ Zod enum: 영 §178의8②2·3호 외국인근로자 구분 (2027.1.1. 이후 출국분) */
+export const foreignWorkerStatusSchema = z.enum(["none", "foreign_worker", "foreign_worker_family"]);
+
+/** ⑨ Zod enum: 영 §178의8②3호 가족 구분 (배우자 / 20세 이하 직계비속) */
+export const foreignWorkerFamilyKindSchema = z.enum(["spouse", "child_20_or_under"]);
+
+/** ⑫ 영 §178의8②2·3호 외국인근로자 요건 4개 (사용자 선언) — 키가 빠지면 거부한다(미입력을 false로 채우지 않는다) */
+export const foreignWorkerChecksSchema = z.object({
+  isOfficerOrEmployee: z.boolean(),
+  isNotDailyWorker: z.boolean(),
+  domesticWorkRatioAtLeast80: z.boolean(),
+  departedWithin6MonthsOfWorkEnd: z.boolean(),
+});
+
+/** ⑫ §118의10④ 기본공제 250만원의 세율 구분별 배분 — 과세 구분이 둘 이상일 때 사용자가 입력 (자동 안분 없음) */
+export const basicDeductionAllocationSchema = z.object({
+  clause1: z.number().min(0).optional(),
+  clause2a: z.number().min(0).optional(),
+  clause2b: z.number().min(0).optional(),
+});
 
 /**
  * ⑫ 국외전출세 보유 종목 Zod 정의
@@ -41,7 +68,8 @@ export const foreignTaxExclusionReasonSchema = z.enum(["none", "credit_allowed",
 export const exitTaxHoldingSchema = z.object({
   id: z.string().min(1),
   stockName: z.string().min(1),
-  marketType: z.enum(["kospi", "kosdaq", "konex", "unlisted"]),
+  // "foreign_stock" = §94①3다목 국외주식등 (2027.1.1. 이후 출국분부터 과세, 이전은 제외·echo)
+  marketType: z.enum(["kospi", "kosdaq", "konex", "unlisted", "foreign_stock"]),
   shareCount: z.number().int().positive(),
   acquisitionDate: z.union([z.string(), z.date()]),   // route handler에서 map toDate()
   perShareAcquisitionPrice: z.number().min(0),
@@ -50,6 +78,18 @@ export const exitTaxHoldingSchema = z.object({
   priorYearEndMonthAvg: z.number().min(0).optional(),
   unlistedSamplePrice: z.number().min(0).optional(),
   unlistedStdPricePerShare: z.number().min(0).optional(),
+
+  // ── 국외주식(foreign_stock) 전용 — 소득세법 §94①3다목 · 시행령 §157의3 ──
+  // 외화 경로의 필수 여부·원화 혼용·환율 자릿수는 엔진(`resolveForeignHoldingKrw`·`assertForeignInputs`)이 판정하고,
+  // 아래 최상위 refine이 엔진을 그대로 돌려 같은 사유·경로로 거부한다(⑧과 단일 소스).
+  isListedForeignCorp: z.boolean().optional(),
+  isSmallMediumEnterprise: z.boolean().optional(),
+  countryCode: z.string().optional(),
+  foreignCurrencyCode: z.string().optional(),
+  departureDayPriceForeign: z.number().min(0).optional(),
+  departureExchangeRate: z.number().min(0).optional(),
+  perShareAcquisitionPriceForeign: z.number().min(0).optional(),
+  acquisitionExchangeRate: z.number().min(0).optional(),
 }).superRefine((h, ctx) => {
   // 모드별 필수 입력 검증 (자동 fallback 금지)
   if (h.departureDayValuationMode === "market_price" && h.departureDayMarketPrice == null) {
@@ -102,6 +142,16 @@ export const exitTaxInputSchema = z.object({
   // ── 보유 종목 (최소 1건) ──
   holdings: z.array(exitTaxHoldingSchema).min(1, "보유 주식을 1종목 이상 입력하세요"),
 
+  // ── 영 §178의8②2·3호 외국인근로자 제외 (2027.1.1. 이후 출국분) ──
+  // 미입력은 "none"(엔진 default) — status ≠ none 일 때의 필수 입력은 엔진 판정(`assertForeignInputs`)이 거부한다
+  foreignWorkerStatus: foreignWorkerStatusSchema.optional(),
+  foreignWorkerChecks: foreignWorkerChecksSchema.optional(),
+  foreignWorkerFamilyKind: foreignWorkerFamilyKindSchema.optional(),
+  foreignWorkerStartDate: z.union([z.string(), z.date()]).optional(),   // ⑭ toOptionalDate
+
+  // ── §118의10④ 기본공제 250만원 구분별 배분 — 과세 구분이 둘 이상이면 필수(엔진 `calcBuckets`가 판정) ──
+  basicDeductionAllocation: basicDeductionAllocationSchema.optional(),
+
   // ── 납부유예 §118의16 ──
   deferralRequested: z.boolean(),
   deferralReason: deferralReasonSchema,
@@ -152,6 +202,37 @@ export const exitTaxInputSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ["actualTransferPricePerShare"],
       message: "실제 양도 단가는 0 이상이어야 합니다",
+    });
+  }
+
+  // 입력 결함 판정은 엔진이 한다 — 같은 판정을 여기서 다시 구현하지 않는다(⑧↔⑫ 단일 소스, 계획서 §5.1).
+  // 위에서 이미 걸린 결함이 있으면 엔진을 돌리지 않는다(같은 문제를 두 번 보고하지 않는다).
+  if (ctx.issues.length > 0) return;
+  let engineInput;
+  try {
+    engineInput = buildExitTaxEngineInput(d as Record<string, unknown>);
+  } catch (err) {
+    // 날짜 형식 오류 — 종전에는 route에서 잡히지 않아 500이었다
+    ctx.addIssue({
+      code: "custom",
+      path: [],
+      message: err instanceof Error ? err.message : "날짜 형식이 올바르지 않습니다",
+    });
+    return;
+  }
+  let problem;
+  try {
+    problem = findExitTaxInputProblem(engineInput);
+  } catch (err) {
+    // 입력 결함이 아닌 오류(세율 누락 등)는 여기서 가리지 않는다 — route가 종전대로 응답한다
+    if (err instanceof TaxCalculationError) return;
+    throw err;
+  }
+  if (problem) {
+    ctx.addIssue({
+      code: "custom",
+      path: problem.path ? problem.path.split(".") : [],
+      message: problem.message,
     });
   }
 });
