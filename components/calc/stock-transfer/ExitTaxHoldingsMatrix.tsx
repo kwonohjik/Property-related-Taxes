@@ -28,6 +28,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { isExitTaxFrom2027 } from "@/lib/tax-engine/data/exit-tax-2027-era";
+import { foreignDepartureValueKrw } from "@/lib/calc/stock-transfer-exit-tax-fx-preview";
 import { ExitTaxForeignHoldingFields } from "./ExitTaxForeignHoldingFields";
 import type { ExitTaxHoldingForm } from "@/lib/stores/calc-wizard-stock-store";
 import { createEmptyExitTaxHolding } from "@/lib/stores/calc-wizard-stock-store";
@@ -105,8 +106,11 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange, departureDate }: Exi
   const era = isExitTaxFrom2027(departureDate);
   const marketOptions = era ? [...MARKET_OPTIONS, FOREIGN_MARKET_OPTION] : MARKET_OPTIONS;
   // 총 간주양도가액 미리보기 (useMemo — store 미러링 금지)
+  // 국내(원화 입력)와 국외주식(외화 환산 참고)은 합산 단위가 달라 사이드바처럼 따로 센다.
+  // 국외 행 환산은 사이드바와 같은 함수(`foreignDepartureValueKrw` → 엔진 `toKrwExact`) — 화면에서 다시 계산하지 않는다.
   const totalDepartureDayValue = useMemo(() => {
     return holdings.reduce((sum, h) => {
+      if (h.marketType === "foreign_stock") return sum;
       const shares = parseInt(h.shareCount.replace(/,/g, ""), 10) || 0;
       const mode = h.departureDayValuationMode || "market_price";
       let priceStr = "";
@@ -118,6 +122,11 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange, departureDate }: Exi
       return sum + shares * price;
     }, 0);
   }, [holdings]);
+  const foreignDepartureTotal = useMemo(
+    () => (era ? holdings.reduce((sum, h) => sum + (foreignDepartureValueKrw(h) ?? 0), 0) : 0),
+    [holdings, era],
+  );
+  const hasForeignRow = era && holdings.some((h) => h.marketType === "foreign_stock");
 
   // ── 행 추가 — 빈 행 정의는 `createEmptyExitTaxHolding()` 하나다(이중 정의 정리) ──
   function addHolding() {
@@ -404,11 +413,23 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange, departureDate }: Exi
         + 종목 추가
       </button>
 
-      {/* 합산 미리보기 */}
-      {holdings.length > 1 && totalDepartureDayValue > 0 && (
+      {/* 합산 미리보기 — 국외 행이 없으면 종전 한 줄 마크업 그대로 */}
+      {holdings.length > 1 && (totalDepartureDayValue > 0 || foreignDepartureTotal > 0) && (
         <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-950/40">
-          <span className="font-semibold">보유 종목 합계 간주양도가액 (참고):</span>{" "}
-          {totalDepartureDayValue.toLocaleString()}
+          {totalDepartureDayValue > 0 && (
+            <>
+              <span className="font-semibold">
+                {hasForeignRow ? "국내주식 합계 간주양도가액 (참고):" : "보유 종목 합계 간주양도가액 (참고):"}
+              </span>{" "}
+              {totalDepartureDayValue.toLocaleString()}
+            </>
+          )}
+          {foreignDepartureTotal > 0 && (
+            <div>
+              <span className="font-semibold">국외주식 합계 간주양도가액 (환산 참고):</span>{" "}
+              {foreignDepartureTotal.toLocaleString()}
+            </div>
+          )}
         </div>
       )}
 
