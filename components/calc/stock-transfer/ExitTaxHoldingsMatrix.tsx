@@ -23,12 +23,12 @@
  */
 
 import { useMemo } from "react";
-import { nanoid } from "nanoid";
 import { CurrencyInput, parseAmount } from "@/components/calc/inputs/CurrencyInput";
 import { DateInput } from "@/components/ui/date-input";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import type { ExitTaxHoldingForm } from "@/lib/stores/calc-wizard-stock-store";
+import { createEmptyExitTaxHolding } from "@/lib/stores/calc-wizard-stock-store";
 
 // ── 시장 옵션 ──
 const MARKET_OPTIONS: { value: ExitTaxHoldingForm["marketType"]; label: string }[] = [
@@ -87,24 +87,9 @@ export function ExitTaxHoldingsMatrix({ holdings, onChange }: ExitTaxHoldingsMat
     }, 0);
   }, [holdings]);
 
-  // ── 행 추가 ──
+  // ── 행 추가 — 빈 행 정의는 `createEmptyExitTaxHolding()` 하나다(이중 정의 정리) ──
   function addHolding() {
-    onChange([
-      ...holdings,
-      {
-        id: nanoid(),
-        stockName: "",
-        marketType: "kospi",
-        shareCount: "",
-        acquisitionDate: "",
-        perShareAcquisitionPrice: "",
-        departureDayValuationMode: "market_price",
-        departureDayMarketPrice: "",
-        priorYearEndMonthAvg: "",
-        unlistedSamplePrice: "",
-        unlistedStdPricePerShare: "",
-      },
-    ]);
+    onChange([...holdings, createEmptyExitTaxHolding()]);
   }
 
   // ── 행 삭제 ──

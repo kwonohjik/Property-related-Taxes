@@ -20,9 +20,9 @@ import {
   type AcquisitionLotForm,
   type TransferLotForm,
   type SpecificMatchingForm,
-  type ExitTaxHoldingForm,
   createInitialStockFormData,
 } from "./calc-wizard-stock-store";
+import { normalizeExitTaxHoldings } from "./calc-wizard-stock-normalize-exit";
 
 // ============================================================
 // normalize — sessionStorage 마이그레이션 호환 (③ 동기화 지점)
@@ -600,53 +600,6 @@ function normalizeFsInstallmentReceipts(
       };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
-}
-
-// ============================================================
-// 분할 lot 배열 sanitizer (③ 동기화 지점)
-// ============================================================
-
-// ============================================================
-// PR-4B 국외전출세 보유 종목 배열 normalizer
-// ============================================================
-
-function normalizeExitTaxHoldings(raw: unknown): ExitTaxHoldingForm[] {
-  if (!Array.isArray(raw)) return [];
-  const validModes = ["market_price", "prior_year_std", "unlisted_sample", "unlisted_std"] as const;
-  const validMarkets = ["kospi", "kosdaq", "konex", "unlisted"] as const;
-  return raw
-    .map((r): ExitTaxHoldingForm | null => {
-      if (!r || typeof r !== "object") return null;
-      const o = r as Record<string, unknown>;
-      const idVal = typeof o.id === "string" ? o.id : null;
-      if (!idVal) return null;
-      const mode = typeof o.departureDayValuationMode === "string" &&
-        (validModes as readonly string[]).includes(o.departureDayValuationMode)
-        ? (o.departureDayValuationMode as ExitTaxHoldingForm["departureDayValuationMode"])
-        : "market_price";
-      const mkt = typeof o.marketType === "string" &&
-        (validMarkets as readonly string[]).includes(o.marketType)
-        ? (o.marketType as ExitTaxHoldingForm["marketType"])
-        : "kospi";
-      return {
-        id: idVal,
-        stockName: typeof o.stockName === "string" ? o.stockName : "",
-        marketType: mkt,
-        shareCount: typeof o.shareCount === "string" ? o.shareCount : "",
-        acquisitionDate: typeof o.acquisitionDate === "string" ? o.acquisitionDate : "",
-        perShareAcquisitionPrice: typeof o.perShareAcquisitionPrice === "string" ? o.perShareAcquisitionPrice : "",
-        departureDayValuationMode: mode,
-        departureDayMarketPrice: typeof o.departureDayMarketPrice === "string" ? o.departureDayMarketPrice : "",
-        priorYearEndMonthAvg: typeof o.priorYearEndMonthAvg === "string" ? o.priorYearEndMonthAvg : "",
-        unlistedSamplePrice: typeof o.unlistedSamplePrice === "string" ? o.unlistedSamplePrice : "",
-        unlistedStdPricePerShare: typeof o.unlistedStdPricePerShare === "string" ? o.unlistedStdPricePerShare : "",
-        // 보유현황 신고서 표시 전용 — 구 세션에는 없던 필드라 빈 문자열로 채운다
-        stockCodeOrBizNumber: typeof o.stockCodeOrBizNumber === "string" ? o.stockCodeOrBizNumber : "",
-        faceValuePerShare: typeof o.faceValuePerShare === "string" ? o.faceValuePerShare : "",
-        ownershipRatio: typeof o.ownershipRatio === "string" ? o.ownershipRatio : "",
-      };
-    })
-    .filter((l): l is ExitTaxHoldingForm => l !== null);
 }
 
 // ============================================================
