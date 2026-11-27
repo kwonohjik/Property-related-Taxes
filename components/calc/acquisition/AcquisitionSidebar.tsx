@@ -311,37 +311,7 @@ export function AcquisitionSidebar({
   const visitedUpTo = Math.max(maxVisitedStep ?? currentStep, currentStep);
   const isDeemed = isDeemedAcquisitionCause(form.acquisitionCause);
 
-  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- 명시 deps로 selector 안정화. Compiler 자동 메모와 별도로 유지
-  const summary = useMemo(() => computeAcquisitionSummary(form), [
-    form.reportedPrice,
-    form.marketValue,
-    form.constructionCost,
-    form.standardValue,
-    form.houseCountAfter,
-    form.isRegulatedArea,
-    form.acquiredBy,
-    form.propertyType,
-    form.acquisitionCause,
-    form.deemedMajorIsListed,
-    form.deemedMajorIsFoundingShare,
-    form.deemedMajorCorporateAssetValue,
-    form.deemedMajorPrevShareRatio,
-    form.deemedMajorNewShareRatio,
-    form.deemedLandPrevStandardValue,
-    form.deemedLandNewStandardValue,
-    // §10의6①1호 본칙 — 빠뜨리면 토글을 켜도 사이드바가 차액으로 stale 된다
-    form.deemedLandActualPriceKnown,
-    form.deemedLandActualPrice,
-    form.deemedRenovationPrevStandardValue,
-    form.deemedRenovationNewStandardValue,
-    // §15② 단서 — 사치성 여부·물건별 구분이 세율·합계를 바꾼다. 빠뜨리면 사이드바가 stale 된다.
-    form.isLuxuryProperty,
-    form.deemedMajorUseBuckets,
-    form.deemedMajorAssetBuckets,
-    form.isInstallmentAcquisition,
-    form.installments,
-    form.installmentTotalContractPrice,
-  ]);
+  const summary = useMemo(() => computeAcquisitionSummary(form), [form]);
 
   const activeSteps = isDeemed
     ? ["취득 정보", "간주취득 상세"]

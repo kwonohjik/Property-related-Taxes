@@ -53,8 +53,8 @@ export function ExcessShareholderTable({ rows, onChange }: Props) {
 
   // 총 실수령 배당합계 (단순 합산 — 미리보기 표시용)
   const totalActualDividend = useMemo(
-    () => safeRows.reduce((sum, r) => sum + parseAmount(r.actualDividendStr), 0),
-    [safeRows],
+    () => (rows ?? []).reduce((sum, r) => sum + parseAmount(r.actualDividendStr), 0),
+    [rows],
   );
 
   function addRow() {

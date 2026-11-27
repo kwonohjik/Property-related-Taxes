@@ -210,6 +210,9 @@ export function CompanionAcqPurchaseBlock(props: BlockProps) {
     ) {
       props.onPre1990Change({ pre1990Enabled: true });
     }
+    // 트리거 3개가 바뀔 때만 켠다 — pre1990Enabled·onPre1990Change를 넣으면 사용자가 끈 직후 다시 켜지고
+    // (onPre1990Change가 렌더마다 새 함수면) 매 렌더 재발동한다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.useEstimatedAcquisition, isLand, acqDatePre1990]);
 
   // 건물 취득일 < 2005.4.29. (개별주택공시가격 최초 고시 이전) → usePreHousingDisclosure 자동 체크
