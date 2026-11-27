@@ -21,7 +21,8 @@ function result(o: Partial<StockTransferResult> = {}): StockTransferResult {
     underReportPenalty: 0,
     latePaymentPenalty: 68_200,
     electronicFilingCredit: 0,
-  } as StockTransferResult & typeof o;
+    ...o,
+  } as StockTransferResult;
 }
 
 describe("PR-BASIS 정상 신고 + 납부지연", () => {
