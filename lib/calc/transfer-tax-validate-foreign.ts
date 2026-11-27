@@ -15,13 +15,13 @@ import type { z } from "zod";
 import { FOREIGN_RE_MAX_ASSETS, FOREIGN_RE_MAX_ROWS } from "@/lib/api/transfer-foreign-schema";
 import { FOREIGN_RE_REFINES } from "@/lib/api/transfer-foreign-refines";
 import { buildForeignRealEstateBody, foreignAssetLabel } from "@/lib/calc/transfer-foreign-body";
+import { TRANSFER_FOREIGN_RE } from "@/lib/tax-engine/legal-codes/transfer-foreign-realestate";
 import type { ForeignAssetForm, ForeignMoneyRowForm } from "@/lib/stores/calc-wizard-form-foreign";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import type { ValidationIssue } from "./transfer-tax-validate";
 import type { IssueField } from "./transfer-tax-validate-field";
 
-export const FOREIGN_KIND_RIGHT_BLOCKED_MESSAGE =
-  "부동산에 관한 권리(소득세법 §118의2 2호)는 계산하지 않습니다 — 토지 또는 건물을 선택하세요.";
+export const FOREIGN_KIND_RIGHT_BLOCKED_MESSAGE = `부동산에 관한 권리(${TRANSFER_FOREIGN_RE.SECTION_118_2_SCOPE} 2호)는 계산하지 않습니다 — 토지 또는 건물을 선택하세요.`;
 
 type RowKind = "capitalRows" | "costRows" | "taxRows";
 const ROW_LABEL: Record<RowKind, string> = { capitalRows: "자본적지출", costRows: "양도비", taxRows: "외국납부세액" };

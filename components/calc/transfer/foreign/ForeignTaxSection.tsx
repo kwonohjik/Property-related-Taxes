@@ -15,6 +15,7 @@ import { COUNTRY_OPTIONS } from "@/components/calc/foreign/foreign-options";
 import type { ForeignMoneyRowForm } from "@/lib/stores/calc-wizard-form-foreign";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import { FOREIGN_RE_MAX_ROWS } from "@/lib/api/transfer-foreign-schema";
+import { TRANSFER_FOREIGN_RE as RE } from "@/lib/tax-engine/legal-codes/transfer-foreign-realestate";
 import { FOREIGN_RE_TAX_METHOD_OPTIONS, ROW_EMPTY_HINT, krwOfExact, limitRows } from "./foreign-ui-shared";
 
 interface Props {
@@ -33,7 +34,7 @@ export function ForeignTaxSection({ form, onChange }: Props) {
   }
 
   return (
-    <ToneCard tone="violet" title="외국납부세액 (소득세법 §118의6)" bodyClassName="space-y-3">
+    <ToneCard tone="violet" title={`외국납부세액 (${RE.SECTION_118_6_FOREIGN_TAX})`} bodyClassName="space-y-3">
       <ToggleCard
         tone="violet"
         checked={form.foreignTaxEnabled}
@@ -70,7 +71,6 @@ export function ForeignTaxSection({ form, onChange }: Props) {
                   onChange={(next) => setRows(i, next)}
                   krwOf={krwOfExact}
                   fieldPrefix={`foreignTaxRow.${i}`}
-                  rateShortcut={{ rate: a.transferRate, label: "양도일 환율과 같음" }}
                   labels={{
                     dateHeader: "납부일",
                     amountHeader: "납부세액",

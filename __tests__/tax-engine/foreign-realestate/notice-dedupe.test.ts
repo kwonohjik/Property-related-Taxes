@@ -15,6 +15,8 @@ const rates = ratesAt("2026-07-10");
 const CODE_TOPIC = {
   LOCAL_TAX_WEIGHTING_NOT_EVALUATED: /지방소득세|조례|§103의3/,
   FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY: /환산 기준일|납부일/,
+  DOMESTIC_TRANSFER_NOT_AGGREGATED: /국내 양도소득|합산/,
+  UNSUPPORTED_SITUATIONS_NOT_EVALUATED: /상속|증여|환차익|장기할부|시가로/,
 } as const satisfies Record<ForeignRealEstateConfirmationCode, RegExp>;
 
 const t = (assetId: string, krw: number) => ftax(assetId, krw / 1_000, "2026-07-20", 1_000);

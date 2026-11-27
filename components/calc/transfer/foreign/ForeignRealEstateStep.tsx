@@ -13,10 +13,12 @@ import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { Button } from "@/components/ui/button";
 import { FOREIGN_RE_MAX_ASSETS } from "@/lib/api/transfer-foreign-schema";
 import { isForeignResidenceBoundaryAmbiguous, isForeignResidenceUnderMin } from "@/lib/calc/transfer-foreign-scope";
+import { TRANSFER_FOREIGN_RE as RE } from "@/lib/tax-engine/legal-codes/transfer-foreign-realestate";
 import { makeDefaultForeignAsset, type ForeignAssetForm } from "@/lib/stores/calc-wizard-form-foreign";
 import type { TransferFormData } from "@/lib/stores/calc-wizard-form.types";
 import { ForeignAssetCard } from "./ForeignAssetCard";
 import { ForeignTaxSection } from "./ForeignTaxSection";
+import { ForeignUnsupportedNotice } from "./ForeignUnsupportedNotice";
 import { RESIDENCE_BOUNDARY_NOTICE, RESIDENCE_UNDER_MIN_NOTICE, UNREGISTERED_NOTICE } from "./foreign-ui-shared";
 
 interface Props {
@@ -35,8 +37,10 @@ export function ForeignRealEstateStep({ form, onChange, assetErrors }: Props) {
 
   return (
     <div className="space-y-4" data-testid="foreign-real-estate-step">
-      {/* 납세의무 (§118의2) */}
-      <ToneCard tone="rose" title="납세의무 (소득세법 §118의2)" bodyClassName="space-y-3">
+      <ForeignUnsupportedNotice />
+
+      {/* 납세의무 */}
+      <ToneCard tone="rose" title={`납세의무 (${RE.SECTION_118_2_SCOPE})`} bodyClassName="space-y-3">
         <FieldCard
           label="국내 거주 연수"
           required

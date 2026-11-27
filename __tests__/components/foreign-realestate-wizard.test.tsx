@@ -167,6 +167,40 @@ describe("국외 입력 화면 — 안내·힌트·카드 관리", () => {
     expect(useCalcWizardStore.getState().formData.foreignAssets[0].capitalRows[0].exchangeRate).toBe("1100");
   });
 
+  it("U5: 국외 1단계 맨 위에 «지원하지 않는 경우» 안내 카드가 있다(국내 합산 안 함 · 상속·증여 · 환차익 · 장기할부 · 시가 · 비과세)", () => {
+    seed();
+    render(<TransferTaxCalculator />);
+    const card = screen.getByTestId("foreign-unsupported-notice");
+    const step = screen.getByTestId("foreign-real-estate-step");
+    expect(step.firstElementChild).toBe(card);
+    expect(card.textContent).toContain("이 계산이 지원하지 않는 경우");
+    for (const id of ["domestic", "inherited", "fxBorrow", "installment", "market", "exemption"]) {
+      expect(within(card).getByTestId(`foreign-unsupported-${id}`)).toBeTruthy();
+    }
+    expect(within(card).getByTestId("foreign-unsupported-domestic").textContent).toContain("국내 양도소득과 합산하지 않습니다");
+    expect(within(card).getByTestId("foreign-unsupported-exemption").textContent).toContain("국내에 1주택");
+  });
+
+  it("L4: 외국납부세액 행에는 «양도일 환율과 같음»이 없고(납부일 기준) 필요경비 행에는 있다", () => {
+    seed({ foreignTaxEnabled: true }, [
+      k1Asset({
+        capitalRows: [{ date: "2026-07-10", amountForeign: "10000", exchangeRate: "" }],
+        taxRows: [{ date: "2026-08-01", amountForeign: "5000", exchangeRate: "" }],
+      }),
+    ]);
+    render(<TransferTaxCalculator />);
+    const tax = screen.getByTestId("foreign-tax-rows-0");
+    expect(within(tax).queryByRole("button", { name: "양도일 환율과 같음" })).toBeNull();
+    expect(within(screen.getByTestId("foreign-capitalRows-0")).getByRole("button", { name: "양도일 환율과 같음" })).toBeTruthy();
+  });
+
+  it("L7: 통화 «기타» 코드 입력에는 placeholder가 없다(hint가 안내)", () => {
+    seed();
+    render(<TransferTaxCalculator />);
+    fireEvent.change(screen.getByTestId("foreign-currency-select"), { target: { value: "OTHER" } });
+    expect(screen.getByTestId("foreign-currency-code").getAttribute("placeholder")).toBeNull();
+  });
+
   it("통화 «기타»를 고르면 3자리 코드 입력이 나타나고 대문자로 저장한다", () => {
     seed();
     render(<TransferTaxCalculator />);

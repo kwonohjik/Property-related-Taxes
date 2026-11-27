@@ -10,10 +10,20 @@
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { MULTI_FOREIGN_UNSUPPORTED_MESSAGE } from "@/lib/calc/transfer-foreign-messages";
+import { TRANSFER, shortArticle } from "@/lib/tax-engine/legal-codes";
+import { TRANSFER_FOREIGN_RE as RE } from "@/lib/tax-engine/legal-codes/transfer-foreign-realestate";
 
 export const ASSET_LOCATION_OPTIONS = [
-  { value: "domestic", label: "국내 부동산", description: "국내에 있는 주택·토지·건물 등 (소득세법 §94·§104)" },
-  { value: "foreign", label: "국외 부동산", description: "5년 이상 국내 거주자의 국외 토지·건물 양도 (소득세법 §118의2~§118의8)" },
+  {
+    value: "domestic",
+    label: "국내 부동산",
+    description: `국내에 있는 주택·토지·건물 등 (${TRANSFER.TRANSFER_GAIN}과 ${shortArticle(TRANSFER.TAX_RATE)})`,
+  },
+  {
+    value: "foreign",
+    label: "국외 부동산",
+    description: `5년 이상 국내 거주자의 국외 토지·건물 양도 (${RE.SECTION_118_2_SCOPE}~${shortArticle(RE.SECTION_118_8_MUTATIS_NO_LTHD)})`,
+  },
 ] as const;
 
 type AssetLocation = (typeof ASSET_LOCATION_OPTIONS)[number]["value"];

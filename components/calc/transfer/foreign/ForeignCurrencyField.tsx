@@ -36,7 +36,6 @@ export function ForeignCurrencyField({ value, onChange }: { value: string; onCha
           maxLength={3}
           onChange={(e) => onChange(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          placeholder="통화 코드 3자리(영문 대문자)"
           aria-label="통화 코드"
           data-testid="foreign-currency-code"
         />

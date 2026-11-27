@@ -517,3 +517,10 @@ leaf 4개(`summary` · `asset-gain` · `tax-calc` · `notices`), **pdf 채널 0�
 
 C-2 한계(`RESIDENCE_BOUNDARY_NOTICE`)·C-3 미등기(`UNREGISTERED_NOTICE`)는 U1에서 이미 입력 화면에 있음을 확인했다. 홈 메뉴 부제는 바꾸지 않았다 — 홈 레이아웃 테스트가 부제 한 줄(CI 글꼴)에 묶여 있고 V-14는 «읽기» 항목이다(국외 표기 요구 근거 없음). **확인 필요**: 홈에 «국외» 표기를 원하면 부제 폭 실측 후 별도 PR.
 
+
+## 16. U5 확정 (2026-11-27 · 구현 PR `fix/foreign-re-notices`) — 14지점 점검 후속
+
+- **M1 미지원 고지**: 엔진 계획이 «차단+고지»·«고지»로 정한 항목(상속·증여 취득 Q-6 · 외화차입 환차익 V-14 · 국내 양도소득 합산 안 함 Q-8/V-5 · 국외 주택 비과세 불가 V-4 · 장기할부 Q-13 · 시가 모드 Q-5)을 입력 1단계 맨 위 amber 카드(`ForeignUnsupportedNotice`)와 결과 «확인 필요»로 알린다. 문구 단일 소스 = `lib/calc/transfer-foreign-messages.ts`(`FOREIGN_DOMESTIC_NOT_AGGREGATED_TEXT` · `FOREIGN_UNSUPPORTED_ITEMS`). 엔진 코드 2종 — `DOMESTIC_TRANSFER_NOT_AGGREGATED`(국내 합산 안 함 — 납세의무 있는 모든 결과) · `UNSUPPORTED_SITUATIONS_NOT_EVALUATED`(범위 밖 상황 5종을 한 코드로). 납세의무 없음(`not_liable`)은 세액 0이라 코드를 싣지 않는다. 세액 숫자 불변.
+- **L2**: 납세의무 없음 결과의 자산별 «양도소득금액»은 «(참고)» 라벨 + «세액에 반영하지 않는 참고 값» 줄(엔진 행 값은 그대로, 합계·세액 0).
+- **L3**: 입력 화면(`components/calc/transfer/foreign/*`)·⑧ 문구에서 «§» 리터럴 제거 — `TRANSFER_FOREIGN_RE`·`TRANSFER` 상수. 결과 카드 소스 가드를 입력 쪽까지 넓혔다.
+- **L4**: 외국납부세액 행의 «양도일 환율과 같음» 제거(납부일 기준 환율) — 양도비·자본적지출 행은 유지. **L7**: 통화 «기타» 코드 입력 placeholder 제거 → 통화 칸 hint로 이동.

@@ -151,12 +151,31 @@ describe("입력 검증 — fallback 없이 던진다", () => {
   });
 });
 
+describe("확인 필요 코드 — 납세의무 있는 결과에만(U5)", () => {
+  it("납세의무 없음(거주 5년 미만)은 세액이 0이라 확인 필요 코드를 싣지 않는다", () => {
+    const r = calc(k1Input({ domesticResidenceYears: 4 }), rates);
+    expect(r.taxCategory).toBe("not_liable");
+    expect(r.confirmationNeeded).toEqual([]);
+  });
+
+  it("세액 숫자는 코드 추가 전과 같다(K-1 147,860,000 · 지방소득세 14,786,000)", () => {
+    const r = calc(k1Input(), rates);
+    expect(r.calculatedTax).toBe(147_860_000);
+    expect(r.localIncomeTax).toBe(14_786_000);
+    expect(r.totalTax).toBe(162_646_000);
+  });
+});
+
 describe("결과 메타", () => {
   it("appliedLawDate·supportedFrom·confirmationNeeded·appliedRules", () => {
     const r = calc(k1Input(), rates);
     expect(r.appliedLawDate).toBe("2026-07-10");
     expect(r.supportedFrom).toBe("2020-01-01");
-    expect(r.confirmationNeeded).toEqual(["LOCAL_TAX_WEIGHTING_NOT_EVALUATED"]);
+    expect(r.confirmationNeeded).toEqual([
+      "LOCAL_TAX_WEIGHTING_NOT_EVALUATED",
+      "DOMESTIC_TRANSFER_NOT_AGGREGATED",
+      "UNSUPPORTED_SITUATIONS_NOT_EVALUATED",
+    ]);
     expect(r.appliedRules).toContain("소득세법 §118의8");
     expect(r.appliedRules).toContain("국고금 관리법 §47 ①");
     // 지방소득세 가중 미평가는 코드로만 알린다 — 같은 취지의 warnings 문구를 두면 «확인 필요» 카드가 겹친다(U3)
