@@ -38,9 +38,6 @@ import type {
 
 export { FOREIGN_RE_MIN_RESIDENCE_YEARS };
 
-const LOCAL_TAX_WARNING =
-  "개인지방소득세는 표준세율(지방세법 §92①) 기준이며 지방자치단체 조례 가감(§103의3④)과 §103의3⑨의 가중은 반영하지 않았습니다.";
-
 export function calculateForeignRealEstateTransferTax(
   input: ForeignRealEstateInput,
   rates: ForeignRealEstateRates,
@@ -122,7 +119,8 @@ export function calculateForeignRealEstateTransferTax(
   const localIncomeTaxBeforeRounding = localBefore - localCredit;
   const localIncomeTax = truncateLocalIncomeTax(localIncomeTaxBeforeRounding);
 
-  const warnings = [LOCAL_TAX_WARNING];
+  // 지방소득세 가중 미평가는 `confirmationNeeded: LOCAL_TAX_WEIGHTING_NOT_EVALUATED` 코드로만 알린다 — 같은 취지의 문구를 `warnings`에도 실으면 «확인 필요» 카드가 두 장 겹친다(U3)
+  const warnings: string[] = [];
   if (foreignTaxUnappliedKrw > 0 && prepared?.method === "credit") {
     warnings.push(
       "외국납부세액이 공제한도(소득세법 §118의6①1호)를 넘는 부분은 공제되지 않으며 같은 조에 이월 규정이 없어 다음 과세기간으로 넘기지 않았습니다.",

@@ -187,6 +187,7 @@ export interface ForeignRealEstateResult {
   supportedFrom: string;
   /** 가장 늦은 양도일(yyyy-MM-dd) */
   appliedLawDate: string;
+  /** 코드(`confirmationNeeded`)로 표현되지 않는 주의 문구만 — 같은 취지를 코드와 문구로 이중 발행하지 않는다(화면에 «확인 필요» 카드가 겹친다) */
   warnings: string[];
   /** 적용한 법령 조문 상수(`TRANSFER_FOREIGN_RE.*`) */
   appliedRules: string[];

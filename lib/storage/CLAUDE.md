@@ -12,6 +12,7 @@ current-user.ts           # getCurrentUserId() — Supabase 교체 단일 지점
 user-repository.ts        # createUserRepository(uid) 클로저 패턴
 calculation-repository.ts # createCalculationRepository(uid)
 title-generator.ts        # 세목별 자동 title 생성
+foreign-history.ts        # 국외자산 부동산 양도세 — 제목·dedup 키·빈 폼 판정·세율 기준일의 대표(foreignAssets[0]) 추출 단일 소스
 use-auto-save-calculation.ts  # 결과 화면 마운트 시 자동 저장 훅
 migrations/
   reduction-reclassification.ts  # 기존 이력 재분류: 'unsold_housing' → 'new_99_3' 또는 'unsold_98_3'(계약일·취득일 분기) 또는 취득일이 §98의3 기간(엔진 상수 `UNSOLD_98_3_PERIOD_*`) 뒤이면 `unsold_housing_unresolved`(조문 미정 — ⑧이 막고 사용자가 재선택, 리뷰 Q-28), 'long_term_rental' → 'rental_97_3', 'new_housing' → 'new_99'
@@ -52,7 +53,7 @@ useAutoSaveCalculation({
 
 ## resultData 구조 주의
 
-`TransferAPIResult`는 `{ mode: "single", result: TransferTaxResult }` 구조. `totalTax`는 최상위가 아닌 `resultData.result.totalTax`. 이력 화면 추출 시 `mode`별 분기 필수.
+`TransferAPIResult`는 `{ mode: "single", result: TransferTaxResult }` 구조(국외자산 부동산은 `{ mode: "foreign", result: ForeignRealEstateResult }` — 제목·키·요약은 `foreign-history.ts`·`lib/calc/transfer-foreign-history.ts`를 거친다. 국내 `assets[0]`·폼 양도일을 읽으면 안 된다). `totalTax`는 최상위가 아닌 `resultData.result.totalTax`. 이력 화면 추출 시 `mode`별 분기 필수.
 
 ## `/history` 라우트
 

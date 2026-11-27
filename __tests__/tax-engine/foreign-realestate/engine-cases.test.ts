@@ -159,6 +159,7 @@ describe("결과 메타", () => {
     expect(r.confirmationNeeded).toEqual(["LOCAL_TAX_WEIGHTING_NOT_EVALUATED"]);
     expect(r.appliedRules).toContain("소득세법 §118의8");
     expect(r.appliedRules).toContain("국고금 관리법 §47 ①");
-    expect(r.warnings.length).toBe(1);
+    // 지방소득세 가중 미평가는 코드로만 알린다 — 같은 취지의 warnings 문구를 두면 «확인 필요» 카드가 겹친다(U3)
+    expect(r.warnings).toEqual([]);
   });
 });

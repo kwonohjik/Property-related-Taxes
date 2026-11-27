@@ -26,6 +26,7 @@ import { StockHistoryAggregateModal } from "@/components/calc/stock-transfer/Sto
  */
 import { TAX_TYPE_ROUTES } from "@/lib/storage/tax-type-routes";
 import { deemedGiftHeadline } from "@/lib/calc/gift-deemed-history";
+import { foreignResultSummaryItems } from "@/lib/calc/transfer-foreign-history";
 
 interface Props {
   record: CalculationRecord;
@@ -68,6 +69,10 @@ export function extractResultSummaryItems(
   resultData: Record<string, unknown>,
   taxType: LocalTaxType
 ): { label: string; value: string }[] {
+  // 국외자산 부동산({mode:"foreign"}) — 국내 결과 키와 달라 전용 추출
+  const foreignItems = taxType === "transfer" ? foreignResultSummaryItems(resultData) : null;
+  if (foreignItems) return foreignItems;
+
   const items: { label: string; value: string }[] = [];
 
   // single/mixed-use 모드: resultData.result 안에 실제 값이 있음

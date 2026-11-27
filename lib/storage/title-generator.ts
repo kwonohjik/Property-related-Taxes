@@ -1,6 +1,11 @@
 import type { LocalTaxType } from "./types";
 import { DEEMED_TYPE_META } from "@/lib/calc/gift-deemed-type-meta";
 import type { DeemedGiftType } from "@/lib/tax-engine/gift-deemed/types";
+import {
+  extractForeignRepresentative,
+  foreignPlace,
+  type ForeignRepresentative,
+} from "./foreign-history";
 
 /**
  * 세목 배지·제목 접두어 — **이력 화면과 같은 문자열을 쓴다**(`HistoryClient`가 이것을 편다).
@@ -162,6 +167,21 @@ export function extractStockValuationName(inputData: Record<string, unknown>): s
 }
 
 /**
+ * 국외자산 부동산 양도세 제목 — `양도소득세 (국외 부동산) — 미국 {소재지} 외 1건 (양도 2026.07.10)`.
+ * 대표는 첫 국외 자산이다(`foreign-history.ts`). 소재지가 비면 국가만, 둘 다 비면 양도일만 싣는다.
+ */
+function foreignTitle(label: string, rep: ForeignRepresentative): string {
+  const base = `${label} (국외 부동산)`;
+  const place = foreignPlace(rep) ?? rep.country;
+  const name = place && rep.assetCount > 1 ? `${place} 외 ${rep.assetCount - 1}건` : place;
+  const date = formatDate(rep.transferDate);
+  if (name && date) return `${base} — ${name} (양도 ${date})`;
+  if (name) return `${base} — ${name}`;
+  if (date) return `${base} — 양도 ${date}`;
+  return base;
+}
+
+/**
  * 세목·입력값 기반 계산 이력 title 자동 생성.
  * 주소·날짜가 입력된 경우 포함하여 식별력을 높임.
  * 미입력 필드는 기본 레이블만 사용.
@@ -175,6 +195,9 @@ export function generateTitle(
   const address = extractAddress(inputData);
 
   if (taxType === "transfer") {
+    // 국외는 국내 자리(assets[0]·top-level transferDate)를 읽지 않는다 — 숨은 국내 입력이 제목에 새면 안 된다
+    const foreign = extractForeignRepresentative(inputData);
+    if (foreign) return foreignTitle(label, foreign);
     const date = extractTransferDate(inputData);
     // 다건(multi)은 저장 taxType이 "transfer"라 라벨만으로는 단건과 구분 불가 → "(다건)" 병기
     const baseLabel = inputData.__multiTransfer === true ? `${label} (다건)` : label;

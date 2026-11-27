@@ -480,9 +480,40 @@ leaf 4개(`summary` · `asset-gain` · `tax-calc` · `notices`), **pdf 채널 0�
 ### 14.6 결과 모드 경로·이력 (U3로 넘긴 것)
 
 - `TransferAPIResult`에 `mode: "foreign"`이 들어와도 `calc-wizard-store`·`transfer-per-asset-summary`·`classifyAmendableTransfer`·`classifyLoadableTransfer`·`extractGiftResaleDeterminedTax`·`extractRealEstateSide`·이력 목록 `extractTotalTax`는 터지지 않고 «해당 없음»으로 떨어진다(`__tests__/components/foreign-realestate-result-mode-paths.test.tsx`). 이력 목록 납부세액은 국외 `result.totalTax`를 읽는다.
-- **이력 저장은 U3까지 보류한다**: 자동 저장 `resultData`를 국외면 `null`로 넘기고(저장 안 함) 수동 「저장하기」는 `FOREIGN_HISTORY_SAVE_DEFERRED_MESSAGE` 토스트만 보인다. 이유 — 이력 제목(`generateTitle`은 `assets[0]` 국내 주소)·dedup 키(`extractBusinessKey` 주소 null)·상세 드로어·PDF(`TransferSection`)·복원(`resumeTransferRecord`)이 국외를 모른다. U3이 이 경로들을 국외에 맞춘 뒤 보류를 걷는다(V-7·V-8).
+- **이력 저장은 U3까지 보류한다 (→ §15에서 걷었다)**: 자동 저장 `resultData`를 국외면 `null`로 넘기고(저장 안 함) 수동 「저장하기」는 `FOREIGN_HISTORY_SAVE_DEFERRED_MESSAGE` 토스트만 보인다. 이유 — 이력 제목(`generateTitle`은 `assets[0]` 국내 주소)·dedup 키(`extractBusinessKey` 주소 null)·상세 드로어·PDF(`TransferSection`)·복원(`resumeTransferRecord`)이 국외를 모른다. U3이 이 경로들을 국외에 맞춘 뒤 보류를 걷는다(V-7·V-8).
 
 ### 14.7 확인 필요 (U2 시점)
 
-- 엔진 `warnings`의 지방소득세 문구와 `LOCAL_TAX_WEIGHTING_NOT_EVALUATED` 코드 문구가 같은 취지라 «확인 필요» 카드가 2장 겹친다 — 「하나도 버리지 않는다」를 우선했다. 엔진이 둘 중 하나로 합치면 카드도 따라 한 장이 된다.
+- (§15.3에서 해소) 엔진 `warnings`의 지방소득세 문구와 `LOCAL_TAX_WEIGHTING_NOT_EVALUATED` 코드 문구가 같은 취지라 «확인 필요» 카드가 2장 겹친다 — 「하나도 버리지 않는다」를 우선했다. 엔진이 둘 중 하나로 합치면 카드도 따라 한 장이 된다.
 - PDF(서버·클라이언트) 국외 부동산 섹션·별지 서식은 없다(V-6) — 출력은 브라우저 인쇄(PDF 저장)뿐.
+
+---
+
+## 15. U3 확정 (2026-11-27 · 구현 PR `feat/foreign-re-history`) — 이력 저장·제목·dedup·재계산 + 확인 필요 중복 제거
+
+> §14.6의 «이력 저장은 U3까지 보류»를 걷었다. V-7·V-8 해소.
+
+### 15.1 저장 — 자동·수동 모두
+
+- 자동 저장(`useAutoSaveCalculation`)은 `resultData`를 `{ mode: "foreign", result }` 그대로 넘긴다(U2의 `null` 보류 제거). 수동 「저장하기」 보류 토스트(`FOREIGN_HISTORY_SAVE_DEFERRED_MESSAGE`)와 상수 삭제.
+- 제목·dedup 키·빈 폼 판정·세율 기준일은 **`lib/storage/foreign-history.ts` 한 곳**(`extractForeignRepresentative` · `foreignPlace` · `hasForeignInput` · `foreignTaxLawVersion`). 국외 폼은 국내 `assets[0]`·폼 전역 `transferDate`를 읽지 않는다 — 숨은 국내 입력(D-4)이 제목·키에 새지 않게 `extractAddress`·`extractTransferDate`(다른 세목 공용)는 건드리지 않고 `generateTitle`·`extractBusinessKey`의 `transfer` 분기 맨 앞에서 갈랐다.
+- **제목** `양도소득세 (국외 부동산) — {국가} {소재지}[ 외 N건] (양도 YYYY.MM.DD)` — 국가 「기타」·미선택은 생략, 소재지가 비면 국가만, 다 비면 양도일만. 대표 = 첫 국외 자산(자산을 뒤에 추가해도 같은 record를 갱신).
+- **dedup 키** `addr:{국가} {소재지}|{대표 양도일}|foreign` — 소재지가 비면 키 없음(content 폴백). `|foreign` 접미로 같은 문자열의 국내 키와 분리. ⑧이 소재지를 필수로 막는 이유(§7)가 이것이다.
+- **빈 폼** — 국외는 거주 연수·국가·소재지·양도일·금액 칸·자본적지출/양도비/납부 행 중 하나라도 있으면 비어 있지 않다(통화·종류 기본값은 입력 아님). 숨은 국내 입력은 보지 않는다.
+- **세율 기준일**(`taxLawVersion`) — 국외는 자산별 양도일 중 가장 늦은 날(결과 `appliedLawDate`와 같다). 자동·수동 저장이 `transferTaxLawVersion` 하나를 쓴다.
+
+### 15.2 목록·드로어·재계산
+
+- 목록 카드: 주소 자리에 국가+소재지, 날짜는 대표 양도일. 납부세액은 `result.totalTax`(K-1 162,646,000) — U2에서 이미 읽는다.
+- 드로어 «계산 결과 요약»: 국외 필드명(양도차익 합계·양도소득금액 합계·기본공제·과세표준·산출세액·외국납부세액공제·결정세액·지방소득세·납부세액, 0원 항목 생략 · 거주 5년 미만은 «납세의무 없음» 1줄) — `lib/calc/transfer-foreign-history.ts`. 수정신고·경정청구·다건 합산 진입은 국외에 열리지 않는다(U2 `classify*` null).
+- 「이 조건으로 재계산」: 국외 슬라이스(라디오·거주 연수·자산 행·외국납부세액)를 복원한다. **결과는 되살리지 않고 첫 단계에서 연다** — 국내·비사업용 토지 판정과 같은 규칙(재계산은 입력을 되살려 다시 계산). 저장된 행은 `normalizeForeignRealEstate`(③)를 거친다(국내 이력에는 적용하지 않는다 — 기본 카드 id가 바뀌어 «초기값 대비 변경» 비교가 오고지).
+- PDF: 서버·클라이언트 PDF 채널에 국외 섹션은 없다(§14.4). `HistoryPdfDocument`는 호출처가 없다(죽은 코드 — 건드리지 않음). 이력 화면에서 PDF를 만드는 경로는 없어 국외 record가 PDF 경로에 닿지 않는다.
+
+### 15.3 확인 필요 «이중 카드» 해소
+
+엔진이 지방소득세 가중 미평가를 `warnings` 문구와 `confirmationNeeded: LOCAL_TAX_WEIGHTING_NOT_EVALUATED`로 **이중 발행**해 «확인 필요» 카드가 두 장 겹쳤다(§14.7). 엔진에서 문구를 지우고 코드만 남겼다(UI 코드 표 `CONFIRMATION_NOTICES`가 단일 문구). 코드↔문구 쌍은 이것 하나였다 — `FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY`는 문구가 없고, 한도 초과 `warnings`(이월 규정 없음)는 코드가 없는 별개 취지다. 가드: `__tests__/tax-engine/foreign-realestate/notice-dedupe.test.ts`(코드 표가 `satisfies Record<코드, RegExp>`라 새 코드는 주제어를 정해야 한다).
+
+### 15.4 안내 문구·홈
+
+C-2 한계(`RESIDENCE_BOUNDARY_NOTICE`)·C-3 미등기(`UNREGISTERED_NOTICE`)는 U1에서 이미 입력 화면에 있음을 확인했다. 홈 메뉴 부제는 바꾸지 않았다 — 홈 레이아웃 테스트가 부제 한 줄(CI 글꼴)에 묶여 있고 V-14는 «읽기» 항목이다(국외 표기 요구 근거 없음). **확인 필요**: 홈에 «국외» 표기를 원하면 부제 폭 실측 후 별도 PR.
+

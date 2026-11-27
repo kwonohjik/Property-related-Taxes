@@ -25,7 +25,7 @@ import { ResetButton } from "@/components/calc/shared/ResetButton";
 import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { computeTransferPerAssetSummary } from "@/lib/stores/transfer-per-asset-summary";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
-import { runTransferManualSave, formatTransferSaveMessage } from "@/components/calc/transfer-tax-save-handler";
+import { runTransferManualSave, formatTransferSaveMessage, transferTaxLawVersion } from "@/components/calc/transfer-tax-save-handler";
 import { useRecordCount } from "@/components/calc/shared/save-handler-builders";
 import { SaveButton } from "@/components/calc/shared/SaveButton";
 import { SaveToast, type SaveToastMessage } from "@/components/calc/shared/SaveToast";
@@ -41,7 +41,6 @@ import { CorrectionModeBanner } from "@/components/calc/transfer/CorrectionModeB
 import type { TransferTaxCalculatorProps } from "./transfer-calculator-meta";
 import { foreignWizardMeta } from "./transfer-foreign-wizard-meta";
 import { callForeignRealEstateAPI, ForeignCalcError } from "@/lib/calc/transfer-foreign-call";
-import { FOREIGN_HISTORY_SAVE_DEFERRED_MESSAGE } from "@/lib/calc/transfer-foreign-messages";
 import { computeForeignRealEstateSummary } from "@/lib/stores/transfer-foreign-summary";
 import { ForeignRealEstateResultView } from "@/components/calc/results/foreign-realestate/ForeignRealEstateResultView";
 import { ForeignSidebarSummary } from "./ForeignSidebarSummary";
@@ -146,9 +145,9 @@ export default function TransferTaxCalculator({
   const autoSave = useAutoSaveCalculation({
     taxType: "transfer",
     inputData: formData as unknown as Record<string, unknown>,
-    // 국외 결과는 이력 저장을 U3까지 보류한다(제목·중복 판정·복원 경로가 국외를 모른다 — `FOREIGN_HISTORY_SAVE_DEFERRED_MESSAGE`)
-    resultData: isResult && result?.mode !== "foreign" ? (result as unknown as Record<string, unknown>) : null,
-    taxLawVersion: formData.transferDate || new Date().toISOString().split("T")[0],
+    resultData: isResult ? (result as unknown as Record<string, unknown>) : null,
+    // 국외는 폼 전역 양도일이 없다 — 자산별 양도일 중 가장 늦은 날(결과의 appliedLawDate와 같다)
+    taxLawVersion: transferTaxLawVersion(formData) || new Date().toISOString().split("T")[0],
     clientId: activeClientId,
   });
 
@@ -157,10 +156,6 @@ export default function TransferTaxCalculator({
   const recordCount = useRecordCount(result);
   const handleManualSave = async () => {
     setSaveMessage(null);
-    if (isForeign) {
-      setSaveMessage({ kind: "info", text: FOREIGN_HISTORY_SAVE_DEFERRED_MESSAGE });
-      return;
-    }
     try {
       const outcome = await runTransferManualSave({
         form: formData as unknown as Record<string, unknown>,

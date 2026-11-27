@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 /**
- * 국외 부동산 U2 — 계산 흐름 배선: 「세금 계산하기」 → 국외 전용 API → 결과 화면 · 사이드바 · 서버 오류 칸 이동 · 이력 보류 · 다건 안내
+ * 국외 부동산 U2 — 계산 흐름 배선: 「세금 계산하기」 → 국외 전용 API → 결과 화면 · 사이드바 · 서버 오류 칸 이동 · 이력 저장 · 다건 안내
  *
  * route 핸들러를 fetch 뒤에 붙여 폼 → body → Zod → 엔진 → 결과 화면까지 한 번에 확인한다(교재 K-1).
  */
@@ -26,7 +26,7 @@ import TransferTaxCalculator from "@/app/calc/transfer-tax/TransferTaxCalculator
 import { useCalcWizardStore } from "@/lib/stores/calc-wizard-store";
 import { calculationRepository } from "@/lib/storage/calculation-repository";
 import { FOREIGN_API_PATH } from "@/lib/calc/transfer-foreign-call";
-import { FOREIGN_HISTORY_SAVE_DEFERRED_MESSAGE, MULTI_FOREIGN_UNSUPPORTED_MESSAGE } from "@/lib/calc/transfer-foreign-messages";
+import { MULTI_FOREIGN_UNSUPPORTED_MESSAGE } from "@/lib/calc/transfer-foreign-messages";
 import { StepList } from "@/app/calc/transfer-tax/multi/MultiTransferSteps";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
@@ -60,7 +60,7 @@ const calculate = () => fireEvent.click(screen.getByRole("button", { name: "세�
 describe("K-1 — 계산 → 결과 화면", () => {
   it("국외 전용 API만 부르고(국내 /api/calc/transfer 아님) 결과 화면에 교재 숫자가 보인다", async () => {
     const urls = routeFetch();
-    const save = vi.spyOn(calculationRepository, "saveOrUpdateByBusinessKey");
+    const save = vi.spyOn(calculationRepository, "saveOrUpdateByBusinessKey").mockResolvedValue({ id: "rec-1", created: true });
     seed();
     render(<TransferTaxCalculator />);
     calculate();
@@ -73,8 +73,14 @@ describe("K-1 — 계산 → 결과 화면", () => {
     expect(screen.getByTestId("foreign-tax-base").textContent).toContain("434,500,000");
     expect(screen.getByTestId("foreign-calculated-tax").textContent).toContain("147,860,000");
     expect(screen.getByTestId("foreign-local-tax").textContent).toContain("14,786,000");
-    // 이력: 국외 결과는 U3까지 자동 저장하지 않는다(제목·dedup·복원 경로가 국외를 모른다)
-    expect(save).not.toHaveBeenCalled();
+    // 이력(U3): 결과 화면 마운트 시 자동 저장 — 제목·세율 기준일(가장 늦은 양도일)·{mode:"foreign"} 결과
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    const arg = save.mock.calls[0][0];
+    expect(arg.taxType).toBe("transfer");
+    expect(arg.title).toBe("양도소득세 (국외 부동산) — 미국 Seattle (양도 2026.07.10)");
+    expect(arg.taxLawVersion).toBe("2026-07-10");
+    expect((arg.resultData as { mode?: string }).mode).toBe("foreign");
+    expect((arg.resultData as { result: { totalTax: number } }).result.totalTax).toBe(162_646_000);
   });
 
   it("결과 화면에서 «이전»으로 돌아가면 입력 화면이 다시 보이고 결과는 입력을 고치면 사라진다", async () => {
@@ -153,13 +159,23 @@ describe("서버 오류 — 입력칸으로 이동 · 확인 필요", () => {
   });
 });
 
-describe("이력 보류 — 국외 결과는 저장하지 않는다(U3)", () => {
-  it("수동 «저장하기»는 보류 안내만 보이고 이력에 쓰지 않는다", async () => {
-    const save = vi.spyOn(calculationRepository, "saveOrUpdateByBusinessKey");
+describe("이력 저장(U3) — 수동 «저장하기»", () => {
+  it("국외 입력만 있는 폼도 «빈 폼»이 아니라 저장된다(국내 양도일·자산은 비어 있다)", async () => {
+    const save = vi.spyOn(calculationRepository, "saveOrUpdateByBusinessKey").mockResolvedValue({ id: "rec-2", created: true });
     seed();
     render(<TransferTaxCalculator />);
     fireEvent.click(screen.getByRole("button", { name: "현재 입력 저장" }));
-    await waitFor(() => expect(screen.queryByText(FOREIGN_HISTORY_SAVE_DEFERRED_MESSAGE)).not.toBeNull());
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(save.mock.calls[0][0].title).toBe("양도소득세 (국외 부동산) — 미국 Seattle (양도 2026.07.10)");
+    expect(screen.queryByText(/아직 지원하지 않습니다/)).toBeNull();
+  });
+
+  it("입력이 하나도 없으면 «저장할 입력이 없습니다»", async () => {
+    const save = vi.spyOn(calculationRepository, "saveOrUpdateByBusinessKey");
+    useCalcWizardStore.setState({ formData: foreignForm({ foreignResidenceYears: "" }, [{ ...k1Asset(), countryCode: "", address: "", transferDate: "", transferAmount: "", transferRate: "", acquisitionDate: "", acquisitionAmount: "", acquisitionRate: "", costRows: [] }]), result: null, currentStep: 0 });
+    render(<TransferTaxCalculator />);
+    fireEvent.click(screen.getByRole("button", { name: "현재 입력 저장" }));
+    await waitFor(() => expect(screen.queryByText(/저장할 입력이 없습니다/)).not.toBeNull());
     expect(save).not.toHaveBeenCalled();
   });
 });
