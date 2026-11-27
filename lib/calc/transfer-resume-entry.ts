@@ -33,6 +33,11 @@ import { householdFactsKindOf } from "@/lib/calc/household-facts-asset";
 import { useBuildingStdSnapshotStore } from "@/lib/stores/building-std-snapshot-store";
 import type { MultiTransferFormData } from "@/lib/stores/multi-transfer-tax-store";
 import { moveLinkedCountExclusionsToRows } from "@/lib/calc/house-count-exclusion-rows";
+import { isForeignRealEstateForm } from "@/lib/calc/transfer-foreign-scope";
+import {
+  normalizeForeignRealEstate,
+  type ForeignRealEstateFormSlice,
+} from "@/lib/stores/calc-wizard-form-foreign";
 
 const TRANSFER_ROUTE = "/calc/transfer-tax";
 const MULTI_TRANSFER_ROUTE = "/calc/transfer-tax/multi";
@@ -150,6 +155,14 @@ export async function resumeTransferRecord(
    * ⚠️ `updateFormData`는 **단순 merge**다(위 주석과 같은 이유). 「어긋나면 켠다」만 하면
    *    깨끗한 record를 이어서 열 때 **직전 폼의 표식이 그대로 남는다** ⇒ `false`도 함께 쓴다.
    */
+  /**
+   * 국외자산 부동산 이력(③) — `updateFormData`는 단순 merge라 저장된 `foreignAssets` 행이 그대로 들어간다.
+   * 깨진 배열·옛 enum을 sessionStorage 복원과 같은 보정(`normalizeForeignRealEstate`)으로 거른다.
+   * 국내 이력에는 적용하지 않는다 — 기본 카드의 id가 바뀌어 «초기값 대비 변경» 비교가 오고지한다.
+   */
+  const foreignNormalized = isForeignRealEstateForm(migrated)
+    ? normalizeForeignRealEstate(migrated as typeof migrated & ForeignRealEstateFormSlice)
+    : migrated;
   const legacyHouseCountPrecedence = houseCountDivergedFromRoster(
     householdFactsKindOf(migrated?.assets, migrated?.assetSplitMode),
     migrated?.houses,
@@ -164,7 +177,7 @@ export async function resumeTransferRecord(
    *    전달 키를 담고 있으면 그 키는 **저장 당시 그대로** 복원돼야 한다.
    */
   reset();
-  updateFormData({ ...migrated, legacyHouseCountPrecedence });
+  updateFormData({ ...foreignNormalized, legacyHouseCountPrecedence });
   setStep(0);
   router.push(TRANSFER_ROUTE);
   return null;

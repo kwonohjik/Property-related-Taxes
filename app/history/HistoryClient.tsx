@@ -17,6 +17,8 @@ import { StockHistoryAggregateModal } from "@/components/calc/stock-transfer/Sto
 import type { CalculationRecord, LocalTaxType, Client } from "@/lib/storage/types";
 import { TAX_TYPE_ROUTES } from "@/lib/storage/tax-type-routes";
 import { TAX_LABEL } from "@/lib/storage/title-generator";
+import { extractForeignRepresentative } from "@/lib/storage/foreign-history";
+import { foreignPlace } from "@/lib/storage/foreign-history";
 import { oneHouseVerdictLabel } from "@/lib/calc/one-house-judgment-verdict";
 import { nblVerdictLabel } from "@/lib/calc/nbl-judgment-verdict";
 import { inheritedRightHistoryNotice } from "@/lib/calc/history-inherited-right-notice";
@@ -90,6 +92,11 @@ function extractCardSummary(
   }
 
   if (taxType === "transfer") {
+    // 국외: 국내 `assets[0]`·폼 양도일이 아니라 대표(첫 국외 자산)의 소재지·양도일
+    const foreign = extractForeignRepresentative(inputData);
+    if (foreign) {
+      return { address: foreignPlace(foreign) ?? foreign.country, dateLabel: fmt(foreign.transferDate, "양도일") };
+    }
     const assets = inputData.assets as Array<Record<string, unknown>> | undefined;
     const first = Array.isArray(assets) && assets.length > 0 ? assets[0] : null;
     const address = first ? addr(first) : null;

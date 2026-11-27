@@ -26,6 +26,8 @@ import {
   extractStockTransferDate,
   extractStockValuationName,
 } from "./title-generator";
+import { extractForeignRepresentative } from "./foreign-history";
+import { foreignPlace } from "./foreign-history";
 
 export function extractBusinessKey(
   taxType: LocalTaxType,
@@ -43,6 +45,14 @@ export function extractBusinessKey(
       return `nd:${name}|${death}`;
     }
     case "transfer": {
+      // 국외: 대표(첫 국외 자산)의 «국가 + 소재지»가 물건 식별자 — 국내 `assets[0]`은 읽지 않는다.
+      // `|foreign` 접미로 같은 문자열의 국내 record와 서로 덮어쓰지 않는다. 소재지가 비면 키 없음(⑧이 필수로 막는 이유).
+      const foreign = extractForeignRepresentative(inputData);
+      if (foreign) {
+        const place = foreignPlace(foreign);
+        if (!place) return null;
+        return `addr:${place}|${formatDate(foreign.transferDate) ?? ""}|foreign`;
+      }
       const addr = extractAddress(inputData);
       const date = extractTransferDate(inputData);
       // 주소가 물건 식별자다 — 양도일만으로는 물건이 갈리지 않는다
