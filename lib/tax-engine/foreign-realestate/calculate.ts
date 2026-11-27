@@ -128,7 +128,7 @@ export function calculateForeignRealEstateTransferTax(
   }
   const confirmationNeeded: ForeignRealEstateConfirmationCode[] = ["LOCAL_TAX_WEIGHTING_NOT_EVALUATED"];
   if (prepared?.method === "credit") confirmationNeeded.push("FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY");
-  confirmationNeeded.push("DOMESTIC_TRANSFER_NOT_AGGREGATED", "UNSUPPORTED_SITUATIONS_NOT_EVALUATED");
+  confirmationNeeded.push("UNSUPPORTED_SITUATIONS_NOT_EVALUATED");
 
   return {
     ...base,

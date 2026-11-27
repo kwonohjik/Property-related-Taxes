@@ -98,7 +98,6 @@ describe("확인 필요 — 엔진이 돌려준 것은 하나도 버리지 않�
     expect(r.confirmationNeeded).toEqual([
       "LOCAL_TAX_WEIGHTING_NOT_EVALUATED",
       "FOREIGN_TAX_CREDIT_FX_DATE_NOT_STATUTORY",
-      "DOMESTIC_TRANSFER_NOT_AGGREGATED",
       "UNSUPPORTED_SITUATIONS_NOT_EVALUATED",
     ]);
     expect(r.warnings.length).toBe(1);
@@ -138,12 +137,14 @@ describe("확인 필요 — 엔진이 돌려준 것은 하나도 버리지 않�
     expect(screen.queryByTestId("foreign-ftc-a1")).toBeNull();
   });
 
-  it("U5: 국내 양도소득 합산 안 함 + 미지원 상황 — 모든 납세의무 있는 결과에 «확인 필요»로 보이고 근거 조문을 상수로 인용한다", () => {
+  it("U5: 국내자산과 각각 구분 계산(해석례 근거)은 «확인 필요»가 아닌 일반 안내 + 미지원 상황은 «확인 필요»로 보이고 근거 조문을 상수로 인용한다", () => {
     render(<ForeignRealEstateResultCard result={k1()} />);
-    const domestic = text("foreign-confirm-DOMESTIC_TRANSFER_NOT_AGGREGATED");
-    expect(domestic).toContain("확인 필요");
-    expect(domestic).toContain("국내 양도소득과 합산하지 않습니다");
-    expect(domestic).toContain(TRANSFER_FOREIGN_RE.SECTION_118_5_RATE);
+    expect(screen.queryByTestId("foreign-confirm-DOMESTIC_TRANSFER_NOT_AGGREGATED")).toBeNull();
+    const domestic = text("foreign-domestic-separate");
+    expect(domestic).not.toContain("확인 필요");
+    expect(domestic).toContain("각각 구분하여 계산합니다");
+    expect(domestic).toContain("서면인터넷방문상담4팀-962");
+    expect(domestic).toContain("국심2005서3759");
     expect(domestic).toContain(TRANSFER_FOREIGN_RE.SECTION_118_7_BASIC_DEDUCTION);
     const scope = text("foreign-confirm-UNSUPPORTED_SITUATIONS_NOT_EVALUATED");
     for (const phrase of ["상속·증여로 취득한 국외자산", "외화를 차입해 취득한 자산의 환차익", "장기할부조건", "시가로 계산하는 경우", "1세대1주택 비과세"]) {

@@ -173,7 +173,6 @@ describe("결과 메타", () => {
     expect(r.supportedFrom).toBe("2020-01-01");
     expect(r.confirmationNeeded).toEqual([
       "LOCAL_TAX_WEIGHTING_NOT_EVALUATED",
-      "DOMESTIC_TRANSFER_NOT_AGGREGATED",
       "UNSUPPORTED_SITUATIONS_NOT_EVALUATED",
     ]);
     expect(r.appliedRules).toContain("소득세법 §118의8");

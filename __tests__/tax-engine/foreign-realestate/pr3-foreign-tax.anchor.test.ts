@@ -175,7 +175,6 @@ describe("입력 규율 — fallback 없음 (K-13)", () => {
     expect(r.foreignTaxMethod).toBeUndefined();
     expect(r.confirmationNeeded).toEqual([
       "LOCAL_TAX_WEIGHTING_NOT_EVALUATED",
-      "DOMESTIC_TRANSFER_NOT_AGGREGATED",
       "UNSUPPORTED_SITUATIONS_NOT_EVALUATED",
     ]);
   });
@@ -198,7 +197,6 @@ describe("확인 필요 · 근거 · 거주 5년 미만", () => {
     expect(r.appliedRules).not.toContain("소득세법 §118의6");
     expect(r.confirmationNeeded).toEqual([
       "LOCAL_TAX_WEIGHTING_NOT_EVALUATED",
-      "DOMESTIC_TRANSFER_NOT_AGGREGATED",
       "UNSUPPORTED_SITUATIONS_NOT_EVALUATED",
     ]);
   });

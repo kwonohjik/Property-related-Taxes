@@ -172,12 +172,16 @@ describe("국외 입력 화면 — 안내·힌트·카드 관리", () => {
     render(<TransferTaxCalculator />);
     const card = screen.getByTestId("foreign-unsupported-notice");
     const step = screen.getByTestId("foreign-real-estate-step");
-    expect(step.firstElementChild).toBe(card);
+    expect(step.firstElementChild?.contains(card)).toBe(true);
+    const separate = screen.getByTestId("foreign-domestic-separate-input");
+    expect(step.firstElementChild?.contains(separate)).toBe(true);
+    expect(separate.textContent).toContain("각각 구분하여 계산합니다");
+    expect(separate.textContent).toContain("서면인터넷방문상담4팀-962");
     expect(card.textContent).toContain("이 계산이 지원하지 않는 경우");
-    for (const id of ["domestic", "inherited", "fxBorrow", "installment", "market", "exemption"]) {
+    expect(within(card).queryByTestId("foreign-unsupported-domestic")).toBeNull();
+    for (const id of ["inherited", "fxBorrow", "installment", "market", "exemption"]) {
       expect(within(card).getByTestId(`foreign-unsupported-${id}`)).toBeTruthy();
     }
-    expect(within(card).getByTestId("foreign-unsupported-domestic").textContent).toContain("국내 양도소득과 합산하지 않습니다");
     expect(within(card).getByTestId("foreign-unsupported-exemption").textContent).toContain("국내에 1주택");
   });
 

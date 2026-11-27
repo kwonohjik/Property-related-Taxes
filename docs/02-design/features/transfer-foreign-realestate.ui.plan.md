@@ -524,3 +524,5 @@ C-2 한계(`RESIDENCE_BOUNDARY_NOTICE`)·C-3 미등기(`UNREGISTERED_NOTICE`)는
 - **L2**: 납세의무 없음 결과의 자산별 «양도소득금액»은 «(참고)» 라벨 + «세액에 반영하지 않는 참고 값» 줄(엔진 행 값은 그대로, 합계·세액 0).
 - **L3**: 입력 화면(`components/calc/transfer/foreign/*`)·⑧ 문구에서 «§» 리터럴 제거 — `TRANSFER_FOREIGN_RE`·`TRANSFER` 상수. 결과 카드 소스 가드를 입력 쪽까지 넓혔다.
 - **L4**: 외국납부세액 행의 «양도일 환율과 같음» 제거(납부일 기준 환율) — 양도비·자본적지출 행은 유지. **L7**: 통화 «기타» 코드 입력 placeholder 제거 → 통화 칸 hint로 이동.
+
+- **V-5 해소 반영(2026-11-27 사용자 승인)**: 국내자산과 국외자산은 양도소득과세표준·산출세액을 **각각 구분하여 산정**(국세청 서면인터넷방문상담4팀-962 2005.6.16.·서면4팀-22 2005.1.4. · 국심2005서3759 2006.7.5. 기각 — §118의8 미준용 §102 배제, 처분 유지). 현행 §118의8 준용 목록에도 §102·§104 없음. → 엔진 코드 `DOMESTIC_TRANSFER_NOT_AGGREGATED` 삭제, 문구는 `FOREIGN_DOMESTIC_SEPARATE_TEXT`로 바꿔 «확인 필요»(amber)가 아닌 일반 안내(sky)로 입력 1단계(`foreign-domestic-separate-input`)와 납세의무 있는 결과(`foreign-domestic-separate`)에 보인다. 위 M1 줄의 `DOMESTIC_TRANSFER_NOT_AGGREGATED`·`FOREIGN_DOMESTIC_NOT_AGGREGATED_TEXT` 서술은 이 줄로 대체한다. 세액 불변.
