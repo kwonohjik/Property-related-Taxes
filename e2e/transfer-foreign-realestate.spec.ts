@@ -17,6 +17,7 @@
  *  FRE-E6  ⑧ 차단: 양도비 행 환율 누락 → 오류 목록 + 그 칸으로 이동 · 요청 없음
  *  FRE-E7  `/multi`: 국외 건 안내 문구 + 합산 계산 차단
  *  FRE-E8  이력: K-1 계산 뒤 이력 목록에 국외 제목과 총 납부세액
+ *  FRE-E9  신고서 표(별지 제84호서식 · 국내 부동산과 같은 서식): K-1 숫자 · 선택 출력(print) · 선택 항목 PDF 다운로드
  *
  * 실행: E2E_PORT=<포트> npx playwright test e2e/transfer-foreign-realestate.spec.ts
  */
@@ -356,5 +357,61 @@ test.describe("국외자산 부동산 양도소득세 — 화면 입력부터 �
       await expect(hist.getByText("양도소득세 (국외 부동산) — 미국 Dallas TX 1 Main St (양도 2026.07.10)")).toBeVisible({ timeout: 4_000 });
     }).toPass({ timeout: 45_000 });
     await expect(hist.getByText("162,646,000").first()).toBeVisible();
+  });
+  test("FRE-E9: 신고서 표(별지 제84호서식) — K-1 숫자 · 신고서 표만 인쇄 · 선택 항목 PDF 다운로드", async ({ page }) => {
+    test.setTimeout(240_000);
+    // 폰트 CDN은 E2E 전용 헤더(x-e2e-*)가 CORS에 걸린다 — route에서 뗀다(`transfer-pdf-head-rows.spec.ts`와 같다). PDF 실패 alert도 잡는다.
+    const dialogs: string[] = [];
+    page.on("dialog", async (d) => {
+      dialogs.push(d.message());
+      await d.dismiss();
+    });
+    await page.route("https://cdn.jsdelivr.net/**", async (r) => {
+      const h = { ...r.request().headers() };
+      for (const k of Object.keys(h)) if (k.startsWith("x-e2e")) delete h[k];
+      await r.continue({ headers: h });
+    });
+    await fillK1(page);
+    const { status } = await calculate(page);
+    expect(status).toBe(200);
+
+    // 화면: 서식 표에 교재 숫자가 보인다(원화 환산 · 장기보유특별공제 0 · 세율구분 코드 2-10 · 소재지는 입력한 값)
+    const form = page.getByTestId("foreign-filing-form");
+    await expect(form).toBeVisible({ timeout: 30_000 });
+    await expect(form).toContainText("별지 제84호서식");
+    for (const n of ["990,000,000", "520,000,000", "33,000,000", "437,000,000", "2,500,000", "434,500,000", "147,860,000", "2-10", "Dallas TX 1 Main St", "미국"]) {
+      await expect(form).toContainText(n);
+    }
+    await expect(form).toContainText("국외자산은 해당되지 않습니다");
+    const shot = process.env.FRE_SHOT_DIR;
+    if (shot) {
+      await page.addStyleTag({ content: "header, nav { position: static !important; }" }); // sticky 사이트 헤더가 표를 가리지 않게(스크린샷 전용)
+      await form.screenshot({ path: `${shot}/foreign-filing-form-screen.png` });
+    }
+
+    // 기본은 전체 미선택 — PDF 버튼은 잠겨 있다. 신고서 표만 고른다.
+    const pdfBtn = page.getByRole("button", { name: /선택 항목 PDF/ });
+    await expect(pdfBtn).toBeDisabled();
+    await page.getByLabel("신고서 양식 표 (별지 제84호서식)").click();
+
+    // 인쇄: 신고서 표 leaf만 남고 나머지는 print:hidden
+    await page.emulateMedia({ media: "print" });
+    await expect(page.locator('[data-print-id="form-table"]')).toBeVisible();
+    await expect(page.locator('[data-print-id="summary"]')).toBeHidden();
+    await expect(page.locator('[data-print-id="asset-gain"]')).toBeHidden();
+    if (shot) await page.screenshot({ path: `${shot}/foreign-filing-form-print.png`, fullPage: true });
+    await page.emulateMedia({ media: "screen" });
+
+    // PDF: react-pdf가 클라이언트에서 파일을 만든다
+    await expect(pdfBtn).toBeEnabled();
+    const [download] = await Promise.all([page.waitForEvent("download", { timeout: 90_000 }), pdfBtn.click()]);
+    expect(download.suggestedFilename()).toMatch(/^양도소득세_국외부동산_신고서_.*\.pdf$/);
+    const path = await download.path();
+    const { readFileSync } = await import("node:fs");
+    const bytes = readFileSync(path);
+    expect(bytes.subarray(0, 4).toString("latin1")).toBe("%PDF");
+    expect(bytes.length).toBeGreaterThan(5_000);
+    expect(dialogs).toEqual([]);
+    if (shot) await download.saveAs(`${shot}/foreign-filing-form.pdf`);
   });
 });

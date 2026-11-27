@@ -37,7 +37,7 @@ interface CalcStep {
 // result_data를 Record로 받아 각 세금 유형에 맞게 필드 접근
 
 export interface ResultPdfProps {
-  taxType: string;       // "transfer" | "acquisition" | "inheritance" | "gift" | "property" | "comprehensive_property"
+  taxType: string;       // "transfer" | "transfer_foreign" | "acquisition" | "inheritance" | "gift" | "property" | "comprehensive_property"
   taxTypeLabel: string;
   createdAt: string;
   resultData: R;
@@ -57,7 +57,7 @@ export interface ResultPdfProps {
 
 // 세금 유형별 총 납부세액 필드 매핑
 function getTotalTax(taxType: string, r: R): number | undefined {
-  if (taxType === "transfer" || taxType === "transfer_multi") return num(r.totalTax);
+  if (taxType === "transfer" || taxType === "transfer_multi" || taxType === "transfer_foreign") return num(r.totalTax);
   if (taxType === "acquisition") return num(r.totalTaxAfterReduction) ?? num(r.totalTax);
   if (taxType === "inheritance" || taxType === "gift") return num(r.finalTax) ?? num(r.totalTax);
   if (taxType === "property") return num(r.totalPayable) ?? num(r.totalTax);
@@ -66,6 +66,7 @@ function getTotalTax(taxType: string, r: R): number | undefined {
 }
 // ─── 양도세 섹션 3종 — ResultPdfTransferSections.tsx로 분리 (800줄 정책) ───
 import { TransferSection, TransferMultiSection, RegulatedAssumptionPdfNote } from "./ResultPdfTransferSections";
+import { ForeignTransferSection } from "./ResultPdfForeignSections";
 import type { RegulatedAssumptionPdfGroup } from "@/lib/calc/regulated-area-assumption-text";
 import type { FilingHeadPdfRow } from "@/components/calc/results/transfer/filing-head-pdf-rows";
 
@@ -465,6 +466,7 @@ export function ResultPdfDocument({
 
         {/* 세금 유형별 상세 섹션 */}
         {taxType === "transfer" && <TransferSection r={r} selectedSectionIds={selectedSectionIds} phdApartment={inputData?.phdApartment === true} headRows={inputData?.filingHeadRows as FilingHeadPdfRow[] | undefined} codeRows={inputData?.filingCodeRows as FilingHeadPdfRow[] | undefined} />}
+        {taxType === "transfer_foreign" && <ForeignTransferSection r={r} inputData={inputData} selectedSectionIds={selectedSectionIds} />}
         {taxType === "transfer_multi" && <TransferMultiSection r={r} selectedSectionIds={selectedSectionIds} codeRows={inputData?.filingCodeRows as FilingHeadPdfRow[] | undefined} />}
         {/* 조정대상지역 주소 문자열 판정 가정 — 화면 줄처럼 항목 선택과 무관하게 싣는다(결과뷰가 같은 leaf로 만든 값). */}
         {(taxType === "transfer" || taxType === "transfer_multi") && (

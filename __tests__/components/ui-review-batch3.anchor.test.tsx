@@ -123,7 +123,8 @@ describe("R05 · FieldCard unit이 trailing에 먹히지 않는다", () => {
 /* ══ R08 — 금액 셀 4클래스 ═══════════════════════════════════════════════════ */
 describe("R08 · 신고서 양식 금액 셀이 규약 4클래스를 갖춘다", () => {
   it("🔴 tabular-nums가 있다 (components/calc/CLAUDE.md 「금액 칸 정렬」)", () => {
-    const s = src("components/calc/results/transfer/FilingFormTable.tsx");
+    // 격자 본체는 `FilingFormGrid`로 옮겼다(국외자산 신고서 표와 공용) — 금액 셀 클래스는 그 파일에 있다.
+    const s = src("components/calc/results/transfer/FilingFormGrid.tsx");
     const cell = s.split("px-3 py-1.5 text-right")[1] ?? "";
     for (const cls of ["font-mono", "tabular-nums", "whitespace-nowrap"]) {
       expect(cell.slice(0, 120)).toContain(cls);
