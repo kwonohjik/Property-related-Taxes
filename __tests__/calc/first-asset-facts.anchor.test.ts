@@ -50,6 +50,7 @@ const EXCLUDED: Record<string, readonly string[]> = {
   "국외자산 부동산 슬라이스(국내 자산 목록과 별개 — 첫 국내 자산이 바뀌어도 의미가 같다)": [
     "assetLocation", "foreignResidenceYears", "foreignAssets", "foreignTaxEnabled", "foreignTaxMethod",
   ],
+  "이력 표지(계산 전체 단위 — §101② 증여자 기준 계산 · 첫 자산이 바뀌어도 의미가 같다)": ["giftResaleDonorBasis"],
   "UI 보조 플래그": ["isRegulatedAreaTouched", "wasRegulatedAtAcquisitionTouched", "ruralHouseLocationTouched"],
   "가산세·정정신고": [
     "enablePenalty", "filingType", "penaltyReason", "priorPaidTax", "originalFiledTax", "excessRefundAmount", "interestSurcharge",

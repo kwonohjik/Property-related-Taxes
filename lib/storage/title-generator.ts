@@ -177,7 +177,9 @@ export function generateTitle(
   if (taxType === "transfer") {
     const date = extractTransferDate(inputData);
     // 다건(multi)은 저장 taxType이 "transfer"라 라벨만으로는 단건과 구분 불가 → "(다건)" 병기
-    const baseLabel = inputData.__multiTransfer === true ? `${label} (다건)` : label;
+    const multiLabel = inputData.__multiTransfer === true ? `${label} (다건)` : label;
+    // §101② 증여자 직접양도 기준 계산 — 같은 물건의 수증자 기준 이력과 목록에서 구별
+    const baseLabel = inputData.giftResaleDonorBasis === true ? `${multiLabel} (증여자 기준)` : multiLabel;
     const label2 =
       inputData.amendmentMode === true
         ? inputData.correctionKind === "refund_claim"

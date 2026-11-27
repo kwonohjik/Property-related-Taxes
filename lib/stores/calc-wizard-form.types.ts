@@ -603,4 +603,13 @@ export interface TransferFormData extends ForeignRealEstateFormSlice {
   posteriorEventDate: string;
   /** 당초 납부일(YYYY-MM-DD, 선택) — 환급가산금 기산일 안내(form-only, 엔진 미전송) */
   originalPaymentDate: string;
+
+  /**
+   * 증여 후 우회양도 판정(소득세법 §101②)용 **증여자 직접양도 기준 계산** 표지 — form-only, 엔진 미전송.
+   *
+   * 같은 물건·같은 양도일을 수증자 기준과 증여자 기준으로 각각 계산하면 이력 키(`addr:주소|양도일`)가 같아
+   * 두 번째 계산이 첫 이력을 덮어썼다. 이 표지가 켜지면 키 끝에 `|101-2-donor`를 붙여 두 이력을 따로 둔다
+   * (`lib/storage/business-key.ts`). 세액에는 영향이 없다.
+   */
+  giftResaleDonorBasis: boolean;
 }

@@ -51,13 +51,16 @@ export function extractBusinessKey(
       const multiSuffix = inputData.__multiTransfer === true ? "|multi" : "";
       // 수정신고·경정청구는 주소·양도일이 당초와 동일 → 접미로 당초 record 덮어쓰기 방지
       // (당초·수정신고|amend·경정청구|refund 3-record 공존)
+      // §101② 증여자 직접양도 기준 계산은 수증자 기준 계산과 주소·양도일이 같다 → 접미로 분리
+      // (수증자·증여자 두 record 공존 — 판정 화면이 두 결정세액을 모두 불러간다)
+      const donorSuffix = inputData.giftResaleDonorBasis === true ? "|101-2-donor" : "";
       const amendSuffix =
         inputData.amendmentMode === true
           ? inputData.correctionKind === "refund_claim"
             ? "|refund"
             : "|amend"
           : "";
-      return `addr:${addr}|${date ?? ""}${multiSuffix}${amendSuffix}`;
+      return `addr:${addr}|${date ?? ""}${multiSuffix}${donorSuffix}${amendSuffix}`;
     }
     case "acquisition": {
       // jibun/road는 acquisition FormState top-level → extractAddress 동작
