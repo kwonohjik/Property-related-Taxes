@@ -1,0 +1,141 @@
+/**
+ * 국외자산 부동산 양도소득세(소득세법 §118의2~§118의8) 순수 엔진 — 입력·결과 타입.
+ *
+ * 다건(PR-3)이 깨지지 않도록 처음부터 `assets[]` 배열 + 자산별 `rows[]`로 둔다. PR-2 엔진은 정확히 1건만 받는다.
+ * 계획서: docs/02-design/features/transfer-foreign-realestate.engine.plan.md §3 · 색인 §2 결정(C-1 다건 · C-2 거주 연수 정수 · C-3 미등기 칸 없음)
+ */
+
+/** 외화 금액 1항목 — 각 항목이 자기 일자·환율을 가진다(영 §178의5① 수령·지출일 현재 기준환율). 양도일 환율 fallback 없음. */
+export interface ForeignMoneyItem {
+  /** 외화액(≥ 0, 소수 4자리 이하) */
+  amountForeign: number;
+  /** 통화 코드(표시용 — 계산에 영향 없음) */
+  currency: string;
+  /** 수령 또는 지출한 날 */
+  date: Date;
+  /** 그날 기준환율 또는 재정환율(원/외화 1단위, > 0, 소수 4자리 이하) */
+  exchangeRate: number;
+}
+
+export interface ForeignRealEstateAssetInput {
+  id: string;
+  /** 법 §118의2 1호 토지·건물 */
+  kind: "land" | "building";
+  transferDate: Date;
+  acquisitionDate: Date;
+  /** 양도가액(실지거래가액) */
+  transfer: ForeignMoneyItem;
+  /** 취득가액(실지거래가액 · 매매 취득) */
+  acquisition: ForeignMoneyItem;
+  /** 자본적지출액 — 항목마다 지출일·환율 */
+  capitalExpenditures: ForeignMoneyItem[];
+  /** 양도비 — 항목마다 지출일·환율 */
+  transferCosts: ForeignMoneyItem[];
+}
+
+export interface ForeignRealEstateInput {
+  /** 해당 자산의 양도일까지 계속 국내에 주소·거소를 둔 연수(정수, 폼 전역 1칸 — 색인 C-2). 5 미만이면 과세대상 아님. */
+  domesticResidenceYears: number;
+  /** PR-2는 정확히 1건. 다건은 PR-3. */
+  assets: ForeignRealEstateAssetInput[];
+}
+
+/** 누진세율 구간 — `calculateProgressiveTax`가 읽는 최소 구조(`TaxBracket`과 구조 호환). */
+export interface ForeignRealEstateBracket {
+  max?: number | null;
+  rate: number;
+  deduction: number;
+}
+
+/** 순수 엔진이 받는 세율 — 호출자(route/테스트)가 `parseRatesFromMap` 결과에서 만든다(`rates.ts`). DB 호출 없음. */
+export interface ForeignRealEstateRates {
+  /** 소득세법 §55① 구간 (양도일 시점 행 — 법 §118의5①이 §55①을 가리킨다) */
+  brackets: readonly ForeignRealEstateBracket[];
+  /** 법 §118의7① 연 기본공제 한도(원) */
+  basicDeductionAnnualLimit: number;
+}
+
+/** 환산 1항목 echo — 결과 카드가 「외화 × 환율 = 원화」를 그대로 보여준다. */
+export interface ForeignRealEstateConvertedItem {
+  amountForeign: number;
+  currency: string;
+  /** yyyy-MM-dd (UTC 달력일) */
+  date: string;
+  exchangeRate: number;
+  amountKrw: number;
+}
+
+export interface ForeignRealEstateAssetRow {
+  id: string;
+  kind: "land" | "building";
+  transferDate: string;
+  acquisitionDate: string;
+  transfer: ForeignRealEstateConvertedItem;
+  acquisition: ForeignRealEstateConvertedItem;
+  capitalExpenditures: ForeignRealEstateConvertedItem[];
+  transferCosts: ForeignRealEstateConvertedItem[];
+  /** 양도가액(원) */
+  transferValueKrw: number;
+  /** 취득가액(원) */
+  acquisitionValueKrw: number;
+  capitalExpenditureKrw: number;
+  transferCostKrw: number;
+  /** 양도차익 = 양도가액 − 취득가액 − 자본적지출 − 양도비. 음수면 양도차손. */
+  capitalGain: number;
+  /** 양도차손 echo(양수, 차익이면 0) */
+  lossAmount: number;
+  /** 장기보유특별공제 — 법 §118의8 단서로 항상 0 */
+  longTermDeduction: 0;
+  /** 양도소득금액 = max(0, 양도차익 − 장특 0) */
+  incomeAmount: number;
+}
+
+/** 세액이 아니라 사용자가 확인해야 할 미결 사항 코드(계획서 V-n) */
+export type ForeignRealEstateConfirmationCode =
+  /** 지방세법 §103의3⑨(제3항 세율의 §103의3⑤ 준용 가중) · ④(조례 가감)는 지정지역 등 자료가 없어 평가하지 않았다 */
+  | "LOCAL_TAX_WEIGHTING_NOT_EVALUATED";
+
+export type ForeignRealEstateNotLiableReason = "RESIDENCE_UNDER_5_YEARS";
+
+export interface ForeignRealEstateResult {
+  taxCategory: "foreign_realestate" | "not_liable";
+  /** 법 §118의2 요건 충족(거주 5년 이상) */
+  isLiable: boolean;
+  notLiableReason?: ForeignRealEstateNotLiableReason;
+  ineligibleReason?: string;
+
+  domesticResidenceYears: number;
+  rows: ForeignRealEstateAssetRow[];
+
+  /** Σ 양도차익(차손 포함) */
+  capitalGainTotal: number;
+  /** 장기보유특별공제 — 법 §118의8 단서로 항상 0 */
+  longTermDeduction: 0;
+  /** 양도소득금액(차손 자산은 0으로 본 합) */
+  incomeAmountTotal: number;
+  /** 법 §118의7① 기본공제 = min(양도소득금액, 연 한도) — 미등기 배제 단서 없음 */
+  basicDeduction: number;
+  /** 과세표준 = 양도소득금액 − 기본공제 (천원 절사 없음) */
+  taxBase: number;
+  /** 법 §118의5① §55① 적용 구간의 세율(소수, 0.4 = 40%) — 과세표준 0이면 0 */
+  appliedRate: number;
+  progressiveDeduction: number;
+  /** 산출세액 */
+  calculatedTax: number;
+  /** 결정세액(= 산출세액 — PR-2는 감면·외국납부세액공제 없음) */
+  determinedTax: number;
+  /** 지방세법 §103③ 과세표준(= 소득세 과세표준) */
+  localIncomeTaxBase: number;
+  /** 개인지방소득세 — 지방세법 §92① 세율, 지방세기본법 §59→국고금 관리법 §47① 10원 미만 절사 */
+  localIncomeTax: number;
+  totalTax: number;
+
+  /** 지원 개시 양도일(yyyy-MM-dd) */
+  supportedFrom: string;
+  /** 가장 늦은 양도일(yyyy-MM-dd) */
+  appliedLawDate: string;
+  warnings: string[];
+  /** 적용한 법령 조문 상수(`TRANSFER_FOREIGN_RE.*`) */
+  appliedRules: string[];
+  confirmationNeeded: ForeignRealEstateConfirmationCode[];
+}

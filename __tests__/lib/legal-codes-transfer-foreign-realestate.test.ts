@@ -27,6 +27,10 @@ const EXPECTED_KEYS: Record<keyof typeof TRANSFER_FOREIGN_RE, string> = {
   DECREE_178_2_4_UNREGISTERED: "소득세법 시행령 제178조의2",
   DECREE_178_5_FX_BASE_RATE: "소득세법 시행령 제178조의5",
   LOCAL_103_3_3_RATE: "지방세법 제103조의3",
+  LOCAL_103_3_FOREIGN_TAX_BASE: "지방세법 제103조",
+  LOCAL_92_1_RATE_TABLE: "지방세법 제92조",
+  LOCAL_BASIC_59_ROUNDING: "지방세기본법 제59조",
+  TREASURY_47_1_ROUND_10: "국고금 관리법 제47조",
 };
 
 describe("TRANSFER_FOREIGN_RE 상수", () => {

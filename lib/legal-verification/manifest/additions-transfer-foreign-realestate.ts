@@ -75,4 +75,20 @@ export const TRANSFER_FOREIGN_REALESTATE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  {
+    id: "TRANSFER_FOREIGN_RE.LOCAL_103_3_FOREIGN_TAX_BASE",
+    citation: "지방세법 §103 ③",
+    keywords: [
+      "거주자의 국외자산 양도소득에 대한 개인지방소득세 과세표준은",
+      "제118조의3, 제118조의4 및 제118조의6부터 제118조의8까지의 규정에 따라 계산한 소득세의 과세표준",
+    ],
+    keywordMode: "ALL",
+  },
+  {
+    /** 시행본마다 금액만 다르고(1천200만원 표 → 1천400만원 표) 「종합소득에 대한 … 표준세율」 문언과 1천분의 6 첫 구간은 같다 */
+    id: "TRANSFER_FOREIGN_RE.LOCAL_92_1_RATE_TABLE",
+    citation: "지방세법 §92 ①",
+    keywords: ["거주자의 종합소득에 대한 개인지방소득세의 표준세율은 다음 표와 같다", "과세표준의 1천분의 6"],
+    keywordMode: "ALL",
+  },
 ];
