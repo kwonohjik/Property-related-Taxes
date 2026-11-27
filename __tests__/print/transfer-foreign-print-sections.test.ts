@@ -1,8 +1,9 @@
 /**
  * 계산 결과 선택 출력 — 국외 부동산 레지스트리 (U2)
- * pdf 채널 = 0종 (ResultPdfDocument에 국외 부동산 섹션 없음 — 거짓 선택 방지).
+ * pdf 채널 = form-table 1종 (ResultPdfDocument taxType transfer_foreign이 신고서 표만 그린다 — 거짓 선택 방지).
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   TRANSFER_FOREIGN_PRINT_SECTIONS,
   flattenTransferForeignPrintIds,
@@ -11,7 +12,7 @@ import {
 import { pdfEligibleIds, resolvePrintVisibilityClass } from "@/lib/print/print-sections.types";
 
 // ⚠️ union에서 파생되지 않는다 — leaf를 늘리면 여기도 늘린다. 아래 PD-fre-3이 레지스트리와의 일치를 강제한다.
-const ALL_LEAVES: TransferForeignPrintSectionId[] = ["summary", "asset-gain", "tax-calc", "notices"];
+const ALL_LEAVES: TransferForeignPrintSectionId[] = ["form-table", "summary", "asset-gain", "tax-calc", "notices"];
 
 describe("국외 부동산 선택 출력 레지스트리", () => {
   it("PD-fre-1: 선택 0건이면 모든 섹션이 print:hidden", () => {
@@ -32,8 +33,10 @@ describe("국외 부동산 선택 출력 레지스트리", () => {
     for (const g of TRANSFER_FOREIGN_PRINT_SECTIONS) expect(g.id.startsWith("group:")).toBe(true);
   });
 
-  it("PD-fre-4: pdf 채널 0종 — 서버 PDF에 없는 서식을 PDF로 고르게 두지 않는다", () => {
-    expect(pdfEligibleIds(TRANSFER_FOREIGN_PRINT_SECTIONS)).toEqual([]);
+  it("PD-fre-4: pdf 채널은 form-table 1종뿐 — PDF 본문(ResultPdfForeignSections)이 그리는 것만 PDF로 고르게 둔다", () => {
+    expect(pdfEligibleIds(TRANSFER_FOREIGN_PRINT_SECTIONS)).toEqual(["form-table"]);
+    const src = readFileSync("lib/pdf/ResultPdfForeignSections.tsx", "utf8");
+    expect(src).toContain('selectedSectionIds.includes("form-table")');
   });
 
   it("PD-fre-5: 결과 카드가 렌더하는 data-print-id 전부가 레지스트리 leaf다", async () => {

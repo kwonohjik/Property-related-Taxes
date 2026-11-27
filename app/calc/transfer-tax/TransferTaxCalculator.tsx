@@ -481,6 +481,7 @@ export default function TransferTaxCalculator({
         result.mode === "foreign" ? (
           <ForeignRealEstateResultView
             result={result.result}
+            foreignAssets={formData.foreignAssets}
             onBack={() => { setStep(totalSteps - 1); clearError(); }}
             onGoToFirst={() => { setStep(0); clearError(); }}
             onReset={handleReset}

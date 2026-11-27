@@ -4,8 +4,8 @@
  * 설계: docs/02-design/features/selective-print-6tax.ui.design.md §1 · 국외 부동산 U2(`transfer-foreign-realestate.ui.plan.md` §14).
  * 선택은 «인쇄 대상»만 제어한다 — 미선택이어도 화면에는 그대로 보이고 인쇄(print)에서만 `print:hidden`.
  *
- * pdf 채널 = 없음. 서버·클라이언트 PDF(`ResultPdfDocument`)에 국외 부동산 섹션이 없다 — 거짓 선택 방지 원칙에 따라 어떤 leaf에도 pdf를 주지 않는다.
- * 사용자는 「선택 항목 인쇄」(window.print → 브라우저 PDF 저장)로 출력한다.
+ * pdf 채널 = `form-table`(별지 제84호서식 신고서 표) 1종. `ResultPdfDocument`(taxType `transfer_foreign`)가 그 표만 그린다 —
+ * 나머지 leaf는 PDF 본문에 없으므로 거짓 선택 방지 원칙에 따라 pdf를 주지 않는다(「선택 항목 인쇄」 window.print 로는 전부 나온다).
  *
  * ⚠️ leaf를 늘리면 `__tests__/print/transfer-foreign-print-sections.test.ts`의 `ALL_LEAVES`도 늘린다 — union에서 파생되지 않아 타입이 강제하지 않는다.
  */
@@ -17,6 +17,8 @@ import {
 } from "@/lib/print/print-sections.types";
 
 export type TransferForeignPrintSectionId =
+  /** 신고서 양식 표 — 별지 제84호서식(국내 부동산과 같은 서식, 국외분) */
+  | "form-table"
   /** 총 납부세액 요약 카드 */
   | "summary"
   /** 자산별 환산 · 양도차익 · 양도소득금액 */
@@ -30,8 +32,14 @@ export type TransferForeignPrintSectionGroup = GenericGroup<TransferForeignPrint
 export type TransferForeignPrintSectionNode = GenericNode<TransferForeignPrintSectionId>;
 
 const SCREEN: PrintChannel[] = ["screen"];
+const SCREEN_PDF: PrintChannel[] = ["screen", "pdf"];
 
 export const TRANSFER_FOREIGN_PRINT_SECTIONS: TransferForeignPrintSectionGroup[] = [
+  {
+    id: "group:forms",
+    label: "신고서식",
+    children: [{ id: "form-table", label: "신고서 양식 표 (별지 제84호서식)", channel: SCREEN_PDF }],
+  },
   {
     id: "group:calc",
     label: "계산 내역",

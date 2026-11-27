@@ -13,8 +13,8 @@ import {
   type FilingFormTableProps,
   deriveColumns,
   buildRows,
-  fmtCell,
 } from "./FilingFormTableHelpers";
+import { FilingFormGrid } from "./FilingFormGrid";
 import { collectSaleSplitUnenteredNotices } from "./sale-split-unentered-notice";
 
 export type { FilingFormTableProps as FilingFormTableProps };
@@ -167,80 +167,7 @@ export function FilingFormTable({
           </div>
 
           {/* 열 수에 따라 테이블 폭 자동 조정 */}
-          <table className="text-xs border-collapse" style={{ width: "auto", tableLayout: "fixed" }}>
-            <colgroup>
-              <col style={{ width: "160px" }} />
-              {columns.map((c) => (
-                <col key={c.key} style={{ width: "130px" }} />
-              ))}
-            </colgroup>
-            <thead className="bg-slate-50 dark:bg-slate-800/50">
-              <tr>
-                <th className="text-left px-3 py-2 border-b border-r border-slate-200 font-semibold sticky left-0 bg-slate-50 dark:bg-slate-800/50 print:static">
-                  항목
-                </th>
-                {columns.map((c) => (
-                  <th
-                    key={c.key}
-                    className={cn(
-                      "text-right px-3 py-2 border-b border-r border-slate-200 font-semibold whitespace-nowrap",
-                      c.key === "total" && "bg-slate-100 dark:bg-slate-800",
-                    )}
-                  >
-                    {c.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr
-                  key={i}
-                  className={cn(
-                    "border-b border-slate-100",
-                    row.highlight && "bg-amber-50/60 dark:bg-amber-950/30 font-semibold",
-                    row.separatorAfter && "border-b-2 border-slate-300",
-                  )}
-                >
-                  <td
-                    className={cn(
-                      "px-3 py-1.5 border-r border-slate-200 sticky left-0 bg-white dark:bg-slate-900 print:static",
-                      row.indent && "pl-7 text-slate-600 dark:text-slate-400",
-                      row.highlight && "bg-amber-50/60 dark:bg-amber-950/30",
-                    )}
-                  >
-                    {row.label}
-                  </td>
-                  {columns.map((c) => {
-                    const note = row.notes?.[c.key];
-                    const roseNote = row.roseNotes?.[c.key];
-                    return (
-                      <td
-                        key={c.key}
-                        className={cn(
-                          "px-3 py-1.5 text-right border-r border-slate-200 font-mono tabular-nums whitespace-nowrap",
-                          c.key === "total" && "bg-slate-50/60 dark:bg-slate-800/40",
-                          (note || roseNote) && "align-top",
-                        )}
-                      >
-                        {fmtCell(row.values[c.key])}
-                        {roseNote && (
-                          <div data-testid="filing-rose-note" className="text-micro font-sans font-normal text-rose-700 leading-tight mt-0.5 whitespace-normal text-right dark:text-rose-400">
-                            {roseNote}
-                          </div>
-                        )}
-                        {note && (
-                          <div className="text-micro font-sans font-normal text-slate-600 dark:text-slate-400 leading-tight mt-0.5 whitespace-normal text-right">
-                            {note}
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <FilingFormGrid columns={columns} rows={rows} />
         </div>
       </div>
       {/* 「※」 안내는 가로 스크롤 영역 밖에 둔다 — 안에 두면 표 폭(375px에서 414)으로 줄바꿈되어 오른쪽 끝이 가려졌다. */}
