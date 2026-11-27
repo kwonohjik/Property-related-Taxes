@@ -31,3 +31,4 @@ export * from "./legal-codes/stock";
 export * from "./legal-codes/building-standard-price";
 export * from "./legal-codes/income-tax";
 export * from "./legal-codes/local-tax";
+export * from "./legal-codes/transfer-foreign-realestate";

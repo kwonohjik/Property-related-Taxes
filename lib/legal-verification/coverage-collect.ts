@@ -30,6 +30,7 @@ import * as transferNecessaryExpense from "@/lib/tax-engine/legal-codes/transfer
 import * as stockForeignCarryover from "@/lib/tax-engine/legal-codes/stock-foreign-carryover";
 import * as transferFbLthd from "@/lib/tax-engine/legal-codes/transfer-fb-lthd";
 import * as stockFamilyBusiness from "@/lib/tax-engine/legal-codes/stock-family-business";
+import * as transferForeignRealestate from "@/lib/tax-engine/legal-codes/transfer-foreign-realestate";
 
 import { isLegalCitation } from "./coverage";
 import { parseCitations, LAW_ALIAS } from "./citation-parser";
@@ -55,6 +56,7 @@ const MODULES: unknown[] = [
   stockForeignCarryover,
   transferFbLthd,
   stockFamilyBusiness,
+  transferForeignRealestate,
 ];
 
 /** 객체/배열을 재귀 순회하며 모든 문자열 leaf를 수집한다. */
