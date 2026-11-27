@@ -3,20 +3,14 @@
  * 항목마다 자기 일자·환율로 환산하며 양도일 환율로 대체하지 않는다(미입력 → `toKrw`가 TaxCalculationError).
  */
 import { format } from "../utc-date";
-import { TaxCalculationError, TaxErrorCode } from "../tax-errors";
 import { toKrw } from "./fx";
+import { assertAcquisitionNotAfterTransfer, assertValidDate } from "./input-asserts";
 import type {
   ForeignMoneyItem,
   ForeignRealEstateAssetInput,
   ForeignRealEstateAssetRow,
   ForeignRealEstateConvertedItem,
 } from "./types";
-
-function assertValidDate(d: unknown, path: string): asserts d is Date {
-  if (!(d instanceof Date) || Number.isNaN(d.getTime())) {
-    throw new TaxCalculationError(TaxErrorCode.INVALID_DATE, `${path}: 유효한 날짜가 아닙니다`, { path });
-  }
-}
 
 export function convertItem(item: ForeignMoneyItem, path: string): ForeignRealEstateConvertedItem {
   assertValidDate(item.date, `${path}.date`);
@@ -39,9 +33,7 @@ export function buildAssetRow(asset: ForeignRealEstateAssetInput, index: number)
   const p = `assets[${index}]`;
   assertValidDate(asset.transferDate, `${p}.transferDate`);
   assertValidDate(asset.acquisitionDate, `${p}.acquisitionDate`);
-  if (asset.acquisitionDate.getTime() > asset.transferDate.getTime()) {
-    throw new TaxCalculationError(TaxErrorCode.INVALID_DATE, `${p}: 취득일이 양도일보다 늦습니다`, { path: p });
-  }
+  assertAcquisitionNotAfterTransfer(asset, index);
   const transfer = convertItem(asset.transfer, `${p}.transfer`);
   const acquisition = convertItem(asset.acquisition, `${p}.acquisition`);
   const capitalExpenditures = asset.capitalExpenditures.map((it, i) => convertItem(it, `${p}.capitalExpenditures[${i}]`));

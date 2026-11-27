@@ -229,6 +229,30 @@ Layer 2  lib/tax-engine/foreign-realestate/
 | 거주 5년 미만 | **경고만** | 통과 | 엔진이 `not_liable` (주식 선례 `:65-69`·`stock-transfer-foreign-schema.ts:154`) |
 | `domesticResidenceStartDate` 미입력 | O | O | 5년 판정 불가는 «0년»이 아니라 입력 요구 |
 
+### 4.2 PR-4 확정 API 계약 (구현 완료 — 위 §3.2 표보다 이 절이 우선)
+
+`POST /api/calc/transfer/foreign` · 응답 `200 { data: ForeignRealEstateResult }` · 400 `{ error: { code, message, fieldErrors } }`(`code`는 `INVALID_INPUT`, 차손 혼재만 `FOREIGN_LOSS_NETTING_UNRESOLVED`) · 429 rate limit(키 `transfer-foreign:IP`, 분당 30).
+파일: `lib/api/transfer-foreign-schema.ts`(⑨⑫) · `transfer-foreign-refines.ts`(⑩) · `transfer-foreign-engine-input.ts`(⑭ 매핑) · `app/api/calc/transfer/foreign/route.ts`.
+
+| body 키 | 타입 | 비고 (§3.2 초안과 다른 점) |
+|---|---|---|
+| `domesticResidenceYears` | number(정수 ≥ 0) | 색인 C-2 = 거주 연수. `domesticResidenceStartDate`(초안)는 폐기. 5 미만이면 200 + `not_liable` |
+| `assets[]` (1..20, `FOREIGN_RE_MAX_ASSETS`) | | 같은 과세기간(양도일 연도) |
+| `assets[].id` | string 1..64 | 자산 간 유일 |
+| `assets[].kind` | `"land"\|"building"` | |
+| `assets[].transferDate` · `acquisitionDate` | string\|Date | 필수·fallback 없음. ⑭가 `toDate` |
+| `assets[].transfer` · `acquisition` | `{ amountForeign, currency, date, exchangeRate }` | 초안과 달리 **`date`가 항목마다 있다**(영 §178의5① 수령·지출일). 보통 `transferDate`·`acquisitionDate`와 같은 값을 싣는다 — 엔진은 둘이 같은지 검사하지 않는다 |
+| `assets[].capitalExpenditures[]` · `transferCosts[]` | 같은 모양(≤ 50, 기본 `[]`) | 행마다 지출일·환율 |
+| `assets[].acquisitionCause?` | `"purchase"` | 엔진에 칸 없음 — **다른 값은 400**(strip 방지) |
+| `assets[].foreignBorrowAcquired?` | `false` | 엔진에 칸 없음 — **true는 400** |
+| `foreignTax?` | `{ method: "credit"\|"expense", items[] }` | 항목 0건이면 §118의6 미적용 |
+| `foreignTax.items[]` | `{ assetId, amountForeign, currency, date(납부일), exchangeRate }` | `assetId`는 `assets[].id` 중 하나 |
+
+값 규칙(엔진 `toKrw`와 같은 함수 `tryToKrw`): 외화액 ≥ 0·소수 4자리 이하·≤ 1e11 / 환율 > 0·소수 4자리 이하·≤ 1e7 / 원화 환산 안전 정수 이하. `currency`는 3자리 영문 대문자(표시용 — Zod만 검사).
+⑩ refine 10개와 소유 관계: `__tests__/api/transfer-foreign.parity.test.ts`(엔진 throw ⇄ Zod 같은 `engineCode`·경로 격자 + refine별 제거 뮤테이션). 엔진 검증 함수 정본은 `lib/tax-engine/foreign-realestate/input-asserts.ts`·`fx.ts`.
+⑪ N/A 확정: `acquisitionDate`는 자산 필수·최상위 fallback 없음(`grep '??' lib/api/transfer-foreign-*.ts` 0건).
+**확인 필요(미해소)**: 양도가액·취득가액 항목의 `date`와 `transferDate`·`acquisitionDate`가 다를 때(장기할부 등)는 막지 않는다 — 엔진 V-10 · 장기할부 미지원 고지는 UI(U3).
+
 ---
 
 ## §5 법령 상수 · 검증 매니페스트
@@ -251,7 +275,7 @@ Layer 2  lib/tax-engine/foreign-realestate/
 | **PR-1** | 법령 상수·era 술어·매니페스트(§5) + `verify:legal` | 커버리지 게이트 · V-16 시행본 재대조 |
 | **PR-2** | `fx.ts`(K-23·K-27) + `gain.ts`·`tax.ts`·`index.ts` **단건 경로**(K-1~K-9·K-18·K-24~K-26) · 타입 | 엔진 anchor — `npx vitest run __tests__/tax-engine/foreign-realestate/` |
 | **PR-3** | 다건(K-14·K-16) + 기본공제 순서 + 외국납부세액(K-10~K-13) | B/C는 기존 함수 재사용 — 합계 불변식 `Σlimit ≤ A` |
-| **PR-4** | ⑨⑩⑫ Zod + ⑭ route + rate limit + 응답 규약 | route 테스트 W-1~W-3 |
+| **PR-4** ✅ | ⑨⑩⑫ Zod + ⑭ route + rate limit + 응답 규약 (§4.2 확정 계약) | route anchor + ⑧↔⑫ 패리티 격자·뮤테이션 |
 | **PR-5** | ④⑧⑬ (UI plan의 ①②③⑤⑥⑦과 한 묶음 순차: 엔진이 타입·헬퍼·anchor 선처리 → UI 후행) | ⑧↔⑫ 격자 패리티 테스트 |
 | **PR-6** | 브라우저 수동 확인(Playwright)·Network 탭 body 확인·E2E 1건 | `e2e/CLAUDE.md` 표준 |
 
