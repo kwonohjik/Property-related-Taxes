@@ -20,6 +20,7 @@
  */
 
 import { useMemo } from "react";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { StockFilingFormTable } from "@/components/calc/stock-transfer/StockFilingFormTable";
 import { useStockFilingHeaderMeta } from "@/components/calc/results/useStockFilingHeaderMeta";
 import { toStockTransferResultFromExitTax } from "@/lib/tax-engine/stock-transfer/exit-tax-filing-adapter";
@@ -71,6 +72,18 @@ export function ExitTaxFilingFormSection({
       }),
     [result, departureDate, holdings],
   );
+
+  // 세율 구분이 둘 이상이면 서식 23·24행의 단일 세율·누진공제 칸이 성립하지 않는다 — 잘못된 단일 세율을 보이지 않는다.
+  // 2027.1.1. 개정 서식(별지 제84호서식 부표 2)의 호별 칸 대조(UI 계획 V-7) 뒤에 서식 표시를 정한다(U3).
+  if ((result.bucketDetails?.length ?? 0) >= 2) {
+    return (
+      <ToneCard tone="amber" title="별지 제84호서식 표시 보류">
+        <p className="text-sm leading-relaxed">
+          과세 세율 구분이 둘 이상이라 서식의 단일 세율 칸에 담을 수 없습니다. 구분별 세율·과세표준·산출세액은 위 결과 카드를 참조하세요.
+        </p>
+      </ToneCard>
+    );
+  }
 
   return (
     <StockFilingFormTable

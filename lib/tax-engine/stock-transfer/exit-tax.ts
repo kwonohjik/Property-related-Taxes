@@ -8,8 +8,8 @@
  *   STEP 1: §118의9 요건 확인 (거주기간 5년 이상 + 대주주)
  *   STEP 2: 종목별 출국일 시가 산정 (§178의9)
  *   STEP 3: 종목별 양도차익 (간주양도가 − 취득가)
- *   STEP 4: 합산 과세표준 (기본공제 §118의10④ 250만원)
- *   STEP 5: §118의11 → §104①11가목2) 20%/25% 산출세액
+ *   STEP 4: 세율 구분별 과세표준 (기본공제 §118의10④ 250만원 — 구분이 둘 이상이면 사용자 배분 입력)
+ *   STEP 5: §118의11 산출세액 (1호 20%/25% 누진 · 2호가목 10% · 2호나목 20%)
  *   STEP 6: 납부유예 §118의16 처리 (5년/10년)
  *   STEP 7: 경정청구 계산 (조정공제·외국납부세액공제·비거주자공제)
  *   STEP 8: 보유현황 미신고 가산세 §118의15
@@ -37,10 +37,13 @@ import { isExitTaxFrom2027 } from "@/lib/tax-engine/data/exit-tax-2027-era";
 import { applyRate } from "@/lib/tax-engine/tax-utils";
 import { isForeignValuationMode } from "./exit-tax-fx";
 import { resolveForeignHoldingKrw } from "./exit-tax-fx";
-import { calcBucketTax, calcLocalIncomeTaxTable, floorTen } from "./exit-tax-bucket";
+import { calcLocalIncomeTaxTable, floorTen } from "./exit-tax-bucket";
+import { calcBuckets } from "./exit-tax-multi-bucket";
+import { calcMultiBucketLocalTax } from "./exit-tax-multi-bucket";
+import { multiBucketNotices } from "./exit-tax-multi-bucket";
 import {
+  assertAdjustmentInputSupported,
   assertForeignInputs,
-  assertSupportedByPr2,
   buildAllExcludedResult,
   classifyExitTaxHoldings,
   type ExitTaxRegime,
@@ -203,45 +206,37 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   // 조정공제·외국납부세액공제의 안분 인자(주식수)는 과세 종목만 쓴다 — 제외된 국외주식이 섞이면 조용히 틀린다.
   const taxedHoldings = cls.taxedHoldings;
 
-  // 입력 종목이 있는데 전부 제외됐으면 납세의무가 없다.
+  // 입력 종목이 있는데 전부 제외됐으면 납세의무가 없다. 배분 입력이 있으면 무시하지 않고 검증한다(과세 구분이 없으니 전부 0이어야 한다).
   if (input.holdings.length > 0 && taxedHoldings.length === 0) {
+    if (input.basicDeductionAllocation != null) calcBuckets(input, []);
     return buildAllExcludedResult(regime, cls, appliedRules);
   }
-  assertSupportedByPr2(input, cls.buckets);
+  assertAdjustmentInputSupported(cls.buckets, input);
   appliedRules.push(...cls.appliedRules);
-  const bucket = cls.buckets[0] ?? "clause1";
-  const isClause2 = bucket !== "clause1";
 
   // ──────────────────────────────────────────────────────────
-  // STEP 4: 합산 과세표준 (§118의10④ 기본공제 250만원)
+  // STEP 4~5: 세율 구분별 과세표준 (§118의10④ 기본공제 250만원) + 산출세액 (§118의11)
+  //   구분이 하나이면 종전과 같다. 둘 이상이면 기본공제 배분을 입력받고 구분 간 손실은 차단한다(exit-tax-multi-bucket.ts).
   // ──────────────────────────────────────────────────────────
   const taxedDetails = holdingDetails.filter((h) => h.scope !== "excluded");
-  const totalTransferGain = taxedDetails.reduce((sum, h) => sum + h.transferGain, 0);
   const totalDepartureDayValue = taxedDetails.reduce((sum, h) => sum + h.departureDayValue, 0);
-
-  // §118의10④ 기본공제 250만원 (§103①·§118의7과 별도 그룹)
-  const basicDeduction =
-    totalTransferGain > 0
-      ? Math.min(STOCK_EXIT_TAX_CONSTS.BASIC_DEDUCTION, totalTransferGain)
-      : 0;
+  const calc = calcBuckets(input, taxedDetails);
+  const isMultiBucket = calc.details.length >= 2;
+  const isClause2 = calc.details.some((d) => d.bucket !== "clause1");
+  const totalTransferGain = calc.totalGain;
+  const basicDeduction = calc.basicDeduction;
+  const taxBase = calc.taxBase;
+  const incomeTax = calc.incomeTax;
   appliedRules.push(STOCK_EXIT_TAX.SECTION_118_10_4_BASIC_DEDUCTION);
-
-  const taxBase = Math.max(0, totalTransferGain - basicDeduction);
 
   if (totalTransferGain <= 0) {
     warnings.push(`양도차익 합산 ${totalTransferGain.toLocaleString()}원 — 과세표준 0 (양도손실 또는 차익 없음)`);
   }
 
-  // ──────────────────────────────────────────────────────────
-  // STEP 5: §118의11 산출세액 (§104①11가목2) 20%/25%)
-  // ──────────────────────────────────────────────────────────
   // rate·progressiveDeduction 은 종전에도 계산되고 있었다 — 버리지 않고 결과에 echo 한다
-  // (별지 제84호서식 23·24행. 산식은 그대로다).
-  const {
-    tax: incomeTax,
-    rate: appliedRate,
-    progressiveDeduction,
-  } = calcBucketTax(bucket, taxBase);
+  // (별지 제84호서식 23·24행. 산식은 그대로다). 구분이 둘 이상이면 단일 값이 성립하지 않아 0이고 `bucketDetails`를 읽는다.
+  const appliedRate = isMultiBucket ? 0 : (calc.details[0]?.appliedRate ?? 0);
+  const progressiveDeduction = isMultiBucket ? 0 : (calc.details[0]?.progressiveDeduction ?? 0);
   appliedRules.push(STOCK_EXIT_TAX.SECTION_118_11_TAX_RATE);
 
   // ──────────────────────────────────────────────────────────
@@ -426,14 +421,24 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
   // 즉시 납부 케이스: (경정 후 세액 or 산출세액) × 10%
   const taxForLocal = finalTaxAfterAdjustment ?? incomeTax;
   // 2호(국외주식)는 지방세법 §103의3⑧ 표를 과세표준에 직독한 값이 주값이고 소득세 10%는 참고값이다(C-5, V-3).
-  // 1호는 종전 그대로 — 소득세 표의 정확히 10%와 같다.
-  const localIncomeTax = isClause2
-    ? calcLocalIncomeTaxTable(taxBase)
-    : floorTen(taxForLocal * 0.1);
-  const localIncomeTaxAlternative = isClause2 ? floorTen(applyRate(taxForLocal, 0.1)) : undefined;
+  // 1호는 종전 그대로 — 소득세 표의 정확히 10%와 같다. 구분이 둘 이상이면 구분별로 계산해 더한다.
+  const multiLocal = isMultiBucket ? calcMultiBucketLocalTax(calc.details) : undefined;
+  const localIncomeTax = multiLocal
+    ? multiLocal.primary
+    : isClause2
+      ? calcLocalIncomeTaxTable(taxBase)
+      : floorTen(taxForLocal * 0.1);
+  const localIncomeTaxAlternative = multiLocal
+    ? multiLocal.alternative
+    : isClause2
+      ? floorTen(applyRate(taxForLocal, 0.1))
+      : undefined;
   appliedRules.push(STOCK_EXIT_TAX.LOCAL_TAX_103_3);
-  if (isClause2) {
-    appliedRules.push(STOCK_EXIT_TAX_2027.LOCAL_103_3_8);
+  if (isClause2) appliedRules.push(STOCK_EXIT_TAX_2027.LOCAL_103_3_8);
+  if (multiLocal) {
+    // 구분별 지방소득세·배분·3억 구간 기준 고지가 2호 단일 고지를 대신한다
+    warnings.push(...multiBucketNotices(calc.details, multiLocal));
+  } else if (isClause2) {
     warnings.push(
       `2호(국외주식) 지방소득세는 지방세법 §103의3⑧ 표를 과세표준에 직독한 ${localIncomeTax.toLocaleString()}원이 주값이고, 소득세 산출세액의 10%는 ${(localIncomeTaxAlternative ?? 0).toLocaleString()}원입니다 — 표가 호 구분 없는 단일표라 두 값이 다를 수 있어 확인 필요`,
     );
@@ -483,17 +488,7 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
     holdingDetails,
     ...(taxedHoldings.length > 0
       ? {
-          bucketDetails: [
-            {
-              bucket,
-              transferGain: totalTransferGain,
-              basicDeductionAllocated: basicDeduction,
-              taxBase,
-              appliedRate,
-              progressiveDeduction,
-              calculatedTax: incomeTax,
-            },
-          ],
+          bucketDetails: calc.details,
         }
       : {}),
     ...(cls.foreignExclusion ? { foreignExclusion: cls.foreignExclusion } : {}),
@@ -501,6 +496,7 @@ export function calculateExitTax(input: ExitTaxInput): ExitTaxResult {
     totalTransferGain,
     basicDeduction,
     taxBase,
+    ...(calc.userAllocated ? { basicDeductionBasis: "user_allocation" as const } : {}),
 
     incomeTax,
     appliedRate,

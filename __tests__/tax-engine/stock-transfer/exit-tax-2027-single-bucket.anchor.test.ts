@@ -396,7 +396,7 @@ describe("1호 경로 회귀 · 제외 종목 오염 방지", () => {
   });
 });
 
-describe("차단 — 구분 ≥ 2 · 2호 경정청구 (PR-4·PR-7 대기)", () => {
+describe("차단 — 2호 경정청구 (PR-7 대기) · 구분 ≥ 2 배분 미입력 (PR-4 anchor 는 exit-tax-2027-multi-bucket)", () => {
   const expectInvalid = (fn: () => unknown) => {
     try {
       fn();
@@ -407,11 +407,11 @@ describe("차단 — 구분 ≥ 2 · 2호 경정청구 (PR-4·PR-7 대기)", () 
     }
   };
 
-  it("국내 1호 + 국외 2호 과세 혼합 → INVALID_INPUT", () => {
+  it("국내 1호 + 국외 2호 과세 혼합 + 기본공제 배분 미입력 → INVALID_INPUT", () => {
     expectInvalid(() => calculateExitTax(input(utc(2027, 1, 1), [domestic(), foreign()])));
   });
 
-  it("2호 가목(중소) + 나목(그 밖) 혼재 → INVALID_INPUT", () => {
+  it("2호 가목(중소) + 나목(그 밖) 혼재 + 기본공제 배분 미입력 → INVALID_INPUT", () => {
     const a = foreign({ id: "a", isListedForeignCorp: false, isSmallMediumEnterprise: true });
     const b = foreign({ id: "b", isListedForeignCorp: true });
     expectInvalid(() => calculateExitTax(input(utc(2027, 1, 1), [a, b])));
