@@ -22,6 +22,7 @@ import { HomeButton } from "@/components/calc/shared/HomeButton";
 import { ASSET_KIND_LABELS } from "@/components/calc/transfer/asset-labels";
 import { areAllPropertiesReady } from "@/lib/calc/multi-transfer-tax-validate";
 import { isForeignRealEstateForm } from "@/lib/calc/transfer-foreign-scope";
+import { MULTI_FOREIGN_UNSUPPORTED_MESSAGE } from "@/lib/calc/transfer-foreign-messages";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
 import TransferTaxCalculator from "../TransferTaxCalculator";
 
@@ -91,6 +92,11 @@ export function StepList({ properties, onAdd, onLoad, onEdit, onRemove, onNext, 
                       {p.completionPercent}%
                     </Badge>
                   </div>
+                  {isForeignRealEstateForm(p.form) && (
+                    <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-300" data-testid="multi-foreign-list-notice">
+                      {MULTI_FOREIGN_UNSUPPORTED_MESSAGE}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={() => onEdit(i)}>

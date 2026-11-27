@@ -101,7 +101,8 @@ import { buildHouseFirstDisclosurePayload } from "./house-first-disclosure";
 import { bgIgnoresCommercialEstimated } from "./bg-asset-acq-mode-scope";
 import { assetContractDateForCause } from "@/lib/tax-engine/transfer-reductions/asset-contract-date";
 import { isForeignRealEstateForm } from "./transfer-foreign-scope";
-import { FOREIGN_CALC_PENDING_MESSAGE } from "./transfer-foreign-pending";
+import { FOREIGN_DOMESTIC_PATH_GUARD_MESSAGE } from "./transfer-foreign-messages";
+import type { ForeignTransferResult } from "./transfer-foreign-result";
 export { toEngineReductions } from "./transfer-tax-api-helpers";
 
 export type SingleTransferResult = { mode: "single"; result: TransferTaxResult };
@@ -113,13 +114,13 @@ export type BundledTransferResult = {
   transferBurdenedGiftBreakdown?: import("@/lib/tax-engine/types/transfer-burdened-gift.types").TransferBurdenedGiftBreakdown;
 };
 export type MixedUseTransferResult = { mode: "mixed-use"; result: MixedUseGainBreakdown };
-export type TransferAPIResult = SingleTransferResult | BundledTransferResult | MixedUseTransferResult;
+export type TransferAPIResult = SingleTransferResult | BundledTransferResult | MixedUseTransferResult | ForeignTransferResult;
 
 /** 엔진이 이해하는 3종 assetKind (right_to_move_in / presale_right → housing) */
 
 export async function callTransferTaxAPI(formInput: TransferFormData): Promise<TransferAPIResult> {
-  // 국외 폼을 국내 경로로 보내면 빈 국내 자산이 조용히 계산된다 — U2가 국외 호출(④)을 연결할 때까지 던진다.
-  if (isForeignRealEstateForm(formInput)) throw new Error(FOREIGN_CALC_PENDING_MESSAGE);
+  // 국외 폼을 국내 경로로 보내면 빈 국내 자산이 조용히 계산된다 — 국외는 `callForeignRealEstateAPI`(④)로만 간다.
+  if (isForeignRealEstateForm(formInput)) throw new Error(FOREIGN_DOMESTIC_PATH_GUARD_MESSAGE);
   // 화면에 보이는 양도비만 싣는다 — 숨은 총 양도비·꺼진 자산 양도비를 비운다(O-9, ⑥과 같은 leaf).
   // 재개발 × 이월과세 — ⑤ 라디오 대신 이월과세 ② 토글이 산정 방식을 정한 사본(⑧·⑤와 같은 leaf · `redev-carryover-acq-mode.ts`) · 이월과세 승계 입주권은 숨은 승계 산정 방식 플래그를 끈다.
   const form = withHiddenSuccessorRightModeActual(withRedevCarryoverAcqMode(withInScopeTransferExpenses(formInput)));
