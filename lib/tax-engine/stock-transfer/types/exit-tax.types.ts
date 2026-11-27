@@ -19,8 +19,11 @@ export type ExitTaxHolding = {
   /**
    * 시장 분류. §118의9① 범위 = §94①3가·나목(상장·비상장 주식) + §94①4다·라목(기타자산: 과점주주·부동산과다보유법인).
    * 기타자산 다·라목은 §94①4의 주식이므로 "unlisted"로 입력 — 출국일 시가 × 주수 − 취득가 + §118의11 동일 세율(별도 분기 불요).
+   *
+   * 2027.1.1. 이후 출국분부터 `"foreign_stock"`(§94①3다목 국외주식등)이 추가된다 — 기존 국외주식 트랙
+   * (`ForeignStockInput.marketType`)과 같은 값. 2026.12.31. 이전 출국분에서는 과세 대상이 아니라 **제외·echo**한다.
    */
-  marketType: "kospi" | "kosdaq" | "konex" | "unlisted";
+  marketType: "kospi" | "kosdaq" | "konex" | "unlisted" | "foreign_stock";
   /** 보유 주식 수 (정수) */
   shareCount: number;
   /**
@@ -38,12 +41,15 @@ export type ExitTaxHolding = {
    * "prior_year_std"  → §99①3 기준시가 (상장: 1개월 종가평균)
    * "unlisted_sample" → §178의9②2호가목 전후 각 3개월 매매사례가액
    * "unlisted_std"    → §99①4 비상장 기준시가 (매매사례 없음)
+   * "foreign_market_price" · "foreign_decree_178_3" → 국외주식 외화 시가(PR-3 예약, 아래 「PR-3 예약」). PR-2는 거부한다.
    */
   departureDayValuationMode:
     | "market_price"
     | "prior_year_std"
     | "unlisted_sample"
-    | "unlisted_std";
+    | "unlisted_std"
+    | "foreign_market_price"
+    | "foreign_decree_178_3";
 
   /** §178의9① 출국일 거래가액 1주당 (market_price 모드) */
   departureDayMarketPrice?: number;
@@ -53,6 +59,57 @@ export type ExitTaxHolding = {
   unlistedSamplePrice?: number;
   /** §99①4 비상장 기준시가 1주당 (unlisted_std 모드) */
   unlistedStdPricePerShare?: number;
+
+  // ── 국외주식(`marketType: "foreign_stock"`) 전용 — 소득세법 §94①3다목 · 시행령 §157의3 ──
+  /**
+   * §157의3 자산 분류 — `ForeignStockInput.isListedForeignCorp`와 **같은 이름·의미**.
+   *   true  = 1호 외국법인 발행 주식등 / false = 2호 내국법인 발행 해외 증권시장 상장 주식등.
+   * 미입력은 **true**(외국법인)다(3중 패턴 default — ④·⑧·엔진 동일). 외국법인 발행은 중소기업 가목이 불가하다.
+   */
+  isListedForeignCorp?: boolean;
+  /**
+   * 중소기업 해당 여부 — §118의11 2호**가목**(10%) / 나목(그 밖 20%). `isListedForeignCorp`가 true(기본)면 무시(false 취급).
+   * 미입력은 나목 20% — 중소기업 여부는 납세자만 아는 사실이라 추정하지 않는다.
+   */
+  isSmallMediumEnterprise?: boolean;
+  /** ISO 2자리 국가코드 (표시용 — 계산 무영향) */
+  countryCode?: string;
+  /** 통화 코드 (표시용 — 계산 무영향) */
+  foreignCurrencyCode?: string;
+
+  // ── PR-3 예약 — 외화 환산 (이 PR의 계산에 **쓰이지 않는다**) ──
+  // 국외 종목 금액은 PR-2에서 **원화 단가**(`perShareAcquisitionPrice`·`departureDayMarketPrice`)로만 받는다.
+  // 아래 필드가 하나라도 있으면 조용히 무시하지 않고 `INVALID_INPUT`으로 거부한다(엔진 `assertNoReservedFxFields`).
+  /** 1주당 외화 출국일 시가 (PR-3) */
+  departureDayPriceForeign?: number;
+  /** 출국일 기준환율 (원/외화, PR-3) */
+  departureExchangeRate?: number;
+  /** 1주당 외화 취득가액 (PR-3) */
+  perShareAcquisitionPriceForeign?: number;
+  /** 취득일 기준환율 (원/외화, PR-3) */
+  acquisitionExchangeRate?: number;
+};
+
+/** 시행령 §178의8② 국외주식등 제외 사유 + 2026 이전 출국 미적용 */
+export type ExitTaxExcludedReason =
+  | "foreign_total_le_500m"
+  | "foreign_worker_owned"
+  | "foreign_worker_family_pre_work"
+  | "pre2027_foreign_not_covered";
+
+/** §118의11 세율 구분 — 1호(3호 가·나목, 4호 다·라목) / 2호가목(중소기업) / 2호나목(그 밖) */
+export type ExitTaxRateBucket = "clause1" | "clause2a" | "clause2b";
+
+/** 영 §178의8②2·3호 외국인근로자 요건 4개 (사용자 선언 — 엔진은 자동 판정하지 않는다) */
+export type ForeignWorkerChecks = {
+  /** 외국인인 임원 또는 사용인 */
+  isOfficerOrEmployee: boolean;
+  /** 일용근로자가 아님 */
+  isNotDailyWorker: boolean;
+  /** 출국일 10년 전부터 출국일까지 국내 거소·주소 기간의 100분의 80 이상 국내 근로 */
+  domesticWorkRatioAtLeast80: boolean;
+  /** 국내 근로 제공 종료일부터 6개월 이내 출국 */
+  departedWithin6MonthsOfWorkEnd: boolean;
 };
 
 // ============================================================
@@ -70,12 +127,33 @@ export type ExitTaxInput = {
   departureDate: Date;
 
   // ── 대주주 요건 §178의8 → §167의8 준용 ──
-  /** 직전 연도말 대주주 여부 (사용자 직접 판정 입력) */
+  /**
+   * 직전 연도말 대주주 여부 (사용자 직접 판정 입력).
+   * 2027.1.1. 이후 출국분은 §118의9①2호 괄호에 따라 **국외주식등(§94①3다목) 보유분을 판정에서 제외**한다
+   * — 엔진은 boolean을 그대로 받고 안내 문구만 더한다(계획 Q-9).
+   */
   isMajorShareholder: boolean;
 
   // ── 보유 주식 (종목별 다건) ──
   /** 최소 1건 이상 필수 */
   holdings: ExitTaxHolding[];
+
+  // ── 영 §178의8②2·3호 외국인근로자 제외 (2027.1.1. 이후 출국분) ──
+  /**
+   * 외국인근로자 구분. 미입력은 `"none"`(3중 패턴 default).
+   * "foreign_worker"        → ②2호 본인 소유 국외주식 전부 제외 (요건 4개 모두 true)
+   * "foreign_worker_family" → ②3호 배우자·20세 이하 직계비속이 근로 개시일 **전에 취득**한 종목만 제외
+   */
+  foreignWorkerStatus?: "none" | "foreign_worker" | "foreign_worker_family";
+  /** status ≠ none 일 때 필수. 4개 **모두** true여야 제외한다(하나라도 false면 과세). */
+  foreignWorkerChecks?: ForeignWorkerChecks;
+  /** status = foreign_worker_family 일 때 필수. 20세 이하 여부는 문언에 기준 시점이 없어 선언으로 받는다. */
+  foreignWorkerFamilyKind?: "spouse" | "child_20_or_under";
+  /**
+   * 외국인근로자가 국내에서 근로를 제공하기 시작한 날 — status = foreign_worker_family 일 때 필수.
+   * 엔진이 `취득일 < 근로 개시일`로 종목별 판정한다(같은 날 취득은 「전」이 아니다).
+   */
+  foreignWorkerStartDate?: Date;
 
   // ── 납부유예 §118의16 ──
   /** 납부유예 신청 여부 */
@@ -175,6 +253,28 @@ export type ExitTaxHoldingResult = {
   transferGain: number;
   /** 적용된 시가 산정 모드 */
   valuationMode: ExitTaxHolding["departureDayValuationMode"];
+  /**
+   * 과세 여부. `"excluded"`는 합계·세액·서식 값에서 **빠진** 종목이다(값은 echo용으로만 남는다).
+   * 2027.1.1. 개정 전 결과(저장 이력)에는 없다 — 없으면 `"taxed"`로 읽는다.
+   */
+  scope?: "taxed" | "excluded";
+  /** scope = "excluded" 일 때의 사유 */
+  excludedReason?: ExitTaxExcludedReason;
+  /** scope = "taxed" 일 때의 §118의11 세율 구분 */
+  rateBucket?: ExitTaxRateBucket;
+};
+
+/** §118의11 세율 구분별 계산 분해 (PR-2는 구분이 하나일 때만 계산한다) */
+export type ExitTaxBucketDetail = {
+  bucket: ExitTaxRateBucket;
+  /** 구분 내 종목 양도차익 합산(구분 안 손실 통산) */
+  transferGain: number;
+  /** 이 구분에서 공제한 §118의10④ 기본공제 */
+  basicDeductionAllocated: number;
+  taxBase: number;
+  appliedRate: number;
+  progressiveDeduction: number;
+  calculatedTax: number;
 };
 
 // ============================================================
@@ -182,6 +282,12 @@ export type ExitTaxHoldingResult = {
 // ============================================================
 
 export type ExitTaxResult = {
+  /**
+   * 출국일 기준 적용 규정 — "pre2027"(~2026.12.31. 출국) / "from2027"(2027.1.1.~ 출국).
+   * 소득세법 부칙(법률 제21221호) 제8조 — 기준은 실제 양도일이 아니라 **출국일**이다.
+   * 요건 미충족으로 조기 반환된 결과에도 담긴다. 이 필드가 생기기 전의 저장 이력에는 없다.
+   */
+  exitTaxRegime?: "pre2027" | "from2027";
   /**
    * 과세 분류
    * "exit_tax"    → §118의9 요건 충족, 정상 과세
@@ -199,6 +305,21 @@ export type ExitTaxResult = {
 
   // ── 종목별 계산 결과 ──
   holdingDetails: ExitTaxHoldingResult[];
+
+  /** §118의11 세율 구분별 분해 — 과세 종목이 있을 때만(PR-2는 구분 하나) */
+  bucketDetails?: ExitTaxBucketDetail[];
+  /**
+   * 국외주식등 제외 판정(영 §178의8②) echo — 국외 종목이 하나라도 있을 때만.
+   * `applied`는 국외 종목이 하나라도 제외됐는지, `reason`은 그 사유다.
+   */
+  foreignExclusion?: {
+    applied: boolean;
+    reason?: ExitTaxExcludedReason;
+    /** 출국 당시 소유한 국외주식등 전부의 §118의10① 양도가액 합계(원화) */
+    foreignDepartureValueTotal: number;
+    /** 영 §178의8②1호 「5억원 이하」 */
+    threshold: number;
+  };
 
   // ── 합산 양도차익 ──
   /** 전체 종목 양도차익 합산 */
@@ -224,8 +345,14 @@ export type ExitTaxResult = {
   appliedRate: number;
   /** 누진공제액 (3억 초과 구간 15,000,000 / 그 외 0) */
   progressiveDeduction: number;
-  /** 지방소득세 (10원 미만 절사) */
+  /** 지방소득세 (10원 미만 절사). 2호(국외주식)는 지방세법 §103의3⑧ 표를 과세표준에 직독한 값이다. */
   localIncomeTax: number;
+  /**
+   * 참고값 — 2호(국외주식) 과세 시에만. 소득세 산출세액의 10%(10원 미만 절사).
+   * 지방세법 §103의3⑧은 호 구분 없는 단일표라 2호 세율(10%/20%)과 어긋날 수 있어(계획 V-3) 두 값을 병기한다 — 확인 필요.
+   * 1호만이면 두 값이 같아 없다.
+   */
+  localIncomeTaxAlternative?: number;
 
   // ── 납부유예 §118의16 ──
   /** 유예 연수 (5년 또는 10년) */

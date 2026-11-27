@@ -39,8 +39,10 @@ export function toStockTransferResultFromExitTax(
     totalShareCount: number;
   },
 ): StockTransferResult {
-  const departureDayValue = r.holdingDetails.reduce((s, h) => s + h.departureDayValue, 0);
-  const acquisitionCost = r.holdingDetails.reduce((s, h) => s + h.acquisitionCost, 0);
+  // 제외(scope="excluded") 종목은 합계·서식 값에 새면 안 된다 — scope가 없는 종전 결과는 과세로 읽는다.
+  const taxedDetails = r.holdingDetails.filter((h) => h.scope !== "excluded");
+  const departureDayValue = taxedDetails.reduce((s, h) => s + h.departureDayValue, 0);
+  const acquisitionCost = taxedDetails.reduce((s, h) => s + h.acquisitionCost, 0);
 
   return {
     taxCategory: "exit_tax",
