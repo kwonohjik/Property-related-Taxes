@@ -30,6 +30,7 @@ import type { StockTransferAggregateResult } from "@/lib/tax-engine/stock-transf
 // 서브 폼 타입 + 빈 행 팩토리 — 분리 sibling: calc-wizard-stock-types.ts
 export type {
   ExitTaxHoldingForm,
+  ExitTaxHoldingActualForm,
   CapitalAdjustmentForm,
   AcquisitionLotForm,
   TransferLotForm,
@@ -38,6 +39,7 @@ export type {
 export {
   createEmptyAcquisitionLot,
   createEmptyExitTaxHolding,
+  createEmptyExitTaxActualTransfer,
   SYNTH_SINGLE_TRANSFER_ID,
 } from "./calc-wizard-stock-types";
 

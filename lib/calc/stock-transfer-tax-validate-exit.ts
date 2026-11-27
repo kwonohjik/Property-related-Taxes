@@ -33,7 +33,8 @@ import {
   exitTaxProblemStep,
   findExitTaxFormProblem,
 } from "./stock-transfer-exit-tax-input-problem";
-import { previewExitTaxBuckets } from "./stock-transfer-tax-api-foreign-exit";
+import { previewExitTaxActualMode, previewExitTaxBuckets } from "./stock-transfer-tax-api-foreign-exit";
+import { validateExitTaxActualTransfer } from "./stock-transfer-tax-validate-exit-actual";
 
 function isEmpty(s: string | undefined): boolean {
   return !s || s.trim() === "";
@@ -337,6 +338,9 @@ export function validateStep2ExitTax(form: StockTransferFormData): StockValidati
 export function validateStep3ExitTax(form: StockTransferFormData): StockValidationError[] {
   if (form.marketType !== "exit_tax") return [];
   const errors: StockValidationError[] = [];
+  // 경정청구 실제 양도 입력 방식(전역/종목별) — ④·UI와 같은 판정. 종목별이면 전역 칸 검증은 건너뛴다(그 값은 ④가 싣지 않고, 남아 있으면 아래에서 충돌로 막는다)
+  const actualInfo = previewExitTaxActualMode(form);
+  const globalActual = actualInfo.mode === "global";
 
   // 납부유예 사유 — deferralRequested=true 시 사유 "none" 아닌 값 필수
   // (3중 패턴 default: "none" — "none"은 납부유예 미신청 상태이므로 신청 시 변경 필요)
@@ -351,7 +355,7 @@ export function validateStep3ExitTax(form: StockTransferFormData): StockValidati
     //    (`__tests__/api/exit-tax-deferral-reason-zod.anchor.test.ts`).
 
     // 경정청구: 실양도일 입력 시 실양도 단가 필수
-    if (form.etActualTransferDate && !isEmpty(form.etActualTransferDate)) {
+    if (globalActual && form.etActualTransferDate && !isEmpty(form.etActualTransferDate)) {
       if (isEmpty(form.etActualTransferPricePerShare) || parseI(form.etActualTransferPricePerShare) <= 0) {
         errors.push({
           field: "etActualTransferPricePerShare",
@@ -397,7 +401,7 @@ export function validateStep3ExitTax(form: StockTransferFormData): StockValidati
 
   // 외국납부세액 (§118의13) — 토글이 꺼져 있으면 검증하지 않는다(API 변환도 body 에서 제외).
   // 켜져 있으면 «원화 > 0» 또는 «외화 > 0 이고 환율 > 0» 중 하나 필수.
-  if (form.etHasForeignTax) {
+  if (globalActual && form.etHasForeignTax) {
     const hasKrw = !isEmpty(form.etForeignTaxPaid);
     if (hasKrw && parseF(form.etForeignTaxPaid) <= 0) {
       errors.push({
@@ -422,7 +426,7 @@ export function validateStep3ExitTax(form: StockTransferFormData): StockValidati
   }
 
   // 비거주자 원천징수세액 — 입력값 있으면 양식 검증 (§118의14)
-  if (!isEmpty(form.etDomesticSourceTaxWithheld)) {
+  if (globalActual && !isEmpty(form.etDomesticSourceTaxWithheld)) {
     const v = parseI(form.etDomesticSourceTaxWithheld);
     if (v < 0) {
       errors.push({
@@ -444,6 +448,9 @@ export function validateStep3ExitTax(form: StockTransferFormData): StockValidati
       });
     }
   }
+
+  // 종목별 실제 양도(PR-7b) — 칸 단위 필수 입력 + 전역↔종목별 방식 충돌
+  errors.push(...validateExitTaxActualTransfer(form, actualInfo));
 
   // 엔진 판정(⑫ Zod와 단일 소스) — 기본공제 배분·경정청구 범위 등 3단계 사유. 칸 단위 결함이 없을 때만 돌린다
   if (!errors.some((e) => e.severity === "error")) errors.push(...engineProblemErrors(form, 3));

@@ -10,11 +10,20 @@
  * 자동 안분 fallback 금지 (feedback_no_silent_apportion_fallback)
  */
 
-import type { ExitTaxHoldingForm, StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
+import type {
+  ExitTaxHoldingActualForm,
+  ExitTaxHoldingForm,
+  StockTransferFormData,
+} from "@/lib/stores/calc-wizard-stock-store";
 import { isExitTaxFrom2027 } from "@/lib/tax-engine/data/exit-tax-2027-era";
 import { isForeignValuationMode } from "@/lib/tax-engine/stock-transfer/exit-tax-fx";
 import type { ExitTaxRateBucket } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
-import { previewExitTaxBucketsFromBody } from "./stock-transfer-exit-tax-buckets";
+import { previewExitTaxClassificationFromBody } from "./stock-transfer-exit-tax-buckets";
+import {
+  holdingAllowsDomesticWithholding,
+  resolveExitTaxActualMode,
+  type ExitTaxActualModeInfo,
+} from "./stock-transfer-exit-tax-actual-mode";
 import {
   parseIntOrUndef,
   parseFloatOrUndef,
@@ -177,7 +186,9 @@ export function buildForeignStockApiBody(form: StockTransferFormData): Record<st
 // ⑬ grep 자가점검 목록:
 //   etYearsResidentLast10 / etDepartureDate / etIsMajorShareholder /
 //   etHoldings[] / etDeferralRequested / etDeferralReason /
-//   etActualTransferDate / etActualTransferPricePerShare /
+//   etActualTransferDate / etActualTransferPricePerShare / etActualTransferMode(→ 종목별 모드 게이트) /
+//   [종목별 모드] holdings[].actualTransfer.{shareCount,transferDate,pricePerShare,priceForeign,exchangeRate,
+//   foreignTaxPaid,foreignTaxPaidForeign,foreignTaxCurrencyCode,foreignTaxExchangeRate,domesticSourceTaxWithheld} /
 //   etHasForeignTax / etForeignTaxPaid / etForeignTaxExclusionReason /
 //   etDomesticSourceTaxWithheld / etHasFiledHoldingsReport / etTotalFaceValue /
 //   [2027.1.1. 이후 출국] holdings[].isListedForeignCorp / isSmallMediumEnterprise / countryCode /
@@ -306,12 +317,86 @@ export function buildExitTaxApiBodyCore(form: StockTransferFormData): Record<str
 
 /** 입력 화면용 — 과세 세율 구분 미리보기 (엔진 분류 helper 호출). 배분 칸 노출·④ 전송 게이트의 단일 소스 */
 export function previewExitTaxBuckets(form: StockTransferFormData): ExitTaxRateBucket[] | null {
-  return previewExitTaxBucketsFromBody(buildExitTaxApiBodyCore(form));
+  return previewExitTaxClassificationFromBody(buildExitTaxApiBodyCore(form))?.buckets ?? null;
+}
+
+/** 입력 화면용 — 경정청구 실제 양도 입력 방식(전역/종목별) 판정. 종목별 칸 노출·④ 전송 게이트·⑧ 충돌 검사의 단일 소스 */
+export function previewExitTaxActualMode(form: StockTransferFormData): ExitTaxActualModeInfo {
+  return resolveExitTaxActualMode(form, previewExitTaxClassificationFromBody(buildExitTaxApiBodyCore(form)));
+}
+
+/** 종목별 모드에서 **싣지 않는** 전역 경정청구 키 — 숨은 전역 값이 종목별 입력과 섞여 엔진에 가지 않게 한다 */
+const GLOBAL_ADJUSTMENT_KEYS = [
+  "actualTransferDate",
+  "actualTransferPricePerShare",
+  "foreignTaxPaid",
+  "foreignTaxPaidForeign",
+  "foreignTaxExchangeRate",
+  "foreignTaxCurrencyCode",
+  "domesticSourceTaxWithheld",
+] as const;
+
+/**
+ * 종목 1건의 실제 양도 → body (PR-7b ⑬). 종목 종류로 칸이 갈린다 — 국내 종목은 원화 단가, 국외주식은 외화 단가 + 실제 양도일 기준환율.
+ * 반대 쪽·꺼진 외국납부세액 방식·허용되지 않는 원천징수액은 **싣지 않는다**(엔진이 거부하는 조합이 stale 값으로 만들어지지 않게).
+ * 빈 칸은 키를 싣지 않는다 — 0·대체값으로 채우지 않는다(엔진·Zod·⑧이 필수로 차단).
+ */
+export function buildExitTaxHoldingActualBody(
+  h: ExitTaxHoldingForm,
+  a: ExitTaxHoldingActualForm,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  const shares = parseIntOrUndef(a.shareCount);
+  if (shares !== undefined) out.shareCount = shares;
+  if (a.transferDate) out.transferDate = a.transferDate; // ⑭ route에서 toOptionalDate() 변환
+
+  if (h.marketType === "foreign_stock") {
+    const price = parseFloatOrUndef(a.priceForeign);
+    if (price !== undefined) out.priceForeign = price;
+    const rate = parseFloatOrUndef(a.exchangeRate);
+    if (rate !== undefined) out.exchangeRate = rate;
+  } else {
+    const price = parseIntOrUndef(a.pricePerShare);
+    if (price !== undefined) out.pricePerShare = price;
+  }
+
+  const taxInput = a.foreignTaxInput || "none"; // 3중 패턴 default
+  if (taxInput === "krw") {
+    const v = parseIntOrUndef(a.foreignTaxPaid);
+    if (v !== undefined) out.foreignTaxPaid = v;
+  } else if (taxInput === "foreign") {
+    const v = parseFloatOrUndef(a.foreignTaxPaidForeign);
+    if (v !== undefined) out.foreignTaxPaidForeign = v;
+    const rate = parseFloatOrUndef(a.foreignTaxExchangeRate);
+    if (rate !== undefined) out.foreignTaxExchangeRate = rate;
+    out.foreignTaxCurrencyCode = a.foreignTaxCurrencyCode || "USD"; // 3중 패턴 default
+  }
+
+  if (holdingAllowsDomesticWithholding(h)) {
+    const v = parseIntOrUndef(a.domesticSourceTaxWithheld);
+    if (v !== undefined) out.domesticSourceTaxWithheld = v;
+  }
+  return out;
+}
+
+/** 종목별 모드 — 전역 경정청구 키를 빼고 종목마다 `actualTransfer`를 싣는다. 외국납부세액 배제 사유는 종목별 외국납부세액이 있을 때만 싣는다 */
+function applyPerHoldingActualBody(body: Record<string, unknown>, form: StockTransferFormData): void {
+  for (const k of GLOBAL_ADJUSTMENT_KEYS) delete body[k];
+  const holdings = body.holdings as Record<string, unknown>[];
+  const forms = form.etHoldings || [];
+  forms.forEach((h, i) => {
+    if (h.actualTransfer) holdings[i].actualTransfer = buildExitTaxHoldingActualBody(h, h.actualTransfer);
+  });
+  const anyForeignTax = forms.some((h) => h.actualTransfer && (h.actualTransfer.foreignTaxInput || "none") !== "none");
+  body.foreignTaxExclusionReason = anyForeignTax ? form.etForeignTaxExclusionReason || "none" : "none"; // 3중 패턴 default
 }
 
 export function buildExitTaxApiBody(form: StockTransferFormData): Record<string, unknown> {
   const body = buildExitTaxApiBodyCore(form);
-  appendExitTaxAllocationBody(body, form, previewExitTaxBucketsFromBody(body));
+  const cls = previewExitTaxClassificationFromBody(body);
+  appendExitTaxAllocationBody(body, form, cls?.buckets ?? null);
+  // 종목별 실제 양도 — 모드가 «종목별»일 때만. 전역 모드에서는 종목별 입력이 남아 있어도 싣지 않는다(⑧이 막고 안내한다)
+  if (resolveExitTaxActualMode(form, cls).mode === "per_holding") applyPerHoldingActualBody(body, form);
   return body;
 }
 

@@ -528,6 +528,13 @@ export interface StockTransferFormData {
   etBasicDeductionAllocClause2a: string;
   etBasicDeductionAllocClause2b: string;
 
+  /**
+   * 경정청구 실제 양도 입력 방식 (PR-7b) — "global" = 종목 공통 단가(현행) · "per_holding" = 종목별 실제 양도.
+   * **선택은 2027.1.1. 이후 출국 + 과세 구분이 1호뿐일 때만** 열린다. 2호 과세 종목이 있거나 구분이 둘 이상이면 종목별만 쓸 수 있고
+   * 2026 이전 출국은 전역만 쓴다 — 실제 쓰이는 모드는 `previewExitTaxActualMode`(엔진 분류 helper)가 정한다. 3중 패턴 default "global".
+   */
+  etActualTransferMode: "global" | "per_holding";
+
   // ── PR-4A 해외주식 전용 필드 (§94①3 다목 · §118② 준용 트랙) ──
   // 활성 조건: marketType === "foreign_stock"
   /** 국내 주소·거소 거주 연수 (만 년 수) — 5년 이상 시 납세의무 충족 (§118의2) */

@@ -33,9 +33,13 @@ export function findExitTaxFormProblem(form: StockTransferFormData): ExitTaxInpu
   }
 }
 
-/** 엔진 problem.path 가 가리키는 «단계» — 2단계(종목·외국인근로자)에서 막을지, 3단계(그 밖)에서 막을지 */
+/**
+ * 엔진 problem.path 가 가리키는 «단계» — 2단계(종목·외국인근로자)에서 막을지, 3단계(그 밖)에서 막을지.
+ * 종목별 실제 양도(`holdings.<id>.actualTransfer…`)는 입력칸이 3단계에 있으므로 3단계 사유다 — 2단계에서 막으면 풀 곳이 없다.
+ */
 export function exitTaxProblemStep(problem: ExitTaxInputProblem): 2 | 3 {
   const p = problem.path;
+  if (p.startsWith("holdings") && p.split(".")[2] === "actualTransfer") return 3;
   return p === "" || p.startsWith("holdings") || p.startsWith("foreignWorker") ? 2 : 3;
 }
 
@@ -50,7 +54,8 @@ export function exitTaxProblemField(
     if (parts.length === 1) return "etHoldings";
     const idx = (form.etHoldings ?? []).findIndex((h) => h.id === parts[1]);
     if (idx < 0) return "etHoldings";
-    return parts[2] ? `etHoldings[${idx}].${parts[2]}` : `etHoldings[${idx}]`;
+    // `holdings.<id>.actualTransfer.<key>` → `etHoldings[i].actualTransfer.<key>` (종목별 실제 양도 입력칸 앵커 — 폼 필드명이 엔진 키와 같다)
+    return parts.length > 2 ? `etHoldings[${idx}].${parts.slice(2).join(".")}` : `etHoldings[${idx}]`;
   }
   if (parts[0] === "foreignWorkerChecks" || parts[0] === "foreignWorkerStatus") return "etForeignWorkerStatus";
   if (parts[0] === "foreignWorkerFamilyKind") return "etForeignWorkerFamilyKind";
