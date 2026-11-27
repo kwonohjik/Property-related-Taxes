@@ -75,7 +75,7 @@ export function fxPerShareText(foreign: number, currency: string | undefined, ra
 }
 
 /** 금액 한 줄 — 라벨 좌 · 값 우(고정폭 · tabular-nums · 줄바꿈 없음) */
-function AmountLine({
+export function AmountLine({
   label,
   value,
   strong,

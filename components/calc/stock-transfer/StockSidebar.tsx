@@ -180,6 +180,9 @@ export function StockSidebar({
           if (r.incomeTax > 0) items.push({ label: "산출세액", value: r.incomeTax, highlight: true });
           if (r.localIncomeTax > 0) items.push({ label: "지방소득세", value: r.localIncomeTax });
           if (r.deferredTaxAmount > 0) items.push({ label: `납부유예액(${r.deferralYears}년)`, value: r.deferredTaxAmount });
+          // 종목별 실제 양도(PR-7b) — 엔진 echo의 종목별 하락분 합(0원 제외). 전역 입력 결과에는 echo가 없어 줄이 없다
+          const priceDropSum = (r.holdingDetails ?? []).reduce((sum, d) => sum + (d.actualTransfer?.priceDrop ?? 0), 0);
+          if (priceDropSum > 0) items.push({ label: "실제 양도 하락분 (종목별 합)", value: priceDropSum });
           if (r.adjustmentDeduction) items.push({ label: "조정공제", value: r.adjustmentDeduction });
           if (r.foreignTaxCreditApplied) items.push({ label: "외국납부세액공제", value: r.foreignTaxCreditApplied });
           // §118의15④ 가산세는 종전에 여기서 통째로 누락돼, 결과 카드에는 보이는 금액이
