@@ -12,7 +12,7 @@
  * 2. **필요경비 틀이 §97가 아니라 §118②→§118의4다.** 환산취득가액·개산공제·매매사례가 없다 —
  *    증여자 취득가액은 실지거래가액(`actual`) 또는 영 §178의3 시가(`market_price`) 둘뿐이다.
  * 3. **환산**: 증여자 취득가액 = 1주당 외화 × **증여자 취득일 기준환율**(영 §178의5① 「지출한 날」).
- *    수증일 환율이 아니다. 증여자 자본적지출은 그 **지출일** 환율이다. 항목별 `Math.floor`.
+ *    수증일 환율이 아니다. 증여자 자본적지출은 그 **지출일** 환율이다. 항목별 절사(공용 환산 leaf `fx-krw.ts`).
  *
  * ## 게이트 — 국내와 같은 leaf를 그대로 쓴다 (single-source)
  *
@@ -26,11 +26,12 @@
 import { isCarryoverRelationExcluded } from "../carryover-donor-death";
 import { isStockCarryoverEra, isWithinCarryoverPeriod } from "../data/carryover-scope-era";
 import { STOCK_FOREIGN_RESIDENT_MIN_YEARS } from "../legal-codes/stock";
+import { toKrwUnlessZero } from "../fx-krw";
 import type { ForeignStockInput } from "./types/foreign-stock.types";
 
-/** 외화 단가 × 주식수 × 환율 → 원화(원 미만 절사). `foreign-stock.ts` STEP 3과 같은 식이다. */
+/** 외화 단가 × 주식수 × 환율 → 원화(원 미만 절사). `foreign-stock.ts` STEP 3과 같은 공용 환산 leaf(BigInt 정확 곱)를 쓴다. */
 export function foreignAcquisitionKrw(perShareForeign: number, shareCount: number, rate: number): number {
-  return Math.floor(perShareForeign * shareCount * rate);
+  return toKrwUnlessZero(perShareForeign, rate, "foreignAcquisition", shareCount);
 }
 
 /**
@@ -116,8 +117,10 @@ export function buildForeignScenarioB(input: ForeignStockInput): ForeignStockInp
 
 /** 시나리오 A 골격 — 증여세 상당액은 한도 계산 후 주입받는다. */
 function buildForeignScenarioABase(input: ForeignStockInput, giftTaxIncluded: number): ForeignStockInput {
-  const donorCapexKrw = Math.floor(
-    (input.donorCapitalExpenditureForeign ?? 0) * (input.donorCapitalExpenditureExchangeRate ?? 0),
+  const donorCapexKrw = toKrwUnlessZero(
+    input.donorCapitalExpenditureForeign ?? 0,
+    input.donorCapitalExpenditureExchangeRate ?? 0,
+    "donorCapitalExpenditure",
   );
   return {
     ...input,

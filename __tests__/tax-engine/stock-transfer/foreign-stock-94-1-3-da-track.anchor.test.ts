@@ -260,8 +260,10 @@ describe("B — 기본공제는 §103①2호 그룹 연 1회 250만원", () => {
   });
 
   it("B-1c 차손이면 기본공제 0", () => {
-    const r = calculateForeignStockTax(fx(-5_000_000));
-    expect(r.transferGain).toBeLessThan(0);
+    // 양도가액 1,000,000 · 취득가액 6,000,000 → 차손 5,000,000. (종전엔 «양도가액 −4,000,000»이라는 음수 외화 입력으로 만들었는데
+    // 공용 환산 leaf는 음수 외화액을 거부한다 — 실제 입력 경로(⑫ min(0))에서도 불가능한 입력이었다.)
+    const r = calculateForeignStockTax(fx(0, { perShareAcquisitionPriceForeign: 6_000_000 }));
+    expect(r.transferGain).toBe(-5_000_000);
     expect(r.basicDeduction).toBe(0);
     expect(r.taxBase).toBe(0);
   });

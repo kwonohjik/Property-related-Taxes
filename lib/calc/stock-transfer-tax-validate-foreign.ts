@@ -24,6 +24,10 @@ import {
   FOREIGN_STOCK_TRACK_START,
   isBeforeForeignStockTrack,
 } from "@/lib/tax-engine/data/foreign-stock-track-era";
+import { foreignStockFxIssues, type ForeignStockFxFacts } from "./foreign-stock-fx-limits";
+import { appendForeignCarryoverBody } from "./stock-transfer-tax-api-carryover";
+import { isForeignCarryoverForm } from "./stock-foreign-carryover";
+import { parseFloatOrUndef, parseIntOrUndef } from "./stock-transfer-tax-api-parse";
 
 function isEmpty(s: string | undefined): boolean {
   return !s || s.trim() === "";
@@ -32,6 +36,76 @@ function isEmpty(s: string | undefined): boolean {
 function parseF(s: string): number {
   const n = parseFloat(s.replace(/,/g, ""));
   return isNaN(n) ? 0 : n;
+}
+
+/** 입력 한도 이슈의 단계 배정 — 입력 위치 = 검증 위치 */
+const FX_LIMIT_STEP: Record<string, 1 | 2 | 3> = {
+  shareCount: 1,
+  transferInstallmentReceipts: 2,
+  perShareTransferPriceForeign: 2,
+  totalTransferPriceForeign: 2,
+  transferExchangeRate: 2,
+  perShareAcquisitionPriceForeign: 2,
+  acquisitionExchangeRate: 2,
+  donorPerShareAcquisitionPriceForeign: 2,
+  donorAcquisitionExchangeRate: 2,
+  capitalExpenditureForeign: 3,
+  capitalExpenditureExchangeRate: 3,
+  transferCostForeign: 3,
+  transferCostExchangeRate: 3,
+  foreignTaxPaidForeign: 3,
+  foreignTaxExchangeRate: 3,
+  donorCapitalExpenditureForeign: 3,
+  donorCapitalExpenditureExchangeRate: 3,
+};
+
+/**
+ * 외화액·환율 **입력 한도**(소수 4자리·외화액 1e11·환율 1e7·환산 원화 안전 정수) — 서버 ⑫와 같은 leaf `foreignStockFxIssues`.
+ * 사실은 ④와 **같은 파싱·같은 3중 패턴 default**로 만든다(`parseFloatOrUndef` · `|| "per_share"` · `|| "single"`).
+ * 이월과세 증여자 값은 ④의 `appendForeignCarryoverBody` 결과를 그대로 읽는다(선언한 종목만).
+ * 분할 수령 행은 불완전 행을 걸러 인덱스가 밀리지 않도록 폼 행에서 **행 번호를 보존**해 읽는다.
+ */
+function foreignFxLimitErrors(form: StockTransferFormData, step: 1 | 2 | 3): StockValidationError[] {
+  const num = (s: string | undefined) => parseFloatOrUndef(s ?? "");
+  const donor: Record<string, unknown> = {};
+  if (isForeignCarryoverForm(form)) appendForeignCarryoverBody(donor, form);
+  const donorNum = (k: string) => (typeof donor[k] === "number" ? (donor[k] as number) : undefined);
+  const facts: ForeignStockFxFacts = {
+    shareCount: parseIntOrUndef(form.shareCount ?? "") ?? 1,
+    transferReceiptMode: form.fsTransferReceiptMode || "single",
+    transferPriceMode: form.fgTransferPriceMode || "per_share",
+    perShareTransferPriceForeign: num(form.perShareTransferPriceForeign),
+    totalTransferPriceForeign: num(form.totalTransferPriceForeign),
+    transferExchangeRate: num(form.transferExchangeRate),
+    transferInstallmentReceipts: (form.fsTransferInstallmentReceipts || []).map((r) => ({
+      amountForeign: num(r.amountForeign),
+      exchangeRate: num(r.exchangeRate),
+    })),
+    perShareAcquisitionPriceForeign: num(form.perShareAcquisitionPriceForeign),
+    acquisitionExchangeRate: num(form.acquisitionExchangeRate),
+    capitalExpenditureForeign: num(form.capitalExpenditureForeign) ?? 0,
+    capitalExpenditureExchangeRate: num(form.capitalExpenditureExchangeRate),
+    transferCostForeign: num(form.transferCostForeign) ?? 0,
+    transferCostExchangeRate: num(form.transferCostExchangeRate),
+    hasForeignTax: form.hasForeignTax,
+    foreignTaxPaidForeign: num(form.foreignTaxPaidForeign),
+    foreignTaxExchangeRate: num(form.foreignTaxExchangeRate),
+    acquisitionCause: donor.acquisitionCause as string | undefined,
+    donorPerShareAcquisitionPriceForeign: donorNum("donorPerShareAcquisitionPriceForeign"),
+    donorAcquisitionExchangeRate: donorNum("donorAcquisitionExchangeRate"),
+    donorCapitalExpenditureForeign: donorNum("donorCapitalExpenditureForeign"),
+    donorCapitalExpenditureExchangeRate: donorNum("donorCapitalExpenditureExchangeRate"),
+  };
+  return foreignStockFxIssues(facts)
+    .filter((i) => FX_LIMIT_STEP[String(i.path[0])] === step)
+    .map((i) => ({
+      field:
+        i.path[0] === "transferInstallmentReceipts"
+          ? `fsTransferInstallmentReceipts[${i.path[1]}].${i.path[2]}`
+          : String(i.path[0]),
+      message: i.message,
+      severity: "error" as const,
+    }));
 }
 
 // ============================================================
@@ -106,6 +180,7 @@ export function validateStep1Foreign(form: StockTransferFormData): StockValidati
 
   // §97의2① 이월과세 — 관계 · 증여자 취득일 · 수증일 순서 (서버 ⑫와 같은 leaf)
   errors.push(...foreignCarryoverStepErrors(form, 1));
+  errors.push(...foreignFxLimitErrors(form, 1));
 
   return errors;
 }
@@ -280,6 +355,9 @@ export function validateStep2Foreign(form: StockTransferFormData): StockValidati
   // §97의2① 이월과세 — 증여자 취득가액·환율 (서버 ⑫와 같은 leaf)
   errors.push(...foreignCarryoverStepErrors(form, 2));
 
+  // 외화액·환율 입력 한도 (서버 ⑫와 같은 leaf)
+  errors.push(...foreignFxLimitErrors(form, 2));
+
   return errors;
 }
 
@@ -364,6 +442,9 @@ export function validateStep3Foreign(form: StockTransferFormData): StockValidati
 
   // §97의2① 이월과세 — 자본적지출 지출일 환율 · 증여세 안분 (서버 ⑫와 같은 leaf)
   errors.push(...foreignCarryoverStepErrors(form, 3));
+
+  // 외화액·환율 입력 한도 (서버 ⑫와 같은 leaf)
+  errors.push(...foreignFxLimitErrors(form, 3));
 
   return errors;
 }

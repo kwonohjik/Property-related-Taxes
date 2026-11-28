@@ -12,6 +12,7 @@
  */
 
 import { ForeignDatedAmountRows } from "@/components/calc/foreign/ForeignDatedAmountRows";
+import { krwOfExact } from "@/components/calc/foreign/krw-of";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 export type InstallmentReceiptRow = {
@@ -70,6 +71,7 @@ export function InstallmentReceiptsMatrix({
         onChange(next.map((r) => ({ receiptDate: r.date, amountForeign: r.amountForeign, exchangeRate: r.exchangeRate })))
       }
       labels={LABELS}
+      krwOf={krwOfExact}
     />
   );
 }

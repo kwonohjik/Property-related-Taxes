@@ -17,6 +17,7 @@ import { WizardSidebar, type WizardSidebarStep, type WizardSidebarSummaryItem } 
 import { useStockTransferStore } from "@/lib/stores/calc-wizard-stock-store";
 import { validateStepByIndex } from "@/lib/calc/stock-transfer-tax-validate";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
+import { perShareKrwPreview, totalKrwPreview } from "@/components/calc/foreign/krw-of";
 import { previewSplitAllocation } from "@/lib/calc/stock-split-preview";
 import { isLotsModeForm, isPreDeemedLotClause1On } from "@/lib/calc/stock-transfer-section94-4-form";
 import type { ExitTaxResult } from "@/lib/tax-engine/stock-transfer/types/exit-tax.types";
@@ -204,10 +205,10 @@ export function StockSidebar({
         let fgKrw: number | null = null;
         if (fgMode === "per_share") {
           const perShare = parseFloat(formData.perShareTransferPriceForeign || "0");
-          if (perShare > 0) fgKrw = Math.floor(perShare * count * rate);
+          fgKrw = perShareKrwPreview(perShare, count, rate);
         } else {
           const total = parseFloat(formData.totalTransferPriceForeign || "0");
-          if (total > 0) fgKrw = Math.floor(total * rate);
+          fgKrw = totalKrwPreview(total, rate);
         }
         if (fgKrw !== null && fgKrw > 0) {
           items.push({ label: "양도가액(환산 참고)", value: fgKrw });

@@ -42,11 +42,8 @@ export function foreignKrwPreview(amount: string, rate: string): number | null {
   return "krw" in r ? r.krw : null;
 }
 
-/** 같은 통화로 쓰는 `krwOf`(ForeignDatedAmountRows 용) */
-export function krwOfExact(amountForeign: number, exchangeRate: number): number | null {
-  const r = tryToKrw(amountForeign, exchangeRate);
-  return "krw" in r ? r.krw : null;
-}
+/** 같은 통화로 쓰는 `krwOf`(ForeignDatedAmountRows 용) — 주식 화면과 공용(`components/calc/foreign/krw-of.ts`) */
+export { krwOfExact } from "@/components/calc/foreign/krw-of";
 
 /** 행 목록 상한(`FOREIGN_RE_MAX_ROWS`) — 「+ 추가」로 넘기려 하면 직전 목록을 유지한다(⑧도 같은 상한으로 막는다) */
 export function limitRows<T>(next: T[], prev: T[]): T[] {

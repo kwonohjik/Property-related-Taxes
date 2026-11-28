@@ -25,6 +25,7 @@ import { ToggleCard } from "@/components/calc/inputs/ToggleCard";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { perShareKrwPreview } from "@/components/calc/foreign/krw-of";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 import { CarryoverGateFields } from "./CarryoverGateFields";
 import { CarryoverGiftTaxFields } from "./CarryoverGiftTaxFields";
@@ -72,8 +73,7 @@ export function ForeignCarryoverDonorPriceSection({ form, onChange }: ForeignSto
     const rate = parseDecimal(form.donorAcquisitionExchangeRate);
     const perShare = parseDecimal(form.donorPerShareAcquisitionPriceForeign);
     const count = parseInt((form.shareCount || "0").replace(/,/g, ""), 10);
-    if (rate <= 0 || perShare <= 0 || !(count > 0)) return null;
-    return Math.floor(perShare * count * rate);
+    return perShareKrwPreview(perShare, count, rate);
   })();
 
   return (

@@ -53,10 +53,10 @@ interface ForeignDatedAmountRowsProps {
   onChange: (rows: ForeignDatedAmountRow[]) => void;
   labels: ForeignDatedAmountRowsLabels;
   /**
-   * 원화 환산 미리보기 함수 — 지정하지 않으면 기존 `Math.floor(외화 × 환율)`(주식 수령 행 그대로).
-   * 부동산은 엔진 환산 leaf(`tryToKrw`)를 넘긴다 — 부동소수 1원 과소를 피하고 엔진과 같은 값을 보인다.
+   * 원화 환산 미리보기 함수 — **필수**. 호출부가 빠뜨려 부동소수 `Math.floor(외화 × 환율)`로 떨어지는 일(1원 과소)을
+   * 컴파일 에러로 막는다. 주식·부동산 모두 엔진 환산 leaf를 쓰는 `krwOfExact`(`krw-of.ts`)를 넘긴다.
    */
-  krwOf?: (amountForeign: number, exchangeRate: number) => number | null;
+  krwOf: (amountForeign: number, exchangeRate: number) => number | null;
   /**
    * 검증 오류 → 입력칸 이동 앵커 접두 — 각 칸에 `data-field="{접두}.{행}.date|amount|rate"`를 단다.
    * 지정하지 않으면 앵커 없음(기존 DOM 그대로).
@@ -72,14 +72,6 @@ interface ForeignDatedAmountRowsProps {
 /** 빈 행 팩토리 */
 export function createEmptyForeignDatedAmountRow(): ForeignDatedAmountRow {
   return { date: "", amountForeign: "", exchangeRate: "" };
-}
-
-/** 원화 환산 미리보기 계산 (UI 전용 — 엔진 비의존) */
-function calcRowKrw(row: ForeignDatedAmountRow): number | null {
-  const amount = parseDecimal(row.amountForeign);
-  const rate = parseDecimal(row.exchangeRate);
-  if (amount <= 0 || rate <= 0) return null;
-  return Math.floor(amount * rate);
 }
 
 export function ForeignDatedAmountRows({
@@ -107,7 +99,6 @@ export function ForeignDatedAmountRows({
   }
 
   const rowKrw = (r: ForeignDatedAmountRow): number | null => {
-    if (!krwOf) return calcRowKrw(r);
     const amount = parseDecimal(r.amountForeign);
     const rate = parseDecimal(r.exchangeRate);
     return amount <= 0 || rate <= 0 ? null : krwOf(amount, rate);

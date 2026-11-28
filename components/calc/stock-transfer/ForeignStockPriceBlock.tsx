@@ -15,6 +15,7 @@ import { CURRENCY_OPTIONS } from "./currency-options";
 import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { DecimalInput, parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { isForeignCarryoverForm } from "@/lib/calc/stock-foreign-carryover";
+import { perShareKrwPreview, totalKrwPreview } from "@/components/calc/foreign/krw-of";
 import { ForeignCarryoverDonorPriceSection } from "./ForeignCarryoverBlocks";
 import {
   InstallmentReceiptsMatrix,
@@ -160,10 +161,10 @@ export function ForeignStockPriceBlock({ form, onChange }: ForeignStockSectionPr
               let krw: number | null = null;
               if (fgTransferPriceMode === "per_share") {
                 const perShare = parseDecimal(form.perShareTransferPriceForeign);
-                if (perShare > 0 && count > 0) krw = Math.floor(perShare * count * rate);
+                krw = perShareKrwPreview(perShare, count, rate);
               } else {
                 const total = parseDecimal(form.totalTransferPriceForeign);
-                if (total > 0) krw = Math.floor(total * rate);
+                krw = totalKrwPreview(total, rate);
               }
               if (krw === null) return null;
               return (
@@ -255,8 +256,8 @@ export function ForeignStockPriceBlock({ form, onChange }: ForeignStockSectionPr
           const count = parseInt(form.shareCount || "0", 10);
           if (rate <= 0) return null;
           const perShare = parseDecimal(form.perShareAcquisitionPriceForeign);
-          if (perShare <= 0 || count <= 0) return null;
-          const krw = Math.floor(perShare * count * rate);
+          const krw = perShareKrwPreview(perShare, count, rate);
+          if (krw === null) return null;
           return (
             <div className="rounded bg-amber-100/60 border border-amber-200 px-3 py-2 text-xs text-amber-800 dark:text-amber-200 dark:bg-amber-900/40">
               취득가액(원화 환산 참고): {krw.toLocaleString()}
