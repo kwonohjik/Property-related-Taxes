@@ -8,7 +8,7 @@
  *
  * NOTE:
  * - INITIAL_FORM 기본값: propertyType=housing, acquisitionCause=purchase, acquiredBy=individual
- * - individual 기본에서 Step4(법인·특수) skip → Step3→Step5 직접 이동
+ * - Step4(법인·특수)는 간주취득 외엔 늘 거친다(세율특례 §15 입력 자리 — 종전 skip 제거)
  * - TaxHelp(ⓘ) trailing이 있는 ToggleCard의 switch는 accessible name이 없음
  *   → getByRole("switch", { name: /.../ }) 대신 card-level locator 사용
  *
@@ -73,10 +73,13 @@ test.describe("취득세 — 황금 경로", () => {
     await page.getByRole("button", { name: /다음/ }).click();
 
     // Step 3: 중과 분기 — "조정대상지역 내 주택" 카드 노출 확인 후 다음
-    // (individual 기본 → Step4 skip → Step3→Step5)
     await expect(
       page.locator('[data-slot="toggle-card"]').filter({ hasText: "조정대상지역 내 주택" }),
     ).toBeVisible();
+    await page.getByRole("button", { name: /다음/ }).click();
+
+    // Step 4: 법인·특수 — 세율특례 §15 카드 노출 확인 후 다음
+    await expect(page.getByRole("switch", { name: /^세율특례 §15 해당/ })).toBeVisible();
     await page.getByRole("button", { name: /다음/ }).click();
 
     // Step 5: 감면 확인 → 취득세 계산

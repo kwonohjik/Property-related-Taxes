@@ -282,7 +282,7 @@ function calcGratuitousTaxBase(
 
   if (!useStandardPrice && input.marketValue && input.marketValue > 0) {
     // 시가인정액(매매사례가액·감정가) 사용 — 지방세법 §10의2(무상취득 과세표준)
-    warnings.push(`무상취득 — 시가인정액(${input.marketValue.toLocaleString()} 적용`);
+    warnings.push(`무상취득 — 시가인정액(${input.marketValue.toLocaleString()}) 적용`);
     return {
       method: "recognized_market",
       taxBase: input.marketValue,

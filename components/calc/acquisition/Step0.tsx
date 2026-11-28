@@ -9,6 +9,7 @@ import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
 import { ReferenceSiteLinks, REFERENCE_SITES } from "@/components/calc/inputs/ReferenceSiteLink";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { SaleContractTransitionBlock } from "./SaleContractTransitionBlock";
+import { ACQUISITION } from "@/lib/tax-engine/legal-codes";
 import {
   PROPERTY_TYPE_LABELS,
   INITIAL_FORM,
@@ -336,8 +337,8 @@ export function Step0({
 채무 승계액: 매매·경매 세율 (주택 1~3%, 토지·건물 4%)
 나머지(증여분): 무상취득 세율 (3.5% 또는 2.8%)
 
-## 다음 단계에서 관계 선택 가능
-Step 3 "부담부증여 관계" 토글에서 배우자·직계존비속 여부 선택.`}
+## 증여자와의 관계는 3단계에서 선택
+Step 3 「수증자 관점 — 증여자의 신분」에서 배우자·직계존비속 여부를 고릅니다.`}
                 size="sm"
               />
             </div>
@@ -407,7 +408,7 @@ Step 3 "부담부증여 관계" 토글에서 배우자·직계존비속 여부 �
             onChange={(v) => set("balancePaymentDate", v)}
           />
           <p className="text-xs text-muted-foreground mt-1">
-            상속 신고기한 = 상속개시일로부터 6개월
+            상속 신고기한 = 상속개시일이 속하는 달의 말일부터 6개월 ({ACQUISITION.INHERITANCE_DEADLINE})
           </p>
         </div>
       )}

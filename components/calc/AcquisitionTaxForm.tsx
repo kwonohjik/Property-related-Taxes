@@ -50,7 +50,8 @@ import { AcquisitionSidebar } from "./acquisition/AcquisitionSidebar";
  * 다음 단계 계산 (skip 포함)
  * - 간주취득: Step 0 → Step 1 → -1 (API 호출 시그널)
  * - Step 2 (주택 현황): 비주택이면 건너뜀
- * - Step 4 (법인·특수): 비법인 + 비사치성 + 세율특례 없으면 건너뜀
+ * - Step 4 (법인·특수): 건너뛰지 않는다 — 세율특례 §15①(상속 1가구1주택·환매 등)는 이 단계에서만 켤 수 있다.
+ *   (종전엔 「세율특례 없으면 건너뜀」이라 켜려면 단계가 보여야 하고 단계가 보이려면 켜져 있어야 했다)
  */
 function computeNextStep(
   current: number,
@@ -71,21 +72,14 @@ function computeNextStep(
   }
 
   const isHousing = form.propertyType === "housing";
-  const isCorporation = form.acquiredBy === "corporation";
-  const isLuxury = form.isLuxuryProperty;
-  const hasSpecialRate = !!form.specialRateType;
-
   const shouldSkipStep2 = !isHousing;
-  const shouldSkipStep4 = !isCorporation && !isLuxury && !hasSpecialRate;
 
   if (forward) {
     let next = current + 1;
     if (next === 2 && shouldSkipStep2) next = 3;
-    if (next === 4 && shouldSkipStep4) next = 5;
     return next;
   } else {
     let prev = current - 1;
-    if (prev === 4 && shouldSkipStep4) prev = 3;
     if (prev === 2 && shouldSkipStep2) prev = 1;
     return prev;
   }

@@ -5,10 +5,7 @@ import { RadioCardGroup } from "@/components/calc/inputs/RadioCardGroup";
 import { TaxHelp } from "@/components/calc/inputs/TaxHelp";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { DateInput } from "@/components/ui/date-input";
-import {
-  infoBannerCls,
-  type FormState,
-} from "./shared";
+import type { FormState } from "./shared";
 
 interface Step4Props {
   form: FormState;
@@ -23,7 +20,6 @@ interface Step4Props {
  * - 사치성 + 대도시 법인 중복 (§13⑦)
  * - 법인·공장 중과 (§13①②)
  * - 세율특례 §15 (9종)
- * - 비법인 + 비사치성 케이스: 자동 skip 안내
  * tone: rose (사치성·법인 중과) / violet (세율특례)
  */
 export function Step4({
@@ -32,19 +28,6 @@ export function Step4({
   isCorporation,
 }: Step4Props) {
   const isLuxury = form.isLuxuryProperty;
-  const hasSpecialRateContext = form.acquisitionCause !== "purchase" ||
-    form.specialRateType !== "";
-
-  // 모두 해당 없는 경우 — 간소 안내
-  if (!isLuxury && !isCorporation && !hasSpecialRateContext) {
-    return (
-      <div className={infoBannerCls}>
-        사치성 재산·법인·세율특례에 해당하지 않아 이 단계를 건너뜁니다.
-        <br />
-        다음 단계에서 감면 조건을 확인하세요.
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4">
