@@ -103,6 +103,15 @@ describe("계산 후 — 엔진 값", () => {
     expect(s.incomeAmountTotal).toBe(537_000_000);
   });
 
+  it("차손 자산 혼재: 양도차익 합계 417,000,000(차손 포함) · 양도소득금액 437,000,000(차손 0) · hasLossAsset", () => {
+    const mixed = calc(k1Input({ assets: [aAsset(), bAsset({}, 200_000, 1_200)] }), ratesAt("2026-07-10"));
+    const s = computeForeignRealEstateSummary(form(k1Asset(), gainAsset2()), mixed);
+    expect(s.hasLossAsset).toBe(true);
+    expect([s.capitalGainTotal, s.incomeAmountTotal, s.basicDeduction, s.taxBase, s.calculatedTax]).toEqual([417_000_000, 437_000_000, 2_500_000, 434_500_000, 147_860_000]);
+    expect(computeForeignRealEstateSummary(form(k1Asset()), r).hasLossAsset).toBe(false);
+    expect(computeForeignRealEstateSummary(form(k1Asset()), null).hasLossAsset).toBe(false);
+  });
+
   it("같은 입력은 같은 결과(순수 — useMemo 캐시가 유효하다)", () => {
     const f = form(k1Asset());
     expect(computeForeignRealEstateSummary(f, r)).toEqual(computeForeignRealEstateSummary(f, r));

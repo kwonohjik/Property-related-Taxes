@@ -64,18 +64,8 @@ export async function POST(request: NextRequest) {
       const key = issue.path.length > 0 ? issue.path.join(".") : "_root";
       fieldErrors[key] = [...(fieldErrors[key] ?? []), issue.message];
     }
-    // 엔진이 던질 코드를 그대로 싣는다 — 차손 혼재는 입력 결함이 아니라 미결 법리라 별도 코드(`FOREIGN_LOSS_NETTING_UNRESOLVED`)
-    const netting = parsed.error.issues.some(
-      (i) => (i as { params?: { engineCode?: string } }).params?.engineCode === TaxErrorCode.FOREIGN_LOSS_NETTING_UNRESOLVED,
-    );
     return NextResponse.json(
-      {
-        error: {
-          code: netting ? TaxErrorCode.FOREIGN_LOSS_NETTING_UNRESOLVED : TaxErrorCode.INVALID_INPUT,
-          message: "입력값이 올바르지 않습니다",
-          fieldErrors,
-        },
-      },
+      { error: { code: TaxErrorCode.INVALID_INPUT, message: "입력값이 올바르지 않습니다", fieldErrors } },
       { status: 400 },
     );
   }

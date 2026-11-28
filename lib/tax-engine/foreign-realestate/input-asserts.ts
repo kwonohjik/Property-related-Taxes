@@ -11,7 +11,7 @@ import {
   FOREIGN_RE_SUPPORT_FROM_TRANSFER_DATE_MS,
   isForeignRealEstateSupportedTransferDate,
 } from "../transfer-foreign-realestate-era";
-import type { ForeignRealEstateAssetRow, ForeignTaxMethod } from "./types";
+import type { ForeignTaxMethod } from "./types";
 
 /** 법 §118의2 본문 「계속 5년 이상」 */
 export const FOREIGN_RE_MIN_RESIDENCE_YEARS = 5;
@@ -82,24 +82,6 @@ export function assertSameTaxYear(assets: readonly { transferDate: Date }[]): vo
       );
     }
   });
-}
-
-/**
- * 양도차손 자산과 양도차익 자산이 한 과세기간에 섞이면 막는다 — 법 §118의8 준용 목록에 §102(양도차손 통산)가 없어
- * 통산하는 것도 차손을 0으로 버리는 것도 근거를 찾지 못했다(계획서 엔진 V-1 · 사용자 결정 C-1).
- * 차익 자산이 없으면(전부 차손·0) 통산할 대상이 없어 세액 0으로 계산한다. 필요경비 산입 뒤의 양도차익 기준이다.
- */
-export function assertNoLossNetting(rows: readonly Pick<ForeignRealEstateAssetRow, "id" | "capitalGain">[]): void {
-  const losses = rows.filter((r) => r.capitalGain < 0);
-  const gains = rows.filter((r) => r.capitalGain > 0);
-  if (losses.length > 0 && gains.length > 0) {
-    throw new TaxCalculationError(
-      TaxErrorCode.FOREIGN_LOSS_NETTING_UNRESOLVED,
-      `확인 필요: 같은 과세기간에 양도차손 자산(${losses.map((r) => r.id).join(", ")})과 양도차익 자산(${gains.map((r) => r.id).join(", ")})이 함께 있습니다. ` +
-        "국외자산은 소득세법 §118의8 준용 목록에 양도차손 통산(§102)이 없어 통산 여부를 확정할 수 없으므로 계산하지 않습니다. 자산을 나누어 계산하거나 세무 전문가에게 확인하세요.",
-      { path: "assets", lossAssetIds: losses.map((r) => r.id), gainAssetIds: gains.map((r) => r.id) },
-    );
-  }
 }
 
 const FOREIGN_TAX_METHODS: readonly ForeignTaxMethod[] = ["credit", "expense"];

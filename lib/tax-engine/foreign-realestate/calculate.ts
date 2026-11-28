@@ -5,7 +5,9 @@
  *       → 기본공제 §118의7(과세기간당 1회, 먼저 양도한 자산부터) → 과세표준 합계(천원 절사 없음)
  *       → §118의5① §55① 세율 1회 → 산출세액 → 외국납부세액 세액공제(§118의6①1호) → 개인지방소득세(`local-tax.ts`).
  * 거주 5년 미만은 §118의2 과세대상 아님(세액 0, 오류 아님). 양도일 < 2020-01-01은 지원 범위 밖이라 던진다.
- * 같은 과세기간(양도일 연도)이 아니면 던진다. 양도차손 자산이 양도차익 자산과 섞이면 던진다(§102 미준용 — 통산도 배제도 근거 미확인).
+ * 같은 과세기간(양도일 연도)이 아니면 던진다.
+ * 양도차손 자산은 통산하지 않는다 — §118의8 준용 목록에 §102②(양도차손 공제)가 없다(사용자 결정 2026-11-28 · 국심2005서3759). 차손 자산의 양도소득금액은 0으로 보고(`incomeAmount = max(0, 양도차익)`),
+ * 기본공제·과세표준·§118의6 한도 B·C는 모두 그 0 반영 값으로 계산한다. 차손과 차익 자산이 한 과세기간에 함께 있으면 확인 필요 코드를 싣는다.
  */
 import { calculateProgressiveTax } from "../tax-utils";
 import { TRANSFER_FOREIGN_RE } from "../legal-codes/transfer-foreign-realestate";
@@ -17,7 +19,6 @@ import {
   FOREIGN_RE_SUPPORTED_FROM,
   assertAssetsPresent,
   assertDomesticResidenceYears,
-  assertNoLossNetting,
   assertSameTaxYear,
   assertSupportedTransferDate,
   assertUniqueAssetIds,
@@ -94,7 +95,6 @@ export function calculateForeignRealEstateTransferTax(
   }
 
   rows = rowsAfterMethod(rows, prepared);
-  assertNoLossNetting(rows);
 
   const allocation = allocateBasicDeduction(rows, rates.basicDeductionAnnualLimit);
   rows = allocation.rows;
@@ -127,6 +127,10 @@ export function calculateForeignRealEstateTransferTax(
     );
   }
   const confirmationNeeded: ForeignRealEstateConfirmationCode[] = [];
+  // 차손 자산이 있는데 통산 대상인 차익 자산도 있을 때만 — 차익 자산이 없으면 통산 여부가 세액에 영향이 없다(전부 차손·0이면 세액 0)
+  if (rows.some((r) => r.capitalGain < 0) && rows.some((r) => r.capitalGain > 0)) {
+    confirmationNeeded.push("FOREIGN_LOSS_NOT_NETTED");
+  }
   confirmationNeeded.push("UNSUPPORTED_SITUATIONS_NOT_EVALUATED");
 
   return {

@@ -117,7 +117,7 @@ export interface ForeignRealEstateAssetRow {
   lossAmount: number;
   /** 장기보유특별공제 — 법 §118의8 단서로 항상 0 */
   longTermDeduction: 0;
-  /** 양도소득금액 = max(0, 양도차익 − 장특 0) — 기본공제 전 */
+  /** 양도소득금액 = max(0, 양도차익 − 장특 0) — 기본공제 전. 차손 자산은 0(다른 자산과 통산하지 않는다) */
   incomeAmount: number;
   /** 법 §118의7② 순서(먼저 양도한 자산부터)로 이 자산에서 공제된 기본공제 */
   basicDeductionAllocated: number;
@@ -128,6 +128,11 @@ export interface ForeignRealEstateAssetRow {
 
 /** 세액이 아니라 사용자가 확인해야 할 미결 사항 코드(계획서 V-n) */
 export type ForeignRealEstateConfirmationCode =
+  /**
+   * 같은 과세기간에 양도차손 자산과 양도차익 자산이 함께 있어, 차손 자산을 다른 국외자산 양도소득과 통산하지 않고 0으로 보아 계산했다
+   * (사용자 결정 2026-11-28 — §118의8 준용 목록에 §102② 없음 · 국심2005서3759 · 국외-국외 통산을 다룬 해석례 미확인).
+   */
+  | "FOREIGN_LOSS_NOT_NETTED"
   /**
    * 지원하지 않는 상황(상속·증여 취득 · 외화차입 환차익 · 장기할부 · 시가 모드 · 국외 주택 비과세 등)을 계산하지 않았다 — 해당하면 결과를 그대로 쓸 수 없다
    * (계획 Q-5·Q-6·Q-13·V-4·V-14). 엔진은 이 상황을 입력으로 받지 않으므로 «해당 여부»를 알 수 없어 납세의무가 있는 모든 결과에 싣는다.
@@ -150,7 +155,7 @@ export interface ForeignRealEstateResult {
   capitalGainTotal: number;
   /** 장기보유특별공제 — 법 §118의8 단서로 항상 0 */
   longTermDeduction: 0;
-  /** 양도소득금액(차손 자산은 0으로 본 합) */
+  /** 양도소득금액(차손 자산은 0으로 본 합 = Σ max(0, 자산별 양도소득금액), 통산 없음) */
   incomeAmountTotal: number;
   /** 법 §118의7① 기본공제 = min(양도소득금액, 연 한도) — 미등기 배제 단서 없음 */
   basicDeduction: number;

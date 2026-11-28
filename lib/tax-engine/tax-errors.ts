@@ -31,12 +31,6 @@ export enum TaxErrorCode {
   SPECIAL_TREATMENT_INVALID = "SPECIAL_TREATMENT_INVALID",
   /** 세대생략 할증 대상자 판정 실패 */
   GENERATION_SKIP_INVALID = "GENERATION_SKIP_INVALID",
-
-  /**
-   * 국외자산 부동산: 양도차손 자산과 양도차익 자산이 한 과세기간에 섞임 — 법 §118의8 준용 목록에 §102(통산)가 없어
-   * 통산도 배제도 근거를 찾지 못했다(계획서 엔진 V-1). 입력의 결함이 아니라 미결 법리라 별도 코드로 막는다.
-   */
-  FOREIGN_LOSS_NETTING_UNRESOLVED = "FOREIGN_LOSS_NETTING_UNRESOLVED",
 }
 
 export class TaxCalculationError extends Error {

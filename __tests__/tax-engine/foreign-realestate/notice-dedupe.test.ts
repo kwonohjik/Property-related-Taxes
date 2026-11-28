@@ -13,6 +13,7 @@ import { aAsset, bAsset, ftax, k1Input, ratesAt } from "./_fixtures";
 const rates = ratesAt("2026-07-10");
 
 const CODE_TOPIC = {
+  FOREIGN_LOSS_NOT_NETTED: /통산|양도차손/,
   UNSUPPORTED_SITUATIONS_NOT_EVALUATED: /상속|증여|환차익|장기할부|시가로/,
 } as const satisfies Record<ForeignRealEstateConfirmationCode, RegExp>;
 
@@ -28,6 +29,7 @@ const SCENARIOS: { name: string; run: () => ReturnType<typeof calc> }[] = [
     name: "필요경비 산입",
     run: () => calc(k1Input({ assets: [aAsset(), bAsset()], foreignTax: { method: "expense", items: [t("a", 10_000_000)] } }), rates),
   },
+  { name: "차손 자산 혼재(통산하지 않음)", run: () => calc(k1Input({ assets: [aAsset(), bAsset({}, 200_000, 1_200)] }), rates) },
   { name: "거주 5년 미만(납세의무 없음)", run: () => calc(k1Input({ domesticResidenceYears: 3 }), rates) },
 ];
 

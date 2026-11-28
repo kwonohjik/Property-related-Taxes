@@ -232,6 +232,37 @@ describe("2건 — 기본공제 §118의7② 순서 배분", () => {
   });
 });
 
+describe("차손 자산 혼재 — 통산하지 않음(확인 필요 코드 FOREIGN_LOSS_NOT_NETTED)", () => {
+  const mixed = () => calc(k1Input({ assets: [aAsset(), bAsset({}, 200_000, 1_200)] }), ratesAt("2026-07-10"));
+
+  it("«확인 필요» 카드: 통산하지 않고 0으로 보아 계산 · 근거 §102②·§118의8·국심2005서3759 · 해석례 미확인 · 세무 전문가 확인", () => {
+    render(<ForeignRealEstateResultCard result={mixed()} />);
+    const t = text("foreign-confirm-FOREIGN_LOSS_NOT_NETTED");
+    expect(t).toContain("통산하지 않고 0으로 보아 계산했습니다");
+    expect(t).toContain(TRANSFER_FOREIGN_RE.SECTION_102_2_LOSS_OFFSET);
+    expect(t).toContain(TRANSFER_FOREIGN_RE.SECTION_118_8_MUTATIS_NO_LTHD);
+    expect(t).toContain("국심2005서3759");
+    expect(t).toContain("해석례는 찾지 못했습니다");
+    expect(t).toContain("세무 전문가에게 확인하세요");
+  });
+
+  it("차손 자산 행: 음수 양도차손 · «통산하지 않음 — 과세기간 소득금액에 0으로 반영» · 양도소득금액 0 · 기본공제 배분 0, 차익 자산 a가 기본공제를 받는다", () => {
+    render(<ForeignRealEstateResultCard result={mixed()} />);
+    expect(text("foreign-gain-1-gain")).toContain("-20,000,000");
+    expect(text("foreign-gain-1-gain")).toContain("양도차손");
+    expect(text("foreign-gain-1-income")).toContain("통산하지 않음 — 과세기간 소득금액에 0으로 반영");
+    expect(text("foreign-gain-0-bd")).toContain("2,500,000");
+    expect(text("foreign-gain-1-bd")).toMatch(/0$/);
+    expect(text("foreign-income-total")).toContain("a 437,000,000 + b 0");
+    expect(text("foreign-tax-base")).toContain("434,500,000");
+  });
+
+  it("차손이 없거나 차익 자산이 없으면 이 카드는 없다", () => {
+    render(<ForeignRealEstateResultCard result={k1()} />);
+    expect(screen.queryByTestId("foreign-confirm-FOREIGN_LOSS_NOT_NETTED")).toBeNull();
+  });
+});
+
 describe("인쇄 — 접힘은 CSS로만 펼친다 · 선택 출력", () => {
   it("접힌 자산 본문은 hidden이지만 print:block이라 인쇄에는 나온다 · 토글 버튼은 print:hidden", () => {
     const { container } = render(<ForeignRealEstateResultCard result={k1()} />);

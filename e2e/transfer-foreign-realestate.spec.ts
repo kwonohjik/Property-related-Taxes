@@ -12,7 +12,7 @@
  *  FRE-E1  K-1 교재: 항목별 환율이 body에 실리고 결과가 437,000,000 / 434,500,000 / 147,860,000 / 14,786,000 / 162,646,000
  *  FRE-E2  함정 음성: 같은 사례에 대고객 매입률(1,050/1,250)을 입력하면 다른 과세표준 — 환율은 입력 그대로(숨은 대체 없음)
  *  FRE-E3  K-14 2건: 산출세액 188,550,000 (합산 후 1회 누진 · 기본공제는 먼저 양도한 자산에서)
- *  FRE-E4  K-15 차손+차익 혼재: 「확인 필요」 차단 · 요청 없음 · 결과 없음
+ *  FRE-E4  K-15 차손+차익 혼재: 통산하지 않고 계산(437,000,000 / 434,500,000 / 147,860,000) · 「확인 필요」 카드 · 차손 행 0 반영
  *  FRE-E5  거주 4년: 비차단 경고 → 계산 → 납세의무 없음 사유 카드 · 세액 0 · 세액 계산 섹션 없음
  *  FRE-E6  ⑧ 차단: 양도비 행 환율 누락 → 오류 목록 + 그 칸으로 이동 · 요청 없음
  *  FRE-E7  `/multi`: 국외 건 안내 문구 + 합산 계산 차단
@@ -249,11 +249,11 @@ test.describe("국외자산 부동산 양도소득세 — 화면 입력부터 �
     await expect(amount(page, "foreign-gain-0-bd")).toHaveText("0");
   });
 
-  test("FRE-E4: K-15 — 차손 자산과 차익 자산이 섞이면 «확인 필요»로 막는다(요청·결과 없음)", async ({ page }) => {
+  test("FRE-E4: K-15 — 차손 자산과 차익 자산이 섞이면 통산하지 않고 계산하고 «확인 필요» 카드를 보인다", async ({ page }) => {
     test.setTimeout(180_000);
     await fillK1(page);
     await page.getByTestId("foreign-add-asset").click();
-    // 자산 2 — 양도 $50,000 − 취득 $100,000 = 차손 −50,000,000
+    // 자산 2 — 양도 $50,000 @1,000 − 취득 $100,000 @1,000 = 차손 −50,000,000 (양도 3/5 — K-1 자산보다 먼저)
     await fillAsset(page, 1, {
       address: "Austin TX 2 Oak Ave",
       transferDate: ["2026", "3", "5"],
@@ -264,11 +264,26 @@ test.describe("국외자산 부동산 양도소득세 — 화면 입력부터 �
       acquisitionRate: "1000",
     });
 
-    expect(await calculateBlocked(page)).toBe(true);
-    const panel = page.getByTestId("validation-issues");
-    await expect(panel).toContainText("확인 필요");
-    await expect(panel).toContainText("양도차손");
-    await expect(page.getByTestId("foreign-result-view")).toHaveCount(0);
+    const { status, json } = await calculate(page);
+    expect(status).toBe(200);
+    expect(json.data.confirmationNeeded).toContain("FOREIGN_LOSS_NOT_NETTED");
+
+    // 차손 −50,000,000은 0으로 보고 K-1 자산만 과세 — K-1 단건(FRE-E1)과 같은 세액
+    await expect(page.getByTestId("foreign-result-card")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId("foreign-gain-1-gain")).toContainText("-50,000,000");
+    await expect(page.getByTestId("foreign-gain-1-income")).toContainText("통산하지 않음 — 과세기간 소득금액에 0으로 반영");
+    await expect(amount(page, "foreign-gain-1-income")).toHaveText("0");
+    await expect(amount(page, "foreign-income-total")).toHaveText("437,000,000");
+    await expect(amount(page, "foreign-basic-deduction")).toHaveText("2,500,000");
+    await expect(amount(page, "foreign-gain-0-bd")).toHaveText("2,500,000"); // 차손 자산이 먼저 양도됐어도 기본공제는 차익 자산 몫
+    await expect(amount(page, "foreign-gain-1-bd")).toHaveText("0");
+    await expect(amount(page, "foreign-tax-base")).toHaveText("434,500,000");
+    await expect(amount(page, "foreign-calculated-tax")).toHaveText("147,860,000");
+    await expect(amount(page, "foreign-total-tax")).toHaveText("162,646,000");
+    const notice = page.getByTestId("foreign-confirm-FOREIGN_LOSS_NOT_NETTED");
+    await expect(notice).toContainText("통산하지 않고 0으로 보아 계산했습니다");
+    await expect(notice).toContainText("국심2005서3759");
+    await expect(page.getByTestId("validation-issues")).toHaveCount(0);
   });
 
   test("FRE-E5: 거주 4년 — 경고(비차단) → 계산 → 납세의무 없음 카드 · 세액 0", async ({ page }) => {

@@ -4,7 +4,7 @@
  * - K-1 교재 사례: 양도소득금액 437,000,000 · 과세표준 434,500,000 · 산출세액 147,860,000 · 지방소득세 14,786,000
  * - 응답에 mode가 없으므로 `{ mode: "foreign", result }`로 감싼다
  * - 400 fieldErrors(점 표기) → U1 입력칸 `data-field` 앵커 이슈
- * - 차손 혼재(FOREIGN_LOSS_NETTING_UNRESOLVED) → 「확인 필요」 문구
+ * - 차손 혼재 → 통산하지 않고 계산(FOREIGN_LOSS_NOT_NETTED)
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
 
@@ -111,25 +111,20 @@ describe("400 fieldErrors → U1 입력칸 앵커", () => {
   });
 });
 
-describe("FOREIGN_LOSS_NETTING_UNRESOLVED — 확인 필요", () => {
-  it("양도차손 자산 + 양도차익 자산이 섞이면 «확인 필요» 문구로 막고 입력칸 이슈는 만들지 않는다", async () => {
+describe("양도차손 자산 + 양도차익 자산 — 통산하지 않고 계산(확인 필요 코드)", () => {
+  it("차단하지 않고 결과를 돌려준다 — 차손 −160,000,000은 0으로 보고 차익 125,000,000만 과세", async () => {
     routeFetch();
-    // 차손: 양도 $100,000@1,000 < 취득 $200,000@1,300
+    // 차손: 양도 $100,000@1,000 = 100,000,000 < 취득 $200,000@1,300 = 260,000,000 (양도 7/10) · 차익 gainAsset2: 240,000,000 − 115,000,000 = 125,000,000 (양도 3/5)
     const loss = k1Asset({ transferAmount: "100000", transferRate: "1000", costRows: [], acquisitionAmount: "200000" });
-    const form = foreignForm({}, [loss, gainAsset2()]);
-    const err = (await callForeignRealEstateAPI(form).catch((e) => e)) as ForeignCalcError;
-    expect(err).toBeInstanceOf(ForeignCalcError);
-    expect(err.code).toBe("FOREIGN_LOSS_NETTING_UNRESOLVED");
-    expect(err.message.startsWith("확인 필요")).toBe(true);
-    expect(err.issues).toEqual([]);
-  });
-
-  it("서버 메시지에 「확인 필요」가 없어도 붙인다", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ error: { code: "FOREIGN_LOSS_NETTING_UNRESOLVED", message: "x", fieldErrors: { assets: ["같은 과세기간에 차손과 차익이 있습니다"] } } }), { status: 400 }),
-    );
-    const err = (await callForeignRealEstateAPI(foreignForm()).catch((e) => e)) as ForeignCalcError;
-    expect(err.message).toBe("확인 필요: 같은 과세기간에 차손과 차익이 있습니다");
+    const res = await callForeignRealEstateAPI(foreignForm({}, [loss, gainAsset2()]));
+    const r = res.result;
+    expect(r.rows.map((x) => x.capitalGain)).toEqual([-160_000_000, 125_000_000]);
+    expect(r.incomeAmountTotal).toBe(125_000_000);
+    expect(r.taxBase).toBe(122_500_000); // 통산하면 0
+    expect(r.calculatedTax).toBe(27_435_000); // 122,500,000 × 35% − 15,440,000
+    expect(r.localIncomeTax).toBe(2_743_500);
+    expect(r.rows.map((x) => x.basicDeductionAllocated)).toEqual([0, 2_500_000]);
+    expect(r.confirmationNeeded).toContain("FOREIGN_LOSS_NOT_NETTED");
   });
 
   it("fieldErrors 없는 500은 서버 메시지를 그대로 보인다", async () => {

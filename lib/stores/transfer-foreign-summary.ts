@@ -36,6 +36,8 @@ export interface ForeignRealEstateSummary {
   /** §118의2 5년 미만 — 세액 0 */
   notLiable: boolean;
   capitalGainTotal: number | null;
+  /** 양도차손 자산이 있음 — 양도차익 합계에 차손이 음수로 들어 있고 양도소득금액에는 0으로 반영된다(통산하지 않음) */
+  hasLossAsset: boolean;
   incomeAmountTotal: number | null;
   basicDeduction: number | null;
   taxBase: number | null;
@@ -88,6 +90,7 @@ export function computeForeignRealEstateSummary(
     notLiable: result !== null && !result.isLiable,
     // 양도차익은 차손일 수 있어 0만 숨긴다(음수는 그대로 보인다)
     capitalGainTotal: result && result.capitalGainTotal !== 0 ? result.capitalGainTotal : null,
+    hasLossAsset: result?.rows.some((r) => r.capitalGain < 0) ?? false,
     incomeAmountTotal: liable ? orNull(result.incomeAmountTotal) : null,
     basicDeduction: liable ? orNull(result.basicDeduction) : null,
     taxBase: liable ? orNull(result.taxBase) : null,

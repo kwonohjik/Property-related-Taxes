@@ -1,7 +1,7 @@
 /**
  * ⑩ 국외 부동산 Zod refine — 엔진이 던지는 검증과 **같은 함수**를 부른다(복제 금지).
  *
- * 엔진 쪽 정본: `lib/tax-engine/foreign-realestate/input-asserts.ts`(날짜·과세기간·id·차손 혼재·외국납부세액) · `fx.ts`의 `tryToKrw`(환율·외화액).
+ * 엔진 쪽 정본: `lib/tax-engine/foreign-realestate/input-asserts.ts`(날짜·과세기간·id·외국납부세액) · `fx.ts`의 `tryToKrw`(환율·외화액).
  * 엔진은 첫 오류에서 던지지만 Zod는 refine마다 독립으로 돌아 한 번에 여러 칸을 알린다. 이슈의 `path`·`params.engineCode`는 엔진 오류의
  * `details.path`·`code`와 같다(⑧↔⑫ 패리티 테스트가 격자로 고정: `__tests__/api/transfer-foreign.parity.test.ts`).
  *
@@ -13,20 +13,15 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
 import { TaxCalculationError } from "@/lib/tax-engine/tax-errors";
 import { tryToKrw } from "@/lib/tax-engine/foreign-realestate/fx";
 import {
-  FOREIGN_RE_MIN_RESIDENCE_YEARS,
   assertAcquisitionNotAfterTransfer,
   assertAssetsPresent,
   assertDomesticResidenceYears,
   assertForeignTaxAssetId,
-  assertNoLossNetting,
   assertSameTaxYear,
   assertSupportedTransferDate,
   assertUniqueAssetIds,
   assertValidDate,
 } from "@/lib/tax-engine/foreign-realestate/input-asserts";
-import { buildAssetRow } from "@/lib/tax-engine/foreign-realestate/convert";
-import { attachForeignTax, prepareForeignTax, rowsAfterMethod } from "@/lib/tax-engine/foreign-realestate/foreign-tax";
-import { toForeignRealEstateEngineInput } from "./transfer-foreign-engine-input";
 import type { ForeignRealEstateBaseInput } from "./transfer-foreign-schema";
 
 type Ctx = z.RefinementCtx;
@@ -139,23 +134,6 @@ export const FOREIGN_RE_REFINES: readonly ForeignRealEstateRefine[] = [
         checkMoneyItem(ctx, item, path, "date");
         checkMoneyItem(ctx, item, path, "money");
       });
-    },
-  },
-  {
-    // 양도차손 자산 + 양도차익 자산 혼재(§102 미준용) — 엔진은 거주 5년 미만이면 이 검사 전에 not_liable로 반환한다.
-    // 행 계산이 깨지는 입력(날짜·환율 오류)은 위 refine이 소유하므로 여기서는 건너뛴다.
-    id: "loss-gain-mix",
-    run: (d, ctx) => {
-      if (!(d.domesticResidenceYears >= FOREIGN_RE_MIN_RESIDENCE_YEARS)) return;
-      let rows;
-      try {
-        const input = toForeignRealEstateEngineInput(d);
-        const prepared = prepareForeignTax(input.foreignTax, input.assets.map((a) => a.id));
-        rows = rowsAfterMethod(attachForeignTax(input.assets.map((a, i) => buildAssetRow(a, i)), prepared), prepared);
-      } catch {
-        return;
-      }
-      check(ctx, () => assertNoLossNetting(rows));
     },
   },
 ];

@@ -125,7 +125,8 @@ export function buildForeignFilingForm(result: ForeignRealEstateResult, meta: Fo
         } satisfies RowDef]
       : []),
     { label: "전체 양도차익 (차손은 음수)", values: values(result.capitalGainTotal, (a) => a.capitalGain), separatorAfter: true },
-    { label: "과세대상 양도차익", values: values(result.capitalGainTotal, (a) => a.capitalGain) },
+    // 장기보유특별공제 0이라 과세대상 양도차익 = 양도소득금액(차손 자산은 0 — 통산하지 않는다). 엔진 값 그대로.
+    { label: "과세대상 양도차익", values: values(result.incomeAmountTotal, (a) => a.incomeAmount) },
     {
       label: "장기보유특별공제",
       values: values(0, () => 0),
@@ -172,6 +173,11 @@ export function buildForeignFilingForm(result: ForeignRealEstateResult, meta: Fo
   }
   if (assets.some((a) => !metaOf(a).countryLabel)) {
     notices.push("소재지국이 비어 있습니다(미선택 또는 「기타」) — 국가명·국가코드는 신고 시 직접 기재합니다(확인 필요).");
+  }
+  if (result.confirmationNeeded.includes("FOREIGN_LOSS_NOT_NETTED")) {
+    notices.push(
+      `양도차손 자산은 다른 국외자산의 양도소득과 통산하지 않고 0으로 보아 과세대상 양도차익·양도소득금액에 0으로 적었습니다(${TRANSFER_FOREIGN_RE.SECTION_102_2_LOSS_OFFSET}은 ${TRANSFER_FOREIGN_RE.SECTION_118_8_MUTATIS_NO_LTHD} 준용 목록에 없음) — 확인 필요.`,
+    );
   }
   if (expenseApplied) {
     notices.push(

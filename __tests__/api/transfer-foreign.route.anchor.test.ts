@@ -134,12 +134,15 @@ describe("400 — route 응답 형태", () => {
     expect(json.error.fieldErrors["assets.0.transfer.exchangeRate"]).toHaveLength(1);
   });
 
-  it("양도차손 + 양도차익 혼재(K-15) → 400 FOREIGN_LOSS_NETTING_UNRESOLVED · 키 assets", async () => {
-    const loss = bAsset({}, 100_000, 1_100); // 양도 110,000,000 − 취득 260,000,000
+  it("양도차손 + 양도차익 혼재(K-15) → 200 · 통산하지 않음 — a 단건과 같은 세액 147,860,000 + 확인 필요 코드", async () => {
+    const loss = bAsset({}, 100_000, 1_100); // 양도 110,000,000 − 취득 260,000,000 = −150,000,000
     const { status, json } = await post(wire(k1Input({ assets: [aAsset(), loss] })));
-    expect(status).toBe(400);
-    expect(json.error.code).toBe("FOREIGN_LOSS_NETTING_UNRESOLVED");
-    expect(json.error.fieldErrors.assets[0]).toContain("확인 필요");
+    expect(status).toBe(200);
+    expect(json.data.rows[1].capitalGain).toBe(-150_000_000);
+    expect(json.data.incomeAmountTotal).toBe(437_000_000);
+    expect(json.data.taxBase).toBe(434_500_000);
+    expect(json.data.calculatedTax).toBe(147_860_000);
+    expect(json.data.confirmationNeeded).toContain("FOREIGN_LOSS_NOT_NETTED");
   });
 
   it("전부 양도차손이면 통산할 대상이 없어 200 · 세액 0 (K-7)", async () => {

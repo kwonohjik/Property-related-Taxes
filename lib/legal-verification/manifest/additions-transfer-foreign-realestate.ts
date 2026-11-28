@@ -102,6 +102,16 @@ export const TRANSFER_FOREIGN_REALESTATE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** 양도차손 통산 규정 — 국외자산은 위 준용 목록에 없어 통산하지 않는다(사용자 결정 2026-11-28 · 계획서 엔진 V-1). 이 문언이 개정되면 결과 «확인 필요» 문구의 근거가 흔들린다. */
+    id: "TRANSFER_FOREIGN_RE.LOSS_OFFSET_102_2",
+    citation: "소득세법 §102 ②",
+    keywords: [
+      "양도소득금액을 계산할 때 양도차손이 발생한 자산이 있는 경우",
+      "해당 자산 외의 다른 자산에서 발생한 양도소득금액에서 그 양도차손을 공제한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "TRANSFER_FOREIGN_RE.DECREE_154_1_DOMESTIC_ONE_HOUSE",
     citation: "소득세법 시행령 §154 ①",
     keywords: [
