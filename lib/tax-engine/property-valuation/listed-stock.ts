@@ -26,6 +26,7 @@ import type {
   Section53_8_2FailReason,
 } from "../types/stock-premium-exclusion.types";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { migrateListedPremiumReason } from "../types/stock-premium-exclusion.types";
 import {
   isMidSizedPremiumExcluded,
   maxShareholderPremiumEraNotices,
@@ -70,7 +71,9 @@ function resolveListedPremiumRate(
 } {
   if (!item.isMaxShareholder) return { premiumRate: 0 };
 
-  let exclusionEffective = item.premiumExclusionReason;
+  // 레거시 저장 코드(smb_med 등)는 ⑫ preprocess와 같은 매핑으로 공용 코드로 바꾼 뒤 비교한다(U-04).
+  let exclusionEffective =
+    item.premiumExclusionReason === undefined ? undefined : migrateListedPremiumReason(item.premiumExclusionReason);
   let section53_8_2FailReason: Section53_8_2FailReason | undefined;
 
   // §53⑧2호: 게이트 통과해야만 유효한 배제. 실패 시 explicit 무효화 후 일반 분기로.

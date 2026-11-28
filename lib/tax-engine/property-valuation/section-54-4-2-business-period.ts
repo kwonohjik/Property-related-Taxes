@@ -20,6 +20,7 @@ import { format } from "@/lib/tax-engine/utc-date";
 import { VALUATION } from "@/lib/tax-engine/legal-codes";
 import { PERIOD_CALCULATION_4 } from "@/lib/tax-engine/legal-codes";
 import type { UnlistedNetAssetOnlyReason } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
+import { hasSection54_4Proviso } from "./section-54-4-proviso-era";
 
 export type Section54_4_2BusinessPeriodStatus =
   | "pre_start" // 평가기준일 < 사업개시일 — 사업개시 전의 법인
@@ -66,11 +67,38 @@ export const SECTION_55_3_2_PROVISO_NOTICE =
   "법인전환하여 그 법인이 사업용 무형자산을 계속 사용하고 개인·법인 사업기간 합계가 3년 이상이면 영업권을 합산해야 함 " +
   "— 이 계산기는 미반영, 확인 필요";
 
+const OVERLAP_HO: Partial<Record<UnlistedNetAssetOnlyReason, string>> = {
+  real_estate_80: "3호",
+  stock_holding_80: "5호",
+  remaining_3y: "6호",
+};
+
+/**
+ * 사용자가 고른 3·5·6호와 날짜로 성립한 2호가 함께일 때의 화면 한 줄(ToneCard).
+ * 3·5호 단서(가중평균 < 순자산일 때만)는 평가기준일 2026.2.27. 이후에만 있다(section-54-4-proviso-era · U-03) —
+ * 그 전이면 「단서 판정 없이」가 아니라 단서 자체가 없다. 6호는 단서가 없는 무조건 사유다.
+ */
+export function section54_4_2OverlapNote(
+  userReason: UnlistedNetAssetOnlyReason | undefined,
+  evaluationDate: Date | undefined,
+): string | null {
+  const ho = userReason ? OVERLAP_HO[userReason] : undefined;
+  if (!ho) return null;
+  if (userReason === "remaining_3y") {
+    return `선택한 순자산가치 사유(${ho})와 2호가 함께 해당 — 둘 다 무조건 순자산가치 · 영업권은 2호로 합산 안 함`;
+  }
+  return hasSection54_4Proviso(evaluationDate)
+    ? `선택한 순자산가치 사유(${ho})와 2호가 함께 해당 — 2호 우선(${ho} 단서 판정 없이 순자산가치)`
+    : `선택한 순자산가치 사유(${ho})와 2호가 함께 해당 — 평가기준일이 2026.2.27. 전이라 ${ho} 단서가 없어 어느 쪽이든 순자산가치`;
+}
+
 /** 2호 자동 판정의 appliedRules·warnings 문구 (오케스트레이터 전용 · 문구는 상수로 조립) */
 export function section54_4_2Notices(args: {
   period: Section54_4_2BusinessPeriod;
   userReason?: UnlistedNetAssetOnlyReason;
   goodwillExcludedByLaw?: string;
+  /** 평가기준일 — 3·5호 단서 연혁(2026.2.27.) 판정 */
+  evaluationDate?: Date;
 }): { appliedRules: string[]; warnings: string[] } {
   const { period, userReason } = args;
   const appliedRules: string[] = [];
@@ -86,7 +114,11 @@ export function section54_4_2Notices(args: {
     );
   }
   if (isSection54_4_2ByBusinessStart(period) && (userReason === "real_estate_80" || userReason === "stock_holding_80")) {
-    appliedRules.push(`${law} 우선 — 선택한 사유 ${userReason}의 단서(가중평균 < 순자산) 판정 없이 순자산가치 단독`);
+    appliedRules.push(
+      hasSection54_4Proviso(args.evaluationDate)
+        ? `${law} 우선 — 선택한 사유 ${userReason}의 단서(가중평균 < 순자산) 판정 없이 순자산가치 단독`
+        : `${law}·선택한 사유 ${userReason} 모두 순자산가치 단독 — 평가기준일 2026.2.27. 전이라 ${userReason}의 단서 없음`,
+    );
   }
   if (userReason === "lt3y" && period.status === "three_years_or_more") {
     warnings.push(

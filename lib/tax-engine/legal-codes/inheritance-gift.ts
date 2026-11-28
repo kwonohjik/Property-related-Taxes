@@ -347,6 +347,8 @@ export const VALUATION = {
   UNLISTED_NET_ASSET_INTANGIBLE: "상증규 §17의2 1~4호 (상증령 §55 ② 위임)",
   /** 상증령 §55 ③ — 영업권 자산 가산 (단서 1·2·3호 자동 배제) */
   UNLISTED_GOODWILL_INCLUDE: "상증령 §55 ③",
+  /** 상증령 §55 ③ 1호 — §54④1호(청산)·3호(부동산 80%) 법인은 영업권 합산 안 함 */
+  UNLISTED_GOODWILL_EXCLUDE_LIQUIDATION_REAL_ESTATE: "상증령 §55 ③ 1호",
   /** 상증령 §55 ③ 2호 — §54④2호 법인은 영업권 합산 안 함 (단서 가·나목 법인전환 예외는 미구현 · U-10) */
   UNLISTED_GOODWILL_EXCLUDE_BUSINESS_PERIOD: "상증령 §55 ③ 2호",
   /** 상증령 §56 ① — 1주당 최근 3년간 순손익액 가중평균 (3·2·1/6), 음수 시 0 */

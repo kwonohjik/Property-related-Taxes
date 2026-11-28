@@ -470,6 +470,7 @@ export function evaluateUnlistedStockV2(
     period: businessPeriod,
     userReason,
     goodwillExcludedByLaw: goodwill.excludedByLaw,
+    evaluationDate: toOptionalDate(input.evaluationDate),
   });
   appliedRules.push(...businessPeriodNotices.appliedRules);
   warnings.push(...businessPeriodNotices.warnings);

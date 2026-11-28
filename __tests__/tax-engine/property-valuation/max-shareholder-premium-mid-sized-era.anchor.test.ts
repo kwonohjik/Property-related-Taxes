@@ -242,3 +242,37 @@ describe("U-04 — 「9호 + 일반기업」 ⑧·⑫ 같은 술어 차단 (Q-2 
     expect(unlistedStockValuationV2Schema.safeParse(okV2).success).toBe(true);
   });
 });
+
+/**
+ * 레거시 저장 코드 `smb_med`(구 상장 9호) — ⑫는 preprocess(migrateListedPremiumReason)로 9호로 바꾸지만
+ * 클라이언트 엔진(사이드바·도구)은 원값을 받아 「9호 아닌 명시 사유」로 보고 연혁 게이트를 건너뛰었다
+ * (클라 500,000,000 vs 서버 600,000,000). 엔진 비교 지점·⑧⑫ 술어가 같은 매핑을 쓴다.
+ */
+describe("U-04 — 레거시 smb_med = 9호 (엔진·술어 매핑)", () => {
+  const legacy = { premiumExclusionReason: "smb_med" } as unknown as Partial<EstateItem>;
+
+  it("🔑 상장 smb_med + medium 2022-06-30 → 600,000,000 (종전 500,000,000) = ⑫ 경유 값", () => {
+    const client = evaluateListedStock(listed(legacy), { valuationDate: "2022-06-30" });
+    expect(client.valuatedAmount).toBe(600_000_000);
+    const parsed = estateItemSchema.safeParse(listed(legacy));
+    expect(parsed.success).toBe(true);
+    const server = evaluateListedStock(parsed.data as EstateItem, { valuationDate: "2022-06-30" });
+    expect(server.valuatedAmount).toBe(client.valuatedAmount);
+  });
+
+  it("🔑 상장 smb_med + large → ⑧ 차단 (종전 술어 우회)", () => {
+    expect(validateListedStockBesshi(listed({ ...legacy, companySize: "large" }))).toContain(SME_REASON_LARGE_SIZE_MESSAGE);
+  });
+
+  it("🔑 비상장 V2 smb_med + medium 2022-06-30 → 할증 0.2 (calcMaxShareholderPremium)", () => {
+    const r = calcMaxShareholderPremium({
+      finalPerShareValue: 66_000,
+      isMaxShareholder: true,
+      companySize: "medium",
+      explicitExclusionReason: "smb_med" as never,
+      valuationDate: d("2022-06-30"),
+    });
+    expect(r.premiumRate).toBe(0.2);
+    expect(r.premiumPerShare).toBe(79_200);
+  });
+});

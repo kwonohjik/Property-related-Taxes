@@ -15,6 +15,7 @@ import {
   resolveUnlistedDisplayMode,
 } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { stockSmeReasonLargeSizeError } from "@/lib/calc/inheritance-validate-unlisted";
 
 export interface StockValuationToolItemResult {
   id: string;
@@ -31,6 +32,11 @@ export interface StockValuationToolResult {
   valuationDate: string;
   items: StockValuationToolItemResult[];
   totalValuationAmount: number;
+  /**
+   * 계산 전에 막은 종목 — 상속·증여 ⑧·⑫가 막는 입력 조합(U-04 「9호 + 일반기업」).
+   * 이 종목은 items·합계에서 빠진다(조용히 다른 할증률로 평가하지 않는다).
+   */
+  errors: { id: string; message: string }[];
 }
 
 /** 평가대상회사명 추출 — category별 분기. */
@@ -65,9 +71,19 @@ export function buildStockValuationResult(
   valuationDate: string,
 ): StockValuationToolResult {
   const items: StockValuationToolItemResult[] = [];
+  const errors: StockValuationToolResult["errors"] = [];
   let total = 0;
   for (const item of stockItems) {
     if (item.category !== "listed_stock" && item.category !== "unlisted_stock") continue;
+    // 비상장은 정식평가(V2)로 평가될 때만 V2 칸을 읽는다 — computeStockValuation과 같은 모드 판정
+    const blocked =
+      item.category === "listed_stock" || resolveUnlistedDisplayMode(item) === "formal"
+        ? stockSmeReasonLargeSizeError(item)
+        : null;
+    if (blocked) {
+      errors.push({ id: item.id, message: blocked });
+      continue;
+    }
     const valuationAmount = computeStockValuation(item, valuationDate || undefined);
     if (valuationAmount <= 0) continue;
     items.push({
@@ -79,5 +95,5 @@ export function buildStockValuationResult(
     });
     total += valuationAmount;
   }
-  return { valuationDate, items, totalValuationAmount: total };
+  return { valuationDate, items, totalValuationAmount: total, errors };
 }

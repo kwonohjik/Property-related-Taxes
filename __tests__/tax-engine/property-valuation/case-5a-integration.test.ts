@@ -173,7 +173,7 @@ describe("[⑧] validateUnlistedStockV2", () => {
         evaluationDate: new Date("1999-01-01"), // 사업개시일 2000-01-01 이전
       },
     };
-    expect(validateUnlistedStockV2(item) ?? "").not.toMatch(/평가기준일은 사업개시일 이후/);
+    expect(validateUnlistedStockV2(item)).toBeNull();
   });
 
   it("U-10 — 사업개시일 미입력 차단", () => {

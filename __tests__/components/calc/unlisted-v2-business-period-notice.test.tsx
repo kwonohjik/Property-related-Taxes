@@ -57,6 +57,41 @@ describe("U-10 ⑤ CorporateInfoSection", () => {
   });
 });
 
+describe("U-10 F ⑤ — 사용자 사유와 2호가 겹칠 때 문구·영업권 라벨 (엔진과 같은 기준)", () => {
+  const start = new Date("2023-03-01");
+  const notice = (patch: Partial<CorporateInfoSectionProps>) => {
+    render(<CorporateInfoSection {...props({ businessStartDate: start, ...patch })} />);
+    return screen.getByTestId("unlisted-v2-business-period-notice").textContent ?? "";
+  };
+
+  it("6호 → 「단서 판정 없이」 문구 아님 · 둘 다 무조건 · 영업권 라벨 §55③2호", () => {
+    const t = notice({ netAssetOnlyReason: "remaining_3y", evaluationDate: new Date("2025-06-30") });
+    expect(t).toContain("선택한 순자산가치 사유(6호)와 2호가 함께 해당 — 둘 다 무조건 순자산가치");
+    expect(t).not.toContain("단서 판정 없이");
+    expect(t).toContain("영업권 합산 안 함(상증령 §55 ③ 2호)");
+  });
+
+  it("5호 + 평가기준일 2026-02-27(단서 시행) → 2호 우선 · 단서 판정 없이", () => {
+    const t = notice({ netAssetOnlyReason: "stock_holding_80", evaluationDate: new Date("2026-02-27") });
+    expect(t).toContain("2호 우선(5호 단서 판정 없이 순자산가치)");
+    expect(t).toContain("영업권 합산 안 함(상증령 §55 ③ 2호)");
+    expect(t).toContain("가·나목");
+  });
+
+  it("3호 + 평가기준일 2025-06-30(단서 신설 전) → 단서 없음 문구 · 영업권 라벨 §55③1호 · 2호 가·나목 고지 없음", () => {
+    const t = notice({ netAssetOnlyReason: "real_estate_80", evaluationDate: new Date("2025-06-30") });
+    expect(t).toContain("평가기준일이 2026.2.27. 전이라 3호 단서가 없어 어느 쪽이든 순자산가치");
+    expect(t).not.toContain("단서 판정 없이");
+    expect(t).toContain("영업권 합산 안 함(상증령 §55 ③ 1호)");
+    expect(t).not.toContain("가·나목");
+  });
+
+  it("1호(청산) → 영업권 라벨 §55③1호 (엔진 excludedByLaw liquidation과 같다)", () => {
+    const t = notice({ netAssetOnlyReason: "liquidation", evaluationDate: new Date("2025-06-30") });
+    expect(t).toContain("영업권 합산 안 함(상증령 §55 ③ 1호)");
+  });
+});
+
 describe("U-10 ⑦ 별지 제1쪽 [v] — 자동 2호면 「나」 행 체크", () => {
   it("사용자 사유 6호 + 사업개시 2023-03-01 · 평가기준일 2025-06-30 → 나·바 모두 [v] (종전 바만)", () => {
     const input: UnlistedStockValuationInput = {

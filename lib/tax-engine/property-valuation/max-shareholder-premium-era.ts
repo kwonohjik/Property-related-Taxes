@@ -11,8 +11,11 @@
  * - 날짜를 모르면(간편 미리보기 등) 현행(중견기업 배제)으로 본다 — U-03 선례.
  */
 
-import { isBefore, isValid, parseISO } from "../utc-date";
+import { isBefore } from "../utc-date";
+import { isValid } from "../utc-date";
+import { parseISO } from "../utc-date";
 import { VALUATION } from "../legal-codes";
+import { migrateListedPremiumReason } from "../types/stock-premium-exclusion.types";
 
 /** 중견기업 할증 제외 적용 시작 평가기준일 (상증법 법률 제19195호 부칙 §2) */
 export const MID_SIZED_PREMIUM_EXCLUSION_FROM = parseISO("2023-01-01");
@@ -78,7 +81,8 @@ export function isSmeReasonWithLargeSize(v: {
 }): boolean {
   return (
     !!v.isMaxShareholder &&
-    v.premiumExclusionReason === "small_medium_enterprise" &&
+    // 레거시 저장 코드(smb_med)도 9호다 — ⑫ preprocess·엔진과 같은 매핑
+    migrateListedPremiumReason(v.premiumExclusionReason) === "small_medium_enterprise" &&
     v.companySize === "large"
   );
 }

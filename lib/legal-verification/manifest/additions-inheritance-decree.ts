@@ -320,7 +320,14 @@ export const INHERITANCE_DECREE_ADDITIONS: VerificationRule[] = [
     id: "INH_DECREE.NET_ASSET_VALUE",
     citation: "상증령 §55",
     // U-10 — §55③2호 「제54조제4항제2호에 해당하는 경우」(영업권 배제 사실 요건)
-    keywords: ["순자산가액", "장부가액", "영업권평가액", "제54조제4항제2호에 해당하는 경우"],
+    keywords: [
+      "순자산가액",
+      "장부가액",
+      "영업권평가액",
+      "제54조제4항제2호에 해당하는 경우",
+      // U-10 F — §55③1호 「제54조제4항제1호 또는 제3호에 해당하는 경우」(화면 영업권 배제 라벨)
+      "제54조제4항제1호 또는 제3호에 해당하는 경우",
+    ],
     keywordMode: "ALL",
   },
   {

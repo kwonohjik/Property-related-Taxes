@@ -28,6 +28,7 @@ import type { UnlistedNetAssetOnlyReason, UnlistedCapitalChange } from "@/lib/ta
 import { resolveSection54_4_2ByBusinessStart } from "@/lib/tax-engine/property-valuation/section-54-4-2-business-period";
 import { isSection54_4_2ByBusinessStart } from "@/lib/tax-engine/property-valuation/section-54-4-2-business-period";
 import { SECTION_55_3_2_PROVISO_NOTICE } from "@/lib/tax-engine/property-valuation/section-54-4-2-business-period";
+import { section54_4_2OverlapNote } from "@/lib/tax-engine/property-valuation/section-54-4-2-business-period";
 import { VALUATION } from "@/lib/tax-engine/legal-codes";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import type {
@@ -228,6 +229,12 @@ export function CorporateInfoSection({
     [businessStartDate, evaluationDate, evaluationDateFallback],
   );
   const businessPeriodAuto = isSection54_4_2ByBusinessStart(businessPeriod);
+  // §55③ 영업권 배제 라벨 — 엔진 goodwillReason과 같다: 청산·부동산 80%(1·3호)는 1호, 그 밖에는 2호
+  const goodwillExcludedBy1Ho = netAssetOnlyReason === "liquidation" || netAssetOnlyReason === "real_estate_80";
+  const overlapNote = section54_4_2OverlapNote(
+    netAssetOnlyReason,
+    toOptionalDate(evaluationDate) ?? toOptionalDate(evaluationDateFallback),
+  );
   return (
     <div className="space-y-4">
       {/* 1. 평가대상 비상장법인 */}
@@ -359,14 +366,15 @@ export function CorporateInfoSection({
                 {businessPeriod.status === "pre_start"
                   ? "평가기준일이 사업개시일 전 — 사업개시 전의 법인"
                   : `사업개시 후 3년 미만 — 3년 만료일 ${dateToStr(businessPeriod.threeYearsEndDate)}(그날까지 3년 미만)`}
-                {" · "}영업권 합산 안 함({VALUATION.UNLISTED_GOODWILL_EXCLUDE_BUSINESS_PERIOD})
+                {" · "}영업권 합산 안 함(
+                {goodwillExcludedBy1Ho
+                  ? VALUATION.UNLISTED_GOODWILL_EXCLUDE_LIQUIDATION_REAL_ESTATE
+                  : VALUATION.UNLISTED_GOODWILL_EXCLUDE_BUSINESS_PERIOD}
+                )
               </p>
-              {(netAssetOnlyReason === "real_estate_80" ||
-                netAssetOnlyReason === "stock_holding_80" ||
-                netAssetOnlyReason === "remaining_3y") && (
-                <p>선택한 순자산가치 사유와 2호가 함께 해당 — 2호 우선(3·5호 단서 판정 없이 순자산가치 · 영업권 합산 안 함)</p>
-              )}
-              <p>{SECTION_55_3_2_PROVISO_NOTICE}</p>
+              {overlapNote && <p>{overlapNote}</p>}
+              {/* 엔진과 같은 조건 — 영업권 배제가 2호일 때만 2호 단서 가·나목 고지 */}
+              {!goodwillExcludedBy1Ho && <p>{SECTION_55_3_2_PROVISO_NOTICE}</p>}
             </div>
           </ToneCard>
         )}

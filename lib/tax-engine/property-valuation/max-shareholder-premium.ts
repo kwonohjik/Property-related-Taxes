@@ -37,6 +37,7 @@ import type {
 import { evaluateSection53_8_2 } from "./section-53-8-2-gate";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { isMidSizedPremiumExcluded } from "./max-shareholder-premium-era";
+import { migrateListedPremiumReason } from "@/lib/tax-engine/types/stock-premium-exclusion.types";
 
 export interface MaxShareholderPremiumInput {
   /** ⑥ 1주당 평가액 (할증 적용 전 base value) */
@@ -100,7 +101,9 @@ export function calcMaxShareholderPremium(
 
   // §53⑧2호: 게이트 통과해야만 유효한 배제. 실패 시 explicit 무효화 후 일반 분기로.
   const D = toOptionalDate(input.valuationDate);
-  let effective = input.explicitExclusionReason;
+  // 레거시 저장 코드(smb_med 등)는 ⑫ preprocess와 같은 매핑으로 공용 코드로 바꾼 뒤 비교한다(U-04).
+  let effective =
+    input.explicitExclusionReason === undefined ? undefined : migrateListedPremiumReason(input.explicitExclusionReason);
   let section53_8_2FailReason: Section53_8_2FailReason | undefined;
   if (effective === "all_sold_within_6m") {
     const saleDate = toOptionalDate(input.section53_8_2?.saleContractDate);

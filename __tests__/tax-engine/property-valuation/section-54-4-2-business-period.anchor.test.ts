@@ -228,6 +228,61 @@ describe("U-10 엔진 — §54④2호 자동 적용", () => {
   });
 });
 
+/**
+ * F (뮤테이션 생존 차단): 상호출자 연립방정식(cross-holding)의 평가대상 기준(valuationBasis)도 사업개시일로 성립한
+ *   2호(autoLt3y)를 따라 「순자산 단독」이어야 한다. 상대 법인이 평가대상 주식을 갖고 있으면(crossHeldOfTarget > 0)
+ *   상대 1주당가액 β가 평가대상 α를 역참조하므로, 기준이 가중평균으로 남으면 주입액(②평가차액)이 달라진다.
+ */
+describe("U-10 F — 3·5호 + 2호 appliedRules 연혁 (단서 신설 2026.2.27.)", () => {
+  it("5호 + 평가기준일 2025-06-30 → 「단서 판정 없이」가 아니라 「단서 없음」", () => {
+    const r = evaluateUnlistedStockV2(base({ businessStartDate: "2023-03-01", evaluationDate: "2025-06-30", reason: "stock_holding_80" }));
+    expect(r.totalValuation).toBe(500_000_000);
+    expect(r.appliedRules.some((x) => x.includes("2026.2.27. 전이라 stock_holding_80의 단서 없음"))).toBe(true);
+    expect(r.appliedRules.some((x) => x.includes("판정 없이"))).toBe(false);
+  });
+
+  it("5호 + 평가기준일 2026-02-27 → 「단서 판정 없이」 (종전 문구 유지)", () => {
+    const r = evaluateUnlistedStockV2(base({ businessStartDate: "2023-03-01", evaluationDate: "2026-02-27", reason: "stock_holding_80" }));
+    expect(r.appliedRules.some((x) => x.includes("단서(가중평균 < 순자산) 판정 없이"))).toBe(true);
+  });
+});
+
+describe("U-10 F — 3년 미만 + 상호출자 법인", () => {
+  const holdings = [
+    {
+      rowId: "B",
+      issuerCorpName: "B법인",
+      holdingShares: 2_000,
+      totalShares: 10_000,
+      bookValue: 1,
+      counterparty: {
+        netAssetExStock: 500_000_000,
+        totalLiabilities: 0,
+        issuedShares: 10_000,
+        netIncomePerShare: 10_000,
+        isRealEstateHeavy: false,
+        netAssetOnly: false,
+        crossHeldOfTarget: 3_000,
+      },
+    },
+  ];
+  const withHoldings = (reason?: UnlistedNetAssetOnlyReason): UnlistedStockValuationInput => ({
+    ...base({ businessStartDate: "2023-03-01", evaluationDate: "2025-06-30", reason }),
+    otherUnlistedHoldings: holdings,
+  });
+
+  it("🔑 사업개시일로 성립한 2호 = lt3y 칩을 켠 값 (연립 기준도 순자산 단독)", () => {
+    const auto = evaluateUnlistedStockV2(withHoldings());
+    const chip = evaluateUnlistedStockV2(withHoldings("lt3y"));
+    expect(auto.section54_4_2ByBusinessStart?.status).toBe("under_3y");
+    expect(auto.totalValuation).toBe(chip.totalValuation);
+    expect(auto.finalPerShareValue).toBe(chip.finalPerShareValue);
+    // 손 계산: α = (999,999,999 + 2,000 × β) ÷ 10,000 · β = (3 × 10,000 + 2 × (5억 + 3,000 × α) ÷ 10,000) ÷ 5
+    //   → α ≈ 107,786 · 보유 5,000주 = 538,930,000
+    expect(auto.totalValuation).toBe(538_930_000);
+  });
+});
+
 describe("U-10 ⑧·⑫ — 「평가기준일 < 사업개시일」 차단 제거 · 사업개시일 필수", () => {
   it("A5 사업개시 전: ⑧ null · Zod 통과 (종전 「평가기준일은 사업개시일 이후여야 합니다」·400)", () => {
     const v2 = base({ businessStartDate: "2025-08-01", evaluationDate: "2025-06-30", incomes: [0, 0, 0] });
