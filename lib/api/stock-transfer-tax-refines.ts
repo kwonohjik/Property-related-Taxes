@@ -32,6 +32,8 @@ import {
   type AcquisitionCauseKey,
 } from "@/lib/calc/stock-transfer-required-inputs";
 import { judgeSplitSalePeriods, splitSalePeriodMessage } from "@/lib/calc/stock-split-sale-period-gate";
+import { isListedStockMarket } from "@/lib/tax-engine/stock-transfer/listed-stock-market";
+import { POST_LISTING_UNLISTED_MARKET_MESSAGE } from "@/lib/tax-engine/stock-transfer/listed-stock-market";
 
 const ACQUISITION_CAUSE_LABEL: Record<AcquisitionCauseKey, string> = {
   decedentAcquisitionDate: "피상속인 취득일을",
@@ -177,6 +179,16 @@ export function addStockRefines(
         code: z.ZodIssueCode.custom,
         path: [data.tradingHaltAtTransfer ? "tradingHaltAtTransfer" : "tradingHaltAtAcquisition"],
         message: TRADING_HALT_MARKET_SCOPE_MESSAGE,
+      });
+    }
+
+    // 취득 후 상장(영 §165⑤·⑥)은 상장 3시장 전용 — 비상장·기타자산에 플래그가 서면 엔진 if-체인이 §165④
+    // 보충평가보다 먼저 §165⑤를 타 분모가 비어 취득가액이 0이 된다(U-15). ④는 같은 술어로 끊으므로 직접 API 전용 방어.
+    if (haltGateApplies && data.acquiredBeforeListing && !isListedStockMarket(data.marketType as string | undefined)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["acquiredBeforeListing"],
+        message: POST_LISTING_UNLISTED_MARKET_MESSAGE,
       });
     }
 
