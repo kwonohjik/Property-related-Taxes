@@ -33,6 +33,7 @@ import {
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
 import { applyCapitalIncreaseShareValuation } from "@/lib/tax-engine/property-valuation/dividend-difference-section-63-2-3";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 /**
  * 비상장주식 표시 모드 도출 — 단일 진실 헬퍼.
@@ -129,7 +130,12 @@ export function computeStockValuation(item: EstateItem, valuationDate?: string):
       const d = item.unlistedStockData;
       if (d.totalShares > 0 && d.ownedShares > 0) {
         // 부동산과다보유법인(시행령 §54① 본문 괄호) 가중치 반전 반영. 미지정 시 false(일반 법인).
-        const result = calcUnlistedStockPerShareValue(d, d.isRealEstateHeavy ?? false);
+        // §54④ 단서 연혁 게이트(U-03)용 평가기준일 — 상속개시일·증여일
+        const result = calcUnlistedStockPerShareValue(
+          d,
+          d.isRealEstateHeavy ?? false,
+          toOptionalDate(valuationDate),
+        );
         return result.perShareFinalValue * d.ownedShares;
       }
     }
@@ -147,8 +153,8 @@ export function computeStockValuation(item: EstateItem, valuationDate?: string):
  *
  * ⚠️ `lib/calc/estate-item-valuation.ts`의 `computeEffectiveValuation`과는 **동치가 아니다.**
  *    그쪽은 `valuationDate`를 받고 부동산에서 임대료환산(§61⑤)·미임대·담보하한(§66)까지
- *    반영한다. 이 함수는 `valuationDate`를 **받지 않는다** — 시점에 종속되지 않는 §60 우선순위
- *    선택만 한다. 표시·합계 경로는 `computeEffectiveValuation`을, 공제 산정 경로는 이 함수를
+ *    반영한다. 이 함수의 `valuationDate`는 **주식 보충평가에만** 쓴다(§53⑧2호 할증 배제 · §54④ 단서
+ *    연혁 — U-18). 부동산 쪽은 시점에 종속되지 않는 §60 우선순위 선택만 한다. 표시·합계 경로는 `computeEffectiveValuation`을, 공제 산정 경로는 이 함수를
  *    쓴다. 둘을 바꿔 끼우면 조용히 다른 값이 나온다.
  *
  * 사업무관자산 차감(§15⑤2호)은 미포함 — gross 평가액 반환(호출처가 별도 적용).
@@ -156,7 +162,11 @@ export function computeStockValuation(item: EstateItem, valuationDate?: string):
  * @param item EstateItem
  * @returns 평가액 (원, 정수). 도출 불가 시 0 또는 부수토지 가산액.
  */
-export function resolveEstateItemValue(item: EstateItem): number {
+export function resolveEstateItemValue(
+  item: EstateItem,
+  /** 평가기준일(상속개시일·증여일) — 주식 보충평가(computeStockValuation)로 전달. U-18 */
+  valuationDate?: string,
+): number {
   if (typeof item.marketValue === "number" && item.marketValue > 0) {
     return item.marketValue;
   }
@@ -179,7 +189,7 @@ export function resolveEstateItemValue(item: EstateItem): number {
     return item.standardPrice + supplementaryLandAddon;
   }
   if (item.category === "listed_stock" || item.category === "unlisted_stock") {
-    return computeStockValuation(item);
+    return computeStockValuation(item, valuationDate);
   }
   return supplementaryLandAddon;
 }

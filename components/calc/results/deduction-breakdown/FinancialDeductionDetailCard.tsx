@@ -30,6 +30,8 @@ interface Props {
   triggerValue: string;
   estateItems?: EstateItem[];
   debtItems?: DebtItem[];
+  /** 상속개시일 — 주식 평가액을 엔진과 같은 평가기준일로 (U-18) */
+  deathDate?: string;
 }
 
 export function FinancialDeductionDetailCard({
@@ -38,16 +40,17 @@ export function FinancialDeductionDetailCard({
   triggerValue,
   estateItems,
   debtItems,
+  deathDate,
 }: Props) {
   const [open, setOpen] = useState(false);
 
   // §22② 최대주주 제외 (기존 FinancialDeductionCountRow 로직 흡수)
   const excludedBySection22 = (estateItems ?? []).filter(isSection22MajorShareholderExcluded);
-  const excludedTotal = excludedBySection22.reduce((sum, i) => sum + getValuatedAmount(i), 0);
+  const excludedTotal = excludedBySection22.reduce((sum, i) => sum + getValuatedAmount(i, deathDate), 0);
 
   const eligibleAssets = (estateItems ?? []).filter(resolveFinancialEligibility);
   const eligibleDebts = (debtItems ?? []).filter(resolveFinancialDebt);
-  const assetTotal = eligibleAssets.reduce((sum, i) => sum + getValuatedAmount(i), 0);
+  const assetTotal = eligibleAssets.reduce((sum, i) => sum + getValuatedAmount(i, deathDate), 0);
   const debtTotal = eligibleDebts.reduce((sum, d) => sum + d.amount, 0);
   const hasCountInfo =
     eligibleAssets.length > 0 || eligibleDebts.length > 0 || excludedBySection22.length > 0;

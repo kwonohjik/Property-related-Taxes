@@ -71,10 +71,14 @@ export interface DeductionSuggestion {
  * export: 결과뷰(InheritanceTaxResultView)가 동일 함수를 재사용하도록 export 제공.
  * (단일 진실 — single-source-engine-helper 정책)
  */
-export function getValuatedAmount(item: EstateItem): number {
+export function getValuatedAmount(
+  item: EstateItem,
+  /** 상속개시일 — 주식 보충평가 평가기준일 (엔진과 같은 값 · U-18) */
+  deathDate?: string,
+): number {
   // J-1: §60 평가 우선순위(시가→감정가→기준시가→주식 보충평가→0)는 엔진 단일 진실로 통일.
   // 기존 5단계 로직과 동치(resolveEstateItemValue로 이동). family-business와 동일 소스 사용.
-  return resolveEstateItemValue(item);
+  return resolveEstateItemValue(item, deathDate);
 }
 
 /**
@@ -82,7 +86,7 @@ export function getValuatedAmount(item: EstateItem): number {
  * 시행령 §15⑤2호 + §16⑤2호 공통. 미입력 시 raw value.
  */
 function getCorporateAdjustedAmount(item: EstateItem, deathDate?: string): number {
-  const raw = getValuatedAmount(item);
+  const raw = getValuatedAmount(item, deathDate);
   const isCorporateStock =
     item.farmingCategory === "corporate_stock" ||
     item.familyBusinessCategory === "corporate_stock";
@@ -116,10 +120,12 @@ function formatKrw(n: number): string {
 export function suggestNetFinancialAssets(
   estateItems: EstateItem[],
   debtItems: DebtItem[] | undefined,
+  /** 상속개시일 — 엔진 §22 rows와 같은 평가기준일 (U-18) */
+  deathDate?: string,
 ): DeductionSuggestion {
   const eligibleAssets = estateItems.filter(resolveFinancialEligibility);
   const eligibleDebts = (debtItems ?? []).filter(resolveFinancialDebt);
-  const assets = eligibleAssets.reduce((sum, i) => sum + getValuatedAmount(i), 0);
+  const assets = eligibleAssets.reduce((sum, i) => sum + getValuatedAmount(i, deathDate), 0);
   const debtItemsSum = eligibleDebts.reduce((sum, d) => sum + d.amount, 0);
   // 담보채무 §14 자동공제 중 금융채무(저당분)를 §22 순금융 차감에도 반영 (collateral-debt-auto-deduction)
   const collateralFinancial = sumCollateralFinancialDebt(
@@ -265,7 +271,7 @@ export function suggestFamilyBusinessValue(
     reason: "isFamilyBusinessAsset=true 자산 합산 (법인=사업무관자산·개인가업=담보채무 차감)",
     breakdown: eligible.map((i) => {
       const adj = resolveFamilyBusinessAssetValue(i, deathDate);
-      const raw = getValuatedAmount(i);
+      const raw = getValuatedAmount(i, deathDate);
       const note = adj !== raw ? ` (사업무관자산·담보채무 차감 / 평가 ${formatKrw(raw)}원)` : "";
       return `${i.name}: ${formatKrw(adj)}원${note}`;
     }).concat([

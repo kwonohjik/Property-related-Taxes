@@ -96,7 +96,7 @@ export function calcGiftTax(
   // ─────────────────────────────────────────────
   // STEP 1: 재산 평가
   // ─────────────────────────────────────────────
-  const valuationResults = evaluateAllEstateItems(ordinaryGiftItems);
+  const valuationResults = evaluateAllEstateItems(ordinaryGiftItems, input.giftDate);
   const grossGiftValue = valuationResults.reduce(
     (sum, v) => sum + v.valuatedAmount,
     0,

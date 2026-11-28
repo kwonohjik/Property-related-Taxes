@@ -651,7 +651,7 @@ export function GiftTaxResultView({
 
       {/* 비상장주식 평가조서 (간편평가 — 보충적 평가 자산) */}
       <PrintSection id="unlisted-stock-simple" selectedIds={selectedPrintIds}>
-        <UnlistedStockSimpleValuationSection estateItems={estateItems} />
+        <UnlistedStockSimpleValuationSection estateItems={estateItems} valuationDate={giftDate} />
       </PrintSection>
 
       {/* 상장주식 평가조서(갑·을) 출력 — §63①1가·§63②3호·§63③ */}

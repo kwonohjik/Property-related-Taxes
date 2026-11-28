@@ -242,7 +242,7 @@ export function filterFamilyBusinessInheritanceCandidates(
       if (typeof cat !== "string" || cat.length === 0) return;
       // 상속개시일 평가액 — 상속세 엔진과 같은 해석(시가·감정가·매매사례·기준시가·비상장 평가).
       // 종전에는 `marketValue`만 보아 감정가·기준시가·비상장 평가 자산이 조용히 빠졌다.
-      const marketValue = resolveEstateItemValue(item as unknown as EstateItem);
+      const marketValue = resolveEstateItemValue(item as unknown as EstateItem, deathDate);
       if (!(marketValue > 0)) return;
       const isCorporateStock = cat === "corporate_stock";
       if (isCorporateStock !== (target === "stock")) {

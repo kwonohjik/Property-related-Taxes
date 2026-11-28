@@ -65,7 +65,7 @@ export function CorporateNonBusinessAssetsSection({
   // 자산에서만 고를 수 있고 그 자산들은 marketValue를 store에 쓰지 않는 정책이라
   // (inheritance-deduction-suggest.ts:70 — mirror 금지·derive만) 대개 0이 되어
   // 차감 미리보기 카드가 아예 뜨지 않았다.
-  const stockValue = resolveEstateItemValue(item);
+  const stockValue = resolveEstateItemValue(item, deathDate);
 
   const cashAuto = assets?.cashByYearEnd !== undefined;
   const exclude = exclusionApplicable(deathDate);

@@ -22,8 +22,8 @@ import { resolveEngineValuatedAmount, resolveValuationMethod } from "@/lib/tax-e
 //   이전 `marketValue ?? appraisedValue ?? standardPrice ?? 0`은 주식 computeStockValuation·
 //   §66 담보 하한을 제외 → 엔진 categoryTotals(valuatedAmount)와 어긋나 합계열 과소 표시.
 //   (avg×수량·V2 주식이 0/과소로 표시되던 버그 동시 해소)
-export function resolveValuation(item: EstateItem): number {
-  return resolveEngineValuatedAmount(item);
+export function resolveValuation(item: EstateItem, deathDate?: string): number {
+  return resolveEngineValuatedAmount(item, deathDate); // 평가기준일 — 엔진과 같은 값 (U-18)
 }
 
 // ============================================================

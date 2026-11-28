@@ -605,7 +605,7 @@ export function InheritanceTaxResultView({
       {/* 비상장주식 평가조서 (간편평가 — 보충적 평가 자산) */}
       {estateItems && (
         <PrintSection id="unlisted-stock-simple" selectedIds={selectedPrintIds}>
-          <UnlistedStockSimpleValuationSection estateItems={estateItems} />
+          <UnlistedStockSimpleValuationSection estateItems={estateItems} valuationDate={deathDate} />
         </PrintSection>
       )}
 

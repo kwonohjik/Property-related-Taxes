@@ -58,8 +58,8 @@ export function DeductionBesshiFormsSection({
 
   const bp3 = useMemo(() => buildBuppyo3Data(result, debtItems), [result, debtItems]);
   const b5 = useMemo(
-    () => buildBesshi5Data(result, estateItems, debtItems, heirs, decedentName, decedentResidentNumber),
-    [result, estateItems, debtItems, heirs, decedentName, decedentResidentNumber],
+    () => buildBesshi5Data(result, estateItems, debtItems, heirs, decedentName, decedentResidentNumber, deathDate),
+    [result, estateItems, debtItems, heirs, decedentName, decedentResidentNumber, deathDate],
   );
   const b1 = useMemo(
     () =>

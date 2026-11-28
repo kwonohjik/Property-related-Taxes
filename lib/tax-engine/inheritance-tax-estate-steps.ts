@@ -31,7 +31,7 @@ export function runEstateValuationSteps(
   // ─────────────────────────────────────────────
   // STEP 1: 재산 평가
   // ─────────────────────────────────────────────
-  const valuationResults = evaluateAllEstateItems(input.estateItems);
+  const valuationResults = evaluateAllEstateItems(input.estateItems, input.deathDate);
 
   const grossEstateValue = valuationResults.reduce(
     (sum, v) => sum + v.valuatedAmount,

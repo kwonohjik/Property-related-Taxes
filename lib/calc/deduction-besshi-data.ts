@@ -282,6 +282,8 @@ export function buildBesshi5Data(
   heirs?: Heir[],
   decedentName?: string,
   decedentResidentNumber?: string,
+  /** 상속개시일 — 주식 평가액을 엔진 §22 rows와 같은 평가기준일로 (U-18) */
+  deathDate?: string,
 ): Besshi5Data | null {
   const fdd = result.deductionDetail.financialDeductionDetail;
   const finalDeduction = result.deductionDetail.financialDeduction;
@@ -301,7 +303,7 @@ export function buildBesshi5Data(
       .filter(resolveFinancialEligibility)
       .map((item) => ({
         kindLabel: financialAssetKindLabel(item),
-        amount: resolveEstateItemValue(item),
+        amount: resolveEstateItemValue(item, deathDate),
       }))
       .filter((r) => r.amount > 0);
     debtRows = (debtItems ?? [])

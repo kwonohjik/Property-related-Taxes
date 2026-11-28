@@ -26,6 +26,8 @@ export function buildPhaseDFinancialRows(
   estateItems: EstateItem[],
   debtItems: DebtItem[] | undefined,
   collateralDebts: DerivedCollateralDebt[],
+  /** 상속개시일 — 주식 보충평가 평가기준일(U-18) */
+  deathDate?: string,
 ): FinancialBreakdownRow[] {
   // 자산 종류별 집계: 예금·상장주식·보험금·기타금융 구분
   let depositTotal = 0;
@@ -36,7 +38,7 @@ export function buildPhaseDFinancialRows(
     // §22 적격 판정 — 단일 헬퍼(isFinancialAssetEligible)로 판정.
     // 우선순위: §22② 최대주주 강제 배제 > 명시값 > deemedCategory > 카테고리 default.
     if (!isFinancialAssetEligible(item)) continue;
-    const val = resolveEstateItemValue(item);
+    const val = resolveEstateItemValue(item, deathDate);
     if (val <= 0) continue;
     // 표시 레이블 분류 (§22 적격 통과 후)
     if (item.deemedCategory === "insurance") {

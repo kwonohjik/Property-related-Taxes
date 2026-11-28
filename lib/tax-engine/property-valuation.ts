@@ -480,6 +480,11 @@ export function evaluateEstateItem(item: EstateItem): PropertyValuationResult {
  */
 export function evaluateAllEstateItems(
   items: EstateItem[],
+  /**
+   * 평가기준일(상속개시일·증여일) — 상장·간편 비상장 주식 보충평가에 전달(U-18).
+   * 없으면 §53⑧2호 전부매각 할증 배제가 missing_input으로 꺼지고 §54④ 단서 연혁 게이트가 현행으로 본다.
+   */
+  valuationDate?: string,
 ): PropertyValuationResult[] {
   return items.map((i) => {
     // V2 라우팅은 mode==="formal" + V2 객체 동시 충족 시에만 (2026-05-31 fix — dual-truth 차단).
@@ -494,7 +499,7 @@ export function evaluateAllEstateItems(
       return evaluateUnlistedStockV2AsPropertyResult(i);
     }
     if (i.category === "listed_stock" || i.category === "unlisted_stock") {
-      return evaluateStockAsPropertyResult(i);
+      return evaluateStockAsPropertyResult(i, valuationDate);
     }
     return evaluateEstateItem(i);
   });
@@ -509,8 +514,8 @@ export function evaluateAllEstateItems(
  *
  * ⚠️ `evaluateEstateItem`은 주식에 throw → 반드시 `evaluateAllEstateItems` 경유(주식 라우팅 포함).
  */
-export function resolveEngineValuatedAmount(item: EstateItem): number {
-  return evaluateAllEstateItems([item])[0]?.valuatedAmount ?? 0;
+export function resolveEngineValuatedAmount(item: EstateItem, valuationDate?: string): number {
+  return evaluateAllEstateItems([item], valuationDate)[0]?.valuatedAmount ?? 0;
 }
 
 /**
@@ -534,9 +539,9 @@ export function resolveEngineValuatedAmount(item: EstateItem): number {
  *   - standardPrice 사용 시: "standard_price"
  *   - computeStockValuation fallback: 기존 method 유지 (상장="market_value", V1="book_value")
  */
-function evaluateStockAsPropertyResult(item: EstateItem): PropertyValuationResult {
-  // §60 우선순위: 명시 평가액 → 주식 보충평가 fallback
-  const amount = resolveEstateItemValue(item);
+function evaluateStockAsPropertyResult(item: EstateItem, valuationDate?: string): PropertyValuationResult {
+  // §60 우선순위: 명시 평가액 → 주식 보충평가 fallback (평가기준일 전달 — U-18)
+  const amount = resolveEstateItemValue(item, valuationDate);
   const isListed = item.category === "listed_stock";
 
   // method: 어느 경로로 평가했는지 정확히 반영

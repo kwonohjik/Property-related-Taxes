@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 // ============================================================
 // 총 주식 평가액 합산
@@ -65,6 +66,7 @@ function TotalStockValue({ items, valuationDate }: StockTotal) {
           const preview = calcUnlistedStockPerShareValue(
             item.unlistedStockData,
             item.unlistedStockData.isRealEstateHeavy ?? false,
+            toOptionalDate(valuationDate), // §54④ 단서 연혁 (U-03)
           );
           total += preview.perShareFinalValue * item.unlistedStockData.ownedShares;
         } catch {

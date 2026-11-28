@@ -154,7 +154,7 @@ export function validateInheritanceTaxInput(
     if (cf) return cf;
     // auto 모드 pre-inject — 미수이자·원천징수세액 주입 후 협의분할 검증
     const item = deathDateObj ? injectSavingsAccrualIfAuto(rawItem, deathDateObj) : rawItem;
-    const e = validateEstateItemAllocations(item);
+    const e = validateEstateItemAllocations(item, input.deathDate);
     if (e) return e;
     // 가업상속공제 배타성·정합성 (2026-05-21, 상증법 §18의2)
     const fbe = validateFamilyBusinessEstateItem(item, input.deductionInput?.familyBusiness);

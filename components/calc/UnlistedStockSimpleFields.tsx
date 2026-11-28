@@ -32,6 +32,7 @@ import { buildDefaultFiscalYears } from "@/lib/tax-engine/property-valuation/fis
 import type { EstateItem, UnlistedStockData, UnlistedAssetValueOnlyReason } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { UnlistedStockSpecialReasonSection } from "@/components/calc/inheritance/UnlistedStockSpecialReasonSection";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 // ============================================================
 // §54④ 호별 분류 — 1·2·6호(무조건 순자산) / 3·5호(단서 조건부) / undefined(본칙)
@@ -363,11 +364,12 @@ export function UnlistedStockSimpleFields({
   const preview = useMemo(() => {
     if (!data || data.totalShares <= 0) return null;
     try {
-      return calcUnlistedStockPerShareValue(data, isRealEstateHeavy);
+      // 평가기준일 — §54④ 단서 연혁 게이트(U-03), 엔진(computeStockValuation)과 같은 값
+      return calcUnlistedStockPerShareValue(data, isRealEstateHeavy, toOptionalDate(valuationDate));
     } catch {
       return null;
     }
-  }, [data, isRealEstateHeavy]);
+  }, [data, isRealEstateHeavy, valuationDate]);
 
   // 적자법인 판정: resolveWeightedNetIncome 기준 (엔진과 동일 로직)
   const isDeficit = data ? resolveWeightedNetIncome(data) <= 0 : false;

@@ -39,6 +39,7 @@ import {
 } from "@/components/calc/inheritance/unlisted-stock-v2/UnlistedStockV2Card";
 import { buildDefaultFiscalYears } from "@/lib/tax-engine/property-valuation/fiscal-year-annualize";
 import { computeStockValuation, resolveUnlistedDisplayMode } from "@/lib/calc/stock-valuation";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 // ============================================================
 // 상장주식 자동조회 통합 (종목정보 + inline 버튼 + 결과 카드)
@@ -382,14 +383,14 @@ function UnlistedStockCard({
     const data = item.unlistedStockData;
     if (data && data.totalShares > 0 && data.ownedShares > 0) {
       try {
-        const preview = calcUnlistedStockPerShareValue(data, isRealEstateHeavy);
+        const preview = calcUnlistedStockPerShareValue(data, isRealEstateHeavy, toOptionalDate(valuationDate)); // U-03
         return preview.perShareFinalValue * data.ownedShares;
       } catch {
         return 0;
       }
     }
     return 0;
-  }, [currentMode, item, isRealEstateHeavy]);
+  }, [currentMode, item, isRealEstateHeavy, valuationDate]);
 
   const handleModeChange = (newMode: "simple" | "formal") => {
     if (newMode === "formal" && !item.unlistedStockValuationV2) {
