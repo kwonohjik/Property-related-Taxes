@@ -76,6 +76,7 @@ import { giftBurdenedRentalExceptionError } from "@/lib/calc/gift-burdened-renta
 import { familyBusinessTotalAssetsMissing } from "@/components/calc/gift-tax-form-validate-items";
 import { stockValuationGateError } from "@/components/calc/gift-tax-form-validate-items";
 import { ineligibleSpecialCategoryMessage } from "@/components/calc/gift-tax-form-validate-items";
+import { unassignedSpecialItemsMessage } from "@/components/calc/gift-tax-form-validate-items";
 
 /**
  * G-M4: 동일그룹 판정을 isSameDonorGroup 엔진 헬퍼로 재사용.
@@ -578,22 +579,10 @@ export function validateStep(step: number, form: FormState): string | null {
       return "국외 증여재산 과세표준을 입력하세요. (§59 외국납부세액공제 §21① 점유비 한도 산정에 필요)";
     }
 
-    // 엔진 superRefine 동기화 (⑧): 혼합 자산(N≥2)에서 특례 선택 시 귀속 미설정 차단.
-    // 자산 1개는 엔진이 자동 귀속으로 처리하므로 차단 없음.
-    // Zod superRefine(property-valuation-input.ts)과 동일 조건 — 미귀속(undefined) 1개라도
-    // 있으면 차단. (일부만 태깅 후 신규 자산 추가 시 UI 통과↔API 400 모순 방지)
+    // 엔진 superRefine 동기화 (⑧): 혼합 자산(N≥2)에서 특례 선택 시 귀속 미설정 차단 — ⑩과 같은 조건.
     if (form.specialTreatment !== "") {
-      const allItems = [...form.giftItems, ...form.stockItems];
-      if (allItems.length >= 2) {
-        const unassigned = allItems.filter(
-          (it) => it.isSpecialTreatmentAsset === undefined
-        );
-        if (unassigned.length > 0) {
-          const label =
-            form.specialTreatment === "startup" ? "창업자금" : "가업승계";
-          return `${label} 특례 적용 시 모든 자산의 특례 귀속 여부를 선택하세요. (위 "특례 귀속 자산 선택" 항목 — 미선택 ${unassigned.length}개)`;
-        }
-      }
+      const unassignedMessage = unassignedSpecialItemsMessage(form);
+      if (unassignedMessage) return unassignedMessage;
 
       // 특례 귀속 재산 종류 제약 — Zod superRefine 동기화 (⑧, R3 잔여 해소).
       const ineligibleMessage = ineligibleSpecialCategoryMessage(form);
@@ -646,6 +635,8 @@ export function validateStep(step: number, form: FormState): string | null {
         // 추가 건도 ⑩(giftSubFormSchema = giftTaxInputSchema)이 재산 종류·총자산을 같은 술어로 막는다 — UI 통과 ↔ API 400 방지
         const subStockGateErr = stockValuationGateError(sub);
         if (subStockGateErr) return `동시증여 건 ${i + 1}: ${subStockGateErr}`;
+        const subUnassignedMessage = unassignedSpecialItemsMessage(sub);
+        if (subUnassignedMessage) return `동시증여 건 ${i + 1}: ${subUnassignedMessage}`;
         const subIneligibleMessage = ineligibleSpecialCategoryMessage(sub);
         if (subIneligibleMessage) return `동시증여 건 ${i + 1}: ${subIneligibleMessage}`;
         // U-17: 가업자산상당액 — 법인 총자산 미입력

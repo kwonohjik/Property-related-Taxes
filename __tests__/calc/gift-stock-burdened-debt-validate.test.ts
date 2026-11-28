@@ -80,6 +80,8 @@ describe("주식 부담부증여 validateStep ⑧ — 채무>평가액 경고", 
       name: "비상장",
       marketValue: 100_000_000,
       assumedDebtForGift: 200_000_000,
+      // ⑫ estate-item-schema가 V1·V2 중 하나를 요구 — U-09 이후 증여 ⑧도 같은 검사(상속 ⑧과 동일)를 한다
+      unlistedStockData: { totalShares: 10_000, ownedShares: 5_000 },
     } as EstateItem;
     const msg = validateStep(STEP1, form([item]));
     expect(msg).not.toBeNull();
