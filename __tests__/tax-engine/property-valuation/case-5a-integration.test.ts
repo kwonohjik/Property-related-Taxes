@@ -165,7 +165,7 @@ describe("[⑧] validateUnlistedStockV2", () => {
     expect(validateUnlistedStockV2(item)).toMatch(/보유주식수.*발행주식총수.*초과/);
   });
 
-  it("평가기준일 < 사업개시일 차단", () => {
+  it("U-10 — 평가기준일 < 사업개시일은 차단하지 않는다(상증령 §54④2호 사업개시 전의 법인 → 순자산가치)", () => {
     const item: EstateItem = {
       ...case6V2Item,
       unlistedStockValuationV2: {
@@ -173,7 +173,18 @@ describe("[⑧] validateUnlistedStockV2", () => {
         evaluationDate: new Date("1999-01-01"), // 사업개시일 2000-01-01 이전
       },
     };
-    expect(validateUnlistedStockV2(item)).toMatch(/평가기준일은 사업개시일 이후/);
+    expect(validateUnlistedStockV2(item) ?? "").not.toMatch(/평가기준일은 사업개시일 이후/);
+  });
+
+  it("U-10 — 사업개시일 미입력 차단", () => {
+    const item: EstateItem = {
+      ...case6V2Item,
+      unlistedStockValuationV2: {
+        ...case6V2Item.unlistedStockValuationV2!,
+        businessStartDate: undefined,
+      },
+    };
+    expect(validateUnlistedStockV2(item)).toMatch(/사업개시일을 입력해야 합니다/);
   });
 
   it("자본금 변동일 > 평가기준일 차단", () => {

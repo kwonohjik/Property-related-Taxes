@@ -18,7 +18,8 @@ import { SME_REASON_LARGE_SIZE_MESSAGE } from "@/lib/tax-engine/property-valuati
  *   2) 사업연도 종료일 3개 각각 유효 Date 필수 (순서 비교 전 존재 확인)
  *   3) 사업연도 종료일 순서 (1년전 > 2년전 > 3년전)
  *   4) 소유주식수 ≤ 발행주식총수
- *   5) 평가기준일 ≥ 사업개시일
+ *   5) 사업개시일 필수 (Zod z.coerce.date()와 동일) — 평가기준일 < 사업개시일(사업개시 전의 법인)은
+ *      상증령 §54④2호로 평가하므로 막지 않는다 (U-10)
  *   6) 자본금 변동: 변동일 유효 Date 필수 / 주식수 > 0 필수 / 변동일 ≤ 평가기준일
  *   7) 유상증자(paid_in) — 1주당 납입금액 > 0 필수 (§56⑤)
  *   8) 유상감자(capital_reduction) — 1주당 지급금액 > 0 필수 (§56⑤ 준용)
@@ -84,11 +85,10 @@ export function validateUnlistedStockV2(
     return `비상장주식 "${item.name}" — 자기주식수(${v2.treasuryStock.shares})는 발행주식총수(${v2.totalShares}) 미만이어야 합니다.`;
   }
 
-  // ④ 평가기준일 < 사업개시일 (effectiveEvaluationDate: v2.evaluationDate || ctx fallback)
-  // toOptionalDate: string ISO → Date 정규화 (H-5 2차 방어)
-  const effectiveBusinessStartDate = toOptionalDate(v2.businessStartDate);
-  if (effectiveEvaluationDate && effectiveBusinessStartDate && effectiveEvaluationDate < effectiveBusinessStartDate) {
-    return `비상장주식 "${item.name}" — 평가기준일은 사업개시일 이후여야 합니다.`;
+  // ④ 사업개시일 필수 — §54④2호(사업개시 전·3년 미만) 자동 판정 입력. 화면 초기값은 비어 있다(U-10 Q-1).
+  //   ⑫ z.coerce.date()도 미입력을 막는다(⑧↔⑫ 정합). 「평가기준일 < 사업개시일」은 2호(사업개시 전의 법인)라 막지 않는다.
+  if (!toOptionalDate(v2.businessStartDate)) {
+    return `비상장주식 "${item.name}" — 사업개시일을 입력해야 합니다.`;
   }
 
   // ⑤ 자본금 변동 — 변동일·주식수·1주당 금액 검증

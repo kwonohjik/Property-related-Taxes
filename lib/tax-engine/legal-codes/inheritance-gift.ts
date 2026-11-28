@@ -339,12 +339,16 @@ export const VALUATION = {
   UNLISTED_FORMULA:    "상증령 §54 ①",
   /** 상증령 §54 ④ — 순자산가치 단독 평가 5사유 (1·2·3·5·6호. KoreanLaw 검증: 4호 삭제) */
   UNLISTED_NET_ASSET_ONLY: "상증령 §54 ④ 1·2·3·5·6호",
+  /** 상증령 §54 ④ 2호 — 사업개시 전·사업개시 후 3년 미만 법인 (사업개시일로 자동 판정 · U-10) */
+  UNLISTED_NET_ASSET_ONLY_BUSINESS_PERIOD: "상증령 §54 ④ 2호",
   /** 상증령 §55 ① — 순자산가액 산식 (자산−부채, 0 이하 시 0, 장부가액 하한) */
   UNLISTED_NET_ASSET_FORMULA: "상증령 §55 ①",
   /** 상증령 §55 ② → 상증규 §17의2 1~4호 — 무형고정자산·준비금·충당금 평가 */
   UNLISTED_NET_ASSET_INTANGIBLE: "상증규 §17의2 1~4호 (상증령 §55 ② 위임)",
   /** 상증령 §55 ③ — 영업권 자산 가산 (단서 1·2·3호 자동 배제) */
   UNLISTED_GOODWILL_INCLUDE: "상증령 §55 ③",
+  /** 상증령 §55 ③ 2호 — §54④2호 법인은 영업권 합산 안 함 (단서 가·나목 법인전환 예외는 미구현 · U-10) */
+  UNLISTED_GOODWILL_EXCLUDE_BUSINESS_PERIOD: "상증령 §55 ③ 2호",
   /** 상증령 §56 ① — 1주당 최근 3년간 순손익액 가중평균 (3·2·1/6), 음수 시 0 */
   UNLISTED_NET_INCOME_FORMULA: "상증령 §56 ①",
   /** 상증령 §56 ② + 상증규 §17의3 ① — 추정이익 옵션 (신용평가전문기관·회계법인·세무법인 둘 이상 평균, 8가지 사유) */

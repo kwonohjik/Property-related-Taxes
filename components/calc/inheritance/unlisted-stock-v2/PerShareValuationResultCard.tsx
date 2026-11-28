@@ -25,6 +25,8 @@ import {
   expandToggleLabel,
 } from "@/components/calc/results/shared/ExpandToggleButton";
 import { evaluateUnlistedStockV2 } from "@/lib/tax-engine/property-valuation/unlisted-orchestrator";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { VALUATION } from "@/lib/tax-engine/legal-codes";
 import type { UnlistedStockValuationInput } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
 import type { MergerNetIncomeResult } from "@/lib/tax-engine/types/merger-net-income.types";
 import type { AgencyType, EstimatedProfitResult } from "@/lib/tax-engine/property-valuation/estimated-profit-section-56-2";
@@ -396,6 +398,16 @@ export function PerShareValuationResultCard({ input, sectionNum = 11 }: PerShare
             <span className="font-mono tabular-nums text-right font-bold">{fmt(result.goodwillCalculation.goodwillFinal)}원</span>
           </div>
         </div>
+      )}
+
+      {/* U-10 — 사업개시일 기준 §54④2호 자동 적용 */}
+      {result.section54_4_2ByBusinessStart && (
+        <ToneCard tone="amber" className="py-2">
+          <p data-testid="unlisted-v2-result-business-period" className="text-caption">
+            순자산가치로만 평가 — {VALUATION.UNLISTED_NET_ASSET_ONLY_BUSINESS_PERIOD}(사업개시일 기준 자동 판정 ·{" "}
+            {result.section54_4_2ByBusinessStart.status === "pre_start" ? "사업개시 전의 법인" : "사업개시 후 3년 미만"})
+          </p>
+        </ToneCard>
       )}
 
       {/* §55③ 영업권 배제 안내 */}

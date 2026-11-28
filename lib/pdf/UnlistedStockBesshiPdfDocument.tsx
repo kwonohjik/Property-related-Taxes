@@ -142,7 +142,12 @@ function Page1Cover({ input, result, taxKind }: { input: UnlistedStockValuationI
             <Text style={reasonCode}>{row.code}</Text>
             <Text style={{ ...s.cellLabel, color: row.deleted ? "#9ca3af" : C.black }}>{row.label}</Text>
             <Text style={reasonCheck}>
-              {row.deleted ? "—" : input.netAssetOnlyReason === row.reason ? "[v]" : "[ ]"}
+              {row.deleted
+                ? "—"
+                : input.netAssetOnlyReason === row.reason ||
+                    (row.reason === "lt3y" && !!result?.section54_4_2ByBusinessStart) // U-10 사업개시일 기준 2호
+                  ? "[v]"
+                  : "[ ]"}
             </Text>
           </View>
         ))}

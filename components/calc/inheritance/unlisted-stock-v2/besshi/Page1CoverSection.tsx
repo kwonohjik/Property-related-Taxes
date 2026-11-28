@@ -77,7 +77,11 @@ export function Page1CoverSection({ input, result, taxKind }: Page1CoverSectionP
               <td className="border border-black p-1 w-8 text-center font-mono">{row.code}</td>
               <td className="border border-black p-1">{row.label}</td>
               <td className="border border-black p-1 w-12 text-center font-mono">
-                {row.deleted ? "—" : reason === row.reason ? "[v]" : "[ ]"}
+                {row.deleted
+                  ? "—"
+                  : reason === row.reason || (row.reason === "lt3y" && !!result?.section54_4_2ByBusinessStart)
+                    ? "[v]"
+                    : "[ ]"}
               </td>
             </tr>
           ))}

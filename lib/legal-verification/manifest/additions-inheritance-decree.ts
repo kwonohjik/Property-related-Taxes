@@ -307,9 +307,20 @@ export const INHERITANCE_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // U-10 — 2호 문구(사업개시 전·3년 미만)와 적격분할 기산 후단이 바뀌면 자동 판정(section-54-4-2-business-period.ts)을 다시 본다
+    id: "INH_DECREE.UNLISTED_NET_ASSET_ONLY_BUSINESS_PERIOD",
+    citation: "상증령 §54",
+    keywords: [
+      "사업개시 전의 법인, 사업개시 후 3년 미만의 법인 또는 휴업ㆍ폐업 중인 법인의 주식등",
+      "분할 전 동일 사업부분의 사업개시일부터 기산한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "INH_DECREE.NET_ASSET_VALUE",
     citation: "상증령 §55",
-    keywords: ["순자산가액", "장부가액", "영업권평가액"],
+    // U-10 — §55③2호 「제54조제4항제2호에 해당하는 경우」(영업권 배제 사실 요건)
+    keywords: ["순자산가액", "장부가액", "영업권평가액", "제54조제4항제2호에 해당하는 경우"],
     keywordMode: "ALL",
   },
   {
