@@ -44,6 +44,8 @@ import {
   calcSpecialTreatmentStream,
 } from "./gift-special-stream";
 import { calcAggregationExcludedStream } from "./gift-aggregation-excluded-stream";
+import { applyFamilyBusinessAssetEquivalent } from "./gift-family-business-asset-equivalent";
+import { FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_WARNING } from "./gift-family-business-asset-equivalent";
 import { formatBracketRate, TAX_BASE_MIN, type GiftTaxEngineOptions } from "./gift-tax-helpers";
 
 /**
@@ -94,10 +96,30 @@ export function calcGiftTaxTwoStream(
     valuationMap.set(item, allValuationResults[idx]?.valuatedAmount ?? 0);
   });
 
-  const specialItemsValue = partition.specialItems.reduce(
+  const specialItemsGrossValue = partition.specialItems.reduce(
     (s, item) => s + (valuationMap.get(item) ?? 0),
     0,
   );
+  // U-17: §30의6① 특례·한도는 「가업자산상당액」(조특령 §27의6⑩ → 상증령 §15⑤2호 준용, 기준일=증여일)에만 건다.
+  //   사업무관자산 비율분은 특례 적격 시 일반 스트림에 합산(§30의5⑬ — §30의6⑤ 준용). 창업자금은 해당 없음.
+  const fbEquivalent =
+    input.creditInput?.specialTreatment === "family_business"
+      ? applyFamilyBusinessAssetEquivalent(
+          partition.specialItems,
+          (item) => valuationMap.get(item) ?? 0,
+          input.giftDate,
+        )
+      : null;
+  const specialItemsValue = fbEquivalent ? fbEquivalent.specialValue : specialItemsGrossValue;
+  if (fbEquivalent && fbEquivalent.detail.length > 0) {
+    allLaws.add(TAX_CREDIT.FAMILY_BUSINESS_ASSET_EQUIVALENT);
+    allBreakdown.push({
+      label: "가업자산상당액 (주식가액 × (법인 총자산 − 사업무관자산) ÷ 법인 총자산)",
+      amount: specialItemsValue,
+      lawRef: TAX_CREDIT.FAMILY_BUSINESS_ASSET_EQUIVALENT,
+      note: `주식 평가액 ${specialItemsGrossValue.toLocaleString()} 중 사업무관자산 비율분 ${fbEquivalent.nonBusinessPortion.toLocaleString()}은 특례 대상 아님`,
+    });
+  }
   const ordinaryItemsGrossValue = partition.ordinaryItems.reduce(
     (s, item) => s + (valuationMap.get(item) ?? 0),
     0,
@@ -158,13 +180,20 @@ export function calcGiftTaxTwoStream(
   );
   allBreakdown.push(...specialStream.breakdown);
   allWarnings.push(...specialStream.warnings);
+  // 미적격(영위 10년 미만)은 평가액 전액 일반 과세라 총자산이 계산에 쓰이지 않는다 — 적격일 때만 경고.
+  if (specialStream.isEligible && fbEquivalent && fbEquivalent.missingTotalAssetsCount > 0) {
+    allWarnings.push(FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_WARNING);
+  }
+  // 사업무관자산 비율분 — 특례 적격일 때만 일반 스트림 이관 (미적격은 아래 폴백이 gross 전액을 넣는다)
+  const fbNonBusinessToOrdinary =
+    specialStream.isEligible && fbEquivalent ? fbEquivalent.nonBusinessPortion : 0;
 
   // 특례 미적격 시 일반 스트림으로 폴백 (모든 자산을 일반 처리)
   // 적격이어도 §30의5①·§30의6① 한도 초과 신규분은 특례 대상이 아니므로 일반 스트림 합산
   // (법문: "창업자금"은 과세가액 50억/100억 한도로 정의, 가업승계 한도는 영위기간별 300/400/600억)
   const effectiveOrdinaryGrossValue = specialStream.isEligible
-    ? ordinaryItemsGrossValue + specialStream.excessToOrdinary
-    : ordinaryItemsGrossValue + specialItemsValue;
+    ? ordinaryItemsGrossValue + specialStream.excessToOrdinary + fbNonBusinessToOrdinary
+    : ordinaryItemsGrossValue + specialItemsGrossValue;
   if (specialStream.isEligible && specialStream.excessToOrdinary > 0) {
     allBreakdown.push({
       label: "특례 한도 초과 신규 증여분 일반 스트림 합산",
@@ -174,6 +203,14 @@ export function calcGiftTaxTwoStream(
           ? TAX_CREDIT.STARTUP_FUND
           : TAX_CREDIT.FAMILY_BUSINESS,
       note: "한도 초과분은 특례 미적용 — 일반 증여세 과세",
+    });
+  }
+  if (fbNonBusinessToOrdinary > 0) {
+    allBreakdown.push({
+      label: "사업무관자산 비율분 일반 스트림 합산",
+      amount: fbNonBusinessToOrdinary,
+      lawRef: TAX_CREDIT.FAMILY_BUSINESS_ASSET_EQUIVALENT,
+      note: "가업자산상당액 외 주식가액은 특례 미적용 — 일반 증여세 과세",
     });
   }
 
@@ -190,7 +227,7 @@ export function calcGiftTaxTwoStream(
 
   // 일반 스트림 차감 채무:
   //   적격 → 일반 자산 채무만 (특례 자산 채무는 specialItemsNetValue에서 이미 차감)
-  //   미적격 → 특례 자산이 gross로 일반 스트림에 폴백(effectiveOrdinaryGrossValue += specialItemsValue)
+  //   미적격 → 특례 자산이 gross로 일반 스트림에 폴백(effectiveOrdinaryGrossValue += specialItemsGrossValue)
   //           되므로 그 채무도 일반 스트림에서 차감
   const assumedDebtTotal = specialStream.isEligible
     ? ordinaryItemsDebt
@@ -502,6 +539,14 @@ export function calcGiftTaxTwoStream(
     specialStreamAggregatedValue: specialStream.aggregatedValue,
     // 특례 자산 §47① 인수 채무 (한도 차감분) — 2-스트림 카드 표시용
     specialStreamDebt: Math.min(specialItemsDebt, specialItemsValue) || undefined,
+    // U-17 가업자산상당액 echo — 특례 적격 + 총자산 입력 자산이 있을 때만 (결과 ⑦ 자산별 산식 줄)
+    ...(specialStream.isEligible && fbEquivalent && fbEquivalent.detail.length > 0
+      ? {
+          familyBusinessAssetEquivalent: specialItemsValue,
+          familyBusinessNonBusinessPortion: fbEquivalent.nonBusinessPortion,
+          familyBusinessAssetEquivalentDetail: fbEquivalent.detail,
+        }
+      : {}),
   };
   // H-47: 별지10호 ㊺ 자진납부는 서식 산식(㉞ 산출세액계 − 세액공제)상 일반 스트림 결정세액이어야 한다.
   //   partialResult.finalTax는 특례+일반(+합산배제) combined이므로 그대로 쓰면 ㊺가 filingFormRows ⑫와 어긋난다.

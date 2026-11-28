@@ -7,8 +7,8 @@ import { unlistedStockDataSchema } from "./property-valuation-input-unlisted-dat
 
 // 가업상속공제 스키마 — 800줄 정책으로 sibling 분리(2026-06-02)
 import { familyBusinessInheritanceInputSchema } from "./family-business-inheritance-schema";
-import { refineGiftRequiredInputs } from "./inheritance-gift-required-refines";
 import { refineInheritanceRequiredInputs } from "./inheritance-gift-required-refines";
+import { refineGiftTaxInput } from "./gift-tax-input-refine";
 // 영농상속공제 사후관리 스키마 — 800줄 정책으로 sibling 분리(2026-06-07)
 import {
   farmingPostMgmtInputSchema,
@@ -85,14 +85,6 @@ export type BargainTransferInputSchema = z.infer<typeof bargainTransferInputSche
 export { giftDonorRelationSchema, priorGiftSchema } from "./prior-gift-schema";
 import { giftDonorRelationSchema, priorGiftSchema } from "./prior-gift-schema";
 
-// 특례 귀속 가능 재산 종류 — 엔진 단일 진실 (UI ⑤·validateStep ⑧과 동일 헬퍼)
-import {
-  isSpecialTreatmentEligibleCategory,
-  SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
-} from "@/lib/tax-engine/gift-special-stream";
-import type { AssetCategory } from "@/lib/tax-engine/types/inheritance-gift.types";
-// 대납(代納) gross-up 차단 판정 — donorGroup=B 시 세대생략 할증 ↔ 대납 fold-back 미지원
-import { getDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
 
 // ============================================================
 // 비과세 항목 스키마 — ExemptionCheckedItem[] 기반 (§11·§12·§46·§52의2)
@@ -571,7 +563,8 @@ export type InheritanceTaxInputSchema = z.infer<typeof inheritanceTaxInputSchema
 
 
 
-export const giftTaxInputSchema = z
+/** superRefine 전 객체 스키마 — 본문 refine(`gift-tax-input-refine.ts`)의 입력 타입 (800줄 정책 분리) */
+export const giftTaxInputObjectSchema = z
   .object({
     giftDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD 형식"),
     donorRelation: z.enum([
@@ -624,91 +617,10 @@ export const giftTaxInputSchema = z
     // 분납 (§70②) — 별지10호 ㊼ 연동
     applyInstallmentSplit: z.boolean().optional(),
     requestedSplitAmount: z.number().nonnegative().optional(),
-  })
-  .superRefine((data, ctx) => {
-    // 사전증여(§47② 합산)·외국납부세액 필수 입력 — ⑧ `gift-tax-form-validate.ts`와 같은 술어(2026-09-30).
-    // 비우면 증여자 없는 회차는 합산에서 빠지고 동일 그룹 회차는 §58 한도가 0이 됐다(동일인 회차는 존재만 요구).
-    refineGiftRequiredInputs(data, ctx);
-
-    // T-12 (동기화 지점 ⑩): 조특법 특례 2-스트림 — 혼합 자산 귀속 미설정 차단
-    // §30의5⑪: 창업자금 외 자산은 특례 스트림 과세가액에 §47② 합산 금지.
-    // 혼합 증여(N≥2 자산)에서 특례 선택 시 isSpecialTreatmentAsset 명시 필수.
-    const specialTreatment = data.creditInput?.specialTreatment;
-    if (specialTreatment && data.giftItems.length >= 2) {
-      const unassigned = data.giftItems.filter(
-        (item) => item.isSpecialTreatmentAsset === undefined,
-      );
-      if (unassigned.length > 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["giftItems"],
-          message:
-            `조특법 특례(${specialTreatment === "startup" ? "창업자금 §30의5" : "가업승계 §30의6"}) 선택 시 ` +
-            `혼합 자산 ${data.giftItems.length}개 중 미귀속 자산 ${unassigned.length}개에 ` +
-            `특례 귀속(isSpecialTreatmentAsset)을 명시해야 합니다 (§30의5⑪).`,
-        });
-      }
-    }
-
-    // 특례 귀속 자산 재산 종류 제약 (동기화 지점 ⑩ — R3 잔여 해소):
-    //   startup — 소득세법 §94① 재산(부동산·주식) 제외 (조특령 §27의5①)
-    //   family_business — 주식·출자지분만 (§30의6①)
-    // 명시 태깅(true) + 단일 자산 자동 귀속(엔진 partition이 1개면 자동 특례) 모두 검사.
-    // 이 차단으로 "특례 자산 + assumedDebtForGift(부동산 전용 입력)" 조합도 구조적으로 차단됨.
-    if (specialTreatment) {
-      const effectiveSpecialItems =
-        data.giftItems.length === 1
-          ? data.giftItems
-          : data.giftItems.filter(
-              (item) => item.isSpecialTreatmentAsset === true,
-            );
-      const ineligible = effectiveSpecialItems.filter(
-        (item) =>
-          !isSpecialTreatmentEligibleCategory(
-            item.category as AssetCategory,
-            specialTreatment,
-          ),
-      );
-      if (ineligible.length > 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["giftItems"],
-          message: `특례 귀속 불가 재산 ${ineligible.length}개 — ${SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON[specialTreatment]}`,
-        });
-      }
-    }
-
-    // ──────────────────────────────────────────────────────────────
-    // 대납(代納) gross-up 차단 조합 ⑫ (Zod superRefine)
-    // ⑧ validateStep과 동일 메시지로 동기화
-    // ──────────────────────────────────────────────────────────────
-    if (data.donorPaysGiftTax === true) {
-      // ⓐ 동시증여 + 대납 — 상증령 §46①2호 안분 ↔ 대납 fold-back 미지원
-      if (data.deductionInput?.simultaneousGifts && data.deductionInput.simultaneousGifts.length > 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["donorPaysGiftTax"],
-          message: "동시증여와 대납(代納)은 현재 함께 계산할 수 없습니다.",
-        });
-      }
-      // ⓑ 2-스트림 특례 + 대납 — aggregatedOrdinaryValue 주입 미지원
-      if (data.creditInput?.specialTreatment) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["donorPaysGiftTax"],
-          message: "가업·창업 특례(2-스트림)와 대납(代納)은 현재 함께 계산할 수 없습니다.",
-        });
-      }
-      // ⓒ 세대생략(donorGroup=B) + 대납 — §57 grossGiftValue 조정 미구현
-      if (getDonorGroup(data.donor) === "B") {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["donorPaysGiftTax"],
-          message: "세대생략 할증 대상 증여와 대납(代納)은 현재 함께 계산할 수 없습니다.",
-        });
-      }
-    }
   });
+
+// 본문(T-12 귀속·재산 종류·U-17 가업자산상당액·대납 차단)은 `gift-tax-input-refine.ts` — 800줄 정책 분리
+export const giftTaxInputSchema = giftTaxInputObjectSchema.superRefine(refineGiftTaxInput);
 
 export type GiftTaxInputSchema = z.infer<typeof giftTaxInputSchema>;
 

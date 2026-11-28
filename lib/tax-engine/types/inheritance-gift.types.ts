@@ -127,6 +127,15 @@ export type { ExemptionCheckedItem, ExemptionInput, ExemptionResult, ExemptionIt
 import type { PriorGift } from "./inheritance-prior-gift.types";
 export type { PriorGift, GiftPriorPropertyCategory, EstatePropertyKindCode } from "./inheritance-prior-gift.types";
 
+/** U-17 가업승계 특례 주식 1개의 가업자산상당액 산정 내역 (조특령 §27의6⑩ — 결과 ⑦ 자산별 산식 줄 echo) */
+export interface FamilyBusinessAssetEquivalentDetail {
+  name: string;
+  grossValue: number;
+  totalAssets: number;
+  sumOfNonBusiness: number;
+  assetEquivalent: number;
+}
+
 // 물납 §73 타입 — inheritance-payment-in-kind.types.ts (barrel re-export)
 export type {
   PaymentInKindAssets,
@@ -690,6 +699,17 @@ export interface GiftTaxResult extends TaxResultMeta {
    * 채무 0 또는 특례 미선택 시 undefined.
    */
   specialStreamDebt?: number;
+
+  /**
+   * U-17 가업자산상당액 echo (조특법 §30의6① · 조특령 §27의6⑩ → 상증령 §15⑤2호 준용, 기준일=증여일).
+   * 가업승계 특례 적격 + 법인 총자산 입력 특례 주식이 있을 때만 채운다(그 밖에는 undefined).
+   *   familyBusinessAssetEquivalent    — 특례 스트림에 넣은 주식가액 합계(가업자산상당액)
+   *   familyBusinessNonBusinessPortion — 사업무관자산 비율분 합계(일반 스트림 이관분)
+   *   familyBusinessAssetEquivalentDetail — 주식별 산식(법인마다 비율이 달라 스칼라 비율은 두지 않는다)
+   */
+  familyBusinessAssetEquivalent?: number;
+  familyBusinessNonBusinessPortion?: number;
+  familyBusinessAssetEquivalentDetail?: FamilyBusinessAssetEquivalentDetail[];
 
   /**
    * @deprecated 조특법 특례 2-스트림 분리과세(2026-06-11) 이후 의미 없음.

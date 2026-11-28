@@ -30,12 +30,20 @@ import {
 } from "@/lib/tax-engine/property-valuation-corporate";
 import type { CorporateNonBusinessAssets } from "@/lib/tax-engine/types/inheritance-corporate-non-business.types";
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
+import { TAX_CREDIT } from "@/lib/tax-engine/legal-codes";
 
 export interface CorporateNonBusinessAssetsSectionProps {
   item: EstateItem;
   onUpdate: (updated: EstateItem) => void;
-  /** 상속개시일 — 과다현금 비율·제외 단서 시기 판정 (미입력 시 현행 2025+ 가정) */
+  /** 상속개시일 — 과다현금 비율·제외 단서 시기 판정 (미입력 시 현행 2025+ 가정). 증여 문맥이면 증여일. */
   deathDate?: string;
+  /** 렌더 여부 — 미지정 시 영농·가업상속 corporate_stock 분류 게이트 (U-17: 증여 가업승계 특례 주식은 true) */
+  enabled?: boolean;
+  /**
+   * 문구 문맥 — "gift_family_business": 조특법 §30의6 가업자산상당액(조특령 §27의6⑩ → 상증령 §15⑤2호 준용,
+   * 「상속개시일」→「증여일」). 미지정 = 상속(가업·영농상속공제).
+   */
+  context?: "inheritance" | "gift_family_business";
 }
 
 /** 나·다목 제외 단서 적용 여부 (2025.2.28. 신설) — 엔진 applyExclusionByDate와 동일 규칙 */
@@ -52,10 +60,15 @@ export function CorporateNonBusinessAssetsSection({
   item,
   onUpdate,
   deathDate,
+  enabled,
+  context = "inheritance",
 }: CorporateNonBusinessAssetsSectionProps) {
   const isCorporateStock =
-    item.farmingCategory === "corporate_stock" ||
-    item.familyBusinessCategory === "corporate_stock";
+    enabled ??
+    (item.farmingCategory === "corporate_stock" ||
+      item.familyBusinessCategory === "corporate_stock");
+  const isGift = context === "gift_family_business";
+  const baseDateLabel = isGift ? "증여일" : "상속개시일";
 
   const assets = item.corporateNonBusinessAssets;
   const totalAssets = item.corporateTotalAssets;
@@ -107,14 +120,21 @@ export function CorporateNonBusinessAssetsSection({
     <div className="rounded-lg border border-amber-200 bg-amber-50/40 dark:bg-amber-950/20 dark:border-amber-800 p-3 space-y-3">
       <div className="space-y-1">
         <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
-          법인 사업무관자산 차감 (시행령 §15⑤2호 + §16⑤2호)
+          {isGift
+            ? `가업자산상당액 — 법인 사업무관자산 차감 (${TAX_CREDIT.FAMILY_BUSINESS_ASSET_EQUIVALENT} → 상증령 §15⑤2호 준용)`
+            : "법인 사업무관자산 차감 (시행령 §15⑤2호 + §16⑤2호)"}
         </p>
         <p className="text-micro text-amber-700 dark:text-amber-300">
-          ⓘ 산식: 평가가액 × (총자산 − 사업무관자산 합) / 총자산. 총자산 미입력 시 차감 미적용(이전 입력 형식).
+          {isGift
+            ? "ⓘ 산식: 주식가액 × (총자산 − 사업무관자산 합) / 총자산 = 가업자산상당액(특례 대상). 나머지는 일반 증여세로 과세합니다. 기준일은 증여일이며, 총자산을 입력하지 않으면 계산할 수 없습니다."
+            : "ⓘ 산식: 평가가액 × (총자산 − 사업무관자산 합) / 총자산. 총자산 미입력 시 차감 미적용(이전 입력 형식)."}
         </p>
         <div className="flex flex-wrap gap-1.5">
+          {isGift && (
+            <LawArticleModal legalBasis="조세특례제한법 시행령 §27의6" label="조특령 §27의6⑩" />
+          )}
           <LawArticleModal legalBasis="상증령 §15" label="상증령 §15⑤2호" />
-          <LawArticleModal legalBasis="상증령 §16" label="상증령 §16⑤2호" />
+          {!isGift && <LawArticleModal legalBasis="상증령 §16" label="상증령 §16⑤2호" />}
           <LawArticleModal legalBasis="소득세법 §104의3" label="소득세법 §104의3 비사업용토지" />
         </div>
       </div>
@@ -123,7 +143,8 @@ export function CorporateNonBusinessAssetsSection({
         label="법인 총자산 (분모)"
         value={totalAssets ? String(totalAssets) : ""}
         onChange={updateTotalAssets}
-        placeholder="법인 총자산 (미입력 시 차감 미적용)"
+        placeholder={isGift ? "법인 총자산 (필수)" : "법인 총자산 (미입력 시 차감 미적용)"}
+        data-testid="corporate-total-assets"
       />
 
       {/* 가. 비사업용토지 */}
@@ -132,6 +153,7 @@ export function CorporateNonBusinessAssetsSection({
         value={assets?.nonBusinessLand ? String(assets.nonBusinessLand) : ""}
         onChange={(v) => updateAssets({ nonBusinessLand: parseKrw(v) })}
         hint="소득세법 §104조의3 판정"
+        data-testid="corporate-non-business-land"
         placeholder="없으면 비워두세요"
       />
 
@@ -182,7 +204,7 @@ export function CorporateNonBusinessAssetsSection({
         title={`라. 과다보유현금 자동산정 (5년 평균 ${ratioPct}% 초과분)`}
         description={
           cashAuto
-            ? `상속개시일 보유현금 − 직전 5년 평균 × ${ratioPct}% = 과다현금. (2025.2.28. 이후 200% / 이전 150%)`
+            ? `${baseDateLabel} 보유현금 − 직전 5년 평균 × ${ratioPct}% = 과다현금. (2025.2.28. 이후 200% / 이전 150%)`
             : `체크하면 보유현금·5년 현금을 입력해 자동산정. 미체크 시 초과분을 직접 입력.`
         }
         checked={cashAuto}
@@ -193,7 +215,7 @@ export function CorporateNonBusinessAssetsSection({
       {cashAuto ? (
         <div className="rounded-md border border-sky-200 bg-sky-50/40 dark:bg-sky-950/10 dark:border-sky-800 p-2 space-y-2">
           <CurrencyInput
-            label="상속개시일 현재 보유현금"
+            label={`${baseDateLabel} 현재 보유현금`}
             value={assets?.currentCash ? String(assets.currentCash) : ""}
             onChange={(v) => updateAssets({ currentCash: parseKrw(v) })}
             hint="요구불예금 + 취득일부터 만기 3개월 이내 금융상품 포함"

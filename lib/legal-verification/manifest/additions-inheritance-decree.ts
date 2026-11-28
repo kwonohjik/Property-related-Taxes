@@ -589,4 +589,15 @@ export const INHERITANCE_DECREE_ADDITIONS: VerificationRule[] = [
     ],
     keywordMode: "ALL",
   },
+  // ── 가업승계 증여세 과세특례 가업자산상당액 — KoreanLaw MST 288915 실독(2026-11-28) ──
+  {
+    id: "GIFT_DECREE.FAMILY_BUSINESS_ASSET_EQUIVALENT",
+    citation: "조특령 §27의6",
+    keywords: [
+      "\"대통령령으로 정하는 가업자산상당액\"이란",
+      "제15조제5항제2호를 준용하여 계산한 금액",
+      "\"상속개시일\"은 \"증여일\"로 본다",
+    ],
+    keywordMode: "ALL",
+  },
 ];

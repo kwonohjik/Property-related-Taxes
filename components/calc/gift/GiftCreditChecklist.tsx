@@ -29,6 +29,7 @@ import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { DateInput } from "@/components/ui/date-input";
 import { AppraisalFeeSection } from "@/components/calc/deductions/AppraisalFeeSection";
 import { SpecialTreatmentAssetSelector } from "@/components/calc/gift/SpecialTreatmentAssetSelector";
+import { GiftFamilyBusinessAssetEquivalentSection } from "@/components/calc/gift/GiftFamilyBusinessAssetEquivalentSection";
 import { resolveValuationMethod } from "@/lib/tax-engine/property-valuation";
 import {
   isCreditItemActive,
@@ -619,6 +620,9 @@ export function GiftCreditChecklist({
               }}
             />
           )}
+
+          {/* U-17 가업자산상당액(조특령 §27의6⑩) — 특례 주식별 법인 총자산·사업무관자산 */}
+          {form.specialTreatment === "family_business" && <GiftFamilyBusinessAssetEquivalentSection form={form} set={set} />}
 
           {/* 창업자금 투자 완료 (§30의5④) — startup 선택 시 */}
           {form.specialTreatment === "startup" && (

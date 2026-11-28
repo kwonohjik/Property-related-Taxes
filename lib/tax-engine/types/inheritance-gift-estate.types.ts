@@ -669,7 +669,11 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
   familyBusinessCategory?: FamilyBusinessCategory;
   /** 법인 영농·가업상속 주식 사업무관자산 (시행령 §15⑤2호 + §16⑤2호). corporate_stock일 때만 의미. 타입: inheritance-corporate-non-business.types.ts */
   corporateNonBusinessAssets?: CorporateNonBusinessAssets;
-  /** 법인 총자산 (사업무관자산 비율 분모). 미입력 시 차감 미적용 (legacy). */
+  /**
+   * 법인 총자산 (사업무관자산 비율 분모). 상속: 미입력 시 차감 미적용 (legacy).
+   * 증여: 조특법 §30의6 특례 귀속 주식의 가업자산상당액(조특령 §27의6⑩) 산정에 쓴다 — corporateNonBusinessAssets와 함께
+   * 카테고리 무관하게 읽으며, 미입력이면 ⑧·⑩에서 차단한다(U-17).
+   */
   corporateTotalAssets?: number;
   /**
    * 영농상속재산 — 피상속인이 상속개시일 2년 전부터 영농에 사용 (§16⑤1호 본문).

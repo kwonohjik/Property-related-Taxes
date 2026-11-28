@@ -14,6 +14,14 @@
  * 시나리오 [E2E-GFY-3] (카테고리 차단 — R3 잔여 해소):
  *   토지 + family_business → Selector "특례 귀속 불가 재산" 경고 + 계산 차단
  *
+ * 시나리오 [E2E-GFY-4] (U-17 가업자산상당액 — 조특령 §27의6⑩):
+ *   상장주식 50억 · 영위 15년 · 법인 총자산 100억 · 비사업용토지 20억
+ *   → 가업자산상당액 40억 특례 300,000,000 + 비율분 10억 일반 218,250,000 = 518,250,000
+ *   request body: giftItems[0].corporateTotalAssets === 10,000,000,000 (⑬ 도달)
+ *
+ * U-17 이후 GFY-1·GFY-2도 법인 총자산을 입력한다(미입력이면 ⑧ 차단). 사업무관자산 미입력 → 비율 1이라
+ * 기대값은 그대로다.
+ *
  * 주의사항:
  *   - worktree 실행 시 E2E_PORT 격리 필수. 3100이 타 worktree dev 서버에 점유될 수
  *     있음 — lsof -p로 cwd 확인 (memory: feedback_e2e_worktree_port_isolation)
@@ -47,14 +55,14 @@ async function addListedStockAsset(
   await page.getByTestId("ls-avg-price").fill(opts.avgPrice);
 }
 
-async function setupFamilyBusinessStep3(page: PageT) {
+async function setupFamilyBusinessStep3(page: PageT, shares = "35000") {
   await fillDateAndVerify(page, { year: "2025", month: "1", day: "15" });
   await page.getByRole("button", { name: /^다음/ }).click();
 
-  // Step1: 상장주식 350억 (1,000,000원/주 × 35,000주)
+  // Step1: 상장주식 (1,000,000원/주 × shares주 — 기본 35,000주 = 350억)
   await addListedStockAsset(page, {
     name: "가업주식회사",
-    shares: "35000",
+    shares,
     avgPrice: "1000000",
   });
 
@@ -65,6 +73,14 @@ async function setupFamilyBusinessStep3(page: PageT) {
   await page.getByText("조특법 과세특례 (§30의5·6)").click();
   await page.getByText("가업승계 증여세 과세특례 (§30의6)").click();
   await expect(page.getByText("부모 가업 영위기간 (§30의6①)")).toBeVisible();
+}
+
+// U-17: 가업자산상당액 입력 — CorporateNonBusinessAssetsSection(context="gift_family_business")
+async function fillCorporateAssets(page: PageT, opts: { totalAssets: string; nonBusinessLand?: string }) {
+  await page.getByTestId("corporate-total-assets").first().fill(opts.totalAssets);
+  if (opts.nonBusinessLand) {
+    await page.getByTestId("corporate-non-business-land").first().fill(opts.nonBusinessLand);
+  }
 }
 
 test.describe("§30의6① 가업 영위기간 — 한도 분기 + 카테고리 차단", () => {
@@ -79,6 +95,7 @@ test.describe("§30의6① 가업 영위기간 — 한도 분기 + 카테고리 
     await setupFamilyBusinessStep3(page);
 
     await page.getByPlaceholder("영위 기간 입력").fill("25");
+    await fillCorporateAssets(page, { totalAssets: "10000000000" });
 
     const reqPromise = page.waitForRequest(
       (req) => req.url().includes("/api/calc/gift") && req.method() === "POST",
@@ -101,6 +118,7 @@ test.describe("§30의6① 가업 영위기간 — 한도 분기 + 카테고리 
   }) => {
     test.setTimeout(90_000);
     await setupFamilyBusinessStep3(page);
+    await fillCorporateAssets(page, { totalAssets: "10000000000" });
 
     const reqPromise = page.waitForRequest(
       (req) => req.url().includes("/api/calc/gift") && req.method() === "POST",
@@ -115,6 +133,28 @@ test.describe("§30의6① 가업 영위기간 — 한도 분기 + 카테고리 
     await expect(page.getByText("6,554,550,000").first()).toBeVisible({
       timeout: 10_000,
     });
+  });
+
+  test("[E2E-GFY-4] 법인 총자산 100억·비사업용토지 20억 → 가업자산상당액 40억 · finalTax 518,250,000", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await setupFamilyBusinessStep3(page, "5000");
+    await page.getByPlaceholder("영위 기간 입력").fill("15");
+    await fillCorporateAssets(page, { totalAssets: "10000000000", nonBusinessLand: "2000000000" });
+
+    const reqPromise = page.waitForRequest(
+      (req) => req.url().includes("/api/calc/gift") && req.method() === "POST",
+    );
+    await calcAndWaitResult(page, { taxType: "gift" });
+    const req = await reqPromise;
+    const body = req.postDataJSON() as {
+      giftItems: { corporateTotalAssets?: number; corporateNonBusinessAssets?: { nonBusinessLand?: number } }[];
+    };
+    expect(body.giftItems[0].corporateTotalAssets).toBe(10_000_000_000);
+    expect(body.giftItems[0].corporateNonBusinessAssets?.nonBusinessLand).toBe(2_000_000_000);
+
+    await expect(page.getByText("518,250,000").first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("[E2E-GFY-3] 토지 + 가업승계 → 특례 귀속 불가 경고 + 계산 차단 (§30의6① 주식만)", async ({

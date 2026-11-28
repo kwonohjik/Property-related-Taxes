@@ -4,7 +4,7 @@
  * GiftTwoStreamDetailSection — 증여세 조특법 특례 2-스트림 분리과세 상세 카드.
  *
  * GiftTaxResultView.tsx 800줄 분할 (2026-06-26).
- * specialStreamTax > 0 (창업자금 §30의5·가업승계 §30의6 특례) 일 때만 렌더 — 그 외 null.
+ * specialStreamTax > 0 (창업자금 §30의5·가업승계 §30의6 특례) 또는 가업자산상당액 echo(U-17)가 있을 때만 렌더 — 그 외 null.
  * 일반 스트림(§47·§53·§56) + 특례 스트림(10%/20%, §69 배제) + 최종 합산 표시.
  */
 
@@ -14,7 +14,14 @@ import { Row } from "@/components/calc/results/GiftTaxResultViewHelpers";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 export function GiftTwoStreamDetailSection({ result }: { result: GiftTaxResult }) {
-  if (!(result.specialStreamTax != null && result.specialStreamTax > 0)) return null;
+  // U-17: 가업자산상당액 echo가 있으면 특례세액 0(사업무관 ≥ 총자산 · 상당액 ≤ 10억)이어도 산식 줄을 보인다
+  const fbDetail = result.familyBusinessAssetEquivalentDetail;
+  if (
+    !(result.specialStreamTax != null && result.specialStreamTax > 0) &&
+    result.familyBusinessAssetEquivalent == null
+  )
+    return null;
+  const specialStreamTax = result.specialStreamTax ?? 0;
   return (
     <div className="space-y-2">
       {/* 일반 스트림 */}
@@ -55,9 +62,32 @@ export function GiftTwoStreamDetailSection({ result }: { result: GiftTaxResult }
           <div className="flex flex-wrap gap-1 mt-1">
             <LawArticleModal legalBasis="조특법 §30의5" label="조특법 §30의5 창업자금" />
             <LawArticleModal legalBasis="조특법 §30의6" label="조특법 §30의6 가업승계" />
+            {fbDetail && (
+              <LawArticleModal legalBasis="조세특례제한법 시행령 §27의6" label="조특령 §27의6⑩ 가업자산상당액" />
+            )}
           </div>
         </div>
         <div className="divide-y divide-border">
+          {/* U-17 가업자산상당액 — 주식별 산식 (조특령 §27의6⑩ → 상증령 §15⑤2호 준용, 기준일=증여일) */}
+          {fbDetail?.map((d, i) => (
+            <Row
+              key={i}
+              label={
+                `${d.name || "가업승계 특례 주식"} 가업자산상당액 = 주식 평가액 ${formatKRW(d.grossValue)} × ` +
+                `(법인 총자산 ${formatKRW(d.totalAssets)} − 사업무관자산 ${formatKRW(d.sumOfNonBusiness)}) ÷ 법인 총자산 ${formatKRW(d.totalAssets)}` +
+                (d.sumOfNonBusiness >= d.totalAssets ? " (사업무관자산이 총자산 이상이라 0)" : "")
+              }
+              value={formatKRW(d.assetEquivalent)}
+              sub
+            />
+          ))}
+          {(result.familyBusinessNonBusinessPortion ?? 0) > 0 && (
+            <Row
+              label="사업무관자산 비율분 — 특례 미적용, 일반 증여 스트림에 합산"
+              value={formatKRW(result.familyBusinessNonBusinessPortion ?? 0)}
+              sub
+            />
+          )}
           {(result.specialStreamDebt ?? 0) > 0 && (
             <Row
               label="특례 자산 채무인수 차감 (§47①)"
@@ -74,7 +104,7 @@ export function GiftTwoStreamDetailSection({ result }: { result: GiftTaxResult }
           )}
           <Row
             label="특례 스트림 세액 (10% 또는 20%)"
-            value={formatKRW(result.specialStreamTax)}
+            value={formatKRW(specialStreamTax)}
             highlight
           />
           {/* §30의5⑫ §69 신고세액공제 배제 안내 */}
@@ -101,8 +131,8 @@ export function GiftTwoStreamDetailSection({ result }: { result: GiftTaxResult }
             <Row
               label={
                 result.aggregationExcludedDetail
-                  ? `= 일반 ${formatKRW(result.ordinaryStreamTax ?? 0)} + 특례 ${formatKRW(result.specialStreamTax)} + 합산배제 ${formatKRW(result.aggregationExcludedDetail.finalTax)}`
-                  : `= 일반 ${formatKRW(result.ordinaryStreamTax ?? 0)} + 특례 ${formatKRW(result.specialStreamTax)}`
+                  ? `= 일반 ${formatKRW(result.ordinaryStreamTax ?? 0)} + 특례 ${formatKRW(specialStreamTax)} + 합산배제 ${formatKRW(result.aggregationExcludedDetail.finalTax)}`
+                  : `= 일반 ${formatKRW(result.ordinaryStreamTax ?? 0)} + 특례 ${formatKRW(specialStreamTax)}`
               }
               value={formatKRW(result.finalTax)}
               highlight

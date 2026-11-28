@@ -24,6 +24,8 @@ import {
   SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
 } from "@/lib/tax-engine/gift-special-stream";
 import { isSameDonorGroup, getDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
+import { findFamilyBusinessItemsMissingTotalAssets } from "@/lib/tax-engine/gift-family-business-asset-equivalent";
+import { FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_MESSAGE } from "@/lib/tax-engine/gift-family-business-asset-equivalent";
 import { missingPriorRoundInputs } from "@/lib/calc/gift-required-inputs";
 import { foreignGiftTaxBaseMissing } from "@/lib/calc/gift-required-inputs";
 import { resolvePropertyType } from "@/lib/calc/gift-burdened-transfer-api";
@@ -76,6 +78,24 @@ import {
   giftBurdenedRegionCode,
 } from "@/lib/calc/gift-burdened-one-house";
 import { giftBurdenedRentalExceptionError } from "@/lib/calc/gift-burdened-rental-exception";
+
+/**
+ * U-17 ⑧ — 가업승계 특례 주식의 법인 총자산 미입력 여부. 엔진 입력(④ buildGiftTaxInput)과 같은
+ * allItems·specialTreatment·familyBusinessYears 파생으로 엔진 술어를 부른다.
+ */
+function familyBusinessTotalAssetsMissing(
+  f: Pick<FormState, "giftItems" | "stockItems" | "specialTreatment" | "familyBusinessYears">,
+): boolean {
+  return (
+    findFamilyBusinessItemsMissingTotalAssets([...f.giftItems, ...f.stockItems], {
+      specialTreatment: f.specialTreatment || undefined,
+      familyBusinessYears:
+        f.specialTreatment === "family_business" && f.familyBusinessYears !== ""
+          ? parseDecimal(f.familyBusinessYears)
+          : undefined,
+    }).length > 0
+  );
+}
 
 /**
  * G-M4: 동일그룹 판정을 isSameDonorGroup 엔진 헬퍼로 재사용.
@@ -617,6 +637,10 @@ export function validateStep(step: number, form: FormState): string | null {
       return "가업 영위기간은 0 이상이어야 합니다.";
     }
 
+    // U-17: 가업자산상당액(조특령 §27의6⑩) — 특례 주식의 법인 총자산 미입력 차단(자동 fallback 금지).
+    //   ⑩ Zod(gift-tax-input-refine.ts)·엔진과 같은 술어 — 영위기간 10년 미만 명시(미적격)는 차단하지 않는다.
+    if (familyBusinessTotalAssetsMissing(form)) return FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_MESSAGE;
+
     // 상증령 §46①2호 동시증여 안분 (⑧) — Zod taxableValue.positive() 동기화.
     // §53(관계공제)·§53의2(혼인·출산공제) 모두 동시증여 안분(Phase 2) → 별도 차단 없음.
     if (form.simultaneousGifts !== undefined) {
@@ -646,6 +670,10 @@ export function validateStep(step: number, form: FormState): string | null {
         // 증여재산 필수 (자동 안분 fallback 금지 정책 — ⑧)
         if (sub.giftItems.length + sub.stockItems.length === 0) {
           return `동시증여 건 ${i + 1}(${DONOR_LABELS[sub.donor]}): 증여재산을 1개 이상 입력하세요.`;
+        }
+        // U-17: 추가 건도 ⑩(giftSubFormSchema = giftTaxInputSchema)이 같은 술어로 막는다 — UI 통과 ↔ API 400 방지
+        if (familyBusinessTotalAssetsMissing(sub)) {
+          return `동시증여 건 ${i + 1}: ${FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_MESSAGE}`;
         }
       }
     }
