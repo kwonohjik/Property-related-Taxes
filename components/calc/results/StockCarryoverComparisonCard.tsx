@@ -21,6 +21,7 @@
 import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/stock-transfer.types";
 import type { ForeignCarryoverDetail } from "@/lib/tax-engine/stock-transfer/types/foreign-stock.types";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
+import { fmtRate } from "@/components/calc/foreign/fx-formula";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
 
 export type CarryoverCardVariant = "domestic" | "foreign";
@@ -151,7 +152,7 @@ export function StockCarryoverComparisonCard({
                       취득가액 (원화 환산)
                       {donorDate && fc.donorExchangeRate !== undefined && (
                         <span className="block text-caption text-violet-700 dark:text-violet-400">
-                          적용: 증여자 취득일 {donorDate} 기준환율 {fc.donorExchangeRate.toLocaleString()}
+                          적용: 증여자 취득일 {donorDate} 기준환율 {fmtRate(fc.donorExchangeRate)}
                           {fc.donorAcquisitionCurrencyCode ? ` (${fc.donorAcquisitionCurrencyCode})` : ""}
                         </span>
                       )}

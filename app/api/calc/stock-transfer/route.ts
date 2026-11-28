@@ -197,6 +197,9 @@ async function handleForeignStock(body: unknown): Promise<NextResponse> {
     const result = calculateStockTransferTax(engineInput);
     return finiteJson({ result }, { status: 200 });
   } catch (err) {
+    // 엔진 환산 leaf(`fx-krw.ts`)의 입력 오류는 400 — ⑫ refine(`foreign-stock-fx-limits.ts`)이 같은 판정으로 먼저 거르므로
+    // 이 분기는 refine이 놓친 조합의 안전망이다(국외전출세 `handleExitTax`와 같은 규약).
+    if (err instanceof TaxCalculationError) return taxCalculationErrorResponse(err);
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });
   }

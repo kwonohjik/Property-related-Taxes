@@ -16,7 +16,7 @@
  */
 
 import type { ForeignStockResult } from "@/lib/tax-engine/stock-transfer/types/foreign-stock.types";
-import { fxFormula } from "@/components/calc/foreign/fx-formula";
+import { fmtRate, fxFormula } from "@/components/calc/foreign/fx-formula";
 import { StockCarryoverComparisonCard } from "@/components/calc/results/StockCarryoverComparisonCard";
 
 interface ForeignStockResultCardProps {
@@ -130,7 +130,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
                 <Row
                   key={i}
                   label={`${i + 1}차 수령 (${dateStr})`}
-                  value={`${fmt(r.amountForeign)} × ${fmt(r.exchangeRate)} = ${fmt(r.amountKrw)}`}
+                  value={`${fmt(r.amountForeign)} × ${fmtRate(r.exchangeRate)} = ${fmt(r.amountKrw)}`}
                   sub="수령액(외화) × 수령일 기준환율 (§178의5②)"
                   indent={i > 0}
                 />
@@ -180,7 +180,7 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
           <Row
             label="외국납부세액 (원화)"
             value={fmt(result.foreignTaxPaidKrw)}
-            sub={`외국납부세액(외화) × 납세일 기준환율 ${result.foreignTaxExchangeRate !== undefined ? fmt(result.foreignTaxExchangeRate) : ""}`}
+            sub={`외국납부세액(외화) × 납세일 기준환율 ${result.foreignTaxExchangeRate !== undefined ? fmtRate(result.foreignTaxExchangeRate) : ""}`}
             indent
           />
         )}
@@ -209,8 +209,8 @@ export function ForeignStockResultCard({ result, stockName }: ForeignStockResult
           sub={[
             result.capitalExpenditureExchangeRateApplied ===
             result.transferCostExchangeRateApplied
-              ? `지출일 기준환율 ${fmt(result.capitalExpenditureExchangeRateApplied)} (영 §178의5①)`
-              : `자본적지출 ${fmt(result.capitalExpenditureExchangeRateApplied)} · 양도비 ${fmt(
+              ? `지출일 기준환율 ${fmtRate(result.capitalExpenditureExchangeRateApplied)} (영 §178의5①)`
+              : `자본적지출 ${fmtRate(result.capitalExpenditureExchangeRateApplied)} · 양도비 ${fmtRate(
                   result.transferCostExchangeRateApplied,
                 )} (지출일 기준환율, 영 §178의5①)`,
             hasForeignTaxExpense ? "외국납부세액 필요경비 산입 포함" : null,

@@ -4,8 +4,18 @@
  * 주식(`ForeignStockResultCard`)과 부동산 결과 카드가 함께 쓴다(계획서 §11 U0).
  */
 
+import { FX_MAX_DECIMALS } from "@/lib/tax-engine/fx-krw";
+
 function fmt(n: number): string {
   return n.toLocaleString("ko-KR");
+}
+
+/**
+ * 환율 표시 — 소수 **4자리까지**(`FX_MAX_DECIMALS`). `toLocaleString`의 기본 최대 3자리로는 1300.1234가 «1,300.123»으로 잘려
+ * 입력과 다르게 보인다(사용자가 «외화 × 환율 = 원화»를 계산기로 검산하면 어긋난다). 정수 환율은 소수점 없이 그대로 나온다.
+ */
+export function fmtRate(rate: number): string {
+  return rate.toLocaleString("ko-KR", { maximumFractionDigits: FX_MAX_DECIMALS });
 }
 
 /**
@@ -17,5 +27,5 @@ export function fxFormula(foreign: number | undefined, currency: string | undefi
     foreign === undefined
       ? "—"
       : `${currency && currency !== "OTHER" ? `${currency} ` : ""}${foreign.toLocaleString("ko-KR", { maximumFractionDigits: 4 })}`;
-  return `${foreignText} × ${fmt(rate)} = ${fmt(krw)}`;
+  return `${foreignText} × ${fmtRate(rate)} = ${fmt(krw)}`;
 }

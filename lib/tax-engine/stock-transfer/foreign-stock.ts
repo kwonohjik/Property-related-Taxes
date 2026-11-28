@@ -40,6 +40,7 @@ import type {
   InstallmentReceiptDetail,
 } from "./types/foreign-stock.types";
 import { applyRate } from "@/lib/tax-engine/tax-utils";
+import { toKrwUnlessZero } from "@/lib/tax-engine/fx-krw";
 import { STOCK_FOREIGN_CARRYOVER } from "@/lib/tax-engine/legal-codes/stock-foreign-carryover";
 import { computeForeignTaxCreditLimits } from "./foreign-tax-credit-limit";
 import {
@@ -81,7 +82,7 @@ function floorTen(n: number): number {
  *    수령하거나 지출한 날로 본다"
  *   → 각 수령일의 기준환율을 개별 적용하여 원화 환산 후 합산
  *
- * 정수 연산: 각 수령액 × 환율을 개별 floor() 후 합산 (오버플로우 방지)
+ * 정수 연산: 각 수령액 × 환율을 공용 환산 leaf(`fx-krw.ts` — BigInt 정확 곱 floor)로 개별 환산 후 합산
  *
  * @param receipts 분할 수령 배열 (≥2건)
  * @returns { totalKrw, detail }
@@ -90,11 +91,11 @@ function calcInstallmentTransferPrice(receipts: InstallmentReceipt[]): {
   totalKrw: number;
   detail: InstallmentReceiptDetail;
 } {
-  const receiptItems: InstallmentReceiptDetail["receipts"] = receipts.map((r) => ({
+  const receiptItems: InstallmentReceiptDetail["receipts"] = receipts.map((r, i) => ({
     receiptDate: r.receiptDate,
     amountForeign: r.amountForeign,
     exchangeRate: r.exchangeRate,
-    amountKrw: Math.floor(r.amountForeign * r.exchangeRate),
+    amountKrw: toKrwUnlessZero(r.amountForeign, r.exchangeRate, `transferInstallmentReceipts[${i}]`),
   }));
 
   const totalKrw = receiptItems.reduce((sum, item) => sum + item.amountKrw, 0);
@@ -196,12 +197,12 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
     if (input.transferPriceMode === "total") {
       // 총액 직접 입력 → 환산
       const totalForeign = input.totalTransferPriceForeign ?? 0;
-      transferPriceKrw = Math.floor(totalForeign * input.transferExchangeRate);
+      transferPriceKrw = toKrwUnlessZero(totalForeign, input.transferExchangeRate, "transferPrice");
       transferPriceForeign = totalForeign;
     } else {
       // 1주당 단가 × 주식수 → 환산
       const perShare = input.perShareTransferPriceForeign ?? 0;
-      transferPriceKrw = Math.floor(perShare * input.shareCount * input.transferExchangeRate);
+      transferPriceKrw = toKrwUnlessZero(perShare, input.transferExchangeRate, "transferPrice", input.shareCount);
       transferPriceForeign = perShare * input.shareCount;
     }
     appliedRules.push(STOCK_FOREIGN.SECTION_178_5_FX_RATE);
@@ -213,16 +214,12 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
   let acquisitionPriceKrw: number;
   if (input.acquisitionMode === "actual") {
     const perShareAcq = input.perShareAcquisitionPriceForeign ?? 0;
-    acquisitionPriceKrw = Math.floor(
-      perShareAcq * input.shareCount * input.acquisitionExchangeRate,
-    );
+    acquisitionPriceKrw = toKrwUnlessZero(perShareAcq, input.acquisitionExchangeRate, "acquisitionPrice", input.shareCount);
   } else {
     // market_price: §178의3 시가 산정 — v1에서는 사용자 직접 입력값으로 수신
     // (perShareAcquisitionPriceForeign에 §178의3 적용 시가를 입력)
     const perShareMkt = input.perShareAcquisitionPriceForeign ?? 0;
-    acquisitionPriceKrw = Math.floor(
-      perShareMkt * input.shareCount * input.acquisitionExchangeRate,
-    );
+    acquisitionPriceKrw = toKrwUnlessZero(perShareMkt, input.acquisitionExchangeRate, "acquisitionPrice", input.shareCount);
     warnings.push("§178의3 시가 산정: 사용자 입력값 사용. 외국정부 평가가액 → 상증법§63 준용 시가 순위 적용 확인 필요");
     appliedRules.push(STOCK_FOREIGN.SECTION_178_3_MARKET_PRICE);
   }
@@ -243,8 +240,8 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
   // ⚠️ **항목별로 floor** 한다. 합산 후 floor 하면 1원이 달라진다(anchor FX-4).
   const capExRate = input.capitalExpenditureExchangeRate ?? input.transferExchangeRate;
   const costRate = input.transferCostExchangeRate ?? input.transferExchangeRate;
-  const capitalExpKrw = Math.floor(input.capitalExpenditureForeign * capExRate);
-  const transferCostKrw = Math.floor(input.transferCostForeign * costRate);
+  const capitalExpKrw = toKrwUnlessZero(input.capitalExpenditureForeign, capExRate, "capitalExpenditure");
+  const transferCostKrw = toKrwUnlessZero(input.transferCostForeign, costRate, "transferCost");
 
   // ──────────────────────────────────────────────────────────
   // STEP 5: 외국납부세액 처리 (§118의6)
@@ -254,7 +251,7 @@ export function calculateForeignStockTax(input: ForeignStockInput): ForeignStock
 
   if (input.hasForeignTax && input.foreignTaxPaidForeign != null) {
     const fxRate = input.foreignTaxExchangeRate ?? input.transferExchangeRate;
-    foreignTaxPaidKrw = Math.floor(input.foreignTaxPaidForeign * fxRate);
+    foreignTaxPaidKrw = toKrwUnlessZero(input.foreignTaxPaidForeign, fxRate, "foreignTax");
     appliedRules.push(STOCK_FOREIGN.SECTION_178_7_FOREIGN_TAX_SCOPE);
   }
 

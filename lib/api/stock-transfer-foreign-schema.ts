@@ -7,6 +7,7 @@
  */
 import { z } from "zod";
 import { foreignCarryoverIssues } from "@/lib/calc/foreign-stock-carryover-required";
+import { foreignStockFxIssues } from "@/lib/calc/foreign-stock-fx-limits";
 import {
   FOREIGN_STOCK_TRACK_START,
   isBeforeForeignStockTrack,
@@ -227,6 +228,13 @@ export const foreignStockInputSchema = z.object({
       path: ["paymentDeadline"],
       message: "납부지연가산세를 계산하려면 법정납부기한이 필요합니다 (국세기본법 §47의4①1호)",
     });
+  }
+
+  // ⑩ 외화액·환율 입력 한도(소수 4자리·외화액 1e11·환율 1e7·환산 원화 안전 정수) — 엔진 환산 leaf(`fx-krw.ts`)와
+  //    **같은 판정**(⑧ `stock-transfer-tax-validate-foreign.ts`와 단일 소스 `foreign-stock-fx-limits.ts`).
+  //    ⑫가 놓치면 엔진이 던진 오류가 route에서 500이 된다. 쌍 구성은 엔진 환산 호출과 1:1이다.
+  for (const issue of foreignStockFxIssues(d)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: issue.path, message: issue.message });
   }
 
   // ⑩ §97의2① 이월과세 필수 입력·날짜 순서 — ⑧과 **같은 술어**(`foreignCarryoverIssues`)를 쓴다.
