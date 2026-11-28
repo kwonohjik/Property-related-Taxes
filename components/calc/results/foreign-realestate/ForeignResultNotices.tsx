@@ -13,6 +13,7 @@
 import { ToneCard } from "@/components/calc/shared/ToneCard";
 import { TRANSFER_FOREIGN_RE as RE } from "@/lib/tax-engine/legal-codes/transfer-foreign-realestate";
 import { FOREIGN_DOMESTIC_SEPARATE_TEXT } from "@/lib/calc/transfer-foreign-messages";
+import { FOREIGN_LOSS_NOT_NETTED_TEXT } from "@/lib/calc/transfer-foreign-messages";
 import { FOREIGN_UNSUPPORTED_RESULT_TEXT } from "@/lib/calc/transfer-foreign-messages";
 import { FOREIGN_TAX_FX_DATE_TEXT } from "@/lib/calc/transfer-foreign-messages";
 import type {
@@ -22,6 +23,7 @@ import type {
 } from "@/lib/tax-engine/foreign-realestate";
 
 export const CONFIRMATION_NOTICES = {
+  FOREIGN_LOSS_NOT_NETTED: FOREIGN_LOSS_NOT_NETTED_TEXT,
   UNSUPPORTED_SITUATIONS_NOT_EVALUATED: FOREIGN_UNSUPPORTED_RESULT_TEXT,
 } as const satisfies Record<ForeignRealEstateConfirmationCode, string>;
 

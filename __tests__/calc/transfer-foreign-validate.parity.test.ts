@@ -61,13 +61,6 @@ const GRID: Row[] = [
   { name: "취득일이 양도일보다 늦음", owner: "acquisition-not-after-transfer", form: withRows({ acquisitionDate: "2026-08-01" }), field: "foreignAsset.acquisitionDate", server: true },
   { name: "양도일 2019-12-31 (지원 개시 2020-01-01 전)", owner: "transfer-date-supported", form: withRows({ acquisitionDate: "2015-01-01", transferDate: "2019-12-31" }), field: "foreignAsset.transferDate", server: true },
   { name: "과세기간이 다른 2건", owner: "same-tax-year", form: foreignForm({}, [k1Asset(), gainAsset2({ transferDate: "2025-03-05" })]), field: "foreignAsset.transferDate", server: true },
-  // ── 양도차손 + 양도차익 혼재
-  {
-    name: "양도차손 자산 + 양도차익 자산",
-    owner: "loss-gain-mix",
-    form: foreignForm({}, [k1Asset(), gainAsset2({ acquisitionAmount: "900000", transferAmount: "100000" })]),
-    server: true,
-  },
   // ── ⑨ 기본 모양 (화면이 같은 값으로 막는다)
   { name: "자산 종류 = 부동산에 관한 권리(v1 body에 없다)", owner: "base", form: withRows({ kind: "right" }), field: "foreignAsset.kind", server: true },
   { name: "통화 «기타» 코드 미입력", owner: "base", form: withRows({ currency: "" }), field: "foreignAsset.currency", server: true },
@@ -162,7 +155,10 @@ describe("양성 짝 — 게이트가 정상 입력을 삼키지 않는다", () 
     expect(serverBlocks(f)).toBe(false);
   });
 
-  it("전부 차손이면 통산할 대상이 없어 통과 · 차익 2건도 통과", () => {
+  it("차손 자산 + 차익 자산 혼재는 통산하지 않고 계산하므로 통과(서버도 통과) · 전부 차손 · 차익 2건도 통과", () => {
+    const mixed = foreignForm({}, [k1Asset(), gainAsset2({ acquisitionAmount: "900000", transferAmount: "100000" })]);
+    expect(collectForeignIssues(mixed)).toEqual([]);
+    expect(serverBlocks(mixed)).toBe(false);
     const loss = (p = {}) => gainAsset2({ acquisitionAmount: "900000", transferAmount: "100000", ...p });
     expect(collectForeignIssues(foreignForm({}, [loss(), loss({ address: "B" })]))).toEqual([]);
     expect(collectForeignIssues(foreignForm({}, [k1Asset(), gainAsset2()]))).toEqual([]);

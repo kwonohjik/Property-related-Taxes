@@ -87,7 +87,7 @@ export function ForeignAssetGainSection({
         </NoteRow>
         <AmountRow
           label={liable ? "양도소득금액" : "양도소득금액 (참고)"}
-          formula={liable ? (isLoss ? "양도차손이라 0으로 봅니다" : undefined) : "납세의무가 없어 세액에 반영하지 않는 참고 값입니다"}
+          formula={liable ? (isLoss ? "통산하지 않음 — 과세기간 소득금액에 0으로 반영" : undefined) : "납세의무가 없어 세액에 반영하지 않는 참고 값입니다"}
           amount={row.incomeAmount}
           strong
           testId={`foreign-gain-${index}-income`}

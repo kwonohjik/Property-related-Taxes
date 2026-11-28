@@ -46,7 +46,7 @@ export function ForeignSidebarSummary({ summary }: { summary: ForeignRealEstateS
       )}
       {summary.hasResult && !summary.notLiable && (
         <div className="space-y-1.5 border-t pt-2">
-          {summary.capitalGainTotal !== null && <Line label="양도차익" value={summary.capitalGainTotal} />}
+          {summary.capitalGainTotal !== null && <Line label={summary.hasLossAsset ? "양도차익 합계 (차손 포함)" : "양도차익"} value={summary.capitalGainTotal} />}
           {summary.incomeAmountTotal !== null && <Line label="양도소득금액" value={summary.incomeAmountTotal} />}
           {summary.basicDeduction !== null && <Line label="기본공제(§118의7)" value={summary.basicDeduction} />}
           {summary.taxBase !== null && <Line label="과세표준" value={summary.taxBase} />}

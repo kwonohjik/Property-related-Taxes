@@ -160,22 +160,6 @@ const ROWS: Row[] = [
     ],
   },
   { name: "양도가액 환율 미입력", owner: "base", edits: [["assets.0.transfer.exchangeRate", undefined, MISSING]] },
-  // ── 양도차손 + 양도차익 혼재 (§102 미준용)
-  {
-    name: "차손 자산 + 차익 자산 혼재",
-    owner: "loss-gain-mix",
-    base: "two",
-    edits: [["assets.1.transfer", usd(100_000, "2026-03-05", 1_100)]],
-  },
-  {
-    name: "필요경비 산입방법 외국세가 b를 차손으로 만들어 혼재",
-    owner: "loss-gain-mix",
-    base: "two",
-    edits: [
-      ["assets.1.transfer", usd(261_000, "2026-03-05", 1_000)], // b 양도차익 1,000,000
-      ["foreignTax", { method: "expense", items: [ftax("b", 2_000, "2026-03-05", 1_000)] }], // 외국세 2,000,000
-    ],
-  },
 ];
 
 /** 엔진이 던지지 않는 입력 — Zod도 통과해야 한다(게이트가 지나치게 막지 않는다) */
@@ -183,6 +167,17 @@ const POSITIVE: Row[] = [
   { name: "K-1 교재", owner: "-", edits: [] },
   { name: "2건 합산", owner: "-", base: "two", edits: [] },
   { name: "양도일 2020-01-01 정각(지원 개시일 포함)", owner: "-", edits: [["assets.0.acquisitionDate", d("2015-01-01")], ["assets.0.transferDate", d("2020-01-01")]] },
+  // 차손+차익 혼재는 통산하지 않고 계산한다(사용자 결정 2026-11-28 — 과거엔 loss-gain-mix refine이 막던 행)
+  { name: "차손 자산 + 차익 자산 혼재 — 통산하지 않고 계산", owner: "-", base: "two", edits: [["assets.1.transfer", usd(100_000, "2026-03-05", 1_100)]] },
+  {
+    name: "필요경비 산입방법 외국세가 b를 차손으로 만들어도 혼재는 계산",
+    owner: "-",
+    base: "two",
+    edits: [
+      ["assets.1.transfer", usd(261_000, "2026-03-05", 1_000)],
+      ["foreignTax", { method: "expense", items: [ftax("b", 2_000, "2026-03-05", 1_000)] }],
+    ],
+  },
   { name: "거주 5년 미만이면 차손+차익 혼재도 엔진은 not_liable로 반환", owner: "-", base: "two", edits: [["domesticResidenceYears", 4], ["assets.1.transfer", usd(100_000, "2026-03-05", 1_100)]] },
   { name: "전부 차손이면 통산할 대상이 없어 계산", owner: "-", base: "two", edits: [["assets.0.transfer", usd(300_000, "2026-07-10", 1_100)], ["assets.1.transfer", usd(100_000, "2026-03-05", 1_100)]] },
   { name: "외국납부세액 항목 0건이면 §118의6 미적용", owner: "-", edits: [["foreignTax", { method: "credit", items: [] }]] },

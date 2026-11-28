@@ -442,14 +442,14 @@ mutation probe: 술어를 `!==`로 뒤집어 국내까지 삼킴 → FRE-4 실�
 
 ## 14. U2 확정 (2026-11-27 · 구현 PR `feat/foreign-re-ui-result`) — ④⑥⑦ + 인쇄 + 다건 차단 안내
 
-> 사용자 결정(재제안 금지): **C-1** 국외 자산 여러 개는 한 건의 계산 안(`foreignAssets[]` ≤ 20) · **D-M** 다건(연간 합산) 마법사는 국외 건을 계속 막고 «국외 자산은 한 건 계산 안에서 여러 개를 추가하세요» 안내 · 지방소득세 국외 10원 미만 절사·전부 차손 = 세액 0은 엔진에서 확정.
+> 사용자 결정(재제안 금지): **C-1** 국외 자산 여러 개는 한 건의 계산 안(`foreignAssets[]` ≤ 20) · **D-M** 다건(연간 합산) 마법사는 국외 건을 계속 막고 «국외 자산은 한 건 계산 안에서 여러 개를 추가하세요» 안내 · 지방소득세 국외 10원 미만 절사·전부 차손 = 세액 0은 엔진에서 확정 · **차손+차익 혼재 = 통산하지 않고 0 반영 + «확인 필요»(2026-11-28 · §14.8)**.
 
 ### 14.1 ④⑬ 호출 — `lib/calc/transfer-foreign-call.ts`
 
 - `callForeignRealEstateAPI(form)` = 순수 빌더(`buildForeignRealEstateBody`, ⑧이 서버 refine을 돌리는 것과 같은 함수) → `POST /api/calc/transfer/foreign` → `{ mode: "foreign", result }`로 감싼다(API 응답에 mode 없음). 래핑 타입은 `lib/calc/transfer-foreign-result.ts`(`ForeignTransferResult`)이고 `TransferAPIResult` 유니온에 1줄로 합류한다 — `transfer-tax-api.ts`는 그 줄 + import만 늘었다.
 - `TransferTaxCalculator.handleSubmit`이 `isForeignRealEstateForm`으로 국외 호출/국내 호출을 가른다. 국내 `callTransferTaxAPI`의 국외 가드는 유지(빈 국내 자산이 조용히 계산되는 것을 막는다). 단건 자동 백업(`backupSingleToMulti`)은 국외에서 건너뛴다(다건이 국외 건을 막으므로).
 - ⑬ 가드: `__tests__/calc/transfer-foreign-body-zod-keys.test.ts` — 모든 선택 칸을 채운 폼으로 빌더 body 키 ↔ Zod 스키마 키 **양방향**(strip 방지 · 스키마에만 있는 키는 차단용 literal 2개뿐) + Zod 파싱 후 값 불변. 뮤테이션(빌더에 키 추가 · 필드 비우기)으로 양쪽이 실제로 빨개짐을 확인했다.
-- 오류: 400 `fieldErrors`(점 표기 `assets.0.transfer.exchangeRate` · `foreignTax.items.0.date` · `domesticResidenceYears`) → `foreignFieldErrorsToIssues`가 U1 `data-field` 앵커(`foreignAsset.transferRate` · `foreignTaxRow.{자산}.{행}.rate` · `foreignResidenceYears`)로 되돌린다(⑧의 `locate`를 공유 — `describeServerIssue`). 오류 패널에 항목으로 뜨고 첫 칸으로 바로 이동. `FOREIGN_LOSS_NETTING_UNRESOLVED`는 입력 결함이 아니라 미결 법리라 칸 이슈 없이 「확인 필요: …」 메시지로 보인다(⑧이 같은 refine으로 먼저 막으므로 정상 흐름에서는 서버까지 오지 않는다 — 직접 API 호출 방어).
+- 오류: 400 `fieldErrors`(점 표기 `assets.0.transfer.exchangeRate` · `foreignTax.items.0.date` · `domesticResidenceYears`) → `foreignFieldErrorsToIssues`가 U1 `data-field` 앵커(`foreignAsset.transferRate` · `foreignTaxRow.{자산}.{행}.rate` · `foreignResidenceYears`)로 되돌린다(⑧의 `locate`를 공유 — `describeServerIssue`). 오류 패널에 항목으로 뜨고 첫 칸으로 바로 이동. 차손+차익 혼재는 더 이상 오류가 아니다(2026-11-28 결정 — 통산하지 않고 0 반영, 결과 «확인 필요» 카드 `FOREIGN_LOSS_NOT_NETTED`). 종전 `FOREIGN_LOSS_NETTING_UNRESOLVED` 400·「확인 필요: …」 오류 메시지 분기는 삭제했다.
 
 ### 14.2 ⑦ 결과 카드 — `components/calc/results/foreign-realestate/`
 
@@ -486,6 +486,17 @@ leaf 4개(`summary` · `asset-gain` · `tax-calc` · `notices`), **pdf 채널 0�
 
 - (§15.3에서 해소) 엔진 `warnings`의 지방소득세 문구와 `LOCAL_TAX_WEIGHTING_NOT_EVALUATED` 코드 문구가 같은 취지라 «확인 필요» 카드가 2장 겹친다 — 「하나도 버리지 않는다」를 우선했다. 엔진이 둘 중 하나로 합치면 카드도 따라 한 장이 된다.
 - (§17에서 해소) PDF·별지 서식은 §17의 신고서 표(`form-table`)로 들어왔다.
+
+### 14.8 차손+차익 혼재 — 통산하지 않음 (2026-11-28 사용자 결정 · 재제안 금지 · 구현 PR `fix/foreign-re-loss-no-netting`)
+
+엔진 V-1 결정(옵션 1: 통산하지 않고 계산 + «확인 필요»)의 화면 반영. ⑧·⑫는 더 이상 막지 않고(`loss-gain-mix` refine 삭제 — 패리티 격자에서 통과 행) ④는 `FOREIGN_LOSS_NETTING_UNRESOLVED` 분기를 걷었다.
+
+| 지점 | 처리 |
+|---|---|
+| ⑦ 결과 «확인 필요» | `CONFIRMATION_NOTICES.FOREIGN_LOSS_NOT_NETTED` = `FOREIGN_LOSS_NOT_NETTED_TEXT`(`transfer-foreign-messages.ts`): 차손 자산은 다른 국외자산 양도소득과 통산하지 않고 0으로 보아 계산 · 근거 `TRANSFER_FOREIGN_RE.SECTION_102_2_LOSS_OFFSET`(§102②, 매니페스트 `LOSS_OFFSET_102_2`)·§118의8 준용 목록에 없음·국심2005서3759(2006.7.5. 기각) · 국외자산 사이 통산 해석례 미확인 → 세무 전문가 확인 |
+| ⑦ 차손 자산 행 | 양도차손(음수) 그대로 + 양도소득금액 행에 «통산하지 않음 — 과세기간 소득금액에 0으로 반영» · 기본공제 배분 0(공제는 양(+) 자산에 양도일 순서로) |
+| ⑥ 사이드바 | `양도차익` 합계는 엔진 `capitalGainTotal`(차손 포함) — 차손 자산이 있으면 라벨 «양도차익 합계 (차손 포함)»(`hasLossAsset`), 양도소득금액은 차손 0 반영 값(엔진) |
+| 신고서 표 | 「전체 양도차익」은 차손 음수 그대로, 「과세대상 양도차익」은 엔진 `incomeAmount`(차손 자산 0 — 장기보유특별공제 0이라 양도소득금액과 같다) · 안내 줄 «통산하지 않고 0으로 보아…확인 필요» |
 
 ---
 

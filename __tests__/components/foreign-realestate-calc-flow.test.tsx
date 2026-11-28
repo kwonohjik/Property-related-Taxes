@@ -30,7 +30,7 @@ import { MULTI_FOREIGN_UNSUPPORTED_MESSAGE } from "@/lib/calc/transfer-foreign-m
 import { StepList } from "@/app/calc/transfer-tax/multi/MultiTransferSteps";
 import { createDefaultTransferFormData } from "@/lib/stores/calc-wizard-store";
 import type { PropertyItem } from "@/lib/stores/multi-transfer-tax-store";
-import { foreignForm, k1Asset } from "../calc/_foreign-form-fixture";
+import { foreignForm, gainAsset2, k1Asset } from "../calc/_foreign-form-fixture";
 
 afterEach(() => {
   cleanup();
@@ -147,15 +147,26 @@ describe("서버 오류 — 입력칸으로 이동 · 확인 필요", () => {
     expect(useCalcWizardStore.getState().result).toBeNull();
   });
 
-  it("차손 혼재 코드는 «확인 필요» 문구로 보인다", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ error: { code: "FOREIGN_LOSS_NETTING_UNRESOLVED", message: "입력값이 올바르지 않습니다", fieldErrors: { assets: ["확인 필요: 같은 과세기간에 양도차손 자산과 양도차익 자산이 함께 있습니다."] } } }), { status: 400 }),
-    );
-    seed();
+  it("차손 자산 + 차익 자산 혼재는 차단하지 않고 계산한다 — 확인 필요 카드 · 차손 행 0 반영 · 사이드바 값 일치", async () => {
+    routeFetch();
+    vi.spyOn(calculationRepository, "saveOrUpdateByBusinessKey").mockResolvedValue({ id: "rec-3", created: true });
+    // 차손: 양도 $100,000@1,200 = 120,000,000 − 취득 $200,000@1,150 = 230,000,000 → −110,000,000 (양도 3/5 — K-1(7/10)보다 먼저)
+    seed({}, [k1Asset(), gainAsset2({ acquisitionAmount: "200000", transferAmount: "100000" })]);
     render(<TransferTaxCalculator />);
     calculate();
-    const panel = await screen.findByTestId("validation-issues");
-    expect(panel.textContent).toContain("확인 필요: 같은 과세기간에 양도차손 자산과 양도차익 자산이 함께 있습니다.");
+    await waitFor(() => expect(screen.queryByTestId("foreign-result-view")).not.toBeNull());
+    expect(screen.queryByTestId("validation-issues")).toBeNull();
+    expect(screen.getByTestId("foreign-confirm-FOREIGN_LOSS_NOT_NETTED").textContent).toContain("통산하지 않고 0으로 보아 계산했습니다");
+    expect(screen.getByTestId("foreign-income-total").textContent).toContain("437,000,000");
+    expect(screen.getByTestId("foreign-tax-base").textContent).toContain("434,500,000");
+    expect(screen.getByTestId("foreign-calculated-tax").textContent).toContain("147,860,000");
+    // 차손 자산 행: 음수 양도차손 + «통산하지 않음» 안내 + 양도소득금액 0 · 기본공제 배분 0 (기본공제는 K-1 자산 몫)
+    expect(screen.getByTestId("foreign-gain-1-gain").textContent).toContain("-110,000,000");
+    expect(screen.getByTestId("foreign-gain-1-income").textContent).toContain("통산하지 않음 — 과세기간 소득금액에 0으로 반영");
+    expect(screen.getByTestId("foreign-gain-1-bd").textContent).toMatch(/0$/);
+    expect(screen.getByTestId("foreign-gain-0-bd").textContent).toContain("2,500,000");
+    const st = useCalcWizardStore.getState();
+    expect(st.result?.mode === "foreign" && st.result.result.confirmationNeeded).toContain("FOREIGN_LOSS_NOT_NETTED");
   });
 });
 
