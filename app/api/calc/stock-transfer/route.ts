@@ -243,7 +243,8 @@ function buildForeignEngineInput(rawInput: Record<string, unknown>): ForeignStoc
     perShareTransferPriceForeign: coerced.perShareTransferPriceForeign as number | undefined,
     totalTransferPriceForeign: coerced.totalTransferPriceForeign as number | undefined,
     transferCurrencyCode: coerced.transferCurrencyCode as string,
-    transferExchangeRate: coerced.transferExchangeRate as number,
+    // 단일 수령만 필수(⑫ superRefine) — 분할 수령은 없을 수 있다
+    transferExchangeRate: coerced.transferExchangeRate as number | undefined,
 
     // FS-09 §178의5② 분할 수령 — ⑭ 매핑
     transferReceiptMode: (coerced.transferReceiptMode as ForeignStockInput["transferReceiptMode"]) ?? "single",

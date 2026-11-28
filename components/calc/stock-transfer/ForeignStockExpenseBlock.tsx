@@ -33,10 +33,18 @@ export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSection
    * ([[feedback_useeffect_store_mirror_forbidden]]).
    */
   const hasAmount = (v: string) => (parseFloat(v) || 0) > 0;
+  /**
+   * 비운 지출일 환율을 대신할 양도일 환율이 있는가 — 분할 수령은 그 칸이 없어 비어 있을 수 있다.
+   * 없으면 ⑧⑫(`foreignStockExpenseRateIssues`)가 지출일 환율을 요구하므로 안내도 «필수»로 바꾼다(같은 조건: 양도일 환율 > 0).
+   */
+  const hasFallbackRate = hasAmount(form.transferExchangeRate);
   // ⚠️ FieldCard 의 hint 는 `<p>{hint}</p>` 평문 렌더다 — 마크다운이 그대로 보인다.
   const rateHint = (label: string) =>
     `${label}을 지출한 날의 기준환율 (원/외화) — 영 §178의5①. ` +
-    "비워두면 양도일 기준환율로 환산합니다.";
+    (hasFallbackRate
+      ? "비워두면 양도일 기준환율로 환산합니다."
+      : "양도일 기준환율이 없어(분할 수령) 비워둘 수 없습니다.");
+  const ratePlaceholder = hasFallbackRate ? "비우면 양도일 기준환율 적용" : "지출일 기준환율";
 
   return (
     <div className="space-y-5">
@@ -57,6 +65,7 @@ export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSection
         {hasAmount(form.capitalExpenditureForeign) && (
           <FieldCard
             label="자본적지출 지출일 기준환율"
+            required={!hasFallbackRate}
             hint={rateHint("자본적지출액")}
             // ⚠️ `unit` 은 주지 않는다 — FieldCard 는 `trailing ? trailing : unit` 이라
             //   조문 배지가 있으면 단위가 렌더되지 않는다. 단위는 hint 가 말한다.
@@ -69,7 +78,7 @@ export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSection
             <DecimalInput
               value={form.capitalExpenditureExchangeRate}
               onChange={(v) => onChange({ capitalExpenditureExchangeRate: v })}
-              placeholder="비우면 양도일 기준환율 적용"
+              placeholder={ratePlaceholder}
             />
           </FieldCard>
         )}
@@ -89,6 +98,7 @@ export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSection
         {hasAmount(form.transferCostForeign) && (
           <FieldCard
             label="양도비 지출일 기준환율"
+            required={!hasFallbackRate}
             hint={rateHint("양도비")}
             trailing={
               <span className="text-xs text-sky-700 font-medium bg-sky-50 px-2 py-0.5 rounded">
@@ -99,7 +109,7 @@ export function ForeignStockExpenseBlock({ form, onChange }: ForeignStockSection
             <DecimalInput
               value={form.transferCostExchangeRate}
               onChange={(v) => onChange({ transferCostExchangeRate: v })}
-              placeholder="비우면 양도일 기준환율 적용"
+              placeholder={ratePlaceholder}
             />
           </FieldCard>
         )}

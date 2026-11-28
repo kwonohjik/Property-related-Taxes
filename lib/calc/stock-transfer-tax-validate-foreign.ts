@@ -25,6 +25,7 @@ import {
   isBeforeForeignStockTrack,
 } from "@/lib/tax-engine/data/foreign-stock-track-era";
 import { foreignStockFxIssues, type ForeignStockFxFacts } from "./foreign-stock-fx-limits";
+import { foreignStockExpenseRateIssues } from "./foreign-stock-fx-limits";
 import { appendForeignCarryoverBody } from "./stock-transfer-tax-api-carryover";
 import { isForeignCarryoverForm } from "./stock-foreign-carryover";
 import { parseFloatOrUndef, parseIntOrUndef } from "./stock-transfer-tax-api-parse";
@@ -60,17 +61,17 @@ const FX_LIMIT_STEP: Record<string, 1 | 2 | 3> = {
 };
 
 /**
- * 외화액·환율 **입력 한도**(소수 4자리·외화액 1e11·환율 1e7·환산 원화 안전 정수) — 서버 ⑫와 같은 leaf `foreignStockFxIssues`.
+ * 외화 환산 판정(입력 한도 `foreignStockFxIssues` · 지출일 환율 미입력 `foreignStockExpenseRateIssues`)에 넘길 사실 — 서버 ⑫와 같은 leaf.
  * 사실은 ④와 **같은 파싱·같은 3중 패턴 default**로 만든다(`parseFloatOrUndef` · `|| "per_share"` · `|| "single"`).
  * 이월과세 증여자 값은 ④의 `appendForeignCarryoverBody` 결과를 그대로 읽는다(선언한 종목만).
  * 분할 수령 행은 불완전 행을 걸러 인덱스가 밀리지 않도록 폼 행에서 **행 번호를 보존**해 읽는다.
  */
-function foreignFxLimitErrors(form: StockTransferFormData, step: 1 | 2 | 3): StockValidationError[] {
+function foreignFxFacts(form: StockTransferFormData): ForeignStockFxFacts {
   const num = (s: string | undefined) => parseFloatOrUndef(s ?? "");
   const donor: Record<string, unknown> = {};
   if (isForeignCarryoverForm(form)) appendForeignCarryoverBody(donor, form);
   const donorNum = (k: string) => (typeof donor[k] === "number" ? (donor[k] as number) : undefined);
-  const facts: ForeignStockFxFacts = {
+  return {
     shareCount: parseIntOrUndef(form.shareCount ?? "") ?? 1,
     transferReceiptMode: form.fsTransferReceiptMode || "single",
     transferPriceMode: form.fgTransferPriceMode || "per_share",
@@ -96,7 +97,10 @@ function foreignFxLimitErrors(form: StockTransferFormData, step: 1 | 2 | 3): Sto
     donorCapitalExpenditureForeign: donorNum("donorCapitalExpenditureForeign"),
     donorCapitalExpenditureExchangeRate: donorNum("donorCapitalExpenditureExchangeRate"),
   };
-  return foreignStockFxIssues(facts)
+}
+
+function foreignFxLimitErrors(form: StockTransferFormData, step: 1 | 2 | 3): StockValidationError[] {
+  return foreignStockFxIssues(foreignFxFacts(form))
     .filter((i) => FX_LIMIT_STEP[String(i.path[0])] === step)
     .map((i) => ({
       field:
@@ -404,6 +408,10 @@ export function validateStep3Foreign(form: StockTransferFormData): StockValidati
   };
   checkExpenseRate("capitalExpenditureExchangeRate", "자본적지출 지출일 기준환율");
   checkExpenseRate("transferCostExchangeRate", "양도비 지출일 기준환율");
+  // 대신 쓸 양도일 환율도 없으면(분할 수령) 비울 수 없다 — 서버 ⑫와 같은 leaf (계획서 F-1)
+  for (const i of foreignStockExpenseRateIssues(foreignFxFacts(form))) {
+    errors.push({ field: String(i.path[0]), message: i.message, severity: "error" });
+  }
 
   if (form.hasForeignTax) {
     // 납부세액 필수

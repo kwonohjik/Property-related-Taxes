@@ -1618,7 +1618,8 @@ export type StockTransferResult = {
     stockName: string;
     countryCode: string;
     shareCount: number;
-    transferExchangeRate: number;
+    /** 분할 수령은 없을 수 있다 */
+    transferExchangeRate?: number;
     acquisitionExchangeRate: number;
     foreignTaxExchangeRate?: number;
     /** 원화 환산 외국납부세액 */

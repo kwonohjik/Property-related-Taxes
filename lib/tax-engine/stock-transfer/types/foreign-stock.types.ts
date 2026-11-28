@@ -99,8 +99,11 @@ export type ForeignStockInput = {
   totalTransferPriceForeign?: number;
   /** 양도 통화코드: "USD" | "JPY" | "EUR" | "HKD" | "CNY" | "GBP" | "OTHER" */
   transferCurrencyCode: string;
-  /** 양도일 기준환율 (원/외화). §178의5① — single 모드에서 사용 */
-  transferExchangeRate: number;
+  /**
+   * 양도일 기준환율 (원/외화). §178의5① — single 모드에서 사용(⑧⑫ 필수).
+   * installments 모드는 화면이 이 칸을 숨겨 없을 수 있다 — 그때 필요경비 지출일 환율 대체도 없다(⑧⑫가 지출일 환율을 요구).
+   */
+  transferExchangeRate?: number;
 
   // ── FS-09 §178의5② 장기할부 분할 수령 ──
   /**
@@ -337,7 +340,8 @@ export type ForeignStockResult = {
   totalTax: number;
 
   // ── 산식 echo (결과 카드 표시용) ──
-  transferExchangeRate: number;
+  /** 입력 echo — 분할 수령은 없을 수 있다 */
+  transferExchangeRate?: number;
   acquisitionExchangeRate: number;
   /**
    * 필요경비에 **실제로 적용된** 환율 echo (영 §178의5①).
@@ -345,9 +349,10 @@ export type ForeignStockResult = {
    * 입력값이 아니라 **fallback 이 반영된 값**이다 — 지출일 환율을 비우면 양도일 환율이
    * 실린다. 결과 화면이 「무슨 환율로 환산됐는가」를 그대로 보여줄 수 있어야 한다
    * (양도가액·취득가액·외국납부세액은 이미 그렇게 하고 있고 필요경비만 빠져 있었다).
+   * 분할 수령에서 지출일 환율·양도일 환율이 둘 다 없으면(= 그 항목 금액 0) `undefined`다.
    */
-  capitalExpenditureExchangeRateApplied: number;
-  transferCostExchangeRateApplied: number;
+  capitalExpenditureExchangeRateApplied?: number;
+  transferCostExchangeRateApplied?: number;
   foreignTaxExchangeRate?: number;
   shareCount: number;
   /**
