@@ -10,6 +10,7 @@
  *    (쌍 중 하나가 양수가 아니면 건너뛴다 — 중복 오류 방지). 외화액 0은 엔진이 환산하지 않으므로(`toKrwUnlessZero`) 환율도 보지 않는다.
  * ⚠️ 필요경비·외국세의 «환율 비움 → 양도일 환율» 대체(`?? transferExchangeRate`)는 엔진이 아직 쓰므로 여기도 같은 쌍을 만든다.
  *    그 대체가 폐지되면(후속 PR) 엔진·이 함수를 함께 고친다 — 쌍 구성이 한 곳이라 어긋나지 않는다.
+ *    대체 대상(양도일 환율)마저 없는 경우의 «미입력» 판정은 아래 `foreignStockExpenseRateIssues`가 맡는다.
  */
 import { fxViolation, type FxViolationTarget } from "@/lib/tax-engine/fx-krw";
 
@@ -168,5 +169,30 @@ export function foreignStockFxIssues(f: ForeignStockFxFacts): ForeignStockFxIssu
     );
   }
 
+  return out;
+}
+
+/**
+ * 필요경비 지출일 환율 **미입력** 판정 — ⑧ validate(3단계) · ⑫ Zod 공용 단일 소스.
+ *
+ * 엔진(`foreign-stock.ts` STEP 4)은 지출일 환율을 비우면 양도일 환율(`transferExchangeRate`)로 환산한다.
+ * 분할 수령 모드는 양도일 환율 칸이 없어(화면이 숨기고 ⑫도 요구하지 않는다) 그 대체 대상이 비어 있을 수 있다 —
+ * 그러면 엔진이 «환율 미입력 불가»로 던져 「화면 통과 ↔ API 400」이 된다(계획서 F-1의 형제 모순).
+ * 그래서 **금액 > 0 · 지출일 환율 없음 · 양도일 환율 없음**이면 지출일 환율 칸을 막는다(엔진이 실패하는 조건과 같다).
+ *
+ * ⚠️ 양도일 환율이 있으면 대체가 그대로 살아 있으므로 막지 않는다 — 대체 자체의 폐지는 Q-2 PR(계획서 PR-2)이 한다.
+ */
+export function foreignStockExpenseRateIssues(f: ForeignStockFxFacts): ForeignStockFxIssue[] {
+  if (positive(f.transferExchangeRate)) return [];
+  const out: ForeignStockFxIssue[] = [];
+  const need = (amount: number | undefined, rate: number | undefined, rateKey: string) => {
+    if (!positive(amount) || rate !== undefined) return;
+    out.push({
+      path: [rateKey],
+      message: `${LABEL[rateKey]}을 입력하세요 — 양도일 기준환율이 없어 대신 쓸 환율이 없습니다 (소득세법 시행령 §178의5①)`,
+    });
+  };
+  need(f.capitalExpenditureForeign, f.capitalExpenditureExchangeRate, "capitalExpenditureExchangeRate");
+  need(f.transferCostForeign, f.transferCostExchangeRate, "transferCostExchangeRate");
   return out;
 }

@@ -12,6 +12,7 @@
  * FX-5 소수 단가 × 주식 수의 부동소수 잔여가 화면에 새지 않는다 (12.34 × 100 = 1,234)
  * FX-6 분할 수령: 양도 외화 echo 없음(회차 표가 대신) · 통화 OTHER는 접두 없음
  * FX-7 echo가 없는 결과(이 필드 전 저장 이력)는 종전처럼 「—」
+ * FX-8 분할 수령 + 양도일 환율 없음(계획서 F-1): 필요경비 적용 환율 echo가 비어도 카드가 렌더된다(종전 `fmtRate(undefined)` 크래시)
  */
 import "fake-indexeddb/auto";
 import React from "react";
@@ -99,5 +100,23 @@ describe("FX — 환율 환산 표의 외화 원금", () => {
     const t = text(legacy);
     expect(t).toContain("— × 1,500 = 300,000,000");
     expect(t).toContain("— × 1,250 = 100,000,000");
+  });
+
+  it("FX-8 분할 수령 + 양도일 환율 없음: 필요경비 적용 환율 「—」 · 카드 렌더", () => {
+    const r = run({
+      ...FOREIGN_BASE,
+      transferExchangeRate: undefined,
+      transferReceiptMode: "installments",
+      transferInstallmentReceipts: [
+        { receiptDate: new Date("2026-06-01"), amountForeign: 100_000, exchangeRate: 1_400 },
+        { receiptDate: new Date("2026-12-02"), amountForeign: 100_000, exchangeRate: 1_500 },
+      ],
+    });
+    expect(r.transferExchangeRate).toBeUndefined();
+    expect(r.capitalExpenditureExchangeRateApplied).toBeUndefined();
+    expect(r.transferPriceKrw).toBe(290_000_000);
+    const t = text(r);
+    expect(t).toContain("100,000 × 1,500 = 150,000,000");
+    expect(t).toContain("지출일 기준환율 — (영 §178의5①)");
   });
 });

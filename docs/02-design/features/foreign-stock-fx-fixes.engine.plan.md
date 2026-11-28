@@ -235,7 +235,7 @@ mutation: M-1 판정 `≥1년` → `>1년` → A-3-3 경계 · M-2 계약금 제
 |---|---|---|---|
 | **PR-1** | 공용 leaf `fx-krw.ts` + 국외 부동산 `fx.ts` re-export + 주식 엔진·이월과세 환산 교체 + ⑧⑫ 패리티 + (Q-5 (b) 시) route 400 매핑 | 없음(결정 불요) | 엔진 → UI(미리보기 3곳 `ForeignStockPriceBlock`·`ForeignCarryoverBlocks`·`StockSidebar`은 leaf 호출) |
 | **PR-2** | #2 — Q-2 결과 반영((a) 경고 1건 / (b)(c) 차단 + FX-3 반전 + Q-2-1) | Q-2 | 엔진 → UI |
-| **PR-3a** | F-1 핫픽스(⑫ `transferExchangeRate` 조건부) — **V-2 브라우저 재현 후**. Q-3 (b)를 곧 할 거면 PR-3로 흡수 | V-2 | 엔진/API |
+| **PR-3a** ✅ | F-1 핫픽스(⑫ `transferExchangeRate` 조건부) — **V-2 브라우저 재현 후**. Q-3 (b)를 곧 할 거면 PR-3로 흡수 · 완료: V-2 재현(POST 400 `transferExchangeRate`) → ⑫ 단일만 필수 · 형제 모순(필요경비 금액>0·지출일 환율 없음·양도일 환율 없음 → 엔진 «환율 미입력 불가») ⑧⑫ 공용 leaf `foreignStockExpenseRateIssues` · 결과 카드 `fmtRate(undefined)` 크래시 가드 | V-2 | 엔진/API |
 | **PR-3** | #3 — Q-3 결과((a) UI 라벨·고지 / (b) 판정 leaf + 14지점) + 법령 상수·manifest | Q-3 · UI 합의 | 엔진 → UI |
 | **PR-4** | #4 라벨 상수 | — | UI |
 

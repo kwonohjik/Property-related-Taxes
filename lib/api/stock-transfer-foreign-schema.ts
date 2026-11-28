@@ -8,6 +8,7 @@
 import { z } from "zod";
 import { foreignCarryoverIssues } from "@/lib/calc/foreign-stock-carryover-required";
 import { foreignStockFxIssues } from "@/lib/calc/foreign-stock-fx-limits";
+import { foreignStockExpenseRateIssues } from "@/lib/calc/foreign-stock-fx-limits";
 import {
   FOREIGN_STOCK_TRACK_START,
   isBeforeForeignStockTrack,
@@ -90,7 +91,8 @@ export const foreignStockInputSchema = z.object({
   perShareTransferPriceForeign: z.number().min(0).optional(),
   totalTransferPriceForeign: z.number().min(0).optional(),
   transferCurrencyCode: z.string().min(1),
-  transferExchangeRate: z.number().positive(),
+  // 단일 수령만 필수(superRefine) — 분할 수령은 양도가액을 수령일별 환율로 환산하고 화면도 이 칸을 숨긴다(계획서 F-1).
+  transferExchangeRate: z.number().positive().optional(),
 
   // ── FS-09 §178의5② 장기할부 분할 수령 ──
   /** 수령 방식: "single"(기본) | "installments"(장기할부) */
@@ -174,6 +176,14 @@ export const foreignStockInputSchema = z.object({
     }
     // 분할 수령 모드에서는 양도가액 필수 검증 생략 (합계 = 배열 합산)
   } else {
+    // single 모드 — 양도일 기준환율 필수 (⑧ `validateStep2Foreign`과 같은 조건)
+    if (d.transferExchangeRate === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["transferExchangeRate"],
+        message: "양도일 기준환율을 입력하세요 (소득세법 시행령 §178의5①)",
+      });
+    }
     // single 모드 — 기존 양도가액 필수성 검증
     if (d.transferPriceMode === "per_share" && (d.perShareTransferPriceForeign == null || d.perShareTransferPriceForeign < 0)) {
       ctx.addIssue({
@@ -234,6 +244,10 @@ export const foreignStockInputSchema = z.object({
   //    **같은 판정**(⑧ `stock-transfer-tax-validate-foreign.ts`와 단일 소스 `foreign-stock-fx-limits.ts`).
   //    ⑫가 놓치면 엔진이 던진 오류가 route에서 500이 된다. 쌍 구성은 엔진 환산 호출과 1:1이다.
   for (const issue of foreignStockFxIssues(d)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: issue.path, message: issue.message });
+  }
+  // ⑩ 필요경비 지출일 환율 — 대신 쓸 양도일 환율도 없으면 필수(분할 수령). ⑧ 3단계와 같은 leaf.
+  for (const issue of foreignStockExpenseRateIssues(d)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: issue.path, message: issue.message });
   }
 

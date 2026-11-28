@@ -50,9 +50,13 @@ function bad(target: FxViolationTarget, reason: string, value?: number): FxViola
  * 환산 가능 여부와 값을 한 번에 — `toKrw`·`tryToKrw`·`toKrwOrNull`·`fxViolation`이 모두 이 함수 하나에서 파생된다.
  * 검사 순서는 종전 `toKrw`와 같다(음수 → 환율>0 → 외화액 상한 → 환율 상한 → 외화액 소수 → 환율 소수 → 수량 → 오버플로).
  */
-function compute(amountForeign: number, exchangeRate: number, quantity: number): { krw: number } | { violation: FxViolation } {
+function compute(
+  amountForeign: number,
+  exchangeRate: number | undefined,
+  quantity: number,
+): { krw: number } | { violation: FxViolation } {
   if (amountForeign < 0) return { violation: bad("amount", "음수일 수 없습니다", amountForeign) };
-  if (!(exchangeRate > 0)) return { violation: bad("rate", "0보다 커야 합니다 (환율 미입력 불가)", exchangeRate) };
+  if (exchangeRate === undefined || !(exchangeRate > 0)) return { violation: bad("rate", "0보다 커야 합니다 (환율 미입력 불가)", exchangeRate) };
   if (amountForeign > FX_MAX_FOREIGN_AMOUNT) {
     return { violation: bad("amount", `${FX_MAX_FOREIGN_AMOUNT.toLocaleString("en-US")} 이하여야 합니다`, amountForeign) };
   }
@@ -89,9 +93,10 @@ function toError(v: FxViolation, path: string): TaxCalculationError {
 
 /**
  * `amountForeign`(외화, ≥ 0) × `exchangeRate`(원/외화, > 0) [× `quantity`(주식 수)]를 원 미만 절사한 정수 원으로 환산한다.
+ * 환율 `undefined`(미입력)는 0 이하와 같은 «환율 미입력 불가» 오류다.
  * @param path 오류 메시지·details에 싣는 입력 경로(예: "assets[0].transfer")
  */
-export function toKrw(amountForeign: number, exchangeRate: number, path = "toKrw", quantity = 1): number {
+export function toKrw(amountForeign: number, exchangeRate: number | undefined, path = "toKrw", quantity = 1): number {
   const r = compute(amountForeign, exchangeRate, quantity);
   if ("violation" in r) throw toError(r.violation, path);
   return r.krw;
@@ -131,6 +136,6 @@ export function fxViolation(amountForeign: number, exchangeRate: number, quantit
  * 외화액이 0이면 환율과 무관하게 0원, 아니면 `toKrw`.
  * 필요경비·외국세처럼 «금액이 없으면 환율 칸이 비어 있는» 항목에 쓴다(`fxViolation`과 같은 규칙).
  */
-export function toKrwUnlessZero(amountForeign: number, exchangeRate: number, path = "toKrw", quantity = 1): number {
+export function toKrwUnlessZero(amountForeign: number, exchangeRate: number | undefined, path = "toKrw", quantity = 1): number {
   return amountForeign === 0 ? 0 : toKrw(amountForeign, exchangeRate, path, quantity);
 }
