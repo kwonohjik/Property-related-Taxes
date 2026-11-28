@@ -332,11 +332,14 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
     netAssetOnlyReason: enumField("netAssetOnlyReason", NET_ASSET_ONLY_REASONS, ""),
     // 종전 레코드는 사유 칸이 하나였고 **양측**에 걸렸다 — 취득 사유 키가 없으면 그 값을 이어받는다(계획서 §14).
     // 키가 있으면 빈 값도 사용자가 고른 «없음»이다.
-    acquisitionNetAssetOnlyReason: enumField(
-      "acquisitionNetAssetOnlyReason" in d ? "acquisitionNetAssetOnlyReason" : "netAssetOnlyReason",
-      NET_ASSET_ONLY_REASONS,
-      "",
-    ),
+    // 단, 취득 후 상장(§165⑤) 레코드는 이어받지 않는다(U-14 리뷰 M-1): 종전 엔진의 §165⑤ 경로는 이 사유를 읽지
+    //   않았으므로, 이어받으면 이력 「다시 계산」의 분자가 순자산 단독으로 바뀌어 과거 세액이 달라진다.
+    acquisitionNetAssetOnlyReason:
+      "acquisitionNetAssetOnlyReason" in d
+        ? enumField("acquisitionNetAssetOnlyReason", NET_ASSET_ONLY_REASONS, "")
+        : acquisitionStdMode === "post_listing"
+          ? ""
+          : enumField("netAssetOnlyReason", NET_ASSET_ONLY_REASONS, ""),
     // 취득 후 상장 분모(상장일 현재) 사유 — 신설 키라 종전 레코드는 «없음»(U-14)
     listingNetAssetOnlyReason: enumField("listingNetAssetOnlyReason", NET_ASSET_ONLY_REASONS, ""),
     expenseMode: enumField("expenseMode", ["actual", "estimated"], "actual"),

@@ -31,6 +31,10 @@ import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-form"
 import { normalizeStockFormData } from "@/lib/stores/calc-wizard-stock-normalize";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
+import { calcPostListingConversion } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
+import { toDate } from "@/lib/api/date-coerce";
+
+const d = (s: string) => toDate(s, "test");
 
 function form(o: Partial<StockTransferFormData> = {}): StockTransferFormData {
   return {
@@ -142,5 +146,38 @@ describe("PL3: §165⑤ 분자·분모의 §165④3 사유", () => {
     const legacy = { ...form() } as Record<string, unknown>;
     delete legacy.listingNetAssetOnlyReason;
     expect(normalizeStockFormData(legacy).listingNetAssetOnlyReason).toBe("");
+  });
+});
+
+describe("PL3 리뷰 후속", () => {
+  it("PL3-7 (M-1) 종전 레코드(취득 사유 키 없음) + 취득 후 상장 — 양도측 사유를 분자로 이어받지 않는다 · 과거 세액 불변", () => {
+    const legacy = { ...form({ netAssetOnlyReason: "no_business_or_short_or_closed" }) } as Record<string, unknown>;
+    delete legacy.acquisitionNetAssetOnlyReason;
+    delete legacy.listingNetAssetOnlyReason;
+    const n = normalizeStockFormData(legacy);
+    expect(n.acquisitionNetAssetOnlyReason).toBe("");
+    expect(ok(n).postListingDetail?.finalPerShareValue).toBe(3_636);
+    // 취득 후 상장이 아닌 종전 레코드는 종전대로 이어받는다(계획서 §14)
+    const unlisted = { ...legacy, marketType: "unlisted", acquisitionStdMode: "" } as Record<string, unknown>;
+    expect(normalizeStockFormData(unlisted).acquisitionNetAssetOnlyReason).toBe("no_business_or_short_or_closed");
+  });
+
+  it("PL3-8 (L-1) §81④1호 월할 가산 + 상장일측 사유 — 전전사업연도도 순자산가치 단독(순손익 공란 허용)", () => {
+    const r = calcPostListingConversion({
+      transferDate: d("2025-06-10"),
+      acquisitionDate: d("2022-01-10"),
+      listingDate: d("2022-05-02"),
+      listingDatePriceAvg1Month: 20_000,
+      listingYearNetAssetPerShare: 5_000,
+      acquisitionYearNetAssetPerShare: 5_000,
+      listingNetAssetOnlyReason: "no_business_or_short_or_closed",
+      acquisitionNetAssetOnlyReason: "no_business_or_short_or_closed",
+      prePriorYearNetAssetPerShare: 3_000,
+      postListingDetail: { unlistedDetailMode: "simple", monthlyAccrualToggle: true },
+    } as unknown as Parameters<typeof calcPostListingConversion>[0]);
+    // 보정 상장일 평가액 = 5,000 + (5,000 − 3,000) × 4/12 = 5,666 · 1주당 floor(20,000 × 5,000 / 5,666) = 17,649
+    expect(r.monthlyAccrualDetail?.prePriorYearPerShareValue).toBe(3_000);
+    expect(r.monthlyAccrualDetail?.adjustedListingYearPerShareValue).toBe(5_666);
+    expect(r.finalPerShareValue).toBe(17_649);
   });
 });

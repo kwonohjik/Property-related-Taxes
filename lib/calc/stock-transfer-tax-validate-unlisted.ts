@@ -184,8 +184,8 @@ function validateTransferSupplementaryPositive(
  *    §165④를 부르는 분기에서만 막는다 — 환산(비상장·거래정지·취득 후 상장)과 매매사례가액(비상장 — 개산공제 기준시가).
  *    양도일 칸은 1단계라 이 화면의 산정방법 칸에 단다.
  * 2. Q-3b — §165④3 순자산 단독 사유가 양도일에 없던 사유면 그 시점의 사유 칸에서 막는다(`isNetAssetOnlyReasonInEra`).
- *    사유를 **읽는** 시점(= 사유 칸이 화면에 있는 시점 · `netAssetOnlyReasonSidesRead`)에서만 — 취득 후 상장(§165⑤)·
- *    실지거래가액에 남은 값은 고칠 칸이 없으므로 막지 않는다.
+ *    사유를 **읽는** 시점(= 사유 칸이 화면에 있는 시점 · `netAssetOnlyReasonSidesRead`)에서만 — 취득 후 상장(§165⑤)은
+ *    분자(취득일)·분모(상장일) 사유 칸을 읽으므로 막고(U-14), 실지거래가액에 남은 값은 고칠 칸이 없으므로 막지 않는다.
  */
 export function validateSection165_4Era(
   form: StockTransferFormData,

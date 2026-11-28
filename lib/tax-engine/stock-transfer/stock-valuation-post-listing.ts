@@ -597,7 +597,7 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
         monthlyAccrualApplied: false,
         weightedBasis,
         listingClosingAvg1Month: listingDatePriceAvg1Month,
-      netAssetOnlyReason,
+        netAssetOnlyReason,
         appliedRules,
         warnings,
         capitalEventTruncation,

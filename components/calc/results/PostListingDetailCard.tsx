@@ -163,7 +163,7 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           <div className="rounded-md border border-rose-200 bg-rose-50/60 px-2 py-1.5 my-1 space-y-0.5 text-rose-800 dark:text-rose-200 dark:bg-rose-950/40">
             <p className="font-medium">월할 가산 보정 (소칙 §81④ 1호 — 같은 사업연도 취득·상장)</p>
             <p>
-              전전사업연도 1주당 가중평균 ={" "}
+              {post.netAssetOnlyReason?.listing ? "전전사업연도 1주당 평가액 (순자산가치 단독)" : "전전사업연도 1주당 가중평균"} ={" "}
               <strong>{post.monthlyAccrualDetail.prePriorYearPerShareValue.toLocaleString()}</strong>
             </p>
             <p>
