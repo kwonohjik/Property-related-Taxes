@@ -499,6 +499,10 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   if (form.acquisitionNetAssetOnlyReason) {
     body.acquisitionNetAssetOnlyReason = form.acquisitionNetAssetOnlyReason;
   }
+  // 취득 후 상장 분모(상장일 현재) 사유 — 그 칸은 §165⑤ 카드에만 있어 그 경로일 때만 싣는다(U-14)
+  if (body.acquiredBeforeListing === true && form.listingNetAssetOnlyReason) {
+    body.listingNetAssetOnlyReason = form.listingNetAssetOnlyReason;
+  }
 
   // ── 필요경비 ──
   // 소령 §163⑥4 — expenseMode는 acquisitionMode에서 100% 자동 도출 (사용자 선택 폐지).

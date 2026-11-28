@@ -25,7 +25,7 @@ import { DateInput } from "@/components/ui/date-input";
 // 엔진 단일 진실 — 평가액 동일 판정(토글 노출 조건) 재구현 금지 (dual-truth 회피)
 // ⚠️ 본칙 가중평균(`calcUnlistedPerShareWeighted`)이 아니라 「제4항에 따른 평가액」으로 비교해야
 //    엔진의 §165⑤ 후단 트리거 판정과 일치한다(80% 하한 단서 + 연혁 게이팅 포함).
-import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { calcPostListingSideValue } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
 import { getValuationWeights } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import type { StockTransferFormData } from "@/lib/stores/calc-wizard-stock-store";
@@ -39,6 +39,7 @@ import { PostListingNetAssetStatement } from "./PostListingNetAssetStatement";
 import { PostListingFormulaPreview } from "./PostListingFormulaPreview";
 import { MonthlyAccrual81Section } from "./MonthlyAccrual81Section";
 import { PostListingAmountInputSection } from "./PostListingAmountInputSection";
+import { PostListingNetAssetOnlyReasonFields } from "./PostListingNetAssetOnlyReasonFields";
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 interface PostListingValuationCardProps {
@@ -74,18 +75,23 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
       : undefined;
   // 2007.2.27. 이전 양도는 max 산식 — 가중치가 없어 2:3 반전 토글도 의미가 없다
   const isMaxModel = evalDate !== undefined && getValuationWeights(evalDate).model === "max";
+  // §165④3 사유가 있는 쪽은 순자산가치 단독 — 엔진과 같은 함수(U-14). 그 쪽 순손익 칸은 숨긴다(엔진이 쓰지 않는다).
+  const listingReason = form.listingNetAssetOnlyReason || undefined;
+  const acquisitionReason = form.acquisitionNetAssetOnlyReason || undefined;
   const simpleListingEval = evalDate
-    ? calcSection165_4Value(
+    ? calcPostListingSideValue(
         parseAmount(form.listingYearNetIncomePerShare),
         parseAmount(form.listingYearNetAssetPerShare),
+        listingReason,
         heavyRE,
         evalDate,
       ).value
     : 0;
   const simpleAcqEval = evalDate
-    ? calcSection165_4Value(
+    ? calcPostListingSideValue(
         parseAmount(form.acquisitionYearNetIncomePerShare),
         parseAmount(form.acquisitionYearNetAssetPerShare),
+        acquisitionReason,
         heavyRE,
         evalDate,
       ).value
@@ -95,9 +101,9 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
   //    **대용품**이었고, 그 탓에 결손·자본잠식으로 **음수가 같은 경우**를 함께 막았다.
   //    ⇒ 술어를 의도대로 바꾼다: 「값이 양수인가」 → 「**4필드가 입력되었는가**」. anchor AT-1·AT-2
   const simpleFourFieldsEntered =
-    !!form.listingYearNetIncomePerShare &&
+    (!!form.listingYearNetIncomePerShare || !!listingReason) &&
     !!form.listingYearNetAssetPerShare &&
-    !!form.acquisitionYearNetIncomePerShare &&
+    (!!form.acquisitionYearNetIncomePerShare || !!acquisitionReason) &&
     !!form.acquisitionYearNetAssetPerShare;
   const showAccrualToggle =
     mode !== "simple" ||
@@ -284,6 +290,14 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
           {/* §165④1호 괄호 — ②의 가중치(3:2 ↔ 2:3)를 정한다. 모든 입력 방식 공통이라 ② 맨 위.
               max 산식(2007.2.27. 이전 양도)에는 가중치가 없어 숨긴다 */}
           {!isMaxModel && <ReversalCorpToggle form={form} onChange={onChange} />}
+          {/* §165④3 사유 — 분모(상장일 현재)·분자(취득일 현재) 따로. 가중평균 입력보다 먼저 정한다(계산 순서) */}
+          <PostListingNetAssetOnlyReasonFields form={form} onChange={onChange} />
+          {(listingReason || acquisitionReason) && !(mode === "simple" && valueMode === "direct") && (
+            <p className="text-caption text-amber-700 leading-relaxed dark:text-amber-300/90">
+              {[listingReason && "상장연도", acquisitionReason && "취득연도"].filter(Boolean).join("·")} 평가는
+              순자산가치 단독(§165④3)이라 아래 그 연도의 순손익 입력은 계산에 쓰지 않습니다(비워 두어도 됩니다).
+            </p>
+          )}
           {mode === "simple" ? (
             <>
               {/* 값 입력 방식 — 결과값 직접 ↔ 순액에서 계산 (계획서 Q-1: 간이 모드 «안»의 하위 토글) */}
@@ -313,9 +327,11 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
                   <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3 dark:bg-amber-950/40">
                     <p className="text-sm font-medium text-amber-800 mb-3 dark:text-amber-200">상장연도 비상장 보충적 평가</p>
                     <div className="space-y-3">
-                      <CurrencyInput label="상장일 직전 사업연도 1주당 순손익가치" required allowNegative
-                        value={form.listingYearNetIncomePerShare}
-                        onChange={(v) => onChange({ listingYearNetIncomePerShare: v })} />
+                      {!listingReason && (
+                        <CurrencyInput label="상장일 직전 사업연도 1주당 순손익가치" required allowNegative
+                          value={form.listingYearNetIncomePerShare}
+                          onChange={(v) => onChange({ listingYearNetIncomePerShare: v })} />
+                      )}
                       <CurrencyInput label="상장일 직전 사업연도 1주당 순자산가치" required allowNegative
                         value={form.listingYearNetAssetPerShare}
                         onChange={(v) => onChange({ listingYearNetAssetPerShare: v })} />
@@ -324,9 +340,11 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
                   <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3 dark:bg-amber-950/40">
                     <p className="text-sm font-medium text-amber-800 mb-3 dark:text-amber-200">취득연도 비상장 보충적 평가</p>
                     <div className="space-y-3">
-                      <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required allowNegative
-                        value={form.acquisitionYearNetIncomePerShare}
-                        onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })} />
+                      {!acquisitionReason && (
+                        <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required allowNegative
+                          value={form.acquisitionYearNetIncomePerShare}
+                          onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })} />
+                      )}
                       <CurrencyInput label="취득일 직전 사업연도 1주당 순자산가치" required allowNegative
                         value={form.acquisitionYearNetAssetPerShare}
                         onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })} />
@@ -375,9 +393,11 @@ export function PostListingValuationCard({ form, onChange }: PostListingValuatio
                 <div className="rounded-lg border border-amber-200/60 bg-amber-50/50 px-4 py-3 dark:bg-amber-950/40">
                   <p className="text-sm font-medium text-amber-800 mb-3 dark:text-amber-200">취득일 직전 사업연도 1주당 가치 (직접 입력)</p>
                   <div className="space-y-3">
-                    <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required allowNegative
-                      value={form.acquisitionYearNetIncomePerShare}
-                      onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })} />
+                    {!acquisitionReason && (
+                      <CurrencyInput label="취득일 직전 사업연도 1주당 순손익가치" required allowNegative
+                        value={form.acquisitionYearNetIncomePerShare}
+                        onChange={(v) => onChange({ acquisitionYearNetIncomePerShare: v })} />
+                    )}
                     <CurrencyInput label="취득일 직전 사업연도 1주당 순자산가치" required allowNegative
                       value={form.acquisitionYearNetAssetPerShare}
                       onChange={(v) => onChange({ acquisitionYearNetAssetPerShare: v })} />

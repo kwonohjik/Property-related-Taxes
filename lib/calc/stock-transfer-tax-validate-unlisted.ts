@@ -213,12 +213,16 @@ export function validateSection165_4Era(
     haltAtAcquisition: stdMode === "halt_acquisition",
     acqFaceValueOnly: form.acqFaceValueOnly === true,
     donorConversion: isDonorConversionForm(form),
+    postListing: stdMode === "post_listing",
   });
   if (reads.transfer && !isNetAssetOnlyReasonInEra(form.netAssetOnlyReason || undefined, td)) {
     errors.push({ field: "netAssetOnlyReason", message: UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA, severity: "error" });
   }
   if (reads.acquisition && !isNetAssetOnlyReasonInEra(form.acquisitionNetAssetOnlyReason || undefined, td)) {
     errors.push({ field: "acquisitionNetAssetOnlyReason", message: UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA, severity: "error" });
+  }
+  if (reads.listing && !isNetAssetOnlyReasonInEra(form.listingNetAssetOnlyReason || undefined, td)) {
+    errors.push({ field: "listingNetAssetOnlyReason", message: UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA, severity: "error" });
   }
 }
 

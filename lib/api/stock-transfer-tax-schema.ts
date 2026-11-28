@@ -386,6 +386,8 @@ export const stockTransferInputSchema = z.object({
   // 순자산 단독 평가 사유 §165④3
   netAssetOnlyReason: netAssetOnlyReasonSchema.optional(),
   acquisitionNetAssetOnlyReason: netAssetOnlyReasonSchema.optional(),
+  /** 취득 후 상장(§165⑤·⑥) 분모 — 상장일 현재 평가의 §165④3 사유 (U-14) */
+  listingNetAssetOnlyReason: netAssetOnlyReasonSchema.optional(),
 
   // 필요경비
   expenseMode: expenseModeSchema,

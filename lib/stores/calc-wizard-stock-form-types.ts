@@ -325,6 +325,8 @@ export interface StockTransferFormData {
   netAssetOnlyReason: "liquidation_or_owner_death" | "no_business_or_short_or_closed" | "consecutive_loss_3y" | "stock_holding_company" | "remaining_term_under_3y" | "";
   /** 취득 당시 평가의 §165④3 사유 — `netAssetOnlyReason`은 양도 당시 (계획서 `stock-165-4-valuation-followups.plan.md` §14) */
   acquisitionNetAssetOnlyReason: StockTransferFormData["netAssetOnlyReason"];
+  /** 취득 후 상장(§165⑤·⑥) 분모 — 상장일 현재 평가의 §165④3 사유. 분자는 `acquisitionNetAssetOnlyReason` (U-14) */
+  listingNetAssetOnlyReason: StockTransferFormData["netAssetOnlyReason"];
 
   // ── 필요경비 ──
   expenseMode: "actual" | "estimated";

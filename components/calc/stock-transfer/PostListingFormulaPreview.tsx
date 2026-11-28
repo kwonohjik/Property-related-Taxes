@@ -20,7 +20,8 @@ import { useMemo } from "react";
 import { parseAmount } from "@/components/calc/inputs/CurrencyInput";
 // ⚠️ 본칙 가중평균(`calcUnlistedPerShareWeighted`)이 아니라 「제4항에 따른 평가액」을 보여야
 //    엔진 결과와 일치한다 — §165④1 단서(80% 하한)와 연혁 게이팅이 여기에 들어 있다.
-import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+// §165④3 사유가 있는 쪽은 순자산가치 단독 — 엔진과 같은 함수(U-14)
+import { calcPostListingSideValue } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
 import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
 import {
@@ -56,6 +57,19 @@ interface StageData {
   isHeavyRE: boolean;
   /** 2007.2.27. 이전 양도 — max 산식(가중치 없음) */
   isMaxModel: boolean;
+  /** §165④3 사유로 순자산가치 단독인 쪽 */
+  listingNaOnly: boolean;
+  acqNaOnly: boolean;
+}
+
+/** 순자산가치 단독 줄 — 가중평균·80% 하한 대신 (소득세법 시행령 §165④3) */
+function NetAssetOnlyRow({ netAsset, value }: { netAsset: number; value: number }) {
+  return (
+    <p>
+      = 순자산가치 {netAsset.toLocaleString()} → <strong>{value.toLocaleString()}</strong>{" "}
+      <span className="text-caption">(순자산가치 단독 — 소득세법 시행령 §165④3)</span>
+    </p>
+  );
 }
 
 function PlaceholderRow({ message }: { message: string }) {
@@ -116,10 +130,14 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
       }
     }
 
+    // §165④3 사유가 있는 쪽은 순손익가치를 보지 않는다(엔진 `calcPostListingSideValue`)
+    const listingReason = form.listingNetAssetOnlyReason || undefined;
+    const acqReason = form.acquisitionNetAssetOnlyReason || undefined;
+
     // 단계별 활성화 — 단계별로 정의된 임계 부분 입력 시도
     const stage1Active = listingAvg > 0;
-    const stage2Active = listingNI > 0 && listingNA > 0;
-    const stage3Active = acqNI > 0 && acqNA > 0;
+    const stage2Active = (listingNI > 0 || !!listingReason) && listingNA > 0;
+    const stage3Active = (acqNI > 0 || !!acqReason) && acqNA > 0;
 
     // 양도일 미입력·형식오류면 연혁 게이팅 기준이 없다 → 프리뷰 미산출(임의 기준일 fallback 금지)
     // 2000.4.2. 이전 양도도 미산출 — 산식이 달라 계산하지 않는다(⑧·⑫ 차단)
@@ -127,11 +145,11 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
     const evalDate = td && !isNaN(td.getTime()) && !isSection165_4EraUnsupported(td) ? td : undefined;
     const listingSec =
       stage2Active && evalDate
-        ? calcSection165_4Value(listingNI, listingNA, isHeavyRE, evalDate)
+        ? calcPostListingSideValue(listingNI, listingNA, listingReason, isHeavyRE, evalDate)
         : undefined;
     const acqSec =
       stage3Active && evalDate
-        ? calcSection165_4Value(acqNI, acqNA, isHeavyRE, evalDate)
+        ? calcPostListingSideValue(acqNI, acqNA, acqReason, isHeavyRE, evalDate)
         : undefined;
     const listingEval = listingSec?.value ?? 0;
     const acqEval = acqSec?.value ?? 0;
@@ -150,6 +168,8 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
       acqFloorApplied: acqSec?.floorApplied ?? false,
       perShareStdPrice, totalAcqPrice, shareCount, isHeavyRE,
       isMaxModel: (listingSec ?? acqSec)?.model === "max",
+      listingNaOnly: !!listingReason,
+      acqNaOnly: !!acqReason,
     };
   }, [form, mode, isHeavyRE, shareCount]);
 
@@ -176,7 +196,9 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
           <p className="font-medium text-violet-800 dark:text-violet-200">[2] 상장연도 1주당 평가액</p>
           {(data.listingEval ?? 0) > 0 ? (
             <div className="space-y-0.5">
-              {data.isMaxModel ? (
+              {data.listingNaOnly ? (
+                <NetAssetOnlyRow netAsset={data.listingNA ?? 0} value={data.listingEval ?? 0} />
+              ) : data.isMaxModel ? (
                 <p>
                   = 순손익가치 {(data.listingNI ?? 0).toLocaleString()}·순자산가치{" "}
                   {(data.listingNA ?? 0).toLocaleString()} 중 큰 금액 ={" "}
@@ -203,7 +225,9 @@ export function PostListingFormulaPreview({ form }: PostListingFormulaPreviewPro
           <p className="font-medium text-violet-800 dark:text-violet-200">[3] 취득연도 1주당 평가액</p>
           {(data.acqEval ?? 0) > 0 ? (
             <div className="space-y-0.5">
-              {data.isMaxModel ? (
+              {data.acqNaOnly ? (
+                <NetAssetOnlyRow netAsset={data.acqNA ?? 0} value={data.acqEval ?? 0} />
+              ) : data.isMaxModel ? (
                 <p>
                   = 순손익가치 {(data.acqNI ?? 0).toLocaleString()}·순자산가치{" "}
                   {(data.acqNA ?? 0).toLocaleString()} 중 큰 금액 ={" "}

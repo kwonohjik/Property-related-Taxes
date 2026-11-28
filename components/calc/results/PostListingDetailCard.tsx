@@ -19,6 +19,7 @@ import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/
 import { Frac } from "@/components/calc/results/shared/FormulaParts";
 import type { Section165_4Model } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { UNLISTED_MESSAGES } from "@/lib/tax-engine/stock-transfer/unlisted-messages";
+import { netAssetOnlyRuleRef } from "@/lib/tax-engine/stock-transfer/net-asset-only-basis";
 
 interface PostListingDetailCardProps {
   result: StockTransferResult;
@@ -39,7 +40,10 @@ function WeightedAvgRow({
   naWeight,
   floorApplied,
   value,
+  netAssetOnlyReason,
 }: {
+  /** §165④3 사유 echo — 있으면 그 쪽은 순자산가치 단독(가중평균·80% 하한 없음, U-14) */
+  netAssetOnlyReason?: Parameters<typeof netAssetOnlyRuleRef>[0];
   label: string;
   basis?: { netIncomeValue: number; netAssetValue: number; weightedRaw: number };
   model?: Section165_4Model;
@@ -48,6 +52,15 @@ function WeightedAvgRow({
   floorApplied: boolean;
   value: number;
 }) {
+  if (netAssetOnlyReason && basis) {
+    return (
+      <p>
+        {label} = 순자산가치 단독 {basis.netAssetValue.toLocaleString()} = <strong>{value.toLocaleString()}</strong>{" "}
+        <span className="text-caption">({netAssetOnlyRuleRef(netAssetOnlyReason)} — 가중평균·80% 하한 대신 순자산가치)</span>
+      </p>
+    );
+  }
+
   if (!basis || niWeight === undefined || naWeight === undefined) {
     return (
       <p>
@@ -127,7 +140,8 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           </div>
         )}
         <WeightedAvgRow
-          label={post.weightedBasis?.model === "max" ? "상장연도 1주당 평가액" : "상장연도 1주당 가중평균"}
+          label={post.weightedBasis?.model === "max" || post.netAssetOnlyReason?.listing ? "상장연도 1주당 평가액" : "상장연도 1주당 가중평균"}
+          netAssetOnlyReason={post.netAssetOnlyReason?.listing}
           basis={post.weightedBasis?.listing}
           model={post.weightedBasis?.model}
           niWeight={post.weightedBasis?.niWeight}
@@ -136,7 +150,8 @@ export function PostListingDetailCard({ result }: PostListingDetailCardProps) {
           value={post.listingYearPerShareValue}
         />
         <WeightedAvgRow
-          label={post.weightedBasis?.model === "max" ? "취득연도 1주당 평가액" : "취득연도 1주당 가중평균"}
+          label={post.weightedBasis?.model === "max" || post.netAssetOnlyReason?.acquisition ? "취득연도 1주당 평가액" : "취득연도 1주당 가중평균"}
+          netAssetOnlyReason={post.netAssetOnlyReason?.acquisition}
           basis={post.weightedBasis?.acquisition}
           model={post.weightedBasis?.model}
           niWeight={post.weightedBasis?.niWeight}

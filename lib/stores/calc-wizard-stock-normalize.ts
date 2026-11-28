@@ -337,6 +337,8 @@ export function normalizeStockFormData(raw: unknown): StockTransferFormData {
       NET_ASSET_ONLY_REASONS,
       "",
     ),
+    // 취득 후 상장 분모(상장일 현재) 사유 — 신설 키라 종전 레코드는 «없음»(U-14)
+    listingNetAssetOnlyReason: enumField("listingNetAssetOnlyReason", NET_ASSET_ONLY_REASONS, ""),
     expenseMode: enumField("expenseMode", ["actual", "estimated"], "actual"),
     actualExpenses: strField("actualExpenses"),
     filingType: enumField("filingType", ["preliminary", "final", "revised"], defaults.filingType),

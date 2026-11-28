@@ -62,6 +62,9 @@ import type {
 import { STOCK } from "@/lib/tax-engine/legal-codes/stock";
 import { calcAccrualMonths, apply81_4Accrual } from "./apply-81-4-accrual";
 import { calcSection165_4Value, hasNetAssetZeroFloor } from "./valuation-165-4-basis";
+import { calcNetAssetOnlyValue } from "./valuation-165-4-basis";
+import type { Section165_4Value } from "./valuation-165-4-basis";
+import { netAssetOnlyRuleRef } from "./net-asset-only-basis";
 import { isSection165_4_1ReversalCorp } from "./section165-4-reversal-corp";
 
 // §81④ 월할 헬퍼는 apply-81-4-accrual.ts로 추출(본체·준용 공용). import 경로 보존 위해 re-export.
@@ -319,6 +322,32 @@ export function calcUnlistedPerShareWeighted(
   return Math.floor(weighted);
 }
 
+type NetAssetOnlyReason = NonNullable<StockTransferInput["netAssetOnlyReason"]>;
+
+/**
+ * §165⑤ 환산식 한쪽(분자 = 취득일 현재 · 분모 = 상장일 현재)의 「제4항에 따른 평가액」 (U-14).
+ *
+ * 제4항에는 3호(각 목 사유 → 「제1호 각 목 외의 부분에도 불구하고 제1호나목의 계산식에 따라 평가한 가액」)도
+ * 들어 있다 ⇒ 그 쪽에 사유가 있으면 가중평균·80% 하한(1호 단서) 대신 **순자산가치 단독**(0 하한은 정본)이다.
+ * 사유가 없으면 1호(`calcSection165_4Value`). 엔진·⑤ 미리보기·⑧ 월할 경고가 **이 함수 하나**를 부른다.
+ *
+ * ⚠️ §165⑧1호 후단(라목 주식등)은 넣지 않는다 — 그 규정은 「법 제99조제1항제4호의 주식등」의 평가이고,
+ *    §165⑤가 부르는 것은 「제4항에 따른 평가액」이다.
+ * 순자산 단독이어도 `model`·가중치는 1호 값을 그대로 돌려준다(결과 카드 다른 쪽 산식 표시용) — `value`만 다르다.
+ */
+export function calcPostListingSideValue(
+  netIncomeValue: number | undefined,
+  netAssetValue: number,
+  reason: NetAssetOnlyReason | undefined,
+  isHeavyRE: boolean,
+  transferDate: Date,
+): Section165_4Value {
+  const weighted = calcSection165_4Value(netIncomeValue ?? 0, netAssetValue, isHeavyRE, transferDate);
+  if (!reason) return weighted;
+  const value = calcNetAssetOnlyValue(netAssetValue, transferDate);
+  return { ...weighted, value, weightedRaw: value, floorApplied: false };
+}
+
 /**
  * 취득 후 상장 환산취득가 계산 (simple 모드 — 기존 4 결과값 직접 입력).
  *
@@ -336,6 +365,9 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     postListingDetail,
   } = input;
 
+  // §165④3 사유 — 분모(상장일 현재)·분자(취득일 현재) 따로 (U-14). 사유가 있는 쪽은 순손익가치가 필요 없다.
+  const listingReason = input.listingNetAssetOnlyReason;
+  const acquisitionReason = input.acquisitionNetAssetOnlyReason;
   const mode = postListingDetail?.unlistedDetailMode ?? "simple";
   const appliedRules: string[] = [STOCK.ENFORCEMENT_DECREE_165_5_POST_LISTING];
   const warnings: string[] = [];
@@ -360,9 +392,9 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
    */
   if (
     listingDatePriceAvg1Month === undefined ||
-    listingYearNetIncomePerShare === undefined ||
+    (listingYearNetIncomePerShare === undefined && !listingReason) ||
     listingYearNetAssetPerShare === undefined ||
-    acquisitionYearNetIncomePerShare === undefined ||
+    (acquisitionYearNetIncomePerShare === undefined && !acquisitionReason) ||
     acquisitionYearNetAssetPerShare === undefined
   ) {
     warnings.push("취득 후 상장 환산에 필요한 입력값이 없습니다. validate에서 차단되어야 합니다.");
@@ -417,23 +449,34 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
   // §165④1호 괄호(2:3) — 「제4항에 따른 평가액」이므로 같은 대상 법인 판정(leaf · S-1c-2)
   const isHeavyRE = isSection165_4_1ReversalCorp(input);
 
-  // 상장일 직전 사업연도 「제4항에 따른 평가액」(= 환산식 분모)
-  const listingEval = calcSection165_4Value(
+  // 상장일 직전 사업연도 「제4항에 따른 평가액」(= 환산식 분모) — §165④3 사유면 순자산가치 단독
+  const listingEval = calcPostListingSideValue(
     listingYearNetIncomePerShare,
     listingYearNetAssetPerShare,
+    listingReason,
     isHeavyRE,
     input.transferDate,
   );
   const listingYearPerShareValue = listingEval.value;
 
-  // 취득일 직전 사업연도 「제4항에 따른 평가액」(= 환산식 분자)
-  const acquisitionEval = calcSection165_4Value(
+  // 취득일 직전 사업연도 「제4항에 따른 평가액」(= 환산식 분자) — §165④3 사유면 순자산가치 단독
+  const acquisitionEval = calcPostListingSideValue(
     acquisitionYearNetIncomePerShare,
     acquisitionYearNetAssetPerShare,
+    acquisitionReason,
     isHeavyRE,
     input.transferDate,
   );
   const acquisitionYearPerShareValue = acquisitionEval.value;
+  const netAssetOnlyReason: PostListingValuationResult["netAssetOnlyReason"] =
+    listingReason || acquisitionReason
+      ? {
+          ...(listingReason ? { listing: listingReason } : {}),
+          ...(acquisitionReason ? { acquisition: acquisitionReason } : {}),
+        }
+      : undefined;
+  if (listingReason) appliedRules.push(`${netAssetOnlyRuleRef(listingReason)} — 상장일 현재 순자산가치 단독`);
+  if (acquisitionReason) appliedRules.push(`${netAssetOnlyRuleRef(acquisitionReason)} — 취득일 현재 순자산가치 단독`);
 
   // [표시 전용 echo] 결과 카드가 가중평균 산식을 라벨·변수값으로 펼치기 위한 산출 근거.
   // 가중치는 실제 적용값(연혁·§94①4다목 반전 반영)이라 화면이 3/5·2/5를 추정하지 않아도 된다.
@@ -442,12 +485,12 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     niWeight: listingEval.niWeight,
     naWeight: listingEval.naWeight,
     listing: {
-      netIncomeValue: listingYearNetIncomePerShare,
+      netIncomeValue: listingYearNetIncomePerShare ?? 0,
       netAssetValue: listingYearNetAssetPerShare,
       weightedRaw: Math.floor(listingEval.weightedRaw),
     },
     acquisition: {
-      netIncomeValue: acquisitionYearNetIncomePerShare,
+      netIncomeValue: acquisitionYearNetIncomePerShare ?? 0,
       netAssetValue: acquisitionYearNetAssetPerShare,
       weightedRaw: Math.floor(acquisitionEval.weightedRaw),
     },
@@ -475,6 +518,7 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
       monthlyAccrualApplied: false,
       weightedBasis,
       listingClosingAvg1Month: listingDatePriceAvg1Month,
+      netAssetOnlyReason,
       appliedRules,
       warnings,
       capitalEventTruncation,
@@ -490,8 +534,9 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
   // ──────────────────────────────────────────────────────────
   const valuesEqual = acquisitionYearPerShareValue === listingYearPerShareValue;
   const accrualToggle = postListingDetail?.monthlyAccrualToggle === true;
+  // 전전사업연도는 보정 대상(상장일 현재 평가액)과 같은 기준 — 상장일측 사유면 순자산가치 단독이라 순손익가치가 필요 없다
   const hasPrePrior =
-    typeof input.prePriorYearNetIncomePerShare === "number" &&
+    (typeof input.prePriorYearNetIncomePerShare === "number" || !!listingReason) &&
     typeof input.prePriorYearNetAssetPerShare === "number" &&
     input.listingDate instanceof Date;
 
@@ -528,9 +573,10 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     //    비상장주식의 그 산정 방법이 곧 §165④(**단서 = 80% 하한 「평가액으로 한다」**)이므로
     //    전전연도 값에도 하한이 따라온다. `stock-valuation-unlisted.ts` §165⑨ 블록도 **함께** 고쳤다.
     //    anchor: `__tests__/tax-engine/stock-transfer/section81-4-preprior-floor80.anchor.test.ts`
-    const prePrior = calcSection165_4Value(
-      input.prePriorYearNetIncomePerShare!,
+    const prePrior = calcPostListingSideValue(
+      input.prePriorYearNetIncomePerShare,
       input.prePriorYearNetAssetPerShare!,
+      listingReason,
       isHeavyRE,
       input.transferDate,
     ).value;
@@ -551,6 +597,7 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
         monthlyAccrualApplied: false,
         weightedBasis,
         listingClosingAvg1Month: listingDatePriceAvg1Month,
+      netAssetOnlyReason,
         appliedRules,
         warnings,
         capitalEventTruncation,
@@ -588,6 +635,7 @@ export function calcPostListingConversion(input: StockTransferInput): PostListin
     monthlyAccrualDetail,
     weightedBasis,
     listingClosingAvg1Month: listingDatePriceAvg1Month,
+    netAssetOnlyReason,
     capitalEventTruncation,
     appliedRules,
     warnings,
