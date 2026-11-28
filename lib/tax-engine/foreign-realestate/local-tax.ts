@@ -21,7 +21,7 @@
  *     「국외자산의 양도소득에 대하여 … 소득세법 제118조의6제1항제1호에 따라 납부세액을 공제한 경우 그 공제금액의 100분의 10에
  *     상당하는 금액을 양도소득분 개인지방소득 산출세액에서 공제받을 수 있다」(시행본 2020.01.15·2023.03.14·2026.06.02 동일).
  *     필요경비 산입방법(2호)은 이 공제 대상이 아니라 과세표준(§103③)이 줄어드는 것으로만 반영된다.
- *     「100분의 10」의 원 미만 처리는 법 무규정 — 원 미만 절사 규약(`creditWon = floor(공제금액 ÷ 10)`).
+ *     「100분의 10」의 끝수는 법 무규정 — 사용자 결정(2026-11-28 · 재제안 금지)으로 **10원 미만 절사**(`creditWon = floor(공제금액 ÷ 100) × 10`).
  *
  * 국내 양도소득세 지방소득세(`transfer-tax-finalize.ts` 「결정세액 × 10% 원 미만」)와 절사 단위가 다르다 — 이 모듈은 국외 전용이다.
  * 끝수 처리는 `truncateLocalIncomeTax` **한 함수**에만 있다(사용자가 절사 단위를 따로 정하는 중 — 바꿀 때 이 함수만 고친다).
@@ -92,9 +92,9 @@ export function localIncomeTaxBeforeCredit(
   return Math.max(0, gross - b.deduction / 10);
 }
 
-/** 지방세특례제한법 §97③ — 세액공제방법 공제금액(소득세)의 100분의 10, 원 미만 절사. 지방소득세 산출세액을 넘지 못한다(지방세법 §103의4 단서). */
+/** 지방세특례제한법 §97③ — 세액공제방법 공제금액(소득세)의 100분의 10, 10원 미만 절사(사용자 결정 2026-11-28). 지방소득세 산출세액을 넘지 못한다(지방세법 §103의4 단서). */
 export function localForeignTaxCredit(incomeTaxCreditApplied: number, localTaxBeforeCredit: number): number {
-  return Math.min(Math.floor(Math.max(0, incomeTaxCreditApplied) / 10), localTaxBeforeCredit);
+  return Math.min(Math.floor(Math.max(0, incomeTaxCreditApplied) / 100) * 10, localTaxBeforeCredit);
 }
 
 /** 개인지방소득세 = 끝수 처리( §92① 산출세액 − §97③ 외국납부세액 공제 ). 공제가 없으면 종전 PR-2 값과 같다. */
