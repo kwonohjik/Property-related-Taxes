@@ -39,6 +39,7 @@ import {
   SECTION_53_8_2_FAIL_LABELS,
 } from "./data/stock-premium-exclusion-labels";
 import { evaluateSection53_8_2 } from "./property-valuation/section-53-8-2-gate";
+import { hasSection54_4Proviso } from "./property-valuation/section-54-4-proviso-era";
 import type {
   StockPremiumExclusionReason,
   Section53_8_2FailReason,
@@ -562,6 +563,8 @@ function resolveWeightedNetIncome3yForGoodwill(data: UnlistedStockData): number 
 export function calcUnlistedStockPerShareValue(
   data: UnlistedStockData,
   isRealEstateHeavy: boolean,
+  /** 평가기준일(상속개시일·증여일) — §54④ 단서 연혁 게이트(U-03). 미전달 시 현행 단서 적용. */
+  evaluationDate?: Date,
 ): {
   perShareIncomeValue: number;
   perShareAssetValue: number;
@@ -653,13 +656,12 @@ export function calcUnlistedStockPerShareValue(
       case "remaining_3y":    // §54④ 6호 (잔여 존속기한 3년 이내)
         perShareFinalValue = perShareAssetValue;
         break;
-      // 3호·5호: 가중평균 < 1주당 순자산가치인 경우만 순자산가치 적용
-      //   ⚠️ 단서는 평가기준일 2026.2.27. 이후만(U-03) — 간편평가는 세액 경로에 평가기준일이 없어(U-18)
-      //      연혁 게이트를 U-18과 함께 넣는다. V2는 unlisted-orchestrator가 이미 게이트한다.
+      // 3호·5호: 가중평균 < 1주당 순자산가치인 경우만 순자산가치 적용 (단서 — 평가기준일 2026.2.27. 이후)
+      //   그 전 평가기준일은 단서 신설 전이라 무조건 순자산가치 (부칙 <제36131호> 제11조 · U-03)
       case "real_estate_80":  // §54④ 3호 (부동산 80%)
       case "stock_80":        // §54④ 5호 (주식 80%)
         perShareFinalValue =
-          perShareWeightedValue < perShareAssetValue
+          !hasSection54_4Proviso(evaluationDate) || perShareWeightedValue < perShareAssetValue
             ? perShareAssetValue
             : perShareWeightedValue;
         break;

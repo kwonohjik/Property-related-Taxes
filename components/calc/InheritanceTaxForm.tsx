@@ -226,7 +226,7 @@ export function InheritanceTaxForm() {
   const autos = useMemo(
     () => ({
       spouse: suggestSpouseActualAmount(autoAllItems, form.heirs, form.debtItems),
-      netFin: suggestNetFinancialAssets(autoAllItems, form.debtItems),
+      netFin: suggestNetFinancialAssets(autoAllItems, form.debtItems, form.deathDate || undefined),
       cohabit: deriveCohabitHouseStdPrice(autoAllItems, form.heirs),
       farming: suggestFarmingAssetValue(autoAllItems, form.farming, form.deathDate),
       legatee: suggestLegateeAmountNonHeir(autoAllItems, form.heirs),

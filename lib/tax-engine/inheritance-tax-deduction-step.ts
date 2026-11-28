@@ -220,6 +220,7 @@ export function runInheritanceDeductionStep(
     input.estateItems,
     input.debtItems,
     collateralDebts,
+    input.deathDate,
   );
 
   // override가 명시되어 있으면 그대로, 없으면 자동 계산값 사용

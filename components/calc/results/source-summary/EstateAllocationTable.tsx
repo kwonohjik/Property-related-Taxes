@@ -53,7 +53,7 @@ export function EstateAllocationTable({
   );
 
   const totalValuation = estateItems.reduce(
-    (acc, it) => acc + resolveValuation(it),
+    (acc, it) => acc + resolveValuation(it, deathDate),
     0,
   );
   const totalByHeir = (heirId: string) =>
@@ -96,7 +96,7 @@ export function EstateAllocationTable({
         </thead>
         <tbody>
           {orderedGroups.map((g) => (
-            <GroupRows key={g.group} group={g} heirs={heirs} />
+            <GroupRows key={g.group} group={g} heirs={heirs} deathDate={deathDate} />
           ))}
           {/* 상속재산 합계 */}
           <tr className="bg-amber-50 font-semibold dark:bg-amber-950/40">
@@ -168,9 +168,11 @@ export function EstateAllocationTable({
 function GroupRows({
   group,
   heirs,
+  deathDate,
 }: {
   group: GroupedEstateItems;
   heirs: Heir[];
+  deathDate?: string;
 }) {
   return (
     <>
@@ -184,7 +186,7 @@ function GroupRows({
             {formatQuantity(item)}
           </td>
           <td className="border border-slate-200 px-2 py-1.5 text-right font-mono tabular-nums whitespace-nowrap">
-            {resolveValuation(item).toLocaleString()}
+            {resolveValuation(item, deathDate).toLocaleString()}
           </td>
           {heirs.map((h) => (
             <td

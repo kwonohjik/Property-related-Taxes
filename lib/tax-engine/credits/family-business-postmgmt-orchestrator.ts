@@ -247,7 +247,7 @@ export function buildFamilyBusinessPostMgmtMeta(args: {
         id: i.id,
         // J-1: §60 평가 우선순위(시가→감정가→기준시가→주식 보충평가) 통일.
         //   marketValue 직접 사용 시 비상장주식 V2·부동산(감정가·기준시가)은 value=0 누락.
-        value: resolveEstateItemValue(i),
+        value: resolveEstateItemValue(i, deathDate),
         type: mapEstateItemToPostMgmtType(i.category),
       })),
   };

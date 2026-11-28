@@ -214,14 +214,18 @@ export function validateCryptoFields(item: EstateItem): string | null {
   return null;
 }
 
-export function validateEstateItemAllocations(item: EstateItem): string | null {
+export function validateEstateItemAllocations(
+  item: EstateItem,
+  /** 상속개시일 — 엔진 평가액(resolveEngineValuatedAmount)과 같은 평가기준일 (U-18) */
+  deathDate?: string,
+): string | null {
   if (!item.heirAllocations || item.heirAllocations.length === 0) {
     return null; // 분배 미입력은 허용 (총액-단위 계산 모드)
   }
   // T2 (R1): 엔진 권위 평가액 단일 진실 — §66 담보 하한·주식 라우팅 포함.
   //   resolveEstateItemValue(§60 우선순위만)는 §66 하한 미적용 → 엔진(categoryTotals)과
   //   괴리하여 협의분할 합(650)이 엔진 평가(550 vs 담보 650)와 다른 기준으로 통과되던 dual-truth 제거.
-  const expected = resolveEngineValuatedAmount(item);
+  const expected = resolveEngineValuatedAmount(item, deathDate);
   if (expected === 0) return null;
   const sum = item.heirAllocations.reduce((s, a) => s + a.amount, 0);
   if (sum !== expected) {

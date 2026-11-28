@@ -148,6 +148,7 @@ export function DeductionBreakdownSection({ result, estateItems, debtItems, heir
               triggerValue={formatKRW(dd.financialDeduction)}
               estateItems={estateItems}
               debtItems={debtItems}
+              deathDate={deathDate}
             />
           )}
 

@@ -267,7 +267,7 @@ export function resolveFamilyBusinessAssetValue(
   item: EstateItem,
   deathDate?: string,
 ): number {
-  const raw = resolveEstateItemValue(item);
+  const raw = resolveEstateItemValue(item, deathDate);
   if (item.familyBusinessCategory === "corporate_stock") {
     return item.corporateTotalAssets
       ? calcCorporateStockAdjustedValue(

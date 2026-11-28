@@ -462,7 +462,7 @@ export function validateStep(step: number, form: FormState): string | null {
       let valuation = 0;
       if (it.category === "listed_stock" || it.category === "unlisted_stock") {
         try {
-          valuation = evaluateAllEstateItems([it])[0]?.valuatedAmount ?? 0;
+          valuation = evaluateAllEstateItems([it], form.giftDate)[0]?.valuatedAmount ?? 0;
         } catch {
           valuation = 0;
         }

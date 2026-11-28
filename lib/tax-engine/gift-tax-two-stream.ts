@@ -84,7 +84,7 @@ export function calcGiftTaxTwoStream(
   // ─────────────────────────────────────────────
   // STEP 0.2: 자산별 평가
   // ─────────────────────────────────────────────
-  const allValuationResults = evaluateAllEstateItems(twoStreamItems);
+  const allValuationResults = evaluateAllEstateItems(twoStreamItems, input.giftDate);
   for (const vr of allValuationResults)
     allWarnings.push(...vr.warnings.filter((w) => w !== COLLATERAL_DEBT_NOTICE)); // §14 상속세 전용 제외
 

@@ -17,9 +17,12 @@ import { isSimpleModeUnlisted } from "@/lib/calc/unlisted-valuation-mode";
 import { calcUnlistedStockPerShareValue } from "@/lib/tax-engine/property-valuation-stock";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { ExpandToggleButton } from "./shared/ExpandToggleButton";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 
 export interface UnlistedStockSimpleValuationSectionProps {
   estateItems: EstateItem[];
+  /** 평가기준일(상속개시일·증여일) — §54④ 단서 연혁 게이트(U-03), 엔진과 같은 값 */
+  valuationDate?: string;
 }
 
 const AMT = "py-1.5 px-2 text-right font-mono tabular-nums whitespace-nowrap";
@@ -27,6 +30,7 @@ const LBL = "py-1.5 px-2 text-left";
 
 export function UnlistedStockSimpleValuationSection({
   estateItems,
+  valuationDate,
 }: UnlistedStockSimpleValuationSectionProps) {
   const [open, setOpen] = useState(false);
 
@@ -51,6 +55,7 @@ export function UnlistedStockSimpleValuationSection({
           const v = calcUnlistedStockPerShareValue(
             data,
             data.isRealEstateHeavy ?? false,
+            toOptionalDate(valuationDate),
           );
           const ownedValue = v.perShareFinalValue * data.ownedShares;
           const weightLabel = data.isRealEstateHeavy

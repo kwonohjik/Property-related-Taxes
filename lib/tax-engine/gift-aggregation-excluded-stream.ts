@@ -92,7 +92,7 @@ export function calcAggregationExcludedStream(
   const warnings: string[] = [];
 
   // 평가
-  const valuationResults = evaluateAllEstateItems(items);
+  const valuationResults = evaluateAllEstateItems(items, input.giftDate);
   const grossValue = valuationResults.reduce((s, v) => s + v.valuatedAmount, 0);
   // §14 담보채무 안내는 상속세 전용 → 증여 결과에서 제외 (메인 스트림 gift-tax.ts와 동일 필터)
   for (const vr of valuationResults)
