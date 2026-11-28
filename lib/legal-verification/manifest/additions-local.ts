@@ -48,6 +48,13 @@ export const LOCAL_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    /** acquisition.ts `LINEAR_RATE` — 6억 초과 9억 이하 주택 세율 산식(§11①8호 나목, MST 282559 실독 2026-11-28) */
+    id: "ACQUISITION.LINEAR_RATE",
+    citation: "지방세법 §11①8호 나목",
+    keywords: ["취득당시가액이 6억원을 초과하고 9억원 이하인 주택", "소수점이하 다섯째자리에서 반올림하여 소수점 넷째자리까지 계산한다"],
+    keywordMode: "ALL",
+  },
+  {
     /** acquisition.ts `HOUSING_SHARE_RATE_BASIS` — 지분 취득 주택 세율 판정 전체가액 환산(교재 대조 T6, MST 282559 실독 2026-11-28) */
     id: "ACQUISITION.HOUSING_SHARE_RATE_BASIS",
     citation: "지방세법 §11①8호 후단",
