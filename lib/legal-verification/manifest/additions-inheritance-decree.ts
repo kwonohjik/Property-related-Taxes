@@ -307,9 +307,27 @@ export const INHERITANCE_DECREE_ADDITIONS: VerificationRule[] = [
     keywordMode: "ALL",
   },
   {
+    // U-10 — 2호 문구(사업개시 전·3년 미만)와 적격분할 기산 후단이 바뀌면 자동 판정(section-54-4-2-business-period.ts)을 다시 본다
+    id: "INH_DECREE.UNLISTED_NET_ASSET_ONLY_BUSINESS_PERIOD",
+    citation: "상증령 §54",
+    keywords: [
+      "사업개시 전의 법인, 사업개시 후 3년 미만의 법인 또는 휴업ㆍ폐업 중인 법인의 주식등",
+      "분할 전 동일 사업부분의 사업개시일부터 기산한다",
+    ],
+    keywordMode: "ALL",
+  },
+  {
     id: "INH_DECREE.NET_ASSET_VALUE",
     citation: "상증령 §55",
-    keywords: ["순자산가액", "장부가액", "영업권평가액"],
+    // U-10 — §55③2호 「제54조제4항제2호에 해당하는 경우」(영업권 배제 사실 요건)
+    keywords: [
+      "순자산가액",
+      "장부가액",
+      "영업권평가액",
+      "제54조제4항제2호에 해당하는 경우",
+      // U-10 F — §55③1호 「제54조제4항제1호 또는 제3호에 해당하는 경우」(화면 영업권 배제 라벨)
+      "제54조제4항제1호 또는 제3호에 해당하는 경우",
+    ],
     keywordMode: "ALL",
   },
   {
@@ -575,6 +593,17 @@ export const INHERITANCE_DECREE_ADDITIONS: VerificationRule[] = [
       "자경농민등",
       "직선거리 30킬로미터 이내",
       "18세 이상인 직계비속",
+    ],
+    keywordMode: "ALL",
+  },
+  // ── 가업승계 증여세 과세특례 가업자산상당액 — KoreanLaw MST 288915 실독(2026-11-28) ──
+  {
+    id: "GIFT_DECREE.FAMILY_BUSINESS_ASSET_EQUIVALENT",
+    citation: "조특령 §27의6",
+    keywords: [
+      "\"대통령령으로 정하는 가업자산상당액\"이란",
+      "제15조제5항제2호를 준용하여 계산한 금액",
+      "\"상속개시일\"은 \"증여일\"로 본다",
     ],
     keywordMode: "ALL",
   },

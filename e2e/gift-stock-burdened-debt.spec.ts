@@ -139,6 +139,8 @@ test.describe("주식 부담부증여 §47① 채무인수", () => {
     await page.getByText("조특법 과세특례 (§30의5·6)").click();
     await page.getByText("가업승계 증여세 과세특례 (§30의6)").click();
     await page.getByPlaceholder("영위 기간 입력").fill("15");
+    // 조특령 §27의6⑩ 가업자산상당액 — 법인 총자산 필수(U-17). 사업무관자산 0 → 가업자산상당액 = 평가액 50억
+    await page.getByTestId("corporate-total-assets").first().fill("10000000000");
 
     await calcAndWaitResult(page, { taxType: "gift" });
 

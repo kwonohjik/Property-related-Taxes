@@ -31,6 +31,7 @@ import {
 } from "@/lib/tax-engine/valuation/resolve-estate-item-value";
 import { useAutoSaveCalculation } from "@/lib/storage/use-auto-save-calculation";
 import { useProfessionalStore } from "@/lib/stores/professional-store";
+import { ToneCard } from "@/components/calc/shared/ToneCard";
 
 const AMOUNT_CELL = "text-right font-mono tabular-nums whitespace-nowrap";
 
@@ -105,6 +106,19 @@ export function StockValuationTool() {
           valuationOnly
         />
       </div>
+
+      {/* 계산 전에 막은 종목 — 상속·증여 ⑧·⑫와 같은 술어 (U-04) */}
+      {result.errors.length > 0 && (
+        <div className="mt-6 print:hidden" data-testid="stock-valuation-errors">
+          <ToneCard tone="rose" title="평가하지 않은 종목이 있습니다">
+            {result.errors.map((e) => (
+              <p key={e.id} className="text-sm">
+                {e.message}
+              </p>
+            ))}
+          </ToneCard>
+        </div>
+      )}
 
       {/* 요약 + 평가조서 */}
       {result.items.length > 0 && (

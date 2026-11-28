@@ -31,6 +31,9 @@ function makeForm(overrides: Partial<FormState> = {}): FormState {
         marketValue: 1_000_000_000,
         // unlistedStockItemSchema superRefine: legacy 또는 V2 평가 데이터 필수
         unlistedStockData: { totalShares: 10_000, ownedShares: 10_000, netAssetValue: 1_000_000_000 },
+        // U-17: 가업자산상당액(조특령 §27의6⑩) 산정용 법인 총자산 — 미입력이면 ⑧·⑩ 차단.
+        //   사업무관자산 미입력 → 비율 1이라 이 파일의 기대값은 그대로다.
+        corporateTotalAssets: 1_000_000_000,
       } as EstateItem,
     ],
     ...overrides,

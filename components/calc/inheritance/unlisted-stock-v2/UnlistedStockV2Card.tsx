@@ -77,7 +77,8 @@ export function createDefaultUnlistedStockV2(): UnlistedStockValuationInput {
   return {
     corpName: "",
     representative: undefined,
-    businessStartDate: new Date(Date.UTC(currentYear - 10, 0, 1)),
+    // U-10 Q-1 — 사업개시일은 비워 둔다(§54④2호 자동 판정 입력 · 입력하지 않은 기본값이 2호를 일으키지 않게). ⑧ 필수.
+    businessStartDate: undefined,
     evaluationDate: now,
     faceValuePerShare: 5_000,
     totalShares: 0,

@@ -13,6 +13,8 @@
 
 import { z } from "zod";
 import { migrateListedPremiumReason } from "@/lib/tax-engine/types/stock-premium-exclusion.types";
+import { isSmeReasonWithLargeSize } from "@/lib/tax-engine/property-valuation/max-shareholder-premium-era";
+import { SME_REASON_LARGE_SIZE_MESSAGE } from "@/lib/tax-engine/property-valuation/max-shareholder-premium-era";
 
 /** §54④ 순자산 단독 평가 사유 5종 (4호 삭제 반영) */
 export const unlistedNetAssetOnlyReasonSchema = z.enum([
@@ -327,14 +329,15 @@ export const unlistedStockValuationV2Schema = z
         message: "보유주식수는 발행주식총수를 초과할 수 없습니다.",
       });
     }
-    // 평가기준일 < 사업개시일 차단
-    if (input.evaluationDate < input.businessStartDate) {
+    // U-04 — 「9호 + 일반기업」 차단 (⑧ validateUnlistedStockV2와 같은 술어)
+    if (isSmeReasonWithLargeSize(input)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["evaluationDate"],
-        message: "평가기준일은 사업개시일 이후여야 합니다.",
+        path: ["premiumExclusionReason"],
+        message: SME_REASON_LARGE_SIZE_MESSAGE,
       });
     }
+    // U-10 — 「평가기준일 < 사업개시일」은 상증령 §54④2호 「사업개시 전의 법인」이라 막지 않는다(⑧과 짝 · 엔진이 순자산가치로 평가)
     // 자본금 변동 날짜 검증
     for (let i = 0; i < input.capitalChanges.length; i++) {
       const c = input.capitalChanges[i];

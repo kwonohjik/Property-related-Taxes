@@ -20,7 +20,7 @@
  *   - fiscalYears[0..2].fiscalYearEndDate (Date — 필수)
  *   - fiscalYears[0..2].fiscalYearStartDate (Date | undefined — 선택)
  *   - capitalChanges[].changeDate (Date | undefined — 선택)
- *   - businessStartDate (Date — 필수)
+ *   - businessStartDate (Date | undefined — 타입상 선택 · 정식평가 ⑧·⑫가 미입력 차단)
  *   - evaluationDate (Date — 필수)
  *
  * # 정책

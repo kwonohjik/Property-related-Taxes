@@ -11,6 +11,7 @@
  * UI Design: docs/02-design/features/inheritance-unlisted-stock-valuation.ui.design.md §2-1·§4
  */
 
+import { useMemo } from "react";
 import { CurrencyInput } from "@/components/calc/inputs/CurrencyInput";
 import { FieldCard } from "@/components/calc/inputs/FieldCard";
 import { ToneCard } from "@/components/calc/shared/ToneCard";
@@ -24,6 +25,12 @@ import {
   STOCK_PREMIUM_EXCLUSION_LABELS,
 } from "@/lib/tax-engine/data/stock-premium-exclusion-labels";
 import type { UnlistedNetAssetOnlyReason, UnlistedCapitalChange } from "@/lib/tax-engine/types/unlisted-stock-valuation.types";
+import { resolveSection54_4_2ByBusinessStart } from "@/lib/tax-engine/property-valuation/section-54-4-2-business-period";
+import { isSection54_4_2ByBusinessStart } from "@/lib/tax-engine/property-valuation/section-54-4-2-business-period";
+import { SECTION_55_3_2_PROVISO_NOTICE } from "@/lib/tax-engine/property-valuation/section-54-4-2-business-period";
+import { section54_4_2OverlapNote } from "@/lib/tax-engine/property-valuation/section-54-4-2-business-period";
+import { VALUATION } from "@/lib/tax-engine/legal-codes";
+import { toOptionalDate } from "@/lib/api/date-coerce";
 import type {
   StockPremiumExclusionReason,
   Section53_8_2Input,
@@ -113,7 +120,7 @@ const COMPANY_SIZE_OPTIONS: RadioCardOption<"small" | "medium" | "large">[] = [
   {
     value: "medium",
     label: "중견기업 (매출 5천억 미만)",
-    description: "「중견기업 성장촉진법」 §2 + 직전 3개 사업연도 매출 평균 5천억 미만 — 상증령 §53⑦·§53⑧9호 할증 배제",
+    description: "「중견기업 성장촉진법」 §2 + 직전 3개 사업연도 매출 평균 5천억 미만 — 상증령 §53⑦·§53⑧9호 할증 배제(평가기준일 2023.1.1. 이후 상속·증여분부터, 그 전은 ×120%)",
   },
   {
     value: "large",
@@ -209,6 +216,25 @@ export function CorporateInfoSection({
     : faceValuePerShare > 0 && totalShares > 0
       ? String(faceValuePerShare * totalShares)
       : "";
+  /**
+   * U-10 — §54④2호(사업개시 전·3년 미만) 파생 표시. 엔진과 같은 헬퍼·같은 평가기준일 fallback
+   * (UnlistedStockV2Card effectiveInput: evaluationDate 없으면 상속개시일·증여일). store에는 쓰지 않는다.
+   */
+  const businessPeriod = useMemo(
+    () =>
+      resolveSection54_4_2ByBusinessStart(
+        businessStartDate,
+        evaluationDate ?? toOptionalDate(evaluationDateFallback),
+      ),
+    [businessStartDate, evaluationDate, evaluationDateFallback],
+  );
+  const businessPeriodAuto = isSection54_4_2ByBusinessStart(businessPeriod);
+  // §55③ 영업권 배제 라벨 — 엔진 goodwillReason과 같다: 청산·부동산 80%(1·3호)는 1호, 그 밖에는 2호
+  const goodwillExcludedBy1Ho = netAssetOnlyReason === "liquidation" || netAssetOnlyReason === "real_estate_80";
+  const overlapNote = section54_4_2OverlapNote(
+    netAssetOnlyReason,
+    toOptionalDate(evaluationDate) ?? toOptionalDate(evaluationDateFallback),
+  );
   return (
     <div className="space-y-4">
       {/* 1. 평가대상 비상장법인 */}
@@ -251,7 +277,13 @@ export function CorporateInfoSection({
         </div>
         {/* 행 2 — 사업개시일·평가기준일·보유 주식수 (3열, 라벨 상단 stacked) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <FieldCard label="사업개시일" required stacked>
+          <FieldCard
+            label="사업개시일"
+            required
+            stacked
+            warning={businessStartDate ? undefined : "사업개시일을 입력해야 합니다."}
+            hint="처음으로 재화·용역을 공급한 날(법인설립일 아님) · 폐업 후 재개한 법인은 재개 후 처음 공급한 날 · 적격분할·적격물적분할 신설법인은 분할 전 동일 사업부분의 사업개시일 · 아직 공급 전이면 개시 예정일"
+          >
             <DateInput
               value={dateToStr(businessStartDate)}
               onChange={(s) => onChange({ businessStartDate: strToDate(s) })}
@@ -321,6 +353,31 @@ export function CorporateInfoSection({
             />
           </FieldCard>
         </div>
+        {/* U-10 — 사업개시일 기준 §54④2호 자동 판정 (엔진과 같은 헬퍼 · 칩 상태는 바꾸지 않는다) */}
+        {businessPeriodAuto && (
+          <ToneCard
+            tone="amber"
+            title={`${VALUATION.UNLISTED_NET_ASSET_ONLY_BUSINESS_PERIOD} — 순자산가치로만 평가(사업개시일 기준 자동)`}
+            className="py-2"
+            bodyClassName="space-y-1"
+          >
+            <div data-testid="unlisted-v2-business-period-notice" className="space-y-1 text-xs">
+              <p>
+                {businessPeriod.status === "pre_start"
+                  ? "평가기준일이 사업개시일 전 — 사업개시 전의 법인"
+                  : `사업개시 후 3년 미만 — 3년 만료일 ${dateToStr(businessPeriod.threeYearsEndDate)}(그날까지 3년 미만)`}
+                {" · "}영업권 합산 안 함(
+                {goodwillExcludedBy1Ho
+                  ? VALUATION.UNLISTED_GOODWILL_EXCLUDE_LIQUIDATION_REAL_ESTATE
+                  : VALUATION.UNLISTED_GOODWILL_EXCLUDE_BUSINESS_PERIOD}
+                )
+              </p>
+              {overlapNote && <p>{overlapNote}</p>}
+              {/* 엔진과 같은 조건 — 영업권 배제가 2호일 때만 2호 단서 가·나목 고지 */}
+              {!goodwillExcludedBy1Ho && <p>{SECTION_55_3_2_PROVISO_NOTICE}</p>}
+            </div>
+          </ToneCard>
+        )}
         {/* 자본금 변동사항 (증자·감자) — 발행주식총수·자본금 바로 아래에 임베드 (sectionNum 미전달 → 번호 없음) */}
         <CapitalChangeTable capitalChanges={capitalChanges} onChange={onCapitalChangesChange} />
       </ToneCard>

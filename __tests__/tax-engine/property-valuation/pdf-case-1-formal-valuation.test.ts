@@ -211,8 +211,14 @@ describe("[AC-7] 최대주주 할증율 companySize 분기", () => {
     expect(evaluateUnlistedStockV2({ ...maxBase, companySize: "small" }).premiumRate).toBe(0);
   });
 
-  it("medium(중견기업) → premiumRate 0 (§53⑦·§53⑧9호 배제)", () => {
-    expect(evaluateUnlistedStockV2({ ...maxBase, companySize: "medium" }).premiumRate).toBe(0);
+  it("medium(중견기업) · 평가기준일 2022-06-30 → premiumRate 0.20 (U-04: 중견 배제는 2023.1.1. 이후분부터)", () => {
+    expect(evaluateUnlistedStockV2({ ...maxBase, companySize: "medium" }).premiumRate).toBe(0.2);
+  });
+
+  it("medium(중견기업) · 평가기준일 2023-02-28 → premiumRate 0 (§53⑦·§53⑧9호 배제)", () => {
+    expect(
+      evaluateUnlistedStockV2({ ...maxBase, companySize: "medium", evaluationDate: new Date("2023-02-28") }).premiumRate,
+    ).toBe(0);
   });
 
   it("비최대주주 → premiumRate 0", () => {

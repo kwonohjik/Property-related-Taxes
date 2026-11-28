@@ -71,7 +71,8 @@ function normalizeBesshiInput(input: UnlistedStockValuationInput): UnlistedStock
   return {
     ...input,
     evaluationDate: toDate(input.evaluationDate, "evaluationDate"),
-    businessStartDate: toDate(input.businessStartDate, "businessStartDate"),
+    // U-10 — 화면 초기값이 비어 있으므로 미입력은 undefined로 둔다(toDate는 throw)
+    businessStartDate: toOptionalDate(input.businessStartDate),
     fiscalYears: input.fiscalYears.map((fy) => ({
       ...fy,
       fiscalYearEndDate: toDate(fy.fiscalYearEndDate, "fiscalYearEndDate"),

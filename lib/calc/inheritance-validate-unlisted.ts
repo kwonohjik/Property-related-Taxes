@@ -4,6 +4,34 @@
  */
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { isSmeReasonWithLargeSize } from "@/lib/tax-engine/property-valuation/max-shareholder-premium-era";
+import { SME_REASON_LARGE_SIZE_MESSAGE } from "@/lib/tax-engine/property-valuation/max-shareholder-premium-era";
+
+/**
+ * U-10 ⑧ — 정식평가(V2) 사업개시일 필수. ⑫ `unlistedStockValuationV2Schema`의 z.coerce.date()와 정합.
+ * 상속 ⑧(validateUnlistedStockV2)·증여 ⑧(gift-tax-form-validate)이 같은 문구로 쓴다.
+ * 입력은 ④ 변환(resolveActiveUnlistedValuation) 뒤 자산 — 간편평가 모드의 숨은 V2는 이미 빠져 있다.
+ */
+export function unlistedV2BusinessStartDateError(item: EstateItem): string | null {
+  if (item.category !== "unlisted_stock" || !item.unlistedStockValuationV2) return null;
+  if (toOptionalDate(item.unlistedStockValuationV2.businessStartDate)) return null;
+  return `비상장주식 "${item.name}" — 사업개시일을 입력해야 합니다.`;
+}
+
+/**
+ * U-04 ⑧ — 「9호(중소·중견기업) + 일반기업」 차단. ⑫(estate-item-schema · unlisted-stock-valuation-v2.schema)와 같은 술어.
+ * 상장은 자산 필드, 비상장은 V2 필드를 본다. 상속·증여 ⑧ 공용 문구.
+ */
+export function stockSmeReasonLargeSizeError(item: EstateItem): string | null {
+  if (item.category === "listed_stock" && isSmeReasonWithLargeSize(item)) {
+    return `자산 "${item.name}" — ${SME_REASON_LARGE_SIZE_MESSAGE}`;
+  }
+  const v2 = item.category === "unlisted_stock" ? item.unlistedStockValuationV2 : undefined;
+  if (v2 && isSmeReasonWithLargeSize(v2)) {
+    return `비상장주식 "${item.name}" — ${SME_REASON_LARGE_SIZE_MESSAGE}`;
+  }
+  return null;
+}
 
 /**
  * 비상장주식 V2 평가 입력 검증
@@ -16,7 +44,8 @@ import { toOptionalDate } from "@/lib/api/date-coerce";
  *   2) 사업연도 종료일 3개 각각 유효 Date 필수 (순서 비교 전 존재 확인)
  *   3) 사업연도 종료일 순서 (1년전 > 2년전 > 3년전)
  *   4) 소유주식수 ≤ 발행주식총수
- *   5) 평가기준일 ≥ 사업개시일
+ *   5) 사업개시일 필수 (Zod z.coerce.date()와 동일) — 평가기준일 < 사업개시일(사업개시 전의 법인)은
+ *      상증령 §54④2호로 평가하므로 막지 않는다 (U-10)
  *   6) 자본금 변동: 변동일 유효 Date 필수 / 주식수 > 0 필수 / 변동일 ≤ 평가기준일
  *   7) 유상증자(paid_in) — 1주당 납입금액 > 0 필수 (§56⑤)
  *   8) 유상감자(capital_reduction) — 1주당 지급금액 > 0 필수 (§56⑤ 준용)
@@ -82,12 +111,10 @@ export function validateUnlistedStockV2(
     return `비상장주식 "${item.name}" — 자기주식수(${v2.treasuryStock.shares})는 발행주식총수(${v2.totalShares}) 미만이어야 합니다.`;
   }
 
-  // ④ 평가기준일 < 사업개시일 (effectiveEvaluationDate: v2.evaluationDate || ctx fallback)
-  // toOptionalDate: string ISO → Date 정규화 (H-5 2차 방어)
-  const effectiveBusinessStartDate = toOptionalDate(v2.businessStartDate);
-  if (effectiveEvaluationDate && effectiveBusinessStartDate && effectiveEvaluationDate < effectiveBusinessStartDate) {
-    return `비상장주식 "${item.name}" — 평가기준일은 사업개시일 이후여야 합니다.`;
-  }
+  // ④ 사업개시일 필수 — §54④2호(사업개시 전·3년 미만) 자동 판정 입력. 화면 초기값은 비어 있다(U-10 Q-1).
+  //   ⑫ z.coerce.date()도 미입력을 막는다(⑧↔⑫ 정합). 「평가기준일 < 사업개시일」은 2호(사업개시 전의 법인)라 막지 않는다.
+  const startDateErr = unlistedV2BusinessStartDateError(item);
+  if (startDateErr) return startDateErr;
 
   // ⑤ 자본금 변동 — 변동일·주식수·1주당 금액 검증
   for (let i = 0; i < v2.capitalChanges.length; i++) {
@@ -135,6 +162,10 @@ export function validateUnlistedStockV2(
       return `비상장주식 "${item.name}" §53⑧2호 — 평가기준일이 필요합니다(전부매각 기간 판정).`;
     }
   }
+
+  // U-04 — 9호는 규모·날짜로만 판정(엔진) → 「9호 + 일반기업」은 ⑫와 같은 술어로 차단
+  const smeErr = stockSmeReasonLargeSizeError(item);
+  if (smeErr) return smeErr;
 
   // PR-E (UI 통합 v3): §22② 자동 모드 시 보유·발행 주식 수 필수 (사실상 기존 ownedShares/totalShares 검증)
   // 별도 추가 검증 없음 — ownedShares>0 / totalShares>0 보장은 Zod에서 처리.

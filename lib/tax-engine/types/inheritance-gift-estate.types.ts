@@ -201,7 +201,7 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
 
   /** §63③ 최대주주 등 할증평가 적용 토글 */
   isMaxShareholder?: boolean;
-  /** §53④ 기업 규모 (중소·중견 자동 배제) */
+  /** 기업 규모 — §53⑧9호 할증 배제: 중소 / 중견은 평가기준일 2023.1.1. 이후만(상증법 법률 제19195호 부칙 §2, U-04) */
   companySize?: ListedCompanySize;
   /** §53⑧ 1~9호 + 중소·중견 배제 사유 */
   premiumExclusionReason?: ListedPremiumExclusionReason;
@@ -669,7 +669,11 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
   familyBusinessCategory?: FamilyBusinessCategory;
   /** 법인 영농·가업상속 주식 사업무관자산 (시행령 §15⑤2호 + §16⑤2호). corporate_stock일 때만 의미. 타입: inheritance-corporate-non-business.types.ts */
   corporateNonBusinessAssets?: CorporateNonBusinessAssets;
-  /** 법인 총자산 (사업무관자산 비율 분모). 미입력 시 차감 미적용 (legacy). */
+  /**
+   * 법인 총자산 (사업무관자산 비율 분모). 상속: 미입력 시 차감 미적용 (legacy).
+   * 증여: 조특법 §30의6 특례 귀속 주식의 가업자산상당액(조특령 §27의6⑩) 산정에 쓴다 — corporateNonBusinessAssets와 함께
+   * 카테고리 무관하게 읽으며, 미입력이면 ⑧·⑩에서 차단한다(U-17).
+   */
   corporateTotalAssets?: number;
   /**
    * 영농상속재산 — 피상속인이 상속개시일 2년 전부터 영농에 사용 (§16⑤1호 본문).

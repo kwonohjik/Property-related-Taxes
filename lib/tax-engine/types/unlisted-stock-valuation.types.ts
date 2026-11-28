@@ -139,7 +139,11 @@ export interface UnlistedStockValuationInput {
   businessRegistrationNumber?: string;
   /** 자본금 (제1쪽 1번 — 표시 전용, 계산 무관) */
   capital?: number;
-  businessStartDate: Date;
+  /**
+   * 사업개시일 — 처음으로 재화·용역을 공급한 날(§54④2호 자동 판정 입력 · U-10).
+   * 화면 초기값은 비어 있다(⑧ 필수 · ⑫ z.coerce.date() 필수). 미입력이면 엔진은 자동 판정하지 않는다.
+   */
+  businessStartDate?: Date;
   evaluationDate: Date;                  // 평가기준일 (상속개시일 or 증여일)
   faceValuePerShare: number;             // 1주당 액면가액
   totalShares: number;                   // 발행주식총수 (평가기준일 현재)
@@ -232,7 +236,8 @@ export interface UnlistedStockValuationInput {
   /**
    * 회사 규모. §63③ + §53⑥⑦⑧ 9호:
    *   - small: 중소기업 → 할증 배제 ×100%
-   *   - medium: 중견기업(매출 5천억 미만) → 할증 배제 ×100%
+   *   - medium: 중견기업(매출 5천억 미만) → 할증 배제 ×100% — 평가기준일 2023.1.1. 이후만
+   *     (상증법 법률 제19195호 부칙 §2). 그 전은 ×120% (U-04)
    *   - large: 일반기업 → ×120% (할증 적용)
    */
   companySize: "small" | "medium" | "large";
@@ -390,4 +395,14 @@ export interface UnlistedStockValuationResult {
    * 미입력(counterparty 없는 holding만) 시 undefined.
    */
   crossHoldingReflection?: import("@/lib/tax-engine/property-valuation/cross-holding-equations").CrossHoldingReflectionResult;
+
+  /**
+   * U-10: 사업개시일 기준 §54④2호(사업개시 전·3년 미만) 자동 적용 echo — 자동 적용됐을 때만 채운다.
+   * 휴업·폐업(날짜로 판정 불가)으로 사용자가 고른 2호는 여기에 나오지 않는다.
+   */
+  section54_4_2ByBusinessStart?: {
+    status: "pre_start" | "under_3y";
+    businessStartDate: Date;
+    threeYearsEndDate: Date;
+  };
 }

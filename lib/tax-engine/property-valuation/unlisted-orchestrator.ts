@@ -18,6 +18,7 @@
  * §54④ short-circuit:
  *   1·2·6호 무조건 → 가중평균 비활성, ⑥ = ④
  *   3·5호 단서 → 가중평균 < 순자산일 때만 ⑥ = ④
+ *   2호(사업개시 전·3년 미만)는 사업개시일로도 자동 판정 — 사용자 사유보다 먼저 (U-10)
  *
  * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-besshi-4-buppyo-3.plan.md
  * Design: docs/02-design/features/inheritance-unlisted-stock-valuation.engine.design.md
@@ -59,6 +60,10 @@ import { safeMultiply } from "@/lib/tax-engine/tax-utils";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { SECTION_53_8_2_FAIL_LABELS } from "@/lib/tax-engine/data/stock-premium-exclusion-labels";
 import { hasSection54_4Proviso } from "./section-54-4-proviso-era";
+import { maxShareholderPremiumEraNotices } from "./max-shareholder-premium-era";
+import { resolveSection54_4_2ByBusinessStart } from "./section-54-4-2-business-period";
+import { isSection54_4_2ByBusinessStart } from "./section-54-4-2-business-period";
+import { section54_4_2Notices } from "./section-54-4-2-business-period";
 
 /**
  * 비상장주식 V2 평가 진입점
@@ -70,6 +75,20 @@ export function evaluateUnlistedStockV2(
   const appliedRules: string[] = ["상증법 §63 ① 1호 나목 + 상증령 §54 ①"];
   const capRate = input.capitalizationRate > 0 ? input.capitalizationRate : 0.10;
   const goodwillRate = input.goodwillRate ?? 0.10;
+
+  // U-10 — §54④2호(사업개시 전·사업개시 후 3년 미만)는 사업개시일로 판정한다(무조건 사유 · 휴업·폐업은 사용자 선택).
+  const businessPeriod = resolveSection54_4_2ByBusinessStart(input.businessStartDate, input.evaluationDate);
+  const autoLt3y = isSection54_4_2ByBusinessStart(businessPeriod);
+  const userReason = input.netAssetOnlyReason;
+  const netAssetOnlyUnconditional =
+    userReason === "liquidation" || userReason === "lt3y" || userReason === "remaining_3y" || autoLt3y;
+  // §55③ 배제 라벨 — 1호(청산·부동산 80%)는 사용자 사유, 그 밖에는 날짜로 성립한 2호가 앞선다
+  const goodwillReason =
+    userReason === "liquidation" || userReason === "real_estate_80"
+      ? userReason
+      : autoLt3y
+        ? "lt3y"
+        : userReason;
 
   // 자기주식 — 소각·감자목적은 발행주식총수에서 차감(N−t), 일시보유·미보유는 N 유지.
   //   소각·감자: 1주당 순손익가치(⑤)·순자산가치(④) 두 분모 모두 N−t (재산-240, 이미지 7쪽 ②).
@@ -216,12 +235,7 @@ export function evaluateUnlistedStockV2(
       issuedShares: input.totalShares,
       netIncomePerShare,
       isRealEstateHeavy: input.isRealEstateHeavy,
-      valuationBasis:
-        input.netAssetOnlyReason === "liquidation" ||
-        input.netAssetOnlyReason === "lt3y" ||
-        input.netAssetOnlyReason === "remaining_3y"
-          ? "net_asset_only"
-          : "weighted",
+      valuationBasis: netAssetOnlyUnconditional ? "net_asset_only" : "weighted",
     },
     input.otherUnlistedHoldings,
   );
@@ -262,7 +276,7 @@ export function evaluateUnlistedStockV2(
     // 「자기자본」은 다(사실값)에 0 가드를 건 값 — 종전 값 유지(음수 자기자본 처리는 Q-1과 별개 논점)
     selfCapital: Math.max(0, netAssetResult.netAssetBeforeGoodwill),
     rate: goodwillRate,
-    netAssetOnlyReason: input.netAssetOnlyReason,
+    netAssetOnlyReason: goodwillReason,
     isContinuousLossLastThreeYears: input.isContinuousLossLastThreeYears,
   });
 
@@ -288,10 +302,6 @@ export function evaluateUnlistedStockV2(
   if (input.treasuryStock?.purpose === "temporary_holding") {
     // 자기주식 일시보유 — ⑥ 블록 전체(㉠·㉡·최종)를 자기참조 solver로 대체 (기존 3함수 우회).
     //   단서 사유(real_estate_80·stock_holding_80)+일시보유는 MVP 범위 외 → 일반 가중평균(단서 미발동).
-    const netAssetOnlyUnconditional =
-      input.netAssetOnlyReason === "liquidation" ||
-      input.netAssetOnlyReason === "lt3y" ||
-      input.netAssetOnlyReason === "remaining_3y";
     const sr = solveSelfReferentialValuation({
       netAssetTotal,
       treasuryShares: input.treasuryStock.shares,
@@ -326,16 +336,14 @@ export function evaluateUnlistedStockV2(
     };
   } else {
     // 미보유 + 소각·감자 공통 — 소각은 effectiveTotalShares=N−t 주입으로 ④·⑤가 차감 반영됨.
-    if (input.netAssetOnlyReason) {
-      // 무조건 사유 (1·2·6호): 순자산 단독
-      if (
-        input.netAssetOnlyReason === "liquidation" ||
-        input.netAssetOnlyReason === "lt3y" ||
-        input.netAssetOnlyReason === "remaining_3y"
-      ) {
+    if (input.netAssetOnlyReason || autoLt3y) {
+      // 무조건 사유 (1·2·6호 · 사업개시일로 성립한 2호): 순자산 단독 — 3·5호 단서·연혁 분기보다 먼저
+      if (netAssetOnlyUnconditional) {
         finalPerShareValue = netAssetPerShare;
         weightedAvgPerShare = 0; // 미적용 표시
-        appliedRules.push(`§54④ ${input.netAssetOnlyReason} — 순자산 단독 (무조건)`);
+        if (userReason === "liquidation" || userReason === "lt3y" || userReason === "remaining_3y") {
+          appliedRules.push(`§54④ ${userReason} — 순자산 단독 (무조건)`);
+        }
       } else if (!hasSection54_4Proviso(toOptionalDate(input.evaluationDate))) {
         // 3·5호 + 평가기준일 2026.2.27. 전: 단서 신설 전이라 무조건 순자산 단독 (부칙 <제36131호> 제11조 · U-03)
         finalPerShareValue = netAssetPerShare;
@@ -427,6 +435,17 @@ export function evaluateUnlistedStockV2(
   if (premium.section53_8_2FailReason) {
     warnings.push(SECTION_53_8_2_FAIL_LABELS[premium.section53_8_2FailReason]);
   }
+  if (input.isMaxShareholder) {
+    // U-04 — 중견기업 배제 연혁(2023.1.1.)·2020 전 100분의 30 단계 고지 (상장과 같은 문구)
+    warnings.push(
+      ...maxShareholderPremiumEraNotices({
+        companySize: input.companySize,
+        premiumRate: premium.premiumRate,
+        exclusionReason: premium.exclusionReason,
+        valuationDate: toOptionalDate(input.evaluationDate),
+      }),
+    );
+  }
 
   const finalPerShareForReporting = input.isMaxShareholder
     ? premium.premiumPerShare
@@ -445,6 +464,16 @@ export function evaluateUnlistedStockV2(
     buildBreakdown(input, 1, adjustedIncomes[1], capitalAdjustments[1], finalNetIncomes[1], convertedShares[1], perShareNetIncomes[1]),
     buildBreakdown(input, 2, adjustedIncomes[2], capitalAdjustments[2], finalNetIncomes[2], convertedShares[2], perShareNetIncomes[2]),
   ];
+
+  // U-10 — 2호 자동 판정 근거·고지 (appliedRules·warnings)
+  const businessPeriodNotices = section54_4_2Notices({
+    period: businessPeriod,
+    userReason,
+    goodwillExcludedByLaw: goodwill.excludedByLaw,
+    evaluationDate: toOptionalDate(input.evaluationDate),
+  });
+  appliedRules.push(...businessPeriodNotices.appliedRules);
+  warnings.push(...businessPeriodNotices.warnings);
 
   // 경고 메시지
   if (goodwill.excludedByLaw) {
@@ -523,6 +552,14 @@ export function evaluateUnlistedStockV2(
     evaluationCommitteeApplied,
     estimatedProfitResult,
     preIpoListingResult,
+    section54_4_2ByBusinessStart:
+      autoLt3y && businessPeriod.businessStartDate && businessPeriod.threeYearsEndDate
+        ? {
+            status: businessPeriod.status as "pre_start" | "under_3y",
+            businessStartDate: businessPeriod.businessStartDate,
+            threeYearsEndDate: businessPeriod.threeYearsEndDate,
+          }
+        : undefined,
   };
 }
 

@@ -65,7 +65,7 @@ function makeRecord(
         unlistedStockValuationV2: {
           ...it.v2,
           // JSON round-trip 시뮬레이션: Date → ISO string
-          businessStartDate: it.v2.businessStartDate.toISOString(),
+          businessStartDate: it.v2.businessStartDate?.toISOString(),
           evaluationDate: it.v2.evaluationDate.toISOString(),
           fiscalYears: it.v2.fiscalYears.map((fy) => ({
             ...fy,

@@ -23,6 +23,9 @@
  *
  * ★ KoreanLaw 검증: 조특법 §101 삭제 — 본 모듈은 §63③ + §53⑥⑦⑧ 사용
  *
+ * 연혁(U-04): 중견기업 제외는 평가기준일 2023.1.1. 이후분부터(상증법 법률 제19195호 부칙 §2) — 그 전 중견기업은
+ *   일반기업과 같이 ×120%. 9호는 사용자 선택이 아니라 규모·날짜로만 판정한다(명시 9호도 규모 게이트로 넘김).
+ *
  * Plan: docs/00-pm/inheritance-unlisted-stock-valuation-besshi-4-buppyo-3.plan.md
  */
 
@@ -33,6 +36,8 @@ import type {
 } from "@/lib/tax-engine/types/stock-premium-exclusion.types";
 import { evaluateSection53_8_2 } from "./section-53-8-2-gate";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { isMidSizedPremiumExcluded } from "./max-shareholder-premium-era";
+import { migrateListedPremiumReason } from "@/lib/tax-engine/types/stock-premium-exclusion.types";
 
 export interface MaxShareholderPremiumInput {
   /** ⑥ 1주당 평가액 (할증 적용 전 base value) */
@@ -47,7 +52,7 @@ export interface MaxShareholderPremiumInput {
   explicitExclusionReason?: UnlistedPremiumExclusionReason;
   /** §53⑧2호 전부매각 보조입력 (explicitExclusionReason==="all_sold_within_6m" 시) */
   section53_8_2?: Section53_8_2Input;
-  /** 평가기준일 D (= evaluationDate) — 2호 게이트 기간 판정 */
+  /** 평가기준일 D (= evaluationDate) — 2호 게이트 기간 판정 · 중견기업 배제 연혁(U-04) */
   valuationDate?: Date;
 }
 
@@ -95,10 +100,12 @@ export function calcMaxShareholderPremium(
   }
 
   // §53⑧2호: 게이트 통과해야만 유효한 배제. 실패 시 explicit 무효화 후 일반 분기로.
-  let effective = input.explicitExclusionReason;
+  const D = toOptionalDate(input.valuationDate);
+  // 레거시 저장 코드(smb_med 등)는 ⑫ preprocess와 같은 매핑으로 공용 코드로 바꾼 뒤 비교한다(U-04).
+  let effective =
+    input.explicitExclusionReason === undefined ? undefined : migrateListedPremiumReason(input.explicitExclusionReason);
   let section53_8_2FailReason: Section53_8_2FailReason | undefined;
   if (effective === "all_sold_within_6m") {
-    const D = toOptionalDate(input.valuationDate);
     const saleDate = toOptionalDate(input.section53_8_2?.saleContractDate);
     if (!D || !input.section53_8_2 || !saleDate) {
       effective = undefined;
@@ -116,14 +123,17 @@ export function calcMaxShareholderPremium(
   }
 
   // §53⑧ 배제 사유 판정 — 우선순위:
-  //   1) 명시 배제 사유 (게이트 통과한 2호 포함)
-  //   2) §53⑧9호 중소·중견기업
+  //   1) 명시 배제 사유 (게이트 통과한 2호 포함 · 9호 제외 — 9호는 2)에서 규모·날짜로 판정)
+  //   2) §53⑧9호 중소기업 · 중견기업(평가기준일 2023.1.1. 이후)
   //   3) §53⑧1호 3년 계속 결손
   let exclusionReason: UnlistedPremiumExclusionReason | undefined;
 
-  if (effective && effective !== "none") {
+  if (effective && effective !== "none" && effective !== "small_medium_enterprise") {
     exclusionReason = effective;
-  } else if (companySize === "small" || companySize === "medium") {
+  } else if (
+    companySize === "small" ||
+    (companySize === "medium" && isMidSizedPremiumExcluded(D))
+  ) {
     exclusionReason = "small_medium_enterprise"; // §53⑧9호
   } else if (input.isContinuousLossLastThreeYears) {
     exclusionReason = "continuous_loss_3y"; // §53⑧1호

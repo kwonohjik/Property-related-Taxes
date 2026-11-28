@@ -49,8 +49,8 @@ const COMPANY_SIZE_OPTIONS: Array<{
   label: string;
   description: string;
 }> = [
-  { value: "small", label: "중소기업", description: "§53④ 자동 배제" },
-  { value: "medium", label: "중견기업", description: "§53④ 자동 배제" },
+  { value: "small", label: "중소기업", description: "§53⑧9호 할증 배제" },
+  { value: "medium", label: "중견기업", description: "§53⑧9호 할증 배제 — 2023.1.1. 이후 상속·증여분부터(그 전은 20% 가산)" },
   { value: "large", label: "대기업", description: "할증 20% 적용 가능" },
 ];
 
@@ -207,7 +207,7 @@ export function ListedStockBesshiAttributesSection({ item, onUpdate, taxKind }: 
           });
         }}
         title="§63③ 최대주주 등 할증평가 (×120%)"
-        description="최대주주 보유 주식 — 대기업은 20% 가산, 중소·중견·9사유 배제 시 0%"
+        description="최대주주 보유 주식 — 대기업은 20% 가산, 중소·중견(중견은 2023.1.1. 이후 상속·증여분)·9사유 배제 시 0%"
       >
         <div className="space-y-3">
           <FieldCard label="기업 규모 (§53④)">

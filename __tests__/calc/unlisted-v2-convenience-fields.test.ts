@@ -108,7 +108,7 @@ describe("V: 평가기준일 fallback (validateUnlistedStockV2 ctx)", () => {
 
   test("V-2: evaluationDate 없음 + ctx fallback 있음 → 통과 (fallback 인식)", () => {
     const v2 = makeV2({ evaluationDate: undefined });
-    // ctx fallback = deathDate = 2026-05-01 → 사업개시일(2010-01-01) 이후이므로 통과
+    // ctx fallback = deathDate = 2026-05-01 → 다른 검증(자본금 변동일 등)에 fallback 인식 · 통과
     expect(validateUnlistedStockV2(makeItem(v2), { evaluationDateFallback: "2026-05-01" })).toBeNull();
   });
 
@@ -118,20 +118,18 @@ describe("V: 평가기준일 fallback (validateUnlistedStockV2 ctx)", () => {
     expect(validateUnlistedStockV2(makeItem(v2))).toBeNull();
   });
 
-  test("V-4: evaluationDate ctx fallback < businessStartDate → 오류 차단", () => {
+  test("V-4 (U-10 반전): evaluationDate ctx fallback < businessStartDate → 차단 없음(§54④2호 사업개시 전의 법인)", () => {
     const v2 = makeV2({
       evaluationDate: undefined,
       businessStartDate: new Date(2026, 5, 1), // 2026-06-01
     });
-    // fallback 2026-05-01 < businessStartDate 2026-06-01 → 오류
-    const result = validateUnlistedStockV2(makeItem(v2), { evaluationDateFallback: "2026-05-01" });
-    expect(result).not.toBeNull();
-    expect(result).toContain("평가기준일");
+    // fallback 2026-05-01 < businessStartDate 2026-06-01 → 엔진이 2호(순자산가치)로 평가하므로 막지 않는다
+    expect(validateUnlistedStockV2(makeItem(v2), { evaluationDateFallback: "2026-05-01" })).toBeNull();
   });
 
   test("V-5: evaluationDate 명시 입력 우선 — ctx fallback 무시", () => {
     const v2 = makeV2({ evaluationDate: new Date(2026, 4, 1) });
-    // evaluationDate(2026-05-01) > businessStartDate(2010-01-01) → 통과. fallback은 쓰지 않음
+    // evaluationDate(2026-05-01) 명시 → 통과. fallback은 쓰지 않음(fallback 경로 검증은 V-6)
     expect(validateUnlistedStockV2(makeItem(v2), { evaluationDateFallback: "2020-01-01" })).toBeNull();
   });
 
