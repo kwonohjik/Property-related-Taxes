@@ -701,6 +701,12 @@ export interface GiftTaxResult extends TaxResultMeta {
   specialStreamDebt?: number;
 
   /**
+   * 특례 자산 인수 채무 중 특례 자산가액(가업승계는 가업자산상당액)을 넘어 일반 스트림에서 뺀 금액.
+   * §47①은 인수 채무 전액을 빼므로 초과분을 버리지 않는다(debtAssumed에 포함). 특례 적격일 때만, 0이면 undefined.
+   */
+  specialStreamDebtExcessToOrdinary?: number;
+
+  /**
    * U-17 가업자산상당액 echo (조특법 §30의6① · 조특령 §27의6⑩ → 상증령 §15⑤2호 준용, 기준일=증여일).
    * 가업승계 특례 적격 + 법인 총자산 입력 특례 주식이 있을 때만 채운다(그 밖에는 undefined).
    *   familyBusinessAssetEquivalent    — 특례 스트림에 넣은 주식가액 합계(가업자산상당액)

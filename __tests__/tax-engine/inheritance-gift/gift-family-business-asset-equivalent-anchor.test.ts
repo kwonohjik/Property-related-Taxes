@@ -34,7 +34,9 @@ import {
 import {
   FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_MESSAGE,
   FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_WARNING,
+  findFamilyBusinessItemsMissingTotalAssets,
 } from "@/lib/tax-engine/gift-family-business-asset-equivalent";
+import { SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON } from "@/lib/tax-engine/gift-special-stream";
 
 const FB_CREDIT: GiftTaxCreditInput = {
   isFiledOnTime: true,
@@ -208,6 +210,61 @@ describe("U-17 엔진 — 가업자산상당액(조특령 §27의6⑩)", () => {
     expect(r.finalTax).toBe(729_400_000);
   });
 
+  /**
+   * C16 (§47① 인수채무 전액 차감 — 특례 쪽 먼저, 남는 채무는 일반 과세분에서):
+   *   D2: 상당액 0(사업무관 20억 ≥ 총자산 10억) · 채무 10억 → 특례 0 · 초과 10억 이월
+   *       일반 50억 − 10억 − 5천만 = 39.5억 × 50% − 4.6억 = 1,515,000,000 − §69 45,450,000 = 1,469,550,000
+   *       (before 1,954,550,000 — 채무 10억이 사라졌다)
+   *   D1: 상당액 40억 · 비율분 10억 · 채무 45억 → 특례 (40억 − 40억) = 0 · 초과 5억 이월
+   *       일반 10억 − 5억 − 5천만 = 4.5억 × 20% − 1천만 = 80,000,000 − §69 2,400,000 = 77,600,000
+   *       (before 218,250,000)
+   */
+  it("[C16-D2] 상당액 0 + 채무 10억 → 초과 10억 일반 차감 1,469,550,000", () => {
+    const r = calcGiftTax(
+      makeInput({
+        giftItems: [
+          stock({ assumedDebtForGift: 1_000_000_000, corporateTotalAssets: 1_000_000_000, corporateNonBusinessAssets: LAND_2B }),
+        ],
+      }),
+    );
+    expect(r.specialStreamTax).toBe(0);
+    expect(r.specialStreamDebtExcessToOrdinary).toBe(1_000_000_000);
+    expect(r.debtAssumed).toBe(1_000_000_000);
+    expect(r.ordinaryStreamTax).toBe(1_469_550_000);
+    expect(r.finalTax).toBe(1_469_550_000);
+    expect(r.warnings.some((w) => w.includes("1,000,000,000원") && w.includes("일반 증여 과세가액에서 차감"))).toBe(true);
+  });
+
+  it("[C16-D1] 상당액 40억 + 채무 45억 → 특례 0 · 초과 5억 일반 차감 77,600,000", () => {
+    const r = calcGiftTax(
+      makeInput({
+        giftItems: [
+          stock({ assumedDebtForGift: 4_500_000_000, corporateTotalAssets: 10_000_000_000, corporateNonBusinessAssets: LAND_2B }),
+        ],
+      }),
+    );
+    expect(r.specialStreamDebt).toBe(4_000_000_000);
+    expect(r.specialStreamDebtExcessToOrdinary).toBe(500_000_000);
+    expect(r.specialStreamTax).toBe(0);
+    expect(r.ordinaryStreamTax).toBe(77_600_000);
+    expect(r.finalTax).toBe(77_600_000);
+  });
+
+  it("[C16-미적격] 영위 5년 + 채무 45억 → gross 일반 과세·채무 전액 일반 차감, 이월 echo 없음", () => {
+    // 50억 − 45억 − 5천만 = 4.5억 × 20% − 1천만 = 80,000,000 − §69 2,400,000 = 77,600,000 (수정 전과 같다)
+    const r = calcGiftTax(
+      makeInput({
+        giftItems: [
+          stock({ assumedDebtForGift: 4_500_000_000, corporateTotalAssets: 10_000_000_000, corporateNonBusinessAssets: LAND_2B }),
+        ],
+        creditInput: { ...FB_CREDIT, familyBusinessYears: 5 },
+      }),
+    );
+    expect(r.specialStreamDebtExcessToOrdinary).toBeUndefined();
+    expect(r.debtAssumed).toBe(4_500_000_000);
+    expect(r.finalTax).toBe(77_600_000);
+  });
+
   /** C12: 창업자금은 총자산을 읽지 않는다 */
   it("[C12] startup → 가업자산상당액 미적용", () => {
     const r = calcGiftTax(
@@ -303,6 +360,42 @@ describe("U-17 ⑧·⑩ — 법인 총자산 미입력 차단", () => {
     form.giftItems = [fbStock({ isSpecialTreatmentAsset: true }), { ...aggExcl, isSpecialTreatmentAsset: false }];
     expect(validateStep(3, form)).toBe(FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_MESSAGE);
     expect(giftTaxInputSchema.safeParse(buildGiftTaxInput(form)).success).toBe(false);
+  });
+
+  /**
+   * C15b (합산배제 필터 구별력): 합산배제 주식은 엔진이 partition 전에 빼므로 특례 귀속 표시가 있어도
+   *   총자산을 요구하지 않는다. 필터(`!isAggregationExcludedGift`)를 지우면 이 주식이 특례 집합에 들어와 차단된다.
+   */
+  it("[C15b] 합산배제 주식(특례 표시·총자산 없음)은 총자산 차단 대상이 아니다 — ⑧·⑩·술어", () => {
+    const aggExclStock = fbStock({ id: "x", name: "합산배제 주식", isAggregationExcludedGift: true, isSpecialTreatmentAsset: true });
+    const items = [fbStock({ isSpecialTreatmentAsset: true, corporateTotalAssets: 10_000_000_000 }), aggExclStock];
+    expect(findFamilyBusinessItemsMissingTotalAssets(items, FB_CREDIT)).toEqual([]);
+    const form = makeForm({ giftItems: items });
+    expect(validateStep(3, form)).not.toBe(FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_MESSAGE);
+    const parsed = giftTaxInputSchema.safeParse(buildGiftTaxInput(form));
+    const messages = parsed.success ? [] : parsed.error.issues.map((i) => i.message);
+    expect(messages).not.toContain(FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_MESSAGE);
+  });
+
+  /**
+   * G-1: 추가 건 토지 + 가업승계 — 토지에는 총자산 칸이 없다(⑤ 섹션은 주식만 그린다).
+   *   ⑧은 입력 칸 없는 총자산 문구가 아니라 ⑩과 같은 재산 종류 문구로 막는다.
+   */
+  it("[C17] 동시증여 추가 건 토지 + 가업승계 → ⑧ 재산 종류 문구(⑩과 같음) · 총자산 문구 아님", () => {
+    const land = { id: "l", category: "real_estate_land", name: "토지", marketValue: 1_000_000_000, standardPrice: 1_000_000_000 } as EstateItem;
+    const sub = makeSub({ giftItems: [land] });
+    const form = makeForm({ specialTreatment: "", giftItems: [CASH_ITEM], simultaneousGiftForms: [sub] });
+    const categoryMessage = `특례 귀속 불가 재산 1개 — ${SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON.family_business}`;
+    expect(validateStep(3, form)).toBe(`동시증여 건 1: ${categoryMessage}`);
+    expect(findFamilyBusinessItemsMissingTotalAssets([land], FB_CREDIT)).toEqual([]);
+    const body = { ...buildGiftTaxInput(form), simultaneousGiftForms: [buildGiftTaxInput(sub as FormState)] };
+    const parsed = giftSimultaneousRequestSchema.safeParse(body);
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      const messages = parsed.error.issues.map((i) => i.message);
+      expect(messages).toContain(categoryMessage);
+      expect(messages).not.toContain(FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_MESSAGE);
+    }
   });
 
   it("[C13] 동시증여 추가 건 총자산 미입력 → ⑧ 추가 건 루프 차단 · ⑩ giftSubFormSchema 400", () => {

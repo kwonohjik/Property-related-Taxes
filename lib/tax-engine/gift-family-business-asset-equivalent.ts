@@ -18,6 +18,7 @@ import type { GiftTaxCreditInput } from "./types/inheritance-gift.types";
 import type { FamilyBusinessAssetEquivalentDetail } from "./types/inheritance-gift.types";
 import { calcCorporateStockAdjustedValue } from "./property-valuation-corporate";
 import { partitionGiftItems } from "./gift-special-stream";
+import { isSpecialTreatmentEligibleCategory } from "./gift-special-stream";
 
 /** 특례 귀속 주식 전체의 가업자산상당액 집계 */
 export interface FamilyBusinessAssetEquivalentResult {
@@ -96,13 +97,17 @@ export function findFamilyBusinessItemsMissingTotalAssets(
   const years = creditInput.familyBusinessYears;
   if (years != null && years < 10) return [];
   const twoStreamItems = giftItems.filter((i) => !i.isAggregationExcludedGift);
-  return partitionGiftItems(twoStreamItems).specialItems.filter((i) => !hasTotalAssets(i));
+  // 주식이 아닌 특례 귀속 재산은 총자산 칸이 없다(⑤ GiftFamilyBusinessAssetEquivalentSection과 같은 필터) —
+  //   그 재산은 재산 종류 검사(SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON)가 막는다.
+  return partitionGiftItems(twoStreamItems).specialItems.filter(
+    (i) => isSpecialTreatmentEligibleCategory(i.category, "family_business") && !hasTotalAssets(i),
+  );
 }
 
 /** ⑧·⑩ 차단 문구 (같은 문구) */
 export const FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_MESSAGE =
   "가업승계 특례 주식의 법인 총자산가액을 입력하세요. " +
-  `(가업자산상당액 = 주식가액 × (총자산 − 사업무관자산) ÷ 총자산 — ${TAX_CREDIT.FAMILY_BUSINESS_ASSET_EQUIVALENT})`;
+  `(가업자산상당액은 주식가액에 총자산에서 사업무관자산을 뺀 금액을 총자산으로 나눈 비율을 곱한 금액 — ${TAX_CREDIT.FAMILY_BUSINESS_ASSET_EQUIVALENT})`;
 
 /** 엔진 직접 호출 시 경고 문구 */
 export const FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_WARNING =

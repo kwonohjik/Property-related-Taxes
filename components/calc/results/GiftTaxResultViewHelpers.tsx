@@ -10,6 +10,7 @@ import { CURRENT_SURCHARGE_RATE } from "@/lib/tax-engine/data/installment-surcha
 import { calcInstallmentPayment } from "@/lib/tax-engine/credits/installment-payment";
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import type { ReactNode } from "react";
 
 export function Row({
   label,
@@ -18,7 +19,7 @@ export function Row({
   highlight = false,
   deduction = false,
 }: {
-  label: string;
+  label: ReactNode;
   value: string;
   sub?: boolean;
   highlight?: boolean;

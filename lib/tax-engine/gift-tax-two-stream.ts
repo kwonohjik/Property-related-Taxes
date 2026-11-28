@@ -114,7 +114,7 @@ export function calcGiftTaxTwoStream(
   if (fbEquivalent && fbEquivalent.detail.length > 0) {
     allLaws.add(TAX_CREDIT.FAMILY_BUSINESS_ASSET_EQUIVALENT);
     allBreakdown.push({
-      label: "가업자산상당액 (주식가액 × (법인 총자산 − 사업무관자산) ÷ 법인 총자산)",
+      label: "가업자산상당액 = 주식가액 × (법인 총자산 − 사업무관자산) ÷ (법인 총자산)",
       amount: specialItemsValue,
       lawRef: TAX_CREDIT.FAMILY_BUSINESS_ASSET_EQUIVALENT,
       note: `주식 평가액 ${specialItemsGrossValue.toLocaleString()} 중 사업무관자산 비율분 ${fbEquivalent.nonBusinessPortion.toLocaleString()}은 특례 대상 아님`,
@@ -139,6 +139,10 @@ export function calcGiftTaxTwoStream(
   // §47① — "증여세 과세가액 = 증여재산가액 − 인수 채무". 조특법 §30의5⑬(§30의6⑤ 준용) 보충 적용으로
   //   특례 과세가액(한도) 산정도 채무 차감 후 순가액 기준. (법문 해석 기준, 예규 미확보 — warnings 안내)
   const specialItemsNetValue = Math.max(0, specialItemsValue - specialItemsDebt);
+  // 특례 과세가액을 넘는 인수 채무 — §47①은 채무 전액을 빼므로 버리지 않고 일반 스트림에서 뺀다(적격일 때만 쓴다).
+  //   ⑧이 자산별 「채무 > 평가액(gross)」을 막으므로 화면 경로에서 이 초과분은 사업무관자산 비율분 이하다
+  //   (직접 API 호출로 넘어가면 일반 스트림 순가액이 0에서 멈춘다).
+  const specialDebtExcess = Math.max(0, specialItemsDebt - specialItemsValue);
   if (specialItemsDebt > 0 && specialItemsValue > 0) {
     allBreakdown.push({
       label: "가업승계 특례 자산 채무 인수 차감 (§47①)",
@@ -149,11 +153,6 @@ export function calcGiftTaxTwoStream(
     allWarnings.push(
       "가업승계 과세특례와 부담부증여(§47① 채무 인수)가 동시 적용되는 경우, 특례 과세가액의 채무 차감 적용 범위에 대해 과세관청 해석을 확인하시기 바랍니다.",
     );
-    if (specialItemsDebt > specialItemsValue) {
-      allWarnings.push(
-        "특례 자산의 인수 채무액이 특례 증여재산가액을 초과하여 특례 스트림 과세가액을 0으로 처리합니다.",
-      );
-    }
   }
 
   // ─────────────────────────────────────────────
@@ -183,6 +182,14 @@ export function calcGiftTaxTwoStream(
   // 미적격(영위 10년 미만)은 평가액 전액 일반 과세라 총자산이 계산에 쓰이지 않는다 — 적격일 때만 경고.
   if (specialStream.isEligible && fbEquivalent && fbEquivalent.missingTotalAssetsCount > 0) {
     allWarnings.push(FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_WARNING);
+  }
+  // 특례 과세가액 초과 채무 — 적격일 때만 일반 스트림으로 이월 (미적격은 아래에서 특례 자산 채무 전액을 일반에서 뺀다)
+  const specialDebtExcessToOrdinary = specialStream.isEligible ? specialDebtExcess : 0;
+  if (specialDebtExcessToOrdinary > 0) {
+    allWarnings.push(
+      `특례 자산의 인수 채무액이 특례 증여재산가액을 초과합니다 — 특례 스트림 과세가액은 0이고, 초과 채무 ` +
+        `${specialDebtExcessToOrdinary.toLocaleString()}원은 ${GIFT_LAW.TAXABLE_VALUE}(인수 채무 차감)에 따라 일반 증여 과세가액에서 차감했습니다.`,
+    );
   }
   // 사업무관자산 비율분 — 특례 적격일 때만 일반 스트림 이관 (미적격은 아래 폴백이 gross 전액을 넣는다)
   const fbNonBusinessToOrdinary =
@@ -226,17 +233,20 @@ export function calcGiftTaxTwoStream(
   }
 
   // 일반 스트림 차감 채무:
-  //   적격 → 일반 자산 채무만 (특례 자산 채무는 specialItemsNetValue에서 이미 차감)
+  //   적격 → 일반 자산 채무 + 특례 과세가액 초과 채무 (특례 자산 채무는 specialItemsNetValue에서 먼저 차감)
   //   미적격 → 특례 자산이 gross로 일반 스트림에 폴백(effectiveOrdinaryGrossValue += specialItemsGrossValue)
   //           되므로 그 채무도 일반 스트림에서 차감
   const assumedDebtTotal = specialStream.isEligible
-    ? ordinaryItemsDebt
+    ? ordinaryItemsDebt + specialDebtExcessToOrdinary
     : ordinaryItemsDebt + specialItemsDebt;
   if (assumedDebtTotal > 0) {
     allBreakdown.push({
       label: "부담부증여 수증자 인수 채무 (일반 스트림)",
       amount: -assumedDebtTotal,
       lawRef: GIFT_LAW.TAXABLE_VALUE,
+      ...(specialDebtExcessToOrdinary > 0
+        ? { note: `특례 과세가액을 넘는 특례 자산 채무 ${specialDebtExcessToOrdinary.toLocaleString()} 포함` }
+        : {}),
     });
   }
 
@@ -539,6 +549,8 @@ export function calcGiftTaxTwoStream(
     specialStreamAggregatedValue: specialStream.aggregatedValue,
     // 특례 자산 §47① 인수 채무 (한도 차감분) — 2-스트림 카드 표시용
     specialStreamDebt: Math.min(specialItemsDebt, specialItemsValue) || undefined,
+    // 특례 과세가액을 넘어 일반 스트림에서 뺀 인수 채무 (§47① 전액 차감 — 적격일 때만)
+    specialStreamDebtExcessToOrdinary: specialDebtExcessToOrdinary || undefined,
     // U-17 가업자산상당액 echo — 특례 적격 + 총자산 입력 자산이 있을 때만 (결과 ⑦ 자산별 산식 줄)
     ...(specialStream.isEligible && fbEquivalent && fbEquivalent.detail.length > 0
       ? {

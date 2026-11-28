@@ -19,12 +19,7 @@ import { parseDecimal } from "@/components/calc/inputs/DecimalInput";
 import { evaluateAllEstateItems } from "@/lib/tax-engine/property-valuation";
 import { computeEffectiveValuation } from "@/lib/calc/estate-item-valuation";
 import { validateFinancialSavingsFields, validateCryptoFields } from "@/lib/calc/inheritance-validate";
-import {
-  isSpecialTreatmentEligibleCategory,
-  SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON,
-} from "@/lib/tax-engine/gift-special-stream";
 import { isSameDonorGroup, getDonorGroup } from "@/lib/tax-engine/gift-prior-aggregation";
-import { findFamilyBusinessItemsMissingTotalAssets } from "@/lib/tax-engine/gift-family-business-asset-equivalent";
 import { FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_MESSAGE } from "@/lib/tax-engine/gift-family-business-asset-equivalent";
 import { missingPriorRoundInputs } from "@/lib/calc/gift-required-inputs";
 import { foreignGiftTaxBaseMissing } from "@/lib/calc/gift-required-inputs";
@@ -78,24 +73,9 @@ import {
   giftBurdenedRegionCode,
 } from "@/lib/calc/gift-burdened-one-house";
 import { giftBurdenedRentalExceptionError } from "@/lib/calc/gift-burdened-rental-exception";
-
-/**
- * U-17 ⑧ — 가업승계 특례 주식의 법인 총자산 미입력 여부. 엔진 입력(④ buildGiftTaxInput)과 같은
- * allItems·specialTreatment·familyBusinessYears 파생으로 엔진 술어를 부른다.
- */
-function familyBusinessTotalAssetsMissing(
-  f: Pick<FormState, "giftItems" | "stockItems" | "specialTreatment" | "familyBusinessYears">,
-): boolean {
-  return (
-    findFamilyBusinessItemsMissingTotalAssets([...f.giftItems, ...f.stockItems], {
-      specialTreatment: f.specialTreatment || undefined,
-      familyBusinessYears:
-        f.specialTreatment === "family_business" && f.familyBusinessYears !== ""
-          ? parseDecimal(f.familyBusinessYears)
-          : undefined,
-    }).length > 0
-  );
-}
+import { familyBusinessTotalAssetsMissing } from "@/components/calc/gift-tax-form-validate-items";
+import { stockValuationGateError } from "@/components/calc/gift-tax-form-validate-items";
+import { ineligibleSpecialCategoryMessage } from "@/components/calc/gift-tax-form-validate-items";
 
 /**
  * G-M4: 동일그룹 판정을 isSameDonorGroup 엔진 헬퍼로 재사용.
@@ -129,6 +109,9 @@ export function validateStep(step: number, form: FormState): string | null {
       const ve = validateVacancyPortion(it);
       if (ve) return ve;
     }
+    // U-04·U-10: 주식 평가 — ⑫와 같은 술어 (9호 + 일반기업 · V2 사업개시일)
+    const stockGateErr = stockValuationGateError(form);
+    if (stockGateErr) return stockGateErr;
     // §63④ 예금 자동 계산 필수 필드 검증 (⑧ 동기화 지점)
     for (const it of [...form.giftItems, ...form.stockItems]) {
       const sf = validateFinancialSavingsFields(it);
@@ -613,19 +596,8 @@ export function validateStep(step: number, form: FormState): string | null {
       }
 
       // 특례 귀속 재산 종류 제약 — Zod superRefine 동기화 (⑧, R3 잔여 해소).
-      // startup: 소법 §94① 재산(부동산·주식) 제외 (조특령 §27의5①) / family_business: 주식만 (§30의6①).
-      // 단일 자산은 엔진 자동 귀속이므로 동일 검사 (Zod와 동일 조건 — UI 통과↔API 400 모순 방지)
-      const effectiveSpecialItems =
-        allItems.length === 1
-          ? allItems
-          : allItems.filter((it) => it.isSpecialTreatmentAsset === true);
-      const ineligible = effectiveSpecialItems.filter(
-        (it) =>
-          !isSpecialTreatmentEligibleCategory(it.category, form.specialTreatment as "startup" | "family_business")
-      );
-      if (ineligible.length > 0) {
-        return `특례 귀속 불가 재산 ${ineligible.length}개 — ${SPECIAL_TREATMENT_CATEGORY_BLOCK_REASON[form.specialTreatment as "startup" | "family_business"]}`;
-      }
+      const ineligibleMessage = ineligibleSpecialCategoryMessage(form);
+      if (ineligibleMessage) return ineligibleMessage;
     }
 
     // §30의6① 가업 영위기간 — Zod min(0) 동기화 (음수만 차단).
@@ -671,7 +643,12 @@ export function validateStep(step: number, form: FormState): string | null {
         if (sub.giftItems.length + sub.stockItems.length === 0) {
           return `동시증여 건 ${i + 1}(${DONOR_LABELS[sub.donor]}): 증여재산을 1개 이상 입력하세요.`;
         }
-        // U-17: 추가 건도 ⑩(giftSubFormSchema = giftTaxInputSchema)이 같은 술어로 막는다 — UI 통과 ↔ API 400 방지
+        // 추가 건도 ⑩(giftSubFormSchema = giftTaxInputSchema)이 재산 종류·총자산을 같은 술어로 막는다 — UI 통과 ↔ API 400 방지
+        const subStockGateErr = stockValuationGateError(sub);
+        if (subStockGateErr) return `동시증여 건 ${i + 1}: ${subStockGateErr}`;
+        const subIneligibleMessage = ineligibleSpecialCategoryMessage(sub);
+        if (subIneligibleMessage) return `동시증여 건 ${i + 1}: ${subIneligibleMessage}`;
+        // U-17: 가업자산상당액 — 법인 총자산 미입력
         if (familyBusinessTotalAssetsMissing(sub)) {
           return `동시증여 건 ${i + 1}: ${FAMILY_BUSINESS_TOTAL_ASSETS_MISSING_MESSAGE}`;
         }

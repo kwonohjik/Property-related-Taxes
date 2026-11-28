@@ -12,6 +12,7 @@ import type { GiftTaxResult } from "@/lib/tax-engine/types/inheritance-gift.type
 import { formatKRW } from "@/components/calc/inputs/CurrencyInput";
 import { Row } from "@/components/calc/results/GiftTaxResultViewHelpers";
 import { LawArticleModal } from "@/components/ui/law-article-modal";
+import { Frac } from "@/components/calc/results/shared/FormulaParts";
 
 export function GiftTwoStreamDetailSection({ result }: { result: GiftTaxResult }) {
   // U-17: 가업자산상당액 echo가 있으면 특례세액 0(사업무관 ≥ 총자산 · 상당액 ≤ 10억)이어도 산식 줄을 보인다
@@ -73,9 +74,14 @@ export function GiftTwoStreamDetailSection({ result }: { result: GiftTaxResult }
             <Row
               key={i}
               label={
-                `${d.name || "가업승계 특례 주식"} 가업자산상당액 = 주식 평가액 ${formatKRW(d.grossValue)} × ` +
-                `(법인 총자산 ${formatKRW(d.totalAssets)} − 사업무관자산 ${formatKRW(d.sumOfNonBusiness)}) ÷ 법인 총자산 ${formatKRW(d.totalAssets)}` +
-                (d.sumOfNonBusiness >= d.totalAssets ? " (사업무관자산이 총자산 이상이라 0)" : "")
+                <>
+                  {`${d.name || "가업승계 특례 주식"} 가업자산상당액 = 주식 평가액 ${formatKRW(d.grossValue)} × `}
+                  <Frac
+                    top={`법인 총자산 ${formatKRW(d.totalAssets)} − 사업무관자산 ${formatKRW(d.sumOfNonBusiness)}`}
+                    bottom={`법인 총자산 ${formatKRW(d.totalAssets)}`}
+                  />
+                  {d.sumOfNonBusiness >= d.totalAssets ? " (사업무관자산이 총자산 이상이라 0)" : ""}
+                </>
               }
               value={formatKRW(d.assetEquivalent)}
               sub
@@ -92,6 +98,14 @@ export function GiftTwoStreamDetailSection({ result }: { result: GiftTaxResult }
             <Row
               label="특례 자산 채무인수 차감 (§47①)"
               value={`- ${formatKRW(result.specialStreamDebt ?? 0)}`}
+              sub
+              deduction
+            />
+          )}
+          {(result.specialStreamDebtExcessToOrdinary ?? 0) > 0 && (
+            <Row
+              label="특례 자산가액을 넘는 인수 채무 — 버리지 않고 일반 증여 과세가액에서 차감 (§47①)"
+              value={`- ${formatKRW(result.specialStreamDebtExcessToOrdinary ?? 0)}`}
               sub
               deduction
             />
