@@ -232,7 +232,8 @@ export interface UnlistedStockValuationInput {
   /**
    * 회사 규모. §63③ + §53⑥⑦⑧ 9호:
    *   - small: 중소기업 → 할증 배제 ×100%
-   *   - medium: 중견기업(매출 5천억 미만) → 할증 배제 ×100%
+   *   - medium: 중견기업(매출 5천억 미만) → 할증 배제 ×100% — 평가기준일 2023.1.1. 이후만
+   *     (상증법 법률 제19195호 부칙 §2). 그 전은 ×120% (U-04)
    *   - large: 일반기업 → ×120% (할증 적용)
    */
   companySize: "small" | "medium" | "large";

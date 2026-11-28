@@ -59,6 +59,7 @@ import { safeMultiply } from "@/lib/tax-engine/tax-utils";
 import { toDate, toOptionalDate } from "@/lib/api/date-coerce";
 import { SECTION_53_8_2_FAIL_LABELS } from "@/lib/tax-engine/data/stock-premium-exclusion-labels";
 import { hasSection54_4Proviso } from "./section-54-4-proviso-era";
+import { maxShareholderPremiumEraNotices } from "./max-shareholder-premium-era";
 
 /**
  * 비상장주식 V2 평가 진입점
@@ -426,6 +427,17 @@ export function evaluateUnlistedStockV2(
   }
   if (premium.section53_8_2FailReason) {
     warnings.push(SECTION_53_8_2_FAIL_LABELS[premium.section53_8_2FailReason]);
+  }
+  if (input.isMaxShareholder) {
+    // U-04 — 중견기업 배제 연혁(2023.1.1.)·2020 전 100분의 30 단계 고지 (상장과 같은 문구)
+    warnings.push(
+      ...maxShareholderPremiumEraNotices({
+        companySize: input.companySize,
+        premiumRate: premium.premiumRate,
+        exclusionReason: premium.exclusionReason,
+        valuationDate: toOptionalDate(input.evaluationDate),
+      }),
+    );
   }
 
   const finalPerShareForReporting = input.isMaxShareholder

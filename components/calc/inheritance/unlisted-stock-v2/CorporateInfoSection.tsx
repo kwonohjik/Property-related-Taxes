@@ -113,7 +113,7 @@ const COMPANY_SIZE_OPTIONS: RadioCardOption<"small" | "medium" | "large">[] = [
   {
     value: "medium",
     label: "중견기업 (매출 5천억 미만)",
-    description: "「중견기업 성장촉진법」 §2 + 직전 3개 사업연도 매출 평균 5천억 미만 — 상증령 §53⑦·§53⑧9호 할증 배제",
+    description: "「중견기업 성장촉진법」 §2 + 직전 3개 사업연도 매출 평균 5천억 미만 — 상증령 §53⑦·§53⑧9호 할증 배제(평가기준일 2023.1.1. 이후 상속·증여분부터, 그 전은 ×120%)",
   },
   {
     value: "large",

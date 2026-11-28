@@ -201,7 +201,7 @@ export interface EstateItem extends EstateLocationFields, EstateItemSavingsField
 
   /** §63③ 최대주주 등 할증평가 적용 토글 */
   isMaxShareholder?: boolean;
-  /** §53④ 기업 규모 (중소·중견 자동 배제) */
+  /** 기업 규모 — §53⑧9호 할증 배제: 중소 / 중견은 평가기준일 2023.1.1. 이후만(상증법 법률 제19195호 부칙 §2, U-04) */
   companySize?: ListedCompanySize;
   /** §53⑧ 1~9호 + 중소·중견 배제 사유 */
   premiumExclusionReason?: ListedPremiumExclusionReason;

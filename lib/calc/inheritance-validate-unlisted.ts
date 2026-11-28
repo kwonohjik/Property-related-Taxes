@@ -4,6 +4,8 @@
  */
 import type { EstateItem } from "@/lib/tax-engine/types/inheritance-gift.types";
 import { toOptionalDate } from "@/lib/api/date-coerce";
+import { isSmeReasonWithLargeSize } from "@/lib/tax-engine/property-valuation/max-shareholder-premium-era";
+import { SME_REASON_LARGE_SIZE_MESSAGE } from "@/lib/tax-engine/property-valuation/max-shareholder-premium-era";
 
 /**
  * 비상장주식 V2 평가 입력 검증
@@ -134,6 +136,11 @@ export function validateUnlistedStockV2(
     if (!effectiveEvaluationDate) {
       return `비상장주식 "${item.name}" §53⑧2호 — 평가기준일이 필요합니다(전부매각 기간 판정).`;
     }
+  }
+
+  // U-04 — 9호는 규모·날짜로만 판정(엔진) → 「9호 + 일반기업」은 ⑫와 같은 술어로 차단
+  if (isSmeReasonWithLargeSize(v2)) {
+    return `비상장주식 "${item.name}" — ${SME_REASON_LARGE_SIZE_MESSAGE}`;
   }
 
   // PR-E (UI 통합 v3): §22② 자동 모드 시 보유·발행 주식 수 필수 (사실상 기존 ownedShares/totalShares 검증)

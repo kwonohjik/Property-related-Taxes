@@ -17,6 +17,8 @@ import { validateVacancyPortion } from "@/lib/calc/estate-item-vacancy-validate"
 import { injectSavingsAccrualIfAuto } from "@/lib/tax-engine/property-valuation";
 import { toOptionalDate } from "@/lib/api/date-coerce";
 import { validateUnlistedStockV2 } from "./inheritance-validate-unlisted";
+import { isSmeReasonWithLargeSize } from "@/lib/tax-engine/property-valuation/max-shareholder-premium-era";
+import { SME_REASON_LARGE_SIZE_MESSAGE } from "@/lib/tax-engine/property-valuation/max-shareholder-premium-era";
 export { validateUnlistedStockV2 };
 import { isCompleteResidentNumber } from "@/lib/calc/resident-number";
 import { endOfMonth, addMonths, format } from "@/lib/tax-engine/utc-date";
@@ -341,6 +343,10 @@ export function validateListedStockBesshi(item: EstateItem): string | null {
   // §63③ 최대주주 토글 시 기업규모 필수
   if (item.isMaxShareholder && !item.companySize) {
     return `자산 "${item.name}" §63③ — 기업 규모 (중소·중견·대기업) 입력 필요`;
+  }
+  // U-04 — 「9호 + 대기업」 차단 (⑫ estate-item-schema와 같은 술어)
+  if (isSmeReasonWithLargeSize(item)) {
+    return `자산 "${item.name}" — ${SME_REASON_LARGE_SIZE_MESSAGE}`;
   }
 
   // §53⑧2호 전부매각 — 선택 시 매매계약일 필수 (게이트 missing_input 차단).

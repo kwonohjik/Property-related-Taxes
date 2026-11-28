@@ -184,7 +184,7 @@ export const INHERITANCE_ADDITIONS: VerificationRule[] = [
   {
     id: "INH.STOCK_VALUATION",
     citation: "상증법 §63",
-    keywords: ["이전ㆍ이후 각 2개월 동안 공표된 매일의", "최종 시세가액", "최대주주 또는 최대출자자", "100분의 20을 가산"],
+    keywords: ["이전ㆍ이후 각 2개월 동안 공표된 매일의", "최종 시세가액", "최대주주 또는 최대출자자", "100분의 20을 가산", "대통령령으로 정하는 중견기업"],
     keywordMode: "ALL",
   },
   {
