@@ -4,6 +4,7 @@
  * 계획서: `docs/02-design/features/transfer-foreign-realestate.ui.plan.md` §11 U0
  * 복제하면 갈라진다 — 두 자산 종류의 옵션은 이 파일 하나가 단일 소스다.
  */
+import { TRANSFER_FOREIGN_RE } from "@/lib/tax-engine/legal-codes/transfer-foreign-realestate";
 
 // ── 지원 국가 목록 ──
 export const COUNTRY_OPTIONS = [
@@ -26,12 +27,12 @@ export const COUNTRY_OPTIONS = [
 export const FOREIGN_TAX_METHOD_OPTIONS = [
   {
     value: "credit",
-    label: "세액공제 (§118의6①1호)",
+    label: `세액공제 (${TRANSFER_FOREIGN_RE.SECTION_118_6_1_1_CREDIT})`,
     description: "한도 = 국외 산출세액 합 × 해당 종목 양도소득금액 / 국외 양도소득금액 합",
   },
   {
     value: "expense",
-    label: "필요경비 산입 (§118의6①2호)",
+    label: `필요경비 산입 (${TRANSFER_FOREIGN_RE.SECTION_118_6_1_2_EXPENSE})`,
     description: "양도차익 계산 시 필요경비로 처리",
   },
 ];
