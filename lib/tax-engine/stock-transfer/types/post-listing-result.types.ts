@@ -6,6 +6,9 @@
  */
 
 import type { Section165_4Model } from "../valuation-165-4-basis";
+import type { StockTransferInput } from "./stock-transfer.types";
+
+type NetAssetOnlyReason = NonNullable<StockTransferInput["netAssetOnlyReason"]>;
 
 export type PostListingValuationResult = {
   /** 상장연도 직전 사업연도 1주당 비상장 평가액 (가중평균) */
@@ -53,6 +56,14 @@ export type PostListingValuationResult = {
    * (일자별 합계·거래일수)이 없다 ⇒ 그 모드에서는 이 echo가 화면의 유일한 노출 경로다.
    */
   listingClosingAvg1Month?: number;
+  /**
+   * [echo] 순자산가치 단독으로 평가한 쪽의 §165④3 사유 — 그 쪽은 가중평균·80% 하한 대신 순자산가치(같은 호 나목)다.
+   * 사유 없는 쪽은 키가 없다(U-14).
+   */
+  netAssetOnlyReason?: {
+    listing?: NetAssetOnlyReason;
+    acquisition?: NetAssetOnlyReason;
+  };
   appliedRules: string[];
   warnings: string[];
 

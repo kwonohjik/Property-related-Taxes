@@ -102,11 +102,14 @@ export function refineSingleModeRequiredInputs(data: StockInput, ctx: z.Refineme
         data.acquisitionCause === "carryover_gift" &&
         data.donorAcquisitionMethod === "estimated" &&
         data.acquisitionMode !== "estimated",
+      postListing: data.acquiredBeforeListing === true,
     });
     if (reads.transfer && !isNetAssetOnlyReasonInEra(data.netAssetOnlyReason, transferDateForEra))
       issue("netAssetOnlyReason", UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA);
     if (reads.acquisition && !isNetAssetOnlyReasonInEra(data.acquisitionNetAssetOnlyReason, transferDateForEra))
       issue("acquisitionNetAssetOnlyReason", UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA);
+    if (reads.listing && !isNetAssetOnlyReasonInEra(data.listingNetAssetOnlyReason, transferDateForEra))
+      issue("listingNetAssetOnlyReason", UNLISTED_MESSAGES.NET_ASSET_ONLY_REASON_ERA);
   }
   if (!splitOrLots) {
     if (
@@ -193,6 +196,9 @@ export function refineSingleModeRequiredInputs(data: StockInput, ctx: z.Refineme
     // 취득 후 상장 간이 입력(시행령 §165⑤) — 상세 모드(`postListingDetail`)는 결산 원자료로 따로 온다.
     if (listed && data.acquiredBeforeListing && !data.tradingHaltAtTransfer && !data.postListingDetail) {
       for (const [key, label] of POST_LISTING_SIMPLE_REQUIRED) {
+        // §165④3 사유가 있는 쪽은 순자산가치 단독이라 순손익가치를 요구하지 않는다(엔진 `calcPostListingSideValue` — U-14)
+        if (key === "listingYearNetIncomePerShare" && data.listingNetAssetOnlyReason) continue;
+        if (key === "acquisitionYearNetIncomePerShare" && data.acquisitionNetAssetOnlyReason) continue;
         if (data[key] === undefined) issue(key, `${label} 입력하세요 (소득세법 시행령 §165⑤)`);
       }
     }

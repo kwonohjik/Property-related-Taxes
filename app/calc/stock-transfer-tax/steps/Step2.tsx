@@ -44,6 +44,7 @@ import { BONUS_TAXED_ACTUAL_ONLY_MESSAGE } from "@/lib/calc/stock-acquisition-ca
 import { isBonusTaxedEstimationBlocked } from "@/lib/calc/stock-acquisition-cause";
 import { effectiveSingleAcquisitionCause } from "@/lib/calc/stock-acquisition-cause";
 import { isPreDeemedPurchaseForm } from "@/lib/calc/stock-transfer-section94-4-form";
+import { isListedStockMarket } from "@/lib/tax-engine/stock-transfer/listed-stock-market";
 
 interface Step2Props {
   form: StockTransferFormData;
@@ -69,7 +70,8 @@ export function Step2({ form, onChange }: Step2Props) {
   const acquisitionActualInputMode = effectiveAcquisitionActualInputMode(form);
   // 취득 당시 기준시가 입력 방식 — 3중 패턴 default(분모 축 `transferStdInputMode`와 같은 형태)
   const acqInputMode = form.acquisitionStdInputMode || "direct";
-  const isListed = ["kospi", "kosdaq", "konex"].includes(form.marketType);
+  // ④ `acquiredBeforeListing`·⑫ 차단과 같은 술어 — 상장 환산 블록(취득 후 상장 라디오)의 표시 조건(U-15)
+  const isListed = isListedStockMarket(form.marketType);
   const isSplitMode = form.lotsMode === "split";
   /**
    * 영 §163⑨ — 증여·상속 원인이면 취득가액은 평가액(실지거래가액 의제)이다. 그래서

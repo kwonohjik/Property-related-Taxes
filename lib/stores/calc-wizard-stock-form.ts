@@ -168,6 +168,7 @@ export function createInitialStockFormData(): StockTransferFormData {
 
     netAssetOnlyReason: "",
     acquisitionNetAssetOnlyReason: "",
+    listingNetAssetOnlyReason: "",
 
     expenseMode: "actual",
     actualExpenses: "",

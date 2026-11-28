@@ -23,6 +23,7 @@ import type { StockTransferResult } from "@/lib/tax-engine/stock-transfer/types/
 import type { StockTransferAggregateResult } from "@/lib/tax-engine/stock-transfer/stock-transfer-aggregate";
 import { isTradingHaltMarketScopeViolation } from "@/lib/tax-engine/stock-transfer/trading-halt-market-scope";
 import { usesUnlistedSupplementaryValuation } from "@/lib/tax-engine/stock-transfer/supplementary-valuation-market";
+import { isListedStockMarket } from "@/lib/tax-engine/stock-transfer/listed-stock-market";
 
 import {
   parseIntOrUndef,
@@ -390,7 +391,9 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
    * `acquisitionStdMode` 가 그대로 남는다** — 그 stale 값을 여기서 끊는다.
    */
   const haltAllowed = !isTradingHaltMarketScopeViolation(form.marketType);
-  body.acquiredBeforeListing = stdMode === "post_listing";
+  // 취득 후 상장(영 §165⑤·⑥)은 상장 3시장 전용 — 라디오와 같은 술어. 비상장으로 바꾼 뒤 남은 값은 무시(U-15)
+  const postListingAllowed = isListedStockMarket(form.marketType);
+  body.acquiredBeforeListing = postListingAllowed && stdMode === "post_listing";
   body.tradingHaltAtTransfer = haltAllowed && stdMode === "halt_transfer";
   body.tradingHaltAtAcquisition = haltAllowed && stdMode === "halt_acquisition";
 
@@ -460,6 +463,7 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
 
   // Round 4 H-02 — full/listing_only 모드 시 adapter로 nested + 4 필드 자동 합성
   if (
+    postListingAllowed &&
     form.acquisitionStdMode === "post_listing" &&
     (form.unlistedDetailMode === "listing_only" || form.unlistedDetailMode === "full")
   ) {
@@ -494,6 +498,10 @@ export function buildStockTransferApiBody(form: StockTransferFormData): Record<s
   }
   if (form.acquisitionNetAssetOnlyReason) {
     body.acquisitionNetAssetOnlyReason = form.acquisitionNetAssetOnlyReason;
+  }
+  // 취득 후 상장 분모(상장일 현재) 사유 — 그 칸은 §165⑤ 카드에만 있어 그 경로일 때만 싣는다(U-14)
+  if (body.acquiredBeforeListing === true && form.listingNetAssetOnlyReason) {
+    body.listingNetAssetOnlyReason = form.listingNetAssetOnlyReason;
   }
 
   // ── 필요경비 ──

@@ -131,6 +131,7 @@ export function buildEngineInput(coerced: Record<string, unknown>): StockTransfe
     acqFaceValuePerShare: coerced.acqFaceValuePerShare as number | undefined,
     netAssetOnlyReason: coerced.netAssetOnlyReason as StockTransferInput["netAssetOnlyReason"],
     acquisitionNetAssetOnlyReason: coerced.acquisitionNetAssetOnlyReason as StockTransferInput["acquisitionNetAssetOnlyReason"],
+    listingNetAssetOnlyReason: coerced.listingNetAssetOnlyReason as StockTransferInput["listingNetAssetOnlyReason"],
     expenseMode: coerced.expenseMode as StockTransferInput["expenseMode"],
     actualExpenses: coerced.actualExpenses as number | undefined,
     filingType: coerced.filingType as StockTransferInput["filingType"],

@@ -57,6 +57,8 @@ export function requiredUnlistedValuationKeys(o: {
  * - 양측: 환산 — 비상장·기타자산 또는 양도일 거래정지(§165③). 취득시 장부분실(사례 49)이면 취득측은 액면가라 취득 사유 없음
  * - 취득측만: 취득일 거래정지(§165③) · 매매사례가액(비상장 — 개산공제 기준시가)
  * - 양도측만: 이월과세 증여자 기준 환산의 분모(비상장 또는 양도일 거래정지)
+ * - 취득 후 상장(§165⑤·⑥ — 상장 환산 · 양도일 거래정지 아님): 분자 = 취득 사유(`acquisition`) ·
+ *   분모 = 상장일 현재 사유(`listing` — `listingNetAssetOnlyReason`). 칸은 `PostListingValuationCard`(U-14)
  */
 export function netAssetOnlyReasonSidesRead(o: {
   acquisitionMode: string | undefined;
@@ -65,14 +67,20 @@ export function netAssetOnlyReasonSidesRead(o: {
   haltAtAcquisition: boolean;
   acqFaceValueOnly: boolean;
   donorConversion: boolean;
-}): { transfer: boolean; acquisition: boolean } {
+  /** 취득 후 상장 선택(④ `acquiredBeforeListing`과 같은 값) */
+  postListing?: boolean;
+}): { transfer: boolean; acquisition: boolean; listing: boolean } {
   const bothSides = o.acquisitionMode === "estimated" && (!o.listed || o.haltAtTransfer);
+  const postListing =
+    o.acquisitionMode === "estimated" && o.listed && !o.haltAtTransfer && o.postListing === true;
   return {
     transfer: bothSides || (o.donorConversion && (!o.listed || o.haltAtTransfer)),
     acquisition:
       (bothSides && !o.acqFaceValueOnly) ||
       (o.acquisitionMode === "estimated" && o.listed && !o.haltAtTransfer && o.haltAtAcquisition) ||
+      postListing ||
       (o.acquisitionMode === "sale_case" && !o.listed),
+    listing: postListing,
   };
 }
 

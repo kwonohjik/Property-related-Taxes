@@ -33,7 +33,7 @@ import {
   isGiftLikeEstimationBlocked,
   GIFT_LIKE_ESTIMATION_BLOCKED_MESSAGE,
 } from "@/lib/tax-engine/stock-transfer/gift-acquisition-163-9";
-import { calcSection165_4Value } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
+import { calcPostListingSideValue } from "@/lib/tax-engine/stock-transfer/stock-valuation-post-listing";
 import { isSection165_4EraUnsupported } from "@/lib/tax-engine/stock-transfer/valuation-165-4-basis";
 import { netIncomeSkipBySide } from "@/lib/tax-engine/stock-transfer/unlisted-flat-adapter";
 // §165④1호 괄호(2:3) 대상 법인 — 엔진과 같은 leaf(사용자 신고 · 다목 50% · 라목)
@@ -342,6 +342,9 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
       }
       if (stdMode === "post_listing") {
         const detailMode = form.unlistedDetailMode || "simple";
+        // §165④3 사유가 있는 쪽은 순자산가치 단독 — 순손익 입력을 요구하지 않는다(엔진 `calcPostListingSideValue` · ⑫ 같은 규칙, U-14)
+        const listingNaOnly = !!form.listingNetAssetOnlyReason;
+        const acqNaOnly = !!form.acquisitionNetAssetOnlyReason;
         if (isEmpty(form.listingDate)) {
           errors.push({ field: "listingDate", message: "상장일을 입력하세요 (소령 §165⑤)", severity: "error" });
         }
@@ -400,6 +403,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
             const axes = [
               {
                 label: "상장연도",
+                naOnly: listingNaOnly,
                 ni: { field: "listingYearNetIncomeAmount", value: form.listingYearNetIncomeAmount },
                 sc: { field: "listingYearShareCount", value: form.listingYearShareCount },
                 na: { field: "listingYearNetAssetAmount", value: form.listingYearNetAssetAmount },
@@ -408,6 +412,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
               },
               {
                 label: "취득연도",
+                naOnly: acqNaOnly,
                 ni: { field: "acquisitionYearNetIncomeAmount", value: form.acquisitionYearNetIncomeAmount },
                 sc: { field: "acquisitionYearShareCount", value: form.acquisitionYearShareCount },
                 na: { field: "acquisitionYearNetAssetAmount", value: form.acquisitionYearNetAssetAmount },
@@ -416,11 +421,11 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
               },
             ] as const;
             for (const ax of axes) {
-              if (isEmpty(ax.ni.value)) errors.push({ field: ax.ni.field, message: `${ax.label} 순손익액을 입력하세요 (§165④1 가목)`, severity: "error" });
+              if (!ax.naOnly && isEmpty(ax.ni.value)) errors.push({ field: ax.ni.field, message: `${ax.label} 순손익액을 입력하세요 (§165④1 가목)`, severity: "error" });
               if (isEmpty(ax.sc.value) || parseI(ax.sc.value) <= 0) errors.push({ field: ax.sc.field, message: `${ax.label} 발행주식총수를 입력하세요 (1주당 가치의 분모)`, severity: "error" });
               if (isEmpty(ax.na.value)) errors.push({ field: ax.na.field, message: `${ax.label} 순자산가액(영업권 포함 전)을 입력하세요 (§165④1 나목)`, severity: "error" });
               // 원천값이 다 찼는데 파생이 비어 있으면 산정이 실패한 것이다 — 조용히 넘기지 않는다.
-              if (!isEmpty(ax.ni.value) && !isEmpty(ax.sc.value) && isEmpty(ax.derivedNi)) {
+              if (!ax.naOnly && !isEmpty(ax.ni.value) && !isEmpty(ax.sc.value) && isEmpty(ax.derivedNi)) {
                 errors.push({ field: ax.ni.field, message: `${ax.label} 1주당 순손익가치 자동 산정 실패 — 순손익액·발행주식총수를 확인하세요`, severity: "error" });
               }
               if (!isEmpty(ax.na.value) && !isEmpty(ax.sc.value) && isEmpty(ax.derivedNa)) {
@@ -428,9 +433,9 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
               }
             }
           } else {
-            if (isEmpty(form.listingYearNetIncomePerShare)) errors.push({ field: "listingYearNetIncomePerShare", message: "상장연도 1주당 순손익가치를 입력하세요", severity: "error" });
+            if (!listingNaOnly && isEmpty(form.listingYearNetIncomePerShare)) errors.push({ field: "listingYearNetIncomePerShare", message: "상장연도 1주당 순손익가치를 입력하세요", severity: "error" });
             if (isEmpty(form.listingYearNetAssetPerShare)) errors.push({ field: "listingYearNetAssetPerShare", message: "상장연도 1주당 순자산가치를 입력하세요", severity: "error" });
-            if (isEmpty(form.acquisitionYearNetIncomePerShare)) errors.push({ field: "acquisitionYearNetIncomePerShare", message: "취득연도 1주당 순손익가치를 입력하세요", severity: "error" });
+            if (!acqNaOnly && isEmpty(form.acquisitionYearNetIncomePerShare)) errors.push({ field: "acquisitionYearNetIncomePerShare", message: "취득연도 1주당 순손익가치를 입력하세요", severity: "error" });
             if (isEmpty(form.acquisitionYearNetAssetPerShare)) errors.push({ field: "acquisitionYearNetAssetPerShare", message: "취득연도 1주당 순자산가치를 입력하세요", severity: "error" });
           }
         } else {
@@ -438,15 +443,15 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           if (!hasClosingData) {
             errors.push({ field: "listingPriceClosing", message: "상장일 이후 1개월 종가를 1셀 이상 입력하세요", severity: "error" });
           }
-          if (isEmpty(form.niShareCountListing)) errors.push({ field: "niShareCountListing", message: "상장연도 사업연도말 주식수를 입력하세요", severity: "error" });
+          if (!listingNaOnly && isEmpty(form.niShareCountListing)) errors.push({ field: "niShareCountListing", message: "상장연도 사업연도말 주식수를 입력하세요", severity: "error" });
           if (isEmpty(form.naAssetTotalRow1Listing)) errors.push({ field: "naAssetTotalRow1Listing", message: "상장연도 자산총계를 입력하세요", severity: "error" });
           if (isEmpty(form.naLiabTotalRow8Listing)) errors.push({ field: "naLiabTotalRow8Listing", message: "상장연도 부채총계를 입력하세요", severity: "error" });
           if (isEmpty(form.naShareCountListing)) errors.push({ field: "naShareCountListing", message: "상장연도 순자산 주식수를 입력하세요", severity: "error" });
           if (detailMode === "listing_only") {
-            if (isEmpty(form.acquisitionYearNetIncomePerShare)) errors.push({ field: "acquisitionYearNetIncomePerShare", message: "취득연도 1주당 순손익가치를 직접 입력하세요", severity: "error" });
+            if (!acqNaOnly && isEmpty(form.acquisitionYearNetIncomePerShare)) errors.push({ field: "acquisitionYearNetIncomePerShare", message: "취득연도 1주당 순손익가치를 직접 입력하세요", severity: "error" });
             if (isEmpty(form.acquisitionYearNetAssetPerShare)) errors.push({ field: "acquisitionYearNetAssetPerShare", message: "취득연도 1주당 순자산가치를 직접 입력하세요", severity: "error" });
           } else {
-            if (isEmpty(form.niShareCountAcq)) errors.push({ field: "niShareCountAcq", message: "취득연도 사업연도말 주식수를 입력하세요", severity: "error" });
+            if (!acqNaOnly && isEmpty(form.niShareCountAcq)) errors.push({ field: "niShareCountAcq", message: "취득연도 사업연도말 주식수를 입력하세요", severity: "error" });
             if (isEmpty(form.naAssetTotalRow1Acq)) errors.push({ field: "naAssetTotalRow1Acq", message: "취득연도 자산총계를 입력하세요", severity: "error" });
             if (isEmpty(form.naLiabTotalRow8Acq)) errors.push({ field: "naLiabTotalRow8Acq", message: "취득연도 부채총계를 입력하세요", severity: "error" });
             if (isEmpty(form.naShareCountAcq)) errors.push({ field: "naShareCountAcq", message: "취득연도 순자산 주식수를 입력하세요", severity: "error" });
@@ -456,7 +461,7 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
         // 소칙 §81④ 1호 월할 가산 — 토글 ON 시 (C-4 차단 / C-7 경고)
         if (form.monthlyAccrualToggle) {
           // C-4: 전전사업연도 평가 필수 (자동 fallback 금지 — 미입력 시 차단)
-          if (isEmpty(form.prePriorYearNetIncomePerShare)) {
+          if (!listingNaOnly && isEmpty(form.prePriorYearNetIncomePerShare)) {
             errors.push({ field: "prePriorYearNetIncomePerShare", message: "전전사업연도 1주당 순손익가치를 입력하세요 (소칙 §81④ 1호 월할 가산)", severity: "error" });
           }
           if (isEmpty(form.prePriorYearNetAssetPerShare)) {
@@ -466,8 +471,8 @@ export function validateStep2Domestic(form: StockTransferFormData): StockValidat
           const td5 = parseTransferDate(effectiveTransferDate(form));
           if (detailMode === "simple" && td5 && !isSection165_4EraUnsupported(td5)) {
             const heavyRE = isReversalCorpForm(form);
-            const listEval = calcSection165_4Value(parseF(form.listingYearNetIncomePerShare), parseF(form.listingYearNetAssetPerShare), heavyRE, td5).value;
-            const acqEval = calcSection165_4Value(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), heavyRE, td5).value;
+            const listEval = calcPostListingSideValue(parseF(form.listingYearNetIncomePerShare), parseF(form.listingYearNetAssetPerShare), form.listingNetAssetOnlyReason || undefined, heavyRE, td5).value;
+            const acqEval = calcPostListingSideValue(parseF(form.acquisitionYearNetIncomePerShare), parseF(form.acquisitionYearNetAssetPerShare), form.acquisitionNetAssetOnlyReason || undefined, heavyRE, td5).value;
             if (listEval > 0 && listEval !== acqEval) {
               errors.push({ field: "monthlyAccrualToggle", message: "취득연도·상장연도 평가액이 달라 소칙 §81④ 월할 가산이 적용되지 않습니다. 토글을 해제하세요.", severity: "warning" });
             }

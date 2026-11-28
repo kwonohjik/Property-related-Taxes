@@ -542,6 +542,11 @@ export type StockTransferInput = {
     | "remaining_term_under_3y";
   /** **취득 당시** 평가의 순자산 단독 평가 사유 (시행령 §165④3) — 값의 범위·연혁은 `netAssetOnlyReason`과 같다 */
   acquisitionNetAssetOnlyReason?: StockTransferInput["netAssetOnlyReason"];
+  /**
+   * 취득 후 상장 환산(시행령 §165⑤·⑥)의 **상장일 현재** 「제4항에 따른 평가액」(환산식 분모)의 §165④3 사유.
+   * 분자(취득일 현재)는 `acquisitionNetAssetOnlyReason`을 같은 뜻으로 읽는다. 연혁은 `netAssetOnlyReason`과 같다(U-14).
+   */
+  listingNetAssetOnlyReason?: StockTransferInput["netAssetOnlyReason"];
 
   // 필요경비
   expenseMode: "actual" | "estimated";
