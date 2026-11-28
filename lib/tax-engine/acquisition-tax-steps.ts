@@ -56,7 +56,7 @@ export function buildMainTaxSteps(ctx: {
       : specialRateResult.isApplied
         ? `§15 세율특례 ${(finalRate * 100).toFixed(4).replace(/\.?0+$/, "")}%`
         : basicRateDecision.rateType === "linear_interpolation"
-          ? `선형보간세율 ${(basicRateDecision.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}% (6~9억 구간${shareRateBasis !== undefined ? ` — 지분 취득: 전체 주택 ${shareRateBasis.toLocaleString()}원 기준` : ""}, 지방세법 §11①8)`
+          ? `선형보간세율 ${(basicRateDecision.appliedRate * 100).toFixed(4).replace(/\.?0+$/, "")}% (6~9억 구간${shareRateBasis !== undefined ? ` — 지분 취득: 전체 주택 ${shareRateBasis.toLocaleString()}원 기준` : ""}, ${ACQUISITION.LINEAR_RATE})`
           : `${(finalRate * 100).toFixed(1)}%`;
   steps.push(
     {
@@ -77,7 +77,9 @@ export function buildMainTaxSteps(ctx: {
           ? ACQUISITION.SURCHARGE
           : specialRateResult.isApplied
             ? specialRateResult.legalBasis
-            : ACQUISITION.BASIC_RATE,
+            : basicRateDecision.rateType === "linear_interpolation"
+              ? ACQUISITION.LINEAR_RATE
+              : ACQUISITION.BASIC_RATE,
     },
   );
   if (ruralSpecialTax > 0) {

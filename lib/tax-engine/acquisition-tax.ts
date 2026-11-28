@@ -375,6 +375,16 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
 
   warnings.push(...surchargeDecision.warnings);
   legalBasis.push(...surchargeDecision.legalBasis);
+  // 6~9억 주택 선형보간 세율(§11①8호 나목)이 그대로 최종 세율일 때만 근거로 싣는다
+  // (중과·세율특례면 그 근거가 대신한다 — 본세 step 근거 분기와 같은 조건).
+  if (
+    basicRateDecision.rateType === "linear_interpolation" &&
+    !corpSurchargeResult.isSurcharged &&
+    !surchargeDecision.isSurcharged &&
+    !specialRateResult.isApplied
+  ) {
+    legalBasis.push(ACQUISITION.LINEAR_RATE);
+  }
 
   // §13①② 법인·공장 중과와 §13의2 다주택·§13⑤⑦ 사치성 중과가 경합하면
   // 더 높은 세율을 최종 세율로 적용한다(중복 적용이 아니라 max).

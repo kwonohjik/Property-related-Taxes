@@ -39,6 +39,9 @@ async function throughStep3AndCalc(page: Page) {
   await expect(regulated).toBeVisible();
   await regulated.click();
   await page.getByRole("button", { name: /다음/ }).click();
+  // ⑤ 법인·특수 — 간주취득 외엔 늘 거친다(세율특례 §15 입력 자리)
+  await expect(page.getByRole("switch", { name: /^세율특례 §15 해당/ })).toBeVisible();
+  await page.getByRole("button", { name: /다음/ }).click();
   const calcResponse = page.waitForResponse(
     (r) => r.url().includes("/api/calc/acquisition") && r.request().method() === "POST",
   );
