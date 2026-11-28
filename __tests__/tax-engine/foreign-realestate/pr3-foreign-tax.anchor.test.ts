@@ -130,17 +130,23 @@ describe("지방소득세 — 지방세특례제한법 §97③ · 지방세법 �
     expect(r.totalTax).toBe(138_550_000 + 13_855_000);
   });
 
-  it("한도 걸림: 소득세 공제 163,438,268 → 지방 공제 floor(÷10) = 16,343,826 → 2,511,174 → 10원 미만 절사 2,511,170", () => {
+  it("한도 걸림: 소득세 공제 163,438,268 → 지방 공제 100분의 10 = 16,343,826.8 → 10원 미만 절사 16,343,820(사용자 결정 2026-11-28) → 18,855,000 − 16,343,820 = 2,511,180", () => {
     const r = two({ method: "credit", items: [t("a", 200_000_000), t("b", 10_000_000)] });
-    expect(r.localForeignTaxCredit).toBe(16_343_826);
-    expect(r.localIncomeTaxBeforeRounding).toBe(2_511_174);
-    expect(r.localIncomeTax).toBe(2_511_170);
+    expect(r.localForeignTaxCredit).toBe(16_343_820);
+    expect(r.localIncomeTaxBeforeRounding).toBe(2_511_180);
+    expect(r.localIncomeTax).toBe(2_511_180);
   });
 
-  it("b 한도 걸림: 공제 75,111,732 → 7,511,173 → 11,343,827 → 11,343,820", () => {
+  it("b 한도 걸림: 공제 75,111,732 → 지방 공제 7,511,170(10원 미만 절사) → 18,855,000 − 7,511,170 = 11,343,830", () => {
     const r = two({ method: "credit", items: [t("a", 40_000_000), t("b", 50_000_000)] });
-    expect(r.localForeignTaxCredit).toBe(7_511_173);
-    expect(r.localIncomeTax).toBe(11_343_820);
+    expect(r.localForeignTaxCredit).toBe(7_511_170);
+    expect(r.localIncomeTax).toBe(11_343_830);
+  });
+
+  it("공제액 1의 자리·10의 자리 끝수: 소득세 공제 1,000,009 → 100분의 10 = 100,000.9 → 10원 미만 절사 100,000 · 1,000,199 → 100,010", () => {
+    expect(localForeignTaxCredit(1_000_009, 18_855_000)).toBe(100_000);
+    expect(localForeignTaxCredit(1_000_199, 18_855_000)).toBe(100_010);
+    expect(localForeignTaxCredit(1_000_199, 50_005)).toBe(50_005);
   });
 
   it("K-11: 소득세 공제 147,860,000 = 지방소득세 14,786,000 전액 → 지방소득세 0 (공제가 산출세액을 넘지 않음)", () => {

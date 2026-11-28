@@ -116,7 +116,7 @@ export function ForeignTaxCalcSection({ result }: { result: ForeignRealEstateRes
         {r.localForeignTaxCredit > 0 && (
           <AmountRow
             label={`외국납부세액 공제 (${TRANSFER_FOREIGN_RE.LOCAL_SPECIAL_97_3_FOREIGN_TAX_CREDIT})`}
-            formula={`소득세 외국납부세액 공제액 ${fmt(r.foreignTaxCreditApplied)}의 10분의 1 (지방소득세 산출세액 한도 — ${TRANSFER_FOREIGN_RE.LOCAL_103_4_CREDIT_CAP})`}
+            formula={`소득세 외국납부세액 공제액 ${fmt(r.foreignTaxCreditApplied)}의 10분의 1, 10원 미만 절사 (지방소득세 산출세액 한도 — ${TRANSFER_FOREIGN_RE.LOCAL_103_4_CREDIT_CAP})`}
             amount={r.localForeignTaxCredit}
             testId="foreign-local-credit"
           />

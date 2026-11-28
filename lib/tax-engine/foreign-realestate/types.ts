@@ -178,7 +178,7 @@ export interface ForeignRealEstateResult {
   determinedTax: number;
   /** 지방세법 §103③ 과세표준(= 소득세 과세표준) */
   localIncomeTaxBase: number;
-  /** 지방세특례제한법 §97③ — 세액공제방법 공제금액의 100분의 10(원 미만 절사, 지방소득세 산출세액 한도) */
+  /** 지방세특례제한법 §97③ — 세액공제방법 공제금액의 100분의 10(10원 미만 절사, 지방소득세 산출세액 한도) */
   localForeignTaxCredit: number;
   /** 지방소득세 끝수 처리 전 금액 = 지방세법 §92① 산출세액 − 지방세특례제한법 §97③ 공제 */
   localIncomeTaxBeforeRounding: number;
