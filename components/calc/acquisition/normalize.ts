@@ -153,7 +153,6 @@ export function normalizeAcquisitionForm(
       ? (legacy.isMetropolitanRegion as boolean)
       : INITIAL_FORM.isMetropolitanRegion,
 
-    giftRelation: (legacy.giftRelation as string) ?? INITIAL_FORM.giftRelation,
     giftorRelation: (legacy.giftorRelation as string) ?? INITIAL_FORM.giftorRelation,
     giftorIs1HHHolder: typeof legacy.giftorIs1HHHolder === "boolean"
       ? (legacy.giftorIs1HHHolder as boolean)
@@ -249,7 +248,6 @@ export function normalizeAcquisitionForm(
       ? (legacy.isMultiHouseholdWithUnitArea as boolean)
       : INITIAL_FORM.isMultiHouseholdWithUnitArea,
 
-    separateHouseholdReason: (legacy.separateHouseholdReason as string) ?? INITIAL_FORM.separateHouseholdReason,
 
     // P5UI 누락 필드
     majorShareholderDate: (legacy.majorShareholderDate as string) ?? INITIAL_FORM.majorShareholderDate,

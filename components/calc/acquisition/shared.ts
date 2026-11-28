@@ -261,9 +261,7 @@ export interface FormState {
   isMetropolitanRegion: boolean;
 
   // ─── [P1] 부담부증여·무상취득 관계 ───
-  /** 증여자 관계 (부담부증여 시) */
-  giftRelation: string; // "spouse_or_lineal" | "other" | ""
-  /** 무상취득 단서 — 수증자 관점 증여자 신분 */
+  /** 무상취득 단서·부담부증여 §7⑫ 단서 — 수증자 관점 증여자 신분 (단일 소스) */
   giftorRelation: string; // "spouse" | "lineal_ascendant" | "lineal_ascendant_spouse" | "lineal_descendant" | "lineal_descendant_step" | "other" | ""
   /** 증여자가 1세대 1주택자인지 */
   giftorIs1HHHolder: boolean;
@@ -359,8 +357,6 @@ export interface FormState {
   isMultiHouseholdWithUnitArea: boolean;
 
   // ─── [P3 v3] 세대 별도 인정 ───
-  /** 세대 별도 인정 사유 */
-  separateHouseholdReason: string; // "under30_income" | "over65_cohabitation" | "overseas_90days" | "relocate_60days" | ""
 
   // ─── [P5UI] 누락 필드 추가 ───
   /** 과점주주 도달일 (YYYY-MM-DD) — 휴면법인 5년 기산 기준 */
@@ -485,7 +481,6 @@ export const INITIAL_FORM: FormState = {
   isMetropolitanRegion: false,
 
   // P1 부담부증여·무상취득
-  giftRelation: "",
   giftorRelation: "",
   giftorIs1HHHolder: false,
 
@@ -545,7 +540,6 @@ export const INITIAL_FORM: FormState = {
   isMultiHouseholdWithUnitArea: false,
 
   // P3 세대 별도
-  separateHouseholdReason: "",
 
   // P5UI 누락 필드
   majorShareholderDate: undefined,

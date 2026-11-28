@@ -350,7 +350,7 @@ export interface AcquisitionTaxInput {
   isMetropolitanRegion?: boolean;
 
   // ─── [P1 v3·v4] 부담부증여·무상취득 관계 ───
-  /** [P1-6] 증여자 관계 — burdened_gift 시 spouse_or_lineal이면 전체 무상 처리 (지법 §7④) */
+  /** [P1-6] 증여자 관계 — burdened_gift 시 spouse_or_lineal이면 전체 무상 처리 (지법 §7⑫ 단서 → §7⑪) */
   giftRelation?: "spouse_or_lineal" | "other";
   /** [P1-3 v4 M4] 무상취득 단서 — 수증자 관점의 증여자 신분 (시행령 §28의6② 1호, 사실혼 모두 제외) */
   giftorRelation?:

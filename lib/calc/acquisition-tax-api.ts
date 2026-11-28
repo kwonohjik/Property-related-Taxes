@@ -18,6 +18,7 @@ import { isPre2026TempTwoHouseContractDate } from "@/lib/calc/acquisition-sale-c
 import { isSameDayOrderCandidate } from "@/lib/calc/acquisition-same-day-order";
 import type { AcquisitionTaxResult } from "@/lib/tax-engine/types/acquisition.types";
 import type { HouseCountInput, OwnedHouseInfo as EngineOwnedHouseInfo, RightAsset, OfficeAsset, PendingAcquisition } from "@/lib/tax-engine/house-count/types";
+import { resolveHouseCount } from "@/lib/tax-engine/house-count/index";
 
 // ============================================================
 // 헬퍼
@@ -171,6 +172,17 @@ function mapToEngineRightAsset(h: FormOwnedHouseInfo, form: FormState): RightAss
 }
 
 /**
+ * 화면 게이트용 취득 후 주택 수 — 보유 주택 목록이 있으면 엔진 자동 산정(`resolveHouseCount`)과 같은 값,
+ * 없으면 주택 수 선택값(교재 대조 U4: Step3 카드 게이트가 선택값만 보던 결함).
+ * 엔진은 주택 수 기준일을 §20 확정 취득일로 다시 정하므로 잔금일·등기일이 다르면 화면 값과 어긋날 수 있다.
+ */
+export function resolveFormHouseCount(form: FormState): number {
+  const input = buildHouseCountInput(form);
+  if (input) return resolveHouseCount(input, undefined).effectiveCount;
+  return parseInt(form.houseCountAfter) || 1;
+}
+
+/**
  * FormState.ownedHouses[] → HouseCountInput
  * 취득 주택 자체(pendingAcquisition)는 별도 입력 필드에서 구성
  */
@@ -221,7 +233,7 @@ function buildHouseCountInput(form: FormState): HouseCountInput | undefined {
     houses,
     rights,
     offices,
-    // household 멤버 개별 정보는 FormState 미지원 → 빈 배열 (separateHouseholdReason 단일 필드로 대체)
+    // household 멤버 개별 정보는 FormState 미지원 → 빈 배열. 별도 세대원 주택은 목록에서 빼도록 Step2가 안내한다(U3)
     household: { members: [] },
     trustedHouseCount: parseInt(form.trustedHouseCount) || 0,
     pendingAcquisition,
@@ -277,7 +289,8 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
   }
 
   // 특수관계인
-  if (form.isRelatedParty) body.isRelatedParty = true;
+  // 특수관계인 토글은 유상거래 화면에서만 보인다(Step1) — 증여로 바꾼 뒤 남은 값은 보내지 않는다
+  if (form.isRelatedParty && !isGift && form.acquisitionCause !== "donation") body.isRelatedParty = true;
 
   // ─── 주택 관련 ───
   if (isHousing) {
@@ -318,8 +331,8 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
       }
     }
 
-    // §13의2④ 지정 전 계약 보호
-    if (form.contractDateBeforeRegulation) {
+    // §13의2④ 지정 전 계약 보호 — 매매계약만(⑤ 카드도 매매에서만 보인다, U5)
+    if (form.contractDateBeforeRegulation && form.acquisitionCause === "purchase") {
       body.contractDateBeforeRegulation = true;
       const rd = strOrUndef(form.regulationDesignationDate);
       if (rd) body.regulationDesignationDate = rd;
@@ -354,10 +367,6 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
     if (form.isHansiBenefitLeaseRegistered) body.isHansiBenefitLeaseRegistered = true;
     if (form.isHansiBenefitUnsoldApt) body.isHansiBenefitUnsoldApt = true;
     if (form.isMultiHouseholdWithUnitArea) body.isMultiHouseholdWithUnitArea = true;
-
-    // 세대 별도 인정 사유
-    const shr = strOrUndef(form.separateHouseholdReason);
-    if (shr) body.separateHouseholdReason = shr;
 
     // 신탁재산 위탁자 주택 수
     const tc = parseIntOrUndef(form.trustedHouseCount);
@@ -463,8 +472,6 @@ export function buildAcquisitionTaxBody(form: FormState): Record<string, unknown
 
   // ─── 무상취득 관계 ───
   if (isGift) {
-    const gr = strOrUndef(form.giftRelation);
-    if (gr) body.giftRelation = gr;
     const gor = strOrUndef(form.giftorRelation);
     if (gor) body.giftorRelation = gor;
     if (form.giftorIs1HHHolder) body.giftorIs1HHHolder = true;

@@ -55,7 +55,7 @@ function checkMemberSeparateEligibility(member: HouseholdMember): SeparateHouseh
   if (
     member.relation === "child" &&
     member.age < ACQUISITION_CONST.SEPARATE_HOUSEHOLD_AGE_LIMIT &&
-    !member.isMinor
+    !isMinorMember(member)
   ) {
     // 소득 조건: 12개월 소득 ≥ 기준중위소득 40%
     const income = member.income12Months ?? 0;
@@ -72,7 +72,7 @@ function checkMemberSeparateEligibility(member: HouseholdMember): SeparateHouseh
     }
 
     // 30세 미만이지만 미성년인 경우 경고: 해당 없음 (예외 명시)
-    // (미성년은 function 외부에서 isMinor 체크로 이미 필터됨)
+    // (미성년은 위 isMinorMember 조건에서 이미 걸러진다 — 플래그·나이 둘 다)
   }
 
   // ── 사유 2: 65세 이상 직계존속 동거봉양 합가 (§28의3② 2호) ──
@@ -123,13 +123,22 @@ function checkMemberSeparateEligibility(member: HouseholdMember): SeparateHouseh
  * 미성년 자녀가 30세 미만 소득 조건을 충족하는 것처럼 보이는지 확인
  * (UI 경고 표시용 — 실제 인정은 되지 않음)
  */
+/**
+ * 미성년 판정 (§28의3②1호 단서) — 나이로도 판정한다(교재 대조 U8).
+ * 종전에는 `isMinor` 플래그만 봐서 18세 자녀가 플래그 없이 들어오면 별도 세대로 인정됐다.
+ * 플래그나 나이 중 하나라도 미성년이면 미성년으로 본다(혜택 요건 — 「모름」=불성립).
+ */
+export function isMinorMember(member: HouseholdMember): boolean {
+  return member.isMinor === true || member.age < ACQUISITION_CONST.ADULT_AGE;
+}
+
 export function hasMinorWithApparentIncomeCondition(household: Household | undefined): boolean {
   if (!household) return false;
   return household.members.some(
     (m) =>
       m.relation === "child" &&
       m.age < ACQUISITION_CONST.SEPARATE_HOUSEHOLD_AGE_LIMIT &&
-      m.isMinor === true &&
+      isMinorMember(m) &&
       (m.income12Months ?? 0) > 0
   );
 }

@@ -44,6 +44,7 @@ import {
 } from "./acquisition-tax-rate";
 import { assessSurcharge, resolveFinalRate } from "./acquisition-tax-surcharge";
 import { isCorporateHouseAcquirer } from "./acquisition-tax-surcharge";
+import { resolveBurdenedGiftRelation } from "./acquisition-surcharge/corp-house";
 import { computeBurdenedGiftResult } from "./acquisition-tax-burdened";
 import {
   applySpecialRate,
@@ -118,14 +119,15 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
   // ── Step 2: 간주취득 판정 ──
   let effectiveInput = { ...input };
 
-  // [P1-6] 부담부증여 — 배우자·직계존비속 간 채무인수는 전체 무상으로 처리 (지법 §7④)
+  // [P1-6] 부담부증여 — 배우자·직계존비속 간 채무인수는 전체 무상으로 처리 (지법 §7⑫ 단서 → §7⑪)
   // 후속 단계(과세표준·세율·중과)가 일반 gift 흐름을 따르도록 cause 자체를 변환.
-  if (input.acquisitionCause === "burdened_gift" && input.giftRelation === "spouse_or_lineal") {
+  const burdenedGiftRelation = resolveBurdenedGiftRelation(input); // U1: 증여자 신분 단일 소스
+  if (input.acquisitionCause === "burdened_gift" && burdenedGiftRelation === "spouse_or_lineal") {
     effectiveInput = { ...effectiveInput, acquisitionCause: "gift" };
     warnings.push(
-      "배우자·직계존비속 간 부담부증여는 채무액 인수 부분도 증여로 간주되어 전체 무상 처리됩니다 (지방세법 §7④).",
+      `배우자·직계존비속 간 부담부증여는 채무액 인수 부분도 증여로 간주되어 전체 무상 처리됩니다 (${ACQUISITION.BURDENED_GIFT_FAMILY} → §7⑪).`,
     );
-    legalBasis.push("지방세법 §7④");
+    legalBasis.push(ACQUISITION.BURDENED_GIFT_FAMILY);
   }
 
   const deemedStep = runDeemedAcquisitionStep(input, effectiveInput, targetDate, warnings, legalBasis);
@@ -353,11 +355,12 @@ export function calcAcquisitionTax(input: AcquisitionTaxInput): AcquisitionTaxRe
     previousHouseRegion: input.previousHouseRegion,
     newHouseRegion: input.newHouseRegion,
     saleContractDate: input.saleContractDate, // §28의5① 2026 개정 부칙 제2조②
-    // [P1-6] 부담부증여 배우자·직계존비속 배제 (지법 §7④)
-    giftRelation: input.giftRelation,
+    // [P1-6] 부담부증여 배우자·직계존비속 배제 (지법 §7⑫ 단서 → §7⑪)
+    giftRelation: burdenedGiftRelation,
     // [P1-6.5] §13의2④ 지정 전 매매계약 보호
     contractDateBeforeRegulation: input.contractDateBeforeRegulation,
     hasContractDepositProof: input.hasContractDepositProof,
+    regulationDesignationDate: input.regulationDesignationDate,
     // [§13⑦] 사치성 + 대도시 법인 중복
     isCorpMetroSurcharge: effectiveCorpMetro,
     // [P2-1] 세율특례 사유 (무상취득 단서 배제 판단에 사용)

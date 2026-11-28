@@ -114,21 +114,39 @@ export function Step1({
         </div>
       </ToneCard>
 
-      {/* 특수 조건 — amber 카드 */}
-      <ToggleCard
-        tone="amber"
-        title="특수관계인 간 거래"
-        description="시가보다 3억원 이상 또는 시가의 5% 이상 낮게 사면 시가 기준 과세"
-        checked={form.isRelatedParty}
-        onCheckedChange={(v) => set("isRelatedParty", v)}
-      >
-        <CurrencyInput
-          label="시가인정액 (감정가·매매사례가액)"
-          value={form.marketValue}
-          onChange={(v) => set("marketValue", v)}
-          placeholder="시가 기준 금액"
-        />
-      </ToggleCard>
+      {/* 증여·기부 — 과세표준은 시가인정액 (§10의2①). 특수관계인 토글 안에 숨어 있던 칸을 바로 보인다(U2).
+          부담부증여는 기본 정보 단계에서 시가를 받으므로 여기서 다시 묻지 않는다. */}
+      {(form.acquisitionCause === "gift" || form.acquisitionCause === "donation") && (
+        <ToneCard tone="amber" title="시가인정액" bodyClassName="space-y-2">
+          <CurrencyInput
+            label="시가인정액 (매매사례가액·감정가액·공매가액 등)"
+            value={form.marketValue}
+            onChange={(v) => set("marketValue", v)}
+            placeholder="없으면 시가표준액으로 과세"
+          />
+          <p className="text-xs text-muted-foreground">
+            증여 취득의 과세표준은 시가인정액입니다. 시가인정액을 산정하기 어려우면 시가표준액으로 하고, 시가표준액 1억원 이하 부동산은 둘 중 납세자가 정하는 가액으로 합니다 (지방세법 §10의2②).
+          </p>
+        </ToneCard>
+      )}
+
+      {/* 특수 조건 — amber 카드 (유상거래 전용 — §10의3② 부당행위계산) */}
+      {!["gift", "donation", "burdened_gift"].includes(form.acquisitionCause) && (
+        <ToggleCard
+          tone="amber"
+          title="특수관계인 간 거래"
+          description="시가보다 3억원 이상 또는 시가의 5% 이상 낮게 사면 시가 기준 과세"
+          checked={form.isRelatedParty}
+          onCheckedChange={(v) => set("isRelatedParty", v)}
+        >
+          <CurrencyInput
+            label="시가인정액 (감정가·매매사례가액)"
+            value={form.marketValue}
+            onChange={(v) => set("marketValue", v)}
+            placeholder="시가 기준 금액"
+          />
+        </ToggleCard>
+      )}
 
       {/* 연부 회차 정보 — 매매 + 연부 ON 시만 표시 */}
       {!isDeemedAcquisitionCause(form.acquisitionCause) &&

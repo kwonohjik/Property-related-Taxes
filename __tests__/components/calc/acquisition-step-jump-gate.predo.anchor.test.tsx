@@ -35,7 +35,9 @@ vi.mock("next/navigation", () => ({
 }));
 
 const calcSpy = vi.fn(async () => ({ totalTax: 0 }) as never);
-vi.mock("@/lib/calc/acquisition-tax-api", () => ({
+// 계산 호출만 가로챈다 — 화면이 쓰는 순수 헬퍼(resolveFormHouseCount 등)는 실제 구현을 쓴다
+vi.mock("@/lib/calc/acquisition-tax-api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/calc/acquisition-tax-api")>()),
   callAcquisitionTaxAPI: (...a: unknown[]) => calcSpy(...(a as [])),
 }));
 // 이력 자동저장은 Dexie를 연다 — jsdom에 IndexedDB가 없어 무관한 예외가 난다.

@@ -346,7 +346,7 @@ describe("OH-27 — 저가주택 한도 연혁(취득하는 주택의 취득일 
       isRegulatedArea: false,
       isMetropolitanRegion: false,
       houseCountAfter: "4",
-      giftRelation: "other",
+      giftorRelation: "other",
       balancePaymentDate: balance,
     });
 
